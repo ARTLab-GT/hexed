@@ -31,9 +31,9 @@ int main ()
 n_elem = int(1e5)
 row_size = 5
 dim = 3
-n_dof = row_size**dim
-size = n_dof*n_elem
-kernels = ["multiply_by_2"]
+n_qpoint = row_size**dim
+size = n_qpoint*n_elem
+kernels = ["copy", "copy_full_dim"]
 for kernel in kernels:
     include = '#include "kernels/local.hpp"'
     setup = """
@@ -44,7 +44,8 @@ for (int i = 0; i < {0}; ++i)
   read[i] = i/100.;
 }}
 """.format(size)
-    execute = "local::multiply_by_2<{0}, {1}>(NULL, NULL, read, write, {2});".format(n_dof, row_size, n_elem)
+    execute = "local::{0}<{1}, {2}>(NULL, NULL, read, write, {2});"
+    execute = execute.format(kernel, n_qpoint, row_size, n_elem)
     flags = ""
     ex_time = time(include, setup, execute, flags)
     print(ex_time)
