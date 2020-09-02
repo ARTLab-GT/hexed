@@ -38,7 +38,7 @@ namespace local
         {
           for (int i_inner = 0; i_inner < stride; ++i_inner)
           {
-            for (int i_qpoint = 0; i_qpoint < row_size; i_qpoint += stride)
+            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
             {
               write  [i_elem*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride]
               += read[i_elem*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
