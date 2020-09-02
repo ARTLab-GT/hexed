@@ -31,9 +31,10 @@ int main ()
 n_elem = int(1e5)
 row_size = 5
 dim = 3
+n_var = 3
 n_qpoint = row_size**dim
-size = n_qpoint*n_elem
-kernels = ["copy", "basic_tensor"]
+size = n_qpoint*n_elem*n_var
+kernels = ["copy", "basic_tensor", "add_operator"]
 for kernel in kernels:
     include = '#include "kernels/local.hpp"'
     setup = """
@@ -44,8 +45,12 @@ for (int i = 0; i < {0}; ++i)
   read[i] = i/100.;
 }}
 """.format(size)
-    execute = "local::{0}<{1}, {2}>(NULL, NULL, read, write, {3});"
-    execute = execute.format(kernel, n_qpoint, row_size, n_elem)
+    if kernel in "copy basic_tensor":
+        execute = "{0}<{1}, {2}>(NULL, NULL, read, write, {3});"
+        execute = execute.format(kernel, n_qpoint, row_size, n_elem*n_var)
+    else:
+        execute = "update<{4}, {1}, {2}, add_operator<{4}, {2}>>(NULL, NULL, read, write, {3});"
+        execute = execute.format(kernel, n_qpoint, row_size, n_elem, n_var)
     flags = ""
     ex_time = time(include, setup, execute, flags)
     print(ex_time)
