@@ -33,7 +33,7 @@ row_size = 5
 dim = 3
 n_qpoint = row_size**dim
 size = n_qpoint*n_elem
-kernels = ["copy", "copy_full_dim"]
+kernels = ["copy", "basic_tensor"]
 for kernel in kernels:
     include = '#include "kernels/local.hpp"'
     setup = """

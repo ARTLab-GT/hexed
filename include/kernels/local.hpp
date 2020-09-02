@@ -21,8 +21,8 @@ namespace local
   }
 
   template<int n_qpoint, int row_size>
-  void copy_full_dim(double * diff_mat, double * quad_weights,
-            double * read, double * write, int n_elem)
+  void basic_tensor(double * diff_mat, double * quad_weights,
+                    double * read, double * write, int n_elem)
   {
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
@@ -40,8 +40,11 @@ namespace local
           {
             for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
             {
-              write  [i_elem*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride]
-              += read[i_elem*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
+              for (int j_qpoint = 0; j_qpoint < row_size; ++j_qpoint)
+              {
+                write  [i_elem*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride]
+                += read[i_elem*n_qpoint + i_outer*stride*row_size + i_inner + j_qpoint*stride];
+              }
             }
           }
         }
