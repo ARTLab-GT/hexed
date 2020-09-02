@@ -44,7 +44,7 @@ for (int i = 0; i < {0}; ++i)
   read[i] = i/100.;
 }}
 """.format(size)
-    execute = "local::{0}<{1}, {2}>(NULL, NULL, read, write, {2});"
+    execute = "local::{0}<{1}, {2}>(NULL, NULL, read, write, {3});"
     execute = execute.format(kernel, n_qpoint, row_size, n_elem)
     flags = ""
     ex_time = time(include, setup, execute, flags)

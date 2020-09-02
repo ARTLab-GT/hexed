@@ -11,7 +11,11 @@ namespace local
     {
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
-        write[i_elem*n_qpoint + i_qpoint] = read[i_elem*n_qpoint + i_qpoint]*2;
+        write[i_elem*n_qpoint + i_qpoint] = 0.;
+      }
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
+      {
+        write[i_elem*n_qpoint + i_qpoint] += read[i_elem*n_qpoint + i_qpoint];
       }
     }
   }
@@ -44,6 +48,7 @@ namespace local
       }
     }
   }
+
 }
 
 #endif
