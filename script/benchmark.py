@@ -32,10 +32,10 @@ int main ()
 n_elem = int(1e5)
 row_size = 5
 dim = 2
-n_var = 3
+n_var = 5
 n_qpoint = row_size**dim
 size = n_qpoint*n_elem*n_var
-kernels = ["copy", "basic_tensor", "add_operator"]
+kernels = ["copy", "basic_tensor", "add_operator", "matvec", "cpg_euler_matvec_scalar"]
 for kernel in kernels:
     include = """
 #include <fstream>
@@ -53,8 +53,15 @@ for (int i = 0; i < {0}; ++i)
         execute = "local::{0}<{1}, {2}>(NULL, NULL, read, write, {3});"
         execute = execute.format(kernel, n_qpoint, row_size, n_elem*n_var)
     else:
+        setup += """
+double diff_mat [{0}*{0}];
+for (int i = 0; i < {0}*{0}; ++i)
+{{
+  diff_mat[i] = i/2.;
+}}
+""".format(row_size)
         execute = """
-local::update<{4}, {1}, {2}, local::add_operator<{4}, {2}>>(NULL, NULL, read, write, {3});"""
+local::update<{4}, {1}, {2}, local::{0}<{4}, {2}>>(diff_mat, NULL, read, write, {3});"""
         execute = execute.format(kernel, n_qpoint, row_size, n_elem, n_var)
     file_name = "benchmark_output_{}.txt".format(kernel)
     ofile = open(file_name, "w"); ofile.write(""); ofile.close()
