@@ -149,8 +149,41 @@ namespace local
       FLUX(2) = READ(2)*READ(i_axis)/READ(0);
       FLUX(3) = READ(3)*READ(i_axis)/READ(0);
       FLUX(i_axis) += PRES;
-      FLUX(4) = READ(4)*(READ(i_axis) + PRES)/READ(0);
+      FLUX(4) = READ(i_axis)*(READ(4) + PRES)/READ(0);
+      #undef PRES
     }
+    Eigen::Map<Eigen::Matrix<double, row_size, row_size>> dm (diff_mat);
+    Eigen::Map<Eigen::Matrix<double, row_size, n_var>> w (write);
+    Eigen::Map<Eigen::Matrix<double, row_size, n_var>> f (flux);
+    w.noalias() = dm*f;
+  }
+
+  template<int n_var, int row_size>
+  void cpg_euler_matvec_simd(double * read, double * write, double * diff_mat, int i_axis)
+  {
+    double flux[n_var*row_size];
+    Eigen::Map<Eigen::Array<double, row_size, 1>> mass   (read);
+    Eigen::Map<Eigen::Array<double, row_size, 1>> mmtm_0 (read + 1*row_size);
+    Eigen::Map<Eigen::Array<double, row_size, 1>> mmtm_1 (read + 2*row_size);
+    Eigen::Map<Eigen::Array<double, row_size, 1>> mmtm_2 (read + 3*row_size);
+    Eigen::Map<Eigen::Array<double, row_size, 1>> ener   (read + 4*row_size);
+    Eigen::Map<Eigen::Array<double, row_size, 1>> mmtm_i (read + (i_axis + 1)*row_size);
+
+    Eigen::Map<Eigen::Array<double, row_size, 1>> f_mass   (flux);
+    Eigen::Map<Eigen::Array<double, row_size, 1>> f_mmtm_0 (flux + 1*row_size);
+    Eigen::Map<Eigen::Array<double, row_size, 1>> f_mmtm_1 (flux + 2*row_size);
+    Eigen::Map<Eigen::Array<double, row_size, 1>> f_mmtm_2 (flux + 3*row_size);
+    Eigen::Map<Eigen::Array<double, row_size, 1>> f_ener   (flux + 4*row_size);
+    Eigen::Map<Eigen::Array<double, row_size, 1>> f_mmtm_i (read + (i_axis + 1)*row_size);
+
+    #define PRES ((gamma - 1)*(ener - 0.5*(mmtm_0*mmtm_0 + mmtm_1*mmtm_1 + mmtm_2*mmtm_2)/mass))
+    f_mass = mmtm_i;
+    f_mmtm_0 = mmtm_i*mmtm_0/mass;
+    f_mmtm_1 = mmtm_i*mmtm_1/mass;
+    f_mmtm_2 = mmtm_i*mmtm_2/mass;
+    f_ener = mmtm_i/mass*(ener + PRES);
+    f_mmtm_i += PRES;
+
     Eigen::Map<Eigen::Matrix<double, row_size, row_size>> dm (diff_mat);
     Eigen::Map<Eigen::Matrix<double, row_size, n_var>> w (write);
     Eigen::Map<Eigen::Matrix<double, row_size, n_var>> f (flux);

@@ -35,7 +35,7 @@ dim = 2
 n_var = 5
 n_qpoint = row_size**dim
 size = n_qpoint*n_elem*n_var
-kernels = ["copy", "basic_tensor", "add_operator", "matvec", "cpg_euler_matvec_scalar"]
+kernels = ["copy", "basic_tensor", "add_operator", "matvec", "cpg_euler_matvec_scalar", "cpg_euler_matvec_simd"]
 for kernel in kernels:
     include = """
 #include <fstream>
@@ -49,6 +49,7 @@ for (int i = 0; i < {0}; ++i)
   read[i] = i/100.;
 }}
 """.format(size)
+    flags = ""
     if kernel in "copy basic_tensor":
         execute = "local::{0}<{1}, {2}>(NULL, NULL, read, write, {3});"
         execute = execute.format(kernel, n_qpoint, row_size, n_elem*n_var)
@@ -63,6 +64,8 @@ for (int i = 0; i < {0}*{0}; ++i)
         execute = """
 local::update<{4}, {1}, {2}, local::{0}<{4}, {2}>>(diff_mat, NULL, read, write, {3});"""
         execute = execute.format(kernel, n_qpoint, row_size, n_elem, n_var)
+    if "simd" in kernel:
+        flags += "-march=native"
     file_name = "benchmark_output_{}.txt".format(kernel)
     ofile = open(file_name, "w"); ofile.write(""); ofile.close()
     teardown = r"""
@@ -74,6 +77,5 @@ for (int i = 0; i < 1000; ++i)
 }}
 ofile.close();
 """.format(size, file_name)
-    flags = ""
     ex_time = time(include, setup, execute, teardown, flags)
     print(ex_time)
