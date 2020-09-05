@@ -30,12 +30,12 @@ int main ()
     return time
 
 n_elem = int(1e5)
-row_size = 10
+row_size = 5
 dim = 3
 n_var = 5
 n_qpoint = row_size**dim
 size = n_qpoint*n_elem*n_var
-kernels = ["copy", "basic_tensor", "update_add", "update_matvec", "cpg_euler_matvec"]
+kernels = ["copy", "basic_tensor", "update_add", "update_matvec", "cpg_euler_matrix"]
 for kernel in kernels:
     include = """
 #include <fstream>
@@ -58,8 +58,6 @@ for (int i = 0; i < {1}*{1}; ++i)
     flags = ""
     execute = "local::{}<{}, {}, {}>(diff_mat, NULL, read, write, {});"
     execute = execute.format(kernel, n_var, n_qpoint, row_size, n_elem)
-    if "simd" in kernel:
-        flags += "-march=native"
     file_name = "benchmark_output_{}.txt".format(kernel)
     ofile = open(file_name, "w"); ofile.write(""); ofile.close()
     teardown = r"""

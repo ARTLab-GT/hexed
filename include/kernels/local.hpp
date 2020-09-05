@@ -173,7 +173,7 @@ namespace local
   const double gamma = 1.4;
 
   template<int n_var, int n_qpoint, int row_size>
-  void cpg_euler_matvec(double * diff_mat, double * quad_weights,
+  void cpg_euler_matrix(double * diff_mat, double * quad_weights,
               double * read, double * write, int n_elem)
   {
     double mat [row_size*row_size];
@@ -207,25 +207,28 @@ namespace local
                        + i_outer*stride*row_size + i_inner + i_qpoint*stride];
               }
             }
-            double flux[n_var*row_size];
+            double flux [n_var*row_size];
             for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
             {
               #define READ(i) row_r[(i)*row_size + i_qpoint]
               #define FLUX(i) flux[(i)*row_size + i_qpoint]
-              #define PRES ((gamma - 1)*(READ(4) - 0.5*(READ(1)*READ(1) + READ(2)*READ(2) \
-                                         + READ(3)*READ(3))/READ(0)))
-              FLUX(0) = READ(i_axis);
-              FLUX(1) = READ(1)*READ(i_axis)/READ(0);
-              FLUX(2) = READ(2)*READ(i_axis)/READ(0);
-              FLUX(3) = READ(3)*READ(i_axis)/READ(0);
-              FLUX(i_axis) += PRES;
-              FLUX(4) = READ(i_axis)*(READ(4) + PRES)/READ(0);
-              #undef PRES
+              double veloc = READ(i_axis)/READ(n_var - 2);
+              double pres = 0;
+              for (int j_axis = 0; j_axis < n_var - 2; ++j_axis)
+              {
+                FLUX(j_axis) = READ(j_axis)*veloc;
+                pres += READ(j_axis)*READ(j_axis)/READ(n_var - 2);
+              }
+              FLUX(i_axis) += pres;
+              FLUX(n_var - 2) = READ(i_axis);
+              FLUX(n_var - 1) = (READ(n_var - 1) + pres)*veloc;
+              #undef FLUX
+              #undef READ
             }
-            Eigen::Map<Eigen::Matrix<double, row_size, 1>> f (&(flux[0]));
-            Eigen::Map<Eigen::Matrix<double, row_size, 1>> w (&(row_w[0]));
-            Eigen::Map<Eigen::Matrix<double, row_size, row_size>> dm (&(mat[0]));
-            w.noalias() = dm*f;
+            Eigen::Map<Eigen::Matrix<double, row_size, 1       >> f (&(flux[0]));
+            Eigen::Map<Eigen::Matrix<double, row_size, 1       >> w (&(row_w[0]));
+            Eigen::Map<Eigen::Matrix<double, row_size, row_size>> d (&(mat[0]));
+            w.noalias() = d*f;
             for (int i_var = 0; i_var < n_var; ++i_var)
             {
               for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
@@ -239,38 +242,6 @@ namespace local
         }
       }
     }
-  }
-
-  template<int n_var, int row_size>
-  void cpg_euler_matvec_simd(double * read, double * write, double * diff_mat, int i_axis)
-  {
-    double flux[n_var*row_size];
-    Eigen::Map<Eigen::Array<double, row_size, 1>> mass   (read);
-    Eigen::Map<Eigen::Array<double, row_size, 1>> mmtm_0 (read + 1*row_size);
-    Eigen::Map<Eigen::Array<double, row_size, 1>> mmtm_1 (read + 2*row_size);
-    Eigen::Map<Eigen::Array<double, row_size, 1>> mmtm_2 (read + 3*row_size);
-    Eigen::Map<Eigen::Array<double, row_size, 1>> ener   (read + 4*row_size);
-    Eigen::Map<Eigen::Array<double, row_size, 1>> mmtm_i (read + (i_axis + 1)*row_size);
-
-    Eigen::Map<Eigen::Array<double, row_size, 1>> f_mass   (flux);
-    Eigen::Map<Eigen::Array<double, row_size, 1>> f_mmtm_0 (flux + 1*row_size);
-    Eigen::Map<Eigen::Array<double, row_size, 1>> f_mmtm_1 (flux + 2*row_size);
-    Eigen::Map<Eigen::Array<double, row_size, 1>> f_mmtm_2 (flux + 3*row_size);
-    Eigen::Map<Eigen::Array<double, row_size, 1>> f_ener   (flux + 4*row_size);
-    Eigen::Map<Eigen::Array<double, row_size, 1>> f_mmtm_i (read + (i_axis + 1)*row_size);
-
-    #define PRES ((gamma - 1)*(ener - 0.5*(mmtm_0*mmtm_0 + mmtm_1*mmtm_1 + mmtm_2*mmtm_2)/mass))
-    f_mass = mmtm_i;
-    f_mmtm_0 = mmtm_i*mmtm_0/mass;
-    f_mmtm_1 = mmtm_i*mmtm_1/mass;
-    f_mmtm_2 = mmtm_i*mmtm_2/mass;
-    f_ener = mmtm_i/mass*(ener + PRES);
-    f_mmtm_i += PRES;
-
-    Eigen::Map<Eigen::Matrix<double, row_size, row_size>> dm (diff_mat);
-    Eigen::Map<Eigen::Matrix<double, row_size, n_var>> w (write);
-    Eigen::Map<Eigen::Matrix<double, row_size, n_var>> f (flux);
-    w.noalias() = dm*f;
   }
 
 }
