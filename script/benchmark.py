@@ -35,7 +35,7 @@ dim = 2
 n_var = 5
 n_qpoint = row_size**dim
 size = n_qpoint*n_elem*n_var
-kernels = ["copy", "basic_tensor", "add_operator", "matvec", "cpg_euler_matvec_scalar", "cpg_euler_matvec_simd"]
+kernels = ["copy", "basic_tensor", "update_add", "update_matvec"]
 for kernel in kernels:
     include = """
 #include <fstream>
@@ -48,22 +48,16 @@ for (int i = 0; i < {0}; ++i)
 {{
   read[i] = i/100.;
 }}
-""".format(size)
-    flags = ""
-    if kernel in "copy basic_tensor":
-        execute = "local::{0}<{1}, {2}>(NULL, NULL, read, write, {3});"
-        execute = execute.format(kernel, n_qpoint, row_size, n_elem*n_var)
-    else:
-        setup += """
-double diff_mat [{0}*{0}];
-for (int i = 0; i < {0}*{0}; ++i)
+
+double diff_mat [{1}*{1}];
+for (int i = 0; i < {1}*{1}; ++i)
 {{
   diff_mat[i] = i/2.;
 }}
-""".format(row_size)
-        execute = """
-local::update<{4}, {1}, {2}, local::{0}<{4}, {2}>>(diff_mat, NULL, read, write, {3});"""
-        execute = execute.format(kernel, n_qpoint, row_size, n_elem, n_var)
+""".format(size, row_size)
+    flags = ""
+    execute = "local::{}<{}, {}, {}>(diff_mat, NULL, read, write, {});"
+    execute = execute.format(kernel, n_var, n_qpoint, row_size, n_elem)
     if "simd" in kernel:
         flags += "-march=native"
     file_name = "benchmark_output_{}.txt".format(kernel)
