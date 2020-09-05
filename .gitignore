@@ -1,1 +1,3 @@
 benchmark*.txt
+*.o
+test/unit_test
