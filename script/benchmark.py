@@ -30,12 +30,12 @@ int main ()
     return time
 
 n_elem = int(1e5)
-row_size = 5
-dim = 2
+row_size = 10
+dim = 3
 n_var = 5
 n_qpoint = row_size**dim
 size = n_qpoint*n_elem*n_var
-kernels = ["copy", "basic_tensor", "update_add", "update_matvec"]
+kernels = ["copy", "basic_tensor", "update_add", "update_matvec", "cpg_euler_matvec"]
 for kernel in kernels:
     include = """
 #include <fstream>
