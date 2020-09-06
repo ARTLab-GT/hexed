@@ -1,12 +1,15 @@
-FLAG = -I ../include/ -g -fsanitize=address -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize=leak -fsanitize=undefined 
+FLAGS = -I ../include/ -g -fsanitize=address -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize=leak -fsanitize=undefined 
 
-all: main
-	g++ ${FLAG} main.o -o unit_test
+SRCS := ${wildcard *.cpp}
+OBJS := ${SRCS:%.cpp=%.o}
+
+all: ${OBJS}
+	g++ ${FLAGS} ${OBJS} -o unit_test
+
+%.o: %.cpp
+	g++ -c ${FLAGS} $< -o $@
 
 clean:
 	rm *.o
 	rm unit_test
-
-main: main.cpp
-	g++ -c ${FLAG} main.cpp
 
