@@ -6,7 +6,7 @@
 template<int n_var, int n_qpoint, int row_size>
 void cpg_euler_matrix(double * read, double * write, int n_elem,
                       double * diff_mat, double * quad_weights,
-                      double dt, double sp_heat_rat = 1.4)
+                      double cfl, double sp_heat_rat = 1.4)
 {
 
   // Fetch differentiation matrix
@@ -74,7 +74,7 @@ void cpg_euler_matrix(double * read, double * write, int n_elem,
           Eigen::Map<Eigen::Matrix<double, row_size, 1       >> f (&(flux[0]));
           Eigen::Map<Eigen::Matrix<double, row_size, 1       >> w (&(row_w[0]));
           Eigen::Map<Eigen::Matrix<double, row_size, row_size>> d (&(mat[0]));
-          w.noalias() += d*f*dt;
+          w.noalias() += d*f*cfl;
 
           // Write updated solution
           for (int i_var = 0; i_var < n_var; ++i_var)
