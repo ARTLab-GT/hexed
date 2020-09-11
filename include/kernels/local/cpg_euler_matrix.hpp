@@ -1,5 +1,6 @@
 #ifndef CPG_EULER_MATRIX_HPP_
 #define CPG_EULER_MATRIX_HPP_
+#include <iostream>
 
 #include <Eigen/Dense>
 
@@ -71,8 +72,8 @@ void cpg_euler_matrix(double * read, double * write, int n_elem,
           }
 
           // Differentiate flux
-          Eigen::Map<Eigen::Matrix<double, row_size, 1       >> f (&(flux[0]));
-          Eigen::Map<Eigen::Matrix<double, row_size, 1       >> w (&(row_w[0]));
+          Eigen::Map<Eigen::Matrix<double, row_size, n_var   >> f (&(flux[0]));
+          Eigen::Map<Eigen::Matrix<double, row_size, n_var   >> w (&(row_w[0]));
           Eigen::Map<Eigen::Matrix<double, row_size, row_size>> d (&(mat[0]));
           w.noalias() += d*f*cfl;
 

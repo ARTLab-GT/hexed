@@ -148,8 +148,8 @@ void update_matvec(double * read, double * write, int n_elem,
                      + i_outer*stride*row_size + i_inner + i_qpoint*stride];
             }
           }
-          Eigen::Map<Eigen::Matrix<double, row_size, 1>> r (&(row_r[0]));
-          Eigen::Map<Eigen::Matrix<double, row_size, 1>> w (&(row_w[0]));
+          Eigen::Map<Eigen::Matrix<double, row_size, n_var   >> r  (&(row_r[0]));
+          Eigen::Map<Eigen::Matrix<double, row_size, n_var   >> w  (&(row_w[0]));
           Eigen::Map<Eigen::Matrix<double, row_size, row_size>> dm (&(mat[0]));
           w.noalias() = dm*r;
           for (int i_var = 0; i_var < n_var; ++i_var)
