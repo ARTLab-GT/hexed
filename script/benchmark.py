@@ -36,12 +36,11 @@ n_var = 5
 n_qpoint = row_size**dim
 size = n_qpoint*n_elem*n_var
 benchmark = ["copy", "basic_tensor", "update_add", "update_matvec"]
-real = ["cpg_euler_matrix"]
+real = ["cpg_euler_matrix", "cpg_euler_tensor"]
 for kernel in benchmark + real:
     include = """
 #include <fstream>
 #include "kernels/local/benchmark.hpp"
-#include "kernels/local/cpg_euler_matrix.hpp"
 """
     setup = """
 double * read  = new double [{0}];
@@ -61,6 +60,9 @@ for (int i = 0; i < {1}*{1}; ++i)
     if kernel in benchmark:
         execute = "{}<{}, {}, {}>(read, write, {}, diff_mat);"
     else:
+        include += """
+#include "kernels/local/{}.hpp"
+""".format(kernel)
         execute = "{}<{}, {}, {}>(read, write, {}, diff_mat, 1.);"
     execute = execute.format(kernel, n_var, n_qpoint, row_size, n_elem)
     file_name = "benchmark_output_{}.txt".format(kernel)
