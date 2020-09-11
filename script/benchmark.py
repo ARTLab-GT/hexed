@@ -37,6 +37,7 @@ n_qpoint = row_size**dim
 size = n_qpoint*n_elem*n_var
 benchmark = ["copy", "basic_tensor", "update_add", "update_matvec"]
 real = ["cpg_euler_matrix", "cpg_euler_tensor"]
+times = []
 for kernel in benchmark + real:
     include = """
 #include <fstream>
@@ -77,4 +78,9 @@ for (int i = 0; i < 1000; ++i)
 ofile.close();
 """.format(size, file_name)
     ex_time = time(include, setup, execute, teardown, flags)
-    print(ex_time)
+    times.append(ex_time)
+    print(kernel, ": ", ex_time)
+plt.bar(range(len(times)), times)
+plt.xticks(range(len(times)), (benchmark + real), rotation=20)
+plt.ylabel("Execution time (s)")
+plt.show()
