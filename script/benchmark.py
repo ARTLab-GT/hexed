@@ -57,7 +57,7 @@ for (int i = 0; i < {1}*{1}; ++i)
   diff_mat[i] = i/2.;
 }}
 """.format(size, row_size)
-    flags = ""
+    flags = "-march=native"
     if kernel in benchmark:
         execute = "{}<{}, {}, {}>(read, write, {}, diff_mat);"
     else:

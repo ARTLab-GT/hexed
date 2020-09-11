@@ -40,8 +40,6 @@ void test_diff_mat(Basis& basis)
       REQUIRE( derivative_quad == Approx(-0.38 - 2*4.43*basis.node(i_result)) );
     }
   }
-
-  
 }
 
 TEST_CASE("Equidistant Basis")

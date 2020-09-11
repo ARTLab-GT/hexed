@@ -1,6 +1,5 @@
 #ifndef CPG_EULER_MATRIX_HPP_
 #define CPG_EULER_MATRIX_HPP_
-#include <iostream>
 
 #include <Eigen/Dense>
 
@@ -63,7 +62,7 @@ void cpg_euler_matrix(double * read, double * write, int n_elem,
               FLUX(j_axis) = READ(j_axis)*veloc;
               pres += READ(j_axis)*READ(j_axis)/READ(n_var - 2);
             }
-            pres = (sp_heat_rat - 1.)*(READ(n_var - 1) - pres);
+            pres = (sp_heat_rat - 1.)*(READ(n_var - 1) - 0.5*pres);
             FLUX(i_axis) += pres;
             FLUX(n_var - 2) = READ(i_axis);
             FLUX(n_var - 1) = (READ(n_var - 1) + pres)*veloc;
@@ -75,7 +74,7 @@ void cpg_euler_matrix(double * read, double * write, int n_elem,
           Eigen::Map<Eigen::Matrix<double, row_size, n_var   >> f (&(flux[0]));
           Eigen::Map<Eigen::Matrix<double, row_size, n_var   >> w (&(row_w[0]));
           Eigen::Map<Eigen::Matrix<double, row_size, row_size>> d (&(mat[0]));
-          w.noalias() += d*f*cfl;
+          w.noalias() = d*f*cfl;
 
           // Write updated solution
           for (int i_var = 0; i_var < n_var; ++i_var)
