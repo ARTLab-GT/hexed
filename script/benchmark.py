@@ -61,7 +61,7 @@ for (int i = 0; i < {1}*{1}; ++i)
     if kernel in benchmark:
         execute = "{}<{}, {}, {}>(read, write, {}, diff_mat);"
     else:
-        execute = "{}<{}, {}, {}>(read, write, {}, diff_mat, NULL, 1.);"
+        execute = "{}<{}, {}, {}>(read, write, {}, diff_mat, 1.);"
     execute = execute.format(kernel, n_var, n_qpoint, row_size, n_elem)
     file_name = "benchmark_output_{}.txt".format(kernel)
     ofile = open(file_name, "w"); ofile.write(""); ofile.close()

@@ -5,8 +5,7 @@
 
 template<int n_var, int n_qpoint, int row_size>
 void cpg_euler_matrix(double * read, double * write, int n_elem,
-                      double * diff_mat, double * quad_weights,
-                      double cfl, double sp_heat_rat = 1.4)
+                      double * diff_mat, double cfl, double sp_heat_rat = 1.4)
 {
 
   // Fetch differentiation matrix
