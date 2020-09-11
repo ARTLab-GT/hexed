@@ -10,7 +10,7 @@ void test_diff_mat(Basis& basis)
     {
       derivative += basis.diff_mat(i_result, i_operand);
     }
-    REQUIRE( derivative == Approx(0) );
+    REQUIRE( derivative == Approx(0).margin(1e-13) );
   }
 
   std::vector<double> linear;
@@ -31,8 +31,14 @@ void test_diff_mat(Basis& basis)
       derivative_lin  += basis.diff_mat(i_result, i_operand)*linear   [i_operand];
       derivative_quad += basis.diff_mat(i_result, i_operand)*quadratic[i_operand];
     }
-    REQUIRE( derivative_lin  == Approx(9.07) );
-    REQUIRE( derivative_quad == Approx(-0.38 + 2*4.43*basis.node(i_result)) );
+    if (basis.rank > 1)
+    {
+      REQUIRE( derivative_lin  == Approx(9.07) );
+    }
+    if (basis.rank > 2)
+    {
+      REQUIRE( derivative_quad == Approx(-0.38 - 2*4.43*basis.node(i_result)) );
+    }
   }
 
   
@@ -40,6 +46,9 @@ void test_diff_mat(Basis& basis)
 
 TEST_CASE("Equidistant Basis")
 {
-  Equidistant equi (4);
-  test_diff_mat(equi);
+  for (int rank = 0; rank < 10; ++rank)
+  {
+    Equidistant equi (rank);
+    test_diff_mat(equi);
+  }
 }
