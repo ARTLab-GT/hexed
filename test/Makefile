@@ -1,6 +1,6 @@
 FLAGS = -I ../include/ -g -fsanitize=address -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize=leak -fsanitize=undefined 
 
-SRCS := Basis.cpp Equidistant.cpp
+SRCS := Basis.cpp Equidistant.cpp Grid.cpp
 SRCS := ${SRCS:%=../src/%}
 SRCS := ${wildcard *.cpp} ${SRCS}
 OBJS := ${SRCS:%.cpp=%.o}
