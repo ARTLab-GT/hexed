@@ -14,15 +14,16 @@ class Grid
   int n_qpoint;
   int n_dof;
   int n_elem;
-  double * access_r;
-  double * access_w;
+  std::vector<double> state_r;
+  std::vector<double> state_w;
+  std::vector<int> pos;
+  double mesh_size;
 
-  Grid(int n_var_arg, int n_dim_arg, int n_elem_arg, Basis& basis_arg);
+  Grid(int n_var_arg, int n_dim_arg, int n_elem_arg, double mesh_size_arg, Basis& basis_arg);
   virtual ~Grid();
 
-  protected:
-  std::vector<double> storage_r;
-  std::vector<double> storage_w;
+  std::vector<double> get_pos(int i_elem);
+  void visualize();
 };
 
 #endif
