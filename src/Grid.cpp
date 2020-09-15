@@ -19,7 +19,7 @@ Grid::~Grid() {}
 
 std::vector<double> Grid::get_pos(int i_elem)
 {
-  std::vector<double> elem_pos (n_qpoint*n_dim);
+  std::vector<double> elem_pos (n_qpoint*n_dim, 0.);
   return elem_pos;
 }
 

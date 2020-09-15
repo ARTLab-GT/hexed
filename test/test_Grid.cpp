@@ -29,7 +29,62 @@ TEST_CASE("Grid")
     REQUIRE(grid3.state_r[size - 1] == 0.);
     REQUIRE(grid3.state_w[size - 1] == 0.);
   }
-  SECTION("Positioning and visualization")
+
+  for (int i = 0; i < 5; ++i)
   {
+    grid1.pos[i] = i - 1;
   }
+  {
+    int i = 0;
+    grid2.pos[i++] = 0; grid2.pos[i++] =  0;
+    grid2.pos[i++] = 0; grid2.pos[i++] = -1;
+    grid2.pos[i++] = 1; grid2.pos[i++] = -1;
+    grid2.pos[i++] = 1; grid2.pos[i++] =  1;
+    grid2.pos[i++] = 3; grid2.pos[i++] =  0;
+  }
+  for (int i = 0; i < 3; ++i)
+  {
+    for (int j = 0; j < 3; ++j)
+    {
+      for (int k = 0; k < 3; ++k)
+      {
+        int i_qpoint = k + 3*(j + 3*i);
+        grid3.pos[i_qpoint + 0] = i;
+        grid3.pos[i_qpoint + 1] = j;
+        grid3.pos[i_qpoint + 2] = k;
+      }
+    }
+  }
+
+  SECTION("Positioning")
+  {
+    std::vector<double> pos;
+    pos = grid1.get_pos(0);
+    REQUIRE(pos[0] == 0.);
+    REQUIRE(pos[1] == 1./7.);
+    REQUIRE(pos[7] == 1.);
+    pos = grid1.get_pos(1);
+    REQUIRE(pos[0] == 1.);
+
+    pos = grid2.get_pos(0);
+    REQUIRE(pos[0] == 0.);
+    REQUIRE(pos[1] == 0.);
+    REQUIRE(pos[2] == 1./7.);
+    REQUIRE(pos[3] == 0.);
+    REQUIRE(pos[14] == 0.);
+    REQUIRE(pos[15] == 1./7.);
+    REQUIRE(pos[127] == 1.);
+    pos = grid2.get_pos(1);
+    REQUIRE(pos[0] == 0.);
+    REQUIRE(pos[1] == -1.);
+    REQUIRE(pos[126] == 1.);
+    REQUIRE(pos[127] == 0.);
+
+    pos = grid3.get_pos(0);
+    REQUIRE(pos[0] == 0.);
+    REQUIRE(pos[1] == 0.);
+    REQUIRE(pos[2] == 0.);
+    REQUIRE(pos[3] == 1./7.);
+  }
+
 }
