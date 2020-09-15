@@ -87,4 +87,11 @@ TEST_CASE("Grid")
     REQUIRE(pos[512] == 0.);
   }
 
+  SECTION("Visualization")
+  {
+    grid1.visualize("unit_test_1d");
+    grid2.visualize("unit_test_2d");
+    grid3.visualize("unit_test_3d");
+  }
+
 }
