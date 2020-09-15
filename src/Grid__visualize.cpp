@@ -32,7 +32,7 @@ void Grid::visualize(std::string file_name)
   INTEGER4 ICellMax = 0;
   INTEGER4 JCellMax = 0;
   INTEGER4 KCellMax = 0;
-  INTEGER4 DIsDouble = 0;
+  INTEGER4 DIsDouble = 1;
   double SolTime = time;
   INTEGER4 StrandID = 0; /* StaticZone */
   INTEGER4 unused = 0; // ParentZone is no longer used
@@ -48,40 +48,42 @@ void Grid::visualize(std::string file_name)
   INTEGER4 JMax = (n_dim >= 2) ? basis.rank : 1;
   INTEGER4 KMax = (n_dim >= 3) ? basis.rank : 1;
 
-  int i_elem = 0;
-  /* Ordered Zone */
-  INTEGER4 ZoneType = 0;
-  I = TECZNE142((char*)"element 0",
-  &ZoneType,
-  &IMax,
-  &JMax,
-  &KMax,
-  &ICellMax,
-  &JCellMax,
-  &KCellMax,
-  &SolTime,
-  &StrandID,
-  &unused,
-  &IsBlock,
-  &NFConns,
-  &FNMode,
-  &TotalNumFaceNodes,
-  &TotalNumBndryFaces,
-  &TotalNumBndryConnections,
-  NULL,
-  NULL,
-  NULL,
-  &ShrConn);
+  for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+  {
+    /* Ordered Zone */
+    INTEGER4 ZoneType = 0;
+    I = TECZNE142(("element " + std::to_string(i_elem)).c_str(),
+    &ZoneType,
+    &IMax,
+    &JMax,
+    &KMax,
+    &ICellMax,
+    &JCellMax,
+    &KCellMax,
+    &SolTime,
+    &StrandID,
+    &unused,
+    &IsBlock,
+    &NFConns,
+    &FNMode,
+    &TotalNumFaceNodes,
+    &TotalNumBndryFaces,
+    &TotalNumBndryConnections,
+    NULL,
+    NULL,
+    NULL,
+    &ShrConn);
 
-  INTEGER4 III = IMax * JMax * KMax;
-  std::vector<double> pos = get_pos(0);
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-  {
-    I = TECDAT142(&III, pos.data() + i_dim*n_qpoint, &DIsDouble);
-  }
-  for (int i_var = 0; i_var < n_var; ++i_var)
-  {
-    I = TECDAT142(&III, state_r.data() + i_elem*n_dof + i_var*n_qpoint, &DIsDouble);
+    INTEGER4 III = IMax * JMax * KMax;
+    std::vector<double> pos = get_pos(i_elem);
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+    {
+      I = TECDAT142(&III, pos.data() + i_dim*n_qpoint, &DIsDouble);
+    }
+    for (int i_var = 0; i_var < n_var; ++i_var)
+    {
+      I = TECDAT142(&III, state_r.data() + i_elem*n_dof + i_var*n_qpoint, &DIsDouble);
+    }
   }
 
   I = TECEND142();
