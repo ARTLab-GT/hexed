@@ -68,23 +68,23 @@ TEST_CASE("Grid")
 
     pos = grid2.get_pos(0);
     REQUIRE(pos[0] == 0.);
-    REQUIRE(pos[1] == 0.);
-    REQUIRE(pos[2] == 1./7.);
-    REQUIRE(pos[3] == 0.);
-    REQUIRE(pos[14] == 0.);
-    REQUIRE(pos[15] == 1./7.);
+    REQUIRE(pos[1] == 1./7.);
+    REQUIRE(pos[8] == 0.);
+    REQUIRE(pos[63] == 1.);
+    REQUIRE(pos[64] == 0.);
+    REQUIRE(pos[65] == 0.);
+    REQUIRE(pos[72] == 1./7.);
     REQUIRE(pos[127] == 1.);
     pos = grid2.get_pos(1);
     REQUIRE(pos[0] == 0.);
-    REQUIRE(pos[1] == -1.);
-    REQUIRE(pos[126] == 1.);
+    REQUIRE(pos[63] == 1.);
+    REQUIRE(pos[64] == -1.);
     REQUIRE(pos[127] == 0.);
 
     pos = grid3.get_pos(0);
     REQUIRE(pos[0] == 0.);
-    REQUIRE(pos[1] == 0.);
-    REQUIRE(pos[2] == 0.);
-    REQUIRE(pos[3] == 1./7.);
+    REQUIRE(pos[511] == 1.);
+    REQUIRE(pos[512] == 0.);
   }
 
 }
