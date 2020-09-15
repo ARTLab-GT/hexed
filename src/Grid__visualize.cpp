@@ -6,7 +6,7 @@
 
 void Grid::visualize(std::string file_name)
 {
-  INTEGER4 Debug = 1;
+  INTEGER4 Debug = 0;
   INTEGER4 VIsDouble = 1;
   INTEGER4 FileType = 0;
   INTEGER4 fileFormat = 1; // 0 == PLT, 1 == SZPLT

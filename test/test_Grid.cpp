@@ -48,10 +48,10 @@ TEST_CASE("Grid")
     {
       for (int k = 0; k < 3; ++k)
       {
-        int i_qpoint = k + 3*(j + 3*i);
-        grid3.pos[i_qpoint + 0] = i;
-        grid3.pos[i_qpoint + 1] = j;
-        grid3.pos[i_qpoint + 2] = k;
+        int i_elem = 3*(k + 3*(j + 3*i));
+        grid3.pos[i_elem + 0] = i;
+        grid3.pos[i_elem + 1] = j;
+        grid3.pos[i_elem + 2] = k;
       }
     }
   }
@@ -85,6 +85,22 @@ TEST_CASE("Grid")
     REQUIRE(pos[0] == 0.);
     REQUIRE(pos[511] == 0.1);
     REQUIRE(pos[512] == 0.);
+    pos = grid3.get_pos(1);
+    REQUIRE(pos[0  ] == 0.);
+    REQUIRE(pos[512] == 0.);
+    REQUIRE(pos[1024] == 0.1);
+    pos = grid3.get_pos(3);
+    REQUIRE(pos[0  ] == 0.);
+    REQUIRE(pos[512] == 0.1);
+    REQUIRE(pos[1024] == 0.);
+    pos = grid3.get_pos(9);
+    REQUIRE(pos[0  ] == 0.1);
+    REQUIRE(pos[512] == 0.);
+    REQUIRE(pos[1024] == 0.);
+    pos = grid3.get_pos(26);
+    REQUIRE(pos[0  ] == 0.2);
+    REQUIRE(pos[512] == 0.2);
+    REQUIRE(pos[1024] == 0.2);
   }
 
   SECTION("Visualization")
