@@ -31,7 +31,7 @@ TEST_CASE("Sinusoidal density wave")
         grid.state_r[i_qpoint + grid.n_dof*i_elem + 2*grid.n_qpoint] = energy;
       }
     }
-    grid.print();
+    //grid.print();
     grid.visualize("sinusoid_1d");
   }
 }

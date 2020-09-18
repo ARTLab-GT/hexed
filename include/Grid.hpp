@@ -15,8 +15,8 @@ class Grid
   int n_qpoint;
   int n_dof;
   int n_elem;
-  std::vector<double> state_r;
-  std::vector<double> state_w;
+  double * state_r;
+  double * state_w;
   std::vector<int> pos;
   double mesh_size;
   double time;
@@ -27,6 +27,10 @@ class Grid
   std::vector<double> get_pos(int i_elem);
   void visualize(std::string file_name);
   void print();
+
+  protected:
+  std::vector<double> state_r_storage;
+  std::vector<double> state_w_storage;
 
   private:
   void populate_slice(std::vector<double>&, std::vector<int>, int);

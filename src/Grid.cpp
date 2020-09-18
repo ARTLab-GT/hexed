@@ -11,8 +11,10 @@ basis(basis_arg)
     n_qpoint *= basis.rank;
   }
   n_dof = n_qpoint*n_var;
-  state_r.resize(n_dof*n_elem, 0.);
-  state_w.resize(n_dof*n_elem, 0.);
+  state_r_storage.resize(n_dof*n_elem, 0.);
+  state_w_storage.resize(n_dof*n_elem, 0.);
+  state_r = state_r_storage.data();
+  state_w = state_w_storage.data();
   pos.resize(n_elem*n_dim, 0);
 }
 
