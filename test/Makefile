@@ -11,8 +11,7 @@ all: ${OBJS}
 	g++ -c ${FLAGS} $< -o $@
 
 clean:
-	@echo ${SRCS}
-	@echo ${OBJS}
 	rm *.o
 	rm unit_test
+	rm *.szplt
 
