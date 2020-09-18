@@ -26,6 +26,7 @@ class Grid
 
   std::vector<double> get_pos(int i_elem);
   void visualize(std::string file_name);
+  void print();
 
   private:
   void populate_slice(std::vector<double>&, std::vector<int>, int);

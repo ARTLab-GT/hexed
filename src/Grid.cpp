@@ -1,4 +1,5 @@
 #include "Grid.hpp"
+#include <iostream>
 
 Grid::Grid(int n_var_arg, int n_dim_arg, int n_elem_arg, double mesh_size_arg, Basis& basis_arg)
 : n_var(n_var_arg), n_dim(n_dim_arg), n_elem(n_elem_arg), mesh_size(mesh_size_arg), time(0.),
@@ -51,4 +52,26 @@ std::vector<double> Grid::get_pos(int i_elem)
   std::vector<int> indices;
   populate_slice(elem_pos, indices, i_elem);
   return elem_pos;
+}
+
+void Grid::print()
+{
+  for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+  {
+    std::vector<double> pos = get_pos(i_elem);
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
+    {
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+      {
+        std::cout << pos[i_qpoint + n_qpoint*i_dim] << "  ";
+      }
+      std::cout << ":    ";
+      for (int i_var = 0; i_var < n_var; ++i_var)
+      {
+        std::cout << state_r[i_qpoint + n_qpoint*i_var + n_dof*i_elem] << "    ";
+      }
+      std::cout << '\n';
+    }
+    std::cout << '\n';
+  }
 }
