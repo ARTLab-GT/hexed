@@ -9,7 +9,7 @@
     const int rank = 2; \
     double read [n_elem][3][rank]; \
     double write[n_elem][3][rank]; \
-    Eigen::MatrixXd diff_mat = Eigen::MatrixXd::Identity(rank, rank); \
+    Eigen::MatrixXd diff_mat = -Eigen::MatrixXd::Identity(rank, rank); \
     double mass = 1.225; double veloc = 10; double pres = 1e5; \
     double mmtm = mass*veloc; double ener = pres/0.4 + 0.5*mass*veloc*veloc; \
     for (int i_elem = 0; i_elem < n_elem; ++i_elem) \
@@ -43,7 +43,7 @@
     const int rank = 3; \
     double read [n_elem][5][rank*rank*rank]; \
     double write[n_elem][5][rank*rank*rank]; \
-    Eigen::MatrixXd diff_mat = Eigen::MatrixXd::Identity(rank, rank); \
+    Eigen::MatrixXd diff_mat = -Eigen::MatrixXd::Identity(rank, rank); \
     double mass = 1.225; \
     double veloc0 = 10; double veloc1 = -20; double veloc2 = 30; \
     double pres = 1e5; \
