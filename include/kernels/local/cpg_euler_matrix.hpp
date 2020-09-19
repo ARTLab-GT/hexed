@@ -7,7 +7,6 @@ template<int n_var, int n_qpoint, int row_size>
 void cpg_euler_matrix(double * read, double * write, int n_elem,
                       const Eigen::MatrixXd& diff_mat_arg, double cfl, double sp_heat_rat = 1.4)
 {
-
   Eigen::Matrix<double, row_size, row_size> diff_mat = diff_mat_arg;
 
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
@@ -21,9 +20,9 @@ void cpg_euler_matrix(double * read, double * write, int n_elem,
     }
 
     // Perform update
-    for (int stride = 1, n_rows = n_qpoint/row_size, i_axis = 0;
+    for (int stride = 1, n_rows = n_qpoint/row_size, i_axis = n_var - 3;
          stride < n_qpoint;
-         stride *= row_size, n_rows /= row_size, ++i_axis)
+         stride *= row_size, n_rows /= row_size, --i_axis)
     {
       for (int i_outer = 0; i_outer < n_rows; ++i_outer)
       {
@@ -65,8 +64,8 @@ void cpg_euler_matrix(double * read, double * write, int n_elem,
           }
 
           // Differentiate flux
-          Eigen::Map<Eigen::Matrix<double, row_size, n_var   >> f (&(flux[0]));
-          Eigen::Map<Eigen::Matrix<double, row_size, n_var   >> w (&(row_w[0]));
+          Eigen::Map<Eigen::Matrix<double, row_size, n_var>> f (&(flux[0]));
+          Eigen::Map<Eigen::Matrix<double, row_size, n_var>> w (&(row_w[0]));
           w.noalias() = -diff_mat*f*cfl;
 
           // Write updated solution
