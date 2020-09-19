@@ -20,9 +20,9 @@ void cpg_euler_matrix(double * read, double * write, int n_elem,
     }
 
     // Perform update
-    for (int stride = 1, n_rows = n_qpoint/row_size, i_axis = n_var - 3;
-         stride < n_qpoint;
-         stride *= row_size, n_rows /= row_size, --i_axis)
+    for (int stride = n_qpoint/row_size, n_rows = 1, i_axis = 0;
+         n_rows < n_qpoint;
+         stride /= row_size, n_rows *= row_size, ++i_axis)
     {
       for (int i_outer = 0; i_outer < n_rows; ++i_outer)
       {
