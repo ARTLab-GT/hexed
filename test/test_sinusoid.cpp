@@ -33,5 +33,33 @@ TEST_CASE("Sinusoidal density wave")
     }
     //grid.print();
     grid.visualize("sinusoid_1d");
+    for (int i_elem = 0; i_elem < n_divisions; ++i_elem)
+    {
+      std::vector<double> pos = grid.get_pos(i_elem);
+      for (int i_qpoint = 0; i_qpoint < basis.rank; ++i_qpoint)
+      {
+        double d_mass_by_dt = -0.1*velocity*cos(pos[i_qpoint]);
+        double d_momentum_by_dt = velocity*d_mass_by_dt;
+        double d_energy_by_dt = 0.5*velocity*d_momentum_by_dt;
+        double num_d_mass_by_dt =   grid.state_w[i_qpoint + grid.n_dof*i_elem]
+                                  - grid.state_r[i_qpoint + grid.n_dof*i_elem];
+        double num_d_momentum_by_dt =   grid.state_w[i_qpoint + grid.n_dof*i_elem
+                                                     + grid.n_qpoint]
+                                      - grid.state_r[i_qpoint + grid.n_dof*i_elem
+                                                     + grid.n_qpoint];
+        double num_d_energy_by_dt =   grid.state_w[i_qpoint + grid.n_dof*i_elem
+                                                   + 2*grid.n_qpoint]
+                                    - grid.state_r[i_qpoint + grid.n_dof*i_elem
+                                                   + 2*grid.n_qpoint];
+        /*
+        CHECK(num_d_mass_by_dt == Approx(d_mass_by_dt).margin(0.05*mean_mass));
+        CHECK(num_d_momentum_by_dt
+                == Approx(d_momentum_by_dt).margin(0.05*mean_mass*velocity));
+        CHECK(num_d_energy_by_dt
+                == Approx(d_energy_by_dt).margin(0.05*(pressure/0.4 +
+                          0.5*mean_mass*velocity*velocity)));
+        */
+      }
+    }
   }
 }

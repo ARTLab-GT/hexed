@@ -51,10 +51,10 @@ for (int i = 0; i < {0}; ++i)
   read[i] = i/100.;
 }}
 
-double diff_mat [{1}*{1}];
+Eigen::MatrixXd diff_mat ({1}, {1});
 for (int i = 0; i < {1}*{1}; ++i)
 {{
-  diff_mat[i] = i/2.;
+  diff_mat(i) = i/2.;
 }}
 """.format(size, row_size)
     flags = "-march=native"

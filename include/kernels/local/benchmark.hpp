@@ -5,7 +5,7 @@
 
 template<int n_var, int n_qpoint, int row_size>
 void copy(double * read, double * write, int n_elem,
-          double * diff_mat)
+          const Eigen::MatrixXd& diff_mat)
 {
   for (int i_elem = 0; i_elem < n_elem*n_var; ++i_elem)
   {
@@ -22,7 +22,7 @@ void copy(double * read, double * write, int n_elem,
 
 template<int n_var, int n_qpoint, int row_size>
 void basic_tensor(double * read, double * write, int n_elem,
-                  double * diff_mat)
+                  const Eigen::MatrixXd& diff_mat)
 {
   for (int i_elem = 0; i_elem < n_elem*n_var; ++i_elem)
   {
@@ -54,13 +54,8 @@ void basic_tensor(double * read, double * write, int n_elem,
 
 template<int n_var, int n_qpoint, int row_size>
 void update_add(double * read, double * write, int n_elem,
-                double * diff_mat)
+                const Eigen::MatrixXd& diff_mat)
 {
-  double mat [row_size*row_size];
-  for (int i_coef = 0; i_coef < row_size*row_size; ++i_coef)
-  {
-    mat[i_coef] = diff_mat[i_coef];
-  }
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
     for (int i_dof = 0; i_dof < n_qpoint*n_var; ++i_dof)
@@ -115,13 +110,9 @@ void update_add(double * read, double * write, int n_elem,
 
 template<int n_var, int n_qpoint, int row_size>
 void update_matvec(double * read, double * write, int n_elem,
-                   double * diff_mat)
+                   const Eigen::MatrixXd& diff_mat_arg)
 {
-  double mat [row_size*row_size];
-  for (int i_coef = 0; i_coef < row_size*row_size; ++i_coef)
-  {
-    mat[i_coef] = diff_mat[i_coef];
-  }
+  Eigen::Matrix<double, row_size, row_size> diff_mat = diff_mat_arg;
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
     for (int i_dof = 0; i_dof < n_qpoint*n_var; ++i_dof)
@@ -150,8 +141,7 @@ void update_matvec(double * read, double * write, int n_elem,
           }
           Eigen::Map<Eigen::Matrix<double, row_size, n_var   >> r  (&(row_r[0]));
           Eigen::Map<Eigen::Matrix<double, row_size, n_var   >> w  (&(row_w[0]));
-          Eigen::Map<Eigen::Matrix<double, row_size, row_size>> dm (&(mat[0]));
-          w.noalias() = dm*r;
+          w.noalias() = diff_mat*r;
           for (int i_var = 0; i_var < n_var; ++i_var)
           {
             for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)

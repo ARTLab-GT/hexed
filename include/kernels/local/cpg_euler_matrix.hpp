@@ -5,15 +5,10 @@
 
 template<int n_var, int n_qpoint, int row_size>
 void cpg_euler_matrix(double * read, double * write, int n_elem,
-                      double * diff_mat, double cfl, double sp_heat_rat = 1.4)
+                      const Eigen::MatrixXd& diff_mat_arg, double cfl, double sp_heat_rat = 1.4)
 {
 
-  // Fetch differentiation matrix
-  double mat [row_size*row_size];
-  for (int i_coef = 0; i_coef < row_size*row_size; ++i_coef)
-  {
-    mat[i_coef] = diff_mat[i_coef];
-  }
+  Eigen::Matrix<double, row_size, row_size> diff_mat = diff_mat_arg;
 
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
@@ -72,8 +67,7 @@ void cpg_euler_matrix(double * read, double * write, int n_elem,
           // Differentiate flux
           Eigen::Map<Eigen::Matrix<double, row_size, n_var   >> f (&(flux[0]));
           Eigen::Map<Eigen::Matrix<double, row_size, n_var   >> w (&(row_w[0]));
-          Eigen::Map<Eigen::Matrix<double, row_size, row_size>> d (&(mat[0]));
-          w.noalias() = d*f*cfl;
+          w.noalias() = diff_mat*f*cfl;
 
           // Write updated solution
           for (int i_var = 0; i_var < n_var; ++i_var)

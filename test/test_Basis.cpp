@@ -3,12 +3,13 @@
 
 void test_diff_mat(Basis& basis)
 {
+  Eigen::MatrixXd diff_mat = basis.diff_mat();
   for (int i_result = 0; i_result < basis.rank; ++i_result)
   {
     double derivative = 0;
     for (int i_operand = 0; i_operand < basis.rank; ++i_operand)
     {
-      derivative += basis.diff_mat(i_result, i_operand);
+      derivative += diff_mat(i_result, i_operand);
     }
     REQUIRE( derivative == Approx(0).margin(1e-13) );
   }
@@ -28,8 +29,8 @@ void test_diff_mat(Basis& basis)
     double derivative_quad = 0;
     for (int i_operand = 0; i_operand < basis.rank; ++i_operand)
     {
-      derivative_lin  += basis.diff_mat(i_result, i_operand)*linear   [i_operand];
-      derivative_quad += basis.diff_mat(i_result, i_operand)*quadratic[i_operand];
+      derivative_lin  += diff_mat(i_result, i_operand)*linear   [i_operand];
+      derivative_quad += diff_mat(i_result, i_operand)*quadratic[i_operand];
     }
     if (basis.rank > 1)
     {

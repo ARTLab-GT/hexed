@@ -9,7 +9,7 @@
     const int rank = 2; \
     double read [n_elem][3][rank]; \
     double write[n_elem][3][rank]; \
-    double diff_mat[rank][rank] {1, 0, 0, 1}; \
+    Eigen::MatrixXd diff_mat = Eigen::MatrixXd::Identity(rank, rank); \
     double mass = 1.225; double veloc = 10; double pres = 1e5; \
     double mmtm = mass*veloc; double ener = pres/0.4 + 0.5*mass*veloc*veloc; \
     for (int i_elem = 0; i_elem < n_elem; ++i_elem) \
@@ -22,7 +22,7 @@
       } \
     } \
     kernel<3, 2, 2>(&read[0][0][0], &write[0][0][0], n_elem, \
-                              &diff_mat[0][0], cfl); \
+                              diff_mat, cfl); \
     for (int i_elem = 0; i_elem < n_elem; ++i_elem) \
     { \
       for (int i_qpoint = 0; i_qpoint < rank; ++i_qpoint) \
@@ -43,7 +43,7 @@
     const int rank = 3; \
     double read [n_elem][5][rank*rank*rank]; \
     double write[n_elem][5][rank*rank*rank]; \
-    double diff_mat[rank][rank] {1, 0, 0, 0, 1, 0, 0, 0, 1}; \
+    Eigen::MatrixXd diff_mat = Eigen::MatrixXd::Identity(rank, rank); \
     double mass = 1.225; \
     double veloc0 = 10; double veloc1 = -20; double veloc2 = 30; \
     double pres = 1e5; \
@@ -60,7 +60,7 @@
       } \
     } \
     kernel<5, 27, 3>(&read[0][0][0], &write[0][0][0], n_elem, \
-                               &diff_mat[0][0], cfl); \
+                               diff_mat, cfl); \
     for (int i_elem = 0; i_elem < n_elem; ++i_elem) \
     { \
       for (int i_qpoint = 0; i_qpoint < rank*rank*rank; ++i_qpoint) \

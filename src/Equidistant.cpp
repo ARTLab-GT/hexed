@@ -7,34 +7,41 @@ double Equidistant::node(int i)
   return (double)i/(rank - 1);
 }
 
-double Equidistant::diff_mat(int i_result, int i_operand)
+Eigen::MatrixXd Equidistant::diff_mat()
 {
-  double deriv;
-  if (i_result == i_operand)
+  Eigen::MatrixXd dm (rank, rank);
+  for (int i_operand = 0; i_operand < rank; ++i_operand)
   {
-    deriv = 0;
-    for (int i_node = 0; i_node < rank; ++i_node)
+    for (int i_result = 0; i_result < rank; ++i_result)
     {
-      if (i_node != i_operand)
+      double& deriv = dm(i_result, i_operand);
+      if (i_result == i_operand)
       {
-        deriv += 1./(node(i_result) - node(i_node));
-      }
-    }
-  }
-  else
-  {
-    deriv = 1;
-    for (int i_node = 0; i_node < rank; ++i_node)
-    {
-      if (i_node != i_operand)
-      {
-        deriv /= node(i_operand) - node(i_node);
-        if (i_node != i_result)
+        deriv = 0.;
+        for (int i_node = 0; i_node < rank; ++i_node)
         {
-          deriv *= node(i_result) - node(i_node);
+          if (i_node != i_operand)
+          {
+            deriv += 1./(node(i_result) - node(i_node));
+          }
+        }
+      }
+      else
+      {
+        deriv = 1;
+        for (int i_node = 0; i_node < rank; ++i_node)
+        {
+          if (i_node != i_operand)
+          {
+            deriv /= node(i_operand) - node(i_node);
+            if (i_node != i_result)
+            {
+              deriv *= node(i_result) - node(i_node);
+            }
+          }
         }
       }
     }
   }
-  return deriv;
+  return dm;
 }
