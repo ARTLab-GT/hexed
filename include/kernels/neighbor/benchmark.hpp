@@ -5,7 +5,7 @@
 #include "kernels/neighbor/write_copy.hpp"
 #include "kernels/neighbor/average_flux.hpp"
 
-template<n_var, int n_qpoint, int row_size>
+template<int n_var, int n_qpoint, int row_size>
 void average_neighbor(double** connections_r, double** connections_w, int n_connections)
 {
   const int n_face_qpoint = n_qpoint/row_size;
@@ -17,7 +17,7 @@ void average_neighbor(double** connections_r, double** connections_w, int n_conn
     double face_w [face_size];
     for (int i_con = 0; i_con < n_connections; ++i_con)
     {
-      con_offset = i_axis*n_connections + 2*i_con;
+      const int con_offset = i_axis*n_connections + 2*i_con;
       read_copy<n_var, n_qpoint, row_size>(connections_r[con_offset    ], face0, stride, 1);
       read_copy<n_var, n_qpoint, row_size>(connections_r[con_offset + 1], face1, stride, 0);
       average_flux<face_size>(&face0[0], &face1[0], &face_w[0]);

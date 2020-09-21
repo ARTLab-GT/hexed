@@ -35,13 +35,15 @@ dim = 3
 n_var = 5
 n_qpoint = row_size**dim
 size = n_qpoint*n_elem*n_var
-benchmark = ["copy", "basic_tensor", "update_add", "update_matvec"]
+benchmark_local = ["copy", "basic_tensor", "update_add", "update_matvec"]
+benchmark_neighbor = ["average_neighbor"]
 real = ["cpg_euler_matrix", "cpg_euler_tensor"]
+kernels = benchmark_local + benchmark_neighbor + real
 times = []
-for kernel in benchmark + real:
+for kernel in kernels:
     include = """
 #include <fstream>
-#include "kernels/local/benchmark.hpp"
+#include <Eigen/Dense>
 """
     setup = """
 double * read  = new double [{0}];
@@ -56,10 +58,29 @@ for (int i = 0; i < {1}*{1}; ++i)
 {{
   diff_mat(i) = i/2.;
 }}
-""".format(size, row_size)
+
+double** connect_r = new double* [{2}*2*{3}];
+double** connect_w = new double* [{2}*2*{3}];
+for (int i = 0; i < {2}*{3}; ++i)
+{{
+  int i0 = rand()%({2}*{3}); int i1 = rand()%({2}*{3});
+  connect_r[2*i    ] = read  + i0;
+  connect_r[2*i + 1] = read  + i1;
+  connect_w[2*i    ] = write + i0;
+  connect_w[2*i + 1] = write + i1;
+}}
+""".format(size, row_size, n_elem, dim)
     flags = "-march=native"
-    if kernel in benchmark:
+    if kernel in benchmark_local:
+        include += """
+#include "kernels/local/benchmark.hpp"
+"""
         execute = "{}<{}, {}, {}>(read, write, {}, diff_mat);"
+    elif kernel in benchmark_neighbor:
+        include += """
+#include "kernels/neighbor/benchmark.hpp"
+"""
+        execute = "{}<{}, {}, {}>(connect_r, connect_w, {});"
     else:
         include += """
 #include "kernels/local/{}.hpp"
@@ -81,6 +102,6 @@ ofile.close();
     times.append(ex_time)
     print(kernel, ": ", ex_time)
 plt.bar(range(len(times)), times)
-plt.xticks(range(len(times)), (benchmark + real), rotation=20)
+plt.xticks(range(len(times)), kernels, rotation=20)
 plt.ylabel("Execution time (s)")
 plt.show()
