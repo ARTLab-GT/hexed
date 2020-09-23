@@ -13,4 +13,5 @@ TEST_CASE("Solution class")
   g = &sol.get_grid(0);
   REQUIRE(g->basis.rank == 4);
   REQUIRE(g->n_elem == 6);
+  REQUIRE(g->mesh_size == 0.35);
 }
