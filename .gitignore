@@ -2,3 +2,4 @@ benchmark*.txt
 *.o
 test/unit_test
 *.szplt
+src/Solution_get_kernel.cpp

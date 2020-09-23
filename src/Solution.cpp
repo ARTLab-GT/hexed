@@ -31,3 +31,7 @@ Grid& Solution::get_grid(int order_added)
     return grids[order_added];
   }
 }
+
+void Solution::update()
+{
+}

@@ -3,6 +3,7 @@
 
 #include "Grid.hpp"
 #include "Equidistant.hpp"
+#include "kernels/kernel_types.hpp"
 
 class Solution
 {
@@ -22,6 +23,10 @@ class Solution
   protected:
   Equidistant basis;
   std::vector<Grid> grids;
+  virtual Local_kernel get_local_kernel();
+  virtual Copy_kernel get_read_kernel();
+  virtual Copy_kernel get_write_kernel();
+  virtual Flux_kernel get_flux_kernel();
 };
 
 #endif
