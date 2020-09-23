@@ -15,10 +15,12 @@ class Solution
   Solution(int n_var_arg, int n_dim_arg, int rank_arg, double bms);
   virtual ~Solution();
 
-  void add_block_grid(int ref_level, std::vector<int> lower_corner,
-                                     std::vector<int> upper_corner);
   Grid& get_grid(int order_added);
   void update();
+
+  void add_block_grid(int ref_level, std::vector<int> lower_corner,
+                                     std::vector<int> upper_corner);
+  void add_block_grid(int ref_level);
 
   protected:
   Equidistant basis;

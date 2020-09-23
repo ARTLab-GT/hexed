@@ -5,6 +5,22 @@ Solution::Solution(int n_var_arg, int n_dim_arg, int rank_arg, double bms)
 
 Solution::~Solution() {}
 
+Grid& Solution::get_grid(int order_added)
+{
+  if (grids.size() <= order_added)
+  {
+    throw "The requested grid does not exist.";
+  }
+  else
+  {
+    return grids[order_added];
+  }
+}
+
+void Solution::update()
+{
+}
+
 void Solution::add_block_grid(int ref_level, std::vector<int> lower_corner,
                                              std::vector<int> upper_corner)
 {
@@ -20,18 +36,14 @@ void Solution::add_block_grid(int ref_level, std::vector<int> lower_corner,
   grids.push_back(g);
 }
 
-Grid& Solution::get_grid(int order_added)
+void Solution::add_block_grid(int ref_level)
 {
-  if (grids.size() <= order_added)
+  int n_div = 1; 
+  for (int i = 0; i < ref_level; ++i) n_div *= 2;
+  std::vector<int> lc; std::vector<int> uc;
+  for (int i = 0; i < n_dim; ++i)
   {
-    throw "The requested grid does not exist.";
+    lc.push_back(0); uc.push_back(n_div);
   }
-  else
-  {
-    return grids[order_added];
-  }
-}
-
-void Solution::update()
-{
+  add_block_grid(ref_level, lc, uc);
 }
