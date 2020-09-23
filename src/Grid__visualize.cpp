@@ -82,7 +82,7 @@ void Grid::visualize(std::string file_name)
     }
     for (int i_var = 0; i_var < n_var; ++i_var)
     {
-      I = TECDAT142(&III, state_r.data() + i_elem*n_dof + i_var*n_qpoint, &DIsDouble);
+      I = TECDAT142(&III, state_r() + i_elem*n_dof + i_var*n_qpoint, &DIsDouble);
     }
   }
 

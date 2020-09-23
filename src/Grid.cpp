@@ -13,8 +13,6 @@ basis(basis_arg)
   n_dof = n_qpoint*n_var;
   state_r_storage.resize(n_dof*n_elem, 0.);
   state_w_storage.resize(n_dof*n_elem, 0.);
-  state_r = state_r_storage.data();
-  state_w = state_w_storage.data();
   pos.resize(n_elem*n_dim, 0);
 }
 
@@ -70,7 +68,7 @@ void Grid::print()
       std::cout << ":    ";
       for (int i_var = 0; i_var < n_var; ++i_var)
       {
-        std::cout << state_r[i_qpoint + n_qpoint*i_var + n_dof*i_elem] << "    ";
+        std::cout << state_r()[i_qpoint + n_qpoint*i_var + n_dof*i_elem] << "    ";
       }
       std::cout << '\n';
     }

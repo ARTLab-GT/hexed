@@ -24,10 +24,10 @@ TEST_CASE("Grid")
     REQUIRE(grid3.n_dof == 2048);
     REQUIRE(grid1.n_elem == 5);
     int size = 2048*27;
-    REQUIRE(grid3.state_r[0] == 0.);
-    REQUIRE(grid3.state_w[0] == 0.);
-    REQUIRE(grid3.state_r[size - 1] == 0.);
-    REQUIRE(grid3.state_w[size - 1] == 0.);
+    REQUIRE(grid3.state_r()[0] == 0.);
+    REQUIRE(grid3.state_w()[0] == 0.);
+    REQUIRE(grid3.state_r()[size - 1] == 0.);
+    REQUIRE(grid3.state_w()[size - 1] == 0.);
   }
 
   for (int i = 0; i < 5; ++i)

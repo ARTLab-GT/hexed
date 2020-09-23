@@ -5,6 +5,8 @@
 #include "Equidistant.hpp"
 #include "kernels/kernel_types.hpp"
 
+class Initializer;
+
 class Solution
 {
   public:
@@ -18,6 +20,7 @@ class Solution
   Grid& get_grid(int order_added);
   void update();
 
+  void initialize(Initializer& init);
   void add_block_grid(int ref_level, std::vector<int> lower_corner,
                                      std::vector<int> upper_corner);
   void add_block_grid(int ref_level);
