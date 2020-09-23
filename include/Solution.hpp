@@ -1,9 +1,9 @@
 #ifndef SOLUTION_HPP_
 #define SOLUTION_HPP_
 
-#include "Grid.hpp"
-#include "Equidistant.hpp"
-#include "kernels/kernel_types.hpp"
+#include <Grid.hpp>
+#include <Equidistant.hpp>
+#include <kernels/kernel_types.hpp>
 
 class Initializer;
 

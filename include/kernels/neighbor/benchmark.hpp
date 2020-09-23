@@ -1,9 +1,9 @@
 #ifndef BENCHMARK_HPP_
 #define BENCHMARK_HPP_
 
-#include "kernels/neighbor/read_copy.hpp"
-#include "kernels/neighbor/write_copy.hpp"
-#include "kernels/neighbor/average_flux.hpp"
+#include <kernels/neighbor/read_copy.hpp>
+#include <kernels/neighbor/write_copy.hpp>
+#include <kernels/neighbor/average_flux.hpp>
 
 template<int n_var, int n_qpoint, int row_size>
 void average_neighbor(double** connections_r, double** connections_w, int n_connections)

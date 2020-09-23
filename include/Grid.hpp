@@ -4,7 +4,7 @@
 #include <vector>
 #include <string>
 
-#include "Basis.hpp"
+#include <Basis.hpp>
 
 class Grid
 {

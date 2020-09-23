@@ -1,6 +1,5 @@
-#include "Solution.hpp"
-#include "Initializer.hpp"
-#include <iostream>
+#include <Solution.hpp>
+#include <Initializer.hpp>
 
 Solution::Solution(int n_var_arg, int n_dim_arg, int rank_arg, double bms)
 : n_var(n_var_arg), n_dim(n_dim_arg), basis(rank_arg), base_mesh_size(bms) {}

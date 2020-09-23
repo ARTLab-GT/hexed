@@ -1,4 +1,4 @@
-#include "Equidistant.hpp"
+#include <Equidistant.hpp>
 
 Equidistant::Equidistant(int rank_arg) : Basis(rank_arg) {}
 

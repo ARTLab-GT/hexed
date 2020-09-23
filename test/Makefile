@@ -5,7 +5,7 @@ SRCS := ${wildcard *.cpp} ${SRCS}
 OBJS := ${SRCS:%.cpp=%.o}
 
 all: ${OBJS}
-	g++ ${FLAGS} ${OBJS} -o unit_test -ltecio
+	g++ ${FLAGS} ${OBJS} -o test -ltecio
 
 %.o: %.cpp
 	g++ -c ${FLAGS} $< -o $@

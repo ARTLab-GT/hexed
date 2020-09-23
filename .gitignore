@@ -1,5 +1,5 @@
 benchmark*.txt
 *.o
-test/unit_test
+test/test
 *.szplt
-src/Solution_get_kernel.cpp
+src/Solution__get_kernel.cpp

@@ -1,7 +1,7 @@
 #ifndef EQUIDISTANT_HPP_
 #define EQUIDISTANT_HPP_
 
-#include "Basis.hpp"
+#include <Basis.hpp>
 
 class Equidistant : public Basis
 {

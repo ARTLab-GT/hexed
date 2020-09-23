@@ -8,11 +8,11 @@ Do not attempt to modify it directly. Instead, modify and rerun script/auto_gene
 to make the required changes.
 */
 
-#include "Solution.hpp"
-#include "kernels/local/cpg_euler_matrix.hpp"
-#include "kernels/neighbor/read_copy.hpp"
-#include "kernels/neighbor/write_copy.hpp"
-#include "kernels/neighbor/average_flux.hpp"
+#include <Solution.hpp>
+#include <kernels/local/cpg_euler_matrix.hpp>
+#include <kernels/neighbor/read_copy.hpp>
+#include <kernels/neighbor/write_copy.hpp>
+#include <kernels/neighbor/average_flux.hpp>
 """
 
 """
@@ -56,5 +56,5 @@ for kernel_type in ["local", "read", "write", "flux"]:
 }}
 """.format(func_type, kernel_type, i_dim)
 
-with open("../src/Solution_get_kernel.cpp", "w") as write_file:
+with open("../src/Solution__get_kernel.cpp", "w") as write_file:
     write_file.write(text)
