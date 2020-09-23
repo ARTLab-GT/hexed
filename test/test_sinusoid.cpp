@@ -1,11 +1,11 @@
 #include <cmath>
 #include <iostream>
 
-#include "catch.hpp"
+#include <catch.hpp>
 
-#include "Grid.hpp"
-#include "Equidistant.hpp"
-#include "kernels/local/cpg_euler_matrix.hpp"
+#include <Grid.hpp>
+#include <Equidistant.hpp>
+#include <kernels/local/cpg_euler_matrix.hpp>
 
 TEST_CASE("Sinusoidal density wave")
 {

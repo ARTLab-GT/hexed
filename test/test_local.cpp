@@ -1,6 +1,6 @@
-#include "catch.hpp"
-#include "kernels/local/cpg_euler_matrix.hpp"
-#include "kernels/local/cpg_euler_tensor.hpp"
+#include <catch.hpp>
+#include <kernels/local/cpg_euler_matrix.hpp>
+#include <kernels/local/cpg_euler_tensor.hpp>
 
 #define TEST_CPG_EULER(kernel, cfl) \
   SECTION("1D") \

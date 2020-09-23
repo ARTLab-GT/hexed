@@ -1,7 +1,7 @@
-#include "catch.hpp"
+#include <catch.hpp>
 
-#include "kernels/neighbor/read_copy.hpp"
-#include "kernels/neighbor/write_copy.hpp"
+#include <kernels/neighbor/read_copy.hpp>
+#include <kernels/neighbor/write_copy.hpp>
 
 TEST_CASE("neighbor kernel read_copy<>()")
 {

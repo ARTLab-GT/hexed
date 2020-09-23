@@ -1,7 +1,7 @@
 #include <catch.hpp>
 
-#include "Solution.hpp"
-#include "Initializer.hpp"
+#include <Solution.hpp>
+#include <Initializer.hpp>
 
 class Test_initializer : public Initializer
 {

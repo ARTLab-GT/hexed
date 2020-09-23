@@ -1,7 +1,7 @@
-#include "catch.hpp"
+#include <catch.hpp>
 
-#include "Grid.hpp"
-#include "Equidistant.hpp"
+#include <Grid.hpp>
+#include <Equidistant.hpp>
 
 TEST_CASE("Grid")
 {

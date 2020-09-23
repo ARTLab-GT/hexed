@@ -1,5 +1,5 @@
-#include "catch.hpp"
-#include "Equidistant.hpp"
+#include <catch.hpp>
+#include <Equidistant.hpp>
 
 void test_diff_mat(Basis& basis)
 {
