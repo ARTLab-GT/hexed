@@ -13,6 +13,6 @@ all: ${OBJS}
 clean:
 	rm *.o
 	rm ../src/*.o
-	rm unit_test
+	rm test
 	rm *.szplt
 
