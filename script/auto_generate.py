@@ -54,7 +54,7 @@ for kernel_type in ["local", "read", "write", "flux"]:
   if (n_dim <= {2}) return {1}_kernels[n_dim - 1][basis.rank - 1];
   else throw "Kernel not available.";
 }}
-""".format(func_type, kernel_type, i_dim)
+""".format(func_type, kernel_type, i_dim + 1)
 
 with open("../src/Solution__get_kernel.cpp", "w") as write_file:
     write_file.write(text)

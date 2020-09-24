@@ -20,6 +20,13 @@ Grid& Solution::get_grid(int order_added)
 
 void Solution::update()
 {
+  Local_kernel local = get_local_kernel();
+  for (Grid& g : grids)
+  {
+    // FIXME: replace this with a CFL-based time step
+    double cfl = 1./g.mesh_size;
+    local(g.state_r(), g.state_w(), g.n_elem, g.basis.diff_mat(), cfl, 1.4);
+  }
 }
 
 void Solution::initialize(Initializer& init)

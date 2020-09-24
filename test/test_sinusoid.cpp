@@ -110,8 +110,8 @@ TEST_CASE("Sinusoidal density wave")
       std::vector<double> pos = grid.get_pos(i_elem);
       for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
       {
-        double d_mass_by_d_t = -0.1*cos(2*pos[i_qpoint] + pos[i_qpoint + grid.n_qpoint])
-                               *(2*init.velocity[0] + init.velocity[1]);
+        double d_mass_by_d_t = -0.1*cos(pos[i_qpoint] + 2*pos[i_qpoint + grid.n_qpoint])
+                               *(init.velocity[0] + 2*init.velocity[1]);
         double d_momentum0_by_d_t = init.velocity[0]*d_mass_by_d_t;
         double d_momentum1_by_d_t = init.velocity[1]*d_mass_by_d_t;
         double d_energy_by_d_t = 0.5*d_mass_by_d_t*(  init.velocity[0]*init.velocity[0]
