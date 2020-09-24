@@ -2,13 +2,13 @@
 #include <Initializer.hpp>
 
 Solution::Solution(int n_var_arg, int n_dim_arg, int rank_arg, double bms)
-: n_var(n_var_arg), n_dim(n_dim_arg), basis(rank_arg), base_mesh_size(bms) {}
+: n_var(n_var_arg), n_dim(n_dim_arg), base_mesh_size(bms), basis(rank_arg) {}
 
 Solution::~Solution() {}
 
 Grid& Solution::get_grid(int order_added)
 {
-  if (grids.size() <= order_added)
+  if ((int)grids.size() <= order_added)
   {
     throw "The requested Grid does not exist.";
   }

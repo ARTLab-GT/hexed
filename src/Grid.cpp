@@ -21,7 +21,7 @@ Grid::~Grid() {}
 
 void Grid::populate_slice(std::vector<double>& elem_pos, std::vector<int> indices, int i_elem)
 {
-  if (indices.size() < n_dim)
+  if ((int)indices.size() < n_dim)
   {
     indices.push_back(0);
     for (int i = 0; i < basis.rank; ++i)

@@ -9,7 +9,6 @@
 class Grid
 {
   public:
-  Basis& basis;
   int n_var;
   int n_dim;
   int n_qpoint;
@@ -18,6 +17,7 @@ class Grid
   std::vector<int> pos;
   double mesh_size;
   double time;
+  Basis& basis;
 
   Grid(int n_var_arg, int n_dim_arg, int n_elem_arg, double mesh_size_arg, Basis& basis_arg);
   virtual ~Grid();

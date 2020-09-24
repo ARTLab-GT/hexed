@@ -1,4 +1,4 @@
-FLAGS = -I ../include/ -g -fsanitize=address -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize=leak -fsanitize=undefined
+FLAGS = -I ../include/ -g -Wall -fsanitize=address -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize=leak -fsanitize=undefined
 
 SRCS := ${wildcard ../src/*.cpp}
 SRCS := ${wildcard *.cpp} ${SRCS}

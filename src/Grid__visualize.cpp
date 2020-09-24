@@ -11,7 +11,6 @@ void Grid::visualize(std::string file_name)
   INTEGER4 VIsDouble = 1;
   INTEGER4 FileType = 0;
   INTEGER4 fileFormat = 1; // 0 == PLT, 1 == SZPLT
-  INTEGER4 I = 0; /* Used to track return codes */
   /*
   * Open the file and write the tecplot datafile
   * header information
@@ -27,8 +26,8 @@ void Grid::visualize(std::string file_name)
     var_names += " q" + std::to_string(i_var);
   }
   var_names.erase(0, 1);
-  I = TECINI142((char*)"flow solution", var_names.c_str(), file_name.c_str(), ".",
-                &fileFormat, &FileType, &Debug, &VIsDouble);
+  TECINI142((char*)"flow solution", var_names.c_str(), file_name.c_str(), ".",
+            &fileFormat, &FileType, &Debug, &VIsDouble);
 
   INTEGER4 ICellMax = 0;
   INTEGER4 JCellMax = 0;
@@ -53,7 +52,7 @@ void Grid::visualize(std::string file_name)
   {
     /* Ordered Zone */
     INTEGER4 ZoneType = 0;
-    I = TECZNE142(("element " + std::to_string(i_elem)).c_str(),
+    TECZNE142(("element " + std::to_string(i_elem)).c_str(),
     &ZoneType,
     &IMax,
     &JMax,
@@ -79,13 +78,13 @@ void Grid::visualize(std::string file_name)
     std::vector<double> pos = get_pos(i_elem);
     for (int i_dim = 0; i_dim < n_dim; ++i_dim)
     {
-      I = TECDAT142(&III, pos.data() + i_dim*n_qpoint, &DIsDouble);
+      TECDAT142(&III, pos.data() + i_dim*n_qpoint, &DIsDouble);
     }
     for (int i_var = 0; i_var < n_var; ++i_var)
     {
-      I = TECDAT142(&III, state_r() + i_elem*n_dof + i_var*n_qpoint, &DIsDouble);
+      TECDAT142(&III, state_r() + i_elem*n_dof + i_var*n_qpoint, &DIsDouble);
     }
   }
 
-  I = TECEND142();
+  TECEND142();
 }
