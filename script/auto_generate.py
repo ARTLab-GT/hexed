@@ -65,6 +65,8 @@ calc_digits = 50
 min_rank = 2
 for rank in range(2, max_rank + 1):
     nodes, weights = gauss_lobatto(rank, calc_digits)
+    nodes = [(node + 1)/2 for node in nodes]
+    weights = [weight/2 for weight in weights]
     basis = Basis(nodes, weights, calc_digits=calc_digits)
 
     text += """

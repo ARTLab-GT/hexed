@@ -2,7 +2,7 @@
 #define SOLUTION_HPP_
 
 #include <Grid.hpp>
-#include <Equidistant.hpp>
+#include <Gauss_lobatto.hpp>
 #include <kernels/kernel_types.hpp>
 
 class Initializer;
@@ -26,7 +26,7 @@ class Solution
   void add_block_grid(int ref_level);
 
   protected:
-  Equidistant basis;
+  Gauss_lobatto basis;
   std::vector<Grid> grids;
   virtual Local_kernel get_local_kernel();
   virtual Copy_kernel get_read_kernel();
