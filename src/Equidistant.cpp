@@ -45,3 +45,10 @@ Eigen::MatrixXd Equidistant::diff_mat()
   }
   return dm;
 }
+
+Eigen::VectorXd Equidistant::node_weights()
+{
+  throw "Not implemented.";
+  Eigen::VectorXd unused (0);
+  return unused;
+}

@@ -9,6 +9,7 @@ class Equidistant : public Basis
   Equidistant(int rank_arg);
   virtual double node(int i);
   Eigen::MatrixXd diff_mat();
+  Eigen::VectorXd node_weights();
 };
 
 #endif
