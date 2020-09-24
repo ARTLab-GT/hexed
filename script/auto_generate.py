@@ -1,26 +1,21 @@
 max_dim = 3
 max_rank = 8
 
-text = """
+message = """
 /*
 This file was generated automatically by script/auto_generate.py.
 Do not attempt to modify it directly. Instead, modify and rerun script/auto_generate.py
 to make the required changes.
 */
+"""
 
+text = """
 #include <Solution.hpp>
 #include <kernels/local/cpg_euler_matrix.hpp>
 #include <kernels/neighbor/read_copy.hpp>
 #include <kernels/neighbor/write_copy.hpp>
 #include <kernels/neighbor/average_flux.hpp>
 """
-
-"""
-Local_kernel local_kernels [{0}][{1}];
-Copy_kernel read_kernels [{0}][{1}];
-Copy_kernel write_kernels [{0}][{1}];
-Flux_kernel flux_kernels [{0}][{1}];
-""".format(max_dim, max_rank);
 
 templates = {"local" : "cpg_euler_matrix", "read" : "read_copy", "write" : "write_copy", \
              "flux" : "average_flux"}
@@ -57,4 +52,93 @@ for kernel_type in ["local", "read", "write", "flux"]:
 """.format(func_type, kernel_type, i_dim + 1)
 
 with open("../src/Solution__get_kernel.cpp", "w") as write_file:
-    write_file.write(text)
+    write_file.write(message + text)
+
+
+from Basis import *
+from sympy.integrals.quadrature import gauss_lobatto
+
+text = """
+#include <Gauss_lobatto.hpp>
+"""
+calc_digits = 50
+min_rank = 2
+for rank in range(2, max_rank + 1):
+    nodes, weights = gauss_lobatto(rank, calc_digits)
+    basis = Basis(nodes, weights, calc_digits=calc_digits)
+
+    text += """
+double nodes{0} [{0}] {{
+""".format(rank)
+    for i_result in range(rank):
+        text += "{}, ".format(basis.node(i_result))
+    text += "\n};\n"
+
+    text += """
+double weights{0} [{0}] {{
+""".format(rank)
+    for i_result in range(rank):
+        text += "{}, ".format(basis.weight(i_result))
+    text += "\n};\n"
+
+    text += """
+double diff_mat{0} [{1}] {{
+""".format(rank, rank**2)
+    for i_operand in range(rank):
+        for i_result in range(rank):
+            text += "{}, ".format(basis.derivative(i_result, i_operand))
+        text += "\n"
+    text += "};\n"
+
+node_text = """
+double* nodes [{}] {{
+""".format(max_rank + 1 - min_rank)
+weight_text = """
+double* weights [{}] {{
+""".format(max_rank + 1 - min_rank)
+diff_mat_text = """
+double* diff_mats [{}] {{
+""".format(max_rank + 1 - min_rank)
+for rank in range(2, max_rank + 1):
+    node_text += "&nodes{}[0], ".format(rank)
+    weight_text += "&weights{}[0], ".format(rank)
+    diff_mat_text += "&diff_mat{}[0], ".format(rank)
+text += node_text + "\n};\n\n" + weight_text + "\n};\n\n" + diff_mat_text + "\n};\n\n"
+
+conditional_block = """
+  if (({} > rank) || (rank > {}))
+  {{
+    throw "Not implemented for required rank.";
+  }}""".format(min_rank, max_rank)
+
+text += """
+double Gauss_lobatto::node(int i)
+{""" + conditional_block
+text += """
+  return nodes[rank - {}][i];""".format(min_rank)
+text += """
+}
+
+Eigen::VectorXd Gauss_lobatto::node_weights()
+{""" + conditional_block
+text += """
+  Eigen::VectorXd nw (rank);
+  for (int i_node = 0; i_node < rank; ++i_node) nw(i_node) = weights[rank - {}][i_node];
+  return nw;""".format(min_rank)
+text += """
+}
+
+Eigen::MatrixXd Gauss_lobatto::diff_mat()
+{""" + conditional_block
+text += """
+  Eigen::MatrixXd dm (rank, rank);
+  for (int i_node = 0; i_node < rank*rank; ++i_node) dm(i_node) = diff_mats[rank - {}][i_node];
+  return dm;""".format(min_rank)
+text += """
+}
+
+Gauss_lobatto::Gauss_lobatto(int rank_arg) : Basis(rank_arg) {}
+"""
+
+with open("../src/Gauss_lobatto.cpp", "w") as write_file:
+    write_file.write(message + text)

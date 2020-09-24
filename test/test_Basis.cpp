@@ -1,5 +1,7 @@
 #include <catch.hpp>
+
 #include <Equidistant.hpp>
+#include <Gauss_lobatto.hpp>
 
 void test_diff_mat(Basis& basis)
 {
@@ -49,5 +51,14 @@ TEST_CASE("Equidistant Basis")
   {
     Equidistant equi (rank);
     test_diff_mat(equi);
+  }
+}
+
+TEST_CASE("Gauss_lobatto Basis")
+{
+  for (int rank = 2; rank < 8; ++rank)
+  {
+    Gauss_lobatto GLo (rank);
+    test_diff_mat(GLo);
   }
 }

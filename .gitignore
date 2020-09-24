@@ -3,3 +3,4 @@ benchmark*.txt
 test/test
 *.szplt
 src/Solution__get_kernel.cpp
+script/__pycache__/
