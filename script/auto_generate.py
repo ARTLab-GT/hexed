@@ -14,7 +14,7 @@ text = """
 #include <kernels/local/cpg_euler_matrix.hpp>
 #include <kernels/neighbor/read_copy.hpp>
 #include <kernels/neighbor/write_copy.hpp>
-#include <kernels/neighbor/average_flux.hpp>
+#include <kernels/neighbor/average.hpp>
 """
 
 templates = {"local" : "cpg_euler_matrix", "read" : "read_copy", "write" : "write_copy", \
@@ -35,8 +35,8 @@ for kernel_type in ["local", "read", "write", "flux"]:
             row_size = i_rank + 1
             if kernel_type == "flux":
                 text += """
-&(average_flux<{}>),
-""".format(i_dim, i_rank, n_face_qpoint*n_var)
+&(average<{}>),
+"""[1:].format(i_dim, i_rank, n_face_qpoint*n_var)
             else:
                 text += """
 &({}<{}, {}, {}>),
