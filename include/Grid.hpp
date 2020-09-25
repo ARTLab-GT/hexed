@@ -20,13 +20,12 @@ class Grid
   double mesh_size;
   double time;
   Basis& basis;
-  int iter;
 
   Grid(int n_var_arg, int n_dim_arg, int n_elem_arg, double mesh_size_arg, Basis& basis_arg);
   virtual ~Grid();
 
-  inline double* state_r() { return ((iter%2 == 0) ? state_r_storage : state_w_storage).data(); }
-  inline double* state_w() { return ((iter%2 == 1) ? state_r_storage : state_w_storage).data(); }
+  inline double* state_r() { return state_r_storage.data(); }
+  inline double* state_w() { return state_w_storage.data(); }
   std::vector<double> get_pos(int i_elem);
 
   void visualize(std::string file_name);
