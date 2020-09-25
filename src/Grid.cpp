@@ -76,3 +76,29 @@ void Grid::print()
     std::cout << '\n';
   }
 }
+
+Eigen::VectorXd Grid::state_integral()
+{
+  Eigen::VectorXd weights (n_qpoint);
+  Eigen::VectorXd weights_1d = basis.node_weights();
+  for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) weights(i_qpoint) = 1.;
+  for (int stride = n_qpoint/basis.rank, n_rows = 1; n_rows < n_qpoint;
+       stride /= basis.rank, n_rows *= basis.rank)
+  {
+    for (int i_outer = 0; i_outer < n_rows; ++i_outer)
+    {
+      for (int i_inner = 0; i_inner < stride; ++i_inner)
+      {
+        for (int i_qpoint = 0; i_qpoint < basis.rank; ++i_qpoint)
+        {
+          weights((i_outer*basis.rank + i_qpoint)*stride + i_inner)
+          *= weights_1d(i_qpoint)*mesh_size;
+        }
+      }
+    }
+  }
+  Eigen::Map<Eigen::MatrixXd> elem_mat (state_r(), n_qpoint, n_elem*n_var);
+  Eigen::MatrixXd elem_integral = elem_mat.transpose()*weights;
+  elem_integral.resize(n_var, n_elem);
+  return elem_integral.rowwise().sum();
+}

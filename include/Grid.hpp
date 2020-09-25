@@ -4,6 +4,8 @@
 #include <vector>
 #include <string>
 
+#include <Eigen/Dense>
+
 #include <Basis.hpp>
 
 class Grid
@@ -25,8 +27,10 @@ class Grid
   inline double* state_r() { return state_r_storage.data(); }
   inline double* state_w() { return state_w_storage.data(); }
   std::vector<double> get_pos(int i_elem);
+
   void visualize(std::string file_name);
   void print();
+  Eigen::VectorXd state_integral();
 
   protected:
   std::vector<double> state_r_storage;

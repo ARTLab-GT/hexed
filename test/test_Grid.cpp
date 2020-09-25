@@ -1,7 +1,9 @@
 #include <catch.hpp>
+#include <iostream>
 
 #include <Grid.hpp>
 #include <Equidistant.hpp>
+#include <Gauss_lobatto.hpp>
 
 TEST_CASE("Grid")
 {
@@ -108,6 +110,21 @@ TEST_CASE("Grid")
     grid1.visualize("unit_test_1d");
     grid2.visualize("unit_test_2d");
     grid3.visualize("unit_test_3d");
+  }
+
+  SECTION("State integration")
+  {
+    Gauss_lobatto basis (5);
+    Grid grid1 (2, 1, 5, 0.1, basis);
+    Grid grid2 (2, 2, 5, 0.1, basis);
+    Grid grid3 (2, 3, 5, 0.1, basis);
+    Eigen::Vector2d correct; correct << 5, 5;
+    for (int i = 0; i < grid1.n_dof*grid1.n_elem; ++i) grid1.state_r()[i] = 1.;
+    for (int i = 0; i < grid2.n_dof*grid1.n_elem; ++i) grid2.state_r()[i] = 1.;
+    for (int i = 0; i < grid3.n_dof*grid1.n_elem; ++i) grid3.state_r()[i] = 1.;
+    REQUIRE((grid1.state_integral() - correct*0.1  ).sum() == Approx(0.));
+    REQUIRE((grid2.state_integral() - correct*0.01 ).sum() == Approx(0.));
+    REQUIRE((grid3.state_integral() - correct*0.001).sum() == Approx(0.));
   }
 
 }
