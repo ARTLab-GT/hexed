@@ -45,6 +45,21 @@ void test_diff_mat(Basis& basis)
   }
 }
 
+void test_quadrature(Basis& basis)
+{
+  Eigen::VectorXd weights = basis.node_weights();
+  REQUIRE(weights.sum() == Approx(1.));
+  double total = 0.;
+  if (basis.rank >= 3)
+  {
+    for (int i = 0; i < basis.rank; ++i)
+    {
+      total += weights(i)*(basis.node(i)*basis.node(i));
+    }
+    REQUIRE(total == Approx(1./3.));
+  }
+}
+
 TEST_CASE("Equidistant Basis")
 {
   for (int rank = 0; rank < 10; ++rank)
@@ -60,5 +75,6 @@ TEST_CASE("Gauss_lobatto Basis")
   {
     Gauss_lobatto GLo (rank);
     test_diff_mat(GLo);
+    test_quadrature(GLo);
   }
 }
