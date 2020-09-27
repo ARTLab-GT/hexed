@@ -37,8 +37,9 @@ n_qpoint = row_size**dim
 size = n_qpoint*n_elem*n_var
 benchmark_local = ["copy", "basic_tensor", "update_add", "update_matvec"]
 benchmark_neighbor = ["average_neighbor"]
-real = ["cpg_euler_matrix", "cpg_euler_tensor"]
-kernels = benchmark_local + benchmark_neighbor + real
+real_local = ["cpg_euler_matrix", "cpg_euler_tensor"]
+real_neighbor = ["cpg_euler_copy"]
+kernels = benchmark_local + benchmark_neighbor + real_local + real_neighbor
 times = []
 for kernel in kernels:
     include = """
@@ -59,6 +60,12 @@ for (int i = 0; i < {1}*{1}; ++i)
   diff_mat(i) = i/2.;
 }}
 
+Eigen::VectorXd weights_1d ({1});
+for (int i = 0; i < {1}; ++i)
+{{
+  weights_1d(i) = i/3.;
+}}
+
 double** connect_r = new double* [{2}*2*{3}];
 double** connect_w = new double* [{2}*2*{3}];
 for (int i = 0; i < {2}*{3}; ++i)
@@ -68,6 +75,12 @@ for (int i = 0; i < {2}*{3}; ++i)
   connect_r[2*i + 1] = read  + i1;
   connect_w[2*i    ] = write + i0;
   connect_w[2*i + 1] = write + i1;
+}}
+int starts [{3}]; int n_connections [{3}];
+for (int i = 0; i < {3}; ++i)
+{{
+  starts[i] = i*{2};
+  n_connections[i] = {2};
 }}
 """.format(size, row_size, n_elem, dim)
     flags = "-march=native"
@@ -80,12 +93,17 @@ for (int i = 0; i < {2}*{3}; ++i)
         include += """
 #include "kernels/neighbor/benchmark.hpp"
 """
-        execute = "{}<{}, {}, {}>(connect_r, connect_w, {});"
-    else:
+        execute = "{}<{}, {}, {}>(connect_r, connect_w, starts, n_connections, weights_1d, 0.2);"
+    elif kernel in real_local:
         include += """
 #include "kernels/local/{}.hpp"
 """.format(kernel)
         execute = "{}<{}, {}, {}>(read, write, {}, diff_mat, 1.);"
+    elif kernel in real_neighbor:
+        include += """
+#include "kernels/neighbor/{}.hpp"
+""".format(kernel)
+        execute = "{}<{}, {}, {}>(connect_r, connect_w, starts, n_connections, weights_1d, 0.2);"
     execute = execute.format(kernel, n_var, n_qpoint, row_size, n_elem)
     file_name = "benchmark_output_{}.txt".format(kernel)
     ofile = open(file_name, "w"); ofile.write(""); ofile.close()
