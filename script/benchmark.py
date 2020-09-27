@@ -66,20 +66,22 @@ for (int i = 0; i < {1}; ++i)
   weights_1d(i) = i/3.;
 }}
 
-double** connect_r = new double* [{2}*2*{3}];
-double** connect_w = new double* [{2}*2*{3}];
+double** all_connect_r = new double* [{2}*2*{3}];
+double** all_connect_w = new double* [{2}*2*{3}];
 for (int i = 0; i < {2}*{3}; ++i)
 {{
   int i0 = rand()%({2}*{3}); int i1 = rand()%({2}*{3});
-  connect_r[2*i    ] = read  + i0;
-  connect_r[2*i + 1] = read  + i1;
-  connect_w[2*i    ] = write + i0;
-  connect_w[2*i + 1] = write + i1;
+  all_connect_r[2*i    ] = read  + i0;
+  all_connect_r[2*i + 1] = read  + i1;
+  all_connect_w[2*i    ] = write + i0;
+  all_connect_w[2*i + 1] = write + i1;
 }}
-int starts [{3}]; int n_connections [{3}];
+double** connect_r [{3}]; int n_connections [{3}];
+double** connect_w [{3}];
 for (int i = 0; i < {3}; ++i)
 {{
-  starts[i] = i*{2};
+  connect_r[i] = all_connect_r + i*{2};
+  connect_w[i] = all_connect_w + i*{2};
   n_connections[i] = {2};
 }}
 """.format(size, row_size, n_elem, dim)
@@ -93,7 +95,7 @@ for (int i = 0; i < {3}; ++i)
         include += """
 #include "kernels/neighbor/benchmark.hpp"
 """
-        execute = "{}<{}, {}, {}>(connect_r, connect_w, starts, n_connections, weights_1d, 0.2);"
+        execute = "{}<{}, {}, {}>(connect_r, connect_w, n_connections, weights_1d, 0.2);"
     elif kernel in real_local:
         include += """
 #include "kernels/local/{}.hpp"
@@ -103,7 +105,7 @@ for (int i = 0; i < {3}; ++i)
         include += """
 #include "kernels/neighbor/{}.hpp"
 """.format(kernel)
-        execute = "{}<{}, {}, {}>(connect_r, connect_w, starts, n_connections, weights_1d, 0.2);"
+        execute = "{}<{}, {}, {}>(connect_r, connect_w, n_connections, weights_1d, 0.2);"
     execute = execute.format(kernel, n_var, n_qpoint, row_size, n_elem)
     file_name = "benchmark_output_{}.txt".format(kernel)
     ofile = open(file_name, "w"); ofile.write(""); ofile.close()

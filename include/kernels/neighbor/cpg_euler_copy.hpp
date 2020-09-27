@@ -6,8 +6,7 @@
 #include <kernels/neighbor/cpg_euler_hll.hpp>
 
 template<int n_var, int n_qpoint, int row_size>
-void cpg_euler_copy(double** connections_r, double** connections_w,
-                    int* starts, int* n_connections,
+void cpg_euler_copy(double*** connections_r, double*** connections_w, int* n_connections,
                     Eigen::VectorXd weights_1d, double d_t_by_d_pos, double sp_heat_rat=1.4)
 {
   const int n_face_qpoint = n_qpoint/row_size;
@@ -36,13 +35,13 @@ void cpg_euler_copy(double** connections_r, double** connections_w,
     double face_w [2*face_size];
     for (int i_con = 0; i_con < n_connections[i_axis]; ++i_con)
     {
-      double** connect = connections_r + starts[i_axis];
+      double** connect = connections_r[i_axis];
       read_copy<n_var, n_qpoint, row_size>(connect[0], face_r            , stride, 1);
       read_copy<n_var, n_qpoint, row_size>(connect[1], face_r + face_size, stride, 0);
 
       cpg_euler_hll<n_var - 2, n_face_qpoint>(face_r, face_w, weights, i_axis, sp_heat_rat);
 
-      connect = connections_w + starts[i_axis];
+      connect = connections_w[i_axis];
       write_copy<n_var, n_qpoint, row_size>(face_w, connect[0], stride, 1);
       write_copy<n_var, n_qpoint, row_size>(face_w, connect[1], stride, 0);
     }
