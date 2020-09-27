@@ -14,7 +14,7 @@ void write_copy(double* read, double* write, int stride, bool is_positive_face)
     {
       for (int i_inner = 0; i_inner < stride; ++i_inner)
       {
-        write[offset + i_outer*outer_stride + i_inner] = read[i_read++];
+        write[offset + i_outer*outer_stride + i_inner] += read[i_read++];
       }
     }
   }

@@ -121,6 +121,7 @@ TEST_CASE("neighbor kernel write_copy<>()")
     double read[18];
     double write0[6];
     double write1[18];
+    int n_copies[9] {2, 1, 2, 1, 0, 1, 2, 1, 2};
     for (int i = 0; i < 18; ++i)
     {
       read[i] = i/10.;
@@ -136,14 +137,7 @@ TEST_CASE("neighbor kernel write_copy<>()")
     #undef COPY
     for (int i = 0; i < 18; ++i)
     {
-      if (i%9 != 4)
-      {
-        REQUIRE(read[i] == write1[i]);
-      }
-      else
-      {
-        REQUIRE(write1[i] == 0);
-      }
+      REQUIRE(n_copies[i%9]*read[i] == write1[i]);
     }
   }
 
@@ -152,6 +146,13 @@ TEST_CASE("neighbor kernel write_copy<>()")
     double read[27];
     double write0[9];
     double write1[27];
+    int n_copies_2d[9] {2, 1, 2, 1, 0, 1, 2, 1, 2};
+    int n_copies[27];
+    for (int i = 0; i < 9; ++i)
+    {
+      n_copies[i + 9] = n_copies_2d[i];
+      n_copies[i + 18] = n_copies[i] = n_copies_2d[i] + 1;
+    }
     for (int i = 0; i < 27; ++i)
     {
       read[i] = i/10.;
@@ -169,14 +170,8 @@ TEST_CASE("neighbor kernel write_copy<>()")
     #undef COPY
     for (int i = 0; i < 27; ++i)
     {
-      if (i != 13)
-      {
-        REQUIRE(read[i] == write1[i]);
-      }
-      else
-      {
-        REQUIRE(write1[i] == 0);
-      }
+      REQUIRE(n_copies[i]*read[i] == write1[i]);
     }
   }
+
 }
