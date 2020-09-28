@@ -1,5 +1,4 @@
 #include <cmath>
-#include <iostream>
 
 #include <catch.hpp>
 
@@ -57,16 +56,18 @@ class Sinusoidal_init : public Initializer
 
 TEST_CASE("Sinusoidal density wave")
 {
-  int length = 2.*M_PI;
+  double length = 2.*M_PI;
   int rank = 6;
 
   SECTION("1D")
   {
     Solution sol (3, 1, rank, length);
     sol.add_block_grid(3);
+    std::vector<int> periods {8};
     Sinusoidal_init init (1);
     sol.initialize(init);
     Grid& grid = sol.get_grid(0);
+    grid.auto_connect(periods);
     //grid.print();
     grid.visualize("sinusoid_1d");
     sol.update();

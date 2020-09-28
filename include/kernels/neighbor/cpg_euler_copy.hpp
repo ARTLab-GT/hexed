@@ -11,30 +11,7 @@ void cpg_euler_copy(double*** connections_r, double*** connections_w, int* n_con
                     double d_t_by_d_pos, double sp_heat_rat=1.4)
 {
   const int n_face_qpoint = n_qpoint/row_size;
-  double weights [n_face_qpoint];
-  for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint)
-  {
-    weights[i_qpoint] = d_t_by_d_pos/weights_1d(0);
-    //weights[i_qpoint] = d_t_by_d_pos;
-    //weights[i_qpoint] = 0.;
-  }
-  /*
-  for (int stride = n_face_qpoint/row_size, n_rows = 1; n_rows < n_face_qpoint;
-       stride /= row_size, n_rows *= row_size)
-  {
-    for (int i_outer = 0; i_outer < n_rows; ++i_outer)
-    {
-      for (int i_inner = 0; i_inner < stride; ++i_inner)
-      {
-        for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
-        {
-          weights[(i_outer*row_size + i_qpoint)*stride + i_inner]
-          /= weights_1d(i_qpoint);
-        }
-      }
-    }
-  }
-  */
+  double mult = d_t_by_d_pos/weights_1d(0);
 
   const int face_size = n_face_qpoint*n_var;
   for (int stride=n_face_qpoint, i_axis=0; stride > 0; stride /= row_size, ++i_axis)
@@ -43,13 +20,13 @@ void cpg_euler_copy(double*** connections_r, double*** connections_w, int* n_con
     double face_w [2*face_size];
     for (int i_con = 0; i_con < n_connections[i_axis]; ++i_con)
     {
-      double** connect = connections_r[i_axis];
+      double** connect = connections_r[i_axis] + 2*i_con;
       read_copy<n_var, n_qpoint, row_size>(connect[0], face_r            , stride, 1);
       read_copy<n_var, n_qpoint, row_size>(connect[1], face_r + face_size, stride, 0);
 
       cpg_euler_hll<n_var - 2, n_face_qpoint>(face_r, face_w, weights, i_axis, sp_heat_rat);
 
-      connect = connections_w[i_axis];
+      connect = connections_w[i_axis] + 2*i_con;
       write_copy<n_var, n_qpoint, row_size>(face_w            , connect[0], stride, 1);
       write_copy<n_var, n_qpoint, row_size>(face_w + face_size, connect[1], stride, 0);
     }

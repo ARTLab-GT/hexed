@@ -186,7 +186,7 @@ TEST_CASE("cpg_euler_hll")
   double energy = pressure/0.4 + 0.5*mass*680*680;
   double read[20] {};
   double write[20] {};
-  double quad_weights[2] {0.7, 0.3};
+  double mult = 0.7;
   for (int i = 0; i < 2; ++i)
   {
     for (int j = 0; j < 2; ++j)
@@ -198,7 +198,7 @@ TEST_CASE("cpg_euler_hll")
       read[i + 10*j + 8] = energy;
     }
   }
-  cpg_euler_hll<3, 2>(&read[0], &write[0], &quad_weights[0], 0);
+  cpg_euler_hll<3, 2>(&read[0], &write[0], mult, 0);
   for (int j = 0; j < 2; ++j)
   {
     for (int i_var = 0; i_var < 5; ++i_var)
@@ -206,11 +206,11 @@ TEST_CASE("cpg_euler_hll")
       double correct_d_flux = 680*read[2*i_var];
       if (i_var == 4) correct_d_flux += 680*pressure;
       CHECK(write[10*j + 2*i_var    ] == Approx(j*0.7*correct_d_flux));
-      CHECK(write[10*j + 2*i_var + 1] == Approx(j*0.3*correct_d_flux));
+      CHECK(write[10*j + 2*i_var + 1] == Approx(j*0.7*correct_d_flux));
     }
   }
   for (int i = 0; i < 20; ++i) write[i] = 0;
-  cpg_euler_hll<3, 2>(&read[0], &write[0], &quad_weights[0], 1);
+  cpg_euler_hll<3, 2>(&read[0], &write[0], mult, 1);
   for (int j = 0; j < 2; ++j)
   {
     for (int i_var = 0; i_var < 5; ++i_var)
@@ -218,7 +218,7 @@ TEST_CASE("cpg_euler_hll")
       double correct_d_flux = 680*read[2*i_var + 10];
       if (i_var == 4) correct_d_flux += 680*pressure;
       CHECK(write[10*j + 2*i_var    ] == Approx((1 - j)*0.7*correct_d_flux));
-      CHECK(write[10*j + 2*i_var + 1] == Approx((1 - j)*0.3*correct_d_flux));
+      CHECK(write[10*j + 2*i_var + 1] == Approx((1 - j)*0.7*correct_d_flux));
     }
   }
 }

@@ -57,10 +57,11 @@ TEST_CASE("Conservation of state variables")
   {
     Solution sol (3, 1, rank, length);
     sol.add_block_grid(2);
-    sol.auto_connect();
     Linear_init init (1);
     sol.initialize(init);
     Grid& grid = sol.get_grid(0);
+    std::vector<int> periods {4};
+    grid.auto_connect(periods);
     double * state = grid.state_r();
     for (int i_state = 0; i_state < grid.n_qpoint; ++i_state)
     {
@@ -76,7 +77,7 @@ TEST_CASE("Conservation of state variables")
     }
     for (int i_var = 0; i_var < grid.n_var; ++i_var)
     {
-      REQUIRE(grid.state_integral()(i_var) == Approx(0.).epsilon(0.001));
+      REQUIRE(grid.state_integral()(i_var) == Approx(0.).margin(0.001));
     }
   }
 
@@ -84,10 +85,11 @@ TEST_CASE("Conservation of state variables")
   {
     Solution sol (4, 2, rank, length);
     sol.add_block_grid(2);
-    sol.auto_connect();
     Linear_init init (2);
     sol.initialize(init);
     Grid& grid = sol.get_grid(0);
+    std::vector<int> periods {4, 4};
+    grid.auto_connect(periods);
     double * state = grid.state_r();
     for (int i_state = 0; i_state < grid.n_qpoint; ++i_state)
     {
@@ -103,7 +105,7 @@ TEST_CASE("Conservation of state variables")
     }
     for (int i_var = 0; i_var < grid.n_var; ++i_var)
     {
-      REQUIRE(grid.state_integral()(i_var) == Approx(0.).epsilon(0.001));
+      REQUIRE(grid.state_integral()(i_var) == Approx(0.).margin(0.001));
     }
   }
 
@@ -111,10 +113,11 @@ TEST_CASE("Conservation of state variables")
   {
     Solution sol (5, 3, rank, length);
     sol.add_block_grid(2);
-    sol.auto_connect();
     Linear_init init (3);
     sol.initialize(init);
     Grid& grid = sol.get_grid(0);
+    std::vector<int> periods {4, 4, 4};
+    grid.auto_connect(periods);
     double * state = grid.state_r();
     for (int i_state = 0; i_state < grid.n_qpoint; ++i_state)
     {
@@ -130,7 +133,7 @@ TEST_CASE("Conservation of state variables")
     }
     for (int i_var = 0; i_var < grid.n_var; ++i_var)
     {
-      REQUIRE(grid.state_integral()(i_var) == Approx(0.).epsilon(0.001));
+      REQUIRE(grid.state_integral()(i_var) == Approx(0.).margin(0.001));
     }
   }
 }
