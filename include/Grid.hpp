@@ -27,7 +27,8 @@ class Grid
 
   inline double* state_r() { return ((iter%2 == 0) ? state_r_storage : state_w_storage).data(); }
   inline double* state_w() { return ((iter%2 == 1) ? state_r_storage : state_w_storage).data(); }
-  std::vector<double**> neighbor_connections();
+  std::vector<double**> neighbor_connections_r();
+  std::vector<double**> neighbor_connections_w();
   std::vector<int> n_neighb_con();
   std::vector<double> get_pos(int i_elem);
 

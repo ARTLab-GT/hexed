@@ -24,12 +24,22 @@ basis(basis_arg), iter(0)
 
 Grid::~Grid() {}
 
-std::vector<double**> Grid::neighbor_connections()
+std::vector<double**> Grid::neighbor_connections_r()
 {
   std::vector<double**> connections;
-  for (int i_dim = 0; i_dim < 2*n_dim; ++i_dim)
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
   {
-    connections.push_back(neighbor_storage[i_dim].data());
+    connections.push_back(neighbor_storage[i_dim + (    iter%2)*n_dim].data());
+  }
+  return connections;
+}
+
+std::vector<double**> Grid::neighbor_connections_w()
+{
+  std::vector<double**> connections;
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+  {
+    connections.push_back(neighbor_storage[i_dim + (1 - iter%2)*n_dim].data());
   }
   return connections;
 }

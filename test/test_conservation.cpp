@@ -57,6 +57,7 @@ TEST_CASE("Conservation of state variables")
   {
     Solution sol (3, 1, rank, length);
     sol.add_block_grid(2);
+    sol.auto_connect();
     Linear_init init (1);
     sol.initialize(init);
     Grid& grid = sol.get_grid(0);
@@ -83,6 +84,7 @@ TEST_CASE("Conservation of state variables")
   {
     Solution sol (4, 2, rank, length);
     sol.add_block_grid(2);
+    sol.auto_connect();
     Linear_init init (2);
     sol.initialize(init);
     Grid& grid = sol.get_grid(0);
@@ -109,6 +111,7 @@ TEST_CASE("Conservation of state variables")
   {
     Solution sol (5, 3, rank, length);
     sol.add_block_grid(2);
+    sol.auto_connect();
     Linear_init init (3);
     sol.initialize(init);
     Grid& grid = sol.get_grid(0);
