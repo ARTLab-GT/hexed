@@ -71,7 +71,8 @@ void Solution::add_block_grid(int ref_level, std::vector<int> lower_corner,
   }
   double mesh_size = base_mesh_size;
   for (int i_rl = 0; i_rl < ref_level; ++i_rl) mesh_size /= 2;
-  Grid g (n_var, n_dim, n_elem, mesh_size, basis);
+  grids.push_back(Grid (n_var, n_dim, n_elem, mesh_size, basis));
+  Grid& g = grids.back();
   for (int i_dim = 0, stride = 1; i_dim < n_dim; ++i_dim)
   {
     int row_size = upper_corner[i_dim] - lower_corner[i_dim];
@@ -88,7 +89,6 @@ void Solution::add_block_grid(int ref_level, std::vector<int> lower_corner,
     }
     stride *= row_size;
   }
-  grids.push_back(g);
 }
 
 void Solution::add_block_grid(int ref_level)
