@@ -27,8 +27,13 @@ class Grid
 
   inline double* state_r() { return ((iter%2 == 0) ? state_r_storage : state_w_storage).data(); }
   inline double* state_w() { return ((iter%2 == 1) ? state_r_storage : state_w_storage).data(); }
+  std::vector<double**> neighbor_connections();
+  std::vector<int> n_neighb_con();
   std::vector<double> get_pos(int i_elem);
 
+  void auto_connect(std::vector<int> periods);
+  void auto_connect();
+  void clear_neighbors();
   void visualize(std::string file_name);
   void print();
   Eigen::VectorXd state_integral();
@@ -36,6 +41,7 @@ class Grid
   protected:
   std::vector<double> state_r_storage;
   std::vector<double> state_w_storage;
+  std::vector<std::vector<double*>> neighbor_storage;
 
   private:
   void populate_slice(std::vector<double>&, std::vector<int>, int);

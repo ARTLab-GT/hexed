@@ -15,9 +15,96 @@ basis(basis_arg), iter(0)
   state_r_storage.resize(n_dof*n_elem, 0.);
   state_w_storage.resize(n_dof*n_elem, 0.);
   pos.resize(n_elem*n_dim, 0);
+  for (int i_dim = 0; i_dim < 2*n_dim; ++i_dim)
+  {
+    std::vector<double*> empty;
+    neighbor_storage.push_back(empty);
+  }
 }
 
 Grid::~Grid() {}
+
+std::vector<double**> Grid::neighbor_connections()
+{
+  std::vector<double**> connections;
+  for (int i_dim = 0; i_dim < 2*n_dim; ++i_dim)
+  {
+    connections.push_back(neighbor_storage[i_dim].data());
+  }
+  return connections;
+}
+
+std::vector<int> Grid::n_neighb_con()
+{
+  std::vector<int> n_con;
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+  {
+    n_con.push_back(neighbor_storage[i_dim].size()/2);
+  }
+  return n_con;
+}
+
+void Grid::auto_connect(std::vector<int> periods)
+{
+  double* sr = state_r_storage.data();
+  double* sw = state_w_storage.data();
+  for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+  {
+    for (int j_elem = i_elem + 1; j_elem < n_elem; ++j_elem)
+    {
+      int pos_diff [n_dim];
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+      {
+        pos_diff[i_dim] = pos[n_dim*j_elem + i_dim] - pos[n_dim*i_elem + i_dim];
+        // assumes period[i_dim] >= greatest distance between elements in this dimension
+        if (periods[i_dim] > 0)
+        {
+          pos_diff[i_dim] = (pos_diff[i_dim] + periods[i_dim] + 1)%periods[i_dim] - 1;
+        }
+      }
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+      {
+        bool is_same_row = true;
+        for (int j_dim = 0; j_dim < n_dim; ++j_dim)
+        {
+          if ((j_dim != i_dim) && (pos_diff[j_dim] != 0)) is_same_row = false;
+        }
+        if (is_same_row)
+        {
+          if (pos_diff[i_dim] == 1)
+          {
+            neighbor_storage[i_dim        ].push_back(sr + n_dof*i_elem);
+            neighbor_storage[i_dim        ].push_back(sr + n_dof*j_elem);
+            neighbor_storage[i_dim + n_dim].push_back(sw + n_dof*i_elem);
+            neighbor_storage[i_dim + n_dim].push_back(sw + n_dof*j_elem);
+          }
+          else if (pos_diff[i_dim] == -1)
+          {
+            neighbor_storage[i_dim        ].push_back(sr + n_dof*j_elem);
+            neighbor_storage[i_dim        ].push_back(sr + n_dof*i_elem);
+            neighbor_storage[i_dim + n_dim].push_back(sw + n_dof*j_elem);
+            neighbor_storage[i_dim + n_dim].push_back(sw + n_dof*i_elem);
+          }
+        }
+      }
+    }
+  }
+}
+
+void Grid::clear_neighbors()
+{
+  for (int i_dim = 0; i_dim < 2*n_dim; ++i_dim)
+  {
+    neighbor_storage[i_dim].clear();
+  }
+}
+
+void Grid::auto_connect()
+{
+  std::vector<int> periods;
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) periods.push_back(0);
+  auto_connect(periods);
+}
 
 void Grid::populate_slice(std::vector<double>& elem_pos, std::vector<int> indices, int i_elem)
 {

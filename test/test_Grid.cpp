@@ -38,10 +38,10 @@ TEST_CASE("Grid")
   }
   {
     int i = 0;
+    grid2.pos[i++] = 1; grid2.pos[i++] =  1;
     grid2.pos[i++] = 0; grid2.pos[i++] =  0;
     grid2.pos[i++] = 0; grid2.pos[i++] = -1;
     grid2.pos[i++] = 1; grid2.pos[i++] = -1;
-    grid2.pos[i++] = 1; grid2.pos[i++] =  1;
     grid2.pos[i++] = 3; grid2.pos[i++] =  0;
   }
   for (int i = 0; i < 3; ++i)
@@ -69,6 +69,8 @@ TEST_CASE("Grid")
     REQUIRE(pos[0] == 0.);
 
     pos = grid2.get_pos(0);
+    REQUIRE(pos[0] == 0.1);
+    pos = grid2.get_pos(1);
     REQUIRE(pos[0] == 0.);
     REQUIRE(pos[1] == 0.);
     REQUIRE(pos[8] == Approx(0.1/7.));
@@ -77,7 +79,7 @@ TEST_CASE("Grid")
     REQUIRE(pos[65] == Approx(0.1/7.));
     REQUIRE(pos[72] == Approx(0.));
     REQUIRE(pos[127] == 0.1);
-    pos = grid2.get_pos(1);
+    pos = grid2.get_pos(2);
     REQUIRE(pos[0] == 0.);
     REQUIRE(pos[63] == 0.1);
     REQUIRE(pos[64] == -0.1);
@@ -125,6 +127,27 @@ TEST_CASE("Grid")
     REQUIRE((grid1.state_integral() - correct*0.1  ).sum() == Approx(0.));
     REQUIRE((grid2.state_integral() - correct*0.01 ).sum() == Approx(0.));
     REQUIRE((grid3.state_integral() - correct*0.001).sum() == Approx(0.));
+  }
+
+  SECTION("Automatic graph creation")
+  {
+    grid2.auto_connect();
+    std::vector<int> n_neighb_con = grid2.n_neighb_con();
+    REQUIRE(n_neighb_con[0] == 1);
+    REQUIRE(n_neighb_con[1] == 1);
+    grid2.clear_neighbors();
+    std::vector<int> periods {0, 3};
+    grid2.auto_connect(periods);
+    n_neighb_con = grid2.n_neighb_con();
+    REQUIRE(n_neighb_con[0] == 1);
+    REQUIRE(n_neighb_con[1] == 2);
+
+    std::vector<int> periods3d {3, 3, 3};
+    grid3.auto_connect(periods3d);
+    n_neighb_con = grid3.n_neighb_con();
+    REQUIRE(n_neighb_con[0] == 27);
+    REQUIRE(n_neighb_con[1] == 27);
+    REQUIRE(n_neighb_con[2] == 27);
   }
 
 }
