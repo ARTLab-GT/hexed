@@ -2,7 +2,7 @@
 #include <kernels/local/cpg_euler_matrix.hpp>
 #include <kernels/local/cpg_euler_tensor.hpp>
 
-#define TEST_CPG_EULER(kernel, cfl) \
+#define TEST_CPG_EULER(kernel, d_t_by_d_x) \
   SECTION("1D") \
   { \
     const int n_elem = 5; \
@@ -22,7 +22,7 @@
       } \
     } \
     kernel<3, 2, 2>(&read[0][0][0], &write[0][0][0], n_elem, \
-                              diff_mat, cfl); \
+                              diff_mat, d_t_by_d_x); \
     for (int i_elem = 0; i_elem < n_elem; ++i_elem) \
     { \
       for (int i_qpoint = 0; i_qpoint < rank; ++i_qpoint) \
@@ -60,7 +60,7 @@
       } \
     } \
     kernel<5, 27, 3>(&read[0][0][0], &write[0][0][0], n_elem, \
-                               diff_mat, cfl); \
+                               diff_mat, d_t_by_d_x); \
     for (int i_elem = 0; i_elem < n_elem; ++i_elem) \
     { \
       for (int i_qpoint = 0; i_qpoint < rank*rank*rank; ++i_qpoint) \

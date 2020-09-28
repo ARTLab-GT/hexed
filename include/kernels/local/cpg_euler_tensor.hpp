@@ -5,7 +5,7 @@
 
 template<int n_var, int n_qpoint, int row_size>
 void cpg_euler_tensor(double * read, double * write, int n_elem,
-                      const Eigen::MatrixXd& diff_mat, double cfl, double sp_heat_rat = 1.4)
+                      const Eigen::MatrixXd& diff_mat, double d_t_by_d_x, double sp_heat_rat = 1.4)
 {
 
   // Fetch differentiation matrix
@@ -81,7 +81,7 @@ void cpg_euler_tensor(double * read, double * write, int n_elem,
             for (int j_qpoint = 0; j_qpoint < row_size; ++j_qpoint)
             {
               #define WRITE(i) row_w[(i)*row_size + i_qpoint]
-              double coef = cfl*mat[i_qpoint*row_size + j_qpoint];
+              double coef = d_t_by_d_x*mat[i_qpoint*row_size + j_qpoint];
               double mass_log = (flux_var[(n_var - 2)*row_size + i_qpoint] - flux_var[(n_var - 2)*row_size + j_qpoint])/
                                 (flux_var[(n_var - 0)*row_size + i_qpoint] - flux_var[(n_var - 0)*row_size + j_qpoint]);
               double beta_log = (flux_var[(n_var - 1)*row_size + i_qpoint] - flux_var[(n_var - 1)*row_size + j_qpoint])/

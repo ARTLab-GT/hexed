@@ -24,8 +24,8 @@ void Solution::update()
   for (Grid& g : grids)
   {
     // FIXME: replace this with a CFL-based time step
-    double cfl = 1./g.mesh_size;
-    local(g.state_r(), g.state_w(), g.n_elem, g.basis.diff_mat(), cfl, 1.4);
+    double d_t_by_d_x = 1./g.mesh_size;
+    local(g.state_r(), g.state_w(), g.n_elem, g.basis.diff_mat(), d_t_by_d_x, 1.4);
     g.iter++;
   }
 }
