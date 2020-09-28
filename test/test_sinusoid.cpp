@@ -62,11 +62,11 @@ TEST_CASE("Sinusoidal density wave")
   SECTION("1D")
   {
     Solution sol (3, 1, rank, length);
-    sol.add_block_grid(3);
-    std::vector<int> periods {8};
+    sol.add_block_grid(2);
     Sinusoidal_init init (1);
     sol.initialize(init);
     Grid& grid = sol.get_grid(0);
+    std::vector<int> periods {4};
     grid.auto_connect(periods);
     //grid.print();
     grid.visualize("sinusoid_1d");
@@ -95,6 +95,11 @@ TEST_CASE("Sinusoidal density wave")
                           0.5*init.mean_mass*init.velocity[0]*init.velocity[0])));
       }
     }
+    for (int i_iter = 0; i_iter < 1e5; ++i_iter)
+    {
+      sol.update(1e-5);
+    }
+    grid.visualize("sinusoid_1d_end");
   }
 
   SECTION("2D")

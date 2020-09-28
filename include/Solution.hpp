@@ -19,6 +19,7 @@ class Solution
 
   Grid& get_grid(int order_added);
   void update();
+  void update(double d_t);
 
   void initialize(Initializer& init);
   void add_block_grid(int ref_level, std::vector<int> lower_corner,
