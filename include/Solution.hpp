@@ -24,14 +24,13 @@ class Solution
   void add_block_grid(int ref_level, std::vector<int> lower_corner,
                                      std::vector<int> upper_corner);
   void add_block_grid(int ref_level);
+  void auto_connect();
 
   protected:
   Gauss_lobatto basis;
   std::vector<Grid> grids;
   virtual Local_kernel get_local_kernel();
-  virtual Copy_kernel get_read_kernel();
-  virtual Copy_kernel get_write_kernel();
-  virtual Flux_kernel get_flux_kernel();
+  virtual Neighbor_kernel get_neighbor_kernel();
 };
 
 #endif

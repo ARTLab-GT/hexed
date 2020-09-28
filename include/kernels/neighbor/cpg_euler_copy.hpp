@@ -7,7 +7,8 @@
 
 template<int n_var, int n_qpoint, int row_size>
 void cpg_euler_copy(double*** connections_r, double*** connections_w, int* n_connections,
-                    Eigen::VectorXd weights_1d, double d_t_by_d_pos, double sp_heat_rat=1.4)
+                    const Eigen::VectorXd weights_1d,
+                    double d_t_by_d_pos, double sp_heat_rat=1.4)
 {
   const int n_face_qpoint = n_qpoint/row_size;
   double weights [n_qpoint];

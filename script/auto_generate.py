@@ -12,19 +12,13 @@ to make the required changes.
 text = """
 #include <Solution.hpp>
 #include <kernels/local/cpg_euler_matrix.hpp>
-#include <kernels/neighbor/read_copy.hpp>
-#include <kernels/neighbor/write_copy.hpp>
-#include <kernels/neighbor/average.hpp>
+#include <kernels/neighbor/cpg_euler_copy.hpp>
 """
 
-templates = {"local" : "cpg_euler_matrix", "read" : "read_copy", "write" : "write_copy", \
-             "flux" : "average_flux"}
+templates = {"local" : "cpg_euler_matrix", "neighbor" : "cpg_euler_copy"}
 
-for kernel_type in ["local", "read", "write", "flux"]:
-    if kernel_type in "read write":
-        func_type = "Copy"
-    else:
-        func_type = kernel_type.capitalize()
+for kernel_type in ["local", "neighbor"]:
+    func_type = kernel_type.capitalize()
     kernel_arr = "\n{}_kernel {}_kernels [{}][{}] {{\n"
     text += kernel_arr.format(func_type, kernel_type, max_dim, max_rank)
     for i_dim in range(max_dim):
@@ -33,12 +27,7 @@ for kernel_type in ["local", "read", "write", "flux"]:
             n_qpoint = (i_rank + 1)**(i_dim + 1)
             n_face_qpoint = (i_rank + 1)**i_dim
             row_size = i_rank + 1
-            if kernel_type == "flux":
-                text += """
-&(average<{}>),
-"""[1:].format(i_dim, i_rank, n_face_qpoint*n_var)
-            else:
-                text += """
+            text += """
 &({}<{}, {}, {}>),
 """[1:].format(templates[kernel_type], n_var, n_qpoint, row_size)
     text += "};\n"
