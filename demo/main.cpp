@@ -1,4 +1,5 @@
 #include <iostream>
+#include <chrono>
 
 #include <Initializer.hpp>
 #include <Solution.hpp>
@@ -100,10 +101,14 @@ int main()
 
   // Let's go!
   grid.visualize("initial");
-  std::cout << v_init.max_char_speed << "\n";
-  while (grid.time < 0.1)
+  auto start = std::chrono::high_resolution_clock::now();
+  while (grid.time < 0.01)
   {
     solution.update(1e-6);
   }
+  auto stop = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start);
+  std::cout << "Execution completed in " << float(duration.count())*1e-9 << " s\n";
+  std::cout << "(" << float(duration.count())*1e-9/grid.iter << " s per iteration)\n";
   grid.visualize("final");
 }
