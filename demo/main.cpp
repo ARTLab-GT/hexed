@@ -1,4 +1,4 @@
-#include <Initializer.hpp>
+#include <Solution.hpp>
 
 class Vortex_init : public Initializer
 {
@@ -88,6 +88,8 @@ int main()
   int n_div = 1; for (int i = 0; i < ref_level; ++i) n_div *= 2;
   std::vector<int> periods {n_div, n_div};
   grid.auto_connect(periods);
+  Vortex_init v_init;
+  solution.initialize(v_init);
 
   // Let's go!
   grid.visualize("Initial_cond");
