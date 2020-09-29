@@ -29,6 +29,7 @@ void Solution::update(double dt)
     local(g.state_r(), g.state_w(), g.n_elem, g.basis.diff_mat(), d_t_by_d_x, 1.4);
     neighbor(g.neighbor_connections_r().data(), g.neighbor_connections_w().data(), 
              g.n_neighb_con().data(), g.basis.node_weights(), d_t_by_d_x, 1.4);
+    g.time += dt;
     g.iter++;
   }
 }

@@ -1,6 +1,7 @@
 benchmark*.txt
 *.o
 test/test
+demo/demo
 *.szplt
 src/Solution__get_kernel.cpp
 src/Gauss_lobatto.cpp

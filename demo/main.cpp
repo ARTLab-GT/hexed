@@ -1,3 +1,6 @@
+#include <iostream>
+
+#include <Initializer.hpp>
 #include <Solution.hpp>
 
 class Vortex_init : public Initializer
@@ -46,7 +49,7 @@ class Vortex_init : public Initializer
   double mass;
   double energy;
 
-  double sqrt(x)
+  double sqr(double x)
   {
     return x*x;
   }
@@ -57,15 +60,19 @@ class Vortex_init : public Initializer
     double radius = sqrt(sqr(pos[0] - center0) + sqr(pos[1] - center1));
     double nondim_radius = radius/critical_radius;
     double veloc_mag = vortex_strength*nondim_radius*exp(decay_rate*(1. - sqr(nondim_radius)));
-    double veloc0 =  veloc_mag*(pos[1] - center1)/radius;
-    double veloc1 = -veloc_mag*(pos[0] - center0)/radius;
-    double temperature = -sp_gas_cons*(sp_heat_rat - 1)/(4*decay_rate*sp_heat_rat)
-                         *sqr(veloc_mag/nondim_radius);
+    double veloc0 =  veloc_mag*(pos[1] - center1 + 1e-6)/(radius + 1e-6);
+    double veloc1 = -veloc_mag*(pos[0] - center0 + 1e-6)/(radius + 1e-6);
+    double temperature = -(sp_heat_rat - 1)/(4*decay_rate*sp_heat_rat*sp_gas_const)
+                         *sqr(vortex_strength*exp(decay_rate*(1. - sqr(nondim_radius))));
 
     // Combine with freestream
     veloc0 += freestream_velocity;
-    freestream_temperature = freestream_pressure/(sp_gas_const*freestream_mass);
+    double freestream_temperature = freestream_pressure/(sp_gas_const*freestream_mass);
     temperature += freestream_temperature;
+
+    // Calculate char speed
+    double char_speed = veloc_mag + sqrt(sp_heat_rat*sp_gas_const*temperature);
+    max_char_speed = std::max(max_char_speed, char_speed);
 
     // Convert to conserved variables
     mass = freestream_mass*pow(temperature/freestream_temperature, 1./(sp_heat_rat - 1.));
@@ -78,7 +85,7 @@ class Vortex_init : public Initializer
 int main()
 {
   // Resolution parameters
-  const int rank = 6;
+  const int rank = 4;
   const int ref_level = 3;
 
   // Solution setup
@@ -92,5 +99,11 @@ int main()
   solution.initialize(v_init);
 
   // Let's go!
-  grid.visualize("Initial_cond");
+  grid.visualize("initial");
+  std::cout << v_init.max_char_speed << "\n";
+  while (grid.time < 0.1)
+  {
+    solution.update(1e-6);
+  }
+  grid.visualize("final");
 }
