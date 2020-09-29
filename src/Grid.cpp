@@ -4,7 +4,7 @@
 
 Grid::Grid(int n_var_arg, int n_dim_arg, int n_elem_arg, double mesh_size_arg, Basis& basis_arg)
 : n_var(n_var_arg), n_dim(n_dim_arg), n_elem(n_elem_arg), mesh_size(mesh_size_arg), time(0.),
-basis(basis_arg), iter(0)
+basis(basis_arg), iter(0), rk_stage(0), i_read(0), i_write(1)
 {
   n_qpoint = 1;
   for (int i_dim = 0; i_dim < n_dim; ++i_dim)
@@ -12,10 +12,9 @@ basis(basis_arg), iter(0)
     n_qpoint *= basis.rank;
   }
   n_dof = n_qpoint*n_var;
-  state_r_storage.resize(n_dof*n_elem, 0.);
-  state_w_storage.resize(n_dof*n_elem, 0.);
+  for (int i = 0; i < (int)state_storage.size(); ++i) state_storage[i].resize(n_dof*n_elem, 0.);
   pos.resize(n_elem*n_dim, 0);
-  for (int i_dim = 0; i_dim < 2*n_dim; ++i_dim)
+  for (int i_dim = 0; i_dim < 3*n_dim; ++i_dim)
   {
     std::vector<double*> empty;
     neighbor_storage.push_back(empty);
@@ -24,12 +23,22 @@ basis(basis_arg), iter(0)
 
 Grid::~Grid() {}
 
+double* Grid::state_r()
+{
+  return state_storage[i_read].data();
+}
+
+double* Grid::state_w()
+{
+  return state_storage[i_write].data();
+}
+
 std::vector<double**> Grid::neighbor_connections_r()
 {
   std::vector<double**> connections;
   for (int i_dim = 0; i_dim < n_dim; ++i_dim)
   {
-    connections.push_back(neighbor_storage[i_dim + (    iter%2)*n_dim].data());
+    connections.push_back(neighbor_storage[i_dim + i_read*n_dim].data());
   }
   return connections;
 }
@@ -39,7 +48,7 @@ std::vector<double**> Grid::neighbor_connections_w()
   std::vector<double**> connections;
   for (int i_dim = 0; i_dim < n_dim; ++i_dim)
   {
-    connections.push_back(neighbor_storage[i_dim + (1 - iter%2)*n_dim].data());
+    connections.push_back(neighbor_storage[i_dim + i_write*n_dim].data());
   }
   return connections;
 }
@@ -56,8 +65,8 @@ std::vector<int> Grid::n_neighb_con()
 
 void Grid::auto_connect(std::vector<int> periods)
 {
-  double* sr = state_r_storage.data();
-  double* sw = state_w_storage.data();
+  std::array<double*, 3> state_data {state_storage[0].data(), state_storage[1].data(),
+                                     state_storage[1].data()};
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
     for (int j_elem = i_elem + 1; j_elem < n_elem; ++j_elem)
@@ -83,17 +92,23 @@ void Grid::auto_connect(std::vector<int> periods)
         {
           if (pos_diff[i_dim] == 1)
           {
-            neighbor_storage[i_dim        ].push_back(sr + n_dof*i_elem);
-            neighbor_storage[i_dim        ].push_back(sr + n_dof*j_elem);
-            neighbor_storage[i_dim + n_dim].push_back(sw + n_dof*i_elem);
-            neighbor_storage[i_dim + n_dim].push_back(sw + n_dof*j_elem);
+            for (int i_stage = 0; i_stage < 3; ++i_stage)
+            {
+              neighbor_storage[i_dim + i_stage*n_dim].push_back(state_data[i_stage]
+                                                                + n_dof*i_elem);
+              neighbor_storage[i_dim + i_stage*n_dim].push_back(state_data[i_stage]
+                                                                + n_dof*j_elem);
+            }
           }
           else if (pos_diff[i_dim] == -1)
           {
-            neighbor_storage[i_dim        ].push_back(sr + n_dof*j_elem);
-            neighbor_storage[i_dim        ].push_back(sr + n_dof*i_elem);
-            neighbor_storage[i_dim + n_dim].push_back(sw + n_dof*j_elem);
-            neighbor_storage[i_dim + n_dim].push_back(sw + n_dof*i_elem);
+            for (int i_stage = 0; i_stage < 3; ++i_stage)
+            {
+              neighbor_storage[i_dim + i_stage*n_dim].push_back(state_data[i_stage]
+                                                                + n_dof*j_elem);
+              neighbor_storage[i_dim + i_stage*n_dim].push_back(state_data[i_stage]
+                                                                + n_dof*i_elem);
+            }
           }
         }
       }
