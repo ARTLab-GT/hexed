@@ -24,13 +24,16 @@ void Solution::update(double dt)
   Neighbor_kernel neighbor = get_neighbor_kernel();
   for (Grid& g : grids)
   {
-    // FIXME: replace this with a CFL-based time step
-    double d_t_by_d_x = dt/g.mesh_size;
-    local(g.state_r(), g.state_w(), g.n_elem, g.basis.diff_mat(), d_t_by_d_x, 1.4);
-    neighbor(g.neighbor_connections_r().data(), g.neighbor_connections_w().data(), 
-             g.n_neighb_con().data(), g.basis.node_weights(), d_t_by_d_x, 1.4);
+    do
+    {
+      // FIXME: replace this with a CFL-based time step
+      double d_t_by_d_x = dt/g.mesh_size;
+      local(g.state_r(), g.state_w(), g.n_elem, g.basis.diff_mat(), d_t_by_d_x, 1.4);
+      neighbor(g.neighbor_connections_r().data(), g.neighbor_connections_w().data(), 
+               g.n_neighb_con().data(), g.basis.node_weights(), d_t_by_d_x, 1.4);
+    }
+    while (g.execute_runge_kutta_stage());
     g.time += dt;
-    g.iter++;
   }
 }
 

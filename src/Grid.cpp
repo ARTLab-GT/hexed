@@ -3,8 +3,8 @@
 #include <Grid.hpp>
 
 Grid::Grid(int n_var_arg, int n_dim_arg, int n_elem_arg, double mesh_size_arg, Basis& basis_arg)
-: n_var(n_var_arg), n_dim(n_dim_arg), n_elem(n_elem_arg), mesh_size(mesh_size_arg), time(0.),
-basis(basis_arg), iter(0), rk_stage(0), i_read(0), i_write(1)
+: n_var(n_var_arg), n_dim(n_dim_arg), n_elem(n_elem_arg), mesh_size(mesh_size_arg),
+basis(basis_arg), iter(0), time(0.), i_rk_stage(0), i_read(0), i_write(1)
 {
   n_qpoint = 1;
   for (int i_dim = 0; i_dim < n_dim; ++i_dim)
@@ -165,6 +165,24 @@ std::vector<double> Grid::get_pos(int i_elem)
   std::vector<int> indices;
   populate_slice(elem_pos, indices, i_elem);
   return elem_pos;
+}
+
+bool Grid::execute_runge_kutta_stage()
+{
+  double* read0 = state_storage[0].data();
+  double* read1 = state_w();
+  double* write = (i_rk_stage == 2) ? read0 : read1;
+  double weight1 = rk_weights[i_rk_stage]; double weight0 = 1. - weight1;
+  for (int i = 0; i < n_elem*n_dof; ++i)
+  {
+    write[i] = weight1*read1[i] + weight0*read0[i];
+  }
+  ++i_rk_stage;
+  i_write = i_rk_stage + 1;
+  if (i_write == 3) i_write = 1;
+  if (i_rk_stage == 3) { i_rk_stage = 0; ++iter; }
+  i_read = i_rk_stage;
+  return i_rk_stage == 0;
 }
 
 void Grid::print()

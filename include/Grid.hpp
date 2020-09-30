@@ -18,9 +18,9 @@ class Grid
   int n_elem;
   std::vector<int> pos;
   double mesh_size;
-  double time;
   Basis& basis;
   int iter;
+  double time;
 
   Grid(int n_var_arg, int n_dim_arg, int n_elem_arg, double mesh_size_arg, Basis& basis_arg);
   virtual ~Grid();
@@ -31,7 +31,7 @@ class Grid
   std::vector<double**> neighbor_connections_w();
   std::vector<int> n_neighb_con();
   std::vector<double> get_pos(int i_elem);
-  void execute_runge_kutta_stage();
+  bool execute_runge_kutta_stage();
 
   void auto_connect(std::vector<int> periods);
   void auto_connect();
@@ -41,9 +41,10 @@ class Grid
   Eigen::VectorXd state_integral();
 
   protected:
-  int rk_stage;
+  int i_rk_stage;
   int i_read;
   int i_write;
+  double rk_weights [3] {1., 1./4., 2./3.};
   std::array<std::vector<double>, 3> state_storage {};
   std::vector<std::vector<double*>> neighbor_storage;
 
