@@ -21,7 +21,8 @@ double cpg_euler_max_char_speed(double* read, int n_elem, double sp_heat_rat)
         int_ener += veloc*READ(i_dim);
       }
       int_ener = READ(n_var - 1) - 0.5*int_ener;
-      const double sound_speed = sqrt(sp_heat_rat*(sp_heat_rat - 1)*int_ener);
+      const double sound_speed = std::sqrt(sp_heat_rat*(sp_heat_rat - 1)
+                                           *int_ener/READ(n_var - 2));
       max_speed = std::max(max_speed, max_veloc + sound_speed);
       #undef READ
     }
