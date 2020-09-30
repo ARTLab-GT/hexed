@@ -32,7 +32,7 @@ void Solution::update(double dt)
       neighbor(g.neighbor_connections_r().data(), g.neighbor_connections_w().data(), 
                g.n_neighb_con().data(), g.basis.node_weights(), d_t_by_d_x, 1.4);
     }
-    while (g.execute_runge_kutta_stage());
+    while (!g.execute_runge_kutta_stage());
     g.time += dt;
   }
 }

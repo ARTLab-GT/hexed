@@ -177,10 +177,9 @@ bool Grid::execute_runge_kutta_stage()
   {
     write[i] = weight1*read1[i] + weight0*read0[i];
   }
-  ++i_rk_stage;
-  i_write = i_rk_stage + 1;
+  ++i_rk_stage; ++i_write;
   if (i_write == 3) i_write = 1;
-  if (i_rk_stage == 3) { i_rk_stage = 0; ++iter; }
+  if (i_rk_stage == 3) { i_rk_stage = 0; i_write = 1; ++iter; }
   i_read = i_rk_stage;
   return i_rk_stage == 0;
 }

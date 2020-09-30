@@ -150,4 +150,40 @@ TEST_CASE("Grid")
     REQUIRE(n_neighb_con[2] == 27);
   }
 
+  SECTION("Runge Kutta time integration")
+  {
+    for (int i = 0; i < grid1.n_dof*grid1.n_elem; ++i)
+    {
+      grid1.state_r()[i] = 7.;
+    }
+
+    do
+    {
+      for (int i = 0; i < grid1.n_dof*grid1.n_elem; ++i)
+      {
+        grid1.state_w()[i] = grid1.state_r()[i] + 0.371;
+      }
+    }
+    while (!grid1.execute_runge_kutta_stage());
+
+    for (int i = 0; i < grid1.n_dof*grid1.n_elem; ++i)
+    {
+      REQUIRE(grid1.state_r()[i] == Approx(7.371));
+    }
+
+    do
+    {
+      for (int i = 0; i < grid1.n_dof*grid1.n_elem; ++i)
+      {
+        grid1.state_w()[i] = grid1.state_r()[i] + 0.001;
+      }
+    }
+    while (!grid1.execute_runge_kutta_stage());
+
+    for (int i = 0; i < grid1.n_dof*grid1.n_elem; ++i)
+    {
+      REQUIRE(grid1.state_r()[i] == Approx(7.372));
+    }
+  }
+
 }
