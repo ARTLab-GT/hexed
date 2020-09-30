@@ -73,6 +73,7 @@ void Grid::visualize(std::string file_name)
     NULL,
     NULL,
     &ShrConn);
+    ++StrandID;
 
     INTEGER4 III = IMax * JMax * KMax;
     std::vector<double> pos = get_pos(i_elem);

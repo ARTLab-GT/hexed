@@ -102,9 +102,17 @@ int main()
   // Let's go!
   grid.visualize("initial");
   auto start = std::chrono::high_resolution_clock::now();
-  while (grid.time < 0.01)
+  double time = 0;
+  for (int i = 0; i < 10; ++i)
   {
-    solution.update(1e-6);
+    time += 0.001;
+    while (grid.time < time)
+    {
+      solution.update(1e-5);
+    }
+    char buffer [100];
+    snprintf(buffer, 100, "t%e.txt", time);
+    grid.visualize(std::string(buffer));
   }
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start);
