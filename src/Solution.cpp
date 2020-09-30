@@ -1,3 +1,5 @@
+#include <limits>
+
 #include <Solution.hpp>
 #include <Initializer.hpp>
 
@@ -18,15 +20,21 @@ Grid& Solution::get_grid(int order_added)
   }
 }
 
-void Solution::update(double dt)
+double Solution::update(double cfl_by_stable_cfl)
 {
   Local_kernel local = get_local_kernel();
   Neighbor_kernel neighbor = get_neighbor_kernel();
+  Max_char_speed_kernel max_char_speed = get_max_char_speed_kernel();
+  double dt = std::numeric_limits<double>::max();
+  for (Grid& g : grids)
+  {
+    double cfl = cfl_by_stable_cfl*g.get_stable_cfl();
+    dt = std::min<double>(dt, cfl*g.mesh_size/max_char_speed(g.state_r(), g.n_elem, 1.4));
+  }
   for (Grid& g : grids)
   {
     do
     {
-      // FIXME: replace this with a CFL-based time step
       double d_t_by_d_x = dt/g.mesh_size;
       local(g.state_r(), g.state_w(), g.n_elem, g.basis.diff_mat(), d_t_by_d_x, 1.4);
       neighbor(g.neighbor_connections_r().data(), g.neighbor_connections_w().data(), 
@@ -35,11 +43,7 @@ void Solution::update(double dt)
     while (!g.execute_runge_kutta_stage());
     g.time += dt;
   }
-}
-
-void Solution::update()
-{
-  update(1.);
+  return dt;
 }
 
 void Solution::initialize(Initializer& init)

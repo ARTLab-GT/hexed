@@ -50,7 +50,6 @@ TEST_CASE("Conservation of state variables")
 {
   int length = 1.;
   int rank = 3;
-  double dt = 1e-5;
 
   SECTION("1D")
   {
@@ -75,7 +74,7 @@ TEST_CASE("Conservation of state variables")
     }
     grid.visualize("conservation_1d");
 
-    sol.update(dt);
+    double dt = sol.update();
     grid.visualize("conservation_final");
     double * state_r = grid.state_r();
     for (int i_state = 0; i_state < grid.n_elem*grid.n_dof; ++i_state)
@@ -85,7 +84,7 @@ TEST_CASE("Conservation of state variables")
     grid.visualize("conservation_diff");
     for (int i_var = 0; i_var < grid.n_var; ++i_var)
     {
-      REQUIRE(grid.state_integral()(i_var) == Approx(0.).margin(0.001));
+      REQUIRE(grid.state_integral()(i_var)/dt == Approx(0.).margin(0.001));
     }
   }
 
@@ -112,7 +111,7 @@ TEST_CASE("Conservation of state variables")
     }
     grid.visualize("conservation_2d");
 
-    sol.update(dt);
+    double dt = sol.update();
     double * state_r = grid.state_r();
     for (int i_state = 0; i_state < grid.n_elem*grid.n_dof; ++i_state)
     {
@@ -147,7 +146,7 @@ TEST_CASE("Conservation of state variables")
     }
     grid.visualize("conservation_3d");
 
-    sol.update(dt);
+    double dt = sol.update();
     double * state_r = grid.state_r();
     for (int i_state = 0; i_state < grid.n_elem*grid.n_dof; ++i_state)
     {

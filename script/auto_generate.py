@@ -13,11 +13,12 @@ text = """
 #include <Solution.hpp>
 #include <kernels/local/cpg_euler_matrix.hpp>
 #include <kernels/neighbor/cpg_euler_copy.hpp>
+#include <kernels/max_char_speed/cpg_euler_max.hpp>
 """
 
-templates = {"local" : "cpg_euler_matrix", "neighbor" : "cpg_euler_copy"}
+templates = {"local" : "cpg_euler_matrix", "neighbor" : "cpg_euler_copy", "max_char_speed" : "cpg_euler_max"}
 
-for kernel_type in ["local", "neighbor"]:
+for kernel_type in templates.keys():
     func_type = kernel_type.capitalize()
     kernel_arr = "\n{}_kernel {}_kernels [{}][{}] {{\n"
     text += kernel_arr.format(func_type, kernel_type, max_dim, max_rank)

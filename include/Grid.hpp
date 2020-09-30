@@ -32,6 +32,7 @@ class Grid
   std::vector<int> n_neighb_con();
   std::vector<double> get_pos(int i_elem);
   bool execute_runge_kutta_stage();
+  double get_stable_cfl();
 
   void auto_connect(std::vector<int> periods);
   void auto_connect();
@@ -47,6 +48,7 @@ class Grid
   double rk_weights [3] {1., 1./4., 2./3.};
   std::array<std::vector<double>, 3> state_storage {};
   std::vector<std::vector<double*>> neighbor_storage;
+  double stable_cfl [9] {1.256, 0.409, 0.209, 0.130, 0.089, 0.066, 0.051, 0.040, 0.033};
 
   private:
   void populate_slice(std::vector<double>&, std::vector<int>, int);

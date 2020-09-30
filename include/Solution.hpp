@@ -18,8 +18,7 @@ class Solution
   virtual ~Solution();
 
   Grid& get_grid(int order_added);
-  void update();
-  void update(double d_t);
+  double update(double cfl_by_stable_cfl=1.);
 
   void initialize(Initializer& init);
   void add_block_grid(int ref_level, std::vector<int> lower_corner,
@@ -32,6 +31,7 @@ class Solution
   std::vector<Grid> grids;
   virtual Local_kernel get_local_kernel();
   virtual Neighbor_kernel get_neighbor_kernel();
+  virtual Max_char_speed_kernel get_max_char_speed_kernel();
 };
 
 #endif

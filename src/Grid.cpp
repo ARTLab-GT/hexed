@@ -184,6 +184,18 @@ bool Grid::execute_runge_kutta_stage()
   return i_rk_stage == 0;
 }
 
+double Grid::get_stable_cfl()
+{
+  if ((basis.rank > 0) && (basis.rank <= 9))
+  {
+    return stable_cfl[basis.rank - 1];
+  }
+  else
+  {
+    throw "Stable CFL number unknown for basis of desired rank.";
+  }
+}
+
 void Grid::print()
 {
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)

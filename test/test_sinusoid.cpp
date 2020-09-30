@@ -58,7 +58,7 @@ TEST_CASE("Sinusoidal density wave")
 {
   double length = 2.*M_PI;
   int rank = 6;
-  double dt = 0.001;
+  double cfl = 0.01;
 
   SECTION("1D")
   {
@@ -78,7 +78,7 @@ TEST_CASE("Sinusoidal density wave")
     }
     grid.visualize("sinusoid_1d");
 
-    sol.update(dt);
+    double dt = sol.update(cfl);
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
       std::vector<double> pos = grid.get_pos(i_elem);
@@ -122,7 +122,7 @@ TEST_CASE("Sinusoidal density wave")
     }
     grid.visualize("sinusoid_2d");
 
-    sol.update(dt);
+    double dt = sol.update(cfl);
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
       std::vector<double> pos = grid.get_pos(i_elem);
@@ -176,7 +176,7 @@ TEST_CASE("Sinusoidal density wave")
     }
     grid.visualize("sinusoid_3d");
 
-    sol.update(dt);
+    double dt = sol.update(cfl);
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
       std::vector<double> pos = grid.get_pos(i_elem);

@@ -1,8 +1,8 @@
-#ifndef CPG_EULER_MAX_CHAR_SPEED_HPP_
-#define CPG_EULER_MAX_CHAR_SPEED_HPP_
+#ifndef CPG_EULER_MAX_HPP_
+#define CPG_EULER_MAX_HPP_
 
-template<int n_var, int n_qpoint>
-double cpg_euler_max_char_speed(double* read, int n_elem, double sp_heat_rat)
+template<int n_var, int n_qpoint, int row_size>
+double cpg_euler_max(double* read, int n_elem, double sp_heat_rat)
 {
   const int n_dof = n_var*n_qpoint;
   const int n_dim = n_var - 2;
