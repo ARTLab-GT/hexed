@@ -86,7 +86,7 @@ class Vortex_init : public Initializer
 int main()
 {
   // Resolution parameters
-  const int rank = 4;
+  const int rank = 6;
   const int ref_level = 3;
 
   // Solution setup
@@ -103,20 +103,26 @@ int main()
   grid.visualize("initial");
   auto start = std::chrono::high_resolution_clock::now();
   double time = 0;
-  for (int i = 0; i < 10; ++i)
+  for (int i = 0; i < 20; ++i)
   {
     time += 0.001;
     while (grid.time < time)
     {
-      solution.update(1e-5);
+      solution.update();
     }
     char buffer [100];
     snprintf(buffer, 100, "t%e.txt", time);
     grid.visualize(std::string(buffer));
   }
+  time = 0.2;
+  while (grid.time < time)
+  {
+    solution.update();
+  }
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start);
   std::cout << "Execution completed in " << float(duration.count())*1e-9 << " s\n";
-  std::cout << "(" << float(duration.count())*1e-9/grid.iter << " s per iteration)\n";
+  std::cout << "(" << grid.iter << " iterations at "
+            << float(duration.count())*1e-9/grid.iter << " s per iteration)\n";
   grid.visualize("final");
 }
