@@ -35,7 +35,7 @@ class Linear_init : public Initializer
   void set_properties(std::vector<double> pos)
   {
     mass = 1.;
-    pressure += 1.e5;
+    pressure = 1.e5;
     energy = pressure/0.4;
     _momentum.clear();
     for (int i = 0; i < dim; ++i)
