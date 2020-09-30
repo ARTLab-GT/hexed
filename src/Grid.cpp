@@ -66,7 +66,7 @@ std::vector<int> Grid::n_neighb_con()
 void Grid::auto_connect(std::vector<int> periods)
 {
   std::array<double*, 3> state_data {state_storage[0].data(), state_storage[1].data(),
-                                     state_storage[1].data()};
+                                     state_storage[2].data()};
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
     for (int j_elem = i_elem + 1; j_elem < n_elem; ++j_elem)

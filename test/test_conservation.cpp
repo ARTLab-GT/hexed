@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include <catch.hpp>
 
 #include <Solution.hpp>
@@ -52,29 +50,39 @@ TEST_CASE("Conservation of state variables")
 {
   int length = 1.;
   int rank = 3;
+  double dt = 1e-5;
 
   SECTION("1D")
   {
     Solution sol (3, 1, rank, length);
     sol.add_block_grid(2);
-    Linear_init init (1);
-    sol.initialize(init);
     Grid& grid = sol.get_grid(0);
     std::vector<int> periods {4};
     grid.auto_connect(periods);
+
+    Linear_init init (1);
+    sol.initialize(init);
     double * state = grid.state_r();
     for (int i_state = 0; i_state < grid.n_qpoint; ++i_state)
     {
       state[i_state] = i_state + 1;
     }
+    const int size = grid.n_elem*grid.n_dof;
+    double initial[size];
+    for (int i = 0; i < size; ++i)
+    {
+      initial[i] = grid.state_r()[i];
+    }
     grid.visualize("conservation_1d");
-    sol.update();
+
+    sol.update(dt);
+    grid.visualize("conservation_final");
     double * state_r = grid.state_r();
-    double * state_w = grid.state_w();
     for (int i_state = 0; i_state < grid.n_elem*grid.n_dof; ++i_state)
     {
-      state_r[i_state] = state_w[i_state] - state_r[i_state];
+      state_r[i_state] -= initial[i_state];
     }
+    grid.visualize("conservation_diff");
     for (int i_var = 0; i_var < grid.n_var; ++i_var)
     {
       REQUIRE(grid.state_integral()(i_var) == Approx(0.).margin(0.001));
@@ -85,27 +93,34 @@ TEST_CASE("Conservation of state variables")
   {
     Solution sol (4, 2, rank, length);
     sol.add_block_grid(2);
-    Linear_init init (2);
-    sol.initialize(init);
     Grid& grid = sol.get_grid(0);
     std::vector<int> periods {4, 4};
     grid.auto_connect(periods);
+
+    Linear_init init (2);
+    sol.initialize(init);
     double * state = grid.state_r();
     for (int i_state = 0; i_state < grid.n_qpoint; ++i_state)
     {
       state[i_state] = i_state + 1;
     }
+    const int size = grid.n_elem*grid.n_dof;
+    double initial[size];
+    for (int i = 0; i < size; ++i)
+    {
+      initial[i] = grid.state_r()[i];
+    }
     grid.visualize("conservation_2d");
-    sol.update();
+
+    sol.update(dt);
     double * state_r = grid.state_r();
-    double * state_w = grid.state_w();
     for (int i_state = 0; i_state < grid.n_elem*grid.n_dof; ++i_state)
     {
-      state_r[i_state] = state_w[i_state] - state_r[i_state];
+      state_r[i_state] -= initial[i_state];
     }
     for (int i_var = 0; i_var < grid.n_var; ++i_var)
     {
-      REQUIRE(grid.state_integral()(i_var) == Approx(0.).margin(0.001));
+      REQUIRE(grid.state_integral()(i_var)/dt == Approx(0.).margin(0.001));
     }
   }
 
@@ -113,27 +128,34 @@ TEST_CASE("Conservation of state variables")
   {
     Solution sol (5, 3, rank, length);
     sol.add_block_grid(2);
-    Linear_init init (3);
-    sol.initialize(init);
     Grid& grid = sol.get_grid(0);
     std::vector<int> periods {4, 4, 4};
     grid.auto_connect(periods);
+
+    Linear_init init (3);
+    sol.initialize(init);
     double * state = grid.state_r();
     for (int i_state = 0; i_state < grid.n_qpoint; ++i_state)
     {
       state[i_state] = i_state + 1;
     }
+    const int size = grid.n_elem*grid.n_dof;
+    double initial[size];
+    for (int i = 0; i < size; ++i)
+    {
+      initial[i] = grid.state_r()[i];
+    }
     grid.visualize("conservation_3d");
-    sol.update();
+
+    sol.update(dt);
     double * state_r = grid.state_r();
-    double * state_w = grid.state_w();
     for (int i_state = 0; i_state < grid.n_elem*grid.n_dof; ++i_state)
     {
-      state_r[i_state] = state_w[i_state] - state_r[i_state];
+      state_r[i_state] -= initial[i_state];
     }
     for (int i_var = 0; i_var < grid.n_var; ++i_var)
     {
-      REQUIRE(grid.state_integral()(i_var) == Approx(0.).margin(0.001));
+      REQUIRE(grid.state_integral()(i_var)/dt == Approx(0.).margin(0.001));
     }
   }
 }
