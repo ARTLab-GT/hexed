@@ -39,7 +39,8 @@ benchmark_local = ["copy", "basic_tensor", "update_add", "update_matvec"]
 benchmark_neighbor = ["average_neighbor"]
 real_local = ["cpg_euler_matrix", "cpg_euler_tensor"]
 real_neighbor = ["cpg_euler_copy"]
-kernels = benchmark_local + benchmark_neighbor + real_local + real_neighbor
+real_pp = ["cpg_euler_post_process"]
+kernels = benchmark_local + benchmark_neighbor + real_local + real_neighbor + real_pp
 times = []
 for kernel in kernels:
     include = """
@@ -106,9 +107,13 @@ for (int i = 0; i < {3}; ++i)
 #include "kernels/neighbor/{}.hpp"
 """.format(kernel)
         execute = "{}<{}, {}, {}>(connect_r, connect_w, n_connections, weights_1d, 0.2);"
+    elif kernel in real_pp:
+        include += """
+#include "kernels/local/{}.hpp"
+""".format(kernel)
+        execute = "{0}<{1}, {2}>(read, write, write, {4}, 0.25, 1.4);"
     execute = execute.format(kernel, n_var, n_qpoint, row_size, n_elem)
     file_name = "benchmark_output_{}.txt".format(kernel)
-    ofile = open(file_name, "w"); ofile.write(""); ofile.close()
     teardown = r"""
 std::ofstream ofile;
 ofile.open("{1}");
