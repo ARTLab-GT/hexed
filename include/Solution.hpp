@@ -18,7 +18,7 @@ class Solution
   virtual ~Solution();
 
   Grid& get_grid(int order_added);
-  double update(double cfl_by_stable_cfl=1.);
+  double update(double cfl_by_stable_cfl=0.7);
 
   void initialize(Initializer& init);
   void add_block_grid(int ref_level, std::vector<int> lower_corner,
