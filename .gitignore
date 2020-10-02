@@ -1,5 +1,6 @@
 benchmark*.txt
 *.o
+*.so
 test/test
 demo/demo
 *.szplt
