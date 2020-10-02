@@ -1,5 +1,5 @@
-FLAGS = -I include/ -g -Wall -fsanitize=address -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize=leak -fsanitize=undefined
-#FLAGS = -I include/ -O3 -march=native
+#FLAGS = -I include/ -g -Wall -fsanitize=address -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize=leak -fsanitize=undefined
+FLAGS = -I include/ -O3 -march=native
 
 SRCS := ${wildcard src/*.cpp}
 OBJS := ${SRCS:%.cpp=%.o}

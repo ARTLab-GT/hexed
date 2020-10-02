@@ -1,18 +1,9 @@
 FLAGS = -I ../include/ -O3 -march=native
 
-SRCS := ${wildcard ../src/*.cpp}
-SRCS := ${wildcard *.cpp} ${SRCS}
-OBJS := ${SRCS:%.cpp=%.o}
-
-all: ${OBJS}
-	g++ ${FLAGS} ${OBJS} -o demo -ltecio
-
-%.o: %.cpp
-	g++ -c ${FLAGS} $< -o $@
+all:
+	g++ -L.. -Wl,-rpath,.. ${FLAGS} main.cpp -o demo -ltecio -lcartdg
 
 clean:
-	rm *.o
-	rm ../src/*.o
 	rm demo
 	rm *.szplt
 
