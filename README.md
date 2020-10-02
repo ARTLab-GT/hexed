@@ -88,6 +88,10 @@ I use the following nonstandard terms in the code:
  * Shock capturing.
  * Implicit and/or multigrid method.
  
+ ## Contributing
+ Please do not push directly to `master`. Feel free to create and push new branches. Once you have something that
+ works, please open a pull request.
+ 
  
  
  
