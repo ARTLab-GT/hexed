@@ -79,7 +79,7 @@ To build and run the demo:
 * `make`
 * `./demo`
 
-The executable will simulate the isentropic vortex test problem and write the solution to `.szplot` Tecplot binary files.
+The executable will simulate the isentropic vortex test problem and write the solution to `.szplt` Tecplot binary files.
  
 This is obviously far from an ideal build system, but it works for now until I learn how to properly set up CMake.
 
