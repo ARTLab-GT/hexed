@@ -58,9 +58,9 @@ I use the following nonstandard terms in the code:
 Perform the following steps to build the library `libcartdg.so` which contains most of the functionality.
 * Generate translation files that associate function pointers with instances of kernel templates and define
   high-precision quadrature rules.
-  `cd script`
-  `python3 auto_generate.py`
-  `cd ..`
+  * `cd script`
+  * `python3 auto_generate.py`
+  * `cd ..`
 * Edit the
   Makefile to select the appropriate compiler flags. Use the debug flags (the ones with `-fsanitize`) if you want to run the
   tests. Use the high-performance flags (the ones with `-O3` and `-march=native`) if you wish to run the demo.
@@ -70,14 +70,15 @@ To build and run the tests:
 * `cd test`
 * `make`
 * `./test`
+
 All tests should pass, and there should
-also be some Tecplot files. You can also navigate to `demo/`, type `make`, and then `./demo` to run a demonstration case.
-This case simulates the isentropic vortex problem and generates Tecplot visualization files.
+also be some Tecplot files.
 
 To build and run the demo:
 * `cd demo`
 * `make`
 * `./demo`
+
 The executable will simulate the isentropic vortex test problem and write the solution to `.szplot` Tecplot binary files.
  
 This is obviously far from an ideal build system, but it works for now until I learn how to properly set up CMake.
