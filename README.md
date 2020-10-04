@@ -54,47 +54,59 @@ I use the following nonstandard terms in the code:
   unfortunately may conflict with the use of the term "rank" in parallel programming, but I have yet to invent a better
   term.
  
- ## Compiling
- Typing `make` in the root directory builds a shared library which contains the main functionality of the code. Edit the
- Makefile to select the appropriate compiler flags. Use the debug flags (the ones with `-fsanitize`) if you want to run the
- tests. Use the high-performance flags (the ones with `-O3` and `-march=native`) for any other purpose. To compile and run the
- unit tests, navigate to the directory `test/` and type `make` and then `./test`. All tests should pass, and there should
- also be some Tecplot files. You can also navigate to `demo/`, type `make`, and then `./demo` to run a demonstration case.
- This case simulates the isentropic vortex problem and generates Tecplot visualization files.
+## Compiling
+Perform the following steps to build the library `libcartdg.so` which contains most of the functionality.
+* Generate translation files that associate function pointers with instances of kernel templates and define
+  high-precision quadrature rules.
+  * `cd script`
+  * `python3 auto_generate.py`
+  * `cd ..`
+* Edit the
+  Makefile to select the appropriate compiler flags. Use the debug flags (the ones with `-fsanitize`) if you want to run the
+  tests. Use the high-performance flags (the ones with `-O3` and `-march=native`) if you wish to run the demo.
+* `make`
+
+To build and run the tests:
+* `cd test`
+* `make`
+* `./test`
+
+All tests should pass, and there should
+also be some Tecplot files.
+
+To build and run the demo:
+* `cd demo`
+* `make`
+* `./demo`
+
+The executable will simulate the isentropic vortex test problem and write the solution to `.szplt` Tecplot binary files.
  
- This is obviously far from an ideal build system, but it works for now until I learn how to properly set up CMake.
+This is obviously far from an ideal build system, but it works for now until I learn how to properly set up CMake.
+
+## Dependencies
+The following must be available in your include and library paths:
+* Eigen
+* Tecio
  
- ## Dependencies
- The following must be available in your include and library paths:
- * Eigen
- * Tecio
+## Features
+Currently implemented features:
+* Standard DG method.
+* Gauss-Lobatto nodal basis.
+* Isotropic, Cartesian cells connected in an arbitrary graph.
+* 3-stage Runge-Kutta explicit time integration.
+* CFL-based time step selection.
+* Generation of structured grids for testing purposes.
+* Visualization with Tecplot.
+* Periodic boundary conditions.
  
- ## Features
- Currently implemented features:
- * Standard DG method.
- * Gauss-Lobatto nodal basis.
- * Isotropic, Cartesian cells connected in an arbitrary graph.
- * 3-stage Runge-Kutta explicit time integration.
- * CFL-based time step selection.
- * Generation of structured grids for testing purposes.
- * Visualization with Tecplot.
- * Periodic boundary conditions.
- 
- Planned or in-progress features (roughly in order of planned implementation):
- * Entropy-stable methods (in progress).
- * Integration with NASCART-GT.
- * Immersed and freestream boundary conditions.
- * Hanging-nodes.
- * Shock capturing.
- * Implicit and/or multigrid method.
- 
- ## Contributing
- Please do not push directly to `master`. Feel free to create and push new branches. Once you have something that
- works, please open a pull request.
- 
- 
- 
- 
- 
- 
- 
+Planned or in-progress features (roughly in order of planned implementation):
+* Entropy-stable methods (in progress).
+* Integration with NASCART-GT.
+* Immersed and freestream boundary conditions.
+* Hanging-nodes.
+* Shock capturing.
+* Implicit and/or multigrid method.
+
+## Contributing
+Please do not push directly to `master`. Feel free to create and push new branches. Once you have something that
+works, please open a pull request.
