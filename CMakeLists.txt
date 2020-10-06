@@ -7,7 +7,11 @@ project(cartdg VERSION 0.0
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+find_library(tecio REQUIRED)
+
 add_library(cartdg SHARED)
 
 add_subdirectory(src)
 target_include_directories(cartdg PUBLIC include)
+add_subdirectory(test)
+add_subdirectory(demo)
