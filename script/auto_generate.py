@@ -1,5 +1,11 @@
+import sys
+
 max_dim = 3
-max_rank = 8
+
+src_dir = sys.argv[1]
+src_dir += "/"
+src_dir = src_dir.replace("//", "/")
+max_rank = int(sys.argv[2])
 
 def format_file_text(include, text):
     return """
@@ -47,7 +53,7 @@ for kernel_type in templates.keys():
 }}
 """.format(func_type, kernel_type, i_dim + 1)
 
-with open("../src/Solution__get_kernel.cpp", "w") as write_file:
+with open(src_dir + "Solution__get_kernel.cpp", "w") as write_file:
     write_file.write(format_file_text(include, text))
 
 
@@ -140,5 +146,5 @@ text += """
 Gauss_lobatto::Gauss_lobatto(int rank_arg) : Basis(rank_arg) {}
 """
 
-with open("../src/Gauss_lobatto.cpp", "w") as write_file:
+with open(src_dir + "Gauss_lobatto.cpp", "w") as write_file:
     write_file.write(format_file_text(include, text))
