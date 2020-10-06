@@ -3,6 +3,9 @@
 
 #include <Basis.hpp>
 
+namespace cartdg
+{
+
 class Equidistant : public Basis
 {
   public:
@@ -12,4 +15,5 @@ class Equidistant : public Basis
   Eigen::VectorXd node_weights();
 };
 
+}
 #endif

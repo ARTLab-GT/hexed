@@ -8,6 +8,9 @@
 
 #include <Basis.hpp>
 
+namespace cartdg
+{
+
 class Grid
 {
   public:
@@ -54,4 +57,5 @@ class Grid
   void populate_slice(std::vector<double>&, std::vector<int>, int);
 };
 
+}
 #endif

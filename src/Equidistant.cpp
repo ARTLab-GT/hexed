@@ -1,5 +1,8 @@
 #include <Equidistant.hpp>
 
+namespace cartdg
+{
+
 Equidistant::Equidistant(int rank_arg) : Basis(rank_arg) {}
 
 double Equidistant::node(int i)
@@ -51,4 +54,6 @@ Eigen::VectorXd Equidistant::node_weights()
   throw "Not implemented.";
   Eigen::VectorXd unused (0);
   return unused;
+}
+
 }

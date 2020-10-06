@@ -3,7 +3,7 @@
 #include <Equidistant.hpp>
 #include <Gauss_lobatto.hpp>
 
-void test_diff_mat(Basis& basis)
+void test_diff_mat(cartdg::Basis& basis)
 {
   Eigen::MatrixXd diff_mat = basis.diff_mat();
   for (int i_result = 0; i_result < basis.rank; ++i_result)
@@ -45,7 +45,7 @@ void test_diff_mat(Basis& basis)
   }
 }
 
-void test_quadrature(Basis& basis)
+void test_quadrature(cartdg::Basis& basis)
 {
   Eigen::VectorXd weights = basis.node_weights();
   REQUIRE(weights.sum() == Approx(1.));
@@ -64,7 +64,7 @@ TEST_CASE("Equidistant Basis")
 {
   for (int rank = 0; rank < 10; ++rank)
   {
-    Equidistant equi (rank);
+    cartdg::Equidistant equi (rank);
     test_diff_mat(equi);
   }
 }
@@ -73,7 +73,7 @@ TEST_CASE("Gauss_lobatto Basis")
 {
   for (int rank = 2; rank < 8; ++rank)
   {
-    Gauss_lobatto GLo (rank);
+    cartdg::Gauss_lobatto GLo (rank);
     test_diff_mat(GLo);
     test_quadrature(GLo);
   }

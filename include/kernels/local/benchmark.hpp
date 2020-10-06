@@ -3,6 +3,9 @@
 
 #include <Eigen/Dense>
 
+namespace cartdg
+{
+
 template<int n_var, int n_qpoint, int row_size>
 void copy(double * read, double * write, int n_elem,
           const Eigen::MatrixXd& diff_mat)
@@ -157,4 +160,5 @@ void update_matvec(double * read, double * write, int n_elem,
   }
 }
 
+}
 #endif

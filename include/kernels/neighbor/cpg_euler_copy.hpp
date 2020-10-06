@@ -5,6 +5,9 @@
 #include <kernels/neighbor/write_copy.hpp>
 #include <kernels/neighbor/cpg_euler_hll.hpp>
 
+namespace cartdg
+{
+
 template<int n_var, int n_qpoint, int row_size>
 void cpg_euler_copy(double*** connections_r, double*** connections_w, int* n_connections,
                     const Eigen::VectorXd weights_1d,
@@ -33,4 +36,5 @@ void cpg_euler_copy(double*** connections_r, double*** connections_w, int* n_con
   }
 }
 
+}
 #endif

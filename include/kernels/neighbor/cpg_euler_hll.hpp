@@ -1,6 +1,9 @@
 #ifndef CPG_EULER_HLL_HPP_
 #define CPG_EULER_HLL_HPP_
 
+namespace cartdg
+{
+
 template<int n_dim, int n_face_qpoint>
 void cpg_euler_hll(double* state_r, double* d_flux_w, double mult,
                    int i_axis, double sp_heat_rat=1.4)
@@ -52,4 +55,5 @@ void cpg_euler_hll(double* state_r, double* d_flux_w, double mult,
   }
 }
 
+}
 #endif

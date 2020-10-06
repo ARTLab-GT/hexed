@@ -5,6 +5,9 @@
 #include <kernels/neighbor/write_copy.hpp>
 #include <kernels/neighbor/average.hpp>
 
+namespace cartdg
+{
+
 template<int n_var, int n_qpoint, int row_size>
 void average_neighbor(double*** connections_r, double*** connections_w, int* n_connections,
                       Eigen::VectorXd weights_1d, double d_t_by_d_pos)
@@ -28,4 +31,5 @@ void average_neighbor(double*** connections_r, double*** connections_w, int* n_c
   }
 }
 
+}
 #endif

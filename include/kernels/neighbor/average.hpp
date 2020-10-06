@@ -1,6 +1,9 @@
 #ifndef AVERAGE_HPP_
 #define AVERAGE_HPP_
 
+namespace cartdg
+{
+
 template<int size>
 void average(double* read0, double* read1, double* write)
 {
@@ -10,4 +13,5 @@ void average(double* read0, double* read1, double* write)
   }
 }
 
+}
 #endif

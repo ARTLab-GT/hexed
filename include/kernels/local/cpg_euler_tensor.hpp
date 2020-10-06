@@ -3,6 +3,9 @@
 
 #include <Eigen/Dense>
 
+namespace cartdg
+{
+
 template<int n_var, int n_qpoint, int row_size>
 void cpg_euler_tensor(double * read, double * write, int n_elem,
                       const Eigen::MatrixXd& diff_mat, double d_t_by_d_x, double sp_heat_rat = 1.4)
@@ -119,4 +122,5 @@ void cpg_euler_tensor(double * read, double * write, int n_elem,
   }
 }
 
+}
 #endif

@@ -5,6 +5,9 @@
 #include <Gauss_lobatto.hpp>
 #include <kernels/kernel_types.hpp>
 
+namespace cartdg
+{
+
 class Initializer;
 
 class Solution
@@ -34,4 +37,5 @@ class Solution
   virtual Max_char_speed_kernel get_max_char_speed_kernel();
 };
 
+}
 #endif

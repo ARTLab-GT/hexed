@@ -7,10 +7,10 @@
 
 TEST_CASE("Grid")
 {
-  Equidistant basis (8);
-  Grid grid1 (4, 1, 5, 0.1, basis);
-  Grid grid2 (4, 2, 5, 0.1, basis);
-  Grid grid3 (4, 3, 27, 0.1, basis);
+  cartdg::Equidistant basis (8);
+  cartdg::Grid grid1 (4, 1, 5, 0.1, basis);
+  cartdg::Grid grid2 (4, 2, 5, 0.1, basis);
+  cartdg::Grid grid3 (4, 3, 27, 0.1, basis);
   SECTION("Construction")
   {
     REQUIRE(grid2.basis.node(1) == 1./7.);
@@ -116,10 +116,10 @@ TEST_CASE("Grid")
 
   SECTION("State integration")
   {
-    Gauss_lobatto basis (5);
-    Grid grid1 (2, 1, 5, 0.1, basis);
-    Grid grid2 (2, 2, 5, 0.1, basis);
-    Grid grid3 (2, 3, 5, 0.1, basis);
+    cartdg::Gauss_lobatto basis (5);
+    cartdg::Grid grid1 (2, 1, 5, 0.1, basis);
+    cartdg::Grid grid2 (2, 2, 5, 0.1, basis);
+    cartdg::Grid grid3 (2, 3, 5, 0.1, basis);
     Eigen::Vector2d correct; correct << 5, 5;
     for (int i = 0; i < grid1.n_dof*grid1.n_elem; ++i) grid1.state_r()[i] = 1.;
     for (int i = 0; i < grid2.n_dof*grid1.n_elem; ++i) grid2.state_r()[i] = 1.;
