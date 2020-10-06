@@ -124,9 +124,9 @@ TEST_CASE("Grid")
     for (int i = 0; i < grid1.n_dof*grid1.n_elem; ++i) grid1.state_r()[i] = 1.;
     for (int i = 0; i < grid2.n_dof*grid1.n_elem; ++i) grid2.state_r()[i] = 1.;
     for (int i = 0; i < grid3.n_dof*grid1.n_elem; ++i) grid3.state_r()[i] = 1.;
-    REQUIRE((grid1.state_integral() - correct*0.1  ).sum() == Approx(0.));
-    REQUIRE((grid2.state_integral() - correct*0.01 ).sum() == Approx(0.));
-    REQUIRE((grid3.state_integral() - correct*0.001).sum() == Approx(0.));
+    REQUIRE((grid1.state_integral() - correct*0.1  ).sum() == Approx(0.).margin(1e-12));
+    REQUIRE((grid2.state_integral() - correct*0.01 ).sum() == Approx(0.).margin(1e-12));
+    REQUIRE((grid3.state_integral() - correct*0.001).sum() == Approx(0.).margin(1e-12));
   }
 
   SECTION("Automatic graph creation")
