@@ -1,5 +1,6 @@
 #include <catch.hpp>
 
+#include <cartdgConfig.hpp>
 #include <Equidistant.hpp>
 #include <Gauss_lobatto.hpp>
 
@@ -71,7 +72,7 @@ TEST_CASE("Equidistant Basis")
 
 TEST_CASE("Gauss_lobatto Basis")
 {
-  for (int rank = 2; rank < 8; ++rank)
+  for (int rank = 2; rank <= MAX_BASIS_RANK; ++rank)
   {
     cartdg::Gauss_lobatto GLo (rank);
     test_diff_mat(GLo);
