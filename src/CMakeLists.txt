@@ -1,4 +1,4 @@
-target_sources(cartdg PUBLIC
+target_sources(cartdg PRIVATE
 Basis.cpp
 Equidistant.cpp
 Grid.cpp
