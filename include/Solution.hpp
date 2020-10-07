@@ -16,6 +16,7 @@ class Solution
   int n_var;
   int n_dim;
   double base_mesh_size;
+  Gauss_lobatto basis;
 
   Solution(int n_var_arg, int n_dim_arg, int rank_arg, double bms);
   virtual ~Solution();
@@ -30,7 +31,6 @@ class Solution
   void auto_connect();
 
   protected:
-  Gauss_lobatto basis;
   std::vector<Grid> grids;
   virtual Local_kernel get_local_kernel();
   virtual Neighbor_kernel get_neighbor_kernel();
