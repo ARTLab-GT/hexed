@@ -1,6 +1,9 @@
 #ifndef CPG_EULER_MAX_HPP_
 #define CPG_EULER_MAX_HPP_
 
+namespace cartdg
+{
+
 template<int n_var, int n_qpoint, int row_size>
 double cpg_euler_max(double* read, int n_elem, double sp_heat_rat)
 {
@@ -30,4 +33,5 @@ double cpg_euler_max(double* read, int n_elem, double sp_heat_rat)
   return max_speed;
 }
 
+}
 #endif

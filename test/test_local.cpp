@@ -83,13 +83,13 @@ TEST_CASE("Local kernels")
 {
   SECTION("CPG Euler flux, matrix form")
   {
-    TEST_CPG_EULER(cpg_euler_matrix, 0.1)
+    TEST_CPG_EULER(cartdg::cpg_euler_matrix, 0.1)
   }
 
   /*
   SECTION("CPG Euler flux, tensor form")
   {
-    TEST_CPG_EULER(cpg_euler_tensor, 0.05)
+    TEST_CPG_EULER(cartdg::cpg_euler_tensor, 0.05)
   }
   */
 }

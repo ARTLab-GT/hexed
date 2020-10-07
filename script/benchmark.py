@@ -39,7 +39,7 @@ benchmark_local = ["copy", "basic_tensor", "update_add", "update_matvec"]
 benchmark_neighbor = ["average_neighbor"]
 real_local = ["cpg_euler_matrix", "cpg_euler_tensor"]
 real_neighbor = ["cpg_euler_copy"]
-misc = ["cpg_euler_max_char_speed"]
+misc = ["cpg_euler_max"]
 kernels = benchmark_local + benchmark_neighbor + real_local + real_neighbor + misc
 times = []
 for kernel in kernels:
@@ -91,27 +91,27 @@ for (int i = 0; i < {3}; ++i)
         include += """
 #include "kernels/local/benchmark.hpp"
 """
-        execute = "{}<{}, {}, {}>(read, write, {}, diff_mat);"
+        execute = "cartdg::{}<{}, {}, {}>(read, write, {}, diff_mat);"
     elif kernel in benchmark_neighbor:
         include += """
 #include "kernels/neighbor/benchmark.hpp"
 """
-        execute = "{}<{}, {}, {}>(connect_r, connect_w, n_connections, weights_1d, 0.2);"
+        execute = "cartdg::{}<{}, {}, {}>(connect_r, connect_w, n_connections, weights_1d, 0.2);"
     elif kernel in real_local:
         include += """
 #include "kernels/local/{}.hpp"
 """.format(kernel)
-        execute = "{}<{}, {}, {}>(read, write, {}, diff_mat, 1.);"
+        execute = "cartdg::{}<{}, {}, {}>(read, write, {}, diff_mat, 1.);"
     elif kernel in real_neighbor:
         include += """
 #include "kernels/neighbor/{}.hpp"
 """.format(kernel)
-        execute = "{}<{}, {}, {}>(connect_r, connect_w, n_connections, weights_1d, 0.2);"
-    elif kernel == "cpg_euler_max_char_speed":
+        execute = "cartdg::{}<{}, {}, {}>(connect_r, connect_w, n_connections, weights_1d, 0.2);"
+    elif kernel == "cpg_euler_max":
         include += """
-#include "kernels/local/{}.hpp"
+#include "kernels/max_char_speed/{}.hpp"
 """.format(kernel)
-        execute = "{0}<{1}, {2}>(read, {4}, 1.);"
+        execute = "cartdg::{}<{}, {}, {}>(read, {}, 1.4);"
     execute = execute.format(kernel, n_var, n_qpoint, row_size, n_elem)
     file_name = "benchmark_output_{}.txt".format(kernel)
     ofile = open(file_name, "w"); ofile.write(""); ofile.close()

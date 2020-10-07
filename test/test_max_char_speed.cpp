@@ -18,13 +18,13 @@ TEST_CASE("Max characteristic speed")
                       mass*-20, 0,
                       mass, mass,
                       int_ener0 + 0.5*mass*400, int_ener1};
-    double mcs = cpg_euler_max<3, 2, 2>(read, 2, sp_heat_rat);
+    double mcs = cartdg::cpg_euler_max<3, 2, 2>(read, 2, sp_heat_rat);
     REQUIRE(mcs == Approx(420));
   }
   SECTION("2D")
   {
     double read[4] {2.25, 24.5, 1.225, 101235/0.4 + 0.5*1.225*500};
-    double mcs = cpg_euler_max<4, 1, 1>(read, 1, 1.4);
+    double mcs = cartdg::cpg_euler_max<4, 1, 1>(read, 1, 1.4);
     REQUIRE(mcs == Approx(360).epsilon(0.01));
   }
 }

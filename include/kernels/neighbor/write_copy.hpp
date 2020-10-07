@@ -1,6 +1,9 @@
 #ifndef WRITE_COPY_HPP_
 #define WRITE_COPY_HPP_
 
+namespace cartdg
+{
+
 template<int n_var, int n_qpoint, int row_size>
 void write_copy(double* read, double* write, int stride, bool is_positive_face)
 {
@@ -20,4 +23,5 @@ void write_copy(double* read, double* write, int stride, bool is_positive_face)
   }
 }
 
+}
 #endif

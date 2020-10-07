@@ -3,6 +3,9 @@
 
 #include <Basis.hpp>
 
+namespace cartdg
+{
+
 class Gauss_lobatto : public Basis
 {
   public:
@@ -12,4 +15,5 @@ class Gauss_lobatto : public Basis
   virtual Eigen::MatrixXd diff_mat();
 };
 
+}
 #endif

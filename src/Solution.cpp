@@ -3,6 +3,9 @@
 #include <Solution.hpp>
 #include <Initializer.hpp>
 
+namespace cartdg
+{
+
 Solution::Solution(int n_var_arg, int n_dim_arg, int rank_arg, double bms)
 : n_var(n_var_arg), n_dim(n_dim_arg), base_mesh_size(bms), basis(rank_arg) {}
 
@@ -125,4 +128,6 @@ void Solution::auto_connect()
   {
     grid.auto_connect();
   }
+}
+
 }

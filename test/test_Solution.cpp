@@ -3,7 +3,7 @@
 #include <Solution.hpp>
 #include <Initializer.hpp>
 
-class Test_initializer : public Initializer
+class Test_initializer : public cartdg::Initializer
 {
   virtual std::vector<double> momentum(std::vector<double> position)
   {
@@ -20,8 +20,8 @@ class Test_initializer : public Initializer
 
 TEST_CASE("Solution class")
 {
-  Solution sol (4, 2, 4, 0.7);
-  Grid* g;
+  cartdg::Solution sol (4, 2, 4, 0.7);
+  cartdg::Grid* g;
   REQUIRE_THROWS(g = &sol.get_grid(0));
   std::vector<int> lc {-1, -1};
   std::vector<int> uc {1, 2};

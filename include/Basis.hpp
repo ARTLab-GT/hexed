@@ -3,6 +3,9 @@
 
 #include <Eigen/Dense>
 
+namespace cartdg
+{
+
 class Basis
 {
   public:
@@ -15,4 +18,5 @@ class Basis
   virtual Eigen::MatrixXd diff_mat() = 0;
 };
 
+}
 #endif

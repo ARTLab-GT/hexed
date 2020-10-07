@@ -54,39 +54,30 @@ I use the following nonstandard terms in the code:
   unfortunately may conflict with the use of the term "rank" in parallel programming, but I have yet to invent a better
   term.
  
-## Compiling
-Perform the following steps to build the library `libcartdg.so` which contains most of the functionality.
-* Generate translation files that associate function pointers with instances of kernel templates and define
-  high-precision quadrature rules.
-  * `cd script`
-  * `python3 auto_generate.py`
-  * `cd ..`
-* Edit the
-  Makefile to select the appropriate compiler flags. Use the debug flags (the ones with `-fsanitize`) if you want to run the
-  tests. Use the high-performance flags (the ones with `-O3` and `-march=native`) if you wish to run the demo.
-* `make`
+## Building
+If you are familiar with CMake, then execute the following steps to build CartDG. Unfortunately, more beginner-friendly
+documentation is not yet available.
+1. `mkdir build`
+   * You may replace `build` with an alternative name that begins with "build".
+2. `cd build`
+3. `ccmake ../`
+   * You must set `TECIO_DIR` to be a directory where `bin/libtecio.so` and `include/TECIO.h` can be found.
+     You may optionally edit the other options.
+4. `make`
 
-To build and run the tests:
-* `cd test`
-* `make`
-* `./test`
+To install the library, header files, and CMake configuration files, type `make install`. You may need to
+add `sudo`, depending on the permissions of your install prefix.
 
-All tests should pass, and there should
-also be some Tecplot files.
+To run the tests, type `test/test`. To run the demo, type `demo/demo`. This will generate `.szplt` files
+to vizualize the solution. Note: on my machine, demo takes approximately 5 seconds to run in Release mode.
+If you build in Debug mode, it may take a very long time.
 
-To build and run the demo:
-* `cd demo`
-* `make`
-* `./demo`
-
-The executable will simulate the isentropic vortex test problem and write the solution to `.szplt` Tecplot binary files.
- 
-This is obviously far from an ideal build system, but it works for now until I learn how to properly set up CMake.
+Performance data for the kernels can be obtained by navigating to `script/` (from the project root directory)
+and running `python3 benchmark.py`. This will show you a plot of performance data.
 
 ## Dependencies
-The following must be available in your include and library paths:
-* Eigen
-* Tecio
+Eigen must be available in your include path. Tecio must be available in a directory that you may specify.
+Python3 must also be available, along with some common libraries.
  
 ## Features
 Currently implemented features:

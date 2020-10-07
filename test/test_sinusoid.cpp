@@ -5,7 +5,7 @@
 #include <Solution.hpp>
 #include <Initializer.hpp>
 
-class Sinusoidal_init : public Initializer
+class Sinusoidal_init : public cartdg::Initializer
 {
   public:
   const double length = 2*M_PI;
@@ -62,9 +62,9 @@ TEST_CASE("Sinusoidal density wave")
 
   SECTION("1D")
   {
-    Solution sol (3, 1, rank, length);
+    cartdg::Solution sol (3, 1, rank, length);
     sol.add_block_grid(2);
-    Grid& grid = sol.get_grid(0);
+    cartdg::Grid& grid = sol.get_grid(0);
     std::vector<int> periods {4};
     grid.auto_connect(periods);
 
@@ -106,9 +106,9 @@ TEST_CASE("Sinusoidal density wave")
 
   SECTION("2D")
   {
-    Solution sol (4, 2, rank, length);
+    cartdg::Solution sol (4, 2, rank, length);
     sol.add_block_grid(3);
-    Grid& grid = sol.get_grid(0);
+    cartdg::Grid& grid = sol.get_grid(0);
     std::vector<int> periods {8, 8};
     grid.auto_connect(periods);
 
@@ -160,9 +160,9 @@ TEST_CASE("Sinusoidal density wave")
 
   SECTION("3D")
   {
-    Solution sol (5, 3, rank, length);
+    cartdg::Solution sol (5, 3, rank, length);
     sol.add_block_grid(3);
-    Grid& grid = sol.get_grid(0);
+    cartdg::Grid& grid = sol.get_grid(0);
     std::vector<int> periods {8, 8, 8};
     grid.auto_connect(periods);
 

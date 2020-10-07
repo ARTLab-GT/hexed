@@ -3,7 +3,7 @@
 #include <Solution.hpp>
 #include <Initializer.hpp>
 
-class Linear_init : public Initializer
+class Linear_init : public cartdg::Initializer
 {
   public:
   int dim;
@@ -53,9 +53,9 @@ TEST_CASE("Conservation of state variables")
 
   SECTION("1D")
   {
-    Solution sol (3, 1, rank, length);
+    cartdg::Solution sol (3, 1, rank, length);
     sol.add_block_grid(2);
-    Grid& grid = sol.get_grid(0);
+    cartdg::Grid& grid = sol.get_grid(0);
     std::vector<int> periods {4};
     grid.auto_connect(periods);
 
@@ -90,9 +90,9 @@ TEST_CASE("Conservation of state variables")
 
   SECTION("2D")
   {
-    Solution sol (4, 2, rank, length);
+    cartdg::Solution sol (4, 2, rank, length);
     sol.add_block_grid(2);
-    Grid& grid = sol.get_grid(0);
+    cartdg::Grid& grid = sol.get_grid(0);
     std::vector<int> periods {4, 4};
     grid.auto_connect(periods);
 
@@ -125,9 +125,9 @@ TEST_CASE("Conservation of state variables")
 
   SECTION("3D")
   {
-    Solution sol (5, 3, rank, length);
+    cartdg::Solution sol (5, 3, rank, length);
     sol.add_block_grid(2);
-    Grid& grid = sol.get_grid(0);
+    cartdg::Grid& grid = sol.get_grid(0);
     std::vector<int> periods {4, 4, 4};
     grid.auto_connect(periods);
 

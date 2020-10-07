@@ -4,7 +4,7 @@
 #include <Initializer.hpp>
 #include <Solution.hpp>
 
-class Vortex_init : public Initializer
+class Vortex_init : public cartdg::Initializer
 {
   public:
   // Physical parameters
@@ -90,9 +90,9 @@ int main()
   const int ref_level = 3;
 
   // Solution setup
-  Solution solution (4, 2, rank, 1.);
+  cartdg::Solution solution (4, 2, rank, 1.);
   solution.add_block_grid(ref_level);
-  Grid& grid = solution.get_grid(0);
+  cartdg::Grid& grid = solution.get_grid(0);
   int n_div = 1; for (int i = 0; i < ref_level; ++i) n_div *= 2;
   std::vector<int> periods {n_div, n_div};
   grid.auto_connect(periods);

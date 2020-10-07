@@ -1,6 +1,9 @@
 #ifndef CPG_EULER_AVERAGE_HPP_
 #define CPG_EULER_AVERAGE_HPP_
 
+namespace cartdg
+{
+
 template<int n_dim, int n_qpoint>
 cpg_euler_average(double* read0, double* read1, double* write,
                   int i_dim, double sp_heat_rat=1.4)
@@ -34,4 +37,5 @@ cpg_euler_average(double* read0, double* read1, double* write,
   }
 }
 
+}
 #endif

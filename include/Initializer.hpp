@@ -3,6 +3,9 @@
 
 #include <vector>
 
+namespace cartdg
+{
+
 class Initializer
 {
   public:
@@ -12,4 +15,5 @@ class Initializer
   virtual std::vector<double> scalar_state(std::vector<double> position) = 0;
 };
 
+}
 #endif

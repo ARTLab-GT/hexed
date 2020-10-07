@@ -5,6 +5,9 @@
 
 #include "Grid.hpp"
 
+namespace cartdg
+{
+
 void Grid::visualize(std::string file_name)
 {
   INTEGER4 Debug = 0;
@@ -88,4 +91,6 @@ void Grid::visualize(std::string file_name)
   }
 
   TECEND142();
+}
+
 }

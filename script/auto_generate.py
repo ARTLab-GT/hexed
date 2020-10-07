@@ -1,20 +1,32 @@
-max_dim = 3
-max_rank = 8
+import sys
 
-message = """
+max_dim = 3
+
+src_dir = sys.argv[1]
+src_dir += "/"
+src_dir = src_dir.replace("//", "/")
+max_rank = int(sys.argv[2])
+
+def format_file_text(include, text):
+    return """
 /*
 This file was generated automatically by script/auto_generate.py.
 Do not attempt to modify it directly. Instead, modify and rerun script/auto_generate.py
 to make the required changes.
 */
-"""
 
-text = """
+""" + include + """
+namespace cartdg
+{
+""" + text + "\n\n}\n"
+
+include = """
 #include <Solution.hpp>
 #include <kernels/local/cpg_euler_matrix.hpp>
 #include <kernels/neighbor/cpg_euler_copy.hpp>
 #include <kernels/max_char_speed/cpg_euler_max.hpp>
 """
+text = ""
 
 templates = {"local" : "cpg_euler_matrix", "neighbor" : "cpg_euler_copy", "max_char_speed" : "cpg_euler_max"}
 
@@ -41,16 +53,18 @@ for kernel_type in templates.keys():
 }}
 """.format(func_type, kernel_type, i_dim + 1)
 
-with open("../src/Solution__get_kernel.cpp", "w") as write_file:
-    write_file.write(message + text)
+with open(src_dir + "Solution__get_kernel.cpp", "w") as write_file:
+    write_file.write(format_file_text(include, text))
 
 
 from Basis import *
 from sympy.integrals.quadrature import gauss_lobatto
 
-text = """
+include = """
 #include <Gauss_lobatto.hpp>
 """
+text = ""
+
 calc_digits = 50
 min_rank = 2
 for rank in range(2, max_rank + 1):
@@ -132,5 +146,5 @@ text += """
 Gauss_lobatto::Gauss_lobatto(int rank_arg) : Basis(rank_arg) {}
 """
 
-with open("../src/Gauss_lobatto.cpp", "w") as write_file:
-    write_file.write(message + text)
+with open(src_dir + "Gauss_lobatto.cpp", "w") as write_file:
+    write_file.write(format_file_text(include, text))
