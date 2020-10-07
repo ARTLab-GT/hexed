@@ -62,3 +62,24 @@ install(EXPORT cartdgTargets
   FILE cartdgTargets.cmake
   DESTINATION lib/cmake/cartdg
 )
+
+include(CMakePackageConfigHelpers)
+# generate the config file that is includes the exports
+configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in
+"${CMAKE_CURRENT_BINARY_DIR}/cartdgConfig.cmake"
+INSTALL_DESTINATION "lib/cmake"
+NO_SET_AND_CHECK_MACRO
+NO_CHECK_REQUIRED_COMPONENTS_MACRO
+)
+# generate the version file for the config file
+write_basic_package_version_file(
+"${CMAKE_CURRENT_BINARY_DIR}/cartdgConfigVersion.cmake"
+VERSION "${cartdg_VERSION_MAJOR}.${cartdg_VERSION_MINOR}"
+COMPATIBILITY AnyNewerVersion
+)
+
+# install the configuration file
+install(FILES
+${CMAKE_CURRENT_BINARY_DIR}/cartdgConfig.cmake
+DESTINATION lib/cmake/cartdg
+)
