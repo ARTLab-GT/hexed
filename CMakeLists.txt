@@ -24,21 +24,28 @@ if(NOT MAX_BASIS_RANK)
 endif()
 execute_process(COMMAND python3 ${CMAKE_SOURCE_DIR}/script/auto_generate.py ${CMAKE_BINARY_DIR} ${MAX_BASIS_RANK})
 
+# determine rank of polynomial basis
+if(NOT TECIO_DIR)
+   set(TECIO_DIR /usr/local/tecplot/360ex_2018r2 CACHE STRING
+       "Where to find TECIO (probably the root directory of your tecplot installation)" FORCE)
+endif()
+
 # add a configure file to pass CMake variables to the code
 configure_file(cartdgConfig.hpp.in cartdgConfig.hpp)
 
-# find external libraries
-find_library(tecio REQUIRED)
-
 # define main target, which is a library
 add_library(cartdg SHARED)
+
+# add tecio as external library
+add_library(tecio SHARED IMPORTED)
+set_target_properties(tecio PROPERTIES IMPORTED_LOCATION ${TECIO_DIR}/bin/libtecio.so)
+target_include_directories(cartdg PRIVATE ${TECIO_DIR}/include)
 
 # add automatically generated source files
 target_sources(cartdg PRIVATE ${CMAKE_BINARY_DIR}/Gauss_lobatto.cpp
                               ${CMAKE_BINARY_DIR}/Solution__get_kernel.cpp)
 
-target_include_directories(cartdg
-                           PUBLIC
+target_include_directories(cartdg PUBLIC
                            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
                            $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>
                            $<INSTALL_INTERFACE:include/cartdg>
