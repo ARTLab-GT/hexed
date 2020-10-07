@@ -42,3 +42,6 @@ target_include_directories(cartdg PUBLIC include ${PROJECT_BINARY_DIR})
 add_subdirectory(src)
 add_subdirectory(test)
 add_subdirectory(demo)
+
+install(TARGETS cartdg LIBRARY DESTINATION lib)
+install(DIRECTORY include/ DESTINATION include/cartdg)
