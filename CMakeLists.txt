@@ -59,8 +59,9 @@ install(TARGETS cartdg DESTINATION lib EXPORT cartdgTargets)
 install(DIRECTORY include/ DESTINATION include/cartdg)
 install(FILES ${CMAKE_BINARY_DIR}/cartdgConfig.hpp DESTINATION include/cartdg)
 install(EXPORT cartdgTargets
-  FILE cartdgTargets.cmake
-  DESTINATION lib/cmake/cartdg
+        NAMESPACE cartdg::
+        FILE cartdgTargets.cmake
+        DESTINATION lib/cmake/cartdg
 )
 
 include(CMakePackageConfigHelpers)
