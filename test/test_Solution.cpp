@@ -51,7 +51,9 @@ TEST_CASE("Solution class")
     unsigned int n_grids = sol.grids.size();
     sol.add_empty_grid(2);
     REQUIRE(sol.grids.size() == n_grids + 1);
-    REQUIRE(sol.get_grid(n_grids).n_elem == 0);
+    cartdg::Grid& g = sol.get_grid(n_grids);
+    REQUIRE(g.n_elem == 0);
+    REQUIRE(g.mesh_size == 0.175);
   }
 
   SECTION("Initialization")
