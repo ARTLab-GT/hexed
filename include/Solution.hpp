@@ -1,9 +1,9 @@
-#ifndef SOLUTION_HPP_
-#define SOLUTION_HPP_
+#ifndef CARTDG_SOLUTION_HPP_
+#define CARTDG_SOLUTION_HPP_
 
-#include <Grid.hpp>
-#include <Gauss_lobatto.hpp>
-#include <kernels/kernel_types.hpp>
+#include "Grid.hpp"
+#include "Gauss_lobatto.hpp"
+#include "kernels/kernel_types.hpp"
 
 namespace cartdg
 {

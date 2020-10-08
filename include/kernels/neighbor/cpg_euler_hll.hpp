@@ -1,5 +1,5 @@
-#ifndef CPG_EULER_HLL_HPP_
-#define CPG_EULER_HLL_HPP_
+#ifndef CARTDG_CPG_EULER_HLL_HPP_
+#define CARTDG_CPG_EULER_HLL_HPP_
 
 namespace cartdg
 {

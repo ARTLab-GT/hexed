@@ -1,5 +1,5 @@
-#ifndef CPG_EULER_COPY_HPP_
-#define CPG_EULER_COPY_HPP_
+#ifndef CARTDG_CPG_EULER_COPY_HPP_
+#define CARTDG_CPG_EULER_COPY_HPP_
 
 #include <kernels/neighbor/read_copy.hpp>
 #include <kernels/neighbor/write_copy.hpp>

@@ -1,5 +1,5 @@
-#ifndef KERNEL_TYPES_HPP_
-#define KERNEL_TYPES_HPP_
+#ifndef CARTDG_KERNEL_TYPES_HPP_
+#define CARTDG_KERNEL_TYPES_HPP_
 
 #include <Eigen/Dense>
 

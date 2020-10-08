@@ -1,5 +1,5 @@
-#ifndef INITIALIZER_HPP_
-#define INITIALIZER_HPP_
+#ifndef CARTDG_INITIALIZER_HPP_
+#define CARTDG_INITIALIZER_HPP_
 
 #include <vector>
 

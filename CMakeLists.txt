@@ -48,7 +48,7 @@ target_sources(cartdg PRIVATE ${CMAKE_BINARY_DIR}/Gauss_lobatto.cpp
 target_include_directories(cartdg PUBLIC
                            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
                            $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>
-                           $<INSTALL_INTERFACE:include/cartdg>
+                           $<INSTALL_INTERFACE:include>
 )
 
 add_subdirectory(src)

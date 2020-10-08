@@ -1,5 +1,5 @@
-#ifndef BENCHMARK_HPP_
-#define BENCHMARK_HPP_
+#ifndef CARTDG_BENCHMARK_HPP_
+#define CARTDG_BENCHMARK_HPP_
 
 #include <kernels/neighbor/read_copy.hpp>
 #include <kernels/neighbor/write_copy.hpp>

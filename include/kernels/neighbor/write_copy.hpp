@@ -1,5 +1,5 @@
-#ifndef WRITE_COPY_HPP_
-#define WRITE_COPY_HPP_
+#ifndef CARTDG_WRITE_COPY_HPP_
+#define CARTDG_WRITE_COPY_HPP_
 
 namespace cartdg
 {

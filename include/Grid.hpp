@@ -1,12 +1,12 @@
-#ifndef GRID_HPP_
-#define GRID_HPP_
+#ifndef CARTDG_GRID_HPP_
+#define CARTDG_GRID_HPP_
 
 #include <vector>
 #include <string>
 
 #include <Eigen/Dense>
 
-#include <Basis.hpp>
+#include "Basis.hpp"
 
 namespace cartdg
 {

@@ -1,5 +1,5 @@
-#ifndef CPG_EULER_MATRIX_HPP_
-#define CPG_EULER_MATRIX_HPP_
+#ifndef CARTDG_CPG_EULER_MATRIX_HPP_
+#define CARTDG_CPG_EULER_MATRIX_HPP_
 
 #include <Eigen/Dense>
 

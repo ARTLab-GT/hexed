@@ -1,5 +1,5 @@
-#ifndef AVERAGE_HPP_
-#define AVERAGE_HPP_
+#ifndef CARTDG_AVERAGE_HPP_
+#define CARTDG_AVERAGE_HPP_
 
 namespace cartdg
 {

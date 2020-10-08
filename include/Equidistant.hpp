@@ -1,7 +1,7 @@
-#ifndef EQUIDISTANT_HPP_
-#define EQUIDISTANT_HPP_
+#ifndef CARTDG_EQUIDISTANT_HPP_
+#define CARTDG_EQUIDISTANT_HPP_
 
-#include <Basis.hpp>
+#include "Basis.hpp"
 
 namespace cartdg
 {
