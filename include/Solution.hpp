@@ -17,6 +17,7 @@ class Solution
   int n_dim;
   double base_mesh_size;
   Gauss_lobatto basis;
+  std::vector<Grid> grids;
 
   Solution(int n_var_arg, int n_dim_arg, int rank_arg, double bms);
   virtual ~Solution();
@@ -28,10 +29,10 @@ class Solution
   void add_block_grid(int ref_level, std::vector<int> lower_corner,
                                      std::vector<int> upper_corner);
   void add_block_grid(int ref_level);
+  void add_empty_grid(int ref_level, std::vector<int> origin);
   void auto_connect();
 
   protected:
-  std::vector<Grid> grids;
   virtual Local_kernel get_local_kernel();
   virtual Neighbor_kernel get_neighbor_kernel();
   virtual Max_char_speed_kernel get_max_char_speed_kernel();

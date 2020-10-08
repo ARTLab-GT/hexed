@@ -122,6 +122,10 @@ void Solution::add_block_grid(int ref_level)
   add_block_grid(ref_level, lc, uc);
 }
 
+void Solution::add_empty_grid(int ref_level, std::vector<int> origin)
+{
+}
+
 void Solution::auto_connect()
 {
   for (Grid& grid : grids)

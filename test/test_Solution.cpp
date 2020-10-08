@@ -27,6 +27,7 @@ TEST_CASE("Solution class")
   std::vector<int> uc {1, 2};
   sol.add_block_grid(1, lc, uc);
   sol.add_block_grid(2);
+
   SECTION("add_block_grid creates correct grid")
   {
     g = &sol.get_grid(0);
@@ -44,6 +45,14 @@ TEST_CASE("Solution class")
     REQUIRE(g->mesh_size == 0.175);
     REQUIRE(g->pos[0] == 0);
   }
+
+  SECTION("add_empty_grid creates an empty grid")
+  {
+    std::vector<int> origin {2, 3};
+    unsigned int n_grids = sol.grids.size();
+    REQUIRE(sol.grids.size() == n_grids + 1);
+  }
+
   SECTION("Initialization")
   {
     Test_initializer ti;
