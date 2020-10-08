@@ -80,6 +80,13 @@ void Solution::initialize(Initializer& init)
   }
 }
 
+double Solution::refined_mesh_size(int ref_level)
+{
+  double mesh_size = base_mesh_size;
+  for (int i_rl = 0; i_rl < ref_level; ++i_rl) mesh_size /= 2;
+  return mesh_size;
+}
+
 void Solution::add_block_grid(int ref_level, std::vector<int> lower_corner,
                                              std::vector<int> upper_corner)
 {
@@ -88,9 +95,7 @@ void Solution::add_block_grid(int ref_level, std::vector<int> lower_corner,
   {
     n_elem *= upper_corner[i_dim] - lower_corner[i_dim];
   }
-  double mesh_size = base_mesh_size;
-  for (int i_rl = 0; i_rl < ref_level; ++i_rl) mesh_size /= 2;
-  grids.push_back(Grid (n_var, n_dim, n_elem, mesh_size, basis));
+  grids.push_back(Grid (n_var, n_dim, n_elem, refined_mesh_size(ref_level), basis));
   Grid& g = grids.back();
   for (int i_dim = 0, stride = 1; i_dim < n_dim; ++i_dim)
   {
@@ -122,8 +127,9 @@ void Solution::add_block_grid(int ref_level)
   add_block_grid(ref_level, lc, uc);
 }
 
-void Solution::add_empty_grid(int ref_level, std::vector<int> origin)
+void Solution::add_empty_grid(int ref_level)
 {
+  grids.push_back(Grid(n_var, n_dim, 0, refined_mesh_size(ref_level), basis));
 }
 
 void Solution::auto_connect()

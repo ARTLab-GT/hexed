@@ -29,10 +29,12 @@ class Solution
   void add_block_grid(int ref_level, std::vector<int> lower_corner,
                                      std::vector<int> upper_corner);
   void add_block_grid(int ref_level);
-  void add_empty_grid(int ref_level, std::vector<int> origin);
+  void add_empty_grid(int ref_level);
   void auto_connect();
 
   protected:
+  double refined_mesh_size(int ref_level);
+
   virtual Local_kernel get_local_kernel();
   virtual Neighbor_kernel get_neighbor_kernel();
   virtual Max_char_speed_kernel get_max_char_speed_kernel();

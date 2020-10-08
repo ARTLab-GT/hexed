@@ -48,9 +48,10 @@ TEST_CASE("Solution class")
 
   SECTION("add_empty_grid creates an empty grid")
   {
-    std::vector<int> origin {2, 3};
     unsigned int n_grids = sol.grids.size();
+    sol.add_empty_grid(2);
     REQUIRE(sol.grids.size() == n_grids + 1);
+    REQUIRE(sol.get_grid(n_grids).n_elem == 0);
   }
 
   SECTION("Initialization")
