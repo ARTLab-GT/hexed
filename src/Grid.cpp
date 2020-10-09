@@ -19,8 +19,7 @@ basis(basis_arg), iter(0), time(0.), i_rk_stage(0), i_read(0), i_write(1)
   pos.resize(n_elem*n_dim, 0);
   for (int i_dim = 0; i_dim < 3*n_dim; ++i_dim)
   {
-    std::vector<double*> empty;
-    neighbor_storage.push_back(empty);
+    neighbor_storage.emplace_back();
   }
 }
 

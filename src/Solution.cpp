@@ -95,7 +95,7 @@ void Solution::add_block_grid(int ref_level, std::vector<int> lower_corner,
   {
     n_elem *= upper_corner[i_dim] - lower_corner[i_dim];
   }
-  grids.push_back(Grid (n_var, n_dim, n_elem, refined_mesh_size(ref_level), basis));
+  grids.emplace_back(n_var, n_dim, n_elem, refined_mesh_size(ref_level), basis);
   Grid& g = grids.back();
   for (int i_dim = 0, stride = 1; i_dim < n_dim; ++i_dim)
   {
@@ -129,7 +129,7 @@ void Solution::add_block_grid(int ref_level)
 
 void Solution::add_empty_grid(int ref_level)
 {
-  grids.push_back(Grid(n_var, n_dim, 0, refined_mesh_size(ref_level), basis));
+  grids.emplace_back(n_var, n_dim, 0, refined_mesh_size(ref_level), basis);
 }
 
 void Solution::auto_connect()
