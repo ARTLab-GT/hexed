@@ -44,6 +44,7 @@ TEST_CASE("Grid")
     grid2.pos[i++] = 1; grid2.pos[i++] = -1;
     grid2.pos[i++] = 3; grid2.pos[i++] =  0;
   }
+  grid2.origin[1] = 10.;
   for (int i = 0; i < 3; ++i)
   {
     for (int j = 0; j < 3; ++j)
@@ -61,6 +62,7 @@ TEST_CASE("Grid")
   SECTION("Positioning")
   {
     std::vector<double> pos;
+
     pos = grid1.get_pos(0);
     REQUIRE(pos[0] == -0.1);
     REQUIRE(pos[1] == Approx(-0.1 + 0.1/7.));
@@ -75,15 +77,15 @@ TEST_CASE("Grid")
     REQUIRE(pos[1] == 0.);
     REQUIRE(pos[8] == Approx(0.1/7.));
     REQUIRE(pos[63] == 0.1);
-    REQUIRE(pos[64] == 0.);
-    REQUIRE(pos[65] == Approx(0.1/7.));
-    REQUIRE(pos[72] == Approx(0.));
-    REQUIRE(pos[127] == 0.1);
+    REQUIRE(pos[64] == 10.);
+    REQUIRE(pos[65] == Approx(10. + 0.1/7.));
+    REQUIRE(pos[72] == Approx(10.));
+    REQUIRE(pos[127] == 10.1);
     pos = grid2.get_pos(2);
     REQUIRE(pos[0] == 0.);
     REQUIRE(pos[63] == 0.1);
-    REQUIRE(pos[64] == -0.1);
-    REQUIRE(pos[127] == 0.);
+    REQUIRE(pos[64] == 10. - 0.1);
+    REQUIRE(pos[127] == 10.);
 
     pos = grid3.get_pos(0);
     REQUIRE(pos[0] == 0.);

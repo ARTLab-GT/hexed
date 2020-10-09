@@ -13,6 +13,7 @@ basis(basis_arg), iter(0), time(0.), i_rk_stage(0), i_read(0), i_write(1)
   for (int i_dim = 0; i_dim < n_dim; ++i_dim)
   {
     n_qpoint *= basis.rank;
+    origin.push_back(0.);
   }
   n_dof = n_qpoint*n_var;
   for (int i = 0; i < (int)state_storage.size(); ++i) state_storage[i].resize(n_dof*n_elem, 0.);
@@ -170,7 +171,8 @@ void Grid::populate_slice(std::vector<double>& elem_pos, std::vector<int> indice
     for (int i_dim = 0; i_dim < n_dim; ++i_dim)
     {
       elem_pos[i_flat + n_qpoint*i_dim] = (basis.node(indices[i_dim])
-                                           + pos[i_elem*n_dim + i_dim])*mesh_size;
+                                           + pos[i_elem*n_dim + i_dim])*mesh_size
+                                           + origin[i_dim];
     }
   }
 }
