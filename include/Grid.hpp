@@ -28,18 +28,25 @@ class Grid
   Grid(int n_var_arg, int n_dim_arg, int n_elem_arg, double mesh_size_arg, Basis& basis_arg);
   virtual ~Grid();
 
+  // functions for accessing data
   double* state_r();
   double* state_w();
   std::vector<double**> neighbor_connections_r();
   std::vector<double**> neighbor_connections_w();
   std::vector<int> n_neighb_con();
   std::vector<double> get_pos(int i_elem);
+
+  // functions that execute some aspect of time integration
   bool execute_runge_kutta_stage();
   double get_stable_cfl();
 
+  // functions that resize/reallocate/modify data
   void auto_connect(std::vector<int> periods);
   void auto_connect();
   void clear_neighbors();
+  int add_element(std::vector<int> position);
+
+  // functions that provide diagnostic information
   void visualize(std::string file_name);
   void print();
   Eigen::VectorXd state_integral();

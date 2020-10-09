@@ -119,6 +119,13 @@ void Grid::auto_connect(std::vector<int> periods)
   }
 }
 
+void Grid::auto_connect()
+{
+  std::vector<int> periods;
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) periods.push_back(0);
+  auto_connect(periods);
+}
+
 void Grid::clear_neighbors()
 {
   for (int i_dim = 0; i_dim < 2*n_dim; ++i_dim)
@@ -127,11 +134,14 @@ void Grid::clear_neighbors()
   }
 }
 
-void Grid::auto_connect()
+int Grid::add_element(std::vector<int> position)
 {
-  std::vector<int> periods;
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim) periods.push_back(0);
-  auto_connect(periods);
+  for (int i_rk_stage = 0; i_rk_stage < 3; ++i_rk_stage)
+  {
+    state_storage[i_rk_stage].resize(state_storage[i_rk_stage].size() + n_dof, 0.);
+  }
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) pos.push_back(position[i_dim]);
+  return n_elem++;
 }
 
 void Grid::populate_slice(std::vector<double>& elem_pos, std::vector<int> indices, int i_elem)

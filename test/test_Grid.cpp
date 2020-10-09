@@ -186,4 +186,24 @@ TEST_CASE("Grid")
     }
   }
 
+  SECTION("Add element")
+  {
+    cartdg::Equidistant basis (8);
+    cartdg::Grid grid (4, 1, 0, 0.1, basis);
+    std::vector<int> position {1};
+    REQUIRE(grid.add_element(position) == 0);
+    position[0] += 1;
+    REQUIRE(grid.add_element(position) == 1);
+    REQUIRE(grid.n_elem == 2);
+    REQUIRE(grid.pos[0] == 1);
+    REQUIRE(grid.pos[1] == 2);
+    grid.auto_connect();
+    REQUIRE(grid.n_neighb_con()[0] == 1);
+
+    grid.state_w()[0] = 1.;
+    REQUIRE(grid.state_r()[0] == 0.);
+    grid.state_w()[2*grid.n_dof - 1] = 1.;
+    REQUIRE(grid.state_r()[2*grid.n_dof - 1] == 0.);
+  }
+
 }
