@@ -133,6 +133,10 @@ void Grid::clear_neighbors()
   }
 }
 
+// Note: the return value is trivial right now, since it is equal to n_elem.
+// However, once we implement adaptive refinement, elements may be created at places
+// other than the end of the vector, and the return value will become non-trivial.
+// Treat the return value as a black box for forward compatability.
 int Grid::add_element(std::vector<int> position)
 {
   for (int i_rk_stage = 0; i_rk_stage < 3; ++i_rk_stage)
