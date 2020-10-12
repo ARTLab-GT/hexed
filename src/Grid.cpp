@@ -68,8 +68,6 @@ std::vector<int> Grid::n_neighb_con()
 
 void Grid::auto_connect(std::vector<int> periods)
 {
-  std::array<double*, 3> state_data {state_storage[0].data(), state_storage[1].data(),
-                                     state_storage[2].data()};
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
     for (int j_elem = i_elem + 1; j_elem < n_elem; ++j_elem)
@@ -93,26 +91,8 @@ void Grid::auto_connect(std::vector<int> periods)
         }
         if (is_same_row)
         {
-          if (pos_diff[i_dim] == 1)
-          {
-            for (int i_stage = 0; i_stage < 3; ++i_stage)
-            {
-              neighbor_storage[i_dim + i_stage*n_dim].push_back(state_data[i_stage]
-                                                                + n_dof*i_elem);
-              neighbor_storage[i_dim + i_stage*n_dim].push_back(state_data[i_stage]
-                                                                + n_dof*j_elem);
-            }
-          }
-          else if (pos_diff[i_dim] == -1)
-          {
-            for (int i_stage = 0; i_stage < 3; ++i_stage)
-            {
-              neighbor_storage[i_dim + i_stage*n_dim].push_back(state_data[i_stage]
-                                                                + n_dof*j_elem);
-              neighbor_storage[i_dim + i_stage*n_dim].push_back(state_data[i_stage]
-                                                                + n_dof*i_elem);
-            }
-          }
+          if      (pos_diff[i_dim] ==  1) add_connection(i_elem, j_elem, i_dim);
+          else if (pos_diff[i_dim] == -1) add_connection(j_elem, i_elem, i_dim);
         }
       }
     }
@@ -146,6 +126,16 @@ int Grid::add_element(std::vector<int> position)
   }
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) pos.push_back(position[i_dim]);
   return n_elem++;
+}
+
+void Grid::add_connection(int i_elem0, int i_elem1, int i_dim)
+{
+  for (int i_stage = 0; i_stage < 3; ++i_stage)
+  {
+    double* state_data = state_storage[i_stage].data();
+    neighbor_storage[i_dim + i_stage*n_dim].push_back(state_data + n_dof*i_elem0);
+    neighbor_storage[i_dim + i_stage*n_dim].push_back(state_data + n_dof*i_elem1);
+  }
 }
 
 void Grid::populate_slice(std::vector<double>& elem_pos, std::vector<int> indices, int i_elem)

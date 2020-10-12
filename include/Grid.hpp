@@ -46,6 +46,7 @@ class Grid
   void auto_connect();
   void clear_neighbors();
   int add_element(std::vector<int> position);
+  void add_connection(int i_elem0, int i_elem1, int i_dim);
 
   // functions that provide diagnostic information
   void visualize(std::string file_name);
