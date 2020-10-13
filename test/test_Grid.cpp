@@ -137,6 +137,8 @@ TEST_CASE("Grid")
     std::vector<int> n_neighb_con = grid2.n_neighb_con();
     REQUIRE(n_neighb_con[0] == 1);
     REQUIRE(n_neighb_con[1] == 1);
+    REQUIRE(grid2.neighbor_connections_r()[0][0] == grid2.state_r() + 2*grid2.n_dof);
+    REQUIRE(grid2.neighbor_connections_r()[0][1] == grid2.state_r() + 3*grid2.n_dof);
     grid2.clear_neighbors();
     std::vector<int> periods {0, 3};
     grid2.auto_connect(periods);
