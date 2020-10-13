@@ -92,7 +92,7 @@ Currently implemented features:
  
 Planned or in-progress features (roughly in order of planned implementation):
 * Entropy-stable methods (in progress).
-* Integration with NASCART-GT.
+* Integration with NASCART-GT (in progress).
 * Immersed and freestream boundary conditions.
 * Hanging-nodes.
 * Shock capturing.
