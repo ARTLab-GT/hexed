@@ -140,4 +140,12 @@ void Solution::auto_connect()
   }
 }
 
+void Solution::clear_neighbors()
+{
+  for (Grid& grid : grids)
+  {
+    grid.clear_neighbors();
+  }
+}
+
 }
