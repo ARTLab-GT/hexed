@@ -23,6 +23,8 @@ class Solution
   virtual ~Solution();
 
   Grid& get_grid(int order_added);
+  void visualize(std::string file_prefix);
+
   double update(double cfl_by_stable_cfl=0.7);
 
   void initialize(Initializer& init);

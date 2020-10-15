@@ -23,6 +23,16 @@ Grid& Solution::get_grid(int order_added)
   }
 }
 
+void Solution::visualize(std::string file_prefix)
+{
+  char buffer [100];
+  for (Grid& grid : grids)
+  {
+    snprintf(buffer, 100, "%s_%.2e", file_prefix.c_str(), grid.mesh_size);
+    grid.visualize(std::string(buffer));
+  }
+}
+
 double Solution::update(double cfl_by_stable_cfl)
 {
   Local_kernel local = get_local_kernel();

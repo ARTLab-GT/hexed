@@ -112,7 +112,7 @@ TEST_CASE("Sinusoidal density wave")
     {
       initial[i] = grid.state_r()[i];
     }
-    grid.visualize("sinusoid_1d");
+    sol.visualize("sinusoid_1d");
 
     double dt = sol.update(cfl);
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
@@ -145,7 +145,7 @@ TEST_CASE("Sinusoidal density wave")
     {
       initial[i] = grid.state_r()[i];
     }
-    grid.visualize("sinusoid_pressure_1d");
+    sol.visualize("sinusoid_pressure_1d");
 
     dt = sol.update(cfl);
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
@@ -189,7 +189,7 @@ TEST_CASE("Sinusoidal density wave")
     {
       initial[i] = grid.state_r()[i];
     }
-    grid.visualize("sinusoid_2d");
+    sol.visualize("sinusoid_2d");
 
     double dt = sol.update(cfl);
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
@@ -232,7 +232,7 @@ TEST_CASE("Sinusoidal density wave")
     {
       initial[i] = grid.state_r()[i];
     }
-    grid.visualize("sinusoid_2d");
+    sol.visualize("sinusoid_2d");
 
     dt = sol.update(cfl);
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
@@ -285,7 +285,7 @@ TEST_CASE("Sinusoidal density wave")
     {
       initial[i] = grid.state_r()[i];
     }
-    grid.visualize("sinusoid_3d");
+    sol.visualize("sinusoid_3d");
 
     double dt = sol.update(cfl);
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
