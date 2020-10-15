@@ -25,6 +25,17 @@ TEST_CASE("Grid")
     REQUIRE(grid2.n_dof == 256);
     REQUIRE(grid3.n_dof == 2048);
     REQUIRE(grid1.n_elem == 5);
+    REQUIRE(grid1.time == 0.);
+    REQUIRE(grid1.origin.size() == 1);
+    REQUIRE(grid2.origin.size() == 2);
+    REQUIRE(grid3.origin.size() == 3);
+    REQUIRE(grid1.origin[0] == 0.);
+    REQUIRE(grid2.origin[0] == 0.);
+    REQUIRE(grid2.origin[1] == 0.);
+    REQUIRE(grid3.origin[0] == 0.);
+    REQUIRE(grid3.origin[1] == 0.);
+    REQUIRE(grid3.origin[2] == 0.);
+
     int size = 2048*27;
     REQUIRE(grid3.state_r()[0] == 0.);
     REQUIRE(grid3.state_w()[0] == 0.);
