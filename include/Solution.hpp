@@ -22,12 +22,15 @@ class Solution
   Solution(int n_var_arg, int n_dim_arg, int rank_arg, double bms);
   virtual ~Solution();
 
+  // functions that access information
   Grid& get_grid(int order_added);
   void visualize(std::string file_prefix);
 
+  // functions that modify the state data
   double update(double cfl_by_stable_cfl=0.7);
-
   void initialize(Initializer& init);
+
+  // functions that modify the Grid(s)
   void add_block_grid(int ref_level, std::vector<int> lower_corner,
                                      std::vector<int> upper_corner);
   void add_block_grid(int ref_level);
