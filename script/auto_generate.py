@@ -24,11 +24,12 @@ include = """
 #include <Solution.hpp>
 #include <kernels/local/cpg_euler_matrix.hpp>
 #include <kernels/neighbor/cpg_euler_copy.hpp>
+#include <kernels/neighbor/cpg_euler_copy_boundary.hpp>
 #include <kernels/max_char_speed/cpg_euler_max.hpp>
 """
 text = ""
 
-templates = {"local" : "cpg_euler_matrix", "neighbor" : "cpg_euler_copy", "max_char_speed" : "cpg_euler_max"}
+templates = {"local" : "cpg_euler_matrix", "neighbor" : "cpg_euler_copy", "neighbor_boundary" : "cpg_euler_copy_boundary", "max_char_speed" : "cpg_euler_max"}
 
 for kernel_type in templates.keys():
     func_type = kernel_type.capitalize()

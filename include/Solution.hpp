@@ -43,6 +43,7 @@ class Solution
 
   virtual Local_kernel get_local_kernel();
   virtual Neighbor_kernel get_neighbor_kernel();
+  virtual Neighbor_boundary_kernel get_neighbor_boundary_kernel();
   virtual Max_char_speed_kernel get_max_char_speed_kernel();
 };
 
