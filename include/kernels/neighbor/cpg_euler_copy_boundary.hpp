@@ -9,7 +9,8 @@ namespace cartdg
 {
 
 template<int n_var, int n_qpoint, int row_size>
-void cpg_euler_copy_boundary(double*** connections_r, double*** connections_w, int* n_connections,
+void cpg_euler_copy_boundary(double*** connections_r, double*** connections_w,
+                             bool** is_positive_face, int* n_connections,
                              const Eigen::VectorXd weights_1d,
                              void (*set_ghost) (double* read, double* write, int n_points),
                              double d_t_by_d_pos, double sp_heat_rat=1.4)
@@ -25,13 +26,14 @@ void cpg_euler_copy_boundary(double*** connections_r, double*** connections_w, i
     for (int i_con = 0; i_con < n_connections[i_axis]; ++i_con)
     {
       double** connect = connections_r[i_axis] + i_con;
-      read_copy<n_var, n_qpoint, row_size>(connect[0], face_r, stride, 1);
+      const bool ipf = is_positive_face[i_axis][i_con];
+      read_copy<n_var, n_qpoint, row_size>(connect[0], face_r, stride, ipf);
       set_ghost(face_r, face_r + face_size, n_face_qpoint);
 
       cpg_euler_hll<n_var - 2, n_face_qpoint>(face_r, face_w, mult, i_axis, sp_heat_rat);
 
       connect = connections_w[i_axis] + 2*i_con;
-      write_copy<n_var, n_qpoint, row_size>(face_w, connect[0], stride, 1);
+      write_copy<n_var, n_qpoint, row_size>(face_w, connect[0], stride, ipf);
     }
   }
 }
