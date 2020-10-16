@@ -9,6 +9,9 @@ namespace cartdg
 typedef void (*Local_kernel)(double*, double*, int, const Eigen::MatrixXd&, double, double);
 typedef void (*Neighbor_kernel)(double***, double***, int*, const Eigen::VectorXd,
               double, double);
+typedef void (*Flux_kernel)(double*, double*, double, int, double);
+typedef void (*Read_kernel)(double*, double*, int, bool);
+typedef void (*Write_kernel)(double*, double*, int, bool);
 typedef double (*Max_char_speed_kernel)(double*, int, double);
 
 }
