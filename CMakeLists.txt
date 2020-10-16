@@ -14,7 +14,7 @@ if(NOT CMAKE_BUILD_TYPE)
        "Select Release for high performance and Debug for easier debugging" FORCE)
    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Release" "Debug")
 endif()
-set(CMAKE_CXX_FLAGS_DEBUG "-g -Wall -fsanitize=address -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize=leak -fsanitize=undefined")
+set(CMAKE_CXX_FLAGS_DEBUG "-g3 -Wall -fsanitize=address -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize=leak -fsanitize=undefined")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native")
 
 # determine rank of polynomial basis
@@ -48,7 +48,7 @@ target_sources(cartdg PRIVATE ${CMAKE_BINARY_DIR}/Gauss_lobatto.cpp
 target_include_directories(cartdg PUBLIC
                            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
                            $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>
-                           $<INSTALL_INTERFACE:include/cartdg>
+                           $<INSTALL_INTERFACE:include>
 )
 
 add_subdirectory(src)

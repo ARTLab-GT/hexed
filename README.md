@@ -89,11 +89,11 @@ Currently implemented features:
 * Generation of structured grids for testing purposes.
 * Visualization with Tecplot.
 * Periodic boundary conditions.
+* Integration with NASCART-GT.
  
 Planned or in-progress features (roughly in order of planned implementation):
 * Entropy-stable methods (in progress).
-* Integration with NASCART-GT (in progress).
-* Immersed and freestream boundary conditions.
+* Immersed and freestream boundary conditions (in progress).
 * Hanging-nodes.
 * Shock capturing.
 * Implicit and/or multigrid method.

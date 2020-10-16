@@ -1,5 +1,5 @@
-#ifndef BASIS_HPP_
-#define BASIS_HPP_
+#ifndef CARTDG_BASIS_HPP_
+#define CARTDG_BASIS_HPP_
 
 #include <Eigen/Dense>
 

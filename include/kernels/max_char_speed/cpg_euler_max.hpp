@@ -1,5 +1,5 @@
-#ifndef CPG_EULER_MAX_HPP_
-#define CPG_EULER_MAX_HPP_
+#ifndef CARTDG_CPG_EULER_MAX_HPP_
+#define CARTDG_CPG_EULER_MAX_HPP_
 
 namespace cartdg
 {

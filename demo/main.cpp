@@ -111,7 +111,7 @@ int main()
       solution.update();
     }
     char buffer [100];
-    snprintf(buffer, 100, "t%e.txt", time);
+    snprintf(buffer, 100, "t%e", time);
     grid.visualize(std::string(buffer));
   }
   time = 0.2;

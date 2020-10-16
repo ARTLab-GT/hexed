@@ -1,12 +1,12 @@
-#ifndef GRID_HPP_
-#define GRID_HPP_
+#ifndef CARTDG_GRID_HPP_
+#define CARTDG_GRID_HPP_
 
 #include <vector>
 #include <string>
 
 #include <Eigen/Dense>
 
-#include <Basis.hpp>
+#include "Basis.hpp"
 
 namespace cartdg
 {
@@ -24,22 +24,31 @@ class Grid
   Basis& basis;
   int iter;
   double time;
+  std::vector<double> origin;
 
   Grid(int n_var_arg, int n_dim_arg, int n_elem_arg, double mesh_size_arg, Basis& basis_arg);
   virtual ~Grid();
 
+  // functions for accessing data
   double* state_r();
   double* state_w();
   std::vector<double**> neighbor_connections_r();
   std::vector<double**> neighbor_connections_w();
   std::vector<int> n_neighb_con();
   std::vector<double> get_pos(int i_elem);
+
+  // functions that execute some aspect of time integration
   bool execute_runge_kutta_stage();
   double get_stable_cfl();
 
+  // functions that resize/reallocate/modify data
   void auto_connect(std::vector<int> periods);
   void auto_connect();
   void clear_neighbors();
+  int add_element(std::vector<int> position);
+  void add_connection(int i_elem0, int i_elem1, int i_dim);
+
+  // functions that provide diagnostic information
   void visualize(std::string file_name);
   void print();
   Eigen::VectorXd state_integral();

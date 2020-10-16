@@ -13,14 +13,14 @@ basis(basis_arg), iter(0), time(0.), i_rk_stage(0), i_read(0), i_write(1)
   for (int i_dim = 0; i_dim < n_dim; ++i_dim)
   {
     n_qpoint *= basis.rank;
+    origin.push_back(0.);
   }
   n_dof = n_qpoint*n_var;
   for (int i = 0; i < (int)state_storage.size(); ++i) state_storage[i].resize(n_dof*n_elem, 0.);
   pos.resize(n_elem*n_dim, 0);
   for (int i_dim = 0; i_dim < 3*n_dim; ++i_dim)
   {
-    std::vector<double*> empty;
-    neighbor_storage.push_back(empty);
+    neighbor_storage.emplace_back();
   }
 }
 
@@ -68,8 +68,6 @@ std::vector<int> Grid::n_neighb_con()
 
 void Grid::auto_connect(std::vector<int> periods)
 {
-  std::array<double*, 3> state_data {state_storage[0].data(), state_storage[1].data(),
-                                     state_storage[2].data()};
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
     for (int j_elem = i_elem + 1; j_elem < n_elem; ++j_elem)
@@ -93,30 +91,19 @@ void Grid::auto_connect(std::vector<int> periods)
         }
         if (is_same_row)
         {
-          if (pos_diff[i_dim] == 1)
-          {
-            for (int i_stage = 0; i_stage < 3; ++i_stage)
-            {
-              neighbor_storage[i_dim + i_stage*n_dim].push_back(state_data[i_stage]
-                                                                + n_dof*i_elem);
-              neighbor_storage[i_dim + i_stage*n_dim].push_back(state_data[i_stage]
-                                                                + n_dof*j_elem);
-            }
-          }
-          else if (pos_diff[i_dim] == -1)
-          {
-            for (int i_stage = 0; i_stage < 3; ++i_stage)
-            {
-              neighbor_storage[i_dim + i_stage*n_dim].push_back(state_data[i_stage]
-                                                                + n_dof*j_elem);
-              neighbor_storage[i_dim + i_stage*n_dim].push_back(state_data[i_stage]
-                                                                + n_dof*i_elem);
-            }
-          }
+          if      (pos_diff[i_dim] ==  1) add_connection(i_elem, j_elem, i_dim);
+          else if (pos_diff[i_dim] == -1) add_connection(j_elem, i_elem, i_dim);
         }
       }
     }
   }
+}
+
+void Grid::auto_connect()
+{
+  std::vector<int> periods;
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) periods.push_back(0);
+  auto_connect(periods);
 }
 
 void Grid::clear_neighbors()
@@ -127,11 +114,28 @@ void Grid::clear_neighbors()
   }
 }
 
-void Grid::auto_connect()
+// Note: the return value is trivial right now, since it is equal to n_elem.
+// However, once we implement adaptive refinement, elements may be created at places
+// other than the end of the vector, and the return value will become non-trivial.
+// Treat the return value as a black box for forward compatability.
+int Grid::add_element(std::vector<int> position)
 {
-  std::vector<int> periods;
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim) periods.push_back(0);
-  auto_connect(periods);
+  for (int i_rk_stage = 0; i_rk_stage < 3; ++i_rk_stage)
+  {
+    state_storage[i_rk_stage].resize(state_storage[i_rk_stage].size() + n_dof, 0.);
+  }
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) pos.push_back(position[i_dim]);
+  return n_elem++;
+}
+
+void Grid::add_connection(int i_elem0, int i_elem1, int i_dim)
+{
+  for (int i_stage = 0; i_stage < 3; ++i_stage)
+  {
+    double* state_data = state_storage[i_stage].data();
+    neighbor_storage[i_dim + i_stage*n_dim].push_back(state_data + n_dof*i_elem0);
+    neighbor_storage[i_dim + i_stage*n_dim].push_back(state_data + n_dof*i_elem1);
+  }
 }
 
 void Grid::populate_slice(std::vector<double>& elem_pos, std::vector<int> indices, int i_elem)
@@ -157,7 +161,8 @@ void Grid::populate_slice(std::vector<double>& elem_pos, std::vector<int> indice
     for (int i_dim = 0; i_dim < n_dim; ++i_dim)
     {
       elem_pos[i_flat + n_qpoint*i_dim] = (basis.node(indices[i_dim])
-                                           + pos[i_elem*n_dim + i_dim])*mesh_size;
+                                           + pos[i_elem*n_dim + i_dim])*mesh_size
+                                           + origin[i_dim];
     }
   }
 }

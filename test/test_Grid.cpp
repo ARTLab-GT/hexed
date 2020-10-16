@@ -25,6 +25,17 @@ TEST_CASE("Grid")
     REQUIRE(grid2.n_dof == 256);
     REQUIRE(grid3.n_dof == 2048);
     REQUIRE(grid1.n_elem == 5);
+    REQUIRE(grid1.time == 0.);
+    REQUIRE(grid1.origin.size() == 1);
+    REQUIRE(grid2.origin.size() == 2);
+    REQUIRE(grid3.origin.size() == 3);
+    REQUIRE(grid1.origin[0] == 0.);
+    REQUIRE(grid2.origin[0] == 0.);
+    REQUIRE(grid2.origin[1] == 0.);
+    REQUIRE(grid3.origin[0] == 0.);
+    REQUIRE(grid3.origin[1] == 0.);
+    REQUIRE(grid3.origin[2] == 0.);
+
     int size = 2048*27;
     REQUIRE(grid3.state_r()[0] == 0.);
     REQUIRE(grid3.state_w()[0] == 0.);
@@ -44,6 +55,7 @@ TEST_CASE("Grid")
     grid2.pos[i++] = 1; grid2.pos[i++] = -1;
     grid2.pos[i++] = 3; grid2.pos[i++] =  0;
   }
+  grid2.origin[1] = 10.;
   for (int i = 0; i < 3; ++i)
   {
     for (int j = 0; j < 3; ++j)
@@ -61,6 +73,7 @@ TEST_CASE("Grid")
   SECTION("Positioning")
   {
     std::vector<double> pos;
+
     pos = grid1.get_pos(0);
     REQUIRE(pos[0] == -0.1);
     REQUIRE(pos[1] == Approx(-0.1 + 0.1/7.));
@@ -75,15 +88,15 @@ TEST_CASE("Grid")
     REQUIRE(pos[1] == 0.);
     REQUIRE(pos[8] == Approx(0.1/7.));
     REQUIRE(pos[63] == 0.1);
-    REQUIRE(pos[64] == 0.);
-    REQUIRE(pos[65] == Approx(0.1/7.));
-    REQUIRE(pos[72] == Approx(0.));
-    REQUIRE(pos[127] == 0.1);
+    REQUIRE(pos[64] == 10.);
+    REQUIRE(pos[65] == Approx(10. + 0.1/7.));
+    REQUIRE(pos[72] == Approx(10.));
+    REQUIRE(pos[127] == 10.1);
     pos = grid2.get_pos(2);
     REQUIRE(pos[0] == 0.);
     REQUIRE(pos[63] == 0.1);
-    REQUIRE(pos[64] == -0.1);
-    REQUIRE(pos[127] == 0.);
+    REQUIRE(pos[64] == 10. - 0.1);
+    REQUIRE(pos[127] == 10.);
 
     pos = grid3.get_pos(0);
     REQUIRE(pos[0] == 0.);
@@ -135,6 +148,8 @@ TEST_CASE("Grid")
     std::vector<int> n_neighb_con = grid2.n_neighb_con();
     REQUIRE(n_neighb_con[0] == 1);
     REQUIRE(n_neighb_con[1] == 1);
+    REQUIRE(grid2.neighbor_connections_r()[0][0] == grid2.state_r() + 2*grid2.n_dof);
+    REQUIRE(grid2.neighbor_connections_r()[0][1] == grid2.state_r() + 3*grid2.n_dof);
     grid2.clear_neighbors();
     std::vector<int> periods {0, 3};
     grid2.auto_connect(periods);
@@ -184,6 +199,26 @@ TEST_CASE("Grid")
     {
       REQUIRE(grid1.state_r()[i] == Approx(7.372));
     }
+  }
+
+  SECTION("Add element")
+  {
+    cartdg::Equidistant basis (8);
+    cartdg::Grid grid (4, 1, 0, 0.1, basis);
+    std::vector<int> position {1};
+    REQUIRE(grid.add_element(position) == 0);
+    position[0] += 1;
+    REQUIRE(grid.add_element(position) == 1);
+    REQUIRE(grid.n_elem == 2);
+    REQUIRE(grid.pos[0] == 1);
+    REQUIRE(grid.pos[1] == 2);
+    grid.auto_connect();
+    REQUIRE(grid.n_neighb_con()[0] == 1);
+
+    grid.state_w()[0] = 1.;
+    REQUIRE(grid.state_r()[0] == 0.);
+    grid.state_w()[2*grid.n_dof - 1] = 1.;
+    REQUIRE(grid.state_r()[2*grid.n_dof - 1] == 0.);
   }
 
 }

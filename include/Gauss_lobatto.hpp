@@ -1,7 +1,7 @@
-#ifndef GAUSS_LOBATTO_HPP_
-#define GAUSS_LOBATTO_HPP_
+#ifndef CARTDG_GAUSS_LOBATTO_HPP_
+#define CARTDG_GAUSS_LOBATTO_HPP_
 
-#include <Basis.hpp>
+#include "Basis.hpp"
 
 namespace cartdg
 {

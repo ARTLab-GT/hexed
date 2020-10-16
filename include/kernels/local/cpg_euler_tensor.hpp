@@ -1,5 +1,5 @@
-#ifndef CPG_EULER_TENSOR_HPP_
-#define CPG_EULER_TENSOR_HPP_
+#ifndef CARTDG_CPG_EULER_TENSOR_HPP_
+#define CARTDG_CPG_EULER_TENSOR_HPP_
 
 #include <Eigen/Dense>
 

@@ -23,6 +23,16 @@ Grid& Solution::get_grid(int order_added)
   }
 }
 
+void Solution::visualize(std::string file_prefix)
+{
+  char buffer [100];
+  for (Grid& grid : grids)
+  {
+    snprintf(buffer, 100, "%s_%.2e_%.2e", file_prefix.c_str(), grid.mesh_size, grid.time);
+    grid.visualize(std::string(buffer));
+  }
+}
+
 double Solution::update(double cfl_by_stable_cfl)
 {
   Local_kernel local = get_local_kernel();
@@ -80,6 +90,13 @@ void Solution::initialize(Initializer& init)
   }
 }
 
+double Solution::refined_mesh_size(int ref_level)
+{
+  double mesh_size = base_mesh_size;
+  for (int i_rl = 0; i_rl < ref_level; ++i_rl) mesh_size /= 2;
+  return mesh_size;
+}
+
 void Solution::add_block_grid(int ref_level, std::vector<int> lower_corner,
                                              std::vector<int> upper_corner)
 {
@@ -88,9 +105,7 @@ void Solution::add_block_grid(int ref_level, std::vector<int> lower_corner,
   {
     n_elem *= upper_corner[i_dim] - lower_corner[i_dim];
   }
-  double mesh_size = base_mesh_size;
-  for (int i_rl = 0; i_rl < ref_level; ++i_rl) mesh_size /= 2;
-  grids.push_back(Grid (n_var, n_dim, n_elem, mesh_size, basis));
+  grids.emplace_back(n_var, n_dim, n_elem, refined_mesh_size(ref_level), basis);
   Grid& g = grids.back();
   for (int i_dim = 0, stride = 1; i_dim < n_dim; ++i_dim)
   {
@@ -122,11 +137,24 @@ void Solution::add_block_grid(int ref_level)
   add_block_grid(ref_level, lc, uc);
 }
 
+void Solution::add_empty_grid(int ref_level)
+{
+  grids.emplace_back(n_var, n_dim, 0, refined_mesh_size(ref_level), basis);
+}
+
 void Solution::auto_connect()
 {
   for (Grid& grid : grids)
   {
     grid.auto_connect();
+  }
+}
+
+void Solution::clear_neighbors()
+{
+  for (Grid& grid : grids)
+  {
+    grid.clear_neighbors();
   }
 }
 
