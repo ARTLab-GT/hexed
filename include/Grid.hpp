@@ -42,7 +42,7 @@ class Grid
 
   // functions that execute some aspect of time integration
   bool execute_runge_kutta_stage();
-  void apply_fit_bound_conds();
+  void apply_fit_bound_conds(double d_t_by_d_x);
   double get_stable_cfl();
 
   // functions that resize/reallocate/modify data

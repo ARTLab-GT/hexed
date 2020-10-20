@@ -192,7 +192,7 @@ bool Grid::execute_runge_kutta_stage()
   return i_rk_stage == 0;
 }
 
-void apply_fit_bound_conds()
+void Grid::apply_fit_bound_conds(double d_t_by_d_x)
 {
 }
 

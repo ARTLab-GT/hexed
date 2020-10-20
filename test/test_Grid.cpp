@@ -1,13 +1,40 @@
 #include <catch.hpp>
 #include <iostream>
 
+#include <cartdgConfig.hpp>
 #include <Grid.hpp>
 #include <Equidistant.hpp>
 #include <Gauss_lobatto.hpp>
 
+class Supersonic_inlet : public cartdg::Fitted_boundary_condition
+{
+  public:
+  int n_dim;
+
+  Supersonic_inlet(int n_dim_arg, int n_qpoint_arg, int i_dim_arg, bool is_positive_face_arg)
+  : cartdg::Fitted_boundary_condition(n_dim_arg + 2, n_qpoint_arg, i_dim_arg,
+                                      is_positive_face_arg),
+    n_dim(n_dim_arg) {}
+
+  virtual void calc_ghost_state()
+  {
+    double mass = 2.;
+    double speed = 700;
+    double int_ener = 5e5;
+    for (int j_dim = 0; j_dim < n_dim; ++j_dim)
+    {
+      ghost_state.col(j_dim) = 0.;
+    }
+    ghost_state.col(i_dim) = mass*speed;
+    if (is_positive_face) ghost_state.col(i_dim) *= -1;
+    ghost_state.col(n_dim) = mass;
+    ghost_state.col(n_dim + 1) = int_ener + 0.5*mass*speed*speed;
+  }
+};
+
 TEST_CASE("Grid")
 {
-  cartdg::Equidistant basis (8);
+  cartdg::Equidistant basis (MAX_BASIS_RANK);
   cartdg::Grid grid1 (4, 1, 5, 0.1, basis);
   cartdg::Grid grid2 (4, 2, 5, 0.1, basis);
   cartdg::Grid grid3 (4, 3, 27, 0.1, basis);
@@ -198,6 +225,79 @@ TEST_CASE("Grid")
     for (int i = 0; i < grid1.n_dof*grid1.n_elem; ++i)
     {
       REQUIRE(grid1.state_r()[i] == Approx(7.372));
+    }
+  }
+
+  SECTION("Fitted boundary conditions")
+  {
+    cartdg::Gauss_lobatto basis (MAX_BASIS_RANK);
+    cartdg::Grid grid (5, 3, 27, 0.5, basis);
+    for (int i = 0; i < 3; ++i)
+    {
+      for (int j = 0; j < 3; ++j)
+      {
+        for (int k = 0; k < 3; ++k)
+        {
+          int i_elem = 3*(k + 3*(j + 3*i));
+          grid.pos[i_elem + 0] = i;
+          grid.pos[i_elem + 1] = j;
+          grid.pos[i_elem + 2] = k;
+        }
+      }
+    }
+    SECTION("Axis 0")
+    {
+      Supersonic_inlet bc0 (grid.n_dim, grid.n_qpoint, 0, false);
+      grid.fit_bound_conds.push_back(&bc0);
+      Supersonic_inlet bc1 (grid.n_dim, grid.n_qpoint, 0, true);
+      grid.fit_bound_conds.push_back(&bc0);
+      for (int j = 0; j < 3; ++j)
+      {
+        for (int k = 0; k < 3; ++k)
+        {
+          int i_elem; int i;
+          i = 0;
+          i_elem = 3*(k + 3*(j + 3*i));
+          bc0.elems.push_back(i_elem);
+          i = MAX_BASIS_RANK - 1;
+          i_elem = 3*(k + 3*(j + 3*i));
+          bc1.elems.push_back(i_elem);
+        }
+      }
+      for (int i_elem = 0; i_elem < 27; ++i_elem)
+      {
+        for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
+        {
+          #define  READ(i) grid.state_r()[i_elem*grid.n_dof + i_qpoint + i*grid.n_qpoint]
+          #define WRITE(i) grid.state_w()[i_elem*grid.n_dof + i_qpoint + i*grid.n_qpoint]
+          READ(0) = 0.; READ(1) = 0.; READ(2) = 0.;
+          READ(3) = 1.;
+          READ(4) = 4e5;
+          WRITE(0) = 0.; WRITE(1) = 0.; WRITE(2) = 0.;
+          WRITE(3) = 1.;
+          WRITE(4) = 4e5;
+          #undef  READ
+          #undef WRITE
+        }
+      }
+      grid.apply_fit_bound_conds(1.);
+      for (int i_elem = 0; i_elem < 27; ++i_elem)
+      {
+        std::vector<double> pos = grid.get_pos(i_elem);
+        for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
+        {
+          #define WRITE(i) grid.state_w()[i_elem*grid.n_dof + i_qpoint + i*grid.n_qpoint]
+          if (std::min(std::abs(pos[i_qpoint]), std::abs(pos[i_qpoint] - 1.5)) < 1e-15)
+          {
+            REQUIRE(WRITE(3) == 1. + 2.*700/basis.node_weights()[0]);
+          }
+          else
+          {
+            REQUIRE(WRITE(3) == 1.);
+          }
+          #undef WRITE
+        }
+      }
     }
   }
 
