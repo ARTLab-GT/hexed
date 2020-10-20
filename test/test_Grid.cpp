@@ -23,12 +23,12 @@ class Supersonic_inlet : public cartdg::Fitted_boundary_condition
     double int_ener = 5e5;
     for (int j_dim = 0; j_dim < n_dim; ++j_dim)
     {
-      ghost_state.col(j_dim) = 0.;
+      ghost_state().col(j_dim) = 0.;
     }
-    ghost_state.col(i_dim) = mass*speed;
-    if (is_positive_face) ghost_state.col(i_dim) *= -1;
-    ghost_state.col(n_dim) = mass;
-    ghost_state.col(n_dim + 1) = int_ener + 0.5*mass*speed*speed;
+    ghost_state().col(i_dim) = mass*speed;
+    if (is_positive_face) ghost_state().col(i_dim) *= -1;
+    ghost_state().col(n_dim) = mass;
+    ghost_state().col(n_dim + 1) = int_ener + 0.5*mass*speed*speed;
   }
 };
 
@@ -247,20 +247,20 @@ TEST_CASE("Grid")
     }
     SECTION("Axis 0")
     {
-      Supersonic_inlet bc0 (grid.n_dim, grid.n_qpoint, 0, false);
+      Supersonic_inlet bc0 (grid.n_dim, grid.n_qpoint/grid.basis.rank, 0, false);
       grid.fit_bound_conds.push_back(&bc0);
-      Supersonic_inlet bc1 (grid.n_dim, grid.n_qpoint, 0, true);
-      grid.fit_bound_conds.push_back(&bc0);
+      Supersonic_inlet bc1 (grid.n_dim, grid.n_qpoint/grid.basis.rank, 0, true);
+      grid.fit_bound_conds.push_back(&bc1);
       for (int j = 0; j < 3; ++j)
       {
         for (int k = 0; k < 3; ++k)
         {
           int i_elem; int i;
           i = 0;
-          i_elem = 3*(k + 3*(j + 3*i));
+          i_elem = k + 3*(j + 3*i);
           bc0.elems.push_back(i_elem);
-          i = MAX_BASIS_RANK - 1;
-          i_elem = 3*(k + 3*(j + 3*i));
+          i = 2;
+          i_elem = k + 3*(j + 3*i);
           bc1.elems.push_back(i_elem);
         }
       }
@@ -268,8 +268,8 @@ TEST_CASE("Grid")
       {
         for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
         {
-          #define  READ(i) grid.state_r()[i_elem*grid.n_dof + i_qpoint + i*grid.n_qpoint]
-          #define WRITE(i) grid.state_w()[i_elem*grid.n_dof + i_qpoint + i*grid.n_qpoint]
+          #define  READ(i) grid.state_r()[i_elem*grid.n_dof + i_qpoint + (i)*grid.n_qpoint]
+          #define WRITE(i) grid.state_w()[i_elem*grid.n_dof + i_qpoint + (i)*grid.n_qpoint]
           READ(0) = 0.; READ(1) = 0.; READ(2) = 0.;
           READ(3) = 1.;
           READ(4) = 4e5;
@@ -286,7 +286,7 @@ TEST_CASE("Grid")
         std::vector<double> pos = grid.get_pos(i_elem);
         for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
         {
-          #define WRITE(i) grid.state_w()[i_elem*grid.n_dof + i_qpoint + i*grid.n_qpoint]
+          #define WRITE(i) grid.state_w()[i_elem*grid.n_dof + i_qpoint + (i)*grid.n_qpoint]
           if (std::min(std::abs(pos[i_qpoint]), std::abs(pos[i_qpoint] - 1.5)) < 1e-15)
           {
             REQUIRE(WRITE(3) == 1. + 2.*700/basis.node_weights()[0]);

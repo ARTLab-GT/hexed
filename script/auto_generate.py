@@ -62,7 +62,7 @@ for auto_file in [solution, grid]:
                 if kernel_type == "flux":
                     text += """
         &({}<{}, {}>),
-        """[1:].format(auto_file.templates[kernel_type], n_var, n_qpoint//row_size)
+        """[1:].format(auto_file.templates[kernel_type], i_dim + 1, n_qpoint//row_size)
                 else:
                     text += """
         &({}<{}, {}, {}>),

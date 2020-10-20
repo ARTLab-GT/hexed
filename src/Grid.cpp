@@ -192,8 +192,26 @@ bool Grid::execute_runge_kutta_stage()
   return i_rk_stage == 0;
 }
 
-void Grid::apply_fit_bound_conds(double d_t_by_d_x)
+void Grid::apply_fit_bound_conds(double d_t_by_d_pos)
 {
+  for (Fitted_boundary_condition* fbc : fit_bound_conds)
+  {
+    for (int i_elem : fbc->elems)
+    {
+      int stride = n_qpoint;
+      for (int i_axis = 0; i_axis < fbc->i_dim + 1; ++i_axis) stride /= basis.rank;
+      get_read_kernel()(state_r() + i_elem*n_dof, fbc->domain_state().data(), stride,
+                        fbc->is_positive_face);
+      double mult = d_t_by_d_pos/basis.node_weights()(0);
+      fbc->calc_ghost_state();
+      // FIXME: get correct specific heat ratio
+      Eigen::ArrayXXd d_flux (n_qpoint/basis.rank, 2*n_var);
+      get_flux_kernel()(fbc->state.data(), d_flux.data(), mult, fbc->i_dim, 1.4);
+      double* d_flux_r = d_flux.data();
+      if (!fbc->is_positive_face) d_flux_r += n_qpoint/basis.rank*n_var;
+      get_write_kernel()(d_flux_r, state_w() + i_elem*n_dof, stride, fbc->is_positive_face);
+    }
+  }
 }
 
 double Grid::get_stable_cfl()
