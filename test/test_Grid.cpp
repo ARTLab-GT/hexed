@@ -11,10 +11,10 @@ class Supersonic_inlet : public cartdg::Fitted_boundary_condition
   public:
   int n_dim;
 
-  Supersonic_inlet(int n_dim_arg, int n_qpoint_arg, int i_dim_arg, bool is_positive_face_arg)
-  : cartdg::Fitted_boundary_condition(n_dim_arg + 2, n_qpoint_arg, i_dim_arg,
-                                      is_positive_face_arg),
-    n_dim(n_dim_arg) {}
+  Supersonic_inlet(cartdg::Grid& grid, int i_dim_arg, bool is_positive_face_arg)
+  : cartdg::Fitted_boundary_condition(grid, i_dim_arg, is_positive_face_arg), n_dim(grid.n_dim)
+  {}
+    
 
   virtual void calc_ghost_state()
   {
@@ -248,10 +248,8 @@ TEST_CASE("Grid")
 
     SECTION("Axis 0")
     {
-      Supersonic_inlet bc0 (grid.n_dim, grid.n_qpoint/grid.basis.rank, 0, false);
-      grid.fit_bound_conds.push_back(&bc0);
-      Supersonic_inlet bc1 (grid.n_dim, grid.n_qpoint/grid.basis.rank, 0, true);
-      grid.fit_bound_conds.push_back(&bc1);
+      Supersonic_inlet bc0 (grid, 0, false);
+      Supersonic_inlet bc1 (grid, 0, true);
       for (int j = 0; j < 3; ++j)
       {
         for (int k = 0; k < 3; ++k)
@@ -303,8 +301,7 @@ TEST_CASE("Grid")
 
     SECTION("Axis 1")
     {
-      Supersonic_inlet bc1 (grid.n_dim, grid.n_qpoint/grid.basis.rank, 1, true);
-      grid.fit_bound_conds.push_back(&bc1);
+      Supersonic_inlet bc1 (grid, 1, true);
       for (int i = 0; i < 3; ++i)
       {
         for (int k = 0; k < 3; ++k)
@@ -354,8 +351,7 @@ TEST_CASE("Grid")
 
     SECTION("Axis 2")
     {
-      Supersonic_inlet bc0 (grid.n_dim, grid.n_qpoint/grid.basis.rank, 2, false);
-      grid.fit_bound_conds.push_back(&bc0);
+      Supersonic_inlet bc0 (grid, 2, false);
       bc0.elems.push_back(3);
       for (int i_elem = 0; i_elem < 27; ++i_elem)
       {
