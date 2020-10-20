@@ -20,50 +20,65 @@ namespace cartdg
 {
 """ + text + "\n\n}\n"
 
-include = """
+class Auto_file:
+    def __init__(self, name):
+        self.name = name
+        self.file_name = name + "__get_kernel.cpp"
+        include = ""
+        templates = {}
+
+solution = Auto_file("Solution")
+solution.include = """
 #include <Solution.hpp>
 #include <kernels/local/cpg_euler_matrix.hpp>
 #include <kernels/neighbor/cpg_euler_copy.hpp>
+#include <kernels/max_char_speed/cpg_euler_max.hpp>
+"""
+solution.templates = {"local":"cpg_euler_matrix", "neighbor":"cpg_euler_copy",
+                      "max_char_speed":"cpg_euler_max"}
+
+grid = Auto_file("Grid")
+grid.include = """
+#include <Grid.hpp>
 #include <kernels/neighbor/cpg_euler_hll.hpp>
 #include <kernels/neighbor/read_copy.hpp>
 #include <kernels/neighbor/write_copy.hpp>
-#include <kernels/max_char_speed/cpg_euler_max.hpp>
 """
-text = ""
+grid.templates = {"flux":"cpg_euler_hll", "read":"read_copy", "write":"write_copy"}
 
-templates = {"local":"cpg_euler_matrix", "neighbor":"cpg_euler_copy", "flux":"cpg_euler_hll",\
-             "read":"read_copy", "write":"write_copy", "max_char_speed":"cpg_euler_max"}
+for auto_file in [solution, grid]:
+    text = ""
 
-for kernel_type in templates.keys():
-    func_type = kernel_type.capitalize()
-    kernel_arr = "\n{}_kernel {}_kernels [{}][{}] {{\n"
-    text += kernel_arr.format(func_type, kernel_type, max_dim, max_rank)
-    for i_dim in range(max_dim):
-        for i_rank in range(max_rank):
-            n_var = i_dim + 3
-            n_qpoint = (i_rank + 1)**(i_dim + 1)
-            n_face_qpoint = (i_rank + 1)**i_dim
-            row_size = i_rank + 1
-            if kernel_type == "flux":
-                text += """
-    &({}<{}, {}>),
-    """[1:].format(templates[kernel_type], n_var, n_qpoint//row_size)
-            else:
-                text += """
-    &({}<{}, {}, {}>),
-    """[1:].format(templates[kernel_type], n_var, n_qpoint, row_size)
-    text += "};\n"
+    for kernel_type in auto_file.templates.keys():
+        func_type = kernel_type.capitalize()
+        kernel_arr = "\n{}_kernel {}_kernels [{}][{}] {{\n"
+        text += kernel_arr.format(func_type, kernel_type, max_dim, max_rank)
+        for i_dim in range(max_dim):
+            for i_rank in range(max_rank):
+                n_var = i_dim + 3
+                n_qpoint = (i_rank + 1)**(i_dim + 1)
+                n_face_qpoint = (i_rank + 1)**i_dim
+                row_size = i_rank + 1
+                if kernel_type == "flux":
+                    text += """
+        &({}<{}, {}>),
+        """[1:].format(auto_file.templates[kernel_type], n_var, n_qpoint//row_size)
+                else:
+                    text += """
+        &({}<{}, {}, {}>),
+        """[1:].format(auto_file.templates[kernel_type], n_var, n_qpoint, row_size)
+        text += "};\n"
 
-    text += """
-{0}_kernel Solution::get_{1}_kernel()
-{{
-  if (n_dim <= {2}) return {1}_kernels[n_dim - 1][basis.rank - 1];
-  else throw "Kernel not available.";
-}}
-""".format(func_type, kernel_type, i_dim + 1)
+        text += """
+    {0}_kernel {3}::get_{1}_kernel()
+    {{
+      if (n_dim <= {2}) return {1}_kernels[n_dim - 1][basis.rank - 1];
+      else throw "Kernel not available.";
+    }}
+    """.format(func_type, kernel_type, i_dim + 1, auto_file.name)
 
-with open(src_dir + "Solution__get_kernel.cpp", "w") as write_file:
-    write_file.write(format_file_text(include, text))
+    with open(src_dir + auto_file.file_name, "w") as write_file:
+        write_file.write(format_file_text(auto_file.include, text))
 
 
 from Basis import *

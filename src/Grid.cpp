@@ -192,6 +192,10 @@ bool Grid::execute_runge_kutta_stage()
   return i_rk_stage == 0;
 }
 
+void apply_fit_bound_conds()
+{
+}
+
 double Grid::get_stable_cfl()
 {
   if ((basis.rank > 0) && (basis.rank <= 9))

@@ -43,9 +43,6 @@ class Solution
 
   virtual Local_kernel get_local_kernel();
   virtual Neighbor_kernel get_neighbor_kernel();
-  virtual Flux_kernel get_flux_kernel();
-  virtual Read_kernel get_read_kernel();
-  virtual Write_kernel get_write_kernel();
   virtual Max_char_speed_kernel get_max_char_speed_kernel();
 };
 
