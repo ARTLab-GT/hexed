@@ -245,6 +245,7 @@ TEST_CASE("Grid")
         }
       }
     }
+
     SECTION("Axis 0")
     {
       Supersonic_inlet bc0 (grid.n_dim, grid.n_qpoint/grid.basis.rank, 0, false);
@@ -288,6 +289,99 @@ TEST_CASE("Grid")
         {
           #define WRITE(i) grid.state_w()[i_elem*grid.n_dof + i_qpoint + (i)*grid.n_qpoint]
           if (std::min(std::abs(pos[i_qpoint]), std::abs(pos[i_qpoint] - 1.5)) < 1e-15)
+          {
+            REQUIRE(WRITE(3) == 1. + 2.*700/basis.node_weights()[0]);
+          }
+          else
+          {
+            REQUIRE(WRITE(3) == 1.);
+          }
+          #undef WRITE
+        }
+      }
+    }
+
+    SECTION("Axis 1")
+    {
+      Supersonic_inlet bc1 (grid.n_dim, grid.n_qpoint/grid.basis.rank, 1, true);
+      grid.fit_bound_conds.push_back(&bc1);
+      for (int i = 0; i < 3; ++i)
+      {
+        for (int k = 0; k < 3; ++k)
+        {
+          int i_elem; int j;
+          j = 2;
+          i_elem = k + 3*(j + 3*i);
+          bc1.elems.push_back(i_elem);
+        }
+      }
+      for (int i_elem = 0; i_elem < 27; ++i_elem)
+      {
+        for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
+        {
+          #define  READ(i) grid.state_r()[i_elem*grid.n_dof + i_qpoint + (i)*grid.n_qpoint]
+          #define WRITE(i) grid.state_w()[i_elem*grid.n_dof + i_qpoint + (i)*grid.n_qpoint]
+          READ(0) = 0.; READ(1) = 0.; READ(2) = 0.;
+          READ(3) = 1.;
+          READ(4) = 4e5;
+          WRITE(0) = 0.; WRITE(1) = 0.; WRITE(2) = 0.;
+          WRITE(3) = 1.;
+          WRITE(4) = 4e5;
+          #undef  READ
+          #undef WRITE
+        }
+      }
+      grid.apply_fit_bound_conds(1.);
+      for (int i_elem = 0; i_elem < 27; ++i_elem)
+      {
+        std::vector<double> pos = grid.get_pos(i_elem);
+        for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
+        {
+          #define WRITE(i) grid.state_w()[i_elem*grid.n_dof + i_qpoint + (i)*grid.n_qpoint]
+          double qpoint_pos = pos[i_qpoint + grid.n_qpoint];
+          if (std::abs(qpoint_pos - 1.5) < 1e-15)
+          {
+            REQUIRE(WRITE(3) == 1. + 2.*700/basis.node_weights()[0]);
+          }
+          else
+          {
+            REQUIRE(WRITE(3) == 1.);
+          }
+          #undef WRITE
+        }
+      }
+    }
+
+    SECTION("Axis 2")
+    {
+      Supersonic_inlet bc0 (grid.n_dim, grid.n_qpoint/grid.basis.rank, 2, false);
+      grid.fit_bound_conds.push_back(&bc0);
+      bc0.elems.push_back(3);
+      for (int i_elem = 0; i_elem < 27; ++i_elem)
+      {
+        for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
+        {
+          #define  READ(i) grid.state_r()[i_elem*grid.n_dof + i_qpoint + (i)*grid.n_qpoint]
+          #define WRITE(i) grid.state_w()[i_elem*grid.n_dof + i_qpoint + (i)*grid.n_qpoint]
+          READ(0) = 0.; READ(1) = 0.; READ(2) = 0.;
+          READ(3) = 1.;
+          READ(4) = 4e5;
+          WRITE(0) = 0.; WRITE(1) = 0.; WRITE(2) = 0.;
+          WRITE(3) = 1.;
+          WRITE(4) = 4e5;
+          #undef  READ
+          #undef WRITE
+        }
+      }
+      grid.apply_fit_bound_conds(1.);
+      for (int i_elem = 0; i_elem < 27; ++i_elem)
+      {
+        std::vector<double> pos = grid.get_pos(i_elem);
+        for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
+        {
+          #define WRITE(i) grid.state_w()[i_elem*grid.n_dof + i_qpoint + (i)*grid.n_qpoint]
+          double qpoint_pos = pos[i_qpoint + 2*grid.n_qpoint];
+          if ((i_elem == 3) && (std::abs(qpoint_pos) < 1e-15))
           {
             REQUIRE(WRITE(3) == 1. + 2.*700/basis.node_weights()[0]);
           }
