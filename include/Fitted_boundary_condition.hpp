@@ -2,6 +2,7 @@
 #define CARTDG_FITTED_BOUNDARY_CONDITION_HPP_
 
 #include <Eigen/Dense>
+#include <vector>
 
 namespace cartdg
 {
