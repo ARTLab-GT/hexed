@@ -100,7 +100,7 @@ int main()
   solution.initialize(v_init);
 
   // Let's go!
-  grid.visualize("initial");
+  solution.visualize("initial");
   auto start = std::chrono::high_resolution_clock::now();
   double time = 0;
   for (int i = 0; i < 20; ++i)
@@ -110,9 +110,7 @@ int main()
     {
       solution.update();
     }
-    char buffer [100];
-    snprintf(buffer, 100, "t%e", time);
-    grid.visualize(std::string(buffer));
+    solution.visualize("simulation");
   }
   time = 0.2;
   while (grid.time < time)
@@ -124,5 +122,5 @@ int main()
   std::cout << "Execution completed in " << float(duration.count())*1e-9 << " s\n";
   std::cout << "(" << grid.iter << " iterations at "
             << float(duration.count())*1e-9/grid.iter << " s per iteration)\n";
-  grid.visualize("final");
+  solution.visualize("final");
 }
