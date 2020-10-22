@@ -1,5 +1,6 @@
 #include <Fitted_boundary_condition.hpp>
 #include <Grid.hpp>
+#include <iostream>
 
 namespace cartdg
 {
@@ -28,6 +29,13 @@ Eigen::Block<Eigen::ArrayXXd> Fitted_boundary_condition::ghost_state()
 {
   return (is_positive_face) ? state.block(0, n_var, n_qpoint, n_var)
                             : state.block(0,     0, n_qpoint, n_var);
+}
+
+void Fitted_boundary_condition::print()
+{
+  std::cout << i_dim << " " << is_positive_face << " : ";
+  for (int i_elem : elems) std::cout << i_elem << " ";
+  std::cout << "\n";
 }
 
 }

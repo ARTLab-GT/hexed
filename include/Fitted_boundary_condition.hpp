@@ -27,6 +27,7 @@ class Fitted_boundary_condition
   virtual ~Fitted_boundary_condition();
 
   virtual void calc_ghost_state() = 0;
+  virtual void print();
 };
 
 }
