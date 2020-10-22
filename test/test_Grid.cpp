@@ -249,7 +249,9 @@ TEST_CASE("Grid")
     SECTION("Axis 0")
     {
       Supersonic_inlet bc0 (grid, 0, false);
+      grid.fit_bound_conds.push_back(&bc0);
       Supersonic_inlet bc1 (grid, 0, true);
+      grid.fit_bound_conds.push_back(&bc1);
       for (int j = 0; j < 3; ++j)
       {
         for (int k = 0; k < 3; ++k)
@@ -302,6 +304,7 @@ TEST_CASE("Grid")
     SECTION("Axis 1")
     {
       Supersonic_inlet bc1 (grid, 1, true);
+      grid.fit_bound_conds.push_back(&bc1);
       for (int i = 0; i < 3; ++i)
       {
         for (int k = 0; k < 3; ++k)
@@ -352,6 +355,7 @@ TEST_CASE("Grid")
     SECTION("Axis 2")
     {
       Supersonic_inlet bc0 (grid, 2, false);
+      grid.fit_bound_conds.push_back(&bc0);
       bc0.elems.push_back(3);
       for (int i_elem = 0; i_elem < 27; ++i_elem)
       {

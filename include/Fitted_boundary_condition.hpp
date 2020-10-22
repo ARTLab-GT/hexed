@@ -23,7 +23,7 @@ class Fitted_boundary_condition
 
   Fitted_boundary_condition(int n_var_arg, int n_qpoint_arg, int i_dim_arg,
                             bool is_positive_face_arg);
-  Fitted_boundary_condition(Grid& grid, int i_dim_arg, bool is_positive_face_arg);
+  Fitted_boundary_condition(const Grid& grid, int i_dim_arg, bool is_positive_face_arg);
   virtual ~Fitted_boundary_condition();
 
   virtual void calc_ghost_state() = 0;
