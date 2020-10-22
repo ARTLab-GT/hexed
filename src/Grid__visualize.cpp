@@ -37,7 +37,7 @@ void Grid::visualize(std::string file_name)
   INTEGER4 KCellMax = 0;
   INTEGER4 DIsDouble = 1;
   double SolTime = time;
-  INTEGER4 StrandID = 0; /* StaticZone */
+  INTEGER4 StrandID = 1; // This must not be 0, as 0 indicats a StaticZone (apparently)
   INTEGER4 unused = 0; // ParentZone is no longer used
   INTEGER4 IsBlock = 1; /* Block */
   INTEGER4 NFConns = 0;
