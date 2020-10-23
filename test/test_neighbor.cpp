@@ -227,14 +227,13 @@ TEST_CASE("cpg_euler_hll")
 
   SECTION("Opposing supersonic flows")
   {
-    double velocity0 [] {680, 0};
-    double velocity1 [] {-680, 0};
+    double velocity0 [] {680, -680};
     for (int i = 0; i < 2; ++i)
     {
       for (int j = 0; j < 2; ++j)
       {
         read[i + 10*j + 0] = mass*velocity0[j];
-        read[i + 10*j + 2] = mass*velocity1[j];
+        read[i + 10*j + 2] = 0;
         read[i + 10*j + 4] = 0;
         read[i + 10*j + 6] = mass;
         read[i + 10*j + 8] = energy;
