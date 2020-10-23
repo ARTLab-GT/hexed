@@ -60,9 +60,9 @@ class Vortex_init : public cartdg::Initializer
     // Calculate vortex perturbation
     double radius = sqrt(sqr(pos[0] - center0) + sqr(pos[1] - center1));
     double nondim_radius = radius/critical_radius;
-    double veloc_mag = vortex_strength*nondim_radius*exp(decay_rate*(1. - sqr(nondim_radius)));
-    double veloc0 =  veloc_mag*(pos[1] - center1 + 1e-6)/(radius + 1e-6);
-    double veloc1 = -veloc_mag*(pos[0] - center0 + 1e-6)/(radius + 1e-6);
+    double veloc_mag_by_radius = vortex_strength/critical_radius*exp(decay_rate*(1. - sqr(nondim_radius)));
+    double veloc0 =  veloc_mag_by_radius*(pos[1] - center1);
+    double veloc1 = -veloc_mag_by_radius*(pos[0] - center0);
     double temperature = -(sp_heat_rat - 1)/(4*decay_rate*sp_heat_rat*sp_gas_const)
                          *sqr(vortex_strength*exp(decay_rate*(1. - sqr(nondim_radius))));
 
@@ -72,7 +72,7 @@ class Vortex_init : public cartdg::Initializer
     temperature += freestream_temperature;
 
     // Calculate char speed
-    double char_speed = veloc_mag + sqrt(sp_heat_rat*sp_gas_const*temperature);
+    double char_speed = veloc_mag_by_radius*radius + sqrt(sp_heat_rat*sp_gas_const*temperature);
     max_char_speed = std::max(max_char_speed, char_speed);
 
     // Convert to conserved variables
