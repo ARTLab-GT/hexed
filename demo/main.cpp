@@ -78,7 +78,7 @@ class Vortex_init : public cartdg::Initializer
     // Convert to conserved variables
     mass = freestream_mass*pow(temperature/freestream_temperature, 1./(sp_heat_rat - 1.));
     _momentum[0] = mass*veloc0; _momentum[1] = mass*veloc1;
-    energy = sp_gas_const/(sp_heat_rat - 1.)*temperature + 0.5*mass*(sqr(veloc0) + sqr(veloc1));
+    energy = mass*(sp_gas_const/(sp_heat_rat - 1.)*temperature + 0.5*(sqr(veloc0) + sqr(veloc1)));
   }
 
 };
