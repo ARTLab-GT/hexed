@@ -181,44 +181,87 @@ TEST_CASE("cpg_euler_hll")
 {
   double mass = 1.225;
   double pressure = 101325;
-  double velocity0 [] {680, 0};
-  double velocity1 [] {0, -680};
   double energy = pressure/0.4 + 0.5*mass*680*680;
   double read[20] {};
   double write[20] {};
   double mult = 0.7;
-  for (int i = 0; i < 2; ++i)
+  SECTION("Reasonable flow")
   {
+    double velocity0 [] {680, 0};
+    double velocity1 [] {0, -680};
+    for (int i = 0; i < 2; ++i)
+    {
+      for (int j = 0; j < 2; ++j)
+      {
+        read[i + 10*j + 0] = mass*velocity0[j];
+        read[i + 10*j + 2] = mass*velocity1[j];
+        read[i + 10*j + 4] = 0;
+        read[i + 10*j + 6] = mass;
+        read[i + 10*j + 8] = energy;
+      }
+    }
+    cartdg::cpg_euler_hll<3, 2>(&read[0], &write[0], mult, 0);
     for (int j = 0; j < 2; ++j)
     {
-      read[i + 10*j + 0] = mass*velocity0[j];
-      read[i + 10*j + 2] = mass*velocity1[j];
-      read[i + 10*j + 4] = 0;
-      read[i + 10*j + 6] = mass;
-      read[i + 10*j + 8] = energy;
+      for (int i_var = 0; i_var < 5; ++i_var)
+      {
+        double correct_d_flux = 680*read[2*i_var];
+        if (i_var == 4) correct_d_flux += 680*pressure;
+        CHECK(write[10*j + 2*i_var    ] == Approx(j*0.7*correct_d_flux));
+        CHECK(write[10*j + 2*i_var + 1] == Approx(j*0.7*correct_d_flux));
+      }
+    }
+    for (int i = 0; i < 20; ++i) write[i] = 0;
+    cartdg::cpg_euler_hll<3, 2>(&read[0], &write[0], mult, 1);
+    for (int j = 0; j < 2; ++j)
+    {
+      for (int i_var = 0; i_var < 5; ++i_var)
+      {
+        double correct_d_flux = 680*read[2*i_var + 10];
+        if (i_var == 4) correct_d_flux += 680*pressure;
+        CHECK(write[10*j + 2*i_var    ] == Approx((1 - j)*0.7*correct_d_flux));
+        CHECK(write[10*j + 2*i_var + 1] == Approx((1 - j)*0.7*correct_d_flux));
+      }
     }
   }
-  cartdg::cpg_euler_hll<3, 2>(&read[0], &write[0], mult, 0);
-  for (int j = 0; j < 2; ++j)
+
+  SECTION("Opposing supersonic flows")
   {
-    for (int i_var = 0; i_var < 5; ++i_var)
+    double velocity0 [] {680, 0};
+    double velocity1 [] {-680, 0};
+    for (int i = 0; i < 2; ++i)
     {
-      double correct_d_flux = 680*read[2*i_var];
-      if (i_var == 4) correct_d_flux += 680*pressure;
-      CHECK(write[10*j + 2*i_var    ] == Approx(j*0.7*correct_d_flux));
-      CHECK(write[10*j + 2*i_var + 1] == Approx(j*0.7*correct_d_flux));
+      for (int j = 0; j < 2; ++j)
+      {
+        read[i + 10*j + 0] = mass*velocity0[j];
+        read[i + 10*j + 2] = mass*velocity1[j];
+        read[i + 10*j + 4] = 0;
+        read[i + 10*j + 6] = mass;
+        read[i + 10*j + 8] = energy;
+      }
     }
-  }
-  for (int i = 0; i < 20; ++i) write[i] = 0;
-  cartdg::cpg_euler_hll<3, 2>(&read[0], &write[0], mult, 1);
-  for (int j = 0; j < 2; ++j)
-  {
-    for (int i_var = 0; i_var < 5; ++i_var)
+    cartdg::cpg_euler_hll<3, 2>(&read[0], &write[0], mult, 0);
+    for (int j = 0; j < 2; ++j)
     {
-      double correct_d_flux = 680*read[2*i_var + 10];
-      if (i_var == 4) correct_d_flux += 680*pressure;
-      CHECK(write[10*j + 2*i_var    ] == Approx((1 - j)*0.7*correct_d_flux));
-      CHECK(write[10*j + 2*i_var + 1] == Approx((1 - j)*0.7*correct_d_flux));
+      for (int i_var = 0; i_var < 5; ++i_var)
+      {
+        double correct_d_flux = 680*read[2*i_var];
+        if (i_var == 4) correct_d_flux += 680*pressure;
+        CHECK(write[10*j + 2*i_var    ] == Approx(j*0.7*correct_d_flux));
+        CHECK(write[10*j + 2*i_var + 1] == Approx(j*0.7*correct_d_flux));
+      }
+    }
+    for (int i = 0; i < 20; ++i) write[i] = 0;
+    cartdg::cpg_euler_hll<3, 2>(&read[0], &write[0], mult, 1);
+    for (int j = 0; j < 2; ++j)
+    {
+      for (int i_var = 0; i_var < 5; ++i_var)
+      {
+        double correct_d_flux = 680*read[2*i_var + 10];
+        if (i_var == 4) correct_d_flux += 680*pressure;
+        REQUIRE(write[10*j + 2*i_var    ] == Approx((1 - j)*0.7*correct_d_flux));
+        REQUIRE(write[10*j + 2*i_var + 1] == Approx((1 - j)*0.7*correct_d_flux));
+      }
     }
   }
 }
