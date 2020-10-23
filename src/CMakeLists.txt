@@ -5,4 +5,5 @@ Grid.cpp
 Grid__visualize.cpp
 Initializer.cpp
 Solution.cpp
+Fitted_boundary_condition.cpp
 )

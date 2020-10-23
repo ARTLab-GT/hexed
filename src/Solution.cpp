@@ -48,10 +48,11 @@ double Solution::update(double cfl_by_stable_cfl)
   {
     do
     {
-      double d_t_by_d_x = dt/g.mesh_size;
-      local(g.state_r(), g.state_w(), g.n_elem, g.basis.diff_mat(), d_t_by_d_x, 1.4);
+      double d_t_by_d_pos = dt/g.mesh_size;
+      local(g.state_r(), g.state_w(), g.n_elem, g.basis.diff_mat(), d_t_by_d_pos, 1.4);
       neighbor(g.neighbor_connections_r().data(), g.neighbor_connections_w().data(), 
-               g.n_neighb_con().data(), g.basis.node_weights(), d_t_by_d_x, 1.4);
+               g.n_neighb_con().data(), g.basis.node_weights(), d_t_by_d_pos, 1.4);
+      g.apply_fit_bound_conds(d_t_by_d_pos);
     }
     while (!g.execute_runge_kutta_stage());
     g.time += dt;

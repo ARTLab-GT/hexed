@@ -9,7 +9,7 @@ namespace cartdg
 template<int n_var, int n_qpoint, int row_size>
 void cpg_euler_matrix(double * read, double * write, int n_elem,
                       const Eigen::MatrixXd& diff_mat_arg,
-                      double d_t_by_d_x, double sp_heat_rat = 1.4)
+                      double d_t_by_d_pos, double sp_heat_rat = 1.4)
 {
   Eigen::Matrix<double, row_size, row_size> diff_mat = diff_mat_arg;
 
@@ -70,7 +70,7 @@ void cpg_euler_matrix(double * read, double * write, int n_elem,
           // Differentiate flux
           Eigen::Map<Eigen::Matrix<double, row_size, n_var>> f (&(flux[0]));
           Eigen::Map<Eigen::Matrix<double, row_size, n_var>> w (&(row_w[0]));
-          w.noalias() = -diff_mat*f*d_t_by_d_x;
+          w.noalias() = -diff_mat*f*d_t_by_d_pos;
 
           // Write updated solution
           for (int i_var = 0; i_var < n_var; ++i_var)
