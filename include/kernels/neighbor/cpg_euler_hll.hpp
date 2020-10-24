@@ -36,8 +36,11 @@ void cpg_euler_hll(double* state_r, double* d_flux_w, double mult,
     for (int i_var = 0; i_var < n_var; ++i_var)
     {
       double num_flux;
-      if      (wave_speed[0] >= 0) num_flux = flux[i_var];
-      else if (wave_speed[1] <= 0) num_flux = flux[i_var + n_var];
+      // Note: these conditions are different from the standard ones, but it rarely makes
+      // a difference, except in the case of opposing supersonic flows, where this behavior
+      // is preferable
+      if      (std::min(wave_speed[0], wave_speed[1]) >= 0) num_flux = flux[i_var];
+      else if (std::max(wave_speed[1], wave_speed[0]) <= 0) num_flux = flux[i_var + n_var];
       else
       {
         num_flux = (  wave_speed[1]*flux[i_var        ]
@@ -47,6 +50,7 @@ void cpg_euler_hll(double* state_r, double* d_flux_w, double mult,
                     - state_r[i_var*n_face_qpoint + i_qpoint]))
                    / (wave_speed[1] - wave_speed[0]);
       }
+
       d_flux_w[i_qpoint + i_var*n_face_qpoint            ]
       = (flux[i_var] - num_flux)*mult;
       d_flux_w[i_qpoint + i_var*n_face_qpoint + face_size]

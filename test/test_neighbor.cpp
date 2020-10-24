@@ -1,4 +1,5 @@
 #include <catch.hpp>
+#include <iostream>
 
 #include <kernels/neighbor/read_copy.hpp>
 #include <kernels/neighbor/write_copy.hpp>
@@ -239,28 +240,10 @@ TEST_CASE("cpg_euler_hll")
         read[i + 10*j + 8] = energy;
       }
     }
-    cartdg::cpg_euler_hll<3, 2>(&read[0], &write[0], mult, 0);
-    for (int j = 0; j < 2; ++j)
-    {
-      for (int i_var = 0; i_var < 5; ++i_var)
-      {
-        double correct_d_flux = 680*read[2*i_var];
-        if (i_var == 4) correct_d_flux += 680*pressure;
-        CHECK(write[10*j + 2*i_var    ] == Approx(j*0.7*correct_d_flux));
-        CHECK(write[10*j + 2*i_var + 1] == Approx(j*0.7*correct_d_flux));
-      }
-    }
+
     for (int i = 0; i < 20; ++i) write[i] = 0;
-    cartdg::cpg_euler_hll<3, 2>(&read[0], &write[0], mult, 1);
-    for (int j = 0; j < 2; ++j)
-    {
-      for (int i_var = 0; i_var < 5; ++i_var)
-      {
-        double correct_d_flux = 680*read[2*i_var + 10];
-        if (i_var == 4) correct_d_flux += 680*pressure;
-        REQUIRE(write[10*j + 2*i_var    ] == Approx((1 - j)*0.7*correct_d_flux));
-        REQUIRE(write[10*j + 2*i_var + 1] == Approx((1 - j)*0.7*correct_d_flux));
-      }
-    }
+    cartdg::cpg_euler_hll<3, 2>(&read[0], &write[0], mult, 0);
+    REQUIRE(write[2*3     ] == Approx(0.7*mass*680));
+    REQUIRE(write[2*3 + 10] == Approx(0.7*mass*680));
   }
 }
