@@ -268,7 +268,29 @@ double Grid::integral(Domain_function& integrand)
       }
     }
   }
-  return 0;
+
+  double total = 0;
+  double* sr = state_r();
+  for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+  {
+    std::vector<double> elem_pos = get_pos(i_elem);
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
+    {
+      std::vector<double> point_pos;
+      for (int i_axis = 0; i_axis < n_dim; ++i_axis)
+      {
+        point_pos.push_back(elem_pos[i_qpoint + i_axis*n_qpoint]);
+      }
+      std::vector<double> point_state;
+      for (int i_var = 0; i_var < n_var; ++i_var)
+      {
+        point_state.push_back(sr[i_qpoint + i_var*n_qpoint]);
+      }
+      double point_integrand = integrand.evaluate(point_pos, time, point_state);
+      total += point_integrand*weights[i_qpoint];
+    }
+  }
+  return total;
 }
 
 }

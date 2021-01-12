@@ -191,7 +191,7 @@ TEST_CASE("Grid")
       }
     }
     square.time = 0.61;
-    REQUIRE(square.integral(sv0) == Approx(1./6.));
+    REQUIRE(square.integral(sv0) == Approx(1./12.));
     Arbitrary_integrand integrand;
     REQUIRE(square.integral(integrand) == Approx(0.61));
   }
