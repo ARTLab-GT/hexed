@@ -248,7 +248,7 @@ void Grid::print()
   }
 }
 
-Eigen::VectorXd Grid::state_integral()
+double Grid::integral(Domain_function& integrand)
 {
   Eigen::VectorXd weights (n_qpoint);
   Eigen::VectorXd weights_1d = basis.node_weights();
@@ -268,10 +268,7 @@ Eigen::VectorXd Grid::state_integral()
       }
     }
   }
-  Eigen::Map<Eigen::MatrixXd> elem_mat (state_r(), n_qpoint, n_elem*n_var);
-  Eigen::MatrixXd elem_integral = elem_mat.transpose()*weights;
-  elem_integral.resize(n_var, n_elem);
-  return elem_integral.rowwise().sum();
+  return 0;
 }
 
 }
