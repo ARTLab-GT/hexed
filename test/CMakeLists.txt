@@ -12,5 +12,6 @@ test_sinusoid.cpp
 test_Solution.cpp
 test_Initializer.cpp
 test_Spacetime_func.cpp
+test_Domain_func.cpp
 )
 target_link_libraries(test PRIVATE cartdg tecio Catch2::Catch2)
