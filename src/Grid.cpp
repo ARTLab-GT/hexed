@@ -284,7 +284,7 @@ double Grid::integral(Domain_function& integrand)
       std::vector<double> point_state;
       for (int i_var = 0; i_var < n_var; ++i_var)
       {
-        point_state.push_back(sr[i_qpoint + i_var*n_qpoint]);
+        point_state.push_back(sr[i_qpoint + i_var*n_qpoint + i_elem*n_dof]);
       }
       double point_integrand = integrand.evaluate(point_pos, time, point_state);
       total += point_integrand*weights[i_qpoint];

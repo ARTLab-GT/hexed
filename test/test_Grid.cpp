@@ -181,19 +181,23 @@ TEST_CASE("Grid")
     REQUIRE(grid3.integral(sv0) == Approx(0.005).margin(1e-12));
     REQUIRE(grid3.integral(sv1) == Approx(0.005).margin(1e-12));
 
-    cartdg::Grid square (1, 2, 1, 1., basis);
-    for (int i = 0; i < basis.rank; ++i)
+    cartdg::Grid square (1, 2, 2, 1., basis);
+    for (int i_elem = 0; i_elem < square.n_elem; ++i_elem)
     {
-      for (int j = 0; j < basis.rank; ++j)
+      for (int i = 0; i < basis.rank; ++i)
       {
-        double pos0 = basis.node(i); double pos1 = basis.node(j);
-        square.state_r()[i*basis.rank + j] = pos0*pos0*pos1*pos1*pos1;
+        for (int j = 0; j < basis.rank; ++j)
+        {
+          double pos0 = basis.node(i) + i_elem; double pos1 = basis.node(j);
+          square.state_r()[(i_elem*basis.rank + i)*basis.rank + j] = pos0*pos0*pos1*pos1*pos1;
+          square.pos[i_elem*2] = i_elem;
+        }
       }
     }
     square.time = 0.61;
-    REQUIRE(square.integral(sv0) == Approx(1./12.));
+    REQUIRE(square.integral(sv0) == Approx(2./3.));
     Arbitrary_integrand integrand;
-    REQUIRE(square.integral(integrand) == Approx(0.61));
+    REQUIRE(square.integral(integrand) == Approx(2*0.61));
   }
 
   SECTION("Automatic graph creation")
