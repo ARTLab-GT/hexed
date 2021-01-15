@@ -32,11 +32,11 @@ class Supersonic_inlet : public cartdg::Fitted_boundary_condition
   }
 };
 
-class Arbitrary_integrand : public cartdg::Domain_function
+class Arbitrary_integrand : public cartdg::Domain_func
 {
   public:
-  virtual double evaluate(std::vector<double> pos, double time,
-                          std::vector<double> state)
+  virtual double operator()(std::vector<double> pos, double time,
+                            std::vector<double> state)
   {
     return pos[0]*pos[0]*pos[1]*pos[1]*pos[1] - state[0] + time;
   }

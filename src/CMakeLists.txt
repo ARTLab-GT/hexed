@@ -6,6 +6,6 @@ Grid__visualize.cpp
 Initializer.cpp
 Solution.cpp
 Fitted_boundary_condition.cpp
-Domain_function.cpp
+Domain_func.cpp
 Spacetime_func.cpp
 )

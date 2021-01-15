@@ -248,7 +248,7 @@ void Grid::print()
   }
 }
 
-double Grid::integral(Domain_function& integrand)
+double Grid::integral(Domain_func& integrand)
 {
   Eigen::VectorXd weights (n_qpoint);
   Eigen::VectorXd weights_1d = basis.node_weights();
@@ -286,7 +286,7 @@ double Grid::integral(Domain_function& integrand)
       {
         point_state.push_back(sr[i_qpoint + i_var*n_qpoint + i_elem*n_dof]);
       }
-      double point_integrand = integrand.evaluate(point_pos, time, point_state);
+      double point_integrand = integrand(point_pos, time, point_state);
       total += point_integrand*weights[i_qpoint];
     }
   }
