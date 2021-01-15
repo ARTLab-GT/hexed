@@ -7,4 +7,5 @@ Initializer.cpp
 Solution.cpp
 Fitted_boundary_condition.cpp
 Domain_function.cpp
+Spacetime_func.cpp
 )
