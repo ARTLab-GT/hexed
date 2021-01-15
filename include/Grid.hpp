@@ -56,7 +56,8 @@ class Grid
   // functions that provide diagnostic information
   void visualize(std::string file_name);
   void print();
-  double integral(Domain_func& integrand);
+  std::vector<double> integral();
+  std::vector<double> integral(Domain_func& integrand);
 
   protected:
   int i_rk_stage;

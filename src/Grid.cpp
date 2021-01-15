@@ -248,7 +248,12 @@ void Grid::print()
   }
 }
 
-double Grid::integral(Domain_func& integrand)
+std::vector<double> Grid::integral()
+{
+  State_variables state_variables;
+  return integral(state_variables);
+}
+std::vector<double> Grid::integral(Domain_func& integrand)
 {
   Eigen::VectorXd weights (n_qpoint);
   Eigen::VectorXd weights_1d = basis.node_weights();
@@ -269,7 +274,7 @@ double Grid::integral(Domain_func& integrand)
     }
   }
 
-  double total = 0;
+  std::vector<double> total;
   double* sr = state_r();
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
@@ -286,8 +291,15 @@ double Grid::integral(Domain_func& integrand)
       {
         point_state.push_back(sr[i_qpoint + i_var*n_qpoint + i_elem*n_dof]);
       }
-      double point_integrand = integrand(point_pos, time, point_state);
-      total += point_integrand*weights[i_qpoint];
+      std::vector<double> point_integrand = integrand(point_pos, time, point_state);
+      if (total.size() < point_integrand.size())
+      {
+        total.resize(point_integrand.size());
+      }
+      for (int i_var = 0; i_var < int(point_integrand.size()); ++i_var)
+      {
+        total[i_var] += point_integrand[i_var]*weights[i_qpoint];
+      }
     }
   }
   return total;

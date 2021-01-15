@@ -35,10 +35,10 @@ class Supersonic_inlet : public cartdg::Fitted_boundary_condition
 class Arbitrary_integrand : public cartdg::Domain_func
 {
   public:
-  virtual double operator()(std::vector<double> pos, double time,
-                            std::vector<double> state)
+  virtual std::vector<double> operator()(std::vector<double> pos, double time,
+                                         std::vector<double> state)
   {
-    return pos[0]*pos[0]*pos[1]*pos[1]*pos[1] - state[0] + time;
+    return std::vector<double> {pos[0]*pos[0]*pos[1]*pos[1]*pos[1] - state[0] + time, 0., 0.};
   }
 };
 
@@ -173,13 +173,12 @@ TEST_CASE("Grid")
     for (int i = 0; i < grid1.n_dof*grid1.n_elem; ++i) grid1.state_r()[i] = 1.;
     for (int i = 0; i < grid2.n_dof*grid1.n_elem; ++i) grid2.state_r()[i] = 1.;
     for (int i = 0; i < grid3.n_dof*grid1.n_elem; ++i) grid3.state_r()[i] = 1.;
-    cartdg::State_variable sv0(0); cartdg::State_variable sv1(1);
-    REQUIRE(grid1.integral(sv0) == Approx(0.5  ).margin(1e-12));
-    REQUIRE(grid1.integral(sv1) == Approx(0.5  ).margin(1e-12));
-    REQUIRE(grid2.integral(sv0) == Approx(0.05 ).margin(1e-12));
-    REQUIRE(grid2.integral(sv1) == Approx(0.05 ).margin(1e-12));
-    REQUIRE(grid3.integral(sv0) == Approx(0.005).margin(1e-12));
-    REQUIRE(grid3.integral(sv1) == Approx(0.005).margin(1e-12));
+    REQUIRE(grid1.integral()[0] == Approx(0.5  ).margin(1e-12));
+    REQUIRE(grid1.integral()[1] == Approx(0.5  ).margin(1e-12));
+    REQUIRE(grid2.integral()[0] == Approx(0.05 ).margin(1e-12));
+    REQUIRE(grid2.integral()[1] == Approx(0.05 ).margin(1e-12));
+    REQUIRE(grid3.integral()[0] == Approx(0.005).margin(1e-12));
+    REQUIRE(grid3.integral()[1] == Approx(0.005).margin(1e-12));
 
     cartdg::Grid square (1, 2, 2, 1., basis);
     for (int i_elem = 0; i_elem < square.n_elem; ++i_elem)
@@ -195,9 +194,9 @@ TEST_CASE("Grid")
       }
     }
     square.time = 0.61;
-    REQUIRE(square.integral(sv0) == Approx(2./3.));
+    REQUIRE(square.integral()[0] == Approx(2./3.));
     Arbitrary_integrand integrand;
-    REQUIRE(square.integral(integrand) == Approx(2*0.61));
+    REQUIRE(square.integral(integrand)[0] == Approx(2*0.61));
   }
 
   SECTION("Automatic graph creation")

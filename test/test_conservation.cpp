@@ -82,10 +82,10 @@ TEST_CASE("Conservation of state variables")
       state_r[i_state] -= initial[i_state];
     }
     grid.visualize("conservation_diff");
+    auto integral = grid.integral();
     for (int i_var = 0; i_var < grid.n_var; ++i_var)
     {
-      cartdg::State_variable state_var(i_var);
-      REQUIRE(grid.integral(state_var)/dt == Approx(0.).margin(0.001));
+      REQUIRE(integral[i_var]/dt == Approx(0.).margin(0.001));
     }
   }
 
@@ -118,10 +118,10 @@ TEST_CASE("Conservation of state variables")
     {
       state_r[i_state] -= initial[i_state];
     }
+    auto integral = grid.integral();
     for (int i_var = 0; i_var < grid.n_var; ++i_var)
     {
-      cartdg::State_variable state_var(i_var);
-      REQUIRE(grid.integral(state_var)/dt == Approx(0.).margin(0.001));
+      REQUIRE(integral[i_var]/dt == Approx(0.).margin(0.001));
     }
   }
 
@@ -154,10 +154,10 @@ TEST_CASE("Conservation of state variables")
     {
       state_r[i_state] -= initial[i_state];
     }
+    auto integral = grid.integral();
     for (int i_var = 0; i_var < grid.n_var; ++i_var)
     {
-      cartdg::State_variable state_var(i_var);
-      REQUIRE(grid.integral(state_var)/dt == Approx(0.).margin(0.001));
+      REQUIRE(integral[i_var]/dt == Approx(0.).margin(0.001));
     }
   }
 }
