@@ -38,9 +38,9 @@ TEST_CASE("Domain_func and Spacetime_func subclasses")
   std::vector<std::vector<double>> test_error
   {
     {},
-    {-2*0.2 - 2*0 - 1.3, 0.3*7.9 - 2*0 - 0.02},
-    {-2*0. - 2*10. - 1.},
-    {-2*-1.3, -2*-1.3, -2*-1.3},
+    {1.3 - (-2*0.2 - 2*0), 0.02 - (0.3*7.9 - 2*0)},
+    {1. - (-2*0. - 2*10.)},
+    {2*-1.3, 2*-1.3, 2*-1.3},
   };
 
   SECTION("Constant_func")
@@ -69,7 +69,7 @@ TEST_CASE("Domain_func and Spacetime_func subclasses")
       REQUIRE(error.size() == test_error[i_test].size());
       for (unsigned i_val = 0; i_val < error.size(); ++i_val)
       {
-        REQUIRE(error[i_val] == test_state[i_test][i_val]);
+        REQUIRE(error[i_val] == test_error[i_test][i_val]);
       }
     }
   }
