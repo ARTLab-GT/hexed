@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include <catch.hpp>
 
 #include <Domain_func.hpp>
@@ -77,8 +75,7 @@ TEST_CASE("Vortex_func")
 {
   SECTION("Solves inviscid flow equations")
   {
-    //std::vector<double> freestream {9., -0.2, 0.8, 2e5};
-    std::vector<double> freestream {1., 1., 1., 1.};
+    std::vector<double> freestream {9., -0.2, 0.8, 2e5};
     cartdg::Isentropic_vortex vortex(freestream);
 
     std::vector<double> test_pos []
@@ -130,8 +127,7 @@ TEST_CASE("Vortex_func")
 
       for (int i_var = 0; i_var < 4; ++i_var)
       {
-        std::cout << i_test << " " << i_var << "\n";
-        CHECK(rate[i_var] + flux_grad[0][i_var] + flux_grad[1][i_var]
+        REQUIRE(rate[i_var] + flux_grad[0][i_var] + flux_grad[1][i_var]
                 == Approx(0.).margin(1.e-4*std::abs(freestream[i_var])));
       }
     }
