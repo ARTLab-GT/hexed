@@ -94,7 +94,7 @@ TEST_CASE("Vortex_func")
       std::vector<double> flux_grad [2];
       flux_grad[0].resize(4); flux_grad[1].resize(4);
       std::vector<double> rate (4);
-      double diff = 1.e-5;
+      double diff = 1.e-6;
       for (int dir : {-1, 1})
       {
         for (int i_axis : {0, 1})
@@ -128,7 +128,7 @@ TEST_CASE("Vortex_func")
       for (int i_var = 0; i_var < 4; ++i_var)
       {
         REQUIRE(rate[i_var] + flux_grad[0][i_var] + flux_grad[1][i_var]
-                == Approx(0.).margin(1.e-4*std::abs(freestream[i_var])));
+                == Approx(0.).margin(1.e-3*std::abs(freestream[i_var])));
       }
     }
   }
@@ -138,7 +138,8 @@ TEST_CASE("Vortex_func")
     std::vector<double> freestream = {0., 0., 1., 2e5};
     cartdg::Isentropic_vortex vortex (freestream);
     auto state = vortex(std::vector<double> {0., vortex.argmax_radius}, 0.);
+    double sound_speed = std::sqrt(vortex.heat_rat*(vortex.heat_rat - 1.)*freestream[3]);
     double tang_veloc = -state[0]/state[2];
-    REQUIRE(tang_veloc == Approx(vortex.max_tang_veloc));
+    REQUIRE(tang_veloc/sound_speed == Approx(vortex.max_nondim_veloc));
   }
 }
