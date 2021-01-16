@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include <catch.hpp>
 
 #include <Domain_func.hpp>
@@ -75,25 +77,27 @@ TEST_CASE("Vortex_func")
 {
   SECTION("Solves inviscid flow equations")
   {
-    std::vector<double> freestream {9., -0.2, 0.8, 2e5};
+    //std::vector<double> freestream {9., -0.2, 0.8, 2e5};
+    std::vector<double> freestream {0., 0., 1., 2e5};
     cartdg::Isentropic_vortex vortex(freestream);
 
     std::vector<double> test_pos []
     {
-      {0.1, 0.5},
-      {-0.3, -0.3},
-      {0., 2.4},
+      {0.01, 0.05},
+      {-0.03, -0.03},
+      {0., 0.24},
       {0, -0.01},
       {0., 0.},
+      {2, 10},
     };
-    double test_time [] {0., 0., 1.1, -0.03, 0.-2};
+    double test_time [] {0., 0., 0.11, -0.03, 0.2, 3};
 
     for (int i_test = 0; i_test < 5; ++i_test)
     {
       std::vector<double> flux_grad [2];
       flux_grad[0].resize(4); flux_grad[1].resize(4);
       std::vector<double> rate (4);
-      double diff = 1.e-3;
+      double diff = 1.e-5;
       for (int dir : {-1, 1})
       {
         for (int i_axis : {0, 1})
@@ -102,13 +106,14 @@ TEST_CASE("Vortex_func")
           pos[i_axis] += dir*diff;
           auto state = vortex(pos, test_time[i_test]);
           double pressure = state[3] - 0.5/state[2]*(state[0]*state[0] + state[1]*state[1]);
-          pressure *= (vortex.heat_rat - 1.)/vortex.heat_rat;
+          pressure *= (vortex.heat_rat - 1.);
           std::vector<double> flux (4);
           for (int j_axis = 0; j_axis < 2; ++j_axis)
           {
-            flux[j_axis] = state[j_axis]*state[i_axis]/state[2];
+            flux[j_axis] += state[i_axis]/state[2];
           }
           flux[i_axis] += pressure;
+          std::cout << dir << " " << i_axis << " " << flux[0] << "\n";
           flux[2] = state[i_axis];
           flux[3] = state[i_axis]/state[2]*(state[3] + pressure);
           for (int i_var = 0; i_var < 4; ++i_var)
@@ -126,29 +131,19 @@ TEST_CASE("Vortex_func")
 
       for (int i_var = 0; i_var < 4; ++i_var)
       {
-        REQUIRE(rate[i_var] + flux_grad[0][i_var] + flux_grad[1][i_var]
-                == Approx(0.));
+        std::cout << i_test << " " << i_var << "\n";
+        CHECK(rate[i_var] + flux_grad[0][i_var] + flux_grad[1][i_var]
+                == Approx(0.).margin(1.e-4*std::abs(freestream[i_var])));
       }
     }
   }
 
   SECTION("Max tangential velocity is correct")
   {
-    std::vector<double> freestream = {0., 0., 1., 2e-5};
+    std::vector<double> freestream = {0., 0., 1., 2e5};
     cartdg::Isentropic_vortex vortex (freestream);
-    int n = 200;
-    double max_tang_veloc = 0.;
-    for (int i_point = 0; i_point < n; ++i_point)
-    {
-      for (int j_point = 0; j_point < n; ++j_point)
-      {
-        std::vector<double> pos {double(i_point)/n, double(j_point)/n};
-        auto state = vortex(pos, 0);
-        double flow_speed = std::sqrt((state[0]*state[0] + state[1]*state[1])
-                                      /(state[2]*state[2]));
-        max_tang_veloc = std::max(max_tang_veloc, flow_speed/sound_speed);
-      }
-    }
-    REQUIRE(max_tang_veloc == Approx(vortex.max_tang_lin_tang_veloc));
+    auto state = vortex(std::vector<double> {0., vortex.argmax_radius}, 0.);
+    double tang_veloc = -state[0]/state[2];
+    REQUIRE(tang_veloc == Approx(vortex.max_tang_veloc));
   }
 }
