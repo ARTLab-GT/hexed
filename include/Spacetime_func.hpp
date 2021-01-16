@@ -24,7 +24,8 @@ class Isentropic_vortex : public Spacetime_func
   public:
   std::vector<double> state;
   double heat_rat = 1.4;
-  double critical_radius = 0.05;
+  double argmax_radius = 0.05;
+  double max_tang_veloc = 0.2;
   Isentropic_vortex(std::vector<double> state_arg);
   virtual std::vector<double> operator()(std::vector<double> pos, double time);
 };

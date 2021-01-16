@@ -12,7 +12,6 @@ Isentropic_vortex::Isentropic_vortex(std::vector<double> state_arg) : state(stat
 
 std::vector<double> Isentropic_vortex::operator()(std::vector<double> pos, double time)
 {
-  throw "not implemented!";
   return state;
 }
 
