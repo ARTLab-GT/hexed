@@ -110,10 +110,9 @@ TEST_CASE("Vortex_func")
           std::vector<double> flux (4);
           for (int j_axis = 0; j_axis < 2; ++j_axis)
           {
-            flux[j_axis] += state[i_axis]/state[2];
+            flux[j_axis] += state[i_axis]*state[j_axis]/state[2];
           }
           flux[i_axis] += pressure;
-          std::cout << dir << " " << i_axis << " " << flux[0] << "\n";
           flux[2] = state[i_axis];
           flux[3] = state[i_axis]/state[2]*(state[3] + pressure);
           for (int i_var = 0; i_var < 4; ++i_var)
@@ -129,7 +128,7 @@ TEST_CASE("Vortex_func")
         }
       }
 
-      for (int i_var = 2; i_var < 4; ++i_var)
+      for (int i_var = 0; i_var < 4; ++i_var)
       {
         std::cout << i_test << " " << i_var << "\n";
         CHECK(rate[i_var] + flux_grad[0][i_var] + flux_grad[1][i_var]
