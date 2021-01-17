@@ -1,20 +1,13 @@
 #include <catch.hpp>
 
 #include <Solution.hpp>
-#include <Initializer.hpp>
 
-class Test_initializer : public cartdg::Initializer
+class Test_func : public cartdg::Spacetime_func
 {
-  virtual std::vector<double> momentum(std::vector<double> position)
+  public:
+  std::vector<double> operator()(std::vector<double> position, double time)
   {
-    std::vector<double> mmtm {0.1, 0.2, 0.3};
-    return mmtm;
-  }
-
-  virtual std::vector<double> scalar_state(std::vector<double> position)
-  {
-    std::vector<double> ss {(double)position[0], 2.5};
-    return ss;
+    return std::vector<double> {0.1, 0.2, position[0], 2.5};
   }
 };
 
@@ -58,8 +51,8 @@ TEST_CASE("Solution class")
 
   SECTION("Initialization")
   {
-    Test_initializer ti;
-    sol.initialize(ti);
+    Test_func test_func;
+    sol.initialize(test_func);
     g = &sol.get_grid(0);
     REQUIRE(g->basis.rank == 4);
     REQUIRE(g->n_elem == 6);

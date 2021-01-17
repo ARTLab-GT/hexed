@@ -1,49 +1,30 @@
 #include <catch.hpp>
 
 #include <Solution.hpp>
-#include <Initializer.hpp>
 
-class Linear_init : public cartdg::Initializer
+class Initializer : public cartdg::Spacetime_func
 {
   public:
   int dim;
-
-  Linear_init(int dim_arg) : dim(dim_arg) {}
-
-  virtual std::vector<double> momentum(std::vector<double> position)
-  {
-    set_properties(position);
-    return _momentum;
-  }
-
-  virtual std::vector<double> scalar_state(std::vector<double> position)
-  {
-    set_properties(position);
-    std::vector<double> ss {mass, energy};
-    return ss;
-  }
-
-  private:
-  std::vector<double> _momentum;
-  double mass;
   const std::vector<double> velocity {4., -.3, 1.2};
-  double pressure;
-  double energy;
+  Initializer(int dim_arg) : dim(dim_arg) {}
 
-  void set_properties(std::vector<double> pos)
+  std::vector<double> operator()(std::vector<double> position, double time)
   {
-    mass = 1.;
-    pressure = 1.e5;
-    energy = pressure/0.4;
-    _momentum.clear();
+    double mass = 1.;
+    double pressure = 1.e5;
+    double energy = pressure/0.4;
+    std::vector<double> state;
     for (int i = 0; i < dim; ++i)
     {
       double momentum_i = velocity[i]*mass;
-      _momentum.push_back(momentum_i);
+      state.push_back(momentum_i);
       energy += 0.5*momentum_i*velocity[i];
     }
+    state.push_back(mass);
+    state.push_back(energy);
+    return state;
   }
-
 };
 
 TEST_CASE("Conservation of state variables")
@@ -59,7 +40,7 @@ TEST_CASE("Conservation of state variables")
     std::vector<int> periods {4};
     grid.auto_connect(periods);
 
-    Linear_init init (1);
+    Initializer init (1);
     sol.initialize(init);
     double * state = grid.state_r();
     for (int i_state = 0; i_state < grid.n_qpoint; ++i_state)
@@ -97,7 +78,7 @@ TEST_CASE("Conservation of state variables")
     std::vector<int> periods {4, 4};
     grid.auto_connect(periods);
 
-    Linear_init init (2);
+    Initializer init (2);
     sol.initialize(init);
     double * state = grid.state_r();
     for (int i_state = 0; i_state < grid.n_qpoint; ++i_state)
@@ -133,7 +114,7 @@ TEST_CASE("Conservation of state variables")
     std::vector<int> periods {4, 4, 4};
     grid.auto_connect(periods);
 
-    Linear_init init (3);
+    Initializer init (3);
     sol.initialize(init);
     double * state = grid.state_r();
     for (int i_state = 0; i_state < grid.n_qpoint; ++i_state)

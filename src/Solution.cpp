@@ -1,7 +1,6 @@
 #include <limits>
 
 #include <Solution.hpp>
-#include <Initializer.hpp>
 
 namespace cartdg
 {
@@ -60,7 +59,7 @@ double Solution::update(double cfl_by_stable_cfl)
   return dt;
 }
 
-void Solution::initialize(Initializer& init)
+void Solution::initialize(Spacetime_func& init_cond)
 {
   for (Grid& g : grids)
   {
@@ -75,16 +74,11 @@ void Solution::initialize(Initializer& init)
         {
           qpoint_pos.push_back(pos[i_qpoint + i_dim*g.n_qpoint]);
         }
-        std::vector<double> mmtm = init.momentum(qpoint_pos);
-        std::vector<double> scalar = init.scalar_state(qpoint_pos);
+        auto qpoint_state = init_cond(qpoint_pos, g.time);
         int qpoint_ind = i_elem*g.n_dof + i_qpoint;
-        for (int i_dim = 0; i_dim < g.n_dim; ++i_dim)
+        for (int i_var = 0; i_var < g.n_var; ++i_var)
         {
-          state[qpoint_ind + i_dim*g.n_qpoint] = mmtm[i_dim];
-        }
-        for (int i_var = g.n_dim; i_var < g.n_var; ++i_var)
-        {
-          state[qpoint_ind + i_var*g.n_qpoint] = scalar[i_var - g.n_dim];
+          state[qpoint_ind + i_var*g.n_qpoint] = qpoint_state[i_var];
         }
       }
     }

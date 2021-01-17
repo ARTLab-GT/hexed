@@ -4,11 +4,10 @@
 #include "Grid.hpp"
 #include "Gauss_lobatto.hpp"
 #include "kernels/kernel_types.hpp"
+#include "Spacetime_func.hpp"
 
 namespace cartdg
 {
-
-class Initializer;
 
 class Solution
 {
@@ -28,7 +27,7 @@ class Solution
 
   // functions that modify the state data
   double update(double cfl_by_stable_cfl=0.7);
-  void initialize(Initializer& init);
+  void initialize(Spacetime_func& init_cond);
 
   // functions that modify the Grid(s)
   void add_block_grid(int ref_level, std::vector<int> lower_corner,
