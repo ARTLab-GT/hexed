@@ -19,8 +19,8 @@ std::vector<double> Isentropic_vortex::operator()(std::vector<double> pos, doubl
   double mass = freestream[2];
   double sp_int_ener = (freestream[3] - 0.5*mass*(veloc0*veloc0 + veloc1*veloc1))/mass;
   double sound_speed = std::sqrt(sp_int_ener*heat_rat*(heat_rat - 1.));
-  double pos0 = (pos[0] - veloc0*time)/argmax_radius;
-  double pos1 = (pos[1] - veloc1*time)/argmax_radius;
+  double pos0 = (pos[0] - center0 - veloc0*time)/argmax_radius;
+  double pos1 = (pos[1] - center1 - veloc1*time)/argmax_radius;
 
   double gaussian = max_nondim_veloc*std::exp((1. - (pos0*pos0 + pos1*pos1))/2.);
   veloc0 += gaussian*-pos1*sound_speed;

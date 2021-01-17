@@ -16,7 +16,8 @@ int main()
   int n_div = 1; for (int i = 0; i < ref_level; ++i) n_div *= 2;
   std::vector<int> periods {n_div, n_div};
   grid.auto_connect(periods);
-  cartdg::Isentropic_vortex vortex (std::vector<double> {10., 0., 1.225, 101325/0.4});
+  cartdg::Isentropic_vortex vortex (std::vector<double> {100., 0., 1.225, 101325/0.4});
+  vortex.center0 = 0.5; vortex.center1 = 0.5;
   solution.initialize(vortex);
 
   // Let's go!
