@@ -10,12 +10,14 @@ class Spacetime_func
 {
   public:
   virtual std::vector<double> operator()(std::vector<double> pos, double time) = 0;
+  virtual ~Spacetime_func();
 };
 
 class Constant_func : public Spacetime_func
 {
   public:
   std::vector<double> value;
+  Constant_func(std::vector<double> value_arg);
   virtual std::vector<double> operator()(std::vector<double> pos, double time);
 };
 

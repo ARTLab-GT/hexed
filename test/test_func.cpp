@@ -42,8 +42,7 @@ std::vector<std::vector<double>> test_error
 
 TEST_CASE("Constant_func")
 {
-  cartdg::Constant_func cf;
-  cf.value = std::vector<double> {3.2, -0.7};
+  cartdg::Constant_func cf (std::vector<double> {3.2, -0.7});
   for (auto pos : test_pos)
   {
     for (auto time : test_time)

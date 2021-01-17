@@ -9,6 +9,7 @@ namespace cartdg
 class Domain_func
 {
   public:
+  virtual ~Domain_func();
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state) = 0;
 };
