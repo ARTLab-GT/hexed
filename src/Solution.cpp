@@ -45,12 +45,16 @@ std::vector<double> Solution::integral(Domain_func& integrand)
   }
   else
   {
-    auto first_integral = grids[0].integral(integrand);
-    std::vector<double> total (first_integral.size());
+    std::vector<double> total;
     for (Grid& grid : grids)
     {
       auto grid_integral = grid.integral(integrand);
-      for (unsigned i_var = 0; i_var < grid_integral.size(); ++i_var)
+      int size = grid_integral.size();
+      if (int(total.size()) < size)
+      {
+        total.resize(size);
+      }
+      for (int i_var = 0; i_var < size; ++i_var)
       {
         total[i_var] += grid_integral[i_var];
       }

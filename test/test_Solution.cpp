@@ -28,12 +28,13 @@ TEST_CASE("Solution class")
   REQUIRE_THROWS(g = &sol.get_grid(0));
   std::vector<int> lc {-1, -1};
   std::vector<int> uc {1, 2};
+  sol.add_empty_grid(1);
   sol.add_block_grid(1, lc, uc);
   sol.add_block_grid(2);
 
   SECTION("add_block_grid creates correct grid")
   {
-    g = &sol.get_grid(0);
+    g = &sol.get_grid(1);
     REQUIRE(g->basis.rank == 4);
     REQUIRE(g->state_r()[0] == 0.0);
     REQUIRE(g->n_elem == 6);
@@ -42,7 +43,7 @@ TEST_CASE("Solution class")
     REQUIRE(g->get_pos(0)[0] == -0.35);
     REQUIRE(g->get_pos(1)[0] == -0.);
     REQUIRE(g->get_pos(1)[16] == -0.35);
-    g = &sol.get_grid(1);
+    g = &sol.get_grid(2);
     REQUIRE(g->basis.rank == 4);
     REQUIRE(g->n_elem == 16);
     REQUIRE(g->mesh_size == 0.175);
@@ -63,7 +64,7 @@ TEST_CASE("Solution class")
   {
     Test_func test_func;
     sol.initialize(test_func);
-    g = &sol.get_grid(0);
+    g = &sol.get_grid(1);
     REQUIRE(g->basis.rank == 4);
     REQUIRE(g->n_elem == 6);
     REQUIRE(g->state_r()[0] == 0.1);
