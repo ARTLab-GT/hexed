@@ -39,17 +39,24 @@ std::vector<double> Solution::integral()
 }
 std::vector<double> Solution::integral(Domain_func& integrand)
 {
-  auto first_integral = grids[0].integral(integrand);
-  std::vector<double> total (first_integral.size());
-  for (Grid& grid : grids)
+  if (grids.empty())
   {
-    auto grid_integral = grid.integral(integrand);
-    for (int i_var = 0; i_var < n_var; ++i_var)
-    {
-      total[i_var] += grid_integral[i_var];
-    }
+    return std::vector<double> {};
   }
-  return total;
+  else
+  {
+    auto first_integral = grids[0].integral(integrand);
+    std::vector<double> total (first_integral.size());
+    for (Grid& grid : grids)
+    {
+      auto grid_integral = grid.integral(integrand);
+      for (int i_var = 0; i_var < n_var; ++i_var)
+      {
+        total[i_var] += grid_integral[i_var];
+      }
+    }
+    return total;
+  }
 }
 
 double Solution::update(double cfl_by_stable_cfl)

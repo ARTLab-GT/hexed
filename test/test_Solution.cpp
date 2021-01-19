@@ -64,7 +64,7 @@ TEST_CASE("Solution class")
     REQUIRE(g->state_r()[size - 1] == 2.5);
   }
 
-  SECTION("Integration")
+  SECTION("Quadrature")
   {
     cartdg::Constant_func init (std::vector<double> (4, 1.2));
     sol.initialize(init);
@@ -74,5 +74,9 @@ TEST_CASE("Solution class")
     {
       REQUIRE(integral[i_var] == Approx((6./4. + 16/16)*0.7*0.7*1.2));
     }
+
+    cartdg::Solution empty (4, 2, 4, 0.7);
+    empty.initialize(init);
+    empty.integral();
   }
 }
