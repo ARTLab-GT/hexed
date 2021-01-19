@@ -11,6 +11,16 @@ class Test_func : public cartdg::Spacetime_func
   }
 };
 
+class Arbitrary_integrand : public cartdg::Domain_func
+{
+  public:
+  virtual std::vector<double> operator()(std::vector<double> pos, double time,
+                                         std::vector<double> state)
+  {
+    return std::vector<double> {pos[0]*pos[0]*pos[1]*pos[1]*pos[1] - state[0] + time, 0., 0.};
+  }
+};
+
 TEST_CASE("Solution class")
 {
   cartdg::Solution sol (4, 2, 4, 0.7);
@@ -74,6 +84,8 @@ TEST_CASE("Solution class")
     {
       REQUIRE(integral[i_var] == Approx((6./4. + 16/16)*0.7*0.7*1.2));
     }
+    Arbitrary_integrand arbitrary;
+    sol.integral(arbitrary);
 
     cartdg::Solution empty (4, 2, 4, 0.7);
     empty.initialize(init);

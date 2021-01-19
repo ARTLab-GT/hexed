@@ -50,7 +50,7 @@ std::vector<double> Solution::integral(Domain_func& integrand)
     for (Grid& grid : grids)
     {
       auto grid_integral = grid.integral(integrand);
-      for (int i_var = 0; i_var < n_var; ++i_var)
+      for (unsigned i_var = 0; i_var < grid_integral.size(); ++i_var)
       {
         total[i_var] += grid_integral[i_var];
       }
