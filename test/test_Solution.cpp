@@ -63,4 +63,16 @@ TEST_CASE("Solution class")
     int size = g->n_dof*g->n_elem;
     REQUIRE(g->state_r()[size - 1] == 2.5);
   }
+
+  SECTION("Integration")
+  {
+    cartdg::Constant_func init (std::vector<double> (4, 1.2));
+    sol.initialize(init);
+    auto integral = sol.integral();
+    REQUIRE(integral.size() == 4);
+    for (int i_var = 0; i_var < 4; ++i_var)
+    {
+      REQUIRE(integral[i_var] == Approx((6./4. + 16/16)*0.7*0.7*1.2));
+    }
+  }
 }

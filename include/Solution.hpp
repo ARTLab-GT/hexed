@@ -24,6 +24,8 @@ class Solution
   // functions that access information
   Grid& get_grid(int order_added);
   void visualize(std::string file_prefix);
+  std::vector<double> integral();
+  std::vector<double> integral(Domain_func& integrand);
 
   // functions that modify the state data
   double update(double cfl_by_stable_cfl=0.7);
