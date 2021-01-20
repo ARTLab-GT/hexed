@@ -248,7 +248,12 @@ void Grid::print()
   }
 }
 
-Eigen::VectorXd Grid::state_integral()
+std::vector<double> Grid::integral()
+{
+  State_variables state_variables;
+  return integral(state_variables);
+}
+std::vector<double> Grid::integral(Domain_func& integrand)
 {
   Eigen::VectorXd weights (n_qpoint);
   Eigen::VectorXd weights_1d = basis.node_weights();
@@ -268,10 +273,36 @@ Eigen::VectorXd Grid::state_integral()
       }
     }
   }
-  Eigen::Map<Eigen::MatrixXd> elem_mat (state_r(), n_qpoint, n_elem*n_var);
-  Eigen::MatrixXd elem_integral = elem_mat.transpose()*weights;
-  elem_integral.resize(n_var, n_elem);
-  return elem_integral.rowwise().sum();
+
+  std::vector<double> total;
+  double* sr = state_r();
+  for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+  {
+    std::vector<double> elem_pos = get_pos(i_elem);
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
+    {
+      std::vector<double> point_pos;
+      for (int i_axis = 0; i_axis < n_dim; ++i_axis)
+      {
+        point_pos.push_back(elem_pos[i_qpoint + i_axis*n_qpoint]);
+      }
+      std::vector<double> point_state;
+      for (int i_var = 0; i_var < n_var; ++i_var)
+      {
+        point_state.push_back(sr[i_qpoint + i_var*n_qpoint + i_elem*n_dof]);
+      }
+      std::vector<double> point_integrand = integrand(point_pos, time, point_state);
+      if (total.size() < point_integrand.size())
+      {
+        total.resize(point_integrand.size());
+      }
+      for (int i_var = 0; i_var < int(point_integrand.size()); ++i_var)
+      {
+        total[i_var] += point_integrand[i_var]*weights[i_qpoint];
+      }
+    }
+  }
+  return total;
 }
 
 }

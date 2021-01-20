@@ -9,6 +9,7 @@
 #include "Basis.hpp"
 #include "Fitted_boundary_condition.hpp"
 #include "kernels/kernel_types.hpp"
+#include "Domain_func.hpp"
 
 namespace cartdg
 {
@@ -55,7 +56,8 @@ class Grid
   // functions that provide diagnostic information
   void visualize(std::string file_name);
   void print();
-  Eigen::VectorXd state_integral();
+  std::vector<double> integral();
+  std::vector<double> integral(Domain_func& integrand);
 
   protected:
   int i_rk_stage;

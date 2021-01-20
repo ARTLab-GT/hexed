@@ -1,20 +1,23 @@
 #include <catch.hpp>
 
 #include <Solution.hpp>
-#include <Initializer.hpp>
 
-class Test_initializer : public cartdg::Initializer
+class Test_func : public cartdg::Spacetime_func
 {
-  virtual std::vector<double> momentum(std::vector<double> position)
+  public:
+  std::vector<double> operator()(std::vector<double> position, double time)
   {
-    std::vector<double> mmtm {0.1, 0.2, 0.3};
-    return mmtm;
+    return std::vector<double> {0.1, 0.2, position[0], 2.5};
   }
+};
 
-  virtual std::vector<double> scalar_state(std::vector<double> position)
+class Arbitrary_integrand : public cartdg::Domain_func
+{
+  public:
+  virtual std::vector<double> operator()(std::vector<double> pos, double time,
+                                         std::vector<double> state)
   {
-    std::vector<double> ss {(double)position[0], 2.5};
-    return ss;
+    return std::vector<double> {pos[0]*pos[0]*pos[1]*pos[1]*pos[1] - state[0] + time, 0., 0.};
   }
 };
 
@@ -25,12 +28,13 @@ TEST_CASE("Solution class")
   REQUIRE_THROWS(g = &sol.get_grid(0));
   std::vector<int> lc {-1, -1};
   std::vector<int> uc {1, 2};
+  sol.add_empty_grid(1);
   sol.add_block_grid(1, lc, uc);
   sol.add_block_grid(2);
 
   SECTION("add_block_grid creates correct grid")
   {
-    g = &sol.get_grid(0);
+    g = &sol.get_grid(1);
     REQUIRE(g->basis.rank == 4);
     REQUIRE(g->state_r()[0] == 0.0);
     REQUIRE(g->n_elem == 6);
@@ -39,7 +43,7 @@ TEST_CASE("Solution class")
     REQUIRE(g->get_pos(0)[0] == -0.35);
     REQUIRE(g->get_pos(1)[0] == -0.);
     REQUIRE(g->get_pos(1)[16] == -0.35);
-    g = &sol.get_grid(1);
+    g = &sol.get_grid(2);
     REQUIRE(g->basis.rank == 4);
     REQUIRE(g->n_elem == 16);
     REQUIRE(g->mesh_size == 0.175);
@@ -58,9 +62,9 @@ TEST_CASE("Solution class")
 
   SECTION("Initialization")
   {
-    Test_initializer ti;
-    sol.initialize(ti);
-    g = &sol.get_grid(0);
+    Test_func test_func;
+    sol.initialize(test_func);
+    g = &sol.get_grid(1);
     REQUIRE(g->basis.rank == 4);
     REQUIRE(g->n_elem == 6);
     REQUIRE(g->state_r()[0] == 0.1);
@@ -69,5 +73,23 @@ TEST_CASE("Solution class")
     REQUIRE(g->state_r()[48] == 2.5);
     int size = g->n_dof*g->n_elem;
     REQUIRE(g->state_r()[size - 1] == 2.5);
+  }
+
+  SECTION("Quadrature")
+  {
+    cartdg::Constant_func init (std::vector<double> (4, 1.2));
+    sol.initialize(init);
+    auto integral = sol.integral();
+    REQUIRE(integral.size() == 4);
+    for (int i_var = 0; i_var < 4; ++i_var)
+    {
+      REQUIRE(integral[i_var] == Approx((6./4. + 16/16)*0.7*0.7*1.2));
+    }
+    Arbitrary_integrand arbitrary;
+    sol.integral(arbitrary);
+
+    cartdg::Solution empty (4, 2, 4, 0.7);
+    empty.initialize(init);
+    empty.integral();
   }
 }

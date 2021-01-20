@@ -32,6 +32,16 @@ class Supersonic_inlet : public cartdg::Fitted_boundary_condition
   }
 };
 
+class Arbitrary_integrand : public cartdg::Domain_func
+{
+  public:
+  virtual std::vector<double> operator()(std::vector<double> pos, double time,
+                                         std::vector<double> state)
+  {
+    return std::vector<double> {pos[0]*pos[0]*pos[1]*pos[1]*pos[1] - state[0] + time, 0., 0.};
+  }
+};
+
 TEST_CASE("Grid")
 {
   cartdg::Equidistant basis (MAX_BASIS_RANK);
@@ -160,13 +170,33 @@ TEST_CASE("Grid")
     cartdg::Grid grid1 (2, 1, 5, 0.1, basis);
     cartdg::Grid grid2 (2, 2, 5, 0.1, basis);
     cartdg::Grid grid3 (2, 3, 5, 0.1, basis);
-    Eigen::Vector2d correct; correct << 5, 5;
     for (int i = 0; i < grid1.n_dof*grid1.n_elem; ++i) grid1.state_r()[i] = 1.;
     for (int i = 0; i < grid2.n_dof*grid1.n_elem; ++i) grid2.state_r()[i] = 1.;
     for (int i = 0; i < grid3.n_dof*grid1.n_elem; ++i) grid3.state_r()[i] = 1.;
-    REQUIRE((grid1.state_integral() - correct*0.1  ).sum() == Approx(0.).margin(1e-12));
-    REQUIRE((grid2.state_integral() - correct*0.01 ).sum() == Approx(0.).margin(1e-12));
-    REQUIRE((grid3.state_integral() - correct*0.001).sum() == Approx(0.).margin(1e-12));
+    REQUIRE(grid1.integral()[0] == Approx(0.5  ).margin(1e-12));
+    REQUIRE(grid1.integral()[1] == Approx(0.5  ).margin(1e-12));
+    REQUIRE(grid2.integral()[0] == Approx(0.05 ).margin(1e-12));
+    REQUIRE(grid2.integral()[1] == Approx(0.05 ).margin(1e-12));
+    REQUIRE(grid3.integral()[0] == Approx(0.005).margin(1e-12));
+    REQUIRE(grid3.integral()[1] == Approx(0.005).margin(1e-12));
+
+    cartdg::Grid square (1, 2, 2, 1., basis);
+    for (int i_elem = 0; i_elem < square.n_elem; ++i_elem)
+    {
+      for (int i = 0; i < basis.rank; ++i)
+      {
+        for (int j = 0; j < basis.rank; ++j)
+        {
+          double pos0 = basis.node(i) + i_elem; double pos1 = basis.node(j);
+          square.state_r()[(i_elem*basis.rank + i)*basis.rank + j] = pos0*pos0*pos1*pos1*pos1;
+          square.pos[i_elem*2] = i_elem;
+        }
+      }
+    }
+    square.time = 0.61;
+    REQUIRE(square.integral()[0] == Approx(2./3.));
+    Arbitrary_integrand integrand;
+    REQUIRE(square.integral(integrand)[0] == Approx(2*0.61));
   }
 
   SECTION("Automatic graph creation")

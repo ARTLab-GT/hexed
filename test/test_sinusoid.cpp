@@ -3,9 +3,8 @@
 #include <catch.hpp>
 
 #include <Solution.hpp>
-#include <Initializer.hpp>
 
-class Sinusoidal_init : public cartdg::Initializer
+class Sinusoidal_init : public cartdg::Spacetime_func
 {
   public:
   const double length = 2*M_PI;
@@ -16,28 +15,7 @@ class Sinusoidal_init : public cartdg::Initializer
 
   Sinusoidal_init(int dim_arg) : dim(dim_arg) {}
 
-  virtual std::vector<double> momentum(std::vector<double> position)
-  {
-    set_properties(position);
-    return _momentum;
-  }
-
-  virtual std::vector<double> scalar_state(std::vector<double> position)
-  {
-    set_properties(position);
-    std::vector<double> ss {mass, energy};
-    return ss;
-  }
-
-  protected:
-  virtual void set_state() = 0;
-  std::vector<double> _momentum;
-  double mass;
-  double energy;
-  double pos_func;
-
-  private:
-  void set_properties(std::vector<double> pos)
+  std::vector<double> operator()(std::vector<double> pos, double time)
   {
     pos_func = 0.;
     for (int i = 0; i < dim; ++i)
@@ -45,8 +23,13 @@ class Sinusoidal_init : public cartdg::Initializer
       pos_func += (i + 1)*pos[i];
     }
     set_state();
+    return state;
   }
 
+  protected:
+  double pos_func;
+  std::vector<double> state;
+  virtual void set_state() = 0;
 };
 
 class Velocity_init : public Sinusoidal_init
@@ -57,15 +40,17 @@ class Velocity_init : public Sinusoidal_init
   protected:
   virtual void set_state()
   {
-    mass = mean_mass + 0.1*sin(pos_func);
-    energy = mean_pressure/0.4;
-    _momentum.clear();
+    double mass = mean_mass + 0.1*sin(pos_func);
+    double energy = mean_pressure/0.4;
+    state.clear();
     for (int i = 0; i < dim; ++i)
     {
       double momentum_i = velocity[i]*mass;
-      _momentum.push_back(momentum_i);
+      state.push_back(momentum_i);
       energy += 0.5*momentum_i*velocity[i];
     }
+    state.push_back(mass);
+    state.push_back(energy);
   }
 };
 
@@ -77,16 +62,18 @@ class Pressure_init : public Sinusoidal_init
   protected:
   virtual void set_state()
   {
-    mass = mean_mass;
+    double mass = mean_mass;
     double pressure = mean_pressure*(1. + 0.01*sin(pos_func));
-    energy = pressure/0.4;
-    _momentum.clear();
+    double energy = pressure/0.4;
+    state.clear();
     for (int i = 0; i < dim; ++i)
     {
       double momentum_i = velocity[i]*mass;
-      _momentum.push_back(momentum_i);
+      state.push_back(momentum_i);
       energy += 0.5*momentum_i*velocity[i];
     }
+    state.push_back(mass);
+    state.push_back(energy);
   }
 };
 

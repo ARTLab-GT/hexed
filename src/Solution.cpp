@@ -1,7 +1,6 @@
 #include <limits>
 
 #include <Solution.hpp>
-#include <Initializer.hpp>
 
 namespace cartdg
 {
@@ -33,6 +32,37 @@ void Solution::visualize(std::string file_prefix)
   }
 }
 
+std::vector<double> Solution::integral()
+{
+  State_variables state_variables;
+  return integral(state_variables);
+}
+std::vector<double> Solution::integral(Domain_func& integrand)
+{
+  if (grids.empty())
+  {
+    return std::vector<double> {};
+  }
+  else
+  {
+    std::vector<double> total;
+    for (Grid& grid : grids)
+    {
+      auto grid_integral = grid.integral(integrand);
+      int size = grid_integral.size();
+      if (int(total.size()) < size)
+      {
+        total.resize(size);
+      }
+      for (int i_var = 0; i_var < size; ++i_var)
+      {
+        total[i_var] += grid_integral[i_var];
+      }
+    }
+    return total;
+  }
+}
+
 double Solution::update(double cfl_by_stable_cfl)
 {
   Local_kernel local = get_local_kernel();
@@ -60,7 +90,7 @@ double Solution::update(double cfl_by_stable_cfl)
   return dt;
 }
 
-void Solution::initialize(Initializer& init)
+void Solution::initialize(Spacetime_func& init_cond)
 {
   for (Grid& g : grids)
   {
@@ -75,16 +105,11 @@ void Solution::initialize(Initializer& init)
         {
           qpoint_pos.push_back(pos[i_qpoint + i_dim*g.n_qpoint]);
         }
-        std::vector<double> mmtm = init.momentum(qpoint_pos);
-        std::vector<double> scalar = init.scalar_state(qpoint_pos);
+        auto qpoint_state = init_cond(qpoint_pos, g.time);
         int qpoint_ind = i_elem*g.n_dof + i_qpoint;
-        for (int i_dim = 0; i_dim < g.n_dim; ++i_dim)
+        for (int i_var = 0; i_var < g.n_var; ++i_var)
         {
-          state[qpoint_ind + i_dim*g.n_qpoint] = mmtm[i_dim];
-        }
-        for (int i_var = g.n_dim; i_var < g.n_var; ++i_var)
-        {
-          state[qpoint_ind + i_var*g.n_qpoint] = scalar[i_var - g.n_dim];
+          state[qpoint_ind + i_var*g.n_qpoint] = qpoint_state[i_var];
         }
       }
     }

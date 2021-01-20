@@ -1,87 +1,7 @@
 #include <iostream>
 #include <chrono>
 
-#include <Initializer.hpp>
 #include <Solution.hpp>
-
-class Vortex_init : public cartdg::Initializer
-{
-  public:
-  // Physical parameters
-  double sp_heat_rat = 1.4;
-  double sp_gas_const = 287;
-
-  // Freestream parameters
-  double freestream_mass = 1.;
-  double freestream_velocity = 100.;
-  double freestream_pressure = 1.e5;
-
-  // Vortex parameters
-  double vortex_strength = 30;
-  double critical_radius = 0.05;
-  double decay_rate = 0.2;
-
-  // Geometric parameters --
-  // if you mess with these you must also modify the Solution setup in main()
-  const double center0 = 0.5;
-  const double center1 = 0.5;
-  const int dim = 2;
-
-  // Can use this for estimating cfl number
-  double max_char_speed = 0.;
-
-  Vortex_init() { _momentum.resize(2); }
-
-  virtual std::vector<double> momentum(std::vector<double> position)
-  {
-    set_properties(position);
-    return _momentum;
-  }
-
-  virtual std::vector<double> scalar_state(std::vector<double> position)
-  {
-    set_properties(position);
-    std::vector<double> ss {mass, energy};
-    return ss;
-  }
-
-  private:
-  std::vector<double> _momentum;
-  double mass;
-  double energy;
-
-  double sqr(double x)
-  {
-    return x*x;
-  }
-
-  void set_properties(std::vector<double> pos)
-  {
-    // Calculate vortex perturbation
-    double radius = sqrt(sqr(pos[0] - center0) + sqr(pos[1] - center1));
-    double nondim_radius = radius/critical_radius;
-    double veloc_mag_by_radius = vortex_strength/critical_radius*exp(decay_rate*(1. - sqr(nondim_radius)));
-    double veloc0 =  veloc_mag_by_radius*(pos[1] - center1);
-    double veloc1 = -veloc_mag_by_radius*(pos[0] - center0);
-    double temperature = -(sp_heat_rat - 1)/(4*decay_rate*sp_heat_rat*sp_gas_const)
-                         *sqr(vortex_strength*exp(decay_rate*(1. - sqr(nondim_radius))));
-
-    // Combine with freestream
-    veloc0 += freestream_velocity;
-    double freestream_temperature = freestream_pressure/(sp_gas_const*freestream_mass);
-    temperature += freestream_temperature;
-
-    // Calculate char speed
-    double char_speed = veloc_mag_by_radius*radius + sqrt(sp_heat_rat*sp_gas_const*temperature);
-    max_char_speed = std::max(max_char_speed, char_speed);
-
-    // Convert to conserved variables
-    mass = freestream_mass*pow(temperature/freestream_temperature, 1./(sp_heat_rat - 1.));
-    _momentum[0] = mass*veloc0; _momentum[1] = mass*veloc1;
-    energy = mass*(sp_gas_const/(sp_heat_rat - 1.)*temperature + 0.5*(sqr(veloc0) + sqr(veloc1)));
-  }
-
-};
 
 int main()
 {
@@ -96,8 +16,9 @@ int main()
   int n_div = 1; for (int i = 0; i < ref_level; ++i) n_div *= 2;
   std::vector<int> periods {n_div, n_div};
   grid.auto_connect(periods);
-  Vortex_init v_init;
-  solution.initialize(v_init);
+  cartdg::Isentropic_vortex vortex (std::vector<double> {100., 0., 1.225, 101325/0.4});
+  vortex.center0 = 0.5; vortex.center1 = 0.5;
+  solution.initialize(vortex);
 
   // Let's go!
   solution.visualize("initial");
