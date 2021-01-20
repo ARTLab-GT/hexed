@@ -22,6 +22,7 @@ std::vector<double> Error_func::operator()(const std::vector<double> point_pos,
   for (unsigned i_var = 0; i_var < state.size(); ++i_var)
   {
     error[i_var] = state[i_var] - error[i_var];
+    error[i_var] = error[i_var]*error[i_var];
   }
   return error;
 }

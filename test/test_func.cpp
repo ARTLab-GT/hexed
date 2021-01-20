@@ -65,7 +65,7 @@ TEST_CASE("Error_func")
     REQUIRE(error.size() == test_error[i_test].size());
     for (unsigned i_val = 0; i_val < error.size(); ++i_val)
     {
-      REQUIRE(error[i_val] == test_error[i_test][i_val]);
+      REQUIRE(std::sqrt(error[i_val]) == std::abs(test_error[i_test][i_val]));
     }
   }
 }
