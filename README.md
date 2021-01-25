@@ -1,5 +1,5 @@
 # CartDG
-Discontinuous Galerkin numerics for CFD on a Cartesian grid.
+Provides a discontinuous Galerkin scheme as a library for Cartesian grid CFD solvers.
 
 ## Overview
 CartDG implements the core numerical algorithms for a discontinuous Galerkin scheme operating on the equations of fluid flow
