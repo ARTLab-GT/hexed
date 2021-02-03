@@ -21,6 +21,7 @@ void cpg_euler_tensor(double * read, double * write, int n_elem,
     }
   }
 
+  #pragma omp parallel for
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
 

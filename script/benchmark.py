@@ -22,7 +22,7 @@ int main ()
     main_file = open("main.cpp", "w")
     main_file.write(main)
     main_file.close()
-    subprocess.run("g++ -I ../include/ -O3 {} main.cpp -o main".format(flags), shell=True)
+    subprocess.run("g++ -I ../include/ -O3 -fopenmp {} main.cpp -o main".format(flags), shell=True)
     output = subprocess.run("./main", stdout=subprocess.PIPE)
     output = str(output.stdout, "ascii")
     time = float(output.split("\n")[-2])*1e-9

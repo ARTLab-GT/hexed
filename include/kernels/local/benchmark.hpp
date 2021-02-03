@@ -10,6 +10,7 @@ template<int n_var, int n_qpoint, int row_size>
 void copy(double * read, double * write, int n_elem,
           const Eigen::MatrixXd& diff_mat)
 {
+  #pragma omp parallel for
   for (int i_elem = 0; i_elem < n_elem*n_var; ++i_elem)
   {
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
@@ -27,6 +28,7 @@ template<int n_var, int n_qpoint, int row_size>
 void basic_tensor(double * read, double * write, int n_elem,
                   const Eigen::MatrixXd& diff_mat)
 {
+  #pragma omp parallel for
   for (int i_elem = 0; i_elem < n_elem*n_var; ++i_elem)
   {
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
@@ -59,6 +61,7 @@ template<int n_var, int n_qpoint, int row_size>
 void update_add(double * read, double * write, int n_elem,
                 const Eigen::MatrixXd& diff_mat)
 {
+  #pragma omp parallel for
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
     for (int i_dof = 0; i_dof < n_qpoint*n_var; ++i_dof)
@@ -116,6 +119,8 @@ void update_matvec(double * read, double * write, int n_elem,
                    const Eigen::MatrixXd& diff_mat_arg)
 {
   Eigen::Matrix<double, row_size, row_size> diff_mat = diff_mat_arg;
+
+  #pragma omp parallel for
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
     for (int i_dof = 0; i_dof < n_qpoint*n_var; ++i_dof)

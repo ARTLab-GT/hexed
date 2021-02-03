@@ -19,10 +19,12 @@ void cpg_euler_copy(double*** connections_r, double*** connections_w, int* n_con
   const int face_size = n_face_qpoint*n_var;
   for (int stride=n_face_qpoint, i_axis=0; stride > 0; stride /= row_size, ++i_axis)
   {
-    double face_r [2*face_size];
-    double face_w [2*face_size];
+    #pragma omp parallel for
     for (int i_con = 0; i_con < n_connections[i_axis]; ++i_con)
     {
+      double face_r [2*face_size];
+      double face_w [2*face_size];
+
       double** connect = connections_r[i_axis] + 2*i_con;
       read_copy<n_var, n_qpoint, row_size>(connect[0], face_r            , stride, 1);
       read_copy<n_var, n_qpoint, row_size>(connect[1], face_r + face_size, stride, 0);
