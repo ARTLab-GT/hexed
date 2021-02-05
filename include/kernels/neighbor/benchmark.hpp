@@ -19,6 +19,8 @@ void average_neighbor(double*** connections_r, double*** connections_w, int* n_c
     double face0 [face_size];
     double face1 [face_size];
     double face_w [face_size];
+
+    #pragma omp parallel for
     for (int i_con = 0; i_con < n_connections[i_axis]; ++i_con)
     {
       read_copy<n_var, n_qpoint, row_size>(connections_r[i_axis][2*i_con], face0, stride, 1);

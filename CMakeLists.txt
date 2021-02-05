@@ -14,8 +14,8 @@ if(NOT CMAKE_BUILD_TYPE)
        "Select Release for high performance and Debug for easier debugging" FORCE)
    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Release" "Debug")
 endif()
-set(CMAKE_CXX_FLAGS_DEBUG "-g3 -Wall -fsanitize=address -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize=leak -fsanitize=undefined")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native")
+set(CMAKE_CXX_FLAGS_DEBUG "-fopenmp -g3 -Wall -fsanitize=address -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize=leak -fsanitize=undefined")
+set(CMAKE_CXX_FLAGS_RELEASE "-fopenmp -O3 -march=native")
 
 # determine rank of polynomial basis
 if(NOT MAX_BASIS_RANK)

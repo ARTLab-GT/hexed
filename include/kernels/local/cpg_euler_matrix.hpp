@@ -13,6 +13,7 @@ void cpg_euler_matrix(double * read, double * write, int n_elem,
 {
   Eigen::Matrix<double, row_size, row_size> diff_mat = diff_mat_arg;
 
+  #pragma omp parallel for
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
 
