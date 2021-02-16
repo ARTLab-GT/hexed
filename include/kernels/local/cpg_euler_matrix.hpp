@@ -35,24 +35,24 @@ void cpg_euler_matrix(double * read, double * write, int n_elem,
         {
 
           // Fetch this row of data
-          double row_r [row_size*n_var];
-          double row_w [row_size*n_var];
+          double row_r [n_var][row_size];
+          double row_w [n_var][row_size];
           for (int i_var = 0; i_var < n_var; ++i_var)
           {
             for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
             {
-              row_r[row_size*i_var + i_qpoint]
+              row_r[i_var][i_qpoint]
               = read[(i_elem*n_var + i_var)*n_qpoint
                      + i_outer*stride*row_size + i_inner + i_qpoint*stride];
             }
           }
 
           // Calculate flux
-          double flux [n_var*row_size];
+          double flux [n_var][row_size];
           for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
           {
-            #define READ(i) row_r[(i)*row_size + i_qpoint]
-            #define FLUX(i) flux[(i)*row_size + i_qpoint]
+            #define READ(i) row_r[i][i_qpoint]
+            #define FLUX(i) flux[i][i_qpoint]
             double veloc = READ(i_axis)/READ(n_var - 2);
             double pres = 0;
             for (int j_axis = 0; j_axis < n_var - 2; ++j_axis)
@@ -69,8 +69,8 @@ void cpg_euler_matrix(double * read, double * write, int n_elem,
           }
 
           // Differentiate flux
-          Eigen::Map<Eigen::Matrix<double, row_size, n_var>> f (&(flux[0]));
-          Eigen::Map<Eigen::Matrix<double, row_size, n_var>> w (&(row_w[0]));
+          Eigen::Map<Eigen::Matrix<double, row_size, n_var>> f (&(flux[0][0]));
+          Eigen::Map<Eigen::Matrix<double, row_size, n_var>> w (&(row_w[0][0]));
           w.noalias() = -diff_mat*f*d_t_by_d_pos;
 
           // Write updated solution
@@ -80,7 +80,7 @@ void cpg_euler_matrix(double * read, double * write, int n_elem,
             {
                write[(i_elem*n_var + i_var)*n_qpoint
                      + i_outer*stride*row_size + i_inner + i_qpoint*stride]
-               += row_w[row_size*i_var + i_qpoint];
+               += row_w[i_var][i_qpoint];
             }
           }
 
