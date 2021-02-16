@@ -1,6 +1,5 @@
 #include <catch.hpp>
 #include <kernels/local/cpg_euler_matrix.hpp>
-#include <kernels/local/cpg_euler_tensor.hpp>
 
 #define TEST_CPG_EULER(kernel, d_t_by_d_x) \
   SECTION("1D") \
@@ -85,11 +84,4 @@ TEST_CASE("Local kernels")
   {
     TEST_CPG_EULER(cartdg::cpg_euler_matrix, 0.1)
   }
-
-  /*
-  SECTION("CPG Euler flux, tensor form")
-  {
-    TEST_CPG_EULER(cartdg::cpg_euler_tensor, 0.05)
-  }
-  */
 }
