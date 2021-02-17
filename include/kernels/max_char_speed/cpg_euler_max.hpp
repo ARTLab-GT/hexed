@@ -1,14 +1,18 @@
 #ifndef CARTDG_CPG_EULER_MAX_HPP_
 #define CARTDG_CPG_EULER_MAX_HPP_
 
+#include "../Kernel_settings.hpp"
+
 namespace cartdg
 {
 
 template<int n_var, int n_qpoint, int row_size>
-double cpg_euler_max(double* read, int n_elem, double sp_heat_rat)
+double cpg_euler_max(double* read, int n_elem, Kernel_settings& settings)
 {
   const int n_dof = n_var*n_qpoint;
   const int n_dim = n_var - 2;
+  double heat_rat = settings.cpg_heat_rat;
+
   double max_speed = 0.;
   #pragma omp parallel for reduction(max:max_speed)
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
@@ -25,7 +29,7 @@ double cpg_euler_max(double* read, int n_elem, double sp_heat_rat)
         int_ener += veloc*READ(i_dim);
       }
       int_ener = READ(n_var - 1) - 0.5*int_ener;
-      const double sound_speed = std::sqrt(sp_heat_rat*(sp_heat_rat - 1)
+      const double sound_speed = std::sqrt(heat_rat*(heat_rat - 1)
                                            *int_ener/READ(n_var - 2));
       max_speed = std::max(max_speed, max_veloc + sound_speed);
       #undef READ

@@ -68,21 +68,26 @@ double Solution::update(double cfl_by_stable_cfl)
   Local_kernel local = get_local_kernel();
   Neighbor_kernel neighbor = get_neighbor_kernel();
   Max_char_speed_kernel max_char_speed = get_max_char_speed_kernel();
+  Fbc_kernel fbc = get_fbc_kernel();
   double dt = std::numeric_limits<double>::max();
   for (Grid& g : grids)
   {
     double cfl = cfl_by_stable_cfl*g.get_stable_cfl();
-    dt = std::min<double>(dt, cfl*g.mesh_size/max_char_speed(g.state_r(), g.n_elem, 1.4));
+    dt = std::min<double>(dt, cfl*g.mesh_size/max_char_speed(g.state_r(), g.n_elem,
+                                                             kernel_settings));
   }
   for (Grid& g : grids)
   {
     do
     {
-      double d_t_by_d_pos = dt/g.mesh_size;
-      local(g.state_r(), g.state_w(), g.n_elem, g.basis.diff_mat(), d_t_by_d_pos, 1.4);
+      kernel_settings.d_t_by_d_pos = dt/g.mesh_size;
+      local(g.state_r(), g.state_w(), g.n_elem, g.basis.diff_mat(), kernel_settings);
       neighbor(g.neighbor_connections_r().data(), g.neighbor_connections_w().data(), 
-               g.n_neighb_con().data(), g.basis.node_weights(), d_t_by_d_pos, 1.4);
-      g.apply_fit_bound_conds(d_t_by_d_pos);
+               g.n_neighb_con().data(), g.basis.node_weights(), kernel_settings);
+      {
+        auto weights = g.basis.node_weights();
+        fbc(g.fit_bound_conds, g.state_r(), g.state_w(), weights(0), kernel_settings);
+      }
     }
     while (!g.execute_runge_kutta_stage());
     g.time += dt;

@@ -32,21 +32,13 @@ solution.include = """
 #include <Solution.hpp>
 #include <kernels/local/cpg_euler_matrix.hpp>
 #include <kernels/neighbor/cpg_euler_copy.hpp>
+#include <kernels/neighbor/cpg_euler_fbc.hpp>
 #include <kernels/max_char_speed/cpg_euler_max.hpp>
 """
 solution.templates = {"local":"cpg_euler_matrix", "neighbor":"cpg_euler_copy",
-                      "max_char_speed":"cpg_euler_max"}
+                      "fbc":"cpg_euler_fbc", "max_char_speed":"cpg_euler_max"}
 
-grid = Auto_file("Grid")
-grid.include = """
-#include <Grid.hpp>
-#include <kernels/neighbor/cpg_euler_hll.hpp>
-#include <kernels/neighbor/read_copy.hpp>
-#include <kernels/neighbor/write_copy.hpp>
-"""
-grid.templates = {"flux":"cpg_euler_hll", "read":"read_copy", "write":"write_copy"}
-
-for auto_file in [solution, grid]:
+for auto_file in [solution]:
     text = ""
 
     for kernel_type in auto_file.templates.keys():
