@@ -5,6 +5,8 @@ def time(include, setup, execute, teardown, flags):
     main = r"""
 #include <iostream>
 #include <chrono>
+
+#include "kernels/Kernel_settings.hpp"
 {}
 
 int main ()
@@ -85,6 +87,9 @@ for (int i = 0; i < {3}; ++i)
   connect_w[i] = all_connect_w + i*{2};
   n_connections[i] = {2};
 }}
+
+cartdg::Kernel_settings settings;
+settings.d_t_by_d_pos = 0.3;
 """.format(size, row_size, n_elem, dim)
     flags = "-march=native"
     if kernel in benchmark_local:
@@ -101,17 +106,17 @@ for (int i = 0; i < {3}; ++i)
         include += """
 #include "kernels/local/{}.hpp"
 """.format(kernel)
-        execute = "cartdg::{}<{}, {}, {}>(read, write, {}, diff_mat, 1.);"
+        execute = "cartdg::{}<{}, {}, {}>(read, write, {}, diff_mat, settings);"
     elif kernel in real_neighbor:
         include += """
 #include "kernels/neighbor/{}.hpp"
 """.format(kernel)
-        execute = "cartdg::{}<{}, {}, {}>(connect_r, connect_w, n_connections, weights_1d, 0.2);"
+        execute = "cartdg::{}<{}, {}, {}>(connect_r, connect_w, n_connections, weights_1d, settings);"
     elif kernel == "cpg_euler_max":
         include += """
 #include "kernels/max_char_speed/{}.hpp"
 """.format(kernel)
-        execute = "cartdg::{}<{}, {}, {}>(read, {}, 1.4);"
+        execute = "cartdg::{}<{}, {}, {}>(read, {}, settings);"
     execute = execute.format(kernel, n_var, n_qpoint, row_size, n_elem)
     file_name = "benchmark_output_{}.txt".format(kernel)
     ofile = open(file_name, "w"); ofile.write(""); ofile.close()

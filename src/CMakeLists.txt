@@ -7,4 +7,5 @@ Solution.cpp
 Fitted_boundary_condition.cpp
 Domain_func.cpp
 Spacetime_func.cpp
+Kernel_settings.cpp
 )

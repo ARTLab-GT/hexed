@@ -1,9 +1,11 @@
 #ifndef CARTDG_BENCHMARK_HPP_
 #define CARTDG_BENCHMARK_HPP_
 
-#include <kernels/neighbor/read_copy.hpp>
-#include <kernels/neighbor/write_copy.hpp>
-#include <kernels/neighbor/average.hpp>
+#include <Eigen/Dense>
+
+#include "read_copy.hpp"
+#include "write_copy.hpp"
+#include "average.hpp"
 
 namespace cartdg
 {

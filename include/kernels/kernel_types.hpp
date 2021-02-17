@@ -3,16 +3,17 @@
 
 #include <Eigen/Dense>
 
+#include "Kernel_settings.hpp"
+
 namespace cartdg
 {
 
-typedef void (*Local_kernel)(double*, double*, int, const Eigen::MatrixXd&, double, double);
+typedef void (*Local_kernel)(double*, double*, int, const Eigen::MatrixXd&, Kernel_settings&);
 typedef void (*Neighbor_kernel)(double***, double***, int*, const Eigen::VectorXd,
-              double, double);
-typedef void (*Flux_kernel)(double*, double*, double, int, double);
-typedef void (*Read_kernel)(double*, double*, int, bool);
-typedef void (*Write_kernel)(double*, double*, int, bool);
-typedef double (*Max_char_speed_kernel)(double*, int, double);
+              Kernel_settings&);
+typedef void (*Fbc_kernel)(std::vector<Fitted_boundary_condition*>&, double*, double*,
+                           double, Kernel_settings&);
+typedef double (*Max_char_speed_kernel)(double*, int, Kernel_settings&);
 
 }
 #endif

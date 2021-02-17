@@ -1,13 +1,17 @@
 #ifndef CARTDG_CPG_EULER_AVERAGE_HPP_
 #define CARTDG_CPG_EULER_AVERAGE_HPP_
 
+#include "../Kernel_settings.hpp"
+
 namespace cartdg
 {
 
 template<int n_dim, int n_qpoint>
-cpg_euler_average(double* read0, double* read1, double* write,
-                  int i_dim, double sp_heat_rat=1.4)
+void cpg_euler_average(double* read0, double* read1, double* write,
+                       int i_dim, Kernel_settings& settings)
 {
+  double heat_rat = settings.cpg_heat_rat;
+
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
   {
     #define CALC_FLUX(i_read) \
@@ -22,7 +26,7 @@ cpg_euler_average(double* read0, double* read1, double* write,
         pressure +=  read##i_read[i_qpoint + j_dim*n_qpoint] \
                     *read##i_read[i_qpoint + j_dim*n_qpoint]; \
       } \
-      pressure = (sp_heat_rat - 1.)*(read##i_read[i_qpoint + (n_dim + 1)*n_qpoint] \
+      pressure = (heat_rat - 1.)*(read##i_read[i_qpoint + (n_dim + 1)*n_qpoint] \
                                      - 0.5*pressure); \
       flux##i_read[i_dim] += pressure; \
       flux##i_read[n_dim] = read##i_read[i_qpoint + i_dim*n_qpoint]; \
