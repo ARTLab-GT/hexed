@@ -28,7 +28,6 @@ void cpg_euler_fbc(std::vector<Fitted_boundary_condition*>& fit_bound_conds,
                                            stride, fbc->is_positive_face);
       double mult = settings.d_t_by_d_pos/weight;
       fbc->calc_ghost_state();
-      // FIXME: get correct specific heat ratio
       Eigen::ArrayXXd d_flux (n_qpoint/row_size, 2*n_var);
       cpg_euler_hll<n_var - 2, n_qpoint/row_size>(fbc->state.data(), d_flux.data(), mult,
                                                   fbc->i_dim, settings.cpg_heat_rat);
