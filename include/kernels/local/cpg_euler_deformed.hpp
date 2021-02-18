@@ -1,6 +1,7 @@
 #ifndef CARTDG_CPG_EULER_DEFORMED_HPP_
 #define CARTDG_CPG_EULER_DEFORMED_HPP_
 
+#include <iostream>
 #include <Eigen/Dense>
 #include "../Kernel_settings.hpp"
 
@@ -21,10 +22,22 @@ void cpg_euler_deformed(double* read, double* write, double* jacobian, int n_ele
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
 
-    // Compute flux in all reference coordinate directions
     double flux [n_dim][n_var][n_qpoint];
+    double jacobian_determinant [n_qpoint];
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
     {
+      // Get jacobian
+      Eigen::Matrix<double, n_dim, n_dim> local_jacobian;
+      for (int i_axis = 0; i_axis < n_dim; ++i_axis)
+      {
+        for (int j_axis = 0; j_axis < n_var - 2; ++j_axis)
+        {
+          local_jacobian(i_axis, j_axis) = jacobian[((i_elem*n_dim + i_axis)*n_dim + j_axis)*n_qpoint + i_qpoint];
+        }
+      }
+      jacobian_determinant[i_qpoint] = local_jacobian.determinant();
+
+    // Compute flux in physical space
       double pres = 0;
       #define READ(i_var) read[(i_elem*n_var + i_var)*n_qpoint + i_qpoint]
       for (int i_axis = 0; i_axis < n_var - 2; ++i_axis)
@@ -47,6 +60,25 @@ void cpg_euler_deformed(double* read, double* write, double* jacobian, int n_ele
         #undef FLUX
       }
       #undef READ
+
+      // Compute flux in reference space
+      for (int i_var = 0; i_var < n_var; ++i_var)
+      {
+        double temp_flux [n_dim];
+        for (int i_axis = 0; i_axis < n_dim; ++i_axis)
+        {
+          Eigen::Matrix<double, n_dim, n_dim> flux_mat = local_jacobian;
+          for (int j_axis = 0; j_axis < n_dim; ++j_axis)
+          {
+            flux_mat(j_axis, i_axis) = flux[j_axis][i_var][i_qpoint];
+          }
+          temp_flux[i_axis] = flux_mat.determinant();
+        }
+        for (int i_axis = 0; i_axis < n_dim; ++i_axis)
+        {
+          flux[i_axis][i_var][i_qpoint] = temp_flux[i_axis];
+        }
+      }
     }
 
     // Initialize updated solution to be equal to current solution
@@ -88,9 +120,9 @@ void cpg_euler_deformed(double* read, double* write, double* jacobian, int n_ele
           {
             for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
             {
-               write[(i_elem*n_var + i_var)*n_qpoint
-                     + i_outer*stride*row_size + i_inner + i_qpoint*stride]
-               += row_w[i_var][i_qpoint];
+              const int i = + i_outer*stride*row_size + i_inner + i_qpoint*stride;
+               write[(i_elem*n_var + i_var)*n_qpoint + i]
+               += row_w[i_var][i_qpoint]/jacobian_determinant[i];
             }
           }
 

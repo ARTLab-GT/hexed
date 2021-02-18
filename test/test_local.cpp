@@ -145,6 +145,7 @@ TEST_CASE("CPG Euler deformed elements")
           read[i_elem][0][i_qpoint] = mmtm;
           read[i_elem][1][i_qpoint] = mass;
           read[i_elem][2][i_qpoint] = ener;
+          jacobian[i_elem][0][0][i_qpoint] = 1.;
       }
     }
     cartdg::cpg_euler_deformed<3, 2, 2>(&read[0][0][0], &write[0][0][0], 
@@ -239,10 +240,10 @@ TEST_CASE("CPG Euler deformed elements")
           read[i_elem][2][i_qpoint] = mass;
           read[i_elem][3][i_qpoint] = ener;
 
-          jacobian[i_elem][0][0][i_qpoint] = 1.;
+          jacobian[i_elem][0][0][i_qpoint] = 1. - 0.5*basis.node(j);
           jacobian[i_elem][0][1][i_qpoint] = -0.5*basis.node(i);
           jacobian[i_elem][1][0][i_qpoint] = -0.3*basis.node(j);
-          jacobian[i_elem][1][1][i_qpoint] = 1.;
+          jacobian[i_elem][1][1][i_qpoint] = 1. - 0.3*basis.node(i);
         }
       }
     }
