@@ -4,6 +4,7 @@
 #include <kernels/neighbor/read_copy.hpp>
 #include <kernels/neighbor/write_copy.hpp>
 #include <kernels/neighbor/cpg_euler_hll.hpp>
+#include <kernels/neighbor/cpg_euler_hll_deformed.hpp>
 
 TEST_CASE("neighbor kernel read_copy<>()")
 {
@@ -201,7 +202,7 @@ TEST_CASE("cpg_euler_hll")
         read[i + 10*j + 8] = energy;
       }
     }
-    cartdg::cpg_euler_hll<3, 2>(&read[0], &write[0], mult, 0);
+    cartdg::cpg_euler_hll<3, 2>(&read[0], &write[0], mult, 0, 1.4);
     for (int j = 0; j < 2; ++j)
     {
       for (int i_var = 0; i_var < 5; ++i_var)
@@ -213,7 +214,7 @@ TEST_CASE("cpg_euler_hll")
       }
     }
     for (int i = 0; i < 20; ++i) write[i] = 0;
-    cartdg::cpg_euler_hll<3, 2>(&read[0], &write[0], mult, 1);
+    cartdg::cpg_euler_hll<3, 2>(&read[0], &write[0], mult, 1, 1.4);
     for (int j = 0; j < 2; ++j)
     {
       for (int i_var = 0; i_var < 5; ++i_var)
@@ -242,7 +243,91 @@ TEST_CASE("cpg_euler_hll")
     }
 
     for (int i = 0; i < 20; ++i) write[i] = 0;
-    cartdg::cpg_euler_hll<3, 2>(&read[0], &write[0], mult, 0);
+    cartdg::cpg_euler_hll<3, 2>(&read[0], &write[0], mult, 0, 1.4);
+    REQUIRE(write[2*3     ] == Approx(0.7*mass*680));
+    REQUIRE(write[2*3 + 10] == Approx(0.7*mass*680));
+  }
+}
+
+TEST_CASE("cpg_euler_hll_deformed")
+{
+  double mass = 1.225;
+  double pressure = 101325;
+  double energy = pressure/0.4 + 0.5*mass*680*680;
+  double read[20] {};
+  double write[20] {};
+  double jacobian [2][3][3][2] {};
+  double mult = 0.7;
+  SECTION("Reasonable flow")
+  {
+    double velocity0 [] {680, 0};
+    double velocity1 [] {0, -680};
+    for (int i = 0; i < 2; ++i)
+    {
+      for (int j = 0; j < 2; ++j)
+      {
+        read[i + 10*j + 0] = mass*velocity0[j];
+        read[i + 10*j + 2] = mass*velocity1[j];
+        read[i + 10*j + 4] = 0;
+        read[i + 10*j + 6] = mass;
+        read[i + 10*j + 8] = energy;
+
+        for (int k = 0; k < 3; ++k)
+        {
+          jacobian[i][k][k][j] = 1.;
+        }
+      }
+    }
+    cartdg::cpg_euler_hll_deformed<3, 2>(&read[0], &write[0],
+                                         &(jacobian[0][0][0][0]), mult, 0, 0, 1.4);
+    for (int j = 0; j < 2; ++j)
+    {
+      for (int i_var = 0; i_var < 5; ++i_var)
+      {
+        double correct_d_flux = 680*read[2*i_var];
+        if (i_var == 4) correct_d_flux += 680*pressure;
+        CHECK(write[10*j + 2*i_var    ] == Approx(j*0.7*correct_d_flux));
+        CHECK(write[10*j + 2*i_var + 1] == Approx(j*0.7*correct_d_flux));
+      }
+    }
+    for (int i = 0; i < 20; ++i) write[i] = 0;
+    cartdg::cpg_euler_hll_deformed<3, 2>(&read[0], &write[0],
+                                         &(jacobian[0][0][0][0]), mult, 1, 1, 1.4);
+    for (int j = 0; j < 2; ++j)
+    {
+      for (int i_var = 0; i_var < 5; ++i_var)
+      {
+        double correct_d_flux = 680*read[2*i_var + 10];
+        if (i_var == 4) correct_d_flux += 680*pressure;
+        CHECK(write[10*j + 2*i_var    ] == Approx((1 - j)*0.7*correct_d_flux));
+        CHECK(write[10*j + 2*i_var + 1] == Approx((1 - j)*0.7*correct_d_flux));
+      }
+    }
+  }
+
+  SECTION("Opposing supersonic flows")
+  {
+    double velocity0 [] {680, -680};
+    for (int i = 0; i < 2; ++i)
+    {
+      for (int j = 0; j < 2; ++j)
+      {
+        read[i + 10*j + 0] = mass*velocity0[j];
+        read[i + 10*j + 2] = 0;
+        read[i + 10*j + 4] = 0;
+        read[i + 10*j + 6] = mass;
+        read[i + 10*j + 8] = energy;
+
+        for (int k = 0; k < 3; ++k)
+        {
+          jacobian[i][k][k][j] = 1.;
+        }
+      }
+    }
+
+    for (int i = 0; i < 20; ++i) write[i] = 0;
+    cartdg::cpg_euler_hll_deformed<3, 2>(&read[0], &write[0],
+                                         &(jacobian[0][0][0][0]), mult, 0, 0, 1.4);
     REQUIRE(write[2*3     ] == Approx(0.7*mass*680));
     REQUIRE(write[2*3 + 10] == Approx(0.7*mass*680));
   }
