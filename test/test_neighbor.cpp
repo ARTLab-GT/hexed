@@ -255,11 +255,11 @@ TEST_CASE("cpg_euler_hll_deformed")
   double energy = pressure/0.4 + 0.5*mass*680*680;
   double read[20] {};
   double write[20] {};
-  double jacobian [2][3][3][2] {};
   double mult = 0.7;
 
   SECTION("Reasonable flow")
   {
+    double jacobian [2][3][3][2] {};
     double velocity0 [] {680, 0};
     double velocity1 [] {0, -680};
     for (int i = 0; i < 2; ++i)
@@ -309,9 +309,9 @@ TEST_CASE("cpg_euler_hll_deformed")
   {
     for (int i_give : {0, 1})
     {
+      double jacobian [2][3][3][2] {};
       double velocity0 [2] {};
       double velocity1 [2] {};
-      //velocity0[i_give] = 340*(1 - 2*i_give);
       velocity1[i_give] = 680*(1 - 2*i_give);
       for (int i = 0; i < 2; ++i)
       {
@@ -344,15 +344,68 @@ TEST_CASE("cpg_euler_hll_deformed")
         {
           if (j == i_give)
           {
-            CHECK(write[10*j + 2*i_var    ] == 0.);
-            CHECK(write[10*j + 2*i_var + 1] == 0.);
+            REQUIRE(write[10*j + 2*i_var    ] == 0.);
+            REQUIRE(write[10*j + 2*i_var + 1] == 0.);
           }
           else
           {
             double correct_d_flux = 680*read[2*i_var + 10*i_give];
             if (i_var == 4) correct_d_flux += 680*pressure;
-            CHECK(write[10*j + 2*i_var    ] == Approx(0.7*correct_d_flux).margin(1e-10));
-            CHECK(write[10*j + 2*i_var + 1] == Approx(0.7*correct_d_flux).margin(1e-10));
+            REQUIRE(write[10*j + 2*i_var    ] == Approx(0.7*correct_d_flux).margin(1e-10));
+            REQUIRE(write[10*j + 2*i_var + 1] == Approx(0.7*correct_d_flux).margin(1e-10));
+          }
+        }
+      }
+    }
+  }
+
+  SECTION("Oblique boundary difficult")
+  {
+    for (int i_give : {0, 1})
+    {
+      double jacobian [2][2][2][2] {};
+      double velocity0 [2] {};
+      double velocity1 [2] {};
+      velocity0[i_give] = 340*(1 - 2*i_give);
+      velocity1[i_give] = 680*(1 - 2*i_give);
+      for (int i = 0; i < 2; ++i)
+      {
+        for (int j = 0; j < 2; ++j)
+        {
+          read[i + 8*j + 0] = mass*velocity0[j];
+          read[i + 8*j + 2] = mass*velocity1[j];
+          read[i + 8*j + 4] = mass;
+          read[i + 8*j + 6] = pressure/0.4 + 0.5*mass*(  velocity0[j]*velocity0[j]
+                                                       + velocity1[j]*velocity1[j]);
+        }
+
+        jacobian[0][0][0][i] = 2.;
+        jacobian[0][1][0][i] = 1.;
+        jacobian[0][0][1][i] = 0;
+        jacobian[0][1][1][i] = 1.;
+
+        jacobian[1][0][0][i] = 1.;
+        jacobian[1][1][0][i] = 2.5;
+        jacobian[1][0][1][i] = -2.;
+        jacobian[1][1][1][i] = -1;
+      }
+      cartdg::cpg_euler_hll_deformed<2, 2>(&read[0], &write[0],
+                                           &(jacobian[0][0][0][0]), mult, 1, 0, 1.4);
+      for (int j = 0; j < 2; ++j)
+      {
+        for (int i_var = 0; i_var < 4; ++i_var)
+        {
+          if (j == i_give)
+          {
+            CHECK(write[8*j + 2*i_var    ] == 0.);
+            CHECK(write[8*j + 2*i_var + 1] == 0.);
+          }
+          else
+          {
+            double correct_d_flux = 3*340*read[2*i_var + 8*i_give];
+            if (i_var == 3) correct_d_flux += 3*340*pressure;
+            CHECK(write[8*j + 2*i_var    ] == Approx(0.7*correct_d_flux/(2*(1 + j))).margin(1e-10));
+            CHECK(write[8*j + 2*i_var + 1] == Approx(0.7*correct_d_flux/(2*(1 + j))).margin(1e-10));
           }
         }
       }
@@ -361,6 +414,7 @@ TEST_CASE("cpg_euler_hll_deformed")
 
   SECTION("Opposing supersonic flows")
   {
+    double jacobian [2][3][3][2] {};
     double velocity0 [] {680, -680};
     for (int i = 0; i < 2; ++i)
     {

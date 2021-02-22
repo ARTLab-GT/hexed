@@ -12,7 +12,7 @@ void cpg_euler_hll_deformed(double* state_r, double* d_flux_w, double* jacobian,
 {
   const int n_var = n_dim + 2;
   const int face_size = n_var*n_face_qpoint;
-  int i_axis_arg [] {i_axis0, i_axis1};
+  const int i_axis_arg [] {i_axis0, i_axis1};
 
   for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint)
   {
