@@ -8,11 +8,11 @@ namespace cartdg
 
 template<int n_dim, int n_face_qpoint>
 void cpg_euler_hll_deformed(double* state_r, double* d_flux_w, double* jacobian,
-                            double mult, int i_axis0, int i_axis1, double sp_heat_rat)
+                            double mult, int i_axis_arg [2],
+                            double sp_heat_rat)
 {
   const int n_var = n_dim + 2;
   const int face_size = n_var*n_face_qpoint;
-  const int i_axis_arg [] {i_axis0, i_axis1};
 
   for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint)
   {
