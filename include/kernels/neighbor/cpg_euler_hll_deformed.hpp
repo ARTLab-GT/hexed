@@ -8,8 +8,7 @@ namespace cartdg
 
 template<int n_dim, int n_face_qpoint>
 void cpg_euler_hll_deformed(double* state_r, double* d_flux_w, double* jacobian,
-                            double mult, int i_axis_arg [2],
-                            double sp_heat_rat)
+                            double mult, int i_axis_arg [2], bool flip [2], double sp_heat_rat)
 {
   const int n_var = n_dim + 2;
   const int face_size = n_var*n_face_qpoint;
@@ -44,6 +43,7 @@ void cpg_euler_hll_deformed(double* state_r, double* d_flux_w, double* jacobian,
         #undef READ
       }
 
+      const int normal_dir = flip[i_side] ? -1 : 1;
       jacobian_det[i_side] = jac_mat.determinant();
       for (int i_var = 0; i_var < n_var; ++i_var)
       {
@@ -51,7 +51,7 @@ void cpg_euler_hll_deformed(double* state_r, double* d_flux_w, double* jacobian,
         {
           jac_mat(i_axis, i_axis_arg[i_side]) = qpoint_flux[i_axis][i_var];
         }
-        flux[i_side][i_var] = jac_mat.determinant();
+        flux[i_side][i_var] = jac_mat.determinant()*normal_dir;
       }
       double normal_magnitude = 0.;
       for (int i_axis = 0; i_axis < n_dim; ++i_axis)
@@ -70,7 +70,7 @@ void cpg_euler_hll_deformed(double* state_r, double* d_flux_w, double* jacobian,
       {
         jac_mat(i_axis, i_axis_arg[i_side]) = veloc[i_axis];
       }
-      wave_speed[i_side] = jac_mat.determinant() + (2*i_side - 1)*normal_magnitude*sound_speed;
+      wave_speed[i_side] = jac_mat.determinant()*normal_dir + (2*i_side - 1)*normal_magnitude*sound_speed;
     }
 
     for (int i_var = 0; i_var < n_var; ++i_var)

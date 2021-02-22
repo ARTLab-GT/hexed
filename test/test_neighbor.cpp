@@ -256,6 +256,7 @@ TEST_CASE("cpg_euler_hll_deformed")
   double read[20] {};
   double write[20] {};
   double mult = 0.7;
+  bool flip [] {false, false};
 
   SECTION("Reasonable flow")
   {
@@ -281,7 +282,7 @@ TEST_CASE("cpg_euler_hll_deformed")
     {
       int i_axis_arg [] {0, 0};
       cartdg::cpg_euler_hll_deformed<3, 2>(&read[0], &write[0],
-                                          &(jacobian[0][0][0][0]), mult, i_axis_arg, 1.4);
+                                           &(jacobian[0][0][0][0]), mult, i_axis_arg, flip, 1.4);
     }
     for (int j = 0; j < 2; ++j)
     {
@@ -297,7 +298,7 @@ TEST_CASE("cpg_euler_hll_deformed")
     {
       int i_axis_arg [] {1, 1};
       cartdg::cpg_euler_hll_deformed<3, 2>(&read[0], &write[0],
-                                          &(jacobian[0][0][0][0]), mult, i_axis_arg, 1.4);
+                                           &(jacobian[0][0][0][0]), mult, i_axis_arg, flip, 1.4);
     }
     for (int j = 0; j < 2; ++j)
     {
@@ -307,6 +308,63 @@ TEST_CASE("cpg_euler_hll_deformed")
         if (i_var == 4) correct_d_flux += 680*pressure;
         REQUIRE(write[10*j + 2*i_var    ] == Approx((1 - j)*0.7*correct_d_flux));
         REQUIRE(write[10*j + 2*i_var + 1] == Approx((1 - j)*0.7*correct_d_flux));
+      }
+    }
+  }
+
+  SECTION("normal flipping")
+  {
+    for (int i_give : {0, 1})
+    {
+      double jacobian [2][3][3][2] {};
+      double velocity0 [2] {};
+      double velocity1 [2] {};
+      velocity1[i_give] = 680;
+      for (int i = 0; i < 2; ++i)
+      {
+        for (int j = 0; j < 2; ++j)
+        {
+          read[i + 10*j + 0] = mass*velocity0[j];
+          read[i + 10*j + 2] = mass*velocity1[j];
+          read[i + 10*j + 4] = 0;
+          read[i + 10*j + 6] = mass;
+          read[i + 10*j + 8] = pressure/0.4 + 0.5*mass*(  velocity0[j]*velocity0[j]
+                                                        + velocity1[j]*velocity1[j]);
+          jacobian[j][2][2][i] = 1.;
+        }
+
+        jacobian[0][0][0][i] = 1.;
+        jacobian[0][1][0][i] = 0.;
+        jacobian[0][0][1][i] = 0.;
+        jacobian[0][1][1][i] = 1.;
+
+        jacobian[1][0][0][i] = -1.;
+        jacobian[1][1][0][i] = 0.;
+        jacobian[1][0][1][i] = 0.;
+        jacobian[1][1][1][i] = -1.;
+      }
+      int i_axis_arg [] {1, 1};
+      bool flip_arg [] {true, true};
+      flip_arg[i_give] = false;
+      cartdg::cpg_euler_hll_deformed<3, 2>(&read[0], &write[0],
+                                           &(jacobian[0][0][0][0]), mult, i_axis_arg, flip_arg, 1.4);
+      for (int j = 0; j < 2; ++j)
+      {
+        for (int i_var = 0; i_var < 5; ++i_var)
+        {
+          if (j == i_give)
+          {
+            REQUIRE(write[10*j + 2*i_var    ] == 0.);
+            REQUIRE(write[10*j + 2*i_var + 1] == 0.);
+          }
+          else
+          {
+            double correct_d_flux = 680*read[2*i_var + 10*i_give];
+            if (i_var == 4) correct_d_flux += 680*pressure;
+            REQUIRE(write[10*j + 2*i_var    ] == Approx(0.7*correct_d_flux).margin(1e-10));
+            REQUIRE(write[10*j + 2*i_var + 1] == Approx(0.7*correct_d_flux).margin(1e-10));
+          }
+        }
       }
     }
   }
@@ -344,7 +402,7 @@ TEST_CASE("cpg_euler_hll_deformed")
       }
       int i_axis_arg [] {1, 1};
       cartdg::cpg_euler_hll_deformed<3, 2>(&read[0], &write[0],
-                                           &(jacobian[0][0][0][0]), mult, i_axis_arg, 1.4);
+                                           &(jacobian[0][0][0][0]), mult, i_axis_arg, flip, 1.4);
       for (int j = 0; j < 2; ++j)
       {
         for (int i_var = 0; i_var < 5; ++i_var)
@@ -398,7 +456,7 @@ TEST_CASE("cpg_euler_hll_deformed")
       }
       int i_axis_arg [] {1, 0};
       cartdg::cpg_euler_hll_deformed<2, 2>(&read[0], &write[0],
-                                           &(jacobian[0][0][0][0]), mult, i_axis_arg, 1.4);
+                                           &(jacobian[0][0][0][0]), mult, i_axis_arg, flip, 1.4);
       for (int j = 0; j < 2; ++j)
       {
         for (int i_var = 0; i_var < 4; ++i_var)
@@ -444,7 +502,7 @@ TEST_CASE("cpg_euler_hll_deformed")
     for (int i = 0; i < 20; ++i) write[i] = 0;
     int i_axis_arg [] {0, 0};
     cartdg::cpg_euler_hll_deformed<3, 2>(&read[0], &write[0],
-                                         &(jacobian[0][0][0][0]), mult, i_axis_arg, 1.4);
+                                         &(jacobian[0][0][0][0]), mult, i_axis_arg, flip, 1.4);
     REQUIRE(write[2*3     ] == Approx(0.7*mass*680));
     REQUIRE(write[2*3 + 10] == Approx(0.7*mass*680));
   }
