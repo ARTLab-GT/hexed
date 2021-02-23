@@ -86,8 +86,35 @@ TEST_CASE("Deformed grid class")
       }
     }
 
-    SECTION("position calculation")
+    SECTION("vertex interpolation")
     {
+      /*
+      Approximate vertex layout:
+         3
+                 2
+
+
+      1
+                   0
+      */
+      grid2.get_vertex(0).pos = { 0.1, 2.0, 0.0};
+      grid2.get_vertex(1).pos = {-1.1, 2.1, 0.0};
+      grid2.get_vertex(2).pos = { 0.0, 2.8, 0.0};
+      grid2.get_vertex(3).pos = {-1.0, 2.9, 0.0};
+      std::vector<double> pos2 = grid2.get_pos(0);
+      REQUIRE(pos2[ 0] == Approx( 0.1));
+      REQUIRE(pos2[ 1] == Approx(-0.5));
+      REQUIRE(pos2[ 2] == Approx(-1.1));
+      REQUIRE(pos2[ 4] == Approx(-0.5));
+      REQUIRE(pos2[ 9] == Approx( 2. ));
+      REQUIRE(pos2[12] == Approx( 2.4));
+      REQUIRE(pos2[13] == Approx( 2.45));
+      REQUIRE(pos2[17] == Approx( 2.9));
+
+      grid3.add_element({0, 0, 0});
+      grid3.get_vertex(15).pos = {0.2*0.8, 0.2*0.8, 0.2*0.8};
+      std::vector<double> pos3 = grid3.get_pos(1);
+      for (int i_dim = 0; i_dim < 3; ++i_dim) REQUIRE(pos3[27*i_dim + 13] == Approx(0.2*0.475));
     }
   }
 }

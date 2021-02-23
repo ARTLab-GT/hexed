@@ -62,7 +62,40 @@ int Deformed_grid::add_element(std::vector<int> position)
 
 std::vector<double> Deformed_grid::get_pos(int i_elem)
 {
-  return Grid::get_pos(i_elem);
+  std::vector<double> elem_pos (n_qpoint*n_dim);
+  for (int i_vertex = 0; i_vertex < n_vertices; ++i_vertex)
+  {
+    int id = vertex_ids[n_vertices*i_elem + i_vertex];
+    int i_node = 0;
+    for (int vertex_stride = 1, node_stride = 1;
+         vertex_stride < n_vertices;
+         vertex_stride *= 2, node_stride *= basis.rank)
+    {
+      if ((i_vertex/vertex_stride)%2 == 1) i_node += node_stride*(basis.rank - 1);
+    }
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+    {
+      elem_pos[n_qpoint*i_dim + i_node] = get_vertex(id).pos[i_dim];
+    }
+  }
+
+  for (int stride = 1; stride < n_qpoint; stride *= basis.rank)
+  {
+    for (int i_node = 0; i_node < n_qpoint; ++i_node)
+    {
+      int coord = (i_node/stride)%basis.rank;
+      int i_node0 = i_node - coord*stride;
+      int i_node1 = i_node0 + (basis.rank - 1)*stride;
+      double weight0 = 1. - basis.node(coord);
+      double weight1 = basis.node(coord);
+      for (int j_dim = 0; j_dim < n_dim; ++j_dim)
+      {
+        int i = j_dim*n_qpoint;
+        elem_pos[i + i_node] = weight0*elem_pos[i + i_node0] + weight1*elem_pos[i + i_node1];
+      }
+    }
+  }
+  return elem_pos;
 }
 
 }
