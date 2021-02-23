@@ -12,7 +12,7 @@ class Vertex
   public:
   std::array<double, 3> pos {0, 0, 0};
   std::vector<int> id_refs;
-  std::vector<Vertex*> neighbors;
+  std::vector<int> neighbor_ids;
   int mass = 1;
   int id;
   Vertex(int id_arg);

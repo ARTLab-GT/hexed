@@ -12,6 +12,8 @@ Deformed_grid::Deformed_grid(int n_var_arg, int n_dim_arg, int n_elem_arg,
     auto message = "Capability to construct Deformed_grid with multiple elements is not implemented";
     throw message;
   }
+  n_vertices = 1;
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) n_vertices *= 2;
 }
 
 void Deformed_grid::add_vertices(std::vector<int> position, int i_dim)
@@ -39,6 +41,15 @@ int Deformed_grid::add_element(std::vector<int> position)
 {
   int i_elem = Grid::add_element(position);
   add_vertices(position, 0);
+  for (int stride = 1; stride < n_vertices; stride *= 2)
+  {
+    for (int i_vertex = 0; i_vertex < n_vertices; ++i_vertex)
+    {
+      int i_neighbor = ((i_vertex/stride)%2 == 0) ? i_vertex + stride : i_vertex - stride;
+      int id = vertex_ids[n_vertices*i_elem + i_vertex];
+      vertices[id].neighbor_ids.push_back(n_vertices*i_elem + i_neighbor);
+    }
+  }
   for (int i = 0; i < n_qpoint/basis.rank*2*n_dim; ++i) node_adjustments.push_back(0);
   return i_elem;
 }

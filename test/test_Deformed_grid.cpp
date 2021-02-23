@@ -21,6 +21,8 @@ TEST_CASE("Deformed grid class")
       REQUIRE(grid.vertex_ids.empty());
       REQUIRE(grid.node_adjustments.empty());
     }
+    REQUIRE(grid2.n_vertices == 4);
+    REQUIRE(grid3.n_vertices == 8);
     REQUIRE_THROWS(cartdg::Deformed_grid (1, 2, 1, 0.2, basis));
   }
   SECTION("add_element")
@@ -39,6 +41,14 @@ TEST_CASE("Deformed grid class")
     REQUIRE(grid2.vertices[grid2.vertex_ids[1]].pos[1] == Approx( 0.6));
     REQUIRE(grid2.vertices[grid2.vertex_ids[7]].pos[0] == Approx( 0.5));
     REQUIRE(grid2.vertices[grid2.vertex_ids[7]].pos[1] == Approx( 0.6));
+    cartdg::Vertex& vertex0 = grid2.vertices[grid2.vertex_ids[0]];
+    REQUIRE(vertex0.neighbor_ids.size() == 2);
+    REQUIRE(std::count(vertex0.neighbor_ids.begin(), vertex0.neighbor_ids.end(), 1) == 1);
+    REQUIRE(std::count(vertex0.neighbor_ids.begin(), vertex0.neighbor_ids.end(), 2) == 1);
+    cartdg::Vertex& vertex5 = grid2.vertices[grid2.vertex_ids[5]];
+    REQUIRE(vertex5.neighbor_ids.size() == 2);
+    REQUIRE(std::count(vertex5.neighbor_ids.begin(), vertex5.neighbor_ids.end(), 4) == 1);
+    REQUIRE(std::count(vertex5.neighbor_ids.begin(), vertex5.neighbor_ids.end(), 7) == 1);
 
     REQUIRE(grid3.n_elem == 0);
     grid3.add_element(std::vector<int>{2, -3, 1});
@@ -55,6 +65,11 @@ TEST_CASE("Deformed grid class")
     REQUIRE(grid3.vertices[grid3.vertex_ids[7]].pos[0] == Approx( 0.6));
     REQUIRE(grid3.vertices[grid3.vertex_ids[7]].pos[1] == Approx(-0.4));
     REQUIRE(grid3.vertices[grid3.vertex_ids[7]].pos[2] == Approx( 0.4));
+    cartdg::Vertex& vertex3 = grid3.vertices[grid2.vertex_ids[3]];
+    REQUIRE(vertex3.neighbor_ids.size() == 3);
+    REQUIRE(std::count(vertex3.neighbor_ids.begin(), vertex3.neighbor_ids.end(), 1) == 1);
+    REQUIRE(std::count(vertex3.neighbor_ids.begin(), vertex3.neighbor_ids.end(), 2) == 1);
+    REQUIRE(std::count(vertex3.neighbor_ids.begin(), vertex3.neighbor_ids.end(), 7) == 1);
 
     for (cartdg::Deformed_grid& grid : grids)
     {
