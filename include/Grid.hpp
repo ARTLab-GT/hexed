@@ -39,7 +39,7 @@ class Grid
   std::vector<double**> neighbor_connections_r();
   std::vector<double**> neighbor_connections_w();
   std::vector<int> n_neighb_con();
-  std::vector<double> get_pos(int i_elem);
+  virtual std::vector<double> get_pos(int i_elem);
 
   // functions that execute some aspect of time integration
   bool execute_runge_kutta_stage();
@@ -49,7 +49,7 @@ class Grid
   void auto_connect(std::vector<int> periods);
   void auto_connect();
   void clear_neighbors();
-  int add_element(std::vector<int> position);
+  virtual int add_element(std::vector<int> position);
   void add_connection(int i_elem0, int i_elem1, int i_dim);
 
   // functions that provide diagnostic information

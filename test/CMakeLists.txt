@@ -11,5 +11,6 @@ test_neighbor.cpp
 test_sinusoid.cpp
 test_Solution.cpp
 test_func.cpp
+test_Deformed_grid.cpp
 )
 target_link_libraries(test PRIVATE cartdg tecio Catch2::Catch2)
