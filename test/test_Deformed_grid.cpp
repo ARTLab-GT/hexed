@@ -55,5 +55,17 @@ TEST_CASE("Deformed grid class")
     REQUIRE(grid3.vertices[grid3.vertex_ids[7]].pos[0] == Approx( 0.6));
     REQUIRE(grid3.vertices[grid3.vertex_ids[7]].pos[1] == Approx(-0.4));
     REQUIRE(grid3.vertices[grid3.vertex_ids[7]].pos[2] == Approx( 0.4));
+
+    for (cartdg::Deformed_grid& grid : grids)
+    {
+      for (int i_id = 0; i_id < (int)grid.vertex_ids.size(); ++i_id)
+      {
+        int id = grid.vertex_ids[i_id];
+        cartdg::Vertex vertex = grid.vertices[id];
+        REQUIRE(vertex.id == id);
+        REQUIRE(vertex.id_refs.size() == 1);
+        REQUIRE(vertex.id_refs[0] == i_id);
+      }
+    }
   }
 }

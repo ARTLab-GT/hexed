@@ -11,7 +11,7 @@ class Vertex
 {
   public:
   std::array<double, 3> pos {0, 0, 0};
-  std::vector<Vertex**> responsibilities;
+  std::vector<int> id_refs;
   std::vector<Vertex*> neighbors;
   int mass = 1;
   int id;
