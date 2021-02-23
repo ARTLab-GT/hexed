@@ -17,7 +17,9 @@ class Deformed_grid : public Grid
 
   Deformed_grid(int n_var_arg, int n_dim_arg, int n_elem_arg, double mesh_size_arg,
                 Basis& basis_arg);
+  Vertex& get_vertex(int i_vertex);
   virtual int add_element(std::vector<int> position);
+  virtual std::vector<double> get_pos(int i_elem);
 
   private:
   void add_vertices(std::vector<int> position, int i_dim);

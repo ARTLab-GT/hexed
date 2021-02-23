@@ -16,6 +16,11 @@ Deformed_grid::Deformed_grid(int n_var_arg, int n_dim_arg, int n_elem_arg,
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) n_vertices *= 2;
 }
 
+Vertex& Deformed_grid::get_vertex(int i_vertex)
+{
+  return vertices[vertex_ids[i_vertex]];
+}
+
 void Deformed_grid::add_vertices(std::vector<int> position, int i_dim)
 {
   if (i_dim == n_dim)
@@ -53,6 +58,11 @@ int Deformed_grid::add_element(std::vector<int> position)
   }
   for (int i = 0; i < n_qpoint/basis.rank*2*n_dim; ++i) node_adjustments.push_back(0);
   return i_elem;
+}
+
+std::vector<double> Deformed_grid::get_pos(int i_elem)
+{
+  return Grid::get_pos(i_elem);
 }
 
 }
