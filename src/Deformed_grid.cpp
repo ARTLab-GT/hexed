@@ -24,6 +24,7 @@ void Deformed_grid::add_vertices(std::vector<int> position, int i_dim)
     Vertex& vertex = vertices.back();
     vertex.id_refs.push_back(vertex_ids.size());
     vertex_ids.push_back(vertex.id);
+    vertex.parent_grid = this;
     for (int i_dim = 0; i_dim < n_dim; ++i_dim)
     {
       vertex.pos[i_dim] = position[i_dim]*mesh_size + origin[i_dim];

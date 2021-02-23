@@ -77,6 +77,7 @@ TEST_CASE("Deformed grid class")
       {
         int id = grid.vertex_ids[i_id];
         cartdg::Vertex vertex = grid.vertices[id];
+        REQUIRE(vertex.parent_grid == &grid);
         REQUIRE(vertex.id == id);
         REQUIRE(vertex.id_refs.size() == 1);
         REQUIRE(vertex.id_refs[0] == i_id);
