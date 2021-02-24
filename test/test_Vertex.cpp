@@ -35,7 +35,7 @@ TEST_CASE("Vertex")
   REQUIRE(vert8.id_refs.empty());
   REQUIRE(grid.vertex_ids[1] == 1);
   REQUIRE(grid.vertex_ids[8] == 1);
-  REQUIRE(vert1.pos[0] == Approx(2.));
-  REQUIRE(vert1.pos[1] == Approx(2.));
+  REQUIRE(vert1.pos[0] == Approx(4./3.));
+  REQUIRE(vert1.pos[1] == Approx(4./3.));
   REQUIRE(vert1.pos[2] == Approx(5./3.));
 }
