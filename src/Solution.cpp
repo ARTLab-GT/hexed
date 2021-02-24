@@ -175,6 +175,12 @@ void Solution::add_empty_grid(int ref_level)
   all_grids.push_back(&grids.back());
 }
 
+void Solution::add_deformed_grid(int ref_level)
+{
+  def_grids.emplace_back(n_var, n_dim, 0, refined_mesh_size(ref_level), basis);
+  all_grids.push_back(&def_grids.back());
+}
+
 void Solution::auto_connect()
 {
   for (Grid& grid : grids)
