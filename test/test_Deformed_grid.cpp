@@ -294,6 +294,7 @@ TEST_CASE("Deformed grid class")
         REQUIRE(grid3.vertex_ids[3] == grid3.vertex_ids[11]);
         REQUIRE(grid3.vertex_ids[5] == grid3.vertex_ids[ 8]);
         REQUIRE(grid3.vertex_ids[7] == grid3.vertex_ids[10]);
+        grid3.visualize("test");
       }
 
       SECTION("2D")

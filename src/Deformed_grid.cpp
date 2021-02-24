@@ -156,4 +156,9 @@ void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_axis
   }
 }
 
+void Deformed_grid::visualize(std::string file_name)
+{
+  Grid::visualize(file_name + "_deformed");
+}
+
 }
