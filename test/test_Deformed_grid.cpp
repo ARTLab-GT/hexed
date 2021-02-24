@@ -116,5 +116,27 @@ TEST_CASE("Deformed grid class")
       std::vector<double> pos3 = grid3.get_pos(1);
       for (int i_dim = 0; i_dim < 3; ++i_dim) REQUIRE(pos3[27*i_dim + 13] == Approx(0.2*0.475));
     }
+
+    SECTION("warped face interpolation")
+    {
+      grid2.get_vertex(0).pos = {0.0, 0.0, 0.0};
+      grid2.get_vertex(1).pos = {0.0, 1.0, 0.0};
+      grid2.get_vertex(2).pos = {1.0, 0.0, 0.0};
+      grid2.get_vertex(3).pos = {0.6, 1.0, 0.0};
+      grid2.node_adjustments[2*3 + 1] =  0.2;
+      grid2.node_adjustments[3*3 + 1] = -0.1;
+      std::vector<double> pos2 = grid2.get_pos(0);
+      REQUIRE(pos2[ 0] == Approx(0.0));
+      REQUIRE(pos2[ 7] == Approx(0.8));
+      REQUIRE(pos2[ 8] == Approx(0.6));
+      REQUIRE(pos2[16] == Approx(0.5));
+
+      CHECK(pos2[ 3] == Approx(0.5 - 0.2*0.2));
+      CHECK(pos2[ 4] == Approx(0.4 - 0.2*(0.2 - 0.1)/2));
+      CHECK(pos2[ 5] == Approx(0.3 + 0.2*0.1));
+      CHECK(pos2[12] == Approx(0.0 + 0.2));
+      CHECK(pos2[13] == Approx(0.5 + (0.2 - 0.1)/2));
+      CHECK(pos2[14] == Approx(1.0 - 0.1));
+    }
   }
 }

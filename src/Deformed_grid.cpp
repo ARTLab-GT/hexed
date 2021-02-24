@@ -79,23 +79,43 @@ std::vector<double> Deformed_grid::get_pos(int i_elem)
     }
   }
 
-  for (int stride = 1; stride < n_qpoint; stride *= basis.rank)
+  for (int i_dim = 0, stride = n_qpoint/basis.rank; i_dim < n_dim; ++i_dim, stride /= basis.rank)
+  {
+    for (int i_node = 0; i_node < n_qpoint; ++i_node)
+    {
+      int coord = (i_node/stride)%basis.rank;
+      double dist = basis.node(coord);
+      int i_node0 = i_node - coord*stride;
+      int i_node1 = i_node0 + (basis.rank - 1)*stride;
+      for (int j_dim = 0; j_dim < n_dim; ++j_dim)
+      {
+        int i = j_dim*n_qpoint;
+        elem_pos[i + i_node] = (1. - dist)*elem_pos[i + i_node0] + dist*elem_pos[i + i_node1];
+      }
+    }
+  }
+
+  std::vector<double> warped_elem_pos = elem_pos;
+  for (int i_dim = 0, stride = n_qpoint/basis.rank; i_dim < n_dim; ++i_dim, stride /= basis.rank)
   {
     for (int i_node = 0; i_node < n_qpoint; ++i_node)
     {
       int coord = (i_node/stride)%basis.rank;
       int i_node0 = i_node - coord*stride;
       int i_node1 = i_node0 + (basis.rank - 1)*stride;
-      double weight0 = 1. - basis.node(coord);
-      double weight1 = basis.node(coord);
+      int i_adjust = 2*i_dim*n_qpoint/basis.rank
+                     + i_node/(stride*basis.rank)*stride + i_node%stride;
+      double adjust0 = node_adjustments[i_adjust];
+      double adjust1 = node_adjustments[i_adjust + n_qpoint/basis.rank];
+      double dist = basis.node(coord);
       for (int j_dim = 0; j_dim < n_dim; ++j_dim)
       {
         int i = j_dim*n_qpoint;
-        elem_pos[i + i_node] = weight0*elem_pos[i + i_node0] + weight1*elem_pos[i + i_node1];
+        warped_elem_pos[i + i_node] += (elem_pos[i + i_node1] - elem_pos[i + i_node0])*((1. - dist)*adjust0 + dist*adjust1);
       }
     }
   }
-  return elem_pos;
+  return warped_elem_pos;
 }
 
 }
