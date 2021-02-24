@@ -131,8 +131,14 @@ void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_axis
       if ((i_vertex/stride)%2 == int(is_positive[i_side]))
       {
         id_inds[i_side].push_back(i_vertex + i_elem[i_side]*n_vertices);
+        //printf("%d ", i_vertex + i_elem[i_side]*n_vertices);
       }
     }
+    //printf("\n");
+  }
+  if ((i_axis[0] == 0 && i_axis[1] == 2) || (i_axis[0] == 2 && i_axis[1] == 0))
+  {
+    std::swap(id_inds[1][1], id_inds[1][2]);
   }
   for (int i_vertex = 0; i_vertex < n_vertices/2; ++i_vertex)
   {
