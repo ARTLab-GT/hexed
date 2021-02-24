@@ -118,4 +118,26 @@ std::vector<double> Deformed_grid::get_pos(int i_elem)
   return warped_elem_pos;
 }
 
+void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_axis,
+                            std::array<bool, 2> is_positive)
+{
+  std::array<std::vector<int>, 2> id_inds;
+  for (int i_side : {0, 1})
+  {
+    int stride = n_vertices/2;
+    for (int i = 0; i < i_axis[i_side]; ++i) stride /= 2;
+    for (int i_vertex = 0; i_vertex < n_vertices; ++i_vertex)
+    {
+      if ((i_vertex/stride)%2 == int(is_positive[i_side]))
+      {
+        id_inds[i_side].push_back(i_vertex + i_elem[i_side]*n_vertices);
+      }
+    }
+  }
+  for (int i_vertex = 0; i_vertex < n_vertices/2; ++i_vertex)
+  {
+    get_vertex(id_inds[0][i_vertex]).eat(get_vertex(id_inds[1][i_vertex]));
+  }
+}
+
 }

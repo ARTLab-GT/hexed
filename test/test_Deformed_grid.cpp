@@ -156,4 +156,32 @@ TEST_CASE("Deformed grid class")
       REQUIRE(pos3[13 + 2*27] == .1);
     }
   }
+
+  SECTION("Element connection")
+  {
+    SECTION("Same direction")
+    {
+      grid3.add_element({0, 0, 0});
+      grid3.add_element({1, 0, 0});
+      grid3.connect({0, 1}, {0, 0}, {1, 0});
+      REQUIRE(grid3.vertex_ids[4] == grid3.vertex_ids[8]);
+      REQUIRE(grid3.vertex_ids[5] == grid3.vertex_ids[9]);
+      REQUIRE(grid3.vertex_ids[6] == grid3.vertex_ids[10]);
+      REQUIRE(grid3.vertex_ids[7] == grid3.vertex_ids[11]);
+
+      grid3.add_element({0, 1, 0});
+      grid3.connect({2, 0}, {1, 1}, {0, 1});
+      REQUIRE(grid3.vertex_ids[2] == grid3.vertex_ids[16]);
+      REQUIRE(grid3.vertex_ids[3] == grid3.vertex_ids[17]);
+      REQUIRE(grid3.vertex_ids[6] == grid3.vertex_ids[20]);
+      REQUIRE(grid3.vertex_ids[7] == grid3.vertex_ids[21]);
+
+      grid3.add_element({0, 0, -1});
+      grid3.connect({0, 3}, {2, 2}, {0, 1});
+      REQUIRE(grid3.vertex_ids[0] == grid3.vertex_ids[25]);
+      REQUIRE(grid3.vertex_ids[2] == grid3.vertex_ids[27]);
+      REQUIRE(grid3.vertex_ids[4] == grid3.vertex_ids[29]);
+      REQUIRE(grid3.vertex_ids[6] == grid3.vertex_ids[31]);
+    }
+  }
 }

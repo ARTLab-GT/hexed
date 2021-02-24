@@ -20,6 +20,8 @@ class Deformed_grid : public Grid
   Vertex& get_vertex(int i_vertex);
   virtual int add_element(std::vector<int> position);
   virtual std::vector<double> get_pos(int i_elem);
+  void connect(std::array<int, 2> i_elem, std::array<int, 2> i_axis,
+               std::array<bool, 2> is_positive);
 
   private:
   void add_vertices(std::vector<int> position, int i_dim);
