@@ -131,12 +131,29 @@ TEST_CASE("Deformed grid class")
       REQUIRE(pos2[ 8] == Approx(0.6));
       REQUIRE(pos2[16] == Approx(0.5));
 
-      CHECK(pos2[ 3] == Approx(0.5 - 0.2*0.2));
-      CHECK(pos2[ 4] == Approx(0.4 - 0.2*(0.2 - 0.1)/2));
-      CHECK(pos2[ 5] == Approx(0.3 + 0.2*0.1));
-      CHECK(pos2[12] == Approx(0.0 + 0.2));
-      CHECK(pos2[13] == Approx(0.5 + (0.2 - 0.1)/2));
-      CHECK(pos2[14] == Approx(1.0 - 0.1));
+      REQUIRE(pos2[ 3] == Approx(0.5 - 0.2*0.2));
+      REQUIRE(pos2[ 4] == Approx(0.4 - 0.2*(0.2 - 0.1)/2));
+      REQUIRE(pos2[ 5] == Approx(0.3 + 0.2*0.1));
+      REQUIRE(pos2[12] == Approx(0.0 + 0.2));
+      REQUIRE(pos2[13] == Approx(0.5 + (0.2 - 0.1)/2));
+      REQUIRE(pos2[14] == Approx(1.0 - 0.1));
+
+      grid2.get_vertex(4).pos = {0.0, 0.0, 0.0};
+      grid2.get_vertex(5).pos = {0.0, 1.0, 0.0};
+      grid2.get_vertex(6).pos = {1.0, 0.0, 0.0};
+      grid2.get_vertex(7).pos = {1.0, 1.0, 0.0};
+      grid2.node_adjustments[4*3 + 1] =  0.1;
+      std::vector<double> pos21 = grid2.get_pos(1);
+      REQUIRE(pos21[ 0] == Approx(0.0));
+      REQUIRE(pos21[ 6] == Approx(1.0));
+      REQUIRE(pos21[ 4] == Approx(0.55));
+
+      grid3.add_element({0, 0, 0});
+      grid3.node_adjustments[6*9 + 4] = 0.01;
+      std::vector<double> pos3 = grid3.get_pos(1);
+      REQUIRE(pos3[13] == 0.101);
+      REQUIRE(pos3[13 + 27] == .1);
+      REQUIRE(pos3[13 + 2*27] == .1);
     }
   }
 }

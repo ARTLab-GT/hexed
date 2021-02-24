@@ -103,7 +103,7 @@ std::vector<double> Deformed_grid::get_pos(int i_elem)
       int coord = (i_node/stride)%basis.rank;
       int i_node0 = i_node - coord*stride;
       int i_node1 = i_node0 + (basis.rank - 1)*stride;
-      int i_adjust = 2*i_dim*n_qpoint/basis.rank
+      int i_adjust = 2*(i_dim + i_elem*n_dim)*n_qpoint/basis.rank
                      + i_node/(stride*basis.rank)*stride + i_node%stride;
       double adjust0 = node_adjustments[i_adjust];
       double adjust1 = node_adjustments[i_adjust + n_qpoint/basis.rank];
