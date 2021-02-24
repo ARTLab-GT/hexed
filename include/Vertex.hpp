@@ -19,6 +19,7 @@ class Vertex
   int id;
   Deformed_grid* parent_grid = nullptr;
   Vertex(int id_arg);
+  void eat(Vertex& other);
 };
 
 }
