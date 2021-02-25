@@ -16,6 +16,7 @@ class Vertex
   std::vector<int> id_refs;
   std::vector<int> neighbor_ids;
   int mass = 1;
+  bool snap = false;
   int id;
   Deformed_grid* parent_grid = nullptr;
   Vertex(int id_arg);
