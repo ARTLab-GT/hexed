@@ -45,9 +45,15 @@ void Vertex::calc_relax()
 
 void Vertex::apply_relax()
 {
+  if (mobile)
+  {
+    for (int i_dim = 0; i_dim < 3; ++i_dim)
+    {
+      pos[i_dim] += relax[i_dim];
+    }
+  }
   for (int i_dim = 0; i_dim < 3; ++i_dim)
   {
-    pos[i_dim] += relax[i_dim];
     relax[i_dim] = 0;
   }
 }

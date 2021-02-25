@@ -52,6 +52,20 @@ TEST_CASE("Vertex")
     REQUIRE(vertex.relax[0] == 0.);
     REQUIRE(vertex.relax[1] == 0.);
     REQUIRE(vertex.relax[2] == 0.);
+
+    vertex.calc_relax();
+    REQUIRE(vertex.pos[0] == 0.);
+    REQUIRE(vertex.pos[1] == 0.);
+    REQUIRE(vertex.pos[2] == 0.);
+    vertex.apply_relax();
+    REQUIRE(vertex.pos[0] == 0.);
+    REQUIRE(vertex.pos[1] == 0.);
+    REQUIRE(vertex.pos[2] == 0.);
+    REQUIRE(vertex.relax[0] == 0.);
+    REQUIRE(vertex.relax[1] == 0.);
+    REQUIRE(vertex.relax[2] == 0.);
+
+    vertex.mobile = true;
     vertex.calc_relax();
     REQUIRE(vertex.pos[0] == 0.);
     REQUIRE(vertex.pos[1] == 0.);
@@ -60,12 +74,12 @@ TEST_CASE("Vertex")
     REQUIRE(vertex.pos[0] == Approx(1./6.));
     REQUIRE(vertex.pos[1] == Approx(1./6.));
     REQUIRE(vertex.pos[2] == Approx(1./6.));
+    REQUIRE(vertex.relax[0] == 0.);
+    REQUIRE(vertex.relax[1] == 0.);
+    REQUIRE(vertex.relax[2] == 0.);
     vertex.apply_relax();
     REQUIRE(vertex.pos[0] == Approx(1./6.));
     REQUIRE(vertex.pos[1] == Approx(1./6.));
     REQUIRE(vertex.pos[2] == Approx(1./6.));
-    REQUIRE(vertex.relax[0] == 0.);
-    REQUIRE(vertex.relax[1] == 0.);
-    REQUIRE(vertex.relax[2] == 0.);
   }
 }
