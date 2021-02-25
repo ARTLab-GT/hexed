@@ -29,11 +29,7 @@ TEST_CASE("Solution class")
   std::vector<int> lc {-1, -1};
   std::vector<int> uc {1, 2};
   sol.add_empty_grid(1);
-  {
-    unsigned int n_all = sol.all_grids.size();
-    sol.add_block_grid(1, lc, uc);
-    REQUIRE(sol.all_grids.size() == n_all + 1);
-  }
+  sol.add_block_grid(1, lc, uc);
   sol.add_block_grid(2);
 
   SECTION("add_block_grid creates correct grid")
@@ -57,10 +53,8 @@ TEST_CASE("Solution class")
   SECTION("add_empty_grid creates an empty grid")
   {
     unsigned int n_grids = sol.grids.size();
-    unsigned int n_all = sol.all_grids.size();
     sol.add_empty_grid(2);
     REQUIRE(sol.grids.size() == n_grids + 1);
-    REQUIRE(sol.all_grids.size() == n_all + 1);
     cartdg::Grid& g = sol.get_grid(n_grids);
     REQUIRE(g.n_elem == 0);
     REQUIRE(g.mesh_size == 0.175);
@@ -69,10 +63,8 @@ TEST_CASE("Solution class")
   SECTION("add_deformed_grid creates a deformed grid")
   {
     unsigned int n_grids = sol.def_grids.size();
-    unsigned int n_all = sol.all_grids.size();
     sol.add_deformed_grid(2);
     REQUIRE(sol.def_grids.size() == n_grids + 1);
-    REQUIRE(sol.all_grids.size() == n_all + 1);
     cartdg::Grid& g = sol.def_grids.back();
     REQUIRE(g.n_elem == 0);
     REQUIRE(g.mesh_size == 0.175);

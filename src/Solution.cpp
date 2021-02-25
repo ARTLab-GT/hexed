@@ -25,10 +25,15 @@ Grid& Solution::get_grid(int order_added)
 void Solution::visualize(std::string file_prefix)
 {
   char buffer [100];
-  for (Grid* grid : all_grids)
+  for (Grid& grid : grids)
   {
-    snprintf(buffer, 100, "%s_%.2e_%.2e", file_prefix.c_str(), grid->mesh_size, grid->time);
-    grid->visualize(std::string(buffer));
+    snprintf(buffer, 100, "%s_%.2e_%.2e", file_prefix.c_str(), grid.mesh_size, grid.time);
+    grid.visualize(std::string(buffer));
+  }
+  for (Grid& grid : def_grids)
+  {
+    snprintf(buffer, 100, "%s_%.2e_%.2e", file_prefix.c_str(), grid.mesh_size, grid.time);
+    grid.visualize(std::string(buffer));
   }
 }
 
@@ -138,7 +143,6 @@ void Solution::add_block_grid(int ref_level, std::vector<int> lower_corner,
   }
   grids.emplace_back(n_var, n_dim, n_elem, refined_mesh_size(ref_level), basis);
   Grid& g = grids.back();
-  all_grids.push_back(&g);
   for (int i_dim = 0, stride = 1; i_dim < n_dim; ++i_dim)
   {
     int row_size = upper_corner[i_dim] - lower_corner[i_dim];
@@ -172,13 +176,11 @@ void Solution::add_block_grid(int ref_level)
 void Solution::add_empty_grid(int ref_level)
 {
   grids.emplace_back(n_var, n_dim, 0, refined_mesh_size(ref_level), basis);
-  all_grids.push_back(&grids.back());
 }
 
 void Solution::add_deformed_grid(int ref_level)
 {
   def_grids.emplace_back(n_var, n_dim, 0, refined_mesh_size(ref_level), basis);
-  all_grids.push_back(&def_grids.back());
 }
 
 void Solution::auto_connect()

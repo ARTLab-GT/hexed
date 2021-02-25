@@ -21,7 +21,6 @@ class Solution
   Kernel_settings kernel_settings;
   std::vector<Grid> grids;
   std::vector<Deformed_grid> def_grids;
-  std::vector<Grid*> all_grids;
 
   Solution(int n_var_arg, int n_dim_arg, int rank_arg, double bms);
   virtual ~Solution();
