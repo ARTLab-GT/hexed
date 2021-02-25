@@ -28,4 +28,28 @@ void Vertex::eat(Vertex& other)
   }
 }
 
+void Vertex::calc_relax()
+{
+  for (int neighbor_id : neighbor_ids)
+  {
+    for (int i_dim = 0; i_dim < 3; ++i_dim)
+    {
+      relax[i_dim] += parent_grid->get_vertex(neighbor_id).pos[i_dim];
+    }
+  }
+  for (int i_dim = 0; i_dim < 3; ++i_dim)
+  {
+    relax[i_dim] = 0.5*(relax[i_dim]/neighbor_ids.size() - pos[i_dim]);
+  }
+}
+
+void Vertex::apply_relax()
+{
+  for (int i_dim = 0; i_dim < 3; ++i_dim)
+  {
+    pos[i_dim] += relax[i_dim];
+    relax[i_dim] = 0;
+  }
+}
+
 }
