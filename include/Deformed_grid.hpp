@@ -13,6 +13,7 @@ class Deformed_grid : public Grid
   std::vector<Vertex> vertices;
   std::vector<int> vertex_ids;
   std::vector<double> node_adjustments;
+  std::vector<double> jacobian;
   int n_vertices;
 
   Deformed_grid(int n_var_arg, int n_dim_arg, int n_elem_arg, double mesh_size_arg,
@@ -23,6 +24,7 @@ class Deformed_grid : public Grid
   void connect(std::array<int, 2> i_elem, std::array<int, 2> i_axis,
                std::array<bool, 2> is_positive);
   virtual void visualize(std::string file_name);
+  void calc_jacobian();
 
   private:
   void add_vertices(std::vector<int> position, int i_dim);

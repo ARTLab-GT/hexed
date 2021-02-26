@@ -161,4 +161,7 @@ void Deformed_grid::visualize(std::string file_name)
   Grid::visualize(file_name + "_deformed");
 }
 
+void Deformed_grid::calc_jacobian()
+{}
+
 }
