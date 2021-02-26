@@ -36,7 +36,7 @@ class Grid
   // functions for accessing data
   double* state_r();
   double* state_w();
-  std::vector<double**> neighbor_connections_r();
+  std::vector<double**> neighbor_connections_r(); // FIXME: return a pointer
   std::vector<double**> neighbor_connections_w();
   std::vector<int> n_neighb_con();
   virtual std::vector<double> get_pos(int i_elem);

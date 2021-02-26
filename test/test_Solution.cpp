@@ -126,20 +126,26 @@ TEST_CASE("Integration of deformed elements")
     }
   }
 
-  def_grid.get_vertex(0).pos = {0., -0.5, 0.};
-  def_grid.get_vertex(1).pos = {0.1, 0.1, 0.};
-  def_grid.get_vertex(2).pos = {-0.5, -0.5, 0.};
-  def_grid.get_vertex(3).pos = {-0.5, 0., 0.};
+  def_grid.get_vertex(0).pos = {-0.5, -0.5, 0.};
+  def_grid.get_vertex(1).pos = {-0.5, 0., 0.};
+  def_grid.get_vertex(2).pos = {0., -0.5, 0.};
+  def_grid.get_vertex(3).pos = {0.1, 0.1, 0.};
 
-  def_grid.get_vertex(4).pos = {-0.5, 0., 0.};
-  def_grid.get_vertex(5).pos = {0.1, 0.1, 0.};
-  def_grid.get_vertex(6).pos = {-0.5, 0.5, 0.};
-  def_grid.get_vertex(7).pos = {0., 0.5, 0.};
+  def_grid.get_vertex(4).pos = {-0.5, 0.5, 0.};
+  def_grid.get_vertex(5).pos = {0., 0.5, 0.};
+  def_grid.get_vertex(6).pos = {-0.5, 0., 0.};
+  def_grid.get_vertex(7).pos = {0.1, 0.1, 0.};
 
   def_grid.get_vertex(9).pos = {0.1, 0.1, 0.};
   def_grid.get_vertex(12).pos = {0.1, 0.1, 0.};
 
+  def_grid.connect({0, 1}, {1, 0}, {1, 1});
+  def_grid.connect({2, 3}, {1, 1}, {1, 0});
+  def_grid.connect({0, 2}, {0, 0}, {1, 0});
+  def_grid.connect({1, 3}, {1, 0}, {1, 0});
+
   def_grid.calc_jacobian();
+  def_grid.update_connections();
   cartdg::Isentropic_vortex init ({100., 0., 1.225, 2e5});
   init.argmax_radius = 0.1;
   init.max_nondim_veloc = 0.3;

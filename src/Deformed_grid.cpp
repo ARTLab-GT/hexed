@@ -14,6 +14,7 @@ Deformed_grid::Deformed_grid(int n_var_arg, int n_dim_arg, int n_elem_arg,
   }
   n_vertices = 1;
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) n_vertices *= 2;
+  neighbor_storage.resize(3);
 }
 
 Vertex& Deformed_grid::get_vertex(int i_vertex)
@@ -153,6 +154,26 @@ void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_axis
   for (int i_vertex = 0; i_vertex < n_vertices/2; ++i_vertex)
   {
     get_vertex(id_inds[0][i_vertex]).eat(get_vertex(id_inds[1][i_vertex]));
+  }
+  for (int i_side : {0, 1})
+  {
+    neighbor_inds.push_back(i_elem[i_side]);
+    neighbor_axes.push_back(i_axis[i_side]);
+    neighbor_is_positive.push_back(is_positive[i_side]);
+    neighbor_is_deformed.push_back(true);
+  }
+}
+
+void Deformed_grid::update_connections()
+{
+  for (int i_elem : neighbor_inds)
+  {
+    jacobian_neighbors.push_back(jacobian.data() + i_elem*n_dim*n_dim*n_qpoint);
+    for (int i_stage = 0; i_stage < 3; ++i_stage)
+    {
+      double* state_data = state_storage[i_stage].data();
+      neighbor_storage[i_stage].push_back(state_data + n_dof*i_elem);
+    }
   }
 }
 
