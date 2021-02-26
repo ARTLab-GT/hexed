@@ -320,38 +320,40 @@ TEST_CASE("Deformed grid class")
 
   SECTION("Jacobian calculation")
   {
+    grid2.mesh_size = 1.;
     grid2.add_element({0, 0});
     grid2.add_element({1, 1});
     grid2.get_vertex(3).pos = {0.8, 0.8, 0.};
     grid2.node_adjustments[12 + 6 + 1] = 0.1;
     grid2.calc_jacobian();
     REQUIRE(grid2.jacobian.size() == 2*4*9);
-    REQUIRE(grid2.jacobian[      0*9    ] == 1.);
-    REQUIRE(grid2.jacobian[      1*9    ] == 0.);
-    REQUIRE(grid2.jacobian[      2*9    ] == 0.);
-    REQUIRE(grid2.jacobian[      3*9    ] == 1.);
-    REQUIRE(grid2.jacobian[      0*9 + 2] == 1.);
-    REQUIRE(grid2.jacobian[      1*9 + 2] == -0.2);
-    REQUIRE(grid2.jacobian[      2*9 + 2] == 0.);
-    REQUIRE(grid2.jacobian[      3*9 + 2] == 0.8);
-    REQUIRE(grid2.jacobian[      0*9 + 8] == 0.8);
-    REQUIRE(grid2.jacobian[      1*9 + 8] == -0.2);
-    REQUIRE(grid2.jacobian[      2*9 + 8] == -0.2);
-    REQUIRE(grid2.jacobian[      3*9 + 8] == 0.8);
-    REQUIRE(grid2.jacobian[4*9 + 0*9 + 7] == 1.);
-    REQUIRE(grid2.jacobian[4*9 + 1*9 + 7] == 0.);
-    REQUIRE(grid2.jacobian[4*9 + 2*9 + 7] == 0.);
-    REQUIRE(grid2.jacobian[4*9 + 3*9 + 7] == 0.9);
+    REQUIRE(grid2.jacobian[      0*9    ] == Approx(1.));
+    REQUIRE(grid2.jacobian[      1*9    ] == Approx(0.));
+    REQUIRE(grid2.jacobian[      2*9    ] == Approx(0.));
+    REQUIRE(grid2.jacobian[      3*9    ] == Approx(1.));
+    REQUIRE(grid2.jacobian[      0*9 + 6] == Approx(1.));
+    REQUIRE(grid2.jacobian[      1*9 + 6] == Approx(-0.2));
+    REQUIRE(grid2.jacobian[      2*9 + 6] == Approx(0.));
+    REQUIRE(grid2.jacobian[      3*9 + 6] == Approx(0.8));
+    REQUIRE(grid2.jacobian[      0*9 + 8] == Approx(0.8));
+    REQUIRE(grid2.jacobian[      1*9 + 8] == Approx(-0.2));
+    REQUIRE(grid2.jacobian[      2*9 + 8] == Approx(-0.2));
+    REQUIRE(grid2.jacobian[      3*9 + 8] == Approx(0.8));
+    REQUIRE(grid2.jacobian[4*9 + 0*9 + 5] == Approx(1.));
+    REQUIRE(grid2.jacobian[4*9 + 1*9 + 5] == Approx(0.));
+    REQUIRE(grid2.jacobian[4*9 + 2*9 + 5] == Approx(0.));
+    REQUIRE(grid2.jacobian[4*9 + 3*9 + 5] == Approx(0.9));
 
+    grid3.mesh_size = 1.;
     grid3.add_element({0, 0, 0});
     grid3.get_vertex(7).pos = {0.8, 0.8, 0.8};
     grid3.calc_jacobian();
     REQUIRE(grid3.jacobian.size() == 9*27);
     REQUIRE(grid3.jacobian[0] == 1.);
-    REQUIRE(grid3.jacobian[0*27 + 26] == 0.8);
-    REQUIRE(grid3.jacobian[1*27 + 26] == -0.2);
-    REQUIRE(grid3.jacobian[2*27 + 26] == -0.2);
-    REQUIRE(grid3.jacobian[7*27 + 26] == -0.2);
-    REQUIRE(grid3.jacobian[8*27 + 26] == 0.8);
+    REQUIRE(grid3.jacobian[0*27 + 26] == Approx(0.8));
+    REQUIRE(grid3.jacobian[1*27 + 26] == Approx(-0.2));
+    REQUIRE(grid3.jacobian[2*27 + 26] == Approx(-0.2));
+    REQUIRE(grid3.jacobian[7*27 + 26] == Approx(-0.2));
+    REQUIRE(grid3.jacobian[8*27 + 26] == Approx(0.8));
   }
 }

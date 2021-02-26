@@ -162,6 +162,38 @@ void Deformed_grid::visualize(std::string file_name)
 }
 
 void Deformed_grid::calc_jacobian()
-{}
+{
+  jacobian.resize(n_elem*n_dim*n_dim*n_qpoint);
+  // FIXME: make this a kernel
+  auto diff_mat = basis.diff_mat();
+  for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+  {
+    std::vector<double> elem_pos = get_pos(i_elem);
+    for (int i_dim = 0, stride = n_qpoint/basis.rank; i_dim < n_dim; ++i_dim, stride /= basis.rank)
+    {
+      for (int i_outer = 0; i_outer < n_qpoint/(stride*basis.rank); ++i_outer)
+      {
+        for (int i_inner = 0; i_inner < stride; ++i_inner)
+        {
+          for (int j_dim = 0; j_dim < n_dim; ++j_dim)
+          {
+            Eigen::VectorXd row_pos (basis.rank);
+            int row_start = i_outer*stride*basis.rank + i_inner;
+            for (int i_qpoint = 0; i_qpoint < basis.rank; ++i_qpoint)
+            {
+              row_pos(i_qpoint) = elem_pos[j_dim*n_qpoint + row_start + i_qpoint*stride];
+            }
+            auto row_jacobian = diff_mat*row_pos;
+            for (int i_qpoint = 0; i_qpoint < basis.rank; ++i_qpoint)
+            {
+              jacobian[((i_elem*n_dim + j_dim)*n_dim + i_dim)*n_qpoint
+                       + row_start + i_qpoint*stride] = row_jacobian(i_qpoint);
+            }
+          }
+        }
+      }
+    }
+  }
+}
 
 }
