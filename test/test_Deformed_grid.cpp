@@ -320,10 +320,9 @@ TEST_CASE("Deformed grid class")
 
   SECTION("Jacobian calculation")
   {
-    grid2.mesh_size = 1.;
     grid2.add_element({0, 0});
     grid2.add_element({1, 1});
-    grid2.get_vertex(3).pos = {0.8, 0.8, 0.};
+    grid2.get_vertex(3).pos = {0.8*0.2, 0.8*0.2, 0.};
     grid2.node_adjustments[12 + 6 + 1] = 0.1;
     grid2.calc_jacobian();
     REQUIRE(grid2.jacobian.size() == 2*4*9);
@@ -344,9 +343,8 @@ TEST_CASE("Deformed grid class")
     REQUIRE(grid2.jacobian[4*9 + 2*9 + 5] == Approx(0.));
     REQUIRE(grid2.jacobian[4*9 + 3*9 + 5] == Approx(0.9));
 
-    grid3.mesh_size = 1.;
     grid3.add_element({0, 0, 0});
-    grid3.get_vertex(7).pos = {0.8, 0.8, 0.8};
+    grid3.get_vertex(7).pos = {0.8*0.2, 0.8*0.2, 0.8*0.2};
     grid3.calc_jacobian();
     REQUIRE(grid3.jacobian.size() == 9*27);
     REQUIRE(grid3.jacobian[0] == 1.);

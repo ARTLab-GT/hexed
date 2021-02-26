@@ -187,7 +187,7 @@ void Deformed_grid::calc_jacobian()
             for (int i_qpoint = 0; i_qpoint < basis.rank; ++i_qpoint)
             {
               jacobian[((i_elem*n_dim + j_dim)*n_dim + i_dim)*n_qpoint
-                       + row_start + i_qpoint*stride] = row_jacobian(i_qpoint);
+                       + row_start + i_qpoint*stride] = row_jacobian(i_qpoint)/mesh_size;
             }
           }
         }
