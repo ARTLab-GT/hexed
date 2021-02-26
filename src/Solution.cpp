@@ -25,15 +25,10 @@ Grid& Solution::get_grid(int order_added)
 void Solution::visualize(std::string file_prefix)
 {
   char buffer [100];
-  for (Grid& grid : grids)
+  for (Grid* grid : all_grids())
   {
-    snprintf(buffer, 100, "%s_%.2e_%.2e", file_prefix.c_str(), grid.mesh_size, grid.time);
-    grid.visualize(std::string(buffer));
-  }
-  for (Grid& grid : def_grids)
-  {
-    snprintf(buffer, 100, "%s_%.2e_%.2e", file_prefix.c_str(), grid.mesh_size, grid.time);
-    grid.visualize(std::string(buffer));
+    snprintf(buffer, 100, "%s_%.2e_%.2e", file_prefix.c_str(), grid->mesh_size, grid->time);
+    grid->visualize(std::string(buffer));
   }
 }
 
@@ -51,9 +46,9 @@ std::vector<double> Solution::integral(Domain_func& integrand)
   else
   {
     std::vector<double> total;
-    for (Grid& grid : grids)
+    for (Grid* grid : all_grids()) // FIXME: incorporate jacobian
     {
-      auto grid_integral = grid.integral(integrand);
+      auto grid_integral = grid->integral(integrand);
       int size = grid_integral.size();
       if (int(total.size()) < size)
       {
@@ -68,19 +63,19 @@ std::vector<double> Solution::integral(Domain_func& integrand)
   }
 }
 
-  std::vector<Grid*> Solution::all_grids()
+std::vector<Grid*> Solution::all_grids()
+{
+  std::vector<Grid*> all;
+  for (Grid& g : grids)
   {
-    std::vector<Grid*> all;
-    for (Grid& g : grids)
-    {
-      all.push_back(&g);
-    }
-    for (Deformed_grid& g : def_grids)
-    {
-      all.push_back(&g);
-    }
-    return all;
+    all.push_back(&g);
   }
+  for (Deformed_grid& g : def_grids)
+  {
+    all.push_back(&g);
+  }
+  return all;
+}
 
 double Solution::update(double cfl_by_stable_cfl)
 {

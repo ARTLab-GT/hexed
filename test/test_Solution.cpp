@@ -114,7 +114,7 @@ TEST_CASE("Solution class")
 
 TEST_CASE("Integration of deformed elements")
 {
-  const int rank = std::max<unsigned>(5, MAX_BASIS_RANK);
+  const int rank = MAX_BASIS_RANK;
   cartdg::Solution sol (4, 2, rank, 1.);
   sol.add_deformed_grid(1);
   cartdg::Deformed_grid& def_grid = sol.def_grids[0];
@@ -125,8 +125,30 @@ TEST_CASE("Integration of deformed elements")
       def_grid.add_element({i, j});
     }
   }
+
+  def_grid.get_vertex(0).pos = {0., -0.5, 0.};
+  def_grid.get_vertex(1).pos = {0.1, 0.1, 0.};
+  def_grid.get_vertex(2).pos = {-0.5, -0.5, 0.};
+  def_grid.get_vertex(3).pos = {-0.5, 0., 0.};
+
+  def_grid.get_vertex(4).pos = {-0.5, 0., 0.};
+  def_grid.get_vertex(5).pos = {0.1, 0.1, 0.};
+  def_grid.get_vertex(6).pos = {-0.5, 0.5, 0.};
+  def_grid.get_vertex(7).pos = {0., 0.5, 0.};
+
+  def_grid.get_vertex(9).pos = {0.1, 0.1, 0.};
+  def_grid.get_vertex(12).pos = {0.1, 0.1, 0.};
+
   def_grid.calc_jacobian();
-  cartdg::Isentropic_vortex init ({10., 0., 1.225, 2e5});
+  cartdg::Isentropic_vortex init ({100., 0., 1.225, 2e5});
+  init.argmax_radius = 0.1;
+  init.max_nondim_veloc = 0.3;
   sol.initialize(init);
-  sol.visualize("deformed_integration");
+  auto file_name = "deformed_integration";
+  sol.visualize(file_name);
+  for (int i = 0; i < 10; ++i)
+  {
+    sol.update();
+    sol.visualize(file_name);
+  }
 }
