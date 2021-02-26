@@ -31,11 +31,13 @@ solution = Auto_file("Solution")
 solution.include = """
 #include <Solution.hpp>
 #include <kernels/local/cpg_euler_matrix.hpp>
+#include <kernels/local/cpg_euler_deformed.hpp>
 #include <kernels/neighbor/cpg_euler_copy.hpp>
 #include <kernels/neighbor/cpg_euler_fbc.hpp>
 #include <kernels/max_char_speed/cpg_euler_max.hpp>
 """
-solution.templates = {"local":"cpg_euler_matrix", "neighbor":"cpg_euler_copy",
+solution.templates = {"local":"cpg_euler_matrix", "local_deformed":"cpg_euler_deformed",
+                      "neighbor":"cpg_euler_copy",
                       "fbc":"cpg_euler_fbc", "max_char_speed":"cpg_euler_max"}
 
 for auto_file in [solution]:

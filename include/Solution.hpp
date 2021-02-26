@@ -48,6 +48,7 @@ class Solution
   double refined_mesh_size(int ref_level);
 
   virtual Local_kernel get_local_kernel();
+  virtual Local_deformed_kernel get_local_deformed_kernel();
   virtual Neighbor_kernel get_neighbor_kernel();
   virtual Max_char_speed_kernel get_max_char_speed_kernel();
   virtual Fbc_kernel get_fbc_kernel();

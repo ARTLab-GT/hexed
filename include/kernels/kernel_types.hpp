@@ -14,6 +14,8 @@ typedef void (*Neighbor_kernel)(double***, double***, int*, const Eigen::VectorX
 typedef void (*Fbc_kernel)(std::vector<Fitted_boundary_condition*>&, double*, double*,
                            double, Kernel_settings&);
 typedef double (*Max_char_speed_kernel)(double*, int, Kernel_settings&);
+typedef void (*Local_deformed_kernel)(double*, double*, double*, int,
+                                      const Eigen::MatrixXd&, Kernel_settings&);
 
 }
 #endif
