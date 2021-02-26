@@ -112,7 +112,7 @@ double Solution::update(double cfl_by_stable_cfl)
       local_deformed(g.state_r(), g.state_w(), g.jacobian.data(), g.n_elem,
                      g.basis.diff_mat(), kernel_settings);
       neighbor_deformed(g.state_connections_r(), g.state_connections_w(), g.jacobian_neighbors.data(),
-                        g.neighbor_axes.data(), g.neighbor_is_positive.data(), g.neighbor_axes.size()/2, g.basis.node_weights(), kernel_settings);
+                        g.neighbor_axes.data(), g.neighbor_is_positive.data(), g.neighbor_storage[0].size()/2, g.basis.node_weights(), kernel_settings);
       {
         auto weights = g.basis.node_weights();
         fbc(g.fit_bound_conds, g.state_r(), g.state_w(), weights(0), kernel_settings);
@@ -220,9 +220,9 @@ void Solution::auto_connect()
 
 void Solution::clear_neighbors()
 {
-  for (Grid* grid : all_grids())
+  for (Grid& grid : grids)
   {
-    grid->clear_neighbors();
+    grid.clear_neighbors();
   }
 }
 
