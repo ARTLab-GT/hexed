@@ -30,6 +30,7 @@ class Solution
   void visualize(std::string file_prefix);
   std::vector<double> integral();
   std::vector<double> integral(Domain_func& integrand);
+  std::vector<Grid*> all_grids();
 
   // functions that modify the state data
   double update(double cfl_by_stable_cfl=0.7);

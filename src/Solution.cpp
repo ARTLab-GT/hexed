@@ -68,22 +68,37 @@ std::vector<double> Solution::integral(Domain_func& integrand)
   }
 }
 
+  std::vector<Grid*> Solution::all_grids()
+  {
+    std::vector<Grid*> all;
+    for (Grid& g : grids)
+    {
+      all.push_back(&g);
+    }
+    for (Deformed_grid& g : def_grids)
+    {
+      all.push_back(&g);
+    }
+    return all;
+  }
+
 double Solution::update(double cfl_by_stable_cfl)
 {
   Local_kernel local = get_local_kernel();
+  Local_deformed_kernel local_deformed = get_local_deformed_kernel();
   Neighbor_kernel neighbor = get_neighbor_kernel();
   Max_char_speed_kernel max_char_speed = get_max_char_speed_kernel();
   Fbc_kernel fbc = get_fbc_kernel();
   double dt = std::numeric_limits<double>::max();
-  for (Grid& g : grids)
+  for (Grid* g : all_grids()) // FIXME: incorporate jacobian
   {
-    double cfl = cfl_by_stable_cfl*g.get_stable_cfl();
-    dt = std::min<double>(dt, cfl*g.mesh_size/max_char_speed(g.state_r(), g.n_elem,
-                                                             kernel_settings));
+    double cfl = cfl_by_stable_cfl*g->get_stable_cfl();
+    dt = std::min<double>(dt, cfl*g->mesh_size/max_char_speed(g->state_r(), g->n_elem,
+                                                              kernel_settings));
   }
-  for (Grid& g : grids)
+  for (int i_rk = 0; i_rk < 3; ++i_rk)
   {
-    do
+    for (Grid& g : grids)
     {
       kernel_settings.d_t_by_d_pos = dt/g.mesh_size;
       local(g.state_r(), g.state_w(), g.n_elem, g.basis.diff_mat(), kernel_settings);
@@ -93,33 +108,47 @@ double Solution::update(double cfl_by_stable_cfl)
         auto weights = g.basis.node_weights();
         fbc(g.fit_bound_conds, g.state_r(), g.state_w(), weights(0), kernel_settings);
       }
+      g.execute_runge_kutta_stage();
     }
-    while (!g.execute_runge_kutta_stage());
-    g.time += dt;
+    for (Deformed_grid& g : def_grids)
+    {
+      kernel_settings.d_t_by_d_pos = dt/g.mesh_size;
+      local_deformed(g.state_r(), g.state_w(), g.jacobian.data(), g.n_elem,
+                     g.basis.diff_mat(), kernel_settings);
+      {
+        auto weights = g.basis.node_weights();
+        fbc(g.fit_bound_conds, g.state_r(), g.state_w(), weights(0), kernel_settings);
+      }
+      g.execute_runge_kutta_stage();
+    }
+  }
+  for (Grid* g : all_grids())
+  {
+    g->time += dt;
   }
   return dt;
 }
 
 void Solution::initialize(Spacetime_func& init_cond)
 {
-  for (Grid& g : grids)
+  for (Grid* g : all_grids())
   {
-    double* state = g.state_r();
-    for (int i_elem = 0; i_elem < g.n_elem; ++i_elem)
+    double* state = g->state_r();
+    for (int i_elem = 0; i_elem < g->n_elem; ++i_elem)
     {
-      std::vector<double> pos = g.get_pos(i_elem);
-      for (int i_qpoint = 0; i_qpoint < g.n_qpoint; ++i_qpoint)
+      std::vector<double> pos = g->get_pos(i_elem);
+      for (int i_qpoint = 0; i_qpoint < g->n_qpoint; ++i_qpoint)
       {
         std::vector<double> qpoint_pos;
-        for (int i_dim = 0; i_dim < g.n_dim; ++i_dim)
+        for (int i_dim = 0; i_dim < g->n_dim; ++i_dim)
         {
-          qpoint_pos.push_back(pos[i_qpoint + i_dim*g.n_qpoint]);
+          qpoint_pos.push_back(pos[i_qpoint + i_dim*g->n_qpoint]);
         }
-        auto qpoint_state = init_cond(qpoint_pos, g.time);
-        int qpoint_ind = i_elem*g.n_dof + i_qpoint;
-        for (int i_var = 0; i_var < g.n_var; ++i_var)
+        auto qpoint_state = init_cond(qpoint_pos, g->time);
+        int qpoint_ind = i_elem*g->n_dof + i_qpoint;
+        for (int i_var = 0; i_var < g->n_var; ++i_var)
         {
-          state[qpoint_ind + i_var*g.n_qpoint] = qpoint_state[i_var];
+          state[qpoint_ind + i_var*g->n_qpoint] = qpoint_state[i_var];
         }
       }
     }
@@ -193,9 +222,9 @@ void Solution::auto_connect()
 
 void Solution::clear_neighbors()
 {
-  for (Grid& grid : grids)
+  for (Grid* grid : all_grids())
   {
-    grid.clear_neighbors();
+    grid->clear_neighbors();
   }
 }
 

@@ -1,6 +1,7 @@
 #include <catch.hpp>
 
 #include <Solution.hpp>
+#include <cartdgConfig.hpp>
 
 class Test_func : public cartdg::Spacetime_func
 {
@@ -31,6 +32,13 @@ TEST_CASE("Solution class")
   sol.add_empty_grid(1);
   sol.add_block_grid(1, lc, uc);
   sol.add_block_grid(2);
+
+  SECTION("all_grids")
+  {
+    REQUIRE(sol.all_grids().size() == 3);
+    sol.add_deformed_grid(1);
+    REQUIRE(sol.all_grids().size() == 4);
+  }
 
   SECTION("add_block_grid creates correct grid")
   {
@@ -102,4 +110,23 @@ TEST_CASE("Solution class")
     empty.initialize(init);
     empty.integral();
   }
+}
+
+TEST_CASE("Integration of deformed elements")
+{
+  const int rank = std::max<unsigned>(5, MAX_BASIS_RANK);
+  cartdg::Solution sol (4, 2, rank, 1.);
+  sol.add_deformed_grid(1);
+  cartdg::Deformed_grid& def_grid = sol.def_grids[0];
+  for (int i : {-1, 0})
+  {
+    for (int j : {-1, 0})
+    {
+      def_grid.add_element({i, j});
+    }
+  }
+  def_grid.calc_jacobian();
+  cartdg::Isentropic_vortex init ({10., 0., 1.225, 2e5});
+  sol.initialize(init);
+  sol.visualize("deformed_integration");
 }
