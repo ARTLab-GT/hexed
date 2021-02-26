@@ -79,11 +79,12 @@ std::vector<Grid*> Solution::all_grids()
 
 double Solution::update(double cfl_by_stable_cfl)
 {
-  Local_kernel local = get_local_kernel();
-  Local_deformed_kernel local_deformed = get_local_deformed_kernel();
-  Neighbor_kernel neighbor = get_neighbor_kernel();
-  Max_char_speed_kernel max_char_speed = get_max_char_speed_kernel();
-  Fbc_kernel fbc = get_fbc_kernel();
+  auto local = get_local_kernel();
+  auto local_deformed = get_local_deformed_kernel();
+  auto neighbor = get_neighbor_kernel();
+  auto neighbor_deformed = get_neighbor_deformed_kernel();
+  auto max_char_speed = get_max_char_speed_kernel();
+  auto fbc = get_fbc_kernel();
   double dt = std::numeric_limits<double>::max();
   for (Grid* g : all_grids()) // FIXME: incorporate jacobian
   {
@@ -110,6 +111,8 @@ double Solution::update(double cfl_by_stable_cfl)
       kernel_settings.d_t_by_d_pos = dt/g.mesh_size;
       local_deformed(g.state_r(), g.state_w(), g.jacobian.data(), g.n_elem,
                      g.basis.diff_mat(), kernel_settings);
+      neighbor_deformed(g.state_connections_r(), g.state_connections_w(), g.jacobian_neighbors.data(),
+                        g.neighbor_axes.data(), g.neighbor_is_positive.data(), g.neighbor_is_deformed.data(), g.neighbor_axes.size()/2, g.basis.node_weights(), kernel_settings);
       {
         auto weights = g.basis.node_weights();
         fbc(g.fit_bound_conds, g.state_r(), g.state_w(), weights(0), kernel_settings);

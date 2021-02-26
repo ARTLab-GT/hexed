@@ -17,8 +17,8 @@ class Deformed_grid : public Grid
   std::vector<int> neighbor_inds;
   std::vector<double*> jacobian_neighbors;
   std::vector<int> neighbor_axes;
-  std::vector<bool> neighbor_is_positive;
-  std::vector<bool> neighbor_is_deformed;
+  std::vector<int> neighbor_is_positive;
+  std::vector<int> neighbor_is_deformed;
   int n_vertices;
 
   Deformed_grid(int n_var_arg, int n_dim_arg, int n_elem_arg, double mesh_size_arg,

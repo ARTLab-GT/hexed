@@ -217,4 +217,14 @@ void Deformed_grid::calc_jacobian()
   }
 }
 
+double** Deformed_grid::state_connections_r()
+{
+  return neighbor_storage[i_read].data();
+}
+
+double** Deformed_grid::state_connections_w()
+{
+  return neighbor_storage[i_write].data();
+}
+
 }

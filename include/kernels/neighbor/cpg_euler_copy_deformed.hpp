@@ -11,8 +11,8 @@ namespace cartdg
 
 template<int n_var, int n_qpoint, int row_size>
 void cpg_euler_copy_deformed(double** connections_r, double** connections_w,
-                             double** jacobian, int* i_axis, bool* is_positive_face,
-                             bool* is_deformed, int n_connections,
+                             double** jacobian, int* i_axis, int* is_positive_face,
+                             int* is_deformed, int n_connections,
                              const Eigen::VectorXd weights_1d, Kernel_settings& settings)
 {
   const int n_face_qpoint = n_qpoint/row_size;
@@ -36,12 +36,37 @@ void cpg_euler_copy_deformed(double** connections_r, double** connections_w,
       int i_axis_side = i_axis[2*i_con + i_side];
       int stride = n_face_qpoint;
       for (int i = 0; i < i_axis_side; ++i) stride /= row_size;
-      bool is_positive = is_positive_face[2*i_con + i_side];
+      bool is_positive = is_positive_face[2*i_con + i_side] == 1;
       read_copy<n_var, n_qpoint, row_size>(connect[i_side], face_r + i_side*face_size, stride, is_positive);
       read_copy<n_dim*n_dim, n_qpoint, row_size>(jacobian[2*i_con + i_side], face_jacobian + i_side*jac_size, stride, is_positive);
     }
 
-    cpg_euler_hll_deformed<n_var - 2, n_face_qpoint>(face_r, face_w, face_jacobian, mult, {i_axis[2*i_con], i_axis[2*i_con+ 1]}, {0, 0}, heat_rat);
+    if ((is_positive_face[2*i_con] != is_positive_face[2*i_con + 1]) && (i_axis[2*i_con] != i_axis[2*i_con + 1]))
+    {
+      if (n_dim == 3)
+      {}
+      else
+      {
+        Eigen::Map<Eigen::Matrix<double, row_size, n_var>> face_state (face_r);
+        face_state.colwise().reverseInPlace();
+        Eigen::Map<Eigen::Matrix<double, row_size, n_dim*n_dim>> face_jac (face_jacobian);
+        face_jac.colwise().reverseInPlace();
+      }
+    }
+
+    bool flip [] {is_positive_face[2*i_con] == 0, is_positive_face[2*i_con + 1] == 1};
+    cpg_euler_hll_deformed<n_var - 2, n_face_qpoint>(face_r, face_w, face_jacobian, mult, i_axis + 2*i_con, flip, heat_rat);
+
+    if ((is_positive_face[2*i_con] != is_positive_face[2*i_con + 1]) && (i_axis[2*i_con] != i_axis[2*i_con + 1]))
+    {
+      if (n_dim == 3)
+      {}
+      else
+      {
+        Eigen::Map<Eigen::Matrix<double, row_size, n_var>> face_state (face_w);
+        face_state.colwise().reverseInPlace();
+      }
+    }
 
     connect = connections_w + 2*i_con;
 
