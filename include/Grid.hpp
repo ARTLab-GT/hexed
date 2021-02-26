@@ -22,6 +22,8 @@ class Grid
   int n_qpoint;
   int n_dof;
   int n_elem;
+  std::array<std::vector<double>, 3> state_storage {};
+  std::vector<std::vector<double*>> neighbor_storage;
   std::vector<int> pos;
   double mesh_size;
   Basis& basis;
@@ -63,8 +65,6 @@ class Grid
   int i_read;
   int i_write;
   double rk_weights [3] {1., 1./4., 2./3.};
-  std::array<std::vector<double>, 3> state_storage {};
-  std::vector<std::vector<double*>> neighbor_storage;
   double stable_cfl [9] {1.256, 0.409, 0.209, 0.130, 0.089, 0.066, 0.051, 0.040, 0.033};
 
   private:

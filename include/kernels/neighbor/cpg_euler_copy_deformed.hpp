@@ -12,7 +12,7 @@ namespace cartdg
 template<int n_var, int n_qpoint, int row_size>
 void cpg_euler_copy_deformed(double** connections_r, double** connections_w,
                              double** jacobian, int* i_axis, int* is_positive_face,
-                             int* is_deformed, int n_connections,
+                             int n_connections,
                              const Eigen::VectorXd weights_1d, Kernel_settings& settings)
 {
   const int n_face_qpoint = n_qpoint/row_size;

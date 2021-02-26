@@ -15,6 +15,16 @@ Deformed_grid::Deformed_grid(int n_var_arg, int n_dim_arg, int n_elem_arg,
   n_vertices = 1;
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) n_vertices *= 2;
   neighbor_storage.resize(3);
+
+  default_jacobian.clear();
+  default_jacobian.resize(n_dim*n_dim*n_qpoint, 0.);
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+  {
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
+    {
+      default_jacobian[i_dim*(n_dim + 1)*n_qpoint + i_qpoint] = 1.;
+    }
+  }
 }
 
 Vertex& Deformed_grid::get_vertex(int i_vertex)
@@ -160,7 +170,6 @@ void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_axis
     neighbor_inds.push_back(i_elem[i_side]);
     neighbor_axes.push_back(i_axis[i_side]);
     neighbor_is_positive.push_back(is_positive[i_side]);
-    neighbor_is_deformed.push_back(true);
   }
 }
 
@@ -175,6 +184,24 @@ void Deformed_grid::update_connections()
       neighbor_storage[i_stage].push_back(state_data + n_dof*i_elem);
     }
   }
+}
+
+void Deformed_grid::connect_non_def(std::array<int, 2> i_elem, std::array<int, 2> i_axis,
+                                    std::array<bool, 2> is_positive, Grid& other_grid)
+{
+  for (int i_stage = 0; i_stage < 3; ++i_stage)
+  {
+    neighbor_storage[i_stage].push_back(state_storage[i_stage].data() + n_dof*i_elem[0]);
+    neighbor_storage[i_stage].push_back(other_grid.state_storage[i_stage].data()
+                                        + other_grid.n_dof*i_elem[1]);
+  }
+  for (int i_side : {0, 1})
+  {
+    neighbor_axes.push_back(i_axis[i_side]);
+    neighbor_is_positive.push_back(int(is_positive[i_side]));
+  }
+  jacobian_neighbors.push_back(jacobian.data() + i_elem[0]*n_dim*n_dim*n_qpoint);
+  jacobian_neighbors.push_back(default_jacobian.data());
 }
 
 void Deformed_grid::visualize(std::string file_name)

@@ -116,6 +116,8 @@ TEST_CASE("Integration of deformed elements")
 {
   const int rank = MAX_BASIS_RANK;
   cartdg::Solution sol (4, 2, rank, 1.);
+  sol.add_empty_grid(1);
+  cartdg::Grid& grid = sol.grids[0];
   sol.add_deformed_grid(1);
   cartdg::Deformed_grid& def_grid = sol.def_grids[0];
   for (int i : {-1, 0})
@@ -125,6 +127,12 @@ TEST_CASE("Integration of deformed elements")
       def_grid.add_element({i, j});
     }
   }
+  grid.add_element({1, -1});
+  grid.add_element({1, 0});
+  grid.add_element({1, 1});
+  grid.add_element({0, 1});
+  grid.add_element({-1, 1});
+  grid.auto_connect({3, 3});
 
   def_grid.get_vertex(0).pos = {-0.5, -0.5, 0.};
   def_grid.get_vertex(1).pos = {-0.5, 0., 0.};
@@ -143,9 +151,17 @@ TEST_CASE("Integration of deformed elements")
   def_grid.connect({2, 3}, {1, 1}, {1, 0});
   def_grid.connect({0, 2}, {0, 0}, {1, 0});
   def_grid.connect({1, 3}, {1, 0}, {1, 0});
-
   def_grid.calc_jacobian();
   def_grid.update_connections();
+  def_grid.connect_non_def({2, 0}, {0, 0}, {1, 0}, grid);
+  def_grid.connect_non_def({3, 1}, {0, 0}, {1, 0}, grid);
+  def_grid.connect_non_def({3, 3}, {1, 1}, {1, 0}, grid);
+  def_grid.connect_non_def({1, 4}, {0, 1}, {0, 0}, grid);
+  def_grid.connect_non_def({0, 0}, {0, 0}, {0, 1}, grid);
+  def_grid.connect_non_def({1, 1}, {1, 0}, {0, 1}, grid);
+  def_grid.connect_non_def({0, 4}, {1, 1}, {0, 1}, grid);
+  def_grid.connect_non_def({2, 3}, {1, 1}, {0, 1}, grid);
+
   cartdg::Isentropic_vortex init ({100., 0., 1.225, 2e5});
   init.argmax_radius = 0.1;
   init.max_nondim_veloc = 0.3;
@@ -154,7 +170,10 @@ TEST_CASE("Integration of deformed elements")
   sol.visualize(file_name);
   for (int i = 0; i < 10; ++i)
   {
-    sol.update();
+    for (int j = 0; j < 20; ++j)
+    {
+      sol.update(0.5);
+    }
     sol.visualize(file_name);
   }
 }
