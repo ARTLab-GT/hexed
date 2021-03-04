@@ -13,6 +13,7 @@ test_Solution.cpp
 test_func.cpp
 test_Deformed_grid.cpp
 test_Vertex.cpp
-test_Ghost_boundary_condition
+test_Ghost_boundary_condition.cpp
+test_flux_bc.cpp
 )
 target_link_libraries(test PRIVATE cartdg tecio Catch2::Catch2)
