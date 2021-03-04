@@ -1,5 +1,6 @@
 #include <catch.hpp>
 
+#include <cartdgConfig.hpp>
 #include <Solution.hpp>
 #include <kernels/neighbor/cpg_euler_gbc.hpp>
 
