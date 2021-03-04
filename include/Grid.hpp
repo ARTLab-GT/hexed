@@ -7,7 +7,7 @@
 #include <Eigen/Dense>
 
 #include "Basis.hpp"
-#include "Fitted_boundary_condition.hpp"
+#include "Ghost_boundary_condition.hpp"
 #include "kernels/kernel_types.hpp"
 #include "Domain_func.hpp"
 
@@ -30,7 +30,7 @@ class Grid
   int iter;
   double time;
   std::vector<double> origin;
-  std::vector<Fitted_boundary_condition*> fit_bound_conds;
+  std::vector<Ghost_boundary_condition*> ghost_bound_conds;
 
   Grid(int n_var_arg, int n_dim_arg, int n_elem_arg, double mesh_size_arg, Basis& basis_arg);
   virtual ~Grid();

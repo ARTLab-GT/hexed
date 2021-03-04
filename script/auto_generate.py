@@ -34,12 +34,12 @@ solution.include = """
 #include <kernels/local/cpg_euler_deformed.hpp>
 #include <kernels/neighbor/cpg_euler_copy.hpp>
 #include <kernels/neighbor/cpg_euler_copy_deformed.hpp>
-#include <kernels/neighbor/cpg_euler_fbc.hpp>
+#include <kernels/neighbor/cpg_euler_gbc.hpp>
 #include <kernels/max_char_speed/cpg_euler_max.hpp>
 """
 solution.templates = {"local":"cpg_euler_matrix", "local_deformed":"cpg_euler_deformed",
                       "neighbor":"cpg_euler_copy", "neighbor_deformed":"cpg_euler_copy_deformed",
-                      "fbc":"cpg_euler_fbc", "max_char_speed":"cpg_euler_max"}
+                      "gbc":"cpg_euler_gbc", "max_char_speed":"cpg_euler_max"}
 
 for auto_file in [solution]:
     text = ""

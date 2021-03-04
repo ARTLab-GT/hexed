@@ -1,24 +1,24 @@
-#ifndef CPG_EULER_FBC_HPP_
-#define CPG_EULER_FBC_HPP_
+#ifndef CPG_EULER_GBC_HPP_
+#define CPG_EULER_GBC_HPP_
 
 #include "cpg_euler_hll.hpp"
 #include "read_copy.hpp"
 #include "write_copy.hpp"
 #include "../Kernel_settings.hpp"
-#include "../../Fitted_boundary_condition.hpp"
+#include "../../Ghost_boundary_condition.hpp"
 
 namespace cartdg
 {
 
 template <int n_var, int n_qpoint, int row_size>
-void cpg_euler_fbc(std::vector<Fitted_boundary_condition*>& fit_bound_conds,
+void cpg_euler_gbc(std::vector<Ghost_boundary_condition*>& ghost_bound_conds,
                    double* read, double* write,
                    double weight,
                    Kernel_settings& settings)
 {
   const int n_dof = n_var*n_qpoint;
 
-  for (Fitted_boundary_condition* fbc : fit_bound_conds)
+  for (Ghost_boundary_condition* fbc : ghost_bound_conds)
   {
     for (int i_elem : fbc->elems)
     {

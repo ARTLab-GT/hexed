@@ -4,7 +4,7 @@ Equidistant.cpp
 Grid.cpp
 Grid__visualize.cpp
 Solution.cpp
-Fitted_boundary_condition.cpp
+Ghost_boundary_condition.cpp
 Domain_func.cpp
 Spacetime_func.cpp
 Kernel_settings.cpp

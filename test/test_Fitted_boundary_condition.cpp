@@ -1,15 +1,15 @@
 #include <catch.hpp>
 
 #include <Solution.hpp>
-#include <kernels/neighbor/cpg_euler_fbc.hpp>
+#include <kernels/neighbor/cpg_euler_gbc.hpp>
 
-class Supersonic_inlet : public cartdg::Fitted_boundary_condition
+class Supersonic_inlet : public cartdg::Ghost_boundary_condition
 {
   public:
   int n_dim;
 
   Supersonic_inlet(cartdg::Grid& grid, int i_dim_arg, bool is_positive_face_arg)
-  : cartdg::Fitted_boundary_condition(grid, i_dim_arg, is_positive_face_arg), n_dim(grid.n_dim)
+  : cartdg::Ghost_boundary_condition(grid, i_dim_arg, is_positive_face_arg), n_dim(grid.n_dim)
   {}
     
 
@@ -53,9 +53,9 @@ TEST_CASE("Fitted boundary conditions")
   SECTION("Axis 0")
   {
     Supersonic_inlet bc0 (grid, 0, false);
-    grid.fit_bound_conds.push_back(&bc0);
+    grid.ghost_bound_conds.push_back(&bc0);
     Supersonic_inlet bc1 (grid, 0, true);
-    grid.fit_bound_conds.push_back(&bc1);
+    grid.ghost_bound_conds.push_back(&bc1);
     for (int j = 0; j < 3; ++j)
     {
       for (int k = 0; k < 3; ++k)
@@ -86,8 +86,8 @@ TEST_CASE("Fitted boundary conditions")
       }
     }
     auto weights = soln.basis.node_weights();
-    cartdg::cpg_euler_fbc<5, MAX_BASIS_RANK*MAX_BASIS_RANK*MAX_BASIS_RANK, MAX_BASIS_RANK>
-                         (grid.fit_bound_conds, grid.state_r(), grid.state_w(),
+    cartdg::cpg_euler_gbc<5, MAX_BASIS_RANK*MAX_BASIS_RANK*MAX_BASIS_RANK, MAX_BASIS_RANK>
+                         (grid.ghost_bound_conds, grid.state_r(), grid.state_w(),
                          weights[0], soln.kernel_settings);
     for (int i_elem = 0; i_elem < 27; ++i_elem)
     {
@@ -111,7 +111,7 @@ TEST_CASE("Fitted boundary conditions")
   SECTION("Axis 1")
   {
     Supersonic_inlet bc1 (grid, 1, true);
-    grid.fit_bound_conds.push_back(&bc1);
+    grid.ghost_bound_conds.push_back(&bc1);
     for (int i = 0; i < 3; ++i)
     {
       for (int k = 0; k < 3; ++k)
@@ -139,8 +139,8 @@ TEST_CASE("Fitted boundary conditions")
       }
     }
     auto weights = soln.basis.node_weights();
-    cartdg::cpg_euler_fbc<5, MAX_BASIS_RANK*MAX_BASIS_RANK*MAX_BASIS_RANK, MAX_BASIS_RANK>
-                         (grid.fit_bound_conds, grid.state_r(), grid.state_w(),
+    cartdg::cpg_euler_gbc<5, MAX_BASIS_RANK*MAX_BASIS_RANK*MAX_BASIS_RANK, MAX_BASIS_RANK>
+                         (grid.ghost_bound_conds, grid.state_r(), grid.state_w(),
                          weights[0], soln.kernel_settings);
     for (int i_elem = 0; i_elem < 27; ++i_elem)
     {
@@ -165,7 +165,7 @@ TEST_CASE("Fitted boundary conditions")
   SECTION("Axis 2")
   {
     Supersonic_inlet bc0 (grid, 2, false);
-    grid.fit_bound_conds.push_back(&bc0);
+    grid.ghost_bound_conds.push_back(&bc0);
     bc0.elems.push_back(3);
     for (int i_elem = 0; i_elem < 27; ++i_elem)
     {
@@ -184,8 +184,8 @@ TEST_CASE("Fitted boundary conditions")
       }
     }
     auto weights = soln.basis.node_weights();
-    cartdg::cpg_euler_fbc<5, MAX_BASIS_RANK*MAX_BASIS_RANK*MAX_BASIS_RANK, MAX_BASIS_RANK>
-                         (grid.fit_bound_conds, grid.state_r(), grid.state_w(),
+    cartdg::cpg_euler_gbc<5, MAX_BASIS_RANK*MAX_BASIS_RANK*MAX_BASIS_RANK, MAX_BASIS_RANK>
+                         (grid.ghost_bound_conds, grid.state_r(), grid.state_w(),
                           weights[0], soln.kernel_settings);
     for (int i_elem = 0; i_elem < 27; ++i_elem)
     {

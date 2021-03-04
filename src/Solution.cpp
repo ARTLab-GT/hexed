@@ -84,7 +84,7 @@ double Solution::update(double cfl_by_stable_cfl)
   auto neighbor = get_neighbor_kernel();
   auto neighbor_deformed = get_neighbor_deformed_kernel();
   auto max_char_speed = get_max_char_speed_kernel();
-  auto fbc = get_fbc_kernel();
+  auto fbc = get_gbc_kernel();
   double dt = std::numeric_limits<double>::max();
   for (Grid* g : all_grids()) // FIXME: incorporate jacobian
   {
@@ -102,7 +102,7 @@ double Solution::update(double cfl_by_stable_cfl)
                g.n_neighb_con().data(), g.basis.node_weights(), kernel_settings);
       {
         auto weights = g.basis.node_weights();
-        fbc(g.fit_bound_conds, g.state_r(), g.state_w(), weights(0), kernel_settings);
+        fbc(g.ghost_bound_conds, g.state_r(), g.state_w(), weights(0), kernel_settings);
       }
       g.execute_runge_kutta_stage();
     }
@@ -115,7 +115,7 @@ double Solution::update(double cfl_by_stable_cfl)
                         g.neighbor_axes.data(), g.neighbor_is_positive.data(), g.neighbor_storage[0].size()/2, g.basis.node_weights(), kernel_settings);
       {
         auto weights = g.basis.node_weights();
-        fbc(g.fit_bound_conds, g.state_r(), g.state_w(), weights(0), kernel_settings);
+        fbc(g.ghost_bound_conds, g.state_r(), g.state_w(), weights(0), kernel_settings);
       }
       g.execute_runge_kutta_stage();
     }
