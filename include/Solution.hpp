@@ -52,6 +52,7 @@ class Solution
   virtual Local_deformed_kernel get_local_deformed_kernel();
   virtual Neighbor_kernel get_neighbor_kernel();
   virtual Neighbor_deformed_kernel get_neighbor_deformed_kernel();
+  virtual Nonpen_kernel get_nonpen_kernel();
   virtual Max_char_speed_kernel get_max_char_speed_kernel();
   virtual Gbc_kernel get_gbc_kernel();
 };

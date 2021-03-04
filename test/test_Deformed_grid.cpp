@@ -21,6 +21,9 @@ TEST_CASE("Deformed grid class")
       REQUIRE(grid.vertices.empty());
       REQUIRE(grid.vertex_ids.empty());
       REQUIRE(grid.node_adjustments.empty());
+      REQUIRE(grid.i_elem_wall.empty());
+      REQUIRE(grid.i_dim_wall.empty());
+      REQUIRE(grid.is_positive_wall.empty());
     }
     REQUIRE(grid2.n_vertices == 4);
     REQUIRE(grid3.n_vertices == 8);
@@ -354,4 +357,17 @@ TEST_CASE("Deformed grid class")
     REQUIRE(grid3.jacobian[7*27 + 26] == Approx(-0.2));
     REQUIRE(grid3.jacobian[8*27 + 26] == Approx(0.8));
   }
+
+  SECTION("Adding wall boundary conditions")
+  {
+    grid3.add_wall(1, 2, false);
+    grid3.add_wall(0, 0, true);
+    REQUIRE(grid3.i_elem_wall.size() == 2);
+    REQUIRE(grid3.i_dim_wall.size() == 2);
+    REQUIRE(grid3.is_positive_wall.size() == 2);
+    REQUIRE(grid3.i_elem_wall[0] == 1);
+    REQUIRE(grid3.i_dim_wall[1] == 0);
+    REQUIRE(grid3.is_positive_wall[1] == true);
+  }
+
 }

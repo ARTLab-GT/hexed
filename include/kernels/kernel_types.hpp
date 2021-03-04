@@ -13,6 +13,8 @@ typedef void (*Neighbor_kernel)(double***, double***, int*, const Eigen::VectorX
               Kernel_settings&);
 typedef void (*Gbc_kernel)(std::vector<Ghost_boundary_condition*>&, double*, double*,
                            double, Kernel_settings&);
+typedef void (*Nonpen_kernel)(double*, double*, double*, int*, int*, int*, int, double,
+                              Kernel_settings&);
 typedef double (*Max_char_speed_kernel)(double*, int, Kernel_settings&);
 typedef void (*Local_deformed_kernel)(double*, double*, double*, int,
                                       const Eigen::MatrixXd&, Kernel_settings&);

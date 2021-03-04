@@ -129,6 +129,13 @@ std::vector<double> Deformed_grid::get_pos(int i_elem)
   return warped_elem_pos;
 }
 
+void Deformed_grid::add_wall(int i_elem, int i_dim, bool is_positive_face)
+{
+  i_elem_wall.push_back(i_elem);
+  i_dim_wall.push_back(i_dim);
+  is_positive_wall.push_back((int)is_positive_face);
+}
+
 void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_axis,
                             std::array<bool, 2> is_positive)
 {
