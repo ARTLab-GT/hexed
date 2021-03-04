@@ -1,5 +1,5 @@
-#ifndef CARTDG_CPG_EULER_FBC_HPP_
-#define CARTDG_CPG_EULER_FBC_HPP_
+#ifndef CARTDG_CPG_EULER_NONPEN_HPP_
+#define CARTDG_CPG_EULER_NONPEN_HPP_
 
 #include "../Kernel_settings.hpp"
 #include "read_copy.hpp"
@@ -9,9 +9,9 @@ namespace cartdg
 {
 
 template <int n_var, int n_qpoint, int row_size>
-void cpg_euler_fbc(double* read, double* write, double* jacobian, int* i_elem,
-                   int* i_dim, int* is_positive_face, int n_bc, double weight,
-                   Kernel_settings& settings)
+void cpg_euler_nonpen(double* read, double* write, double* jacobian, int* i_elem,
+                      int* i_dim, int* is_positive_face, int n_bc, double weight,
+                      Kernel_settings& settings)
 {
   const int n_face_qpoint = n_qpoint/row_size;
   const int face_size = n_face_qpoint*n_var;

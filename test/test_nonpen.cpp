@@ -1,8 +1,8 @@
 #include <catch.hpp>
 
-#include <kernels/neighbor/cpg_euler_fbc.hpp>
+#include <kernels/neighbor/cpg_euler_nonpen.hpp>
 
-TEST_CASE("flux bc")
+TEST_CASE("non-penetration BC")
 {
   cartdg::Kernel_settings settings;
   settings.d_t_by_d_pos = 0.1;
@@ -38,8 +38,8 @@ TEST_CASE("flux bc")
     }
   }
 
-  cartdg::cpg_euler_fbc<5, 8, 2>(&read[0][0][0], &write[0][0][0], &jacobian[0][0][0][0],
-                                 i_elem, i_dim, is_positive, 2, 2., settings);
+  cartdg::cpg_euler_nonpen<5, 8, 2>(&read[0][0][0], &write[0][0][0], &jacobian[0][0][0][0],
+                                    i_elem, i_dim, is_positive, 2, 2., settings);
 
   for (int i_qpoint = 0; i_qpoint < 8; ++i_qpoint)
   {
