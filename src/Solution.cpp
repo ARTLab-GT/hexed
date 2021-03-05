@@ -83,6 +83,7 @@ double Solution::update(double cfl_by_stable_cfl)
   auto local_deformed = get_local_deformed_kernel();
   auto neighbor = get_neighbor_kernel();
   auto neighbor_deformed = get_neighbor_deformed_kernel();
+  auto nonpen = get_nonpen_kernel();
   auto max_char_speed = get_max_char_speed_kernel();
   auto fbc = get_gbc_kernel();
   double dt = std::numeric_limits<double>::max();
@@ -117,6 +118,7 @@ double Solution::update(double cfl_by_stable_cfl)
         auto weights = g.basis.node_weights();
         fbc(g.ghost_bound_conds, g.state_r(), g.state_w(), weights(0), kernel_settings);
       }
+      nonpen(g.state_r(), g.state_w(), g.jacobian.data(), g.i_elem_wall.data(), g.i_dim_wall.data(), g.is_positive_wall.data(), g.i_elem_wall.size(), g.basis.node_weights()(0), kernel_settings);
       g.execute_runge_kutta_stage();
     }
   }
