@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include <Vertex.hpp>
 #include <Deformed_grid.hpp>
 
@@ -8,6 +10,10 @@ Vertex::Vertex (int id_arg) : id(id_arg) {}
 
 void Vertex::eat(Vertex& other)
 {
+  if (parent_grid != other.parent_grid)
+  {
+    throw "Error: attempting to combine vertices from different grids.";
+  }
   if (other.id != id)
   {
     for (int i_dim = 0; i_dim < 3; ++i_dim)

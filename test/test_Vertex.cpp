@@ -59,6 +59,10 @@ TEST_CASE("Vertex")
     REQUIRE(vert1.pos[2] == Approx(5./3.));
     REQUIRE(vert1.mobile == true);
     REQUIRE(vert1.snap == true);
+
+    cartdg::Deformed_grid other_grid (1, 3, 0, 1., basis);
+    other_grid.add_element({0, 0, 0});
+    REQUIRE_THROWS(grid.get_vertex(0).eat(other_grid.get_vertex(0)));
   }
 
   SECTION("Smoothing")
