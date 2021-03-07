@@ -14,7 +14,7 @@ Grid& Solution::get_grid(int order_added)
 {
   if ((int)grids.size() <= order_added)
   {
-    throw "The requested Grid does not exist.";
+    throw std::runtime_error("The requested Grid does not exist.");
   }
   else
   {

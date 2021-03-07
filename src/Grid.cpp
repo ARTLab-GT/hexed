@@ -200,7 +200,7 @@ double Grid::get_stable_cfl()
   }
   else
   {
-    throw "Stable CFL number unknown for basis of desired rank.";
+    throw std::runtime_error("Stable CFL number unknown for basis of desired rank.");
   }
 }
 

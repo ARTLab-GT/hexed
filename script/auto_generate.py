@@ -70,7 +70,7 @@ for auto_file in [solution]:
     {0}_kernel {3}::get_{1}_kernel()
     {{
       if (n_dim <= {2}) return {1}_kernels[n_dim - 1][basis.rank - 1];
-      else throw "Kernel not available.";
+      else throw std::runtime_error("Kernel not available.");
     }}
     """.format(func_type, kernel_type, i_dim + 1, auto_file.name)
 
@@ -135,7 +135,7 @@ text += node_text + "\n};\n\n" + weight_text + "\n};\n\n" + diff_mat_text + "\n}
 conditional_block = """
   if (({} > rank) || (rank > {}))
   {{
-    throw "Not implemented for required rank.";
+    throw std::runtime_error("Not implemented for required rank.");
   }}""".format(min_rank, max_rank)
 
 text += """

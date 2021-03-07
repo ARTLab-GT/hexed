@@ -12,7 +12,7 @@ void Vertex::eat(Vertex& other)
 {
   if (parent_grid != other.parent_grid)
   {
-    throw "Error: attempting to combine vertices from different grids.";
+    throw std::runtime_error("Error: attempting to combine vertices from different grids.");
   }
   if (other.id != id)
   {

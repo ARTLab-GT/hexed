@@ -9,8 +9,7 @@ Deformed_grid::Deformed_grid(int n_var_arg, int n_dim_arg, int n_elem_arg,
 {
   if (n_elem_arg != 0)
   {
-    auto message = "Capability to construct Deformed_grid with multiple elements is not implemented";
-    throw message;
+    throw std::runtime_error("Capability to construct Deformed_grid with multiple elements is not implemented.");
   }
   n_vertices = 1;
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) n_vertices *= 2;
