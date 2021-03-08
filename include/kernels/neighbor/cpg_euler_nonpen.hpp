@@ -6,6 +6,7 @@
 #include "../Kernel_settings.hpp"
 #include "read_copy.hpp"
 #include "write_copy.hpp"
+#include "cpg_euler_hll_deformed.hpp"
 
 namespace cartdg
 {
@@ -24,14 +25,13 @@ void cpg_euler_nonpen(double* read, double* write, double* jacobian, int* i_elem
   {
     int stride = n_face_qpoint;
     for (int i = 0; i < i_dim[i_bc]; ++i) stride /= row_size;
-    int sign = 2*is_positive_face[i_bc] - 1;
     bool is_positive = is_positive_face[i_bc] == 1;
 
-    double face_r [n_var][n_face_qpoint];
-    double face_jacobian[n_dim][n_dim][n_face_qpoint];
-    double face_w [n_var][n_face_qpoint];
-    read_copy<n_var, n_qpoint, row_size>(read + n_var*n_qpoint*i_elem[i_bc], &face_r[0][0], stride, is_positive);
-    read_copy<n_dim*n_dim, n_qpoint, row_size>(jacobian + n_dim*n_dim*n_qpoint*i_elem[i_bc], &face_jacobian[0][0][0], stride, is_positive);
+    double face_r [2][n_var][n_face_qpoint];
+    double face_jacobian [2][n_dim][n_dim][n_face_qpoint];
+    double face_w [2][n_var][n_face_qpoint];
+    read_copy<n_var, n_qpoint, row_size>(read + n_var*n_qpoint*i_elem[i_bc], &face_r[0][0][0], stride, is_positive);
+    read_copy<n_dim*n_dim, n_qpoint, row_size>(jacobian + n_dim*n_dim*n_qpoint*i_elem[i_bc], &face_jacobian[0][0][0][0], stride, is_positive);
 
     for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++ i_qpoint)
     {
@@ -40,13 +40,13 @@ void cpg_euler_nonpen(double* read, double* write, double* jacobian, int* i_elem
       {
         for (int k_dim = 0; k_dim < n_dim; ++k_dim)
         {
-          jac_mat(j_dim, k_dim) = face_jacobian[j_dim][k_dim][i_qpoint];
+          jac_mat(j_dim, k_dim) = face_jacobian[0][j_dim][k_dim][i_qpoint];
         }
       }
-      double jac_det = jac_mat.determinant();
 
-      double normal [3];
-      double normal_magnitude = 0;
+      double normal [n_dim];
+      double normal_sq = 0;
+      double mom_dot_normal = 0;
       for (int j_dim = 0; j_dim < n_dim; ++j_dim)
       {
         for (int k_dim = 0; k_dim < n_dim; ++k_dim)
@@ -55,44 +55,36 @@ void cpg_euler_nonpen(double* read, double* write, double* jacobian, int* i_elem
         }
         jac_mat(j_dim, i_dim[i_bc]) = 1.;
         normal[j_dim] = jac_mat.determinant();
-        normal_magnitude += normal[j_dim]*normal[j_dim];
+        mom_dot_normal += face_r[0][j_dim][i_qpoint]*normal[j_dim];
+        normal_sq += normal[j_dim]*normal[j_dim];
       }
-      normal_magnitude = std::sqrt(normal_magnitude);
+      double normal_mom [n_dim];
       for (int j_dim = 0; j_dim < n_dim; ++j_dim)
       {
-        normal[j_dim] *= sign/normal_magnitude;
+        normal_mom[j_dim] = mom_dot_normal*normal[j_dim]/normal_sq;
       }
-
-      double veloc [n_dim];
-      for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-      {
-        veloc[j_dim] = face_r[j_dim][i_qpoint]/face_r[n_var - 2][i_qpoint];
-        jac_mat(j_dim, i_dim[i_bc]) = veloc[j_dim];
-      }
-      double veloc_normal = jac_mat.determinant()*sign;
-
-      double kin_ener = 0.;
-      for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-      {
-        kin_ener += face_r[j_dim][i_qpoint]*veloc[j_dim];
-      }
-      kin_ener *= 0.5;
-      double pressure = (face_r[n_var - 1][i_qpoint] - kin_ener)*(heat_rat - 1.);
-      double sound_speed = std::sqrt(heat_rat*pressure/face_r[n_var - 2][i_qpoint]);
-      double mach_normal = veloc_normal/sound_speed;
 
       for (int i_var = 0; i_var < n_var; ++i_var)
       {
-        face_w[i_var][i_qpoint] = veloc_normal*face_r[i_var][i_qpoint]*mult/jac_det;
+        face_r[1][i_var][i_qpoint] = face_r[0][i_var][i_qpoint];
       }
-      face_w[n_var - 1][i_qpoint] += veloc_normal*pressure*mult/jac_det;
+      face_r[1][0][i_qpoint] -= 1.;
       for (int j_dim = 0; j_dim < n_dim; ++j_dim)
       {
-        face_w[j_dim][i_qpoint] -= heat_rat*mach_normal*normal[j_dim]*pressure*mult/jac_det;
+        //face_r[1][j_dim][i_qpoint] -= 2*normal_mom[j_dim];
+        //face_r[1][j_dim][i_qpoint] -= normal[j_dim];
+        //face_r[1][j_dim][i_qpoint] = -face_r[0][j_dim][i_qpoint];
+        for (int k_dim = 0; k_dim < n_dim; ++k_dim)
+        {
+          face_jacobian[1][j_dim][k_dim][i_qpoint] = face_jacobian[0][j_dim][k_dim][i_qpoint];
+        }
       }
     }
 
-    write_copy<n_var, n_qpoint, row_size>(&face_w[0][0], write + n_var*n_qpoint*i_elem[i_bc], stride, is_positive);
+    int dims [2] {i_dim[i_bc], i_dim[i_bc]};
+    bool flips [2] {!is_positive, !is_positive};
+    cpg_euler_hll_deformed<n_dim, n_face_qpoint>(&face_r[0][0][0], &face_w[0][0][0], &face_jacobian[0][0][0][0], mult, dims, flips, heat_rat);
+    write_copy<n_var, n_qpoint, row_size>(&face_w[0][0][0], write + n_var*n_qpoint*i_elem[i_bc], stride, is_positive);
   }
 }
 
