@@ -20,7 +20,6 @@ TEST_CASE("Vertex")
     REQUIRE(std::count(vert1.neighbor_ids.begin(), vert1.neighbor_ids.end(), 10) == 0);
     cartdg::Vertex& vert8 = grid.get_vertex(8);
     vert8.mobile = true;
-    vert8.snap = true;
     REQUIRE(vert8.pos == std::array<double, 3>({2., 2., 2.}));
     REQUIRE(std::count(vert8.neighbor_ids.begin(), vert8.neighbor_ids.end(), 0) == 0);
     REQUIRE(std::count(vert8.neighbor_ids.begin(), vert8.neighbor_ids.end(), 10) == 1);
@@ -29,7 +28,6 @@ TEST_CASE("Vertex")
     REQUIRE(grid.vertex_ids[1] == 1);
     REQUIRE(grid.vertex_ids[8] == 8);
     REQUIRE(vert1.mobile == false);
-    REQUIRE(vert1.snap == false);
 
     // verification
     vert1.eat(vert8);
@@ -46,7 +44,6 @@ TEST_CASE("Vertex")
     REQUIRE(vert1.pos[1] == Approx(4./3.));
     REQUIRE(vert1.pos[2] == Approx(5./3.));
     REQUIRE(vert1.mobile == true);
-    REQUIRE(vert1.snap == true);
 
     vert1.eat(vert1);
     REQUIRE(vert1.mass == 3);
@@ -58,7 +55,6 @@ TEST_CASE("Vertex")
     REQUIRE(vert1.pos[1] == Approx(4./3.));
     REQUIRE(vert1.pos[2] == Approx(5./3.));
     REQUIRE(vert1.mobile == true);
-    REQUIRE(vert1.snap == true);
 
     cartdg::Deformed_grid other_grid (1, 3, 0, 1., basis);
     other_grid.add_element({0, 0, 0});

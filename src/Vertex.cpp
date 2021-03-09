@@ -34,7 +34,6 @@ void Vertex::eat(Vertex& other)
       parent_grid->vertex_ids[ref] = id;
       other.id_refs.pop_back();
     }
-    snap = snap || other.snap;
     mobile = mobile || other.mobile;
   }
 }
