@@ -170,7 +170,7 @@ TEST_CASE("Integration of deformed elements")
   sol.visualize(file_name);
   for (int i = 0; i < 10; ++i)
   {
-    for (int j = 0; j < 20; ++j)
+    for (int j = 0; j < 10; ++j)
     {
       sol.update(0.5);
     }
@@ -180,7 +180,8 @@ TEST_CASE("Integration of deformed elements")
 
 TEST_CASE("Execution of non-penetration boundary condition")
 {
-  cartdg::Solution sol (4, 2, MAX_BASIS_RANK, 1.);
+  const int rank = MAX_BASIS_RANK;
+  cartdg::Solution sol (4, 2, rank, 1.);
   sol.add_deformed_grid(1);
   cartdg::Deformed_grid& grid = sol.def_grids[0];
   grid.add_element({0, 0});

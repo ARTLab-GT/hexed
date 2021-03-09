@@ -54,32 +54,23 @@ void cpg_euler_nonpen(double* read, double* write, double* jacobian, int* i_elem
           jac_mat(k_dim, i_dim[i_bc]) = 0.;
         }
         jac_mat(j_dim, i_dim[i_bc]) = 1.;
-        normal[j_dim] = jac_mat.determinant();
+        normal[j_dim] = jac_mat.determinant()*sign;
         normal_magnitude += normal[j_dim]*normal[j_dim];
       }
       normal_magnitude = std::sqrt(normal_magnitude);
-      for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-      {
-        normal[j_dim] *= sign/normal_magnitude;
-      }
 
-      double veloc [n_dim];
-      for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-      {
-        veloc[j_dim] = face_r[j_dim][i_qpoint]/face_r[n_var - 2][i_qpoint];
-        jac_mat(j_dim, i_dim[i_bc]) = veloc[j_dim];
-      }
-      double veloc_normal = jac_mat.determinant()*sign;
-
+      double veloc_normal = 0.;
       double kin_ener = 0.;
       for (int j_dim = 0; j_dim < n_dim; ++j_dim)
       {
-        kin_ener += face_r[j_dim][i_qpoint]*veloc[j_dim];
+        double veloc = face_r[j_dim][i_qpoint]/face_r[n_var - 2][i_qpoint];
+        veloc_normal += veloc*normal[j_dim];
+        kin_ener += face_r[j_dim][i_qpoint]*veloc;
       }
       kin_ener *= 0.5;
       double pressure = (face_r[n_var - 1][i_qpoint] - kin_ener)*(heat_rat - 1.);
       double sound_speed = std::sqrt(heat_rat*pressure/face_r[n_var - 2][i_qpoint]);
-      double mach_normal = veloc_normal/sound_speed;
+      double normal_mach = veloc_normal/(sound_speed*normal_magnitude);
 
       for (int i_var = 0; i_var < n_var; ++i_var)
       {
@@ -88,7 +79,7 @@ void cpg_euler_nonpen(double* read, double* write, double* jacobian, int* i_elem
       face_w[n_var - 1][i_qpoint] += veloc_normal*pressure*mult/jac_det;
       for (int j_dim = 0; j_dim < n_dim; ++j_dim)
       {
-        face_w[j_dim][i_qpoint] -= heat_rat*mach_normal*normal[j_dim]*pressure*mult/jac_det;
+        face_w[j_dim][i_qpoint] -= heat_rat*normal_mach*normal[j_dim]*pressure*mult/jac_det;
       }
     }
 
