@@ -24,7 +24,6 @@ class Ghost_boundary_condition
   std::vector<int> elems;
 
   Ghost_boundary_condition(const Grid& grid, int i_dim_arg, bool is_positive_face_arg);
-  virtual ~Ghost_boundary_condition();
 
   void add_element(int i_elem);
   void add_element(int i_elem, double* jacobian);

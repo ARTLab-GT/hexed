@@ -21,8 +21,6 @@ Ghost_boundary_condition::Ghost_boundary_condition(const Grid& grid, int i_dim_a
   }
 }
 
-Ghost_boundary_condition::~Ghost_boundary_condition() {}
-
 void Ghost_boundary_condition::add_element(int i_elem, double* jacobian)
 {
   elems.push_back(i_elem);
