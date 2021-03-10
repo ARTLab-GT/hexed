@@ -29,7 +29,7 @@ class Supersonic_inlet : public cartdg::Ghost_boundary_condition
   }
 };
 
-TEST_CASE("Fitted boundary conditions")
+TEST_CASE("Ghost boundary conditions")
 {
   cartdg::Solution soln (5, 3, MAX_BASIS_RANK, 1.);
   cartdg::Basis& basis = soln.basis;
@@ -50,32 +50,39 @@ TEST_CASE("Fitted boundary conditions")
     }
   }
 
-  SECTION("default jacobian")
+  SECTION("Basic functionality")
   {
+    const int n_face_qpoint = MAX_BASIS_RANK*MAX_BASIS_RANK;
     Supersonic_inlet bc (grid, 0, true);
-    REQUIRE(bc.default_jacobian.size() >= unsigned(3*3*grid.n_qpoint));
-    for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
-    {
-      for (int i_dim : {0, 1, 2})
-      {
-        for (int j_dim : {0, 1, 2})
-        {
-          REQUIRE(bc.default_jacobian[(i_dim*3 + j_dim)*grid.n_qpoint + i_dim] == ((i_dim == j_dim) ? 1 : 0));
-        }
-      }
-    }
-  }
-
-  SECTION("Add element")
-  {
-    Supersonic_inlet bc (grid, 0, true);
+    double some_number = 0.;
     REQUIRE(bc.jacobians.empty());
     REQUIRE(bc.elems.empty());
-    double some_number = 0.;
     bc.add_element(373, &some_number);
     bc.add_element(26);
-    REQUIRE(bc.elems == std::vector<int> {373, 26});
-    REQUIRE(bc.jacobians == std::vector<double*> {&some_number, bc.default_jacobian.data()});
+    Supersonic_inlet new_bc (bc);
+    for (cartdg::Ghost_boundary_condition* bc_ptr : {&bc, &new_bc})
+    {
+      cartdg::Ghost_boundary_condition& each_bc = *bc_ptr;
+      REQUIRE(each_bc.i_dim == 0);
+      REQUIRE(each_bc.n_var == 5);
+      REQUIRE(each_bc.n_qpoint == n_face_qpoint);
+      REQUIRE(each_bc.is_positive_face == true);
+      REQUIRE(each_bc.domain_state().size() == 5*n_face_qpoint);
+      REQUIRE(each_bc.ghost_state().size() == 5*n_face_qpoint);
+      REQUIRE(each_bc.default_jacobian.size() == unsigned(3*3*grid.n_qpoint));
+      for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
+      {
+        for (int i_dim : {0, 1, 2})
+        {
+          for (int j_dim : {0, 1, 2})
+          {
+            REQUIRE(each_bc.default_jacobian[(i_dim*3 + j_dim)*grid.n_qpoint + i_dim] == ((i_dim == j_dim) ? 1 : 0));
+          }
+        }
+      }
+      REQUIRE(each_bc.elems == std::vector<int> {373, 26});
+      REQUIRE(each_bc.jacobians == std::vector<double*> {&some_number, bc.default_jacobian.data()});
+    }
   }
 
   SECTION("Axis 0")
