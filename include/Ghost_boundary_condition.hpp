@@ -19,10 +19,10 @@ class Ghost_boundary_condition
   Eigen::ArrayXXd state; // Stores both states in an order compatible with Flux_kernel
   Eigen::Block<Eigen::ArrayXXd> domain_state(); // indices: (i_qpoint, i_var)
   Eigen::Block<Eigen::ArrayXXd> ghost_state();
+  std::vector<double*> jacobians;
+  std::vector<double> default_jacobian;
   std::vector<int> elems;
 
-  Ghost_boundary_condition(int n_var_arg, int n_qpoint_arg, int i_dim_arg,
-                            bool is_positive_face_arg);
   Ghost_boundary_condition(const Grid& grid, int i_dim_arg, bool is_positive_face_arg);
   virtual ~Ghost_boundary_condition();
 

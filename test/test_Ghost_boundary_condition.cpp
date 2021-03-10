@@ -13,7 +13,6 @@ class Supersonic_inlet : public cartdg::Ghost_boundary_condition
   : cartdg::Ghost_boundary_condition(grid, i_dim_arg, is_positive_face_arg), n_dim(grid.n_dim)
   {}
     
-
   virtual void calc_ghost_state()
   {
     double mass = 2.;
@@ -47,6 +46,23 @@ TEST_CASE("Fitted boundary conditions")
         grid.pos[i_elem + 0] = i;
         grid.pos[i_elem + 1] = j;
         grid.pos[i_elem + 2] = k;
+      }
+    }
+  }
+
+  SECTION("jacobian")
+  {
+    Supersonic_inlet bc (grid, 0, true);
+    REQUIRE(bc.jacobians.empty());
+    REQUIRE(bc.default_jacobian.size() >= unsigned(3*3*grid.n_qpoint));
+    for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
+    {
+      for (int i_dim : {0, 1, 2})
+      {
+        for (int j_dim : {0, 1, 2})
+        {
+          REQUIRE(bc.default_jacobian[(i_dim*3 + j_dim)*grid.n_qpoint + i_dim] == ((i_dim == j_dim) ? 1 : 0));
+        }
       }
     }
   }
@@ -87,7 +103,8 @@ TEST_CASE("Fitted boundary conditions")
       }
     }
     auto weights = soln.basis.node_weights();
-    cartdg::cpg_euler_gbc<5, MAX_BASIS_RANK*MAX_BASIS_RANK*MAX_BASIS_RANK, MAX_BASIS_RANK>
+    const int n_qpoint = MAX_BASIS_RANK*MAX_BASIS_RANK*MAX_BASIS_RANK;
+    cartdg::cpg_euler_gbc<5, n_qpoint, MAX_BASIS_RANK>
                          (grid.ghost_bound_conds, grid.state_r(), grid.state_w(),
                          weights[0], soln.kernel_settings);
     for (int i_elem = 0; i_elem < 27; ++i_elem)
