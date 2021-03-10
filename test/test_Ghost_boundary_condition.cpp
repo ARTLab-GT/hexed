@@ -84,6 +84,14 @@ TEST_CASE("Fitted boundary conditions")
     grid.ghost_bound_conds.push_back(&bc0);
     Supersonic_inlet bc1 (grid, 0, true);
     grid.ghost_bound_conds.push_back(&bc1);
+    std::vector<double> other_jacobian (9*grid.n_qpoint, 0.);
+    for (int i_dim = 0; i_dim < 3; ++i_dim)
+    {
+      for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
+      {
+        other_jacobian[i_dim*4*grid.n_qpoint + i_qpoint] = 2.;
+      }
+    }
     for (int j = 0; j < 3; ++j)
     {
       for (int k = 0; k < 3; ++k)
@@ -91,7 +99,7 @@ TEST_CASE("Fitted boundary conditions")
         int i_elem; int i;
         i = 0;
         i_elem = k + 3*(j + 3*i);
-        bc0.add_element(i_elem);
+        bc0.add_element(i_elem, other_jacobian.data());
         i = 2;
         i_elem = k + 3*(j + 3*i);
         bc1.add_element(i_elem);
@@ -124,7 +132,11 @@ TEST_CASE("Fitted boundary conditions")
       for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
       {
         #define WRITE(i) grid.state_w()[i_elem*grid.n_dof + i_qpoint + (i)*grid.n_qpoint]
-        if (std::min(std::abs(pos[i_qpoint]), std::abs(pos[i_qpoint] - 1.5)) < 1e-15)
+        if (std::abs(pos[i_qpoint]) < 1e-15)
+        {
+          REQUIRE(WRITE(3) == 1. + 2.*700/(2*basis.node_weights()[0]));
+        }
+        else if (std::abs(pos[i_qpoint] - 1.5) < 1e-15)
         {
           REQUIRE(WRITE(3) == 1. + 2.*700/basis.node_weights()[0]);
         }
