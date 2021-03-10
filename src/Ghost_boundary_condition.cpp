@@ -23,6 +23,17 @@ Ghost_boundary_condition::Ghost_boundary_condition(const Grid& grid, int i_dim_a
 
 Ghost_boundary_condition::~Ghost_boundary_condition() {}
 
+void Ghost_boundary_condition::add_element(int i_elem, double* jacobian)
+{
+  elems.push_back(i_elem);
+  jacobians.push_back(jacobian);
+}
+
+void Ghost_boundary_condition::add_element(int i_elem)
+{
+  add_element(i_elem, default_jacobian.data());
+}
+
 Eigen::Block<Eigen::ArrayXXd> Ghost_boundary_condition::domain_state()
 {
   return (is_positive_face) ? state.block(0,     0, n_qpoint, n_var)

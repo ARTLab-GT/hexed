@@ -50,10 +50,9 @@ TEST_CASE("Fitted boundary conditions")
     }
   }
 
-  SECTION("jacobian")
+  SECTION("default jacobian")
   {
     Supersonic_inlet bc (grid, 0, true);
-    REQUIRE(bc.jacobians.empty());
     REQUIRE(bc.default_jacobian.size() >= unsigned(3*3*grid.n_qpoint));
     for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
     {
@@ -65,6 +64,18 @@ TEST_CASE("Fitted boundary conditions")
         }
       }
     }
+  }
+
+  SECTION("Add element")
+  {
+    Supersonic_inlet bc (grid, 0, true);
+    REQUIRE(bc.jacobians.empty());
+    REQUIRE(bc.elems.empty());
+    double some_number = 0.;
+    bc.add_element(373, &some_number);
+    bc.add_element(26);
+    REQUIRE(bc.elems == std::vector<int> {373, 26});
+    REQUIRE(bc.jacobians == std::vector<double*> {&some_number, bc.default_jacobian.data()});
   }
 
   SECTION("Axis 0")
@@ -80,10 +91,10 @@ TEST_CASE("Fitted boundary conditions")
         int i_elem; int i;
         i = 0;
         i_elem = k + 3*(j + 3*i);
-        bc0.elems.push_back(i_elem);
+        bc0.add_element(i_elem);
         i = 2;
         i_elem = k + 3*(j + 3*i);
-        bc1.elems.push_back(i_elem);
+        bc1.add_element(i_elem);
       }
     }
     for (int i_elem = 0; i_elem < 27; ++i_elem)
@@ -137,7 +148,7 @@ TEST_CASE("Fitted boundary conditions")
         int i_elem; int j;
         j = 2;
         i_elem = k + 3*(j + 3*i);
-        bc1.elems.push_back(i_elem);
+        bc1.add_element(i_elem);
       }
     }
     for (int i_elem = 0; i_elem < 27; ++i_elem)
@@ -184,7 +195,7 @@ TEST_CASE("Fitted boundary conditions")
   {
     Supersonic_inlet bc0 (grid, 2, false);
     grid.ghost_bound_conds.push_back(&bc0);
-    bc0.elems.push_back(3);
+    bc0.add_element(3);
     for (int i_elem = 0; i_elem < 27; ++i_elem)
     {
       for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
