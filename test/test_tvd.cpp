@@ -18,5 +18,7 @@ TEST_CASE("n_extrema")
   read[2] = -1;
   REQUIRE(cartdg::n_extrema<6>(read) == 2);
   read[4] = -1;
-  REQUIRE(cartdg::n_extrema<6>(read) == 3);
+  REQUIRE(cartdg::n_extrema<6>(read) == 4);
+  read[3] = -2;
+  REQUIRE(cartdg::n_extrema<6>(read) == 2);
 }
