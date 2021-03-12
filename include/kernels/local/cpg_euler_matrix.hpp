@@ -87,7 +87,12 @@ void cpg_euler_matrix(double * read, double * write, int n_elem,
           int n_ex = row_size;
           for (int i_var = 0; i_var < n_var; ++i_var)
           {
-            n_ex = std::min<int>(n_ex, n_extrema<row_size>(row_w[i_var]));
+            double data [row_size];
+            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
+            {
+              data[i_qpoint] = row_r[i_var][i_qpoint] + row_w[i_var][i_qpoint];
+            }
+            n_ex = std::min<int>(n_ex, n_extrema<row_size>(data));
           }
           if (n_ex > 1)
           {
@@ -139,7 +144,6 @@ void cpg_euler_matrix(double * read, double * write, int n_elem,
         }
       }
     }
-
   }
 }
 

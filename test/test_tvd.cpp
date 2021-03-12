@@ -73,7 +73,7 @@ TEST_CASE("regular TVD")
         tv_read += std::abs(var_read[ind1] - var_read[ind0]);
         tv_write += std::abs(var_write[ind1] - var_write[ind0]);
       }
-      CHECK(tv_write <= tv_read);
+      REQUIRE(tv_write <= tv_read);
     }
   }
 }
