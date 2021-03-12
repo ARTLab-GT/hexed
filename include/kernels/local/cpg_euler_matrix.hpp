@@ -4,16 +4,20 @@
 #include <Eigen/Dense>
 
 #include "../Kernel_settings.hpp"
+#include "n_extrema.hpp"
 
 namespace cartdg
 {
 
 template<int n_var, int n_qpoint, int row_size>
 void cpg_euler_matrix(double * read, double * write, int n_elem,
-                      const Eigen::MatrixXd& diff_mat_arg,
+                      Eigen::MatrixXd diff_mat_arg,
+                      Eigen::VectorXd weights_arg,
                       Kernel_settings& settings)
 {
   Eigen::Matrix<double, row_size, row_size> diff_mat = diff_mat_arg;
+  double weights [row_size];
+  for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) weights[i_qpoint] = weights_arg(i_qpoint);
   double d_t_by_d_pos = settings.d_t_by_d_pos;
   double heat_rat = settings.cpg_heat_rat;
 
@@ -76,6 +80,21 @@ void cpg_euler_matrix(double * read, double * write, int n_elem,
           Eigen::Map<Eigen::Matrix<double, row_size, n_var>> f (&(flux[0][0]));
           Eigen::Map<Eigen::Matrix<double, row_size, n_var>> w (&(row_w[0][0]));
           w.noalias() = -diff_mat*f*d_t_by_d_pos;
+          int n_ex = 0;
+          for (int i_var = 0; i_var < n_var; ++i_var)
+          {
+            n_ex = std::max<int>(n_ex, n_extrema<row_size>(row_r[i_var]));
+          }
+          #if 0
+          if (n_ex > 1)
+          {
+            for (int i_var = 0; i_var < n_var; ++i_var)
+            {
+              row_w[i_var][0] = flux[i_var][0]/weights[0];
+              row_w[i_var][n_qpoint - 1] = -flux[i_var][n_qpoint - 1]/weights[n_qpoint - 1];
+            }
+          }
+          #endif
 
           // Write updated solution
           for (int i_var = 0; i_var < n_var; ++i_var)

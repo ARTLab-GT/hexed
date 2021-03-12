@@ -31,6 +31,7 @@ TEST_CASE("regular TVD")
   constexpr int rank = MAX_BASIS_RANK;
   cartdg::Gauss_lobatto basis (rank);
   auto diff_mat = basis.diff_mat();
+  auto weights = basis.node_weights();
   cartdg::Kernel_settings settings;
   settings.d_t_by_d_pos = 1.e-5;
 
@@ -56,7 +57,7 @@ TEST_CASE("regular TVD")
       }
     }
 
-    cartdg::cpg_euler_matrix<4, rank*rank, rank>(&read[0][0][0], &write[0][0][0], 1, diff_mat, settings);
+    cartdg::cpg_euler_matrix<4, rank*rank, rank>(&read[0][0][0], &write[0][0][0], 1, diff_mat, weights, settings);
     double* var_read = &read[2][0][0];
     double* var_write = &write[2][0][0];
     for (int i_row = 0; i_row < rank; ++i_row)

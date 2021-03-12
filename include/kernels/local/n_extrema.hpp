@@ -3,6 +3,7 @@
 
 namespace cartdg
 {
+
 template<int row_size>
 int n_extrema(double* data)
 {
@@ -23,13 +24,13 @@ int n_extrema(double* data)
 }
 
 template<>
-int n_extrema<0>(double* data) {return 0;}
+inline int n_extrema<0>(double* data) {return 0;}
 
 template<>
-int n_extrema<1>(double* data) {return 0;}
+inline int n_extrema<1>(double* data) {return 0;}
 
 template<>
-int n_extrema<2>(double* data) {return 0;}
+inline int n_extrema<2>(double* data) {return 0;}
 
 }
 
