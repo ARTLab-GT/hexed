@@ -84,22 +84,19 @@ void cpg_euler_matrix(double * read, double * write, int n_elem,
           w.noalias() = -diff_mat*f*d_t_by_d_pos;
 
           // Extremum-counting limiter
-          int n_ex = 0;
+          int n_ex = row_size;
           for (int i_var = 0; i_var < n_var; ++i_var)
           {
-            n_ex = std::max<int>(n_ex, n_extrema<row_size>(row_w[i_var]));
+            n_ex = std::min<int>(n_ex, n_extrema<row_size>(row_w[i_var]));
           }
           if (n_ex > 1)
           {
-            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
+            for (int i_var = 0; i_var < n_var; ++i_var)
             {
-              for (int i_var = 0; i_var < n_var; ++i_var)
+              for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
               {
                 row_w[i_var][i_qpoint] = 0.;
               }
-            }
-            for (int i_var = 0; i_var < n_var; ++i_var)
-            {
               row_w[i_var][0] = flux[i_var][0]/weights[0]*d_t_by_d_pos;
               row_w[i_var][row_size - 1] = -flux[i_var][row_size - 1]/weights[row_size - 1]*d_t_by_d_pos;
             }
