@@ -109,16 +109,18 @@ void cpg_euler_matrix(double * read, double * write, int n_elem,
             double veloc = row_r[i_axis][0]/row_r[n_var - 2][0];
             for (int i_qpoint = 1; i_qpoint < row_size; ++i_qpoint)
             {
-              double wave_speed0 = veloc - sound_speed;
-              double sound_speed = std::sqrt(heat_rat*pressure[i_qpoint]
+              double new_sound_speed = std::sqrt(heat_rat*pressure[i_qpoint]
                                               /row_r[n_var - 2][i_qpoint]);
-              double veloc = row_r[i_axis][i_qpoint]/row_r[n_var - 2][i_qpoint];
-              double wave_speed1 = veloc + sound_speed;
+              double new_veloc = row_r[i_axis][i_qpoint]/row_r[n_var - 2][i_qpoint];
+              double wave_speed0 = std::min(veloc - sound_speed, new_veloc - new_sound_speed);
+              double wave_speed1 = std::max(veloc + sound_speed, new_veloc + new_sound_speed);
+              veloc = new_veloc;
+              sound_speed = new_sound_speed;
               for (int i_var = 0; i_var < n_var; ++i_var)
               {
                 double num_flux;
-                if      (std::min(wave_speed0, wave_speed1) >= 0) num_flux = flux[i_var][i_qpoint - 1];
-                else if (std::max(wave_speed1, wave_speed0) <= 0) num_flux = flux[i_var][i_qpoint];
+                if      (wave_speed0 >= 0) num_flux = flux[i_var][i_qpoint - 1];
+                else if (wave_speed1 <= 0) num_flux = flux[i_var][i_qpoint];
                 else
                 {
                   num_flux = (wave_speed1*flux[i_var][i_qpoint - 1] - wave_speed0*flux[i_var][i_qpoint]

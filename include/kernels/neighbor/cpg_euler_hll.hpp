@@ -13,7 +13,8 @@ void cpg_euler_hll(double* state_r, double* d_flux_w, double mult,
   for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint)
   {
     double flux[2][n_var];
-    double wave_speed[2];
+    double velocity[2];
+    double sound_speed[2];
     for (int i_side = 0; i_side < 2; ++i_side)
     {
       #define READ(i) state_r[(i)*n_face_qpoint + i_qpoint + i_side*face_size]
@@ -29,10 +30,16 @@ void cpg_euler_hll(double* state_r, double* d_flux_w, double mult,
       FLUX(i_axis) += pres;
       FLUX(n_var - 2) = READ(i_axis);
       FLUX(n_var - 1) = (READ(n_var - 1) + pres)*veloc;
-      wave_speed[i_side] = veloc + (2*i_side - 1)*sqrt(sp_heat_rat*pres/READ(n_var - 2));
+      velocity[i_side] = veloc;
+      sound_speed[i_side] = sqrt(sp_heat_rat*pres/READ(n_var - 2));
       #undef FLUX
       #undef READ
     }
+
+    double wave_speed [2];
+    wave_speed[0] = std::min(velocity[0] - sound_speed[0], velocity[1] - sound_speed[1]);
+    wave_speed[1] = std::max(velocity[1] + sound_speed[0], velocity[1] + sound_speed[1]);
+
     for (int i_var = 0; i_var < n_var; ++i_var)
     {
       const int i = i_var*n_face_qpoint + i_qpoint;
@@ -40,8 +47,8 @@ void cpg_euler_hll(double* state_r, double* d_flux_w, double mult,
       // Note: these conditions are different from the standard ones, but it rarely makes
       // a difference, except in the case of opposing supersonic flows, where this behavior
       // is preferable
-      if      (std::min(wave_speed[0], wave_speed[1]) >= 0) num_flux = flux[0][i_var];
-      else if (std::max(wave_speed[1], wave_speed[0]) <= 0) num_flux = flux[1][i_var];
+      if      (wave_speed[0] >= 0) num_flux = flux[0][i_var];
+      else if (wave_speed[1] <= 0) num_flux = flux[1][i_var];
       else
       {
         num_flux = (wave_speed[1]*flux[0][i_var] - wave_speed[0]*flux[1][i_var]
