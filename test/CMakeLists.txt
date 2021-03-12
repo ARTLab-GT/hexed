@@ -6,7 +6,7 @@ test_Basis.cpp
 test_conservation.cpp
 test_Grid.cpp
 test_local.cpp
-test_max_char_speed.cpp
+test_observing.cpp
 test_neighbor.cpp
 test_sinusoid.cpp
 test_Solution.cpp

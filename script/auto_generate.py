@@ -36,7 +36,7 @@ solution.include = """
 #include <kernels/neighbor/cpg_euler_copy_deformed.hpp>
 #include <kernels/neighbor/cpg_euler_nonpen.hpp>
 #include <kernels/neighbor/cpg_euler_gbc.hpp>
-#include <kernels/max_char_speed/cpg_euler_max.hpp>
+#include <kernels/observing/cpg_euler_max.hpp>
 """
 solution.templates = {"local":"cpg_euler_matrix", "local_deformed":"cpg_euler_deformed",
                       "neighbor":"cpg_euler_copy", "neighbor_deformed":"cpg_euler_copy_deformed",

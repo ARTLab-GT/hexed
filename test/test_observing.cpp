@@ -1,6 +1,6 @@
 #include <catch.hpp>
 
-#include <kernels/max_char_speed/cpg_euler_max.hpp>
+#include <kernels/observing/cpg_euler_max.hpp>
 
 TEST_CASE("Max characteristic speed")
 {
