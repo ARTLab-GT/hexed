@@ -196,7 +196,7 @@ double Grid::get_stable_cfl()
 {
   if ((basis.rank > 0) && (basis.rank <= 9))
   {
-    return std::min(stable_cfl[basis.rank - 1], basis.node_weights().minCoeff());
+    return stable_cfl[basis.rank - 1];
   }
   else
   {
