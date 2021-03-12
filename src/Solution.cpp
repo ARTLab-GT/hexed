@@ -85,6 +85,8 @@ double Solution::update(double cfl_by_stable_cfl)
   auto neighbor_deformed = get_neighbor_deformed_kernel();
   auto nonpen = get_nonpen_kernel();
   auto max_char_speed = get_max_char_speed_kernel();
+  auto physical_step = get_physical_step_kernel();
+  auto restrict_step = get_restrict_step_kernel();
   auto fbc = get_gbc_kernel();
   double dt = std::numeric_limits<double>::max();
   for (Grid* g : all_grids()) // FIXME: incorporate jacobian
@@ -95,6 +97,7 @@ double Solution::update(double cfl_by_stable_cfl)
   }
   for (int i_rk = 0; i_rk < 3; ++i_rk)
   {
+    double step = 1.;
     for (Grid& g : grids)
     {
       kernel_settings.d_t_by_d_pos = dt/g.mesh_size;
@@ -105,7 +108,7 @@ double Solution::update(double cfl_by_stable_cfl)
         auto weights = g.basis.node_weights();
         fbc(g.ghost_bound_conds, g.state_r(), g.state_w(), weights(0), kernel_settings);
       }
-      g.execute_runge_kutta_stage();
+      step = std::min(step, physical_step(g.state_r(), g.state_w(), g.n_elem, kernel_settings));
     }
     for (Deformed_grid& g : def_grids)
     {
@@ -119,7 +122,12 @@ double Solution::update(double cfl_by_stable_cfl)
         fbc(g.ghost_bound_conds, g.state_r(), g.state_w(), weights(0), kernel_settings);
       }
       nonpen(g.state_r(), g.state_w(), g.jacobian.data(), g.i_elem_wall.data(), g.i_dim_wall.data(), g.is_positive_wall.data(), g.i_elem_wall.size(), g.basis.node_weights()(0), kernel_settings);
-      g.execute_runge_kutta_stage();
+      step = std::min(step, physical_step(g.state_r(), g.state_w(), g.n_elem, kernel_settings));
+    }
+    for (Grid* g : all_grids())
+    {
+      restrict_step(g->state_r(), g->state_w(), g->n_elem, step, kernel_settings);
+      g->execute_runge_kutta_stage();
     }
   }
   for (Grid* g : all_grids())
