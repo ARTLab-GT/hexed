@@ -41,8 +41,8 @@ TEST_CASE("minimum ratio of thermodynamic variables")
 
   SECTION("1D pressure difference")
   {
-    double pressure_r [] {1.e5, 2.e5, 0.5e5};
-    double pressure_w [] {1.e5, 0.5e5, 0.4e5};
+    double pressure_r [] {1.e5, 1.e5, 0.5e5};
+    double pressure_w [] {1.e5, 0.25e5, 0.4e5};
     double state_r [3][3];
     double state_w [3][3];
     for (int i = 0; i < 3; ++i)
@@ -54,8 +54,8 @@ TEST_CASE("minimum ratio of thermodynamic variables")
       state_r[2][i] = pressure_r[i]/0.4 + 0.5*1.*100*100;
       state_w[2][i] = pressure_w[i]/0.4 + 0.5*1.*100*100;
     }
-    double step = cartdg::cpg_euler_physical_step<3, 1>(&state_r[0][0], &state_w[0][0], 3, settings);
-    REQUIRE(step == Approx(0.5));
+    double step = cartdg::cpg_euler_physical_step<3, 3>(&state_r[0][0], &state_w[0][0], 1, settings);
+    REQUIRE(step == Approx(2./3.));
   }
 
   SECTION("1D density difference")
@@ -63,18 +63,21 @@ TEST_CASE("minimum ratio of thermodynamic variables")
     double mass_r [50] {1., 1., 1.};
     double mass_w [50] {0.4, 4., 0.5};
     for (int i = 3; i < 50; ++i) {mass_r[i] = 1.; mass_w[i] = 1.;};
-    double state_r [3][50];
-    double state_w [3][50];
-    for (int i = 0; i < 50; ++i)
+    double state_r [10][3][5];
+    double state_w [10][3][5];
+    for (int i_elem = 0; i_elem < 10; ++i_elem)
     {
-      state_r[0][i] = 100.;
-      state_w[0][i] = 100.;
-      state_r[1][i] = mass_r[i];
-      state_w[1][i] = mass_w[i];
-      state_r[2][i] = 1.e5/0.4 + 0.5*mass_r[i]*100*100;
-      state_w[2][i] = 1.e5/0.4 + 0.5*mass_w[i]*100*100;
+      for (int i = 0; i < 5; ++i)
+      {
+        state_r[i_elem][0][i] = 100.;
+        state_w[i_elem][0][i] = 100.;
+        state_r[i_elem][1][i] = mass_r[5*i_elem + i];
+        state_w[i_elem][1][i] = mass_w[5*i_elem + i];
+        state_r[i_elem][2][i] = 1.e5/0.4 + 0.5*mass_r[5*i_elem + i]*100*100;
+        state_w[i_elem][2][i] = 1.e5/0.4 + 0.5*mass_w[5*i_elem + i]*100*100;
+      }
     }
-    double step = cartdg::cpg_euler_physical_step<3, 5>(&state_r[0][0], &state_w[0][0], 10, settings);
+    double step = cartdg::cpg_euler_physical_step<3, 5>(&state_r[0][0][0], &state_w[0][0][0], 10, settings);
     REQUIRE(step == Approx(5./6.));
   }
 
