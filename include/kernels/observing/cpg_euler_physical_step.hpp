@@ -6,11 +6,12 @@
 namespace cartdg
 {
 
-template<int n_var>
-double cpg_euler_physical_step(double* read, double* write, int n_points,
+template<int n_var, int n_qpoint>
+double cpg_euler_physical_step(double* read, double* write, int n_elem,
                                Kernel_settings& settings)
 {
-  return 1.;
+  double step = 1.;
+  return step;
 }
 
 }
