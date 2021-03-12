@@ -57,12 +57,14 @@ void cpg_euler_matrix(double * read, double * write, int n_elem,
 
           // Calculate flux
           double flux [n_var][row_size];
+          double pressure [row_size];
           for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
           {
             #define READ(i) row_r[i][i_qpoint]
             #define FLUX(i) flux[i][i_qpoint]
             double veloc = READ(i_axis)/READ(n_var - 2);
-            double pres = 0;
+            double& pres = pressure[i_qpoint];
+            pres = 0;
             for (int j_axis = 0; j_axis < n_var - 2; ++j_axis)
             {
               FLUX(j_axis) = READ(j_axis)*veloc;
@@ -80,21 +82,52 @@ void cpg_euler_matrix(double * read, double * write, int n_elem,
           Eigen::Map<Eigen::Matrix<double, row_size, n_var>> f (&(flux[0][0]));
           Eigen::Map<Eigen::Matrix<double, row_size, n_var>> w (&(row_w[0][0]));
           w.noalias() = -diff_mat*f*d_t_by_d_pos;
+
+          // Extremum-counting limiter
           int n_ex = 0;
           for (int i_var = 0; i_var < n_var; ++i_var)
           {
-            n_ex = std::max<int>(n_ex, n_extrema<row_size>(row_r[i_var]));
+            n_ex = std::max<int>(n_ex, n_extrema<row_size>(row_w[i_var]));
           }
-          #if 0
           if (n_ex > 1)
           {
+            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
+            {
+              for (int i_var = 0; i_var < n_var; ++i_var)
+              {
+                row_w[i_var][i_qpoint] = 0.;
+              }
+            }
             for (int i_var = 0; i_var < n_var; ++i_var)
             {
-              row_w[i_var][0] = flux[i_var][0]/weights[0];
-              row_w[i_var][n_qpoint - 1] = -flux[i_var][n_qpoint - 1]/weights[n_qpoint - 1];
+              row_w[i_var][0] = flux[i_var][0]/weights[0]*d_t_by_d_pos;
+              row_w[i_var][row_size - 1] = -flux[i_var][row_size - 1]/weights[row_size - 1]*d_t_by_d_pos;
+            }
+            double sound_speed = std::sqrt(heat_rat*pressure[0]/row_r[n_var - 2][0]);
+            double veloc = row_r[i_axis][0]/row_r[n_var - 2][0];
+            for (int i_qpoint = 1; i_qpoint < row_size; ++i_qpoint)
+            {
+              double wave_speed0 = veloc - sound_speed;
+              double sound_speed = std::sqrt(heat_rat*pressure[i_qpoint]
+                                              /row_r[n_var - 2][i_qpoint]);
+              double veloc = row_r[i_axis][i_qpoint]/row_r[n_var - 2][i_qpoint];
+              double wave_speed1 = veloc + sound_speed;
+              for (int i_var = 0; i_var < n_var; ++i_var)
+              {
+                double num_flux;
+                if      (std::min(wave_speed0, wave_speed1) >= 0) num_flux = flux[i_var][i_qpoint - 1];
+                else if (std::max(wave_speed1, wave_speed0) <= 0) num_flux = flux[i_var][i_qpoint];
+                else
+                {
+                  num_flux = (wave_speed1*flux[i_var][i_qpoint - 1] - wave_speed0*flux[i_var][i_qpoint]
+                              + wave_speed0*wave_speed1*(row_r[i_var][i_qpoint] - row_r[i_var][i_qpoint - 1]))
+                            / (wave_speed1 - wave_speed0);
+                }
+                row_w[i_var][i_qpoint - 1] -= num_flux/weights[i_qpoint - 1]*d_t_by_d_pos;
+                row_w[i_var][i_qpoint    ] += num_flux/weights[i_qpoint    ]*d_t_by_d_pos;
+              }
             }
           }
-          #endif
 
           // Write updated solution
           for (int i_var = 0; i_var < n_var; ++i_var)
@@ -106,7 +139,6 @@ void cpg_euler_matrix(double * read, double * write, int n_elem,
                += row_w[i_var][i_qpoint];
             }
           }
-
         }
       }
     }
