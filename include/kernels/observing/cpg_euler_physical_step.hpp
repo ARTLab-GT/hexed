@@ -6,7 +6,7 @@
 namespace cartdg
 {
 
-template<int n_var, int n_qpoint>
+template<int n_var, int n_qpoint, int row_size>
 double cpg_euler_physical_step(double* read, double* write, int n_elem,
                                Kernel_settings& settings)
 {

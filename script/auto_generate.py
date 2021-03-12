@@ -32,13 +32,17 @@ solution.include = """
 #include <Solution.hpp>
 #include <kernels/local/cpg_euler_matrix.hpp>
 #include <kernels/local/cpg_euler_deformed.hpp>
+#include <kernels/local/cpg_euler_restrict_step.hpp>
 #include <kernels/neighbor/cpg_euler_copy.hpp>
 #include <kernels/neighbor/cpg_euler_copy_deformed.hpp>
 #include <kernels/neighbor/cpg_euler_nonpen.hpp>
 #include <kernels/neighbor/cpg_euler_gbc.hpp>
 #include <kernels/observing/cpg_euler_max.hpp>
+#include <kernels/observing/cpg_euler_physical_step.hpp>
 """
 solution.templates = {"local":"cpg_euler_matrix", "local_deformed":"cpg_euler_deformed",
+                      "physical_step":"cpg_euler_physical_step",
+                      "restrict_step":"cpg_euler_restrict_step",
                       "neighbor":"cpg_euler_copy", "neighbor_deformed":"cpg_euler_copy_deformed",
                       "nonpen":"cpg_euler_nonpen",
                       "gbc":"cpg_euler_gbc", "max_char_speed":"cpg_euler_max"}
@@ -56,12 +60,7 @@ for auto_file in [solution]:
                 n_qpoint = (i_rank + 1)**(i_dim + 1)
                 n_face_qpoint = (i_rank + 1)**i_dim
                 row_size = i_rank + 1
-                if kernel_type == "flux":
-                    text += """
-        &({}<{}, {}>),
-        """[1:].format(auto_file.templates[kernel_type], i_dim + 1, n_qpoint//row_size)
-                else:
-                    text += """
+                text += """
         &({}<{}, {}, {}>),
         """[1:].format(auto_file.templates[kernel_type], n_var, n_qpoint, row_size)
         text += "};\n"
