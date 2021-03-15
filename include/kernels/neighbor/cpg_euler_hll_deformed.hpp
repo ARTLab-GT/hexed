@@ -73,7 +73,7 @@ void cpg_euler_hll_deformed(double* state_r, double* d_flux_w, double* jacobian,
       {
         jac_mat(i_axis, i_axis_arg[i_side]) = veloc[i_axis];
       }
-      veloc[i_side] = jac_mat.determinant()*normal_dir;
+      velocity[i_side] = jac_mat.determinant()*normal_dir;
     }
 
     double wave_speed [2];
