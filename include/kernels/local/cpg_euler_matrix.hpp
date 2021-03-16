@@ -12,12 +12,9 @@ namespace cartdg
 template<int n_var, int n_qpoint, int row_size>
 void cpg_euler_matrix(double * read, double * write, int n_elem,
                       Eigen::MatrixXd diff_mat_arg,
-                      Eigen::VectorXd weights_arg,
                       Kernel_settings& settings)
 {
   Eigen::Matrix<double, row_size, row_size> diff_mat = diff_mat_arg;
-  double weights [row_size];
-  for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) weights[i_qpoint] = weights_arg(i_qpoint);
   double d_t_by_d_pos = settings.d_t_by_d_pos;
   double heat_rat = settings.cpg_heat_rat;
 

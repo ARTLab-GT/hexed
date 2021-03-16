@@ -8,7 +8,7 @@
 namespace cartdg
 {
 
-typedef void (*Local_kernel)(double*, double*, int, Eigen::MatrixXd, Eigen::VectorXd, Kernel_settings&);
+typedef void (*Local_kernel)(double*, double*, int, Eigen::MatrixXd, Kernel_settings&);
 typedef void (*Neighbor_kernel)(double***, double***, int*, const Eigen::VectorXd,
               Kernel_settings&);
 typedef void (*Gbc_kernel)(std::vector<Ghost_boundary_condition*>&, double*, double*,
