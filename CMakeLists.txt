@@ -14,17 +14,22 @@ if(NOT CMAKE_BUILD_TYPE)
        "Select Release for high performance and Debug for easier debugging" FORCE)
    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Release" "Debug")
 endif()
-set(CMAKE_CXX_FLAGS_DEBUG "-fopenmp -g3")
-set(CMAKE_CXX_FLAGS_RELEASE "-fopenmp -O3 -march=native")
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native")
 set(CMAKE_CXX_FLAGS "-Wall")
 
 # determine whether to compile with sanitizers
-if(NOT DEFINED SANITIZE)
-   set(SANITIZE OFF CACHE BOOL
-       "If ON, compile with sanitizer flags." FORCE)
-endif()
-if (SANITIZE)
+option(sanitize "If ON, compile with sanitizer flags." OFF)
+if (sanitize)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize=leak -fsanitize=undefined")
+endif()
+
+# determine whether to parallelize
+option(threaded "If ON, allow multiple threads. Substantially reduces execution time." ON)
+if(threaded)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
 endif()
 
 # determine rank of polynomial basis
