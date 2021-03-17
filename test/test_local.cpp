@@ -101,7 +101,7 @@ TEST_CASE("CPG Euler matrix form")
           int i_qpoint = i*rank + j;
           double mass = 1 + 0.1*basis.node(i) + 0.2*basis.node(j);
           double veloc0 = 10; double veloc1 = -20;
-          double pres = 1e5;
+          double pres = 1e5*(1. - 0.3*basis.node(i) + 0.5*basis.node(j));
           double ener = pres/0.4 + 0.5*mass*(veloc0*veloc0 + veloc1*veloc1);
 
           read[i_elem][0][i_qpoint] = mass*veloc0;
@@ -119,6 +119,8 @@ TEST_CASE("CPG Euler matrix form")
       {
         REQUIRE((write[i_elem][2][i_qpoint] - read[i_elem][2][i_qpoint])
                 == Approx(-0.1*(0.1*10 - 0.2*20)));
+        REQUIRE((write[i_elem][3][i_qpoint] - read[i_elem][3][i_qpoint])
+                == Approx(-0.1*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20) + 0.5*(10*10 + 20*20)*(0.1*10 - 0.2*20))));
       }
     }
   }
@@ -232,7 +234,7 @@ TEST_CASE("CPG Euler deformed elements")
           double pos1 = basis.node(j)*(1. - 0.3*basis.node(i));
           double mass = 1 + 0.1*pos0 + 0.2*pos1;
           double veloc0 = 10; double veloc1 = -20;
-          double pres = 1e5;
+          double pres = 1e5*(1. - 0.3*pos0 + 0.5*pos1);
           double ener = pres/0.4 + 0.5*mass*(veloc0*veloc0 + veloc1*veloc1);
 
           read[i_elem][0][i_qpoint] = mass*veloc0;
@@ -254,8 +256,10 @@ TEST_CASE("CPG Euler deformed elements")
     {
       for (int i_qpoint = 0; i_qpoint < rank*rank; ++i_qpoint)
       {
-        CHECK((write[i_elem][2][i_qpoint] - read[i_elem][2][i_qpoint])
-                == Approx(-0.1*(0.1*10 - 0.2*20)));
+        REQUIRE((write[i_elem][2][i_qpoint] - read[i_elem][2][i_qpoint])
+                 == Approx(-0.1*(0.1*10 - 0.2*20)));
+        REQUIRE((write[i_elem][3][i_qpoint] - read[i_elem][3][i_qpoint])
+                == Approx(-0.1*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20) + 0.5*(10*10 + 20*20)*(0.1*10 - 0.2*20))));
       }
     }
   }
