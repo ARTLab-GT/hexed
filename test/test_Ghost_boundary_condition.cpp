@@ -17,7 +17,7 @@ class Supersonic_inlet : public cartdg::Ghost_boundary_condition
   {
     double mass = 2.;
     double speed = 700;
-    double int_ener = 5e5;
+    double int_ener = 2e5;
     for (int j_dim = 0; j_dim < n_dim; ++j_dim)
     {
       ghost_state().col(j_dim) = 0.;
@@ -31,9 +31,10 @@ class Supersonic_inlet : public cartdg::Ghost_boundary_condition
 
 TEST_CASE("Ghost boundary conditions")
 {
-  cartdg::Solution soln (5, 3, MAX_BASIS_RANK, 1.);
+  const int rank = 2;
+  cartdg::Solution soln (5, 3, rank, 1.); //FIXME: change back to MAX_BASIS_RANK
   cartdg::Basis& basis = soln.basis;
-  soln.kernel_settings.d_t_by_d_pos = 1.0;
+  soln.kernel_settings.d_t_by_d_pos = 0.1;
   soln.add_block_grid(1, std::vector<int>{0, 0, 0}, std::vector<int>{3, 3, 3});
   cartdg::Grid& grid = soln.get_grid(0);
   for (int i = 0; i < 3; ++i)
@@ -52,7 +53,7 @@ TEST_CASE("Ghost boundary conditions")
 
   SECTION("Basic functionality")
   {
-    const int n_face_qpoint = MAX_BASIS_RANK*MAX_BASIS_RANK;
+    const int n_face_qpoint = rank*rank;
     Supersonic_inlet bc (grid, 0, true);
     double some_number = 0.;
     REQUIRE(bc.jacobians.empty());
@@ -96,7 +97,7 @@ TEST_CASE("Ghost boundary conditions")
     {
       for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
       {
-        other_jacobian[i_dim*4*grid.n_qpoint + i_qpoint] = 2.;
+        other_jacobian[i_dim*4*grid.n_qpoint + i_qpoint] = 3.;
       }
     }
     for (int j = 0; j < 3; ++j)
@@ -118,19 +119,19 @@ TEST_CASE("Ghost boundary conditions")
       {
         #define  READ(i) grid.state_r()[i_elem*grid.n_dof + i_qpoint + (i)*grid.n_qpoint]
         #define WRITE(i) grid.state_w()[i_elem*grid.n_dof + i_qpoint + (i)*grid.n_qpoint]
-        READ(0) = 0.; READ(1) = 0.; READ(2) = 0.;
+        READ(0) = 600.*(1 - 2.*(i_qpoint/rank)/(grid.n_qpoint - 1.)); READ(1) = 0.; READ(2) = 0.;
         READ(3) = 1.;
-        READ(4) = 4e5;
+        READ(4) = 2e5;
         WRITE(0) = 0.; WRITE(1) = 0.; WRITE(2) = 0.;
         WRITE(3) = 1.;
-        WRITE(4) = 4e5;
+        WRITE(4) = 2e5;
         #undef  READ
         #undef WRITE
       }
     }
     auto weights = soln.basis.node_weights();
-    const int n_qpoint = MAX_BASIS_RANK*MAX_BASIS_RANK*MAX_BASIS_RANK;
-    cartdg::cpg_euler_gbc<5, n_qpoint, MAX_BASIS_RANK>
+    const int n_qpoint = rank*rank*rank;
+    cartdg::cpg_euler_gbc<5, n_qpoint, rank>
                          (grid.ghost_bound_conds, grid.state_r(), grid.state_w(),
                          weights[0], soln.kernel_settings);
     for (int i_elem = 0; i_elem < 27; ++i_elem)
@@ -141,11 +142,11 @@ TEST_CASE("Ghost boundary conditions")
         #define WRITE(i) grid.state_w()[i_elem*grid.n_dof + i_qpoint + (i)*grid.n_qpoint]
         if (std::abs(pos[i_qpoint]) < 1e-15)
         {
-          REQUIRE(WRITE(3) == 1. + 2.*700/(2*basis.node_weights()[0]));
+          REQUIRE(WRITE(3) == Approx(1. + 0.1*(700*2 - 600)/(3*basis.node_weights()[0])));
         }
         else if (std::abs(pos[i_qpoint] - 1.5) < 1e-15)
         {
-          REQUIRE(WRITE(3) == 1. + 2.*700/basis.node_weights()[0]);
+          REQUIRE(WRITE(3) == 1. + 2.*100/basis.node_weights()[0]);
         }
         else
         {
@@ -187,7 +188,7 @@ TEST_CASE("Ghost boundary conditions")
       }
     }
     auto weights = soln.basis.node_weights();
-    cartdg::cpg_euler_gbc<5, MAX_BASIS_RANK*MAX_BASIS_RANK*MAX_BASIS_RANK, MAX_BASIS_RANK>
+    cartdg::cpg_euler_gbc<5, rank*rank*rank, rank>
                          (grid.ghost_bound_conds, grid.state_r(), grid.state_w(),
                          weights[0], soln.kernel_settings);
     for (int i_elem = 0; i_elem < 27; ++i_elem)
@@ -232,7 +233,7 @@ TEST_CASE("Ghost boundary conditions")
       }
     }
     auto weights = soln.basis.node_weights();
-    cartdg::cpg_euler_gbc<5, MAX_BASIS_RANK*MAX_BASIS_RANK*MAX_BASIS_RANK, MAX_BASIS_RANK>
+    cartdg::cpg_euler_gbc<5, rank*rank*rank, rank>
                          (grid.ghost_bound_conds, grid.state_r(), grid.state_w(),
                           weights[0], soln.kernel_settings);
     for (int i_elem = 0; i_elem < 27; ++i_elem)
