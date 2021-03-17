@@ -32,6 +32,7 @@ class Supersonic_inlet : public cartdg::Ghost_boundary_condition
 TEST_CASE("Ghost boundary conditions")
 {
   const int rank = 2;
+  const int n_qpoint = rank*rank*rank;
   cartdg::Solution soln (5, 3, rank, 1.); //FIXME: change back to MAX_BASIS_RANK
   cartdg::Basis& basis = soln.basis;
   soln.kernel_settings.d_t_by_d_pos = 0.1;
@@ -115,22 +116,28 @@ TEST_CASE("Ghost boundary conditions")
     }
     for (int i_elem = 0; i_elem < 27; ++i_elem)
     {
-      for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
+      for (int i = 0; i < rank; ++i)
       {
-        #define  READ(i) grid.state_r()[i_elem*grid.n_dof + i_qpoint + (i)*grid.n_qpoint]
-        #define WRITE(i) grid.state_w()[i_elem*grid.n_dof + i_qpoint + (i)*grid.n_qpoint]
-        READ(0) = 600.*(1 - 2.*(i_qpoint/rank)/(grid.n_qpoint - 1.)); READ(1) = 0.; READ(2) = 0.;
-        READ(3) = 1.;
-        READ(4) = 2e5;
-        WRITE(0) = 0.; WRITE(1) = 0.; WRITE(2) = 0.;
-        WRITE(3) = 1.;
-        WRITE(4) = 2e5;
-        #undef  READ
-        #undef WRITE
+        for (int j = 0; j < rank; ++j)
+        {
+          for (int k = 0; k < rank; ++k)
+          {
+            int i_qpoint = k + rank*(j + rank*i);
+            #define  READ(i) grid.state_r()[i_elem*grid.n_dof + i_qpoint + (i)*grid.n_qpoint]
+            #define WRITE(i) grid.state_w()[i_elem*grid.n_dof + i_qpoint + (i)*grid.n_qpoint]
+            READ(0) = 600.*(1 - 2.*i/(rank - 1.)); READ(1) = 0.; READ(2) = 0.;
+            READ(3) = 1.;
+            READ(4) = 2e5;
+            WRITE(0) = 0.; WRITE(1) = 0.; WRITE(2) = 0.;
+            WRITE(3) = 1.;
+            WRITE(4) = 2e5;
+            #undef  READ
+            #undef WRITE
+          }
+        }
       }
     }
     auto weights = soln.basis.node_weights();
-    const int n_qpoint = rank*rank*rank;
     cartdg::cpg_euler_gbc<5, n_qpoint, rank>
                          (grid.ghost_bound_conds, grid.state_r(), grid.state_w(),
                          weights[0], soln.kernel_settings);
@@ -146,7 +153,7 @@ TEST_CASE("Ghost boundary conditions")
         }
         else if (std::abs(pos[i_qpoint] - 1.5) < 1e-15)
         {
-          REQUIRE(WRITE(3) == 1. + 2.*100/basis.node_weights()[0]);
+          REQUIRE(WRITE(3) == Approx(1. + 0.1*(700*2 - 600)/basis.node_weights()[0]));
         }
         else
         {
@@ -177,7 +184,7 @@ TEST_CASE("Ghost boundary conditions")
       {
         #define  READ(i) grid.state_r()[i_elem*grid.n_dof + i_qpoint + (i)*grid.n_qpoint]
         #define WRITE(i) grid.state_w()[i_elem*grid.n_dof + i_qpoint + (i)*grid.n_qpoint]
-        READ(0) = 0.; READ(1) = 0.; READ(2) = 0.;
+        READ(0) = 0.; READ(1) = -600.;  READ(2) = 0.;
         READ(3) = 1.;
         READ(4) = 4e5;
         WRITE(0) = 0.; WRITE(1) = 0.; WRITE(2) = 0.;
@@ -200,7 +207,7 @@ TEST_CASE("Ghost boundary conditions")
         double qpoint_pos = pos[i_qpoint + grid.n_qpoint];
         if (std::abs(qpoint_pos - 1.5) < 1e-15)
         {
-          REQUIRE(WRITE(3) == 1. + 2.*700/basis.node_weights()[0]);
+          REQUIRE(WRITE(3) == Approx(1. + 0.1*(700*2 - 600)/basis.node_weights()[0]));
         }
         else
         {
@@ -222,7 +229,7 @@ TEST_CASE("Ghost boundary conditions")
       {
         #define  READ(i) grid.state_r()[i_elem*grid.n_dof + i_qpoint + (i)*grid.n_qpoint]
         #define WRITE(i) grid.state_w()[i_elem*grid.n_dof + i_qpoint + (i)*grid.n_qpoint]
-        READ(0) = 0.; READ(1) = 0.; READ(2) = 0.;
+        READ(0) = 0.; READ(1) = 0.; READ(2) = 600.;
         READ(3) = 1.;
         READ(4) = 4e5;
         WRITE(0) = 0.; WRITE(1) = 0.; WRITE(2) = 0.;
@@ -245,7 +252,7 @@ TEST_CASE("Ghost boundary conditions")
         double qpoint_pos = pos[i_qpoint + 2*grid.n_qpoint];
         if ((i_elem == 3) && (std::abs(qpoint_pos) < 1e-15))
         {
-          REQUIRE(WRITE(3) == 1. + 2.*700/basis.node_weights()[0]);
+          REQUIRE(WRITE(3) == Approx(1. + 0.1*(700*2 - 600)/basis.node_weights()[0]));
         }
         else
         {
