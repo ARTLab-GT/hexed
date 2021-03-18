@@ -46,7 +46,7 @@ std::vector<double> Solution::integral(Domain_func& integrand)
   else
   {
     std::vector<double> total;
-    for (Grid* grid : all_grids()) // FIXME: incorporate jacobian
+    for (Grid* grid : all_grids())
     {
       auto grid_integral = grid->integral(integrand);
       int size = grid_integral.size();
