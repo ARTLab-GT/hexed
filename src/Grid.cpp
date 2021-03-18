@@ -275,13 +275,14 @@ std::vector<double> Grid::integral(Domain_func& integrand)
         point_state.push_back(sr[i_qpoint + i_var*n_qpoint + i_elem*n_dof]);
       }
       std::vector<double> point_integrand = integrand(point_pos, time, point_state);
+      double jac_det = jacobian_det(i_elem, i_qpoint);
       if (total.size() < point_integrand.size())
       {
         total.resize(point_integrand.size());
       }
       for (int i_var = 0; i_var < int(point_integrand.size()); ++i_var)
       {
-        total[i_var] += point_integrand[i_var]*weights[i_qpoint];
+        total[i_var] += point_integrand[i_var]*weights[i_qpoint]*jac_det;
       }
     }
   }
