@@ -108,7 +108,12 @@ double Solution::update(double cfl_by_stable_cfl)
         auto weights = g.basis.node_weights();
         fbc(g.ghost_bound_conds, g.state_r(), g.state_w(), weights(0), kernel_settings);
       }
-      step = std::min(step, physical_step(g.state_r(), g.state_w(), g.n_elem, kernel_settings));
+      double restricted_step = physical_step(g.state_r(), g.state_w(), g.n_elem, kernel_settings);
+      if (restricted_step < step)
+      {
+        step = restricted_step;
+        printf("\nTime step restricted to prevent nonphysical thermodynamic quantities!\n");
+      }
     }
     for (Deformed_grid& g : def_grids)
     {
@@ -122,7 +127,12 @@ double Solution::update(double cfl_by_stable_cfl)
         fbc(g.ghost_bound_conds, g.state_r(), g.state_w(), weights(0), kernel_settings);
       }
       nonpen(g.state_r(), g.state_w(), g.jacobian.data(), g.i_elem_wall.data(), g.i_dim_wall.data(), g.is_positive_wall.data(), g.i_elem_wall.size(), g.basis.node_weights()(0), kernel_settings);
-      step = std::min(step, physical_step(g.state_r(), g.state_w(), g.n_elem, kernel_settings));
+      double restricted_step = physical_step(g.state_r(), g.state_w(), g.n_elem, kernel_settings);
+      if (restricted_step < step)
+      {
+        step = restricted_step;
+        printf("\nTime step restricted to prevent nonphysical thermodynamic quantities!\n");
+      }
     }
     for (Grid* g : all_grids())
     {
