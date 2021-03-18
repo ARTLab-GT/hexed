@@ -7,12 +7,13 @@ TEST_CASE("non-penetration BC")
   cartdg::Kernel_settings settings;
   settings.d_t_by_d_pos = 0.1;
 
-  double veloc0 = 2.;
-  double veloc1 = 1.;
+  double veloc0 = 100.;
+  double veloc1 = 50.;
   double veloc2 = 0.;
   double mass = 1.2;
   double pressure = 1e5;
-  double ener = (pressure/(settings.cpg_heat_rat - 1.) + mass*0.5*14);
+  double kin_ener = mass*0.5*(veloc0*veloc0 + veloc1*veloc1);
+  double ener = (pressure/(settings.cpg_heat_rat - 1.) + kin_ener);
 
   double read [2][5][8];
   double write [2][5][8] {};
@@ -50,7 +51,7 @@ TEST_CASE("non-penetration BC")
     REQUIRE(write[0][4][i_qpoint] == Approx(0.));
   }
 
-  double veloc_normal = 3;
+  double veloc_normal = 2*veloc0 - 1*veloc1;
   double mult = settings.d_t_by_d_pos/4.;
   double mom_tang = mass*(veloc0*1 + veloc1*2);
   for (int i_qpoint : {0, 1, 4, 5})
