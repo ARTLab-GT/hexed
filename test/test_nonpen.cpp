@@ -52,13 +52,20 @@ TEST_CASE("non-penetration BC")
 
   double veloc_normal = 3;
   double mult = settings.d_t_by_d_pos/4.;
+  double mom_tang = mass*(veloc0*1 + veloc1*2);
   for (int i_qpoint : {0, 1, 4, 5})
   {
+    double d_mom_tang = (write[1][0][i_qpoint]*1 + write[1][1][i_qpoint]*2);
+    REQUIRE(d_mom_tang == Approx(-veloc_normal*mom_tang*mult));
+    REQUIRE(write[1][2][i_qpoint] == Approx(0.));
     REQUIRE(write[1][3][i_qpoint] == Approx(-veloc_normal*mass*mult));
     REQUIRE(write[1][4][i_qpoint] == Approx(-veloc_normal*(ener + pressure)*mult));
   }
   for (int i_qpoint : {2, 3, 6, 7})
   {
+    double d_mom_tang = (write[1][0][i_qpoint]*1 + write[1][1][i_qpoint]*2);
+    REQUIRE(d_mom_tang == Approx(veloc_normal*mom_tang*mult));
+    REQUIRE(write[1][2][i_qpoint] == Approx(0.));
     REQUIRE(write[1][3][i_qpoint] == Approx(veloc_normal*mass*mult));
     REQUIRE(write[1][4][i_qpoint] == Approx(veloc_normal*(ener + pressure)*mult));
   }
