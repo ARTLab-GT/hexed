@@ -134,18 +134,20 @@ TEST_CASE("Integration of deformed elements")
   grid.add_element({-1, 1});
   grid.auto_connect({3, 3});
 
+  double center [] {0.1, 0.1};
+
   def_grid.get_vertex(0).pos = {-0.5, -0.5, 0.};
   def_grid.get_vertex(1).pos = {-0.5, 0., 0.};
   def_grid.get_vertex(2).pos = {0., -0.5, 0.};
-  def_grid.get_vertex(3).pos = {0.1, 0.1, 0.};
+  def_grid.get_vertex(3).pos = {center[0], center[1], 0.};
 
   def_grid.get_vertex(4).pos = {-0.5, 0.5, 0.};
   def_grid.get_vertex(5).pos = {0., 0.5, 0.};
   def_grid.get_vertex(6).pos = {-0.5, 0., 0.};
-  def_grid.get_vertex(7).pos = {0.1, 0.1, 0.};
+  def_grid.get_vertex(7).pos = {center[0], center[1], 0.};
 
-  def_grid.get_vertex(9).pos = {0.1, 0.1, 0.};
-  def_grid.get_vertex(12).pos = {0.1, 0.1, 0.};
+  def_grid.get_vertex( 9).pos = {center[0], center[1], 0.};
+  def_grid.get_vertex(12).pos = {center[0], center[1], 0.};
 
   def_grid.connect({0, 1}, {1, 0}, {1, 1});
   def_grid.connect({2, 3}, {1, 1}, {1, 0});
@@ -196,14 +198,14 @@ TEST_CASE("Execution of non-penetration boundary condition")
     }
   }
   grid.calc_jacobian();
-  cartdg::Constant_func init ({1., 1., 1., 2.e5});
+  cartdg::Constant_func init ({100., 100., 1., 2.e5});
   sol.initialize(init);
   sol.visualize("nonpen_test");
   for (int i = 0; i < 10; ++i)
   {
     for (int j = 0; j < 10; ++j)
     {
-      sol.update(0.3);
+      sol.update(0.05);
     }
     sol.visualize("nonpen_test");
   }
