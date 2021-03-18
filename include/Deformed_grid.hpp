@@ -30,6 +30,7 @@ class Deformed_grid : public Grid
   virtual int add_element(std::vector<int> position);
   virtual std::vector<double> get_pos(int i_elem);
   void add_wall(int i_elem, int i_dim, bool is_positive_face);
+  virtual double jacobian_det(int i_elem, int i_qpoint);
 
   // Note: the following functions must be called in the order
   // that they appear.

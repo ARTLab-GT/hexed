@@ -42,6 +42,7 @@ class Grid
   std::vector<double**> neighbor_connections_w();
   std::vector<int> n_neighb_con();
   virtual std::vector<double> get_pos(int i_elem);
+  virtual double jacobian_det(int i_elem, int i_qpoint);
 
   // functions that execute some aspect of time integration
   bool execute_runge_kutta_stage();

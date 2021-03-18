@@ -135,6 +135,20 @@ void Deformed_grid::add_wall(int i_elem, int i_dim, bool is_positive_face)
   is_positive_wall.push_back((int)is_positive_face);
 }
 
+double Deformed_grid::jacobian_det(int i_elem, int i_qpoint)
+{
+  Eigen::MatrixXd jac_mat (n_dim, n_dim);
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+  {
+    for (int j_dim = 0; j_dim < n_dim; ++j_dim)
+    {
+      int i_value = ((i_elem*n_dim + i_dim)*n_dim + j_dim)*n_qpoint + i_qpoint;
+      jac_mat(i_dim, j_dim) = jacobian[i_value];
+    }
+  }
+  return jac_mat.fullPivLu().determinant();
+}
+
 void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_axis,
                             std::array<bool, 2> is_positive)
 {

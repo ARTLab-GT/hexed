@@ -175,6 +175,11 @@ std::vector<double> Grid::get_pos(int i_elem)
   return elem_pos;
 }
 
+double Grid::jacobian_det(int i_elem, int i_qpoint)
+{
+  return 1.;
+}
+
 bool Grid::execute_runge_kutta_stage()
 {
   double* read0 = state_storage[0].data();
