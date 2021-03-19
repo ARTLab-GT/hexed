@@ -5,7 +5,7 @@ project(cartdg VERSION 0.0
         LANGUAGES CXX)
 
 # specify the C++ standard
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # determine build type
@@ -14,18 +14,33 @@ if(NOT CMAKE_BUILD_TYPE)
        "Select Release for high performance and Debug for easier debugging" FORCE)
    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Release" "Debug")
 endif()
-set(CMAKE_CXX_FLAGS_DEBUG "-fopenmp -g3 -Wall -fsanitize=address -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize=leak -fsanitize=undefined")
-set(CMAKE_CXX_FLAGS_RELEASE "-fopenmp -O3 -march=native")
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native")
+set(CMAKE_CXX_FLAGS "-Wall")
+
+# determine whether to compile with sanitizers
+option(sanitize "If ON, compile with sanitizer flags." OFF)
+if (sanitize)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize=leak -fsanitize=undefined")
+endif()
+
+# determine whether to parallelize
+option(threaded "If ON, allow multiple threads. Substantially reduces execution time." ON)
+if(threaded)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
+endif()
 
 # determine rank of polynomial basis
-if(NOT MAX_BASIS_RANK)
+if(NOT DEFINED MAX_BASIS_RANK)
    set(MAX_BASIS_RANK 8 CACHE STRING
        "Maximum degree of basis polynomials + 1. Must be an integer greater than 1." FORCE)
 endif()
 execute_process(COMMAND python3 ${CMAKE_SOURCE_DIR}/script/auto_generate.py ${CMAKE_BINARY_DIR} ${MAX_BASIS_RANK})
 
 # determine rank of polynomial basis
-if(NOT TECIO_DIR)
+if(NOT DEFINED TECIO_DIR)
    set(TECIO_DIR /usr/local/tecplot/360ex_2018r2 CACHE STRING
        "Where to find TECIO (probably the root directory of your tecplot installation)" FORCE)
 endif()

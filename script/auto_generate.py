@@ -31,12 +31,21 @@ solution = Auto_file("Solution")
 solution.include = """
 #include <Solution.hpp>
 #include <kernels/local/cpg_euler_matrix.hpp>
+#include <kernels/local/cpg_euler_deformed.hpp>
+#include <kernels/local/cpg_euler_restrict_step.hpp>
 #include <kernels/neighbor/cpg_euler_copy.hpp>
-#include <kernels/neighbor/cpg_euler_fbc.hpp>
-#include <kernels/max_char_speed/cpg_euler_max.hpp>
+#include <kernels/neighbor/cpg_euler_copy_deformed.hpp>
+#include <kernels/neighbor/cpg_euler_nonpen.hpp>
+#include <kernels/neighbor/cpg_euler_gbc.hpp>
+#include <kernels/observing/cpg_euler_max.hpp>
+#include <kernels/observing/cpg_euler_physical_step.hpp>
 """
-solution.templates = {"local":"cpg_euler_matrix", "neighbor":"cpg_euler_copy",
-                      "fbc":"cpg_euler_fbc", "max_char_speed":"cpg_euler_max"}
+solution.templates = {"local":"cpg_euler_matrix", "local_deformed":"cpg_euler_deformed",
+                      "physical_step":"cpg_euler_physical_step",
+                      "restrict_step":"cpg_euler_restrict_step",
+                      "neighbor":"cpg_euler_copy", "neighbor_deformed":"cpg_euler_copy_deformed",
+                      "nonpen":"cpg_euler_nonpen",
+                      "gbc":"cpg_euler_gbc", "max_char_speed":"cpg_euler_max"}
 
 for auto_file in [solution]:
     text = ""
@@ -51,12 +60,7 @@ for auto_file in [solution]:
                 n_qpoint = (i_rank + 1)**(i_dim + 1)
                 n_face_qpoint = (i_rank + 1)**i_dim
                 row_size = i_rank + 1
-                if kernel_type == "flux":
-                    text += """
-        &({}<{}, {}>),
-        """[1:].format(auto_file.templates[kernel_type], i_dim + 1, n_qpoint//row_size)
-                else:
-                    text += """
+                text += """
         &({}<{}, {}, {}>),
         """[1:].format(auto_file.templates[kernel_type], n_var, n_qpoint, row_size)
         text += "};\n"
@@ -65,7 +69,7 @@ for auto_file in [solution]:
     {0}_kernel {3}::get_{1}_kernel()
     {{
       if (n_dim <= {2}) return {1}_kernels[n_dim - 1][basis.rank - 1];
-      else throw "Kernel not available.";
+      else throw std::runtime_error("Kernel not available.");
     }}
     """.format(func_type, kernel_type, i_dim + 1, auto_file.name)
 
@@ -130,7 +134,7 @@ text += node_text + "\n};\n\n" + weight_text + "\n};\n\n" + diff_mat_text + "\n}
 conditional_block = """
   if (({} > rank) || (rank > {}))
   {{
-    throw "Not implemented for required rank.";
+    throw std::runtime_error("Not implemented for required rank.");
   }}""".format(min_rank, max_rank)
 
 text += """

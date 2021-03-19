@@ -7,7 +7,7 @@
 #include <Eigen/Dense>
 
 #include "Basis.hpp"
-#include "Fitted_boundary_condition.hpp"
+#include "Ghost_boundary_condition.hpp"
 #include "kernels/kernel_types.hpp"
 #include "Domain_func.hpp"
 
@@ -22,13 +22,15 @@ class Grid
   int n_qpoint;
   int n_dof;
   int n_elem;
+  std::array<std::vector<double>, 3> state_storage {};
+  std::vector<std::vector<double*>> neighbor_storage;
   std::vector<int> pos;
   double mesh_size;
   Basis& basis;
   int iter;
   double time;
   std::vector<double> origin;
-  std::vector<Fitted_boundary_condition*> fit_bound_conds;
+  std::vector<Ghost_boundary_condition*> ghost_bound_conds;
 
   Grid(int n_var_arg, int n_dim_arg, int n_elem_arg, double mesh_size_arg, Basis& basis_arg);
   virtual ~Grid();
@@ -36,10 +38,11 @@ class Grid
   // functions for accessing data
   double* state_r();
   double* state_w();
-  std::vector<double**> neighbor_connections_r();
+  std::vector<double**> neighbor_connections_r(); // FIXME: return a pointer
   std::vector<double**> neighbor_connections_w();
   std::vector<int> n_neighb_con();
-  std::vector<double> get_pos(int i_elem);
+  virtual std::vector<double> get_pos(int i_elem);
+  virtual double jacobian_det(int i_elem, int i_qpoint);
 
   // functions that execute some aspect of time integration
   bool execute_runge_kutta_stage();
@@ -49,11 +52,11 @@ class Grid
   void auto_connect(std::vector<int> periods);
   void auto_connect();
   void clear_neighbors();
-  int add_element(std::vector<int> position);
+  virtual int add_element(std::vector<int> position);
   void add_connection(int i_elem0, int i_elem1, int i_dim);
 
   // functions that provide diagnostic information
-  void visualize(std::string file_name);
+  virtual void visualize(std::string file_name);
   void print();
   std::vector<double> integral();
   std::vector<double> integral(Domain_func& integrand);
@@ -63,8 +66,6 @@ class Grid
   int i_read;
   int i_write;
   double rk_weights [3] {1., 1./4., 2./3.};
-  std::array<std::vector<double>, 3> state_storage {};
-  std::vector<std::vector<double*>> neighbor_storage;
   double stable_cfl [9] {1.256, 0.409, 0.209, 0.130, 0.089, 0.066, 0.051, 0.040, 0.033};
 
   private:

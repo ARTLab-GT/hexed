@@ -4,13 +4,14 @@
 #include <Eigen/Dense>
 
 #include "../Kernel_settings.hpp"
+#include "n_extrema.hpp"
 
 namespace cartdg
 {
 
 template<int n_var, int n_qpoint, int row_size>
 void cpg_euler_matrix(double * read, double * write, int n_elem,
-                      const Eigen::MatrixXd& diff_mat_arg,
+                      Eigen::MatrixXd diff_mat_arg,
                       Kernel_settings& settings)
 {
   Eigen::Matrix<double, row_size, row_size> diff_mat = diff_mat_arg;
@@ -87,11 +88,9 @@ void cpg_euler_matrix(double * read, double * write, int n_elem,
                += row_w[i_var][i_qpoint];
             }
           }
-
         }
       }
     }
-
   }
 }
 

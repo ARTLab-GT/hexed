@@ -131,6 +131,14 @@ TEST_CASE("Grid")
     REQUIRE(pos[1024] == 0.2);
   }
 
+  SECTION("(trivial) Jacobian determinant")
+  {
+    REQUIRE(grid1.jacobian_det(0, 0) == 1.);
+    REQUIRE(grid2.jacobian_det(4, 2) == 1.);
+    REQUIRE(grid3.jacobian_det(16, 8) == 1.);
+    REQUIRE(grid3.jacobian_det(0, 0) == 1.);
+  }
+
   SECTION("Visualization")
   {
     grid1.visualize("unit_test_1d");

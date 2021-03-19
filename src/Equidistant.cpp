@@ -51,7 +51,7 @@ Eigen::MatrixXd Equidistant::diff_mat()
 
 Eigen::VectorXd Equidistant::node_weights()
 {
-  throw "Not implemented.";
+  throw std::runtime_error("Not implemented.");
   Eigen::VectorXd unused (0);
   return unused;
 }

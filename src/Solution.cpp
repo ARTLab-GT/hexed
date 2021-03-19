@@ -14,7 +14,7 @@ Grid& Solution::get_grid(int order_added)
 {
   if ((int)grids.size() <= order_added)
   {
-    throw "The requested Grid does not exist.";
+    throw std::runtime_error("The requested Grid does not exist.");
   }
   else
   {
@@ -25,10 +25,10 @@ Grid& Solution::get_grid(int order_added)
 void Solution::visualize(std::string file_prefix)
 {
   char buffer [100];
-  for (Grid& grid : grids)
+  for (Grid* grid : all_grids())
   {
-    snprintf(buffer, 100, "%s_%.2e_%.2e", file_prefix.c_str(), grid.mesh_size, grid.time);
-    grid.visualize(std::string(buffer));
+    snprintf(buffer, 100, "%s_%.2e_%.2e", file_prefix.c_str(), grid->mesh_size, grid->time);
+    grid->visualize(std::string(buffer));
   }
 }
 
@@ -46,9 +46,9 @@ std::vector<double> Solution::integral(Domain_func& integrand)
   else
   {
     std::vector<double> total;
-    for (Grid& grid : grids)
+    for (Grid* grid : all_grids())
     {
-      auto grid_integral = grid.integral(integrand);
+      auto grid_integral = grid->integral(integrand);
       int size = grid_integral.size();
       if (int(total.size()) < size)
       {
@@ -63,22 +63,42 @@ std::vector<double> Solution::integral(Domain_func& integrand)
   }
 }
 
+std::vector<Grid*> Solution::all_grids()
+{
+  std::vector<Grid*> all;
+  for (Grid& g : grids)
+  {
+    all.push_back(&g);
+  }
+  for (Deformed_grid& g : def_grids)
+  {
+    all.push_back(&g);
+  }
+  return all;
+}
+
 double Solution::update(double cfl_by_stable_cfl)
 {
-  Local_kernel local = get_local_kernel();
-  Neighbor_kernel neighbor = get_neighbor_kernel();
-  Max_char_speed_kernel max_char_speed = get_max_char_speed_kernel();
-  Fbc_kernel fbc = get_fbc_kernel();
+  auto local = get_local_kernel();
+  auto local_deformed = get_local_deformed_kernel();
+  auto neighbor = get_neighbor_kernel();
+  auto neighbor_deformed = get_neighbor_deformed_kernel();
+  auto nonpen = get_nonpen_kernel();
+  auto max_char_speed = get_max_char_speed_kernel();
+  auto physical_step = get_physical_step_kernel();
+  auto restrict_step = get_restrict_step_kernel();
+  auto fbc = get_gbc_kernel();
   double dt = std::numeric_limits<double>::max();
-  for (Grid& g : grids)
+  for (Grid* g : all_grids()) // FIXME: incorporate jacobian
   {
-    double cfl = cfl_by_stable_cfl*g.get_stable_cfl();
-    dt = std::min<double>(dt, cfl*g.mesh_size/max_char_speed(g.state_r(), g.n_elem,
-                                                             kernel_settings));
+    double cfl = cfl_by_stable_cfl*g->get_stable_cfl();
+    dt = std::min<double>(dt, cfl*g->mesh_size/max_char_speed(g->state_r(), g->n_elem,
+                                                              kernel_settings));
   }
-  for (Grid& g : grids)
+  for (int i_rk = 0; i_rk < 3; ++i_rk)
   {
-    do
+    double step = 1.;
+    for (Grid& g : grids)
     {
       kernel_settings.d_t_by_d_pos = dt/g.mesh_size;
       local(g.state_r(), g.state_w(), g.n_elem, g.basis.diff_mat(), kernel_settings);
@@ -86,35 +106,67 @@ double Solution::update(double cfl_by_stable_cfl)
                g.n_neighb_con().data(), g.basis.node_weights(), kernel_settings);
       {
         auto weights = g.basis.node_weights();
-        fbc(g.fit_bound_conds, g.state_r(), g.state_w(), weights(0), kernel_settings);
+        fbc(g.ghost_bound_conds, g.state_r(), g.state_w(), weights(0), kernel_settings);
+      }
+      double restricted_step = physical_step(g.state_r(), g.state_w(), g.n_elem, kernel_settings);
+      if (restricted_step < step)
+      {
+        step = restricted_step;
+        printf("\nTime step restricted to prevent nonphysical thermodynamic quantities!\n");
       }
     }
-    while (!g.execute_runge_kutta_stage());
-    g.time += dt;
+    for (Deformed_grid& g : def_grids)
+    {
+      kernel_settings.d_t_by_d_pos = dt/g.mesh_size;
+      local_deformed(g.state_r(), g.state_w(), g.jacobian.data(), g.n_elem,
+                     g.basis.diff_mat(), kernel_settings);
+      neighbor_deformed(g.state_connections_r(), g.state_connections_w(), g.jacobian_neighbors.data(),
+                        g.neighbor_axes.data(), g.neighbor_is_positive.data(), g.neighbor_storage[0].size()/2, g.basis.node_weights(), kernel_settings);
+      {
+        auto weights = g.basis.node_weights();
+        fbc(g.ghost_bound_conds, g.state_r(), g.state_w(), weights(0), kernel_settings);
+      }
+      nonpen(g.state_r(), g.state_w(), g.jacobian.data(), g.i_elem_wall.data(), g.i_dim_wall.data(), g.is_positive_wall.data(), g.i_elem_wall.size(), g.basis.node_weights()(0), kernel_settings);
+      double restricted_step = physical_step(g.state_r(), g.state_w(), g.n_elem, kernel_settings);
+      if (restricted_step < step)
+      {
+        step = restricted_step;
+        printf("\nTime step restricted to prevent nonphysical thermodynamic quantities!\n");
+      }
+    }
+    for (Grid* g : all_grids())
+    {
+      restrict_step(g->state_r(), g->state_w(), g->n_elem, step, kernel_settings);
+      g->execute_runge_kutta_stage();
+    }
+  }
+  for (Grid* g : all_grids())
+  {
+    g->time += dt;
   }
   return dt;
 }
 
 void Solution::initialize(Spacetime_func& init_cond)
 {
-  for (Grid& g : grids)
+  for (Grid* g : all_grids())
   {
-    double* state = g.state_r();
-    for (int i_elem = 0; i_elem < g.n_elem; ++i_elem)
+    double* state = g->state_r();
+    for (int i_elem = 0; i_elem < g->n_elem; ++i_elem)
     {
-      std::vector<double> pos = g.get_pos(i_elem);
-      for (int i_qpoint = 0; i_qpoint < g.n_qpoint; ++i_qpoint)
+      std::vector<double> pos = g->get_pos(i_elem);
+      for (int i_qpoint = 0; i_qpoint < g->n_qpoint; ++i_qpoint)
       {
         std::vector<double> qpoint_pos;
-        for (int i_dim = 0; i_dim < g.n_dim; ++i_dim)
+        for (int i_dim = 0; i_dim < g->n_dim; ++i_dim)
         {
-          qpoint_pos.push_back(pos[i_qpoint + i_dim*g.n_qpoint]);
+          qpoint_pos.push_back(pos[i_qpoint + i_dim*g->n_qpoint]);
         }
-        auto qpoint_state = init_cond(qpoint_pos, g.time);
-        int qpoint_ind = i_elem*g.n_dof + i_qpoint;
-        for (int i_var = 0; i_var < g.n_var; ++i_var)
+        auto qpoint_state = init_cond(qpoint_pos, g->time);
+        int qpoint_ind = i_elem*g->n_dof + i_qpoint;
+        for (int i_var = 0; i_var < g->n_var; ++i_var)
         {
-          state[qpoint_ind + i_var*g.n_qpoint] = qpoint_state[i_var];
+          state[qpoint_ind + i_var*g->n_qpoint] = qpoint_state[i_var];
         }
       }
     }
@@ -171,6 +223,11 @@ void Solution::add_block_grid(int ref_level)
 void Solution::add_empty_grid(int ref_level)
 {
   grids.emplace_back(n_var, n_dim, 0, refined_mesh_size(ref_level), basis);
+}
+
+void Solution::add_deformed_grid(int ref_level)
+{
+  def_grids.emplace_back(n_var, n_dim, 0, refined_mesh_size(ref_level), basis);
 }
 
 void Solution::auto_connect()

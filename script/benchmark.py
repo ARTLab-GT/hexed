@@ -40,9 +40,10 @@ size = n_qpoint*n_elem*n_var
 benchmark_local = ["copy", "update_matvec"]
 benchmark_neighbor = ["average_neighbor"]
 real_local = ["cpg_euler_matrix"]
+real_local_deformed = ["cpg_euler_deformed"]
 real_neighbor = ["cpg_euler_copy"]
 misc = ["cpg_euler_max"]
-kernels = benchmark_local + benchmark_neighbor + real_local + real_neighbor + misc
+kernels = benchmark_local + benchmark_neighbor + real_local + real_neighbor + real_local_deformed + misc
 times = []
 for kernel in kernels:
     include = """
@@ -55,6 +56,12 @@ double * write = new double [{0}];
 for (int i = 0; i < {0}; ++i)
 {{
   read[i] = i/100.;
+}}
+
+double* jacobian = new double [{4}];
+for (int i = 0; i < {4}; ++i)
+{{
+    jacobian[i] = (i + 1.)/{4};
 }}
 
 Eigen::MatrixXd diff_mat ({1}, {1});
@@ -90,7 +97,7 @@ for (int i = 0; i < {3}; ++i)
 
 cartdg::Kernel_settings settings;
 settings.d_t_by_d_pos = 0.3;
-""".format(size, row_size, n_elem, dim)
+""".format(size, row_size, n_elem, dim, n_elem*row_size**dim*dim**2)
     flags = "-march=native"
     if kernel in benchmark_local:
         include += """
@@ -107,6 +114,11 @@ settings.d_t_by_d_pos = 0.3;
 #include "kernels/local/{}.hpp"
 """.format(kernel)
         execute = "cartdg::{}<{}, {}, {}>(read, write, {}, diff_mat, settings);"
+    elif kernel in real_local_deformed:
+        include += """
+#include "kernels/local/{}.hpp"
+""".format(kernel)
+        execute = "cartdg::{}<{}, {}, {}>(read, write, jacobian, {}, diff_mat, settings);"
     elif kernel in real_neighbor:
         include += """
 #include "kernels/neighbor/{}.hpp"
