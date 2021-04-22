@@ -56,4 +56,11 @@ Eigen::VectorXd Equidistant::node_weights()
   return unused;
 }
 
+Eigen::VectorXd Equidistant::orthogonal(int degree)
+{
+  throw std::runtime_error("Not implemented.");
+  Eigen::VectorXd unused (0);
+  return unused;
+}
+
 }

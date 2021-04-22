@@ -4,6 +4,25 @@
 
 #include <Gauss_lobatto.hpp>
 
+class Identity_basis : public cartdg::Basis
+{
+  public:
+  Identity_basis (int rank_arg) : Basis(rank_arg) {}
+  double node(int i) { return 0.;}
+  Eigen::MatrixXd diff_mat()
+  {
+    return -Eigen::MatrixXd::Identity(rank, rank);
+  }
+  Eigen::VectorXd node_weights()
+  {
+    return Eigen::VectorXd::Ones(rank);
+  }
+  Eigen::VectorXd orthogonal(int degree)
+  {
+    return Eigen::VectorXd::Zero(rank);
+  }
+};
+
 TEST_CASE("CPG Euler matrix form")
 {
   cartdg::Kernel_settings settings;
@@ -14,7 +33,7 @@ TEST_CASE("CPG Euler matrix form")
     const int rank = 2;
     double read [n_elem][3][rank];
     double write[n_elem][3][rank];
-    Eigen::MatrixXd diff_mat = -Eigen::MatrixXd::Identity(rank, rank);
+    Identity_basis basis (rank);
     double mass = 1.225; double veloc = 10; double pres = 1e5;
     double mmtm = mass*veloc; double ener = pres/0.4 + 0.5*mass*veloc*veloc;
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
@@ -27,7 +46,7 @@ TEST_CASE("CPG Euler matrix form")
       }
     }
     cartdg::cpg_euler_matrix<3, 2, 2>(&read[0][0][0], &write[0][0][0], n_elem,
-                                      diff_mat, settings);
+                                      basis, settings);
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       for (int i_qpoint = 0; i_qpoint < rank; ++i_qpoint)
@@ -48,7 +67,7 @@ TEST_CASE("CPG Euler matrix form")
     const int rank = 3;
     double read [n_elem][5][rank*rank*rank];
     double write[n_elem][5][rank*rank*rank];
-    Eigen::MatrixXd diff_mat = -Eigen::MatrixXd::Identity(rank, rank);
+    Identity_basis basis (rank);
     double mass = 1.225;
     double veloc0 = 10; double veloc1 = -20; double veloc2 = 30;
     double pres = 1e5;
@@ -65,7 +84,7 @@ TEST_CASE("CPG Euler matrix form")
       }
     }
     cartdg::cpg_euler_matrix<5, 27, 3>(&read[0][0][0], &write[0][0][0], n_elem,
-                                       diff_mat, settings);
+                                       basis, settings);
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       for (int i_qpoint = 0; i_qpoint < rank*rank*rank; ++i_qpoint)
@@ -91,7 +110,6 @@ TEST_CASE("CPG Euler matrix form")
     double read [n_elem][4][rank*rank];
     double write[n_elem][4][rank*rank];
     cartdg::Gauss_lobatto basis (rank);
-    Eigen::MatrixXd diff_mat = basis.diff_mat();
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       for (int i = 0; i < rank; ++i)
@@ -112,7 +130,7 @@ TEST_CASE("CPG Euler matrix form")
       }
     }
     cartdg::cpg_euler_matrix<4, rank*rank, rank>(&read[0][0][0], &write[0][0][0], n_elem,
-                                                 diff_mat, settings);
+                                                 basis, settings);
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       for (int i_qpoint = 0; i_qpoint < rank*rank; ++i_qpoint)
@@ -137,7 +155,7 @@ TEST_CASE("CPG Euler deformed elements")
     double read [n_elem][3][rank];
     double write[n_elem][3][rank];
     double jacobian [n_elem][1][1][rank] {};
-    Eigen::MatrixXd diff_mat = -Eigen::MatrixXd::Identity(rank, rank);
+    Identity_basis basis (rank);
     double mass = 1.225; double veloc = 10; double pres = 1e5;
     double mmtm = mass*veloc; double ener = pres/0.4 + 0.5*mass*veloc*veloc;
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
@@ -152,7 +170,7 @@ TEST_CASE("CPG Euler deformed elements")
     }
     cartdg::cpg_euler_deformed<3, 2, 2>(&read[0][0][0], &write[0][0][0], 
                                         &jacobian[0][0][0][0], n_elem,
-                                        diff_mat, settings);
+                                        basis, settings);
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       for (int i_qpoint = 0; i_qpoint < rank; ++i_qpoint)
@@ -174,7 +192,7 @@ TEST_CASE("CPG Euler deformed elements")
     double read [n_elem][5][rank*rank*rank];
     double write[n_elem][5][rank*rank*rank];
     double jacobian [n_elem][3][3][rank*rank*rank] {};
-    Eigen::MatrixXd diff_mat = -Eigen::MatrixXd::Identity(rank, rank);
+    Identity_basis basis (rank);
     double mass = 1.225;
     double veloc0 = 10; double veloc1 = -20; double veloc2 = 30;
     double pres = 1e5;
@@ -195,7 +213,7 @@ TEST_CASE("CPG Euler deformed elements")
     }
     cartdg::cpg_euler_deformed<5, 27, 3>(&read[0][0][0], &write[0][0][0], 
                                          &jacobian[0][0][0][0], n_elem,
-                                         diff_mat, settings);
+                                         basis, settings);
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       for (int i_qpoint = 0; i_qpoint < rank*rank*rank; ++i_qpoint)
@@ -222,7 +240,6 @@ TEST_CASE("CPG Euler deformed elements")
     double write[n_elem][4][rank*rank];
     double jacobian [n_elem][2][2][rank*rank] {};
     cartdg::Gauss_lobatto basis (rank);
-    Eigen::MatrixXd diff_mat = basis.diff_mat();
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       for (int i = 0; i < rank; ++i)
@@ -251,7 +268,7 @@ TEST_CASE("CPG Euler deformed elements")
     }
     cartdg::cpg_euler_deformed<4, rank*rank, rank>(&read[0][0][0], &write[0][0][0],
                                                    &jacobian[0][0][0][0], n_elem,
-                                                   diff_mat, settings);
+                                                   basis, settings);
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       for (int i_qpoint = 0; i_qpoint < rank*rank; ++i_qpoint)

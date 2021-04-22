@@ -16,6 +16,7 @@ class Basis
   virtual double node(int i) = 0;
   virtual Eigen::VectorXd node_weights() = 0;
   virtual Eigen::MatrixXd diff_mat() = 0;
+  virtual Eigen::VectorXd orthogonal(int degree) = 0;
 };
 
 }

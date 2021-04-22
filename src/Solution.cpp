@@ -101,7 +101,7 @@ double Solution::update(double cfl_by_stable_cfl)
     for (Grid& g : grids)
     {
       kernel_settings.d_t_by_d_pos = dt/g.mesh_size;
-      local(g.state_r(), g.state_w(), g.n_elem, g.basis.diff_mat(), kernel_settings);
+      local(g.state_r(), g.state_w(), g.n_elem, g.basis, kernel_settings);
       neighbor(g.neighbor_connections_r().data(), g.neighbor_connections_w().data(), 
                g.n_neighb_con().data(), g.basis.node_weights(), kernel_settings);
       {
@@ -119,7 +119,7 @@ double Solution::update(double cfl_by_stable_cfl)
     {
       kernel_settings.d_t_by_d_pos = dt/g.mesh_size;
       local_deformed(g.state_r(), g.state_w(), g.jacobian.data(), g.n_elem,
-                     g.basis.diff_mat(), kernel_settings);
+                     g.basis, kernel_settings);
       neighbor_deformed(g.state_connections_r(), g.state_connections_w(), g.jacobian_neighbors.data(),
                         g.neighbor_axes.data(), g.neighbor_is_positive.data(), g.neighbor_storage[0].size()/2, g.basis.node_weights(), kernel_settings);
       {

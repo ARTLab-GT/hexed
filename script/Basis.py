@@ -8,6 +8,9 @@ class Basis:
         assert len(weights) == self.rank
         self.nodes = [sp.Float(node, self.calc_digits) for node in nodes]
         self.weights = [sp.Float(weight, self.calc_digits) for weight in weights]
+        self.ortho = []
+        for i in range(self.rank):
+            self.ortho.append(self.legendre(i))
 
     def node(self, i):
         return sp.Float(self.nodes[i], self.repr_digits)
@@ -29,3 +32,20 @@ class Basis:
                     if n != i_result:
                         dp *= sp.Float(self.nodes[i_result] - self.nodes[n])
         return sp.Float(dp, self.repr_digits)
+
+    def legendre(self, degree):
+        x = sp.Symbol("x")
+        poly = sp.legendre(degree, x)
+        vals = []
+        norm = sp.Float(0, self.calc_digits)
+        for i_node in range(self.rank):
+            node = self.nodes[i_node]
+            vals.append(poly.subs(x, node*2 - 1).evalf(self.calc_digits))
+            norm += vals[i_node]**2*self.weights[i_node]
+        norm = norm**sp.Rational(1, 2)
+        for i_node in range(self.rank):
+            vals[i_node] /= norm
+        return vals
+
+    def get_ortho(self, degree, i_node):
+        return sp.Float(self.ortho[degree][i_node], self.repr_digits)

@@ -4,16 +4,16 @@
 #include <iostream>
 #include <Eigen/Dense>
 #include "../Kernel_settings.hpp"
+#include "../../Basis.hpp"
 
 namespace cartdg
 {
 
 template<int n_var, int n_qpoint, int row_size>
 void cpg_euler_deformed(double* read, double* write, double* jacobian, int n_elem,
-                        const Eigen::MatrixXd& diff_mat_arg,
-                        Kernel_settings& settings)
+                        Basis& basis, Kernel_settings& settings)
 {
-  Eigen::Matrix<double, row_size, row_size> diff_mat = diff_mat_arg;
+  Eigen::Matrix<double, row_size, row_size> diff_mat = basis.diff_mat();
   double d_t_by_d_pos = settings.d_t_by_d_pos;
   double heat_rat = settings.cpg_heat_rat;
   const int n_dim = n_var - 2;
