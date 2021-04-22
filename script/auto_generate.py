@@ -8,17 +8,18 @@ src_dir = src_dir.replace("//", "/")
 max_rank = int(sys.argv[2])
 
 def format_file_text(include, text):
-    return """
-/*
-This file was generated automatically by script/auto_generate.py.
-Do not attempt to modify it directly. Instead, modify and rerun script/auto_generate.py
-to make the required changes.
+    return f"""/*
+This file was generated automatically by script/auto_generate.py, which CMake executes
+during the build process. Do not attempt to modify it directly. Instead, modify
+script/auto_generate.py and rerun CMake.
 */
 
-""" + include + """
+{include}
 namespace cartdg
-{
-""" + text + "\n\n}\n"
+{{
+{text}
+}}
+"""
 
 class Auto_file:
     def __init__(self, name):
@@ -93,43 +94,45 @@ for rank in range(2, max_rank + 1):
     weights = [weight/2 for weight in weights]
     basis = Basis(nodes, weights, calc_digits=calc_digits)
 
-    text += """
-double nodes{0} [{0}] {{
-""".format(rank)
+    text += f"""
+double node{rank} [{rank}] {{
+"""
     for i_result in range(rank):
-        text += "{}, ".format(basis.node(i_result))
+        text += f"{basis.node(i_result)}, "
     text += "\n};\n"
 
-    text += """
-double weights{0} [{0}] {{
-""".format(rank)
+    text += f"""
+double weight{rank} [{rank}] {{
+"""
     for i_result in range(rank):
-        text += "{}, ".format(basis.weight(i_result))
+        text += f"{basis.weight(i_result)}, "
     text += "\n};\n"
 
-    text += """
-double diff_mat{0} [{1}] {{
-""".format(rank, rank**2)
+    text += f"""
+double diff_mat{rank} [{rank**2}] {{
+"""
     for i_operand in range(rank):
         for i_result in range(rank):
-            text += "{}, ".format(basis.derivative(i_result, i_operand))
+            text += f"{basis.derivative(i_result, i_operand)}, "
         text += "\n"
     text += "};\n"
 
-node_text = """
-double* nodes [{}] {{
-""".format(max_rank + 1 - min_rank)
-weight_text = """
-double* weights [{}] {{
-""".format(max_rank + 1 - min_rank)
-diff_mat_text = """
-double* diff_mats [{}] {{
-""".format(max_rank + 1 - min_rank)
-for rank in range(2, max_rank + 1):
-    node_text += "&nodes{}[0], ".format(rank)
-    weight_text += "&weights{}[0], ".format(rank)
-    diff_mat_text += "&diff_mat{}[0], ".format(rank)
-text += node_text + "\n};\n\n" + weight_text + "\n};\n\n" + diff_mat_text + "\n};\n\n"
+    text += f"""
+double orthogonal{rank} [{rank**2}] {{
+"""
+    for deg in range(rank):
+        for i_node in range(rank):
+            text += f"{basis.get_ortho(deg, i_node)}, "
+        text += "\n"
+    text += "};\n"
+
+for name in ["node", "weight", "diff_mat", "orthogonal"]:
+    text += f"""
+double* {name}s [{max_rank + 1 - min_rank}] {{"""
+    for rank in range(2, max_rank + 1):
+        text += f"&{name}{rank}[0], "
+    text += "};"
+text += "\n"
 
 conditional_block = """
   if (({} > rank) || (rank > {}))
@@ -137,33 +140,34 @@ conditional_block = """
     throw std::runtime_error("Not implemented for required rank.");
   }}""".format(min_rank, max_rank)
 
-text += """
+text += f"""
 double Gauss_lobatto::node(int i)
-{""" + conditional_block
-text += """
-  return nodes[rank - {}][i];""".format(min_rank)
-text += """
-}
+{{{conditional_block}
+  return nodes[rank - {min_rank}][i];
+}}
 
 Eigen::VectorXd Gauss_lobatto::node_weights()
-{""" + conditional_block
-text += """
+{{{conditional_block}
   Eigen::VectorXd nw (rank);
-  for (int i_node = 0; i_node < rank; ++i_node) nw(i_node) = weights[rank - {}][i_node];
-  return nw;""".format(min_rank)
-text += """
-}
+  for (int i_node = 0; i_node < rank; ++i_node) nw(i_node) = weights[rank - {min_rank}][i_node];
+  return nw;
+}}
 
 Eigen::MatrixXd Gauss_lobatto::diff_mat()
-{""" + conditional_block
-text += """
+{{{conditional_block}
   Eigen::MatrixXd dm (rank, rank);
-  for (int i_node = 0; i_node < rank*rank; ++i_node) dm(i_node) = diff_mats[rank - {}][i_node];
-  return dm;""".format(min_rank)
-text += """
-}
+  for (int i_node = 0; i_node < rank*rank; ++i_node) dm(i_node) = diff_mats[rank - {min_rank}][i_node];
+  return dm;
+}}
 
-Gauss_lobatto::Gauss_lobatto(int rank_arg) : Basis(rank_arg) {}
+Eigen::VectorXd Gauss_lobatto::orthogonal(int degree)
+{{{conditional_block}
+  Eigen::VectorXd orth (rank);
+  for (int i_node = 0; i_node < rank; ++i_node) orth(i_node) = orthogonals[rank - {min_rank}][degree*rank + i_node];
+  return orth;
+}}
+
+Gauss_lobatto::Gauss_lobatto(int rank_arg) : Basis(rank_arg) {{}}
 """
 
 with open(src_dir + "Gauss_lobatto.cpp", "w") as write_file:
