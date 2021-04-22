@@ -1,13 +1,13 @@
 target_sources(cartdg PRIVATE
 Basis.cpp
+Deformed_grid.cpp
+Domain_func.cpp
 Equidistant.cpp
+Ghost_boundary_condition.cpp
 Grid.cpp
 Grid__visualize.cpp
-Solution.cpp
-Ghost_boundary_condition.cpp
-Domain_func.cpp
-Spacetime_func.cpp
 Kernel_settings.cpp
-Deformed_grid.cpp
+Solution.cpp
+Spacetime_func.cpp
 Vertex.cpp
 )
