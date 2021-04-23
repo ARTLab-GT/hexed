@@ -289,7 +289,7 @@ TEST_CASE("derivative")
   const int row_size = MAX_BASIS_RANK;
   cartdg::Gauss_lobatto basis (row_size);
   cartdg::Kernel_settings settings;
-  SECTION("correct calculations")
+  SECTION("calculations")
   {
     double read [row_size];
     double write [row_size];
@@ -330,6 +330,41 @@ TEST_CASE("derivative")
       for (int i = 0; i < row_size; ++i)
       {
         REQUIRE(write[i] == Approx(std::exp(basis.node(i))).margin(1e-14));
+      }
+    }
+  }
+  SECTION("data juggling")
+  {
+    SECTION("3D")
+    {
+      const int n_qpoint = row_size*row_size*row_size;
+      double coefs [] {1.103, -4.044, 0.392};
+      for (int i_axis = 0; i_axis < 3; ++i_axis)
+      {
+        double read [row_size][row_size][row_size] {};
+        double write [row_size][row_size][row_size] {};
+        for (int i = 0; i < row_size; ++i)
+        {
+          for (int j = 0; j < row_size; ++j)
+          {
+            for (int k = 0; k < row_size; ++k)
+            {
+              int inds [] {i, j, k};
+              for (int j_axis : {0, 1, 2}) read[i][j][k] += coefs[j_axis]*basis.node(inds[j_axis]);
+            }
+          }
+        }
+        derivative<1, n_qpoint, row_size>({0}, read[0][0], write[0][0], 0, i_axis, basis, settings);
+        for (int i = 0; i < row_size; ++i)
+        {
+          for (int j = 0; j < row_size; ++j)
+          {
+            for (int k = 0; k < row_size; ++k)
+            {
+              REQUIRE(write[i][j][k] == Approx(coefs[i_axis]));
+            }
+          }
+        }
       }
     }
   }
