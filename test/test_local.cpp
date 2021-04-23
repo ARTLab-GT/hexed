@@ -1,7 +1,9 @@
 #include <catch.hpp>
+
+#include <cartdgConfig.hpp>
 #include <kernels/local/cpg_euler_matrix.hpp>
 #include <kernels/local/cpg_euler_deformed.hpp>
-
+#include <kernels/local/derivative.hpp>
 #include <Gauss_lobatto.hpp>
 
 class Identity_basis : public cartdg::Basis
@@ -277,6 +279,57 @@ TEST_CASE("CPG Euler deformed elements")
                  == Approx(-0.1*(0.1*10 - 0.2*20)));
         REQUIRE((write[i_elem][3][i_qpoint] - read[i_elem][3][i_qpoint])
                 == Approx(-0.1*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20) + 0.5*(10*10 + 20*20)*(0.1*10 - 0.2*20))));
+      }
+    }
+  }
+}
+
+TEST_CASE("derivative")
+{
+  const int row_size = MAX_BASIS_RANK;
+  cartdg::Gauss_lobatto basis (row_size);
+  cartdg::Kernel_settings settings;
+  SECTION("correct calculations")
+  {
+    double read [row_size];
+    double write [row_size];
+    SECTION("constant function")
+    {
+      for (int i = 0; i < row_size; ++i)
+      {
+        read[i] = 1.;
+        write[i] = 1.;
+      }
+      derivative<1, row_size, row_size>({0}, read, write, 0, 0, basis, settings);
+      for (int i = 0; i < row_size; ++i)
+      {
+        REQUIRE(write[i] == Approx(0.).margin(1e-14));
+      }
+    }
+    SECTION("polynomial")
+    {
+      for (int i = 0; i < row_size; ++i)
+      {
+        read[i] = std::pow(basis.node(i), 3);
+        write[i] = 1.;
+      }
+      derivative<1, row_size, row_size>({0}, read, write, 0, 0, basis, settings);
+      for (int i = 0; i < row_size; ++i)
+      {
+        REQUIRE(write[i] == Approx(3*std::pow(basis.node(i), 2)).margin(1e-14));
+      }
+    }
+    SECTION("exponential") // Not mathematically exact but numerically very good
+    {
+      for (int i = 0; i < row_size; ++i)
+      {
+        read[i] = std::exp(basis.node(i));
+        write[i] = 1.;
+      }
+      derivative<1, row_size, row_size>({0}, read, write, 0, 0, basis, settings);
+      for (int i = 0; i < row_size; ++i)
+      {
+        REQUIRE(write[i] == Approx(std::exp(basis.node(i))).margin(1e-14));
       }
     }
   }
