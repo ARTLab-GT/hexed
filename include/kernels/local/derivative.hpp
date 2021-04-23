@@ -40,7 +40,7 @@ void derivative(std::vector<int> elem_inds, double* read, double* write, int i_v
         Eigen::Matrix<double, row_size, 1> row_w = diff_mat*row_r;
         for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
         {
-          write[(i_elem*n_var + i_var)*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride] = row_w(i_qpoint);
+          write[i_elem*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride] = row_w(i_qpoint);
         }
       }
     }
