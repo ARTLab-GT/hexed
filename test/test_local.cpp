@@ -386,5 +386,33 @@ TEST_CASE("derivative")
         REQUIRE(write[i] == Approx(3*std::pow(basis.node(i), 2)).margin(1e-14));
       }
     }
+    SECTION("multi-element")
+    {
+      double read [3][row_size] {};
+      double write [3][row_size] {};
+      double coefs [] {1.103, -4.044, 0.392};
+      for (int i_elem = 0; i_elem < 3; ++i_elem)
+      {
+        for (int i = 0; i < row_size; ++i)
+        {
+          read[i_elem][i] = coefs[i_elem]*basis.node(i);
+        }
+      }
+      derivative<1, row_size, row_size>({2, 0}, read[0], write[0], 0, 0, basis, settings);
+      for (int i_elem = 0; i_elem < 3; ++i_elem)
+      {
+        for (int i = 0; i < row_size; ++i)
+        {
+          if (i_elem == 1)
+          {
+            REQUIRE(write[i_elem][i] == 0.);
+          }
+          else
+          {
+            REQUIRE(write[i_elem][i] == Approx(coefs[i_elem]));
+          }
+        }
+      }
+    }
   }
 }
