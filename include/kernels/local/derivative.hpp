@@ -1,5 +1,5 @@
-#ifndef DERIVATIVE_HPP_
-#define DERIVATIVE_HPP_
+#ifndef CARTDG_DERIVATIVE_HPP_
+#define CARTDG_DERIVATIVE_HPP_
 
 #include <vector>
 

@@ -1,9 +1,11 @@
 #include <catch.hpp>
 
+#include <cartdgConfig.hpp>
 #include <kernels/neighbor/read_copy.hpp>
 #include <kernels/neighbor/write_copy.hpp>
 #include <kernels/neighbor/cpg_euler_hll.hpp>
 #include <kernels/neighbor/cpg_euler_hll_deformed.hpp>
+#include <kernels/neighbor/jump.hpp>
 
 TEST_CASE("neighbor kernel read_copy<>()")
 {
@@ -517,4 +519,37 @@ TEST_CASE("cpg_euler_hll_deformed")
     REQUIRE(write[2*3     ] == Approx(0.7*mass*680));
     REQUIRE(write[2*3 + 10] == Approx(0.7*mass*680));
   }
+}
+
+TEST_CASE("jump kernel")
+{
+  const int row_size = MAX_BASIS_RANK;
+  const int n_qpoint = row_size*row_size*row_size;
+  double read  [3][1][row_size][row_size][row_size];
+  double write [3][1][row_size][row_size][row_size];
+  Eigen::VectorXd weights = Eigen::VectorXd::Ones(1)*0.2;
+  cartdg::Kernel_settings settings;
+  for (int i = 0; i < n_qpoint; ++i)
+  {
+    *(&read[0][0][0][0][0] + i) = 0.5;
+    *(&read[1][0][0][0][0] + i) = 2.;
+    *(&read[2][0][0][0][0] + i) = 0.7;
+    for (int j = 0; j < 3; ++j)
+    {
+      *(&write[j][0][0][0][0] + i) = 0.1;
+    }
+  }
+  double* connect_read  [4] {&read[2][0][0][0][0], &read[1][0][0][0][0], &read[0][0][0][0][0], &read[2][0][0][0][0]};
+  double* connect_write [4] {&write[0][0][0][0][0], &write[1][0][0][0][0], &write[2][0][0][0][0], &write[1][0][0][0][0]};
+  std::vector<int> inds {1};
+  jump<1, n_qpoint, row_size>(inds, connect_read, connect_write, 0, 1, weights, settings);
+  double correct = (0.7 - 0.5)/2./0.2 + 0.1;
+  REQUIRE(write[2][0][0][row_size - 1][0] == Approx(correct));
+  REQUIRE(write[2][0][row_size - 1][row_size - 1][row_size - 1] == Approx(correct));
+  REQUIRE(write[1][0][0][0][0] == Approx(correct));
+  REQUIRE(write[1][0][row_size - 1][0][row_size - 1] == Approx(correct));
+  REQUIRE(write[0][0][0][0][0] == 0.1);
+  REQUIRE(write[0][0][0][row_size - 1][0] == 0.1);
+  REQUIRE(write[2][0][0][0][0] == 0.1);
+  REQUIRE(write[1][0][1][1][1] == 0.1); // might fail if MAX_BASIS_RANK == 2
 }
