@@ -12,7 +12,7 @@ namespace cartdg
 {
 
 template<int n_var, int n_qpoint, int row_size>
-void derivative(std::vector<int> elem_inds, double* read, double* write, int i_var, int i_axis,
+void derivative(std::vector<int>& elem_inds, double* read, double* write, int i_var, int i_axis,
                 Basis& basis, Kernel_settings& settings)
 {
   Eigen::Matrix<double, row_size, row_size> diff_mat = basis.diff_mat();
