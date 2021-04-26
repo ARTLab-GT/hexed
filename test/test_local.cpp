@@ -4,6 +4,7 @@
 #include <kernels/local/cpg_euler_matrix.hpp>
 #include <kernels/local/cpg_euler_deformed.hpp>
 #include <kernels/local/derivative.hpp>
+#include <kernels/local/laplacian.hpp>
 #include <Gauss_lobatto.hpp>
 
 class Identity_basis : public cartdg::Basis
@@ -417,6 +418,43 @@ TEST_CASE("derivative")
           {
             REQUIRE(write[i_elem][i] == Approx(coefs[i_elem]));
           }
+        }
+      }
+    }
+  }
+}
+
+TEST_CASE("laplacian")
+{
+  const int row_size = MAX_BASIS_RANK;
+  cartdg::Gauss_lobatto basis (row_size);
+  cartdg::Kernel_settings settings;
+
+  const int n_qpoint = row_size*row_size*row_size;
+  double coefs [] {1.103, -4.044, 0.392};
+  for (int i_axis = 0; i_axis < 3; ++i_axis)
+  {
+    double data [row_size][row_size][row_size] {};
+    for (int i = 0; i < row_size; ++i)
+    {
+      for (int j = 0; j < row_size; ++j)
+      {
+        for (int k = 0; k < row_size; ++k)
+        {
+          int inds [] {i, j, k};
+          for (int j_axis : {0, 1, 2}) data[i][j][k] += coefs[j_axis]*basis.node(inds[j_axis]);
+        }
+      }
+    }
+    std::vector<int> inds {0};
+    laplacian<5, n_qpoint, row_size>(inds, data[0][0], i_axis, basis, settings);
+    for (int i = 0; i < row_size; ++i)
+    {
+      for (int j = 0; j < row_size; ++j)
+      {
+        for (int k = 0; k < row_size; ++k)
+        {
+          REQUIRE(data[i][j][k] == Approx(coefs[i_axis]));
         }
       }
     }
