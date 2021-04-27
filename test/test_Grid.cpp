@@ -250,7 +250,11 @@ TEST_CASE("Grid")
     cartdg::Equidistant basis (8);
     cartdg::Grid grid (4, 1, 0, 0.1, basis);
     std::vector<int> position {1};
+    REQUIRE(grid.state_storage[0].size() == 0);
+    REQUIRE(grid.derivs.size() == 0);
     REQUIRE(grid.add_element(position) == 0);
+    REQUIRE(grid.state_storage[0].size() == 4*8);
+    REQUIRE(grid.derivs.size() == 8);
     position[0] += 1;
     REQUIRE(grid.add_element(position) == 1);
     REQUIRE(grid.n_elem == 2);

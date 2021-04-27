@@ -140,6 +140,7 @@ int Grid::add_element(std::vector<int> position)
   {
     state_storage[i_rk_stage].resize(state_storage[i_rk_stage].size() + n_dof, 0.);
   }
+  derivs.resize(derivs.size() + n_qpoint, 0.);
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) pos.push_back(position[i_dim]);
   return n_elem++;
 }
