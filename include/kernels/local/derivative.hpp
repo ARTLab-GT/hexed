@@ -11,8 +11,8 @@
 namespace cartdg
 {
 
-template<int n_var, int n_qpoint, int row_size>
-void derivative(std::vector<int>& elem_inds, double* read, double* write, int i_var, int i_axis,
+template<int n_var_read, int n_var_write, int n_qpoint, int row_size>
+void derivative(std::vector<int>& elem_inds, double* read, double* write, int i_var_read, int i_var_write, int i_axis,
                 Basis& basis, Kernel_settings& settings)
 {
   Eigen::Matrix<double, row_size, row_size> diff_mat = basis.diff_mat();
@@ -35,7 +35,7 @@ void derivative(std::vector<int>& elem_inds, double* read, double* write, int i_
         Eigen::Matrix<double, row_size, 1> row_r;
         for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
         {
-          row_r(i_qpoint) = read[(i_elem*n_var + i_var)*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
+          row_r(i_qpoint) = read[(i_elem*n_var_read + i_var_read)*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
         }
         Eigen::Matrix<double, row_size, 1> row_w = diff_mat*row_r;
         for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)

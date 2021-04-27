@@ -4,7 +4,6 @@
 #include <kernels/local/cpg_euler_matrix.hpp>
 #include <kernels/local/cpg_euler_deformed.hpp>
 #include <kernels/local/derivative.hpp>
-#include <kernels/local/laplacian.hpp>
 #include <Gauss_lobatto.hpp>
 
 class Identity_basis : public cartdg::Basis
@@ -302,7 +301,7 @@ TEST_CASE("derivative")
         write[i] = 1.;
       }
       std::vector<int> inds {0};
-      derivative<1, row_size, row_size>(inds, read, write, 0, 0, basis, settings);
+      derivative<1, 1, row_size, row_size>(inds, read, write, 0, 0, 0, basis, settings);
       for (int i = 0; i < row_size; ++i)
       {
         REQUIRE(write[i] == Approx(0.).margin(1e-14));
@@ -316,7 +315,7 @@ TEST_CASE("derivative")
         write[i] = 1.;
       }
       std::vector<int> inds {0};
-      derivative<1, row_size, row_size>(inds, read, write, 0, 0, basis, settings);
+      derivative<1, 1, row_size, row_size>(inds, read, write, 0, 0, 0, basis, settings);
       for (int i = 0; i < row_size; ++i)
       {
         REQUIRE(write[i] == Approx(3*std::pow(basis.node(i), 2)).margin(1e-14));
@@ -330,7 +329,7 @@ TEST_CASE("derivative")
         write[i] = 1.;
       }
       std::vector<int> inds {0};
-      derivative<1, row_size, row_size>(inds, read, write, 0, 0, basis, settings);
+      derivative<1, 1, row_size, row_size>(inds, read, write, 0, 0, 0, basis, settings);
       for (int i = 0; i < row_size; ++i)
       {
         REQUIRE(write[i] == Approx(std::exp(basis.node(i))).margin(1e-14));
@@ -359,7 +358,7 @@ TEST_CASE("derivative")
           }
         }
         std::vector<int> inds {0};
-        derivative<1, n_qpoint, row_size>(inds, read[0][0], write[0][0], 0, i_axis, basis, settings);
+        derivative<1, 1, n_qpoint, row_size>(inds, read[0][0], write[0][0], 0, 0, i_axis, basis, settings);
         for (int i = 0; i < row_size; ++i)
         {
           for (int j = 0; j < row_size; ++j)
@@ -381,12 +380,12 @@ TEST_CASE("derivative")
         read[1][i] = std::pow(basis.node(i), 3);
       }
       std::vector<int> inds {0};
-      derivative<1, row_size, row_size>(inds, read[0], write, 0, 0, basis, settings);
+      derivative<1, 1, row_size, row_size>(inds, read[0], write, 0, 0, 0, basis, settings);
       for (int i = 0; i < row_size; ++i)
       {
         REQUIRE(write[i] == Approx(0.).margin(1e-14));
       }
-      derivative<1, row_size, row_size>(inds, read[0], write, 1, 0, basis, settings);
+      derivative<1, 1, row_size, row_size>(inds, read[0], write, 1, 0, 0, basis, settings);
       for (int i = 0; i < row_size; ++i)
       {
         REQUIRE(write[i] == Approx(3*std::pow(basis.node(i), 2)).margin(1e-14));
@@ -405,7 +404,7 @@ TEST_CASE("derivative")
         }
       }
       std::vector<int> inds {2, 0};
-      derivative<1, row_size, row_size>(inds, read[0], write[0], 0, 0, basis, settings);
+      derivative<1, 1, row_size, row_size>(inds, read[0], write[0], 0, 0, 0, basis, settings);
       for (int i_elem = 0; i_elem < 3; ++i_elem)
       {
         for (int i = 0; i < row_size; ++i)
@@ -418,43 +417,6 @@ TEST_CASE("derivative")
           {
             REQUIRE(write[i_elem][i] == Approx(coefs[i_elem]));
           }
-        }
-      }
-    }
-  }
-}
-
-TEST_CASE("laplacian")
-{
-  const int row_size = MAX_BASIS_RANK;
-  cartdg::Gauss_lobatto basis (row_size);
-  cartdg::Kernel_settings settings;
-
-  const int n_qpoint = row_size*row_size*row_size;
-  double coefs [] {1.103, -4.044, 0.392};
-  for (int i_axis = 0; i_axis < 3; ++i_axis)
-  {
-    double data [row_size][row_size][row_size] {};
-    for (int i = 0; i < row_size; ++i)
-    {
-      for (int j = 0; j < row_size; ++j)
-      {
-        for (int k = 0; k < row_size; ++k)
-        {
-          int inds [] {i, j, k};
-          for (int j_axis : {0, 1, 2}) data[i][j][k] += coefs[j_axis]*basis.node(inds[j_axis]);
-        }
-      }
-    }
-    std::vector<int> inds {0};
-    laplacian<5, n_qpoint, row_size>(inds, data[0][0], i_axis, basis, settings);
-    for (int i = 0; i < row_size; ++i)
-    {
-      for (int j = 0; j < row_size; ++j)
-      {
-        for (int k = 0; k < row_size; ++k)
-        {
-          REQUIRE(data[i][j][k] == Approx(coefs[i_axis]));
         }
       }
     }
