@@ -140,6 +140,26 @@ double Solution::update(double cfl_by_stable_cfl)
       g->execute_runge_kutta_stage();
     }
   }
+  int n_iter = 2;
+  for (int i_iter = 0; i_iter < n_iter; ++i_iter)
+  {
+    for (int i_rk = 0; i_rk < 3; ++i_rk)
+    {
+      for (Grid& g : grids)
+      {
+        double* sr = g.state_r();
+        double* sw = g.state_w();
+        for (int i_data = 0; i_data < g.n_elem*g.n_dof; ++i_data)
+        {
+          sw[i_data] = sr[i_data];
+        }
+      }
+      for (Grid& g : grids)
+      {
+        g.execute_runge_kutta_stage();
+      }
+    }
+  }
   for (Grid* g : all_grids())
   {
     g->time += dt;
