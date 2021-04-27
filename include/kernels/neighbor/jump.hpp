@@ -40,6 +40,24 @@ void jump(std::vector<int>& con_inds, double** connections_r, double** connectio
   }
 }
 
+template<int n_var, int n_qpoint, int row_size>
+void jump_r(std::vector<int>& con_inds, double** connections_r, double** connections_w,
+           int i_var, int i_axis,
+           const Eigen::VectorXd weights_1d, Kernel_settings& settings)
+{
+  jump<n_var, 1, n_qpoint, row_size>(con_inds, connections_r, connections_w,
+                                     i_var, 1, i_axis, weights_1d, settings);
+}
+
+template<int n_var, int n_qpoint, int row_size>
+void jump_w(std::vector<int>& con_inds, double** connections_r, double** connections_w,
+           int i_var, int i_axis,
+           const Eigen::VectorXd weights_1d, Kernel_settings& settings)
+{
+  jump<1, n_var, n_qpoint, row_size>(con_inds, connections_r, connections_w,
+                                     1, i_var, i_axis, weights_1d, settings);
+}
+
 }
 
 #endif

@@ -23,7 +23,10 @@ typedef void (*Local_deformed_kernel)(double*, double*, double*, int, Basis& bas
                                       Kernel_settings&);
 typedef void (*Neighbor_deformed_kernel)(double**, double**, double**, int*, int*,
                                          int, const Eigen::VectorXd, Kernel_settings&);
-                             
+typedef void (*Derivative_kernel)(std::vector<int>&, double*, double*, int, int, Basis&, Kernel_settings&);
+typedef void (*Viscous_local_kernel)(std::vector<int>&, double*, double*, int, int, Basis&, Kernel_settings&);
+typedef void (*Jump_kernel)(std::vector<int>&, double**, double**, int, int, Eigen::VectorXd, Kernel_settings&);
+typedef void (*Viscous_neighbor_kernel)(std::vector<int>&, double**, double**, int, int, Eigen::VectorXd, Kernel_settings&);
 
 }
 #endif

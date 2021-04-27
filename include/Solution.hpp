@@ -50,8 +50,12 @@ class Solution
 
   virtual Local_kernel get_local_kernel();
   virtual Local_deformed_kernel get_local_deformed_kernel();
+  virtual Derivative_kernel get_derivative_kernel();
+  virtual Viscous_local_kernel get_viscous_local_kernel();
   virtual Neighbor_kernel get_neighbor_kernel();
   virtual Neighbor_deformed_kernel get_neighbor_deformed_kernel();
+  virtual Jump_kernel get_jump_kernel();
+  virtual Viscous_neighbor_kernel get_viscous_neighbor_kernel();
   virtual Nonpen_kernel get_nonpen_kernel();
   virtual Max_char_speed_kernel get_max_char_speed_kernel();
   virtual Physical_step_kernel get_physical_step_kernel();

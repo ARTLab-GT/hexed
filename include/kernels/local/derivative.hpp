@@ -47,6 +47,20 @@ void derivative(std::vector<int>& elem_inds, double* read, double* write, int i_
   }
 }
 
+template<int n_var, int n_qpoint, int row_size>
+void derivative_r(std::vector<int>& elem_inds, double* read, double* write, int i_var, int i_axis,
+                Basis& basis, Kernel_settings& settings)
+{
+  derivative<n_var, 1, n_qpoint, row_size>(elem_inds, read, write, i_var, 0, i_axis, basis, settings);
+}
+
+template<int n_var, int n_qpoint, int row_size>
+void derivative_w(std::vector<int>& elem_inds, double* read, double* write, int i_var, int i_axis,
+                Basis& basis, Kernel_settings& settings)
+{
+  derivative<1, n_var, n_qpoint, row_size>(elem_inds, read, write, 0, i_var, i_axis, basis, settings);
+}
+
 }
 
 #endif
