@@ -1,4 +1,5 @@
 #include <limits>
+#include <iostream>
 
 #include <Solution.hpp>
 
@@ -143,15 +144,30 @@ double Solution::update(double cfl_by_stable_cfl)
   int n_iter = 2;
   for (int i_iter = 0; i_iter < n_iter; ++i_iter)
   {
+    dt = std::numeric_limits<double>::max();
+    for (Grid* g : all_grids()) // FIXME: incorporate jacobian
+    {
+      double cfl = cfl_by_stable_cfl*g->get_stable_cfl();
+      dt = std::min<double>(dt, cfl*g->mesh_size/max_char_speed(g->state_r(), g->n_elem,
+                                                                kernel_settings));
+    }
     for (int i_rk = 0; i_rk < 3; ++i_rk)
     {
       for (Grid& g : grids)
       {
+        kernel_settings.d_t_by_d_pos = dt/g.mesh_size;
         double* sr = g.state_r();
         double* sw = g.state_w();
-        for (int i_data = 0; i_data < g.n_elem*g.n_dof; ++i_data)
+        for (int i_data = 0; i_data < g.n_dof*g.n_elem; ++i_data)
         {
           sw[i_data] = sr[i_data];
+        }
+        for (int i_var = 0; i_var < n_var; ++i_var)
+        {
+          for (int i_axis = 0; i_axis < n_dim; ++i_axis)
+          {
+            get_derivative_kernel()(g.viscous_inds, sr, g.derivs.data(), i_var, i_axis, basis, kernel_settings);
+          }
         }
       }
       for (Grid& g : grids)

@@ -26,6 +26,7 @@ class Grid
   std::vector<std::vector<double*>> neighbor_storage;
   std::vector<double> derivs;
   std::vector<std::vector<double*>> deriv_neighbor_storage;
+  std::vector<int> viscous_inds;
   std::vector<int> pos;
   double mesh_size;
   Basis& basis;

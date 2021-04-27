@@ -24,6 +24,10 @@ basis(basis_arg), iter(0), time(0.), i_rk_stage(0), i_read(0), i_write(1)
     neighbor_storage.emplace_back();
     deriv_neighbor_storage.emplace_back();
   }
+  for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+  {
+    viscous_inds.push_back(i_elem);
+  }
 }
 
 Grid::~Grid() {}

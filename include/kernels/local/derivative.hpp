@@ -11,7 +11,7 @@
 namespace cartdg
 {
 
-template<int n_var_read, int n_var_write, int n_qpoint, int row_size>
+template<int n_var_read, int n_var_write, int n_qpoint, int row_size, bool add=false>
 void derivative(std::vector<int>& elem_inds, double* read, double* write, int i_var_read, int i_var_write, int i_axis,
                 Basis& basis, Kernel_settings& settings)
 {
@@ -40,7 +40,8 @@ void derivative(std::vector<int>& elem_inds, double* read, double* write, int i_
         Eigen::Matrix<double, row_size, 1> row_w = diff_mat*row_r;
         for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
         {
-          write[(i_elem*n_var_write + i_var_write)*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride] = row_w(i_qpoint);
+          int w_ind = (i_elem*n_var_write + i_var_write)*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride;
+          add ? write[w_ind] += row_w(i_qpoint) : write[w_ind] = row_w(i_qpoint);
         }
       }
     }
@@ -51,14 +52,14 @@ template<int n_var, int n_qpoint, int row_size>
 void derivative_r(std::vector<int>& elem_inds, double* read, double* write, int i_var, int i_axis,
                 Basis& basis, Kernel_settings& settings)
 {
-  derivative<n_var, 1, n_qpoint, row_size>(elem_inds, read, write, i_var, 0, i_axis, basis, settings);
+  derivative<n_var, 1, n_qpoint, row_size, false>(elem_inds, read, write, i_var, 0, i_axis, basis, settings);
 }
 
 template<int n_var, int n_qpoint, int row_size>
 void derivative_w(std::vector<int>& elem_inds, double* read, double* write, int i_var, int i_axis,
                 Basis& basis, Kernel_settings& settings)
 {
-  derivative<1, n_var, n_qpoint, row_size>(elem_inds, read, write, 0, i_var, i_axis, basis, settings);
+  derivative<1, n_var, n_qpoint, row_size, true>(elem_inds, read, write, 0, i_var, i_axis, basis, settings);
 }
 
 }
