@@ -52,6 +52,9 @@ TEST_CASE("Grid")
     REQUIRE(grid3.state_w()[0] == 0.);
     REQUIRE(grid3.state_r()[size - 1] == 0.);
     REQUIRE(grid3.state_w()[size - 1] == 0.);
+    REQUIRE(grid3.derivs[0] == 0.);
+    size = 27*MAX_BASIS_RANK*MAX_BASIS_RANK*MAX_BASIS_RANK;
+    REQUIRE(grid3.derivs[size - 1] == 0.);
   }
 
   for (int i = 0; i < 5; ++i)
@@ -189,6 +192,8 @@ TEST_CASE("Grid")
     REQUIRE(n_neighb_con[1] == 1);
     REQUIRE(grid2.neighbor_connections_r()[0][0] == grid2.state_r() + 2*grid2.n_dof);
     REQUIRE(grid2.neighbor_connections_r()[0][1] == grid2.state_r() + 3*grid2.n_dof);
+    REQUIRE(grid2.deriv_neighbor_connections()[0][0] == grid2.derivs.data() + 2*grid2.n_qpoint);
+    REQUIRE(grid2.deriv_neighbor_connections()[0][1] == grid2.derivs.data() + 3*grid2.n_qpoint);
     grid2.clear_neighbors();
     std::vector<int> periods {0, 3};
     grid2.auto_connect(periods);

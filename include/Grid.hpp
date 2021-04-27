@@ -24,6 +24,8 @@ class Grid
   int n_elem;
   std::array<std::vector<double>, 3> state_storage {};
   std::vector<std::vector<double*>> neighbor_storage;
+  std::vector<double> derivs;
+  std::vector<std::vector<double*>> deriv_neighbor_storage;
   std::vector<int> pos;
   double mesh_size;
   Basis& basis;
@@ -40,6 +42,7 @@ class Grid
   double* state_w();
   std::vector<double**> neighbor_connections_r(); // FIXME: return a pointer
   std::vector<double**> neighbor_connections_w();
+  std::vector<double**> deriv_neighbor_connections();
   std::vector<int> n_neighb_con();
   virtual std::vector<double> get_pos(int i_elem);
   virtual double jacobian_det(int i_elem, int i_qpoint);
