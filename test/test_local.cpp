@@ -402,30 +402,61 @@ TEST_CASE("derivative")
     }
     SECTION("multivariable")
     {
-      double read [2][4][row_size] {};
-      double write [2][row_size] {};
-      for (int i_elem : {0, 1})
+      SECTION("1 var to 4 var")
       {
-        for (int i = 0; i < row_size; ++i)
+        double read [2][4][row_size] {};
+        double write [2][row_size] {};
+        for (int i_elem : {0, 1})
         {
-          read[i_elem][1][i] = std::pow(basis.node(i), 3);
+          for (int i = 0; i < row_size; ++i)
+          {
+            read[i_elem][1][i] = std::pow(basis.node(i), 3);
+          }
+        }
+        std::vector<int> inds {0, 1};
+        derivative<4, 1, row_size, row_size>(inds, read[0][0], write[0], 0, 0, 0, basis, settings);
+        for (int i_elem : {0, 1})
+        {
+          for (int i = 0; i < row_size; ++i)
+          {
+            REQUIRE(write[i_elem][i] == Approx(0.).margin(1e-14));
+          }
+        }
+        derivative<4, 1, row_size, row_size>(inds, read[0][0], write[0], 1, 0, 0, basis, settings);
+        for (int i_elem : {0, 1})
+        {
+          for (int i = 0; i < row_size; ++i)
+          {
+            REQUIRE(write[i_elem][i] == Approx(3*std::pow(basis.node(i), 2)).margin(1e-14));
+          }
         }
       }
-      std::vector<int> inds {0, 1};
-      derivative<4, 1, row_size, row_size>(inds, read[0][0], write[0], 0, 0, 0, basis, settings);
-      for (int i_elem : {0, 1})
+      SECTION("3 var to 1 var")
       {
-        for (int i = 0; i < row_size; ++i)
+        double read [2][row_size] {};
+        double write [2][3][row_size] {};
+        for (int i_elem : {0, 1})
         {
-          REQUIRE(write[i_elem][i] == Approx(0.).margin(1e-14));
+          for (int i = 0; i < row_size; ++i)
+          {
+            read[i_elem][i] = std::pow(basis.node(i), 3);
+          }
         }
-      }
-      derivative<4, 1, row_size, row_size>(inds, read[0][0], write[0], 1, 0, 0, basis, settings);
-      for (int i_elem : {0, 1})
-      {
-        for (int i = 0; i < row_size; ++i)
+        std::vector<int> inds {0, 1};
+        derivative<1, 3, row_size, row_size>(inds, read[0], write[0][0], 0, 1, 0, basis, settings);
+        for (int i_elem : {0, 1})
         {
-          REQUIRE(write[i_elem][i] == Approx(3*std::pow(basis.node(i), 2)).margin(1e-14));
+          for (int i = 0; i < row_size; ++i)
+          {
+            REQUIRE(write[i_elem][0][i] == Approx(0.).margin(1e-14));
+          }
+        }
+        for (int i_elem : {0, 1})
+        {
+          for (int i = 0; i < row_size; ++i)
+          {
+            REQUIRE(write[i_elem][1][i] == Approx(3*std::pow(basis.node(i), 2)).margin(1e-14));
+          }
         }
       }
     }
