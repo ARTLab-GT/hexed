@@ -300,8 +300,7 @@ TEST_CASE("derivative")
         read[i] = 1.;
         write[i] = 1.;
       }
-      std::vector<int> inds {0};
-      derivative<1, 1, row_size, row_size>(inds, read, write, 0, 0, 0, basis, settings);
+      derivative<1, 1, row_size, row_size>(read, write, 1, 0, 0, 0, basis, settings);
       for (int i = 0; i < row_size; ++i)
       {
         REQUIRE(write[i] == Approx(0.).margin(1e-14));
@@ -314,8 +313,7 @@ TEST_CASE("derivative")
         read[i] = std::pow(basis.node(i), 3);
         write[i] = 1.;
       }
-      std::vector<int> inds {0};
-      derivative<1, 1, row_size, row_size>(inds, read, write, 0, 0, 0, basis, settings);
+      derivative<1, 1, row_size, row_size>(read, write, 1, 0, 0, 0, basis, settings);
       for (int i = 0; i < row_size; ++i)
       {
         REQUIRE(write[i] == Approx(3*std::pow(basis.node(i), 2)).margin(1e-14));
@@ -328,8 +326,7 @@ TEST_CASE("derivative")
         read[i] = std::exp(basis.node(i));
         write[i] = 1.;
       }
-      std::vector<int> inds {0};
-      derivative<1, 1, row_size, row_size>(inds, read, write, 0, 0, 0, basis, settings);
+      derivative<1, 1, row_size, row_size>(read, write, 1, 0, 0, 0, basis, settings);
       for (int i = 0; i < row_size; ++i)
       {
         REQUIRE(write[i] == Approx(std::exp(basis.node(i))).margin(1e-14));
@@ -357,8 +354,7 @@ TEST_CASE("derivative")
             }
           }
         }
-        std::vector<int> inds {0};
-        derivative<1, 1, n_qpoint, row_size>(inds, read[0][0], write[0][0], 0, 0, i_axis, basis, settings);
+        derivative<1, 1, n_qpoint, row_size>(read[0][0], write[0][0], 1, 0, 0, i_axis, basis, settings);
         for (int i = 0; i < row_size; ++i)
         {
           for (int j = 0; j < row_size; ++j)
@@ -383,20 +379,12 @@ TEST_CASE("derivative")
           read[i_elem][i] = coefs[i_elem]*basis.node(i);
         }
       }
-      std::vector<int> inds {2, 0};
-      derivative<1, 1, row_size, row_size>(inds, read[0], write[0], 0, 0, 0, basis, settings);
+      derivative<1, 1, row_size, row_size>(read[0], write[0], 3, 0, 0, 0, basis, settings);
       for (int i_elem = 0; i_elem < 3; ++i_elem)
       {
         for (int i = 0; i < row_size; ++i)
         {
-          if (i_elem == 1)
-          {
-            REQUIRE(write[i_elem][i] == 0.);
-          }
-          else
-          {
-            REQUIRE(write[i_elem][i] == Approx(coefs[i_elem]));
-          }
+          REQUIRE(write[i_elem][i] == Approx(coefs[i_elem]));
         }
       }
     }
@@ -413,8 +401,7 @@ TEST_CASE("derivative")
             read[i_elem][1][i] = std::pow(basis.node(i), 3);
           }
         }
-        std::vector<int> inds {0, 1};
-        derivative<4, 1, row_size, row_size>(inds, read[0][0], write[0], 0, 0, 0, basis, settings);
+        derivative<4, 1, row_size, row_size>(read[0][0], write[0], 2, 0, 0, 0, basis, settings);
         for (int i_elem : {0, 1})
         {
           for (int i = 0; i < row_size; ++i)
@@ -422,7 +409,7 @@ TEST_CASE("derivative")
             REQUIRE(write[i_elem][i] == Approx(0.).margin(1e-14));
           }
         }
-        derivative<4, 1, row_size, row_size>(inds, read[0][0], write[0], 1, 0, 0, basis, settings);
+        derivative<4, 1, row_size, row_size>(read[0][0], write[0], 2, 1, 0, 0, basis, settings);
         for (int i_elem : {0, 1})
         {
           for (int i = 0; i < row_size; ++i)
@@ -442,8 +429,7 @@ TEST_CASE("derivative")
             read[i_elem][i] = std::pow(basis.node(i), 3);
           }
         }
-        std::vector<int> inds {0, 1};
-        derivative<1, 3, row_size, row_size>(inds, read[0], write[0][0], 0, 1, 0, basis, settings);
+        derivative<1, 3, row_size, row_size>(read[0], write[0][0], 2, 0, 1, 0, basis, settings);
         for (int i_elem : {0, 1})
         {
           for (int i = 0; i < row_size; ++i)

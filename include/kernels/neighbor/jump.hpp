@@ -9,7 +9,7 @@ namespace cartdg
 {
 
 template<int n_var_read, int n_var_write, int n_qpoint, int row_size>
-void jump(std::vector<int>& con_inds, double** connections_r, double** connections_w,
+void jump(double** connections_r, double** connections_w, int n_con,
           int i_var_read, int i_var_write, int i_axis,
           const Eigen::VectorXd weights_1d, Kernel_settings& settings)
 {
@@ -18,7 +18,7 @@ void jump(std::vector<int>& con_inds, double** connections_r, double** connectio
   int stride=n_face_qpoint;
   for (int j_axis = 0; j_axis < i_axis; ++j_axis) stride /= row_size;
 
-  for (int i_con : con_inds)
+  for (int i_con = 0; i_con < n_con; ++i_con)
   {
     double face_r [2][n_face_qpoint];
     double face_w [2][n_face_qpoint];
@@ -41,20 +41,20 @@ void jump(std::vector<int>& con_inds, double** connections_r, double** connectio
 }
 
 template<int n_var, int n_qpoint, int row_size>
-void jump_r(std::vector<int>& con_inds, double** connections_r, double** connections_w,
+void jump_r(double** connections_r, double** connections_w, int n_con,
            int i_var, int i_axis,
            const Eigen::VectorXd weights_1d, Kernel_settings& settings)
 {
-  jump<n_var, 1, n_qpoint, row_size>(con_inds, connections_r, connections_w,
+  jump<n_var, 1, n_qpoint, row_size>(connections_r, connections_w, n_con,
                                      i_var, 0, i_axis, weights_1d, settings);
 }
 
 template<int n_var, int n_qpoint, int row_size>
-void jump_w(std::vector<int>& con_inds, double** connections_r, double** connections_w,
+void jump_w(double** connections_r, double** connections_w, int n_con,
            int i_var, int i_axis,
            const Eigen::VectorXd weights_1d, Kernel_settings& settings)
 {
-  jump<1, n_var, n_qpoint, row_size>(con_inds, connections_r, connections_w,
+  jump<1, n_var, n_qpoint, row_size>(connections_r, connections_w, n_con,
                                      0, i_var, i_axis, weights_1d, settings);
 }
 
