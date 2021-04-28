@@ -153,8 +153,11 @@ void Grid::add_connection(int i_elem0, int i_elem1, int i_dim)
     for (int i_elem : {i_elem0, i_elem1})
     {
       neighbor_storage[i_dim + i_stage*n_dim].push_back(state_data + n_dof*i_elem);
-      deriv_neighbor_storage[i_dim].push_back(derivs.data() + n_qpoint*i_elem);
     }
+  }
+  for (int i_elem : {i_elem0, i_elem1})
+  {
+    deriv_neighbor_storage[i_dim].push_back(derivs.data() + n_qpoint*i_elem);
   }
 }
 

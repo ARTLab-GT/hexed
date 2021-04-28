@@ -20,7 +20,7 @@ TEST_CASE("Grid")
 {
   cartdg::Equidistant basis (MAX_BASIS_RANK);
   cartdg::Grid grid1 (4, 1, 5, 0.1, basis);
-  cartdg::Grid grid2 (4, 2, 5, 0.1, basis);
+  cartdg::Grid grid2 (4, 2, 6, 0.1, basis);
   cartdg::Grid grid3 (4, 3, 27, 0.1, basis);
   SECTION("Construction")
   {
@@ -68,6 +68,7 @@ TEST_CASE("Grid")
     grid2.pos[i++] = 0; grid2.pos[i++] = -1;
     grid2.pos[i++] = 1; grid2.pos[i++] = -1;
     grid2.pos[i++] = 3; grid2.pos[i++] =  0;
+    grid2.pos[i++] = -1; grid2.pos[i++] = -1;
   }
   grid2.origin[1] = 10.;
   for (int i = 0; i < 3; ++i)
@@ -188,17 +189,21 @@ TEST_CASE("Grid")
   {
     grid2.auto_connect();
     std::vector<int> n_neighb_con = grid2.n_neighb_con();
-    REQUIRE(n_neighb_con[0] == 1);
+    REQUIRE(n_neighb_con[0] == 2);
     REQUIRE(n_neighb_con[1] == 1);
     REQUIRE(grid2.neighbor_connections_r()[0][0] == grid2.state_r() + 2*grid2.n_dof);
     REQUIRE(grid2.neighbor_connections_r()[0][1] == grid2.state_r() + 3*grid2.n_dof);
+    REQUIRE(grid2.neighbor_connections_r()[0][2] == grid2.state_r() + 5*grid2.n_dof);
+    REQUIRE(grid2.neighbor_connections_r()[0][3] == grid2.state_r() + 2*grid2.n_dof);
     REQUIRE(grid2.deriv_neighbor_connections()[0][0] == grid2.derivs.data() + 2*grid2.n_qpoint);
     REQUIRE(grid2.deriv_neighbor_connections()[0][1] == grid2.derivs.data() + 3*grid2.n_qpoint);
+    REQUIRE(grid2.deriv_neighbor_connections()[0][2] == grid2.derivs.data() + 5*grid2.n_qpoint);
+    REQUIRE(grid2.deriv_neighbor_connections()[0][3] == grid2.derivs.data() + 2*grid2.n_qpoint);
     grid2.clear_neighbors();
     std::vector<int> periods {0, 3};
     grid2.auto_connect(periods);
     n_neighb_con = grid2.n_neighb_con();
-    REQUIRE(n_neighb_con[0] == 1);
+    REQUIRE(n_neighb_con[0] == 2);
     REQUIRE(n_neighb_con[1] == 2);
 
     std::vector<int> periods3d {3, 3, 3};

@@ -174,7 +174,8 @@ double Solution::update(double cfl_by_stable_cfl)
             {
               g.derivs[i_data] *= 1.e-5;
             }
-            get_viscous_local_kernel()(g.derivs.data(), sw, n_con, i_var, i_axis, basis, kernel_settings);
+            get_viscous_local_kernel()(g.derivs.data(), sw, g.n_elem, i_var, i_axis, basis, kernel_settings);
+            std::vector<double> foo (g.n_elem);
             get_viscous_neighbor_kernel()(g.deriv_neighbor_connections()[i_axis],
                                           g.neighbor_connections_w()[i_axis], n_con, i_var, i_axis, basis.node_weights(), kernel_settings);
           }
