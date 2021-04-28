@@ -169,6 +169,13 @@ double Solution::update(double cfl_by_stable_cfl)
             get_derivative_kernel()(g.viscous_inds, sr, g.derivs.data(), i_var, i_axis, basis, kernel_settings);
             get_jump_kernel()(g.viscous_inds, g.neighbor_connections_r()[i_axis],
                                               g.deriv_neighbor_connections()[i_axis], i_var, i_axis, basis.node_weights(), kernel_settings);
+            for (int i_data = 0; i_data < g.n_qpoint*g.n_elem; ++i_data)
+            {
+              g.derivs[i_data] *= 1.e-5;
+            }
+            get_viscous_local_kernel()(g.viscous_inds, g.derivs.data(), sw, i_var, i_axis, basis, kernel_settings);
+            get_viscous_neighbor_kernel()(g.viscous_inds, g.deriv_neighbor_connections()[i_axis],
+                                                          g.neighbor_connections_w()[i_axis], i_var, i_axis, basis.node_weights(), kernel_settings);
           }
         }
       }
