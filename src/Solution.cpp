@@ -141,7 +141,7 @@ double Solution::update(double cfl_by_stable_cfl)
       g->execute_runge_kutta_stage();
     }
   }
-  int n_iter = 1;
+  int n_iter = 0;
   for (int i_iter = 0; i_iter < n_iter; ++i_iter)
   {
     dt = std::numeric_limits<double>::max();
