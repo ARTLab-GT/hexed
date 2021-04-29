@@ -1,7 +1,9 @@
 #include <catch.hpp>
+
+#include <cartdgConfig.hpp>
 #include <kernels/local/cpg_euler_matrix.hpp>
 #include <kernels/local/cpg_euler_deformed.hpp>
-
+#include <kernels/local/derivative.hpp>
 #include <Gauss_lobatto.hpp>
 
 class Identity_basis : public cartdg::Basis
@@ -277,6 +279,171 @@ TEST_CASE("CPG Euler deformed elements")
                  == Approx(-0.1*(0.1*10 - 0.2*20)));
         REQUIRE((write[i_elem][3][i_qpoint] - read[i_elem][3][i_qpoint])
                 == Approx(-0.1*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20) + 0.5*(10*10 + 20*20)*(0.1*10 - 0.2*20))));
+      }
+    }
+  }
+}
+
+TEST_CASE("derivative")
+{
+  const int row_size = MAX_BASIS_RANK;
+  cartdg::Gauss_lobatto basis (row_size);
+  cartdg::Kernel_settings settings;
+  SECTION("calculations")
+  {
+    double read [row_size];
+    double write [row_size];
+    SECTION("constant function")
+    {
+      for (int i = 0; i < row_size; ++i)
+      {
+        read[i] = 1.;
+        write[i] = 1.;
+      }
+      derivative<1, 1, row_size, row_size>(read, write, 1, 0, 0, 0, basis, settings);
+      for (int i = 0; i < row_size; ++i)
+      {
+        REQUIRE(write[i] == Approx(0.).margin(1e-14));
+      }
+    }
+    SECTION("polynomial")
+    {
+      for (int i = 0; i < row_size; ++i)
+      {
+        read[i] = std::pow(basis.node(i), 3);
+        write[i] = 1.;
+      }
+      derivative<1, 1, row_size, row_size>(read, write, 1, 0, 0, 0, basis, settings);
+      for (int i = 0; i < row_size; ++i)
+      {
+        REQUIRE(write[i] == Approx(3*std::pow(basis.node(i), 2)).margin(1e-14));
+      }
+    }
+    SECTION("exponential") // Not mathematically exact but numerically very good
+    {
+      for (int i = 0; i < row_size; ++i)
+      {
+        read[i] = std::exp(basis.node(i));
+        write[i] = 1.;
+      }
+      derivative<1, 1, row_size, row_size>(read, write, 1, 0, 0, 0, basis, settings);
+      for (int i = 0; i < row_size; ++i)
+      {
+        REQUIRE(write[i] == Approx(std::exp(basis.node(i))).margin(1e-14));
+      }
+    }
+  }
+  SECTION("data juggling")
+  {
+    SECTION("3D")
+    {
+      const int n_qpoint = row_size*row_size*row_size;
+      double coefs [] {1.103, -4.044, 0.392};
+      for (int i_axis = 0; i_axis < 3; ++i_axis)
+      {
+        double read [row_size][row_size][row_size] {};
+        double write [row_size][row_size][row_size] {};
+        for (int i = 0; i < row_size; ++i)
+        {
+          for (int j = 0; j < row_size; ++j)
+          {
+            for (int k = 0; k < row_size; ++k)
+            {
+              int inds [] {i, j, k};
+              for (int j_axis : {0, 1, 2}) read[i][j][k] += coefs[j_axis]*basis.node(inds[j_axis]);
+            }
+          }
+        }
+        derivative<1, 1, n_qpoint, row_size>(read[0][0], write[0][0], 1, 0, 0, i_axis, basis, settings);
+        for (int i = 0; i < row_size; ++i)
+        {
+          for (int j = 0; j < row_size; ++j)
+          {
+            for (int k = 0; k < row_size; ++k)
+            {
+              REQUIRE(write[i][j][k] == Approx(coefs[i_axis]));
+            }
+          }
+        }
+      }
+    }
+    SECTION("multi-element")
+    {
+      double read [3][row_size] {};
+      double write [3][row_size] {};
+      double coefs [] {1.103, -4.044, 0.392};
+      for (int i_elem = 0; i_elem < 3; ++i_elem)
+      {
+        for (int i = 0; i < row_size; ++i)
+        {
+          read[i_elem][i] = coefs[i_elem]*basis.node(i);
+        }
+      }
+      derivative<1, 1, row_size, row_size>(read[0], write[0], 3, 0, 0, 0, basis, settings);
+      for (int i_elem = 0; i_elem < 3; ++i_elem)
+      {
+        for (int i = 0; i < row_size; ++i)
+        {
+          REQUIRE(write[i_elem][i] == Approx(coefs[i_elem]));
+        }
+      }
+    }
+    SECTION("multivariable")
+    {
+      SECTION("1 var to 4 var")
+      {
+        double read [2][4][row_size] {};
+        double write [2][row_size] {};
+        for (int i_elem : {0, 1})
+        {
+          for (int i = 0; i < row_size; ++i)
+          {
+            read[i_elem][1][i] = std::pow(basis.node(i), 3);
+          }
+        }
+        derivative<4, 1, row_size, row_size>(read[0][0], write[0], 2, 0, 0, 0, basis, settings);
+        for (int i_elem : {0, 1})
+        {
+          for (int i = 0; i < row_size; ++i)
+          {
+            REQUIRE(write[i_elem][i] == Approx(0.).margin(1e-14));
+          }
+        }
+        derivative<4, 1, row_size, row_size>(read[0][0], write[0], 2, 1, 0, 0, basis, settings);
+        for (int i_elem : {0, 1})
+        {
+          for (int i = 0; i < row_size; ++i)
+          {
+            REQUIRE(write[i_elem][i] == Approx(3*std::pow(basis.node(i), 2)).margin(1e-14));
+          }
+        }
+      }
+      SECTION("3 var to 1 var")
+      {
+        double read [2][row_size] {};
+        double write [2][3][row_size] {};
+        for (int i_elem : {0, 1})
+        {
+          for (int i = 0; i < row_size; ++i)
+          {
+            read[i_elem][i] = std::pow(basis.node(i), 3);
+          }
+        }
+        derivative<1, 3, row_size, row_size>(read[0], write[0][0], 2, 0, 1, 0, basis, settings);
+        for (int i_elem : {0, 1})
+        {
+          for (int i = 0; i < row_size; ++i)
+          {
+            REQUIRE(write[i_elem][0][i] == Approx(0.).margin(1e-14));
+          }
+        }
+        for (int i_elem : {0, 1})
+        {
+          for (int i = 0; i < row_size; ++i)
+          {
+            REQUIRE(write[i_elem][1][i] == Approx(3*std::pow(basis.node(i), 2)).margin(1e-14));
+          }
+        }
       }
     }
   }

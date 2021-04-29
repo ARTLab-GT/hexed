@@ -1,4 +1,5 @@
 #include <limits>
+#include <iostream>
 
 #include <Solution.hpp>
 
@@ -138,6 +139,52 @@ double Solution::update(double cfl_by_stable_cfl)
     {
       restrict_step(g->state_r(), g->state_w(), g->n_elem, step, kernel_settings);
       g->execute_runge_kutta_stage();
+    }
+  }
+  int n_iter = 0;
+  for (int i_iter = 0; i_iter < n_iter; ++i_iter)
+  {
+    dt = std::numeric_limits<double>::max();
+    for (Grid* g : all_grids()) // FIXME: incorporate jacobian
+    {
+      double cfl = cfl_by_stable_cfl*g->get_stable_cfl();
+      dt = std::min<double>(dt, cfl*g->mesh_size/max_char_speed(g->state_r(), g->n_elem,
+                                                                kernel_settings));
+    }
+    for (int i_rk = 0; i_rk < 3; ++i_rk)
+    {
+      for (Grid& g : grids)
+      {
+        kernel_settings.d_t_by_d_pos = dt/g.mesh_size;
+        double* sr = g.state_r();
+        double* sw = g.state_w();
+        for (int i_data = 0; i_data < g.n_dof*g.n_elem; ++i_data)
+        {
+          sw[i_data] = sr[i_data];
+        }
+        for (int i_axis = 0; i_axis < n_dim; ++i_axis)
+        {
+          for (int i_var = 0; i_var < n_var; ++i_var)
+          {
+            get_derivative_kernel()(sr, g.derivs.data(), g.n_elem, i_var, i_axis, basis, kernel_settings);
+            int n_con = g.n_neighb_con()[i_axis];
+            get_jump_kernel()(g.neighbor_connections_r()[i_axis],
+                              g.deriv_neighbor_connections()[i_axis], n_con, i_var, i_axis, basis.node_weights(), kernel_settings);
+            for (int i_data = 0; i_data < g.n_qpoint*g.n_elem; ++i_data)
+            {
+              g.derivs[i_data] *= 1.e-3;
+            }
+            get_viscous_local_kernel()(g.derivs.data(), sw, g.n_elem, i_var, i_axis, basis, kernel_settings);
+            get_viscous_neighbor_kernel()(g.deriv_neighbor_connections()[i_axis],
+                                          g.neighbor_connections_w()[i_axis], n_con, i_var, i_axis, basis.node_weights(), kernel_settings);
+            get_jump_gbc_kernel()(g.ghost_bound_conds, g.derivs.data(), g.state_w(), i_var, i_axis, basis.node_weights()(0), kernel_settings);
+          }
+        }
+      }
+      for (Grid& g : grids)
+      {
+        g.execute_runge_kutta_stage();
+      }
     }
   }
   for (Grid* g : all_grids())
