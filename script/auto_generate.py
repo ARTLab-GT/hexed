@@ -40,6 +40,7 @@ solution.include = """
 #include <kernels/neighbor/cpg_euler_nonpen.hpp>
 #include <kernels/neighbor/cpg_euler_gbc.hpp>
 #include <kernels/neighbor/jump.hpp>
+#include <kernels/neighbor/jump_gbc.hpp>
 #include <kernels/observing/cpg_euler_max.hpp>
 #include <kernels/observing/cpg_euler_physical_step.hpp>
 """
@@ -49,6 +50,7 @@ solution.templates = {"local":"cpg_euler_matrix", "local_deformed":"cpg_euler_de
                       "neighbor":"cpg_euler_copy", "neighbor_deformed":"cpg_euler_copy_deformed",
                       "derivative":"derivative_r", "jump":"jump_r",
                       "viscous_local":"derivative_w", "viscous_neighbor":"jump_w",
+                      "jump_gbc":"jump_gbc",
                       "nonpen":"cpg_euler_nonpen",
                       "gbc":"cpg_euler_gbc", "max_char_speed":"cpg_euler_max"}
 

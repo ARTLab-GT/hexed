@@ -141,7 +141,7 @@ double Solution::update(double cfl_by_stable_cfl)
       g->execute_runge_kutta_stage();
     }
   }
-  int n_iter = 2;
+  int n_iter = 30;
   for (int i_iter = 0; i_iter < n_iter; ++i_iter)
   {
     dt = std::numeric_limits<double>::max();
@@ -172,12 +172,12 @@ double Solution::update(double cfl_by_stable_cfl)
                               g.deriv_neighbor_connections()[i_axis], n_con, i_var, i_axis, basis.node_weights(), kernel_settings);
             for (int i_data = 0; i_data < g.n_qpoint*g.n_elem; ++i_data)
             {
-              g.derivs[i_data] *= 1.e-5;
+              g.derivs[i_data] *= 1.e-4;
             }
             get_viscous_local_kernel()(g.derivs.data(), sw, g.n_elem, i_var, i_axis, basis, kernel_settings);
-            std::vector<double> foo (g.n_elem);
             get_viscous_neighbor_kernel()(g.deriv_neighbor_connections()[i_axis],
                                           g.neighbor_connections_w()[i_axis], n_con, i_var, i_axis, basis.node_weights(), kernel_settings);
+            get_jump_gbc_kernel()(g.ghost_bound_conds, g.derivs.data(), g.state_w(), i_var, i_axis, basis.node_weights()(0), kernel_settings);
           }
         }
       }
