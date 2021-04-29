@@ -1,5 +1,5 @@
-#ifndef CPG_EULER_GBC_HPP_
-#define CPG_EULER_GBC_HPP_
+#ifndef CARTDG_CPG_EULER_GBC_HPP_
+#define CARTDG_CPG_EULER_GBC_HPP_
 
 #include "cpg_euler_hll_deformed.hpp"
 #include "read_copy.hpp"
