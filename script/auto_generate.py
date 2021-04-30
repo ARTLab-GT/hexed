@@ -42,6 +42,7 @@ for dir_group in os.walk("../include/kernels"):
         if file_name[-4:] == ".hpp":
             header_names.append(dir_group[0] + "/" + file_name)
 
+source_names = []
 for file_name in header_names:
     with open(file_name, "r") as in_file:
         text = in_file.read()
@@ -74,8 +75,16 @@ for file_name in header_names:
   else throw std::runtime_error("Kernel not available.");
 }}"""
         output_text = format_file_text(include, output_text)
+        source_names.append(f"{name}.cpp")
         with open(f"kernels/{name}.cpp", "w") as out_file:
             out_file.write(output_text)
+
+cmake_text = "target_sources(cartdg PRIVATE\n"
+for source in source_names:
+    cmake_text += source + "\n"
+cmake_text += ")"
+with open("kernels/CMakeLists.txt", "w") as cmake_file:
+    cmake_file.write(cmake_text)
 
 class Auto_file:
     def __init__(self, name):
