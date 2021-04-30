@@ -36,8 +36,14 @@ param_funcs = {"int n_var":(lambda dim, row_size : dim + 2),
 if not "kernels" in os.listdir("."):
     os.mkdir("kernels")
 
-for file_name in ["kernels/local/cpg_euler_matrix.hpp"]:
-    with open("../include/" + file_name, "r") as in_file:
+header_names = []
+for dir_group in os.walk("../include/kernels"):
+    for file_name in dir_group[2]:
+        if file_name[-4:] == ".hpp":
+            header_names.append(dir_group[0] + "/" + file_name)
+
+for file_name in header_names:
+    with open(file_name, "r") as in_file:
         text = in_file.read()
     templates = text.split("AUTOGENERATE")[1:]
     for template in templates:
