@@ -1,4 +1,5 @@
 import sys
+import re
 
 max_dim = 3
 
@@ -10,7 +11,7 @@ max_rank = int(sys.argv[2])
 def format_file_text(include, text):
     return f"""/*
 This file was generated automatically by script/auto_generate.py, which CMake executes
-during the build process. Do not attempt to modify it directly. Instead, modify
+during the build process. Please do not attempt to modify it directly. Instead, modify
 script/auto_generate.py and rerun CMake.
 */
 
@@ -20,6 +21,22 @@ namespace cartdg
 {text}
 }}
 """
+
+def pop(regex, string):
+    return re.search(regex, string, re.DOTALL), re.sub(regex, "", string)
+
+for file_name in ["../include/kernels/local/cpg_euler_matrix.hpp"]:
+    with open(file_name, "r") as in_file:
+        text = in_file.read()
+    templates = text.split("AUTOGENERATE")[1:]
+    for template in templates:
+        params, template = pop("\n*template<([^\n]*)>", template)
+        params = params.group(1).split(",")
+        print(params)
+        signature, template  = pop("\n*(.*?[)])", template)
+        signature = re.sub("\n *", " ", signature.groups(1)[0])
+        signature = re.sub(" \w*?(,|\))", r"\1", signature)
+        print(signature)
 
 class Auto_file:
     def __init__(self, name):
