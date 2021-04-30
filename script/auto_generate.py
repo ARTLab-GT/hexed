@@ -1,5 +1,6 @@
 import sys
 import re
+import os
 
 max_dim = 3
 
@@ -32,6 +33,9 @@ param_funcs = {"int n_var":(lambda dim, row_size : dim + 2),
                "int n_qpoint":(lambda dim, row_size : row_size**dim),
                "int row_size":lambda dim, row_size : row_size}
 
+if not "kernels" in os.listdir("."):
+    os.mkdir("kernels")
+
 for file_name in ["kernels/local/cpg_euler_matrix.hpp"]:
     with open("../include/" + file_name, "r") as in_file:
         text = in_file.read()
@@ -39,7 +43,6 @@ for file_name in ["kernels/local/cpg_euler_matrix.hpp"]:
     for template in templates:
         params, template = pop("\n*template<([^\n]*)>", template)
         params = re.split(" *, *", params.group(1))
-        print(params)
         signature, template  = pop("\n*(.*?[)])", template)
         signature = re.sub("\n *", " ", signature.groups(1)[0])
         signature = re.sub(" \w*?(,|\))", r"\1", signature)
@@ -65,7 +68,9 @@ for file_name in ["kernels/local/cpg_euler_matrix.hpp"]:
   else throw std::runtime_error("Kernel not available.");
 }}
 """
-        print(output_text)
+        output_text = format_file_text(include, output_text)
+        with open(f"kernels/{name}.cpp", "w") as out_file:
+            out_file.write(output_text)
 
 class Auto_file:
     def __init__(self, name):
