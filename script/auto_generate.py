@@ -52,7 +52,7 @@ for file_name in header_names:
         signature, template  = pop("\n*(.*?[)])", template)
         signature = re.sub("\n *", " ", signature.groups(1)[0])
         signature = re.sub(" \w*?(,|\))", r"\1", signature)
-        include = f'#include "{file_name}"'
+        include = f'#include <{file_name[11:]}>'
         name = re.search(" (\w*)\(", signature).groups(1)[0]
         output_text = f"typedef {name}_type "
         output_text += re.sub(" \w*\(", " (*)(", signature) + ";\n\n"
@@ -72,8 +72,7 @@ for file_name in header_names:
     return {name}s[n_dim - 1][row_size - 2];
   }}
   else throw std::runtime_error("Kernel not available.");
-}}
-"""
+}}"""
         output_text = format_file_text(include, output_text)
         with open(f"kernels/{name}.cpp", "w") as out_file:
             out_file.write(output_text)
