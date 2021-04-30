@@ -16,27 +16,56 @@ script/auto_generate.py and rerun CMake.
 */
 
 {include}
+
 namespace cartdg
 {{
+
 {text}
+
 }}
 """
 
 def pop(regex, string):
     return re.search(regex, string, re.DOTALL), re.sub(regex, "", string)
 
-for file_name in ["../include/kernels/local/cpg_euler_matrix.hpp"]:
-    with open(file_name, "r") as in_file:
+param_funcs = {"int n_var":(lambda dim, row_size : dim + 2),
+               "int n_qpoint":(lambda dim, row_size : row_size**dim),
+               "int row_size":lambda dim, row_size : row_size}
+
+for file_name in ["kernels/local/cpg_euler_matrix.hpp"]:
+    with open("../include/" + file_name, "r") as in_file:
         text = in_file.read()
     templates = text.split("AUTOGENERATE")[1:]
     for template in templates:
         params, template = pop("\n*template<([^\n]*)>", template)
-        params = params.group(1).split(",")
+        params = re.split(" *, *", params.group(1))
         print(params)
         signature, template  = pop("\n*(.*?[)])", template)
         signature = re.sub("\n *", " ", signature.groups(1)[0])
         signature = re.sub(" \w*?(,|\))", r"\1", signature)
-        print(signature)
+        include = f'#include "{file_name}"'
+        name = re.search(" (\w*)\(", signature).groups(1)[0]
+        output_text = f"typedef {name}_type "
+        output_text += re.sub(" \w*\(", " (*)(", signature) + ";\n\n"
+        output_text += f"{name}_type {name}s [{max_dim}][{max_rank - 1}] {{\n"
+        for dim in range(1, max_dim + 1):
+            for row_size in range(2, max_rank + 1):
+                output_text += f"{name}<"
+                for i_param in range(len(params)):
+                    output_text += f"{param_funcs[params[i_param]](dim, row_size)}, "
+                output_text = output_text[:-2] + ">,\n"
+        output_text += f"""}}
+
+{name}_type get_{name}(int n_dim, int row_size):
+{{
+  if ((n_dim > 0) && (n_dim <= {max_dim}) && (row_size >= 2) && (row_size <= max_rank))
+  {{
+    return {name}s[n_dim - 1][row_size - 2];
+  }}
+  else throw std::runtime_error("Kernel not available.");
+}}
+"""
+        print(output_text)
 
 class Auto_file:
     def __init__(self, name):
