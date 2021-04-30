@@ -59,8 +59,6 @@ class Solution
   virtual Viscous_neighbor_kernel get_viscous_neighbor_kernel();
   virtual Nonpen_kernel get_nonpen_kernel();
   virtual Max_char_speed_kernel get_max_char_speed_kernel();
-  virtual Physical_step_kernel get_physical_step_kernel();
-  virtual Restrict_step_kernel get_restrict_step_kernel();
   virtual Gbc_kernel get_gbc_kernel();
 };
 
