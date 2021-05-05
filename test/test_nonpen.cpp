@@ -1,6 +1,7 @@
 #include <catch.hpp>
 
-#include <kernels/neighbor/cpg_euler_nonpen.hpp>
+#include <kernels/Kernel_settings.hpp>
+#include <get_nonpen_cpg_euler.hpp>
 
 TEST_CASE("non-penetration BC")
 {
@@ -39,8 +40,8 @@ TEST_CASE("non-penetration BC")
     }
   }
 
-  cartdg::cpg_euler_nonpen<5, 8, 2>(&read[0][0][0], &write[0][0][0], &jacobian[0][0][0][0],
-                                    i_elem, i_dim, is_positive, 3, 2., settings);
+  cartdg::get_nonpen_cpg_euler(3, 2)(&read[0][0][0], &write[0][0][0], &jacobian[0][0][0][0],
+                                     i_elem, i_dim, is_positive, 3, 2., settings);
 
   for (int i_qpoint = 0; i_qpoint < 8; ++i_qpoint)
   {

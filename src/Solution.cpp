@@ -82,7 +82,6 @@ std::vector<Grid*> Solution::all_grids()
 
 double Solution::update(double cfl_by_stable_cfl)
 {
-  auto nonpen = get_nonpen_kernel();
   double dt = std::numeric_limits<double>::max();
   FOR_ALL_GRIDS // FIXME: incorporate_jacobian
   (
@@ -100,11 +99,6 @@ double Solution::update(double cfl_by_stable_cfl)
       kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
       grid->execute_neighbor(kernel_settings);
     )
-    for (Deformed_grid& g : def_grids)
-    {
-      kernel_settings.d_t_by_d_pos = dt/g.mesh_size;
-      nonpen(g.state_r(), g.state_w(), g.jacobian.data(), g.i_elem_wall.data(), g.i_dim_wall.data(), g.is_positive_wall.data(), g.i_elem_wall.size(), g.basis.node_weights()(0), kernel_settings);
-    }
     FOR_ALL_GRIDS
     (
       grid->execute_runge_kutta_stage();
