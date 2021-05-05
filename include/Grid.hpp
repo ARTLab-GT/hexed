@@ -9,6 +9,7 @@
 #include "Basis.hpp"
 #include "Ghost_boundary_condition.hpp"
 #include "kernels/kernel_types.hpp"
+#include "kernels/Kernel_settings.hpp"
 #include "Domain_func.hpp"
 
 namespace cartdg
@@ -51,6 +52,7 @@ class Grid
   // functions that execute some aspect of time integration
   bool execute_runge_kutta_stage();
   double get_stable_cfl();
+  virtual void execute_local(Kernel_settings&);
 
   // functions that resize/reallocate/modify data
   void auto_connect(std::vector<int> periods);

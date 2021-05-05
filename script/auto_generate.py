@@ -112,8 +112,6 @@ class Auto_file:
 solution = Auto_file("Solution")
 solution.include = """
 #include <Solution.hpp>
-#include <kernels/local/cpg_euler_matrix.hpp>
-#include <kernels/local/cpg_euler_deformed.hpp>
 #include <kernels/local/derivative.hpp>
 #include <kernels/neighbor/cpg_euler_copy.hpp>
 #include <kernels/neighbor/cpg_euler_copy_deformed.hpp>
@@ -123,7 +121,7 @@ solution.include = """
 #include <kernels/neighbor/jump_gbc.hpp>
 #include <kernels/observing/cpg_euler_max.hpp>
 """
-solution.templates = {"local":"cpg_euler_matrix", "local_deformed":"cpg_euler_deformed",
+solution.templates = {
                       "neighbor":"cpg_euler_copy", "neighbor_deformed":"cpg_euler_copy_deformed",
                       "derivative":"derivative_r", "jump":"jump_r",
                       "viscous_local":"derivative_w", "viscous_neighbor":"jump_w",

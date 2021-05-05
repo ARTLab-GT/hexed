@@ -80,8 +80,6 @@ std::vector<Grid*> Solution::all_grids()
 
 double Solution::update(double cfl_by_stable_cfl)
 {
-  auto local = get_local_kernel();
-  auto local_deformed = get_local_deformed_kernel();
   auto neighbor = get_neighbor_kernel();
   auto neighbor_deformed = get_neighbor_deformed_kernel();
   auto nonpen = get_nonpen_kernel();
@@ -96,10 +94,14 @@ double Solution::update(double cfl_by_stable_cfl)
   }
   for (int i_rk = 0; i_rk < 3; ++i_rk)
   {
+    for (Grid* g : all_grids())
+    {
+      kernel_settings.d_t_by_d_pos = dt/g->mesh_size;
+      g->execute_local(kernel_settings);
+    }
     for (Grid& g : grids)
     {
       kernel_settings.d_t_by_d_pos = dt/g.mesh_size;
-      local(g.state_r(), g.state_w(), g.n_elem, g.basis, kernel_settings);
       neighbor(g.neighbor_connections_r().data(), g.neighbor_connections_w().data(), 
                g.n_neighb_con().data(), g.basis.node_weights(), kernel_settings);
       {
@@ -110,8 +112,6 @@ double Solution::update(double cfl_by_stable_cfl)
     for (Deformed_grid& g : def_grids)
     {
       kernel_settings.d_t_by_d_pos = dt/g.mesh_size;
-      local_deformed(g.state_r(), g.state_w(), g.jacobian.data(), g.n_elem,
-                     g.basis, kernel_settings);
       neighbor_deformed(g.state_connections_r(), g.state_connections_w(), g.jacobian_neighbors.data(),
                         g.neighbor_axes.data(), g.neighbor_is_positive.data(), g.neighbor_storage[0].size()/2, g.basis.node_weights(), kernel_settings);
       {

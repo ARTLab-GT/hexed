@@ -1,4 +1,5 @@
 #include <Deformed_grid.hpp>
+#include <get_local_deformed_cpg_euler.hpp>
 
 namespace cartdg
 {
@@ -147,6 +148,12 @@ double Deformed_grid::jacobian_det(int i_elem, int i_qpoint)
     }
   }
   return jac_mat.fullPivLu().determinant();
+}
+
+void Deformed_grid::execute_local(Kernel_settings& settings)
+{
+  get_local_deformed_cpg_euler(n_dim, basis.rank)(state_r(), state_w(), jacobian.data(), n_elem,
+                                                  basis, settings);
 }
 
 void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_axis,

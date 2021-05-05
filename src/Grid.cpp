@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include <Grid.hpp>
+#include <get_local_cpg_euler.hpp>
 
 namespace cartdg
 {
@@ -230,6 +231,11 @@ double Grid::get_stable_cfl()
   {
     throw std::runtime_error("Stable CFL number unknown for basis of desired rank.");
   }
+}
+
+void Grid::execute_local(Kernel_settings& settings)
+{
+  get_local_cpg_euler(n_dim, basis.rank)(state_r(), state_w(), n_elem, basis, settings);
 }
 
 void Grid::print()
