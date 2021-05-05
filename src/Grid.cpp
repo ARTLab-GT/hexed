@@ -6,6 +6,7 @@
 #include <get_neighbor_cpg_euler.hpp>
 #include <get_gbc_cpg_euler.hpp>
 #include <get_local_derivative.hpp>
+#include <get_local_av.hpp>
 
 namespace cartdg
 {
@@ -264,6 +265,11 @@ void Grid::execute_local_derivative(int i_var, int i_axis, Kernel_settings& sett
     sw[i_data] = sr[i_data];
   }
   get_local_derivative(n_dim, basis.rank)(sr, derivs.data(), n_elem, i_var, i_axis, basis, settings);
+}
+
+void Grid::execute_local_av(int i_var, int i_axis, Kernel_settings& settings)
+{
+  get_local_av(n_dim, basis.rank)(derivs.data(), state_w(), n_elem, i_var, i_axis, basis, settings);
 }
 
 void Grid::print()

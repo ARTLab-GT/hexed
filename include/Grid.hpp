@@ -56,6 +56,7 @@ class Grid
   virtual void execute_local(Kernel_settings&);
   virtual void execute_neighbor(Kernel_settings&);
   virtual void execute_local_derivative(int i_var, int i_axis, Kernel_settings&); // FIXME: override for Deformed_grid
+  virtual void execute_local_av(int i_var, int i_axis, Kernel_settings&); // FIXME: override for Deformed_grid
 
   // functions that resize/reallocate/modify data
   void auto_connect(std::vector<int> periods);

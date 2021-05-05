@@ -112,13 +112,12 @@ class Auto_file:
 solution = Auto_file("Solution")
 solution.include = """
 #include <Solution.hpp>
-#include <kernels/local/derivative.hpp>
 #include <kernels/neighbor/jump.hpp>
 #include <kernels/neighbor/jump_gbc.hpp>
 """
 solution.templates = {
                       "jump":"jump_r",
-                      "viscous_local":"derivative_w", "viscous_neighbor":"jump_w",
+                      "viscous_neighbor":"jump_w",
                       "jump_gbc":"jump_gbc",
                      }
 

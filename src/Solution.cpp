@@ -126,7 +126,6 @@ double Solution::update(double cfl_by_stable_cfl)
           for (Grid& g : grids)
           {
             kernel_settings.d_t_by_d_pos = dt/g.mesh_size;
-            double* sw = g.state_w();
             int n_con = g.n_neighb_con()[i_axis];
             get_jump_kernel()(g.neighbor_connections_r()[i_axis],
                               g.deriv_neighbor_connections()[i_axis], n_con, i_var, i_axis, basis.node_weights(), kernel_settings);
@@ -134,11 +133,15 @@ double Solution::update(double cfl_by_stable_cfl)
             {
               g.derivs[i_data] *= 1.e-3;
             }
-            get_viscous_local_kernel()(g.derivs.data(), sw, g.n_elem, i_var, i_axis, basis, kernel_settings);
             get_viscous_neighbor_kernel()(g.deriv_neighbor_connections()[i_axis],
                                           g.neighbor_connections_w()[i_axis], n_con, i_var, i_axis, basis.node_weights(), kernel_settings);
             get_jump_gbc_kernel()(g.ghost_bound_conds, g.derivs.data(), g.state_w(), i_var, i_axis, basis.node_weights()(0), kernel_settings);
           }
+          FOR_ALL_GRIDS
+          (
+            kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
+            grid->execute_local_av(i_var, i_axis, kernel_settings);
+          )
         }
       }
       for (Grid& g : grids)
