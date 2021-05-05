@@ -71,6 +71,7 @@ target_include_directories(cartdg PUBLIC
 add_subdirectory(src)
 add_subdirectory(test)
 add_subdirectory(demo)
+add_subdirectory(${CMAKE_BINARY_DIR}/kernels)
 
 install(TARGETS cartdg DESTINATION lib EXPORT cartdgTargets)
 install(DIRECTORY include/ DESTINATION include/cartdg)

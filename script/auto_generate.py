@@ -59,15 +59,15 @@ for file_name in header_names:
         hpp_include = ""
         cpp_include = f'#include <{file_name[11:]}>\n'
         name = re.search(" (\w*)\(", signature).groups(1)[0]
-        cpp_include += f'#include "{name}.hpp"\n'
+        cpp_include += f'#include "get_{name}.hpp"\n'
         hpp_text = """
 class Basis;
 class Grid;
 class Kernel_settings;
 
 """[1:]
-        hpp_text += f"typedef {name}_type "
-        hpp_text += re.sub(" \w*\(", " (*)(", signature) + ";\n\n"
+        hpp_text += f"typedef "
+        hpp_text += re.sub(" \w*\(", f" (*{name}_type)(", signature) + ";\n\n"
         cpp_text = f"{name}_type {name}s [{max_dim}][{max_rank - 1}] {{\n"
         for dim in range(1, max_dim + 1):
             for row_size in range(2, max_rank + 1):
@@ -75,11 +75,11 @@ class Kernel_settings;
                 for i_param in range(len(params)):
                     cpp_text += f"{param_funcs[params[i_param]](dim, row_size)}, "
                 cpp_text = cpp_text[:-2] + ">,\n"
-        cpp_text += f"""}}
+        cpp_text += f"""}};
 
 {name}_type get_{name}(int n_dim, int row_size)
 {{
-  if ((n_dim > 0) && (n_dim <= {max_dim}) && (row_size >= 2) && (row_size <= max_rank))
+  if ((n_dim > 0) && (n_dim <= {max_dim}) && (row_size >= 2) && (row_size <= {max_rank}))
   {{
     return {name}s[n_dim - 1][row_size - 2];
   }}
