@@ -1,6 +1,8 @@
 #ifndef CARTDG_JUMP_HPP_
 #define CARTDG_JUMP_HPP_
 
+#include <Eigen/Dense>
+
 #include "read_copy.hpp"
 #include "write_copy.hpp"
 #include "../Kernel_settings.hpp"
@@ -38,15 +40,6 @@ void jump(double** connections_r, double** connections_w, int n_con,
     write_copy<1, n_qpoint, row_size>(face_w[0], connect[0] + i_var_write*n_qpoint, stride, 1);
     write_copy<1, n_qpoint, row_size>(face_w[1], connect[1] + i_var_write*n_qpoint, stride, 0);
   }
-}
-
-template<int n_var, int n_qpoint, int row_size>
-void jump_r(double** connections_r, double** connections_w, int n_con,
-           int i_var, int i_axis,
-           const Eigen::VectorXd weights_1d, Kernel_settings& settings)
-{
-  jump<n_var, 1, n_qpoint, row_size>(connections_r, connections_w, n_con,
-                                     i_var, 0, i_axis, weights_1d, settings);
 }
 
 template<int n_var, int n_qpoint, int row_size>

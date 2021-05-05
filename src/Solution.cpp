@@ -123,12 +123,15 @@ double Solution::update(double cfl_by_stable_cfl)
             kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
             grid->execute_local_derivative(i_var, i_axis, kernel_settings);
           )
+          FOR_ALL_GRIDS
+          (
+            kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
+            grid->execute_neighbor_derivative(i_var, i_axis, kernel_settings);
+          )
           for (Grid& g : grids)
           {
             kernel_settings.d_t_by_d_pos = dt/g.mesh_size;
             int n_con = g.n_neighb_con()[i_axis];
-            get_jump_kernel()(g.neighbor_connections_r()[i_axis],
-                              g.deriv_neighbor_connections()[i_axis], n_con, i_var, i_axis, basis.node_weights(), kernel_settings);
             for (int i_data = 0; i_data < g.n_qpoint*g.n_elem; ++i_data)
             {
               g.derivs[i_data] *= 1.e-3;
