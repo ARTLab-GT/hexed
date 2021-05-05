@@ -10,14 +10,14 @@ src_dir = src_dir.replace("//", "/")
 max_rank = int(sys.argv[2])
 
 def format_file_text(include, text):
+    if len(include) > 0:
+        include = "\n" + include
     return f"""/*
 This file was generated automatically by script/auto_generate.py, which CMake executes
 during the build process. Please do not attempt to modify it directly. Instead, modify
 script/auto_generate.py and rerun CMake.
 */
-
 {include}
-
 namespace cartdg
 {{
 
@@ -33,7 +33,10 @@ param_funcs = {"int n_var":(lambda dim, row_size : dim + 2),
                "int n_qpoint":(lambda dim, row_size : row_size**dim),
                "int row_size":lambda dim, row_size : row_size}
 
-if not "kernels" in os.listdir("."):
+if "kernels" in os.listdir("."):
+    for file_name in os.listdir("kernels"):
+        os.remove("kernels/" + file_name)
+else:
     os.mkdir("kernels")
 
 header_names = []
@@ -53,20 +56,28 @@ for file_name in header_names:
         signature, template  = pop("\n*(.*?[)])", template)
         signature = re.sub("\n *", " ", signature.groups(1)[0])
         signature = re.sub(" \w*?(,|\))", r"\1", signature)
-        include = f'#include <{file_name[11:]}>'
+        hpp_include = ""
+        cpp_include = f'#include <{file_name[11:]}>\n'
         name = re.search(" (\w*)\(", signature).groups(1)[0]
-        output_text = f"typedef {name}_type "
-        output_text += re.sub(" \w*\(", " (*)(", signature) + ";\n\n"
-        output_text += f"{name}_type {name}s [{max_dim}][{max_rank - 1}] {{\n"
+        cpp_include += f'#include "{name}.hpp"\n'
+        hpp_text = """
+class Basis;
+class Grid;
+class Kernel_settings;
+
+"""[1:]
+        hpp_text += f"typedef {name}_type "
+        hpp_text += re.sub(" \w*\(", " (*)(", signature) + ";\n\n"
+        cpp_text = f"{name}_type {name}s [{max_dim}][{max_rank - 1}] {{\n"
         for dim in range(1, max_dim + 1):
             for row_size in range(2, max_rank + 1):
-                output_text += f"{name}<"
+                cpp_text += f"{name}<"
                 for i_param in range(len(params)):
-                    output_text += f"{param_funcs[params[i_param]](dim, row_size)}, "
-                output_text = output_text[:-2] + ">,\n"
-        output_text += f"""}}
+                    cpp_text += f"{param_funcs[params[i_param]](dim, row_size)}, "
+                cpp_text = cpp_text[:-2] + ">,\n"
+        cpp_text += f"""}}
 
-{name}_type get_{name}(int n_dim, int row_size):
+{name}_type get_{name}(int n_dim, int row_size)
 {{
   if ((n_dim > 0) && (n_dim <= {max_dim}) && (row_size >= 2) && (row_size <= max_rank))
   {{
@@ -74,15 +85,19 @@ for file_name in header_names:
   }}
   else throw std::runtime_error("Kernel not available.");
 }}"""
-        output_text = format_file_text(include, output_text)
-        source_names.append(f"{name}.cpp")
-        with open(f"kernels/{name}.cpp", "w") as out_file:
-            out_file.write(output_text)
+        hpp_text += f"{name}_type get_{name}(int n_dim, int row_size);"
+        hpp_text = format_file_text(hpp_include, hpp_text)
+        cpp_text = format_file_text(cpp_include, cpp_text)
+        source_names.append(f"get_{name}.cpp")
+        with open(f"kernels/get_{name}.hpp", "w") as out_file:
+            out_file.write(hpp_text)
+        with open(f"kernels/get_{name}.cpp", "w") as out_file:
+            out_file.write(cpp_text)
 
 cmake_text = "target_sources(cartdg PRIVATE\n"
 for source in source_names:
     cmake_text += source + "\n"
-cmake_text += ")"
+cmake_text += ")\n"
 with open("kernels/CMakeLists.txt", "w") as cmake_file:
     cmake_file.write(cmake_text)
 
