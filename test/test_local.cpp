@@ -1,6 +1,7 @@
 #include <catch.hpp>
 
 #include <cartdgConfig.hpp>
+#include <get_local_cpg_euler.hpp>
 #include <kernels/local/cpg_euler_matrix.hpp>
 #include <kernels/local/cpg_euler_deformed.hpp>
 #include <kernels/local/derivative.hpp>

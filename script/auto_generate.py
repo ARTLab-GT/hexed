@@ -1,6 +1,7 @@
 import sys
 import re
 import os
+import shutil
 
 max_dim = 3
 
@@ -34,10 +35,10 @@ param_funcs = {"int n_var":(lambda dim, row_size : dim + 2),
                "int row_size":lambda dim, row_size : row_size}
 
 if "kernels" in os.listdir("."):
-    for file_name in os.listdir("kernels"):
-        os.remove("kernels/" + file_name)
-else:
-    os.mkdir("kernels")
+    shutil.rmtree("kernels")
+os.mkdir("kernels")
+os.mkdir("kernels/include")
+os.mkdir("kernels/src")
 
 header_names = []
 for dir_group in os.walk("../include/kernels"):
@@ -89,16 +90,16 @@ class Kernel_settings;
         hpp_text = format_file_text(hpp_include, hpp_text)
         cpp_text = format_file_text(cpp_include, cpp_text)
         source_names.append(f"get_{name}.cpp")
-        with open(f"kernels/get_{name}.hpp", "w") as out_file:
+        with open(f"kernels/include/get_{name}.hpp", "w") as out_file:
             out_file.write(hpp_text)
-        with open(f"kernels/get_{name}.cpp", "w") as out_file:
+        with open(f"kernels/src/get_{name}.cpp", "w") as out_file:
             out_file.write(cpp_text)
 
 cmake_text = "target_sources(cartdg PRIVATE\n"
 for source in source_names:
     cmake_text += source + "\n"
 cmake_text += ")\n"
-with open("kernels/CMakeLists.txt", "w") as cmake_file:
+with open("kernels/src/CMakeLists.txt", "w") as cmake_file:
     cmake_file.write(cmake_text)
 
 class Auto_file:

@@ -60,18 +60,20 @@ target_include_directories(cartdg PRIVATE ${TECIO_DIR}/include)
 
 # add automatically generated source files
 target_sources(cartdg PRIVATE ${CMAKE_BINARY_DIR}/Gauss_lobatto.cpp
-                              ${CMAKE_BINARY_DIR}/Solution__get_kernel.cpp)
+                              ${CMAKE_BINARY_DIR}/Solution__get_kernel.cpp
+)
 
 target_include_directories(cartdg PUBLIC
                            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
                            $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>
+                           $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/kernels/include>
                            $<INSTALL_INTERFACE:include>
 )
 
 add_subdirectory(src)
 add_subdirectory(test)
 add_subdirectory(demo)
-add_subdirectory(${CMAKE_BINARY_DIR}/kernels)
+add_subdirectory(${CMAKE_BINARY_DIR}/kernels/src)
 
 install(TARGETS cartdg DESTINATION lib EXPORT cartdgTargets)
 install(DIRECTORY include/ DESTINATION include/cartdg)
