@@ -2,7 +2,6 @@
 
 #include <cartdgConfig.hpp>
 #include <get_local_cpg_euler.hpp>
-#include <kernels/local/cpg_euler_matrix.hpp>
 #include <kernels/local/cpg_euler_deformed.hpp>
 #include <kernels/local/derivative.hpp>
 #include <Gauss_lobatto.hpp>
@@ -48,8 +47,7 @@ TEST_CASE("CPG Euler matrix form")
           read[i_elem][2][i_qpoint] = ener;
       }
     }
-    cartdg::cpg_euler_matrix<3, 2, 2>(&read[0][0][0], &write[0][0][0], n_elem,
-                                      basis, settings);
+    cartdg::get_local_cpg_euler(1, 2)(&read[0][0][0], &write[0][0][0], n_elem, basis, settings);
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       for (int i_qpoint = 0; i_qpoint < rank; ++i_qpoint)
@@ -86,8 +84,7 @@ TEST_CASE("CPG Euler matrix form")
           read[i_elem][4][i_qpoint] = ener;
       }
     }
-    cartdg::cpg_euler_matrix<5, 27, 3>(&read[0][0][0], &write[0][0][0], n_elem,
-                                       basis, settings);
+    cartdg::get_local_cpg_euler(3, 3)(&read[0][0][0], &write[0][0][0], n_elem, basis, settings);
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       for (int i_qpoint = 0; i_qpoint < rank*rank*rank; ++i_qpoint)
@@ -109,7 +106,7 @@ TEST_CASE("CPG Euler matrix form")
   SECTION("2D non-constant")
   {
     const int n_elem = 5;
-    const int rank = 6;
+    const int rank = std::min<int>(6, MAX_BASIS_RANK);
     double read [n_elem][4][rank*rank];
     double write[n_elem][4][rank*rank];
     cartdg::Gauss_lobatto basis (rank);
@@ -132,8 +129,7 @@ TEST_CASE("CPG Euler matrix form")
         }
       }
     }
-    cartdg::cpg_euler_matrix<4, rank*rank, rank>(&read[0][0][0], &write[0][0][0], n_elem,
-                                                 basis, settings);
+    cartdg::get_local_cpg_euler(2, rank)(&read[0][0][0], &write[0][0][0], n_elem, basis, settings);
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       for (int i_qpoint = 0; i_qpoint < rank*rank; ++i_qpoint)
