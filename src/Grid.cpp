@@ -2,6 +2,7 @@
 
 #include <Grid.hpp>
 #include <get_local_cpg_euler.hpp>
+#include <get_neighbor_cpg_euler.hpp>
 
 namespace cartdg
 {
@@ -236,6 +237,12 @@ double Grid::get_stable_cfl()
 void Grid::execute_local(Kernel_settings& settings)
 {
   get_local_cpg_euler(n_dim, basis.rank)(state_r(), state_w(), n_elem, basis, settings);
+}
+
+void Grid::execute_neighbor(Kernel_settings& settings)
+{
+  get_neighbor_cpg_euler(n_dim, basis.rank)(neighbor_connections_r().data(), neighbor_connections_w().data(), 
+                                            n_neighb_con().data(), basis.node_weights(), settings);
 }
 
 void Grid::print()

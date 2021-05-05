@@ -1,5 +1,6 @@
 #include <Deformed_grid.hpp>
 #include <get_local_deformed_cpg_euler.hpp>
+#include <get_neighbor_deformed_cpg_euler.hpp>
 
 namespace cartdg
 {
@@ -154,6 +155,12 @@ void Deformed_grid::execute_local(Kernel_settings& settings)
 {
   get_local_deformed_cpg_euler(n_dim, basis.rank)(state_r(), state_w(), jacobian.data(), n_elem,
                                                   basis, settings);
+}
+
+void Deformed_grid::execute_neighbor(Kernel_settings& settings)
+{
+  get_neighbor_deformed_cpg_euler(n_dim, basis.rank)(state_connections_r(), state_connections_w(), jacobian_neighbors.data(),
+                                  neighbor_axes.data(), neighbor_is_positive.data(), neighbor_storage[0].size()/2, basis.node_weights(), settings);
 }
 
 void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_axis,

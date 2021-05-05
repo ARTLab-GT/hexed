@@ -1,5 +1,5 @@
-#ifndef CARTDG_CPG_EULER_COPY_DEFORMED_HPP_
-#define CARTDG_CPG_EULER_COPY_DEFORMED_HPP_
+#ifndef CARTDG_NEIGHBOR_DEFORMED_CPG_EULER_HPP_
+#define CARTDG_NEIGHBOR_DEFORMED_CPG_EULER_HPP_
 
 #include "read_copy.hpp"
 #include "write_copy.hpp"
@@ -9,11 +9,12 @@
 namespace cartdg
 {
 
+// AUTOGENERATE
 template<int n_var, int n_qpoint, int row_size>
-void cpg_euler_copy_deformed(double** connections_r, double** connections_w,
-                             double** jacobian, int* i_axis, int* is_positive_face,
-                             int n_connections,
-                             const Eigen::VectorXd weights_1d, Kernel_settings& settings)
+void neighbor_deformed_cpg_euler(double** connections_r, double** connections_w,
+                                 double** jacobian, int* i_axis, int* is_positive_face,
+                                 int n_connections,
+                                 const Eigen::VectorXd weights_1d, Kernel_settings& settings)
 {
   const int n_face_qpoint = n_qpoint/row_size;
   const int face_size = n_face_qpoint*n_var;

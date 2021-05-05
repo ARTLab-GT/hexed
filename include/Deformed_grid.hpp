@@ -32,6 +32,7 @@ class Deformed_grid : public Grid
   void add_wall(int i_elem, int i_dim, bool is_positive_face);
   virtual double jacobian_det(int i_elem, int i_qpoint);
   virtual void execute_local(Kernel_settings&);
+  virtual void execute_neighbor(Kernel_settings&);
 
   // Note: the following functions must be called in the order
   // that they appear.

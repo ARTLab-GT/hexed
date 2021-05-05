@@ -9,15 +9,11 @@
 namespace cartdg
 {
 
-typedef void (*Neighbor_kernel)(double***, double***, int*, const Eigen::VectorXd,
-              Kernel_settings&);
 typedef void (*Gbc_kernel)(std::vector<Ghost_boundary_condition*>&, double*, double*,
                            double, Kernel_settings&);
 typedef void (*Nonpen_kernel)(double*, double*, double*, int*, int*, int*, int, double,
                               Kernel_settings&);
 typedef double (*Max_char_speed_kernel)(double*, int, Kernel_settings&);
-typedef void (*Neighbor_deformed_kernel)(double**, double**, double**, int*, int*,
-                                         int, const Eigen::VectorXd, Kernel_settings&);
 typedef void (*Derivative_kernel)(double*, double*, int, int, int, Basis&, Kernel_settings&);
 typedef void (*Viscous_local_kernel)(double*, double*, int, int, int, Basis&, Kernel_settings&);
 typedef void (*Jump_kernel)(double**, double**, int, int, int, Eigen::VectorXd, Kernel_settings&);

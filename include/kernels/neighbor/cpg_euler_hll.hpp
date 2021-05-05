@@ -1,6 +1,9 @@
 #ifndef CARTDG_CPG_EULER_HLL_HPP_
 #define CARTDG_CPG_EULER_HLL_HPP_
 
+#include <algorithm>
+#include <cmath>
+
 namespace cartdg
 {
 
@@ -31,7 +34,7 @@ void cpg_euler_hll(double* state_r, double* d_flux_w, double mult,
       FLUX(n_var - 2) = READ(i_axis);
       FLUX(n_var - 1) = (READ(n_var - 1) + pres)*veloc;
       velocity[i_side] = veloc;
-      sound_speed[i_side] = sqrt(sp_heat_rat*pres/READ(n_var - 2));
+      sound_speed[i_side] = std::sqrt(sp_heat_rat*pres/READ(n_var - 2));
       #undef FLUX
       #undef READ
     }

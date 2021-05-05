@@ -53,6 +53,7 @@ class Grid
   bool execute_runge_kutta_stage();
   double get_stable_cfl();
   virtual void execute_local(Kernel_settings&);
+  virtual void execute_neighbor(Kernel_settings&);
 
   // functions that resize/reallocate/modify data
   void auto_connect(std::vector<int> periods);

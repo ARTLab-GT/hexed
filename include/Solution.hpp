@@ -50,8 +50,6 @@ class Solution
 
   virtual Derivative_kernel get_derivative_kernel();
   virtual Viscous_local_kernel get_viscous_local_kernel();
-  virtual Neighbor_kernel get_neighbor_kernel();
-  virtual Neighbor_deformed_kernel get_neighbor_deformed_kernel();
   virtual Jump_kernel get_jump_kernel();
   virtual Jump_gbc_kernel get_jump_gbc_kernel();
   virtual Viscous_neighbor_kernel get_viscous_neighbor_kernel();

@@ -1,6 +1,9 @@
 #ifndef CARTDG_CPG_EULER_HLL_DEFORMED_HPP_
 #define CARTDG_CPG_EULER_HLL_DEFORMED_HPP_
 
+#include <algorithm>
+#include <cmath>
+
 #include <Eigen/Dense>
 
 namespace cartdg
