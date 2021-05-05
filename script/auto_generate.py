@@ -117,7 +117,7 @@ solution.include = """
 #include <kernels/neighbor/jump_gbc.hpp>
 """
 solution.templates = {
-                      "derivative":"derivative_r", "jump":"jump_r",
+                      "jump":"jump_r",
                       "viscous_local":"derivative_w", "viscous_neighbor":"jump_w",
                       "jump_gbc":"jump_gbc",
                      }

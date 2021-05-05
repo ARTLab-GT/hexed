@@ -49,13 +49,6 @@ void derivative(double* read, double* write, int n_elem, int i_var_read, int i_v
 }
 
 template<int n_var, int n_qpoint, int row_size>
-void derivative_r(double* read, double* write, int n_elem, int i_var, int i_axis,
-                Basis& basis, Kernel_settings& settings)
-{
-  derivative<n_var, 1, n_qpoint, row_size, false>(read, write, n_elem, i_var, 0, i_axis, basis, settings);
-}
-
-template<int n_var, int n_qpoint, int row_size>
 void derivative_w(double* read, double* write, int n_elem, int i_var, int i_axis,
                 Basis& basis, Kernel_settings& settings)
 {

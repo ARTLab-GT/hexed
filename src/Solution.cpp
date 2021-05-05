@@ -104,7 +104,7 @@ double Solution::update(double cfl_by_stable_cfl)
       grid->execute_runge_kutta_stage();
     )
   }
-  int n_iter = 0;
+  int n_iter = 1;
   for (int i_iter = 0; i_iter < n_iter; ++i_iter)
   {
     dt = std::numeric_limits<double>::max();
@@ -114,20 +114,19 @@ double Solution::update(double cfl_by_stable_cfl)
     )
     for (int i_rk = 0; i_rk < 3; ++i_rk)
     {
-      for (Grid& g : grids)
+      for (int i_axis = 0; i_axis < n_dim; ++i_axis)
       {
-        kernel_settings.d_t_by_d_pos = dt/g.mesh_size;
-        double* sr = g.state_r();
-        double* sw = g.state_w();
-        for (int i_data = 0; i_data < g.n_dof*g.n_elem; ++i_data)
+        for (int i_var = 0; i_var < n_var; ++i_var)
         {
-          sw[i_data] = sr[i_data];
-        }
-        for (int i_axis = 0; i_axis < n_dim; ++i_axis)
-        {
-          for (int i_var = 0; i_var < n_var; ++i_var)
+          FOR_ALL_GRIDS
+          (
+            kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
+            grid->execute_local_derivative(i_var, i_axis, kernel_settings);
+          )
+          for (Grid& g : grids)
           {
-            get_derivative_kernel()(sr, g.derivs.data(), g.n_elem, i_var, i_axis, basis, kernel_settings);
+            kernel_settings.d_t_by_d_pos = dt/g.mesh_size;
+            double* sw = g.state_w();
             int n_con = g.n_neighb_con()[i_axis];
             get_jump_kernel()(g.neighbor_connections_r()[i_axis],
                               g.deriv_neighbor_connections()[i_axis], n_con, i_var, i_axis, basis.node_weights(), kernel_settings);
