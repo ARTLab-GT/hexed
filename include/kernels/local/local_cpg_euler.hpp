@@ -1,5 +1,5 @@
-#ifndef CARTDG_CPG_EULER_MATRIX_HPP_
-#define CARTDG_CPG_EULER_MATRIX_HPP_
+#ifndef CARTDG_LOCAL_CPG_EULER_HPP_
+#define CARTDG_LOCAL_CPG_EULER_HPP_
 
 #include <Eigen/Dense>
 
@@ -9,9 +9,10 @@
 namespace cartdg
 {
 
+// AUTOGENERATE
 template<int n_var, int n_qpoint, int row_size>
-void cpg_euler_matrix(double * read, double * write, int n_elem,
-                      Basis& basis, Kernel_settings& settings)
+void local_cpg_euler(double* read, double* write, int n_elem,
+                     Basis& basis, Kernel_settings& settings)
 {
   Eigen::Matrix<double, row_size, row_size> diff_mat = basis.diff_mat();
   double d_t_by_d_pos = settings.d_t_by_d_pos;
@@ -94,4 +95,5 @@ void cpg_euler_matrix(double * read, double * write, int n_elem,
 }
 
 }
+
 #endif
