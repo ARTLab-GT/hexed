@@ -83,7 +83,6 @@ std::vector<Grid*> Solution::all_grids()
 double Solution::update(double cfl_by_stable_cfl)
 {
   auto nonpen = get_nonpen_kernel();
-  auto fbc = get_gbc_kernel();
   double dt = std::numeric_limits<double>::max();
   FOR_ALL_GRIDS // FIXME: incorporate_jacobian
   (
@@ -101,21 +100,9 @@ double Solution::update(double cfl_by_stable_cfl)
       kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
       grid->execute_neighbor(kernel_settings);
     )
-    for (Grid& g : grids)
-    {
-      kernel_settings.d_t_by_d_pos = dt/g.mesh_size;
-      {
-        auto weights = g.basis.node_weights();
-        fbc(g.ghost_bound_conds, g.state_r(), g.state_w(), weights(0), kernel_settings);
-      }
-    }
     for (Deformed_grid& g : def_grids)
     {
       kernel_settings.d_t_by_d_pos = dt/g.mesh_size;
-      {
-        auto weights = g.basis.node_weights();
-        fbc(g.ghost_bound_conds, g.state_r(), g.state_w(), weights(0), kernel_settings);
-      }
       nonpen(g.state_r(), g.state_w(), g.jacobian.data(), g.i_elem_wall.data(), g.i_dim_wall.data(), g.is_positive_wall.data(), g.i_elem_wall.size(), g.basis.node_weights()(0), kernel_settings);
     }
     FOR_ALL_GRIDS

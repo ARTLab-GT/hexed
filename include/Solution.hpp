@@ -54,7 +54,6 @@ class Solution
   virtual Jump_gbc_kernel get_jump_gbc_kernel();
   virtual Viscous_neighbor_kernel get_viscous_neighbor_kernel();
   virtual Nonpen_kernel get_nonpen_kernel();
-  virtual Gbc_kernel get_gbc_kernel();
 };
 
 }

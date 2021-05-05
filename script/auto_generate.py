@@ -114,7 +114,6 @@ solution.include = """
 #include <Solution.hpp>
 #include <kernels/local/derivative.hpp>
 #include <kernels/neighbor/cpg_euler_nonpen.hpp>
-#include <kernels/neighbor/cpg_euler_gbc.hpp>
 #include <kernels/neighbor/jump.hpp>
 #include <kernels/neighbor/jump_gbc.hpp>
 """
@@ -123,7 +122,7 @@ solution.templates = {
                       "viscous_local":"derivative_w", "viscous_neighbor":"jump_w",
                       "jump_gbc":"jump_gbc",
                       "nonpen":"cpg_euler_nonpen",
-                      "gbc":"cpg_euler_gbc"}
+                     }
 
 for auto_file in [solution]:
     text = ""
