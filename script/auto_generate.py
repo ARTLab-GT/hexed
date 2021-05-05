@@ -52,7 +52,7 @@ for file_name in header_names:
         text = in_file.read()
     templates = text.split("AUTOGENERATE")[1:]
     for template in templates:
-        params, template = pop("\n*template<([^\n]*)>", template)
+        params, template = pop("\n*template *<([^\n]*)>", template)
         params = re.split(" *, *", params.group(1))
         signature, template  = pop("\n*(.*?[)])", template)
         signature = re.sub("\n *", " ", signature.groups(1)[0])
