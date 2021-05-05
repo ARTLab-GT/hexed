@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include <Grid.hpp>
+#include <get_mcs_cpg_euler.hpp>
 #include <get_local_cpg_euler.hpp>
 #include <get_neighbor_cpg_euler.hpp>
 
@@ -203,6 +204,12 @@ std::vector<double> Grid::get_pos(int i_elem)
 double Grid::jacobian_det(int i_elem, int i_qpoint)
 {
   return 1.;
+}
+
+double Grid::stable_time_step(double cfl_by_stable_cfl, Kernel_settings& settings)
+{
+  double cfl = cfl_by_stable_cfl*get_stable_cfl();
+  return cfl*mesh_size/get_mcs_cpg_euler(n_dim, basis.rank)(state_r(), n_elem, settings);
 }
 
 bool Grid::execute_runge_kutta_stage()

@@ -1,6 +1,7 @@
 #include <catch.hpp>
 
-#include <kernels/observing/cpg_euler_max.hpp>
+#include <get_mcs_cpg_euler.hpp>
+#include <kernels/Kernel_settings.hpp>
 
 TEST_CASE("Max characteristic speed")
 {
@@ -21,13 +22,20 @@ TEST_CASE("Max characteristic speed")
                       mass, mass,
                       int_ener0 + 0.5*mass*400, int_ener1};
     settings.cpg_heat_rat = heat_rat;
-    double mcs = cartdg::cpg_euler_max<3, 2, 2>(read, 2, settings);
+    double mcs = cartdg::get_mcs_cpg_euler(1, 2)(read, 2, settings);
     REQUIRE(mcs == Approx(420));
   }
   SECTION("2D")
   {
-    double read[4] {2.25, 24.5, 1.225, 101235/0.4 + 0.5*1.225*500};
-    double mcs = cartdg::cpg_euler_max<4, 1, 1>(read, 1, settings);
+    double read[4][4];
+    for (int i_qpoint = 0; i_qpoint < 4; ++i_qpoint)
+    {
+      read[0][i_qpoint] = 2.25;
+      read[1][i_qpoint] = 24.5;
+      read[2][i_qpoint] = 1.225;
+      read[3][i_qpoint] = 101235/0.4 + 0.5*1.225*500;
+    }
+    double mcs = cartdg::get_mcs_cpg_euler(2, 2)(read[0], 1, settings);
     REQUIRE(mcs == Approx(360).epsilon(0.01));
   }
 }

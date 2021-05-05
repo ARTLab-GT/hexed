@@ -83,13 +83,11 @@ std::vector<Grid*> Solution::all_grids()
 double Solution::update(double cfl_by_stable_cfl)
 {
   auto nonpen = get_nonpen_kernel();
-  auto max_char_speed = get_max_char_speed_kernel();
   auto fbc = get_gbc_kernel();
   double dt = std::numeric_limits<double>::max();
   FOR_ALL_GRIDS // FIXME: incorporate_jacobian
   (
-    double cfl = cfl_by_stable_cfl*grid->get_stable_cfl();
-    dt = std::min<double>(dt, cfl*grid->mesh_size/max_char_speed(grid->state_r(), grid->n_elem, kernel_settings));
+    dt = std::min<double>(dt, grid->stable_time_step(cfl_by_stable_cfl, kernel_settings));
   )
   for (int i_rk = 0; i_rk < 3; ++i_rk)
   {
@@ -129,10 +127,9 @@ double Solution::update(double cfl_by_stable_cfl)
   for (int i_iter = 0; i_iter < n_iter; ++i_iter)
   {
     dt = std::numeric_limits<double>::max();
-    FOR_ALL_GRIDS // FIXME: incorporate jacobian
+    FOR_ALL_GRIDS // FIXME: incorporate_jacobian
     (
-      double cfl = cfl_by_stable_cfl*grid->get_stable_cfl();
-      dt = std::min<double>(dt, cfl*grid->mesh_size/max_char_speed(grid->state_r(), grid->n_elem, kernel_settings));
+      dt = std::min<double>(dt, grid->stable_time_step(cfl_by_stable_cfl, kernel_settings));
     )
     for (int i_rk = 0; i_rk < 3; ++i_rk)
     {

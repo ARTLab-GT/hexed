@@ -117,14 +117,13 @@ solution.include = """
 #include <kernels/neighbor/cpg_euler_gbc.hpp>
 #include <kernels/neighbor/jump.hpp>
 #include <kernels/neighbor/jump_gbc.hpp>
-#include <kernels/observing/cpg_euler_max.hpp>
 """
 solution.templates = {
                       "derivative":"derivative_r", "jump":"jump_r",
                       "viscous_local":"derivative_w", "viscous_neighbor":"jump_w",
                       "jump_gbc":"jump_gbc",
                       "nonpen":"cpg_euler_nonpen",
-                      "gbc":"cpg_euler_gbc", "max_char_speed":"cpg_euler_max"}
+                      "gbc":"cpg_euler_gbc"}
 
 for auto_file in [solution]:
     text = ""
