@@ -1,5 +1,5 @@
-#ifndef CARTDG_JUMP_GBC_HPP_
-#define CARTDG_JUMP_GBC_HPP_
+#ifndef CARTDG_GBC_AV_HPP_
+#define CARTDG_GBC_AV_HPP_
 
 #include "read_copy.hpp"
 #include "write_copy.hpp"
@@ -9,11 +9,12 @@
 namespace cartdg
 {
 
+// AUTOGENERATE
 template <int n_var, int n_qpoint, int row_size>
-void jump_gbc(std::vector<Ghost_boundary_condition*>& ghost_bound_conds,
-                   double* read, double* write,
-                   int i_var, int i_axis, double weight,
-                   Kernel_settings& settings)
+void gbc_av(std::vector<Ghost_boundary_condition*>& ghost_bound_conds,
+            double* read, double* write,
+            int i_var, int i_axis, double weight,
+            Kernel_settings& settings)
 {
   const int n_dof = n_var*n_qpoint;
   for (Ghost_boundary_condition* gbc : ghost_bound_conds)

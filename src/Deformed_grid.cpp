@@ -185,6 +185,10 @@ void Deformed_grid::execute_local_av(int i_var, int i_axis, Kernel_settings& set
 {
 }
 
+void Deformed_grid::execute_neighbor_av(int i_var, int i_axis, Kernel_settings& settings)
+{
+}
+
 void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_axis,
                             std::array<bool, 2> is_positive)
 {

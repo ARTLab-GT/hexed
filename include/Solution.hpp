@@ -4,7 +4,6 @@
 #include "Grid.hpp"
 #include "Deformed_grid.hpp"
 #include "Gauss_lobatto.hpp"
-#include "kernels/kernel_types.hpp"
 #include "kernels/Kernel_settings.hpp"
 #include "Spacetime_func.hpp"
 
@@ -47,9 +46,6 @@ class Solution
 
   protected:
   double refined_mesh_size(int ref_level);
-
-  virtual Jump_gbc_kernel get_jump_gbc_kernel();
-  virtual Viscous_neighbor_kernel get_viscous_neighbor_kernel();
 };
 
 }

@@ -112,12 +112,8 @@ class Auto_file:
 solution = Auto_file("Solution")
 solution.include = """
 #include <Solution.hpp>
-#include <kernels/neighbor/jump.hpp>
-#include <kernels/neighbor/jump_gbc.hpp>
 """
 solution.templates = {
-                      "viscous_neighbor":"jump_w",
-                      "jump_gbc":"jump_gbc",
                      }
 
 for auto_file in [solution]:

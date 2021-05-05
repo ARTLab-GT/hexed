@@ -36,6 +36,7 @@ class Deformed_grid : public Grid
   virtual void execute_local_derivative(int i_var, int i_axis, Kernel_settings&); // FIXME: do something
   virtual void execute_neighbor_derivative(int i_var, int i_axis, Kernel_settings&);
   virtual void execute_local_av(int i_var, int i_axis, Kernel_settings&);
+  virtual void execute_neighbor_av(int i_var, int i_axis, Kernel_settings&);
 
   // Note: the following functions must be called in the order
   // that they appear.

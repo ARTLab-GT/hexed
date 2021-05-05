@@ -7,7 +7,9 @@
 #include <get_gbc_cpg_euler.hpp>
 #include <get_local_derivative.hpp>
 #include <get_neighbor_derivative.hpp>
+#include <get_neighbor_av.hpp>
 #include <get_local_av.hpp>
+#include <get_gbc_av.hpp>
 
 namespace cartdg
 {
@@ -277,6 +279,14 @@ void Grid::execute_neighbor_derivative(int i_var, int i_axis, Kernel_settings& s
 void Grid::execute_local_av(int i_var, int i_axis, Kernel_settings& settings)
 {
   get_local_av(n_dim, basis.rank)(derivs.data(), state_w(), n_elem, i_var, i_axis, basis, settings);
+}
+
+void Grid::execute_neighbor_av(int i_var, int i_axis, Kernel_settings& settings)
+{
+  int n_con = n_neighb_con()[i_axis];
+  get_neighbor_av(n_dim, basis.rank)(deriv_neighbor_connections()[i_axis],
+                                     neighbor_connections_w()[i_axis], n_con, i_var, i_axis, basis.node_weights(), settings);
+  get_gbc_av(n_dim, basis.rank)(ghost_bound_conds, derivs.data(), state_w(), i_var, i_axis, basis.node_weights()(0), settings);
 }
 
 void Grid::print()
