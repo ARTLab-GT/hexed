@@ -2,7 +2,7 @@
 
 #include <cartdgConfig.hpp>
 #include <get_local_cpg_euler.hpp>
-#include <kernels/local/cpg_euler_deformed.hpp>
+#include <get_local_deformed_cpg_euler.hpp>
 #include <kernels/local/derivative.hpp>
 #include <Gauss_lobatto.hpp>
 
@@ -167,9 +167,9 @@ TEST_CASE("CPG Euler deformed elements")
           jacobian[i_elem][0][0][i_qpoint] = 1.;
       }
     }
-    cartdg::cpg_euler_deformed<3, 2, 2>(&read[0][0][0], &write[0][0][0], 
-                                        &jacobian[0][0][0][0], n_elem,
-                                        basis, settings);
+    cartdg::get_local_deformed_cpg_euler(1, 2)(&read[0][0][0], &write[0][0][0], 
+                                               &jacobian[0][0][0][0], n_elem,
+                                               basis, settings);
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       for (int i_qpoint = 0; i_qpoint < rank; ++i_qpoint)
@@ -210,9 +210,9 @@ TEST_CASE("CPG Euler deformed elements")
           jacobian[i_elem][2][2][i_qpoint] = 1.;
       }
     }
-    cartdg::cpg_euler_deformed<5, 27, 3>(&read[0][0][0], &write[0][0][0], 
-                                         &jacobian[0][0][0][0], n_elem,
-                                         basis, settings);
+    cartdg::get_local_deformed_cpg_euler(3, 3)(&read[0][0][0], &write[0][0][0], 
+                                               &jacobian[0][0][0][0], n_elem,
+                                               basis, settings);
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       for (int i_qpoint = 0; i_qpoint < rank*rank*rank; ++i_qpoint)
@@ -265,9 +265,9 @@ TEST_CASE("CPG Euler deformed elements")
         }
       }
     }
-    cartdg::cpg_euler_deformed<4, rank*rank, rank>(&read[0][0][0], &write[0][0][0],
-                                                   &jacobian[0][0][0][0], n_elem,
-                                                   basis, settings);
+    cartdg::get_local_deformed_cpg_euler(2, rank)(&read[0][0][0], &write[0][0][0],
+                                                  &jacobian[0][0][0][0], n_elem,
+                                                  basis, settings);
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       for (int i_qpoint = 0; i_qpoint < rank*rank; ++i_qpoint)
