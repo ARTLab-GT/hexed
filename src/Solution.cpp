@@ -6,6 +6,8 @@
 namespace cartdg
 {
 
+#define FOR_ALL_GRIDS(code) for (Grid* grid : all_grids()) { code }
+
 Solution::Solution(int n_var_arg, int n_dim_arg, int rank_arg, double bms)
 : n_var(n_var_arg), n_dim(n_dim_arg), base_mesh_size(bms), basis(rank_arg) {}
 
@@ -26,11 +28,11 @@ Grid& Solution::get_grid(int order_added)
 void Solution::visualize(std::string file_prefix)
 {
   char buffer [100];
-  for (Grid* grid : all_grids())
-  {
+  FOR_ALL_GRIDS
+  (
     snprintf(buffer, 100, "%s_%.2e_%.2e", file_prefix.c_str(), grid->mesh_size, grid->time);
     grid->visualize(std::string(buffer));
-  }
+  )
 }
 
 std::vector<double> Solution::integral()
@@ -47,8 +49,8 @@ std::vector<double> Solution::integral(Domain_func& integrand)
   else
   {
     std::vector<double> total;
-    for (Grid* grid : all_grids())
-    {
+    FOR_ALL_GRIDS
+    (
       auto grid_integral = grid->integral(integrand);
       int size = grid_integral.size();
       if (int(total.size()) < size)
@@ -59,7 +61,7 @@ std::vector<double> Solution::integral(Domain_func& integrand)
       {
         total[i_var] += grid_integral[i_var];
       }
-    }
+    )
     return total;
   }
 }
@@ -86,19 +88,18 @@ double Solution::update(double cfl_by_stable_cfl)
   auto max_char_speed = get_max_char_speed_kernel();
   auto fbc = get_gbc_kernel();
   double dt = std::numeric_limits<double>::max();
-  for (Grid* g : all_grids()) // FIXME: incorporate jacobian
-  {
-    double cfl = cfl_by_stable_cfl*g->get_stable_cfl();
-    dt = std::min<double>(dt, cfl*g->mesh_size/max_char_speed(g->state_r(), g->n_elem,
-                                                              kernel_settings));
-  }
+  FOR_ALL_GRIDS // FIXME: incorporate_jacobian
+  (
+    double cfl = cfl_by_stable_cfl*grid->get_stable_cfl();
+    dt = std::min<double>(dt, cfl*grid->mesh_size/max_char_speed(grid->state_r(), grid->n_elem, kernel_settings));
+  )
   for (int i_rk = 0; i_rk < 3; ++i_rk)
   {
-    for (Grid* g : all_grids())
-    {
-      kernel_settings.d_t_by_d_pos = dt/g->mesh_size;
-      g->execute_local(kernel_settings);
-    }
+    FOR_ALL_GRIDS
+    (
+      kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
+      grid->execute_local(kernel_settings);
+    )
     for (Grid& g : grids)
     {
       kernel_settings.d_t_by_d_pos = dt/g.mesh_size;
@@ -120,21 +121,20 @@ double Solution::update(double cfl_by_stable_cfl)
       }
       nonpen(g.state_r(), g.state_w(), g.jacobian.data(), g.i_elem_wall.data(), g.i_dim_wall.data(), g.is_positive_wall.data(), g.i_elem_wall.size(), g.basis.node_weights()(0), kernel_settings);
     }
-    for (Grid* g : all_grids())
-    {
-      g->execute_runge_kutta_stage();
-    }
+    FOR_ALL_GRIDS
+    (
+      grid->execute_runge_kutta_stage();
+    )
   }
   int n_iter = 0;
   for (int i_iter = 0; i_iter < n_iter; ++i_iter)
   {
     dt = std::numeric_limits<double>::max();
-    for (Grid* g : all_grids()) // FIXME: incorporate jacobian
-    {
-      double cfl = cfl_by_stable_cfl*g->get_stable_cfl();
-      dt = std::min<double>(dt, cfl*g->mesh_size/max_char_speed(g->state_r(), g->n_elem,
-                                                                kernel_settings));
-    }
+    FOR_ALL_GRIDS // FIXME: incorporate jacobian
+    (
+      double cfl = cfl_by_stable_cfl*grid->get_stable_cfl();
+      dt = std::min<double>(dt, cfl*grid->mesh_size/max_char_speed(grid->state_r(), grid->n_elem, kernel_settings));
+    )
     for (int i_rk = 0; i_rk < 3; ++i_rk)
     {
       for (Grid& g : grids)
@@ -171,37 +171,37 @@ double Solution::update(double cfl_by_stable_cfl)
       }
     }
   }
-  for (Grid* g : all_grids())
-  {
-    g->time += dt;
-  }
+  FOR_ALL_GRIDS
+  (
+    grid->time += dt;
+  )
   return dt;
 }
 
 void Solution::initialize(Spacetime_func& init_cond)
 {
-  for (Grid* g : all_grids())
-  {
-    double* state = g->state_r();
-    for (int i_elem = 0; i_elem < g->n_elem; ++i_elem)
+  FOR_ALL_GRIDS
+  (
+    double* state = grid->state_r();
+    for (int i_elem = 0; i_elem < grid->n_elem; ++i_elem)
     {
-      std::vector<double> pos = g->get_pos(i_elem);
-      for (int i_qpoint = 0; i_qpoint < g->n_qpoint; ++i_qpoint)
+      std::vector<double> pos = grid->get_pos(i_elem);
+      for (int i_qpoint = 0; i_qpoint < grid->n_qpoint; ++i_qpoint)
       {
         std::vector<double> qpoint_pos;
-        for (int i_dim = 0; i_dim < g->n_dim; ++i_dim)
+        for (int i_dim = 0; i_dim < grid->n_dim; ++i_dim)
         {
-          qpoint_pos.push_back(pos[i_qpoint + i_dim*g->n_qpoint]);
+          qpoint_pos.push_back(pos[i_qpoint + i_dim*grid->n_qpoint]);
         }
-        auto qpoint_state = init_cond(qpoint_pos, g->time);
-        int qpoint_ind = i_elem*g->n_dof + i_qpoint;
-        for (int i_var = 0; i_var < g->n_var; ++i_var)
+        auto qpoint_state = init_cond(qpoint_pos, grid->time);
+        int qpoint_ind = i_elem*grid->n_dof + i_qpoint;
+        for (int i_var = 0; i_var < grid->n_var; ++i_var)
         {
-          state[qpoint_ind + i_var*g->n_qpoint] = qpoint_state[i_var];
+          state[qpoint_ind + i_var*grid->n_qpoint] = qpoint_state[i_var];
         }
       }
     }
-  }
+  )
 }
 
 double Solution::refined_mesh_size(int ref_level)
@@ -276,5 +276,7 @@ void Solution::clear_neighbors()
     grid.clear_neighbors();
   }
 }
+
+#undef FOR_ALL_GRIDS
 
 }
