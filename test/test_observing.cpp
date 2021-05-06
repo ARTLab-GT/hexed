@@ -89,7 +89,7 @@ TEST_CASE("Discontinuity indicator")
         {
           read[0] = 1. + std::exp(pow*0.05);
           curr = cartdg::indicator<rank, rank>(read, weights.data(), ortho.data());
-          CHECK(curr - prev < 0.1);
+          REQUIRE(curr - prev < 0.1);
           REQUIRE(curr - prev >= 0.);
           prev = curr;
         }
@@ -120,7 +120,7 @@ TEST_CASE("Discontinuity indicator")
     const int n_qpoint = rank*rank*rank;
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
     {
-      read[0][0][i_qpoint] = 1.;
+      (&read[0][0][0])[i_qpoint] = 1.;
     }
     REQUIRE(cartdg::indicator<n_qpoint, rank>(read[0][0], weights.data(), ortho.data()) == 0.);
 
