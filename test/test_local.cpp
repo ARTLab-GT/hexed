@@ -3,7 +3,7 @@
 #include <cartdgConfig.hpp>
 #include <get_local_cpg_euler.hpp>
 #include <get_local_deformed_cpg_euler.hpp>
-#include <get_req_visc.hpp>
+#include <get_req_visc_cpg_euler.hpp>
 #include <local/derivative.hpp>
 #include <Gauss_lobatto.hpp>
 #include <static_math.hpp>
@@ -469,7 +469,7 @@ TEST_CASE("req_visc")
     }
   }
   read[1][0][3] = 1.5; // set an anomaly to trip the indicator in element 1
-  cartdg::get_req_visc(3, rank)(read[0][0], visc[0][0][0], 2, basis, settings);
+  cartdg::get_req_visc_cpg_euler(3, rank)(read[0][0], visc[0][0][0], 2, basis, settings);
   REQUIRE(visc[0][0][0][0] == 0.);
   REQUIRE(visc[0][1][1][1] == 0.);
   REQUIRE(visc[1][0][0][0] == Approx(0.5*340.29/(rank - 1.)).margin(0.01));
