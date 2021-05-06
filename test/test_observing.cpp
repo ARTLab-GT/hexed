@@ -84,7 +84,7 @@ TEST_CASE("Discontinuity indicator")
       auto ortho = basis1.orthogonal(rank - 2);
       for (int i_qpoint = 0; i_qpoint < rank - 1; ++i_qpoint)
       {
-        read[i_qpoint] = std::exp(basis.node(i_qpoint)*0.5);
+        read[i_qpoint] = std::exp(basis1.node(i_qpoint)*0.5);
       }
       REQUIRE(cartdg::indicator<rank - 1, rank - 1>(read, weights.data(), ortho.data()) == 0.);
       read[1] = 2.;
