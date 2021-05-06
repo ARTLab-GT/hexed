@@ -1,21 +1,21 @@
-#ifndef CARTDG_NEIGHBOR_CPG_EULER_HPP_
-#define CARTDG_NEIGHBOR_CPG_EULER_HPP_
+#ifndef CARTDG_CONT_VISC_CPG_EULER_HPP_
+#define CARTDG_CONT_VISC_CPG_EULER_HPP_
 
 #include <Eigen/Dense>
 
 #include <Kernel_settings.hpp>
 #include "read_copy.hpp"
 #include "write_copy.hpp"
-#include "cpg_euler_hll.hpp"
+#include "../static_math.hpp"
 
 namespace cartdg
 {
 
 // AUTOGENERATE
 template<int n_var, int n_qpoint, int row_size>
-void neighbor_cpg_euler(double*** connections_r, double*** connections_w, int* n_connections,
-                        const Eigen::VectorXd weights_1d, Kernel_settings& settings)
+void cont_visc_cpg_euler(double*** connections, int* n_connections, Kernel_settings& settings)
 {
+  #if 0
   const int n_face_qpoint = n_qpoint/row_size;
   double mult = settings.d_t_by_d_pos/weights_1d(0);
   double heat_rat = settings.cpg_heat_rat;
@@ -40,6 +40,7 @@ void neighbor_cpg_euler(double*** connections_r, double*** connections_w, int* n
       write_copy<n_var, n_qpoint, row_size>(face_w + face_size, connect[1], stride, 0);
     }
   }
+  #endif
 }
 
 }
