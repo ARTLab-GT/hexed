@@ -1,7 +1,7 @@
 #include <catch.hpp>
 
 #include <get_mcs_cpg_euler.hpp>
-#include <kernels/Kernel_settings.hpp>
+#include <Kernel_settings.hpp>
 
 TEST_CASE("Max characteristic speed")
 {

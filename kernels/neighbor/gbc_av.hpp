@@ -1,10 +1,10 @@
 #ifndef CARTDG_GBC_AV_HPP_
 #define CARTDG_GBC_AV_HPP_
 
+#include <Kernel_settings.hpp>
+#include <Ghost_boundary_condition.hpp>
 #include "read_copy.hpp"
 #include "write_copy.hpp"
-#include "../Kernel_settings.hpp"
-#include "../../Ghost_boundary_condition.hpp"
 
 namespace cartdg
 {

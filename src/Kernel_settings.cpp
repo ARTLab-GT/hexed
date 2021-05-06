@@ -1,4 +1,4 @@
-#include "kernels/Kernel_settings.hpp"
+#include <Kernel_settings.hpp>
 
 namespace cartdg
 {

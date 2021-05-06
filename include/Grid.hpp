@@ -8,8 +8,7 @@
 
 #include "Basis.hpp"
 #include "Ghost_boundary_condition.hpp"
-#include "kernels/kernel_types.hpp"
-#include "kernels/Kernel_settings.hpp"
+#include "Kernel_settings.hpp"
 #include "Domain_func.hpp"
 
 namespace cartdg

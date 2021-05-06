@@ -3,7 +3,7 @@
 
 #include <Eigen/Dense>
 
-#include "../Kernel_settings.hpp"
+#include <Kernel_settings.hpp>
 #include "read_copy.hpp"
 #include "write_copy.hpp"
 #include "cpg_euler_hll.hpp"

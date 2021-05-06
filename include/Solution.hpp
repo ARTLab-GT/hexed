@@ -4,7 +4,7 @@
 #include "Grid.hpp"
 #include "Deformed_grid.hpp"
 #include "Gauss_lobatto.hpp"
-#include "kernels/Kernel_settings.hpp"
+#include "Kernel_settings.hpp"
 #include "Spacetime_func.hpp"
 
 namespace cartdg

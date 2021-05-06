@@ -3,9 +3,9 @@
 
 #include <Eigen/Dense>
 
+#include <Kernel_settings.hpp>
 #include "read_copy.hpp"
 #include "write_copy.hpp"
-#include "../Kernel_settings.hpp"
 
 namespace cartdg
 {

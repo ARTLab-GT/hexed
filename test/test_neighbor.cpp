@@ -1,11 +1,11 @@
 #include <catch.hpp>
 
 #include <cartdgConfig.hpp>
-#include <kernels/neighbor/read_copy.hpp>
-#include <kernels/neighbor/write_copy.hpp>
-#include <kernels/neighbor/cpg_euler_hll.hpp>
-#include <kernels/neighbor/cpg_euler_hll_deformed.hpp>
-#include <kernels/neighbor/jump.hpp>
+#include <neighbor/read_copy.hpp>
+#include <neighbor/write_copy.hpp>
+#include <neighbor/cpg_euler_hll.hpp>
+#include <neighbor/cpg_euler_hll_deformed.hpp>
+#include <neighbor/jump.hpp>
 
 TEST_CASE("neighbor kernel read_copy<>()")
 {

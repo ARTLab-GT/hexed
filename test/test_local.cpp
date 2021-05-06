@@ -3,7 +3,7 @@
 #include <cartdgConfig.hpp>
 #include <get_local_cpg_euler.hpp>
 #include <get_local_deformed_cpg_euler.hpp>
-#include <kernels/local/derivative.hpp>
+#include <local/derivative.hpp>
 #include <Gauss_lobatto.hpp>
 
 class Identity_basis : public cartdg::Basis

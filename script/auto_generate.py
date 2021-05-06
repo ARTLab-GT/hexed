@@ -10,6 +10,8 @@ src_dir += "/"
 src_dir = src_dir.replace("//", "/")
 max_rank = int(sys.argv[2])
 
+### generate template lookup tables ###
+
 def format_file_text(include, text):
     if len(include) > 0:
         include = "\n" + include
@@ -41,7 +43,7 @@ os.mkdir("kernels/include")
 os.mkdir("kernels/src")
 
 header_names = []
-for dir_group in os.walk("../include/kernels"):
+for dir_group in os.walk("../kernels"):
     for file_name in dir_group[2]:
         if file_name[-4:] == ".hpp":
             header_names.append(dir_group[0] + "/" + file_name)
@@ -69,17 +71,20 @@ class Kernel_settings;
 """[1:]
         hpp_text += f"typedef "
         hpp_text += re.sub(" \w*\(", f" (*{name}_type)(", signature) + ";\n\n"
-        cpp_text = f"{name}_type {name}s [{max_dim}][{max_rank - 1}] {{\n"
+        cpp_text = f"""
+{name}_type get_{name}(int n_dim, int row_size)
+{{
+  {name}_type {name}s [{max_dim}][{max_rank - 1}]
+  {{
+"""
         for dim in range(1, max_dim + 1):
             for row_size in range(2, max_rank + 1):
-                cpp_text += f"{name}<"
+                cpp_text += f"    {name}<"
                 for i_param in range(len(params)):
                     cpp_text += f"{param_funcs[params[i_param]](dim, row_size)}, "
                 cpp_text = cpp_text[:-2] + ">,\n"
-        cpp_text += f"""}};
+        cpp_text += f"""  }};
 
-{name}_type get_{name}(int n_dim, int row_size)
-{{
   if ((n_dim > 0) && (n_dim <= {max_dim}) && (row_size >= 2) && (row_size <= {max_rank}))
   {{
     return {name}s[n_dim - 1][row_size - 2];
@@ -95,56 +100,14 @@ class Kernel_settings;
         with open(f"kernels/src/get_{name}.cpp", "w") as out_file:
             out_file.write(cpp_text)
 
-cmake_text = "target_sources(cartdg PRIVATE\n"
+cmake_text = "target_sources(kernels PRIVATE\n"
 for source in source_names:
     cmake_text += source + "\n"
 cmake_text += ")\n"
 with open("kernels/src/CMakeLists.txt", "w") as cmake_file:
     cmake_file.write(cmake_text)
 
-class Auto_file:
-    def __init__(self, name):
-        self.name = name
-        self.file_name = name + "__get_kernel.cpp"
-        include = ""
-        templates = {}
-
-solution = Auto_file("Solution")
-solution.include = """
-#include <Solution.hpp>
-"""
-solution.templates = {
-                     }
-
-for auto_file in [solution]:
-    text = ""
-
-    for kernel_type in auto_file.templates.keys():
-        func_type = kernel_type.capitalize()
-        kernel_arr = "\n{}_kernel {}_kernels [{}][{}] {{\n"
-        text += kernel_arr.format(func_type, kernel_type, max_dim, max_rank)
-        for i_dim in range(max_dim):
-            for i_rank in range(max_rank):
-                n_var = i_dim + 3
-                n_qpoint = (i_rank + 1)**(i_dim + 1)
-                n_face_qpoint = (i_rank + 1)**i_dim
-                row_size = i_rank + 1
-                text += """
-        &({}<{}, {}, {}>),
-        """[1:].format(auto_file.templates[kernel_type], n_var, n_qpoint, row_size)
-        text += "};\n"
-
-        text += """
-    {0}_kernel {3}::get_{1}_kernel()
-    {{
-      if (n_dim <= {2}) return {1}_kernels[n_dim - 1][basis.rank - 1];
-      else throw std::runtime_error("Kernel not available.");
-    }}
-    """.format(func_type, kernel_type, i_dim + 1, auto_file.name)
-
-    with open(src_dir + auto_file.file_name, "w") as write_file:
-        write_file.write(format_file_text(auto_file.include, text))
-
+### Calculate bases ###
 
 from Basis import *
 from sympy.integrals.quadrature import gauss_lobatto

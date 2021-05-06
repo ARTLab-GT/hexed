@@ -5,8 +5,8 @@
 
 #include <Eigen/Dense>
 
-#include "../Kernel_settings.hpp"
-#include "../../Basis.hpp"
+#include <Kernel_settings.hpp>
+#include <Basis.hpp>
 
 namespace cartdg
 {

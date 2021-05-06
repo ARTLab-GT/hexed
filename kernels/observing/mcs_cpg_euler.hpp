@@ -4,7 +4,7 @@
 #include <cmath>
 #include <stdexcept>
 
-#include "../Kernel_settings.hpp"
+#include <Kernel_settings.hpp>
 
 namespace cartdg
 {

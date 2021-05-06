@@ -59,21 +59,25 @@ set_target_properties(tecio PROPERTIES IMPORTED_LOCATION ${TECIO_DIR}/bin/libtec
 target_include_directories(cartdg PRIVATE ${TECIO_DIR}/include)
 
 # add automatically generated source files
-target_sources(cartdg PRIVATE ${CMAKE_BINARY_DIR}/Gauss_lobatto.cpp
-                              ${CMAKE_BINARY_DIR}/Solution__get_kernel.cpp
-)
+target_sources(cartdg PRIVATE ${CMAKE_BINARY_DIR}/Gauss_lobatto.cpp)
 
 target_include_directories(cartdg PUBLIC
                            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
                            $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>
-                           $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/kernels/include>
                            $<INSTALL_INTERFACE:include>
 )
 
 add_subdirectory(src)
 add_subdirectory(test)
 add_subdirectory(demo)
+
+# object library to contain the kernels
+add_library(kernels OBJECT)
+set_property(TARGET kernels PROPERTY POSITION_INDEPENDENT_CODE ON)
+target_include_directories(kernels PRIVATE ${CMAKE_SOURCE_DIR}/kernels ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(kernels PUBLIC $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/kernels/include>)
 add_subdirectory(${CMAKE_BINARY_DIR}/kernels/src)
+target_link_libraries(cartdg PRIVATE kernels)
 
 install(TARGETS cartdg DESTINATION lib EXPORT cartdgTargets)
 install(DIRECTORY include/ DESTINATION include/cartdg)

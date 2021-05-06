@@ -1,6 +1,6 @@
 #include <catch.hpp>
 
-#include <kernels/Kernel_settings.hpp>
+#include <Kernel_settings.hpp>
 #include <get_nonpen_cpg_euler.hpp>
 
 TEST_CASE("non-penetration BC")

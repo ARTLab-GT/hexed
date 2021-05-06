@@ -1,11 +1,11 @@
 #ifndef CARTDG_GBC_CPG_EULER_HPP_
 #define CARTDG_GBC_CPG_EULER_HPP_
 
+#include <Kernel_settings.hpp>
+#include <Ghost_boundary_condition.hpp>
 #include "cpg_euler_hll_deformed.hpp"
 #include "read_copy.hpp"
 #include "write_copy.hpp"
-#include "../Kernel_settings.hpp"
-#include "../../Ghost_boundary_condition.hpp"
 
 namespace cartdg
 {

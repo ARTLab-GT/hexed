@@ -1,10 +1,10 @@
 #ifndef CARTDG_LOCAL_DEFORMED_CPG_EULER_HPP_
 #define CARTDG_LOCAL_DEFORMED_CPG_EULER_HPP_
 
-#include <iostream>
 #include <Eigen/Dense>
-#include "../Kernel_settings.hpp"
-#include "../../Basis.hpp"
+
+#include <Kernel_settings.hpp>
+#include <Basis.hpp>
 
 namespace cartdg
 {
