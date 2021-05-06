@@ -589,27 +589,41 @@ TEST_CASE("continuous viscosity kernel")
   cartdg::Kernel_settings settings;
 
   double visc [4][4];
+  /*
+  element order is transposed, just for fun:
+    21 23   31 33
+    20 22   30 32
+  ^ 
+  | 01 03   11 13
+  y 00 02   10 12
+   x --->
+  */
+
   double*   connections1 [2][4]  {{visc[0], visc[1], visc[2], visc[3]},
                                   {visc[0], visc[2], visc[1], visc[3]}};
   double**  connections2 [2] {connections1[0], connections1[1]};
   int n_connections [] {2, 2};
   for (int i_point = 0; i_point < 4; ++i_point)
   {
-    visc[0][i_point] = 0.5;
-    visc[1][i_point] = 0.;
+    visc[0][i_point] = 0.;
+    visc[1][i_point] = 0.5;
     visc[2][i_point] = 2.;
     visc[3][i_point] = 1.;
   }
 
   cartdg::get_cont_visc_cpg_euler(2, MAX_BASIS_RANK)(connections2, n_connections, settings);
-  REQUIRE(visc[0][0] == 0.5);
-  REQUIRE(visc[0][1] == 0.5);
-  REQUIRE(visc[0][2] == 2.);
-  REQUIRE(visc[0][3] == 2.);
-  REQUIRE(visc[1][0] == 0.5);
-  REQUIRE(visc[1][1] == 0.);
-  REQUIRE(visc[1][2] == 2.);
-  REQUIRE(visc[2][1] == 0.5);
-  REQUIRE(visc[2][2] == 2.);
-  REQUIRE(visc[2][0] == 2.);
+  CHECK(visc[0][0] == Approx(0.0));
+  CHECK(visc[0][1] == Approx(2.0));
+  CHECK(visc[0][2] == Approx(0.5));
+  CHECK(visc[0][3] == Approx(2.0));
+  CHECK(visc[1][0] == Approx(0.5));
+  CHECK(visc[1][1] == Approx(2.0));
+  CHECK(visc[1][2] == Approx(0.5));
+  CHECK(visc[1][3] == Approx(1.0));
+  CHECK(visc[2][0] == Approx(2.0));
+  CHECK(visc[2][1] == Approx(2.0));
+  CHECK(visc[3][0] == Approx(2.0));
+  CHECK(visc[3][1] == Approx(2.0));
+  CHECK(visc[3][2] == Approx(1.0));
+  CHECK(visc[3][3] == Approx(1.0));
 }
