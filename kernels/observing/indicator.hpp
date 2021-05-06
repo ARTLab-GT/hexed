@@ -22,11 +22,8 @@ double indicator(double* read, double* weights, double* ortho)
   const double ramp_center = -(4. + 4.25*std::log10(row_size - 1));
   const double ramp_width = 1.;
   if (log_rat < ramp_center - ramp_width/2.) return 0;
-  /*
   else if (log_rat > ramp_center + ramp_width/2.) return 1.;
   else return 0.5*(1. + std::sin(M_PI*(log_rat - ramp_center)/ramp_width));
-  */
-  else return 1.;
 }
 
 }

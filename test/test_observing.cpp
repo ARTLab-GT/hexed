@@ -76,6 +76,25 @@ TEST_CASE("Discontinuity indicator")
         read[i_qpoint] = 1.5;
       }
       REQUIRE(cartdg::indicator<rank, rank>(read, weights.data(), ortho.data()) == 1.);
+
+      SECTION("smoothness of indicator function")
+      {
+        for (int i_qpoint = 0; i_qpoint < rank; ++i_qpoint)
+        {
+          read[i_qpoint] = 1.;
+        }
+        double prev = 0.;
+        double curr;
+        for (int pow = -200; pow < 0; ++pow)
+        {
+          read[0] = 1. + std::exp(pow*0.05);
+          curr = cartdg::indicator<rank, rank>(read, weights.data(), ortho.data());
+          CHECK(curr - prev < 0.1);
+          REQUIRE(curr - prev >= 0.);
+          prev = curr;
+        }
+        REQUIRE(curr == 1.);
+      }
     }
     SECTION("even/odd")
     {
