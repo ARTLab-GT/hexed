@@ -8,7 +8,7 @@
 
 #include "Basis.hpp"
 #include "Ghost_boundary_condition.hpp"
-#include "kernels/kernel_types.hpp"
+#include "Kernel_settings.hpp"
 #include "Domain_func.hpp"
 
 namespace cartdg
@@ -47,10 +47,17 @@ class Grid
   std::vector<int> n_neighb_con();
   virtual std::vector<double> get_pos(int i_elem);
   virtual double jacobian_det(int i_elem, int i_qpoint);
+  virtual double stable_time_step(double cfl_by_stable_cfl, Kernel_settings& setttings);
 
   // functions that execute some aspect of time integration
   bool execute_runge_kutta_stage();
   double get_stable_cfl();
+  virtual void execute_local(Kernel_settings&);
+  virtual void execute_neighbor(Kernel_settings&);
+  virtual void execute_local_derivative(int i_var, int i_axis, Kernel_settings&);
+  virtual void execute_neighbor_derivative(int i_var, int i_axis, Kernel_settings&);
+  virtual void execute_local_av(int i_var, int i_axis, Kernel_settings&);
+  virtual void execute_neighbor_av(int i_var, int i_axis, Kernel_settings&);
 
   // functions that resize/reallocate/modify data
   void auto_connect(std::vector<int> periods);

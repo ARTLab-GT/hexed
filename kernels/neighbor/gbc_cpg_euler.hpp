@@ -1,19 +1,19 @@
-#ifndef CARTDG_CPG_EULER_GBC_HPP_
-#define CARTDG_CPG_EULER_GBC_HPP_
+#ifndef CARTDG_GBC_CPG_EULER_HPP_
+#define CARTDG_GBC_CPG_EULER_HPP_
 
+#include <Kernel_settings.hpp>
+#include <Ghost_boundary_condition.hpp>
 #include "cpg_euler_hll_deformed.hpp"
 #include "read_copy.hpp"
 #include "write_copy.hpp"
-#include "../Kernel_settings.hpp"
-#include "../../Ghost_boundary_condition.hpp"
 
 namespace cartdg
 {
 
-template <int n_var, int n_qpoint, int row_size>
-void cpg_euler_gbc(std::vector<Ghost_boundary_condition*>& ghost_bound_conds,
-                   double* read, double* write,
-                   double weight,
+// AUTOGENERATE
+template<int n_var, int n_qpoint, int row_size>
+void gbc_cpg_euler(std::vector<Ghost_boundary_condition*>& ghost_bound_conds,
+                   double* read, double* write, double weight,
                    Kernel_settings& settings)
 {
   const int n_dof = n_var*n_qpoint;

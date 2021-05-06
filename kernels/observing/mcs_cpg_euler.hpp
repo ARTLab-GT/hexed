@@ -1,13 +1,17 @@
-#ifndef CARTDG_CPG_EULER_MAX_HPP_
-#define CARTDG_CPG_EULER_MAX_HPP_
+#ifndef CARTDG_MCS_CPG_EULER_HPP_
+#define CARTDG_MCS_CPG_EULER_HPP_
 
-#include "../Kernel_settings.hpp"
+#include <cmath>
+#include <stdexcept>
+
+#include <Kernel_settings.hpp>
 
 namespace cartdg
 {
 
+// AUTOGENERATE
 template<int n_var, int n_qpoint, int row_size>
-double cpg_euler_max(double* read, int n_elem, Kernel_settings& settings)
+double mcs_cpg_euler(double* read, int n_elem, Kernel_settings& settings)
 {
   const int n_dof = n_var*n_qpoint;
   const int n_dim = n_var - 2;

@@ -1,17 +1,17 @@
-#ifndef CARTDG_CPG_EULER_DEFORMED_HPP_
-#define CARTDG_CPG_EULER_DEFORMED_HPP_
+#ifndef CARTDG_LOCAL_DEFORMED_CPG_EULER_HPP_
+#define CARTDG_LOCAL_DEFORMED_CPG_EULER_HPP_
 
-#include <iostream>
 #include <Eigen/Dense>
-#include "../Kernel_settings.hpp"
-#include "../../Basis.hpp"
+
+#include <Kernel_settings.hpp>
+#include <Basis.hpp>
 
 namespace cartdg
 {
 
+// AUTOGENERATE
 template<int n_var, int n_qpoint, int row_size>
-void cpg_euler_deformed(double* read, double* write, double* jacobian, int n_elem,
-                        Basis& basis, Kernel_settings& settings)
+void local_deformed_cpg_euler(double* read, double* write, double* jacobian, int n_elem, Basis& basis, Kernel_settings& settings)
 {
   Eigen::Matrix<double, row_size, row_size> diff_mat = basis.diff_mat();
   double d_t_by_d_pos = settings.d_t_by_d_pos;

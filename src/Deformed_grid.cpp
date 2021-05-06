@@ -1,4 +1,8 @@
 #include <Deformed_grid.hpp>
+#include <get_local_deformed_cpg_euler.hpp>
+#include <get_neighbor_deformed_cpg_euler.hpp>
+#include <get_gbc_cpg_euler.hpp>
+#include <get_nonpen_cpg_euler.hpp>
 
 namespace cartdg
 {
@@ -147,6 +151,42 @@ double Deformed_grid::jacobian_det(int i_elem, int i_qpoint)
     }
   }
   return jac_mat.fullPivLu().determinant();
+}
+
+void Deformed_grid::execute_local(Kernel_settings& settings)
+{
+  get_local_deformed_cpg_euler(n_dim, basis.rank)(state_r(), state_w(), jacobian.data(), n_elem,
+                                                  basis, settings);
+}
+
+void Deformed_grid::execute_neighbor(Kernel_settings& settings)
+{
+  get_neighbor_deformed_cpg_euler(n_dim, basis.rank)(state_connections_r(), state_connections_w(), jacobian_neighbors.data(),
+                                  neighbor_axes.data(), neighbor_is_positive.data(), neighbor_storage[0].size()/2, basis.node_weights(), settings);
+  get_gbc_cpg_euler(n_dim, basis.rank)(ghost_bound_conds, state_r(), state_w(), basis.node_weights()(0), settings);
+  get_nonpen_cpg_euler(n_dim, basis.rank)(state_r(), state_w(), jacobian.data(), i_elem_wall.data(), i_dim_wall.data(), is_positive_wall.data(), i_elem_wall.size(), basis.node_weights()(0), settings);
+}
+
+void Deformed_grid::execute_local_derivative(int i_var, int i_axis, Kernel_settings& settings)
+{
+  double* sr = state_r();
+  double* sw = state_w();
+  for (int i_data = 0; i_data < n_dof*n_elem; ++i_data)
+  {
+    sw[i_data] = sr[i_data];
+  }
+}
+
+void Deformed_grid::execute_neighbor_derivative(int i_var, int i_axis, Kernel_settings& settings)
+{
+}
+
+void Deformed_grid::execute_local_av(int i_var, int i_axis, Kernel_settings& settings)
+{
+}
+
+void Deformed_grid::execute_neighbor_av(int i_var, int i_axis, Kernel_settings& settings)
+{
 }
 
 void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_axis,

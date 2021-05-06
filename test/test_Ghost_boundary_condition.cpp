@@ -2,7 +2,7 @@
 
 #include <cartdgConfig.hpp>
 #include <Solution.hpp>
-#include <kernels/neighbor/cpg_euler_gbc.hpp>
+#include <get_gbc_cpg_euler.hpp>
 
 class Supersonic_inlet : public cartdg::Ghost_boundary_condition
 {
@@ -32,7 +32,6 @@ class Supersonic_inlet : public cartdg::Ghost_boundary_condition
 TEST_CASE("Ghost boundary conditions")
 {
   const int rank = 2;
-  const int n_qpoint = rank*rank*rank;
   cartdg::Solution soln (5, 3, rank, 1.); //FIXME: change back to MAX_BASIS_RANK
   cartdg::Basis& basis = soln.basis;
   soln.kernel_settings.d_t_by_d_pos = 0.1;
@@ -138,9 +137,8 @@ TEST_CASE("Ghost boundary conditions")
       }
     }
     auto weights = soln.basis.node_weights();
-    cartdg::cpg_euler_gbc<5, n_qpoint, rank>
-                         (grid.ghost_bound_conds, grid.state_r(), grid.state_w(),
-                         weights[0], soln.kernel_settings);
+    cartdg::get_gbc_cpg_euler(3, rank)(grid.ghost_bound_conds, grid.state_r(), grid.state_w(),
+                                       weights[0], soln.kernel_settings);
     for (int i_elem = 0; i_elem < 27; ++i_elem)
     {
       std::vector<double> pos = grid.get_pos(i_elem);
@@ -195,9 +193,8 @@ TEST_CASE("Ghost boundary conditions")
       }
     }
     auto weights = soln.basis.node_weights();
-    cartdg::cpg_euler_gbc<5, rank*rank*rank, rank>
-                         (grid.ghost_bound_conds, grid.state_r(), grid.state_w(),
-                         weights[0], soln.kernel_settings);
+    cartdg::get_gbc_cpg_euler(3, rank)(grid.ghost_bound_conds, grid.state_r(), grid.state_w(),
+                                       weights[0], soln.kernel_settings);
     for (int i_elem = 0; i_elem < 27; ++i_elem)
     {
       std::vector<double> pos = grid.get_pos(i_elem);
@@ -240,9 +237,8 @@ TEST_CASE("Ghost boundary conditions")
       }
     }
     auto weights = soln.basis.node_weights();
-    cartdg::cpg_euler_gbc<5, rank*rank*rank, rank>
-                         (grid.ghost_bound_conds, grid.state_r(), grid.state_w(),
-                          weights[0], soln.kernel_settings);
+    cartdg::get_gbc_cpg_euler(3, rank)(grid.ghost_bound_conds, grid.state_r(), grid.state_w(),
+                                       weights[0], soln.kernel_settings);
     for (int i_elem = 0; i_elem < 27; ++i_elem)
     {
       std::vector<double> pos = grid.get_pos(i_elem);

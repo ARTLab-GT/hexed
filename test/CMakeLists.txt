@@ -16,4 +16,5 @@ test_sinusoid.cpp
 test_Solution.cpp
 test_Vertex.cpp
 )
-target_link_libraries(test PRIVATE cartdg tecio Catch2::Catch2)
+target_include_directories(test PRIVATE ${CMAKE_SOURCE_DIR}/kernels)
+target_link_libraries(test PRIVATE cartdg kernels tecio Catch2::Catch2)

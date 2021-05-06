@@ -1,9 +1,9 @@
-#ifndef CARTDG_CPG_EULER_NONPEN_HPP_
-#define CARTDG_CPG_EULER_NONPEN_HPP_
+#ifndef CARTDG_NONPEN_CPG_EULER_HPP_
+#define CARTDG_NONPEN_CPG_EULER_HPP_
 
 #include <Eigen/Dense>
 
-#include "../Kernel_settings.hpp"
+#include <Kernel_settings.hpp>
 #include "read_copy.hpp"
 #include "write_copy.hpp"
 #include "cpg_euler_hll_deformed.hpp"
@@ -11,8 +11,9 @@
 namespace cartdg
 {
 
+// AUTOGENERATE
 template <int n_var, int n_qpoint, int row_size>
-void cpg_euler_nonpen(double* read, double* write, double* jacobian, int* i_elem,
+void nonpen_cpg_euler(double* read, double* write, double* jacobian, int* i_elem,
                       int* i_dim, int* is_positive_face, int n_bc, double weight,
                       Kernel_settings& settings)
 {

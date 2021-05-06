@@ -4,8 +4,7 @@
 #include "Grid.hpp"
 #include "Deformed_grid.hpp"
 #include "Gauss_lobatto.hpp"
-#include "kernels/kernel_types.hpp"
-#include "kernels/Kernel_settings.hpp"
+#include "Kernel_settings.hpp"
 #include "Spacetime_func.hpp"
 
 namespace cartdg
@@ -47,21 +46,6 @@ class Solution
 
   protected:
   double refined_mesh_size(int ref_level);
-
-  virtual Local_kernel get_local_kernel();
-  virtual Local_deformed_kernel get_local_deformed_kernel();
-  virtual Derivative_kernel get_derivative_kernel();
-  virtual Viscous_local_kernel get_viscous_local_kernel();
-  virtual Neighbor_kernel get_neighbor_kernel();
-  virtual Neighbor_deformed_kernel get_neighbor_deformed_kernel();
-  virtual Jump_kernel get_jump_kernel();
-  virtual Jump_gbc_kernel get_jump_gbc_kernel();
-  virtual Viscous_neighbor_kernel get_viscous_neighbor_kernel();
-  virtual Nonpen_kernel get_nonpen_kernel();
-  virtual Max_char_speed_kernel get_max_char_speed_kernel();
-  virtual Physical_step_kernel get_physical_step_kernel();
-  virtual Restrict_step_kernel get_restrict_step_kernel();
-  virtual Gbc_kernel get_gbc_kernel();
 };
 
 }

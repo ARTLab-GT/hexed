@@ -1,7 +1,7 @@
 #ifndef CARTDG_CPG_EULER_AVERAGE_HPP_
 #define CARTDG_CPG_EULER_AVERAGE_HPP_
 
-#include "../Kernel_settings.hpp"
+#include <Kernel_settings.hpp>
 
 namespace cartdg
 {

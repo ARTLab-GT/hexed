@@ -1,4 +1,7 @@
 import sys
+import re
+import os
+import shutil
 
 max_dim = 3
 
@@ -7,82 +10,104 @@ src_dir += "/"
 src_dir = src_dir.replace("//", "/")
 max_rank = int(sys.argv[2])
 
+### generate template lookup tables ###
+
 def format_file_text(include, text):
+    if len(include) > 0:
+        include = "\n" + include
     return f"""/*
 This file was generated automatically by script/auto_generate.py, which CMake executes
-during the build process. Do not attempt to modify it directly. Instead, modify
+during the build process. Please do not attempt to modify it directly. Instead, modify
 script/auto_generate.py and rerun CMake.
 */
-
 {include}
 namespace cartdg
 {{
+
 {text}
+
 }}
 """
 
-class Auto_file:
-    def __init__(self, name):
-        self.name = name
-        self.file_name = name + "__get_kernel.cpp"
-        include = ""
-        templates = {}
+def pop(regex, string):
+    return re.search(regex, string, re.DOTALL), re.sub(regex, "", string)
 
-solution = Auto_file("Solution")
-solution.include = """
-#include <Solution.hpp>
-#include <kernels/local/cpg_euler_matrix.hpp>
-#include <kernels/local/cpg_euler_deformed.hpp>
-#include <kernels/local/cpg_euler_restrict_step.hpp>
-#include <kernels/local/derivative.hpp>
-#include <kernels/neighbor/cpg_euler_copy.hpp>
-#include <kernels/neighbor/cpg_euler_copy_deformed.hpp>
-#include <kernels/neighbor/cpg_euler_nonpen.hpp>
-#include <kernels/neighbor/cpg_euler_gbc.hpp>
-#include <kernels/neighbor/jump.hpp>
-#include <kernels/neighbor/jump_gbc.hpp>
-#include <kernels/observing/cpg_euler_max.hpp>
-#include <kernels/observing/cpg_euler_physical_step.hpp>
+param_funcs = {"int n_var":(lambda dim, row_size : dim + 2),
+               "int n_qpoint":(lambda dim, row_size : row_size**dim),
+               "int row_size":lambda dim, row_size : row_size}
+
+if "kernels" in os.listdir("."):
+    shutil.rmtree("kernels")
+os.mkdir("kernels")
+os.mkdir("kernels/include")
+os.mkdir("kernels/src")
+
+header_names = []
+for dir_group in os.walk("../kernels"):
+    for file_name in dir_group[2]:
+        if file_name[-4:] == ".hpp":
+            header_names.append(dir_group[0] + "/" + file_name)
+
+source_names = []
+for file_name in header_names:
+    with open(file_name, "r") as in_file:
+        text = in_file.read()
+    templates = text.split("AUTOGENERATE")[1:]
+    for template in templates:
+        params, template = pop("\n*template *<([^\n]*)>", template)
+        params = re.split(" *, *", params.group(1))
+        signature, template  = pop("\n*(.*?[)])", template)
+        signature = re.sub("\n *", " ", signature.groups(1)[0])
+        signature = re.sub(" \w*?(,|\))", r"\1", signature)
+        hpp_include = ""
+        cpp_include = f'#include <{file_name[11:]}>\n'
+        name = re.search(" (\w*)\(", signature).groups(1)[0]
+        cpp_include += f'#include "get_{name}.hpp"\n'
+        hpp_text = """
+class Basis;
+class Grid;
+class Kernel_settings;
+
+"""[1:]
+        hpp_text += f"typedef "
+        hpp_text += re.sub(" \w*\(", f" (*{name}_type)(", signature) + ";\n\n"
+        cpp_text = f"""
+{name}_type get_{name}(int n_dim, int row_size)
+{{
+  {name}_type {name}s [{max_dim}][{max_rank - 1}]
+  {{
 """
-solution.templates = {"local":"cpg_euler_matrix", "local_deformed":"cpg_euler_deformed",
-                      "physical_step":"cpg_euler_physical_step",
-                      "restrict_step":"cpg_euler_restrict_step",
-                      "neighbor":"cpg_euler_copy", "neighbor_deformed":"cpg_euler_copy_deformed",
-                      "derivative":"derivative_r", "jump":"jump_r",
-                      "viscous_local":"derivative_w", "viscous_neighbor":"jump_w",
-                      "jump_gbc":"jump_gbc",
-                      "nonpen":"cpg_euler_nonpen",
-                      "gbc":"cpg_euler_gbc", "max_char_speed":"cpg_euler_max"}
+        for dim in range(1, max_dim + 1):
+            for row_size in range(2, max_rank + 1):
+                cpp_text += f"    {name}<"
+                for i_param in range(len(params)):
+                    cpp_text += f"{param_funcs[params[i_param]](dim, row_size)}, "
+                cpp_text = cpp_text[:-2] + ">,\n"
+        cpp_text += f"""  }};
 
-for auto_file in [solution]:
-    text = ""
+  if ((n_dim > 0) && (n_dim <= {max_dim}) && (row_size >= 2) && (row_size <= {max_rank}))
+  {{
+    return {name}s[n_dim - 1][row_size - 2];
+  }}
+  else throw std::runtime_error("Kernel not available.");
+}}"""
+        hpp_text += f"{name}_type get_{name}(int n_dim, int row_size);"
+        hpp_text = format_file_text(hpp_include, hpp_text)
+        cpp_text = format_file_text(cpp_include, cpp_text)
+        source_names.append(f"get_{name}.cpp")
+        with open(f"kernels/include/get_{name}.hpp", "w") as out_file:
+            out_file.write(hpp_text)
+        with open(f"kernels/src/get_{name}.cpp", "w") as out_file:
+            out_file.write(cpp_text)
 
-    for kernel_type in auto_file.templates.keys():
-        func_type = kernel_type.capitalize()
-        kernel_arr = "\n{}_kernel {}_kernels [{}][{}] {{\n"
-        text += kernel_arr.format(func_type, kernel_type, max_dim, max_rank)
-        for i_dim in range(max_dim):
-            for i_rank in range(max_rank):
-                n_var = i_dim + 3
-                n_qpoint = (i_rank + 1)**(i_dim + 1)
-                n_face_qpoint = (i_rank + 1)**i_dim
-                row_size = i_rank + 1
-                text += """
-        &({}<{}, {}, {}>),
-        """[1:].format(auto_file.templates[kernel_type], n_var, n_qpoint, row_size)
-        text += "};\n"
+cmake_text = "target_sources(kernels PRIVATE\n"
+for source in source_names:
+    cmake_text += source + "\n"
+cmake_text += ")\n"
+with open("kernels/src/CMakeLists.txt", "w") as cmake_file:
+    cmake_file.write(cmake_text)
 
-        text += """
-    {0}_kernel {3}::get_{1}_kernel()
-    {{
-      if (n_dim <= {2}) return {1}_kernels[n_dim - 1][basis.rank - 1];
-      else throw std::runtime_error("Kernel not available.");
-    }}
-    """.format(func_type, kernel_type, i_dim + 1, auto_file.name)
-
-    with open(src_dir + auto_file.file_name, "w") as write_file:
-        write_file.write(format_file_text(auto_file.include, text))
-
+### Calculate bases ###
 
 from Basis import *
 from sympy.integrals.quadrature import gauss_lobatto

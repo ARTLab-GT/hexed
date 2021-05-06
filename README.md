@@ -93,10 +93,9 @@ Currently implemented features:
 * Freestream boundary conditions.
  
 Planned or in-progress features (roughly in order of planned implementation):
-* Entropy-stable methods (in progress).
 * Immersed boundary conditions (in progress).
+* Shock capturing (in progress).
 * Hanging-nodes.
-* Shock capturing.
 * Implicit and/or multigrid method.
 
 ## Contributing

@@ -1,6 +1,15 @@
 #include <iostream>
 
 #include <Grid.hpp>
+#include <get_mcs_cpg_euler.hpp>
+#include <get_local_cpg_euler.hpp>
+#include <get_neighbor_cpg_euler.hpp>
+#include <get_gbc_cpg_euler.hpp>
+#include <get_local_derivative.hpp>
+#include <get_neighbor_derivative.hpp>
+#include <get_neighbor_av.hpp>
+#include <get_local_av.hpp>
+#include <get_gbc_av.hpp>
 
 namespace cartdg
 {
@@ -203,6 +212,12 @@ double Grid::jacobian_det(int i_elem, int i_qpoint)
   return 1.;
 }
 
+double Grid::stable_time_step(double cfl_by_stable_cfl, Kernel_settings& settings)
+{
+  double cfl = cfl_by_stable_cfl*get_stable_cfl();
+  return cfl*mesh_size/get_mcs_cpg_euler(n_dim, basis.rank)(state_r(), n_elem, settings);
+}
+
 bool Grid::execute_runge_kutta_stage()
 {
   double* read0 = state_storage[0].data();
@@ -230,6 +245,42 @@ double Grid::get_stable_cfl()
   {
     throw std::runtime_error("Stable CFL number unknown for basis of desired rank.");
   }
+}
+
+void Grid::execute_local(Kernel_settings& settings)
+{
+  get_local_cpg_euler(n_dim, basis.rank)(state_r(), state_w(), n_elem, basis, settings);
+}
+
+void Grid::execute_neighbor(Kernel_settings& settings)
+{
+  get_neighbor_cpg_euler(n_dim, basis.rank)(neighbor_connections_r().data(), neighbor_connections_w().data(), 
+                                            n_neighb_con().data(), basis.node_weights(), settings);
+  get_gbc_cpg_euler(n_dim, basis.rank)(ghost_bound_conds, state_r(), state_w(), basis.node_weights()(0), settings);
+}
+
+void Grid::execute_local_derivative(int i_var, int i_axis, Kernel_settings& settings)
+{
+  get_local_derivative(n_dim, basis.rank)(state_r(), derivs.data(), n_elem, i_var, i_axis, basis, settings);
+}
+
+void Grid::execute_neighbor_derivative(int i_var, int i_axis, Kernel_settings& settings)
+{
+  int n_con = n_neighb_con()[i_axis];
+  get_neighbor_derivative(n_dim, basis.rank)(neighbor_connections_r()[i_axis], deriv_neighbor_connections()[i_axis], n_con, i_var, i_axis, basis.node_weights(), settings);
+}
+
+void Grid::execute_local_av(int i_var, int i_axis, Kernel_settings& settings)
+{
+  get_local_av(n_dim, basis.rank)(derivs.data(), state_w(), n_elem, i_var, i_axis, basis, settings);
+}
+
+void Grid::execute_neighbor_av(int i_var, int i_axis, Kernel_settings& settings)
+{
+  int n_con = n_neighb_con()[i_axis];
+  get_neighbor_av(n_dim, basis.rank)(deriv_neighbor_connections()[i_axis],
+                                     neighbor_connections_w()[i_axis], n_con, i_var, i_axis, basis.node_weights(), settings);
+  get_gbc_av(n_dim, basis.rank)(ghost_bound_conds, derivs.data(), state_w(), i_var, i_axis, basis.node_weights()(0), settings);
 }
 
 void Grid::print()
