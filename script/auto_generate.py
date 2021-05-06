@@ -60,7 +60,10 @@ for file_name in header_names:
         signature = re.sub("\n *", " ", signature.groups(1)[0])
         signature = re.sub(" \w*?(,|\))", r"\1", signature)
         hpp_include = ""
-        cpp_include = f'#include <{file_name[11:]}>\n'
+        cpp_include = f"""
+#include <stdexcept>
+#include <{file_name[11:]}>
+"""[1:]
         name = re.search(" (\w*)\(", signature).groups(1)[0]
         cpp_include += f'#include "get_{name}.hpp"\n'
         hpp_text = """
