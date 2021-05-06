@@ -3,8 +3,10 @@
 #include <cartdgConfig.hpp>
 #include <get_local_cpg_euler.hpp>
 #include <get_local_deformed_cpg_euler.hpp>
+#include <get_req_visc.hpp>
 #include <local/derivative.hpp>
 #include <Gauss_lobatto.hpp>
+#include <static_math.hpp>
 
 class Identity_basis : public cartdg::Basis
 {
@@ -444,4 +446,32 @@ TEST_CASE("derivative")
       }
     }
   }
+}
+
+TEST_CASE("req_visc")
+{
+  const int rank = MAX_BASIS_RANK;
+  const int n_qpoint = cartdg::static_math::pow(rank, 3);
+  cartdg::Gauss_lobatto basis (rank);
+  cartdg::Kernel_settings settings;
+  settings.d_pos = 0.5;
+  double read [2][5][n_qpoint];
+  double visc [2][2][2][2] {};
+  for (int i_elem = 0; i_elem < 2; ++i_elem)
+  {
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
+    {
+      read[i_elem][0][i_qpoint] = 1.225;
+      read[i_elem][1][i_qpoint] = 0.;
+      read[i_elem][2][i_qpoint] = 0.;
+      read[i_elem][3][i_qpoint] = 0.;
+      read[i_elem][4][i_qpoint] = 101325/0.4;
+    }
+  }
+  read[1][0][3] = 1.5; // set an anomaly to trip the indicator in element 1
+  cartdg::get_req_visc(3, rank)(read[0][0], visc[0][0][0], 2, basis, settings);
+  REQUIRE(visc[0][0][0][0] == 0.);
+  REQUIRE(visc[0][1][1][1] == 0.);
+  REQUIRE(visc[1][0][0][0] == Approx(0.5*340.29/(rank - 1.)).margin(0.01));
+  REQUIRE(visc[1][1][1][1] == Approx(0.5*340.29/(rank - 1.)).margin(0.01));
 }
