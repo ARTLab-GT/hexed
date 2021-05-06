@@ -461,14 +461,14 @@ TEST_CASE("req_visc")
   {
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
     {
-      read[i_elem][0][i_qpoint] = 1.225;
+      read[i_elem][0][i_qpoint] = 0.;
       read[i_elem][1][i_qpoint] = 0.;
       read[i_elem][2][i_qpoint] = 0.;
-      read[i_elem][3][i_qpoint] = 0.;
+      read[i_elem][3][i_qpoint] = 1.225;
       read[i_elem][4][i_qpoint] = 101325/0.4;
     }
   }
-  read[1][0][3] = 1.5; // set an anomaly to trip the indicator in element 1
+  read[1][3][3] = 1.5; // set an anomaly to trip the indicator in element 1
   cartdg::get_req_visc_cpg_euler(3, rank)(read[0][0], visc[0][0][0], 2, basis, settings);
   REQUIRE(visc[0][0][0][0] == 0.);
   REQUIRE(visc[0][1][1][1] == 0.);
