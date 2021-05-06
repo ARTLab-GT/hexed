@@ -110,4 +110,36 @@ TEST_CASE("Discontinuity indicator")
       REQUIRE(cartdg::indicator<rank - 1, rank - 1>(read, weights.data(), ortho.data()) == 1.);
     }
   }
+
+  SECTION("3D")
+  {
+    double read [rank][rank][rank];
+    auto weights = basis.node_weights();
+    auto ortho = basis.orthogonal(rank - 1);
+
+    const int n_qpoint = rank*rank*rank;
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
+    {
+      read[0][0][i_qpoint] = 1.;
+    }
+    REQUIRE(cartdg::indicator<n_qpoint, rank>(read[0][0], weights.data(), ortho.data()) == 0.);
+
+    SECTION("all directions activated")
+    {
+      read[1][2][1] = 2.;
+      REQUIRE(cartdg::indicator<n_qpoint, rank>(read[0][0], weights.data(), ortho.data()) == 1.);
+    }
+
+    SECTION("one direction activated")
+    {
+      for (int i_row = 0; i_row < rank; ++i_row)
+      {
+        for (int j_row = 0; j_row < rank; ++j_row)
+        {
+          read[i_row][1][j_row] = 0.9;
+        }
+      }
+      REQUIRE(cartdg::indicator<n_qpoint, rank>(read[0][0], weights.data(), ortho.data()) == 1.);
+    }
+  }
 }
