@@ -114,6 +114,15 @@ double Solution::update(double cfl_by_stable_cfl)
     )
     for (int i_rk = 0; i_rk < 3; ++i_rk)
     {
+      FOR_ALL_GRIDS
+      (
+        double* sr = grid->state_r();
+        double* sw = grid->state_w();
+        for (int i_data = 0; i_data < grid->n_elem*grid->n_dof; ++i_data)
+        {
+          sw[i_data] = sr[i_data];
+        }
+      )
       for (int i_axis = 0; i_axis < n_dim; ++i_axis)
       {
         for (int i_var = 0; i_var < n_var; ++i_var)
@@ -123,13 +132,11 @@ double Solution::update(double cfl_by_stable_cfl)
             kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
             grid->execute_local_derivative(i_var, i_axis, kernel_settings);
           )
-          #if 0
           FOR_ALL_GRIDS
           (
             kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
             grid->execute_neighbor_derivative(i_var, i_axis, kernel_settings);
           )
-          #endif
           FOR_ALL_GRIDS
           (
             for (int i_data = 0; i_data < grid->n_qpoint*grid->n_elem; ++i_data)
@@ -140,12 +147,12 @@ double Solution::update(double cfl_by_stable_cfl)
           FOR_ALL_GRIDS
           (
             kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
-            grid->execute_neighbor_av(i_var, i_axis, kernel_settings);
+            grid->execute_local_av(i_var, i_axis, kernel_settings);
           )
           FOR_ALL_GRIDS
           (
             kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
-            grid->execute_local_av(i_var, i_axis, kernel_settings);
+            grid->execute_neighbor_av(i_var, i_axis, kernel_settings);
           )
         }
       }

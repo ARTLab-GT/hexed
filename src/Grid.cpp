@@ -261,13 +261,7 @@ void Grid::execute_neighbor(Kernel_settings& settings)
 
 void Grid::execute_local_derivative(int i_var, int i_axis, Kernel_settings& settings)
 {
-  double* sr = state_r();
-  double* sw = state_w();
-  for (int i_data = 0; i_data < n_dof*n_elem; ++i_data)
-  {
-    sw[i_data] = sr[i_data];
-  }
-  get_local_derivative(n_dim, basis.rank)(sr, derivs.data(), n_elem, i_var, i_axis, basis, settings);
+  get_local_derivative(n_dim, basis.rank)(state_r(), derivs.data(), n_elem, i_var, i_axis, basis, settings);
 }
 
 void Grid::execute_neighbor_derivative(int i_var, int i_axis, Kernel_settings& settings)
