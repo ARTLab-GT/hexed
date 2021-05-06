@@ -1,7 +1,10 @@
 #include <catch.hpp>
 
-#include <get_mcs_cpg_euler.hpp>
+#include <cartdgConfig.hpp>
 #include <Kernel_settings.hpp>
+#include <get_mcs_cpg_euler.hpp>
+#include <Gauss_lobatto.hpp>
+#include <observing/indicator.hpp>
 
 TEST_CASE("Max characteristic speed")
 {
@@ -37,5 +40,55 @@ TEST_CASE("Max characteristic speed")
     }
     double mcs = cartdg::get_mcs_cpg_euler(2, 2)(read[0], 1, settings);
     REQUIRE(mcs == Approx(360).epsilon(0.01));
+  }
+}
+
+TEST_CASE("Discontinuity indicator")
+{
+  const int rank = MAX_BASIS_RANK;
+  cartdg::Gauss_lobatto basis (rank);
+  cartdg::Gauss_lobatto basis1 (rank - 1);
+
+  SECTION("1D")
+  {
+    SECTION("different types of functions")
+    {
+      double read [rank];
+      auto weights = basis.node_weights();
+      auto ortho = basis.orthogonal(rank - 1);
+
+      for (int i_qpoint = 0; i_qpoint < rank; ++i_qpoint)
+      {
+        read[i_qpoint] = std::exp(basis.node(i_qpoint)*0.5);
+      }
+      REQUIRE(cartdg::indicator<rank, rank>(read, weights.data(), ortho.data()) == 0.);
+      read[1] = 2.;
+      REQUIRE(cartdg::indicator<rank, rank>(read, weights.data(), ortho.data()) == 1.);
+
+      for (int i_qpoint = 0; i_qpoint < rank; ++i_qpoint)
+      {
+        read[i_qpoint] = 1;
+      }
+      REQUIRE(cartdg::indicator<rank, rank>(read, weights.data(), ortho.data()) == 0.);
+
+      for (int i_qpoint = 2; i_qpoint < rank; ++i_qpoint)
+      {
+        read[i_qpoint] = 1.5;
+      }
+      REQUIRE(cartdg::indicator<rank, rank>(read, weights.data(), ortho.data()) == 1.);
+    }
+    SECTION("even/odd")
+    {
+      double read [rank - 1];
+      auto weights = basis1.node_weights();
+      auto ortho = basis1.orthogonal(rank - 2);
+      for (int i_qpoint = 0; i_qpoint < rank - 1; ++i_qpoint)
+      {
+        read[i_qpoint] = std::exp(basis.node(i_qpoint)*0.5);
+      }
+      REQUIRE(cartdg::indicator<rank - 1, rank - 1>(read, weights.data(), ortho.data()) == 0.);
+      read[1] = 2.;
+      REQUIRE(cartdg::indicator<rank - 1, rank - 1>(read, weights.data(), ortho.data()) == 1.);
+    }
   }
 }
