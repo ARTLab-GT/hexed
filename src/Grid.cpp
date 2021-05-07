@@ -9,8 +9,9 @@
 #include <get_cont_visc_cpg_euler.hpp>
 #include <get_local_derivative.hpp>
 #include <get_neighbor_derivative.hpp>
-#include <get_neighbor_av.hpp>
+#include <get_av_flux.hpp>
 #include <get_local_av.hpp>
+#include <get_neighbor_av.hpp>
 #include <get_gbc_av.hpp>
 
 namespace cartdg
@@ -164,6 +165,7 @@ int Grid::add_element(std::vector<int> position)
     state_storage[i_rk_stage].resize(state_storage[i_rk_stage].size() + n_dof, 0.);
   }
   derivs.resize(derivs.size() + n_qpoint, 0.);
+  visc.resize(visc.size() + n_vertices, 0.);
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) pos.push_back(position[i_dim]);
   return n_elem++;
 }
@@ -293,6 +295,11 @@ void Grid::execute_neighbor_derivative(int i_var, int i_axis, Kernel_settings& s
 {
   int n_con = n_neighb_con()[i_axis];
   get_neighbor_derivative(n_dim, basis.rank)(neighbor_connections_r()[i_axis], deriv_neighbor_connections()[i_axis], n_con, i_var, i_axis, basis.node_weights(), settings);
+}
+
+void Grid::execute_av_flux(Kernel_settings& settings)
+{
+  get_av_flux(n_dim, basis.rank)(derivs.data(), visc.data(), n_elem, basis, settings);
 }
 
 void Grid::execute_local_av(int i_var, int i_axis, Kernel_settings& settings)

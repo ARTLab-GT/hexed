@@ -265,9 +265,11 @@ TEST_CASE("Grid")
     std::vector<int> position {1};
     REQUIRE(grid.state_storage[0].size() == 0);
     REQUIRE(grid.derivs.size() == 0);
+    REQUIRE(grid.visc.size() == 0);
     REQUIRE(grid.add_element(position) == 0);
     REQUIRE(grid.state_storage[0].size() == 4*8);
     REQUIRE(grid.derivs.size() == 8);
+    REQUIRE(grid.visc.size() == 2);
     position[0] += 1;
     REQUIRE(grid.add_element(position) == 1);
     REQUIRE(grid.n_elem == 2);

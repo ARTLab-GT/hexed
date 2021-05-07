@@ -105,7 +105,7 @@ double Solution::update(double cfl_by_stable_cfl)
     )
   }
 
-  #if 0
+  #if 1
   int n_iter = 1;
   dt = std::numeric_limits<double>::max();
   FOR_ALL_GRIDS // FIXME: incorporate_jacobian
@@ -140,28 +140,31 @@ double Solution::update(double cfl_by_stable_cfl)
           FOR_ALL_GRIDS
           (
             kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
+            kernel_settings.d_pos = grid->mesh_size;
             grid->execute_local_derivative(i_var, i_axis, kernel_settings);
           )
           FOR_ALL_GRIDS
           (
             kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
+            kernel_settings.d_pos = grid->mesh_size;
             grid->execute_neighbor_derivative(i_var, i_axis, kernel_settings);
           )
           FOR_ALL_GRIDS
           (
-            for (int i_data = 0; i_data < grid->n_qpoint*grid->n_elem; ++i_data)
-            {
-              grid->derivs[i_data] *= 1.e-3;
-            }
+            kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
+            kernel_settings.d_pos = grid->mesh_size;
+            grid->execute_av_flux(kernel_settings);
           )
           FOR_ALL_GRIDS
           (
             kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
+            kernel_settings.d_pos = grid->mesh_size;
             grid->execute_local_av(i_var, i_axis, kernel_settings);
           )
           FOR_ALL_GRIDS
           (
             kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
+            kernel_settings.d_pos = grid->mesh_size;
             grid->execute_neighbor_av(i_var, i_axis, kernel_settings);
           )
         }
