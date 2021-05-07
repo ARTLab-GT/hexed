@@ -151,6 +151,8 @@ void Grid::clear_neighbors()
   for (int i_dim = 0; i_dim < 2*n_dim; ++i_dim)
   {
     neighbor_storage[i_dim].clear();
+    deriv_neighbor_storage[i_dim].clear();
+    visc_neighbor_storage[i_dim].clear();
   }
 }
 
