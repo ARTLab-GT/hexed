@@ -4,6 +4,7 @@
 #include <get_local_cpg_euler.hpp>
 #include <get_local_deformed_cpg_euler.hpp>
 #include <get_req_visc_cpg_euler.hpp>
+#include <get_av_flux.hpp>
 #include <local/derivative.hpp>
 #include <Gauss_lobatto.hpp>
 #include <static_math.hpp>
@@ -474,4 +475,33 @@ TEST_CASE("req_visc")
   REQUIRE(visc[0][1][1][1] == 0.);
   REQUIRE(visc[1][0][0][0] == Approx(0.5*340.29/(rank - 1.)).margin(0.01));
   REQUIRE(visc[1][1][1][1] == Approx(0.5*340.29/(rank - 1.)).margin(0.01));
+}
+
+TEST_CASE("av_flux")
+{
+  #if MAX_BASIS_RANK >= 3
+  cartdg::Gauss_lobatto basis (3);
+  cartdg::Kernel_settings settings;
+  settings.d_pos = 0.5;
+  settings.d_t_by_d_pos = 3.;
+  double flux [2][9] {};
+  double visc [2][4] {};
+  visc[0][0] = 0.2;
+  flux[1][1] = 0.3;
+  flux[1][8] = 0.4;
+  for (int i = 0; i < 4; ++i) visc[1][i] = 1.;
+  for (int i = 0; i < 9; ++i) flux[0][i] = 1.;
+  cartdg::get_av_flux(2, 3)(flux[0], visc[0], 2, basis, settings);
+
+  REQUIRE(flux[0][0] == Approx(0.2*6.));
+  REQUIRE(flux[0][1] == Approx(0.1*6.));
+  REQUIRE(flux[0][2] == Approx(0.0*6.));
+  REQUIRE(flux[0][3] == Approx(0.1*6.));
+  REQUIRE(flux[0][4] == Approx(0.05*6.));
+  REQUIRE(flux[0][5] == Approx(0.0*6.));
+
+  REQUIRE(flux[1][0] == Approx(0.0));
+  REQUIRE(flux[1][1] == Approx(0.3*6.));
+  REQUIRE(flux[1][8] == Approx(0.4*6.));
+  #endif
 }
