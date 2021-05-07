@@ -493,15 +493,15 @@ TEST_CASE("av_flux")
   for (int i = 0; i < 9; ++i) flux[0][i] = 1.;
   cartdg::get_av_flux(2, 3)(flux[0], visc[0], 2, basis, settings);
 
-  REQUIRE(flux[0][0] == Approx(0.2*6.));
-  REQUIRE(flux[0][1] == Approx(0.1*6.));
-  REQUIRE(flux[0][2] == Approx(0.0*6.));
-  REQUIRE(flux[0][3] == Approx(0.1*6.));
-  REQUIRE(flux[0][4] == Approx(0.05*6.));
-  REQUIRE(flux[0][5] == Approx(0.0*6.));
+  REQUIRE(flux[0][0] == Approx(0.2*1.5));
+  REQUIRE(flux[0][1] == Approx(0.1*1.5));
+  REQUIRE(flux[0][2] == Approx(0.0*1.5));
+  REQUIRE(flux[0][3] == Approx(0.1*1.5));
+  REQUIRE(flux[0][4] == Approx(0.05*1.5));
+  REQUIRE(flux[0][5] == Approx(0.0*1.5));
 
   REQUIRE(flux[1][0] == Approx(0.0));
-  REQUIRE(flux[1][1] == Approx(0.3*6.));
-  REQUIRE(flux[1][8] == Approx(0.4*6.));
+  REQUIRE(flux[1][1] == Approx(0.3*1.5));
+  REQUIRE(flux[1][8] == Approx(0.4*1.5));
   #endif
 }
