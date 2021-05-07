@@ -10,6 +10,7 @@ namespace cartdg
 template <int n_qpoint, int row_size>
 double indicator(double* read, double* weights, double* ortho)
 {
+  #if 0
   double log_rat = std::numeric_limits<double>::lowest();
   for (int stride = n_qpoint/row_size, n_rows = 1; n_rows < n_qpoint; stride /= row_size, n_rows *= row_size)
   {
@@ -42,6 +43,9 @@ double indicator(double* read, double* weights, double* ortho)
   if (log_rat < ramp_center - ramp_width/2.) return 0;
   else if (log_rat > ramp_center + ramp_width/2.) return 1.;
   else return 0.5*(1. + std::sin(M_PI*(log_rat - ramp_center)/ramp_width));
+  #else
+  return 1.;
+  #endif
 }
 
 }
