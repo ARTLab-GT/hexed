@@ -5,6 +5,8 @@
 #include <get_local_cpg_euler.hpp>
 #include <get_neighbor_cpg_euler.hpp>
 #include <get_gbc_cpg_euler.hpp>
+#include <get_req_visc_cpg_euler.hpp>
+#include <get_cont_visc_cpg_euler.hpp>
 #include <get_local_derivative.hpp>
 #include <get_neighbor_derivative.hpp>
 #include <get_neighbor_av.hpp>
@@ -270,6 +272,16 @@ void Grid::execute_neighbor(Kernel_settings& settings)
   get_neighbor_cpg_euler(n_dim, basis.rank)(neighbor_connections_r().data(), neighbor_connections_w().data(), 
                                             n_neighb_con().data(), basis.node_weights(), settings);
   get_gbc_cpg_euler(n_dim, basis.rank)(ghost_bound_conds, state_r(), state_w(), basis.node_weights()(0), settings);
+}
+
+void Grid::execute_req_visc(Kernel_settings& settings)
+{
+  get_req_visc_cpg_euler(n_dim, basis.rank)(state_r(), visc.data(), n_elem, basis, settings);
+}
+
+void Grid::execute_cont_visc(Kernel_settings& settings)
+{
+  get_cont_visc_cpg_euler(n_dim, basis.rank)(visc_neighbor_connections().data(), n_neighb_con().data(), settings);
 }
 
 void Grid::execute_local_derivative(int i_var, int i_axis, Kernel_settings& settings)
