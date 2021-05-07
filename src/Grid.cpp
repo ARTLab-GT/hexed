@@ -15,7 +15,7 @@ namespace cartdg
 {
 
 Grid::Grid(int n_var_arg, int n_dim_arg, int n_elem_arg, double mesh_size_arg, Basis& basis_arg)
-: n_var(n_var_arg), n_dim(n_dim_arg), n_elem(n_elem_arg), mesh_size(mesh_size_arg),
+: n_var(n_var_arg), n_dim(n_dim_arg), n_vertices(std::pow(2, n_dim)), n_elem(n_elem_arg), mesh_size(mesh_size_arg),
 basis(basis_arg), iter(0), time(0.), i_rk_stage(0), i_read(0), i_write(1)
 {
   n_qpoint = 1;
@@ -27,11 +27,13 @@ basis(basis_arg), iter(0), time(0.), i_rk_stage(0), i_read(0), i_write(1)
   n_dof = n_qpoint*n_var;
   for (int i = 0; i < (int)state_storage.size(); ++i) state_storage[i].resize(n_dof*n_elem, 0.);
   derivs.resize(n_elem*n_qpoint, 0.);
+  visc.resize(n_elem*n_vertices, 0.);
   pos.resize(n_elem*n_dim, 0);
   for (int i_dim = 0; i_dim < 3*n_dim; ++i_dim)
   {
     neighbor_storage.emplace_back();
     deriv_neighbor_storage.emplace_back();
+    visc_neighbor_storage.emplace_back();
   }
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
@@ -67,6 +69,16 @@ std::vector<double**> Grid::deriv_neighbor_connections()
   for (int i_dim = 0; i_dim < n_dim; ++i_dim)
   {
     connections.push_back(deriv_neighbor_storage[i_dim].data());
+  }
+  return connections;
+}
+
+std::vector<double**> Grid::visc_neighbor_connections()
+{
+  std::vector<double**> connections;
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+  {
+    connections.push_back(visc_neighbor_storage[i_dim].data());
   }
   return connections;
 }
@@ -167,6 +179,7 @@ void Grid::add_connection(int i_elem0, int i_elem1, int i_dim)
   for (int i_elem : {i_elem0, i_elem1})
   {
     deriv_neighbor_storage[i_dim].push_back(derivs.data() + n_qpoint*i_elem);
+    visc_neighbor_storage[i_dim].push_back(visc.data() + n_vertices*i_elem);
   }
 }
 

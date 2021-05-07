@@ -19,6 +19,7 @@ class Grid
   public:
   int n_var;
   int n_dim;
+  int n_vertices;
   int n_qpoint;
   int n_dof;
   int n_elem;
@@ -26,6 +27,8 @@ class Grid
   std::vector<std::vector<double*>> neighbor_storage;
   std::vector<double> derivs;
   std::vector<std::vector<double*>> deriv_neighbor_storage;
+  std::vector<double> visc;
+  std::vector<std::vector<double*>> visc_neighbor_storage;
   std::vector<int> viscous_inds;
   std::vector<int> pos;
   double mesh_size;
@@ -44,6 +47,7 @@ class Grid
   std::vector<double**> neighbor_connections_r(); // FIXME: return a pointer
   std::vector<double**> neighbor_connections_w();
   std::vector<double**> deriv_neighbor_connections();
+  std::vector<double**> visc_neighbor_connections();
   std::vector<int> n_neighb_con();
   virtual std::vector<double> get_pos(int i_elem);
   virtual double jacobian_det(int i_elem, int i_qpoint);
