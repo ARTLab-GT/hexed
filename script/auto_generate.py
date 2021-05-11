@@ -42,51 +42,66 @@ os.mkdir("kernels")
 os.mkdir("kernels/include")
 os.mkdir("kernels/src")
 
+if "benchmark" in os.listdir("."):
+    shutil.rmtree("kernels")
+os.mkdir("benchmark")
+
 header_names = []
 for dir_group in os.walk("../kernels"):
     for file_name in dir_group[2]:
         if file_name[-4:] == ".hpp":
             header_names.append(dir_group[0] + "/" + file_name)
 
+avail_cmds = ["LOOKUP", "BENCHMARK"]
+
 source_names = []
+benchmark_text = ""
 for file_name in header_names:
     with open(file_name, "r") as in_file:
         text = in_file.read()
-    templates = re.split("AUTOGENERATE .*LOOKUP.*", text)[1:]
+    templates = re.split("AUTOGENERATE", text)[1:]
     for template in templates:
-        params, template = pop("\n*template *<([^\n]*)>", template)
+        cmds = []
+        for cmd in avail_cmds:
+            match, template = pop(cmd, template)
+            if match is not None:
+                cmds.append(cmd)
+        params, template = pop("\ntemplate *<([^\n]*)>", template)
         params = re.split(" *, *", params.group(1))
-        signature, template  = pop("\n*(.*?[)])", template)
-        signature = re.sub("\n *", " ", signature.groups(1)[0])
-        signature = re.sub(" \w*?(,|\))", r"\1", signature)
-        hpp_include = ""
-        cpp_include = f"""
+        full_sig, _  = pop("\n*(.*?[)])", template)
+        full_sig = re.sub("\n *", " ", full_sig.groups(1)[0])
+        decl = re.sub(" \w*?(,|\))", r"\1", full_sig)
+        call = re.sub("( |\()[^ ^,^)]+ ", r"\1", full_sig)
+        call = re.sub("^ *", "", call)
+        name = re.search(" (\w*)\(", decl).groups(1)[0]
+        if "LOOKUP" in cmds:
+            hpp_include = ""
+            cpp_include = f"""
 #include <stdexcept>
 #include <{file_name[11:]}>
 """[1:]
-        name = re.search(" (\w*)\(", signature).groups(1)[0]
-        cpp_include += f'#include "get_{name}.hpp"\n'
-        hpp_text = """
+            cpp_include += f'#include "get_{name}.hpp"\n'
+            hpp_text = """
 class Basis;
 class Grid;
 class Kernel_settings;
 
 """[1:]
-        hpp_text += f"typedef "
-        hpp_text += re.sub(" \w*\(", f" (*{name}_type)(", signature) + ";\n\n"
-        cpp_text = f"""
+            hpp_text += f"typedef "
+            hpp_text += re.sub(" \w*\(", f" (*{name}_type)(", decl) + ";\n\n"
+            cpp_text = f"""
 {name}_type get_{name}(int n_dim, int row_size)
 {{
   {name}_type {name}s [{max_dim}][{max_rank - 1}]
   {{
 """
-        for dim in range(1, max_dim + 1):
-            for row_size in range(2, max_rank + 1):
-                cpp_text += f"    {name}<"
-                for i_param in range(len(params)):
-                    cpp_text += f"{param_funcs[params[i_param]](dim, row_size)}, "
-                cpp_text = cpp_text[:-2] + ">,\n"
-        cpp_text += f"""  }};
+            for dim in range(1, max_dim + 1):
+                for row_size in range(2, max_rank + 1):
+                    cpp_text += f"    {name}<"
+                    for i_param in range(len(params)):
+                        cpp_text += f"{param_funcs[params[i_param]](dim, row_size)}, "
+                    cpp_text = cpp_text[:-2] + ">,\n"
+            cpp_text += f"""  }};
 
   if ((n_dim > 0) && (n_dim <= {max_dim}) && (row_size >= 2) && (row_size <= {max_rank}))
   {{
@@ -94,14 +109,17 @@ class Kernel_settings;
   }}
   else throw std::runtime_error("Kernel not available.");
 }}"""
-        hpp_text += f"{name}_type get_{name}(int n_dim, int row_size);"
-        hpp_text = format_file_text(hpp_include, hpp_text)
-        cpp_text = format_file_text(cpp_include, cpp_text)
-        source_names.append(f"get_{name}.cpp")
-        with open(f"kernels/include/get_{name}.hpp", "w") as out_file:
-            out_file.write(hpp_text)
-        with open(f"kernels/src/get_{name}.cpp", "w") as out_file:
-            out_file.write(cpp_text)
+            hpp_text += f"{name}_type get_{name}(int n_dim, int row_size);"
+            hpp_text = format_file_text(hpp_include, hpp_text)
+            cpp_text = format_file_text(cpp_include, cpp_text)
+            source_names.append(f"get_{name}.cpp")
+            with open(f"kernels/include/get_{name}.hpp", "w") as out_file:
+                out_file.write(hpp_text)
+            with open(f"kernels/src/get_{name}.cpp", "w") as out_file:
+                out_file.write(cpp_text)
+
+        if "BENCHMARK" in cmds:
+            benchmark_text += call + ";\n"
 
 cmake_text = "target_sources(kernels PRIVATE\n"
 for source in source_names:
@@ -109,6 +127,9 @@ for source in source_names:
 cmake_text += ")\n"
 with open("kernels/src/CMakeLists.txt", "w") as cmake_file:
     cmake_file.write(cmake_text)
+
+with open("benchmark/main.cpp", "w") as out_file:
+    out_file.write(benchmark_text)
 
 ### Calculate bases ###
 
