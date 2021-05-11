@@ -52,7 +52,7 @@ source_names = []
 for file_name in header_names:
     with open(file_name, "r") as in_file:
         text = in_file.read()
-    templates = text.split("AUTOGENERATE")[1:]
+    templates = re.split("AUTOGENERATE .*LOOKUP.*", text)[1:]
     for template in templates:
         params, template = pop("\n*template *<([^\n]*)>", template)
         params = re.split(" *, *", params.group(1))

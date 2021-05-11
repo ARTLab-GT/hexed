@@ -11,7 +11,7 @@
 namespace cartdg
 {
 
-// AUTOGENERATE
+// AUTOGENERATE LOOKUP
 template<int n_var, int n_qpoint, int row_size>
 void neighbor_cpg_euler(double*** connections_r, double*** connections_w, int* n_connections,
                         const Eigen::VectorXd weights_1d, Kernel_settings& settings)

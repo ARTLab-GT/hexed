@@ -10,7 +10,7 @@
 namespace cartdg
 {
 
-// AUTOGENERATE
+// AUTOGENERATE LOOKUP
 template<int n_var, int n_qpoint, int row_size>
 void req_visc_cpg_euler(double* read, double* visc, int n_elem, Basis& basis, Kernel_settings& settings)
 {

@@ -9,7 +9,7 @@
 namespace cartdg
 {
 
-// AUTOGENERATE
+// AUTOGENERATE LOOKUP
 template <int n_var, int n_qpoint, int row_size>
 void gbc_av(std::vector<Ghost_boundary_condition*>& ghost_bound_conds,
             double* read, double* write,
