@@ -105,7 +105,7 @@ double Solution::update(double cfl_by_stable_cfl)
     )
   }
 
-  #if 1
+  #if 0
   int n_iter = 4;
   double visc_dt = dt/n_iter;
   FOR_ALL_GRIDS // FIXME: incorporate_jacobian
