@@ -1,7 +1,33 @@
 #include <iostream>
+#include <stdexcept>
+#include <string>
+#include <cmath>
+#include <cstdlib>
 
-int main
+#include <Gauss_lobatto.hpp>
+#include <Kernel_settings.hpp>
+
+int main(int argc, char** argv)
 {
+
+if (argc != 4) throw std::runtime_error("Wrong number of arguments. 3 required.");
+
+int dim = std::stoi(argv[1]);
+int row_size = std::stoi(argv[2]);
+int n_elem_side = std::stoi(argv[3]);
+int n_elem = std::pow(n_elem_side, dim);
+int n_qpoint = std::pow(row_size, dim);
+int n_var = dim + 2;
+int n_total = n_var*n_qpoint*n_elem;
+
+std::vector<double> read_vec (n_total);
+std::vector<double> write_vec (n_total, 0.);
+for (int i = 0; i < n_total)
+{
+  read_vec[i] = (rand(i)%1000)/1000.;
+}
+double* read = read_vec.data();
+double* write = write_vec.data();
 
 // AUTOGENERATE
 
