@@ -12,15 +12,18 @@ max_rank = int(sys.argv[2])
 
 ### generate template lookup tables ###
 
-def format_file_text(include, text):
+def format_file_text(include, text, namespace=True):
     if len(include) > 0:
         include = "\n" + include
-    return f"""/*
+    output = f"""/*
 This file was generated automatically by script/auto_generate.py, which CMake executes
 during the build process. Please do not attempt to modify it directly. Instead, modify
 script/auto_generate.py and rerun CMake.
 */
-{include}
+{include}"""
+
+    if namespace:
+        text = f"""
 namespace cartdg
 {{
 
@@ -28,6 +31,8 @@ namespace cartdg
 
 }}
 """
+    output += text
+    return output
 
 def pop(regex, string):
     return re.search(regex, string, re.DOTALL), re.sub(regex, "", string)
@@ -72,6 +77,7 @@ for file_name in header_names:
         full_sig, _  = pop("\n*(.*?[)])", template)
         full_sig = re.sub("\n *", " ", full_sig.groups(1)[0])
         decl = re.sub(" \w*?(,|\))", r"\1", full_sig)
+        decl = re.sub("^ *", "", decl)
         call = re.sub("( |\()[^ ^,^)]+ ", r"\1", full_sig)
         call = re.sub("^ *", "", call)
         name = re.search(" (\w*)\(", decl).groups(1)[0]
@@ -95,7 +101,7 @@ class Kernel_settings;
 {{
   {name}_type {name}s [{max_dim}][{max_rank - 1}]
   {{
-"""
+"""[1:]
             for dim in range(1, max_dim + 1):
                 for row_size in range(2, max_rank + 1):
                     cpp_text += f"    {name}<"
@@ -132,7 +138,7 @@ with open("kernels/src/CMakeLists.txt", "w") as cmake_file:
 
 with open("../script/benchmark.cpp.in", "r") as in_file:
     benchmark_text = re.sub("// *AUTOGENERATE", benchmark_text[:-1], in_file.read())
-benchmark_text = format_file_text(benchmark_include, benchmark_text)
+benchmark_text = format_file_text(benchmark_include, benchmark_text, namespace=False)
 with open("benchmark/main.cpp", "w") as out_file:
     out_file.write(benchmark_text)
 
