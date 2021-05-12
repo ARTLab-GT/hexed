@@ -43,7 +43,7 @@ os.mkdir("kernels/include")
 os.mkdir("kernels/src")
 
 if "benchmark" in os.listdir("."):
-    shutil.rmtree("kernels")
+    shutil.rmtree("benchmark")
 os.mkdir("benchmark")
 
 header_names = []
@@ -56,6 +56,7 @@ avail_cmds = ["LOOKUP", "BENCHMARK"]
 
 source_names = []
 benchmark_text = ""
+benchmark_include = ""
 for file_name in header_names:
     with open(file_name, "r") as in_file:
         text = in_file.read()
@@ -120,6 +121,7 @@ class Kernel_settings;
 
         if "BENCHMARK" in cmds:
             benchmark_text += call + ";\n"
+            benchmark_include += f"#include <get_{name}.hpp>\n"
 
 cmake_text = "target_sources(kernels PRIVATE\n"
 for source in source_names:
@@ -128,6 +130,9 @@ cmake_text += ")\n"
 with open("kernels/src/CMakeLists.txt", "w") as cmake_file:
     cmake_file.write(cmake_text)
 
+with open("../script/benchmark.cpp.in", "r") as in_file:
+    benchmark_text = re.sub("// *AUTOGENERATE", benchmark_text[:-1], in_file.read())
+benchmark_text = format_file_text(benchmark_include, benchmark_text)
 with open("benchmark/main.cpp", "w") as out_file:
     out_file.write(benchmark_text)
 
