@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import subprocess
+import re
 
 dim = 3
 row_size = 5
@@ -25,13 +26,25 @@ print(output)
 lines = output.split("\n")
 names = []
 times = []
+groups = {}
 for line in lines:
     if len(line) > 0:
         name, rest = line.split(":")
-        names.append(name)
         time = float(rest.split("s")[0])/n_elem
+        if "(" in name:
+            parts = re.split(r" ?[()]", name)
+            name = parts[0]
+            args = re.split(" *, *", parts[1])
+            if args[0] not in groups.keys():
+                groups[args[0]] = ([], [])
+            groups[args[0]][0].append(time*int(args[1]))
+            groups[args[0]][1].append(name)
+        names.append(name)
         times.append(time)
 plt.bar(range(len(times)), times)
 plt.xticks(range(len(times)), names, rotation=20)
 plt.ylabel("Execution time per element (s)")
 plt.show()
+for group in groups.keys():
+    plt.pie(groups[group][0], labels=groups[group][1], normalize=True)
+    plt.show()

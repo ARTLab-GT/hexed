@@ -57,7 +57,7 @@ for dir_group in os.walk("../kernels"):
         if file_name[-4:] == ".hpp":
             header_names.append(dir_group[0] + "/" + file_name)
 
-avail_cmds = ["LOOKUP", "BENCHMARK"]
+avail_cmds = ["LOOKUP", "BENCHMARK(\([\w, ]*?\))?"]
 
 source_names = []
 benchmark_text = ""
@@ -71,7 +71,7 @@ for file_name in header_names:
         for cmd in avail_cmds:
             match, template = pop(cmd, template)
             if match is not None:
-                cmds.append(cmd)
+                cmds.append(match.group(0))
         params, template = pop("\ntemplate *<([^\n]*)>", template)
         params = re.split(" *, *", params.group(1))
         full_sig, _  = pop("\n*(.*?[)])", template)
@@ -125,7 +125,12 @@ class Kernel_settings;
             with open(f"kernels/src/get_{name}.cpp", "w") as out_file:
                 out_file.write(cpp_text)
 
-        if "BENCHMARK" in cmds:
+        benchmark_cmd = [cmd for cmd in cmds if "BENCHMARK" in cmd]
+        if len(benchmark_cmd) > 0:
+            args = re.search("\(.*\)", benchmark_cmd[0])
+            identifier = name
+            if args:
+                identifier += " " + args.group(0)
             get_call = re.sub(r"\(", "(dim, row_size)(", call)
             newline = r"\\n"
             benchmark_text += f"""
@@ -134,7 +139,7 @@ class Kernel_settings;
   cartdg::get_{get_call};
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start);
-  printf("{name}: %e s{newline}", double(duration.count())*1e-9);
+  printf("{identifier}: %e s{newline}", double(duration.count())*1e-9);
 }}
 """[1:]
             benchmark_include += f"#include <get_{name}.hpp>\n"

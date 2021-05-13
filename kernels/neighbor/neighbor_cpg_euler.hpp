@@ -12,7 +12,7 @@
 namespace cartdg
 {
 
-// AUTOGENERATE LOOKUP BENCHMARK
+// AUTOGENERATE LOOKUP BENCHMARK(regular, 3)
 template<int n_var, int n_qpoint, int row_size>
 void neighbor_cpg_euler(double*** connections_r, double*** connections_w, int* n_connections,
                         Basis& basis, Kernel_settings& settings)
