@@ -3,13 +3,14 @@ import subprocess
 
 dim = 3
 row_size = 5
-n_side = int(3e1)
+n_side = int(40)
 n_elem = n_side**dim
 
 print(f"""
 Dimension: {dim}
 Row size: {row_size}
 Number of elements: {n_side}**{dim} = {n_elem:g}
+Array size: {row_size**dim*n_elem:g}
 
 Times:
 """[1:-1])
