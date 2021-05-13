@@ -134,7 +134,7 @@ class Kernel_settings;
   cartdg::get_{get_call};
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start);
-  printf("{name}: %e ns{newline}", double(duration.count()));
+  printf("{name}: %e s{newline}", double(duration.count())*1e-9);
 }}
 """[1:]
             benchmark_include += f"#include <get_{name}.hpp>\n"
