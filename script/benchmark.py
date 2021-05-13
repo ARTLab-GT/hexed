@@ -44,7 +44,8 @@ for line in lines:
 plt.bar(range(len(times)), times)
 plt.xticks(range(len(times)), names, rotation=20)
 plt.ylabel("Execution time per element (s)")
-plt.show()
 for group in groups.keys():
-    plt.pie(groups[group][0], labels=groups[group][1], normalize=True)
-    plt.show()
+    plt.figure()
+    plt.pie(groups[group][0], labels=groups[group][1], normalize=True, autopct="%d%%")
+    plt.title("Fraction of time for 3-stage RK cycle: " + group)
+plt.show()
