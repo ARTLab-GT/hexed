@@ -3,6 +3,7 @@
 #include <string>
 #include <cmath>
 #include <cstdlib>
+#include <chrono>
 
 #include <Gauss_lobatto.hpp>
 #include <Kernel_settings.hpp>

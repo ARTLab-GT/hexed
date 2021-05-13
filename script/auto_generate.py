@@ -127,7 +127,16 @@ class Kernel_settings;
 
         if "BENCHMARK" in cmds:
             get_call = re.sub(r"\(", "(dim, row_size)(", call)
-            benchmark_text += f"cartdg::get_{get_call};\n"
+            newline = r"\\n"
+            benchmark_text += f"""
+{{
+  auto start = std::chrono::high_resolution_clock::now();
+  cartdg::get_{get_call};
+  auto stop = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start);
+  printf("{name}: %e ns{newline}", double(duration.count()));
+}}
+"""[1:]
             benchmark_include += f"#include <get_{name}.hpp>\n"
 
 cmake_text = "target_sources(kernels PRIVATE\n"
