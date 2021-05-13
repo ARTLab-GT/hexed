@@ -6,9 +6,9 @@
 namespace cartdg
 {
 
+// AUTOGENERATE LOOKUP BENCHMARK
 template<int n_var, int n_qpoint, int row_size>
-void copy(double * read, double * write, int n_elem,
-          const Eigen::MatrixXd& diff_mat)
+void copy(double* read, double* write, int n_elem)
 {
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < n_elem*n_var; ++i_elem)
