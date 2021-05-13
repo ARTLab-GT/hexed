@@ -10,7 +10,7 @@ print(f"""
 Dimension: {dim}
 Row size: {row_size}
 Number of elements: {n_side}**{dim} = {n_elem:g}
-Array size: {row_size**dim*n_elem:g}
+Approximate memory requirement: {row_size**dim*n_elem*8*2:g} bytes
 
 Times:
 """[1:-1])
