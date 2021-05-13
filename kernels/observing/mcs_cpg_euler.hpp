@@ -7,7 +7,7 @@
 namespace cartdg
 {
 
-// AUTOGENERATE LOOKUP BENCHMARK
+// AUTOGENERATE LOOKUP BENCHMARK(regular, 1)
 template<int n_var, int n_qpoint, int row_size>
 double mcs_cpg_euler(double* read, int n_elem, Kernel_settings& settings)
 {

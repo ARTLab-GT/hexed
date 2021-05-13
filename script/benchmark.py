@@ -3,7 +3,7 @@ import subprocess
 import re
 
 dim = 3
-row_size = 5
+row_size = 6
 n_side = 40
 n_elem = n_side**dim
 
@@ -36,9 +36,11 @@ for line in lines:
             name = parts[0]
             args = re.split(" *, *", parts[1])
             if args[0] not in groups.keys():
-                groups[args[0]] = ([], [])
-            groups[args[0]][0].append(time*int(args[1]))
+                groups[args[0]] = [[], [], 0]
+            cycle_time = time*int(args[1])
+            groups[args[0]][0].append(cycle_time)
             groups[args[0]][1].append(name)
+            groups[args[0]][2] += cycle_time
         names.append(name)
         times.append(time)
 plt.bar(range(len(times)), times)
@@ -47,5 +49,5 @@ plt.ylabel("Execution time per element (s)")
 for group in groups.keys():
     plt.figure()
     plt.pie(groups[group][0], labels=groups[group][1], normalize=True, autopct="%d%%")
-    plt.title("Fraction of time for 3-stage RK cycle: " + group)
+    plt.title("Fraction of time for 3-stage RK cycle: " + group + f"\nTotal: {groups[group][2]:.1e} s")
 plt.show()
