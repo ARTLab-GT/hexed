@@ -3,7 +3,7 @@ import subprocess
 
 dim = 3
 row_size = 5
-n_side = int(40)
+n_side = 40
 n_elem = n_side**dim
 
 print(f"""
