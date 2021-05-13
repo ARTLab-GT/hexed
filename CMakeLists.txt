@@ -18,7 +18,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g -DDEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
 set(CMAKE_CXX_FLAGS "-Wall")
 
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "script/auto_generate.py")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "script/auto_generate.py;script/benchmark.cpp.in")
 
 # determine whether to compile with sanitizers
 option(sanitize "If ON, compile with sanitizer flags." OFF)
@@ -78,6 +78,11 @@ target_include_directories(kernels PRIVATE ${CMAKE_SOURCE_DIR}/kernels ${CMAKE_S
 target_include_directories(kernels PUBLIC $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/kernels/include>)
 add_subdirectory(${CMAKE_BINARY_DIR}/kernels/src)
 target_link_libraries(cartdg PRIVATE kernels)
+
+# add executable for benchmarking
+add_executable(benchmark benchmark/main.cpp)
+set_property(TARGET benchmark PROPERTY RUNTIME_OUTPUT_DIRECTORY benchmark)
+target_link_libraries(benchmark PRIVATE cartdg kernels tecio)
 
 install(TARGETS cartdg DESTINATION lib EXPORT cartdgTargets)
 install(DIRECTORY include/ DESTINATION include/cartdg)

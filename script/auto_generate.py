@@ -126,7 +126,8 @@ class Kernel_settings;
                 out_file.write(cpp_text)
 
         if "BENCHMARK" in cmds:
-            benchmark_text += call + ";\n"
+            get_call = re.sub(r"\(", "(dim, row_size)(", call)
+            benchmark_text += f"cartdg::get_{get_call};\n"
             benchmark_include += f"#include <get_{name}.hpp>\n"
 
 cmake_text = "target_sources(kernels PRIVATE\n"
