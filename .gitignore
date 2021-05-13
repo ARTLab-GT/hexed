@@ -1,5 +1,4 @@
 build*
-benchmark*.txt
 src/Solution__get_kernel.cpp
 src/Gauss_lobatto.cpp
 script/__pycache__/
