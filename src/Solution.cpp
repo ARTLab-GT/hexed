@@ -104,14 +104,22 @@ double Solution::update(double cfl_by_stable_cfl)
       grid->execute_runge_kutta_stage();
     )
   }
-  int n_iter = 0;
+
+  #if 1
+  int n_iter = 4;
+  double visc_dt = dt/n_iter;
+  FOR_ALL_GRIDS // FIXME: incorporate_jacobian
+  (
+    kernel_settings.d_pos = grid->mesh_size;
+    grid->execute_req_visc(kernel_settings);
+  )
+  FOR_ALL_GRIDS
+  (
+    kernel_settings.d_pos = grid->mesh_size;
+    grid->execute_cont_visc(kernel_settings);
+  )
   for (int i_iter = 0; i_iter < n_iter; ++i_iter)
   {
-    dt = std::numeric_limits<double>::max();
-    FOR_ALL_GRIDS // FIXME: incorporate_jacobian
-    (
-      dt = std::min<double>(dt, grid->stable_time_step(cfl_by_stable_cfl, kernel_settings));
-    )
     for (int i_rk = 0; i_rk < 3; ++i_rk)
     {
       FOR_ALL_GRIDS
@@ -129,29 +137,32 @@ double Solution::update(double cfl_by_stable_cfl)
         {
           FOR_ALL_GRIDS
           (
-            kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
+            kernel_settings.d_t_by_d_pos = visc_dt/grid->mesh_size;
+            kernel_settings.d_pos = grid->mesh_size;
             grid->execute_local_derivative(i_var, i_axis, kernel_settings);
           )
           FOR_ALL_GRIDS
           (
-            kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
+            kernel_settings.d_t_by_d_pos = visc_dt/grid->mesh_size;
+            kernel_settings.d_pos = grid->mesh_size;
             grid->execute_neighbor_derivative(i_var, i_axis, kernel_settings);
           )
           FOR_ALL_GRIDS
           (
-            for (int i_data = 0; i_data < grid->n_qpoint*grid->n_elem; ++i_data)
-            {
-              grid->derivs[i_data] *= 1.e-3;
-            }
+            kernel_settings.d_t_by_d_pos = visc_dt/grid->mesh_size;
+            kernel_settings.d_pos = grid->mesh_size;
+            grid->execute_av_flux(kernel_settings);
           )
           FOR_ALL_GRIDS
           (
-            kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
+            kernel_settings.d_t_by_d_pos = visc_dt/grid->mesh_size;
+            kernel_settings.d_pos = grid->mesh_size;
             grid->execute_local_av(i_var, i_axis, kernel_settings);
           )
           FOR_ALL_GRIDS
           (
-            kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
+            kernel_settings.d_t_by_d_pos = visc_dt/grid->mesh_size;
+            kernel_settings.d_pos = grid->mesh_size;
             grid->execute_neighbor_av(i_var, i_axis, kernel_settings);
           )
         }
@@ -162,6 +173,7 @@ double Solution::update(double cfl_by_stable_cfl)
       }
     }
   }
+  #endif
   FOR_ALL_GRIDS
   (
     grid->time += dt;

@@ -16,7 +16,7 @@ void jump(double** connections_r, double** connections_w, int n_con,
           const Eigen::VectorXd weights_1d, Kernel_settings& settings)
 {
   const int n_face_qpoint = n_qpoint/row_size;
-  double weight = weights_1d(0);
+  double weight = weights_1d(0)*settings.d_pos;
   int stride=n_face_qpoint;
   for (int j_axis = 0; j_axis < i_axis; ++j_axis) stride /= row_size;
 

@@ -3,8 +3,11 @@
 #include <cartdgConfig.hpp>
 #include <get_local_cpg_euler.hpp>
 #include <get_local_deformed_cpg_euler.hpp>
+#include <get_req_visc_cpg_euler.hpp>
+#include <get_av_flux.hpp>
 #include <local/derivative.hpp>
 #include <Gauss_lobatto.hpp>
+#include <static_math.hpp>
 
 class Identity_basis : public cartdg::Basis
 {
@@ -444,4 +447,61 @@ TEST_CASE("derivative")
       }
     }
   }
+}
+
+TEST_CASE("req_visc")
+{
+  const int rank = MAX_BASIS_RANK;
+  const int n_qpoint = cartdg::static_math::pow(rank, 3);
+  cartdg::Gauss_lobatto basis (rank);
+  cartdg::Kernel_settings settings;
+  settings.d_pos = 0.5;
+  double read [2][5][n_qpoint];
+  double visc [2][2][2][2] {};
+  for (int i_elem = 0; i_elem < 2; ++i_elem)
+  {
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
+    {
+      read[i_elem][0][i_qpoint] = 0.;
+      read[i_elem][1][i_qpoint] = 0.;
+      read[i_elem][2][i_qpoint] = 0.;
+      read[i_elem][3][i_qpoint] = 1.225;
+      read[i_elem][4][i_qpoint] = 101325/0.4;
+    }
+  }
+  read[1][3][3] = 1.5; // set an anomaly to trip the indicator in element 1
+  cartdg::get_req_visc_cpg_euler(3, rank)(read[0][0], visc[0][0][0], 2, basis, settings);
+  REQUIRE(visc[0][0][0][0] == 0.);
+  REQUIRE(visc[0][1][1][1] == 0.);
+  REQUIRE(visc[1][0][0][0] == Approx(0.5*340.29/(rank - 1.)).margin(0.01));
+  REQUIRE(visc[1][1][1][1] == Approx(0.5*340.29/(rank - 1.)).margin(0.01));
+}
+
+TEST_CASE("av_flux")
+{
+  #if MAX_BASIS_RANK >= 3
+  cartdg::Gauss_lobatto basis (3);
+  cartdg::Kernel_settings settings;
+  settings.d_pos = 0.5;
+  settings.d_t_by_d_pos = 3.;
+  double flux [2][9] {};
+  double visc [2][4] {};
+  visc[0][0] = 0.2;
+  flux[1][1] = 0.3;
+  flux[1][8] = 0.4;
+  for (int i = 0; i < 4; ++i) visc[1][i] = 1.;
+  for (int i = 0; i < 9; ++i) flux[0][i] = 1.;
+  cartdg::get_av_flux(2, 3)(flux[0], visc[0], 2, basis, settings);
+
+  REQUIRE(flux[0][0] == Approx(0.2*1.5));
+  REQUIRE(flux[0][1] == Approx(0.1*1.5));
+  REQUIRE(flux[0][2] == Approx(0.0*1.5));
+  REQUIRE(flux[0][3] == Approx(0.1*1.5));
+  REQUIRE(flux[0][4] == Approx(0.05*1.5));
+  REQUIRE(flux[0][5] == Approx(0.0*1.5));
+
+  REQUIRE(flux[1][0] == Approx(0.0));
+  REQUIRE(flux[1][1] == Approx(0.3*1.5));
+  REQUIRE(flux[1][8] == Approx(0.4*1.5));
+  #endif
 }

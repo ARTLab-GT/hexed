@@ -1,5 +1,5 @@
-#ifndef CARTDG_COPY_CPG_EULER_HPP_
-#define CARTDG_COPY_CPG_EULER_HPP_
+#ifndef CARTDG_NEIGHBOR_CPG_EULER_HPP_
+#define CARTDG_NEIGHBOR_CPG_EULER_HPP_
 
 #include <Eigen/Dense>
 

@@ -16,6 +16,7 @@ void derivative(double* read, double* write, int n_elem, int i_var_read, int i_v
                 Basis& basis, Kernel_settings& settings)
 {
   Eigen::Matrix<double, row_size, row_size> diff_mat = basis.diff_mat();
+  double d_pos = settings.d_pos;
 
   int stride = n_qpoint/row_size;
   int n_rows = 1;
@@ -37,7 +38,7 @@ void derivative(double* read, double* write, int n_elem, int i_var_read, int i_v
         {
           row_r(i_qpoint) = read[(i_elem*n_var_read + i_var_read)*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
         }
-        Eigen::Matrix<double, row_size, 1> row_w = diff_mat*row_r;
+        Eigen::Matrix<double, row_size, 1> row_w = diff_mat*row_r/d_pos;
         for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
         {
           int w_ind = (i_elem*n_var_write + i_var_write)*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride;

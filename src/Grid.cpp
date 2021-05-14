@@ -5,17 +5,20 @@
 #include <get_local_cpg_euler.hpp>
 #include <get_neighbor_cpg_euler.hpp>
 #include <get_gbc_cpg_euler.hpp>
+#include <get_req_visc_cpg_euler.hpp>
+#include <get_cont_visc_cpg_euler.hpp>
 #include <get_local_derivative.hpp>
 #include <get_neighbor_derivative.hpp>
-#include <get_neighbor_av.hpp>
+#include <get_av_flux.hpp>
 #include <get_local_av.hpp>
+#include <get_neighbor_av.hpp>
 #include <get_gbc_av.hpp>
 
 namespace cartdg
 {
 
 Grid::Grid(int n_var_arg, int n_dim_arg, int n_elem_arg, double mesh_size_arg, Basis& basis_arg)
-: n_var(n_var_arg), n_dim(n_dim_arg), n_elem(n_elem_arg), mesh_size(mesh_size_arg),
+: n_var(n_var_arg), n_dim(n_dim_arg), n_vertices(std::pow(2, n_dim)), n_elem(n_elem_arg), mesh_size(mesh_size_arg),
 basis(basis_arg), iter(0), time(0.), i_rk_stage(0), i_read(0), i_write(1)
 {
   n_qpoint = 1;
@@ -27,11 +30,13 @@ basis(basis_arg), iter(0), time(0.), i_rk_stage(0), i_read(0), i_write(1)
   n_dof = n_qpoint*n_var;
   for (int i = 0; i < (int)state_storage.size(); ++i) state_storage[i].resize(n_dof*n_elem, 0.);
   derivs.resize(n_elem*n_qpoint, 0.);
+  visc.resize(n_elem*n_vertices, 0.);
   pos.resize(n_elem*n_dim, 0);
   for (int i_dim = 0; i_dim < 3*n_dim; ++i_dim)
   {
     neighbor_storage.emplace_back();
     deriv_neighbor_storage.emplace_back();
+    visc_neighbor_storage.emplace_back();
   }
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
@@ -67,6 +72,16 @@ std::vector<double**> Grid::deriv_neighbor_connections()
   for (int i_dim = 0; i_dim < n_dim; ++i_dim)
   {
     connections.push_back(deriv_neighbor_storage[i_dim].data());
+  }
+  return connections;
+}
+
+std::vector<double**> Grid::visc_neighbor_connections()
+{
+  std::vector<double**> connections;
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+  {
+    connections.push_back(visc_neighbor_storage[i_dim].data());
   }
   return connections;
 }
@@ -136,6 +151,8 @@ void Grid::clear_neighbors()
   for (int i_dim = 0; i_dim < 2*n_dim; ++i_dim)
   {
     neighbor_storage[i_dim].clear();
+    deriv_neighbor_storage[i_dim].clear();
+    visc_neighbor_storage[i_dim].clear();
   }
 }
 
@@ -150,6 +167,7 @@ int Grid::add_element(std::vector<int> position)
     state_storage[i_rk_stage].resize(state_storage[i_rk_stage].size() + n_dof, 0.);
   }
   derivs.resize(derivs.size() + n_qpoint, 0.);
+  visc.resize(visc.size() + n_vertices, 0.);
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) pos.push_back(position[i_dim]);
   return n_elem++;
 }
@@ -167,6 +185,7 @@ void Grid::add_connection(int i_elem0, int i_elem1, int i_dim)
   for (int i_elem : {i_elem0, i_elem1})
   {
     deriv_neighbor_storage[i_dim].push_back(derivs.data() + n_qpoint*i_elem);
+    visc_neighbor_storage[i_dim].push_back(visc.data() + n_vertices*i_elem);
   }
 }
 
@@ -259,6 +278,16 @@ void Grid::execute_neighbor(Kernel_settings& settings)
   get_gbc_cpg_euler(n_dim, basis.rank)(ghost_bound_conds, state_r(), state_w(), basis.node_weights()(0), settings);
 }
 
+void Grid::execute_req_visc(Kernel_settings& settings)
+{
+  get_req_visc_cpg_euler(n_dim, basis.rank)(state_r(), visc.data(), n_elem, basis, settings);
+}
+
+void Grid::execute_cont_visc(Kernel_settings& settings)
+{
+  get_cont_visc_cpg_euler(n_dim, basis.rank)(visc_neighbor_connections().data(), n_neighb_con().data(), settings);
+}
+
 void Grid::execute_local_derivative(int i_var, int i_axis, Kernel_settings& settings)
 {
   get_local_derivative(n_dim, basis.rank)(state_r(), derivs.data(), n_elem, i_var, i_axis, basis, settings);
@@ -268,6 +297,11 @@ void Grid::execute_neighbor_derivative(int i_var, int i_axis, Kernel_settings& s
 {
   int n_con = n_neighb_con()[i_axis];
   get_neighbor_derivative(n_dim, basis.rank)(neighbor_connections_r()[i_axis], deriv_neighbor_connections()[i_axis], n_con, i_var, i_axis, basis.node_weights(), settings);
+}
+
+void Grid::execute_av_flux(Kernel_settings& settings)
+{
+  get_av_flux(n_dim, basis.rank)(derivs.data(), visc.data(), n_elem, basis, settings);
 }
 
 void Grid::execute_local_av(int i_var, int i_axis, Kernel_settings& settings)

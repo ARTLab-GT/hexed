@@ -167,6 +167,14 @@ void Deformed_grid::execute_neighbor(Kernel_settings& settings)
   get_nonpen_cpg_euler(n_dim, basis.rank)(state_r(), state_w(), jacobian.data(), i_elem_wall.data(), i_dim_wall.data(), is_positive_wall.data(), i_elem_wall.size(), basis.node_weights()(0), settings);
 }
 
+void Deformed_grid::execute_req_visc(Kernel_settings& settings)
+{
+}
+
+void Deformed_grid::execute_cont_visc(Kernel_settings& settings)
+{
+}
+
 void Deformed_grid::execute_local_derivative(int i_var, int i_axis, Kernel_settings& settings)
 {
   double* sr = state_r();
@@ -178,6 +186,10 @@ void Deformed_grid::execute_local_derivative(int i_var, int i_axis, Kernel_setti
 }
 
 void Deformed_grid::execute_neighbor_derivative(int i_var, int i_axis, Kernel_settings& settings)
+{
+}
+
+void Deformed_grid::execute_av_flux(Kernel_settings& settings)
 {
 }
 

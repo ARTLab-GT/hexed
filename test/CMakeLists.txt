@@ -14,6 +14,7 @@ test_nonpen.cpp
 test_observing.cpp
 test_sinusoid.cpp
 test_Solution.cpp
+test_static_math.cpp
 test_Vertex.cpp
 )
 target_include_directories(test PRIVATE ${CMAKE_SOURCE_DIR}/kernels)
