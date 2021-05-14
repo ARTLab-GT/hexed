@@ -72,8 +72,7 @@ To run the tests, type `test/test`. To run the demo, type `demo/demo`. This will
 to vizualize the solution. Note: on my machine, demo takes approximately 5 seconds to run in Release mode.
 If you build in Debug mode, it may take a very long time.
 
-Performance data for the kernels can be obtained by navigating to `script/` (from the project root directory)
-and running `python3 benchmark.py`. This will show you a plot of performance data.
+Performance data for the kernels can be visualized by running `python3 benchmark.py` from the build directory.
 
 ## Dependencies
 Eigen must be available in your include path. Tecio must be available in a directory that you may specify.
