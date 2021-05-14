@@ -11,7 +11,7 @@
 namespace cartdg
 {
 
-// AUTOGENERATE
+// AUTOGENERATE LOOKUP
 template <int n_var, int n_qpoint, int row_size>
 void nonpen_cpg_euler(double* read, double* write, double* jacobian, int* i_elem,
                       int* i_dim, int* is_positive_face, int n_bc, double weight,

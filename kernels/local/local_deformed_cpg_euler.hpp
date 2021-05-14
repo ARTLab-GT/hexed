@@ -9,7 +9,7 @@
 namespace cartdg
 {
 
-// AUTOGENERATE
+// AUTOGENERATE LOOKUP
 template<int n_var, int n_qpoint, int row_size>
 void local_deformed_cpg_euler(double* read, double* write, double* jacobian, int n_elem, Basis& basis, Kernel_settings& settings)
 {

@@ -9,7 +9,7 @@
 namespace cartdg
 {
 
-// AUTOGENERATE
+// AUTOGENERATE LOOKUP
 template<int n_var, int n_qpoint, int row_size>
 void neighbor_deformed_cpg_euler(double** connections_r, double** connections_w,
                                  double** jacobian, int* i_axis, int* is_positive_face,

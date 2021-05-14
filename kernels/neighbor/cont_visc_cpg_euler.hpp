@@ -11,7 +11,7 @@
 namespace cartdg
 {
 
-// AUTOGENERATE
+// AUTOGENERATE LOOKUP
 template<int n_var, int n_qpoint, int row_size>
 void cont_visc_cpg_euler(double*** connections, int* n_connections, Kernel_settings& settings)
 {

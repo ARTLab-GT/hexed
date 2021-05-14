@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 
 #include <Kernel_settings.hpp>
+#include <Basis.hpp>
 #include "read_copy.hpp"
 #include "write_copy.hpp"
 #include "cpg_euler_hll.hpp"
@@ -11,13 +12,13 @@
 namespace cartdg
 {
 
-// AUTOGENERATE
+// AUTOGENERATE LOOKUP BENCHMARK(regular, 3)
 template<int n_var, int n_qpoint, int row_size>
 void neighbor_cpg_euler(double*** connections_r, double*** connections_w, int* n_connections,
-                        const Eigen::VectorXd weights_1d, Kernel_settings& settings)
+                        Basis& basis, Kernel_settings& settings)
 {
   const int n_face_qpoint = n_qpoint/row_size;
-  double mult = settings.d_t_by_d_pos/weights_1d(0);
+  double mult = settings.d_t_by_d_pos/basis.node_weights()(0);
   double heat_rat = settings.cpg_heat_rat;
 
   const int face_size = n_face_qpoint*n_var;

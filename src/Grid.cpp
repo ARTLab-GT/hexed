@@ -274,7 +274,7 @@ void Grid::execute_local(Kernel_settings& settings)
 void Grid::execute_neighbor(Kernel_settings& settings)
 {
   get_neighbor_cpg_euler(n_dim, basis.rank)(neighbor_connections_r().data(), neighbor_connections_w().data(), 
-                                            n_neighb_con().data(), basis.node_weights(), settings);
+                                            n_neighb_con().data(), basis, settings);
   get_gbc_cpg_euler(n_dim, basis.rank)(ghost_bound_conds, state_r(), state_w(), basis.node_weights()(0), settings);
 }
 

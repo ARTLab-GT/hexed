@@ -6,7 +6,7 @@
 namespace cartdg
 {
 
-// AUTOGENERATE
+// AUTOGENERATE LOOKUP
 template<int n_var, int n_qpoint, int row_size>
 void neighbor_derivative(double** connections_r, double** connections_w, int n_con,
                          int i_var, int i_axis,

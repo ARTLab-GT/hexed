@@ -6,7 +6,7 @@
 namespace cartdg
 {
 
-// AUTOGENERATE
+// AUTOGENERATE LOOKUP
 template<int n_var, int n_qpoint, int row_size>
 void local_derivative(double* read, double* write, int n_elem, int i_var, int i_axis,
                       Basis& basis, Kernel_settings& settings)
