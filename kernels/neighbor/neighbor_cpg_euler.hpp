@@ -8,6 +8,7 @@
 #include "read_copy.hpp"
 #include "write_copy.hpp"
 #include "cpg_euler_hll.hpp"
+#include "ausm_plus_up_cpg_euler.hpp"
 
 namespace cartdg
 {
@@ -34,7 +35,7 @@ void neighbor_cpg_euler(double*** connections_r, double*** connections_w, int* n
       read_copy<n_var, n_qpoint, row_size>(connect[0], face_r            , stride, 1);
       read_copy<n_var, n_qpoint, row_size>(connect[1], face_r + face_size, stride, 0);
 
-      cpg_euler_hll<n_var - 2, n_face_qpoint>(face_r, face_w, mult, i_axis, heat_rat);
+      ausm_plus_up_cpg_euler<n_var - 2, n_face_qpoint>(face_r, face_w, mult, i_axis, heat_rat);
 
       connect = connections_w[i_axis] + 2*i_con;
       write_copy<n_var, n_qpoint, row_size>(face_w            , connect[0], stride, 1);
