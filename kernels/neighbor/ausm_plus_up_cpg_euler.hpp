@@ -65,20 +65,23 @@ void ausm_plus_up_cpg_euler(double* state_r, double* d_flux_w, double mult,
       for (int i_sign : {0, 1})
       {
         int sign = 2*i_sign - 1;
-        mach_poly4[i_side][i_sign] = std::abs(mach) >= 1 ? mach_poly1[i_side][i_sign] : mach_poly2[i_side][i_sign]*(1. - sign*2*mach_poly2[i_side][1 - i_sign]);
-        pres_poly5[i_side][i_sign] = std::abs(mach) >= 1 ? mach_poly1[i_side][i_sign]/mach : mach_poly2[i_side][i_sign]*(sign*2 - mach - sign*3*(-4. + 5*sound_mult*sound_mult)*mach*mach_poly2[i_side][1 - i_sign]);
+        mach_poly4[i_side][i_sign] = (std::abs(mach) >= 1) ? mach_poly1[i_side][i_sign] : mach_poly2[i_side][i_sign]*(1. - sign*2*mach_poly2[i_side][1 - i_sign]);
+        pres_poly5[i_side][i_sign] = (std::abs(mach) >= 1) ? mach_poly1[i_side][i_sign]/mach : mach_poly2[i_side][i_sign]*(sign*2 - mach - sign*3*(-4. + 5*sound_mult*sound_mult)*mach*mach_poly2[i_side][1 - i_sign]);
       }
       #undef READ
     }
     double mid_mach = mach_poly4[0][1] + mach_poly4[1][0] - 0.25/sound_mult*std::max(1. - mean_sq_mach, 0.)*(pres[1] - pres[0])/(mid_mass*mid_sound_speed*mid_sound_speed);
-    double mass_flux = mid_sound_speed*mid_mach*(mid_mach > 0 ? mass[0] : mass[1]);
-    double mid_pres = pres_poly5[0][1] + pres_poly5[1][0] - 0.75*pres_poly5[0][1]*pres_poly5[1][0]*(mass[0] + mass[1])*sound_mult*mid_sound_speed*(veloc[1] - veloc[0]);
+    double mass_flux = mid_sound_speed*mid_mach*((mid_mach > 0) ? mass[0] : mass[1]);
+    double mid_pres = pres_poly5[0][1]*pres[0] + pres_poly5[1][0]*pres[1] - 0.75*pres_poly5[0][1]*pres_poly5[1][0]*(mass[0] + mass[1])*sound_mult*mid_sound_speed*(veloc[1] - veloc[0]);
 
     for (int i_var = 0; i_var < n_var; ++i_var)
     {
       const int i = i_var*n_face_qpoint + i_qpoint;
-      int upwind_offset = mass_flux > 0 ? 0 : face_size;
+      int upwind_ind = mass_flux > 0 ? 0 : 1;
+      int upwind_offset = upwind_ind*face_size;
       double num_flux = state_r[i + upwind_offset];
+      if (i_var == n_var - 1) num_flux += pres[upwind_ind];
+      num_flux *= mass_flux/mass[upwind_ind];
       if (i_var == i_axis) num_flux += mid_pres;
       d_flux_w[i            ] = (flux[0][i_var] - num_flux)*mult;
       d_flux_w[i + face_size] = (num_flux - flux[1][i_var])*mult;
