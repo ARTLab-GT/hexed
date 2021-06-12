@@ -1,5 +1,5 @@
-#ifndef CARTDG_CPG_EULER_HLL_DEFORMED_HPP_
-#define CARTDG_CPG_EULER_HLL_DEFORMED_HPP_
+#ifndef CARTDG_HLL_DEFORMED_CPG_EULER_HPP_
+#define CARTDG_HLL_DEFORMED_CPG_EULER_HPP_
 
 #include <algorithm>
 #include <cmath>
@@ -10,7 +10,7 @@ namespace cartdg
 {
 
 template<int n_dim, int n_face_qpoint>
-void cpg_euler_hll_deformed(double* state_r, double* d_flux_w, double* jacobian,
+void hll_deformed_cpg_euler(double* state_r, double* d_flux_w, double* jacobian,
                             double mult, int i_axis_arg [2], bool flip [2], double sp_heat_rat)
 {
   const int n_var = n_dim + 2;

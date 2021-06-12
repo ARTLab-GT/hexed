@@ -3,7 +3,7 @@
 
 #include <Kernel_settings.hpp>
 #include <Ghost_boundary_condition.hpp>
-#include "cpg_euler_hll_deformed.hpp"
+#include "hll_deformed_cpg_euler.hpp"
 #include "read_copy.hpp"
 #include "write_copy.hpp"
 
@@ -39,7 +39,7 @@ void gbc_cpg_euler(std::vector<Ghost_boundary_condition*>& ghost_bound_conds,
       Eigen::ArrayXXd d_flux (n_qpoint/row_size, 2*n_var);
       int i_axis_arg [] {gbc->i_dim, gbc->i_dim};
       bool flip [] {false, false};
-      cpg_euler_hll_deformed<n_dim, n_qpoint/row_size>(gbc->state.data(), d_flux.data(), &face_jacobian[0][0], mult, i_axis_arg, flip, settings.cpg_heat_rat);
+      hll_deformed_cpg_euler<n_dim, n_qpoint/row_size>(gbc->state.data(), d_flux.data(), &face_jacobian[0][0], mult, i_axis_arg, flip, settings.cpg_heat_rat);
       double* d_flux_r = d_flux.data();
       if (!gbc->is_positive_face) d_flux_r += n_qpoint/row_size*n_var;
       write_copy<n_var, n_qpoint, row_size>(d_flux_r, write + i_elem*n_dof, stride, gbc->is_positive_face);

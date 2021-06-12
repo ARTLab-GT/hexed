@@ -4,7 +4,7 @@
 #include <Kernel_settings.hpp>
 #include "read_copy.hpp"
 #include "write_copy.hpp"
-#include "cpg_euler_hll_deformed.hpp"
+#include "hll_deformed_cpg_euler.hpp"
 
 namespace cartdg
 {
@@ -56,7 +56,7 @@ void neighbor_deformed_cpg_euler(double** connections_r, double** connections_w,
     }
 
     bool flip [] {is_positive_face[2*i_con] == 0, is_positive_face[2*i_con + 1] == 1};
-    cpg_euler_hll_deformed<n_var - 2, n_face_qpoint>(face_r, face_w, face_jacobian, mult, i_axis + 2*i_con, flip, heat_rat);
+    hll_deformed_cpg_euler<n_var - 2, n_face_qpoint>(face_r, face_w, face_jacobian, mult, i_axis + 2*i_con, flip, heat_rat);
 
     if ((is_positive_face[2*i_con] != is_positive_face[2*i_con + 1]) && (i_axis[2*i_con] != i_axis[2*i_con + 1]))
     {
