@@ -4,6 +4,7 @@
 #include <neighbor/read_copy.hpp>
 #include <neighbor/write_copy.hpp>
 #include <neighbor/cpg_euler_hll.hpp>
+#include <neighbor/ausm_plus_up_cpg_euler.hpp>
 #include <neighbor/cpg_euler_hll_deformed.hpp>
 #include <neighbor/jump.hpp>
 #include <get_cont_visc_cpg_euler.hpp>
@@ -205,6 +206,78 @@ TEST_CASE("cpg_euler_hll")
       }
     }
     cartdg::cpg_euler_hll<3, 2>(&read[0], &write[0], mult, 0, 1.4);
+    for (int j = 0; j < 2; ++j)
+    {
+      for (int i_var = 0; i_var < 5; ++i_var)
+      {
+        double correct_d_flux = 3*340*read[2*i_var] - 2*340*read[2*i_var + 10];
+        if (i_var == 4) correct_d_flux += 340*pressure;
+        correct_d_flux *= j;
+        REQUIRE(write[10*j + 2*i_var    ] == Approx(0.7*correct_d_flux).margin(1.e-8));
+        REQUIRE(write[10*j + 2*i_var + 1] == Approx(0.7*correct_d_flux).margin(1.e-8));
+      }
+    }
+    for (int i = 0; i < 20; ++i) write[i] = 0;
+    cartdg::cpg_euler_hll<3, 2>(&read[0], &write[0], mult, 1, 1.4);
+    for (int j = 0; j < 2; ++j)
+    {
+      for (int i_var = 0; i_var < 5; ++i_var)
+      {
+        double correct_d_flux = 3*340*read[2*i_var + 10] - 2*340*read[2*i_var];
+        if (i_var == 4) correct_d_flux += 340*pressure;
+        correct_d_flux *= (1 - j);
+        REQUIRE(write[10*j + 2*i_var    ] == Approx(0.7*correct_d_flux).margin(1.e-8));
+        REQUIRE(write[10*j + 2*i_var + 1] == Approx(0.7*correct_d_flux).margin(1.e-8));
+      }
+    }
+  }
+
+  SECTION("Opposing supersonic flows")
+  {
+    double velocity0 [] {680, -680};
+    for (int i = 0; i < 2; ++i)
+    {
+      for (int j = 0; j < 2; ++j)
+      {
+        read[i + 10*j + 0] = mass*velocity0[j];
+        read[i + 10*j + 2] = 0;
+        read[i + 10*j + 4] = 0;
+        read[i + 10*j + 6] = mass;
+        read[i + 10*j + 8] = pressure/0.4 + 0.5*mass*velocity0[j]*velocity0[j];
+      }
+    }
+
+    for (int i = 0; i < 20; ++i) write[i] = 0;
+    cartdg::cpg_euler_hll<3, 2>(&read[0], &write[0], mult, 0, 1.4);
+    REQUIRE(write[2*3     ] == Approx(0.7*mass*680));
+    REQUIRE(write[2*3 + 10] == Approx(0.7*mass*680));
+  }
+}
+
+TEST_CASE("ausm_plus_up_cpg_euler")
+{
+  double mass = 1.225;
+  double pressure = 101325;
+  double read[20] {};
+  double write[20] {};
+  double mult = 0.7;
+  SECTION("Reasonable flow")
+  {
+    double velocity0 [] {3*340, 2*340};
+    double velocity1 [] {-2*340, -3*340};
+    for (int i = 0; i < 2; ++i)
+    {
+      for (int j = 0; j < 2; ++j)
+      {
+        read[i + 10*j + 0] = mass*velocity0[j];
+        read[i + 10*j + 2] = mass*velocity1[j];
+        read[i + 10*j + 4] = 0;
+        read[i + 10*j + 6] = mass;
+        read[i + 10*j + 8] = pressure/0.4 + 0.5*mass*(  velocity0[j]*velocity0[j]
+                                                      + velocity1[j]*velocity1[j]);
+      }
+    }
+    cartdg::ausm_plus_up_cpg_euler<3, 2>(&read[0], &write[0], mult, 0, 1.4);
     for (int j = 0; j < 2; ++j)
     {
       for (int i_var = 0; i_var < 5; ++i_var)
