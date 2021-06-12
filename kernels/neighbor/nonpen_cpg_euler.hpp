@@ -6,7 +6,7 @@
 #include <Kernel_settings.hpp>
 #include "read_copy.hpp"
 #include "write_copy.hpp"
-#include "cpg_euler_hll_deformed.hpp"
+#include "hll_deformed_cpg_euler.hpp"
 
 namespace cartdg
 {
@@ -81,7 +81,7 @@ void nonpen_cpg_euler(double* read, double* write, double* jacobian, int* i_elem
 
     int dims [2] {i_dim[i_bc], i_dim[i_bc]};
     bool flips [2] {!is_positive, !is_positive};
-    cpg_euler_hll_deformed<n_dim, n_face_qpoint>(&face_r[0][0][0], &face_w[0][0][0], &face_jacobian[0][0][0][0], mult, dims, flips, heat_rat);
+    hll_deformed_cpg_euler<n_dim, n_face_qpoint>(&face_r[0][0][0], &face_w[0][0][0], &face_jacobian[0][0][0][0], mult, dims, flips, heat_rat);
     write_copy<n_var, n_qpoint, row_size>(&face_w[0][0][0], write + n_var*n_qpoint*i_elem[i_bc], stride, is_positive);
   }
 }

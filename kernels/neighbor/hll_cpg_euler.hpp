@@ -1,5 +1,5 @@
-#ifndef CARTDG_CPG_EULER_HLL_HPP_
-#define CARTDG_CPG_EULER_HLL_HPP_
+#ifndef CARTDG_HLL_CPG_EULER_HPP_
+#define CARTDG_HLL_CPG_EULER_HPP_
 
 #include <algorithm>
 #include <cmath>
@@ -8,7 +8,7 @@ namespace cartdg
 {
 
 template<int n_dim, int n_face_qpoint>
-void cpg_euler_hll(double* state_r, double* d_flux_w, double mult,
+void hll_cpg_euler(double* state_r, double* d_flux_w, double mult,
                    int i_axis, double sp_heat_rat)
 {
   const int n_var = n_dim + 2;
