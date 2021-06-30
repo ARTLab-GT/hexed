@@ -281,6 +281,11 @@ void Deformed_grid::visualize(std::string file_name)
   Grid::visualize(file_name + "_deformed");
 }
 
+std::vector<double> Deformed_grid::face_integral(Domain_func& integrand, int i_elem, int i_dim, bool is_positive)
+{
+  return std::vector<double> (5);
+}
+
 void Deformed_grid::calc_jacobian()
 {
   jacobian.resize(n_elem*n_dim*n_dim*n_qpoint);
