@@ -345,9 +345,14 @@ TEST_CASE("Deformed grid class")
       {
         grid3.state_r()[i_qpoint] = 1.;
       }
+      for (int i_qpoint = 0; i_qpoint < grid2.n_qpoint; ++i_qpoint)
+      {
+        grid2.state_r()[i_qpoint] = 1.;
+      }
+
       grid3.get_vertex(1).pos = {0., 0., 0.8*0.2};
       grid3.calc_jacobian();
-      double area = 0.2*0.2*0.2;
+      double area = 0.2*0.2;
       REQUIRE(grid3.face_integral(sv, 0, 0, 0)[0] == Approx(0.9*area));
       REQUIRE(grid3.face_integral(sv, 0, 0, 1)[0] == Approx(area));
       REQUIRE(grid3.face_integral(sv, 0, 1, 0)[0] == Approx(0.9*area));
@@ -355,12 +360,12 @@ TEST_CASE("Deformed grid class")
 
       grid3.get_vertex(3).pos = {0., 0.2, 0.8*0.2};
       grid3.calc_jacobian();
-      REQUIRE(grid3.face_integral(sv, 0, 2, 1)[0] == Approx(std::sqrt((0.2*0.2 + 1.)*0.2*0.2)));
+      REQUIRE(grid3.face_integral(sv, 0, 2, 1)[0] == Approx(std::sqrt(0.2*0.2 + 1.)*area));
 
-      grid2.get_vertex(2).pos = {0., 1.1*0.2};
-      grid2.get_vertex(3).pos = {0., 0.9*0.2};
+      grid2.get_vertex(2).pos = {1.1*0.2, 0.};
+      grid2.get_vertex(3).pos = {0.9*0.2, 0.9*0.2};
       grid2.calc_jacobian();
-      REQUIRE(grid2.face_integral(sv, 0, 1, 1)[0] == Approx(std::sqrt((0.2*0.2 + 0.9*0.9)*0.2*0.2)));
+      REQUIRE(grid2.face_integral(sv, 0, 0, 1)[0] == Approx(std::sqrt(0.2*0.2 + 0.9*0.9)*0.2));
     }
   }
 
