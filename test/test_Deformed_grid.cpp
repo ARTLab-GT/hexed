@@ -364,6 +364,7 @@ TEST_CASE("Deformed grid class")
 
       grid2.get_vertex(2).pos = {1.1*0.2, 0.};
       grid2.get_vertex(3).pos = {0.9*0.2, 0.9*0.2};
+      grid2.get_vertex(0).pos = {0.3, 0.3}; // show that vertex on opposite face has no effect
       grid2.calc_jacobian();
       REQUIRE(grid2.face_integral(sv, 0, 0, 1)[0] == Approx(std::sqrt(0.2*0.2 + 0.9*0.9)*0.2));
     }
