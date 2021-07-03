@@ -339,6 +339,10 @@ std::vector<double> Deformed_grid::face_integral(Domain_func& integrand, int i_e
       }
     }
   }
+  for (int i_var = 0; i_var < int(total.size()); ++i_var)
+  {
+    total[i_var] *= std::pow(mesh_size, n_dim - 1);
+  }
   return total;
 }
 
