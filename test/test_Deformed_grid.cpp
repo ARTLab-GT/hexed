@@ -325,6 +325,8 @@ TEST_CASE("Deformed grid class")
   {
     grid3.add_element({0, 0, 0});
     grid2.add_element({0, 0});
+    grid2.calc_jacobian();
+    grid3.calc_jacobian();
     cartdg::State_variables sv;
     SECTION("cubic polynomial, regular face")
     {
@@ -344,6 +346,7 @@ TEST_CASE("Deformed grid class")
         grid3.state_r()[i_qpoint] = 1.;
       }
       grid3.get_vertex(1).pos = {0., 0., 0.8*0.2};
+      grid3.calc_jacobian();
       double area = 0.2*0.2*0.2;
       REQUIRE(grid3.face_integral(sv, 0, 0, 0)[0] == Approx(0.9*area));
       REQUIRE(grid3.face_integral(sv, 0, 0, 1)[0] == Approx(area));
@@ -351,10 +354,12 @@ TEST_CASE("Deformed grid class")
       REQUIRE(grid3.face_integral(sv, 0, 2, 0)[0] == Approx(area));
 
       grid3.get_vertex(3).pos = {0., 0.2, 0.8*0.2};
+      grid3.calc_jacobian();
       REQUIRE(grid3.face_integral(sv, 0, 2, 1)[0] == Approx(std::sqrt((0.2*0.2 + 1.)*0.2*0.2)));
 
       grid2.get_vertex(2).pos = {0., 1.1*0.2};
       grid2.get_vertex(3).pos = {0., 0.9*0.2};
+      grid2.calc_jacobian();
       REQUIRE(grid2.face_integral(sv, 0, 1, 1)[0] == Approx(std::sqrt((0.2*0.2 + 0.9*0.9)*0.2*0.2)));
     }
   }
