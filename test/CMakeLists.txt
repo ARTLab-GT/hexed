@@ -11,6 +11,7 @@ test_Grid.cpp
 test_local.cpp
 test_neighbor.cpp
 test_nonpen.cpp
+test_math.cpp
 test_observing.cpp
 test_sinusoid.cpp
 test_Solution.cpp
