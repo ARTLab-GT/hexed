@@ -348,7 +348,20 @@ std::vector<double> Deformed_grid::face_integral(Domain_func& integrand, int i_e
 
 std::vector<double> Deformed_grid::surface_integral(Domain_func& integrand)
 {
-  return face_integral(integrand, 0, 0, 0);
+  std::vector<double> total;
+  for (int i_wall = 0; i_wall < int(i_elem_wall.size()); ++i_wall)
+  {
+    auto fi = face_integral(integrand, i_elem_wall[i_wall], i_dim_wall[i_wall], is_positive_wall[i_wall]);
+    if (total.size() < fi.size())
+    {
+      total.resize(fi.size());
+    }
+    for (int i_var = 0; i_var < int(total.size()); ++i_var)
+    {
+      total[i_var] += fi[i_var];
+    }
+  }
+  return total;
 }
 
 void Deformed_grid::calc_jacobian()

@@ -452,6 +452,7 @@ TEST_CASE("Deformed grid class")
     grid2.add_element({ 1,0});
     grid2.add_element({-1,2});
     grid2.add_element({-1,3});
+    grid2.calc_jacobian();
 
     grid2.add_wall(1, 0, 0);
     grid2.add_wall(2, 0, 0);
@@ -467,7 +468,7 @@ TEST_CASE("Deformed grid class")
       }
     }
     cartdg::State_variables sv;
-    REQUIRE(grid2.surface_integral(sv)[0] == Approx(-1*.2*2*.2 - 0.2*0.2/2. + 0.1*(2*4*.2*4*.2 - 2*.2*2*.2 - 3*.2*3*.2 + 4*0.2*0.2)));
+    REQUIRE(grid2.surface_integral(sv)[0] == Approx(-1*.2*2*.2 - 0.2*0.2/2. + 0.1*((2*4*.2*4*.2 - 2*.2*2*.2 - 3*.2*3*.2)/2. + 4*0.2*0.2)));
   }
 
   SECTION("Adding wall boundary conditions")
