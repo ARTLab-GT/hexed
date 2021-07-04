@@ -4,7 +4,7 @@
 namespace cartdg
 {
 
-double root(double (*func)(double arg), double init_guess, double atol=1e-10);
+double root(double (*func)(double arg), double init_guess, double atol=1e-10, double init_diff=1e-3);
 
 }
 
