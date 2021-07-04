@@ -321,55 +321,6 @@ TEST_CASE("Deformed grid class")
     }
   }
 
-  SECTION("face integration")
-  {
-    grid3.add_element({0, 0, 0});
-    grid2.add_element({0, 0});
-    grid2.calc_jacobian();
-    grid3.calc_jacobian();
-    cartdg::State_variables sv;
-    SECTION("cubic polynomial, regular face")
-    {
-      auto pos = grid3.get_pos(0);
-      for (int i_qpoint = 0; i_qpoint < grid3.n_qpoint; ++i_qpoint)
-      {
-        double pos1 = pos[i_qpoint + grid3.n_qpoint];
-        double pos2 = pos[i_qpoint + grid3.n_qpoint*2];
-        grid3.state_r()[i_qpoint] = std::pow(pos1, 3)*(-std::pow(pos2, 3) + pos2 + 3.) - 2.*std::pow(pos2, 2) - 1.;
-      }
-      REQUIRE(grid3.face_integral(sv, 0, 0, 0)[0] == Approx(-0.04081882666666667));
-    }
-    SECTION("constant polynomial, irregular faces")
-    {
-      for (int i_qpoint = 0; i_qpoint < grid3.n_qpoint; ++i_qpoint)
-      {
-        grid3.state_r()[i_qpoint] = 1.;
-      }
-      for (int i_qpoint = 0; i_qpoint < grid2.n_qpoint; ++i_qpoint)
-      {
-        grid2.state_r()[i_qpoint] = 1.;
-      }
-
-      grid3.get_vertex(1).pos = {0., 0., 0.8*0.2};
-      grid3.calc_jacobian();
-      double area = 0.2*0.2;
-      REQUIRE(grid3.face_integral(sv, 0, 0, 0)[0] == Approx(0.9*area));
-      REQUIRE(grid3.face_integral(sv, 0, 0, 1)[0] == Approx(area));
-      REQUIRE(grid3.face_integral(sv, 0, 1, 0)[0] == Approx(0.9*area));
-      REQUIRE(grid3.face_integral(sv, 0, 2, 0)[0] == Approx(area));
-
-      grid3.get_vertex(3).pos = {0., 0.2, 0.8*0.2};
-      grid3.calc_jacobian();
-      REQUIRE(grid3.face_integral(sv, 0, 2, 1)[0] == Approx(std::sqrt(0.2*0.2 + 1.)*area));
-
-      grid2.get_vertex(2).pos = {1.1*0.2, 0.};
-      grid2.get_vertex(3).pos = {0.9*0.2, 0.9*0.2};
-      grid2.get_vertex(0).pos = {0.3, 0.3}; // show that vertex on opposite face has no effect
-      grid2.calc_jacobian();
-      REQUIRE(grid2.face_integral(sv, 0, 0, 1)[0] == Approx(std::sqrt(0.2*0.2 + 0.9*0.9)*0.2));
-    }
-  }
-
   SECTION("Jacobian calculation")
   {
     grid2.add_element({0, 0});
@@ -427,7 +378,7 @@ TEST_CASE("Deformed grid class")
     REQUIRE(grid3.jacobian_det(0, grid3.n_qpoint - 1) == Approx(1.));
   }
 
-  SECTION("Integrals")
+  SECTION("volume integrals")
   {
     grid2.add_element({-1, 0});
     grid2.add_element({0, 0});
@@ -444,6 +395,79 @@ TEST_CASE("Deformed grid class")
     auto integral = grid2.integral();
     double area = 0.2*0.2*2. - 0.2*0.5*(0.05 + 0.07);
     REQUIRE(integral[0] == Approx(1.2*area));
+  }
+
+  SECTION("single-face integrals")
+  {
+    grid3.add_element({0, 0, 0});
+    grid2.add_element({0, 0});
+    grid2.calc_jacobian();
+    grid3.calc_jacobian();
+    cartdg::State_variables sv;
+    SECTION("cubic polynomial, regular face")
+    {
+      auto pos = grid3.get_pos(0);
+      for (int i_qpoint = 0; i_qpoint < grid3.n_qpoint; ++i_qpoint)
+      {
+        double pos1 = pos[i_qpoint + grid3.n_qpoint];
+        double pos2 = pos[i_qpoint + grid3.n_qpoint*2];
+        grid3.state_r()[i_qpoint] = std::pow(pos1, 3)*(-std::pow(pos2, 3) + pos2 + 3.) - 2.*std::pow(pos2, 2) - 1.;
+      }
+      REQUIRE(grid3.face_integral(sv, 0, 0, 0)[0] == Approx(-0.04081882666666667));
+    }
+    SECTION("constant polynomial, irregular faces")
+    {
+      for (int i_qpoint = 0; i_qpoint < grid3.n_qpoint; ++i_qpoint)
+      {
+        grid3.state_r()[i_qpoint] = 1.;
+      }
+      for (int i_qpoint = 0; i_qpoint < grid2.n_qpoint; ++i_qpoint)
+      {
+        grid2.state_r()[i_qpoint] = 1.;
+      }
+
+      grid3.get_vertex(1).pos = {0., 0., 0.8*0.2};
+      grid3.calc_jacobian();
+      double area = 0.2*0.2;
+      REQUIRE(grid3.face_integral(sv, 0, 0, 0)[0] == Approx(0.9*area));
+      REQUIRE(grid3.face_integral(sv, 0, 0, 1)[0] == Approx(area));
+      REQUIRE(grid3.face_integral(sv, 0, 1, 0)[0] == Approx(0.9*area));
+      REQUIRE(grid3.face_integral(sv, 0, 2, 0)[0] == Approx(area));
+
+      grid3.get_vertex(3).pos = {0., 0.2, 0.8*0.2};
+      grid3.calc_jacobian();
+      REQUIRE(grid3.face_integral(sv, 0, 2, 1)[0] == Approx(std::sqrt(0.2*0.2 + 1.)*area));
+
+      grid2.get_vertex(2).pos = {1.1*0.2, 0.};
+      grid2.get_vertex(3).pos = {0.9*0.2, 0.9*0.2};
+      grid2.get_vertex(0).pos = {0.3, 0.3}; // show that vertex on opposite face has no effect
+      grid2.calc_jacobian();
+      REQUIRE(grid2.face_integral(sv, 0, 0, 1)[0] == Approx(std::sqrt(0.2*0.2 + 0.9*0.9)*0.2));
+    }
+  }
+
+  SECTION("wall surface integrals")
+  {
+    // some completely arbitrary elements
+    grid2.add_element({ 1,0});
+    grid2.add_element({-1,2});
+    grid2.add_element({-1,3});
+
+    grid2.add_wall(1, 0, 0);
+    grid2.add_wall(2, 0, 0);
+    grid2.add_wall(2, 0, 1);
+    grid2.add_wall(2, 1, 1);
+    for (int i_elem = 0; i_elem < grid2.n_elem; ++i_elem)
+    {
+      auto pos = grid2.get_pos(i_elem);
+      double* state = grid2.state_r() + i_elem*grid2.n_dof;
+      for (int i_qpoint = 0; i_qpoint < grid2.n_qpoint; ++i_qpoint)
+      {
+        state[i_qpoint] = pos[i_qpoint] + 0.1*pos[i_qpoint + grid2.n_qpoint];
+      }
+    }
+    cartdg::State_variables sv;
+    REQUIRE(grid2.surface_integral(sv)[0] == Approx(-1*.2*2*.2 - 0.2*0.2/2. + 0.1*(2*4*.2*4*.2 - 2*.2*2*.2 - 3*.2*3*.2 + 4*0.2*0.2)));
   }
 
   SECTION("Adding wall boundary conditions")

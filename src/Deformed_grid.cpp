@@ -346,6 +346,11 @@ std::vector<double> Deformed_grid::face_integral(Domain_func& integrand, int i_e
   return total;
 }
 
+std::vector<double> Deformed_grid::surface_integral(Domain_func& integrand)
+{
+  return face_integral(integrand, 0, 0, 0);
+}
+
 void Deformed_grid::calc_jacobian()
 {
   jacobian.resize(n_elem*n_dim*n_dim*n_qpoint);
