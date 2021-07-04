@@ -469,6 +469,20 @@ TEST_CASE("Deformed grid class")
     }
     cartdg::State_variables sv;
     REQUIRE(grid2.surface_integral(sv)[0] == Approx(-1*.2*2*.2 - 0.2*0.2/2. + 0.1*((2*4*.2*4*.2 - 2*.2*2*.2 - 3*.2*3*.2)/2. + 4*0.2*0.2)));
+
+    cartdg::Deformed_grid multivar (2, 3, 0, 1., basis);
+    multivar.add_element({0, 0, 0});
+    multivar.add_wall(0, 2, 1);
+    multivar.add_wall(0, 1, 0);
+    for (int i_qpoint = 0; i_qpoint < multivar.n_qpoint; ++i_qpoint)
+    {
+      multivar.state_r()[i_qpoint] = 2.;
+      multivar.state_r()[i_qpoint + multivar.n_qpoint] = .03;
+    }
+    multivar.calc_jacobian();
+    auto integral = multivar.surface_integral(sv);
+    REQUIRE(integral[0] == Approx(4.));
+    REQUIRE(integral[1] == Approx(.06));
   }
 
   SECTION("Adding wall boundary conditions")
