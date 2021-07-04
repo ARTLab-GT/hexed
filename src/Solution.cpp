@@ -66,6 +66,32 @@ std::vector<double> Solution::integral(Domain_func& integrand)
   }
 }
 
+std::vector<double> Solution::surface_integral(Domain_func& integrand)
+{
+  if (def_grids.empty())
+  {
+    return std::vector<double> {};
+  }
+  else
+  {
+    std::vector<double> total;
+    for (Deformed_grid grid : def_grids)
+    {
+      auto grid_integral = grid.integral(integrand);
+      int size = grid_integral.size();
+      if (int(total.size()) < size)
+      {
+        total.resize(size);
+      }
+      for (int i_var = 0; i_var < size; ++i_var)
+      {
+        total[i_var] += grid_integral[i_var];
+      }
+    }
+    return total;
+  }
+}
+
 std::vector<Grid*> Solution::all_grids()
 {
   std::vector<Grid*> all;
