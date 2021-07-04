@@ -7,7 +7,6 @@ Ghost_boundary_condition.cpp
 Grid.cpp
 Grid__visualize.cpp
 Kernel_settings.cpp
-math.cpp
 Solution.cpp
 Spacetime_func.cpp
 Vertex.cpp
