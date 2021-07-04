@@ -281,6 +281,89 @@ void Deformed_grid::visualize(std::string file_name)
   Grid::visualize(file_name + "_deformed");
 }
 
+std::vector<double> Deformed_grid::face_integral(Domain_func& integrand, int i_elem, int i_dim, bool is_positive)
+{
+  auto pos = get_pos(i_elem);
+  double* elem_state = state_r() + i_elem*n_dof;
+  auto row_weights = basis.node_weights();
+  int stride = std::pow(basis.rank, n_dim - 1 - i_dim);
+  std::vector<double> total;
+  for (int i_outer = 0; i_outer < n_qpoint/basis.rank/stride; ++i_outer)
+  {
+    for (int i_inner = 0; i_inner < stride; ++i_inner)
+    {
+      int i_qpoint = (i_outer*basis.rank + int(is_positive)*(basis.rank - 1.))*stride + i_inner;
+      std::vector<double> qpoint_pos;
+      for (int j_dim = 0; j_dim < n_dim; ++j_dim)
+      {
+        qpoint_pos.push_back(pos[i_qpoint + n_qpoint*j_dim]);
+      }
+      std::vector<double> qpoint_state;
+      for (int i_var = 0; i_var < n_var; ++i_var)
+      {
+        qpoint_state.push_back(elem_state[i_qpoint + i_var*n_qpoint]);
+      }
+      auto qpoint_integrand = integrand(qpoint_pos, time, qpoint_state);
+      if (total.size() < qpoint_integrand.size())
+      {
+        total.resize(qpoint_integrand.size());
+      }
+      Eigen::MatrixXd qpoint_jacobian (n_dim, n_dim);
+      for (int j_dim = 0; j_dim < n_dim; ++j_dim)
+      {
+        for (int k_dim = 0; k_dim < n_dim; ++k_dim)
+        {
+          qpoint_jacobian(j_dim, k_dim) = jacobian[((i_elem*n_dim + j_dim)*n_dim + k_dim)*n_qpoint + i_qpoint];
+        }
+        qpoint_jacobian(j_dim, i_dim) = 0.;
+      }
+      double face_jac_det = 0.;
+      for (int j_dim = 0; j_dim < n_dim; ++j_dim)
+      {
+        qpoint_jacobian(j_dim, i_dim) = 1.;
+        double dim_jac = qpoint_jacobian.determinant();
+        face_jac_det += dim_jac*dim_jac;
+        qpoint_jacobian(j_dim, i_dim) = 0.;
+      }
+      face_jac_det = std::sqrt(face_jac_det);
+      int i_face = i_inner + i_outer*stride;
+      double weight = 1.;
+      for (int j_dim = 0; j_dim < n_dim - 1; ++j_dim)
+      {
+        int stride_j = std::pow(basis.rank, j_dim);
+        weight *= row_weights((i_face/stride_j)%basis.rank);
+      }
+      for (int i_var = 0; i_var < int(total.size()); ++i_var)
+      {
+        total[i_var] += weight*face_jac_det*qpoint_integrand[i_var];
+      }
+    }
+  }
+  for (int i_var = 0; i_var < int(total.size()); ++i_var)
+  {
+    total[i_var] *= std::pow(mesh_size, n_dim - 1);
+  }
+  return total;
+}
+
+std::vector<double> Deformed_grid::surface_integral(Domain_func& integrand)
+{
+  std::vector<double> total;
+  for (int i_wall = 0; i_wall < int(i_elem_wall.size()); ++i_wall)
+  {
+    auto fi = face_integral(integrand, i_elem_wall[i_wall], i_dim_wall[i_wall], is_positive_wall[i_wall]);
+    if (total.size() < fi.size())
+    {
+      total.resize(fi.size());
+    }
+    for (int i_var = 0; i_var < int(total.size()); ++i_var)
+    {
+      total[i_var] += fi[i_var];
+    }
+  }
+  return total;
+}
+
 void Deformed_grid::calc_jacobian()
 {
   jacobian.resize(n_elem*n_dim*n_dim*n_qpoint);
