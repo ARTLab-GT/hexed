@@ -253,7 +253,7 @@ TEST_CASE("CPG Euler deformed elements")
           int i_qpoint = i*rank + j;
           double pos0 = basis.node(i)*(1. - 0.5*basis.node(j));
           double pos1 = basis.node(j)*(1. - 0.3*basis.node(i));
-          double mass = 1 + 0.1*pos0 + 0.2*pos1;
+          double mass = 1 + 0.1*std::pow(pos0, 5) - 0.3*std::pow(pos0, 2)*std::pow(pos1, 3) + 0.2*pos1;
           double veloc0 = 10; double veloc1 = -20;
           double pres = 1e5*(1. - 0.3*pos0 + 0.5*pos1);
           double ener = pres/0.4 + 0.5*mass*(veloc0*veloc0 + veloc1*veloc1);
@@ -275,12 +275,21 @@ TEST_CASE("CPG Euler deformed elements")
                                                   basis, settings);
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
-      for (int i_qpoint = 0; i_qpoint < rank*rank; ++i_qpoint)
+      for (int i = 0; i < rank; ++i)
       {
-        REQUIRE((write[i_elem][2][i_qpoint] - read[i_elem][2][i_qpoint])
-                 == Approx(-0.1*(0.1*10 - 0.2*20)));
-        REQUIRE((write[i_elem][3][i_qpoint] - read[i_elem][3][i_qpoint])
-                == Approx(-0.1*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20) + 0.5*(10*10 + 20*20)*(0.1*10 - 0.2*20))));
+        for (int j = 0; j < rank; ++j)
+        {
+          int i_qpoint = i*rank + j;
+          double pos0 = basis.node(i)*(1. - 0.5*basis.node(j));
+          double pos1 = basis.node(j)*(1. - 0.3*basis.node(i));
+          double veloc_dot_grad_mass = (0.1*5*std::pow(pos0, 4)
+                                        - 0.3*2*std::pow(pos0, 1)*std::pow(pos1, 3))*10
+                                      + (-0.3*std::pow(pos0, 2)*3*std::pow(pos1, 2) + 0.2)*-20;
+          REQUIRE((write[i_elem][2][i_qpoint] - read[i_elem][2][i_qpoint])
+                   == Approx(-0.1*veloc_dot_grad_mass));
+          REQUIRE((write[i_elem][3][i_qpoint] - read[i_elem][3][i_qpoint])
+                   == Approx(-0.1*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20) + 0.5*(10*10 + 20*20)*veloc_dot_grad_mass)));
+        }
       }
     }
   }
