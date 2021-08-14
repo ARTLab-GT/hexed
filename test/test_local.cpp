@@ -150,6 +150,7 @@ TEST_CASE("CPG Euler deformed elements")
 {
   cartdg::Kernel_settings settings;
   settings.d_t_by_d_pos = 0.1;
+  #if 0
   SECTION("1D regular")
   {
     const int n_elem = 5;
@@ -233,6 +234,7 @@ TEST_CASE("CPG Euler deformed elements")
       }
     }
   }
+  #endif
 
   SECTION("2D non-constant deformed")
   {
