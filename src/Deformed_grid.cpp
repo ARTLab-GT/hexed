@@ -304,7 +304,6 @@ std::vector<double> Deformed_grid::face_integral(Domain_func& integrand, int i_e
         qpoint_state.push_back(elem_state[i_qpoint + i_var*n_qpoint]);
       }
       auto qpoint_integrand = integrand(qpoint_pos, time, qpoint_state);
-      //printf("%.3e\t", qpoint_integrand[0]);
       if (total.size() < qpoint_integrand.size())
       {
         total.resize(qpoint_integrand.size());
@@ -344,7 +343,6 @@ std::vector<double> Deformed_grid::face_integral(Domain_func& integrand, int i_e
   {
     total[i_var] *= std::pow(mesh_size, n_dim - 1);
   }
-  printf("\n");
   return total;
 }
 
