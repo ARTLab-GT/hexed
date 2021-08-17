@@ -2,6 +2,7 @@
 #define CARTDG_GBC_AV_HPP_
 
 #include <Kernel_settings.hpp>
+#include <Basis.hpp>
 #include <Ghost_boundary_condition.hpp>
 #include "read_copy.hpp"
 #include "write_copy.hpp"
@@ -13,10 +14,10 @@ namespace cartdg
 template <int n_var, int n_qpoint, int row_size>
 void gbc_av(std::vector<Ghost_boundary_condition*>& ghost_bound_conds,
             double* read, double* write,
-            int i_var, int i_axis, double weight,
+            int i_var, int i_axis, Basis& basis,
             Kernel_settings& settings)
 {
-  double mult = 1./(weight*settings.d_pos);
+  double mult = 1./(basis.node_weights()[0]*settings.d_pos);
   const int n_dof = n_var*n_qpoint;
   for (Ghost_boundary_condition* gbc : ghost_bound_conds)
   {

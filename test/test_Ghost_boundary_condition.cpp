@@ -136,9 +136,8 @@ TEST_CASE("Ghost boundary conditions")
         }
       }
     }
-    auto weights = soln.basis.node_weights();
     cartdg::get_gbc_cpg_euler(3, rank)(grid.ghost_bound_conds, grid.state_r(), grid.state_w(),
-                                       weights[0], soln.kernel_settings);
+                                       soln.basis, soln.kernel_settings);
     for (int i_elem = 0; i_elem < 27; ++i_elem)
     {
       std::vector<double> pos = grid.get_pos(i_elem);
@@ -192,9 +191,8 @@ TEST_CASE("Ghost boundary conditions")
         #undef WRITE
       }
     }
-    auto weights = soln.basis.node_weights();
     cartdg::get_gbc_cpg_euler(3, rank)(grid.ghost_bound_conds, grid.state_r(), grid.state_w(),
-                                       weights[0], soln.kernel_settings);
+                                       soln.basis, soln.kernel_settings);
     for (int i_elem = 0; i_elem < 27; ++i_elem)
     {
       std::vector<double> pos = grid.get_pos(i_elem);
@@ -236,9 +234,8 @@ TEST_CASE("Ghost boundary conditions")
         #undef WRITE
       }
     }
-    auto weights = soln.basis.node_weights();
     cartdg::get_gbc_cpg_euler(3, rank)(grid.ghost_bound_conds, grid.state_r(), grid.state_w(),
-                                       weights[0], soln.kernel_settings);
+                                       soln.basis, soln.kernel_settings);
     for (int i_elem = 0; i_elem < 27; ++i_elem)
     {
       std::vector<double> pos = grid.get_pos(i_elem);

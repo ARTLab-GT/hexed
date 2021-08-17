@@ -2,6 +2,7 @@
 #define CARTDG_NEIGHBOR_DEFORMED_CPG_EULER_HPP_
 
 #include <Kernel_settings.hpp>
+#include <Basis.hpp>
 #include "read_copy.hpp"
 #include "write_copy.hpp"
 #include "hll_deformed_cpg_euler.hpp"
@@ -14,13 +15,13 @@ template<int n_var, int n_qpoint, int row_size>
 void neighbor_deformed_cpg_euler(double** connections_r, double** connections_w,
                                  double** jacobian, int* i_axis, int* is_positive_face,
                                  int n_connections,
-                                 const Eigen::VectorXd weights_1d, Kernel_settings& settings)
+                                 Basis& basis, Kernel_settings& settings)
 {
   const int n_face_qpoint = n_qpoint/row_size;
   const int face_size = n_face_qpoint*n_var;
   const int n_dim = n_var - 2;
   const int jac_size = n_dim*n_dim*n_face_qpoint;
-  double mult = settings.d_t_by_d_pos/weights_1d(0);
+  double mult = settings.d_t_by_d_pos/basis.node_weights()[0];
   double heat_rat = settings.cpg_heat_rat;
 
   // FIXME: fix race condition to allow parallelism

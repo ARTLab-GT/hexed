@@ -161,10 +161,9 @@ void Deformed_grid::execute_local(Kernel_settings& settings)
 
 void Deformed_grid::execute_neighbor(Kernel_settings& settings)
 {
-  get_neighbor_deformed_cpg_euler(n_dim, basis.rank)(state_connections_r(), state_connections_w(), jacobian_neighbors.data(),
-                                  neighbor_axes.data(), neighbor_is_positive.data(), neighbor_storage[0].size()/2, basis.node_weights(), settings);
-  get_gbc_cpg_euler(n_dim, basis.rank)(ghost_bound_conds, state_r(), state_w(), basis.node_weights()(0), settings);
-  get_nonpen_cpg_euler(n_dim, basis.rank)(state_r(), state_w(), jacobian.data(), i_elem_wall.data(), i_dim_wall.data(), is_positive_wall.data(), i_elem_wall.size(), basis.node_weights()(0), settings);
+  get_neighbor_deformed_cpg_euler(n_dim, basis.rank)(state_connections_r(), state_connections_w(), jacobian_neighbors.data(), neighbor_axes.data(), neighbor_is_positive.data(), neighbor_storage[0].size()/2, basis, settings);
+  get_gbc_cpg_euler(n_dim, basis.rank)(ghost_bound_conds, state_r(), state_w(), basis, settings);
+  get_nonpen_cpg_euler(n_dim, basis.rank)(state_r(), state_w(), jacobian.data(), i_elem_wall.data(), i_dim_wall.data(), is_positive_wall.data(), i_elem_wall.size(), basis, settings);
 }
 
 void Deformed_grid::execute_req_visc(Kernel_settings& settings)

@@ -3,6 +3,7 @@
 
 #include <Eigen/Dense>
 
+#include <Basis.hpp>
 #include "read_copy.hpp"
 #include "write_copy.hpp"
 #include "average.hpp"
@@ -12,7 +13,7 @@ namespace cartdg
 
 template<int n_var, int n_qpoint, int row_size>
 void average_neighbor(double*** connections_r, double*** connections_w, int* n_connections,
-                      Eigen::VectorXd weights_1d, double d_t_by_d_pos)
+                      Basis& basis, double d_t_by_d_pos)
 {
   const int n_face_qpoint = n_qpoint/row_size;
   const int face_size = n_face_qpoint*n_var;
