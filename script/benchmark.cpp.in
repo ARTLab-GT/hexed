@@ -21,7 +21,9 @@ int n_qpoint = std::pow(row_size, dim);
 int n_visc = std::pow(2, dim);
 int n_var = dim + 2;
 int n_total = n_var*n_qpoint*n_elem;
+int n_jacobian = n_elem*n_qpoint*dim*dim;
 
+std::vector<double> jacobian_vec (n_jacobian, 0.);
 std::vector<double> read_vec (n_total);
 std::vector<double> write_vec (n_total, 0.);
 std::vector<double> visc_vec (n_elem*n_visc, 0.);
@@ -31,6 +33,16 @@ for (int i = 0; i < n_total; ++i)
   read_vec[i] = (rand()%1000)/1000. + 10.; // "+ 10." avoids NaN due to nonpositive density
   if (((i/n_qpoint)%n_var) == n_var - 1) read_vec[i] += 100; // Avoid NaN due to negative pressure
 }
+#pragma omp parallel for
+for (int i = 0; i < n_jacobian; ++i)
+{
+  // generate numbers between 0.9 and 1.099 on the diagonal
+  // and between -0.1 and 0.099 elsewhere
+  jacobian_vec[i] = ((rand()%200) - 100)/1000.;
+  int i_entry = (i/n_qpoint)%(dim*dim);
+  if ((i_entry/dim) == (i_entry%dim)) i_entry += 1.;
+}
+double* jacobian = jacobian_vec.data();
 double* read = read_vec.data();
 double* write = write_vec.data();
 double* visc = visc_vec.data();
