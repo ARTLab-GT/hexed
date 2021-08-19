@@ -273,9 +273,8 @@ void Grid::execute_local(Kernel_settings& settings)
 
 void Grid::execute_neighbor(Kernel_settings& settings)
 {
-  get_neighbor_cpg_euler(n_dim, basis.rank)(neighbor_connections_r().data(), neighbor_connections_w().data(), 
-                                            n_neighb_con().data(), basis, settings);
-  get_gbc_cpg_euler(n_dim, basis.rank)(ghost_bound_conds, state_r(), state_w(), basis.node_weights()(0), settings);
+  get_neighbor_cpg_euler(n_dim, basis.rank)(neighbor_connections_r().data(), neighbor_connections_w().data(), n_neighb_con().data(), basis, settings);
+  get_gbc_cpg_euler(n_dim, basis.rank)(ghost_bound_conds, state_r(), state_w(), basis, settings);
 }
 
 void Grid::execute_req_visc(Kernel_settings& settings)
@@ -296,7 +295,7 @@ void Grid::execute_local_derivative(int i_var, int i_axis, Kernel_settings& sett
 void Grid::execute_neighbor_derivative(int i_var, int i_axis, Kernel_settings& settings)
 {
   int n_con = n_neighb_con()[i_axis];
-  get_neighbor_derivative(n_dim, basis.rank)(neighbor_connections_r()[i_axis], deriv_neighbor_connections()[i_axis], n_con, i_var, i_axis, basis.node_weights(), settings);
+  get_neighbor_derivative(n_dim, basis.rank)(neighbor_connections_r()[i_axis], deriv_neighbor_connections()[i_axis], n_con, i_var, i_axis, basis, settings);
 }
 
 void Grid::execute_av_flux(Kernel_settings& settings)
@@ -313,8 +312,8 @@ void Grid::execute_neighbor_av(int i_var, int i_axis, Kernel_settings& settings)
 {
   int n_con = n_neighb_con()[i_axis];
   get_neighbor_av(n_dim, basis.rank)(deriv_neighbor_connections()[i_axis],
-                                     neighbor_connections_w()[i_axis], n_con, i_var, i_axis, basis.node_weights(), settings);
-  get_gbc_av(n_dim, basis.rank)(ghost_bound_conds, derivs.data(), state_w(), i_var, i_axis, basis.node_weights()(0), settings);
+                                     neighbor_connections_w()[i_axis], n_con, i_var, i_axis, basis, settings);
+  get_gbc_av(n_dim, basis.rank)(ghost_bound_conds, derivs.data(), state_w(), i_var, i_axis, basis, settings);
 }
 
 void Grid::print()

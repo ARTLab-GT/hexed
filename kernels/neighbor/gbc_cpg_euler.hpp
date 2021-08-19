@@ -2,6 +2,7 @@
 #define CARTDG_GBC_CPG_EULER_HPP_
 
 #include <Kernel_settings.hpp>
+#include <Basis.hpp>
 #include <Ghost_boundary_condition.hpp>
 #include "hll_deformed_cpg_euler.hpp"
 #include "read_copy.hpp"
@@ -13,9 +14,10 @@ namespace cartdg
 // AUTOGENERATE LOOKUP
 template<int n_var, int n_qpoint, int row_size>
 void gbc_cpg_euler(std::vector<Ghost_boundary_condition*>& ghost_bound_conds,
-                   double* read, double* write, double weight,
+                   double* read, double* write, Basis& basis,
                    Kernel_settings& settings)
 {
+  double weight = basis.node_weights()[0];
   const int n_dof = n_var*n_qpoint;
   const int n_dim = n_var - 2;
 

@@ -1,12 +1,14 @@
 #include <catch.hpp>
 
 #include <Kernel_settings.hpp>
+#include <Gauss_lobatto.hpp>
 #include <get_nonpen_cpg_euler.hpp>
 
 TEST_CASE("non-penetration BC")
 {
   cartdg::Kernel_settings settings;
   settings.d_t_by_d_pos = 0.1;
+  cartdg::Gauss_lobatto basis (2);
 
   double veloc0 = 100.;
   double veloc1 = 50.;
@@ -41,7 +43,7 @@ TEST_CASE("non-penetration BC")
   }
 
   cartdg::get_nonpen_cpg_euler(3, 2)(&read[0][0][0], &write[0][0][0], &jacobian[0][0][0][0],
-                                     i_elem, i_dim, is_positive, 3, 2., settings);
+                                     i_elem, i_dim, is_positive, 3, basis, settings);
 
   for (int i_qpoint = 0; i_qpoint < 8; ++i_qpoint)
   {
@@ -53,7 +55,7 @@ TEST_CASE("non-penetration BC")
   }
 
   double veloc_normal = 2*veloc0 - 1*veloc1;
-  double mult = settings.d_t_by_d_pos/4.;
+  double mult = settings.d_t_by_d_pos/1.;
   double mom_tang = mass*(veloc0*1 + veloc1*2);
   for (int i_qpoint : {0, 1, 4, 5})
   {

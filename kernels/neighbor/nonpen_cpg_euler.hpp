@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 
 #include <Kernel_settings.hpp>
+#include <Basis.hpp>
 #include "read_copy.hpp"
 #include "write_copy.hpp"
 #include "hll_deformed_cpg_euler.hpp"
@@ -14,12 +15,12 @@ namespace cartdg
 // AUTOGENERATE LOOKUP
 template <int n_var, int n_qpoint, int row_size>
 void nonpen_cpg_euler(double* read, double* write, double* jacobian, int* i_elem,
-                      int* i_dim, int* is_positive_face, int n_bc, double weight,
+                      int* i_dim, int* is_positive_face, int n_bc, Basis& basis,
                       Kernel_settings& settings)
 {
   const int n_face_qpoint = n_qpoint/row_size;
   const int n_dim = n_var - 2;
-  double mult = settings.d_t_by_d_pos/weight;
+  double mult = settings.d_t_by_d_pos/basis.node_weights()[0];
   double heat_rat = settings.cpg_heat_rat;
 
   for (int i_bc = 0; i_bc < n_bc; ++i_bc)

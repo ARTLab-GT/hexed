@@ -9,7 +9,7 @@
 namespace cartdg
 {
 
-// AUTOGENERATE LOOKUP
+// AUTOGENERATE LOOKUP BENCHMARK(deformed, 3)
 template<int n_var, int n_qpoint, int row_size>
 void local_deformed_cpg_euler(double* read, double* write, double* jacobian, int n_elem, Basis& basis, Kernel_settings& settings)
 {
@@ -21,7 +21,6 @@ void local_deformed_cpg_euler(double* read, double* write, double* jacobian, int
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
-
     double flux [n_dim][n_var][n_qpoint];
     double jacobian_determinant [n_qpoint];
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
@@ -37,7 +36,7 @@ void local_deformed_cpg_euler(double* read, double* write, double* jacobian, int
       }
       jacobian_determinant[i_qpoint] = local_jacobian.determinant();
 
-    // Compute flux in physical space
+      // Compute flux in physical space
       double pres = 0;
       #define READ(i_var) read[(i_elem*n_var + i_var)*n_qpoint + i_qpoint]
       for (int i_axis = 0; i_axis < n_var - 2; ++i_axis)
@@ -60,25 +59,6 @@ void local_deformed_cpg_euler(double* read, double* write, double* jacobian, int
         #undef FLUX
       }
       #undef READ
-
-      // Compute flux in reference space
-      for (int i_var = 0; i_var < n_var; ++i_var)
-      {
-        double temp_flux [n_dim];
-        for (int i_axis = 0; i_axis < n_dim; ++i_axis)
-        {
-          Eigen::Matrix<double, n_dim, n_dim> flux_mat = local_jacobian;
-          for (int j_axis = 0; j_axis < n_dim; ++j_axis)
-          {
-            flux_mat(j_axis, i_axis) = flux[j_axis][i_var][i_qpoint];
-          }
-          temp_flux[i_axis] = flux_mat.determinant();
-        }
-        for (int i_axis = 0; i_axis < n_dim; ++i_axis)
-        {
-          flux[i_axis][i_var][i_qpoint] = temp_flux[i_axis];
-        }
-      }
     }
 
     // Initialize updated solution to be equal to current solution
@@ -99,21 +79,56 @@ void local_deformed_cpg_euler(double* read, double* write, double* jacobian, int
         {
 
           // Fetch this row of data
-          double row_flux [n_var][row_size];
+          double phys_flux [n_dim][n_var][row_size];
+          double row_jac [n_dim][n_dim][row_size];
           double row_w [n_var][row_size];
+          for (int j_axis = 0; j_axis < n_dim; ++j_axis)
+          {
+            for (int i_var = 0; i_var < n_var; ++i_var)
+            {
+              for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
+              {
+                phys_flux[j_axis][i_var][i_qpoint]
+                = flux[j_axis][i_var][i_outer*stride*row_size + i_inner + i_qpoint*stride];
+              }
+            }
+          }
+          for (int j_axis = 0; j_axis < n_dim; ++j_axis)
+          {
+            for (int k_axis = 0; k_axis < n_dim; ++k_axis)
+            {
+              for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
+              {
+                row_jac[j_axis][k_axis][i_qpoint] = jacobian[((i_elem*n_dim + j_axis)*n_dim + k_axis)*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
+              }
+            }
+          }
+
+          // differentiate flux
+          double flux_diff [n_dim][n_var][row_size];
+          Eigen::Map<Eigen::Matrix<double, row_size, n_dim*n_var>> pf (&(phys_flux[0][0][0]));
+          Eigen::Map<Eigen::Matrix<double, row_size, n_dim*n_var>> fd (&(flux_diff[0][0][0]));
+          fd.noalias() = diff_mat*pf;
+
           for (int i_var = 0; i_var < n_var; ++i_var)
           {
             for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
             {
-              row_flux[i_var][i_qpoint]
-              = flux[i_axis][i_var][i_outer*stride*row_size + i_inner + i_qpoint*stride];
+              Eigen::Matrix<double, n_dim, n_dim> flux_mat;
+              for (int j_axis = 0; j_axis < n_dim; ++j_axis)
+              {
+                for (int k_axis = 0; k_axis < n_dim; ++k_axis)
+                {
+                  flux_mat(j_axis, k_axis) = row_jac[j_axis][k_axis][i_qpoint];
+                }
+              }
+              for (int j_axis = 0; j_axis < n_dim; ++j_axis)
+              {
+                flux_mat(j_axis, i_axis) = flux_diff[j_axis][i_var][i_qpoint];
+              }
+              row_w[i_var][i_qpoint] = flux_mat.determinant()*-d_t_by_d_pos;
             }
           }
-
-          // Differentiate flux
-          Eigen::Map<Eigen::Matrix<double, row_size, n_var>> f (&(row_flux[0][0]));
-          Eigen::Map<Eigen::Matrix<double, row_size, n_var>> w (&(row_w[0][0]));
-          w.noalias() = -diff_mat*f*d_t_by_d_pos;
 
           // Write updated solution
           for (int i_var = 0; i_var < n_var; ++i_var)
