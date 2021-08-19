@@ -40,7 +40,7 @@ for (int i = 0; i < n_jacobian; ++i)
   // and between -0.1 and 0.099 elsewhere
   jacobian_vec[i] = ((rand()%200) - 100)/1000.;
   int i_entry = (i/n_qpoint)%(dim*dim);
-  if ((i_entry/dim) == (i_entry%dim)) i_entry += 1.;
+  if ((i_entry/dim) == (i_entry%dim)) jacobian_vec[i] += 1.;
 }
 double* jacobian = jacobian_vec.data();
 double* read = read_vec.data();
@@ -50,25 +50,44 @@ std::vector<std::vector<double*>> con_r_vec2 (dim);
 std::vector<std::vector<double*>> con_w_vec2 (dim);
 std::vector<double**> con_r_vec1 (dim);
 std::vector<double**> con_w_vec1 (dim);
+std::vector<double*> def_con_j_vec;
+std::vector<double*> def_con_r_vec;
+std::vector<double*> def_con_w_vec;
+std::vector<int> i_axis_vec;
+std::vector<int> is_positive_face_vec;
 std::vector<int> n_con_vec (dim);
 for (int i_dim = 0; i_dim < dim; ++i_dim)
 {
   n_con_vec[i_dim] = n_elem;
   for (int i_con = 0; i_con < n_elem; ++i_con)
   {
-    int elem0 = (rand()%n_elem)*n_qpoint*n_var;
-    int elem1 = (rand()%n_elem)*n_qpoint*n_var;
-    con_r_vec2[i_dim].push_back(read + elem0);
-    con_r_vec2[i_dim].push_back(read + elem1);
-    con_w_vec2[i_dim].push_back(write + elem0);
-    con_w_vec2[i_dim].push_back(write + elem1);
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wunused-variable"
+    for (int i_side: {0, 1})
+    {
+      int elem = (rand()%n_elem)*n_qpoint*n_var;
+      con_r_vec2[i_dim].push_back(read + elem);
+      con_w_vec2[i_dim].push_back(write + elem);
+      def_con_j_vec.push_back(jacobian + elem);
+      def_con_r_vec.push_back(read + elem);
+      def_con_w_vec.push_back(write + elem);
+      i_axis_vec.push_back(rand()%dim);
+      is_positive_face_vec.push_back(rand()%2);
+    }
+    #pragma GCC diagnostic pop
   }
   con_r_vec1[i_dim] = con_r_vec2[i_dim].data();
   con_w_vec1[i_dim] = con_w_vec2[i_dim].data();
 }
 double*** connections_r = con_r_vec1.data();
 double*** connections_w = con_w_vec1.data();
+double** def_connections_j = def_con_j_vec.data();
+double** def_connections_r = def_con_r_vec.data();
+double** def_connections_w = def_con_w_vec.data();
+int* i_axis = i_axis_vec.data();
+int* is_positive_face = is_positive_face_vec.data();
 int* n_connections = n_con_vec.data();
+int def_n_connections = dim*n_elem;
 
 cartdg::Gauss_lobatto basis (row_size);
 cartdg::Kernel_settings settings;
