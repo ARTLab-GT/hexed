@@ -22,8 +22,8 @@ void jump(double** connections_r, double** connections_w, int n_con,
 
   for (int i_con = 0; i_con < n_con; ++i_con)
   {
-    double face_r [2][n_face_qpoint];
-    double face_w [2][n_face_qpoint];
+    double face_r [2][n_face_qpoint] {}; // initialize to avoid "-Wmaybe-uninitialized"
+    double face_w [2][n_face_qpoint] {};
 
     double** connect = connections_r + 2*i_con;
     read_copy<1, n_qpoint, row_size>(connect[0] + i_var_read*n_qpoint, face_r[0], stride, 1);

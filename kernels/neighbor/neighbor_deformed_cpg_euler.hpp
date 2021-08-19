@@ -4,7 +4,9 @@
 #include <Kernel_settings.hpp>
 #include <Basis.hpp>
 #include "read_copy.hpp"
+#define CARTDG_ATOMIC // avoids race condition since i_axis is not the same for all threads
 #include "write_copy.hpp"
+#undef CARTDG_ATOMIC
 #include "hll_deformed_cpg_euler.hpp"
 
 namespace cartdg
@@ -25,12 +27,11 @@ void neighbor_deformed_cpg_euler(double** def_connections_r, double** def_connec
   double mult = settings.d_t_by_d_pos/basis.node_weights()[0];
   double heat_rat = settings.cpg_heat_rat;
 
-  // FIXME: fix race condition to allow parallelism
-  //#pragma omp parallel for
+  #pragma omp parallel for
   for (int i_con = 0; i_con < def_n_connections; ++i_con)
   {
     double face_r [2*face_size];
-    double face_jacobian[2*jac_size];
+    double face_jacobian [2*jac_size];
     double face_w [2*face_size];
 
     double** connect = def_connections_r + 2*i_con;
