@@ -48,7 +48,7 @@ void neighbor_deformed_cpg_euler(double** def_connections_r, double** def_connec
     if ((is_positive_face[2*i_con] != is_positive_face[2*i_con + 1]) && (i_axis[2*i_con] != i_axis[2*i_con + 1]))
     {
       if (n_dim == 3)
-      {}
+      {} // FIXME
       else
       {
         Eigen::Map<Eigen::Matrix<double, row_size, n_var>> face_state (face_r);
