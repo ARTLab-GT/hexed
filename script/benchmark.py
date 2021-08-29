@@ -1,10 +1,21 @@
 import matplotlib.pyplot as plt
 import subprocess
 import re
+import sys
 
 dim = 3
 row_size = 6
 n_side = 40
+
+args = sys.argv[1:]
+for arg in args:
+    # argument must fit precise form to avoid remote possibility of security hazard
+    match = re.match(r"\w+=\w+", arg)
+    if (not match) or len(match.group(0)) != len(arg):
+        print("Invalid command line argument.")
+        exit()
+    exec(arg)
+
 n_elem = n_side**dim
 
 print(f"""
