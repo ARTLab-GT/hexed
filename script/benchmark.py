@@ -17,13 +17,13 @@ Times:
 """[1:-1])
 cmd = [str(arg) for arg in ["benchmark/benchmark", dim, row_size, n_side]]
 output = subprocess.run(cmd, capture_output=True)
+stdout = str(output.stdout, "ascii")
+print(stdout)
 if len(output.stderr) > 0:
     err = str(output.stderr, "ascii")
     raise Exception("Benchmark executable crashed with the following error message:\n\n" + err)
-output = str(output.stdout, "ascii")
-print(output)
 
-lines = output.split("\n")
+lines = stdout.split("\n")
 names = []
 times = []
 groups = {}
