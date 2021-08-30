@@ -6,7 +6,9 @@
 #include <Ghost_boundary_condition.hpp>
 #include "hll_deformed_cpg_euler.hpp"
 #include "read_copy.hpp"
+#define CARTDG_ATOMIC
 #include "write_copy.hpp"
+#undef CARTDG_ATOMIC
 
 namespace cartdg
 {
@@ -21,6 +23,7 @@ void gbc_cpg_euler(std::vector<Ghost_boundary_condition*>& ghost_bound_conds,
   const int n_dof = n_var*n_qpoint;
   const int n_dim = n_var - 2;
 
+  #pragma omp parallel for
   for (Ghost_boundary_condition* gbc : ghost_bound_conds)
   {
     for (unsigned i_bc = 0; i_bc < gbc->elems.size(); ++i_bc)

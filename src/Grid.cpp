@@ -243,6 +243,7 @@ bool Grid::execute_runge_kutta_stage()
   double* read1 = state_w();
   double* write = (i_rk_stage == 2) ? read0 : read1;
   double weight1 = rk_weights[i_rk_stage]; double weight0 = 1. - weight1;
+  #pragma omp parallel for
   for (int i = 0; i < n_elem*n_dof; ++i)
   {
     write[i] = weight1*read1[i] + weight0*read0[i];

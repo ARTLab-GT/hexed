@@ -23,6 +23,7 @@ void nonpen_cpg_euler(double* read, double* write, double* jacobian, int* i_elem
   double mult = settings.d_t_by_d_pos/basis.node_weights()[0];
   double heat_rat = settings.cpg_heat_rat;
 
+  #pragma omp parallel for
   for (int i_bc = 0; i_bc < n_bc; ++i_bc)
   {
     int stride = n_face_qpoint;
