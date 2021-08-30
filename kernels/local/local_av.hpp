@@ -8,10 +8,10 @@ namespace cartdg
 
 // AUTOGENERATE LOOKUP
 template<int n_var, int n_qpoint, int row_size>
-void local_av(double* read, double* write, int n_elem, int i_var, int i_axis,
+void local_av(double* read, double* write, int n_elem, int i_var, int i_dim,
               Basis& basis, Kernel_settings& settings)
 {
-  derivative<1, n_var, n_qpoint, row_size, true>(read, write, n_elem, 0, i_var, i_axis, basis, settings);
+  derivative<1, n_var, n_qpoint, row_size, true>(read, write, n_elem, 0, i_var, i_dim, basis, settings);
 }
 
 }

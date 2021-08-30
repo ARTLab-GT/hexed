@@ -350,7 +350,7 @@ TEST_CASE("derivative")
     {
       const int n_qpoint = row_size*row_size*row_size;
       double coefs [] {1.103, -4.044, 0.392};
-      for (int i_axis = 0; i_axis < 3; ++i_axis)
+      for (int i_dim = 0; i_dim < 3; ++i_dim)
       {
         double read [row_size][row_size][row_size] {};
         double write [row_size][row_size][row_size] {};
@@ -361,18 +361,18 @@ TEST_CASE("derivative")
             for (int k = 0; k < row_size; ++k)
             {
               int inds [] {i, j, k};
-              for (int j_axis : {0, 1, 2}) read[i][j][k] += coefs[j_axis]*basis.node(inds[j_axis]);
+              for (int j_dim : {0, 1, 2}) read[i][j][k] += coefs[j_dim]*basis.node(inds[j_dim]);
             }
           }
         }
-        derivative<1, 1, n_qpoint, row_size>(read[0][0], write[0][0], 1, 0, 0, i_axis, basis, settings);
+        derivative<1, 1, n_qpoint, row_size>(read[0][0], write[0][0], 1, 0, 0, i_dim, basis, settings);
         for (int i = 0; i < row_size; ++i)
         {
           for (int j = 0; j < row_size; ++j)
           {
             for (int k = 0; k < row_size; ++k)
             {
-              REQUIRE(write[i][j][k] == Approx(coefs[i_axis]));
+              REQUIRE(write[i][j][k] == Approx(coefs[i_dim]));
             }
           }
         }

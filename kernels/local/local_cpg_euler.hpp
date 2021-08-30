@@ -30,9 +30,9 @@ void local_cpg_euler(double* read, double* write, int n_elem,
     }
 
     // Perform update
-    for (int stride = n_qpoint/row_size, n_rows = 1, i_axis = 0;
+    for (int stride = n_qpoint/row_size, n_rows = 1, i_dim = 0;
          n_rows < n_qpoint;
-         stride /= row_size, n_rows *= row_size, ++i_axis)
+         stride /= row_size, n_rows *= row_size, ++i_dim)
     {
       for (int i_outer = 0; i_outer < n_rows; ++i_outer)
       {
@@ -58,16 +58,16 @@ void local_cpg_euler(double* read, double* write, int n_elem,
           {
             #define READ(i) row_r[i][i_qpoint]
             #define FLUX(i) flux[i][i_qpoint]
-            double veloc = READ(i_axis)/READ(n_var - 2);
+            double veloc = READ(i_dim)/READ(n_var - 2);
             double pres = 0;
-            for (int j_axis = 0; j_axis < n_var - 2; ++j_axis)
+            for (int j_dim = 0; j_dim < n_var - 2; ++j_dim)
             {
-              FLUX(j_axis) = READ(j_axis)*veloc;
-              pres += READ(j_axis)*READ(j_axis)/READ(n_var - 2);
+              FLUX(j_dim) = READ(j_dim)*veloc;
+              pres += READ(j_dim)*READ(j_dim)/READ(n_var - 2);
             }
             pres = (heat_rat - 1.)*(READ(n_var - 1) - 0.5*pres);
-            FLUX(i_axis) += pres;
-            FLUX(n_var - 2) = READ(i_axis);
+            FLUX(i_dim) += pres;
+            FLUX(n_var - 2) = READ(i_dim);
             FLUX(n_var - 1) = (READ(n_var - 1) + pres)*veloc;
             #undef FLUX
             #undef READ

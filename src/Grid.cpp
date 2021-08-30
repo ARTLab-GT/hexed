@@ -288,15 +288,15 @@ void Grid::execute_cont_visc(Kernel_settings& settings)
   get_cont_visc_cpg_euler(n_dim, basis.row_size)(visc_neighbor_connections().data(), n_neighb_con().data(), settings);
 }
 
-void Grid::execute_local_derivative(int i_var, int i_axis, Kernel_settings& settings)
+void Grid::execute_local_derivative(int i_var, int i_dim, Kernel_settings& settings)
 {
-  get_local_derivative(n_dim, basis.row_size)(state_r(), derivs.data(), n_elem, i_var, i_axis, basis, settings);
+  get_local_derivative(n_dim, basis.row_size)(state_r(), derivs.data(), n_elem, i_var, i_dim, basis, settings);
 }
 
-void Grid::execute_neighbor_derivative(int i_var, int i_axis, Kernel_settings& settings)
+void Grid::execute_neighbor_derivative(int i_var, int i_dim, Kernel_settings& settings)
 {
-  int n_con = n_neighb_con()[i_axis];
-  get_neighbor_derivative(n_dim, basis.row_size)(neighbor_connections_r()[i_axis], deriv_neighbor_connections()[i_axis], n_con, i_var, i_axis, basis, settings);
+  int n_con = n_neighb_con()[i_dim];
+  get_neighbor_derivative(n_dim, basis.row_size)(neighbor_connections_r()[i_dim], deriv_neighbor_connections()[i_dim], n_con, i_var, i_dim, basis, settings);
 }
 
 void Grid::execute_av_flux(Kernel_settings& settings)
@@ -304,17 +304,17 @@ void Grid::execute_av_flux(Kernel_settings& settings)
   get_av_flux(n_dim, basis.row_size)(derivs.data(), visc.data(), n_elem, basis, settings);
 }
 
-void Grid::execute_local_av(int i_var, int i_axis, Kernel_settings& settings)
+void Grid::execute_local_av(int i_var, int i_dim, Kernel_settings& settings)
 {
-  get_local_av(n_dim, basis.row_size)(derivs.data(), state_w(), n_elem, i_var, i_axis, basis, settings);
+  get_local_av(n_dim, basis.row_size)(derivs.data(), state_w(), n_elem, i_var, i_dim, basis, settings);
 }
 
-void Grid::execute_neighbor_av(int i_var, int i_axis, Kernel_settings& settings)
+void Grid::execute_neighbor_av(int i_var, int i_dim, Kernel_settings& settings)
 {
-  int n_con = n_neighb_con()[i_axis];
-  get_neighbor_av(n_dim, basis.row_size)(deriv_neighbor_connections()[i_axis],
-                                     neighbor_connections_w()[i_axis], n_con, i_var, i_axis, basis, settings);
-  get_gbc_av(n_dim, basis.row_size)(ghost_bound_conds, derivs.data(), state_w(), i_var, i_axis, basis, settings);
+  int n_con = n_neighb_con()[i_dim];
+  get_neighbor_av(n_dim, basis.row_size)(deriv_neighbor_connections()[i_dim],
+                                         neighbor_connections_w()[i_dim], n_con, i_var, i_dim, basis, settings);
+  get_gbc_av(n_dim, basis.row_size)(ghost_bound_conds, derivs.data(), state_w(), i_var, i_dim, basis, settings);
 }
 
 void Grid::print()
@@ -373,9 +373,9 @@ std::vector<double> Grid::integral(Domain_func& integrand)
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
     {
       std::vector<double> point_pos;
-      for (int i_axis = 0; i_axis < n_dim; ++i_axis)
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim)
       {
-        point_pos.push_back(elem_pos[i_qpoint + i_axis*n_qpoint]);
+        point_pos.push_back(elem_pos[i_qpoint + i_dim*n_qpoint]);
       }
       std::vector<double> point_state;
       for (int i_var = 0; i_var < n_var; ++i_var)

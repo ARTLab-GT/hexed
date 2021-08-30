@@ -9,9 +9,9 @@ class Arbitrary_func : public cartdg::Spacetime_func
   {
     auto result = pos;
     double mult [] {-2, 0.3, 4, 0., 0.01};
-    for (int i_axis = 0; i_axis < int(pos.size()); ++i_axis)
+    for (int i_dim = 0; i_dim < int(pos.size()); ++i_dim)
     {
-      result[i_axis] = pos[i_axis]*mult[i_axis] - 2*time;
+      result[i_dim] = pos[i_dim]*mult[i_dim] - 2*time;
     }
     return result;
   }
@@ -96,24 +96,24 @@ TEST_CASE("Vortex_func")
       double diff = 1.e-6;
       for (int dir : {-1, 1})
       {
-        for (int i_axis : {0, 1})
+        for (int i_dim : {0, 1})
         {
           auto pos = test_pos[i_test];
-          pos[i_axis] += dir*diff;
+          pos[i_dim] += dir*diff;
           auto state = vortex(pos, test_time[i_test]);
           double pressure = state[3] - 0.5/state[2]*(state[0]*state[0] + state[1]*state[1]);
           pressure *= (vortex.heat_rat - 1.);
           std::vector<double> flux (4);
-          for (int j_axis = 0; j_axis < 2; ++j_axis)
+          for (int j_dim = 0; j_dim < 2; ++j_dim)
           {
-            flux[j_axis] += state[i_axis]*state[j_axis]/state[2];
+            flux[j_dim] += state[i_dim]*state[j_dim]/state[2];
           }
-          flux[i_axis] += pressure;
-          flux[2] = state[i_axis];
-          flux[3] = state[i_axis]/state[2]*(state[3] + pressure);
+          flux[i_dim] += pressure;
+          flux[2] = state[i_dim];
+          flux[3] = state[i_dim]/state[2]*(state[3] + pressure);
           for (int i_var = 0; i_var < 4; ++i_var)
           {
-            flux_grad[i_axis][i_var] += dir*flux[i_var]/(2*diff);
+            flux_grad[i_dim][i_var] += dir*flux[i_var]/(2*diff);
           }
         }
         auto pos = test_pos[i_test];

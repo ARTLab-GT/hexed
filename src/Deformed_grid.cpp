@@ -174,7 +174,7 @@ void Deformed_grid::execute_cont_visc(Kernel_settings& settings)
 {
 }
 
-void Deformed_grid::execute_local_derivative(int i_var, int i_axis, Kernel_settings& settings)
+void Deformed_grid::execute_local_derivative(int i_var, int i_dim, Kernel_settings& settings)
 {
   double* sr = state_r();
   double* sw = state_w();
@@ -184,7 +184,7 @@ void Deformed_grid::execute_local_derivative(int i_var, int i_axis, Kernel_setti
   }
 }
 
-void Deformed_grid::execute_neighbor_derivative(int i_var, int i_axis, Kernel_settings& settings)
+void Deformed_grid::execute_neighbor_derivative(int i_var, int i_dim, Kernel_settings& settings)
 {
 }
 
@@ -192,15 +192,15 @@ void Deformed_grid::execute_av_flux(Kernel_settings& settings)
 {
 }
 
-void Deformed_grid::execute_local_av(int i_var, int i_axis, Kernel_settings& settings)
+void Deformed_grid::execute_local_av(int i_var, int i_dim, Kernel_settings& settings)
 {
 }
 
-void Deformed_grid::execute_neighbor_av(int i_var, int i_axis, Kernel_settings& settings)
+void Deformed_grid::execute_neighbor_av(int i_var, int i_dim, Kernel_settings& settings)
 {
 }
 
-void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_axis,
+void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
                             std::array<bool, 2> is_positive)
 {
   std::array<std::vector<int>, 2> id_inds;
@@ -208,7 +208,7 @@ void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_axis
   for (int i_side : {0, 1})
   {
     int stride = n_vertices/2;
-    for (int i = 0; i < i_axis[i_side]; ++i) stride /= 2;
+    for (int i = 0; i < i_dim[i_side]; ++i) stride /= 2;
     strides[i_side] = stride;
     for (int i_vertex = 0; i_vertex < n_vertices; ++i_vertex)
     {
@@ -218,17 +218,17 @@ void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_axis
       }
     }
   }
-  if ((is_positive[0] != is_positive[1]) && (i_axis[0] != i_axis[1]))
+  if ((is_positive[0] != is_positive[1]) && (i_dim[0] != i_dim[1]))
   {
     if (n_dim == 3)
     {
       int stride = strides[0];
-      if (i_axis[0] < i_axis[1]) stride /= 2;
+      if (i_dim[0] < i_dim[1]) stride /= 2;
       for (int i : {0, 1}) std::swap(id_inds[1][i*2/stride], id_inds[1][i*2/stride + stride]);
     }
     else std::swap(id_inds[1][0], id_inds[1][1]);
   }
-  if ((i_axis[0] == 0 && i_axis[1] == 2) || (i_axis[0] == 2 && i_axis[1] == 0))
+  if ((i_dim[0] == 0 && i_dim[1] == 2) || (i_dim[0] == 2 && i_dim[1] == 0))
   {
     std::swap(id_inds[1][1], id_inds[1][2]);
   }
@@ -239,7 +239,7 @@ void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_axis
   for (int i_side : {0, 1})
   {
     neighbor_inds.push_back(i_elem[i_side]);
-    neighbor_axes.push_back(i_axis[i_side]);
+    neighbor_axes.push_back(i_dim[i_side]);
     neighbor_is_positive.push_back(is_positive[i_side]);
   }
 }
@@ -257,7 +257,7 @@ void Deformed_grid::update_connections()
   }
 }
 
-void Deformed_grid::connect_non_def(std::array<int, 2> i_elem, std::array<int, 2> i_axis,
+void Deformed_grid::connect_non_def(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
                                     std::array<bool, 2> is_positive, Grid& other_grid)
 {
   for (int i_stage = 0; i_stage < 3; ++i_stage)
@@ -268,7 +268,7 @@ void Deformed_grid::connect_non_def(std::array<int, 2> i_elem, std::array<int, 2
   }
   for (int i_side : {0, 1})
   {
-    neighbor_axes.push_back(i_axis[i_side]);
+    neighbor_axes.push_back(i_dim[i_side]);
     neighbor_is_positive.push_back(int(is_positive[i_side]));
   }
   jacobian_neighbors.push_back(jacobian.data() + i_elem[0]*n_dim*n_dim*n_qpoint);

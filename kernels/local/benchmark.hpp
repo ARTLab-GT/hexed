@@ -38,9 +38,9 @@ void update_matvec(double * read, double * write, int n_elem,
       const int i = i_elem*n_qpoint*n_var + i_dof;
       write[i] = read[i];
     }
-    for (int stride = 1, n_rows = n_qpoint/row_size, i_axis = 0;
+    for (int stride = 1, n_rows = n_qpoint/row_size, i_dim = 0;
          stride < n_qpoint;
-         stride *= row_size, n_rows /= row_size, ++i_axis)
+         stride *= row_size, n_rows /= row_size, ++i_dim)
     {
       for (int i_outer = 0; i_outer < n_rows; ++i_outer)
       {

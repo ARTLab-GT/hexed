@@ -24,9 +24,9 @@ void av_flux(double* flux, double* visc, int n_elem, Basis& basis, Kernel_settin
       interp[i_visc][i_qpoint] = 1.;
     }
   }
-  for (int stride_f = n_qpoint/row_size, stride_v = n_visc/2, n_rows = 1, i_axis = 0;
+  for (int stride_f = n_qpoint/row_size, stride_v = n_visc/2, n_rows = 1, i_dim = 0;
        n_rows < n_qpoint;
-       stride_f /= row_size, stride_v /= 2, n_rows *= row_size, ++i_axis)
+       stride_f /= row_size, stride_v /= 2, n_rows *= row_size, ++i_dim)
   {
     for (int i_outer = 0; i_outer < n_rows; ++i_outer)
     {

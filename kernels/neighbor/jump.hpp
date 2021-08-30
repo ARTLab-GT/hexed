@@ -12,13 +12,13 @@ namespace cartdg
 
 template<int n_var_read, int n_var_write, int n_qpoint, int row_size>
 void jump(double** connections_r, double** connections_w, int n_con,
-          int i_var_read, int i_var_write, int i_axis,
+          int i_var_read, int i_var_write, int i_dim,
           const Eigen::VectorXd weights_1d, Kernel_settings& settings)
 {
   const int n_face_qpoint = n_qpoint/row_size;
   double weight = weights_1d(0)*settings.d_pos;
   int stride=n_face_qpoint;
-  for (int j_axis = 0; j_axis < i_axis; ++j_axis) stride /= row_size;
+  for (int j_dim = 0; j_dim < i_dim; ++j_dim) stride /= row_size;
 
   for (int i_con = 0; i_con < n_con; ++i_con)
   {
