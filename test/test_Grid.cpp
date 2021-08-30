@@ -173,12 +173,12 @@ TEST_CASE("Grid")
     cartdg::Grid square (1, 2, 2, 1., basis);
     for (int i_elem = 0; i_elem < square.n_elem; ++i_elem)
     {
-      for (int i = 0; i < basis.rank; ++i)
+      for (int i = 0; i < basis.row_size; ++i)
       {
-        for (int j = 0; j < basis.rank; ++j)
+        for (int j = 0; j < basis.row_size; ++j)
         {
           double pos0 = basis.node(i) + i_elem; double pos1 = basis.node(j);
-          square.state_r()[(i_elem*basis.rank + i)*basis.rank + j] = pos0*pos0*pos1*pos1*pos1;
+          square.state_r()[(i_elem*basis.row_size + i)*basis.row_size + j] = pos0*pos0*pos1*pos1*pos1;
           square.pos[i_elem*2] = i_elem;
         }
       }

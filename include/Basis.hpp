@@ -9,9 +9,9 @@ namespace cartdg
 class Basis
 {
   public:
-  int rank;
+  int row_size;
 
-  Basis(int rank_arg);
+  Basis(int row_size_arg);
   virtual ~Basis();
   virtual double node(int i) = 0;
   virtual Eigen::VectorXd node_weights() = 0;

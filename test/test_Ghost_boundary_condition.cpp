@@ -31,8 +31,8 @@ class Supersonic_inlet : public cartdg::Ghost_boundary_condition
 
 TEST_CASE("Ghost boundary conditions")
 {
-  const int rank = 2;
-  cartdg::Solution soln (5, 3, rank, 1.); //FIXME: change back to MAX_BASIS_RANK
+  const int row_size = 2;
+  cartdg::Solution soln (5, 3, row_size, 1.); //FIXME: change back to MAX_BASIS_RANK
   cartdg::Basis& basis = soln.basis;
   soln.kernel_settings.d_t_by_d_pos = 0.1;
   soln.add_block_grid(1, std::vector<int>{0, 0, 0}, std::vector<int>{3, 3, 3});
@@ -53,7 +53,7 @@ TEST_CASE("Ghost boundary conditions")
 
   SECTION("Basic functionality")
   {
-    const int n_face_qpoint = rank*rank;
+    const int n_face_qpoint = row_size*row_size;
     Supersonic_inlet bc (grid, 0, true);
     double some_number = 0.;
     REQUIRE(bc.jacobians.empty());
@@ -115,16 +115,16 @@ TEST_CASE("Ghost boundary conditions")
     }
     for (int i_elem = 0; i_elem < 27; ++i_elem)
     {
-      for (int i = 0; i < rank; ++i)
+      for (int i = 0; i < row_size; ++i)
       {
-        for (int j = 0; j < rank; ++j)
+        for (int j = 0; j < row_size; ++j)
         {
-          for (int k = 0; k < rank; ++k)
+          for (int k = 0; k < row_size; ++k)
           {
-            int i_qpoint = k + rank*(j + rank*i);
+            int i_qpoint = k + row_size*(j + row_size*i);
             #define  READ(i) grid.state_r()[i_elem*grid.n_dof + i_qpoint + (i)*grid.n_qpoint]
             #define WRITE(i) grid.state_w()[i_elem*grid.n_dof + i_qpoint + (i)*grid.n_qpoint]
-            READ(0) = 600.*(1 - 2.*i/(rank - 1.)); READ(1) = 0.; READ(2) = 0.;
+            READ(0) = 600.*(1 - 2.*i/(row_size - 1.)); READ(1) = 0.; READ(2) = 0.;
             READ(3) = 1.;
             READ(4) = 2e5;
             WRITE(0) = 0.; WRITE(1) = 0.; WRITE(2) = 0.;
@@ -136,7 +136,7 @@ TEST_CASE("Ghost boundary conditions")
         }
       }
     }
-    cartdg::get_gbc_cpg_euler(3, rank)(grid.ghost_bound_conds, grid.state_r(), grid.state_w(),
+    cartdg::get_gbc_cpg_euler(3, row_size)(grid.ghost_bound_conds, grid.state_r(), grid.state_w(),
                                        soln.basis, soln.kernel_settings);
     for (int i_elem = 0; i_elem < 27; ++i_elem)
     {
@@ -191,7 +191,7 @@ TEST_CASE("Ghost boundary conditions")
         #undef WRITE
       }
     }
-    cartdg::get_gbc_cpg_euler(3, rank)(grid.ghost_bound_conds, grid.state_r(), grid.state_w(),
+    cartdg::get_gbc_cpg_euler(3, row_size)(grid.ghost_bound_conds, grid.state_r(), grid.state_w(),
                                        soln.basis, soln.kernel_settings);
     for (int i_elem = 0; i_elem < 27; ++i_elem)
     {
@@ -234,8 +234,8 @@ TEST_CASE("Ghost boundary conditions")
         #undef WRITE
       }
     }
-    cartdg::get_gbc_cpg_euler(3, rank)(grid.ghost_bound_conds, grid.state_r(), grid.state_w(),
-                                       soln.basis, soln.kernel_settings);
+    cartdg::get_gbc_cpg_euler(3, row_size)(grid.ghost_bound_conds, grid.state_r(), grid.state_w(),
+                                           soln.basis, soln.kernel_settings);
     for (int i_elem = 0; i_elem < 27; ++i_elem)
     {
       std::vector<double> pos = grid.get_pos(i_elem);

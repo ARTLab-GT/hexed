@@ -8,8 +8,8 @@ namespace cartdg
 
 #define FOR_ALL_GRIDS(code) for (Grid* grid : all_grids()) { code }
 
-Solution::Solution(int n_var_arg, int n_dim_arg, int rank_arg, double bms)
-: n_var(n_var_arg), n_dim(n_dim_arg), base_mesh_size(bms), basis(rank_arg) {}
+Solution::Solution(int n_var_arg, int n_dim_arg, int row_size_arg, double bms)
+: n_var(n_var_arg), n_dim(n_dim_arg), base_mesh_size(bms), basis(row_size_arg) {}
 
 Solution::~Solution() {}
 

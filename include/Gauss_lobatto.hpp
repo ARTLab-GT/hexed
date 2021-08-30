@@ -9,7 +9,7 @@ namespace cartdg
 class Gauss_lobatto : public Basis
 {
   public:
-  Gauss_lobatto (int rank_arg);
+  Gauss_lobatto (int row_size_arg);
   virtual double node(int i);
   virtual Eigen::VectorXd node_weights();
   virtual Eigen::MatrixXd diff_mat();

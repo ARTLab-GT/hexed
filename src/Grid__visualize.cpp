@@ -47,9 +47,9 @@ void Grid::visualize(std::string file_name)
   INTEGER4 TotalNumBndryConnections = 1;
   INTEGER4 ShrConn = 0;
   /*Ordered Zone Parameters*/
-  INTEGER4 IMax = basis.rank;
-  INTEGER4 JMax = (n_dim >= 2) ? basis.rank : 1;
-  INTEGER4 KMax = (n_dim >= 3) ? basis.rank : 1;
+  INTEGER4 IMax = basis.row_size;
+  INTEGER4 JMax = (n_dim >= 2) ? basis.row_size : 1;
+  INTEGER4 KMax = (n_dim >= 3) ? basis.row_size : 1;
 
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {

@@ -7,7 +7,7 @@ namespace cartdg
 
 Ghost_boundary_condition::Ghost_boundary_condition(const Grid& grid, int i_dim_arg,
                                                      bool is_positive_face_arg)
-: i_dim(i_dim_arg), n_var(grid.n_var), n_qpoint(grid.n_qpoint/grid.basis.rank),
+: i_dim(i_dim_arg), n_var(grid.n_var), n_qpoint(grid.n_qpoint/grid.basis.row_size),
   is_positive_face(is_positive_face_arg), state(n_qpoint, 2*n_var)
 {
   default_jacobian.clear();

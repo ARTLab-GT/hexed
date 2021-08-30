@@ -3,25 +3,25 @@
 namespace cartdg
 {
 
-Equidistant::Equidistant(int rank_arg) : Basis(rank_arg) {}
+Equidistant::Equidistant(int row_size_arg) : Basis(row_size_arg) {}
 
 double Equidistant::node(int i)
 {
-  return (double)i/(rank - 1);
+  return (double)i/(row_size - 1);
 }
 
 Eigen::MatrixXd Equidistant::diff_mat()
 {
-  Eigen::MatrixXd dm (rank, rank);
-  for (int i_operand = 0; i_operand < rank; ++i_operand)
+  Eigen::MatrixXd dm (row_size, row_size);
+  for (int i_operand = 0; i_operand < row_size; ++i_operand)
   {
-    for (int i_result = 0; i_result < rank; ++i_result)
+    for (int i_result = 0; i_result < row_size; ++i_result)
     {
       double& deriv = dm(i_result, i_operand);
       if (i_result == i_operand)
       {
         deriv = 0.;
-        for (int i_node = 0; i_node < rank; ++i_node)
+        for (int i_node = 0; i_node < row_size; ++i_node)
         {
           if (i_node != i_operand)
           {
@@ -32,7 +32,7 @@ Eigen::MatrixXd Equidistant::diff_mat()
       else
       {
         deriv = 1;
-        for (int i_node = 0; i_node < rank; ++i_node)
+        for (int i_node = 0; i_node < row_size; ++i_node)
         {
           if (i_node != i_operand)
           {

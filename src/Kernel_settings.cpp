@@ -2,5 +2,4 @@
 
 namespace cartdg
 {
-
-} // namespace cartdg
+}

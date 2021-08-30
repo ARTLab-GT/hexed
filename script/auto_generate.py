@@ -8,7 +8,7 @@ max_dim = 3
 src_dir = sys.argv[1]
 src_dir += "/"
 src_dir = src_dir.replace("//", "/")
-max_rank = int(sys.argv[2])
+max_row_size = int(sys.argv[2])
 
 ### generate template lookup tables ###
 
@@ -99,18 +99,18 @@ class Kernel_settings;
             cpp_text = f"""
 {name}_type get_{name}(int n_dim, int row_size)
 {{
-  {name}_type {name}s [{max_dim}][{max_rank - 1}]
+  {name}_type {name}s [{max_dim}][{max_row_size - 1}]
   {{
 """[1:]
             for dim in range(1, max_dim + 1):
-                for row_size in range(2, max_rank + 1):
+                for row_size in range(2, max_row_size + 1):
                     cpp_text += f"    {name}<"
                     for i_param in range(len(params)):
                         cpp_text += f"{param_funcs[params[i_param]](dim, row_size)}, "
                     cpp_text = cpp_text[:-2] + ">,\n"
             cpp_text += f"""  }};
 
-  if ((n_dim > 0) && (n_dim <= {max_dim}) && (row_size >= 2) && (row_size <= {max_rank}))
+  if ((n_dim > 0) && (n_dim <= {max_dim}) && (row_size >= 2) && (row_size <= {max_row_size}))
   {{
     return {name}s[n_dim - 1][row_size - 2];
   }}
@@ -168,87 +168,87 @@ include = """
 text = ""
 
 calc_digits = 50
-min_rank = 2
-for rank in range(2, max_rank + 1):
-    nodes, weights = gauss_lobatto(rank, calc_digits)
+min_row_size = 2
+for row_size in range(2, max_row_size + 1):
+    nodes, weights = gauss_lobatto(row_size, calc_digits)
     nodes = [(node + 1)/2 for node in nodes]
     weights = [weight/2 for weight in weights]
     basis = Basis(nodes, weights, calc_digits=calc_digits)
 
     text += f"""
-double node{rank} [{rank}] {{
+double node{row_size} [{row_size}] {{
 """
-    for i_result in range(rank):
+    for i_result in range(row_size):
         text += f"{basis.node(i_result)}, "
     text += "\n};\n"
 
     text += f"""
-double weight{rank} [{rank}] {{
+double weight{row_size} [{row_size}] {{
 """
-    for i_result in range(rank):
+    for i_result in range(row_size):
         text += f"{basis.weight(i_result)}, "
     text += "\n};\n"
 
     text += f"""
-double diff_mat{rank} [{rank**2}] {{
+double diff_mat{row_size} [{row_size**2}] {{
 """
-    for i_operand in range(rank):
-        for i_result in range(rank):
+    for i_operand in range(row_size):
+        for i_result in range(row_size):
             text += f"{basis.derivative(i_result, i_operand)}, "
         text += "\n"
     text += "};\n"
 
     text += f"""
-double orthogonal{rank} [{rank**2}] {{
+double orthogonal{row_size} [{row_size**2}] {{
 """
-    for deg in range(rank):
-        for i_node in range(rank):
+    for deg in range(row_size):
+        for i_node in range(row_size):
             text += f"{basis.get_ortho(deg, i_node)}, "
         text += "\n"
     text += "};\n"
 
 for name in ["node", "weight", "diff_mat", "orthogonal"]:
     text += f"""
-double* {name}s [{max_rank + 1 - min_rank}] {{"""
-    for rank in range(2, max_rank + 1):
-        text += f"&{name}{rank}[0], "
+double* {name}s [{max_row_size + 1 - min_row_size}] {{"""
+    for row_size in range(2, max_row_size + 1):
+        text += f"&{name}{row_size}[0], "
     text += "};"
 text += "\n"
 
 conditional_block = """
-  if (({} > rank) || (rank > {}))
+  if (({} > row_size) || (row_size > {}))
   {{
-    throw std::runtime_error("Not implemented for required rank.");
-  }}""".format(min_rank, max_rank)
+    throw std::runtime_error("Not implemented for required row_size.");
+  }}""".format(min_row_size, max_row_size)
 
 text += f"""
 double Gauss_lobatto::node(int i)
 {{{conditional_block}
-  return nodes[rank - {min_rank}][i];
+  return nodes[row_size - {min_row_size}][i];
 }}
 
 Eigen::VectorXd Gauss_lobatto::node_weights()
 {{{conditional_block}
-  Eigen::VectorXd nw (rank);
-  for (int i_node = 0; i_node < rank; ++i_node) nw(i_node) = weights[rank - {min_rank}][i_node];
+  Eigen::VectorXd nw (row_size);
+  for (int i_node = 0; i_node < row_size; ++i_node) nw(i_node) = weights[row_size - {min_row_size}][i_node];
   return nw;
 }}
 
 Eigen::MatrixXd Gauss_lobatto::diff_mat()
 {{{conditional_block}
-  Eigen::MatrixXd dm (rank, rank);
-  for (int i_node = 0; i_node < rank*rank; ++i_node) dm(i_node) = diff_mats[rank - {min_rank}][i_node];
+  Eigen::MatrixXd dm (row_size, row_size);
+  for (int i_node = 0; i_node < row_size*row_size; ++i_node) dm(i_node) = diff_mats[row_size - {min_row_size}][i_node];
   return dm;
 }}
 
 Eigen::VectorXd Gauss_lobatto::orthogonal(int degree)
 {{{conditional_block}
-  Eigen::VectorXd orth (rank);
-  for (int i_node = 0; i_node < rank; ++i_node) orth(i_node) = orthogonals[rank - {min_rank}][degree*rank + i_node];
+  Eigen::VectorXd orth (row_size);
+  for (int i_node = 0; i_node < row_size; ++i_node) orth(i_node) = orthogonals[row_size - {min_row_size}][degree*row_size + i_node];
   return orth;
 }}
 
-Gauss_lobatto::Gauss_lobatto(int rank_arg) : Basis(rank_arg) {{}}
+Gauss_lobatto::Gauss_lobatto(int row_size_arg) : Basis(row_size_arg) {{}}
 """
 
 with open(src_dir + "Gauss_lobatto.cpp", "w") as write_file:
