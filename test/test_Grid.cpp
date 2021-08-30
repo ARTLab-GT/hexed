@@ -18,7 +18,7 @@ class Arbitrary_integrand : public cartdg::Domain_func
 
 TEST_CASE("Grid")
 {
-  cartdg::Equidistant basis (MAX_BASIS_RANK);
+  cartdg::Equidistant basis (MAX_BASIS_ROW_SIZE);
   cartdg::Grid grid1 (4, 1, 5, 0.1, basis);
   cartdg::Grid grid2 (4, 2, 6, 0.1, basis);
   cartdg::Grid grid3 (4, 3, 27, 0.1, basis);
@@ -52,7 +52,7 @@ TEST_CASE("Grid")
     REQUIRE(grid3.state_w()[0] == 0.);
     REQUIRE(grid3.state_r()[size - 1] == 0.);
     REQUIRE(grid3.state_w()[size - 1] == 0.);
-    size = 27*MAX_BASIS_RANK*MAX_BASIS_RANK*MAX_BASIS_RANK;
+    size = 27*MAX_BASIS_ROW_SIZE*MAX_BASIS_ROW_SIZE*MAX_BASIS_ROW_SIZE;
     REQUIRE((int)grid3.derivs.size() == size);
     REQUIRE(grid3.derivs[0] == 0.);
     REQUIRE(grid3.derivs[size - 1] == 0.);

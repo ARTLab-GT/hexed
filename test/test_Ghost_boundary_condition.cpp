@@ -32,7 +32,7 @@ class Supersonic_inlet : public cartdg::Ghost_boundary_condition
 TEST_CASE("Ghost boundary conditions")
 {
   const int row_size = 2;
-  cartdg::Solution soln (5, 3, row_size, 1.); //FIXME: change back to MAX_BASIS_RANK
+  cartdg::Solution soln (5, 3, row_size, 1.); //FIXME: change back to MAX_BASIS_ROW_SIZE
   cartdg::Basis& basis = soln.basis;
   soln.kernel_settings.d_t_by_d_pos = 0.1;
   soln.add_block_grid(1, std::vector<int>{0, 0, 0}, std::vector<int>{3, 3, 3});

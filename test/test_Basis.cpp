@@ -72,7 +72,7 @@ TEST_CASE("Equidistant Basis")
 
 TEST_CASE("Gauss_lobatto Basis")
 {
-  for (int row_size = 2; row_size <= MAX_BASIS_RANK; ++row_size)
+  for (int row_size = 2; row_size <= MAX_BASIS_ROW_SIZE; ++row_size)
   {
     cartdg::Gauss_lobatto GLo (row_size);
     test_diff_mat(GLo);

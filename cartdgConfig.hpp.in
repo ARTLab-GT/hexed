@@ -1,2 +1,2 @@
 // the configured options and settings
-#define MAX_BASIS_RANK @MAX_BASIS_RANK@
+#define MAX_BASIS_ROW_SIZE @MAX_BASIS_ROW_SIZE@

@@ -109,7 +109,7 @@ TEST_CASE("CPG Euler matrix form")
   SECTION("2D non-constant")
   {
     const int n_elem = 5;
-    const int row_size = std::min<int>(6, MAX_BASIS_RANK);
+    const int row_size = std::min<int>(6, MAX_BASIS_ROW_SIZE);
     double read [n_elem][4][row_size*row_size];
     double write[n_elem][4][row_size*row_size];
     cartdg::Gauss_lobatto basis (row_size);
@@ -297,7 +297,7 @@ TEST_CASE("CPG Euler deformed elements")
 
 TEST_CASE("derivative")
 {
-  const int row_size = MAX_BASIS_RANK;
+  const int row_size = MAX_BASIS_ROW_SIZE;
   cartdg::Gauss_lobatto basis (row_size);
   cartdg::Kernel_settings settings;
   SECTION("calculations")
@@ -462,7 +462,7 @@ TEST_CASE("derivative")
 
 TEST_CASE("req_visc")
 {
-  const int row_size = MAX_BASIS_RANK;
+  const int row_size = MAX_BASIS_ROW_SIZE;
   const int n_qpoint = cartdg::static_math::pow(row_size, 3);
   cartdg::Gauss_lobatto basis (row_size);
   cartdg::Kernel_settings settings;
@@ -490,7 +490,7 @@ TEST_CASE("req_visc")
 
 TEST_CASE("av_flux")
 {
-  #if MAX_BASIS_RANK >= 3
+  #if MAX_BASIS_ROW_SIZE >= 3
   cartdg::Gauss_lobatto basis (3);
   cartdg::Kernel_settings settings;
   settings.d_pos = 0.5;

@@ -6,11 +6,11 @@
 int main()
 {
   // Resolution parameters
-  const int rank = 6;
+  const int row_size = 6;
   const int ref_level = 3;
 
   // Solution setup
-  cartdg::Solution solution (4, 2, rank, 1.);
+  cartdg::Solution solution (4, 2, row_size, 1.);
   solution.add_block_grid(ref_level);
   cartdg::Grid& grid = solution.get_grid(0);
   int n_div = 1; for (int i = 0; i < ref_level; ++i) n_div *= 2;
