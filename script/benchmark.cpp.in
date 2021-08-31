@@ -45,13 +45,26 @@ for (int i = 0; i < n_jacobian; ++i)
 double* jacobian = jacobian_vec.data();
 double* read = read_vec.data();
 double* write = write_vec.data();
-std::vector<double*> read_ptrs_vec (n_elem);
-std::vector<double*> write_ptrs_vec (n_elem);
-#pragma omp parallel for
+std::vector<double*> read_ptrs_vec;
+std::vector<double*> write_ptrs_vec;
 for (int i_elem = 0; i_elem < n_elem; ++i_elem)
 {
-  read_ptrs_vec[i_elem] = read + i_elem*n_var*n_qpoint;
-  write_ptrs_vec[i_elem] = write + i_elem*n_var*n_qpoint;
+  int ind;
+  if (i_elem == 0)
+  {
+    ind = 0;
+  }
+  else
+  {
+    ind = (rand()%read_ptrs_vec.size());
+  }
+  #if 1
+  read_ptrs_vec.insert(read_ptrs_vec.begin() + ind, read + i_elem*n_var*n_qpoint);
+  write_ptrs_vec.insert(write_ptrs_vec.begin() + ind, write + i_elem*n_var*n_qpoint);
+  #else
+  read_ptrs_vec.push_back(read + i_elem*n_var*n_qpoint);
+  write_ptrs_vec.push_back(write + i_elem*n_var*n_qpoint);
+  #endif
 }
 double** read_ptrs = read_ptrs_vec.data();
 double** write_ptrs = write_ptrs_vec.data();
