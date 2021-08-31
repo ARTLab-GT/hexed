@@ -31,7 +31,7 @@ class Supersonic_inlet : public cartdg::Ghost_boundary_condition
 
 TEST_CASE("Ghost boundary conditions")
 {
-  const int row_size = MAX_BASIS_ROW_SIZE;
+  const int row_size = CARTDG_MAX_BASIS_ROW_SIZE;
   cartdg::Solution soln (5, 3, row_size, 1.);
   cartdg::Basis& basis = soln.basis;
   soln.kernel_settings.d_t_by_d_pos = 0.1;

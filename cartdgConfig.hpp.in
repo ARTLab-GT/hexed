@@ -1,2 +1,2 @@
 // the configured options and settings
-#define MAX_BASIS_ROW_SIZE @MAX_BASIS_ROW_SIZE@
+#define CARTDG_MAX_BASIS_ROW_SIZE @MAX_BASIS_ROW_SIZE@

@@ -597,7 +597,7 @@ TEST_CASE("hll_deformed_cpg_euler")
 
 TEST_CASE("jump kernel")
 {
-  const int row_size = MAX_BASIS_ROW_SIZE;
+  const int row_size = CARTDG_MAX_BASIS_ROW_SIZE;
   const int n_qpoint = row_size*row_size*row_size;
   SECTION("scalar")
   {
@@ -625,7 +625,7 @@ TEST_CASE("jump kernel")
     REQUIRE(write[1][0][row_size - 1][0][row_size - 1] == Approx(correct));
     REQUIRE(write[0][0][0][row_size - 1][0] == 0.1);
     REQUIRE(write[2][0][0][0][0] == 0.1);
-    REQUIRE(write[1][0][1][1][1] == 0.1); // might fail if MAX_BASIS_ROW_SIZE == 2
+    REQUIRE(write[1][0][1][1][1] == 0.1); // might fail if CARTDG_MAX_BASIS_ROW_SIZE == 2
   }
   SECTION("vector")
   {
@@ -653,7 +653,7 @@ TEST_CASE("jump kernel")
     REQUIRE(write[1][1][row_size - 1][0][row_size - 1] == Approx(correct));
     REQUIRE(write[0][1][0][row_size - 1][0] == 0.1);
     REQUIRE(write[2][1][0][0][0] == 0.1);
-    REQUIRE(write[1][1][1][1][1] == 0.1); // might fail if MAX_BASIS_ROW_SIZE == 2
+    REQUIRE(write[1][1][1][1][1] == 0.1); // might fail if CARTDG_MAX_BASIS_ROW_SIZE == 2
   }
 }
 
@@ -684,7 +684,7 @@ TEST_CASE("continuous viscosity kernel")
     visc[3][i_point] = 1.;
   }
 
-  cartdg::get_cont_visc_cpg_euler(2, MAX_BASIS_ROW_SIZE)(connections2, n_connections, settings);
+  cartdg::get_cont_visc_cpg_euler(2, CARTDG_MAX_BASIS_ROW_SIZE)(connections2, n_connections, settings);
   CHECK(visc[0][0] == Approx(0.0));
   CHECK(visc[0][1] == Approx(2.0));
   CHECK(visc[0][2] == Approx(0.5));
