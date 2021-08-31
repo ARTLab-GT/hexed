@@ -80,12 +80,12 @@ class Pressure_init : public Sinusoidal_init
 TEST_CASE("Sinusoidal density wave")
 {
   double length = 2.*M_PI;
-  int rank = 6;
+  int row_size = 6;
   double cfl = 0.01;
 
   SECTION("1D")
   {
-    cartdg::Solution sol (3, 1, rank, length);
+    cartdg::Solution sol (3, 1, row_size, length);
     sol.add_block_grid(2);
     cartdg::Grid& grid = sol.get_grid(0);
     std::vector<int> periods {4};
@@ -105,7 +105,7 @@ TEST_CASE("Sinusoidal density wave")
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
       std::vector<double> pos = grid.get_pos(i_elem);
-      for (int i_qpoint = 0; i_qpoint < grid.basis.rank; ++i_qpoint)
+      for (int i_qpoint = 0; i_qpoint < grid.basis.row_size; ++i_qpoint)
       {
         double d_mass_by_d_t = -0.1*init.velocity[0]*cos(pos[i_qpoint]);
         double d_momentum_by_d_t = init.velocity[0]*d_mass_by_d_t;
@@ -138,7 +138,7 @@ TEST_CASE("Sinusoidal density wave")
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
       std::vector<double> pos = grid.get_pos(i_elem);
-      for (int i_qpoint = 0; i_qpoint < grid.basis.rank; ++i_qpoint)
+      for (int i_qpoint = 0; i_qpoint < grid.basis.row_size; ++i_qpoint)
       {
         double d_mass_by_d_t = 0.;
         double d_momentum_by_d_t = -0.01*init.mean_pressure*cos(pos[i_qpoint]);
@@ -162,7 +162,7 @@ TEST_CASE("Sinusoidal density wave")
 
   SECTION("2D")
   {
-    cartdg::Solution sol (4, 2, rank, length);
+    cartdg::Solution sol (4, 2, row_size, length);
     sol.add_block_grid(3);
     cartdg::Grid& grid = sol.get_grid(0);
     std::vector<int> periods {8, 8};
@@ -258,7 +258,7 @@ TEST_CASE("Sinusoidal density wave")
 
   SECTION("3D")
   {
-    cartdg::Solution sol (5, 3, rank, length);
+    cartdg::Solution sol (5, 3, row_size, length);
     sol.add_block_grid(3);
     cartdg::Grid& grid = sol.get_grid(0);
     std::vector<int> periods {8, 8, 8};

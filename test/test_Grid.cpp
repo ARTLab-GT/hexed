@@ -18,7 +18,7 @@ class Arbitrary_integrand : public cartdg::Domain_func
 
 TEST_CASE("Grid")
 {
-  cartdg::Equidistant basis (MAX_BASIS_RANK);
+  cartdg::Equidistant basis (CARTDG_MAX_BASIS_ROW_SIZE);
   cartdg::Grid grid1 (4, 1, 5, 0.1, basis);
   cartdg::Grid grid2 (4, 2, 6, 0.1, basis);
   cartdg::Grid grid3 (4, 3, 27, 0.1, basis);
@@ -52,7 +52,7 @@ TEST_CASE("Grid")
     REQUIRE(grid3.state_w()[0] == 0.);
     REQUIRE(grid3.state_r()[size - 1] == 0.);
     REQUIRE(grid3.state_w()[size - 1] == 0.);
-    size = 27*MAX_BASIS_RANK*MAX_BASIS_RANK*MAX_BASIS_RANK;
+    size = 27*std::pow(CARTDG_MAX_BASIS_ROW_SIZE, 3);
     REQUIRE((int)grid3.derivs.size() == size);
     REQUIRE(grid3.derivs[0] == 0.);
     REQUIRE(grid3.derivs[size - 1] == 0.);
@@ -173,12 +173,12 @@ TEST_CASE("Grid")
     cartdg::Grid square (1, 2, 2, 1., basis);
     for (int i_elem = 0; i_elem < square.n_elem; ++i_elem)
     {
-      for (int i = 0; i < basis.rank; ++i)
+      for (int i = 0; i < basis.row_size; ++i)
       {
-        for (int j = 0; j < basis.rank; ++j)
+        for (int j = 0; j < basis.row_size; ++j)
         {
           double pos0 = basis.node(i) + i_elem; double pos1 = basis.node(j);
-          square.state_r()[(i_elem*basis.rank + i)*basis.rank + j] = pos0*pos0*pos1*pos1*pos1;
+          square.state_r()[(i_elem*basis.row_size + i)*basis.row_size + j] = pos0*pos0*pos1*pos1*pos1;
           square.pos[i_elem*2] = i_elem;
         }
       }

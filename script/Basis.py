@@ -4,12 +4,12 @@ class Basis:
     def __init__(self, nodes, weights, repr_digits=20, calc_digits=50):
         self.repr_digits = repr_digits
         self.calc_digits = calc_digits
-        self.rank = len(nodes)
-        assert len(weights) == self.rank
+        self.row_size = len(nodes)
+        assert len(weights) == self.row_size
         self.nodes = [sp.Float(node, self.calc_digits) for node in nodes]
         self.weights = [sp.Float(weight, self.calc_digits) for weight in weights]
         self.ortho = []
-        for i in range(self.rank):
+        for i in range(self.row_size):
             self.ortho.append(self.legendre(i))
 
     def node(self, i):
@@ -21,12 +21,12 @@ class Basis:
     def derivative(self, i_result, i_operand):
         if i_result == i_operand:
             dp = sp.Float(0, self.calc_digits)
-            for n in range(self.rank):
+            for n in range(self.row_size):
                 if n != i_result:
                     dp += sp.Float(1, self.calc_digits)/(self.nodes[i_result] - self.nodes[n])
         else:
             dp = sp.Float(1, self.calc_digits)
-            for n in range(self.rank):
+            for n in range(self.row_size):
                 if n != i_operand:
                     dp /= sp.Float(self.nodes[i_operand] - self.nodes[n])
                     if n != i_result:
@@ -38,12 +38,12 @@ class Basis:
         poly = sp.legendre(degree, x)
         vals = []
         norm = sp.Float(0, self.calc_digits)
-        for i_node in range(self.rank):
+        for i_node in range(self.row_size):
             node = self.nodes[i_node]
             vals.append(poly.subs(x, node*2 - 1).evalf(self.calc_digits))
             norm += vals[i_node]**2*self.weights[i_node]
         norm = norm**sp.Rational(1, 2)
-        for i_node in range(self.rank):
+        for i_node in range(self.row_size):
             vals[i_node] /= norm
         return vals
 

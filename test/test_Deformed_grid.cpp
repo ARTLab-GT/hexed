@@ -6,8 +6,8 @@
 
 TEST_CASE("Deformed grid class")
 {
-  const int rank = std::min<int>(3, MAX_BASIS_RANK);
-  cartdg::Gauss_lobatto basis (rank);
+  const int row_size = std::min<int>(3, CARTDG_MAX_BASIS_ROW_SIZE);
+  cartdg::Gauss_lobatto basis (row_size);
   std::vector<cartdg::Deformed_grid> grids;
   grids.emplace_back(1, 2, 0, 0.2, basis);
   grids.emplace_back(1, 3, 0, 0.2, basis);
@@ -367,9 +367,9 @@ TEST_CASE("Deformed grid class")
     grid2.get_vertex(7).pos[1] += 0.1;
     grid2.calc_jacobian();
     REQUIRE(grid2.jacobian_det(0, 0) == Approx(0.95));
-    REQUIRE(grid2.jacobian_det(0, rank - 1) == Approx(0.95));
+    REQUIRE(grid2.jacobian_det(0, row_size - 1) == Approx(0.95));
     REQUIRE(grid2.jacobian_det(1, 0) == Approx(1.));
-    REQUIRE(grid2.jacobian_det(1, rank*(rank - 1)) == Approx(1.));
+    REQUIRE(grid2.jacobian_det(1, row_size*(row_size - 1)) == Approx(1.));
 
     grid3.add_element({0, 0, 0});
     grid3.get_vertex(0).pos = {0.01, 0.0, 0.0};

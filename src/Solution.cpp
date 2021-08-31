@@ -8,8 +8,8 @@ namespace cartdg
 
 #define FOR_ALL_GRIDS(code) for (Grid* grid : all_grids()) { code }
 
-Solution::Solution(int n_var_arg, int n_dim_arg, int rank_arg, double bms)
-: n_var(n_var_arg), n_dim(n_dim_arg), base_mesh_size(bms), basis(rank_arg) {}
+Solution::Solution(int n_var_arg, int n_dim_arg, int row_size_arg, double bms)
+: n_var(n_var_arg), n_dim(n_dim_arg), base_mesh_size(bms), basis(row_size_arg) {}
 
 Solution::~Solution() {}
 
@@ -157,7 +157,7 @@ double Solution::update(double cfl_by_stable_cfl)
           sw[i_data] = sr[i_data];
         }
       )
-      for (int i_axis = 0; i_axis < n_dim; ++i_axis)
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim)
       {
         for (int i_var = 0; i_var < n_var; ++i_var)
         {
@@ -165,13 +165,13 @@ double Solution::update(double cfl_by_stable_cfl)
           (
             kernel_settings.d_t_by_d_pos = visc_dt/grid->mesh_size;
             kernel_settings.d_pos = grid->mesh_size;
-            grid->execute_local_derivative(i_var, i_axis, kernel_settings);
+            grid->execute_local_derivative(i_var, i_dim, kernel_settings);
           )
           FOR_ALL_GRIDS
           (
             kernel_settings.d_t_by_d_pos = visc_dt/grid->mesh_size;
             kernel_settings.d_pos = grid->mesh_size;
-            grid->execute_neighbor_derivative(i_var, i_axis, kernel_settings);
+            grid->execute_neighbor_derivative(i_var, i_dim, kernel_settings);
           )
           FOR_ALL_GRIDS
           (
@@ -183,13 +183,13 @@ double Solution::update(double cfl_by_stable_cfl)
           (
             kernel_settings.d_t_by_d_pos = visc_dt/grid->mesh_size;
             kernel_settings.d_pos = grid->mesh_size;
-            grid->execute_local_av(i_var, i_axis, kernel_settings);
+            grid->execute_local_av(i_var, i_dim, kernel_settings);
           )
           FOR_ALL_GRIDS
           (
             kernel_settings.d_t_by_d_pos = visc_dt/grid->mesh_size;
             kernel_settings.d_pos = grid->mesh_size;
-            grid->execute_neighbor_av(i_var, i_axis, kernel_settings);
+            grid->execute_neighbor_av(i_var, i_dim, kernel_settings);
           )
         }
       }

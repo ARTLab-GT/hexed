@@ -21,7 +21,7 @@ class Solution
   std::vector<Grid> grids;
   std::vector<Deformed_grid> def_grids;
 
-  Solution(int n_var_arg, int n_dim_arg, int rank_arg, double bms);
+  Solution(int n_var_arg, int n_dim_arg, int row_size_arg, double bms);
   virtual ~Solution();
 
   // functions that access information

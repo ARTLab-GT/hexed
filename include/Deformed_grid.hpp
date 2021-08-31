@@ -35,19 +35,19 @@ class Deformed_grid : public Grid
   virtual void execute_neighbor(Kernel_settings&);
   virtual void execute_req_visc(Kernel_settings&);
   virtual void execute_cont_visc(Kernel_settings&);
-  virtual void execute_local_derivative(int i_var, int i_axis, Kernel_settings&); // FIXME: for now, does nothing
-  virtual void execute_neighbor_derivative(int i_var, int i_axis, Kernel_settings&);
+  virtual void execute_local_derivative(int i_var, int i_dim, Kernel_settings&); // FIXME: for now, does nothing
+  virtual void execute_neighbor_derivative(int i_var, int i_dim, Kernel_settings&);
   virtual void execute_av_flux(Kernel_settings&);
-  virtual void execute_local_av(int i_var, int i_axis, Kernel_settings&);
-  virtual void execute_neighbor_av(int i_var, int i_axis, Kernel_settings&);
+  virtual void execute_local_av(int i_var, int i_dim, Kernel_settings&);
+  virtual void execute_neighbor_av(int i_var, int i_dim, Kernel_settings&);
 
   // Note: the following functions must be called in the order
   // that they appear.
-  void connect(std::array<int, 2> i_elem, std::array<int, 2> i_axis,
+  void connect(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
                std::array<bool, 2> is_positive);
   void calc_jacobian();
   void update_connections();
-  void connect_non_def(std::array<int, 2> i_elem, std::array<int, 2> i_axis,
+  void connect_non_def(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
                        std::array<bool, 2> is_positive, Grid& other_grid);
 
   virtual void visualize(std::string file_name);

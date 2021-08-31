@@ -11,7 +11,7 @@ namespace cartdg
 
 template<int n_dim, int n_face_qpoint>
 void hll_deformed_cpg_euler(double* state_r, double* d_flux_w, double* jacobian,
-                            double mult, int i_axis_arg [2], bool flip [2], double sp_heat_rat)
+                            double mult, int i_dim_arg [2], bool flip [2], double sp_heat_rat)
 {
   const int n_var = n_dim + 2;
   const int face_size = n_var*n_face_qpoint;
@@ -27,9 +27,9 @@ void hll_deformed_cpg_euler(double* state_r, double* d_flux_w, double* jacobian,
     {
       #define READ(i) state_r[(i)*n_face_qpoint + i_qpoint + i_side*face_size]
       double pres = 0;
-      for (int i_axis = 0; i_axis < n_dim; ++i_axis)
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim)
       {
-        pres += READ(i_axis)*READ(i_axis)/READ(n_var - 2);
+        pres += READ(i_dim)*READ(i_dim)/READ(n_var - 2);
       }
       pres = (sp_heat_rat - 1.)*(READ(n_var - 1) - 0.5*pres);
       sound_speed[i_side] = std::sqrt(sp_heat_rat*pres/READ(n_var - 2));
@@ -37,18 +37,18 @@ void hll_deformed_cpg_euler(double* state_r, double* d_flux_w, double* jacobian,
       double qpoint_flux [n_dim][n_var];
       double veloc [n_dim];
       Eigen::Matrix<double, n_dim, n_dim> jac_mat;
-      for (int i_axis = 0; i_axis < n_dim; ++i_axis)
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim)
       {
-        veloc[i_axis] = READ(i_axis)/READ(n_var - 2);
-        for (int j_axis = 0; j_axis < n_var - 2; ++j_axis)
+        veloc[i_dim] = READ(i_dim)/READ(n_var - 2);
+        for (int j_dim = 0; j_dim < n_var - 2; ++j_dim)
         {
-          qpoint_flux[i_axis][j_axis] = READ(j_axis)*veloc[i_axis];
-          jac_mat(i_axis, j_axis) = jacobian[(i_axis*n_dim + j_axis
+          qpoint_flux[i_dim][j_dim] = READ(j_dim)*veloc[i_dim];
+          jac_mat(i_dim, j_dim) = jacobian[(i_dim*n_dim + j_dim
                                               + i_side*n_dim*n_dim)*n_face_qpoint + i_qpoint];
         }
-        qpoint_flux[i_axis][i_axis] += pres;
-        qpoint_flux[i_axis][n_var - 2] = READ(i_axis);
-        qpoint_flux[i_axis][n_var - 1] = (READ(n_var - 1) + pres)*veloc[i_axis];
+        qpoint_flux[i_dim][i_dim] += pres;
+        qpoint_flux[i_dim][n_var - 2] = READ(i_dim);
+        qpoint_flux[i_dim][n_var - 1] = (READ(n_var - 1) + pres)*veloc[i_dim];
       }
       #undef READ
 
@@ -56,25 +56,25 @@ void hll_deformed_cpg_euler(double* state_r, double* d_flux_w, double* jacobian,
       jacobian_det[i_side] = jac_mat.determinant();
       for (int i_var = 0; i_var < n_var; ++i_var)
       {
-        for (int i_axis = 0; i_axis < n_dim; ++i_axis)
+        for (int i_dim = 0; i_dim < n_dim; ++i_dim)
         {
-          jac_mat(i_axis, i_axis_arg[i_side]) = qpoint_flux[i_axis][i_var];
+          jac_mat(i_dim, i_dim_arg[i_side]) = qpoint_flux[i_dim][i_var];
         }
         flux[i_side][i_var] = jac_mat.determinant()*normal_dir;
       }
       double normal_magnitude = 0.;
-      jac_mat.col(i_axis_arg[i_side]) = Eigen::Matrix<double, n_dim, 1>::Zero();
-      for (int i_axis = 0; i_axis < n_dim; ++i_axis)
+      jac_mat.col(i_dim_arg[i_side]) = Eigen::Matrix<double, n_dim, 1>::Zero();
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim)
       {
-        jac_mat(i_axis, i_axis_arg[i_side]) = 1;
+        jac_mat(i_dim, i_dim_arg[i_side]) = 1;
         const double det = jac_mat.determinant();
         normal_magnitude += det*det;
-        jac_mat(i_axis, i_axis_arg[i_side]) = 0;
+        jac_mat(i_dim, i_dim_arg[i_side]) = 0;
       }
       normal_magnitude = std::sqrt(normal_magnitude);
-      for (int i_axis = 0; i_axis < n_dim; ++i_axis)
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim)
       {
-        jac_mat(i_axis, i_axis_arg[i_side]) = veloc[i_axis];
+        jac_mat(i_dim, i_dim_arg[i_side]) = veloc[i_dim];
       }
       velocity[i_side] = jac_mat.determinant()*normal_dir;
     }

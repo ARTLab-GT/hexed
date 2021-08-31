@@ -9,7 +9,7 @@ namespace cartdg
 class Equidistant : public Basis
 {
   public:
-  Equidistant(int rank_arg);
+  Equidistant(int row_size_arg);
   virtual double node(int i);
   virtual Eigen::MatrixXd diff_mat();
   virtual Eigen::VectorXd node_weights();

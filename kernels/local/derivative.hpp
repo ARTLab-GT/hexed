@@ -12,7 +12,7 @@ namespace cartdg
 {
 
 template<int n_var_read, int n_var_write, int n_qpoint, int row_size, bool add=false>
-void derivative(double* read, double* write, int n_elem, int i_var_read, int i_var_write, int i_axis,
+void derivative(double* read, double* write, int n_elem, int i_var_read, int i_var_write, int i_dim,
                 Basis& basis, Kernel_settings& settings)
 {
   Eigen::Matrix<double, row_size, row_size> diff_mat = basis.diff_mat();
@@ -20,7 +20,7 @@ void derivative(double* read, double* write, int n_elem, int i_var_read, int i_v
 
   int stride = n_qpoint/row_size;
   int n_rows = 1;
-  for (int j_axis = 0; j_axis < i_axis; ++j_axis)
+  for (int j_dim = 0; j_dim < i_dim; ++j_dim)
   {
     n_rows *= row_size;
     stride /= row_size;

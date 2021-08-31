@@ -9,7 +9,7 @@ namespace cartdg
 
 template<int n_dim, int n_face_qpoint>
 void hll_cpg_euler(double* state_r, double* d_flux_w, double mult,
-                   int i_axis, double sp_heat_rat)
+                   int i_dim, double sp_heat_rat)
 {
   const int n_var = n_dim + 2;
   const int face_size = n_var*n_face_qpoint;
@@ -22,16 +22,16 @@ void hll_cpg_euler(double* state_r, double* d_flux_w, double mult,
     {
       #define READ(i) state_r[(i)*n_face_qpoint + i_qpoint + i_side*face_size]
       #define FLUX(i) flux[i_side][i]
-      double veloc = READ(i_axis)/READ(n_var - 2);
+      double veloc = READ(i_dim)/READ(n_var - 2);
       double pres = 0;
-      for (int j_axis = 0; j_axis < n_var - 2; ++j_axis)
+      for (int j_dim = 0; j_dim < n_var - 2; ++j_dim)
       {
-        FLUX(j_axis) = READ(j_axis)*veloc;
-        pres += READ(j_axis)*READ(j_axis)/READ(n_var - 2);
+        FLUX(j_dim) = READ(j_dim)*veloc;
+        pres += READ(j_dim)*READ(j_dim)/READ(n_var - 2);
       }
       pres = (sp_heat_rat - 1.)*(READ(n_var - 1) - 0.5*pres);
-      FLUX(i_axis) += pres;
-      FLUX(n_var - 2) = READ(i_axis);
+      FLUX(i_dim) += pres;
+      FLUX(n_var - 2) = READ(i_dim);
       FLUX(n_var - 1) = (READ(n_var - 1) + pres)*veloc;
       velocity[i_side] = veloc;
       sound_speed[i_side] = std::sqrt(sp_heat_rat*pres/READ(n_var - 2));

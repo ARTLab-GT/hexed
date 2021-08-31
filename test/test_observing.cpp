@@ -45,41 +45,41 @@ TEST_CASE("Max characteristic speed")
 
 TEST_CASE("Discontinuity indicator")
 {
-  const int rank = MAX_BASIS_RANK;
-  cartdg::Gauss_lobatto basis (rank);
-  cartdg::Gauss_lobatto basis1 (rank - 1);
+  const int row_size = CARTDG_MAX_BASIS_ROW_SIZE;
+  cartdg::Gauss_lobatto basis (row_size);
+  cartdg::Gauss_lobatto basis1 (row_size - 1);
 
   SECTION("1D")
   {
     SECTION("different types of functions")
     {
-      double read [rank];
+      double read [row_size];
       auto weights = basis.node_weights();
-      auto ortho = basis.orthogonal(rank - 1);
+      auto ortho = basis.orthogonal(row_size - 1);
 
-      for (int i_qpoint = 0; i_qpoint < rank; ++i_qpoint)
+      for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
       {
         read[i_qpoint] = std::exp(basis.node(i_qpoint)*0.5);
       }
-      REQUIRE(cartdg::indicator<rank, rank>(read, weights.data(), ortho.data()) == 0.);
+      REQUIRE(cartdg::indicator<row_size, row_size>(read, weights.data(), ortho.data()) == 0.);
       read[1] = 2.;
-      REQUIRE(cartdg::indicator<rank, rank>(read, weights.data(), ortho.data()) == 1.);
+      REQUIRE(cartdg::indicator<row_size, row_size>(read, weights.data(), ortho.data()) == 1.);
 
-      for (int i_qpoint = 0; i_qpoint < rank; ++i_qpoint)
+      for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
       {
         read[i_qpoint] = 1;
       }
-      REQUIRE(cartdg::indicator<rank, rank>(read, weights.data(), ortho.data()) == 0.);
+      REQUIRE(cartdg::indicator<row_size, row_size>(read, weights.data(), ortho.data()) == 0.);
 
-      for (int i_qpoint = 2; i_qpoint < rank; ++i_qpoint)
+      for (int i_qpoint = 2; i_qpoint < row_size; ++i_qpoint)
       {
         read[i_qpoint] = 1.5;
       }
-      REQUIRE(cartdg::indicator<rank, rank>(read, weights.data(), ortho.data()) == 1.);
+      REQUIRE(cartdg::indicator<row_size, row_size>(read, weights.data(), ortho.data()) == 1.);
 
       SECTION("smoothness of indicator function")
       {
-        for (int i_qpoint = 0; i_qpoint < rank; ++i_qpoint)
+        for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
         {
           read[i_qpoint] = 1.;
         }
@@ -88,7 +88,7 @@ TEST_CASE("Discontinuity indicator")
         for (int pow = -200; pow < 0; ++pow)
         {
           read[0] = 1. + std::exp(pow*0.05);
-          curr = cartdg::indicator<rank, rank>(read, weights.data(), ortho.data());
+          curr = cartdg::indicator<row_size, row_size>(read, weights.data(), ortho.data());
           REQUIRE(curr - prev < 0.1);
           REQUIRE(curr - prev >= 0.);
           prev = curr;
@@ -98,48 +98,48 @@ TEST_CASE("Discontinuity indicator")
     }
     SECTION("even/odd")
     {
-      double read [rank - 1];
+      double read [row_size - 1];
       auto weights = basis1.node_weights();
-      auto ortho = basis1.orthogonal(rank - 2);
-      for (int i_qpoint = 0; i_qpoint < rank - 1; ++i_qpoint)
+      auto ortho = basis1.orthogonal(row_size - 2);
+      for (int i_qpoint = 0; i_qpoint < row_size - 1; ++i_qpoint)
       {
         read[i_qpoint] = std::exp(basis1.node(i_qpoint)*0.5);
       }
-      REQUIRE(cartdg::indicator<rank - 1, rank - 1>(read, weights.data(), ortho.data()) == 0.);
+      REQUIRE(cartdg::indicator<row_size - 1, row_size - 1>(read, weights.data(), ortho.data()) == 0.);
       read[1] = 2.;
-      REQUIRE(cartdg::indicator<rank - 1, rank - 1>(read, weights.data(), ortho.data()) == 1.);
+      REQUIRE(cartdg::indicator<row_size - 1, row_size - 1>(read, weights.data(), ortho.data()) == 1.);
     }
   }
 
   SECTION("3D")
   {
-    double read [rank][rank][rank];
+    double read [row_size][row_size][row_size];
     auto weights = basis.node_weights();
-    auto ortho = basis.orthogonal(rank - 1);
+    auto ortho = basis.orthogonal(row_size - 1);
 
-    const int n_qpoint = rank*rank*rank;
+    const int n_qpoint = row_size*row_size*row_size;
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
     {
       (&read[0][0][0])[i_qpoint] = 1.;
     }
-    REQUIRE(cartdg::indicator<n_qpoint, rank>(read[0][0], weights.data(), ortho.data()) == 0.);
+    REQUIRE(cartdg::indicator<n_qpoint, row_size>(read[0][0], weights.data(), ortho.data()) == 0.);
 
     SECTION("all directions activated")
     {
       read[1][2][1] = 2.;
-      REQUIRE(cartdg::indicator<n_qpoint, rank>(read[0][0], weights.data(), ortho.data()) == 1.);
+      REQUIRE(cartdg::indicator<n_qpoint, row_size>(read[0][0], weights.data(), ortho.data()) == 1.);
     }
 
     SECTION("one direction activated")
     {
-      for (int i_row = 0; i_row < rank; ++i_row)
+      for (int i_row = 0; i_row < row_size; ++i_row)
       {
-        for (int j_row = 0; j_row < rank; ++j_row)
+        for (int j_row = 0; j_row < row_size; ++j_row)
         {
           read[i_row][1][j_row] = 0.9;
         }
       }
-      REQUIRE(cartdg::indicator<n_qpoint, rank>(read[0][0], weights.data(), ortho.data()) == 1.);
+      REQUIRE(cartdg::indicator<n_qpoint, row_size>(read[0][0], weights.data(), ortho.data()) == 1.);
     }
   }
 }

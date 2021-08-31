@@ -53,7 +53,7 @@ std::vector<double**> con_w_vec1 (dim);
 std::vector<double*> def_con_j_vec;
 std::vector<double*> def_con_r_vec;
 std::vector<double*> def_con_w_vec;
-std::vector<int> i_axis_vec;
+std::vector<int> i_dim_vec;
 std::vector<int> is_positive_face_vec;
 std::vector<int> n_con_vec (dim);
 for (int i_dim = 0; i_dim < dim; ++i_dim)
@@ -71,7 +71,7 @@ for (int i_dim = 0; i_dim < dim; ++i_dim)
       def_con_j_vec.push_back(jacobian + elem);
       def_con_r_vec.push_back(read + elem);
       def_con_w_vec.push_back(write + elem);
-      i_axis_vec.push_back(rand()%dim);
+      i_dim_vec.push_back(rand()%dim);
       is_positive_face_vec.push_back(rand()%2);
     }
     #pragma GCC diagnostic pop
@@ -84,7 +84,7 @@ double*** connections_w = con_w_vec1.data();
 double** def_connections_j = def_con_j_vec.data();
 double** def_connections_r = def_con_r_vec.data();
 double** def_connections_w = def_con_w_vec.data();
-int* i_axis = i_axis_vec.data();
+int* i_dim = i_dim_vec.data();
 int* is_positive_face = is_positive_face_vec.data();
 int* n_connections = n_con_vec.data();
 int def_n_connections = dim*n_elem;

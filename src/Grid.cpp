@@ -24,7 +24,7 @@ basis(basis_arg), iter(0), time(0.), i_rk_stage(0), i_read(0), i_write(1)
   n_qpoint = 1;
   for (int i_dim = 0; i_dim < n_dim; ++i_dim)
   {
-    n_qpoint *= basis.rank;
+    n_qpoint *= basis.row_size;
     origin.push_back(0.);
   }
   n_dof = n_qpoint*n_var;
@@ -194,7 +194,7 @@ void Grid::populate_slice(std::vector<double>& elem_pos, std::vector<int> indice
   if ((int)indices.size() < n_dim)
   {
     indices.push_back(0);
-    for (int i = 0; i < basis.rank; ++i)
+    for (int i = 0; i < basis.row_size; ++i)
     {
       indices.back() = i;
       populate_slice(elem_pos, indices, i_elem);
@@ -206,7 +206,7 @@ void Grid::populate_slice(std::vector<double>& elem_pos, std::vector<int> indice
     int stride = n_qpoint;
     for (auto i : indices)
     {
-      stride /= basis.rank;
+      stride /= basis.row_size;
       i_flat += i*stride;
     }
     for (int i_dim = 0; i_dim < n_dim; ++i_dim)
@@ -234,7 +234,7 @@ double Grid::jacobian_det(int i_elem, int i_qpoint)
 double Grid::stable_time_step(double cfl_by_stable_cfl, Kernel_settings& settings)
 {
   double cfl = cfl_by_stable_cfl*get_stable_cfl();
-  return cfl*mesh_size/get_mcs_cpg_euler(n_dim, basis.rank)(state_r(), n_elem, settings);
+  return cfl*mesh_size/get_mcs_cpg_euler(n_dim, basis.row_size)(state_r(), n_elem, settings);
 }
 
 bool Grid::execute_runge_kutta_stage()
@@ -257,64 +257,64 @@ bool Grid::execute_runge_kutta_stage()
 
 double Grid::get_stable_cfl()
 {
-  if ((basis.rank > 0) && (basis.rank <= 9))
+  if ((basis.row_size > 0) && (basis.row_size <= 9))
   {
-    return stable_cfl[basis.rank - 1];
+    return stable_cfl[basis.row_size - 1];
   }
   else
   {
-    throw std::runtime_error("Stable CFL number unknown for basis of desired rank.");
+    throw std::runtime_error("Stable CFL number unknown for basis of desired row_size.");
   }
 }
 
 void Grid::execute_local(Kernel_settings& settings)
 {
-  get_local_cpg_euler(n_dim, basis.rank)(state_r(), state_w(), n_elem, basis, settings);
+  get_local_cpg_euler(n_dim, basis.row_size)(state_r(), state_w(), n_elem, basis, settings);
 }
 
 void Grid::execute_neighbor(Kernel_settings& settings)
 {
-  get_neighbor_cpg_euler(n_dim, basis.rank)(neighbor_connections_r().data(), neighbor_connections_w().data(), n_neighb_con().data(), basis, settings);
-  get_gbc_cpg_euler(n_dim, basis.rank)(ghost_bound_conds, state_r(), state_w(), basis, settings);
+  get_neighbor_cpg_euler(n_dim, basis.row_size)(neighbor_connections_r().data(), neighbor_connections_w().data(), n_neighb_con().data(), basis, settings);
+  get_gbc_cpg_euler(n_dim, basis.row_size)(ghost_bound_conds, state_r(), state_w(), basis, settings);
 }
 
 void Grid::execute_req_visc(Kernel_settings& settings)
 {
-  get_req_visc_cpg_euler(n_dim, basis.rank)(state_r(), visc.data(), n_elem, basis, settings);
+  get_req_visc_cpg_euler(n_dim, basis.row_size)(state_r(), visc.data(), n_elem, basis, settings);
 }
 
 void Grid::execute_cont_visc(Kernel_settings& settings)
 {
-  get_cont_visc_cpg_euler(n_dim, basis.rank)(visc_neighbor_connections().data(), n_neighb_con().data(), settings);
+  get_cont_visc_cpg_euler(n_dim, basis.row_size)(visc_neighbor_connections().data(), n_neighb_con().data(), settings);
 }
 
-void Grid::execute_local_derivative(int i_var, int i_axis, Kernel_settings& settings)
+void Grid::execute_local_derivative(int i_var, int i_dim, Kernel_settings& settings)
 {
-  get_local_derivative(n_dim, basis.rank)(state_r(), derivs.data(), n_elem, i_var, i_axis, basis, settings);
+  get_local_derivative(n_dim, basis.row_size)(state_r(), derivs.data(), n_elem, i_var, i_dim, basis, settings);
 }
 
-void Grid::execute_neighbor_derivative(int i_var, int i_axis, Kernel_settings& settings)
+void Grid::execute_neighbor_derivative(int i_var, int i_dim, Kernel_settings& settings)
 {
-  int n_con = n_neighb_con()[i_axis];
-  get_neighbor_derivative(n_dim, basis.rank)(neighbor_connections_r()[i_axis], deriv_neighbor_connections()[i_axis], n_con, i_var, i_axis, basis, settings);
+  int n_con = n_neighb_con()[i_dim];
+  get_neighbor_derivative(n_dim, basis.row_size)(neighbor_connections_r()[i_dim], deriv_neighbor_connections()[i_dim], n_con, i_var, i_dim, basis, settings);
 }
 
 void Grid::execute_av_flux(Kernel_settings& settings)
 {
-  get_av_flux(n_dim, basis.rank)(derivs.data(), visc.data(), n_elem, basis, settings);
+  get_av_flux(n_dim, basis.row_size)(derivs.data(), visc.data(), n_elem, basis, settings);
 }
 
-void Grid::execute_local_av(int i_var, int i_axis, Kernel_settings& settings)
+void Grid::execute_local_av(int i_var, int i_dim, Kernel_settings& settings)
 {
-  get_local_av(n_dim, basis.rank)(derivs.data(), state_w(), n_elem, i_var, i_axis, basis, settings);
+  get_local_av(n_dim, basis.row_size)(derivs.data(), state_w(), n_elem, i_var, i_dim, basis, settings);
 }
 
-void Grid::execute_neighbor_av(int i_var, int i_axis, Kernel_settings& settings)
+void Grid::execute_neighbor_av(int i_var, int i_dim, Kernel_settings& settings)
 {
-  int n_con = n_neighb_con()[i_axis];
-  get_neighbor_av(n_dim, basis.rank)(deriv_neighbor_connections()[i_axis],
-                                     neighbor_connections_w()[i_axis], n_con, i_var, i_axis, basis, settings);
-  get_gbc_av(n_dim, basis.rank)(ghost_bound_conds, derivs.data(), state_w(), i_var, i_axis, basis, settings);
+  int n_con = n_neighb_con()[i_dim];
+  get_neighbor_av(n_dim, basis.row_size)(deriv_neighbor_connections()[i_dim],
+                                         neighbor_connections_w()[i_dim], n_con, i_var, i_dim, basis, settings);
+  get_gbc_av(n_dim, basis.row_size)(ghost_bound_conds, derivs.data(), state_w(), i_var, i_dim, basis, settings);
 }
 
 void Grid::print()
@@ -349,16 +349,16 @@ std::vector<double> Grid::integral(Domain_func& integrand)
   Eigen::VectorXd weights (n_qpoint);
   Eigen::VectorXd weights_1d = basis.node_weights();
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) weights(i_qpoint) = 1.;
-  for (int stride = n_qpoint/basis.rank, n_rows = 1; n_rows < n_qpoint;
-       stride /= basis.rank, n_rows *= basis.rank)
+  for (int stride = n_qpoint/basis.row_size, n_rows = 1; n_rows < n_qpoint;
+       stride /= basis.row_size, n_rows *= basis.row_size)
   {
     for (int i_outer = 0; i_outer < n_rows; ++i_outer)
     {
       for (int i_inner = 0; i_inner < stride; ++i_inner)
       {
-        for (int i_qpoint = 0; i_qpoint < basis.rank; ++i_qpoint)
+        for (int i_qpoint = 0; i_qpoint < basis.row_size; ++i_qpoint)
         {
-          weights((i_outer*basis.rank + i_qpoint)*stride + i_inner)
+          weights((i_outer*basis.row_size + i_qpoint)*stride + i_inner)
           *= weights_1d(i_qpoint)*mesh_size;
         }
       }
@@ -373,9 +373,9 @@ std::vector<double> Grid::integral(Domain_func& integrand)
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
     {
       std::vector<double> point_pos;
-      for (int i_axis = 0; i_axis < n_dim; ++i_axis)
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim)
       {
-        point_pos.push_back(elem_pos[i_qpoint + i_axis*n_qpoint]);
+        point_pos.push_back(elem_pos[i_qpoint + i_dim*n_qpoint]);
       }
       std::vector<double> point_state;
       for (int i_var = 0; i_var < n_var; ++i_var)

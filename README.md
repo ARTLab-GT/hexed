@@ -10,8 +10,8 @@ used with other similar codes.
 
 What CartDG is:
 * Fast.
-* Simple.
-* Capable of helping NASCART-GT do CFD with a state-of-the art numerical scheme.
+* Simple (relatively).
+* Capable of helping NASCART-GT do CFD with a state-of-the-art numerical scheme.
 
 What CartDG is not:
 * A stand-alone CFD code.
@@ -48,11 +48,10 @@ I use the following nonstandard terms in the code:
    of) two elements.
 * At some point in the future I may begin using the term "parent" and "child" kernel to refer to kernels that restrict and
   prolong the solution onto coarser or finer grids in a multigrid sense.
-* The "rank" of a basis is it's degree + 1 (i.e. the number of coefficients in it's 1-D polynomial). This is generally a
-  more convenient term to use than the degree, and it is not to be confused with the number of quadrature points, which
-  depends on the dimensionality. E.g. a 4th degree basis in 2 dimensions is of rank 5 and has 25 quadrature points. This
-  unfortunately may conflict with the use of the term "rank" in parallel programming, but I have yet to invent a better
-  term.
+* The "row size" of a basis is it's degree + 1 (i.e. the number of rows of quadrature points in each dimension, which is
+  equal to the number of coefficients in it's 1-D polynomial). It is usually more convenient to talk about the row size
+  than the degree. The row size is not to be confused with the number of quadrature points, which depends on the
+  dimensionality. E.g. a 4th degree basis in 3 dimensions is of row size 5 and has 125 quadrature points.
  
 ## Building
 If you are familiar with CMake, then execute the following steps to build CartDG. Unfortunately, more beginner-friendly

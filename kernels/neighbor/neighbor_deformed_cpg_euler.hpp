@@ -4,7 +4,7 @@
 #include <Kernel_settings.hpp>
 #include <Basis.hpp>
 #include "read_copy.hpp"
-#define CARTDG_ATOMIC // avoids race condition since i_axis is not the same for all threads
+#define CARTDG_ATOMIC // avoids race condition since i_dim is not the same for all threads
 #include "write_copy.hpp"
 #undef CARTDG_ATOMIC
 #include "hll_deformed_cpg_euler.hpp"
@@ -15,7 +15,7 @@ namespace cartdg
 // AUTOGENERATE LOOKUP BENCHMARK(deformed, 3)
 template<int n_var, int n_qpoint, int row_size>
 void neighbor_deformed_cpg_euler(double** def_connections_r, double** def_connections_w,
-                                 double** def_connections_j, int* i_axis, int* is_positive_face,
+                                 double** def_connections_j, int* i_dim, int* is_positive_face,
                                  int def_n_connections,
                                  Basis& basis, Kernel_settings& settings)
 // "def_" (for "deformed") prepended to arguments to avoid naming conflicts in benchmark code
@@ -37,15 +37,15 @@ void neighbor_deformed_cpg_euler(double** def_connections_r, double** def_connec
     double** connect = def_connections_r + 2*i_con;
     for (int i_side : {0, 1})
     {
-      int i_axis_side = i_axis[2*i_con + i_side];
+      int i_dim_side = i_dim[2*i_con + i_side];
       int stride = n_face_qpoint;
-      for (int i = 0; i < i_axis_side; ++i) stride /= row_size;
+      for (int i = 0; i < i_dim_side; ++i) stride /= row_size;
       bool is_positive = is_positive_face[2*i_con + i_side] == 1;
       read_copy<n_var, n_qpoint, row_size>(connect[i_side], face_r + i_side*face_size, stride, is_positive);
       read_copy<n_dim*n_dim, n_qpoint, row_size>(def_connections_j[2*i_con + i_side], face_jacobian + i_side*jac_size, stride, is_positive);
     }
 
-    if ((is_positive_face[2*i_con] != is_positive_face[2*i_con + 1]) && (i_axis[2*i_con] != i_axis[2*i_con + 1]))
+    if ((is_positive_face[2*i_con] != is_positive_face[2*i_con + 1]) && (i_dim[2*i_con] != i_dim[2*i_con + 1]))
     {
       if (n_dim == 3)
       {} // FIXME
@@ -59,9 +59,9 @@ void neighbor_deformed_cpg_euler(double** def_connections_r, double** def_connec
     }
 
     bool flip [] {is_positive_face[2*i_con] == 0, is_positive_face[2*i_con + 1] == 1};
-    hll_deformed_cpg_euler<n_var - 2, n_face_qpoint>(face_r, face_w, face_jacobian, mult, i_axis + 2*i_con, flip, heat_rat);
+    hll_deformed_cpg_euler<n_var - 2, n_face_qpoint>(face_r, face_w, face_jacobian, mult, i_dim + 2*i_con, flip, heat_rat);
 
-    if ((is_positive_face[2*i_con] != is_positive_face[2*i_con + 1]) && (i_axis[2*i_con] != i_axis[2*i_con + 1]))
+    if ((is_positive_face[2*i_con] != is_positive_face[2*i_con + 1]) && (i_dim[2*i_con] != i_dim[2*i_con + 1]))
     {
       if (n_dim == 3)
       {}
@@ -76,9 +76,9 @@ void neighbor_deformed_cpg_euler(double** def_connections_r, double** def_connec
 
     for (int i_side : {0, 1})
     {
-      int i_axis_side = i_axis[2*i_con + i_side];
+      int i_dim_side = i_dim[2*i_con + i_side];
       int stride = n_face_qpoint;
-      for (int i = 0; i < i_axis_side; ++i) stride /= row_size;
+      for (int i = 0; i < i_dim_side; ++i) stride /= row_size;
       bool is_positive = is_positive_face[2*i_con + i_side];
       write_copy<n_var, n_qpoint, row_size>(face_w + i_side*face_size, connect[i_side], stride, is_positive);
     }

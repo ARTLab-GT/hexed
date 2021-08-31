@@ -43,7 +43,7 @@ TEST_CASE("Solution class")
   SECTION("add_block_grid creates correct grid")
   {
     g = &sol.get_grid(1);
-    REQUIRE(g->basis.rank == 4);
+    REQUIRE(g->basis.row_size == 4);
     REQUIRE(g->state_r()[0] == 0.0);
     REQUIRE(g->n_elem == 6);
     REQUIRE(g->mesh_size == 0.35);
@@ -52,7 +52,7 @@ TEST_CASE("Solution class")
     REQUIRE(g->get_pos(1)[0] == -0.);
     REQUIRE(g->get_pos(1)[16] == -0.35);
     g = &sol.get_grid(2);
-    REQUIRE(g->basis.rank == 4);
+    REQUIRE(g->basis.row_size == 4);
     REQUIRE(g->n_elem == 16);
     REQUIRE(g->mesh_size == 0.175);
     REQUIRE(g->pos[0] == 0);
@@ -83,7 +83,7 @@ TEST_CASE("Solution class")
     Test_func test_func;
     sol.initialize(test_func);
     g = &sol.get_grid(1);
-    REQUIRE(g->basis.rank == 4);
+    REQUIRE(g->basis.row_size == 4);
     REQUIRE(g->n_elem == 6);
     REQUIRE(g->state_r()[0] == 0.1);
     REQUIRE(g->state_r()[16] == 0.2);
@@ -114,8 +114,8 @@ TEST_CASE("Solution class")
 
 TEST_CASE("Integration of deformed elements")
 {
-  const int rank = MAX_BASIS_RANK;
-  cartdg::Solution sol (4, 2, rank, 1.);
+  const int row_size = CARTDG_MAX_BASIS_ROW_SIZE;
+  cartdg::Solution sol (4, 2, row_size, 1.);
   sol.add_empty_grid(1);
   cartdg::Grid& grid = sol.grids[0];
   sol.add_deformed_grid(1);
@@ -182,8 +182,8 @@ TEST_CASE("Integration of deformed elements")
 
 TEST_CASE("Execution of non-penetration boundary condition")
 {
-  const int rank = MAX_BASIS_RANK;
-  cartdg::Solution sol (4, 2, rank, 1.);
+  const int row_size = CARTDG_MAX_BASIS_ROW_SIZE;
+  cartdg::Solution sol (4, 2, row_size, 1.);
   sol.add_deformed_grid(1);
   cartdg::Deformed_grid& grid = sol.def_grids[0];
   grid.add_element({0, 0});

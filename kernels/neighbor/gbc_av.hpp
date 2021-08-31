@@ -14,17 +14,17 @@ namespace cartdg
 template <int n_var, int n_qpoint, int row_size>
 void gbc_av(std::vector<Ghost_boundary_condition*>& ghost_bound_conds,
             double* read, double* write,
-            int i_var, int i_axis, Basis& basis,
+            int i_var, int i_dim, Basis& basis,
             Kernel_settings& settings)
 {
   double mult = 1./(basis.node_weights()[0]*settings.d_pos);
   const int n_dof = n_var*n_qpoint;
   for (Ghost_boundary_condition* gbc : ghost_bound_conds)
   {
-    if (gbc->i_dim == i_axis)
+    if (gbc->i_dim == i_dim)
     {
       int stride = n_qpoint;
-      for (int i_axis = 0; i_axis < gbc->i_dim + 1; ++i_axis) stride /= row_size;
+      for (int j_dim = 0; j_dim < gbc->i_dim + 1; ++j_dim) stride /= row_size;
       for (unsigned i_bc = 0; i_bc < gbc->elems.size(); ++i_bc)
       {
         int i_elem = gbc->elems[i_bc];

@@ -10,7 +10,7 @@ const double ref_mach = 0.3;
 
 template<int n_dim, int n_face_qpoint>
 void ausm_plus_up_cpg_euler(double* state_r, double* d_flux_w, double mult,
-                            int i_axis, double heat_rat)
+                            int i_dim, double heat_rat)
 {
   const int n_var = n_dim + 2;
   const int face_size = n_var*n_face_qpoint;
@@ -26,16 +26,16 @@ void ausm_plus_up_cpg_euler(double* state_r, double* d_flux_w, double mult,
       #define READ(i) state_r[(i)*n_face_qpoint + i_qpoint + i_side*face_size]
       #define FLUX(i) flux[i_side][i]
       mass[i_side] = READ(n_var - 2);
-      veloc[i_side] = READ(i_axis)/READ(n_var - 2);
+      veloc[i_side] = READ(i_dim)/READ(n_var - 2);
       pres[i_side] = 0;
-      for (int j_axis = 0; j_axis < n_var - 2; ++j_axis)
+      for (int j_dim = 0; j_dim < n_var - 2; ++j_dim)
       {
-        FLUX(j_axis) = READ(j_axis)*veloc[i_side];
-        pres[i_side] += READ(j_axis)*READ(j_axis)/READ(n_var - 2);
+        FLUX(j_dim) = READ(j_dim)*veloc[i_side];
+        pres[i_side] += READ(j_dim)*READ(j_dim)/READ(n_var - 2);
       }
       pres[i_side] = (heat_rat - 1.)*(READ(n_var - 1) - 0.5*pres[i_side]);
-      FLUX(i_axis) += pres[i_side];
-      FLUX(n_var - 2) = READ(i_axis);
+      FLUX(i_dim) += pres[i_side];
+      FLUX(n_var - 2) = READ(i_dim);
       FLUX(n_var - 1) = (READ(n_var - 1) + pres[i_side])*veloc[i_side];
       #undef FLUX
 
@@ -82,7 +82,7 @@ void ausm_plus_up_cpg_euler(double* state_r, double* d_flux_w, double mult,
       double num_flux = state_r[i + upwind_offset];
       if (i_var == n_var - 1) num_flux += pres[upwind_ind];
       num_flux *= mass_flux/mass[upwind_ind];
-      if (i_var == i_axis) num_flux += mid_pres;
+      if (i_var == i_dim) num_flux += mid_pres;
       d_flux_w[i            ] = (flux[0][i_var] - num_flux)*mult;
       d_flux_w[i + face_size] = (num_flux - flux[1][i_var])*mult;
     }

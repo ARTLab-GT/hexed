@@ -31,11 +31,11 @@ class Initializer : public cartdg::Spacetime_func
 TEST_CASE("Conservation of state variables")
 {
   int length = 1.;
-  int rank = 3;
+  int row_size = 3;
 
   SECTION("1D")
   {
-    cartdg::Solution sol (3, 1, rank, length);
+    cartdg::Solution sol (3, 1, row_size, length);
     sol.add_block_grid(2);
     cartdg::Grid& grid = sol.get_grid(0);
     std::vector<int> periods {4};
@@ -73,7 +73,7 @@ TEST_CASE("Conservation of state variables")
 
   SECTION("2D cartesian")
   {
-    cartdg::Solution sol (4, 2, rank, length);
+    cartdg::Solution sol (4, 2, row_size, length);
     sol.add_block_grid(2);
     cartdg::Grid& grid = sol.get_grid(0);
     std::vector<int> periods {4, 4};
@@ -109,8 +109,8 @@ TEST_CASE("Conservation of state variables")
 
   SECTION("2D deformed")
   {
-    const int rank = MAX_BASIS_RANK;
-    cartdg::Solution sol (4, 2, rank, 1.);
+    const int row_size = CARTDG_MAX_BASIS_ROW_SIZE;
+    cartdg::Solution sol (4, 2, row_size, 1.);
     sol.add_empty_grid(1);
     cartdg::Grid& grid = sol.grids[0];
     sol.add_deformed_grid(1);
@@ -180,7 +180,7 @@ TEST_CASE("Conservation of state variables")
 
   SECTION("3D")
   {
-    cartdg::Solution sol (5, 3, rank, length);
+    cartdg::Solution sol (5, 3, row_size, length);
     sol.add_block_grid(2);
     cartdg::Grid& grid = sol.get_grid(0);
     std::vector<int> periods {4, 4, 4};

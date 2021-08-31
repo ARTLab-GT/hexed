@@ -70,7 +70,7 @@ int Deformed_grid::add_element(std::vector<int> position)
       vertices[id].neighbor_ids.push_back(n_vertices*i_elem + i_neighbor);
     }
   }
-  for (int i = 0; i < n_qpoint/basis.rank*2*n_dim; ++i) node_adjustments.push_back(0);
+  for (int i = 0; i < n_qpoint/basis.row_size*2*n_dim; ++i) node_adjustments.push_back(0);
   return i_elem;
 }
 
@@ -83,9 +83,9 @@ std::vector<double> Deformed_grid::get_pos(int i_elem)
     int i_node = 0;
     for (int vertex_stride = 1, node_stride = 1;
          vertex_stride < n_vertices;
-         vertex_stride *= 2, node_stride *= basis.rank)
+         vertex_stride *= 2, node_stride *= basis.row_size)
     {
-      if ((i_vertex/vertex_stride)%2 == 1) i_node += node_stride*(basis.rank - 1);
+      if ((i_vertex/vertex_stride)%2 == 1) i_node += node_stride*(basis.row_size - 1);
     }
     for (int i_dim = 0; i_dim < n_dim; ++i_dim)
     {
@@ -93,14 +93,14 @@ std::vector<double> Deformed_grid::get_pos(int i_elem)
     }
   }
 
-  for (int i_dim = 0, stride = n_qpoint/basis.rank; i_dim < n_dim; ++i_dim, stride /= basis.rank)
+  for (int i_dim = 0, stride = n_qpoint/basis.row_size; i_dim < n_dim; ++i_dim, stride /= basis.row_size)
   {
     for (int i_node = 0; i_node < n_qpoint; ++i_node)
     {
-      int coord = (i_node/stride)%basis.rank;
+      int coord = (i_node/stride)%basis.row_size;
       double dist = basis.node(coord);
       int i_node0 = i_node - coord*stride;
-      int i_node1 = i_node0 + (basis.rank - 1)*stride;
+      int i_node1 = i_node0 + (basis.row_size - 1)*stride;
       for (int j_dim = 0; j_dim < n_dim; ++j_dim)
       {
         int i = j_dim*n_qpoint;
@@ -110,17 +110,17 @@ std::vector<double> Deformed_grid::get_pos(int i_elem)
   }
 
   std::vector<double> warped_elem_pos = elem_pos;
-  for (int i_dim = 0, stride = n_qpoint/basis.rank; i_dim < n_dim; ++i_dim, stride /= basis.rank)
+  for (int i_dim = 0, stride = n_qpoint/basis.row_size; i_dim < n_dim; ++i_dim, stride /= basis.row_size)
   {
     for (int i_node = 0; i_node < n_qpoint; ++i_node)
     {
-      int coord = (i_node/stride)%basis.rank;
+      int coord = (i_node/stride)%basis.row_size;
       int i_node0 = i_node - coord*stride;
-      int i_node1 = i_node0 + (basis.rank - 1)*stride;
-      int i_adjust = 2*(i_dim + i_elem*n_dim)*n_qpoint/basis.rank
-                     + i_node/(stride*basis.rank)*stride + i_node%stride;
+      int i_node1 = i_node0 + (basis.row_size - 1)*stride;
+      int i_adjust = 2*(i_dim + i_elem*n_dim)*n_qpoint/basis.row_size
+                     + i_node/(stride*basis.row_size)*stride + i_node%stride;
       double adjust0 = node_adjustments[i_adjust];
-      double adjust1 = node_adjustments[i_adjust + n_qpoint/basis.rank];
+      double adjust1 = node_adjustments[i_adjust + n_qpoint/basis.row_size];
       double dist = basis.node(coord);
       for (int j_dim = 0; j_dim < n_dim; ++j_dim)
       {
@@ -155,15 +155,15 @@ double Deformed_grid::jacobian_det(int i_elem, int i_qpoint)
 
 void Deformed_grid::execute_local(Kernel_settings& settings)
 {
-  get_local_deformed_cpg_euler(n_dim, basis.rank)(state_r(), state_w(), jacobian.data(), n_elem,
+  get_local_deformed_cpg_euler(n_dim, basis.row_size)(state_r(), state_w(), jacobian.data(), n_elem,
                                                   basis, settings);
 }
 
 void Deformed_grid::execute_neighbor(Kernel_settings& settings)
 {
-  get_neighbor_deformed_cpg_euler(n_dim, basis.rank)(state_connections_r(), state_connections_w(), jacobian_neighbors.data(), neighbor_axes.data(), neighbor_is_positive.data(), neighbor_storage[0].size()/2, basis, settings);
-  get_gbc_cpg_euler(n_dim, basis.rank)(ghost_bound_conds, state_r(), state_w(), basis, settings);
-  get_nonpen_cpg_euler(n_dim, basis.rank)(state_r(), state_w(), jacobian.data(), i_elem_wall.data(), i_dim_wall.data(), is_positive_wall.data(), i_elem_wall.size(), basis, settings);
+  get_neighbor_deformed_cpg_euler(n_dim, basis.row_size)(state_connections_r(), state_connections_w(), jacobian_neighbors.data(), neighbor_axes.data(), neighbor_is_positive.data(), neighbor_storage[0].size()/2, basis, settings);
+  get_gbc_cpg_euler(n_dim, basis.row_size)(ghost_bound_conds, state_r(), state_w(), basis, settings);
+  get_nonpen_cpg_euler(n_dim, basis.row_size)(state_r(), state_w(), jacobian.data(), i_elem_wall.data(), i_dim_wall.data(), is_positive_wall.data(), i_elem_wall.size(), basis, settings);
 }
 
 void Deformed_grid::execute_req_visc(Kernel_settings& settings)
@@ -174,7 +174,7 @@ void Deformed_grid::execute_cont_visc(Kernel_settings& settings)
 {
 }
 
-void Deformed_grid::execute_local_derivative(int i_var, int i_axis, Kernel_settings& settings)
+void Deformed_grid::execute_local_derivative(int i_var, int i_dim, Kernel_settings& settings)
 {
   double* sr = state_r();
   double* sw = state_w();
@@ -184,7 +184,7 @@ void Deformed_grid::execute_local_derivative(int i_var, int i_axis, Kernel_setti
   }
 }
 
-void Deformed_grid::execute_neighbor_derivative(int i_var, int i_axis, Kernel_settings& settings)
+void Deformed_grid::execute_neighbor_derivative(int i_var, int i_dim, Kernel_settings& settings)
 {
 }
 
@@ -192,15 +192,15 @@ void Deformed_grid::execute_av_flux(Kernel_settings& settings)
 {
 }
 
-void Deformed_grid::execute_local_av(int i_var, int i_axis, Kernel_settings& settings)
+void Deformed_grid::execute_local_av(int i_var, int i_dim, Kernel_settings& settings)
 {
 }
 
-void Deformed_grid::execute_neighbor_av(int i_var, int i_axis, Kernel_settings& settings)
+void Deformed_grid::execute_neighbor_av(int i_var, int i_dim, Kernel_settings& settings)
 {
 }
 
-void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_axis,
+void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
                             std::array<bool, 2> is_positive)
 {
   std::array<std::vector<int>, 2> id_inds;
@@ -208,7 +208,7 @@ void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_axis
   for (int i_side : {0, 1})
   {
     int stride = n_vertices/2;
-    for (int i = 0; i < i_axis[i_side]; ++i) stride /= 2;
+    for (int i = 0; i < i_dim[i_side]; ++i) stride /= 2;
     strides[i_side] = stride;
     for (int i_vertex = 0; i_vertex < n_vertices; ++i_vertex)
     {
@@ -218,17 +218,17 @@ void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_axis
       }
     }
   }
-  if ((is_positive[0] != is_positive[1]) && (i_axis[0] != i_axis[1]))
+  if ((is_positive[0] != is_positive[1]) && (i_dim[0] != i_dim[1]))
   {
     if (n_dim == 3)
     {
       int stride = strides[0];
-      if (i_axis[0] < i_axis[1]) stride /= 2;
+      if (i_dim[0] < i_dim[1]) stride /= 2;
       for (int i : {0, 1}) std::swap(id_inds[1][i*2/stride], id_inds[1][i*2/stride + stride]);
     }
     else std::swap(id_inds[1][0], id_inds[1][1]);
   }
-  if ((i_axis[0] == 0 && i_axis[1] == 2) || (i_axis[0] == 2 && i_axis[1] == 0))
+  if ((i_dim[0] == 0 && i_dim[1] == 2) || (i_dim[0] == 2 && i_dim[1] == 0))
   {
     std::swap(id_inds[1][1], id_inds[1][2]);
   }
@@ -239,7 +239,7 @@ void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_axis
   for (int i_side : {0, 1})
   {
     neighbor_inds.push_back(i_elem[i_side]);
-    neighbor_axes.push_back(i_axis[i_side]);
+    neighbor_axes.push_back(i_dim[i_side]);
     neighbor_is_positive.push_back(is_positive[i_side]);
   }
 }
@@ -257,7 +257,7 @@ void Deformed_grid::update_connections()
   }
 }
 
-void Deformed_grid::connect_non_def(std::array<int, 2> i_elem, std::array<int, 2> i_axis,
+void Deformed_grid::connect_non_def(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
                                     std::array<bool, 2> is_positive, Grid& other_grid)
 {
   for (int i_stage = 0; i_stage < 3; ++i_stage)
@@ -268,7 +268,7 @@ void Deformed_grid::connect_non_def(std::array<int, 2> i_elem, std::array<int, 2
   }
   for (int i_side : {0, 1})
   {
-    neighbor_axes.push_back(i_axis[i_side]);
+    neighbor_axes.push_back(i_dim[i_side]);
     neighbor_is_positive.push_back(int(is_positive[i_side]));
   }
   jacobian_neighbors.push_back(jacobian.data() + i_elem[0]*n_dim*n_dim*n_qpoint);
@@ -285,13 +285,13 @@ std::vector<double> Deformed_grid::face_integral(Domain_func& integrand, int i_e
   auto pos = get_pos(i_elem);
   double* elem_state = state_r() + i_elem*n_dof;
   auto row_weights = basis.node_weights();
-  int stride = std::pow(basis.rank, n_dim - 1 - i_dim);
+  int stride = std::pow(basis.row_size, n_dim - 1 - i_dim);
   std::vector<double> total;
-  for (int i_outer = 0; i_outer < n_qpoint/basis.rank/stride; ++i_outer)
+  for (int i_outer = 0; i_outer < n_qpoint/basis.row_size/stride; ++i_outer)
   {
     for (int i_inner = 0; i_inner < stride; ++i_inner)
     {
-      int i_qpoint = (i_outer*basis.rank + int(is_positive)*(basis.rank - 1.))*stride + i_inner;
+      int i_qpoint = (i_outer*basis.row_size + int(is_positive)*(basis.row_size - 1.))*stride + i_inner;
       std::vector<double> qpoint_pos;
       for (int j_dim = 0; j_dim < n_dim; ++j_dim)
       {
@@ -329,8 +329,8 @@ std::vector<double> Deformed_grid::face_integral(Domain_func& integrand, int i_e
       double weight = 1.;
       for (int j_dim = 0; j_dim < n_dim - 1; ++j_dim)
       {
-        int stride_j = std::pow(basis.rank, j_dim);
-        weight *= row_weights((i_face/stride_j)%basis.rank);
+        int stride_j = std::pow(basis.row_size, j_dim);
+        weight *= row_weights((i_face/stride_j)%basis.row_size);
       }
       for (int i_var = 0; i_var < int(total.size()); ++i_var)
       {
@@ -371,22 +371,22 @@ void Deformed_grid::calc_jacobian()
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
     std::vector<double> elem_pos = get_pos(i_elem);
-    for (int i_dim = 0, stride = n_qpoint/basis.rank; i_dim < n_dim; ++i_dim, stride /= basis.rank)
+    for (int i_dim = 0, stride = n_qpoint/basis.row_size; i_dim < n_dim; ++i_dim, stride /= basis.row_size)
     {
-      for (int i_outer = 0; i_outer < n_qpoint/(stride*basis.rank); ++i_outer)
+      for (int i_outer = 0; i_outer < n_qpoint/(stride*basis.row_size); ++i_outer)
       {
         for (int i_inner = 0; i_inner < stride; ++i_inner)
         {
           for (int j_dim = 0; j_dim < n_dim; ++j_dim)
           {
-            Eigen::VectorXd row_pos (basis.rank);
-            int row_start = i_outer*stride*basis.rank + i_inner;
-            for (int i_qpoint = 0; i_qpoint < basis.rank; ++i_qpoint)
+            Eigen::VectorXd row_pos (basis.row_size);
+            int row_start = i_outer*stride*basis.row_size + i_inner;
+            for (int i_qpoint = 0; i_qpoint < basis.row_size; ++i_qpoint)
             {
               row_pos(i_qpoint) = elem_pos[j_dim*n_qpoint + row_start + i_qpoint*stride];
             }
             auto row_jacobian = diff_mat*row_pos;
-            for (int i_qpoint = 0; i_qpoint < basis.rank; ++i_qpoint)
+            for (int i_qpoint = 0; i_qpoint < basis.row_size; ++i_qpoint)
             {
               jacobian[((i_elem*n_dim + j_dim)*n_dim + i_dim)*n_qpoint
                        + row_start + i_qpoint*stride] = row_jacobian(i_qpoint)/mesh_size;
