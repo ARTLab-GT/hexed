@@ -1,17 +1,20 @@
 #ifndef CARTDG_LOCAL_CPG_EULER_NC_HPP_
 #define CARTDG_LOCAL_CPG_EULER_NC_HPP_
 
+#include <vector>
+
 #include <Eigen/Dense>
 
 #include <Kernel_settings.hpp>
 #include <Basis.hpp>
+#include <Element.hpp>
 
 namespace cartdg
 {
 
 // AUTOGENERATE LOOKUP BENCHMARK(regular, 3)
 template<int n_var, int n_qpoint, int row_size>
-void local_cpg_euler_nc(double** read_ptrs, double** write_ptrs, int n_elem,
+void local_cpg_euler_nc(std::vector<Element> elements, int n_elem,
                         Basis& basis, Kernel_settings& settings)
 {
   Eigen::Matrix<double, row_size, row_size> diff_mat = basis.diff_mat();
@@ -19,10 +22,10 @@ void local_cpg_euler_nc(double** read_ptrs, double** write_ptrs, int n_elem,
   double heat_rat = settings.cpg_heat_rat;
 
   #pragma omp parallel for
-  for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+  for (Element& element : elements)
   {
-    double* read = read_ptrs[i_elem];
-    double* write = write_ptrs[i_elem];
+    double* read = element.read_ptr();
+    double* write = element.write_ptr();
     // Initialize updated solution to be equal to current solution
     for (int i_dof = 0; i_dof < n_qpoint*n_var; ++i_dof)
     {

@@ -1,10 +1,12 @@
 find_package(Catch2 REQUIRED)
 add_executable(test)
 target_sources(test PRIVATE
+# please maintain alphabetical order
 main.cpp
 test_Basis.cpp
 test_conservation.cpp
 test_Deformed_grid.cpp
+test_Element.cpp
 test_func.cpp
 test_Ghost_boundary_condition.cpp
 test_Grid.cpp

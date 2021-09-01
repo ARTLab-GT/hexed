@@ -1,7 +1,9 @@
 target_sources(cartdg PRIVATE
+# please maintain alphabetical order
 Basis.cpp
 Deformed_grid.cpp
 Domain_func.cpp
+Element.cpp
 Equidistant.cpp
 Ghost_boundary_condition.cpp
 Grid.cpp

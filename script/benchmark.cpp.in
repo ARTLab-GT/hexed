@@ -7,6 +7,7 @@
 
 #include <Gauss_lobatto.hpp>
 #include <Kernel_settings.hpp>
+#include <Element.hpp>
 
 int main(int argc, char** argv)
 {
@@ -23,10 +24,23 @@ int n_var = dim + 2;
 int n_total = n_var*n_qpoint*n_elem;
 int n_jacobian = n_elem*n_qpoint*dim*dim;
 
+cartdg::Storage_params storage_params (3, n_var, dim, row_size);
+
 std::vector<double> jacobian_vec (n_jacobian, 0.);
 std::vector<double> read_vec (n_total);
 std::vector<double> write_vec (n_total, 0.);
 std::vector<double> visc_vec (n_elem*n_visc, 0.);
+std::vector<cartdg::Element> elements;
+for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+{
+  elements.emplace_back(storage_params);
+  for (int i_dof = 0; i_dof < n_var*n_qpoint; ++i_dof)
+  {
+    double state = (rand()%1000)/1000. + 10.; // "+ 10." avoids NaN due to nonpositive density
+    if (i_dof/n_qpoint == n_var - 1) state += 100; // Avoid NaN due to negative pressure
+    elements.back().read_ptr()[i_dof] = state;
+  }
+}
 #pragma omp parallel for
 for (int i = 0; i < n_total; ++i)
 {
