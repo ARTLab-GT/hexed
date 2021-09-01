@@ -14,7 +14,7 @@ namespace cartdg
 
 // AUTOGENERATE LOOKUP BENCHMARK(regular, 3)
 template<int n_var, int n_qpoint, int row_size>
-void local_cpg_euler_nc(std::vector<Element> elements, int n_elem,
+void local_cpg_euler_nc(std::vector<Element>& elements, int n_elem,
                         Basis& basis, Kernel_settings& settings)
 {
   Eigen::Matrix<double, row_size, row_size> diff_mat = basis.diff_mat();

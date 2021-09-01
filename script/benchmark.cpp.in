@@ -63,6 +63,7 @@ std::vector<double*> read_ptrs_vec;
 std::vector<double*> write_ptrs_vec;
 for (int i_elem = 0; i_elem < n_elem; ++i_elem)
 {
+  #if 0
   int ind;
   if (i_elem == 0)
   {
@@ -72,12 +73,11 @@ for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
     ind = (rand()%read_ptrs_vec.size());
   }
-  #if 1
   read_ptrs_vec.insert(read_ptrs_vec.begin() + ind, read + i_elem*n_var*n_qpoint);
   write_ptrs_vec.insert(write_ptrs_vec.begin() + ind, write + i_elem*n_var*n_qpoint);
   #else
-  read_ptrs_vec.push_back(read + i_elem*n_var*n_qpoint);
-  write_ptrs_vec.push_back(write + i_elem*n_var*n_qpoint);
+  read_ptrs_vec.push_back(elements[i_elem].read_ptr());
+  write_ptrs_vec.push_back(elements[i_elem].write_ptr());
   #endif
 }
 double** read_ptrs = read_ptrs_vec.data();
