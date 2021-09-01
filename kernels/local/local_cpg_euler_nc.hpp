@@ -20,17 +20,16 @@ void local_cpg_euler_nc(std::vector<Element>& elements, int n_elem,
   Eigen::Matrix<double, row_size, row_size> diff_mat = basis.diff_mat();
   double d_t_by_d_pos = settings.d_t_by_d_pos;
   double heat_rat = settings.cpg_heat_rat;
+  const int n_dof = n_var*n_qpoint;
 
   #pragma omp parallel for
   for (Element& element : elements)
   {
-    double* read = element.read_ptr();
-    double* write = element.write_ptr();
-    // Initialize updated solution to be equal to current solution
-    for (int i_dof = 0; i_dof < n_qpoint*n_var; ++i_dof)
-    {
-      write[i_dof] = read[i_dof];
-    }
+    auto read_vec = element.stage_block(settings.i_read, n_dof);
+    auto write_vec = element.stage_block(settings.i_write, n_dof);
+    write_vec = read_vec;
+    double* read = &read_vec[0];
+    double* write = &write_vec[0];
 
     // Perform update
     for (int stride = n_qpoint/row_size, n_rows = 1, i_dim = 0;

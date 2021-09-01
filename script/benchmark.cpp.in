@@ -21,6 +21,7 @@ int n_elem = std::pow(n_elem_side, dim);
 int n_qpoint = std::pow(row_size, dim);
 int n_visc = std::pow(2, dim);
 int n_var = dim + 2;
+int n_dof = n_var*n_qpoint;
 int n_total = n_var*n_qpoint*n_elem;
 int n_jacobian = n_elem*n_qpoint*dim*dim;
 
@@ -38,7 +39,7 @@ for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
     double state = (rand()%1000)/1000. + 10.; // "+ 10." avoids NaN due to nonpositive density
     if (i_dof/n_qpoint == n_var - 1) state += 100; // Avoid NaN due to negative pressure
-    elements.back().read_ptr()[i_dof] = state;
+    elements.back().stage_block(0, n_dof)[i_dof] = state;
   }
 }
 #pragma omp parallel for
@@ -59,29 +60,6 @@ for (int i = 0; i < n_jacobian; ++i)
 double* jacobian = jacobian_vec.data();
 double* read = read_vec.data();
 double* write = write_vec.data();
-std::vector<double*> read_ptrs_vec;
-std::vector<double*> write_ptrs_vec;
-for (int i_elem = 0; i_elem < n_elem; ++i_elem)
-{
-  #if 0
-  int ind;
-  if (i_elem == 0)
-  {
-    ind = 0;
-  }
-  else
-  {
-    ind = (rand()%read_ptrs_vec.size());
-  }
-  read_ptrs_vec.insert(read_ptrs_vec.begin() + ind, read + i_elem*n_var*n_qpoint);
-  write_ptrs_vec.insert(write_ptrs_vec.begin() + ind, write + i_elem*n_var*n_qpoint);
-  #else
-  read_ptrs_vec.push_back(elements[i_elem].read_ptr());
-  write_ptrs_vec.push_back(elements[i_elem].write_ptr());
-  #endif
-}
-double** read_ptrs = read_ptrs_vec.data();
-double** write_ptrs = write_ptrs_vec.data();
 double* visc = visc_vec.data();
 std::vector<std::vector<double*>> con_r_vec2 (dim);
 std::vector<std::vector<double*>> con_w_vec2 (dim);
