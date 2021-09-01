@@ -17,7 +17,7 @@ class Element
   public:
   Element(Storage_params);
   using ref_t = Eigen::VectorBlock<vec_t>;
-  ref_t stage_block(int i_stage, int size) {return data.segment(i_stage*n_dof, size);}
+  ref_t stage_block(int i_stage);
 };
 
 }

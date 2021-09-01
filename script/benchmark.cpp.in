@@ -21,7 +21,6 @@ int n_elem = std::pow(n_elem_side, dim);
 int n_qpoint = std::pow(row_size, dim);
 int n_visc = std::pow(2, dim);
 int n_var = dim + 2;
-int n_dof = n_var*n_qpoint;
 int n_total = n_var*n_qpoint*n_elem;
 int n_jacobian = n_elem*n_qpoint*dim*dim;
 
@@ -39,7 +38,7 @@ for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
     double state = (rand()%1000)/1000. + 10.; // "+ 10." avoids NaN due to nonpositive density
     if (i_dof/n_qpoint == n_var - 1) state += 100; // Avoid NaN due to negative pressure
-    elements.back().stage_block(0, n_dof)[i_dof] = state;
+    elements.back().stage_block(0)[i_dof] = state;
   }
 }
 #pragma omp parallel for

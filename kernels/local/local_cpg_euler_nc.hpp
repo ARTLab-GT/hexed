@@ -20,13 +20,12 @@ void local_cpg_euler_nc(std::vector<Element>& elements, int n_elem,
   Eigen::Matrix<double, row_size, row_size> diff_mat = basis.diff_mat();
   double d_t_by_d_pos = settings.d_t_by_d_pos;
   double heat_rat = settings.cpg_heat_rat;
-  const int n_dof = n_var*n_qpoint;
 
   #pragma omp parallel for
   for (Element& element : elements)
   {
-    auto read_vec = element.stage_block(settings.i_read, n_dof);
-    auto write_vec = element.stage_block(settings.i_write, n_dof);
+    auto read_vec = element.stage_block(settings.i_read);
+    auto write_vec = element.stage_block(settings.i_write);
     write_vec = read_vec;
     double* read = &read_vec[0];
     double* write = &write_vec[0];
