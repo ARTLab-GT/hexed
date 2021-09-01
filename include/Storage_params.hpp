@@ -4,17 +4,17 @@
 namespace cartdg
 {
 
-struct Storage_params
+class Storage_params
 {
-  const int n_stage;
-  const int n_var;
-  const int row_size;
-  const int n_dim;
-  const int n_qpoint;
-  const int n_dof;
-  const int size;
+  public:
+  unsigned n_stage;
+  unsigned n_var;
+  unsigned n_dim;
+  unsigned row_size;
 
-  Storage_params(int n_stage, int n_var, int n_dim, int row_size);
+  unsigned n_qpoint();
+  unsigned n_dof();
+  unsigned size();
 };
 
 }
