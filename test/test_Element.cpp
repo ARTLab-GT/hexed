@@ -16,6 +16,7 @@ TEST_CASE("Element")
       REQUIRE(element.stage_block(3).size() == params.n_dof());
       auto zero = Eigen::VectorXd::Zero(params.n_dof());
       auto one = Eigen::VectorXd::Ones(params.n_dof());
+      for (unsigned i_stage = 0; i_stage < 4; ++i_stage) element.stage_block(i_stage) = zero;
       element.stage_block(0) = 1.2*one;
       REQUIRE(element.stage_block(3) == zero);
       element.stage_block(3) = 1.3*one;
