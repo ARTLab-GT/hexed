@@ -12,12 +12,12 @@ class Element
 {
   using vec_t = Eigen::VectorXd;
   vec_t data;
-  int n_dof;
+  unsigned n_dof;
 
   public:
   Element(Storage_params);
   using ref_t = Eigen::VectorBlock<vec_t>;
-  ref_t stage_block(int i_stage);
+  ref_t stage_block(unsigned i_stage);
 };
 
 }
