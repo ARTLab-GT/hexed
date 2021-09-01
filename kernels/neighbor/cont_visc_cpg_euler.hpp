@@ -3,10 +3,10 @@
 
 #include <Eigen/Dense>
 
+#include <math.hpp>
 #include <Kernel_settings.hpp>
 #include "read_copy.hpp"
 #include "write_copy.hpp"
-#include "../static_math.hpp"
 
 namespace cartdg
 {
@@ -16,7 +16,7 @@ template<int n_var, int n_qpoint, int row_size>
 void cont_visc_cpg_euler(double*** connections, int* n_connections, Kernel_settings& settings)
 {
   const int n_dim = n_var - 2;
-  constexpr int n_point = static_math::pow(2, n_dim);
+  constexpr int n_point = custom_math::pow(2, n_dim);
   constexpr int n_face_point = n_point/2;
   for (int stride = n_face_point, i_dim = 0; stride > 0; stride /= 2, ++i_dim)
   {

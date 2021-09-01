@@ -1,9 +1,9 @@
 #ifndef CARTDG_REQ_VISC_CPG_EULER_HPP_
 #define CARTDG_REQ_VISC_CPG_EULER_HPP_
 
+#include <math.hpp>
 #include <Basis.hpp>
 #include <Kernel_settings.hpp>
-#include "../static_math.hpp"
 #include "../observing/indicator.hpp"
 #include "../observing/char_speed_cpg_euler.hpp"
 
@@ -15,7 +15,7 @@ template<int n_var, int n_qpoint, int row_size>
 void req_visc_cpg_euler(double* read, double* visc, int n_elem, Basis& basis, Kernel_settings& settings)
 {
   const int n_dim = n_var - 2;
-  constexpr int n_visc = static_math::pow(2, n_dim);
+  constexpr int n_visc = custom_math::pow(2, n_dim);
   const double heat_rat = settings.cpg_heat_rat;
   const double d_pos = settings.d_pos;
   double weights [row_size];

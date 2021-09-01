@@ -1,9 +1,9 @@
 #ifndef CARTDG_AV_FLUX_HPP_
 #define CARTDG_AV_FLUX_HPP_
 
+#include <math.hpp>
 #include <Basis.hpp>
 #include <Kernel_settings.hpp>
-#include "../static_math.hpp"
 
 namespace cartdg
 {
@@ -14,7 +14,7 @@ void av_flux(double* flux, double* visc, int n_elem, Basis& basis, Kernel_settin
 {
   double d_t = settings.d_t_by_d_pos*settings.d_pos;
   const int n_dim = n_var - 2;
-  constexpr int n_visc = static_math::pow(2, n_dim);
+  constexpr int n_visc = custom_math::pow(2, n_dim);
 
   double interp [n_visc][n_qpoint];
   for (int i_visc = 0; i_visc < n_visc; ++i_visc)

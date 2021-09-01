@@ -7,7 +7,7 @@
 #include <get_av_flux.hpp>
 #include <local/derivative.hpp>
 #include <Gauss_lobatto.hpp>
-#include <static_math.hpp>
+#include <math.hpp>
 
 class Identity_basis : public cartdg::Basis
 {
@@ -463,7 +463,7 @@ TEST_CASE("derivative")
 TEST_CASE("req_visc")
 {
   const int row_size = CARTDG_MAX_BASIS_ROW_SIZE;
-  const int n_qpoint = cartdg::static_math::pow(row_size, 3);
+  const int n_qpoint = cartdg::custom_math::pow(row_size, 3);
   cartdg::Gauss_lobatto basis (row_size);
   cartdg::Kernel_settings settings;
   settings.d_pos = 0.5;

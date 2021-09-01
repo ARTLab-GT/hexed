@@ -1,8 +1,22 @@
 #ifndef MATH_HPP_
 #define MATH_HPP_
 
+#include <cmath>
+
 namespace cartdg
 {
+
+namespace custom_math
+{
+
+template<typename number_t>
+constexpr number_t pow(number_t base, int exponent)
+{
+  number_t result = 1;
+  for (int i = 0; i < exponent; ++i) result *= base;
+  for (int i = 0; i > exponent; --i) result /= base;
+  return result;
+}
 
 template <typename Func_type>
 double root(Func_type func, double init_guess, double atol=1e-10, double init_diff=1e-3)
@@ -22,6 +36,7 @@ double root(Func_type func, double init_guess, double atol=1e-10, double init_di
   return guess;
 }
 
+}
 
 }
 
