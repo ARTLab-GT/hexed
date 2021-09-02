@@ -617,7 +617,7 @@ TEST_CASE("jump kernel")
     }
     double* connect_read  [4] {&read[2][0][0][0][0], &read[1][0][0][0][0], &read[0][0][0][0][0], &read[2][0][0][0][0]};
     double* connect_write [4] {&write[1][0][0][0][0], &write[0][0][0][0][0], &write[2][0][0][0][0], &write[1][0][0][0][0]};
-    jump<1, 1, n_qpoint, row_size>(connect_read, connect_write, 2, 0, 0, 1, weights, settings);
+    cartdg::jump<1, 1, n_qpoint, row_size>(connect_read, connect_write, 2, 0, 0, 1, weights, settings);
     double correct = (0.7 - 0.5)/2./0.2 + 0.1;
     REQUIRE(write[2][0][0][row_size - 1][0] == Approx(correct));
     REQUIRE(write[2][0][row_size - 1][row_size - 1][row_size - 1] == Approx(correct));
@@ -645,7 +645,7 @@ TEST_CASE("jump kernel")
     }
     double* connect_read  [4] {&read[2][0][0][0][0], &read[1][0][0][0][0], &read[0][0][0][0][0], &read[2][0][0][0][0]};
     double* connect_write [4] {&write[1][0][0][0][0], &write[0][0][0][0][0], &write[2][0][0][0][0], &write[1][0][0][0][0]};
-    jump<5, 4, n_qpoint, row_size>(connect_read, connect_write, 2, 2, 1, 1, weights, settings);
+    cartdg::jump<5, 4, n_qpoint, row_size>(connect_read, connect_write, 2, 2, 1, 1, weights, settings);
     double correct = (0.7 - 0.5)/2./0.2 + 0.1;
     REQUIRE(write[2][1][0][row_size - 1][0] == Approx(correct));
     REQUIRE(write[2][1][row_size - 1][row_size - 1][row_size - 1] == Approx(correct));
