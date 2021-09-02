@@ -16,3 +16,8 @@
     * This will execute the performance benchmarking script.
   * `demo/demo`
     * This will run a very simple toy problem and output visualization files.
+
+## Detailed instructions
+This section is in progress. For now, please refer to Quick Start.
+Mention:
+* Create install directory.
