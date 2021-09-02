@@ -17,18 +17,16 @@ template<int n_var, int n_qpoint, int row_size>
 void local_cpg_euler_nc(std::vector<Element>& elements, int n_elem,
                         Basis& basis, Kernel_settings& settings)
 {
-  Eigen::Matrix<double, row_size, row_size> diff_mat = basis.diff_mat();
+  const Eigen::Matrix<double, row_size, row_size> diff_mat = basis.diff_mat();
   double d_t_by_d_pos = settings.d_t_by_d_pos;
   double heat_rat = settings.cpg_heat_rat;
 
   #pragma omp parallel for
   for (Element& element : elements)
   {
-    auto read_vec = element.stage_block(settings.i_read);
-    auto write_vec = element.stage_block(settings.i_write);
-    write_vec = read_vec;
-    double* read = &read_vec[0];
-    double* write = &write_vec[0];
+    auto read = element.stage_block(settings.i_read);
+    auto write = element.stage_block(settings.i_write);
+    write = read;
 
     // Perform update
     for (int stride = n_qpoint/row_size, n_rows = 1, i_dim = 0;
@@ -39,28 +37,24 @@ void local_cpg_euler_nc(std::vector<Element>& elements, int n_elem,
       {
         for (int i_inner = 0; i_inner < stride; ++i_inner)
         {
+          typedef Eigen::Matrix<double, row_size, n_var> row_t;
 
           // Fetch this row of data
-          double row_r [n_var][row_size];
-          double row_w [n_var][row_size];
+          row_t row_r;
+          row_t row_w;
           for (int i_var = 0; i_var < n_var; ++i_var)
           {
-            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
-            {
-              row_r[i_var][i_qpoint]
-              = read[i_var*n_qpoint
-                     + i_outer*stride*row_size + i_inner + i_qpoint*stride];
-            }
+            row_r.col(i_var) = read(Eigen::seqN(i_var*n_qpoint + i_outer*stride*row_size + i_inner, Eigen::fix<row_size>, stride));
           }
 
           // Calculate flux
-          double flux [n_var][row_size];
-          for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
+          row_t flux;
           {
-            #define READ(i) row_r[i][i_qpoint]
-            #define FLUX(i) flux[i][i_qpoint]
-            double veloc = READ(i_dim)/READ(n_var - 2);
-            double pres = 0;
+            #define READ(i_var) row_r.col(i_var).array()
+            #define FLUX(i_var) flux.col(i_var).array()
+            typedef Eigen::Array<double, row_size, 1> var_t;
+            var_t veloc = READ(i_dim)/READ(n_var - 2);
+            var_t pres = var_t::Zero();
             for (int j_dim = 0; j_dim < n_var - 2; ++j_dim)
             {
               FLUX(j_dim) = READ(j_dim)*veloc;
@@ -75,19 +69,12 @@ void local_cpg_euler_nc(std::vector<Element>& elements, int n_elem,
           }
 
           // Differentiate flux
-          Eigen::Map<Eigen::Matrix<double, row_size, n_var>> f (&(flux[0][0]));
-          Eigen::Map<Eigen::Matrix<double, row_size, n_var>> w (&(row_w[0][0]));
-          w.noalias() = -diff_mat*f*d_t_by_d_pos;
+          row_w.noalias() = -diff_mat*flux*d_t_by_d_pos;
 
           // Write updated solution
           for (int i_var = 0; i_var < n_var; ++i_var)
           {
-            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
-            {
-               write[i_var*n_qpoint
-                     + i_outer*stride*row_size + i_inner + i_qpoint*stride]
-               += row_w[i_var][i_qpoint];
-            }
+            write(Eigen::seqN(i_var*n_qpoint + i_outer*stride*row_size + i_inner, Eigen::fix<row_size>, stride)) += row_w.col(i_var);
           }
         }
       }
