@@ -2,6 +2,7 @@
 
 #include <cartdgConfig.hpp>
 #include <get_local_cpg_euler.hpp>
+#include <get_local_cpg_euler_nc.hpp>
 #include <get_local_deformed_cpg_euler.hpp>
 #include <get_req_visc_cpg_euler.hpp>
 #include <get_av_flux.hpp>
@@ -61,6 +62,125 @@ TEST_CASE("CPG Euler matrix form")
               == Approx(0.1*mmtm));
         REQUIRE((write[i_elem][2][i_qpoint] - read[i_elem][2][i_qpoint])
               == Approx(0.1*((ener + pres)*veloc)));
+      }
+    }
+  }
+
+  SECTION("3D")
+  {
+    const int n_elem = 5;
+    const int row_size = 3;
+    double read [n_elem][5][row_size*row_size*row_size];
+    double write[n_elem][5][row_size*row_size*row_size];
+    Identity_basis basis (row_size);
+    double mass = 1.225;
+    double veloc0 = 10; double veloc1 = -20; double veloc2 = 30;
+    double pres = 1e5;
+    double ener = pres/0.4 + 0.5*mass*(veloc0*veloc0 + veloc1*veloc1 + veloc2*veloc2);
+    for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+    {
+      for (int i_qpoint = 0; i_qpoint < row_size*row_size*row_size; ++i_qpoint)
+      {
+          read[i_elem][0][i_qpoint] = mass*veloc0;
+          read[i_elem][1][i_qpoint] = mass*veloc1;
+          read[i_elem][2][i_qpoint] = mass*veloc2;
+          read[i_elem][3][i_qpoint] = mass;
+          read[i_elem][4][i_qpoint] = ener;
+      }
+    }
+    cartdg::get_local_cpg_euler(3, 3)(&read[0][0][0], &write[0][0][0], n_elem, basis, settings);
+    for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+    {
+      for (int i_qpoint = 0; i_qpoint < row_size*row_size*row_size; ++i_qpoint)
+      {
+        REQUIRE((write[i_elem][0][i_qpoint] - read[i_elem][0][i_qpoint])
+              == Approx(0.1*(mass*veloc0*(veloc0 + veloc1 + veloc2) + pres)));
+        REQUIRE((write[i_elem][1][i_qpoint] - read[i_elem][1][i_qpoint])
+              == Approx(0.1*(mass*veloc1*(veloc0 + veloc1 + veloc2) + pres)));
+        REQUIRE((write[i_elem][2][i_qpoint] - read[i_elem][2][i_qpoint])
+              == Approx(0.1*(mass*veloc2*(veloc0 + veloc1 + veloc2) + pres)));
+        REQUIRE((write[i_elem][3][i_qpoint] - read[i_elem][3][i_qpoint])
+              == Approx(0.1*mass*(veloc0 + veloc1 + veloc2)));
+        REQUIRE((write[i_elem][4][i_qpoint] - read[i_elem][4][i_qpoint])
+              == Approx(0.1*((ener + pres)*(veloc0 + veloc1 + veloc2))));
+      }
+    }
+  }
+
+  SECTION("2D non-constant")
+  {
+    const int n_elem = 5;
+    const int row_size = std::min<int>(6, CARTDG_MAX_BASIS_ROW_SIZE);
+    double read [n_elem][4][row_size*row_size];
+    double write[n_elem][4][row_size*row_size];
+    cartdg::Gauss_lobatto basis (row_size);
+    for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+    {
+      for (int i = 0; i < row_size; ++i)
+      {
+        for (int j = 0; j < row_size; ++j)
+        {
+          int i_qpoint = i*row_size + j;
+          double mass = 1 + 0.1*basis.node(i) + 0.2*basis.node(j);
+          double veloc0 = 10; double veloc1 = -20;
+          double pres = 1e5*(1. - 0.3*basis.node(i) + 0.5*basis.node(j));
+          double ener = pres/0.4 + 0.5*mass*(veloc0*veloc0 + veloc1*veloc1);
+
+          read[i_elem][0][i_qpoint] = mass*veloc0;
+          read[i_elem][1][i_qpoint] = mass*veloc1;
+          read[i_elem][2][i_qpoint] = mass;
+          read[i_elem][3][i_qpoint] = ener;
+        }
+      }
+    }
+    cartdg::get_local_cpg_euler(2, row_size)(&read[0][0][0], &write[0][0][0], n_elem, basis, settings);
+    for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+    {
+      for (int i_qpoint = 0; i_qpoint < row_size*row_size; ++i_qpoint)
+      {
+        REQUIRE((write[i_elem][2][i_qpoint] - read[i_elem][2][i_qpoint])
+                == Approx(-0.1*(0.1*10 - 0.2*20)));
+        REQUIRE((write[i_elem][3][i_qpoint] - read[i_elem][3][i_qpoint])
+                == Approx(-0.1*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20) + 0.5*(10*10 + 20*20)*(0.1*10 - 0.2*20))));
+      }
+    }
+  }
+}
+
+TEST_CASE("CPG Euler matrix form (non-contiguous)")
+{
+  cartdg::Kernel_settings settings;
+  settings.d_t_by_d_pos = 0.1;
+  SECTION("1D")
+  {
+    unsigned n_elem = 5;
+    cartdg::Storage_params params {2, 3, 1, 2};
+    unsigned n_qpoint = params.n_qpoint();
+    std::vector<cartdg::Element> elements;
+    Identity_basis basis {int(params.row_size)};
+    double mass = 1.225; double veloc = 10; double pres = 1e5;
+    double mmtm = mass*veloc; double ener = pres/0.4 + 0.5*mass*veloc*veloc;
+    for (unsigned i_elem = 0; i_elem < n_elem; ++i_elem)
+    {
+      elements.emplace_back(params);
+      auto block = elements[i_elem].stage_block(0);
+      for (unsigned i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
+      {
+          block[0*n_qpoint + i_qpoint] = mmtm;
+          block[1*n_qpoint + i_qpoint] = mass;
+          block[2*n_qpoint + i_qpoint] = ener;
+      }
+    }
+    cartdg::get_local_cpg_euler_nc(1, 2)(elements, n_elem, basis, settings);
+    for (unsigned i_elem = 0; i_elem < n_elem; ++i_elem)
+    {
+      Eigen::VectorXd diff =    elements[i_elem].stage_block(settings.i_write)
+                             -  elements[i_elem].stage_block(settings.i_read);
+      for (unsigned i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
+      {
+        REQUIRE(diff[0*n_qpoint + i_qpoint] == Approx(0.1*(mmtm*mmtm/mass + pres)));
+        REQUIRE(diff[1*n_qpoint + i_qpoint] == Approx(0.1*mmtm));
+        REQUIRE(diff[2*n_qpoint + i_qpoint] == Approx(0.1*((ener + pres)*veloc)));
       }
     }
   }
