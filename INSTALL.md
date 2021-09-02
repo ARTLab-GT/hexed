@@ -24,7 +24,7 @@ This section is in progress. For now, please refer to Quick Start.
   * `mkdir codes`
   * Edit bashrc and add:
     * `export PATH=$PATH:~/codes`
-    * `export CXX_INCLUDE_PATH=$CXX_INCLUDE_PATH:~/codes/include`
+    * `export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:~/codes/include`
 * `pip3 install sympy`
 * Install Catch2:
   * `git clone https://github.com/catchorg/Catch2.git`
