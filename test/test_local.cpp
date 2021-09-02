@@ -232,16 +232,19 @@ TEST_CASE("CPG Euler matrix form (non-contiguous)")
 
   SECTION("2D non-constant")
   {
-    const int n_elem = 5;
-    const int row_size = std::min<int>(6, CARTDG_MAX_BASIS_ROW_SIZE);
-    double read [n_elem][4][row_size*row_size];
-    double write[n_elem][4][row_size*row_size];
+    const unsigned n_elem = 5;
+    const unsigned row_size = std::min<unsigned>(6, unsigned(CARTDG_MAX_BASIS_ROW_SIZE));
+    cartdg::Storage_params params {3, 4, 2, row_size};
+    unsigned int n_qpoint = params.n_qpoint();
+    std::vector<cartdg::Element> elements;
     cartdg::Gauss_lobatto basis (row_size);
-    for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+    for (unsigned i_elem = 0; i_elem < n_elem; ++i_elem)
     {
-      for (int i = 0; i < row_size; ++i)
+      elements.emplace_back(params);
+      auto block = elements[i_elem].stage_block(settings.i_read);
+      for (unsigned i = 0; i < row_size; ++i)
       {
-        for (int j = 0; j < row_size; ++j)
+        for (unsigned j = 0; j < row_size; ++j)
         {
           int i_qpoint = i*row_size + j;
           double mass = 1 + 0.1*basis.node(i) + 0.2*basis.node(j);
@@ -249,22 +252,23 @@ TEST_CASE("CPG Euler matrix form (non-contiguous)")
           double pres = 1e5*(1. - 0.3*basis.node(i) + 0.5*basis.node(j));
           double ener = pres/0.4 + 0.5*mass*(veloc0*veloc0 + veloc1*veloc1);
 
-          read[i_elem][0][i_qpoint] = mass*veloc0;
-          read[i_elem][1][i_qpoint] = mass*veloc1;
-          read[i_elem][2][i_qpoint] = mass;
-          read[i_elem][3][i_qpoint] = ener;
+          block[0*n_qpoint + i_qpoint] = mass*veloc0;
+          block[1*n_qpoint + i_qpoint] = mass*veloc1;
+          block[2*n_qpoint + i_qpoint] = mass;
+          block[3*n_qpoint + i_qpoint] = ener;
         }
       }
     }
-    cartdg::get_local_cpg_euler(2, row_size)(&read[0][0][0], &write[0][0][0], n_elem, basis, settings);
-    for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+    cartdg::get_local_cpg_euler_nc(2, row_size)(elements, n_elem, basis, settings);
+    for (cartdg::Element& element : elements)
     {
-      for (int i_qpoint = 0; i_qpoint < row_size*row_size; ++i_qpoint)
+      Eigen::VectorXd diff =    element.stage_block(settings.i_write)
+                             -  element.stage_block(settings.i_read);
+      for (unsigned i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
-        REQUIRE((write[i_elem][2][i_qpoint] - read[i_elem][2][i_qpoint])
-                == Approx(-0.1*(0.1*10 - 0.2*20)));
-        REQUIRE((write[i_elem][3][i_qpoint] - read[i_elem][3][i_qpoint])
-                == Approx(-0.1*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20) + 0.5*(10*10 + 20*20)*(0.1*10 - 0.2*20))));
+        REQUIRE(diff[2*n_qpoint + i_qpoint] == Approx(-0.1*(0.1*10 - 0.2*20)));
+        REQUIRE(diff[3*n_qpoint + i_qpoint] == Approx(-0.1*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20)
+                                                       + 0.5*(10*10 + 20*20)*(0.1*10 - 0.2*20))));
       }
     }
   }
