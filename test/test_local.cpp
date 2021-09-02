@@ -163,7 +163,7 @@ TEST_CASE("CPG Euler matrix form (non-contiguous)")
     for (unsigned i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       elements.emplace_back(params);
-      auto block = elements[i_elem].stage_block(0);
+      auto block = elements[i_elem].stage_block(settings.i_read);
       for (unsigned i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
           block[0*n_qpoint + i_qpoint] = mmtm;
@@ -172,10 +172,10 @@ TEST_CASE("CPG Euler matrix form (non-contiguous)")
       }
     }
     cartdg::get_local_cpg_euler_nc(1, 2)(elements, n_elem, basis, settings);
-    for (unsigned i_elem = 0; i_elem < n_elem; ++i_elem)
+    for (cartdg::Element& element : elements)
     {
-      Eigen::VectorXd diff =    elements[i_elem].stage_block(settings.i_write)
-                             -  elements[i_elem].stage_block(settings.i_read);
+      Eigen::VectorXd diff =    element.stage_block(settings.i_write)
+                             -  element.stage_block(settings.i_read);
       for (unsigned i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
         REQUIRE(diff[0*n_qpoint + i_qpoint] == Approx(0.1*(mmtm*mmtm/mass + pres)));
@@ -187,41 +187,45 @@ TEST_CASE("CPG Euler matrix form (non-contiguous)")
 
   SECTION("3D")
   {
-    const int n_elem = 5;
-    const int row_size = 3;
-    double read [n_elem][5][row_size*row_size*row_size];
-    double write[n_elem][5][row_size*row_size*row_size];
-    Identity_basis basis (row_size);
+    const unsigned n_elem = 5;
+    cartdg::Storage_params params {2, 5, 3, 3};
+    unsigned n_qpoint = params.n_qpoint();
+    std::vector<cartdg::Element> elements;
+    Identity_basis basis (params.row_size);
     double mass = 1.225;
     double veloc0 = 10; double veloc1 = -20; double veloc2 = 30;
     double pres = 1e5;
     double ener = pres/0.4 + 0.5*mass*(veloc0*veloc0 + veloc1*veloc1 + veloc2*veloc2);
-    for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+    for (unsigned i_elem = 0; i_elem < n_elem; ++i_elem)
     {
-      for (int i_qpoint = 0; i_qpoint < row_size*row_size*row_size; ++i_qpoint)
+      elements.emplace_back(params);
+      auto block = elements[i_elem].stage_block(settings.i_read);
+      for (unsigned i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
-          read[i_elem][0][i_qpoint] = mass*veloc0;
-          read[i_elem][1][i_qpoint] = mass*veloc1;
-          read[i_elem][2][i_qpoint] = mass*veloc2;
-          read[i_elem][3][i_qpoint] = mass;
-          read[i_elem][4][i_qpoint] = ener;
+          block[0*n_qpoint + i_qpoint] = mass*veloc0;
+          block[1*n_qpoint + i_qpoint] = mass*veloc1;
+          block[2*n_qpoint + i_qpoint] = mass*veloc2;
+          block[3*n_qpoint + i_qpoint] = mass;
+          block[4*n_qpoint + i_qpoint] = ener;
       }
     }
-    cartdg::get_local_cpg_euler(3, 3)(&read[0][0][0], &write[0][0][0], n_elem, basis, settings);
-    for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+    cartdg::get_local_cpg_euler_nc(3, 3)(elements, n_elem, basis, settings);
+    for (cartdg::Element& element : elements)
     {
-      for (int i_qpoint = 0; i_qpoint < row_size*row_size*row_size; ++i_qpoint)
+      Eigen::VectorXd diff =    element.stage_block(settings.i_write)
+                             -  element.stage_block(settings.i_read);
+      for (unsigned i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
-        REQUIRE((write[i_elem][0][i_qpoint] - read[i_elem][0][i_qpoint])
-              == Approx(0.1*(mass*veloc0*(veloc0 + veloc1 + veloc2) + pres)));
-        REQUIRE((write[i_elem][1][i_qpoint] - read[i_elem][1][i_qpoint])
-              == Approx(0.1*(mass*veloc1*(veloc0 + veloc1 + veloc2) + pres)));
-        REQUIRE((write[i_elem][2][i_qpoint] - read[i_elem][2][i_qpoint])
-              == Approx(0.1*(mass*veloc2*(veloc0 + veloc1 + veloc2) + pres)));
-        REQUIRE((write[i_elem][3][i_qpoint] - read[i_elem][3][i_qpoint])
-              == Approx(0.1*mass*(veloc0 + veloc1 + veloc2)));
-        REQUIRE((write[i_elem][4][i_qpoint] - read[i_elem][4][i_qpoint])
-              == Approx(0.1*((ener + pres)*(veloc0 + veloc1 + veloc2))));
+        REQUIRE(diff[0*n_qpoint + i_qpoint]
+                == Approx(0.1*(mass*veloc0*(veloc0 + veloc1 + veloc2) + pres)));
+        REQUIRE(diff[1*n_qpoint + i_qpoint]
+                == Approx(0.1*(mass*veloc1*(veloc0 + veloc1 + veloc2) + pres)));
+        REQUIRE(diff[2*n_qpoint + i_qpoint]
+                == Approx(0.1*(mass*veloc2*(veloc0 + veloc1 + veloc2) + pres)));
+        REQUIRE(diff[3*n_qpoint + i_qpoint]
+                == Approx(0.1*mass*(veloc0 + veloc1 + veloc2)));
+        REQUIRE(diff[4*n_qpoint + i_qpoint]
+                == Approx(0.1*((ener + pres)*(veloc0 + veloc1 + veloc2))));
       }
     }
   }
