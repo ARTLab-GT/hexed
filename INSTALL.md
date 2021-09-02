@@ -1,7 +1,7 @@
 # Installation
 
 ## Quick Start
-* Create and navigate to a build directory.
+* Create and navigate to a build directory (git will ignore names that start with "build").
 * Use `ccmake` to configure build options. This project has been configured to show you the available options and their defaults specifically with the `ccmake` interface for CMake.
   * Ensure that `TECIO_DIR` is set to a directory where `bin/libtecio.so` and `include/TECIO.h` can be found (the default *should* be correct for ARTLAB machines).
     Much to my disappointment, TecIO does not cooperate with CMake, so this option must be configured manually.
