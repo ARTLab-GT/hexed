@@ -5,7 +5,7 @@ project(cartdg VERSION 0.0
         LANGUAGES CXX)
 
 # specify the C++ standard
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # determine build type
@@ -43,8 +43,8 @@ execute_process(COMMAND python3 ${CMAKE_SOURCE_DIR}/script/auto_generate.py ${CM
 
 # determine row_size of polynomial basis
 if(NOT DEFINED TECIO_DIR)
-   set(TECIO_DIR /usr/local/tecplot/360ex_2018r2 CACHE STRING
-       "Where to find TECIO (probably the root directory of your tecplot installation)" FORCE)
+   set(TECIO_DIR /opt/local/tecplot/360ex CACHE STRING
+       "Where to find TECIO (should contain directories bin, lib, and include)" FORCE)
 endif()
 
 # add a configure file to pass CMake variables to the code
