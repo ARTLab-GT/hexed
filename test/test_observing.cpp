@@ -1,4 +1,4 @@
-#include <catch.hpp>
+#include <catch2/catch.hpp>
 
 #include <cartdgConfig.hpp>
 #include <Kernel_settings.hpp>
