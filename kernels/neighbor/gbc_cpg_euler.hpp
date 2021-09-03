@@ -24,7 +24,7 @@ void gbc_cpg_euler(std::vector<Ghost_boundary_condition*>& ghost_bound_conds,
   const int n_dim = n_var - 2;
 
   #pragma omp parallel for
-  for (unsigned i_gbc = 0; i_gbc < ghost_bound_conds.size(); ++i_gbc)
+  for (unsigned i_gbc = 0; i_gbc < ghost_bound_conds.size(); ++i_gbc) // range-based for not supported by omp <=4.0
   {
     Ghost_boundary_condition* gbc = ghost_bound_conds[i_gbc];
     for (unsigned i_bc = 0; i_bc < gbc->elems.size(); ++i_bc)
