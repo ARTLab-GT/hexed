@@ -19,4 +19,4 @@ test_static_math.cpp
 test_Vertex.cpp
 )
 target_include_directories(test PRIVATE ${CMAKE_SOURCE_DIR}/kernels)
-target_link_libraries(test PRIVATE cartdg kernels tecio Catch2::Catch2)
+target_link_libraries(test PRIVATE cartdg kernels Catch2::Catch2)

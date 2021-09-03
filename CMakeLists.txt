@@ -57,7 +57,8 @@ add_library(cartdg SHARED)
 # add tecio as external library
 add_library(tecio SHARED IMPORTED)
 set_target_properties(tecio PROPERTIES IMPORTED_LOCATION ${TECIO_DIR}/bin/libtecio.so)
-target_include_directories(cartdg PRIVATE ${TECIO_DIR}/include)
+target_include_directories(tecio INTERFACE ${TECIO_DIR}/include)
+target_link_libraries(cartdg PUBLIC tecio)
 
 # add automatically generated source files
 target_sources(cartdg PRIVATE ${CMAKE_BINARY_DIR}/Gauss_lobatto.cpp)
@@ -83,7 +84,7 @@ target_link_libraries(cartdg PRIVATE kernels)
 # add executable for benchmarking
 add_executable(benchmark benchmark/main.cpp)
 set_property(TARGET benchmark PROPERTY RUNTIME_OUTPUT_DIRECTORY benchmark)
-target_link_libraries(benchmark PRIVATE cartdg kernels tecio)
+target_link_libraries(benchmark PRIVATE cartdg kernels)
 file(CREATE_LINK ${CMAKE_SOURCE_DIR}/script/benchmark.py benchmark.py SYMBOLIC)
 
 install(TARGETS cartdg DESTINATION lib EXPORT cartdgTargets)
