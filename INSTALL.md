@@ -19,6 +19,10 @@
 
 ## Detailed instructions
 This section is in progress. For now, please refer to Quick Start.
+These instructions should work if you follow them exactly. If you are trying to adapt them for whatever reason, follow these general principles:
+* If the instructions mention a directory that does not exist, create it.
+
+Instructions:
 * Create install directory.
   * `cd`
   * `mkdir codes`
@@ -27,13 +31,14 @@ This section is in progress. For now, please refer to Quick Start.
     * `export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:~/codes/include`
 * `pip3 install sympy`
 * Install Catch2:
-  * `git clone https://github.com/catchorg/Catch2.git`
-  * `cd Catch2/`
+  * Visit the Catch2 [Releases](https://github.com/catchorg/Catch2/releases/tag/v2.13.7) page and download the source code
+    for the latest one (do not clone the `devel` branch from the github repo, as that is not a stable release).
+  * Unpack (e.g. unzip) the source code and place it in `~/codes`. `~/codes` should now contain a directory named something like `Catch2-2.xx.x`
+    depending on what happens to be the current version. `cd` into this directory.
   * `cmake -Bbuild -H. -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=~/codes`
   * `cmake --build build/ --target install`
 * Install Eigen:
   * Download the Eigen [source code](http://eigen.tuxfamily.org/index.php?title=Main_Page#Download) (latest stable release).
-  * Unpack (e.g. unzip) the Eigen source and copy it to `~/codes`. `~/codes` should now contain a directory named `eigen-X.X.X` depending
-    on the current version. `cd` into this directory.
+  * Unpack the Eigen source and copy it to `~/codes`. `~/codes` should now contain a directory named something like `eigen-X.X.X`.
+    `cd` into this directory.
   * `cp -r Eigen/ ~/codes/include/`
-    * `~/codes/include/` should have already been created when you installed Catch2, but if for whatever reason it does not exist, create it.
