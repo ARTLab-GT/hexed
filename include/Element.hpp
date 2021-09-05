@@ -10,13 +10,16 @@ namespace cartdg
 
 class Element
 {
-  double* data;
+  unsigned n_stage;
   unsigned n_dof;
+  double* data;
+  void allocate();
 
   public:
   Element(Storage_params);
+  Element(const Element& other);
   ~Element();
-  // FIXME: copy and move
+  Element& operator=(const Element& other);
   double* stage(unsigned i_stage);
 };
 
