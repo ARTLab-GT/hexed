@@ -38,7 +38,7 @@ for (unsigned i_elem = 0; i_elem < n_elem; ++i_elem)
   {
     double state = (rand()%1000)/1000. + 10.; // "+ 10." avoids NaN due to nonpositive density
     if (i_dof/n_qpoint == n_var - 1) state += 100; // Avoid NaN due to negative pressure
-    elements.back().stage_block(0)[i_dof] = state;
+    elements.back().stage(0)[i_dof] = state;
   }
 }
 #pragma omp parallel for

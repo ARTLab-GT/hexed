@@ -4,12 +4,16 @@ namespace cartdg
 {
 
 Element::Element(Storage_params params)
-: data(params.size()), n_dof(params.n_dof())
-{}
-
-Element::ref_t Element::stage_block(unsigned i_stage)
+: n_dof(params.n_dof())
 {
-  return data.segment(i_stage*n_dof, n_dof);
+  data = new double [n_dof*params.n_stage];
+}
+
+Element::~Element() {}
+
+double* Element::stage(unsigned i_stage)
+{
+  return data + i_stage*n_dof;
 }
 
 }

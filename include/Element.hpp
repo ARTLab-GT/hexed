@@ -10,14 +10,14 @@ namespace cartdg
 
 class Element
 {
-  using vec_t = Eigen::VectorXd;
-  vec_t data;
+  double* data;
   unsigned n_dof;
 
   public:
   Element(Storage_params);
-  using ref_t = Eigen::VectorBlock<vec_t>;
-  ref_t stage_block(unsigned i_stage);
+  ~Element();
+  // FIXME: copy and move
+  double* stage(unsigned i_stage);
 };
 
 }

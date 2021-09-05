@@ -2,7 +2,7 @@
 
 #include <cartdgConfig.hpp>
 #include <get_local_cpg_euler.hpp>
-#include <get_local_cpg_euler_nc.hpp>
+#include <get_local_convective.hpp>
 #include <get_local_deformed_cpg_euler.hpp>
 #include <get_req_visc_cpg_euler.hpp>
 #include <get_av_flux.hpp>
@@ -147,7 +147,7 @@ TEST_CASE("CPG Euler matrix form")
   }
 }
 
-TEST_CASE("CPG Euler matrix form (non-contiguous)")
+TEST_CASE("Local convective")
 {
   cartdg::Kernel_settings settings;
   settings.d_t_by_d_pos = 0.1;
@@ -163,24 +163,24 @@ TEST_CASE("CPG Euler matrix form (non-contiguous)")
     for (unsigned i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       elements.emplace_back(params);
-      auto block = elements[i_elem].stage_block(settings.i_read);
+      double* read = elements[i_elem].stage(settings.i_read);
       for (unsigned i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
-          block[0*n_qpoint + i_qpoint] = mmtm;
-          block[1*n_qpoint + i_qpoint] = mass;
-          block[2*n_qpoint + i_qpoint] = ener;
+          read[0*n_qpoint + i_qpoint] = mmtm;
+          read[1*n_qpoint + i_qpoint] = mass;
+          read[2*n_qpoint + i_qpoint] = ener;
       }
     }
-    cartdg::get_local_cpg_euler_nc(1, 2)(elements, n_elem, basis, settings);
+    cartdg::get_local_convective(1, 2)(elements, n_elem, basis, settings);
     for (cartdg::Element& element : elements)
     {
-      Eigen::VectorXd diff =    element.stage_block(settings.i_write)
-                             -  element.stage_block(settings.i_read);
+      double* r = element.stage(settings.i_read);
+      double* w = element.stage(settings.i_write);
       for (unsigned i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
-        REQUIRE(diff[0*n_qpoint + i_qpoint] == Approx(0.1*(mmtm*mmtm/mass + pres)));
-        REQUIRE(diff[1*n_qpoint + i_qpoint] == Approx(0.1*mmtm));
-        REQUIRE(diff[2*n_qpoint + i_qpoint] == Approx(0.1*((ener + pres)*veloc)));
+        REQUIRE(w[0*n_qpoint + i_qpoint] - r[0*n_qpoint + i_qpoint] == Approx(0.1*(mmtm*mmtm/mass + pres)));
+        REQUIRE(w[1*n_qpoint + i_qpoint] - r[1*n_qpoint + i_qpoint] == Approx(0.1*mmtm));
+        REQUIRE(w[2*n_qpoint + i_qpoint] - r[2*n_qpoint + i_qpoint] == Approx(0.1*((ener + pres)*veloc)));
       }
     }
   }
@@ -199,32 +199,32 @@ TEST_CASE("CPG Euler matrix form (non-contiguous)")
     for (unsigned i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       elements.emplace_back(params);
-      auto block = elements[i_elem].stage_block(settings.i_read);
+      double* read = elements[i_elem].stage(settings.i_read);
       for (unsigned i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
-          block[0*n_qpoint + i_qpoint] = mass*veloc0;
-          block[1*n_qpoint + i_qpoint] = mass*veloc1;
-          block[2*n_qpoint + i_qpoint] = mass*veloc2;
-          block[3*n_qpoint + i_qpoint] = mass;
-          block[4*n_qpoint + i_qpoint] = ener;
+          read[0*n_qpoint + i_qpoint] = mass*veloc0;
+          read[1*n_qpoint + i_qpoint] = mass*veloc1;
+          read[2*n_qpoint + i_qpoint] = mass*veloc2;
+          read[3*n_qpoint + i_qpoint] = mass;
+          read[4*n_qpoint + i_qpoint] = ener;
       }
     }
-    cartdg::get_local_cpg_euler_nc(3, 3)(elements, n_elem, basis, settings);
+    cartdg::get_local_convective(3, 3)(elements, n_elem, basis, settings);
     for (cartdg::Element& element : elements)
     {
-      Eigen::VectorXd diff =    element.stage_block(settings.i_write)
-                             -  element.stage_block(settings.i_read);
+      double* r = element.stage(settings.i_read);
+      double* w = element.stage(settings.i_write);
       for (unsigned i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
-        REQUIRE(diff[0*n_qpoint + i_qpoint]
+        REQUIRE(w[0*n_qpoint + i_qpoint] - r[0*n_qpoint + i_qpoint]
                 == Approx(0.1*(mass*veloc0*(veloc0 + veloc1 + veloc2) + pres)));
-        REQUIRE(diff[1*n_qpoint + i_qpoint]
+        REQUIRE(w[1*n_qpoint + i_qpoint] - r[1*n_qpoint + i_qpoint]
                 == Approx(0.1*(mass*veloc1*(veloc0 + veloc1 + veloc2) + pres)));
-        REQUIRE(diff[2*n_qpoint + i_qpoint]
+        REQUIRE(w[2*n_qpoint + i_qpoint] - r[2*n_qpoint + i_qpoint]
                 == Approx(0.1*(mass*veloc2*(veloc0 + veloc1 + veloc2) + pres)));
-        REQUIRE(diff[3*n_qpoint + i_qpoint]
+        REQUIRE(w[3*n_qpoint + i_qpoint] - r[3*n_qpoint + i_qpoint]
                 == Approx(0.1*mass*(veloc0 + veloc1 + veloc2)));
-        REQUIRE(diff[4*n_qpoint + i_qpoint]
+        REQUIRE(w[4*n_qpoint + i_qpoint] - r[4*n_qpoint + i_qpoint]
                 == Approx(0.1*((ener + pres)*(veloc0 + veloc1 + veloc2))));
       }
     }
@@ -241,7 +241,7 @@ TEST_CASE("CPG Euler matrix form (non-contiguous)")
     for (unsigned i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       elements.emplace_back(params);
-      auto block = elements[i_elem].stage_block(settings.i_read);
+      double* read = elements[i_elem].stage(settings.i_read);
       for (unsigned i = 0; i < row_size; ++i)
       {
         for (unsigned j = 0; j < row_size; ++j)
@@ -252,23 +252,25 @@ TEST_CASE("CPG Euler matrix form (non-contiguous)")
           double pres = 1e5*(1. - 0.3*basis.node(i) + 0.5*basis.node(j));
           double ener = pres/0.4 + 0.5*mass*(veloc0*veloc0 + veloc1*veloc1);
 
-          block[0*n_qpoint + i_qpoint] = mass*veloc0;
-          block[1*n_qpoint + i_qpoint] = mass*veloc1;
-          block[2*n_qpoint + i_qpoint] = mass;
-          block[3*n_qpoint + i_qpoint] = ener;
+          read[0*n_qpoint + i_qpoint] = mass*veloc0;
+          read[1*n_qpoint + i_qpoint] = mass*veloc1;
+          read[2*n_qpoint + i_qpoint] = mass;
+          read[3*n_qpoint + i_qpoint] = ener;
         }
       }
     }
-    cartdg::get_local_cpg_euler_nc(2, row_size)(elements, n_elem, basis, settings);
+    cartdg::get_local_convective(2, row_size)(elements, n_elem, basis, settings);
     for (cartdg::Element& element : elements)
     {
-      Eigen::VectorXd diff =    element.stage_block(settings.i_write)
-                             -  element.stage_block(settings.i_read);
+      double* r = element.stage(settings.i_read);
+      double* w = element.stage(settings.i_write);
       for (unsigned i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
-        REQUIRE(diff[2*n_qpoint + i_qpoint] == Approx(-0.1*(0.1*10 - 0.2*20)));
-        REQUIRE(diff[3*n_qpoint + i_qpoint] == Approx(-0.1*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20)
-                                                       + 0.5*(10*10 + 20*20)*(0.1*10 - 0.2*20))));
+        REQUIRE(w[2*n_qpoint + i_qpoint] - r[2*n_qpoint + i_qpoint]
+                == Approx(-0.1*(0.1*10 - 0.2*20)));
+        REQUIRE(w[3*n_qpoint + i_qpoint] - r[3*n_qpoint + i_qpoint]
+                == Approx(-0.1*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20)
+                          + 0.5*(10*10 + 20*20)*(0.1*10 - 0.2*20))));
       }
     }
   }
