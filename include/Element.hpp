@@ -14,6 +14,7 @@ class Element
   unsigned n_dof;
   double* data;
   void allocate();
+  void copy_data_values(const Element& other);
 
   public:
   Element(Storage_params);
