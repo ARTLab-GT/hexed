@@ -12,15 +12,10 @@ class Element
 {
   unsigned n_stage;
   unsigned n_dof;
-  double* data;
-  void allocate();
-  void copy_data_values(const Element& other);
+  Eigen::VectorXd data;
 
   public:
   Element(Storage_params);
-  Element(const Element& other);
-  ~Element();
-  Element& operator=(const Element& other);
   double* stage(unsigned i_stage);
 };
 
