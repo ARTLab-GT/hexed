@@ -89,7 +89,7 @@ TEST_CASE("neighbor kernel read_copy<>()")
   }
 }
 
-TEST_CASE("neighbor kernel cartdg::write_copy<>()")
+TEST_CASE("neighbor kernel write_copy<>()")
 {
   SECTION("1D")
   {
