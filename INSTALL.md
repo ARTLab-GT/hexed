@@ -42,3 +42,15 @@ Instructions:
   * Unpack the Eigen source and copy it to `~/codes`. `~/codes` should now contain a directory named something like `eigen-X.X.X`.
     `cd` into this directory.
   * `cp -r Eigen/ ~/codes/include/`
+  * build...
+  * `python3 benchmark.py dim=2`
+    * This runs the performance benchmarking script for 2 dimensions.
+    * You should see three plots. One is titled "Fraction of time for 3-stage RK cycle: regular" and below
+      that you should see something like "Total: 1.4e-06 s". Another is titled "Fraction... : deformed" and should say
+      "Total: 1.2e-06 s". 
+  * `python3 benchmark.py`
+    * This runs the performance benchmarking script for 3 dimensions (the default).
+    * You should see similar plots. The "regular" plot total should be 2.6e-5 s and the "deformed" should be 3.1e-5 s.
+  * If any of these "total" numbers differ from this tutorial by more than a factor of 2 (better or worse) please
+    report it to Micaiah. That said, you might try running if a few times first. Timing execution always involves some uncertainty,
+    and sometimes there can be outlying results.
