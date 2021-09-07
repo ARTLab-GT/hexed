@@ -22,11 +22,11 @@ void local_convective(elem_vec& elements, int n_elem,
   const int i_write = settings.i_write;
 
   #pragma omp parallel for
-  for (auto& elem_ptr : elements)
+  for (unsigned i_elem = 0; i_elem < n_elem; ++i_elem)
   {
     // Initialize updated solution to be equal to current solution
-    double* read = elem_ptr->stage(i_read);
-    double* write = elem_ptr->stage(i_write);
+    double* read  = elements[i_elem]->stage(i_read);
+    double* write = elements[i_elem]->stage(i_write);
     for (int i_dof = 0; i_dof < n_qpoint*n_var; ++i_dof)
     {
       write[i_dof] = read[i_dof];

@@ -15,7 +15,7 @@ namespace cartdg
 
 // AUTOGENERATE LOOKUP BENCHMARK(regular, 3)
 template<int n_var, int n_qpoint, int row_size>
-void neighbor_convective(elem_cons connections, Basis& basis, Kernel_settings& settings)
+void neighbor_convective(elem_cons& connections, Basis& basis, Kernel_settings& settings)
 {
   const int n_face_qpoint = n_qpoint/row_size;
   double mult = settings.d_t_by_d_pos/basis.node_weights()(0);
