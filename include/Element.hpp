@@ -23,6 +23,7 @@ class Element
 };
 
 typedef std::vector<std::unique_ptr<Element>> elem_vec;
+typedef std::vector<std::vector<Element*>> elem_cons;
 
 }
 
