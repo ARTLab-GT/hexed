@@ -18,10 +18,11 @@ class Threaded_list
   std::list<T> data;
   int nt;
   std::vector<int> sizes;
-  std::vector<iterator> interior_iterators;
+  std::vector<iterator> iterators;
 
   public:
-  Threaded_list(int n_thread) {}
+  Threaded_list(int n_thread)
+  : nt{n_thread}
   Threaded_list() {}
   int size();
   int n_thread();
