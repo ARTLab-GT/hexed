@@ -85,10 +85,12 @@ TEST_CASE("Solution class")
     g = &sol.get_grid(1);
     REQUIRE(g->basis.row_size == 4);
     REQUIRE(g->n_elem == 6);
-    REQUIRE(g->state_r()[0] == 0.1);
-    REQUIRE(g->state_r()[16] == 0.2);
-    REQUIRE(g->state_r()[32] == -0.35);
-    REQUIRE(g->state_r()[48] == 2.5);
+    REQUIRE(g->element(0).stage(0)[0] == 0.1);
+    REQUIRE(g->element(0).stage(0)[16] == 0.2);
+    REQUIRE(g->element(0).stage(0)[32] == -0.35);
+    REQUIRE(g->element(0).stage(0)[48] == 2.5);
+    REQUIRE(g->element(5).stage(0)[ 0] == 0.1);
+    REQUIRE(g->element(5).stage(0)[48] == 2.5);
     int size = g->n_dof*g->n_elem;
     REQUIRE(g->state_r()[size - 1] == 2.5);
   }

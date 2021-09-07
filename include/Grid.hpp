@@ -7,6 +7,7 @@
 #include <Eigen/Dense>
 
 #include "Basis.hpp"
+#include "Element.hpp"
 #include "Ghost_boundary_condition.hpp"
 #include "Kernel_settings.hpp"
 #include "Domain_func.hpp"
@@ -42,6 +43,7 @@ class Grid
   virtual ~Grid();
 
   // functions for accessing data
+  Element& element(unsigned i_elem);
   double* state_r();
   double* state_w();
   std::vector<double**> neighbor_connections_r(); // FIXME: return a pointer
@@ -85,6 +87,7 @@ class Grid
   int i_write;
   double rk_weights [3] {1., 1./4., 2./3.};
   double stable_cfl [9] {1.256, 0.409, 0.209, 0.130, 0.089, 0.066, 0.051, 0.040, 0.033};
+  elem_vec elements;
 
   private:
   void populate_slice(std::vector<double>&, std::vector<int>, int);
