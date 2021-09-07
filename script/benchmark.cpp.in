@@ -30,15 +30,15 @@ std::vector<double> jacobian_vec (n_jacobian, 0.);
 std::vector<double> read_vec (n_total);
 std::vector<double> write_vec (n_total, 0.);
 std::vector<double> visc_vec (n_elem*n_visc, 0.);
-std::vector<cartdg::Element> elements;
+cartdg::elem_vec elements;
 for (unsigned i_elem = 0; i_elem < n_elem; ++i_elem)
 {
-  elements.emplace_back(storage_params);
+  elements.emplace_back(new cartdg::Element {storage_params});
   for (unsigned i_dof = 0; i_dof < n_var*n_qpoint; ++i_dof)
   {
     double state = (rand()%1000)/1000. + 10.; // "+ 10." avoids NaN due to nonpositive density
     if (i_dof/n_qpoint == n_var - 1) state += 100; // Avoid NaN due to negative pressure
-    elements.back().stage(0)[i_dof] = state;
+    elements.back()->stage(0)[i_dof] = state;
   }
 }
 #pragma omp parallel for

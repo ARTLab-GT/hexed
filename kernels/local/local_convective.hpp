@@ -1,8 +1,6 @@
 #ifndef CARTDG_LOCAL_CONVECTIVE_HPP_
 #define CARTDG_LOCAL_CONVECTIVE_HPP_
 
-#include <vector>
-
 #include <Eigen/Dense>
 
 #include <Kernel_settings.hpp>
@@ -14,7 +12,7 @@ namespace cartdg
 
 // AUTOGENERATE LOOKUP BENCHMARK(regular, 3)
 template<int n_var, int n_qpoint, int row_size>
-void local_convective(std::vector<Element>& elements, int n_elem,
+void local_convective(elem_vec& elements, int n_elem,
                       Basis& basis, Kernel_settings& settings)
 {
   const Eigen::Matrix<double, row_size, row_size> diff_mat = basis.diff_mat();
@@ -24,11 +22,11 @@ void local_convective(std::vector<Element>& elements, int n_elem,
   const int i_write = settings.i_write;
 
   #pragma omp parallel for
-  for (Element& element : elements)
+  for (auto& elem_ptr : elements)
   {
     // Initialize updated solution to be equal to current solution
-    double* read = element.stage(i_read);
-    double* write = element.stage(i_write);
+    double* read = elem_ptr->stage(i_read);
+    double* write = elem_ptr->stage(i_write);
     for (int i_dof = 0; i_dof < n_qpoint*n_var; ++i_dof)
     {
       write[i_dof] = read[i_dof];

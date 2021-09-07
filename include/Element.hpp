@@ -1,6 +1,9 @@
 #ifndef ELEMENT_HPP_
 #define ELEMENT_HPP_
 
+#include <memory>
+#include <vector>
+
 #include <Eigen/Dense>
 
 #include <Storage_params.hpp>
@@ -18,6 +21,8 @@ class Element
   Element(Storage_params);
   double* stage(unsigned i_stage);
 };
+
+typedef std::vector<std::unique_ptr<Element>> elem_vec;
 
 }
 
