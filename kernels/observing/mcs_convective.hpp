@@ -12,12 +12,11 @@ namespace cartdg
 template<int n_var, int n_qpoint, int row_size>
 double mcs_convective(elem_vec& elements, Kernel_settings& settings)
 {
-  const int n_dof = n_var*n_qpoint;
   double heat_rat = settings.cpg_heat_rat;
   const int i_read = settings.i_read;
   double max_speed = 0.;
   #pragma omp parallel for reduction(max:max_speed)
-  for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
+  for (unsigned i_elem = 0; i_elem < elements.size(); ++i_elem)
   {
     max_speed = std::max<double>(char_speed_cpg_euler<n_var, n_qpoint>(elements[i_elem]->stage(i_read), heat_rat), max_speed);
   }
