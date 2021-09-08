@@ -54,7 +54,7 @@ Grid::~Grid() {}
 
 Element& Grid::element(int i_elem)
 {
-  return *elements[0];
+  return *elements[i_elem];
 }
 
 double* Grid::state_r()
@@ -180,6 +180,7 @@ int Grid::add_element(std::vector<int> position)
   derivs.resize(derivs.size() + n_qpoint, 0.);
   visc.resize(visc.size() + n_vertices, 0.);
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) pos.push_back(position[i_dim]);
+  elements.emplace_back(new Element {storage_params});
   return n_elem++;
 }
 

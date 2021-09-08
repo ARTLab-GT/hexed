@@ -270,11 +270,15 @@ TEST_CASE("Grid")
     REQUIRE(grid.state_storage[0].size() == 4*8);
     REQUIRE(grid.derivs.size() == 8);
     REQUIRE(grid.visc.size() == 2);
+    grid.element(0).stage(0)[0] = 1.; // modify element to verify existence
+    REQUIRE(grid.element(0).stage(0)[0] == 1.);
     position[0] += 1;
     REQUIRE(grid.add_element(position) == 1);
     REQUIRE(grid.n_elem == 2);
     REQUIRE(grid.pos[0] == 1);
     REQUIRE(grid.pos[1] == 2);
+    grid.element(1).stage(0)[0] = 1.;
+    REQUIRE(grid.element(1).stage(0)[0] == 1.);
     grid.auto_connect();
     REQUIRE(grid.n_neighb_con()[0] == 1);
 
