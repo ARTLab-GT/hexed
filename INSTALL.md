@@ -20,7 +20,8 @@
 ## Detailed instructions
 This section is provided in case you need more information than the Quick Start section includes. It assumes you have access to an ARTLAB
 machine and are familiar with managing directories and files in Linux. If you have more than that, it is assumed that you can adapt these
-instructions to suit your environment. If you have less than that, consider asking for help.
+instructions to suit your environment. If you have less than that, consider asking for help. If you have any trouble following these instructions,
+please discuss it so that this documentation can be improved.
 1. Create install directory. You need somewhere to install libraries so that your other codes can find them. On a system where you have
    superuser privileges, you can use `/usr/local`. However, on the ARTLAB machines, we can only write within our home directory, so we need
    to create our own install directory. If you already have one set up, you can use that. Otherwise, follow these instructions to create one:
@@ -29,6 +30,7 @@ instructions to suit your environment. If you have less than that, consider aski
   * We need to tell the shell to look for libraries in `~/codes`. Edit `~/.bashrc` and add the following lines at the end:
     * `export PATH=$PATH:~/codes`
     * `export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:~/codes/include`
+    * Close and reopen the terminal.
 2. Install sympy (used by Cartdg to generate quadrature rules):
   * `pip3 install sympy`
 3. Install Catch2:
@@ -40,7 +42,7 @@ instructions to suit your environment. If you have less than that, consider aski
   * `cmake --build build/ --target install`
 4. Install Eigen:
   * Download the Eigen [source code](http://eigen.tuxfamily.org/index.php?title=Main_Page#Download) (latest stable release).
-  * Unpack the Eigen source and copy it to `~/codes`. `~/codes` should now contain a directory named something like `eigen-X.X.X`.
+  * Unpack the Eigen source in `~/codes`. `~/codes` should now contain a directory named something like `eigen-X.X.X`.
     `cd` into this directory.
   * `cp -r Eigen/ ~/codes/include/`
     * If `~/codes/include` does not exist, create it.
@@ -52,12 +54,13 @@ instructions to suit your environment. If you have less than that, consider aski
   * `cd build_Release`
   * `ccmake ../`
     * This will open a GUI for the tool CMake. This allows you to choose some options for how to build CartDG. You should not see any errors.
+    * Press `c`. You should now see a list of options.
     * Use the arrow keys to move the cursor and "Enter" to edit the option under the cursor.
     * If you are on an ARTLAB machine, the only option you need to edit is `CMAKE_INSTALL_PREFIX`. Set that to `~/codes`.
     * If you are not on an ARTLAB machine, you will need to also edit the `TECIO_DIR` option (and install Tecplot if you don't already have it).
     * Leave the other options. If you are developing CartDG, consider making another directory `build_Debug` where you set `CMAKE_BUILD_TYPE` to
       `Debug` and `sanitize` to `ON`.
-    * When you have set all the options, press `c` twice. Then press `g`. The GUI should exit.
+    * When you have set all the options, press `c`. Then press `g`. The GUI should exit.
   * `make -j install`
 6. Verify that everything works:
   * `test/test`
