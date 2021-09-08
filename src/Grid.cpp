@@ -52,7 +52,7 @@ storage_params{3, n_var, n_dim, basis.row_size}, elements{}
 
 Grid::~Grid() {}
 
-Element& Grid::element(unsigned i_elem)
+Element& Grid::element(int i_elem)
 {
   return *elements[0];
 }

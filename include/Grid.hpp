@@ -44,7 +44,7 @@ class Grid
   virtual ~Grid();
 
   // functions for accessing data
-  Element& element(unsigned i_elem);
+  Element& element(int i_elem);
   double* state_r();
   double* state_w();
   std::vector<double**> neighbor_connections_r(); // FIXME: return a pointer

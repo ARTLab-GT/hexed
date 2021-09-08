@@ -13,13 +13,13 @@ namespace cartdg
 
 class Element
 {
-  unsigned n_stage;
-  unsigned n_dof;
+  int n_stage;
+  int n_dof;
   Eigen::VectorXd data;
 
   public:
   Element(Storage_params);
-  double* stage(unsigned i_stage);
+  double* stage(int i_stage);
 };
 
 typedef std::vector<std::unique_ptr<Element>> elem_vec;

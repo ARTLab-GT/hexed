@@ -66,7 +66,7 @@ TEST_CASE("Max characteristic speed (non-contiguous)")
                         {mass*-20, 0,
                          mass, mass,
                          int_ener0 + 0.5*mass*400, int_ener1}};
-    for (unsigned i_elem : {0, 1})
+    for (int i_elem : {0, 1})
     {
       for (int i_dof = 0; i_dof < 6; ++i_dof)
       {
