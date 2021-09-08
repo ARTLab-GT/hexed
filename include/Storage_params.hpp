@@ -7,14 +7,14 @@ namespace cartdg
 class Storage_params
 {
   public:
-  unsigned n_stage;
-  unsigned n_var;
-  unsigned n_dim;
-  unsigned row_size;
+  int n_stage;
+  int n_var;
+  int n_dim;
+  int row_size;
 
-  unsigned n_qpoint();
-  unsigned n_dof();
-  unsigned size();
+  int n_qpoint();
+  int n_dof();
+  int size();
 };
 
 }

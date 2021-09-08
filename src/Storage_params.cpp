@@ -4,17 +4,17 @@
 namespace cartdg
 {
 
-unsigned Storage_params::n_qpoint()
+int Storage_params::n_qpoint()
 {
   return custom_math::pow(row_size, n_dim);
 }
 
-unsigned Storage_params::n_dof()
+int Storage_params::n_dof()
 {
   return n_qpoint()*n_var;
 }
 
-unsigned Storage_params::size()
+int Storage_params::size()
 {
   return n_dof()*n_stage;
 }
