@@ -7,6 +7,7 @@ project(cartdg VERSION 0.0
 # specify the C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_CXX_EXTENSIONS False)
 
 # determine build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -23,7 +24,10 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "script/auto_gene
 # determine whether to compile with sanitizers
 option(sanitize "If ON, compile with sanitizer flags." OFF)
 if (sanitize)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize=leak -fsanitize=undefined")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=bounds-strict -fsanitize=undefined -fsanitize=address -fsanitize=leak")
+    if (CMAKE_CXX_COMPILER_VERSION AND CMAKE_CXX_COMPILER_VERSION GREATER_EQUAL 9.0.0)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=pointer-compare -fsanitize=pointer-subtract")
+    endif()
 endif()
 
 # determine whether to parallelize
@@ -43,8 +47,8 @@ execute_process(COMMAND python3 ${CMAKE_SOURCE_DIR}/script/auto_generate.py ${CM
 
 # determine row_size of polynomial basis
 if(NOT DEFINED TECIO_DIR)
-   set(TECIO_DIR /usr/local/tecplot/360ex_2018r2 CACHE STRING
-       "Where to find TECIO (probably the root directory of your tecplot installation)" FORCE)
+   set(TECIO_DIR /opt/local/tecplot/360ex CACHE STRING
+       "Where to find TECIO (should contain directories bin, lib, and include)" FORCE)
 endif()
 
 # add a configure file to pass CMake variables to the code
@@ -56,7 +60,8 @@ add_library(cartdg SHARED)
 # add tecio as external library
 add_library(tecio SHARED IMPORTED)
 set_target_properties(tecio PROPERTIES IMPORTED_LOCATION ${TECIO_DIR}/bin/libtecio.so)
-target_include_directories(cartdg PRIVATE ${TECIO_DIR}/include)
+target_include_directories(tecio INTERFACE ${TECIO_DIR}/include)
+target_link_libraries(cartdg PUBLIC tecio)
 
 # add automatically generated source files
 target_sources(cartdg PRIVATE ${CMAKE_BINARY_DIR}/Gauss_lobatto.cpp)
@@ -82,7 +87,7 @@ target_link_libraries(cartdg PRIVATE kernels)
 # add executable for benchmarking
 add_executable(benchmark benchmark/main.cpp)
 set_property(TARGET benchmark PROPERTY RUNTIME_OUTPUT_DIRECTORY benchmark)
-target_link_libraries(benchmark PRIVATE cartdg kernels tecio)
+target_link_libraries(benchmark PRIVATE cartdg kernels)
 file(CREATE_LINK ${CMAKE_SOURCE_DIR}/script/benchmark.py benchmark.py SYMBOLIC)
 
 install(TARGETS cartdg DESTINATION lib EXPORT cartdgTargets)

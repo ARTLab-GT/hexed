@@ -18,6 +18,8 @@ What CartDG is not:
 * A general framework for CFD on arbitrary grids.
 * Capable of solving equations other than those that govern the flow of fluids.
 
+This document describes CartDG. For installation instructions, see `INSTALL.md`.
+
 ## Motivation
 The motivation for this project came from my experience with NASCART-GT. With it's highly automated adaptive Cartesian grid
 strategy, NASCART-GT represents the holy grail of modern CFD, in that the user merely provides the geometry and a few
@@ -53,26 +55,6 @@ I use the following nonstandard terms in the code:
   than the degree. The row size is not to be confused with the number of quadrature points, which depends on the
   dimensionality. E.g. a 4th degree basis in 3 dimensions is of row size 5 and has 125 quadrature points.
  
-## Building
-If you are familiar with CMake, then execute the following steps to build CartDG. Unfortunately, more beginner-friendly
-documentation is not yet available.
-1. `mkdir build`
-   * You may replace `build` with an alternative name that begins with "build".
-2. `cd build`
-3. `ccmake ../`
-   * You must set `TECIO_DIR` to be a directory where `bin/libtecio.so` and `include/TECIO.h` can be found.
-     You may optionally edit the other options.
-4. `make`
-
-To install the library, header files, and CMake configuration files, type `make install`. You may need to
-add `sudo`, depending on the permissions of your install prefix.
-
-To run the tests, type `test/test`. To run the demo, type `demo/demo`. This will generate `.szplt` files
-to vizualize the solution. Note: on my machine, demo takes approximately 5 seconds to run in Release mode.
-If you build in Debug mode, it may take a very long time.
-
-Performance data for the kernels can be visualized by running `python3 benchmark.py` from the build directory.
-
 ## Dependencies
 Eigen must be available in your include path. Tecio must be available in a directory that you may specify.
 Python3 must also be available, along with some common libraries.
