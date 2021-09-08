@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import subprocess
 import re
 import sys
@@ -27,10 +28,10 @@ Approximate memory requirement: {row_size**dim*n_elem*8*2:g} bytes
 Times:
 """[1:-1])
 cmd = [str(arg) for arg in ["benchmark/benchmark", dim, row_size, n_side]]
-output = subprocess.run(cmd, capture_output=True)
+output = subprocess.run(cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE) # avoid capture_output for backward compatibility
 stdout = str(output.stdout, "ascii")
 print(stdout)
-if len(output.stderr) > 0:
+if output.stderr: # could be empty or None depending on version
     err = str(output.stderr, "ascii")
     raise Exception("Benchmark executable crashed with the following error message:\n\n" + err)
 
@@ -59,6 +60,10 @@ plt.xticks(range(len(times)), names, rotation=20)
 plt.ylabel("Execution time per element (s)")
 for group in groups.keys():
     plt.figure()
-    plt.pie(groups[group][0], labels=groups[group][1], normalize=True, autopct="%d%%")
+    # normalize manually to avoid "normalize" kwarg which does not work in all versions
+    fractions = np.array(groups[group][0])
+    fractions /= fractions.sum()
+    plt.pie(fractions, labels=groups[group][1], autopct="%d%%")
     plt.title("Fraction of time for 3-stage RK cycle: " + group + f"\nTotal: {groups[group][2]:.1e} s")
+    plt.axis("equal")
 plt.show()

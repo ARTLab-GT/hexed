@@ -1,4 +1,4 @@
-#include <catch.hpp>
+#include <catch2/catch.hpp>
 
 #include <Deformed_grid.hpp>
 #include <Gauss_lobatto.hpp>
