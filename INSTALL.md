@@ -18,31 +18,53 @@
     * This will run a very simple toy problem and output visualization files.
 
 ## Detailed instructions
-This section is in progress. For now, please refer to Quick Start.
-These instructions should work if you follow them exactly. If you are trying to adapt them for whatever reason, follow these general principles:
-* If the instructions mention a directory that does not exist, create it.
-
-Instructions:
-* Create install directory.
+This section is provided in case you need more information than the Quick Start section includes. It assumes you have access to an ARTLAB
+machine and are familiar with managing directories and files in Linux. If you have more than that, it is assumed that you can adapt these
+instructions to suit your environment. If you have less than that, consider asking for help.
+1. Create install directory. You need somewhere to install libraries so that your other codes can find them. On a system where you have
+   superuser privileges, you can use `/usr/local`. However, on the ARTLAB machines, we can only write within our home directory, so we need
+   to create our own install directory. If you already have one set up, you can use that. Otherwise, follow these instructions to create one:
   * `cd`
   * `mkdir codes`
-  * Edit bashrc and add:
+  * We need to tell the shell to look for libraries in `~/codes`. Edit `~/.bashrc` and add the following lines at the end:
     * `export PATH=$PATH:~/codes`
     * `export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:~/codes/include`
-* `pip3 install sympy`
-* Install Catch2:
+2. Install sympy (used by Cartdg to generate quadrature rules):
+  * `pip3 install sympy`
+3. Install Catch2:
   * Visit the Catch2 [Releases](https://github.com/catchorg/Catch2/releases/tag/v2.13.7) page and download the source code
     for the latest one (do not clone the `devel` branch from the github repo, as that is not a stable release).
-  * Unpack (e.g. unzip) the source code and place it in `~/codes`. `~/codes` should now contain a directory named something like `Catch2-2.xx.x`
+  * Unpack (e.g. unzip) the source code and place it in `~/codes`. `~/codes` should now contain a directory named something like `Catch2-2.XX.X`
     depending on what happens to be the current version. `cd` into this directory.
   * `cmake -Bbuild -H. -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=~/codes`
   * `cmake --build build/ --target install`
-* Install Eigen:
+4. Install Eigen:
   * Download the Eigen [source code](http://eigen.tuxfamily.org/index.php?title=Main_Page#Download) (latest stable release).
   * Unpack the Eigen source and copy it to `~/codes`. `~/codes` should now contain a directory named something like `eigen-X.X.X`.
     `cd` into this directory.
   * `cp -r Eigen/ ~/codes/include/`
-  * build...
+    * If `~/codes/include` does not exist, create it.
+5. Install CartDG:
+  * Go to whatever directory you want to put CartDG in (`~` or `~/codes` works).
+  * `git clone git@github.gatech.edu:ARTLab/CartDG.git`
+  * `cd CartDG`
+  * `mkdir build_Release`
+  * `cd build_Release`
+  * `ccmake ../`
+    * This will open a GUI for the tool CMake. This allows you to choose some options for how to build CartDG. You should not see any errors.
+    * Use the arrow keys to move the cursor and "Enter" to edit the option under the cursor.
+    * If you are on an ARTLAB machine, the only option you need to edit is `CMAKE_INSTALL_PREFIX`. Set that to `~/codes`.
+    * If you are not on an ARTLAB machine, you will need to also edit the `TECIO_DIR` option (and install Tecplot if you don't already have it).
+    * Leave the other options. If you are developing CartDG, consider making another directory `build_Debug` where you set `CMAKE_BUILD_TYPE` to
+      `Debug` and `sanitize` to `ON`.
+    * When you have set all the options, press `c` twice. Then press `g`. The GUI should exit.
+  * `make -j install`
+6. Verify that everything works:
+  * `test/test`
+    * This executes the unit tests. It should say "All tests passed".
+  * `demo/demo`
+    * This runs a simple demonstration simulation. It should generate a bunch of `.szplt` files. If you open them in Tecplot, you should see
+      a vortex travel out one side of the domain and come back on the other.
   * `python3 benchmark.py dim=2`
     * This runs the performance benchmarking script for 2 dimensions.
     * You should see three plots. One is titled "Fraction of time for 3-stage RK cycle: regular" and below
