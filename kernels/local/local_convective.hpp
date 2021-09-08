@@ -12,8 +12,7 @@ namespace cartdg
 
 // AUTOGENERATE LOOKUP BENCHMARK(regular, 3)
 template<int n_var, int n_qpoint, int row_size>
-void local_convective(elem_vec& elements, int n_elem,
-                      Basis& basis, Kernel_settings& settings)
+void local_convective(elem_vec& elements, Basis& basis, Kernel_settings& settings)
 {
   const Eigen::Matrix<double, row_size, row_size> diff_mat = basis.diff_mat();
   double d_t_by_d_pos = settings.d_t_by_d_pos;
@@ -22,7 +21,7 @@ void local_convective(elem_vec& elements, int n_elem,
   const int i_write = settings.i_write;
 
   #pragma omp parallel for
-  for (unsigned i_elem = 0; i_elem < n_elem; ++i_elem)
+  for (unsigned i_elem = 0; i_elem < elements.size(); ++i_elem)
   {
     // Initialize updated solution to be equal to current solution
     double* read  = elements[i_elem]->stage(i_read);

@@ -171,7 +171,7 @@ TEST_CASE("Local convective")
           read[2*n_qpoint + i_qpoint] = ener;
       }
     }
-    cartdg::get_local_convective(1, 2)(elements, n_elem, basis, settings);
+    cartdg::get_local_convective(1, 2)(elements, basis, settings);
     for (auto& element : elements)
     {
       double* r = element->stage(settings.i_read);
@@ -209,7 +209,7 @@ TEST_CASE("Local convective")
           read[4*n_qpoint + i_qpoint] = ener;
       }
     }
-    cartdg::get_local_convective(3, 3)(elements, n_elem, basis, settings);
+    cartdg::get_local_convective(3, 3)(elements, basis, settings);
     for (auto& element : elements)
     {
       double* r = element->stage(settings.i_read);
@@ -259,7 +259,7 @@ TEST_CASE("Local convective")
         }
       }
     }
-    cartdg::get_local_convective(2, row_size)(elements, n_elem, basis, settings);
+    cartdg::get_local_convective(2, row_size)(elements, basis, settings);
     for (auto& element : elements)
     {
       double* r = element->stage(settings.i_read);
