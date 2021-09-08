@@ -215,6 +215,7 @@ void Solution::initialize(Spacetime_func& init_cond)
     for (int i_elem = 0; i_elem < grid->n_elem; ++i_elem)
     {
       std::vector<double> pos = grid->get_pos(i_elem);
+      double* elem_state = grid->element(i_elem).stage(0);
       for (int i_qpoint = 0; i_qpoint < grid->n_qpoint; ++i_qpoint)
       {
         std::vector<double> qpoint_pos;
@@ -227,6 +228,7 @@ void Solution::initialize(Spacetime_func& init_cond)
         for (int i_var = 0; i_var < grid->n_var; ++i_var)
         {
           state[qpoint_ind + i_var*grid->n_qpoint] = qpoint_state[i_var];
+          elem_state[i_var*grid->n_qpoint + i_qpoint] = qpoint_state[i_var];
         }
       }
     }
