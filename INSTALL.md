@@ -8,7 +8,7 @@
   * Set `CMAKE_INSTALL_PREFIX` to the location where you want to install CartDG. Alas, there is no reasonable default for this,
     because we do not have write permission above our respective home directories on ARTLAB machines.
   * Otherwise, the default options should be appropriate for a release build.
-* `make install`
+* `make -j install`
 * CartDG is now ready to use. To verify the success of the build, execute the following:
   * `test/test`
     * This will execute the unit tests.
@@ -32,7 +32,7 @@ instructions to suit your environment. If you have less than that, consider aski
 2. Install sympy (used by Cartdg to generate quadrature rules):
   * `pip3 install sympy`
 3. Install Catch2:
-  * Visit the Catch2 [Releases](https://github.com/catchorg/Catch2/releases/tag/v2.13.7) page and download the source code
+  * Visit the Catch2 [Releases](https://github.com/catchorg/Catch2/releases) page and download the source code
     for the latest one (do not clone the `devel` branch from the github repo, as that is not a stable release).
   * Unpack (e.g. unzip) the source code and place it in `~/codes`. `~/codes` should now contain a directory named something like `Catch2-2.XX.X`
     depending on what happens to be the current version. `cd` into this directory.
