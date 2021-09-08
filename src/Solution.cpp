@@ -75,7 +75,7 @@ std::vector<double> Solution::surface_integral(Domain_func& integrand)
   else
   {
     std::vector<double> total;
-    for (Deformed_grid grid : def_grids)
+    for (Deformed_grid& grid : def_grids)
     {
       auto grid_integral = grid.surface_integral(integrand);
       int size = grid_integral.size();

@@ -40,6 +40,7 @@ class Grid
   std::vector<Ghost_boundary_condition*> ghost_bound_conds;
 
   Grid(int n_var_arg, int n_dim_arg, int n_elem_arg, double mesh_size_arg, Basis& basis_arg);
+  Grid(Grid&&) = default;
   virtual ~Grid();
 
   // functions for accessing data
