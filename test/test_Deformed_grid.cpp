@@ -16,7 +16,7 @@ TEST_CASE("Deformed grid class")
 
   SECTION("construction")
   {
-    for (cartdg::Deformed_grid grid : grids)
+    for (cartdg::Deformed_grid& grid : grids)
     {
       REQUIRE(grid.vertices.empty());
       REQUIRE(grid.vertex_ids.empty());
