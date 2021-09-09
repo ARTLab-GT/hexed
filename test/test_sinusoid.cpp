@@ -93,11 +93,14 @@ TEST_CASE("Sinusoidal density wave")
 
     Velocity_init init (1);
     sol.initialize(init);
-    const int size = grid.n_elem*grid.n_dof;
-    double initial[size];
-    for (int i = 0; i < size; ++i)
+    std::vector<double> initial (grid.n_elem*grid.n_dof);
+    for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
-      initial[i] = grid.state_r()[i];
+      double* stage = grid.element(i_elem).stage(0);
+      for (int i_dof = 0; i_dof < grid.n_dof; ++i_dof)
+      {
+        initial[i_elem*grid.n_dof + i_dof] = stage[i_dof];
+      }
     }
     sol.visualize("sinusoid_1d");
 
@@ -105,18 +108,20 @@ TEST_CASE("Sinusoidal density wave")
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
       std::vector<double> pos = grid.get_pos(i_elem);
+      double* stage = grid.element(i_elem).stage(0);
+      double* init_stage = initial.data() + i_elem*grid.n_dof;
       for (int i_qpoint = 0; i_qpoint < grid.basis.row_size; ++i_qpoint)
       {
         double d_mass_by_d_t = -0.1*init.velocity[0]*cos(pos[i_qpoint]);
         double d_momentum_by_d_t = init.velocity[0]*d_mass_by_d_t;
         double d_energy_by_d_t = 0.5*init.velocity[0]*d_momentum_by_d_t;
-        int i = i_qpoint + grid.n_dof*i_elem;
-        double num_d_momentum_by_d_t = (grid.state_r()[i] - initial[i])/dt;
-        i += grid.n_qpoint;
-        double num_d_mass_by_d_t = (grid.state_r()[i] - initial[i])/dt;
-        i += grid.n_qpoint;
-        double num_d_energy_by_d_t = (grid.state_r()[i] - initial[i])/dt;
-        i += grid.n_qpoint;
+        int i_dof = i_qpoint;
+        double num_d_momentum_by_d_t = (stage[i_dof] - init_stage[i_dof])/dt;
+        i_dof += grid.n_qpoint;
+        double num_d_mass_by_d_t = (stage[i_dof] - init_stage[i_dof])/dt;
+        i_dof += grid.n_qpoint;
+        double num_d_energy_by_d_t = (stage[i_dof] - init_stage[i_dof])/dt;
+        i_dof += grid.n_qpoint;
         REQUIRE(num_d_momentum_by_d_t
                 == Approx(d_momentum_by_d_t).margin(0.01*init.mean_mass*init.velocity[0]));
         REQUIRE(num_d_mass_by_d_t == Approx(d_mass_by_d_t).margin(0.01*init.mean_mass));
@@ -128,28 +133,35 @@ TEST_CASE("Sinusoidal density wave")
 
     Pressure_init pres_init (1);
     sol.initialize(pres_init);
-    for (int i = 0; i < size; ++i)
+    for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
-      initial[i] = grid.state_r()[i];
+      double* stage = grid.element(i_elem).stage(0);
+      for (int i_dof = 0; i_dof < grid.n_dof; ++i_dof)
+      {
+        initial[i_elem*grid.n_dof + i_dof] = stage[i_dof];
+      }
     }
+    sol.visualize("sinusoid_1d");
     sol.visualize("sinusoid_pressure_1d");
 
     dt = sol.update(cfl);
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
       std::vector<double> pos = grid.get_pos(i_elem);
+      double* stage = grid.element(i_elem).stage(0);
+      double* init_stage = initial.data() + i_elem*grid.n_dof;
       for (int i_qpoint = 0; i_qpoint < grid.basis.row_size; ++i_qpoint)
       {
         double d_mass_by_d_t = 0.;
         double d_momentum_by_d_t = -0.01*init.mean_pressure*cos(pos[i_qpoint]);
         double d_energy_by_d_t = 0.5*init.velocity[0]*d_momentum_by_d_t;
-        int i = i_qpoint + grid.n_dof*i_elem;
-        double num_d_momentum_by_d_t = (grid.state_r()[i] - initial[i])/dt;
-        i += grid.n_qpoint;
-        double num_d_mass_by_d_t = (grid.state_r()[i] - initial[i])/dt;
-        i += grid.n_qpoint;
-        double num_d_energy_by_d_t = (grid.state_r()[i] - initial[i])/dt;
-        i += grid.n_qpoint;
+        int i_dof = i_qpoint;
+        double num_d_momentum_by_d_t = (stage[i_dof] - init_stage[i_dof])/dt;
+        i_dof += grid.n_qpoint;
+        double num_d_mass_by_d_t = (stage[i_dof] - init_stage[i_dof])/dt;
+        i_dof += grid.n_qpoint;
+        double num_d_energy_by_d_t = (stage[i_dof] - init_stage[i_dof])/dt;
+        i_dof += grid.n_qpoint;
         REQUIRE(num_d_momentum_by_d_t
                 == Approx(d_momentum_by_d_t).margin(0.0001*init.mean_pressure));
         REQUIRE(num_d_mass_by_d_t == Approx(d_mass_by_d_t).margin(0.01*init.mean_mass));
@@ -170,11 +182,14 @@ TEST_CASE("Sinusoidal density wave")
 
     Velocity_init init (2);
     sol.initialize(init);
-    const int size = grid.n_elem*grid.n_dof;
-    double initial[size];
-    for (int i = 0; i < size; ++i)
+    std::vector<double> initial (grid.n_elem*grid.n_dof);
+    for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
-      initial[i] = grid.state_r()[i];
+      double* stage = grid.element(i_elem).stage(0);
+      for (int i_dof = 0; i_dof < grid.n_dof; ++i_dof)
+      {
+        initial[i_elem*grid.n_dof + i_dof] = stage[i_dof];
+      }
     }
     sol.visualize("sinusoid_2d");
 
@@ -182,6 +197,8 @@ TEST_CASE("Sinusoidal density wave")
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
       std::vector<double> pos = grid.get_pos(i_elem);
+      double* stage = grid.element(i_elem).stage(0);
+      double* init_stage = initial.data() + i_elem*grid.n_dof;
       for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
       {
         double d_mass_by_d_t = -0.1*cos(pos[i_qpoint] + 2*pos[i_qpoint + grid.n_qpoint])
@@ -190,15 +207,15 @@ TEST_CASE("Sinusoidal density wave")
         double d_momentum1_by_d_t = init.velocity[1]*d_mass_by_d_t;
         double d_energy_by_d_t = 0.5*d_mass_by_d_t*(  init.velocity[0]*init.velocity[0]
                                                     + init.velocity[1]*init.velocity[1]);
-        int i = i_qpoint + grid.n_dof*i_elem;
-        double num_d_momentum0_by_d_t = (grid.state_r()[i] - initial[i])/dt;
-        i += grid.n_qpoint;
-        double num_d_momentum1_by_d_t = (grid.state_r()[i] - initial[i])/dt;
-        i += grid.n_qpoint;
-        double num_d_mass_by_d_t = (grid.state_r()[i] - initial[i])/dt;
-        i += grid.n_qpoint;
-        double num_d_energy_by_d_t = (grid.state_r()[i] - initial[i])/dt;
-        i += grid.n_qpoint;
+        int i_dof = i_qpoint;
+        double num_d_momentum0_by_d_t = (stage[i_dof] - init_stage[i_dof])/dt;
+        i_dof += grid.n_qpoint;
+        double num_d_momentum1_by_d_t = (stage[i_dof] - init_stage[i_dof])/dt;
+        i_dof += grid.n_qpoint;
+        double num_d_mass_by_d_t = (stage[i_dof] - init_stage[i_dof])/dt;
+        i_dof += grid.n_qpoint;
+        double num_d_energy_by_d_t = (stage[i_dof] - init_stage[i_dof])/dt;
+        i_dof += grid.n_qpoint;
         REQUIRE(num_d_momentum0_by_d_t
                 == Approx(d_momentum0_by_d_t).margin(0.01*init.mean_mass*(  init.velocity[0]
                                                                           + init.velocity[1])));
@@ -215,9 +232,13 @@ TEST_CASE("Sinusoidal density wave")
 
     Pressure_init pres_init (2);
     sol.initialize(pres_init);
-    for (int i = 0; i < size; ++i)
+    for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
-      initial[i] = grid.state_r()[i];
+      double* stage = grid.element(i_elem).stage(0);
+      for (int i_dof = 0; i_dof < grid.n_dof; ++i_dof)
+      {
+        initial[i_elem*grid.n_dof + i_dof] = stage[i_dof];
+      }
     }
     sol.visualize("sinusoid_2d");
 
@@ -225,6 +246,8 @@ TEST_CASE("Sinusoidal density wave")
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
       std::vector<double> pos = grid.get_pos(i_elem);
+      double* stage = grid.element(i_elem).stage(0);
+      double* init_stage = initial.data() + i_elem*grid.n_dof;
       for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
       {
         double d_mass_by_d_t = 0.;
@@ -234,15 +257,15 @@ TEST_CASE("Sinusoidal density wave")
         double d_momentum1_by_d_t = cos_pos*2;
         double d_energy_by_d_t = 0.5*(  init.velocity[0]*d_momentum0_by_d_t
                                       + init.velocity[1]*d_momentum1_by_d_t);
-        int i = i_qpoint + grid.n_dof*i_elem;
-        double num_d_momentum0_by_d_t = (grid.state_r()[i] - initial[i])/dt;
-        i += grid.n_qpoint;
-        double num_d_momentum1_by_d_t = (grid.state_r()[i] - initial[i])/dt;
-        i += grid.n_qpoint;
-        double num_d_mass_by_d_t = (grid.state_r()[i] - initial[i])/dt;
-        i += grid.n_qpoint;
-        double num_d_energy_by_d_t = (grid.state_r()[i] - initial[i])/dt;
-        i += grid.n_qpoint;
+        int i_dof = i_qpoint;
+        double num_d_momentum0_by_d_t = (stage[i_dof] - init_stage[i_dof])/dt;
+        i_dof += grid.n_qpoint;
+        double num_d_momentum1_by_d_t = (stage[i_dof] - init_stage[i_dof])/dt;
+        i_dof += grid.n_qpoint;
+        double num_d_mass_by_d_t = (stage[i_dof] - init_stage[i_dof])/dt;
+        i_dof += grid.n_qpoint;
+        double num_d_energy_by_d_t = (stage[i_dof] - init_stage[i_dof])/dt;
+        i_dof += grid.n_qpoint;
         REQUIRE(num_d_momentum0_by_d_t
                 == Approx(d_momentum0_by_d_t).margin(0.0001*init.mean_pressure));
         REQUIRE(num_d_momentum1_by_d_t
@@ -266,11 +289,14 @@ TEST_CASE("Sinusoidal density wave")
 
     Velocity_init init (3);
     sol.initialize(init);
-    const int size = grid.n_elem*grid.n_dof;
-    double initial[size];
-    for (int i = 0; i < size; ++i)
+    std::vector<double> initial (grid.n_elem*grid.n_dof);
+    for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
-      initial[i] = grid.state_r()[i];
+      double* stage = grid.element(i_elem).stage(0);
+      for (int i_dof = 0; i_dof < grid.n_dof; ++i_dof)
+      {
+        initial[i_elem*grid.n_dof + i_dof] = stage[i_dof];
+      }
     }
     sol.visualize("sinusoid_3d");
 
@@ -278,6 +304,8 @@ TEST_CASE("Sinusoidal density wave")
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
       std::vector<double> pos = grid.get_pos(i_elem);
+      double* stage = grid.element(i_elem).stage(0);
+      double* init_stage = initial.data() + i_elem*grid.n_dof;
       for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
       {
         double d_mass_by_d_t = -0.1*cos(    pos[i_qpoint]
@@ -291,17 +319,17 @@ TEST_CASE("Sinusoidal density wave")
                             + init.velocity[1]*init.velocity[1]
                             + init.velocity[2]*init.velocity[2]);
         double d_energy_by_d_t = 0.5*d_mass_by_d_t*speed*speed;
-        int i = i_qpoint + grid.n_dof*i_elem;
-        double num_d_momentum0_by_d_t = (grid.state_r()[i] - initial[i])/dt;
-        i += grid.n_qpoint;
-        double num_d_momentum1_by_d_t = (grid.state_r()[i] - initial[i])/dt;
-        i += grid.n_qpoint;
-        double num_d_momentum2_by_d_t = (grid.state_r()[i] - initial[i])/dt;
-        i += grid.n_qpoint;
-        double num_d_mass_by_d_t = (grid.state_r()[i] - initial[i])/dt;
-        i += grid.n_qpoint;
-        double num_d_energy_by_d_t = (grid.state_r()[i] - initial[i])/dt;
-        i += grid.n_qpoint;
+        int i_dof = i_qpoint;
+        double num_d_momentum0_by_d_t = (stage[i_dof] - init_stage[i_dof])/dt;
+        i_dof += grid.n_qpoint;
+        double num_d_momentum1_by_d_t = (stage[i_dof] - init_stage[i_dof])/dt;
+        i_dof += grid.n_qpoint;
+        double num_d_momentum2_by_d_t = (stage[i_dof] - init_stage[i_dof])/dt;
+        i_dof += grid.n_qpoint;
+        double num_d_mass_by_d_t = (stage[i_dof] - init_stage[i_dof])/dt;
+        i_dof += grid.n_qpoint;
+        double num_d_energy_by_d_t = (stage[i_dof] - init_stage[i_dof])/dt;
+        i_dof += grid.n_qpoint;
         REQUIRE(num_d_momentum0_by_d_t
                 == Approx(d_momentum0_by_d_t).margin(0.01*init.mean_mass*speed));
         REQUIRE(num_d_momentum1_by_d_t
