@@ -91,8 +91,6 @@ TEST_CASE("Solution class")
     REQUIRE(g->element(0).stage(0)[48] == 2.5);
     REQUIRE(g->element(5).stage(0)[ 0] == 0.1);
     REQUIRE(g->element(5).stage(0)[48] == 2.5);
-    int size = g->n_dof*g->n_elem;
-    REQUIRE(g->state_r()[size - 1] == 2.5);
   }
 
   SECTION("Quadrature")
