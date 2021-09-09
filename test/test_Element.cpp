@@ -24,6 +24,14 @@ TEST_CASE("Element")
     REQUIRE(element.stage(2)[i_dof] == 0.);
     REQUIRE(element.stage(3)[i_dof] == 1.3);
   }
+  for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint)
+  {
+    REQUIRE(element.jacobian(0, 0, i_qpoint) == 1.);
+    REQUIRE(element.jacobian(1, 0, i_qpoint) == 0.);
+    REQUIRE(element.jacobian(0, 2, i_qpoint) == 0.);
+    REQUIRE(element.jacobian(2, 2, i_qpoint) == 1.);
+    REQUIRE(element.jacobian_determinant(i_qpoint) == 1.);
+  }
 
   cartdg::Element copy {element};
   cartdg::Element assigned {params};
