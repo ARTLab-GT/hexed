@@ -90,6 +90,7 @@ class Grid
   double stable_cfl [9] {1.256, 0.409, 0.209, 0.130, 0.089, 0.066, 0.051, 0.040, 0.033};
   Storage_params storage_params;
   elem_vec elements;
+  elem_con_vec elem_cons;
 
   private:
   void populate_slice(std::vector<double>&, std::vector<int>, int);
