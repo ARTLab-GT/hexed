@@ -192,9 +192,8 @@ TEST_CASE("Grid")
   SECTION("Automatic graph creation")
   {
     grid2.auto_connect();
-    std::vector<int> n_neighb_con = grid2.n_neighb_con();
-    REQUIRE(n_neighb_con[0] == 2);
-    REQUIRE(n_neighb_con[1] == 1);
+    REQUIRE(grid2.n_con(0) == 2);
+    REQUIRE(grid2.n_con(1) == 1);
     {
       auto con = grid2.connection(0, 0);
       REQUIRE(con[0] == &grid2.element(2));
@@ -221,16 +220,14 @@ TEST_CASE("Grid")
     grid2.clear_neighbors();
     std::vector<int> periods {0, 3};
     grid2.auto_connect(periods);
-    n_neighb_con = grid2.n_neighb_con();
-    REQUIRE(n_neighb_con[0] == 2);
-    REQUIRE(n_neighb_con[1] == 2);
+    REQUIRE(grid2.n_con(0) == 2);
+    REQUIRE(grid2.n_con(1) == 2);
 
     std::vector<int> periods3d {3, 3, 3};
     grid3.auto_connect(periods3d);
-    n_neighb_con = grid3.n_neighb_con();
-    REQUIRE(n_neighb_con[0] == 27);
-    REQUIRE(n_neighb_con[1] == 27);
-    REQUIRE(n_neighb_con[2] == 27);
+    REQUIRE(grid3.n_con(0) == 27);
+    REQUIRE(grid3.n_con(1) == 27);
+    REQUIRE(grid3.n_con(2) == 27);
   }
 
   SECTION("Runge Kutta time integration")

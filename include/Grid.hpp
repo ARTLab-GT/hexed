@@ -45,7 +45,8 @@ class Grid
 
   // functions for accessing data
   Element& element(int i_elem);
-  elem_con connection(int i_dim, int i_con); // Mostly for testing
+  elem_con connection(int i_dim, int i_con); // mostly for testing
+  int n_con(int i_dim); // mostly for testing
   double* state_r();
   double* state_w();
   std::vector<double**> neighbor_connections_r(); // FIXME: return a pointer

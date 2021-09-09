@@ -63,6 +63,11 @@ elem_con Grid::connection(int i_dim, int i_con)
   return elem_cons[i_dim][i_con];
 }
 
+int Grid::n_con(int i_dim)
+{
+  return int(elem_cons[i_dim].size());
+}
+
 double* Grid::state_r()
 {
   return state_storage[i_read].data();
@@ -167,6 +172,7 @@ void Grid::clear_neighbors()
 {
   for (int i_dim = 0; i_dim < 2*n_dim; ++i_dim)
   {
+    elem_cons[i_dim].clear();
     neighbor_storage[i_dim].clear();
     deriv_neighbor_storage[i_dim].clear();
     visc_neighbor_storage[i_dim].clear();
