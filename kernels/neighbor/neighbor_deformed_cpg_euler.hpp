@@ -4,9 +4,7 @@
 #include <Kernel_settings.hpp>
 #include <Basis.hpp>
 #include "read_copy.hpp"
-#define CARTDG_ATOMIC // avoids race condition since i_dim is not the same for all threads
 #include "write_copy.hpp"
-#undef CARTDG_ATOMIC
 #include "hll_deformed_cpg_euler.hpp"
 
 namespace cartdg
@@ -80,7 +78,7 @@ void neighbor_deformed_cpg_euler(double** def_connections_r, double** def_connec
       int stride = n_face_qpoint;
       for (int i = 0; i < i_dim_side; ++i) stride /= row_size;
       bool is_positive = is_positive_face[2*i_con + i_side];
-      write_copy<n_var, n_qpoint, row_size>(face_w + i_side*face_size, connect[i_side], stride, is_positive);
+      write_copy<n_var, n_qpoint, row_size, true>(face_w + i_side*face_size, connect[i_side], stride, is_positive);
     }
   }
 }

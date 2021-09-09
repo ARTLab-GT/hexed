@@ -6,9 +6,7 @@
 #include <Ghost_boundary_condition.hpp>
 #include "hll_deformed_cpg_euler.hpp"
 #include "read_copy.hpp"
-#define CARTDG_ATOMIC
 #include "write_copy.hpp"
-#undef CARTDG_ATOMIC
 
 namespace cartdg
 {
@@ -48,7 +46,7 @@ void gbc_cpg_euler(std::vector<Ghost_boundary_condition*>& ghost_bound_conds,
       hll_deformed_cpg_euler<n_dim, n_qpoint/row_size>(gbc->state.data(), d_flux.data(), &face_jacobian[0][0], mult, i_dim_arg, flip, settings.cpg_heat_rat);
       double* d_flux_r = d_flux.data();
       if (!gbc->is_positive_face) d_flux_r += n_qpoint/row_size*n_var;
-      write_copy<n_var, n_qpoint, row_size>(d_flux_r, write + i_elem*n_dof, stride, gbc->is_positive_face);
+      write_copy<n_var, n_qpoint, row_size, true>(d_flux_r, write + i_elem*n_dof, stride, gbc->is_positive_face);
     }
   }
 }
