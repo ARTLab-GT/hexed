@@ -4,7 +4,7 @@ namespace cartdg
 {
 
 Deformed_element::Deformed_element(Storage_params params)
-: Element{params}, n_dim{params.n_dim}, n_qpoint{params.n_qpoint()}, jac{n_dim*n_dim*n_qpoint}
+: Element{params}, n_qpoint{params.n_qpoint()}, jac{n_dim*n_dim*n_qpoint}
 {}
 
 double* Deformed_element::jacobian()

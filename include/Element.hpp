@@ -17,6 +17,9 @@ class Element
   int n_dof;
   Eigen::VectorXd data;
 
+  protected:
+  int n_dim;
+
   public:
   Element(Storage_params);
   double* stage(int i_stage);

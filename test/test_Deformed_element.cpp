@@ -20,4 +20,10 @@ TEST_CASE("Deformed_element.hpp")
       }
     }
   }
+
+  element.jacobian()[0*16] = 1.;
+  element.jacobian()[1*16] = 2.;
+  element.jacobian()[2*16] = .1;
+  element.jacobian()[3*16] = 3.;
+  REQUIRE(element.jacobian_determinant(0) == Approx(2.8));
 }

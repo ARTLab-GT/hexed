@@ -8,7 +8,6 @@ namespace cartdg
 
 class Deformed_element : public Element
 {
-  int n_dim;
   int n_qpoint;
   Eigen::VectorXd jac;
 
