@@ -415,10 +415,10 @@ std::vector<double> Grid::integral(Domain_func& integrand)
   }
 
   std::vector<double> total;
-  double* sr = state_r();
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
     std::vector<double> elem_pos = get_pos(i_elem);
+    double* stage = element(i_elem).stage(0);
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
     {
       std::vector<double> point_pos;
@@ -429,7 +429,7 @@ std::vector<double> Grid::integral(Domain_func& integrand)
       std::vector<double> point_state;
       for (int i_var = 0; i_var < n_var; ++i_var)
       {
-        point_state.push_back(sr[i_qpoint + i_var*n_qpoint + i_elem*n_dof]);
+        point_state.push_back(stage[i_qpoint + i_var*n_qpoint]);
       }
       std::vector<double> point_integrand = integrand(point_pos, time, point_state);
       double jac_det = jacobian_det(i_elem, i_qpoint);

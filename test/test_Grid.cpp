@@ -47,12 +47,7 @@ TEST_CASE("Grid")
     REQUIRE(grid3.origin[1] == 0.);
     REQUIRE(grid3.origin[2] == 0.);
 
-    int size = 2048*27;
-    REQUIRE(grid3.state_r()[0] == 0.);
-    REQUIRE(grid3.state_w()[0] == 0.);
-    REQUIRE(grid3.state_r()[size - 1] == 0.);
-    REQUIRE(grid3.state_w()[size - 1] == 0.);
-    size = 27*std::pow(CARTDG_MAX_BASIS_ROW_SIZE, 3);
+    int size = 27*std::pow(CARTDG_MAX_BASIS_ROW_SIZE, 3);
     REQUIRE((int)grid3.derivs.size() == size);
     REQUIRE(grid3.derivs[0] == 0.);
     REQUIRE(grid3.derivs[size - 1] == 0.);
@@ -160,9 +155,17 @@ TEST_CASE("Grid")
     cartdg::Grid grid1 (2, 1, 5, 0.1, basis);
     cartdg::Grid grid2 (2, 2, 5, 0.1, basis);
     cartdg::Grid grid3 (2, 3, 5, 0.1, basis);
-    for (int i = 0; i < grid1.n_dof*grid1.n_elem; ++i) grid1.state_r()[i] = 1.;
-    for (int i = 0; i < grid2.n_dof*grid1.n_elem; ++i) grid2.state_r()[i] = 1.;
-    for (int i = 0; i < grid3.n_dof*grid1.n_elem; ++i) grid3.state_r()[i] = 1.;
+    for (cartdg::Grid* grid : {&grid1, &grid2, &grid3})
+    {
+      for (int i_elem = 0; i_elem < grid->n_elem; ++i_elem)
+      {
+        double* stage = grid->element(i_elem).stage(0);
+        for (int i_dof = 0; i_dof < grid->n_dof; ++i_dof)
+        {
+          stage[i_dof] = 1.;
+        }
+      }
+    }
     REQUIRE(grid1.integral()[0] == Approx(0.5  ).margin(1e-12));
     REQUIRE(grid1.integral()[1] == Approx(0.5  ).margin(1e-12));
     REQUIRE(grid2.integral()[0] == Approx(0.05 ).margin(1e-12));
@@ -173,12 +176,13 @@ TEST_CASE("Grid")
     cartdg::Grid square (1, 2, 2, 1., basis);
     for (int i_elem = 0; i_elem < square.n_elem; ++i_elem)
     {
+      double* stage = square.element(i_elem).stage(0);
       for (int i = 0; i < basis.row_size; ++i)
       {
         for (int j = 0; j < basis.row_size; ++j)
         {
           double pos0 = basis.node(i) + i_elem; double pos1 = basis.node(j);
-          square.state_r()[(i_elem*basis.row_size + i)*basis.row_size + j] = pos0*pos0*pos1*pos1*pos1;
+          stage[i*basis.row_size + j] = pos0*pos0*pos1*pos1*pos1;
           square.pos[i_elem*2] = i_elem;
         }
       }
