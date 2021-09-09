@@ -43,25 +43,30 @@ TEST_CASE("Conservation of state variables")
 
     Initializer init (1);
     sol.initialize(init);
-    double * state = grid.state_r();
     for (int i_state = 0; i_state < grid.n_qpoint; ++i_state)
     {
-      state[i_state] = i_state + 1;
+      grid.element(0).stage(0)[i_state] = i_state + 1;
     }
-    const int size = grid.n_elem*grid.n_dof;
-    double initial[size];
-    for (int i = 0; i < size; ++i)
+    std::vector<double> initial (grid.n_elem*grid.n_dof);
+    for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
-      initial[i] = grid.state_r()[i];
+      double* stage = grid.element(i_elem).stage(0);
+      for (int i_dof = 0; i_dof < grid.n_dof; ++i_dof)
+      {
+        initial[i_elem*grid.n_dof + i_dof] = stage[i_dof];
+      }
     }
     grid.visualize("conservation_1d");
 
     double dt = sol.update();
     grid.visualize("conservation_final");
-    double * state_r = grid.state_r();
-    for (int i_state = 0; i_state < grid.n_elem*grid.n_dof; ++i_state)
+    for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
-      state_r[i_state] -= initial[i_state];
+      double* stage = grid.element(i_elem).stage(0);
+      for (int i_dof = 0; i_dof < grid.n_dof; ++i_dof)
+      {
+        stage[i_dof] -= initial[i_elem*grid.n_dof + i_dof];
+      }
     }
     grid.visualize("conservation_diff");
     auto integral = grid.integral();
@@ -81,24 +86,29 @@ TEST_CASE("Conservation of state variables")
 
     Initializer init (2);
     sol.initialize(init);
-    double * state = grid.state_r();
     for (int i_state = 0; i_state < grid.n_qpoint; ++i_state)
     {
-      state[i_state] = i_state + 1;
+      grid.element(0).stage(0)[i_state] = i_state + 1;
     }
-    const int size = grid.n_elem*grid.n_dof;
-    double initial[size];
-    for (int i = 0; i < size; ++i)
+    std::vector<double> initial (grid.n_elem*grid.n_dof);
+    for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
-      initial[i] = grid.state_r()[i];
+      double* stage = grid.element(i_elem).stage(0);
+      for (int i_dof = 0; i_dof < grid.n_dof; ++i_dof)
+      {
+        initial[i_elem*grid.n_dof + i_dof] = stage[i_dof];
+      }
     }
     grid.visualize("conservation_2d");
 
     double dt = sol.update();
-    double * state_r = grid.state_r();
-    for (int i_state = 0; i_state < grid.n_elem*grid.n_dof; ++i_state)
+    for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
-      state_r[i_state] -= initial[i_state];
+      double* stage = grid.element(i_elem).stage(0);
+      for (int i_dof = 0; i_dof < grid.n_dof; ++i_dof)
+      {
+        stage[i_dof] -= initial[i_elem*grid.n_dof + i_dof];
+      }
     }
     auto integral = grid.integral();
     for (int i_var = 0; i_var < grid.n_var; ++i_var)
@@ -188,24 +198,29 @@ TEST_CASE("Conservation of state variables")
 
     Initializer init (3);
     sol.initialize(init);
-    double * state = grid.state_r();
     for (int i_state = 0; i_state < grid.n_qpoint; ++i_state)
     {
-      state[i_state] = i_state + 1;
+      grid.element(0).stage(0)[i_state] = i_state + 1;
     }
-    const int size = grid.n_elem*grid.n_dof;
-    double initial[size];
-    for (int i = 0; i < size; ++i)
+    std::vector<double> initial (grid.n_elem*grid.n_dof);
+    for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
-      initial[i] = grid.state_r()[i];
+      double* stage = grid.element(i_elem).stage(0);
+      for (int i_dof = 0; i_dof < grid.n_dof; ++i_dof)
+      {
+        initial[i_elem*grid.n_dof + i_dof] = stage[i_dof];
+      }
     }
     grid.visualize("conservation_3d");
 
     double dt = sol.update();
-    double * state_r = grid.state_r();
-    for (int i_state = 0; i_state < grid.n_elem*grid.n_dof; ++i_state)
+    for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
-      state_r[i_state] -= initial[i_state];
+      double* stage = grid.element(i_elem).stage(0);
+      for (int i_dof = 0; i_dof < grid.n_dof; ++i_dof)
+      {
+        stage[i_dof] -= initial[i_elem*grid.n_dof + i_dof];
+      }
     }
     auto integral = grid.integral();
     for (int i_var = 0; i_var < grid.n_var; ++i_var)
