@@ -9,7 +9,7 @@ namespace cartdg
 
 Deformed_grid::Deformed_grid(int n_var_arg, int n_dim_arg, int n_elem_arg,
                              double mesh_size_arg, Basis& basis_arg)
-: Grid(n_var_arg, n_dim_arg, n_elem_arg, mesh_size_arg, basis_arg)
+: Grid(n_var_arg, n_dim_arg, n_elem_arg, mesh_size_arg, basis_arg), dummy_element({storage_params})
 {
   if (n_elem_arg != 0)
   {
@@ -33,6 +33,11 @@ Deformed_grid::Deformed_grid(int n_var_arg, int n_dim_arg, int n_elem_arg,
 Vertex& Deformed_grid::get_vertex(int i_vertex)
 {
   return vertices[vertex_ids[i_vertex]];
+}
+
+Element& Deformed_grid::element(int i_elem)
+{
+  return dummy_element;
 }
 
 void Deformed_grid::add_vertices(std::vector<int> position, int i_dim)
