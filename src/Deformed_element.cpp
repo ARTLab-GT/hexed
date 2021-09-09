@@ -3,16 +3,18 @@
 namespace cartdg
 {
 
-Deformed_element::Deformed_element(Storage_params params) : Element{params} {}
+Deformed_element::Deformed_element(Storage_params params)
+: Element{params}, n_dim{params.n_dim}, n_qpoint{params.n_qpoint()}, jac{n_dim*n_dim*n_qpoint}
+{}
 
 double* Deformed_element::jacobian()
 {
-  return nullptr;
+  return jac.data();
 }
 
 double Deformed_element::jacobian(int i_dim, int j_dim, int i_qpoint)
 {
-  return 0.;
+  return jac[(n_dim*i_dim + j_dim)*n_qpoint + i_qpoint];
 }
 
 }
