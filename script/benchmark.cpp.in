@@ -83,6 +83,7 @@ std::vector<int> i_dim_vec;
 std::vector<int> is_positive_face_vec;
 std::vector<int> n_con_vec (dim);
 cartdg::elem_con_vec connections (dim);
+cartdg::def_elem_con_vec def_connections (dim);
 for (int i_dim = 0; i_dim < dim; ++i_dim)
 {
   n_con_vec[i_dim] = n_elem;
@@ -91,11 +92,15 @@ for (int i_dim = 0; i_dim < dim; ++i_dim)
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wunused-variable"
     connections[i_dim].push_back({});
+    def_connections.push_back({});
     for (int i_side: {0, 1})
     {
       int i_elem = rand()%n_elem;
       int elem = (i_elem)*n_qpoint*n_var;
       connections[i_dim].back()[i_side] = elements[i_elem].get();
+      def_connections.back().element[i_side] = def_elements[i_elem].get();
+      def_connections.back().i_dim[i_side] = rand()%dim;
+      def_connections.back().is_positive[i_side] = bool(rand()%2);
       con_r_vec2[i_dim].push_back(read + elem);
       con_w_vec2[i_dim].push_back(write + elem);
       def_con_j_vec.push_back(jacobian + elem);

@@ -20,8 +20,9 @@ class Deformed_element : public Element
 class Deformed_elem_con
 {
   public:
-  std::array<Deformed_element*, 2> elems;
-  std::array<int, 2> i_dims;
+  std::array<Deformed_element*, 2> element;
+  std::array<int, 2> i_dim;
+  std::array<bool, 2> is_positive;
 };
 
 typedef std::vector<std::unique_ptr<Deformed_element>> def_elem_vec;
