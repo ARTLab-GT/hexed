@@ -2,9 +2,11 @@
 
 #include <Grid.hpp>
 #include <math.hpp>
-#include <get_mcs_cpg_euler.hpp>
+#include <get_mcs_convective.hpp>
 #include <get_local_cpg_euler.hpp>
+#include <get_local_convective.hpp>
 #include <get_neighbor_cpg_euler.hpp>
+#include <get_neighbor_convective.hpp>
 #include <get_gbc_cpg_euler.hpp>
 #include <get_req_visc_cpg_euler.hpp>
 #include <get_cont_visc_cpg_euler.hpp>
@@ -259,7 +261,8 @@ double Grid::jacobian_det(int i_elem, int i_qpoint)
 double Grid::stable_time_step(double cfl_by_stable_cfl, Kernel_settings& settings)
 {
   double cfl = cfl_by_stable_cfl*get_stable_cfl();
-  return cfl*mesh_size/get_mcs_cpg_euler(n_dim, basis.row_size)(state_r(), n_elem, settings);
+  settings.i_read = i_read;
+  return cfl*mesh_size/get_mcs_convective(n_dim, basis.row_size)(elements, settings);
 }
 
 bool Grid::execute_runge_kutta_stage()
@@ -267,12 +270,27 @@ bool Grid::execute_runge_kutta_stage()
   double* read0 = state_storage[0].data();
   double* read1 = state_w();
   double* write = (i_rk_stage == 2) ? read0 : read1;
+  const int r0 = 0;
+  const int r1 = i_write;
+  const int w = (i_rk_stage == 2) ? r0 : r1;
   double weight1 = rk_weights[i_rk_stage]; double weight0 = 1. - weight1;
   #pragma omp parallel for
   for (int i = 0; i < n_elem*n_dof; ++i)
   {
     write[i] = weight1*read1[i] + weight0*read0[i];
   }
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+  {
+    double* stage_r0 = elements[i_elem]->stage(r0);
+    double* stage_r1 = elements[i_elem]->stage(r1);
+    double* stage_w  = elements[i_elem]->stage(w );
+    for (int i_dof = 0; i_dof < storage_params.n_dof(); ++i_dof)
+    {
+      stage_w[i_dof] = weight1*stage_r1[i_dof] + weight0*stage_r0[i_dof];
+    }
+  }
+      
   ++i_rk_stage; ++i_write;
   if (i_write == 3) i_write = 1;
   if (i_rk_stage == 3) { i_rk_stage = 0; i_write = 1; ++iter; }
@@ -294,12 +312,18 @@ double Grid::get_stable_cfl()
 
 void Grid::execute_local(Kernel_settings& settings)
 {
+  settings.i_read = i_read;
+  settings.i_write = i_write;
   get_local_cpg_euler(n_dim, basis.row_size)(state_r(), state_w(), n_elem, basis, settings);
+  get_local_convective(n_dim, basis.row_size)(elements, basis, settings);
 }
 
 void Grid::execute_neighbor(Kernel_settings& settings)
 {
+  settings.i_read = i_read;
+  settings.i_write = i_write;
   get_neighbor_cpg_euler(n_dim, basis.row_size)(neighbor_connections_r().data(), neighbor_connections_w().data(), n_neighb_con().data(), basis, settings);
+  get_neighbor_convective(n_dim, basis.row_size)(elem_cons, basis, settings);
   get_gbc_cpg_euler(n_dim, basis.row_size)(ghost_bound_conds, state_r(), state_w(), basis, settings);
 }
 
