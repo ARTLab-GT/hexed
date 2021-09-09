@@ -5,6 +5,7 @@ target_sources(test PRIVATE
 main.cpp
 test_Basis.cpp
 test_conservation.cpp
+test_Deformed_element.cpp
 test_Deformed_grid.cpp
 test_Element.cpp
 test_func.cpp

@@ -1,6 +1,7 @@
 target_sources(cartdg PRIVATE
 # please maintain alphabetical order
 Basis.cpp
+Deformed_element.cpp
 Deformed_grid.cpp
 Domain_func.cpp
 Element.cpp
