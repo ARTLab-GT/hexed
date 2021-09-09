@@ -37,7 +37,7 @@ TEST_CASE("Conservation of state variables")
   {
     cartdg::Solution sol (3, 1, row_size, length);
     sol.add_block_grid(2);
-    cartdg::Grid& grid = sol.get_grid(0);
+    cartdg::Grid& grid = *sol.all_grids()[0];
     std::vector<int> periods {4};
     grid.auto_connect(periods);
 
@@ -80,7 +80,7 @@ TEST_CASE("Conservation of state variables")
   {
     cartdg::Solution sol (4, 2, row_size, length);
     sol.add_block_grid(2);
-    cartdg::Grid& grid = sol.get_grid(0);
+    cartdg::Grid& grid = *sol.all_grids()[0];
     std::vector<int> periods {4, 4};
     grid.auto_connect(periods);
 
@@ -122,7 +122,7 @@ TEST_CASE("Conservation of state variables")
     const int row_size = CARTDG_MAX_BASIS_ROW_SIZE;
     cartdg::Solution sol (4, 2, row_size, 1.);
     sol.add_empty_grid(1);
-    cartdg::Grid& grid = sol.grids[0];
+    cartdg::Regular_grid& grid = sol.reg_grids[0];
     sol.add_deformed_grid(1);
     cartdg::Deformed_grid& def_grid = sol.def_grids[0];
     for (int i : {-1, 0})
@@ -192,7 +192,7 @@ TEST_CASE("Conservation of state variables")
   {
     cartdg::Solution sol (5, 3, row_size, length);
     sol.add_block_grid(2);
-    cartdg::Grid& grid = sol.get_grid(0);
+    cartdg::Grid& grid = *sol.all_grids()[0];
     std::vector<int> periods {4, 4, 4};
     grid.auto_connect(periods);
 

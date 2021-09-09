@@ -41,7 +41,6 @@ class Grid
 
   Grid(int n_var_arg, int n_dim_arg, int n_elem_arg, double mesh_size_arg, Basis& basis_arg);
   Grid(Grid&&) = default;
-  virtual ~Grid();
 
   // functions for accessing data
   Element& element(int i_elem);
@@ -91,11 +90,11 @@ class Grid
   double rk_weights [3] {1., 1./4., 2./3.};
   double stable_cfl [9] {1.256, 0.409, 0.209, 0.130, 0.089, 0.066, 0.051, 0.040, 0.033};
   Storage_params storage_params;
-  elem_vec elements;
-  elem_con_vec elem_cons;
 
   private:
   void populate_slice(std::vector<double>&, std::vector<int>, int);
+  elem_vec elements;
+  elem_con_vec elem_cons;
 };
 
 }

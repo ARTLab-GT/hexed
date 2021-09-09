@@ -12,7 +12,7 @@ int main()
   // Solution setup
   cartdg::Solution solution (4, 2, row_size, 1.);
   solution.add_block_grid(ref_level);
-  cartdg::Grid& grid = solution.get_grid(0);
+  cartdg::Grid& grid = *solution.all_grids()[0];
   int n_div = 1; for (int i = 0; i < ref_level; ++i) n_div *= 2;
   std::vector<int> periods {n_div, n_div};
   grid.auto_connect(periods);

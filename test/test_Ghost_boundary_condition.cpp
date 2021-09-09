@@ -36,7 +36,7 @@ TEST_CASE("Ghost boundary conditions")
   cartdg::Basis& basis = soln.basis;
   soln.kernel_settings.d_t_by_d_pos = 0.1;
   soln.add_block_grid(1, std::vector<int>{0, 0, 0}, std::vector<int>{3, 3, 3});
-  cartdg::Grid& grid = soln.get_grid(0);
+  cartdg::Regular_grid& grid = soln.reg_grids[0];
   for (int i = 0; i < 3; ++i)
   {
     for (int j = 0; j < 3; ++j)
