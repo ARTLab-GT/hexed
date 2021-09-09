@@ -39,6 +39,7 @@ storage_params{3, n_var, n_dim, basis.row_size}, elements{}
     neighbor_storage.emplace_back();
     deriv_neighbor_storage.emplace_back();
     visc_neighbor_storage.emplace_back();
+    elem_cons.push_back({});
   }
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
@@ -59,7 +60,7 @@ Element& Grid::element(int i_elem)
 
 elem_con Grid::connection(int i_dim, int i_con)
 {
-  return elem_con {nullptr, nullptr};
+  return elem_cons[i_dim][i_con];
 }
 
 double* Grid::state_r()
@@ -204,6 +205,7 @@ void Grid::add_connection(int i_elem0, int i_elem1, int i_dim)
     deriv_neighbor_storage[i_dim].push_back(derivs.data() + n_qpoint*i_elem);
     visc_neighbor_storage[i_dim].push_back(visc.data() + n_vertices*i_elem);
   }
+  elem_cons[i_dim].push_back({elements[i_elem0].get(), elements[i_elem1].get()});
 }
 
 void Grid::populate_slice(std::vector<double>& elem_pos, std::vector<int> indices, int i_elem)

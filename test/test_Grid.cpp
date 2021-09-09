@@ -211,8 +211,8 @@ TEST_CASE("Grid")
     }
     {
       auto con = grid2.connection(1, 0);
-      REQUIRE(con[0] == &grid2.element(1));
-      REQUIRE(con[1] == &grid2.element(2));
+      REQUIRE(con[0] == &grid2.element(2));
+      REQUIRE(con[1] == &grid2.element(1));
     }
     REQUIRE(grid2.deriv_neighbor_connections()[0][0] == grid2.derivs.data() + 2*grid2.n_qpoint);
     REQUIRE(grid2.deriv_neighbor_connections()[0][1] == grid2.derivs.data() + 3*grid2.n_qpoint);
