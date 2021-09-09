@@ -7,7 +7,7 @@
 
 #include <Gauss_lobatto.hpp>
 #include <Kernel_settings.hpp>
-#include <Element.hpp>
+#include <Deformed_element.hpp>
 
 int main(int argc, char** argv)
 {
@@ -31,14 +31,26 @@ std::vector<double> read_vec (n_total);
 std::vector<double> write_vec (n_total, 0.);
 std::vector<double> visc_vec (n_elem*n_visc, 0.);
 cartdg::elem_vec elements;
+cartdg::def_elem_vec def_elements;
 for (int i_elem = 0; i_elem < n_elem; ++i_elem)
 {
   elements.emplace_back(new cartdg::Element {storage_params});
+  def_elements.emplace_back(new cartdg::Deformed_element {storage_params});
   for (int i_dof = 0; i_dof < n_var*n_qpoint; ++i_dof)
   {
     double state = (rand()%1000)/1000. + 10.; // "+ 10." avoids NaN due to nonpositive density
     if (i_dof/n_qpoint == n_var - 1) state += 100; // Avoid NaN due to negative pressure
     elements.back()->stage(0)[i_dof] = state;
+    def_elements.back()->stage(0)[i_dof] = state;
+  }
+  for (int i_jac = 0; i_jac < dim*dim*n_qpoint; ++i_jac)
+  {
+    // generate numbers between 0.9 and 1.099 on the diagonal
+    // and between -0.1 and 0.099 elsewhere
+    double* jac = def_elements.back()->jacobian();
+    *jac = ((rand()%200) - 100)/1000.;
+    int i_entry = i_jac/n_qpoint;
+    if ((i_entry/dim) == (i_entry%dim)) *jac += 1.;
   }
 }
 #pragma omp parallel for

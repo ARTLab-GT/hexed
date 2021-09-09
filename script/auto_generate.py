@@ -24,7 +24,7 @@ script/auto_generate.py and rerun CMake.
 
     if namespace:
         text = f"""
-#include <Element.hpp>
+#include <Deformed_element.hpp>
 
 namespace cartdg
 {{
