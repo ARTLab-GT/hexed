@@ -4,6 +4,7 @@
 #include <get_local_cpg_euler.hpp>
 #include <get_local_convective.hpp>
 #include <get_local_deformed_cpg_euler.hpp>
+#include <get_local_deformed_convective.hpp>
 #include <get_req_visc_cpg_euler.hpp>
 #include <get_av_flux.hpp>
 #include <local/derivative.hpp>
@@ -418,6 +419,69 @@ TEST_CASE("CPG Euler deformed elements")
           REQUIRE((write[i_elem][2][i_qpoint] - read[i_elem][2][i_qpoint])
                    == Approx(-0.1*veloc_dot_grad_mass));
           REQUIRE((write[i_elem][3][i_qpoint] - read[i_elem][3][i_qpoint])
+                   == Approx(-0.1*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20) + 0.5*(10*10 + 20*20)*veloc_dot_grad_mass)));
+        }
+      }
+    }
+  }
+
+  SECTION("Local convective for deformed elements")
+  {
+    const int n_elem = 5;
+    const int row_size = 6;
+    cartdg::Gauss_lobatto basis (row_size);
+    cartdg::Storage_params params {3, 4, 2, row_size};
+    int n_qpoint = params.n_qpoint();
+    cartdg::def_elem_vec elements;
+    for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+    {
+      elements.emplace_back(new cartdg::Deformed_element {params});
+      double* stage    = elements.back()->stage(0);
+      double* jacobian = elements.back()->jacobian();
+      for (int i = 0; i < row_size; ++i)
+      {
+        for (int j = 0; j < row_size; ++j)
+        {
+          int i_qpoint = i*row_size + j;
+          double pos0 = basis.node(i)*(1. - 0.5*basis.node(j));
+          double pos1 = basis.node(j)*(1. - 0.3*basis.node(i));
+          double mass = 1 + 0.1*std::pow(pos0, 5) - 0.3*std::pow(pos0, 2)*std::pow(pos1, 3) + 0.2*pos1;
+          double veloc0 = 10; double veloc1 = -20;
+          double pres = 1e5*(1. - 0.3*pos0 + 0.5*pos1);
+          double ener = pres/0.4 + 0.5*mass*(veloc0*veloc0 + veloc1*veloc1);
+
+          stage[0*n_qpoint + i_qpoint] = mass*veloc0;
+          stage[1*n_qpoint + i_qpoint] = mass*veloc1;
+          stage[2*n_qpoint + i_qpoint] = mass;
+          stage[3*n_qpoint + i_qpoint] = ener;
+
+          jacobian[(0*2 + 0)*n_qpoint + i_qpoint] = 1. - 0.5*basis.node(j);
+          jacobian[(0*2 + 1)*n_qpoint + i_qpoint] = -0.5*basis.node(i);
+          jacobian[(1*2 + 0)*n_qpoint + i_qpoint] = -0.3*basis.node(j);
+          jacobian[(1*2 + 1)*n_qpoint + i_qpoint] = 1. - 0.3*basis.node(i);
+        }
+      }
+    }
+
+    cartdg::get_local_deformed_convective(2, row_size)(elements, basis, settings);
+
+    for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+    {
+      double* stage_r  = elements[i_elem]->stage(0);
+      double* stage_w  = elements[i_elem]->stage(1);
+      for (int i = 0; i < row_size; ++i)
+      {
+        for (int j = 0; j < row_size; ++j)
+        {
+          int i_qpoint = i*row_size + j;
+          double pos0 = basis.node(i)*(1. - 0.5*basis.node(j));
+          double pos1 = basis.node(j)*(1. - 0.3*basis.node(i));
+          double veloc_dot_grad_mass = (0.1*5*std::pow(pos0, 4)
+                                        - 0.3*2*std::pow(pos0, 1)*std::pow(pos1, 3))*10
+                                        + (-0.3*std::pow(pos0, 2)*3*std::pow(pos1, 2) + 0.2)*-20;
+          REQUIRE((stage_w[2*n_qpoint + i_qpoint] - stage_r[2*n_qpoint + i_qpoint])
+                   == Approx(-0.1*veloc_dot_grad_mass));
+          REQUIRE((stage_w[3*n_qpoint + i_qpoint] - stage_r[3*n_qpoint + i_qpoint])
                    == Approx(-0.1*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20) + 0.5*(10*10 + 20*20)*veloc_dot_grad_mass)));
         }
       }

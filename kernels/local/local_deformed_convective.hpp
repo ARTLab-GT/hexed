@@ -34,7 +34,7 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
     {
       // Compute flux in physical space
       double pres = 0;
-      #define READ(i_var) read[i_var*n_qpoint + i_qpoint]
+      #define READ(i_var) read[(i_var)*n_qpoint + i_qpoint]
       for (int i_dim = 0; i_dim < n_var - 2; ++i_dim)
       {
         pres += READ(i_dim)*READ(i_dim)/READ(n_var - 2);
