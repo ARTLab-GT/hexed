@@ -197,8 +197,23 @@ TEST_CASE("Grid")
     REQUIRE(n_neighb_con[1] == 1);
     REQUIRE(grid2.neighbor_connections_r()[0][0] == grid2.state_r() + 2*grid2.n_dof);
     REQUIRE(grid2.neighbor_connections_r()[0][1] == grid2.state_r() + 3*grid2.n_dof);
+    {
+      auto con = grid2.connection(0, 0);
+      REQUIRE(con[0] == &grid2.element(2));
+      REQUIRE(con[1] == &grid2.element(3));
+    }
     REQUIRE(grid2.neighbor_connections_r()[0][2] == grid2.state_r() + 5*grid2.n_dof);
     REQUIRE(grid2.neighbor_connections_r()[0][3] == grid2.state_r() + 2*grid2.n_dof);
+    {
+      auto con = grid2.connection(0, 1);
+      REQUIRE(con[0] == &grid2.element(5));
+      REQUIRE(con[1] == &grid2.element(2));
+    }
+    {
+      auto con = grid2.connection(1, 0);
+      REQUIRE(con[0] == &grid2.element(1));
+      REQUIRE(con[1] == &grid2.element(2));
+    }
     REQUIRE(grid2.deriv_neighbor_connections()[0][0] == grid2.derivs.data() + 2*grid2.n_qpoint);
     REQUIRE(grid2.deriv_neighbor_connections()[0][1] == grid2.derivs.data() + 3*grid2.n_qpoint);
     REQUIRE(grid2.deriv_neighbor_connections()[0][2] == grid2.derivs.data() + 5*grid2.n_qpoint);

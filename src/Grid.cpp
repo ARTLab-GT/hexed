@@ -57,6 +57,11 @@ Element& Grid::element(int i_elem)
   return *elements[i_elem];
 }
 
+elem_con Grid::connection(int i_dim, int i_con)
+{
+  return elem_con {nullptr, nullptr};
+}
+
 double* Grid::state_r()
 {
   return state_storage[i_read].data();
