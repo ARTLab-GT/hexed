@@ -9,12 +9,12 @@ test_Deformed_grid.cpp
 test_Element.cpp
 test_func.cpp
 test_Ghost_boundary_condition.cpp
-test_Grid.cpp
 test_local.cpp
 test_neighbor.cpp
 test_nonpen.cpp
 test_math.cpp
 test_observing.cpp
+test_Regular_grid.cpp
 test_sinusoid.cpp
 test_Solution.cpp
 test_Storage_params.cpp

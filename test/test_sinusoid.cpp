@@ -87,7 +87,7 @@ TEST_CASE("Sinusoidal density wave")
   {
     cartdg::Solution sol (3, 1, row_size, length);
     sol.add_block_grid(2);
-    cartdg::Grid& grid = *sol.all_grids()[0];
+    cartdg::Regular_grid& grid = sol.reg_grids[0];
     std::vector<int> periods {4};
     grid.auto_connect(periods);
 
@@ -176,7 +176,7 @@ TEST_CASE("Sinusoidal density wave")
   {
     cartdg::Solution sol (4, 2, row_size, length);
     sol.add_block_grid(3);
-    cartdg::Grid& grid = *sol.all_grids()[0];
+    cartdg::Regular_grid& grid = sol.reg_grids[0];
     std::vector<int> periods {8, 8};
     grid.auto_connect(periods);
 
@@ -283,7 +283,7 @@ TEST_CASE("Sinusoidal density wave")
   {
     cartdg::Solution sol (5, 3, row_size, length);
     sol.add_block_grid(3);
-    cartdg::Grid& grid = *sol.all_grids()[0];
+    cartdg::Regular_grid& grid = sol.reg_grids[0];
     std::vector<int> periods {8, 8, 8};
     grid.auto_connect(periods);
 

@@ -2,7 +2,7 @@
 #include <iostream>
 
 #include <cartdgConfig.hpp>
-#include <Grid.hpp>
+#include <Regular_grid.hpp>
 #include <Equidistant.hpp>
 #include <Gauss_lobatto.hpp>
 
@@ -16,12 +16,12 @@ class Arbitrary_integrand : public cartdg::Domain_func
   }
 };
 
-TEST_CASE("Grid")
+TEST_CASE("Regular_grid")
 {
   cartdg::Equidistant basis (CARTDG_MAX_BASIS_ROW_SIZE);
-  cartdg::Grid grid1 (4, 1, 5, 0.1, basis);
-  cartdg::Grid grid2 (4, 2, 6, 0.1, basis);
-  cartdg::Grid grid3 (4, 3, 27, 0.1, basis);
+  cartdg::Regular_grid grid1 (4, 1, 5, 0.1, basis);
+  cartdg::Regular_grid grid2 (4, 2, 6, 0.1, basis);
+  cartdg::Regular_grid grid3 (4, 3, 27, 0.1, basis);
   SECTION("Construction")
   {
     REQUIRE(grid2.basis.node(1) == 1./7.);
@@ -152,10 +152,10 @@ TEST_CASE("Grid")
   SECTION("State integration")
   {
     cartdg::Gauss_lobatto basis (5);
-    cartdg::Grid grid1 (2, 1, 5, 0.1, basis);
-    cartdg::Grid grid2 (2, 2, 5, 0.1, basis);
-    cartdg::Grid grid3 (2, 3, 5, 0.1, basis);
-    for (cartdg::Grid* grid : {&grid1, &grid2, &grid3})
+    cartdg::Regular_grid grid1 (2, 1, 5, 0.1, basis);
+    cartdg::Regular_grid grid2 (2, 2, 5, 0.1, basis);
+    cartdg::Regular_grid grid3 (2, 3, 5, 0.1, basis);
+    for (cartdg::Regular_grid* grid : {&grid1, &grid2, &grid3})
     {
       for (int i_elem = 0; i_elem < grid->n_elem; ++i_elem)
       {
@@ -173,7 +173,7 @@ TEST_CASE("Grid")
     REQUIRE(grid3.integral()[0] == Approx(0.005).margin(1e-12));
     REQUIRE(grid3.integral()[1] == Approx(0.005).margin(1e-12));
 
-    cartdg::Grid square (1, 2, 2, 1., basis);
+    cartdg::Regular_grid square (1, 2, 2, 1., basis);
     for (int i_elem = 0; i_elem < square.n_elem; ++i_elem)
     {
       double* stage = square.element(i_elem).stage(0);
@@ -273,7 +273,7 @@ TEST_CASE("Grid")
   SECTION("Add element")
   {
     cartdg::Equidistant basis (8);
-    cartdg::Grid grid (4, 1, 0, 0.1, basis);
+    cartdg::Regular_grid grid (4, 1, 0, 0.1, basis);
     std::vector<int> position {1};
     REQUIRE(grid.state_storage[0].size() == 0);
     REQUIRE(grid.derivs.size() == 0);
