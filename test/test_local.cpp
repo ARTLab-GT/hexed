@@ -82,11 +82,11 @@ TEST_CASE("CPG Euler matrix form")
     {
       for (int i_qpoint = 0; i_qpoint < row_size*row_size*row_size; ++i_qpoint)
       {
-          read[i_elem][0][i_qpoint] = mass*veloc0;
-          read[i_elem][1][i_qpoint] = mass*veloc1;
-          read[i_elem][2][i_qpoint] = mass*veloc2;
-          read[i_elem][3][i_qpoint] = mass;
-          read[i_elem][4][i_qpoint] = ener;
+        read[i_elem][0][i_qpoint] = mass*veloc0;
+        read[i_elem][1][i_qpoint] = mass*veloc1;
+        read[i_elem][2][i_qpoint] = mass*veloc2;
+        read[i_elem][3][i_qpoint] = mass;
+        read[i_elem][4][i_qpoint] = ener;
       }
     }
     cartdg::get_local_cpg_euler(3, 3)(&read[0][0][0], &write[0][0][0], n_elem, basis, settings);
