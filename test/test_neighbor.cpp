@@ -602,11 +602,14 @@ TEST_CASE("neighbor_def_reg_convective")
 {
   cartdg::Storage_params params {3, 4, 2, CARTDG_MAX_BASIS_ROW_SIZE};
   int n_qpoint = params.n_qpoint();
+  int row_size = params.row_size;
   cartdg::Gauss_lobatto basis {params.row_size};
+  double weight0 = basis.node_weights()(0);
   cartdg::Kernel_settings settings;
   settings.d_t_by_d_pos = 0.1;
   cartdg::Deformed_element def {params};
   cartdg::Element          reg {params};
+
   double mass = 1.;
   double veloc0 = 20;
   double veloc1 = 10;
@@ -617,9 +620,10 @@ TEST_CASE("neighbor_def_reg_convective")
   double* reg_w = reg.stage(1);
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
   {
-    def_r[0*n_qpoint + i_qpoint] = mass*veloc0;
+    def_r[0*n_qpoint + i_qpoint] =  mass*veloc0;
     reg_r[0*n_qpoint + i_qpoint] = -mass*veloc0;
-    def_r[1*n_qpoint + i_qpoint] = reg_r[1*n_qpoint + i_qpoint] = mass*veloc1;
+    def_r[1*n_qpoint + i_qpoint] =  mass*veloc1;
+    reg_r[1*n_qpoint + i_qpoint] = -mass*veloc1;
     def_r[2*n_qpoint + i_qpoint] = reg_r[2*n_qpoint + i_qpoint] = mass;
     def_r[3*n_qpoint + i_qpoint] = reg_r[3*n_qpoint + i_qpoint] = pres/0.4 + 0.5*mass*(veloc0*veloc0 + veloc1*veloc1);
   }
@@ -635,17 +639,40 @@ TEST_CASE("neighbor_def_reg_convective")
     jac[2*n_qpoint + i_qpoint] = 0.1;
     jac[3*n_qpoint + i_qpoint] = 1.;
   }
+
   cartdg::def_reg_con_vec cons {{{&def, &reg}}, {}, {}};
   cartdg::get_neighbor_def_reg_convective(2, params.row_size)(cons, basis, settings);
-  reg_r += 2*n_qpoint;
-  reg_w += 2*n_qpoint;
-  def_r += 3*n_qpoint - params.row_size;
   def_w += 3*n_qpoint - params.row_size;
-  double weight0 = basis.node_weights()(0);
-  for (int i_row = 0; i_row < params.row_size; ++i_row)
+  reg_w += 2*n_qpoint;
+  for (int i_row = 0; i_row < row_size; ++i_row)
   {
-    CHECK(def_w[i_row]/0.1 == 20./weight0/2.);
-    CHECK(reg_w[i_row]/0.1 == 20./weight0);
+    REQUIRE(def_w[i_row]/0.1 == Approx(20./weight0/2.));
+    REQUIRE(reg_w[i_row]/0.1 == Approx(20./weight0));
+  }
+
+  def_w = def.stage(1);
+  reg_w = reg.stage(1);
+  for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof)
+  {
+    def_w[i_dof] = reg_w[i_dof] = 0.;
+  }
+  for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
+  {
+    jac[0*n_qpoint + i_qpoint] = 1.;
+    jac[1*n_qpoint + i_qpoint] = -0.3;
+    jac[2*n_qpoint + i_qpoint] = 0.;
+    jac[3*n_qpoint + i_qpoint] = 3.;
+  }
+  cons[1].push_back(cons[0][0]);
+  cons[0].clear();
+
+  cartdg::get_neighbor_def_reg_convective(2, params.row_size)(cons, basis, settings);
+  def_w += 2*n_qpoint;
+  reg_w += 2*n_qpoint;
+  for (int i_row = 0; i_row < row_size; ++i_row)
+  {
+    REQUIRE(def_w[i_row*row_size + row_size - 1]/0.1 == Approx(10./weight0/3.));
+    REQUIRE(reg_w[i_row*row_size               ]/0.1 == Approx(10./weight0));
   }
 }
 

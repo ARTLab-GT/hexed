@@ -27,7 +27,7 @@ void neighbor_def_reg_convective(def_reg_con_vec& def_reg_cons, Basis& basis, Ke
   const int face_size = n_face_qpoint*n_var;
   for (unsigned stride = n_face_qpoint, i_dim = 0; stride > 0; stride /= row_size, ++i_dim)
   {
-    const int i_jac = i_dim*(n_dim + 1)*n_face_qpoint;
+    const int i_jac = i_dim*(n_dim + 1)*n_qpoint;
     #pragma omp parallel for
     for (unsigned i_con = 0; i_con < def_reg_cons[i_dim].size(); ++i_con)
     {
