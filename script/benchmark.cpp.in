@@ -83,7 +83,7 @@ std::vector<int> i_dim_vec;
 std::vector<int> is_positive_face_vec;
 std::vector<int> n_con_vec (dim);
 cartdg::elem_con_vec connections (dim);
-cartdg::def_elem_con_vec def_connections (dim);
+cartdg::def_elem_con_vec def_connections;
 for (int i_dim = 0; i_dim < dim; ++i_dim)
 {
   n_con_vec[i_dim] = n_elem;
