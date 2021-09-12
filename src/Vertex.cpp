@@ -6,6 +6,10 @@
 namespace cartdg
 {
 
+Vertex::Vertex (std::array<double, 3> pos)
+: pos {pos}
+{}
+
 Vertex::Vertex (int id_arg) : id(id_arg) {}
 
 Vertex::~Vertex() {}
@@ -73,6 +77,20 @@ void Vertex::apply_relax()
   {
     relax[i_dim] = 0;
   }
+}
+
+Vertex::Transferrable_ptr::Transferrable_ptr(std::array<double, 3> pos)
+: ptr {new Vertex {pos}}
+{
+}
+
+Vertex::Transferrable_ptr::~Transferrable_ptr()
+{
+}
+
+Vertex* Vertex::Transferrable_ptr::operator->()
+{
+  return ptr.operator->();
 }
 
 }

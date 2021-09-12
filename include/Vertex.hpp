@@ -3,6 +3,7 @@
 
 #include <array>
 #include <vector>
+#include <memory>
 
 namespace cartdg
 {
@@ -12,10 +13,13 @@ class Deformed_grid;
 class Vertex
 {
   int m = 1;
+  Vertex(std::array<double, 3> pos);
 
   public:
   class Non_transferrable_ptr;
   class Transferrable_ptr;
+  std::array<double, 3> pos {0, 0, 0};
+
   Vertex(int id_arg);
   ~Vertex();
   // FIXME: handle copy/move
@@ -26,7 +30,6 @@ class Vertex
   void apply_relax();
 
   // should not be public
-  std::array<double, 3> pos {0, 0, 0};
   std::array<double, 3> relax {0, 0, 0};
   std::vector<int> id_refs;
   std::vector<int> neighbor_ids;
@@ -51,8 +54,10 @@ class Vertex::Non_transferrable_ptr
 
 class Vertex::Transferrable_ptr
 {
+  std::shared_ptr<Vertex> ptr;
+
   public:
-  Transferrable_ptr();
+  Transferrable_ptr(std::array<double, 3> pos);
   Transferrable_ptr(const Transferrable_ptr& other);
   Transferrable_ptr(Transferrable_ptr&& other);
   ~Transferrable_ptr();

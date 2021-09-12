@@ -5,6 +5,16 @@
 
 TEST_CASE("Vertex")
 {
+  cartdg::Vertex::Transferrable_ptr ptr {{1.1, -3.7, 0.05}};
+  REQUIRE(ptr->mass() == 1);
+  REQUIRE(ptr->pos[0] == 1.1);
+  REQUIRE(ptr->pos[1] == -3.7);
+  REQUIRE(ptr->pos[2] == 0.05);
+  REQUIRE(ptr->is_mobile == false);
+}
+
+TEST_CASE("Vertex (old interface)")
+{
   cartdg::Gauss_lobatto basis (2);
   cartdg::Deformed_grid grid (1, 3, 0, 1., basis);
   grid.add_element({0, 0, 0});
