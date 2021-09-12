@@ -58,6 +58,9 @@ class Deformed_grid : public Grid
   double** state_connections_w();
 
   private:
+  def_elem_vec elements;
+  def_elem_con_vec elem_cons;
+  def_reg_con_vec def_reg_cons;
   void add_vertices(std::vector<int> position, int i_dim);
   Element dummy_element; // FIXME: delete this after fixing element(int)
 };
