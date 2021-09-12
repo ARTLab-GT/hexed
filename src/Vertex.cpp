@@ -8,6 +8,8 @@ namespace cartdg
 
 Vertex::Vertex (int id_arg) : id(id_arg) {}
 
+Vertex::~Vertex() {}
+
 void Vertex::eat(Vertex& other)
 {
   if (parent_grid != other.parent_grid)
@@ -18,10 +20,10 @@ void Vertex::eat(Vertex& other)
   {
     for (int i_dim = 0; i_dim < 3; ++i_dim)
     {
-      pos[i_dim] = (mass*pos[i_dim] + other.mass*other.pos[i_dim])/(mass + other.mass);
+      pos[i_dim] = (m*pos[i_dim] + other.m*other.pos[i_dim])/(m + other.m);
     }
-    mass += other.mass;
-    other.mass = 0;
+    m += other.m;
+    other.m = 0;
     while (!other.neighbor_ids.empty())
     {
       neighbor_ids.push_back(other.neighbor_ids.back());
@@ -36,6 +38,11 @@ void Vertex::eat(Vertex& other)
     }
     mobile = mobile || other.mobile;
   }
+}
+
+int Vertex::mass()
+{
+  return m;
 }
 
 void Vertex::calc_relax()

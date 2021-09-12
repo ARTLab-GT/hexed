@@ -1,7 +1,8 @@
 #ifndef DEFORMED_ELEMENT_HPP_
 #define DEFORMED_ELEMENT_HPP_
 
-#include <Element.hpp>
+#include "Element.hpp"
+#include "Vertex.hpp"
 
 namespace cartdg
 {

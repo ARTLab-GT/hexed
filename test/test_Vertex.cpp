@@ -23,16 +23,19 @@ TEST_CASE("Vertex")
     REQUIRE(vert8.pos == std::array<double, 3>({2., 2., 2.}));
     REQUIRE(std::count(vert8.neighbor_ids.begin(), vert8.neighbor_ids.end(), 0) == 0);
     REQUIRE(std::count(vert8.neighbor_ids.begin(), vert8.neighbor_ids.end(), 10) == 1);
-    REQUIRE(vert8.mass == 1);
-    vert8.mass = 2; // mess just to verify that non-unit masses get added correctly
+    REQUIRE(vert8.mass() == 1);
     REQUIRE(grid.vertex_ids[1] == 1);
     REQUIRE(grid.vertex_ids[8] == 8);
     REQUIRE(vert1.mobile == false);
 
     // verification
+    cartdg::Vertex another8(1000);
+    another8.pos = vert8.pos;
+    another8.parent_grid = vert8.parent_grid;
+    vert8.eat(another8); // want to make sure following works when vert8.mass() != 1
     vert1.eat(vert8);
-    REQUIRE(vert1.mass == 3);
-    REQUIRE(vert8.mass == 0);
+    REQUIRE(vert1.mass() == 3);
+    REQUIRE(vert8.mass() == 0);
     REQUIRE(std::count(vert1.neighbor_ids.begin(), vert1.neighbor_ids.end(), 0) == 1);
     REQUIRE(std::count(vert1.neighbor_ids.begin(), vert1.neighbor_ids.end(), 10) == 1);
     REQUIRE(vert8.neighbor_ids.empty());
@@ -46,7 +49,7 @@ TEST_CASE("Vertex")
     REQUIRE(vert1.mobile == true);
 
     vert1.eat(vert1);
-    REQUIRE(vert1.mass == 3);
+    REQUIRE(vert1.mass() == 3);
     REQUIRE(std::count(vert1.neighbor_ids.begin(), vert1.neighbor_ids.end(), 0) == 1);
     REQUIRE(std::count(vert1.neighbor_ids.begin(), vert1.neighbor_ids.end(), 10) == 1);
     REQUIRE(vert1.id_refs == std::vector<int>({1, 8}));

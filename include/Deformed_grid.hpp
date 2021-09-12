@@ -2,7 +2,7 @@
 #define CARTDG_DEFORMED_GRID_HPP_
 
 #include "Grid.hpp"
-#include "Vertex.hpp"
+#include "Deformed_element.hpp"
 
 namespace cartdg
 {
