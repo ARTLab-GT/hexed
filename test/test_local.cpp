@@ -425,7 +425,7 @@ TEST_CASE("CPG Euler deformed elements")
     }
   }
 
-  SECTION("Local convective for deformed elements")
+  SECTION("Local convective for deformed elements (2D non-constant)")
   {
     const int n_elem = 5;
     const int row_size = 6;
