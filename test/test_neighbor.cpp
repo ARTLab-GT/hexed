@@ -644,8 +644,8 @@ TEST_CASE("neighbor_def_reg_convective")
   double weight0 = basis.node_weights()(0);
   for (int i_row = 0; i_row < params.row_size; ++i_row)
   {
-    REQUIRE(def_w[i_row]/0.1 == 20./weight0/2.);
-    REQUIRE(reg_w[i_row]/0.1 == 20./weight0);
+    CHECK(def_w[i_row]/0.1 == 20./weight0/2.);
+    CHECK(reg_w[i_row]/0.1 == 20./weight0);
   }
 }
 
