@@ -35,7 +35,7 @@ TEST_CASE("Deformed grid class")
     REQUIRE(grid2.n_elem == 0);
     grid2.origin[0] = 0.1;
     grid2.add_element(std::vector<int>{-1, 2});
-    grid2.add_element(std::vector<int>{1, 2});
+    grid2.add_element(std::vector<int>{ 1, 2});
     REQUIRE(grid2.n_elem == 2);
     REQUIRE(grid2.vertices.size() == 8);
     REQUIRE(grid2.vertex_ids.size() == 8);
