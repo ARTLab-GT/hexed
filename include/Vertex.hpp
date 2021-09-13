@@ -14,8 +14,8 @@ class Deformed_grid;
 class Vertex
 {
   public:
-  class Non_transferable_ptr;
   class Transferable_ptr;
+  class Non_transferable_ptr;
   std::array<double, 3> pos {0, 0, 0};
   bool mobile = false;
 
@@ -37,21 +37,8 @@ class Vertex
   private:
   int m;
   std::unordered_set<Transferable_ptr*> trbl_ptrs;
+  std::unordered_set<Non_transferable_ptr*> nont_ptrs;
   Vertex(std::array<double, 3> pos);
-};
-
-class Vertex::Non_transferable_ptr
-{
-  public:
-  Non_transferable_ptr(Vertex& target);
-  Non_transferable_ptr(const Non_transferable_ptr& other);
-  Non_transferable_ptr(Non_transferable_ptr&& other);
-  ~Non_transferable_ptr();
-  Non_transferable_ptr& operator=(const Non_transferable_ptr& other);
-  Non_transferable_ptr& operator=(Non_transferable_ptr&& other);
-
-  bool is_assigned();
-  Vertex* operator->();
 };
 
 class Vertex::Transferable_ptr
@@ -66,6 +53,22 @@ class Vertex::Transferable_ptr
 
   Vertex* operator->();
   Vertex& operator*();
+};
+
+class Vertex::Non_transferable_ptr
+{
+  Vertex* ptr;
+
+  public:
+  Non_transferable_ptr(Vertex& target);
+  Non_transferable_ptr(const Non_transferable_ptr& other);
+  ~Non_transferable_ptr();
+  Non_transferable_ptr& operator=(const Non_transferable_ptr& other);
+
+  operator bool();
+  Vertex* operator->();
+  Vertex& operator*();
+  void nullify();
 };
 
 }

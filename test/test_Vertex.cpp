@@ -40,7 +40,7 @@ TEST_CASE("Vertex")
     REQUIRE(ptr0->pos[0] == 1.4);
   }
 
-  SECTION("Transferable copy/move")
+  SECTION("Pointer validity")
   {
     cartdg::Vertex::Transferable_ptr ptr1_1 {ptr1};
     cartdg::Vertex::Transferable_ptr ptr1_2 {{0., 0., 0.}};
@@ -54,11 +54,35 @@ TEST_CASE("Vertex")
     ptr1_5 = std::move(*ptr1_4);
     delete ptr1_4;
 
+    cartdg::Vertex::Non_transferable_ptr ptr0_1 {*ptr0};
+    cartdg::Vertex::Non_transferable_ptr ptr0_2 {*ptr1};
+    cartdg::Vertex::Non_transferable_ptr ptr0_3 {*ptr1};
+    // test that pointers are valid and point to the right Vertex
+    REQUIRE(bool(ptr0_1));
+    REQUIRE(&*ptr0_1 == orig_addr);
+    REQUIRE(ptr0_1->pos[0] == 1.1);
+    REQUIRE(bool(ptr0_2));
+    REQUIRE(bool(ptr0_3));
+
+    // destructor doesn't leave dangling pointer
+    cartdg::Vertex::Non_transferable_ptr* ptr0_4 = new cartdg::Vertex::Non_transferable_ptr {*ptr1};
+    delete ptr0_4;
+
+    // explicitly nullifying works
+    cartdg::Vertex::Non_transferable_ptr ptr0_5 {*ptr0};
+    ptr0_5.nullify();
+    REQUIRE(!ptr0_5);
+
     ptr0->eat(*ptr1);
     REQUIRE(&*ptr1   == orig_addr);
     REQUIRE(&*ptr1_1 == orig_addr);
     REQUIRE(&*ptr1_2 == orig_addr);
     REQUIRE(&*ptr1_5 == orig_addr);
+    REQUIRE(bool(ptr0_1));
+    REQUIRE(&*ptr0_1 == orig_addr);
+    // `Non_transferable_ptr`s to eaten element should be nullified
+    REQUIRE(!ptr0_2);
+    REQUIRE(!ptr0_3);
   }
 }
 

@@ -12,7 +12,14 @@ Vertex::Vertex (std::array<double, 3> pos)
 
 Vertex::Vertex (int id_arg) : id(id_arg), m(1) {}
 
-Vertex::~Vertex() {}
+Vertex::~Vertex()
+{
+  int size = nont_ptrs.size();
+  for (int i_ptr = 0; i_ptr < size; ++i_ptr)
+  {
+    (*nont_ptrs.begin())->nullify();
+  }
+}
 
 void Vertex::eat(Vertex& other)
 {
@@ -125,6 +132,49 @@ Vertex* Vertex::Transferable_ptr::operator->()
 Vertex& Vertex::Transferable_ptr::operator*()
 {
   return *ptr;
+}
+
+Vertex::Non_transferable_ptr::Non_transferable_ptr(Vertex& target)
+: ptr{&target}
+{
+  target.nont_ptrs.insert(this);
+}
+
+Vertex::Non_transferable_ptr::Non_transferable_ptr(const Vertex::Non_transferable_ptr& other)
+{
+}
+
+Vertex::Non_transferable_ptr::~Non_transferable_ptr()
+{
+  nullify();
+}
+
+Vertex::Non_transferable_ptr& Vertex::Non_transferable_ptr::operator=(const Vertex::Non_transferable_ptr& other)
+{
+}
+
+Vertex* Vertex::Non_transferable_ptr::operator->()
+{
+  return ptr;
+}
+
+Vertex& Vertex::Non_transferable_ptr::operator*()
+{
+  return *ptr;
+}
+
+Vertex::Non_transferable_ptr::operator bool()
+{
+  return ptr;
+}
+
+void Vertex::Non_transferable_ptr::nullify()
+{
+  if (ptr)
+  {
+    ptr->nont_ptrs.erase(this);
+    ptr = nullptr;
+  }
 }
 
 }
