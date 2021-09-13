@@ -36,7 +36,6 @@ class Vertex
 
   private:
   int m;
-  //std::vector<Transferable_ptr*> trbl_ptrs;
   std::unordered_set<Transferable_ptr*> trbl_ptrs;
   Vertex(std::array<double, 3> pos);
 };
