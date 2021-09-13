@@ -103,6 +103,7 @@ TEST_CASE("Vertex")
     cartdg::Vertex::Transferable_ptr vert2 {{0., 2., 0.}};
     cartdg::Vertex::connect(*vert0, *vert1);
     cartdg::Vertex::connect(*vert2, *vert0);
+
     SECTION("calling once")
     {
       vert0->calc_relax();
@@ -116,6 +117,7 @@ TEST_CASE("Vertex")
       REQUIRE(vert0->pos == std::array<double, 3>{.5, .5, 0.});
     }
     vert0->mobile = true;
+
     SECTION("calling multiple times")
     {
       vert0->calc_relax();
@@ -124,6 +126,21 @@ TEST_CASE("Vertex")
       vert0->apply_relax();
       REQUIRE(vert1->pos == std::array<double, 3>{2., 0., 0.});
       REQUIRE(vert0->pos == std::array<double, 3>{.5, .5, 0.});
+    }
+
+    SECTION("eating and deleting")
+    {
+      cartdg::Vertex::Transferable_ptr* temp = new cartdg::Vertex::Transferable_ptr {{-1., -1., -1.}};
+      cartdg::Vertex::connect(*vert0, **temp);
+      delete temp;
+      cartdg::Vertex::Transferable_ptr vert3 {{0., 0., 2.}};
+      cartdg::Vertex::Transferable_ptr vert4 {{-1., -1., 0.}};
+      cartdg::Vertex::connect(*vert3, *vert4);
+      cartdg::Vertex::connect(*vert3, *vert1);
+      vert0->eat(*vert3);
+      vert0->calc_relax();
+      vert0->apply_relax();
+      REQUIRE(vert0->pos == std::array<double, 3>{1./6., 1./6., .5});
     }
   }
 }

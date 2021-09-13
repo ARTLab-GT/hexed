@@ -19,6 +19,10 @@ Vertex::~Vertex()
   {
     (*nont_ptrs.begin())->nullify();
   }
+  for (Vertex* neighbor : neighbors)
+  {
+    neighbor->neighbors.erase(this);
+  }
 }
 
 void Vertex::eat(Vertex& other)
@@ -38,6 +42,10 @@ void Vertex::eat(Vertex& other)
     mobile = mobile || other.mobile;
     if (not trbl_ptrs.empty()) // FIXME: won't be necessary without old interface
     {
+      for (Vertex* neighbor : other.neighbors)
+      {
+        connect(*this, *neighbor);
+      }
       const Transferable_ptr& this_ptr = **trbl_ptrs.begin();
       int size = other.trbl_ptrs.size();
       for (int i_ptr = 0; i_ptr < size; ++i_ptr)
