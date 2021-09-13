@@ -121,8 +121,11 @@ void Vertex::apply_relax()
 
 void Vertex::connect(Vertex& vert0, Vertex& vert1)
 {
-  vert0.neighbors.insert(&vert1);
-  vert1.neighbors.insert(&vert0);
+  if (&vert0 != &vert1)
+  {
+    vert0.neighbors.insert(&vert1);
+    vert1.neighbors.insert(&vert0);
+  }
 }
 
 Vertex::Transferable_ptr::Transferable_ptr(std::array<double, 3> pos)

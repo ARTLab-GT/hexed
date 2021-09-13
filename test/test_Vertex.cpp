@@ -21,6 +21,7 @@ TEST_CASE("Vertex")
   SECTION("eat")
   {
     ptr0->eat(*ptr1);
+    ptr0->eat(*ptr0); // autocannibalism does nothing
     REQUIRE(ptr0->mass() == 2);
     REQUIRE(ptr0->mobile == true);
     REQUIRE(ptr0->pos[0] == 1.05);
@@ -141,6 +142,14 @@ TEST_CASE("Vertex")
       vert0->calc_relax();
       vert0->apply_relax();
       REQUIRE(vert0->pos == std::array<double, 3>{1./6., 1./6., .5});
+    }
+
+    SECTION("self-connection does nothing")
+    {
+      cartdg::Vertex::connect(*vert0, *vert0);
+      vert0->calc_relax();
+      vert0->apply_relax();
+      REQUIRE(vert0->pos == std::array<double, 3>{.5, .5, 0.});
     }
   }
 }
