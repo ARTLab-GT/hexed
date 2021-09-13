@@ -6,6 +6,10 @@
 TEST_CASE("Vertex")
 {
   cartdg::Vertex::Transferable_ptr ptr0 {{1.1, -3.5, 0.05}};
+  cartdg::Vertex* orig_addr = &*ptr0;
+  cartdg::Vertex::Transferable_ptr ptr1 {{1., 1., 1.}};
+  ptr1->mobile = true;
+
   REQUIRE(ptr0->mass() == 1);
   REQUIRE(ptr0->pos[0] == 1.1);
   REQUIRE((*ptr0).pos[1] == -3.5);
@@ -16,8 +20,6 @@ TEST_CASE("Vertex")
 
   SECTION("eat")
   {
-    cartdg::Vertex::Transferable_ptr ptr1 {{1., 1., 1.}};
-    ptr1->mobile = true;
     ptr0->eat(*ptr1);
     REQUIRE(ptr0->mass() == 2);
     REQUIRE(ptr0->mobile == true);
@@ -25,7 +27,8 @@ TEST_CASE("Vertex")
     REQUIRE(ptr0->pos[1] == 1.5);
     REQUIRE(ptr1->pos[2] == 0.525);
     ptr1->pos[0] = 2.;
-    REQUIRE(&(*ptr0) == &(*ptr1));
+    REQUIRE(&*ptr0 == orig_addr);
+    REQUIRE(&*ptr1 == orig_addr);
 
     cartdg::Vertex::Transferable_ptr ptr2 {{1., 0., 0.}};
     cartdg::Vertex::Transferable_ptr ptr3 {{1., 0., 0.}};
@@ -35,6 +38,27 @@ TEST_CASE("Vertex")
     ptr1->eat(*ptr3);
     REQUIRE(ptr1->mass() == 5.);
     REQUIRE(ptr0->pos[0] == 1.4);
+  }
+
+  SECTION("Transferable copy/move")
+  {
+    cartdg::Vertex::Transferable_ptr ptr1_1 {ptr1};
+    cartdg::Vertex::Transferable_ptr ptr1_2 {{0., 0., 0.}};
+    ptr1_2 = ptr1;
+
+    // verifies that destructors and move semantics do not leave dangling pointers
+    cartdg::Vertex::Transferable_ptr* ptr1_3 = new cartdg::Vertex::Transferable_ptr {ptr1};
+    delete ptr1_3;
+    cartdg::Vertex::Transferable_ptr* ptr1_4 = new cartdg::Vertex::Transferable_ptr {ptr1};
+    cartdg::Vertex::Transferable_ptr ptr1_5 {{0., 0., 0.}};
+    ptr1_5 = std::move(*ptr1_4);
+    delete ptr1_4;
+
+    ptr0->eat(*ptr1);
+    REQUIRE(&*ptr1   == orig_addr);
+    REQUIRE(&*ptr1_1 == orig_addr);
+    REQUIRE(&*ptr1_2 == orig_addr);
+    REQUIRE(&*ptr1_5 == orig_addr);
   }
 }
 

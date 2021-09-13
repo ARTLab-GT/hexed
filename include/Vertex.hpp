@@ -61,10 +61,8 @@ class Vertex::Transferable_ptr
   public:
   Transferable_ptr(std::array<double, 3> pos);
   Transferable_ptr(const Transferable_ptr&);
-  Transferable_ptr(Transferable_ptr&&);
   ~Transferable_ptr();
   Transferable_ptr& operator=(const Transferable_ptr&);
-  Transferable_ptr& operator=(Transferable_ptr&&);
 
   Vertex* operator->();
   Vertex& operator*();
