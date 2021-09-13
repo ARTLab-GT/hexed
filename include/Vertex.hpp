@@ -19,11 +19,11 @@ class Vertex
   class Non_transferrable_ptr;
   class Transferrable_ptr;
   std::array<double, 3> pos {0, 0, 0};
+  bool mobile = false;
 
   Vertex(int id_arg);
   ~Vertex();
   // FIXME: handle copy/move
-  bool is_mobile();
   int mass();
   void eat(Vertex& other);
   void calc_relax();
@@ -33,7 +33,6 @@ class Vertex
   std::array<double, 3> relax {0, 0, 0};
   std::vector<int> id_refs;
   std::vector<int> neighbor_ids;
-  bool mobile = false;
   int id;
   Deformed_grid* parent_grid = nullptr;
 };
@@ -65,6 +64,7 @@ class Vertex::Transferrable_ptr
   Transferrable_ptr& operator=(Transferrable_ptr&& other);
 
   Vertex* operator->();
+  Vertex& operator*();
 };
 
 }

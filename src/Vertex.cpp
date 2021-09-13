@@ -93,4 +93,9 @@ Vertex* Vertex::Transferrable_ptr::operator->()
   return ptr.operator->();
 }
 
+Vertex& Vertex::Transferrable_ptr::operator*()
+{
+  return *ptr;
+}
+
 }
