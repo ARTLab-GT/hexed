@@ -4,6 +4,7 @@
 #include <array>
 #include <vector>
 #include <memory>
+#include <set>
 #include <unordered_set>
 
 namespace cartdg
@@ -13,6 +14,7 @@ class Deformed_grid;
 
 class Vertex
 {
+  // not thread safe!
   public:
   class Transferable_ptr;
   class Non_transferable_ptr;
@@ -26,6 +28,8 @@ class Vertex
   void calc_relax();
   void apply_relax();
 
+  static void connect(Vertex&, Vertex&);
+
   // should not be public
   Vertex(int id_arg);
   std::array<double, 3> relax {0, 0, 0};
@@ -38,6 +42,7 @@ class Vertex
   int m;
   std::unordered_set<Transferable_ptr*> trbl_ptrs;
   std::unordered_set<Non_transferable_ptr*> nont_ptrs;
+  std::set<Vertex*> neighbors; // use set because have to iterate through
   Vertex(std::array<double, 3> pos);
 };
 
@@ -60,10 +65,10 @@ class Vertex::Non_transferable_ptr
   Vertex* ptr;
 
   public:
-  Non_transferable_ptr(Vertex& target);
-  Non_transferable_ptr(const Non_transferable_ptr& other);
+  Non_transferable_ptr(Vertex&);
+  Non_transferable_ptr(const Non_transferable_ptr&);
   ~Non_transferable_ptr();
-  Non_transferable_ptr& operator=(const Non_transferable_ptr& other);
+  Non_transferable_ptr& operator=(const Non_transferable_ptr&);
 
   operator bool();
   Vertex* operator->();

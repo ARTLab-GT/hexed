@@ -95,6 +95,37 @@ TEST_CASE("Vertex")
     REQUIRE(!ptr1_8);
     REQUIRE(!ptr1_9);
   }
+
+  SECTION("Position relaxation")
+  {
+    cartdg::Vertex::Transferable_ptr vert0 {{0., 0., 0.}};
+    cartdg::Vertex::Transferable_ptr vert1 {{2., 0., 0.}};
+    cartdg::Vertex::Transferable_ptr vert2 {{0., 2., 0.}};
+    cartdg::Vertex::connect(*vert0, *vert1);
+    cartdg::Vertex::connect(*vert2, *vert0);
+    SECTION("calling once")
+    {
+      vert0->calc_relax();
+      REQUIRE(vert0->pos == std::array<double, 3>{0., 0., 0.});
+      vert0->apply_relax();
+      REQUIRE(vert0->pos == std::array<double, 3>{0., 0., 0.});
+      vert0->mobile = true;
+      vert0->calc_relax();
+      vert0->apply_relax();
+      REQUIRE(vert1->pos == std::array<double, 3>{2., 0., 0.});
+      REQUIRE(vert0->pos == std::array<double, 3>{.5, .5, 0.});
+    }
+    vert0->mobile = true;
+    SECTION("calling multiple times")
+    {
+      vert0->calc_relax();
+      vert0->calc_relax();
+      vert0->apply_relax();
+      vert0->apply_relax();
+      REQUIRE(vert1->pos == std::array<double, 3>{2., 0., 0.});
+      REQUIRE(vert0->pos == std::array<double, 3>{.5, .5, 0.});
+    }
+  }
 }
 
 TEST_CASE("Vertex (old interface)")

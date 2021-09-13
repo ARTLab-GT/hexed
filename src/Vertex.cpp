@@ -71,6 +71,10 @@ int Vertex::mass()
 
 void Vertex::calc_relax()
 {
+  for (int i_dim = 0; i_dim < 3; ++i_dim)
+  {
+    relax[i_dim] = 0.;
+  }
   for (int neighbor_id : neighbor_ids)
   {
     for (int i_dim = 0; i_dim < 3; ++i_dim)
@@ -78,9 +82,17 @@ void Vertex::calc_relax()
       relax[i_dim] += parent_grid->get_vertex(neighbor_id).pos[i_dim];
     }
   }
+  for (Vertex* neighbor : neighbors)
+  {
+    for (int i_dim = 0; i_dim < 3; ++i_dim)
+    {
+      relax[i_dim] += neighbor->pos[i_dim];
+    }
+  }
+  int size = neighbor_ids.size() + neighbors.size();
   for (int i_dim = 0; i_dim < 3; ++i_dim)
   {
-    relax[i_dim] = 0.5*(relax[i_dim]/neighbor_ids.size() - pos[i_dim]);
+    relax[i_dim] = 0.5*(relax[i_dim]/size - pos[i_dim]);
   }
 }
 
@@ -97,6 +109,12 @@ void Vertex::apply_relax()
   {
     relax[i_dim] = 0;
   }
+}
+
+void Vertex::connect(Vertex& vert0, Vertex& vert1)
+{
+  vert0.neighbors.insert(&vert1);
+  vert1.neighbors.insert(&vert0);
 }
 
 Vertex::Transferable_ptr::Transferable_ptr(std::array<double, 3> pos)
