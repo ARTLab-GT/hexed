@@ -5,7 +5,7 @@
 
 TEST_CASE("Vertex")
 {
-  cartdg::Vertex::Transferrable_ptr ptr0 {{1.1, -3.5, 0.05}};
+  cartdg::Vertex::Transferable_ptr ptr0 {{1.1, -3.5, 0.05}};
   REQUIRE(ptr0->mass() == 1);
   REQUIRE(ptr0->pos[0] == 1.1);
   REQUIRE((*ptr0).pos[1] == -3.5);
@@ -14,7 +14,7 @@ TEST_CASE("Vertex")
   (*ptr0).pos[1] = 2.;
   REQUIRE(ptr0->pos[1] == 2.);
 
-  cartdg::Vertex::Transferrable_ptr ptr1 {{1., 1., 1.}};
+  cartdg::Vertex::Transferable_ptr ptr1 {{1., 1., 1.}};
   ptr0->eat(*ptr1);
   REQUIRE(ptr0->mass() == 2);
   REQUIRE(ptr1->mass() == 2);
@@ -26,9 +26,9 @@ TEST_CASE("Vertex")
   ptr1->pos[0] = 2.;
   REQUIRE(ptr0->pos[0] == 2.);
 
-  cartdg::Vertex::Transferrable_ptr ptr2 {{1., 0., 0.}};
-  cartdg::Vertex::Transferrable_ptr ptr3 {{1., 0., 0.}};
-  cartdg::Vertex::Transferrable_ptr ptr4 {{1., 0., 0.}};
+  cartdg::Vertex::Transferable_ptr ptr2 {{1., 0., 0.}};
+  cartdg::Vertex::Transferable_ptr ptr3 {{1., 0., 0.}};
+  cartdg::Vertex::Transferable_ptr ptr4 {{1., 0., 0.}};
   ptr2->eat(*ptr3);
   ptr3->eat(*ptr4);
   ptr1->eat(*ptr3);

@@ -4,6 +4,7 @@
 #include <array>
 #include <vector>
 #include <memory>
+#include <unordered_set>
 
 namespace cartdg
 {
@@ -12,12 +13,9 @@ class Deformed_grid;
 
 class Vertex
 {
-  int m = 1;
-  Vertex(std::array<double, 3> pos);
-
   public:
-  class Non_transferrable_ptr;
-  class Transferrable_ptr;
+  class Non_transferable_ptr;
+  class Transferable_ptr;
   std::array<double, 3> pos {0, 0, 0};
   bool mobile = false;
 
@@ -35,33 +33,39 @@ class Vertex
   std::vector<int> neighbor_ids;
   int id;
   Deformed_grid* parent_grid = nullptr;
+
+  private:
+  int m;
+  //std::vector<Transferable_ptr*> trbl_ptrs;
+  std::unordered_set<Transferable_ptr*> trbl_ptrs;
+  Vertex(std::array<double, 3> pos);
 };
 
-class Vertex::Non_transferrable_ptr
+class Vertex::Non_transferable_ptr
 {
   public:
-  Non_transferrable_ptr(Vertex& target);
-  Non_transferrable_ptr(const Non_transferrable_ptr& other);
-  Non_transferrable_ptr(Non_transferrable_ptr&& other);
-  ~Non_transferrable_ptr();
-  Non_transferrable_ptr& operator=(const Non_transferrable_ptr& other);
-  Non_transferrable_ptr& operator=(Non_transferrable_ptr&& other);
+  Non_transferable_ptr(Vertex& target);
+  Non_transferable_ptr(const Non_transferable_ptr& other);
+  Non_transferable_ptr(Non_transferable_ptr&& other);
+  ~Non_transferable_ptr();
+  Non_transferable_ptr& operator=(const Non_transferable_ptr& other);
+  Non_transferable_ptr& operator=(Non_transferable_ptr&& other);
 
   bool is_assigned();
   Vertex* operator->();
 };
 
-class Vertex::Transferrable_ptr
+class Vertex::Transferable_ptr
 {
   std::shared_ptr<Vertex> ptr;
 
   public:
-  Transferrable_ptr(std::array<double, 3> pos);
-  Transferrable_ptr(const Transferrable_ptr& other);
-  Transferrable_ptr(Transferrable_ptr&& other);
-  ~Transferrable_ptr();
-  Transferrable_ptr& operator=(const Transferrable_ptr& other);
-  Transferrable_ptr& operator=(Transferrable_ptr&& other);
+  Transferable_ptr(std::array<double, 3> pos);
+  Transferable_ptr(const Transferable_ptr&);
+  Transferable_ptr(Transferable_ptr&&);
+  ~Transferable_ptr();
+  Transferable_ptr& operator=(const Transferable_ptr&);
+  Transferable_ptr& operator=(Transferable_ptr&&);
 
   Vertex* operator->();
   Vertex& operator*();
