@@ -55,23 +55,23 @@ TEST_CASE("Vertex")
     delete ptr1_4;
 
     cartdg::Vertex::Non_transferable_ptr ptr0_1 {*ptr0};
-    cartdg::Vertex::Non_transferable_ptr ptr0_2 {*ptr1};
-    cartdg::Vertex::Non_transferable_ptr ptr0_3 {*ptr1};
+    cartdg::Vertex::Non_transferable_ptr ptr1_6 {*ptr1};
+    cartdg::Vertex::Non_transferable_ptr ptr1_7 {*ptr1};
     // test that pointers are valid and point to the right Vertex
     REQUIRE(bool(ptr0_1));
     REQUIRE(&*ptr0_1 == orig_addr);
     REQUIRE(ptr0_1->pos[0] == 1.1);
-    REQUIRE(bool(ptr0_2));
-    REQUIRE(bool(ptr0_3));
+    REQUIRE(bool(ptr1_6));
+    REQUIRE(bool(ptr1_7));
 
     // destructor doesn't leave dangling pointer
-    cartdg::Vertex::Non_transferable_ptr* ptr0_4 = new cartdg::Vertex::Non_transferable_ptr {*ptr1};
-    delete ptr0_4;
+    cartdg::Vertex::Non_transferable_ptr* ptr1_8 = new cartdg::Vertex::Non_transferable_ptr {*ptr1};
+    delete ptr1_8;
 
     // explicitly nullifying works
-    cartdg::Vertex::Non_transferable_ptr ptr0_5 {*ptr0};
-    ptr0_5.nullify();
-    REQUIRE(!ptr0_5);
+    cartdg::Vertex::Non_transferable_ptr ptr0_2 {*ptr0};
+    ptr0_2.nullify();
+    REQUIRE(!ptr0_2);
 
     ptr0->eat(*ptr1);
     REQUIRE(&*ptr1   == orig_addr);
@@ -81,8 +81,8 @@ TEST_CASE("Vertex")
     REQUIRE(bool(ptr0_1));
     REQUIRE(&*ptr0_1 == orig_addr);
     // `Non_transferable_ptr`s to eaten element should be nullified
-    REQUIRE(!ptr0_2);
-    REQUIRE(!ptr0_3);
+    REQUIRE(!ptr1_6);
+    REQUIRE(!ptr1_7);
   }
 }
 

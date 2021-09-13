@@ -151,6 +151,7 @@ Vertex::Non_transferable_ptr::~Non_transferable_ptr()
 
 Vertex::Non_transferable_ptr& Vertex::Non_transferable_ptr::operator=(const Vertex::Non_transferable_ptr& other)
 {
+  return *this;
 }
 
 Vertex* Vertex::Non_transferable_ptr::operator->()
