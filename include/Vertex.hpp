@@ -19,7 +19,6 @@ class Vertex
   std::array<double, 3> pos {0, 0, 0};
   bool mobile = false;
 
-  Vertex(int id_arg);
   ~Vertex();
   // FIXME: handle copy/move
   int mass();
@@ -28,6 +27,7 @@ class Vertex
   void apply_relax();
 
   // should not be public
+  Vertex(int id_arg);
   std::array<double, 3> relax {0, 0, 0};
   std::vector<int> id_refs;
   std::vector<int> neighbor_ids;
