@@ -42,6 +42,8 @@ TEST_CASE("Vertex")
 
   SECTION("Pointer validity")
   {
+    //Note: If you choose to delete any of this test, do so with caution. Some seemingly
+    //      harmless lines are capable of exposing dangling pointers in faulty implementations
     cartdg::Vertex::Transferable_ptr ptr1_1 {ptr1};
     cartdg::Vertex::Transferable_ptr ptr1_2 {{0., 0., 0.}};
     ptr1_2 = ptr1;
@@ -57,16 +59,23 @@ TEST_CASE("Vertex")
     cartdg::Vertex::Non_transferable_ptr ptr0_1 {*ptr0};
     cartdg::Vertex::Non_transferable_ptr ptr1_6 {*ptr1};
     cartdg::Vertex::Non_transferable_ptr ptr1_7 {*ptr1};
+    cartdg::Vertex::Non_transferable_ptr ptr1_8 {ptr1_6};
+    cartdg::Vertex::Non_transferable_ptr ptr1_9 {*ptr0};
+    ptr1_9 = ptr1_6;
     // test that pointers are valid and point to the right Vertex
     REQUIRE(bool(ptr0_1));
     REQUIRE(&*ptr0_1 == orig_addr);
     REQUIRE(ptr0_1->pos[0] == 1.1);
     REQUIRE(bool(ptr1_6));
     REQUIRE(bool(ptr1_7));
+    REQUIRE(bool(ptr1_8));
+    REQUIRE(bool(ptr1_9));
+    REQUIRE(&*ptr1_8 == &*ptr1_6);
+    REQUIRE(&*ptr1_9 == &*ptr1_6);
 
     // destructor doesn't leave dangling pointer
-    cartdg::Vertex::Non_transferable_ptr* ptr1_8 = new cartdg::Vertex::Non_transferable_ptr {*ptr1};
-    delete ptr1_8;
+    cartdg::Vertex::Non_transferable_ptr* ptr1_10 = new cartdg::Vertex::Non_transferable_ptr {*ptr1};
+    delete ptr1_10;
 
     // explicitly nullifying works
     cartdg::Vertex::Non_transferable_ptr ptr0_2 {*ptr0};
@@ -83,6 +92,8 @@ TEST_CASE("Vertex")
     // `Non_transferable_ptr`s to eaten element should be nullified
     REQUIRE(!ptr1_6);
     REQUIRE(!ptr1_7);
+    REQUIRE(!ptr1_8);
+    REQUIRE(!ptr1_9);
   }
 }
 

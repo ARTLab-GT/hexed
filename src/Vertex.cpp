@@ -141,7 +141,9 @@ Vertex::Non_transferable_ptr::Non_transferable_ptr(Vertex& target)
 }
 
 Vertex::Non_transferable_ptr::Non_transferable_ptr(const Vertex::Non_transferable_ptr& other)
+: ptr{other.ptr}
 {
+  ptr->nont_ptrs.insert(this);
 }
 
 Vertex::Non_transferable_ptr::~Non_transferable_ptr()
@@ -151,6 +153,9 @@ Vertex::Non_transferable_ptr::~Non_transferable_ptr()
 
 Vertex::Non_transferable_ptr& Vertex::Non_transferable_ptr::operator=(const Vertex::Non_transferable_ptr& other)
 {
+  nullify();
+  ptr = other.ptr;
+  ptr->nont_ptrs.insert(this);
   return *this;
 }
 
