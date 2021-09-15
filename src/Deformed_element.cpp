@@ -9,8 +9,9 @@ Deformed_element::Deformed_element(Storage_params params, std::vector<int> pos, 
   node_adj{n_qpoint/params.row_size*n_dim*2}
 {
   std::array<double, 3> first_pos;
-  for (int i_dim = pos.size(); i_dim < 3; ++i_dim) pos.push_back(0);
-  for (int i_dim = 0; i_dim < 3; ++i_dim) first_pos[i_dim] = pos[i_dim]*mesh_size;
+  int n_pos_set = std::min<int>(pos.size(), n_dim);
+  for (int i_dim = 0; i_dim < n_pos_set; ++i_dim) first_pos[i_dim] = pos[i_dim]*mesh_size;
+  for (int i_dim = n_pos_set; i_dim < 3; ++i_dim) first_pos[i_dim] = 0.;
   for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert)
   {
     auto vertex_pos = first_pos;

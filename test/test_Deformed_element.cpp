@@ -57,5 +57,18 @@ TEST_CASE("Deformed_element.hpp")
     elem3d.vertex(5).calc_relax();
     elem3d.vertex(5).apply_relax();
     assert_equal(elem3d.vertex(5).pos, {0.4 - 0.1/3., 0.4 + 0.1/3., -0.1/3.});
+
+    cartdg::Storage_params params2d {3, 4, 2, 4};
+    cartdg::Deformed_element elem2d {params2d, {1, 2, -1}, 1.};
+    assert_equal(elem2d.vertex(0).pos, {1., 2., 0.});
+    assert_equal(elem2d.vertex(1).pos, {1., 3., 0.});
+    assert_equal(elem2d.vertex(2).pos, {2., 2., 0.});
+    elem2d.vertex(0).mobile = true;
+    elem2d.vertex(0).calc_relax();
+    elem2d.vertex(0).apply_relax();
+    assert_equal(elem2d.vertex(0).pos, {1.25, 2.25, 0.});
+
+    cartdg::Deformed_element elem3d_1 {params3d, {3,}, 1.};
+    assert_equal(elem3d_1.vertex(0).pos, {3., 0., 0.});
   }
 }
