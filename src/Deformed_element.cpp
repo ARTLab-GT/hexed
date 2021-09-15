@@ -5,7 +5,8 @@ namespace cartdg
 {
 
 Deformed_element::Deformed_element(Storage_params params, std::vector<int> pos, double mesh_size)
-: Element{params}, n_qpoint{params.n_qpoint()}, jac{n_dim*n_dim*n_qpoint}
+: Element{params}, n_qpoint{params.n_qpoint()}, jac{n_dim*n_dim*n_qpoint},
+  node_adj{n_qpoint/params.row_size*n_dim*2}
 {
   std::array<double, 3> first_pos;
   for (int i_dim = pos.size(); i_dim < 3; ++i_dim) pos.push_back(0);
@@ -37,6 +38,11 @@ double* Deformed_element::jacobian()
 double Deformed_element::jacobian(int i_dim, int j_dim, int i_qpoint)
 {
   return jac[(n_dim*i_dim + j_dim)*n_qpoint + i_qpoint];
+}
+
+double* Deformed_element::node_adjustments()
+{
+  return node_adj.data();
 }
 
 }
