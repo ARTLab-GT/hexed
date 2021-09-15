@@ -13,13 +13,19 @@ Deformed_element::Deformed_element(Storage_params params, std::vector<int> pos, 
   for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert)
   {
     auto vertex_pos = first_pos;
+    int stride [3];
+    int i_row [3];
     for (int i_dim = 0; i_dim < n_dim; ++i_dim)
     {
-      int stride = custom_math::pow(2, n_dim - i_dim - 1);
-      int i_row = (i_vert/stride)%2;
-      vertex_pos[i_dim] += i_row*mesh_size;
+      stride[i_dim] = custom_math::pow(2, n_dim - i_dim - 1);
+      i_row[i_dim] = (i_vert/stride[i_dim])%2;
+      vertex_pos[i_dim] += i_row[i_dim]*mesh_size;
     }
     vertices.emplace_back(vertex_pos);
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+    {
+      if (i_row[i_dim]) Vertex::connect(*vertices.back(), *vertices[i_vert - stride[i_dim]]);
+    }
   }
 }
 

@@ -6,7 +6,7 @@ void assert_equal(std::array<double, 3> computed, std::array<double, 3> correct)
 {
   for (int i_dim = 0; i_dim < 3; ++i_dim)
   {
-    REQUIRE(computed[i_dim] == Approx(correct[i_dim]).margin(1e-14));
+    CHECK(computed[i_dim] == Approx(correct[i_dim]).margin(1e-14));
   }
 }
 
@@ -37,11 +37,19 @@ TEST_CASE("Deformed_element.hpp")
 
   SECTION("vertex arrangement")
   {
-    cartdg::Storage_params params {3, 5, 3, 4};
-    cartdg::Deformed_element elem3d {params, {1, 2, -1}, 0.2};
+    // check that vertices start out in correct location
+    cartdg::Storage_params params3d {3, 5, 3, 4};
+    cartdg::Deformed_element elem3d {params3d, {1, 2, -1}, 0.2};
     assert_equal(elem3d.vertex(0).pos, {0.2, 0.4, -0.2});
     assert_equal(elem3d.vertex(1).pos, {0.2, 0.4,  0. });
     assert_equal(elem3d.vertex(2).pos, {0.2, 0.6, -0.2});
+    assert_equal(elem3d.vertex(5).pos, {0.4, 0.4,  0. });
     assert_equal(elem3d.vertex(7).pos, {0.4, 0.6,  0. });
+
+    // check that vertices have correct neighbors
+    elem3d.vertex(5).mobile = true;
+    elem3d.vertex(5).calc_relax();
+    elem3d.vertex(5).apply_relax();
+    assert_equal(elem3d.vertex(5).pos, {0.4 - 0.1/3., 0.4 + 0.1/3., -0.1/3.});
   }
 }
