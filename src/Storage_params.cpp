@@ -19,4 +19,9 @@ int Storage_params::size()
   return n_dof()*n_stage;
 }
 
+int Storage_params::n_vertices()
+{
+  return custom_math::pow(2, n_dim);
+}
+
 }

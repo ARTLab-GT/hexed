@@ -14,15 +14,18 @@ TEST_CASE("Storage_params")
     REQUIRE(params.n_qpoint() == 64);
     REQUIRE(params.n_dof() == 128);
     REQUIRE(params.size() == 128*7);
+    REQUIRE(params.n_vertices() == 8);
   }
   SECTION("2D")
   {
     cartdg::Storage_params params {2, 4, 2, 5};
     REQUIRE(params.size() == 200);
+    REQUIRE(params.n_vertices() == 4);
   }
   SECTION("1D")
   {
     cartdg::Storage_params params {3, 3, 1, 3};
     REQUIRE(params.size() == 27);
+    REQUIRE(params.n_vertices() == 2);
   }
 }

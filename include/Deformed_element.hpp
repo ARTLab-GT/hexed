@@ -17,7 +17,7 @@ class Deformed_element : public Element
   Deformed_element(Storage_params, std::vector<int> pos={}, double mesh_size=1.);
   double* jacobian();
   virtual double jacobian(int i_dim, int j_dim, int i_qpoint);
-  inline Vertex& vertex(int i_vertex) { return *vertices[0]; }
+  inline Vertex& vertex(int i_vertex) { return *vertices[i_vertex]; }
 };
 
 class Deformed_elem_con

@@ -15,6 +15,7 @@ class Storage_params
   int n_qpoint();
   int n_dof();
   int size();
+  int n_vertices();
 };
 
 }
