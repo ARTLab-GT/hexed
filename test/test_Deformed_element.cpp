@@ -26,4 +26,14 @@ TEST_CASE("Deformed_element.hpp")
   element.jacobian()[2*16] = .1;
   element.jacobian()[3*16] = 3.;
   REQUIRE(element.jacobian_determinant(0) == Approx(2.8));
+
+  SECTION("vertex arrangement")
+  {
+    cartdg::Storage_params params {3, 5, 3, 4};
+    cartdg::Deformed_element elem3d {params, {1, 2, -1}, 0.2};
+    REQUIRE(elem3d.vertex(0).pos == std::array<double, 3>{0.2, 0.4, -0.2});
+    REQUIRE(elem3d.vertex(1).pos == std::array<double, 3>{0.2, 0.4, 0.});
+    REQUIRE(elem3d.vertex(2).pos == std::array<double, 3>{0.2, 0.6, -0.2});
+    REQUIRE(elem3d.vertex(7).pos == std::array<double, 3>{0.4, 0.6, 0.});
+  }
 }

@@ -3,7 +3,7 @@
 namespace cartdg
 {
 
-Deformed_element::Deformed_element(Storage_params params)
+Deformed_element::Deformed_element(Storage_params params, std::vector<int> pos, double mesh_size)
 : Element{params}, n_qpoint{params.n_qpoint()}, jac{n_dim*n_dim*n_qpoint}
 {}
 
