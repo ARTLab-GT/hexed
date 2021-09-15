@@ -9,7 +9,7 @@ namespace cartdg
 
 Deformed_grid::Deformed_grid(int n_var_arg, int n_dim_arg, int n_elem_arg,
                              double mesh_size_arg, Basis& basis_arg)
-: Grid(n_var_arg, n_dim_arg, n_elem_arg, mesh_size_arg, basis_arg), dummy_element({storage_params})
+: Grid(n_var_arg, n_dim_arg, n_elem_arg, mesh_size_arg, basis_arg)
 {
   if (n_elem_arg != 0)
   {
@@ -37,7 +37,12 @@ Vertex& Deformed_grid::get_vertex(int i_vertex)
 
 Element& Deformed_grid::element(int i_elem)
 {
-  return dummy_element;
+  return *elements[i_elem];
+}
+
+Deformed_element& Deformed_grid::deformed_element(int i_elem)
+{
+  return *elements[i_elem];
 }
 
 void Deformed_grid::add_vertices(std::vector<int> position, int i_dim)
@@ -65,6 +70,14 @@ void Deformed_grid::add_vertices(std::vector<int> position, int i_dim)
 int Deformed_grid::add_element(std::vector<int> position)
 {
   int i_elem = Grid::add_element(position);
+  elements.emplace_back(new Deformed_element {storage_params, position, mesh_size});
+  for (int i_vert = 0; i_vert < n_vertices; ++i_vert)
+  {
+    Vertex& vert = elements.back()->vertex(i_vert);
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) vert.pos[i_dim] += origin[i_dim];
+  }
+
+  //old interface
   add_vertices(position, 0);
   for (int stride = 1; stride < n_vertices; stride *= 2)
   {
@@ -76,6 +89,7 @@ int Deformed_grid::add_element(std::vector<int> position)
     }
   }
   for (int i = 0; i < n_qpoint/basis.row_size*2*n_dim; ++i) node_adjustments.push_back(0);
+
   return i_elem;
 }
 

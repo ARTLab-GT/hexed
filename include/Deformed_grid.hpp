@@ -28,6 +28,7 @@ class Deformed_grid : public Grid
                 Basis& basis_arg);
   Vertex& get_vertex(int i_vertex);
   virtual Element& element(int i_elem);
+  Deformed_element& deformed_element(int i_elem); // points to same object as element(int) but with different type
   virtual int add_element(std::vector<int> position);
   virtual std::vector<double> get_pos(int i_elem);
   void add_wall(int i_elem, int i_dim, bool is_positive_face);
@@ -62,7 +63,6 @@ class Deformed_grid : public Grid
   def_elem_con_vec elem_cons;
   def_reg_con_vec def_reg_cons;
   void add_vertices(std::vector<int> position, int i_dim);
-  Element dummy_element; // FIXME: delete this after fixing element(int)
 };
 
 }
