@@ -57,10 +57,10 @@ TEST_CASE("Deformed grid class")
       1
                    0
       */
-      grid2.get_vertex(0).pos = { 0.1, 2.0, 0.0};
-      grid2.get_vertex(1).pos = {-1.1, 2.1, 0.0};
-      grid2.get_vertex(2).pos = { 0.0, 2.8, 0.0};
-      grid2.get_vertex(3).pos = {-1.0, 2.9, 0.0};
+      grid2.deformed_element(0).vertex(0).pos = { 0.1, 2.0, 0.0};
+      grid2.deformed_element(0).vertex(1).pos = {-1.1, 2.1, 0.0};
+      grid2.deformed_element(0).vertex(2).pos = { 0.0, 2.8, 0.0};
+      grid2.deformed_element(0).vertex(3).pos = {-1.0, 2.9, 0.0};
       std::vector<double> pos2 = grid2.get_pos(0);
       REQUIRE(pos2[ 0] == Approx( 0.1));
       REQUIRE(pos2[ 1] == Approx(-0.5));
@@ -72,19 +72,20 @@ TEST_CASE("Deformed grid class")
       REQUIRE(pos2[17] == Approx( 2.9));
 
       grid3.add_element({0, 0, 0});
-      grid3.get_vertex(15).pos = {0.2*0.8, 0.2*0.8, 0.2*0.8};
+      grid3.deformed_element(1).vertex(7).pos = {0.2*0.8, 0.2*0.8, 0.2*0.8};
       std::vector<double> pos3 = grid3.get_pos(1);
       for (int i_dim = 0; i_dim < 3; ++i_dim) REQUIRE(pos3[27*i_dim + 13] == Approx(0.2*0.475));
     }
 
     SECTION("warped face interpolation")
     {
-      grid2.get_vertex(0).pos = {0.0, 0.0, 0.0};
-      grid2.get_vertex(1).pos = {0.0, 1.0, 0.0};
-      grid2.get_vertex(2).pos = {1.0, 0.0, 0.0};
-      grid2.get_vertex(3).pos = {0.6, 1.0, 0.0};
-      grid2.node_adjustments[2*3 + 1] =  0.2;
-      grid2.node_adjustments[3*3 + 1] = -0.1;
+      cartdg::Deformed_element& elem = grid2.deformed_element(0);
+      elem.vertex(0).pos = {0.0, 0.0, 0.0};
+      elem.vertex(1).pos = {0.0, 1.0, 0.0};
+      elem.vertex(2).pos = {1.0, 0.0, 0.0};
+      elem.vertex(3).pos = {0.6, 1.0, 0.0};
+      elem.node_adjustments()[2*3 + 1] =  0.2;
+      elem.node_adjustments()[3*3 + 1] = -0.1;
       std::vector<double> pos2 = grid2.get_pos(0);
       REQUIRE(pos2[ 0] == Approx(0.0));
       REQUIRE(pos2[ 7] == Approx(0.8));
@@ -98,18 +99,19 @@ TEST_CASE("Deformed grid class")
       REQUIRE(pos2[13] == Approx(0.5 + (0.2 - 0.1)/2));
       REQUIRE(pos2[14] == Approx(1.0 - 0.1));
 
-      grid2.get_vertex(4).pos = {0.0, 0.0, 0.0};
-      grid2.get_vertex(5).pos = {0.0, 1.0, 0.0};
-      grid2.get_vertex(6).pos = {1.0, 0.0, 0.0};
-      grid2.get_vertex(7).pos = {1.0, 1.0, 0.0};
-      grid2.node_adjustments[4*3 + 1] =  0.1;
+      cartdg::Deformed_element& elem1 = grid2.deformed_element(1);
+      elem1.vertex(0).pos = {0.0, 0.0, 0.0};
+      elem1.vertex(1).pos = {0.0, 1.0, 0.0};
+      elem1.vertex(2).pos = {1.0, 0.0, 0.0};
+      elem1.vertex(3).pos = {1.0, 1.0, 0.0};
+      elem1.node_adjustments()[1] =  0.1;
       std::vector<double> pos21 = grid2.get_pos(1);
       REQUIRE(pos21[ 0] == Approx(0.0));
       REQUIRE(pos21[ 6] == Approx(1.0));
       REQUIRE(pos21[ 4] == Approx(0.55));
 
       grid3.add_element({0, 0, 0});
-      grid3.node_adjustments[6*9 + 4] = 0.01;
+      grid3.deformed_element(1).node_adjustments()[4] = 0.01;
       std::vector<double> pos3 = grid3.get_pos(1);
       REQUIRE(pos3[13] == 0.101);
       REQUIRE(pos3[13 + 27] == .1);

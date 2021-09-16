@@ -6,7 +6,7 @@ namespace cartdg
 
 Deformed_element::Deformed_element(Storage_params params, std::vector<int> pos, double mesh_size)
 : Element{params}, n_qpoint{params.n_qpoint()}, jac{n_dim*n_dim*n_qpoint},
-  node_adj{n_qpoint/params.row_size*n_dim*2}
+  node_adj{Eigen::VectorXd::Zero(n_qpoint/params.row_size*n_dim*2)}
 {
   std::array<double, 3> first_pos;
   int n_pos_set = std::min<int>(pos.size(), n_dim);

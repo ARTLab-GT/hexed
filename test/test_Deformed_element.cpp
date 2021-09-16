@@ -35,6 +35,10 @@ TEST_CASE("Deformed_element.hpp")
   element.jacobian()[3*16] = 3.;
   REQUIRE(element.jacobian_determinant(0) == Approx(2.8));
 
+  for (int i_adj = 0; i_adj < 16; ++i_adj)
+  {
+    REQUIRE(element.node_adjustments()[i_adj] == 0.);
+  }
   element.node_adjustments()[0] = 2.7;
   element.node_adjustments()[4*2*2 - 1] = 0.04;
   REQUIRE(element.node_adjustments()[0] == 2.7);

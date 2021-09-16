@@ -96,9 +96,9 @@ int Deformed_grid::add_element(std::vector<int> position)
 std::vector<double> Deformed_grid::get_pos(int i_elem)
 {
   std::vector<double> elem_pos (n_qpoint*n_dim);
+  Deformed_element& elem {deformed_element(i_elem)};
   for (int i_vertex = 0; i_vertex < n_vertices; ++i_vertex)
   {
-    int id = vertex_ids[n_vertices*i_elem + i_vertex];
     int i_node = 0;
     for (int vertex_stride = 1, node_stride = 1;
          vertex_stride < n_vertices;
@@ -106,9 +106,10 @@ std::vector<double> Deformed_grid::get_pos(int i_elem)
     {
       if ((i_vertex/vertex_stride)%2 == 1) i_node += node_stride*(basis.row_size - 1);
     }
+    Vertex& vert = elem.vertex(i_vertex);;
     for (int i_dim = 0; i_dim < n_dim; ++i_dim)
     {
-      elem_pos[n_qpoint*i_dim + i_node] = get_vertex(id).pos[i_dim];
+      elem_pos[n_qpoint*i_dim + i_node] = vert.pos[i_dim];
     }
   }
 
@@ -136,10 +137,10 @@ std::vector<double> Deformed_grid::get_pos(int i_elem)
       int coord = (i_node/stride)%basis.row_size;
       int i_node0 = i_node - coord*stride;
       int i_node1 = i_node0 + (basis.row_size - 1)*stride;
-      int i_adjust = 2*(i_dim + i_elem*n_dim)*n_qpoint/basis.row_size
-                     + i_node/(stride*basis.row_size)*stride + i_node%stride;
-      double adjust0 = node_adjustments[i_adjust];
-      double adjust1 = node_adjustments[i_adjust + n_qpoint/basis.row_size];
+      int i_adjust = 2*i_dim*n_qpoint/basis.row_size + i_node/(stride*basis.row_size)*stride + i_node%stride;
+      double* node_adj = elem.node_adjustments();
+      double adjust0 = node_adj[i_adjust];
+      double adjust1 = node_adj[i_adjust + n_qpoint/basis.row_size];
       double dist = basis.node(coord);
       for (int j_dim = 0; j_dim < n_dim; ++j_dim)
       {
