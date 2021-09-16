@@ -1,9 +1,7 @@
 #include <catch2/catch.hpp>
 
 #include <cartdgConfig.hpp>
-#include <get_local_cpg_euler.hpp>
 #include <get_local_convective.hpp>
-#include <get_local_deformed_cpg_euler.hpp>
 #include <get_local_deformed_convective.hpp>
 #include <get_req_visc_cpg_euler.hpp>
 #include <get_av_flux.hpp>
@@ -29,124 +27,6 @@ class Identity_basis : public cartdg::Basis
     return Eigen::VectorXd::Zero(row_size);
   }
 };
-
-TEST_CASE("CPG Euler matrix form")
-{
-  cartdg::Kernel_settings settings;
-  settings.d_t_by_d_pos = 0.1;
-  SECTION("1D")
-  {
-    const int n_elem = 5;
-    const int row_size = 2;
-    double read [n_elem][3][row_size];
-    double write[n_elem][3][row_size];
-    Identity_basis basis (row_size);
-    double mass = 1.225; double veloc = 10; double pres = 1e5;
-    double mmtm = mass*veloc; double ener = pres/0.4 + 0.5*mass*veloc*veloc;
-    for (int i_elem = 0; i_elem < n_elem; ++i_elem)
-    {
-      for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
-      {
-          read[i_elem][0][i_qpoint] = mmtm;
-          read[i_elem][1][i_qpoint] = mass;
-          read[i_elem][2][i_qpoint] = ener;
-      }
-    }
-    cartdg::get_local_cpg_euler(1, 2)(&read[0][0][0], &write[0][0][0], n_elem, basis, settings);
-    for (int i_elem = 0; i_elem < n_elem; ++i_elem)
-    {
-      for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
-      {
-        REQUIRE((write[i_elem][0][i_qpoint] - read[i_elem][0][i_qpoint])
-              == Approx(0.1*(mmtm*mmtm/mass + pres)));
-        REQUIRE((write[i_elem][1][i_qpoint] - read[i_elem][1][i_qpoint])
-              == Approx(0.1*mmtm));
-        REQUIRE((write[i_elem][2][i_qpoint] - read[i_elem][2][i_qpoint])
-              == Approx(0.1*((ener + pres)*veloc)));
-      }
-    }
-  }
-
-  SECTION("3D")
-  {
-    const int n_elem = 5;
-    const int row_size = 3;
-    double read [n_elem][5][row_size*row_size*row_size];
-    double write[n_elem][5][row_size*row_size*row_size];
-    Identity_basis basis (row_size);
-    double mass = 1.225;
-    double veloc0 = 10; double veloc1 = -20; double veloc2 = 30;
-    double pres = 1e5;
-    double ener = pres/0.4 + 0.5*mass*(veloc0*veloc0 + veloc1*veloc1 + veloc2*veloc2);
-    for (int i_elem = 0; i_elem < n_elem; ++i_elem)
-    {
-      for (int i_qpoint = 0; i_qpoint < row_size*row_size*row_size; ++i_qpoint)
-      {
-        read[i_elem][0][i_qpoint] = mass*veloc0;
-        read[i_elem][1][i_qpoint] = mass*veloc1;
-        read[i_elem][2][i_qpoint] = mass*veloc2;
-        read[i_elem][3][i_qpoint] = mass;
-        read[i_elem][4][i_qpoint] = ener;
-      }
-    }
-    cartdg::get_local_cpg_euler(3, 3)(&read[0][0][0], &write[0][0][0], n_elem, basis, settings);
-    for (int i_elem = 0; i_elem < n_elem; ++i_elem)
-    {
-      for (int i_qpoint = 0; i_qpoint < row_size*row_size*row_size; ++i_qpoint)
-      {
-        REQUIRE((write[i_elem][0][i_qpoint] - read[i_elem][0][i_qpoint])
-              == Approx(0.1*(mass*veloc0*(veloc0 + veloc1 + veloc2) + pres)));
-        REQUIRE((write[i_elem][1][i_qpoint] - read[i_elem][1][i_qpoint])
-              == Approx(0.1*(mass*veloc1*(veloc0 + veloc1 + veloc2) + pres)));
-        REQUIRE((write[i_elem][2][i_qpoint] - read[i_elem][2][i_qpoint])
-              == Approx(0.1*(mass*veloc2*(veloc0 + veloc1 + veloc2) + pres)));
-        REQUIRE((write[i_elem][3][i_qpoint] - read[i_elem][3][i_qpoint])
-              == Approx(0.1*mass*(veloc0 + veloc1 + veloc2)));
-        REQUIRE((write[i_elem][4][i_qpoint] - read[i_elem][4][i_qpoint])
-              == Approx(0.1*((ener + pres)*(veloc0 + veloc1 + veloc2))));
-      }
-    }
-  }
-
-  SECTION("2D non-constant")
-  {
-    const int n_elem = 5;
-    const int row_size = std::min<int>(6, CARTDG_MAX_BASIS_ROW_SIZE);
-    double read [n_elem][4][row_size*row_size];
-    double write[n_elem][4][row_size*row_size];
-    cartdg::Gauss_lobatto basis (row_size);
-    for (int i_elem = 0; i_elem < n_elem; ++i_elem)
-    {
-      for (int i = 0; i < row_size; ++i)
-      {
-        for (int j = 0; j < row_size; ++j)
-        {
-          int i_qpoint = i*row_size + j;
-          double mass = 1 + 0.1*basis.node(i) + 0.2*basis.node(j);
-          double veloc0 = 10; double veloc1 = -20;
-          double pres = 1e5*(1. - 0.3*basis.node(i) + 0.5*basis.node(j));
-          double ener = pres/0.4 + 0.5*mass*(veloc0*veloc0 + veloc1*veloc1);
-
-          read[i_elem][0][i_qpoint] = mass*veloc0;
-          read[i_elem][1][i_qpoint] = mass*veloc1;
-          read[i_elem][2][i_qpoint] = mass;
-          read[i_elem][3][i_qpoint] = ener;
-        }
-      }
-    }
-    cartdg::get_local_cpg_euler(2, row_size)(&read[0][0][0], &write[0][0][0], n_elem, basis, settings);
-    for (int i_elem = 0; i_elem < n_elem; ++i_elem)
-    {
-      for (int i_qpoint = 0; i_qpoint < row_size*row_size; ++i_qpoint)
-      {
-        REQUIRE((write[i_elem][2][i_qpoint] - read[i_elem][2][i_qpoint])
-                == Approx(-0.1*(0.1*10 - 0.2*20)));
-        REQUIRE((write[i_elem][3][i_qpoint] - read[i_elem][3][i_qpoint])
-                == Approx(-0.1*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20) + 0.5*(10*10 + 20*20)*(0.1*10 - 0.2*20))));
-      }
-    }
-  }
-}
 
 TEST_CASE("Local convective")
 {
@@ -366,64 +246,6 @@ TEST_CASE("CPG Euler deformed elements")
     }
   }
   #endif
-
-  SECTION("2D non-constant deformed")
-  {
-    const int n_elem = 5;
-    const int row_size = 6;
-    double read [n_elem][4][row_size*row_size];
-    double write[n_elem][4][row_size*row_size];
-    double jacobian [n_elem][2][2][row_size*row_size] {};
-    cartdg::Gauss_lobatto basis (row_size);
-    for (int i_elem = 0; i_elem < n_elem; ++i_elem)
-    {
-      for (int i = 0; i < row_size; ++i)
-      {
-        for (int j = 0; j < row_size; ++j)
-        {
-          int i_qpoint = i*row_size + j;
-          double pos0 = basis.node(i)*(1. - 0.5*basis.node(j));
-          double pos1 = basis.node(j)*(1. - 0.3*basis.node(i));
-          double mass = 1 + 0.1*std::pow(pos0, 5) - 0.3*std::pow(pos0, 2)*std::pow(pos1, 3) + 0.2*pos1;
-          double veloc0 = 10; double veloc1 = -20;
-          double pres = 1e5*(1. - 0.3*pos0 + 0.5*pos1);
-          double ener = pres/0.4 + 0.5*mass*(veloc0*veloc0 + veloc1*veloc1);
-
-          read[i_elem][0][i_qpoint] = mass*veloc0;
-          read[i_elem][1][i_qpoint] = mass*veloc1;
-          read[i_elem][2][i_qpoint] = mass;
-          read[i_elem][3][i_qpoint] = ener;
-
-          jacobian[i_elem][0][0][i_qpoint] = 1. - 0.5*basis.node(j);
-          jacobian[i_elem][0][1][i_qpoint] = -0.5*basis.node(i);
-          jacobian[i_elem][1][0][i_qpoint] = -0.3*basis.node(j);
-          jacobian[i_elem][1][1][i_qpoint] = 1. - 0.3*basis.node(i);
-        }
-      }
-    }
-    cartdg::get_local_deformed_cpg_euler(2, row_size)(&read[0][0][0], &write[0][0][0],
-                                                  &jacobian[0][0][0][0], n_elem,
-                                                  basis, settings);
-    for (int i_elem = 0; i_elem < n_elem; ++i_elem)
-    {
-      for (int i = 0; i < row_size; ++i)
-      {
-        for (int j = 0; j < row_size; ++j)
-        {
-          int i_qpoint = i*row_size + j;
-          double pos0 = basis.node(i)*(1. - 0.5*basis.node(j));
-          double pos1 = basis.node(j)*(1. - 0.3*basis.node(i));
-          double veloc_dot_grad_mass = (0.1*5*std::pow(pos0, 4)
-                                        - 0.3*2*std::pow(pos0, 1)*std::pow(pos1, 3))*10
-                                      + (-0.3*std::pow(pos0, 2)*3*std::pow(pos1, 2) + 0.2)*-20;
-          REQUIRE((write[i_elem][2][i_qpoint] - read[i_elem][2][i_qpoint])
-                   == Approx(-0.1*veloc_dot_grad_mass));
-          REQUIRE((write[i_elem][3][i_qpoint] - read[i_elem][3][i_qpoint])
-                   == Approx(-0.1*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20) + 0.5*(10*10 + 20*20)*veloc_dot_grad_mass)));
-        }
-      }
-    }
-  }
 
   SECTION("Local convective for deformed elements (2D non-constant)")
   {

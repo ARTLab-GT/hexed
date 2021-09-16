@@ -47,7 +47,7 @@ class Grid
   double* state_w();
   virtual std::vector<double> get_pos(int i_elem) = 0;
   virtual double jacobian_det(int i_elem, int i_qpoint) = 0;
-  virtual double stable_time_step(double cfl_by_stable_cfl, Kernel_settings& setttings);
+  virtual double stable_time_step(double cfl_by_stable_cfl, Kernel_settings& setttings) = 0;
 
   // functions that execute some aspect of time integration
   bool execute_runge_kutta_stage();

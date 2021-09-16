@@ -36,7 +36,7 @@ void neighbor_def_reg_convective(def_reg_con_vec& def_reg_cons, Basis& basis, Ke
       {
         double face_r [2*face_size];
         double face_w [2*face_size];
-        double jacobian [n_face_qpoint];
+        double jacobian [n_face_qpoint] {};
         Deformed_element* def = def_reg_cons[i_vec][i_con].first;
         Element*          reg = def_reg_cons[i_vec][i_con].second;
         Element* elements [2] {positive?def:reg, positive?reg:def};

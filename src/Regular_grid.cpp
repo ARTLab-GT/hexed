@@ -1,8 +1,6 @@
 #include <Regular_grid.hpp>
 #include <get_mcs_convective.hpp>
-#include <get_local_cpg_euler.hpp>
 #include <get_local_convective.hpp>
-#include <get_neighbor_cpg_euler.hpp>
 #include <get_neighbor_convective.hpp>
 #include <get_gbc_convective.hpp>
 #include <get_req_visc_cpg_euler.hpp>
@@ -119,7 +117,6 @@ void Regular_grid::execute_local(Kernel_settings& settings)
 {
   settings.i_read = i_read;
   settings.i_write = i_write;
-  get_local_cpg_euler(n_dim, basis.row_size)(state_r(), state_w(), n_elem, basis, settings);
   get_local_convective(n_dim, basis.row_size)(elements, basis, settings);
 }
 
@@ -127,7 +124,6 @@ void Regular_grid::execute_neighbor(Kernel_settings& settings)
 {
   settings.i_read = i_read;
   settings.i_write = i_write;
-  get_neighbor_cpg_euler(n_dim, basis.row_size)(neighbor_connections_r().data(), neighbor_connections_w().data(), n_neighb_con().data(), basis, settings);
   get_neighbor_convective(n_dim, basis.row_size)(elem_cons, basis, settings);
   //get_gbc_cpg_euler(n_dim, basis.row_size)(ghost_bound_conds, state_r(), state_w(), basis, settings);
 }

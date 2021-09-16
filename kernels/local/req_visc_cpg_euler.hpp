@@ -5,7 +5,7 @@
 #include <Basis.hpp>
 #include <Kernel_settings.hpp>
 #include "../observing/indicator.hpp"
-#include "../observing/char_speed_cpg_euler.hpp"
+#include "../observing/char_speed_convective.hpp"
 
 namespace cartdg
 {
@@ -34,7 +34,7 @@ void req_visc_cpg_euler(double* read, double* visc, int n_elem, Basis& basis, Ke
   {
     double* elem_read = read + i_elem*n_qpoint*n_var;
     double mass_indicator = indicator<n_qpoint, row_size>(elem_read + n_dim*n_qpoint, weights, ortho);
-    double char_speed = char_speed_cpg_euler<n_var, n_qpoint>(elem_read, heat_rat);
+    double char_speed = char_speed_convective<n_var, n_qpoint>(elem_read, heat_rat);
     double req_visc = mass_indicator*char_speed*d_pos/(row_size - 1.);
     for (int i_visc = 0; i_visc < n_visc; ++i_visc)
     {

@@ -2,7 +2,6 @@
 
 #include <Grid.hpp>
 #include <math.hpp>
-#include <get_mcs_cpg_euler.hpp>
 
 namespace cartdg
 {
@@ -69,13 +68,6 @@ int Grid::add_element(std::vector<int> position)
   visc.resize(visc.size() + n_vertices, 0.);
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) pos.push_back(position[i_dim]);
   return n_elem++;
-}
-
-double Grid::stable_time_step(double cfl_by_stable_cfl, Kernel_settings& settings)
-{
-  double cfl = cfl_by_stable_cfl*get_stable_cfl();
-  settings.i_read = i_read;
-  return cfl*mesh_size/get_mcs_cpg_euler(n_dim, basis.row_size)(state_r(), n_elem, settings);
 }
 
 bool Grid::execute_runge_kutta_stage()

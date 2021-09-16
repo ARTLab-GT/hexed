@@ -31,6 +31,8 @@ class Deformed_grid : public Grid
   Vertex& get_vertex(int i_vertex);
   Deformed_elem_con connection(int i_con); // mostly for testing
   def_reg_con def_reg_connection(int i_dim, int i_con); // mostly for testing
+  virtual double stable_time_step(double cfl_by_stable_cfl, Kernel_settings& setttings);
+
   virtual int add_element(std::vector<int> position);
   virtual std::vector<double> get_pos(int i_elem);
   void add_wall(int i_elem, int i_dim, bool is_positive_face);
