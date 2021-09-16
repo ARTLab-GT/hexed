@@ -640,7 +640,7 @@ TEST_CASE("neighbor_def_reg_convective")
     jac[3*n_qpoint + i_qpoint] = 1.;
   }
 
-  cartdg::def_reg_con_vec cons {{{&def, &reg}}, {}, {}};
+  cartdg::def_reg_con_vec cons {{}, {}, {{&def, &reg}}, {}};
   cartdg::get_neighbor_def_reg_convective(2, params.row_size)(cons, basis, settings);
   def_w += 3*n_qpoint - params.row_size;
   reg_w += 2*n_qpoint;
@@ -656,6 +656,32 @@ TEST_CASE("neighbor_def_reg_convective")
   {
     def_w[i_dof] = reg_w[i_dof] = 0.;
   }
+  cons[0].push_back({&def, &reg});
+  cons[2].clear();
+  cartdg::get_neighbor_def_reg_convective(2, params.row_size)(cons, basis, settings);
+  def_w += 3*n_qpoint - params.row_size;
+  reg_w += 2*n_qpoint;
+  for (int i_row = 0; i_row < row_size; ++i_row)
+  {
+    REQUIRE(def_w[i_row]/0.1 == 0.);
+    REQUIRE(reg_w[i_row]/0.1 == 0.);
+  }
+  def_w = def.stage(1);
+  reg_w = reg.stage(1);
+  def_w += 2*n_qpoint;
+  reg_w += 3*n_qpoint - params.row_size;
+  for (int i_row = 0; i_row < row_size; ++i_row)
+  {
+    REQUIRE(def_w[i_row]/0.1 == Approx(-20./weight0/2.));
+    REQUIRE(reg_w[i_row]/0.1 == Approx(-20./weight0));
+  }
+
+  def_w = def.stage(1);
+  reg_w = reg.stage(1);
+  for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof)
+  {
+    def_w[i_dof] = reg_w[i_dof] = 0.;
+  }
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
   {
     jac[0*n_qpoint + i_qpoint] = 1.;
@@ -663,7 +689,7 @@ TEST_CASE("neighbor_def_reg_convective")
     jac[2*n_qpoint + i_qpoint] = 0.;
     jac[3*n_qpoint + i_qpoint] = 3.;
   }
-  cons[1].push_back(cons[0][0]);
+  cons[3].push_back({&def, &reg});
   cons[0].clear();
 
   cartdg::get_neighbor_def_reg_convective(2, params.row_size)(cons, basis, settings);

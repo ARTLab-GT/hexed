@@ -20,13 +20,13 @@ Deformed_grid::Deformed_grid(int n_var_arg, int n_dim_arg, int n_elem_arg,
   }
   n_vertices = 1;
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) n_vertices *= 2;
+  def_reg_cons.resize(2*n_dim);
   neighbor_storage.resize(3);
 
   default_jacobian.clear();
   default_jacobian.resize(n_dim*n_dim*n_qpoint, 0.);
   for (int i_dim = 0; i_dim < n_dim; ++i_dim)
   {
-    def_reg_cons.emplace_back();
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
     {
       default_jacobian[i_dim*(n_dim + 1)*n_qpoint + i_qpoint] = 1.;
