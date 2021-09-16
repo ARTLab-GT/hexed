@@ -320,7 +320,7 @@ void Deformed_grid::connect_non_def(std::array<int, 2> i_elem, std::array<int, 2
   {
     throw std::runtime_error("connecting deformed-regular with opposing face direction is deprecated");
   }
-  def_reg_cons[i_dim[0]].emplace_back(elements[i_elem[0]].get(), &other_grid.element(i_elem[1]));
+  def_reg_cons[i_dim[0] + is_positive[0]*n_dim].emplace_back(elements[i_elem[0]].get(), &other_grid.element(i_elem[1]));
   for (int i_stage = 0; i_stage < 3; ++i_stage)
   {
     neighbor_storage[i_stage].push_back(state_storage[i_stage].data() + n_dof*i_elem[0]);
