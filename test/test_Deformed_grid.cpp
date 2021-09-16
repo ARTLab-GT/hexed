@@ -319,26 +319,6 @@ TEST_CASE("Deformed grid class")
     REQUIRE(jac[8*27 + 26] == Approx( 0.8));
   }
 
-  SECTION("Jacobian determinant")
-  {
-    grid2.add_element({1, -2});
-    grid2.add_element({3, 4});
-    grid2.get_vertex(0).pos = {0.2, -0.39, 0.};
-    grid2.get_vertex(6).pos[1] += 0.1;
-    grid2.get_vertex(7).pos[1] += 0.1;
-    grid2.calc_jacobian();
-    REQUIRE(grid2.jacobian_det(0, 0) == Approx(0.95));
-    REQUIRE(grid2.jacobian_det(0, row_size - 1) == Approx(0.95));
-    REQUIRE(grid2.jacobian_det(1, 0) == Approx(1.));
-    REQUIRE(grid2.jacobian_det(1, row_size*(row_size - 1)) == Approx(1.));
-
-    grid3.add_element({0, 0, 0});
-    grid3.get_vertex(0).pos = {0.01, 0.0, 0.0};
-    grid3.calc_jacobian();
-    REQUIRE(grid3.jacobian_det(0, 0) == Approx(0.95));
-    REQUIRE(grid3.jacobian_det(0, grid3.n_qpoint - 1) == Approx(1.));
-  }
-
   SECTION("volume integrals")
   {
     grid2.add_element({-1, 0});

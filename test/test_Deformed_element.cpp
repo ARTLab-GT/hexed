@@ -29,11 +29,11 @@ TEST_CASE("Deformed_element.hpp")
     }
   }
 
-  element.jacobian()[0*16] = 1.;
-  element.jacobian()[1*16] = 2.;
-  element.jacobian()[2*16] = .1;
-  element.jacobian()[3*16] = 3.;
-  REQUIRE(element.jacobian_determinant(0) == Approx(2.8));
+  element.jacobian()[0*16 + 15] = 1.;
+  element.jacobian()[1*16 + 15] = 2.;
+  element.jacobian()[2*16 + 15] = .1;
+  element.jacobian()[3*16 + 15] = 3.;
+  REQUIRE(element.jacobian_determinant(15) == Approx(2.8));
 
   for (int i_adj = 0; i_adj < 16; ++i_adj)
   {
@@ -43,7 +43,17 @@ TEST_CASE("Deformed_element.hpp")
   element.node_adjustments()[4*2*2 - 1] = 0.04;
   REQUIRE(element.node_adjustments()[0] == 2.7);
   REQUIRE(element.node_adjustments()[4*2*2 - 1] == 0.04);
-  
+
+  cartdg::Storage_params params3d {1, 1, 3, 2};
+  cartdg::Deformed_element element3d {params3d};
+  double jacobian [9] {2., 1., -.7,
+                       .5, 1.,  0.,
+                       1., 0.,  .3};
+  for (int i_jac = 0; i_jac < 9; ++i_jac)
+  {
+    element3d.jacobian()[i_jac*8] = jacobian[i_jac];
+  }
+  REQUIRE(element3d.jacobian_determinant(0) == Approx(1.*.7 + 0.3*1.5));
 
   SECTION("vertex arrangement")
   {
