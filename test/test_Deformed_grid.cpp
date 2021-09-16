@@ -322,16 +322,14 @@ TEST_CASE("Deformed grid class")
   SECTION("volume integrals")
   {
     grid2.add_element({-1, 0});
-    grid2.add_element({0, 0});
-    grid2.get_vertex(4).pos[0] = 0.05;
-    grid2.get_vertex(4).pos[1] = 0.07;
+    grid2.add_element({ 0, 0});
+    grid2.deformed_element(1).vertex(0).pos[0] = 0.05;
+    grid2.deformed_element(1).vertex(0).pos[1] = 0.07;
     grid2.calc_jacobian();
     for (int i_elem : {0, 1})
     {
-      for (int i_qpoint = 0; i_qpoint < grid2.n_qpoint; ++i_qpoint)
-      {
-        grid2.state_r()[i_elem*grid2.n_dof + i_qpoint] = 1.2;
-      }
+      double* stage = grid2.deformed_element(i_elem).stage(0);
+      for (int i_qpoint = 0; i_qpoint < grid2.n_qpoint; ++i_qpoint) stage[i_qpoint] = 1.2;
     }
     auto integral = grid2.integral();
     double area = 0.2*0.2*2. - 0.2*0.5*(0.05 + 0.07);

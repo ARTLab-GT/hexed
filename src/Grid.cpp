@@ -151,6 +151,7 @@ std::vector<double> Grid::integral()
   State_variables state_variables;
   return integral(state_variables);
 }
+
 std::vector<double> Grid::integral(Domain_func& integrand)
 {
   Eigen::VectorXd weights (n_qpoint);
@@ -176,7 +177,8 @@ std::vector<double> Grid::integral(Domain_func& integrand)
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
     std::vector<double> elem_pos = get_pos(i_elem);
-    double* stage = element(i_elem).stage(0);
+    Element& elem = element(i_elem);
+    double* stage = elem.stage(0);
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
     {
       std::vector<double> point_pos;
@@ -190,14 +192,13 @@ std::vector<double> Grid::integral(Domain_func& integrand)
         point_state.push_back(stage[i_qpoint + i_var*n_qpoint]);
       }
       std::vector<double> point_integrand = integrand(point_pos, time, point_state);
-      double jac_det = jacobian_det(i_elem, i_qpoint);
       if (total.size() < point_integrand.size())
       {
-        total.resize(point_integrand.size());
+        total.resize(point_integrand.size(), 0.);
       }
       for (int i_var = 0; i_var < int(point_integrand.size()); ++i_var)
       {
-        total[i_var] += point_integrand[i_var]*weights[i_qpoint]*jac_det;
+        total[i_var] += point_integrand[i_var]*weights[i_qpoint]*elem.jacobian_determinant(i_qpoint);
       }
     }
   }
