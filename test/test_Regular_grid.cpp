@@ -134,14 +134,6 @@ TEST_CASE("Regular_grid")
     REQUIRE(pos[1024] == 0.2);
   }
 
-  SECTION("(trivial) Jacobian determinant")
-  {
-    REQUIRE(grid1.jacobian_det(0, 0) == 1.);
-    REQUIRE(grid2.jacobian_det(4, 2) == 1.);
-    REQUIRE(grid3.jacobian_det(16, 8) == 1.);
-    REQUIRE(grid3.jacobian_det(0, 0) == 1.);
-  }
-
   SECTION("Visualization")
   {
     grid1.visualize("unit_test_1d");
@@ -275,11 +267,11 @@ TEST_CASE("Regular_grid")
     cartdg::Equidistant basis (8);
     cartdg::Regular_grid grid (4, 1, 0, 0.1, basis);
     std::vector<int> position {1};
-    REQUIRE(grid.state_storage[0].size() == 0);
+    REQUIRE(grid.n_elem == 0);
     REQUIRE(grid.derivs.size() == 0);
     REQUIRE(grid.visc.size() == 0);
     REQUIRE(grid.add_element(position) == 0);
-    REQUIRE(grid.state_storage[0].size() == 4*8);
+    REQUIRE(grid.n_elem == 1);
     REQUIRE(grid.derivs.size() == 8);
     REQUIRE(grid.visc.size() == 2);
     grid.element(0).stage(0)[0] = 1.; // modify element to verify existence
@@ -292,12 +284,6 @@ TEST_CASE("Regular_grid")
     grid.element(1).stage(0)[0] = 1.;
     REQUIRE(grid.element(1).stage(0)[0] == 1.);
     grid.auto_connect();
-    REQUIRE(grid.n_neighb_con()[0] == 1);
-
-    grid.state_w()[0] = 1.;
-    REQUIRE(grid.state_r()[0] == 0.);
-    grid.state_w()[2*grid.n_dof - 1] = 1.;
-    REQUIRE(grid.state_r()[2*grid.n_dof - 1] == 0.);
+    REQUIRE(grid.n_con(0) == 1);
   }
-
 }
