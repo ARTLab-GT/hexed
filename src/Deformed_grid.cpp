@@ -409,6 +409,7 @@ void Deformed_grid::calc_jacobian()
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
     std::vector<double> elem_pos = get_pos(i_elem);
+    double* jac = elements[i_elem]->jacobian();
     for (int i_dim = 0, stride = n_qpoint/basis.row_size; i_dim < n_dim; ++i_dim, stride /= basis.row_size)
     {
       for (int i_outer = 0; i_outer < n_qpoint/(stride*basis.row_size); ++i_outer)
@@ -428,6 +429,7 @@ void Deformed_grid::calc_jacobian()
             {
               jacobian[((i_elem*n_dim + j_dim)*n_dim + i_dim)*n_qpoint
                        + row_start + i_qpoint*stride] = row_jacobian(i_qpoint)/mesh_size;
+              jac[(j_dim*n_dim + i_dim)*n_qpoint + row_start + i_qpoint*stride] = row_jacobian(i_qpoint)/mesh_size;
             }
           }
         }
