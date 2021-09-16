@@ -126,24 +126,24 @@ TEST_CASE("Deformed grid class")
       grid3.add_element({0, 0, 0});
       grid3.add_element({1, 0, 0});
       grid3.connect({0, 1}, {0, 0}, {1, 0});
-      REQUIRE(grid3.vertex_ids[4] == grid3.vertex_ids[8]);
-      REQUIRE(grid3.vertex_ids[5] == grid3.vertex_ids[9]);
-      REQUIRE(grid3.vertex_ids[6] == grid3.vertex_ids[10]);
-      REQUIRE(grid3.vertex_ids[7] == grid3.vertex_ids[11]);
+      REQUIRE(&grid3.deformed_element(0).vertex(4) == &grid3.deformed_element(1).vertex(0));
+      REQUIRE(&grid3.deformed_element(0).vertex(5) == &grid3.deformed_element(1).vertex(1));
+      REQUIRE(&grid3.deformed_element(0).vertex(6) == &grid3.deformed_element(1).vertex(2));
+      REQUIRE(&grid3.deformed_element(0).vertex(7) == &grid3.deformed_element(1).vertex(3));
 
       grid3.add_element({0, 1, 0});
       grid3.connect({2, 0}, {1, 1}, {0, 1});
-      REQUIRE(grid3.vertex_ids[2] == grid3.vertex_ids[16]);
-      REQUIRE(grid3.vertex_ids[3] == grid3.vertex_ids[17]);
-      REQUIRE(grid3.vertex_ids[6] == grid3.vertex_ids[20]);
-      REQUIRE(grid3.vertex_ids[7] == grid3.vertex_ids[21]);
+      REQUIRE(&grid3.deformed_element(0).vertex(2) == &grid3.deformed_element(2).vertex(0));
+      REQUIRE(&grid3.deformed_element(0).vertex(3) == &grid3.deformed_element(2).vertex(1));
+      REQUIRE(&grid3.deformed_element(0).vertex(6) == &grid3.deformed_element(2).vertex(4));
+      REQUIRE(&grid3.deformed_element(0).vertex(7) == &grid3.deformed_element(2).vertex(5));
 
       grid3.add_element({0, 0, -1});
       grid3.connect({0, 3}, {2, 2}, {0, 1});
-      REQUIRE(grid3.vertex_ids[0] == grid3.vertex_ids[25]);
-      REQUIRE(grid3.vertex_ids[2] == grid3.vertex_ids[27]);
-      REQUIRE(grid3.vertex_ids[4] == grid3.vertex_ids[29]);
-      REQUIRE(grid3.vertex_ids[6] == grid3.vertex_ids[31]);
+      REQUIRE(&grid3.deformed_element(0).vertex(0) == &grid3.deformed_element(3).vertex(1));
+      REQUIRE(&grid3.deformed_element(0).vertex(2) == &grid3.deformed_element(3).vertex(3));
+      REQUIRE(&grid3.deformed_element(0).vertex(4) == &grid3.deformed_element(3).vertex(5));
+      REQUIRE(&grid3.deformed_element(0).vertex(6) == &grid3.deformed_element(3).vertex(7));
     }
     
     SECTION("Different direction")
@@ -153,10 +153,10 @@ TEST_CASE("Deformed grid class")
         grid3.add_element({0, 0, 0});
         grid3.add_element({1, -1, 0});
         grid3.connect({0, 1}, {0, 1}, {1, 1});
-        REQUIRE(grid3.vertex_ids[4] == grid3.vertex_ids[10]);
-        REQUIRE(grid3.vertex_ids[5] == grid3.vertex_ids[11]);
-        REQUIRE(grid3.vertex_ids[6] == grid3.vertex_ids[14]);
-        REQUIRE(grid3.vertex_ids[7] == grid3.vertex_ids[15]);
+        REQUIRE(&grid3.deformed_element(0).vertex(4) == &grid3.deformed_element(1).vertex(2));
+        REQUIRE(&grid3.deformed_element(0).vertex(5) == &grid3.deformed_element(1).vertex(3));
+        REQUIRE(&grid3.deformed_element(0).vertex(6) == &grid3.deformed_element(1).vertex(6));
+        REQUIRE(&grid3.deformed_element(0).vertex(7) == &grid3.deformed_element(1).vertex(7));
       }
 
       SECTION("0- 1-")
@@ -164,10 +164,10 @@ TEST_CASE("Deformed grid class")
         grid3.add_element({0, 0, 0});
         grid3.add_element({-1, 1, 0});
         grid3.connect({0, 1}, {0, 1}, {0, 0});
-        REQUIRE(grid3.vertex_ids[0] == grid3.vertex_ids[8]);
-        REQUIRE(grid3.vertex_ids[1] == grid3.vertex_ids[9]);
-        REQUIRE(grid3.vertex_ids[2] == grid3.vertex_ids[12]);
-        REQUIRE(grid3.vertex_ids[3] == grid3.vertex_ids[13]);
+        REQUIRE(&grid3.deformed_element(0).vertex(0) == &grid3.deformed_element(1).vertex(0));
+        REQUIRE(&grid3.deformed_element(0).vertex(1) == &grid3.deformed_element(1).vertex(1));
+        REQUIRE(&grid3.deformed_element(0).vertex(2) == &grid3.deformed_element(1).vertex(4));
+        REQUIRE(&grid3.deformed_element(0).vertex(3) == &grid3.deformed_element(1).vertex(5));
       }
 
       SECTION("2+ 1+")
@@ -175,10 +175,10 @@ TEST_CASE("Deformed grid class")
         grid3.add_element({0, 0, 0});
         grid3.add_element({0, -1, 1});
         grid3.connect({0, 1}, {2, 1}, {1, 1});
-        REQUIRE(grid3.vertex_ids[1] == grid3.vertex_ids[10]);
-        REQUIRE(grid3.vertex_ids[3] == grid3.vertex_ids[11]);
-        REQUIRE(grid3.vertex_ids[5] == grid3.vertex_ids[14]);
-        REQUIRE(grid3.vertex_ids[7] == grid3.vertex_ids[15]);
+        REQUIRE(&grid3.deformed_element(0).vertex(1) == &grid3.deformed_element(1).vertex(2));
+        REQUIRE(&grid3.deformed_element(0).vertex(3) == &grid3.deformed_element(1).vertex(3));
+        REQUIRE(&grid3.deformed_element(0).vertex(5) == &grid3.deformed_element(1).vertex(6));
+        REQUIRE(&grid3.deformed_element(0).vertex(7) == &grid3.deformed_element(1).vertex(7));
       }
 
       SECTION("0+ 2+")
@@ -186,10 +186,10 @@ TEST_CASE("Deformed grid class")
         grid3.add_element({0, 0, 0});
         grid3.add_element({1, 0, -1});
         grid3.connect({0, 1}, {0, 2}, {1, 1});
-        REQUIRE(grid3.vertex_ids[4] == grid3.vertex_ids[9]);
-        REQUIRE(grid3.vertex_ids[5] == grid3.vertex_ids[13]);
-        REQUIRE(grid3.vertex_ids[6] == grid3.vertex_ids[11]);
-        REQUIRE(grid3.vertex_ids[7] == grid3.vertex_ids[15]);
+        REQUIRE(&grid3.deformed_element(0).vertex(4) == &grid3.deformed_element(1).vertex(1));
+        REQUIRE(&grid3.deformed_element(0).vertex(5) == &grid3.deformed_element(1).vertex(5));
+        REQUIRE(&grid3.deformed_element(0).vertex(6) == &grid3.deformed_element(1).vertex(3));
+        REQUIRE(&grid3.deformed_element(0).vertex(7) == &grid3.deformed_element(1).vertex(7));
       }
 
       SECTION("2+ 0+")
@@ -197,10 +197,10 @@ TEST_CASE("Deformed grid class")
         grid3.add_element({0, 0, 0});
         grid3.add_element({1, 0, -1});
         grid3.connect({1, 0}, {2, 0}, {1, 1});
-        REQUIRE(grid3.vertex_ids[4] == grid3.vertex_ids[9]);
-        REQUIRE(grid3.vertex_ids[5] == grid3.vertex_ids[13]);
-        REQUIRE(grid3.vertex_ids[6] == grid3.vertex_ids[11]);
-        REQUIRE(grid3.vertex_ids[7] == grid3.vertex_ids[15]);
+        REQUIRE(&grid3.deformed_element(0).vertex(4) == &grid3.deformed_element(1).vertex(1));
+        REQUIRE(&grid3.deformed_element(0).vertex(5) == &grid3.deformed_element(1).vertex(5));
+        REQUIRE(&grid3.deformed_element(0).vertex(6) == &grid3.deformed_element(1).vertex(3));
+        REQUIRE(&grid3.deformed_element(0).vertex(7) == &grid3.deformed_element(1).vertex(7));
       }
 
       SECTION("0+ 1-")
@@ -208,10 +208,10 @@ TEST_CASE("Deformed grid class")
         grid3.add_element({0, 0, 0});
         grid3.add_element({1, 1, 0});
         grid3.connect({0, 1}, {0, 1}, {1, 0});
-        REQUIRE(grid3.vertex_ids[4] == grid3.vertex_ids[12]);
-        REQUIRE(grid3.vertex_ids[5] == grid3.vertex_ids[13]);
-        REQUIRE(grid3.vertex_ids[6] == grid3.vertex_ids[ 8]);
-        REQUIRE(grid3.vertex_ids[7] == grid3.vertex_ids[ 9]);
+        REQUIRE(&grid3.deformed_element(0).vertex(4) == &grid3.deformed_element(1).vertex(4));
+        REQUIRE(&grid3.deformed_element(0).vertex(5) == &grid3.deformed_element(1).vertex(5));
+        REQUIRE(&grid3.deformed_element(0).vertex(6) == &grid3.deformed_element(1).vertex(0));
+        REQUIRE(&grid3.deformed_element(0).vertex(7) == &grid3.deformed_element(1).vertex(1));
       }
 
       SECTION("0- 1+")
@@ -219,10 +219,10 @@ TEST_CASE("Deformed grid class")
         grid3.add_element({0, 0, 0});
         grid3.add_element({1, 1, 0});
         grid3.connect({1, 0}, {0, 1}, {0, 1});
-        REQUIRE(grid3.vertex_ids[2] == grid3.vertex_ids[10]);
-        REQUIRE(grid3.vertex_ids[3] == grid3.vertex_ids[11]);
-        REQUIRE(grid3.vertex_ids[6] == grid3.vertex_ids[ 8]);
-        REQUIRE(grid3.vertex_ids[7] == grid3.vertex_ids[ 9]);
+        REQUIRE(&grid3.deformed_element(0).vertex(2) == &grid3.deformed_element(1).vertex(2));
+        REQUIRE(&grid3.deformed_element(0).vertex(3) == &grid3.deformed_element(1).vertex(3));
+        REQUIRE(&grid3.deformed_element(0).vertex(6) == &grid3.deformed_element(1).vertex(0));
+        REQUIRE(&grid3.deformed_element(0).vertex(7) == &grid3.deformed_element(1).vertex(1));
       }
 
       SECTION("1+ 0-")
@@ -230,10 +230,10 @@ TEST_CASE("Deformed grid class")
         grid3.add_element({0, 0, 0});
         grid3.add_element({1, 1, 0});
         grid3.connect({0, 1}, {1, 0}, {1, 0});
-        REQUIRE(grid3.vertex_ids[2] == grid3.vertex_ids[10]);
-        REQUIRE(grid3.vertex_ids[3] == grid3.vertex_ids[11]);
-        REQUIRE(grid3.vertex_ids[6] == grid3.vertex_ids[ 8]);
-        REQUIRE(grid3.vertex_ids[7] == grid3.vertex_ids[ 9]);
+        REQUIRE(&grid3.deformed_element(0).vertex(2) == &grid3.deformed_element(1).vertex(2));
+        REQUIRE(&grid3.deformed_element(0).vertex(3) == &grid3.deformed_element(1).vertex(3));
+        REQUIRE(&grid3.deformed_element(0).vertex(6) == &grid3.deformed_element(1).vertex(0));
+        REQUIRE(&grid3.deformed_element(0).vertex(7) == &grid3.deformed_element(1).vertex(1));
       }
 
       SECTION("1+ 2-")
@@ -241,10 +241,10 @@ TEST_CASE("Deformed grid class")
         grid3.add_element({0, 0, 0});
         grid3.add_element({0, 1, 1});
         grid3.connect({0, 1}, {1, 2}, {1, 0});
-        REQUIRE(grid3.vertex_ids[2] == grid3.vertex_ids[10]);
-        REQUIRE(grid3.vertex_ids[3] == grid3.vertex_ids[ 8]);
-        REQUIRE(grid3.vertex_ids[6] == grid3.vertex_ids[14]);
-        REQUIRE(grid3.vertex_ids[7] == grid3.vertex_ids[12]);
+        REQUIRE(&grid3.deformed_element(0).vertex(2) == &grid3.deformed_element(1).vertex(2));
+        REQUIRE(&grid3.deformed_element(0).vertex(3) == &grid3.deformed_element(1).vertex(0));
+        REQUIRE(&grid3.deformed_element(0).vertex(6) == &grid3.deformed_element(1).vertex(6));
+        REQUIRE(&grid3.deformed_element(0).vertex(7) == &grid3.deformed_element(1).vertex(4));
       }
 
       SECTION("2+ 0-")
@@ -252,10 +252,10 @@ TEST_CASE("Deformed grid class")
         grid3.add_element({0, 0, 0});
         grid3.add_element({1, 0, 1});
         grid3.connect({0, 1}, {2, 0}, {1, 0});
-        REQUIRE(grid3.vertex_ids[1] == grid3.vertex_ids[ 9]);
-        REQUIRE(grid3.vertex_ids[3] == grid3.vertex_ids[11]);
-        REQUIRE(grid3.vertex_ids[5] == grid3.vertex_ids[ 8]);
-        REQUIRE(grid3.vertex_ids[7] == grid3.vertex_ids[10]);
+        REQUIRE(&grid3.deformed_element(0).vertex(1) == &grid3.deformed_element(1).vertex(1));
+        REQUIRE(&grid3.deformed_element(0).vertex(3) == &grid3.deformed_element(1).vertex(3));
+        REQUIRE(&grid3.deformed_element(0).vertex(5) == &grid3.deformed_element(1).vertex(0));
+        REQUIRE(&grid3.deformed_element(0).vertex(7) == &grid3.deformed_element(1).vertex(2));
         grid3.visualize("test");
       }
 
@@ -264,18 +264,18 @@ TEST_CASE("Deformed grid class")
         grid2.add_element({0, 0});
         grid2.add_element({1, 0});
         grid2.connect({0, 1}, {0, 0}, {1, 0});
-        REQUIRE(grid2.vertex_ids[2] == grid2.vertex_ids[4]);
-        REQUIRE(grid2.vertex_ids[3] == grid2.vertex_ids[5]);
+        REQUIRE(&grid2.deformed_element(0).vertex(2) == &grid2.deformed_element(1).vertex(0));
+        REQUIRE(&grid2.deformed_element(0).vertex(3) == &grid2.deformed_element(1).vertex(1));
 
         grid2.add_element({-1, -1});
         grid2.connect({0, 2}, {0, 1}, {0, 1});
-        REQUIRE(grid2.vertex_ids[0] == grid2.vertex_ids[11]);
-        REQUIRE(grid2.vertex_ids[1] == grid2.vertex_ids[ 9]);
+        REQUIRE(&grid2.deformed_element(0).vertex(0) == &grid2.deformed_element(2).vertex(3));
+        REQUIRE(&grid2.deformed_element(0).vertex(1) == &grid2.deformed_element(2).vertex(1));
 
         grid2.add_element({1, -1});
         grid2.connect({0, 3}, {1, 0}, {0, 0});
-        REQUIRE(grid2.vertex_ids[0] == grid2.vertex_ids[12]);
-        REQUIRE(grid2.vertex_ids[2] == grid2.vertex_ids[13]);
+        REQUIRE(&grid2.deformed_element(0).vertex(0) == &grid2.deformed_element(3).vertex(0));
+        REQUIRE(&grid2.deformed_element(0).vertex(2) == &grid2.deformed_element(3).vertex(1));
       }
     }
   }

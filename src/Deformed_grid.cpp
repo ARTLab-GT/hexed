@@ -223,7 +223,9 @@ void Deformed_grid::execute_neighbor_av(int i_var, int i_dim, Kernel_settings& s
 void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
                             std::array<bool, 2> is_positive)
 {
+  // combine vertices
   std::array<std::vector<int>, 2> id_inds;
+  std::array<std::vector<int>, 2> vertex_inds;
   std::array<int, 2> strides;
   for (int i_side : {0, 1})
   {
@@ -235,6 +237,7 @@ void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
       if ((i_vertex/stride)%2 == int(is_positive[i_side]))
       {
         id_inds[i_side].push_back(i_vertex + i_elem[i_side]*n_vertices);
+        vertex_inds[i_side].push_back(i_vertex);
       }
     }
   }
@@ -245,22 +248,37 @@ void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
       int stride = strides[0];
       if (i_dim[0] < i_dim[1]) stride /= 2;
       for (int i : {0, 1}) std::swap(id_inds[1][i*2/stride], id_inds[1][i*2/stride + stride]);
+      for (int i : {0, 1}) std::swap(vertex_inds[1][i*2/stride], vertex_inds[1][i*2/stride + stride]);
     }
-    else std::swap(id_inds[1][0], id_inds[1][1]);
+    else
+    {
+      std::swap(id_inds[1][0], id_inds[1][1]);
+      std::swap(vertex_inds[1][0], vertex_inds[1][1]);
+    }
   }
   if ((i_dim[0] == 0 && i_dim[1] == 2) || (i_dim[0] == 2 && i_dim[1] == 0))
   {
     std::swap(id_inds[1][1], id_inds[1][2]);
+    std::swap(vertex_inds[1][1], vertex_inds[1][2]);
   }
   for (int i_vertex = 0; i_vertex < n_vertices/2; ++i_vertex)
   {
     get_vertex(id_inds[0][i_vertex]).eat(get_vertex(id_inds[1][i_vertex]));
+    Vertex& vert0 = deformed_element(i_elem[0]).vertex(vertex_inds[0][i_vertex]);
+    Vertex& vert1 = deformed_element(i_elem[1]).vertex(vertex_inds[1][i_vertex]);
+    vert0.eat(vert1);
   }
+
+  // create connection object
+  elem_cons.emplace_back();
   for (int i_side : {0, 1})
   {
     neighbor_inds.push_back(i_elem[i_side]);
     neighbor_axes.push_back(i_dim[i_side]);
     neighbor_is_positive.push_back(is_positive[i_side]);
+    elem_cons.back().element[i_side] = elements[i_elem[i_side]].get();
+    elem_cons.back().i_dim[i_side] = i_dim[i_side];
+    elem_cons.back().is_positive[i_side] = is_positive[i_side];
   }
 }
 
