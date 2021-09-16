@@ -2,6 +2,7 @@
 
 #include <cartdgConfig.hpp>
 #include <Deformed_grid.hpp>
+#include <Regular_grid.hpp>
 #include <Gauss_lobatto.hpp>
 
 TEST_CASE("Deformed grid class")
@@ -144,6 +145,9 @@ TEST_CASE("Deformed grid class")
       REQUIRE(&grid3.deformed_element(0).vertex(2) == &grid3.deformed_element(3).vertex(3));
       REQUIRE(&grid3.deformed_element(0).vertex(4) == &grid3.deformed_element(3).vertex(5));
       REQUIRE(&grid3.deformed_element(0).vertex(6) == &grid3.deformed_element(3).vertex(7));
+
+      REQUIRE(grid3.connection(1).element[0] == &grid3.deformed_element(2));
+      REQUIRE(grid3.connection(1).element[1] == &grid3.deformed_element(0));
     }
     
     SECTION("Different direction")
@@ -212,6 +216,11 @@ TEST_CASE("Deformed grid class")
         REQUIRE(&grid3.deformed_element(0).vertex(5) == &grid3.deformed_element(1).vertex(5));
         REQUIRE(&grid3.deformed_element(0).vertex(6) == &grid3.deformed_element(1).vertex(0));
         REQUIRE(&grid3.deformed_element(0).vertex(7) == &grid3.deformed_element(1).vertex(1));
+
+        REQUIRE(grid3.connection(0).i_dim[0] == 0);
+        REQUIRE(grid3.connection(0).i_dim[1] == 1);
+        REQUIRE(grid3.connection(0).is_positive[0] == true);
+        REQUIRE(grid3.connection(0).is_positive[1] == false);
       }
 
       SECTION("0- 1+")
@@ -277,6 +286,23 @@ TEST_CASE("Deformed grid class")
         REQUIRE(&grid2.deformed_element(0).vertex(0) == &grid2.deformed_element(3).vertex(0));
         REQUIRE(&grid2.deformed_element(0).vertex(2) == &grid2.deformed_element(3).vertex(1));
       }
+    }
+
+    SECTION("deformed-regular")
+    {
+      grid3.add_element({0, -1, 0});
+      grid3.add_element({0, 0, 0});
+      cartdg::Regular_grid reg3 {1, 3, 0, 0.2, basis};
+      reg3.add_element({1, 0, 0});
+      reg3.add_element({0, 0, 1});
+      grid3.connect_non_def({1, 0}, {0, 0}, {1, 0}, reg3);
+      grid3.connect_non_def({1, 1}, {2, 2}, {1, 0}, reg3);
+      REQUIRE(grid3.def_reg_connection(0, 0).first == &grid3.deformed_element(1));
+      REQUIRE(grid3.def_reg_connection(0, 0).second == &reg3.element(0));
+      REQUIRE(grid3.def_reg_connection(2, 0).first == &grid3.deformed_element(1));
+      REQUIRE(grid3.def_reg_connection(2, 0).second == &reg3.element(1));
+      REQUIRE_THROWS(grid3.connect_non_def({1, 0}, {1, 0}, {1, 0}, reg3));
+      REQUIRE_THROWS(grid3.connect_non_def({1, 0}, {0, 0}, {0, 0}, reg3));
     }
   }
 

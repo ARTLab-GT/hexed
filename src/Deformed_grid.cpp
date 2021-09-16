@@ -23,16 +23,12 @@ Deformed_grid::Deformed_grid(int n_var_arg, int n_dim_arg, int n_elem_arg,
   default_jacobian.resize(n_dim*n_dim*n_qpoint, 0.);
   for (int i_dim = 0; i_dim < n_dim; ++i_dim)
   {
+    def_reg_cons.emplace_back();
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
     {
       default_jacobian[i_dim*(n_dim + 1)*n_qpoint + i_qpoint] = 1.;
     }
   }
-}
-
-Vertex& Deformed_grid::get_vertex(int i_vertex)
-{
-  return vertices[vertex_ids[i_vertex]];
 }
 
 Element& Deformed_grid::element(int i_elem)
@@ -43,6 +39,21 @@ Element& Deformed_grid::element(int i_elem)
 Deformed_element& Deformed_grid::deformed_element(int i_elem)
 {
   return *elements[i_elem];
+}
+
+Vertex& Deformed_grid::get_vertex(int i_vertex)
+{
+  return vertices[vertex_ids[i_vertex]];
+}
+
+Deformed_elem_con Deformed_grid::connection(int i_con)
+{
+  return elem_cons[i_con];
+}
+
+def_reg_con Deformed_grid::def_reg_connection(int i_dim, int i_con)
+{
+  return def_reg_cons[i_dim][i_con];
 }
 
 void Deformed_grid::add_vertices(std::vector<int> position, int i_dim)
@@ -298,6 +309,15 @@ void Deformed_grid::update_connections()
 void Deformed_grid::connect_non_def(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
                                     std::array<bool, 2> is_positive, Grid& other_grid)
 {
+  if (i_dim[0] != i_dim[1])
+  {
+    throw std::runtime_error("connecting deformed-regular along different dimensions is deprecated");
+  }
+  if (is_positive[0] == is_positive[1])
+  {
+    throw std::runtime_error("connecting deformed-regular with opposing face direction is deprecated");
+  }
+  def_reg_cons[i_dim[0]].emplace_back(elements[i_elem[0]].get(), &other_grid.element(i_elem[1]));
   for (int i_stage = 0; i_stage < 3; ++i_stage)
   {
     neighbor_storage[i_stage].push_back(state_storage[i_stage].data() + n_dof*i_elem[0]);
