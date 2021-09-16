@@ -4,7 +4,7 @@
 #include <get_local_deformed_convective.hpp>
 #include <get_neighbor_deformed_convective.hpp>
 #include <get_neighbor_def_reg_convective.hpp>
-#include <get_gbc_cpg_euler.hpp>
+#include <get_gbc_convective.hpp>
 #include <get_nonpen_cpg_euler.hpp>
 
 namespace cartdg

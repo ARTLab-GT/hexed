@@ -20,13 +20,13 @@ class Ghost_boundary_condition
   Eigen::Block<Eigen::ArrayXXd> domain_state(); // indices: (i_qpoint, i_var)
   Eigen::Block<Eigen::ArrayXXd> ghost_state();
   std::vector<double> default_jacobian;
-  std::vector<double*> jacobians;
+  std::vector<double*> jacobians; // FIXME: deprecated
   std::vector<int> elems;
 
   Ghost_boundary_condition(const Grid& grid, int i_dim_arg, bool is_positive_face_arg);
 
   void add_element(int i_elem);
-  void add_element(int i_elem, double* jacobian);
+  void add_element(int i_elem, double* jacobian); // FIXME: deprecated
   virtual void calc_ghost_state() = 0;
   virtual void print();
 };
