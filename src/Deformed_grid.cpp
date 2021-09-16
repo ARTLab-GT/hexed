@@ -321,9 +321,10 @@ void Deformed_grid::visualize(std::string file_name)
 std::vector<double> Deformed_grid::face_integral(Domain_func& integrand, int i_elem, int i_dim, bool is_positive)
 {
   auto pos = get_pos(i_elem);
-  double* elem_state = state_r() + i_elem*n_dof;
   auto row_weights = basis.node_weights();
   int stride = std::pow(basis.row_size, n_dim - 1 - i_dim);
+  Deformed_element& elem = deformed_element(i_elem);
+  double* stage = elem.stage(0);
   std::vector<double> total;
   for (int i_outer = 0; i_outer < n_qpoint/basis.row_size/stride; ++i_outer)
   {
@@ -338,7 +339,7 @@ std::vector<double> Deformed_grid::face_integral(Domain_func& integrand, int i_e
       std::vector<double> qpoint_state;
       for (int i_var = 0; i_var < n_var; ++i_var)
       {
-        qpoint_state.push_back(elem_state[i_qpoint + i_var*n_qpoint]);
+        qpoint_state.push_back(stage[i_qpoint + i_var*n_qpoint]);
       }
       auto qpoint_integrand = integrand(qpoint_pos, time, qpoint_state);
       if (total.size() < qpoint_integrand.size())
@@ -350,7 +351,7 @@ std::vector<double> Deformed_grid::face_integral(Domain_func& integrand, int i_e
       {
         for (int k_dim = 0; k_dim < n_dim; ++k_dim)
         {
-          qpoint_jacobian(j_dim, k_dim) = jacobian[((i_elem*n_dim + j_dim)*n_dim + k_dim)*n_qpoint + i_qpoint];
+          qpoint_jacobian(j_dim, k_dim) = elem.jacobian(j_dim, k_dim, i_qpoint);
         }
         qpoint_jacobian(j_dim, i_dim) = 0.;
       }

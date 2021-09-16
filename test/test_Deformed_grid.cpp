@@ -346,11 +346,12 @@ TEST_CASE("Deformed grid class")
     SECTION("cubic polynomial, regular face")
     {
       auto pos = grid3.get_pos(0);
+      double* stage = grid3.deformed_element(0).stage(0);
       for (int i_qpoint = 0; i_qpoint < grid3.n_qpoint; ++i_qpoint)
       {
         double pos1 = pos[i_qpoint + grid3.n_qpoint];
         double pos2 = pos[i_qpoint + grid3.n_qpoint*2];
-        grid3.state_r()[i_qpoint] = std::pow(pos1, 3)*(-std::pow(pos2, 3) + pos2 + 3.) - 2.*std::pow(pos2, 2) - 1.;
+        stage[i_qpoint] = std::pow(pos1, 3)*(-std::pow(pos2, 3) + pos2 + 3.) - 2.*std::pow(pos2, 2) - 1.;
       }
       REQUIRE(grid3.face_integral(sv, 0, 0, 0)[0] == Approx(-0.04081882666666667));
     }
@@ -358,14 +359,14 @@ TEST_CASE("Deformed grid class")
     {
       for (int i_qpoint = 0; i_qpoint < grid3.n_qpoint; ++i_qpoint)
       {
-        grid3.state_r()[i_qpoint] = 1.;
+        grid3.deformed_element(0).stage(0)[i_qpoint] = 1.;
       }
       for (int i_qpoint = 0; i_qpoint < grid2.n_qpoint; ++i_qpoint)
       {
-        grid2.state_r()[i_qpoint] = 1.;
+        grid2.deformed_element(0).stage(0)[i_qpoint] = 1.;
       }
 
-      grid3.get_vertex(1).pos = {0., 0., 0.8*0.2};
+      grid3.deformed_element(0).vertex(1).pos = {0., 0., 0.8*0.2};
       grid3.calc_jacobian();
       double area = 0.2*0.2;
       REQUIRE(grid3.face_integral(sv, 0, 0, 0)[0] == Approx(0.9*area));
@@ -373,13 +374,13 @@ TEST_CASE("Deformed grid class")
       REQUIRE(grid3.face_integral(sv, 0, 1, 0)[0] == Approx(0.9*area));
       REQUIRE(grid3.face_integral(sv, 0, 2, 0)[0] == Approx(area));
 
-      grid3.get_vertex(3).pos = {0., 0.2, 0.8*0.2};
+      grid3.deformed_element(0).vertex(3).pos = {0., 0.2, 0.8*0.2};
       grid3.calc_jacobian();
       REQUIRE(grid3.face_integral(sv, 0, 2, 1)[0] == Approx(std::sqrt(0.2*0.2 + 1.)*area));
 
-      grid2.get_vertex(2).pos = {1.1*0.2, 0.};
-      grid2.get_vertex(3).pos = {0.9*0.2, 0.9*0.2};
-      grid2.get_vertex(0).pos = {0.3, 0.3}; // show that vertex on opposite face has no effect
+      grid2.deformed_element(0).vertex(2).pos = {1.1*0.2, 0.};
+      grid2.deformed_element(0).vertex(3).pos = {0.9*0.2, 0.9*0.2};
+      grid2.deformed_element(0).vertex(0).pos = {0.3, 0.3}; // show that vertex on opposite face has no effect
       grid2.calc_jacobian();
       REQUIRE(grid2.face_integral(sv, 0, 0, 1)[0] == Approx(std::sqrt(0.2*0.2 + 0.9*0.9)*0.2));
     }
