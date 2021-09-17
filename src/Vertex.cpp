@@ -153,7 +153,7 @@ Vertex::Non_transferable_ptr& Vertex::Non_transferable_ptr::operator=(const Vert
 {
   nullify();
   ptr = other.ptr;
-  ptr->nont_ptrs.insert(this);
+  if (ptr) ptr->nont_ptrs.insert(this);
   return *this;
 }
 
