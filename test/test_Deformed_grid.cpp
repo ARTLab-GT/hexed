@@ -348,16 +348,33 @@ TEST_CASE("Deformed grid class")
         grid3.deformed_element(i_elem).vertex(i_vertex).mobile = true;
       }
     }
-    grid3.calc_vertex_relaxation();
-    REQUIRE(grid3.deformed_element(0).vertex(0).pos[0] == 0.);
-    REQUIRE(grid3.deformed_element(0).vertex(0).pos[1] == 0.);
-    REQUIRE(grid3.deformed_element(0).vertex(4).pos[0] == 0.2*1.);
-    REQUIRE(grid3.deformed_element(0).vertex(4).pos[0] == 0.2*1.);
-    grid3.apply_vertex_relaxation();
-    REQUIRE(grid3.deformed_element(0).vertex(0).pos[0] == 0.2*0.5/3.);
-    REQUIRE(grid3.deformed_element(0).vertex(0).pos[1] == 0.2*0.5/3.);
-    REQUIRE(grid3.deformed_element(0).vertex(4).pos[0] == 0.2*1.);
-    REQUIRE(grid3.deformed_element(0).vertex(4).pos[1] == 0.2*0.5/4.);
+    SECTION("without purging")
+    {
+      grid3.calc_vertex_relaxation();
+      REQUIRE(grid3.deformed_element(0).vertex(0).pos[0] == 0.);
+      REQUIRE(grid3.deformed_element(0).vertex(0).pos[1] == 0.);
+      REQUIRE(grid3.deformed_element(0).vertex(4).pos[0] == 0.2*1.);
+      REQUIRE(grid3.deformed_element(0).vertex(4).pos[0] == 0.2*1.);
+      grid3.apply_vertex_relaxation();
+      REQUIRE(grid3.deformed_element(0).vertex(0).pos[0] == 0.2*0.5/3.);
+      REQUIRE(grid3.deformed_element(0).vertex(0).pos[1] == 0.2*0.5/3.);
+      REQUIRE(grid3.deformed_element(0).vertex(4).pos[0] == 0.2*1.);
+      REQUIRE(grid3.deformed_element(0).vertex(4).pos[1] == 0.2*0.5/4.);
+    }
+    SECTION("with purging")
+    {
+      grid3.purge_vertices();
+      grid3.calc_vertex_relaxation();
+      REQUIRE(grid3.deformed_element(0).vertex(0).pos[0] == 0.);
+      REQUIRE(grid3.deformed_element(0).vertex(0).pos[1] == 0.);
+      REQUIRE(grid3.deformed_element(0).vertex(4).pos[0] == 0.2*1.);
+      REQUIRE(grid3.deformed_element(0).vertex(4).pos[0] == 0.2*1.);
+      grid3.apply_vertex_relaxation();
+      REQUIRE(grid3.deformed_element(0).vertex(0).pos[0] == 0.2*0.5/3.);
+      REQUIRE(grid3.deformed_element(0).vertex(0).pos[1] == 0.2*0.5/3.);
+      REQUIRE(grid3.deformed_element(0).vertex(4).pos[0] == 0.2*1.);
+      REQUIRE(grid3.deformed_element(0).vertex(4).pos[1] == 0.2*0.5/4.);
+    }
   }
 
   SECTION("volume integrals")

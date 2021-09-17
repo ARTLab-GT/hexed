@@ -249,6 +249,15 @@ void Deformed_grid::connect_non_def(std::array<int, 2> i_elem, std::array<int, 2
   def_reg_cons[i_dim[0] + is_positive[0]*n_dim].emplace_back(elements[i_elem[0]].get(), &other_grid.element(i_elem[1]));
 }
 
+void Deformed_grid::purge_vertices()
+{
+  for (std::vector<Vertex::Non_transferable_ptr>::iterator current = vertices.begin();
+       current < vertices.end(); ++current)
+  {
+    if (!*current) vertices.erase(current);
+  }
+}
+
 void Deformed_grid::calc_vertex_relaxation()
 {
   for (Vertex::Non_transferable_ptr& vertex : vertices)
