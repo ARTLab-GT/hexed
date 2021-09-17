@@ -48,6 +48,13 @@ Vertex& Deformed_grid::get_vertex(int i_vertex)
   return vertices[vertex_ids[i_vertex]];
 }
 
+double Deformed_grid::stable_time_step(double cfl_by_stable_cfl, Kernel_settings& settings)
+{
+  double cfl = cfl_by_stable_cfl*get_stable_cfl();
+  settings.i_read = i_read;
+  return cfl*mesh_size/get_mcs_deformed_convective(n_dim, basis.row_size)(elements, settings);
+}
+
 Deformed_elem_con Deformed_grid::connection(int i_con)
 {
   return elem_cons[i_con];
@@ -58,11 +65,9 @@ def_reg_con Deformed_grid::def_reg_connection(int i_dim, int i_con)
   return def_reg_cons[i_dim][i_con];
 }
 
-double Deformed_grid::stable_time_step(double cfl_by_stable_cfl, Kernel_settings& settings)
+Deformed_elem_wall Deformed_grid::def_elem_wall(int i_wall)
 {
-  double cfl = cfl_by_stable_cfl*get_stable_cfl();
-  settings.i_read = i_read;
-  return cfl*mesh_size/get_mcs_deformed_convective(n_dim, basis.row_size)(elements, settings);
+  return walls[i_wall];
 }
 
 void Deformed_grid::add_vertices(std::vector<int> position, int i_dim)
@@ -174,6 +179,9 @@ std::vector<double> Deformed_grid::get_pos(int i_elem)
 
 void Deformed_grid::add_wall(int i_elem, int i_dim, bool is_positive_face)
 {
+  Deformed_elem_wall wall {elements[i_elem].get(), i_dim, is_positive_face};
+  walls.push_back(wall);
+
   i_elem_wall.push_back(i_elem);
   i_dim_wall.push_back(i_dim);
   is_positive_wall.push_back((int)is_positive_face);

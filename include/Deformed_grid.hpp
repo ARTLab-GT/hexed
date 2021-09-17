@@ -29,9 +29,12 @@ class Deformed_grid : public Grid
   virtual Element& element(int i_elem);
   Deformed_element& deformed_element(int i_elem); // points to same object as element(int) but with different type
   Vertex& get_vertex(int i_vertex);
-  Deformed_elem_con connection(int i_con); // mostly for testing
-  def_reg_con def_reg_connection(int i_dim, int i_con); // mostly for testing
   virtual double stable_time_step(double cfl_by_stable_cfl, Kernel_settings& setttings);
+
+  // the following are mostly for testing
+  Deformed_elem_con connection(int i_con);
+  def_reg_con def_reg_connection(int i_dim, int i_con);
+  Deformed_elem_wall def_elem_wall(int i_wall);
 
   virtual int add_element(std::vector<int> position);
   virtual std::vector<double> get_pos(int i_elem);
@@ -66,6 +69,7 @@ class Deformed_grid : public Grid
   def_elem_vec elements;
   def_elem_con_vec elem_cons;
   def_reg_con_vec def_reg_cons;
+  def_elem_wall_vec walls;
   void add_vertices(std::vector<int> position, int i_dim);
 };
 

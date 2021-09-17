@@ -427,13 +427,18 @@ TEST_CASE("Deformed grid class")
     grid2.add_wall(2, 0, 0);
     grid2.add_wall(2, 0, 1);
     grid2.add_wall(2, 1, 1);
+    REQUIRE(grid2.def_elem_wall(1).element == &grid2.deformed_element(2));
+    REQUIRE(grid2.def_elem_wall(1).i_dim == 0);
+    REQUIRE(grid2.def_elem_wall(3).i_dim == 1);
+    REQUIRE(grid2.def_elem_wall(2).is_positive == true);
+
     for (int i_elem = 0; i_elem < grid2.n_elem; ++i_elem)
     {
       auto pos = grid2.get_pos(i_elem);
-      double* state = grid2.state_r() + i_elem*grid2.n_dof;
+      double* stage = grid2.deformed_element(i_elem).stage(0);
       for (int i_qpoint = 0; i_qpoint < grid2.n_qpoint; ++i_qpoint)
       {
-        state[i_qpoint] = pos[i_qpoint] + 0.1*pos[i_qpoint + grid2.n_qpoint];
+        stage[i_qpoint] = pos[i_qpoint] + 0.1*pos[i_qpoint + grid2.n_qpoint];
       }
     }
     cartdg::State_variables sv;
@@ -445,24 +450,12 @@ TEST_CASE("Deformed grid class")
     multivar.add_wall(0, 1, 0);
     for (int i_qpoint = 0; i_qpoint < multivar.n_qpoint; ++i_qpoint)
     {
-      multivar.state_r()[i_qpoint] = 2.;
-      multivar.state_r()[i_qpoint + multivar.n_qpoint] = .03;
+      multivar.element(0).stage(0)[i_qpoint] = 2.;
+      multivar.element(0).stage(0)[i_qpoint + multivar.n_qpoint] = .03;
     }
     multivar.calc_jacobian();
     auto integral = multivar.surface_integral(sv);
     REQUIRE(integral[0] == Approx(4.));
     REQUIRE(integral[1] == Approx(.06));
-  }
-
-  SECTION("Adding wall boundary conditions")
-  {
-    grid3.add_wall(1, 2, false);
-    grid3.add_wall(0, 0, true);
-    REQUIRE(grid3.i_elem_wall.size() == 2);
-    REQUIRE(grid3.i_dim_wall.size() == 2);
-    REQUIRE(grid3.is_positive_wall.size() == 2);
-    REQUIRE(grid3.i_elem_wall[0] == 1);
-    REQUIRE(grid3.i_dim_wall[1] == 0);
-    REQUIRE(grid3.is_positive_wall[1] == true);
   }
 }
