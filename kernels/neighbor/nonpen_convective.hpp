@@ -87,7 +87,7 @@ void nonpen_convective(def_elem_wall_vec& walls, Basis& basis, Kernel_settings& 
     int dims [2] {i_dim, i_dim};
     bool flips [2] {!is_positive, !is_positive};
     hll_deformed_cpg_euler<n_dim, n_face_qpoint>(&face_r[0][0][0], &face_w[0][0][0], &face_jacobian[0][0][0][0], mult, dims, flips, heat_rat);
-    write_copy<n_var, n_qpoint, row_size>(&face_w[0][0][0], wall.element->stage(i_write), stride, is_positive);
+    write_copy<n_var, n_qpoint, row_size, true>(&face_w[0][0][0], wall.element->stage(i_write), stride, is_positive);
   }
 }
 
