@@ -10,8 +10,6 @@ Vertex::Vertex (std::array<double, 3> pos)
 : pos{pos}, m{1}
 {}
 
-Vertex::Vertex (int id_arg) : id(id_arg), m(1) {}
-
 Vertex::~Vertex()
 {
   int size = nont_ptrs.size();
@@ -27,10 +25,6 @@ Vertex::~Vertex()
 
 void Vertex::eat(Vertex& other)
 {
-  if (parent_grid && (parent_grid != other.parent_grid))
-  {
-    throw std::runtime_error("Error: attempting to combine vertices from different grids.");
-  }
   if (this != &other)
   {
     for (int i_dim = 0; i_dim < 3; ++i_dim)
@@ -40,35 +34,17 @@ void Vertex::eat(Vertex& other)
     m += other.m;
     other.m = 0;
     mobile = mobile || other.mobile;
-    if (not trbl_ptrs.empty()) // FIXME: won't be necessary without old interface
+    for (Vertex* neighbor : other.neighbors)
     {
-      for (Vertex* neighbor : other.neighbors)
-      {
-        connect(*this, *neighbor);
-      }
-      const Transferable_ptr& this_ptr = **trbl_ptrs.begin();
-      int size = other.trbl_ptrs.size();
-      for (int i_ptr = 0; i_ptr < size; ++i_ptr)
-      {
-        Transferable_ptr& other_ptr = **other.trbl_ptrs.begin();
-        other_ptr = this_ptr;
-      } // `other` no longer exists!
+      connect(*this, *neighbor);
     }
-    else
+    const Transferable_ptr& this_ptr = **trbl_ptrs.begin();
+    int size = other.trbl_ptrs.size();
+    for (int i_ptr = 0; i_ptr < size; ++i_ptr)
     {
-      while (!other.neighbor_ids.empty())
-      {
-        neighbor_ids.push_back(other.neighbor_ids.back());
-        other.neighbor_ids.pop_back();
-      }
-      while (!other.id_refs.empty())
-      {
-        int ref = other.id_refs.back();
-        id_refs.push_back(ref);
-        parent_grid->vertex_ids[ref] = id;
-        other.id_refs.pop_back();
-      }
-    }
+      Transferable_ptr& other_ptr = **other.trbl_ptrs.begin();
+      other_ptr = this_ptr;
+    } // `other` no longer exists!
   }
 }
 
@@ -83,13 +59,6 @@ void Vertex::calc_relax()
   {
     relax[i_dim] = 0.;
   }
-  for (int neighbor_id : neighbor_ids)
-  {
-    for (int i_dim = 0; i_dim < 3; ++i_dim)
-    {
-      relax[i_dim] += parent_grid->get_vertex(neighbor_id).pos[i_dim];
-    }
-  }
   for (Vertex* neighbor : neighbors)
   {
     for (int i_dim = 0; i_dim < 3; ++i_dim)
@@ -97,7 +66,7 @@ void Vertex::calc_relax()
       relax[i_dim] += neighbor->pos[i_dim];
     }
   }
-  int size = neighbor_ids.size() + neighbors.size();
+  int size = neighbors.size();
   for (int i_dim = 0; i_dim < 3; ++i_dim)
   {
     relax[i_dim] = 0.5*(relax[i_dim]/size - pos[i_dim]);

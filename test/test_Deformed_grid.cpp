@@ -14,19 +14,7 @@ TEST_CASE("Deformed grid class")
   grids.emplace_back(1, 3, 0, 0.2, basis);
   cartdg::Deformed_grid& grid2 = grids[0];
   cartdg::Deformed_grid& grid3 = grids[1];
-
-  SECTION("construction")
-  {
-    for (cartdg::Deformed_grid& grid : grids)
-    {
-      REQUIRE(grid.i_elem_wall.empty());
-      REQUIRE(grid.i_dim_wall.empty());
-      REQUIRE(grid.is_positive_wall.empty());
-    }
-    REQUIRE(grid2.n_vertices == 4);
-    REQUIRE(grid3.n_vertices == 8);
-    REQUIRE_THROWS(cartdg::Deformed_grid (1, 2, 1, 0.2, basis));
-  }
+  REQUIRE_THROWS(cartdg::Deformed_grid (1, 2, 1, 0.2, basis));
 
   SECTION("Adding deformed elements")
   {
@@ -428,6 +416,7 @@ TEST_CASE("Deformed grid class")
     grid2.add_wall(2, 0, 1);
     grid2.add_wall(2, 1, 1);
     REQUIRE(grid2.def_elem_wall(1).element == &grid2.deformed_element(2));
+    REQUIRE(grid2.def_elem_wall(1).i_elem == 2);
     REQUIRE(grid2.def_elem_wall(1).i_dim == 0);
     REQUIRE(grid2.def_elem_wall(3).i_dim == 1);
     REQUIRE(grid2.def_elem_wall(2).is_positive == true);

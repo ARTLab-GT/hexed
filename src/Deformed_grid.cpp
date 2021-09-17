@@ -20,17 +20,6 @@ Deformed_grid::Deformed_grid(int n_var_arg, int n_dim_arg, int n_elem_arg,
   n_vertices = 1;
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) n_vertices *= 2;
   def_reg_cons.resize(2*n_dim);
-  neighbor_storage.resize(3);
-
-  default_jacobian.clear();
-  default_jacobian.resize(n_dim*n_dim*n_qpoint, 0.);
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-  {
-    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
-    {
-      default_jacobian[i_dim*(n_dim + 1)*n_qpoint + i_qpoint] = 1.;
-    }
-  }
 }
 
 Element& Deformed_grid::element(int i_elem)
@@ -41,11 +30,6 @@ Element& Deformed_grid::element(int i_elem)
 Deformed_element& Deformed_grid::deformed_element(int i_elem)
 {
   return *elements[i_elem];
-}
-
-Vertex& Deformed_grid::get_vertex(int i_vertex)
-{
-  return vertices[vertex_ids[i_vertex]];
 }
 
 double Deformed_grid::stable_time_step(double cfl_by_stable_cfl, Kernel_settings& settings)
@@ -70,28 +54,6 @@ Deformed_elem_wall Deformed_grid::def_elem_wall(int i_wall)
   return walls[i_wall];
 }
 
-void Deformed_grid::add_vertices(std::vector<int> position, int i_dim)
-{
-  if (i_dim == n_dim)
-  {
-    vertices.emplace_back(vertices.size());
-    Vertex& vertex = vertices.back();
-    vertex.id_refs.push_back(vertex_ids.size());
-    vertex_ids.push_back(vertex.id);
-    vertex.parent_grid = this;
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-    {
-      vertex.pos[i_dim] = position[i_dim]*mesh_size + origin[i_dim];
-    }
-  }
-  else
-  {
-    add_vertices(position, i_dim + 1);
-    ++position[i_dim];
-    add_vertices(position, i_dim + 1);
-  }
-}
-
 int Deformed_grid::add_element(std::vector<int> position)
 {
   int i_elem = Grid::add_element(position);
@@ -101,20 +63,6 @@ int Deformed_grid::add_element(std::vector<int> position)
     Vertex& vert = elements.back()->vertex(i_vert);
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) vert.pos[i_dim] += origin[i_dim];
   }
-
-  //old interface
-  add_vertices(position, 0);
-  for (int stride = 1; stride < n_vertices; stride *= 2)
-  {
-    for (int i_vertex = 0; i_vertex < n_vertices; ++i_vertex)
-    {
-      int i_neighbor = ((i_vertex/stride)%2 == 0) ? i_vertex + stride : i_vertex - stride;
-      int id = vertex_ids[n_vertices*i_elem + i_vertex];
-      vertices[id].neighbor_ids.push_back(n_vertices*i_elem + i_neighbor);
-    }
-  }
-  for (int i = 0; i < n_qpoint/basis.row_size*2*n_dim; ++i) node_adjustments.push_back(0);
-
   return i_elem;
 }
 
@@ -179,26 +127,8 @@ std::vector<double> Deformed_grid::get_pos(int i_elem)
 
 void Deformed_grid::add_wall(int i_elem, int i_dim, bool is_positive_face)
 {
-  Deformed_elem_wall wall {elements[i_elem].get(), i_dim, is_positive_face};
+  Deformed_elem_wall wall {elements[i_elem].get(), i_dim, is_positive_face, i_elem};
   walls.push_back(wall);
-
-  i_elem_wall.push_back(i_elem);
-  i_dim_wall.push_back(i_dim);
-  is_positive_wall.push_back((int)is_positive_face);
-}
-
-double Deformed_grid::jacobian_det(int i_elem, int i_qpoint)
-{
-  Eigen::MatrixXd jac_mat (n_dim, n_dim);
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-  {
-    for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-    {
-      int i_value = ((i_elem*n_dim + i_dim)*n_dim + j_dim)*n_qpoint + i_qpoint;
-      jac_mat(i_dim, j_dim) = jacobian[i_value];
-    }
-  }
-  return jac_mat.fullPivLu().determinant();
 }
 
 void Deformed_grid::execute_local(Kernel_settings& settings)
@@ -252,7 +182,6 @@ void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
                             std::array<bool, 2> is_positive)
 {
   // combine vertices
-  std::array<std::vector<int>, 2> id_inds;
   std::array<std::vector<int>, 2> vertex_inds;
   std::array<int, 2> strides;
   for (int i_side : {0, 1})
@@ -264,7 +193,6 @@ void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
     {
       if ((i_vertex/stride)%2 == int(is_positive[i_side]))
       {
-        id_inds[i_side].push_back(i_vertex + i_elem[i_side]*n_vertices);
         vertex_inds[i_side].push_back(i_vertex);
       }
     }
@@ -275,23 +203,19 @@ void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
     {
       int stride = strides[0];
       if (i_dim[0] < i_dim[1]) stride /= 2;
-      for (int i : {0, 1}) std::swap(id_inds[1][i*2/stride], id_inds[1][i*2/stride + stride]);
       for (int i : {0, 1}) std::swap(vertex_inds[1][i*2/stride], vertex_inds[1][i*2/stride + stride]);
     }
     else
     {
-      std::swap(id_inds[1][0], id_inds[1][1]);
       std::swap(vertex_inds[1][0], vertex_inds[1][1]);
     }
   }
   if ((i_dim[0] == 0 && i_dim[1] == 2) || (i_dim[0] == 2 && i_dim[1] == 0))
   {
-    std::swap(id_inds[1][1], id_inds[1][2]);
     std::swap(vertex_inds[1][1], vertex_inds[1][2]);
   }
   for (int i_vertex = 0; i_vertex < n_vertices/2; ++i_vertex)
   {
-    get_vertex(id_inds[0][i_vertex]).eat(get_vertex(id_inds[1][i_vertex]));
     Vertex& vert0 = deformed_element(i_elem[0]).vertex(vertex_inds[0][i_vertex]);
     Vertex& vert1 = deformed_element(i_elem[1]).vertex(vertex_inds[1][i_vertex]);
     vert0.eat(vert1);
@@ -301,25 +225,9 @@ void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
   elem_cons.emplace_back();
   for (int i_side : {0, 1})
   {
-    neighbor_inds.push_back(i_elem[i_side]);
-    neighbor_axes.push_back(i_dim[i_side]);
-    neighbor_is_positive.push_back(is_positive[i_side]);
     elem_cons.back().element[i_side] = elements[i_elem[i_side]].get();
     elem_cons.back().i_dim[i_side] = i_dim[i_side];
     elem_cons.back().is_positive[i_side] = is_positive[i_side];
-  }
-}
-
-void Deformed_grid::update_connections()
-{
-  for (int i_elem : neighbor_inds)
-  {
-    jacobian_neighbors.push_back(jacobian.data() + i_elem*n_dim*n_dim*n_qpoint);
-    for (int i_stage = 0; i_stage < 3; ++i_stage)
-    {
-      double* state_data = state_storage[i_stage].data();
-      neighbor_storage[i_stage].push_back(state_data + n_dof*i_elem);
-    }
   }
 }
 
@@ -335,19 +243,6 @@ void Deformed_grid::connect_non_def(std::array<int, 2> i_elem, std::array<int, 2
     throw std::runtime_error("connecting deformed-regular with opposing face direction is deprecated");
   }
   def_reg_cons[i_dim[0] + is_positive[0]*n_dim].emplace_back(elements[i_elem[0]].get(), &other_grid.element(i_elem[1]));
-  for (int i_stage = 0; i_stage < 3; ++i_stage)
-  {
-    neighbor_storage[i_stage].push_back(state_storage[i_stage].data() + n_dof*i_elem[0]);
-    neighbor_storage[i_stage].push_back(other_grid.state_storage[i_stage].data()
-                                        + other_grid.n_dof*i_elem[1]);
-  }
-  for (int i_side : {0, 1})
-  {
-    neighbor_axes.push_back(i_dim[i_side]);
-    neighbor_is_positive.push_back(int(is_positive[i_side]));
-  }
-  jacobian_neighbors.push_back(jacobian.data() + i_elem[0]*n_dim*n_dim*n_qpoint);
-  jacobian_neighbors.push_back(default_jacobian.data());
 }
 
 void Deformed_grid::visualize(std::string file_name)
@@ -424,9 +319,9 @@ std::vector<double> Deformed_grid::face_integral(Domain_func& integrand, int i_e
 std::vector<double> Deformed_grid::surface_integral(Domain_func& integrand)
 {
   std::vector<double> total;
-  for (int i_wall = 0; i_wall < int(i_elem_wall.size()); ++i_wall)
+  for (Deformed_elem_wall wall : walls)
   {
-    auto fi = face_integral(integrand, i_elem_wall[i_wall], i_dim_wall[i_wall], is_positive_wall[i_wall]);
+    auto fi = face_integral(integrand, wall.i_elem, wall.i_dim, wall.is_positive);
     if (total.size() < fi.size())
     {
       total.resize(fi.size());
@@ -441,7 +336,6 @@ std::vector<double> Deformed_grid::surface_integral(Domain_func& integrand)
 
 void Deformed_grid::calc_jacobian()
 {
-  jacobian.resize(n_elem*n_dim*n_dim*n_qpoint);
   // FIXME: make this a kernel
   auto diff_mat = basis.diff_mat();
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
@@ -465,8 +359,6 @@ void Deformed_grid::calc_jacobian()
             auto row_jacobian = diff_mat*row_pos;
             for (int i_qpoint = 0; i_qpoint < basis.row_size; ++i_qpoint)
             {
-              jacobian[((i_elem*n_dim + j_dim)*n_dim + i_dim)*n_qpoint
-                       + row_start + i_qpoint*stride] = row_jacobian(i_qpoint)/mesh_size;
               jac[(j_dim*n_dim + i_dim)*n_qpoint + row_start + i_qpoint*stride] = row_jacobian(i_qpoint)/mesh_size;
             }
           }
@@ -474,16 +366,6 @@ void Deformed_grid::calc_jacobian()
       }
     }
   }
-}
-
-double** Deformed_grid::state_connections_r()
-{
-  return neighbor_storage[i_read].data();
-}
-
-double** Deformed_grid::state_connections_w()
-{
-  return neighbor_storage[i_write].data();
 }
 
 }

@@ -30,16 +30,9 @@ class Vertex
 
   static void connect(Vertex&, Vertex&);
 
-  // should not be public
-  Vertex(int id_arg);
-  std::array<double, 3> relax {0, 0, 0};
-  std::vector<int> id_refs;
-  std::vector<int> neighbor_ids;
-  int id;
-  Deformed_grid* parent_grid = nullptr;
-
   private:
   int m;
+  std::array<double, 3> relax {0, 0, 0};
   std::unordered_set<Transferable_ptr*> trbl_ptrs;
   std::unordered_set<Non_transferable_ptr*> nont_ptrs;
   std::set<Vertex*> neighbors; // use set because have to iterate through

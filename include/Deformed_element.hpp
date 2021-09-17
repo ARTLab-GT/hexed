@@ -36,6 +36,7 @@ class Deformed_elem_wall
   Deformed_element* element;
   int i_dim;
   bool is_positive;
+  int i_elem;
 };
 
 typedef std::vector<std::unique_ptr<Deformed_element>> def_elem_vec;
