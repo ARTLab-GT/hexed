@@ -30,10 +30,19 @@ class Deformed_elem_con
   std::array<bool, 2> is_positive;
 };
 
+class Deformed_elem_wall
+{
+  public:
+  Deformed_element* element;
+  int i_dim;
+  bool is_positive;
+};
+
 typedef std::vector<std::unique_ptr<Deformed_element>> def_elem_vec;
 typedef std::vector<Deformed_elem_con> def_elem_con_vec;
 typedef std::pair<Deformed_element*, Element*> def_reg_con;
 typedef std::vector<std::vector<def_reg_con>> def_reg_con_vec;
+typedef std::vector<Deformed_elem_wall> def_elem_wall_vec;
 
 }
 #endif
