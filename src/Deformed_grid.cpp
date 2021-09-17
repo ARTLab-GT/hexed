@@ -62,6 +62,8 @@ int Deformed_grid::add_element(std::vector<int> position)
   {
     Vertex& vert = elements.back()->vertex(i_vert);
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) vert.pos[i_dim] += origin[i_dim];
+    Vertex::Non_transferable_ptr ptr {vert};
+    vertices.push_back(vert);
   }
   return i_elem;
 }
@@ -245,6 +247,22 @@ void Deformed_grid::connect_non_def(std::array<int, 2> i_elem, std::array<int, 2
     throw std::runtime_error("connecting deformed-regular with opposing face direction is deprecated");
   }
   def_reg_cons[i_dim[0] + is_positive[0]*n_dim].emplace_back(elements[i_elem[0]].get(), &other_grid.element(i_elem[1]));
+}
+
+void Deformed_grid::calc_vertex_relaxation()
+{
+  for (Vertex::Non_transferable_ptr& vertex : vertices)
+  {
+    if (vertex) vertex->calc_relax();
+  }
+}
+
+void Deformed_grid::apply_vertex_relaxation()
+{
+  for (Vertex::Non_transferable_ptr& vertex : vertices)
+  {
+    if (vertex) vertex->apply_relax();
+  }
 }
 
 void Deformed_grid::visualize(std::string file_name)

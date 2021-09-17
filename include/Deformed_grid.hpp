@@ -10,6 +10,7 @@ namespace cartdg
 class Deformed_grid : public Grid
 {
   def_elem_vec elements;
+  std::vector<Vertex::Non_transferable_ptr> vertices;
   def_elem_con_vec elem_cons;
   def_reg_con_vec def_reg_cons;
   def_elem_wall_vec walls;
@@ -35,6 +36,8 @@ class Deformed_grid : public Grid
                std::array<bool, 2> is_positive);
   void connect_non_def(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
                        std::array<bool, 2> is_positive, Grid& other_grid);
+  void calc_vertex_relaxation();
+  void apply_vertex_relaxation();
   void calc_jacobian(); // must be called after vertex locations are correct
 
   // time integration

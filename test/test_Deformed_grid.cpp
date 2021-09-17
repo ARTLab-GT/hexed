@@ -336,6 +336,30 @@ TEST_CASE("Deformed grid class")
     REQUIRE(jac[8*27 + 26] == Approx( 0.8));
   }
 
+  SECTION("vertex relaxation")
+  {
+    grid3.add_element({0, 0, 0});
+    grid3.add_element({1, 0, 0});
+    grid3.connect({0, 1}, {0, 0}, {1, 0});
+    for (int i_elem : {0, 1})
+    {
+      for (int i_vertex = 0; i_vertex < 8; ++i_vertex)
+      {
+        grid3.deformed_element(i_elem).vertex(i_vertex).mobile = true;
+      }
+    }
+    grid3.calc_vertex_relaxation();
+    REQUIRE(grid3.deformed_element(0).vertex(0).pos[0] == 0.);
+    REQUIRE(grid3.deformed_element(0).vertex(0).pos[1] == 0.);
+    REQUIRE(grid3.deformed_element(0).vertex(4).pos[0] == 0.2*1.);
+    REQUIRE(grid3.deformed_element(0).vertex(4).pos[0] == 0.2*1.);
+    grid3.apply_vertex_relaxation();
+    REQUIRE(grid3.deformed_element(0).vertex(0).pos[0] == 0.2*0.5/3.);
+    REQUIRE(grid3.deformed_element(0).vertex(0).pos[1] == 0.2*0.5/3.);
+    REQUIRE(grid3.deformed_element(0).vertex(4).pos[0] == 0.2*1.);
+    REQUIRE(grid3.deformed_element(0).vertex(4).pos[1] == 0.2*0.5/4.);
+  }
+
   SECTION("volume integrals")
   {
     grid2.add_element({-1, 0});
