@@ -135,13 +135,13 @@ Vertex& Vertex::Transferable_ptr::operator*()
 Vertex::Non_transferable_ptr::Non_transferable_ptr(Vertex& target)
 : ptr{&target}
 {
-  target.nont_ptrs.insert(this);
+  if (ptr) target.nont_ptrs.insert(this);
 }
 
 Vertex::Non_transferable_ptr::Non_transferable_ptr(const Vertex::Non_transferable_ptr& other)
 : ptr{other.ptr}
 {
-  ptr->nont_ptrs.insert(this);
+  if (ptr) ptr->nont_ptrs.insert(this);
 }
 
 Vertex::Non_transferable_ptr::~Non_transferable_ptr()
