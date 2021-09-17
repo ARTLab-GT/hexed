@@ -198,7 +198,6 @@ void Solution::initialize(Spacetime_func& init_cond)
 {
   for (Grid* grid : all_grids())
   {
-    double* state = grid->state_r();
     for (int i_elem = 0; i_elem < grid->n_elem; ++i_elem)
     {
       std::vector<double> pos = grid->get_pos(i_elem);
@@ -211,10 +210,8 @@ void Solution::initialize(Spacetime_func& init_cond)
           qpoint_pos.push_back(pos[i_qpoint + i_dim*grid->n_qpoint]);
         }
         auto qpoint_state = init_cond(qpoint_pos, grid->time);
-        int qpoint_ind = i_elem*grid->n_dof + i_qpoint;
         for (int i_var = 0; i_var < grid->n_var; ++i_var)
         {
-          state[qpoint_ind + i_var*grid->n_qpoint] = qpoint_state[i_var];
           elem_state[i_var*grid->n_qpoint + i_qpoint] = qpoint_state[i_var];
         }
       }
@@ -284,14 +281,6 @@ void Solution::auto_connect()
   for (Regular_grid& grid : reg_grids)
   {
     grid.auto_connect();
-  }
-}
-
-void Solution::clear_neighbors()
-{
-  for (Regular_grid& grid : reg_grids)
-  {
-    grid.clear_neighbors();
   }
 }
 

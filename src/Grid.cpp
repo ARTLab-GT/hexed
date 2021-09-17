@@ -18,40 +18,17 @@ storage_params{3, n_var, n_dim, basis.row_size}
     origin.push_back(0.);
   }
   n_dof = n_qpoint*n_var;
-  for (int i = 0; i < (int)state_storage.size(); ++i) state_storage[i].resize(n_dof*n_elem, 0.);
-  derivs.resize(n_elem*n_qpoint, 0.);
-  visc.resize(n_elem*n_vertices, 0.);
   pos.resize(n_elem*n_dim, 0);
-  for (int i_dim = 0; i_dim < 3*n_dim; ++i_dim)
-  {
-    neighbor_storage.emplace_back();
-    deriv_neighbor_storage.emplace_back();
-    visc_neighbor_storage.emplace_back();
-  }
-  for (int i_elem = 0; i_elem < n_elem; ++i_elem)
-  {
-    viscous_inds.push_back(i_elem);
-  }
 }
 
-double* Grid::state_r()
+int Grid::i_stage_read()
 {
-  return state_storage[i_read].data();
+  return i_read;
 }
 
-double* Grid::state_w()
+int Grid::i_stage_write()
 {
-  return state_storage[i_write].data();
-}
-
-void Grid::clear_neighbors()
-{
-  for (int i_dim = 0; i_dim < 2*n_dim; ++i_dim)
-  {
-    neighbor_storage[i_dim].clear();
-    deriv_neighbor_storage[i_dim].clear();
-    visc_neighbor_storage[i_dim].clear();
-  }
+  return i_write;
 }
 
 // Note: the return value is trivial right now, since it is equal to n_elem.
@@ -60,30 +37,16 @@ void Grid::clear_neighbors()
 // Treat the return value as a black box for forward compatability.
 int Grid::add_element(std::vector<int> position)
 {
-  for (int i_rk_stage = 0; i_rk_stage < 3; ++i_rk_stage)
-  {
-    state_storage[i_rk_stage].resize(state_storage[i_rk_stage].size() + n_dof, 0.);
-  }
-  derivs.resize(derivs.size() + n_qpoint, 0.);
-  visc.resize(visc.size() + n_vertices, 0.);
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) pos.push_back(position[i_dim]);
   return n_elem++;
 }
 
 bool Grid::execute_runge_kutta_stage()
 {
-  double* read0 = state_storage[0].data();
-  double* read1 = state_w();
-  double* write = (i_rk_stage == 2) ? read0 : read1;
   const int r0 = 0;
   const int r1 = i_write;
   const int w = (i_rk_stage == 2) ? r0 : r1;
   double weight1 = rk_weights[i_rk_stage]; double weight0 = 1. - weight1;
-  #pragma omp parallel for
-  for (int i = 0; i < n_elem*n_dof; ++i)
-  {
-    write[i] = weight1*read1[i] + weight0*read0[i];
-  }
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
@@ -127,12 +90,6 @@ void Grid::print()
       {
         std::cout << pos[i_qpoint + n_qpoint*i_dim] << "  ";
       }
-      std::cout << ":    ";
-      for (int i_var = 0; i_var < n_var; ++i_var)
-      {
-        std::cout << state_r()[i_qpoint + n_qpoint*i_var + n_dof*i_elem] << "    ";
-      }
-      std::cout << '\n';
     }
     std::cout << '\n';
   }

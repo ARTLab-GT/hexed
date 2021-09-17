@@ -154,12 +154,14 @@ void Deformed_grid::execute_cont_visc(Kernel_settings& settings)
 
 void Deformed_grid::execute_local_derivative(int i_var, int i_dim, Kernel_settings& settings)
 {
+  #if 0
   double* sr = state_r();
   double* sw = state_w();
   for (int i_data = 0; i_data < n_dof*n_elem; ++i_data)
   {
     sw[i_data] = sr[i_data];
   }
+  #endif
 }
 
 void Deformed_grid::execute_neighbor_derivative(int i_var, int i_dim, Kernel_settings& settings)

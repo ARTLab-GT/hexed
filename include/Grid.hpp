@@ -24,13 +24,6 @@ class Grid
   int n_qpoint;
   int n_dof;
   int n_elem;
-  std::array<std::vector<double>, 3> state_storage {};
-  std::vector<double> derivs;
-  std::vector<double> visc;
-  std::vector<std::vector<double*>> neighbor_storage;
-  std::vector<std::vector<double*>> deriv_neighbor_storage;
-  std::vector<std::vector<double*>> visc_neighbor_storage;
-  std::vector<int> viscous_inds;
   std::vector<int> pos;
   double mesh_size;
   Basis& basis;
@@ -41,14 +34,14 @@ class Grid
 
   Grid(int n_var_arg, int n_dim_arg, int n_elem_arg, double mesh_size_arg, Basis& basis_arg);
 
-  // functions for accessing data
+  // access
   virtual Element& element(int i_elem) = 0;
-  double* state_r();
-  double* state_w();
   virtual std::vector<double> get_pos(int i_elem) = 0;
   virtual double stable_time_step(double cfl_by_stable_cfl, Kernel_settings& setttings) = 0;
+  int i_stage_read();
+  int i_stage_write();
 
-  // functions that execute some aspect of time integration
+  // time integration
   bool execute_runge_kutta_stage();
   double get_stable_cfl();
   virtual void execute_local(Kernel_settings&) = 0;
@@ -61,11 +54,10 @@ class Grid
   virtual void execute_local_av(int i_var, int i_dim, Kernel_settings&) = 0;
   virtual void execute_neighbor_av(int i_var, int i_dim, Kernel_settings&) = 0;
 
-  // functions that resize/reallocate/modify data
+  // modification
   virtual int add_element(std::vector<int> position);
-  virtual void clear_neighbors();
 
-  // functions that provide diagnostic information
+  // diagnostic
   virtual void visualize(std::string file_name);
   void print();
   std::vector<double> integral();

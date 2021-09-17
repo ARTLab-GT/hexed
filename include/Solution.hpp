@@ -42,7 +42,6 @@ class Solution
   void add_empty_grid(int ref_level);
   void add_deformed_grid(int ref_level);
   void auto_connect();
-  void clear_neighbors();
 
   protected:
   double refined_mesh_size(int ref_level);

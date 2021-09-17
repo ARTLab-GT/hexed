@@ -51,61 +51,6 @@ std::vector<double> Regular_grid::get_pos(int i_elem)
   return elem_pos;
 }
 
-double Regular_grid::jacobian_det(int i_elem, int i_qpoint)
-{
-  return 1.;
-}
-
-std::vector<double**> Regular_grid::neighbor_connections_r()
-{
-  std::vector<double**> connections;
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-  {
-    connections.push_back(neighbor_storage[i_dim + i_read*n_dim].data());
-  }
-  return connections;
-}
-
-std::vector<double**> Regular_grid::deriv_neighbor_connections()
-{
-  std::vector<double**> connections;
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-  {
-    connections.push_back(deriv_neighbor_storage[i_dim].data());
-  }
-  return connections;
-}
-
-std::vector<double**> Regular_grid::visc_neighbor_connections()
-{
-  std::vector<double**> connections;
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-  {
-    connections.push_back(visc_neighbor_storage[i_dim].data());
-  }
-  return connections;
-}
-
-std::vector<double**> Regular_grid::neighbor_connections_w()
-{
-  std::vector<double**> connections;
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-  {
-    connections.push_back(neighbor_storage[i_dim + i_write*n_dim].data());
-  }
-  return connections;
-}
-
-std::vector<int> Regular_grid::n_neighb_con()
-{
-  std::vector<int> n_con;
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-  {
-    n_con.push_back(neighbor_storage[i_dim].size()/2);
-  }
-  return n_con;
-}
-
 double Regular_grid::stable_time_step(double cfl_by_stable_cfl, Kernel_settings& settings)
 {
   double cfl = cfl_by_stable_cfl*get_stable_cfl();
@@ -130,41 +75,45 @@ void Regular_grid::execute_neighbor(Kernel_settings& settings)
 
 void Regular_grid::execute_req_visc(Kernel_settings& settings)
 {
-  get_req_visc_cpg_euler(n_dim, basis.row_size)(state_r(), visc.data(), n_elem, basis, settings);
+  //get_req_visc_cpg_euler(n_dim, basis.row_size)(state_r(), visc.data(), n_elem, basis, settings);
 }
 
 void Regular_grid::execute_cont_visc(Kernel_settings& settings)
 {
-  get_cont_visc_cpg_euler(n_dim, basis.row_size)(visc_neighbor_connections().data(), n_neighb_con().data(), settings);
+  //get_cont_visc_cpg_euler(n_dim, basis.row_size)(visc_neighbor_connections().data(), n_neighb_con().data(), settings);
 }
 
 void Regular_grid::execute_local_derivative(int i_var, int i_dim, Kernel_settings& settings)
 {
-  get_local_derivative(n_dim, basis.row_size)(state_r(), derivs.data(), n_elem, i_var, i_dim, basis, settings);
+  //get_local_derivative(n_dim, basis.row_size)(state_r(), derivs.data(), n_elem, i_var, i_dim, basis, settings);
 }
 
 void Regular_grid::execute_neighbor_derivative(int i_var, int i_dim, Kernel_settings& settings)
 {
+  #if 0
   int n_con = n_neighb_con()[i_dim];
   get_neighbor_derivative(n_dim, basis.row_size)(neighbor_connections_r()[i_dim], deriv_neighbor_connections()[i_dim], n_con, i_var, i_dim, basis, settings);
+  #endif
 }
 
 void Regular_grid::execute_av_flux(Kernel_settings& settings)
 {
-  get_av_flux(n_dim, basis.row_size)(derivs.data(), visc.data(), n_elem, basis, settings);
+  //get_av_flux(n_dim, basis.row_size)(derivs.data(), visc.data(), n_elem, basis, settings);
 }
 
 void Regular_grid::execute_local_av(int i_var, int i_dim, Kernel_settings& settings)
 {
-  get_local_av(n_dim, basis.row_size)(derivs.data(), state_w(), n_elem, i_var, i_dim, basis, settings);
+  //get_local_av(n_dim, basis.row_size)(derivs.data(), state_w(), n_elem, i_var, i_dim, basis, settings);
 }
 
 void Regular_grid::execute_neighbor_av(int i_var, int i_dim, Kernel_settings& settings)
 {
+  #if 0
   int n_con = n_neighb_con()[i_dim];
   get_neighbor_av(n_dim, basis.row_size)(deriv_neighbor_connections()[i_dim],
                                          neighbor_connections_w()[i_dim], n_con, i_var, i_dim, basis, settings);
   get_gbc_av(n_dim, basis.row_size)(ghost_bound_conds, derivs.data(), state_w(), i_var, i_dim, basis, settings);
+  #endif
 }
 
 int Regular_grid::add_element(std::vector<int> position)
@@ -175,29 +124,7 @@ int Regular_grid::add_element(std::vector<int> position)
 
 void Regular_grid::add_connection(int i_elem0, int i_elem1, int i_dim)
 {
-  for (int i_stage = 0; i_stage < 3; ++i_stage)
-  {
-    double* state_data = state_storage[i_stage].data();
-    for (int i_elem : {i_elem0, i_elem1})
-    {
-      neighbor_storage[i_dim + i_stage*n_dim].push_back(state_data + n_dof*i_elem);
-    }
-  }
-  for (int i_elem : {i_elem0, i_elem1})
-  {
-    deriv_neighbor_storage[i_dim].push_back(derivs.data() + n_qpoint*i_elem);
-    visc_neighbor_storage[i_dim].push_back(visc.data() + n_vertices*i_elem);
-  }
   elem_cons[i_dim].push_back({elements[i_elem0].get(), elements[i_elem1].get()});
-}
-
-void Regular_grid::clear_neighbors()
-{
-  Grid::clear_neighbors();
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-  {
-    elem_cons[i_dim].clear();
-  }
 }
 
 void Regular_grid::auto_connect(std::vector<int> periods)

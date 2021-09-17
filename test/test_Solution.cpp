@@ -43,7 +43,6 @@ TEST_CASE("Solution class")
   {
     cartdg::Grid* g = sol.all_grids()[1];
     REQUIRE(g->basis.row_size == 4);
-    REQUIRE(g->state_r()[0] == 0.0);
     REQUIRE(g->n_elem == 6);
     REQUIRE(g->mesh_size == 0.35);
     REQUIRE(g->pos[0] == -1);

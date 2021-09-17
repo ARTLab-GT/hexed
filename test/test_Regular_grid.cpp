@@ -46,14 +46,6 @@ TEST_CASE("Regular_grid")
     REQUIRE(grid3.origin[0] == 0.);
     REQUIRE(grid3.origin[1] == 0.);
     REQUIRE(grid3.origin[2] == 0.);
-
-    int size = 27*std::pow(CARTDG_MAX_BASIS_ROW_SIZE, 3);
-    REQUIRE((int)grid3.derivs.size() == size);
-    REQUIRE(grid3.derivs[0] == 0.);
-    REQUIRE(grid3.derivs[size - 1] == 0.);
-    REQUIRE((int)grid3.visc.size() == 27*8);
-    REQUIRE(grid3.visc[0] == 0.);
-    REQUIRE(grid3.visc[27*8 - 1] == 0.);
   }
 
   for (int i = 0; i < 5; ++i)
@@ -187,78 +179,95 @@ TEST_CASE("Regular_grid")
 
   SECTION("Automatic graph creation")
   {
-    grid2.auto_connect();
-    REQUIRE(grid2.n_con(0) == 2);
-    REQUIRE(grid2.n_con(1) == 1);
+    SECTION("non-periodic")
     {
-      auto con = grid2.connection(0, 0);
-      REQUIRE(con[0] == &grid2.element(2));
-      REQUIRE(con[1] == &grid2.element(3));
+      grid2.auto_connect();
+      REQUIRE(grid2.n_con(0) == 2);
+      REQUIRE(grid2.n_con(1) == 1);
+      {
+        auto con = grid2.connection(0, 0);
+        REQUIRE(con[0] == &grid2.element(2));
+        REQUIRE(con[1] == &grid2.element(3));
+      }
+      {
+        auto con = grid2.connection(0, 1);
+        REQUIRE(con[0] == &grid2.element(5));
+        REQUIRE(con[1] == &grid2.element(2));
+      }
+      {
+        auto con = grid2.connection(1, 0);
+        REQUIRE(con[0] == &grid2.element(2));
+        REQUIRE(con[1] == &grid2.element(1));
+      }
     }
-    {
-      auto con = grid2.connection(0, 1);
-      REQUIRE(con[0] == &grid2.element(5));
-      REQUIRE(con[1] == &grid2.element(2));
-    }
-    {
-      auto con = grid2.connection(1, 0);
-      REQUIRE(con[0] == &grid2.element(2));
-      REQUIRE(con[1] == &grid2.element(1));
-    }
-    REQUIRE(grid2.deriv_neighbor_connections()[0][0] == grid2.derivs.data() + 2*grid2.n_qpoint);
-    REQUIRE(grid2.deriv_neighbor_connections()[0][1] == grid2.derivs.data() + 3*grid2.n_qpoint);
-    REQUIRE(grid2.deriv_neighbor_connections()[0][2] == grid2.derivs.data() + 5*grid2.n_qpoint);
-    REQUIRE(grid2.deriv_neighbor_connections()[0][3] == grid2.derivs.data() + 2*grid2.n_qpoint);
-    REQUIRE(grid2.visc_neighbor_connections()[0][0] == grid2.visc.data() + 2*4);
-    REQUIRE(grid2.visc_neighbor_connections()[0][1] == grid2.visc.data() + 3*4);
-    REQUIRE(grid2.visc_neighbor_connections()[0][2] == grid2.visc.data() + 5*4);
-    REQUIRE(grid2.visc_neighbor_connections()[0][3] == grid2.visc.data() + 2*4);
-    grid2.clear_neighbors();
-    std::vector<int> periods {0, 3};
-    grid2.auto_connect(periods);
-    REQUIRE(grid2.n_con(0) == 2);
-    REQUIRE(grid2.n_con(1) == 2);
 
-    std::vector<int> periods3d {3, 3, 3};
-    grid3.auto_connect(periods3d);
-    REQUIRE(grid3.n_con(0) == 27);
-    REQUIRE(grid3.n_con(1) == 27);
-    REQUIRE(grid3.n_con(2) == 27);
+    SECTION("periodic")
+    {
+      std::vector<int> periods {0, 3};
+      grid2.auto_connect(periods);
+      REQUIRE(grid2.n_con(0) == 2);
+      REQUIRE(grid2.n_con(1) == 2);
+
+      std::vector<int> periods3d {3, 3, 3};
+      grid3.auto_connect(periods3d);
+      REQUIRE(grid3.n_con(0) == 27);
+      REQUIRE(grid3.n_con(1) == 27);
+      REQUIRE(grid3.n_con(2) == 27);
+    }
   }
 
   SECTION("Runge Kutta time integration")
   {
-    for (int i = 0; i < grid1.n_dof*grid1.n_elem; ++i)
+    for (int i_elem = 0; i_elem < grid1.n_elem; ++i_elem)
     {
-      grid1.state_r()[i] = 7.;
+      for (int i_dof = 0; i_dof < grid1.n_dof; ++i_dof)
+      {
+        grid1.element(i_elem).stage(grid1.i_stage_read())[i_dof] = 7.;
+      }
     }
 
     do
     {
-      for (int i = 0; i < grid1.n_dof*grid1.n_elem; ++i)
+      for (int i_elem = 0; i_elem < grid1.n_elem; ++i_elem)
       {
-        grid1.state_w()[i] = grid1.state_r()[i] + 0.371;
+        for (int i_dof = 0; i_dof < grid1.n_dof; ++i_dof)
+        {
+          double* read = grid1.element(i_elem).stage(grid1.i_stage_read());
+          double* write = grid1.element(i_elem).stage(grid1.i_stage_write());
+          write[i_dof] = read[i_dof] + 0.371;
+        }
       }
     }
     while (!grid1.execute_runge_kutta_stage());
 
-    for (int i = 0; i < grid1.n_dof*grid1.n_elem; ++i)
+    for (int i_elem = 0; i_elem < grid1.n_elem; ++i_elem)
     {
-      REQUIRE(grid1.state_r()[i] == Approx(7.371));
+      for (int i_dof = 0; i_dof < grid1.n_dof; ++i_dof)
+      {
+        REQUIRE(grid1.element(i_elem).stage(grid1.i_stage_read())[i_dof] == Approx(7.371));
+      }
     }
 
     do
     {
-      for (int i = 0; i < grid1.n_dof*grid1.n_elem; ++i)
+      for (int i_elem = 0; i_elem < grid1.n_elem; ++i_elem)
       {
-        grid1.state_w()[i] = grid1.state_r()[i] + 0.001;
+        for (int i_dof = 0; i_dof < grid1.n_dof; ++i_dof)
+        {
+          double* read = grid1.element(i_elem).stage(grid1.i_stage_read());
+          double* write = grid1.element(i_elem).stage(grid1.i_stage_write());
+          write[i_dof] = read[i_dof] + 0.001;
+        }
       }
     }
     while (!grid1.execute_runge_kutta_stage());
 
-    for (int i = 0; i < grid1.n_dof*grid1.n_elem; ++i)
+    for (int i_elem = 0; i_elem < grid1.n_elem; ++i_elem)
     {
-      REQUIRE(grid1.state_r()[i] == Approx(7.372));
+      for (int i_dof = 0; i_dof < grid1.n_dof; ++i_dof)
+      {
+        REQUIRE(grid1.element(i_elem).stage(grid1.i_stage_read())[i_dof] == Approx(7.372));
+      }
     }
   }
 
@@ -268,12 +277,8 @@ TEST_CASE("Regular_grid")
     cartdg::Regular_grid grid (4, 1, 0, 0.1, basis);
     std::vector<int> position {1};
     REQUIRE(grid.n_elem == 0);
-    REQUIRE(grid.derivs.size() == 0);
-    REQUIRE(grid.visc.size() == 0);
     REQUIRE(grid.add_element(position) == 0);
     REQUIRE(grid.n_elem == 1);
-    REQUIRE(grid.derivs.size() == 8);
-    REQUIRE(grid.visc.size() == 2);
     grid.element(0).stage(0)[0] = 1.; // modify element to verify existence
     REQUIRE(grid.element(0).stage(0)[0] == 1.);
     position[0] += 1;
