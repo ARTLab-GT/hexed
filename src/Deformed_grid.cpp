@@ -4,7 +4,7 @@
 #include <get_neighbor_deformed_convective.hpp>
 #include <get_neighbor_def_reg_convective.hpp>
 #include <get_gbc_convective.hpp>
-#include <get_nonpen_cpg_euler.hpp>
+#include <get_nonpen_convective.hpp>
 
 namespace cartdg
 {
@@ -210,8 +210,8 @@ void Deformed_grid::execute_neighbor(Kernel_settings& settings)
 {
   get_neighbor_deformed_convective(n_dim, basis.row_size)(elem_cons, basis, settings);
   get_neighbor_def_reg_convective(n_dim, basis.row_size)(def_reg_cons, basis, settings);
-  //get_gbc_cpg_euler(n_dim, basis.row_size)(ghost_bound_conds, state_r(), state_w(), basis, settings);
-  //get_nonpen_cpg_euler(n_dim, basis.row_size)(state_r(), state_w(), jacobian.data(), i_elem_wall.data(), i_dim_wall.data(), is_positive_wall.data(), i_elem_wall.size(), basis, settings);
+  get_gbc_convective(n_dim, basis.row_size)(*this, basis, settings);
+  get_nonpen_convective(n_dim, basis.row_size)(walls, basis, settings);
 }
 
 void Deformed_grid::execute_req_visc(Kernel_settings& settings)

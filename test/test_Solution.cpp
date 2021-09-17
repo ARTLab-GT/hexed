@@ -226,9 +226,9 @@ TEST_CASE("Execution of non-penetration boundary condition")
   sol.add_deformed_grid(1);
   cartdg::Deformed_grid& grid = sol.def_grids[0];
   grid.add_element({0, 0});
-  grid.get_vertex(1).pos = {-0.1, 0.5, 0.};
-  grid.get_vertex(2).pos = {0.7, 0.05, 0.};
-  grid.get_vertex(3).pos = {1.3, 1.3, 0.};
+  grid.deformed_element(0).vertex(1).pos = {-0.1, 0.5, 0.};
+  grid.deformed_element(0).vertex(2).pos = {0.7, 0.05, 0.};
+  grid.deformed_element(0).vertex(3).pos = {1.3, 1.3, 0.};
   for (int i_dim : {0, 1})
   {
     for (bool is_positive : {false, true})

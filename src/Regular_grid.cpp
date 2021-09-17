@@ -125,7 +125,7 @@ void Regular_grid::execute_neighbor(Kernel_settings& settings)
   settings.i_read = i_read;
   settings.i_write = i_write;
   get_neighbor_convective(n_dim, basis.row_size)(elem_cons, basis, settings);
-  //get_gbc_cpg_euler(n_dim, basis.row_size)(ghost_bound_conds, state_r(), state_w(), basis, settings);
+  get_gbc_convective(n_dim, basis.row_size)(*this, basis, settings);
 }
 
 void Regular_grid::execute_req_visc(Kernel_settings& settings)
