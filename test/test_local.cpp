@@ -3,7 +3,7 @@
 #include <cartdgConfig.hpp>
 #include <get_local_convective.hpp>
 #include <get_local_deformed_convective.hpp>
-#include <get_req_visc_cpg_euler.hpp>
+#include <get_req_visc_regular_convective.hpp>
 #include <get_av_flux.hpp>
 #include <local/derivative.hpp>
 #include <Gauss_lobatto.hpp>
@@ -483,25 +483,28 @@ TEST_CASE("req_visc")
   cartdg::Gauss_lobatto basis (row_size);
   cartdg::Kernel_settings settings;
   settings.d_pos = 0.5;
-  double read [2][5][n_qpoint];
-  double visc [2][2][2][2] {};
+  cartdg::Storage_params params {3, 5, 3, row_size};
+  cartdg::elem_vec elements;
+  elements.emplace_back(new cartdg::Element {params});
+  elements.emplace_back(new cartdg::Element {params});
   for (int i_elem = 0; i_elem < 2; ++i_elem)
   {
+    double* stage = elements[i_elem]->stage(0);
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
     {
-      read[i_elem][0][i_qpoint] = 0.;
-      read[i_elem][1][i_qpoint] = 0.;
-      read[i_elem][2][i_qpoint] = 0.;
-      read[i_elem][3][i_qpoint] = 1.225;
-      read[i_elem][4][i_qpoint] = 101325/0.4;
+      stage[0*n_qpoint + i_qpoint] = 0.;
+      stage[1*n_qpoint + i_qpoint] = 0.;
+      stage[2*n_qpoint + i_qpoint] = 0.;
+      stage[3*n_qpoint + i_qpoint] = 1.225;
+      stage[4*n_qpoint + i_qpoint] = 101325/0.4;
     }
   }
-  read[1][3][3] = 1.5; // set an anomaly to trip the indicator in element 1
-  cartdg::get_req_visc_cpg_euler(3, row_size)(read[0][0], visc[0][0][0], 2, basis, settings);
-  REQUIRE(visc[0][0][0][0] == 0.);
-  REQUIRE(visc[0][1][1][1] == 0.);
-  REQUIRE(visc[1][0][0][0] == Approx(0.5*340.29/(row_size - 1.)).margin(0.01));
-  REQUIRE(visc[1][1][1][1] == Approx(0.5*340.29/(row_size - 1.)).margin(0.01));
+  elements[1]->stage(0)[3*n_qpoint + 3] = 1.5; // set an anomaly to trip the indicator in element 1
+  cartdg::get_req_visc_regular_convective(3, row_size)(elements, basis, settings);
+  REQUIRE(elements[0]->viscosity()[0] == 0.);
+  REQUIRE(elements[0]->viscosity()[7] == 0.);
+  REQUIRE(elements[1]->viscosity()[0] == Approx(0.5*340.29/(row_size - 1.)).margin(0.01));
+  REQUIRE(elements[1]->viscosity()[7] == Approx(0.5*340.29/(row_size - 1.)).margin(0.01));
 }
 
 TEST_CASE("av_flux")
