@@ -15,7 +15,9 @@ class Element
 {
   int n_stage;
   int n_dof;
+  int n_vert;
   Eigen::VectorXd data;
+  Eigen::VectorXd visc_storage;
 
   protected:
   int n_dim;
@@ -26,6 +28,8 @@ class Element
   // following two functions are for convenience, not performance
   virtual double jacobian(int i_dim, int j_dim, int i_qpoint);
   double jacobian_determinant(int i_qpoint);
+  double* viscosity();
+  bool viscous();
 };
 
 typedef std::vector<std::unique_ptr<Element>> elem_vec;

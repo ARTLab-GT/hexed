@@ -4,7 +4,8 @@ namespace cartdg
 {
 
 Element::Element(Storage_params params)
-: n_stage(params.n_stage), n_dof(params.n_dof()), data(n_stage*n_dof), n_dim(params.n_dim)
+: n_stage(params.n_stage), n_dof(params.n_dof()), n_vert(params.n_vertices()),
+  data(n_stage*n_dof), visc_storage{Eigen::VectorXd::Zero(n_vert)}, n_dim(params.n_dim)
 {}
 
 double* Element::stage(int i_stage)
@@ -28,6 +29,21 @@ double Element::jacobian_determinant(int i_qpoint)
     }
   }
   return jac_mat.determinant();
+}
+
+double* Element::viscosity()
+{
+  return visc_storage.data();
+}
+
+bool Element::viscous()
+{
+  bool visc {false};
+  for (int i_vert = 0; i_vert < n_vert; ++i_vert)
+  {
+    visc = visc || (visc_storage[i_vert] != 0.);
+  }
+  return visc;
 }
 
 }

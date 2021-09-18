@@ -24,6 +24,13 @@ TEST_CASE("Element")
     REQUIRE(element.stage(2)[i_dof] == 0.);
     REQUIRE(element.stage(3)[i_dof] == 1.3);
   }
+  for (int i_vert = 0; i_vert < 8; ++i_vert)
+  {
+    REQUIRE(element.viscosity()[i_vert] == 0.);
+  }
+  REQUIRE(element.viscous() == false);
+  element.viscosity()[3] = 0.1;
+  REQUIRE(element.viscous() == true);
   for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint)
   {
     REQUIRE(element.jacobian(0, 0, i_qpoint) == 1.);
