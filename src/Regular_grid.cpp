@@ -4,7 +4,7 @@
 #include <get_neighbor_convective.hpp>
 #include <get_gbc_convective.hpp>
 #include <get_req_visc_regular_convective.hpp>
-#include <get_cont_visc_cpg_euler.hpp>
+#include <get_cont_visc.hpp>
 #include <get_local_derivative.hpp>
 #include <get_neighbor_derivative.hpp>
 #include <get_av_flux.hpp>
@@ -80,7 +80,7 @@ void Regular_grid::execute_req_visc(Kernel_settings& settings)
 
 void Regular_grid::execute_cont_visc(Kernel_settings& settings)
 {
-  //get_cont_visc_cpg_euler(n_dim, basis.row_size)(visc_neighbor_connections().data(), n_neighb_con().data(), settings);
+  get_cont_visc(n_dim, basis.row_size)(elem_cons, settings);
 }
 
 void Regular_grid::execute_local_derivative(int i_var, int i_dim, Kernel_settings& settings)

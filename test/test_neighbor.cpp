@@ -7,7 +7,7 @@
 #include <neighbor/ausm_plus_up_cpg_euler.hpp>
 #include <neighbor/hll_deformed_cpg_euler.hpp>
 #include <neighbor/jump.hpp>
-#include <get_cont_visc_cpg_euler.hpp>
+#include <get_cont_visc.hpp>
 #include <get_neighbor_def_reg_convective.hpp>
 #include <Storage_params.hpp>
 #include <Gauss_lobatto.hpp>
@@ -767,8 +767,9 @@ TEST_CASE("jump kernel")
 TEST_CASE("continuous viscosity kernel")
 {
   cartdg::Kernel_settings settings;
-
-  double visc [4][4];
+  cartdg::Storage_params params {1, 1, 2, 4};
+  cartdg::elem_vec elements;
+  for (int i = 0; i < 4; ++i) elements.emplace_back(new cartdg::Element {params});
   /*
   element order is transposed, just for fun:
     21 23   31 33
@@ -778,32 +779,31 @@ TEST_CASE("continuous viscosity kernel")
   y 00 02   10 12
    x --->
   */
-
-  double*   connections1 [2][4]  {{visc[0], visc[1], visc[2], visc[3]},
-                                  {visc[0], visc[2], visc[1], visc[3]}};
-  double**  connections2 [2] {connections1[0], connections1[1]};
-  int n_connections [] {2, 2};
+  cartdg::elem_con_vec connections {{{elements[0].get(), elements[1].get()},
+                                     {elements[2].get(), elements[3].get()}},
+                                    {{elements[0].get(), elements[2].get()},
+                                     {elements[1].get(), elements[3].get()}}};
   for (int i_point = 0; i_point < 4; ++i_point)
   {
-    visc[0][i_point] = 0.;
-    visc[1][i_point] = 0.5;
-    visc[2][i_point] = 2.;
-    visc[3][i_point] = 1.;
+    elements[0]->viscosity()[i_point] = 0.;
+    elements[1]->viscosity()[i_point] = 0.5;
+    elements[2]->viscosity()[i_point] = 2.;
+    elements[3]->viscosity()[i_point] = 1.;
   }
 
-  cartdg::get_cont_visc_cpg_euler(2, CARTDG_MAX_BASIS_ROW_SIZE)(connections2, n_connections, settings);
-  CHECK(visc[0][0] == Approx(0.0));
-  CHECK(visc[0][1] == Approx(2.0));
-  CHECK(visc[0][2] == Approx(0.5));
-  CHECK(visc[0][3] == Approx(2.0));
-  CHECK(visc[1][0] == Approx(0.5));
-  CHECK(visc[1][1] == Approx(2.0));
-  CHECK(visc[1][2] == Approx(0.5));
-  CHECK(visc[1][3] == Approx(1.0));
-  CHECK(visc[2][0] == Approx(2.0));
-  CHECK(visc[2][1] == Approx(2.0));
-  CHECK(visc[3][0] == Approx(2.0));
-  CHECK(visc[3][1] == Approx(2.0));
-  CHECK(visc[3][2] == Approx(1.0));
-  CHECK(visc[3][3] == Approx(1.0));
+  cartdg::get_cont_visc(2, CARTDG_MAX_BASIS_ROW_SIZE)(connections, settings);
+  REQUIRE(elements[0]->viscosity()[0] == Approx(0.0));
+  REQUIRE(elements[0]->viscosity()[1] == Approx(2.0));
+  REQUIRE(elements[0]->viscosity()[2] == Approx(0.5));
+  REQUIRE(elements[0]->viscosity()[3] == Approx(2.0));
+  REQUIRE(elements[1]->viscosity()[0] == Approx(0.5));
+  REQUIRE(elements[1]->viscosity()[1] == Approx(2.0));
+  REQUIRE(elements[1]->viscosity()[2] == Approx(0.5));
+  REQUIRE(elements[1]->viscosity()[3] == Approx(1.0));
+  REQUIRE(elements[2]->viscosity()[0] == Approx(2.0));
+  REQUIRE(elements[2]->viscosity()[1] == Approx(2.0));
+  REQUIRE(elements[3]->viscosity()[0] == Approx(2.0));
+  REQUIRE(elements[3]->viscosity()[1] == Approx(2.0));
+  REQUIRE(elements[3]->viscosity()[2] == Approx(1.0));
+  REQUIRE(elements[3]->viscosity()[3] == Approx(1.0));
 }
