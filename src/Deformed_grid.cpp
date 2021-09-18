@@ -5,6 +5,7 @@
 #include <get_neighbor_def_reg_convective.hpp>
 #include <get_gbc_convective.hpp>
 #include <get_nonpen_convective.hpp>
+#include <get_req_visc_deformed_convective.hpp>
 
 namespace cartdg
 {
@@ -148,6 +149,7 @@ void Deformed_grid::execute_neighbor(Kernel_settings& settings)
 
 void Deformed_grid::execute_req_visc(Kernel_settings& settings)
 {
+  get_req_visc_deformed_convective(n_dim, basis.row_size)(elements, basis, settings);
 }
 
 void Deformed_grid::execute_cont_visc(Kernel_settings& settings)

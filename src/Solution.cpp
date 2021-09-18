@@ -118,14 +118,14 @@ double Solution::update(double cfl_by_stable_cfl)
     }
   }
 
-  #if 0
   int n_iter = 4;
   double visc_dt = dt/n_iter;
-  FOR_ALL_GRIDS // FIXME: incorporate_jacobian
-  (
+  for (Grid* grid : all_grids()) // FIXME: incorporate_jacobian
+  {
     kernel_settings.d_pos = grid->mesh_size;
     grid->execute_req_visc(kernel_settings);
-  )
+  }
+  #if 0
   FOR_ALL_GRIDS
   (
     kernel_settings.d_pos = grid->mesh_size;
