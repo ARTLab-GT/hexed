@@ -9,27 +9,11 @@ Ghost_boundary_condition::Ghost_boundary_condition(const Grid& grid, int i_dim_a
                                                      bool is_positive_face_arg)
 : i_dim(i_dim_arg), n_var(grid.n_var), n_qpoint(grid.n_qpoint/grid.basis.row_size),
   is_positive_face(is_positive_face_arg), state(n_qpoint, 2*n_var)
-{
-  default_jacobian.clear();
-  default_jacobian.resize(grid.n_dim*grid.n_dim*grid.n_qpoint, 0.);
-  for (int i_dim = 0; i_dim < grid.n_dim; ++i_dim)
-  {
-    for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
-    {
-      default_jacobian[i_dim*(grid.n_dim + 1)*grid.n_qpoint + i_qpoint] = 1.;
-    }
-  }
-}
-
-void Ghost_boundary_condition::add_element(int i_elem, double* jacobian)
-{
-  elems.push_back(i_elem);
-  jacobians.push_back(jacobian);
-}
+{}
 
 void Ghost_boundary_condition::add_element(int i_elem)
 {
-  add_element(i_elem, default_jacobian.data());
+  elems.push_back(i_elem);
 }
 
 Eigen::Block<Eigen::ArrayXXd> Ghost_boundary_condition::domain_state()
