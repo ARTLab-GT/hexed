@@ -520,24 +520,30 @@ TEST_CASE("av_flux")
   cartdg::Kernel_settings settings;
   settings.d_pos = 0.5;
   settings.d_t_by_d_pos = 3.;
-  double flux [2][9] {};
-  double visc [2][4] {};
-  visc[0][0] = 0.2;
-  flux[1][1] = 0.3;
-  flux[1][8] = 0.4;
-  for (int i = 0; i < 4; ++i) visc[1][i] = 1.;
-  for (int i = 0; i < 9; ++i) flux[0][i] = 1.;
-  cartdg::get_av_flux(2, 3)(flux[0], visc[0], 2, basis, settings);
+  cartdg::Storage_params params {3, 4, 2, 3};
+  cartdg::elem_vec elements;
+  for (int i_elem : {0, 1})
+  {
+    elements.emplace_back(new cartdg::Element {params});
+    for (int i = 0; i < 4; ++i) elements[i_elem]->viscosity()[i] = 0.;
+    for (int i = 0; i < 9; ++i) elements[i_elem]->derivative()[i] = 0.;
+  }
+  elements[0]->viscosity()[0] = 0.2;
+  elements[1]->derivative()[1] = 0.3;
+  elements[1]->derivative()[8] = 0.4;
+  for (int i = 0; i < 4; ++i) elements[1]->viscosity()[i] = 1.;
+  for (int i = 0; i < 9; ++i) elements[0]->derivative()[i] = 1.;
+  cartdg::get_av_flux(2, 3)(elements, basis, settings);
 
-  REQUIRE(flux[0][0] == Approx(0.2*1.5));
-  REQUIRE(flux[0][1] == Approx(0.1*1.5));
-  REQUIRE(flux[0][2] == Approx(0.0*1.5));
-  REQUIRE(flux[0][3] == Approx(0.1*1.5));
-  REQUIRE(flux[0][4] == Approx(0.05*1.5));
-  REQUIRE(flux[0][5] == Approx(0.0*1.5));
+  REQUIRE(elements[0]->derivative()[0] == Approx(0.2*1.5));
+  REQUIRE(elements[0]->derivative()[1] == Approx(0.1*1.5));
+  REQUIRE(elements[0]->derivative()[2] == Approx(0.0*1.5));
+  REQUIRE(elements[0]->derivative()[3] == Approx(0.1*1.5));
+  REQUIRE(elements[0]->derivative()[4] == Approx(0.05*1.5));
+  REQUIRE(elements[0]->derivative()[5] == Approx(0.0*1.5));
 
-  REQUIRE(flux[1][0] == Approx(0.0));
-  REQUIRE(flux[1][1] == Approx(0.3*1.5));
-  REQUIRE(flux[1][8] == Approx(0.4*1.5));
+  REQUIRE(elements[1]->derivative()[0] == Approx(0.0));
+  REQUIRE(elements[1]->derivative()[1] == Approx(0.3*1.5));
+  REQUIRE(elements[1]->derivative()[8] == Approx(0.4*1.5));
   #endif
 }

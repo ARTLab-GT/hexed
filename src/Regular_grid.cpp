@@ -103,7 +103,9 @@ void Regular_grid::execute_neighbor_derivative(int i_var, int i_dim, Kernel_sett
 
 void Regular_grid::execute_av_flux(Kernel_settings& settings)
 {
-  //get_av_flux(n_dim, basis.row_size)(derivs.data(), visc.data(), n_elem, basis, settings);
+  settings.i_read = i_read;
+  settings.i_write = i_write;
+  get_av_flux(n_dim, basis.row_size)(elements, basis, settings);
 }
 
 void Regular_grid::execute_local_av(int i_var, int i_dim, Kernel_settings& settings)
