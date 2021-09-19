@@ -5,7 +5,6 @@
 #include <get_local_deformed_convective.hpp>
 #include <get_req_visc_regular_convective.hpp>
 #include <get_av_flux.hpp>
-#include <local/derivative.hpp>
 #include <local/variable_derivative.hpp>
 #include <get_local_derivative.hpp>
 #include <Gauss_lobatto.hpp>
@@ -448,33 +447,6 @@ TEST_CASE("derivative")
           for (int i = 0; i < row_size; ++i)
           {
             REQUIRE(elements[i_elem]->derivative()[i] == Approx(3*std::pow(basis.node(i), 2)).margin(1e-14));
-          }
-        }
-      }
-      SECTION("3 var to 1 var")
-      {
-        double read [2][row_size] {};
-        double write [2][3][row_size] {};
-        for (int i_elem : {0, 1})
-        {
-          for (int i = 0; i < row_size; ++i)
-          {
-            read[i_elem][i] = std::pow(basis.node(i), 3);
-          }
-        }
-        cartdg::derivative<1, 3, row_size, row_size>(read[0], write[0][0], 2, 0, 1, 0, basis, settings);
-        for (int i_elem : {0, 1})
-        {
-          for (int i = 0; i < row_size; ++i)
-          {
-            REQUIRE(write[i_elem][0][i] == Approx(0.).margin(1e-14));
-          }
-        }
-        for (int i_elem : {0, 1})
-        {
-          for (int i = 0; i < row_size; ++i)
-          {
-            REQUIRE(write[i_elem][1][i] == Approx(3*std::pow(basis.node(i), 2)).margin(1e-14));
           }
         }
       }

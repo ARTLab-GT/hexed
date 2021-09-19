@@ -19,7 +19,6 @@ int row_size = std::stoi(argv[2]);
 int n_elem_side = std::stoi(argv[3]);
 int n_elem = std::pow(n_elem_side, dim);
 int n_qpoint = std::pow(row_size, dim);
-int n_visc = std::pow(2, dim);
 int n_var = dim + 2;
 int n_total = n_var*n_qpoint*n_elem;
 
@@ -27,7 +26,6 @@ cartdg::Storage_params storage_params {3, n_var, dim, row_size};
 
 std::vector<double> read_vec (n_total);
 std::vector<double> write_vec (n_total, 0.);
-std::vector<double> visc_vec (n_elem*n_visc, 0.);
 cartdg::elem_vec elements;
 cartdg::def_elem_vec def_elements;
 for (int i_elem = 0; i_elem < n_elem; ++i_elem)
@@ -59,7 +57,6 @@ for (int i = 0; i < n_total; ++i)
 }
 double* read = read_vec.data();
 double* write = write_vec.data();
-double* visc = visc_vec.data();
 cartdg::elem_con_vec connections (dim);
 cartdg::def_elem_con_vec def_connections;
 for (int i_dim = 0; i_dim < dim; ++i_dim)
