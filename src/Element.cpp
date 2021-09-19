@@ -5,7 +5,8 @@ namespace cartdg
 
 Element::Element(Storage_params params)
 : n_stage(params.n_stage), n_dof(params.n_dof()), n_vert(params.n_vertices()),
-  data(n_stage*n_dof), visc_storage{Eigen::VectorXd::Zero(n_vert)}, n_dim(params.n_dim)
+  data(n_stage*n_dof), visc_storage{Eigen::VectorXd::Zero(n_vert)},
+  derivative_storage(params.n_qpoint()), n_dim(params.n_dim)
 {}
 
 double* Element::stage(int i_stage)
@@ -44,6 +45,11 @@ bool Element::viscous()
     visc = visc || (visc_storage[i_vert] != 0.);
   }
   return visc;
+}
+
+double* Element::derivative()
+{
+  return derivative_storage.data();
 }
 
 }

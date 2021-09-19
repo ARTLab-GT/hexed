@@ -7,6 +7,7 @@
 #include <get_av_flux.hpp>
 #include <local/derivative.hpp>
 #include <local/variable_derivative.hpp>
+#include <get_local_derivative.hpp>
 #include <Gauss_lobatto.hpp>
 #include <math.hpp>
 
@@ -397,52 +398,56 @@ TEST_CASE("derivative")
     }
     SECTION("multi-element")
     {
-      double read [3][row_size] {};
-      double write [3][row_size] {};
+      cartdg::Storage_params params {3, 3, 1, row_size};
+      cartdg::elem_vec elements;
       double coefs [] {1.103, -4.044, 0.392};
       for (int i_elem = 0; i_elem < 3; ++i_elem)
       {
+        elements.emplace_back(new cartdg::Element {params});
         for (int i = 0; i < row_size; ++i)
         {
-          read[i_elem][i] = coefs[i_elem]*basis.node(i);
+          elements.back()->stage(0)[i] = coefs[i_elem]*basis.node(i);
         }
       }
-      cartdg::derivative<1, 1, row_size, row_size>(read[0], write[0], 3, 0, 0, 0, basis, settings);
+      cartdg::get_local_derivative(1, row_size)(elements, 0, 0, basis, settings);
       for (int i_elem = 0; i_elem < 3; ++i_elem)
       {
         for (int i = 0; i < row_size; ++i)
         {
-          REQUIRE(write[i_elem][i] == Approx(coefs[i_elem]));
+          REQUIRE(elements[i_elem]->derivative()[i] == Approx(coefs[i_elem]));
         }
       }
     }
     SECTION("multivariable")
     {
-      SECTION("1 var to 4 var")
+      cartdg::Storage_params params {3, 3, 1, row_size};
+      cartdg::elem_vec elements;
+      SECTION("differentiate flow vars")
       {
-        double read [2][4][row_size] {};
-        double write [2][row_size] {};
         for (int i_elem : {0, 1})
         {
+          elements.emplace_back(new cartdg::Element {params});
+          double* stage = elements[i_elem]->stage(0);
           for (int i = 0; i < row_size; ++i)
           {
-            read[i_elem][1][i] = std::pow(basis.node(i), 3);
+            stage[i + 1*row_size] = std::pow(basis.node(i), 2);
+            stage[i + 2*row_size] = std::pow(basis.node(i), 3);
           }
         }
-        cartdg::derivative<4, 1, row_size, row_size>(read[0][0], write[0], 2, 0, 0, 0, basis, settings);
+        cartdg::get_local_derivative(1, row_size)(elements, 1, 0, basis, settings);
         for (int i_elem : {0, 1})
         {
           for (int i = 0; i < row_size; ++i)
           {
-            REQUIRE(write[i_elem][i] == Approx(0.).margin(1e-14));
+            REQUIRE(elements[i_elem]->derivative()[i] == Approx(2*basis.node(i)).margin(1e-14));
           }
         }
-        cartdg::derivative<4, 1, row_size, row_size>(read[0][0], write[0], 2, 1, 0, 0, basis, settings);
+        cartdg::get_local_derivative(1, row_size)(elements, 2, 0, basis, settings);
         for (int i_elem : {0, 1})
         {
           for (int i = 0; i < row_size; ++i)
           {
-            REQUIRE(write[i_elem][i] == Approx(3*std::pow(basis.node(i), 2)).margin(1e-14));
+            REQUIRE(elements[i_elem]->derivative()[i] == Approx(3*std::pow(basis.node(i), 2)).margin(1e-14));
           }
         }
       }

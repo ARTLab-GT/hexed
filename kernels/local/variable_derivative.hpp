@@ -14,7 +14,7 @@ namespace cartdg
 
 template<int n_dim, int row_size, bool add=false>
 void variable_derivative(double* read, double* write, int i_dim,
-                         Eigen::Matrix<double, row_size, row_size>& diff_mat, double d_pos)
+                         const Eigen::Matrix<double, row_size, row_size>& diff_mat, double d_pos)
 {
   const int stride = custom_math::pow(row_size, n_dim - i_dim - 1);
   const int n_rows = custom_math::pow(row_size, i_dim);

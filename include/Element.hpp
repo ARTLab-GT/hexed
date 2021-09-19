@@ -18,6 +18,7 @@ class Element
   int n_vert;
   Eigen::VectorXd data;
   Eigen::VectorXd visc_storage;
+  Eigen::VectorXd derivative_storage;
 
   protected:
   int n_dim;
@@ -30,6 +31,7 @@ class Element
   double jacobian_determinant(int i_qpoint);
   double* viscosity();
   bool viscous();
+  double* derivative();
 };
 
 typedef std::vector<std::unique_ptr<Element>> elem_vec;
