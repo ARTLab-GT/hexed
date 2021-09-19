@@ -22,7 +22,11 @@ class Vertex
   bool mobile = false;
 
   ~Vertex();
-  // FIXME: handle copy/move
+  // if we have a reason to copy/move vertices, we can implement these
+  Vertex(const Vertex&) = delete;
+  Vertex(Vertex&&) = delete;
+  Vertex& operator=(const Vertex&) = delete;
+  Vertex& operator=(Vertex&&) = delete;
   int mass();
   void eat(Vertex& other);
   void calc_relax();

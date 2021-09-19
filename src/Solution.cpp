@@ -118,6 +118,7 @@ double Solution::update(double cfl_by_stable_cfl)
     }
   }
 
+  #if 0
   int n_iter = 4;
   double visc_dt = dt/n_iter;
   for (Grid* grid : all_grids()) // FIXME: incorporate_jacobian
@@ -189,6 +190,7 @@ double Solution::update(double cfl_by_stable_cfl)
       }
     }
   }
+  #endif
   for (Grid* grid : all_grids())
   {
     grid->time += dt;
