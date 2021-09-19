@@ -117,12 +117,10 @@ void Regular_grid::execute_local_av(int i_var, int i_dim, Kernel_settings& setti
 
 void Regular_grid::execute_neighbor_av(int i_var, int i_dim, Kernel_settings& settings)
 {
-  #if 0
-  int n_con = n_neighb_con()[i_dim];
-  get_neighbor_av(n_dim, basis.row_size)(deriv_neighbor_connections()[i_dim],
-                                         neighbor_connections_w()[i_dim], n_con, i_var, i_dim, basis, settings);
-  get_gbc_av(n_dim, basis.row_size)(ghost_bound_conds, derivs.data(), state_w(), i_var, i_dim, basis, settings);
-  #endif
+  settings.i_read = i_read;
+  settings.i_write = i_write;
+  get_neighbor_av(n_dim, basis.row_size)(elem_cons, i_var, i_dim, basis, settings);
+  get_gbc_av(n_dim, basis.row_size)(*this, i_var, i_dim, basis, settings);
 }
 
 int Regular_grid::add_element(std::vector<int> position)

@@ -175,14 +175,12 @@ double Solution::update(double cfl_by_stable_cfl)
             kernel_settings.d_pos = grid->mesh_size;
             grid->execute_local_av(i_var, i_dim, kernel_settings);
           }
-          #if 0
-          FOR_ALL_GRIDS
-          (
+          for (Grid* grid : all_grids())
+          {
             kernel_settings.d_t_by_d_pos = visc_dt/grid->mesh_size;
             kernel_settings.d_pos = grid->mesh_size;
             grid->execute_neighbor_av(i_var, i_dim, kernel_settings);
-          )
-          #endif
+          }
         }
       }
       for (Grid* grid : all_grids())
