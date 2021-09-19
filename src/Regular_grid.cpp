@@ -85,7 +85,7 @@ void Regular_grid::execute_cont_visc(Kernel_settings& settings)
 
 void Regular_grid::execute_local_derivative(int i_var, int i_dim, Kernel_settings& settings)
 {
-  //get_local_derivative(n_dim, basis.row_size)(state_r(), derivs.data(), n_elem, i_var, i_dim, basis, settings);
+  get_local_derivative(n_dim, basis.row_size)(elements, i_var, i_dim, basis, settings);
 }
 
 void Regular_grid::execute_neighbor_derivative(int i_var, int i_dim, Kernel_settings& settings)

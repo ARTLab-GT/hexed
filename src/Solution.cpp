@@ -125,35 +125,39 @@ double Solution::update(double cfl_by_stable_cfl)
     kernel_settings.d_pos = grid->mesh_size;
     grid->execute_req_visc(kernel_settings);
   }
-  #if 0
-  FOR_ALL_GRIDS
-  (
+  for (Grid* grid : all_grids())
+  {
     kernel_settings.d_pos = grid->mesh_size;
     grid->execute_cont_visc(kernel_settings);
-  )
+  }
   for (int i_iter = 0; i_iter < n_iter; ++i_iter)
   {
     for (int i_rk = 0; i_rk < 3; ++i_rk)
     {
-      FOR_ALL_GRIDS
-      (
-        double* sr = grid->state_r();
-        double* sw = grid->state_w();
-        for (int i_data = 0; i_data < grid->n_elem*grid->n_dof; ++i_data)
+      for (Grid* grid : all_grids())
+      {
+        for (int i_elem = 0; i_elem < grid->n_elem; ++i_elem)
         {
-          sw[i_data] = sr[i_data];
+          Element& elem = grid->element(i_elem);
+          double* stage_r = elem.stage(grid->i_stage_read());
+          double* stage_w = elem.stage(grid->i_stage_write());
+          for (int i_dof = 0; i_dof < grid->n_dof; ++i_dof)
+          {
+            stage_w[i_dof] = stage_r[i_dof];
+          }
         }
-      )
+      }
       for (int i_dim = 0; i_dim < n_dim; ++i_dim)
       {
         for (int i_var = 0; i_var < n_var; ++i_var)
         {
-          FOR_ALL_GRIDS
-          (
+          for (Grid* grid : all_grids())
+          {
             kernel_settings.d_t_by_d_pos = visc_dt/grid->mesh_size;
             kernel_settings.d_pos = grid->mesh_size;
             grid->execute_local_derivative(i_var, i_dim, kernel_settings);
-          )
+          }
+          #if 0
           FOR_ALL_GRIDS
           (
             kernel_settings.d_t_by_d_pos = visc_dt/grid->mesh_size;
@@ -178,15 +182,15 @@ double Solution::update(double cfl_by_stable_cfl)
             kernel_settings.d_pos = grid->mesh_size;
             grid->execute_neighbor_av(i_var, i_dim, kernel_settings);
           )
+          #endif
         }
       }
-      for (Grid& g : grids)
+      for (Grid* grid : all_grids())
       {
-        g.execute_runge_kutta_stage();
+        grid->execute_runge_kutta_stage();
       }
     }
   }
-  #endif
   for (Grid* grid : all_grids())
   {
     grid->time += dt;

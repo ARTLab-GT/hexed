@@ -22,7 +22,7 @@ void cont_visc(elem_con_vec& connections, Kernel_settings& settings)
   for (int stride = n_face_point, i_dim = 0; stride > 0; stride /= 2, ++i_dim)
   {
     #pragma omp parallel for
-    for (unsigned i_con = 0; i_con < connections.size(); ++i_con)
+    for (unsigned i_con = 0; i_con < connections[i_dim].size(); ++i_con)
     {
       double* visc [2] {connections[i_dim][i_con][0]->viscosity(),
                         connections[i_dim][i_con][1]->viscosity()};
