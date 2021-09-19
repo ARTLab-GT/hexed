@@ -28,7 +28,7 @@ please discuss it so that this documentation can be improved.
   * `cd`
   * `mkdir codes`
   * We need to tell the shell to look for libraries in `~/codes`. Edit `~/.bashrc` and add the following lines at the end:
-    * `export PATH=$PATH:~/codes`
+    * `export PATH=$PATH:~/codes/bin`
     * `export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:~/codes/include`
     * Close and reopen the terminal.
 2. Install sympy (used by Cartdg to generate quadrature rules):
