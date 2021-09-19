@@ -6,8 +6,8 @@
 #include <neighbor/hll_cpg_euler.hpp>
 #include <neighbor/ausm_plus_up_cpg_euler.hpp>
 #include <neighbor/hll_deformed_cpg_euler.hpp>
-#include <neighbor/jump.hpp>
 #include <neighbor/variable_jump.hpp>
+#include <get_neighbor_derivative.hpp>
 #include <get_cont_visc.hpp>
 #include <get_neighbor_def_reg_convective.hpp>
 #include <Storage_params.hpp>
@@ -707,60 +707,65 @@ TEST_CASE("jump kernel")
 {
   const int row_size = CARTDG_MAX_BASIS_ROW_SIZE;
   const int n_qpoint = row_size*row_size*row_size;
-  SECTION("scalar")
+  double read  [3][1][row_size][row_size][row_size];
+  double write [3][1][row_size][row_size][row_size];
+  double weight = 0.2;
+  for (int i = 0; i < n_qpoint; ++i)
   {
-    double read  [3][1][row_size][row_size][row_size];
-    double write [3][1][row_size][row_size][row_size];
-    double weight = 0.2;
-    for (int i = 0; i < n_qpoint; ++i)
+    *(&read[0][0][0][0][0] + i) = 0.5;
+    *(&read[1][0][0][0][0] + i) = 2.;
+    *(&read[2][0][0][0][0] + i) = 0.7;
+    for (int j = 0; j < 3; ++j)
     {
-      *(&read[0][0][0][0][0] + i) = 0.5;
-      *(&read[1][0][0][0][0] + i) = 2.;
-      *(&read[2][0][0][0][0] + i) = 0.7;
-      for (int j = 0; j < 3; ++j)
-      {
-        *(&write[j][0][0][0][0] + i) = 0.1;
-      }
+      *(&write[j][0][0][0][0] + i) = 0.1;
     }
-    cartdg::variable_jump<n_qpoint, row_size>({&read[2][0][0][0][0], &read[1][0][0][0][0]}, {&write[1][0][0][0][0], &write[0][0][0][0][0]}, 1, weight);
-    cartdg::variable_jump<n_qpoint, row_size>({&read[0][0][0][0][0], &read[2][0][0][0][0]}, {&write[2][0][0][0][0], &write[1][0][0][0][0]}, 1, weight);
-    double correct = (0.7 - 0.5)/2./0.2 + 0.1;
-    REQUIRE(write[2][0][0][row_size - 1][0] == Approx(correct));
-    REQUIRE(write[2][0][row_size - 1][row_size - 1][row_size - 1] == Approx(correct));
-    REQUIRE(write[1][0][0][0][0] == Approx(correct));
-    REQUIRE(write[1][0][row_size - 1][0][row_size - 1] == Approx(correct));
-    REQUIRE(write[0][0][0][row_size - 1][0] == 0.1);
-    REQUIRE(write[2][0][0][0][0] == 0.1);
-    REQUIRE(write[1][0][1][1][1] == 0.1); // might fail if CARTDG_MAX_BASIS_ROW_SIZE == 2
   }
-  SECTION("vector")
+
+  cartdg::variable_jump<n_qpoint, row_size>({&read[2][0][0][0][0], &read[1][0][0][0][0]}, {&write[1][0][0][0][0], &write[0][0][0][0][0]}, 1, weight);
+  cartdg::variable_jump<n_qpoint, row_size>({&read[0][0][0][0][0], &read[2][0][0][0][0]}, {&write[2][0][0][0][0], &write[1][0][0][0][0]}, 1, weight);
+  double correct = (0.7 - 0.5)/2./0.2 + 0.1;
+  REQUIRE(write[2][0][0][row_size - 1][0] == Approx(correct));
+  REQUIRE(write[2][0][row_size - 1][row_size - 1][row_size - 1] == Approx(correct));
+  REQUIRE(write[1][0][0][0][0] == Approx(correct));
+  REQUIRE(write[1][0][row_size - 1][0][row_size - 1] == Approx(correct));
+  REQUIRE(write[0][0][0][row_size - 1][0] == 0.1);
+  REQUIRE(write[2][0][0][0][0] == 0.1);
+  REQUIRE(write[1][0][1][1][1] == 0.1); // might fail if CARTDG_MAX_BASIS_ROW_SIZE == 2
+}
+
+TEST_CASE("neighbor_derivative")
+{
+  const int row_size = CARTDG_MAX_BASIS_ROW_SIZE;
+  const int n_qpoint = row_size*row_size*row_size;
+  cartdg::Storage_params params {1, 5, 3, row_size};
+  cartdg::Kernel_settings settings;
+  cartdg::Gauss_lobatto basis {row_size};
+  cartdg::elem_vec elements;
+  for (int i_elem = 0; i_elem < 3; ++i_elem)
   {
-    double read  [3][5][row_size][row_size][row_size] {};
-    double write [3][4][row_size][row_size][row_size];
-    Eigen::VectorXd weights = Eigen::VectorXd::Ones(1)*0.2;
-    cartdg::Kernel_settings settings;
-    for (int i = 0; i < n_qpoint; ++i)
-    {
-      *(&read[0][2][0][0][0] + i) = 0.5;
-      *(&read[1][2][0][0][0] + i) = 2.;
-      *(&read[2][2][0][0][0] + i) = 0.7;
-      for (int j = 0; j < 3; ++j)
-      {
-        *(&write[j][1][0][0][0] + i) = 0.1;
-      }
-    }
-    double* connect_read  [4] {&read[2][0][0][0][0], &read[1][0][0][0][0], &read[0][0][0][0][0], &read[2][0][0][0][0]};
-    double* connect_write [4] {&write[1][0][0][0][0], &write[0][0][0][0][0], &write[2][0][0][0][0], &write[1][0][0][0][0]};
-    cartdg::jump<5, 4, n_qpoint, row_size>(connect_read, connect_write, 2, 2, 1, 1, weights, settings);
-    double correct = (0.7 - 0.5)/2./0.2 + 0.1;
-    REQUIRE(write[2][1][0][row_size - 1][0] == Approx(correct));
-    REQUIRE(write[2][1][row_size - 1][row_size - 1][row_size - 1] == Approx(correct));
-    REQUIRE(write[1][1][0][0][0] == Approx(correct));
-    REQUIRE(write[1][1][row_size - 1][0][row_size - 1] == Approx(correct));
-    REQUIRE(write[0][1][0][row_size - 1][0] == 0.1);
-    REQUIRE(write[2][1][0][0][0] == 0.1);
-    REQUIRE(write[1][1][1][1][1] == 0.1); // might fail if CARTDG_MAX_BASIS_ROW_SIZE == 2
+    elements.emplace_back(new cartdg::Element {params});
   }
+  for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
+  {
+    elements[0]->stage(0)[2*n_qpoint + i_qpoint] = 0.5;
+    elements[1]->stage(0)[2*n_qpoint + i_qpoint] = 2.;
+    elements[2]->stage(0)[2*n_qpoint + i_qpoint] = 0.7;
+    for (int i_elem = 0; i_elem < 3; ++i_elem)
+    {
+      elements[i_elem]->derivative()[i_qpoint] = 0.1;
+    }
+  }
+  cartdg::elem_con_vec connections {{}, {{elements[2].get(), elements[1].get()}, {elements[0].get(), elements[2].get()}}, {}};
+  cartdg::get_neighbor_derivative(3, row_size)(connections, 2, 1, basis, settings);
+  double correct = (0.7 - 0.5)/2./basis.node_weights()[0] + 0.1;
+  int end = (row_size - 1)*(row_size*row_size + 1);
+  REQUIRE(elements[0]->derivative()[(row_size - 1)*row_size + 0  ] == Approx(correct));
+  REQUIRE(elements[0]->derivative()[(row_size - 1)*row_size + end] == Approx(correct));
+  REQUIRE(elements[2]->derivative()[(0           )*row_size + 0  ] == Approx(correct));
+  REQUIRE(elements[2]->derivative()[(0           )*row_size + end] == Approx(correct));
+  REQUIRE(elements[1]->derivative()[(row_size - 1)*row_size + 0 ] == 0.1);
+  REQUIRE(elements[0]->derivative()[(0           )*row_size + 0 ] == 0.1);
+  REQUIRE(elements[2]->derivative()[(1           )*row_size + row_size*row_size + 1] == 0.1); // might fail if CARTDG_MAX_BASIS_ROW_SIZE == 2
 }
 
 TEST_CASE("continuous viscosity kernel")
