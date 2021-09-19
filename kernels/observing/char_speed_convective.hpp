@@ -1,5 +1,5 @@
-#ifndef CARTDG_CHAR_SPEED_CPG_EULER_HPP_
-#define CARTDG_CHAR_SPEED_CPG_EULER_HPP_
+#ifndef CARTDG_CHAR_SPEED_CONVECTIVE_HPP_
+#define CARTDG_CHAR_SPEED_CONVECTIVE_HPP_
 
 #include <cmath>
 
@@ -9,7 +9,7 @@ namespace cartdg
 {
 
 template<int n_var, int n_qpoint>
-double char_speed_cpg_euler(double* read, double heat_rat)
+double char_speed_convective(double* read, double heat_rat)
 {
   const int n_dim = n_var - 2;
   double max_speed = 0.;

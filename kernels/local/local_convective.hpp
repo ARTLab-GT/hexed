@@ -1,32 +1,34 @@
-#ifndef CARTDG_LOCAL_CPG_EULER_HPP_
-#define CARTDG_LOCAL_CPG_EULER_HPP_
+#ifndef CARTDG_LOCAL_CONVECTIVE_HPP_
+#define CARTDG_LOCAL_CONVECTIVE_HPP_
 
 #include <Eigen/Dense>
 
 #include <Kernel_settings.hpp>
 #include <Basis.hpp>
+#include <Element.hpp>
 
 namespace cartdg
 {
 
 // AUTOGENERATE LOOKUP BENCHMARK(regular, 3)
 template<int n_var, int n_qpoint, int row_size>
-void local_cpg_euler(double* read, double* write, int n_elem,
-                     Basis& basis, Kernel_settings& settings)
+void local_convective(elem_vec& elements, Basis& basis, Kernel_settings& settings)
 {
-  Eigen::Matrix<double, row_size, row_size> diff_mat = basis.diff_mat();
+  const Eigen::Matrix<double, row_size, row_size> diff_mat = basis.diff_mat();
   double d_t_by_d_pos = settings.d_t_by_d_pos;
   double heat_rat = settings.cpg_heat_rat;
+  const int i_read = settings.i_read;
+  const int i_write = settings.i_write;
 
   #pragma omp parallel for
-  for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+  for (unsigned i_elem = 0; i_elem < elements.size(); ++i_elem)
   {
-
     // Initialize updated solution to be equal to current solution
+    double* read  = elements[i_elem]->stage(i_read);
+    double* write = elements[i_elem]->stage(i_write);
     for (int i_dof = 0; i_dof < n_qpoint*n_var; ++i_dof)
     {
-      const int i = i_elem*n_qpoint*n_var + i_dof;
-      write[i] = read[i];
+      write[i_dof] = read[i_dof];
     }
 
     // Perform update
@@ -47,8 +49,7 @@ void local_cpg_euler(double* read, double* write, int n_elem,
             for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
             {
               row_r[i_var][i_qpoint]
-              = read[(i_elem*n_var + i_var)*n_qpoint
-                     + i_outer*stride*row_size + i_inner + i_qpoint*stride];
+              = read[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
             }
           }
 
@@ -83,8 +84,7 @@ void local_cpg_euler(double* read, double* write, int n_elem,
           {
             for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
             {
-               write[(i_elem*n_var + i_var)*n_qpoint
-                     + i_outer*stride*row_size + i_inner + i_qpoint*stride]
+               write[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride]
                += row_w[i_var][i_qpoint];
             }
           }

@@ -2,7 +2,7 @@
 
 #include <cartdgConfig.hpp>
 #include <Kernel_settings.hpp>
-#include <get_mcs_cpg_euler.hpp>
+#include <get_mcs_convective.hpp>
 #include <Gauss_lobatto.hpp>
 #include <observing/indicator.hpp>
 
@@ -18,27 +18,41 @@ TEST_CASE("Max characteristic speed")
     double heat_rat = 1.3;
     double int_ener0 = mass*sound_speed0*sound_speed0/(heat_rat*(heat_rat - 1));
     double int_ener1 = mass*sound_speed1*sound_speed1/(heat_rat*(heat_rat - 1));
-    double read [12] {mass*50, mass*10,
-                      mass, mass,
-                      int_ener1 + 0.5*mass*250, int_ener0 + 0.5*mass*100,
-                      mass*-20, 0,
-                      mass, mass,
-                      int_ener0 + 0.5*mass*400, int_ener1};
+    cartdg::Storage_params params {1, 3, 1, 2};
+    cartdg::elem_vec elements;
+    elements.emplace_back(new cartdg::Element {params});
+    elements.emplace_back(new cartdg::Element {params});
+    double read [2][6] {{mass*50, mass*10,
+                         mass, mass,
+                         int_ener1 + 0.5*mass*250, int_ener0 + 0.5*mass*100},
+                        {mass*-20, 0,
+                         mass, mass,
+                         int_ener0 + 0.5*mass*400, int_ener1}};
+    for (int i_elem : {0, 1})
+    {
+      for (int i_dof = 0; i_dof < 6; ++i_dof)
+      {
+        elements[i_elem]->stage(0)[i_dof] = read[i_elem][i_dof];
+      }
+    }
     settings.cpg_heat_rat = heat_rat;
-    double mcs = cartdg::get_mcs_cpg_euler(1, 2)(read, 2, settings);
+    double mcs = cartdg::get_mcs_convective(1, 2)(elements, settings);
     REQUIRE(mcs == Approx(420));
   }
   SECTION("2D")
   {
-    double read[4][4];
+    cartdg::Storage_params params {3, 4, 2, 2};
+    cartdg::elem_vec elements;
+    elements.emplace_back(new cartdg::Element {params});
+    double* read = elements.back()->stage(0);
     for (int i_qpoint = 0; i_qpoint < 4; ++i_qpoint)
     {
-      read[0][i_qpoint] = 2.25;
-      read[1][i_qpoint] = 24.5;
-      read[2][i_qpoint] = 1.225;
-      read[3][i_qpoint] = 101235/0.4 + 0.5*1.225*500;
+      read[0*4 + i_qpoint] = 2.25;
+      read[1*4 + i_qpoint] = 24.5;
+      read[2*4 + i_qpoint] = 1.225;
+      read[3*4 + i_qpoint] = 101235/0.4 + 0.5*1.225*500;
     }
-    double mcs = cartdg::get_mcs_cpg_euler(2, 2)(read[0], 1, settings);
+    double mcs = cartdg::get_mcs_convective(2, 2)(elements, settings);
     REQUIRE(mcs == Approx(360).epsilon(0.01));
   }
 }

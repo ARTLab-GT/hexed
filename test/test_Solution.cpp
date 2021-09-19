@@ -25,8 +25,7 @@ class Arbitrary_integrand : public cartdg::Domain_func
 TEST_CASE("Solution class")
 {
   cartdg::Solution sol (4, 2, 4, 0.7);
-  cartdg::Grid* g;
-  REQUIRE_THROWS(g = &sol.get_grid(0));
+  REQUIRE(sol.all_grids().size() == 0);
   std::vector<int> lc {-1, -1};
   std::vector<int> uc {1, 2};
   sol.add_empty_grid(1);
@@ -42,16 +41,15 @@ TEST_CASE("Solution class")
 
   SECTION("add_block_grid creates correct grid")
   {
-    g = &sol.get_grid(1);
+    cartdg::Grid* g = sol.all_grids()[1];
     REQUIRE(g->basis.row_size == 4);
-    REQUIRE(g->state_r()[0] == 0.0);
     REQUIRE(g->n_elem == 6);
     REQUIRE(g->mesh_size == 0.35);
     REQUIRE(g->pos[0] == -1);
     REQUIRE(g->get_pos(0)[0] == -0.35);
     REQUIRE(g->get_pos(1)[0] == -0.);
     REQUIRE(g->get_pos(1)[16] == -0.35);
-    g = &sol.get_grid(2);
+    g = sol.all_grids()[2];
     REQUIRE(g->basis.row_size == 4);
     REQUIRE(g->n_elem == 16);
     REQUIRE(g->mesh_size == 0.175);
@@ -60,10 +58,10 @@ TEST_CASE("Solution class")
 
   SECTION("add_empty_grid creates an empty grid")
   {
-    unsigned int n_grids = sol.grids.size();
+    unsigned int n_grids = sol.reg_grids.size();
     sol.add_empty_grid(2);
-    REQUIRE(sol.grids.size() == n_grids + 1);
-    cartdg::Grid& g = sol.get_grid(n_grids);
+    REQUIRE(sol.reg_grids.size() == n_grids + 1);
+    cartdg::Regular_grid& g = sol.reg_grids[n_grids];
     REQUIRE(g.n_elem == 0);
     REQUIRE(g.mesh_size == 0.175);
   }
@@ -82,15 +80,15 @@ TEST_CASE("Solution class")
   {
     Test_func test_func;
     sol.initialize(test_func);
-    g = &sol.get_grid(1);
+    cartdg::Grid* g = sol.all_grids()[1];
     REQUIRE(g->basis.row_size == 4);
     REQUIRE(g->n_elem == 6);
-    REQUIRE(g->state_r()[0] == 0.1);
-    REQUIRE(g->state_r()[16] == 0.2);
-    REQUIRE(g->state_r()[32] == -0.35);
-    REQUIRE(g->state_r()[48] == 2.5);
-    int size = g->n_dof*g->n_elem;
-    REQUIRE(g->state_r()[size - 1] == 2.5);
+    REQUIRE(g->element(0).stage(0)[0] == 0.1);
+    REQUIRE(g->element(0).stage(0)[16] == 0.2);
+    REQUIRE(g->element(0).stage(0)[32] == -0.35);
+    REQUIRE(g->element(0).stage(0)[48] == 2.5);
+    REQUIRE(g->element(5).stage(0)[ 0] == 0.1);
+    REQUIRE(g->element(5).stage(0)[48] == 2.5);
   }
 
   SECTION("Quadrature")
@@ -117,9 +115,15 @@ TEST_CASE("Integration of deformed elements")
   const int row_size = CARTDG_MAX_BASIS_ROW_SIZE;
   cartdg::Solution sol (4, 2, row_size, 1.);
   sol.add_empty_grid(1);
-  cartdg::Grid& grid = sol.grids[0];
+  cartdg::Regular_grid& grid = sol.reg_grids[0];
   sol.add_deformed_grid(1);
   cartdg::Deformed_grid& def_grid = sol.def_grids[0];
+
+  // I know this setup is complicated... sorry :(
+  for (int i = 0; i < 5; ++i) grid.add_element({2, i - 2});
+  for (int i = 0; i < 4; ++i) grid.add_element({1 - i, 2});
+  grid.auto_connect({5, 5});
+
   for (int i : {-1, 0})
   {
     for (int j : {-1, 0})
@@ -127,42 +131,76 @@ TEST_CASE("Integration of deformed elements")
       def_grid.add_element({i, j});
     }
   }
-  grid.add_element({1, -1});
-  grid.add_element({1, 0});
-  grid.add_element({1, 1});
-  grid.add_element({0, 1});
-  grid.add_element({-1, 1});
-  grid.auto_connect({3, 3});
+  for (int i = 0; i < 3; ++i)
+  {
+    def_grid.add_element({1, i - 1});
+    def_grid.connect_non_def({i + 4, i + 1}, {0, 0}, {1, 0}, grid);
+  }
+  def_grid.connect_non_def({6, 5}, {1, 1}, {1, 0}, grid);
+  def_grid.connect({5, 4}, {1, 1}, {0, 1});
+  def_grid.connect({6, 5}, {1, 1}, {0, 1});
+  for (int i = 0; i < 3; ++i)
+  {
+    def_grid.add_element({-i, 1});
+    def_grid.connect({i + 7, i + 6}, {0, 0}, {1, 0});
+    def_grid.connect_non_def({i + 7, i + 6}, {1, 1}, {1, 0}, grid);
+  }
+  def_grid.connect_non_def({9, 3}, {0, 0}, {0, 1}, grid);
+  for (int i = 0; i < 3; ++i)
+  {
+    def_grid.add_element({-2, -i});
+    def_grid.connect({i + 10, i + 9}, {1, 1}, {1, 0});
+    def_grid.connect_non_def({i + 10, 2 - i}, {0, 0}, {0, 1}, grid);
+  }
+  def_grid.connect_non_def({12, 8}, {1, 1}, {0, 1}, grid);
+  for (int i = 0; i < 3; ++i)
+  {
+    def_grid.add_element({i - 1, -2});
+    def_grid.connect({i + 13, i + 12}, {0, 0}, {0, 1});
+    def_grid.connect_non_def({i + 13, 7 - i}, {1, 1}, {0, 1}, grid);
+  }
+  def_grid.connect_non_def({15, 0}, {0, 0}, {1, 0}, grid);
+  def_grid.connect({4, 15}, {1, 1}, {0, 1});
 
   double center [] {0.1, 0.1};
-
-  def_grid.get_vertex(0).pos = {-0.5, -0.5, 0.};
-  def_grid.get_vertex(1).pos = {-0.5, 0., 0.};
-  def_grid.get_vertex(2).pos = {0., -0.5, 0.};
-  def_grid.get_vertex(3).pos = {center[0], center[1], 0.};
-
-  def_grid.get_vertex(4).pos = {-0.5, 0.5, 0.};
-  def_grid.get_vertex(5).pos = {0., 0.5, 0.};
-  def_grid.get_vertex(6).pos = {-0.5, 0., 0.};
-  def_grid.get_vertex(7).pos = {center[0], center[1], 0.};
-
-  def_grid.get_vertex( 9).pos = {center[0], center[1], 0.};
-  def_grid.get_vertex(12).pos = {center[0], center[1], 0.};
+  {
+    cartdg::Deformed_element& elem {def_grid.deformed_element(0)};
+    elem.vertex(3).pos = {center[0], center[1], 0.};
+  }
+  {
+    cartdg::Deformed_element& elem {def_grid.deformed_element(1)};
+    elem.vertex(0).pos = {-0.5, 0.5, 0.};
+    elem.vertex(1).pos = {0., 0.5, 0.};
+    elem.vertex(2).pos = {-0.5, 0., 0.};
+    elem.vertex(3).pos = {center[0], center[1], 0.};
+  }
+  {
+    cartdg::Deformed_element& elem {def_grid.deformed_element(2)};
+    elem.vertex(1).pos = {center[0], center[1], 0.};
+  }
+  {
+    cartdg::Deformed_element& elem {def_grid.deformed_element(3)};
+    elem.vertex(0).pos = {center[0], center[1], 0.};
+  }
+  {
+    cartdg::Deformed_element& elem {def_grid.deformed_element(6)};
+    elem.vertex(0).pos[0] += 0.1;
+    elem.vertex(0).pos[1] += 0.1;
+  }
 
   def_grid.connect({0, 1}, {1, 0}, {1, 1});
   def_grid.connect({2, 3}, {1, 1}, {1, 0});
   def_grid.connect({0, 2}, {0, 0}, {1, 0});
   def_grid.connect({1, 3}, {1, 0}, {1, 0});
+  def_grid.connect({2, 4}, {0, 0}, {1, 0});
+  def_grid.connect({3, 5}, {0, 0}, {1, 0});
+  def_grid.connect({3, 7}, {1, 1}, {1, 0});
+  def_grid.connect({1, 8}, {0, 1}, {0, 0});
+  def_grid.connect({0,11}, {0, 0}, {0, 1});
+  def_grid.connect({1,10}, {1, 0}, {0, 1});
+  def_grid.connect({2,14}, {1, 1}, {0, 1});
+  def_grid.connect({0,13}, {1, 1}, {0, 1});
   def_grid.calc_jacobian();
-  def_grid.update_connections();
-  def_grid.connect_non_def({2, 0}, {0, 0}, {1, 0}, grid);
-  def_grid.connect_non_def({3, 1}, {0, 0}, {1, 0}, grid);
-  def_grid.connect_non_def({3, 3}, {1, 1}, {1, 0}, grid);
-  def_grid.connect_non_def({1, 4}, {0, 1}, {0, 0}, grid);
-  def_grid.connect_non_def({0, 0}, {0, 0}, {0, 1}, grid);
-  def_grid.connect_non_def({1, 1}, {1, 0}, {0, 1}, grid);
-  def_grid.connect_non_def({0, 4}, {1, 1}, {0, 1}, grid);
-  def_grid.connect_non_def({2, 3}, {1, 1}, {0, 1}, grid);
 
   cartdg::Isentropic_vortex init ({100., 0., 1.225, 2e5});
   init.argmax_radius = 0.1;
@@ -187,9 +225,9 @@ TEST_CASE("Execution of non-penetration boundary condition")
   sol.add_deformed_grid(1);
   cartdg::Deformed_grid& grid = sol.def_grids[0];
   grid.add_element({0, 0});
-  grid.get_vertex(1).pos = {-0.1, 0.5, 0.};
-  grid.get_vertex(2).pos = {0.7, 0.05, 0.};
-  grid.get_vertex(3).pos = {1.3, 1.3, 0.};
+  grid.deformed_element(0).vertex(1).pos = {-0.1, 0.5, 0.};
+  grid.deformed_element(0).vertex(2).pos = {0.7, 0.05, 0.};
+  grid.deformed_element(0).vertex(3).pos = {1.3, 1.3, 0.};
   for (int i_dim : {0, 1})
   {
     for (bool is_positive : {false, true})

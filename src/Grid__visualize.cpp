@@ -84,9 +84,10 @@ void Grid::visualize(std::string file_name)
     {
       TECDAT142(&III, pos.data() + i_dim*n_qpoint, &DIsDouble);
     }
+    double* state = element(i_elem).stage(0);
     for (int i_var = 0; i_var < n_var; ++i_var)
     {
-      TECDAT142(&III, state_r() + i_elem*n_dof + i_var*n_qpoint, &DIsDouble);
+      TECDAT142(&III, state + i_var*n_qpoint, &DIsDouble);
     }
   }
 

@@ -7,6 +7,7 @@
 
 #include <Gauss_lobatto.hpp>
 #include <Kernel_settings.hpp>
+#include <Deformed_element.hpp>
 
 int main(int argc, char** argv)
 {
@@ -18,76 +19,65 @@ int row_size = std::stoi(argv[2]);
 int n_elem_side = std::stoi(argv[3]);
 int n_elem = std::pow(n_elem_side, dim);
 int n_qpoint = std::pow(row_size, dim);
-int n_visc = std::pow(2, dim);
 int n_var = dim + 2;
 int n_total = n_var*n_qpoint*n_elem;
-int n_jacobian = n_elem*n_qpoint*dim*dim;
 
-std::vector<double> jacobian_vec (n_jacobian, 0.);
+cartdg::Storage_params storage_params {3, n_var, dim, row_size};
+
 std::vector<double> read_vec (n_total);
 std::vector<double> write_vec (n_total, 0.);
-std::vector<double> visc_vec (n_elem*n_visc, 0.);
+cartdg::elem_vec elements;
+cartdg::def_elem_vec def_elements;
+for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+{
+  elements.emplace_back(new cartdg::Element {storage_params});
+  def_elements.emplace_back(new cartdg::Deformed_element {storage_params});
+  for (int i_dof = 0; i_dof < n_var*n_qpoint; ++i_dof)
+  {
+    double state = (rand()%1000)/1000. + 10.; // "+ 10." avoids NaN due to nonpositive density
+    if (i_dof/n_qpoint == n_var - 1) state += 100; // Avoid NaN due to negative pressure
+    elements.back()->stage(0)[i_dof] = state;
+    def_elements.back()->stage(0)[i_dof] = state;
+  }
+  for (int i_jac = 0; i_jac < dim*dim*n_qpoint; ++i_jac)
+  {
+    // generate numbers between 0.9 and 1.099 on the diagonal
+    // and between -0.1 and 0.099 elsewhere
+    double* jac = def_elements.back()->jacobian();
+    *jac = ((rand()%200) - 100)/1000.;
+    int i_entry = i_jac/n_qpoint;
+    if ((i_entry/dim) == (i_entry%dim)) *jac += 1.;
+  }
+}
 #pragma omp parallel for
 for (int i = 0; i < n_total; ++i)
 {
   read_vec[i] = (rand()%1000)/1000. + 10.; // "+ 10." avoids NaN due to nonpositive density
   if (((i/n_qpoint)%n_var) == n_var - 1) read_vec[i] += 100; // Avoid NaN due to negative pressure
 }
-#pragma omp parallel for
-for (int i = 0; i < n_jacobian; ++i)
-{
-  // generate numbers between 0.9 and 1.099 on the diagonal
-  // and between -0.1 and 0.099 elsewhere
-  jacobian_vec[i] = ((rand()%200) - 100)/1000.;
-  int i_entry = (i/n_qpoint)%(dim*dim);
-  if ((i_entry/dim) == (i_entry%dim)) jacobian_vec[i] += 1.;
-}
-double* jacobian = jacobian_vec.data();
 double* read = read_vec.data();
 double* write = write_vec.data();
-double* visc = visc_vec.data();
-std::vector<std::vector<double*>> con_r_vec2 (dim);
-std::vector<std::vector<double*>> con_w_vec2 (dim);
-std::vector<double**> con_r_vec1 (dim);
-std::vector<double**> con_w_vec1 (dim);
-std::vector<double*> def_con_j_vec;
-std::vector<double*> def_con_r_vec;
-std::vector<double*> def_con_w_vec;
-std::vector<int> i_dim_vec;
-std::vector<int> is_positive_face_vec;
-std::vector<int> n_con_vec (dim);
+cartdg::elem_con_vec connections (dim);
+cartdg::def_elem_con_vec def_connections;
 for (int i_dim = 0; i_dim < dim; ++i_dim)
 {
-  n_con_vec[i_dim] = n_elem;
   for (int i_con = 0; i_con < n_elem; ++i_con)
   {
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wunused-variable"
+    connections[i_dim].push_back({});
+    def_connections.push_back({});
     for (int i_side: {0, 1})
     {
-      int elem = (rand()%n_elem)*n_qpoint*n_var;
-      con_r_vec2[i_dim].push_back(read + elem);
-      con_w_vec2[i_dim].push_back(write + elem);
-      def_con_j_vec.push_back(jacobian + elem);
-      def_con_r_vec.push_back(read + elem);
-      def_con_w_vec.push_back(write + elem);
-      i_dim_vec.push_back(rand()%dim);
-      is_positive_face_vec.push_back(rand()%2);
+      int i_elem = rand()%n_elem;
+      connections[i_dim].back()[i_side] = elements[i_elem].get();
+      def_connections.back().element[i_side] = def_elements[i_elem].get();
+      def_connections.back().i_dim[i_side] = rand()%dim;
+      def_connections.back().is_positive[i_side] = bool(rand()%2);
     }
     #pragma GCC diagnostic pop
   }
-  con_r_vec1[i_dim] = con_r_vec2[i_dim].data();
-  con_w_vec1[i_dim] = con_w_vec2[i_dim].data();
 }
-double*** connections_r = con_r_vec1.data();
-double*** connections_w = con_w_vec1.data();
-double** def_connections_j = def_con_j_vec.data();
-double** def_connections_r = def_con_r_vec.data();
-double** def_connections_w = def_con_w_vec.data();
-int* i_dim = i_dim_vec.data();
-int* is_positive_face = is_positive_face_vec.data();
-int* n_connections = n_con_vec.data();
-int def_n_connections = dim*n_elem;
 
 cartdg::Gauss_lobatto basis (row_size);
 cartdg::Kernel_settings settings;

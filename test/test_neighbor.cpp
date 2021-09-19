@@ -6,8 +6,12 @@
 #include <neighbor/hll_cpg_euler.hpp>
 #include <neighbor/ausm_plus_up_cpg_euler.hpp>
 #include <neighbor/hll_deformed_cpg_euler.hpp>
-#include <neighbor/jump.hpp>
-#include <get_cont_visc_cpg_euler.hpp>
+#include <neighbor/variable_jump.hpp>
+#include <get_neighbor_derivative.hpp>
+#include <get_cont_visc.hpp>
+#include <get_neighbor_def_reg_convective.hpp>
+#include <Storage_params.hpp>
+#include <Gauss_lobatto.hpp>
 
 TEST_CASE("neighbor kernel read_copy<>()")
 {
@@ -89,7 +93,7 @@ TEST_CASE("neighbor kernel read_copy<>()")
   }
 }
 
-TEST_CASE("neighbor kernel cartdg::write_copy<>()")
+TEST_CASE("neighbor kernel write_copy<>()")
 {
   SECTION("1D")
   {
@@ -595,73 +599,181 @@ TEST_CASE("hll_deformed_cpg_euler")
   }
 }
 
+TEST_CASE("neighbor_def_reg_convective")
+{
+  cartdg::Storage_params params {3, 4, 2, CARTDG_MAX_BASIS_ROW_SIZE};
+  int n_qpoint = params.n_qpoint();
+  int row_size = params.row_size;
+  cartdg::Gauss_lobatto basis {params.row_size};
+  double weight0 = basis.node_weights()(0);
+  cartdg::Kernel_settings settings;
+  settings.d_t_by_d_pos = 0.1;
+  cartdg::Deformed_element def {params};
+  cartdg::Element          reg {params};
+
+  double mass = 1.;
+  double veloc0 = 20;
+  double veloc1 = 10;
+  double pres = 1e5;
+  double* def_r = def.stage(0);
+  double* reg_r = reg.stage(0);
+  double* def_w = def.stage(1);
+  double* reg_w = reg.stage(1);
+  for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
+  {
+    def_r[0*n_qpoint + i_qpoint] =  mass*veloc0;
+    reg_r[0*n_qpoint + i_qpoint] = -mass*veloc0;
+    def_r[1*n_qpoint + i_qpoint] =  mass*veloc1;
+    reg_r[1*n_qpoint + i_qpoint] = -mass*veloc1;
+    def_r[2*n_qpoint + i_qpoint] = reg_r[2*n_qpoint + i_qpoint] = mass;
+    def_r[3*n_qpoint + i_qpoint] = reg_r[3*n_qpoint + i_qpoint] = pres/0.4 + 0.5*mass*(veloc0*veloc0 + veloc1*veloc1);
+  }
+  for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof)
+  {
+    def_w[i_dof] = reg_w[i_dof] = 0.;
+  }
+  double* jac = def.jacobian();
+  for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
+  {
+    jac[0*n_qpoint + i_qpoint] = 2.;
+    jac[1*n_qpoint + i_qpoint] = 0.;
+    jac[2*n_qpoint + i_qpoint] = 0.1;
+    jac[3*n_qpoint + i_qpoint] = 1.;
+  }
+
+  cartdg::def_reg_con_vec cons {{}, {}, {{&def, &reg}}, {}};
+  cartdg::get_neighbor_def_reg_convective(2, params.row_size)(cons, basis, settings);
+  def_w += 3*n_qpoint - params.row_size;
+  reg_w += 2*n_qpoint;
+  for (int i_row = 0; i_row < row_size; ++i_row)
+  {
+    REQUIRE(def_w[i_row]/0.1 == Approx(20./weight0/2.));
+    REQUIRE(reg_w[i_row]/0.1 == Approx(20./weight0));
+  }
+
+  def_w = def.stage(1);
+  reg_w = reg.stage(1);
+  for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof)
+  {
+    def_w[i_dof] = reg_w[i_dof] = 0.;
+  }
+  cons[0].push_back({&def, &reg});
+  cons[2].clear();
+  cartdg::get_neighbor_def_reg_convective(2, params.row_size)(cons, basis, settings);
+  def_w += 3*n_qpoint - params.row_size;
+  reg_w += 2*n_qpoint;
+  for (int i_row = 0; i_row < row_size; ++i_row)
+  {
+    REQUIRE(def_w[i_row]/0.1 == 0.);
+    REQUIRE(reg_w[i_row]/0.1 == 0.);
+  }
+  def_w = def.stage(1);
+  reg_w = reg.stage(1);
+  def_w += 2*n_qpoint;
+  reg_w += 3*n_qpoint - params.row_size;
+  for (int i_row = 0; i_row < row_size; ++i_row)
+  {
+    REQUIRE(def_w[i_row]/0.1 == Approx(-20./weight0/2.));
+    REQUIRE(reg_w[i_row]/0.1 == Approx(-20./weight0));
+  }
+
+  def_w = def.stage(1);
+  reg_w = reg.stage(1);
+  for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof)
+  {
+    def_w[i_dof] = reg_w[i_dof] = 0.;
+  }
+  for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
+  {
+    jac[0*n_qpoint + i_qpoint] = 1.;
+    jac[1*n_qpoint + i_qpoint] = -0.3;
+    jac[2*n_qpoint + i_qpoint] = 0.;
+    jac[3*n_qpoint + i_qpoint] = 3.;
+  }
+  cons[3].push_back({&def, &reg});
+  cons[0].clear();
+
+  cartdg::get_neighbor_def_reg_convective(2, params.row_size)(cons, basis, settings);
+  def_w += 2*n_qpoint;
+  reg_w += 2*n_qpoint;
+  for (int i_row = 0; i_row < row_size; ++i_row)
+  {
+    REQUIRE(def_w[i_row*row_size + row_size - 1]/0.1 == Approx(10./weight0/3.));
+    REQUIRE(reg_w[i_row*row_size               ]/0.1 == Approx(10./weight0));
+  }
+}
+
 TEST_CASE("jump kernel")
 {
   const int row_size = CARTDG_MAX_BASIS_ROW_SIZE;
   const int n_qpoint = row_size*row_size*row_size;
-  SECTION("scalar")
+  double read  [3][1][row_size][row_size][row_size];
+  double write [3][1][row_size][row_size][row_size];
+  double weight = 0.2;
+  for (int i = 0; i < n_qpoint; ++i)
   {
-    double read  [3][1][row_size][row_size][row_size];
-    double write [3][1][row_size][row_size][row_size];
-    Eigen::VectorXd weights = Eigen::VectorXd::Ones(1)*0.2;
-    cartdg::Kernel_settings settings;
-    for (int i = 0; i < n_qpoint; ++i)
+    *(&read[0][0][0][0][0] + i) = 0.5;
+    *(&read[1][0][0][0][0] + i) = 2.;
+    *(&read[2][0][0][0][0] + i) = 0.7;
+    for (int j = 0; j < 3; ++j)
     {
-      *(&read[0][0][0][0][0] + i) = 0.5;
-      *(&read[1][0][0][0][0] + i) = 2.;
-      *(&read[2][0][0][0][0] + i) = 0.7;
-      for (int j = 0; j < 3; ++j)
-      {
-        *(&write[j][0][0][0][0] + i) = 0.1;
-      }
+      *(&write[j][0][0][0][0] + i) = 0.1;
     }
-    double* connect_read  [4] {&read[2][0][0][0][0], &read[1][0][0][0][0], &read[0][0][0][0][0], &read[2][0][0][0][0]};
-    double* connect_write [4] {&write[1][0][0][0][0], &write[0][0][0][0][0], &write[2][0][0][0][0], &write[1][0][0][0][0]};
-    cartdg::jump<1, 1, n_qpoint, row_size>(connect_read, connect_write, 2, 0, 0, 1, weights, settings);
-    double correct = (0.7 - 0.5)/2./0.2 + 0.1;
-    REQUIRE(write[2][0][0][row_size - 1][0] == Approx(correct));
-    REQUIRE(write[2][0][row_size - 1][row_size - 1][row_size - 1] == Approx(correct));
-    REQUIRE(write[1][0][0][0][0] == Approx(correct));
-    REQUIRE(write[1][0][row_size - 1][0][row_size - 1] == Approx(correct));
-    REQUIRE(write[0][0][0][row_size - 1][0] == 0.1);
-    REQUIRE(write[2][0][0][0][0] == 0.1);
-    REQUIRE(write[1][0][1][1][1] == 0.1); // might fail if CARTDG_MAX_BASIS_ROW_SIZE == 2
   }
-  SECTION("vector")
+
+  cartdg::variable_jump<n_qpoint, row_size>({&read[2][0][0][0][0], &read[1][0][0][0][0]}, {&write[1][0][0][0][0], &write[0][0][0][0][0]}, 1, weight);
+  cartdg::variable_jump<n_qpoint, row_size>({&read[0][0][0][0][0], &read[2][0][0][0][0]}, {&write[2][0][0][0][0], &write[1][0][0][0][0]}, 1, weight);
+  double correct = (0.7 - 0.5)/2./0.2 + 0.1;
+  REQUIRE(write[2][0][0][row_size - 1][0] == Approx(correct));
+  REQUIRE(write[2][0][row_size - 1][row_size - 1][row_size - 1] == Approx(correct));
+  REQUIRE(write[1][0][0][0][0] == Approx(correct));
+  REQUIRE(write[1][0][row_size - 1][0][row_size - 1] == Approx(correct));
+  REQUIRE(write[0][0][0][row_size - 1][0] == 0.1);
+  REQUIRE(write[2][0][0][0][0] == 0.1);
+  REQUIRE(write[1][0][1][1][1] == 0.1); // might fail if CARTDG_MAX_BASIS_ROW_SIZE == 2
+}
+
+TEST_CASE("neighbor_derivative")
+{
+  const int row_size = CARTDG_MAX_BASIS_ROW_SIZE;
+  const int n_qpoint = row_size*row_size*row_size;
+  cartdg::Storage_params params {1, 5, 3, row_size};
+  cartdg::Kernel_settings settings;
+  cartdg::Gauss_lobatto basis {row_size};
+  cartdg::elem_vec elements;
+  for (int i_elem = 0; i_elem < 3; ++i_elem)
   {
-    double read  [3][5][row_size][row_size][row_size] {};
-    double write [3][4][row_size][row_size][row_size];
-    Eigen::VectorXd weights = Eigen::VectorXd::Ones(1)*0.2;
-    cartdg::Kernel_settings settings;
-    for (int i = 0; i < n_qpoint; ++i)
-    {
-      *(&read[0][2][0][0][0] + i) = 0.5;
-      *(&read[1][2][0][0][0] + i) = 2.;
-      *(&read[2][2][0][0][0] + i) = 0.7;
-      for (int j = 0; j < 3; ++j)
-      {
-        *(&write[j][1][0][0][0] + i) = 0.1;
-      }
-    }
-    double* connect_read  [4] {&read[2][0][0][0][0], &read[1][0][0][0][0], &read[0][0][0][0][0], &read[2][0][0][0][0]};
-    double* connect_write [4] {&write[1][0][0][0][0], &write[0][0][0][0][0], &write[2][0][0][0][0], &write[1][0][0][0][0]};
-    cartdg::jump<5, 4, n_qpoint, row_size>(connect_read, connect_write, 2, 2, 1, 1, weights, settings);
-    double correct = (0.7 - 0.5)/2./0.2 + 0.1;
-    REQUIRE(write[2][1][0][row_size - 1][0] == Approx(correct));
-    REQUIRE(write[2][1][row_size - 1][row_size - 1][row_size - 1] == Approx(correct));
-    REQUIRE(write[1][1][0][0][0] == Approx(correct));
-    REQUIRE(write[1][1][row_size - 1][0][row_size - 1] == Approx(correct));
-    REQUIRE(write[0][1][0][row_size - 1][0] == 0.1);
-    REQUIRE(write[2][1][0][0][0] == 0.1);
-    REQUIRE(write[1][1][1][1][1] == 0.1); // might fail if CARTDG_MAX_BASIS_ROW_SIZE == 2
+    elements.emplace_back(new cartdg::Element {params});
   }
+  for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
+  {
+    elements[0]->stage(0)[2*n_qpoint + i_qpoint] = 0.5;
+    elements[1]->stage(0)[2*n_qpoint + i_qpoint] = 2.;
+    elements[2]->stage(0)[2*n_qpoint + i_qpoint] = 0.7;
+    for (int i_elem = 0; i_elem < 3; ++i_elem)
+    {
+      elements[i_elem]->derivative()[i_qpoint] = 0.1;
+    }
+  }
+  cartdg::elem_con_vec connections {{}, {{elements[2].get(), elements[1].get()}, {elements[0].get(), elements[2].get()}}, {}};
+  cartdg::get_neighbor_derivative(3, row_size)(connections, 2, 1, basis, settings);
+  double correct = (0.7 - 0.5)/2./basis.node_weights()[0] + 0.1;
+  int end = (row_size - 1)*(row_size*row_size + 1);
+  REQUIRE(elements[0]->derivative()[(row_size - 1)*row_size + 0  ] == Approx(correct));
+  REQUIRE(elements[0]->derivative()[(row_size - 1)*row_size + end] == Approx(correct));
+  REQUIRE(elements[2]->derivative()[(0           )*row_size + 0  ] == Approx(correct));
+  REQUIRE(elements[2]->derivative()[(0           )*row_size + end] == Approx(correct));
+  REQUIRE(elements[1]->derivative()[(row_size - 1)*row_size + 0 ] == 0.1);
+  REQUIRE(elements[0]->derivative()[(0           )*row_size + 0 ] == 0.1);
+  REQUIRE(elements[2]->derivative()[(1           )*row_size + row_size*row_size + 1] == 0.1); // might fail if CARTDG_MAX_BASIS_ROW_SIZE == 2
 }
 
 TEST_CASE("continuous viscosity kernel")
 {
   cartdg::Kernel_settings settings;
-
-  double visc [4][4];
+  cartdg::Storage_params params {1, 1, 2, 4};
+  cartdg::elem_vec elements;
+  for (int i = 0; i < 4; ++i) elements.emplace_back(new cartdg::Element {params});
   /*
   element order is transposed, just for fun:
     21 23   31 33
@@ -671,32 +783,31 @@ TEST_CASE("continuous viscosity kernel")
   y 00 02   10 12
    x --->
   */
-
-  double*   connections1 [2][4]  {{visc[0], visc[1], visc[2], visc[3]},
-                                  {visc[0], visc[2], visc[1], visc[3]}};
-  double**  connections2 [2] {connections1[0], connections1[1]};
-  int n_connections [] {2, 2};
+  cartdg::elem_con_vec connections {{{elements[0].get(), elements[1].get()},
+                                     {elements[2].get(), elements[3].get()}},
+                                    {{elements[0].get(), elements[2].get()},
+                                     {elements[1].get(), elements[3].get()}}};
   for (int i_point = 0; i_point < 4; ++i_point)
   {
-    visc[0][i_point] = 0.;
-    visc[1][i_point] = 0.5;
-    visc[2][i_point] = 2.;
-    visc[3][i_point] = 1.;
+    elements[0]->viscosity()[i_point] = 0.;
+    elements[1]->viscosity()[i_point] = 0.5;
+    elements[2]->viscosity()[i_point] = 2.;
+    elements[3]->viscosity()[i_point] = 1.;
   }
 
-  cartdg::get_cont_visc_cpg_euler(2, CARTDG_MAX_BASIS_ROW_SIZE)(connections2, n_connections, settings);
-  CHECK(visc[0][0] == Approx(0.0));
-  CHECK(visc[0][1] == Approx(2.0));
-  CHECK(visc[0][2] == Approx(0.5));
-  CHECK(visc[0][3] == Approx(2.0));
-  CHECK(visc[1][0] == Approx(0.5));
-  CHECK(visc[1][1] == Approx(2.0));
-  CHECK(visc[1][2] == Approx(0.5));
-  CHECK(visc[1][3] == Approx(1.0));
-  CHECK(visc[2][0] == Approx(2.0));
-  CHECK(visc[2][1] == Approx(2.0));
-  CHECK(visc[3][0] == Approx(2.0));
-  CHECK(visc[3][1] == Approx(2.0));
-  CHECK(visc[3][2] == Approx(1.0));
-  CHECK(visc[3][3] == Approx(1.0));
+  cartdg::get_cont_visc(2, CARTDG_MAX_BASIS_ROW_SIZE)(connections, settings);
+  REQUIRE(elements[0]->viscosity()[0] == Approx(0.0));
+  REQUIRE(elements[0]->viscosity()[1] == Approx(2.0));
+  REQUIRE(elements[0]->viscosity()[2] == Approx(0.5));
+  REQUIRE(elements[0]->viscosity()[3] == Approx(2.0));
+  REQUIRE(elements[1]->viscosity()[0] == Approx(0.5));
+  REQUIRE(elements[1]->viscosity()[1] == Approx(2.0));
+  REQUIRE(elements[1]->viscosity()[2] == Approx(0.5));
+  REQUIRE(elements[1]->viscosity()[3] == Approx(1.0));
+  REQUIRE(elements[2]->viscosity()[0] == Approx(2.0));
+  REQUIRE(elements[2]->viscosity()[1] == Approx(2.0));
+  REQUIRE(elements[3]->viscosity()[0] == Approx(2.0));
+  REQUIRE(elements[3]->viscosity()[1] == Approx(2.0));
+  REQUIRE(elements[3]->viscosity()[2] == Approx(1.0));
+  REQUIRE(elements[3]->viscosity()[3] == Approx(1.0));
 }

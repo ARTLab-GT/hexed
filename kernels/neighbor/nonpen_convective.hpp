@@ -1,10 +1,11 @@
-#ifndef CARTDG_NONPEN_CPG_EULER_HPP_
-#define CARTDG_NONPEN_CPG_EULER_HPP_
+#ifndef CARTDG_NONPEN_CONVECTIVE_HPP_
+#define CARTDG_NONPEN_CONVECTIVE_HPP_
 
 #include <Eigen/Dense>
 
 #include <Kernel_settings.hpp>
 #include <Basis.hpp>
+#include <Deformed_element.hpp>
 #include "read_copy.hpp"
 #include "write_copy.hpp"
 #include "hll_deformed_cpg_euler.hpp"
@@ -14,27 +15,29 @@ namespace cartdg
 
 // AUTOGENERATE LOOKUP
 template <int n_var, int n_qpoint, int row_size>
-void nonpen_cpg_euler(double* read, double* write, double* jacobian, int* i_elem,
-                      int* i_dim, int* is_positive_face, int n_bc, Basis& basis,
-                      Kernel_settings& settings)
+void nonpen_convective(def_elem_wall_vec& walls, Basis& basis, Kernel_settings& settings)
 {
   const int n_face_qpoint = n_qpoint/row_size;
   const int n_dim = n_var - 2;
   double mult = settings.d_t_by_d_pos/basis.node_weights()[0];
   double heat_rat = settings.cpg_heat_rat;
+  const int i_read = settings.i_read;
+  const int i_write = settings.i_write;
 
   #pragma omp parallel for
-  for (int i_bc = 0; i_bc < n_bc; ++i_bc)
+  for (unsigned i_bc = 0; i_bc < walls.size(); ++i_bc)
   {
+    auto wall {walls[i_bc]};
+    const int i_dim = wall.i_dim;
     int stride = n_face_qpoint;
-    for (int i = 0; i < i_dim[i_bc]; ++i) stride /= row_size;
-    bool is_positive = is_positive_face[i_bc] == 1;
+    for (int i = 0; i < i_dim; ++i) stride /= row_size;
+    bool is_positive = wall.is_positive == 1;
 
     double face_r [2][n_var][n_face_qpoint];
     double face_jacobian [2][n_dim][n_dim][n_face_qpoint];
     double face_w [2][n_var][n_face_qpoint];
-    read_copy<n_var, n_qpoint, row_size>(read + n_var*n_qpoint*i_elem[i_bc], &face_r[0][0][0], stride, is_positive);
-    read_copy<n_dim*n_dim, n_qpoint, row_size>(jacobian + n_dim*n_dim*n_qpoint*i_elem[i_bc], &face_jacobian[0][0][0][0], stride, is_positive);
+    read_copy<n_var, n_qpoint, row_size>(wall.element->stage(i_read), &face_r[0][0][0], stride, is_positive);
+    read_copy<n_dim*n_dim, n_qpoint, row_size>(wall.element->jacobian(), &face_jacobian[0][0][0][0], stride, is_positive);
 
     for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++ i_qpoint)
     {
@@ -54,9 +57,9 @@ void nonpen_cpg_euler(double* read, double* write, double* jacobian, int* i_elem
       {
         for (int k_dim = 0; k_dim < n_dim; ++k_dim)
         {
-          jac_mat(k_dim, i_dim[i_bc]) = 0.;
+          jac_mat(k_dim, i_dim) = 0.;
         }
-        jac_mat(j_dim, i_dim[i_bc]) = 1.;
+        jac_mat(j_dim, i_dim) = 1.;
         normal[j_dim] = jac_mat.determinant();
         mom_dot_normal += face_r[0][j_dim][i_qpoint]*normal[j_dim];
         normal_sq += normal[j_dim]*normal[j_dim];
@@ -81,10 +84,10 @@ void nonpen_cpg_euler(double* read, double* write, double* jacobian, int* i_elem
       }
     }
 
-    int dims [2] {i_dim[i_bc], i_dim[i_bc]};
+    int dims [2] {i_dim, i_dim};
     bool flips [2] {!is_positive, !is_positive};
     hll_deformed_cpg_euler<n_dim, n_face_qpoint>(&face_r[0][0][0], &face_w[0][0][0], &face_jacobian[0][0][0][0], mult, dims, flips, heat_rat);
-    write_copy<n_var, n_qpoint, row_size>(&face_w[0][0][0], write + n_var*n_qpoint*i_elem[i_bc], stride, is_positive);
+    write_copy<n_var, n_qpoint, row_size, true>(&face_w[0][0][0], wall.element->stage(i_write), stride, is_positive);
   }
 }
 

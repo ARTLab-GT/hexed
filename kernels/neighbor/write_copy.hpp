@@ -4,7 +4,7 @@
 namespace cartdg
 {
 
-template<int n_var, int n_qpoint, int row_size>
+template<int n_var, int n_qpoint, int row_size, bool atomic=false>
 void write_copy(double* read, double* write, int stride, bool is_positive_face)
 {
   int i_read = 0;
@@ -17,10 +17,15 @@ void write_copy(double* read, double* write, int stride, bool is_positive_face)
     {
       for (int i_inner = 0; i_inner < stride; ++i_inner)
       {
-        #ifdef CARTDG_ATOMIC
-        #pragma omp atomic update
-        #endif
-        write[offset + i_outer*outer_stride + i_inner] += read[i_read++];
+        if constexpr (atomic)
+        {
+          #pragma omp atomic update
+          write[offset + i_outer*outer_stride + i_inner] += read[i_read++];
+        }
+        else
+        {
+          write[offset + i_outer*outer_stride + i_inner] += read[i_read++];
+        }
       }
     }
   }

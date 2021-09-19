@@ -1,7 +1,7 @@
 #ifndef CARTDG_SOLUTION_HPP_
 #define CARTDG_SOLUTION_HPP_
 
-#include "Grid.hpp"
+#include "Regular_grid.hpp"
 #include "Deformed_grid.hpp"
 #include "Gauss_lobatto.hpp"
 #include "Kernel_settings.hpp"
@@ -18,14 +18,13 @@ class Solution
   double base_mesh_size;
   Gauss_lobatto basis;
   Kernel_settings kernel_settings;
-  std::vector<Grid> grids;
+  std::vector<Regular_grid> reg_grids;
   std::vector<Deformed_grid> def_grids;
 
   Solution(int n_var_arg, int n_dim_arg, int row_size_arg, double bms);
   virtual ~Solution();
 
   // functions that access information
-  Grid& get_grid(int order_added);
   void visualize(std::string file_prefix);
   std::vector<double> integral();
   std::vector<double> integral(Domain_func& integrand);
@@ -43,7 +42,6 @@ class Solution
   void add_empty_grid(int ref_level);
   void add_deformed_grid(int ref_level);
   void auto_connect();
-  void clear_neighbors();
 
   protected:
   double refined_mesh_size(int ref_level);

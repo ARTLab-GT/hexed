@@ -24,6 +24,8 @@ script/auto_generate.py and rerun CMake.
 
     if namespace:
         text = f"""
+#include <Deformed_element.hpp>
+
 namespace cartdg
 {{
 
@@ -78,7 +80,7 @@ for file_name in header_names:
         full_sig = re.sub("\n *", " ", full_sig.groups(1)[0])
         decl = re.sub(" \w*?(,|\))", r"\1", full_sig)
         decl = re.sub("^ *", "", decl)
-        call = re.sub("[\w*&]+ ", r"", full_sig)
+        call = re.sub("[\w*&:<>]+ ", r"", full_sig)
         call = re.sub("^ *", "", call)
         name = re.search(" (\w*)\(", decl).groups(1)[0]
         if "LOOKUP" in cmds:

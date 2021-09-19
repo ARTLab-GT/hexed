@@ -2,19 +2,32 @@
 #define CARTDG_NEIGHBOR_AV_HPP_
 
 #include <Basis.hpp>
-#include "jump.hpp"
+#include <Element.hpp>
+#include "variable_jump.hpp"
 
 namespace cartdg
 {
 
 // AUTOGENERATE LOOKUP
 template<int n_var, int n_qpoint, int row_size>
-void neighbor_av(double** connections_r, double** connections_w, int n_con,
-                 int i_var, int i_dim,
+void neighbor_av(elem_con_vec& connections, int i_var, int i_dim,
                  Basis& basis, Kernel_settings& settings)
 {
-  jump<1, n_var, n_qpoint, row_size>(connections_r, connections_w, n_con,
-                                     0, i_var, i_dim, basis.node_weights(), settings);
+  const double weight = basis.node_weights()[0]*settings.d_pos;
+  const int i_write = settings.i_write;
+  #pragma omp parallel for
+  for (unsigned i_con = 0; i_con < connections[i_dim].size(); ++i_con)
+  {
+    std::array<double*, 2> read;
+    std::array<double*, 2> write;
+    for (int i_side : {0, 1})
+    {
+      Element* elem = connections[i_dim][i_con][i_side];
+      read[i_side] = elem->derivative();
+      write[i_side] = elem->stage(i_write) + i_var*n_qpoint;
+    }
+    variable_jump<n_qpoint, row_size>(read, write, i_dim, weight);
+  }
 }
 
 }

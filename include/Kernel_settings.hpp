@@ -11,7 +11,8 @@ class Kernel_settings
   double d_pos = 1.;
   double cpg_heat_rat = 1.4;
   double max_difference = 0.5;
-  bool always_smear = false;
+  int i_read = 0;
+  int i_write = 1;
 };
 
 }
