@@ -110,7 +110,9 @@ void Regular_grid::execute_av_flux(Kernel_settings& settings)
 
 void Regular_grid::execute_local_av(int i_var, int i_dim, Kernel_settings& settings)
 {
-  //get_local_av(n_dim, basis.row_size)(derivs.data(), state_w(), n_elem, i_var, i_dim, basis, settings);
+  settings.i_read = i_read;
+  settings.i_write = i_write;
+  get_local_av(n_dim, basis.row_size)(elements, i_var, i_dim, basis, settings);
 }
 
 void Regular_grid::execute_neighbor_av(int i_var, int i_dim, Kernel_settings& settings)
