@@ -6,6 +6,7 @@
 #include <get_req_visc_regular_convective.hpp>
 #include <get_av_flux.hpp>
 #include <local/derivative.hpp>
+#include <local/variable_derivative.hpp>
 #include <Gauss_lobatto.hpp>
 #include <math.hpp>
 
@@ -316,6 +317,7 @@ TEST_CASE("derivative")
   const int row_size = CARTDG_MAX_BASIS_ROW_SIZE;
   cartdg::Gauss_lobatto basis (row_size);
   cartdg::Kernel_settings settings;
+  Eigen::Matrix<double, row_size, row_size> diff_mat = basis.diff_mat();
   SECTION("calculations")
   {
     double read [row_size];
@@ -327,7 +329,7 @@ TEST_CASE("derivative")
         read[i] = 1.;
         write[i] = 1.;
       }
-      cartdg::derivative<1, 1, row_size, row_size>(read, write, 1, 0, 0, 0, basis, settings);
+      cartdg::variable_derivative<1, row_size>(read, write, 0, diff_mat, settings.d_pos);
       for (int i = 0; i < row_size; ++i)
       {
         REQUIRE(write[i] == Approx(0.).margin(1e-14));
@@ -340,7 +342,7 @@ TEST_CASE("derivative")
         read[i] = std::pow(basis.node(i), 3);
         write[i] = 1.;
       }
-      cartdg::derivative<1, 1, row_size, row_size>(read, write, 1, 0, 0, 0, basis, settings);
+      cartdg::variable_derivative<1, row_size>(read, write, 0, diff_mat, settings.d_pos);
       for (int i = 0; i < row_size; ++i)
       {
         REQUIRE(write[i] == Approx(3*std::pow(basis.node(i), 2)).margin(1e-14));
@@ -353,7 +355,7 @@ TEST_CASE("derivative")
         read[i] = std::exp(basis.node(i));
         write[i] = 1.;
       }
-      cartdg::derivative<1, 1, row_size, row_size>(read, write, 1, 0, 0, 0, basis, settings);
+      cartdg::variable_derivative<1, row_size>(read, write, 0, diff_mat, settings.d_pos);
       for (int i = 0; i < row_size; ++i)
       {
         REQUIRE(write[i] == Approx(std::exp(basis.node(i))).margin(1e-14));
@@ -364,7 +366,6 @@ TEST_CASE("derivative")
   {
     SECTION("3D")
     {
-      const int n_qpoint = row_size*row_size*row_size;
       double coefs [] {1.103, -4.044, 0.392};
       for (int i_dim = 0; i_dim < 3; ++i_dim)
       {
@@ -381,7 +382,7 @@ TEST_CASE("derivative")
             }
           }
         }
-        cartdg::derivative<1, 1, n_qpoint, row_size>(read[0][0], write[0][0], 1, 0, 0, i_dim, basis, settings);
+        cartdg::variable_derivative<3, row_size>(read[0][0], write[0][0], i_dim, diff_mat, settings.d_pos);
         for (int i = 0; i < row_size; ++i)
         {
           for (int j = 0; j < row_size; ++j)
