@@ -18,7 +18,7 @@ What CartDG is not:
 * A general framework for CFD on arbitrary grids.
 * Capable of solving equations other than those that govern the flow of fluids.
 
-This document describes CartDG. For installation instructions, see `INSTALL.md`.
+This document describes CartDG. For installation instructions, see [`INSTALL.md`](https://github.gatech.edu/ARTLab/CartDG/blob/master/INSTALL.md).
 
 ## Motivation
 The motivation for this project came from my experience with NASCART-GT. With it's highly automated adaptive Cartesian grid
@@ -40,7 +40,7 @@ code is sometimes written multiple times, but it gives the compiler maximal free
 All of these things are
 disasterous from a software engineering perspective, but have shown significant performance benefits. For the kernels
 I am willing to make this trade, but for the rest of the code I have priortized readability and modularity over performance.
-The speed of the kernels is measured by the script `benchmark.py`. The speed of the code as a whole when solving the
+The speed of the kernels is measured by the script [`benchmark.py`](https://github.gatech.edu/ARTLab/CartDG/blob/master/script/benchmark.py). The speed of the code as a whole when solving the
 isentropic vortex problem has shown good agreement with the measurements made by `benchmark.py`.
 
 ## Terminology and conventions
