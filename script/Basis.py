@@ -33,6 +33,15 @@ class Basis:
                         dp *= sp.Float(self.nodes[i_result] - self.nodes[n])
         return sp.Float(dp, self.repr_digits)
 
+    def interpolate(self, i, position):
+        pos = sp.Float(position, self.calc_digits)
+        nodes = self.nodes.copy()
+        main_node = nodes.pop(i)
+        result = sp.Float(1, self.calc_digits)
+        for node in nodes:
+            result *= (pos - node)/(main_node - node)
+        return sp.Float(result, self.repr_digits)
+
     def legendre(self, degree):
         x = sp.Symbol("x")
         poly = sp.legendre(degree, x)
@@ -49,3 +58,22 @@ class Basis:
 
     def get_ortho(self, degree, i_node):
         return sp.Float(self.ortho[degree][i_node], self.repr_digits)
+
+
+from sympy.integrals.quadrature import gauss_legendre
+import matplotlib.pyplot as plt
+import numpy as np
+calc_digits = 50
+row_size = 8
+nodes, weights = gauss_legendre(row_size, calc_digits)
+nodes = [(node + 1)/2 for node in nodes]
+weights = [weight/2 for weight in weights]
+basis = Basis(nodes, weights, calc_digits=calc_digits)
+plt.scatter(basis.nodes, [1 for node in basis.nodes], color="k", marker="+")
+pos = np.linspace(0, 1, 1000)
+for i in range(row_size):
+    y = []
+    for p in pos:
+        y.append(basis.interpolate(i, p))
+    plt.plot(pos, y)
+plt.show()
