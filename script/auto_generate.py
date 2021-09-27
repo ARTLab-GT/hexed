@@ -173,9 +173,6 @@ for basis_params in [("Gauss_legendre", gauss_legendre), ("Gauss_lobatto", gauss
 #include <{name}.hpp>"""
     text = f"""namespace {name}_lookup
 {{"""
-
-
-
     for row_size in range(2, max_row_size + 1):
         nodes, weights = basis_params[1](row_size, calc_digits)
         nodes = [(node + 1)/2 for node in nodes]
@@ -206,6 +203,14 @@ double diff_mat{row_size} [{row_size**2}] {{
         text += "};\n"
 
         text += f"""
+double boundary{row_size} [2*{row_size}] {{
+"""
+        for pos in ["0", "1"]:
+            for i_operand in range(row_size):
+                text += f"{basis.interpolate(i_operand, pos)}, "
+        text += "\n};\n"
+
+        text += f"""
 double orthogonal{row_size} [{row_size**2}] {{
 """
         for deg in range(row_size):
@@ -214,7 +219,7 @@ double orthogonal{row_size} [{row_size**2}] {{
             text += "\n"
         text += "};\n"
 
-    for member_name in ["node", "weight", "diff_mat", "orthogonal"]:
+    for member_name in ["node", "weight", "diff_mat", "boundary", "orthogonal"]:
         text += f"""
 double* {member_name}s [{max_row_size + 1 - min_row_size}] {{"""
         for row_size in range(2, max_row_size + 1):
@@ -258,7 +263,14 @@ Eigen::MatrixXd {name}::diff_mat()
 
 Eigen::MatrixXd {name}::boundary()
 {{{conditional_block}
-  Eigen::MatrixXd b {{Eigen::MatrixXd::Zero(2, row_size)}};
+  Eigen::MatrixXd b {{2, row_size}};
+  for (int is_positive : {{0, 1}})
+  {{
+    for (int i_node = 0; i_node < row_size; ++i_node)
+    {{
+      b(is_positive, i_node) = {name}_lookup::boundarys[row_size - {min_row_size}][is_positive*row_size + i_node];
+    }}
+  }}
   return b;
 }}
 

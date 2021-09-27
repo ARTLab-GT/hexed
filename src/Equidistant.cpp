@@ -58,7 +58,10 @@ Eigen::MatrixXd Equidistant::diff_mat()
 
 Eigen::MatrixXd Equidistant::boundary()
 {
-  return Eigen::MatrixXd::Zero(2, row_size);
+  Eigen::MatrixXd b {Eigen::MatrixXd::Zero(2, row_size)};
+  b(0, 0) = 1.;
+  b(1, row_size - 1) = 1.;
+  return b;
 }
 
 Eigen::VectorXd Equidistant::orthogonal(int degree)

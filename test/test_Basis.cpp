@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include <catch2/catch.hpp>
 
 #include <cartdgConfig.hpp>
@@ -95,7 +93,7 @@ void test_orthogonal(cartdg::Basis& basis)
 
 TEST_CASE("Equidistant Basis")
 {
-  for (int row_size = 0; row_size < 10; ++row_size)
+  for (int row_size = 2; row_size < 10; ++row_size)
   {
     cartdg::Equidistant equi (row_size);
     test_diff_mat(equi);
