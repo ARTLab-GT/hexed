@@ -162,18 +162,22 @@ with open("benchmark/main.cpp", "w") as out_file:
 ### Calculate bases ###
 
 from Basis import *
-from sympy.integrals.quadrature import gauss_lobatto
+from sympy.integrals.quadrature import gauss_legendre, gauss_lobatto
 
 calc_digits = 50
 min_row_size = 2
 
-for basis_params in [("Gauss_lobatto", gauss_lobatto)]:
+for basis_params in [("Gauss_legendre", gauss_legendre), ("Gauss_lobatto", gauss_lobatto)]:
+    name = basis_params[0]
     include = f"""
-#include <{basis_params[0]}.hpp>"""
-    text = ""
+#include <{name}.hpp>"""
+    text = f"""namespace {name}_lookup
+{{"""
+
+
 
     for row_size in range(2, max_row_size + 1):
-        nodes, weights = gauss_lobatto(row_size, calc_digits)
+        nodes, weights = basis_params[1](row_size, calc_digits)
         nodes = [(node + 1)/2 for node in nodes]
         weights = [weight/2 for weight in weights]
         basis = Basis(nodes, weights, calc_digits=calc_digits)
@@ -210,13 +214,15 @@ double orthogonal{row_size} [{row_size**2}] {{
             text += "\n"
         text += "};\n"
 
-    for name in ["node", "weight", "diff_mat", "orthogonal"]:
+    for member_name in ["node", "weight", "diff_mat", "orthogonal"]:
         text += f"""
-double* {name}s [{max_row_size + 1 - min_row_size}] {{"""
+double* {member_name}s [{max_row_size + 1 - min_row_size}] {{"""
         for row_size in range(2, max_row_size + 1):
-            text += f"&{name}{row_size}[0], "
+            text += f"&{member_name}{row_size}[0], "
         text += "};"
-    text += "\n"
+    text += f"""
+}} // namespace {name}_lookup
+"""
 
     conditional_block = """
   if (({} > row_size) || (row_size > {}))
@@ -225,34 +231,43 @@ double* {name}s [{max_row_size + 1 - min_row_size}] {{"""
   }}""".format(min_row_size, max_row_size)
 
     text += f"""
-double {basis_params[0]}::node(int i)
+double {name}::node(int i)
 {{{conditional_block}
-  return nodes[row_size - {min_row_size}][i];
+  return {name}_lookup::nodes[row_size - {min_row_size}][i];
 }}
 
-Eigen::VectorXd {basis_params[0]}::node_weights()
+Eigen::VectorXd {name}::node_weights()
 {{{conditional_block}
   Eigen::VectorXd nw (row_size);
-  for (int i_node = 0; i_node < row_size; ++i_node) nw(i_node) = weights[row_size - {min_row_size}][i_node];
+  for (int i_node = 0; i_node < row_size; ++i_node)
+  {{
+    nw(i_node) = {name}_lookup::weights[row_size - {min_row_size}][i_node];
+  }}
   return nw;
 }}
 
-Eigen::MatrixXd {basis_params[0]}::diff_mat()
+Eigen::MatrixXd {name}::diff_mat()
 {{{conditional_block}
   Eigen::MatrixXd dm (row_size, row_size);
-  for (int i_node = 0; i_node < row_size*row_size; ++i_node) dm(i_node) = diff_mats[row_size - {min_row_size}][i_node];
+  for (int i_node = 0; i_node < row_size*row_size; ++i_node)
+  {{
+    dm(i_node) = {name}_lookup::diff_mats[row_size - {min_row_size}][i_node];
+  }}
   return dm;
 }}
 
-Eigen::VectorXd {basis_params[0]}::orthogonal(int degree)
+Eigen::VectorXd {name}::orthogonal(int degree)
 {{{conditional_block}
   Eigen::VectorXd orth (row_size);
-  for (int i_node = 0; i_node < row_size; ++i_node) orth(i_node) = orthogonals[row_size - {min_row_size}][degree*row_size + i_node];
+  for (int i_node = 0; i_node < row_size; ++i_node)
+  {{
+    orth(i_node) = {name}_lookup::orthogonals[row_size - {min_row_size}][degree*row_size + i_node];
+  }}
   return orth;
 }}
 
-{basis_params[0]}::{basis_params[0]}(int row_size_arg) : Basis(row_size_arg) {{}}
+{name}::{name}(int row_size_arg) : Basis(row_size_arg) {{}}
 """
 
-    with open(src_dir + f"{basis_params[0]}.cpp", "w") as write_file:
+    with open(src_dir + f"{name}.cpp", "w") as write_file:
         write_file.write(format_file_text(include, text))

@@ -64,7 +64,7 @@ target_include_directories(tecio INTERFACE ${TECIO_DIR}/include)
 target_link_libraries(cartdg PUBLIC tecio)
 
 # add automatically generated source files
-target_sources(cartdg PRIVATE ${CMAKE_BINARY_DIR}/Gauss_lobatto.cpp)
+target_sources(cartdg PRIVATE ${CMAKE_BINARY_DIR}/Gauss_lobatto.cpp ${CMAKE_BINARY_DIR}/Gauss_legendre.cpp)
 
 target_include_directories(cartdg PUBLIC
                            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
