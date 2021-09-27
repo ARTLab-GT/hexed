@@ -19,7 +19,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g -DDEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
 set(CMAKE_CXX_FLAGS "-Wall")
 
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "script/auto_generate.py;script/benchmark.cpp.in")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "script/auto_generate.py;script/Basis.py;script/benchmark.cpp.in")
 
 # determine whether to compile with sanitizers
 option(sanitize "If ON, compile with sanitizer flags." OFF)
