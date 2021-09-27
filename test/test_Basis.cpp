@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include <catch2/catch.hpp>
 
 #include <cartdgConfig.hpp>
@@ -62,6 +64,20 @@ void test_quadrature(cartdg::Basis& basis)
   }
 }
 
+void test_orthogonal(cartdg::Basis& basis)
+{
+  Eigen::VectorXd weights = basis.node_weights();
+  for (int i_orth = 0; i_orth < basis.row_size; ++i_orth)
+  {
+    Eigen::VectorXd weighted_orth = basis.orthogonal(i_orth).cwiseProduct(weights);
+    for (int j_orth = 0; j_orth < basis.row_size; ++j_orth)
+    {
+      auto orth = basis.orthogonal(j_orth);
+      REQUIRE(weighted_orth.dot(orth) == Approx(i_orth == j_orth ? 1. : 0.).margin(1e-10));
+    }
+  }
+}
+
 TEST_CASE("Equidistant Basis")
 {
   for (int row_size = 0; row_size < 10; ++row_size)
@@ -78,6 +94,7 @@ TEST_CASE("Gauss_lobatto Basis")
     cartdg::Gauss_lobatto GLo (row_size);
     test_diff_mat(GLo);
     test_quadrature(GLo);
+    test_orthogonal(GLo);
   }
 }
 
@@ -88,5 +105,6 @@ TEST_CASE("Gauss_legendre Basis")
     cartdg::Gauss_legendre GLe (row_size);
     test_diff_mat(GLe);
     test_quadrature(GLe);
+    test_orthogonal(GLe);
   }
 }
