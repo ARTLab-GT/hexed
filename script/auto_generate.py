@@ -164,94 +164,95 @@ with open("benchmark/main.cpp", "w") as out_file:
 from Basis import *
 from sympy.integrals.quadrature import gauss_lobatto
 
-include = """
-#include <Gauss_lobatto.hpp>
-"""
-text = ""
-
 calc_digits = 50
 min_row_size = 2
-for row_size in range(2, max_row_size + 1):
-    nodes, weights = gauss_lobatto(row_size, calc_digits)
-    nodes = [(node + 1)/2 for node in nodes]
-    weights = [weight/2 for weight in weights]
-    basis = Basis(nodes, weights, calc_digits=calc_digits)
 
-    text += f"""
+for basis_params in [("Gauss_lobatto", gauss_lobatto)]:
+    include = f"""
+#include <{basis_params[0]}.hpp>"""
+    text = ""
+
+    for row_size in range(2, max_row_size + 1):
+        nodes, weights = gauss_lobatto(row_size, calc_digits)
+        nodes = [(node + 1)/2 for node in nodes]
+        weights = [weight/2 for weight in weights]
+        basis = Basis(nodes, weights, calc_digits=calc_digits)
+
+        text += f"""
 double node{row_size} [{row_size}] {{
 """
-    for i_result in range(row_size):
-        text += f"{basis.node(i_result)}, "
-    text += "\n};\n"
+        for i_result in range(row_size):
+            text += f"{basis.node(i_result)}, "
+        text += "\n};\n"
 
-    text += f"""
+        text += f"""
 double weight{row_size} [{row_size}] {{
 """
-    for i_result in range(row_size):
-        text += f"{basis.weight(i_result)}, "
-    text += "\n};\n"
+        for i_result in range(row_size):
+            text += f"{basis.weight(i_result)}, "
+        text += "\n};\n"
 
-    text += f"""
+        text += f"""
 double diff_mat{row_size} [{row_size**2}] {{
 """
-    for i_operand in range(row_size):
-        for i_result in range(row_size):
-            text += f"{basis.derivative(i_result, i_operand)}, "
-        text += "\n"
-    text += "};\n"
+        for i_operand in range(row_size):
+            for i_result in range(row_size):
+                text += f"{basis.derivative(i_result, i_operand)}, "
+            text += "\n"
+        text += "};\n"
 
-    text += f"""
+        text += f"""
 double orthogonal{row_size} [{row_size**2}] {{
 """
-    for deg in range(row_size):
-        for i_node in range(row_size):
-            text += f"{basis.get_ortho(deg, i_node)}, "
-        text += "\n"
-    text += "};\n"
+        for deg in range(row_size):
+            for i_node in range(row_size):
+                text += f"{basis.get_ortho(deg, i_node)}, "
+            text += "\n"
+        text += "};\n"
 
-for name in ["node", "weight", "diff_mat", "orthogonal"]:
-    text += f"""
+    for name in ["node", "weight", "diff_mat", "orthogonal"]:
+        text += f"""
 double* {name}s [{max_row_size + 1 - min_row_size}] {{"""
-    for row_size in range(2, max_row_size + 1):
-        text += f"&{name}{row_size}[0], "
-    text += "};"
-text += "\n"
+        for row_size in range(2, max_row_size + 1):
+            text += f"&{name}{row_size}[0], "
+        text += "};"
+    text += "\n"
 
-conditional_block = """
+    conditional_block = """
   if (({} > row_size) || (row_size > {}))
   {{
     throw std::runtime_error("Not implemented for required row_size.");
   }}""".format(min_row_size, max_row_size)
 
-text += f"""
-double Gauss_lobatto::node(int i)
+    text += f"""
+double {basis_params[0]}::node(int i)
 {{{conditional_block}
   return nodes[row_size - {min_row_size}][i];
 }}
 
-Eigen::VectorXd Gauss_lobatto::node_weights()
+Eigen::VectorXd {basis_params[0]}::node_weights()
 {{{conditional_block}
   Eigen::VectorXd nw (row_size);
   for (int i_node = 0; i_node < row_size; ++i_node) nw(i_node) = weights[row_size - {min_row_size}][i_node];
   return nw;
 }}
 
-Eigen::MatrixXd Gauss_lobatto::diff_mat()
+Eigen::MatrixXd {basis_params[0]}::diff_mat()
 {{{conditional_block}
   Eigen::MatrixXd dm (row_size, row_size);
   for (int i_node = 0; i_node < row_size*row_size; ++i_node) dm(i_node) = diff_mats[row_size - {min_row_size}][i_node];
   return dm;
 }}
 
-Eigen::VectorXd Gauss_lobatto::orthogonal(int degree)
+Eigen::VectorXd {basis_params[0]}::orthogonal(int degree)
 {{{conditional_block}
   Eigen::VectorXd orth (row_size);
   for (int i_node = 0; i_node < row_size; ++i_node) orth(i_node) = orthogonals[row_size - {min_row_size}][degree*row_size + i_node];
   return orth;
 }}
 
-Gauss_lobatto::Gauss_lobatto(int row_size_arg) : Basis(row_size_arg) {{}}
+{basis_params[0]}::{basis_params[0]}(int row_size_arg) : Basis(row_size_arg) {{}}
 """
 
-with open(src_dir + "Gauss_lobatto.cpp", "w") as write_file:
-    write_file.write(format_file_text(include, text))
+    with open(src_dir + f"{basis_params[0]}.cpp", "w") as write_file:
+        write_file.write(format_file_text(include, text))
