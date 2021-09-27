@@ -23,6 +23,10 @@ class Identity_basis : public cartdg::Basis
   {
     return Eigen::VectorXd::Ones(row_size);
   }
+  Eigen::MatrixXd boundary()
+  {
+    return Eigen::MatrixXd::Zero(2, row_size);
+  }
   Eigen::VectorXd orthogonal(int degree)
   {
     return Eigen::VectorXd::Zero(row_size);

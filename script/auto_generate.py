@@ -256,6 +256,12 @@ Eigen::MatrixXd {name}::diff_mat()
   return dm;
 }}
 
+Eigen::MatrixXd {name}::boundary()
+{{{conditional_block}
+  Eigen::MatrixXd b {{Eigen::MatrixXd::Zero(2, row_size)}};
+  return b;
+}}
+
 Eigen::VectorXd {name}::orthogonal(int degree)
 {{{conditional_block}
   Eigen::VectorXd orth (row_size);

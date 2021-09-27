@@ -64,6 +64,21 @@ void test_quadrature(cartdg::Basis& basis)
   }
 }
 
+void test_boundary(cartdg::Basis& basis)
+{
+  auto boundary = basis.boundary();
+  REQUIRE(boundary.rows() == 2);
+  REQUIRE(boundary.cols() == basis.row_size);
+  Eigen::VectorXd node_vals (basis.row_size);
+  for (int i_node = 0; i_node < basis.row_size; ++i_node)
+  {
+    node_vals[i_node] = 0.15*basis.node(i_node) + 0.37;
+  }
+  Eigen::VectorXd boundary_vals = boundary*node_vals;
+  REQUIRE(boundary_vals(0) == Approx(0.37));
+  REQUIRE(boundary_vals(1) == Approx(0.52));
+}
+
 void test_orthogonal(cartdg::Basis& basis)
 {
   Eigen::VectorXd weights = basis.node_weights();
@@ -84,6 +99,7 @@ TEST_CASE("Equidistant Basis")
   {
     cartdg::Equidistant equi (row_size);
     test_diff_mat(equi);
+    test_boundary(equi);
   }
 }
 
@@ -95,6 +111,7 @@ TEST_CASE("Gauss_lobatto Basis")
     test_diff_mat(GLo);
     test_quadrature(GLo);
     test_orthogonal(GLo);
+    test_boundary(GLo);
   }
 }
 
@@ -106,5 +123,6 @@ TEST_CASE("Gauss_legendre Basis")
     test_diff_mat(GLe);
     test_quadrature(GLe);
     test_orthogonal(GLe);
+    test_boundary(GLe);
   }
 }

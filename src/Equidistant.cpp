@@ -10,6 +10,13 @@ double Equidistant::node(int i)
   return (double)i/(row_size - 1);
 }
 
+Eigen::VectorXd Equidistant::node_weights()
+{
+  throw std::runtime_error("Not implemented.");
+  Eigen::VectorXd unused (0);
+  return unused;
+}
+
 Eigen::MatrixXd Equidistant::diff_mat()
 {
   Eigen::MatrixXd dm (row_size, row_size);
@@ -49,11 +56,9 @@ Eigen::MatrixXd Equidistant::diff_mat()
   return dm;
 }
 
-Eigen::VectorXd Equidistant::node_weights()
+Eigen::MatrixXd Equidistant::boundary()
 {
-  throw std::runtime_error("Not implemented.");
-  Eigen::VectorXd unused (0);
-  return unused;
+  return Eigen::MatrixXd::Zero(2, row_size);
 }
 
 Eigen::VectorXd Equidistant::orthogonal(int degree)
