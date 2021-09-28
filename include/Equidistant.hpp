@@ -13,6 +13,7 @@ class Equidistant : public Basis
   virtual double node(int i);
   virtual Eigen::MatrixXd diff_mat();
   virtual Eigen::VectorXd node_weights();
+  virtual Eigen::MatrixXd boundary();
   virtual Eigen::VectorXd orthogonal(int degree);
 };
 

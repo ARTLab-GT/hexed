@@ -1,15 +1,15 @@
-#ifndef CARTDG_GAUSS_LOBATTO_HPP_
-#define CARTDG_GAUSS_LOBATTO_HPP_
+#ifndef CARTDG_GAUSS_LEGENDRE_HPP_
+#define CARTDG_GAUSS_LEGENDRE_HPP_
 
 #include "Basis.hpp"
 
 namespace cartdg
 {
 
-class Gauss_lobatto : public Basis
+class Gauss_legendre : public Basis
 {
   public:
-  Gauss_lobatto (int row_size_arg);
+  Gauss_legendre (int row_size_arg);
   virtual double node(int i);
   virtual Eigen::VectorXd node_weights();
   virtual Eigen::MatrixXd diff_mat();

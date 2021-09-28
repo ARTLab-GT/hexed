@@ -3,6 +3,7 @@
 #include <cartdgConfig.hpp>
 #include <Equidistant.hpp>
 #include <Gauss_lobatto.hpp>
+#include <Gauss_legendre.hpp>
 
 void test_diff_mat(cartdg::Basis& basis)
 {
@@ -61,12 +62,42 @@ void test_quadrature(cartdg::Basis& basis)
   }
 }
 
+void test_boundary(cartdg::Basis& basis)
+{
+  auto boundary = basis.boundary();
+  REQUIRE(boundary.rows() == 2);
+  REQUIRE(boundary.cols() == basis.row_size);
+  Eigen::VectorXd node_vals (basis.row_size);
+  for (int i_node = 0; i_node < basis.row_size; ++i_node)
+  {
+    node_vals[i_node] = 0.15*basis.node(i_node) + 0.37;
+  }
+  Eigen::VectorXd boundary_vals = boundary*node_vals;
+  REQUIRE(boundary_vals(0) == Approx(0.37));
+  REQUIRE(boundary_vals(1) == Approx(0.52));
+}
+
+void test_orthogonal(cartdg::Basis& basis)
+{
+  Eigen::VectorXd weights = basis.node_weights();
+  for (int i_orth = 0; i_orth < basis.row_size; ++i_orth)
+  {
+    Eigen::VectorXd weighted_orth = basis.orthogonal(i_orth).cwiseProduct(weights);
+    for (int j_orth = 0; j_orth < basis.row_size; ++j_orth)
+    {
+      auto orth = basis.orthogonal(j_orth);
+      REQUIRE(weighted_orth.dot(orth) == Approx(i_orth == j_orth ? 1. : 0.).margin(1e-10));
+    }
+  }
+}
+
 TEST_CASE("Equidistant Basis")
 {
-  for (int row_size = 0; row_size < 10; ++row_size)
+  for (int row_size = 2; row_size < 10; ++row_size)
   {
     cartdg::Equidistant equi (row_size);
     test_diff_mat(equi);
+    test_boundary(equi);
   }
 }
 
@@ -77,5 +108,19 @@ TEST_CASE("Gauss_lobatto Basis")
     cartdg::Gauss_lobatto GLo (row_size);
     test_diff_mat(GLo);
     test_quadrature(GLo);
+    test_orthogonal(GLo);
+    test_boundary(GLo);
+  }
+}
+
+TEST_CASE("Gauss_legendre Basis")
+{
+  for (int row_size = 2; row_size <= CARTDG_MAX_BASIS_ROW_SIZE; ++row_size)
+  {
+    cartdg::Gauss_legendre GLe (row_size);
+    test_diff_mat(GLe);
+    test_quadrature(GLe);
+    test_orthogonal(GLe);
+    test_boundary(GLe);
   }
 }

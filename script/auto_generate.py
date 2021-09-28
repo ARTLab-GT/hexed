@@ -162,96 +162,130 @@ with open("benchmark/main.cpp", "w") as out_file:
 ### Calculate bases ###
 
 from Basis import *
-from sympy.integrals.quadrature import gauss_lobatto
-
-include = """
-#include <Gauss_lobatto.hpp>
-"""
-text = ""
+from sympy.integrals.quadrature import gauss_legendre, gauss_lobatto
 
 calc_digits = 50
 min_row_size = 2
-for row_size in range(2, max_row_size + 1):
-    nodes, weights = gauss_lobatto(row_size, calc_digits)
-    nodes = [(node + 1)/2 for node in nodes]
-    weights = [weight/2 for weight in weights]
-    basis = Basis(nodes, weights, calc_digits=calc_digits)
 
-    text += f"""
+for basis_params in [("Gauss_legendre", gauss_legendre), ("Gauss_lobatto", gauss_lobatto)]:
+    name = basis_params[0]
+    include = f"""
+#include <{name}.hpp>"""
+    text = f"""namespace {name}_lookup
+{{"""
+    for row_size in range(2, max_row_size + 1):
+        nodes, weights = basis_params[1](row_size, calc_digits)
+        nodes = [(node + 1)/2 for node in nodes]
+        weights = [weight/2 for weight in weights]
+        basis = Basis(nodes, weights, calc_digits=calc_digits)
+
+        text += f"""
 double node{row_size} [{row_size}] {{
 """
-    for i_result in range(row_size):
-        text += f"{basis.node(i_result)}, "
-    text += "\n};\n"
+        for i_result in range(row_size):
+            text += f"{basis.node(i_result)}, "
+        text += "\n};\n"
 
-    text += f"""
+        text += f"""
 double weight{row_size} [{row_size}] {{
 """
-    for i_result in range(row_size):
-        text += f"{basis.weight(i_result)}, "
-    text += "\n};\n"
+        for i_result in range(row_size):
+            text += f"{basis.weight(i_result)}, "
+        text += "\n};\n"
 
-    text += f"""
+        text += f"""
 double diff_mat{row_size} [{row_size**2}] {{
 """
-    for i_operand in range(row_size):
-        for i_result in range(row_size):
-            text += f"{basis.derivative(i_result, i_operand)}, "
-        text += "\n"
-    text += "};\n"
+        for i_operand in range(row_size):
+            for i_result in range(row_size):
+                text += f"{basis.derivative(i_result, i_operand)}, "
+            text += "\n"
+        text += "};\n"
 
-    text += f"""
+        text += f"""
+double boundary{row_size} [2*{row_size}] {{
+"""
+        for pos in ["0", "1"]:
+            for i_operand in range(row_size):
+                text += f"{basis.interpolate(i_operand, pos)}, "
+        text += "\n};\n"
+
+        text += f"""
 double orthogonal{row_size} [{row_size**2}] {{
 """
-    for deg in range(row_size):
-        for i_node in range(row_size):
-            text += f"{basis.get_ortho(deg, i_node)}, "
-        text += "\n"
-    text += "};\n"
+        for deg in range(row_size):
+            for i_node in range(row_size):
+                text += f"{basis.get_ortho(deg, i_node)}, "
+            text += "\n"
+        text += "};\n"
 
-for name in ["node", "weight", "diff_mat", "orthogonal"]:
+    for member_name in ["node", "weight", "diff_mat", "boundary", "orthogonal"]:
+        text += f"""
+double* {member_name}s [{max_row_size + 1 - min_row_size}] {{"""
+        for row_size in range(2, max_row_size + 1):
+            text += f"&{member_name}{row_size}[0], "
+        text += "};"
     text += f"""
-double* {name}s [{max_row_size + 1 - min_row_size}] {{"""
-    for row_size in range(2, max_row_size + 1):
-        text += f"&{name}{row_size}[0], "
-    text += "};"
-text += "\n"
+}} // namespace {name}_lookup
+"""
 
-conditional_block = """
+    conditional_block = """
   if (({} > row_size) || (row_size > {}))
   {{
     throw std::runtime_error("Not implemented for required row_size.");
   }}""".format(min_row_size, max_row_size)
 
-text += f"""
-double Gauss_lobatto::node(int i)
+    text += f"""
+double {name}::node(int i)
 {{{conditional_block}
-  return nodes[row_size - {min_row_size}][i];
+  return {name}_lookup::nodes[row_size - {min_row_size}][i];
 }}
 
-Eigen::VectorXd Gauss_lobatto::node_weights()
+Eigen::VectorXd {name}::node_weights()
 {{{conditional_block}
   Eigen::VectorXd nw (row_size);
-  for (int i_node = 0; i_node < row_size; ++i_node) nw(i_node) = weights[row_size - {min_row_size}][i_node];
+  for (int i_node = 0; i_node < row_size; ++i_node)
+  {{
+    nw(i_node) = {name}_lookup::weights[row_size - {min_row_size}][i_node];
+  }}
   return nw;
 }}
 
-Eigen::MatrixXd Gauss_lobatto::diff_mat()
+Eigen::MatrixXd {name}::diff_mat()
 {{{conditional_block}
   Eigen::MatrixXd dm (row_size, row_size);
-  for (int i_node = 0; i_node < row_size*row_size; ++i_node) dm(i_node) = diff_mats[row_size - {min_row_size}][i_node];
+  for (int i_node = 0; i_node < row_size*row_size; ++i_node)
+  {{
+    dm(i_node) = {name}_lookup::diff_mats[row_size - {min_row_size}][i_node];
+  }}
   return dm;
 }}
 
-Eigen::VectorXd Gauss_lobatto::orthogonal(int degree)
+Eigen::MatrixXd {name}::boundary()
+{{{conditional_block}
+  Eigen::MatrixXd b {{2, row_size}};
+  for (int is_positive : {{0, 1}})
+  {{
+    for (int i_node = 0; i_node < row_size; ++i_node)
+    {{
+      b(is_positive, i_node) = {name}_lookup::boundarys[row_size - {min_row_size}][is_positive*row_size + i_node];
+    }}
+  }}
+  return b;
+}}
+
+Eigen::VectorXd {name}::orthogonal(int degree)
 {{{conditional_block}
   Eigen::VectorXd orth (row_size);
-  for (int i_node = 0; i_node < row_size; ++i_node) orth(i_node) = orthogonals[row_size - {min_row_size}][degree*row_size + i_node];
+  for (int i_node = 0; i_node < row_size; ++i_node)
+  {{
+    orth(i_node) = {name}_lookup::orthogonals[row_size - {min_row_size}][degree*row_size + i_node];
+  }}
   return orth;
 }}
 
-Gauss_lobatto::Gauss_lobatto(int row_size_arg) : Basis(row_size_arg) {{}}
+{name}::{name}(int row_size_arg) : Basis(row_size_arg) {{}}
 """
 
-with open(src_dir + "Gauss_lobatto.cpp", "w") as write_file:
-    write_file.write(format_file_text(include, text))
+    with open(src_dir + f"{name}.cpp", "w") as write_file:
+        write_file.write(format_file_text(include, text))

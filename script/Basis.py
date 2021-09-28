@@ -33,6 +33,15 @@ class Basis:
                         dp *= sp.Float(self.nodes[i_result] - self.nodes[n])
         return sp.Float(dp, self.repr_digits)
 
+    def interpolate(self, i, position):
+        pos = sp.Float(position, self.calc_digits)
+        nodes = self.nodes.copy()
+        main_node = nodes.pop(i)
+        result = sp.Float(1, self.calc_digits)
+        for node in nodes:
+            result *= (pos - node)/(main_node - node)
+        return sp.Float(result, self.repr_digits)
+
     def legendre(self, degree):
         x = sp.Symbol("x")
         poly = sp.legendre(degree, x)
