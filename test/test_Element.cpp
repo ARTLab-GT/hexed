@@ -16,6 +16,10 @@ TEST_CASE("Element")
       element.stage(i_stage)[i_dof] = 0.;
     }
   }
+  for (int i_face_data = 0; i_face_data < n_dof/params.row_size*3*2; ++i_face_data)
+  {
+    element.face()[i_face_data] = 1.;
+  }
   for (int i_dof = 0; i_dof < n_dof; ++i_dof) element.stage(0)[i_dof] = 1.2;
   for (int i_dof = 0; i_dof < n_dof; ++i_dof) REQUIRE(element.stage(3)[i_dof] == 0.);
   for (int i_dof = 0; i_dof < n_dof; ++i_dof) element.stage(3)[i_dof] = 1.3;
@@ -25,6 +29,10 @@ TEST_CASE("Element")
     REQUIRE(element.stage(1)[i_dof] == 0.);
     REQUIRE(element.stage(2)[i_dof] == 0.);
     REQUIRE(element.stage(3)[i_dof] == 1.3);
+  }
+  for (int i_face_data = 0; i_face_data < n_dof/params.row_size*3*2; ++i_face_data)
+  {
+    REQUIRE(element.face()[i_face_data] == 1.);
   }
   for (int i_vert = 0; i_vert < 8; ++i_vert)
   {
