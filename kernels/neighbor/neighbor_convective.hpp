@@ -18,12 +18,10 @@ template<int n_var, int n_qpoint, int row_size>
 void neighbor_convective(elem_con_vec& connections, Basis& basis, Kernel_settings& settings)
 {
   const int n_face_qpoint = n_qpoint/row_size;
+  const int face_size = n_face_qpoint*n_var;
   double mult = settings.d_t_by_d_pos/basis.node_weights()(0);
   double heat_rat = settings.cpg_heat_rat;
-  const int i_read = settings.i_read;
-  const int i_write = settings.i_write;
 
-  const int face_size = n_face_qpoint*n_var;
   for (unsigned stride = n_face_qpoint, i_dim = 0; stride > 0; stride /= row_size, ++i_dim)
   {
     #pragma omp parallel for
@@ -33,13 +31,25 @@ void neighbor_convective(elem_con_vec& connections, Basis& basis, Kernel_setting
       double face_w [2*face_size];
       elem_con con = connections[i_dim][i_con];
 
-      read_copy<n_var, n_qpoint, row_size>(con[0]->stage(i_read), face_r            , stride, 1);
-      read_copy<n_var, n_qpoint, row_size>(con[1]->stage(i_read), face_r + face_size, stride, 0);
+      for (int i_side : {0, 1})
+      {
+        double* read = con[i_side]->face() + (i_dim*2 + 1 - i_side)*face_size;
+        for (int i_face_dof = 0; i_face_dof < face_size; ++i_face_dof)
+        {
+          face_r[i_side*face_size + i_face_dof] = read[i_face_dof];
+        }
+      }
 
       hll_cpg_euler<n_var - 2, n_face_qpoint>(face_r, face_w, mult, i_dim, heat_rat);
 
-      write_copy<n_var, n_qpoint, row_size>(face_w            , con[0]->stage(i_write), stride, 1);
-      write_copy<n_var, n_qpoint, row_size>(face_w + face_size, con[1]->stage(i_write), stride, 0);
+      for (int i_side : {0, 1})
+      {
+        double* write = con[i_side]->face() + (i_dim*2 + 1 - i_side)*face_size;
+        for (int i_face_dof = 0; i_face_dof < face_size; ++i_face_dof)
+        {
+          write[i_face_dof] = face_r[i_side*face_size + i_face_dof];
+        }
+      }
     }
   }
 }
