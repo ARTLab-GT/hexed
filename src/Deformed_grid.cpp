@@ -134,9 +134,8 @@ void Deformed_grid::add_wall(int i_elem, int i_dim, bool is_positive_face)
   walls.push_back(wall);
 }
 
-void Deformed_grid::execute_local(Kernel_settings& settings)
+void Deformed_grid::execute_write_face(Kernel_settings& settings)
 {
-  get_local_deformed_convective(n_dim, basis.row_size)(elements, basis, settings);
 }
 
 void Deformed_grid::execute_neighbor(Kernel_settings& settings)
@@ -145,6 +144,11 @@ void Deformed_grid::execute_neighbor(Kernel_settings& settings)
   get_neighbor_def_reg_convective(n_dim, basis.row_size)(def_reg_cons, basis, settings);
   get_gbc_convective(n_dim, basis.row_size)(*this, basis, settings);
   get_nonpen_convective(n_dim, basis.row_size)(walls, basis, settings);
+}
+
+void Deformed_grid::execute_local(Kernel_settings& settings)
+{
+  get_local_deformed_convective(n_dim, basis.row_size)(elements, basis, settings);
 }
 
 void Deformed_grid::execute_req_visc(Kernel_settings& settings)

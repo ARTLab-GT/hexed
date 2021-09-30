@@ -58,11 +58,8 @@ double Regular_grid::stable_time_step(double cfl_by_stable_cfl, Kernel_settings&
   return cfl*mesh_size/get_mcs_convective(n_dim, basis.row_size)(elements, settings);
 }
 
-void Regular_grid::execute_local(Kernel_settings& settings)
+void Regular_grid::execute_write_face(Kernel_settings& settings)
 {
-  settings.i_read = i_read;
-  settings.i_write = i_write;
-  get_local_convective(n_dim, basis.row_size)(elements, basis, settings);
 }
 
 void Regular_grid::execute_neighbor(Kernel_settings& settings)
@@ -71,6 +68,13 @@ void Regular_grid::execute_neighbor(Kernel_settings& settings)
   settings.i_write = i_write;
   get_neighbor_convective(n_dim, basis.row_size)(elem_cons, basis, settings);
   get_gbc_convective(n_dim, basis.row_size)(*this, basis, settings);
+}
+
+void Regular_grid::execute_local(Kernel_settings& settings)
+{
+  settings.i_read = i_read;
+  settings.i_write = i_write;
+  get_local_convective(n_dim, basis.row_size)(elements, basis, settings);
 }
 
 void Regular_grid::execute_req_visc(Kernel_settings& settings)

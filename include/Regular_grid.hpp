@@ -25,8 +25,9 @@ class Regular_grid : public Grid
   void auto_connect();
 
   // time integration
-  virtual void execute_local(Kernel_settings&);
+  virtual void execute_write_face(Kernel_settings&);
   virtual void execute_neighbor(Kernel_settings&);
+  virtual void execute_local(Kernel_settings&);
   virtual void execute_req_visc(Kernel_settings&);
   virtual void execute_cont_visc(Kernel_settings&);
   virtual void execute_local_derivative(int i_var, int i_dim, Kernel_settings&);

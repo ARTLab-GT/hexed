@@ -105,6 +105,11 @@ double Solution::update(double cfl_by_stable_cfl)
     for (Grid* grid : all_grids())
     {
       kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
+      grid->execute_write_face(kernel_settings);
+    }
+    for (Grid* grid : all_grids())
+    {
+      kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
       grid->execute_local(kernel_settings);
     }
     for (Grid* grid : all_grids())
