@@ -95,6 +95,7 @@ void local_convective(elem_vec& elements, Basis& basis, Kernel_settings& setting
           {
             const int face_offset = i_var*n_qpoint/row_size + i_face_qpoint;
             Eigen::Matrix<double, 2, 1> boundary_values {face0[face_offset], face1[face_offset]};
+            std::cout << elements[i_elem].get() << "\n";
             printf("%i %i %i\n", i_elem, i_var, i_face_qpoint);
             std::cout << boundary_values << "\n\n";
             w.col(i_var).noalias() += boundary_mat*boundary_values;

@@ -1,6 +1,8 @@
 #ifndef CARTDG_NEIGHBOR_CONVECTIVE_HPP_
 #define CARTDG_NEIGHBOR_CONVECTIVE_HPP_
 
+#include <iostream>
+
 #include <Eigen/Dense>
 
 #include <Kernel_settings.hpp>
@@ -19,17 +21,18 @@ void neighbor_convective(elem_con_vec& connections, Basis& basis, Kernel_setting
 {
   const int n_face_qpoint = n_qpoint/row_size;
   const int face_size = n_face_qpoint*n_var;
-  double mult = settings.d_t_by_d_pos/basis.node_weights()(0);
+  double mult = 1./basis.node_weights()(0);
   double heat_rat = settings.cpg_heat_rat;
 
   for (unsigned stride = n_face_qpoint, i_dim = 0; stride > 0; stride /= row_size, ++i_dim)
   {
-    #pragma omp parallel for
+    //#pragma omp parallel for
     for (unsigned i_con = 0; i_con < connections[i_dim].size(); ++i_con)
     {
       double face_r [2*face_size];
       double face_w [2*face_size];
       elem_con con = connections[i_dim][i_con];
+      std::cout << con[0] << " " << con[1] << "\n";
 
       for (int i_side : {0, 1})
       {
@@ -37,8 +40,10 @@ void neighbor_convective(elem_con_vec& connections, Basis& basis, Kernel_setting
         for (int i_face_dof = 0; i_face_dof < face_size; ++i_face_dof)
         {
           face_r[i_side*face_size + i_face_dof] = read[i_face_dof];
+          std::cout << read[i_face_dof] << " ";
         }
       }
+      std::cout << "\n\n";
 
       hll_cpg_euler<n_var - 2, n_face_qpoint>(face_r, face_w, mult, i_dim, heat_rat);
 
