@@ -1,8 +1,6 @@
 #ifndef CARTDG_LOCAL_CONVECTIVE_HPP_
 #define CARTDG_LOCAL_CONVECTIVE_HPP_
 
-#include <iostream>
-
 #include <Eigen/Dense>
 
 #include <Kernel_settings.hpp>
@@ -17,9 +15,8 @@ template<int n_var, int n_qpoint, int row_size>
 void local_convective(elem_vec& elements, Basis& basis, Kernel_settings& settings)
 {
   const Eigen::Matrix<double, row_size, row_size> diff_mat = basis.diff_mat();
-  Eigen::MatrixXd dyn_boundary_mat = basis.boundary().transpose();
-  const Eigen::Matrix<double, row_size, 2> boundary_mat {dyn_boundary_mat};
-  std::cout << "\n\n" << boundary_mat << "\n\n";
+  const Eigen::Matrix<double, row_size, 2> boundary_mat {basis.node_weights().asDiagonal().inverse()
+                                                         *basis.boundary().transpose()};
 
   double d_t_by_d_pos = settings.d_t_by_d_pos;
   double heat_rat = settings.cpg_heat_rat;
@@ -95,9 +92,6 @@ void local_convective(elem_vec& elements, Basis& basis, Kernel_settings& setting
           {
             const int face_offset = i_var*n_qpoint/row_size + i_face_qpoint;
             Eigen::Matrix<double, 2, 1> boundary_values {face0[face_offset], face1[face_offset]};
-            std::cout << elements[i_elem].get() << "\n";
-            printf("%i %i %i\n", i_elem, i_var, i_face_qpoint);
-            std::cout << boundary_values << "\n\n";
             w.col(i_var).noalias() += boundary_mat*boundary_values;
             for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
             {

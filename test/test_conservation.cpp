@@ -45,7 +45,7 @@ TEST_CASE("Conservation of state variables")
     sol.initialize(init);
     for (int i_state = 0; i_state < grid.n_qpoint; ++i_state)
     {
-      grid.element(0).stage(0)[i_state] = i_state + 2;
+      grid.element(0).stage(0)[i_state] = i_state + 1;
     }
     std::vector<double> initial (grid.n_elem*grid.n_dof);
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
@@ -76,7 +76,6 @@ TEST_CASE("Conservation of state variables")
     }
   }
 
-  #if 0
   SECTION("2D cartesian")
   {
     cartdg::Solution sol (4, 2, row_size, length);
@@ -270,5 +269,4 @@ TEST_CASE("Conservation of state variables")
       REQUIRE(integral[i_var]/dt == Approx(0.).margin(0.001));
     }
   }
-  #endif
 }
