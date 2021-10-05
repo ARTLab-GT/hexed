@@ -1,6 +1,8 @@
 #ifndef CARTDG_LOCAL_CONVECTIVE_HPP_
 #define CARTDG_LOCAL_CONVECTIVE_HPP_
 
+#include <iostream>
+
 #include <Eigen/Dense>
 
 #include <Kernel_settings.hpp>
@@ -15,17 +17,24 @@ template<int n_var, int n_qpoint, int row_size>
 void local_convective(elem_vec& elements, Basis& basis, Kernel_settings& settings)
 {
   const Eigen::Matrix<double, row_size, row_size> diff_mat = basis.diff_mat();
+  Eigen::MatrixXd dyn_boundary_mat = basis.boundary().transpose();
+  const Eigen::Matrix<double, row_size, 2> boundary_mat {dyn_boundary_mat};
+  std::cout << "\n\n" << boundary_mat << "\n\n";
+
   double d_t_by_d_pos = settings.d_t_by_d_pos;
   double heat_rat = settings.cpg_heat_rat;
   const int i_read = settings.i_read;
   const int i_write = settings.i_write;
+  const int n_face_dof = n_var*n_qpoint/row_size;
 
-  #pragma omp parallel for
+  //#pragma omp parallel for
   for (unsigned i_elem = 0; i_elem < elements.size(); ++i_elem)
   {
-    // Initialize updated solution to be equal to current solution
     double* read  = elements[i_elem]->stage(i_read);
     double* write = elements[i_elem]->stage(i_write);
+    double* face = elements[i_elem]->face();
+
+    // Initialize updated solution to be equal to current solution
     for (int i_dof = 0; i_dof < n_qpoint*n_var; ++i_dof)
     {
       write[i_dof] = read[i_dof];
@@ -36,11 +45,13 @@ void local_convective(elem_vec& elements, Basis& basis, Kernel_settings& setting
          n_rows < n_qpoint;
          stride /= row_size, n_rows *= row_size, ++i_dim)
     {
+      double* face0 = face + i_dim*2*n_face_dof;
+      double* face1 = face0 + n_face_dof;
+      int i_face_qpoint {0};
       for (int i_outer = 0; i_outer < n_rows; ++i_outer)
       {
         for (int i_inner = 0; i_inner < stride; ++i_inner)
         {
-
           // Fetch this row of data
           double row_r [n_var][row_size];
           double row_w [n_var][row_size];
@@ -77,17 +88,23 @@ void local_convective(elem_vec& elements, Basis& basis, Kernel_settings& setting
           // Differentiate flux
           Eigen::Map<Eigen::Matrix<double, row_size, n_var>> f (&(flux[0][0]));
           Eigen::Map<Eigen::Matrix<double, row_size, n_var>> w (&(row_w[0][0]));
-          w.noalias() = -diff_mat*f*d_t_by_d_pos;
+          w.noalias() = -diff_mat*f;
 
           // Write updated solution
           for (int i_var = 0; i_var < n_var; ++i_var)
           {
+            const int face_offset = i_var*n_qpoint/row_size + i_face_qpoint;
+            Eigen::Matrix<double, 2, 1> boundary_values {face0[face_offset], face1[face_offset]};
+            printf("%i %i %i\n", i_elem, i_var, i_face_qpoint);
+            std::cout << boundary_values << "\n\n";
+            w.col(i_var).noalias() += boundary_mat*boundary_values;
             for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
             {
                write[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride]
-               += row_w[i_var][i_qpoint];
+               += row_w[i_var][i_qpoint]*d_t_by_d_pos;
             }
           }
+          ++i_face_qpoint;
         }
       }
     }

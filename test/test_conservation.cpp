@@ -76,6 +76,7 @@ TEST_CASE("Conservation of state variables")
     }
   }
 
+  #if 0
   SECTION("2D cartesian")
   {
     cartdg::Solution sol (4, 2, row_size, length);
@@ -269,4 +270,5 @@ TEST_CASE("Conservation of state variables")
       REQUIRE(integral[i_var]/dt == Approx(0.).margin(0.001));
     }
   }
+  #endif
 }

@@ -47,7 +47,7 @@ void neighbor_convective(elem_con_vec& connections, Basis& basis, Kernel_setting
         double* write = con[i_side]->face() + (i_dim*2 + 1 - i_side)*face_size;
         for (int i_face_dof = 0; i_face_dof < face_size; ++i_face_dof)
         {
-          write[i_face_dof] = face_r[i_side*face_size + i_face_dof];
+          write[i_face_dof] = face_w[i_side*face_size + i_face_dof];
         }
       }
     }

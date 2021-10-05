@@ -79,22 +79,26 @@ TEST_CASE("Local convective")
   settings.d_t_by_d_pos = 0.1;
   SECTION("1D")
   {
-    unsigned n_elem = 5;
+    int n_elem = 5;
     cartdg::Storage_params params {2, 3, 1, 2};
-    unsigned n_qpoint = params.n_qpoint();
+    int n_qpoint = params.n_qpoint();
     cartdg::elem_vec elements;
     Identity_basis basis {int(params.row_size)};
     double mass = 1.225; double veloc = 10; double pres = 1e5;
     double mmtm = mass*veloc; double ener = pres/0.4 + 0.5*mass*veloc*veloc;
-    for (unsigned i_elem = 0; i_elem < n_elem; ++i_elem)
+    for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       elements.emplace_back(new cartdg::Element {params});
       double* read = elements[i_elem]->stage(settings.i_read);
-      for (unsigned i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
           read[0*n_qpoint + i_qpoint] = mmtm;
           read[1*n_qpoint + i_qpoint] = mass;
           read[2*n_qpoint + i_qpoint] = ener;
+      }
+      for (int i_face = 0; i_face < n_qpoint/params.row_size*3*2*1; ++i_face)
+      {
+        elements[i_elem]->face()[i_face] = 0.;
       }
     }
     cartdg::get_local_convective(1, 2)(elements, basis, settings);
@@ -102,7 +106,7 @@ TEST_CASE("Local convective")
     {
       double* r = element->stage(settings.i_read);
       double* w = element->stage(settings.i_write);
-      for (unsigned i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
         REQUIRE(w[0*n_qpoint + i_qpoint] - r[0*n_qpoint + i_qpoint] == Approx(0.1*(mmtm*mmtm/mass + pres)));
         REQUIRE(w[1*n_qpoint + i_qpoint] - r[1*n_qpoint + i_qpoint] == Approx(0.1*mmtm));
@@ -113,20 +117,20 @@ TEST_CASE("Local convective")
 
   SECTION("3D")
   {
-    const unsigned n_elem = 5;
+    const int n_elem = 5;
     cartdg::Storage_params params {2, 5, 3, 3};
-    unsigned n_qpoint = params.n_qpoint();
+    int n_qpoint = params.n_qpoint();
     cartdg::elem_vec elements;
     Identity_basis basis (params.row_size);
     double mass = 1.225;
     double veloc0 = 10; double veloc1 = -20; double veloc2 = 30;
     double pres = 1e5;
     double ener = pres/0.4 + 0.5*mass*(veloc0*veloc0 + veloc1*veloc1 + veloc2*veloc2);
-    for (unsigned i_elem = 0; i_elem < n_elem; ++i_elem)
+    for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       elements.emplace_back(new cartdg::Element {params});
       double* read = elements[i_elem]->stage(settings.i_read);
-      for (unsigned i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
           read[0*n_qpoint + i_qpoint] = mass*veloc0;
           read[1*n_qpoint + i_qpoint] = mass*veloc1;
@@ -134,13 +138,17 @@ TEST_CASE("Local convective")
           read[3*n_qpoint + i_qpoint] = mass;
           read[4*n_qpoint + i_qpoint] = ener;
       }
+      for (int i_face = 0; i_face < n_qpoint/params.row_size*5*2*3; ++i_face)
+      {
+        elements[i_elem]->face()[i_face] = 0.;
+      }
     }
     cartdg::get_local_convective(3, 3)(elements, basis, settings);
     for (auto& element : elements)
     {
       double* r = element->stage(settings.i_read);
       double* w = element->stage(settings.i_write);
-      for (unsigned i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
         REQUIRE(w[0*n_qpoint + i_qpoint] - r[0*n_qpoint + i_qpoint]
                 == Approx(0.1*(mass*veloc0*(veloc0 + veloc1 + veloc2) + pres)));
@@ -158,19 +166,19 @@ TEST_CASE("Local convective")
 
   SECTION("2D non-constant")
   {
-    const unsigned n_elem = 5;
-    const unsigned row_size = std::min<unsigned>(6, unsigned(CARTDG_MAX_BASIS_ROW_SIZE));
+    const int n_elem = 5;
+    const int row_size = std::min<int>(6, int(CARTDG_MAX_BASIS_ROW_SIZE));
     cartdg::Storage_params params {3, 4, 2, row_size};
-    unsigned int n_qpoint = params.n_qpoint();
+    int n_qpoint = params.n_qpoint();
     cartdg::elem_vec elements;
     cartdg::Gauss_lobatto basis (row_size);
-    for (unsigned i_elem = 0; i_elem < n_elem; ++i_elem)
+    for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       elements.emplace_back(new cartdg::Element {params});
       double* read = elements[i_elem]->stage(settings.i_read);
-      for (unsigned i = 0; i < row_size; ++i)
+      for (int i = 0; i < row_size; ++i)
       {
-        for (unsigned j = 0; j < row_size; ++j)
+        for (int j = 0; j < row_size; ++j)
         {
           int i_qpoint = i*row_size + j;
           double mass = 1 + 0.1*basis.node(i) + 0.2*basis.node(j);
@@ -184,13 +192,17 @@ TEST_CASE("Local convective")
           read[3*n_qpoint + i_qpoint] = ener;
         }
       }
+      for (int i_face = 0; i_face < n_qpoint/row_size*4*2*2; ++i_face)
+      {
+        elements[i_elem]->face()[i_face] = 0.;
+      }
     }
     cartdg::get_local_convective(2, row_size)(elements, basis, settings);
     for (auto& element : elements)
     {
       double* r = element->stage(settings.i_read);
       double* w = element->stage(settings.i_write);
-      for (unsigned i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
         REQUIRE(w[2*n_qpoint + i_qpoint] - r[2*n_qpoint + i_qpoint]
                 == Approx(-0.1*(0.1*10 - 0.2*20)));
