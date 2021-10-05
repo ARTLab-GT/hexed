@@ -23,7 +23,7 @@ void neighbor_convective(elem_con_vec& connections, Basis& basis, Kernel_setting
 
   for (unsigned stride = n_face_qpoint, i_dim = 0; stride > 0; stride /= row_size, ++i_dim)
   {
-    //#pragma omp parallel for
+    #pragma omp parallel for
     for (unsigned i_con = 0; i_con < connections[i_dim].size(); ++i_con)
     {
       double face_r [2*face_size];
