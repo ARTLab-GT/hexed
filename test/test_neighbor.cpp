@@ -287,24 +287,26 @@ TEST_CASE("ausm_plus_up_cpg_euler")
     {
       for (int i_var = 0; i_var < 5; ++i_var)
       {
-        double correct_d_flux = 3*340*read[2*i_var] - 2*340*read[2*i_var + 10];
-        if (i_var == 4) correct_d_flux += 340*pressure;
-        correct_d_flux *= j;
-        REQUIRE(write[10*j + 2*i_var    ] == Approx(0.7*correct_d_flux).margin(1.e-8));
-        REQUIRE(write[10*j + 2*i_var + 1] == Approx(0.7*correct_d_flux).margin(1.e-8));
+        double correct_flux = read[2*i_var];
+        if (i_var == 4) correct_flux += pressure;
+        correct_flux *= 3*340;
+        if (i_var == 0) correct_flux += pressure;
+        REQUIRE(write[10*j + 2*i_var    ] == Approx(correct_flux).margin(1.e-8));
+        REQUIRE(write[10*j + 2*i_var + 1] == Approx(correct_flux).margin(1.e-8));
       }
     }
     for (int i = 0; i < 20; ++i) write[i] = 0;
-    cartdg::hll_cpg_euler<3, 2>(&read[0], &write[0], mult, 1, 1.4);
+    cartdg::ausm_plus_up_cpg_euler<3, 2>(&read[0], &write[0], mult, 1, 1.4);
     for (int j = 0; j < 2; ++j)
     {
       for (int i_var = 0; i_var < 5; ++i_var)
       {
-        double correct_d_flux = 3*340*read[2*i_var + 10] - 2*340*read[2*i_var];
-        if (i_var == 4) correct_d_flux += 340*pressure;
-        correct_d_flux *= (1 - j);
-        REQUIRE(write[10*j + 2*i_var    ] == Approx(0.7*correct_d_flux).margin(1.e-8));
-        REQUIRE(write[10*j + 2*i_var + 1] == Approx(0.7*correct_d_flux).margin(1.e-8));
+        double correct_flux = read[2*i_var + 10];
+        if (i_var == 4) correct_flux += pressure;
+        correct_flux *= -3*340;
+        if (i_var == 1) correct_flux += pressure;
+        REQUIRE(write[10*j + 2*i_var    ] == Approx(correct_flux).margin(1.e-8));
+        REQUIRE(write[10*j + 2*i_var + 1] == Approx(correct_flux).margin(1.e-8));
       }
     }
   }
@@ -325,9 +327,9 @@ TEST_CASE("ausm_plus_up_cpg_euler")
     }
 
     for (int i = 0; i < 20; ++i) write[i] = 0;
-    cartdg::hll_cpg_euler<3, 2>(&read[0], &write[0], mult, 0, 1.4);
-    REQUIRE(write[2*3     ] == Approx(0.7*mass*680));
-    REQUIRE(write[2*3 + 10] == Approx(0.7*mass*680));
+    cartdg::ausm_plus_up_cpg_euler<3, 2>(&read[0], &write[0], mult, 0, 1.4);
+    REQUIRE(write[2*3     ] == Approx(0).margin(1e-8));
+    REQUIRE(write[2*3 + 10] == Approx(0).margin(1e-8));
   }
 }
 

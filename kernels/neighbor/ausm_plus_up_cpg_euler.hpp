@@ -83,8 +83,8 @@ void ausm_plus_up_cpg_euler(double* state_r, double* d_flux_w, double mult,
       if (i_var == n_var - 1) num_flux += pres[upwind_ind];
       num_flux *= mass_flux/mass[upwind_ind];
       if (i_var == i_dim) num_flux += mid_pres;
-      d_flux_w[i            ] = (flux[0][i_var] - num_flux)*mult;
-      d_flux_w[i + face_size] = (num_flux - flux[1][i_var])*mult;
+      d_flux_w[i            ] = num_flux;
+      d_flux_w[i + face_size] = num_flux;
     }
   }
 }
