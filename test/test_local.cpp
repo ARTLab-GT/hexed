@@ -108,9 +108,9 @@ TEST_CASE("Local convective")
       double* w = element->stage(settings.i_write);
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
-        REQUIRE(w[0*n_qpoint + i_qpoint] - r[0*n_qpoint + i_qpoint] == Approx(0.1*(mmtm*mmtm/mass + pres)));
-        REQUIRE(w[1*n_qpoint + i_qpoint] - r[1*n_qpoint + i_qpoint] == Approx(0.1*mmtm));
-        REQUIRE(w[2*n_qpoint + i_qpoint] - r[2*n_qpoint + i_qpoint] == Approx(0.1*((ener + pres)*veloc)));
+        REQUIRE(w[0*n_qpoint + i_qpoint] - r[0*n_qpoint + i_qpoint] == Approx(-0.1*(mmtm*mmtm/mass + pres)));
+        REQUIRE(w[1*n_qpoint + i_qpoint] - r[1*n_qpoint + i_qpoint] == Approx(-0.1*mmtm));
+        REQUIRE(w[2*n_qpoint + i_qpoint] - r[2*n_qpoint + i_qpoint] == Approx(-0.1*((ener + pres)*veloc)));
       }
     }
   }
@@ -151,15 +151,15 @@ TEST_CASE("Local convective")
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
         REQUIRE(w[0*n_qpoint + i_qpoint] - r[0*n_qpoint + i_qpoint]
-                == Approx(0.1*(mass*veloc0*(veloc0 + veloc1 + veloc2) + pres)));
+                == Approx(-0.1*(mass*veloc0*(veloc0 + veloc1 + veloc2) + pres)));
         REQUIRE(w[1*n_qpoint + i_qpoint] - r[1*n_qpoint + i_qpoint]
-                == Approx(0.1*(mass*veloc1*(veloc0 + veloc1 + veloc2) + pres)));
+                == Approx(-0.1*(mass*veloc1*(veloc0 + veloc1 + veloc2) + pres)));
         REQUIRE(w[2*n_qpoint + i_qpoint] - r[2*n_qpoint + i_qpoint]
-                == Approx(0.1*(mass*veloc2*(veloc0 + veloc1 + veloc2) + pres)));
+                == Approx(-0.1*(mass*veloc2*(veloc0 + veloc1 + veloc2) + pres)));
         REQUIRE(w[3*n_qpoint + i_qpoint] - r[3*n_qpoint + i_qpoint]
-                == Approx(0.1*mass*(veloc0 + veloc1 + veloc2)));
+                == Approx(-0.1*mass*(veloc0 + veloc1 + veloc2)));
         REQUIRE(w[4*n_qpoint + i_qpoint] - r[4*n_qpoint + i_qpoint]
-                == Approx(0.1*((ener + pres)*(veloc0 + veloc1 + veloc2))));
+                == Approx(-0.1*((ener + pres)*(veloc0 + veloc1 + veloc2))));
       }
     }
   }
@@ -172,30 +172,48 @@ TEST_CASE("Local convective")
     int n_qpoint = params.n_qpoint();
     cartdg::elem_vec elements;
     cartdg::Gauss_lobatto basis (row_size);
+
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       elements.emplace_back(new cartdg::Element {params});
       double* read = elements[i_elem]->stage(settings.i_read);
+      double* face = elements[i_elem]->face();
+
+      #define SET_VARS \
+        double mass = 1 + 0.1*pos0 + 0.2*pos1; \
+        double veloc [] {10, -20}; \
+        double pres = 1e5*(1. - 0.3*pos0 + 0.5*pos1); \
+        double ener = pres/0.4 + 0.5*mass*(veloc[0]*veloc[0] + veloc[1]*veloc[1]); \
+
       for (int i = 0; i < row_size; ++i)
       {
         for (int j = 0; j < row_size; ++j)
         {
           int i_qpoint = i*row_size + j;
-          double mass = 1 + 0.1*basis.node(i) + 0.2*basis.node(j);
-          double veloc0 = 10; double veloc1 = -20;
-          double pres = 1e5*(1. - 0.3*basis.node(i) + 0.5*basis.node(j));
-          double ener = pres/0.4 + 0.5*mass*(veloc0*veloc0 + veloc1*veloc1);
-
-          read[0*n_qpoint + i_qpoint] = mass*veloc0;
-          read[1*n_qpoint + i_qpoint] = mass*veloc1;
+          double pos0 = basis.node(i); double pos1 = basis.node(j);
+          SET_VARS
+          read[0*n_qpoint + i_qpoint] = mass*veloc[0];
+          read[1*n_qpoint + i_qpoint] = mass*veloc[1];
           read[2*n_qpoint + i_qpoint] = mass;
           read[3*n_qpoint + i_qpoint] = ener;
         }
+        for (int i_dim : {0, 1})
+        {
+          for (int positive : {0, 1})
+          {
+            double* qpoint_start = face + (2*i_dim + positive)*row_size*4 + i;
+            double pos0 {i_dim ? basis.node(i) : positive};
+            double pos1 {i_dim ? positive : basis.node(i)};
+            SET_VARS
+            qpoint_start[0*row_size] = mass*veloc[0]*veloc[i_dim];
+            qpoint_start[1*row_size] = mass*veloc[1]*veloc[i_dim];
+            qpoint_start[2*row_size] = mass*veloc[i_dim];
+            qpoint_start[3*row_size] = (ener + pres)*veloc[i_dim];
+            qpoint_start[i_dim*row_size] += pres;
+          }
+        }
       }
-      for (int i_face = 0; i_face < n_qpoint/row_size*4*2*2; ++i_face)
-      {
-        elements[i_elem]->face()[i_face] = 0.;
-      }
+      #undef SET_VARS
     }
     cartdg::get_local_convective(2, row_size)(elements, basis, settings);
     for (auto& element : elements)
