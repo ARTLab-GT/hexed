@@ -133,19 +133,17 @@ TEST_CASE("interpolation")
   SECTION("large sample")
   {
     Eigen::VectorXd sample {{0, 0.5, 0.7, 0.16, 1.2, 0., 0.}};
-    Eigen::VectorXd write {sample.size()};
-    basis.interpolate(values, sample, write);
-    REQUIRE(sample[0] == 0.);
-    REQUIRE(sample[1] == Approx(0.125));
-    REQUIRE(sample[2] == Approx(.7*.7*.7));
-    REQUIRE(sample[4] == Approx(1.2*1.2*1.2));
-    REQUIRE(sample[6] == 0.);
+    Eigen::VectorXd interpolated = basis.interpolate(sample)*values;
+    REQUIRE(interpolated[0] == 0.);
+    REQUIRE(interpolated[1] == Approx(0.125));
+    REQUIRE(interpolated[2] == Approx(.7*.7*.7));
+    REQUIRE(interpolated[4] == Approx(1.2*1.2*1.2));
+    REQUIRE(interpolated[6] == 0.);
   }
   SECTION("small sample")
   {
     Eigen::VectorXd sample {{0.2}};
-    Eigen::VectorXd write {sample.size()};
-    basis.interpolate(values, sample, write);
-    REQUIRE(sample[0] == Approx(.2*.2*.2));
+    Eigen::VectorXd interpolated = basis.interpolate(sample)*values;
+    REQUIRE(interpolated[0] == Approx(.2*.2*.2));
   }
 }
