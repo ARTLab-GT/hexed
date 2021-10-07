@@ -18,7 +18,7 @@ class Basis
   virtual Eigen::MatrixXd diff_mat() = 0;
   virtual Eigen::MatrixXd boundary() = 0;
   virtual Eigen::VectorXd orthogonal(int degree) = 0;
-  Eigen::MatrixXd interpolate(Eigen::VectorXd& sample);
+  Eigen::MatrixXd interpolate(const Eigen::VectorXd& sample);
 };
 
 }
