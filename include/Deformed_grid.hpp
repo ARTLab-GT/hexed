@@ -53,7 +53,7 @@ class Deformed_grid : public Grid
   virtual void execute_neighbor_av(int i_var, int i_dim, Kernel_settings&);
 
   // diagnostic
-  virtual void visualize(std::string file_name);
+  virtual void visualize_qpoints(std::string file_name);
   std::vector<double> face_integral(Domain_func& integrand, int i_elem, int i_dim, bool is_positive);
   std::vector<double> surface_integral(Domain_func& integrand);
 };

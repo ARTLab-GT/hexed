@@ -128,9 +128,9 @@ TEST_CASE("Regular_grid")
 
   SECTION("Visualization")
   {
-    grid1.visualize("unit_test_1d");
-    grid2.visualize("unit_test_2d");
-    grid3.visualize("unit_test_3d");
+    grid1.visualize_qpoints("unit_test_1d");
+    grid2.visualize_qpoints("unit_test_2d");
+    grid3.visualize_qpoints("unit_test_3d");
   }
 
   SECTION("State integration")

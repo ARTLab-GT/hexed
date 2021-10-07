@@ -8,7 +8,7 @@
 namespace cartdg
 {
 
-void Grid::visualize(std::string file_name)
+void Grid::visualize_qpoints(std::string file_name)
 {
   INTEGER4 Debug = 0;
   INTEGER4 VIsDouble = 1;

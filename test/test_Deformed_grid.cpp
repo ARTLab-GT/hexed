@@ -253,7 +253,7 @@ TEST_CASE("Deformed grid class")
         REQUIRE(&grid3.deformed_element(0).vertex(3) == &grid3.deformed_element(1).vertex(3));
         REQUIRE(&grid3.deformed_element(0).vertex(5) == &grid3.deformed_element(1).vertex(0));
         REQUIRE(&grid3.deformed_element(0).vertex(7) == &grid3.deformed_element(1).vertex(2));
-        grid3.visualize("test");
+        grid3.visualize_qpoints("test");
       }
 
       SECTION("2D")
