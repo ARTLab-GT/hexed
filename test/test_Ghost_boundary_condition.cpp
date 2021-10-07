@@ -65,12 +65,12 @@ TEST_CASE("gbc_convective")
   Supersonic_inlet gbc1 {grid, 0, true};
   Supersonic_inlet gbc2 {grid, 2, false};
   grid.ghost_bound_conds.push_back(&gbc0);
-  grid.ghost_bound_conds.back()->add_element(0);
-  grid.ghost_bound_conds.back()->add_element(1);
+  gbc0.add_element(0);
+  gbc0.add_element(1);
   grid.ghost_bound_conds.push_back(&gbc1);
-  grid.ghost_bound_conds.back()->add_element(26);
+  gbc1.add_element(26);
   grid.ghost_bound_conds.push_back(&gbc2);
-  grid.ghost_bound_conds.back()->add_element(0);
+  gbc2.add_element(0);
 
   int nfqpoint = row_size*row_size;
   for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
@@ -85,9 +85,9 @@ TEST_CASE("gbc_convective")
           double* qpoint = face + (2*i_dim + positive)*5*nfqpoint + i_qpoint;
           qpoint[0*nfqpoint] = 700.;
           qpoint[1*nfqpoint] = 0.;
-          qpoint[2*nfqpoint] = -700.;
+          qpoint[2*nfqpoint] = 700.;
           qpoint[3*nfqpoint] = 1.;
-          qpoint[4*nfqpoint] = 2e5 + 0.5*1.*700*700;
+          qpoint[4*nfqpoint] = 1e5 + 0.5*1.*2*700*700;
         }
       }
     }
@@ -97,6 +97,6 @@ TEST_CASE("gbc_convective")
   REQUIRE(grid.element(0).face()[3*nfqpoint] == Approx(2.*700.));
   REQUIRE(grid.element(0).face()[3*nfqpoint + nfqpoint - 1] == Approx(2.*700.));
   REQUIRE(grid.element(1).face()[3*nfqpoint] == Approx(2.*700.));
-  REQUIRE(grid.element(26).face()[(5 + 3)*nfqpoint] == Approx(0.));
+  REQUIRE(grid.element(26).face()[(1*5 + 3)*nfqpoint] < 0.);
   REQUIRE(grid.element(0).face()[(2*2*5 + 3)*nfqpoint] == Approx(2.*700.));
 }
