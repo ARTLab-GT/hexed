@@ -33,7 +33,7 @@ TEST_CASE("Ghost_boundary_condition class")
 {
   const int row_size = CARTDG_MAX_BASIS_ROW_SIZE;
   const int n_face_qpoint = row_size*row_size;
-  cartdg::Gauss_lobatto basis {row_size};
+  cartdg::Gauss_legendre basis {row_size};
   cartdg::Regular_grid grid {5, 3, 0, 1., basis};
   Supersonic_inlet bc (grid, 0, true);
   REQUIRE(bc.elems.empty());

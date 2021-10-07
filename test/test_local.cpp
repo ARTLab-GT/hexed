@@ -9,6 +9,7 @@
 #include <local/variable_derivative.hpp>
 #include <get_local_derivative.hpp>
 #include <Gauss_lobatto.hpp>
+#include <Gauss_legendre.hpp>
 #include <Equidistant.hpp>
 #include <math.hpp>
 
@@ -171,7 +172,7 @@ TEST_CASE("Local convective")
     cartdg::Storage_params params {3, 4, 2, row_size};
     int n_qpoint = params.n_qpoint();
     cartdg::elem_vec elements;
-    cartdg::Gauss_lobatto basis (row_size);
+    cartdg::Gauss_legendre basis (row_size);
 
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
@@ -532,7 +533,7 @@ TEST_CASE("req_visc")
 {
   const int row_size = CARTDG_MAX_BASIS_ROW_SIZE;
   const int n_qpoint = cartdg::custom_math::pow(row_size, 3);
-  cartdg::Gauss_lobatto basis (row_size);
+  cartdg::Gauss_legendre basis (row_size);
   cartdg::Kernel_settings settings;
   settings.d_pos = 0.5;
   cartdg::Storage_params params {3, 5, 3, row_size};
