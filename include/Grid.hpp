@@ -58,7 +58,8 @@ class Grid
   virtual int add_element(std::vector<int> position);
 
   // diagnostic
-  virtual void visualize_qpoints(std::string file_name);
+  void visualize_qpoints(std::string file_name);
+  void visualize_edges(std::string file_name);
   void print();
   std::vector<double> integral();
   std::vector<double> integral(Domain_func& integrand);

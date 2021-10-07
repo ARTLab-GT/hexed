@@ -29,8 +29,7 @@ void Grid::visualize_qpoints(std::string file_name)
     var_names += " q" + std::to_string(i_var);
   }
   var_names.erase(0, 1);
-  TECINI142((char*)"flow solution", var_names.c_str(), annotate(file_name).c_str(), ".",
-            &fileFormat, &FileType, &Debug, &VIsDouble);
+  TECINI142((char*)"flow solution", var_names.c_str(), (annotate(file_name) + "_qpoints").c_str(), ".", &fileFormat, &FileType, &Debug, &VIsDouble);
 
   INTEGER4 ICellMax = 0;
   INTEGER4 JCellMax = 0;
@@ -92,6 +91,10 @@ void Grid::visualize_qpoints(std::string file_name)
   }
 
   TECEND142();
+}
+
+void Grid::visualize_edges(std::string file_name)
+{
 }
 
 }
