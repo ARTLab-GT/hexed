@@ -70,6 +70,8 @@ class Grid
   double rk_weights [3] {1., 1./4., 2./3.};
   double stable_cfl [9] {1.256, 0.409, 0.209, 0.130, 0.089, 0.066, 0.051, 0.040, 0.033};
   Storage_params storage_params;
+
+  virtual std::string annotate(std::string file_name);
 };
 
 }

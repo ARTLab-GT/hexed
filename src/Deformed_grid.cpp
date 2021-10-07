@@ -276,11 +276,6 @@ void Deformed_grid::apply_vertex_relaxation()
   }
 }
 
-void Deformed_grid::visualize_qpoints(std::string file_name)
-{
-  Grid::visualize_qpoints(file_name + "_deformed");
-}
-
 std::vector<double> Deformed_grid::face_integral(Domain_func& integrand, int i_elem, int i_dim, bool is_positive)
 {
   auto pos = get_pos(i_elem);
@@ -397,6 +392,11 @@ void Deformed_grid::calc_jacobian()
       }
     }
   }
+}
+
+std::string Deformed_grid::annotate(std::string file_name)
+{
+  return file_name + "_deformed";
 }
 
 }

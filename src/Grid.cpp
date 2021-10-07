@@ -154,4 +154,9 @@ std::vector<double> Grid::integral(Domain_func& integrand)
   return total;
 }
 
+std::string Grid::annotate(std::string file_name)
+{
+  return file_name;
+}
+
 }
