@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include <catch2/catch.hpp>
 #include <cmath>
 #include <math.hpp>
@@ -64,9 +66,20 @@ TEST_CASE("hypercube_matvec")
       Eigen::VectorXd vec {Eigen::VectorXd::Ones(28)};
       REQUIRE_THROWS(hcmv(mat, vec));
     }
+    {
+      Eigen::MatrixXd mat {Eigen::MatrixXd::Identity(2, 3)};
+      Eigen::VectorXd vec {Eigen::VectorXd::Ones(36)};
+      REQUIRE_THROWS(hcmv(mat, vec));
+    }
   }
   #endif
-  Eigen::MatrixXd mat {Eigen::MatrixXd::Identity(2, 3)};
-  Eigen::VectorXd vec {Eigen::VectorXd::Ones(27)};
-  auto prod {hcmv(mat, vec)};
+  SECTION("correct values")
+  {
+    Eigen::MatrixXd mat {{0.5, 0.5, 0.}, {0., 0.5, 0.5}};
+    Eigen::VectorXd vec {Eigen::VectorXd::LinSpaced(27, 0, 26)};
+    auto prod = hcmv(mat, vec);
+    REQUIRE(prod.size() == 8);
+    Eigen::VectorXd correct {{6.5, 7.5, 9.5, 10.5, 15.5, 16.5, 18.5, 19.5}};
+    REQUIRE(prod == correct);
+  }
 }
