@@ -10,6 +10,7 @@ Ghost_boundary_condition.cpp
 Grid.cpp
 Grid__visualize.cpp
 Kernel_settings.cpp
+math.cpp
 Regular_grid.cpp
 Solution.cpp
 Spacetime_func.cpp

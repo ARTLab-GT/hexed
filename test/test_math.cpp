@@ -47,3 +47,26 @@ TEST_CASE("root finder")
   REQUIRE(cartdg::custom_math::root([](double x){return std::exp(x) - 2.;}, 0.)
           == Approx(std::log(2.)));
 }
+
+TEST_CASE("hypercube_matvec")
+{
+  auto hcmv {cartdg::custom_math::hypercube_matvec};
+  #ifdef DEBUG
+  SECTION("multiplying incompatible shapes throws")
+  {
+    {
+      Eigen::MatrixXd mat {Eigen::MatrixXd::Identity(6, 5)};
+      Eigen::VectorXd vec {Eigen::VectorXd::Ones(4)};
+      REQUIRE_THROWS(hcmv(mat, vec));
+    }
+    {
+      Eigen::MatrixXd mat {Eigen::MatrixXd::Identity(2, 3)};
+      Eigen::VectorXd vec {Eigen::VectorXd::Ones(28)};
+      REQUIRE_THROWS(hcmv(mat, vec));
+    }
+  }
+  #endif
+  Eigen::MatrixXd mat {Eigen::MatrixXd::Identity(2, 3)};
+  Eigen::VectorXd vec {Eigen::VectorXd::Ones(27)};
+  auto prod {hcmv(mat, vec)};
+}
