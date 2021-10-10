@@ -60,6 +60,7 @@ class Grid
   // diagnostic
   void visualize_qpoints(std::string file_name);
   void visualize_edges(std::string file_name);
+  void visualize_interior(std::string file_name, int n_sample = 10);
   void print();
   std::vector<double> integral();
   std::vector<double> integral(Domain_func& integrand);
