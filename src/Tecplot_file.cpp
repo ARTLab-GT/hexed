@@ -118,4 +118,45 @@ void Tecplot_file::write_line_segment(double* pos, double* vars)
   TECNOD142(node_inds);
 }
 
+Tecplot_file::Zone::Zone(Tecplot_file& file) : file{file} {}
+
+
+void Tecplot_file::Zone::write(double* pos, double* vars)
+{
+  INTEGER4 IsDouble {1};
+  INTEGER4 size {file.n_dim*n_nodes};
+  TECDAT142(&size, pos, &IsDouble);
+  size = file.n_var*n_nodes;
+  TECDAT142(&size, vars, &IsDouble);
+}
+
+Tecplot_file::Structured_block::Structured_block(Tecplot_file& file)
+: Zone{file}
+{
+  n_nodes = file.n_qpoint;
+
+  INTEGER4 ICellMax = 0;
+  INTEGER4 JCellMax = 0;
+  INTEGER4 KCellMax = 0;
+  INTEGER4 unused = 0; // ParentZone is no longer used
+  INTEGER4 IsBlock = 1; // always set to 1
+  INTEGER4 NFConns = 0;
+  INTEGER4 FNMode = 0;
+  INTEGER4 TotalNumFaceNodes = 1;
+  INTEGER4 TotalNumBndryFaces = 1;
+  INTEGER4 TotalNumBndryConnections = 1;
+  INTEGER4 ShrConn = 0;
+  INTEGER4 IMax = file.row_size;
+  INTEGER4 JMax = (file.n_dim >= 2) ? file.row_size : 1;
+  INTEGER4 KMax = (file.n_dim >= 3) ? file.row_size : 1;
+
+  INTEGER4 ZoneType = 0; // 0 indicates ordered
+  TECZNE142(("zone " + std::to_string(file.i_zone)).c_str(),
+            &ZoneType, &IMax, &JMax, &KMax, &ICellMax, &JCellMax, &KCellMax, &file.time, &file.strand_id,
+            &unused, &IsBlock, &NFConns, &FNMode, &TotalNumFaceNodes, &TotalNumBndryFaces,
+            &TotalNumBndryConnections, NULL, NULL, NULL, &ShrConn); // initialize new zone
+  ++file.strand_id; // next zone will be on next time strand
+  ++file.i_zone; // next zone will be named with next number
+}
+
 }

@@ -87,7 +87,8 @@ void Grid::visualize_qpoints(std::string file_name)
   {
     std::vector<double> pos = get_pos(i_elem);
     double* state = element(i_elem).stage(0);
-    file.write_block(pos.data(), state);
+    Tecplot_file::Structured_block zone {file};
+    zone.write(pos.data(), state);
   }
 }
 
@@ -159,7 +160,8 @@ void Grid::visualize_interior(std::string file_name, int n_sample)
       Eigen::Map<Eigen::VectorXd> var (state + i_var*n_qpoint, n_qpoint);
       interp_state.segment(i_var*n_block, n_block) = custom_math::hypercube_matvec(interp, var);
     }
-    file.write_block(interp_pos.data(), interp_state.data());
+    Tecplot_file::Structured_block zone {file};
+    zone.write(interp_pos.data(), interp_state.data());
   }
 }
 

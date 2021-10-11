@@ -22,11 +22,12 @@ class Tecplot_file
   {
     protected:
     Tecplot_file& file;
+    int n_nodes;
     public:
     Zone(Tecplot_file&);
     Zone(const Zone& other) = delete;
     Zone& operator=(const Zone& other) = delete;
-    virtual ~Zone();
+    virtual ~Zone() = default;
     virtual void write(double* pos, double* vars);
   };
   class Structured_block : public Zone
