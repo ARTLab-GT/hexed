@@ -102,27 +102,35 @@ void Grid::visualize_edges(std::string file_name, int n_sample)
     std::vector<double> pos = get_pos(i_elem);
     const int n_corners {custom_math::pow(2, n_dim - 1)};
     const int nfqpoint = n_qpoint/basis.row_size;
-    Eigen::MatrixXd edge_pos {n_sample, n_corners*n_dim};
-    for (int j_dim = 0; j_dim < n_dim; ++j_dim)
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim)
     {
-      Eigen::MatrixXd edge_qpoints {basis.row_size, n_corners};
-      for (int i_qpoint = 0; i_qpoint < basis.row_size; ++i_qpoint)
+      const int stride {custom_math::pow(basis.row_size, n_dim - 1 - i_dim)};
+      const int n_outer {n_qpoint/stride/basis.row_size};
+      Eigen::MatrixXd edge_pos {n_sample, n_corners*n_dim};
+      for (int j_dim = 0; j_dim < n_dim; ++j_dim)
       {
-        Eigen::VectorXd qpoint_slab {nfqpoint};
-        for (int i_fqpoint = 0; i_fqpoint < nfqpoint; ++i_fqpoint)
+        Eigen::MatrixXd edge_qpoints {basis.row_size, n_corners};
+        for (int i_qpoint = 0; i_qpoint < basis.row_size; ++i_qpoint)
         {
-          qpoint_slab[i_fqpoint] = pos[j_dim*n_qpoint + i_qpoint*nfqpoint + i_fqpoint];
+          Eigen::VectorXd qpoint_slab {nfqpoint};
+          for (int i_outer = 0; i_outer < n_outer; ++i_outer)
+          {
+            for (int i_inner = 0; i_inner < stride; ++i_inner)
+            {
+              qpoint_slab[i_outer*stride + i_inner] = pos[j_dim*n_qpoint + i_qpoint*stride + i_outer*stride*basis.row_size + i_inner];
+            }
+          }
+          edge_qpoints.row(i_qpoint) = custom_math::hypercube_matvec(boundary, qpoint_slab);
         }
-        edge_qpoints.row(i_qpoint) = custom_math::hypercube_matvec(boundary, qpoint_slab);
+        for (int i_corner = 0; i_corner < n_corners; ++i_corner)
+        {
+          edge_pos.col(i_corner*n_dim + j_dim) = interp*edge_qpoints.col(i_corner);
+        }
       }
       for (int i_corner = 0; i_corner < n_corners; ++i_corner)
       {
-        edge_pos.col(i_corner*n_dim + j_dim) = interp*edge_qpoints.col(i_corner);
+        file.write_line_segment(edge_pos.data() + i_corner*n_dim*n_sample, nullptr);
       }
-    }
-    for (int i_corner = 0; i_corner < n_corners; ++i_corner)
-    {
-      file.write_line_segment(edge_pos.data() + i_corner*n_dim*n_sample, nullptr);
     }
   }
 }
