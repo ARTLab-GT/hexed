@@ -2,6 +2,7 @@
 
 #include <Grid.hpp>
 #include <math.hpp>
+#include <Tecplot_file.hpp>
 
 namespace cartdg
 {
@@ -76,6 +77,46 @@ double Grid::get_stable_cfl()
   else
   {
     throw std::runtime_error("Stable CFL number unknown for basis of desired row_size.");
+  }
+}
+
+void Grid::visualize_qpoints(std::string file_name)
+{
+  Tecplot_file file {annotate(file_name) + "_qpoints", n_dim, n_var, basis.row_size, time};
+  for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+  {
+    std::vector<double> pos = get_pos(i_elem);
+    double* state = element(i_elem).stage(0);
+    file.write_block(pos.data(), state);
+  }
+}
+
+void Grid::visualize_edges(std::string file_name)
+{
+}
+
+void Grid::visualize_interior(std::string file_name, int n_sample)
+{
+  Tecplot_file file {annotate(file_name) + "_interior", n_dim, n_var, n_sample, time};
+  Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
+  const int n_block {custom_math::pow(n_sample, n_dim)};
+  for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+  {
+    std::vector<double> pos = get_pos(i_elem);
+    Eigen::VectorXd interp_pos {n_block*n_dim};
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+    {
+      Eigen::Map<Eigen::VectorXd> qpoint_pos (pos.data() + i_dim*n_qpoint, n_qpoint);
+      interp_pos.segment(i_dim*n_block, n_block) = custom_math::hypercube_matvec(interp, qpoint_pos);
+    }
+    double* state = element(i_elem).stage(0);
+    Eigen::VectorXd interp_state {n_block*n_var};
+    for (int i_var = 0; i_var < n_var; ++i_var)
+    {
+      Eigen::Map<Eigen::VectorXd> var (state + i_var*n_qpoint, n_qpoint);
+      interp_state.segment(i_var*n_block, n_block) = custom_math::hypercube_matvec(interp, var);
+    }
+    file.write_block(interp_pos.data(), interp_state.data());
   }
 }
 
