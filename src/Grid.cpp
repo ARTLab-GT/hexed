@@ -93,16 +93,38 @@ void Grid::visualize_qpoints(std::string file_name)
 
 void Grid::visualize_edges(std::string file_name, int n_sample)
 {
+  if (n_dim == 1) return; // 1D elements don't really have edges
   Tecplot_file file {annotate(file_name) + "_edges", n_dim, 0, n_sample, time};
-  Eigen::VectorXd made_up {n_dim*n_sample};
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+  Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
+  Eigen::MatrixXd boundary {basis.boundary()};
+  for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
-    Eigen::VectorXd temp {Eigen::VectorXd::LinSpaced(n_sample, 0, 1)};
-    for (int j_dim = 0; j_dim < i_dim; ++j_dim) temp.array() *= temp.array();
-    made_up.segment(i_dim*n_sample, n_sample) = temp;
+    std::vector<double> pos = get_pos(i_elem);
+    const int n_corners {custom_math::pow(2, n_dim - 1)};
+    const int nfqpoint = n_qpoint/basis.row_size;
+    Eigen::MatrixXd edge_pos {n_sample, n_corners*n_dim};
+    for (int j_dim = 0; j_dim < n_dim; ++j_dim)
+    {
+      Eigen::MatrixXd edge_qpoints {basis.row_size, n_corners};
+      for (int i_qpoint = 0; i_qpoint < basis.row_size; ++i_qpoint)
+      {
+        Eigen::VectorXd qpoint_slab {nfqpoint};
+        for (int i_fqpoint = 0; i_fqpoint < nfqpoint; ++i_fqpoint)
+        {
+          qpoint_slab[i_fqpoint] = pos[j_dim*n_qpoint + i_qpoint*nfqpoint + i_fqpoint];
+        }
+        edge_qpoints.row(i_qpoint) = custom_math::hypercube_matvec(boundary, qpoint_slab);
+      }
+      for (int i_corner = 0; i_corner < n_corners; ++i_corner)
+      {
+        edge_pos.col(i_corner*n_dim + j_dim) = interp*edge_qpoints.col(i_corner);
+      }
+    }
+    for (int i_corner = 0; i_corner < n_corners; ++i_corner)
+    {
+      file.write_line_segment(edge_pos.data() + i_corner*n_dim*n_sample, nullptr);
+    }
   }
-  double not_used;
-  file.write_line_segment(made_up.data(), &not_used);
 }
 
 void Grid::visualize_interior(std::string file_name, int n_sample)
