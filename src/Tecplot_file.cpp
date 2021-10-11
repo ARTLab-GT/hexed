@@ -7,10 +7,15 @@
 namespace cartdg
 {
 
+int Tecplot_file::n_instances {0};
+
 Tecplot_file::Tecplot_file(std::string file_name, int n_dim, int n_var, int row_size, double time)
 : n_dim{n_dim}, n_var{n_var}, row_size{row_size}, n_qpoint{custom_math::pow(row_size, n_dim)},
   time{time}, strand_id{1}, i_zone{0}
 {
+  if (n_instances > 0) throw std::runtime_error("Attempt to create multiple `Tecplot_file`s at once, which is illegal.");
+  ++n_instances;
+
   INTEGER4 Debug = 0;
   INTEGER4 VIsDouble = 1;
   INTEGER4 FileType = 0;
@@ -31,6 +36,7 @@ Tecplot_file::Tecplot_file(std::string file_name, int n_dim, int n_var, int row_
 Tecplot_file::~Tecplot_file()
 {
   TECEND142(); // closes Tecplot file
+  --n_instances;
 }
 
 void Tecplot_file::write_block(double* pos, double* vars)

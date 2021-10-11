@@ -298,7 +298,11 @@ TEST_CASE("Sinusoidal density wave")
         initial[i_elem*grid.n_dof + i_dof] = stage[i_dof];
       }
     }
+    auto start = std::chrono::high_resolution_clock::now();
     sol.visualize("sinusoid_3d");
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start);
+    printf("time: %e s\n", double(duration.count())*1e-9);
 
     double dt = sol.update(cfl);
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)

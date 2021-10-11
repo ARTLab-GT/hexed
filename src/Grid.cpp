@@ -107,6 +107,7 @@ void Grid::visualize_edges(std::string file_name, int n_sample)
       const int stride {custom_math::pow(basis.row_size, n_dim - 1 - i_dim)};
       const int n_outer {n_qpoint/stride/basis.row_size};
       Eigen::MatrixXd edge_pos {n_sample, n_corners*n_dim};
+      #if 0
       for (int j_dim = 0; j_dim < n_dim; ++j_dim)
       {
         Eigen::MatrixXd edge_qpoints {basis.row_size, n_corners};
@@ -127,6 +128,8 @@ void Grid::visualize_edges(std::string file_name, int n_sample)
           edge_pos.col(i_corner*n_dim + j_dim) = interp*edge_qpoints.col(i_corner);
         }
       }
+      #endif
+      edge_pos = Eigen::MatrixXd::Zero(n_sample, n_corners*n_dim);
       for (int i_corner = 0; i_corner < n_corners; ++i_corner)
       {
         file.write_line_segment(edge_pos.data() + i_corner*n_dim*n_sample, nullptr);
