@@ -89,4 +89,48 @@ void Tecplot_file::write_block(double* pos, double* vars)
   TECDAT142(&size, vars, &DIsDouble);
 }
 
+void Tecplot_file::write_line_segment(double* pos, double* vars)
+{
+  INTEGER4 ZoneType {1};
+  INTEGER4 NumPoints {row_size};
+  INTEGER4 NumElements {row_size - 1};
+  INTEGER4 NumFaces {0};
+  INTEGER4 ICellMax {0};
+  INTEGER4 JCellMax {0};
+  INTEGER4 KCellMax {0};
+  INTEGER4 ParentZone {0};
+  INTEGER4 IsBlock {1};
+  INTEGER4 NumFaceConnections {0};
+  INTEGER4 FaceNeighborMode {0};
+  INTEGER4 TotalNumFaceNodes {0};
+  INTEGER4 NumConnectedBoundaryFaces {0};
+  INTEGER4 TotalNumBoundaryConnections {0};
+  INTEGER4* PassiveVarList {nullptr};
+  INTEGER4* ValueLocation {nullptr};
+  INTEGER4* SharVarFromZone {nullptr};
+  INTEGER4 ShareConnectivityFromZone {0};
+  TECZNE142(("zone " + std::to_string(i_zone)).c_str(),
+            &ZoneType, &NumPoints, &NumElements, &NumFaces, &ICellMax, &JCellMax,
+            &KCellMax, &time, &strand_id, &ParentZone, &IsBlock, &NumFaceConnections,
+            &FaceNeighborMode, &TotalNumFaceNodes, &NumConnectedBoundaryFaces,
+            &TotalNumBoundaryConnections, PassiveVarList, ValueLocation, SharVarFromZone,
+            &ShareConnectivityFromZone);
+  ++strand_id;
+  ++i_zone;
+
+  INTEGER4 IsDouble {1};
+  INTEGER4 size {n_dim*row_size};
+  TECDAT142(&size, pos, &IsDouble);
+  size = n_var*row_size;
+  TECDAT142(&size, vars, &IsDouble);
+
+  INTEGER4 node_inds [2*(row_size - 1)];
+  for (int i_elem = 0; i_elem < row_size - 1; ++i_elem)
+  {
+    node_inds[2*i_elem] = i_elem + 1;
+    node_inds[2*i_elem + 1] = i_elem + 2;
+  }
+  TECNOD142(node_inds);
+}
+
 }

@@ -91,8 +91,18 @@ void Grid::visualize_qpoints(std::string file_name)
   }
 }
 
-void Grid::visualize_edges(std::string file_name)
+void Grid::visualize_edges(std::string file_name, int n_sample)
 {
+  Tecplot_file file {annotate(file_name) + "_edges", n_dim, 0, n_sample, time};
+  Eigen::VectorXd made_up {n_dim*n_sample};
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+  {
+    Eigen::VectorXd temp {Eigen::VectorXd::LinSpaced(n_sample, 0, 1)};
+    for (int j_dim = 0; j_dim < i_dim; ++j_dim) temp.array() *= temp.array();
+    made_up.segment(i_dim*n_sample, n_sample) = temp;
+  }
+  double not_used;
+  file.write_line_segment(made_up.data(), &not_used);
 }
 
 void Grid::visualize_interior(std::string file_name, int n_sample)

@@ -20,7 +20,7 @@ class Tecplot_file
   Tecplot_file(std::string file_name, int n_dim, int n_var, int row_size, double time);
   ~Tecplot_file();
   void write_block(double* pos, double* vars);
-  void write_segment(double* pos, double* vars);
+  void write_line_segment(double* pos, double* vars);
 };
 
 }
