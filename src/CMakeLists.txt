@@ -15,5 +15,6 @@ Regular_grid.cpp
 Solution.cpp
 Spacetime_func.cpp
 Storage_params.cpp
+Tecplot_file.cpp
 Vertex.cpp
 )
