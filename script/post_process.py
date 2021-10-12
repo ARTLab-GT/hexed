@@ -1,7 +1,9 @@
 import tecplot
+import os
 
 tecplot.new_layout()
-
 frame = tecplot.active_frame()
-frame.add_text('Hello, World!', position=(36, 50), size=34)
-tecplot.export.save_png('hello_world.png', 600, supersample=3)
+files = os.listdir()
+files = [f for f in files if "_interior.szplt" in f]
+data = tecplot.data.load_tecplot_szl(files)
+tecplot.save_layout("foo.lay")
