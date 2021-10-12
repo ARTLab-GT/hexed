@@ -45,12 +45,6 @@ if(NOT DEFINED MAX_BASIS_ROW_SIZE)
 endif()
 execute_process(COMMAND python3 ${CMAKE_SOURCE_DIR}/script/auto_generate.py ${CMAKE_BINARY_DIR} ${MAX_BASIS_ROW_SIZE})
 
-# determine row_size of polynomial basis
-if(NOT DEFINED TECIO_DIR)
-   set(TECIO_DIR /opt/local/tecplot/360ex CACHE STRING
-       "Where to find TECIO (should contain directories bin, lib, and include)" FORCE)
-endif()
-
 # add a configure file to pass CMake variables to the code
 configure_file(cartdgConfig.hpp.in cartdgConfig.hpp)
 
@@ -58,10 +52,7 @@ configure_file(cartdgConfig.hpp.in cartdgConfig.hpp)
 add_library(cartdg SHARED)
 
 # add tecio as external library
-add_library(tecio SHARED IMPORTED)
-set_target_properties(tecio PROPERTIES IMPORTED_LOCATION ${TECIO_DIR}/bin/libtecio.so)
-target_include_directories(tecio INTERFACE ${TECIO_DIR}/include)
-target_link_libraries(cartdg PUBLIC tecio)
+target_link_libraries(cartdg PRIVATE tecio)
 
 # add automatically generated source files
 target_sources(cartdg PRIVATE ${CMAKE_BINARY_DIR}/Gauss_lobatto.cpp ${CMAKE_BINARY_DIR}/Gauss_legendre.cpp)
