@@ -39,54 +39,9 @@ Tecplot_file::~Tecplot_file()
   --n_instances;
 }
 
-void Tecplot_file::write_line_segment(double* pos, double* vars)
-{
-  INTEGER4 ZoneType {1}; // 1 indicates unstructured ("finite element", in Tecplot parlance) line segment
-  INTEGER4 NumPoints {row_size};
-  INTEGER4 NumElements {row_size - 1};
-  INTEGER4 NumFaces {0};
-  INTEGER4 ICellMax {0};
-  INTEGER4 JCellMax {0};
-  INTEGER4 KCellMax {0};
-  INTEGER4 ParentZone {0};
-  INTEGER4 IsBlock {1};
-  INTEGER4 NumFaceConnections {0};
-  INTEGER4 FaceNeighborMode {0};
-  INTEGER4 TotalNumFaceNodes {0};
-  INTEGER4 NumConnectedBoundaryFaces {0};
-  INTEGER4 TotalNumBoundaryConnections {0};
-  INTEGER4* PassiveVarList {nullptr};
-  INTEGER4* ValueLocation {nullptr};
-  INTEGER4* SharVarFromZone {nullptr};
-  INTEGER4 ShareConnectivityFromZone {0};
-  TECZNE142(("zone " + std::to_string(i_zone)).c_str(),
-            &ZoneType, &NumPoints, &NumElements, &NumFaces, &ICellMax, &JCellMax,
-            &KCellMax, &time, &strand_id, &ParentZone, &IsBlock, &NumFaceConnections,
-            &FaceNeighborMode, &TotalNumFaceNodes, &NumConnectedBoundaryFaces,
-            &TotalNumBoundaryConnections, PassiveVarList, ValueLocation, SharVarFromZone,
-            &ShareConnectivityFromZone); // initialize new zone
-  ++strand_id;
-  ++i_zone;
-
-  // write data
-  INTEGER4 IsDouble {1};
-  INTEGER4 size {n_dim*row_size};
-  TECDAT142(&size, pos, &IsDouble);
-  size = n_var*row_size;
-  TECDAT142(&size, vars, &IsDouble);
-
-  // define connections between nodes
-  INTEGER4 node_inds [2*(row_size - 1)];
-  for (int i_elem = 0; i_elem < row_size - 1; ++i_elem)
-  {
-    node_inds[2*i_elem] = i_elem + 1;
-    node_inds[2*i_elem + 1] = i_elem + 2;
-  }
-  TECNOD142(node_inds);
-}
-
-Tecplot_file::Zone::Zone(Tecplot_file& file) : file{file} {}
-
+Tecplot_file::Zone::Zone(Tecplot_file& file, std::string name_arg)
+: file{file}, name{name_arg + std::to_string(file.i_zone++)}
+{}
 
 void Tecplot_file::Zone::write(double* pos, double* vars)
 {
@@ -97,8 +52,8 @@ void Tecplot_file::Zone::write(double* pos, double* vars)
   TECDAT142(&size, vars, &IsDouble);
 }
 
-Tecplot_file::Structured_block::Structured_block(Tecplot_file& file)
-: Zone{file}
+Tecplot_file::Structured_block::Structured_block(Tecplot_file& file, std::string name_arg)
+: Zone{file, name_arg}
 {
   n_nodes = file.n_qpoint;
 
@@ -118,7 +73,7 @@ Tecplot_file::Structured_block::Structured_block(Tecplot_file& file)
   INTEGER4 KMax = (file.n_dim >= 3) ? file.row_size : 1;
 
   INTEGER4 ZoneType = 0; // 0 indicates ordered
-  TECZNE142(("zone " + std::to_string(file.i_zone)).c_str(),
+  TECZNE142(name.c_str(),
             &ZoneType, &IMax, &JMax, &KMax, &ICellMax, &JCellMax, &KCellMax, &file.time, &file.strand_id,
             &unused, &IsBlock, &NFConns, &FNMode, &TotalNumFaceNodes, &TotalNumBndryFaces,
             &TotalNumBndryConnections, NULL, NULL, NULL, &ShrConn); // initialize new zone
@@ -126,8 +81,8 @@ Tecplot_file::Structured_block::Structured_block(Tecplot_file& file)
   ++file.i_zone; // next zone will be named with next number
 }
 
-Tecplot_file::Line_segments::Line_segments(Tecplot_file& file, int n_segs)
-: Zone{file}, n_segs{n_segs}, i_seg{0}
+Tecplot_file::Line_segments::Line_segments(Tecplot_file& file, int n_segs, std::string name_arg)
+: Zone{file, name_arg}, n_segs{n_segs}, i_seg{0}
 {
   n_nodes = file.row_size*n_segs;
   pos_storage.resize(file.n_dim*n_nodes);
@@ -151,7 +106,7 @@ Tecplot_file::Line_segments::Line_segments(Tecplot_file& file, int n_segs)
   INTEGER4* ValueLocation {nullptr};
   INTEGER4* SharVarFromZone {nullptr};
   INTEGER4 ShareConnectivityFromZone {0};
-  TECZNE142(("zone " + std::to_string(file.i_zone)).c_str(),
+  TECZNE142(name.c_str(),
             &ZoneType, &NumPoints, &NumElements, &NumFaces, &ICellMax, &JCellMax,
             &KCellMax, &file.time, &file.strand_id, &ParentZone, &IsBlock, &NumFaceConnections,
             &FaceNeighborMode, &TotalNumFaceNodes, &NumConnectedBoundaryFaces,

@@ -87,7 +87,7 @@ void Grid::visualize_qpoints(std::string file_name)
   {
     std::vector<double> pos = get_pos(i_elem);
     double* state = element(i_elem).stage(0);
-    Tecplot_file::Structured_block zone {file};
+    Tecplot_file::Structured_block zone {file, "element_qpoints"};
     zone.write(pos.data(), state);
   }
 }
@@ -97,7 +97,7 @@ void Grid::visualize_edges(std::string file_name, int n_sample)
   if (n_dim == 1) return; // 1D elements don't really have edges
   Tecplot_file file {annotate(file_name) + "_edges", n_dim, 0, n_sample, time};
   const int n_corners {custom_math::pow(2, n_dim - 1)};
-  Tecplot_file::Line_segments zone {file, n_elem*n_dim*n_corners};
+  Tecplot_file::Line_segments zone {file, n_elem*n_dim*n_corners, "edges"};
   Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
   Eigen::MatrixXd boundary {basis.boundary()};
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
@@ -158,7 +158,7 @@ void Grid::visualize_interior(std::string file_name, int n_sample)
       Eigen::Map<Eigen::VectorXd> var (state + i_var*n_qpoint, n_qpoint);
       interp_state.segment(i_var*n_block, n_block) = custom_math::hypercube_matvec(interp, var);
     }
-    Tecplot_file::Structured_block zone {file};
+    Tecplot_file::Structured_block zone {file, "element_interior"};
     zone.write(interp_pos.data(), interp_state.data());
   }
 }

@@ -24,8 +24,9 @@ class Tecplot_file
     protected:
     Tecplot_file& file;
     int n_nodes;
+    std::string name;
     public:
-    Zone(Tecplot_file&);
+    Zone(Tecplot_file&, std::string name_arg);
     Zone(const Zone& other) = delete;
     Zone& operator=(const Zone& other) = delete;
     virtual ~Zone() = default;
@@ -34,7 +35,7 @@ class Tecplot_file
   class Structured_block : public Zone
   {
     public:
-    Structured_block(Tecplot_file&);
+    Structured_block(Tecplot_file&, std::string name_arg="block");
   };
   class Line_segments : public Zone
   {
@@ -43,7 +44,7 @@ class Tecplot_file
     std::vector<double> pos_storage;
     std::vector<double> var_storage;
     public:
-    Line_segments(Tecplot_file&, int n_segs);
+    Line_segments(Tecplot_file&, int n_segs, std::string name_arg="line_segments");
     virtual void write(double* pos, double* vars);
     virtual ~Line_segments();
   };
@@ -52,8 +53,6 @@ class Tecplot_file
   Tecplot_file(const Tecplot_file&) = delete; // at the moment, can't be more than one Tecplot_file at a time
   Tecplot_file& operator=(const Tecplot_file&) = delete;
   ~Tecplot_file();
-  void write_block(double* pos, double* vars);
-  void write_line_segment(double* pos, double* vars);
 };
 
 }
