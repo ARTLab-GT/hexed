@@ -2,6 +2,7 @@
 #define TECPLOT_FILE_HPP_
 
 #include <string>
+#include <vector>
 
 namespace cartdg
 {
@@ -37,10 +38,14 @@ class Tecplot_file
   };
   class Line_segments : public Zone
   {
+    int n_segs;
+    int i_seg;
+    std::vector<double> pos_storage;
+    std::vector<double> var_storage;
     public:
-    Line_segments(Tecplot_file&);
-    virtual ~Line_segments();
+    Line_segments(Tecplot_file&, int n_segs);
     virtual void write(double* pos, double* vars);
+    virtual ~Line_segments();
   };
 
   Tecplot_file(std::string file_name, int n_dim, int n_var, int row_size, double time);

@@ -96,19 +96,19 @@ void Grid::visualize_edges(std::string file_name, int n_sample)
 {
   if (n_dim == 1) return; // 1D elements don't really have edges
   Tecplot_file file {annotate(file_name) + "_edges", n_dim, 0, n_sample, time};
+  const int n_corners {custom_math::pow(2, n_dim - 1)};
+  Tecplot_file::Line_segments zone {file, n_elem*n_dim*n_corners};
   Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
   Eigen::MatrixXd boundary {basis.boundary()};
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
     std::vector<double> pos = get_pos(i_elem);
-    const int n_corners {custom_math::pow(2, n_dim - 1)};
     const int nfqpoint = n_qpoint/basis.row_size;
     for (int i_dim = 0; i_dim < n_dim; ++i_dim)
     {
       const int stride {custom_math::pow(basis.row_size, n_dim - 1 - i_dim)};
       const int n_outer {n_qpoint/stride/basis.row_size};
       Eigen::MatrixXd edge_pos {n_sample, n_corners*n_dim};
-      #if 0
       for (int j_dim = 0; j_dim < n_dim; ++j_dim)
       {
         Eigen::MatrixXd edge_qpoints {basis.row_size, n_corners};
@@ -129,11 +129,9 @@ void Grid::visualize_edges(std::string file_name, int n_sample)
           edge_pos.col(i_corner*n_dim + j_dim) = interp*edge_qpoints.col(i_corner);
         }
       }
-      #endif
-      edge_pos = Eigen::MatrixXd::Zero(n_sample, n_corners*n_dim);
       for (int i_corner = 0; i_corner < n_corners; ++i_corner)
       {
-        file.write_line_segment(edge_pos.data() + i_corner*n_dim*n_sample, nullptr);
+        zone.write(edge_pos.data() + i_corner*n_dim*n_sample, nullptr);
       }
     }
   }

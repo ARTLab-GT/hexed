@@ -17,9 +17,9 @@ void Solution::visualize(std::string file_prefix)
   for (Grid* grid : all_grids())
   {
     snprintf(buffer, 100, "%s_%.2e_%.2e", file_prefix.c_str(), grid->mesh_size, grid->time);
-    grid->visualize_qpoints(std::string(buffer));
+    //grid->visualize_qpoints(std::string(buffer));
     grid->visualize_edges(std::string(buffer));
-    grid->visualize_interior(std::string(buffer));
+    //grid->visualize_interior(std::string(buffer));
   }
 }
 
