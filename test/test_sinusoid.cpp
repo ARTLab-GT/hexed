@@ -298,7 +298,6 @@ TEST_CASE("Sinusoidal density wave")
         initial[i_elem*grid.n_dof + i_dof] = stage[i_dof];
       }
     }
-    sol.visualize("sinusoid_3d");
 
     double dt = sol.update(cfl);
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
