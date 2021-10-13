@@ -17,10 +17,10 @@ void Solution::visualize(std::string file_prefix)
 {
   char buffer [100];
   snprintf(buffer, 100, "%s_%.2e", file_prefix.c_str(), time);
-  Tecplot_file file {buffer, n_dim, n_var, basis.row_size, time};
+  Tecplot_file file {buffer, n_dim, n_var, time};
   for (Grid* grid : all_grids())
   {
-    grid->visualize_qpoints (std::string(buffer), file);
+    //grid->visualize_qpoints (std::string(buffer), file);
     grid->visualize_edges   (std::string(buffer), file);
     grid->visualize_interior(std::string(buffer), file);
   }

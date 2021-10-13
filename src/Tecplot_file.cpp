@@ -9,9 +9,8 @@ namespace cartdg
 
 int Tecplot_file::n_instances {0};
 
-Tecplot_file::Tecplot_file(std::string file_name, int n_dim, int n_var, int row_size, double time)
-: n_dim{n_dim}, n_var{n_var}, row_size{row_size}, n_qpoint{custom_math::pow(row_size, n_dim)},
-  time{time}, strand_id{1}, i_zone{0}
+Tecplot_file::Tecplot_file(std::string file_name, int n_dim, int n_var, double time)
+: n_dim{n_dim}, n_var{n_var}, time{time}, strand_id{1}, i_zone{0}
 {
   if (n_instances > 0) throw std::runtime_error("Attempt to create multiple `Tecplot_file`s at once, which is illegal.");
   ++n_instances;
@@ -39,8 +38,8 @@ Tecplot_file::~Tecplot_file()
   --n_instances;
 }
 
-Tecplot_file::Zone::Zone(Tecplot_file& file, std::string name_arg)
-: file{file}, name{name_arg + std::to_string(file.i_zone++)}
+Tecplot_file::Zone::Zone(Tecplot_file& file, int n_nodes, std::string name_arg)
+: file{file}, name{name_arg + std::to_string(file.i_zone++)}, n_nodes{n_nodes}
 {}
 
 void Tecplot_file::Zone::write(double* pos, double* vars)
@@ -52,11 +51,9 @@ void Tecplot_file::Zone::write(double* pos, double* vars)
   TECDAT142(&size, vars, &IsDouble);
 }
 
-Tecplot_file::Structured_block::Structured_block(Tecplot_file& file, std::string name_arg)
-: Zone{file, name_arg}
+Tecplot_file::Structured_block::Structured_block(Tecplot_file& file, int row_size, std::string name_arg)
+: Zone{file, custom_math::pow(row_size, file.n_dim), name_arg}
 {
-  n_nodes = file.n_qpoint;
-
   INTEGER4 ICellMax = 0;
   INTEGER4 JCellMax = 0;
   INTEGER4 KCellMax = 0;
@@ -68,9 +65,9 @@ Tecplot_file::Structured_block::Structured_block(Tecplot_file& file, std::string
   INTEGER4 TotalNumBndryFaces = 1;
   INTEGER4 TotalNumBndryConnections = 1;
   INTEGER4 ShrConn = 0;
-  INTEGER4 IMax = file.row_size;
-  INTEGER4 JMax = (file.n_dim >= 2) ? file.row_size : 1;
-  INTEGER4 KMax = (file.n_dim >= 3) ? file.row_size : 1;
+  INTEGER4 IMax = row_size;
+  INTEGER4 JMax = (file.n_dim >= 2) ? row_size : 1;
+  INTEGER4 KMax = (file.n_dim >= 3) ? row_size : 1;
 
   INTEGER4 ZoneType = 0; // 0 indicates ordered
   TECZNE142(name.c_str(),
@@ -81,16 +78,15 @@ Tecplot_file::Structured_block::Structured_block(Tecplot_file& file, std::string
   ++file.i_zone; // next zone will be named with next number
 }
 
-Tecplot_file::Line_segments::Line_segments(Tecplot_file& file, int n_segs, std::string name_arg)
-: Zone{file, name_arg}, n_segs{n_segs}, i_seg{0}
+Tecplot_file::Line_segments::Line_segments(Tecplot_file& file, int n_segs, int row_size, std::string name_arg)
+: Zone{file, row_size*n_segs, name_arg}, n_segs{n_segs}, row_size{row_size}, i_seg{0}
 {
-  n_nodes = file.row_size*n_segs;
   pos_storage.resize(file.n_dim*n_nodes);
   var_storage.resize(file.n_var*n_nodes);
 
   INTEGER4 ZoneType {1}; // 1 indicates unstructured ("finite element", in Tecplot parlance) line segment
   INTEGER4 NumPoints {n_nodes};
-  INTEGER4 NumElements {(file.row_size - 1)*n_segs};
+  INTEGER4 NumElements {(row_size - 1)*n_segs};
   INTEGER4 NumFaces {0};
   INTEGER4 ICellMax {0};
   INTEGER4 JCellMax {0};
@@ -118,15 +114,15 @@ Tecplot_file::Line_segments::Line_segments(Tecplot_file& file, int n_segs, std::
 
 void Tecplot_file::Line_segments::write(double* pos, double* vars)
 {
-  for (int i_node = 0; i_node < file.row_size; ++i_node)
+  for (int i_node = 0; i_node < row_size; ++i_node)
   {
     for (int i_dim = 0; i_dim < file.n_dim; ++i_dim)
     {
-      pos_storage[(n_segs*i_dim + i_seg)*file.row_size + i_node] = pos[i_dim*file.row_size + i_node];
+      pos_storage[(n_segs*i_dim + i_seg)*row_size + i_node] = pos[i_dim*row_size + i_node];
     }
     for (int i_var = 0; i_var < file.n_var; ++i_var)
     {
-      var_storage[(n_segs*i_var + i_seg)*file.row_size + i_node] = vars[i_var*file.row_size + i_node];
+      var_storage[(n_segs*i_var + i_seg)*row_size + i_node] = vars[i_var*row_size + i_node];
     }
   }
   ++i_seg;
@@ -138,10 +134,10 @@ Tecplot_file::Line_segments::~Line_segments()
   std::vector<INTEGER4> inds;
   for (int i_seg = 0; i_seg < n_segs; ++i_seg)
   {
-    for (int i_elem = 0; i_elem < file.row_size - 1; ++i_elem)
+    for (int i_elem = 0; i_elem < row_size - 1; ++i_elem)
     {
-      inds.push_back(file.row_size*i_seg + i_elem + 1);
-      inds.push_back(file.row_size*i_seg + i_elem + 2);
+      inds.push_back(row_size*i_seg + i_elem + 1);
+      inds.push_back(row_size*i_seg + i_elem + 2);
     }
   }
   TECNOD142(inds.data());
