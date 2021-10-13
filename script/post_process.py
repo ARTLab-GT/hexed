@@ -1,11 +1,17 @@
 import tecplot
 import os
+import sys
 
 # basic plot setup
 tecplot.new_layout()
 frame = tecplot.active_frame()
-files = os.listdir()
+if len(sys.argv) <= 1:
+    work_dir = "."
+else:
+    work_dir = sys.argv[1]
+files = os.listdir(work_dir)
 files = [f for f in files if ".szplt" in f]
+raise Exception("No `.szplt` files found in specified directory.")
 data = tecplot.data.load_tecplot_szl(files)
 variable_names = frame.dataset.variable_names
 n_dim = len([var for var in variable_names if "pos" in var])
@@ -61,4 +67,4 @@ if n_dim >= 2:
 if n_dim >= 3:
     plot.vector.w_variable = data.variable("velocity2")
 
-tecplot.save_layout("all.lay")
+tecplot.save_layout(f"{work_dir}/all.lay")
