@@ -18,7 +18,7 @@ else:
 plot = frame.plot(plot_type)
 plot.activate()
 
-# configure Zone Style
+# Zone Style
 for fieldmap in plot.active_fieldmaps:
     for zone in fieldmap.zones:
         fm = plot.fieldmap(zone)
@@ -34,7 +34,7 @@ for fieldmap in plot.active_fieldmaps:
             fm.contour.show = False
             fm.edge.show = False
 
-# compute new variables
+# new variables
 heat_rat = 1.4
 gas_const = 287.058
 equations = ""
@@ -48,6 +48,17 @@ equations += f"""
 {{density}} = {{state{n_dim}}}
 {{pressure}} = ({{state{n_dim + 1}}} - 0.5*{{density}}*{{velocity_magnitude}}**2)*{heat_rat - 1}
 """[1:]
+equations += f"""
+{{temperature}} = {{pressure}}/({{density}}*{gas_const})
+{{sound_speed}} = ({heat_rat}*{{pressure}}*{{density}})**0.5
+"""[1:]
+equations += "{mach} = {velocity_magnitude}/{sound_speed}\n"
 tecplot.data.operate.execute_equation(equations, ignore_divide_by_zero=True)
+plot.contour(0).variable = data.variable("mach")
+if n_dim >= 2:
+    plot.vector.u_variable = data.variable("velocity0")
+    plot.vector.v_variable = data.variable("velocity1")
+if n_dim >= 3:
+    plot.vector.w_variable = data.variable("velocity2")
 
 tecplot.save_layout("all.lay")
