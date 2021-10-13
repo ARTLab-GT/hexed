@@ -20,7 +20,7 @@ void Solution::visualize(std::string file_prefix)
   Tecplot_file file {buffer, n_dim, n_var, time};
   for (Grid* grid : all_grids())
   {
-    //grid->visualize_qpoints (std::string(buffer), file);
+    grid->visualize_qpoints (std::string(buffer), file);
     grid->visualize_edges   (std::string(buffer), file);
     grid->visualize_interior(std::string(buffer), file);
   }
