@@ -1,5 +1,5 @@
 #include <limits>
-#include <iostream>
+#include <cstdlib>
 
 #include <Solution.hpp>
 #include <Tecplot_file.hpp>
@@ -13,16 +13,18 @@ Solution::Solution(int n_var_arg, int n_dim_arg, int row_size_arg, double bms)
 
 Solution::~Solution() {}
 
-void Solution::visualize(std::string file_prefix)
+void Solution::visualize(std::string name)
 {
   char buffer [100];
-  snprintf(buffer, 100, "%s_%.2e", file_prefix.c_str(), time);
+  snprintf(buffer, 100, "mkdir %s", name.c_str());
+  std::system(buffer);
+  snprintf(buffer, 100, "%s/time%.2e", name.c_str(), time);
   Tecplot_file file {buffer, n_dim, n_var, time};
   for (Grid* grid : all_grids())
   {
-    grid->visualize_qpoints (std::string(buffer), file);
-    grid->visualize_edges   (std::string(buffer), file);
-    grid->visualize_interior(std::string(buffer), file);
+    grid->visualize_qpoints (file);
+    grid->visualize_edges   (file);
+    grid->visualize_interior(file);
   }
 }
 

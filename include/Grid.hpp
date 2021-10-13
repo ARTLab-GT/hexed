@@ -60,9 +60,9 @@ class Grid
   virtual int add_element(std::vector<int> position);
 
   // diagnostic
-  void visualize_qpoints(std::string file_name, Tecplot_file&);
-  void visualize_edges(std::string file_name, Tecplot_file&, int n_sample = 30);
-  void visualize_interior(std::string file_name, Tecplot_file&, int n_sample = 20);
+  void visualize_qpoints (Tecplot_file&);
+  void visualize_edges   (Tecplot_file&, int n_sample = 30);
+  void visualize_interior(Tecplot_file&, int n_sample = 20);
   void print();
   std::vector<double> integral();
   std::vector<double> integral(Domain_func& integrand);

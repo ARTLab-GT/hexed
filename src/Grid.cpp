@@ -80,7 +80,7 @@ double Grid::get_stable_cfl()
   }
 }
 
-void Grid::visualize_qpoints(std::string file_name, Tecplot_file& file)
+void Grid::visualize_qpoints(Tecplot_file& file)
 {
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
@@ -91,7 +91,7 @@ void Grid::visualize_qpoints(std::string file_name, Tecplot_file& file)
   }
 }
 
-void Grid::visualize_edges(std::string file_name, Tecplot_file& file, int n_sample)
+void Grid::visualize_edges(Tecplot_file& file, int n_sample)
 {
   if (n_dim == 1) return; // 1D elements don't really have edges
   const int n_corners {custom_math::pow(2, n_dim - 1)};
@@ -145,7 +145,7 @@ void Grid::visualize_edges(std::string file_name, Tecplot_file& file, int n_samp
   }
 }
 
-void Grid::visualize_interior(std::string file_name, Tecplot_file& file, int n_sample)
+void Grid::visualize_interior(Tecplot_file& file, int n_sample)
 {
   Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
   const int n_block {custom_math::pow(n_sample, n_dim)};
