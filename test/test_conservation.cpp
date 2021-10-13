@@ -56,10 +56,10 @@ TEST_CASE("Conservation of state variables")
         initial[i_elem*grid.n_dof + i_dof] = stage[i_dof];
       }
     }
-    grid.visualize_qpoints("conservation_1d");
+    sol.visualize("conservation_1d");
 
     double dt = sol.update();
-    grid.visualize_qpoints("conservation_final");
+    sol.visualize("conservation_1d_final");
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
       double* stage = grid.element(i_elem).stage(0);
@@ -68,7 +68,7 @@ TEST_CASE("Conservation of state variables")
         stage[i_dof] -= initial[i_elem*grid.n_dof + i_dof];
       }
     }
-    grid.visualize_qpoints("conservation_diff");
+    sol.visualize("conservation_diff");
     auto integral = grid.integral();
     for (int i_var = 0; i_var < grid.n_var; ++i_var)
     {
@@ -99,7 +99,7 @@ TEST_CASE("Conservation of state variables")
         initial[i_elem*grid.n_dof + i_dof] = stage[i_dof];
       }
     }
-    grid.visualize_qpoints("conservation_2d");
+    sol.visualize("conservation_2d");
 
     double dt = sol.update();
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
@@ -252,7 +252,7 @@ TEST_CASE("Conservation of state variables")
         initial[i_elem*grid.n_dof + i_dof] = stage[i_dof];
       }
     }
-    grid.visualize_qpoints("conservation_3d");
+    sol.visualize("conservation_3d");
 
     double dt = sol.update();
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)

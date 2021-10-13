@@ -80,9 +80,8 @@ double Grid::get_stable_cfl()
   }
 }
 
-void Grid::visualize_qpoints(std::string file_name)
+void Grid::visualize_qpoints(std::string file_name, Tecplot_file& file)
 {
-  Tecplot_file file {annotate(file_name) + "_qpoints", n_dim, n_var, basis.row_size, time};
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
     std::vector<double> pos = get_pos(i_elem);
@@ -92,10 +91,9 @@ void Grid::visualize_qpoints(std::string file_name)
   }
 }
 
-void Grid::visualize_edges(std::string file_name, int n_sample)
+void Grid::visualize_edges(std::string file_name, Tecplot_file& file, int n_sample)
 {
   if (n_dim == 1) return; // 1D elements don't really have edges
-  Tecplot_file file {annotate(file_name) + "_edges", n_dim, n_var, n_sample, time};
   const int n_corners {custom_math::pow(2, n_dim - 1)};
   Tecplot_file::Line_segments zone {file, n_elem*n_dim*n_corners, "edges"};
   Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
@@ -147,9 +145,8 @@ void Grid::visualize_edges(std::string file_name, int n_sample)
   }
 }
 
-void Grid::visualize_interior(std::string file_name, int n_sample)
+void Grid::visualize_interior(std::string file_name, Tecplot_file& file, int n_sample)
 {
-  Tecplot_file file {annotate(file_name) + "_interior", n_dim, n_var, n_sample, time};
   Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
   const int n_block {custom_math::pow(n_sample, n_dim)};
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
@@ -246,11 +243,6 @@ std::vector<double> Grid::integral(Domain_func& integrand)
     }
   }
   return total;
-}
-
-std::string Grid::annotate(std::string file_name)
-{
-  return file_name;
 }
 
 }

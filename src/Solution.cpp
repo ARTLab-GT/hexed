@@ -2,24 +2,27 @@
 #include <iostream>
 
 #include <Solution.hpp>
+#include <Tecplot_file.hpp>
 
 namespace cartdg
 {
 
 Solution::Solution(int n_var_arg, int n_dim_arg, int row_size_arg, double bms)
-: n_var(n_var_arg), n_dim(n_dim_arg), base_mesh_size(bms), basis(row_size_arg) {}
+: n_var(n_var_arg), n_dim(n_dim_arg), base_mesh_size(bms), basis(row_size_arg), time(0.)
+{}
 
 Solution::~Solution() {}
 
 void Solution::visualize(std::string file_prefix)
 {
   char buffer [100];
+  snprintf(buffer, 100, "%s_%.2e", file_prefix.c_str(), time);
+  Tecplot_file file {buffer, n_dim, n_var, basis.row_size, time};
   for (Grid* grid : all_grids())
   {
-    snprintf(buffer, 100, "%s_%.2e_%.2e", file_prefix.c_str(), grid->mesh_size, grid->time);
-    grid->visualize_qpoints(std::string(buffer));
-    grid->visualize_edges(std::string(buffer));
-    grid->visualize_interior(std::string(buffer));
+    grid->visualize_qpoints (std::string(buffer), file);
+    grid->visualize_edges   (std::string(buffer), file);
+    grid->visualize_interior(std::string(buffer), file);
   }
 }
 
@@ -193,9 +196,10 @@ double Solution::update(double cfl_by_stable_cfl)
     }
   }
   #endif
+  time += dt;
   for (Grid* grid : all_grids())
   {
-    grid->time += dt;
+    grid->time = time;
   }
   return dt;
 }

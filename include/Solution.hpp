@@ -44,6 +44,7 @@ class Solution
   void auto_connect();
 
   protected:
+  double time;
   double refined_mesh_size(int ref_level);
 };
 

@@ -15,6 +15,8 @@
 namespace cartdg
 {
 
+class Tecplot_file;
+
 class Grid
 {
   public:
@@ -58,9 +60,9 @@ class Grid
   virtual int add_element(std::vector<int> position);
 
   // diagnostic
-  void visualize_qpoints(std::string file_name);
-  void visualize_edges(std::string file_name, int n_sample = 30);
-  void visualize_interior(std::string file_name, int n_sample = 20);
+  void visualize_qpoints(std::string file_name, Tecplot_file&);
+  void visualize_edges(std::string file_name, Tecplot_file&, int n_sample = 30);
+  void visualize_interior(std::string file_name, Tecplot_file&, int n_sample = 20);
   void print();
   std::vector<double> integral();
   std::vector<double> integral(Domain_func& integrand);
@@ -72,8 +74,6 @@ class Grid
   double rk_weights [3] {1., 1./4., 2./3.};
   double stable_cfl [9] {1.256, 0.409, 0.209, 0.130, 0.089, 0.066, 0.051, 0.040, 0.033};
   Storage_params storage_params;
-
-  virtual std::string annotate(std::string file_name);
 };
 
 }

@@ -126,13 +126,6 @@ TEST_CASE("Regular_grid")
     REQUIRE(pos[1024] == 0.2);
   }
 
-  SECTION("Visualization")
-  {
-    grid1.visualize_qpoints("unit_test_1d");
-    grid2.visualize_qpoints("unit_test_2d");
-    grid3.visualize_qpoints("unit_test_3d");
-  }
-
   SECTION("State integration")
   {
     cartdg::Gauss_lobatto basis (5);
