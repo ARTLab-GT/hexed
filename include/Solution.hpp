@@ -25,7 +25,7 @@ class Solution
   virtual ~Solution();
 
   // functions that access information
-  void visualize(std::string file_prefix);
+  void visualize(std::string name);
   std::vector<double> integral();
   std::vector<double> integral(Domain_func& integrand);
   std::vector<double> surface_integral(Domain_func& integrand);
@@ -44,6 +44,7 @@ class Solution
   void auto_connect();
 
   protected:
+  double time;
   double refined_mesh_size(int ref_level);
 };
 

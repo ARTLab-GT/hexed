@@ -2,10 +2,10 @@
 #define MATH_HPP_
 
 #include <cmath>
+#include <Eigen/Dense>
 
 namespace cartdg
 {
-
 namespace custom_math
 {
 
@@ -36,8 +36,8 @@ double root(Func_type func, double init_guess, double atol=1e-10, double init_di
   return guess;
 }
 
-}
+Eigen::VectorXd hypercube_matvec(const Eigen::MatrixXd&, const Eigen::VectorXd&);
 
 }
-
+}
 #endif

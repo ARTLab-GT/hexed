@@ -19,6 +19,7 @@ test_Regular_grid.cpp
 test_sinusoid.cpp
 test_Solution.cpp
 test_Storage_params.cpp
+test_Tecplot_file.cpp
 test_Vertex.cpp
 )
 target_include_directories(test PRIVATE ${CMAKE_SOURCE_DIR}/kernels)

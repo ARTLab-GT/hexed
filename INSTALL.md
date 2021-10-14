@@ -29,8 +29,15 @@ please discuss it so that this documentation can be improved.
   * `mkdir codes`
   * We need to tell the shell to look for libraries in `~/codes`. Edit `~/.bashrc` and add the following lines at the end:
     * `export PATH=$PATH:~/codes/bin`
-    * `export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:~/codes/include`
+    * `TECPLOT_DIR=/opt/local/tecplot/360ex`
+      * If you are not on an ARTLAB machine, change this path to match your Tecplot installation.
+    * `TECPLOT_LIB_PATH=$TECPLOT_DIR/bin/`
+    * `export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:~/codes/include/:$TECPLOT_DIR/include/`
+    * `export LIBRARY_PATH=$LIBRARY_PATH:$TECPLOT_LIB_PATH`
+    * `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$TECPLOT_LIB_PATH`
     * Close and reopen the terminal.
+2. Install PyTecplot (Tecplot's Python API):
+  * `pip3 install pytecplot`
 2. Install sympy (used by Cartdg to generate quadrature rules):
   * `pip3 install sympy`
 3. Install Catch2:

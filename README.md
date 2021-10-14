@@ -8,15 +8,15 @@ isotropic nature of the grid to produce concise and efficient code. It is design
 an accuracy boost, but it is meant to be encapsulated well enough that it can survive major changes to NASCART-GT or even be
 used with other similar codes.
 
-What CartDG is:
+CartDG is:
 * Fast.
 * Simple (relatively).
 * Capable of helping NASCART-GT do CFD with a state-of-the-art numerical scheme.
 
-What CartDG is not:
+CartDG is not:
 * A stand-alone CFD code.
 * A general framework for CFD on arbitrary grids.
-* Capable of solving equations other than those that govern the flow of fluids.
+* A solver for arbitrary PDEs.
 
 This document describes CartDG. For installation instructions, see [`INSTALL.md`](INSTALL.md).
 
@@ -40,43 +40,40 @@ code is sometimes written multiple times, but it gives the compiler maximal free
 All of these things are
 disasterous from a software engineering perspective, but have shown significant performance benefits. For the kernels
 I am willing to make this trade, but for the rest of the code I have priortized readability and modularity over performance.
-The speed of the kernels is measured by the script [`benchmark.py`](script/benchmark.py). The speed of the code as a whole when solving the
-isentropic vortex problem has shown good agreement with the measurements made by `benchmark.py`.
+The speed of the kernels is measured by the script [`benchmark.py`](script/benchmark.py). The speed of the code as a whole has shown good agreement with the measurements made by `benchmark.py`.
 
 ## Terminology and conventions
 I use the following nonstandard terms in the code:
-* "local" kernel - the kernel that calculates time derivatives based only on information within each element.
-* "neighbor" kernel - the kernel that calculates adjustments based on numerical flux at the intersection of (the closures
-   of) two elements.
-* At some point in the future I may begin using the term "parent" and "child" kernel to refer to kernels that restrict and
-  prolong the solution onto coarser or finer grids in a multigrid sense.
-* The "row size" of a basis is it's degree + 1 (i.e. the number of rows of quadrature points in each dimension, which is
-  equal to the number of coefficients in it's 1-D polynomial). It is usually more convenient to talk about the row size
+* "local" kernel - performs updates based on information stored in a single element.
+* "neighbor" kernel - the kernel that calculates adjustments based on numerical flux at the interface between two elements.
+* The "row size" of a basis is its degree + 1 (i.e. the number of rows of quadrature points in each dimension, which equals
+  the number of coefficients in the 1D case). It is usually more convenient to talk about the row size
   than the degree. The row size is not to be confused with the number of quadrature points, which depends on the
-  dimensionality. E.g. a 4th degree basis in 3 dimensions is of row size 5 and has 125 quadrature points.
+  dimensionality. E.g. a 4th degree basis in 3 dimensions has row size 5 and 125 quadrature points.
  
 ## Dependencies
 Eigen must be available in your include path. Tecio must be available in a directory that you may specify.
-Python3 must also be available, along with some common libraries.
+Catch2 must be available in a location that CMake can find.
+Python3 must also be available, along with the libraries NumPy, SymPy, and MatPlotLib.
  
 ## Features
 Currently implemented features:
 * Standard DG method.
-* Gauss-Lobatto nodal basis.
-* Isotropic, Cartesian cells connected in an arbitrary graph.
+* Gauss-Lobatto and Gauss-Legendre nodal bases.
+* Isotropic Cartesian and deformed quad/hex cells connected in an arbitrary graph.
 * 3-stage Runge-Kutta explicit time integration.
 * CFL-based time step selection.
 * Generation of structured grids for testing purposes.
 * Visualization with Tecplot.
-* Periodic boundary conditions.
+* Boundary conditions.
 * Integration with NASCART-GT.
-* Freestream boundary conditions.
  
 Planned or in-progress features (roughly in order of planned implementation):
-* Immersed boundary conditions (in progress).
+* Stability with immersed geometries (in progress).
 * Shock capturing (in progress).
 * Hanging-nodes.
-* Implicit and/or multigrid method.
+* Implicit method.
+* Viscous flows.
 
 ## Contributing
 Please do not push directly to `master`. Feel free to create and push new branches. Once you have something that
