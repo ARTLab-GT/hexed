@@ -10,8 +10,9 @@ if len(sys.argv) <= 1:
 else:
     work_dir = sys.argv[1]
 files = os.listdir(work_dir)
-files = [f for f in files if ".szplt" in f]
-raise Exception("No `.szplt` files found in specified directory.")
+files = [f"{work_dir}/{f}" for f in files if ".szplt" in f]
+if not files:
+    raise Exception("No `.szplt` files found in specified directory.")
 data = tecplot.data.load_tecplot_szl(files)
 variable_names = frame.dataset.variable_names
 n_dim = len([var for var in variable_names if "pos" in var])
@@ -25,20 +26,21 @@ plot = frame.plot(plot_type)
 plot.activate()
 
 # Zone Style
-for fieldmap in plot.active_fieldmaps:
-    for zone in fieldmap.zones:
-        fm = plot.fieldmap(zone)
-        if "qpoints" in zone.name:
-            fm.scatter.size = 1.
-            fm.scatter.symbol_type = tecplot.constant.SymbolType.Geometry
-            fm.scatter.symbol().shape = tecplot.constant.GeomShape.Diamond
-        else:
-            fm.scatter.show = False
-        if not ("edges" in zone.name):
-            fm.mesh.show = False
-        if not ("interior" in zone.name):
-            fm.contour.show = False
-            fm.edge.show = False
+if n_dim > 1:
+    for fieldmap in plot.active_fieldmaps:
+        for zone in fieldmap.zones:
+            fm = plot.fieldmap(zone)
+            if "qpoints" in zone.name:
+                fm.scatter.size = 1.
+                fm.scatter.symbol_type = tecplot.constant.SymbolType.Geometry
+                fm.scatter.symbol().shape = tecplot.constant.GeomShape.Diamond
+            else:
+                fm.scatter.show = False
+            if not ("edges" in zone.name):
+                fm.mesh.show = False
+            if not ("interior" in zone.name):
+                fm.contour.show = False
+                fm.edge.show = False
 
 # new variables
 heat_rat = 1.4
@@ -60,8 +62,8 @@ equations += f"""
 """[1:]
 equations += "{mach} = {velocity_magnitude}/{sound_speed}\n"
 tecplot.data.operate.execute_equation(equations, ignore_divide_by_zero=True)
-plot.contour(0).variable = data.variable("mach")
 if n_dim >= 2:
+    plot.contour(0).variable = data.variable("mach")
     plot.vector.u_variable = data.variable("velocity0")
     plot.vector.v_variable = data.variable("velocity1")
 if n_dim >= 3:
