@@ -84,6 +84,7 @@ file(CREATE_LINK ${CMAKE_SOURCE_DIR}/script/benchmark.py benchmark.py SYMBOLIC)
 install(TARGETS cartdg DESTINATION lib EXPORT cartdgTargets)
 install(DIRECTORY include/ DESTINATION include/cartdg)
 install(FILES ${CMAKE_BINARY_DIR}/cartdgConfig.hpp DESTINATION include/cartdg)
+install(PROGRAMS script/cartdg-post-process TYPE BIN)
 install(EXPORT cartdgTargets
         NAMESPACE cartdg::
         FILE cartdgTargets.cmake
