@@ -1,5 +1,5 @@
 #include <limits>
-#include <cstdlib>
+#include <sys/stat.h>
 
 #include <Solution.hpp>
 #include <Tecplot_file.hpp>
@@ -15,16 +15,17 @@ Solution::~Solution() {}
 
 void Solution::visualize(std::string name)
 {
+  mkdir(name.c_str(), 0700);
   char buffer [100];
-  snprintf(buffer, 100, "mkdir %s", name.c_str());
-  std::system(buffer);
-  snprintf(buffer, 100, "%s/time%.2e", name.c_str(), time);
   Tecplot_file file {buffer, n_dim, n_var, time};
   for (Grid* grid : all_grids())
   {
-    grid->visualize_qpoints (file);
-    grid->visualize_edges   (file);
-    grid->visualize_interior(file);
+    if (grid->n_elem > 0)
+    {
+      grid->visualize_qpoints (file);
+      grid->visualize_edges   (file);
+      grid->visualize_interior(file);
+    }
   }
 }
 
