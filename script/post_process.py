@@ -25,23 +25,6 @@ else:
 plot = frame.plot(plot_type)
 plot.activate()
 
-# Zone Style
-if n_dim > 1:
-    for fieldmap in plot.active_fieldmaps:
-        for zone in fieldmap.zones:
-            fm = plot.fieldmap(zone)
-            if "qpoints" in zone.name:
-                fm.scatter.size = 1.
-                fm.scatter.symbol_type = tecplot.constant.SymbolType.Geometry
-                fm.scatter.symbol().shape = tecplot.constant.GeomShape.Diamond
-            else:
-                fm.scatter.show = False
-            if not ("edges" in zone.name):
-                fm.mesh.show = False
-            if not ("interior" in zone.name):
-                fm.contour.show = False
-                fm.edge.show = False
-
 # new variables
 heat_rat = 1.4
 gas_const = 287.058
@@ -68,5 +51,39 @@ if n_dim >= 2:
     plot.vector.v_variable = data.variable("velocity1")
 if n_dim >= 3:
     plot.vector.w_variable = data.variable("velocity2")
+
+# Zone Style
+if n_dim > 1:
+    for fieldmap in plot.active_fieldmaps:
+        for zone in fieldmap.zones:
+            if "qpoints" in zone.name:
+                fieldmap.scatter.size = 1.
+                fieldmap.scatter.symbol_type = tecplot.constant.SymbolType.Geometry
+                fieldmap.scatter.symbol().shape = tecplot.constant.GeomShape.Diamond
+            else:
+                fieldmap.scatter.show = False
+            if not ("edges" in zone.name):
+                fieldmap.mesh.show = False
+            if not ("interior" in zone.name):
+                fieldmap.contour.show = False
+                fieldmap.edge.show = False
+else:
+    plot.delete_linemaps()
+    n_zones = data.num_zones
+    for i_zone in range(n_zones):
+        zone = data.zone(i_zone)
+        linemap = plot.add_linemap(zone=zone, x=data.variable("position0"), y=data.variable("mach"))
+        if "interior" in zone.name:
+            linemap.line.show = True
+        else:
+            linemap.line.show = False
+        if "qpoints" in zone.name:
+            linemap.symbols.show = True
+            linemap.symbols.symbol_type = tecplot.constant.SymbolType.Geometry
+            linemap.symbols.symbol().shape = tecplot.constant.GeomShape.Diamond
+            linemap.symbols.color = tecplot.constant.Color.Black
+        else:
+            linemap.symbols.show = False
+    plot.view.fit()
 
 tecplot.save_layout(f"{work_dir}/all.lay")
