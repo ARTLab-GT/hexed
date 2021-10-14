@@ -1,23 +1,31 @@
 #include <limits>
-#include <iostream>
+#include <sys/stat.h>
 
 #include <Solution.hpp>
+#include <Tecplot_file.hpp>
 
 namespace cartdg
 {
 
 Solution::Solution(int n_var_arg, int n_dim_arg, int row_size_arg, double bms)
-: n_var(n_var_arg), n_dim(n_dim_arg), base_mesh_size(bms), basis(row_size_arg) {}
+: n_var(n_var_arg), n_dim(n_dim_arg), base_mesh_size(bms), basis(row_size_arg), time(0.)
+{}
 
 Solution::~Solution() {}
 
-void Solution::visualize(std::string file_prefix)
+void Solution::visualize(std::string name)
 {
+  mkdir(name.c_str(), 0700);
   char buffer [100];
+  Tecplot_file file {buffer, n_dim, n_var, time};
   for (Grid* grid : all_grids())
   {
-    snprintf(buffer, 100, "%s_%.2e_%.2e", file_prefix.c_str(), grid->mesh_size, grid->time);
-    grid->visualize(std::string(buffer));
+    if (grid->n_elem > 0)
+    {
+      grid->visualize_qpoints (file);
+      grid->visualize_edges   (file);
+      grid->visualize_interior(file);
+    }
   }
 }
 
@@ -191,9 +199,10 @@ double Solution::update(double cfl_by_stable_cfl)
     }
   }
   #endif
+  time += dt;
   for (Grid* grid : all_grids())
   {
-    grid->time += dt;
+    grid->time = time;
   }
   return dt;
 }

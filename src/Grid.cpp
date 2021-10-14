@@ -2,6 +2,7 @@
 
 #include <Grid.hpp>
 #include <math.hpp>
+#include <Tecplot_file.hpp>
 
 namespace cartdg
 {
@@ -76,6 +77,96 @@ double Grid::get_stable_cfl()
   else
   {
     throw std::runtime_error("Stable CFL number unknown for basis of desired row_size.");
+  }
+}
+
+void Grid::visualize_qpoints(Tecplot_file& file)
+{
+  for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+  {
+    std::vector<double> pos = get_pos(i_elem);
+    double* state = element(i_elem).stage(0);
+    Tecplot_file::Structured_block zone {file, basis.row_size, "element_qpoints"};
+    zone.write(pos.data(), state);
+  }
+}
+
+void Grid::visualize_edges(Tecplot_file& file, int n_sample)
+{
+  if (n_dim == 1) return; // 1D elements don't really have edges
+  const int n_corners {custom_math::pow(2, n_dim - 1)};
+  Tecplot_file::Line_segments zone {file, n_elem*n_dim*n_corners, n_sample, "edges"};
+  Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
+  Eigen::MatrixXd boundary {basis.boundary()};
+  for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+  {
+    std::vector<double> pos = get_pos(i_elem);
+    double* state = element(i_elem).stage(0);
+    const int nfqpoint = n_qpoint/basis.row_size;
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+    {
+      const int stride {custom_math::pow(basis.row_size, n_dim - 1 - i_dim)};
+      const int n_outer {n_qpoint/stride/basis.row_size};
+
+      auto extract_edge = [=](double* data, int n)
+      {
+        Eigen::MatrixXd edge {n_sample, n_corners*n};
+        for (int i = 0; i < n; ++i)
+        {
+          Eigen::MatrixXd edge_qpoints {basis.row_size, n_corners};
+          for (int i_qpoint = 0; i_qpoint < basis.row_size; ++i_qpoint)
+          {
+            Eigen::VectorXd qpoint_slab {nfqpoint};
+            for (int i_outer = 0; i_outer < n_outer; ++i_outer)
+            {
+              for (int i_inner = 0; i_inner < stride; ++i_inner)
+              {
+                qpoint_slab[i_outer*stride + i_inner] = data[i*n_qpoint + i_qpoint*stride + i_outer*stride*basis.row_size + i_inner];
+              }
+            }
+            edge_qpoints.row(i_qpoint) = custom_math::hypercube_matvec(boundary, qpoint_slab);
+          }
+          for (int i_corner = 0; i_corner < n_corners; ++i_corner)
+          {
+            edge.col(i_corner*n + i) = interp*edge_qpoints.col(i_corner);
+          }
+        }
+        return edge;
+      };
+
+      Eigen::MatrixXd edge_pos {extract_edge(pos.data(), n_dim)};
+      Eigen::MatrixXd edge_state {extract_edge(state, n_var)};
+      for (int i_corner = 0; i_corner < n_corners; ++i_corner)
+      {
+        zone.write(  edge_pos.data() + i_corner*n_dim*n_sample,
+                   edge_state.data() + i_corner*n_var*n_sample);
+      }
+    }
+  }
+}
+
+void Grid::visualize_interior(Tecplot_file& file, int n_sample)
+{
+  Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
+  const int n_block {custom_math::pow(n_sample, n_dim)};
+  for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+  {
+    std::vector<double> pos = get_pos(i_elem);
+    Eigen::VectorXd interp_pos {n_block*n_dim};
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+    {
+      Eigen::Map<Eigen::VectorXd> qpoint_pos (pos.data() + i_dim*n_qpoint, n_qpoint);
+      interp_pos.segment(i_dim*n_block, n_block) = custom_math::hypercube_matvec(interp, qpoint_pos);
+    }
+    double* state = element(i_elem).stage(0);
+    Eigen::VectorXd interp_state {n_block*n_var};
+    for (int i_var = 0; i_var < n_var; ++i_var)
+    {
+      Eigen::Map<Eigen::VectorXd> var (state + i_var*n_qpoint, n_qpoint);
+      interp_state.segment(i_var*n_block, n_block) = custom_math::hypercube_matvec(interp, var);
+    }
+    Tecplot_file::Structured_block zone {file, n_sample, "element_interior"};
+    zone.write(interp_pos.data(), interp_state.data());
   }
 }
 

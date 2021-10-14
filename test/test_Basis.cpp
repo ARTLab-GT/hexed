@@ -124,3 +124,26 @@ TEST_CASE("Gauss_legendre Basis")
     test_boundary(GLe);
   }
 }
+
+TEST_CASE("interpolation")
+{
+  cartdg::Equidistant basis {5};
+  Eigen::VectorXd values {5};
+  for (int i = 0; i < 5; ++i) values[i] = std::pow(i/4., 3);
+  SECTION("large sample")
+  {
+    Eigen::VectorXd sample {{0, 0.5, 0.7, 0.16, 1.2, 0., 0.}};
+    Eigen::VectorXd interpolated = basis.interpolate(sample)*values;
+    REQUIRE(interpolated[0] == 0.);
+    REQUIRE(interpolated[1] == Approx(0.125));
+    REQUIRE(interpolated[2] == Approx(.7*.7*.7));
+    REQUIRE(interpolated[4] == Approx(1.2*1.2*1.2));
+    REQUIRE(interpolated[6] == 0.);
+  }
+  SECTION("small sample")
+  {
+    Eigen::VectorXd sample {{0.2}};
+    Eigen::VectorXd interpolated = basis.interpolate(sample)*values;
+    REQUIRE(interpolated[0] == Approx(.2*.2*.2));
+  }
+}
