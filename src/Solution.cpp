@@ -17,6 +17,7 @@ void Solution::visualize(std::string name)
 {
   mkdir(name.c_str(), 0700);
   char buffer [100];
+  snprintf(buffer, 100, "%s/time_%e", name.c_str(), time);
   Tecplot_file file {buffer, n_dim, n_var, time};
   for (Grid* grid : all_grids())
   {
