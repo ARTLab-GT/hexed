@@ -1,4 +1,5 @@
-#!/usr/bin/python3
+eval $(tec360-env) && /usr/bin/python3 -x "$0" "$@"
+# above line performs pytecplot-specific environment setup
 
 import tecplot
 import os
