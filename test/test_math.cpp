@@ -86,4 +86,24 @@ TEST_CASE("hypercube_matvec")
 
 TEST_CASE("orthonormal")
 {
+  SECTION("1D")
+  {
+    Eigen::Matrix<double, 1, 1> n_dim1 {-1.2};
+    REQUIRE(cartdg::custom_math::orthonormal(n_dim1, 0)(0, 0) == Approx(-1.));
+    n_dim1(0, 0) = 0.1;
+    REQUIRE(cartdg::custom_math::orthonormal(n_dim1, 0)(0, 0) == Approx(1.));
+  }
+  SECTION("2D")
+  {
+    Eigen::Matrix<double, 2, 2> n_dim2;
+    n_dim2 << -2., 0.3,
+               0., 0.4;
+    Eigen::Matrix<double, 2, 2> correct;
+    correct << -1., 0.,
+                0., 1.;
+    REQUIRE((cartdg::custom_math::orthonormal(n_dim2, 1) - correct).norm() == Approx(0.).scale(1.));
+    correct << -0.8, 0.6,
+                0.6, 0.8;
+    REQUIRE((cartdg::custom_math::orthonormal(n_dim2, 0) - correct).norm() == Approx(0.).scale(1.));
+  }
 }

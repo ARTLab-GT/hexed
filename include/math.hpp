@@ -51,7 +51,27 @@ template <int n_dim>
 Eigen::Matrix<double, n_dim, n_dim> orthonormal (const Eigen::Matrix<double, n_dim, n_dim>& basis, int i_dim)
 {
   static_assert (n_dim <= 3, "Not implemented for n_dim > 3.");
-  return Eigen::Matrix<double, n_dim, n_dim>::Zero();
+  if constexpr (n_dim == 1)
+  {
+    return basis/std::abs(basis(0, 0));
+  }
+  else
+  {
+    Eigen::Matrix<double, n_dim, n_dim> orth {basis};
+    auto col_i = orth.col(i_dim);
+    for (int offset = 1; offset < n_dim; ++offset)
+    {
+      auto col_j = orth.col((offset + i_dim)%n_dim);
+      col_j /= col_j.norm();
+    }
+    for (int offset = 1; offset < n_dim; ++offset)
+    {
+      auto col_j = orth.col((offset + i_dim)%n_dim);
+      col_i -= col_i.dot(col_j)*col_j;
+    }
+    col_i /= col_i.norm();
+    return orth;
+  }
 }
 
 }
