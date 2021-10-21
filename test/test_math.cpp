@@ -88,57 +88,57 @@ TEST_CASE("orthonormal")
 {
   SECTION("1D")
   {
-    Eigen::Matrix<double, 1, 1> n_dim1 {-1.2};
-    REQUIRE(cartdg::custom_math::orthonormal(n_dim1, 0)(0, 0) == Approx(-1.));
-    n_dim1(0, 0) = 0.1;
-    REQUIRE(cartdg::custom_math::orthonormal(n_dim1, 0)(0, 0) == Approx(1.));
+    Eigen::Matrix<double, 1, 1> basis {-1.2};
+    REQUIRE(cartdg::custom_math::orthonormal(basis, 0)(0, 0) == Approx(-1.));
+    basis(0, 0) = 0.1;
+    REQUIRE(cartdg::custom_math::orthonormal(basis, 0)(0, 0) == Approx(1.));
   }
   SECTION("2D")
   {
-    Eigen::Matrix2d n_dim2;
-    n_dim2 << -2., 0.3,
+    Eigen::Matrix2d basis;
+    basis << -2., 0.3,
                0., 0.4;
     Eigen::Matrix2d correct;
     correct << -1., 0.,
                 0., 1.;
-    REQUIRE((cartdg::custom_math::orthonormal(n_dim2, 1) - correct).norm() == Approx(0.).scale(1.));
+    REQUIRE((cartdg::custom_math::orthonormal(basis, 1) - correct).norm() == Approx(0.).scale(1.));
     correct << -0.8, 0.6,
                 0.6, 0.8;
-    REQUIRE((cartdg::custom_math::orthonormal(n_dim2, 0) - correct).norm() == Approx(0.).scale(1.));
+    REQUIRE((cartdg::custom_math::orthonormal(basis, 0) - correct).norm() == Approx(0.).scale(1.));
   }
   SECTION("3D")
   {
-    Eigen::Matrix3d n_dim3;
+    Eigen::Matrix3d basis;
     Eigen::Vector3d correct;
 
     // case where the answer can be computed by hand
     double degree = M_PI/180;
-    n_dim3 << std::cos(80*degree), std::cos(-20*degree), 0.1,
+    basis << std::cos(80*degree), std::cos(-20*degree), 0.1,
               std::sin(80*degree), std::sin(-20*degree), -100.,
                                0.,                   0.,  0.05;
-    Eigen::Matrix3d orth {cartdg::custom_math::orthonormal(n_dim3, 2)};
+    Eigen::Matrix3d orth {cartdg::custom_math::orthonormal(basis, 2)};
     correct << std::cos(75*degree), std::sin(75*degree), 0.;
     CHECK((orth.col(0) - correct).norm() == Approx(0.).scale(1.));
     correct << std::cos(-15*degree), std::sin(-15*degree), 0.;
     CHECK((orth.col(1) - correct).norm() == Approx(0.).scale(1.));
     correct << 0., 0., 1.;
-    CHECK((orth.col(1) - correct).norm() == Approx(0.).scale(1.));
+    CHECK((orth.col(2) - correct).norm() == Approx(0.).scale(1.));
 
     // test that if you mess with a unitary matrix in the right way, you get the original back
     Eigen::FullPivHouseholderQR<Eigen::Matrix3d> qr (Eigen::Matrix3d::Random());
     orth = qr.matrixQ();
-    n_dim3 = orth;
+    basis = orth;
     Eigen::Vector3d sum = orth.col(1) + orth.col(2);
-    orth.col(1) += 0.2*sum;
-    orth.col(2) += 0.2*sum;
-    orth.col(0) += Eigen::Vector3d {0.1, -.3, 0.3};
-    REQUIRE((cartdg::custom_math::orthonormal(n_dim3, 0) - orth).norm() == Approx(0.).scale(1.));
+    basis.col(1) += 0.2*sum;
+    basis.col(2) += 0.2*sum;
+    basis.col(0) += Eigen::Vector3d {0.1, -.3, 0.3};
+    REQUIRE((cartdg::custom_math::orthonormal(basis, 0) - orth).norm() == Approx(0.).scale(1.));
 
-    n_dim3 = orth;
+    basis = orth;
     sum = orth.col(0) + orth.col(2);
-    orth.col(0) += 3.*sum;
-    orth.col(2) += 3.*sum;
-    orth.col(1) *= 0.1;
-    REQUIRE((cartdg::custom_math::orthonormal(n_dim3, 1) - orth).norm() == Approx(0.).scale(1.));
+    basis.col(0) += 3.*sum;
+    basis.col(2) += 3.*sum;
+    basis.col(1) *= 0.1;
+    REQUIRE((cartdg::custom_math::orthonormal(basis, 1) - orth).norm() == Approx(0.).scale(1.));
   }
 }

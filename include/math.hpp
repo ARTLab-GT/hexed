@@ -59,14 +59,29 @@ Eigen::Matrix<double, n_dim, n_dim> orthonormal (const Eigen::Matrix<double, n_d
   {
     Eigen::Matrix<double, n_dim, n_dim> orth {basis};
     auto col_i = orth.col(i_dim);
+    int j_col [n_dim - 1];
     for (int offset = 1; offset < n_dim; ++offset)
     {
-      auto col_j = orth.col((offset + i_dim)%n_dim);
+      j_col[offset - 1] = (offset + i_dim)%n_dim;
+    }
+    for (int jc : j_col)
+    {
+      auto col_j = orth.col(jc);
       col_j /= col_j.norm();
     }
-    for (int offset = 1; offset < n_dim; ++offset)
+    if constexpr (n_dim == 3)
     {
-      auto col_j = orth.col((offset + i_dim)%n_dim);
+      Eigen::Matrix<double, 3, 2> temp;
+      for (int i : {0, 1}) temp.col(i) = orth.col(j_col[i]);
+      Eigen::Matrix2d sum_diff {{1, -1}, {1, 1}};
+      temp = temp*sum_diff;
+      for (int i : {0, 1}) temp.col(i) /= temp.col(i).norm();
+      temp = temp*(sum_diff.transpose()/std::sqrt(2.));
+      for (int i : {0, 1}) orth.col(j_col[i]) = temp.col(i);
+    }
+    for (int jc : j_col)
+    {
+      auto col_j = orth.col(jc);
       col_i -= col_i.dot(col_j)*col_j;
     }
     col_i /= col_i.norm();
