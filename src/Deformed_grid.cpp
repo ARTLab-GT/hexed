@@ -7,7 +7,6 @@
 #include <get_nonpen_convective.hpp>
 #include <get_req_visc_deformed_convective.hpp>
 #include <math.hpp>
-#include <iostream>
 
 namespace cartdg
 {
@@ -75,20 +74,24 @@ std::vector<double> Deformed_grid::get_pos(int i_elem)
 {
   std::vector<double> elem_pos (n_qpoint*n_dim);
   Deformed_element& elem {deformed_element(i_elem)};
+  Eigen::MatrixXd lin_interp {basis.row_size, 2};
+  for (int i_qpoint = 0; i_qpoint < basis.row_size; ++i_qpoint)
+  {
+    double node {basis.node(i_qpoint)};
+    lin_interp(i_qpoint, 0) = 1. - node;
+    lin_interp(i_qpoint, 1) = node;
+  }
   for (int i_dim = 0; i_dim < n_dim; ++i_dim)
   {
     Eigen::VectorXd vert_pos {n_vertices};
-    Eigen::MatrixXd bound_trans = basis.boundary().transpose();
     for (int i_vertex = 0; i_vertex < n_vertices; ++i_vertex)
     {
       vert_pos[i_vertex] = elem.vertex(i_vertex).pos[i_dim];
     }
     Eigen::Map<Eigen::VectorXd> dim_pos {elem_pos.data() + i_dim*n_qpoint, n_qpoint};
-    dim_pos = custom_math::hypercube_matvec(bound_trans, vert_pos);
-    if (i_elem == 0) std::cout << di_pos << "\n\n";
+    dim_pos = custom_math::hypercube_matvec(lin_interp, vert_pos);
   }
 
-  #if 0
   std::vector<double> warped_elem_pos = elem_pos;
   for (int i_dim = 0, stride = n_qpoint/basis.row_size; i_dim < n_dim; ++i_dim, stride /= basis.row_size)
   {
@@ -110,8 +113,6 @@ std::vector<double> Deformed_grid::get_pos(int i_elem)
     }
   }
   return warped_elem_pos;
-  #endif
-  return elem_pos;
 }
 
 void Deformed_grid::add_wall(int i_elem, int i_dim, bool is_positive_face)
