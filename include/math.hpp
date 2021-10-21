@@ -48,7 +48,7 @@ Eigen::VectorXd hypercube_matvec(const Eigen::MatrixXd&, const Eigen::VectorXd&)
  * - Inner product of `i_dim`th columns of return matrix and `basis` is positive.
  */
 template <int n_dim>
-Eigen::Matrix<double, n_dim, n_dim> orthonormal (const Eigen::Matrix<double, n_dim, n_dim>& basis, int i_dim)
+Eigen::Matrix<double, n_dim, n_dim> orthonormal (Eigen::Matrix<double, n_dim, n_dim> basis, int i_dim)
 {
   static_assert (n_dim <= 3, "Not implemented for n_dim > 3.");
   if constexpr (n_dim == 1)
@@ -57,35 +57,27 @@ Eigen::Matrix<double, n_dim, n_dim> orthonormal (const Eigen::Matrix<double, n_d
   }
   else
   {
-    Eigen::Matrix<double, n_dim, n_dim> orth {basis};
-    auto col_i = orth.col(i_dim);
-    int j_col [n_dim - 1];
+    auto col_i = basis.col(i_dim);
+    std::array<int, n_dim - 1> j_col;
     for (int offset = 1; offset < n_dim; ++offset)
     {
       j_col[offset - 1] = (offset + i_dim)%n_dim;
     }
-    for (int jc : j_col)
+    auto cols {basis(Eigen::all, j_col)}; // all the cols except for `i_dim`th
+    cols.array().rowwise() /= cols.array().colwise().norm(); // normalize
+    if constexpr (n_dim == 3) // orthonormalize `cols`
     {
-      auto col_j = orth.col(jc);
-      col_j /= col_j.norm();
-    }
-    if constexpr (n_dim == 3)
-    {
-      Eigen::Matrix<double, 3, 2> temp;
-      for (int i : {0, 1}) temp.col(i) = orth.col(j_col[i]);
       Eigen::Matrix2d sum_diff {{1, -1}, {1, 1}};
-      temp = temp*sum_diff;
-      for (int i : {0, 1}) temp.col(i) /= temp.col(i).norm();
-      temp = temp*(sum_diff.transpose()/std::sqrt(2.));
-      for (int i : {0, 1}) orth.col(j_col[i]) = temp.col(i);
+      cols = cols*sum_diff;
+      cols.array().rowwise() /= cols.array().colwise().norm();
+      cols = cols*(sum_diff.transpose()/std::sqrt(2.));
     }
-    for (int jc : j_col)
+    for (int jc : j_col) // orthogonalize `i_dim`th col wrt `cols` (Gram-Schmidt style)
     {
-      auto col_j = orth.col(jc);
-      col_i -= col_i.dot(col_j)*col_j;
+      col_i -= col_i.dot(basis.col(jc))*basis.col(jc);
     }
     col_i /= col_i.norm();
-    return orth;
+    return basis;
   }
 }
 

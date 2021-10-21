@@ -97,11 +97,13 @@ TEST_CASE("orthonormal")
   {
     Eigen::Matrix2d basis;
     basis << -2., 0.3,
-               0., 0.4;
+              0., 0.4;
+    Eigen::Matrix2d backup = basis*1.;
     Eigen::Matrix2d correct;
     correct << -1., 0.,
                 0., 1.;
     REQUIRE((cartdg::custom_math::orthonormal(basis, 1) - correct).norm() == Approx(0.).scale(1.));
+    REQUIRE((backup - basis).norm() == Approx(0.).scale(1.)); // make sure we don't modify `basis`
     correct << -0.8, 0.6,
                 0.6, 0.8;
     REQUIRE((cartdg::custom_math::orthonormal(basis, 0) - correct).norm() == Approx(0.).scale(1.));
