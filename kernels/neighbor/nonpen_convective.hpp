@@ -8,7 +8,6 @@
 #include <Deformed_element.hpp>
 #include "read_copy.hpp"
 #include "write_copy.hpp"
-#include "hll_deformed_cpg_euler.hpp"
 
 namespace cartdg
 {
@@ -17,6 +16,7 @@ namespace cartdg
 template <int n_var, int n_qpoint, int row_size>
 void nonpen_convective(def_elem_wall_vec& walls, Basis& basis, Kernel_settings& settings)
 {
+  #if 0
   const int n_face_qpoint = n_qpoint/row_size;
   const int n_dim = n_var - 2;
   double mult = settings.d_t_by_d_pos/basis.node_weights()[0];
@@ -89,6 +89,7 @@ void nonpen_convective(def_elem_wall_vec& walls, Basis& basis, Kernel_settings& 
     hll_deformed_cpg_euler<n_dim, n_face_qpoint>(&face_r[0][0][0], &face_w[0][0][0], &face_jacobian[0][0][0][0], mult, dims, flips, heat_rat);
     write_copy<n_var, n_qpoint, row_size, true>(&face_w[0][0][0], wall.element->stage(i_write), stride, is_positive);
   }
+  #endif
 }
 
 }

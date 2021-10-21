@@ -6,7 +6,6 @@
 #include <Deformed_element.hpp>
 #include "read_copy.hpp"
 #include "write_copy.hpp"
-#include "hll_deformed_cpg_euler.hpp"
 
 namespace cartdg
 {
@@ -20,8 +19,6 @@ void neighbor_deformed_convective(def_elem_con_vec& def_connections, Basis& basi
   const int face_size = n_face_qpoint*n_var;
   const int n_dim = n_var - 2;
   const int jac_size = n_dim*n_dim*n_face_qpoint;
-  double mult = settings.d_t_by_d_pos/basis.node_weights()[0];
-  double heat_rat = settings.cpg_heat_rat;
   const int i_read = settings.i_read;
   const int i_write = settings.i_write;
 
@@ -57,9 +54,6 @@ void neighbor_deformed_convective(def_elem_con_vec& def_connections, Basis& basi
         face_jac.colwise().reverseInPlace();
       }
     }
-
-    bool flip [] {is_positive[0] == 0, is_positive[1] == 1};
-    hll_deformed_cpg_euler<n_var - 2, n_face_qpoint>(face_r, face_w, face_jacobian, mult, i_dim, flip, heat_rat);
 
     if ((is_positive[0] != is_positive[1]) && (i_dim[0] != i_dim[1]))
     {
