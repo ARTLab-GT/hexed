@@ -38,6 +38,22 @@ double root(Func_type func, double init_guess, double atol=1e-10, double init_di
 
 Eigen::VectorXd hypercube_matvec(const Eigen::MatrixXd&, const Eigen::VectorXd&);
 
+/*
+ * Orthonormalize a basis. Assumes `basis` is invertible. Returns a matrix with the
+ * following properties:
+ * - Unitary.
+ * - Span of columns excluding the `i_dim`th is the same as for `basis`.
+ * - Minimizes RMS difference between columns exclucing `i_dim`th of return matrix and `basis`
+ *   (sensitive to order).
+ * - Inner product of `i_dim`th columns of return matrix and `basis` is positive.
+ */
+template <int n_dim>
+Eigen::Matrix<double, n_dim, n_dim> orthonormal (const Eigen::Matrix<double, n_dim, n_dim>& basis, int i_dim)
+{
+  static_assert (n_dim <= 3, "Not implemented for n_dim > 3.");
+  return Eigen::Matrix<double, n_dim, n_dim>::Zero();
+}
+
 }
 }
 #endif

@@ -83,3 +83,7 @@ TEST_CASE("hypercube_matvec")
     REQUIRE(prod == correct);
   }
 }
+
+TEST_CASE("orthonormal")
+{
+}
