@@ -1,6 +1,8 @@
 #ifndef STORAGE_PARAMS_HPP_
 #define STORAGE_PARAMS_HPP_
 
+#include <cartdgConfig.hpp>
+
 namespace cartdg
 {
 

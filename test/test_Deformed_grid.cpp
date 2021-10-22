@@ -87,18 +87,21 @@ TEST_CASE("Deformed grid class")
       elem.vertex(3).pos = {0.6, 1.0, 0.0};
       elem.node_adjustments()[2*3 + 1] =  0.2;
       elem.node_adjustments()[3*3 + 1] = -0.1;
+      printf("foo\n");
+      cartdg::global_debug_message["print"] = 1;
       std::vector<double> pos2 = grid2.get_pos(0);
+      cartdg::global_debug_message.erase("print");
       REQUIRE(pos2[ 0] == Approx(0.0));
       REQUIRE(pos2[ 7] == Approx(0.8));
       REQUIRE(pos2[ 8] == Approx(0.6));
       REQUIRE(pos2[16] == Approx(0.5));
 
-      REQUIRE(pos2[ 3] == Approx(0.5 - 0.2*0.2));
-      REQUIRE(pos2[ 4] == Approx(0.4 - 0.2*(0.2 - 0.1)/2));
-      REQUIRE(pos2[ 5] == Approx(0.3 + 0.2*0.1));
-      REQUIRE(pos2[12] == Approx(0.0 + 0.2));
-      REQUIRE(pos2[13] == Approx(0.5 + (0.2 - 0.1)/2));
-      REQUIRE(pos2[14] == Approx(1.0 - 0.1));
+      CHECK(pos2[ 3] == Approx(0.5 - 0.2*0.2));
+      CHECK(pos2[ 4] == Approx(0.4 - 0.2*(0.2 - 0.1)/2));
+      CHECK(pos2[ 5] == Approx(0.3 + 0.2*0.1));
+      CHECK(pos2[12] == Approx(0.0 + 0.2));
+      CHECK(pos2[13] == Approx(0.5 + (0.2 - 0.1)/2));
+      CHECK(pos2[14] == Approx(1.0 - 0.1));
 
       cartdg::Deformed_element& elem1 = grid2.deformed_element(1);
       elem1.vertex(0).pos = {0.0, 0.0, 0.0};
@@ -117,6 +120,15 @@ TEST_CASE("Deformed grid class")
       REQUIRE(pos3[13] == 0.101);
       REQUIRE(pos3[13 + 27] == .1);
       REQUIRE(pos3[13 + 2*27] == .1);
+
+      cartdg::Gauss_legendre leg_basis {row_size};
+      cartdg::Deformed_grid leg_grid {1, 2, 0, 0.2, leg_basis};
+      leg_grid.add_element({0, 0});
+      leg_grid.deformed_element(0).node_adjustments()[1] = 0.1;
+      leg_grid.deformed_element(0).node_adjustments()[3] = -0.2;
+      std::vector<double> pos {leg_grid.get_pos(0)};
+      REQUIRE(pos[3] == Approx(0.06));
+      REQUIRE(pos[4] == Approx(0.12));
     }
   }
 

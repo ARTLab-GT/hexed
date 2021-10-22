@@ -81,6 +81,7 @@ std::vector<double> Deformed_grid::get_pos(int i_elem)
     lin_interp(i_qpoint, 0) = 1. - node;
     lin_interp(i_qpoint, 1) = node;
   }
+
   for (int i_dim = 0; i_dim < n_dim; ++i_dim)
   {
     Eigen::VectorXd vert_pos {n_vertices};
@@ -93,23 +94,23 @@ std::vector<double> Deformed_grid::get_pos(int i_elem)
   }
 
   std::vector<double> warped_elem_pos = elem_pos;
+  Eigen::MatrixXd boundary {basis.boundary()};
   for (int i_dim = 0, stride = n_qpoint/basis.row_size; i_dim < n_dim; ++i_dim, stride /= basis.row_size)
   {
-    for (int i_node = 0; i_node < n_qpoint; ++i_node)
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
     {
-      int coord = (i_node/stride)%basis.row_size;
-      int i_node0 = i_node - coord*stride;
-      int i_node1 = i_node0 + (basis.row_size - 1)*stride;
-      int i_adjust = 2*i_dim*n_qpoint/basis.row_size + i_node/(stride*basis.row_size)*stride + i_node%stride;
+      int coord = (i_qpoint/stride)%basis.row_size;
+      int i_row_start = i_qpoint - coord*stride;
       double* node_adj = elem.node_adjustments();
-      double adjust0 = node_adj[i_adjust];
-      double adjust1 = node_adj[i_adjust + n_qpoint/basis.row_size];
-      double dist = basis.node(coord);
-      for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-      {
-        int i = j_dim*n_qpoint;
-        warped_elem_pos[i + i_node] += (elem_pos[i + i_node1] - elem_pos[i + i_node0])*((1. - dist)*adjust0 + dist*adjust1);
-      }
+      int i_adjust = 2*i_dim*n_qpoint/basis.row_size + i_qpoint/(stride*basis.row_size)*stride + i_qpoint%stride;
+      Eigen::VectorXd adjust {{node_adj[i_adjust], node_adj[i_adjust + n_qpoint/basis.row_size]}};
+      typedef Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic> stride_t;
+      typedef Eigen::Map<Eigen::MatrixXd, 0, stride_t> map;
+      if (global_debug_message.count("print")) printf("bar\n");
+      map orig {&elem_pos[i_row_start], basis.row_size, n_dim, stride_t{n_qpoint, stride}};
+      map warped {&warped_elem_pos[i_row_start], basis.row_size, n_dim, stride_t{n_qpoint, stride}};
+      Eigen::MatrixXd face_pos = boundary*orig;
+      warped += lin_interp*(adjust*(face_pos.row(1) - face_pos.row(0)));
     }
   }
   return warped_elem_pos;
