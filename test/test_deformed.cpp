@@ -17,10 +17,35 @@ class Copy_bc : public cartdg::Ghost_boundary_condition
   }
 };
 
-double deform (double node)
+class Quadratic_def : public cartdg::Deformed_grid
 {
-  return node*(1. - node)*4.;
-}
+  double deform (int i_node)
+  {
+    double node = basis.node(i_node);
+    return node*(1. - node)*4.;
+  }
+  public:
+  Quadratic_def(int n_var_arg, int n_dim_arg, int n_elem_arg, double mesh_size_arg, cartdg::Basis& basis_arg)
+  : Deformed_grid(n_var_arg, n_dim_arg, n_elem_arg, mesh_size_arg, basis_arg) {}
+  virtual std::vector<double> get_pos(int i_elem)
+  {
+    auto p {cartdg::Deformed_grid::get_pos(i_elem)};
+    if (i_elem != 4) return p;
+    double max_def [] {0.07, -0.13};
+    for (int i_dim = 0; i_dim < 2; ++i_dim)
+    {
+      for (int i_row = 0; i_row < basis.row_size; ++i_row)
+      {
+        for (int j_row = 0; j_row < basis.row_size; ++j_row)
+        {
+          double def = max_def[i_dim]*mesh_size*deform(i_row)*deform(j_row);
+          p[i_dim*n_qpoint + i_row*basis.row_size + j_row] += def;
+        }
+      }
+    }
+    return p;
+  }
+};
 
 void test(cartdg::Deformed_grid& grid)
 {
@@ -96,6 +121,11 @@ TEST_CASE("Deformed elements")
   SECTION("plain")
   {
     cartdg::Deformed_grid grid {4, 2, 0, 0.2, basis};
+    test(grid);
+  }
+  SECTION("deformed interior")
+  {
+    Quadratic_def grid {4, 2, 0, 0.2, basis};
     test(grid);
   }
 }
