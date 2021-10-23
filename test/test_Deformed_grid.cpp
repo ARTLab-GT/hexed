@@ -87,10 +87,7 @@ TEST_CASE("Deformed grid class")
       elem.vertex(3).pos = {0.6, 1.0, 0.0};
       elem.node_adjustments()[2*3 + 1] =  0.2;
       elem.node_adjustments()[3*3 + 1] = -0.1;
-      printf("foo\n");
-      cartdg::global_debug_message["print"] = 1;
       std::vector<double> pos2 = grid2.get_pos(0);
-      cartdg::global_debug_message.erase("print");
       REQUIRE(pos2[ 0] == Approx(0.0));
       REQUIRE(pos2[ 7] == Approx(0.8));
       REQUIRE(pos2[ 8] == Approx(0.6));
@@ -127,8 +124,8 @@ TEST_CASE("Deformed grid class")
       leg_grid.deformed_element(0).node_adjustments()[1] = 0.1;
       leg_grid.deformed_element(0).node_adjustments()[3] = -0.2;
       std::vector<double> pos {leg_grid.get_pos(0)};
-      REQUIRE(pos[3] == Approx(0.06));
-      REQUIRE(pos[4] == Approx(0.12));
+      REQUIRE(pos[3] == Approx(0.08));
+      REQUIRE(pos[4] == Approx(0.11));
     }
   }
 
