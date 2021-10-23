@@ -16,7 +16,6 @@ template<int n_var, int n_qpoint, int row_size>
 void neighbor_deformed_convective(def_elem_con_vec& def_connections, Basis& basis, Kernel_settings& settings)
 // "def_" (for "deformed") prepended to arguments to avoid naming conflicts in benchmark code
 {
-  std::cout << settings.d_t_by_d_pos << "\n";
   const int n_face_qpoint = n_qpoint/row_size;
   const int face_size = n_face_qpoint*n_var;
   double heat_rat = settings.cpg_heat_rat;
