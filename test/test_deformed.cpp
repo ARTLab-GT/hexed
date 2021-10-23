@@ -39,21 +39,25 @@ TEST_CASE("Deformed elements")
     grid.purge_vertices();
     grid.calc_jacobian();
     cartdg::Kernel_settings settings;
-    settings.d_t_by_d_pos = 0.07;
+    double dt = 0.07;
+    settings.d_t_by_d_pos = 0.07/0.2;
     grid.execute_write_face(settings);
     grid.execute_neighbor(settings);
     grid.execute_local(settings);
-    for (int i = 0, i_elem = 0; i < 3; ++i)
+    for (int i_elem = 0; i_elem < 9; ++i_elem)
     {
       double* r {grid.element(i_elem).stage(settings.i_read)};
       double* w {grid.element(i_elem).stage(settings.i_write)};
       for (int i_dof = 0; i_dof < 4*n_qpoint; ++i_dof)
       {
-        r[i_dof] = (w[i_dof] - r[i_dof])/settings.d_t_by_d_pos;
+        r[i_dof] = (w[i_dof] - r[i_dof])/dt;
       }
+      if (i_elem == 4)
+      {
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
-        CHECK(r[2*n_qpoint + i_qpoint] == Approx(0.03*veloc[0] + 0.02*veloc[1]));
+        CHECK(r[2*n_qpoint + i_qpoint] == Approx(-0.03*veloc[0] - 0.02*veloc[1]));
+      }
       }
     }
     cartdg::Tecplot_file file {"deformed_test", 2, 4, 0.};
