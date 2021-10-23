@@ -46,9 +46,6 @@ TEST_CASE("Solution class")
     REQUIRE(g->n_elem == 6);
     REQUIRE(g->mesh_size == 0.35);
     REQUIRE(g->pos[0] == -1);
-    REQUIRE(g->get_pos(0)[0] == -0.35);
-    REQUIRE(g->get_pos(1)[0] == -0.);
-    REQUIRE(g->get_pos(1)[16] == -0.35);
     g = sol.all_grids()[2];
     REQUIRE(g->basis.row_size == 4);
     REQUIRE(g->n_elem == 16);
@@ -85,7 +82,7 @@ TEST_CASE("Solution class")
     REQUIRE(g->n_elem == 6);
     REQUIRE(g->element(0).stage(0)[0] == 0.1);
     REQUIRE(g->element(0).stage(0)[16] == 0.2);
-    REQUIRE(g->element(0).stage(0)[32] == -0.35);
+    REQUIRE(g->element(0).stage(0)[32] == g->get_pos(0)[0]);
     REQUIRE(g->element(0).stage(0)[48] == 2.5);
     REQUIRE(g->element(5).stage(0)[ 0] == 0.1);
     REQUIRE(g->element(5).stage(0)[48] == 2.5);
