@@ -51,15 +51,16 @@ class Test
 {
   protected:
   cartdg::Deformed_grid& grid;
+  int row_size;
+  int n_qpoint;
+  int nfq;
   double veloc [2] {1.2, -1.3};
   double pres {101000};
   public:
-  Test(cartdg::Deformed_grid& g) : grid{g} {}
+  Test(cartdg::Deformed_grid& g) : grid{g}, row_size{grid.basis.row_size}, n_qpoint{row_size*row_size}, nfq{n_qpoint/row_size} {}
 
   void test()
   {
-    int row_size {grid.basis.row_size};
-    int n_qpoint {row_size*row_size};
     for (int i = 0, i_elem = 0; i < 3; ++i)
     {
       for (int j = 0; j < 3; ++j)
@@ -147,10 +148,13 @@ class Test_def_edge : public Test
   }
   virtual void test_momentum_rotation()
   {
-    const int row_size {grid.basis.row_size};
-    for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
+    for (int i_row = 0; i_row < row_size; ++i_row)
     {
       double* face {grid.deformed_element(4).face()};
+      double qpv [] {face[4*nfq + i_row]/face[6*nfq + i_row],
+                     face[5*nfq + i_row]/face[6*nfq + i_row]};
+      double mag {std::sqrt(0.05*0.05 + 0.16*0.16)};
+      REQUIRE(qpv[0] == Approx((veloc[0]*0.16 - veloc[1]*0.05)/mag));
     }
   }
 };
