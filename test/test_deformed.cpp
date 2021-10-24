@@ -47,7 +47,24 @@ class Quadratic_def : public cartdg::Deformed_grid
   }
 };
 
-void test(cartdg::Deformed_grid& grid)
+class Grid_adjustment
+{
+  public:
+  virtual void displace_vertices(cartdg::Deformed_grid& grid)
+  {}
+};
+
+class Def_edge : public Grid_adjustment
+{
+  public:
+  virtual void displace_vertices(cartdg::Deformed_grid& grid)
+  {
+    grid.deformed_element(4).vertex(3).pos[0] += 0.05;
+    grid.deformed_element(4).vertex(3).pos[1] -= 0.04;
+  }
+};
+
+void test(cartdg::Deformed_grid& grid, Grid_adjustment& adjust)
 {
   int row_size {grid.basis.row_size};
   int n_qpoint {row_size*row_size};
@@ -60,6 +77,14 @@ void test(cartdg::Deformed_grid& grid)
       grid.add_element({i, j});
       if (i > 0) grid.connect({i_elem - 3, i_elem}, {0, 0}, {1, 0});
       if (j > 0) grid.connect({i_elem - 1, i_elem}, {1, 1}, {1, 0});
+      ++i_elem;
+    }
+  }
+  adjust.displace_vertices(grid);
+  for (int i = 0, i_elem = 0; i < 3; ++i)
+  {
+    for (int j = 0; j < 3; ++j)
+    {
       auto pos = grid.get_pos(i_elem);
       double* stage {grid.element(i_elem).stage(0)};
       for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
@@ -118,14 +143,21 @@ TEST_CASE("Deformed elements")
 {
   const int row_size {CARTDG_MAX_BASIS_ROW_SIZE};
   cartdg::Gauss_legendre basis {row_size};
+  Grid_adjustment default_adjust;
   SECTION("plain")
   {
     cartdg::Deformed_grid grid {4, 2, 0, 0.2, basis};
-    test(grid);
+    test(grid, default_adjust);
   }
   SECTION("deformed interior")
   {
     Quadratic_def grid {4, 2, 0, 0.2, basis};
-    test(grid);
+    test(grid, default_adjust);
+  }
+  SECTION("deformed edges")
+  {
+    cartdg::Deformed_grid grid {4, 2, 0, 0.2, basis};
+    Def_edge adjust;
+    test(grid, adjust);
   }
 }
