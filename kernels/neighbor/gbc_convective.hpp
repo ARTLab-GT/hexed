@@ -8,8 +8,6 @@
 #include <Ghost_boundary_condition.hpp>
 #include <Grid.hpp>
 #include "hll_cpg_euler.hpp"
-#include "read_copy.hpp"
-#include "write_copy.hpp"
 
 namespace cartdg
 {
