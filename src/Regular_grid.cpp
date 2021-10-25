@@ -139,6 +139,11 @@ void Regular_grid::add_connection(int i_elem0, int i_elem1, int i_dim)
   elem_cons[i_dim].push_back({elements[i_elem0].get(), elements[i_elem1].get()});
 }
 
+void Regular_grid::add_connection(Element* elem0, Element* elem1, int i_dim)
+{
+  elem_cons[i_dim].push_back({elem0, elem1});
+}
+
 void Regular_grid::auto_connect(std::vector<int> periods)
 {
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)

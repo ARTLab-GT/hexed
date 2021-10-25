@@ -1,4 +1,5 @@
 #include <Deformed_grid.hpp>
+#include <Regular_grid.hpp>
 #include <get_mcs_deformed_convective.hpp>
 #include <get_write_face_deformed.hpp>
 #include <get_neighbor_deformed_convective.hpp>
@@ -233,7 +234,7 @@ void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
 }
 
 void Deformed_grid::connect_non_def(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
-                                    std::array<bool, 2> is_positive, Grid& other_grid)
+                                    std::array<bool, 2> is_positive, Regular_grid& other_grid)
 {
   if (i_dim[0] != i_dim[1])
   {
@@ -243,7 +244,7 @@ void Deformed_grid::connect_non_def(std::array<int, 2> i_elem, std::array<int, 2
   {
     throw std::runtime_error("connecting deformed-regular with opposing face direction is deprecated");
   }
-  def_reg_cons[i_dim[0] + is_positive[0]*n_dim].emplace_back(elements[i_elem[0]].get(), &other_grid.element(i_elem[1]));
+  other_grid.add_connection(&element(i_elem[0]), &other_grid.element(i_elem[1]), i_dim[0]);
 }
 
 void Deformed_grid::purge_vertices()

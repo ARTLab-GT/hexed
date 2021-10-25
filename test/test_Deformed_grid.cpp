@@ -306,12 +306,12 @@ TEST_CASE("Deformed grid class")
       grid3.connect_non_def({1, 0}, {0, 0}, {1, 0}, reg3);
       grid3.connect_non_def({1, 1}, {2, 2}, {1, 0}, reg3);
       grid3.connect_non_def({1, 1}, {2, 2}, {0, 1}, reg3);
-      REQUIRE(grid3.def_reg_connection(3, 0).first == &grid3.deformed_element(1));
-      REQUIRE(grid3.def_reg_connection(3, 0).second == &reg3.element(0));
-      REQUIRE(grid3.def_reg_connection(5, 0).first == &grid3.deformed_element(1));
-      REQUIRE(grid3.def_reg_connection(5, 0).second == &reg3.element(1));
-      REQUIRE(grid3.def_reg_connection(2, 0).first == &grid3.deformed_element(1));
-      REQUIRE(grid3.def_reg_connection(2, 0).second == &reg3.element(1));
+      REQUIRE(reg3.connection(0, 0)[0] == &grid3.element(1));
+      REQUIRE(reg3.connection(0, 0)[1] ==  &reg3.element(0));
+      REQUIRE(reg3.connection(2, 0)[0] == &grid3.element(1));
+      REQUIRE(reg3.connection(2, 0)[1] ==  &reg3.element(1));
+      REQUIRE(reg3.connection(2, 1)[0] == &grid3.element(1));
+      REQUIRE(reg3.connection(2, 1)[1] ==  &reg3.element(1));
       REQUIRE_THROWS(grid3.connect_non_def({1, 0}, {1, 0}, {1, 0}, reg3));
       REQUIRE_THROWS(grid3.connect_non_def({1, 0}, {0, 0}, {0, 0}, reg3));
     }

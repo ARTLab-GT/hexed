@@ -7,6 +7,8 @@
 namespace cartdg
 {
 
+class Regular_grid;
+
 class Deformed_grid : public Grid
 {
   def_elem_vec elements;
@@ -35,7 +37,7 @@ class Deformed_grid : public Grid
   void connect(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
                std::array<bool, 2> is_positive);
   void connect_non_def(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
-                       std::array<bool, 2> is_positive, Grid& other_grid);
+                       std::array<bool, 2> is_positive, Regular_grid& other_grid);
   void purge_vertices();
   void calc_vertex_relaxation();
   void apply_vertex_relaxation();
