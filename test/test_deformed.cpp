@@ -179,7 +179,6 @@ TEST_CASE("Deformed elements")
   SECTION("deformed edges")
   {
     cartdg::Deformed_grid grid {4, 2, 0, 0.2, basis};
-    cartdg::global_debug_message["require"] = 0;
     Test_def_edge test {grid};
     test.test();
   }

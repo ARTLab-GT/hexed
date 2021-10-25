@@ -6,6 +6,7 @@
 #include <Kernel_settings.hpp>
 #include <Basis.hpp>
 #include <Deformed_element.hpp>
+#include <math.hpp>
 
 namespace cartdg
 {
@@ -19,6 +20,7 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
   const Eigen::Matrix<double, row_size, row_size> stiff_mat {basis.diff_mat().transpose()*weights.asDiagonal()};
   Eigen::MatrixXd sign {{1, 0}, {0, -1}};
   const Eigen::Matrix<double, row_size, 2> boundary_mat {basis.boundary().transpose()*sign};
+  const Eigen::Matrix<double, 2, row_size> boundary {basis.boundary()};
 
   double d_t_by_d_pos = settings.d_t_by_d_pos;
   double heat_rat = settings.cpg_heat_rat;
@@ -106,11 +108,37 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
           }
           Eigen::Matrix<double, row_size, n_var> row_w {stiff_mat*row_f};
 
+          Eigen::Matrix<double, row_size, n_dim*n_dim> row_j;
+          for (int i_jac = 0; i_jac < n_dim*n_dim; ++i_jac)
+          {
+            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
+            {
+              row_j(i_qpoint, i_jac) = jacobian[i_jac*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
+            }
+          }
+          Eigen::Matrix<double, 2, n_dim*n_dim> face_jac;
+          face_jac.noalias() = boundary*row_j;
+          Eigen::Matrix<double, 2, 1> face_det;
+          for (int i_side : {0, 1})
+          {
+            Eigen::Matrix<double, n_dim, n_dim> jac;
+            for (int j_dim = 0; j_dim < n_dim; ++j_dim)
+            {
+              for (int k_dim = 0; k_dim < n_dim; ++k_dim)
+              {
+                jac(j_dim, k_dim) = face_jac(i_side, j_dim*n_dim + k_dim);
+              }
+            }
+            auto orth {custom_math::orthonormal(jac, i_dim)};
+            jac.col(i_dim) = orth.col(i_dim);
+            face_det(i_side) = jac.determinant();
+          }
+
           // Write updated solution
           for (int i_var = 0; i_var < n_var; ++i_var)
           {
             const int face_offset = i_var*n_qpoint/row_size + i_face_qpoint;
-            Eigen::Matrix<double, 2, 1> boundary_values {face0[face_offset], face1[face_offset]};
+            Eigen::Matrix<double, 2, 1> boundary_values {face0[face_offset]*face_det(0), face1[face_offset]*face_det(1)};
             row_w.col(i_var).noalias() += boundary_mat*boundary_values;
             for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
             {
