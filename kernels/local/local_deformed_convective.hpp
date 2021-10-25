@@ -108,6 +108,13 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
           }
           Eigen::Matrix<double, row_size, n_var> row_w {stiff_mat*row_f};
 
+          Eigen::Matrix<double, n_var, 2> boundary_values;
+          for (int i_var = 0; i_var < n_var; ++i_var)
+          {
+            const int face_offset = i_var*n_qpoint/row_size + i_face_qpoint;
+            boundary_values(i_var, 0) = face0[face_offset];
+            boundary_values(i_var, 1) = face1[face_offset];
+          }
           Eigen::Matrix<double, row_size, n_dim*n_dim> row_j;
           for (int i_jac = 0; i_jac < n_dim*n_dim; ++i_jac)
           {
@@ -118,7 +125,6 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
           }
           Eigen::Matrix<double, 2, n_dim*n_dim> face_jac;
           face_jac.noalias() = boundary*row_j;
-          Eigen::Matrix<double, 2, 1> face_det;
           for (int i_side : {0, 1})
           {
             Eigen::Matrix<double, n_dim, n_dim> jac;
@@ -131,15 +137,15 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
             }
             auto orth {custom_math::orthonormal(jac, i_dim)};
             jac.col(i_dim) = orth.col(i_dim);
-            face_det(i_side) = jac.determinant();
+            boundary_values.col(i_side) *= jac.determinant();
+            Eigen::Block<Eigen::Matrix<double, n_var, 2>, n_dim, 1> momentum {boundary_values, 0, i_side};
+            momentum = orth*momentum;
           }
 
           // Write updated solution
           for (int i_var = 0; i_var < n_var; ++i_var)
           {
-            const int face_offset = i_var*n_qpoint/row_size + i_face_qpoint;
-            Eigen::Matrix<double, 2, 1> boundary_values {face0[face_offset]*face_det(0), face1[face_offset]*face_det(1)};
-            row_w.col(i_var).noalias() += boundary_mat*boundary_values;
+            row_w.col(i_var).noalias() += boundary_mat*boundary_values.row(i_var).transpose();
             for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
             {
                write[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride]

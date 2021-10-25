@@ -124,14 +124,13 @@ class Test
       }
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
-        if (cartdg::global_debug_message["require"]) REQUIRE(r[2*n_qpoint + i_qpoint] == Approx(-0.03*veloc[0] - 0.02*veloc[1]));
+        REQUIRE(r[0*n_qpoint + i_qpoint] == Approx(-0.03*veloc[0]*veloc[0] - 0.02*veloc[1]*veloc[0]).scale(pres));
+        REQUIRE(r[1*n_qpoint + i_qpoint] == Approx(-0.03*veloc[0]*veloc[1] - 0.02*veloc[1]*veloc[1]).scale(pres));
+        REQUIRE(r[2*n_qpoint + i_qpoint] == Approx(-0.03*veloc[0] - 0.02*veloc[1]));
       }
     }
-    if (!cartdg::global_debug_message["require"])
-    {
-      cartdg::Tecplot_file file {"deformed_test", 2, 4, 0.};
-      grid.visualize_interior(file);
-    }
+    cartdg::Tecplot_file file {"deformed_test", 2, 4, 0.};
+    grid.visualize_interior(file);
   }
   virtual void displace_vertices() {}
   virtual void test_momentum_rotation() {}
