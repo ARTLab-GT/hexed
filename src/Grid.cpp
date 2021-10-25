@@ -48,7 +48,7 @@ bool Grid::execute_runge_kutta_stage()
   const int r1 = i_write;
   const int w = (i_rk_stage == 2) ? r0 : r1;
   double weight1 = rk_weights[i_rk_stage]; double weight0 = 1. - weight1;
-  //#pragma omp parallel for
+  #pragma omp parallel for
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
     auto& elem = element(i_elem);

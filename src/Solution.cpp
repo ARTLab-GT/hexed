@@ -126,22 +126,6 @@ double Solution::update(double cfl_by_stable_cfl)
       kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
       grid->execute_local(kernel_settings);
     }
-    if (global_debug_message.count("plot"))
-    {
-      for (Grid* grid : all_grids())
-      {
-        for (int i_elem = 0; i_elem < grid->n_elem; ++i_elem)
-        {
-          Element& elem {grid->element(i_elem)};
-          for (int i_dof = 0; i_dof < grid->n_dof; ++i_dof)
-          {
-            elem.stage(kernel_settings.i_read)[i_dof] = elem.stage(kernel_settings.i_write)[i_dof];
-          }
-        }
-      }
-      visualize("debug");
-      throw;
-    }
     for (Grid* grid : all_grids())
     {
       grid->execute_runge_kutta_stage();

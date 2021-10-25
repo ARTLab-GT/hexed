@@ -20,7 +20,7 @@ void neighbor_deformed_convective(def_elem_con_vec& def_connections, Basis& basi
   const int face_size = n_face_qpoint*n_var;
   double heat_rat = settings.cpg_heat_rat;
 
-  //#pragma omp parallel for
+  #pragma omp parallel for
   for (unsigned i_con = 0; i_con < def_connections.size(); ++i_con)
   {
     double face_r [2*face_size];

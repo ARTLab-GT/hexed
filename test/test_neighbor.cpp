@@ -8,7 +8,6 @@
 #include <neighbor/variable_jump.hpp>
 #include <get_neighbor_derivative.hpp>
 #include <get_cont_visc.hpp>
-#include <get_neighbor_def_reg_convective.hpp>
 #include <Storage_params.hpp>
 #include <Gauss_lobatto.hpp>
 

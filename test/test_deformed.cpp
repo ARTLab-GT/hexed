@@ -128,8 +128,6 @@ class Test
         REQUIRE(r[2*n_qpoint + i_qpoint] == Approx(-0.03*veloc[0] - 0.02*veloc[1]));
       }
     }
-    cartdg::Tecplot_file file {"deformed_test", 2, 4, 0.};
-    grid.visualize_interior(file);
   }
   virtual void connect()
   {
@@ -218,7 +216,6 @@ TEST_CASE("Deformed elements")
 {
   const int row_size {CARTDG_MAX_BASIS_ROW_SIZE};
   cartdg::Gauss_legendre basis {row_size};
-  cartdg::global_debug_message["require"] = 1;
   SECTION("plain")
   {
     cartdg::Deformed_grid grid {4, 2, 0, 0.2, basis};
@@ -239,7 +236,6 @@ TEST_CASE("Deformed elements")
   }
   SECTION("rotated") // cyclical permutation of element 4's vertices
   {
-    cartdg::global_debug_message["require"] = 0;
     cartdg::Deformed_grid grid {4, 2, 0, 0.2, basis};
     Test_rotated test {grid};
     test.test();

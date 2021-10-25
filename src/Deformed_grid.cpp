@@ -3,7 +3,6 @@
 #include <get_mcs_deformed_convective.hpp>
 #include <get_write_face_deformed.hpp>
 #include <get_neighbor_deformed_convective.hpp>
-#include <get_neighbor_def_reg_convective.hpp>
 #include <get_gbc_convective.hpp>
 #include <get_local_deformed_convective.hpp>
 #include <get_nonpen_convective.hpp>
@@ -23,7 +22,6 @@ Deformed_grid::Deformed_grid(int n_var_arg, int n_dim_arg, int n_elem_arg,
   }
   n_vertices = 1;
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) n_vertices *= 2;
-  def_reg_cons.resize(2*n_dim);
 }
 
 Element& Deformed_grid::element(int i_elem)
@@ -46,11 +44,6 @@ double Deformed_grid::stable_time_step(double cfl_by_stable_cfl, Kernel_settings
 Deformed_elem_con Deformed_grid::connection(int i_con)
 {
   return elem_cons[i_con];
-}
-
-def_reg_con Deformed_grid::def_reg_connection(int i_dim, int i_con)
-{
-  return def_reg_cons[i_dim][i_con];
 }
 
 Deformed_elem_wall Deformed_grid::def_elem_wall(int i_wall)
@@ -230,20 +223,6 @@ void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
     elem_cons.back().i_dim[i_side] = i_dim[i_side];
     elem_cons.back().is_positive[i_side] = is_positive[i_side];
   }
-}
-
-void Deformed_grid::connect_non_def(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
-                                    std::array<bool, 2> is_positive, Regular_grid& other_grid)
-{
-  if (i_dim[0] != i_dim[1])
-  {
-    throw std::runtime_error("connecting deformed-regular along different dimensions is deprecated");
-  }
-  if (is_positive[0] == is_positive[1])
-  {
-    throw std::runtime_error("connecting deformed-regular with opposing face direction is deprecated");
-  }
-  other_grid.add_connection(&element(i_elem[0]), &other_grid.element(i_elem[1]), i_dim[0]);
 }
 
 void Deformed_grid::purge_vertices()

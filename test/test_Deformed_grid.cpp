@@ -295,26 +295,6 @@ TEST_CASE("Deformed grid class")
         REQUIRE(&grid2.deformed_element(0).vertex(2) == &grid2.deformed_element(3).vertex(1));
       }
     }
-
-    SECTION("deformed-regular")
-    {
-      grid3.add_element({0, -1, 0});
-      grid3.add_element({0, 0, 0});
-      cartdg::Regular_grid reg3 {1, 3, 0, 0.2, basis};
-      reg3.add_element({1, 0, 0});
-      reg3.add_element({0, 0, 1});
-      grid3.connect_non_def({1, 0}, {0, 0}, {1, 0}, reg3);
-      grid3.connect_non_def({1, 1}, {2, 2}, {1, 0}, reg3);
-      grid3.connect_non_def({1, 1}, {2, 2}, {0, 1}, reg3);
-      REQUIRE(reg3.connection(0, 0)[0] == &grid3.element(1));
-      REQUIRE(reg3.connection(0, 0)[1] ==  &reg3.element(0));
-      REQUIRE(reg3.connection(2, 0)[0] == &grid3.element(1));
-      REQUIRE(reg3.connection(2, 0)[1] ==  &reg3.element(1));
-      REQUIRE(reg3.connection(2, 1)[0] == &grid3.element(1));
-      REQUIRE(reg3.connection(2, 1)[1] ==  &reg3.element(1));
-      REQUIRE_THROWS(grid3.connect_non_def({1, 0}, {1, 0}, {1, 0}, reg3));
-      REQUIRE_THROWS(grid3.connect_non_def({1, 0}, {0, 0}, {0, 0}, reg3));
-    }
   }
 
   SECTION("Jacobian calculation")

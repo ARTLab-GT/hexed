@@ -19,7 +19,7 @@ void write_face_deformed(def_elem_vec& def_elements, Basis& basis, Kernel_settin
   const int n_face_qpoint {n_qpoint/row_size};
   const int n_face_dof {n_face_qpoint*n_var};
 
-  //#pragma omp parallel for
+  #pragma omp parallel for
   for (unsigned i_elem = 0; i_elem < def_elements.size(); ++i_elem)
   {
     double* read  = def_elements[i_elem]->stage(i_read);
