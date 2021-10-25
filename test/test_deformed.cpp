@@ -66,11 +66,10 @@ class Test
       for (int j = 0; j < 3; ++j)
       {
         grid.add_element({i, j});
-        if (i > 0) grid.connect({i_elem - 3, i_elem}, {0, 0}, {1, 0});
-        if (j > 0) grid.connect({i_elem - 1, i_elem}, {1, 1}, {1, 0});
         ++i_elem;
       }
     }
+    connect();
     displace_vertices();
     for (int i = 0, i_elem = 0; i < 3; ++i)
     {
@@ -124,27 +123,48 @@ class Test
       }
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
+        if (cartdg::global_debug_message["require"])
+        {
         REQUIRE(r[0*n_qpoint + i_qpoint] == Approx(-0.03*veloc[0]*veloc[0] - 0.02*veloc[1]*veloc[0]).scale(pres));
         REQUIRE(r[1*n_qpoint + i_qpoint] == Approx(-0.03*veloc[0]*veloc[1] - 0.02*veloc[1]*veloc[1]).scale(pres));
         REQUIRE(r[2*n_qpoint + i_qpoint] == Approx(-0.03*veloc[0] - 0.02*veloc[1]));
+        }
       }
     }
     cartdg::Tecplot_file file {"deformed_test", 2, 4, 0.};
     grid.visualize_interior(file);
   }
+  virtual void connect()
+  {
+    for (int i = 0, i_elem = 0; i < 3; ++i)
+    {
+      for (int j = 0; j < 3; ++j)
+      {
+        if (i > 0) grid.connect({i_elem - 3, i_elem}, {0, 0}, {1, 0});
+        if (j > 0) grid.connect({i_elem - 1, i_elem}, {1, 1}, {1, 0});
+        ++i_elem;
+      }
+    }
+  }
   virtual void displace_vertices() {}
   virtual void test_momentum_rotation() {}
 };
 
-class Test_def_edge : public Test
+class Def_edge : public Test
 {
   public:
-  Test_def_edge(cartdg::Deformed_grid& g) : Test{g} {}
-  virtual void displace_vertices() override
+  Def_edge(cartdg::Deformed_grid& g) : Test{g} {}
+  virtual void displace_vertices()
   {
     grid.deformed_element(4).vertex(3).pos[0] += 0.05;
     grid.deformed_element(4).vertex(3).pos[1] -= 0.04;
   }
+};
+
+class Test_def_edge : public Def_edge
+{
+  public:
+  Test_def_edge(cartdg::Deformed_grid& g) : Def_edge{g} {}
   virtual void test_momentum_rotation()
   {
     for (int i_row = 0; i_row < row_size; ++i_row)
@@ -154,6 +174,45 @@ class Test_def_edge : public Test
                      face[5*nfq + i_row]/face[6*nfq + i_row]};
       double mag {std::sqrt(0.05*0.05 + 0.16*0.16)};
       REQUIRE(qpv[0] == Approx((veloc[0]*0.16 - veloc[1]*0.05)/mag));
+    }
+  }
+};
+
+class Test_rotated : public Def_edge
+{
+  void connect(int i_elem, int i_dim)
+  {
+    std::array<int, 2> i_elems {i_elem - (3 - 2*i_dim), i_elem};
+    std::array<int, 2> i_dims {i_dim, i_dim};
+    std::array<bool, 2> is_p {1, 0};
+    for (int i_side : {0, 1})
+    {
+      if (i_elems[i_side] == 4)
+      {
+        i_dims[i_side] = 1 - i_dims[i_side];
+        if (i_dim) is_p[i_side] = !is_p[i_side];
+      }
+    }
+    grid.connect(i_elems, i_dims, is_p);
+  }
+  public:
+  Test_rotated(cartdg::Deformed_grid& g) : Def_edge{g} {}
+  virtual void connect()
+  {
+    auto& elem {grid.deformed_element(4)};
+    std::array<double, 3> pos {elem.vertex(0).pos};
+    std::swap(elem.vertex(2).pos, pos);
+    std::swap(elem.vertex(3).pos, pos);
+    std::swap(elem.vertex(1).pos, pos);
+    std::swap(elem.vertex(0).pos, pos);
+    for (int i = 0, i_elem = 0; i < 3; ++i)
+    {
+      for (int j = 0; j < 3; ++j)
+      {
+        if (i > 0) connect(i_elem, 0);
+        if (j > 0) connect(i_elem, 1);
+        ++i_elem;
+      }
     }
   }
 };
@@ -179,6 +238,13 @@ TEST_CASE("Deformed elements")
   {
     cartdg::Deformed_grid grid {4, 2, 0, 0.2, basis};
     Test_def_edge test {grid};
+    test.test();
+  }
+  SECTION("rotated") // cyclical permutation of element 4's vertices
+  {
+    cartdg::global_debug_message["require"] = 0;
+    cartdg::Deformed_grid grid {4, 2, 0, 0.2, basis};
+    Test_rotated test {grid};
     test.test();
   }
 }
