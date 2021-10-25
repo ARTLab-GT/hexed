@@ -131,7 +131,6 @@ void Deformed_grid::execute_write_face(Kernel_settings& settings)
 void Deformed_grid::execute_neighbor(Kernel_settings& settings)
 {
   get_neighbor_deformed_convective(n_dim, basis.row_size)(elem_cons, basis, settings);
-  get_neighbor_def_reg_convective(n_dim, basis.row_size)(def_reg_cons, basis, settings);
   get_gbc_convective(n_dim, basis.row_size)(*this, basis, settings);
   get_nonpen_convective(n_dim, basis.row_size)(walls, basis, settings);
 }
