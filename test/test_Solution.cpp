@@ -46,9 +46,6 @@ TEST_CASE("Solution class")
     REQUIRE(g->n_elem == 6);
     REQUIRE(g->mesh_size == 0.35);
     REQUIRE(g->pos[0] == -1);
-    REQUIRE(g->get_pos(0)[0] == -0.35);
-    REQUIRE(g->get_pos(1)[0] == -0.);
-    REQUIRE(g->get_pos(1)[16] == -0.35);
     g = sol.all_grids()[2];
     REQUIRE(g->basis.row_size == 4);
     REQUIRE(g->n_elem == 16);
@@ -85,7 +82,7 @@ TEST_CASE("Solution class")
     REQUIRE(g->n_elem == 6);
     REQUIRE(g->element(0).stage(0)[0] == 0.1);
     REQUIRE(g->element(0).stage(0)[16] == 0.2);
-    REQUIRE(g->element(0).stage(0)[32] == -0.35);
+    REQUIRE(g->element(0).stage(0)[32] == g->get_pos(0)[0]);
     REQUIRE(g->element(0).stage(0)[48] == 2.5);
     REQUIRE(g->element(5).stage(0)[ 0] == 0.1);
     REQUIRE(g->element(5).stage(0)[48] == 2.5);
@@ -134,32 +131,32 @@ TEST_CASE("Integration of deformed elements")
   for (int i = 0; i < 3; ++i)
   {
     def_grid.add_element({1, i - 1});
-    def_grid.connect_non_def({i + 4, i + 1}, {0, 0}, {1, 0}, grid);
+    grid.add_connection(&def_grid.element(i + 4), &grid.element(i + 1), 0);
   }
-  def_grid.connect_non_def({6, 5}, {1, 1}, {1, 0}, grid);
+  grid.add_connection(&def_grid.element(6), &grid.element(5), 1);
   def_grid.connect({5, 4}, {1, 1}, {0, 1});
   def_grid.connect({6, 5}, {1, 1}, {0, 1});
   for (int i = 0; i < 3; ++i)
   {
     def_grid.add_element({-i, 1});
     def_grid.connect({i + 7, i + 6}, {0, 0}, {1, 0});
-    def_grid.connect_non_def({i + 7, i + 6}, {1, 1}, {1, 0}, grid);
+    grid.add_connection(&def_grid.element(i + 7), &grid.element(i + 6), 1);
   }
-  def_grid.connect_non_def({9, 3}, {0, 0}, {0, 1}, grid);
+  grid.add_connection(&grid.element(3), &def_grid.element(9), 0);
   for (int i = 0; i < 3; ++i)
   {
     def_grid.add_element({-2, -i});
     def_grid.connect({i + 10, i + 9}, {1, 1}, {1, 0});
-    def_grid.connect_non_def({i + 10, 2 - i}, {0, 0}, {0, 1}, grid);
+    grid.add_connection(&grid.element(2 - i), &def_grid.element(i + 10), 0);
   }
-  def_grid.connect_non_def({12, 8}, {1, 1}, {0, 1}, grid);
+  grid.add_connection(&grid.element(8), &def_grid.element(12), 1);
   for (int i = 0; i < 3; ++i)
   {
     def_grid.add_element({i - 1, -2});
     def_grid.connect({i + 13, i + 12}, {0, 0}, {0, 1});
-    def_grid.connect_non_def({i + 13, 7 - i}, {1, 1}, {0, 1}, grid);
+    grid.add_connection(&grid.element(7 - i), &def_grid.element(i + 13), 1);
   }
-  def_grid.connect_non_def({15, 0}, {0, 0}, {1, 0}, grid);
+  grid.add_connection(&def_grid.element(15), &grid.element(0), 0);
   def_grid.connect({4, 15}, {1, 1}, {0, 1});
 
   double center [] {0.1, 0.1};

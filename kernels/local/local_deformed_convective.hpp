@@ -6,6 +6,7 @@
 #include <Kernel_settings.hpp>
 #include <Basis.hpp>
 #include <Deformed_element.hpp>
+#include <math.hpp>
 
 namespace cartdg
 {
@@ -14,48 +15,28 @@ namespace cartdg
 template<int n_var, int n_qpoint, int row_size>
 void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_settings& settings)
 {
-  Eigen::Matrix<double, row_size, row_size> diff_mat = basis.diff_mat();
+  const int n_dim {n_var - 2};
+  const Eigen::Matrix<double, row_size, 1> weights {basis.node_weights()};
+  const Eigen::Matrix<double, row_size, row_size> stiff_mat {basis.diff_mat().transpose()*weights.asDiagonal()};
+  Eigen::MatrixXd sign {{1, 0}, {0, -1}};
+  const Eigen::Matrix<double, row_size, 2> boundary_mat {basis.boundary().transpose()*sign};
+  const Eigen::Matrix<double, 2, row_size> boundary {basis.boundary()};
+
   double d_t_by_d_pos = settings.d_t_by_d_pos;
   double heat_rat = settings.cpg_heat_rat;
-  const int n_dim = n_var - 2;
   const int i_read = settings.i_read;
   const int i_write = settings.i_write;
+  const int n_face_dof = n_var*n_qpoint/row_size;
 
   #pragma omp parallel for
   for (unsigned i_elem = 0; i_elem < def_elements.size(); ++i_elem)
   {
-    double* read     = def_elements[i_elem]->stage(i_read);
-    double* write    = def_elements[i_elem]->stage(i_write);
+    double* read  = def_elements[i_elem]->stage(i_read);
+    double* write = def_elements[i_elem]->stage(i_write);
     double* jacobian = def_elements[i_elem]->jacobian();
-
-    // Precompute flux for all qpoints
+    double* face = def_elements[i_elem]->face();
     double flux [n_dim][n_var][n_qpoint];
-    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
-    {
-      // Compute flux in physical space
-      double pres = 0;
-      #define READ(i_var) read[(i_var)*n_qpoint + i_qpoint]
-      for (int i_dim = 0; i_dim < n_var - 2; ++i_dim)
-      {
-        pres += READ(i_dim)*READ(i_dim)/READ(n_var - 2);
-      }
-      pres = (heat_rat - 1.)*(READ(n_var - 1) - 0.5*pres);
-
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-      {
-        #define FLUX(i_var) flux[i_dim][i_var][i_qpoint]
-        double veloc = READ(i_dim)/READ(n_var - 2);
-        for (int j_dim = 0; j_dim < n_var - 2; ++j_dim)
-        {
-          FLUX(j_dim) = READ(j_dim)*veloc;
-        }
-        FLUX(i_dim) += pres;
-        FLUX(n_var - 2) = READ(i_dim);
-        FLUX(n_var - 1) = (READ(n_var - 1) + pres)*veloc;
-        #undef FLUX
-      }
-      #undef READ
-    }
+    double jac_det [n_qpoint];
 
     // Initialize updated solution to be equal to current solution
     for (int i_dof = 0; i_dof < n_qpoint*n_var; ++i_dof)
@@ -63,79 +44,115 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
       write[i_dof] = read[i_dof];
     }
 
+    // precompute flux
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
+    {
+      Eigen::Matrix<double, n_var, n_dim> phys_flux;
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+      {
+        #define READ(i) read[(i)*n_qpoint + i_qpoint]
+        #define FLUX(i) phys_flux((i), i_dim)
+        double veloc = READ(i_dim)/READ(n_var - 2);
+        double pres = 0;
+        for (int j_dim = 0; j_dim < n_var - 2; ++j_dim)
+        {
+          FLUX(j_dim) = READ(j_dim)*veloc;
+          pres += READ(j_dim)*READ(j_dim)/READ(n_var - 2);
+        }
+        pres = (heat_rat - 1.)*(READ(n_var - 1) - 0.5*pres);
+        FLUX(i_dim) += pres;
+        FLUX(n_var - 2) = READ(i_dim);
+        FLUX(n_var - 1) = (READ(n_var - 1) + pres)*veloc;
+        #undef FLUX
+        #undef READ
+      }
+
+      Eigen::Matrix<double, n_dim, n_dim> jact;
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+      {
+        for (int j_dim = 0; j_dim < n_dim; ++j_dim)
+        {
+          jact(j_dim, i_dim) = jacobian[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
+        }
+      }
+      jac_det[i_qpoint] = jact.determinant();
+      Eigen::Matrix<double, n_var, n_dim> qpoint_flux = phys_flux*jact.inverse()*jac_det[i_qpoint];
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+      {
+        for (int i_var = 0; i_var < n_var; ++i_var)
+        {
+          flux[i_dim][i_var][i_qpoint] = qpoint_flux(i_var, i_dim);
+        }
+      }
+    }
+
     // Perform update
-    for (int stride = n_qpoint/row_size, n_rows = 1, i_dim = 0;
-         n_rows < n_qpoint;
+    for (int stride = n_qpoint/row_size, n_rows = 1, i_dim = 0; n_rows < n_qpoint;
          stride /= row_size, n_rows *= row_size, ++i_dim)
     {
+      double* face0 = face + i_dim*2*n_face_dof;
+      double* face1 = face0 + n_face_dof;
+      int i_face_qpoint {0};
       for (int i_outer = 0; i_outer < n_rows; ++i_outer)
       {
         for (int i_inner = 0; i_inner < stride; ++i_inner)
         {
-
-          // Fetch this row of data
-          double phys_flux [n_dim][n_var][row_size];
-          double row_jac [n_dim][n_dim][row_size];
-          double row_w [n_var][row_size];
-          for (int j_dim = 0; j_dim < n_dim; ++j_dim)
+          // compute flux derivative
+          Eigen::Matrix<double, row_size, n_var> row_f;
+          for (int i_var = 0; i_var < n_var; ++i_var)
           {
-            for (int i_var = 0; i_var < n_var; ++i_var)
+            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
             {
-              for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
-              {
-                phys_flux[j_dim][i_var][i_qpoint]
-                = flux[j_dim][i_var][i_outer*stride*row_size + i_inner + i_qpoint*stride];
-              }
+              row_f(i_qpoint, i_var) = flux[i_dim][i_var][i_outer*stride*row_size + i_inner + i_qpoint*stride];
             }
           }
-          for (int j_dim = 0; j_dim < n_dim; ++j_dim)
+          Eigen::Matrix<double, row_size, n_var> row_w {stiff_mat*row_f};
+
+          Eigen::Matrix<double, n_var, 2> boundary_values;
+          for (int i_var = 0; i_var < n_var; ++i_var)
           {
-            for (int k_dim = 0; k_dim < n_dim; ++k_dim)
+            const int face_offset = i_var*n_qpoint/row_size + i_face_qpoint;
+            boundary_values(i_var, 0) = face0[face_offset];
+            boundary_values(i_var, 1) = face1[face_offset];
+          }
+          Eigen::Matrix<double, row_size, n_dim*n_dim> row_j;
+          for (int i_jac = 0; i_jac < n_dim*n_dim; ++i_jac)
+          {
+            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
             {
-              for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
-              {
-                row_jac[j_dim][k_dim][i_qpoint] = jacobian[(j_dim*n_dim + k_dim)*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
-              }
+              row_j(i_qpoint, i_jac) = jacobian[i_jac*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
             }
           }
-
-          // differentiate flux
-          double flux_diff [n_dim][n_var][row_size];
-          Eigen::Map<Eigen::Matrix<double, row_size, n_dim*n_var>> pf (&(phys_flux[0][0][0]));
-          Eigen::Map<Eigen::Matrix<double, row_size, n_dim*n_var>> fd (&(flux_diff[0][0][0]));
-          fd.noalias() = diff_mat*pf;
-
-          double jac_det [row_size];
-          for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
+          Eigen::Matrix<double, 2, n_dim*n_dim> face_jac;
+          face_jac.noalias() = boundary*row_j;
+          for (int i_side : {0, 1})
           {
-            Eigen::Matrix<double, n_dim, n_dim> flux_mat;
+            Eigen::Matrix<double, n_dim, n_dim> jac;
             for (int j_dim = 0; j_dim < n_dim; ++j_dim)
             {
               for (int k_dim = 0; k_dim < n_dim; ++k_dim)
               {
-                flux_mat(j_dim, k_dim) = row_jac[j_dim][k_dim][i_qpoint];
+                jac(j_dim, k_dim) = face_jac(i_side, j_dim*n_dim + k_dim);
               }
             }
-            jac_det[i_qpoint] = flux_mat.determinant();
-            for (int i_var = 0; i_var < n_var; ++i_var)
-            {
-              for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-              {
-                flux_mat(j_dim, i_dim) = flux_diff[j_dim][i_var][i_qpoint];
-              }
-              row_w[i_var][i_qpoint] = flux_mat.determinant()*-d_t_by_d_pos;
-            }
+            auto orth {custom_math::orthonormal(jac, i_dim)};
+            jac.col(i_dim) = orth.col(i_dim);
+            boundary_values.col(i_side) *= jac.determinant();
+            Eigen::Block<Eigen::Matrix<double, n_var, 2>, n_dim, 1> momentum {boundary_values, 0, i_side};
+            momentum = orth*momentum;
           }
 
           // Write updated solution
           for (int i_var = 0; i_var < n_var; ++i_var)
           {
+            row_w.col(i_var).noalias() += boundary_mat*boundary_values.row(i_var).transpose();
             for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
             {
-              const int i = + i_outer*stride*row_size + i_inner + i_qpoint*stride;
-              write[i_var*n_qpoint + i] += row_w[i_var][i_qpoint]/jac_det[i_qpoint];
+               write[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride]
+               += row_w(i_qpoint, i_var)*d_t_by_d_pos/weights[i_qpoint]/jac_det[i_outer*stride*row_size + i_inner + i_qpoint*stride];
             }
           }
+          ++i_face_qpoint;
         }
       }
     }

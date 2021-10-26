@@ -1,11 +1,13 @@
 #include <Deformed_grid.hpp>
+#include <Regular_grid.hpp>
 #include <get_mcs_deformed_convective.hpp>
-#include <get_local_deformed_convective.hpp>
+#include <get_write_face_deformed.hpp>
 #include <get_neighbor_deformed_convective.hpp>
-#include <get_neighbor_def_reg_convective.hpp>
 #include <get_gbc_convective.hpp>
+#include <get_local_deformed_convective.hpp>
 #include <get_nonpen_convective.hpp>
 #include <get_req_visc_deformed_convective.hpp>
+#include <math.hpp>
 
 namespace cartdg
 {
@@ -20,7 +22,6 @@ Deformed_grid::Deformed_grid(int n_var_arg, int n_dim_arg, int n_elem_arg,
   }
   n_vertices = 1;
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) n_vertices *= 2;
-  def_reg_cons.resize(2*n_dim);
 }
 
 Element& Deformed_grid::element(int i_elem)
@@ -43,11 +44,6 @@ double Deformed_grid::stable_time_step(double cfl_by_stable_cfl, Kernel_settings
 Deformed_elem_con Deformed_grid::connection(int i_con)
 {
   return elem_cons[i_con];
-}
-
-def_reg_con Deformed_grid::def_reg_connection(int i_dim, int i_con)
-{
-  return def_reg_cons[i_dim][i_con];
 }
 
 Deformed_elem_wall Deformed_grid::def_elem_wall(int i_wall)
@@ -73,56 +69,41 @@ std::vector<double> Deformed_grid::get_pos(int i_elem)
 {
   std::vector<double> elem_pos (n_qpoint*n_dim);
   Deformed_element& elem {deformed_element(i_elem)};
-  for (int i_vertex = 0; i_vertex < n_vertices; ++i_vertex)
+  Eigen::MatrixXd lin_interp {basis.row_size, 2};
+  for (int i_qpoint = 0; i_qpoint < basis.row_size; ++i_qpoint)
   {
-    int i_node = 0;
-    for (int vertex_stride = 1, node_stride = 1;
-         vertex_stride < n_vertices;
-         vertex_stride *= 2, node_stride *= basis.row_size)
-    {
-      if ((i_vertex/vertex_stride)%2 == 1) i_node += node_stride*(basis.row_size - 1);
-    }
-    Vertex& vert = elem.vertex(i_vertex);;
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-    {
-      elem_pos[n_qpoint*i_dim + i_node] = vert.pos[i_dim];
-    }
+    double node {basis.node(i_qpoint)};
+    lin_interp(i_qpoint, 0) = 1. - node;
+    lin_interp(i_qpoint, 1) = node;
   }
 
-  for (int i_dim = 0, stride = n_qpoint/basis.row_size; i_dim < n_dim; ++i_dim, stride /= basis.row_size)
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
   {
-    for (int i_node = 0; i_node < n_qpoint; ++i_node)
+    Eigen::VectorXd vert_pos {n_vertices};
+    for (int i_vertex = 0; i_vertex < n_vertices; ++i_vertex)
     {
-      int coord = (i_node/stride)%basis.row_size;
-      double dist = basis.node(coord);
-      int i_node0 = i_node - coord*stride;
-      int i_node1 = i_node0 + (basis.row_size - 1)*stride;
-      for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-      {
-        int i = j_dim*n_qpoint;
-        elem_pos[i + i_node] = (1. - dist)*elem_pos[i + i_node0] + dist*elem_pos[i + i_node1];
-      }
+      vert_pos[i_vertex] = elem.vertex(i_vertex).pos[i_dim];
     }
+    Eigen::Map<Eigen::VectorXd> dim_pos {elem_pos.data() + i_dim*n_qpoint, n_qpoint};
+    dim_pos = custom_math::hypercube_matvec(lin_interp, vert_pos);
   }
 
   std::vector<double> warped_elem_pos = elem_pos;
+  Eigen::MatrixXd boundary {basis.boundary()};
   for (int i_dim = 0, stride = n_qpoint/basis.row_size; i_dim < n_dim; ++i_dim, stride /= basis.row_size)
   {
-    for (int i_node = 0; i_node < n_qpoint; ++i_node)
+    for (int i_qpoint = 0; i_qpoint < n_qpoint/basis.row_size; ++i_qpoint)
     {
-      int coord = (i_node/stride)%basis.row_size;
-      int i_node0 = i_node - coord*stride;
-      int i_node1 = i_node0 + (basis.row_size - 1)*stride;
-      int i_adjust = 2*i_dim*n_qpoint/basis.row_size + i_node/(stride*basis.row_size)*stride + i_node%stride;
+      int i_row_start = i_qpoint/stride*stride*basis.row_size + i_qpoint%stride;
       double* node_adj = elem.node_adjustments();
-      double adjust0 = node_adj[i_adjust];
-      double adjust1 = node_adj[i_adjust + n_qpoint/basis.row_size];
-      double dist = basis.node(coord);
-      for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-      {
-        int i = j_dim*n_qpoint;
-        warped_elem_pos[i + i_node] += (elem_pos[i + i_node1] - elem_pos[i + i_node0])*((1. - dist)*adjust0 + dist*adjust1);
-      }
+      int i_adjust = 2*i_dim*n_qpoint/basis.row_size + i_qpoint;
+      Eigen::VectorXd adjust {{node_adj[i_adjust], node_adj[i_adjust + n_qpoint/basis.row_size]}};
+      typedef Eigen::Stride<Eigen::Dynamic, Eigen::Dynamic> stride_t;
+      typedef Eigen::Map<Eigen::MatrixXd, 0, stride_t> map;
+      map orig {&elem_pos[i_row_start], basis.row_size, n_dim, stride_t{n_qpoint, stride}};
+      map warped {&warped_elem_pos[i_row_start], basis.row_size, n_dim, stride_t{n_qpoint, stride}};
+      Eigen::MatrixXd face_pos = boundary*orig;
+      warped += lin_interp*(adjust*(face_pos.row(1) - face_pos.row(0)));
     }
   }
   return warped_elem_pos;
@@ -134,17 +115,24 @@ void Deformed_grid::add_wall(int i_elem, int i_dim, bool is_positive_face)
   walls.push_back(wall);
 }
 
-void Deformed_grid::execute_local(Kernel_settings& settings)
+void Deformed_grid::execute_write_face(Kernel_settings& settings)
 {
-  get_local_deformed_convective(n_dim, basis.row_size)(elements, basis, settings);
+  settings.i_read = i_read;
+  get_write_face_deformed(n_dim, basis.row_size)(elements, basis, settings);
 }
 
 void Deformed_grid::execute_neighbor(Kernel_settings& settings)
 {
   get_neighbor_deformed_convective(n_dim, basis.row_size)(elem_cons, basis, settings);
-  get_neighbor_def_reg_convective(n_dim, basis.row_size)(def_reg_cons, basis, settings);
   get_gbc_convective(n_dim, basis.row_size)(*this, basis, settings);
   get_nonpen_convective(n_dim, basis.row_size)(walls, basis, settings);
+}
+
+void Deformed_grid::execute_local(Kernel_settings& settings)
+{
+  settings.i_read = i_read;
+  settings.i_write = i_write;
+  get_local_deformed_convective(n_dim, basis.row_size)(elements, basis, settings);
 }
 
 void Deformed_grid::execute_req_visc(Kernel_settings& settings)
@@ -235,20 +223,6 @@ void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
     elem_cons.back().i_dim[i_side] = i_dim[i_side];
     elem_cons.back().is_positive[i_side] = is_positive[i_side];
   }
-}
-
-void Deformed_grid::connect_non_def(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
-                                    std::array<bool, 2> is_positive, Grid& other_grid)
-{
-  if (i_dim[0] != i_dim[1])
-  {
-    throw std::runtime_error("connecting deformed-regular along different dimensions is deprecated");
-  }
-  if (is_positive[0] == is_positive[1])
-  {
-    throw std::runtime_error("connecting deformed-regular with opposing face direction is deprecated");
-  }
-  def_reg_cons[i_dim[0] + is_positive[0]*n_dim].emplace_back(elements[i_elem[0]].get(), &other_grid.element(i_elem[1]));
 }
 
 void Deformed_grid::purge_vertices()

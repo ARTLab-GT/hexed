@@ -6,9 +6,7 @@
 #include <Kernel_settings.hpp>
 #include <Basis.hpp>
 #include <Deformed_element.hpp>
-#include "read_copy.hpp"
-#include "write_copy.hpp"
-#include "hll_deformed_cpg_euler.hpp"
+#include "hll_cpg_euler.hpp"
 
 namespace cartdg
 {
@@ -17,12 +15,10 @@ namespace cartdg
 template <int n_var, int n_qpoint, int row_size>
 void nonpen_convective(def_elem_wall_vec& walls, Basis& basis, Kernel_settings& settings)
 {
-  const int n_face_qpoint = n_qpoint/row_size;
+  const double heat_rat = settings.cpg_heat_rat;
   const int n_dim = n_var - 2;
-  double mult = settings.d_t_by_d_pos/basis.node_weights()[0];
-  double heat_rat = settings.cpg_heat_rat;
-  const int i_read = settings.i_read;
-  const int i_write = settings.i_write;
+  const int n_face_qpoint = n_qpoint/row_size;
+  const int face_size = n_var*n_face_qpoint;
 
   #pragma omp parallel for
   for (unsigned i_bc = 0; i_bc < walls.size(); ++i_bc)
@@ -31,63 +27,30 @@ void nonpen_convective(def_elem_wall_vec& walls, Basis& basis, Kernel_settings& 
     const int i_dim = wall.i_dim;
     int stride = n_face_qpoint;
     for (int i = 0; i < i_dim; ++i) stride /= row_size;
-    bool is_positive = wall.is_positive == 1;
+    int is_p = wall.is_positive;
+    Element& elem {*wall.element};
 
-    double face_r [2][n_var][n_face_qpoint];
-    double face_jacobian [2][n_dim][n_dim][n_face_qpoint];
-    double face_w [2][n_var][n_face_qpoint];
-    read_copy<n_var, n_qpoint, row_size>(wall.element->stage(i_read), &face_r[0][0][0], stride, is_positive);
-    read_copy<n_dim*n_dim, n_qpoint, row_size>(wall.element->jacobian(), &face_jacobian[0][0][0][0], stride, is_positive);
-
-    for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++ i_qpoint)
+    double both_face [2][n_var][n_face_qpoint];
+    double* dom_face = elem.face() + (i_dim*2 + is_p)*face_size;
+    for (int i_var = 0; i_var < n_var; ++i_var)
     {
-      Eigen::Matrix<double, n_dim, n_dim> jac_mat;
-      for (int j_dim = 0; j_dim < n_dim; ++j_dim)
+      for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint)
       {
-        for (int k_dim = 0; k_dim < n_dim; ++k_dim)
-        {
-          jac_mat(j_dim, k_dim) = face_jacobian[0][j_dim][k_dim][i_qpoint];
-        }
-      }
-
-      double normal [n_dim];
-      double normal_sq = 0;
-      double mom_dot_normal = 0;
-      for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-      {
-        for (int k_dim = 0; k_dim < n_dim; ++k_dim)
-        {
-          jac_mat(k_dim, i_dim) = 0.;
-        }
-        jac_mat(j_dim, i_dim) = 1.;
-        normal[j_dim] = jac_mat.determinant();
-        mom_dot_normal += face_r[0][j_dim][i_qpoint]*normal[j_dim];
-        normal_sq += normal[j_dim]*normal[j_dim];
-      }
-      double normal_mom [n_dim];
-      for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-      {
-        normal_mom[j_dim] = mom_dot_normal*normal[j_dim]/normal_sq;
-      }
-
-      for (int i_var = 0; i_var < n_var; ++i_var)
-      {
-        face_r[1][i_var][i_qpoint] = face_r[0][i_var][i_qpoint];
-      }
-      for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-      {
-        face_r[1][j_dim][i_qpoint] -= 2*normal_mom[j_dim];
-        for (int k_dim = 0; k_dim < n_dim; ++k_dim)
-        {
-          face_jacobian[1][j_dim][k_dim][i_qpoint] = face_jacobian[0][j_dim][k_dim][i_qpoint];
-        }
+        both_face[0][i_var][i_qpoint] = both_face[1][i_var][i_qpoint] = dom_face[i_var*n_face_qpoint + i_qpoint];
       }
     }
-
-    int dims [2] {i_dim, i_dim};
-    bool flips [2] {!is_positive, !is_positive};
-    hll_deformed_cpg_euler<n_dim, n_face_qpoint>(&face_r[0][0][0], &face_w[0][0][0], &face_jacobian[0][0][0][0], mult, dims, flips, heat_rat);
-    write_copy<n_var, n_qpoint, row_size, true>(&face_w[0][0][0], wall.element->stage(i_write), stride, is_positive);
+    for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint)
+    {
+      both_face[is_p][i_dim][i_qpoint] *= -1;
+    }
+    hll_cpg_euler<n_dim, n_face_qpoint>(both_face[0][0], both_face[0][0], 1., i_dim, heat_rat);
+    for (int i_var = 0; i_var < n_var; ++i_var)
+    {
+      for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint)
+      {
+        dom_face[i_var*n_face_qpoint + i_qpoint] = both_face[1 - is_p][i_var][i_qpoint];
+      }
+    }
   }
 }
 

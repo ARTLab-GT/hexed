@@ -1,7 +1,8 @@
 #include <Regular_grid.hpp>
 #include <get_mcs_convective.hpp>
-#include <get_local_convective.hpp>
+#include <get_write_face.hpp>
 #include <get_neighbor_convective.hpp>
+#include <get_local_convective.hpp>
 #include <get_gbc_convective.hpp>
 #include <get_req_visc_regular_convective.hpp>
 #include <get_cont_visc.hpp>
@@ -58,19 +59,23 @@ double Regular_grid::stable_time_step(double cfl_by_stable_cfl, Kernel_settings&
   return cfl*mesh_size/get_mcs_convective(n_dim, basis.row_size)(elements, settings);
 }
 
+void Regular_grid::execute_write_face(Kernel_settings& settings)
+{
+  settings.i_read = i_read;
+  get_write_face(n_dim, basis.row_size)(elements, basis, settings);
+}
+
+void Regular_grid::execute_neighbor(Kernel_settings& settings)
+{
+  get_neighbor_convective(n_dim, basis.row_size)(elem_cons, basis, settings);
+  get_gbc_convective(n_dim, basis.row_size)(*this, basis, settings);
+}
+
 void Regular_grid::execute_local(Kernel_settings& settings)
 {
   settings.i_read = i_read;
   settings.i_write = i_write;
   get_local_convective(n_dim, basis.row_size)(elements, basis, settings);
-}
-
-void Regular_grid::execute_neighbor(Kernel_settings& settings)
-{
-  settings.i_read = i_read;
-  settings.i_write = i_write;
-  get_neighbor_convective(n_dim, basis.row_size)(elem_cons, basis, settings);
-  get_gbc_convective(n_dim, basis.row_size)(*this, basis, settings);
 }
 
 void Regular_grid::execute_req_visc(Kernel_settings& settings)
@@ -132,6 +137,11 @@ int Regular_grid::add_element(std::vector<int> position)
 void Regular_grid::add_connection(int i_elem0, int i_elem1, int i_dim)
 {
   elem_cons[i_dim].push_back({elements[i_elem0].get(), elements[i_elem1].get()});
+}
+
+void Regular_grid::add_connection(Element* elem0, Element* elem1, int i_dim)
+{
+  elem_cons[i_dim].push_back({elem0, elem1});
 }
 
 void Regular_grid::auto_connect(std::vector<int> periods)

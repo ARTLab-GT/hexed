@@ -5,6 +5,7 @@ target_sources(test PRIVATE
 main.cpp
 test_Basis.cpp
 test_conservation.cpp
+test_deformed.cpp
 test_Deformed_element.cpp
 test_Deformed_grid.cpp
 test_Element.cpp
@@ -12,7 +13,6 @@ test_func.cpp
 test_Ghost_boundary_condition.cpp
 test_local.cpp
 test_neighbor.cpp
-test_nonpen.cpp
 test_math.cpp
 test_observing.cpp
 test_Regular_grid.cpp
