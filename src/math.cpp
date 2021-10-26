@@ -44,5 +44,21 @@ Eigen::VectorXd hypercube_matvec(const Eigen::MatrixXd& mat, const Eigen::Vector
   }
 }
 
+Eigen::VectorXd dimension_matvec(const Eigen::MatrixXd& mat, const Eigen::VectorXd& vec, int i_dim)
+{
+  #if DEBUG
+  int n_rows {pow(int(mat.cols()), i_dim + 1)};
+  if (vec.size()%n_rows)
+  {
+    const int n {100};
+    char buffer [n];
+    auto format = "Incompatible matrix shapes in dimension_matvec: cannot divide %i elements into %i^%i = %i rows.";
+    snprintf(buffer, n, format, vec.size(), mat.cols(), i_dim + 1, n_rows);
+    throw std::runtime_error(buffer);
+  }
+  #endif
+  return Eigen::VectorXd {};
+}
+
 }
 }

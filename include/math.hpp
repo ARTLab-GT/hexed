@@ -37,6 +37,7 @@ double root(Func_type func, double init_guess, double atol=1e-10, double init_di
 }
 
 Eigen::VectorXd hypercube_matvec(const Eigen::MatrixXd&, const Eigen::VectorXd&);
+Eigen::VectorXd dimension_matvec(const Eigen::MatrixXd&, const Eigen::VectorXd&, int i_dim);
 
 /*
  * Orthonormalize a basis. Assumes `basis` is invertible. Returns a matrix with the

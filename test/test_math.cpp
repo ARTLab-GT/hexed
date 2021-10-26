@@ -84,6 +84,27 @@ TEST_CASE("hypercube_matvec")
   }
 }
 
+TEST_CASE("dimension matvec")
+{
+  auto dmv {cartdg::custom_math::dimension_matvec};
+  #ifdef DEBUG
+  SECTION("multiplying incompatible shapes throws")
+  {
+    {
+      Eigen::MatrixXd mat {Eigen::MatrixXd::Identity(7, 7)};
+      Eigen::VectorXd vec {Eigen::VectorXd::Zero(10)};
+      REQUIRE_THROWS(dmv(mat, vec, 0));
+    }
+    {
+      Eigen::MatrixXd mat {Eigen::MatrixXd::Identity(4, 5)};
+      Eigen::VectorXd vec {Eigen::VectorXd::Zero(750)};
+      dmv(mat, vec, 2);
+      REQUIRE_THROWS(dmv(mat, vec, 3));
+    }
+  }
+  #endif
+}
+
 TEST_CASE("orthonormal")
 {
   SECTION("1D")
