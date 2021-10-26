@@ -9,9 +9,9 @@ an accuracy boost, but it is meant to be encapsulated well enough that it can su
 used with other similar codes.
 
 CartDG is:
+* An implementation of the discontinuous Galerkin scheme for CFD solvers.
 * Fast.
 * Simple (relatively).
-* Capable of helping NASCART-GT do CFD with a state-of-the-art numerical scheme.
 
 CartDG is not:
 * A stand-alone CFD code.
