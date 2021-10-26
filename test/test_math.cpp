@@ -103,6 +103,12 @@ TEST_CASE("dimension matvec")
     }
   }
   #endif
+  Eigen::VectorXd vec {Eigen::VectorXd::LinSpaced(8, 0, 7)};
+  Eigen::MatrixXd mat {{0, 1}, {1, 0}, {0.5, 0.5}};
+  auto prod = dmv(mat, vec, 1);
+  REQUIRE(prod.size() == 12);
+  Eigen::VectorXd correct {{2, 3, 0, 1, 1, 2, 6, 7, 4, 5, 5, 6}};
+  REQUIRE(prod == correct);
 }
 
 TEST_CASE("orthonormal")
