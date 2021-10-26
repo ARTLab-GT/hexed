@@ -4,7 +4,7 @@ Provides a discontinuous Galerkin scheme as a library for Cartesian grid CFD sol
 ## Overview
 CartDG implements the core numerical algorithms for a discontinuous Galerkin scheme operating on the equations of fluid flow
 defined on a Cartesian grid. It takes advantage of mathematical simplifications resulting from the Cartesian,
-isotropic nature of the grid to produce concise and efficient code. It is designed to be integrated with NASCART-GT as
+isotropic nature of the majority of the grid to produce concise and efficient code. It is designed to be integrated with NASCART-GT as
 an accuracy boost, but it is meant to be encapsulated well enough that it can survive major changes to NASCART-GT or even be
 used with other similar codes.
 
@@ -18,7 +18,7 @@ CartDG is not:
 * A general framework for CFD on arbitrary grids.
 * A solver for arbitrary PDEs.
 
-This document describes CartDG. For installation instructions, see [`INSTALL.md`](INSTALL.md).
+This document describes the purpose and capabilities of CartDG. For installation instructions, see [`INSTALL.md`](INSTALL.md).
 
 ## Motivation
 The motivation for this project came from my experience with NASCART-GT. With it's highly automated adaptive Cartesian grid
@@ -52,28 +52,28 @@ I use the following nonstandard terms in the code:
   dimensionality. E.g. a 4th degree basis in 3 dimensions has row size 5 and 125 quadrature points.
  
 ## Dependencies
-Eigen must be available in your include path. Tecio must be available in a directory that you may specify.
+Eigen must be available in your include path. Tecplot must be installed with path environment variables configured accordingly.
 Catch2 must be available in a location that CMake can find.
-Python3 must also be available, along with the libraries NumPy, SymPy, and MatPlotLib.
+Python3 must also be available, along with the libraries NumPy, SymPy, and MatPlotLib. See [installation instructions](INSTALL.md)
+for guidance on obtaining these.
  
 ## Features
 Currently implemented features:
 * Standard DG method.
 * Gauss-Lobatto and Gauss-Legendre nodal bases.
-* Isotropic Cartesian and deformed quad/hex cells connected in an arbitrary graph.
+* Body-fitted quasi-Cartesian quad mesh.
+* Cartesian hex mesh.
 * 3-stage Runge-Kutta explicit time integration.
 * CFL-based time step selection.
-* Generation of structured grids for testing purposes.
 * Visualization with Tecplot.
-* Boundary conditions.
 * Integration with NASCART-GT.
  
 Planned or in-progress features (roughly in order of planned implementation):
-* Stability with immersed geometries (in progress).
 * Shock capturing (in progress).
-* Hanging-nodes.
-* Implicit method.
-* Viscous flows.
+* Body-fitted quasi-Cartesian hex mesh.
+* Isotropic hanging-node refinement.
+* Viscous flows with anisotropic refinement.
+* Grid adaptation.
 
 ## Contributing
 Please do not push directly to `master`. Feel free to create and push new branches. Once you have something that
