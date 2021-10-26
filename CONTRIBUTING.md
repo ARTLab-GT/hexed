@@ -1,4 +1,4 @@
-# CONTRIBUTING
+# Contributing
 
 When contributing to CartDG, please adhere to these guidelines. Some are standard (but important) practice
 in software development, while others reflect the personal preferences of the maintainer (currently Micaiah)
