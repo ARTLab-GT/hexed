@@ -56,8 +56,8 @@ void hll_cpg_euler(double* state_r, double* d_flux_w, double mult,
                    / (wave_speed[1] - wave_speed[0]);
       }
 
-      d_flux_w[i            ] = (flux[0][i_var] - num_flux)*mult;
-      d_flux_w[i + face_size] = (num_flux - flux[1][i_var])*mult;
+      d_flux_w[i            ] = num_flux;
+      d_flux_w[i + face_size] = num_flux;
     }
   }
 }

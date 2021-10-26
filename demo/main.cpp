@@ -29,7 +29,7 @@ int main()
     time += 0.001;
     while (grid.time < time)
     {
-      solution.update();
+      solution.update(0.1);
     }
     solution.visualize("simulation");
   }

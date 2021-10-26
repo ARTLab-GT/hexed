@@ -7,6 +7,7 @@ Domain_func.cpp
 Element.cpp
 Equidistant.cpp
 Ghost_boundary_condition.cpp
+global.cpp
 Grid.cpp
 Kernel_settings.cpp
 math.cpp

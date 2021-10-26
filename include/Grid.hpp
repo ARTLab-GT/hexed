@@ -46,8 +46,9 @@ class Grid
   // time integration
   bool execute_runge_kutta_stage();
   double get_stable_cfl();
-  virtual void execute_local(Kernel_settings&) = 0;
+  virtual void execute_write_face(Kernel_settings&) = 0;
   virtual void execute_neighbor(Kernel_settings&) = 0;
+  virtual void execute_local(Kernel_settings&) = 0;
   virtual void execute_req_visc(Kernel_settings&) = 0;
   virtual void execute_cont_visc(Kernel_settings&) = 0;
   virtual void execute_local_derivative(int i_var, int i_dim, Kernel_settings&) = 0;

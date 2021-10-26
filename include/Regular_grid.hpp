@@ -21,12 +21,14 @@ class Regular_grid : public Grid
   // modification
   virtual int add_element(std::vector<int> position);
   void add_connection(int i_elem0, int i_elem1, int i_dim);
+  void add_connection(Element* elem0, Element* elem1, int i_dim);
   void auto_connect(std::vector<int> periods);
   void auto_connect();
 
   // time integration
-  virtual void execute_local(Kernel_settings&);
+  virtual void execute_write_face(Kernel_settings&);
   virtual void execute_neighbor(Kernel_settings&);
+  virtual void execute_local(Kernel_settings&);
   virtual void execute_req_visc(Kernel_settings&);
   virtual void execute_cont_visc(Kernel_settings&);
   virtual void execute_local_derivative(int i_var, int i_dim, Kernel_settings&);

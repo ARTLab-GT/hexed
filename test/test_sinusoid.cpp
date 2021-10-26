@@ -175,9 +175,9 @@ TEST_CASE("Sinusoidal density wave")
   SECTION("2D")
   {
     cartdg::Solution sol (4, 2, row_size, length);
-    sol.add_block_grid(3);
+    sol.add_block_grid(4);
     cartdg::Regular_grid& grid = sol.reg_grids[0];
-    std::vector<int> periods {8, 8};
+    std::vector<int> periods {16, 16};
     grid.auto_connect(periods);
 
     Velocity_init init (2);
@@ -281,10 +281,11 @@ TEST_CASE("Sinusoidal density wave")
 
   SECTION("3D")
   {
+    #ifdef NDEBUG
     cartdg::Solution sol (5, 3, row_size, length);
-    sol.add_block_grid(3);
+    sol.add_block_grid(4);
     cartdg::Regular_grid& grid = sol.reg_grids[0];
-    std::vector<int> periods {8, 8, 8};
+    std::vector<int> periods {16, 16, 16};
     grid.auto_connect(periods);
 
     Velocity_init init (3);
@@ -341,5 +342,6 @@ TEST_CASE("Sinusoidal density wave")
                           0.5*init.mean_mass*speed*speed)));
       }
     }
+    #endif
   }
 }

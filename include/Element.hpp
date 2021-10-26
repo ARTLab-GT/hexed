@@ -26,6 +26,7 @@ class Element
   public:
   Element(Storage_params);
   double* stage(int i_stage);
+  double* face();
   // following two functions are for convenience, not performance
   virtual double jacobian(int i_dim, int j_dim, int i_qpoint);
   double jacobian_determinant(int i_qpoint);

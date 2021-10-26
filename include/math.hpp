@@ -37,6 +37,50 @@ double root(Func_type func, double init_guess, double atol=1e-10, double init_di
 }
 
 Eigen::VectorXd hypercube_matvec(const Eigen::MatrixXd&, const Eigen::VectorXd&);
+Eigen::VectorXd dimension_matvec(const Eigen::MatrixXd&, const Eigen::VectorXd&, int i_dim);
+
+/*
+ * Orthonormalize a basis. Assumes `basis` is invertible. Returns a matrix with the
+ * following properties:
+ * - Unitary.
+ * - Span of columns excluding the `i_dim`th is the same as for `basis`.
+ * - Minimizes RMS difference between columns exclucing `i_dim`th of return matrix and `basis`
+ *   (sensitive to order).
+ * - Inner product of `i_dim`th columns of return matrix and `basis` is positive.
+ */
+template <int n_dim>
+Eigen::Matrix<double, n_dim, n_dim> orthonormal (Eigen::Matrix<double, n_dim, n_dim> basis, int i_dim)
+{
+  static_assert (n_dim <= 3, "Not implemented for n_dim > 3.");
+  if constexpr (n_dim == 1)
+  {
+    return basis/std::abs(basis(0, 0));
+  }
+  else
+  {
+    auto col_i = basis.col(i_dim);
+    std::array<int, n_dim - 1> j_col;
+    for (int offset = 1; offset < n_dim; ++offset)
+    {
+      j_col[offset - 1] = (offset + i_dim)%n_dim;
+    }
+    auto cols {basis(Eigen::all, j_col)}; // all the cols except for `i_dim`th
+    cols.array().rowwise() /= cols.array().colwise().norm(); // normalize
+    if constexpr (n_dim == 3) // orthonormalize `cols`
+    {
+      Eigen::Matrix2d sum_diff {{1, -1}, {1, 1}};
+      cols = cols*sum_diff;
+      cols.array().rowwise() /= cols.array().colwise().norm();
+      cols = cols*(sum_diff.transpose()/std::sqrt(2.));
+    }
+    for (int jc : j_col) // orthogonalize `i_dim`th col wrt `cols` (Gram-Schmidt style)
+    {
+      col_i -= col_i.dot(basis.col(jc))*basis.col(jc);
+    }
+    col_i /= col_i.norm();
+    return basis;
+  }
+}
 
 }
 }

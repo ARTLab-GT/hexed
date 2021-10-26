@@ -4,6 +4,8 @@
 #include <Deformed_grid.hpp>
 #include <Regular_grid.hpp>
 #include <Gauss_lobatto.hpp>
+#include <Gauss_legendre.hpp>
+#include <math.hpp>
 
 TEST_CASE("Deformed grid class")
 {
@@ -37,6 +39,10 @@ TEST_CASE("Deformed grid class")
 
     SECTION("vertex interpolation")
     {
+      cartdg::Gauss_legendre leg_basis {row_size};
+      cartdg::Deformed_grid grid {1, 2, 0, 0.2, leg_basis};
+      grid.origin[0] = 0.1;
+      grid.add_element({-1, 2});
       /*
       Approximate vertex layout:
          3
@@ -46,19 +52,25 @@ TEST_CASE("Deformed grid class")
       1
                    0
       */
-      grid2.deformed_element(0).vertex(0).pos = { 0.1, 2.0, 0.0};
-      grid2.deformed_element(0).vertex(1).pos = {-1.1, 2.1, 0.0};
-      grid2.deformed_element(0).vertex(2).pos = { 0.0, 2.8, 0.0};
-      grid2.deformed_element(0).vertex(3).pos = {-1.0, 2.9, 0.0};
-      std::vector<double> pos2 = grid2.get_pos(0);
-      REQUIRE(pos2[ 0] == Approx( 0.1));
-      REQUIRE(pos2[ 1] == Approx(-0.5));
-      REQUIRE(pos2[ 2] == Approx(-1.1));
-      REQUIRE(pos2[ 4] == Approx(-0.5));
-      REQUIRE(pos2[ 9] == Approx( 2. ));
-      REQUIRE(pos2[12] == Approx( 2.4));
-      REQUIRE(pos2[13] == Approx( 2.45));
-      REQUIRE(pos2[17] == Approx( 2.9));
+      grid.deformed_element(0).vertex(0).pos = { 0.1, 2.0, 0.0};
+      grid.deformed_element(0).vertex(1).pos = {-1.1, 2.1, 0.0};
+      grid.deformed_element(0).vertex(2).pos = { 0.0, 2.8, 0.0};
+      grid.deformed_element(0).vertex(3).pos = {-1.0, 2.9, 0.0};
+      std::vector<double> pos2 = grid.get_pos(0);
+      Eigen::MatrixXd bound_mat = grid.basis.boundary();
+      std::vector<double> bound_pos (8);
+      for (int i_dim : {0, 1})
+      {
+        const int n_qpoint {row_size*row_size};
+        Eigen::Map<Eigen::VectorXd> bound_pos_mat {bound_pos.data() + 4*i_dim, 4};
+        Eigen::Map<Eigen::VectorXd> qpoint_pos_mat {pos2.data() + n_qpoint*i_dim, n_qpoint};
+        bound_pos_mat = cartdg::custom_math::hypercube_matvec(bound_mat, qpoint_pos_mat);
+      }
+      REQUIRE(bound_pos[0] == Approx( 0.1));
+      REQUIRE(bound_pos[1] == Approx(-1.1));
+      REQUIRE(bound_pos[4] == Approx( 2. ));
+      REQUIRE(bound_pos[6] == Approx( 2.8));
+      REQUIRE(bound_pos[7] == Approx( 2.9));
 
       grid3.add_element({0, 0, 0});
       grid3.deformed_element(1).vertex(7).pos = {0.2*0.8, 0.2*0.8, 0.2*0.8};
@@ -81,12 +93,12 @@ TEST_CASE("Deformed grid class")
       REQUIRE(pos2[ 8] == Approx(0.6));
       REQUIRE(pos2[16] == Approx(0.5));
 
-      REQUIRE(pos2[ 3] == Approx(0.5 - 0.2*0.2));
-      REQUIRE(pos2[ 4] == Approx(0.4 - 0.2*(0.2 - 0.1)/2));
-      REQUIRE(pos2[ 5] == Approx(0.3 + 0.2*0.1));
-      REQUIRE(pos2[12] == Approx(0.0 + 0.2));
-      REQUIRE(pos2[13] == Approx(0.5 + (0.2 - 0.1)/2));
-      REQUIRE(pos2[14] == Approx(1.0 - 0.1));
+      CHECK(pos2[ 3] == Approx(0.5 - 0.2*0.2));
+      CHECK(pos2[ 4] == Approx(0.4 - 0.2*(0.2 - 0.1)/2));
+      CHECK(pos2[ 5] == Approx(0.3 + 0.2*0.1));
+      CHECK(pos2[12] == Approx(0.0 + 0.2));
+      CHECK(pos2[13] == Approx(0.5 + (0.2 - 0.1)/2));
+      CHECK(pos2[14] == Approx(1.0 - 0.1));
 
       cartdg::Deformed_element& elem1 = grid2.deformed_element(1);
       elem1.vertex(0).pos = {0.0, 0.0, 0.0};
@@ -105,6 +117,15 @@ TEST_CASE("Deformed grid class")
       REQUIRE(pos3[13] == 0.101);
       REQUIRE(pos3[13 + 27] == .1);
       REQUIRE(pos3[13 + 2*27] == .1);
+
+      cartdg::Gauss_legendre leg_basis {row_size};
+      cartdg::Deformed_grid leg_grid {1, 2, 0, 0.2, leg_basis};
+      leg_grid.add_element({0, 0});
+      leg_grid.deformed_element(0).node_adjustments()[1] = 0.1;
+      leg_grid.deformed_element(0).node_adjustments()[3] = -0.2;
+      std::vector<double> pos {leg_grid.get_pos(0)};
+      REQUIRE(pos[3] == Approx(0.08));
+      REQUIRE(pos[4] == Approx(0.11));
     }
   }
 
@@ -273,26 +294,6 @@ TEST_CASE("Deformed grid class")
         REQUIRE(&grid2.deformed_element(0).vertex(0) == &grid2.deformed_element(3).vertex(0));
         REQUIRE(&grid2.deformed_element(0).vertex(2) == &grid2.deformed_element(3).vertex(1));
       }
-    }
-
-    SECTION("deformed-regular")
-    {
-      grid3.add_element({0, -1, 0});
-      grid3.add_element({0, 0, 0});
-      cartdg::Regular_grid reg3 {1, 3, 0, 0.2, basis};
-      reg3.add_element({1, 0, 0});
-      reg3.add_element({0, 0, 1});
-      grid3.connect_non_def({1, 0}, {0, 0}, {1, 0}, reg3);
-      grid3.connect_non_def({1, 1}, {2, 2}, {1, 0}, reg3);
-      grid3.connect_non_def({1, 1}, {2, 2}, {0, 1}, reg3);
-      REQUIRE(grid3.def_reg_connection(3, 0).first == &grid3.deformed_element(1));
-      REQUIRE(grid3.def_reg_connection(3, 0).second == &reg3.element(0));
-      REQUIRE(grid3.def_reg_connection(5, 0).first == &grid3.deformed_element(1));
-      REQUIRE(grid3.def_reg_connection(5, 0).second == &reg3.element(1));
-      REQUIRE(grid3.def_reg_connection(2, 0).first == &grid3.deformed_element(1));
-      REQUIRE(grid3.def_reg_connection(2, 0).second == &reg3.element(1));
-      REQUIRE_THROWS(grid3.connect_non_def({1, 0}, {1, 0}, {1, 0}, reg3));
-      REQUIRE_THROWS(grid3.connect_non_def({1, 0}, {0, 0}, {0, 0}, reg3));
     }
   }
 
