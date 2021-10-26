@@ -19,6 +19,7 @@ CartDG is not:
 * A solver for arbitrary PDEs.
 
 This document describes the purpose and capabilities of CartDG. For installation instructions, see [`INSTALL.md`](INSTALL.md).
+For contributing guidelines, see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Motivation
 The motivation for this project came from my experience with NASCART-GT. With it's highly automated adaptive Cartesian grid
@@ -74,7 +75,3 @@ Planned or in-progress features (roughly in order of planned implementation):
 * Isotropic hanging-node refinement.
 * Viscous flows with anisotropic refinement.
 * Grid adaptation.
-
-## Contributing
-Please do not push directly to `master`. Feel free to create and push new branches. Once you have something that
-works, please open a pull request.
