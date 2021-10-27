@@ -38,6 +38,7 @@ try to maintain these conventions when contributing to the code.
 ## Abbreviations
 In some abbreviations that are used very frequently, clarity is traded for brevity.
 Thus, please be familiar with the following definitions:
+* `pos`: "position"
 * `i_`: "index of ..."
   * If this is an index in a nested loop, the inside loops may use `j_` and `k_`.
 * `n_`: "number of ..."
