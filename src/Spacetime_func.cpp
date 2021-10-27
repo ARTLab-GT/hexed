@@ -5,8 +5,6 @@
 namespace cartdg
 {
 
-Spacetime_func::~Spacetime_func() {}
-
 Constant_func::Constant_func(std::vector<double> value_arg) : value(value_arg) {}
 std::vector<double> Constant_func::operator()(std::vector<double> pos, double time)
 {
@@ -32,6 +30,14 @@ std::vector<double> Isentropic_vortex::operator()(std::vector<double> pos, doubl
   mass *= std::pow(thermo_factor, 1./(heat_rat - 1.));
   sp_int_ener *= thermo_factor;
   return std::vector<double> {mass*veloc0, mass*veloc1, mass, mass*sp_int_ener + 0.5*mass*(veloc0*veloc0 + veloc1*veloc1)};
+}
+
+Doublet::Doublet(std::vector<double> freestream_state)
+: freestream{freestream_state} {}
+
+std::vector<double> Doublet::operator()(std::vector<double> pos, double time)
+{
+  return std::vector<double>(freestream.size());
 }
 
 }

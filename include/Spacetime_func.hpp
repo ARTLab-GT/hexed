@@ -11,7 +11,6 @@ class Spacetime_func
 {
   public:
   virtual std::vector<double> operator()(std::vector<double> pos, double time) = 0;
-  virtual ~Spacetime_func();
 };
 
 class Constant_func : public Spacetime_func
@@ -35,21 +34,21 @@ class Isentropic_vortex : public Spacetime_func
   double heat_rat = 1.4;
   double argmax_radius = 0.05; // velocity reaches its maximum value at this radius
   double max_nondim_veloc = 0.02; // max velocity perturbation normalized by freestream speed of sound
-  double center0 = 0.; // center of vortex
+  double center0 = 0.;
   double center1 = 0.;
   Isentropic_vortex(std::vector<double> freestream_state);
   virtual std::vector<double> operator()(std::vector<double> pos, double time);
 };
 
 /*
- * Flowfield produced by an irrotational, incompressible source/vortex doublet.
- * The circle of radius `radius` will be a streamline of this flow. Pressure is
- * set according to incompressible flow theory and density is set such that the
+ * Velocity field of this flow matches an irrotational, incompressible source/vortex doublet.
+ * The circle of radius `radius` will be a streamline of this flow. Thermodynamic
+ * variables are set such that entropy and stagnation enthalpy are constant.
  * flow is isentropic. Flow field is steady, and is an exact solution only in
  * incompressible flow.
  * 
- * Warning: Singularity at `location`! Only applicable to domains which do not
- * include this point.
+ * Warning: Singularity at `location`! This class is applicable only to domains
+ * which do not include this point.
  */
 class Doublet : public Spacetime_func
 {
