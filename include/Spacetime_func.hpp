@@ -52,6 +52,12 @@ class Isentropic_vortex : public Spacetime_func
  */
 class Doublet : public Spacetime_func
 {
+  int n_var;
+  int n_dim;
+  std::vector<double> freestream_veloc;
+  double freestream_speed;
+  double angle_of_attack;
+  double stag_enth_per_mass; // stagnation specific enthalpy
   public:
   std::vector<double> freestream;
   std::array<double, 2> location {0., 0.};
