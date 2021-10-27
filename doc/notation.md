@@ -26,15 +26,14 @@ try to maintain these conventions when contributing to the code.
     component of momentum. The latter makes the code for certain formulae cleaner.
 
 ## Storage order
-* Multidimensional arrays are row-major by default. However, be careful, because
-  Eigen matrices are column-major by default, so working with them often involves
-  transposing the data.
-* When storing state data in an array, the order of the indices is usually the
-  following: [Element, Runge-Kutta stage, state component, x-index, (y-index, (z-index))].
+* Be careful of the fact that C++ storage order is row-major, whereas Eigen matrices
+  are column-major by default.
+* When storing data in array format, the hierarchy of indices is:
+  [Element, Runge-Kutta stage, state component, x-index, (y-index, (z-index))].
 * Vertices are ordered as a 2(x2(x2)) array.
-* When storing face data as an array, the order of indices is usually:
+* When storing face data as an array, the hierarchy of indices is usually:
   [dimension-index, positivity (negative side comes before positive), (x-index), (y-index), (z-index)].
-  Of course, for 3D arrays at most two of the x, y, and z indices are included, and for 2D at most two.
+  For 3D arrays at most 2 of the x, y, and z indices are included, and for 2D at most 1.
 
 ## Abbreviations
 In some abbreviations that are used very frequently, clarity is traded for brevity.
@@ -58,8 +57,8 @@ They are defined as follows:
 * "kernel": A performance-critical function which utilizes template metaprogramming
   and relies on a wrapper function to select the appropriate template based on runtime
   parameters.
-* "local" kernel: performs updates based on information stored in a single element.
-* "neighbor" kernel: calculates adjustments based on numerical flux at the interface
+* "local" kernel: computes updates based on information stored in a single element.
+* "neighbor" kernel: handles numerical flux at the interface
   between two elements
 * The "row size" of a basis is its degree + 1 (i.e., the number of rows of quadrature
   points in each dimension, which equals the number of coefficients in the 1D case).
