@@ -51,3 +51,5 @@ Please adhere to the following style conventions whenever possible.
 * *Everything* should be wrapped in the namespace `cartdg` to avoid creating naming conflicts in NASCART-GT.
   * Macros, which do not respect namespaces, should be prefixed with `CARTDG_`.
 * Do not use non-conforming features of GCC.
+* The default type for integers should be `int`. For example, don't use `unsigned` for loop indices and array sizes
+  unless there is a specific reason to.
