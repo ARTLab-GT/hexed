@@ -11,6 +11,7 @@ class Spacetime_func
 {
   public:
   virtual std::vector<double> operator()(std::vector<double> pos, double time) = 0;
+  virtual ~Spacetime_func() = default; // `virtual` necessary to prevent undefined behavior
 };
 
 class Constant_func : public Spacetime_func
