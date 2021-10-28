@@ -3,8 +3,8 @@
 ## Quick Start
 * Create and navigate to a build directory (git will ignore names that start with "build").
 * Use `ccmake` to configure build options. This project has been configured to show you the available options and their defaults specifically with the `ccmake` interface for CMake.
-  * Ensure that `TECIO_DIR` is set to a directory where `bin/libtecio.so` and `include/TECIO.h` can be found (the default *should* be correct for ARTLAB machines).
-    Much to my disappointment, TecIO does not cooperate with CMake, so this option must be configured manually.
+  * Ensure that your system can find Tecplot/TecIO header and library files. You may need to edit `CPLUS_INCLUDE_PATH`, `LIBRARY_PATH`, and `LD_LIBRARY_PATH`.
+    Much to my disappointment, TecIO does not cooperate with CMake, so this must be setup manually.
   * Set `CMAKE_INSTALL_PREFIX` to the location where you want to install CartDG. Alas, there is no reasonable default for this,
     because we do not have write permission above our respective home directories on ARTLAB machines.
   * Otherwise, the default options should be appropriate for a release build.
@@ -19,7 +19,7 @@
 
 ## Detailed instructions
 This section is provided in case you need more information than the Quick Start section includes. It assumes you have access to an ARTLAB
-machine and are familiar with managing directories and files in Linux. If you have more than that, it is assumed that you can adapt these
+machine and are familiar with basic directory and file management in Linux. If you have more than that, it is assumed that you can adapt these
 instructions to suit your environment. If you have less than that, consider asking for help. If you have any trouble following these instructions,
 please discuss it so that this documentation can be improved.
 1. Create install directory. You need somewhere to install libraries so that your other codes can find them. On a system where you have
@@ -27,7 +27,11 @@ please discuss it so that this documentation can be improved.
    to create our own install directory. If you already have one set up, you can use that. Otherwise, follow these instructions to create one:
   * `cd`
   * `mkdir codes`
-  * We need to tell the shell to look for libraries in `~/codes`. Edit `~/.bashrc` and add the following lines at the end:
+  * We need to tell the shell to look for libraries in `~/codes`. We do this by editing the file `~/.bashrc`. First,
+    it is recommended that you make a backup copy:
+    * `cp .bashrc .bashrc_backup`
+
+    Now edit `.bashrc` and add the following lines at the end:
     * `export PATH=$PATH:~/codes/bin`
     * `TECPLOT_DIR=/opt/local/tecplot/360ex`
       * If you are not on an ARTLAB machine, change this path to match your Tecplot installation.
@@ -35,7 +39,7 @@ please discuss it so that this documentation can be improved.
     * `export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:~/codes/include/:$TECPLOT_DIR/include/`
     * `export LIBRARY_PATH=$LIBRARY_PATH:$TECPLOT_LIB_PATH`
     * `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$TECPLOT_LIB_PATH`
-    * Close and reopen the terminal.
+  * Close and reopen the terminal.
 2. Install PyTecplot (Tecplot's Python API):
   * `pip3 install pytecplot`
 2. Install sympy (used by Cartdg to generate quadrature rules):
@@ -43,16 +47,18 @@ please discuss it so that this documentation can be improved.
 3. Install Catch2:
   * Visit the Catch2 [Releases](https://github.com/catchorg/Catch2/releases) page and download the source code
     for the latest one (do not clone the `devel` branch from the github repo, as that is not a stable release).
-  * Unpack (e.g. unzip) the source code and place it in `~/codes`. `~/codes` should now contain a directory named something like `Catch2-2.XX.X`
-    depending on what happens to be the current version. `cd` into this directory.
+  * Unpack (e.g., unzip) the source code and place it in `~/codes`. `~/codes` should now contain a directory named something like `Catch2-2.XX.X`,
+    except instead of "X"s there will be a version number.
+  * `cd ~/Catch2-2.XX.X` (replace the "X"s to match whatever the actual directory name is).
   * `cmake -Bbuild -H. -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=~/codes`
   * `cmake --build build/ --target install`
 4. Install Eigen:
   * Download the Eigen [source code](http://eigen.tuxfamily.org/index.php?title=Main_Page#Download) (latest stable release).
-  * Unpack the Eigen source in `~/codes`. `~/codes` should now contain a directory named something like `eigen-X.X.X`.
-    `cd` into this directory.
+  * Unpack the Eigen source in `~/codes`. `~/codes` should now contain a directory named something like `eigen-X.X.X`, depending on the
+    current version number.
+  * If `~/codes/include` does not exist, create it.
+  * `cd eigen-X.X.X` (replace "X"s with appropriate numbers).
   * `cp -r Eigen/ ~/codes/include/`
-    * If `~/codes/include` does not exist, create it.
 5. Install CartDG:
   * Go to whatever directory you want to put CartDG in (`~` or `~/codes` works).
   * `git clone git@github.gatech.edu:ARTLab/CartDG.git`
