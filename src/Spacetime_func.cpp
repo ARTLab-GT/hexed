@@ -33,10 +33,15 @@ std::vector<double> Isentropic_vortex::operator()(std::vector<double> pos, doubl
 
 Doublet::Doublet(std::vector<double> freestream_state)
 : freestream{freestream_state}, n_var{int(freestream_state.size())}, n_dim{n_var - 2},
-  freestream_veloc(2), freestream_speed{0.}
+  freestream_veloc(2)
 {
-  // ignore any axial (i_dim = 3) component of velocity as it does not affect the flowfield
-  for (int i_dim : {0, 1})
+}
+
+std::vector<double> Doublet::operator()(std::vector<double> pos, double time)
+{
+  // compute freestream properties
+  freestream_speed = 0.;
+  for (int i_dim : {0, 1}) // ignore any axial (i_dim = 3) component of velocity as it does not affect the flowfield
   {
     freestream_veloc[i_dim] = freestream[i_dim]/freestream[n_var - 2];
     freestream_speed += freestream_veloc[i_dim]*freestream_veloc[i_dim];
@@ -46,12 +51,11 @@ Doublet::Doublet(std::vector<double> freestream_state)
   double pres {(heat_rat - 1.)*(freestream[n_var - 1] - 0.5*freestream_speed*freestream_speed*freestream[n_var - 2])};
   stag_enth_per_mass = (freestream[n_var - 1] + pres)/freestream[n_var - 2];
   free_enth_per_mass = stag_enth_per_mass - 0.5*freestream_speed*freestream_speed;
-}
 
-std::vector<double> Doublet::operator()(std::vector<double> pos, double time)
-{
-  if (n_dim == 1) throw std::runtime_error("1D Doublet is not allowed.");
   std::vector<double> state {freestream}; // init to freestream so that if 3D momentum2 matches freestream
+
+  // compute velocity
+  if (n_dim == 1) throw std::runtime_error("1D Doublet is not allowed.");
   std::vector<double> relative_pos (n_dim, 0.);
   // if 3D, leave the last component of `relative_pos` as 0. It doesn't matter anyway.
   for (int i_dim : {0, 1}) relative_pos[i_dim] = (pos[i_dim] - location[i_dim]);
@@ -62,12 +66,15 @@ std::vector<double> Doublet::operator()(std::vector<double> pos, double time)
   double veloc_tangential {-(1. + radius_ratio)*freestream_speed*std::sin(pos_angle - angle_of_attack)};
   double veloc [] {veloc_radial*std::cos(pos_angle) - veloc_tangential*std::sin(pos_angle),
                    veloc_radial*std::sin(pos_angle) + veloc_tangential*std::cos(pos_angle)};
+
+  // compute thermodynamics
   double kin_ener_per_mass {0.5*(veloc[0]*veloc[0] + veloc[1]*veloc[1])};
   double enth_per_mass {stag_enth_per_mass - kin_ener_per_mass};
   double mass {freestream[n_var - 2]*std::pow(enth_per_mass/free_enth_per_mass, 1./(heat_rat - 1.))};
   for (int i_dim : {0, 1}) state[i_dim] = veloc[i_dim]*mass;
   state[n_var - 2] = mass;
   state[n_var - 1] = mass*(enth_per_mass/heat_rat + kin_ener_per_mass);
+
   return state;
 }
 
