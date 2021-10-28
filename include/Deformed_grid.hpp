@@ -55,6 +55,7 @@ class Deformed_grid : public Grid
   // diagnostic
   std::vector<double> face_integral(Domain_func& integrand, int i_elem, int i_dim, bool is_positive);
   std::vector<double> surface_integral(Domain_func& integrand);
+  void visualize_connections(std::string file_name);
 
   protected:
   virtual std::string annotate(std::string file_name);

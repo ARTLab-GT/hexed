@@ -1,5 +1,6 @@
 #include <Deformed_grid.hpp>
 #include <Regular_grid.hpp>
+#include <Tecplot_file.hpp>
 #include <get_mcs_deformed_convective.hpp>
 #include <get_write_face_deformed.hpp>
 #include <get_neighbor_deformed_convective.hpp>
@@ -346,6 +347,37 @@ std::vector<double> Deformed_grid::surface_integral(Domain_func& integrand)
     }
   }
   return total;
+}
+
+void Deformed_grid::visualize_connections(std::string file_name)
+{
+  int n_con = elem_cons.size();
+  Tecplot_file file {file_name, n_dim, n_dim, time};
+  Tecplot_file::Line_segments segs {file, n_con, 2, "connections"};
+  for (int i_con = 0; i_con < n_con; ++i_con)
+  {
+    Deformed_elem_con& con {elem_cons[i_con]};
+    std::vector<double> centers (2*n_dim, 0.);
+    for (int i_side : {0, 1}) {
+      for (int i_vert = 0; i_vert < n_vertices; ++i_vert) {
+        auto pos {con.element[i_side]->vertex(i_vert).pos};
+        double weight {0.};
+        if (i_vert == 0) weight += i_con;
+        else if (i_vert == n_vertices - 1) weight += n_con - i_con;
+        weight = (weight/n_con + 1.)/(n_vertices + 1.);
+        for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+          centers[2*i_dim + i_side] += pos[i_dim]*weight;
+        }
+      }
+    }
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      double avg {(centers[2*i_dim] + centers[2*i_dim + 1])/2.};
+      for (int i_side : {0, 1}) {
+        centers[2*i_dim + i_side] = (centers[2*i_dim + i_side] + avg)/2.;
+      }
+    }
+    segs.write(centers.data(), nullptr);
+  }
 }
 
 void Deformed_grid::match_pos()
