@@ -47,22 +47,23 @@ class Isentropic_vortex : public Spacetime_func
  * flow is isentropic. Flow field is steady, and is an exact solution only in
  * incompressible flow.
  * 
- * Warning: Singularity at `location`! This class is applicable only to domains
+ * WARNING: Singularity at `location`! This class is applicable only to domains
  * which do not include this point.
  */
 class Doublet : public Spacetime_func
 {
+  std::vector<double> freestream;
   int n_var;
   int n_dim;
   std::vector<double> freestream_veloc;
   double freestream_speed;
   double angle_of_attack;
-  double stag_enth_per_mass; // stagnation specific enthalpy
+  double stag_enth_per_mass; // stag = stagnation
+  double free_enth_per_mass; // free = freestream
   public:
-  std::vector<double> freestream;
   std::array<double, 2> location {0., 0.};
   double radius {1.};
-  double heat_rat = 1.4;
+  double heat_rat {1.4};
   Doublet(std::vector<double> freestream_state);
   virtual std::vector<double> operator()(std::vector<double> pos, double time);
 };
