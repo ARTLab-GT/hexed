@@ -61,6 +61,7 @@ class Tecplot_file
     virtual ~Line_segments();
   };
 
+  // `n_var` means number of state (i.e., not position) variables.
   Tecplot_file(std::string file_name, int n_dim, int n_var, double time);
   Tecplot_file(const Tecplot_file&) = delete; // at the moment, can't be more than one Tecplot_file at a time
   Tecplot_file& operator=(const Tecplot_file&) = delete;
