@@ -2,14 +2,10 @@
 #define CARTDG_MAX_BASIS_ROW_SIZE @MAX_BASIS_ROW_SIZE@
 
 #include <iostream>
-#ifdef DEBUG
 #include <map>
-#endif
 
 namespace cartdg
 {
-  #ifdef DEBUG
   // Don't use this. What is it for? When you need it, you will know.
   extern std::map<std::string, int> global_debug_message;
-  #endif
 }
