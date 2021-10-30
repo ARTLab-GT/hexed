@@ -205,6 +205,7 @@ TEST_CASE("Integration of deformed elements")
   sol.initialize(init);
   auto file_name = "deformed_integration";
   sol.visualize(file_name);
+  def_grid.visualize_connections("deformed_integration_connections");
   for (int i = 0; i < 10; ++i)
   {
     for (int j = 0; j < 10; ++j)

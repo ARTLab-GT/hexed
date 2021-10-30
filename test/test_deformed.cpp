@@ -164,11 +164,24 @@ class Test_def_edge : public Def_edge
   {
     for (int i_row = 0; i_row < row_size; ++i_row)
     {
-      double* face {grid.deformed_element(4).face()};
-      double qpv [] {face[4*nfq + i_row]/face[6*nfq + i_row],
-                     face[5*nfq + i_row]/face[6*nfq + i_row]};
-      double mag {std::sqrt(0.05*0.05 + 0.16*0.16)};
-      REQUIRE(qpv[0] == Approx((veloc[0]*0.16 - veloc[1]*0.05)/mag));
+      for (double* face : {grid.deformed_element(4).face() + 4*nfq,
+                           grid.deformed_element(7).face() + 0*nfq})
+      {
+        double qpv [] {face[0*nfq + i_row]/face[2*nfq + i_row],
+                       face[1*nfq + i_row]/face[2*nfq + i_row]};
+        double mag {std::sqrt(0.05*0.05 + 0.16*0.16)};
+        REQUIRE(qpv[0] == Approx((veloc[0]*0.16 - veloc[1]*0.05)/mag));
+        REQUIRE(qpv[1] == Approx((veloc[0]*0.05 + veloc[1]*0.16)/mag));
+      }
+      for (double* face : {grid.deformed_element(4).face() + 12*nfq,
+                           grid.deformed_element(5).face() +  8*nfq})
+      {
+        double qpv [] {face[0*nfq + i_row]/face[2*nfq + i_row],
+                       face[1*nfq + i_row]/face[2*nfq + i_row]};
+        double mag {std::sqrt(0.25*0.25 + 0.04*0.04)};
+        REQUIRE(qpv[0] == Approx((veloc[0]*0.25 - veloc[1]*0.04)/mag));
+        REQUIRE(qpv[1] == Approx((veloc[0]*0.04 + veloc[1]*0.25)/mag));
+      }
     }
   }
 };

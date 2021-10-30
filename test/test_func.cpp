@@ -70,7 +70,7 @@ TEST_CASE("Error_func")
   }
 }
 
-TEST_CASE("Vortex_func")
+TEST_CASE("Vortex")
 {
   SECTION("Solves inviscid flow equations")
   {
@@ -140,5 +140,41 @@ TEST_CASE("Vortex_func")
     double sound_speed = std::sqrt(vortex.heat_rat*(vortex.heat_rat - 1.)*freestream[3]);
     double tang_veloc = -state[0]/state[2];
     REQUIRE(tang_veloc/sound_speed == Approx(vortex.max_nondim_veloc));
+  }
+}
+
+TEST_CASE("Doublet")
+{
+  double veloc [] {10., -1.};
+  double angle_of_attack {std::atan2(veloc[1], veloc[0])};
+  double speed_sq {veloc[0]*veloc[0] + veloc[1]*veloc[1]};
+  double mass {1.2};
+  double pres {101000.};
+  double ener {pres/0.3 + 0.5*mass*speed_sq};
+  std::vector<double> freestream = {veloc[0]*mass, veloc[1]*mass, mass, ener};
+  cartdg::Doublet doublet {freestream};
+  doublet.radius = 0.8;
+  doublet.heat_rat = 1.3; // just to make sure 1.4 isn't hardcoded anywhere
+  doublet.location = {0.05, 0.03};
+  for (double angle_degrees : {0., 10., 90., 160.})
+  {
+    // compute state on circle for some arbitrary time (time doesn't matter).
+    double angle {angle_degrees*M_PI/180.};
+    double sin {std::sin(angle)};
+    double cos {std::cos(angle)};
+    std::vector<double> state {doublet({doublet.radius*cos + 0.05, doublet.radius*sin + 0.03}, 0.2089)};
+    double momentum_magnitude = std::sqrt(state[0]*state[0] + state[1]*state[1]);
+    // require velocity is tangential to surface
+    REQUIRE(state[0]*cos + state[1]*sin == Approx(0.).scale(10.));
+    // require pressure approximately satisfies Bernoulli eq.
+    double pres_coef = (0.3*(state[3] - 0.5*momentum_magnitude*momentum_magnitude/state[2])
+                        - pres)/(0.5*mass*speed_sq);
+    REQUIRE(pres_coef == Approx(1 - 4*std::pow(std::sin(angle - angle_of_attack), 2)).epsilon(1e-2));
+    // require state at large radius is approximately freestream
+    state = doublet({1e3*doublet.radius*cos + 0.05, 1e3*doublet.radius*sin + 0.03}, 0.2089);
+    REQUIRE(state[0] == Approx(mass*veloc[0]).epsilon(1e-3));
+    REQUIRE(state[1] == Approx(mass*veloc[1]).epsilon(1e-3));
+    REQUIRE(state[2] == Approx(mass         ).epsilon(1e-3));
+    REQUIRE(state[3] == Approx(ener         ).epsilon(1e-3));
   }
 }

@@ -17,6 +17,11 @@ class Tecplot_file
   static int n_instances;
 
   public:
+  /*
+   * Manages a "zone", which essentially means the smallest block of data that can be written
+   * to Tecplot at one time. Create derived classes to write data for some object of physical
+   * or mathematical significance.
+   */
   class Zone
   {
     protected:
@@ -30,12 +35,19 @@ class Tecplot_file
     virtual ~Zone() = default;
     virtual void write(double* pos, double* vars);
   };
+  /*
+   * Represents a single block of structured data. Call `write` exactly once before destructing.
+   */
   class Structured_block : public Zone
   {
     int row_size;
     public:
     Structured_block(Tecplot_file&, int row_size, std::string name_arg="block");
   };
+  /*
+   * Represents an arbitrary number of line segments. Each segment shall contain `row_size`
+   * nodes. Call `write` once for each line segment.
+   */
   class Line_segments : public Zone
   {
     int n_segs;
@@ -49,6 +61,7 @@ class Tecplot_file
     virtual ~Line_segments();
   };
 
+  // `n_var` means number of state (i.e., not position) variables.
   Tecplot_file(std::string file_name, int n_dim, int n_var, double time);
   Tecplot_file(const Tecplot_file&) = delete; // at the moment, can't be more than one Tecplot_file at a time
   Tecplot_file& operator=(const Tecplot_file&) = delete;
