@@ -36,21 +36,25 @@ try to maintain these conventions when contributing to the code.
   For 3D arrays at most 2 of the x, y, and z indices are included, and for 2D at most 1.
 
 ## Abbreviations
-In some abbreviations that are used very frequently, clarity is traded for brevity.
-Thus, please be familiar with the following definitions:
-* `pos`: "position"
-* `i_`: "index of ..."
-  * If this is an index in a nested loop, the inside loops may use `j_` and `k_`.
-* `n_`: "number of ..."
-* `qpoint`: "quadrature point"
-* `heat_rat`: "ratio of heat capacities". Often denoted "gamma" in thermodynamics.
+Some common abbreviations are defined as follows, in alphabetical order.
+* `con`: connection
+* `def`: deformed
 * `dim`: dimension
   * `i_dim` specifically serves to identify which of the coordinate axes is referenced
     in some operation.
-* `def`: "deformed"
-* `con`: "connection"
-* `ener`: "total energy"
-* `_sq`: "... squared"
+* `ener`: energy
+* `enth`: enthalpy
+* `heat_rat`: ratio of heat capacities. Often denoted "gamma" in thermodynamics.
+* `i_`: index of ...
+  * If this is an index in a nested loop, the inside loops may use `j_` and `k_`.
+* `n_`: number of ...
+* `pos`: position
+* `pres`: pressure
+* `qpoint`: "quadrature point"
+* `reg`: regular
+* `_sq`: ... squared
+* `stag`: stagnation
+* `veloc`: velocity
 
 ## Terminology
 CartDG uses some terms that are non-standard, or at least not completely universal.
