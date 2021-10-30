@@ -25,7 +25,7 @@ installation instructions, see [`install.md`](doc/install.md).
 The motivation for this project came from my experience with NASCART-GT. With it's highly automated adaptive Cartesian grid
 strategy, NASCART-GT represents the holy grail of modern CFD, in that the user merely provides the geometry and a few
 basic parameters and the code does the rest. However, it still takes a long time to solve even relatively basic problems
-(which is mostly a feature of mainstream CFD methods rather than of NASCART-GT in particular). For that reason I am attempting
+(which is, to a certain extent, a feature of mainstream CFD methods rather than of NASCART-GT in particular). For that reason I am attempting
 to use a high-order-accurate discontinuous Galerkin method to achieve the same accuracy with many fewer cells and less overall
 time.
 
