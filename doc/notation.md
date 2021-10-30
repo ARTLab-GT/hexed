@@ -8,7 +8,7 @@ try to maintain these conventions when contributing to the code.
   (i.e., derived from m, kg, s).
 * Unless otherwise specified, all angles are radian.
 * If an extensive thermodynamic quantity (e.g., mass, volume, energy, as opposed to an
-  intensive quantity like temperature or pressure) is specified without a quantity, it
+  intensive quantity like temperature or pressure) is specified without a reference quantity, it
   means per unit volume. For example, "energy" specified without other context will be
   in units of J/m^3.
   * As a result, "mass" and "density" are synonymous. In fact, prefer "mass" so that
