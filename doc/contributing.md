@@ -1,8 +1,7 @@
 # Contributing
 
 When contributing to CartDG, please adhere to these guidelines. Some are standard (but important) practice
-in software development, while others reflect the personal preferences of the maintainer (currently Micaiah)
-and are included for the sake of standardization.
+in software development, while others are meant to standardize what is otherwise a matter of personal preference.
 
 ## General procedures
 Please to **not** commit or push to `master`. The standard workflow should be the following:
@@ -39,9 +38,11 @@ Please adhere to the following style conventions whenever possible.
 * A name should be a description of the variable it refers to. It
   should not reference mathematical symbols or the sound of words. For example, resist the temptation
   to use `x` to refer to horizontal position. Acceptable alternatives might be `coord0`, or `position`.
+* Maintain convetions in [`notation.md`](notation.md). If you wish to introduce new notation, add it to
+  `notation.md`.
 * When practical, avoid overly long names. Abbreviations are encouraged, especially in a local scope where there
   are fewer opportunities to confuse similar names.
-* Some examples of what not to do:
+* Some examples of names I do not approve of:
   * `eye` to refer to the identity matrix. Rreferences the pronunciation of the mathematical symbol, two levels removed from any
     descriptive meaning. A better name is `identity`.
   * `str2num` to mean "string to number". Just call it `str_to_num`. Distinguishing between "2" and "to" is worth 3 extra characters.
