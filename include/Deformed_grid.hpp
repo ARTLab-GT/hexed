@@ -37,7 +37,6 @@ class Deformed_grid : public Grid
   void purge_vertices();
   void calc_vertex_relaxation();
   void apply_vertex_relaxation();
-  void match_pos(); // FIXME: should happen automatically
   void calc_jacobian(); // must be called after vertex locations are correct
 
   // time integration

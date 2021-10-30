@@ -126,19 +126,6 @@ TEST_CASE("Deformed grid class")
       std::vector<double> pos {leg_grid.get_pos(0)};
       REQUIRE(pos[3] == Approx(0.08));
       REQUIRE(pos[4] == Approx(0.11));
-      // test that position extrapolated to corners matches vertices
-      leg_grid.match_pos();
-      pos = leg_grid.get_pos(0);
-      for (int i_dim : {0, 1})
-      {
-        Eigen::Map<Eigen::VectorXd> dim_pos {pos.data() + i_dim*leg_grid.n_qpoint, leg_grid.n_qpoint};
-        auto boundary {leg_basis.boundary()};
-        auto interp {cartdg::custom_math::hypercube_matvec(boundary, dim_pos)};
-        for (int i_vert = 0; i_vert < 4; ++i_vert)
-        {
-          REQUIRE(std::abs(interp(i_vert) - leg_grid.deformed_element(0).vertex(i_vert).pos[i_dim]) < 1e-12);
-        }
-      }
     }
   }
 

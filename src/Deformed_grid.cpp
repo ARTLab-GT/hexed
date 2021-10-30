@@ -109,18 +109,6 @@ std::vector<double> Deformed_grid::get_pos(int i_elem)
     }
   }
 
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-  {
-    Eigen::VectorXd vert_pos {n_vertices};
-    for (int i_vertex = 0; i_vertex < n_vertices; ++i_vertex)
-    {
-      vert_pos[i_vertex] = elem.vertex(i_vertex).pos[i_dim];
-    }
-    Eigen::Map<Eigen::VectorXd> dim_pos {warped_elem_pos.data() + i_dim*n_qpoint, n_qpoint};
-    auto interp_vert_pos = custom_math::hypercube_matvec(boundary, dim_pos);
-    dim_pos += custom_math::hypercube_matvec(lin_interp, vert_pos - interp_vert_pos);
-  }
-
   return warped_elem_pos;
 }
 
@@ -377,32 +365,6 @@ void Deformed_grid::visualize_connections(std::string file_name)
       }
     }
     segs.write(centers.data(), nullptr);
-  }
-}
-
-void Deformed_grid::match_pos()
-{
-  int nfq {n_qpoint/basis.row_size};
-  auto boundary {basis.boundary()};
-  Eigen::MatrixXd fix {basis.row_size, 2};
-  for (int i_qpoint = 0; i_qpoint < basis.row_size; ++i_qpoint)
-  {
-    fix(i_qpoint, 1) = basis.node(i_qpoint);
-    fix(i_qpoint, 0) = 1. - basis.node(i_qpoint);
-  }
-  for (int i_elem = 0; i_elem < n_elem; ++i_elem)
-  {
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-    {
-      for (int is_positive : {0, 1})
-      {
-        double* adjust = deformed_element(i_elem).node_adjustments();
-        adjust += (2*i_dim + is_positive)*nfq;
-        Eigen::Map<Eigen::VectorXd> adj_vec {adjust, nfq};
-        auto vert_adj {custom_math::hypercube_matvec(boundary, adj_vec)};
-        adj_vec -= custom_math::hypercube_matvec(fix, vert_adj);
-      }
-    }
   }
 }
 
