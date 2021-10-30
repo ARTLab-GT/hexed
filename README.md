@@ -18,14 +18,14 @@ CartDG is not:
 * A general framework for CFD on arbitrary grids.
 * A solver for arbitrary PDEs.
 
-This document describes the purpose and capabilities of CartDG. For installation instructions, see [`INSTALL.md`](INSTALL.md).
-For contributing guidelines, see [`CONTRIBUTING.md`](CONTRIBUTING.md).
+This document provides an overview of CartDG. More detailed documentation can be found in [`doc`](doc/). In particular, for
+installation instructions, see [`install.md`](doc/install.md).
 
 ## Motivation
 The motivation for this project came from my experience with NASCART-GT. With it's highly automated adaptive Cartesian grid
 strategy, NASCART-GT represents the holy grail of modern CFD, in that the user merely provides the geometry and a few
 basic parameters and the code does the rest. However, it still takes a long time to solve even relatively basic problems
-(which is mostly a feature of mainstream CFD methods rather than of NASCART-GT in particular). For that reason I am attempting
+(which is, to a certain extent, a feature of mainstream CFD methods rather than of NASCART-GT in particular). For that reason I am attempting
 to use a high-order-accurate discontinuous Galerkin method to achieve the same accuracy with many fewer cells and less overall
 time.
 
@@ -41,21 +41,13 @@ code is sometimes written multiple times, but it gives the compiler maximal free
 All of these things are
 disasterous from a software engineering perspective, but have shown significant performance benefits. For the kernels
 I am willing to make this trade, but for the rest of the code I have priortized readability and modularity over performance.
-The speed of the kernels is measured by the script [`benchmark.py`](script/benchmark.py). The speed of the code as a whole has shown good agreement with the measurements made by `benchmark.py`.
-
-## Terminology and conventions
-I use the following nonstandard terms in the code:
-* "local" kernel - performs updates based on information stored in a single element.
-* "neighbor" kernel - the kernel that calculates adjustments based on numerical flux at the interface between two elements.
-* The "row size" of a basis is its degree + 1 (i.e. the number of rows of quadrature points in each dimension, which equals
-  the number of coefficients in the 1D case). It is usually more convenient to talk about the row size
-  than the degree. The row size is not to be confused with the number of quadrature points, which depends on the
-  dimensionality. E.g. a 4th degree basis in 3 dimensions has row size 5 and 125 quadrature points.
+The speed of the kernels is measured by the script [`benchmark.py`](script/benchmark.py). The speed of the code as a whole
+has shown good agreement with the measurements made by `benchmark.py`.
  
 ## Dependencies
 Eigen must be available in your include path. Tecplot must be installed with path environment variables configured accordingly.
 Catch2 must be available in a location that CMake can find.
-Python3 must also be available, along with the libraries NumPy, SymPy, and MatPlotLib. See [installation instructions](INSTALL.md)
+Python3 must also be available, along with the libraries NumPy, SymPy, and MatPlotLib. See [installation instructions](doc/install.md)
 for guidance on obtaining these.
  
 ## Features
