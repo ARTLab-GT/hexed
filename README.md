@@ -43,20 +43,11 @@ disasterous from a software engineering perspective, but have shown significant 
 I am willing to make this trade, but for the rest of the code I have priortized readability and modularity over performance.
 The speed of the kernels is measured by the script [`benchmark.py`](script/benchmark.py). The speed of the code as a whole
 has shown good agreement with the measurements made by `benchmark.py`.
-
-## Terminology and conventions
-I use the following nonstandard terms in the code:
-* "local" kernel - performs updates based on information stored in a single element.
-* "neighbor" kernel - the kernel that calculates adjustments based on numerical flux at the interface between two elements.
-* The "row size" of a basis is its degree + 1 (i.e. the number of rows of quadrature points in each dimension, which equals
-  the number of coefficients in the 1D case). It is usually more convenient to talk about the row size
-  than the degree. The row size is not to be confused with the number of quadrature points, which depends on the
-  dimensionality. E.g. a 4th degree basis in 3 dimensions has row size 5 and 125 quadrature points.
  
 ## Dependencies
 Eigen must be available in your include path. Tecplot must be installed with path environment variables configured accordingly.
 Catch2 must be available in a location that CMake can find.
-Python3 must also be available, along with the libraries NumPy, SymPy, and MatPlotLib. See [installation instructions](INSTALL.md)
+Python3 must also be available, along with the libraries NumPy, SymPy, and MatPlotLib. See [installation instructions](doc/install.md)
 for guidance on obtaining these.
  
 ## Features
