@@ -18,8 +18,8 @@ CartDG is not:
 * A general framework for CFD on arbitrary grids.
 * A solver for arbitrary PDEs.
 
-This document describes the purpose and capabilities of CartDG. For installation instructions, see [`INSTALL.md`](INSTALL.md).
-For contributing guidelines, see [`CONTRIBUTING.md`](CONTRIBUTING.md).
+This document provides an overview of CartDG. More detailed documentation can be found in [`doc`](doc/). In particular, for
+installation instructions, see [`install.md`](doc/install.md).
 
 ## Motivation
 The motivation for this project came from my experience with NASCART-GT. With it's highly automated adaptive Cartesian grid
@@ -41,7 +41,8 @@ code is sometimes written multiple times, but it gives the compiler maximal free
 All of these things are
 disasterous from a software engineering perspective, but have shown significant performance benefits. For the kernels
 I am willing to make this trade, but for the rest of the code I have priortized readability and modularity over performance.
-The speed of the kernels is measured by the script [`benchmark.py`](script/benchmark.py). The speed of the code as a whole has shown good agreement with the measurements made by `benchmark.py`.
+The speed of the kernels is measured by the script [`benchmark.py`](script/benchmark.py). The speed of the code as a whole
+has shown good agreement with the measurements made by `benchmark.py`.
 
 ## Terminology and conventions
 I use the following nonstandard terms in the code:
