@@ -76,8 +76,7 @@ a few 3rd-party libraries.
       and no error messages.
     * Press `c`. You should now see a list of options.
     * Use the arrow keys to move the cursor and "Enter" to edit the option under the cursor. If you want to abort and exit the GUI, press `q`.
-    * The only option you need to edit is `CMAKE_INSTALL_PREFIX`. Set that to `~/codes`. If you are a devloper, see `build_options.md` to
-      understand the other options and when to change them.
+    * The only option you need to modify is `CMAKE_INSTALL_PREFIX`. Set that to `~/codes`. Editing other parameters is optional.
     * When you have set all the options, press `c`. Then press `g`. The GUI should exit.
   * `make -j install`
 ### 6. Verify success
