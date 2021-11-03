@@ -9,7 +9,6 @@ namespace cartdg
 class Domain_func
 {
   public:
-  virtual ~Domain_func();
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state) = 0;
 };
@@ -17,15 +16,27 @@ class Domain_func
 class State_variables : public Domain_func
 {
   public:
+  // returns `state`
+  virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
+                                         const std::vector<double> state);
+};
+
+class Domain_func_from_st : public Domain_func
+{
+  Spacetime_func& spacetime;
+  public:
+  Domain_func_from_st(Spacetime_func&);
+  // evaluates given Spacetime_func at `(point_pos, point_time)`
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state);
 };
 
 class Error_func : public Domain_func
 {
-  public:
   Spacetime_func& correct;
-  Error_func(Spacetime_func& correct_arg);
+  public:
+  Error_func(Spacetime_func&);
+  // returns elementwise difference between `state` and `correct(point_pos, point_time)`
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state);
 };

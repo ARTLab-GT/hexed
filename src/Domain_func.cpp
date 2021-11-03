@@ -3,8 +3,6 @@
 namespace cartdg
 {
 
-Domain_func::~Domain_func() {}
-
 std::vector<double> State_variables::operator()(const std::vector<double> point_pos,
                                                 double point_time,
                                                 const std::vector<double> state)
