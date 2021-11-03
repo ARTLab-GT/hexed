@@ -1,7 +1,6 @@
 // the configured options and settings
 #define CARTDG_MAX_BASIS_ROW_SIZE @MAX_BASIS_ROW_SIZE@
 
-#include <iostream>
 #include <map>
 
 namespace cartdg
