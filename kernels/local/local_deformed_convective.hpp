@@ -89,15 +89,40 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
         for (int i_inner = 0; i_inner < stride; ++i_inner)
         {
           // compute flux derivative
-          Eigen::Matrix<double, row_size, n_var> row_f;
-          for (int i_var = 0; i_var < n_var; ++i_var)
+          Eigen::Matrix<double, row_size, n_dim*n_var> row_f;
+          for (int j_dim = 0; j_dim < n_dim; ++j_dim)
           {
-            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
+            for (int i_var = 0; i_var < n_var; ++i_var)
             {
-              row_f(i_qpoint, i_var) = flux[i_dim][i_var][i_outer*stride*row_size + i_inner + i_qpoint*stride];
+              for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
+              {
+                row_f(i_qpoint, j_dim*n_var + i_var) = flux[j_dim][i_var][i_outer*stride*row_size + i_inner + i_qpoint*stride];
+              }
             }
           }
-          Eigen::Matrix<double, row_size, n_var> row_w {-diff_mat*row_f};
+          Eigen::Matrix<double, row_size, n_dim*n_var> d_flux {-diff_mat*row_f};
+          Eigen::Matrix<double, row_size, n_var> row_w;
+          Eigen::Array<double, row_size, 1> jac_det;
+          for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
+          {
+            Eigen::Matrix<double, n_dim, n_dim> jac;
+            for (int j_dim = 0; j_dim < n_dim; ++j_dim)
+            {
+              for (int k_dim = 0; k_dim < n_dim; ++k_dim)
+              {
+                jac(j_dim, k_dim) = jacobian[(j_dim*n_dim + k_dim)*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
+              }
+            }
+            jac_det(i_qpoint) = jac.determinant();
+            for (int i_var = 0; i_var < n_var; ++i_var)
+            {
+              for (int j_dim = 0; j_dim < n_dim; ++j_dim)
+              {
+                jac(j_dim, i_dim) = d_flux(i_qpoint, j_dim*n_var + i_var);
+              }
+              row_w(i_qpoint, i_var) = jac.determinant();
+            }
+          }
 
           Eigen::Matrix<double, n_var, 2> boundary_values;
           for (int i_var = 0; i_var < n_var; ++i_var)
@@ -137,6 +162,7 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
           for (int i_var = 0; i_var < n_var; ++i_var)
           {
             //row_w.col(i_var).noalias() += lift*(boundary_values - boundary*row_f.col(i_var));
+            row_w.col(i_var).array() /= jac_det;
             for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
             {
                write[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride]
