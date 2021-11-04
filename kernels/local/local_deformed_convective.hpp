@@ -36,7 +36,6 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
     double* jacobian = def_elements[i_elem]->jacobian();
     double* face = def_elements[i_elem]->face();
     double flux [n_dim][n_var][n_qpoint];
-    double jac_det [n_qpoint];
 
     // Initialize updated solution to be equal to current solution
     for (int i_dof = 0; i_dof < n_qpoint*n_var; ++i_dof)
@@ -65,16 +64,6 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
         #undef FLUX
         #undef READ
       }
-
-      Eigen::Matrix<double, n_dim, n_dim> jact;
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-      {
-        for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-        {
-          jact(j_dim, i_dim) = jacobian[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
-        }
-      }
-      jac_det[i_qpoint] = jact.determinant();
     }
 
     // Perform update
