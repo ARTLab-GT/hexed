@@ -14,11 +14,11 @@ namespace cartdg
 template<int n_var, int n_qpoint, int row_size>
 void local_convective(elem_vec& elements, Basis& basis, Kernel_settings& settings)
 {
-  const Eigen::Matrix<double, row_size, 1> weights {basis.node_weights()};
   const Eigen::Matrix<double, row_size, row_size> diff_mat {basis.diff_mat()};
   const Eigen::Matrix<double, 2, row_size> boundary {basis.boundary()};
   Eigen::MatrixXd sign {{1, 0}, {0, -1}};
-  const Eigen::Matrix<double, row_size, 2> lift {basis.boundary().transpose()*sign};
+  const Eigen::Matrix<double, row_size, 1> inv_weights {Eigen::Array<double, row_size, 1>::Constant(1.)/basis.node_weights().array()};
+  const Eigen::Matrix<double, row_size, 2> lift {inv_weights.asDiagonal()*basis.boundary().transpose()*sign};
 
   double d_t_by_d_pos = settings.d_t_by_d_pos;
   double heat_rat = settings.cpg_heat_rat;
