@@ -16,11 +16,11 @@ template<int n_var, int n_qpoint, int row_size>
 void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_settings& settings)
 {
   const int n_dim {n_var - 2};
-  const Eigen::Matrix<double, row_size, 1> weights {basis.node_weights()};
-  const Eigen::Matrix<double, row_size, row_size> stiff_mat {basis.diff_mat().transpose()*weights.asDiagonal()};
-  Eigen::MatrixXd sign {{1, 0}, {0, -1}};
-  const Eigen::Matrix<double, row_size, 2> boundary_mat {basis.boundary().transpose()*sign};
+  const Eigen::Matrix<double, row_size, row_size> diff_mat {basis.diff_mat()};
   const Eigen::Matrix<double, 2, row_size> boundary {basis.boundary()};
+  Eigen::MatrixXd sign {{1, 0}, {0, -1}};
+  const Eigen::Matrix<double, row_size, 1> inv_weights {Eigen::Array<double, row_size, 1>::Constant(1.)/basis.node_weights().array()};
+  const Eigen::Matrix<double, row_size, 2> lift {inv_weights.asDiagonal()*basis.boundary().transpose()*sign};
 
   double d_t_by_d_pos = settings.d_t_by_d_pos;
   double heat_rat = settings.cpg_heat_rat;
@@ -47,11 +47,10 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
     // precompute flux
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
     {
-      Eigen::Matrix<double, n_var, n_dim> phys_flux;
       for (int i_dim = 0; i_dim < n_dim; ++i_dim)
       {
         #define READ(i) read[(i)*n_qpoint + i_qpoint]
-        #define FLUX(i) phys_flux((i), i_dim)
+        #define FLUX(i) flux[i_dim][i][i_qpoint]
         double veloc = READ(i_dim)/READ(n_var - 2);
         double pres = 0;
         for (int j_dim = 0; j_dim < n_var - 2; ++j_dim)
@@ -76,14 +75,6 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
         }
       }
       jac_det[i_qpoint] = jact.determinant();
-      Eigen::Matrix<double, n_var, n_dim> qpoint_flux = phys_flux*jact.inverse()*jac_det[i_qpoint];
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-      {
-        for (int i_var = 0; i_var < n_var; ++i_var)
-        {
-          flux[i_dim][i_var][i_qpoint] = qpoint_flux(i_var, i_dim);
-        }
-      }
     }
 
     // Perform update
@@ -106,7 +97,7 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
               row_f(i_qpoint, i_var) = flux[i_dim][i_var][i_outer*stride*row_size + i_inner + i_qpoint*stride];
             }
           }
-          Eigen::Matrix<double, row_size, n_var> row_w {stiff_mat*row_f};
+          Eigen::Matrix<double, row_size, n_var> row_w {-diff_mat*row_f};
 
           Eigen::Matrix<double, n_var, 2> boundary_values;
           for (int i_var = 0; i_var < n_var; ++i_var)
@@ -145,11 +136,11 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
           // Write updated solution
           for (int i_var = 0; i_var < n_var; ++i_var)
           {
-            row_w.col(i_var).noalias() += boundary_mat*boundary_values.row(i_var).transpose();
+            //row_w.col(i_var).noalias() += lift*(boundary_values - boundary*row_f.col(i_var));
             for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
             {
                write[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride]
-               += row_w(i_qpoint, i_var)*d_t_by_d_pos/weights[i_qpoint]/jac_det[i_outer*stride*row_size + i_inner + i_qpoint*stride];
+               += row_w(i_qpoint, i_var)*d_t_by_d_pos;
             }
           }
           ++i_face_qpoint;
