@@ -8,6 +8,10 @@
 #include <Deformed_element.hpp>
 #include <math.hpp>
 
+// FIXME
+#include <iostream>
+#include <cartdgConfig.hpp>
+
 namespace cartdg
 {
 
@@ -28,7 +32,7 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
   const int i_write = settings.i_write;
   const int n_face_dof = n_var*n_qpoint/row_size;
 
-  #pragma omp parallel for
+  //#pragma omp parallel for FIXME
   for (unsigned i_elem = 0; i_elem < def_elements.size(); ++i_elem)
   {
     double* read  = def_elements[i_elem]->stage(i_read);
@@ -130,6 +134,7 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
           }
           Eigen::Matrix<double, 2, n_dim*n_dim> face_jac;
           face_jac.noalias() = boundary*row_j;
+          Eigen::Matrix<double, 2, n_dim*n_var> extrap_flux {boundary*row_f};
           for (int i_side : {0, 1})
           {
             Eigen::Matrix<double, n_dim, n_dim> jac;
@@ -140,17 +145,27 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
                 jac(j_dim, k_dim) = face_jac(i_side, j_dim*n_dim + k_dim);
               }
             }
+            Eigen::Matrix<double, n_var, 1> normal_flux;
             auto orth {custom_math::orthonormal(jac, i_dim)};
+            for (int i_var = 0; i_var < n_var; ++i_var)
+            {
+              for (int j_dim = 0; j_dim < n_dim; ++j_dim)
+              {
+                jac(j_dim, i_dim) = extrap_flux(i_side, j_dim*n_var + i_var);
+              }
+              normal_flux(i_var) = jac.determinant();
+            }
             jac.col(i_dim) = orth.col(i_dim);
             boundary_values.col(i_side) *= jac.determinant();
             Eigen::Block<Eigen::Matrix<double, n_var, 2>, n_dim, 1> momentum {boundary_values, 0, i_side};
             momentum = orth*momentum;
+            boundary_values.col(i_side) -= normal_flux;
           }
 
           // Write updated solution
           for (int i_var = 0; i_var < n_var; ++i_var)
           {
-            //row_w.col(i_var).noalias() += lift*(boundary_values - boundary*row_f.col(i_var));
+            row_w.col(i_var).noalias() += lift*boundary_values.row(i_var).transpose();
             row_w.col(i_var).array() /= jac_det;
             for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
             {
