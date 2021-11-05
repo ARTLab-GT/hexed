@@ -25,15 +25,25 @@ try to maintain these conventions when contributing to the code.
     together and because the i'th component of the state vector is equal to the i'th
     component of momentum. The latter makes the code for certain formulae cleaner.
 
-## Storage order
-* Be careful of the fact that C++ storage order is row-major, whereas Eigen matrices
-  are column-major by default.
-* When storing data in array format, the hierarchy of indices is:
-  [Element, Runge-Kutta stage, state component, x-index, (y-index, (z-index))].
-* Vertices are ordered as a 2(x2(x2)) array.
-* When storing face data as an array, the hierarchy of indices is usually:
-  [dimension-index, positivity (negative side comes before positive), (x-index), (y-index), (z-index)].
-  For 3D arrays at most 2 of the x, y, and z indices are included, and for 2D at most 1.
+## Terminology
+CartDG uses some terms that are non-standard, or at least not completely universal.
+They are defined as follows:
+* "kernel": A performance-critical function which utilizes template metaprogramming
+  and relies on a wrapper function to select the appropriate template based on runtime
+  parameters.
+* "local" kernel: computes updates based on information stored in a single element.
+* "neighbor" kernel: handles numerical flux at the interface
+  between two elements
+* The "row size" of a basis is its degree + 1 (i.e., the number of rows of quadrature
+  points in each dimension, which equals the number of coefficients in the 1D case).
+  It is usually more convenient to talk about the row size than the degree. The row
+  size is not to be confused with the number of quadrature points, which depends on
+  the dimensionality. E.g., a 4th degree basis in 3 dimensions has row size 5 and 125
+  quadrature points.
+* "node": An interpolation node for a basis of Lagrange (interpolating) polynomials.
+  These tend to coincide with the quadrature points.
+* "vertex": A single point shared by a collection of elements. Not to be confused
+  with "node".
 
 ## Abbreviations
 Some common abbreviations are defined as follows, in alphabetical order.
@@ -55,23 +65,27 @@ Some common abbreviations are defined as follows, in alphabetical order.
 * `_sq`: ... squared
 * `stag`: stagnation
 * `veloc`: velocity
+* `vert`: vertex
 
-## Terminology
-CartDG uses some terms that are non-standard, or at least not completely universal.
-They are defined as follows:
-* "kernel": A performance-critical function which utilizes template metaprogramming
-  and relies on a wrapper function to select the appropriate template based on runtime
-  parameters.
-* "local" kernel: computes updates based on information stored in a single element.
-* "neighbor" kernel: handles numerical flux at the interface
-  between two elements
-* The "row size" of a basis is its degree + 1 (i.e., the number of rows of quadrature
-  points in each dimension, which equals the number of coefficients in the 1D case).
-  It is usually more convenient to talk about the row size than the degree. The row
-  size is not to be confused with the number of quadrature points, which depends on
-  the dimensionality. E.g., a 4th degree basis in 3 dimensions has row size 5 and 125
-  quadrature points.
-* "node": An interpolation node for a basis of Lagrange (interpolating) polynomials.
-  These tend to coincide with the quadrature points.
-* "vertex": A single point shared by a collection of elements. Not to be confused
-  with "node".
+## Storage order
+* Array indexing syntax shall be used to specify the layout of data in contiguous
+  memory. For example, the line
+  `double* some_data; // Layout: [i_some_thing][i_other_thing]`
+  indicates that `some_data` points to a block of doubles of size
+  `n_some_thing*n_other_thing`, and that access to this array should look like
+  `some_data[i_some_thing*n_other_thing + i_other_thing]`.
+* Data that is associated with locations in physical space, including vertices
+  and quadrature points, is stored as an array where each array index corresponds
+  to one physical coordinate. That is, the first index corresponds to the `x`
+  coordinate, the second to the `y` coordinate, etc. Thus, when specifying
+  memory layout, `[i_qpoint]` means the following, depending on the dimensionality:
+  * 1D: `[i_row]`
+  * 2D: `[i_row][j_row]`
+  * 3D: `[i_row][j_row][k_row]`
+
+  where `0 <= i_row < row_size`. For example, for a 3D Cartesian element, if you are
+  looking at the position of the `i_qpoint`th quadrature point, then `i_qpoint += 1` will
+  change only the z-coordinate, `i_qpoint += row_size` will change only y, and
+  `i_qpoint += row_size*row_size` will change only x.
+* Be careful of the fact that C++ storage order is row-major, whereas Eigen matrices
+  are column-major by default.
