@@ -19,7 +19,7 @@ class Identity_basis : public cartdg::Basis
   double node(int i) { return 0.;}
   Eigen::MatrixXd diff_mat()
   {
-    return -Eigen::MatrixXd::Identity(row_size, row_size);
+    return Eigen::MatrixXd::Identity(row_size, row_size);
   }
   Eigen::VectorXd node_weights()
   {

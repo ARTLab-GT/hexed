@@ -14,10 +14,11 @@ namespace cartdg
 template<int n_var, int n_qpoint, int row_size>
 void local_convective(elem_vec& elements, Basis& basis, Kernel_settings& settings)
 {
-  const Eigen::Matrix<double, row_size, 1> weights {basis.node_weights()};
-  const Eigen::Matrix<double, row_size, row_size> stiff_mat {basis.diff_mat().transpose()*weights.asDiagonal()};
+  const Eigen::Matrix<double, row_size, row_size> diff_mat {basis.diff_mat()};
+  const Eigen::Matrix<double, 2, row_size> boundary {basis.boundary()};
   Eigen::MatrixXd sign {{1, 0}, {0, -1}};
-  const Eigen::Matrix<double, row_size, 2> boundary_mat {basis.boundary().transpose()*sign};
+  const Eigen::Matrix<double, row_size, 1> inv_weights {Eigen::Array<double, row_size, 1>::Constant(1.)/basis.node_weights().array()};
+  const Eigen::Matrix<double, row_size, 2> lift {inv_weights.asDiagonal()*basis.boundary().transpose()*sign};
 
   double d_t_by_d_pos = settings.d_t_by_d_pos;
   double heat_rat = settings.cpg_heat_rat;
@@ -86,18 +87,18 @@ void local_convective(elem_vec& elements, Basis& basis, Kernel_settings& setting
           // Differentiate flux
           Eigen::Map<Eigen::Matrix<double, row_size, n_var>> f (&(flux[0][0]));
           Eigen::Map<Eigen::Matrix<double, row_size, n_var>> w (&(row_w[0][0]));
-          w.noalias() = stiff_mat*f;
+          w.noalias() = -diff_mat*f;
 
           // Write updated solution
           for (int i_var = 0; i_var < n_var; ++i_var)
           {
             const int face_offset = i_var*n_qpoint/row_size + i_face_qpoint;
             Eigen::Matrix<double, 2, 1> boundary_values {face0[face_offset], face1[face_offset]};
-            w.col(i_var).noalias() += boundary_mat*boundary_values;
+            w.col(i_var).noalias() += lift*(boundary_values - boundary*f.col(i_var));
             for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
             {
                write[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride]
-               += row_w[i_var][i_qpoint]*d_t_by_d_pos/weights[i_qpoint];
+               += row_w[i_var][i_qpoint]*d_t_by_d_pos;
             }
           }
           ++i_face_qpoint;
