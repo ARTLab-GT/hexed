@@ -101,9 +101,7 @@ TEST_CASE("Local convective")
         elements[i_elem]->face()[i_face] = 0.;
       }
     }
-    cartdg::global_debug_message["print"] = 1;
     cartdg::get_local_convective(1, 2)(elements, basis, settings);
-    cartdg::global_debug_message.erase("print");
     for (auto& element : elements)
     {
       double* r = element->stage(settings.i_read);
