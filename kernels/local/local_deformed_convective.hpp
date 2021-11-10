@@ -8,10 +8,6 @@
 #include <Deformed_element.hpp>
 #include <math.hpp>
 
-// FIXME
-#include <iostream>
-#include <cartdgConfig.hpp>
-
 namespace cartdg
 {
 
@@ -32,7 +28,7 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
   const int i_write = settings.i_write;
   const int n_face_dof = n_var*n_qpoint/row_size;
 
-  //#pragma omp parallel for FIXME
+  #pragma omp parallel for
   for (unsigned i_elem = 0; i_elem < def_elements.size(); ++i_elem)
   {
     double* read  = def_elements[i_elem]->stage(i_read);

@@ -25,8 +25,6 @@ void nonpen_convective(def_elem_wall_vec& walls, Basis& basis, Kernel_settings& 
   {
     auto wall {walls[i_bc]};
     const int i_dim = wall.i_dim;
-    int stride = n_face_qpoint;
-    for (int i = 0; i < i_dim; ++i) stride /= row_size;
     int is_p = wall.is_positive;
     Element& elem {*wall.element};
 
