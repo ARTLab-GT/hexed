@@ -119,7 +119,7 @@ TEST_CASE("Conservation of state variables")
 
   SECTION("2D deformed")
   {
-    const int row_size = CARTDG_MAX_BASIS_ROW_SIZE;
+    const int row_size = cartdg::config::max_row_size;
     cartdg::Solution sol (4, 2, row_size, 1.);
     sol.add_empty_grid(1);
     cartdg::Regular_grid& grid = sol.reg_grids[0];

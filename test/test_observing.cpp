@@ -59,7 +59,7 @@ TEST_CASE("Max characteristic speed")
 
 TEST_CASE("Discontinuity indicator")
 {
-  const int row_size = CARTDG_MAX_BASIS_ROW_SIZE;
+  const int row_size = cartdg::config::max_row_size;
   cartdg::Gauss_lobatto basis (row_size);
   cartdg::Gauss_lobatto basis1 (row_size - 1);
 

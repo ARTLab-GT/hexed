@@ -18,7 +18,7 @@ class Arbitrary_integrand : public cartdg::Domain_func
 
 TEST_CASE("Regular_grid")
 {
-  cartdg::Equidistant basis (CARTDG_MAX_BASIS_ROW_SIZE);
+  cartdg::Equidistant basis (cartdg::config::max_row_size);
   cartdg::Regular_grid grid1 (4, 1, 5, 0.1, basis);
   cartdg::Regular_grid grid2 (4, 2, 6, 0.1, basis);
   cartdg::Regular_grid grid3 (4, 3, 27, 0.1, basis);

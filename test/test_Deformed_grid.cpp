@@ -9,7 +9,7 @@
 
 TEST_CASE("Deformed grid class")
 {
-  const int row_size = std::min<int>(3, CARTDG_MAX_BASIS_ROW_SIZE);
+  const int row_size = std::min<int>(3, cartdg::config::max_row_size);
   cartdg::Gauss_lobatto basis (row_size);
   std::vector<cartdg::Deformed_grid> grids;
   grids.emplace_back(1, 2, 0, 0.2, basis);
