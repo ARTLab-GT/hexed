@@ -31,7 +31,7 @@ class Supersonic_inlet : public cartdg::Ghost_boundary_condition
 
 TEST_CASE("Ghost_boundary_condition class")
 {
-  const int row_size = CARTDG_MAX_BASIS_ROW_SIZE;
+  const int row_size = cartdg::config::max_row_size;
   const int n_face_qpoint = row_size*row_size;
   cartdg::Gauss_legendre basis {row_size};
   cartdg::Regular_grid grid {5, 3, 0, 1., basis};
@@ -55,7 +55,7 @@ TEST_CASE("Ghost_boundary_condition class")
 
 TEST_CASE("gbc_convective")
 {
-  const int row_size = CARTDG_MAX_BASIS_ROW_SIZE;
+  const int row_size = cartdg::config::max_row_size;
   cartdg::Solution soln (5, 3, row_size, 1.);
   soln.kernel_settings.d_t_by_d_pos = 0.1;
   soln.add_block_grid(1, std::vector<int>{0, 0, 0}, std::vector<int>{3, 3, 3});

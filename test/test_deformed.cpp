@@ -227,7 +227,7 @@ class Test_rotated : public Def_edge
 
 TEST_CASE("Deformed elements")
 {
-  const int row_size {CARTDG_MAX_BASIS_ROW_SIZE};
+  const int row_size {cartdg::config::max_row_size};
   cartdg::Gauss_legendre basis {row_size};
   SECTION("plain")
   {

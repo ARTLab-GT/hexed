@@ -19,7 +19,7 @@ class Identity_basis : public cartdg::Basis
   double node(int i) { return 0.;}
   Eigen::MatrixXd diff_mat()
   {
-    return -Eigen::MatrixXd::Identity(row_size, row_size);
+    return Eigen::MatrixXd::Identity(row_size, row_size);
   }
   Eigen::VectorXd node_weights()
   {
@@ -37,40 +37,41 @@ class Identity_basis : public cartdg::Basis
 
 TEST_CASE("write_face")
 {
-  #if CARTDG_MAX_BASIS_ROW_SIZE >= 5
-  const int row_size {5};
-  cartdg::Kernel_settings settings;
-  cartdg::Equidistant basis {row_size};
-  cartdg::Storage_params params {2, 5, 3, row_size};
-  cartdg::elem_vec elements;
-  elements.emplace_back(new cartdg::Element {params});
-  const int n_qpoint {params.n_qpoint()};
-  for (int i_var : {0, 1})
+  if (cartdg::config::max_row_size >= 5)
   {
-    for (int i_row = 0; i_row < row_size; ++i_row)
-    for (int j_row = 0; j_row < row_size; ++j_row)
-    for (int k_row = 0; k_row < row_size; ++k_row)
+    const int row_size {5};
+    cartdg::Kernel_settings settings;
+    cartdg::Equidistant basis {row_size};
+    cartdg::Storage_params params {2, 5, 3, row_size};
+    cartdg::elem_vec elements;
+    elements.emplace_back(new cartdg::Element {params});
+    const int n_qpoint {params.n_qpoint()};
+    for (int i_var : {0, 1})
     {
-      int i_qpoint = (i_row*row_size + j_row)*row_size + k_row;
-      double value = 0.1*i_var + 0.2*basis.node(i_row) + 0.3*basis.node(j_row) + 0.4*basis.node(k_row);
-      elements[0]->stage(settings.i_read)[i_var*n_qpoint + i_qpoint] = value;
+      for (int i_row = 0; i_row < row_size; ++i_row)
+      for (int j_row = 0; j_row < row_size; ++j_row)
+      for (int k_row = 0; k_row < row_size; ++k_row)
+      {
+        int i_qpoint = (i_row*row_size + j_row)*row_size + k_row;
+        double value = 0.1*i_var + 0.2*basis.node(i_row) + 0.3*basis.node(j_row) + 0.4*basis.node(k_row);
+        elements[0]->stage(settings.i_read)[i_var*n_qpoint + i_qpoint] = value;
+      }
     }
+    cartdg::get_write_face(3, row_size)(elements, basis, settings);
+    double* face = elements[0]->face();
+    const int n_face {params.n_dof()/row_size};
+    REQUIRE(face[0*n_face + 0*n_qpoint/row_size + 0] == Approx(0.).margin(1e-10));
+    REQUIRE(face[0*n_face + 0*n_qpoint/row_size + 3] == Approx(0.75*0.4));
+    REQUIRE(face[0*n_face + 0*n_qpoint/row_size + 5] == Approx(0.25*0.3));
+    REQUIRE(face[0*n_face + 0*n_qpoint/row_size + 6] == Approx(0.25*(0.3 + 0.4)));
+    REQUIRE(face[0*n_face + 1*n_qpoint/row_size + 0] == Approx(0.1));
+    REQUIRE(face[1*n_face + 0*n_qpoint/row_size + 0] == Approx(1.*0.2));
+    REQUIRE(face[1*n_face + 0*n_qpoint/row_size + 1] == Approx(1.*0.2 + 0.25*0.4));
+    REQUIRE(face[2*n_face + 0*n_qpoint/row_size + 0] == Approx(0.).margin(1e-10));
+    REQUIRE(face[2*n_face + 0*n_qpoint/row_size + 1] == Approx(0.25*0.4));
+    REQUIRE(face[2*n_face + 0*n_qpoint/row_size + 5] == Approx(0.25*0.2));
+    REQUIRE(face[5*n_face + 0*n_qpoint/row_size + 8] == Approx(1.*0.4 + 0.25*0.2 + 0.75*0.3));
   }
-  cartdg::get_write_face(3, row_size)(elements, basis, settings);
-  double* face = elements[0]->face();
-  const int n_face {params.n_dof()/row_size};
-  REQUIRE(face[0*n_face + 0*n_qpoint/row_size + 0] == Approx(0.).margin(1e-10));
-  REQUIRE(face[0*n_face + 0*n_qpoint/row_size + 3] == Approx(0.75*0.4));
-  REQUIRE(face[0*n_face + 0*n_qpoint/row_size + 5] == Approx(0.25*0.3));
-  REQUIRE(face[0*n_face + 0*n_qpoint/row_size + 6] == Approx(0.25*(0.3 + 0.4)));
-  REQUIRE(face[0*n_face + 1*n_qpoint/row_size + 0] == Approx(0.1));
-  REQUIRE(face[1*n_face + 0*n_qpoint/row_size + 0] == Approx(1.*0.2));
-  REQUIRE(face[1*n_face + 0*n_qpoint/row_size + 1] == Approx(1.*0.2 + 0.25*0.4));
-  REQUIRE(face[2*n_face + 0*n_qpoint/row_size + 0] == Approx(0.).margin(1e-10));
-  REQUIRE(face[2*n_face + 0*n_qpoint/row_size + 1] == Approx(0.25*0.4));
-  REQUIRE(face[2*n_face + 0*n_qpoint/row_size + 5] == Approx(0.25*0.2));
-  REQUIRE(face[5*n_face + 0*n_qpoint/row_size + 8] == Approx(1.*0.4 + 0.25*0.2 + 0.75*0.3));
-  #endif
 }
 
 TEST_CASE("Local convective")
@@ -167,7 +168,7 @@ TEST_CASE("Local convective")
   SECTION("2D non-constant")
   {
     const int n_elem = 5;
-    const int row_size = std::min<int>(6, int(CARTDG_MAX_BASIS_ROW_SIZE));
+    const int row_size = std::min<int>(6, int(cartdg::config::max_row_size));
     cartdg::Storage_params params {3, 4, 2, row_size};
     int n_qpoint = params.n_qpoint();
     cartdg::elem_vec elements;
@@ -234,7 +235,7 @@ TEST_CASE("Local convective")
 
 TEST_CASE("derivative")
 {
-  const int row_size = CARTDG_MAX_BASIS_ROW_SIZE;
+  const int row_size = cartdg::config::max_row_size;
   cartdg::Gauss_lobatto basis (row_size);
   cartdg::Kernel_settings settings;
   Eigen::Matrix<double, row_size, row_size> diff_mat = basis.diff_mat();
@@ -376,7 +377,7 @@ TEST_CASE("derivative")
 
 TEST_CASE("req_visc")
 {
-  const int row_size = CARTDG_MAX_BASIS_ROW_SIZE;
+  const int row_size = cartdg::config::max_row_size;
   const int n_qpoint = cartdg::custom_math::pow(row_size, 3);
   cartdg::Gauss_legendre basis (row_size);
   cartdg::Kernel_settings settings;
@@ -407,35 +408,36 @@ TEST_CASE("req_visc")
 
 TEST_CASE("av_flux")
 {
-  #if CARTDG_MAX_BASIS_ROW_SIZE >= 3
-  cartdg::Gauss_lobatto basis (3);
-  cartdg::Kernel_settings settings;
-  settings.d_pos = 0.5;
-  settings.d_t_by_d_pos = 3.;
-  cartdg::Storage_params params {3, 4, 2, 3};
-  cartdg::elem_vec elements;
-  for (int i_elem : {0, 1})
+  if (cartdg::config::max_row_size >= 3)
   {
-    elements.emplace_back(new cartdg::Element {params});
-    for (int i = 0; i < 4; ++i) elements[i_elem]->viscosity()[i] = 0.;
-    for (int i = 0; i < 9; ++i) elements[i_elem]->derivative()[i] = 0.;
+    cartdg::Gauss_lobatto basis (3);
+    cartdg::Kernel_settings settings;
+    settings.d_pos = 0.5;
+    settings.d_t_by_d_pos = 3.;
+    cartdg::Storage_params params {3, 4, 2, 3};
+    cartdg::elem_vec elements;
+    for (int i_elem : {0, 1})
+    {
+      elements.emplace_back(new cartdg::Element {params});
+      for (int i = 0; i < 4; ++i) elements[i_elem]->viscosity()[i] = 0.;
+      for (int i = 0; i < 9; ++i) elements[i_elem]->derivative()[i] = 0.;
+    }
+    elements[0]->viscosity()[0] = 0.2;
+    elements[1]->derivative()[1] = 0.3;
+    elements[1]->derivative()[8] = 0.4;
+    for (int i = 0; i < 4; ++i) elements[1]->viscosity()[i] = 1.;
+    for (int i = 0; i < 9; ++i) elements[0]->derivative()[i] = 1.;
+    cartdg::get_av_flux(2, 3)(elements, basis, settings);
+
+    REQUIRE(elements[0]->derivative()[0] == Approx(0.2*1.5));
+    REQUIRE(elements[0]->derivative()[1] == Approx(0.1*1.5));
+    REQUIRE(elements[0]->derivative()[2] == Approx(0.0*1.5));
+    REQUIRE(elements[0]->derivative()[3] == Approx(0.1*1.5));
+    REQUIRE(elements[0]->derivative()[4] == Approx(0.05*1.5));
+    REQUIRE(elements[0]->derivative()[5] == Approx(0.0*1.5));
+
+    REQUIRE(elements[1]->derivative()[0] == Approx(0.0));
+    REQUIRE(elements[1]->derivative()[1] == Approx(0.3*1.5));
+    REQUIRE(elements[1]->derivative()[8] == Approx(0.4*1.5));
   }
-  elements[0]->viscosity()[0] = 0.2;
-  elements[1]->derivative()[1] = 0.3;
-  elements[1]->derivative()[8] = 0.4;
-  for (int i = 0; i < 4; ++i) elements[1]->viscosity()[i] = 1.;
-  for (int i = 0; i < 9; ++i) elements[0]->derivative()[i] = 1.;
-  cartdg::get_av_flux(2, 3)(elements, basis, settings);
-
-  REQUIRE(elements[0]->derivative()[0] == Approx(0.2*1.5));
-  REQUIRE(elements[0]->derivative()[1] == Approx(0.1*1.5));
-  REQUIRE(elements[0]->derivative()[2] == Approx(0.0*1.5));
-  REQUIRE(elements[0]->derivative()[3] == Approx(0.1*1.5));
-  REQUIRE(elements[0]->derivative()[4] == Approx(0.05*1.5));
-  REQUIRE(elements[0]->derivative()[5] == Approx(0.0*1.5));
-
-  REQUIRE(elements[1]->derivative()[0] == Approx(0.0));
-  REQUIRE(elements[1]->derivative()[1] == Approx(0.3*1.5));
-  REQUIRE(elements[1]->derivative()[8] == Approx(0.4*1.5));
-  #endif
 }

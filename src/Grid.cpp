@@ -70,7 +70,7 @@ bool Grid::execute_runge_kutta_stage()
 
 double Grid::get_stable_cfl()
 {
-  if ((basis.row_size > 0) && (basis.row_size <= 9))
+  if ((basis.row_size > 0) && (basis.row_size <= 10))
   {
     return stable_cfl[basis.row_size - 1];
   }

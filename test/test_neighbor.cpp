@@ -333,7 +333,7 @@ TEST_CASE("ausm_plus_up_cpg_euler")
 
 TEST_CASE("jump kernel")
 {
-  const int row_size = CARTDG_MAX_BASIS_ROW_SIZE;
+  const int row_size = cartdg::config::max_row_size;
   const int n_qpoint = row_size*row_size*row_size;
   double read  [3][1][row_size][row_size][row_size];
   double write [3][1][row_size][row_size][row_size];
@@ -358,12 +358,12 @@ TEST_CASE("jump kernel")
   REQUIRE(write[1][0][row_size - 1][0][row_size - 1] == Approx(correct));
   REQUIRE(write[0][0][0][row_size - 1][0] == 0.1);
   REQUIRE(write[2][0][0][0][0] == 0.1);
-  REQUIRE(write[1][0][1][1][1] == 0.1); // might fail if CARTDG_MAX_BASIS_ROW_SIZE == 2
+  REQUIRE(write[1][0][1][1][1] == 0.1); // might fail if cartdg::config::max_row_size == 2
 }
 
 TEST_CASE("neighbor_derivative")
 {
-  const int row_size = CARTDG_MAX_BASIS_ROW_SIZE;
+  const int row_size = cartdg::config::max_row_size;
   const int n_qpoint = row_size*row_size*row_size;
   cartdg::Storage_params params {1, 5, 3, row_size};
   cartdg::Kernel_settings settings;
@@ -393,7 +393,7 @@ TEST_CASE("neighbor_derivative")
   REQUIRE(elements[2]->derivative()[(0           )*row_size + end] == Approx(correct));
   REQUIRE(elements[1]->derivative()[(row_size - 1)*row_size + 0 ] == 0.1);
   REQUIRE(elements[0]->derivative()[(0           )*row_size + 0 ] == 0.1);
-  REQUIRE(elements[2]->derivative()[(1           )*row_size + row_size*row_size + 1] == 0.1); // might fail if CARTDG_MAX_BASIS_ROW_SIZE == 2
+  REQUIRE(elements[2]->derivative()[(1           )*row_size + row_size*row_size + 1] == 0.1); // might fail if cartdg::config::max_row_size == 2
 }
 
 TEST_CASE("continuous viscosity kernel")
@@ -423,7 +423,7 @@ TEST_CASE("continuous viscosity kernel")
     elements[3]->viscosity()[i_point] = 1.;
   }
 
-  cartdg::get_cont_visc(2, CARTDG_MAX_BASIS_ROW_SIZE)(connections, settings);
+  cartdg::get_cont_visc(2, cartdg::config::max_row_size)(connections, settings);
   REQUIRE(elements[0]->viscosity()[0] == Approx(0.0));
   REQUIRE(elements[0]->viscosity()[1] == Approx(2.0));
   REQUIRE(elements[0]->viscosity()[2] == Approx(0.5));

@@ -4,8 +4,6 @@
 #include <Kernel_settings.hpp>
 #include <Basis.hpp>
 #include <Deformed_element.hpp>
-#include "read_copy.hpp"
-#include "write_copy.hpp"
 #include "hll_cpg_euler.hpp"
 
 namespace cartdg
