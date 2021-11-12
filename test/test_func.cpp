@@ -56,33 +56,26 @@ std::vector<std::vector<double>> test_error
 
 TEST_CASE("Constant_func")
 {
-  cartdg::Constant_func cf (std::vector<double> {3.2, -0.7});
-  for (auto pos : test_pos)
-  {
-    for (auto time : test_time)
-    {
+  std::vector<double> value {0.3, -0.7};
+  cartdg::Constant_func cf (value);
+  for (auto pos : test_pos) {
+    for (auto time : test_time) {
       auto result = cf(pos, time);
-      REQUIRE(result.size() == 2);
-      REQUIRE(result[0] == 3.2);
-      REQUIRE(result[1] == -0.7);
+      REQUIRE(result == value);
     }
   }
 }
 
 TEST_CASE("Domain_from_spacetime")
 {
-  cartdg::Constant_func cf (std::vector<double> {3.2, -0.7});
+  std::vector<double> value {0.3, -0.7};
+  cartdg::Constant_func cf (value);
   cartdg::Domain_from_spacetime dfs {cf};
-  for (auto pos : test_pos)
-  {
-    for (auto time : test_time)
-    {
-      for (auto state : test_state)
-      {
+  for (auto pos : test_pos) {
+    for (auto time : test_time) {
+      for (auto state : test_state) {
         auto result = dfs(pos, time, state);
-        REQUIRE(result.size() == 2);
-        REQUIRE(result[0] == 3.2);
-        REQUIRE(result[1] == -0.7);
+        REQUIRE(result == value);
       }
     }
   }
