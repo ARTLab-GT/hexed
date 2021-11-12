@@ -14,11 +14,11 @@ class Surface_func
                                          std::vector<double> state, std::vector<double> normal) = 0;
 };
 
-class Surface_func_from_dom : public Surface_func
+class Surface_from_domain : public Surface_func
 {
   Domain_func& domain;
   public:
-  Surface_func(Domain_func&);
+  Surface_from_domain(Domain_func&);
   // evaluates given `Domain_func` at `(pos, time, state)`
   virtual std::vector<double> operator()(std::vector<double> pos, double time,
                                          std::vector<double> state, std::vector<double> normal);

@@ -1,6 +1,8 @@
 #include <catch2/catch.hpp>
 
+#include <Spacetime_func.hpp>
 #include <Domain_func.hpp>
+#include <Surface_func.hpp>
 
 class Arbitrary_func : public cartdg::Spacetime_func
 {
@@ -24,7 +26,9 @@ std::vector<std::vector<double>> test_pos
   {0.},
   {0., 0., 0.},
 };
+
 std::vector<double> test_time {1, 0., 10, -1.3};
+
 std::vector<std::vector<double>> test_state
 {
   {},
@@ -32,6 +36,16 @@ std::vector<std::vector<double>> test_state
   {1.},
   {0., 0., 0.},
 };
+
+std::vector<std::vector<double>> test_normal
+{
+  {},
+  {3./5., 4./5.},
+  {2.},
+  {0., 0., 1.},
+  {2., 1., 0.},
+};
+
 std::vector<std::vector<double>> test_error
 {
   {},
@@ -195,5 +209,20 @@ TEST_CASE("Doublet")
     REQUIRE(state[1] == Approx(mass*veloc[1]).epsilon(1e-3));
     REQUIRE(state[2] == Approx(mass         ).epsilon(1e-3));
     REQUIRE(state[3] == Approx(ener         ).epsilon(1e-3));
+  }
+}
+
+TEST_CASE("Surface_from_domain")
+{
+  cartdg::State_variables sv;
+  cartdg::Surface_from_domain sfd {sv};
+  for (auto pos : test_pos) {
+    for (auto time : test_time) {
+      for (auto state : test_state) {
+        for (auto normal : test_normal) {
+          REQUIRE(sfd(pos, time, state, normal) == state);
+        }
+      }
+    }
   }
 }
