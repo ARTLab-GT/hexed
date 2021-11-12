@@ -11,4 +11,10 @@ std::vector<double> Surface_from_domain::operator()(std::vector<double> pos, dou
   return domain(pos, time, state);
 }
 
+std::vector<double> Force_per_area::operator()(std::vector<double> pos, double time,
+                                               std::vector<double> state, std::vector<double> normal)
+{
+  return {};
+}
+
 }

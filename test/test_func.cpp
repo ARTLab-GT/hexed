@@ -40,10 +40,9 @@ std::vector<std::vector<double>> test_state
 std::vector<std::vector<double>> test_normal
 {
   {},
-  {3./5., 4./5.},
+  {3., 4.},
   {2.},
   {0., 0., 1.},
-  {2., 1., 0.},
 };
 
 std::vector<std::vector<double>> test_error
@@ -68,6 +67,8 @@ TEST_CASE("Constant_func")
 
 TEST_CASE("Domain_from_spacetime")
 {
+  // Verify that Domain_from_spacetime(Constant_func) gives you the
+  // same constant value
   std::vector<double> value {0.3, -0.7};
   cartdg::Constant_func cf (value);
   cartdg::Domain_from_spacetime dfs {cf};
@@ -207,6 +208,8 @@ TEST_CASE("Doublet")
 
 TEST_CASE("Surface_from_domain")
 {
+  // Verify that Surface_from_domain(State_variables) gives you state variables
+  // regardless of the other inputs
   cartdg::State_variables sv;
   cartdg::Surface_from_domain sfd {sv};
   for (auto pos : test_pos) {
@@ -215,6 +218,44 @@ TEST_CASE("Surface_from_domain")
         for (auto normal : test_normal) {
           REQUIRE(sfd(pos, time, state, normal) == state);
         }
+      }
+    }
+  }
+}
+
+TEST_CASE("Force_per_area")
+{
+  std::vector<double> pressure {1e5, 2e4, 3.2e4};
+  std::vector<double> pos {}; // size of `pos` shouldn't matter
+  double time {0.2};
+  double veloc [3] {0.2, -2., 10.};
+  double mass {0.7};
+  std::vector<std::vector<double>> unit_normal {
+    {},
+    {3./5., 4./5.},
+    {1.},
+    {0., 0., 1.},
+  };
+  cartdg::Force_per_area fpa;
+  // verify that when you back out the state,
+  // Force_per_area gives you pressure times unit normal
+  for (unsigned i_normal = 0; i_normal < test_normal.size(); ++i_normal)
+  {
+    auto normal {test_normal[i_normal]};
+    for (double pres : pressure)
+    {
+      std::vector<double> state;
+      double kin_ener = 0.;
+      for (unsigned i_dim = 0; i_dim < normal.size(); ++i_dim) {
+        kin_ener += 0.5*mass*veloc[i_dim]*veloc[i_dim];
+        state.push_back(mass*veloc[i_dim]);
+      }
+      state.push_back(mass);
+      state.push_back(0.4*pres + kin_ener);
+      auto computed {fpa(pos, time, state, normal)};
+      REQUIRE(computed.size() == normal.size());
+      for (unsigned i_dim = 0; i_dim < normal.size(); ++i_dim) {
+        REQUIRE(computed[i_dim]/pres == Approx(unit_normal[i_normal][i_dim]).scale(1.));
       }
     }
   }
