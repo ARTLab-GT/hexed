@@ -21,11 +21,11 @@ class State_variables : public Domain_func
                                          const std::vector<double> state);
 };
 
-class Domain_func_from_st : public Domain_func
+class Domain_from_spacetime : public Domain_func
 {
   Spacetime_func& spacetime;
   public:
-  Domain_func_from_st(Spacetime_func&);
+  Domain_from_spacetime(Spacetime_func&);
   // evaluates given Spacetime_func at `(point_pos, point_time)`
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state);

@@ -55,6 +55,25 @@ TEST_CASE("Constant_func")
   }
 }
 
+TEST_CASE("Domain_from_spacetime")
+{
+  cartdg::Constant_func cf (std::vector<double> {3.2, -0.7});
+  cartdg::Domain_from_spacetime dfs {cf};
+  for (auto pos : test_pos)
+  {
+    for (auto time : test_time)
+    {
+      for (auto state : test_state)
+      {
+        auto result = dfs(pos, time, state);
+        REQUIRE(result.size() == 2);
+        REQUIRE(result[0] == 3.2);
+        REQUIRE(result[1] == -0.7);
+      }
+    }
+  }
+}
+
 TEST_CASE("Error_func")
 {
   Arbitrary_func af;

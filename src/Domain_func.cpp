@@ -10,6 +10,14 @@ std::vector<double> State_variables::operator()(const std::vector<double> point_
   return state;
 }
 
+Domain_from_spacetime::Domain_from_spacetime(Spacetime_func& st) : spacetime{st} {}
+
+std::vector<double> Domain_from_spacetime::operator()
+(const std::vector<double> point_pos, double point_time, const std::vector<double> state)
+{
+  return spacetime(point_pos, point_time);
+}
+
 Error_func::Error_func(Spacetime_func& correct_arg) : correct(correct_arg) {}
 
 std::vector<double> Error_func::operator()(const std::vector<double> point_pos,
