@@ -251,11 +251,11 @@ TEST_CASE("Force_per_area")
         state.push_back(mass*veloc[i_dim]);
       }
       state.push_back(mass);
-      state.push_back(0.4*pres + kin_ener);
+      state.push_back(pres/0.4 + kin_ener);
       auto computed {fpa(pos, time, state, normal)};
       REQUIRE(computed.size() == normal.size());
       for (unsigned i_dim = 0; i_dim < normal.size(); ++i_dim) {
-        REQUIRE(computed[i_dim]/pres == Approx(unit_normal[i_normal][i_dim]).scale(1.));
+        REQUIRE(-computed[i_dim]/pres == Approx(unit_normal[i_normal][i_dim]).scale(1.));
       }
     }
   }
