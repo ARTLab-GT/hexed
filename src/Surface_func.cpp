@@ -13,6 +13,8 @@ std::vector<double> Surface_from_domain::operator()(std::vector<double> pos, dou
   return domain(pos, time, state);
 }
 
+Force_per_area::Force_per_area(double heat_rat) : hr{heat_rat} {}
+
 std::vector<double> Force_per_area::operator()(std::vector<double> pos, double time,
                                                std::vector<double> state, std::vector<double> normal)
 {
@@ -23,7 +25,7 @@ std::vector<double> Force_per_area::operator()(std::vector<double> pos, double t
     normal_sq += normal[i_dim]*normal[i_dim];
   }
   double normal_mag {std::sqrt(normal_sq)};
-  double pres {0.4*(state[state.size() - 1] - 0.5*momentum_sq/state[state.size() - 2])}; // FIXME: use correct heat_rat
+  double pres {(hr - 1.)*(state[state.size() - 1] - 0.5*momentum_sq/state[state.size() - 2])}; // FIXME: use correct heat_rat
   std::vector<double> fpa;
   for (unsigned i_dim = 0; i_dim < normal.size(); ++i_dim) {
     fpa.push_back(-normal[i_dim]*pres/normal_mag);

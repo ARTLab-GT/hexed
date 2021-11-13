@@ -236,7 +236,7 @@ TEST_CASE("Force_per_area")
     {1.},
     {0., 0., 1.},
   };
-  cartdg::Force_per_area fpa;
+  cartdg::Force_per_area fpa {1.2};
   // verify that when you back out the state,
   // Force_per_area gives you pressure times unit normal
   for (unsigned i_normal = 0; i_normal < test_normal.size(); ++i_normal)
@@ -251,7 +251,7 @@ TEST_CASE("Force_per_area")
         state.push_back(mass*veloc[i_dim]);
       }
       state.push_back(mass);
-      state.push_back(pres/0.4 + kin_ener);
+      state.push_back(pres/0.2 + kin_ener);
       auto computed {fpa(pos, time, state, normal)};
       REQUIRE(computed.size() == normal.size());
       for (unsigned i_dim = 0; i_dim < normal.size(); ++i_dim) {

@@ -27,7 +27,9 @@ class Surface_from_domain : public Surface_func
 
 class Force_per_area : public Surface_func
 {
+  double hr;
   public:
+  Force_per_area(double heat_rat = 1.4);
   // Computes surface force per unit area (i.e. pressure times unit normal)
   virtual std::vector<double> operator()(std::vector<double> pos, double time,
                                          std::vector<double> state, std::vector<double> outward_normal);

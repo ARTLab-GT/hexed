@@ -60,7 +60,7 @@ class Stag_pres : public Domain_func
 {
   double hr;
   public:
-  Stag_pres(double heat_rat);
+  Stag_pres(double heat_rat = 1.4);
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state);
 };
