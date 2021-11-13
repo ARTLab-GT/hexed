@@ -56,6 +56,15 @@ class Error_func : public Domain_func
                                          const std::vector<double> state);
 };
 
+class Stag_pres : public Domain_func
+{
+  double hr;
+  public:
+  Stag_pres(double heat_rat);
+  virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
+                                         const std::vector<double> state);
+};
+
 }
 
 #endif

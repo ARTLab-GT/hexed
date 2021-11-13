@@ -1,5 +1,5 @@
+#include <cmath>
 #include <Domain_func.hpp>
-
 namespace cartdg
 {
 
@@ -42,6 +42,24 @@ std::vector<double> Error_func::operator()(const std::vector<double> point_pos,
                                            const std::vector<double> state)
 {
   return ds(point_pos, point_time, state);
+}
+
+Stag_pres::Stag_pres(double heat_rat) : hr{heat_rat} {}
+
+std::vector<double> Stag_pres::operator()(const std::vector<double> point_pos, double point_time,
+                                          const std::vector<double> state)
+{
+  double mass {state[state.size() - 2]};
+  double momentum_sq {0.};
+  for (unsigned i_dim = 0; i_dim < point_pos.size(); ++i_dim) {
+    momentum_sq += state[i_dim]*state[i_dim];
+  }
+  double kin_ener {0.5*momentum_sq/mass};
+  double pres {(hr - 1.)*(state[state.size() - 1] - kin_ener)};
+  double stag_enth {state[state.size() - 1] + pres};
+  double enth {stag_enth - kin_ener};
+  double stag_pres {std::pow(stag_enth/enth, hr/(hr - 1.))};
+  return {stag_pres};
 }
 
 }
