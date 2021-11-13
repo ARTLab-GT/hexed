@@ -18,19 +18,30 @@ std::vector<double> Domain_from_spacetime::operator()
   return spacetime(point_pos, point_time);
 }
 
-Error_func::Error_func(Spacetime_func& correct_arg) : correct(correct_arg) {}
+Diff_sq::Diff_sq(Domain_func& arg0, Domain_func& arg1) : func0{arg0}, func1{arg1} {}
+
+std::vector<double> Diff_sq::operator()(const std::vector<double> point_pos,
+                                        double point_time,
+                                        const std::vector<double> state)
+{
+  auto result0 = func0(point_pos, point_time, state);
+  auto result1 = func1(point_pos, point_time, state);
+  std::vector<double> diff_sq {};
+  for (unsigned i = 0; i < result0.size(); ++i) {
+    double diff {result0[i] - result1[i]};
+    diff_sq.push_back(diff*diff);
+  }
+  return diff_sq;
+}
+
+Error_func::Error_func(Spacetime_func& correct_arg)
+: correct{correct_arg}, dfs{correct}, ds{dfs, sv} {}
 
 std::vector<double> Error_func::operator()(const std::vector<double> point_pos,
                                            double point_time,
                                            const std::vector<double> state)
 {
-  auto error = correct(point_pos, point_time);
-  for (unsigned i_var = 0; i_var < state.size(); ++i_var)
-  {
-    error[i_var] = state[i_var] - error[i_var];
-    error[i_var] = error[i_var]*error[i_var];
-  }
-  return error;
+  return ds(point_pos, point_time, state);
 }
 
 }
