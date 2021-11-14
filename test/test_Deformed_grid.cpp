@@ -446,33 +446,36 @@ TEST_CASE("Deformed grid class")
 
   SECTION("wall surface integrals")
   {
+    cartdg::Gauss_legendre legendre {row_size}; // make sure that it works with legendre basis
+    cartdg::Deformed_grid grid {1, 2, 0, 0.2, legendre};
+
     // some completely arbitrary elements
-    grid2.add_element({ 1,0});
-    grid2.add_element({-1,2});
-    grid2.add_element({-1,3});
-    grid2.calc_jacobian();
+    grid.add_element({ 1,0});
+    grid.add_element({-1,2});
+    grid.add_element({-1,3});
+    grid.calc_jacobian();
 
-    grid2.add_wall(1, 0, 0);
-    grid2.add_wall(2, 0, 0);
-    grid2.add_wall(2, 0, 1);
-    grid2.add_wall(2, 1, 1);
-    REQUIRE(grid2.def_elem_wall(1).element == &grid2.deformed_element(2));
-    REQUIRE(grid2.def_elem_wall(1).i_elem == 2);
-    REQUIRE(grid2.def_elem_wall(1).i_dim == 0);
-    REQUIRE(grid2.def_elem_wall(3).i_dim == 1);
-    REQUIRE(grid2.def_elem_wall(2).is_positive == true);
+    grid.add_wall(1, 0, 0);
+    grid.add_wall(2, 0, 0);
+    grid.add_wall(2, 0, 1);
+    grid.add_wall(2, 1, 1);
+    REQUIRE(grid.def_elem_wall(1).element == &grid.deformed_element(2));
+    REQUIRE(grid.def_elem_wall(1).i_elem == 2);
+    REQUIRE(grid.def_elem_wall(1).i_dim == 0);
+    REQUIRE(grid.def_elem_wall(3).i_dim == 1);
+    REQUIRE(grid.def_elem_wall(2).is_positive == true);
 
-    for (int i_elem = 0; i_elem < grid2.n_elem; ++i_elem)
+    for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
-      auto pos = grid2.get_pos(i_elem);
-      double* stage = grid2.deformed_element(i_elem).stage(0);
-      for (int i_qpoint = 0; i_qpoint < grid2.n_qpoint; ++i_qpoint)
+      auto pos = grid.get_pos(i_elem);
+      double* stage = grid.deformed_element(i_elem).stage(0);
+      for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
       {
-        stage[i_qpoint] = pos[i_qpoint] + 0.1*pos[i_qpoint + grid2.n_qpoint];
+        stage[i_qpoint] = pos[i_qpoint] + 0.1*pos[i_qpoint + grid.n_qpoint];
       }
     }
     cartdg::State_variables sv;
-    REQUIRE(grid2.surface_integral(sv)[0] == Approx(-1*.2*2*.2 - 0.2*0.2/2. + 0.1*((2*4*.2*4*.2 - 2*.2*2*.2 - 3*.2*3*.2)/2. + 4*0.2*0.2)));
+    REQUIRE(grid.surface_integral(sv)[0] == Approx(-1*.2*2*.2 - 0.2*0.2/2. + 0.1*((2*4*.2*4*.2 - 2*.2*2*.2 - 3*.2*3*.2)/2. + 4*0.2*0.2)));
 
     cartdg::Deformed_grid multivar (2, 3, 0, 1., basis);
     multivar.add_element({0, 0, 0});
