@@ -257,63 +257,68 @@ std::vector<double> Deformed_grid::face_integral(Domain_func& integrand, int i_e
 {
   auto pos = get_pos(i_elem);
   auto row_weights = basis.node_weights();
-  int stride = std::pow(basis.row_size, n_dim - 1 - i_dim);
   Deformed_element& elem = deformed_element(i_elem);
   double* stage = elem.stage(0);
+  double* jacobian {elem.jacobian()};
+  int nfq {n_qpoint/basis.row_size};
+  Eigen::MatrixXd boundary {basis.boundary().row(is_positive)};
+  Eigen::MatrixXd face_pos {nfq, n_dim};
+  Eigen::MatrixXd face_state {nfq, n_var};
+  Eigen::MatrixXd face_jac {nfq, n_dim*n_dim};
+  for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+    Eigen::Map<Eigen::VectorXd> pos_vec {pos.data() + j_dim*n_qpoint, n_qpoint};
+    face_pos.col(j_dim) = custom_math::dimension_matvec(boundary, pos_vec, i_dim);
+  }
+  for (int i_var = 0; i_var < n_var; ++i_var) {
+    Eigen::Map<Eigen::VectorXd> state_vec {stage + i_var*n_qpoint, n_qpoint};
+    face_state.col(i_var) = custom_math::dimension_matvec(boundary, state_vec, i_dim);
+  }
+  for (int i_jac = 0; i_jac < n_dim*n_dim; ++i_jac) {
+    Eigen::Map<Eigen::VectorXd> jac_vec {jacobian + i_jac*n_qpoint, n_qpoint};
+    face_jac.col(i_jac) = custom_math::dimension_matvec(boundary, jac_vec, i_dim);
+  }
   std::vector<double> total;
-  for (int i_outer = 0; i_outer < n_qpoint/basis.row_size/stride; ++i_outer)
+
+  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint)
   {
-    for (int i_inner = 0; i_inner < stride; ++i_inner)
+    std::vector<double> qpoint_pos;
+    for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+      qpoint_pos.push_back(face_pos(i_qpoint, j_dim));
+    }
+    std::vector<double> qpoint_state;
+    for (int i_var = 0; i_var < n_var; ++i_var) {
+      qpoint_state.push_back(face_state(i_qpoint, i_var));
+    }
+    auto qpoint_integrand = integrand(qpoint_pos, time, qpoint_state);
+    if (total.size() < qpoint_integrand.size()) {
+      total.resize(qpoint_integrand.size());
+    }
+    Eigen::MatrixXd qpoint_jacobian (n_dim, n_dim);
+    for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+      for (int k_dim = 0; k_dim < n_dim; ++k_dim) {
+        qpoint_jacobian(j_dim, k_dim) = face_jac(j_dim*n_dim + k_dim);
+      }
+      qpoint_jacobian(j_dim, i_dim) = 0.;
+    }
+    double face_jac_det = 0.;
+    for (int j_dim = 0; j_dim < n_dim; ++j_dim)
     {
-      int i_qpoint = (i_outer*basis.row_size + int(is_positive)*(basis.row_size - 1.))*stride + i_inner;
-      std::vector<double> qpoint_pos;
-      for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-      {
-        qpoint_pos.push_back(pos[i_qpoint + n_qpoint*j_dim]);
-      }
-      std::vector<double> qpoint_state;
-      for (int i_var = 0; i_var < n_var; ++i_var)
-      {
-        qpoint_state.push_back(stage[i_qpoint + i_var*n_qpoint]);
-      }
-      auto qpoint_integrand = integrand(qpoint_pos, time, qpoint_state);
-      if (total.size() < qpoint_integrand.size())
-      {
-        total.resize(qpoint_integrand.size());
-      }
-      Eigen::MatrixXd qpoint_jacobian (n_dim, n_dim);
-      for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-      {
-        for (int k_dim = 0; k_dim < n_dim; ++k_dim)
-        {
-          qpoint_jacobian(j_dim, k_dim) = elem.jacobian(j_dim, k_dim, i_qpoint);
-        }
-        qpoint_jacobian(j_dim, i_dim) = 0.;
-      }
-      double face_jac_det = 0.;
-      for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-      {
-        qpoint_jacobian(j_dim, i_dim) = 1.;
-        double dim_jac = qpoint_jacobian.determinant();
-        face_jac_det += dim_jac*dim_jac;
-        qpoint_jacobian(j_dim, i_dim) = 0.;
-      }
-      face_jac_det = std::sqrt(face_jac_det);
-      int i_face = i_inner + i_outer*stride;
-      double weight = 1.;
-      for (int j_dim = 0; j_dim < n_dim - 1; ++j_dim)
-      {
-        int stride_j = std::pow(basis.row_size, j_dim);
-        weight *= row_weights((i_face/stride_j)%basis.row_size);
-      }
-      for (int i_var = 0; i_var < int(total.size()); ++i_var)
-      {
-        total[i_var] += weight*face_jac_det*qpoint_integrand[i_var];
-      }
+      qpoint_jacobian(j_dim, i_dim) = 1.;
+      double dim_jac = qpoint_jacobian.determinant();
+      face_jac_det += dim_jac*dim_jac;
+      qpoint_jacobian(j_dim, i_dim) = 0.;
+    }
+    face_jac_det = std::sqrt(face_jac_det);
+    double weight = 1.;
+    for (int j_dim = 0; j_dim < n_dim - 1; ++j_dim) {
+      int stride_j = std::pow(basis.row_size, j_dim);
+      weight *= row_weights((i_qpoint/stride_j)%basis.row_size);
+    }
+    for (int i_var = 0; i_var < int(total.size()); ++i_var) {
+      total[i_var] += weight*face_jac_det*qpoint_integrand[i_var];
     }
   }
-  for (int i_var = 0; i_var < int(total.size()); ++i_var)
-  {
+  for (int i_var = 0; i_var < int(total.size()); ++i_var) {
     total[i_var] *= std::pow(mesh_size, n_dim - 1);
   }
   return total;
