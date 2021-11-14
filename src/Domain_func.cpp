@@ -51,14 +51,14 @@ std::vector<double> Stag_pres::operator()(const std::vector<double> point_pos, d
 {
   double mass {state[state.size() - 2]};
   double momentum_sq {0.};
-  for (unsigned i_dim = 0; i_dim < point_pos.size(); ++i_dim) {
+  for (unsigned i_dim = 0; i_dim < state.size() - 2; ++i_dim) {
     momentum_sq += state[i_dim]*state[i_dim];
   }
   double kin_ener {0.5*momentum_sq/mass};
   double pres {(hr - 1.)*(state[state.size() - 1] - kin_ener)};
   double stag_enth {state[state.size() - 1] + pres};
   double enth {stag_enth - kin_ener};
-  double stag_pres {std::pow(stag_enth/enth, hr/(hr - 1.))};
+  double stag_pres {pres*std::pow(stag_enth/enth, hr/(hr - 1.))};
   return {stag_pres};
 }
 
