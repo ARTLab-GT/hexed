@@ -52,9 +52,10 @@ equations += f"""
 """[1:]
 equations += f"""
 {{temperature}} = {{pressure}}/({{density}}*{gas_const})
-{{sound_speed}} = ({heat_rat}*{{pressure}}*{{density}})**0.5
+{{sound_speed}} = ({heat_rat}*{{pressure}}/{{density}})**0.5
+{{mach}} = {{velocity_magnitude}}/{{sound_speed}}
+{{stagnation_pressure}} = {{pressure}}*(1. + {(heat_rat - 1.)/2.}*{{mach}}**2)**{heat_rat/(heat_rat - 1.)}
 """[1:]
-equations += "{mach} = {velocity_magnitude}/{sound_speed}\n"
 tecplot.data.operate.execute_equation(equations, ignore_divide_by_zero=True)
 if n_dim >= 2:
     plot.contour(0).variable = data.variable("mach")

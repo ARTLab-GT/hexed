@@ -1,5 +1,5 @@
-#ifndef SPACETIME_FUNC_HPP_
-#define SPACETIME_FUNC_HPP_
+#ifndef CARTDG_SPACETIME_FUNC_HPP_
+#define CARTDG_SPACETIME_FUNC_HPP_
 
 #include <vector>
 #include <array>
@@ -10,8 +10,8 @@ namespace cartdg
 class Spacetime_func
 {
   public:
+  virtual ~Spacetime_func() = default;
   virtual std::vector<double> operator()(std::vector<double> pos, double time) = 0;
-  virtual ~Spacetime_func() = default; // `virtual` necessary to prevent undefined behavior
 };
 
 class Constant_func : public Spacetime_func

@@ -1,6 +1,8 @@
 #include <catch2/catch.hpp>
 
+#include <Spacetime_func.hpp>
 #include <Domain_func.hpp>
+#include <Surface_func.hpp>
 
 class Arbitrary_func : public cartdg::Spacetime_func
 {
@@ -24,7 +26,9 @@ std::vector<std::vector<double>> test_pos
   {0.},
   {0., 0., 0.},
 };
+
 std::vector<double> test_time {1, 0., 10, -1.3};
+
 std::vector<std::vector<double>> test_state
 {
   {},
@@ -32,6 +36,15 @@ std::vector<std::vector<double>> test_state
   {1.},
   {0., 0., 0.},
 };
+
+std::vector<std::vector<double>> test_normal
+{
+  {},
+  {3., 4.},
+  {2.},
+  {0., 0., 1.},
+};
+
 std::vector<std::vector<double>> test_error
 {
   {},
@@ -42,15 +55,29 @@ std::vector<std::vector<double>> test_error
 
 TEST_CASE("Constant_func")
 {
-  cartdg::Constant_func cf (std::vector<double> {3.2, -0.7});
-  for (auto pos : test_pos)
-  {
-    for (auto time : test_time)
-    {
+  std::vector<double> value {0.3, -0.7};
+  cartdg::Constant_func cf (value);
+  for (auto pos : test_pos) {
+    for (auto time : test_time) {
       auto result = cf(pos, time);
-      REQUIRE(result.size() == 2);
-      REQUIRE(result[0] == 3.2);
-      REQUIRE(result[1] == -0.7);
+      REQUIRE(result == value);
+    }
+  }
+}
+
+TEST_CASE("Domain_from_spacetime")
+{
+  // Verify that Domain_from_spacetime(Constant_func) gives you the
+  // same constant value
+  std::vector<double> value {0.3, -0.7};
+  cartdg::Constant_func cf (value);
+  cartdg::Domain_from_spacetime dfs {cf};
+  for (auto pos : test_pos) {
+    for (auto time : test_time) {
+      for (auto state : test_state) {
+        auto result = dfs(pos, time, state);
+        REQUIRE(result == value);
+      }
     }
   }
 }
@@ -176,5 +203,60 @@ TEST_CASE("Doublet")
     REQUIRE(state[1] == Approx(mass*veloc[1]).epsilon(1e-3));
     REQUIRE(state[2] == Approx(mass         ).epsilon(1e-3));
     REQUIRE(state[3] == Approx(ener         ).epsilon(1e-3));
+  }
+}
+
+TEST_CASE("Surface_from_domain")
+{
+  // Verify that Surface_from_domain(State_variables) gives you state variables
+  // regardless of the other inputs
+  cartdg::State_variables sv;
+  cartdg::Surface_from_domain sfd {sv};
+  for (auto pos : test_pos) {
+    for (auto time : test_time) {
+      for (auto state : test_state) {
+        for (auto normal : test_normal) {
+          REQUIRE(sfd(pos, time, state, normal) == state);
+        }
+      }
+    }
+  }
+}
+
+TEST_CASE("Force_per_area")
+{
+  std::vector<double> pressure {1e5, 2e4, 3.2e4};
+  std::vector<double> pos {}; // size of `pos` shouldn't matter
+  double time {0.2};
+  double veloc [3] {0.2, -2., 10.};
+  double mass {0.7};
+  std::vector<std::vector<double>> unit_normal {
+    {},
+    {3./5., 4./5.},
+    {1.},
+    {0., 0., 1.},
+  };
+  cartdg::Force_per_area fpa {1.2};
+  // verify that when you back out the state,
+  // Force_per_area gives you pressure times unit normal
+  for (unsigned i_normal = 0; i_normal < test_normal.size(); ++i_normal)
+  {
+    auto normal {test_normal[i_normal]};
+    for (double pres : pressure)
+    {
+      std::vector<double> state;
+      double kin_ener = 0.;
+      for (unsigned i_dim = 0; i_dim < normal.size(); ++i_dim) {
+        kin_ener += 0.5*mass*veloc[i_dim]*veloc[i_dim];
+        state.push_back(mass*veloc[i_dim]);
+      }
+      state.push_back(mass);
+      state.push_back(pres/0.2 + kin_ener);
+      auto computed {fpa(pos, time, state, normal)};
+      REQUIRE(computed.size() == normal.size());
+      for (unsigned i_dim = 0; i_dim < normal.size(); ++i_dim) {
+        REQUIRE(-computed[i_dim]/pres == Approx(unit_normal[i_normal][i_dim]).scale(1.));
+      }
+    }
   }
 }
