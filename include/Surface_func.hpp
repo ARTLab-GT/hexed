@@ -9,6 +9,7 @@ namespace cartdg
 class Surface_func
 {
   public:
+  virtual ~Surface_func() = default;
   // `normal` is surface normal vector pointing out of the surface (into the domain)
   // (normal magnitude is arbitrary -- does not have to be unit)
   virtual std::vector<double> operator()(std::vector<double> pos, double time,

@@ -9,6 +9,7 @@ namespace cartdg
 class Domain_func
 {
   public:
+  virtual ~Domain_func() = default;
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state) = 0;
 };
@@ -61,6 +62,18 @@ class Stag_pres : public Domain_func
   double hr;
   public:
   Stag_pres(double heat_rat = 1.4);
+  virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
+                                         const std::vector<double> state);
+};
+
+class Stag_pres_errsq : public Domain_func
+{
+  Stag_pres sp;
+  Constant_func free;
+  Domain_from_spacetime dfs;
+  Diff_sq ds;
+  public:
+  Stag_pres_errsq(std::vector<double> freestream, double heat_rat = 1.4);
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state);
 };

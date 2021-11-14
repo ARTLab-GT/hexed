@@ -62,4 +62,14 @@ std::vector<double> Stag_pres::operator()(const std::vector<double> point_pos, d
   return {stag_pres};
 }
 
+Stag_pres_errsq::Stag_pres_errsq(std::vector<double> freestream, double heat_rat)
+: sp{heat_rat}, free{sp({}, 0., freestream)}, dfs{free}, ds{dfs, sp}
+{}
+
+std::vector<double> Stag_pres_errsq::operator()(const std::vector<double> point_pos, double point_time,
+                                                const std::vector<double> state)
+{
+  return ds(point_pos, point_time, state);
+}
+
 }

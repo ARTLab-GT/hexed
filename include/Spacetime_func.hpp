@@ -10,6 +10,7 @@ namespace cartdg
 class Spacetime_func
 {
   public:
+  virtual ~Spacetime_func() = default;
   virtual std::vector<double> operator()(std::vector<double> pos, double time) = 0;
 };
 
