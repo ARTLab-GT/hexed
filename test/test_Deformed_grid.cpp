@@ -495,9 +495,10 @@ TEST_CASE("Deformed grid class")
 
     cartdg::Deformed_grid warped {4, 2, 0, 1., legendre};
     warped.add_element({0, 0});
-    warped.deformed_element(0).vertex(1).pos[0] = -2.;
+    warped.deformed_element(0).vertex(0).pos[0] = -2.;
     warped.calc_jacobian();
     warped.add_wall(0, 0, 0);
+    warped.add_wall(0, 1, 1);
     double* stage {warped.element(0).stage(0)};
     for (int i_qpoint = 0; i_qpoint < warped.n_qpoint; ++i_qpoint) {
       stage[i_qpoint + 0*warped.n_qpoint] = 0.;
@@ -508,6 +509,6 @@ TEST_CASE("Deformed grid class")
     cartdg::Force_per_area fpa;
     auto force_integral {warped.surface_integral(fpa)};
     REQUIRE(force_integral[0] == Approx(-1e5));
-    REQUIRE(force_integral[1] == Approx(-2e5));
+    REQUIRE(force_integral[1] == Approx( 3e5));
   }
 }

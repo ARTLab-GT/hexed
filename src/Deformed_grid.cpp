@@ -299,7 +299,7 @@ std::vector<double> Deformed_grid::face_integral(Surface_func& integrand, int i_
     double face_jac_det {0.};
     for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
       qpoint_jacobian(j_dim, i_dim) = 1.;
-      double normal_j {qpoint_jacobian.determinant()};
+      double normal_j {qpoint_jacobian.determinant()*(1 - 2*is_positive)};
       qpoint_jacobian(j_dim, i_dim) = 0.;
       normal.push_back(normal_j);
       face_jac_det += normal_j*normal_j;
