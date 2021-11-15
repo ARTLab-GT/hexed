@@ -295,23 +295,24 @@ std::vector<double> Deformed_grid::face_integral(Surface_func& integrand, int i_
       }
       qpoint_jacobian(j_dim, i_dim) = 0.;
     }
-    double face_jac_det = 0.;
+    std::vector<double> normal;
+    double face_jac_det {0.};
     for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
       qpoint_jacobian(j_dim, i_dim) = 1.;
-      double dim_jac = qpoint_jacobian.determinant();
-      face_jac_det += dim_jac*dim_jac;
+      double normal_j {qpoint_jacobian.determinant()};
       qpoint_jacobian(j_dim, i_dim) = 0.;
+      normal.push_back(normal_j);
+      face_jac_det += normal_j*normal_j;
     }
     face_jac_det = std::sqrt(face_jac_det);
+    auto qpoint_integrand = integrand(qpoint_pos, time, qpoint_state, normal);
+    if (total.size() < qpoint_integrand.size()) {
+      total.resize(qpoint_integrand.size());
+    }
     double weight = 1.;
     for (int j_dim = 0; j_dim < n_dim - 1; ++j_dim) {
       int stride_j = custom_math::pow(basis.row_size, j_dim);
       weight *= row_weights((i_qpoint/stride_j)%basis.row_size);
-    }
-    std::vector<double> normal (n_dim, 1.);
-    auto qpoint_integrand = integrand(qpoint_pos, time, qpoint_state, normal);
-    if (total.size() < qpoint_integrand.size()) {
-      total.resize(qpoint_integrand.size());
     }
     for (int i_var = 0; i_var < int(total.size()); ++i_var) {
       total[i_var] += weight*face_jac_det*qpoint_integrand[i_var];
