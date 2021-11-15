@@ -9,7 +9,6 @@
 #include <get_nonpen_convective.hpp>
 #include <get_req_visc_deformed_convective.hpp>
 #include <math.hpp>
-#include <iostream>
 
 namespace cartdg
 {
@@ -296,13 +295,12 @@ std::vector<double> Deformed_grid::face_integral(Domain_func& integrand, int i_e
     Eigen::MatrixXd qpoint_jacobian (n_dim, n_dim);
     for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
       for (int k_dim = 0; k_dim < n_dim; ++k_dim) {
-        qpoint_jacobian(j_dim, k_dim) = face_jac(j_dim*n_dim + k_dim);
+        qpoint_jacobian(j_dim, k_dim) = face_jac(i_qpoint, j_dim*n_dim + k_dim);
       }
       qpoint_jacobian(j_dim, i_dim) = 0.;
     }
     double face_jac_det = 0.;
-    for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-    {
+    for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
       qpoint_jacobian(j_dim, i_dim) = 1.;
       double dim_jac = qpoint_jacobian.determinant();
       face_jac_det += dim_jac*dim_jac;
@@ -311,7 +309,7 @@ std::vector<double> Deformed_grid::face_integral(Domain_func& integrand, int i_e
     face_jac_det = std::sqrt(face_jac_det);
     double weight = 1.;
     for (int j_dim = 0; j_dim < n_dim - 1; ++j_dim) {
-      int stride_j = std::pow(basis.row_size, j_dim);
+      int stride_j = custom_math::pow(basis.row_size, j_dim);
       weight *= row_weights((i_qpoint/stride_j)%basis.row_size);
     }
     for (int i_var = 0; i_var < int(total.size()); ++i_var) {
@@ -319,7 +317,7 @@ std::vector<double> Deformed_grid::face_integral(Domain_func& integrand, int i_e
     }
   }
   for (int i_var = 0; i_var < int(total.size()); ++i_var) {
-    total[i_var] *= std::pow(mesh_size, n_dim - 1);
+    total[i_var] *= custom_math::pow(mesh_size, n_dim - 1);
   }
   return total;
 }
