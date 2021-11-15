@@ -252,7 +252,7 @@ void Deformed_grid::apply_vertex_relaxation()
   }
 }
 
-std::vector<double> Deformed_grid::face_integral(Domain_func& integrand, int i_elem, int i_dim, bool is_positive)
+std::vector<double> Deformed_grid::face_integral(Surface_func& integrand, int i_elem, int i_dim, bool is_positive)
 {
   auto pos = get_pos(i_elem);
   auto row_weights = basis.node_weights();
@@ -288,10 +288,6 @@ std::vector<double> Deformed_grid::face_integral(Domain_func& integrand, int i_e
     for (int i_var = 0; i_var < n_var; ++i_var) {
       qpoint_state.push_back(face_state(i_qpoint, i_var));
     }
-    auto qpoint_integrand = integrand(qpoint_pos, time, qpoint_state);
-    if (total.size() < qpoint_integrand.size()) {
-      total.resize(qpoint_integrand.size());
-    }
     Eigen::MatrixXd qpoint_jacobian (n_dim, n_dim);
     for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
       for (int k_dim = 0; k_dim < n_dim; ++k_dim) {
@@ -312,6 +308,11 @@ std::vector<double> Deformed_grid::face_integral(Domain_func& integrand, int i_e
       int stride_j = custom_math::pow(basis.row_size, j_dim);
       weight *= row_weights((i_qpoint/stride_j)%basis.row_size);
     }
+    std::vector<double> normal (n_dim, 1.);
+    auto qpoint_integrand = integrand(qpoint_pos, time, qpoint_state, normal);
+    if (total.size() < qpoint_integrand.size()) {
+      total.resize(qpoint_integrand.size());
+    }
     for (int i_var = 0; i_var < int(total.size()); ++i_var) {
       total[i_var] += weight*face_jac_det*qpoint_integrand[i_var];
     }
@@ -322,7 +323,7 @@ std::vector<double> Deformed_grid::face_integral(Domain_func& integrand, int i_e
   return total;
 }
 
-std::vector<double> Deformed_grid::surface_integral(Domain_func& integrand)
+std::vector<double> Deformed_grid::surface_integral(Surface_func& integrand)
 {
   std::vector<double> total;
   for (Deformed_elem_wall wall : walls)

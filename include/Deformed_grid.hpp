@@ -3,6 +3,7 @@
 
 #include "Grid.hpp"
 #include "Deformed_element.hpp"
+#include "Surface_func.hpp"
 
 namespace cartdg
 {
@@ -52,8 +53,8 @@ class Deformed_grid : public Grid
   virtual void execute_neighbor_av(int i_var, int i_dim, Kernel_settings&);
 
   // diagnostic
-  std::vector<double> face_integral(Domain_func& integrand, int i_elem, int i_dim, bool is_positive);
-  std::vector<double> surface_integral(Domain_func& integrand);
+  std::vector<double> face_integral(Surface_func& integrand, int i_elem, int i_dim, bool is_positive);
+  std::vector<double> surface_integral(Surface_func& integrand);
   void visualize_connections(std::string file_name);
 
   protected:

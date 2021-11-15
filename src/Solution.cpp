@@ -62,7 +62,7 @@ std::vector<double> Solution::integral(Domain_func& integrand)
   }
 }
 
-std::vector<double> Solution::surface_integral(Domain_func& integrand)
+std::vector<double> Solution::surface_integral(Surface_func& integrand)
 {
   if (def_grids.empty())
   {
