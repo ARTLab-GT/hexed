@@ -28,7 +28,7 @@ class Solution
   void visualize(std::string name);
   std::vector<double> integral();
   std::vector<double> integral(Domain_func& integrand);
-  std::vector<double> surface_integral(Domain_func& integrand);
+  std::vector<double> surface_integral(Surface_func& integrand);
   std::vector<Grid*> all_grids();
 
   // functions that modify the state data
