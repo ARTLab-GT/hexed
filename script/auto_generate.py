@@ -219,7 +219,27 @@ double orthogonal{row_size} [{row_size**2}] {{
             text += "\n"
         text += "};\n"
 
-    for member_name in ["node", "weight", "diff_mat", "boundary", "orthogonal"]:
+        text += f"""
+double prolong{row_size} [2*{row_size**2}] {{
+"""
+        for i_half in [0, 1]:
+            for i_operand in range(row_size):
+                for i_result in range(row_size):
+                    text += f"{basis.prolong(i_result, i_operand, i_half)}, "
+                text += "\n"
+        text += "};\n"
+
+        text += f"""
+double restrict{row_size} [2*{row_size**2}] {{
+"""
+        for i_half in [0, 1]:
+            for i_operand in range(row_size):
+                for i_result in range(row_size):
+                    text += f"{basis.restrict(i_result, i_operand, i_half)}, "
+                text += "\n"
+        text += "};\n"
+
+    for member_name in ["node", "weight", "diff_mat", "boundary", "orthogonal", "prolong", "restrict"]:
         text += f"""
 double* {member_name}s [{max_row_size + 1 - min_row_size}] {{"""
         for row_size in range(2, max_row_size + 1):
@@ -254,9 +274,9 @@ Eigen::VectorXd {name}::node_weights()
 Eigen::MatrixXd {name}::diff_mat()
 {{{conditional_block}
   Eigen::MatrixXd dm (row_size, row_size);
-  for (int i_node = 0; i_node < row_size*row_size; ++i_node)
+  for (int i_entry = 0; i_entry < row_size*row_size; ++i_entry)
   {{
-    dm(i_node) = {name}_lookup::diff_mats[row_size - {min_row_size}][i_node];
+    dm(i_entry) = {name}_lookup::diff_mats[row_size - {min_row_size}][i_entry];
   }}
   return dm;
 }}
@@ -282,6 +302,24 @@ Eigen::VectorXd {name}::orthogonal(int degree)
     orth(i_node) = {name}_lookup::orthogonals[row_size - {min_row_size}][degree*row_size + i_node];
   }}
   return orth;
+}}
+
+Eigen::MatrixXd {name}::prolong(int i_half)
+{{{conditional_block}
+  Eigen::MatrixXd p {{row_size, row_size}};
+  for (int i_entry = 0; i_entry < row_size*row_size; ++i_entry) {{
+    p(i_entry) = {name}_lookup::prolongs[row_size - {min_row_size}][i_entry + i_half*row_size*row_size];
+  }}
+  return p;
+}}
+
+Eigen::MatrixXd {name}::restrict(int i_half)
+{{{conditional_block}
+  Eigen::MatrixXd r {{row_size, row_size}};
+  for (int i_entry = 0; i_entry < row_size*row_size; ++i_entry) {{
+    r(i_entry) = {name}_lookup::restricts[row_size - {min_row_size}][i_entry + i_half*row_size*row_size];
+  }}
+  return r;
 }}
 
 {name}::{name}(int row_size_arg) : Basis(row_size_arg) {{}}
