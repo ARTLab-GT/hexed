@@ -324,6 +324,8 @@ Eigen::MatrixXd {name}::restrict(int i_half)
 
 {name}::{name}(int row_size_arg) : Basis(row_size_arg) {{}}
 """
+    # delete trailing whitespace
+    text = re.sub(" *\n", "\n", text)
 
     with open(src_dir + f"{name}.cpp", "w") as write_file:
         write_file.write(format_file_text(include, text))
