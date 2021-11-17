@@ -23,7 +23,7 @@ class Refined_face
   double* coarse_face();
 };
 
-typedef std::vector<std::unique_ptr<Refined_face>> ref_face_vec;
+typedef std::vector<std::vector<std::unique_ptr<Refined_face>>> ref_face_vec;
 
 }
 #endif

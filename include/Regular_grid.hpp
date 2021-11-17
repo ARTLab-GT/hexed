@@ -2,6 +2,7 @@
 #define CARTDG_REGULAR_GRID_HPP_
 
 #include "Grid.hpp"
+#include "Refined_face.hpp"
 
 namespace cartdg
 {
@@ -22,6 +23,9 @@ class Regular_grid : public Grid
   virtual int add_element(std::vector<int> position);
   void add_connection(int i_elem0, int i_elem1, int i_dim);
   void add_connection(Element* elem0, Element* elem1, int i_dim);
+  // connect an element of one less refinement level to a set of elements in this grid
+  // Intended use could be generalized later.
+  void connect_refined(Element* coarse, std::vector<Element*> fine, int i_dim, bool is_positive);
   void auto_connect(std::vector<int> periods);
   void auto_connect();
 
@@ -40,6 +44,7 @@ class Regular_grid : public Grid
   private:
   elem_vec elements;
   elem_con_vec elem_cons;
+  ref_face_vec ref_faces;
   void populate_slice(std::vector<double>&, std::vector<int>, int);
 };
 

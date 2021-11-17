@@ -212,6 +212,21 @@ TEST_CASE("Regular_grid")
     }
   }
 
+  SECTION("Connecting different refinement levels")
+  {
+    cartdg::Regular_grid coarse (4, 3, 27, 0.2, basis);
+    for (int i_dim = 0; i_dim < 3; ++i_dim) REQUIRE(grid3.n_con(i_dim) == 0);
+    REQUIRE_THROWS(grid3.connect_refined(&coarse.element(0), {&grid3.element(0), &grid3.element(1)}, 1, 0));
+    REQUIRE_THROWS(grid3.connect_refined(&coarse.element(0), {&grid3.element(0), &grid3.element(1),
+                                                              &grid3.element(2), &grid3.element(3),
+                                                              &grid3.element(4)}, 1, 0));
+    grid3.connect_refined(&coarse.element(0), {&grid3.element(0), &grid3.element(1),
+                                               &grid3.element(2), &grid3.element(3)}, 1, 0);
+    REQUIRE(grid3.n_con(0) == 0);
+    REQUIRE(grid3.n_con(1) == 4);
+    REQUIRE(grid3.n_con(2) == 0);
+  }
+
   SECTION("Runge Kutta time integration")
   {
     for (int i_elem = 0; i_elem < grid1.n_elem; ++i_elem)
