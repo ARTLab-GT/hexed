@@ -257,9 +257,9 @@ TEST_CASE("Conservation of state variables")
       }
     }
     auto before {sol.integral()};
+    sol.visualize("hanging_node");
     double dt = sol.update();
     auto after {sol.integral()};
-    sol.visualize("hanging_node");
     for (int i_var = 0; i_var < sol.n_var; ++i_var) {
       REQUIRE((before[i_var] - after[i_var])/dt == Approx(0).scale(before[i_var]));
     }

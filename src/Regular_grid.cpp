@@ -1,7 +1,9 @@
 #include <Regular_grid.hpp>
 #include <get_mcs_convective.hpp>
 #include <get_write_face.hpp>
+#include <get_prolong.hpp>
 #include <get_neighbor_convective.hpp>
+#include <get_restrict.hpp>
 #include <get_local_convective.hpp>
 #include <get_gbc_convective.hpp>
 #include <get_req_visc_regular_convective.hpp>
@@ -62,12 +64,15 @@ void Regular_grid::execute_write_face(Kernel_settings& settings)
 {
   settings.i_read = i_read;
   get_write_face(n_dim, basis.row_size)(elements, basis, settings);
+  // it's important that the `write_face` of lower-ref-level grids has already happened
+  get_prolong(n_dim, basis.row_size)(ref_faces, basis, settings);
 }
 
 void Regular_grid::execute_neighbor(Kernel_settings& settings)
 {
   get_neighbor_convective(n_dim, basis.row_size)(elem_cons, settings);
   get_gbc_convective(n_dim, basis.row_size)(*this, basis, settings);
+  get_restrict(n_dim, basis.row_size)(ref_faces, basis, settings);
 }
 
 void Regular_grid::execute_local(Kernel_settings& settings)
