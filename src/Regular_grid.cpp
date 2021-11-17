@@ -67,7 +67,7 @@ void Regular_grid::execute_write_face(Kernel_settings& settings)
 
 void Regular_grid::execute_neighbor(Kernel_settings& settings)
 {
-  get_neighbor_convective(n_dim, basis.row_size)(elem_cons, basis, settings);
+  get_neighbor_convective(n_dim, basis.row_size)(elem_cons, settings);
   get_gbc_convective(n_dim, basis.row_size)(*this, basis, settings);
 }
 

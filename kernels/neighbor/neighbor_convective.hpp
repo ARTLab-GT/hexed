@@ -13,7 +13,7 @@ namespace cartdg
 
 // AUTOGENERATE LOOKUP BENCHMARK(regular, 3)
 template<int n_var, int n_qpoint, int row_size>
-void neighbor_convective(elem_con_vec& connections, Basis& basis, Kernel_settings& settings)
+void neighbor_convective(elem_con_vec& connections, Kernel_settings& settings)
 {
   const int n_face_qpoint = n_qpoint/row_size;
   const int face_size = n_face_qpoint*n_var;
@@ -24,25 +24,24 @@ void neighbor_convective(elem_con_vec& connections, Basis& basis, Kernel_setting
     #pragma omp parallel for
     for (unsigned i_con = 0; i_con < connections[i_dim].size(); ++i_con)
     {
-      double face_r [2*face_size];
-      double face_w [2*face_size];
+      double face [2*face_size];
       elem_con con = connections[i_dim][i_con];
 
       for (int i_side : {0, 1})
       {
         for (int i_face_dof = 0; i_face_dof < face_size; ++i_face_dof)
         {
-          face_r[i_side*face_size + i_face_dof] = con[i_side][i_face_dof];
+          face[i_side*face_size + i_face_dof] = con[i_side][i_face_dof];
         }
       }
 
-      hll_cpg_euler<n_var - 2, n_face_qpoint>(face_r, face_w, 1., i_dim, heat_rat);
+      hll_cpg_euler<n_var - 2, n_face_qpoint>(face, face, 1., i_dim, heat_rat);
 
       for (int i_side : {0, 1})
       {
         for (int i_face_dof = 0; i_face_dof < face_size; ++i_face_dof)
         {
-          con[i_side][i_face_dof] = face_w[i_side*face_size + i_face_dof];
+          con[i_side][i_face_dof] = face[i_side*face_size + i_face_dof];
         }
       }
     }
