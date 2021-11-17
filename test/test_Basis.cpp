@@ -115,7 +115,7 @@ void test_transform(cartdg::Basis& basis)
       }
     }
   }
-  auto same {prolong*restrict*coarse_monomial};
+  Eigen::MatrixXd same {prolong*restrict*coarse_monomial};
   REQUIRE((same - coarse_monomial).norm() < tol);
 }
 
