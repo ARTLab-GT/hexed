@@ -374,7 +374,6 @@ TEST_CASE("prolong/restrict")
 
   SECTION("restrict")
   {
-    cartdg::get_prolong(3, row_size)(ref_faces, basis, settings);
     for (int i_half : {0, 1}) {
       for (int j_half : {0, 1}) {
         for (int i_node = 0; i_node < row_size; ++i_node) {
@@ -387,6 +386,7 @@ TEST_CASE("prolong/restrict")
         }
       }
     }
+    cartdg::get_restrict(3, row_size)(ref_faces, basis, settings);
     for (int i_var = 0; i_var < 5; ++i_var) {
       for (int i_node = 0; i_node < row_size; ++i_node) {
         for (int j_node = 0; j_node < row_size; ++j_node) {
