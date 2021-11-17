@@ -336,6 +336,7 @@ TEST_CASE("ausm_plus_up_cpg_euler")
 
 TEST_CASE("prolong/restrict")
 {
+  // test that prolongation/restriction operators are approximately correct for an exponential function
   const int row_size {cartdg::config::max_row_size};
   cartdg::Kernel_settings settings;
   cartdg::Storage_params params {2, 5, 3, row_size};
@@ -346,23 +347,52 @@ TEST_CASE("prolong/restrict")
   for (int i_dim = 0; i_dim < 3; ++i_dim) ref_faces.push_back({});
   ref_faces[2].emplace_back(new cartdg::Refined_face {params, coarse[0][0]});
 
-  for (int i_var = 0; i_var < 5; ++i_var) {
-    for (int i_node = 0; i_node < row_size; ++i_node) {
-      for (int j_node = 0; j_node < row_size; ++j_node) {
-        coarse[i_var][i_node][j_node] = std::exp(basis.node(i_node) + 0.5*basis.node(j_node)) + i_var;
+  SECTION("prolong")
+  {
+    for (int i_var = 0; i_var < 5; ++i_var) {
+      for (int i_node = 0; i_node < row_size; ++i_node) {
+        for (int j_node = 0; j_node < row_size; ++j_node) {
+          coarse[i_var][i_node][j_node] = std::exp(basis.node(i_node) + 0.5*basis.node(j_node)) + i_var;
+        }
+      }
+    }
+    cartdg::get_prolong(3, row_size)(ref_faces, basis, settings);
+    for (int i_half : {0, 1}) {
+      for (int j_half : {0, 1}) {
+        for (int i_node = 0; i_node < row_size; ++i_node) {
+          for (int j_node = 0; j_node < row_size; ++j_node) {
+            for (int i_var = 0; i_var < 5; ++i_var) {
+              double prolonged {ref_faces[2][0]->fine_face(i_half*2 + j_half)[(i_var*row_size + i_node)*row_size + j_node]};
+              double correct {std::exp((basis.node(i_node) + i_half)/2. + 0.5*(basis.node(j_node) + j_half)/2.) + i_var};
+              REQUIRE(prolonged == Approx(correct).margin(1e-4));
+            }
+          }
+        }
       }
     }
   }
-  cartdg::get_prolong(3, row_size)(ref_faces, basis, settings);
-  for (int i_half : {0, 1}) {
-    for (int j_half : {0, 1}) {
+
+  SECTION("restrict")
+  {
+    cartdg::get_prolong(3, row_size)(ref_faces, basis, settings);
+    for (int i_half : {0, 1}) {
+      for (int j_half : {0, 1}) {
+        for (int i_node = 0; i_node < row_size; ++i_node) {
+          for (int j_node = 0; j_node < row_size; ++j_node) {
+            for (int i_var = 0; i_var < 5; ++i_var) {
+              ref_faces[2][0]->fine_face(i_half*2 + j_half)[(i_var*row_size + i_node)*row_size + j_node]
+                = std::exp((basis.node(i_node) + i_half)/2. + 0.5*(basis.node(j_node) + j_half)/2.) + i_var;
+            }
+          }
+        }
+      }
+    }
+    for (int i_var = 0; i_var < 5; ++i_var) {
       for (int i_node = 0; i_node < row_size; ++i_node) {
         for (int j_node = 0; j_node < row_size; ++j_node) {
-          for (int i_var = 0; i_var < 5; ++i_var) {
-            double prolonged {ref_faces[2][0]->fine_face(i_half*2 + j_half)[(i_var*row_size + i_node)*row_size + j_node]};
-            double correct {std::exp((basis.node(i_node) + i_half)/2. + 0.5*(basis.node(j_node) + j_half)/2.) + i_var};
-            REQUIRE(prolonged == Approx(correct).margin(1e-4));
-          }
+          double restricted {coarse[i_var][i_node][j_node]};
+          double correct {std::exp(basis.node(i_node) + 0.5*basis.node(j_node)) + i_var};
+          REQUIRE(restricted == Approx(correct).margin(1e-4));
         }
       }
     }
