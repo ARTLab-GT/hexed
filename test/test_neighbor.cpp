@@ -336,17 +336,21 @@ TEST_CASE("ausm_plus_up_cpg_euler")
 
 TEST_CASE("prolong/restrict")
 {
-  cartdg::Kernel_settings settings;
   const int row_size {cartdg::config::max_row_size};
-  cartdg::Storage_params params {2, 1, 3, row_size};
-  double coarse [row_size][row_size];
+  cartdg::Kernel_settings settings;
+  cartdg::Storage_params params {2, 5, 3, row_size};
+  cartdg::Gauss_legendre basis {row_size};
+
+  double coarse [5][row_size][row_size] {};
   cartdg::ref_face_vec ref_faces;
   for (int i_dim = 0; i_dim < 3; ++i_dim) ref_faces.push_back({});
-  ref_faces[2].emplace_back(new cartdg::Refined_face {params, coarse[0]});
-  cartdg::Gauss_legendre basis {row_size};
-  for (int i_node = 0; i_node < row_size; ++i_node) {
-    for (int j_node = 0; j_node < row_size; ++j_node) {
-      coarse[i_node][j_node] = std::exp(basis.node(i_node) + 0.5*basis.node(j_node));
+  ref_faces[2].emplace_back(new cartdg::Refined_face {params, coarse[0][0]});
+
+  for (int i_var = 0; i_var < 5; ++i_var) {
+    for (int i_node = 0; i_node < row_size; ++i_node) {
+      for (int j_node = 0; j_node < row_size; ++j_node) {
+        coarse[i_var][i_node][j_node] = std::exp(basis.node(i_node) + 0.5*basis.node(j_node)) + i_var;
+      }
     }
   }
   cartdg::get_prolong(3, row_size)(ref_faces, basis, settings);
@@ -354,9 +358,11 @@ TEST_CASE("prolong/restrict")
     for (int j_half : {0, 1}) {
       for (int i_node = 0; i_node < row_size; ++i_node) {
         for (int j_node = 0; j_node < row_size; ++j_node) {
-          double prolonged {ref_faces[2][0]->fine_face(i_half*2 + j_half)[i_node*row_size + j_node]};
-          double correct {std::exp((basis.node(i_node) + i_half)/2. + 0.5*(basis.node(j_node) + j_half)/2.)};
-          REQUIRE(prolonged == Approx(correct).margin(1e-4));
+          for (int i_var = 0; i_var < 5; ++i_var) {
+            double prolonged {ref_faces[2][0]->fine_face(i_half*2 + j_half)[(i_var*row_size + i_node)*row_size + j_node]};
+            double correct {std::exp((basis.node(i_node) + i_half)/2. + 0.5*(basis.node(j_node) + j_half)/2.) + i_var};
+            REQUIRE(prolonged == Approx(correct).margin(1e-4));
+          }
         }
       }
     }
