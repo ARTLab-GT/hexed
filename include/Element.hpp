@@ -52,7 +52,7 @@ class Element
 };
 
 typedef std::vector<std::unique_ptr<Element>> elem_vec;
-typedef std::array<Element*, 2> elem_con;
+typedef std::array<double*, 2> elem_con; // pointers to the faces which are being connected
 typedef std::vector<std::vector<elem_con>> elem_con_vec;
 
 }

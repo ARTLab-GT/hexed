@@ -331,6 +331,7 @@ TEST_CASE("ausm_plus_up_cpg_euler")
   }
 }
 
+#if 0
 TEST_CASE("jump kernel")
 {
   const int row_size = cartdg::config::max_row_size;
@@ -439,3 +440,4 @@ TEST_CASE("continuous viscosity kernel")
   REQUIRE(elements[3]->viscosity()[2] == Approx(1.0));
   REQUIRE(elements[3]->viscosity()[3] == Approx(1.0));
 }
+#endif

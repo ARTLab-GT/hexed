@@ -136,12 +136,14 @@ int Regular_grid::add_element(std::vector<int> position)
 
 void Regular_grid::add_connection(int i_elem0, int i_elem1, int i_dim)
 {
-  elem_cons[i_dim].push_back({elements[i_elem0].get(), elements[i_elem1].get()});
+  add_connection(elements[i_elem0].get(), elements[i_elem1].get(), i_dim);
 }
 
 void Regular_grid::add_connection(Element* elem0, Element* elem1, int i_dim)
 {
-  elem_cons[i_dim].push_back({elem0, elem1});
+  const int fs {n_var*n_qpoint/basis.row_size};
+  elem_con con {elem0->face() + (2*i_dim + 1)*fs, elem1->face() + 2*i_dim*fs};
+  elem_cons[i_dim].push_back(con);
 }
 
 void Regular_grid::auto_connect(std::vector<int> periods)
