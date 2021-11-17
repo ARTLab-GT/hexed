@@ -6,6 +6,7 @@
 namespace cartdg
 {
 
+// Basis based on Gauss-Legendre quadrature, which is exact for polynomials of degree `2*row_size - 1`
 class Gauss_legendre : public Basis
 {
   public:

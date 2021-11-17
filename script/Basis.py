@@ -63,7 +63,7 @@ class Basis:
         position = (self.nodes[i_result] + i_half)/2
         return self.interpolate(i_operand, position, calc)
 
-    def restrict(self, i_result, i_operand, i_half):
+    def restrict(self, i_result, i_operand, i_half): # only works for Legendre
         # take inner product of `i_operand`th fine polynomial with `i_result`th and divide by norm squared
         result = self.weights[i_operand]/2*self.prolong(i_operand, i_result, i_half, True)/self.weights[i_result]
         return sp.Float(result, self.repr_digits)

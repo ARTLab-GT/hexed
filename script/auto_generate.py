@@ -178,6 +178,7 @@ for basis_params in [("Gauss_legendre", gauss_legendre), ("Gauss_lobatto", gauss
         nodes = [(node + 1)/2 for node in nodes]
         weights = [weight/2 for weight in weights]
         basis = Basis(nodes, weights, calc_digits=calc_digits)
+        member_names = ["node", "weight", "diff_mat", "boundary", "orthogonal"]
 
         text += f"""
 double node{row_size} [{row_size}] {{
@@ -219,27 +220,29 @@ double orthogonal{row_size} [{row_size**2}] {{
             text += "\n"
         text += "};\n"
 
-        text += f"""
+        if "legendre" in name:
+            text += f"""
 double prolong{row_size} [2*{row_size**2}] {{
 """
-        for i_half in [0, 1]:
-            for i_operand in range(row_size):
-                for i_result in range(row_size):
-                    text += f"{basis.prolong(i_result, i_operand, i_half)}, "
-                text += "\n"
-        text += "};\n"
+            for i_half in [0, 1]:
+                for i_operand in range(row_size):
+                    for i_result in range(row_size):
+                        text += f"{basis.prolong(i_result, i_operand, i_half)}, "
+                    text += "\n"
+            text += "};\n"
 
-        text += f"""
+            text += f"""
 double restrict{row_size} [2*{row_size**2}] {{
 """
-        for i_half in [0, 1]:
-            for i_operand in range(row_size):
-                for i_result in range(row_size):
-                    text += f"{basis.restrict(i_result, i_operand, i_half)}, "
-                text += "\n"
-        text += "};\n"
+            for i_half in [0, 1]:
+                for i_operand in range(row_size):
+                    for i_result in range(row_size):
+                        text += f"{basis.restrict(i_result, i_operand, i_half)}, "
+                    text += "\n"
+            text += "};\n"
+            member_names += ["prolong", "restrict"]
 
-    for member_name in ["node", "weight", "diff_mat", "boundary", "orthogonal", "prolong", "restrict"]:
+    for member_name in member_names:
         text += f"""
 double* {member_name}s [{max_row_size + 1 - min_row_size}] {{"""
         for row_size in range(2, max_row_size + 1):
@@ -303,7 +306,10 @@ Eigen::VectorXd {name}::orthogonal(int degree)
   }}
   return orth;
 }}
+"""
 
+    if "legendre" in name:
+        text += f"""
 Eigen::MatrixXd {name}::prolong(int i_half)
 {{{conditional_block}
   Eigen::MatrixXd p {{row_size, row_size}};
@@ -321,7 +327,9 @@ Eigen::MatrixXd {name}::restrict(int i_half)
   }}
   return r;
 }}
+"""
 
+    text += f"""
 {name}::{name}(int row_size_arg) : Basis(row_size_arg) {{}}
 """
     # delete trailing whitespace

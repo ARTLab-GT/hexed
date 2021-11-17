@@ -138,7 +138,6 @@ TEST_CASE("Gauss_lobatto Basis")
     test_quadrature(GLo);
     test_orthogonal(GLo);
     test_boundary(GLo);
-    test_transform(GLo);
   }
 }
 
