@@ -1,5 +1,4 @@
 #include <catch2/catch.hpp>
-#include <iostream>
 
 #include <cartdgConfig.hpp>
 #include <Equidistant.hpp>
@@ -103,20 +102,20 @@ void test_transform(cartdg::Basis& basis)
   REQUIRE((Eigen::MatrixXd::Identity(rs, rs) - id).norm() < tol);
 
   // Restricting and then prolonging monomial basis should yield monomial basis.
-  Eigen::MatrixXd prolong  {2*rs, rs};
-  Eigen::MatrixXd restrict {rs, 2*rs};
-  Eigen::MatrixXd coarse_monomial {2*rs, rs};
+  Eigen::MatrixXd prolong  (2*rs, rs);
+  Eigen::MatrixXd restrict (rs, 2*rs);
+  Eigen::MatrixXd coarse_monomial (2*rs, rs);
   for (int i_half : {0, 1}) {
     prolong.block(i_half*rs, 0, rs, rs) = basis.prolong(i_half);
     restrict.block(0, i_half*rs, rs, rs) = basis.restrict(i_half);
     for (int degree = 0; degree < rs; ++degree) {
       for (int i_node = 0; i_node < rs; ++i_node) {
-        coarse_monomial(i_half*rs + i_node) = std::pow((basis.node(i_node) + i_half)/2., degree);
+        coarse_monomial(i_half*rs + i_node, degree) = std::pow((basis.node(i_node) + i_half)/2., degree);
       }
     }
   }
   Eigen::MatrixXd same {prolong*restrict*coarse_monomial};
-  REQUIRE((same - coarse_monomial).norm() < tol);
+  CHECK((same - coarse_monomial).norm() < tol);
 }
 
 TEST_CASE("Equidistant Basis")
