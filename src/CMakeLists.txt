@@ -11,6 +11,7 @@ global.cpp
 Grid.cpp
 Kernel_settings.cpp
 math.cpp
+Refined_face.cpp
 Regular_grid.cpp
 Solution.cpp
 Spacetime_func.cpp

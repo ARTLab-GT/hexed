@@ -16,6 +16,7 @@ namespace cartdg
 template<int n_var, int n_qpoint, int row_size>
 void cont_visc(elem_con_vec& connections, Kernel_settings& settings)
 {
+  #if 0
   const int n_dim = n_var - 2;
   constexpr int n_point = custom_math::pow(2, n_dim);
   constexpr int n_face_point = n_point/2;
@@ -43,6 +44,7 @@ void cont_visc(elem_con_vec& connections, Kernel_settings& settings)
       write_copy<1, n_point, 2>(face_w + n_face_point, visc[1], stride, 0);
     }
   }
+  #endif
 }
 
 }

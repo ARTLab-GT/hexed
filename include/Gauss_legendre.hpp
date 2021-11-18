@@ -6,6 +6,7 @@
 namespace cartdg
 {
 
+// Basis based on Gauss-Legendre quadrature, which is exact for polynomials of degree `2*row_size - 1`
 class Gauss_legendre : public Basis
 {
   public:
@@ -15,6 +16,8 @@ class Gauss_legendre : public Basis
   virtual Eigen::MatrixXd diff_mat();
   virtual Eigen::MatrixXd boundary();
   virtual Eigen::VectorXd orthogonal(int degree);
+  virtual Eigen::MatrixXd prolong  (int i_half);
+  virtual Eigen::MatrixXd restrict (int i_half);
 };
 
 }

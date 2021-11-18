@@ -179,20 +179,21 @@ TEST_CASE("Regular_grid")
       grid2.auto_connect();
       REQUIRE(grid2.n_con(0) == 2);
       REQUIRE(grid2.n_con(1) == 1);
+      const int face_size {grid2.n_var*grid2.n_qpoint/basis.row_size};
       {
         auto con = grid2.connection(0, 0);
-        REQUIRE(con[0] == &grid2.element(2));
-        REQUIRE(con[1] == &grid2.element(3));
+        REQUIRE(con[0] == grid2.element(2).face() + face_size);
+        REQUIRE(con[1] == grid2.element(3).face());
       }
       {
         auto con = grid2.connection(0, 1);
-        REQUIRE(con[0] == &grid2.element(5));
-        REQUIRE(con[1] == &grid2.element(2));
+        REQUIRE(con[0] == grid2.element(5).face() + face_size);
+        REQUIRE(con[1] == grid2.element(2).face());
       }
       {
         auto con = grid2.connection(1, 0);
-        REQUIRE(con[0] == &grid2.element(2));
-        REQUIRE(con[1] == &grid2.element(1));
+        REQUIRE(con[0] == grid2.element(2).face() + 3*face_size);
+        REQUIRE(con[1] == grid2.element(1).face() + 2*face_size);
       }
     }
 
@@ -209,6 +210,21 @@ TEST_CASE("Regular_grid")
       REQUIRE(grid3.n_con(1) == 27);
       REQUIRE(grid3.n_con(2) == 27);
     }
+  }
+
+  SECTION("Connecting different refinement levels")
+  {
+    cartdg::Regular_grid coarse (4, 3, 27, 0.2, basis);
+    for (int i_dim = 0; i_dim < 3; ++i_dim) REQUIRE(grid3.n_con(i_dim) == 0);
+    REQUIRE_THROWS(grid3.connect_refined(&coarse.element(0), {&grid3.element(0), &grid3.element(1)}, 1, 0));
+    REQUIRE_THROWS(grid3.connect_refined(&coarse.element(0), {&grid3.element(0), &grid3.element(1),
+                                                              &grid3.element(2), &grid3.element(3),
+                                                              &grid3.element(4)}, 1, 0));
+    grid3.connect_refined(&coarse.element(0), {&grid3.element(0), &grid3.element(1),
+                                               &grid3.element(2), &grid3.element(3)}, 1, 0);
+    REQUIRE(grid3.n_con(0) == 0);
+    REQUIRE(grid3.n_con(1) == 4);
+    REQUIRE(grid3.n_con(2) == 0);
   }
 
   SECTION("Runge Kutta time integration")

@@ -13,6 +13,7 @@ template<int n_var, int n_qpoint, int row_size>
 void neighbor_derivative(elem_con_vec& connections, int i_var, int i_dim,
                          Basis& basis, Kernel_settings& settings)
 {
+  #if 0
   const double weight = basis.node_weights()[0]*settings.d_pos;
   const int i_read = settings.i_read;
   #pragma omp parallel for
@@ -28,6 +29,7 @@ void neighbor_derivative(elem_con_vec& connections, int i_var, int i_dim,
     }
     variable_jump<n_qpoint, row_size>(read, write, i_dim, weight);
   }
+  #endif
 }
 
 }

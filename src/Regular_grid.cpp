@@ -1,7 +1,9 @@
 #include <Regular_grid.hpp>
 #include <get_mcs_convective.hpp>
 #include <get_write_face.hpp>
+#include <get_prolong.hpp>
 #include <get_neighbor_convective.hpp>
+#include <get_restrict.hpp>
 #include <get_local_convective.hpp>
 #include <get_gbc_convective.hpp>
 #include <get_req_visc_regular_convective.hpp>
@@ -19,13 +21,12 @@ namespace cartdg
 Regular_grid::Regular_grid(int n_var_arg, int n_dim_arg, int n_elem_arg, double mesh_size_arg, Basis& basis_arg)
 : Grid (n_var_arg, n_dim_arg, n_elem_arg, mesh_size_arg, basis_arg), elements{}
 {
-  for (int i_elem = 0; i_elem < n_elem; ++i_elem)
-  {
+  for (int i_elem = 0; i_elem < n_elem; ++i_elem) {
     elements.emplace_back(new Element {storage_params});
   }
-  for (int i_dim = 0; i_dim < 3*n_dim; ++i_dim)
-  {
+  for (int i_dim = 0; i_dim < 3*n_dim; ++i_dim) {
     elem_cons.push_back({});
+    ref_faces.push_back({});
   }
 }
 
@@ -63,12 +64,15 @@ void Regular_grid::execute_write_face(Kernel_settings& settings)
 {
   settings.i_read = i_read;
   get_write_face(n_dim, basis.row_size)(elements, basis, settings);
+  // it's important that the `write_face` of lower-ref-level grids has already happened
+  get_prolong(n_dim, basis.row_size)(ref_faces, basis, settings);
 }
 
 void Regular_grid::execute_neighbor(Kernel_settings& settings)
 {
-  get_neighbor_convective(n_dim, basis.row_size)(elem_cons, basis, settings);
+  get_neighbor_convective(n_dim, basis.row_size)(elem_cons, settings);
   get_gbc_convective(n_dim, basis.row_size)(*this, basis, settings);
+  get_restrict(n_dim, basis.row_size)(ref_faces, basis, settings);
 }
 
 void Regular_grid::execute_local(Kernel_settings& settings)
@@ -136,12 +140,26 @@ int Regular_grid::add_element(std::vector<int> position)
 
 void Regular_grid::add_connection(int i_elem0, int i_elem1, int i_dim)
 {
-  elem_cons[i_dim].push_back({elements[i_elem0].get(), elements[i_elem1].get()});
+  add_connection(elements[i_elem0].get(), elements[i_elem1].get(), i_dim);
 }
 
 void Regular_grid::add_connection(Element* elem0, Element* elem1, int i_dim)
 {
-  elem_cons[i_dim].push_back({elem0, elem1});
+  const int fs {n_var*n_qpoint/basis.row_size};
+  elem_con con {elem0->face() + (2*i_dim + 1)*fs, elem1->face() + 2*i_dim*fs};
+  elem_cons[i_dim].push_back(con);
+}
+
+void Regular_grid::connect_refined(Element* coarse, std::vector<Element*> fine, int i_dim, bool is_positive)
+{
+  const int fs {n_var*n_qpoint/basis.row_size};
+  if (fine.size() != unsigned(n_vertices)/2) throw std::runtime_error("Wrong number of fine elements in hanging-node connection.");
+  ref_faces[i_dim].emplace_back(new Refined_face {storage_params, coarse->face() + (2*i_dim + is_positive)*fs});
+  for (int i_face = 0; i_face < n_vertices/2; ++i_face) {
+    elem_con con {ref_faces[i_dim].back()->fine_face(i_face), fine[i_face]->face() + (2*i_dim + 1 - is_positive)*fs};
+    if (!is_positive) std::swap(con[0], con[1]);
+    elem_cons[i_dim].push_back(con);
+  }
 }
 
 void Regular_grid::auto_connect(std::vector<int> periods)

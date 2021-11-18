@@ -6,6 +6,7 @@
 namespace cartdg
 {
 
+// Basis based on Gauss-Lobatto quadrature, which is exact for polynomials of degree `2*row_size - 3`
 class Gauss_lobatto : public Basis
 {
   public:

@@ -25,6 +25,7 @@ script/auto_generate.py and rerun CMake.
     if namespace:
         text = f"""
 #include <Deformed_element.hpp>
+#include <Refined_face.hpp>
 
 namespace cartdg
 {{
@@ -178,23 +179,24 @@ for basis_params in [("Gauss_legendre", gauss_legendre), ("Gauss_lobatto", gauss
         nodes = [(node + 1)/2 for node in nodes]
         weights = [weight/2 for weight in weights]
         basis = Basis(nodes, weights, calc_digits=calc_digits)
+        member_names = ["node", "weight", "diff_mat", "boundary", "orthogonal"]
 
         text += f"""
-double node{row_size} [{row_size}] {{
+const double node{row_size} [{row_size}] {{
 """
         for i_result in range(row_size):
             text += f"{basis.node(i_result)}, "
         text += "\n};\n"
 
         text += f"""
-double weight{row_size} [{row_size}] {{
+const double weight{row_size} [{row_size}] {{
 """
         for i_result in range(row_size):
             text += f"{basis.weight(i_result)}, "
         text += "\n};\n"
 
         text += f"""
-double diff_mat{row_size} [{row_size**2}] {{
+const double diff_mat{row_size} [{row_size**2}] {{
 """
         for i_operand in range(row_size):
             for i_result in range(row_size):
@@ -203,15 +205,16 @@ double diff_mat{row_size} [{row_size**2}] {{
         text += "};\n"
 
         text += f"""
-double boundary{row_size} [2*{row_size}] {{
+const double boundary{row_size} [2*{row_size}] {{
 """
         for pos in ["0", "1"]:
             for i_operand in range(row_size):
                 text += f"{basis.interpolate(i_operand, pos)}, "
-        text += "\n};\n"
+            text += "\n"
+        text += "};\n"
 
         text += f"""
-double orthogonal{row_size} [{row_size**2}] {{
+const double orthogonal{row_size} [{row_size**2}] {{
 """
         for deg in range(row_size):
             for i_node in range(row_size):
@@ -219,11 +222,33 @@ double orthogonal{row_size} [{row_size**2}] {{
             text += "\n"
         text += "};\n"
 
-    for member_name in ["node", "weight", "diff_mat", "boundary", "orthogonal"]:
+        if "legendre" in name:
+            text += f"""
+const double prolong{row_size} [2*{row_size**2}] {{
+"""
+            for i_half in [0, 1]:
+                for i_operand in range(row_size):
+                    for i_result in range(row_size):
+                        text += f"{basis.prolong(i_result, i_operand, i_half)}, "
+                    text += "\n"
+            text += "};\n"
+
+            text += f"""
+const double restrict{row_size} [2*{row_size**2}] {{
+"""
+            for i_half in [0, 1]:
+                for i_operand in range(row_size):
+                    for i_result in range(row_size):
+                        text += f"{basis.restrict(i_result, i_operand, i_half)}, "
+                    text += "\n"
+            text += "};\n"
+            member_names += ["prolong", "restrict"]
+
+    for member_name in member_names:
         text += f"""
-double* {member_name}s [{max_row_size + 1 - min_row_size}] {{"""
+const double* const {member_name}s [{max_row_size + 1 - min_row_size}] {{"""
         for row_size in range(2, max_row_size + 1):
-            text += f"&{member_name}{row_size}[0], "
+            text += f"{member_name}{row_size}, "
         text += "};"
     text += f"""
 }} // namespace {name}_lookup
@@ -254,9 +279,9 @@ Eigen::VectorXd {name}::node_weights()
 Eigen::MatrixXd {name}::diff_mat()
 {{{conditional_block}
   Eigen::MatrixXd dm (row_size, row_size);
-  for (int i_node = 0; i_node < row_size*row_size; ++i_node)
+  for (int i_entry = 0; i_entry < row_size*row_size; ++i_entry)
   {{
-    dm(i_node) = {name}_lookup::diff_mats[row_size - {min_row_size}][i_node];
+    dm(i_entry) = {name}_lookup::diff_mats[row_size - {min_row_size}][i_entry];
   }}
   return dm;
 }}
@@ -283,9 +308,34 @@ Eigen::VectorXd {name}::orthogonal(int degree)
   }}
   return orth;
 }}
+"""
 
+    if "legendre" in name:
+        text += f"""
+Eigen::MatrixXd {name}::prolong(int i_half)
+{{{conditional_block}
+  Eigen::MatrixXd p (row_size, row_size);
+  for (int i_entry = 0; i_entry < row_size*row_size; ++i_entry) {{
+    p(i_entry) = {name}_lookup::prolongs[row_size - {min_row_size}][i_entry + i_half*row_size*row_size];
+  }}
+  return p;
+}}
+
+Eigen::MatrixXd {name}::restrict(int i_half)
+{{{conditional_block}
+  Eigen::MatrixXd r (row_size, row_size);
+  for (int i_entry = 0; i_entry < row_size*row_size; ++i_entry) {{
+    r(i_entry) = {name}_lookup::restricts[row_size - {min_row_size}][i_entry + i_half*row_size*row_size];
+  }}
+  return r;
+}}
+"""
+
+    text += f"""
 {name}::{name}(int row_size_arg) : Basis(row_size_arg) {{}}
 """
+    # delete trailing whitespace
+    text = re.sub(" *\n", "\n", text)
 
     with open(src_dir + f"{name}.cpp", "w") as write_file:
         write_file.write(format_file_text(include, text))
