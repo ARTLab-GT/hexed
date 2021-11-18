@@ -242,7 +242,7 @@ TEST_CASE("Conservation of state variables")
         if ((i < 2) || (j < 2)) grid2.add_element({i, j});
       }
     }
-    grid2.auto_connect();
+    grid2.auto_connect({4, 4});
     grid2.connect_refined(&grid1.element(0), {&grid2.element(2), &grid2.element( 3)}, 0, 1);
     grid2.connect_refined(&grid1.element(0), {&grid2.element(6), &grid2.element( 7)}, 0, 0);
     grid2.connect_refined(&grid1.element(0), {&grid2.element(8), &grid2.element(10)}, 1, 1);
@@ -261,7 +261,7 @@ TEST_CASE("Conservation of state variables")
     double dt = sol.update();
     auto after {sol.integral()};
     for (int i_var = 0; i_var < sol.n_var; ++i_var) {
-      REQUIRE((before[i_var] - after[i_var])/dt == Approx(0).scale(before[i_var]));
+      REQUIRE((before[i_var] - after[i_var])/dt == Approx(0).scale(std::abs(before[i_var]) + 1.));
     }
   }
 
