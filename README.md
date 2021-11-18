@@ -62,10 +62,10 @@ Currently implemented features:
 * CFL-based time step selection.
 * Visualization with Tecplot.
 * Integration with NASCART-GT.
+* Isotropic hanging-node refinement.
  
 Planned or in-progress features (roughly in order of planned implementation):
 * Shock capturing (in progress).
 * Body-fitted quasi-Cartesian hex mesh.
-* Isotropic hanging-node refinement.
 * Viscous flows with anisotropic refinement.
 * Grid adaptation.
