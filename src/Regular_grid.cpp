@@ -157,7 +157,7 @@ void Regular_grid::connect_refined(Element* coarse, std::vector<Element*> fine, 
   ref_faces[i_dim].emplace_back(new Refined_face {storage_params, coarse->face() + (2*i_dim + is_positive)*fs});
   for (int i_face = 0; i_face < n_vertices/2; ++i_face) {
     elem_con con {ref_faces[i_dim].back()->fine_face(i_face), fine[i_face]->face() + (2*i_dim + 1 - is_positive)*fs};
-    if (is_positive) std::swap(con[0], con[1]);
+    if (!is_positive) std::swap(con[0], con[1]);
     elem_cons[i_dim].push_back(con);
   }
 }
