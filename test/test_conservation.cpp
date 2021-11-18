@@ -47,32 +47,11 @@ TEST_CASE("Conservation of state variables")
     {
       grid.element(0).stage(0)[i_state] = i_state + 1;
     }
-    std::vector<double> initial (grid.n_elem*grid.n_dof);
-    for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
-    {
-      double* stage = grid.element(i_elem).stage(0);
-      for (int i_dof = 0; i_dof < grid.n_dof; ++i_dof)
-      {
-        initial[i_elem*grid.n_dof + i_dof] = stage[i_dof];
-      }
-    }
-    sol.visualize("conservation_1d");
-
+    auto before {sol.integral()};
     double dt = sol.update();
-    sol.visualize("conservation_1d_final");
-    for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
-    {
-      double* stage = grid.element(i_elem).stage(0);
-      for (int i_dof = 0; i_dof < grid.n_dof; ++i_dof)
-      {
-        stage[i_dof] -= initial[i_elem*grid.n_dof + i_dof];
-      }
-    }
-    sol.visualize("conservation_diff");
-    auto integral = grid.integral();
-    for (int i_var = 0; i_var < grid.n_var; ++i_var)
-    {
-      REQUIRE(integral[i_var]/dt == Approx(0.).margin(0.001));
+    auto after {sol.integral()};
+    for (int i_var = 0; i_var < grid.n_var; ++i_var) {
+      REQUIRE((after[i_var] - before[i_var])/dt == Approx{0.}.scale(std::abs(before[i_var]) + 1.));
     }
   }
 
@@ -90,30 +69,11 @@ TEST_CASE("Conservation of state variables")
     {
       grid.element(0).stage(0)[i_state] = i_state + 1;
     }
-    std::vector<double> initial (grid.n_elem*grid.n_dof);
-    for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
-    {
-      double* stage = grid.element(i_elem).stage(0);
-      for (int i_dof = 0; i_dof < grid.n_dof; ++i_dof)
-      {
-        initial[i_elem*grid.n_dof + i_dof] = stage[i_dof];
-      }
-    }
-    sol.visualize("conservation_2d");
-
+    auto before {sol.integral()};
     double dt = sol.update();
-    for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
-    {
-      double* stage = grid.element(i_elem).stage(0);
-      for (int i_dof = 0; i_dof < grid.n_dof; ++i_dof)
-      {
-        stage[i_dof] -= initial[i_elem*grid.n_dof + i_dof];
-      }
-    }
-    auto integral = grid.integral();
-    for (int i_var = 0; i_var < grid.n_var; ++i_var)
-    {
-      REQUIRE(integral[i_var]/dt == Approx(0.).margin(0.001));
+    auto after {sol.integral()};
+    for (int i_var = 0; i_var < grid.n_var; ++i_var) {
+      REQUIRE((after[i_var] - before[i_var])/dt == Approx{0.}.scale(std::abs(before[i_var]) + 1.));
     }
   }
 
@@ -218,14 +178,11 @@ TEST_CASE("Conservation of state variables")
       for (int i_elem : {0, 6 , 12}) def_grid.element(i_elem).stage(0)[i_state] = i_state + 1;
     }
 
-    sol.visualize("conservation_2d_def_before");
-    auto before = sol.integral();
+    auto before {sol.integral()};
     double dt = sol.update();
-    auto after = sol.integral();
-    sol.visualize("conservation_2d_def_after");
-    for (int i_var = 0; i_var < sol.n_var; ++i_var)
-    {
-      REQUIRE((before[i_var] - after[i_var])/dt == Approx(0).margin(0.001));
+    auto after {sol.integral()};
+    for (int i_var = 0; i_var < grid.n_var; ++i_var) {
+      REQUIRE((after[i_var] - before[i_var])/dt == Approx{0.}.scale(std::abs(before[i_var]) + 1.));
     }
   }
 
@@ -279,30 +236,11 @@ TEST_CASE("Conservation of state variables")
     {
       grid.element(0).stage(0)[i_state] = i_state + 1;
     }
-    std::vector<double> initial (grid.n_elem*grid.n_dof);
-    for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
-    {
-      double* stage = grid.element(i_elem).stage(0);
-      for (int i_dof = 0; i_dof < grid.n_dof; ++i_dof)
-      {
-        initial[i_elem*grid.n_dof + i_dof] = stage[i_dof];
-      }
-    }
-    sol.visualize("conservation_3d");
-
+    auto before {sol.integral()};
     double dt = sol.update();
-    for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
-    {
-      double* stage = grid.element(i_elem).stage(0);
-      for (int i_dof = 0; i_dof < grid.n_dof; ++i_dof)
-      {
-        stage[i_dof] -= initial[i_elem*grid.n_dof + i_dof];
-      }
-    }
-    auto integral = grid.integral();
-    for (int i_var = 0; i_var < grid.n_var; ++i_var)
-    {
-      REQUIRE(integral[i_var]/dt == Approx(0.).margin(0.001));
+    auto after {sol.integral()};
+    for (int i_var = 0; i_var < grid.n_var; ++i_var) {
+      REQUIRE((after[i_var] - before[i_var])/dt == Approx{0.}.scale(std::abs(before[i_var]) + 1.));
     }
   }
 }
