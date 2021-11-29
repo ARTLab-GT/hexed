@@ -398,7 +398,7 @@ void Deformed_grid::visualize_surface(Tecplot_file& file, int n_sample)
       auto face {custom_math::dimension_matvec(boundary.row(wall.is_positive), var, wall.i_dim)};
       interp_state.segment(i_var*n_block, n_block) = custom_math::hypercube_matvec(interp, face);
     }
-    Tecplot_file::Structured_block zone {file, n_sample, "face_interior"};
+    Tecplot_file::Structured_block zone {file, n_sample, "face_interior", n_dim - 1};
     zone.write(interp_pos.data(), interp_state.data());
   }
 }

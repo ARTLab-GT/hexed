@@ -29,7 +29,7 @@ void Solution::visualize_field(std::string name)
 void Solution::visualize_surface(std::string name)
 {
   if (n_dim == 1) return; // 1D doesn't have visualizable surfaces
-  Tecplot_file file {name, n_dim - 1, n_var, time};
+  Tecplot_file file {name, n_dim, n_var, time};
   for (Deformed_grid& grid : def_grids)
   {
     grid.visualize_surface(file);
