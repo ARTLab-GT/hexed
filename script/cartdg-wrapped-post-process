@@ -75,7 +75,7 @@ if n_dim > 1:
                 fieldmap.scatter.symbol().shape = tecplot.constant.GeomShape.Diamond
             else:
                 fieldmap.scatter.show = False
-            if not ("edges" in zone.name):
+            if not (("edges" in zone.name) or ("face_interior" in zone.name)):
                 fieldmap.mesh.show = False
             if not ("interior" in zone.name):
                 fieldmap.contour.show = False
