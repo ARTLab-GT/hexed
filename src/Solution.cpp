@@ -1,5 +1,4 @@
 #include <limits>
-#include <sys/stat.h>
 
 #include <Solution.hpp>
 #include <Tecplot_file.hpp>
@@ -13,12 +12,9 @@ Solution::Solution(int n_var_arg, int n_dim_arg, int row_size_arg, double bms)
 
 Solution::~Solution() {}
 
-void Solution::visualize(std::string name)
+void Solution::visualize_field(std::string name)
 {
-  mkdir(name.c_str(), 0700);
-  char buffer [100];
-  snprintf(buffer, 100, "%s/time_%e", name.c_str(), time);
-  Tecplot_file file {buffer, n_dim, n_var, time};
+  Tecplot_file file {name, n_dim, n_var, time};
   for (Grid* grid : all_grids())
   {
     if (grid->n_elem > 0)
@@ -27,6 +23,16 @@ void Solution::visualize(std::string name)
       grid->visualize_edges   (file);
       grid->visualize_interior(file);
     }
+  }
+}
+
+void Solution::visualize_surface(std::string name)
+{
+  if (n_dim == 1) return; // 1D doesn't have visualizable surfaces
+  Tecplot_file file {name, n_dim, n_var, time};
+  for (Deformed_grid& grid : def_grids)
+  {
+    grid.visualize_surface(file);
   }
 }
 

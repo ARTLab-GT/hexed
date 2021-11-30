@@ -1,5 +1,5 @@
+#include <sys/stat.h>
 #include <catch2/catch.hpp>
-
 #include <Solution.hpp>
 #include <cartdgConfig.hpp>
 
@@ -203,16 +203,20 @@ TEST_CASE("Integration of deformed elements")
   init.argmax_radius = 0.1;
   init.max_nondim_veloc = 0.3;
   sol.initialize(init);
-  auto file_name = "deformed_integration";
-  sol.visualize(file_name);
-  def_grid.visualize_connections("deformed_integration_connections");
-  for (int i = 0; i < 10; ++i)
+  int i {0};
+  mkdir("deformed_integration", 0700);
+  int buf_size {100};
+  char buffer [buf_size];
+  snprintf(buffer, buf_size, "deformed_integration/iter_%i", i);
+  sol.visualize_field(buffer);
+  for (; i < 10; ++i)
   {
     for (int j = 0; j < 10; ++j)
     {
       sol.update(0.5);
     }
-    sol.visualize(file_name);
+    snprintf(buffer, buf_size, "deformed_integration/iter_%i", i);
+    sol.visualize_field(buffer);
   }
 }
 
@@ -236,13 +240,19 @@ TEST_CASE("Execution of non-penetration boundary condition")
   grid.calc_jacobian();
   cartdg::Constant_func init ({100., 100., 1., 2.e5});
   sol.initialize(init);
-  sol.visualize("nonpen_test");
-  for (int i = 0; i < 10; ++i)
+  int i {0};
+  mkdir("nonpen", 0700);
+  int buf_size {100};
+  char buffer [buf_size];
+  snprintf(buffer, buf_size, "nonpen/iter_%i", i);
+  sol.visualize_field(buffer);
+  for (; i < 10; ++i)
   {
     for (int j = 0; j < 10; ++j)
     {
       sol.update(0.05);
     }
-    sol.visualize("nonpen_test");
+    snprintf(buffer, buf_size, "nonpen/iter_%i", i);
+    sol.visualize_field(buffer);
   }
 }

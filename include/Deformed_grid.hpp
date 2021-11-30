@@ -56,6 +56,7 @@ class Deformed_grid : public Grid
   std::vector<double> face_integral(Surface_func& integrand, int i_elem, int i_dim, bool is_positive);
   std::vector<double> surface_integral(Surface_func& integrand);
   void visualize_connections(std::string file_name);
+  void visualize_surface(Tecplot_file&, int n_sample = 30);
 
   protected:
   virtual std::string annotate(std::string file_name);

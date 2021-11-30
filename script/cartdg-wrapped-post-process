@@ -11,19 +11,20 @@ effect the necessary configuration and then invoke this script.
 
 import tecplot
 import os
+import re
 import sys
 
 # basic plot setup
 tecplot.new_layout()
 frame = tecplot.active_frame()
 if len(sys.argv) <= 1:
-    work_dir = "."
+    regex = r".*\.szplt"
 else:
-    work_dir = sys.argv[1]
-files = os.listdir(work_dir)
-files = [f"{work_dir}/{f}" for f in files if ".szplt" in f]
+    regex = sys.argv[1]
+files = os.listdir(".")
+files = [f for f in files if re.match(regex, f)]
 if not files:
-    raise Exception("No `.szplt` files found in specified directory.")
+    raise Exception(f'No files matching "{regex}" found in working directory.')
 data = tecplot.data.load_tecplot_szl(files)
 variable_names = frame.dataset.variable_names
 n_dim = len([var for var in variable_names if "pos" in var])
@@ -74,7 +75,7 @@ if n_dim > 1:
                 fieldmap.scatter.symbol().shape = tecplot.constant.GeomShape.Diamond
             else:
                 fieldmap.scatter.show = False
-            if not ("edges" in zone.name):
+            if not (("edges" in zone.name) or ("face_interior" in zone.name)):
                 fieldmap.mesh.show = False
             if not ("interior" in zone.name):
                 fieldmap.contour.show = False
@@ -98,4 +99,4 @@ else:
             linemap.symbols.show = False
     plot.view.fit()
 
-tecplot.save_layout(f"{work_dir}/all.lay")
+tecplot.save_layout("all.lay")

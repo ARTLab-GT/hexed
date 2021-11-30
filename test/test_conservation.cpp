@@ -1,3 +1,4 @@
+#include <sys/stat.h>
 #include <catch2/catch.hpp>
 
 #include <cartdgConfig.hpp>
@@ -214,7 +215,7 @@ TEST_CASE("Conservation of state variables")
       }
     }
     auto before {sol.integral()};
-    sol.visualize("hanging_node");
+    sol.visualize_field("hanging_node");
     double dt = sol.update();
     auto after {sol.integral()};
     for (int i_var = 0; i_var < sol.n_var; ++i_var) {

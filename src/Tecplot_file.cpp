@@ -51,8 +51,8 @@ void Tecplot_file::Zone::write(double* pos, double* vars)
   TECDAT142(&size, vars, &IsDouble);
 }
 
-Tecplot_file::Structured_block::Structured_block(Tecplot_file& file, int row_size, std::string name_arg)
-: Zone{file, custom_math::pow(row_size, file.n_dim), name_arg}
+Tecplot_file::Structured_block::Structured_block(Tecplot_file& file, int row_size, std::string name_arg, int n_dim_arg)
+: Zone{file, custom_math::pow(row_size, n_dim_arg ? n_dim_arg : file.n_dim), name_arg}, n_dim{n_dim_arg ? n_dim_arg : file.n_dim}
 {
   INTEGER4 ICellMax = 0;
   INTEGER4 JCellMax = 0;
@@ -66,8 +66,8 @@ Tecplot_file::Structured_block::Structured_block(Tecplot_file& file, int row_siz
   INTEGER4 TotalNumBndryConnections = 1;
   INTEGER4 ShrConn = 0;
   INTEGER4 IMax = row_size;
-  INTEGER4 JMax = (file.n_dim >= 2) ? row_size : 1;
-  INTEGER4 KMax = (file.n_dim >= 3) ? row_size : 1;
+  INTEGER4 JMax = (n_dim >= 2) ? row_size : 1;
+  INTEGER4 KMax = (n_dim >= 3) ? row_size : 1;
 
   INTEGER4 ZoneType = 0; // 0 indicates ordered
   TECZNE142(name.c_str(),

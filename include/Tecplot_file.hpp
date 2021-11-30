@@ -40,9 +40,10 @@ class Tecplot_file
    */
   class Structured_block : public Zone
   {
+    int n_dim;
     int row_size;
     public:
-    Structured_block(Tecplot_file&, int row_size, std::string name_arg="block");
+    Structured_block(Tecplot_file&, int row_size, std::string name_arg="block", int n_dim_arg=0);
   };
   /*
    * Represents an arbitrary number of line segments. Each segment shall contain `row_size`

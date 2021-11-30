@@ -21,7 +21,7 @@ int main()
   solution.initialize(vortex);
 
   // Let's go!
-  solution.visualize("initial");
+  solution.visualize_field("demo_initial");
   auto start = std::chrono::high_resolution_clock::now();
   double time = 0;
   for (int i = 0; i < 20; ++i)
@@ -31,7 +31,9 @@ int main()
     {
       solution.update(0.1);
     }
-    solution.visualize("simulation");
+    char buffer [100];
+    snprintf(buffer, 100, "demo_time_%e", time);
+    solution.visualize_field(buffer);
   }
   time = 0.2;
   while (grid.time < time)
@@ -43,5 +45,5 @@ int main()
   std::cout << "Execution completed in " << float(duration.count())*1e-9 << " s\n";
   std::cout << "(" << grid.iter << " iterations at "
             << float(duration.count())*1e-9/grid.iter << " s per iteration)\n";
-  solution.visualize("final");
+  solution.visualize_field("demo_final");
 }
