@@ -65,14 +65,15 @@ void Regular_grid::execute_write_face(Kernel_settings& settings)
   settings.i_read = i_read;
   get_write_face(n_dim, basis.row_size)(elements, basis, settings);
   // it's important that the `write_face` of lower-ref-level grids has already happened
-  get_prolong(n_dim, basis.row_size)(ref_faces, basis, settings);
+  // if no refined faces, don't even call the function (to allow to use basis without prolong method as long as grid doesn't have hanging nodes)
+  if (ref_faces[0].size()) get_prolong(n_dim, basis.row_size)(ref_faces, basis, settings);
 }
 
 void Regular_grid::execute_neighbor(Kernel_settings& settings)
 {
   get_neighbor_convective(n_dim, basis.row_size)(elem_cons, settings);
   get_gbc_convective(n_dim, basis.row_size)(*this, basis, settings);
-  get_restrict(n_dim, basis.row_size)(ref_faces, basis, settings);
+  if (ref_faces[0].size()) get_restrict(n_dim, basis.row_size)(ref_faces, basis, settings);
 }
 
 void Regular_grid::execute_local(Kernel_settings& settings)
