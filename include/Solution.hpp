@@ -4,7 +4,6 @@
 #include "Regular_grid.hpp"
 #include "Deformed_grid.hpp"
 #include "Gauss_legendre.hpp"
-#include "Gauss_lobatto.hpp"
 #include "Kernel_settings.hpp"
 #include "Spacetime_func.hpp"
 
@@ -17,7 +16,7 @@ class Solution
   int n_var;
   int n_dim;
   double base_mesh_size;
-  Gauss_lobatto basis;
+  Gauss_legendre basis;
   Kernel_settings kernel_settings;
   std::vector<Regular_grid> reg_grids;
   std::vector<Deformed_grid> def_grids;
