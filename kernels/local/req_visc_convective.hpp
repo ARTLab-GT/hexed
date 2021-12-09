@@ -47,14 +47,14 @@ void req_visc_convective(std::vector<std::unique_ptr<E>>& elements, Basis& basis
   }
 }
 
-// AUTOGENERATE LOOKUP BENCHMARK(regular, 1)
+// AUTOGENERATE LOOKUP
 template<int n_var, int n_qpoint, int row_size>
 void req_visc_regular_convective(elem_vec& elements, Basis& basis, Kernel_settings& settings)
 {
   req_visc_convective<n_var, n_qpoint, row_size, Element>(elements, basis, settings);
 }
 
-// AUTOGENERATE LOOKUP BENCHMARK(deformed, 1)
+// AUTOGENERATE LOOKUP
 template<int n_var, int n_qpoint, int row_size>
 void req_visc_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_settings& settings)
 {

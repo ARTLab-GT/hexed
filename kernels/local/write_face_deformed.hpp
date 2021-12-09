@@ -9,7 +9,7 @@
 namespace cartdg
 {
 
-// AUTOGENERATE LOOKUP BENCHMARK(regular, 3)
+// AUTOGENERATE LOOKUP BENCHMARK(deformed, 3)
 template<int n_var, int n_qpoint, int row_size>
 void write_face_deformed(def_elem_vec& def_elements, Basis& basis, Kernel_settings& settings)
 {

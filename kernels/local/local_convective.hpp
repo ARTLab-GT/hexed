@@ -10,7 +10,7 @@
 namespace cartdg
 {
 
-// AUTOGENERATE LOOKUP BENCHMARK(regular, 3)
+// AUTOGENERATE LOOKUP BENCHMARK(cartesian, 3)
 template<int n_var, int n_qpoint, int row_size>
 void local_convective(elem_vec& elements, Basis& basis, Kernel_settings& settings)
 {

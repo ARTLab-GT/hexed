@@ -8,7 +8,7 @@
 namespace cartdg
 {
 
-// AUTOGENERATE LOOKUP BENCHMARK(regular, 1)
+// AUTOGENERATE LOOKUP BENCHMARK(cartesian, 1)
 template<int n_var, int n_qpoint, int row_size>
 double mcs_convective(elem_vec& elements, Kernel_settings& settings)
 {
