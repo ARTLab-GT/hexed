@@ -11,4 +11,14 @@ Physical_basis::Physical_basis(int n_dim, int row_size, std::vector<double> qpoi
   if (int(pos.size()) != n_dim*n_qpoint) throw std::runtime_error("Size of `qpoint_pos` does not match `n_dim` and `row_size` in `Physical_basis.`");
 }
 
+int Physical_basis::size()
+{
+  switch (n_dim) {
+    case 1: return row_size; break;
+    case 2: return row_size*(row_size + 1)/2; break;
+    case 3: return row_size*(row_size + 1)*(row_size + 2)/6; break;
+    default: return 0;
+  }
+}
+
 }

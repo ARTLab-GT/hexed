@@ -30,6 +30,7 @@ class Physical_basis
    * If efficiency becomes a problem, could pass `pos` by reference
    */
   Physical_basis(int n_dim, int row_size, std::vector<double> pos);
+  int size(); // return the size of the basis, i.e. the number of basis polynomials (not the same as n_qpoint).
   // evaluate the `i_basis`th polynomial at the `i_qpoint`th quadrature point
   double evaluate(int i_qpoint, int i_basis);
 };
