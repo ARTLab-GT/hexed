@@ -22,6 +22,10 @@ class Physical_basis
   int row_size;
   int n_qpoint;
   std::vector<double> pos;
+  std::vector<double> bound_box_center; // coordinates of center of bounding box of points
+  std::vector<double> bound_box_size; // side length in each dimension
+  std::vector<std::vector<double>> indices;
+
   public:
   /*
    * `qpoint_pos` represents position of quadrature points. Must satisfy `qpoint_pos.size() == n_dim*pow(row_size, n_dim)`.

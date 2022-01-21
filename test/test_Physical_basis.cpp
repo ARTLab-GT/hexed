@@ -52,11 +52,11 @@ TEST_CASE("Physical_basis")
 
   SECTION("evaluation")
   {
-    int n_qpoint = 81;
-    std::vector<double> points (n_qpoint);
+    int n_qpoint = 27;
+    std::vector<double> points (3*n_qpoint);
     srand(3);
-    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-      points[i_qpoint] = (rand() % 1000)/10000. + 100.; // random points within a 0.1 by 0.1 by 0.1 box at 100, 100, 100
+    for (int i = 0; i < 3*n_qpoint; ++i) {
+      points[i] = (rand() % 1000)/10000. + 100.; // random points within a 0.1 by 0.1 by 0.1 box at 100, 100, 100
     }
     cartdg::Physical_basis basis (3, 3, points);
     Eigen::MatrixXd mat (n_qpoint, basis.size());
