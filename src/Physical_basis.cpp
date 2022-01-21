@@ -21,4 +21,9 @@ int Physical_basis::size()
   }
 }
 
+double Physical_basis::evaluate(int i_qpoint, int i_basis)
+{
+  return 0.;
+}
+
 }
