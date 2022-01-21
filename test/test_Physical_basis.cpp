@@ -67,5 +67,35 @@ TEST_CASE("Physical_basis")
     }
     Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr (mat);
     REQUIRE(qr.isInjective()); // check that the basis polynomials are linearly independent
+    Eigen::VectorXd values;
+    // check that the constant function 1 is in the space
+    values = Eigen::VectorXd::Ones(n_qpoint);
+    REQUIRE((mat*qr.solve(values) - values).norm() < 1e-8);
+    // check that ((x_i - 100)/0.1)^2 is in the space
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        double coord = (points[i_dim*n_qpoint + i_qpoint] - 100.)/0.1;
+        values[i_qpoint] = coord*coord;
+      }
+      REQUIRE((mat*qr.solve(values) - values).norm() < 1e-8);
+    }
+    // check that ((x_0 - 100)/0.1)*((x_1 - 100)/0.1) is in the space
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+      values[i_qpoint] = 1.;
+      for (int i_dim = 0; i_dim < 2; ++i_dim) {
+        double coord = (points[i_dim*n_qpoint + i_qpoint] - 100.)/0.1;
+        values[i_qpoint] *= coord;
+      }
+    }
+    REQUIRE((mat*qr.solve(values) - values).norm() < 1e-8);
+    // check that ((x_0 - 100)/0.1)*((x_0 - 100)/0.1)*((x_2 - 100)/0.1) is NOT in the space
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+      values[i_qpoint] = 1.;
+      for (int i_dim = 0; i_dim < 3; ++i_dim) {
+        double coord = (points[i_dim*n_qpoint + i_qpoint] - 100.)/0.1;
+        values[i_qpoint] *= coord;
+      }
+    }
+    REQUIRE((mat*qr.solve(values) - values).norm() > 1e-3);
   }
 }
