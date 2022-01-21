@@ -25,6 +25,7 @@ class Physical_basis
   public:
   /*
    * `qpoint_pos` represents position of quadrature points. Must satisfy `qpoint_pos.size() == n_dim*pow(row_size, n_dim)`.
+   * `n_dim` must be <= 3.
    * Any qpoint distribution is allowed, but some might result in a singular basis.
    * If efficiency becomes a problem, could pass `pos` by reference
    */
