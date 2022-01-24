@@ -2,6 +2,7 @@
 #define PHYSICAL_BASIS_HPP_
 
 #include <vector>
+#include <Eigen/Dense>
 
 namespace cartdg
 {
@@ -40,6 +41,14 @@ class Physical_basis
    * Args must satisfy `0 <= i_qpoint < n_qpoint; 0 <= i_basis < size()`.
    */
   double evaluate(int i_qpoint, int i_basis);
+  /*
+   * Compute the projection of `polys` onto the span of the physical basis.
+   * Each column of `polys` represents a polynomial to be projected, evaluated at
+   * the quadrature points. Projection is orthogonal with respect to quadrature
+   * using `weights` . Requires `polys.rows()`, `weights.size()`, and `pos.size()`
+   * to be equal. Returns projection evaluated at quadrature points.
+   */
+  Eigen::MatrixXd projection(Eigen::MatrixXd polys, Eigen::VectorXd weights);
 };
 
 }

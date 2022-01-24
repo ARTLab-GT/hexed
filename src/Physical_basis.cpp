@@ -61,4 +61,9 @@ double Physical_basis::evaluate(int i_qpoint, int i_basis)
   return product;
 }
 
+Eigen::MatrixXd Physical_basis::projection(Eigen::MatrixXd polys, Eigen::VectorXd weights)
+{
+  return Eigen::MatrixXd::Zero(polys.rows(), polys.cols());
+}
+
 }
