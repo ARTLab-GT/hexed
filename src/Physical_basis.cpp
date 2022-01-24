@@ -63,7 +63,14 @@ double Physical_basis::evaluate(int i_qpoint, int i_basis)
 
 Eigen::MatrixXd Physical_basis::projection(Eigen::MatrixXd polys, Eigen::VectorXd weights)
 {
-  return Eigen::MatrixXd::Zero(polys.rows(), polys.cols());
+  Eigen::MatrixXd mat (n_qpoint, size());
+  for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+    for (int i_basis = 0; i_basis < size(); ++i_basis) {
+      mat(i_qpoint, i_basis) = evaluate(i_qpoint, i_basis);
+    }
+  }
+  auto sqrt_w = weights.cwiseSqrt();
+  return mat*(sqrt_w.asDiagonal()*mat).fullPivHouseholderQr().solve(sqrt_w.asDiagonal()*polys);
 }
 
 }

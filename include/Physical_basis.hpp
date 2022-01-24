@@ -46,7 +46,8 @@ class Physical_basis
    * Each column of `polys` represents a polynomial to be projected, evaluated at
    * the quadrature points. Projection is orthogonal with respect to quadrature
    * using `weights` . Requires `polys.rows()`, `weights.size()`, and `pos.size()`
-   * to be equal. Returns projection evaluated at quadrature points.
+   * to be equal. Returns projection evaluated at quadrature points. Size checking
+   * not guaranteed.
    */
   Eigen::MatrixXd projection(Eigen::MatrixXd polys, Eigen::VectorXd weights);
 };
