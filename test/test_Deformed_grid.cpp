@@ -567,8 +567,9 @@ TEST_CASE("Deformed grid class")
         for (int i_elem = 0; i_elem < 2; ++i_elem) {
           std::vector<double> pos = grid.get_pos(i_elem);
           for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint) {
-            double radius = (pos[i_qpoint] - i_elem)*(pos[i_qpoint] - i_elem) + pos[grid.n_qpoint + i_qpoint]*pos[grid.n_qpoint + i_qpoint];
-            grid.element(i_elem).stage(0)[i_qpoint] = std::exp(-radius/resolution);
+            double x0 = (pos[i_qpoint] - i_elem)/resolution;
+            double x1 = pos[grid.n_qpoint + i_qpoint]/resolution;
+            grid.element(i_elem).stage(0)[i_qpoint] = std::exp(-(x0*x0 + x1*x1));
           }
         }
         grid.project_degenerate(0);
@@ -585,8 +586,8 @@ TEST_CASE("Deformed grid class")
         }
         diffs.push_back(std::sqrt(grid.integral()[0]));
       }
-      // leniently demand one less order of accuracy than technically required
-      REQUIRE(diffs[0]/diffs[1] > std::pow(2, row_size - 1));
+      // demand a greater order of accuracy than required
+      REQUIRE(diffs[0]/diffs[1] > std::pow(2, row_size));
     }
   }
 }
