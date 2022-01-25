@@ -132,6 +132,9 @@ double Solution::update(double cfl_by_stable_cfl)
       kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
       grid->execute_local(kernel_settings);
     }
+    for (Deformed_grid& grid : def_grids) {
+      grid.project_degenerate(kernel_settings.i_write);
+    }
     for (Grid* grid : all_grids())
     {
       grid->execute_runge_kutta_stage();
