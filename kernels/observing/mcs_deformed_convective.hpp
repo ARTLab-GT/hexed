@@ -33,6 +33,11 @@ double mcs_deformed_convective(def_elem_vec& def_elements, Kernel_settings& sett
       // find minimum singular value (always at end of singular value vector)
       min_sv = std::min(min_sv, jac_mat.jacobiSvd().singularValues()(n_dim - 1));
     }
+    // if degenerate, ignore jacobian and flag for special treatment
+    if ((min_sv < 1./3.) && settings.degenerate_handling) { // 1./3. is an arbitrary threshold
+      def_elements[i_elem]->degenerate = true;
+      min_sv = 1.;
+    } else def_elements[i_elem]->degenerate = false;
     // for "max speed" use maximum actual characteristic speed divided by minimum grid size,
     // the latter measured by the minimum singular value of the jacobian in the element
     max_speed = std::max<double>(speed/min_sv, max_speed);
