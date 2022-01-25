@@ -3,6 +3,7 @@
 #include <cartdgConfig.hpp>
 #include <Kernel_settings.hpp>
 #include <get_mcs_convective.hpp>
+#include <get_mcs_deformed_convective.hpp>
 #include <Gauss_lobatto.hpp>
 #include <observing/indicator.hpp>
 
@@ -54,6 +55,37 @@ TEST_CASE("Max characteristic speed")
     }
     double mcs = cartdg::get_mcs_convective(2, 2)(elements, settings);
     REQUIRE(mcs == Approx(360).epsilon(0.01));
+  }
+
+  SECTION("deformed")
+  {
+    cartdg::Storage_params params {3, 5, 3, 4};
+    int n_qpoint = params.n_qpoint();
+    cartdg::def_elem_vec elems;
+    for (int i_elem = 0; i_elem < 3; ++i_elem) {
+      elems.emplace_back(new cartdg::Deformed_element {params});
+      double* state = elems.back()->stage(0);
+      double* jac = elems.back()->jacobian();
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        // set state to 0 velocity and speed of sound 100
+        for (int i_dim = 0; i_dim < 3; ++i_dim) state[i_dim*n_qpoint + i_qpoint] = 0.;
+        state[3*n_qpoint + i_qpoint] = 1.4;
+        // set a modeslty higher sound speed in element 1 just to mix it up
+        state[4*n_qpoint + i_qpoint] = ((i_elem == 1) ? 1e6 : 1e4)/0.4;
+        for (int i_jac = 0; i_jac < 9; ++i_jac) {
+          jac[i_jac*n_qpoint + i_qpoint] = (i_jac/3 == i_jac%3) ? 1. : 0.; // set to identity mat
+        }
+      }
+    }
+    cartdg::Kernel_settings settings;
+    // test that actual characteristic speed is measured correctly
+    REQUIRE(cartdg::get_mcs_deformed_convective(3, 4)(elems, settings) == Approx(1e3));
+    for (int i_dim = 0; i_dim < 2; ++i_dim) {
+      // scale 2 entries of jacobian at one quadrature point.
+      elems[2]->jacobian()[(i_dim*3 + i_dim)*n_qpoint + 2] = 0.01;
+    }
+    // test that jacobian is accounted for
+    REQUIRE(cartdg::get_mcs_deformed_convective(3, 4)(elems, settings) == Approx(1e4));
   }
 }
 
