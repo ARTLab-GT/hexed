@@ -532,9 +532,11 @@ TEST_CASE("Deformed grid class")
       for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint) {
         grid.element(0).stage(0)[i_qpoint] = grid.element(1).stage(0)[i_qpoint] = (rand()%1000)/10000.;
       }
+      double integral = grid.integral()[0];
       grid.project_degenerate(0);
       cartdg::Tecplot_file file {"projection_random", 2, 1, 0.};
       grid.visualize_interior(file);
+      REQUIRE(grid.integral()[0] - integral == Approx(0.).scale(1.)); // test conservation
     }
     SECTION("perturbation") // make sure information near degenerate point is annihilated
     {
