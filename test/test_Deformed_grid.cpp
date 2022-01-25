@@ -558,5 +558,33 @@ TEST_CASE("Deformed grid class")
       grid.visualize_interior(file);
       REQUIRE(elem_norm[0]/elem_norm[1] > 10.);
     }
+    SECTION("gaussian")
+    {
+      std::vector<double> diffs;
+      for (int resolution : {1, 2}) {
+        for (int i_elem = 0; i_elem < 2; ++i_elem) {
+          std::vector<double> pos = grid.get_pos(i_elem);
+          for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint) {
+            double radius = (pos[i_qpoint] - i_elem)*(pos[i_qpoint] - i_elem) + pos[grid.n_qpoint + i_qpoint]*pos[grid.n_qpoint + i_qpoint];
+            grid.element(i_elem).stage(0)[i_qpoint] = std::exp(-radius/resolution);
+          }
+        }
+        grid.project_degenerate(0);
+        if (resolution == 1) {
+          cartdg::Tecplot_file file {"projection_gaussian", 2, 1, 0.};
+          grid.visualize_interior(file);
+        }
+        // compute the L2 norm of the difference with/without projection. This is a little
+        // awkward because *someone* wrote an integral function that can't do individual elements
+        for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint) {
+          double diff = grid.element(0).stage(0)[i_qpoint] - grid.element(1).stage(0)[i_qpoint];
+          grid.element(0).stage(0)[i_qpoint] = diff*diff;
+          grid.element(1).stage(0)[i_qpoint] = 0.;
+        }
+        diffs.push_back(std::sqrt(grid.integral()[0]));
+      }
+      // leniently demand one less order of accuracy than technically required
+      REQUIRE(diffs[0]/diffs[1] > std::pow(2, row_size - 1));
+    }
   }
 }
