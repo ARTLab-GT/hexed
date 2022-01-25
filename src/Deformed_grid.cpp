@@ -185,7 +185,7 @@ void Deformed_grid::project_degenerate(int i_stage)
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
         double product = 1.;
         for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-          int i_row = (n_qpoint/custom_math::pow(basis.row_size, n_dim - 1 - i_dim))%basis.row_size;
+          int i_row = (i_qpoint/custom_math::pow(basis.row_size, n_dim - 1 - i_dim))%basis.row_size;
           product *= basis.node_weights()(i_row);
         }
         product *= elem.jacobian_determinant(i_qpoint);
