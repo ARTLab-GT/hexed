@@ -82,10 +82,26 @@ TEST_CASE("Max characteristic speed")
     REQUIRE(cartdg::get_mcs_deformed_convective(3, 4)(elems, settings) == Approx(1e3));
     for (int i_dim = 0; i_dim < 2; ++i_dim) {
       // scale 2 entries of jacobian at one quadrature point.
-      elems[2]->jacobian()[(i_dim*3 + i_dim)*n_qpoint + 2] = 0.01;
+      elems[1]->jacobian()[(i_dim*3 + i_dim)*n_qpoint + 2] = 0.5;
     }
     // test that jacobian is accounted for
+    REQUIRE(cartdg::get_mcs_deformed_convective(3, 4)(elems, settings) == Approx(2e3));
+    for (int i_dim = 0; i_dim < 2; ++i_dim) {
+      // scale 2 entries of jacobian at one quadrature point.
+      elems[2]->jacobian()[(i_dim*3 + i_dim)*n_qpoint + 2] = 0.01;
+    }
+    // test that degeneracy is properly detected
+    REQUIRE(cartdg::get_mcs_deformed_convective(3, 4)(elems, settings) == Approx(2e3));
+    REQUIRE(!elems[0]->degenerate);
+    REQUIRE(!elems[1]->degenerate);
+    REQUIRE( elems[2]->degenerate);
+
+    // behavior when degeneracy handling is off
+    settings.degenerate_handling = 0;
     REQUIRE(cartdg::get_mcs_deformed_convective(3, 4)(elems, settings) == Approx(1e4));
+    REQUIRE(!elems[0]->degenerate);
+    REQUIRE(!elems[1]->degenerate);
+    REQUIRE(!elems[2]->degenerate);
   }
 }
 
