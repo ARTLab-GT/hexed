@@ -536,32 +536,27 @@ TEST_CASE("Deformed grid class")
       cartdg::Tecplot_file file {"projection_random", 2, 1, 0.};
       grid.visualize_interior(file);
     }
-    SECTION("ringing") // make sure information near degenerate point is annihilated
+    SECTION("perturbation") // make sure information near degenerate point is annihilated
     {
       for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint) {
         // use stage 2 just to make sure you can
         grid.element(0).stage(2)[i_qpoint] = grid.element(1).stage(2)[i_qpoint] = 0.;
       }
-      grid.element(0).stage(2)[row_size] = grid.element(1).stage(2)[row_size] = 1./(gleg.node_weights()(1)*gleg.node_weights()(0));
+      grid.element(0).stage(2)[row_size] = grid.element(1).stage(2)[row_size] = 1.;
+      grid.element(0).stage(2)[(row_size - 2)*row_size] = grid.element(1).stage(2)[(row_size - 2)*row_size] = -1.;
       grid.project_degenerate(2);
-      // compute norm in each element. This is a little awkward because *someone* was too lazy
-      // to write a general enough integral function
+      // compute a sort of uniform norm on the quadrature points to assess the amount of
+      // oscillation suppression
+      double elem_norm [2] {};
       for (int i_elem = 0; i_elem < 2; ++i_elem) {
         for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint) {
-          double& value = grid.element(i_elem).stage(2)[i_qpoint]; // square values
-          value *= value;
+          elem_norm[i_elem] = std::max(elem_norm[i_elem], std::abs(grid.element(i_elem).stage(2)[i_qpoint]));
+          grid.element(i_elem).stage(0)[i_qpoint] = grid.element(i_elem).stage(2)[i_qpoint]; // for plotting
         }
       }
-      double elem_norm [2];
-      for (int i_elem = 0; i_elem < 2; ++i_elem) {
-        for (int j_elem = 0; j_elem < 2; ++j_elem) {
-          for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint) {
-            grid.element(j_elem).stage(0)[i_qpoint] = (j_elem == i_elem) ? grid.element(j_elem).stage(2)[i_qpoint] : 0.;
-          }
-        }
-        elem_norm[i_elem] = grid.integral()[0];
-      }
-      REQUIRE(elem_norm[1]/elem_norm[0] < 0.1);
+      cartdg::Tecplot_file file {"projection_perturbation", 2, 1, 0.};
+      grid.visualize_interior(file);
+      REQUIRE(elem_norm[0]/elem_norm[1] > 10.);
     }
   }
 }
