@@ -174,6 +174,10 @@ void Deformed_grid::execute_neighbor_av(int i_var, int i_dim, Kernel_settings& s
 {
 }
 
+void Deformed_grid::project_degenerate(int i_stage)
+{
+}
+
 void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
                             std::array<bool, 2> is_positive)
 {
