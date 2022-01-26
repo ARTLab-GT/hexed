@@ -34,7 +34,7 @@ double mcs_deformed_convective(def_elem_vec& def_elements, Kernel_settings& sett
       min_sv = std::min(min_sv, jac_mat.jacobiSvd().singularValues()(n_dim - 1));
     }
     // if degenerate, ignore jacobian and flag for special treatment
-    if ((min_sv < 1./3.) && settings.degenerate_handling) { // 1./3. is an arbitrary threshold
+    if ((min_sv < 1./10.) && settings.degenerate_handling) { // threshold is arbitrary
       def_elements[i_elem]->degenerate = true;
       min_sv = 1.;
     } else def_elements[i_elem]->degenerate = false;
