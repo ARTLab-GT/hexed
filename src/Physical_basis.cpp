@@ -16,14 +16,10 @@ Physical_basis::Physical_basis(int n_dim, int row_size, std::vector<double> qpoi
 
   // compute bounding box
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-    double min =  std::numeric_limits<double>::max();
-    double max = -std::numeric_limits<double>::max();
-    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-      min = std::min(min, pos[i_dim*n_qpoint + i_qpoint]);
-      max = std::max(max, pos[i_dim*n_qpoint + i_qpoint]);
-    }
+    double max = *std::max_element(pos.begin() + i_dim*n_qpoint, pos.begin() + (i_dim + 1)*n_qpoint);
+    double min = *std::min_element(pos.begin() + i_dim*n_qpoint, pos.begin() + (i_dim + 1)*n_qpoint);
     bound_box_center[i_dim] = (min + max)/2.;
-    bound_box_size[i_dim] = min + max;
+    bound_box_size[i_dim] = max - min;
   }
 
   // compute indices of polynomials
@@ -55,7 +51,7 @@ double Physical_basis::evaluate(int i_qpoint, int i_basis)
   double product = 1.;
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     // scale/translate so that coordinates are +- 1 at edges of bounding box
-    double transformed = (pos[i_dim*n_qpoint + i_qpoint] - bound_box_center[i_dim])*2/bound_box_size[i_dim];
+    double transformed = (pos[i_dim*n_qpoint + i_qpoint] - bound_box_center[i_dim])/bound_box_size[i_dim]*1.99; // multiply by slightly less than 2. to guard against rounding error
     product *= std::legendre(indices[i_dim][i_basis], transformed);
   }
   return product;
