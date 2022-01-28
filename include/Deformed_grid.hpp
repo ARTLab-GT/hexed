@@ -51,6 +51,7 @@ class Deformed_grid : public Grid
   virtual void execute_av_flux(Kernel_settings&);
   virtual void execute_local_av(int i_var, int i_dim, Kernel_settings&);
   virtual void execute_neighbor_av(int i_var, int i_dim, Kernel_settings&);
+  void project_degenerate(int i_stage);
 
   // diagnostic
   std::vector<double> face_integral(Surface_func& integrand, int i_elem, int i_dim, bool is_positive);

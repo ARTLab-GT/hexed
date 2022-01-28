@@ -19,6 +19,8 @@ class Deformed_element : public Element
   Eigen::VectorXd node_adj;
 
   public:
+  bool degenerate = 0;
+
   /*
    * `pos` sets the position of vertex 0 in increments of `mesh_size`. Unspecified
    * components set to 0. `mesh_size` sets distance between vertices. Vertex positions

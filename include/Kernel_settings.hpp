@@ -13,6 +13,7 @@ class Kernel_settings
   double max_difference = 0.5;
   int i_read = 0;
   int i_write = 1;
+  bool degenerate_handling = 1;
 };
 
 }

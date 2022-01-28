@@ -6,6 +6,7 @@
 #include <Gauss_lobatto.hpp>
 #include <Gauss_legendre.hpp>
 #include <math.hpp>
+#include <Tecplot_file.hpp>
 
 TEST_CASE("Deformed grid class")
 {
@@ -510,5 +511,83 @@ TEST_CASE("Deformed grid class")
     auto force_integral {warped.surface_integral(fpa)};
     REQUIRE(force_integral[0] == Approx(-1e5));
     REQUIRE(force_integral[1] == Approx( 3e5));
+  }
+
+  SECTION("degenerate handling")
+  {
+    int row_size = cartdg::config::max_row_size;
+    cartdg::Gauss_legendre gleg (row_size);
+    cartdg::Deformed_grid grid (1, 2, 0, 1., gleg);
+    for (int i_elem = 0; i_elem < 2; ++i_elem) {
+      grid.add_element({i_elem, 0, 0});
+      grid.deformed_element(i_elem).vertex(2).pos[0] -= 1.;
+      grid.deformed_element(i_elem).vertex(3).pos[1] -= 0.1;
+      grid.deformed_element(i_elem).vertex(1).pos[0] += 0.3;
+    }
+    grid.calc_jacobian();
+    grid.deformed_element(1).degenerate = true;
+    srand(10);
+    SECTION("random") // convenient visualization of projection
+    {
+      for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint) {
+        grid.element(0).stage(0)[i_qpoint] = grid.element(1).stage(0)[i_qpoint] = (rand()%1000)/10000.;
+      }
+      double integral = grid.integral()[0];
+      grid.project_degenerate(0);
+      cartdg::Tecplot_file file {"projection_random", 2, 1, 0.};
+      grid.visualize_interior(file);
+      REQUIRE(grid.integral()[0] - integral == Approx(0.).scale(1.)); // test conservation
+    }
+    SECTION("perturbation") // make sure information near degenerate point is annihilated
+    {
+      for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint) {
+        // use stage 2 just to make sure you can
+        grid.element(0).stage(2)[i_qpoint] = grid.element(1).stage(2)[i_qpoint] = 0.;
+      }
+      grid.element(0).stage(2)[row_size] = grid.element(1).stage(2)[row_size] = 1.;
+      grid.element(0).stage(2)[(row_size - 2)*row_size] = grid.element(1).stage(2)[(row_size - 2)*row_size] = -1.;
+      grid.project_degenerate(2);
+      // compute a sort of uniform norm on the quadrature points to assess the amount of
+      // oscillation suppression
+      double elem_norm [2] {};
+      for (int i_elem = 0; i_elem < 2; ++i_elem) {
+        for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint) {
+          elem_norm[i_elem] = std::max(elem_norm[i_elem], std::abs(grid.element(i_elem).stage(2)[i_qpoint]));
+          grid.element(i_elem).stage(0)[i_qpoint] = grid.element(i_elem).stage(2)[i_qpoint]; // for plotting
+        }
+      }
+      cartdg::Tecplot_file file {"projection_perturbation", 2, 1, 0.};
+      grid.visualize_interior(file);
+      REQUIRE(elem_norm[0]/elem_norm[1] > 10.);
+    }
+    SECTION("gaussian")
+    {
+      std::vector<double> diffs;
+      for (int resolution : {1, 2}) {
+        for (int i_elem = 0; i_elem < 2; ++i_elem) {
+          std::vector<double> pos = grid.get_pos(i_elem);
+          for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint) {
+            double x0 = (pos[i_qpoint] - i_elem)/resolution;
+            double x1 = pos[grid.n_qpoint + i_qpoint]/resolution;
+            grid.element(i_elem).stage(0)[i_qpoint] = std::exp(-(x0*x0 + x1*x1));
+          }
+        }
+        grid.project_degenerate(0);
+        if (resolution == 1) {
+          cartdg::Tecplot_file file {"projection_gaussian", 2, 1, 0.};
+          grid.visualize_interior(file);
+        }
+        // compute the L2 norm of the difference with/without projection. This is a little
+        // awkward because *someone* wrote an integral function that can't do individual elements
+        for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint) {
+          double diff = grid.element(0).stage(0)[i_qpoint] - grid.element(1).stage(0)[i_qpoint];
+          grid.element(0).stage(0)[i_qpoint] = diff*diff;
+          grid.element(1).stage(0)[i_qpoint] = 0.;
+        }
+        diffs.push_back(std::sqrt(grid.integral()[0]));
+      }
+      // demand a greater order of accuracy than required
+      REQUIRE(diffs[0]/diffs[1] > std::pow(2, row_size));
+    }
   }
 }

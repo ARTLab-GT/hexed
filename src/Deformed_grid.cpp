@@ -1,6 +1,7 @@
 #include <Deformed_grid.hpp>
 #include <Regular_grid.hpp>
 #include <Tecplot_file.hpp>
+#include <Physical_basis.hpp>
 #include <get_mcs_deformed_convective.hpp>
 #include <get_write_face_deformed.hpp>
 #include <get_neighbor_deformed_convective.hpp>
@@ -172,6 +173,28 @@ void Deformed_grid::execute_local_av(int i_var, int i_dim, Kernel_settings& sett
 
 void Deformed_grid::execute_neighbor_av(int i_var, int i_dim, Kernel_settings& settings)
 {
+}
+
+void Deformed_grid::project_degenerate(int i_stage)
+{
+  for (int i_elem = 0; i_elem < n_elem; ++i_elem) {
+    Deformed_element& elem {deformed_element(i_elem)};
+    if (elem.degenerate) {
+      Physical_basis phys {n_dim, basis.row_size, get_pos(i_elem)};
+      Eigen::VectorXd weights (n_qpoint);
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        double product = 1.;
+        for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+          int i_row = (i_qpoint/custom_math::pow(basis.row_size, n_dim - 1 - i_dim))%basis.row_size;
+          product *= basis.node_weights()(i_row);
+        }
+        product *= elem.jacobian_determinant(i_qpoint);
+        weights[i_qpoint] = product;
+      }
+      Eigen::Map<Eigen::MatrixXd> state (elem.stage(i_stage), n_qpoint, n_var);
+      state = phys.projection(state, weights);
+    }
+  }
 }
 
 void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
