@@ -35,6 +35,27 @@ class Deformed_element : public Element
   double* node_adjustments(); // Layout: [i_dim][is_positive][i_face_qpoint]
 };
 
+class Deformed_face
+{
+  Eigen::VectorXd jac;
+
+  public:
+  Deformed_face(Storage_params);
+  /*
+   * Pointer to a Jacobian matrix at the face mutually agreed upon by any
+   * elements involved. Use this for performance-critical access to jacobian.
+   * Layout: [i_dim][j_dim][i_face_qpoint]
+   */
+  double* jacobian();
+  /*
+   * element of the Jacobian matrix at row `i_dim` and column `j_dim`,
+   * i.e. derivative of `i_dim`th physical coordinate wrt `j_dim`th reference coordinate,
+   * evaluated at the `i_qpoint`th face quadrature point. For convenience, not
+   * performance.
+   */
+  double jacobian(int i_dim, int j_dim, int i_qpoint);
+};
+
 class Deformed_elem_con
 {
   public:
