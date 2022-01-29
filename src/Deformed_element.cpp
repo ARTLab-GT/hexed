@@ -51,17 +51,18 @@ double* Deformed_element::node_adjustments()
 }
 
 Deformed_face::Deformed_face(Storage_params params)
+: n_dim(params.n_dim), n_fqpoint(params.n_qpoint()/params.row_size), jac(n_dim*n_dim*n_fqpoint)
 {
 }
 
 double* Deformed_face::jacobian()
 {
-  return nullptr;
+  return jac.data();
 }
 
 double Deformed_face::jacobian(int i_dim, int j_dim, int i_qpoint)
 {
-  return 0.;
+  return jac((i_dim*n_dim + j_dim)*n_fqpoint + i_qpoint);
 }
 
 }

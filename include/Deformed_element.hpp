@@ -37,6 +37,8 @@ class Deformed_element : public Element
 
 class Deformed_face
 {
+  int n_dim;
+  int n_fqpoint; // number of quadrature points on face
   Eigen::VectorXd jac;
 
   public:

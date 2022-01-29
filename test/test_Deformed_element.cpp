@@ -1,5 +1,7 @@
 #include <catch2/catch.hpp>
 
+#include <cartdgConfig.hpp>
+#include <math.hpp>
 #include <Deformed_element.hpp>
 
 void assert_equal(std::array<double, 3> computed, std::array<double, 3> correct)
@@ -85,4 +87,16 @@ TEST_CASE("Deformed_element.hpp")
     cartdg::Deformed_element elem3d_1 {params3d, {3,}, 1.};
     assert_equal(elem3d_1.vertex(0).pos, {3., 0., 0.});
   }
+}
+
+TEST_CASE("Deformed_face")
+{
+  const int n_dim = 3;
+  const int row_size = std::min(4, cartdg::config::max_row_size);
+  cartdg::Storage_params params {6, 7, n_dim, row_size}; // some more or less arbitrary parameters
+  cartdg::Deformed_face face {params};
+  face.jacobian()[0] = 0.8;
+  face.jacobian()[n_dim*n_dim*cartdg::custom_math::pow(row_size, n_dim - 1) - 1] = 0.9;
+  REQUIRE(face.jacobian(0, 0, 0) == 0.8);
+  REQUIRE(face.jacobian(n_dim - 1, n_dim - 1, cartdg::custom_math::pow(row_size, n_dim - 1) - 1) == 0.9);
 }
