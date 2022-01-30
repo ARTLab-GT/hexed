@@ -3,11 +3,16 @@
 namespace cartdg
 {
 
-Element::Element(Storage_params params)
-: n_stage(params.n_stage), n_dof(params.n_dof()), n_vert(params.n_vertices()),
-  data(n_stage*n_dof + params.n_dim*2*n_dof/params.row_size), visc_storage{Eigen::VectorXd::Zero(n_vert)},
-  derivative_storage(params.n_qpoint()), n_dim(params.n_dim)
+Element::Element(Storage_params params_arg)
+: params(params_arg), n_dim(params.n_dim), n_dof(params.n_dof()), n_vert(params.n_vertices()),
+  data(params.n_stage*n_dof + n_dim*2*n_dof/params.row_size), visc_storage{Eigen::VectorXd::Zero(n_vert)},
+  derivative_storage(params.n_qpoint())
 {}
+
+Storage_params Element::storage_params()
+{
+  return params;
+}
 
 double* Element::stage(int i_stage)
 {
@@ -16,7 +21,7 @@ double* Element::stage(int i_stage)
 
 double* Element::face()
 {
-  return data.data() + n_stage*n_dof;
+  return data.data() + params.n_stage*n_dof;
 }
 
 double Element::jacobian(int i_dim, int j_dim, int i_qpoint)

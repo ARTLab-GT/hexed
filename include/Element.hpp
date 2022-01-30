@@ -19,18 +19,20 @@ namespace cartdg
  */
 class Element
 {
-  int n_stage;
+  protected:
+  Storage_params params;
+  int n_dim;
+
+  private:
   int n_dof;
   int n_vert;
   Eigen::VectorXd data;
   Eigen::VectorXd visc_storage;
   Eigen::VectorXd derivative_storage;
 
-  protected:
-  int n_dim;
-
   public:
   Element(Storage_params);
+  Storage_params storage_params();
   // Pointer to state data for `i_stage`th Runge-Kutta stage.
   double* stage(int i_stage); // Layout: [i_var][i_qpoint]
   // Pointer state data at faces. Must be populated by user
