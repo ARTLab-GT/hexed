@@ -241,13 +241,14 @@ void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
   }
 
   // create connection object
-  elem_cons.emplace_back();
+  std::array<Face_index, 2> face_inds;
   for (int i_side : {0, 1})
   {
-    elem_cons.back().element[i_side] = elements[i_elem[i_side]].get();
-    elem_cons.back().i_dim[i_side] = i_dim[i_side];
-    elem_cons.back().is_positive[i_side] = is_positive[i_side];
+    face_inds[i_side].element = elements[i_elem[i_side]].get();
+    face_inds[i_side].i_dim = i_dim[i_side];
+    face_inds[i_side].is_positive = is_positive[i_side];
   }
+  elem_cons.emplace_back(face_inds);
 }
 
 void Deformed_grid::purge_vertices()
@@ -377,7 +378,7 @@ void Deformed_grid::visualize_connections(std::string file_name)
     std::vector<double> centers (2*n_dim, 0.);
     for (int i_side : {0, 1}) {
       for (int i_vert = 0; i_vert < n_vertices; ++i_vert) {
-        auto pos {con.element[i_side]->vertex(i_vert).pos};
+        auto pos {con.face_index(i_side).element->vertex(i_vert).pos};
         double weight {0.};
         if (i_vert == 0) weight += i_con;
         else if (i_vert == n_vertices - 1) weight += n_con - i_con;

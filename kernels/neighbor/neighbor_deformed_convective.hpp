@@ -27,69 +27,73 @@ void neighbor_deformed_convective(def_elem_con_vec& def_connections, Basis& basi
 
     for (int i_side : {0, 1})
     {
-      double* read = con.element[i_side]->face() + (con.i_dim[i_side]*2 + con.is_positive[i_side])*face_size;
+      Face_index face_ind = con.face_index(i_side);
+      double* read = face_ind.element->face() + (face_ind.i_dim*2 + face_ind.is_positive)*face_size;
       for (int i_face_dof = 0; i_face_dof < face_size; ++i_face_dof)
       {
         face_r[i_side*face_size + i_face_dof] = read[i_face_dof];
       }
     }
 
+    bool same_is_positive = (con.face_index(0).is_positive != con.face_index(1).is_positive);
+    bool same_dim = (con.face_index(0).i_dim == con.face_index(1).i_dim);
     bool expected_positive [] {1, 0};
     for (int i_side : {0, 1})
     {
-      if (con.is_positive[i_side] != expected_positive[i_side])
+      if (con.face_index(i_side).is_positive != expected_positive[i_side])
       {
         for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint)
         {
-          face_r[face_size*i_side + con.i_dim[i_side]*n_face_qpoint + i_qpoint] *= -1;
+          face_r[face_size*i_side + con.face_index(i_side).i_dim*n_face_qpoint + i_qpoint] *= -1;
         }
       }
     }
     // FIXME: make this work in 3D
-    if (con.i_dim[0] != con.i_dim[1])
+    if (!same_dim)
     {
-      if (con.is_positive[0] != con.is_positive[1])
+      if (same_is_positive)
       {
         Eigen::Map<Eigen::Matrix<double, row_size, n_var*n_face_qpoint/row_size>> rows {face_r + face_size};
         rows.colwise().reverseInPlace();
         for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint)
         {
-          face_r[face_size + con.i_dim[0]*n_face_qpoint + i_qpoint] *= -1;
+          face_r[face_size + con.face_index(0).i_dim*n_face_qpoint + i_qpoint] *= -1;
         }
       }
       for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint)
       {
-        std::swap(face_r[face_size + con.i_dim[0]*n_face_qpoint + i_qpoint],
-                  face_r[face_size + con.i_dim[1]*n_face_qpoint + i_qpoint]);
+        std::swap(face_r[face_size + con.face_index(0).i_dim*n_face_qpoint + i_qpoint],
+                  face_r[face_size + con.face_index(1).i_dim*n_face_qpoint + i_qpoint]);
       }
     }
 
-    hll_cpg_euler<n_var - 2, n_face_qpoint>(face_r, face_w, 1., con.i_dim[0], heat_rat);
+    hll_cpg_euler<n_var - 2, n_face_qpoint>(face_r, face_w, 1., con.face_index(0).i_dim, heat_rat);
 
-    if (con.i_dim[0] != con.i_dim[1])
+    if (!same_dim)
     {
       for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint)
       {
-        std::swap(face_w[face_size + con.i_dim[0]*n_face_qpoint + i_qpoint],
-                  face_w[face_size + con.i_dim[1]*n_face_qpoint + i_qpoint]);
+        std::swap(face_w[face_size + con.face_index(0).i_dim*n_face_qpoint + i_qpoint],
+                  face_w[face_size + con.face_index(1).i_dim*n_face_qpoint + i_qpoint]);
       }
-      if (con.is_positive[0] != con.is_positive[1])
+      if (!same_is_positive)
       {
         Eigen::Map<Eigen::Matrix<double, row_size, n_var*n_face_qpoint/row_size>> rows {face_w + face_size};
         rows.colwise().reverseInPlace();
         for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint)
         {
-          face_w[face_size + con.i_dim[0]*n_face_qpoint + i_qpoint] *= -1;
+          face_w[face_size + con.face_index(0).i_dim*n_face_qpoint + i_qpoint] *= -1;
         }
       }
     }
     for (int i_side : {0, 1})
     {
-      if (con.is_positive[i_side] != expected_positive[i_side])
+      Face_index face_ind = con.face_index(i_side);
+      if (face_ind.is_positive != expected_positive[i_side])
       {
         for (int i_var = 0; i_var < n_var; ++i_var)
         {
-          if (i_var != con.i_dim[i_side])
+          if (i_var != face_ind.i_dim)
           {
             for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint)
             {
@@ -102,7 +106,8 @@ void neighbor_deformed_convective(def_elem_con_vec& def_connections, Basis& basi
 
     for (int i_side : {0, 1})
     {
-      double* write = con.element[i_side]->face() + (con.i_dim[i_side]*2 + con.is_positive[i_side])*face_size;
+      Face_index face_ind = con.face_index(i_side);
+      double* write = face_ind.element->face() + (face_ind.i_dim*2 + face_ind.is_positive)*face_size;
       for (int i_face_dof = 0; i_face_dof < face_size; ++i_face_dof)
       {
         write[i_face_dof] = face_w[i_side*face_size + i_face_dof];

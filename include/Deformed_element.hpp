@@ -58,26 +58,28 @@ class Deformed_face
   double jacobian(int i_dim, int j_dim, int i_qpoint);
 };
 
+// Stores the information required to identify a face of a deformed element
 class Face_index
 {
   public:
   Deformed_element* element;
-  int i_dim;
-  bool is_positive;
+  int i_dim; // which reference coordinate axis is normal to face
+  bool is_positive; // `true` if `i_dim`th reference coordinate is 1.0 at face (`false` if 0.0)
 };
 
+// represents a connection between two deformed elements
 class Deformed_elem_con
 {
+  std::array<Face_index, 2> face_inds;
+
   public:
-  std::array<Deformed_element*, 2> element;
-  // Following two members designate which faces are participating in connection
-  std::array<int, 2> i_dim;
-  std::array<bool, 2> is_positive;
+  Deformed_elem_con(std::array<Face_index, 2>);
+  Face_index face_index(int i_side);
   /*
    * return `true` if the face normal direction defined by the face jacobian is the opposite
-   * of that defined by the jacobian of element `i_side`.
+   * of that defined by the jacobian of element `i_side`. Valid args: 0, 1
    */
-  bool flip(bool i_side);
+  bool flip(int i_side);
 };
 
 // Designates that a face of an element is participating in a wall boundary condition

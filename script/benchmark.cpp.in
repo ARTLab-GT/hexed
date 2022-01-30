@@ -66,15 +66,16 @@ for (int i_dim = 0; i_dim < dim; ++i_dim)
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wunused-variable"
     connections[i_dim].push_back({});
-    def_connections.push_back({});
+    std::array<cartdg::Face_index, 2> face_inds;
     for (int i_side: {0, 1})
     {
       int i_elem = rand()%n_elem;
       connections[i_dim].back()[i_side] = elements[i_elem]->face() + (2*i_dim + 1 - i_side)*n_qpoint/row_size;
-      def_connections.back().element[i_side] = def_elements[i_elem].get();
-      def_connections.back().i_dim[i_side] = rand()%dim;
-      def_connections.back().is_positive[i_side] = bool(rand()%2);
+      face_inds[i_side].element = def_elements[i_elem].get();
+      face_inds[i_side].i_dim = rand()%dim;
+      face_inds[i_side].is_positive = bool(rand()%2);
     }
+    def_connections.emplace_back(face_inds);
     #pragma GCC diagnostic pop
   }
 }

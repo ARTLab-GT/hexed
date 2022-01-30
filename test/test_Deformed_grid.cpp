@@ -156,10 +156,10 @@ TEST_CASE("Deformed grid class")
       REQUIRE(&grid3.deformed_element(0).vertex(4) == &grid3.deformed_element(3).vertex(5));
       REQUIRE(&grid3.deformed_element(0).vertex(6) == &grid3.deformed_element(3).vertex(7));
 
-      REQUIRE(grid3.connection(1).element[0] == &grid3.deformed_element(2));
-      REQUIRE(grid3.connection(1).element[1] == &grid3.deformed_element(0));
+      REQUIRE(grid3.connection(1).face_index(0).element == &grid3.deformed_element(2));
+      REQUIRE(grid3.connection(1).face_index(1).element == &grid3.deformed_element(0));
     }
-    
+
     SECTION("Different direction")
     {
       SECTION("0+ 1+")
@@ -227,10 +227,10 @@ TEST_CASE("Deformed grid class")
         REQUIRE(&grid3.deformed_element(0).vertex(6) == &grid3.deformed_element(1).vertex(0));
         REQUIRE(&grid3.deformed_element(0).vertex(7) == &grid3.deformed_element(1).vertex(1));
 
-        REQUIRE(grid3.connection(0).i_dim[0] == 0);
-        REQUIRE(grid3.connection(0).i_dim[1] == 1);
-        REQUIRE(grid3.connection(0).is_positive[0] == true);
-        REQUIRE(grid3.connection(0).is_positive[1] == false);
+        REQUIRE(grid3.connection(0).face_index(0).i_dim == 0);
+        REQUIRE(grid3.connection(0).face_index(1).i_dim == 1);
+        REQUIRE(grid3.connection(0).face_index(0).is_positive == true);
+        REQUIRE(grid3.connection(0).face_index(1).is_positive == false);
       }
 
       SECTION("0- 1+")

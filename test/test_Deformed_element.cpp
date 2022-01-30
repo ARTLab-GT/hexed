@@ -101,6 +101,19 @@ TEST_CASE("Deformed_face")
   REQUIRE(face.jacobian(n_dim - 1, n_dim - 1, cartdg::custom_math::pow(row_size, n_dim - 1) - 1) == 0.9);
 }
 
+TEST_CASE("Deformed_elem_con")
+{
+  cartdg::Storage_params params {1, 3, 1, 1};
+  cartdg::Deformed_element elem0 {params};
+  cartdg::Deformed_element elem1 {params};
+  cartdg::Face_index fi0 {&elem0, 2, 0};
+  cartdg::Face_index fi1 {&elem1, 0, 1};
+  cartdg::Deformed_elem_con con ({fi0, fi1});
+  REQUIRE(con.face_index(0).element == &elem0);
+  REQUIRE(con.face_index(0).i_dim == 2);
+  REQUIRE(con.face_index(1).is_positive == 1);
+}
+
 TEST_CASE("Deformed_elem_wall")
 {
   cartdg::Storage_params params {1, 3, 1, 1};
