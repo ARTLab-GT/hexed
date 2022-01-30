@@ -114,7 +114,7 @@ std::vector<double> Deformed_grid::get_pos(int i_elem)
 
 void Deformed_grid::add_wall(int i_elem, int i_dim, bool is_positive_face)
 {
-  Deformed_elem_wall wall {elements[i_elem].get(), i_dim, is_positive_face, i_elem};
+  Deformed_elem_wall wall {{elements[i_elem].get(), i_dim, is_positive_face}, i_elem};
   walls.push_back(wall);
 }
 
@@ -352,7 +352,8 @@ std::vector<double> Deformed_grid::surface_integral(Surface_func& integrand)
   std::vector<double> total;
   for (Deformed_elem_wall wall : walls)
   {
-    auto fi = face_integral(integrand, wall.i_elem, wall.i_dim, wall.is_positive);
+    auto face_ind = wall.face_index();
+    auto fi = face_integral(integrand, wall.i_elem(), face_ind.i_dim, face_ind.is_positive);
     if (total.size() < fi.size())
     {
       total.resize(fi.size());
@@ -404,21 +405,21 @@ void Deformed_grid::visualize_surface(Tecplot_file& file, int n_sample)
   const int n_block {custom_math::pow(n_sample, n_dim - 1)};
   for (Deformed_elem_wall wall : walls)
   {
-    // wall.i_elem, wall.i_dim, wall.is_positive
-    std::vector<double> pos = get_pos(wall.i_elem);
+    auto fi = wall.face_index();
+    std::vector<double> pos = get_pos(wall.i_elem());
     Eigen::VectorXd interp_pos {n_block*n_dim};
     for (int i_dim = 0; i_dim < n_dim; ++i_dim)
     {
       Eigen::Map<Eigen::VectorXd> qpoint_pos (pos.data() + i_dim*n_qpoint, n_qpoint);
-      auto face {custom_math::dimension_matvec(boundary.row(wall.is_positive), qpoint_pos, wall.i_dim)};
+      auto face {custom_math::dimension_matvec(boundary.row(fi.is_positive), qpoint_pos, fi.i_dim)};
       interp_pos.segment(i_dim*n_block, n_block) = custom_math::hypercube_matvec(interp, face);
     }
-    double* state = element(wall.i_elem).stage(0);
+    double* state = element(wall.i_elem()).stage(0);
     Eigen::VectorXd interp_state {n_block*n_var};
     for (int i_var = 0; i_var < n_var; ++i_var)
     {
       Eigen::Map<Eigen::VectorXd> var (state + i_var*n_qpoint, n_qpoint);
-      auto face {custom_math::dimension_matvec(boundary.row(wall.is_positive), var, wall.i_dim)};
+      auto face {custom_math::dimension_matvec(boundary.row(fi.is_positive), var, fi.i_dim)};
       interp_state.segment(i_var*n_block, n_block) = custom_math::hypercube_matvec(interp, face);
     }
     Tecplot_file::Structured_block zone {file, n_sample, "face_interior", n_dim - 1};

@@ -23,10 +23,10 @@ void nonpen_convective(def_elem_wall_vec& walls, Basis& basis, Kernel_settings& 
   #pragma omp parallel for
   for (unsigned i_bc = 0; i_bc < walls.size(); ++i_bc)
   {
-    auto wall {walls[i_bc]};
-    const int i_dim = wall.i_dim;
-    int is_p = wall.is_positive;
-    Element& elem {*wall.element};
+    auto face_index {walls[i_bc].face_index()};
+    const int i_dim = face_index.i_dim;
+    int is_p = face_index.is_positive;
+    Element& elem {*face_index.element};
 
     double both_face [2][n_var][n_face_qpoint];
     double* dom_face = elem.face() + (i_dim*2 + is_p)*face_size;

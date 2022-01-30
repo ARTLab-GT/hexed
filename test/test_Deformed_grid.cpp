@@ -461,11 +461,11 @@ TEST_CASE("Deformed grid class")
     grid.add_wall(2, 0, 0);
     grid.add_wall(2, 0, 1);
     grid.add_wall(2, 1, 1);
-    REQUIRE(grid.def_elem_wall(1).element == &grid.deformed_element(2));
-    REQUIRE(grid.def_elem_wall(1).i_elem == 2);
-    REQUIRE(grid.def_elem_wall(1).i_dim == 0);
-    REQUIRE(grid.def_elem_wall(3).i_dim == 1);
-    REQUIRE(grid.def_elem_wall(2).is_positive == true);
+    REQUIRE(grid.def_elem_wall(1).face_index().element == &grid.deformed_element(2));
+    REQUIRE(grid.def_elem_wall(1).i_elem() == 2);
+    REQUIRE(grid.def_elem_wall(1).face_index().i_dim == 0);
+    REQUIRE(grid.def_elem_wall(3).face_index().i_dim == 1);
+    REQUIRE(grid.def_elem_wall(2).face_index().is_positive == true);
 
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {

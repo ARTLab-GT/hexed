@@ -58,6 +58,14 @@ class Deformed_face
   double jacobian(int i_dim, int j_dim, int i_qpoint);
 };
 
+class Face_index
+{
+  public:
+  Deformed_element* element;
+  int i_dim;
+  bool is_positive;
+};
+
 class Deformed_elem_con
 {
   public:
@@ -65,16 +73,23 @@ class Deformed_elem_con
   // Following two members designate which faces are participating in connection
   std::array<int, 2> i_dim;
   std::array<bool, 2> is_positive;
+  /*
+   * return `true` if the face normal direction defined by the face jacobian is the opposite
+   * of that defined by the jacobian of element `i_side`.
+   */
+  bool flip(bool i_side);
 };
 
 // Designates that a face of an element is participating in a wall boundary condition
 class Deformed_elem_wall
 {
+  Face_index f_ind;
+  int i_el;
+
   public:
-  Deformed_element* element;
-  int i_dim;
-  bool is_positive;
-  int i_elem;
+  Deformed_elem_wall(Face_index, int i_elem_arg);
+  Face_index face_index();
+  int i_elem();
 };
 
 typedef std::vector<std::unique_ptr<Deformed_element>> def_elem_vec;

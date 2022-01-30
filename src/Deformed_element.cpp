@@ -65,4 +65,18 @@ double Deformed_face::jacobian(int i_dim, int j_dim, int i_qpoint)
   return jac((i_dim*n_dim + j_dim)*n_fqpoint + i_qpoint);
 }
 
+Deformed_elem_wall::Deformed_elem_wall(Face_index face_ind, int i_elem_arg)
+: f_ind(face_ind), i_el(i_elem_arg)
+{}
+
+Face_index Deformed_elem_wall::face_index()
+{
+  return f_ind;
+}
+
+int Deformed_elem_wall::i_elem()
+{
+  return i_el;
+}
+
 }
