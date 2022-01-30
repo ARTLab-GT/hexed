@@ -35,7 +35,7 @@ void neighbor_deformed_convective(def_elem_con_vec& def_connections, Basis& basi
       }
     }
 
-    bool same_is_positive = (con.face_index(0).is_positive != con.face_index(1).is_positive);
+    bool same_is_positive = (con.face_index(0).is_positive == con.face_index(1).is_positive);
     bool same_dim = (con.face_index(0).i_dim == con.face_index(1).i_dim);
     bool expected_positive [] {1, 0};
     for (int i_side : {0, 1})
@@ -51,7 +51,7 @@ void neighbor_deformed_convective(def_elem_con_vec& def_connections, Basis& basi
     // FIXME: make this work in 3D
     if (!same_dim)
     {
-      if (same_is_positive)
+      if (!same_is_positive)
       {
         Eigen::Map<Eigen::Matrix<double, row_size, n_var*n_face_qpoint/row_size>> rows {face_r + face_size};
         rows.colwise().reverseInPlace();
