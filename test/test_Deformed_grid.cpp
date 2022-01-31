@@ -374,6 +374,23 @@ TEST_CASE("Deformed grid class")
         REQUIRE(lin_grid.connection(3).jacobian(0, 0, 0) == Approx(-0.5));
         REQUIRE(lin_grid.connection(3).jacobian(0, 0, 1) == Approx(-0.75));
       }
+      SECTION("2D")
+      {
+        cartdg::Deformed_grid lin_grid {4, 2, 0, 1., lin_basis};
+        lin_grid.add_element({0, 0, 0});
+        lin_grid.add_element({1, 1, 0});
+        lin_grid.connect({0, 1}, {0, 0}, {1, 0});
+        {
+          // make the qpoints align imperfectly to check that the Jacobian is properly averaged
+          auto& elem = lin_grid.deformed_element(0);
+          elem.node_adjustments()[(1*2 + 1)*elem.storage_params().n_qpoint()/2 + 1] = 0.1;
+        }
+        // connect different dimensions to verify qpoint ordering and axis permutation
+        lin_grid.calc_jacobian();
+        REQUIRE(lin_grid.connection(0).jacobian(0, 0, 0) == Approx(0.75));
+        REQUIRE(lin_grid.connection(0).jacobian(0, 1, 0) == Approx(-0.5 - 0.05/std::sqrt(2.)));
+        REQUIRE(lin_grid.connection(0).jacobian(0, 0, 1) == Approx(0.5 - 0.05*std::sqrt(2.)));
+      }
     }
   }
 
