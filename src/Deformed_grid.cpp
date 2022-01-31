@@ -200,7 +200,18 @@ void Deformed_grid::project_degenerate(int i_stage)
 void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
                             std::array<bool, 2> is_positive)
 {
-  // combine vertices
+  // create connection object
+  std::array<Face_index, 2> face_inds;
+  for (int i_side : {0, 1})
+  {
+    face_inds[i_side].element = elements[i_elem[i_side]].get();
+    face_inds[i_side].i_dim = i_dim[i_side];
+    face_inds[i_side].is_positive = is_positive[i_side];
+  }
+  elem_cons.emplace_back(face_inds);
+  Deformed_elem_con& con = elem_cons.back();
+
+  // get vertices involved
   std::array<std::vector<int>, 2> vertex_inds;
   std::array<int, 2> strides;
   for (int i_side : {0, 1})
@@ -216,39 +227,24 @@ void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
       }
     }
   }
-  if ((is_positive[0] != is_positive[1]) && (i_dim[0] != i_dim[1]))
-  {
-    if (n_dim == 3)
-    {
-      int stride = strides[0];
-      if (i_dim[0] < i_dim[1]) stride /= 2;
-      for (int i : {0, 1}) std::swap(vertex_inds[1][i*2/stride], vertex_inds[1][i*2/stride + stride]);
-    }
-    else
-    {
-      std::swap(vertex_inds[1][0], vertex_inds[1][1]);
+
+  // reorder as necessary
+  if (con.flip_tangential()) {
+    for (int i_vert = 0; i_vert < n_vertices/2; ++i_vert) {
+      // this arithmetic is equivalent to swapping vertices along dimension i_dim[0]
+      int coord = (vertex_inds[1][i_vert]/strides[0])%2;
+      vertex_inds[1][i_vert] += ((coord + 1)%2 - coord)*strides[0];
     }
   }
-  if ((i_dim[0] == 0 && i_dim[1] == 2) || (i_dim[0] == 2 && i_dim[1] == 0))
-  {
-    std::swap(vertex_inds[1][1], vertex_inds[1][2]);
-  }
+  if (con.transpose()) std::swap(vertex_inds[1][1], vertex_inds[1][2]);
+
+  // combine vertices
   for (int i_vertex = 0; i_vertex < n_vertices/2; ++i_vertex)
   {
     Vertex& vert0 = deformed_element(i_elem[0]).vertex(vertex_inds[0][i_vertex]);
     Vertex& vert1 = deformed_element(i_elem[1]).vertex(vertex_inds[1][i_vertex]);
     vert0.eat(vert1);
   }
-
-  // create connection object
-  std::array<Face_index, 2> face_inds;
-  for (int i_side : {0, 1})
-  {
-    face_inds[i_side].element = elements[i_elem[i_side]].get();
-    face_inds[i_side].i_dim = i_dim[i_side];
-    face_inds[i_side].is_positive = is_positive[i_side];
-  }
-  elem_cons.emplace_back(face_inds);
 }
 
 void Deformed_grid::purge_vertices()
