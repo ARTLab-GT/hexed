@@ -426,33 +426,16 @@ void Deformed_grid::visualize_surface(Tecplot_file& file, int n_sample)
 
 void Deformed_grid::calc_jacobian()
 {
-  // FIXME: make this a kernel
+  // compute jacobian of each element
   auto diff_mat = basis.diff_mat();
-  for (int i_elem = 0; i_elem < n_elem; ++i_elem)
-  {
+  for (int i_elem = 0; i_elem < n_elem; ++i_elem) {
     std::vector<double> elem_pos = get_pos(i_elem);
     double* jac = elements[i_elem]->jacobian();
-    for (int i_dim = 0, stride = n_qpoint/basis.row_size; i_dim < n_dim; ++i_dim, stride /= basis.row_size)
-    {
-      for (int i_outer = 0; i_outer < n_qpoint/(stride*basis.row_size); ++i_outer)
-      {
-        for (int i_inner = 0; i_inner < stride; ++i_inner)
-        {
-          for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-          {
-            Eigen::VectorXd row_pos (basis.row_size);
-            int row_start = i_outer*stride*basis.row_size + i_inner;
-            for (int i_qpoint = 0; i_qpoint < basis.row_size; ++i_qpoint)
-            {
-              row_pos(i_qpoint) = elem_pos[j_dim*n_qpoint + row_start + i_qpoint*stride];
-            }
-            auto row_jacobian = diff_mat*row_pos;
-            for (int i_qpoint = 0; i_qpoint < basis.row_size; ++i_qpoint)
-            {
-              jac[(j_dim*n_dim + i_dim)*n_qpoint + row_start + i_qpoint*stride] = row_jacobian(i_qpoint)/mesh_size;
-            }
-          }
-        }
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      Eigen::Map<Eigen::VectorXd> dim_pos (elem_pos.data() + i_dim*n_qpoint, n_qpoint);
+      for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+        Eigen::Map<Eigen::VectorXd> jac_entry (jac + (i_dim*n_dim + j_dim)*n_qpoint, n_qpoint);
+        jac_entry = custom_math::dimension_matvec(diff_mat, dim_pos, j_dim)/mesh_size;
       }
     }
   }
