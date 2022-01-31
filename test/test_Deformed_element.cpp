@@ -112,6 +112,13 @@ TEST_CASE("Deformed_elem_con")
   REQUIRE(con.face_index(0).element == &elem0);
   REQUIRE(con.face_index(0).i_dim == 2);
   REQUIRE(con.face_index(1).is_positive == 1);
+  REQUIRE(con.flip_normal(0));
+  REQUIRE(con.flip_normal(1));
+  fi0.is_positive = 1;
+  fi1.is_positive = 0;
+  cartdg::Deformed_elem_con con1 ({fi0, fi1});
+  REQUIRE(!con1.flip_normal(0));
+  REQUIRE(!con1.flip_normal(1));
 }
 
 TEST_CASE("Deformed_elem_wall")

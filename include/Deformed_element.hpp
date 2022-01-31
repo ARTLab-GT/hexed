@@ -67,19 +67,27 @@ class Face_index
   bool is_positive; // `true` if `i_dim`th reference coordinate is 1.0 at face (`false` if 0.0)
 };
 
-// represents a connection between two deformed elements
+/*
+ * Represents a connection between two deformed elements. Elements involved are identified by
+ * indices (`i_side`) 0 and 1, respectively. Reference coordinate axes on the surface are labeled
+ * to match those in element 0, and the normal axis is inverted if necessary so that the surface
+ * normal points from element 0 into element 1, as it would for Cartesian elements (which may
+ * result in a left-hand coordinate system). With the axes consistently labeled, the numerical
+ * value of the Jacobian matrix should be a compromise between those of each element (calculated
+ * elsewhere).
+ */
 class Deformed_elem_con
 {
   std::array<Face_index, 2> face_inds;
 
   public:
   Deformed_elem_con(std::array<Face_index, 2>);
-  Face_index face_index(int i_side);
+  Face_index face_index(int i_side); // obtain the face index of one of the elements. Valid args: 0, 1
   /*
-   * return `true` if the face normal direction defined by the face jacobian is the opposite
-   * of that defined by the jacobian of element `i_side`. Valid args: 0, 1
+   * return `true` if the normal vector defined for the face is the opposite
+   * of that defined for the element `i_side`. Valid args: 0, 1
    */
-  bool flip(int i_side);
+  bool flip_normal(int i_side);
 };
 
 // Designates that a face of an element is participating in a wall boundary condition

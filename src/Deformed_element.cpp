@@ -74,6 +74,11 @@ Face_index Deformed_elem_con::face_index(int i_side)
   return face_inds[i_side];
 }
 
+bool Deformed_elem_con::flip_normal(int i_side)
+{
+  return face_inds[i_side].is_positive == i_side;
+}
+
 Deformed_elem_wall::Deformed_elem_wall(Face_index face_ind, int i_elem_arg)
 : f_ind(face_ind), i_el(i_elem_arg)
 {}
