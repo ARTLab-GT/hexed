@@ -66,7 +66,7 @@ double Deformed_face::jacobian(int i_dim, int j_dim, int i_qpoint)
 }
 
 Deformed_elem_con::Deformed_elem_con(std::array<Face_index, 2> face_indices)
-: face_inds(face_indices)
+: Deformed_face(face_indices[0].element->storage_params()), face_inds(face_indices)
 {}
 
 Face_index Deformed_elem_con::face_index(int i_side)
@@ -94,7 +94,7 @@ bool Deformed_elem_con::transpose()
 }
 
 Deformed_elem_wall::Deformed_elem_wall(Face_index face_ind, int i_elem_arg)
-: f_ind(face_ind), i_el(i_elem_arg)
+: Deformed_face(face_ind.element->storage_params()), f_ind(face_ind), i_el(i_elem_arg)
 {}
 
 Face_index Deformed_elem_wall::face_index()

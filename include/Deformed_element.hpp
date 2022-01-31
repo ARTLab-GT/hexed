@@ -78,7 +78,7 @@ class Face_index
  * When member functions have an argument `int i_side`, this refers specifies which
  * of the two elements is of interest. Permissable values are 0 and 1.
  */
-class Deformed_elem_con
+class Deformed_elem_con : public Deformed_face
 {
   std::array<Face_index, 2> face_inds;
 
@@ -104,7 +104,7 @@ class Deformed_elem_con
 };
 
 // Designates that a face of an element is participating in a wall boundary condition
-class Deformed_elem_wall
+class Deformed_elem_wall : public Deformed_face
 {
   Face_index f_ind;
   int i_el;
