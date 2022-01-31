@@ -119,6 +119,37 @@ TEST_CASE("Deformed_elem_con")
   cartdg::Deformed_elem_con con1 ({fi0, fi1});
   REQUIRE(!con1.flip_normal(0));
   REQUIRE(!con1.flip_normal(1));
+  SECTION("flip_tangential")
+  {
+    fi0.i_dim = 0;
+    fi1.i_dim = 0;
+    {
+      cartdg::Deformed_elem_con con2 ({fi0, fi1});
+      REQUIRE(!con2.flip_tangential());
+    }
+    fi0.i_dim = 0;
+    fi1.i_dim = 1;
+    {
+      cartdg::Deformed_elem_con con2 ({fi0, fi1});
+      REQUIRE(con2.flip_tangential());
+    }
+    fi0.i_dim = 1;
+    fi1.i_dim = 0;
+    {
+      cartdg::Deformed_elem_con con2 ({fi0, fi1});
+      REQUIRE(con2.flip_tangential());
+    }
+    fi0.i_dim = 2;
+    {
+      cartdg::Deformed_elem_con con2 ({fi0, fi1});
+      REQUIRE(con2.flip_tangential());
+    }
+    fi1.is_positive = 1;
+    {
+      cartdg::Deformed_elem_con con2 ({fi0, fi1});
+      REQUIRE(!con2.flip_tangential());
+    }
+  }
 }
 
 TEST_CASE("Deformed_elem_wall")

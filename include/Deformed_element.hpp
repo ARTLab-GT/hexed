@@ -74,7 +74,8 @@ class Face_index
  * normal points from element 0 into element 1, as it would for Cartesian elements (which may
  * result in a left-hand coordinate system). With the axes consistently labeled, the numerical
  * value of the Jacobian matrix should be a compromise between those of each element (calculated
- * elsewhere).
+ * elsewhere). When member functions have an argument `int i_side`, this refers specifies which
+ * of the two elements is of interest. Permissable values are 0 and 1.
  */
 class Deformed_elem_con
 {
@@ -82,12 +83,17 @@ class Deformed_elem_con
 
   public:
   Deformed_elem_con(std::array<Face_index, 2>);
-  Face_index face_index(int i_side); // obtain the face index of one of the elements. Valid args: 0, 1
+  Face_index face_index(int i_side);
   /*
-   * return `true` if the normal vector defined for the face is the opposite
-   * of that defined for the element `i_side`. Valid args: 0, 1
+   * Answers the question: Is it necessary to flip the normal of element `i_side` so that it
+   * points from element 0 into element 1?
    */
   bool flip_normal(int i_side);
+  /*
+   * Answers the question: Is it neccesary to flip axis `face_index(0).i_dim` of element 1
+   * to match the coordinate systems?
+   */
+  bool flip_tangential();
 };
 
 // Designates that a face of an element is participating in a wall boundary condition

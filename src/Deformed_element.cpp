@@ -79,6 +79,14 @@ bool Deformed_elem_con::flip_normal(int i_side)
   return face_inds[i_side].is_positive == i_side;
 }
 
+bool Deformed_elem_con::flip_tangential()
+{
+  // if you're swapping two axes, you have to flip one of them to make a valid rotation. If you're not
+  // flipping a normal (or flipping both of them) then you have to flip a tangential
+  return (face_inds[0].i_dim != face_inds[1].i_dim)
+         && (flip_normal(0) == flip_normal(1));
+}
+
 Deformed_elem_wall::Deformed_elem_wall(Face_index face_ind, int i_elem_arg)
 : f_ind(face_ind), i_el(i_elem_arg)
 {}
