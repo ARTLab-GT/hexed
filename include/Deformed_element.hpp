@@ -74,7 +74,8 @@ class Face_index
  * normal points from element 0 into element 1, as it would for Cartesian elements (which may
  * result in a left-hand coordinate system). With the axes consistently labeled, the numerical
  * value of the Jacobian matrix should be a compromise between those of each element (calculated
- * elsewhere). When member functions have an argument `int i_side`, this refers specifies which
+ * elsewhere). The qpoint order should match element 0.
+ * When member functions have an argument `int i_side`, this refers specifies which
  * of the two elements is of interest. Permissable values are 0 and 1.
  */
 class Deformed_elem_con

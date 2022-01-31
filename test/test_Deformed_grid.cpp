@@ -335,6 +335,32 @@ TEST_CASE("Deformed grid class")
     REQUIRE(jac[2*27 + 26] == Approx(-0.2));
     REQUIRE(jac[7*27 + 26] == Approx(-0.2));
     REQUIRE(jac[8*27 + 26] == Approx( 0.8));
+
+    SECTION("interface synch")
+    {
+      cartdg::Gauss_lobatto lin_basis {2};
+      SECTION("3D")
+      {
+        cartdg::Deformed_grid lin_grid {5, 3, 0, 1., lin_basis};
+        lin_grid.add_element({0, 0, 0});
+        lin_grid.add_element({1, 0, 0});
+        lin_grid.connect({0, 1}, {0, 0}, {1, 0});
+        {
+          auto& elem = lin_grid.deformed_element(1);
+          elem.node_adjustments()[(2*2 + 0)*elem.storage_params().n_qpoint()/2 + 0] = 0.3;
+        }
+        lin_grid.add_element({0, 0, 0});
+        lin_grid.add_element({1, 1, 0});
+        lin_grid.connect({2, 3}, {0, 1}, {1, 0});
+        lin_grid.add_element({1, -1, 0});
+        lin_grid.add_element({0, 0, 0});
+        lin_grid.connect({4, 5}, {1, 0}, {1, 1});
+        lin_grid.add_element({0, 0, 0});
+        lin_grid.add_element({-1, 0, -1});
+        lin_grid.connect({6, 7}, {0, 2}, {1, 1});
+        lin_grid.calc_jacobian();
+      }
+    }
   }
 
   SECTION("vertex relaxation")
