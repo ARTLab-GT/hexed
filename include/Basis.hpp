@@ -26,7 +26,7 @@ class Basis
   virtual Eigen::VectorXd node_weights() = 0;
   // Differentiation matrix. `diff_mat(i, j)` is the derivative of interpolating polynomial `j` evaluated at `node(i)`.
   virtual Eigen::MatrixXd diff_mat() = 0;
-  // `boundary()(i, j)` is the `j`th basis polynomial evaluated at `i`. `i` must be in {0, 1}.
+  // `boundary()(i, j)` is the `j`th basis polynomial evaluated at `i` for `i` in {0, 1}.
   virtual Eigen::MatrixXd boundary() = 0;
   // `orthogonal(degree)(i)` is the Legendre (orthogonal) polynomial evaluated at `node(i)`. Polynomial is
   // scaled so that its norm is 1 with respect to the quadrature rule.

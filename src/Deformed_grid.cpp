@@ -439,6 +439,44 @@ void Deformed_grid::calc_jacobian()
       }
     }
   }
+
+  // compute jacobian at element interfaces & wall BCs
+  auto bound_mat = basis.boundary();
+  // compute 1 row at a time
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+    // compute the face jacobian of each element
+    int face_size = n_qpoint/basis.row_size;
+    for (int i_elem = 0; i_elem < n_elem; ++i_elem) {
+      for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+        auto& elem = deformed_element(i_elem);
+        Eigen::Map<Eigen::VectorXd> elem_jac (elem.jacobian() + (i_dim*n_dim + j_dim)*n_qpoint, n_qpoint);
+        for (int k_dim = 0; k_dim < n_dim; ++k_dim) {
+          Eigen::VectorXd faces = custom_math::dimension_matvec(bound_mat, elem_jac, k_dim); // extrapolate jacobian to faces
+          for (int i_side : {0, 1}) {
+            // use the element face storage to temporarily store one row of the extrapolated jacobian
+            // there is enough space because `n_var > n_dim`
+            Eigen::Map<Eigen::VectorXd> face_jac (elem.face() + ((2*k_dim + i_side)*n_var + j_dim)*face_size, face_size);
+            printf("%i %i %i\n", face_jac.size(), faces.size(), face_size);
+            Eigen::VectorXd foo = faces.segment(i_side*face_size, face_size);
+            face_jac = foo;
+            //face_jac = faces.segment(i_side*face_size, face_size);
+          }
+        }
+      }
+    }
+    // compute the shared face jacobian
+    for (Deformed_elem_con& con : elem_cons) {
+      double* shared_jac = con.jacobian();
+      double* elem_jac [2];
+      for (int i_side : {0, 1}) {
+        Face_index ind = con.face_index(i_side);
+        elem_jac[i_side] = ind.element->face() + (2*ind.i_dim + ind.is_positive)*n_var*face_size;
+      }
+      for (int i_data = 0; i_data < n_dim*face_size; ++i_data) {
+        shared_jac[i_data] = 0.5*(elem_jac[0][i_data] + elem_jac[1][i_data]); // take average of element face jacobians
+      }
+    }
+  }
 }
 
 std::string Deformed_grid::annotate(std::string file_name)
