@@ -94,6 +94,12 @@ class Deformed_elem_con
    * to match the coordinate systems?
    */
   bool flip_tangential();
+  /*
+   * Answers the question: Is it necessary to transpose the rows/columns of the face
+   * quadrature points of element 1 to match element 0? Only applicable to 3D, where some
+   * face combinations can create a row vs column major mismatch. If 2D, always returns `false`.
+   */
+  bool transpose();
 };
 
 // Designates that a face of an element is participating in a wall boundary condition

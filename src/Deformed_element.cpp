@@ -87,6 +87,12 @@ bool Deformed_elem_con::flip_tangential()
          && (flip_normal(0) == flip_normal(1));
 }
 
+bool Deformed_elem_con::transpose()
+{
+  return    ((face_inds[0].i_dim == 0) && (face_inds[1].i_dim == 2))
+         || ((face_inds[0].i_dim == 2) && (face_inds[1].i_dim == 0));
+}
+
 Deformed_elem_wall::Deformed_elem_wall(Face_index face_ind, int i_elem_arg)
 : f_ind(face_ind), i_el(i_elem_arg)
 {}
