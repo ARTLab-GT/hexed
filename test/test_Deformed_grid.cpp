@@ -346,9 +346,11 @@ TEST_CASE("Deformed grid class")
         lin_grid.add_element({1, 0, 0});
         lin_grid.connect({0, 1}, {0, 0}, {1, 0});
         {
+          // make the qpoints align imperfectly to check that the Jacobian is properly averaged
           auto& elem = lin_grid.deformed_element(1);
           elem.node_adjustments()[(2*2 + 0)*elem.storage_params().n_qpoint()/2 + 0] = 0.3;
         }
+        // connect different dimensions to verify qpoint ordering and axis permutation
         lin_grid.add_element({0, 0, 0});
         lin_grid.add_element({1, 1, 0});
         lin_grid.connect({2, 3}, {0, 1}, {1, 0});
@@ -357,8 +359,20 @@ TEST_CASE("Deformed grid class")
         lin_grid.connect({4, 5}, {1, 0}, {1, 1});
         lin_grid.add_element({0, 0, 0});
         lin_grid.add_element({-1, 0, -1});
-        lin_grid.connect({6, 7}, {0, 2}, {1, 1});
+        lin_grid.connect({6, 7}, {0, 2}, {0, 1});
         lin_grid.calc_jacobian();
+        REQUIRE(lin_grid.connection(0).jacobian(0, 0, 0) == Approx(1.));
+        REQUIRE(lin_grid.connection(0).jacobian(2, 1, 0) == Approx(-0.3/2.));
+        REQUIRE(lin_grid.connection(0).jacobian(2, 2, 0) == Approx(1. - 0.3/2.));
+        REQUIRE(lin_grid.connection(1).jacobian(0, 0, 0) == Approx(0.75));
+        REQUIRE(lin_grid.connection(1).jacobian(0, 0, 2) == Approx(0.5));
+        REQUIRE(lin_grid.connection(1).jacobian(0, 1, 2) == Approx(-0.5));
+        REQUIRE(lin_grid.connection(1).jacobian(1, 1, 2) == Approx(0.5));
+        REQUIRE(lin_grid.connection(2).jacobian(0, 0, 0) == Approx(0.5));
+        REQUIRE(lin_grid.connection(2).jacobian(0, 1, 0) == Approx(-0.5));
+        REQUIRE(lin_grid.connection(2).jacobian(2, 2, 0) == Approx(1.));
+        REQUIRE(lin_grid.connection(3).jacobian(0, 0, 0) == Approx(-0.5));
+        REQUIRE(lin_grid.connection(3).jacobian(0, 0, 1) == Approx(-0.75));
       }
     }
   }
