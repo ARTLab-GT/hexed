@@ -392,6 +392,19 @@ TEST_CASE("Deformed grid class")
         REQUIRE(lin_grid.connection(0).jacobian(0, 0, 1) == Approx(0.5 - 0.5*0.05));
       }
     }
+    SECTION("wall synch")
+    {
+      SECTION("3D")
+      {
+        grid3.add_element({0, 0, 0});
+        grid3.add_wall(0, 1, 1);
+        grid3.deformed_element(0).vertex(3).pos[1] -= 0.05;
+        grid3.calc_jacobian();
+        REQUIRE(grid3.def_elem_wall(0).jacobian(0, 0, 0) == Approx(1.));
+        REQUIRE(grid3.def_elem_wall(0).jacobian(1, 2, 0) == Approx(-0.25));
+        REQUIRE(grid3.def_elem_wall(0).jacobian(0, 0, 1) == Approx(0.75));
+      }
+    }
   }
 
   SECTION("vertex relaxation")
