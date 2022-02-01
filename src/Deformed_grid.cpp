@@ -503,6 +503,14 @@ void Deformed_grid::calc_jacobian()
           shared_jac[(i_dim*n_dim + col)*face_size + i_qpoint] += 0.5*normal_sign[1]*tangential_sign*elem_jac[1][i_qpoint];
         }
       }
+      // compute wall jacobian
+      for (Deformed_elem_wall& wall : walls) {
+        auto ind = wall.face_index();
+        double* elem_jac = deformed_element(wall.i_elem()).face() + (2*ind.i_dim + ind.is_positive)*n_var*face_size;
+        for (int i_qpoint = 0; i_qpoint < face_size; ++i_qpoint) {
+          wall.jacobian()[(i_dim*n_dim + j_dim)*face_size + i_qpoint] = elem_jac[i_qpoint];
+        }
+      }
     }
   }
 }

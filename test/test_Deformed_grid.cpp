@@ -396,13 +396,15 @@ TEST_CASE("Deformed grid class")
     {
       SECTION("3D")
       {
-        grid3.add_element({0, 0, 0});
-        grid3.add_wall(0, 1, 1);
-        grid3.deformed_element(0).vertex(3).pos[1] -= 0.05;
-        grid3.calc_jacobian();
-        REQUIRE(grid3.def_elem_wall(0).jacobian(0, 0, 0) == Approx(1.));
-        REQUIRE(grid3.def_elem_wall(0).jacobian(1, 2, 0) == Approx(-0.25));
-        REQUIRE(grid3.def_elem_wall(0).jacobian(0, 0, 1) == Approx(0.75));
+        cartdg::Deformed_grid grid (1, 3, 0, 0.2, basis);
+        grid.add_element({0, 0, 0});
+        grid.add_wall(0, 1, 1);
+        grid.deformed_element(0).vertex(3).pos[1] -= 0.05;
+        grid.calc_jacobian();
+        REQUIRE(grid.def_elem_wall(0).jacobian(0, 0, 0) == Approx(1.));
+        REQUIRE(grid.def_elem_wall(0).jacobian(1, 2, 0) == Approx(-0.25));
+        REQUIRE(grid.def_elem_wall(0).jacobian(1, 1, row_size - 1) == Approx(0.75));
+        REQUIRE(grid.def_elem_wall(0).jacobian(0, 0, row_size - 1) == Approx(1.));
       }
     }
   }
