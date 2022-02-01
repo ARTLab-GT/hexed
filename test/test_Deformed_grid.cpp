@@ -372,7 +372,7 @@ TEST_CASE("Deformed grid class")
         REQUIRE(lin_grid.connection(2).jacobian(0, 1, 0) == Approx(-0.5));
         REQUIRE(lin_grid.connection(2).jacobian(2, 2, 0) == Approx(1.));
         REQUIRE(lin_grid.connection(3).jacobian(0, 0, 0) == Approx(-0.5));
-        REQUIRE(lin_grid.connection(3).jacobian(0, 0, 1) == Approx(-0.75));
+        REQUIRE(lin_grid.connection(3).jacobian(0, 0, 1) == Approx(-1.));
       }
       SECTION("2D")
       {

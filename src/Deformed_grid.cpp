@@ -475,6 +475,10 @@ void Deformed_grid::calc_jacobian()
           elem_jac[i_side] = ind.element->face() + (2*ind.i_dim + ind.is_positive)*n_var*face_size;
           normal_sign[i_side] = ((j_dim == ind.i_dim) && (con.flip_normal(i_side))) ? -1 : 1;
         }
+        if (con.transpose()) { // already implies n_dim == 3
+          Eigen::Map<Eigen::MatrixXd> face (elem_jac[1], row_size, row_size);
+          face.transposeInPlace();
+        }
         if (con.flip_tangential()) {
           int free_dim = n_dim*(n_dim - 1)/2 - dim0 - dim1; // which dimension is not involved in the connection?
           int stride = ((n_dim == 3) && (dim1 < free_dim)) ? row_size : 1; // along what stride do we need to reverse the elements?
