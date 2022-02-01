@@ -468,7 +468,8 @@ void Deformed_grid::calc_jacobian()
           elem_jac[i_side] = ind.element->face() + (2*ind.i_dim + ind.is_positive)*n_var*face_size;
         }
         for (int i_qpoint = 0; i_qpoint < face_size; ++i_qpoint) {
-          shared_jac[i_qpoint] = 0.5*(elem_jac[0][i_qpoint] + elem_jac[1][i_qpoint]); // take average of element face jacobians
+          shared_jac[(i_dim*n_dim + j_dim)*face_size + i_qpoint]
+            = 0.5*(elem_jac[0][i_qpoint] + elem_jac[1][i_qpoint]); // take average of element face jacobians
         }
       }
     }
