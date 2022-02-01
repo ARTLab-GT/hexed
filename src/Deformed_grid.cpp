@@ -11,6 +11,8 @@
 #include <get_req_visc_deformed_convective.hpp>
 #include <math.hpp>
 
+#include <iostream>
+
 namespace cartdg
 {
 
@@ -441,21 +443,25 @@ void Deformed_grid::calc_jacobian()
   }
 
   // compute jacobian at element interfaces & wall BCs
+  int row_size = basis.row_size;
+  int face_size = n_qpoint/row_size;
+  for (Deformed_elem_con& con : elem_cons) {
+    double* jac = con.jacobian();
+    for (int i_data = 0; i_data < n_dim*n_dim*face_size; ++i_data) jac[i_data] = 0.;
+  }
   auto bound_mat = basis.boundary();
   // compute 1 entry at a time
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
       // compute the face jacobian of each element
-      int face_size = n_qpoint/basis.row_size;
       for (int i_elem = 0; i_elem < n_elem; ++i_elem) {
         auto& elem = deformed_element(i_elem);
         Eigen::Map<Eigen::VectorXd> elem_jac (elem.jacobian() + (i_dim*n_dim + j_dim)*n_qpoint, n_qpoint);
         for (int k_dim = 0; k_dim < n_dim; ++k_dim) {
-          Eigen::VectorXd faces = custom_math::dimension_matvec(bound_mat, elem_jac, k_dim); // extrapolate jacobian to faces
           for (int i_side : {0, 1}) {
             // use the element face storage to temporarily store one entry of the extrapolated jacobian
             Eigen::Map<Eigen::VectorXd> face_jac (elem.face() + (2*k_dim + i_side)*n_var*face_size, face_size);
-            face_jac = faces.segment(i_side*face_size, face_size);
+            face_jac = custom_math::dimension_matvec(bound_mat.row(i_side), elem_jac, k_dim); // extrapolate jacobian to faces
           }
         }
       }
@@ -463,13 +469,28 @@ void Deformed_grid::calc_jacobian()
       for (Deformed_elem_con& con : elem_cons) {
         double* shared_jac = con.jacobian();
         double* elem_jac [2];
+        int dim0 = con.face_index(0).i_dim;
+        int dim1 = con.face_index(1).i_dim;
         for (int i_side : {0, 1}) {
           Face_index ind = con.face_index(i_side);
           elem_jac[i_side] = ind.element->face() + (2*ind.i_dim + ind.is_positive)*n_var*face_size;
         }
+        if (con.flip_tangential()) {
+          int free_dim = n_dim*(n_dim - 1)/2 - dim0 - dim1; // which dimension is not involved in the connection?
+          int stride = ((n_dim == 3) && (dim1 < free_dim)) ? row_size : 1; // along what stride do we need to reverse the elements?
+          for (int i_row = 0; i_row < face_size/row_size; ++i_row) {
+            Eigen::Map<Eigen::VectorXd, 0, Eigen::InnerStride<>> row (elem_jac[1] + i_row*row_size/stride, row_size, Eigen::InnerStride<>(stride));
+            row.reverseInPlace();
+          }
+        }
         for (int i_qpoint = 0; i_qpoint < face_size; ++i_qpoint) {
-          shared_jac[(i_dim*n_dim + j_dim)*face_size + i_qpoint]
-            = 0.5*(elem_jac[0][i_qpoint] + elem_jac[1][i_qpoint]); // take average of element face jacobians
+          // take average of element face jacobians with appropriate axis permutations
+          shared_jac[(i_dim*n_dim + j_dim)*face_size + i_qpoint] += 0.5*elem_jac[0][i_qpoint];
+          int col = j_dim;
+          // swap dim0 and dim1
+          if      (col == dim0) col = dim1;
+          else if (col == dim1) col = dim0;
+          shared_jac[(i_dim*n_dim + col)*face_size + i_qpoint] += 0.5*elem_jac[1][i_qpoint];
         }
       }
     }
