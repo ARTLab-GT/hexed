@@ -11,8 +11,6 @@
 #include <get_req_visc_deformed_convective.hpp>
 #include <math.hpp>
 
-#include <iostream>
-
 namespace cartdg
 {
 
@@ -469,11 +467,13 @@ void Deformed_grid::calc_jacobian()
       for (Deformed_elem_con& con : elem_cons) {
         double* shared_jac = con.jacobian();
         double* elem_jac [2];
+        int normal_sign [2]; // record any sign change due to normal flipping
         int dim0 = con.face_index(0).i_dim;
         int dim1 = con.face_index(1).i_dim;
         for (int i_side : {0, 1}) {
           Face_index ind = con.face_index(i_side);
           elem_jac[i_side] = ind.element->face() + (2*ind.i_dim + ind.is_positive)*n_var*face_size;
+          normal_sign[i_side] = ((j_dim == ind.i_dim) && (con.flip_normal(i_side))) ? -1 : 1;
         }
         if (con.flip_tangential()) {
           int free_dim = n_dim*(n_dim - 1)/2 - dim0 - dim1; // which dimension is not involved in the connection?
@@ -485,12 +485,18 @@ void Deformed_grid::calc_jacobian()
         }
         for (int i_qpoint = 0; i_qpoint < face_size; ++i_qpoint) {
           // take average of element face jacobians with appropriate axis permutations
-          shared_jac[(i_dim*n_dim + j_dim)*face_size + i_qpoint] += 0.5*elem_jac[0][i_qpoint];
           int col = j_dim;
+          int tangential_sign = 1;
           // swap dim0 and dim1
-          if      (col == dim0) col = dim1;
-          else if (col == dim1) col = dim0;
-          shared_jac[(i_dim*n_dim + col)*face_size + i_qpoint] += 0.5*elem_jac[1][i_qpoint];
+          if (j_dim == dim1) {
+            col = dim0;
+          }
+          if (j_dim == dim0) {
+            col = dim1;
+            if (con.flip_tangential()) tangential_sign = -1;
+          }
+          shared_jac[(i_dim*n_dim + j_dim)*face_size + i_qpoint] += 0.5*normal_sign[0]*elem_jac[0][i_qpoint];
+          shared_jac[(i_dim*n_dim + col)*face_size + i_qpoint] += 0.5*normal_sign[1]*tangential_sign*elem_jac[1][i_qpoint];
         }
       }
     }

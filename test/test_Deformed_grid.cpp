@@ -388,8 +388,8 @@ TEST_CASE("Deformed grid class")
         // connect different dimensions to verify qpoint ordering and axis permutation
         lin_grid.calc_jacobian();
         REQUIRE(lin_grid.connection(0).jacobian(0, 0, 0) == Approx(1.));
-        REQUIRE(lin_grid.connection(0).jacobian(0, 1, 0) == Approx(-0.5 - 0.05/std::sqrt(2.)));
-        REQUIRE(lin_grid.connection(0).jacobian(0, 0, 1) == Approx(0.5 - 0.05*std::sqrt(2.)));
+        REQUIRE(lin_grid.connection(0).jacobian(0, 1, 0) == Approx(-0.5*1.05));
+        REQUIRE(lin_grid.connection(0).jacobian(0, 0, 1) == Approx(0.5 - 0.5*0.05));
       }
     }
   }
