@@ -86,7 +86,7 @@ void neighbor_deformed_convective(def_elem_con_vec& def_connections, Basis& basi
         }
       }
       jac.col(con.face_index(0).i_dim) = orth.col(con.face_index(0).i_dim);
-      double det = jac.determinant();
+      double det = std::abs(jac.determinant()); // `abs` since surface coordinates not guaranteed to be right-hand
       for (int i_var = 0; i_var < 2*n_var; ++i_var) face_w[i_var*n_face_qpoint + i_qpoint] *= det;
     }
 
