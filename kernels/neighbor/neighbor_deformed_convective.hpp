@@ -29,8 +29,7 @@ void neighbor_deformed_convective(def_elem_con_vec& def_connections, Basis& basi
     for (int i_side : {0, 1}) {
       Face_index ind = con.face_index(i_side);
       double* read = ind.element->face() + (ind.i_dim*2 + ind.is_positive)*face_size;
-      for (int i_face_dof = 0; i_face_dof < face_size; ++i_face_dof)
-      {
+      for (int i_face_dof = 0; i_face_dof < face_size; ++i_face_dof) {
         face_r[i_side*face_size + i_face_dof] = read[i_face_dof];
       }
     }
