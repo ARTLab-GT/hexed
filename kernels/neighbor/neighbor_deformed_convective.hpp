@@ -37,28 +37,10 @@ void neighbor_deformed_convective(def_elem_con_vec& def_connections, Basis& basi
       }
     }
 
-    // flip normals
-    for (int i_side : {0, 1}) {
-      if (con.flip_normal(i_side)) {
-        for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
-          face_r[face_size*i_side + con.face_index(i_side).i_dim*n_face_qpoint + i_qpoint] *= -1;
-        }
-      }
-    }
-    // flip/reverse tangential dimension
+    // reverse tangential dimension
     if (con.flip_tangential()) {
       Eigen::Map<Eigen::Matrix<double, row_size, n_var*n_face_qpoint/row_size>> rows {face_r + face_size};
       rows.colwise().reverseInPlace();
-      for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
-        face_r[face_size + con.face_index(0).i_dim*n_face_qpoint + i_qpoint] *= -1;
-      }
-    }
-    // swap dimensions
-    if (con.face_index(0).i_dim != con.face_index(1).i_dim) {
-      for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
-        std::swap(face_r[face_size + con.face_index(0).i_dim*n_face_qpoint + i_qpoint],
-                  face_r[face_size + con.face_index(1).i_dim*n_face_qpoint + i_qpoint]);
-      }
     }
 
     // rotate momentum into suface-based coordinates
@@ -108,30 +90,17 @@ void neighbor_deformed_convective(def_elem_con_vec& def_connections, Basis& basi
       for (int i_var = 0; i_var < 2*n_var; ++i_var) face_w[i_var*n_face_qpoint + i_qpoint] *= det;
     }
 
-    // re-swap dimensions
-    if (con.face_index(0).i_dim != con.face_index(1).i_dim) {
-      for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
-        std::swap(face_w[face_size + con.face_index(0).i_dim*n_face_qpoint + i_qpoint],
-                  face_w[face_size + con.face_index(1).i_dim*n_face_qpoint + i_qpoint]);
-      }
-    }
-    // re-flip/reverse tangential dimension
+    // re-reverse tangential dimension
     if (con.flip_tangential()) {
       Eigen::Map<Eigen::Matrix<double, row_size, n_var*n_face_qpoint/row_size>> rows {face_w + face_size};
       rows.colwise().reverseInPlace();
-      for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
-        face_w[face_size + con.face_index(0).i_dim*n_face_qpoint + i_qpoint] *= -1;
-      }
     }
     // re-flip normal
     for (int i_side : {0, 1}) {
-      Face_index ind = con.face_index(i_side);
       if (con.flip_normal(i_side)) {
         for (int i_var = 0; i_var < n_var; ++i_var) {
-          if (i_var != ind.i_dim) {
-            for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
-              face_w[face_size*i_side + i_var*n_face_qpoint + i_qpoint] *= -1;
-            }
+          for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
+            face_w[face_size*i_side + i_var*n_face_qpoint + i_qpoint] *= -1;
           }
         }
       }
