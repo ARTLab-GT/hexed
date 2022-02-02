@@ -38,16 +38,13 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
     double flux [n_dim][n_var][n_qpoint];
 
     // Initialize updated solution to be equal to current solution
-    for (int i_dof = 0; i_dof < n_qpoint*n_var; ++i_dof)
-    {
+    for (int i_dof = 0; i_dof < n_qpoint*n_var; ++i_dof) {
       write[i_dof] = read[i_dof];
     }
 
     // precompute flux
-    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
-    {
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-      {
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
         #define READ(i) read[(i)*n_qpoint + i_qpoint]
         #define FLUX(i) flux[i_dim][i][i_qpoint]
         double veloc = READ(i_dim)/READ(n_var - 2);
@@ -79,73 +76,59 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
         {
           // compute flux derivative
           Eigen::Matrix<double, row_size, n_dim*n_var> row_f;
-          for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-          {
-            for (int i_var = 0; i_var < n_var; ++i_var)
-            {
-              for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
-              {
+          for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+            for (int i_var = 0; i_var < n_var; ++i_var) {
+              for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
                 row_f(i_qpoint, j_dim*n_var + i_var) = flux[j_dim][i_var][i_outer*stride*row_size + i_inner + i_qpoint*stride];
               }
             }
           }
           Eigen::Matrix<double, row_size, n_dim*n_var> d_flux {-diff_mat*row_f};
-          Eigen::Matrix<double, row_size, n_var> row_w;
-          Eigen::Array<double, row_size, 1> jac_det;
-          for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
-          {
-            Eigen::Matrix<double, n_dim, n_dim> jac;
-            for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-            {
-              for (int k_dim = 0; k_dim < n_dim; ++k_dim)
-              {
-                jac(j_dim, k_dim) = jacobian[(j_dim*n_dim + k_dim)*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
+
+          // fetch jacobian
+          Eigen::Matrix<double, row_size, n_dim*n_dim> row_jac; // Jacobian entries in column-major order
+          for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+            for (int k_dim = 0; k_dim < n_dim; ++k_dim) {
+              for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+                // fetch from row-major element storage
+                row_jac(i_qpoint, j_dim + n_dim*k_dim) = jacobian[(j_dim*n_dim + k_dim)*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
               }
             }
+          }
+          // transform flux to reference space & compute Jacobian det
+          Eigen::Matrix<double, row_size, n_var> row_w;
+          Eigen::Array<double, row_size, 1> jac_det;
+          for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+            // fetch qpoint Jacobian
+            Eigen::Matrix<double, n_dim, n_dim> jac;
+            for (int i_jac = 0; i_jac < n_dim*n_dim; ++i_jac) jac(i_jac) = row_jac(i_qpoint, i_jac);
+            // compute determinant
             jac_det(i_qpoint) = jac.determinant();
-            for (int i_var = 0; i_var < n_var; ++i_var)
-            {
-              for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-              {
+            // compute reference flux derivative
+            for (int i_var = 0; i_var < n_var; ++i_var) {
+              for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
                 jac(j_dim, i_dim) = d_flux(i_qpoint, j_dim*n_var + i_var);
               }
               row_w(i_qpoint, i_var) = jac.determinant();
             }
           }
 
+          // fetch numerical flux at faces
           Eigen::Matrix<double, n_var, 2> boundary_values;
-          for (int i_var = 0; i_var < n_var; ++i_var)
-          {
+          for (int i_var = 0; i_var < n_var; ++i_var) {
             const int face_offset = i_var*n_qpoint/row_size + i_face_qpoint;
             boundary_values(i_var, 0) = face0[face_offset];
             boundary_values(i_var, 1) = face1[face_offset];
           }
-          Eigen::Matrix<double, row_size, n_dim*n_dim> row_j;
-          for (int i_jac = 0; i_jac < n_dim*n_dim; ++i_jac)
-          {
-            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
-            {
-              row_j(i_qpoint, i_jac) = jacobian[i_jac*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
-            }
-          }
-          Eigen::Matrix<double, 2, n_dim*n_dim> face_jac;
-          face_jac.noalias() = boundary*row_j;
+          // extrapolate (reference) flux to boundaries
+          Eigen::Matrix<double, 2, n_dim*n_dim> extrap_jac {boundary*row_jac};
           Eigen::Matrix<double, 2, n_dim*n_var> extrap_flux {boundary*row_f};
-          for (int i_side : {0, 1})
-          {
+          for (int i_side : {0, 1}) {
             Eigen::Matrix<double, n_dim, n_dim> jac;
-            for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-            {
-              for (int k_dim = 0; k_dim < n_dim; ++k_dim)
-              {
-                jac(j_dim, k_dim) = face_jac(i_side, j_dim*n_dim + k_dim);
-              }
-            }
+            for (int i_jac = 0; i_jac < n_dim*n_dim; ++i_jac) jac(i_jac) = extrap_jac(i_side, i_jac);
             Eigen::Matrix<double, n_var, 1> normal_flux;
-            for (int i_var = 0; i_var < n_var; ++i_var)
-            {
-              for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-              {
+            for (int i_var = 0; i_var < n_var; ++i_var) {
+              for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
                 jac(j_dim, i_dim) = extrap_flux(i_side, j_dim*n_var + i_var);
               }
               normal_flux(i_var) = jac.determinant();
@@ -154,12 +137,10 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
           }
 
           // Write updated solution
-          for (int i_var = 0; i_var < n_var; ++i_var)
-          {
+          for (int i_var = 0; i_var < n_var; ++i_var) {
             row_w.col(i_var).noalias() += lift*boundary_values.row(i_var).transpose();
             row_w.col(i_var).array() /= jac_det;
-            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
-            {
+            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
                write[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride]
                += row_w(i_qpoint, i_var)*d_t_by_d_pos;
             }
