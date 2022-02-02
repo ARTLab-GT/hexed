@@ -4,13 +4,13 @@
 #include <Kernel_settings.hpp>
 #include <Basis.hpp>
 #include <Element.hpp>
+#include <Deformed_element.hpp>
 
 namespace cartdg
 {
 
-// AUTOGENERATE LOOKUP BENCHMARK(cartesian, 3)
-template<int n_var, int n_qpoint, int row_size>
-void write_face(elem_vec& elements, Basis& basis, Kernel_settings& settings)
+template<typename elem_vec_t, int n_var, int n_qpoint, int row_size>
+void write_face_general(elem_vec_t& elements, Basis& basis, Kernel_settings& settings)
 {
   const Eigen::Matrix<double, 2, row_size> boundary {basis.boundary()};
   const int i_read {settings.i_read};
@@ -22,8 +22,7 @@ void write_face(elem_vec& elements, Basis& basis, Kernel_settings& settings)
   {
     double* read  = elements[i_elem]->stage(i_read);
     double* face {elements[i_elem]->face()};
-    for (int stride = n_qpoint/row_size, n_rows = 1, i_dim = 0;
-         n_rows < n_qpoint;
+    for (int stride = n_qpoint/row_size, n_rows = 1, i_dim = 0; n_rows < n_qpoint;
          stride /= row_size, n_rows *= row_size, ++i_dim)
     {
       int i_face_qpoint {0};
@@ -31,17 +30,14 @@ void write_face(elem_vec& elements, Basis& basis, Kernel_settings& settings)
       {
         for (int i_inner = 0; i_inner < stride; ++i_inner)
         {
-          for (int i_var = 0; i_var < n_var; ++i_var)
-          {
+          for (int i_var = 0; i_var < n_var; ++i_var) {
             Eigen::Matrix<double, row_size, 1> row_r;
-            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
-            {
+            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
               row_r[i_qpoint] = read[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
             }
             Eigen::Matrix<double, 2, 1> face_vals;
             face_vals.noalias() = boundary*row_r;
-            for (int is_positive : {0, 1})
-            {
+            for (int is_positive : {0, 1}) {
               face[(i_dim*2 + is_positive)*n_face_dof + i_var*n_face_qpoint + i_face_qpoint] = face_vals[is_positive];
             }
           }
@@ -50,6 +46,20 @@ void write_face(elem_vec& elements, Basis& basis, Kernel_settings& settings)
       }
     }
   }
+}
+
+// AUTOGENERATE LOOKUP BENCHMARK(cartesian, 3)
+template<int n_var, int n_qpoint, int row_size>
+void write_face(elem_vec& elements, Basis& basis, Kernel_settings& settings)
+{
+  write_face_general<elem_vec, n_var, n_qpoint, row_size>(elements, basis, settings);
+}
+
+// AUTOGENERATE LOOKUP BENCHMARK(deformed, 3)
+template<int n_var, int n_qpoint, int row_size>
+void write_face_deformed(def_elem_vec& def_elements, Basis& basis, Kernel_settings& settings)
+{
+  write_face_general<def_elem_vec, n_var, n_qpoint, row_size>(def_elements, basis, settings);
 }
 
 }
