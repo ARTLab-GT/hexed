@@ -27,36 +27,48 @@ void neighbor_deformed_convective(def_elem_con_vec& def_connections, Basis& basi
     double face_w [2*face_size];
     Deformed_elem_con con = def_connections[i_con];
     double* jacobian = con.jacobian();
+    double* elem_face [2];
+    for (int i_side : {0, 1}) {
+      Face_index ind = con.face_index(i_side);
+      elem_face[i_side] = ind.element->face() + (ind.i_dim*2 + ind.is_positive)*face_size;
+    }
+    int i_dim = con.face_index(0).i_dim; // which dimension is the face normal in face coords
+
+    // compute coordinate transformation and (surface) Jacobian determinant
+    Eigen::Matrix<double, n_dim, n_dim> orthonormal [n_face_qpoint];
+    double jac_det [n_face_qpoint];
+    for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
+      Eigen::Matrix<double, n_dim, n_dim> jac;
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+          jac(i_dim, j_dim) = jacobian[(i_dim*n_dim + j_dim)*n_face_qpoint + i_qpoint];
+        }
+      }
+      orthonormal[i_qpoint] = custom_math::orthonormal(jac, con.face_index(0).i_dim);
+      jac.col(i_dim) = orthonormal[i_qpoint].col(i_dim);
+      jac_det[i_qpoint] = std::abs(jac.determinant()); // `abs` since surface coordinates not guaranteed to be right-hand
+    }
 
     // fetch face state from element storage
     for (int i_side : {0, 1}) {
-      Face_index ind = con.face_index(i_side);
-      double* read = ind.element->face() + (ind.i_dim*2 + ind.is_positive)*face_size;
       for (int i_face_dof = 0; i_face_dof < face_size; ++i_face_dof) {
-        face_r[i_side*face_size + i_face_dof] = read[i_face_dof];
+        face_r[i_side*face_size + i_face_dof] = elem_face[i_side][i_face_dof];
       }
     }
-
     // reverse tangential dimension
     if (con.flip_tangential()) {
       Eigen::Map<Eigen::Matrix<double, row_size, n_var*n_face_qpoint/row_size>> rows {face_r + face_size};
       rows.colwise().reverseInPlace();
     }
-
-    // rotate momentum into suface-based coordinates
+    // rotate momentum into surface coordinates
     for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
-      Eigen::Matrix<double, n_dim, n_dim> jac;
       Eigen::Matrix<double, n_dim, 2> momentum;
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-          jac(i_dim, j_dim) = jacobian[(i_dim*n_dim + j_dim)*n_face_qpoint + i_qpoint];
-        }
-        for (int i_side : {0, 1}) {
+      for (int i_side : {0, 1}) {
+        for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
           momentum(i_dim, i_side) = face_r[i_side*face_size + i_dim*n_face_qpoint + i_qpoint];
         }
       }
-      auto orth = custom_math::orthonormal(jac, con.face_index(0).i_dim);
-      momentum = orth.transpose()*momentum;
+      momentum = orthonormal[i_qpoint].transpose()*momentum;
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
         for (int i_side : {0, 1}) {
           face_r[i_side*face_size + i_dim*n_face_qpoint + i_qpoint] = momentum(i_dim, i_side);
@@ -64,32 +76,30 @@ void neighbor_deformed_convective(def_elem_con_vec& def_connections, Basis& basi
       }
     }
 
-    hll_cpg_euler<n_var - 2, n_face_qpoint>(face_r, face_w, 1., con.face_index(0).i_dim, heat_rat);
+    // compute upwind flux
+    hll_cpg_euler<n_var - 2, n_face_qpoint>(face_r, face_w, 1., i_dim, heat_rat);
 
     // rotate momentum back into physical coordinates
     for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
-      Eigen::Matrix<double, n_dim, n_dim> jac;
       Eigen::Matrix<double, n_dim, 2> momentum;
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-          jac(i_dim, j_dim) = jacobian[(i_dim*n_dim + j_dim)*n_face_qpoint + i_qpoint];
-        }
-        for (int i_side : {0, 1}) {
+      for (int i_side : {0, 1}) {
+        for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
           momentum(i_dim, i_side) = face_w[i_side*face_size + i_dim*n_face_qpoint + i_qpoint];
         }
       }
-      auto orth = custom_math::orthonormal(jac, con.face_index(0).i_dim);
-      momentum = orth*momentum;
+      momentum = orthonormal[i_qpoint]*momentum;
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
         for (int i_side : {0, 1}) {
           face_w[i_side*face_size + i_dim*n_face_qpoint + i_qpoint] = momentum(i_dim, i_side);
         }
       }
-      jac.col(con.face_index(0).i_dim) = orth.col(con.face_index(0).i_dim);
-      double det = std::abs(jac.determinant()); // `abs` since surface coordinates not guaranteed to be right-hand
-      for (int i_var = 0; i_var < 2*n_var; ++i_var) face_w[i_var*n_face_qpoint + i_qpoint] *= det;
     }
-
+    // multiply flux by Jacobian determinant. `2*i_var` to cover both sides
+    for (int i_var = 0; i_var < 2*n_var; ++i_var) {
+      for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
+        face_w[i_var*n_face_qpoint + i_qpoint] *= jac_det[i_qpoint];
+      }
+    }
     // re-reverse tangential dimension
     if (con.flip_tangential()) {
       Eigen::Map<Eigen::Matrix<double, row_size, n_var*n_face_qpoint/row_size>> rows {face_w + face_size};
@@ -105,13 +115,10 @@ void neighbor_deformed_convective(def_elem_con_vec& def_connections, Basis& basi
         }
       }
     }
-
     // write numerical flux to element storage
     for (int i_side : {0, 1}) {
-      Face_index ind = con.face_index(i_side);
-      double* write = ind.element->face() + (ind.i_dim*2 + ind.is_positive)*face_size;
       for (int i_face_dof = 0; i_face_dof < face_size; ++i_face_dof) {
-        write[i_face_dof] = face_w[i_side*face_size + i_face_dof];
+        elem_face[i_side][i_face_dof] = face_w[i_side*face_size + i_face_dof];
       }
     }
   }
