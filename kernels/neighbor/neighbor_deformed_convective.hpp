@@ -61,7 +61,6 @@ void neighbor_deformed_convective(def_elem_con_vec& def_connections, Basis& basi
       }
     }
 
-    #if 0
     // rotate momentum into suface-based coordinates
     for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
       Eigen::Matrix<double, n_dim, n_dim> jac;
@@ -76,12 +75,15 @@ void neighbor_deformed_convective(def_elem_con_vec& def_connections, Basis& basi
       }
       auto orth = custom_math::orthonormal(jac, con.face_index(0).i_dim);
       momentum = orth.transpose()*momentum;
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        for (int i_side : {0, 1}) {
+          face_r[i_side*face_size + i_dim*n_face_qpoint + i_qpoint] = momentum(i_dim, i_side);
+        }
+      }
     }
-    #endif
 
     hll_cpg_euler<n_var - 2, n_face_qpoint>(face_r, face_w, 1., con.face_index(0).i_dim, heat_rat);
 
-    #if 0
     // rotate momentum back into physical coordinates
     for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
       Eigen::Matrix<double, n_dim, n_dim> jac;
@@ -91,13 +93,17 @@ void neighbor_deformed_convective(def_elem_con_vec& def_connections, Basis& basi
           jac(i_dim, j_dim) = jacobian[(i_dim*n_dim + j_dim)*n_face_qpoint + i_qpoint];
         }
         for (int i_side : {0, 1}) {
-          momentum(i_dim, i_side) = face_r[i_side*face_size + i_dim*n_face_qpoint + i_qpoint];
+          momentum(i_dim, i_side) = face_w[i_side*face_size + i_dim*n_face_qpoint + i_qpoint];
         }
       }
       auto orth = custom_math::orthonormal(jac, con.face_index(0).i_dim);
-      momentum = orth.transpose()*momentum;
+      momentum = orth*momentum;
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        for (int i_side : {0, 1}) {
+          face_w[i_side*face_size + i_dim*n_face_qpoint + i_qpoint] = momentum(i_dim, i_side);
+        }
+      }
     }
-    #endif
 
     // re-swap dimensions
     if (con.face_index(0).i_dim != con.face_index(1).i_dim) {

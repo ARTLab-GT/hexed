@@ -154,7 +154,6 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
             jac.col(i_dim) = orth.col(i_dim);
             boundary_values.col(i_side) *= jac.determinant();
             Eigen::Block<Eigen::Matrix<double, n_var, 2>, n_dim, 1> momentum {boundary_values, 0, i_side};
-            momentum = orth*momentum;
             boundary_values.col(i_side) -= normal_flux;
           }
 
