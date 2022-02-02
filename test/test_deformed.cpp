@@ -143,10 +143,10 @@ class Test
   virtual void displace_vertices() {}
 };
 
-class Def_edge : public Test
+class Test_def_edge : public Test
 {
   public:
-  Def_edge(cartdg::Deformed_grid& g) : Test{g} {}
+  Test_def_edge(cartdg::Deformed_grid& g) : Test{g} {}
   virtual void displace_vertices()
   {
     grid.deformed_element(4).vertex(3).pos[0] += 0.05;
@@ -154,7 +154,7 @@ class Def_edge : public Test
   }
 };
 
-class Test_rotated : public Def_edge
+class Test_rotated : public Test_def_edge
 {
   void connect(int i_elem, int i_dim)
   {
@@ -172,7 +172,7 @@ class Test_rotated : public Def_edge
     grid.connect(i_elems, i_dims, is_p);
   }
   public:
-  Test_rotated(cartdg::Deformed_grid& g) : Def_edge{g} {}
+  Test_rotated(cartdg::Deformed_grid& g) : Test_def_edge{g} {}
   virtual void connect()
   {
     auto& elem {grid.deformed_element(4)};
@@ -212,7 +212,7 @@ TEST_CASE("Deformed elements")
   SECTION("deformed edges")
   {
     cartdg::Deformed_grid grid {4, 2, 0, 0.2, basis};
-    Test test {grid};
+    Test_def_edge test {grid};
     test.test();
   }
   SECTION("rotated") // cyclical permutation of element 4's vertices
