@@ -103,6 +103,9 @@ void neighbor_deformed_convective(def_elem_con_vec& def_connections, Basis& basi
           face_w[i_side*face_size + i_dim*n_face_qpoint + i_qpoint] = momentum(i_dim, i_side);
         }
       }
+      jac.col(con.face_index(0).i_dim) = orth.col(con.face_index(0).i_dim);
+      double det = jac.determinant();
+      for (int i_var = 0; i_var < 2*n_var; ++i_var) face_w[i_var*n_face_qpoint + i_qpoint] *= det;
     }
 
     // re-swap dimensions
