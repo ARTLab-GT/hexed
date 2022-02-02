@@ -1,6 +1,7 @@
 #ifndef CARTDG_NEIGHBOR_DEFORMED_CONVECTIVE_HPP_
 #define CARTDG_NEIGHBOR_DEFORMED_CONVECTIVE_HPP_
 
+#include <math.hpp>
 #include <Kernel_settings.hpp>
 #include <Basis.hpp>
 #include <Deformed_element.hpp>
@@ -14,6 +15,7 @@ template<int n_var, int n_qpoint, int row_size>
 void neighbor_deformed_convective(def_elem_con_vec& def_connections, Basis& basis, Kernel_settings& settings)
 // "def_" (for "deformed") prepended to arguments to avoid naming conflicts in benchmark code
 {
+  const int n_dim = n_var - 2;
   const int n_face_qpoint = n_qpoint/row_size;
   const int face_size = n_face_qpoint*n_var;
   double heat_rat = settings.cpg_heat_rat;
@@ -24,6 +26,7 @@ void neighbor_deformed_convective(def_elem_con_vec& def_connections, Basis& basi
     double face_r [2*face_size];
     double face_w [2*face_size];
     Deformed_elem_con con = def_connections[i_con];
+    double* jacobian = con.jacobian();
 
     // fetch face state from element storage
     for (int i_side : {0, 1}) {
@@ -56,6 +59,21 @@ void neighbor_deformed_convective(def_elem_con_vec& def_connections, Basis& basi
         std::swap(face_r[face_size + con.face_index(0).i_dim*n_face_qpoint + i_qpoint],
                   face_r[face_size + con.face_index(1).i_dim*n_face_qpoint + i_qpoint]);
       }
+    }
+
+    for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
+      Eigen::Matrix<double, n_dim, n_dim> jac;
+      Eigen::Matrix<double, n_dim, 2> momentum;
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+          jac(i_dim, j_dim) = jacobian[(i_dim*n_dim + j_dim)*n_face_qpoint + i_qpoint];
+        }
+        for (int i_side : {0, 1}) {
+          momentum(i_dim, i_side) = face_r[i_side*face_size + i_dim*n_face_qpoint + i_qpoint];
+        }
+      }
+      auto orth = custom_math::orthonormal(jac, con.face_index(0).i_dim);
+      momentum = orth.transpose()*momentum;
     }
 
     hll_cpg_euler<n_var - 2, n_face_qpoint>(face_r, face_w, 1., con.face_index(0).i_dim, heat_rat);

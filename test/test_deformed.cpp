@@ -110,7 +110,6 @@ class Test
     settings.d_t_by_d_pos = 0.07/0.2;
 
     grid.execute_write_face(settings);
-    test_momentum_rotation();
     grid.execute_neighbor(settings);
     grid.execute_local(settings);
     for (int i_elem = 0; i_elem < 9; ++i_elem)
@@ -142,7 +141,6 @@ class Test
     }
   }
   virtual void displace_vertices() {}
-  virtual void test_momentum_rotation() {}
 };
 
 class Def_edge : public Test
@@ -153,36 +151,6 @@ class Def_edge : public Test
   {
     grid.deformed_element(4).vertex(3).pos[0] += 0.05;
     grid.deformed_element(4).vertex(3).pos[1] -= 0.04;
-  }
-};
-
-class Test_def_edge : public Def_edge
-{
-  public:
-  Test_def_edge(cartdg::Deformed_grid& g) : Def_edge{g} {}
-  virtual void test_momentum_rotation()
-  {
-    for (int i_row = 0; i_row < row_size; ++i_row)
-    {
-      for (double* face : {grid.deformed_element(4).face() + 4*nfq,
-                           grid.deformed_element(7).face() + 0*nfq})
-      {
-        double qpv [] {face[0*nfq + i_row]/face[2*nfq + i_row],
-                       face[1*nfq + i_row]/face[2*nfq + i_row]};
-        double mag {std::sqrt(0.05*0.05 + 0.16*0.16)};
-        REQUIRE(qpv[0] == Approx((veloc[0]*0.16 - veloc[1]*0.05)/mag));
-        REQUIRE(qpv[1] == Approx((veloc[0]*0.05 + veloc[1]*0.16)/mag));
-      }
-      for (double* face : {grid.deformed_element(4).face() + 12*nfq,
-                           grid.deformed_element(5).face() +  8*nfq})
-      {
-        double qpv [] {face[0*nfq + i_row]/face[2*nfq + i_row],
-                       face[1*nfq + i_row]/face[2*nfq + i_row]};
-        double mag {std::sqrt(0.25*0.25 + 0.04*0.04)};
-        REQUIRE(qpv[0] == Approx((veloc[0]*0.25 - veloc[1]*0.04)/mag));
-        REQUIRE(qpv[1] == Approx((veloc[0]*0.04 + veloc[1]*0.25)/mag));
-      }
-    }
   }
 };
 
@@ -244,7 +212,7 @@ TEST_CASE("Deformed elements")
   SECTION("deformed edges")
   {
     cartdg::Deformed_grid grid {4, 2, 0, 0.2, basis};
-    Test_def_edge test {grid};
+    Test test {grid};
     test.test();
   }
   SECTION("rotated") // cyclical permutation of element 4's vertices
