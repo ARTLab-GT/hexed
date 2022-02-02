@@ -449,10 +449,13 @@ void Deformed_grid::calc_jacobian()
   }
   auto bound_mat = basis.boundary();
   // compute 1 entry at a time
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-    for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+  {
+    for (int j_dim = 0; j_dim < n_dim; ++j_dim)
+    {
       // compute the face jacobian of each element
-      for (int i_elem = 0; i_elem < n_elem; ++i_elem) {
+      for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+      {
         auto& elem = deformed_element(i_elem);
         Eigen::Map<Eigen::VectorXd> elem_jac (elem.jacobian() + (i_dim*n_dim + j_dim)*n_qpoint, n_qpoint);
         for (int k_dim = 0; k_dim < n_dim; ++k_dim) {
@@ -464,7 +467,8 @@ void Deformed_grid::calc_jacobian()
         }
       }
       // compute the shared face jacobian
-      for (Deformed_elem_con& con : elem_cons) {
+      for (Deformed_elem_con& con : elem_cons)
+      {
         double* shared_jac = con.jacobian();
         double* elem_jac [2];
         int normal_sign [2]; // record any sign change due to normal flipping
@@ -504,7 +508,8 @@ void Deformed_grid::calc_jacobian()
         }
       }
       // compute wall jacobian
-      for (Deformed_elem_wall& wall : walls) {
+      for (Deformed_elem_wall& wall : walls)
+      {
         auto ind = wall.face_index();
         double* elem_jac = deformed_element(wall.i_elem()).face() + (2*ind.i_dim + ind.is_positive)*n_var*face_size;
         for (int i_qpoint = 0; i_qpoint < face_size; ++i_qpoint) {
