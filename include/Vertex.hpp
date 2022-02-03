@@ -12,6 +12,11 @@ namespace cartdg
 
 class Deformed_grid;
 
+/*
+ * Represents a vertex in a deformed grid. Used by `Deformed_element`s to contain data
+ * that is shared by nodal neighbors, including position and artificial viscosity coefficient.
+ * Note: Construction and ownership should be managed by the `Transferable_ptr` member class.
+ */
 class Vertex
 {
   // not thread safe!
@@ -28,11 +33,17 @@ class Vertex
   Vertex& operator=(const Vertex&) = delete;
   Vertex& operator=(Vertex&&) = delete;
   int mass();
+  /*
+   * Specify that another vertex represents the same grid point as this. All
+   * `Transferable_ptr`s pointing to `other` will be changed to point to `this`.
+   * All `Non_transferable_ptr`s pointing to `other` will be `nullify`d. The `mass`s
+   * will be summed and the `pos`s will be averaged, weighted by `mass`.
+   */
   void eat(Vertex& other);
-  void calc_relax();
-  void apply_relax();
-
-  static void connect(Vertex&, Vertex&);
+  void calc_relax(); // compute a (but do not apply) new position resulting in a smoother grid.
+  void apply_relax(); // update `pos` to the position computed by `calc_relax`.
+  static void connect(Vertex&, Vertex&); // specify that two vertices are connected by an edge
+  double max_viscosity(); // maximum of the `required_visosity` of all `Transferable_ptr`s to this. Thread safe.
 
   private:
   int m;
@@ -43,11 +54,20 @@ class Vertex
   Vertex(std::array<double, 3> pos);
 };
 
+/*
+ * A pointer class which can be transferred by `Vertex::eat`. This is used by
+ * `Deformed_element` to track its vertices, which are initially separate and then
+ * eat those of neighboring elements as the grid connectivity is established.
+ */
 class Vertex::Transferable_ptr
 {
   std::shared_ptr<Vertex> ptr;
 
   public:
+  // set this member to assert that the viscosity of this vertex should be at least this value
+  double required_viscosity;
+
+  // Create a vertex and construct a `Transferable_ptr` to it.
   Transferable_ptr(std::array<double, 3> pos);
   Transferable_ptr(const Transferable_ptr&);
   ~Transferable_ptr();
@@ -57,6 +77,10 @@ class Vertex::Transferable_ptr
   Vertex& operator*();
 };
 
+/*
+ * A pointer class which is not transferred by `Vertex::eat`. This is used
+ * by `Deformed_grid` to maintain a list of vertices without duplicates.
+ */
 class Vertex::Non_transferable_ptr
 {
   Vertex* ptr;
@@ -67,9 +91,12 @@ class Vertex::Non_transferable_ptr
   ~Non_transferable_ptr();
   Non_transferable_ptr& operator=(const Non_transferable_ptr&);
 
+  // return `true` if vertex `this` points to exists and `false` if it does not
   operator bool();
+  // Warning: if `operator bool` is `false` the following will return `nullptr`!
   Vertex* operator->();
   Vertex& operator*();
+  // assert that the vertex `this` points to no longer exists. `operator bool` will now return `false`
   void nullify();
 };
 
