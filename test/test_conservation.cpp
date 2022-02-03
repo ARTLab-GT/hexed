@@ -134,6 +134,7 @@ TEST_CASE("Conservation of state variables")
     {
       cartdg::Deformed_element& elem {def_grid.deformed_element(0)};
       elem.vertex(3).pos = {center[0], center[1], 0.};
+      elem.node_adjustments()[row_size + 1] = 0.1;
     }
     {
       cartdg::Deformed_element& elem {def_grid.deformed_element(1)};
@@ -180,6 +181,7 @@ TEST_CASE("Conservation of state variables")
     }
 
     auto before {sol.integral()};
+    sol.visualize_field("deformed_conservation");
     double dt = sol.update();
     auto after {sol.integral()};
     for (int i_var = 0; i_var < grid.n_var; ++i_var) {

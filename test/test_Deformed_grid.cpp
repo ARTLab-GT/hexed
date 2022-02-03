@@ -156,10 +156,10 @@ TEST_CASE("Deformed grid class")
       REQUIRE(&grid3.deformed_element(0).vertex(4) == &grid3.deformed_element(3).vertex(5));
       REQUIRE(&grid3.deformed_element(0).vertex(6) == &grid3.deformed_element(3).vertex(7));
 
-      REQUIRE(grid3.connection(1).element[0] == &grid3.deformed_element(2));
-      REQUIRE(grid3.connection(1).element[1] == &grid3.deformed_element(0));
+      REQUIRE(grid3.connection(1).face_index(0).element == &grid3.deformed_element(2));
+      REQUIRE(grid3.connection(1).face_index(1).element == &grid3.deformed_element(0));
     }
-    
+
     SECTION("Different direction")
     {
       SECTION("0+ 1+")
@@ -227,10 +227,10 @@ TEST_CASE("Deformed grid class")
         REQUIRE(&grid3.deformed_element(0).vertex(6) == &grid3.deformed_element(1).vertex(0));
         REQUIRE(&grid3.deformed_element(0).vertex(7) == &grid3.deformed_element(1).vertex(1));
 
-        REQUIRE(grid3.connection(0).i_dim[0] == 0);
-        REQUIRE(grid3.connection(0).i_dim[1] == 1);
-        REQUIRE(grid3.connection(0).is_positive[0] == true);
-        REQUIRE(grid3.connection(0).is_positive[1] == false);
+        REQUIRE(grid3.connection(0).face_index(0).i_dim == 0);
+        REQUIRE(grid3.connection(0).face_index(1).i_dim == 1);
+        REQUIRE(grid3.connection(0).face_index(0).is_positive == true);
+        REQUIRE(grid3.connection(0).face_index(1).is_positive == false);
       }
 
       SECTION("0- 1+")
@@ -335,6 +335,78 @@ TEST_CASE("Deformed grid class")
     REQUIRE(jac[2*27 + 26] == Approx(-0.2));
     REQUIRE(jac[7*27 + 26] == Approx(-0.2));
     REQUIRE(jac[8*27 + 26] == Approx( 0.8));
+
+    SECTION("interface synch")
+    {
+      cartdg::Gauss_lobatto lin_basis {2};
+      SECTION("3D")
+      {
+        cartdg::Deformed_grid lin_grid {5, 3, 0, 1., lin_basis};
+        lin_grid.add_element({0, 0, 0});
+        lin_grid.add_element({1, 0, 0});
+        lin_grid.connect({0, 1}, {0, 0}, {1, 0});
+        {
+          // make the qpoints align imperfectly to check that the Jacobian is properly averaged
+          auto& elem = lin_grid.deformed_element(1);
+          elem.node_adjustments()[(2*2 + 0)*elem.storage_params().n_qpoint()/2 + 0] = 0.3;
+        }
+        // connect different dimensions to verify qpoint ordering and axis permutation
+        lin_grid.add_element({0, 0, 0});
+        lin_grid.add_element({1, 1, 0});
+        lin_grid.connect({2, 3}, {0, 1}, {1, 0});
+        lin_grid.add_element({1, -1, 0});
+        lin_grid.add_element({0, 0, 0});
+        lin_grid.connect({4, 5}, {1, 0}, {1, 1});
+        lin_grid.add_element({0, 0, 0});
+        lin_grid.add_element({-1, 0, -1});
+        lin_grid.connect({6, 7}, {0, 2}, {0, 1});
+        lin_grid.calc_jacobian();
+        REQUIRE(lin_grid.connection(0).jacobian(0, 0, 0) == Approx(1.));
+        REQUIRE(lin_grid.connection(0).jacobian(2, 1, 0) == Approx(-0.3/2.));
+        REQUIRE(lin_grid.connection(0).jacobian(2, 2, 0) == Approx(1. - 0.3/2.));
+        REQUIRE(lin_grid.connection(1).jacobian(0, 0, 0) == Approx(1.));
+        REQUIRE(lin_grid.connection(1).jacobian(0, 0, 2) == Approx(0.5));
+        REQUIRE(lin_grid.connection(1).jacobian(0, 1, 2) == Approx(-0.5));
+        REQUIRE(lin_grid.connection(1).jacobian(1, 1, 2) == Approx(0.5));
+        REQUIRE(lin_grid.connection(2).jacobian(0, 0, 0) == Approx(0.5));
+        REQUIRE(lin_grid.connection(2).jacobian(0, 1, 0) == Approx(-0.5));
+        REQUIRE(lin_grid.connection(2).jacobian(2, 2, 0) == Approx(1.));
+        REQUIRE(lin_grid.connection(3).jacobian(0, 0, 0) == Approx(-0.5));
+        REQUIRE(lin_grid.connection(3).jacobian(0, 0, 1) == Approx(-1.));
+      }
+      SECTION("2D")
+      {
+        cartdg::Deformed_grid lin_grid {4, 2, 0, 1., lin_basis};
+        lin_grid.add_element({0, 0, 0});
+        lin_grid.add_element({1, 1, 0});
+        lin_grid.connect({0, 1}, {0, 1}, {1, 0});
+        {
+          // make the qpoints align imperfectly to check that the Jacobian is properly averaged
+          auto& elem = lin_grid.deformed_element(0);
+          elem.node_adjustments()[(1*2 + 1)*elem.storage_params().n_qpoint()/2 + 1] = 0.1;
+        }
+        // connect different dimensions to verify qpoint ordering and axis permutation
+        lin_grid.calc_jacobian();
+        REQUIRE(lin_grid.connection(0).jacobian(0, 0, 0) == Approx(1.));
+        REQUIRE(lin_grid.connection(0).jacobian(0, 1, 0) == Approx(-0.5*1.05));
+        REQUIRE(lin_grid.connection(0).jacobian(0, 0, 1) == Approx(0.5 - 0.5*0.05));
+      }
+    }
+    SECTION("wall synch")
+    {
+      SECTION("3D")
+      {
+        cartdg::Deformed_grid grid (1, 3, 0, 0.2, basis);
+        grid.add_element({0, 0, 0});
+        grid.add_wall(0, 1, 1);
+        grid.deformed_element(0).vertex(3).pos[1] -= 0.05;
+        grid.calc_jacobian();
+        REQUIRE(grid.def_elem_wall(0).jacobian(0, 0, 0) == Approx(1.));
+        REQUIRE(grid.def_elem_wall(0).jacobian(1, 2, 0) == Approx(-0.25));
+        REQUIRE(grid.def_elem_wall(0).jacobian(1, 1, row_size - 1) == Approx(0.75));
+        REQUIRE(grid.def_elem_wall(0).jacobian(0, 0, row_size - 1) == Approx(1.));
+      }
+    }
   }
 
   SECTION("vertex relaxation")
@@ -461,11 +533,11 @@ TEST_CASE("Deformed grid class")
     grid.add_wall(2, 0, 0);
     grid.add_wall(2, 0, 1);
     grid.add_wall(2, 1, 1);
-    REQUIRE(grid.def_elem_wall(1).element == &grid.deformed_element(2));
-    REQUIRE(grid.def_elem_wall(1).i_elem == 2);
-    REQUIRE(grid.def_elem_wall(1).i_dim == 0);
-    REQUIRE(grid.def_elem_wall(3).i_dim == 1);
-    REQUIRE(grid.def_elem_wall(2).is_positive == true);
+    REQUIRE(grid.def_elem_wall(1).face_index().element == &grid.deformed_element(2));
+    REQUIRE(grid.def_elem_wall(1).i_elem() == 2);
+    REQUIRE(grid.def_elem_wall(1).face_index().i_dim == 0);
+    REQUIRE(grid.def_elem_wall(3).face_index().i_dim == 1);
+    REQUIRE(grid.def_elem_wall(2).face_index().is_positive == true);
 
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {

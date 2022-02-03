@@ -7,6 +7,11 @@ TEST_CASE("Element")
   cartdg::Storage_params params {4, 5, 3, 6};
   int n_dof = params.n_dof();
   cartdg::Element element {params};
+  // test that Storage_params are the same
+  REQUIRE(element.storage_params().n_stage == params.n_stage);
+  REQUIRE(element.storage_params().n_var == params.n_var);
+  REQUIRE(element.storage_params().n_dim == params.n_dim);
+  REQUIRE(element.storage_params().row_size == params.row_size);
   // sometimes we will write to and read from some data just
   // to be sure the storage is there and doesn't overlap
   for (int i_stage = 0; i_stage < 4; ++i_stage)

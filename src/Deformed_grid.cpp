@@ -114,7 +114,7 @@ std::vector<double> Deformed_grid::get_pos(int i_elem)
 
 void Deformed_grid::add_wall(int i_elem, int i_dim, bool is_positive_face)
 {
-  Deformed_elem_wall wall {elements[i_elem].get(), i_dim, is_positive_face, i_elem};
+  Deformed_elem_wall wall {{elements[i_elem].get(), i_dim, is_positive_face}, i_elem};
   walls.push_back(wall);
 }
 
@@ -200,7 +200,18 @@ void Deformed_grid::project_degenerate(int i_stage)
 void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
                             std::array<bool, 2> is_positive)
 {
-  // combine vertices
+  // create connection object
+  std::array<Face_index, 2> face_inds;
+  for (int i_side : {0, 1})
+  {
+    face_inds[i_side].element = elements[i_elem[i_side]].get();
+    face_inds[i_side].i_dim = i_dim[i_side];
+    face_inds[i_side].is_positive = is_positive[i_side];
+  }
+  elem_cons.emplace_back(face_inds);
+  Deformed_elem_con& con = elem_cons.back();
+
+  // get vertices involved
   std::array<std::vector<int>, 2> vertex_inds;
   std::array<int, 2> strides;
   for (int i_side : {0, 1})
@@ -216,37 +227,23 @@ void Deformed_grid::connect(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
       }
     }
   }
-  if ((is_positive[0] != is_positive[1]) && (i_dim[0] != i_dim[1]))
-  {
-    if (n_dim == 3)
-    {
-      int stride = strides[0];
-      if (i_dim[0] < i_dim[1]) stride /= 2;
-      for (int i : {0, 1}) std::swap(vertex_inds[1][i*2/stride], vertex_inds[1][i*2/stride + stride]);
-    }
-    else
-    {
-      std::swap(vertex_inds[1][0], vertex_inds[1][1]);
+
+  // reorder as necessary
+  if (con.flip_tangential()) {
+    for (int i_vert = 0; i_vert < n_vertices/2; ++i_vert) {
+      // this arithmetic is equivalent to swapping vertices along dimension i_dim[0]
+      int coord = (vertex_inds[1][i_vert]/strides[0])%2;
+      vertex_inds[1][i_vert] += ((coord + 1)%2 - coord)*strides[0];
     }
   }
-  if ((i_dim[0] == 0 && i_dim[1] == 2) || (i_dim[0] == 2 && i_dim[1] == 0))
-  {
-    std::swap(vertex_inds[1][1], vertex_inds[1][2]);
-  }
+  if (con.transpose()) std::swap(vertex_inds[1][1], vertex_inds[1][2]);
+
+  // combine vertices
   for (int i_vertex = 0; i_vertex < n_vertices/2; ++i_vertex)
   {
     Vertex& vert0 = deformed_element(i_elem[0]).vertex(vertex_inds[0][i_vertex]);
     Vertex& vert1 = deformed_element(i_elem[1]).vertex(vertex_inds[1][i_vertex]);
     vert0.eat(vert1);
-  }
-
-  // create connection object
-  elem_cons.emplace_back();
-  for (int i_side : {0, 1})
-  {
-    elem_cons.back().element[i_side] = elements[i_elem[i_side]].get();
-    elem_cons.back().i_dim[i_side] = i_dim[i_side];
-    elem_cons.back().is_positive[i_side] = is_positive[i_side];
   }
 }
 
@@ -352,7 +349,8 @@ std::vector<double> Deformed_grid::surface_integral(Surface_func& integrand)
   std::vector<double> total;
   for (Deformed_elem_wall wall : walls)
   {
-    auto fi = face_integral(integrand, wall.i_elem, wall.i_dim, wall.is_positive);
+    auto face_ind = wall.face_index();
+    auto fi = face_integral(integrand, wall.i_elem(), face_ind.i_dim, face_ind.is_positive);
     if (total.size() < fi.size())
     {
       total.resize(fi.size());
@@ -376,7 +374,7 @@ void Deformed_grid::visualize_connections(std::string file_name)
     std::vector<double> centers (2*n_dim, 0.);
     for (int i_side : {0, 1}) {
       for (int i_vert = 0; i_vert < n_vertices; ++i_vert) {
-        auto pos {con.element[i_side]->vertex(i_vert).pos};
+        auto pos {con.face_index(i_side).element->vertex(i_vert).pos};
         double weight {0.};
         if (i_vert == 0) weight += i_con;
         else if (i_vert == n_vertices - 1) weight += n_con - i_con;
@@ -404,21 +402,21 @@ void Deformed_grid::visualize_surface(Tecplot_file& file, int n_sample)
   const int n_block {custom_math::pow(n_sample, n_dim - 1)};
   for (Deformed_elem_wall wall : walls)
   {
-    // wall.i_elem, wall.i_dim, wall.is_positive
-    std::vector<double> pos = get_pos(wall.i_elem);
+    auto fi = wall.face_index();
+    std::vector<double> pos = get_pos(wall.i_elem());
     Eigen::VectorXd interp_pos {n_block*n_dim};
     for (int i_dim = 0; i_dim < n_dim; ++i_dim)
     {
       Eigen::Map<Eigen::VectorXd> qpoint_pos (pos.data() + i_dim*n_qpoint, n_qpoint);
-      auto face {custom_math::dimension_matvec(boundary.row(wall.is_positive), qpoint_pos, wall.i_dim)};
+      auto face {custom_math::dimension_matvec(boundary.row(fi.is_positive), qpoint_pos, fi.i_dim)};
       interp_pos.segment(i_dim*n_block, n_block) = custom_math::hypercube_matvec(interp, face);
     }
-    double* state = element(wall.i_elem).stage(0);
+    double* state = element(wall.i_elem()).stage(0);
     Eigen::VectorXd interp_state {n_block*n_var};
     for (int i_var = 0; i_var < n_var; ++i_var)
     {
       Eigen::Map<Eigen::VectorXd> var (state + i_var*n_qpoint, n_qpoint);
-      auto face {custom_math::dimension_matvec(boundary.row(wall.is_positive), var, wall.i_dim)};
+      auto face {custom_math::dimension_matvec(boundary.row(fi.is_positive), var, fi.i_dim)};
       interp_state.segment(i_var*n_block, n_block) = custom_math::hypercube_matvec(interp, face);
     }
     Tecplot_file::Structured_block zone {file, n_sample, "face_interior", n_dim - 1};
@@ -428,32 +426,94 @@ void Deformed_grid::visualize_surface(Tecplot_file& file, int n_sample)
 
 void Deformed_grid::calc_jacobian()
 {
-  // FIXME: make this a kernel
+  // compute jacobian of each element
   auto diff_mat = basis.diff_mat();
-  for (int i_elem = 0; i_elem < n_elem; ++i_elem)
-  {
+  for (int i_elem = 0; i_elem < n_elem; ++i_elem) {
     std::vector<double> elem_pos = get_pos(i_elem);
     double* jac = elements[i_elem]->jacobian();
-    for (int i_dim = 0, stride = n_qpoint/basis.row_size; i_dim < n_dim; ++i_dim, stride /= basis.row_size)
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      Eigen::Map<Eigen::VectorXd> dim_pos (elem_pos.data() + i_dim*n_qpoint, n_qpoint);
+      for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+        Eigen::Map<Eigen::VectorXd> jac_entry (jac + (i_dim*n_dim + j_dim)*n_qpoint, n_qpoint);
+        jac_entry = custom_math::dimension_matvec(diff_mat, dim_pos, j_dim)/mesh_size;
+      }
+    }
+  }
+
+  // compute jacobian at element interfaces & wall BCs
+  int row_size = basis.row_size;
+  int face_size = n_qpoint/row_size;
+  for (Deformed_elem_con& con : elem_cons) {
+    double* jac = con.jacobian();
+    for (int i_data = 0; i_data < n_dim*n_dim*face_size; ++i_data) jac[i_data] = 0.;
+  }
+  auto bound_mat = basis.boundary();
+  // compute 1 entry at a time
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+  {
+    for (int j_dim = 0; j_dim < n_dim; ++j_dim)
     {
-      for (int i_outer = 0; i_outer < n_qpoint/(stride*basis.row_size); ++i_outer)
+      // compute the face jacobian of each element
+      for (int i_elem = 0; i_elem < n_elem; ++i_elem)
       {
-        for (int i_inner = 0; i_inner < stride; ++i_inner)
-        {
-          for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-          {
-            Eigen::VectorXd row_pos (basis.row_size);
-            int row_start = i_outer*stride*basis.row_size + i_inner;
-            for (int i_qpoint = 0; i_qpoint < basis.row_size; ++i_qpoint)
-            {
-              row_pos(i_qpoint) = elem_pos[j_dim*n_qpoint + row_start + i_qpoint*stride];
-            }
-            auto row_jacobian = diff_mat*row_pos;
-            for (int i_qpoint = 0; i_qpoint < basis.row_size; ++i_qpoint)
-            {
-              jac[(j_dim*n_dim + i_dim)*n_qpoint + row_start + i_qpoint*stride] = row_jacobian(i_qpoint)/mesh_size;
-            }
+        auto& elem = deformed_element(i_elem);
+        Eigen::Map<Eigen::VectorXd> elem_jac (elem.jacobian() + (i_dim*n_dim + j_dim)*n_qpoint, n_qpoint);
+        for (int k_dim = 0; k_dim < n_dim; ++k_dim) {
+          for (int i_side : {0, 1}) {
+            // use the element face storage to temporarily store one entry of the extrapolated jacobian
+            Eigen::Map<Eigen::VectorXd> face_jac (elem.face() + (2*k_dim + i_side)*n_var*face_size, face_size);
+            face_jac = custom_math::dimension_matvec(bound_mat.row(i_side), elem_jac, k_dim); // extrapolate jacobian to faces
           }
+        }
+      }
+      // compute the shared face jacobian
+      for (Deformed_elem_con& con : elem_cons)
+      {
+        double* shared_jac = con.jacobian();
+        double* elem_jac [2];
+        int normal_sign [2]; // record any sign change due to normal flipping
+        int dim0 = con.face_index(0).i_dim;
+        int dim1 = con.face_index(1).i_dim;
+        for (int i_side : {0, 1}) {
+          Face_index ind = con.face_index(i_side);
+          elem_jac[i_side] = ind.element->face() + (2*ind.i_dim + ind.is_positive)*n_var*face_size;
+          normal_sign[i_side] = ((j_dim == ind.i_dim) && (con.flip_normal(i_side))) ? -1 : 1;
+        }
+        if (con.transpose()) { // already implies n_dim == 3
+          Eigen::Map<Eigen::MatrixXd> face (elem_jac[1], row_size, row_size);
+          face.transposeInPlace();
+        }
+        if (con.flip_tangential()) {
+          int free_dim = n_dim*(n_dim - 1)/2 - dim0 - dim1; // which dimension is not involved in the connection?
+          int stride = ((n_dim == 3) && (dim1 < free_dim)) ? row_size : 1; // along what stride do we need to reverse the elements?
+          for (int i_row = 0; i_row < face_size/row_size; ++i_row) {
+            Eigen::Map<Eigen::VectorXd, 0, Eigen::InnerStride<>> row (elem_jac[1] + i_row*row_size/stride, row_size, Eigen::InnerStride<>(stride));
+            row.reverseInPlace();
+          }
+        }
+        for (int i_qpoint = 0; i_qpoint < face_size; ++i_qpoint) {
+          // take average of element face jacobians with appropriate axis permutations
+          int col = j_dim;
+          int tangential_sign = 1;
+          // swap dim0 and dim1
+          if (j_dim == dim1) {
+            col = dim0;
+          }
+          if (j_dim == dim0) {
+            col = dim1;
+            if (con.flip_tangential()) tangential_sign = -1;
+          }
+          shared_jac[(i_dim*n_dim + j_dim)*face_size + i_qpoint] += 0.5*normal_sign[0]*elem_jac[0][i_qpoint];
+          shared_jac[(i_dim*n_dim + col)*face_size + i_qpoint] += 0.5*normal_sign[1]*tangential_sign*elem_jac[1][i_qpoint];
+        }
+      }
+      // compute wall jacobian
+      for (Deformed_elem_wall& wall : walls)
+      {
+        auto ind = wall.face_index();
+        double* elem_jac = deformed_element(wall.i_elem()).face() + (2*ind.i_dim + ind.is_positive)*n_var*face_size;
+        for (int i_qpoint = 0; i_qpoint < face_size; ++i_qpoint) {
+          wall.jacobian()[(i_dim*n_dim + j_dim)*face_size + i_qpoint] = elem_jac[i_qpoint];
         }
       }
     }

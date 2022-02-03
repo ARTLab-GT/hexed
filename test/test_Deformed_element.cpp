@@ -1,5 +1,7 @@
 #include <catch2/catch.hpp>
 
+#include <cartdgConfig.hpp>
+#include <math.hpp>
 #include <Deformed_element.hpp>
 
 void assert_equal(std::array<double, 3> computed, std::array<double, 3> correct)
@@ -85,4 +87,110 @@ TEST_CASE("Deformed_element.hpp")
     cartdg::Deformed_element elem3d_1 {params3d, {3,}, 1.};
     assert_equal(elem3d_1.vertex(0).pos, {3., 0., 0.});
   }
+}
+
+TEST_CASE("Deformed_face")
+{
+  const int n_dim = 3;
+  const int row_size = std::min(4, cartdg::config::max_row_size);
+  cartdg::Storage_params params {6, 7, n_dim, row_size}; // some more or less arbitrary parameters
+  cartdg::Deformed_face face {params};
+  face.jacobian()[0] = 0.8;
+  face.jacobian()[n_dim*n_dim*cartdg::custom_math::pow(row_size, n_dim - 1) - 1] = 0.9;
+  REQUIRE(face.jacobian(0, 0, 0) == 0.8);
+  REQUIRE(face.jacobian(n_dim - 1, n_dim - 1, cartdg::custom_math::pow(row_size, n_dim - 1) - 1) == 0.9);
+}
+
+TEST_CASE("Deformed_elem_con")
+{
+  cartdg::Storage_params params {1, 3, 1, 1};
+  cartdg::Deformed_element elem0 {params};
+  cartdg::Deformed_element elem1 {params};
+  cartdg::Face_index fi0 {&elem0, 2, 0};
+  cartdg::Face_index fi1 {&elem1, 0, 1};
+  cartdg::Deformed_elem_con con ({fi0, fi1});
+  REQUIRE(con.face_index(0).element == &elem0);
+  REQUIRE(con.face_index(0).i_dim == 2);
+  REQUIRE(con.face_index(1).is_positive == 1);
+  REQUIRE(con.flip_normal(0));
+  REQUIRE(con.flip_normal(1));
+  fi0.is_positive = 1;
+  fi1.is_positive = 0;
+  cartdg::Deformed_elem_con con1 ({fi0, fi1});
+  REQUIRE(!con1.flip_normal(0));
+  REQUIRE(!con1.flip_normal(1));
+  SECTION("flip_tangential")
+  {
+    fi0.i_dim = 0;
+    fi1.i_dim = 0;
+    {
+      cartdg::Deformed_elem_con con2 ({fi0, fi1});
+      REQUIRE(!con2.flip_tangential());
+    }
+    fi0.i_dim = 0;
+    fi1.i_dim = 1;
+    {
+      cartdg::Deformed_elem_con con2 ({fi0, fi1});
+      REQUIRE(con2.flip_tangential());
+    }
+    fi0.i_dim = 1;
+    fi1.i_dim = 0;
+    {
+      cartdg::Deformed_elem_con con2 ({fi0, fi1});
+      REQUIRE(con2.flip_tangential());
+    }
+    fi0.i_dim = 2;
+    {
+      cartdg::Deformed_elem_con con2 ({fi0, fi1});
+      REQUIRE(con2.flip_tangential());
+    }
+    fi1.is_positive = 1;
+    {
+      cartdg::Deformed_elem_con con2 ({fi0, fi1});
+      REQUIRE(!con2.flip_tangential());
+    }
+  }
+  SECTION("transpose")
+  {
+    fi0.i_dim = 1;
+    fi1.i_dim = 1;
+    {
+      cartdg::Deformed_elem_con con2 ({fi0, fi1});
+      REQUIRE(!con2.transpose());
+    }
+    fi1.i_dim = 0;
+    {
+      cartdg::Deformed_elem_con con2 ({fi0, fi1});
+      REQUIRE(!con2.transpose());
+    }
+    fi0.i_dim = 0;
+    fi1.i_dim = 1;
+    {
+      cartdg::Deformed_elem_con con2 ({fi0, fi1});
+      REQUIRE(!con2.transpose());
+    }
+    fi0.i_dim = 1;
+    fi1.i_dim = 2;
+    {
+      cartdg::Deformed_elem_con con2 ({fi0, fi1});
+      REQUIRE(!con2.transpose());
+    }
+    fi0.i_dim = 0;
+    fi1.i_dim = 2;
+    {
+      cartdg::Deformed_elem_con con2 ({fi0, fi1});
+      REQUIRE(con2.transpose());
+    }
+  }
+}
+
+TEST_CASE("Deformed_elem_wall")
+{
+  cartdg::Storage_params params {1, 3, 1, 1};
+  cartdg::Deformed_element elem {params};
+  cartdg::Deformed_elem_wall dew {{&elem, 2, 1}, 4};
+  REQUIRE(dew.face_index().element == &elem);
+  REQUIRE(dew.face_index().i_dim == 2);
+  REQUIRE(dew.face_index().is_positive);
+  REQUIRE(dew.i_elem() == 4);
 }
