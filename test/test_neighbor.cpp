@@ -345,7 +345,7 @@ TEST_CASE("nonpen")
   cartdg::Face_index index {&elem, 0, 1};
   cartdg::Deformed_elem_wall wall {index, 0};
   for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-    double qpoint_jacobian [] {3., 4., 0., 1.};
+    double qpoint_jacobian [] {1., 3., 0., 4.};
     for (int i_jac = 0; i_jac < 4; ++i_jac) wall.jacobian()[i_jac*row_size + i_qpoint] = qpoint_jacobian[i_jac];
     double state [] {1., 1., 1.2, 1e5/0.4 + 0.5*1.2*2.};
     for (int i_var = 0; i_var < 4; ++i_var) elem.face()[(4 + i_var)*row_size + i_qpoint] = state[i_var];
@@ -354,9 +354,10 @@ TEST_CASE("nonpen")
   elem.face()[5*row_size] = 0.; // momentum[1] at qpoint[0]
   cartdg::def_elem_wall_vec vec {wall};
   cartdg::get_nonpen_convective(2, row_size)(vec, basis, settings);
-  double normal_momentum_flux = 4./5.*elem.face()[4*row_size] + 3./5.*elem.face()[5*row_size];
-  REQUIRE(normal_momentum_flux == Approx(1e5)); // when momentum == 0, normal momentum flux is pressure
-  REQUIRE(elem.face()[5*row_size + 1] == Approx(0.).scale(1.)); // when momentum != 0, tangential momentum flux is 0
+  double normal_momentum_flux = 4./5.*elem.face()[4*row_size] - 3./5.*elem.face()[5*row_size];
+  double tangential_momentum_flux = 3./5.*elem.face()[4*row_size] + 4./5.*elem.face()[5*row_size];
+  REQUIRE(normal_momentum_flux == Approx(1e5*5.)); // when momentum == 0, normal momentum flux is pressure
+  REQUIRE(tangential_momentum_flux == Approx(0.).scale(1.)); // when momentum != 0, tangential momentum flux is 0
   REQUIRE(elem.face()[6*row_size + 1] == Approx(0.).scale(1.)); // when momentum != 0, mass flux is 0
 }
 

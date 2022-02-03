@@ -44,7 +44,7 @@ void neighbor_deformed_convective(def_elem_con_vec& def_connections, Basis& basi
           jac(i_dim, j_dim) = jacobian[(i_dim*n_dim + j_dim)*n_face_qpoint + i_qpoint];
         }
       }
-      orthonormal[i_qpoint] = custom_math::orthonormal(jac, con.face_index(0).i_dim);
+      orthonormal[i_qpoint] = custom_math::orthonormal(jac, i_dim);
       jac.col(i_dim) = orthonormal[i_qpoint].col(i_dim);
       jac_det[i_qpoint] = std::abs(jac.determinant()); // `abs` since surface coordinates not guaranteed to be right-hand
     }

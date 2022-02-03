@@ -3,6 +3,7 @@
 
 #include <Eigen/Dense>
 
+#include <math.hpp>
 #include <Kernel_settings.hpp>
 #include <Basis.hpp>
 #include <Deformed_element.hpp>
@@ -27,25 +28,81 @@ void nonpen_convective(def_elem_wall_vec& walls, Basis& basis, Kernel_settings& 
     const int i_dim = face_index.i_dim;
     int is_p = face_index.is_positive;
     Element& elem {*face_index.element};
+    double* jacobian = walls[i_bc].jacobian();
 
-    double both_face [2][n_var][n_face_qpoint];
+    // compute coordinate transformation and (surface) Jacobian determinant
+    Eigen::Matrix<double, n_dim, n_dim> orthonormal [n_face_qpoint];
+    double jac_det [n_face_qpoint];
+    for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
+      Eigen::Matrix<double, n_dim, n_dim> jac;
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+          jac(i_dim, j_dim) = jacobian[(i_dim*n_dim + j_dim)*n_face_qpoint + i_qpoint];
+        }
+      }
+      orthonormal[i_qpoint] = custom_math::orthonormal(jac, i_dim);
+      jac.col(i_dim) = orthonormal[i_qpoint].col(i_dim);
+      jac_det[i_qpoint] = std::abs(jac.determinant()); // `abs` since surface coordinates not guaranteed to be right-hand
+    }
+
+    double both_face [2][n_var][n_face_qpoint]; // contains the state from the element as well as a ghost state
     double* dom_face = elem.face() + (i_dim*2 + is_p)*face_size;
-    for (int i_var = 0; i_var < n_var; ++i_var)
-    {
-      for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint)
-      {
+    // fetch face state
+    for (int i_var = 0; i_var < n_var; ++i_var) {
+      for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
         both_face[0][i_var][i_qpoint] = both_face[1][i_var][i_qpoint] = dom_face[i_var*n_face_qpoint + i_qpoint];
       }
     }
-    for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint)
-    {
+    // rotate momentum into surface coordinates
+    for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
+      Eigen::Matrix<double, n_dim, 2> momentum;
+      for (int i_side : {0, 1}) {
+        for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+          momentum(i_dim, i_side) = both_face[i_side][i_dim][i_qpoint];
+        }
+      }
+      momentum = orthonormal[i_qpoint].transpose()*momentum;
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        for (int i_side : {0, 1}) {
+          both_face[i_side][i_dim][i_qpoint] = momentum(i_dim, i_side);
+        }
+      }
+    }
+    // flip the surface-normal momentum in the ghost state to enforce nonpenetration condition
+    for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
       both_face[is_p][i_dim][i_qpoint] *= -1;
     }
+
+    // compute upwind flux
     hll_cpg_euler<n_dim, n_face_qpoint>(both_face[0][0], both_face[0][0], 1., i_dim, heat_rat);
-    for (int i_var = 0; i_var < n_var; ++i_var)
-    {
-      for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint)
-      {
+
+    // rotate momentum back into physical coordinates
+    for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
+      Eigen::Matrix<double, n_dim, 2> momentum;
+      for (int i_side : {0, 1}) {
+        for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+          momentum(i_dim, i_side) = both_face[i_side][i_dim][i_qpoint];
+        }
+      }
+      momentum = orthonormal[i_qpoint]*momentum;
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        for (int i_side : {0, 1}) {
+          both_face[i_side][i_dim][i_qpoint] = momentum(i_dim, i_side);
+        }
+      }
+    }
+    // multiply flux by Jacobian determinant. `2*i_var` to cover both sides
+    for (int i_side : {0, 1}) {
+      for (int i_var = 0; i_var < n_var; ++i_var) {
+        for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
+          both_face[i_side][i_var][i_qpoint] *= jac_det[i_qpoint];
+        }
+      }
+    }
+
+    // write numerical flux
+    for (int i_var = 0; i_var < n_var; ++i_var) {
+      for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
         dom_face[i_var*n_face_qpoint + i_qpoint] = both_face[1 - is_p][i_var][i_qpoint];
       }
     }
