@@ -43,7 +43,7 @@ class Vertex
   void calc_relax(); // compute a (but do not apply) new position resulting in a smoother grid.
   void apply_relax(); // update `pos` to the position computed by `calc_relax`.
   static void connect(Vertex&, Vertex&); // specify that two vertices are connected by an edge
-  double max_viscosity(); // maximum of the `required_visosity` of all `Transferable_ptr`s to this. Thread safe.
+  double max_viscosity(); // maximum of the `required_visosity` of all `Transferable_ptr`s to this and 0. Thread safe.
 
   private:
   int m;

@@ -99,11 +99,15 @@ void Vertex::connect(Vertex& vert0, Vertex& vert1)
 
 double Vertex::max_viscosity()
 {
-  return 0.;
+  double max = 0.;
+  for (Transferable_ptr* ptr : trbl_ptrs) {
+    max = std::max(max, ptr->required_viscosity);
+  }
+  return max;
 }
 
 Vertex::Transferable_ptr::Transferable_ptr(std::array<double, 3> pos)
-: ptr {new Vertex {pos}}
+: ptr {new Vertex {pos}}, required_viscosity {0.}
 {
   ptr->trbl_ptrs.insert(this);
 }

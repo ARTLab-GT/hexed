@@ -165,5 +165,7 @@ TEST_CASE("Vertex")
     REQUIRE(ptr0->max_viscosity() == 0.3);
     ptr0.required_viscosity = 0.4;
     REQUIRE(ptr1->max_viscosity() == 0.4);
+    ptr0.required_viscosity = ptr1.required_viscosity = ptr2.required_viscosity = -0.1;
+    REQUIRE(ptr0->max_viscosity() == 0.);
   }
 }
