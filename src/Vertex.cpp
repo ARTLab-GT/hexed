@@ -97,6 +97,11 @@ void Vertex::connect(Vertex& vert0, Vertex& vert1)
   }
 }
 
+double Vertex::max_viscosity()
+{
+  return 0.;
+}
+
 Vertex::Transferable_ptr::Transferable_ptr(std::array<double, 3> pos)
 : ptr {new Vertex {pos}}
 {

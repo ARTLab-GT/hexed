@@ -17,6 +17,8 @@ TEST_CASE("Vertex")
   REQUIRE(ptr0->mobile == false);
   (*ptr0).pos[1] = 2.;
   REQUIRE(ptr0->pos[1] == 2.);
+  REQUIRE(ptr0.required_viscosity == 0.);
+  REQUIRE(ptr1.required_viscosity == 0.);
 
   SECTION("eat")
   {
@@ -151,5 +153,17 @@ TEST_CASE("Vertex")
       vert0->apply_relax();
       REQUIRE(vert0->pos == std::array<double, 3>{.5, .5, 0.});
     }
+  }
+
+  SECTION("maximum viscosity")
+  {
+    ptr0->eat(*ptr1);
+    cartdg::Vertex::Transferable_ptr ptr2 = ptr0;
+    ptr0.required_viscosity = 0.1;
+    ptr1.required_viscosity = 0.3;
+    ptr2.required_viscosity = 0.2;
+    REQUIRE(ptr0->max_viscosity() == 0.3);
+    ptr0.required_viscosity = 0.4;
+    REQUIRE(ptr1->max_viscosity() == 0.4);
   }
 }
