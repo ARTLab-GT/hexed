@@ -50,22 +50,24 @@ void nonpen_convective(def_elem_wall_vec& walls, Basis& basis, Kernel_settings& 
     // fetch face state
     for (int i_var = 0; i_var < n_var; ++i_var) {
       for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
-        both_face[0][i_var][i_qpoint] = both_face[1][i_var][i_qpoint] = dom_face[i_var*n_face_qpoint + i_qpoint];
+        both_face[0][i_var][i_qpoint] = dom_face[i_var*n_face_qpoint + i_qpoint];
       }
     }
     // rotate momentum into surface coordinates
     for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
-      Eigen::Matrix<double, n_dim, 2> momentum;
-      for (int i_side : {0, 1}) {
-        for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-          momentum(i_dim, i_side) = both_face[i_side][i_dim][i_qpoint];
-        }
+      Eigen::Matrix<double, n_dim, 1> momentum;
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        momentum(i_dim) = both_face[0][i_dim][i_qpoint];
       }
       momentum = orthonormal[i_qpoint].transpose()*momentum;
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        for (int i_side : {0, 1}) {
-          both_face[i_side][i_dim][i_qpoint] = momentum(i_dim, i_side);
-        }
+        both_face[0][i_dim][i_qpoint] = momentum(i_dim);
+      }
+    }
+    // copy domain state to create ghost state
+    for (int i_var = 0; i_var < n_var; ++i_var) {
+      for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
+        both_face[1][i_var][i_qpoint] = both_face[0][i_var][i_qpoint];
       }
     }
     // flip the surface-normal momentum in the ghost state to enforce nonpenetration condition
@@ -78,25 +80,19 @@ void nonpen_convective(def_elem_wall_vec& walls, Basis& basis, Kernel_settings& 
 
     // rotate momentum back into physical coordinates
     for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
-      Eigen::Matrix<double, n_dim, 2> momentum;
-      for (int i_side : {0, 1}) {
-        for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-          momentum(i_dim, i_side) = both_face[i_side][i_dim][i_qpoint];
-        }
+      Eigen::Matrix<double, n_dim, 1> momentum;
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        momentum(i_dim) = both_face[1 - is_p][i_dim][i_qpoint];
       }
       momentum = orthonormal[i_qpoint]*momentum;
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        for (int i_side : {0, 1}) {
-          both_face[i_side][i_dim][i_qpoint] = momentum(i_dim, i_side);
-        }
+        both_face[1 - is_p][i_dim][i_qpoint] = momentum(i_dim);
       }
     }
     // multiply flux by Jacobian determinant. `2*i_var` to cover both sides
-    for (int i_side : {0, 1}) {
-      for (int i_var = 0; i_var < n_var; ++i_var) {
-        for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
-          both_face[i_side][i_var][i_qpoint] *= jac_det[i_qpoint];
-        }
+    for (int i_var = 0; i_var < n_var; ++i_var) {
+      for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
+        both_face[1 - is_p][i_var][i_qpoint] *= jac_det[i_qpoint];
       }
     }
 
