@@ -662,4 +662,38 @@ TEST_CASE("Deformed grid class")
       REQUIRE(diffs[0]/diffs[1] > std::pow(2, row_size));
     }
   }
+
+  SECTION("continuous viscosity")
+  {
+    cartdg::Kernel_settings settings;
+    grid2.add_element({0, 0});
+    grid2.add_element({1, 0});
+    grid2.add_element({0, 1});
+    grid2.add_element({1, 1});
+    grid2.add_element({1, 1});
+    grid2.connect({0, 1}, {0, 0}, {1, 0});
+    grid2.connect({0, 2}, {1, 1}, {1, 0});
+    grid2.connect({1, 3}, {1, 1}, {1, 0});
+    grid2.connect({2, 4}, {0, 0}, {1, 0});
+    grid2.connect({3, 4}, {0, 1}, {0, 0});
+    double visc [5][4] {{0.1, 0., 0.2, 0.4},
+                        {0.5, 0.1, 0., 0.},
+                        {}, {}, {}};
+    for (int i_elem = 0; i_elem < 5; ++i_elem)
+    {
+      for (int i_visc = 0; i_visc < 4; ++i_visc)
+      {
+        grid2.element(i_elem).viscosity()[i_visc] = visc[i_elem][i_visc];
+      }
+    }
+    grid2.execute_cont_visc(settings);
+    REQUIRE(grid2.element(0).viscosity()[0] == 0.1);
+    REQUIRE(grid2.element(0).viscosity()[1] == 0.);
+    REQUIRE(grid2.element(0).viscosity()[2] == 0.5);
+    REQUIRE(grid2.element(0).viscosity()[3] == 0.4);
+    REQUIRE(grid2.element(1).viscosity()[1] == 0.4);
+    REQUIRE(grid2.element(2).viscosity()[2] == 0.4);
+    REQUIRE(grid2.element(3).viscosity()[0] == 0.4);
+    REQUIRE(grid2.element(4).viscosity()[0] == 0.4);
+  }
 }
