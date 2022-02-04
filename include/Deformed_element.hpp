@@ -34,6 +34,7 @@ class Deformed_element : public Element
   // No simple way to explain what this represents.
   double* node_adjustments(); // Layout: [i_dim][is_positive][i_face_qpoint]
   void push_required_visc(); // writes required viscosity to vertices so that max can be determined
+  void fetch_visc(); // set viscosity to the max required at each vertex
 };
 
 class Deformed_face

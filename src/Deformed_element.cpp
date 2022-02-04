@@ -57,6 +57,13 @@ void Deformed_element::push_required_visc()
   }
 }
 
+void Deformed_element::fetch_visc()
+{
+  for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {
+    viscosity()[i_vert] = vertices[i_vert]->max_viscosity();
+  }
+}
+
 Deformed_face::Deformed_face(Storage_params params)
 : n_dim(params.n_dim), n_fqpoint(params.n_qpoint()/params.row_size), jac(n_dim*n_dim*n_fqpoint)
 {

@@ -88,8 +88,9 @@ TEST_CASE("Deformed_element.hpp")
     assert_equal(elem3d_1.vertex(0).pos, {3., 0., 0.});
   }
 
-  SECTION("push_required_visc")
+  SECTION("push/fetch viscosity")
   {
+    // test push_required_visc
     element.viscosity()[0] = 0.1;
     element.viscosity()[1] = 0.;
     element.viscosity()[2] = 0.;
@@ -98,6 +99,17 @@ TEST_CASE("Deformed_element.hpp")
     REQUIRE(element.vertex(0).max_viscosity() == Approx(0.1));
     REQUIRE(element.vertex(1).max_viscosity() == Approx(0.));
     REQUIRE(element.vertex(3).max_viscosity() == Approx(0.2));
+    // make sure vertex combination doesn't break anything
+    cartdg::Vertex::Transferable_ptr ptr ({0, 0, 0});
+    ptr->eat(element.vertex(0));
+    REQUIRE(element.vertex(0).max_viscosity() == Approx(0.1));
+    ptr.required_viscosity = 0.3;
+    REQUIRE(element.vertex(0).max_viscosity() == Approx(0.3));
+    // test fetch_visc
+    element.fetch_visc();
+    REQUIRE(element.viscosity()[0] == Approx(0.3));
+    REQUIRE(element.viscosity()[1] == Approx(0.));
+    REQUIRE(element.viscosity()[3] == Approx(0.2));
   }
 }
 
