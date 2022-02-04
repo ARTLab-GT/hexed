@@ -145,6 +145,12 @@ void Deformed_grid::execute_req_visc(Kernel_settings& settings)
 
 void Deformed_grid::execute_cont_visc(Kernel_settings& settings)
 {
+  for (auto& elem : elements) {
+    elem->push_required_visc();
+  }
+  for (auto& elem : elements) {
+    elem->fetch_visc();
+  }
 }
 
 void Deformed_grid::execute_local_derivative(int i_var, int i_dim, Kernel_settings& settings)
