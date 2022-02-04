@@ -87,6 +87,18 @@ TEST_CASE("Deformed_element.hpp")
     cartdg::Deformed_element elem3d_1 {params3d, {3,}, 1.};
     assert_equal(elem3d_1.vertex(0).pos, {3., 0., 0.});
   }
+
+  SECTION("push_required_visc")
+  {
+    element.viscosity()[0] = 0.1;
+    element.viscosity()[1] = 0.;
+    element.viscosity()[2] = 0.;
+    element.viscosity()[3] = 0.2;
+    element.push_required_visc();
+    REQUIRE(element.vertex(0).max_viscosity() == Approx(0.1));
+    REQUIRE(element.vertex(1).max_viscosity() == Approx(0.));
+    REQUIRE(element.vertex(3).max_viscosity() == Approx(0.2));
+  }
 }
 
 TEST_CASE("Deformed_face")

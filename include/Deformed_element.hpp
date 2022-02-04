@@ -33,6 +33,7 @@ class Deformed_element : public Element
   inline Vertex& vertex(int i_vertex) { return *vertices[i_vertex]; }
   // No simple way to explain what this represents.
   double* node_adjustments(); // Layout: [i_dim][is_positive][i_face_qpoint]
+  void push_required_visc(); // writes required viscosity to vertices so that max can be determined
 };
 
 class Deformed_face

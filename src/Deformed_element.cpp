@@ -50,6 +50,13 @@ double* Deformed_element::node_adjustments()
   return node_adj.data();
 }
 
+void Deformed_element::push_required_visc()
+{
+  for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {
+    vertices[i_vert].required_viscosity = viscosity()[i_vert];
+  }
+}
+
 Deformed_face::Deformed_face(Storage_params params)
 : n_dim(params.n_dim), n_fqpoint(params.n_qpoint()/params.row_size), jac(n_dim*n_dim*n_fqpoint)
 {
