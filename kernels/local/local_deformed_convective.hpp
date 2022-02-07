@@ -35,6 +35,7 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
     double* write = def_elements[i_elem]->stage(i_write);
     double* jacobian = def_elements[i_elem]->jacobian();
     double* face = def_elements[i_elem]->face();
+    double* tss = def_elements[i_elem]->time_step_scale();
     double flux [n_dim][n_var][n_qpoint];
 
     // Initialize updated solution to be equal to current solution
@@ -141,8 +142,8 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
             row_w.col(i_var).noalias() += lift*boundary_values.row(i_var).transpose();
             row_w.col(i_var).array() /= jac_det;
             for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-               write[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride]
-               += row_w(i_qpoint, i_var)*d_t_by_d_pos;
+              int offset = i_outer*stride*row_size + i_inner + i_qpoint*stride;
+              write[i_var*n_qpoint + offset] += row_w(i_qpoint, i_var)*d_t_by_d_pos*tss[offset];
             }
           }
           ++i_face_qpoint;
