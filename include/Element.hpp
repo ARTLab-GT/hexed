@@ -35,6 +35,8 @@ class Element
   Storage_params storage_params();
   // Pointer to state data for `i_stage`th Runge-Kutta stage.
   double* stage(int i_stage); // Layout: [i_var][i_qpoint]
+  // pointer to scaling factor for local time step.
+  double* time_step_scale(); // Layout: [i_qpoint]
   // Pointer state data at faces. Must be populated by user
   double* face(); // Layout: [i_dim][is_positive][i_var][i_face_qpoint]
 
