@@ -9,7 +9,7 @@ namespace cartdg
 {
 
 template<int n_var, int n_qpoint>
-double char_speed_convective(double* read, double heat_rat)
+double char_speed_convective(double* read, double* time_step_scale, double heat_rat)
 {
   const int n_dim = n_var - 2;
   double max_speed = 0.;
@@ -27,7 +27,8 @@ double char_speed_convective(double* read, double heat_rat)
     int_ener = READ(n_var - 1) - 0.5*int_ener;
     const double sound_speed = std::sqrt(heat_rat*(heat_rat - 1)
                                          *int_ener/READ(n_var - 2));
-    max_speed = std::max(max_speed, max_veloc + sound_speed);
+    double speed = (max_veloc + sound_speed)/time_step_scale[i_qpoint];
+    max_speed = std::max(max_speed, speed);
     #undef READ
   }
   return max_speed;

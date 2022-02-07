@@ -37,7 +37,7 @@ void req_visc_convective(std::vector<std::unique_ptr<E>>& elements, Basis& basis
   {
     double* stage = elem->stage(i_read);
     double mass_indicator = indicator<n_qpoint, row_size>(stage + n_dim*n_qpoint, weights, ortho);
-    double char_speed = char_speed_convective<n_var, n_qpoint>(stage, heat_rat);
+    double char_speed = char_speed_convective<n_var, n_qpoint>(stage, elem->time_step_scale(), heat_rat);
     double req_visc = mass_indicator*char_speed*d_pos/(row_size - 1.);
     double* visc = elem->viscosity();
     for (int i_visc = 0; i_visc < n_visc; ++i_visc)
