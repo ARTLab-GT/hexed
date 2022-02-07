@@ -53,9 +53,8 @@ TEST_CASE("Max characteristic speed")
       read[2*4 + i_qpoint] = 1.225;
       read[3*4 + i_qpoint] = 101235/0.4 + 0.5*1.225*500;
     }
-    elements.back()->time_step_scale()[0] = 0.9;
     double mcs = cartdg::get_mcs_convective(2, 2)(elements, settings);
-    REQUIRE(mcs == Approx(360/0.9).epsilon(0.01));
+    REQUIRE(mcs == Approx(360).epsilon(0.01));
   }
 
   SECTION("deformed")

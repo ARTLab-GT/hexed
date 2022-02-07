@@ -18,8 +18,7 @@ double mcs_convective(elem_vec& elements, Kernel_settings& settings)
   #pragma omp parallel for reduction(max:max_speed)
   for (unsigned i_elem = 0; i_elem < elements.size(); ++i_elem)
   {
-    max_speed = std::max<double>(char_speed_convective<n_var, n_qpoint>(elements[i_elem]->stage(i_read),
-                                                                        elements[i_elem]->time_step_scale(), heat_rat), max_speed);
+    max_speed = std::max<double>(char_speed_convective<n_var, n_qpoint>(elements[i_elem]->stage(i_read), heat_rat), max_speed);
   }
   return max_speed;
 }
