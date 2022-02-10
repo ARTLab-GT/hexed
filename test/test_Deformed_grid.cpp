@@ -663,9 +663,8 @@ TEST_CASE("Deformed grid class")
     }
   }
 
-  SECTION("continuous viscosity")
+  SECTION("viscosity sharing")
   {
-    cartdg::Kernel_settings settings;
     grid2.add_element({0, 0});
     grid2.add_element({1, 0});
     grid2.add_element({0, 1});
@@ -679,14 +678,12 @@ TEST_CASE("Deformed grid class")
     double visc [5][4] {{0.1, 0., 0.2, 0.4},
                         {0.5, 0.1, 0., 0.},
                         {}, {}, {}};
-    for (int i_elem = 0; i_elem < 5; ++i_elem)
-    {
-      for (int i_visc = 0; i_visc < 4; ++i_visc)
-      {
+    for (int i_elem = 0; i_elem < 5; ++i_elem) {
+      for (int i_visc = 0; i_visc < 4; ++i_visc) {
         grid2.element(i_elem).viscosity()[i_visc] = visc[i_elem][i_visc];
       }
     }
-    grid2.execute_cont_visc(settings);
+    grid2.share_vertex_data(&cartdg::Element::viscosity);
     REQUIRE(grid2.element(0).viscosity()[0] == 0.1);
     REQUIRE(grid2.element(0).viscosity()[1] == 0.);
     REQUIRE(grid2.element(0).viscosity()[2] == 0.5);

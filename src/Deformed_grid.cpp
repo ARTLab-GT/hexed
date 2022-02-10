@@ -143,16 +143,6 @@ void Deformed_grid::execute_req_visc(Kernel_settings& settings)
   get_req_visc_deformed_convective(n_dim, basis.row_size)(elements, basis, settings);
 }
 
-void Deformed_grid::execute_cont_visc(Kernel_settings& settings)
-{
-  for (auto& elem : elements) {
-    elem->push_shareable_value(&Element::viscosity);
-  }
-  for (auto& elem : elements) {
-    elem->fetch_shareable_value(&Element::viscosity);
-  }
-}
-
 void Deformed_grid::execute_local_derivative(int i_var, int i_dim, Kernel_settings& settings)
 {
   #if 0
@@ -179,6 +169,16 @@ void Deformed_grid::execute_local_av(int i_var, int i_dim, Kernel_settings& sett
 
 void Deformed_grid::execute_neighbor_av(int i_var, int i_dim, Kernel_settings& settings)
 {
+}
+
+void Deformed_grid::share_vertex_data(Element::shareable_value_access access_func)
+{
+  for (auto& elem : elements) {
+    elem->push_shareable_value(access_func);
+  }
+  for (auto& elem : elements) {
+    elem->fetch_shareable_value(access_func);
+  }
 }
 
 void Deformed_grid::project_degenerate(int i_stage)

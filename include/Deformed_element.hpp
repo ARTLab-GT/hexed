@@ -35,7 +35,6 @@ class Deformed_element : public Element
   double* node_adjustments(); // Layout: [i_dim][is_positive][i_face_qpoint]
 
   // functions to communicate with nodal neighbors
-  typedef double* (Deformed_element::*shareable_value_access)();
   void push_shareable_value(shareable_value_access access_func); // writes shareable value to vertices so that shared value can be determined
   void fetch_shareable_value(shareable_value_access access_func); // set `this`'s copy of shareable value to the shared values at the vertices
 };

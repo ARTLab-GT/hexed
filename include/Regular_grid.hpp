@@ -34,12 +34,12 @@ class Regular_grid : public Grid
   virtual void execute_neighbor(Kernel_settings&);
   virtual void execute_local(Kernel_settings&);
   virtual void execute_req_visc(Kernel_settings&);
-  virtual void execute_cont_visc(Kernel_settings&);
   virtual void execute_local_derivative(int i_var, int i_dim, Kernel_settings&);
   virtual void execute_neighbor_derivative(int i_var, int i_dim, Kernel_settings&);
   virtual void execute_av_flux(Kernel_settings&);
   virtual void execute_local_av(int i_var, int i_dim, Kernel_settings&);
   virtual void execute_neighbor_av(int i_var, int i_dim, Kernel_settings&);
+  virtual void share_vertex_data(Element::shareable_value_access);
 
   private:
   elem_vec elements;

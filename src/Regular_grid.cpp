@@ -7,7 +7,6 @@
 #include <get_local_convective.hpp>
 #include <get_gbc_convective.hpp>
 #include <get_req_visc_regular_convective.hpp>
-#include <get_cont_visc.hpp>
 #include <get_local_derivative.hpp>
 #include <get_neighbor_derivative.hpp>
 #include <get_av_flux.hpp>
@@ -90,13 +89,6 @@ void Regular_grid::execute_req_visc(Kernel_settings& settings)
   get_req_visc_regular_convective(n_dim, basis.row_size)(elements, basis, settings);
 }
 
-void Regular_grid::execute_cont_visc(Kernel_settings& settings)
-{
-  settings.i_read = i_read;
-  settings.i_write = i_write;
-  get_cont_visc(n_dim, basis.row_size)(elem_cons, settings);
-}
-
 void Regular_grid::execute_local_derivative(int i_var, int i_dim, Kernel_settings& settings)
 {
   settings.i_read = i_read;
@@ -131,6 +123,11 @@ void Regular_grid::execute_neighbor_av(int i_var, int i_dim, Kernel_settings& se
   settings.i_write = i_write;
   get_neighbor_av(n_dim, basis.row_size)(elem_cons, i_var, i_dim, basis, settings);
   get_gbc_av(n_dim, basis.row_size)(*this, i_var, i_dim, basis, settings);
+}
+
+void Regular_grid::share_vertex_data(Element::shareable_value_access)
+{
+  throw std::runtime_error("not implemented");
 }
 
 int Regular_grid::add_element(std::vector<int> position)

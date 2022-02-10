@@ -31,6 +31,9 @@ class Element
   Eigen::VectorXd derivative_storage;
 
   public:
+  // this type represents a pointer to a function that can access some data member which is recorded at the vertices
+  typedef double* (Element::*shareable_value_access)();
+
   Element(Storage_params);
   Storage_params storage_params();
   // Pointer to state data for `i_stage`th Runge-Kutta stage.
