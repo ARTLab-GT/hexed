@@ -53,14 +53,14 @@ double* Deformed_element::node_adjustments()
 void Deformed_element::push_required_visc()
 {
   for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {
-    vertices[i_vert].required_viscosity = viscosity()[i_vert];
+    vertices[i_vert].shareable_value = viscosity()[i_vert];
   }
 }
 
 void Deformed_element::fetch_visc()
 {
   for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {
-    viscosity()[i_vert] = vertices[i_vert]->max_viscosity();
+    viscosity()[i_vert] = vertices[i_vert]->shared_max_value();
   }
 }
 

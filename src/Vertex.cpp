@@ -97,17 +97,17 @@ void Vertex::connect(Vertex& vert0, Vertex& vert1)
   }
 }
 
-double Vertex::max_viscosity()
+double Vertex::shared_max_value()
 {
   double max = 0.;
   for (Transferable_ptr* ptr : trbl_ptrs) {
-    max = std::max(max, ptr->required_viscosity);
+    max = std::max(max, ptr->shareable_value);
   }
   return max;
 }
 
 Vertex::Transferable_ptr::Transferable_ptr(std::array<double, 3> pos)
-: ptr {new Vertex {pos}}, required_viscosity {0.}
+: ptr {new Vertex {pos}}, shareable_value {0.}
 {
   ptr->trbl_ptrs.insert(this);
 }

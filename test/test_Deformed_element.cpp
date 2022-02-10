@@ -96,15 +96,15 @@ TEST_CASE("Deformed_element.hpp")
     element.viscosity()[2] = 0.;
     element.viscosity()[3] = 0.2;
     element.push_required_visc();
-    REQUIRE(element.vertex(0).max_viscosity() == Approx(0.1));
-    REQUIRE(element.vertex(1).max_viscosity() == Approx(0.));
-    REQUIRE(element.vertex(3).max_viscosity() == Approx(0.2));
+    REQUIRE(element.vertex(0).shared_max_value() == Approx(0.1));
+    REQUIRE(element.vertex(1).shared_max_value() == Approx(0.));
+    REQUIRE(element.vertex(3).shared_max_value() == Approx(0.2));
     // make sure vertex combination doesn't break anything
     cartdg::Vertex::Transferable_ptr ptr ({0, 0, 0});
     ptr->eat(element.vertex(0));
-    REQUIRE(element.vertex(0).max_viscosity() == Approx(0.1));
-    ptr.required_viscosity = 0.3;
-    REQUIRE(element.vertex(0).max_viscosity() == Approx(0.3));
+    REQUIRE(element.vertex(0).shared_max_value() == Approx(0.1));
+    ptr.shareable_value = 0.3;
+    REQUIRE(element.vertex(0).shared_max_value() == Approx(0.3));
     // test fetch_visc
     element.fetch_visc();
     REQUIRE(element.viscosity()[0] == Approx(0.3));

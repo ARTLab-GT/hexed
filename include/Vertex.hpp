@@ -43,7 +43,7 @@ class Vertex
   void calc_relax(); // compute a (but do not apply) new position resulting in a smoother grid.
   void apply_relax(); // update `pos` to the position computed by `calc_relax`.
   static void connect(Vertex&, Vertex&); // specify that two vertices are connected by an edge
-  double max_viscosity(); // maximum of the `required_visosity` of all `Transferable_ptr`s to this and 0. Thread safe.
+  double shared_max_value(); // maximum of the `shareable_value` of all `Transferable_ptr`s to this and 0. Thread safe.
 
   private:
   int m;
@@ -64,8 +64,8 @@ class Vertex::Transferable_ptr
   std::shared_ptr<Vertex> ptr;
 
   public:
-  // set this member to assert that the viscosity of this vertex should be at least this value
-  double required_viscosity;
+  // set this member to assert that some shared value at the vertex should be at least this
+  double shareable_value;
 
   // Create a vertex and construct a `Transferable_ptr` to it.
   Transferable_ptr(std::array<double, 3> pos);
