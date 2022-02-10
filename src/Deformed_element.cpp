@@ -50,17 +50,17 @@ double* Deformed_element::node_adjustments()
   return node_adj.data();
 }
 
-void Deformed_element::push_required_visc()
+void Deformed_element::push_shareable_value(shareable_value_access access_func)
 {
   for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {
-    vertices[i_vert].shareable_value = viscosity()[i_vert];
+    vertices[i_vert].shareable_value = std::invoke(access_func, *this)[i_vert];
   }
 }
 
-void Deformed_element::fetch_visc()
+void Deformed_element::fetch_shareable_value(shareable_value_access access_func)
 {
   for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {
-    viscosity()[i_vert] = vertices[i_vert]->shared_max_value();
+    std::invoke(access_func, *this)[i_vert] = vertices[i_vert]->shared_max_value();
   }
 }
 

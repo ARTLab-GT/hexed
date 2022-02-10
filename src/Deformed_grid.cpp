@@ -146,10 +146,10 @@ void Deformed_grid::execute_req_visc(Kernel_settings& settings)
 void Deformed_grid::execute_cont_visc(Kernel_settings& settings)
 {
   for (auto& elem : elements) {
-    elem->push_required_visc();
+    elem->push_shareable_value(&Element::viscosity);
   }
   for (auto& elem : elements) {
-    elem->fetch_visc();
+    elem->fetch_shareable_value(&Element::viscosity);
   }
 }
 

@@ -13,7 +13,7 @@ namespace cartdg
 class Deformed_grid;
 
 /*
- * Represents a vertex in a deformed grid. Used by `Deformed_element`s to contain data
+ * Represents a vertex in a deformed grid. Used by `Deformed_element`s to manage data
  * that is shared by nodal neighbors, including position and artificial viscosity coefficient.
  * Note: Construction and ownership should be managed by the `Transferable_ptr` member class.
  */
@@ -64,7 +64,8 @@ class Vertex::Transferable_ptr
   std::shared_ptr<Vertex> ptr;
 
   public:
-  // set this member to assert that some shared value at the vertex should be at least this
+  // set this member to assert that some value at the vertex shared by all
+  // participating elements should be at least this quantity
   double shareable_value;
 
   // Create a vertex and construct a `Transferable_ptr` to it.
