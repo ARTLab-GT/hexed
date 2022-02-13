@@ -302,4 +302,22 @@ TEST_CASE("Regular_grid")
     grid.auto_connect();
     REQUIRE(grid.n_con(0) == 1);
   }
+
+  SECTION("continuous viscosity")
+  {
+    cartdgConfig::Regular_grid grid {4, 2, 0, 1., basis};
+    grid.add_element({0, 0});
+    grid.add_element({0, 1});
+    grid.add_element({1, 0});
+    grid.add_element({1, 1});
+    for (int i_elem = 0; i_elem < 4; ++i_elem) {
+      for (int i_vertex = 0; i_vertex < 4; ++i_vertex) {
+        grid.element(i_elem).viscosity()[i_vertex] = 0.;
+      }
+    }
+    grid.element(0).viscosity()[3] = 0.7;
+    grid.share_vertex_data(&Element::viscosity);
+    REQUIRE(grid.element(0).viscosity[3] == 0.7);
+    REQUIRE(grid.element(3).viscosity[0] == 0.7);
+  }
 }

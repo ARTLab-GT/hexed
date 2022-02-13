@@ -127,7 +127,6 @@ void Regular_grid::execute_neighbor_av(int i_var, int i_dim, Kernel_settings& se
 
 void Regular_grid::share_vertex_data(Element::shareable_value_access)
 {
-  throw std::runtime_error("not implemented");
 }
 
 int Regular_grid::add_element(std::vector<int> position)
