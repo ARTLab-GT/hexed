@@ -305,7 +305,8 @@ TEST_CASE("Regular_grid")
 
   SECTION("continuous viscosity")
   {
-    cartdgConfig::Regular_grid grid {4, 2, 0, 1., basis};
+    // set up a grid where nodal neighbors have different viscosity at the vertex
+    cartdg::Regular_grid grid {4, 2, 0, 1., basis};
     grid.add_element({0, 0});
     grid.add_element({0, 1});
     grid.add_element({1, 0});
@@ -316,8 +317,15 @@ TEST_CASE("Regular_grid")
       }
     }
     grid.element(0).viscosity()[3] = 0.7;
-    grid.share_vertex_data(&Element::viscosity);
-    REQUIRE(grid.element(0).viscosity[3] == 0.7);
-    REQUIRE(grid.element(3).viscosity[0] == 0.7);
+    // share viscosity
+    grid.share_vertex_data(&cartdg::Element::viscosity);
+    // test that the viscosity has been shared with the nodal neighbors
+    REQUIRE(grid.element(0).viscosity()[3] == 0.7);
+    REQUIRE(grid.element(3).viscosity()[0] == 0.7);
+    REQUIRE(grid.element(2).viscosity()[1] == 0.7);
+    // verify that the viscosity has not been shared to other vertices
+    REQUIRE(grid.element(0).viscosity()[1] == 0.);
+    REQUIRE(grid.element(3).viscosity()[2] == 0.);
+    REQUIRE(grid.element(2).viscosity()[3] == 0.);
   }
 }
