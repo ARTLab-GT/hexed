@@ -125,8 +125,29 @@ void Regular_grid::execute_neighbor_av(int i_var, int i_dim, Kernel_settings& se
   get_gbc_av(n_dim, basis.row_size)(*this, i_var, i_dim, basis, settings);
 }
 
-void Regular_grid::share_vertex_data(Element::shareable_value_access)
+void Regular_grid::share_vertex_data(Element::shareable_value_access access_func)
 {
+  #if 0
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+  {
+    for (int i_con = 0; i_con < elem_cons[i_dim].size();; ++i_con)
+    {
+      double* data[2];
+      for (int i_side : {0, 1}) data[i_side] = std::invoke(access_func, *elem_cons[i_dim][i_con][i_side]);
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        int stride = custom_math::pow(2, n_dim - i_dim - 1);
+        for (int i_inner = 0; i_inner < stride; ++i_inner) {
+          for (int i_outer = 0; i_outer < n_vertices/stride/2; ++i_outer) {
+            double* vert_data [2];
+            for (int i_side : {0, 1}) vert_data[i_side] = data[i_side] + i_inner + i_side*stride + i_outer*stride*2;
+            double max = std::max(*vert_data[0], *vert_data[1]);
+            for (int i_side : {0, 1}) *vert_data[i_side] = max;
+          }
+        }
+      }
+    }
+  }
+  #endif
 }
 
 int Regular_grid::add_element(std::vector<int> position)
