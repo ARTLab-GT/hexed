@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
-
 #include <Element.hpp>
+#include "testing_utils.hpp"
 
 TEST_CASE("Element")
 {
@@ -72,5 +72,41 @@ TEST_CASE("Element")
       REQUIRE(test_elem->stage(2)[i_dof] == 0.);
       REQUIRE(test_elem->stage(3)[i_dof] == 1.3);
     }
+  }
+
+  SECTION("vertex arrangement")
+  {
+    // check that vertices start out in correct location
+    cartdg::Storage_params params3d {3, 5, 3, 4};
+    cartdg::Element elem3d {params3d, {1, 2, -1}, 0.2};
+    assert_equal(elem3d.vertex(0).pos, {0.2, 0.4, -0.2});
+    assert_equal(elem3d.vertex(1).pos, {0.2, 0.4,  0. });
+    assert_equal(elem3d.vertex(2).pos, {0.2, 0.6, -0.2});
+    assert_equal(elem3d.vertex(5).pos, {0.4, 0.4,  0. });
+    assert_equal(elem3d.vertex(7).pos, {0.4, 0.6,  0. });
+  }
+
+  SECTION("push/fetch viscosity")
+  {
+    // test push_required_visc
+    element.viscosity()[0] = 0.1;
+    element.viscosity()[1] = 0.;
+    element.viscosity()[2] = 0.;
+    element.viscosity()[3] = 0.2;
+    element.push_shareable_value(&cartdg::Element::viscosity);
+    REQUIRE(element.vertex(0).shared_max_value() == Approx(0.1));
+    REQUIRE(element.vertex(1).shared_max_value() == Approx(0.));
+    REQUIRE(element.vertex(3).shared_max_value() == Approx(0.2));
+    // make sure vertex combination doesn't break anything
+    cartdg::Vertex::Transferable_ptr ptr ({0, 0, 0});
+    ptr->eat(element.vertex(0));
+    REQUIRE(element.vertex(0).shared_max_value() == Approx(0.1));
+    ptr.shareable_value = 0.3;
+    REQUIRE(element.vertex(0).shared_max_value() == Approx(0.3));
+    // test fetch_visc
+    element.fetch_shareable_value(&cartdg::Element::viscosity);
+    REQUIRE(element.viscosity()[0] == Approx(0.3));
+    REQUIRE(element.viscosity()[1] == Approx(0.));
+    REQUIRE(element.viscosity()[3] == Approx(0.2));
   }
 }
