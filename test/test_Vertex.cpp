@@ -99,13 +99,18 @@ TEST_CASE("Vertex")
     REQUIRE(!ptr1_9);
   }
 
-  SECTION("Position relaxation")
+  SECTION("connection and position relaxation")
   {
     cartdg::Vertex::Transferable_ptr vert0 {{0., 0., 0.}};
     cartdg::Vertex::Transferable_ptr vert1 {{2., 0., 0.}};
     cartdg::Vertex::Transferable_ptr vert2 {{0., 2., 0.}};
     cartdg::Vertex::connect(*vert0, *vert1);
     cartdg::Vertex::connect(*vert2, *vert0);
+    // check neighbors are correct
+    REQUIRE(vert0->is_neighbor(*vert1));
+    REQUIRE(vert1->is_neighbor(*vert0));
+    REQUIRE(!vert1->is_neighbor(*vert2));
+    REQUIRE(!vert2->is_neighbor(*vert1));
 
     SECTION("calling once")
     {

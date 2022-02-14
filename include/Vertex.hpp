@@ -43,6 +43,7 @@ class Vertex
   void calc_relax(); // compute a (but do not apply) new position resulting in a smoother grid.
   void apply_relax(); // update `pos` to the position computed by `calc_relax`.
   static void connect(Vertex&, Vertex&); // specify that two vertices are connected by an edge
+  bool is_neighbor(Vertex& other);
   double shared_max_value(); // maximum of the `shareable_value` of all `Transferable_ptr`s to this and 0. Thread safe.
 
   private:
