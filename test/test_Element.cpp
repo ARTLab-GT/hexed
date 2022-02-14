@@ -84,9 +84,9 @@ TEST_CASE("Element")
     assert_equal(elem3d.vertex(2).pos, {0.2, 0.6, -0.2});
     assert_equal(elem3d.vertex(5).pos, {0.4, 0.4,  0. });
     assert_equal(elem3d.vertex(7).pos, {0.4, 0.6,  0. });
-    REQUIRE(elem3d.vertex(0).is_neighbor(elem3d.vertex(1)));
-    REQUIRE(elem3d.vertex(0).is_neighbor(elem3d.vertex(2)));
-    REQUIRE(!elem3d.vertex(0).is_neighbor(elem3d.vertex(3)));
+    REQUIRE( cartdg::Vertex::are_neighbors(elem3d.vertex(0), elem3d.vertex(1)));
+    REQUIRE( cartdg::Vertex::are_neighbors(elem3d.vertex(0), elem3d.vertex(2)));
+    REQUIRE(!cartdg::Vertex::are_neighbors(elem3d.vertex(0), elem3d.vertex(3)));
   }
 
   SECTION("push/fetch viscosity")

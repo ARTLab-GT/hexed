@@ -97,9 +97,9 @@ void Vertex::connect(Vertex& vert0, Vertex& vert1)
   }
 }
 
-bool Vertex::is_neighbor(Vertex& other)
+bool Vertex::are_neighbors(Vertex& vert0, Vertex& vert1)
 {
-  return neighbors.count(&other);
+  return vert0.neighbors.count(&vert1);
 }
 
 double Vertex::shared_max_value()

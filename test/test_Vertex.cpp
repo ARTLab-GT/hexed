@@ -107,10 +107,10 @@ TEST_CASE("Vertex")
     cartdg::Vertex::connect(*vert0, *vert1);
     cartdg::Vertex::connect(*vert2, *vert0);
     // check neighbors are correct
-    REQUIRE(vert0->is_neighbor(*vert1));
-    REQUIRE(vert1->is_neighbor(*vert0));
-    REQUIRE(!vert1->is_neighbor(*vert2));
-    REQUIRE(!vert2->is_neighbor(*vert1));
+    REQUIRE( cartdg::Vertex::are_neighbors(*vert0, *vert1));
+    REQUIRE( cartdg::Vertex::are_neighbors(*vert1, *vert0));
+    REQUIRE(!cartdg::Vertex::are_neighbors(*vert1, *vert2));
+    REQUIRE(!cartdg::Vertex::are_neighbors(*vert2, *vert1));
 
     SECTION("calling once")
     {
