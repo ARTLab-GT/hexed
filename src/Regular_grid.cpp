@@ -13,6 +13,7 @@
 #include <get_local_av.hpp>
 #include <get_neighbor_av.hpp>
 #include <get_gbc_av.hpp>
+#include <math.hpp>
 
 namespace cartdg
 {
@@ -166,6 +167,11 @@ void Regular_grid::add_connection(Element* elem0, Element* elem1, int i_dim)
   const int fs {n_var*n_qpoint/basis.row_size};
   elem_con con {elem0->face() + (2*i_dim + 1)*fs, elem1->face() + 2*i_dim*fs};
   elem_cons[i_dim].push_back(con);
+  int stride = custom_math::pow(2, n_dim - 1 - i_dim);
+  for (int i_vert = 0; i_vert < n_vertices/2; ++i_vert) {
+    int i_col = i_vert/(stride*2)*(stride*2) + i_vert%stride;
+    elem0->vertex(i_col + stride).eat(elem1->vertex(i_col));
+  }
 }
 
 void Regular_grid::connect_refined(Element* coarse, std::vector<Element*> fine, int i_dim, bool is_positive)

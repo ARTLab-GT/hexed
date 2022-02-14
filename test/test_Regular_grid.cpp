@@ -209,6 +209,12 @@ TEST_CASE("Regular_grid")
       REQUIRE(grid3.n_con(0) == 27);
       REQUIRE(grid3.n_con(1) == 27);
       REQUIRE(grid3.n_con(2) == 27);
+      // check that vertices have been properly merged
+      REQUIRE(&grid3.element(0).vertex(0) == &grid3.element( 2).vertex(1));
+      REQUIRE(&grid3.element(0).vertex(0) == &grid3.element( 6).vertex(2));
+      REQUIRE(&grid3.element(0).vertex(0) == &grid3.element(18).vertex(4));
+      REQUIRE(&grid3.element(0).vertex(1) == &grid3.element( 1).vertex(0));
+      REQUIRE(&grid3.element(0).vertex(0) != &grid3.element( 0).vertex(1));
     }
   }
 
