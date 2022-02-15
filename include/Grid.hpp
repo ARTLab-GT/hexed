@@ -55,7 +55,6 @@ class Grid
   virtual void execute_av_flux(Kernel_settings&) = 0;
   virtual void execute_local_av(int i_var, int i_dim, Kernel_settings&) = 0;
   virtual void execute_neighbor_av(int i_var, int i_dim, Kernel_settings&) = 0;
-  virtual void share_vertex_data(Element::shareable_value_access) = 0;
 
   // modification
   virtual int add_element(std::vector<int> position);

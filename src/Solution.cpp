@@ -233,18 +233,20 @@ void Solution::initialize(Spacetime_func& init_cond)
       for (int i_qpoint = 0; i_qpoint < grid->n_qpoint; ++i_qpoint)
       {
         std::vector<double> qpoint_pos;
-        for (int i_dim = 0; i_dim < grid->n_dim; ++i_dim)
-        {
+        for (int i_dim = 0; i_dim < grid->n_dim; ++i_dim) {
           qpoint_pos.push_back(pos[i_qpoint + i_dim*grid->n_qpoint]);
         }
         auto qpoint_state = init_cond(qpoint_pos, grid->time);
-        for (int i_var = 0; i_var < grid->n_var; ++i_var)
-        {
+        for (int i_var = 0; i_var < grid->n_var; ++i_var) {
           elem_state[i_var*grid->n_qpoint + i_qpoint] = qpoint_state[i_var];
         }
       }
     }
   }
+}
+
+void Solution::share_vertex_data(Element::shareable_value_access)
+{
 }
 
 double Solution::refined_mesh_size(int ref_level)

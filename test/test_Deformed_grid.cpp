@@ -7,6 +7,7 @@
 #include <Gauss_legendre.hpp>
 #include <math.hpp>
 #include <Tecplot_file.hpp>
+#include <Solution.hpp>
 
 TEST_CASE("Deformed grid class")
 {
@@ -665,32 +666,35 @@ TEST_CASE("Deformed grid class")
 
   SECTION("viscosity sharing")
   {
-    grid2.add_element({0, 0});
-    grid2.add_element({1, 0});
-    grid2.add_element({0, 1});
-    grid2.add_element({1, 1});
-    grid2.add_element({1, 1});
-    grid2.connect({0, 1}, {0, 0}, {1, 0});
-    grid2.connect({0, 2}, {1, 1}, {1, 0});
-    grid2.connect({1, 3}, {1, 1}, {1, 0});
-    grid2.connect({2, 4}, {0, 0}, {1, 0});
-    grid2.connect({3, 4}, {0, 1}, {0, 0});
+    cartdg::Solution soln {1, 2, row_size, 0.2};
+    soln.add_deformed_grid(0);
+    cartdg::Deformed_grid& grid {soln.def_grids[0]};
+    grid.add_element({0, 0});
+    grid.add_element({1, 0});
+    grid.add_element({0, 1});
+    grid.add_element({1, 1});
+    grid.add_element({1, 1});
+    grid.connect({0, 1}, {0, 0}, {1, 0});
+    grid.connect({0, 2}, {1, 1}, {1, 0});
+    grid.connect({1, 3}, {1, 1}, {1, 0});
+    grid.connect({2, 4}, {0, 0}, {1, 0});
+    grid.connect({3, 4}, {0, 1}, {0, 0});
     double visc [5][4] {{0.1, 0., 0.2, 0.4},
                         {0.5, 0.1, 0., 0.},
                         {}, {}, {}};
     for (int i_elem = 0; i_elem < 5; ++i_elem) {
       for (int i_visc = 0; i_visc < 4; ++i_visc) {
-        grid2.element(i_elem).viscosity()[i_visc] = visc[i_elem][i_visc];
+        grid.element(i_elem).viscosity()[i_visc] = visc[i_elem][i_visc];
       }
     }
-    grid2.share_vertex_data(&cartdg::Element::viscosity);
-    REQUIRE(grid2.element(0).viscosity()[0] == 0.1);
-    REQUIRE(grid2.element(0).viscosity()[1] == 0.);
-    REQUIRE(grid2.element(0).viscosity()[2] == 0.5);
-    REQUIRE(grid2.element(0).viscosity()[3] == 0.4);
-    REQUIRE(grid2.element(1).viscosity()[1] == 0.4);
-    REQUIRE(grid2.element(2).viscosity()[2] == 0.4);
-    REQUIRE(grid2.element(3).viscosity()[0] == 0.4);
-    REQUIRE(grid2.element(4).viscosity()[0] == 0.4);
+    soln.share_vertex_data(&cartdg::Element::viscosity);
+    REQUIRE(grid.element(0).viscosity()[0] == 0.1);
+    REQUIRE(grid.element(0).viscosity()[1] == 0.);
+    REQUIRE(grid.element(0).viscosity()[2] == 0.5);
+    REQUIRE(grid.element(0).viscosity()[3] == 0.4);
+    REQUIRE(grid.element(1).viscosity()[1] == 0.4);
+    REQUIRE(grid.element(2).viscosity()[2] == 0.4);
+    REQUIRE(grid.element(3).viscosity()[0] == 0.4);
+    REQUIRE(grid.element(4).viscosity()[0] == 0.4);
   }
 }

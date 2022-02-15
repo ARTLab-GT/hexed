@@ -32,9 +32,10 @@ class Solution
   std::vector<double> surface_integral(Surface_func& integrand);
   std::vector<Grid*> all_grids();
 
-  // functions that modify the state data
+  // functions that modify the state (and related) data
   double update(double cfl_by_stable_cfl=0.7);
   void initialize(Spacetime_func& init_cond);
+  void share_vertex_data(Element::shareable_value_access);
 
   // functions that modify the Grid(s)
   void add_block_grid(int ref_level, std::vector<int> lower_corner,

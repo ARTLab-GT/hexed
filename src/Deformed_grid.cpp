@@ -171,16 +171,6 @@ void Deformed_grid::execute_neighbor_av(int i_var, int i_dim, Kernel_settings& s
 {
 }
 
-void Deformed_grid::share_vertex_data(Element::shareable_value_access access_func)
-{
-  for (auto& elem : elements) {
-    elem->push_shareable_value(access_func);
-  }
-  for (auto& elem : elements) {
-    elem->fetch_shareable_value(access_func);
-  }
-}
-
 void Deformed_grid::project_degenerate(int i_stage)
 {
   for (int i_elem = 0; i_elem < n_elem; ++i_elem) {

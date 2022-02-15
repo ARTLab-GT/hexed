@@ -5,6 +5,7 @@
 #include <Regular_grid.hpp>
 #include <Equidistant.hpp>
 #include <Gauss_lobatto.hpp>
+#include <Solution.hpp>
 
 class Arbitrary_integrand : public cartdg::Domain_func
 {
@@ -312,7 +313,9 @@ TEST_CASE("Regular_grid")
   SECTION("continuous viscosity")
   {
     // set up a grid where nodal neighbors have different viscosity at the vertex
-    cartdg::Regular_grid grid {4, 2, 0, 1., basis};
+    cartdg::Solution soln {4, 2, row_size, 1.};
+    soln.add_empty_grid(0);
+    cartdg::Regular_grid& grid {soln.reg_grids[0]};
     grid.add_element({0, 0});
     grid.add_element({0, 1});
     grid.add_element({1, 0});
@@ -324,7 +327,7 @@ TEST_CASE("Regular_grid")
     }
     grid.element(0).viscosity()[3] = 0.7;
     // share viscosity
-    grid.share_vertex_data(&cartdg::Element::viscosity);
+    soln.share_vertex_data(&cartdg::Element::viscosity);
     // test that the viscosity has been shared with the nodal neighbors
     REQUIRE(grid.element(0).viscosity()[3] == 0.7);
     REQUIRE(grid.element(3).viscosity()[0] == 0.7);

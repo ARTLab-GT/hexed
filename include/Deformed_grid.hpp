@@ -50,7 +50,6 @@ class Deformed_grid : public Grid
   virtual void execute_av_flux(Kernel_settings&);
   virtual void execute_local_av(int i_var, int i_dim, Kernel_settings&);
   virtual void execute_neighbor_av(int i_var, int i_dim, Kernel_settings&);
-  virtual void share_vertex_data(Element::shareable_value_access);
   void project_degenerate(int i_stage);
 
   // diagnostic
