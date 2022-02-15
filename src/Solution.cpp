@@ -245,8 +245,18 @@ void Solution::initialize(Spacetime_func& init_cond)
   }
 }
 
-void Solution::share_vertex_data(Element::shareable_value_access)
+void Solution::share_vertex_data(Element::shareable_value_access access_func)
 {
+  for (Grid* grid : all_grids()) {
+    for (int i_elem = 0; i_elem < grid->n_elem; ++i_elem) {
+      grid->element(i_elem).push_shareable_value(access_func);
+    }
+  }
+  for (Grid* grid : all_grids()) {
+    for (int i_elem = 0; i_elem < grid->n_elem; ++i_elem) {
+      grid->element(i_elem).fetch_shareable_value(access_func);
+    }
+  }
 }
 
 double Solution::refined_mesh_size(int ref_level)
