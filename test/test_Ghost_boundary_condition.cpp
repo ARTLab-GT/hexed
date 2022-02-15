@@ -3,6 +3,7 @@
 #include <cartdgConfig.hpp>
 #include <Solution.hpp>
 #include <get_gbc_convective.hpp>
+#include <get_gbc_deformed_convective.hpp>
 
 class Supersonic_inlet : public cartdg::Ghost_boundary_condition
 {
@@ -12,7 +13,7 @@ class Supersonic_inlet : public cartdg::Ghost_boundary_condition
   Supersonic_inlet(cartdg::Grid& grid, int i_dim_arg, bool is_positive_face_arg)
   : cartdg::Ghost_boundary_condition(grid, i_dim_arg, is_positive_face_arg), n_dim(grid.n_dim)
   {}
-    
+
   virtual void calc_ghost_state()
   {
     double mass = 2.;
@@ -106,7 +107,7 @@ TEST_CASE("gbc kernels")
   }
 
   cartdg::get_gbc_convective(3, row_size)(grid, soln.basis, soln.kernel_settings);
-  cartdg::get_gbc_convective(3, row_size)(def_grid, soln.basis, soln.kernel_settings);
+  cartdg::get_gbc_deformed_convective(3, row_size)(def_grid, soln.basis, soln.kernel_settings);
   REQUIRE(grid.element(0).face()[3*nfqpoint] == Approx(2.*700.));
   REQUIRE(grid.element(0).face()[3*nfqpoint + nfqpoint - 1] == Approx(2.*700.));
   REQUIRE(grid.element(1).face()[3*nfqpoint] == Approx(2.*700.));

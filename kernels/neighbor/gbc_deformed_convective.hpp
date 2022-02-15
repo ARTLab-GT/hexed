@@ -1,5 +1,5 @@
-#ifndef CARTDG_GBC_CONVECTIVE_HPP_
-#define CARTDG_GBC_CONVECTIVE_HPP_
+#ifndef CARTDG_GBC_DEFORMED_CONVECTIVE_HPP_
+#define CARTDG_GBC_DEFORMED_CONVECTIVE_HPP_
 
 #include <iostream>
 
@@ -14,7 +14,7 @@ namespace cartdg
 
 // AUTOGENERATE LOOKUP
 template<int n_var, int n_qpoint, int row_size>
-void gbc_convective(Grid& grid, Basis& basis, Kernel_settings& settings)
+void gbc_deformed_convective(Grid& grid, Basis& basis, Kernel_settings& settings)
 {
   const double heat_rat = settings.cpg_heat_rat;
   const int n_dim = n_var - 2;
