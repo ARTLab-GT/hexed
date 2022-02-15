@@ -320,6 +320,7 @@ TEST_CASE("Regular_grid")
     grid.add_element({0, 1});
     grid.add_element({1, 0});
     grid.add_element({1, 1});
+    grid.auto_connect();
     for (int i_elem = 0; i_elem < 4; ++i_elem) {
       for (int i_vertex = 0; i_vertex < 4; ++i_vertex) {
         grid.element(i_elem).viscosity()[i_vertex] = 0.;
