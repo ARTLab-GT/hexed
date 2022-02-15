@@ -37,6 +37,12 @@ class Element
   typedef double* (Element::*shareable_value_access)();
 
   Element(Storage_params, std::vector<int> pos={}, double mesh_size=1.);
+  // Can't copy an Element. Doing so would have to either duplicate or break vertex connections,
+  // both of which seem error prone.
+  Element(const Element&) = delete;
+  Element& operator=(const Element&) = delete;
+  ~Element() = default;
+
   Storage_params storage_params();
   // Pointer to state data for `i_stage`th Runge-Kutta stage.
   double* stage(int i_stage); // Layout: [i_var][i_qpoint]

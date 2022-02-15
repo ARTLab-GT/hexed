@@ -77,7 +77,9 @@ class Vertex::Transferable_ptr
   Transferable_ptr& operator=(const Transferable_ptr&);
 
   Vertex* operator->();
+  const Vertex* operator->() const;
   Vertex& operator*();
+  const Vertex& operator*() const;
 };
 
 /*

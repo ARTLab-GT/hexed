@@ -141,7 +141,17 @@ Vertex* Vertex::Transferable_ptr::operator->()
   return ptr.operator->();
 }
 
+const Vertex* Vertex::Transferable_ptr::operator->() const
+{
+  return ptr.operator->();
+}
+
 Vertex& Vertex::Transferable_ptr::operator*()
+{
+  return *ptr;
+}
+
+const Vertex& Vertex::Transferable_ptr::operator*() const
 {
   return *ptr;
 }
