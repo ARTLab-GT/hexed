@@ -58,6 +58,7 @@ TEST_CASE("Element")
   {
     cartdg::Element copy {element};
     cartdg::Element assigned {params};
+    cartdg::Vertex::Non_transferable_ptr ptr {assigned.vertex(0)};
     assigned = element;
     element.stage(1)[0] = 1.4;
     for (cartdg::Element* test_elem : {&copy, &assigned})
@@ -69,8 +70,14 @@ TEST_CASE("Element")
         REQUIRE(test_elem->stage(2)[i_dof] == 0.);
         REQUIRE(test_elem->stage(3)[i_dof] == 1.3);
       }
+      for (int i_vert = 0; i_vert < 8; ++i_vert) {
+        REQUIRE(test_elem->vertex(i_vert).pos == element.vertex(i_vert).pos);
+        REQUIRE(&test_elem->vertex(i_vert) != &element.vertex(i_vert));
+      }
+      REQUIRE(cartdg::Vertex::are_neighbors(test_elem->vertex(0), test_elem->vertex(1)));
+      REQUIRE(!cartdg::Vertex::are_neighbors(test_elem->vertex(0), element.vertex(1)));
     }
-    REQUIRE(0); // needs a test for vertex behavior
+    REQUIRE(!ptr); // vertices of original `assigned` should have been properly deleted
   }
 
   SECTION("vertex arrangement")
