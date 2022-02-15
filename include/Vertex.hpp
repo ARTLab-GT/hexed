@@ -71,6 +71,7 @@ class Vertex::Transferable_ptr
 
   // Create a vertex and construct a `Transferable_ptr` to it.
   Transferable_ptr(std::array<double, 3> pos);
+  // copy semantics creates another pointer to the same vertex
   Transferable_ptr(const Transferable_ptr&);
   ~Transferable_ptr();
   Transferable_ptr& operator=(const Transferable_ptr&);
