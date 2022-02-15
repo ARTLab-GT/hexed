@@ -153,7 +153,8 @@ void Regular_grid::share_vertex_data(Element::shareable_value_access access_func
 
 int Regular_grid::add_element(std::vector<int> position)
 {
-  elements.emplace_back(new Element {storage_params});
+  elements.emplace_back(new Element {storage_params, position, mesh_size});
+  // FIXME: origin not accounted for
   return Grid::add_element(position);
 }
 
