@@ -53,17 +53,23 @@ TEST_CASE("Ghost_boundary_condition class")
   }
 }
 
-TEST_CASE("gbc_convective")
+TEST_CASE("gbc kernels")
 {
   const int row_size = cartdg::config::max_row_size;
   cartdg::Solution soln (5, 3, row_size, 1.);
   soln.kernel_settings.d_t_by_d_pos = 0.1;
   soln.add_block_grid(1, std::vector<int>{0, 0, 0}, std::vector<int>{3, 3, 3});
   cartdg::Regular_grid& grid = soln.reg_grids[0];
+  soln.add_deformed_grid(1.);
+  cartdg::Deformed_grid& def_grid = soln.def_grids[0];
+  def_grid.add_element({0, 0, 0});
+  def_grid.deformed_element(0).vertex(1).pos[2] /= 2.; // make the face half as large
+  def_grid.deformed_element(0).vertex(3).pos[2] /= 2.;
 
   Supersonic_inlet gbc0 {grid, 0, false};
   Supersonic_inlet gbc1 {grid, 0, true};
   Supersonic_inlet gbc2 {grid, 2, false};
+  Supersonic_inlet gbc3 {def_grid, 0, false};
   grid.ghost_bound_conds.push_back(&gbc0);
   gbc0.add_element(0);
   gbc0.add_element(1);
@@ -71,32 +77,40 @@ TEST_CASE("gbc_convective")
   gbc1.add_element(26);
   grid.ghost_bound_conds.push_back(&gbc2);
   gbc2.add_element(0);
+  def_grid.ghost_bound_conds.push_back(&gbc3);
+  gbc3.add_element(0);
+  def_grid.calc_jacobian();
 
   int nfqpoint = row_size*row_size;
-  for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
+  for (cartdg::Grid* g : soln.all_grids())
   {
-    double* face = grid.element(i_elem).face();
-    for (int i_dim : {0, 1, 2})
+    for (int i_elem = 0; i_elem < g->n_elem; ++i_elem)
     {
-      for (int positive : {0, 1})
+      double* face = g->element(i_elem).face();
+      for (int i_dim : {0, 1, 2})
       {
-        for (int i_qpoint = 0; i_qpoint < nfqpoint; ++i_qpoint)
+        for (int positive : {0, 1})
         {
-          double* qpoint = face + (2*i_dim + positive)*5*nfqpoint + i_qpoint;
-          qpoint[0*nfqpoint] = 700.;
-          qpoint[1*nfqpoint] = 0.;
-          qpoint[2*nfqpoint] = 700.;
-          qpoint[3*nfqpoint] = 1.;
-          qpoint[4*nfqpoint] = 1e5 + 0.5*1.*2*700*700;
+          for (int i_qpoint = 0; i_qpoint < nfqpoint; ++i_qpoint)
+          {
+            double* qpoint = face + (2*i_dim + positive)*5*nfqpoint + i_qpoint;
+            qpoint[0*nfqpoint] = 700.;
+            qpoint[1*nfqpoint] = 0.;
+            qpoint[2*nfqpoint] = 700.;
+            qpoint[3*nfqpoint] = 1.;
+            qpoint[4*nfqpoint] = 1e5 + 0.5*1.*2*700*700;
+          }
         }
       }
     }
   }
 
   cartdg::get_gbc_convective(3, row_size)(grid, soln.basis, soln.kernel_settings);
+  cartdg::get_gbc_convective(3, row_size)(def_grid, soln.basis, soln.kernel_settings);
   REQUIRE(grid.element(0).face()[3*nfqpoint] == Approx(2.*700.));
   REQUIRE(grid.element(0).face()[3*nfqpoint + nfqpoint - 1] == Approx(2.*700.));
   REQUIRE(grid.element(1).face()[3*nfqpoint] == Approx(2.*700.));
   REQUIRE(grid.element(26).face()[(1*5 + 3)*nfqpoint] < 0.);
   REQUIRE(grid.element(0).face()[(2*2*5 + 3)*nfqpoint] == Approx(2.*700.));
+  REQUIRE(grid.element(0).face()[3*nfqpoint] == Approx(2.*700./2.)); // flux should be proportional to face size
 }
