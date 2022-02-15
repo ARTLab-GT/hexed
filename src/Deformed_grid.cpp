@@ -60,7 +60,6 @@ int Deformed_grid::add_element(std::vector<int> position)
   for (int i_vert = 0; i_vert < n_vertices; ++i_vert)
   {
     Vertex& vert = elements.back()->vertex(i_vert);
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) vert.pos[i_dim] += origin[i_dim];
     Vertex::Non_transferable_ptr ptr {vert};
     vertices.push_back(vert);
   }

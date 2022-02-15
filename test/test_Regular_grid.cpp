@@ -40,15 +40,6 @@ TEST_CASE("Regular_grid")
     REQUIRE(grid3.n_dof == 2048);
     REQUIRE(grid1.n_elem == 5);
     REQUIRE(grid1.time == 0.);
-    REQUIRE(grid1.origin.size() == 1);
-    REQUIRE(grid2.origin.size() == 2);
-    REQUIRE(grid3.origin.size() == 3);
-    REQUIRE(grid1.origin[0] == 0.);
-    REQUIRE(grid2.origin[0] == 0.);
-    REQUIRE(grid2.origin[1] == 0.);
-    REQUIRE(grid3.origin[0] == 0.);
-    REQUIRE(grid3.origin[1] == 0.);
-    REQUIRE(grid3.origin[2] == 0.);
   }
 
   for (int i = 0; i < 5; ++i)
@@ -64,7 +55,6 @@ TEST_CASE("Regular_grid")
     grid2.pos[i++] = 3; grid2.pos[i++] =  0;
     grid2.pos[i++] = -1; grid2.pos[i++] = -1;
   }
-  grid2.origin[1] = 10.;
   for (int i = 0; i < 3; ++i)
   {
     for (int j = 0; j < 3; ++j)
@@ -97,15 +87,15 @@ TEST_CASE("Regular_grid")
     REQUIRE(pos[1] == 0.);
     REQUIRE(pos[8] == Approx(0.1/7.));
     REQUIRE(pos[63] == 0.1);
-    REQUIRE(pos[64] == 10.);
-    REQUIRE(pos[65] == Approx(10. + 0.1/7.));
-    REQUIRE(pos[72] == Approx(10.));
-    REQUIRE(pos[127] == 10.1);
+    REQUIRE(pos[64] == 0.);
+    REQUIRE(pos[65] == Approx(0.1/7.));
+    REQUIRE(pos[72] == Approx(0.));
+    REQUIRE(pos[127] == 0.1);
     pos = grid2.get_pos(2);
     REQUIRE(pos[0] == 0.);
     REQUIRE(pos[63] == 0.1);
-    REQUIRE(pos[64] == 10. - 0.1);
-    REQUIRE(pos[127] == 10.);
+    REQUIRE(pos[64] == -0.1);
+    REQUIRE(pos[127] == 0.);
 
     pos = grid3.get_pos(0);
     REQUIRE(pos[0] == 0.);

@@ -13,10 +13,8 @@ basis(basis_arg), iter(0), time(0.), i_rk_stage(0), i_read(0), i_write(1),
 storage_params{3, n_var, n_dim, basis.row_size}
 {
   n_qpoint = 1;
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-  {
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     n_qpoint *= basis.row_size;
-    origin.push_back(0.);
   }
   n_dof = n_qpoint*n_var;
   pos.resize(n_elem*n_dim, 0);

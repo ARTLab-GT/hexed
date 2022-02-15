@@ -23,13 +23,12 @@ TEST_CASE("Deformed grid class")
   SECTION("Adding deformed elements")
   {
     REQUIRE(grid2.n_elem == 0);
-    grid2.origin[0] = 0.1;
     grid2.add_element(std::vector<int>{-1, 2});
     grid2.add_element(std::vector<int>{ 1, 2});
     REQUIRE(grid2.n_elem == 2);
-    REQUIRE(grid2.deformed_element(0).vertex(0).pos[0] == Approx(-0.1));
+    REQUIRE(grid2.deformed_element(0).vertex(0).pos[0] == Approx(-0.2));
     REQUIRE(grid2.deformed_element(0).vertex(1).pos[1] == Approx( 0.6));
-    REQUIRE(grid2.deformed_element(1).vertex(0).pos[0] == Approx( 0.3));
+    REQUIRE(grid2.deformed_element(1).vertex(0).pos[0] == Approx( 0.2));
     // check that deformed_element(int) and element(int) point to the same thing
     grid2.deformed_element(1).stage(0)[0] = -0.31;
     REQUIRE(grid2.element(1).stage(0)[0] == -0.31);
@@ -43,7 +42,6 @@ TEST_CASE("Deformed grid class")
     {
       cartdg::Gauss_legendre leg_basis {row_size};
       cartdg::Deformed_grid grid {1, 2, 0, 0.2, leg_basis};
-      grid.origin[0] = 0.1;
       grid.add_element({-1, 2});
       /*
       Approximate vertex layout:
