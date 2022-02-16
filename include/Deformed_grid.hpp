@@ -31,6 +31,7 @@ class Deformed_grid : public Grid
 
   // modification
   virtual int add_element(std::vector<int> position);
+  virtual void add_element_gbc(int i_elem, Ghost_boundary_condition&);
   virtual std::vector<double> get_pos(int i_elem);
   void add_wall(int i_elem, int i_dim, bool is_positive_face);
   void connect(std::array<int, 2> i_elem, std::array<int, 2> i_dim,
@@ -61,8 +62,8 @@ class Deformed_grid : public Grid
 
   protected:
   virtual std::string annotate(std::string file_name);
+  std::vector<Deformed_element_gbc> element_gbcs;
 };
 
 }
-
 #endif

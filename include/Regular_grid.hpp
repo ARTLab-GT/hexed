@@ -21,6 +21,7 @@ class Regular_grid : public Grid
 
   // modification
   virtual int add_element(std::vector<int> position);
+  virtual void add_element_gbc(int i_elem, Ghost_boundary_condition&);
   void add_connection(int i_elem0, int i_elem1, int i_dim);
   void add_connection(Element* elem0, Element* elem1, int i_dim);
   // connect an element of one less refinement level to a set of elements in this grid
@@ -46,6 +47,7 @@ class Regular_grid : public Grid
   elem_con_vec elem_cons;
   ref_face_vec ref_faces;
   void populate_slice(std::vector<double>&, std::vector<int>, int);
+  std::vector<Element_gbc> element_gbcs;
 };
 
 }
