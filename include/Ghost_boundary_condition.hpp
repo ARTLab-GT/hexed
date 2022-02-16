@@ -3,12 +3,21 @@
 
 #include <Eigen/Dense>
 #include <vector>
+#include "Deformed_element.hpp"
 
 namespace cartdg
 {
 
 class Grid;
+class Deformed_grid;
 
+/*
+ * Represents a general boundary condition that is computed with the "ghost cell" method (with,
+ * for DG, really means that ghost face quadrature points are created, not whole ghost cells).
+ * Includes storage for the real ("domain") state and the fictitious ("ghost") state. This is
+ * and abstract class, and derived classes must define the boundary condition by implementing
+ * the `calc_ghost_state` member function.
+ */
 class Ghost_boundary_condition
 {
   public:
@@ -23,9 +32,9 @@ class Ghost_boundary_condition
 
   Ghost_boundary_condition(const Grid& grid, int i_dim_arg, bool is_positive_face_arg);
 
-  void add_element(int i_elem);
-  virtual void calc_ghost_state() = 0;
-  virtual void print();
+  virtual void add_element(int i_elem);
+  void calc_ghost_state() = 0;
+  void print();
 };
 
 }
