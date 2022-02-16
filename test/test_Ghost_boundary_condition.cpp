@@ -90,6 +90,7 @@ TEST_CASE("gbc kernels")
   }
 
   grid.execute_neighbor(soln.kernel_settings);
+  def_grid.execute_neighbor(soln.kernel_settings);
   REQUIRE(grid.element(0).face()[3*nfqpoint] == Approx(2.*700.));
   REQUIRE(grid.element(0).face()[3*nfqpoint + nfqpoint - 1] == Approx(2.*700.));
   REQUIRE(grid.element(1).face()[3*nfqpoint] == Approx(2.*700.));

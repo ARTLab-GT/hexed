@@ -50,17 +50,13 @@ void gbc_deformed_convective(std::vector<Deformed_element_gbc> elem_gbcs, Basis&
 
     // rotate momentum into surface coordinates
     for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
-      Eigen::Matrix<double, n_dim, 2> momentum;
-      for (int i_side : {0, 1}) {
-        for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-          momentum(i_dim, i_side) = dom_face[i_side*face_size + i_dim*n_face_qpoint + i_qpoint];
-        }
+      Eigen::Matrix<double, n_dim, 1> momentum;
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        momentum(i_dim) = dom_face[i_dim*n_face_qpoint + i_qpoint];
       }
       momentum = orthonormal[i_qpoint].transpose()*momentum;
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        for (int i_side : {0, 1}) {
-          dom_face[i_side*face_size + i_dim*n_face_qpoint + i_qpoint] = momentum(i_dim, i_side);
-        }
+        dom_face[i_dim*n_face_qpoint + i_qpoint] = momentum(i_dim);
       }
     }
 
@@ -70,21 +66,17 @@ void gbc_deformed_convective(std::vector<Deformed_element_gbc> elem_gbcs, Basis&
 
     // rotate momentum back into physical coordinates
     for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
-      Eigen::Matrix<double, n_dim, 2> momentum;
-      for (int i_side : {0, 1}) {
-        for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-          momentum(i_dim, i_side) = dom_face[i_side*face_size + i_dim*n_face_qpoint + i_qpoint];
-        }
+      Eigen::Matrix<double, n_dim, 1> momentum;
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        momentum(i_dim) = dom_face[i_dim*n_face_qpoint + i_qpoint];
       }
       momentum = orthonormal[i_qpoint]*momentum;
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        for (int i_side : {0, 1}) {
-          dom_face[i_side*face_size + i_dim*n_face_qpoint + i_qpoint] = momentum(i_dim, i_side);
-        }
+        dom_face[i_dim*n_face_qpoint + i_qpoint] = momentum(i_dim);
       }
     }
-    // multiply flux by Jacobian determinant. `2*i_var` to cover both sides
-    for (int i_var = 0; i_var < 2*n_var; ++i_var) {
+    // multiply flux by Jacobian determinant.
+    for (int i_var = 0; i_var < n_var; ++i_var) {
       for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
         dom_face[i_var*n_face_qpoint + i_qpoint] *= jac_det[i_qpoint];
       }
