@@ -89,12 +89,14 @@ class Test
     for (int i_dim : {0, 1}) {
       for (bool is_positive : {0, 1}) {
         bcs.emplace_back(grid.element(0).storage_params(), i_dim, is_positive);
-        #if 0
+      }
+    }
+    for (int i_dim : {0, 1}) {
+      for (bool is_positive : {0, 1}) {
         for (int i_row = 0; i_row < 3; ++i_row) {
           int stride {i_dim ? 1 : 3};
-          bcs.back().add_element(i_row*3/stride + is_positive*2*stride);
+          grid.add_element_gbc(i_row*3/stride + is_positive*2*stride, bcs[i_dim*2 + is_positive]);
         }
-        #endif
       }
     }
     grid.purge_vertices();
