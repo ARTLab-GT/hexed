@@ -18,24 +18,28 @@ namespace cartdg
  */
 class Ghost_boundary_condition
 {
-  protected:
-  int i_dim;
+  int i_d;
   int n_var;
   int n_qpoint;
-  bool is_positive_face;
+  bool is_p;
   Eigen::ArrayXXd state; // Stores both states in an order compatible with Flux_kernel
 
   public:
   Ghost_boundary_condition(Storage_params, int i_dim_arg, bool is_positive_face_arg);
+  int i_dim();
+  int is_positive_face();
   Eigen::Block<Eigen::ArrayXXd> domain_state(); // indices: (i_qpoint, i_var)
   Eigen::Block<Eigen::ArrayXXd> ghost_state();
+  double* data(); // all state data for computing numerical neighbor flux
   virtual void calc_ghost_state() = 0;
 };
 
 class Element_gbc
 {
-  Ghost_boundary_condition* gbc;
+  public:
   Element* element;
+  Ghost_boundary_condition* gbc;
+  inline Element_gbc(Element* elem, Ghost_boundary_condition* g) : element{elem}, gbc{g} {}
 };
 
 }

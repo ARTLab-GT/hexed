@@ -72,7 +72,7 @@ void Regular_grid::execute_write_face(Kernel_settings& settings)
 void Regular_grid::execute_neighbor(Kernel_settings& settings)
 {
   get_neighbor_convective(n_dim, basis.row_size)(elem_cons, settings);
-  get_gbc_convective(n_dim, basis.row_size)(*this, basis, settings);
+  get_gbc_convective(n_dim, basis.row_size)(element_gbcs, basis, settings);
   if (ref_faces[0].size()) get_restrict(n_dim, basis.row_size)(ref_faces, basis, settings);
 }
 
@@ -139,8 +139,9 @@ int Regular_grid::add_element(std::vector<int> position)
   return Grid::add_element(position);
 }
 
-void Regular_grid::add_element_gbc(int i_elem, Ghost_boundary_condition*)
+void Regular_grid::add_element_gbc(int i_elem, Ghost_boundary_condition* gbc)
 {
+  element_gbcs.emplace_back(&element(i_elem), gbc);
 }
 
 void Regular_grid::add_connection(int i_elem0, int i_elem1, int i_dim)

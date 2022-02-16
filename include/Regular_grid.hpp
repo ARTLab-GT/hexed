@@ -47,6 +47,7 @@ class Regular_grid : public Grid
   elem_con_vec elem_cons;
   ref_face_vec ref_faces;
   void populate_slice(std::vector<double>&, std::vector<int>, int);
+  std::vector<Element_gbc> element_gbcs;
 };
 
 }

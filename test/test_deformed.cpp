@@ -33,12 +33,9 @@ class Quadratic_def : public cartdg::Deformed_grid
     auto p {cartdg::Deformed_grid::get_pos(i_elem)};
     if (i_elem != 4) return p;
     double max_def [] {0.07, -0.13};
-    for (int i_dim = 0; i_dim < 2; ++i_dim)
-    {
-      for (int i_row = 0; i_row < basis.row_size; ++i_row)
-      {
-        for (int j_row = 0; j_row < basis.row_size; ++j_row)
-        {
+    for (int i_dim = 0; i_dim < 2; ++i_dim) {
+      for (int i_row = 0; i_row < basis.row_size; ++i_row) {
+        for (int j_row = 0; j_row < basis.row_size; ++j_row) {
           double def = max_def[i_dim]*mesh_size*deform(i_row)*deform(j_row);
           p[i_dim*n_qpoint + i_row*basis.row_size + j_row] += def;
         }
