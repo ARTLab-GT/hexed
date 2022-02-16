@@ -139,9 +139,9 @@ int Regular_grid::add_element(std::vector<int> position)
   return Grid::add_element(position);
 }
 
-void Regular_grid::add_element_gbc(int i_elem, Ghost_boundary_condition* gbc)
+void Regular_grid::add_element_gbc(int i_elem, Ghost_boundary_condition& gbc)
 {
-  element_gbcs.emplace_back(&element(i_elem), gbc);
+  element_gbcs.emplace_back(element(i_elem), gbc);
 }
 
 void Regular_grid::add_connection(int i_elem0, int i_elem1, int i_dim)

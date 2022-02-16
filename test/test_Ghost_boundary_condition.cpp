@@ -63,11 +63,11 @@ TEST_CASE("gbc kernels")
   Supersonic_inlet gbc0 {params, 0, false};
   Supersonic_inlet gbc1 {params, 0, true};
   Supersonic_inlet gbc2 {params, 2, false};
-  grid.add_element_gbc(0, &gbc0);
-  grid.add_element_gbc(1, &gbc0);
-  grid.add_element_gbc(26, &gbc1);
-  grid.add_element_gbc(0, &gbc2);
-  def_grid.add_element_gbc(0, &gbc0);
+  grid.add_element_gbc(0, gbc0);
+  grid.add_element_gbc(1, gbc0);
+  grid.add_element_gbc(26, gbc1);
+  grid.add_element_gbc(0, gbc2);
+  def_grid.add_element_gbc(0, gbc0);
   def_grid.calc_jacobian();
 
   int nfqpoint = row_size*row_size;

@@ -37,9 +37,15 @@ class Ghost_boundary_condition
 class Element_gbc
 {
   public:
-  Element* element;
-  Ghost_boundary_condition* gbc;
-  inline Element_gbc(Element* elem, Ghost_boundary_condition* g) : element{elem}, gbc{g} {}
+  Element& element;
+  Ghost_boundary_condition& gbc;
+  Element_gbc(Element&, Ghost_boundary_condition&);
+};
+
+class Deformed_element_gbc : public Element_gbc, public Deformed_face
+{
+  public:
+  Deformed_element_gbc(Deformed_element&, Ghost_boundary_condition&);
 };
 
 }

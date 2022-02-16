@@ -67,7 +67,7 @@ int Deformed_grid::add_element(std::vector<int> position)
   return i_elem;
 }
 
-void Deformed_grid::add_element_gbc(int i_elem, Ghost_boundary_condition*)
+void Deformed_grid::add_element_gbc(int i_elem, Ghost_boundary_condition&)
 {
 }
 

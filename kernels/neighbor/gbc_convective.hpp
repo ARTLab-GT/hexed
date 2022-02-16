@@ -22,8 +22,8 @@ void gbc_convective(std::vector<Element_gbc> elem_gbcs, Basis& basis, Kernel_set
 
   for (unsigned i_egbc = 0; i_egbc < elem_gbcs.size(); ++i_egbc)
   {
-    Element& elem {*elem_gbcs[i_egbc].element};
-    Ghost_boundary_condition& gbc {*elem_gbcs[i_egbc].gbc};
+    Element& elem {elem_gbcs[i_egbc].element};
+    Ghost_boundary_condition& gbc {elem_gbcs[i_egbc].gbc};
     double* face = elem.face() + (gbc.i_dim()*2 + gbc.is_positive_face())*face_size;
     double* dom_face = gbc.domain_state().data();
     for (int i_data = 0; i_data < face_size; ++i_data) dom_face[i_data] = face[i_data];

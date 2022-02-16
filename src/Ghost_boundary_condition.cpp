@@ -29,4 +29,12 @@ double* Ghost_boundary_condition::data()
   return state.data();
 }
 
+Element_gbc::Element_gbc(Element& element_arg, Ghost_boundary_condition& gbc_arg)
+: element{element_arg}, gbc{gbc_arg}
+{}
+
+Deformed_element_gbc::Deformed_element_gbc(Deformed_element& element_arg, Ghost_boundary_condition& gbc_arg)
+: Element_gbc{element_arg, gbc_arg}, Deformed_face{element.storage_params()}
+{}
+
 }

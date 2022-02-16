@@ -58,7 +58,7 @@ class Grid
 
   // modification
   virtual int add_element(std::vector<int> position);
-  virtual void add_element_gbc(int i_elem, Ghost_boundary_condition*) = 0;
+  virtual void add_element_gbc(int i_elem, Ghost_boundary_condition&) = 0;
 
   // diagnostic
   void visualize_qpoints (Tecplot_file&);
