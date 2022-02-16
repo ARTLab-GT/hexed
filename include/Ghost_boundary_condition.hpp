@@ -32,9 +32,9 @@ class Ghost_boundary_condition
 
   Ghost_boundary_condition(const Grid& grid, int i_dim_arg, bool is_positive_face_arg);
 
-  virtual void add_element(int i_elem);
-  void calc_ghost_state() = 0;
-  void print();
+  void add_element(int i_elem);
+  virtual void calc_ghost_state() = 0;
+  virtual void print();
 };
 
 }
