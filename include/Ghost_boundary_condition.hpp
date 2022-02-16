@@ -3,13 +3,11 @@
 
 #include <Eigen/Dense>
 #include <vector>
+#include "Storage_params.hpp"
 #include "Deformed_element.hpp"
 
 namespace cartdg
 {
-
-class Grid;
-class Deformed_grid;
 
 /*
  * Represents a general boundary condition that is computed with the "ghost cell" method (with,
@@ -20,21 +18,24 @@ class Deformed_grid;
  */
 class Ghost_boundary_condition
 {
-  public:
+  protected:
   int i_dim;
   int n_var;
   int n_qpoint;
   bool is_positive_face;
   Eigen::ArrayXXd state; // Stores both states in an order compatible with Flux_kernel
+
+  public:
+  Ghost_boundary_condition(Storage_params, int i_dim_arg, bool is_positive_face_arg);
   Eigen::Block<Eigen::ArrayXXd> domain_state(); // indices: (i_qpoint, i_var)
   Eigen::Block<Eigen::ArrayXXd> ghost_state();
-  std::vector<int> elems;
-
-  Ghost_boundary_condition(const Grid& grid, int i_dim_arg, bool is_positive_face_arg);
-
-  void add_element(int i_elem);
   virtual void calc_ghost_state() = 0;
-  virtual void print();
+};
+
+class Element_gbc
+{
+  Ghost_boundary_condition* gbc;
+  Element* element;
 };
 
 }

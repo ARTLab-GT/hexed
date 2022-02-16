@@ -1,5 +1,6 @@
 #include <catch2/catch.hpp>
 
+#include <Ghost_boundary_condition.hpp>
 #include <cartdgConfig.hpp>
 #include <Solution.hpp>
 #include <get_gbc_convective.hpp>
@@ -10,8 +11,8 @@ class Supersonic_inlet : public cartdg::Ghost_boundary_condition
   public:
   int n_dim;
 
-  Supersonic_inlet(cartdg::Grid& grid, int i_dim_arg, bool is_positive_face_arg)
-  : cartdg::Ghost_boundary_condition(grid, i_dim_arg, is_positive_face_arg), n_dim(grid.n_dim)
+  Supersonic_inlet(cartdg::Storage_params params, int i_dim_arg, bool is_positive_face_arg)
+  : cartdg::Ghost_boundary_condition(params, i_dim_arg, is_positive_face_arg), n_dim(params.n_dim)
   {}
 
   virtual void calc_ghost_state()
@@ -36,21 +37,14 @@ TEST_CASE("Ghost_boundary_condition class")
   const int n_face_qpoint = row_size*row_size;
   cartdg::Gauss_legendre basis {row_size};
   cartdg::Regular_grid grid {5, 3, 0, 1., basis};
-  Supersonic_inlet bc (grid, 0, true);
-  REQUIRE(bc.elems.empty());
-  bc.add_element(373);
-  bc.add_element(26);
+  cartdg::Storage_params params {3, 5, 4, row_size};
+  Supersonic_inlet bc (params, 0, true);
   Supersonic_inlet new_bc (bc);
   for (cartdg::Ghost_boundary_condition* bc_ptr : {&bc, &new_bc})
   {
     cartdg::Ghost_boundary_condition& each_bc = *bc_ptr;
-    REQUIRE(each_bc.i_dim == 0);
-    REQUIRE(each_bc.n_var == 5);
-    REQUIRE(each_bc.n_qpoint == n_face_qpoint);
-    REQUIRE(each_bc.is_positive_face == true);
     REQUIRE(each_bc.domain_state().size() == 5*n_face_qpoint);
     REQUIRE(each_bc.ghost_state().size() == 5*n_face_qpoint);
-    REQUIRE(each_bc.elems == std::vector<int> {373, 26});
   }
 }
 
@@ -67,10 +61,11 @@ TEST_CASE("gbc kernels")
   def_grid.deformed_element(0).vertex(1).pos[2] /= 2.; // make the face half as large
   def_grid.deformed_element(0).vertex(3).pos[2] /= 2.;
 
-  Supersonic_inlet gbc0 {grid, 0, false};
-  Supersonic_inlet gbc1 {grid, 0, true};
-  Supersonic_inlet gbc2 {grid, 2, false};
-  Supersonic_inlet gbc3 {def_grid, 0, false};
+  cartdg::Storage_params params {3, 5, 4, row_size};
+  Supersonic_inlet gbc0 {params, 0, false};
+  Supersonic_inlet gbc1 {params, 0, true};
+  Supersonic_inlet gbc2 {params, 2, false};
+  #if 0
   grid.ghost_bound_conds.push_back(&gbc0);
   gbc0.add_element(0);
   gbc0.add_element(1);
@@ -81,6 +76,7 @@ TEST_CASE("gbc kernels")
   def_grid.ghost_bound_conds.push_back(&gbc3);
   gbc3.add_element(0);
   def_grid.calc_jacobian();
+  #endif
 
   int nfqpoint = row_size*row_size;
   for (cartdg::Grid* g : soln.all_grids())

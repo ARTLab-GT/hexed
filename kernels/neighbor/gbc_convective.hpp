@@ -16,6 +16,7 @@ namespace cartdg
 template<int n_var, int n_qpoint, int row_size>
 void gbc_convective(Grid& grid, Basis& basis, Kernel_settings& settings)
 {
+  #if 0
   const double heat_rat = settings.cpg_heat_rat;
   const int n_dim = n_var - 2;
   const int n_face_qpoint = n_qpoint/row_size;
@@ -38,6 +39,7 @@ void gbc_convective(Grid& grid, Basis& basis, Kernel_settings& settings)
       for (int i_data = 0; i_data < face_size; ++i_data) face[i_data] = gst_face[i_data];
     }
   }
+  #endif
 }
 
 }

@@ -4,12 +4,13 @@
 #include <Deformed_grid.hpp>
 #include <Gauss_legendre.hpp>
 #include <Tecplot_file.hpp>
+#include <Ghost_boundary_condition.hpp>
 
 class Copy_bc : public cartdg::Ghost_boundary_condition
 {
   public:
-  Copy_bc(cartdg::Grid& grid, int id, bool ip)
-  : cartdg::Ghost_boundary_condition{grid, id, ip}
+  Copy_bc(cartdg::Storage_params params, int id, bool ip)
+  : cartdg::Ghost_boundary_condition{params, id, ip}
   {}
   virtual void calc_ghost_state()
   {
@@ -61,10 +62,8 @@ class Test
 
   void test()
   {
-    for (int i = 0, i_elem = 0; i < 3; ++i)
-    {
-      for (int j = 0; j < 3; ++j)
-      {
+    for (int i = 0, i_elem = 0; i < 3; ++i) {
+      for (int j = 0; j < 3; ++j) {
         grid.add_element({i, j});
         ++i_elem;
       }
@@ -90,19 +89,17 @@ class Test
     }
 
     std::vector<Copy_bc> bcs;
-    for (int i_dim : {0, 1})
-    {
-      for (bool is_positive : {0, 1})
-      {
-        bcs.emplace_back(grid, i_dim, is_positive);
-        for (int i_row = 0; i_row < 3; ++i_row)
-        {
+    for (int i_dim : {0, 1}) {
+      for (bool is_positive : {0, 1}) {
+        bcs.emplace_back(grid.element(0).storage_params(), i_dim, is_positive);
+        #if 0
+        for (int i_row = 0; i_row < 3; ++i_row) {
           int stride {i_dim ? 1 : 3};
           bcs.back().add_element(i_row*3/stride + is_positive*2*stride);
         }
+        #endif
       }
     }
-    for (Copy_bc& bc : bcs) grid.ghost_bound_conds.push_back(&bc);
     grid.purge_vertices();
     grid.calc_jacobian();
     cartdg::Kernel_settings settings;
