@@ -67,6 +67,10 @@ int Deformed_grid::add_element(std::vector<int> position)
   return i_elem;
 }
 
+void Deformed_grid::add_element_gbc(int i_elem, Ghost_boundary_condition*)
+{
+}
+
 std::vector<double> Deformed_grid::get_pos(int i_elem)
 {
   std::vector<double> elem_pos (n_qpoint*n_dim);

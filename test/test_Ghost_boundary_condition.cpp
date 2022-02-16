@@ -65,6 +65,11 @@ TEST_CASE("gbc kernels")
   Supersonic_inlet gbc0 {params, 0, false};
   Supersonic_inlet gbc1 {params, 0, true};
   Supersonic_inlet gbc2 {params, 2, false};
+  grid.add_element_gbc(0, &gbc0);
+  grid.add_element_gbc(1, &gbc0);
+  grid.add_element_gbc(26, &gbc1);
+  grid.add_element_gbc(0, &gbc2);
+  def_grid.add_element_gbc(0, &gbc0);
   #if 0
   grid.ghost_bound_conds.push_back(&gbc0);
   gbc0.add_element(0);
@@ -75,21 +80,16 @@ TEST_CASE("gbc kernels")
   gbc2.add_element(0);
   def_grid.ghost_bound_conds.push_back(&gbc3);
   gbc3.add_element(0);
-  def_grid.calc_jacobian();
   #endif
+  def_grid.calc_jacobian();
 
   int nfqpoint = row_size*row_size;
-  for (cartdg::Grid* g : soln.all_grids())
-  {
-    for (int i_elem = 0; i_elem < g->n_elem; ++i_elem)
-    {
+  for (cartdg::Grid* g : soln.all_grids()) {
+    for (int i_elem = 0; i_elem < g->n_elem; ++i_elem) {
       double* face = g->element(i_elem).face();
-      for (int i_dim : {0, 1, 2})
-      {
-        for (int positive : {0, 1})
-        {
-          for (int i_qpoint = 0; i_qpoint < nfqpoint; ++i_qpoint)
-          {
+      for (int i_dim : {0, 1, 2}) {
+        for (int positive : {0, 1}) {
+          for (int i_qpoint = 0; i_qpoint < nfqpoint; ++i_qpoint) {
             double* qpoint = face + (2*i_dim + positive)*5*nfqpoint + i_qpoint;
             qpoint[0*nfqpoint] = 700.;
             qpoint[1*nfqpoint] = 0.;
@@ -102,8 +102,11 @@ TEST_CASE("gbc kernels")
     }
   }
 
+  grid.execute_neighbor(soln.kernel_settings);
+  #if 0
   cartdg::get_gbc_convective(3, row_size)(grid, soln.basis, soln.kernel_settings);
   cartdg::get_gbc_deformed_convective(3, row_size)(def_grid, soln.basis, soln.kernel_settings);
+  #endif
   REQUIRE(grid.element(0).face()[3*nfqpoint] == Approx(2.*700.));
   REQUIRE(grid.element(0).face()[3*nfqpoint + nfqpoint - 1] == Approx(2.*700.));
   REQUIRE(grid.element(1).face()[3*nfqpoint] == Approx(2.*700.));
