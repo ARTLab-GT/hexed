@@ -62,8 +62,8 @@ class Deformed_grid : public Grid
 
   protected:
   virtual std::string annotate(std::string file_name);
+  std::vector<Deformed_element_gbc> element_gbcs;
 };
 
 }
-
 #endif

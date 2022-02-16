@@ -42,9 +42,11 @@ class Element_gbc
   Element_gbc(Element&, Ghost_boundary_condition&);
 };
 
-class Deformed_element_gbc : public Element_gbc, public Deformed_face
+class Deformed_element_gbc : public Deformed_face
 {
   public:
+  Deformed_element& element;
+  Ghost_boundary_condition& gbc;
   Deformed_element_gbc(Deformed_element&, Ghost_boundary_condition&);
 };
 

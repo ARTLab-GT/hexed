@@ -67,8 +67,9 @@ int Deformed_grid::add_element(std::vector<int> position)
   return i_elem;
 }
 
-void Deformed_grid::add_element_gbc(int i_elem, Ghost_boundary_condition&)
+void Deformed_grid::add_element_gbc(int i_elem, Ghost_boundary_condition& gbc)
 {
+  element_gbcs.emplace_back(deformed_element(i_elem), gbc);
 }
 
 std::vector<double> Deformed_grid::get_pos(int i_elem)
@@ -131,7 +132,7 @@ void Deformed_grid::execute_write_face(Kernel_settings& settings)
 void Deformed_grid::execute_neighbor(Kernel_settings& settings)
 {
   get_neighbor_deformed_convective(n_dim, basis.row_size)(elem_cons, basis, settings);
-  get_gbc_deformed_convective(n_dim, basis.row_size)(*this, basis, settings);
+  get_gbc_deformed_convective(n_dim, basis.row_size)(element_gbcs, basis, settings);
   get_nonpen_convective(n_dim, basis.row_size)(walls, basis, settings);
 }
 
@@ -518,6 +519,14 @@ void Deformed_grid::calc_jacobian()
         double* elem_jac = deformed_element(wall.i_elem()).face() + (2*ind.i_dim + ind.is_positive)*n_var*face_size;
         for (int i_qpoint = 0; i_qpoint < face_size; ++i_qpoint) {
           wall.jacobian()[(i_dim*n_dim + j_dim)*face_size + i_qpoint] = elem_jac[i_qpoint];
+        }
+      }
+      // compute ghost BC jacobian
+      for (Deformed_element_gbc& egbc : element_gbcs)
+      {
+        double* elem_jac = egbc.element.face() + (2*egbc.gbc.i_dim() + egbc.gbc.is_positive_face())*n_var*face_size;
+        for (int i_qpoint = 0; i_qpoint < face_size; ++i_qpoint) {
+          egbc.jacobian()[(i_dim*n_dim + j_dim)*face_size + i_qpoint] = elem_jac[i_qpoint];
         }
       }
     }

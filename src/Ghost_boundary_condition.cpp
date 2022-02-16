@@ -34,7 +34,7 @@ Element_gbc::Element_gbc(Element& element_arg, Ghost_boundary_condition& gbc_arg
 {}
 
 Deformed_element_gbc::Deformed_element_gbc(Deformed_element& element_arg, Ghost_boundary_condition& gbc_arg)
-: Element_gbc{element_arg, gbc_arg}, Deformed_face{element.storage_params()}
+: Deformed_face{element_arg.storage_params()}, element{element_arg}, gbc{gbc_arg}
 {}
 
 }
