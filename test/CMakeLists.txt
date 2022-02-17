@@ -12,6 +12,7 @@ test_Deformed_grid.cpp
 test_Element.cpp
 test_func.cpp
 test_Ghost_boundary_condition.cpp
+test_Hanging_node_matcher.cpp
 test_local.cpp
 test_neighbor.cpp
 test_math.cpp

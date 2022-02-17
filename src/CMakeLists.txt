@@ -9,6 +9,7 @@ Equidistant.cpp
 Ghost_boundary_condition.cpp
 global.cpp
 Grid.cpp
+Hanging_node_matcher.cpp
 Kernel_settings.cpp
 math.cpp
 Physical_basis.cpp
