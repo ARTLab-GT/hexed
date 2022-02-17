@@ -15,7 +15,6 @@ storage_params{3, n_var, n_dim, basis.row_size}
   n_qpoint = 1;
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     n_qpoint *= basis.row_size;
-    origin.push_back(0.);
   }
   n_dof = n_qpoint*n_var;
   pos.resize(n_elem*n_dim, 0);
@@ -41,6 +40,13 @@ int Grid::add_element(std::vector<int> position)
   return n_elem++;
 }
 
+void Grid::match_hanging(Element::shareable_value_access access_func)
+{
+  for (auto& matcher : hanging_matchers) {
+    matcher.match(access_func);
+  }
+}
+
 bool Grid::execute_runge_kutta_stage()
 {
   const int r0 = 0;
@@ -59,7 +65,6 @@ bool Grid::execute_runge_kutta_stage()
       stage_w[i_dof] = weight1*stage_r1[i_dof] + weight0*stage_r0[i_dof];
     }
   }
-      
   ++i_rk_stage; ++i_write;
   if (i_write == 3) i_write = 1;
   if (i_rk_stage == 3) { i_rk_stage = 0; i_write = 1; ++iter; }

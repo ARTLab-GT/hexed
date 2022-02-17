@@ -233,17 +233,32 @@ void Solution::initialize(Spacetime_func& init_cond)
       for (int i_qpoint = 0; i_qpoint < grid->n_qpoint; ++i_qpoint)
       {
         std::vector<double> qpoint_pos;
-        for (int i_dim = 0; i_dim < grid->n_dim; ++i_dim)
-        {
+        for (int i_dim = 0; i_dim < grid->n_dim; ++i_dim) {
           qpoint_pos.push_back(pos[i_qpoint + i_dim*grid->n_qpoint]);
         }
         auto qpoint_state = init_cond(qpoint_pos, grid->time);
-        for (int i_var = 0; i_var < grid->n_var; ++i_var)
-        {
+        for (int i_var = 0; i_var < grid->n_var; ++i_var) {
           elem_state[i_var*grid->n_qpoint + i_qpoint] = qpoint_state[i_var];
         }
       }
     }
+  }
+}
+
+void Solution::share_vertex_data(Element::shareable_value_access access_func)
+{
+  for (Grid* grid : all_grids()) {
+    for (int i_elem = 0; i_elem < grid->n_elem; ++i_elem) {
+      grid->element(i_elem).push_shareable_value(access_func);
+    }
+  }
+  for (Grid* grid : all_grids()) {
+    for (int i_elem = 0; i_elem < grid->n_elem; ++i_elem) {
+      grid->element(i_elem).fetch_shareable_value(access_func);
+    }
+  }
+  for (Grid* grid : all_grids()) {
+    grid->match_hanging(access_func);
   }
 }
 
@@ -284,7 +299,7 @@ void Solution::add_block_grid(int ref_level, std::vector<int> lower_corner,
 
 void Solution::add_block_grid(int ref_level)
 {
-  int n_div = 1; 
+  int n_div = 1;
   for (int i = 0; i < ref_level; ++i) n_div *= 2;
   std::vector<int> lc; std::vector<int> uc;
   for (int i = 0; i < n_dim; ++i)

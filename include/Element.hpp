@@ -7,6 +7,7 @@
 #include <Eigen/Dense>
 
 #include "Storage_params.hpp"
+#include "Vertex.hpp"
 
 namespace cartdg
 {
@@ -22,6 +23,7 @@ class Element
   protected:
   Storage_params params;
   int n_dim;
+  std::vector<Vertex::Transferable_ptr> vertices;
 
   private:
   int n_dof;
@@ -31,7 +33,16 @@ class Element
   Eigen::VectorXd derivative_storage;
 
   public:
-  Element(Storage_params);
+  // this type represents a pointer to a function that can access some data member which is recorded at the vertices
+  typedef double* (Element::*shareable_value_access)();
+
+  Element(Storage_params, std::vector<int> pos={}, double mesh_size=1.);
+  // Can't copy an Element. Doing so would have to either duplicate or break vertex connections,
+  // both of which seem error prone.
+  Element(const Element&) = delete;
+  Element& operator=(const Element&) = delete;
+  ~Element() = default;
+
   Storage_params storage_params();
   // Pointer to state data for `i_stage`th Runge-Kutta stage.
   double* stage(int i_stage); // Layout: [i_var][i_qpoint]
@@ -46,6 +57,11 @@ class Element
    */
   virtual double jacobian(int i_dim, int j_dim, int i_qpoint); // identity matrix
   double jacobian_determinant(int i_qpoint); // returns 1.
+
+  inline Vertex& vertex(int i_vertex) { return *vertices[i_vertex]; }
+  // functions to communicate with nodal neighbors
+  void push_shareable_value(shareable_value_access access_func); // writes shareable value to vertices so that shared value can be determined
+  void fetch_shareable_value(shareable_value_access access_func); // set `this`'s copy of shareable value to the shared values at the vertices
 
   double* viscosity(); // Artificial viscosity coefficient at corners.
   bool viscous(); // Should artificial viscosity be applied in this element?

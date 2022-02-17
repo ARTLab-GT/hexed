@@ -60,7 +60,6 @@ int Deformed_grid::add_element(std::vector<int> position)
   for (int i_vert = 0; i_vert < n_vertices; ++i_vert)
   {
     Vertex& vert = elements.back()->vertex(i_vert);
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) vert.pos[i_dim] += origin[i_dim];
     Vertex::Non_transferable_ptr ptr {vert};
     vertices.push_back(vert);
   }
@@ -146,10 +145,6 @@ void Deformed_grid::execute_local(Kernel_settings& settings)
 void Deformed_grid::execute_req_visc(Kernel_settings& settings)
 {
   get_req_visc_deformed_convective(n_dim, basis.row_size)(elements, basis, settings);
-}
-
-void Deformed_grid::execute_cont_visc(Kernel_settings& settings)
-{
 }
 
 void Deformed_grid::execute_local_derivative(int i_var, int i_dim, Kernel_settings& settings)

@@ -17,6 +17,8 @@ TEST_CASE("Vertex")
   REQUIRE(ptr0->mobile == false);
   (*ptr0).pos[1] = 2.;
   REQUIRE(ptr0->pos[1] == 2.);
+  REQUIRE(ptr0.shareable_value == 0.);
+  REQUIRE(ptr1.shareable_value == 0.);
 
   SECTION("eat")
   {
@@ -97,13 +99,18 @@ TEST_CASE("Vertex")
     REQUIRE(!ptr1_9);
   }
 
-  SECTION("Position relaxation")
+  SECTION("connection and position relaxation")
   {
     cartdg::Vertex::Transferable_ptr vert0 {{0., 0., 0.}};
     cartdg::Vertex::Transferable_ptr vert1 {{2., 0., 0.}};
     cartdg::Vertex::Transferable_ptr vert2 {{0., 2., 0.}};
     cartdg::Vertex::connect(*vert0, *vert1);
     cartdg::Vertex::connect(*vert2, *vert0);
+    // check neighbors are correct
+    REQUIRE( cartdg::Vertex::are_neighbors(*vert0, *vert1));
+    REQUIRE( cartdg::Vertex::are_neighbors(*vert1, *vert0));
+    REQUIRE(!cartdg::Vertex::are_neighbors(*vert1, *vert2));
+    REQUIRE(!cartdg::Vertex::are_neighbors(*vert2, *vert1));
 
     SECTION("calling once")
     {
@@ -151,5 +158,19 @@ TEST_CASE("Vertex")
       vert0->apply_relax();
       REQUIRE(vert0->pos == std::array<double, 3>{.5, .5, 0.});
     }
+  }
+
+  SECTION("maximum viscosity")
+  {
+    ptr0->eat(*ptr1);
+    cartdg::Vertex::Transferable_ptr ptr2 = ptr0;
+    ptr0.shareable_value = 0.1;
+    ptr1.shareable_value = 0.3;
+    ptr2.shareable_value = 0.2;
+    REQUIRE(ptr0->shared_max_value() == 0.3);
+    ptr0.shareable_value = 0.4;
+    REQUIRE(ptr1->shared_max_value() == 0.4);
+    ptr0.shareable_value = ptr1.shareable_value = ptr2.shareable_value = -0.1;
+    REQUIRE(ptr0->shared_max_value() == 0.);
   }
 }

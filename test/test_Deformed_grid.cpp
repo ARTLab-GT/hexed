@@ -7,6 +7,7 @@
 #include <Gauss_legendre.hpp>
 #include <math.hpp>
 #include <Tecplot_file.hpp>
+#include <Solution.hpp>
 
 TEST_CASE("Deformed grid class")
 {
@@ -22,13 +23,12 @@ TEST_CASE("Deformed grid class")
   SECTION("Adding deformed elements")
   {
     REQUIRE(grid2.n_elem == 0);
-    grid2.origin[0] = 0.1;
     grid2.add_element(std::vector<int>{-1, 2});
     grid2.add_element(std::vector<int>{ 1, 2});
     REQUIRE(grid2.n_elem == 2);
-    REQUIRE(grid2.deformed_element(0).vertex(0).pos[0] == Approx(-0.1));
+    REQUIRE(grid2.deformed_element(0).vertex(0).pos[0] == Approx(-0.2));
     REQUIRE(grid2.deformed_element(0).vertex(1).pos[1] == Approx( 0.6));
-    REQUIRE(grid2.deformed_element(1).vertex(0).pos[0] == Approx( 0.3));
+    REQUIRE(grid2.deformed_element(1).vertex(0).pos[0] == Approx( 0.2));
     // check that deformed_element(int) and element(int) point to the same thing
     grid2.deformed_element(1).stage(0)[0] = -0.31;
     REQUIRE(grid2.element(1).stage(0)[0] == -0.31);
@@ -42,7 +42,6 @@ TEST_CASE("Deformed grid class")
     {
       cartdg::Gauss_legendre leg_basis {row_size};
       cartdg::Deformed_grid grid {1, 2, 0, 0.2, leg_basis};
-      grid.origin[0] = 0.1;
       grid.add_element({-1, 2});
       /*
       Approximate vertex layout:
@@ -661,5 +660,39 @@ TEST_CASE("Deformed grid class")
       // demand a greater order of accuracy than required
       REQUIRE(diffs[0]/diffs[1] > std::pow(2, row_size));
     }
+  }
+
+  SECTION("viscosity sharing")
+  {
+    cartdg::Solution soln {1, 2, row_size, 0.2};
+    soln.add_deformed_grid(0);
+    cartdg::Deformed_grid& grid {soln.def_grids[0]};
+    grid.add_element({0, 0});
+    grid.add_element({1, 0});
+    grid.add_element({0, 1});
+    grid.add_element({1, 1});
+    grid.add_element({1, 1});
+    grid.connect({0, 1}, {0, 0}, {1, 0});
+    grid.connect({0, 2}, {1, 1}, {1, 0});
+    grid.connect({1, 3}, {1, 1}, {1, 0});
+    grid.connect({2, 4}, {0, 0}, {1, 0});
+    grid.connect({3, 4}, {0, 1}, {0, 0});
+    double visc [5][4] {{0.1, 0., 0.2, 0.4},
+                        {0.5, 0.1, 0., 0.},
+                        {}, {}, {}};
+    for (int i_elem = 0; i_elem < 5; ++i_elem) {
+      for (int i_visc = 0; i_visc < 4; ++i_visc) {
+        grid.element(i_elem).viscosity()[i_visc] = visc[i_elem][i_visc];
+      }
+    }
+    soln.share_vertex_data(&cartdg::Element::viscosity);
+    REQUIRE(grid.element(0).viscosity()[0] == 0.1);
+    REQUIRE(grid.element(0).viscosity()[1] == 0.);
+    REQUIRE(grid.element(0).viscosity()[2] == 0.5);
+    REQUIRE(grid.element(0).viscosity()[3] == 0.4);
+    REQUIRE(grid.element(1).viscosity()[1] == 0.4);
+    REQUIRE(grid.element(2).viscosity()[2] == 0.4);
+    REQUIRE(grid.element(3).viscosity()[0] == 0.4);
+    REQUIRE(grid.element(4).viscosity()[0] == 0.4);
   }
 }

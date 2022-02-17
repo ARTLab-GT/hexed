@@ -3,6 +3,7 @@ add_executable(test)
 target_sources(test PRIVATE
 # please maintain alphabetical order
 main.cpp
+testing_utils.cpp
 test_Basis.cpp
 test_conservation.cpp
 test_deformed.cpp
@@ -11,6 +12,7 @@ test_Deformed_grid.cpp
 test_Element.cpp
 test_func.cpp
 test_Ghost_boundary_condition.cpp
+test_Hanging_vertex_matcher.cpp
 test_local.cpp
 test_neighbor.cpp
 test_math.cpp

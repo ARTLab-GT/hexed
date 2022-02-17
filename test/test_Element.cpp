@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
-
 #include <Element.hpp>
+#include "testing_utils.hpp"
 
 TEST_CASE("Element")
 {
@@ -14,15 +14,12 @@ TEST_CASE("Element")
   REQUIRE(element.storage_params().row_size == params.row_size);
   // sometimes we will write to and read from some data just
   // to be sure the storage is there and doesn't overlap
-  for (int i_stage = 0; i_stage < 4; ++i_stage)
-  {
-    for (int i_dof = 0; i_dof < n_dof; ++i_dof)
-    {
+  for (int i_stage = 0; i_stage < 4; ++i_stage) {
+    for (int i_dof = 0; i_dof < n_dof; ++i_dof) {
       element.stage(i_stage)[i_dof] = 0.;
     }
   }
-  for (int i_face_data = 0; i_face_data < n_dof/params.row_size*3*2; ++i_face_data)
-  {
+  for (int i_face_data = 0; i_face_data < n_dof/params.row_size*3*2; ++i_face_data) {
     element.face()[i_face_data] = 1.;
   }
   for (int i_dof = 0; i_dof < n_dof; ++i_dof) element.stage(0)[i_dof] = 1.2;
@@ -35,12 +32,11 @@ TEST_CASE("Element")
     REQUIRE(element.stage(2)[i_dof] == 0.);
     REQUIRE(element.stage(3)[i_dof] == 1.3);
   }
-  for (int i_face_data = 0; i_face_data < n_dof/params.row_size*3*2; ++i_face_data)
-  {
+  for (int i_face_data = 0; i_face_data < n_dof/params.row_size*3*2; ++i_face_data) {
     REQUIRE(element.face()[i_face_data] == 1.);
   }
-  for (int i_vert = 0; i_vert < 8; ++i_vert)
-  {
+  // test that viscosity is initialized to 0
+  for (int i_vert = 0; i_vert < 8; ++i_vert) {
     REQUIRE(element.viscosity()[i_vert] == 0.);
   }
   REQUIRE(element.viscous() == false);
@@ -59,18 +55,42 @@ TEST_CASE("Element")
     REQUIRE(element.jacobian_determinant(i_qpoint) == 1.);
   }
 
-  cartdg::Element copy {element};
-  cartdg::Element assigned {params};
-  assigned = element;
-  element.stage(1)[0] = 1.4;
-  for (cartdg::Element* test_elem : {&copy, &assigned})
+  SECTION("vertex arrangement")
   {
-    for (int i_dof = 0; i_dof < n_dof; ++i_dof)
-    {
-      REQUIRE(test_elem->stage(0)[i_dof] == 1.2);
-      REQUIRE(test_elem->stage(1)[i_dof] == 0.);
-      REQUIRE(test_elem->stage(2)[i_dof] == 0.);
-      REQUIRE(test_elem->stage(3)[i_dof] == 1.3);
-    }
+    // check that vertices start out in correct location
+    cartdg::Storage_params params3d {3, 5, 3, 4};
+    cartdg::Element elem3d {params3d, {1, 2, -1}, 0.2};
+    assert_equal(elem3d.vertex(0).pos, {0.2, 0.4, -0.2});
+    assert_equal(elem3d.vertex(1).pos, {0.2, 0.4,  0. });
+    assert_equal(elem3d.vertex(2).pos, {0.2, 0.6, -0.2});
+    assert_equal(elem3d.vertex(5).pos, {0.4, 0.4,  0. });
+    assert_equal(elem3d.vertex(7).pos, {0.4, 0.6,  0. });
+    REQUIRE( cartdg::Vertex::are_neighbors(elem3d.vertex(0), elem3d.vertex(1)));
+    REQUIRE( cartdg::Vertex::are_neighbors(elem3d.vertex(0), elem3d.vertex(2)));
+    REQUIRE(!cartdg::Vertex::are_neighbors(elem3d.vertex(0), elem3d.vertex(3)));
+  }
+
+  SECTION("push/fetch viscosity")
+  {
+    // test push_required_visc
+    element.viscosity()[0] = 0.1;
+    element.viscosity()[1] = 0.;
+    element.viscosity()[2] = 0.;
+    element.viscosity()[3] = 0.2;
+    element.push_shareable_value(&cartdg::Element::viscosity);
+    REQUIRE(element.vertex(0).shared_max_value() == Approx(0.1));
+    REQUIRE(element.vertex(1).shared_max_value() == Approx(0.));
+    REQUIRE(element.vertex(3).shared_max_value() == Approx(0.2));
+    // make sure vertex combination doesn't break anything
+    cartdg::Vertex::Transferable_ptr ptr ({0, 0, 0});
+    ptr->eat(element.vertex(0));
+    REQUIRE(element.vertex(0).shared_max_value() == Approx(0.1));
+    ptr.shareable_value = 0.3;
+    REQUIRE(element.vertex(0).shared_max_value() == Approx(0.3));
+    // test fetch_visc
+    element.fetch_shareable_value(&cartdg::Element::viscosity);
+    REQUIRE(element.viscosity()[0] == Approx(0.3));
+    REQUIRE(element.viscosity()[1] == Approx(0.));
+    REQUIRE(element.viscosity()[3] == Approx(0.2));
   }
 }

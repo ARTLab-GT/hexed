@@ -11,6 +11,7 @@
 #include "Kernel_settings.hpp"
 #include "Domain_func.hpp"
 #include "Ghost_boundary_condition.hpp"
+#include "Hanging_vertex_matcher.hpp"
 
 namespace cartdg
 {
@@ -31,7 +32,6 @@ class Grid
   Basis& basis;
   int iter;
   double time;
-  std::vector<double> origin;
 
   Grid(int n_var_arg, int n_dim_arg, int n_elem_arg, double mesh_size_arg, Basis& basis_arg);
 
@@ -49,7 +49,6 @@ class Grid
   virtual void execute_neighbor(Kernel_settings&) = 0;
   virtual void execute_local(Kernel_settings&) = 0;
   virtual void execute_req_visc(Kernel_settings&) = 0;
-  virtual void execute_cont_visc(Kernel_settings&) = 0;
   virtual void execute_local_derivative(int i_var, int i_dim, Kernel_settings&) = 0;
   virtual void execute_neighbor_derivative(int i_var, int i_dim, Kernel_settings&) = 0;
   virtual void execute_av_flux(Kernel_settings&) = 0;
@@ -59,6 +58,7 @@ class Grid
   // modification
   virtual int add_element(std::vector<int> position);
   virtual void add_element_gbc(int i_elem, Ghost_boundary_condition&) = 0;
+  void match_hanging(Element::shareable_value_access);
 
   // diagnostic
   void visualize_qpoints (Tecplot_file&);
@@ -75,6 +75,7 @@ class Grid
   double rk_weights [3] {1., 1./4., 2./3.};
   double stable_cfl [10] {1.256, 0.409, 0.209, 0.130, 0.089, 0.066, 0.051, 0.040, 0.033, 0.026}; // last is a guess
   Storage_params storage_params;
+  std::vector<Hanging_vertex_matcher> hanging_matchers;
 };
 
 }

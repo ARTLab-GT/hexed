@@ -7,13 +7,13 @@
 #include <get_local_convective.hpp>
 #include <get_gbc_convective.hpp>
 #include <get_req_visc_regular_convective.hpp>
-#include <get_cont_visc.hpp>
 #include <get_local_derivative.hpp>
 #include <get_neighbor_derivative.hpp>
 #include <get_av_flux.hpp>
 #include <get_local_av.hpp>
 #include <get_neighbor_av.hpp>
 #include <get_gbc_av.hpp>
+#include <math.hpp>
 
 namespace cartdg
 {
@@ -90,13 +90,6 @@ void Regular_grid::execute_req_visc(Kernel_settings& settings)
   get_req_visc_regular_convective(n_dim, basis.row_size)(elements, basis, settings);
 }
 
-void Regular_grid::execute_cont_visc(Kernel_settings& settings)
-{
-  settings.i_read = i_read;
-  settings.i_write = i_write;
-  get_cont_visc(n_dim, basis.row_size)(elem_cons, settings);
-}
-
 void Regular_grid::execute_local_derivative(int i_var, int i_dim, Kernel_settings& settings)
 {
   settings.i_read = i_read;
@@ -135,7 +128,7 @@ void Regular_grid::execute_neighbor_av(int i_var, int i_dim, Kernel_settings& se
 
 int Regular_grid::add_element(std::vector<int> position)
 {
-  elements.emplace_back(new Element {storage_params});
+  elements.emplace_back(new Element {storage_params, position, mesh_size});
   return Grid::add_element(position);
 }
 
@@ -154,17 +147,31 @@ void Regular_grid::add_connection(Element* elem0, Element* elem1, int i_dim)
   const int fs {n_var*n_qpoint/basis.row_size};
   elem_con con {elem0->face() + (2*i_dim + 1)*fs, elem1->face() + 2*i_dim*fs};
   elem_cons[i_dim].push_back(con);
+  int stride = custom_math::pow(2, n_dim - 1 - i_dim);
+  for (int i_vert = 0; i_vert < n_vertices/2; ++i_vert) {
+    int i_col = i_vert/stride*stride*2 + i_vert%stride;
+    elem0->vertex(i_col + stride).eat(elem1->vertex(i_col));
+  }
 }
 
 void Regular_grid::connect_refined(Element* coarse, std::vector<Element*> fine, int i_dim, bool is_positive)
 {
+  // create a `Hanging_node_matcher` to manage shareable data at the hanging vertices
+  hanging_matchers.emplace_back(fine, i_dim, !is_positive); // `is_positive` refers to coarse not fine
   const int fs {n_var*n_qpoint/basis.row_size};
   if (fine.size() != unsigned(n_vertices)/2) throw std::runtime_error("Wrong number of fine elements in hanging-node connection.");
+  // create a `Refined_face` to store the mortar faces
   ref_faces[i_dim].emplace_back(new Refined_face {storage_params, coarse->face() + (2*i_dim + is_positive)*fs});
+  int vertex_stride = custom_math::pow(2, n_dim - 1 - i_dim);
+  std::vector<Element*> face_elements;
   for (int i_face = 0; i_face < n_vertices/2; ++i_face) {
+    // connect the mortar faces to the fine faces
     elem_con con {ref_faces[i_dim].back()->fine_face(i_face), fine[i_face]->face() + (2*i_dim + 1 - is_positive)*fs};
     if (!is_positive) std::swap(con[0], con[1]);
     elem_cons[i_dim].push_back(con);
+    // combine coarse vertices with matching fine vertices
+    int vertex_col = i_face/vertex_stride*vertex_stride*2 + i_face%vertex_stride;
+    coarse->vertex(vertex_col + is_positive*vertex_stride).eat(fine[i_face]->vertex(vertex_col + (1 - is_positive)*vertex_stride));
   }
 }
 
@@ -213,8 +220,7 @@ void Regular_grid::populate_slice(std::vector<double>& elem_pos, std::vector<int
   if ((int)indices.size() < n_dim)
   {
     indices.push_back(0);
-    for (int i = 0; i < basis.row_size; ++i)
-    {
+    for (int i = 0; i < basis.row_size; ++i) {
       indices.back() = i;
       populate_slice(elem_pos, indices, i_elem);
     }
@@ -223,16 +229,13 @@ void Regular_grid::populate_slice(std::vector<double>& elem_pos, std::vector<int
   {
     int i_flat = 0;
     int stride = n_qpoint;
-    for (auto i : indices)
-    {
+    for (auto i : indices) {
       stride /= basis.row_size;
       i_flat += i*stride;
     }
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-    {
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
       elem_pos[i_flat + n_qpoint*i_dim] = (basis.node(indices[i_dim])
-                                           + pos[i_elem*n_dim + i_dim])*mesh_size
-                                           + origin[i_dim];
+                                           + pos[i_elem*n_dim + i_dim])*mesh_size;
     }
   }
 }
