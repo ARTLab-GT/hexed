@@ -1,15 +1,15 @@
-#include <Hanging_node_matcher.hpp>
+#include <Hanging_vertex_matcher.hpp>
 #include <math.hpp>
 
 namespace cartdg
 {
 
-Hanging_node_matcher::Hanging_node_matcher(std::vector<Element*> fine_elements, int i_dim, bool is_positive)
+Hanging_vertex_matcher::Hanging_vertex_matcher(std::vector<Element*> fine_elements, int i_dim, bool is_positive)
 : elements{fine_elements}, id{i_dim}, isp{is_positive}, n_dim{elements[0]->storage_params().n_dim},
   n_vert{elements[0]->storage_params().n_vertices()/2}
 {}
 
-void Hanging_node_matcher::match(Element::shareable_value_access access_func)
+void Hanging_vertex_matcher::match(Element::shareable_value_access access_func)
 {
   // extract the indices and values of the vertices on the desired face
   int inds [4]; // for `n_dim <= 3` the required size will be <= 4

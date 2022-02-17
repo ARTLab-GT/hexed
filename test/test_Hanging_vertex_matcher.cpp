@@ -1,7 +1,7 @@
 #include <catch2/catch.hpp>
-#include <Hanging_node_matcher.hpp>
+#include <Hanging_vertex_matcher.hpp>
 
-TEST_CASE("Hanging_node_matcher")
+TEST_CASE("Hanging_vertex_matcher")
 {
   SECTION("2D")
   {
@@ -12,7 +12,7 @@ TEST_CASE("Hanging_node_matcher")
       elements.emplace_back(new cartdg::Element {params});
       elem_refs.push_back(elements.back().get());
     }
-    cartdg::Hanging_node_matcher matcher {elem_refs, 0, 1};
+    cartdg::Hanging_vertex_matcher matcher {elem_refs, 0, 1};
     elements[0]->viscosity()[2] = 0.1;
     elements[0]->viscosity()[3] = 0.4; // set the interpolated nodes too just to make sure it has no effect
     elements[1]->viscosity()[2] = 0.3;
@@ -33,7 +33,7 @@ TEST_CASE("Hanging_node_matcher")
       elements.emplace_back(new cartdg::Element {params});
       elem_refs.push_back(elements.back().get());
     }
-    cartdg::Hanging_node_matcher matcher {elem_refs, 1, 0};
+    cartdg::Hanging_vertex_matcher matcher {elem_refs, 1, 0};
     // this time, only set the corner nodes
     elements[0]->viscosity()[0] = 0.2;
     elements[1]->viscosity()[1] = 0.7;
