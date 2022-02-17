@@ -1,38 +1,40 @@
 #include <Ghost_boundary_condition.hpp>
-#include <Grid.hpp>
 #include <iostream>
 
 namespace cartdg
 {
 
-Ghost_boundary_condition::Ghost_boundary_condition(const Grid& grid, int i_dim_arg,
-                                                     bool is_positive_face_arg)
-: i_dim(i_dim_arg), n_var(grid.n_var), n_qpoint(grid.n_qpoint/grid.basis.row_size),
-  is_positive_face(is_positive_face_arg), state(n_qpoint, 2*n_var)
+Ghost_boundary_condition::Ghost_boundary_condition(Storage_params params, int i_dim_arg, bool is_positive_face_arg)
+: i_d(i_dim_arg), n_var(params.n_var), n_qpoint(params.n_qpoint()/params.row_size),
+  is_p(is_positive_face_arg), state(n_qpoint, 2*n_var)
 {}
 
-void Ghost_boundary_condition::add_element(int i_elem)
-{
-  elems.push_back(i_elem);
-}
+int Ghost_boundary_condition::i_dim() {return i_d;}
+int Ghost_boundary_condition::is_positive_face() {return is_p;}
 
 Eigen::Block<Eigen::ArrayXXd> Ghost_boundary_condition::domain_state()
 {
-  return (is_positive_face) ? state.block(0,     0, n_qpoint, n_var)
-                            : state.block(0, n_var, n_qpoint, n_var);
+  return (is_p) ? state.block(0,     0, n_qpoint, n_var)
+                : state.block(0, n_var, n_qpoint, n_var);
 }
 
 Eigen::Block<Eigen::ArrayXXd> Ghost_boundary_condition::ghost_state()
 {
-  return (is_positive_face) ? state.block(0, n_var, n_qpoint, n_var)
-                            : state.block(0,     0, n_qpoint, n_var);
+  return (is_p) ? state.block(0, n_var, n_qpoint, n_var)
+                : state.block(0,     0, n_qpoint, n_var);
 }
 
-void Ghost_boundary_condition::print()
+double* Ghost_boundary_condition::data()
 {
-  std::cout << i_dim << " " << is_positive_face << " : ";
-  for (int i_elem : elems) std::cout << i_elem << " ";
-  std::cout << "\n";
+  return state.data();
 }
+
+Element_gbc::Element_gbc(Element& element_arg, Ghost_boundary_condition& gbc_arg)
+: element{element_arg}, gbc{gbc_arg}
+{}
+
+Deformed_element_gbc::Deformed_element_gbc(Deformed_element& element_arg, Ghost_boundary_condition& gbc_arg)
+: Deformed_face{element_arg.storage_params()}, element{element_arg}, gbc{gbc_arg}
+{}
 
 }
