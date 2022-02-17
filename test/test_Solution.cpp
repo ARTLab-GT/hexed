@@ -117,12 +117,21 @@ TEST_CASE("inter-grid continuous viscosity")
   sol.reg_grids[1].add_element({1, 0});
   sol.reg_grids[1].add_element({1, 1});
   sol.reg_grids[1].add_element({1, 2});
+  sol.reg_grids[1].add_element({2, 2});
+  sol.reg_grids[1].add_element({3, 2});
   sol.reg_grids[1].auto_connect();
   {
     std::vector<cartdg::Element*> elems;
     for (int i_elem : {0, 1}) elems.push_back(&sol.reg_grids[1].element(i_elem));
     sol.reg_grids[1].connect_refined(&sol.reg_grids[0].element(0), elems, 0, 1);
   }
+  {
+    std::vector<cartdg::Element*> elems;
+    for (int i_elem : {3, 4}) elems.push_back(&sol.reg_grids[1].element(i_elem));
+    sol.reg_grids[1].connect_refined(&sol.reg_grids[0].element(0), elems, 1, 0);
+  }
+  REQUIRE(&sol.reg_grids[1].element(3).vertex(0) == &sol.reg_grids[0].element(0).vertex(1));
+  REQUIRE(&sol.reg_grids[1].element(4).vertex(2) == &sol.reg_grids[0].element(0).vertex(3));
   sol.add_deformed_grid(1);
   sol.def_grids[0].add_element({0, 0});
   sol.def_grids[0].add_element({0, 1});
