@@ -112,9 +112,14 @@ TEST_CASE("inter-grid continuous viscosity")
 {
   const int row_size = cartdg::config::max_row_size;
   cartdg::Solution sol (4, 2, row_size, 0.3);
-  sol.add_empty_grid(0);
+  sol.add_block_grid(0, {1, 0}, {2, 1});
   sol.add_block_grid(1, {1, 0}, {2, 3});
   sol.reg_grids[1].auto_connect();
+  {
+    std::vector<cartdg::Element*> elems;
+    for (int i_elem : {0, 1}) elems.push_back(&sol.reg_grids[1].element(i_elem));
+    sol.reg_grids[1].connect_refined(&sol.reg_grids[0].element(0), elems, 0, 1);
+  }
   sol.add_deformed_grid(1);
   sol.def_grids[0].add_element({0, 0});
   sol.def_grids[0].add_element({0, 1});
@@ -123,10 +128,16 @@ TEST_CASE("inter-grid continuous viscosity")
   sol.reg_grids[1].add_connection(&sol.def_grids[0].element(1), &sol.reg_grids[1].element(1), 0);
   sol.def_grids[0].element(0).viscosity()[3] = 0.1;
   sol.reg_grids[1].element(2).viscosity()[0] = 0.2;
+  sol.reg_grids[1].element(2).viscosity()[2] = 0.3;
+  sol.reg_grids[0].element(0).viscosity()[0] = 0.4;
   sol.share_vertex_data(&cartdg::Element::viscosity);
   REQUIRE(sol.reg_grids[1].element(0).viscosity()[1] == Approx(0.1));
   REQUIRE(sol.reg_grids[1].element(1).viscosity()[0] == Approx(0.1));
   REQUIRE(sol.def_grids[0].element(1).viscosity()[3] == Approx(0.2));
+  REQUIRE(sol.reg_grids[0].element(0).viscosity()[1] == Approx(0.3));
+  REQUIRE(sol.reg_grids[1].element(0).viscosity()[2] == Approx(0.4));
+  REQUIRE(sol.reg_grids[1].element(0).viscosity()[3] == Approx(0.35));
+  REQUIRE(sol.reg_grids[1].element(1).viscosity()[2] == Approx(0.35));
 }
 
 TEST_CASE("Integration of deformed elements")
