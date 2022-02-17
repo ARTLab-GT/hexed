@@ -156,11 +156,14 @@ void Regular_grid::add_connection(Element* elem0, Element* elem1, int i_dim)
 
 void Regular_grid::connect_refined(Element* coarse, std::vector<Element*> fine, int i_dim, bool is_positive)
 {
+  // create a `Hanging_node_matcher` to manage shareable data at the hanging vertices
+  hanging_matchers.emplace_back(fine, i_dim, is_positive);
   const int fs {n_var*n_qpoint/basis.row_size};
   if (fine.size() != unsigned(n_vertices)/2) throw std::runtime_error("Wrong number of fine elements in hanging-node connection.");
   // create a `Refined_face` to store the mortar faces
   ref_faces[i_dim].emplace_back(new Refined_face {storage_params, coarse->face() + (2*i_dim + is_positive)*fs});
   int vertex_stride = custom_math::pow(2, n_dim - 1 - i_dim);
+  std::vector<Element*> face_elements;
   for (int i_face = 0; i_face < n_vertices/2; ++i_face) {
     // connect the mortar faces to the fine faces
     elem_con con {ref_faces[i_dim].back()->fine_face(i_face), fine[i_face]->face() + (2*i_dim + 1 - is_positive)*fs};

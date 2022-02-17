@@ -26,7 +26,7 @@ class Regular_grid : public Grid
   void add_connection(Element* elem0, Element* elem1, int i_dim);
   // connect an element of one less refinement level to a set of elements in this grid
   // Intended use could be generalized later.
-  void connect_refined(Element* coarse, std::vector<Element*> fine, int i_dim, bool is_positive);
+  void connect_refined(Element* coarse, std::vector<Element*> fine, int i_dim, bool is_positive); // is_positive refers to fine elements
   void auto_connect(std::vector<int> periods);
   void auto_connect();
 

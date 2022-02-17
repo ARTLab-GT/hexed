@@ -257,6 +257,9 @@ void Solution::share_vertex_data(Element::shareable_value_access access_func)
       grid->element(i_elem).fetch_shareable_value(access_func);
     }
   }
+  for (Grid* grid : all_grids()) {
+    grid->match_hanging(access_func);
+  }
 }
 
 double Solution::refined_mesh_size(int ref_level)

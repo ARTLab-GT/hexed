@@ -11,6 +11,7 @@
 #include "Kernel_settings.hpp"
 #include "Domain_func.hpp"
 #include "Ghost_boundary_condition.hpp"
+#include "Hanging_node_matcher.hpp"
 
 namespace cartdg
 {
@@ -57,6 +58,7 @@ class Grid
   // modification
   virtual int add_element(std::vector<int> position);
   virtual void add_element_gbc(int i_elem, Ghost_boundary_condition&) = 0;
+  void match_hanging(Element::shareable_value_access);
 
   // diagnostic
   void visualize_qpoints (Tecplot_file&);
@@ -73,6 +75,7 @@ class Grid
   double rk_weights [3] {1., 1./4., 2./3.};
   double stable_cfl [10] {1.256, 0.409, 0.209, 0.130, 0.089, 0.066, 0.051, 0.040, 0.033, 0.026}; // last is a guess
   Storage_params storage_params;
+  std::vector<Hanging_node_matcher> hanging_matchers;
 };
 
 }
