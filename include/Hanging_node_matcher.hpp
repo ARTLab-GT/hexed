@@ -16,6 +16,7 @@ class Hanging_node_matcher
   std::vector<Element*> elements;
   int id;
   bool isp;
+  int n_dim;
   int n_vert;
 
   public:
