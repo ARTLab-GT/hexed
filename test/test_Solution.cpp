@@ -123,12 +123,12 @@ TEST_CASE("inter-grid continuous viscosity")
   {
     std::vector<cartdg::Element*> elems;
     for (int i_elem : {0, 1}) elems.push_back(&sol.reg_grids[1].element(i_elem));
-    sol.reg_grids[1].connect_refined(&sol.reg_grids[0].element(0), elems, 0, 1);
+    sol.reg_grids[1].connect_refined(&sol.reg_grids[0].element(0), elems, 0, 0);
   }
   {
     std::vector<cartdg::Element*> elems;
     for (int i_elem : {3, 4}) elems.push_back(&sol.reg_grids[1].element(i_elem));
-    sol.reg_grids[1].connect_refined(&sol.reg_grids[0].element(0), elems, 1, 0);
+    sol.reg_grids[1].connect_refined(&sol.reg_grids[0].element(0), elems, 1, 1);
   }
   REQUIRE(&sol.reg_grids[1].element(3).vertex(0) == &sol.reg_grids[0].element(0).vertex(1));
   REQUIRE(&sol.reg_grids[1].element(4).vertex(2) == &sol.reg_grids[0].element(0).vertex(3));
