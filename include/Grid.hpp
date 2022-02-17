@@ -8,9 +8,9 @@
 
 #include "Basis.hpp"
 #include "Element.hpp"
-#include "Ghost_boundary_condition.hpp"
 #include "Kernel_settings.hpp"
 #include "Domain_func.hpp"
+#include "Ghost_boundary_condition.hpp"
 
 namespace cartdg
 {
@@ -31,7 +31,6 @@ class Grid
   Basis& basis;
   int iter;
   double time;
-  std::vector<Ghost_boundary_condition*> ghost_bound_conds;
 
   Grid(int n_var_arg, int n_dim_arg, int n_elem_arg, double mesh_size_arg, Basis& basis_arg);
 
@@ -57,6 +56,7 @@ class Grid
 
   // modification
   virtual int add_element(std::vector<int> position);
+  virtual void add_element_gbc(int i_elem, Ghost_boundary_condition&) = 0;
 
   // diagnostic
   void visualize_qpoints (Tecplot_file&);

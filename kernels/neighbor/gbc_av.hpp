@@ -16,6 +16,7 @@ namespace cartdg
 template <int n_var, int n_qpoint, int row_size>
 void gbc_av(Grid& grid, int i_var, int i_dim, Basis& basis, Kernel_settings& settings)
 {
+  #if 0
   const int n_dim = n_var - 2;
   const int i_write = settings.i_write;
   const int stride = custom_math::pow(row_size, n_dim - i_dim - 1);
@@ -41,6 +42,7 @@ void gbc_av(Grid& grid, int i_var, int i_dim, Basis& basis, Kernel_settings& set
       }
     }
   }
+  #endif
 }
 
 }

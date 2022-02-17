@@ -4,12 +4,13 @@
 #include <Deformed_grid.hpp>
 #include <Gauss_legendre.hpp>
 #include <Tecplot_file.hpp>
+#include <Ghost_boundary_condition.hpp>
 
 class Copy_bc : public cartdg::Ghost_boundary_condition
 {
   public:
-  Copy_bc(cartdg::Grid& grid, int id, bool ip)
-  : cartdg::Ghost_boundary_condition{grid, id, ip}
+  Copy_bc(cartdg::Storage_params params, int id, bool ip)
+  : cartdg::Ghost_boundary_condition{params, id, ip}
   {}
   virtual void calc_ghost_state()
   {
@@ -32,12 +33,9 @@ class Quadratic_def : public cartdg::Deformed_grid
     auto p {cartdg::Deformed_grid::get_pos(i_elem)};
     if (i_elem != 4) return p;
     double max_def [] {0.07, -0.13};
-    for (int i_dim = 0; i_dim < 2; ++i_dim)
-    {
-      for (int i_row = 0; i_row < basis.row_size; ++i_row)
-      {
-        for (int j_row = 0; j_row < basis.row_size; ++j_row)
-        {
+    for (int i_dim = 0; i_dim < 2; ++i_dim) {
+      for (int i_row = 0; i_row < basis.row_size; ++i_row) {
+        for (int j_row = 0; j_row < basis.row_size; ++j_row) {
           double def = max_def[i_dim]*mesh_size*deform(i_row)*deform(j_row);
           p[i_dim*n_qpoint + i_row*basis.row_size + j_row] += def;
         }
@@ -61,10 +59,8 @@ class Test
 
   void test()
   {
-    for (int i = 0, i_elem = 0; i < 3; ++i)
-    {
-      for (int j = 0; j < 3; ++j)
-      {
+    for (int i = 0, i_elem = 0; i < 3; ++i) {
+      for (int j = 0; j < 3; ++j) {
         grid.add_element({i, j});
         ++i_elem;
       }
@@ -90,19 +86,19 @@ class Test
     }
 
     std::vector<Copy_bc> bcs;
-    for (int i_dim : {0, 1})
-    {
-      for (bool is_positive : {0, 1})
-      {
-        bcs.emplace_back(grid, i_dim, is_positive);
-        for (int i_row = 0; i_row < 3; ++i_row)
-        {
+    for (int i_dim : {0, 1}) {
+      for (bool is_positive : {0, 1}) {
+        bcs.emplace_back(grid.element(0).storage_params(), i_dim, is_positive);
+      }
+    }
+    for (int i_dim : {0, 1}) {
+      for (bool is_positive : {0, 1}) {
+        for (int i_row = 0; i_row < 3; ++i_row) {
           int stride {i_dim ? 1 : 3};
-          bcs.back().add_element(i_row*3/stride + is_positive*2*stride);
+          grid.add_element_gbc(i_row*3/stride + is_positive*2*stride, bcs[i_dim*2 + is_positive]);
         }
       }
     }
-    for (Copy_bc& bc : bcs) grid.ghost_bound_conds.push_back(&bc);
     grid.purge_vertices();
     grid.calc_jacobian();
     cartdg::Kernel_settings settings;
