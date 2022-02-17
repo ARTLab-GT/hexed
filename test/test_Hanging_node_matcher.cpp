@@ -37,15 +37,15 @@ TEST_CASE("Hanging_node_matcher")
     // this time, only set the corner nodes
     elements[0]->viscosity()[0] = 0.2;
     elements[1]->viscosity()[1] = 0.7;
-    elements[2]->viscosity()[2] = 0.9;
-    elements[3]->viscosity()[3] = 0.5;
+    elements[2]->viscosity()[4] = 0.9;
+    elements[3]->viscosity()[5] = 0.5;
     matcher.match(&cartdg::Element::viscosity);
     REQUIRE(elements[0]->viscosity()[0] == Approx(0.2));
     REQUIRE(elements[0]->viscosity()[1] == Approx((0.2 + 0.7)/2.));
-    REQUIRE(elements[0]->viscosity()[2] == Approx((0.2 + 0.9)/2.));
-    REQUIRE(elements[0]->viscosity()[3] == Approx((0.2 + 0.7 + 0.9 + 0.5)/4.));
+    REQUIRE(elements[0]->viscosity()[4] == Approx((0.2 + 0.9)/2.));
+    REQUIRE(elements[0]->viscosity()[5] == Approx((0.2 + 0.7 + 0.9 + 0.5)/4.));
     REQUIRE(elements[1]->viscosity()[1] == Approx(0.7));
-    REQUIRE(elements[2]->viscosity()[3] == Approx((0.9 + 0.5)/2.));
+    REQUIRE(elements[2]->viscosity()[5] == Approx((0.9 + 0.5)/2.));
     REQUIRE(elements[3]->viscosity()[0] == Approx((0.2 + 0.7 + 0.9 + 0.5)/4.));
     REQUIRE(elements[3]->viscosity()[1] == Approx((0.7 + 0.5)/2.));
   }
