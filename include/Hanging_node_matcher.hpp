@@ -19,6 +19,7 @@ class Hanging_node_matcher
   int n_vert;
 
   public:
+  // Note: sensitive to the order in which elements are provided
   Hanging_node_matcher(std::vector<Element*> fine_elements, int i_dim, bool is_positive);
   /*
    * Sets the values at the hanging vertices to the proper interpolated values. The interpolation
