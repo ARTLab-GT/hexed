@@ -149,7 +149,7 @@ void Regular_grid::add_connection(Element* elem0, Element* elem1, int i_dim)
   elem_cons[i_dim].push_back(con);
   int stride = custom_math::pow(2, n_dim - 1 - i_dim);
   for (int i_vert = 0; i_vert < n_vertices/2; ++i_vert) {
-    int i_col = i_vert/(stride*2)*(stride*2) + i_vert%stride;
+    int i_col = i_vert/stride*stride*2 + i_vert%stride;
     elem0->vertex(i_col + stride).eat(elem1->vertex(i_col));
   }
 }
@@ -158,11 +158,17 @@ void Regular_grid::connect_refined(Element* coarse, std::vector<Element*> fine, 
 {
   const int fs {n_var*n_qpoint/basis.row_size};
   if (fine.size() != unsigned(n_vertices)/2) throw std::runtime_error("Wrong number of fine elements in hanging-node connection.");
+  // create a `Refined_face` to store the mortar faces
   ref_faces[i_dim].emplace_back(new Refined_face {storage_params, coarse->face() + (2*i_dim + is_positive)*fs});
+  int vertex_stride = custom_math::pow(2, n_dim - 1 - i_dim);
   for (int i_face = 0; i_face < n_vertices/2; ++i_face) {
+    // connect the mortar faces to the fine faces
     elem_con con {ref_faces[i_dim].back()->fine_face(i_face), fine[i_face]->face() + (2*i_dim + 1 - is_positive)*fs};
     if (!is_positive) std::swap(con[0], con[1]);
     elem_cons[i_dim].push_back(con);
+    // combine coarse vertices with matching fine vertices
+    int vertex_col = i_face/vertex_stride*vertex_stride*2 + i_face%vertex_stride;
+    coarse->vertex(vertex_col + (1 - is_positive)*vertex_stride).eat(fine[i_face]->vertex(vertex_col + is_positive*vertex_stride));
   }
 }
 

@@ -113,7 +113,10 @@ TEST_CASE("inter-grid continuous viscosity")
   const int row_size = cartdg::config::max_row_size;
   cartdg::Solution sol (4, 2, row_size, 0.3);
   sol.add_block_grid(0, {1, 0}, {2, 1});
-  sol.add_block_grid(1, {1, 0}, {2, 3});
+  sol.add_empty_grid(1);
+  sol.reg_grids[1].add_element({1, 0});
+  sol.reg_grids[1].add_element({1, 1});
+  sol.reg_grids[1].add_element({1, 2});
   sol.reg_grids[1].auto_connect();
   {
     std::vector<cartdg::Element*> elems;

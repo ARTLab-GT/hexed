@@ -195,6 +195,13 @@ TEST_CASE("Regular_grid")
       REQUIRE(grid2.n_con(0) == 2);
       REQUIRE(grid2.n_con(1) == 2);
 
+      cartdg::Regular_grid grid2_1 {4, 2, 0, 1., basis};
+      grid2_1.add_element({0, 0});
+      grid2_1.add_element({0, 1});
+      grid2_1.auto_connect();
+      REQUIRE(&grid2_1.element(0).vertex(1) == &grid2_1.element(1).vertex(0));
+      REQUIRE(&grid2_1.element(0).vertex(3) == &grid2_1.element(1).vertex(2));
+
       std::vector<int> periods3d {3, 3, 3};
       grid3.auto_connect(periods3d);
       REQUIRE(grid3.n_con(0) == 27);
@@ -202,6 +209,7 @@ TEST_CASE("Regular_grid")
       REQUIRE(grid3.n_con(2) == 27);
       // check that vertices have been properly merged
       REQUIRE(&grid3.element(0).vertex(0) == &grid3.element( 2).vertex(1));
+      REQUIRE(&grid3.element(0).vertex(7) == &grid3.element( 1).vertex(6));
       REQUIRE(&grid3.element(0).vertex(0) == &grid3.element( 6).vertex(2));
       REQUIRE(&grid3.element(0).vertex(0) == &grid3.element(18).vertex(4));
       REQUIRE(&grid3.element(0).vertex(1) == &grid3.element( 1).vertex(0));
