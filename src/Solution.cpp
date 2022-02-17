@@ -296,7 +296,7 @@ void Solution::add_block_grid(int ref_level, std::vector<int> lower_corner,
 
 void Solution::add_block_grid(int ref_level)
 {
-  int n_div = 1; 
+  int n_div = 1;
   for (int i = 0; i < ref_level; ++i) n_div *= 2;
   std::vector<int> lc; std::vector<int> uc;
   for (int i = 0; i < n_dim; ++i)

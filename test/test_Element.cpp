@@ -35,6 +35,7 @@ TEST_CASE("Element")
   for (int i_face_data = 0; i_face_data < n_dof/params.row_size*3*2; ++i_face_data) {
     REQUIRE(element.face()[i_face_data] == 1.);
   }
+  // test that viscosity is initialized to 0
   for (int i_vert = 0; i_vert < 8; ++i_vert) {
     REQUIRE(element.viscosity()[i_vert] == 0.);
   }

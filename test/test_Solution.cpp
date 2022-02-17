@@ -108,6 +108,27 @@ TEST_CASE("Solution class")
   }
 }
 
+TEST_CASE("inter-grid continuous viscosity")
+{
+  const int row_size = cartdg::config::max_row_size;
+  cartdg::Solution sol (4, 2, row_size, 0.3);
+  sol.add_empty_grid(0);
+  sol.add_block_grid(1, {1, 0}, {2, 3});
+  sol.reg_grids[1].auto_connect();
+  sol.add_deformed_grid(1);
+  sol.def_grids[0].add_element({0, 0});
+  sol.def_grids[0].add_element({0, 1});
+  sol.def_grids[0].connect({0, 1}, {1, 1}, {1, 0});
+  sol.reg_grids[1].add_connection(&sol.def_grids[0].element(0), &sol.reg_grids[1].element(0), 0);
+  sol.reg_grids[1].add_connection(&sol.def_grids[0].element(1), &sol.reg_grids[1].element(1), 0);
+  sol.def_grids[0].element(0).viscosity()[3] = 0.1;
+  sol.reg_grids[1].element(2).viscosity()[0] = 0.2;
+  sol.share_vertex_data(&cartdg::Element::viscosity);
+  REQUIRE(sol.reg_grids[1].element(0).viscosity()[1] == Approx(0.1));
+  REQUIRE(sol.reg_grids[1].element(1).viscosity()[0] == Approx(0.1));
+  REQUIRE(sol.def_grids[0].element(1).viscosity()[3] == Approx(0.2));
+}
+
 TEST_CASE("Integration of deformed elements")
 {
   auto sol_ptr {deformed_test_setup_2d(false)};
