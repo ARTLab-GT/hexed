@@ -264,7 +264,7 @@ TEST_CASE("Force_per_area")
   }
 }
 
-TEST_CASE("Qpoint_from_domain")
+TEST_CASE("Jacobian_det_func")
 {
   cartdg::Gauss_lobatto basis {2};
   cartdg::Deformed_grid grid {4, 2, 0, 1., basis};
@@ -272,10 +272,10 @@ TEST_CASE("Qpoint_from_domain")
   grid.add_element({0, 1});
   grid.element(1).vertex(3).pos[0] -= 0.1;
   grid.calc_jacobian();
-  cartdg::Jacobian_det_func func {grid};
-  REQUIRE(func(0, 0).size() == 1);
-  REQUIRE(func(1, 3).size() == 1);
-  REQUIRE(func(0, 0)[0] == Approx(1.));
-  REQUIRE(func(0, 3)[0] == Approx(1.));
-  REQUIRE(func(1, 3)[0] == Approx(0.9));
+  cartdg::Jacobian_det_func func;
+  REQUIRE(func(grid, 0, 0).size() == 1);
+  REQUIRE(func(grid, 1, 3).size() == 1);
+  REQUIRE(func(grid, 0, 0)[0] == Approx(1.));
+  REQUIRE(func(grid, 0, 3)[0] == Approx(1.));
+  REQUIRE(func(grid, 1, 3)[0] == Approx(0.9));
 }
