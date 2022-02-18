@@ -2,21 +2,24 @@
 #define CARTDG_QPOINT_FUNC_HPP_
 
 #include "Grid.hpp"
-#include "Element.hpp"
 
 namespace cartdg
 {
 
 class Qpoint_func
 {
+  protected:
+  Grid& grid;
   public:
-  virtual std::vector<double> operator()(Element& element, int i_qpoint) = 0;
+  Qpoint_func(Grid&);
+  virtual std::vector<double> operator()(int i_element, int i_qpoint) = 0;
 };
 
-class Jacobian_det_func
+class Jacobian_det_func : public Qpoint_func
 {
   public:
-  virtual std::vector<double> operator()(Element& element, int i_qpoint);
+  Jacobian_det_func(Grid&);
+  virtual std::vector<double> operator()(int i_element, int i_qpoint);
 };
 
 }

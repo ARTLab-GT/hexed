@@ -4,7 +4,8 @@
 #include <Domain_func.hpp>
 #include <Surface_func.hpp>
 #include <Qpoint_func.hpp>
-#include <Deformed_element.hpp>
+#include <Deformed_grid.hpp>
+#include <Gauss_lobatto.hpp>
 
 class Arbitrary_func : public cartdg::Spacetime_func
 {
@@ -265,16 +266,16 @@ TEST_CASE("Force_per_area")
 
 TEST_CASE("Qpoint_from_domain")
 {
-  cartdg::Storage_params params {3, 4, 2, 2};
-  cartdg::Deformed_element element {params};
-  // set Jacobian to identity scaled by 1./(i_qpoint + 1.)
-  for (int i_qpoint = 0; i_qpoint < 4; ++i_qpoint) {
-    for (int i_jac = 0; i_jac < 4; ++i_jac) {
-      element.jacobian()[i_jac*4 + i_qpoint] = ((i_jac/2) == (i_jac%2)) ? 1./(i_qpoint + 1.) : 0.;
-    }
-  }
-  cartdg::Jacobian_det_func func;
-  REQUIRE(func(element, 0).size() == 1);
-  REQUIRE(func(element, 0)[0] == Approx(1.));
-  REQUIRE(func(element, 3)[0] == Approx(1./16.));
+  cartdg::Gauss_lobatto basis {2};
+  cartdg::Deformed_grid grid {4, 2, 0, 1., basis};
+  grid.add_element({0, 0});
+  grid.add_element({0, 1});
+  grid.element(1).vertex(3).pos[0] -= 0.1;
+  grid.calc_jacobian();
+  cartdg::Jacobian_det_func func {grid};
+  REQUIRE(func(0, 0).size() == 1);
+  REQUIRE(func(1, 3).size() == 1);
+  REQUIRE(func(0, 0)[0] == Approx(1.));
+  REQUIRE(func(0, 3)[0] == Approx(1.));
+  REQUIRE(func(1, 3)[0] == Approx(0.9));
 }
