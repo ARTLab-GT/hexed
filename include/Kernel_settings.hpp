@@ -1,5 +1,5 @@
-#ifndef KERNEL_SETTINGS_HPP_
-#define KERNEL_SETTINGS_HPP_
+#ifndef CARTDG_KERNEL_SETTINGS_HPP_
+#define CARTDG_KERNEL_SETTINGS_HPP_
 
 namespace cartdg
 {
