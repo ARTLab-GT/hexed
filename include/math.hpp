@@ -1,5 +1,5 @@
-#ifndef MATH_HPP_
-#define MATH_HPP_
+#ifndef CARTDG_MATH_HPP_
+#define CARTDG_MATH_HPP_
 
 #include <cmath>
 #include <Eigen/Dense>

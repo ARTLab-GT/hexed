@@ -1,5 +1,5 @@
-#ifndef PHYSICAL_BASIS_HPP_
-#define PHYSICAL_BASIS_HPP_
+#ifndef CARTDG_PHYSICAL_BASIS_HPP_
+#define CARTDG_PHYSICAL_BASIS_HPP_
 
 #include <vector>
 #include <Eigen/Dense>

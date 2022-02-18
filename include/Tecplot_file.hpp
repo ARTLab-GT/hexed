@@ -1,5 +1,5 @@
-#ifndef TECPLOT_FILE_HPP_
-#define TECPLOT_FILE_HPP_
+#ifndef CARTDG_TECPLOT_FILE_HPP_
+#define CARTDG_TECPLOT_FILE_HPP_
 
 #include <string>
 #include <vector>

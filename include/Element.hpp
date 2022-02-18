@@ -1,5 +1,5 @@
-#ifndef ELEMENT_HPP_
-#define ELEMENT_HPP_
+#ifndef CARTDG_ELEMENT_HPP_
+#define CARTDG_ELEMENT_HPP_
 
 #include <memory>
 #include <vector>
