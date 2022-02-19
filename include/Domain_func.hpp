@@ -27,6 +27,9 @@ class Domain_func : public Qpoint_func // can be evaluated at quadrature points,
 
 class State_variables : public Domain_func
 {
+  // This override improves performance by not evaluating position.
+  virtual std::vector<double> operator()(Grid& grid, int i_element, int i_qpoint);
+
   public:
   // returns `state`
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,

@@ -22,6 +22,17 @@ std::vector<double> Domain_func::operator()(Grid& grid, int i_element, int i_qpo
   return operator()(qpoint_pos, grid.time, qpoint_state);
 }
 
+std::vector<double> State_variables::operator()(Grid& grid, int i_element, int i_qpoint)
+{
+  Element& element {grid.element(i_element)};
+  Storage_params params {element.storage_params()};
+  std::vector<double> qpoint_state;
+  for (int i_var = 0; i_var < params.n_var; ++i_var) {
+    qpoint_state.push_back(grid.element(i_element).stage(0)[i_var*params.n_qpoint() + i_qpoint]);
+  }
+  return qpoint_state;
+};
+
 std::vector<double> State_variables::operator()(const std::vector<double> point_pos, double point_time,
                                                 const std::vector<double> state)
 {
