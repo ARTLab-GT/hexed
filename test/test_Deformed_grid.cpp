@@ -449,23 +449,6 @@ TEST_CASE("Deformed grid class")
     }
   }
 
-  SECTION("volume integrals")
-  {
-    grid2.add_element({-1, 0});
-    grid2.add_element({ 0, 0});
-    grid2.deformed_element(1).vertex(0).pos[0] = 0.05;
-    grid2.deformed_element(1).vertex(0).pos[1] = 0.07;
-    grid2.calc_jacobian();
-    for (int i_elem : {0, 1})
-    {
-      double* stage = grid2.deformed_element(i_elem).stage(0);
-      for (int i_qpoint = 0; i_qpoint < grid2.n_qpoint; ++i_qpoint) stage[i_qpoint] = 1.2;
-    }
-    auto integral = grid2.integral();
-    double area = 0.2*0.2*2. - 0.2*0.5*(0.05 + 0.07);
-    REQUIRE(integral[0] == Approx(1.2*area));
-  }
-
   SECTION("single-face integrals")
   {
     grid3.add_element({0, 0, 0});
@@ -585,8 +568,9 @@ TEST_CASE("Deformed grid class")
   SECTION("degenerate handling")
   {
     int row_size = cartdg::config::max_row_size;
-    cartdg::Gauss_legendre gleg (row_size);
-    cartdg::Deformed_grid grid (1, 2, 0, 1., gleg);
+    cartdg::Solution sol {4, 2, row_size, 1.};
+    sol.add_deformed_grid(0);
+    cartdg::Deformed_grid grid {sol.def_grids[0]};
     for (int i_elem = 0; i_elem < 2; ++i_elem) {
       grid.add_element({i_elem, 0, 0});
       grid.deformed_element(i_elem).vertex(2).pos[0] -= 1.;
@@ -601,11 +585,11 @@ TEST_CASE("Deformed grid class")
       for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint) {
         grid.element(0).stage(0)[i_qpoint] = grid.element(1).stage(0)[i_qpoint] = (rand()%1000)/10000.;
       }
-      double integral = grid.integral()[0];
+      double integral = sol.integral()[0];
       grid.project_degenerate(0);
       cartdg::Tecplot_file file {"projection_random", 2, 1, 0.};
       grid.visualize_interior(file);
-      REQUIRE(grid.integral()[0] - integral == Approx(0.).scale(1.)); // test conservation
+      REQUIRE(sol.integral()[0] - integral == Approx(0.).scale(1.)); // test conservation
     }
     SECTION("perturbation") // make sure information near degenerate point is annihilated
     {
@@ -653,7 +637,7 @@ TEST_CASE("Deformed grid class")
           grid.element(0).stage(0)[i_qpoint] = diff*diff;
           grid.element(1).stage(0)[i_qpoint] = 0.;
         }
-        diffs.push_back(std::sqrt(grid.integral()[0]));
+        diffs.push_back(std::sqrt(sol.integral()[0]));
       }
       // demand a greater order of accuracy than required
       REQUIRE(diffs[0]/diffs[1] > std::pow(2, row_size));
