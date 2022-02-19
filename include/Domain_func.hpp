@@ -2,6 +2,7 @@
 #define CARTDG_DOMAIN_FUNC_HPP_
 
 #include "Qpoint_func.hpp"
+#include "Surface_func.hpp"
 
 namespace cartdg
 {
@@ -13,12 +14,14 @@ class Spacetime_func;
  * variables in the mathematical problem domain. Useful for defining error functions
  * and computing integrals.
  */
-class Domain_func : public Qpoint_func // can be evaluated at quadrature points, so inherits from `Qpoint_func`
+class Domain_func : public Qpoint_func, public Surface_func
 {
-  // the following invokes `operator()(const std::vector<double>, double, std::vector<double>)`
+  // the following invoke `operator()(const std::vector<double>, double, std::vector<double>)`
   // on the appropriate data at the quadrature point. Declared as private to hide the
   // technicalities of overloading inherited functions.
   virtual std::vector<double> operator()(Grid& grid, int i_element, int i_qpoint);
+  virtual std::vector<double> operator()(std::vector<double> pos, double time,
+                                         std::vector<double> state, std::vector<double> outward_normal);
 
   public:
   virtual std::vector<double> operator()(const std::vector<double> pos, double time,

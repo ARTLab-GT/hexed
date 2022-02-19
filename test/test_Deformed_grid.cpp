@@ -473,7 +473,6 @@ TEST_CASE("Deformed grid class")
     grid2.calc_jacobian();
     grid3.calc_jacobian();
     cartdg::State_variables sv;
-    cartdg::Surface_from_domain sfd {sv};
     SECTION("cubic polynomial, regular face")
     {
       auto pos = grid3.get_pos(0);
@@ -484,7 +483,7 @@ TEST_CASE("Deformed grid class")
         double pos2 = pos[i_qpoint + grid3.n_qpoint*2];
         stage[i_qpoint] = std::pow(pos1, 3)*(-std::pow(pos2, 3) + pos2 + 3.) - 2.*std::pow(pos2, 2) - 1.;
       }
-      REQUIRE(grid3.face_integral(sfd, 0, 0, 0)[0] == Approx(-0.04081882666666667));
+      REQUIRE(grid3.face_integral(sv, 0, 0, 0)[0] == Approx(-0.04081882666666667));
     }
     SECTION("constant polynomial, irregular faces")
     {
@@ -500,20 +499,20 @@ TEST_CASE("Deformed grid class")
       grid3.deformed_element(0).vertex(1).pos = {0., 0., 0.8*0.2};
       grid3.calc_jacobian();
       double area = 0.2*0.2;
-      REQUIRE(grid3.face_integral(sfd, 0, 0, 0)[0] == Approx(0.9*area));
-      REQUIRE(grid3.face_integral(sfd, 0, 0, 1)[0] == Approx(area));
-      REQUIRE(grid3.face_integral(sfd, 0, 1, 0)[0] == Approx(0.9*area));
-      REQUIRE(grid3.face_integral(sfd, 0, 2, 0)[0] == Approx(area));
+      REQUIRE(grid3.face_integral(sv, 0, 0, 0)[0] == Approx(0.9*area));
+      REQUIRE(grid3.face_integral(sv, 0, 0, 1)[0] == Approx(area));
+      REQUIRE(grid3.face_integral(sv, 0, 1, 0)[0] == Approx(0.9*area));
+      REQUIRE(grid3.face_integral(sv, 0, 2, 0)[0] == Approx(area));
 
       grid3.deformed_element(0).vertex(3).pos = {0., 0.2, 0.8*0.2};
       grid3.calc_jacobian();
-      REQUIRE(grid3.face_integral(sfd, 0, 2, 1)[0] == Approx(std::sqrt(0.2*0.2 + 1.)*area));
+      REQUIRE(grid3.face_integral(sv, 0, 2, 1)[0] == Approx(std::sqrt(0.2*0.2 + 1.)*area));
 
       grid2.deformed_element(0).vertex(2).pos = {1.1*0.2, 0.};
       grid2.deformed_element(0).vertex(3).pos = {0.9*0.2, 0.9*0.2};
       grid2.deformed_element(0).vertex(0).pos = {0.3, 0.3}; // show that vertex on opposite face has no effect
       grid2.calc_jacobian();
-      REQUIRE(grid2.face_integral(sfd, 0, 0, 1)[0] == Approx(std::sqrt(0.2*0.2 + 0.9*0.9)*0.2));
+      REQUIRE(grid2.face_integral(sv, 0, 0, 1)[0] == Approx(std::sqrt(0.2*0.2 + 0.9*0.9)*0.2));
     }
   }
 
@@ -548,8 +547,7 @@ TEST_CASE("Deformed grid class")
       }
     }
     cartdg::State_variables sv;
-    cartdg::Surface_from_domain sfd {sv};
-    REQUIRE(grid.surface_integral(sfd)[0] == Approx(-1*.2*2*.2 - 0.2*0.2/2. + 0.1*((2*4*.2*4*.2 - 2*.2*2*.2 - 3*.2*3*.2)/2. + 4*0.2*0.2)));
+    REQUIRE(grid.surface_integral(sv)[0] == Approx(-1*.2*2*.2 - 0.2*0.2/2. + 0.1*((2*4*.2*4*.2 - 2*.2*2*.2 - 3*.2*3*.2)/2. + 4*0.2*0.2)));
 
     cartdg::Deformed_grid multivar (2, 3, 0, 1., basis);
     multivar.add_element({0, 0, 0});
@@ -561,7 +559,7 @@ TEST_CASE("Deformed grid class")
       multivar.element(0).stage(0)[i_qpoint + multivar.n_qpoint] = .03;
     }
     multivar.calc_jacobian();
-    auto integral = multivar.surface_integral(sfd);
+    auto integral = multivar.surface_integral(sv);
     REQUIRE(integral[0] == Approx(4.));
     REQUIRE(integral[1] == Approx(.06));
 

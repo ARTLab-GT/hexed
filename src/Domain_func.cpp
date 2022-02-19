@@ -22,6 +22,12 @@ std::vector<double> Domain_func::operator()(Grid& grid, int i_element, int i_qpo
   return operator()(qpoint_pos, grid.time, qpoint_state);
 }
 
+std::vector<double> Domain_func::operator()(std::vector<double> pos, double time,
+                                            std::vector<double> state, std::vector<double> outward_normal)
+{
+  return operator()(pos, time, state);
+}
+
 std::vector<double> State_variables::operator()(Grid& grid, int i_element, int i_qpoint)
 {
   Element& element {grid.element(i_element)};

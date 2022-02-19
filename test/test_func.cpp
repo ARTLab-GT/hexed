@@ -82,16 +82,35 @@ TEST_CASE("Error_func")
 
 TEST_CASE("Inherited methods")
 {
-  Arbitrary_func af;
-  cartdg::Gauss_lobatto basis {2};
-  cartdg::Deformed_grid grid {4, 2, 0, 1., basis};
-  grid.add_element({0, 0});
-  grid.add_element({0, 1});
-  grid.time = 5.;
-  cartdg::Qpoint_func& af_ref {af};
-  auto result = af_ref(grid, 1, 1);
-  REQUIRE(result.size() == 2);
-  REQUIRE(result[1] == Approx(0.3*2. - 10.));
+  SECTION("Qpoint_func")
+  {
+    Arbitrary_func af;
+    cartdg::Gauss_lobatto basis {2};
+    cartdg::Deformed_grid grid {4, 2, 0, 1., basis};
+    grid.add_element({0, 0});
+    grid.add_element({0, 1});
+    grid.time = 5.;
+    cartdg::Qpoint_func& af_ref {af};
+    auto result = af_ref(grid, 1, 1);
+    REQUIRE(result.size() == 2);
+    REQUIRE(result[1] == Approx(0.3*2. - 10.));
+  }
+  SECTION("Surface_func")
+  {
+    // Verify that (Surface_func&)(State_variables&) gives you state variables
+    // regardless of the other inputs
+    cartdg::State_variables sv;
+    cartdg::Surface_func& surface {sv};
+    for (auto pos : test_pos) {
+      for (auto time : test_time) {
+        for (auto state : test_state) {
+          for (auto normal : test_normal) {
+            REQUIRE(surface(pos, time, state, normal) == state);
+          }
+        }
+      }
+    }
+  }
 }
 
 TEST_CASE("Vortex")
@@ -200,23 +219,6 @@ TEST_CASE("Doublet")
     REQUIRE(state[1] == Approx(mass*veloc[1]).epsilon(1e-3));
     REQUIRE(state[2] == Approx(mass         ).epsilon(1e-3));
     REQUIRE(state[3] == Approx(ener         ).epsilon(1e-3));
-  }
-}
-
-TEST_CASE("Surface_from_domain")
-{
-  // Verify that Surface_from_domain(State_variables) gives you state variables
-  // regardless of the other inputs
-  cartdg::State_variables sv;
-  cartdg::Surface_from_domain sfd {sv};
-  for (auto pos : test_pos) {
-    for (auto time : test_time) {
-      for (auto state : test_state) {
-        for (auto normal : test_normal) {
-          REQUIRE(sfd(pos, time, state, normal) == state);
-        }
-      }
-    }
   }
 }
 
