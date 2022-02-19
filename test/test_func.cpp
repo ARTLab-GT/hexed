@@ -67,23 +67,6 @@ TEST_CASE("Constant_func")
   }
 }
 
-TEST_CASE("Domain_from_spacetime")
-{
-  // Verify that Domain_from_spacetime(Constant_func) gives you the
-  // same constant value
-  std::vector<double> value {0.3, -0.7};
-  cartdg::Constant_func cf (value);
-  cartdg::Domain_from_spacetime dfs {cf};
-  for (auto pos : test_pos) {
-    for (auto time : test_time) {
-      for (auto state : test_state) {
-        auto result = dfs(pos, time, state);
-        REQUIRE(result == value);
-      }
-    }
-  }
-}
-
 TEST_CASE("Error_func")
 {
   Arbitrary_func af;

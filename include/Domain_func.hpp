@@ -33,16 +33,6 @@ class State_variables : public Domain_func
                                          const std::vector<double> state);
 };
 
-class Domain_from_spacetime : public Domain_func
-{
-  Spacetime_func& spacetime;
-  public:
-  Domain_from_spacetime(Spacetime_func&);
-  // evaluates given Spacetime_func at `(point_pos, point_time)`
-  virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
-                                         const std::vector<double> state);
-};
-
 class Diff_sq : public Domain_func
 {
   Domain_func& func0;
@@ -58,9 +48,6 @@ class Diff_sq : public Domain_func
 class Error_func : public Domain_func
 {
   Spacetime_func& correct;
-  Domain_from_spacetime dfs;
-  State_variables sv;
-  Diff_sq ds;
   public:
   Error_func(Spacetime_func&);
   // returns elementwise difference between `state` and `correct(point_pos, point_time)`, squared

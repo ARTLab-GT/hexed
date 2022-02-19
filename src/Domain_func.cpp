@@ -28,14 +28,6 @@ std::vector<double> State_variables::operator()(const std::vector<double> point_
   return state;
 }
 
-Domain_from_spacetime::Domain_from_spacetime(Spacetime_func& st) : spacetime{st} {}
-
-std::vector<double> Domain_from_spacetime::operator()
-(const std::vector<double> point_pos, double point_time, const std::vector<double> state)
-{
-  return spacetime(point_pos, point_time);
-}
-
 Diff_sq::Diff_sq(Domain_func& arg0, Domain_func& arg1) : func0{arg0}, func1{arg1} {}
 
 std::vector<double> Diff_sq::operator()(const std::vector<double> point_pos,
@@ -53,12 +45,14 @@ std::vector<double> Diff_sq::operator()(const std::vector<double> point_pos,
 }
 
 Error_func::Error_func(Spacetime_func& correct_arg)
-: correct{correct_arg}, dfs{correct}, ds{dfs, sv} {}
+: correct{correct_arg}
+{}
 
-std::vector<double> Error_func::operator()(const std::vector<double> point_pos,
-                                           double point_time,
+std::vector<double> Error_func::operator()(const std::vector<double> point_pos, double point_time,
                                            const std::vector<double> state)
 {
+  State_variables sv;
+  Diff_sq ds (correct, sv);
   return ds(point_pos, point_time, state);
 }
 
