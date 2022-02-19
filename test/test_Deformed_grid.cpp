@@ -587,8 +587,7 @@ TEST_CASE("Deformed grid class")
       }
       double integral = sol.integral()[0];
       grid.project_degenerate(0);
-      cartdg::Tecplot_file file {"projection_random", 2, 1, 0.};
-      grid.visualize_interior(file);
+      sol.visualize_field("projection_random");
       REQUIRE(sol.integral()[0] - integral == Approx(0.).scale(1.)); // test conservation
     }
     SECTION("perturbation") // make sure information near degenerate point is annihilated
@@ -609,8 +608,7 @@ TEST_CASE("Deformed grid class")
           grid.element(i_elem).stage(0)[i_qpoint] = grid.element(i_elem).stage(2)[i_qpoint]; // for plotting
         }
       }
-      cartdg::Tecplot_file file {"projection_perturbation", 2, 1, 0.};
-      grid.visualize_interior(file);
+      sol.visualize_field("projection_perturbation");
       REQUIRE(elem_norm[0]/elem_norm[1] > 10.);
     }
     SECTION("gaussian")
@@ -626,10 +624,7 @@ TEST_CASE("Deformed grid class")
           }
         }
         grid.project_degenerate(0);
-        if (resolution == 1) {
-          cartdg::Tecplot_file file {"projection_gaussian", 2, 1, 0.};
-          grid.visualize_interior(file);
-        }
+        if (resolution == 1) sol.visualize_field("projection_gaussian");
         // compute the L2 norm of the difference with/without projection. This is a little
         // awkward because *someone* wrote an integral function that can't do individual elements
         for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint) {
