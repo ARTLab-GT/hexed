@@ -27,8 +27,10 @@ class Solution
   // functions that access information
   void visualize_field(std::string name);
   void visualize_surface(std::string name);
-  std::vector<double> integral();
-  std::vector<double> integral(Domain_func& integrand);
+  // The following two functions compute integrals over the entire domain of some
+  // function, which can be specified as a reference to an object or a functor class name
+  std::vector<double> integral(Qpoint_func& integrand);
+  template<typename T = State_variables> std::vector<double> integral() { T functor; return integral(functor); }
   std::vector<double> surface_integral(Surface_func& integrand);
   std::vector<Grid*> all_grids();
 

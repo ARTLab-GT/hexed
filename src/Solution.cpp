@@ -2,6 +2,7 @@
 
 #include <Solution.hpp>
 #include <Tecplot_file.hpp>
+#include <math.hpp>
 
 namespace cartdg
 {
@@ -36,12 +37,7 @@ void Solution::visualize_surface(std::string name)
   }
 }
 
-std::vector<double> Solution::integral()
-{
-  State_variables state_variables;
-  return integral(state_variables);
-}
-std::vector<double> Solution::integral(Domain_func& integrand)
+std::vector<double> Solution::integral(Qpoint_func& integrand)
 {
   auto grids = all_grids();
   if (grids.empty())
@@ -50,18 +46,37 @@ std::vector<double> Solution::integral(Domain_func& integrand)
   }
   else
   {
-    std::vector<double> total;
-    for(Grid* grid : all_grids())
+    // compute `n_dim`-dimensional quadrature weights
+    int n_qpoint = custom_math::pow(basis.row_size, n_dim);
+    Eigen::VectorXd weights (n_qpoint);
+    Eigen::VectorXd weights_1d = basis.node_weights();
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) weights(i_qpoint) = 1.;
+    for (int stride = n_qpoint/basis.row_size, n_rows = 1; n_rows < n_qpoint;
+         stride /= basis.row_size, n_rows *= basis.row_size)
     {
-      auto grid_integral = grid->integral(integrand);
-      int size = grid_integral.size();
-      if (int(total.size()) < size)
-      {
-        total.resize(size);
+      for (int i_outer = 0; i_outer < n_rows; ++i_outer) {
+        for (int i_inner = 0; i_inner < stride; ++i_inner) {
+          for (int i_qpoint = 0; i_qpoint < basis.row_size; ++i_qpoint) {
+            weights((i_outer*basis.row_size + i_qpoint)*stride + i_inner)
+            *= weights_1d(i_qpoint);
+          }
+        }
       }
-      for (int i_var = 0; i_var < size; ++i_var)
-      {
-        total[i_var] += grid_integral[i_var];
+    }
+
+    // compute integral
+    std::vector<double> total;
+    for(Grid* grid : all_grids()) {
+      double mesh_size_factor = custom_math::pow(grid->mesh_size, n_dim);
+      for (int i_elem = 0; i_elem < grid->n_elem; ++i_elem) {
+        for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+          std::vector<double> point_integrand = integrand(*grid, i_elem, i_qpoint);
+          if (total.size() < point_integrand.size()) total.resize(point_integrand.size(), 0.);
+          double jac_det = grid->element(i_elem).jacobian_determinant(i_qpoint);
+          for (int i_var = 0; i_var < int(point_integrand.size()); ++i_var) {
+            total[i_var] += point_integrand[i_var]*weights[i_qpoint]*jac_det*mesh_size_factor;
+          }
+        }
       }
     }
     return total;
