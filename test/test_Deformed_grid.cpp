@@ -570,7 +570,7 @@ TEST_CASE("Deformed grid class")
     int row_size = cartdg::config::max_row_size;
     cartdg::Solution sol {4, 2, row_size, 1.};
     sol.add_deformed_grid(0);
-    cartdg::Deformed_grid grid {sol.def_grids[0]};
+    cartdg::Deformed_grid& grid {sol.def_grids[0]};
     for (int i_elem = 0; i_elem < 2; ++i_elem) {
       grid.add_element({i_elem, 0, 0});
       grid.deformed_element(i_elem).vertex(2).pos[0] -= 1.;
