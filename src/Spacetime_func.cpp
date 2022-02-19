@@ -4,6 +4,12 @@
 namespace cartdg
 {
 
+std::vector<double> Spacetime_func::operator()(const std::vector<double> pos, double time,
+                                               const std::vector<double> state)
+{
+  return operator()(pos, time);
+}
+
 Constant_func::Constant_func(std::vector<double> value_arg) : value(value_arg) {}
 std::vector<double> Constant_func::operator()(std::vector<double> pos, double time)
 {

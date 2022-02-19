@@ -3,15 +3,18 @@
 
 #include <vector>
 #include <array>
+#include "Domain_func.hpp"
 
 namespace cartdg
 {
 
-class Spacetime_func
+class Spacetime_func : public Domain_func
 {
   public:
-  virtual ~Spacetime_func() = default;
   virtual std::vector<double> operator()(std::vector<double> pos, double time) = 0;
+  // the following invokes `operator()(pos, time)`
+  virtual std::vector<double> operator()(const std::vector<double> pos, double time,
+                                         const std::vector<double> state);
 };
 
 class Constant_func : public Spacetime_func
@@ -47,7 +50,7 @@ class Isentropic_vortex : public Spacetime_func
  * variables are set such that entropy and stagnation enthalpy are constant.
  * flow is isentropic. Flow field is steady, and is an exact solution only in
  * incompressible flow.
- * 
+ *
  * WARNING: Singularity at `location`! This class is applicable only to domains
  * which do not include this point.
  */

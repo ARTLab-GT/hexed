@@ -1,10 +1,28 @@
 #include <cmath>
 #include <Domain_func.hpp>
+#include <Spacetime_func.hpp>
+#include <Grid.hpp>
+
 namespace cartdg
 {
 
-std::vector<double> State_variables::operator()(const std::vector<double> point_pos,
-                                                double point_time,
+std::vector<double> Domain_func::operator()(Grid& grid, int i_element, int i_qpoint)
+{
+  std::vector<double> pos {grid.get_pos(i_element)};
+  Element& element {grid.element(i_element)};
+  Storage_params params {element.storage_params()};
+  std::vector<double> qpoint_pos;
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+    qpoint_pos.push_back(pos[i_dim*params.n_qpoint() + i_qpoint]);
+  }
+  std::vector<double> qpoint_state;
+  for (int i_var = 0; i_var < params.n_var; ++i_var) {
+    qpoint_state.push_back(grid.element(i_element).stage(0)[i_var*params.n_qpoint() + i_qpoint]);
+  }
+  return operator()(qpoint_pos, grid.time, qpoint_state);
+}
+
+std::vector<double> State_variables::operator()(const std::vector<double> point_pos, double point_time,
                                                 const std::vector<double> state)
 {
   return state;
@@ -60,16 +78,6 @@ std::vector<double> Stag_pres::operator()(const std::vector<double> point_pos, d
   double enth {stag_enth - kin_ener};
   double stag_pres {pres*std::pow(stag_enth/enth, hr/(hr - 1.))};
   return {stag_pres};
-}
-
-Stag_pres_errsq::Stag_pres_errsq(std::vector<double> freestream, double heat_rat)
-: sp{heat_rat}, free{sp({}, 0., freestream)}, dfs{free}, ds{dfs, sp}
-{}
-
-std::vector<double> Stag_pres_errsq::operator()(const std::vector<double> point_pos, double point_time,
-                                                const std::vector<double> state)
-{
-  return ds(point_pos, point_time, state);
 }
 
 }

@@ -1,17 +1,21 @@
 #ifndef CARTDG_DOMAIN_FUNC_HPP_
 #define CARTDG_DOMAIN_FUNC_HPP_
 
-#include "Spacetime_func.hpp"
+#include "Qpoint_func.hpp"
 
 namespace cartdg
 {
 
-class Domain_func
+class Spacetime_func;
+
+class Domain_func : public Qpoint_func
 {
   public:
-  virtual ~Domain_func() = default;
-  virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
+  virtual std::vector<double> operator()(const std::vector<double> pos, double time,
                                          const std::vector<double> state) = 0;
+  // the following invokes `operator()(const std::vector<double>, double, std::vector<double>)`
+  // on the appropriate data at the quadrature point
+  virtual std::vector<double> operator()(Grid& grid, int i_element, int i_qpoint);
 };
 
 class State_variables : public Domain_func
@@ -62,18 +66,6 @@ class Stag_pres : public Domain_func
   double hr;
   public:
   Stag_pres(double heat_rat = 1.4);
-  virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
-                                         const std::vector<double> state);
-};
-
-class Stag_pres_errsq : public Domain_func
-{
-  Stag_pres sp;
-  Constant_func free;
-  Domain_from_spacetime dfs;
-  Diff_sq ds;
-  public:
-  Stag_pres_errsq(std::vector<double> freestream, double heat_rat = 1.4);
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state);
 };

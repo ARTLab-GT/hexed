@@ -1,4 +1,5 @@
 #include <Qpoint_func.hpp>
+#include <Grid.hpp>
 
 namespace cartdg
 {

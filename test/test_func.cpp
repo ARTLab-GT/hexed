@@ -1,9 +1,9 @@
 #include <catch2/catch.hpp>
 
-#include <Spacetime_func.hpp>
-#include <Domain_func.hpp>
-#include <Surface_func.hpp>
 #include <Qpoint_func.hpp>
+#include <Domain_func.hpp>
+#include <Spacetime_func.hpp>
+#include <Surface_func.hpp>
 #include <Deformed_grid.hpp>
 #include <Gauss_lobatto.hpp>
 
@@ -14,8 +14,7 @@ class Arbitrary_func : public cartdg::Spacetime_func
   {
     auto result = pos;
     double mult [] {-2, 0.3, 4, 0., 0.01};
-    for (int i_dim = 0; i_dim < int(pos.size()); ++i_dim)
-    {
+    for (int i_dim = 0; i_dim < int(pos.size()); ++i_dim) {
       result[i_dim] = pos[i_dim]*mult[i_dim] - 2*time;
     }
     return result;
@@ -89,15 +88,27 @@ TEST_CASE("Error_func")
 {
   Arbitrary_func af;
   cartdg::Error_func ef(af);
-  for (unsigned i_test = 0; i_test < test_pos.size(); ++i_test)
-  {
+  for (unsigned i_test = 0; i_test < test_pos.size(); ++i_test) {
     auto error = ef(test_pos[i_test], test_time[i_test], test_state[i_test]);
     REQUIRE(error.size() == test_error[i_test].size());
-    for (unsigned i_val = 0; i_val < error.size(); ++i_val)
-    {
+    for (unsigned i_val = 0; i_val < error.size(); ++i_val) {
       REQUIRE(std::sqrt(error[i_val]) == std::abs(test_error[i_test][i_val]));
     }
   }
+}
+
+TEST_CASE("Inherited methods")
+{
+  Arbitrary_func af;
+  cartdg::Gauss_lobatto basis {2};
+  cartdg::Deformed_grid grid {4, 2, 0, 1., basis};
+  grid.add_element({0, 0});
+  grid.add_element({0, 1});
+  grid.time = 5.;
+  cartdg::Qpoint_func& af_ref {af};
+  auto result = af_ref(grid, 1, 1);
+  REQUIRE(result.size() == 2);
+  REQUIRE(result[1] == Approx(0.3*2. - 10.));
 }
 
 TEST_CASE("Vortex")
