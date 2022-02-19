@@ -8,6 +8,11 @@ namespace cartdg
 
 class Grid;
 
+/*
+ * Represents a function which can be evaluated at quadrature points. Can depend on
+ * flow state, position, time, or on mathematical parameters like element Jabobian,
+ * quadrature weights, etc.
+ */
 class Qpoint_func
 {
   public:
@@ -15,6 +20,7 @@ class Qpoint_func
   virtual std::vector<double> operator()(Grid& grid, int i_element, int i_qpoint) = 0;
 };
 
+// Returns a vector with one element: the Jacobian determinant at the quadrature point.
 class Jacobian_det_func : public Qpoint_func
 {
   public:

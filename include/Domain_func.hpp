@@ -8,14 +8,21 @@ namespace cartdg
 
 class Spacetime_func;
 
-class Domain_func : public Qpoint_func
+/*
+ * Represents a function of position, time, and flow state. That is, all the
+ * variables in the mathematical problem domain. Useful for defining error functions
+ * and computing integrals.
+ */
+class Domain_func : public Qpoint_func // can be evaluated at quadrature points, so inherits from `Qpoint_func`
 {
+  // the following invokes `operator()(const std::vector<double>, double, std::vector<double>)`
+  // on the appropriate data at the quadrature point. Declared as private to hide the
+  // technicalities of overloading inherited functions.
+  virtual std::vector<double> operator()(Grid& grid, int i_element, int i_qpoint);
+
   public:
   virtual std::vector<double> operator()(const std::vector<double> pos, double time,
                                          const std::vector<double> state) = 0;
-  // the following invokes `operator()(const std::vector<double>, double, std::vector<double>)`
-  // on the appropriate data at the quadrature point
-  virtual std::vector<double> operator()(Grid& grid, int i_element, int i_qpoint);
 };
 
 class State_variables : public Domain_func
@@ -71,5 +78,4 @@ class Stag_pres : public Domain_func
 };
 
 }
-
 #endif
