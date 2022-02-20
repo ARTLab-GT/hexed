@@ -12,14 +12,12 @@ class Sinusoidal_init : public cartdg::Spacetime_func
   const double mean_mass = 1.1;
   const std::vector<double> velocity {0.5, 0.11, 0.7};
   int dim;
-
   Sinusoidal_init(int dim_arg) : dim(dim_arg) {}
-
+  virtual int n_var(int n_dim_arg) {return n_dim_arg + 2;}
   std::vector<double> operator()(std::vector<double> pos, double time)
   {
     pos_func = 0.;
-    for (int i = 0; i < dim; ++i)
-    {
+    for (int i = 0; i < dim; ++i) {
       pos_func += (i + 1)*pos[i];
     }
     set_state();

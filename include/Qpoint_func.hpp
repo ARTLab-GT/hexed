@@ -17,6 +17,8 @@ class Qpoint_func
 {
   public:
   virtual ~Qpoint_func() = default;
+  // Return the size of `operator()` when called on a `n_dim`-dimensional `Grid`.
+  virtual int n_var(int n_dim) = 0;
   virtual std::vector<double> operator()(Grid& grid, int i_element, int i_qpoint) = 0;
 };
 
@@ -24,6 +26,7 @@ class Qpoint_func
 class Jacobian_det_func : public Qpoint_func
 {
   public:
+  virtual inline int n_var(int n_dim) {return 1;}
   virtual std::vector<double> operator()(Grid& grid, int i_element, int i_qpoint);
 };
 

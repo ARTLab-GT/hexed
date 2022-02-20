@@ -11,7 +11,7 @@ class Initializer : public cartdg::Spacetime_func
   int dim;
   const std::vector<double> velocity {4., -.3, 1.2};
   Initializer(int dim_arg) : dim(dim_arg) {}
-
+  virtual int n_var(int n_dim) {return n_dim + 2;}
   std::vector<double> operator()(std::vector<double> position, double time)
   {
     double mass = 1.;

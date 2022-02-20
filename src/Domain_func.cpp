@@ -65,6 +65,11 @@ Error_func::Error_func(Spacetime_func& correct_arg)
 : correct{correct_arg}
 {}
 
+int Error_func::n_var(int n_dim)
+{
+  return correct.n_var(n_dim);
+}
+
 std::vector<double> Error_func::operator()(const std::vector<double> point_pos, double point_time,
                                            const std::vector<double> state)
 {

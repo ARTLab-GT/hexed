@@ -10,6 +10,7 @@
 class Arbitrary_func : public cartdg::Spacetime_func
 {
   public:
+  virtual int n_var(int n_dim) {return n_dim;}
   virtual std::vector<double> operator()(std::vector<double> pos, double time)
   {
     auto result = pos;
@@ -59,6 +60,8 @@ TEST_CASE("Constant_func")
 {
   std::vector<double> value {0.3, -0.7};
   cartdg::Constant_func cf (value);
+  REQUIRE(cf.n_var(2) == 2);
+  REQUIRE(cf.n_var(3) == 2);
   for (auto pos : test_pos) {
     for (auto time : test_time) {
       auto result = cf(pos, time);
@@ -71,6 +74,8 @@ TEST_CASE("Error_func")
 {
   Arbitrary_func af;
   cartdg::Error_func ef(af);
+  REQUIRE(ef.n_var(2) == 2);
+  REQUIRE(ef.n_var(3) == 3);
   for (unsigned i_test = 0; i_test < test_pos.size(); ++i_test) {
     auto error = ef(test_pos[i_test], test_time[i_test], test_state[i_test]);
     REQUIRE(error.size() == test_error[i_test].size());
@@ -119,6 +124,7 @@ TEST_CASE("Vortex")
   {
     std::vector<double> freestream {9., -0.2, 0.8, 2e5};
     cartdg::Isentropic_vortex vortex(freestream);
+    REQUIRE(vortex.n_var(2) == 4);
 
     std::vector<double> test_pos []
     {
@@ -196,6 +202,7 @@ TEST_CASE("Doublet")
   double ener {pres/0.3 + 0.5*mass*speed_sq};
   std::vector<double> freestream = {veloc[0]*mass, veloc[1]*mass, mass, ener};
   cartdg::Doublet doublet {freestream};
+  REQUIRE(doublet.n_var(2) == 4);
   doublet.radius = 0.8;
   doublet.heat_rat = 1.3; // just to make sure 1.4 isn't hardcoded anywhere
   doublet.location = {0.05, 0.03};
@@ -269,6 +276,8 @@ TEST_CASE("Jacobian_det_func")
   grid.element(1).vertex(3).pos[0] -= 0.1;
   grid.calc_jacobian();
   cartdg::Jacobian_det_func func;
+  REQUIRE(func.n_var(2) == 1);
+  REQUIRE(func.n_var(3) == 1);
   REQUIRE(func(grid, 0, 0).size() == 1);
   REQUIRE(func(grid, 1, 3).size() == 1);
   REQUIRE(func(grid, 0, 0)[0] == Approx(1.));

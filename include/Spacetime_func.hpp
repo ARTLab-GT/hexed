@@ -24,9 +24,10 @@ class Spacetime_func : public Domain_func
 
 class Constant_func : public Spacetime_func
 {
-  public:
   std::vector<double> value;
+  public:
   Constant_func(std::vector<double> value_arg);
+  virtual inline int n_var(int n_dim) {return value.size();}
   virtual std::vector<double> operator()(std::vector<double> pos, double time); // returns `value`
 };
 
@@ -47,6 +48,7 @@ class Isentropic_vortex : public Spacetime_func
   double center0 = 0.;
   double center1 = 0.;
   Isentropic_vortex(std::vector<double> freestream_state);
+  virtual inline int n_var(int n_dim) {return 4;}
   virtual std::vector<double> operator()(std::vector<double> pos, double time);
 };
 
@@ -63,18 +65,20 @@ class Isentropic_vortex : public Spacetime_func
 class Doublet : public Spacetime_func
 {
   std::vector<double> freestream;
-  int n_var;
+  int n_v;
   int n_dim;
   std::vector<double> freestream_veloc;
   double freestream_speed;
   double angle_of_attack;
   double stag_enth_per_mass; // stag = stagnation
   double free_enth_per_mass; // free = freestream
+
   public:
   std::array<double, 2> location {0., 0.};
   double radius {1.};
   double heat_rat {1.4};
   Doublet(std::vector<double> freestream_state);
+  virtual inline int n_var(int n_dim) {return n_v;}
   virtual std::vector<double> operator()(std::vector<double> pos, double time);
 };
 

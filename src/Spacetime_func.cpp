@@ -38,7 +38,7 @@ std::vector<double> Isentropic_vortex::operator()(std::vector<double> pos, doubl
 }
 
 Doublet::Doublet(std::vector<double> freestream_state)
-: freestream{freestream_state}, n_var{int(freestream_state.size())}, n_dim{n_var - 2},
+: freestream{freestream_state}, n_v{int(freestream_state.size())}, n_dim{n_v - 2},
   freestream_veloc(2)
 {
 }
@@ -49,13 +49,13 @@ std::vector<double> Doublet::operator()(std::vector<double> pos, double time)
   freestream_speed = 0.;
   for (int i_dim : {0, 1}) // ignore any axial (i_dim = 3) component of velocity as it does not affect the flowfield
   {
-    freestream_veloc[i_dim] = freestream[i_dim]/freestream[n_var - 2];
+    freestream_veloc[i_dim] = freestream[i_dim]/freestream[n_v - 2];
     freestream_speed += freestream_veloc[i_dim]*freestream_veloc[i_dim];
   }
   freestream_speed = std::sqrt(freestream_speed);
   angle_of_attack = std::atan2(freestream_veloc[1], freestream_veloc[0]);
-  double pres {(heat_rat - 1.)*(freestream[n_var - 1] - 0.5*freestream_speed*freestream_speed*freestream[n_var - 2])};
-  stag_enth_per_mass = (freestream[n_var - 1] + pres)/freestream[n_var - 2];
+  double pres {(heat_rat - 1.)*(freestream[n_v - 1] - 0.5*freestream_speed*freestream_speed*freestream[n_v - 2])};
+  stag_enth_per_mass = (freestream[n_v - 1] + pres)/freestream[n_v - 2];
   free_enth_per_mass = stag_enth_per_mass - 0.5*freestream_speed*freestream_speed;
 
   std::vector<double> state {freestream}; // init to freestream so that if 3D momentum2 matches freestream
@@ -76,10 +76,10 @@ std::vector<double> Doublet::operator()(std::vector<double> pos, double time)
   // compute thermodynamics
   double kin_ener_per_mass {0.5*(veloc[0]*veloc[0] + veloc[1]*veloc[1])};
   double enth_per_mass {stag_enth_per_mass - kin_ener_per_mass};
-  double mass {freestream[n_var - 2]*std::pow(enth_per_mass/free_enth_per_mass, 1./(heat_rat - 1.))};
+  double mass {freestream[n_v - 2]*std::pow(enth_per_mass/free_enth_per_mass, 1./(heat_rat - 1.))};
   for (int i_dim : {0, 1}) state[i_dim] = veloc[i_dim]*mass;
-  state[n_var - 2] = mass;
-  state[n_var - 1] = mass*(enth_per_mass/heat_rat + kin_ener_per_mass);
+  state[n_v - 2] = mass;
+  state[n_v - 1] = mass*(enth_per_mass/heat_rat + kin_ener_per_mass);
 
   return state;
 }

@@ -34,6 +34,7 @@ class State_variables : public Domain_func
   virtual std::vector<double> operator()(Grid& grid, int i_element, int i_qpoint);
 
   public:
+  virtual inline int n_var(int n_dim) {return 0;}
   // returns `state`
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state);
@@ -46,6 +47,7 @@ class Diff_sq : public Domain_func
   public:
   // arguments must return values of same size
   Diff_sq(Domain_func&, Domain_func&);
+  virtual inline int n_var(int n_dim) {return func0.n_var(n_dim);}
   // returns elementwise squared difference between provided funcs
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state);
@@ -56,6 +58,7 @@ class Error_func : public Domain_func
   Spacetime_func& correct;
   public:
   Error_func(Spacetime_func&);
+  virtual int n_var(int n_dim);
   // returns elementwise difference between `state` and `correct(point_pos, point_time)`, squared
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state);
@@ -66,6 +69,7 @@ class Stag_pres : public Domain_func
   double hr;
   public:
   Stag_pres(double heat_rat = 1.4);
+  virtual inline int n_var(int n_dim) {return 1;}
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state);
 };
