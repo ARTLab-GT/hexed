@@ -7,6 +7,12 @@
 namespace cartdg
 {
 
+/*
+ * This class provides an object-oriented wrapper to TecIO because the standard API is verbose
+ * and generally nauseating. Because the wrapped API involves calling several global functions
+ * in a specific sequence, at most one `Tecplot_file` and one `Tecplot_file::Zone`
+ * are allowed to exist at any given time.
+ */
 class Tecplot_file
 {
   int n_dim;
@@ -24,6 +30,7 @@ class Tecplot_file
    */
   class Zone
   {
+    static int n_zone_instances;
     protected:
     Tecplot_file& file;
     std::string name;
@@ -32,7 +39,7 @@ class Tecplot_file
     Zone(Tecplot_file&, int n_nodes_arg, std::string name_arg);
     Zone(const Zone& other) = delete;
     Zone& operator=(const Zone& other) = delete;
-    virtual ~Zone() = default;
+    virtual ~Zone();
     virtual void write(double* pos, double* vars);
   };
   /*

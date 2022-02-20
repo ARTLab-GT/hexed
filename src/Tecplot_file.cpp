@@ -38,9 +38,19 @@ Tecplot_file::~Tecplot_file()
   --n_instances;
 }
 
+int Tecplot_file::Zone::n_zone_instances {0};
+
 Tecplot_file::Zone::Zone(Tecplot_file& file, int n_nodes, std::string name_arg)
 : file{file}, name{name_arg + std::to_string(file.i_zone++)}, n_nodes{n_nodes}
-{}
+{
+  if (n_zone_instances > 0) throw std::runtime_error("Attempt to create multiple `Tecplot_file::Zone`s at once, which is illegal.");
+  ++n_zone_instances;
+}
+
+Tecplot_file::Zone::~Zone()
+{
+  --n_zone_instances;
+}
 
 void Tecplot_file::Zone::write(double* pos, double* vars)
 {
