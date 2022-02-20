@@ -7,6 +7,7 @@
 class Test_func : public cartdg::Spacetime_func
 {
   public:
+  virtual int n_var(int n_dim) {return 4;}
   std::vector<double> operator()(std::vector<double> position, double time)
   {
     return std::vector<double> {0.1, 0.2, position[0], 2.5};
@@ -16,6 +17,7 @@ class Test_func : public cartdg::Spacetime_func
 class Arbitrary_integrand : public cartdg::Domain_func
 {
   public:
+  virtual int n_var(int n_dim) {return 3;}
   virtual std::vector<double> operator()(std::vector<double> pos, double time,
                                          std::vector<double> state)
   {
@@ -89,7 +91,7 @@ TEST_CASE("Solution class")
     REQUIRE(g->element(5).stage(0)[48] == 2.5);
   }
 
-  SECTION("Quadrature")
+  SECTION("Regular integrals")
   {
     cartdg::Constant_func init (std::vector<double> (4, 1.2));
     sol.initialize(init);
@@ -104,7 +106,26 @@ TEST_CASE("Solution class")
 
     cartdg::Solution empty (4, 2, 4, 0.7);
     empty.initialize(init);
-    empty.integral();
+    REQUIRE(empty.integral().size() == 0);
+  }
+
+  SECTION("Deformed integrals")
+  {
+    cartdg::Solution def_sol {4, 2, cartdg::config::max_row_size, 0.4};
+    def_sol.add_deformed_grid(1.);
+    cartdg::Deformed_grid& grid {def_sol.def_grids[0]};
+    grid.add_element({-1, 0});
+    grid.add_element({ 0, 0});
+    grid.deformed_element(1).vertex(0).pos[0] = 0.05;
+    grid.deformed_element(1).vertex(0).pos[1] = 0.07;
+    grid.calc_jacobian();
+    for (int i_elem : {0, 1}) {
+      double* stage = grid.deformed_element(i_elem).stage(0);
+      for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint) stage[i_qpoint] = 1.2;
+    }
+    auto integral = def_sol.integral();
+    double area = 0.2*0.2*2. - 0.2*0.5*(0.05 + 0.07);
+    REQUIRE(integral[0] == Approx(1.2*area));
   }
 }
 
@@ -168,6 +189,7 @@ TEST_CASE("Integration of deformed elements")
   char buffer [buf_size];
   snprintf(buffer, buf_size, "deformed_integration/iter_%i", i);
   sol.visualize_field(buffer);
+  sol.visualize_field<cartdg::Jacobian_det_func>("deformed_integration/jacobian");
   for (; i < 10; ++i) {
     for (int j = 0; j < 10; ++j) {
       sol.update(0.5);

@@ -61,12 +61,7 @@ class Grid
   void match_hanging(Element::shareable_value_access);
 
   // diagnostic
-  void visualize_qpoints (Tecplot_file&);
-  void visualize_edges   (Tecplot_file&, int n_sample = 30);
-  void visualize_interior(Tecplot_file&, int n_sample = 20);
   void print();
-  std::vector<double> integral();
-  std::vector<double> integral(Domain_func& integrand);
 
   protected:
   int i_rk_stage;

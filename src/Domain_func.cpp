@@ -1,21 +1,48 @@
 #include <cmath>
 #include <Domain_func.hpp>
+#include <Spacetime_func.hpp>
+#include <Grid.hpp>
+
 namespace cartdg
 {
 
-std::vector<double> State_variables::operator()(const std::vector<double> point_pos,
-                                                double point_time,
+std::vector<double> Domain_func::operator()(Grid& grid, int i_element, int i_qpoint)
+{
+  std::vector<double> pos {grid.get_pos(i_element)};
+  Element& element {grid.element(i_element)};
+  Storage_params params {element.storage_params()};
+  std::vector<double> qpoint_pos;
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+    qpoint_pos.push_back(pos[i_dim*params.n_qpoint() + i_qpoint]);
+  }
+  std::vector<double> qpoint_state;
+  for (int i_var = 0; i_var < params.n_var; ++i_var) {
+    qpoint_state.push_back(grid.element(i_element).stage(0)[i_var*params.n_qpoint() + i_qpoint]);
+  }
+  return operator()(qpoint_pos, grid.time, qpoint_state);
+}
+
+std::vector<double> Domain_func::operator()(std::vector<double> pos, double time,
+                                            std::vector<double> state, std::vector<double> outward_normal)
+{
+  return operator()(pos, time, state);
+}
+
+std::vector<double> State_variables::operator()(Grid& grid, int i_element, int i_qpoint)
+{
+  Element& element {grid.element(i_element)};
+  Storage_params params {element.storage_params()};
+  std::vector<double> qpoint_state;
+  for (int i_var = 0; i_var < params.n_var; ++i_var) {
+    qpoint_state.push_back(grid.element(i_element).stage(0)[i_var*params.n_qpoint() + i_qpoint]);
+  }
+  return qpoint_state;
+};
+
+std::vector<double> State_variables::operator()(const std::vector<double> point_pos, double point_time,
                                                 const std::vector<double> state)
 {
   return state;
-}
-
-Domain_from_spacetime::Domain_from_spacetime(Spacetime_func& st) : spacetime{st} {}
-
-std::vector<double> Domain_from_spacetime::operator()
-(const std::vector<double> point_pos, double point_time, const std::vector<double> state)
-{
-  return spacetime(point_pos, point_time);
 }
 
 Diff_sq::Diff_sq(Domain_func& arg0, Domain_func& arg1) : func0{arg0}, func1{arg1} {}
@@ -35,12 +62,25 @@ std::vector<double> Diff_sq::operator()(const std::vector<double> point_pos,
 }
 
 Error_func::Error_func(Spacetime_func& correct_arg)
-: correct{correct_arg}, dfs{correct}, ds{dfs, sv} {}
+: correct{correct_arg}
+{}
 
-std::vector<double> Error_func::operator()(const std::vector<double> point_pos,
-                                           double point_time,
+std::string Error_func::variable_name(int i_var)
+{
+  State_variables sv;
+  return sv.variable_name(i_var) + "_errsq";
+}
+
+int Error_func::n_var(int n_dim)
+{
+  return correct.n_var(n_dim);
+}
+
+std::vector<double> Error_func::operator()(const std::vector<double> point_pos, double point_time,
                                            const std::vector<double> state)
 {
+  State_variables sv;
+  Diff_sq ds (correct, sv);
   return ds(point_pos, point_time, state);
 }
 
@@ -60,16 +100,6 @@ std::vector<double> Stag_pres::operator()(const std::vector<double> point_pos, d
   double enth {stag_enth - kin_ener};
   double stag_pres {pres*std::pow(stag_enth/enth, hr/(hr - 1.))};
   return {stag_pres};
-}
-
-Stag_pres_errsq::Stag_pres_errsq(std::vector<double> freestream, double heat_rat)
-: sp{heat_rat}, free{sp({}, 0., freestream)}, dfs{free}, ds{dfs, sp}
-{}
-
-std::vector<double> Stag_pres_errsq::operator()(const std::vector<double> point_pos, double point_time,
-                                                const std::vector<double> state)
-{
-  return ds(point_pos, point_time, state);
 }
 
 }

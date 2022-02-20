@@ -7,6 +7,12 @@
 namespace cartdg
 {
 
+/*
+ * This class provides an object-oriented wrapper to TecIO because the standard API is verbose
+ * and generally nauseating. Because the wrapped API involves calling several global functions
+ * in a specific sequence, at most one `Tecplot_file` and one `Tecplot_file::Zone`
+ * are allowed to exist at any given time.
+ */
 class Tecplot_file
 {
   int n_dim;
@@ -24,6 +30,7 @@ class Tecplot_file
    */
   class Zone
   {
+    static int n_zone_instances;
     protected:
     Tecplot_file& file;
     std::string name;
@@ -32,7 +39,7 @@ class Tecplot_file
     Zone(Tecplot_file&, int n_nodes_arg, std::string name_arg);
     Zone(const Zone& other) = delete;
     Zone& operator=(const Zone& other) = delete;
-    virtual ~Zone() = default;
+    virtual ~Zone();
     virtual void write(double* pos, double* vars);
   };
   /*
@@ -63,7 +70,7 @@ class Tecplot_file
   };
 
   // `n_var` means number of state (i.e., not position) variables.
-  Tecplot_file(std::string file_name, int n_dim, int n_var, double time);
+  Tecplot_file(std::string file_name, int n_dim, std::vector<std::string> variable_names, double time);
   Tecplot_file(const Tecplot_file&) = delete; // at the moment, can't be more than one Tecplot_file at a time
   Tecplot_file& operator=(const Tecplot_file&) = delete;
   ~Tecplot_file();

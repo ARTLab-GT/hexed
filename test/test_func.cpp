@@ -1,18 +1,22 @@
 #include <catch2/catch.hpp>
 
-#include <Spacetime_func.hpp>
+#include <Qpoint_func.hpp>
 #include <Domain_func.hpp>
+#include <Spacetime_func.hpp>
 #include <Surface_func.hpp>
+#include <Deformed_grid.hpp>
+#include <Gauss_lobatto.hpp>
 
 class Arbitrary_func : public cartdg::Spacetime_func
 {
   public:
+  virtual int n_var(int n_dim) {return n_dim;}
+  virtual std::string variable_name(int i_var) {return "arbitrary" + std::to_string(i_var);}
   virtual std::vector<double> operator()(std::vector<double> pos, double time)
   {
     auto result = pos;
     double mult [] {-2, 0.3, 4, 0., 0.01};
-    for (int i_dim = 0; i_dim < int(pos.size()); ++i_dim)
-    {
+    for (int i_dim = 0; i_dim < int(pos.size()); ++i_dim) {
       result[i_dim] = pos[i_dim]*mult[i_dim] - 2*time;
     }
     return result;
@@ -57,6 +61,8 @@ TEST_CASE("Constant_func")
 {
   std::vector<double> value {0.3, -0.7};
   cartdg::Constant_func cf (value);
+  REQUIRE(cf.n_var(2) == 2);
+  REQUIRE(cf.n_var(3) == 2);
   for (auto pos : test_pos) {
     for (auto time : test_time) {
       auto result = cf(pos, time);
@@ -65,34 +71,51 @@ TEST_CASE("Constant_func")
   }
 }
 
-TEST_CASE("Domain_from_spacetime")
-{
-  // Verify that Domain_from_spacetime(Constant_func) gives you the
-  // same constant value
-  std::vector<double> value {0.3, -0.7};
-  cartdg::Constant_func cf (value);
-  cartdg::Domain_from_spacetime dfs {cf};
-  for (auto pos : test_pos) {
-    for (auto time : test_time) {
-      for (auto state : test_state) {
-        auto result = dfs(pos, time, state);
-        REQUIRE(result == value);
-      }
-    }
-  }
-}
-
 TEST_CASE("Error_func")
 {
   Arbitrary_func af;
   cartdg::Error_func ef(af);
-  for (unsigned i_test = 0; i_test < test_pos.size(); ++i_test)
-  {
+  REQUIRE(ef.n_var(2) == 2);
+  REQUIRE(ef.n_var(3) == 3);
+  REQUIRE(ef.variable_name(1) == "state1_errsq");
+  for (unsigned i_test = 0; i_test < test_pos.size(); ++i_test) {
     auto error = ef(test_pos[i_test], test_time[i_test], test_state[i_test]);
     REQUIRE(error.size() == test_error[i_test].size());
-    for (unsigned i_val = 0; i_val < error.size(); ++i_val)
-    {
+    for (unsigned i_val = 0; i_val < error.size(); ++i_val) {
       REQUIRE(std::sqrt(error[i_val]) == std::abs(test_error[i_test][i_val]));
+    }
+  }
+}
+
+TEST_CASE("Inherited methods")
+{
+  SECTION("Qpoint_func")
+  {
+    Arbitrary_func af;
+    cartdg::Gauss_lobatto basis {2};
+    cartdg::Deformed_grid grid {4, 2, 0, 1., basis};
+    grid.add_element({0, 0});
+    grid.add_element({0, 1});
+    grid.time = 5.;
+    cartdg::Qpoint_func& af_ref {af};
+    auto result = af_ref(grid, 1, 1);
+    REQUIRE(result.size() == 2);
+    REQUIRE(result[1] == Approx(0.3*2. - 10.));
+  }
+  SECTION("Surface_func")
+  {
+    // Verify that (Surface_func&)(State_variables&) gives you state variables
+    // regardless of the other inputs
+    cartdg::State_variables sv;
+    cartdg::Surface_func& surface {sv};
+    for (auto pos : test_pos) {
+      for (auto time : test_time) {
+        for (auto state : test_state) {
+          for (auto normal : test_normal) {
+            REQUIRE(surface(pos, time, state, normal) == state);
+          }
+        }
+      }
     }
   }
 }
@@ -103,6 +126,7 @@ TEST_CASE("Vortex")
   {
     std::vector<double> freestream {9., -0.2, 0.8, 2e5};
     cartdg::Isentropic_vortex vortex(freestream);
+    REQUIRE(vortex.n_var(2) == 4);
 
     std::vector<double> test_pos []
     {
@@ -180,6 +204,7 @@ TEST_CASE("Doublet")
   double ener {pres/0.3 + 0.5*mass*speed_sq};
   std::vector<double> freestream = {veloc[0]*mass, veloc[1]*mass, mass, ener};
   cartdg::Doublet doublet {freestream};
+  REQUIRE(doublet.n_var(2) == 4);
   doublet.radius = 0.8;
   doublet.heat_rat = 1.3; // just to make sure 1.4 isn't hardcoded anywhere
   doublet.location = {0.05, 0.03};
@@ -203,23 +228,6 @@ TEST_CASE("Doublet")
     REQUIRE(state[1] == Approx(mass*veloc[1]).epsilon(1e-3));
     REQUIRE(state[2] == Approx(mass         ).epsilon(1e-3));
     REQUIRE(state[3] == Approx(ener         ).epsilon(1e-3));
-  }
-}
-
-TEST_CASE("Surface_from_domain")
-{
-  // Verify that Surface_from_domain(State_variables) gives you state variables
-  // regardless of the other inputs
-  cartdg::State_variables sv;
-  cartdg::Surface_from_domain sfd {sv};
-  for (auto pos : test_pos) {
-    for (auto time : test_time) {
-      for (auto state : test_state) {
-        for (auto normal : test_normal) {
-          REQUIRE(sfd(pos, time, state, normal) == state);
-        }
-      }
-    }
   }
 }
 
@@ -259,4 +267,22 @@ TEST_CASE("Force_per_area")
       }
     }
   }
+}
+
+TEST_CASE("Jacobian_det_func")
+{
+  cartdg::Gauss_lobatto basis {2};
+  cartdg::Deformed_grid grid {4, 2, 0, 1., basis};
+  grid.add_element({0, 0});
+  grid.add_element({0, 1});
+  grid.element(1).vertex(3).pos[0] -= 0.1;
+  grid.calc_jacobian();
+  cartdg::Jacobian_det_func func;
+  REQUIRE(func.n_var(2) == 1);
+  REQUIRE(func.n_var(3) == 1);
+  REQUIRE(func(grid, 0, 0).size() == 1);
+  REQUIRE(func(grid, 1, 3).size() == 1);
+  REQUIRE(func(grid, 0, 0)[0] == Approx(1.));
+  REQUIRE(func(grid, 0, 3)[0] == Approx(1.));
+  REQUIRE(func(grid, 1, 3)[0] == Approx(0.9));
 }

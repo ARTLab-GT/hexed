@@ -358,7 +358,7 @@ std::vector<double> Deformed_grid::surface_integral(Surface_func& integrand)
 void Deformed_grid::visualize_connections(std::string file_name)
 {
   int n_con = elem_cons.size();
-  Tecplot_file file {file_name, n_dim, 0, time};
+  Tecplot_file file {file_name, n_dim, {}, time};
   Tecplot_file::Line_segments segs {file, n_con, 2, "connections"};
   for (int i_con = 0; i_con < n_con; ++i_con)
   {

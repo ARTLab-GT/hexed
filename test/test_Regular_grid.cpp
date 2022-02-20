@@ -119,50 +119,6 @@ TEST_CASE("Regular_grid")
     REQUIRE(pos[1024] == 0.2);
   }
 
-  SECTION("State integration")
-  {
-    cartdg::Gauss_lobatto basis (5);
-    cartdg::Regular_grid grid1 (2, 1, 5, 0.1, basis);
-    cartdg::Regular_grid grid2 (2, 2, 5, 0.1, basis);
-    cartdg::Regular_grid grid3 (2, 3, 5, 0.1, basis);
-    for (cartdg::Regular_grid* grid : {&grid1, &grid2, &grid3})
-    {
-      for (int i_elem = 0; i_elem < grid->n_elem; ++i_elem)
-      {
-        double* stage = grid->element(i_elem).stage(0);
-        for (int i_dof = 0; i_dof < grid->n_dof; ++i_dof)
-        {
-          stage[i_dof] = 1.;
-        }
-      }
-    }
-    REQUIRE(grid1.integral()[0] == Approx(0.5  ).margin(1e-12));
-    REQUIRE(grid1.integral()[1] == Approx(0.5  ).margin(1e-12));
-    REQUIRE(grid2.integral()[0] == Approx(0.05 ).margin(1e-12));
-    REQUIRE(grid2.integral()[1] == Approx(0.05 ).margin(1e-12));
-    REQUIRE(grid3.integral()[0] == Approx(0.005).margin(1e-12));
-    REQUIRE(grid3.integral()[1] == Approx(0.005).margin(1e-12));
-
-    cartdg::Regular_grid square (1, 2, 2, 1., basis);
-    for (int i_elem = 0; i_elem < square.n_elem; ++i_elem)
-    {
-      double* stage = square.element(i_elem).stage(0);
-      for (int i = 0; i < basis.row_size; ++i)
-      {
-        for (int j = 0; j < basis.row_size; ++j)
-        {
-          double pos0 = basis.node(i) + i_elem; double pos1 = basis.node(j);
-          stage[i*basis.row_size + j] = pos0*pos0*pos1*pos1*pos1;
-          square.pos[i_elem*2] = i_elem;
-        }
-      }
-    }
-    square.time = 0.61;
-    REQUIRE(square.integral()[0] == Approx(2./3.));
-    Arbitrary_integrand integrand;
-    REQUIRE(square.integral(integrand)[0] == Approx(2*0.61));
-  }
-
   SECTION("Automatic graph creation")
   {
     SECTION("non-periodic")
