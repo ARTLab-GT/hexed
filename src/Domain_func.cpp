@@ -65,6 +65,12 @@ Error_func::Error_func(Spacetime_func& correct_arg)
 : correct{correct_arg}
 {}
 
+std::string Error_func::variable_name(int i_var)
+{
+  State_variables sv;
+  return sv.variable_name(i_var) + "_errsq";
+}
+
 int Error_func::n_var(int n_dim)
 {
   return correct.n_var(n_dim);

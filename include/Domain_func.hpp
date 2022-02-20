@@ -35,6 +35,7 @@ class State_variables : public Domain_func
 
   public:
   virtual constexpr int n_var(int n_dim) {return n_dim + 2;}
+  virtual inline std::string variable_name(int i_var) {return "state" + std::to_string(i_var);}
   // returns `state`
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state);
@@ -59,6 +60,7 @@ class Error_func : public Domain_func
   public:
   Error_func(Spacetime_func&);
   virtual int n_var(int n_dim);
+  virtual std::string variable_name(int i_var);
   // returns elementwise difference between `state` and `correct(point_pos, point_time)`, squared
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state);
@@ -70,6 +72,7 @@ class Stag_pres : public Domain_func
   public:
   Stag_pres(double heat_rat = 1.4);
   virtual inline int n_var(int n_dim) {return 1;}
+  virtual inline std::string variable_name(int i_var) {return "stagnation_pressure";}
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state);
 };

@@ -11,6 +11,7 @@ class Arbitrary_func : public cartdg::Spacetime_func
 {
   public:
   virtual int n_var(int n_dim) {return n_dim;}
+  virtual std::string variable_name(int i_var) {return "arbitrary" + std::to_string(i_var);}
   virtual std::vector<double> operator()(std::vector<double> pos, double time)
   {
     auto result = pos;
@@ -76,6 +77,7 @@ TEST_CASE("Error_func")
   cartdg::Error_func ef(af);
   REQUIRE(ef.n_var(2) == 2);
   REQUIRE(ef.n_var(3) == 3);
+  REQUIRE(ef.variable_name(1) == "state1_errsq");
   for (unsigned i_test = 0; i_test < test_pos.size(); ++i_test) {
     auto error = ef(test_pos[i_test], test_time[i_test], test_state[i_test]);
     REQUIRE(error.size() == test_error[i_test].size());

@@ -31,13 +31,20 @@ class Constant_func : public Spacetime_func
   virtual std::vector<double> operator()(std::vector<double> pos, double time); // returns `value`
 };
 
+class State_from_spacetime : public Spacetime_func
+{
+  public:
+  virtual constexpr int n_var(int n_dim) {return n_dim + 2;}
+  virtual inline std::string variable_name(int i_var) {return "state" + std::to_string(i_var);}
+};
+
 /*
  * Isentropic vortex flow described by Gaussian function, a classic
  * CFD test problem. Flow field is an exact solution of the Euler equations
  * which consists of the vortex translating at the freestream velocity. Flowfield
  * is well defined at all position and all time.
  */
-class Isentropic_vortex : public Spacetime_func
+class Isentropic_vortex : public State_from_spacetime
 {
   std::vector<double> freestream;
 
@@ -48,7 +55,6 @@ class Isentropic_vortex : public Spacetime_func
   double center0 = 0.;
   double center1 = 0.;
   Isentropic_vortex(std::vector<double> freestream_state);
-  virtual inline int n_var(int n_dim) {return 4;}
   virtual std::vector<double> operator()(std::vector<double> pos, double time);
 };
 
@@ -62,7 +68,7 @@ class Isentropic_vortex : public Spacetime_func
  * WARNING: Singularity at `location`! This class is applicable only to domains
  * which do not include this point.
  */
-class Doublet : public Spacetime_func
+class Doublet : public State_from_spacetime
 {
   std::vector<double> freestream;
   int n_v;
@@ -78,7 +84,6 @@ class Doublet : public Spacetime_func
   double radius {1.};
   double heat_rat {1.4};
   Doublet(std::vector<double> freestream_state);
-  virtual inline int n_var(int n_dim) {return n_v;}
   virtual std::vector<double> operator()(std::vector<double> pos, double time);
 };
 
