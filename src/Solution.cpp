@@ -76,7 +76,7 @@ void Solution::visualize_field(Qpoint_func& func, std::string name)
             Eigen::MatrixXd edge_pos {extract_edge(pos.data(), n_dim)};
             Eigen::MatrixXd edge_state {extract_edge(to_vis.data(), n_vis)};
             for (int i_corner = 0; i_corner < n_corners; ++i_corner) {
-              edges.write(edge_pos.data() + i_corner*n_dim*n_sample, edge_state.data() + i_corner*n_var*n_sample);
+              edges.write(edge_pos.data() + i_corner*n_dim*n_sample, edge_state.data() + i_corner*n_vis*n_sample);
             }
           }
         }
