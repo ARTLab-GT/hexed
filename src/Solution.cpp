@@ -23,28 +23,23 @@ void Solution::visualize_field(std::string name)
     {
       const int n_elem = grid->n_elem;
       const int n_qpoint = grid->n_qpoint;
+      const int n_corners {custom_math::pow(2, n_dim - 1)};
+      const int nfqpoint = n_qpoint/basis.row_size;
+      const int n_block {custom_math::pow(n_sample, n_dim)};
+      Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
 
-      // visualize quadrature points
       for (int i_elem = 0; i_elem < n_elem; ++i_elem)
       {
-        std::vector<double> pos = grid->get_pos(i_elem);
         double* state = grid->element(i_elem).stage(0);
-        Tecplot_file::Structured_block zone {file, basis.row_size, "element_qpoints"};
-        zone.write(pos.data(), state);
-      }
+        std::vector<double> pos = grid->get_pos(i_elem);
+        // note: each visualization stage is enclosed in `{}` to ensure that only one
+        // `Tecplot_file::Zone` is alive at a time
 
-      // visualize edges
-      if (n_dim > 1) // 1D elements don't really have edges
-      {
-        const int n_corners {custom_math::pow(2, n_dim - 1)};
-        Tecplot_file::Line_segments zone {file, n_elem*n_dim*n_corners, n_sample, "edges"};
-        Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
-        Eigen::MatrixXd boundary {basis.boundary()};
-        for (int i_elem = 0; i_elem < n_elem; ++i_elem)
+        // visualize edges
+        if (n_dim > 1) // 1D elements don't really have edges
         {
-          std::vector<double> pos = grid->get_pos(i_elem);
-          double* state = grid->element(i_elem).stage(0);
-          const int nfqpoint = n_qpoint/basis.row_size;
+          Tecplot_file::Line_segments edges {file, n_dim*n_corners, n_sample, "edges"};
+          Eigen::MatrixXd boundary {basis.boundary()};
           for (int i_dim = 0; i_dim < n_dim; ++i_dim)
           {
             const int stride {custom_math::pow(basis.row_size, n_dim - 1 - i_dim)};
@@ -74,34 +69,30 @@ void Solution::visualize_field(std::string name)
             Eigen::MatrixXd edge_pos {extract_edge(pos.data(), n_dim)};
             Eigen::MatrixXd edge_state {extract_edge(state, n_var)};
             for (int i_corner = 0; i_corner < n_corners; ++i_corner) {
-              zone.write(  edge_pos.data() + i_corner*n_dim*n_sample,
-                         edge_state.data() + i_corner*n_var*n_sample);
+              edges.write(edge_pos.data() + i_corner*n_dim*n_sample, edge_state.data() + i_corner*n_var*n_sample);
             }
           }
         }
-      }
 
-      // visualize interior (that is, quadrature point data interpolated to a fine mesh of sample points)
-      Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
-      const int n_block {custom_math::pow(n_sample, n_dim)};
-      for (int i_elem = 0; i_elem < n_elem; ++i_elem)
-      {
-        std::vector<double> pos = grid->get_pos(i_elem);
-        Eigen::VectorXd interp_pos {n_block*n_dim};
-        for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-        {
-          Eigen::Map<Eigen::VectorXd> qpoint_pos (pos.data() + i_dim*n_qpoint, n_qpoint);
-          interp_pos.segment(i_dim*n_block, n_block) = custom_math::hypercube_matvec(interp, qpoint_pos);
+        { // visualize quadrature points
+          Tecplot_file::Structured_block qpoints {file, basis.row_size, "element_qpoints"};
+          qpoints.write(pos.data(), state);
         }
-        double* state = grid->element(i_elem).stage(0);
-        Eigen::VectorXd interp_state {n_block*n_var};
-        for (int i_var = 0; i_var < n_var; ++i_var)
-        {
-          Eigen::Map<Eigen::VectorXd> var (state + i_var*n_qpoint, n_qpoint);
-          interp_state.segment(i_var*n_block, n_block) = custom_math::hypercube_matvec(interp, var);
+
+        { // visualize interior (that is, quadrature point data interpolated to a fine mesh of sample points)
+          Tecplot_file::Structured_block interior {file, n_sample, "element_interior"};
+          Eigen::VectorXd interp_pos {n_block*n_dim};
+          for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+            Eigen::Map<Eigen::VectorXd> qpoint_pos (pos.data() + i_dim*n_qpoint, n_qpoint);
+            interp_pos.segment(i_dim*n_block, n_block) = custom_math::hypercube_matvec(interp, qpoint_pos);
+          }
+          Eigen::VectorXd interp_state {n_block*n_var};
+          for (int i_var = 0; i_var < n_var; ++i_var) {
+            Eigen::Map<Eigen::VectorXd> var (state + i_var*n_qpoint, n_qpoint);
+            interp_state.segment(i_var*n_block, n_block) = custom_math::hypercube_matvec(interp, var);
+          }
+          interior.write(interp_pos.data(), interp_state.data());
         }
-        Tecplot_file::Structured_block zone {file, n_sample, "element_interior"};
-        zone.write(interp_pos.data(), interp_state.data());
       }
     }
   }
