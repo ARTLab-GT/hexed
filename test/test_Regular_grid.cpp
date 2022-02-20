@@ -5,6 +5,7 @@
 #include <Regular_grid.hpp>
 #include <Equidistant.hpp>
 #include <Gauss_lobatto.hpp>
+#include <Solution.hpp>
 
 class Arbitrary_integrand : public cartdg::Domain_func
 {
@@ -39,15 +40,6 @@ TEST_CASE("Regular_grid")
     REQUIRE(grid3.n_dof == 2048);
     REQUIRE(grid1.n_elem == 5);
     REQUIRE(grid1.time == 0.);
-    REQUIRE(grid1.origin.size() == 1);
-    REQUIRE(grid2.origin.size() == 2);
-    REQUIRE(grid3.origin.size() == 3);
-    REQUIRE(grid1.origin[0] == 0.);
-    REQUIRE(grid2.origin[0] == 0.);
-    REQUIRE(grid2.origin[1] == 0.);
-    REQUIRE(grid3.origin[0] == 0.);
-    REQUIRE(grid3.origin[1] == 0.);
-    REQUIRE(grid3.origin[2] == 0.);
   }
 
   for (int i = 0; i < 5; ++i)
@@ -63,7 +55,6 @@ TEST_CASE("Regular_grid")
     grid2.pos[i++] = 3; grid2.pos[i++] =  0;
     grid2.pos[i++] = -1; grid2.pos[i++] = -1;
   }
-  grid2.origin[1] = 10.;
   for (int i = 0; i < 3; ++i)
   {
     for (int j = 0; j < 3; ++j)
@@ -96,15 +87,15 @@ TEST_CASE("Regular_grid")
     REQUIRE(pos[1] == 0.);
     REQUIRE(pos[8] == Approx(0.1/7.));
     REQUIRE(pos[63] == 0.1);
-    REQUIRE(pos[64] == 10.);
-    REQUIRE(pos[65] == Approx(10. + 0.1/7.));
-    REQUIRE(pos[72] == Approx(10.));
-    REQUIRE(pos[127] == 10.1);
+    REQUIRE(pos[64] == 0.);
+    REQUIRE(pos[65] == Approx(0.1/7.));
+    REQUIRE(pos[72] == Approx(0.));
+    REQUIRE(pos[127] == 0.1);
     pos = grid2.get_pos(2);
     REQUIRE(pos[0] == 0.);
     REQUIRE(pos[63] == 0.1);
-    REQUIRE(pos[64] == 10. - 0.1);
-    REQUIRE(pos[127] == 10.);
+    REQUIRE(pos[64] == -0.1);
+    REQUIRE(pos[127] == 0.);
 
     pos = grid3.get_pos(0);
     REQUIRE(pos[0] == 0.);
@@ -126,50 +117,6 @@ TEST_CASE("Regular_grid")
     REQUIRE(pos[0  ] == 0.2);
     REQUIRE(pos[512] == 0.2);
     REQUIRE(pos[1024] == 0.2);
-  }
-
-  SECTION("State integration")
-  {
-    cartdg::Gauss_lobatto basis (5);
-    cartdg::Regular_grid grid1 (2, 1, 5, 0.1, basis);
-    cartdg::Regular_grid grid2 (2, 2, 5, 0.1, basis);
-    cartdg::Regular_grid grid3 (2, 3, 5, 0.1, basis);
-    for (cartdg::Regular_grid* grid : {&grid1, &grid2, &grid3})
-    {
-      for (int i_elem = 0; i_elem < grid->n_elem; ++i_elem)
-      {
-        double* stage = grid->element(i_elem).stage(0);
-        for (int i_dof = 0; i_dof < grid->n_dof; ++i_dof)
-        {
-          stage[i_dof] = 1.;
-        }
-      }
-    }
-    REQUIRE(grid1.integral()[0] == Approx(0.5  ).margin(1e-12));
-    REQUIRE(grid1.integral()[1] == Approx(0.5  ).margin(1e-12));
-    REQUIRE(grid2.integral()[0] == Approx(0.05 ).margin(1e-12));
-    REQUIRE(grid2.integral()[1] == Approx(0.05 ).margin(1e-12));
-    REQUIRE(grid3.integral()[0] == Approx(0.005).margin(1e-12));
-    REQUIRE(grid3.integral()[1] == Approx(0.005).margin(1e-12));
-
-    cartdg::Regular_grid square (1, 2, 2, 1., basis);
-    for (int i_elem = 0; i_elem < square.n_elem; ++i_elem)
-    {
-      double* stage = square.element(i_elem).stage(0);
-      for (int i = 0; i < basis.row_size; ++i)
-      {
-        for (int j = 0; j < basis.row_size; ++j)
-        {
-          double pos0 = basis.node(i) + i_elem; double pos1 = basis.node(j);
-          stage[i*basis.row_size + j] = pos0*pos0*pos1*pos1*pos1;
-          square.pos[i_elem*2] = i_elem;
-        }
-      }
-    }
-    square.time = 0.61;
-    REQUIRE(square.integral()[0] == Approx(2./3.));
-    Arbitrary_integrand integrand;
-    REQUIRE(square.integral(integrand)[0] == Approx(2*0.61));
   }
 
   SECTION("Automatic graph creation")
@@ -204,11 +151,25 @@ TEST_CASE("Regular_grid")
       REQUIRE(grid2.n_con(0) == 2);
       REQUIRE(grid2.n_con(1) == 2);
 
+      cartdg::Regular_grid grid2_1 {4, 2, 0, 1., basis};
+      grid2_1.add_element({0, 0});
+      grid2_1.add_element({0, 1});
+      grid2_1.auto_connect();
+      REQUIRE(&grid2_1.element(0).vertex(1) == &grid2_1.element(1).vertex(0));
+      REQUIRE(&grid2_1.element(0).vertex(3) == &grid2_1.element(1).vertex(2));
+
       std::vector<int> periods3d {3, 3, 3};
       grid3.auto_connect(periods3d);
       REQUIRE(grid3.n_con(0) == 27);
       REQUIRE(grid3.n_con(1) == 27);
       REQUIRE(grid3.n_con(2) == 27);
+      // check that vertices have been properly merged
+      REQUIRE(&grid3.element(0).vertex(0) == &grid3.element( 2).vertex(1));
+      REQUIRE(&grid3.element(0).vertex(7) == &grid3.element( 1).vertex(6));
+      REQUIRE(&grid3.element(0).vertex(0) == &grid3.element( 6).vertex(2));
+      REQUIRE(&grid3.element(0).vertex(0) == &grid3.element(18).vertex(4));
+      REQUIRE(&grid3.element(0).vertex(1) == &grid3.element( 1).vertex(0));
+      REQUIRE(&grid3.element(0).vertex(0) != &grid3.element( 0).vertex(1));
     }
   }
 
@@ -301,5 +262,34 @@ TEST_CASE("Regular_grid")
     REQUIRE(grid.element(1).stage(0)[0] == 1.);
     grid.auto_connect();
     REQUIRE(grid.n_con(0) == 1);
+  }
+
+  SECTION("continuous viscosity")
+  {
+    // set up a grid where nodal neighbors have different viscosity at the vertex
+    cartdg::Solution soln {4, 2, row_size, 1.};
+    soln.add_empty_grid(0);
+    cartdg::Regular_grid& grid {soln.reg_grids[0]};
+    grid.add_element({0, 0});
+    grid.add_element({0, 1});
+    grid.add_element({1, 0});
+    grid.add_element({1, 1});
+    grid.auto_connect();
+    for (int i_elem = 0; i_elem < 4; ++i_elem) {
+      for (int i_vertex = 0; i_vertex < 4; ++i_vertex) {
+        grid.element(i_elem).viscosity()[i_vertex] = 0.;
+      }
+    }
+    grid.element(0).viscosity()[3] = 0.7;
+    // share viscosity
+    soln.share_vertex_data(&cartdg::Element::viscosity);
+    // test that the viscosity has been shared with the nodal neighbors
+    REQUIRE(grid.element(0).viscosity()[3] == 0.7);
+    REQUIRE(grid.element(3).viscosity()[0] == 0.7);
+    REQUIRE(grid.element(2).viscosity()[1] == 0.7);
+    // verify that the viscosity has not been shared to other vertices
+    REQUIRE(grid.element(0).viscosity()[1] == 0.);
+    REQUIRE(grid.element(3).viscosity()[2] == 0.);
+    REQUIRE(grid.element(2).viscosity()[3] == 0.);
   }
 }

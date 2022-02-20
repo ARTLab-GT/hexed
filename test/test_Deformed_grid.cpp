@@ -7,6 +7,7 @@
 #include <Gauss_legendre.hpp>
 #include <math.hpp>
 #include <Tecplot_file.hpp>
+#include <Solution.hpp>
 
 TEST_CASE("Deformed grid class")
 {
@@ -22,13 +23,12 @@ TEST_CASE("Deformed grid class")
   SECTION("Adding deformed elements")
   {
     REQUIRE(grid2.n_elem == 0);
-    grid2.origin[0] = 0.1;
     grid2.add_element(std::vector<int>{-1, 2});
     grid2.add_element(std::vector<int>{ 1, 2});
     REQUIRE(grid2.n_elem == 2);
-    REQUIRE(grid2.deformed_element(0).vertex(0).pos[0] == Approx(-0.1));
+    REQUIRE(grid2.deformed_element(0).vertex(0).pos[0] == Approx(-0.2));
     REQUIRE(grid2.deformed_element(0).vertex(1).pos[1] == Approx( 0.6));
-    REQUIRE(grid2.deformed_element(1).vertex(0).pos[0] == Approx( 0.3));
+    REQUIRE(grid2.deformed_element(1).vertex(0).pos[0] == Approx( 0.2));
     // check that deformed_element(int) and element(int) point to the same thing
     grid2.deformed_element(1).stage(0)[0] = -0.31;
     REQUIRE(grid2.element(1).stage(0)[0] == -0.31);
@@ -42,7 +42,6 @@ TEST_CASE("Deformed grid class")
     {
       cartdg::Gauss_legendre leg_basis {row_size};
       cartdg::Deformed_grid grid {1, 2, 0, 0.2, leg_basis};
-      grid.origin[0] = 0.1;
       grid.add_element({-1, 2});
       /*
       Approximate vertex layout:
@@ -450,23 +449,6 @@ TEST_CASE("Deformed grid class")
     }
   }
 
-  SECTION("volume integrals")
-  {
-    grid2.add_element({-1, 0});
-    grid2.add_element({ 0, 0});
-    grid2.deformed_element(1).vertex(0).pos[0] = 0.05;
-    grid2.deformed_element(1).vertex(0).pos[1] = 0.07;
-    grid2.calc_jacobian();
-    for (int i_elem : {0, 1})
-    {
-      double* stage = grid2.deformed_element(i_elem).stage(0);
-      for (int i_qpoint = 0; i_qpoint < grid2.n_qpoint; ++i_qpoint) stage[i_qpoint] = 1.2;
-    }
-    auto integral = grid2.integral();
-    double area = 0.2*0.2*2. - 0.2*0.5*(0.05 + 0.07);
-    REQUIRE(integral[0] == Approx(1.2*area));
-  }
-
   SECTION("single-face integrals")
   {
     grid3.add_element({0, 0, 0});
@@ -474,7 +456,6 @@ TEST_CASE("Deformed grid class")
     grid2.calc_jacobian();
     grid3.calc_jacobian();
     cartdg::State_variables sv;
-    cartdg::Surface_from_domain sfd {sv};
     SECTION("cubic polynomial, regular face")
     {
       auto pos = grid3.get_pos(0);
@@ -485,7 +466,7 @@ TEST_CASE("Deformed grid class")
         double pos2 = pos[i_qpoint + grid3.n_qpoint*2];
         stage[i_qpoint] = std::pow(pos1, 3)*(-std::pow(pos2, 3) + pos2 + 3.) - 2.*std::pow(pos2, 2) - 1.;
       }
-      REQUIRE(grid3.face_integral(sfd, 0, 0, 0)[0] == Approx(-0.04081882666666667));
+      REQUIRE(grid3.face_integral(sv, 0, 0, 0)[0] == Approx(-0.04081882666666667));
     }
     SECTION("constant polynomial, irregular faces")
     {
@@ -501,20 +482,20 @@ TEST_CASE("Deformed grid class")
       grid3.deformed_element(0).vertex(1).pos = {0., 0., 0.8*0.2};
       grid3.calc_jacobian();
       double area = 0.2*0.2;
-      REQUIRE(grid3.face_integral(sfd, 0, 0, 0)[0] == Approx(0.9*area));
-      REQUIRE(grid3.face_integral(sfd, 0, 0, 1)[0] == Approx(area));
-      REQUIRE(grid3.face_integral(sfd, 0, 1, 0)[0] == Approx(0.9*area));
-      REQUIRE(grid3.face_integral(sfd, 0, 2, 0)[0] == Approx(area));
+      REQUIRE(grid3.face_integral(sv, 0, 0, 0)[0] == Approx(0.9*area));
+      REQUIRE(grid3.face_integral(sv, 0, 0, 1)[0] == Approx(area));
+      REQUIRE(grid3.face_integral(sv, 0, 1, 0)[0] == Approx(0.9*area));
+      REQUIRE(grid3.face_integral(sv, 0, 2, 0)[0] == Approx(area));
 
       grid3.deformed_element(0).vertex(3).pos = {0., 0.2, 0.8*0.2};
       grid3.calc_jacobian();
-      REQUIRE(grid3.face_integral(sfd, 0, 2, 1)[0] == Approx(std::sqrt(0.2*0.2 + 1.)*area));
+      REQUIRE(grid3.face_integral(sv, 0, 2, 1)[0] == Approx(std::sqrt(0.2*0.2 + 1.)*area));
 
       grid2.deformed_element(0).vertex(2).pos = {1.1*0.2, 0.};
       grid2.deformed_element(0).vertex(3).pos = {0.9*0.2, 0.9*0.2};
       grid2.deformed_element(0).vertex(0).pos = {0.3, 0.3}; // show that vertex on opposite face has no effect
       grid2.calc_jacobian();
-      REQUIRE(grid2.face_integral(sfd, 0, 0, 1)[0] == Approx(std::sqrt(0.2*0.2 + 0.9*0.9)*0.2));
+      REQUIRE(grid2.face_integral(sv, 0, 0, 1)[0] == Approx(std::sqrt(0.2*0.2 + 0.9*0.9)*0.2));
     }
   }
 
@@ -549,8 +530,7 @@ TEST_CASE("Deformed grid class")
       }
     }
     cartdg::State_variables sv;
-    cartdg::Surface_from_domain sfd {sv};
-    REQUIRE(grid.surface_integral(sfd)[0] == Approx(-1*.2*2*.2 - 0.2*0.2/2. + 0.1*((2*4*.2*4*.2 - 2*.2*2*.2 - 3*.2*3*.2)/2. + 4*0.2*0.2)));
+    REQUIRE(grid.surface_integral(sv)[0] == Approx(-1*.2*2*.2 - 0.2*0.2/2. + 0.1*((2*4*.2*4*.2 - 2*.2*2*.2 - 3*.2*3*.2)/2. + 4*0.2*0.2)));
 
     cartdg::Deformed_grid multivar (2, 3, 0, 1., basis);
     multivar.add_element({0, 0, 0});
@@ -562,7 +542,7 @@ TEST_CASE("Deformed grid class")
       multivar.element(0).stage(0)[i_qpoint + multivar.n_qpoint] = .03;
     }
     multivar.calc_jacobian();
-    auto integral = multivar.surface_integral(sfd);
+    auto integral = multivar.surface_integral(sv);
     REQUIRE(integral[0] == Approx(4.));
     REQUIRE(integral[1] == Approx(.06));
 
@@ -588,8 +568,9 @@ TEST_CASE("Deformed grid class")
   SECTION("degenerate handling")
   {
     int row_size = cartdg::config::max_row_size;
-    cartdg::Gauss_legendre gleg (row_size);
-    cartdg::Deformed_grid grid (1, 2, 0, 1., gleg);
+    cartdg::Solution sol {4, 2, row_size, 1.};
+    sol.add_deformed_grid(0);
+    cartdg::Deformed_grid& grid {sol.def_grids[0]};
     for (int i_elem = 0; i_elem < 2; ++i_elem) {
       grid.add_element({i_elem, 0, 0});
       grid.deformed_element(i_elem).vertex(2).pos[0] -= 1.;
@@ -604,11 +585,10 @@ TEST_CASE("Deformed grid class")
       for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint) {
         grid.element(0).stage(0)[i_qpoint] = grid.element(1).stage(0)[i_qpoint] = (rand()%1000)/10000.;
       }
-      double integral = grid.integral()[0];
+      double integral = sol.integral()[0];
       grid.project_degenerate(0);
-      cartdg::Tecplot_file file {"projection_random", 2, 1, 0.};
-      grid.visualize_interior(file);
-      REQUIRE(grid.integral()[0] - integral == Approx(0.).scale(1.)); // test conservation
+      sol.visualize_field("projection_random");
+      REQUIRE(sol.integral()[0] - integral == Approx(0.).scale(1.)); // test conservation
     }
     SECTION("perturbation") // make sure information near degenerate point is annihilated
     {
@@ -628,8 +608,7 @@ TEST_CASE("Deformed grid class")
           grid.element(i_elem).stage(0)[i_qpoint] = grid.element(i_elem).stage(2)[i_qpoint]; // for plotting
         }
       }
-      cartdg::Tecplot_file file {"projection_perturbation", 2, 1, 0.};
-      grid.visualize_interior(file);
+      sol.visualize_field("projection_perturbation");
       REQUIRE(elem_norm[0]/elem_norm[1] > 10.);
     }
     SECTION("gaussian")
@@ -645,10 +624,7 @@ TEST_CASE("Deformed grid class")
           }
         }
         grid.project_degenerate(0);
-        if (resolution == 1) {
-          cartdg::Tecplot_file file {"projection_gaussian", 2, 1, 0.};
-          grid.visualize_interior(file);
-        }
+        if (resolution == 1) sol.visualize_field("projection_gaussian");
         // compute the L2 norm of the difference with/without projection. This is a little
         // awkward because *someone* wrote an integral function that can't do individual elements
         for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint) {
@@ -656,10 +632,44 @@ TEST_CASE("Deformed grid class")
           grid.element(0).stage(0)[i_qpoint] = diff*diff;
           grid.element(1).stage(0)[i_qpoint] = 0.;
         }
-        diffs.push_back(std::sqrt(grid.integral()[0]));
+        diffs.push_back(std::sqrt(sol.integral()[0]));
       }
       // demand a greater order of accuracy than required
       REQUIRE(diffs[0]/diffs[1] > std::pow(2, row_size));
     }
+  }
+
+  SECTION("viscosity sharing")
+  {
+    cartdg::Solution soln {1, 2, row_size, 0.2};
+    soln.add_deformed_grid(0);
+    cartdg::Deformed_grid& grid {soln.def_grids[0]};
+    grid.add_element({0, 0});
+    grid.add_element({1, 0});
+    grid.add_element({0, 1});
+    grid.add_element({1, 1});
+    grid.add_element({1, 1});
+    grid.connect({0, 1}, {0, 0}, {1, 0});
+    grid.connect({0, 2}, {1, 1}, {1, 0});
+    grid.connect({1, 3}, {1, 1}, {1, 0});
+    grid.connect({2, 4}, {0, 0}, {1, 0});
+    grid.connect({3, 4}, {0, 1}, {0, 0});
+    double visc [5][4] {{0.1, 0., 0.2, 0.4},
+                        {0.5, 0.1, 0., 0.},
+                        {}, {}, {}};
+    for (int i_elem = 0; i_elem < 5; ++i_elem) {
+      for (int i_visc = 0; i_visc < 4; ++i_visc) {
+        grid.element(i_elem).viscosity()[i_visc] = visc[i_elem][i_visc];
+      }
+    }
+    soln.share_vertex_data(&cartdg::Element::viscosity);
+    REQUIRE(grid.element(0).viscosity()[0] == 0.1);
+    REQUIRE(grid.element(0).viscosity()[1] == 0.);
+    REQUIRE(grid.element(0).viscosity()[2] == 0.5);
+    REQUIRE(grid.element(0).viscosity()[3] == 0.4);
+    REQUIRE(grid.element(1).viscosity()[1] == 0.4);
+    REQUIRE(grid.element(2).viscosity()[2] == 0.4);
+    REQUIRE(grid.element(3).viscosity()[0] == 0.4);
+    REQUIRE(grid.element(4).viscosity()[0] == 0.4);
   }
 }

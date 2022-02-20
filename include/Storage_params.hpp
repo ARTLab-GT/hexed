@@ -1,5 +1,5 @@
-#ifndef STORAGE_PARAMS_HPP_
-#define STORAGE_PARAMS_HPP_
+#ifndef CARTDG_STORAGE_PARAMS_HPP_
+#define CARTDG_STORAGE_PARAMS_HPP_
 
 namespace cartdg
 {

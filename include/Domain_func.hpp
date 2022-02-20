@@ -1,33 +1,42 @@
 #ifndef CARTDG_DOMAIN_FUNC_HPP_
 #define CARTDG_DOMAIN_FUNC_HPP_
 
-#include "Spacetime_func.hpp"
+#include "Qpoint_func.hpp"
+#include "Surface_func.hpp"
 
 namespace cartdg
 {
 
-class Domain_func
+class Spacetime_func;
+
+/*
+ * Represents a function of position, time, and flow state. That is, all the
+ * variables in the mathematical problem domain. Useful for defining error functions
+ * and computing integrals.
+ */
+class Domain_func : public Qpoint_func, public Surface_func
 {
+  // the following invoke `operator()(const std::vector<double>, double, std::vector<double>)`
+  // on the appropriate data at the quadrature point. Declared as private to hide the
+  // technicalities of overloading inherited functions.
+  virtual std::vector<double> operator()(Grid& grid, int i_element, int i_qpoint);
+  virtual std::vector<double> operator()(std::vector<double> pos, double time,
+                                         std::vector<double> state, std::vector<double> outward_normal);
+
   public:
-  virtual ~Domain_func() = default;
-  virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
+  virtual std::vector<double> operator()(const std::vector<double> pos, double time,
                                          const std::vector<double> state) = 0;
 };
 
 class State_variables : public Domain_func
 {
-  public:
-  // returns `state`
-  virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
-                                         const std::vector<double> state);
-};
+  // This override improves performance by not evaluating position.
+  virtual std::vector<double> operator()(Grid& grid, int i_element, int i_qpoint);
 
-class Domain_from_spacetime : public Domain_func
-{
-  Spacetime_func& spacetime;
   public:
-  Domain_from_spacetime(Spacetime_func&);
-  // evaluates given Spacetime_func at `(point_pos, point_time)`
+  virtual constexpr int n_var(int n_dim) {return n_dim + 2;}
+  virtual inline std::string variable_name(int i_var) {return "state" + std::to_string(i_var);}
+  // returns `state`
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state);
 };
@@ -39,6 +48,7 @@ class Diff_sq : public Domain_func
   public:
   // arguments must return values of same size
   Diff_sq(Domain_func&, Domain_func&);
+  virtual inline int n_var(int n_dim) {return func0.n_var(n_dim);}
   // returns elementwise squared difference between provided funcs
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state);
@@ -47,11 +57,10 @@ class Diff_sq : public Domain_func
 class Error_func : public Domain_func
 {
   Spacetime_func& correct;
-  Domain_from_spacetime dfs;
-  State_variables sv;
-  Diff_sq ds;
   public:
   Error_func(Spacetime_func&);
+  virtual int n_var(int n_dim);
+  virtual std::string variable_name(int i_var);
   // returns elementwise difference between `state` and `correct(point_pos, point_time)`, squared
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state);
@@ -62,22 +71,11 @@ class Stag_pres : public Domain_func
   double hr;
   public:
   Stag_pres(double heat_rat = 1.4);
-  virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
-                                         const std::vector<double> state);
-};
-
-class Stag_pres_errsq : public Domain_func
-{
-  Stag_pres sp;
-  Constant_func free;
-  Domain_from_spacetime dfs;
-  Diff_sq ds;
-  public:
-  Stag_pres_errsq(std::vector<double> freestream, double heat_rat = 1.4);
+  virtual inline int n_var(int n_dim) {return 1;}
+  virtual inline std::string variable_name(int i_var) {return "stagnation_pressure";}
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state);
 };
 
 }
-
 #endif

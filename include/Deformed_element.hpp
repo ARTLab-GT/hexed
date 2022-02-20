@@ -1,8 +1,7 @@
-#ifndef DEFORMED_ELEMENT_HPP_
-#define DEFORMED_ELEMENT_HPP_
+#ifndef CARTDG_DEFORMED_ELEMENT_HPP_
+#define CARTDG_DEFORMED_ELEMENT_HPP_
 
 #include "Element.hpp"
-#include "Vertex.hpp"
 
 namespace cartdg
 {
@@ -15,7 +14,6 @@ class Deformed_element : public Element
 {
   int n_qpoint;
   Eigen::VectorXd jac;
-  std::vector<Vertex::Transferable_ptr> vertices;
   Eigen::VectorXd node_adj;
 
   public:
@@ -30,7 +28,6 @@ class Deformed_element : public Element
   // Pointer to jacobian data. Use this for performance-cricial applications.
   double* jacobian(); // Layout: [i_dim][j_dim][i_qpoint]
   virtual double jacobian(int i_dim, int j_dim, int i_qpoint);
-  inline Vertex& vertex(int i_vertex) { return *vertices[i_vertex]; }
   // No simple way to explain what this represents.
   double* node_adjustments(); // Layout: [i_dim][is_positive][i_face_qpoint]
 };

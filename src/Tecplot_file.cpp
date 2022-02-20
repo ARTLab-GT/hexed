@@ -9,8 +9,8 @@ namespace cartdg
 
 int Tecplot_file::n_instances {0};
 
-Tecplot_file::Tecplot_file(std::string file_name, int n_dim, int n_var, double time)
-: n_dim{n_dim}, n_var{n_var}, time{time}, strand_id{1}, i_zone{0}
+Tecplot_file::Tecplot_file(std::string file_name, int n_dim, std::vector<std::string> variable_names, double time)
+: n_dim{n_dim}, n_var{int(variable_names.size())}, time{time}, strand_id{1}, i_zone{0}
 {
   if (n_instances > 0) throw std::runtime_error("Attempt to create multiple `Tecplot_file`s at once, which is illegal.");
   ++n_instances;
@@ -19,17 +19,15 @@ Tecplot_file::Tecplot_file(std::string file_name, int n_dim, int n_var, double t
   INTEGER4 VIsDouble = 1;
   INTEGER4 FileType = 0;
   INTEGER4 fileFormat = 1; // 0 indicates .plt and 1 indicates .szplt
-  std::string var_names = "";
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-  {
-    var_names += " position" + std::to_string(i_dim);
+  std::string var_name_list = "";
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+    var_name_list += " position" + std::to_string(i_dim);
   }
-  for (int i_var = 0; i_var < n_var; ++i_var)
-  {
-    var_names += " state" + std::to_string(i_var);
+  for (int i_var = 0; i_var < n_var; ++i_var) {
+    var_name_list += " " + variable_names[i_var];
   }
-  var_names.erase(0, 1);
-  TECINI142((char*)"flow solution", var_names.c_str(), file_name.c_str(), ".", &fileFormat, &FileType, &Debug, &VIsDouble); // opens a new Tecplot file
+  var_name_list.erase(0, 1); // erase leading space
+  TECINI142((char*)"flow solution", var_name_list.c_str(), file_name.c_str(), ".", &fileFormat, &FileType, &Debug, &VIsDouble); // opens a new Tecplot file
 }
 
 Tecplot_file::~Tecplot_file()
@@ -38,9 +36,19 @@ Tecplot_file::~Tecplot_file()
   --n_instances;
 }
 
+int Tecplot_file::Zone::n_zone_instances {0};
+
 Tecplot_file::Zone::Zone(Tecplot_file& file, int n_nodes, std::string name_arg)
 : file{file}, name{name_arg + std::to_string(file.i_zone++)}, n_nodes{n_nodes}
-{}
+{
+  if (n_zone_instances > 0) throw std::runtime_error("Attempt to create multiple `Tecplot_file::Zone`s at once, which is illegal.");
+  ++n_zone_instances;
+}
+
+Tecplot_file::Zone::~Zone()
+{
+  --n_zone_instances;
+}
 
 void Tecplot_file::Zone::write(double* pos, double* vars)
 {

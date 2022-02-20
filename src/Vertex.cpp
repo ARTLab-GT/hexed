@@ -97,8 +97,22 @@ void Vertex::connect(Vertex& vert0, Vertex& vert1)
   }
 }
 
+bool Vertex::are_neighbors(Vertex& vert0, Vertex& vert1)
+{
+  return vert0.neighbors.count(&vert1);
+}
+
+double Vertex::shared_max_value()
+{
+  double max = 0.;
+  for (Transferable_ptr* ptr : trbl_ptrs) {
+    max = std::max(max, ptr->shareable_value);
+  }
+  return max;
+}
+
 Vertex::Transferable_ptr::Transferable_ptr(std::array<double, 3> pos)
-: ptr {new Vertex {pos}}
+: ptr {new Vertex {pos}}, shareable_value {0.}
 {
   ptr->trbl_ptrs.insert(this);
 }
@@ -127,7 +141,17 @@ Vertex* Vertex::Transferable_ptr::operator->()
   return ptr.operator->();
 }
 
+const Vertex* Vertex::Transferable_ptr::operator->() const
+{
+  return ptr.operator->();
+}
+
 Vertex& Vertex::Transferable_ptr::operator*()
+{
+  return *ptr;
+}
+
+const Vertex& Vertex::Transferable_ptr::operator*() const
 {
   return *ptr;
 }
