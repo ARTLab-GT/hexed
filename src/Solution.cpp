@@ -13,10 +13,11 @@ Solution::Solution(int n_var_arg, int n_dim_arg, int row_size_arg, double bms)
 
 Solution::~Solution() {}
 
-void Solution::visualize_field(std::string name)
+void Solution::visualize_field(Qpoint_func& func, std::string name)
 {
-  Tecplot_file file {name, n_dim, n_var, time};
-  int n_sample = 20;
+  const int n_vis = func.n_var(n_dim); // number of variables to visualize
+  Tecplot_file file {name, n_dim, n_vis, time};
+  const int n_sample = 20;
   for (Grid* grid : all_grids())
   {
     if (grid->n_elem > 0)
@@ -30,8 +31,14 @@ void Solution::visualize_field(std::string name)
 
       for (int i_elem = 0; i_elem < n_elem; ++i_elem)
       {
-        double* state = grid->element(i_elem).stage(0);
         std::vector<double> pos = grid->get_pos(i_elem);
+        std::vector<double> to_vis (n_qpoint*n_vis);
+        for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+          auto qpoint_vis = func(*grid, i_elem, i_qpoint);
+          for (int i_vis = 0; i_vis < n_vis; ++i_vis) {
+            to_vis[i_vis*n_qpoint + i_qpoint] = qpoint_vis[i_vis];
+          }
+        }
         // note: each visualization stage is enclosed in `{}` to ensure that only one
         // `Tecplot_file::Zone` is alive at a time
 
@@ -67,7 +74,7 @@ void Solution::visualize_field(std::string name)
             };
 
             Eigen::MatrixXd edge_pos {extract_edge(pos.data(), n_dim)};
-            Eigen::MatrixXd edge_state {extract_edge(state, n_var)};
+            Eigen::MatrixXd edge_state {extract_edge(to_vis.data(), n_vis)};
             for (int i_corner = 0; i_corner < n_corners; ++i_corner) {
               edges.write(edge_pos.data() + i_corner*n_dim*n_sample, edge_state.data() + i_corner*n_var*n_sample);
             }
@@ -76,7 +83,7 @@ void Solution::visualize_field(std::string name)
 
         { // visualize quadrature points
           Tecplot_file::Structured_block qpoints {file, basis.row_size, "element_qpoints"};
-          qpoints.write(pos.data(), state);
+          qpoints.write(pos.data(), to_vis.data());
         }
 
         { // visualize interior (that is, quadrature point data interpolated to a fine mesh of sample points)
@@ -86,9 +93,9 @@ void Solution::visualize_field(std::string name)
             Eigen::Map<Eigen::VectorXd> qpoint_pos (pos.data() + i_dim*n_qpoint, n_qpoint);
             interp_pos.segment(i_dim*n_block, n_block) = custom_math::hypercube_matvec(interp, qpoint_pos);
           }
-          Eigen::VectorXd interp_state {n_block*n_var};
-          for (int i_var = 0; i_var < n_var; ++i_var) {
-            Eigen::Map<Eigen::VectorXd> var (state + i_var*n_qpoint, n_qpoint);
+          Eigen::VectorXd interp_state {n_block*n_vis};
+          for (int i_var = 0; i_var < n_vis; ++i_var) {
+            Eigen::Map<Eigen::VectorXd> var (to_vis.data() + i_var*n_qpoint, n_qpoint);
             interp_state.segment(i_var*n_block, n_block) = custom_math::hypercube_matvec(interp, var);
           }
           interior.write(interp_pos.data(), interp_state.data());

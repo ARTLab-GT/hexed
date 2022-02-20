@@ -24,13 +24,26 @@ class Solution
   Solution(int n_var_arg, int n_dim_arg, int row_size_arg, double bms);
   virtual ~Solution();
 
-  // functions that access information
-  void visualize_field(std::string name);
+  void visualize_field(Qpoint_func&, std::string name);
+  template<typename T = State_variables>
+  void visualize_field(std::string name)
+  {
+    T functor;
+    visualize_field(functor, name);
+  }
+
   void visualize_surface(std::string name);
+
   // The following two functions compute integrals over the entire domain of some
   // function, which can be specified as a reference to an object or a functor class name
   std::vector<double> integral(Qpoint_func& integrand);
-  template<typename T = State_variables> std::vector<double> integral() { T functor; return integral(functor); }
+  template<typename T = State_variables>
+  std::vector<double> integral()
+  {
+    T functor;
+    return integral(functor);
+  }
+
   std::vector<double> surface_integral(Surface_func& integrand);
   std::vector<Grid*> all_grids();
 
