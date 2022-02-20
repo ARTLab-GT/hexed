@@ -15,9 +15,9 @@ class Deformed_grid : public Grid
   def_elem_vec elements;
   std::vector<Vertex::Non_transferable_ptr> vertices;
   def_elem_con_vec elem_cons;
-  def_elem_wall_vec walls;
 
   public:
+  def_elem_wall_vec walls; // FIXME: should be private
   Deformed_grid(int n_var_arg, int n_dim_arg, int n_elem_arg, double mesh_size_arg,
                 Basis& basis_arg);
 
