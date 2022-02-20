@@ -32,13 +32,7 @@ class Solution
     visualize_field(functor, name);
   }
 
-  void visualize_surface(Surface_func&, std::string name);
-  template<typename T = State_variables>
-  void visualize_surface(std::string name)
-  {
-    T functor;
-    visualize_surface(functor, name);
-  }
+  void visualize_surface(std::string name);
 
   // The following two functions compute integrals over the entire domain of some
   // function, which can be specified as a reference to an object or a functor class name

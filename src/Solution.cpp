@@ -107,40 +107,15 @@ void Solution::visualize_field(Qpoint_func& func, std::string name)
   }
 }
 
-void Solution::visualize_surface(Surface_func& func, std::string name)
+void Solution::visualize_surface(std::string name)
 {
   if (n_dim == 1) return; // 1D doesn't have visualizable surfaces
-  const int n_sample = 20;
-  const int n_vis = func.n_var(n_dim);
+  int n_vis = n_var; // FIXME
   std::vector<std::string> var_names;
-  for (int i_vis = 0; i_vis < n_vis; ++i_vis) var_names.push_back(func.variable_name(i_vis));
+  for (int i_vis = 0; i_vis < n_vis; ++i_vis) var_names.push_back("foo" + std::to_string(i_vis));
   Tecplot_file file {name, n_dim, var_names, time};
-  Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
-  Eigen::MatrixXd boundary {basis.boundary()};
-  const int n_block {custom_math::pow(n_sample, n_dim - 1)};
-  for (Deformed_grid& grid : def_grids)
-  {
-    const int n_qpoint = grid.n_qpoint;
-    for (Deformed_elem_wall wall : grid.walls)
-    {
-      auto fi = wall.face_index();
-      std::vector<double> pos = grid.get_pos(wall.i_elem());
-      Eigen::VectorXd interp_pos {n_block*n_dim};
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        Eigen::Map<Eigen::VectorXd> qpoint_pos (pos.data() + i_dim*n_qpoint, n_qpoint);
-        auto face {custom_math::dimension_matvec(boundary.row(fi.is_positive), qpoint_pos, fi.i_dim)};
-        interp_pos.segment(i_dim*n_block, n_block) = custom_math::hypercube_matvec(interp, face);
-      }
-      double* state = element(wall.i_elem()).stage(0);
-      Eigen::VectorXd interp_state {n_block*n_var};
-      for (int i_var = 0; i_var < n_var; ++i_var) {
-        Eigen::Map<Eigen::VectorXd> var (state + i_var*n_qpoint, n_qpoint);
-        auto face {custom_math::dimension_matvec(boundary.row(fi.is_positive), var, fi.i_dim)};
-        interp_state.segment(i_var*n_block, n_block) = custom_math::hypercube_matvec(interp, face);
-      }
-      Tecplot_file::Structured_block zone {file, n_sample, "face_interior", n_dim - 1};
-      zone.write(interp_pos.data(), interp_state.data());
-    }
+  for (Deformed_grid& grid : def_grids) {
+    grid.visualize_surface(file);
   }
 }
 
