@@ -2,6 +2,7 @@
 #define CARTDG_QPOINT_FUNC_HPP_
 
 #include <vector>
+#include "Output_data.hpp"
 
 namespace cartdg
 {
@@ -11,14 +12,12 @@ class Grid;
 /*
  * Represents a function which can be evaluated at quadrature points. Can depend on
  * flow state, position, time, or on mathematical parameters like element Jabobian,
- * quadrature weights, etc.
+ * quadrature weights, etc. Note: `Output_data` is a virtual base class because
+ * derived classes may inherit from multiple types of `Output_data`.
  */
-class Qpoint_func
+class Qpoint_func : public virtual Output_data
 {
   public:
-  virtual ~Qpoint_func() = default;
-  // Return the size of `operator()` when called on a `n_dim`-dimensional `Grid`.
-  virtual int n_var(int n_dim) = 0;
   virtual std::vector<double> operator()(Grid& grid, int i_element, int i_qpoint) = 0;
 };
 
