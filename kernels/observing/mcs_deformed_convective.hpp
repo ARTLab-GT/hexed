@@ -1,6 +1,7 @@
 #ifndef CARTDG_MCS_DEFORMED_CONVECTIVE_HPP_
 #define CARTDG_MCS_DEFORMED_CONVECTIVE_HPP_
 
+#include <limits>
 #include <Kernel_settings.hpp>
 #include <Deformed_element.hpp>
 #include "char_speed_convective.hpp"
@@ -23,7 +24,7 @@ double mcs_deformed_convective(def_elem_vec& def_elements, Kernel_settings& sett
     double* jac_data = def_elements[i_elem]->jacobian();
     double* tss = def_elements[i_elem]->time_step_scale();
     // account for jacobian
-    double min_sv = 1.;
+    double min_sv = std::numeric_limits<double>::max();
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
       Eigen::Matrix<double, n_dim, n_dim> jac_mat;
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {

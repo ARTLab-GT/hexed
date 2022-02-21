@@ -29,16 +29,18 @@ TEST_CASE("Max characteristic speed")
                         {mass*-20, 0,
                          mass, mass,
                          int_ener0 + 0.5*mass*400, int_ener1}};
-    for (int i_elem : {0, 1})
-    {
-      for (int i_dof = 0; i_dof < 6; ++i_dof)
-      {
+    for (int i_elem : {0, 1}) {
+      for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
+        elements[i_elem]->time_step_scale()[i_qpoint] = 0.6;
+      }
+      elements[i_elem]->time_step_scale()[1] = 0.17;
+      for (int i_dof = 0; i_dof < 6; ++i_dof) {
         elements[i_elem]->stage(0)[i_dof] = read[i_elem][i_dof];
       }
     }
     settings.cpg_heat_rat = heat_rat;
     double mcs = cartdg::get_mcs_convective(1, 2)(elements, settings);
-    REQUIRE(mcs == Approx(420));
+    REQUIRE(mcs == Approx(420*0.6));
   }
   SECTION("2D")
   {
