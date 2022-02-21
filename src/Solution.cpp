@@ -360,6 +360,14 @@ void Solution::share_vertex_data(Element::shareable_value_access access_func, Ve
 
 void Solution::set_local_time_step()
 {
+  for (Grid* grid : all_grids()) {
+    for (int i_elem = 0; i_elem < grid->n_elem; ++i_elem) {
+      double* vert_tss = grid->element(i_elem).vertex_time_step_scale();
+      for (int i_vert = 0; i_vert < grid->n_vertices; ++i_vert) {
+        vert_tss[i_vert] *= grid->mesh_size/base_mesh_size;
+      }
+    }
+  }
   // set time step to be continuous at vertices
   share_vertex_data(&Element::vertex_time_step_scale, Vertex::vector_min);
   // interpolate to quadrature points
