@@ -30,6 +30,7 @@ class Element
   int n_vert;
   Eigen::VectorXd data;
   Eigen::VectorXd visc_storage;
+  Eigen::VectorXd vertex_tss;
   Eigen::VectorXd derivative_storage;
 
   public:
@@ -67,6 +68,8 @@ class Element
 
   double* viscosity(); // Artificial viscosity coefficient at corners.
   bool viscous(); // Should artificial viscosity be applied in this element?
+  // Time step scale at the vertices. TSS in the interior is set by interpolating this.
+  double* vertex_time_step_scale();
   // Pointer to storage for derivative. Must be populated by user.
   double* derivative(); // Layout: [i_qpoint]
 };

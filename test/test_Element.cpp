@@ -42,6 +42,10 @@ TEST_CASE("Element")
   for (int i_vert = 0; i_vert < 8; ++i_vert) {
     REQUIRE(element.viscosity()[i_vert] == 0.);
   }
+  // test that vertex time step scale is initialized to 1
+  for (int i_vert = 0; i_vert < 8; ++i_vert) {
+    REQUIRE(element.vertex_time_step_scale()[i_vert] == 1.);
+  }
   REQUIRE(element.viscous() == false);
   element.viscosity()[3] = 0.1;
   REQUIRE(element.viscous() == true);
