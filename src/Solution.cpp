@@ -360,6 +360,23 @@ void Solution::share_vertex_data(Element::shareable_value_access access_func)
 
 void Solution::set_local_time_step()
 {
+  // set time step to be continuous at vertices
+  share_vertex_data(&Element::vertex_time_step_scale);
+  // interpolate to quadrature points
+  Eigen::MatrixXd lin_interp {basis.row_size, 2};
+  for (int i_qpoint = 0; i_qpoint < basis.row_size; ++i_qpoint) {
+    double node {basis.node(i_qpoint)};
+    lin_interp(i_qpoint, 0) = 1. - node;
+    lin_interp(i_qpoint, 1) = node;
+  }
+  for (Grid* grid : all_grids()) {
+    for (int i_elem = 0; i_elem < grid->n_elem; ++i_elem) {
+      Element& elem {grid->element(i_elem)};
+      Eigen::Map<Eigen::VectorXd> vert_tss (elem.vertex_time_step_scale(), grid->n_vertices);
+      Eigen::Map<Eigen::VectorXd> qpoint_tss (elem.time_step_scale(), grid->n_qpoint);
+      qpoint_tss = custom_math::hypercube_matvec(lin_interp, vert_tss);
+    }
+  }
 }
 
 double Solution::refined_mesh_size(int ref_level)
