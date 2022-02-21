@@ -189,9 +189,9 @@ TEST_CASE("local time step selection")
   grid.calc_jacobian();
   sol.set_local_time_step();
   // test that time step has been propageted to qpoints in element 1
-  REQUIRE(grid.element(1).time_step_scale()[4] == Approx(0.5/2.)); // middle qpoint
+  REQUIRE(grid.element(1).time_step_scale()[4] == Approx(0.5)); // middle qpoint
   // test that time step continuity has been enforced by testing TSS in element 0
-  REQUIRE(grid.element(0).time_step_scale()[4] == Approx(0.75/2.));
+  REQUIRE(grid.element(0).time_step_scale()[4] == Approx(0.75));
 }
 
 TEST_CASE("Integration of deformed elements")
