@@ -358,6 +358,10 @@ void Solution::share_vertex_data(Element::shareable_value_access access_func)
   }
 }
 
+void Solution::set_local_time_step()
+{
+}
+
 double Solution::refined_mesh_size(int ref_level)
 {
   double mesh_size = base_mesh_size;

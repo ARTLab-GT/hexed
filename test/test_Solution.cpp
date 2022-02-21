@@ -173,6 +173,27 @@ TEST_CASE("inter-grid continuous viscosity")
   REQUIRE(sol.reg_grids[1].element(1).viscosity()[2] == Approx(0.35));
 }
 
+TEST_CASE("local time step selection")
+{
+  static_assert (3 <= cartdg::config::max_row_size);
+  const int row_size = 3; // 3 ensures that there will be a middle quadrature point
+  cartdg::Solution sol {4, 2, row_size, 1.};
+  sol.add_deformed_grid(0);
+  cartdg::Deformed_grid& grid {sol.def_grids[0]};
+  grid.add_element({0, 0});
+  grid.add_element({1, 0});
+  grid.connect({0, 1}, {0, 0}, {1, 0});
+  // squeeze element 1 by a factor of 2 in one direction
+  grid.deformed_element(1).vertex(2).pos[0] = 1.5;
+  grid.deformed_element(1).vertex(3).pos[0] = 1.5;
+  grid.calc_jacobian();
+  sol.set_local_time_step();
+  // test that time step has been propageted to qpoints in element 1
+  REQUIRE(grid.element(1).time_step_scale()[4] == Approx(0.5)); // middle qpoint
+  // test that time step continuity has been enforced by testing TSS in element 0
+  REQUIRE(grid.element(0).time_step_scale()[4] == Approx(0.75));
+}
+
 TEST_CASE("Integration of deformed elements")
 {
   auto sol_ptr {deformed_test_setup_2d(false)};
@@ -182,6 +203,7 @@ TEST_CASE("Integration of deformed elements")
   init.max_nondim_veloc = 0.3;
   init.center0 = 1.35;
   init.center1 = 1.5;
+  sol.set_local_time_step();
   sol.initialize(init);
   int i {0};
   mkdir("deformed_integration", 0700);
