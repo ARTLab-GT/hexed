@@ -212,6 +212,7 @@ TEST_CASE("Integration of deformed elements")
   snprintf(buffer, buf_size, "deformed_integration/iter_%i", i);
   sol.visualize_field(buffer);
   sol.visualize_field<cartdg::Jacobian_det_func>("deformed_integration/jacobian");
+  sol.visualize_field<cartdg::Time_step_scale_func>("deformed_integration/tss");
   for (; i < 10; ++i) {
     for (int j = 0; j < 10; ++j) {
       sol.update(0.5);
