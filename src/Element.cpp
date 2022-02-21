@@ -6,9 +6,12 @@ namespace cartdg
 
 Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size)
 : params(params_arg), n_dim(params.n_dim), n_dof(params.n_dof()), n_vert(params.n_vertices()),
-  data(params.n_stage*n_dof + n_dim*2*n_dof/params.row_size), visc_storage{Eigen::VectorXd::Zero(n_vert)},
+  data(params.n_stage*n_dof + n_dim*2*n_dof/params.row_size + params.n_qpoint()),
+  visc_storage{Eigen::VectorXd::Zero(n_vert)}, vertex_tss{Eigen::VectorXd::Ones(n_vert)},
   derivative_storage(params.n_qpoint())
 {
+  // initialize local time step scaling to 1.
+  for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) time_step_scale()[i_qpoint] = 1.;
   // set position of vertex 0
   std::array<double, 3> first_pos;
   int n_pos_set = std::min<int>(pos.size(), n_dim);
@@ -44,6 +47,11 @@ double* Element::stage(int i_stage)
   return data.data() + i_stage*n_dof;
 }
 
+double* Element::time_step_scale()
+{
+  return data.data() + params.n_stage*n_dof + n_dim*2*n_dof/params.row_size;
+}
+
 double* Element::face()
 {
   return data.data() + params.n_stage*n_dof;
@@ -72,10 +80,10 @@ void Element::push_shareable_value(shareable_value_access access_func)
   }
 }
 
-void Element::fetch_shareable_value(shareable_value_access access_func)
+void Element::fetch_shareable_value(shareable_value_access access_func, Vertex::reduction reduce)
 {
   for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {
-    std::invoke(access_func, *this)[i_vert] = vertices[i_vert]->shared_max_value();
+    std::invoke(access_func, *this)[i_vert] = vertices[i_vert]->shared_value(reduce);
   }
 }
 
@@ -87,11 +95,15 @@ double* Element::viscosity()
 bool Element::viscous()
 {
   bool visc {false};
-  for (int i_vert = 0; i_vert < n_vert; ++i_vert)
-  {
+  for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
     visc = visc || (visc_storage[i_vert] != 0.);
   }
   return visc;
+}
+
+double* Element::vertex_time_step_scale()
+{
+  return vertex_tss.data();
 }
 
 double* Element::derivative()

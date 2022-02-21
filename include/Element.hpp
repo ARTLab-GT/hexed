@@ -30,6 +30,7 @@ class Element
   int n_vert;
   Eigen::VectorXd data;
   Eigen::VectorXd visc_storage;
+  Eigen::VectorXd vertex_tss;
   Eigen::VectorXd derivative_storage;
 
   public:
@@ -46,6 +47,8 @@ class Element
   Storage_params storage_params();
   // Pointer to state data for `i_stage`th Runge-Kutta stage.
   double* stage(int i_stage); // Layout: [i_var][i_qpoint]
+  // pointer to scaling factor for local time step.
+  double* time_step_scale(); // Layout: [i_qpoint]
   // Pointer state data at faces. Must be populated by user
   double* face(); // Layout: [i_dim][is_positive][i_var][i_face_qpoint]
 
@@ -61,10 +64,12 @@ class Element
   inline Vertex& vertex(int i_vertex) { return *vertices[i_vertex]; }
   // functions to communicate with nodal neighbors
   void push_shareable_value(shareable_value_access access_func); // writes shareable value to vertices so that shared value can be determined
-  void fetch_shareable_value(shareable_value_access access_func); // set `this`'s copy of shareable value to the shared values at the vertices
+  void fetch_shareable_value(shareable_value_access access_func, Vertex::reduction = Vertex::vector_max); // set `this`'s copy of shareable value to the shared values at the vertices
 
   double* viscosity(); // Artificial viscosity coefficient at corners.
   bool viscous(); // Should artificial viscosity be applied in this element?
+  // Time step scale at the vertices. TSS in the interior is set by interpolating this.
+  double* vertex_time_step_scale();
   // Pointer to storage for derivative. Must be populated by user.
   double* derivative(); // Layout: [i_qpoint]
 };

@@ -65,16 +65,14 @@ class Test
         ++i_elem;
       }
     }
+    grid.element(4).time_step_scale()[0] = 0.77;
     connect();
     displace_vertices();
-    for (int i = 0, i_elem = 0; i < 3; ++i)
-    {
-      for (int j = 0; j < 3; ++j)
-      {
+    for (int i = 0, i_elem = 0; i < 3; ++i) {
+      for (int j = 0; j < 3; ++j) {
         auto pos = grid.get_pos(i_elem);
         double* stage {grid.element(i_elem).stage(0)};
-        for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint)
-        {
+        for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint) {
           double mass = 1. + 0.03*pos[i_qpoint] + 0.02*pos[i_qpoint + n_qpoint];
           stage[0*n_qpoint + i_qpoint] = mass*veloc[0];
           stage[1*n_qpoint + i_qpoint] = mass*veloc[1];
@@ -112,24 +110,21 @@ class Test
     {
       double* r {grid.element(i_elem).stage(settings.i_read)};
       double* w {grid.element(i_elem).stage(settings.i_write)};
-      for (int i_dof = 0; i_dof < 4*n_qpoint; ++i_dof)
-      {
+      for (int i_dof = 0; i_dof < 4*n_qpoint; ++i_dof) {
         r[i_dof] = (w[i_dof] - r[i_dof])/dt;
       }
-      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
-      {
-        REQUIRE(r[0*n_qpoint + i_qpoint] == Approx(-0.03*veloc[0]*veloc[0] - 0.02*veloc[1]*veloc[0]).scale(pres));
-        REQUIRE(r[1*n_qpoint + i_qpoint] == Approx(-0.03*veloc[0]*veloc[1] - 0.02*veloc[1]*veloc[1]).scale(pres));
-        REQUIRE(r[2*n_qpoint + i_qpoint] == Approx(-0.03*veloc[0] - 0.02*veloc[1]));
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        double tss = ((i_elem == 4) && (i_qpoint == 0)) ? 0.77 : 1.;
+        REQUIRE(r[0*n_qpoint + i_qpoint] == Approx(tss*(-0.03*veloc[0]*veloc[0] - 0.02*veloc[1]*veloc[0])).scale(pres));
+        REQUIRE(r[1*n_qpoint + i_qpoint] == Approx(tss*(-0.03*veloc[0]*veloc[1] - 0.02*veloc[1]*veloc[1])).scale(pres));
+        REQUIRE(r[2*n_qpoint + i_qpoint] == Approx(tss*(-0.03*veloc[0] - 0.02*veloc[1])));
       }
     }
   }
   virtual void connect()
   {
-    for (int i = 0, i_elem = 0; i < 3; ++i)
-    {
-      for (int j = 0; j < 3; ++j)
-      {
+    for (int i = 0, i_elem = 0; i < 3; ++i) {
+      for (int j = 0; j < 3; ++j) {
         if (i > 0) grid.connect({i_elem - 3, i_elem}, {0, 0}, {1, 0});
         if (j > 0) grid.connect({i_elem - 1, i_elem}, {1, 1}, {1, 0});
         ++i_elem;

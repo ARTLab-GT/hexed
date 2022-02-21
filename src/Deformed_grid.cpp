@@ -518,6 +518,25 @@ void Deformed_grid::calc_jacobian()
       }
     }
   }
+
+  // compute effect of Jacobian on time step
+  for (int i_elem = 0; i_elem < n_elem; ++i_elem) {
+    Eigen::MatrixXd vertex_jacobian (n_vertices, n_dim*n_dim);
+    for (int i_jac = 0; i_jac < n_dim*n_dim; ++i_jac) {
+      Eigen::Map<Eigen::VectorXd> jacobian_entry (deformed_element(i_elem).jacobian() + i_jac*n_qpoint, n_qpoint);
+      vertex_jacobian.col(i_jac) = custom_math::hypercube_matvec(bound_mat, jacobian_entry);
+    }
+    for (int i_vert = 0; i_vert < n_vertices; ++i_vert) {
+      Eigen::MatrixXd vert_jac (n_dim, n_dim);
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+          vert_jac(i_dim, j_dim) = vertex_jacobian(i_vert, i_dim*n_dim + j_dim);
+        }
+      }
+      double min_sv = vert_jac.jacobiSvd().singularValues()(n_dim - 1);
+      deformed_element(i_elem).vertex_time_step_scale()[i_vert] = min_sv;
+    }
+  }
 }
 
 std::string Deformed_grid::annotate(std::string file_name)

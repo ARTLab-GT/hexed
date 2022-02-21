@@ -167,10 +167,8 @@ TEST_CASE("Vertex")
     ptr0.shareable_value = 0.1;
     ptr1.shareable_value = 0.3;
     ptr2.shareable_value = 0.2;
-    REQUIRE(ptr0->shared_max_value() == 0.3);
+    REQUIRE(ptr0->shared_value() == 0.3);
     ptr0.shareable_value = 0.4;
-    REQUIRE(ptr1->shared_max_value() == 0.4);
-    ptr0.shareable_value = ptr1.shareable_value = ptr2.shareable_value = -0.1;
-    REQUIRE(ptr0->shared_max_value() == 0.);
+    REQUIRE(ptr1->shared_value() == 0.4);
   }
 }

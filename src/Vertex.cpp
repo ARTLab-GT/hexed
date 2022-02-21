@@ -102,13 +102,14 @@ bool Vertex::are_neighbors(Vertex& vert0, Vertex& vert1)
   return vert0.neighbors.count(&vert1);
 }
 
-double Vertex::shared_max_value()
+double Vertex::shared_value(Vertex::reduction reduce)
 {
-  double max = 0.;
+  Eigen::VectorXd shareables (trbl_ptrs.size());
+  int i_ptr = 0;
   for (Transferable_ptr* ptr : trbl_ptrs) {
-    max = std::max(max, ptr->shareable_value);
+    shareables[i_ptr++] = ptr->shareable_value;
   }
-  return max;
+  return std::invoke(reduce, shareables);
 }
 
 Vertex::Transferable_ptr::Transferable_ptr(std::array<double, 3> pos)

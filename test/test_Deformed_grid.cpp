@@ -305,6 +305,7 @@ TEST_CASE("Deformed grid class")
     grid2.deformed_element(0).vertex(3).pos = {0.8*0.2, 0.8*0.2, 0.};
     grid2.deformed_element(1).node_adjustments()[6 + 1] = 0.1;
     grid2.calc_jacobian();
+    // jacobian is correct
     jac = grid2.deformed_element(0).jacobian();
     REQUIRE(jac[0*9    ] == Approx(1.));
     REQUIRE(jac[1*9    ] == Approx(0.));
@@ -323,6 +324,10 @@ TEST_CASE("Deformed grid class")
     REQUIRE(jac[1*9 + 5] == Approx(0.));
     REQUIRE(jac[2*9 + 5] == Approx(0.));
     REQUIRE(jac[3*9 + 5] == Approx(0.9));
+    // time step is correct
+    // At corner 3, diagonal is locally scaled by 1 - 2*(1 - 0.8) = 0.6 = (min singular value)
+    REQUIRE(grid2.element(0).vertex_time_step_scale()[0] == 1.);
+    REQUIRE(grid2.element(0).vertex_time_step_scale()[3] == Approx(0.6));
 
     grid3.add_element({0, 0, 0});
     grid3.deformed_element(0).vertex(7).pos = {0.8*0.2, 0.8*0.2, 0.8*0.2};

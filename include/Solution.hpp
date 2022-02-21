@@ -50,7 +50,8 @@ class Solution
   // functions that modify the state (and related) data
   double update(double cfl_by_stable_cfl=0.7);
   void initialize(Spacetime_func& init_cond);
-  void share_vertex_data(Element::shareable_value_access);
+  void share_vertex_data(Element::shareable_value_access, Vertex::reduction = Vertex::vector_max);
+  void set_local_time_step();
 
   // functions that modify the Grid(s)
   void add_block_grid(int ref_level, std::vector<int> lower_corner,

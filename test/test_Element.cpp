@@ -32,12 +32,19 @@ TEST_CASE("Element")
     REQUIRE(element.stage(2)[i_dof] == 0.);
     REQUIRE(element.stage(3)[i_dof] == 1.3);
   }
+  // time step scale exists and should be initialized to 1.
+  REQUIRE(element.time_step_scale()[0] == 1.);
+  REQUIRE(element.time_step_scale()[params.n_qpoint() - 1] == 1.);
   for (int i_face_data = 0; i_face_data < n_dof/params.row_size*3*2; ++i_face_data) {
     REQUIRE(element.face()[i_face_data] == 1.);
   }
   // test that viscosity is initialized to 0
   for (int i_vert = 0; i_vert < 8; ++i_vert) {
     REQUIRE(element.viscosity()[i_vert] == 0.);
+  }
+  // test that vertex time step scale is initialized to 1
+  for (int i_vert = 0; i_vert < 8; ++i_vert) {
+    REQUIRE(element.vertex_time_step_scale()[i_vert] == 1.);
   }
   REQUIRE(element.viscous() == false);
   element.viscosity()[3] = 0.1;
@@ -78,15 +85,15 @@ TEST_CASE("Element")
     element.viscosity()[2] = 0.;
     element.viscosity()[3] = 0.2;
     element.push_shareable_value(&cartdg::Element::viscosity);
-    REQUIRE(element.vertex(0).shared_max_value() == Approx(0.1));
-    REQUIRE(element.vertex(1).shared_max_value() == Approx(0.));
-    REQUIRE(element.vertex(3).shared_max_value() == Approx(0.2));
+    REQUIRE(element.vertex(0).shared_value() == Approx(0.1));
+    REQUIRE(element.vertex(1).shared_value() == Approx(0.));
+    REQUIRE(element.vertex(3).shared_value() == Approx(0.2));
     // make sure vertex combination doesn't break anything
     cartdg::Vertex::Transferable_ptr ptr ({0, 0, 0});
     ptr->eat(element.vertex(0));
-    REQUIRE(element.vertex(0).shared_max_value() == Approx(0.1));
+    REQUIRE(element.vertex(0).shared_value() == Approx(0.1));
     ptr.shareable_value = 0.3;
-    REQUIRE(element.vertex(0).shared_max_value() == Approx(0.3));
+    REQUIRE(element.vertex(0).shared_value() == Approx(0.3));
     // test fetch_visc
     element.fetch_shareable_value(&cartdg::Element::viscosity);
     REQUIRE(element.viscosity()[0] == Approx(0.3));
