@@ -80,10 +80,10 @@ void Element::push_shareable_value(shareable_value_access access_func)
   }
 }
 
-void Element::fetch_shareable_value(shareable_value_access access_func)
+void Element::fetch_shareable_value(shareable_value_access access_func, Vertex::reduction reduce)
 {
   for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {
-    std::invoke(access_func, *this)[i_vert] = vertices[i_vert]->shared_max_value();
+    std::invoke(access_func, *this)[i_vert] = vertices[i_vert]->shared_value(reduce);
   }
 }
 

@@ -6,6 +6,7 @@
 #include <memory>
 #include <set>
 #include <unordered_set>
+#include <Eigen/Dense>
 
 namespace cartdg
 {
@@ -23,6 +24,9 @@ class Vertex
   public:
   class Transferable_ptr;
   class Non_transferable_ptr;
+  typedef double (Eigen::VectorXd::*reduction)() const;
+  static constexpr reduction vector_max = &Eigen::VectorXd::maxCoeff;
+  static constexpr reduction vector_min = &Eigen::VectorXd::minCoeff;
   std::array<double, 3> pos {0, 0, 0};
   bool mobile = false;
 
@@ -42,7 +46,8 @@ class Vertex
   void eat(Vertex& other);
   void calc_relax(); // compute a (but do not apply) new position resulting in a smoother grid.
   void apply_relax(); // update `pos` to the position computed by `calc_relax`.
-  double shared_max_value(); // maximum of the `shareable_value` of all `Transferable_ptr`s to this and 0. Thread safe.
+  // determine the shared `shareable_value` of all `Transferable_ptr`s to this by applying `reduction`. Thread safe.
+  double shared_value(reduction = vector_max);
   static void connect(Vertex&, Vertex&); // specify that two vertices are connected by an edge
   static bool are_neighbors(Vertex&, Vertex&);
 

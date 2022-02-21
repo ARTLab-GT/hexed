@@ -64,7 +64,7 @@ class Element
   inline Vertex& vertex(int i_vertex) { return *vertices[i_vertex]; }
   // functions to communicate with nodal neighbors
   void push_shareable_value(shareable_value_access access_func); // writes shareable value to vertices so that shared value can be determined
-  void fetch_shareable_value(shareable_value_access access_func); // set `this`'s copy of shareable value to the shared values at the vertices
+  void fetch_shareable_value(shareable_value_access access_func, Vertex::reduction = Vertex::vector_max); // set `this`'s copy of shareable value to the shared values at the vertices
 
   double* viscosity(); // Artificial viscosity coefficient at corners.
   bool viscous(); // Should artificial viscosity be applied in this element?

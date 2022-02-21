@@ -341,7 +341,7 @@ void Solution::initialize(Spacetime_func& init_cond)
   }
 }
 
-void Solution::share_vertex_data(Element::shareable_value_access access_func)
+void Solution::share_vertex_data(Element::shareable_value_access access_func, Vertex::reduction reduce)
 {
   for (Grid* grid : all_grids()) {
     for (int i_elem = 0; i_elem < grid->n_elem; ++i_elem) {
@@ -350,7 +350,7 @@ void Solution::share_vertex_data(Element::shareable_value_access access_func)
   }
   for (Grid* grid : all_grids()) {
     for (int i_elem = 0; i_elem < grid->n_elem; ++i_elem) {
-      grid->element(i_elem).fetch_shareable_value(access_func);
+      grid->element(i_elem).fetch_shareable_value(access_func, reduce);
     }
   }
   for (Grid* grid : all_grids()) {
@@ -361,7 +361,7 @@ void Solution::share_vertex_data(Element::shareable_value_access access_func)
 void Solution::set_local_time_step()
 {
   // set time step to be continuous at vertices
-  share_vertex_data(&Element::vertex_time_step_scale);
+  share_vertex_data(&Element::vertex_time_step_scale, Vertex::vector_min);
   // interpolate to quadrature points
   Eigen::MatrixXd lin_interp {basis.row_size, 2};
   for (int i_qpoint = 0; i_qpoint < basis.row_size; ++i_qpoint) {
