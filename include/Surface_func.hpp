@@ -24,7 +24,7 @@ class Force_per_area : public Surface_func
   double hr;
   public:
   Force_per_area(double heat_rat = 1.4);
-  virtual constexpr int n_var(int n_dim) {return 1;}
+  virtual inline int n_var(int n_dim) {return 1;}
   virtual inline std::string variable_name(int i_var) {return "force_per_area";}
   // Computes surface force per unit area (i.e. pressure times unit normal)
   virtual std::vector<double> operator()(std::vector<double> pos, double time,

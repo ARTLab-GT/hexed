@@ -34,7 +34,7 @@ class State_variables : public Domain_func
   virtual std::vector<double> operator()(Grid& grid, int i_element, int i_qpoint);
 
   public:
-  virtual constexpr int n_var(int n_dim) {return n_dim + 2;}
+  virtual inline int n_var(int n_dim) {return n_dim + 2;}
   virtual inline std::string variable_name(int i_var) {return "state" + std::to_string(i_var);}
   // returns `state`
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,

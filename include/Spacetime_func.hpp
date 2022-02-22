@@ -34,7 +34,7 @@ class Constant_func : public Spacetime_func
 class State_from_spacetime : public Spacetime_func
 {
   public:
-  virtual constexpr int n_var(int n_dim) {return n_dim + 2;}
+  virtual inline int n_var(int n_dim) {return n_dim + 2;}
   virtual inline std::string variable_name(int i_var) {return "state" + std::to_string(i_var);}
 };
 
