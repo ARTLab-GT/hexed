@@ -20,7 +20,6 @@ class Element_vector
 class Element_container : public Element_vector
 {
   virtual int emplace(int ref_level, std::vector<int> position) = 0;
-  virtual void erase(int ref_level, int serial_n) = 0;
   virtual Element& at(int ref_level, int serial_n) = 0;
   virtual std::array<int, 6> connectedness(int ref_level, int serial_n) = 0;
 };
@@ -30,13 +29,14 @@ class Complete_element_container : public Element_container
 {
   Storage_params params;
   double spacing;
+  int next_sn;
   std::vector<std::unique_ptr<element_t>> vec;
   struct Element_data {element_t& element; std::array<int, 6> connectedness;};
   std::map<std::array<int, 2>, Element_data> map;
 
   public:
   Complete_element_container(Storage_params storage_params, double root_spacing)
-  : params{storage_params}, spacing{root_spacing}
+  : params{storage_params}, spacing{root_spacing}, next_sn{0}
   {}
   virtual int size()
   {
@@ -50,14 +50,14 @@ class Complete_element_container : public Element_container
   {
     double level_spacing = spacing/custom_math::pow(2, ref_level);
     vec.emplace_back(new element_t {params, position, level_spacing});
-    return 0;
-  }
-  virtual void erase(int ref_level, int serial_n)
-  {
+    std::array<int, 2> key = {ref_level, next_sn++};
+    Element_data data {*vec.back(), {}};
+    map.insert(std::pair(key, data));
+    return key[1];
   }
   virtual element_t& at(int ref_level, int serial_n)
   {
-    return *vec.back();
+    return map.at({ref_level, serial_n}).element;
   }
   virtual std::array<int, 6> connectedness(int ref_level, int serial_n)
   {
