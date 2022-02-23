@@ -10,6 +10,7 @@ test_deformed.cpp
 test_Deformed_element.cpp
 test_Deformed_grid.cpp
 test_Element.cpp
+test_Element_container.cpp
 test_func.cpp
 test_Ghost_boundary_condition.cpp
 test_Hanging_vertex_matcher.cpp
