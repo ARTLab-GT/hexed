@@ -1,45 +1,65 @@
 #ifndef CARTDG_ELEMENT_CONTAINER_HPP_
 #define CARTDG_ELEMENT_CONTAINER_HPP_
 
+#include <vector>
+#include <map>
 #include "Element.hpp"
 #include "Deformed_element.hpp"
 
 namespace cartdg
 {
 
-class Element_container
+class Element_vector
 {
-  protected:
-  Storage_params params;
-  double spacing;
-
   public:
-  inline Element_container(Storage_params storage_params, double root_spacing) : params{storage_params}, spacing{root_spacing} {}
-  Element_container(const Element_container&) = delete;
-  virtual ~Element_container() = default;
-  virtual int add_element(int ref_level, std::vector<int> position) = 0;
-  virtual void erase_element(int ref_level, int serial_n) = 0;
+  virtual int size() = 0;
+  virtual Element& operator[](int index) = 0;
 };
 
-class Accessible_element_container : public Element_container
+class Element_container : public Element_vector
 {
-  public:
-  inline Accessible_element_container(Storage_params storage_params, double root_spacing) : Element_container(storage_params, root_spacing) {}
-  virtual Element& element(int ref_level, int serial_n) = 0;
+  virtual int emplace(int ref_level, std::vector<int> position) = 0;
+  virtual void erase(int ref_level, int serial_n) = 0;
+  virtual Element& at(int ref_level, int serial_n) = 0;
+  virtual std::array<int, 6> connectedness(int ref_level, int serial_n) = 0;
 };
 
 template <typename element_t>
-class Specific_container : public Accessible_element_container
+class Complete_element_container : public Element_container
 {
-  std::vector<std::unique_ptr<element_t>> elems;
+  Storage_params params;
+  double spacing;
+  std::vector<std::unique_ptr<element_t>> vec;
+  struct Element_data {element_t& element; std::array<int, 6> connectedness;};
+  std::map<std::array<int, 2>, Element_data> map;
 
   public:
-  inline Specific_container(Storage_params storage_params, double root_spacing) : Accessible_element_container(storage_params, root_spacing) {}
-  virtual int add_element(int ref_level, std::vector<int> position) {return 0;}
-  virtual void erase_element(int ref_level, int serial_n) {}
-  virtual Element& element(int ref_level, int serial_n) {return *elems[0];}
-  int size() {return 0;}
-  element_t& operator[](int index) {return *elems[0];}
+  Complete_element_container(Storage_params storage_params, double root_spacing)
+  : params{storage_params}, spacing{root_spacing}
+  {}
+  virtual int size()
+  {
+    return 0;
+  }
+  virtual element_t& operator[](int index)
+  {
+    return *vec.back();
+  }
+  virtual int emplace(int ref_level, std::vector<int> position)
+  {
+    return 0;
+  }
+  virtual void erase(int ref_level, int serial_n)
+  {
+  }
+  virtual element_t& at(int ref_level, int serial_n)
+  {
+    return *vec.back();
+  }
+  virtual std::array<int, 6> connectedness(int ref_level, int serial_n)
+  {
+    return {0, 0, 0, 0, 0, 0};
+  }
 };
 
 }
