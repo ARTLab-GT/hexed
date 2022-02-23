@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <map>
+#include "math.hpp"
 #include "Element.hpp"
 #include "Deformed_element.hpp"
 
@@ -47,6 +48,8 @@ class Complete_element_container : public Element_container
   }
   virtual int emplace(int ref_level, std::vector<int> position)
   {
+    double level_spacing = spacing/custom_math::pow(2, ref_level);
+    vec.emplace_back(new element_t {params, position, level_spacing});
     return 0;
   }
   virtual void erase(int ref_level, int serial_n)
