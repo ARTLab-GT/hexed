@@ -4,6 +4,7 @@
 #include <vector>
 #include <map>
 #include "math.hpp"
+#include "Vector_view.hpp"
 #include "Element.hpp"
 #include "Deformed_element.hpp"
 
@@ -49,19 +50,17 @@ class Complete_element_container : public Element_container
     operator element_t&() {return element;}
     virtual Element& get() {return element;}
   };
-  /*
-   * A sequence-style object which provides efficient access to the elements of a
-   * `Complete_element_container`, in no particular order.
-   */
-  class Sequence
-  {
-    Complete_element_container& c;
-    public:
-    Sequence(Complete_element_container& container) : c{container} {}
-    int size() {return c.vec.size();}
-    element_t& operator[](int index) {return c.vec[index]->element;}
-  };
 
+  private:
+  typedef std::unique_ptr<Compl_mesh_elem> ptr_t;
+  static element_t& convert(ptr_t& ptr) {return ptr->element;}
+  Storage_params params;
+  double spacing;
+  int next_sn;
+  std::vector<ptr_t> vec;
+  std::map<std::array<int, 2>, Compl_mesh_elem&> map;
+
+  public:
   Complete_element_container(Storage_params storage_params, double root_spacing)
   : params{storage_params}, spacing{root_spacing}, next_sn{0}
   {}
@@ -80,18 +79,12 @@ class Complete_element_container : public Element_container
     return map.at({ref_level, serial_n});
   }
 
-  // Provides an `Sequence` which can be used to efficiently iterate through the elements
-  Sequence elements()
+  // Provides a `Vector_view` which can be used to efficiently iterate through the elements,
+  // in no particular order.
+  Vector_view<element_t&, ptr_t, &convert> elements()
   {
-    return *this;
+    return vec;
   }
-
-  private:
-  Storage_params params;
-  double spacing;
-  int next_sn;
-  std::vector<std::unique_ptr<Compl_mesh_elem>> vec;
-  std::map<std::array<int, 2>, Compl_mesh_elem&> map;
 };
 
 }
