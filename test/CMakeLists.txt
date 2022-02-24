@@ -4,6 +4,7 @@ target_sources(test PRIVATE
 # please maintain alphabetical order
 main.cpp
 testing_utils.cpp
+test_Accessible_mesh.cpp
 test_Basis.cpp
 test_conservation.cpp
 test_deformed.cpp

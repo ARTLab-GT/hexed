@@ -4,6 +4,8 @@
 #include "Mesh.hpp"
 #include "Storage_params.hpp"
 #include "Element.hpp"
+#include "Deformed_element.hpp"
+#include "Element_container.hpp"
 
 namespace cartdg
 {
@@ -17,27 +19,13 @@ class Accessible_mesh : public Mesh
 {
   Storage_params params;
   double root_sz;
-
-  struct element_handle {int ref_level, int serial_n};
-  template<class element_t>
-  class element_container {
-    public:
-    int next_sn = 0;
-    std::vector<std::unique_ptr<element_t>> elements;
-    std::map<element_handle, element_t*> directory;
-    int push(Storage_params sp, std::vector<int> pos, double sz)
-    {
-      elements.emplace_back(new element_t {sp, pos, sz});
-      return next_sn++;
-    }
-  }
-  element_container<Element> cartesian;
-  element_container<Deformed_element> deformed;
+  Complete_element_container<Element>          car_elements;
+  Complete_element_container<Deformed_element> def_elements;
+  Element_container& container(bool is_deformed);
 
   public:
   Accessible_mesh(Storage_params, double root_size);
   virtual int add_element(int ref_level, bool is_deformed, std::vector<int> position);
-
   // Access an element. If the parameters to not describe an existing element, throw an exception.
   Element& element(int ref_level, bool is_deformed, int serial_n);
 };

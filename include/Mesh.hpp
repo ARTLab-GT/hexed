@@ -21,11 +21,6 @@ class Mesh
   virtual int add_element(int ref_level, bool is_deformed, std::vector<int> position) = 0;
 
   #if 0
-  /*
-   * Erase an element. The element is `delete`d. Its serial number and all references to it are invalidated, but
-   * serial numbers of and references to all other elements remain valid.
-   */
-  virtual void erase_element(int ref_level, bool is_deformed, int serial_n) = 0;
   virtual void connect_cartesian(int ref_level, int i_dim, std::array<int, 2> serial_n) = 0;
   virtual void connect_deformed(int ref_level, std::array<int, 2> serial_n, std::array<int, 2> i_dim,
                                 std::array<bool, 2> face_positive) = 0;
