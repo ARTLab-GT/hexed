@@ -19,8 +19,10 @@ class Mesh
    * serial number is arbitrary.
    */
   virtual int add_element(int ref_level, bool is_deformed, std::vector<int> position) = 0;
-
-  virtual void connect_cartesian(int ref_level, int i_dim, std::array<int, 2> serial_n) = 0;
+  // Specify that two elements are connected via a Cartesian face. Note: although the interface
+  // is stipulated to be Cartesian, the elements themselves can be deformed
+  virtual void connect_cartesian(int ref_level, int i_dim, std::array<int, 2> serial_n,
+                                 std::array<bool, 2> is_deformed = {false, false}) = 0;
   #if 0
   virtual void connect_deformed(int ref_level, std::array<int, 2> serial_n, std::array<int, 2> i_dim,
                                 std::array<bool, 2> face_positive) = 0;
