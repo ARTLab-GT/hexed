@@ -12,7 +12,7 @@ namespace cartdg
 
 /*
  * A mesh that supports access to the actual elements with the numerical data they contain. This level of
- * access is required by the numerical scheme but should be hidden from the library user, which should not be
+ * access is required by the numerical scheme but should be hidden from the library user, who should not be
  * concerned with numerical details.
  */
 class Accessible_mesh : public Mesh
