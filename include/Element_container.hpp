@@ -32,7 +32,16 @@ class Complete_element_container : public Element_container
     public:
     element_t element;
     Compl_mesh_elem(Storage_params par, std::vector<int> pos, double sz) : element{par, pos, sz} {connectedness.fill(0);}
+    operator element_t&() {return element;}
     virtual Element& get() {return element;}
+  };
+  class Sequence
+  {
+    Complete_element_container& c;
+    public:
+    Sequence(Complete_element_container& container) : c{container} {}
+    int size() {return c.vec.size();}
+    element_t& operator[](int index) {return c.vec[index]->element;}
   };
 
   Complete_element_container(Storage_params storage_params, double root_spacing)
@@ -51,6 +60,11 @@ class Complete_element_container : public Element_container
   virtual Compl_mesh_elem& at(int ref_level, int serial_n)
   {
     return map.at({ref_level, serial_n});
+  }
+
+  Sequence elements()
+  {
+    return *this;
   }
 
   private:

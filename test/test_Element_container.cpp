@@ -22,4 +22,16 @@ TEST_CASE("Specific_container<Deformed_element>")
   REQUIRE(elem.vertex(7).pos[1] == Approx(0.3*4./4.));
   for (int i = 0; i < 6; ++i) REQUIRE(ctn.at(2, sn0).connectedness[i] == 0);
   REQUIRE(ctn.at(3, sn2).element.vertex(0).pos[0] == Approx(0.3*2./8.));
+  // test that `ctn` purports to contain 4 `Deformed_element`s
+  REQUIRE(ctn.elements().size() == 4);
+  // test that each of the `Deformed_element` constructed above appears exactly once in the vector view
+  cartdg::Deformed_element* ptrs [] {&ctn.at(2, sn0).element, &ctn.at(2, sn1).element, &ctn.at(3, sn2).element, &ctn.at(2, sn3).element};
+  for (int i_elem = 0; i_elem < 4; ++i_elem) {
+    int count = 0;
+    for (int j_elem = 0; j_elem < 4; ++j_elem) {
+      cartdg::Deformed_element& elem {ctn.elements()[j_elem]};
+      if (&elem == ptrs[i_elem]) ++count;
+    }
+    REQUIRE(count == 1);
+  }
 }
