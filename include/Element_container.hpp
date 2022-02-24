@@ -10,19 +10,33 @@
 namespace cartdg
 {
 
+/*
+ * An abstract class representing a collection of `Element`s which supports
+ * basic construction and access facilities.
+ */
 class Element_container
 {
   public:
+  // contains an `Element` with some additional data relevant to the mesh
   class Mesh_element
   {
     public:
     std::array<int, 6> connectedness;
     virtual Element& get() = 0;
   };
+  /*
+   * Construct an element, add it to the container, and return a permanent, arbitrary
+   * serial number which is unique among elements of the same refinement level.
+   */
   virtual int emplace(int ref_level, std::vector<int> position) = 0;
+  // access an element by refinement level and serial number
   virtual Mesh_element& at(int ref_level, int serial_n) = 0;
 };
 
+/*
+ * An implementation of `Element_container` which holds elements of a definite type (namely,
+ * `Element` or `Deformed_element`). Supports more advanced access methods.
+ */
 template <typename element_t>
 class Complete_element_container : public Element_container
 {
@@ -35,6 +49,10 @@ class Complete_element_container : public Element_container
     operator element_t&() {return element;}
     virtual Element& get() {return element;}
   };
+  /*
+   * A sequence-style object which provides efficient access to the elements of a
+   * `Complete_element_container`, in no particular order.
+   */
   class Sequence
   {
     Complete_element_container& c;
@@ -62,6 +80,7 @@ class Complete_element_container : public Element_container
     return map.at({ref_level, serial_n});
   }
 
+  // Provides an `Sequence` which can be used to efficiently iterate through the elements
   Sequence elements()
   {
     return *this;
