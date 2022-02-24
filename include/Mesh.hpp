@@ -20,8 +20,8 @@ class Mesh
    */
   virtual int add_element(int ref_level, bool is_deformed, std::vector<int> position) = 0;
 
-  #if 0
   virtual void connect_cartesian(int ref_level, int i_dim, std::array<int, 2> serial_n) = 0;
+  #if 0
   virtual void connect_deformed(int ref_level, std::array<int, 2> serial_n, std::array<int, 2> i_dim,
                                 std::array<bool, 2> face_positive) = 0;
   virtual void connect_levels(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial,

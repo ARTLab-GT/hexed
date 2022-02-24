@@ -45,4 +45,8 @@ Element& Accessible_mesh::Element_sequence::operator[](int index)
          : (Element&)am.def_elems.elements()[index - car_seq.size()];
 }
 
+void Accessible_mesh::connect_cartesian(int ref_level, int i_dim, std::array<int, 2> serial_n)
+{
+}
+
 }
