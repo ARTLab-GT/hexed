@@ -35,8 +35,8 @@ class Accessible_mesh : public Mesh
   Complete_element_container<Element>          car_elems;
   Complete_element_container<Deformed_element> def_elems;
   Element_container& container(bool is_deformed);
-  struct Car_mesh_con : public Cartesian_connection {std::array<Element*, 2> elements;};
-  struct Def_mesh_con : public Deformed_connection {std::array<Deformed_element*, 2> elements;};
+  struct Car_mesh_con : public Cartesian_connection {std::array<Element*, 2> element;};
+  struct Def_mesh_con : public Deformed_connection {std::array<Deformed_element*, 2> element;};
   std::vector<Car_mesh_con> car_cons;
   std::vector<Def_mesh_con> def_cons;
 

@@ -47,6 +47,14 @@ Element& Accessible_mesh::Element_sequence::operator[](int index)
 
 void Accessible_mesh::connect_cartesian(int ref_level, int i_dim, std::array<int, 2> serial_n, std::array<bool, 2> is_deformed)
 {
+  Car_mesh_con con;
+  con.i_dim = i_dim;
+  for (int i_side : {0, 1}) {
+    Element& elem {element(ref_level, is_deformed[i_side], serial_n[i_side])};
+    con.element[i_side] = &elem;
+    con.face[i_side] = elem.face() + (2*i_dim + 1 - i_side)*params.n_dof()/params.row_size;
+  }
+  car_cons.push_back(con);
 }
 
 }

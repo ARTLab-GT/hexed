@@ -38,16 +38,16 @@ TEST_CASE("Accessible_mesh")
     mesh.connect_cartesian(0, 2, {sn1, sn0});
     auto con = mesh.cartesian_connections()[0];
     REQUIRE(con.i_dim == 2);
-    REQUIRE(con.face[0] == mesh.element(0, false, sn1).face() + (2*2 + 1)*params.n_qpoint());
-    REQUIRE(con.face[1] == mesh.element(0, false, sn0).face() + (2*2 + 0)*params.n_qpoint());
+    REQUIRE(con.face[0] == mesh.element(0, false, sn1).face() + (2*2 + 1)*5*row_size*row_size);
+    REQUIRE(con.face[1] == mesh.element(0, false, sn0).face() + (2*2 + 0)*5*row_size*row_size);
   }
   SECTION("deformed-cartesian connection")
   {
     mesh.connect_cartesian(3, 1, {sn2, sn3}, {true, false});
     auto con = mesh.cartesian_connections()[0];
     REQUIRE(con.i_dim == 1);
-    REQUIRE(con.face[0] == mesh.element(3,  true, sn2).face() + (1*2 + 1)*params.n_qpoint());
-    REQUIRE(con.face[1] == mesh.element(3, false, sn3).face() + (1*2 + 0)*params.n_qpoint());
+    REQUIRE(con.face[0] == mesh.element(3,  true, sn2).face() + (1*2 + 1)*5*row_size*row_size);
+    REQUIRE(con.face[1] == mesh.element(3, false, sn3).face() + (1*2 + 0)*5*row_size*row_size);
   }
   SECTION("connection vector size")
   {
