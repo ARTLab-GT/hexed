@@ -112,7 +112,7 @@ void Solution::visualize_surface(std::string name)
   if (n_dim == 1) return; // 1D doesn't have visualizable surfaces
   int n_vis = n_var; // FIXME
   std::vector<std::string> var_names;
-  for (int i_vis = 0; i_vis < n_vis; ++i_vis) var_names.push_back("foo" + std::to_string(i_vis));
+  for (int i_vis = 0; i_vis < n_vis; ++i_vis) var_names.push_back("state" + std::to_string(i_vis));
   Tecplot_file file {name, n_dim, var_names, time};
   for (Deformed_grid& grid : def_grids) {
     grid.visualize_surface(file);
