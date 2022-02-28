@@ -4,13 +4,11 @@
 #include <get_write_face.hpp>
 #include <get_local_convective.hpp>
 #include <get_req_visc_regular_convective.hpp>
-#include <get_av_flux.hpp>
-#include <local/variable_derivative.hpp>
-#include <get_local_derivative.hpp>
 #include <Gauss_lobatto.hpp>
 #include <Gauss_legendre.hpp>
 #include <Equidistant.hpp>
 #include <math.hpp>
+#include <Kernel_settings.hpp>
 
 class Identity_basis : public cartdg::Basis
 {
@@ -235,148 +233,6 @@ TEST_CASE("Local convective")
   }
 }
 
-TEST_CASE("derivative")
-{
-  const int row_size = cartdg::config::max_row_size;
-  cartdg::Gauss_lobatto basis (row_size);
-  cartdg::Kernel_settings settings;
-  Eigen::Matrix<double, row_size, row_size> diff_mat = basis.diff_mat();
-  SECTION("calculations")
-  {
-    double read [row_size];
-    double write [row_size];
-    SECTION("constant function")
-    {
-      for (int i = 0; i < row_size; ++i)
-      {
-        read[i] = 1.;
-        write[i] = 1.;
-      }
-      cartdg::variable_derivative<1, row_size>(read, write, 0, diff_mat, settings.d_pos);
-      for (int i = 0; i < row_size; ++i)
-      {
-        REQUIRE(write[i] == Approx(0.).margin(1e-14));
-      }
-    }
-    SECTION("polynomial")
-    {
-      for (int i = 0; i < row_size; ++i)
-      {
-        read[i] = std::pow(basis.node(i), 3);
-        write[i] = 1.;
-      }
-      cartdg::variable_derivative<1, row_size>(read, write, 0, diff_mat, settings.d_pos);
-      for (int i = 0; i < row_size; ++i)
-      {
-        REQUIRE(write[i] == Approx(3*std::pow(basis.node(i), 2)).margin(1e-14));
-      }
-    }
-    SECTION("exponential") // Not mathematically exact but numerically very good
-    {
-      for (int i = 0; i < row_size; ++i)
-      {
-        read[i] = std::exp(basis.node(i));
-        write[i] = 1.;
-      }
-      cartdg::variable_derivative<1, row_size>(read, write, 0, diff_mat, settings.d_pos);
-      for (int i = 0; i < row_size; ++i)
-      {
-        REQUIRE(write[i] == Approx(std::exp(basis.node(i))).margin(1e-14));
-      }
-    }
-  }
-  SECTION("data juggling")
-  {
-    SECTION("3D")
-    {
-      double coefs [] {1.103, -4.044, 0.392};
-      for (int i_dim = 0; i_dim < 3; ++i_dim)
-      {
-        double read [row_size][row_size][row_size] {};
-        double write [row_size][row_size][row_size] {};
-        for (int i = 0; i < row_size; ++i)
-        {
-          for (int j = 0; j < row_size; ++j)
-          {
-            for (int k = 0; k < row_size; ++k)
-            {
-              int inds [] {i, j, k};
-              for (int j_dim : {0, 1, 2}) read[i][j][k] += coefs[j_dim]*basis.node(inds[j_dim]);
-            }
-          }
-        }
-        cartdg::variable_derivative<3, row_size>(read[0][0], write[0][0], i_dim, diff_mat, settings.d_pos);
-        for (int i = 0; i < row_size; ++i)
-        {
-          for (int j = 0; j < row_size; ++j)
-          {
-            for (int k = 0; k < row_size; ++k)
-            {
-              REQUIRE(write[i][j][k] == Approx(coefs[i_dim]));
-            }
-          }
-        }
-      }
-    }
-    SECTION("multi-element")
-    {
-      cartdg::Storage_params params {3, 3, 1, row_size};
-      cartdg::elem_vec elements;
-      double coefs [] {1.103, -4.044, 0.392};
-      for (int i_elem = 0; i_elem < 3; ++i_elem)
-      {
-        elements.emplace_back(new cartdg::Element {params});
-        for (int i = 0; i < row_size; ++i)
-        {
-          elements.back()->stage(0)[i] = coefs[i_elem]*basis.node(i);
-        }
-      }
-      cartdg::get_local_derivative(1, row_size)(elements, 0, 0, basis, settings);
-      for (int i_elem = 0; i_elem < 3; ++i_elem)
-      {
-        for (int i = 0; i < row_size; ++i)
-        {
-          REQUIRE(elements[i_elem]->derivative()[i] == Approx(coefs[i_elem]));
-        }
-      }
-    }
-    SECTION("multivariable")
-    {
-      cartdg::Storage_params params {3, 3, 1, row_size};
-      cartdg::elem_vec elements;
-      SECTION("differentiate flow vars")
-      {
-        for (int i_elem : {0, 1})
-        {
-          elements.emplace_back(new cartdg::Element {params});
-          double* stage = elements[i_elem]->stage(0);
-          for (int i = 0; i < row_size; ++i)
-          {
-            stage[i + 1*row_size] = std::pow(basis.node(i), 2);
-            stage[i + 2*row_size] = std::pow(basis.node(i), 3);
-          }
-        }
-        cartdg::get_local_derivative(1, row_size)(elements, 1, 0, basis, settings);
-        for (int i_elem : {0, 1})
-        {
-          for (int i = 0; i < row_size; ++i)
-          {
-            REQUIRE(elements[i_elem]->derivative()[i] == Approx(2*basis.node(i)).margin(1e-14));
-          }
-        }
-        cartdg::get_local_derivative(1, row_size)(elements, 2, 0, basis, settings);
-        for (int i_elem : {0, 1})
-        {
-          for (int i = 0; i < row_size; ++i)
-          {
-            REQUIRE(elements[i_elem]->derivative()[i] == Approx(3*std::pow(basis.node(i), 2)).margin(1e-14));
-          }
-        }
-      }
-    }
-  }
-}
-
 TEST_CASE("req_visc")
 {
   const int row_size = cartdg::config::max_row_size;
@@ -406,40 +262,4 @@ TEST_CASE("req_visc")
   REQUIRE(elements[0]->viscosity()[7] == 0.);
   REQUIRE(elements[1]->viscosity()[0] == Approx(0.5*340.29/(row_size - 1.)).margin(0.01));
   REQUIRE(elements[1]->viscosity()[7] == Approx(0.5*340.29/(row_size - 1.)).margin(0.01));
-}
-
-TEST_CASE("av_flux")
-{
-  if (cartdg::config::max_row_size >= 3)
-  {
-    cartdg::Gauss_lobatto basis (3);
-    cartdg::Kernel_settings settings;
-    settings.d_pos = 0.5;
-    settings.d_t_by_d_pos = 3.;
-    cartdg::Storage_params params {3, 4, 2, 3};
-    cartdg::elem_vec elements;
-    for (int i_elem : {0, 1})
-    {
-      elements.emplace_back(new cartdg::Element {params});
-      for (int i = 0; i < 4; ++i) elements[i_elem]->viscosity()[i] = 0.;
-      for (int i = 0; i < 9; ++i) elements[i_elem]->derivative()[i] = 0.;
-    }
-    elements[0]->viscosity()[0] = 0.2;
-    elements[1]->derivative()[1] = 0.3;
-    elements[1]->derivative()[8] = 0.4;
-    for (int i = 0; i < 4; ++i) elements[1]->viscosity()[i] = 1.;
-    for (int i = 0; i < 9; ++i) elements[0]->derivative()[i] = 1.;
-    cartdg::get_av_flux(2, 3)(elements, basis, settings);
-
-    REQUIRE(elements[0]->derivative()[0] == Approx(0.2*1.5));
-    REQUIRE(elements[0]->derivative()[1] == Approx(0.1*1.5));
-    REQUIRE(elements[0]->derivative()[2] == Approx(0.0*1.5));
-    REQUIRE(elements[0]->derivative()[3] == Approx(0.1*1.5));
-    REQUIRE(elements[0]->derivative()[4] == Approx(0.05*1.5));
-    REQUIRE(elements[0]->derivative()[5] == Approx(0.0*1.5));
-
-    REQUIRE(elements[1]->derivative()[0] == Approx(0.0));
-    REQUIRE(elements[1]->derivative()[1] == Approx(0.3*1.5));
-    REQUIRE(elements[1]->derivative()[8] == Approx(0.4*1.5));
-  }
 }

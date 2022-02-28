@@ -7,12 +7,6 @@
 #include <get_local_convective.hpp>
 #include <get_gbc_convective.hpp>
 #include <get_req_visc_regular_convective.hpp>
-#include <get_local_derivative.hpp>
-#include <get_neighbor_derivative.hpp>
-#include <get_av_flux.hpp>
-#include <get_local_av.hpp>
-#include <get_neighbor_av.hpp>
-#include <get_gbc_av.hpp>
 #include <math.hpp>
 
 namespace cartdg
@@ -92,38 +86,22 @@ void Regular_grid::execute_req_visc(Kernel_settings& settings)
 
 void Regular_grid::execute_local_derivative(int i_var, int i_dim, Kernel_settings& settings)
 {
-  settings.i_read = i_read;
-  settings.i_write = i_write;
-  get_local_derivative(n_dim, basis.row_size)(elements, i_var, i_dim, basis, settings);
 }
 
 void Regular_grid::execute_neighbor_derivative(int i_var, int i_dim, Kernel_settings& settings)
 {
-  settings.i_read = i_read;
-  settings.i_write = i_write;
-  get_neighbor_derivative(n_dim, basis.row_size)(elem_cons, i_var, i_dim, basis, settings);
 }
 
 void Regular_grid::execute_av_flux(Kernel_settings& settings)
 {
-  settings.i_read = i_read;
-  settings.i_write = i_write;
-  get_av_flux(n_dim, basis.row_size)(elements, basis, settings);
 }
 
 void Regular_grid::execute_local_av(int i_var, int i_dim, Kernel_settings& settings)
 {
-  settings.i_read = i_read;
-  settings.i_write = i_write;
-  get_local_av(n_dim, basis.row_size)(elements, i_var, i_dim, basis, settings);
 }
 
 void Regular_grid::execute_neighbor_av(int i_var, int i_dim, Kernel_settings& settings)
 {
-  settings.i_read = i_read;
-  settings.i_write = i_write;
-  get_neighbor_av(n_dim, basis.row_size)(elem_cons, i_var, i_dim, basis, settings);
-  get_gbc_av(n_dim, basis.row_size)(*this, i_var, i_dim, basis, settings);
 }
 
 int Regular_grid::add_element(std::vector<int> position)
