@@ -11,9 +11,11 @@ namespace cartdg
 {
 
 /*
- * Computes shared flux due to artificial viscosity at the element interface. Numerical flux is the average
- * of the left and right flux. The first `n_dim` variables are interpreted as the components of the flux
- * vector and the resulting flux through the surface is written to the `i_var`th variable.
+ * Computes shared numerical gradient for artificial viscosity at the element interface. Numerical gradient is the average
+ * of the left and right values. The first `n_dim` variables are interpreted as the components of the gradient
+ * vector and the resulting flux of gradient through the surface is written to the `i_var`th variable. Note: does not
+ * account for viscosity coefficient. Since the viscosity coefficient is continuous, it can be handled by
+ * the local kernel.
  */
 // AUTOGENERATE LOOKUP
 template<int n_var, int n_qpoint, int row_size>
