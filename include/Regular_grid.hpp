@@ -35,11 +35,12 @@ class Regular_grid : public Grid
   virtual void execute_neighbor(Kernel_settings&);
   virtual void execute_local(Kernel_settings&);
   virtual void execute_req_visc(Kernel_settings&);
-  virtual void execute_local_derivative(int i_var, int i_dim, Kernel_settings&);
-  virtual void execute_neighbor_derivative(int i_var, int i_dim, Kernel_settings&);
-  virtual void execute_av_flux(Kernel_settings&);
-  virtual void execute_local_av(int i_var, int i_dim, Kernel_settings&);
-  virtual void execute_neighbor_av(int i_var, int i_dim, Kernel_settings&);
+  virtual void execute_write_face_gradient(int i_var, Kernel_settings&);
+  virtual void execute_neighbor_gradient(int i_var, Kernel_settings&);
+  virtual void execute_local_gradient(int i_var, Kernel_settings&);
+  virtual void execute_write_face_av(int i_var, Kernel_settings&);
+  virtual void execute_neighbor_av(int i_var, Kernel_settings&);
+  virtual void execute_local_av(int i_var, Kernel_settings&);
 
   private:
   elem_vec elements;

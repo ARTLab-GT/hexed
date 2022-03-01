@@ -7,6 +7,9 @@
 #include <get_local_convective.hpp>
 #include <get_gbc_convective.hpp>
 #include <get_req_visc_regular_convective.hpp>
+#include <get_write_face_scalar.hpp>
+#include <get_neighbor_gradient.hpp>
+#include <get_local_gradient.hpp>
 #include <math.hpp>
 
 namespace cartdg
@@ -84,23 +87,36 @@ void Regular_grid::execute_req_visc(Kernel_settings& settings)
   get_req_visc_regular_convective(n_dim, basis.row_size)(elements, basis, settings);
 }
 
-void Regular_grid::execute_local_derivative(int i_var, int i_dim, Kernel_settings& settings)
+void Regular_grid::execute_write_face_gradient(int i_var, Kernel_settings& settings)
+{
+  settings.i_read = i_read;
+  settings.i_write = i_write;
+  get_write_face_scalar(n_dim, basis.row_size)(elements, i_var, basis, settings);
+}
+
+void Regular_grid::execute_neighbor_gradient(int i_var, Kernel_settings& settings)
+{
+  settings.i_read = i_read;
+  settings.i_write = i_write;
+  get_neighbor_gradient(n_dim, basis.row_size)(elem_cons, i_var, settings);
+}
+
+void Regular_grid::execute_local_gradient(int i_var, Kernel_settings& settings)
+{
+  settings.i_read = i_read;
+  settings.i_write = i_write;
+  get_local_gradient(n_dim, basis.row_size)(elements, i_var, basis, settings);
+}
+
+void Regular_grid::execute_write_face_av(int i_var, Kernel_settings& settings)
 {
 }
 
-void Regular_grid::execute_neighbor_derivative(int i_var, int i_dim, Kernel_settings& settings)
+void Regular_grid::execute_neighbor_av(int i_var, Kernel_settings& settings)
 {
 }
 
-void Regular_grid::execute_av_flux(Kernel_settings& settings)
-{
-}
-
-void Regular_grid::execute_local_av(int i_var, int i_dim, Kernel_settings& settings)
-{
-}
-
-void Regular_grid::execute_neighbor_av(int i_var, int i_dim, Kernel_settings& settings)
+void Regular_grid::execute_local_av(int i_var, Kernel_settings& settings)
 {
 }
 

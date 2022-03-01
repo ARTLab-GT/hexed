@@ -147,23 +147,27 @@ void Deformed_grid::execute_req_visc(Kernel_settings& settings)
   get_req_visc_deformed_convective(n_dim, basis.row_size)(elements, basis, settings);
 }
 
-void Deformed_grid::execute_local_derivative(int i_var, int i_dim, Kernel_settings& settings)
+void Deformed_grid::execute_write_face_gradient(int i_var, Kernel_settings&)
 {
 }
 
-void Deformed_grid::execute_neighbor_derivative(int i_var, int i_dim, Kernel_settings& settings)
+void Deformed_grid::execute_neighbor_gradient(int i_var, Kernel_settings&)
 {
 }
 
-void Deformed_grid::execute_av_flux(Kernel_settings& settings)
+void Deformed_grid::execute_local_gradient(int i_var, Kernel_settings&)
 {
 }
 
-void Deformed_grid::execute_local_av(int i_var, int i_dim, Kernel_settings& settings)
+void Deformed_grid::execute_write_face_av(int i_var, Kernel_settings&)
 {
 }
 
-void Deformed_grid::execute_neighbor_av(int i_var, int i_dim, Kernel_settings& settings)
+void Deformed_grid::execute_neighbor_av(int i_var, Kernel_settings&)
+{
+}
+
+void Deformed_grid::execute_local_av(int i_var, Kernel_settings&)
 {
 }
 
