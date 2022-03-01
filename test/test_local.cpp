@@ -6,6 +6,7 @@
 #include <get_local_convective.hpp>
 #include <get_req_visc_regular_convective.hpp>
 #include <get_local_gradient.hpp>
+#include <get_local_av.hpp>
 #include <Gauss_lobatto.hpp>
 #include <Gauss_legendre.hpp>
 #include <Equidistant.hpp>
@@ -266,7 +267,7 @@ TEST_CASE("req_visc")
   REQUIRE(elements[1]->viscosity()[7] == Approx(0.5*340.29/(row_size - 1.)).margin(0.01));
 }
 
-TEST_CASE("local_gradient")
+TEST_CASE("artificial viscosity")
 {
   const int row_size = cartdg::config::max_row_size;
   static_assert (row_size >= 3); // this test requires at least quadratic polynomial
@@ -287,71 +288,106 @@ TEST_CASE("local_gradient")
       }
     }
   }
-  // write an arbitrary triquadratic polynomial to the energy
-  for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-    double* node = nodes[i_qpoint];
-    element.stage(0)[4*n_qpoint + i_qpoint] = 2.*node[0]*node[0] - 3.*node[0]*node[1]*node[1] + 1.*node[0]*node[1]*node[2];
-  }
-  cartdg::Kernel_settings settings;
-  settings.d_t_by_d_pos = 3.4;
-  SECTION("local component")
+
+  SECTION("local_gradient")
   {
-    // reconstruct face values as they would be by the neighbor kernel
-    cartdg::get_write_face_scalar(3, row_size)(elements, 4, basis, settings);
-    for (int i_dim = 0; i_dim < 3; ++i_dim) {
-      for (int is_positive = 0; is_positive < 2; ++is_positive) {
-        for (int i_face_qpoint = 0; i_face_qpoint < n_qpoint/row_size; ++i_face_qpoint) {
-          int offset = (i_dim*2 + is_positive)*5*n_qpoint/row_size + i_face_qpoint;
-          for (int j_dim = 0; j_dim < 3; ++j_dim) {
-            element.face()[offset + i_dim*n_qpoint/row_size] = 0.;
-          }
-          element.face()[offset + i_dim*n_qpoint/row_size] = element.face()[offset + 4*n_qpoint/row_size];
-          element.face()[offset + 4*n_qpoint/row_size] = 0.;
-        }
-      }
-    }
-    cartdg::get_local_gradient(3, row_size)(elements, 4, basis, settings);
+    // write an arbitrary triquadratic polynomial to the energy
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
       double* node = nodes[i_qpoint];
-      // check that derivatives match analytic
-      REQUIRE(element.stage(1)[0*n_qpoint + i_qpoint] == Approx(3.4*(4.*node[0] - 3.*node[1]*node[1] + 1.*node[1]*node[2])));
-      REQUIRE(element.stage(1)[1*n_qpoint + i_qpoint] == Approx(3.4*(-6.*node[0]*node[1] + 1.*node[0]*node[2])));
-      REQUIRE(element.stage(1)[2*n_qpoint + i_qpoint] == Approx(3.4*(1.*node[0]*node[1])));
+      element.stage(0)[4*n_qpoint + i_qpoint] = 2.*node[0]*node[0] - 3.*node[0]*node[1]*node[1] + 1.*node[0]*node[1]*node[2];
+    }
+    cartdg::Kernel_settings settings;
+    settings.d_t_by_d_pos = 3.4;
+    SECTION("local component")
+    {
+      // reconstruct face values as they would be by the neighbor kernel
+      cartdg::get_write_face_scalar(3, row_size)(elements, 4, basis, settings);
+      for (int i_dim = 0; i_dim < 3; ++i_dim) {
+        for (int is_positive = 0; is_positive < 2; ++is_positive) {
+          for (int i_face_qpoint = 0; i_face_qpoint < n_qpoint/row_size; ++i_face_qpoint) {
+            int offset = (i_dim*2 + is_positive)*5*n_qpoint/row_size + i_face_qpoint;
+            for (int j_dim = 0; j_dim < 3; ++j_dim) {
+              element.face()[offset + i_dim*n_qpoint/row_size] = 0.;
+            }
+            element.face()[offset + i_dim*n_qpoint/row_size] = element.face()[offset + 4*n_qpoint/row_size];
+            element.face()[offset + 4*n_qpoint/row_size] = 0.;
+          }
+        }
+      }
+      cartdg::get_local_gradient(3, row_size)(elements, 4, basis, settings);
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        double* node = nodes[i_qpoint];
+        // check that derivatives match analytic
+        REQUIRE(element.stage(1)[0*n_qpoint + i_qpoint] == Approx(3.4*(4.*node[0] - 3.*node[1]*node[1] + 1.*node[1]*node[2])));
+        REQUIRE(element.stage(1)[1*n_qpoint + i_qpoint] == Approx(3.4*(-6.*node[0]*node[1] + 1.*node[0]*node[2])));
+        REQUIRE(element.stage(1)[2*n_qpoint + i_qpoint] == Approx(3.4*(1.*node[0]*node[1])));
+      }
+    }
+    SECTION("variational crimes")
+    {
+      /*
+       * variational crimes can be viewed as a violation of conservation in the LDG gradient
+       * operator. Here we explicitly set the face values and then evaluate the integral of
+       * the computed gradient.
+       */
+      // set face "flux" to be 0.3 inwards on all faces
+      for (int i_dim = 0; i_dim < 3; ++i_dim) {
+        for (int is_positive = 0; is_positive < 2; ++is_positive) {
+          for (int i_face_qpoint = 0; i_face_qpoint < n_qpoint/row_size; ++i_face_qpoint) {
+            int offset = (i_dim*2 + is_positive)*5*n_qpoint/row_size + i_face_qpoint;
+            for (int j_dim = 0; j_dim < 3; ++j_dim) {
+              element.face()[offset + i_dim*n_qpoint/row_size] = 0.;
+            }
+            element.face()[offset + i_dim*n_qpoint/row_size] = 0.3*(2*is_positive - 1);
+          }
+        }
+      }
+      cartdg::get_local_gradient(3, row_size)(elements, 4, basis, settings);
+      // integrate computed gradient
+      double integral [3] {};
+      for (int i_row = 0; i_row < row_size; ++i_row) {
+        for (int j_row = 0; j_row < row_size; ++j_row) {
+          for (int k_row = 0; k_row < row_size; ++k_row) {
+            int i_qpoint = (i_row*row_size + j_row)*row_size + k_row;
+            int row [3] {i_row, j_row, k_row};
+            double weight = 1.;
+            for (int i_dim = 0; i_dim < 3; ++i_dim) weight *= basis.node_weights()(row[i_dim]);
+            for (int i_dim = 0; i_dim < 3; ++i_dim) integral[i_dim] += weight*element.stage(1)[i_dim*n_qpoint + i_qpoint];
+          }
+        }
+      }
+      for (int i_dim = 0; i_dim < 3; ++i_dim) REQUIRE(integral[i_dim] == Approx(2*0.3*3.4));
     }
   }
-  SECTION("variational crimes")
+
+  SECTION("local_av")
   {
-    /*
-     * variational crimes can be viewed as a violation of conservation in the LDG gradient
-     * operator. Here we explicitly set the face values and then evaluate the integral of
-     * the computed gradient.
-     */
-    // set face "flux" to be 0.3 inwards on all faces
+    double direction [3] {2., -0.3, 0.01};
+    double visc_coef [n_qpoint];
+    // write an arbitrary linear polynomial to the gradient
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+      double* node = nodes[i_qpoint];
+      visc_coef[i_qpoint] = 1.;
+      for (int i_dim = 0; i_dim < 3; ++i_dim) {
+        element.stage(1)[i_dim*n_qpoint + i_qpoint] = direction[i_dim]*node[i_dim];
+        visc_coef[i_qpoint] *= node[i_dim]; // compute correct viscosity coefficient
+      }
+    }
+    // reconstruct face gradient data
     for (int i_dim = 0; i_dim < 3; ++i_dim) {
       for (int is_positive = 0; is_positive < 2; ++is_positive) {
         for (int i_face_qpoint = 0; i_face_qpoint < n_qpoint/row_size; ++i_face_qpoint) {
           int offset = (i_dim*2 + is_positive)*5*n_qpoint/row_size + i_face_qpoint;
-          for (int j_dim = 0; j_dim < 3; ++j_dim) {
-            element.face()[offset + i_dim*n_qpoint/row_size] = 0.;
-          }
-          element.face()[offset + i_dim*n_qpoint/row_size] = 0.3*(2*is_positive - 1);
+          element.face()[offset + 4*n_qpoint/row_size] = direction[i_dim];
         }
       }
     }
-    cartdg::get_local_gradient(3, row_size)(elements, 4, basis, settings);
-    // integrate computed gradient
-    double integral [3] {};
-    for (int i_row = 0; i_row < row_size; ++i_row) {
-      for (int j_row = 0; j_row < row_size; ++j_row) {
-        for (int k_row = 0; k_row < row_size; ++k_row) {
-          int i_qpoint = (i_row*row_size + j_row)*row_size + k_row;
-          int row [3] {i_row, j_row, k_row};
-          double weight = 1.;
-          for (int i_dim = 0; i_dim < 3; ++i_dim) weight *= basis.node_weights()(row[i_dim]);
-          for (int i_dim = 0; i_dim < 3; ++i_dim) integral[i_dim] += weight*element.stage(1)[i_dim*n_qpoint + i_qpoint];
-        }
-      }
+    element.viscosity()[7] = 1.;
+    cartdg::Kernel_settings settings;
+    settings.d_t_by_d_pos = 3.4;
+    cartdg::get_local_av(3, row_size)(elements, 4, basis, settings);
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+      REQUIRE(element.stage(0)[4] == Approx(3.4*(2. - 0.3 + 0.01)*visc_coef[i_qpoint]));
     }
-    for (int i_dim = 0; i_dim < 3; ++i_dim) REQUIRE(integral[i_dim] == Approx(2*0.3*3.4));
   }
 }
