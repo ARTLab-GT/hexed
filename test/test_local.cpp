@@ -2,6 +2,7 @@
 
 #include <cartdgConfig.hpp>
 #include <get_write_face.hpp>
+#include <get_write_face_scalar.hpp>
 #include <get_local_convective.hpp>
 #include <get_req_visc_regular_convective.hpp>
 #include <get_local_gradient.hpp>
@@ -286,13 +287,14 @@ TEST_CASE("local_gradient")
       }
     }
   }
-  // write an arbitrary triquadratic polynomial to the mass
+  // write an arbitrary triquadratic polynomial to the energy
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
     double* node = nodes[i_qpoint];
-    element.stage(0)[3*n_qpoint + i_qpoint] = 2.*node[0]*node[0] - 3.*node[0]*node[1]*node[1] + 1.*node[0]*node[1]*node[2];
+    element.stage(0)[4*n_qpoint + i_qpoint] = 2.*node[0]*node[0] - 3.*node[0]*node[1]*node[1] + 1.*node[0]*node[1]*node[2];
   }
   cartdg::Kernel_settings settings;
-  cartdg::get_local_gradient(3, row_size)(elements, 3, basis, settings);
+  cartdg::get_write_face_scalar(3, row_size)(elements, 4, basis, settings);
+  cartdg::get_local_gradient(3, row_size)(elements, 4, basis, settings);
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
     double* node = nodes[i_qpoint];
     // check that derivatives match analytic
