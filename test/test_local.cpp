@@ -294,12 +294,47 @@ TEST_CASE("local_gradient")
   }
   cartdg::Kernel_settings settings;
   cartdg::get_write_face_scalar(3, row_size)(elements, 4, basis, settings);
-  cartdg::get_local_gradient(3, row_size)(elements, 4, basis, settings);
-  for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-    double* node = nodes[i_qpoint];
-    // check that derivatives match analytic
-    REQUIRE(element.stage(1)[0*n_qpoint + i_qpoint] == Approx(4.*node[0] - 3.*node[1]*node[1] + 1.*node[1]*node[2]));
-    REQUIRE(element.stage(1)[1*n_qpoint + i_qpoint] == Approx(-6.*node[0]*node[1] + 1.*node[0]*node[2]));
-    REQUIRE(element.stage(1)[2*n_qpoint + i_qpoint] == Approx(1.*node[0]*node[1]));
+  SECTION("local component")
+  {
+    cartdg::get_local_gradient(3, row_size)(elements, 4, basis, settings);
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+      double* node = nodes[i_qpoint];
+      // check that derivatives match analytic
+      REQUIRE(element.stage(1)[0*n_qpoint + i_qpoint] == Approx(4.*node[0] - 3.*node[1]*node[1] + 1.*node[1]*node[2]));
+      REQUIRE(element.stage(1)[1*n_qpoint + i_qpoint] == Approx(-6.*node[0]*node[1] + 1.*node[0]*node[2]));
+      REQUIRE(element.stage(1)[2*n_qpoint + i_qpoint] == Approx(1.*node[0]*node[1]));
+    }
+  }
+  SECTION("variational crimes")
+  {
+    /*
+     * variational crimes can be viewed as a violation of conservation in the LDG gradient
+     * operator. Here we explicitly set the face values and then evaluate the integral of
+     * the computed gradient.
+     */
+    // set face "flux" to be 0.3 inwards on all faces
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+      for (int is_positive = 0; is_positive < 2; ++is_positive) {
+        for (int i_face_qpoint = 0; i_face_qpoint < n_qpoint/row_size; ++i_face_qpoint) {
+          int index = ((i_dim*2 + is_positive)*5 + 4)*n_qpoint/row_size + i_face_qpoint;
+          element.face()[index] = 0.3*(1 - 2*is_positive);
+        }
+      }
+    }
+    cartdg::get_local_gradient(3, row_size)(elements, 4, basis, settings);
+    // integrate computed gradient
+    double integral [3] {};
+    for (int i_row = 0; i_row < row_size; ++i_row) {
+      for (int j_row = 0; j_row < row_size; ++j_row) {
+        for (int k_row = 0; i_row < row_size; ++i_row) {
+          int i_qpoint = (i_row*row_size + j_row)*row_size + k_row;
+          int row [3] {i_row, j_row, k_row};
+          double weight = 1.;
+          for (int i_dim = 0; i_dim < 3; ++i_dim) weight *= basis.node_weights()(row[i_dim]);
+          for (int i_dim = 0; i_dim < 3; ++i_dim) integral[i_dim] += weight*element.stage(1)[i_dim*n_qpoint + i_qpoint];
+        }
+      }
+    }
+    for (int i_dim = 0; i_dim < 3; ++i_dim) REQUIRE(integral[i_dim] == Approx(2*0.3));
   }
 }
