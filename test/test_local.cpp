@@ -351,6 +351,6 @@ TEST_CASE("local_gradient")
         }
       }
     }
-    for (int i_dim = 0; i_dim < 3; ++i_dim) CHECK(integral[i_dim] == Approx(2*0.3));
+    for (int i_dim = 0; i_dim < 3; ++i_dim) REQUIRE(integral[i_dim] == Approx(2*0.3));
   }
 }
