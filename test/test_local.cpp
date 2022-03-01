@@ -9,6 +9,7 @@
 #include <Equidistant.hpp>
 #include <math.hpp>
 #include <Kernel_settings.hpp>
+#include <local/reference_derivative.hpp>
 
 class Identity_basis : public cartdg::Basis
 {
@@ -262,4 +263,39 @@ TEST_CASE("req_visc")
   REQUIRE(elements[0]->viscosity()[7] == 0.);
   REQUIRE(elements[1]->viscosity()[0] == Approx(0.5*340.29/(row_size - 1.)).margin(0.01));
   REQUIRE(elements[1]->viscosity()[7] == Approx(0.5*340.29/(row_size - 1.)).margin(0.01));
+}
+
+TEST_CASE("reference_derivative")
+{
+  const int row_size = cartdg::config::max_row_size;
+  static_assert (row_size >= 3); // this test requires at least quadratic polynomial
+  const int n_qpoint = cartdg::custom_math::pow(row_size, 3);
+  cartdg::Gauss_legendre basis (row_size);
+  Eigen::MatrixXd diff_mat = basis.diff_mat();
+  double read [n_qpoint];
+  double write [3*n_qpoint] {};
+  double nodes [n_qpoint][3];
+  // compute the positions of the 3D quadrature points
+  for (int i_row = 0; i_row < row_size; ++i_row) {
+    for (int j_row = 0; j_row < row_size; ++j_row) {
+      for (int k_row = 0; k_row < row_size; ++k_row) {
+        int i_qpoint = (i_row*row_size + j_row)*row_size + k_row;
+        int row [3] {i_row, j_row, k_row};
+        for (int i_dim = 0; i_dim < 3; ++i_dim) nodes[i_qpoint][i_dim] = basis.node(row[i_dim]);
+      }
+    }
+  }
+  // construct an arbitrary triquadratic polynomial
+  for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+    double* node = nodes[i_qpoint];
+    read[i_qpoint] = 2.*node[0]*node[0] - 3.*node[0]*node[1]*node[1] + 1.*node[0]*node[1]*node[2];
+  }
+  cartdg::reference_derivative<3, n_qpoint, row_size>(read, write, diff_mat);
+  for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+    double* node = nodes[i_qpoint];
+    // check that derivatives match analytic
+    REQUIRE(write[0*n_qpoint + i_qpoint] == Approx(4.*node[0] - 3.*node[1]*node[1] + 1.*node[1]*node[2]));
+    REQUIRE(write[1*n_qpoint + i_qpoint] == Approx(-6.*node[0]*node[1] + 1.*node[0]*node[2]));
+    REQUIRE(write[2*n_qpoint + i_qpoint] == Approx(1.*node[0]*node[1]));
+  }
 }
