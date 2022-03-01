@@ -4,12 +4,12 @@
 #include <get_write_face.hpp>
 #include <get_local_convective.hpp>
 #include <get_req_visc_regular_convective.hpp>
+#include <get_local_gradient.hpp>
 #include <Gauss_lobatto.hpp>
 #include <Gauss_legendre.hpp>
 #include <Equidistant.hpp>
 #include <math.hpp>
 #include <Kernel_settings.hpp>
-#include <local/reference_derivative.hpp>
 
 class Identity_basis : public cartdg::Basis
 {
@@ -265,15 +265,16 @@ TEST_CASE("req_visc")
   REQUIRE(elements[1]->viscosity()[7] == Approx(0.5*340.29/(row_size - 1.)).margin(0.01));
 }
 
-TEST_CASE("reference_derivative")
+TEST_CASE("local_gradient")
 {
   const int row_size = cartdg::config::max_row_size;
   static_assert (row_size >= 3); // this test requires at least quadratic polynomial
+  cartdg::Storage_params params {3, 5, 3, row_size};
+  cartdg::elem_vec elements;
+  elements.emplace_back(new cartdg::Element {params});
+  cartdg::Element& element = *elements.back();
   const int n_qpoint = cartdg::custom_math::pow(row_size, 3);
   cartdg::Gauss_legendre basis (row_size);
-  Eigen::MatrixXd diff_mat = basis.diff_mat();
-  double read [n_qpoint];
-  double write [3*n_qpoint] {};
   double nodes [n_qpoint][3];
   // compute the positions of the 3D quadrature points
   for (int i_row = 0; i_row < row_size; ++i_row) {
@@ -285,17 +286,18 @@ TEST_CASE("reference_derivative")
       }
     }
   }
-  // construct an arbitrary triquadratic polynomial
+  // write an arbitrary triquadratic polynomial to the mass
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
     double* node = nodes[i_qpoint];
-    read[i_qpoint] = 2.*node[0]*node[0] - 3.*node[0]*node[1]*node[1] + 1.*node[0]*node[1]*node[2];
+    element.stage(0)[3*n_qpoint + i_qpoint] = 2.*node[0]*node[0] - 3.*node[0]*node[1]*node[1] + 1.*node[0]*node[1]*node[2];
   }
-  cartdg::reference_derivative<3, n_qpoint, row_size>(read, write, diff_mat);
+  cartdg::Kernel_settings settings;
+  cartdg::get_local_gradient(3, row_size)(elements, 3, basis, settings);
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
     double* node = nodes[i_qpoint];
     // check that derivatives match analytic
-    REQUIRE(write[0*n_qpoint + i_qpoint] == Approx(4.*node[0] - 3.*node[1]*node[1] + 1.*node[1]*node[2]));
-    REQUIRE(write[1*n_qpoint + i_qpoint] == Approx(-6.*node[0]*node[1] + 1.*node[0]*node[2]));
-    REQUIRE(write[2*n_qpoint + i_qpoint] == Approx(1.*node[0]*node[1]));
+    REQUIRE(element.stage(1)[0*n_qpoint + i_qpoint] == Approx(4.*node[0] - 3.*node[1]*node[1] + 1.*node[1]*node[2]));
+    REQUIRE(element.stage(1)[1*n_qpoint + i_qpoint] == Approx(-6.*node[0]*node[1] + 1.*node[0]*node[2]));
+    REQUIRE(element.stage(1)[2*n_qpoint + i_qpoint] == Approx(1.*node[0]*node[1]));
   }
 }
