@@ -317,7 +317,7 @@ TEST_CASE("local_gradient")
       for (int is_positive = 0; is_positive < 2; ++is_positive) {
         for (int i_face_qpoint = 0; i_face_qpoint < n_qpoint/row_size; ++i_face_qpoint) {
           int index = ((i_dim*2 + is_positive)*5 + 4)*n_qpoint/row_size + i_face_qpoint;
-          element.face()[index] = 0.3*(1 - 2*is_positive);
+          element.face()[index] = 0.3*(2*is_positive - 1);
         }
       }
     }
@@ -326,7 +326,7 @@ TEST_CASE("local_gradient")
     double integral [3] {};
     for (int i_row = 0; i_row < row_size; ++i_row) {
       for (int j_row = 0; j_row < row_size; ++j_row) {
-        for (int k_row = 0; i_row < row_size; ++i_row) {
+        for (int k_row = 0; k_row < row_size; ++k_row) {
           int i_qpoint = (i_row*row_size + j_row)*row_size + k_row;
           int row [3] {i_row, j_row, k_row};
           double weight = 1.;
@@ -335,6 +335,6 @@ TEST_CASE("local_gradient")
         }
       }
     }
-    for (int i_dim = 0; i_dim < 3; ++i_dim) REQUIRE(integral[i_dim] == Approx(2*0.3));
+    for (int i_dim = 0; i_dim < 3; ++i_dim) CHECK(integral[i_dim] == Approx(2*0.3));
   }
 }
