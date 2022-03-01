@@ -6,6 +6,7 @@
 #include <get_gbc_convective.hpp>
 #include <get_gbc_deformed_convective.hpp>
 #include <get_gbc_gradient.hpp>
+#include <get_gbc_av.hpp>
 
 class Supersonic_inlet : public cartdg::Ghost_boundary_condition
 {
@@ -119,5 +120,28 @@ TEST_CASE("gbc gradient")
     REQUIRE(element.face()[(2*5 + 0)*nfq + i_qpoint] == Approx(0.).scale(1.));
     REQUIRE(element.face()[(2*5 + 1)*nfq + i_qpoint] == Approx(0.7));
     REQUIRE(element.face()[(2*5 + 2)*nfq + i_qpoint] == Approx(0.).scale(1.));
+  }
+}
+
+TEST_CASE("gbc av")
+{
+  const int row_size = cartdg::config::max_row_size;
+  const int nfq = row_size*row_size;
+  cartdg::Kernel_settings settings;
+  cartdg::Gauss_legendre basis {row_size};
+  cartdg::Storage_params params {3, 5, 3, row_size};
+  cartdg::Element element {params};
+  Supersonic_inlet inlet {params, 1, 0};
+  cartdg::Element_gbc gbc {element, inlet};
+  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+    element.face()[(2*5 + 0)*nfq + i_qpoint] = 0.;
+    element.face()[(2*5 + 1)*nfq + i_qpoint] = 0.7;
+    element.face()[(2*5 + 2)*nfq + i_qpoint] = 0.;
+    element.face()[(2*5 + 4)*nfq + i_qpoint] = 0.2; // set to something wrong just to make sure it gets overwritten
+  }
+  // should just copy variable 4 into variable 1
+  cartdg::get_gbc_av(3, row_size)({gbc}, 4, basis, settings);
+  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+    REQUIRE(element.face()[(2*5 + 4)*nfq + i_qpoint] == Approx(0.).scale(1.));
   }
 }
