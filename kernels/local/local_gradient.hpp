@@ -8,6 +8,11 @@
 namespace cartdg
 {
 
+/*
+ * Compute the gradient of state variable `i_var` (in stage `i_read`) and write it to stage `i_write`.
+ * The `n_dim` components of the gradient are written to the first `n_dim` variables of the write storage.
+ * The parameter `settings.d_t_by_d_pos` is interpreted as the reciprocal of the mesh spacing.
+ */
 // AUTOGENERATE LOOKUP
 template<int n_var, int n_qpoint, int row_size>
 void local_gradient(elem_vec& elements, int i_var, Basis& basis, Kernel_settings& settings)

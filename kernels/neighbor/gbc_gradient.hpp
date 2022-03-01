@@ -10,6 +10,7 @@
 namespace cartdg
 {
 
+// does essentially the same thing as `neighbor_gradient`, except there is no need to take an average
 // AUTOGENERATE LOOKUP
 template<int n_var, int n_qpoint, int row_size>
 void gbc_gradient(std::vector<Element_gbc> elem_gbcs, int i_var, Basis& basis, Kernel_settings& settings)

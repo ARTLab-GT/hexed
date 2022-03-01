@@ -10,6 +10,12 @@
 namespace cartdg
 {
 
+/*
+ * Computes shared numerical "flux" for LDG gradient calculation. Computes the average variable `i_var` from the
+ * left and right states and writes it to the `i_dim`th variable (for face `i_dim`) of the face storage. Writes 0 to the rest of the
+ * first `n_dim` variables of face storage. This can be interpreted as writing the flux of the `j_dim`th gradient
+ * component to the `j_dim`th variable (of the `i_dim`th face).
+ */
 // AUTOGENERATE LOOKUP
 template<int n_var, int n_qpoint, int row_size>
 void neighbor_gradient(elem_con_vec& connections, int i_var, Kernel_settings& settings)
@@ -18,7 +24,7 @@ void neighbor_gradient(elem_con_vec& connections, int i_var, Kernel_settings& se
   const int n_face_qpoint = n_qpoint/row_size;
   for (int i_dim = 0; i_dim < n_dim; ++i_dim)
   {
-    //#pragma omp parallel for
+    #pragma omp parallel for
     for (unsigned i_con = 0; i_con < connections[i_dim].size(); ++i_con)
     {
       elem_con con = connections[i_dim][i_con];
