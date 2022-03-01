@@ -43,7 +43,7 @@ void local_gradient(elem_vec& elements, int i_var, Basis& basis, Kernel_settings
             row_r(i_qpoint) = read[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
           }
           // get neighbor correction
-          const int face_offset = i_var*n_qpoint/row_size + i_face_qpoint;
+          const int face_offset = i_dim*n_qpoint/row_size + i_face_qpoint;
           Eigen::Matrix<double, 2, 1> boundary_values {face0[face_offset], face1[face_offset]};
           // compute derivative
           Eigen::Matrix<double, row_size, 1> row_w = diff_mat*row_r - lift*(boundary_values - boundary*row_r);

@@ -293,9 +293,22 @@ TEST_CASE("local_gradient")
     element.stage(0)[4*n_qpoint + i_qpoint] = 2.*node[0]*node[0] - 3.*node[0]*node[1]*node[1] + 1.*node[0]*node[1]*node[2];
   }
   cartdg::Kernel_settings settings;
-  cartdg::get_write_face_scalar(3, row_size)(elements, 4, basis, settings);
   SECTION("local component")
   {
+    // reconstruct face values as they would be by the neighbor kernel
+    cartdg::get_write_face_scalar(3, row_size)(elements, 4, basis, settings);
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+      for (int is_positive = 0; is_positive < 2; ++is_positive) {
+        for (int i_face_qpoint = 0; i_face_qpoint < n_qpoint/row_size; ++i_face_qpoint) {
+          int offset = (i_dim*2 + is_positive)*5*n_qpoint/row_size + i_face_qpoint;
+          for (int j_dim = 0; j_dim < 3; ++j_dim) {
+            element.face()[offset + i_dim*n_qpoint/row_size] = 0.;
+          }
+          element.face()[offset + i_dim*n_qpoint/row_size] = element.face()[offset + 4*n_qpoint/row_size];
+          element.face()[offset + 4*n_qpoint/row_size] = 0.;
+        }
+      }
+    }
     cartdg::get_local_gradient(3, row_size)(elements, 4, basis, settings);
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
       double* node = nodes[i_qpoint];
@@ -316,8 +329,11 @@ TEST_CASE("local_gradient")
     for (int i_dim = 0; i_dim < 3; ++i_dim) {
       for (int is_positive = 0; is_positive < 2; ++is_positive) {
         for (int i_face_qpoint = 0; i_face_qpoint < n_qpoint/row_size; ++i_face_qpoint) {
-          int index = ((i_dim*2 + is_positive)*5 + 4)*n_qpoint/row_size + i_face_qpoint;
-          element.face()[index] = 0.3*(2*is_positive - 1);
+          int offset = (i_dim*2 + is_positive)*5*n_qpoint/row_size + i_face_qpoint;
+          for (int j_dim = 0; j_dim < 3; ++j_dim) {
+            element.face()[offset + i_dim*n_qpoint/row_size] = 0.;
+          }
+          element.face()[offset + i_dim*n_qpoint/row_size] = 0.3*(2*is_positive - 1);
         }
       }
     }
