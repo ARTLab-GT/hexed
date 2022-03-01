@@ -22,6 +22,7 @@ void local_gradient(elem_vec& elements, int i_var, Basis& basis, Kernel_settings
   // fetch kernel parameters
   const int i_read = settings.i_read;
   const int i_write = settings.i_write;
+  const double by_d_pos = settings.d_t_by_d_pos;
   // compute
   #pragma omp parallel for
   for (unsigned i_elem = 0; i_elem < elements.size(); ++i_elem)
@@ -49,7 +50,7 @@ void local_gradient(elem_vec& elements, int i_var, Basis& basis, Kernel_settings
           Eigen::Matrix<double, row_size, 1> row_w = diff_mat*row_r - lift*(boundary_values - boundary*row_r);
           // write row of data
           for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-            write[i_dim*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride] = row_w(i_qpoint);
+            write[i_dim*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride] = row_w(i_qpoint)*by_d_pos;
           }
           ++i_face_qpoint;
         }

@@ -293,6 +293,7 @@ TEST_CASE("local_gradient")
     element.stage(0)[4*n_qpoint + i_qpoint] = 2.*node[0]*node[0] - 3.*node[0]*node[1]*node[1] + 1.*node[0]*node[1]*node[2];
   }
   cartdg::Kernel_settings settings;
+  settings.d_t_by_d_pos = 3.4;
   SECTION("local component")
   {
     // reconstruct face values as they would be by the neighbor kernel
@@ -313,9 +314,9 @@ TEST_CASE("local_gradient")
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
       double* node = nodes[i_qpoint];
       // check that derivatives match analytic
-      REQUIRE(element.stage(1)[0*n_qpoint + i_qpoint] == Approx(4.*node[0] - 3.*node[1]*node[1] + 1.*node[1]*node[2]));
-      REQUIRE(element.stage(1)[1*n_qpoint + i_qpoint] == Approx(-6.*node[0]*node[1] + 1.*node[0]*node[2]));
-      REQUIRE(element.stage(1)[2*n_qpoint + i_qpoint] == Approx(1.*node[0]*node[1]));
+      REQUIRE(element.stage(1)[0*n_qpoint + i_qpoint] == Approx(3.4*(4.*node[0] - 3.*node[1]*node[1] + 1.*node[1]*node[2])));
+      REQUIRE(element.stage(1)[1*n_qpoint + i_qpoint] == Approx(3.4*(-6.*node[0]*node[1] + 1.*node[0]*node[2])));
+      REQUIRE(element.stage(1)[2*n_qpoint + i_qpoint] == Approx(3.4*(1.*node[0]*node[1])));
     }
   }
   SECTION("variational crimes")
@@ -351,6 +352,6 @@ TEST_CASE("local_gradient")
         }
       }
     }
-    for (int i_dim = 0; i_dim < 3; ++i_dim) REQUIRE(integral[i_dim] == Approx(2*0.3));
+    for (int i_dim = 0; i_dim < 3; ++i_dim) REQUIRE(integral[i_dim] == Approx(2*0.3*3.4));
   }
 }
