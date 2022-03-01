@@ -7,6 +7,7 @@
 #include <get_prolong.hpp>
 #include <get_restrict.hpp>
 #include <get_neighbor_gradient.hpp>
+#include <get_neighbor_av.hpp>
 #include <Storage_params.hpp>
 #include <Gauss_lobatto.hpp>
 #include <Gauss_legendre.hpp>
@@ -276,6 +277,36 @@ TEST_CASE("neighbor_gradient")
           REQUIRE(faces[2*i_dim + i_side][j_dim][i_qpoint] == Approx(correct).scale(1.));
         }
       }
+    }
+  }
+}
+
+TEST_CASE("neighbor_av")
+{
+  cartdg::Kernel_settings settings;
+  const int row_size = cartdg::config::max_row_size;
+  const int nfq = row_size*row_size;
+  double faces [6][5][nfq] {};
+  cartdg::elem_con_vec cons;
+  for (int i_con = 0; i_con < 3; ++i_con) {
+    std::vector<std::array<double*, 2>> dim_cons;
+    dim_cons.push_back({faces[2*i_con][0], faces[2*i_con + 1][0]});
+    cons.push_back(dim_cons);
+  }
+  for (int i_dim = 0; i_dim < 3; ++i_dim) {
+    for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+      for (int i_side : {0, 1}) {
+        for (int j_dim = 0; j_dim < 3; ++j_dim) {
+          faces[2*i_dim + i_side][j_dim][i_qpoint] = 0.;
+        }
+        faces[2*i_dim + i_side][i_dim][i_qpoint] = 0.4 + 0.01*i_side;
+      }
+    }
+  }
+  cartdg::get_neighbor_av(3, row_size)(cons, 1, settings);
+  for (int i_face = 0; i_face < 6; ++i_face) {
+    for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+      REQUIRE(faces[i_face][1][i_qpoint] == Approx(0.4 + 0.005));
     }
   }
 }
