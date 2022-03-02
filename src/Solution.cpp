@@ -233,13 +233,13 @@ double Solution::update(double cfl_by_stable_cfl)
   }
   #if 1
   for (int i = 0; i < 10; ++i) {
-  share_vertex_data(&Element::viscosity);
   for (int i_var = 0; i_var < n_var; ++i_var)
   {
     for (Grid* grid : all_grids()) {
       kernel_settings.d_pos = grid->mesh_size;
       grid->execute_req_visc(kernel_settings);
     }
+    share_vertex_data(&Element::viscosity);
     for (Grid* grid : all_grids()) {
       kernel_settings.d_t_by_d_pos = 1./grid->mesh_size; // for gradient `d_t_by_d_pos` is interpeted as mesh spacing
       grid->execute_write_face_gradient(i_var, kernel_settings);
