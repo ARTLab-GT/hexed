@@ -53,10 +53,11 @@ TEST_CASE("2D cartesian shock capturing")
   sol.visualize_field<cartdg::Viscosity_func>("visc_coef");
   sol.visualize_field("shock_capturing_after");
   for (int i_var = 0; i_var < grid.n_var; ++i_var) {
+    printf("%e\n", normsq_after[i_var] - normsq_before[i_var]);
     // assert l2 stability, which artificial viscosity should (heuristically) enforce
-    REQUIRE((normsq_after[i_var] - normsq_before[i_var])/dt < 0.);
+    CHECK((normsq_after[i_var] - normsq_before[i_var])/dt < 0.);
     // assert discrete conservation
-    REQUIRE((total_after[i_var] - total_before[i_var])/dt == Approx{0.}.scale(std::abs(total_before[i_var]) + 1.));
+    CHECK((total_after[i_var] - total_before[i_var])/dt == Approx{0.}.scale(std::abs(total_before[i_var]) + 1.));
   }
 }
 

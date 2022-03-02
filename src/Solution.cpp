@@ -232,12 +232,12 @@ double Solution::update(double cfl_by_stable_cfl)
     }
   }
   #if 1
+  for (int i = 0; i < 100; ++i) {
   for (Grid* grid : all_grids()) {
     kernel_settings.d_pos = grid->mesh_size;
     grid->execute_req_visc(kernel_settings);
   }
   share_vertex_data(&Element::viscosity);
-  for (int i = 0; i < 1; ++i) {
   for (int i_var = 0; i_var < n_var; ++i_var)
   {
     for (Grid* grid : all_grids()) {

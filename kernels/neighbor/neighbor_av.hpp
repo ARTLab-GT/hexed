@@ -7,8 +7,6 @@
 #include <Basis.hpp>
 #include <Element.hpp>
 
-#include <iostream>
-
 namespace cartdg
 {
 
@@ -34,10 +32,8 @@ void neighbor_av(elem_con_vec& connections, int i_var, Kernel_settings& settings
       for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
         double sum = 0.;
         for (int i_side : {0, 1}) sum += con[i_side][i_dim*n_face_qpoint + i_qpoint];
-        if (i_dim == 1) std::cout << sum << " ";
         for (int i_side : {0, 1}) con[i_side][i_var*n_face_qpoint + i_qpoint] = sum/2.;
       }
-      std::cout << "\n";
     }
   }
 }
