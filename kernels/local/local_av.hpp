@@ -62,7 +62,7 @@ void local_av(elem_vec& elements, int i_var, Basis& basis, Kernel_settings& sett
             flux(i_qpoint) = read[i_dim*n_qpoint + i_linear]*row_v(i_qpoint);
           }
           // get neighbor correction
-          const int face_offset = i_dim*n_qpoint/row_size + i_face_qpoint;
+          const int face_offset = i_var*n_qpoint/row_size + i_face_qpoint;
           Eigen::Matrix<double, 2, 1> boundary_values {face0[face_offset], face1[face_offset]};
           boundary_values = boundary_values.cwiseProduct(boundary*row_v);
           // compute derivative
