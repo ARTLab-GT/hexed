@@ -67,7 +67,7 @@ template<typename elem_vec_t, int n_var, int n_qpoint, int row_size>
 void write_face_general_n_dim(elem_vec_t& elements, Basis& basis, Kernel_settings& settings)
 {
   const Eigen::Matrix<double, 2, row_size> boundary {basis.boundary()};
-  const int i_read {settings.i_read};
+  const int i_read {settings.i_write}; // reading from the gradient in stage `i_write`!
   #pragma omp parallel for
   for (unsigned i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* read  = elements[i_elem]->stage(i_read);
