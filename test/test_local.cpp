@@ -365,6 +365,7 @@ TEST_CASE("artificial viscosity")
     double direction [3] {2., -0.3, 0.01};
     SECTION("nonuniform gradient")
     {
+      for (int i_vert = 0; i_vert < 8; ++i_vert) element.viscosity()[i_vert] = 1.;
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
         double* node = nodes[i_qpoint];
         for (int i_dim = 0; i_dim < 3; ++i_dim) {
@@ -383,7 +384,6 @@ TEST_CASE("artificial viscosity")
           }
         }
       }
-      element.viscosity()[7] = 1.;
       cartdg::Kernel_settings settings;
       settings.d_t_by_d_pos = 3.4;
       cartdg::get_local_av(3, row_size)(elements, 4, basis, settings);
