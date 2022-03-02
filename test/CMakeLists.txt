@@ -20,6 +20,7 @@ test_observing.cpp
 test_Physical_basis.cpp
 test_Refined_face.cpp
 test_Regular_grid.cpp
+test_shock_capturing.cpp
 test_sinusoid.cpp
 test_Solution.cpp
 test_Storage_params.cpp
