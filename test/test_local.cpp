@@ -380,7 +380,8 @@ TEST_CASE("artificial viscosity")
         for (int is_positive = 0; is_positive < 2; ++is_positive) {
           for (int i_face_qpoint = 0; i_face_qpoint < n_qpoint/row_size; ++i_face_qpoint) {
             int offset = (i_dim*2 + is_positive)*5*n_qpoint/row_size + i_face_qpoint;
-            element.face()[offset + 4*n_qpoint/row_size] = is_positive*direction[i_dim];
+            for (int j_dim = 0; j_dim < 3; ++j_dim) element.face()[offset + j_dim*n_qpoint/row_size] = 0.;
+            element.face()[offset + i_dim*n_qpoint/row_size] = is_positive*direction[i_dim];
           }
         }
       }
@@ -407,7 +408,8 @@ TEST_CASE("artificial viscosity")
         for (int is_positive = 0; is_positive < 2; ++is_positive) {
           for (int i_face_qpoint = 0; i_face_qpoint < n_qpoint/row_size; ++i_face_qpoint) {
             int offset = (i_dim*2 + is_positive)*5*n_qpoint/row_size + i_face_qpoint;
-            element.face()[offset + 4*n_qpoint/row_size] = direction[i_dim];
+            for (int j_dim = 0; j_dim < 3; ++j_dim) element.face()[offset + j_dim*n_qpoint/row_size] = 0.;
+            element.face()[offset + i_dim*n_qpoint/row_size] = direction[i_dim];
           }
         }
       }
