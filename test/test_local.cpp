@@ -364,12 +364,14 @@ TEST_CASE("artificial viscosity")
   {
     double direction [3] {2., -0.3, 0.01};
     double visc_coef [n_qpoint];
-    // write an arbitrary linear polynomial to the gradient
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
       double* node = nodes[i_qpoint];
       visc_coef[i_qpoint] = 1.;
       for (int i_dim = 0; i_dim < 3; ++i_dim) {
+        // write an arbitrary linear polynomial to the gradient
         element.stage(1)[i_dim*n_qpoint + i_qpoint] = direction[i_dim]*node[i_dim];
+        // write something to the output. the av kernel should increment this
+        element.stage(0)[i_dim*n_qpoint + i_qpoint] = 0.4;
         visc_coef[i_qpoint] *= node[i_dim]; // compute correct viscosity coefficient
       }
     }
@@ -387,7 +389,7 @@ TEST_CASE("artificial viscosity")
     settings.d_t_by_d_pos = 3.4;
     cartdg::get_local_av(3, row_size)(elements, 4, basis, settings);
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-      REQUIRE(element.stage(0)[4] == Approx(3.4*(2. - 0.3 + 0.01)*visc_coef[i_qpoint]));
+      REQUIRE(element.stage(0)[4*n_qpoint + i_qpoint] == Approx(0.4 + 3.4*(2. - 0.3 + 0.01)*visc_coef[i_qpoint]));
     }
   }
 }
