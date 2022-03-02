@@ -46,14 +46,14 @@ TEST_CASE("2D cartesian shock capturing")
   cartdg::Diff_sq statesq {sv, cf};
   auto total_before {sol.integral()};
   auto normsq_before {sol.integral(statesq)};
-  double dt = sol.update(0.01); // small time step to make sure we don't get NaN even if shock capturing fails
+  double dt = sol.update(0.1); // small time step to keep things sane if shock capturing fails
   auto total_after {sol.integral()};
   auto normsq_after {sol.integral(statesq)};
+  sol.visualize_field("shock_capturing_after");
   for (int i_var = 0; i_var < grid.n_var; ++i_var) {
     // assert l2 stability, which artificial viscosity should (heuristically) enforce
     REQUIRE((normsq_after[i_var] - normsq_before[i_var])/dt < 0.);
     //REQUIRE((after[i_var] - before[i_var])/dt == Approx{0.}.scale(std::abs(before[i_var]) + 1.));
   }
-  sol.visualize_field("shock_capturing_after");
 }
 
