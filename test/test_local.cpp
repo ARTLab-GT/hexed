@@ -363,33 +363,71 @@ TEST_CASE("artificial viscosity")
   SECTION("local_av")
   {
     double direction [3] {2., -0.3, 0.01};
-    double visc_coef [n_qpoint];
-    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-      double* node = nodes[i_qpoint];
-      visc_coef[i_qpoint] = 1.;
-      for (int i_dim = 0; i_dim < 3; ++i_dim) {
-        // write an arbitrary linear polynomial to the gradient
-        element.stage(1)[i_dim*n_qpoint + i_qpoint] = direction[i_dim]*node[i_dim];
-        // write something to the output. the av kernel should increment this
-        element.stage(0)[i_dim*n_qpoint + i_qpoint] = 0.4;
-        visc_coef[i_qpoint] *= node[i_dim]; // compute correct viscosity coefficient
-      }
-    }
-    // reconstruct face gradient data
-    for (int i_dim = 0; i_dim < 3; ++i_dim) {
-      for (int is_positive = 0; is_positive < 2; ++is_positive) {
-        for (int i_face_qpoint = 0; i_face_qpoint < n_qpoint/row_size; ++i_face_qpoint) {
-          int offset = (i_dim*2 + is_positive)*5*n_qpoint/row_size + i_face_qpoint;
-          element.face()[offset + 4*n_qpoint/row_size] = direction[i_dim];
+    SECTION("nonuniform gradient")
+    {
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        double* node = nodes[i_qpoint];
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+          // write an arbitrary linear polynomial to the gradient
+          element.stage(1)[i_dim*n_qpoint + i_qpoint] = direction[i_dim]*node[i_dim];
+          // write something to the output. the av kernel should increment this
+          element.stage(0)[4*n_qpoint + i_qpoint] = 0.4;
         }
       }
+      // reconstruct face gradient data
+      for (int i_dim = 0; i_dim < 3; ++i_dim) {
+        for (int is_positive = 0; is_positive < 2; ++is_positive) {
+          for (int i_face_qpoint = 0; i_face_qpoint < n_qpoint/row_size; ++i_face_qpoint) {
+            int offset = (i_dim*2 + is_positive)*5*n_qpoint/row_size + i_face_qpoint;
+            element.face()[offset + 4*n_qpoint/row_size] = is_positive*direction[i_dim];
+          }
+        }
+      }
+      element.viscosity()[7] = 1.;
+      cartdg::Kernel_settings settings;
+      settings.d_t_by_d_pos = 3.4;
+      cartdg::get_local_av(3, row_size)(elements, 4, basis, settings);
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        REQUIRE(element.stage(0)[4*n_qpoint + i_qpoint] == Approx(0.4 + 3.4*(2. - 0.3 + 0.01)));
+      }
     }
-    element.viscosity()[7] = 1.;
-    cartdg::Kernel_settings settings;
-    settings.d_t_by_d_pos = 3.4;
-    cartdg::get_local_av(3, row_size)(elements, 4, basis, settings);
-    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-      REQUIRE(element.stage(0)[4*n_qpoint + i_qpoint] == Approx(0.4 + 3.4*(2. - 0.3 + 0.01)*visc_coef[i_qpoint]));
+    SECTION("nonuniform viscosity coefficient")
+    {
+      element.viscosity()[7] = 1.; // set nonumiform viscosity (initalized to zero at all vertices)
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+          // write an constant to the gradient
+          element.stage(1)[i_dim*n_qpoint + i_qpoint] = direction[i_dim];
+          // write something to the output. the av kernel should increment this
+          element.stage(0)[4*n_qpoint + i_qpoint] = 0.4;
+        }
+      }
+      // reconstruct face gradient data
+      for (int i_dim = 0; i_dim < 3; ++i_dim) {
+        for (int is_positive = 0; is_positive < 2; ++is_positive) {
+          for (int i_face_qpoint = 0; i_face_qpoint < n_qpoint/row_size; ++i_face_qpoint) {
+            int offset = (i_dim*2 + is_positive)*5*n_qpoint/row_size + i_face_qpoint;
+            element.face()[offset + 4*n_qpoint/row_size] = direction[i_dim];
+          }
+        }
+      }
+      cartdg::Kernel_settings settings;
+      settings.d_t_by_d_pos = 3.4;
+      cartdg::get_local_av(3, row_size)(elements, 4, basis, settings);
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        double* node = nodes[i_qpoint];
+        double visc_coef = 1.;
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+          // since we set viscosity at vertex 7 to 1, `\mu = \prod_{i = 1}^{n_{dim}} x_i`
+          visc_coef *= node[i_dim];
+        }
+        double divergence = 0.;
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+          // the correct viscosity gradient is `\frac{\partial \mu}{\partial x_i} = \prod_{j = 1; j \ne i}^{n_{dim}} \x_j = `\frac{\mu}{x_i}`
+          divergence += direction[i_dim]*visc_coef/node[i_dim];
+        }
+        REQUIRE(element.stage(0)[4*n_qpoint + i_qpoint] == Approx(0.4 + 3.4*divergence));
+      }
     }
   }
 }

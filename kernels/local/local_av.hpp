@@ -47,8 +47,7 @@ void local_av(elem_vec& elements, int i_var, Basis& basis, Kernel_settings& sett
           // Fetch this row of data
           Eigen::Matrix<double, row_size, 1> flux;
           for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-            int i_linear = i_outer*stride*row_size + i_inner + i_qpoint*stride;
-            flux(i_qpoint) = read[i_dim*n_qpoint + i_linear]*visc(i_linear);
+            flux(i_qpoint) = read[i_dim*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];//*visc(i_linear);
           }
           // compute derivative
           Eigen::Matrix<double, row_size, 1> row_w = diff_mat*flux;
