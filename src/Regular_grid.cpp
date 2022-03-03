@@ -8,9 +8,11 @@
 #include <get_gbc_convective.hpp>
 #include <get_req_visc_regular_convective.hpp>
 #include <get_write_face_scalar.hpp>
+#include <get_gbc_gradient.hpp>
 #include <get_neighbor_gradient.hpp>
 #include <get_local_gradient.hpp>
 #include <get_write_face_n_dim.hpp>
+#include <get_gbc_av.hpp>
 #include <get_neighbor_av.hpp>
 #include <get_local_av.hpp>
 #include <math.hpp>
@@ -101,6 +103,7 @@ void Regular_grid::execute_neighbor_gradient(int i_var, Kernel_settings& setting
 {
   settings.i_read = i_read;
   settings.i_write = i_write;
+  get_gbc_gradient(n_dim, basis.row_size)(element_gbcs, i_var, basis, settings);
   get_neighbor_gradient(n_dim, basis.row_size)(elem_cons, i_var, settings);
 }
 
@@ -122,6 +125,7 @@ void Regular_grid::execute_neighbor_av(int i_var, Kernel_settings& settings)
 {
   settings.i_read = i_read;
   settings.i_write = i_write;
+  get_gbc_av(n_dim, basis.row_size)(element_gbcs, i_var, basis, settings);
   get_neighbor_av(n_dim, basis.row_size)(elem_cons, i_var, settings);
 }
 
