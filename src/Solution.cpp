@@ -232,53 +232,47 @@ double Solution::update(double cfl_by_stable_cfl)
     }
   }
   for (int i = 0; i < 100; ++i) {
-  for (Grid* grid : all_grids()) {
-    kernel_settings.d_pos = grid->mesh_size;
-    grid->execute_req_visc(kernel_settings);
-  }
-  share_vertex_data(&Element::viscosity);
-  for (int i_var = 0; i_var < n_var; ++i_var)
-  {
     for (Grid* grid : all_grids()) {
-      kernel_settings.d_t_by_d_pos = 1./grid->mesh_size; // for gradient `d_t_by_d_pos` is interpeted as mesh spacing
-      grid->execute_write_face_gradient(i_var, kernel_settings);
+      kernel_settings.d_pos = grid->mesh_size;
+      grid->execute_req_visc(kernel_settings);
     }
-    for (Grid* grid : all_grids()) {
-      kernel_settings.d_t_by_d_pos = 1./grid->mesh_size;
-      grid->execute_neighbor_gradient(i_var, kernel_settings);
-    }
-    for (Grid* grid : all_grids()) {
-      kernel_settings.d_t_by_d_pos = 1./grid->mesh_size;
-      grid->execute_local_gradient(i_var, kernel_settings);
-    }
-    for (Grid* grid : all_grids()) {
-      kernel_settings.d_t_by_d_pos = 0.1*dt/grid->mesh_size;
-      grid->execute_write_face_av(i_var, kernel_settings);
-    }
-    for (Grid* grid : all_grids()) {
-      kernel_settings.d_t_by_d_pos = 0.1*dt/grid->mesh_size;
-      grid->execute_neighbor_av(i_var, kernel_settings);
-    }
-    for (Grid* grid : all_grids()) {
-      kernel_settings.d_t_by_d_pos = 0.1*dt/grid->mesh_size;
-      grid->execute_local_av(i_var, kernel_settings);
-    }
-  }
-  for (Deformed_grid& grid : def_grids) {
-    grid.project_degenerate(kernel_settings.i_read);
-  }
-  }
-  #if 0
-  for (Grid* grid : all_grids()) {
-    for (int i_elem = 0; i_elem < grid->n_elem; ++i_elem) {
-      double* stage_read  = grid->element(i_elem).stage(kernel_settings.i_read);
-      double* stage_write = grid->element(i_elem).stage(kernel_settings.i_write);
-      for (int i_dof = 0; i_dof < grid->n_var*grid->n_qpoint; ++i_dof) {
-        stage_write[i_dof] = stage_read[i_dof];
+    share_vertex_data(&Element::viscosity);
+    for (int i_var = 0; i_var < n_var; ++i_var)
+    {
+      double min_size = std::numeric_limits<double>::max();
+      for (Grid* grid : all_grids()) {
+        min_size = std::min<double>(min_size, grid->mesh_size);
+      }
+      min_size *= 0.01*cfl_by_stable_cfl;
+      for (Grid* grid : all_grids()) {
+        kernel_settings.d_t_by_d_pos = min_size/grid->mesh_size;
+        grid->execute_write_face_gradient(i_var, kernel_settings);
+      }
+      for (Grid* grid : all_grids()) {
+        kernel_settings.d_t_by_d_pos = min_size/grid->mesh_size;
+        grid->execute_neighbor_gradient(i_var, kernel_settings);
+      }
+      for (Grid* grid : all_grids()) {
+        kernel_settings.d_t_by_d_pos = min_size/grid->mesh_size;
+        grid->execute_local_gradient(i_var, kernel_settings);
+      }
+      for (Grid* grid : all_grids()) {
+        kernel_settings.d_t_by_d_pos = min_size/grid->mesh_size;
+        grid->execute_write_face_av(i_var, kernel_settings);
+      }
+      for (Grid* grid : all_grids()) {
+        kernel_settings.d_t_by_d_pos = min_size/grid->mesh_size;
+        grid->execute_neighbor_av(i_var, kernel_settings);
+      }
+      for (Grid* grid : all_grids()) {
+        kernel_settings.d_t_by_d_pos = min_size/grid->mesh_size;
+        grid->execute_local_av(i_var, kernel_settings);
       }
     }
+    for (Deformed_grid& grid : def_grids) {
+      grid.project_degenerate(kernel_settings.i_read);
+    }
   }
-  #endif
 
   time += dt;
   for (Grid* grid : all_grids())

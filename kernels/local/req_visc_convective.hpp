@@ -8,7 +8,6 @@
 #include <Kernel_settings.hpp>
 #include <Deformed_element.hpp>
 #include "../observing/indicator.hpp"
-#include "../observing/char_speed_convective.hpp"
 
 namespace cartdg
 {
@@ -18,8 +17,6 @@ void req_visc_convective(std::vector<std::unique_ptr<E>>& elements, Basis& basis
 {
   const int n_dim = n_var - 2;
   constexpr int n_visc = custom_math::pow(2, n_dim);
-  const double heat_rat = settings.cpg_heat_rat;
-  const double d_pos = settings.d_pos;
   const int i_read = settings.i_read;
   double weights [row_size];
   double ortho [row_size];
@@ -37,12 +34,10 @@ void req_visc_convective(std::vector<std::unique_ptr<E>>& elements, Basis& basis
   {
     double* stage = elem->stage(i_read);
     double mass_indicator = indicator<n_qpoint, row_size>(stage + n_dim*n_qpoint, weights, ortho);
-    double char_speed = char_speed_convective<n_var, n_qpoint>(stage, heat_rat);
-    double req_visc = mass_indicator*char_speed*d_pos/(row_size - 1.);
     double* visc = elem->viscosity();
     for (int i_visc = 0; i_visc < n_visc; ++i_visc)
     {
-      visc[i_visc] = req_visc;
+      visc[i_visc] = mass_indicator;
     }
   }
 }

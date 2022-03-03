@@ -263,8 +263,8 @@ TEST_CASE("req_visc")
   cartdg::get_req_visc_regular_convective(3, row_size)(elements, basis, settings);
   REQUIRE(elements[0]->viscosity()[0] == 0.);
   REQUIRE(elements[0]->viscosity()[7] == 0.);
-  REQUIRE(elements[1]->viscosity()[0] == Approx(0.5*340.29/(row_size - 1.)).margin(0.01));
-  REQUIRE(elements[1]->viscosity()[7] == Approx(0.5*340.29/(row_size - 1.)).margin(0.01));
+  REQUIRE(elements[1]->viscosity()[0] == Approx(1.));
+  REQUIRE(elements[1]->viscosity()[7] == Approx(1.));
 }
 
 TEST_CASE("artificial viscosity")
