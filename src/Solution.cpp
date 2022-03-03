@@ -231,7 +231,6 @@ double Solution::update(double cfl_by_stable_cfl)
       grid->execute_runge_kutta_stage();
     }
   }
-  #if 1
   for (int i = 0; i < 100; ++i) {
   for (Grid* grid : all_grids()) {
     kernel_settings.d_pos = grid->mesh_size;
@@ -253,15 +252,15 @@ double Solution::update(double cfl_by_stable_cfl)
       grid->execute_local_gradient(i_var, kernel_settings);
     }
     for (Grid* grid : all_grids()) {
-      kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
+      kernel_settings.d_t_by_d_pos = 0.1*dt/grid->mesh_size;
       grid->execute_write_face_av(i_var, kernel_settings);
     }
     for (Grid* grid : all_grids()) {
-      kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
+      kernel_settings.d_t_by_d_pos = 0.1*dt/grid->mesh_size;
       grid->execute_neighbor_av(i_var, kernel_settings);
     }
     for (Grid* grid : all_grids()) {
-      kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
+      kernel_settings.d_t_by_d_pos = 0.1*dt/grid->mesh_size;
       grid->execute_local_av(i_var, kernel_settings);
     }
   }
@@ -269,7 +268,6 @@ double Solution::update(double cfl_by_stable_cfl)
     grid.project_degenerate(kernel_settings.i_read);
   }
   }
-  #endif
   #if 0
   for (Grid* grid : all_grids()) {
     for (int i_elem = 0; i_elem < grid->n_elem; ++i_elem) {
