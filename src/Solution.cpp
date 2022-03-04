@@ -231,8 +231,9 @@ double Solution::update(double cfl_by_stable_cfl)
       grid->execute_runge_kutta_stage();
     }
   }
-  double nonsmooth;
-  for (int i = 0; i < 100; ++i)
+  double nonsmooth = std::numeric_limits<double>::max();
+  int n_iters = 0;
+  while (nonsmooth > 3.)
   {
     nonsmooth = -std::numeric_limits<double>::max();
     for (Grid* grid : all_grids()) {
@@ -275,8 +276,9 @@ double Solution::update(double cfl_by_stable_cfl)
     for (Deformed_grid& grid : def_grids) {
       grid.project_degenerate(kernel_settings.i_read);
     }
+    ++n_iters;
   }
-  printf("%e\n", nonsmooth);
+  printf("%e %i\n", nonsmooth, n_iters);
 
   time += dt;
   for (Grid* grid : all_grids())
