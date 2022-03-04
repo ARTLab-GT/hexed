@@ -142,9 +142,9 @@ void Deformed_grid::execute_local(Kernel_settings& settings)
   get_local_deformed_convective(n_dim, basis.row_size)(elements, basis, settings);
 }
 
-void Deformed_grid::execute_req_visc(Kernel_settings& settings)
+double Deformed_grid::execute_req_visc(Kernel_settings& settings)
 {
-  get_req_visc_deformed_convective(n_dim, basis.row_size)(elements, basis, settings);
+  return get_req_visc_deformed_convective(n_dim, basis.row_size)(elements, basis, settings);
 }
 
 void Deformed_grid::execute_write_face_gradient(int i_var, Kernel_settings&)

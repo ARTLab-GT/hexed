@@ -231,10 +231,13 @@ double Solution::update(double cfl_by_stable_cfl)
       grid->execute_runge_kutta_stage();
     }
   }
-  for (int i = 0; i < 100; ++i) {
+  double nonsmooth;
+  for (int i = 0; i < 100; ++i)
+  {
+    nonsmooth = -std::numeric_limits<double>::max();
     for (Grid* grid : all_grids()) {
       kernel_settings.d_pos = grid->mesh_size;
-      grid->execute_req_visc(kernel_settings);
+      nonsmooth = std::max(nonsmooth, grid->execute_req_visc(kernel_settings));
     }
     share_vertex_data(&Element::viscosity);
     for (int i_var = 0; i_var < n_var; ++i_var)
@@ -273,6 +276,7 @@ double Solution::update(double cfl_by_stable_cfl)
       grid.project_degenerate(kernel_settings.i_read);
     }
   }
+  printf("%e\n", nonsmooth);
 
   time += dt;
   for (Grid* grid : all_grids())

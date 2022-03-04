@@ -45,7 +45,7 @@ class Deformed_grid : public Grid
   virtual void execute_write_face(Kernel_settings&);
   virtual void execute_neighbor(Kernel_settings&);
   virtual void execute_local(Kernel_settings&);
-  virtual void execute_req_visc(Kernel_settings&);
+  virtual double execute_req_visc(Kernel_settings&);
   virtual void execute_write_face_gradient(int i_var, Kernel_settings&);
   virtual void execute_neighbor_gradient(int i_var, Kernel_settings&);
   virtual void execute_local_gradient(int i_var, Kernel_settings&);

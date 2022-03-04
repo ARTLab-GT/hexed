@@ -85,11 +85,11 @@ void Regular_grid::execute_local(Kernel_settings& settings)
   get_local_convective(n_dim, basis.row_size)(elements, basis, settings);
 }
 
-void Regular_grid::execute_req_visc(Kernel_settings& settings)
+double Regular_grid::execute_req_visc(Kernel_settings& settings)
 {
   settings.i_read = i_read;
   settings.i_write = i_write;
-  get_req_visc_regular_convective(n_dim, basis.row_size)(elements, basis, settings);
+  return get_req_visc_regular_convective(n_dim, basis.row_size)(elements, basis, settings);
 }
 
 void Regular_grid::execute_write_face_gradient(int i_var, Kernel_settings& settings)
