@@ -36,3 +36,9 @@ for mat in [stage_mat, step_mat]:
     print(np.max(np.abs(np.real(eigvals))))
     plt.scatter(np.real(eigvals), np.imag(eigvals))
 plt.show()
+
+
+eigvals, eigvecs = np.linalg.eig(stage_mat)
+plt.plot(pos, np.real(eigvecs[:, np.argmin(np.real(eigvals))]))
+plt.plot(pos, np.real(eigvecs[:, np.argmax(np.real(eigvals))]))
+plt.show()
