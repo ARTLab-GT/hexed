@@ -211,26 +211,23 @@ double Solution::update(double stability_ratio)
     max_reference_speed = std::max(max_reference_speed, grid->max_reference_speed(kernel_settings));
   }
   double dt = basis.max_cfl()*stability_ratio/max_reference_speed;
-  for (int i_rk = 0; i_rk < 3; ++i_rk)
-  {
-    for (Grid* grid : all_grids()) {
-      kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
-      grid->execute_write_face(kernel_settings);
-    }
-    for (Grid* grid : all_grids()) {
-      kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
-      grid->execute_neighbor(kernel_settings);
-    }
-    for (Grid* grid : all_grids()) {
-      kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
-      grid->execute_local(kernel_settings);
-    }
-    for (Deformed_grid& grid : def_grids) {
-      grid.project_degenerate(kernel_settings.i_write);
-    }
-    for (Grid* grid : all_grids()) {
-      grid->execute_runge_kutta_stage();
-    }
+  for (Grid* grid : all_grids()) {
+    kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
+    grid->execute_write_face(kernel_settings);
+  }
+  for (Grid* grid : all_grids()) {
+    kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
+    grid->execute_neighbor(kernel_settings);
+  }
+  for (Grid* grid : all_grids()) {
+    kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
+    grid->execute_local(kernel_settings);
+  }
+  for (Deformed_grid& grid : def_grids) {
+    grid.project_degenerate(kernel_settings.i_write);
+  }
+  for (Grid* grid : all_grids()) {
+    grid->execute_runge_kutta_stage();
   }
   if (artificial_viscosity)
   {
