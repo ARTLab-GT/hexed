@@ -3,13 +3,59 @@
 
 #include <algorithm>
 #include <cmath>
+#include <Eigen/Dense>
 
 namespace cartdg
 {
 
 template<int n_dim, int n_face_qpoint>
-void roe(double* state_r, double* d_flux_w, double mult, int i_dim, double sp_heat_rat)
+void roe(double* state_r, double* d_flux_w, double mult, int i_dim, double heat_rat)
 {
+  const int n_var = n_dim + 2;
+  typedef Eigen::Matrix<double, n_var, n_var> matrix_sq;
+  typedef Eigen::Matrix<double, n_var, 2> matrix_2;
+  typedef Eigen::Matrix<double, n_var, 1> vector;
+  for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint)
+  {
+    // fetch state
+    matrix_2 state;
+    for (int i_side : {0, 1}) {
+      for (int i_var = 0; i_var < n_var; ++i_var) {
+        state(i_var, i_side) = state_r[i_var*n_face_qpoint + i_qpoint];
+      }
+    }
+    // compute derived quantities
+    vector num_state = 0.5*(state.col(0) + state.col(1));
+    double pres = num_state(n_dim+1);
+    for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+      pres -= num_state(j_dim)*num_state(j_dim)/(2.*state(n_dim));
+    }
+    pres *= (heat_rat - 1.);
+    double sound_speed = std::sqrt(heat_rat*pres/num_state(n_dim));
+
+    // compute eigenvectors
+    matrix_sq eigvecs = matrix_sq::Zero();
+    // convective
+    eigvecs(0      , 0) = num_state(0);
+    eigvecs(n_dim  , 0) = num_state(n_dim);
+    eigvecs(n_dim+1, 0) = num_state(0)*num_state(0)/(2.*num_state(n_dim));
+    for (int j_dim = n_dim + 1; j_dim < n_dim; j_dim = (j_dim + 1)%n_dim) { // iterate through all dimensions except `i_dim`
+      eigvecs(j_dim  , 0) = num_state(j_dim)/2.;
+      eigvecs(j_dim  , 1) = num_state(n_dim);
+      eigvecs(n_dim+1, 1) = num_state(j_dim);
+    }
+    // accoustic
+    for (int is_positive : {0, 1}) {
+      int sign = 2*is_positive - 1;
+      int i_col = n_dim + is_positive;
+      eigvecs(i_dim  , i_col) = num_state(i_dim) + sign*num_state(n_dim)*sound_speed;
+      eigvecs(n_dim  , i_col) = num_state(n_dim);
+      eigvecs(n_dim+1, i_col) = num_state(n_dim+1) + pres + sign*num_state(i_dim)*sound_speed;
+      for (int j_dim = n_dim + 1; j_dim < n_dim; j_dim = (j_dim + 1)%n_dim) { // iterate through all dimensions except `i_dim`
+        eigvecs(j_dim, i_col) = num_state(j_dim);
+      }
+    }
+  }
 }
 
 }

@@ -24,7 +24,7 @@ sp.pprint(eigvals)
 print()
 convective = (jacobian - eigvals[0]*sp.eye(4)).nullspace()
 convective[0] += convective[1]*state[0]**2/(2*state[2]**2)
-convective[0] = sp.simplify(convective[0])
+convective[0] = sp.simplify(convective[0]*state[2])
 convective[1] *= state[1]
 print("convective eigenvectors:")
 sp.pprint(convective)
@@ -34,10 +34,10 @@ for i in [0, 1]:
     eigval = eigvals[i + 1]
     sign = 2*i - 1
     eigvec = (jacobian - eigval*sp.eye(4)).nullspace()[0]
-    eigvec /= eigvec[2]
-    eigvec = sp.simplify(eigvec).rewrite(sound_speed)
+    eigvec *= state[2]/eigvec[2]
+    eigvec = sp.simplify(eigvec)
     sp.pprint(eigvec)
-    diff = eigvec - sp.Matrix([veloc_norm + sign*sound_speed, veloc_tang, 1, (state[3] + pres)/mass + sign*veloc_norm*sound_speed])
+    diff = eigvec - state[2]*sp.Matrix([veloc_norm + sign*sound_speed, veloc_tang, 1, (state[3] + pres)/mass + sign*veloc_norm*sound_speed])
     diff = diff.subs(heat_rat, 1.4)
     vals = [4.6, 3.78, 1.02, 1.401e5]
     for i_var in range(4):
