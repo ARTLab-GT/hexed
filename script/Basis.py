@@ -87,6 +87,15 @@ class Basis:
         assert np.linalg.norm(global_weights@diff_mat) < 1e-12
         def error(log_dt):
             dt = np.exp(log_dt)
-            eigvals, eigvecs = np.linalg.eig(ident + dt*diff_mat)
-            return np.min(np.real(eigvals)) + 1.
+            def euler(dt):
+                return ident + dt*diff_mat
+            def rk(dt, step_weights):
+                step_mat = ident
+                for weight in step_weights:
+                    step_mat = (1. - weight)*ident + weight*euler(dt)@step_mat
+                return step_mat
+            def ssp_rk3(dt):
+                return rk(dt, [1., 1./4., 2./3.])
+            eigvals, eigvecs = np.linalg.eig(ssp_rk3(dt))
+            return np.max(np.abs(eigvals)) - 1.
         return np.exp(fsolve(error, -np.log(self.row_size))[0])
