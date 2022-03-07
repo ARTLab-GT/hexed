@@ -231,54 +231,57 @@ double Solution::update(double cfl_by_stable_cfl)
       grid->execute_runge_kutta_stage();
     }
   }
-  double nonsmooth = std::numeric_limits<double>::max();
-  int n_iters = 0;
-  while (nonsmooth > 3.)
+  if (artificial_viscosity)
   {
-    nonsmooth = -std::numeric_limits<double>::max();
-    for (Grid* grid : all_grids()) {
-      kernel_settings.d_pos = grid->mesh_size;
-      nonsmooth = std::max(nonsmooth, grid->execute_req_visc(kernel_settings));
-    }
-    share_vertex_data(&Element::viscosity);
-    for (int i_var = 0; i_var < n_var; ++i_var)
+    double nonsmooth = std::numeric_limits<double>::max();
+    int n_iters = 0;
+    while (nonsmooth > 3.)
     {
-      double min_size = std::numeric_limits<double>::max();
+      nonsmooth = -std::numeric_limits<double>::max();
       for (Grid* grid : all_grids()) {
-        min_size = std::min<double>(min_size, grid->mesh_size);
+        kernel_settings.d_pos = grid->mesh_size;
+        nonsmooth = std::max(nonsmooth, grid->execute_req_visc(kernel_settings));
       }
-      min_size *= 0.01*cfl_by_stable_cfl;
-      for (Grid* grid : all_grids()) {
-        kernel_settings.d_t_by_d_pos = min_size/grid->mesh_size;
-        grid->execute_write_face_gradient(i_var, kernel_settings);
+      share_vertex_data(&Element::viscosity);
+      for (int i_var = 0; i_var < n_var; ++i_var)
+      {
+        double min_size = std::numeric_limits<double>::max();
+        for (Grid* grid : all_grids()) {
+          min_size = std::min<double>(min_size, grid->mesh_size);
+        }
+        min_size *= 0.01*cfl_by_stable_cfl;
+        for (Grid* grid : all_grids()) {
+          kernel_settings.d_t_by_d_pos = min_size/grid->mesh_size;
+          grid->execute_write_face_gradient(i_var, kernel_settings);
+        }
+        for (Grid* grid : all_grids()) {
+          kernel_settings.d_t_by_d_pos = min_size/grid->mesh_size;
+          grid->execute_neighbor_gradient(i_var, kernel_settings);
+        }
+        for (Grid* grid : all_grids()) {
+          kernel_settings.d_t_by_d_pos = min_size/grid->mesh_size;
+          grid->execute_local_gradient(i_var, kernel_settings);
+        }
+        for (Grid* grid : all_grids()) {
+          kernel_settings.d_t_by_d_pos = min_size/grid->mesh_size;
+          grid->execute_write_face_av(i_var, kernel_settings);
+        }
+        for (Grid* grid : all_grids()) {
+          kernel_settings.d_t_by_d_pos = min_size/grid->mesh_size;
+          grid->execute_neighbor_av(i_var, kernel_settings);
+        }
+        for (Grid* grid : all_grids()) {
+          kernel_settings.d_t_by_d_pos = min_size/grid->mesh_size;
+          grid->execute_local_av(i_var, kernel_settings);
+        }
       }
-      for (Grid* grid : all_grids()) {
-        kernel_settings.d_t_by_d_pos = min_size/grid->mesh_size;
-        grid->execute_neighbor_gradient(i_var, kernel_settings);
+      for (Deformed_grid& grid : def_grids) {
+        grid.project_degenerate(kernel_settings.i_read);
       }
-      for (Grid* grid : all_grids()) {
-        kernel_settings.d_t_by_d_pos = min_size/grid->mesh_size;
-        grid->execute_local_gradient(i_var, kernel_settings);
-      }
-      for (Grid* grid : all_grids()) {
-        kernel_settings.d_t_by_d_pos = min_size/grid->mesh_size;
-        grid->execute_write_face_av(i_var, kernel_settings);
-      }
-      for (Grid* grid : all_grids()) {
-        kernel_settings.d_t_by_d_pos = min_size/grid->mesh_size;
-        grid->execute_neighbor_av(i_var, kernel_settings);
-      }
-      for (Grid* grid : all_grids()) {
-        kernel_settings.d_t_by_d_pos = min_size/grid->mesh_size;
-        grid->execute_local_av(i_var, kernel_settings);
-      }
+      ++n_iters;
     }
-    for (Deformed_grid& grid : def_grids) {
-      grid.project_degenerate(kernel_settings.i_read);
-    }
-    ++n_iters;
+    printf("%e %i\n", nonsmooth, n_iters);
   }
-  printf("%e %i\n", nonsmooth, n_iters);
 
   time += dt;
   for (Grid* grid : all_grids())

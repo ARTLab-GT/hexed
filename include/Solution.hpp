@@ -20,6 +20,7 @@ class Solution
   Kernel_settings kernel_settings;
   std::vector<Regular_grid> reg_grids;
   std::vector<Deformed_grid> def_grids;
+  bool artificial_viscosity = false; // FIXME: shouldn't need to turn it off
 
   Solution(int n_var_arg, int n_dim_arg, int row_size_arg, double bms);
   virtual ~Solution();
