@@ -34,4 +34,10 @@ Eigen::MatrixXd Basis::restrict (int i_half)
   return Eigen::MatrixXd::Zero(row_size, row_size);
 }
 
+double Basis::max_cfl()
+{
+  throw std::runtime_error("Not implemented for base class.");
+  return 0.;
+}
+
 }
