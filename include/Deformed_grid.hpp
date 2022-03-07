@@ -24,7 +24,7 @@ class Deformed_grid : public Grid
   // access
   virtual Element& element(int i_elem);
   Deformed_element& deformed_element(int i_elem); // points to same object as element(int) but with different type
-  virtual double stable_time_step(double cfl_by_stable_cfl, Kernel_settings& setttings);
+  double max_reference_speed(Kernel_settings& setttings);
   // the following are mostly for testing
   Deformed_elem_con connection(int i_con);
   Deformed_elem_wall def_elem_wall(int i_wall);

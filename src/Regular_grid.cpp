@@ -55,11 +55,10 @@ std::vector<double> Regular_grid::get_pos(int i_elem)
   return elem_pos;
 }
 
-double Regular_grid::stable_time_step(double cfl_by_stable_cfl, Kernel_settings& settings)
+double Regular_grid::max_reference_speed(Kernel_settings& settings)
 {
-  double cfl = cfl_by_stable_cfl*get_stable_cfl();
   settings.i_read = i_read;
-  return cfl*mesh_size/get_mcs_convective(n_dim, basis.row_size)(elements, settings);
+  return get_mcs_convective(n_dim, basis.row_size)(elements, settings)/mesh_size;
 }
 
 void Regular_grid::execute_write_face(Kernel_settings& settings)

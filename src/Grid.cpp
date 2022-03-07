@@ -72,18 +72,6 @@ bool Grid::execute_runge_kutta_stage()
   return i_rk_stage == 0;
 }
 
-double Grid::get_stable_cfl()
-{
-  if ((basis.row_size > 0) && (basis.row_size <= 10))
-  {
-    return stable_cfl[basis.row_size - 1];
-  }
-  else
-  {
-    throw std::runtime_error("Stable CFL number unknown for basis of desired row_size.");
-  }
-}
-
 void Grid::print()
 {
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)

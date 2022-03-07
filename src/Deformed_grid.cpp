@@ -36,11 +36,10 @@ Deformed_element& Deformed_grid::deformed_element(int i_elem)
   return *elements[i_elem];
 }
 
-double Deformed_grid::stable_time_step(double cfl_by_stable_cfl, Kernel_settings& settings)
+double Deformed_grid::max_reference_speed(Kernel_settings& settings)
 {
-  double cfl = cfl_by_stable_cfl*get_stable_cfl();
   settings.i_read = i_read;
-  return cfl*mesh_size/get_mcs_deformed_convective(n_dim, basis.row_size)(elements, settings);
+  return get_mcs_deformed_convective(n_dim, basis.row_size)(elements, settings)/mesh_size;
 }
 
 Deformed_elem_con Deformed_grid::connection(int i_con)

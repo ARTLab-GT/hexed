@@ -204,12 +204,13 @@ std::vector<Grid*> Solution::all_grids()
   return all;
 }
 
-double Solution::update(double cfl_by_stable_cfl)
+double Solution::update(double stability_ratio)
 {
-  double dt = std::numeric_limits<double>::max();
+  double max_reference_speed = 0.;
   for (Grid* grid : all_grids()) {
-    dt = std::min<double>(dt, grid->stable_time_step(cfl_by_stable_cfl, kernel_settings));
+    max_reference_speed = std::max(max_reference_speed, grid->max_reference_speed(kernel_settings));
   }
+  double dt = basis.max_cfl()*stability_ratio/max_reference_speed;
   for (int i_rk = 0; i_rk < 3; ++i_rk)
   {
     for (Grid* grid : all_grids()) {
@@ -249,7 +250,7 @@ double Solution::update(double cfl_by_stable_cfl)
         for (Grid* grid : all_grids()) {
           min_size = std::min<double>(min_size, grid->mesh_size);
         }
-        min_size *= 0.01*cfl_by_stable_cfl;
+        min_size *= 0.01*stability_ratio;
         for (Grid* grid : all_grids()) {
           kernel_settings.d_t_by_d_pos = min_size/grid->mesh_size;
           grid->execute_write_face_gradient(i_var, kernel_settings);
