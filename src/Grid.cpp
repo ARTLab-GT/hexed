@@ -49,15 +49,27 @@ void Grid::match_hanging(Element::shareable_value_access access_func)
 
 bool Grid::execute_runge_kutta_stage()
 {
+  const int r0 = 0;
+  const int r1 = i_write;
+  const int w = (i_rk_stage == 2) ? r0 : r1;
+  double weight1 = rk_weights[i_rk_stage]; double weight0 = 1. - weight1;
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < n_elem; ++i_elem)
   {
     auto& elem = element(i_elem);
-    double* stage_r = elem.stage(i_read);
-    double* stage_w = elem.stage(i_write);
-    for (int i_dof = 0; i_dof < storage_params.n_dof(); ++i_dof) stage_r[i_dof] = stage_w[i_dof];
+    double* stage_r0 = elem.stage(r0);
+    double* stage_r1 = elem.stage(r1);
+    double* stage_w  = elem.stage(w );
+    for (int i_dof = 0; i_dof < storage_params.n_dof(); ++i_dof)
+    {
+      stage_w[i_dof] = weight1*stage_r1[i_dof] + weight0*stage_r0[i_dof];
+    }
   }
-  return true;
+  ++i_rk_stage; ++i_write;
+  if (i_write == 3) i_write = 1;
+  if (i_rk_stage == 3) { i_rk_stage = 0; i_write = 1; ++iter; }
+  i_read = i_rk_stage;
+  return i_rk_stage == 0;
 }
 
 void Grid::print()
