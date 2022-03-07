@@ -1,4 +1,6 @@
 import sympy as sp
+import numpy as np
+from scipy.optimize import fsolve
 
 class Basis:
     def __init__(self, nodes, weights, repr_digits=20, calc_digits=50):
@@ -67,3 +69,24 @@ class Basis:
         # take inner product of `i_operand`th fine polynomial with `i_result`th and divide by norm squared
         result = self.weights[i_operand]/2*self.prolong(i_operand, i_result, i_half, True)/self.weights[i_result]
         return sp.Float(result, self.repr_digits)
+
+    def max_cfl(self, n_elem = 4):
+        diff_mat = np.zeros((n_elem*self.row_size, n_elem*self.row_size)) # time derivative matrix
+        global_weights = np.zeros(n_elem*self.row_size)
+        for i_elem in range(n_elem):
+            for i_row in range(self.row_size):
+                global_weights[i_elem*self.row_size + i_row] = self.weights[i_row]
+                for i_col in range(self.row_size):
+                    row = i_elem*self.row_size + i_row
+                    col = i_elem*self.row_size + i_col
+                    diff_mat[row, col] = -self.derivative(i_row, i_col)
+                    diff_mat[row, col] -= self.interpolate(i_col, 0)*self.interpolate(i_row, 0)/self.weights[i_row]
+                    row = ((i_elem+1)%n_elem)*self.row_size + i_row
+                    diff_mat[row, col]  = self.interpolate(i_col, 1)*self.interpolate(i_row, 0)/self.weights[i_row]
+        ident = np.identity(n_elem*self.row_size)
+        assert np.linalg.norm(global_weights@diff_mat) < 1e-12
+        def error(log_dt):
+            dt = np.exp(log_dt)
+            eigvals, eigvecs = np.linalg.eig(ident + dt*diff_mat)
+            return np.min(np.real(eigvals)) + 1.
+        return np.exp(fsolve(error, -np.log(self.row_size))[0])

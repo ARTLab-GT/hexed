@@ -16,6 +16,7 @@ class Gauss_legendre : public Basis
   virtual Eigen::MatrixXd diff_mat();
   virtual Eigen::MatrixXd boundary();
   virtual Eigen::VectorXd orthogonal(int degree);
+  virtual double max_cfl();
   virtual Eigen::MatrixXd prolong  (int i_half);
   virtual Eigen::MatrixXd restrict (int i_half);
 };
