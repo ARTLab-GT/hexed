@@ -42,7 +42,8 @@ class Basis
   // value at the `i`th standard node of the orthogonal projection of the `j`th polynomial in the
   // refined space into the standard space.
   virtual Eigen::MatrixXd restrict(int i_half);
-  virtual double max_cfl(); // placeholder implementation that should be overriden
+  virtual double max_cfl_convective(); // placeholder implementation that should be overriden
+  virtual double max_cfl_diffusive(); // placeholder implementation that should be overriden
 };
 
 }

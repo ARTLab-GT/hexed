@@ -16,7 +16,8 @@ class Gauss_lobatto : public Basis
   virtual Eigen::MatrixXd diff_mat();
   virtual Eigen::MatrixXd boundary();
   virtual Eigen::VectorXd orthogonal(int degree);
-  virtual double max_cfl();
+  virtual double max_cfl_convective();
+  virtual double max_cfl_diffusive();
 };
 
 }

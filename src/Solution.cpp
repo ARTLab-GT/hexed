@@ -210,7 +210,7 @@ double Solution::update(double stability_ratio)
   for (Grid* grid : all_grids()) {
     max_reference_speed = std::max(max_reference_speed, grid->max_reference_speed(kernel_settings));
   }
-  double dt = basis.max_cfl()*stability_ratio/max_reference_speed/n_dim;
+  double dt = basis.max_cfl_convective()*stability_ratio/max_reference_speed/n_dim;
   for (int i_rk = 0; i_rk < 3; ++i_rk)
   {
     for (Grid* grid : all_grids()) {
@@ -250,7 +250,6 @@ double Solution::update(double stability_ratio)
         for (Grid* grid : all_grids()) {
           min_size = std::min<double>(min_size, grid->mesh_size);
         }
-        min_size *= 0.01*stability_ratio;
         for (Grid* grid : all_grids()) {
           kernel_settings.d_t_by_d_pos = min_size/grid->mesh_size;
           grid->execute_write_face_gradient(i_var, kernel_settings);
@@ -263,16 +262,17 @@ double Solution::update(double stability_ratio)
           kernel_settings.d_t_by_d_pos = min_size/grid->mesh_size;
           grid->execute_local_gradient(i_var, kernel_settings);
         }
+        dt = min_size*basis.max_cfl_diffusive()*stability_ratio/n_dim;
         for (Grid* grid : all_grids()) {
-          kernel_settings.d_t_by_d_pos = min_size/grid->mesh_size;
+          kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
           grid->execute_write_face_av(i_var, kernel_settings);
         }
         for (Grid* grid : all_grids()) {
-          kernel_settings.d_t_by_d_pos = min_size/grid->mesh_size;
+          kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
           grid->execute_neighbor_av(i_var, kernel_settings);
         }
         for (Grid* grid : all_grids()) {
-          kernel_settings.d_t_by_d_pos = min_size/grid->mesh_size;
+          kernel_settings.d_t_by_d_pos = dt/grid->mesh_size;
           grid->execute_local_av(i_var, kernel_settings);
         }
       }

@@ -71,31 +71,42 @@ class Basis:
         return sp.Float(result, self.repr_digits)
 
     def max_cfl(self, n_elem = 4):
-        diff_mat = np.zeros((n_elem*self.row_size, n_elem*self.row_size)) # time derivative matrix
         global_weights = np.zeros(n_elem*self.row_size)
+        local_grad = np.zeros((n_elem*self.row_size, n_elem*self.row_size))
+        neighb_avrg = np.zeros((n_elem*self.row_size, n_elem*self.row_size))
+        neighb_jump = np.zeros((n_elem*self.row_size, n_elem*self.row_size))
         for i_elem in range(n_elem):
             for i_row in range(self.row_size):
                 global_weights[i_elem*self.row_size + i_row] = self.weights[i_row]
                 for i_col in range(self.row_size):
                     row = i_elem*self.row_size + i_row
                     col = i_elem*self.row_size + i_col
-                    diff_mat[row, col] = -self.derivative(i_row, i_col)
-                    diff_mat[row, col] -= self.interpolate(i_col, 0)*self.interpolate(i_row, 0)/self.weights[i_row]
-                    row = ((i_elem+1)%n_elem)*self.row_size + i_row
-                    diff_mat[row, col]  = self.interpolate(i_col, 1)*self.interpolate(i_row, 0)/self.weights[i_row]
+                    local_grad[row, col] = self.derivative(i_row, i_col)
+                    for i_side in [0, 1]:
+                        for j_side in [0, 1]:
+                            row = ((i_elem+i_side)%n_elem)*self.row_size + i_row
+                            col = ((i_elem+j_side)%n_elem)*self.row_size + i_col
+                            boundary = self.interpolate(i_col, 1-j_side)*self.interpolate(i_row, 1-i_side)/self.weights[i_row]
+                            neighb_avrg[row, col] += 0.5*(2*j_side - 1)*boundary
+                            neighb_jump[row, col] += 0.5*(1 - 2*(j_side == i_side))*boundary
+        advection = -local_grad + -neighb_avrg + neighb_jump
+        diffusion = (local_grad + neighb_avrg)@(local_grad + neighb_avrg)
         ident = np.identity(n_elem*self.row_size)
-        assert np.linalg.norm(global_weights@diff_mat) < 1e-12
-        def error(log_dt):
-            dt = np.exp(log_dt)
-            def euler(dt):
-                return ident + dt*diff_mat
-            def rk(dt, step_weights):
-                step_mat = ident
-                for weight in step_weights:
-                    step_mat = (1. - weight)*ident + weight*euler(dt)@step_mat
-                return step_mat
-            def ssp_rk3(dt):
-                return rk(dt, [1., 1./4., 2./3.])
-            eigvals, eigvecs = np.linalg.eig(ssp_rk3(dt))
-            return np.max(np.abs(eigvals)) - 1.
-        return np.exp(fsolve(error, -np.log(self.row_size))[0])
+        assert np.linalg.norm(global_weights@advection) < 1e-12
+        assert np.linalg.norm(global_weights@diffusion) < 1e-12
+        def euler(dt, mat):
+            return ident + dt*mat
+        def rk(dt, step_weights, mat):
+            step_mat = ident
+            for weight in step_weights:
+                step_mat = (1. - weight)*ident + weight*euler(dt, mat)@step_mat
+            return step_mat
+        def ssp_rk3(dt, mat):
+            return rk(dt, [1., 1./4., 2./3.], mat)
+        def max_cfl(mat, time_scheme):
+            def error(log_dt):
+                dt = np.exp(log_dt)
+                eigvals, eigvecs = np.linalg.eig(time_scheme(dt, mat))
+                return np.max(np.abs(eigvals)) - 1.
+            return np.exp(fsolve(error, -np.log(self.row_size))[0])
+        return max_cfl(advection, ssp_rk3), max_cfl(diffusion, euler)
