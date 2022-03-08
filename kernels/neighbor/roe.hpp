@@ -8,6 +8,7 @@
 namespace cartdg
 {
 
+// Warning: This function is untested! (and, for the time being, unsupported)
 // approximately the Roe flux. There is a slight discrepancy in the way the
 // middle state is computed, which should be corrected if this is to be used in production
 template<int n_dim, int n_face_qpoint>
