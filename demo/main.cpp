@@ -26,11 +26,10 @@ int main()
   double time = 0;
   for (int i = 0; i < 20; ++i)
   {
-    time += 0.001;
+    time += 1e-3;
     while (grid.time < time)
     {
-      //solution.update(0.5);
-      solution.update(0.5);
+      solution.update(0.9);
     }
     char buffer [100];
     snprintf(buffer, 100, "demo_time_%e", time);
@@ -39,7 +38,7 @@ int main()
   time = 0.2;
   while (grid.time < time)
   {
-    solution.update();
+    solution.update(0.9);
   }
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start);

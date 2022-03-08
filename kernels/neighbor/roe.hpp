@@ -8,6 +8,8 @@
 namespace cartdg
 {
 
+// approximately the Roe flux. There is a slight discrepancy in the way the
+// middle state is computed, which should be corrected if this is to be used in production
 template<int n_dim, int n_face_qpoint>
 void roe(double* state_r, double* d_flux_w, double mult, int i_dim, double heat_rat)
 {

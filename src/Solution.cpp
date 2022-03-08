@@ -210,7 +210,7 @@ double Solution::update(double stability_ratio)
   for (Grid* grid : all_grids()) {
     max_reference_speed = std::max(max_reference_speed, grid->max_reference_speed(kernel_settings));
   }
-  double dt = basis.max_cfl()*stability_ratio/max_reference_speed;
+  double dt = basis.max_cfl()*stability_ratio/max_reference_speed/n_dim;
   for (int i_rk = 0; i_rk < 3; ++i_rk)
   {
     for (Grid* grid : all_grids()) {
