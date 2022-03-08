@@ -5,8 +5,6 @@
 #include <cmath>
 #include <Eigen/Dense>
 
-#include <iostream> // FIXME
-
 namespace cartdg
 {
 
@@ -39,10 +37,10 @@ void roe(double* state_r, double* d_flux_w, double mult, int i_dim, double heat_
     matrix_sq eigvecs = matrix_sq::Zero();
     vector eigvals;
     // convective
-    eigvecs(0      , i_dim) = num_state(0);
+    eigvecs(i_dim  , i_dim) = num_state(i_dim);
     eigvecs(n_dim  , i_dim) = num_state(n_dim);
-    eigvecs(n_dim+1, i_dim) = num_state(0)*num_state(0)/(2.*num_state(n_dim));
-    for (int j_dim = i_dim + 1; j_dim != i_dim; j_dim = (j_dim + 1)%n_dim) { // iterate through all dimensions except `i_dim`
+    eigvecs(n_dim+1, i_dim) = num_state(i_dim)*num_state(i_dim)/(2.*num_state(n_dim));
+    for (int j_dim = (i_dim + 1)%n_dim; j_dim != i_dim; j_dim = (j_dim + 1)%n_dim) { // iterate through all dimensions except `i_dim`
       eigvecs(j_dim  , i_dim) = num_state(j_dim)/2.;
       eigvecs(j_dim  , j_dim) = num_state(n_dim);
       eigvecs(n_dim+1, j_dim) = num_state(j_dim);
@@ -55,7 +53,7 @@ void roe(double* state_r, double* d_flux_w, double mult, int i_dim, double heat_
       eigvecs(i_dim  , i_col) = num_state(i_dim) + sign*num_state(n_dim)*sound_speed;
       eigvecs(n_dim  , i_col) = num_state(n_dim);
       eigvecs(n_dim+1, i_col) = num_state(n_dim+1) + pres + sign*num_state(i_dim)*sound_speed;
-      for (int j_dim = n_dim + 1; j_dim < n_dim; j_dim = (j_dim + 1)%n_dim) { // iterate through all dimensions except `i_dim`
+      for (int j_dim = (i_dim + 1)%n_dim; j_dim != i_dim; j_dim = (j_dim + 1)%n_dim) { // iterate through all dimensions except `i_dim`
         eigvecs(j_dim, i_col) = num_state(j_dim);
       }
       eigvals(i_col) = num_state(i_dim)/num_state(n_dim) + sign*sound_speed;

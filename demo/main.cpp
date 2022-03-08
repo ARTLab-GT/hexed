@@ -29,7 +29,8 @@ int main()
     time += 0.001;
     while (grid.time < time)
     {
-      solution.update(0.1);
+      //solution.update(0.5);
+      solution.update(0.5);
     }
     char buffer [100];
     snprintf(buffer, 100, "demo_time_%e", time);
