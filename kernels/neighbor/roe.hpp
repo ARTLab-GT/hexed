@@ -25,7 +25,7 @@ void roe(double* state_r, double* d_flux_w, double mult, int i_dim, double heat_
       }
     }
     // compute derived quantities
-    vector num_state = 0.5*(state.col(0) + state.col(1));
+    vector num_state = 0.5*(state.col(0) + state.col(1)); // FIXME: use proper weighted average
     double pres = num_state(n_dim+1);
     for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
       pres -= num_state(j_dim)*num_state(j_dim)/(2.*state(n_dim));
@@ -33,8 +33,9 @@ void roe(double* state_r, double* d_flux_w, double mult, int i_dim, double heat_
     pres *= (heat_rat - 1.);
     double sound_speed = std::sqrt(heat_rat*pres/num_state(n_dim));
 
-    // compute eigenvectors
+    // compute eigenvectors/values
     matrix_sq eigvecs = matrix_sq::Zero();
+    vector eigvals;
     // convective
     eigvecs(0      , 0) = num_state(0);
     eigvecs(n_dim  , 0) = num_state(n_dim);
@@ -44,6 +45,7 @@ void roe(double* state_r, double* d_flux_w, double mult, int i_dim, double heat_
       eigvecs(j_dim  , 1) = num_state(n_dim);
       eigvecs(n_dim+1, 1) = num_state(j_dim);
     }
+    for (int j_dim = 0; j_dim < n_dim; ++j_dim) eigvals(j_dim) = num_state(i_dim)/num_state(n_dim);
     // accoustic
     for (int is_positive : {0, 1}) {
       int sign = 2*is_positive - 1;
@@ -54,6 +56,18 @@ void roe(double* state_r, double* d_flux_w, double mult, int i_dim, double heat_
       for (int j_dim = n_dim + 1; j_dim < n_dim; j_dim = (j_dim + 1)%n_dim) { // iterate through all dimensions except `i_dim`
         eigvecs(j_dim, i_col) = num_state(j_dim);
       }
+      eigvals(i_col) = num_state(i_dim)/num_state(n_dim) + sign*sound_speed;
+    }
+    // compute flux
+    matrix_2 transformed = eigvecs.householderQr().solve(state);
+    vector num_flux;
+    for (int i_var = 0; i_var < n_var; ++i_var) {
+      num_flux(i_var) = eigvals(i_var)*transformed(i_var, eigvals(i_var) < 0.);
+    }
+    num_flux = eigvecs*num_flux;
+    // write flux
+    for (int i_var = 0; i_var < n_var; ++i_var) {
+      d_flux_w[n_face_qpoint + i_qpoint] = d_flux_w[i_qpoint] = num_flux(i_var);
     }
   }
 }
