@@ -321,9 +321,9 @@ TEST_CASE("artificial viscosity")
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
         double* node = nodes[i_qpoint];
         // check that derivatives match analytic
-        REQUIRE(element.stage(1)[0*n_qpoint + i_qpoint] == Approx(3.4*(4.*node[0] - 3.*node[1]*node[1] + 1.*node[1]*node[2])));
-        REQUIRE(element.stage(1)[1*n_qpoint + i_qpoint] == Approx(3.4*(-6.*node[0]*node[1] + 1.*node[0]*node[2])));
-        REQUIRE(element.stage(1)[2*n_qpoint + i_qpoint] == Approx(3.4*(1.*node[0]*node[1])));
+        REQUIRE(element.stage(2)[0*n_qpoint + i_qpoint] == Approx(3.4*(4.*node[0] - 3.*node[1]*node[1] + 1.*node[1]*node[2])));
+        REQUIRE(element.stage(2)[1*n_qpoint + i_qpoint] == Approx(3.4*(-6.*node[0]*node[1] + 1.*node[0]*node[2])));
+        REQUIRE(element.stage(2)[2*n_qpoint + i_qpoint] == Approx(3.4*(1.*node[0]*node[1])));
       }
     }
     SECTION("variational crimes")
@@ -355,7 +355,7 @@ TEST_CASE("artificial viscosity")
             int row [3] {i_row, j_row, k_row};
             double weight = 1.;
             for (int i_dim = 0; i_dim < 3; ++i_dim) weight *= basis.node_weights()(row[i_dim]);
-            for (int i_dim = 0; i_dim < 3; ++i_dim) integral[i_dim] += weight*element.stage(1)[i_dim*n_qpoint + i_qpoint];
+            for (int i_dim = 0; i_dim < 3; ++i_dim) integral[i_dim] += weight*element.stage(2)[i_dim*n_qpoint + i_qpoint];
           }
         }
       }
@@ -367,8 +367,8 @@ TEST_CASE("artificial viscosity")
   {
     double direction [3] {2., -0.3, 0.01};
     cartdg::Kernel_settings settings;
-    settings.d_t = 3.4;
-    settings.d_pos = 1.;
+    settings.d_t = 1.7;
+    settings.d_pos = 0.5;
     SECTION("nonuniform gradient")
     {
       for (int i_vert = 0; i_vert < 8; ++i_vert) element.viscosity()[i_vert] = 1.;
@@ -376,7 +376,7 @@ TEST_CASE("artificial viscosity")
         double* node = nodes[i_qpoint];
         for (int i_dim = 0; i_dim < 3; ++i_dim) {
           // write an arbitrary linear polynomial to the gradient
-          element.stage(1)[i_dim*n_qpoint + i_qpoint] = direction[i_dim]*node[i_dim];
+          element.stage(2)[i_dim*n_qpoint + i_qpoint] = direction[i_dim]*node[i_dim];
           // write something to the output. the av kernel should increment this
           element.stage(0)[4*n_qpoint + i_qpoint] = 0.4;
         }
@@ -401,7 +401,7 @@ TEST_CASE("artificial viscosity")
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
         for (int i_dim = 0; i_dim < 3; ++i_dim) {
           // write an constant to the gradient
-          element.stage(1)[i_dim*n_qpoint + i_qpoint] = direction[i_dim];
+          element.stage(2)[i_dim*n_qpoint + i_qpoint] = direction[i_dim];
           // write something to the output. the av kernel should increment this
           element.stage(0)[4*n_qpoint + i_qpoint] = 0.4;
         }
