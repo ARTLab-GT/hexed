@@ -55,7 +55,7 @@ TEST_CASE("write_face")
       {
         int i_qpoint = (i_row*row_size + j_row)*row_size + k_row;
         double value = 0.1*i_var + 0.2*basis.node(i_row) + 0.3*basis.node(j_row) + 0.4*basis.node(k_row);
-        elements[0]->stage(settings.i_read)[i_var*n_qpoint + i_qpoint] = value;
+        elements[0]->stage(0)[i_var*n_qpoint + i_qpoint] = value;
       }
     }
     cartdg::get_write_face(3, row_size)(elements, basis, settings);
@@ -78,7 +78,8 @@ TEST_CASE("write_face")
 TEST_CASE("Local convective")
 {
   cartdg::Kernel_settings settings;
-  settings.d_t_by_d_pos = 0.1;
+  settings.d_t = 0.1;
+  settings.d_pos = 1.;
   SECTION("1D")
   {
     int n_elem = 5;
@@ -91,12 +92,12 @@ TEST_CASE("Local convective")
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       elements.emplace_back(new cartdg::Element {params});
-      double* read = elements[i_elem]->stage(settings.i_read);
+      double* state = elements[i_elem]->stage(0);
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
-          read[0*n_qpoint + i_qpoint] = mmtm;
-          read[1*n_qpoint + i_qpoint] = mass;
-          read[2*n_qpoint + i_qpoint] = ener;
+          state[0*n_qpoint + i_qpoint] = mmtm;
+          state[1*n_qpoint + i_qpoint] = mass;
+          state[2*n_qpoint + i_qpoint] = ener;
       }
       for (int i_face = 0; i_face < n_qpoint/params.row_size*3*2*1; ++i_face)
       {
@@ -106,13 +107,12 @@ TEST_CASE("Local convective")
     cartdg::get_local_convective(1, 2)(elements, basis, settings);
     for (auto& element : elements)
     {
-      double* r = element->stage(settings.i_read);
-      double* w = element->stage(settings.i_write);
+      double* state = element->stage(0);
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
-        REQUIRE(w[0*n_qpoint + i_qpoint] - r[0*n_qpoint + i_qpoint] == Approx(-0.1*(mmtm*mmtm/mass + pres)));
-        REQUIRE(w[1*n_qpoint + i_qpoint] - r[1*n_qpoint + i_qpoint] == Approx(-0.1*mmtm));
-        REQUIRE(w[2*n_qpoint + i_qpoint] - r[2*n_qpoint + i_qpoint] == Approx(-0.1*((ener + pres)*veloc)));
+        REQUIRE(state[0*n_qpoint + i_qpoint] - mmtm == Approx(-0.1*(mmtm*mmtm/mass + pres)));
+        REQUIRE(state[1*n_qpoint + i_qpoint] - mass == Approx(-0.1*mmtm));
+        REQUIRE(state[2*n_qpoint + i_qpoint] - ener == Approx(-0.1*((ener + pres)*veloc)));
       }
     }
   }
@@ -131,14 +131,14 @@ TEST_CASE("Local convective")
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       elements.emplace_back(new cartdg::Element {params});
-      double* read = elements[i_elem]->stage(settings.i_read);
+      double* state = elements[i_elem]->stage(0);
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
-          read[0*n_qpoint + i_qpoint] = mass*veloc0;
-          read[1*n_qpoint + i_qpoint] = mass*veloc1;
-          read[2*n_qpoint + i_qpoint] = mass*veloc2;
-          read[3*n_qpoint + i_qpoint] = mass;
-          read[4*n_qpoint + i_qpoint] = ener;
+          state[0*n_qpoint + i_qpoint] = mass*veloc0;
+          state[1*n_qpoint + i_qpoint] = mass*veloc1;
+          state[2*n_qpoint + i_qpoint] = mass*veloc2;
+          state[3*n_qpoint + i_qpoint] = mass;
+          state[4*n_qpoint + i_qpoint] = ener;
       }
       for (int i_face = 0; i_face < n_qpoint/params.row_size*5*2*3; ++i_face)
       {
@@ -149,21 +149,15 @@ TEST_CASE("Local convective")
     cartdg::get_local_convective(3, 3)(elements, basis, settings);
     for (auto& element : elements)
     {
-      double* r = element->stage(settings.i_read);
-      double* w = element->stage(settings.i_write);
+      double* state = element->stage(0);
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
         double tss = (i_qpoint == 1) ? 0.16 : 1.;
-        REQUIRE(w[0*n_qpoint + i_qpoint] - r[0*n_qpoint + i_qpoint]
-                == Approx(-0.1*tss*(mass*veloc0*(veloc0 + veloc1 + veloc2) + pres)));
-        REQUIRE(w[1*n_qpoint + i_qpoint] - r[1*n_qpoint + i_qpoint]
-                == Approx(-0.1*tss*(mass*veloc1*(veloc0 + veloc1 + veloc2) + pres)));
-        REQUIRE(w[2*n_qpoint + i_qpoint] - r[2*n_qpoint + i_qpoint]
-                == Approx(-0.1*tss*(mass*veloc2*(veloc0 + veloc1 + veloc2) + pres)));
-        REQUIRE(w[3*n_qpoint + i_qpoint] - r[3*n_qpoint + i_qpoint]
-                == Approx(-0.1*tss*mass*(veloc0 + veloc1 + veloc2)));
-        REQUIRE(w[4*n_qpoint + i_qpoint] - r[4*n_qpoint + i_qpoint]
-                == Approx(-0.1*tss*((ener + pres)*(veloc0 + veloc1 + veloc2))));
+        REQUIRE(state[0*n_qpoint + i_qpoint] - mass*veloc0 == Approx(-0.1*tss*(mass*veloc0*(veloc0 + veloc1 + veloc2) + pres)));
+        REQUIRE(state[1*n_qpoint + i_qpoint] - mass*veloc1 == Approx(-0.1*tss*(mass*veloc1*(veloc0 + veloc1 + veloc2) + pres)));
+        REQUIRE(state[2*n_qpoint + i_qpoint] - mass*veloc2 == Approx(-0.1*tss*(mass*veloc2*(veloc0 + veloc1 + veloc2) + pres)));
+        REQUIRE(state[3*n_qpoint + i_qpoint] - mass        == Approx(-0.1*tss*mass*(veloc0 + veloc1 + veloc2)));
+        REQUIRE(state[4*n_qpoint + i_qpoint] - ener        == Approx(-0.1*tss*((ener + pres)*(veloc0 + veloc1 + veloc2))));
       }
     }
   }
@@ -180,7 +174,7 @@ TEST_CASE("Local convective")
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       elements.emplace_back(new cartdg::Element {params});
-      double* read = elements[i_elem]->stage(settings.i_read);
+      double* state = elements[i_elem]->stage(0);
       double* face = elements[i_elem]->face();
 
       #define SET_VARS \
@@ -196,10 +190,10 @@ TEST_CASE("Local convective")
           int i_qpoint = i*row_size + j;
           double pos0 = basis.node(i); double pos1 = basis.node(j);
           SET_VARS
-          read[0*n_qpoint + i_qpoint] = mass*veloc[0];
-          read[1*n_qpoint + i_qpoint] = mass*veloc[1];
-          read[2*n_qpoint + i_qpoint] = mass;
-          read[3*n_qpoint + i_qpoint] = ener;
+          state[0*n_qpoint + i_qpoint] = mass*veloc[0];
+          state[1*n_qpoint + i_qpoint] = mass*veloc[1];
+          state[2*n_qpoint + i_qpoint] = mass;
+          state[3*n_qpoint + i_qpoint] = ener;
         }
         for (int i_dim : {0, 1})
         {
@@ -220,17 +214,12 @@ TEST_CASE("Local convective")
       #undef SET_VARS
     }
     cartdg::get_local_convective(2, row_size)(elements, basis, settings);
-    for (auto& element : elements)
-    {
-      double* r = element->stage(settings.i_read);
-      double* w = element->stage(settings.i_write);
-      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
-      {
-        REQUIRE(w[2*n_qpoint + i_qpoint] - r[2*n_qpoint + i_qpoint]
-                == Approx(-0.1*(0.1*10 - 0.2*20)));
-        REQUIRE(w[3*n_qpoint + i_qpoint] - r[3*n_qpoint + i_qpoint]
-                == Approx(-0.1*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20)
-                          + 0.5*(10*10 + 20*20)*(0.1*10 - 0.2*20))));
+    for (auto& element : elements) {
+      double* state = element->stage(0);
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        REQUIRE(state[2*n_qpoint + i_qpoint] == Approx(-0.1*(0.1*10 - 0.2*20)));
+        REQUIRE(state[3*n_qpoint + i_qpoint] == Approx(-0.1*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20)
+                                                       + 0.5*(10*10 + 20*20)*(0.1*10 - 0.2*20))));
       }
     }
   }
@@ -297,7 +286,7 @@ TEST_CASE("artificial viscosity")
       element.stage(0)[4*n_qpoint + i_qpoint] = 2.*node[0]*node[0] - 3.*node[0]*node[1]*node[1] + 1.*node[0]*node[1]*node[2];
     }
     cartdg::Kernel_settings settings;
-    settings.d_t_by_d_pos = 3.4;
+    settings.d_pos = 1./3.4;
     SECTION("local component")
     {
       // reconstruct face values as they would be by the neighbor kernel
@@ -363,6 +352,9 @@ TEST_CASE("artificial viscosity")
   SECTION("local_av")
   {
     double direction [3] {2., -0.3, 0.01};
+    cartdg::Kernel_settings settings;
+    settings.d_t = 3.4;
+    settings.d_pos = 1.;
     SECTION("nonuniform gradient")
     {
       for (int i_vert = 0; i_vert < 8; ++i_vert) element.viscosity()[i_vert] = 1.;
@@ -384,8 +376,6 @@ TEST_CASE("artificial viscosity")
           }
         }
       }
-      cartdg::Kernel_settings settings;
-      settings.d_t_by_d_pos = 3.4;
       cartdg::get_local_av(3, row_size)(elements, 4, basis, settings);
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
         REQUIRE(element.stage(0)[4*n_qpoint + i_qpoint] == Approx(0.4 + 3.4*(2. - 0.3 + 0.01)));
@@ -411,8 +401,6 @@ TEST_CASE("artificial viscosity")
           }
         }
       }
-      cartdg::Kernel_settings settings;
-      settings.d_t_by_d_pos = 3.4;
       cartdg::get_local_av(3, row_size)(elements, 4, basis, settings);
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
         double* node = nodes[i_qpoint];

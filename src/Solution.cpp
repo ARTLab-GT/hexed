@@ -211,6 +211,7 @@ double Solution::update(double stability_ratio)
   for (Grid* grid : all_grids()) {
     max_reference_speed = std::max(max_reference_speed, grid->max_reference_speed(kernel_settings));
   }
+  double dt = basis.max_cfl_convective()*stability_ratio/max_reference_speed/n_dim;
   // record current state for use in the Runge-Kutta scheme
   for (Grid* grid : all_grids()) {
     for (int i_elem = 0; i_elem < grid->n_elem; ++i_elem) {
@@ -223,7 +224,7 @@ double Solution::update(double stability_ratio)
   // execute Runge-Kutta solver
   for (double weight : rk_weights)
   {
-    kernel_setting.rk_weight = weight;
+    kernel_settings.rk_weight = weight;
     // enforce degenerate projection if desired
     for (Deformed_grid& grid : def_grids) {
       grid.project_degenerate();
@@ -242,7 +243,7 @@ double Solution::update(double stability_ratio)
           nonsmooth = std::max(nonsmooth, grid->execute_req_visc(kernel_settings));
         }
         share_vertex_data(&Element::viscosity);
-        kernel_settings.d_t = std::nan(); // d_t shouldn't be needed, so set it to NaN to avoid confusion
+        kernel_settings.d_t = std::nan(""); // d_t shouldn't be needed, so set it to NaN to avoid confusion
         for (int i_var = 0; i_var < n_var; ++i_var)
         {
           // compute gradient
@@ -263,7 +264,7 @@ double Solution::update(double stability_ratio)
           for (Grid* grid : all_grids()) {
             min_size = std::min<double>(min_size, grid->mesh_size);
           }
-          kernel_setting.d_t = min_size*min_size*basis.max_cfl_diffusive()*stability_ratio/n_dim;
+          kernel_settings.d_t = min_size*min_size*basis.max_cfl_diffusive()*stability_ratio/n_dim;
           for (Grid* grid : all_grids()) {
             kernel_settings.d_pos = grid->mesh_size;
             grid->execute_write_face_av(i_var, kernel_settings);
@@ -282,7 +283,7 @@ double Solution::update(double stability_ratio)
       printf("%e %i\n", nonsmooth, n_iters);
     }
     // perform physical solution update
-    double kernel_setting.dt = basis.max_cfl_convective()*stability_ratio/max_reference_speed/n_dim;
+    kernel_settings.d_t = dt;
     for (Grid* grid : all_grids()) {
       kernel_settings.d_pos = grid->mesh_size;
       grid->execute_write_face(kernel_settings);
@@ -295,9 +296,9 @@ double Solution::update(double stability_ratio)
       kernel_settings.d_pos = grid->mesh_size;
       grid->execute_local(kernel_settings);
     }
-    for (Deformed_grid& grid : def_grids) {
-      grid.project_degenerate(kernel_settings.i_write);
-    }
+  }
+  for (Deformed_grid& grid : def_grids) {
+    grid.project_degenerate();
   }
 
   time += dt;

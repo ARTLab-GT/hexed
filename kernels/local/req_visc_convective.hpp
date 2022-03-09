@@ -22,7 +22,6 @@ double req_visc_convective(std::vector<std::unique_ptr<E>>& elements, Basis& bas
 {
   const int n_dim = n_var - 2;
   constexpr int n_visc = custom_math::pow(2, n_dim);
-  const int i_read = settings.i_read;
   double weights [row_size];
   double ortho [row_size];
   {
@@ -38,7 +37,7 @@ double req_visc_convective(std::vector<std::unique_ptr<E>>& elements, Basis& bas
   double max_nonsmooth = -std::numeric_limits<double>::max();
   for (std::unique_ptr<E>& elem : elements)
   {
-    double* stage = elem->stage(i_read);
+    double* stage = elem->stage(0);
     auto params = indicator<n_qpoint, row_size>(stage + n_dim*n_qpoint, weights, ortho);
     double mass_indicator = params[0];
     max_nonsmooth = std::max(max_nonsmooth, params[1]);
