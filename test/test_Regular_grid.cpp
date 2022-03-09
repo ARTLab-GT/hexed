@@ -188,61 +188,6 @@ TEST_CASE("Regular_grid")
     REQUIRE(grid3.n_con(2) == 0);
   }
 
-  SECTION("Runge Kutta time integration")
-  {
-    for (int i_elem = 0; i_elem < grid1.n_elem; ++i_elem)
-    {
-      for (int i_dof = 0; i_dof < grid1.n_dof; ++i_dof)
-      {
-        grid1.element(i_elem).stage(grid1.i_stage_read())[i_dof] = 7.;
-      }
-    }
-
-    do
-    {
-      for (int i_elem = 0; i_elem < grid1.n_elem; ++i_elem)
-      {
-        for (int i_dof = 0; i_dof < grid1.n_dof; ++i_dof)
-        {
-          double* read = grid1.element(i_elem).stage(grid1.i_stage_read());
-          double* write = grid1.element(i_elem).stage(grid1.i_stage_write());
-          write[i_dof] = read[i_dof] + 0.371;
-        }
-      }
-    }
-    while (!grid1.execute_runge_kutta_stage());
-
-    for (int i_elem = 0; i_elem < grid1.n_elem; ++i_elem)
-    {
-      for (int i_dof = 0; i_dof < grid1.n_dof; ++i_dof)
-      {
-        REQUIRE(grid1.element(i_elem).stage(grid1.i_stage_read())[i_dof] == Approx(7.371));
-      }
-    }
-
-    do
-    {
-      for (int i_elem = 0; i_elem < grid1.n_elem; ++i_elem)
-      {
-        for (int i_dof = 0; i_dof < grid1.n_dof; ++i_dof)
-        {
-          double* read = grid1.element(i_elem).stage(grid1.i_stage_read());
-          double* write = grid1.element(i_elem).stage(grid1.i_stage_write());
-          write[i_dof] = read[i_dof] + 0.001;
-        }
-      }
-    }
-    while (!grid1.execute_runge_kutta_stage());
-
-    for (int i_elem = 0; i_elem < grid1.n_elem; ++i_elem)
-    {
-      for (int i_dof = 0; i_dof < grid1.n_dof; ++i_dof)
-      {
-        REQUIRE(grid1.element(i_elem).stage(grid1.i_stage_read())[i_dof] == Approx(7.372));
-      }
-    }
-  }
-
   SECTION("Add element")
   {
     cartdg::Equidistant basis (8);

@@ -40,11 +40,8 @@ class Grid
   virtual std::vector<double> get_pos(int i_elem) = 0;
   // maximum characteristic speed in reference space
   virtual double max_reference_speed(Kernel_settings& setttings) = 0;
-  int i_stage_read();
-  int i_stage_write();
 
   // time integration
-  bool execute_runge_kutta_stage();
   virtual void execute_write_face(Kernel_settings&) = 0;
   virtual void execute_neighbor(Kernel_settings&) = 0;
   virtual void execute_local(Kernel_settings&) = 0;
@@ -65,10 +62,6 @@ class Grid
   void print();
 
   protected:
-  int i_rk_stage;
-  int i_read;
-  int i_write;
-  double rk_weights [3] {1., 1./4., 2./3.};
   Storage_params storage_params;
   std::vector<Hanging_vertex_matcher> hanging_matchers;
 };
