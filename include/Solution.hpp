@@ -65,6 +65,7 @@ class Solution
   protected:
   double time;
   double refined_mesh_size(int ref_level);
+  std::vector<double> rk_weights {1., 1./4., 2./3.};
 };
 
 }
