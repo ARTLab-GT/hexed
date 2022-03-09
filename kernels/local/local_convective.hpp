@@ -27,8 +27,8 @@ void local_convective(elem_vec& elements, Basis& basis, Kernel_settings& setting
   #pragma omp parallel for
   for (unsigned i_elem = 0; i_elem < elements.size(); ++i_elem)
   {
-    double* state  = elements[i_elem]->stage(0);
-    double time_rate [n_var*n_qpoint] {};
+    double* state = elements[i_elem]->stage(0);
+    double time_rate [n_var][n_qpoint] {};
     double* face = elements[i_elem]->face();
     double* tss = elements[i_elem]->time_step_scale();
 
@@ -77,7 +77,7 @@ void local_convective(elem_vec& elements, Basis& basis, Kernel_settings& setting
           Eigen::Map<Eigen::Matrix<double, row_size, n_var>> w (&(row_w[0][0]));
           w.noalias() = -diff_mat*f;
 
-          // Write updated solution
+          // Add dimensional component to update
           for (int i_var = 0; i_var < n_var; ++i_var)
           {
             const int face_offset = i_var*n_qpoint/row_size + i_face_qpoint;
@@ -85,7 +85,7 @@ void local_convective(elem_vec& elements, Basis& basis, Kernel_settings& setting
             w.col(i_var).noalias() += lift*(boundary_values - boundary*f.col(i_var));
             for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
               int offset = i_outer*stride*row_size + i_inner + i_qpoint*stride;
-              time_rate[i_var*n_qpoint + offset] += row_w[i_var][i_qpoint];
+              time_rate[i_var][offset] += row_w[i_var][i_qpoint];
             }
           }
           ++i_face_qpoint;
@@ -94,8 +94,10 @@ void local_convective(elem_vec& elements, Basis& basis, Kernel_settings& setting
     }
 
     // write the updated solution
-    for (int i_dof = 0; i_dof < n_qpoint*n_var; ++i_dof) {
-      state[i_dof] += time_rate[i_dof]*d_t_by_d_pos*tss[i_dof];
+    for (int i_var = 0; i_var < n_var; ++i_var) {
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        state[i_var*n_qpoint + i_qpoint] += time_rate[i_var][i_qpoint]*d_t_by_d_pos*tss[i_qpoint];
+      }
     }
   }
 }
