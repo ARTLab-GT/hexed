@@ -25,11 +25,13 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
   double d_t_by_d_pos = settings.d_t/settings.d_pos;
   double heat_rat = settings.cpg_heat_rat;
   const int n_face_dof = n_var*n_qpoint/row_size;
+  const double rk_weight = settings.rk_weight;
 
   #pragma omp parallel for
   for (unsigned i_elem = 0; i_elem < def_elements.size(); ++i_elem)
   {
     double* state  = def_elements[i_elem]->stage(0);
+    double* rk_reference = state + n_var*n_qpoint;
     double time_rate [n_var][n_qpoint] {};
     double* jacobian = def_elements[i_elem]->jacobian();
     double* face = def_elements[i_elem]->face();
@@ -147,7 +149,9 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
     // write the updated solution
     for (int i_var = 0; i_var < n_var; ++i_var) {
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-        state[i_var*n_qpoint + i_qpoint] += time_rate[i_var][i_qpoint]*d_t_by_d_pos*tss[i_qpoint];
+        const int i_dof = i_var*n_qpoint + i_qpoint;
+        double updated = time_rate[i_var][i_qpoint]*d_t_by_d_pos*tss[i_qpoint] + state[i_dof];
+        state[i_dof] = rk_weight*updated + (1. - rk_weight)*rk_reference[i_dof];
       }
     }
   }

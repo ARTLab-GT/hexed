@@ -79,9 +79,9 @@ class Test
           stage[1*n_qpoint + i_qpoint] = mass*veloc[1];
           stage[2*n_qpoint + i_qpoint] = mass;
           stage[3*n_qpoint + i_qpoint] = pres/0.4 + 0.5*mass*(veloc[0]*veloc[0] + veloc[1]*veloc[1]);
-          // set rk reference state
+          // set RK reference state to negative of initial state
           for (int i_var = 0; i_var < 4; ++i_var) {
-            stage[(4 + i_var)*n_qpoint + i_qpoint] = stage[i_var*n_qpoint + i_qpoint];
+            stage[(4 + i_var)*n_qpoint + i_qpoint] = -stage[i_var*n_qpoint + i_qpoint];
           }
         }
         ++i_elem;
@@ -105,6 +105,7 @@ class Test
     grid.purge_vertices();
     grid.calc_jacobian();
     cartdg::Kernel_settings settings;
+    settings.rk_weight = 0.5; // use the same trick as in `test_local.cpp` to get the time derivative
     double dt = 0.07;
     settings.d_t = dt;
     settings.d_pos = grid.mesh_size;
@@ -114,16 +115,12 @@ class Test
     grid.execute_local(settings);
     for (int i_elem = 0; i_elem < 9; ++i_elem)
     {
-      double* r {grid.element(i_elem).stage(0)};
-      double* w {grid.element(i_elem).stage(1)};
-      for (int i_dof = 0; i_dof < 4*n_qpoint; ++i_dof) {
-        r[i_dof] = (w[i_dof] - r[i_dof])/dt;
-      }
+      double* state {grid.element(i_elem).stage(0)};
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
         double tss = ((i_elem == 4) && (i_qpoint == 0)) ? 0.77 : 1.;
-        REQUIRE(r[0*n_qpoint + i_qpoint] == Approx(tss*(-0.03*veloc[0]*veloc[0] - 0.02*veloc[1]*veloc[0])).scale(pres));
-        REQUIRE(r[1*n_qpoint + i_qpoint] == Approx(tss*(-0.03*veloc[0]*veloc[1] - 0.02*veloc[1]*veloc[1])).scale(pres));
-        REQUIRE(r[2*n_qpoint + i_qpoint] == Approx(tss*(-0.03*veloc[0] - 0.02*veloc[1])));
+        REQUIRE(state[0*n_qpoint + i_qpoint] == Approx(dt*0.5*tss*(-0.03*veloc[0]*veloc[0] - 0.02*veloc[1]*veloc[0])).scale(dt*pres));
+        REQUIRE(state[1*n_qpoint + i_qpoint] == Approx(dt*0.5*tss*(-0.03*veloc[0]*veloc[1] - 0.02*veloc[1]*veloc[1])).scale(dt*pres));
+        REQUIRE(state[2*n_qpoint + i_qpoint] == Approx(dt*0.5*tss*(-0.03*veloc[0] - 0.02*veloc[1])).scale(dt*pres));
       }
     }
   }
