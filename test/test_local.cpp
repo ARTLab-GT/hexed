@@ -95,24 +95,25 @@ TEST_CASE("Local convective")
       double* state = elements[i_elem]->stage(0);
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
-          state[0*n_qpoint + i_qpoint] = mmtm;
-          state[1*n_qpoint + i_qpoint] = mass;
-          state[2*n_qpoint + i_qpoint] = ener;
+        state[0*n_qpoint + i_qpoint] = mmtm;
+        state[1*n_qpoint + i_qpoint] = mass;
+        state[2*n_qpoint + i_qpoint] = ener;
+        // set RK reference state
+        for (int i_var = 0; i_var < 3; ++i_var) state[(3 + i_var)*n_qpoint + i_qpoint] = 30.;
       }
-      for (int i_face = 0; i_face < n_qpoint/params.row_size*3*2*1; ++i_face)
-      {
+      for (int i_face = 0; i_face < n_qpoint/params.row_size*3*2*1; ++i_face) {
         elements[i_elem]->face()[i_face] = 0.;
       }
     }
+    settings.rk_weight = 0.9;
     cartdg::get_local_convective(1, 2)(elements, basis, settings);
     for (auto& element : elements)
     {
       double* state = element->stage(0);
-      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
-      {
-        REQUIRE(state[0*n_qpoint + i_qpoint] - mmtm == Approx(-0.1*(mmtm*mmtm/mass + pres)));
-        REQUIRE(state[1*n_qpoint + i_qpoint] - mass == Approx(-0.1*mmtm));
-        REQUIRE(state[2*n_qpoint + i_qpoint] - ener == Approx(-0.1*((ener + pres)*veloc)));
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        REQUIRE(state[0*n_qpoint + i_qpoint] == Approx(0.1*30. + 0.9*(mmtm - 0.1*(mmtm*mmtm/mass + pres))));
+        REQUIRE(state[1*n_qpoint + i_qpoint] == Approx(0.1*30. + 0.9*(mass - 0.1*mmtm)));
+        REQUIRE(state[2*n_qpoint + i_qpoint] == Approx(0.1*30. + 0.9*(ener - 0.1*((ener + pres)*veloc))));
       }
     }
   }
@@ -170,6 +171,13 @@ TEST_CASE("Local convective")
     int n_qpoint = params.n_qpoint();
     cartdg::elem_vec elements;
     cartdg::Gauss_legendre basis (row_size);
+    /*
+     * to test the correctness of the time derivative, set the RK weight to 0.5
+     * and the RK reference state to minus the initial state. Thus the initial state
+     * and the reference state cancel out, and the result is 0.5 times the time derivative
+     * being written to the state.
+     */
+    settings.rk_weight = 0.5;
 
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
@@ -190,11 +198,17 @@ TEST_CASE("Local convective")
           int i_qpoint = i*row_size + j;
           double pos0 = basis.node(i); double pos1 = basis.node(j);
           SET_VARS
+          // set initial state
           state[0*n_qpoint + i_qpoint] = mass*veloc[0];
           state[1*n_qpoint + i_qpoint] = mass*veloc[1];
           state[2*n_qpoint + i_qpoint] = mass;
           state[3*n_qpoint + i_qpoint] = ener;
+          // set RK reference state to negative of initial state
+          for (int i_var = 0; i_var < 4; ++i_var) {
+            state[(4 + i_var)*n_qpoint + i_qpoint] = -state[i_var*n_qpoint + i_qpoint];
+          }
         }
+        // set face state to match interior state
         for (int i_dim : {0, 1})
         {
           for (int positive : {0, 1})
@@ -217,8 +231,8 @@ TEST_CASE("Local convective")
     for (auto& element : elements) {
       double* state = element->stage(0);
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-        REQUIRE(state[2*n_qpoint + i_qpoint] == Approx(-0.1*(0.1*10 - 0.2*20)));
-        REQUIRE(state[3*n_qpoint + i_qpoint] == Approx(-0.1*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20)
+        REQUIRE(state[2*n_qpoint + i_qpoint] == Approx(-0.05*(0.1*10 - 0.2*20)));
+        REQUIRE(state[3*n_qpoint + i_qpoint] == Approx(-0.05*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20)
                                                        + 0.5*(10*10 + 20*20)*(0.1*10 - 0.2*20))));
       }
     }

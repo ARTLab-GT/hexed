@@ -20,14 +20,16 @@ void local_convective(elem_vec& elements, Basis& basis, Kernel_settings& setting
   const Eigen::Matrix<double, row_size, 1> inv_weights {Eigen::Array<double, row_size, 1>::Constant(1.)/basis.node_weights().array()};
   const Eigen::Matrix<double, row_size, 2> lift {inv_weights.asDiagonal()*basis.boundary().transpose()*sign};
 
-  double d_t_by_d_pos = settings.d_t/settings.d_pos;
-  double heat_rat = settings.cpg_heat_rat;
+  const double d_t_by_d_pos = settings.d_t/settings.d_pos;
+  const double heat_rat = settings.cpg_heat_rat;
   const int n_face_dof = n_var*n_qpoint/row_size;
+  const double rk_weight = settings.rk_weight;
 
   #pragma omp parallel for
   for (unsigned i_elem = 0; i_elem < elements.size(); ++i_elem)
   {
     double* state = elements[i_elem]->stage(0);
+    double* rk_reference = state + n_var*n_qpoint;
     double time_rate [n_var][n_qpoint] {};
     double* face = elements[i_elem]->face();
     double* tss = elements[i_elem]->time_step_scale();
@@ -96,7 +98,9 @@ void local_convective(elem_vec& elements, Basis& basis, Kernel_settings& setting
     // write the updated solution
     for (int i_var = 0; i_var < n_var; ++i_var) {
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-        state[i_var*n_qpoint + i_qpoint] += time_rate[i_var][i_qpoint]*d_t_by_d_pos*tss[i_qpoint];
+        const int i_dof = i_var*n_qpoint + i_qpoint;
+        double updated = time_rate[i_var][i_qpoint]*d_t_by_d_pos*tss[i_qpoint] + state[i_dof];
+        state[i_dof] = rk_weight*updated + (1. - rk_weight)*rk_reference[i_dof];
       }
     }
   }
