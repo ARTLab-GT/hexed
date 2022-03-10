@@ -24,8 +24,8 @@ std::string Iteration_status::report()
 {
   std::string r = "";
   r += format("i", iteration);
-  r += format(".15f", time);
-  r += format(".15f", time_step);
+  r += format(".14e", time);
+  r += format(".14e", time_step);
   for (unsigned i = 0; i < sep.size(); ++i) r.pop_back();
   return r;
 }

@@ -10,7 +10,7 @@ namespace cartdg
 class Iteration_status
 {
   std::string sep = ",       ";
-  int number_width = 20;
+  int number_width = 21;
   std::vector<std::string> labels {"iteration", "flow time", "time step"};
   int width();
   template<typename T>
