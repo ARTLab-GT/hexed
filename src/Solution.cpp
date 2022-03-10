@@ -204,8 +204,14 @@ std::vector<Grid*> Solution::all_grids()
   return all;
 }
 
+Iteration_status Solution::iteration_status()
+{
+  return status;
+}
+
 double Solution::update(double stability_ratio)
 {
+  status.art_visc_iters = 0;
   // compute characteristic speed for evaluating the CFL condition
   double max_reference_speed = 0.;
   for (Grid* grid : all_grids()) {
@@ -233,7 +239,6 @@ double Solution::update(double stability_ratio)
     if (artificial_viscosity)
     {
       double nonsmooth = std::numeric_limits<double>::max();
-      int n_iters = 0;
       while (nonsmooth > 3.)
       {
         // compute artificial viscosity coefficient
@@ -278,9 +283,8 @@ double Solution::update(double stability_ratio)
             grid->execute_local_av(i_var, kernel_settings);
           }
         }
-        ++n_iters;
+        ++status.art_visc_iters;
       }
-      printf("%e %i\n", nonsmooth, n_iters);
     }
     // perform physical solution update
     kernel_settings.d_t = dt;
@@ -300,6 +304,10 @@ double Solution::update(double stability_ratio)
   for (Deformed_grid& grid : def_grids) {
     grid.project_degenerate();
   }
+
+  ++status.iteration;
+  status.time_step = dt;
+  status.flow_time += dt;
 
   time += dt;
   for (Grid* grid : all_grids()) {

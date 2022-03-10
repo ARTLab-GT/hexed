@@ -80,7 +80,9 @@ TEST_CASE("2D cartesian shock capturing")
       }
     }
   }
-  dt = sol.update(0.7); // evaluate how the viscosity coefficient is changing as a measure of the smoothness
+  sol.update(0.7); // evaluate how the viscosity coefficient is changing as a measure of the smoothness
+  dt = sol.iteration_status().time_step;
+  REQUIRE(sol.iteration_status().art_visc_iters > 0);
   std::vector<double> norm_inf_after (4, 0.);
   for (int i_var = 0; i_var < 4; ++i_var) {
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem) {

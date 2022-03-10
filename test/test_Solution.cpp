@@ -91,6 +91,19 @@ TEST_CASE("Solution class")
     REQUIRE(g->element(5).stage(0)[48] == 2.5);
   }
 
+  SECTION("status reporting")
+  {
+    Test_func test_func;
+    sol.initialize(test_func);
+    sol.update();
+    auto stat1 = sol.iteration_status();
+    sol.update();
+    auto stat2 = sol.iteration_status();
+    REQUIRE(stat2.iteration == 2);
+    REQUIRE(stat2.time_step > 0.);
+    REQUIRE(stat2.flow_time == Approx(stat1.time_step + stat2.time_step));
+  }
+
   SECTION("Regular integrals")
   {
     cartdg::Constant_func init (std::vector<double> (4, 1.2));

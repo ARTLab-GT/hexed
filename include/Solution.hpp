@@ -6,6 +6,7 @@
 #include "Gauss_legendre.hpp"
 #include "Kernel_settings.hpp"
 #include "Spacetime_func.hpp"
+#include "Iteration_status.hpp"
 
 namespace cartdg
 {
@@ -47,6 +48,7 @@ class Solution
 
   std::vector<double> surface_integral(Surface_func& integrand);
   std::vector<Grid*> all_grids();
+  Iteration_status iteration_status();
 
   // functions that modify the state (and related) data
   double update(double stability_ratio=0.7);
@@ -66,6 +68,7 @@ class Solution
   double time;
   double refined_mesh_size(int ref_level);
   std::vector<double> rk_weights {1., 1./4., 2./3.};
+  Iteration_status status;
 };
 
 }
