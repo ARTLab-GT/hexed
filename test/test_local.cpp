@@ -405,6 +405,7 @@ TEST_CASE("artificial viscosity")
           // write something to the output. the av kernel should increment this
           element.stage(0)[4*n_qpoint + i_qpoint] = 0.4;
         }
+        element.time_step_scale()[i_qpoint] = 1. + 0.3*i_qpoint; // set time step scale to check that it is incorporated properly
       }
       // reconstruct face gradient data
       for (int i_dim = 0; i_dim < 3; ++i_dim) {
@@ -428,7 +429,7 @@ TEST_CASE("artificial viscosity")
           // the correct viscosity gradient is `\frac{\partial \mu}{\partial x_i} = \prod_{j = 1; j \ne i}^{n_{dim}} \x_j = `\frac{\mu}{x_i}`
           divergence += direction[i_dim]*visc_coef/node[i_dim];
         }
-        REQUIRE(element.stage(0)[4*n_qpoint + i_qpoint] == Approx(0.4 + 3.4*divergence));
+        REQUIRE(element.stage(0)[4*n_qpoint + i_qpoint] == Approx(0.4 + 3.4*divergence*(1. + 0.3*i_qpoint)));
       }
     }
   }

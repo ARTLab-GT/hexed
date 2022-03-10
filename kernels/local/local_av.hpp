@@ -38,6 +38,7 @@ void local_av(elem_vec& elements, int i_var, Basis& basis, Kernel_settings& sett
     double* write = elements[i_elem]->stage(0);
     double* read  = write + 2*n_var*n_qpoint;
     double* face = elements[i_elem]->face();
+    double* tss = elements[i_elem]->time_step_scale();
     Eigen::Map<Eigen::Matrix<double, custom_math::pow(2, n_dim), 1>> vert_visc (elements[i_elem]->viscosity());
     Eigen::VectorXd visc = custom_math::hypercube_matvec(interp, vert_visc);
     for (int stride = n_qpoint/row_size, n_rows = 1, i_dim = 0; n_rows < n_qpoint;
@@ -64,7 +65,8 @@ void local_av(elem_vec& elements, int i_var, Basis& basis, Kernel_settings& sett
           Eigen::Matrix<double, row_size, 1> row_w = derivative(flux, boundary_values);
           // write row of data
           for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-            write[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride] += row_w(i_qpoint)*d_t_by_d_pos;
+            int offset = i_outer*stride*row_size + i_inner + i_qpoint*stride;
+            write[i_var*n_qpoint + offset] += row_w(i_qpoint)*d_t_by_d_pos*tss[offset];
           }
           ++i_face_qpoint;
         }
