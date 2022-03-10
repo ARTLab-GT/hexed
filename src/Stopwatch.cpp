@@ -26,17 +26,17 @@ void Stopwatch::reset()
   n = 0;
 }
 
-bool Stopwatch::running()
+bool Stopwatch::running() const
 {
   return r;
 }
 
-int Stopwatch::n_calls()
+int Stopwatch::n_calls() const
 {
   return n;
 }
 
-double Stopwatch::time()
+double Stopwatch::time() const
 {
   return t;
 }

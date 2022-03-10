@@ -24,9 +24,9 @@ class Stopwatch
   void start();
   void pause();
   void reset();
-  bool running();
-  int n_calls();
-  double time();
+  bool running() const;
+  int n_calls() const;
+  double time() const;
 };
 
 }
