@@ -14,7 +14,6 @@ class Shock_initializer : public cartdg::Spacetime_func
   virtual int n_var(int n_dim) {return n_dim + 2;}
   std::vector<double> operator()(std::vector<double> position, double time)
   {
-    //double mass = (position[1] > position[0]) ? 1.2 : 1.;
     double mass = 1.;
     double p0 = position[0] - 0.5;
     double p1 = position[1] - 0.5;
@@ -34,6 +33,26 @@ class Shock_initializer : public cartdg::Spacetime_func
   }
 };
 
+class Time_step_scaled_residual : public cartdg::Qpoint_func
+{
+  public:
+  virtual inline int n_var(int n_dim) {return n_dim + 2;}
+  virtual inline std::string variable_name(int i_var) {return "tss_residual";}
+  virtual std::vector<double> operator()(cartdg::Grid& grid, int i_element, int i_qpoint)
+  {
+    std::vector<double> result;
+    for (int i_var = 0; i_var < grid.n_var; ++i_var) {
+      // cheat and use the RK reference stage to get the initial condition
+      double diff = 0.;
+      for (int i_stage : {0, 1}) {
+        diff += (1 - 2*i_stage)*grid.element(i_element).stage(i_stage)[i_var*grid.n_qpoint + i_qpoint];
+      }
+      result.push_back(diff/grid.element(i_element).time_step_scale()[i_qpoint]);
+    }
+    return result;
+  }
+};
+
 TEST_CASE("2D cartesian shock capturing")
 {
   srand(406);
@@ -43,12 +62,15 @@ TEST_CASE("2D cartesian shock capturing")
   cartdg::Regular_grid& grid = sol.reg_grids[0];
   std::vector<int> periods {16, 16};
   grid.auto_connect(periods);
+  // set local time step to ensure that it does not violate conservation
+  // (in the local time stepping sense)
+  grid.element(16*8 + 4).vertex_time_step_scale()[3] = 0.5;
+  sol.set_local_time_step();
 
   Shock_initializer init (2);
   sol.initialize(init);
   sol.visualize_field("shock_capturing_before");
   double dt;
-  auto total_before {sol.integral()};
   std::vector<double> norm_inf_before (4, 0.);
   for (int i_var = 0; i_var < 4; ++i_var) {
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem) {
@@ -59,7 +81,6 @@ TEST_CASE("2D cartesian shock capturing")
     }
   }
   dt = sol.update(0.7); // evaluate how the viscosity coefficient is changing as a measure of the smoothness
-  auto total_after {sol.integral()};
   std::vector<double> norm_inf_after (4, 0.);
   for (int i_var = 0; i_var < 4; ++i_var) {
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem) {
@@ -69,13 +90,15 @@ TEST_CASE("2D cartesian shock capturing")
       }
     }
   }
+  auto total_diff = sol.integral<Time_step_scaled_residual>();
   sol.visualize_field<cartdg::Viscosity_func>("visc_coef");
   sol.visualize_field("shock_capturing_after");
+  double scales [] {1., 1., 1., 1e5};
   for (int i_var = 0; i_var < grid.n_var; ++i_var) {
     // assert that state decreases in L_infty norm
     CHECK(norm_inf_after[i_var] - norm_inf_before[i_var] < 0.);
     // assert discrete conservation
-    CHECK((total_after[i_var] - total_before[i_var])/dt == Approx{0.}.scale(std::abs(total_before[i_var]) + 1.));
+    CHECK(total_diff[i_var] == Approx{0.}.scale(scales[i_var]*dt));
   }
 }
 
