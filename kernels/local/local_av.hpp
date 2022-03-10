@@ -4,6 +4,7 @@
 #include <Basis.hpp>
 #include <Element.hpp>
 #include <Kernel_settings.hpp>
+#include <Derivative.hpp>
 #include <math.hpp>
 
 namespace cartdg
@@ -20,17 +21,14 @@ void local_av(elem_vec& elements, int i_var, Basis& basis, Kernel_settings& sett
 {
   const int n_dim = n_var - 2;
   const int n_face_dof = n_var*n_qpoint/row_size;
+  Derivative<row_size> derivative (basis);
   // fetch basis properties
-  const Eigen::Matrix<double, row_size, row_size> diff_mat {basis.diff_mat()};
   Eigen::Matrix<double, row_size, 2> interp;
   for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
     interp(i_qpoint, 0) = 1. - basis.node(i_qpoint);
     interp(i_qpoint, 1) =      basis.node(i_qpoint);
   }
-  const Eigen::Matrix<double, 2, row_size> boundary {basis.boundary()};
-  Eigen::MatrixXd sign {{1, 0}, {0, -1}};
-  const Eigen::Matrix<double, row_size, 1> inv_weights {Eigen::Array<double, row_size, 1>::Constant(1.)/basis.node_weights().array()};
-  const Eigen::Matrix<double, row_size, 2> lift {inv_weights.asDiagonal()*basis.boundary().transpose()*sign};
+  Eigen::Matrix<double, 2, row_size> boundary {basis.boundary()};
   // fetch kernel parameters
   const double d_t_by_d_pos = settings.d_t/settings.d_pos;
   // compute
@@ -63,7 +61,7 @@ void local_av(elem_vec& elements, int i_var, Basis& basis, Kernel_settings& sett
           Eigen::Matrix<double, 2, 1> boundary_values {face0[face_offset], face1[face_offset]};
           boundary_values = boundary_values.cwiseProduct(boundary*row_v);
           // compute derivative
-          Eigen::Matrix<double, row_size, 1> row_w = diff_mat*flux - lift*(boundary_values - boundary*flux);
+          Eigen::Matrix<double, row_size, 1> row_w = derivative(flux, boundary_values);
           // write row of data
           for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
             write[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride] += row_w(i_qpoint)*d_t_by_d_pos;

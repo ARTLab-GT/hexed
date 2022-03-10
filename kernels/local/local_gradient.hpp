@@ -4,6 +4,7 @@
 #include <Basis.hpp>
 #include <Element.hpp>
 #include <Kernel_settings.hpp>
+#include <Derivative.hpp>
 
 namespace cartdg
 {
@@ -17,12 +18,7 @@ template<int n_var, int n_qpoint, int row_size>
 void local_gradient(elem_vec& elements, int i_var, Basis& basis, Kernel_settings& settings)
 {
   const int n_face_dof = n_var*n_qpoint/row_size;
-  // fetch basis properties
-  const Eigen::Matrix<double, row_size, row_size> diff_mat {basis.diff_mat()};
-  const Eigen::Matrix<double, 2, row_size> boundary {basis.boundary()};
-  Eigen::MatrixXd sign {{1, 0}, {0, -1}};
-  const Eigen::Matrix<double, row_size, 1> inv_weights {Eigen::Array<double, row_size, 1>::Constant(1.)/basis.node_weights().array()};
-  const Eigen::Matrix<double, row_size, 2> lift {inv_weights.asDiagonal()*basis.boundary().transpose()*sign};
+  Derivative<row_size> derivative (basis);
   // fetch kernel parameters
   const double d_pos = settings.d_pos;
   // compute
@@ -49,7 +45,7 @@ void local_gradient(elem_vec& elements, int i_var, Basis& basis, Kernel_settings
           const int face_offset = i_dim*n_qpoint/row_size + i_face_qpoint;
           Eigen::Matrix<double, 2, 1> boundary_values {face0[face_offset], face1[face_offset]};
           // compute derivative
-          Eigen::Matrix<double, row_size, 1> row_w = diff_mat*row_r - lift*(boundary_values - boundary*row_r);
+          Eigen::Matrix<double, row_size, 1> row_w = derivative(row_r, boundary_values);
           // write row of data
           for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
             write[i_dim*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride] = row_w(i_qpoint)/d_pos;
