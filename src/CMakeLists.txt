@@ -10,6 +10,7 @@ Ghost_boundary_condition.cpp
 global.cpp
 Grid.cpp
 Hanging_vertex_matcher.cpp
+Iteration_status.cpp
 Kernel_settings.cpp
 math.cpp
 Output_data.cpp
