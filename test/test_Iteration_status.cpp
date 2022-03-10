@@ -34,4 +34,6 @@ TEST_CASE("Iteration_status")
   // the values should be neatly aligned, so the strings should all be the same length
   REQUIRE(lines[0].size() == lines[1].size());
   REQUIRE(lines[0].size() == lines[2].size());
+  // trailing spaces are annoying
+  for (auto line : lines) REQUIRE(line.back() != ' ');
 }
