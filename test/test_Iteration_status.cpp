@@ -11,6 +11,7 @@ TEST_CASE("Iteration_status")
   cartdg::Iteration_status stat;
   std::vector<std::string> lines;
   lines.push_back(stat.header());
+  stat.art_visc_iters = 3;
   lines.push_back(stat.report());
   stat.flow_time = 2.314;
   stat.time_step = 0.7;
@@ -24,6 +25,7 @@ TEST_CASE("Iteration_status")
   REQUIRE(in("iteration", lines[0]));
   REQUIRE(in("flow time", lines[0]));
   REQUIRE(in("time step", lines[0]));
+  REQUIRE(in("3", lines[1]));
   REQUIRE(in("1000000", lines[2]));
   REQUIRE(in("2", lines[2]));
   REQUIRE(in("3141", lines[3]));
