@@ -51,7 +51,7 @@ class Solution
   Iteration_status iteration_status();
 
   // functions that modify the state (and related) data
-  double update(double stability_ratio=0.7);
+  void update(double stability_ratio=0.8);
   void initialize(Spacetime_func& init_cond);
   void share_vertex_data(Element::shareable_value_access, Vertex::reduction = Vertex::vector_max);
   void set_local_time_step();
@@ -65,7 +65,6 @@ class Solution
   void auto_connect();
 
   protected:
-  double time;
   double refined_mesh_size(int ref_level);
   std::vector<double> rk_weights {1., 1./4., 2./3.};
   Iteration_status status;

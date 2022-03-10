@@ -8,7 +8,7 @@ namespace cartdg
 {
 
 Solution::Solution(int n_var_arg, int n_dim_arg, int row_size_arg, double bms)
-: n_var(n_var_arg), n_dim(n_dim_arg), base_mesh_size(bms), basis(row_size_arg), time(0.)
+: n_var(n_var_arg), n_dim(n_dim_arg), base_mesh_size(bms), basis(row_size_arg)
 {}
 
 Solution::~Solution() {}
@@ -18,7 +18,7 @@ void Solution::visualize_field(Qpoint_func& func, std::string name)
   const int n_vis = func.n_var(n_dim); // number of variables to visualize
   std::vector<std::string> var_names;
   for (int i_vis = 0; i_vis < n_vis; ++i_vis) var_names.push_back(func.variable_name(i_vis));
-  Tecplot_file file {name, n_dim, var_names, time};
+  Tecplot_file file {name, n_dim, var_names, status.flow_time};
   const int n_sample = 20;
   for (Grid* grid : all_grids())
   {
@@ -113,7 +113,7 @@ void Solution::visualize_surface(std::string name)
   int n_vis = n_var; // FIXME
   std::vector<std::string> var_names;
   for (int i_vis = 0; i_vis < n_vis; ++i_vis) var_names.push_back("state" + std::to_string(i_vis));
-  Tecplot_file file {name, n_dim, var_names, time};
+  Tecplot_file file {name, n_dim, var_names, status.flow_time};
   for (Deformed_grid& grid : def_grids) {
     grid.visualize_surface(file);
   }
@@ -209,7 +209,7 @@ Iteration_status Solution::iteration_status()
   return status;
 }
 
-double Solution::update(double stability_ratio)
+void Solution::update(double stability_ratio)
 {
   status.art_visc_iters = 0;
   // compute characteristic speed for evaluating the CFL condition
@@ -309,11 +309,9 @@ double Solution::update(double stability_ratio)
   status.time_step = dt;
   status.flow_time += dt;
 
-  time += dt;
   for (Grid* grid : all_grids()) {
-    grid->time = time;
+    grid->time = status.flow_time;
   }
-  return dt;
 }
 
 void Solution::initialize(Spacetime_func& init_cond)

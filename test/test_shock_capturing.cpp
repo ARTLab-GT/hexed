@@ -70,7 +70,6 @@ TEST_CASE("2D cartesian shock capturing")
   Shock_initializer init (2);
   sol.initialize(init);
   sol.visualize_field("shock_capturing_before");
-  double dt;
   std::vector<double> norm_inf_before (4, 0.);
   for (int i_var = 0; i_var < 4; ++i_var) {
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem) {
@@ -81,7 +80,6 @@ TEST_CASE("2D cartesian shock capturing")
     }
   }
   sol.update(0.7); // evaluate how the viscosity coefficient is changing as a measure of the smoothness
-  dt = sol.iteration_status().time_step;
   REQUIRE(sol.iteration_status().art_visc_iters > 0);
   std::vector<double> norm_inf_after (4, 0.);
   for (int i_var = 0; i_var < 4; ++i_var) {
@@ -100,7 +98,7 @@ TEST_CASE("2D cartesian shock capturing")
     // assert that state decreases in L_infty norm
     CHECK(norm_inf_after[i_var] - norm_inf_before[i_var] < 0.);
     // assert discrete conservation
-    CHECK(total_diff[i_var] == Approx{0.}.scale(scales[i_var]*dt));
+    CHECK(total_diff[i_var] == Approx{0.}.scale(scales[i_var]*sol.iteration_status().time_step));
   }
 }
 
