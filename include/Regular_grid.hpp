@@ -17,7 +17,7 @@ class Regular_grid : public Grid
   elem_con connection(int i_dim, int i_con); // mostly for testing
   int n_con(int i_dim); // mostly for testing
   virtual std::vector<double> get_pos(int i_elem);
-  virtual double stable_time_step(double cfl_by_stable_cfl, Kernel_settings& setttings);
+  double max_reference_speed(Kernel_settings& setttings);
 
   // modification
   virtual int add_element(std::vector<int> position);

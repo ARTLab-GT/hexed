@@ -52,7 +52,6 @@ TEST_CASE("gbc convective")
 {
   const int row_size = cartdg::config::max_row_size;
   cartdg::Solution soln (5, 3, row_size, 1.);
-  soln.kernel_settings.d_t_by_d_pos = 0.1;
   soln.add_block_grid(1, std::vector<int>{0, 0, 0}, std::vector<int>{3, 3, 3});
   cartdg::Regular_grid& grid = soln.reg_grids[0];
   soln.add_deformed_grid(1.);

@@ -55,16 +55,13 @@ std::vector<double> Regular_grid::get_pos(int i_elem)
   return elem_pos;
 }
 
-double Regular_grid::stable_time_step(double cfl_by_stable_cfl, Kernel_settings& settings)
+double Regular_grid::max_reference_speed(Kernel_settings& settings)
 {
-  double cfl = cfl_by_stable_cfl*get_stable_cfl();
-  settings.i_read = i_read;
-  return cfl*mesh_size/get_mcs_convective(n_dim, basis.row_size)(elements, settings);
+  return get_mcs_convective(n_dim, basis.row_size)(elements, settings)/mesh_size;
 }
 
 void Regular_grid::execute_write_face(Kernel_settings& settings)
 {
-  settings.i_read = i_read;
   get_write_face(n_dim, basis.row_size)(elements, basis, settings);
   // it's important that the `write_face` of lower-ref-level grids has already happened
   // if no refined faces, don't even call the function (to allow to use basis without prolong method as long as grid doesn't have hanging nodes)
@@ -80,59 +77,43 @@ void Regular_grid::execute_neighbor(Kernel_settings& settings)
 
 void Regular_grid::execute_local(Kernel_settings& settings)
 {
-  settings.i_read = i_read;
-  settings.i_write = i_write;
   get_local_convective(n_dim, basis.row_size)(elements, basis, settings);
 }
 
 double Regular_grid::execute_req_visc(Kernel_settings& settings)
 {
-  settings.i_read = i_read;
-  settings.i_write = i_write;
   return get_req_visc_regular_convective(n_dim, basis.row_size)(elements, basis, settings);
 }
 
 void Regular_grid::execute_write_face_gradient(int i_var, Kernel_settings& settings)
 {
-  settings.i_read = i_read;
-  settings.i_write = i_write;
   get_write_face_scalar(n_dim, basis.row_size)(elements, i_var, basis, settings);
 }
 
 void Regular_grid::execute_neighbor_gradient(int i_var, Kernel_settings& settings)
 {
-  settings.i_read = i_read;
-  settings.i_write = i_write;
   get_gbc_gradient(n_dim, basis.row_size)(element_gbcs, i_var, basis, settings);
   get_neighbor_gradient(n_dim, basis.row_size)(elem_cons, i_var, settings);
 }
 
 void Regular_grid::execute_local_gradient(int i_var, Kernel_settings& settings)
 {
-  settings.i_read = i_read;
-  settings.i_write = i_write;
   get_local_gradient(n_dim, basis.row_size)(elements, i_var, basis, settings);
 }
 
 void Regular_grid::execute_write_face_av(int i_var, Kernel_settings& settings)
 {
-  settings.i_read = i_read;
-  settings.i_write = i_write;
   get_write_face_n_dim(n_dim, basis.row_size)(elements, basis, settings);
 }
 
 void Regular_grid::execute_neighbor_av(int i_var, Kernel_settings& settings)
 {
-  settings.i_read = i_read;
-  settings.i_write = i_write;
   get_gbc_av(n_dim, basis.row_size)(element_gbcs, i_var, basis, settings);
   get_neighbor_av(n_dim, basis.row_size)(elem_cons, i_var, settings);
 }
 
 void Regular_grid::execute_local_av(int i_var, Kernel_settings& settings)
 {
-  settings.i_read = i_read;
-  settings.i_write = i_write;
   get_local_av(n_dim, basis.row_size)(elements, i_var, basis, settings);
 }
 

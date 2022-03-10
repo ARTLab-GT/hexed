@@ -39,10 +39,9 @@ template<typename elem_vec_t, int n_var, int n_qpoint, int row_size>
 void write_face_general(elem_vec_t& elements, Basis& basis, Kernel_settings& settings)
 {
   const Eigen::Matrix<double, 2, row_size> boundary {basis.boundary()};
-  const int i_read {settings.i_read};
   #pragma omp parallel for
   for (unsigned i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    double* read  = elements[i_elem]->stage(i_read);
+    double* read  = elements[i_elem]->stage(0);
     double* face {elements[i_elem]->face()};
     for (int i_var = 0; i_var < n_var; ++i_var) {
       write_face_variable<n_var, n_qpoint, row_size>(read, face, i_var, boundary);
@@ -54,10 +53,9 @@ template<typename elem_vec_t, int n_var, int n_qpoint, int row_size>
 void write_face_general_scalar(elem_vec_t& elements, int i_var, Basis& basis, Kernel_settings& settings)
 {
   const Eigen::Matrix<double, 2, row_size> boundary {basis.boundary()};
-  const int i_read {settings.i_read};
   #pragma omp parallel for
   for (unsigned i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    double* read  = elements[i_elem]->stage(i_read);
+    double* read  = elements[i_elem]->stage(0);
     double* face {elements[i_elem]->face()};
     write_face_variable<n_var, n_qpoint, row_size>(read, face, i_var, boundary);
   }
@@ -67,10 +65,9 @@ template<typename elem_vec_t, int n_var, int n_qpoint, int row_size>
 void write_face_general_n_dim(elem_vec_t& elements, Basis& basis, Kernel_settings& settings)
 {
   const Eigen::Matrix<double, 2, row_size> boundary {basis.boundary()};
-  const int i_read {settings.i_write}; // reading from the gradient in stage `i_write`!
   #pragma omp parallel for
   for (unsigned i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    double* read  = elements[i_elem]->stage(i_read);
+    double* read  = elements[i_elem]->stage(2);
     double* face {elements[i_elem]->face()};
     for (int i_dim = 0; i_dim < n_var - 2; ++i_dim) {
       write_face_variable<n_var, n_qpoint, row_size>(read, face, i_dim, boundary);

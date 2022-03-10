@@ -22,31 +22,26 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
   const Eigen::Matrix<double, row_size, 1> inv_weights {Eigen::Array<double, row_size, 1>::Constant(1.)/basis.node_weights().array()};
   const Eigen::Matrix<double, row_size, 2> lift {inv_weights.asDiagonal()*basis.boundary().transpose()*sign};
 
-  double d_t_by_d_pos = settings.d_t_by_d_pos;
+  double d_t_by_d_pos = settings.d_t/settings.d_pos;
   double heat_rat = settings.cpg_heat_rat;
-  const int i_read = settings.i_read;
-  const int i_write = settings.i_write;
   const int n_face_dof = n_var*n_qpoint/row_size;
+  const double rk_weight = settings.rk_weight;
 
   #pragma omp parallel for
   for (unsigned i_elem = 0; i_elem < def_elements.size(); ++i_elem)
   {
-    double* read  = def_elements[i_elem]->stage(i_read);
-    double* write = def_elements[i_elem]->stage(i_write);
+    double* state  = def_elements[i_elem]->stage(0);
+    double* rk_reference = state + n_var*n_qpoint;
+    double time_rate [n_var][n_qpoint] {};
     double* jacobian = def_elements[i_elem]->jacobian();
     double* face = def_elements[i_elem]->face();
     double* tss = def_elements[i_elem]->time_step_scale();
     double flux [n_dim][n_var][n_qpoint];
 
-    // Initialize updated solution to be equal to current solution
-    for (int i_dof = 0; i_dof < n_qpoint*n_var; ++i_dof) {
-      write[i_dof] = read[i_dof];
-    }
-
     // precompute flux
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        #define READ(i) read[(i)*n_qpoint + i_qpoint]
+        #define READ(i) state[(i)*n_qpoint + i_qpoint]
         #define FLUX(i) flux[i_dim][i][i_qpoint]
         double veloc = READ(i_dim)/READ(n_var - 2);
         double pres = 0;
@@ -64,7 +59,7 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
       }
     }
 
-    // Perform update
+    // Compute update
     for (int stride = n_qpoint/row_size, n_rows = 1, i_dim = 0; n_rows < n_qpoint;
          stride /= row_size, n_rows *= row_size, ++i_dim)
     {
@@ -137,17 +132,26 @@ void local_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_
             boundary_values.col(i_side) -= normal_flux;
           }
 
-          // Write updated solution
+          // Add dimensional component to update
           for (int i_var = 0; i_var < n_var; ++i_var) {
             row_w.col(i_var).noalias() += lift*boundary_values.row(i_var).transpose();
             row_w.col(i_var).array() /= jac_det;
             for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
               int offset = i_outer*stride*row_size + i_inner + i_qpoint*stride;
-              write[i_var*n_qpoint + offset] += row_w(i_qpoint, i_var)*d_t_by_d_pos*tss[offset];
+              time_rate[i_var][offset] += row_w(i_qpoint, i_var);
             }
           }
           ++i_face_qpoint;
         }
+      }
+    }
+
+    // write the updated solution
+    for (int i_var = 0; i_var < n_var; ++i_var) {
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        const int i_dof = i_var*n_qpoint + i_qpoint;
+        double updated = time_rate[i_var][i_qpoint]*d_t_by_d_pos*tss[i_qpoint] + state[i_dof];
+        state[i_dof] = rk_weight*updated + (1. - rk_weight)*rk_reference[i_dof];
       }
     }
   }

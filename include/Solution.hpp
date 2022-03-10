@@ -20,6 +20,7 @@ class Solution
   Kernel_settings kernel_settings;
   std::vector<Regular_grid> reg_grids;
   std::vector<Deformed_grid> def_grids;
+  bool artificial_viscosity = false; // FIXME: shouldn't need to turn it off
 
   Solution(int n_var_arg, int n_dim_arg, int row_size_arg, double bms);
   virtual ~Solution();
@@ -48,7 +49,7 @@ class Solution
   std::vector<Grid*> all_grids();
 
   // functions that modify the state (and related) data
-  double update(double cfl_by_stable_cfl=0.7);
+  double update(double stability_ratio=0.7);
   void initialize(Spacetime_func& init_cond);
   void share_vertex_data(Element::shareable_value_access, Vertex::reduction = Vertex::vector_max);
   void set_local_time_step();
@@ -64,6 +65,7 @@ class Solution
   protected:
   double time;
   double refined_mesh_size(int ref_level);
+  std::vector<double> rk_weights {1., 1./4., 2./3.};
 };
 
 }

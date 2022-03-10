@@ -15,12 +15,11 @@ double mcs_deformed_convective(def_elem_vec& def_elements, Kernel_settings& sett
 {
   const int n_dim = n_var - 2;
   double heat_rat = settings.cpg_heat_rat;
-  const int i_read = settings.i_read;
   double max_speed = 0.;
   #pragma omp parallel for reduction(max:max_speed)
   for (unsigned i_elem = 0; i_elem < def_elements.size(); ++i_elem)
   {
-    double speed = char_speed_convective<n_var, n_qpoint>(def_elements[i_elem]->stage(i_read), heat_rat);
+    double speed = char_speed_convective<n_var, n_qpoint>(def_elements[i_elem]->stage(0), heat_rat);
     double* jac_data = def_elements[i_elem]->jacobian();
     double* tss = def_elements[i_elem]->time_step_scale();
     // account for jacobian

@@ -38,6 +38,7 @@ TEST_CASE("2D cartesian shock capturing")
 {
   srand(406);
   cartdg::Solution sol (4, 2, cartdg::config::max_row_size, 1.);
+  sol.artificial_viscosity = true;
   sol.add_block_grid(4);
   cartdg::Regular_grid& grid = sol.reg_grids[0];
   std::vector<int> periods {16, 16};
