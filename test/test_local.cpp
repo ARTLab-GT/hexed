@@ -3,6 +3,7 @@
 #include <cartdgConfig.hpp>
 #include <get_write_face.hpp>
 #include <get_write_face_scalar.hpp>
+#include <get_write_face_gradient.hpp>
 #include <get_local_convective.hpp>
 #include <get_req_visc_regular_convective.hpp>
 #include <get_local_gradient.hpp>
@@ -288,6 +289,28 @@ TEST_CASE("artificial viscosity")
         int i_qpoint = (i_row*row_size + j_row)*row_size + k_row;
         int row [3] {i_row, j_row, k_row};
         for (int i_dim = 0; i_dim < 3; ++i_dim) nodes[i_qpoint][i_dim] = basis.node(row[i_dim]);
+      }
+    }
+  }
+
+  SECTION("write_face_gradient")
+  {
+    // write an arbitrary linear polynomial to the energy
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+      double* node = nodes[i_qpoint];
+      element.stage(0)[4*n_qpoint + i_qpoint] = 2.*node[2] - 3.*node[1] + 1.*node[2];
+    }
+    // more setup
+    cartdg::Kernel_settings settings;
+    settings.d_pos = 1./3.4;
+    cartdg::get_write_face_scalar(3, row_size)(elements, 4, basis, settings);
+    cartdg::get_write_face_gradient(3, row_size)(elements, basis, settings);
+    // verify face gradients
+    for (int is_positive : {0, 1}) {
+      for (int i_qpoint = 0; i_qpoint < n_qpoint/row_size; ++i_qpoint) {
+        REQUIRE(element.face()[(2*0 + is_positive)*n_qpoint/row_size + i_qpoint] == Approx(2.));
+        REQUIRE(element.face()[(2*1 + is_positive)*n_qpoint/row_size + i_qpoint] == Approx(-3.));
+        REQUIRE(element.face()[(2*2 + is_positive)*n_qpoint/row_size + i_qpoint] == Approx(1.));
       }
     }
   }
