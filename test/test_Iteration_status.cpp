@@ -1,4 +1,3 @@
-#include <iostream>
 #include <catch2/catch.hpp>
 #include <Iteration_status.hpp>
 
@@ -13,15 +12,14 @@ TEST_CASE("Iteration_status")
   std::vector<std::string> lines;
   lines.push_back(stat.header());
   lines.push_back(stat.report());
-  stat.time = 2.314;
+  stat.flow_time = 2.314;
   stat.time_step = 0.7;
   stat.iteration = int(1e6);
   lines.push_back(stat.report());
-  stat.time = 2.3141;
+  stat.flow_time = 2.3141;
   stat.time_step = -0.7;
   ++stat.iteration;
   lines.push_back(stat.report());
-  for (auto line : lines) std::cout << line << "\n";
   // test, as well as possible, that the strings contain the information they are supposed to
   REQUIRE(in("iteration", lines[0]));
   REQUIRE(in("flow time", lines[0]));

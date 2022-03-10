@@ -10,6 +10,15 @@ int Iteration_status::width()
   return w;
 }
 
+std::string Iteration_status::value_string()
+{
+  std::string r = "";
+  r += format("i", iteration);
+  r += format(".14e", flow_time);
+  r += format(".14e", time_step);
+  return r;
+}
+
 std::string Iteration_status::header()
 {
   std::string h = "";
@@ -22,10 +31,7 @@ std::string Iteration_status::header()
 
 std::string Iteration_status::report()
 {
-  std::string r = "";
-  r += format("i", iteration);
-  r += format(".14e", time);
-  r += format(".14e", time_step);
+  auto r = value_string();
   for (unsigned i = 0; i < sep.size(); ++i) r.pop_back();
   return r;
 }
