@@ -16,7 +16,7 @@ std::string Iteration_status::header()
   for (auto label : labels) {
     h += format("s", label.c_str());
   }
-  for (int i = 0; i < n_sep; ++i) h.pop_back(); // delete trailing spaces
+  for (unsigned i = 0; i < sep.size(); ++i) h.pop_back(); // delete trailing separator
   return h;
 }
 
@@ -26,7 +26,7 @@ std::string Iteration_status::report()
   r += format("i", iteration);
   r += format(".15f", time);
   r += format(".15f", time_step);
-  for (int i = 0; i < n_sep; ++i) r.pop_back();
+  for (unsigned i = 0; i < sep.size(); ++i) r.pop_back();
   return r;
 }
 
