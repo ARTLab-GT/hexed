@@ -9,6 +9,7 @@ test_conservation.cpp
 test_deformed.cpp
 test_Deformed_element.cpp
 test_Deformed_grid.cpp
+test_Derivative.cpp
 test_Element.cpp
 test_func.cpp
 test_Ghost_boundary_condition.cpp
