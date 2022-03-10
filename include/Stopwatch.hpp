@@ -17,13 +17,14 @@ class Stopwatch
 {
   int n = 0;
   double t = 0.;
-  bool running = false;
+  bool r = false;
   std::chrono::high_resolution_clock::time_point time_started;
 
   public:
   void start();
   void pause();
   void reset();
+  bool running();
   int n_calls();
   double time();
 };
