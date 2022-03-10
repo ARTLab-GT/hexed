@@ -28,9 +28,9 @@ TEST_CASE("Iteration_status")
   REQUIRE(in("time step", lines[0]));
   REQUIRE(in("1000000", lines[2]));
   REQUIRE(in("2", lines[2]));
-  REQUIRE(in("3141", lines[2]));
-  REQUIRE(in(" -", lines[2]));
-  REQUIRE(in("7", lines[2]));
+  REQUIRE(in("3141", lines[3]));
+  REQUIRE(in(" -", lines[3]));
+  REQUIRE(in("7", lines[3]));
   // the values should be neatly aligned, so the strings should all be the same length
   REQUIRE(lines[0].size() == lines[1].size());
   REQUIRE(lines[0].size() == lines[2].size());
