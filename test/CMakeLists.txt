@@ -25,6 +25,7 @@ test_Regular_grid.cpp
 test_shock_capturing.cpp
 test_sinusoid.cpp
 test_Solution.cpp
+test_Stopwatch.cpp
 test_Storage_params.cpp
 test_Tecplot_file.cpp
 test_Vertex.cpp

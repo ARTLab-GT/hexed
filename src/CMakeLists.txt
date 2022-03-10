@@ -20,6 +20,7 @@ Refined_face.cpp
 Regular_grid.cpp
 Solution.cpp
 Spacetime_func.cpp
+Stopwatch.cpp
 Storage_params.cpp
 Surface_func.cpp
 Tecplot_file.cpp
