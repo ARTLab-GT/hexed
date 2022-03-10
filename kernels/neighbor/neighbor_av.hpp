@@ -1,35 +1,41 @@
 #ifndef CARTDG_NEIGHBOR_AV_HPP_
 #define CARTDG_NEIGHBOR_AV_HPP_
 
+#include <Eigen/Dense>
+
+#include <Kernel_settings.hpp>
 #include <Basis.hpp>
 #include <Element.hpp>
-#include "variable_jump.hpp"
 
 namespace cartdg
 {
 
+/*
+ * Computes shared numerical gradient for artificial viscosity at the element interface. Numerical gradient is the average
+ * of the left and right values. The first `n_dim` variables are interpreted as the components of the gradient
+ * vector and the resulting flux of gradient through the surface is written to the `i_var`th variable. Note: does not
+ * account for viscosity coefficient. Since the viscosity coefficient is continuous, it can be handled by
+ * the local kernel.
+ */
 // AUTOGENERATE LOOKUP
 template<int n_var, int n_qpoint, int row_size>
-void neighbor_av(elem_con_vec& connections, int i_var, int i_dim,
-                 Basis& basis, Kernel_settings& settings)
+void neighbor_av(elem_con_vec& connections, int i_var, Kernel_settings& settings)
 {
-  #if 0
-  const double weight = basis.node_weights()[0]*settings.d_pos;
-  const int i_write = settings.i_write;
-  #pragma omp parallel for
-  for (unsigned i_con = 0; i_con < connections[i_dim].size(); ++i_con)
+  const int n_dim = n_var - 2;
+  const int n_face_qpoint = n_qpoint/row_size;
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
   {
-    std::array<double*, 2> read;
-    std::array<double*, 2> write;
-    for (int i_side : {0, 1})
+    //#pragma omp parallel for
+    for (unsigned i_con = 0; i_con < connections[i_dim].size(); ++i_con)
     {
-      Element* elem = connections[i_dim][i_con][i_side];
-      read[i_side] = elem->derivative();
-      write[i_side] = elem->stage(i_write) + i_var*n_qpoint;
+      elem_con con = connections[i_dim][i_con];
+      for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
+        double sum = 0.;
+        for (int i_side : {0, 1}) sum += con[i_side][i_dim*n_face_qpoint + i_qpoint];
+        for (int i_side : {0, 1}) con[i_side][i_var*n_face_qpoint + i_qpoint] = sum/2.;
+      }
     }
-    variable_jump<n_qpoint, row_size>(read, write, i_dim, weight);
   }
-  #endif
 }
 
 }

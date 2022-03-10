@@ -5,6 +5,8 @@
 #include <Solution.hpp>
 #include <get_gbc_convective.hpp>
 #include <get_gbc_deformed_convective.hpp>
+#include <get_gbc_gradient.hpp>
+#include <get_gbc_av.hpp>
 
 class Supersonic_inlet : public cartdg::Ghost_boundary_condition
 {
@@ -46,11 +48,10 @@ TEST_CASE("Ghost_boundary_condition class")
   }
 }
 
-TEST_CASE("gbc kernels")
+TEST_CASE("gbc convective")
 {
   const int row_size = cartdg::config::max_row_size;
   cartdg::Solution soln (5, 3, row_size, 1.);
-  soln.kernel_settings.d_t_by_d_pos = 0.1;
   soln.add_block_grid(1, std::vector<int>{0, 0, 0}, std::vector<int>{3, 3, 3});
   cartdg::Regular_grid& grid = soln.reg_grids[0];
   soln.add_deformed_grid(1.);
@@ -97,4 +98,49 @@ TEST_CASE("gbc kernels")
   REQUIRE(grid.element(26).face()[(1*5 + 3)*nfqpoint] < 0.);
   REQUIRE(grid.element(0).face()[(2*2*5 + 3)*nfqpoint] == Approx(2.*700.));
   REQUIRE(def_grid.element(0).face()[3*nfqpoint] == Approx(2.*700./2.)); // flux should be proportional to face size
+}
+
+TEST_CASE("gbc gradient")
+{
+  const int row_size = cartdg::config::max_row_size;
+  const int nfq = row_size*row_size;
+  cartdg::Kernel_settings settings;
+  cartdg::Gauss_legendre basis {row_size};
+  cartdg::Storage_params params {3, 5, 3, row_size};
+  cartdg::Element element {params};
+  Supersonic_inlet inlet {params, 1, 0};
+  cartdg::Element_gbc gbc {element, inlet};
+  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+    element.face()[(2*5 + 4)*nfq + i_qpoint] = 0.7;
+  }
+  // should just copy variable 4 into variable 1
+  cartdg::get_gbc_gradient(3, row_size)({gbc}, 4, basis, settings);
+  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+    REQUIRE(element.face()[(2*5 + 0)*nfq + i_qpoint] == Approx(0.).scale(1.));
+    REQUIRE(element.face()[(2*5 + 1)*nfq + i_qpoint] == Approx(0.7));
+    REQUIRE(element.face()[(2*5 + 2)*nfq + i_qpoint] == Approx(0.).scale(1.));
+  }
+}
+
+TEST_CASE("gbc av")
+{
+  const int row_size = cartdg::config::max_row_size;
+  const int nfq = row_size*row_size;
+  cartdg::Kernel_settings settings;
+  cartdg::Gauss_legendre basis {row_size};
+  cartdg::Storage_params params {3, 5, 3, row_size};
+  cartdg::Element element {params};
+  Supersonic_inlet inlet {params, 1, 0};
+  cartdg::Element_gbc gbc {element, inlet};
+  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+    element.face()[(2*5 + 0)*nfq + i_qpoint] = 0.;
+    element.face()[(2*5 + 1)*nfq + i_qpoint] = 0.7;
+    element.face()[(2*5 + 2)*nfq + i_qpoint] = 0.;
+    element.face()[(2*5 + 4)*nfq + i_qpoint] = 0.2; // set to something wrong just to make sure it gets overwritten
+  }
+  // should just copy variable 4 into variable 1
+  cartdg::get_gbc_av(3, row_size)({gbc}, 4, basis, settings);
+  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+    REQUIRE(element.face()[(2*5 + 4)*nfq + i_qpoint] == Approx(0.).scale(1.));
+  }
 }

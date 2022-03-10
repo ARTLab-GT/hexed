@@ -36,11 +36,9 @@ Deformed_element& Deformed_grid::deformed_element(int i_elem)
   return *elements[i_elem];
 }
 
-double Deformed_grid::stable_time_step(double cfl_by_stable_cfl, Kernel_settings& settings)
+double Deformed_grid::max_reference_speed(Kernel_settings& settings)
 {
-  double cfl = cfl_by_stable_cfl*get_stable_cfl();
-  settings.i_read = i_read;
-  return cfl*mesh_size/get_mcs_deformed_convective(n_dim, basis.row_size)(elements, settings);
+  return get_mcs_deformed_convective(n_dim, basis.row_size)(elements, settings)/mesh_size;
 }
 
 Deformed_elem_con Deformed_grid::connection(int i_con)
@@ -124,7 +122,6 @@ void Deformed_grid::add_wall(int i_elem, int i_dim, bool is_positive_face)
 
 void Deformed_grid::execute_write_face(Kernel_settings& settings)
 {
-  settings.i_read = i_read;
   get_write_face_deformed(n_dim, basis.row_size)(elements, basis, settings);
 }
 
@@ -137,37 +134,39 @@ void Deformed_grid::execute_neighbor(Kernel_settings& settings)
 
 void Deformed_grid::execute_local(Kernel_settings& settings)
 {
-  settings.i_read = i_read;
-  settings.i_write = i_write;
   get_local_deformed_convective(n_dim, basis.row_size)(elements, basis, settings);
 }
 
-void Deformed_grid::execute_req_visc(Kernel_settings& settings)
+double Deformed_grid::execute_req_visc(Kernel_settings& settings)
 {
-  get_req_visc_deformed_convective(n_dim, basis.row_size)(elements, basis, settings);
+  return get_req_visc_deformed_convective(n_dim, basis.row_size)(elements, basis, settings);
 }
 
-void Deformed_grid::execute_local_derivative(int i_var, int i_dim, Kernel_settings& settings)
-{
-}
-
-void Deformed_grid::execute_neighbor_derivative(int i_var, int i_dim, Kernel_settings& settings)
+void Deformed_grid::execute_write_face_gradient(int i_var, Kernel_settings&)
 {
 }
 
-void Deformed_grid::execute_av_flux(Kernel_settings& settings)
+void Deformed_grid::execute_neighbor_gradient(int i_var, Kernel_settings&)
 {
 }
 
-void Deformed_grid::execute_local_av(int i_var, int i_dim, Kernel_settings& settings)
+void Deformed_grid::execute_local_gradient(int i_var, Kernel_settings&)
 {
 }
 
-void Deformed_grid::execute_neighbor_av(int i_var, int i_dim, Kernel_settings& settings)
+void Deformed_grid::execute_write_face_av(int i_var, Kernel_settings&)
 {
 }
 
-void Deformed_grid::project_degenerate(int i_stage)
+void Deformed_grid::execute_neighbor_av(int i_var, Kernel_settings&)
+{
+}
+
+void Deformed_grid::execute_local_av(int i_var, Kernel_settings&)
+{
+}
+
+void Deformed_grid::project_degenerate()
 {
   for (int i_elem = 0; i_elem < n_elem; ++i_elem) {
     Deformed_element& elem {deformed_element(i_elem)};
@@ -183,7 +182,7 @@ void Deformed_grid::project_degenerate(int i_stage)
         product *= elem.jacobian_determinant(i_qpoint);
         weights[i_qpoint] = product;
       }
-      Eigen::Map<Eigen::MatrixXd> state (elem.stage(i_stage), n_qpoint, n_var);
+      Eigen::Map<Eigen::MatrixXd> state (elem.stage(0), n_qpoint, n_var);
       state = phys.projection(state, weights);
     }
   }

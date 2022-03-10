@@ -18,6 +18,8 @@ class Gauss_legendre : public Basis
   virtual Eigen::VectorXd orthogonal(int degree);
   virtual Eigen::MatrixXd prolong  (int i_half);
   virtual Eigen::MatrixXd restrict (int i_half);
+  virtual double max_cfl_convective();
+  virtual double max_cfl_diffusive();
 };
 
 }

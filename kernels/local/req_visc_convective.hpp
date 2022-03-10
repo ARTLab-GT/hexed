@@ -8,19 +8,20 @@
 #include <Kernel_settings.hpp>
 #include <Deformed_element.hpp>
 #include "../observing/indicator.hpp"
-#include "../observing/char_speed_convective.hpp"
 
 namespace cartdg
 {
 
+/*
+ * Find the artificial viscosity coefficient required in each element and write it to
+ * the viscosity at each element vertex. Return the maximum value of the logarithmic
+ * nonsmoothness metric to inform smoother convergence criteria.
+ */
 template<int n_var, int n_qpoint, int row_size, typename E>
-void req_visc_convective(std::vector<std::unique_ptr<E>>& elements, Basis& basis, Kernel_settings& settings)
+double req_visc_convective(std::vector<std::unique_ptr<E>>& elements, Basis& basis, Kernel_settings& settings)
 {
   const int n_dim = n_var - 2;
   constexpr int n_visc = custom_math::pow(2, n_dim);
-  const double heat_rat = settings.cpg_heat_rat;
-  const double d_pos = settings.d_pos;
-  const int i_read = settings.i_read;
   double weights [row_size];
   double ortho [row_size];
   {
@@ -33,32 +34,34 @@ void req_visc_convective(std::vector<std::unique_ptr<E>>& elements, Basis& basis
     }
   }
 
+  double max_nonsmooth = -std::numeric_limits<double>::max();
   for (std::unique_ptr<E>& elem : elements)
   {
-    double* stage = elem->stage(i_read);
-    double mass_indicator = indicator<n_qpoint, row_size>(stage + n_dim*n_qpoint, weights, ortho);
-    double char_speed = char_speed_convective<n_var, n_qpoint>(stage, heat_rat);
-    double req_visc = mass_indicator*char_speed*d_pos/(row_size - 1.);
+    double* stage = elem->stage(0);
+    auto params = indicator<n_qpoint, row_size>(stage + n_dim*n_qpoint, weights, ortho);
+    double mass_indicator = params[0];
+    max_nonsmooth = std::max(max_nonsmooth, params[1]);
     double* visc = elem->viscosity();
     for (int i_visc = 0; i_visc < n_visc; ++i_visc)
     {
-      visc[i_visc] = req_visc;
+      visc[i_visc] = mass_indicator;
     }
   }
+  return max_nonsmooth;
 }
 
 // AUTOGENERATE LOOKUP
 template<int n_var, int n_qpoint, int row_size>
-void req_visc_regular_convective(elem_vec& elements, Basis& basis, Kernel_settings& settings)
+double req_visc_regular_convective(elem_vec& elements, Basis& basis, Kernel_settings& settings)
 {
-  req_visc_convective<n_var, n_qpoint, row_size, Element>(elements, basis, settings);
+  return req_visc_convective<n_var, n_qpoint, row_size, Element>(elements, basis, settings);
 }
 
 // AUTOGENERATE LOOKUP
 template<int n_var, int n_qpoint, int row_size>
-void req_visc_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_settings& settings)
+double  req_visc_deformed_convective(def_elem_vec& def_elements, Basis& basis, Kernel_settings& settings)
 {
-  req_visc_convective<n_var, n_qpoint, row_size, Deformed_element>(def_elements, basis, settings);
+  return req_visc_convective<n_var, n_qpoint, row_size, Deformed_element>(def_elements, basis, settings);
 }
 
 }

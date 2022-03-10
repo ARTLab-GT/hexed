@@ -1,5 +1,5 @@
-#ifndef CARTDG_GBC_AV_HPP_
-#define CARTDG_GBC_AV_HPP_
+#ifndef CARTDG_GBC_GRADIENT_HPP_
+#define CARTDG_GBC_GRADIENT_HPP_
 
 #include <iostream>
 
@@ -10,17 +10,20 @@
 namespace cartdg
 {
 
-// Asserts that the artificial viscous flux through the boundary is 0
+// does essentially the same thing as `neighbor_gradient`, except there is no need to take an average
 // AUTOGENERATE LOOKUP
 template<int n_var, int n_qpoint, int row_size>
-void gbc_av(std::vector<Element_gbc> elem_gbcs, int i_var, Basis& basis, Kernel_settings& settings)
+void gbc_gradient(std::vector<Element_gbc> elem_gbcs, int i_var, Basis& basis, Kernel_settings& settings)
 {
+  const int n_dim = n_var - 2;
   const int n_face_qpoint = n_qpoint/row_size;
   for (unsigned i_egbc = 0; i_egbc < elem_gbcs.size(); ++i_egbc) {
     Element_gbc& gbc = elem_gbcs[i_egbc];
     double* face = gbc.element.face() + (2*gbc.gbc.i_dim() + gbc.gbc.is_positive_face())*n_var*n_face_qpoint;
     for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
-      face[i_var*n_face_qpoint + i_qpoint] = 0.;
+      double value = face[i_var*n_face_qpoint + i_qpoint];
+      for (int j_dim = 0; j_dim < n_dim; ++j_dim) face[j_dim*n_face_qpoint + i_qpoint] = 0.;
+      face[gbc.gbc.i_dim()*n_face_qpoint + i_qpoint] = value;
     }
   }
 }

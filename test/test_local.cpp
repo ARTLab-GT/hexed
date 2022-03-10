@@ -2,15 +2,16 @@
 
 #include <cartdgConfig.hpp>
 #include <get_write_face.hpp>
+#include <get_write_face_scalar.hpp>
 #include <get_local_convective.hpp>
 #include <get_req_visc_regular_convective.hpp>
-#include <get_av_flux.hpp>
-#include <local/variable_derivative.hpp>
-#include <get_local_derivative.hpp>
+#include <get_local_gradient.hpp>
+#include <get_local_av.hpp>
 #include <Gauss_lobatto.hpp>
 #include <Gauss_legendre.hpp>
 #include <Equidistant.hpp>
 #include <math.hpp>
+#include <Kernel_settings.hpp>
 
 class Identity_basis : public cartdg::Basis
 {
@@ -54,7 +55,7 @@ TEST_CASE("write_face")
       {
         int i_qpoint = (i_row*row_size + j_row)*row_size + k_row;
         double value = 0.1*i_var + 0.2*basis.node(i_row) + 0.3*basis.node(j_row) + 0.4*basis.node(k_row);
-        elements[0]->stage(settings.i_read)[i_var*n_qpoint + i_qpoint] = value;
+        elements[0]->stage(0)[i_var*n_qpoint + i_qpoint] = value;
       }
     }
     cartdg::get_write_face(3, row_size)(elements, basis, settings);
@@ -77,7 +78,8 @@ TEST_CASE("write_face")
 TEST_CASE("Local convective")
 {
   cartdg::Kernel_settings settings;
-  settings.d_t_by_d_pos = 0.1;
+  settings.d_t = 0.1;
+  settings.d_pos = 1.;
   SECTION("1D")
   {
     int n_elem = 5;
@@ -90,28 +92,28 @@ TEST_CASE("Local convective")
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       elements.emplace_back(new cartdg::Element {params});
-      double* read = elements[i_elem]->stage(settings.i_read);
+      double* state = elements[i_elem]->stage(0);
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
-          read[0*n_qpoint + i_qpoint] = mmtm;
-          read[1*n_qpoint + i_qpoint] = mass;
-          read[2*n_qpoint + i_qpoint] = ener;
+        state[0*n_qpoint + i_qpoint] = mmtm;
+        state[1*n_qpoint + i_qpoint] = mass;
+        state[2*n_qpoint + i_qpoint] = ener;
+        // set RK reference state
+        for (int i_var = 0; i_var < 3; ++i_var) state[(3 + i_var)*n_qpoint + i_qpoint] = 30.;
       }
-      for (int i_face = 0; i_face < n_qpoint/params.row_size*3*2*1; ++i_face)
-      {
+      for (int i_face = 0; i_face < n_qpoint/params.row_size*3*2*1; ++i_face) {
         elements[i_elem]->face()[i_face] = 0.;
       }
     }
+    settings.rk_weight = 0.9;
     cartdg::get_local_convective(1, 2)(elements, basis, settings);
     for (auto& element : elements)
     {
-      double* r = element->stage(settings.i_read);
-      double* w = element->stage(settings.i_write);
-      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
-      {
-        REQUIRE(w[0*n_qpoint + i_qpoint] - r[0*n_qpoint + i_qpoint] == Approx(-0.1*(mmtm*mmtm/mass + pres)));
-        REQUIRE(w[1*n_qpoint + i_qpoint] - r[1*n_qpoint + i_qpoint] == Approx(-0.1*mmtm));
-        REQUIRE(w[2*n_qpoint + i_qpoint] - r[2*n_qpoint + i_qpoint] == Approx(-0.1*((ener + pres)*veloc)));
+      double* state = element->stage(0);
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        REQUIRE(state[0*n_qpoint + i_qpoint] == Approx(0.1*30. + 0.9*(mmtm - 0.1*(mmtm*mmtm/mass + pres))));
+        REQUIRE(state[1*n_qpoint + i_qpoint] == Approx(0.1*30. + 0.9*(mass - 0.1*mmtm)));
+        REQUIRE(state[2*n_qpoint + i_qpoint] == Approx(0.1*30. + 0.9*(ener - 0.1*((ener + pres)*veloc))));
       }
     }
   }
@@ -130,14 +132,14 @@ TEST_CASE("Local convective")
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       elements.emplace_back(new cartdg::Element {params});
-      double* read = elements[i_elem]->stage(settings.i_read);
+      double* state = elements[i_elem]->stage(0);
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
-          read[0*n_qpoint + i_qpoint] = mass*veloc0;
-          read[1*n_qpoint + i_qpoint] = mass*veloc1;
-          read[2*n_qpoint + i_qpoint] = mass*veloc2;
-          read[3*n_qpoint + i_qpoint] = mass;
-          read[4*n_qpoint + i_qpoint] = ener;
+          state[0*n_qpoint + i_qpoint] = mass*veloc0;
+          state[1*n_qpoint + i_qpoint] = mass*veloc1;
+          state[2*n_qpoint + i_qpoint] = mass*veloc2;
+          state[3*n_qpoint + i_qpoint] = mass;
+          state[4*n_qpoint + i_qpoint] = ener;
       }
       for (int i_face = 0; i_face < n_qpoint/params.row_size*5*2*3; ++i_face)
       {
@@ -148,21 +150,15 @@ TEST_CASE("Local convective")
     cartdg::get_local_convective(3, 3)(elements, basis, settings);
     for (auto& element : elements)
     {
-      double* r = element->stage(settings.i_read);
-      double* w = element->stage(settings.i_write);
+      double* state = element->stage(0);
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
         double tss = (i_qpoint == 1) ? 0.16 : 1.;
-        REQUIRE(w[0*n_qpoint + i_qpoint] - r[0*n_qpoint + i_qpoint]
-                == Approx(-0.1*tss*(mass*veloc0*(veloc0 + veloc1 + veloc2) + pres)));
-        REQUIRE(w[1*n_qpoint + i_qpoint] - r[1*n_qpoint + i_qpoint]
-                == Approx(-0.1*tss*(mass*veloc1*(veloc0 + veloc1 + veloc2) + pres)));
-        REQUIRE(w[2*n_qpoint + i_qpoint] - r[2*n_qpoint + i_qpoint]
-                == Approx(-0.1*tss*(mass*veloc2*(veloc0 + veloc1 + veloc2) + pres)));
-        REQUIRE(w[3*n_qpoint + i_qpoint] - r[3*n_qpoint + i_qpoint]
-                == Approx(-0.1*tss*mass*(veloc0 + veloc1 + veloc2)));
-        REQUIRE(w[4*n_qpoint + i_qpoint] - r[4*n_qpoint + i_qpoint]
-                == Approx(-0.1*tss*((ener + pres)*(veloc0 + veloc1 + veloc2))));
+        REQUIRE(state[0*n_qpoint + i_qpoint] - mass*veloc0 == Approx(-0.1*tss*(mass*veloc0*(veloc0 + veloc1 + veloc2) + pres)));
+        REQUIRE(state[1*n_qpoint + i_qpoint] - mass*veloc1 == Approx(-0.1*tss*(mass*veloc1*(veloc0 + veloc1 + veloc2) + pres)));
+        REQUIRE(state[2*n_qpoint + i_qpoint] - mass*veloc2 == Approx(-0.1*tss*(mass*veloc2*(veloc0 + veloc1 + veloc2) + pres)));
+        REQUIRE(state[3*n_qpoint + i_qpoint] - mass        == Approx(-0.1*tss*mass*(veloc0 + veloc1 + veloc2)));
+        REQUIRE(state[4*n_qpoint + i_qpoint] - ener        == Approx(-0.1*tss*((ener + pres)*(veloc0 + veloc1 + veloc2))));
       }
     }
   }
@@ -175,11 +171,18 @@ TEST_CASE("Local convective")
     int n_qpoint = params.n_qpoint();
     cartdg::elem_vec elements;
     cartdg::Gauss_legendre basis (row_size);
+    /*
+     * to test the correctness of the time derivative, set the RK weight to 0.5
+     * and the RK reference state to minus the initial state. Thus the initial state
+     * and the reference state cancel out, and the result is 0.5 times the time derivative
+     * being written to the state.
+     */
+    settings.rk_weight = 0.5;
 
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       elements.emplace_back(new cartdg::Element {params});
-      double* read = elements[i_elem]->stage(settings.i_read);
+      double* state = elements[i_elem]->stage(0);
       double* face = elements[i_elem]->face();
 
       #define SET_VARS \
@@ -195,11 +198,17 @@ TEST_CASE("Local convective")
           int i_qpoint = i*row_size + j;
           double pos0 = basis.node(i); double pos1 = basis.node(j);
           SET_VARS
-          read[0*n_qpoint + i_qpoint] = mass*veloc[0];
-          read[1*n_qpoint + i_qpoint] = mass*veloc[1];
-          read[2*n_qpoint + i_qpoint] = mass;
-          read[3*n_qpoint + i_qpoint] = ener;
+          // set initial state
+          state[0*n_qpoint + i_qpoint] = mass*veloc[0];
+          state[1*n_qpoint + i_qpoint] = mass*veloc[1];
+          state[2*n_qpoint + i_qpoint] = mass;
+          state[3*n_qpoint + i_qpoint] = ener;
+          // set RK reference state to negative of initial state
+          for (int i_var = 0; i_var < 4; ++i_var) {
+            state[(4 + i_var)*n_qpoint + i_qpoint] = -state[i_var*n_qpoint + i_qpoint];
+          }
         }
+        // set face state to match interior state
         for (int i_dim : {0, 1})
         {
           for (int positive : {0, 1})
@@ -219,159 +228,12 @@ TEST_CASE("Local convective")
       #undef SET_VARS
     }
     cartdg::get_local_convective(2, row_size)(elements, basis, settings);
-    for (auto& element : elements)
-    {
-      double* r = element->stage(settings.i_read);
-      double* w = element->stage(settings.i_write);
-      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
-      {
-        REQUIRE(w[2*n_qpoint + i_qpoint] - r[2*n_qpoint + i_qpoint]
-                == Approx(-0.1*(0.1*10 - 0.2*20)));
-        REQUIRE(w[3*n_qpoint + i_qpoint] - r[3*n_qpoint + i_qpoint]
-                == Approx(-0.1*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20)
-                          + 0.5*(10*10 + 20*20)*(0.1*10 - 0.2*20))));
-      }
-    }
-  }
-}
-
-TEST_CASE("derivative")
-{
-  const int row_size = cartdg::config::max_row_size;
-  cartdg::Gauss_lobatto basis (row_size);
-  cartdg::Kernel_settings settings;
-  Eigen::Matrix<double, row_size, row_size> diff_mat = basis.diff_mat();
-  SECTION("calculations")
-  {
-    double read [row_size];
-    double write [row_size];
-    SECTION("constant function")
-    {
-      for (int i = 0; i < row_size; ++i)
-      {
-        read[i] = 1.;
-        write[i] = 1.;
-      }
-      cartdg::variable_derivative<1, row_size>(read, write, 0, diff_mat, settings.d_pos);
-      for (int i = 0; i < row_size; ++i)
-      {
-        REQUIRE(write[i] == Approx(0.).margin(1e-14));
-      }
-    }
-    SECTION("polynomial")
-    {
-      for (int i = 0; i < row_size; ++i)
-      {
-        read[i] = std::pow(basis.node(i), 3);
-        write[i] = 1.;
-      }
-      cartdg::variable_derivative<1, row_size>(read, write, 0, diff_mat, settings.d_pos);
-      for (int i = 0; i < row_size; ++i)
-      {
-        REQUIRE(write[i] == Approx(3*std::pow(basis.node(i), 2)).margin(1e-14));
-      }
-    }
-    SECTION("exponential") // Not mathematically exact but numerically very good
-    {
-      for (int i = 0; i < row_size; ++i)
-      {
-        read[i] = std::exp(basis.node(i));
-        write[i] = 1.;
-      }
-      cartdg::variable_derivative<1, row_size>(read, write, 0, diff_mat, settings.d_pos);
-      for (int i = 0; i < row_size; ++i)
-      {
-        REQUIRE(write[i] == Approx(std::exp(basis.node(i))).margin(1e-14));
-      }
-    }
-  }
-  SECTION("data juggling")
-  {
-    SECTION("3D")
-    {
-      double coefs [] {1.103, -4.044, 0.392};
-      for (int i_dim = 0; i_dim < 3; ++i_dim)
-      {
-        double read [row_size][row_size][row_size] {};
-        double write [row_size][row_size][row_size] {};
-        for (int i = 0; i < row_size; ++i)
-        {
-          for (int j = 0; j < row_size; ++j)
-          {
-            for (int k = 0; k < row_size; ++k)
-            {
-              int inds [] {i, j, k};
-              for (int j_dim : {0, 1, 2}) read[i][j][k] += coefs[j_dim]*basis.node(inds[j_dim]);
-            }
-          }
-        }
-        cartdg::variable_derivative<3, row_size>(read[0][0], write[0][0], i_dim, diff_mat, settings.d_pos);
-        for (int i = 0; i < row_size; ++i)
-        {
-          for (int j = 0; j < row_size; ++j)
-          {
-            for (int k = 0; k < row_size; ++k)
-            {
-              REQUIRE(write[i][j][k] == Approx(coefs[i_dim]));
-            }
-          }
-        }
-      }
-    }
-    SECTION("multi-element")
-    {
-      cartdg::Storage_params params {3, 3, 1, row_size};
-      cartdg::elem_vec elements;
-      double coefs [] {1.103, -4.044, 0.392};
-      for (int i_elem = 0; i_elem < 3; ++i_elem)
-      {
-        elements.emplace_back(new cartdg::Element {params});
-        for (int i = 0; i < row_size; ++i)
-        {
-          elements.back()->stage(0)[i] = coefs[i_elem]*basis.node(i);
-        }
-      }
-      cartdg::get_local_derivative(1, row_size)(elements, 0, 0, basis, settings);
-      for (int i_elem = 0; i_elem < 3; ++i_elem)
-      {
-        for (int i = 0; i < row_size; ++i)
-        {
-          REQUIRE(elements[i_elem]->derivative()[i] == Approx(coefs[i_elem]));
-        }
-      }
-    }
-    SECTION("multivariable")
-    {
-      cartdg::Storage_params params {3, 3, 1, row_size};
-      cartdg::elem_vec elements;
-      SECTION("differentiate flow vars")
-      {
-        for (int i_elem : {0, 1})
-        {
-          elements.emplace_back(new cartdg::Element {params});
-          double* stage = elements[i_elem]->stage(0);
-          for (int i = 0; i < row_size; ++i)
-          {
-            stage[i + 1*row_size] = std::pow(basis.node(i), 2);
-            stage[i + 2*row_size] = std::pow(basis.node(i), 3);
-          }
-        }
-        cartdg::get_local_derivative(1, row_size)(elements, 1, 0, basis, settings);
-        for (int i_elem : {0, 1})
-        {
-          for (int i = 0; i < row_size; ++i)
-          {
-            REQUIRE(elements[i_elem]->derivative()[i] == Approx(2*basis.node(i)).margin(1e-14));
-          }
-        }
-        cartdg::get_local_derivative(1, row_size)(elements, 2, 0, basis, settings);
-        for (int i_elem : {0, 1})
-        {
-          for (int i = 0; i < row_size; ++i)
-          {
-            REQUIRE(elements[i_elem]->derivative()[i] == Approx(3*std::pow(basis.node(i), 2)).margin(1e-14));
-          }
-        }
+    for (auto& element : elements) {
+      double* state = element->stage(0);
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        REQUIRE(state[2*n_qpoint + i_qpoint] == Approx(-0.05*(0.1*10 - 0.2*20)));
+        REQUIRE(state[3*n_qpoint + i_qpoint] == Approx(-0.05*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20)
+                                                       + 0.5*(10*10 + 20*20)*(0.1*10 - 0.2*20))));
       }
     }
   }
@@ -404,42 +266,171 @@ TEST_CASE("req_visc")
   cartdg::get_req_visc_regular_convective(3, row_size)(elements, basis, settings);
   REQUIRE(elements[0]->viscosity()[0] == 0.);
   REQUIRE(elements[0]->viscosity()[7] == 0.);
-  REQUIRE(elements[1]->viscosity()[0] == Approx(0.5*340.29/(row_size - 1.)).margin(0.01));
-  REQUIRE(elements[1]->viscosity()[7] == Approx(0.5*340.29/(row_size - 1.)).margin(0.01));
+  REQUIRE(elements[1]->viscosity()[0] == Approx(1.));
+  REQUIRE(elements[1]->viscosity()[7] == Approx(1.));
 }
 
-TEST_CASE("av_flux")
+TEST_CASE("artificial viscosity")
 {
-  if (cartdg::config::max_row_size >= 3)
-  {
-    cartdg::Gauss_lobatto basis (3);
-    cartdg::Kernel_settings settings;
-    settings.d_pos = 0.5;
-    settings.d_t_by_d_pos = 3.;
-    cartdg::Storage_params params {3, 4, 2, 3};
-    cartdg::elem_vec elements;
-    for (int i_elem : {0, 1})
-    {
-      elements.emplace_back(new cartdg::Element {params});
-      for (int i = 0; i < 4; ++i) elements[i_elem]->viscosity()[i] = 0.;
-      for (int i = 0; i < 9; ++i) elements[i_elem]->derivative()[i] = 0.;
+  const int row_size = cartdg::config::max_row_size;
+  static_assert (row_size >= 3); // this test requires at least quadratic polynomial
+  cartdg::Storage_params params {3, 5, 3, row_size};
+  cartdg::elem_vec elements;
+  elements.emplace_back(new cartdg::Element {params});
+  cartdg::Element& element = *elements.back();
+  const int n_qpoint = cartdg::custom_math::pow(row_size, 3);
+  cartdg::Gauss_legendre basis (row_size);
+  double nodes [n_qpoint][3];
+  // compute the positions of the 3D quadrature points
+  for (int i_row = 0; i_row < row_size; ++i_row) {
+    for (int j_row = 0; j_row < row_size; ++j_row) {
+      for (int k_row = 0; k_row < row_size; ++k_row) {
+        int i_qpoint = (i_row*row_size + j_row)*row_size + k_row;
+        int row [3] {i_row, j_row, k_row};
+        for (int i_dim = 0; i_dim < 3; ++i_dim) nodes[i_qpoint][i_dim] = basis.node(row[i_dim]);
+      }
     }
-    elements[0]->viscosity()[0] = 0.2;
-    elements[1]->derivative()[1] = 0.3;
-    elements[1]->derivative()[8] = 0.4;
-    for (int i = 0; i < 4; ++i) elements[1]->viscosity()[i] = 1.;
-    for (int i = 0; i < 9; ++i) elements[0]->derivative()[i] = 1.;
-    cartdg::get_av_flux(2, 3)(elements, basis, settings);
+  }
 
-    REQUIRE(elements[0]->derivative()[0] == Approx(0.2*1.5));
-    REQUIRE(elements[0]->derivative()[1] == Approx(0.1*1.5));
-    REQUIRE(elements[0]->derivative()[2] == Approx(0.0*1.5));
-    REQUIRE(elements[0]->derivative()[3] == Approx(0.1*1.5));
-    REQUIRE(elements[0]->derivative()[4] == Approx(0.05*1.5));
-    REQUIRE(elements[0]->derivative()[5] == Approx(0.0*1.5));
+  SECTION("local_gradient")
+  {
+    // write an arbitrary triquadratic polynomial to the energy
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+      double* node = nodes[i_qpoint];
+      element.stage(0)[4*n_qpoint + i_qpoint] = 2.*node[0]*node[0] - 3.*node[0]*node[1]*node[1] + 1.*node[0]*node[1]*node[2];
+    }
+    cartdg::Kernel_settings settings;
+    settings.d_pos = 1./3.4;
+    SECTION("local component")
+    {
+      // reconstruct face values as they would be by the neighbor kernel
+      cartdg::get_write_face_scalar(3, row_size)(elements, 4, basis, settings);
+      for (int i_dim = 0; i_dim < 3; ++i_dim) {
+        for (int is_positive = 0; is_positive < 2; ++is_positive) {
+          for (int i_face_qpoint = 0; i_face_qpoint < n_qpoint/row_size; ++i_face_qpoint) {
+            int offset = (i_dim*2 + is_positive)*5*n_qpoint/row_size + i_face_qpoint;
+            for (int j_dim = 0; j_dim < 3; ++j_dim) {
+              element.face()[offset + i_dim*n_qpoint/row_size] = 0.;
+            }
+            element.face()[offset + i_dim*n_qpoint/row_size] = element.face()[offset + 4*n_qpoint/row_size];
+            element.face()[offset + 4*n_qpoint/row_size] = 0.;
+          }
+        }
+      }
+      cartdg::get_local_gradient(3, row_size)(elements, 4, basis, settings);
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        double* node = nodes[i_qpoint];
+        // check that derivatives match analytic
+        REQUIRE(element.stage(2)[0*n_qpoint + i_qpoint] == Approx(3.4*(4.*node[0] - 3.*node[1]*node[1] + 1.*node[1]*node[2])));
+        REQUIRE(element.stage(2)[1*n_qpoint + i_qpoint] == Approx(3.4*(-6.*node[0]*node[1] + 1.*node[0]*node[2])));
+        REQUIRE(element.stage(2)[2*n_qpoint + i_qpoint] == Approx(3.4*(1.*node[0]*node[1])));
+      }
+    }
+    SECTION("variational crimes")
+    {
+      /*
+       * variational crimes can be viewed as a violation of conservation in the LDG gradient
+       * operator. Here we explicitly set the face values and then evaluate the integral of
+       * the computed gradient.
+       */
+      // set face "flux" to be 0.3 inwards on all faces
+      for (int i_dim = 0; i_dim < 3; ++i_dim) {
+        for (int is_positive = 0; is_positive < 2; ++is_positive) {
+          for (int i_face_qpoint = 0; i_face_qpoint < n_qpoint/row_size; ++i_face_qpoint) {
+            int offset = (i_dim*2 + is_positive)*5*n_qpoint/row_size + i_face_qpoint;
+            for (int j_dim = 0; j_dim < 3; ++j_dim) {
+              element.face()[offset + i_dim*n_qpoint/row_size] = 0.;
+            }
+            element.face()[offset + i_dim*n_qpoint/row_size] = 0.3*(2*is_positive - 1);
+          }
+        }
+      }
+      cartdg::get_local_gradient(3, row_size)(elements, 4, basis, settings);
+      // integrate computed gradient
+      double integral [3] {};
+      for (int i_row = 0; i_row < row_size; ++i_row) {
+        for (int j_row = 0; j_row < row_size; ++j_row) {
+          for (int k_row = 0; k_row < row_size; ++k_row) {
+            int i_qpoint = (i_row*row_size + j_row)*row_size + k_row;
+            int row [3] {i_row, j_row, k_row};
+            double weight = 1.;
+            for (int i_dim = 0; i_dim < 3; ++i_dim) weight *= basis.node_weights()(row[i_dim]);
+            for (int i_dim = 0; i_dim < 3; ++i_dim) integral[i_dim] += weight*element.stage(2)[i_dim*n_qpoint + i_qpoint];
+          }
+        }
+      }
+      for (int i_dim = 0; i_dim < 3; ++i_dim) REQUIRE(integral[i_dim] == Approx(2*0.3*3.4));
+    }
+  }
 
-    REQUIRE(elements[1]->derivative()[0] == Approx(0.0));
-    REQUIRE(elements[1]->derivative()[1] == Approx(0.3*1.5));
-    REQUIRE(elements[1]->derivative()[8] == Approx(0.4*1.5));
+  SECTION("local_av")
+  {
+    double direction [3] {2., -0.3, 0.01};
+    cartdg::Kernel_settings settings;
+    settings.d_t = 1.7;
+    settings.d_pos = 0.5;
+    SECTION("nonuniform gradient")
+    {
+      for (int i_vert = 0; i_vert < 8; ++i_vert) element.viscosity()[i_vert] = 1.;
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        double* node = nodes[i_qpoint];
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+          // write an arbitrary linear polynomial to the gradient
+          element.stage(2)[i_dim*n_qpoint + i_qpoint] = direction[i_dim]*node[i_dim];
+          // write something to the output. the av kernel should increment this
+          element.stage(0)[4*n_qpoint + i_qpoint] = 0.4;
+        }
+      }
+      // reconstruct face gradient data
+      for (int i_dim = 0; i_dim < 3; ++i_dim) {
+        for (int is_positive = 0; is_positive < 2; ++is_positive) {
+          for (int i_face_qpoint = 0; i_face_qpoint < n_qpoint/row_size; ++i_face_qpoint) {
+            int offset = (i_dim*2 + is_positive)*5*n_qpoint/row_size + i_face_qpoint;
+            element.face()[offset + 4*n_qpoint/row_size] = is_positive*direction[i_dim];
+          }
+        }
+      }
+      cartdg::get_local_av(3, row_size)(elements, 4, basis, settings);
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        REQUIRE(element.stage(0)[4*n_qpoint + i_qpoint] == Approx(0.4 + 3.4*(2. - 0.3 + 0.01)));
+      }
+    }
+    SECTION("nonuniform viscosity coefficient")
+    {
+      element.viscosity()[7] = 1.; // set nonumiform viscosity (initalized to zero at all vertices)
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+          // write an constant to the gradient
+          element.stage(2)[i_dim*n_qpoint + i_qpoint] = direction[i_dim];
+          // write something to the output. the av kernel should increment this
+          element.stage(0)[4*n_qpoint + i_qpoint] = 0.4;
+        }
+        element.time_step_scale()[i_qpoint] = 1. + 0.3*i_qpoint; // set time step scale to check that it is incorporated properly
+      }
+      // reconstruct face gradient data
+      for (int i_dim = 0; i_dim < 3; ++i_dim) {
+        for (int is_positive = 0; is_positive < 2; ++is_positive) {
+          for (int i_face_qpoint = 0; i_face_qpoint < n_qpoint/row_size; ++i_face_qpoint) {
+            int offset = (i_dim*2 + is_positive)*5*n_qpoint/row_size + i_face_qpoint;
+            element.face()[offset + 4*n_qpoint/row_size] = direction[i_dim];
+          }
+        }
+      }
+      cartdg::get_local_av(3, row_size)(elements, 4, basis, settings);
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        double* node = nodes[i_qpoint];
+        double visc_coef = 1.;
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+          // since we set viscosity at vertex 7 to 1, `\mu = \prod_{i = 1}^{n_{dim}} x_i`
+          visc_coef *= node[i_dim];
+        }
+        double divergence = 0.;
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+          // the correct viscosity gradient is `\frac{\partial \mu}{\partial x_i} = \prod_{j = 1; j \ne i}^{n_{dim}} \x_j = `\frac{\mu}{x_i}`
+          divergence += direction[i_dim]*visc_coef/node[i_dim];
+        }
+        REQUIRE(element.stage(0)[4*n_qpoint + i_qpoint] == Approx(0.4 + 3.4*divergence*(1. + 0.3*i_qpoint)));
+      }
+    }
   }
 }

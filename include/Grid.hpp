@@ -38,22 +38,20 @@ class Grid
   // access
   virtual Element& element(int i_elem) = 0;
   virtual std::vector<double> get_pos(int i_elem) = 0;
-  virtual double stable_time_step(double cfl_by_stable_cfl, Kernel_settings& setttings) = 0;
-  int i_stage_read();
-  int i_stage_write();
+  // maximum characteristic speed in reference space
+  virtual double max_reference_speed(Kernel_settings& setttings) = 0;
 
   // time integration
-  bool execute_runge_kutta_stage();
-  double get_stable_cfl();
   virtual void execute_write_face(Kernel_settings&) = 0;
   virtual void execute_neighbor(Kernel_settings&) = 0;
   virtual void execute_local(Kernel_settings&) = 0;
-  virtual void execute_req_visc(Kernel_settings&) = 0;
-  virtual void execute_local_derivative(int i_var, int i_dim, Kernel_settings&) = 0;
-  virtual void execute_neighbor_derivative(int i_var, int i_dim, Kernel_settings&) = 0;
-  virtual void execute_av_flux(Kernel_settings&) = 0;
-  virtual void execute_local_av(int i_var, int i_dim, Kernel_settings&) = 0;
-  virtual void execute_neighbor_av(int i_var, int i_dim, Kernel_settings&) = 0;
+  virtual double execute_req_visc(Kernel_settings&) = 0;
+  virtual void execute_write_face_gradient(int i_var, Kernel_settings&) = 0;
+  virtual void execute_neighbor_gradient(int i_var, Kernel_settings&) = 0;
+  virtual void execute_local_gradient(int i_var, Kernel_settings&) = 0;
+  virtual void execute_write_face_av(int i_var, Kernel_settings&) = 0;
+  virtual void execute_neighbor_av(int i_var, Kernel_settings&) = 0;
+  virtual void execute_local_av(int i_var, Kernel_settings&) = 0;
 
   // modification
   virtual int add_element(std::vector<int> position);
@@ -64,11 +62,6 @@ class Grid
   void print();
 
   protected:
-  int i_rk_stage;
-  int i_read;
-  int i_write;
-  double rk_weights [3] {1., 1./4., 2./3.};
-  double stable_cfl [10] {1.256, 0.409, 0.209, 0.130, 0.089, 0.066, 0.051, 0.040, 0.033, 0.026}; // last is a guess
   Storage_params storage_params;
   std::vector<Hanging_vertex_matcher> hanging_matchers;
 };

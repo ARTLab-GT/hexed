@@ -9,6 +9,7 @@ test_conservation.cpp
 test_deformed.cpp
 test_Deformed_element.cpp
 test_Deformed_grid.cpp
+test_Derivative.cpp
 test_Element.cpp
 test_func.cpp
 test_Ghost_boundary_condition.cpp
@@ -20,6 +21,7 @@ test_observing.cpp
 test_Physical_basis.cpp
 test_Refined_face.cpp
 test_Regular_grid.cpp
+test_shock_capturing.cpp
 test_sinusoid.cpp
 test_Solution.cpp
 test_Storage_params.cpp

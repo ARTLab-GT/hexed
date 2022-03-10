@@ -24,7 +24,7 @@ class Deformed_grid : public Grid
   // access
   virtual Element& element(int i_elem);
   Deformed_element& deformed_element(int i_elem); // points to same object as element(int) but with different type
-  virtual double stable_time_step(double cfl_by_stable_cfl, Kernel_settings& setttings);
+  double max_reference_speed(Kernel_settings& setttings);
   // the following are mostly for testing
   Deformed_elem_con connection(int i_con);
   Deformed_elem_wall def_elem_wall(int i_wall);
@@ -45,13 +45,14 @@ class Deformed_grid : public Grid
   virtual void execute_write_face(Kernel_settings&);
   virtual void execute_neighbor(Kernel_settings&);
   virtual void execute_local(Kernel_settings&);
-  virtual void execute_req_visc(Kernel_settings&);
-  virtual void execute_local_derivative(int i_var, int i_dim, Kernel_settings&); // FIXME: for now, does nothing
-  virtual void execute_neighbor_derivative(int i_var, int i_dim, Kernel_settings&);
-  virtual void execute_av_flux(Kernel_settings&);
-  virtual void execute_local_av(int i_var, int i_dim, Kernel_settings&);
-  virtual void execute_neighbor_av(int i_var, int i_dim, Kernel_settings&);
-  void project_degenerate(int i_stage);
+  virtual double execute_req_visc(Kernel_settings&);
+  virtual void execute_write_face_gradient(int i_var, Kernel_settings&);
+  virtual void execute_neighbor_gradient(int i_var, Kernel_settings&);
+  virtual void execute_local_gradient(int i_var, Kernel_settings&);
+  virtual void execute_write_face_av(int i_var, Kernel_settings&);
+  virtual void execute_neighbor_av(int i_var, Kernel_settings&);
+  virtual void execute_local_av(int i_var, Kernel_settings&);
+  void project_degenerate();
 
   // diagnostic
   std::vector<double> face_integral(Surface_func& integrand, int i_elem, int i_dim, bool is_positive);
