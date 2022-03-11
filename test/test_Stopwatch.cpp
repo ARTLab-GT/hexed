@@ -12,6 +12,8 @@ TEST_CASE("Stopwatch")
   REQUIRE_THROWS(watch.start()); // can't start a pausewatch that's already running
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
   REQUIRE(watch.running());
+  REQUIRE(watch.n_calls() == 0);
+  REQUIRE(watch.time() == Approx(0).margin(1e-3));
   watch.pause();
   REQUIRE(!watch.running());
   REQUIRE_THROWS(watch.pause()); // can only pause a running pausewatch

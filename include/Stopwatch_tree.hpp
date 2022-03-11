@@ -15,10 +15,10 @@ class Stopwatch_tree
   int work;
 
   public:
-  std::string work_unit_name;
   class Measurement
   {
     Stopwatch_tree& tree;
+    int work;
     public:
     Measurement(Stopwatch_tree&, int workload);
     Measurement(const Measurement&) = delete;
@@ -27,6 +27,8 @@ class Stopwatch_tree
     Measurement start_child(std::string name, int workload);
   };
 
+  const std::string work_unit_name;
+  inline Stopwatch_tree(std::string wun) : work_unit_name{wun} {}
   void add_child(std::string name, Stopwatch_tree&&);
   int work_units_completed() const;
   double time() const;
