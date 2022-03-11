@@ -7,7 +7,7 @@ Domain_func.cpp
 Element.cpp
 Equidistant.cpp
 Ghost_boundary_condition.cpp
-global.cpp
+global_hacks.cpp
 Grid.cpp
 Hanging_vertex_matcher.cpp
 Iteration_status.cpp
