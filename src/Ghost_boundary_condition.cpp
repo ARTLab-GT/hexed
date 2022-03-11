@@ -32,11 +32,11 @@ double* Ghost_boundary_condition::data()
 Freestream::Freestream(Storage_params params, int i_dim_arg, bool is_positive_face_arg, std::vector<double> freestream_state)
 : Ghost_boundary_condition{params, i_dim_arg, is_positive_face_arg}, fs{freestream_state}
 {
-  for (unsigned i_var = 0; i_var < fs.size(); ++i_var) ghost_state().col(i_var) = fs[i_var];
 }
 
 void Freestream::calc_ghost_state()
 {
+  for (unsigned i_var = 0; i_var < fs.size(); ++i_var) ghost_state().col(i_var) = fs[i_var];
 }
 
 Slip_adiabatic_wall::Slip_adiabatic_wall(Storage_params params, int i_dim_arg, bool is_positive_face_arg)

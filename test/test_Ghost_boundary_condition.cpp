@@ -53,6 +53,7 @@ TEST_CASE("Freestream")
   const int row_size = cartdg::config::max_row_size;
   cartdg::Storage_params params {3, 5, 3, row_size};
   cartdg::Freestream freestream {params, 2, false, {10., 30., -20., 1.3, 1.2e5}};
+  freestream.ghost_state()(1, 0) = 0.;
   // set domain state to something arbitrary
   freestream.domain_state().col(0) = 20.;
   freestream.domain_state().col(1) = -10.;
