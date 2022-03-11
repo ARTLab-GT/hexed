@@ -276,8 +276,12 @@ void Solution::update(double stability_ratio)
     // enforce smoothness and positivity with artificial viscosity
     if (artificial_viscosity)
     {
-      double nonsmooth = std::numeric_limits<double>::max();
-      while (nonsmooth > 3.)
+      double nonsmooth = -std::numeric_limits<double>::max();
+      for (Grid* grid : all_grids()) {
+        kernel_settings.d_pos = grid->mesh_size;
+        nonsmooth = std::max(nonsmooth, grid->execute_req_visc(kernel_settings));
+      }
+      while (nonsmooth > 3.5)
       {
         // compute artificial viscosity coefficient
         nonsmooth = -std::numeric_limits<double>::max();
