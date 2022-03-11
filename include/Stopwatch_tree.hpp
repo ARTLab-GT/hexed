@@ -9,13 +9,15 @@ namespace cartdg
 
 class Stopwatch_tree
 {
-  std::string wun;
+  std::string indented_report(std::string indent) const;
 
   public:
   Stopwatch stopwatch;
   std::map<std::string, Stopwatch_tree> children;
-  Stopwatch_tree(std::string work_unit_name);
-  std::string report();
+  int work_units_completed = 0;
+  std::string work_unit_name;
+  Stopwatch_tree(std::string work_unit_name_arg);
+  std::string report() const;
 };
 
 }
