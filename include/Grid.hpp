@@ -60,6 +60,7 @@ class Grid
 
   // diagnostic
   void print();
+  virtual std::string type() = 0;
 
   protected:
   Storage_params storage_params;

@@ -2,7 +2,7 @@
 #define CARTDG_STOPWATCH_TREE_HPP_
 
 #include <map>
-#include <Stopwatch.hpp>
+#include "Stopwatch.hpp"
 
 namespace cartdg
 {
