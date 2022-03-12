@@ -33,11 +33,11 @@ class Iteration_status
    * User can implement custom printing functionality by overriding the following members
    */
   // string used to separate columns
-  std::string sep = ",       ";
+  std::string sep = ",   ";
   // numbers will be justified to fit in columns of this width. Should be >= maximum width of formatted numbers
   int number_width = 21;
   // label of each column to print
-  std::vector<std::string> labels {"iteration", "flow time", "time step", "artificial viscosity iterations"};
+  std::vector<std::string> labels {"iteration", "flow time", "time step", "art visc iters"};
   // return a string containing the data for each column followed by `sep`
   virtual std::string value_string();
 
