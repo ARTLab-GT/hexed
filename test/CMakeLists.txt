@@ -14,6 +14,7 @@ test_Element.cpp
 test_func.cpp
 test_Ghost_boundary_condition.cpp
 test_Hanging_vertex_matcher.cpp
+test_Iteration_status.cpp
 test_local.cpp
 test_neighbor.cpp
 test_math.cpp
@@ -24,6 +25,8 @@ test_Regular_grid.cpp
 test_shock_capturing.cpp
 test_sinusoid.cpp
 test_Solution.cpp
+test_Stopwatch.cpp
+test_Stopwatch_tree.cpp
 test_Storage_params.cpp
 test_Tecplot_file.cpp
 test_Vertex.cpp

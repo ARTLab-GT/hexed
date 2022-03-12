@@ -6,6 +6,8 @@
 #include "Gauss_legendre.hpp"
 #include "Kernel_settings.hpp"
 #include "Spacetime_func.hpp"
+#include "Iteration_status.hpp"
+#include "Stopwatch_tree.hpp"
 
 namespace cartdg
 {
@@ -47,9 +49,11 @@ class Solution
 
   std::vector<double> surface_integral(Surface_func& integrand);
   std::vector<Grid*> all_grids();
+  Iteration_status iteration_status();
+  const Stopwatch_tree& stopwatch_tree();
 
   // functions that modify the state (and related) data
-  double update(double stability_ratio=0.7);
+  void update(double stability_ratio=0.8);
   void initialize(Spacetime_func& init_cond);
   void share_vertex_data(Element::shareable_value_access, Vertex::reduction = Vertex::vector_max);
   void set_local_time_step();
@@ -63,9 +67,10 @@ class Solution
   void auto_connect();
 
   protected:
-  double time;
   double refined_mesh_size(int ref_level);
   std::vector<double> rk_weights {1., 1./4., 2./3.};
+  Iteration_status status;
+  Stopwatch_tree sw_tree;
 };
 
 }

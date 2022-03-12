@@ -1,16 +1,5 @@
 // the configured options and settings
-
-#include <map>
-
-namespace cartdg
+namespace cartdg::config
 {
-namespace config
-{
-
 constexpr int max_row_size {@MAX_BASIS_ROW_SIZE@};
-
-// Don't use this. What is it for? If you need it, you will understand.
-extern std::map<std::string, int> global_debug_message;
-
-}
 }

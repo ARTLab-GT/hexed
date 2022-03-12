@@ -135,14 +135,15 @@ TEST_CASE("Local convective")
       double* state = elements[i_elem]->stage(0);
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
-          state[0*n_qpoint + i_qpoint] = mass*veloc0;
-          state[1*n_qpoint + i_qpoint] = mass*veloc1;
-          state[2*n_qpoint + i_qpoint] = mass*veloc2;
-          state[3*n_qpoint + i_qpoint] = mass;
-          state[4*n_qpoint + i_qpoint] = ener;
+        state[0*n_qpoint + i_qpoint] = mass*veloc0;
+        state[1*n_qpoint + i_qpoint] = mass*veloc1;
+        state[2*n_qpoint + i_qpoint] = mass*veloc2;
+        state[3*n_qpoint + i_qpoint] = mass;
+        state[4*n_qpoint + i_qpoint] = ener;
+        // set RK reference state (since RK weight is 1., inializing to 0 works fine)
+        for (int i_var = 0; i_var < 5; ++i_var) state[(5 + i_var)*n_qpoint + i_qpoint] = 0.;
       }
-      for (int i_face = 0; i_face < n_qpoint/params.row_size*5*2*3; ++i_face)
-      {
+      for (int i_face = 0; i_face < n_qpoint/params.row_size*5*2*3; ++i_face) {
         elements[i_elem]->face()[i_face] = 0.;
       }
       elements[i_elem]->time_step_scale()[1] = 0.16;

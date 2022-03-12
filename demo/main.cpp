@@ -45,5 +45,6 @@ int main()
   std::cout << "Execution completed in " << float(duration.count())*1e-9 << " s\n";
   std::cout << "(" << grid.iter << " iterations at "
             << float(duration.count())*1e-9/grid.iter << " s per iteration)\n";
+  std::cout << solution.stopwatch_tree().report();
   solution.visualize_field("demo_final");
 }

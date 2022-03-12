@@ -8,8 +8,29 @@ namespace cartdg
 {
 
 Solution::Solution(int n_var_arg, int n_dim_arg, int row_size_arg, double bms)
-: n_var(n_var_arg), n_dim(n_dim_arg), base_mesh_size(bms), basis(row_size_arg), time(0.)
-{}
+: n_var(n_var_arg), n_dim(n_dim_arg), base_mesh_size(bms), basis(row_size_arg),
+  sw_tree("(element*iteration)")
+{
+  for (std::string type : {"cartesian", "deformed"}) {
+    std::string name = type + " convective";
+    std::string unit = "(element*RK stage)";
+    sw_tree.children.emplace(name, unit);
+    auto& map_c = sw_tree.children.at(name).children;
+    map_c.emplace("write face", unit);
+    map_c.emplace("neighbor", unit);
+    map_c.emplace("local", unit);
+    name = type + " artificial viscosity";
+    unit = "(element*iteration)";
+    sw_tree.children.emplace(name, unit);
+    auto& map_av = sw_tree.children.at(name).children;
+    map_av.emplace("write face gradient", unit);
+    map_av.emplace("neighbor gradient", unit);
+    map_av.emplace("local gradient", unit);
+    map_av.emplace("write face art visc", unit);
+    map_av.emplace("neighbor art visc", unit);
+    map_av.emplace("local art visc", unit);
+  }
+}
 
 Solution::~Solution() {}
 
@@ -18,7 +39,7 @@ void Solution::visualize_field(Qpoint_func& func, std::string name)
   const int n_vis = func.n_var(n_dim); // number of variables to visualize
   std::vector<std::string> var_names;
   for (int i_vis = 0; i_vis < n_vis; ++i_vis) var_names.push_back(func.variable_name(i_vis));
-  Tecplot_file file {name, n_dim, var_names, time};
+  Tecplot_file file {name, n_dim, var_names, status.flow_time};
   const int n_sample = 20;
   for (Grid* grid : all_grids())
   {
@@ -113,7 +134,7 @@ void Solution::visualize_surface(std::string name)
   int n_vis = n_var; // FIXME
   std::vector<std::string> var_names;
   for (int i_vis = 0; i_vis < n_vis; ++i_vis) var_names.push_back("state" + std::to_string(i_vis));
-  Tecplot_file file {name, n_dim, var_names, time};
+  Tecplot_file file {name, n_dim, var_names, status.flow_time};
   for (Deformed_grid& grid : def_grids) {
     grid.visualize_surface(file);
   }
@@ -204,8 +225,31 @@ std::vector<Grid*> Solution::all_grids()
   return all;
 }
 
-double Solution::update(double stability_ratio)
+Iteration_status Solution::iteration_status()
 {
+  return status;
+}
+
+const Stopwatch_tree& Solution::stopwatch_tree()
+{
+  return sw_tree;
+}
+
+void Solution::update(double stability_ratio)
+{
+  #define EXECUTE_KERNEL(invocation, kernel_name, category_name) \
+    for (Grid* grid : all_grids()) { \
+      kernel_settings.d_pos = grid->mesh_size; \
+      Stopwatch_tree* trees [2]; \
+      trees[0] = &sw_tree.children.at(grid->type() + category_name); \
+      trees[1] = &trees[0]->children.at(kernel_name); \
+      trees[1]->work_units_completed += grid->n_elem; \
+      for (auto tree : trees) tree->stopwatch.start(); \
+      invocation; \
+      for (auto tree : trees) tree->stopwatch.pause(); \
+    }
+  sw_tree.stopwatch.start();
+  status.art_visc_iters = 0;
   // compute characteristic speed for evaluating the CFL condition
   double max_reference_speed = 0.;
   for (Grid* grid : all_grids()) {
@@ -232,9 +276,12 @@ double Solution::update(double stability_ratio)
     // enforce smoothness and positivity with artificial viscosity
     if (artificial_viscosity)
     {
-      double nonsmooth = std::numeric_limits<double>::max();
-      int n_iters = 0;
-      while (nonsmooth > 3.)
+      double nonsmooth = -std::numeric_limits<double>::max();
+      for (Grid* grid : all_grids()) {
+        kernel_settings.d_pos = grid->mesh_size;
+        nonsmooth = std::max(nonsmooth, grid->execute_req_visc(kernel_settings));
+      }
+      while (nonsmooth > 3.5)
       {
         // compute artificial viscosity coefficient
         nonsmooth = -std::numeric_limits<double>::max();
@@ -247,65 +294,48 @@ double Solution::update(double stability_ratio)
         for (int i_var = 0; i_var < n_var; ++i_var)
         {
           // compute gradient
-          for (Grid* grid : all_grids()) {
-            kernel_settings.d_pos = grid->mesh_size;
-            grid->execute_write_face_gradient(i_var, kernel_settings);
-          }
-          for (Grid* grid : all_grids()) {
-            kernel_settings.d_pos = grid->mesh_size;
-            grid->execute_neighbor_gradient(i_var, kernel_settings);
-          }
-          for (Grid* grid : all_grids()) {
-            kernel_settings.d_pos = grid->mesh_size;
-            grid->execute_local_gradient(i_var, kernel_settings);
-          }
+          EXECUTE_KERNEL(grid->execute_write_face_gradient(i_var, kernel_settings), "write face gradient", " artificial viscosity")
+          EXECUTE_KERNEL(grid->execute_neighbor_gradient  (i_var, kernel_settings), "neighbor gradient", " artificial viscosity")
+          EXECUTE_KERNEL(grid->execute_local_gradient     (i_var, kernel_settings), "local gradient", " artificial viscosity")
           // compute artificial viscous update
           double min_size = std::numeric_limits<double>::max();
           for (Grid* grid : all_grids()) {
             min_size = std::min<double>(min_size, grid->mesh_size);
           }
           kernel_settings.d_t = min_size*min_size*basis.max_cfl_diffusive()*stability_ratio/n_dim;
+          EXECUTE_KERNEL(grid->execute_write_face_av(i_var, kernel_settings), "write face art visc", " artificial viscosity")
+          EXECUTE_KERNEL(grid->execute_neighbor_av   (i_var, kernel_settings), "neighbor art visc", " artificial viscosity")
+          EXECUTE_KERNEL(grid->execute_local_av     (i_var, kernel_settings), "local art visc", " artificial viscosity")
           for (Grid* grid : all_grids()) {
-            kernel_settings.d_pos = grid->mesh_size;
-            grid->execute_write_face_av(i_var, kernel_settings);
-          }
-          for (Grid* grid : all_grids()) {
-            kernel_settings.d_pos = grid->mesh_size;
-            grid->execute_neighbor_av(i_var, kernel_settings);
-          }
-          for (Grid* grid : all_grids()) {
-            kernel_settings.d_pos = grid->mesh_size;
-            grid->execute_local_av(i_var, kernel_settings);
+            sw_tree.children.at("cartesian artificial viscosity").work_units_completed += grid->n_elem;
           }
         }
-        ++n_iters;
+        ++status.art_visc_iters;
       }
-      printf("%e %i\n", nonsmooth, n_iters);
     }
     // perform physical solution update
     kernel_settings.d_t = dt;
+    EXECUTE_KERNEL(grid->execute_write_face(kernel_settings), "write face", " convective")
+    EXECUTE_KERNEL(grid->execute_neighbor  (kernel_settings), "neighbor", " convective")
+    EXECUTE_KERNEL(grid->execute_local     (kernel_settings), "local", " convective")
     for (Grid* grid : all_grids()) {
-      kernel_settings.d_pos = grid->mesh_size;
-      grid->execute_write_face(kernel_settings);
-    }
-    for (Grid* grid : all_grids()) {
-      kernel_settings.d_pos = grid->mesh_size;
-      grid->execute_neighbor(kernel_settings);
-    }
-    for (Grid* grid : all_grids()) {
-      kernel_settings.d_pos = grid->mesh_size;
-      grid->execute_local(kernel_settings);
+      sw_tree.children.at(grid->type() + " convective").work_units_completed += grid->n_elem;
     }
   }
   for (Deformed_grid& grid : def_grids) {
     grid.project_degenerate();
   }
 
-  time += dt;
+  ++status.iteration;
+  status.time_step = dt;
+  status.flow_time += dt;
+
   for (Grid* grid : all_grids()) {
-    grid->time = time;
+    grid->time = status.flow_time;
+    sw_tree.work_units_completed += grid->n_elem;
   }
-  return dt;
+  sw_tree.stopwatch.pause();
+  #undef EXECUTE_KERNEL
 }
 
 void Solution::initialize(Spacetime_func& init_cond)

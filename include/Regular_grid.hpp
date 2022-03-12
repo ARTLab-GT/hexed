@@ -18,6 +18,7 @@ class Regular_grid : public Grid
   int n_con(int i_dim); // mostly for testing
   virtual std::vector<double> get_pos(int i_elem);
   double max_reference_speed(Kernel_settings& setttings);
+  inline virtual std::string type() {return "cartesian";}
 
   // modification
   virtual int add_element(std::vector<int> position);

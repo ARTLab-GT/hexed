@@ -28,6 +28,7 @@ class Deformed_grid : public Grid
   // the following are mostly for testing
   Deformed_elem_con connection(int i_con);
   Deformed_elem_wall def_elem_wall(int i_wall);
+  inline virtual std::string type() {return "deformed";}
 
   // modification
   virtual int add_element(std::vector<int> position);

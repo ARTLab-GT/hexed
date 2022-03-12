@@ -48,6 +48,47 @@ TEST_CASE("Ghost_boundary_condition class")
   }
 }
 
+TEST_CASE("Freestream")
+{
+  const int row_size = cartdg::config::max_row_size;
+  cartdg::Storage_params params {3, 5, 3, row_size};
+  cartdg::Freestream freestream {params, 2, false, {10., 30., -20., 1.3, 1.2e5}};
+  freestream.ghost_state()(1, 0) = 0.;
+  // set domain state to something arbitrary
+  freestream.domain_state().col(0) = 20.;
+  freestream.domain_state().col(1) = -10.;
+  freestream.domain_state().col(2) = 50.;
+  freestream.domain_state().col(3) = 0.9;
+  freestream.domain_state().col(4) = 1e4;
+  freestream.calc_ghost_state();
+  // check that ghost state is equal to freestream
+  REQUIRE(freestream.ghost_state()(1, 0) == Approx(10.));
+  REQUIRE(freestream.ghost_state()(1, 1) == Approx(30.));
+  REQUIRE(freestream.ghost_state()(1, 2) == Approx(-20.));
+  REQUIRE(freestream.ghost_state()(1, 3) == Approx(1.3));
+  REQUIRE(freestream.ghost_state()(1, 4) == Approx(1.2e5));
+}
+
+TEST_CASE("Slip_adiabatic_wall")
+{
+  const int row_size = cartdg::config::max_row_size;
+  cartdg::Storage_params params {3, 5, 3, row_size};
+  cartdg::Slip_adiabatic_wall wall {params, 2, false};
+  // set domain state to something arbitrary
+  wall.domain_state().col(0) = 20.;
+  wall.domain_state().col(1) = -10.;
+  wall.domain_state().col(2) = 50.;
+  wall.domain_state().col(3) = 0.9;
+  wall.domain_state().col(4) = 1e4;
+  wall.calc_ghost_state();
+  // check that ghost state is equal to domain state with normal momentum flipped
+  REQUIRE(wall.ghost_state()(1, 0) == Approx(20.));
+  REQUIRE(wall.ghost_state()(1, 1) == Approx(-10.));
+  REQUIRE(wall.ghost_state()(1, 2) == Approx(-50.));
+  REQUIRE(wall.ghost_state()(1, 3) == Approx(0.9));
+  REQUIRE(wall.ghost_state()(1, 4) == Approx(1e4));
+}
+
 TEST_CASE("gbc convective")
 {
   const int row_size = cartdg::config::max_row_size;

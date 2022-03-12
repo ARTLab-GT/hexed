@@ -7,9 +7,10 @@ Domain_func.cpp
 Element.cpp
 Equidistant.cpp
 Ghost_boundary_condition.cpp
-global.cpp
+global_hacks.cpp
 Grid.cpp
 Hanging_vertex_matcher.cpp
+Iteration_status.cpp
 Kernel_settings.cpp
 math.cpp
 Output_data.cpp
@@ -19,6 +20,8 @@ Refined_face.cpp
 Regular_grid.cpp
 Solution.cpp
 Spacetime_func.cpp
+Stopwatch.cpp
+Stopwatch_tree.cpp
 Storage_params.cpp
 Surface_func.cpp
 Tecplot_file.cpp
