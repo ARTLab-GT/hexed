@@ -17,7 +17,8 @@ class Regular_grid : public Grid
   elem_con connection(int i_dim, int i_con); // mostly for testing
   int n_con(int i_dim); // mostly for testing
   virtual std::vector<double> get_pos(int i_elem);
-  virtual double stable_time_step(double cfl_by_stable_cfl, Kernel_settings& setttings);
+  double max_reference_speed(Kernel_settings& setttings);
+  inline virtual std::string type() {return "cartesian";}
 
   // modification
   virtual int add_element(std::vector<int> position);
@@ -34,12 +35,13 @@ class Regular_grid : public Grid
   virtual void execute_write_face(Kernel_settings&);
   virtual void execute_neighbor(Kernel_settings&);
   virtual void execute_local(Kernel_settings&);
-  virtual void execute_req_visc(Kernel_settings&);
-  virtual void execute_local_derivative(int i_var, int i_dim, Kernel_settings&);
-  virtual void execute_neighbor_derivative(int i_var, int i_dim, Kernel_settings&);
-  virtual void execute_av_flux(Kernel_settings&);
-  virtual void execute_local_av(int i_var, int i_dim, Kernel_settings&);
-  virtual void execute_neighbor_av(int i_var, int i_dim, Kernel_settings&);
+  virtual double execute_req_visc(Kernel_settings&);
+  virtual void execute_write_face_gradient(int i_var, Kernel_settings&);
+  virtual void execute_neighbor_gradient(int i_var, Kernel_settings&);
+  virtual void execute_local_gradient(int i_var, Kernel_settings&);
+  virtual void execute_write_face_av(int i_var, Kernel_settings&);
+  virtual void execute_neighbor_av(int i_var, Kernel_settings&);
+  virtual void execute_local_av(int i_var, Kernel_settings&);
 
   private:
   elem_vec elements;

@@ -20,13 +20,14 @@ Isentropic_vortex::Isentropic_vortex(std::vector<double> state) : freestream(sta
 
 std::vector<double> Isentropic_vortex::operator()(std::vector<double> pos, double time)
 {
-  double veloc0 = freestream[0]/freestream[2];
-  double veloc1 = freestream[1]/freestream[2];
-  double mass = freestream[2];
-  double sp_int_ener = (freestream[3] - 0.5*mass*(veloc0*veloc0 + veloc1*veloc1))/mass;
+  int n_dim = pos.size();
+  double mass = freestream[n_dim];
+  double veloc0 = freestream[0]/mass;
+  double veloc1 = (n_dim >= 2) ? freestream[1]/mass : 0.;
+  double sp_int_ener = (freestream[n_dim + 1] - 0.5*mass*(veloc0*veloc0 + veloc1*veloc1))/mass;
   double sound_speed = std::sqrt(sp_int_ener*heat_rat*(heat_rat - 1.));
   double pos0 = (pos[0] - center0 - veloc0*time)/argmax_radius;
-  double pos1 = (pos[1] - center1 - veloc1*time)/argmax_radius;
+  double pos1 = (n_dim >= 2) ? (pos[1] - center1 - veloc1*time)/argmax_radius : 0.;
 
   double gaussian = max_nondim_veloc*std::exp((1. - (pos0*pos0 + pos1*pos1))/2.);
   veloc0 += gaussian*-pos1*sound_speed;
@@ -34,7 +35,12 @@ std::vector<double> Isentropic_vortex::operator()(std::vector<double> pos, doubl
   double thermo_factor = 1. - (heat_rat - 1.)/2*gaussian*gaussian;
   mass *= std::pow(thermo_factor, 1./(heat_rat - 1.));
   sp_int_ener *= thermo_factor;
-  return std::vector<double> {mass*veloc0, mass*veloc1, mass, mass*sp_int_ener + 0.5*mass*(veloc0*veloc0 + veloc1*veloc1)};
+  std::vector<double> state {mass*veloc0};
+  if (n_dim >= 2) state.push_back(mass*veloc1);
+  if (n_dim >= 3) state.push_back(0.);
+  state.push_back(mass);
+  state.push_back(mass*sp_int_ener + 0.5*mass*(veloc0*veloc0 + veloc1*veloc1));
+  return state;
 }
 
 Doublet::Doublet(std::vector<double> freestream_state)

@@ -1,7 +1,5 @@
 #include <cmath>
-
 #include <catch2/catch.hpp>
-
 #include <Solution.hpp>
 
 class Sinusoidal_init : public cartdg::Spacetime_func
@@ -101,7 +99,8 @@ TEST_CASE("Sinusoidal density wave")
       }
     }
 
-    double dt = sol.update(cfl);
+    sol.update(cfl);
+    double dt = sol.iteration_status().time_step;
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
       std::vector<double> pos = grid.get_pos(i_elem);
@@ -139,7 +138,8 @@ TEST_CASE("Sinusoidal density wave")
       }
     }
 
-    dt = sol.update(cfl);
+    sol.update(cfl);
+    dt = sol.iteration_status().time_step;
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
       std::vector<double> pos = grid.get_pos(i_elem);
@@ -187,7 +187,8 @@ TEST_CASE("Sinusoidal density wave")
       }
     }
 
-    double dt = sol.update(cfl);
+    sol.update(cfl);
+    double dt = sol.iteration_status().time_step;
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
       std::vector<double> pos = grid.get_pos(i_elem);
@@ -235,7 +236,8 @@ TEST_CASE("Sinusoidal density wave")
       }
     }
 
-    dt = sol.update(cfl);
+    sol.update(cfl);
+    dt = sol.iteration_status().time_step;
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
       std::vector<double> pos = grid.get_pos(i_elem);
@@ -293,7 +295,8 @@ TEST_CASE("Sinusoidal density wave")
       }
     }
 
-    double dt = sol.update(cfl);
+    sol.update(cfl);
+    double dt = sol.iteration_status().time_step;
     for (int i_elem = 0; i_elem < grid.n_elem; ++i_elem)
     {
       std::vector<double> pos = grid.get_pos(i_elem);

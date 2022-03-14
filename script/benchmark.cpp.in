@@ -32,12 +32,14 @@ for (int i_elem = 0; i_elem < n_elem; ++i_elem)
 {
   elements.emplace_back(new cartdg::Element {storage_params});
   def_elements.emplace_back(new cartdg::Deformed_element {storage_params});
-  for (int i_dof = 0; i_dof < n_var*n_qpoint; ++i_dof)
-  {
-    double state = (rand()%1000)/1000. + 10.; // "+ 10." avoids NaN due to nonpositive density
-    if (i_dof/n_qpoint == n_var - 1) state += 100; // Avoid NaN due to negative pressure
-    elements.back()->stage(0)[i_dof] = state;
-    def_elements.back()->stage(0)[i_dof] = state;
+  for (int i_stage : {0, 1}) {
+    for (int i_dof = 0; i_dof < n_var*n_qpoint; ++i_dof)
+    {
+      double state = (rand()%1000)/1000. + 10.; // "+ 10." avoids NaN due to nonpositive density
+      if (i_dof/n_qpoint == n_var - 1) state += 100; // Avoid NaN due to negative pressure
+      elements    .back()->stage(0)[i_stage*n_var*n_qpoint + i_dof] = state;
+      def_elements.back()->stage(0)[i_stage*n_var*n_qpoint + i_dof] = state;
+    }
   }
   for (int i_jac = 0; i_jac < dim*dim*n_qpoint; ++i_jac)
   {
@@ -82,6 +84,9 @@ for (int i_dim = 0; i_dim < dim; ++i_dim)
 
 cartdg::Gauss_lobatto basis (row_size);
 cartdg::Kernel_settings settings;
+// some arbitrary values
+settings.d_t = 0.7;
+settings.rk_weight = 0.3;
 
 // AUTOGENERATE
 

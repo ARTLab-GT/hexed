@@ -50,10 +50,11 @@ TEST_CASE("Conservation of state variables")
       grid.element(0).stage(0)[i_state] = i_state + 1;
     }
     auto before {sol.integral()};
-    double dt = sol.update();
+    sol.update();
     auto after {sol.integral()};
     for (int i_var = 0; i_var < grid.n_var; ++i_var) {
-      REQUIRE((after[i_var] - before[i_var])/dt == Approx{0.}.scale(std::abs(before[i_var]) + 1.));
+      double rate = (after[i_var] - before[i_var])/sol.iteration_status().time_step;
+      REQUIRE(rate == Approx{0.}.scale(std::abs(before[i_var]) + 1.));
     }
   }
 
@@ -72,10 +73,11 @@ TEST_CASE("Conservation of state variables")
       grid.element(0).stage(0)[i_state] = i_state + 1;
     }
     auto before {sol.integral()};
-    double dt = sol.update();
+    sol.update();
     auto after {sol.integral()};
     for (int i_var = 0; i_var < grid.n_var; ++i_var) {
-      REQUIRE((after[i_var] - before[i_var])/dt == Approx{0.}.scale(std::abs(before[i_var]) + 1.));
+      double rate = (after[i_var] - before[i_var])/sol.iteration_status().time_step;
+      REQUIRE(rate == Approx{0.}.scale(std::abs(before[i_var]) + 1.));
     }
   }
 
@@ -92,10 +94,11 @@ TEST_CASE("Conservation of state variables")
     }
     auto before {sol.integral()};
     sol.visualize_field("deformed_conservation");
-    double dt = sol.update();
+    sol.update();
     auto after {sol.integral()};
     for (int i_var = 0; i_var < grid.n_var; ++i_var) {
-      REQUIRE((after[i_var] - before[i_var])/dt == Approx{0.}.scale(std::abs(before[i_var]) + 1.));
+      double rate = (after[i_var] - before[i_var])/sol.iteration_status().time_step;
+      REQUIRE(rate == Approx{0.}.scale(std::abs(before[i_var]) + 1.));
     }
   }
 
@@ -128,10 +131,11 @@ TEST_CASE("Conservation of state variables")
     }
     auto before {sol.integral()};
     sol.visualize_field("hanging_node");
-    double dt = sol.update();
+    sol.update();
     auto after {sol.integral()};
     for (int i_var = 0; i_var < sol.n_var; ++i_var) {
-      REQUIRE((before[i_var] - after[i_var])/dt == Approx(0).scale(std::abs(before[i_var]) + 1.));
+      double rate = (before[i_var] - after[i_var])/sol.iteration_status().time_step;
+      REQUIRE(rate == Approx(0).scale(std::abs(before[i_var]) + 1.));
     }
   }
 
@@ -150,10 +154,11 @@ TEST_CASE("Conservation of state variables")
       grid.element(0).stage(0)[i_state] = i_state + 1;
     }
     auto before {sol.integral()};
-    double dt = sol.update();
+    sol.update();
     auto after {sol.integral()};
     for (int i_var = 0; i_var < grid.n_var; ++i_var) {
-      REQUIRE((after[i_var] - before[i_var])/dt == Approx{0.}.scale(std::abs(before[i_var]) + 1.));
+      double rate = (before[i_var] - after[i_var])/sol.iteration_status().time_step;
+      REQUIRE(rate == Approx{0.}.scale(std::abs(before[i_var]) + 1.));
     }
   }
 }

@@ -34,6 +34,25 @@ class Ghost_boundary_condition
   virtual void calc_ghost_state() = 0;
 };
 
+/*
+ * Sets the ghost state to the provided freestream state.
+ */
+class Freestream : public Ghost_boundary_condition
+{
+  std::vector<double> fs;
+  public:
+  Freestream(Storage_params, int i_dim_arg, bool is_positive_face_arg, std::vector<double> freestream_state);
+  virtual void calc_ghost_state();
+};
+
+class Slip_adiabatic_wall : public Ghost_boundary_condition
+{
+  int i_d;
+  public:
+  Slip_adiabatic_wall(Storage_params, int i_dim_arg, bool is_positive_face_arg);
+  virtual void calc_ghost_state();
+};
+
 class Element_gbc
 {
   public:

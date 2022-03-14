@@ -126,21 +126,21 @@ TEST_CASE("Discontinuity indicator")
       {
         read[i_qpoint] = std::exp(basis.node(i_qpoint)*0.5);
       }
-      REQUIRE(cartdg::indicator<row_size, row_size>(read, weights.data(), ortho.data()) == 0.);
+      REQUIRE(cartdg::indicator<row_size, row_size>(read, weights.data(), ortho.data())[0] == 0.);
       read[1] = 2.;
-      REQUIRE(cartdg::indicator<row_size, row_size>(read, weights.data(), ortho.data()) == 1.);
+      REQUIRE(cartdg::indicator<row_size, row_size>(read, weights.data(), ortho.data())[0] == 1.);
 
       for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
       {
         read[i_qpoint] = 1;
       }
-      REQUIRE(cartdg::indicator<row_size, row_size>(read, weights.data(), ortho.data()) == 0.);
+      REQUIRE(cartdg::indicator<row_size, row_size>(read, weights.data(), ortho.data())[0] == 0.);
 
       for (int i_qpoint = 2; i_qpoint < row_size; ++i_qpoint)
       {
         read[i_qpoint] = 1.5;
       }
-      REQUIRE(cartdg::indicator<row_size, row_size>(read, weights.data(), ortho.data()) == 1.);
+      REQUIRE(cartdg::indicator<row_size, row_size>(read, weights.data(), ortho.data())[0] == 1.);
 
       SECTION("smoothness of indicator function")
       {
@@ -153,7 +153,7 @@ TEST_CASE("Discontinuity indicator")
         for (int pow = -200; pow < 0; ++pow)
         {
           read[0] = 1. + std::exp(pow*0.05);
-          curr = cartdg::indicator<row_size, row_size>(read, weights.data(), ortho.data());
+          curr = cartdg::indicator<row_size, row_size>(read, weights.data(), ortho.data())[0];
           REQUIRE(curr - prev < 0.1);
           REQUIRE(curr - prev >= 0.);
           prev = curr;
@@ -170,9 +170,9 @@ TEST_CASE("Discontinuity indicator")
       {
         read[i_qpoint] = std::exp(basis1.node(i_qpoint)*0.5);
       }
-      REQUIRE(cartdg::indicator<row_size - 1, row_size - 1>(read, weights.data(), ortho.data()) == 0.);
+      REQUIRE(cartdg::indicator<row_size - 1, row_size - 1>(read, weights.data(), ortho.data())[0] == 0.);
       read[1] = 2.;
-      REQUIRE(cartdg::indicator<row_size - 1, row_size - 1>(read, weights.data(), ortho.data()) == 1.);
+      REQUIRE(cartdg::indicator<row_size - 1, row_size - 1>(read, weights.data(), ortho.data())[0] == 1.);
     }
   }
 
@@ -187,12 +187,12 @@ TEST_CASE("Discontinuity indicator")
     {
       (&read[0][0][0])[i_qpoint] = 1.;
     }
-    REQUIRE(cartdg::indicator<n_qpoint, row_size>(read[0][0], weights.data(), ortho.data()) == 0.);
+    REQUIRE(cartdg::indicator<n_qpoint, row_size>(read[0][0], weights.data(), ortho.data())[0] == 0.);
 
     SECTION("all directions activated")
     {
       read[1][2][1] = 2.;
-      REQUIRE(cartdg::indicator<n_qpoint, row_size>(read[0][0], weights.data(), ortho.data()) == 1.);
+      REQUIRE(cartdg::indicator<n_qpoint, row_size>(read[0][0], weights.data(), ortho.data())[0] == 1.);
     }
 
     SECTION("one direction activated")
@@ -204,7 +204,7 @@ TEST_CASE("Discontinuity indicator")
           read[i_row][1][j_row] = 0.9;
         }
       }
-      REQUIRE(cartdg::indicator<n_qpoint, row_size>(read[0][0], weights.data(), ortho.data()) == 1.);
+      REQUIRE(cartdg::indicator<n_qpoint, row_size>(read[0][0], weights.data(), ortho.data())[0] == 1.);
     }
   }
 }
