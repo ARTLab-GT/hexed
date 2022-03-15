@@ -6,22 +6,10 @@
 #include "Element.hpp"
 #include "Deformed_element.hpp"
 #include "Element_container.hpp"
+#include "connection.hpp"
 
 namespace cartdg
 {
-
-struct Cartesian_connection
-{
-  int i_dim;
-  std::array<double*, 2> face;
-};
-
-struct Deformed_connection
-{
-  std::array<int, 2> i_dim;
-  std::array<bool, 2> face_sign;
-  std::array<double*, 2> face;
-};
 
 /*
  * A mesh that supports access to the actual elements with the numerical data they contain. This level of
@@ -35,10 +23,8 @@ class Accessible_mesh : public Mesh
   Complete_element_container<Element>          car_elems;
   Complete_element_container<Deformed_element> def_elems;
   Element_container& container(bool is_deformed);
-  struct Car_mesh_con : public Cartesian_connection {std::array<Element*, 2> element;};
-  struct Def_mesh_con : public Deformed_connection {std::array<Deformed_element*, 2> element;};
-  std::vector<Car_mesh_con> car_cons;
-  std::vector<Def_mesh_con> def_cons;
+  std::vector<Cartesian_element_connection> car_cons;
+  std::vector< Deformed_element_connection> def_cons;
 
   public:
   class Element_sequence
@@ -62,10 +48,10 @@ class Accessible_mesh : public Mesh
   virtual void connect_cartesian(int ref_level, int i_dim, std::array<int, 2> serial_n,
                                  std::array<bool, 2> is_deformed = {false, false});
   // Provides read access to all connections between Cartesian elements in unspecified order
-  Vector_view<Cartesian_connection, Car_mesh_con> cartesian_connections() {return car_cons;}
+  Vector_view<Cartesian_face_connection&, Cartesian_element_connection> cartesian_connections() {return car_cons;}
   virtual void connect_deformed(int ref_level, std::array<int, 2> serial_n, std::array<int, 2> i_dim, std::array<bool, 2> face_sign);
   // Provides read access to all connections between deformed elements in unspecified order
-  Vector_view<Deformed_connection, Def_mesh_con> deformed_connections() {return def_cons;}
+  Vector_view<Deformed_face_connection&, Deformed_element_connection> deformed_connections() {return def_cons;}
 };
 
 }
