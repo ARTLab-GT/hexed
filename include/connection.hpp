@@ -75,5 +75,22 @@ class Element_face_connection : public Element_connection, public Face_connectio
   virtual element_t& element(int i_side) {return *elems[i_side];}
 };
 
+template <typename element_t>
+class Refined_connection
+{
+  std::vector<Individual_connection> ind_cons;
+  public:
+  class Individual_connection : public Element_connection, public Face_connection<element_t>
+  {
+    public:
+    virtual Con_dir<element_t> direction();
+    virtual double* face(int i_side);
+    virtual element_t& element(int i_side);
+  };
+  Refined_face refined_face;
+  Refined_connection(element_t* coarse, std::vector<element_t*> fine, Con_dir<element_t> dir);
+  Individual_connection& connection(int i_fine);
+};
+
 }
 #endif
