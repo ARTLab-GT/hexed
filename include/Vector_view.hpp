@@ -4,6 +4,18 @@
 namespace cartdg
 {
 
+/*
+ * An interface for general sequence-type containers which supports access but
+ * intentionally doesn't support insertion or removal of elements.
+ */
+template<typename T>
+class Sequence
+{
+  public:
+  virtual int size() = 0;
+  virtual T operator[](int index) = 0;
+};
+
 template<typename S, typename T>
 S trivial_convert(T& t)
 {
@@ -20,7 +32,7 @@ S trivial_convert(T& t)
  * `reference_t` should be a reference type.
  */
 template<typename reference_t, typename storage_t = reference_t, reference_t (*convert)(storage_t&) = &trivial_convert<reference_t, storage_t>>
-class Vector_view
+class Vector_view : public Sequence<reference_t>
 {
   std::vector<storage_t>& vec;
 

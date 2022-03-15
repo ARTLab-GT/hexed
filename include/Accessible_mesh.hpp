@@ -27,7 +27,7 @@ class Accessible_mesh : public Mesh
   std::vector< Deformed_element_connection> def_cons;
 
   public:
-  class Element_sequence
+  class Element_sequence : public Sequence<Element&>
   {
     Accessible_mesh& am;
     public:
