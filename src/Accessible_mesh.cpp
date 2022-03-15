@@ -6,12 +6,12 @@ namespace cartdg
 
 Element_container& Accessible_mesh::container(bool is_deformed)
 {
-  Element_container* containers [] {&car_elems, &def_elems};
+  Element_container* containers [] {&car.elems, &def.elems};
   return *containers[is_deformed];
 }
 
 Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size)
-: params{params_arg}, root_sz{root_size}, car_elems{params, root_sz}, def_elems{params, root_sz}
+: params{params_arg}, root_sz{root_size}, car{params, root_sz}, def{params, root_sz}
 {}
 
 int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<int> position)
@@ -35,21 +35,21 @@ Accessible_mesh::Element_sequence::Element_sequence(Accessible_mesh& mesh)
 
 int Accessible_mesh::Element_sequence::size()
 {
-  return am.car_elems.elements().size() + am.def_elems.elements().size();
+  return am.car.elements().size() + am.def.elements().size();
 }
 
 Element& Accessible_mesh::Element_sequence::operator[](int index)
 {
-  auto car_seq = am.car_elems.elements();
+  auto car_seq = am.car.elements();
   return (index < car_seq.size()) ? car_seq[index]
-         : (Element&)am.def_elems.elements()[index - car_seq.size()];
+         : (Element&)am.def.elements()[index - car_seq.size()];
 }
 
 void Accessible_mesh::connect_cartesian(int ref_level, std::array<int, 2> serial_n, Con_dir<Element> direction, std::array<bool, 2> is_deformed)
 {
   std::array<Element*, 2> el_ar;
   for (int i_side : {0, 1}) el_ar[i_side] = &element(ref_level, is_deformed[i_side], serial_n[i_side]);
-  car_cons.emplace_back(el_ar, direction);
+  car.cons.emplace_back(el_ar, direction);
 }
 
 void Accessible_mesh::connect_deformed(int ref_level, std::array<int, 2> serial_n, Con_dir<Deformed_element> direction)
@@ -59,9 +59,9 @@ void Accessible_mesh::connect_deformed(int ref_level, std::array<int, 2> serial_
   }
   std::array<Deformed_element*, 2> el_ar;
   for (int i_side : {0, 1}) {
-    el_ar[i_side] = &def_elems.at(ref_level, serial_n[i_side]).element;
+    el_ar[i_side] = &def.elems.at(ref_level, serial_n[i_side]).element;
   }
-  def_cons.emplace_back(el_ar, direction);
+  def.cons.emplace_back(el_ar, direction);
 }
 
 }

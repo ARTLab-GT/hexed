@@ -17,8 +17,8 @@ TEST_CASE("Accessible_mesh")
   REQUIRE_THROWS(&mesh.element(0,  true, sn0)); // test that elements are identified with a specific deformedness
   REQUIRE(mesh.element(3, true, sn2).vertex(0).pos[0] == Approx(1./8.)); // test that ref level and pos are incorporated
   // test sequential access
-  REQUIRE(mesh.cartesian_elements().size() == 2);
-  REQUIRE(mesh.deformed_elements().size() == 1);
+  REQUIRE(mesh.cartesian().elements().size() == 2);
+  REQUIRE(mesh.deformed().elements().size() == 1);
   REQUIRE(mesh.elements().size() == 3);
   // check that each of the elements appears exactly once in `mesh.elements()`
   cartdg::Element* ptrs [] {&mesh.element(0, false, sn0), &mesh.element(0, false, sn1), &mesh.element(3, true, sn2)};
@@ -36,7 +36,7 @@ TEST_CASE("Accessible_mesh")
   SECTION("cartesian-cartesian connection")
   {
     mesh.connect_cartesian(0, {sn1, sn0}, {2});
-    auto& con = mesh.cartesian_connections()[0];
+    auto& con = mesh.cartesian().connections()[0];
     REQUIRE(con.direction().i_dim == 2);
     REQUIRE(con.face(0) == mesh.element(0, false, sn1).face() + (2*2 + 1)*5*row_size*row_size);
     REQUIRE(con.face(1) == mesh.element(0, false, sn0).face() + (2*2 + 0)*5*row_size*row_size);
@@ -44,7 +44,7 @@ TEST_CASE("Accessible_mesh")
   SECTION("deformed-cartesian connection")
   {
     mesh.connect_cartesian(3, {sn2, sn3}, {1}, {true, false});
-    auto& con = mesh.cartesian_connections()[0];
+    auto& con = mesh.cartesian().connections()[0];
     REQUIRE(con.direction().i_dim == 1);
     REQUIRE(con.face(0) == mesh.element(3,  true, sn2).face() + (1*2 + 1)*5*row_size*row_size);
     REQUIRE(con.face(1) == mesh.element(3, false, sn3).face() + (1*2 + 0)*5*row_size*row_size);
@@ -56,7 +56,7 @@ TEST_CASE("Accessible_mesh")
     REQUIRE_THROWS(mesh.connect_deformed(3, {sn2, sn4}, {{0, 0}, {0, 0}}));
     REQUIRE_THROWS(mesh.connect_deformed(3, {sn2, sn4}, {{0, 0}, {1, 1}}));
     mesh.connect_deformed(3, {sn4, sn2}, {{1, 0}, {0, 1}});
-    auto& con = mesh.deformed_connections()[0];
+    auto& con = mesh.deformed().connections()[0];
     REQUIRE(con.direction().i_dim[0] == 1);
     REQUIRE(con.direction().i_dim[1] == 0);
     REQUIRE(con.direction().face_sign[0] == 0);
@@ -68,6 +68,6 @@ TEST_CASE("Accessible_mesh")
   {
     mesh.connect_cartesian(0, {sn1, sn0}, {0});
     mesh.connect_cartesian(0, {sn1, sn0}, {1});
-    REQUIRE(mesh.cartesian_connections().size() == 2);
+    REQUIRE(mesh.cartesian().connections().size() == 2);
   }
 }

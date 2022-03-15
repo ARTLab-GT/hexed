@@ -10,6 +10,18 @@
 namespace cartdg
 {
 
+// Provides access to all of the elements, connections, and other numerical data of a specific type
+// (i.e. Cartesian or deformed) without addition/removal
+template <typename element_t>
+class View_by_type
+{
+  public:
+  typedef typename Complete_element_container<element_t>::view_t element_view;
+  typedef Vector_view<Face_connection<element_t>&, Element_face_connection<element_t>> connection_view;
+  virtual element_view elements() = 0;
+  virtual connection_view connections() = 0;
+};
+
 /*
  * A mesh that supports access to the actual elements with the numerical data they contain. This level of
  * access is required by the numerical scheme but should be hidden from the library user, who should not be
@@ -17,13 +29,24 @@ namespace cartdg
  */
 class Accessible_mesh : public Mesh
 {
+  // Stores numerical data of a particular type and provides free access. Private because it allows
+  // open access rather than a neat interface.
+  template <typename element_t>
+  class Mesh_by_type : public View_by_type<element_t>
+  {
+    public:
+    Complete_element_container<element_t> elems;
+    std::vector<Element_face_connection<element_t>> cons;
+    Mesh_by_type(Storage_params params, double root_spacing) : elems{params, root_spacing} {}
+    virtual typename View_by_type<element_t>::element_view elements() {return elems.elements();}
+    virtual typename View_by_type<element_t>::connection_view connections() {return cons;}
+  };
+
   Storage_params params;
   double root_sz;
-  Complete_element_container<Element>          car_elems;
-  Complete_element_container<Deformed_element> def_elems;
   Element_container& container(bool is_deformed);
-  std::vector<Element_face_connection<         Element>> car_cons;
-  std::vector<Element_face_connection<Deformed_element>> def_cons;
+  Mesh_by_type<         Element> car;
+  Mesh_by_type<Deformed_element> def;
 
   public:
   class Element_sequence : public Sequence<Element&>
@@ -36,21 +59,20 @@ class Accessible_mesh : public Mesh
   };
 
   Accessible_mesh(Storage_params, double root_size);
+  inline View_by_type<         Element>& cartesian() {return car;}
+  inline View_by_type<Deformed_element>&  deformed() {return def;}
   virtual int add_element(int ref_level, bool is_deformed, std::vector<int> position);
   // Access an element. If the parameters to not describe an existing element, throw an exception.
   Element& element(int ref_level, bool is_deformed, int serial_n);
-  // The following 3 functions return objects which support efficient read/write access to the elements
-  // with `size()` and `operator[]` member functions. Elements are not guaranteed to be in any particular order.
-  inline auto cartesian_elements() {return car_elems.elements();} // access only cartesian elements
-  inline auto  deformed_elements() {return def_elems.elements();} // access only deformed
-  Element_sequence elements(); // access all elements regardless of deformedness
+  // access all elements regardless of deformedness
+  Element_sequence elements();
   virtual void connect_cartesian(int ref_level, std::array<int, 2> serial_n, Con_dir<Element> dir,
                                  std::array<bool, 2> is_deformed = {false, false});
-  // Provides read access to all connections between Cartesian elements in unspecified order
-  Vector_view<Face_connection<Element>&, Element_face_connection<Element>> cartesian_connections() {return car_cons;}
   virtual void connect_deformed(int ref_level, std::array<int, 2> serial_n, Con_dir<Deformed_element> direction);
-  // Provides read access to all connections between deformed elements in unspecified order
-  Vector_view<Face_connection<Deformed_element>&, Element_face_connection<Deformed_element>> deformed_connections() {return def_cons;}
+  #if 0
+  virtual void connect_hanging_cartesian(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial,
+                                         Con_dir<Element>, bool coarse_face_positive);
+  #endif
 };
 
 }

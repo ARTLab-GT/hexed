@@ -81,7 +81,8 @@ class Complete_element_container : public Element_container
 
   // Provides a `Vector_view` which can be used to efficiently iterate through the elements,
   // in no particular order.
-  Vector_view<element_t&, ptr_t, &convert> elements()
+  typedef Vector_view<element_t&, ptr_t, &convert> view_t;
+  view_t elements()
   {
     return vec;
   }
