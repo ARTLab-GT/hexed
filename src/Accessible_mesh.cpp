@@ -62,6 +62,15 @@ void Accessible_mesh::connect_deformed(int ref_level, std::array<int, 2> serial_
   if ((i_dim[0] == i_dim[1]) && (face_sign[0] == face_sign[1])) {
     throw std::runtime_error("attempt to connect faces of same sign along same dimension which is forbidden");
   }
+  Def_mesh_con con;
+  con.i_dim = i_dim;
+  con.face_sign = face_sign;
+  for (int i_side : {0, 1}) {
+    Deformed_element& elem = def_elems.at(ref_level, serial_n[i_side]);
+    con.element[i_side] = &elem;
+    con.face[i_side] = elem.face() + (2*i_dim[i_side] + face_sign[i_side])*params.n_dof()/params.row_size;
+  }
+  def_cons.push_back(con);
 }
 
 }

@@ -19,6 +19,7 @@ struct Cartesian_connection
 struct Deformed_connection
 {
   std::array<int, 2> i_dim;
+  std::array<bool, 2> face_sign;
   std::array<double*, 2> face;
 };
 
