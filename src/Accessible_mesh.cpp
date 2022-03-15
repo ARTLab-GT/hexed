@@ -59,8 +59,7 @@ void Accessible_mesh::connect_deformed(int ref_level, std::array<int, 2> serial_
   }
   std::array<Deformed_element*, 2> el_ar;
   for (int i_side : {0, 1}) {
-    Deformed_element& elem {def_elems.at(ref_level, serial_n[i_side])};
-    el_ar[i_side] = &elem;
+    el_ar[i_side] = &def_elems.at(ref_level, serial_n[i_side]).element;
   }
   def_cons.emplace_back(el_ar, i_dim, face_sign);
 }
