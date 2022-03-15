@@ -64,4 +64,9 @@ void Accessible_mesh::connect_deformed(int ref_level, std::array<int, 2> serial_
   def.cons.emplace_back(el_ar, direction);
 }
 
+void Accessible_mesh::connect_hanging_cartesian(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Element>,
+                                                bool coarse_face_positive, bool coarse_deformed, bool fine_deformed)
+{
+}
+
 }

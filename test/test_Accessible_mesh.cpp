@@ -49,6 +49,20 @@ TEST_CASE("Accessible_mesh")
     REQUIRE(con.face(0) == mesh.element(3,  true, sn2).face() + (1*2 + 1)*5*row_size*row_size);
     REQUIRE(con.face(1) == mesh.element(3, false, sn3).face() + (1*2 + 0)*5*row_size*row_size);
   }
+  SECTION("refined face connection")
+  {
+    int car0 = mesh.add_element(1, false, {0, 0}); // note: for this purpose, position doesn't matter
+    int def0 = mesh.add_element(2, true, {0, 0});
+    int def1 = mesh.add_element(2, true, {0, 0});
+    int def2 = mesh.add_element(2, true, {0, 0});
+    int def3 = mesh.add_element(2, true, {0, 0});
+    // check that it can't find elements with the wrong deformedness
+    REQUIRE_THROWS(mesh.connect_hanging_cartesian(1, car0, {def0, def1, def2, def3}, {2}, true, false, false));
+    // make a good connection
+    mesh.connect_hanging_cartesian(1, car0, {def0, def1, def2, def3}, {2}, true, false, true);
+    auto& ref_face {mesh.cartesian().refined_faces()[0]};
+    REQUIRE(ref_face.coarse_face() == mesh.element(1, false, car0).face() + (2*2 + 1)*5*row_size*row_size);
+  }
   SECTION("deformed-deformed connection")
   {
     int sn4 = mesh.add_element(3, true, {1, 2}); // position doesn't really make sense, but I don't really care

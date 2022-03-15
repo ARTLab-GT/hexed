@@ -16,10 +16,16 @@ template <typename element_t>
 class View_by_type
 {
   public:
+  // typedef a bunch of template spaghetti into some manageable aliases
   typedef typename Complete_element_container<element_t>::view_t element_view;
   typedef Vector_view<Face_connection<element_t>&, Element_face_connection<element_t>> connection_view;
+  static Refined_face& ref_face(Refined_connection<element_t>& ref_con) {return ref_con.refined_face;}
+  typedef Vector_view<Refined_face&, Refined_connection<element_t>, &ref_face> ref_face_view;
+
+  // the part of the interface you want to look at
   virtual element_view elements() = 0;
   virtual connection_view connections() = 0;
+  virtual ref_face_view refined_faces() = 0;
 };
 
 /*
@@ -37,9 +43,11 @@ class Accessible_mesh : public Mesh
     public:
     Complete_element_container<element_t> elems;
     std::vector<Element_face_connection<element_t>> cons;
+    std::vector<Refined_connection<element_t>> ref_face_cons;
     Mesh_by_type(Storage_params params, double root_spacing) : elems{params, root_spacing} {}
     virtual typename View_by_type<element_t>::element_view elements() {return elems.elements();}
     virtual typename View_by_type<element_t>::connection_view connections() {return cons;}
+    virtual typename View_by_type<element_t>::ref_face_view refined_faces() {return ref_face_cons;}
   };
 
   Storage_params params;
@@ -69,10 +77,8 @@ class Accessible_mesh : public Mesh
   virtual void connect_cartesian(int ref_level, std::array<int, 2> serial_n, Con_dir<Element> dir,
                                  std::array<bool, 2> is_deformed = {false, false});
   virtual void connect_deformed(int ref_level, std::array<int, 2> serial_n, Con_dir<Deformed_element> direction);
-  #if 0
-  virtual void connect_hanging_cartesian(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial,
-                                         Con_dir<Element>, bool coarse_face_positive);
-  #endif
+  virtual void connect_hanging_cartesian(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Element>,
+                                         bool coarse_face_positive, bool coarse_deformed=false, bool fine_deformed=false);
 };
 
 }
