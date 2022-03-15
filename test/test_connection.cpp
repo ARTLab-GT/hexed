@@ -59,6 +59,7 @@ TEST_CASE("Refined_connection<Deformed_element>")
   }
   SECTION("reversed")
   {
+    // the result should be the same as above, but with fine elements as the left side of the connection and coarse as the right
     cartdg::Refined_connection<cartdg::Deformed_element> con {&coarse, elem_ptrs, cartdg::Con_dir<cartdg::Deformed_element>{{0, 2}, {1, 1}}, true};
     REQUIRE(con.refined_face.coarse_face() == coarse.face() + (2*2 + 1)*5*6*6);
     auto& fine_con = con.connection(1);

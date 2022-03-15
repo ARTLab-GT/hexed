@@ -8,6 +8,11 @@
 namespace cartdg
 {
 
+/*
+ * Specification of which face is connected to which (that is, the direction) when
+ * creating element connections. This is different for Cartesian and deformed elements,
+ * so we specify them as templates to support generic programming.
+ */
 template <class element_t> class Con_dir {};
 
 template <>
@@ -27,6 +32,10 @@ class Con_dir<Deformed_element>
   int i_face(int i_side) {return 2*i_dim[i_side] + face_sign[i_side];}
 };
 
+/*
+ * Represents a connection between faces (which may belong to elements or something else like
+ * boundary conditions or `Refined_face`s).
+ */
 template <class element_t>
 class Face_connection
 {
@@ -46,15 +55,22 @@ class Face_connection<Deformed_element>
   {}
   virtual Con_dir<Deformed_element> direction() = 0;
   virtual double* face(int i_side) = 0;
-  double* jacobian() {return jac.data();}
+  double* jacobian() {return jac.data();} // every deformed face connection must contain a numerical Jacobian to ensure the numerical reference flux fully matches
 };
 
+/*
+ * Specifies that two elements are connected without asserting anything about how the faces are
+ * connected. For example, this might be a regular connection, or it could be a hanging node connection.
+ */
 class Element_connection
 {
   public:
   virtual Element& element(int i_side) = 0;
 };
 
+/*
+ * Represents a connection between specific faces of two elements of the same refinement level.
+ */
 template <typename element_t>
 class Element_face_connection : public Element_connection, public Face_connection<element_t>
 {
@@ -76,10 +92,17 @@ class Element_face_connection : public Element_connection, public Face_connectio
   virtual element_t& element(int i_side) {return *elems[i_side];}
 };
 
+/*
+ * Represents a connection between elements whose refinement levels differ by 1. This involves
+ * a `Refined_face` object to facilitate interpolating/projecting between the coarse face and the
+ * fine mortar faces, as well as connections between faces of the fine elements and the corresponding
+ * fine mortar faces where the actual numerical flux will be computed.
+ */
 template <typename element_t>
 class Refined_connection
 {
   public:
+  // connection subclass to which will represent the connections for the numerical flux calculation
   class Fine_connection : public Element_connection, public Face_connection<element_t>
   {
     Refined_connection& ref_con;
@@ -106,6 +129,7 @@ class Refined_connection
 
   public:
   Refined_face refined_face;
+  // if `reverse_order` is true, the fine elements will come before coarse in the connection. Otherwise, coarse will come first
   Refined_connection(element_t* coarse, std::vector<element_t*> fine, Con_dir<element_t> con_dir, bool reverse_order=false)
   : c{*coarse}, params{coarse->storage_params()}, dir{con_dir}, rev{reverse_order},
     refined_face{params, coarse->face() + con_dir.i_face(rev)*params.n_dof()/params.row_size}
@@ -116,6 +140,7 @@ class Refined_connection
     }
   }
   Con_dir<element_t> direction() {return dir;}
+  // fetch an object represting a connection between the face of a fine element and one of the mortar faces
   Fine_connection& connection(int i_fine) {return fine_cons[i_fine];}
 };
 

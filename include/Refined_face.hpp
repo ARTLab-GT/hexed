@@ -10,11 +10,8 @@ namespace cartdg
 
 /*
  * Stores "mortar" data for connecting faces of different refinement levels (connections with hanging
- * nodes). To use, first construct a `Refined_face` object from the coarse face, then use `elem_con`
- * objects to connect the faces of the fine elements to the pointers returned by `fine_face`. Use the
- * prolong kernel to copy the polynomial in `coarse_face()` to the `fine_face`s, apply the neighbor
- * kernel as usual, and then use the restrict kernel to take the flux from the fine faces back to the
- * coarse face.
+ * nodes). Contains a pointer to the face data for the coarse element and storage to contain its
+ * interpolation onto the fine element faces.
  */
 class Refined_face
 {
