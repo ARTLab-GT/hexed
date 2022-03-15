@@ -6,7 +6,6 @@
 #include "Element.hpp"
 #include "Deformed_element.hpp"
 #include "Element_container.hpp"
-#include "connection.hpp"
 
 namespace cartdg
 {
@@ -45,11 +44,11 @@ class Accessible_mesh : public Mesh
   inline auto cartesian_elements() {return car_elems.elements();} // access only cartesian elements
   inline auto  deformed_elements() {return def_elems.elements();} // access only deformed
   Element_sequence elements(); // access all elements regardless of deformedness
-  virtual void connect_cartesian(int ref_level, int i_dim, std::array<int, 2> serial_n,
+  virtual void connect_cartesian(int ref_level, std::array<int, 2> serial_n, Con_dir<Element> dir,
                                  std::array<bool, 2> is_deformed = {false, false});
   // Provides read access to all connections between Cartesian elements in unspecified order
   Vector_view<Face_connection<Element>&, Element_face_connection<Element>> cartesian_connections() {return car_cons;}
-  virtual void connect_deformed(int ref_level, std::array<int, 2> serial_n, std::array<int, 2> i_dim, std::array<bool, 2> face_sign);
+  virtual void connect_deformed(int ref_level, std::array<int, 2> serial_n, Con_dir<Deformed_element> direction);
   // Provides read access to all connections between deformed elements in unspecified order
   Vector_view<Face_connection<Deformed_element>&, Element_face_connection<Deformed_element>> deformed_connections() {return def_cons;}
 };

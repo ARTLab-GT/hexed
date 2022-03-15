@@ -45,23 +45,23 @@ Element& Accessible_mesh::Element_sequence::operator[](int index)
          : (Element&)am.def_elems.elements()[index - car_seq.size()];
 }
 
-void Accessible_mesh::connect_cartesian(int ref_level, int i_dim, std::array<int, 2> serial_n, std::array<bool, 2> is_deformed)
+void Accessible_mesh::connect_cartesian(int ref_level, std::array<int, 2> serial_n, Con_dir<Element> direction, std::array<bool, 2> is_deformed)
 {
   std::array<Element*, 2> el_ar;
   for (int i_side : {0, 1}) el_ar[i_side] = &element(ref_level, is_deformed[i_side], serial_n[i_side]);
-  car_cons.emplace_back(el_ar, Con_dir<Element>{i_dim});
+  car_cons.emplace_back(el_ar, direction);
 }
 
-void Accessible_mesh::connect_deformed(int ref_level, std::array<int, 2> serial_n, std::array<int, 2> i_dim, std::array<bool, 2> face_sign)
+void Accessible_mesh::connect_deformed(int ref_level, std::array<int, 2> serial_n, Con_dir<Deformed_element> direction)
 {
-  if ((i_dim[0] == i_dim[1]) && (face_sign[0] == face_sign[1])) {
+  if ((direction.i_dim[0] == direction.i_dim[1]) && (direction.face_sign[0] == direction.face_sign[1])) {
     throw std::runtime_error("attempt to connect faces of same sign along same dimension which is forbidden");
   }
   std::array<Deformed_element*, 2> el_ar;
   for (int i_side : {0, 1}) {
     el_ar[i_side] = &def_elems.at(ref_level, serial_n[i_side]).element;
   }
-  def_cons.emplace_back(el_ar, Con_dir<Deformed_element>{i_dim, face_sign});
+  def_cons.emplace_back(el_ar, direction);
 }
 
 }

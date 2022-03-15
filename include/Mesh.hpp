@@ -2,6 +2,7 @@
 #define CARTDG_MESH_HPP_
 
 #include "Ghost_boundary_condition.hpp"
+#include "connection.hpp"
 
 namespace cartdg
 {
@@ -21,10 +22,10 @@ class Mesh
   virtual int add_element(int ref_level, bool is_deformed, std::vector<int> position) = 0;
   // Specify that two elements are connected via a Cartesian face. Note: although the interface
   // is stipulated to be Cartesian, the elements themselves can be deformed
-  virtual void connect_cartesian(int ref_level, int i_dim, std::array<int, 2> serial_n,
+  virtual void connect_cartesian(int ref_level, std::array<int, 2> serial_n, Con_dir<Element> dir,
                                  std::array<bool, 2> is_deformed = {false, false}) = 0;
   // Specify that two elements are connected via a deformed face. Requires both elements to be deformed.
-  virtual void connect_deformed(int ref_level, std::array<int, 2> serial_n, std::array<int, 2> i_dim, std::array<bool, 2> face_sign) = 0;
+  virtual void connect_deformed(int ref_level, std::array<int, 2> serial_n, Con_dir<Deformed_element> direction) = 0;
   #if 0
   virtual void connect_levels(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial,
                               int i_dim, bool coarse_face_positive) = 0;

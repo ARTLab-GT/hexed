@@ -32,10 +32,10 @@ TEST_CASE("Accessible_mesh")
   }
   // test connections
   int sn3 = mesh.add_element(3, false, {0, 0});
-  REQUIRE_THROWS(mesh.connect_cartesian(0, 0, {sn0, sn0 + sn1 + 1})); // connecting non-existent elements throws
+  REQUIRE_THROWS(mesh.connect_cartesian(0, {sn0, sn0 + sn1 + 1}, {0})); // connecting non-existent elements throws
   SECTION("cartesian-cartesian connection")
   {
-    mesh.connect_cartesian(0, 2, {sn1, sn0});
+    mesh.connect_cartesian(0, {sn1, sn0}, {2});
     auto& con = mesh.cartesian_connections()[0];
     REQUIRE(con.direction().i_dim == 2);
     REQUIRE(con.face(0) == mesh.element(0, false, sn1).face() + (2*2 + 1)*5*row_size*row_size);
@@ -43,7 +43,7 @@ TEST_CASE("Accessible_mesh")
   }
   SECTION("deformed-cartesian connection")
   {
-    mesh.connect_cartesian(3, 1, {sn2, sn3}, {true, false});
+    mesh.connect_cartesian(3, {sn2, sn3}, {1}, {true, false});
     auto& con = mesh.cartesian_connections()[0];
     REQUIRE(con.direction().i_dim == 1);
     REQUIRE(con.face(0) == mesh.element(3,  true, sn2).face() + (1*2 + 1)*5*row_size*row_size);
@@ -53,9 +53,9 @@ TEST_CASE("Accessible_mesh")
   {
     int sn4 = mesh.add_element(3, true, {1, 2}); // position doesn't really make sense, but I don't really care
     // if dimension is same, positivity must be different
-    REQUIRE_THROWS(mesh.connect_deformed(3, {sn2, sn4}, {0, 0}, {0, 0}));
-    REQUIRE_THROWS(mesh.connect_deformed(3, {sn2, sn4}, {0, 0}, {1, 1}));
-    mesh.connect_deformed(3, {sn4, sn2}, {1, 0}, {0, 1});
+    REQUIRE_THROWS(mesh.connect_deformed(3, {sn2, sn4}, {{0, 0}, {0, 0}}));
+    REQUIRE_THROWS(mesh.connect_deformed(3, {sn2, sn4}, {{0, 0}, {1, 1}}));
+    mesh.connect_deformed(3, {sn4, sn2}, {{1, 0}, {0, 1}});
     auto& con = mesh.deformed_connections()[0];
     REQUIRE(con.direction().i_dim[0] == 1);
     REQUIRE(con.direction().i_dim[1] == 0);
@@ -66,8 +66,8 @@ TEST_CASE("Accessible_mesh")
   }
   SECTION("connection vector size")
   {
-    mesh.connect_cartesian(0, 0, {sn1, sn0});
-    mesh.connect_cartesian(0, 1, {sn1, sn0});
+    mesh.connect_cartesian(0, {sn1, sn0}, {0});
+    mesh.connect_cartesian(0, {sn1, sn0}, {1});
     REQUIRE(mesh.cartesian_connections().size() == 2);
   }
 }
