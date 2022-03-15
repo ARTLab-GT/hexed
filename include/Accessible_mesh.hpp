@@ -23,8 +23,8 @@ class Accessible_mesh : public Mesh
   Complete_element_container<Element>          car_elems;
   Complete_element_container<Deformed_element> def_elems;
   Element_container& container(bool is_deformed);
-  std::vector<Cartesian_element_connection> car_cons;
-  std::vector< Deformed_element_connection> def_cons;
+  std::vector<Element_face_connection<         Element>> car_cons;
+  std::vector<Element_face_connection<Deformed_element>> def_cons;
 
   public:
   class Element_sequence : public Sequence<Element&>
@@ -48,10 +48,10 @@ class Accessible_mesh : public Mesh
   virtual void connect_cartesian(int ref_level, int i_dim, std::array<int, 2> serial_n,
                                  std::array<bool, 2> is_deformed = {false, false});
   // Provides read access to all connections between Cartesian elements in unspecified order
-  Vector_view<Cartesian_face_connection&, Cartesian_element_connection> cartesian_connections() {return car_cons;}
+  Vector_view<Face_connection<Element>&, Element_face_connection<Element>> cartesian_connections() {return car_cons;}
   virtual void connect_deformed(int ref_level, std::array<int, 2> serial_n, std::array<int, 2> i_dim, std::array<bool, 2> face_sign);
   // Provides read access to all connections between deformed elements in unspecified order
-  Vector_view<Deformed_face_connection&, Deformed_element_connection> deformed_connections() {return def_cons;}
+  Vector_view<Face_connection<Deformed_element>&, Element_face_connection<Deformed_element>> deformed_connections() {return def_cons;}
 };
 
 }

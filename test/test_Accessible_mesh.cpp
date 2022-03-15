@@ -37,7 +37,7 @@ TEST_CASE("Accessible_mesh")
   {
     mesh.connect_cartesian(0, 2, {sn1, sn0});
     auto& con = mesh.cartesian_connections()[0];
-    REQUIRE(con.i_dim() == 2);
+    REQUIRE(con.direction().i_dim == 2);
     REQUIRE(con.face(0) == mesh.element(0, false, sn1).face() + (2*2 + 1)*5*row_size*row_size);
     REQUIRE(con.face(1) == mesh.element(0, false, sn0).face() + (2*2 + 0)*5*row_size*row_size);
   }
@@ -45,7 +45,7 @@ TEST_CASE("Accessible_mesh")
   {
     mesh.connect_cartesian(3, 1, {sn2, sn3}, {true, false});
     auto& con = mesh.cartesian_connections()[0];
-    REQUIRE(con.i_dim() == 1);
+    REQUIRE(con.direction().i_dim == 1);
     REQUIRE(con.face(0) == mesh.element(3,  true, sn2).face() + (1*2 + 1)*5*row_size*row_size);
     REQUIRE(con.face(1) == mesh.element(3, false, sn3).face() + (1*2 + 0)*5*row_size*row_size);
   }
@@ -57,10 +57,10 @@ TEST_CASE("Accessible_mesh")
     REQUIRE_THROWS(mesh.connect_deformed(3, {sn2, sn4}, {0, 0}, {1, 1}));
     mesh.connect_deformed(3, {sn4, sn2}, {1, 0}, {0, 1});
     auto& con = mesh.deformed_connections()[0];
-    REQUIRE(con.i_dim(0) == 1);
-    REQUIRE(con.i_dim(1) == 0);
-    REQUIRE(con.face_sign(0) == 0);
-    REQUIRE(con.face_sign(1) == 1);
+    REQUIRE(con.direction().i_dim[0] == 1);
+    REQUIRE(con.direction().i_dim[1] == 0);
+    REQUIRE(con.direction().face_sign[0] == 0);
+    REQUIRE(con.direction().face_sign[1] == 1);
     REQUIRE(con.face(0) == mesh.element(3, true, sn4).face() + (1*2 + 0)*5*row_size*row_size);
     REQUIRE(con.face(1) == mesh.element(3, true, sn2).face() + (0*2 + 1)*5*row_size*row_size);
   }

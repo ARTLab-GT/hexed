@@ -7,20 +7,45 @@
 namespace cartdg
 {
 
-class Cartesian_face_connection
+template <class element_t> class Con_dir {};
+
+template <>
+class Con_dir<Element>
 {
   public:
-  virtual int i_dim() = 0;
+  int i_dim;
+  int i_face(int i_side) {return 2*i_dim + 1 - i_side;}
+};
+
+template <>
+class Con_dir<Deformed_element>
+{
+  public:
+  std::array<int, 2> i_dim;
+  std::array<bool, 2> face_sign;
+  int i_face(int i_side) {return 2*i_dim[i_side] + face_sign[i_side];}
+};
+
+template <class element_t>
+class Face_connection
+{
+  public:
+  Face_connection(Storage_params) {}
+  virtual Con_dir<element_t> direction() = 0;
   virtual double* face(int i_side) = 0;
 };
 
-class Deformed_face_connection
+template <>
+class Face_connection<Deformed_element>
 {
+  Eigen::VectorXd jac;
   public:
-  virtual int i_dim(int i_side) = 0;
-  virtual bool face_sign(int i_side) = 0;
+  Face_connection<Deformed_element>(Storage_params params)
+  : jac{params.n_dim*params.n_dim*params.n_qpoint()/params.row_size}
+  {}
+  virtual Con_dir<Deformed_element> direction() = 0;
   virtual double* face(int i_side) = 0;
-  virtual double* jacobian() = 0;
+  double* jacobian() {return jac.data();}
 };
 
 class Element_connection
@@ -29,34 +54,25 @@ class Element_connection
   virtual Element& element(int i_side) = 0;
 };
 
-class Cartesian_element_connection : public Cartesian_face_connection, public Element_connection
+template <typename element_t>
+class Element_face_connection : public Element_connection, public Face_connection<element_t>
 {
-  std::array<Element*, 2> elems;
-  int id;
+  Con_dir<element_t> dir;
+  std::array<element_t*, 2> elems;
   std::array<double*, 2> faces;
-
   public:
-  Cartesian_element_connection(std::array<Element*, 2> elements, int i_dim_arg);
-  virtual int i_dim();
-  virtual double* face(int i_side);
-  virtual Element& element(int i_side);
-};
-
-class Deformed_element_connection : public Deformed_face_connection, public Element_connection
-{
-  std::array<Deformed_element*, 2> elems;
-  std::array<int, 2> id;
-  std::array<bool, 2> sign;
-  Eigen::VectorXd jac;
-  std::array<double*, 2> faces;
-
-  public:
-  Deformed_element_connection(std::array<Deformed_element*, 2> elements, std::array<int, 2> i_dim_arg, std::array<bool, 2> face_sign_arg);
-  virtual int i_dim(int i_side);
-  virtual bool face_sign(int i_side);
-  virtual double* face(int i_side);
-  virtual double* jacobian();
-  virtual Deformed_element& element(int i_side);
+  Element_face_connection(std::array<element_t*, 2> elements, Con_dir<element_t> con_dir)
+  : Face_connection<element_t>{elements[0]->storage_params()}, dir{con_dir}, elems{elements}
+  {
+    Storage_params params {elements[0]->storage_params()};
+    int face_size = params.n_dof()/params.row_size;
+    for (int i_side : {0, 1}) {
+      faces[i_side] = elements[i_side]->face() + dir.i_face(i_side)*face_size;
+    }
+  }
+  virtual Con_dir<element_t> direction() {return dir;}
+  virtual double* face(int i_side) {return faces[i_side];}
+  virtual element_t& element(int i_side) {return *elems[i_side];}
 };
 
 }

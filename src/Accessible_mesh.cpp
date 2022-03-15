@@ -49,7 +49,7 @@ void Accessible_mesh::connect_cartesian(int ref_level, int i_dim, std::array<int
 {
   std::array<Element*, 2> el_ar;
   for (int i_side : {0, 1}) el_ar[i_side] = &element(ref_level, is_deformed[i_side], serial_n[i_side]);
-  car_cons.emplace_back(el_ar, i_dim);
+  car_cons.emplace_back(el_ar, Con_dir<Element>{i_dim});
 }
 
 void Accessible_mesh::connect_deformed(int ref_level, std::array<int, 2> serial_n, std::array<int, 2> i_dim, std::array<bool, 2> face_sign)
@@ -61,7 +61,7 @@ void Accessible_mesh::connect_deformed(int ref_level, std::array<int, 2> serial_
   for (int i_side : {0, 1}) {
     el_ar[i_side] = &def_elems.at(ref_level, serial_n[i_side]).element;
   }
-  def_cons.emplace_back(el_ar, i_dim, face_sign);
+  def_cons.emplace_back(el_ar, Con_dir<Deformed_element>{i_dim, face_sign});
 }
 
 }
