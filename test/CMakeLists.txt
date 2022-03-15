@@ -6,6 +6,7 @@ main.cpp
 testing_utils.cpp
 test_Accessible_mesh.cpp
 test_Basis.cpp
+test_connection.cpp
 test_conservation.cpp
 test_deformed.cpp
 test_Deformed_element.cpp

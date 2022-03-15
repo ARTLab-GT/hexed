@@ -2,6 +2,7 @@ target_sources(cartdg PRIVATE
 # please maintain alphabetical order
 Accessible_mesh.cpp
 Basis.cpp
+connection.cpp
 Deformed_element.cpp
 Deformed_grid.cpp
 Domain_func.cpp
