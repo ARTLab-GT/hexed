@@ -3,6 +3,7 @@
 
 #include <Eigen/Dense>
 #include "Deformed_element.hpp"
+#include "Refined_face.hpp"
 
 namespace cartdg
 {
@@ -78,18 +79,44 @@ class Element_face_connection : public Element_connection, public Face_connectio
 template <typename element_t>
 class Refined_connection
 {
-  std::vector<Individual_connection> ind_cons;
   public:
-  class Individual_connection : public Element_connection, public Face_connection<element_t>
+  class Fine_connection : public Element_connection, public Face_connection<element_t>
   {
+    Refined_connection& ref_con;
+    element_t& fine_elem;
+    std::array<double*, 2> faces;
     public:
-    virtual Con_dir<element_t> direction();
-    virtual double* face(int i_side);
-    virtual element_t& element(int i_side);
+    Fine_connection(Refined_connection& r, double* mortar_face, element_t& f)
+    : Face_connection<element_t>{r.params}, ref_con{r}, fine_elem{f}
+    {
+      faces[ref_con.rev] = mortar_face;
+      faces[!ref_con.rev] = fine_elem.face() + r.direction().i_face(!ref_con.rev)*r.params.n_dof()/r.params.row_size;
+    }
+    virtual Con_dir<element_t> direction() {return ref_con.direction();}
+    virtual double* face(int i_side) {return faces[i_side];}
+    virtual element_t& element(int i_side) {return (i_side != ref_con.rev) ? fine_elem : ref_con.c;}
   };
+
+  private:
+  element_t& c;
+  Storage_params params;
+  Con_dir<element_t> dir;
+  bool rev;
+  std::vector<Fine_connection> fine_cons;
+
+  public:
   Refined_face refined_face;
-  Refined_connection(element_t* coarse, std::vector<element_t*> fine, Con_dir<element_t> dir);
-  Individual_connection& connection(int i_fine);
+  Refined_connection(element_t* coarse, std::vector<element_t*> fine, Con_dir<element_t> con_dir, bool reverse_order=false)
+  : c{*coarse}, params{coarse->storage_params()}, dir{con_dir}, rev{reverse_order},
+    refined_face{params, coarse->face() + con_dir.i_face(rev)*params.n_dof()/params.row_size}
+  {
+    if (int(fine.size()) != params.n_vertices()/2) throw std::runtime_error("wrong number of elements in `Refined_connection`");
+    for (unsigned i_face = 0; i_face < fine.size(); ++i_face) {
+      fine_cons.emplace_back(*this, refined_face.fine_face(i_face), *fine[i_face]);
+    }
+  }
+  Con_dir<element_t> direction() {return dir;}
+  Fine_connection& connection(int i_fine) {return fine_cons[i_fine];}
 };
 
 }
