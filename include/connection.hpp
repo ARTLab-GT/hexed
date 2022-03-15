@@ -1,6 +1,7 @@
 #ifndef CARTDG_CONNECTION_HPP_
 #define CARTDG_CONNECTION_HPP_
 
+#include <Eigen/Dense>
 #include "Deformed_element.hpp"
 
 namespace cartdg
@@ -31,6 +32,8 @@ class Element_connection
 class Cartesian_element_connection : public Cartesian_face_connection, public Element_connection
 {
   std::array<Element*, 2> elems;
+  int id;
+  std::array<double*, 2> faces;
 
   public:
   Cartesian_element_connection(std::array<Element*, 2> elements, int i_dim_arg);
@@ -42,6 +45,10 @@ class Cartesian_element_connection : public Cartesian_face_connection, public El
 class Deformed_element_connection : public Deformed_face_connection, public Element_connection
 {
   std::array<Deformed_element*, 2> elems;
+  std::array<int, 2> id;
+  std::array<bool, 2> sign;
+  Eigen::VectorXd jac;
+  std::array<double*, 2> faces;
 
   public:
   Deformed_element_connection(std::array<Deformed_element*, 2> elements, std::array<int, 2> i_dim_arg, std::array<bool, 2> face_sign_arg);

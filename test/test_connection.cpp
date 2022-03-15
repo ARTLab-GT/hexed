@@ -11,7 +11,7 @@ TEST_CASE("Cartesian_element_connection")
   REQUIRE(&con.element(0) == &elem0);
   REQUIRE(&con.element(1) == &elem1);
   REQUIRE(con.face(0) == elem0.face() + 3*5*36);
-  REQUIRE(con.face(1) == elem1.face() + 1*5*36);
+  REQUIRE(con.face(1) == elem1.face() + 2*5*36);
 }
 
 TEST_CASE("Deformed_element_connection")
