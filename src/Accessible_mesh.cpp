@@ -57,4 +57,11 @@ void Accessible_mesh::connect_cartesian(int ref_level, int i_dim, std::array<int
   car_cons.push_back(con);
 }
 
+void Accessible_mesh::connect_deformed(int ref_level, std::array<int, 2> serial_n, std::array<int, 2> i_dim, std::array<bool, 2> face_sign)
+{
+  if ((i_dim[0] == i_dim[1]) && (face_sign[0] == face_sign[1])) {
+    throw std::runtime_error("attempt to connect faces of same sign along same dimension which is forbidden");
+  }
+}
+
 }

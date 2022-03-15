@@ -49,6 +49,18 @@ TEST_CASE("Accessible_mesh")
     REQUIRE(con.face[0] == mesh.element(3,  true, sn2).face() + (1*2 + 1)*5*row_size*row_size);
     REQUIRE(con.face[1] == mesh.element(3, false, sn3).face() + (1*2 + 0)*5*row_size*row_size);
   }
+  SECTION("deformed-deformed connection")
+  {
+    int sn4 = mesh.add_element(3, true, {2, 2});
+    int sn5 = mesh.add_element(3, true, {1, 3});
+    int sn6 = mesh.add_element(3, true, {2, 4});
+    // if dimension is same, positivity must be different
+    REQUIRE_THROWS(mesh.connect_deformed(3, {sn2, sn4}, {0, 0}, {0, 0}));
+    REQUIRE_THROWS(mesh.connect_deformed(3, {sn2, sn4}, {0, 0}, {1, 1}));
+    mesh.connect_deformed(3, {sn2, sn4}, {0, 0}, {1, 0});
+    mesh.connect_deformed(3, {sn5, sn2}, {1, 1}, {0, 1});
+    mesh.connect_deformed(3, {sn5, sn6}, {1, 0}, {1, 0});
+  }
   SECTION("connection vector size")
   {
     mesh.connect_cartesian(0, 0, {sn1, sn0});

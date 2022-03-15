@@ -23,9 +23,9 @@ class Mesh
   // is stipulated to be Cartesian, the elements themselves can be deformed
   virtual void connect_cartesian(int ref_level, int i_dim, std::array<int, 2> serial_n,
                                  std::array<bool, 2> is_deformed = {false, false}) = 0;
+  // Specify that two elements are connected via a deformed face. Requires both elements to be deformed.
+  virtual void connect_deformed(int ref_level, std::array<int, 2> serial_n, std::array<int, 2> i_dim, std::array<bool, 2> face_sign) = 0;
   #if 0
-  virtual void connect_deformed(int ref_level, std::array<int, 2> serial_n, std::array<int, 2> i_dim,
-                                std::array<bool, 2> face_positive) = 0;
   virtual void connect_levels(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial,
                               int i_dim, bool coarse_face_positive) = 0;
   virtual void add_gbc(int ref_level, bool is_deformed, int serial_n, int i_dim, bool face_positive, Ghost_boundary_condition&) = 0;

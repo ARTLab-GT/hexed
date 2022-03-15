@@ -19,7 +19,6 @@ struct Cartesian_connection
 struct Deformed_connection
 {
   std::array<int, 2> i_dim;
-  std::array<bool, 2> is_positive;
   std::array<double*, 2> face;
 };
 
@@ -63,6 +62,9 @@ class Accessible_mesh : public Mesh
                                  std::array<bool, 2> is_deformed = {false, false});
   // Provides read access to all connections between Cartesian elements in unspecified order
   Vector_view<Cartesian_connection, Car_mesh_con> cartesian_connections() {return car_cons;}
+  virtual void connect_deformed(int ref_level, std::array<int, 2> serial_n, std::array<int, 2> i_dim, std::array<bool, 2> face_sign);
+  // Provides read access to all connections between deformed elements in unspecified order
+  Vector_view<Deformed_connection, Def_mesh_con> deformed_connections() {return def_cons;}
 };
 
 }
