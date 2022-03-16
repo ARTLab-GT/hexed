@@ -40,7 +40,7 @@ int Accessible_mesh::Element_sequence::size()
 
 Element& Accessible_mesh::Element_sequence::operator[](int index)
 {
-  auto car_seq = am.car.elements();
+  auto& car_seq = am.car.elements();
   return (index < car_seq.size()) ? car_seq[index]
          : (Element&)am.def.elements()[index - car_seq.size()];
 }

@@ -16,16 +16,9 @@ template <typename element_t>
 class View_by_type
 {
   public:
-  // typedef a bunch of template spaghetti into some manageable aliases
-  typedef typename Complete_element_container<element_t>::view_t element_view;
-  typedef Vector_view<Face_connection<element_t>&, Element_face_connection<element_t>> connection_view;
-  static Refined_face& ref_face(Refined_connection<element_t>& ref_con) {return ref_con.refined_face;}
-  typedef Vector_view<Refined_face&, Refined_connection<element_t>, &ref_face> ref_face_view;
-
-  // the part of the interface you want to look at
-  virtual element_view elements() = 0;
-  virtual connection_view connections() = 0;
-  virtual ref_face_view refined_faces() = 0;
+  virtual Sequence<element_t&>& elements() = 0;
+  virtual Sequence<Face_connection<element_t>&>& connections() = 0;
+  virtual Sequence<Refined_face&>& refined_faces() = 0;
 };
 
 /*
@@ -41,13 +34,24 @@ class Accessible_mesh : public Mesh
   class Mesh_by_type : public View_by_type<element_t>
   {
     public:
+    // where the data is kept
     Complete_element_container<element_t> elems;
     std::vector<Element_face_connection<element_t>> cons;
     std::vector<Refined_connection<element_t>> ref_face_cons;
-    Mesh_by_type(Storage_params params, double root_spacing) : elems{params, root_spacing} {}
-    virtual typename View_by_type<element_t>::element_view elements() {return elems.elements();}
-    virtual typename View_by_type<element_t>::connection_view connections() {return cons;}
-    virtual typename View_by_type<element_t>::ref_face_view refined_faces() {return ref_face_cons;}
+    private:
+    // template spaghetti to `Vector_view`s of the data with the right type
+    typename Complete_element_container<element_t>::view_t elem_v;
+    Vector_view<Face_connection<element_t>&, Element_face_connection<element_t>> con_v;
+    static Refined_face& ref_face(Refined_connection<element_t>& ref_con) {return ref_con.refined_face;}
+    Vector_view<Refined_face&, Refined_connection<element_t>, &ref_face> ref_v;
+    public:
+    // interface implementation
+    Mesh_by_type(Storage_params params, double root_spacing)
+    : elems{params, root_spacing}, elem_v{elems.elements()}, con_v{cons}, ref_v{ref_face_cons}
+    {}
+    virtual Sequence<element_t&>& elements() {return elem_v;}
+    virtual Sequence<Face_connection<element_t>&>& connections() {return con_v;}
+    virtual Sequence<Refined_face&>& refined_faces() {return ref_v;}
   };
 
   Storage_params params;
