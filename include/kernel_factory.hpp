@@ -54,10 +54,11 @@ class Kernel_lookup
   Kernel_lookup<kernel, max_n_dim, max_row_size - 1> decremented; // the next "link" in the recursive hirarchy
   public:
   // traverses the recursive hierarchy to find the desired template instance
-  ptr_t<kernel> get(int n_dim, int row_size)
+  template<typename... constructor_args>
+  ptr_t<kernel> get(int n_dim, int row_size, constructor_args&&... args)
   {
-    if ((n_dim == max_n_dim) && (row_size == max_row_size)) return pointer<kernel, max_n_dim, max_row_size>(); // if I have the template you're looking for, return it
-    else return decremented.get(n_dim, row_size); // if I don't have it, delegate it to the next link (which is to say, "move along")
+    if ((n_dim == max_n_dim) && (row_size == max_row_size)) return ptr_t<kernel>{new kernel<max_n_dim+2, max_n_dim, max_row_size>(args...)}; // if I have the template you're looking for, return it
+    else return decremented.get(n_dim, row_size, args...); // if I don't have it, delegate it to the next link (which is to say, "move along")
   }
 };
 
@@ -67,10 +68,11 @@ class Kernel_lookup<kernel, max_n_dim, 1>
 {
   Kernel_lookup<kernel, max_n_dim - 1, config::max_row_size> decremented;
   public:
-  ptr_t<kernel> get(int n_dim, int row_size)
+  template<typename... constructor_args>
+  ptr_t<kernel> get(int n_dim, int row_size, constructor_args&&... args)
   {
-    if (n_dim == max_n_dim) return pointer<kernel, max_n_dim, 1>();
-    else return decremented.get(n_dim, row_size);
+    if (n_dim == max_n_dim) return ptr_t<kernel>{new kernel<max_n_dim+2, max_n_dim, 1>(args...)};
+    else return decremented.get(n_dim, row_size, args...);
   }
 };
 
@@ -79,9 +81,10 @@ template <template<int, int, int> typename kernel>
 class Kernel_lookup<kernel, 1, 1>
 {
   public:
-  ptr_t<kernel> get(int n_dim, int row_size)
+  template<typename... constructor_args>
+  ptr_t<kernel> get(int n_dim, int row_size, constructor_args&&... args)
   {
-    return pointer<kernel, 1, 1>();
+    return ptr_t<kernel>{new kernel<3, 1, 1>(args...)};
   }
 };
 
@@ -92,14 +95,14 @@ class Kernel_lookup<kernel, 1, 1>
  * instantiated with `n_dim` and `row_size` provided as template arguments. Arguments
  * must satisfy `3 >= n_dim > 0` and `config::max_row_size >= row_size > 1`.
  */
-template <template<int, int, int> typename kernel>
-kernel_lookup::ptr_t<kernel> kernel_factory(int n_dim, int row_size)
+template <template<int, int, int> typename kernel, typename... constructor_args>
+kernel_lookup::ptr_t<kernel> kernel_factory(int n_dim, int row_size, constructor_args&&... args)
 {
   if ((n_dim < 1) || (n_dim > 3) || (row_size < 2) || (row_size > config::max_row_size)) {
     throw std::runtime_error("demand for invalid kernel");
   }
   kernel_lookup::Kernel_lookup<kernel, 3, config::max_row_size> lookup;
-  return lookup.get(n_dim, row_size);
+  return lookup.get(n_dim, row_size, args...);
 }
 
 }
