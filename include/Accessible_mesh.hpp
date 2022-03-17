@@ -42,8 +42,13 @@ class Mesh_by_type : public View_by_type<element_t>
     Mesh_by_type& parent;
     public:
     Connection_view(Mesh_by_type& mbt) : parent{mbt} {}
-    virtual int size() {return parent.cons.size();}
-    virtual view_t operator[](int index) {return parent.cons[index];}
+    virtual int size() {return parent.cons.size() + 4*parent.ref_face_cons.size();}
+    virtual view_t operator[](int index)
+    {
+      int i_refined = index - parent.cons.size();
+      if (i_refined < 0) return parent.cons[index];
+      else return parent.ref_face_cons[i_refined/4].connection(i_refined%4);
+    }
   };
   Connection_view<Face_connection<element_t>&> face_con_v;
   Connection_view<Element_connection&> elem_con_v;

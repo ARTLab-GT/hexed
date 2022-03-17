@@ -98,8 +98,8 @@ TEST_CASE("Accessible_mesh")
       if (   (con.face(0) == mesh.element(0, false, sn1).face() + (0*2 + 1)*5*row_size*row_size)
           && (con.face(1) == mesh.element(0, false, sn0).face() + (0*2 + 0)*5*row_size*row_size)) ++count0;
       // is this the connection between def3 and car0 (or rather, the fine mortar face involved in that connection)?
-      if (   (con.face(0) == mesh.element(2, true, def3).face() + (2*2 + 0)*5*row_size*row_size)
-          && (con.face(1) == ref_face.fine_face(3))) ++count0;
+      if (   (con.face(1) == mesh.element(2, true, def3).face() + (2*2 + 0)*5*row_size*row_size)
+          && (con.face(0) == ref_face.fine_face(3))) ++count1;
     }
     REQUIRE(count0 == 1);
     REQUIRE(count1 == 1);
