@@ -10,8 +10,10 @@
 namespace cartdg
 {
 
-// Provides access to all of the elements, connections, and other numerical data of a specific type
-// (i.e. Cartesian or deformed) without addition/removal
+/*
+ * Provides access to all of the elements, connections, and other numerical data of a specific type
+ * (i.e. Cartesian or deformed) without addition/removal
+ */
 template <typename element_t>
 class View_by_type
 {
@@ -48,11 +50,11 @@ class Mesh_by_type : public View_by_type<element_t>
   static Refined_face& ref_face(Refined_connection<element_t>& ref_con) {return ref_con.refined_face;}
   Vector_view<Refined_face&, Refined_connection<element_t>, &ref_face> ref_v;
   public:
-  // interface implementation
   Mesh_by_type(Storage_params params, double root_spacing)
   : elems{params, root_spacing}, elem_v{elems.elements()}, face_con_v{*this},
     elem_con_v{*this}, ref_v{ref_face_cons}
   {}
+  // interface implementation
   virtual Sequence<element_t&>& elements() {return elem_v;}
   virtual Sequence<Face_connection<element_t>&>& face_connections() {return face_con_v;}
   virtual Sequence<Element_connection&>& element_connections() {return elem_con_v;}

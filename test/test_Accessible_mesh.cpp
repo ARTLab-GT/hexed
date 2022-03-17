@@ -33,6 +33,12 @@ TEST_CASE("Accessible_mesh")
   // test connections
   int sn3 = mesh.add_element(3, false, {0, 0});
   REQUIRE_THROWS(mesh.connect_cartesian(0, {sn0, sn0 + sn1 + 1}, {0})); // connecting non-existent elements throws
+  // make some elements for testing refined face connections
+  int car0 = mesh.add_element(1, false, {0, 0}); // note: for this purpose, position doesn't matter
+  int def0 = mesh.add_element(2, true, {0, 0});
+  int def1 = mesh.add_element(2, true, {0, 0});
+  int def2 = mesh.add_element(2, true, {0, 0});
+  int def3 = mesh.add_element(2, true, {0, 0});
   SECTION("cartesian-cartesian connection")
   {
     mesh.connect_cartesian(0, {sn1, sn0}, {2});
@@ -54,11 +60,6 @@ TEST_CASE("Accessible_mesh")
   }
   SECTION("refined face connection")
   {
-    int car0 = mesh.add_element(1, false, {0, 0}); // note: for this purpose, position doesn't matter
-    int def0 = mesh.add_element(2, true, {0, 0});
-    int def1 = mesh.add_element(2, true, {0, 0});
-    int def2 = mesh.add_element(2, true, {0, 0});
-    int def3 = mesh.add_element(2, true, {0, 0});
     // check that it can't find elements with the wrong deformedness
     REQUIRE_THROWS(mesh.connect_hanging_cartesian(1, car0, {def0, def1, def2, def3}, {2}, true, false, false));
     // make a good connection
@@ -81,10 +82,26 @@ TEST_CASE("Accessible_mesh")
     REQUIRE(con.face(0) == mesh.element(3, true, sn4).face() + (1*2 + 0)*5*row_size*row_size);
     REQUIRE(con.face(1) == mesh.element(3, true, sn2).face() + (0*2 + 1)*5*row_size*row_size);
   }
-  SECTION("connection vector size")
+  SECTION("view with multiple connections")
   {
     mesh.connect_cartesian(0, {sn1, sn0}, {0});
     mesh.connect_cartesian(0, {sn1, sn0}, {1});
-    REQUIRE(mesh.cartesian().face_connections().size() == 2);
+    mesh.connect_hanging_cartesian(1, car0, {def0, def1, def2, def3}, {2}, true, false, true);
+    REQUIRE(mesh.cartesian().face_connections().size() == 6);
+    int count0 = 0;
+    int count1 = 0;
+    auto& cons = mesh.cartesian().face_connections();
+    auto& ref_face {mesh.cartesian().refined_faces()[0]};
+    for (int i_con = 0; i_con < cons.size(); ++i_con) {
+      auto& con = cons[i_con];
+      // is this the connection between sn1 and sn0?
+      if (   (con.face(0) == mesh.element(0, false, sn1).face() + (0*2 + 1)*5*row_size*row_size)
+          && (con.face(1) == mesh.element(0, false, sn0).face() + (0*2 + 0)*5*row_size*row_size)) ++count0;
+      // is this the connection between def3 and car0 (or rather, the fine mortar face involved in that connection)?
+      if (   (con.face(0) == mesh.element(2, true, def3).face() + (2*2 + 0)*5*row_size*row_size)
+          && (con.face(1) == ref_face.fine_face(3))) ++count0;
+    }
+    REQUIRE(count0 == 1);
+    REQUIRE(count1 == 1);
   }
 }
