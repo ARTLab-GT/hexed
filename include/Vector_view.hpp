@@ -31,13 +31,15 @@ S trivial_convert(T& t)
  * access to only some aspects of the underlying data). Note: if write acces is desired,
  * `reference_t` should be a reference type.
  */
-template<typename reference_t, typename storage_t = reference_t, reference_t (*convert)(storage_t&) = &trivial_convert<reference_t, storage_t>>
+template<typename reference_t, typename storage_t = reference_t,
+         reference_t (*convert)(storage_t&) = &trivial_convert<reference_t, storage_t>,
+         template<typename> typename sequence_template = std::vector>
 class Vector_view : public Sequence<reference_t>
 {
-  std::vector<storage_t>& vec;
+  sequence_template<storage_t>& vec;
 
   public:
-  Vector_view(std::vector<storage_t>& viewed)
+  Vector_view(sequence_template<storage_t>& viewed)
   : vec{viewed}
   {}
 
@@ -49,6 +51,34 @@ class Vector_view : public Sequence<reference_t>
   reference_t operator[](int index)
   {
     return convert(vec[index]);
+  }
+};
+
+/*
+ * A `Sequence` formed by concatenating two `Sequence`s. For better or for worse,
+ * no copies are made -- it requres references to existing sequences. More then 2
+ * sequences can be concatenated by nesting `Concatenation`s.
+ */
+template <typename T>
+class Concatenation : public Sequence<T>
+{
+  Sequence<T>& s0;
+  Sequence<T>& s1;
+
+  public:
+  Concatenation(Sequence<T>& seq0, Sequence<T>& seq1)
+  : s0{seq0}, s1{seq1}
+  {}
+
+  int size()
+  {
+    return s0.size() + s1.size();
+  }
+
+  T operator[](int index)
+  {
+    int index1 = index - s0.size();
+    return (index1 < 0) ? s0[index] : s1[index1];
   }
 };
 

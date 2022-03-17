@@ -11,7 +11,8 @@ Element_container& Accessible_mesh::container(bool is_deformed)
 }
 
 Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size)
-: params{params_arg}, root_sz{root_size}, car{params, root_sz}, def{params, root_sz}
+: params{params_arg}, root_sz{root_size}, car{params, root_sz}, def{params, root_sz},
+  def_as_car{def.elements()}, elems{car.elements(), def_as_car}
 {}
 
 int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<int> position)
@@ -22,27 +23,6 @@ int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<in
 Element& Accessible_mesh::element(int ref_level, bool is_deformed, int serial_n)
 {
   return container(is_deformed).at(ref_level, serial_n).get();
-}
-
-Accessible_mesh::Element_sequence Accessible_mesh::elements()
-{
-  return *this;
-}
-
-Accessible_mesh::Element_sequence::Element_sequence(Accessible_mesh& mesh)
-: am{mesh}
-{}
-
-int Accessible_mesh::Element_sequence::size()
-{
-  return am.car.elements().size() + am.def.elements().size();
-}
-
-Element& Accessible_mesh::Element_sequence::operator[](int index)
-{
-  auto& car_seq = am.car.elements();
-  return (index < car_seq.size()) ? car_seq[index]
-         : (Element&)am.def.elements()[index - car_seq.size()];
 }
 
 void Accessible_mesh::connect_cartesian(int ref_level, std::array<int, 2> serial_n, Con_dir<Element> direction, std::array<bool, 2> is_deformed)
