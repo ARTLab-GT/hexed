@@ -38,10 +38,14 @@ class Vertex
   Vertex& operator=(Vertex&&) = delete;
   int mass();
   /*
-   * Specify that another vertex represents the same grid point as this. All
-   * `Transferable_ptr`s pointing to `other` will be changed to point to `this`.
-   * All `Non_transferable_ptr`s pointing to `other` will be `nullify`d. The `mass`s
-   * will be summed and the `pos`s will be averaged, weighted by `mass`.
+   * Specify that another vertex represents the same grid point as `*this`. `*this`
+   * will acquire `other`'s resources:
+   * - All `Transferable_ptr`s pointing to `other` will be changed to point to `this`.
+   * - All `Non_transferable_ptr`s pointing to `other` will be `nullify`d.
+   * - The mass of `other` will be added to that of `*this`.
+   * - The `pos`s will be averaged, weighted by `mass`.
+   * The fact that "eat" seemed like the obvious word to describe this might be a
+   * sign that I've been reading too much SnK...
    */
   void eat(Vertex& other);
   void calc_relax(); // compute a (but do not apply) new position resulting in a smoother grid.
