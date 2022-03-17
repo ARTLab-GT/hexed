@@ -56,18 +56,22 @@ class Typed_bound_connection : public Boundary_connection
   element_t& elem;
   Con_dir<Deformed_element> dir;
   Boundary_condition& bound_cond;
+  bool ifs;
   Eigen::VectorXd gh_face;
   double* in_face;
 
   public:
-  Typed_bound_connection(element_t& elem_arg, Con_dir<element_t> dir_arg, Boundary_condition& bound_cond_arg, bool inside_face_sign)
-  : Boundary_connection{elem_arg.storage_params()}, elem{elem_arg}, dir(dir_arg), bound_cond{bound_cond_arg}
+  Typed_bound_connection(element_t& elem_arg, Con_dir<element_t> dir_arg,
+                         Boundary_condition& bound_cond_arg, bool inside_face_sign)
+  : Boundary_connection{elem_arg.storage_params()}, elem{elem_arg}, dir(dir_arg),
+    bound_cond{bound_cond_arg}, ifs{inside_face_sign}, gh_face(size()),
+    in_face{elem.face() + dir_arg.i_face(1 - ifs)*size()}
   {}
-  int n_var() {return 0;}
-  int size() {return 0;}
+  int n_var() {return elem.storage_params().n_var;}
+  int size() {return elem.storage_params().n_dof()/elem.storage_params().row_size;}
   virtual double* ghost_face() {return gh_face.data();}
   virtual double* inside_face() {return in_face;}
-  virtual double* face(int i_side) {return ghost_face();}
+  virtual double* face(int i_side) {return (ifs == i_side) ? ghost_face() : inside_face();}
   virtual double* jacobian() {return jacobian();}
   virtual Con_dir<Deformed_element> direction() {return dir;}
   virtual const Boundary_condition* boundary_condition() {return &bound_cond;}
