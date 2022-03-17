@@ -81,6 +81,7 @@ class Accessible_mesh : public Mesh
   // create a `Vector_view` that can look at `def.elements()` as `Element&`s.
   Vector_view<Element&, Deformed_element&, &trivial_convert<Element&, Deformed_element&>, Sequence> def_as_car;
   Concatenation<Element&> elems;
+  Concatenation<Element_connection&> elem_cons;
 
   public:
   Accessible_mesh(Storage_params, double root_size);
@@ -96,6 +97,7 @@ class Accessible_mesh : public Mesh
   virtual void connect_deformed(int ref_level, std::array<int, 2> serial_n, Con_dir<Deformed_element> direction);
   virtual void connect_hanging_cartesian(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Element>,
                                          bool coarse_face_positive, bool coarse_deformed=false, bool fine_deformed=false);
+  Sequence<Element_connection&>& element_connections() {return elem_cons;}
 };
 
 }

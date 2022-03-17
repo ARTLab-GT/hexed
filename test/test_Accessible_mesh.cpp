@@ -32,6 +32,7 @@ TEST_CASE("Accessible_mesh")
   }
   // test connections
   int sn3 = mesh.add_element(3, false, {0, 0});
+  int sn4 = mesh.add_element(3, true, {1, 2}); // position doesn't really make sense, but I don't really care
   REQUIRE_THROWS(mesh.connect_cartesian(0, {sn0, sn0 + sn1 + 1}, {0})); // connecting non-existent elements throws
   // make some elements for testing refined face connections
   int car0 = mesh.add_element(1, false, {0, 0}); // note: for this purpose, position doesn't matter
@@ -69,7 +70,6 @@ TEST_CASE("Accessible_mesh")
   }
   SECTION("deformed-deformed connection")
   {
-    int sn4 = mesh.add_element(3, true, {1, 2}); // position doesn't really make sense, but I don't really care
     // if dimension is same, positivity must be different
     REQUIRE_THROWS(mesh.connect_deformed(3, {sn2, sn4}, {{0, 0}, {0, 0}}));
     REQUIRE_THROWS(mesh.connect_deformed(3, {sn2, sn4}, {{0, 0}, {1, 1}}));
@@ -84,9 +84,11 @@ TEST_CASE("Accessible_mesh")
   }
   SECTION("view with multiple connections")
   {
+    int sn5 = mesh.add_element(0, false, {0, 0});
     mesh.connect_cartesian(0, {sn1, sn0}, {0});
-    mesh.connect_cartesian(0, {sn1, sn0}, {1});
+    mesh.connect_cartesian(0, {sn1, sn5}, {1});
     mesh.connect_hanging_cartesian(1, car0, {def0, def1, def2, def3}, {2}, true, false, true);
+    mesh.connect_deformed(3, {sn4, sn2}, {{1, 0}, {0, 1}});
     REQUIRE(mesh.cartesian().face_connections().size() == 6);
     int count0 = 0;
     int count1 = 0;
@@ -103,5 +105,22 @@ TEST_CASE("Accessible_mesh")
     }
     REQUIRE(count0 == 1);
     REQUIRE(count1 == 1);
+    count0 = 0;
+    count1 = 0;
+    int count2 = 0;
+    auto& elem_cons = mesh.element_connections();
+    for (int i_con = 0; i_con < elem_cons.size(); ++i_con) {
+      auto& con = elem_cons[i_con];
+      if (   (&con.element(0) == &mesh.element(0, false, sn1))
+          && (&con.element(1) == &mesh.element(0, false, sn0))) ++count0;
+      if (   (&con.element(0) == &mesh.element(1, false, car0))
+          && (&con.element(1) == &mesh.element(2,  true, def1))) ++count1;
+      if (   (&con.element(0) == &mesh.element(3,  true, sn4))
+          && (&con.element(1) == &mesh.element(3,  true, sn2))) ++count2;
+    }
+    REQUIRE(count0 == 1);
+    REQUIRE(count1 == 1);
+    REQUIRE(count2 == 1);
+    REQUIRE(elem_cons.size() == 7);
   }
 }
