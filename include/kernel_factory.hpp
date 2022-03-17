@@ -2,54 +2,67 @@
 #define CARTDG_KERNEL_FACTORY_HPP_
 
 #include <memory>
-#include <array>
+#include <cartdgConfig.hpp>
 
 namespace cartdg
 {
 
-class Base
+template <template<int, int, int> typename kernel>
+class Kernel_traits
 {
   public:
-  virtual int foo() = 0;
+  class base_t;
 };
 
-const int n = 5;
+template <template<int, int, int> typename kernel>
+using ptr_t = std::unique_ptr<typename Kernel_traits<kernel>::base_t>;
 
-template <template<int> typename kernel, int i>
-class Kernel_lookup
+template <template<int, int, int> typename kernel, int n_dim, int row_size>
+ptr_t<kernel> pointer()
 {
-  Kernel_lookup<kernel, i - 1> decremented;
-  public:
-  std::unique_ptr<Base> get(int j)
-  {
-    if (i == j) return std::unique_ptr<Base>{new kernel<i>};
-    else return decremented.get(j);
-  }
-};
-
-template <template<int> typename kernel>
-class Kernel_lookup<kernel, 0>
-{
-  public:
-  std::unique_ptr<Base> get(int j)
-  {
-    return std::unique_ptr<Base>{new kernel<0>};
-  }
-};
-
-template <template<int> typename kernel>
-std::unique_ptr<Base> kernel_factory(int i)
-{
-  Kernel_lookup<kernel, n> lookup;
-  return lookup.get(i);
+  return ptr_t<kernel>{new kernel<n_dim+2, n_dim, row_size>};
 }
 
-template <int i>
-class Derived : public Base
+template <template<int, int, int> typename kernel, int max_n_dim, int max_row_size>
+class Kernel_lookup
+{
+  Kernel_lookup<kernel, max_n_dim, max_row_size - 1> decremented;
+  public:
+  ptr_t<kernel> get(int n_dim, int row_size)
+  {
+    if ((n_dim == max_n_dim) && (row_size == max_row_size)) return pointer<kernel, max_n_dim, max_row_size>();
+    else return decremented.get(n_dim, row_size);
+  }
+};
+
+template <template<int, int, int> typename kernel, int max_n_dim>
+class Kernel_lookup<kernel, max_n_dim, 1>
+{
+  Kernel_lookup<kernel, max_n_dim - 1, config::max_row_size> decremented;
+  public:
+  ptr_t<kernel> get(int n_dim, int row_size)
+  {
+    if (n_dim == max_n_dim) return pointer<kernel, max_n_dim, 1>();
+    else return decremented.get(n_dim, row_size);
+  }
+};
+
+template <template<int, int, int> typename kernel>
+class Kernel_lookup<kernel, 1, 1>
 {
   public:
-  virtual int foo() {return i;}
+  ptr_t<kernel> get(int n_dim, int row_size)
+  {
+    return pointer<kernel, 1, 1>();
+  }
 };
+
+template <template<int, int, int> typename kernel>
+ptr_t<kernel> kernel_factory(int n_dim, int row_size)
+{
+  Kernel_lookup<kernel, 3, config::max_row_size> lookup;
+  return lookup.get(n_dim, row_size);
+}
 
 }
 #endif
