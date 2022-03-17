@@ -16,20 +16,21 @@ namespace cartdg
 template <class element_t> class Con_dir {};
 
 template <>
-class Con_dir<Element>
-{
-  public:
-  int i_dim;
-  int i_face(int i_side) {return 2*i_dim + 1 - i_side;}
-};
-
-template <>
 class Con_dir<Deformed_element>
 {
   public:
   std::array<int, 2> i_dim;
   std::array<bool, 2> face_sign;
   int i_face(int i_side) {return 2*i_dim[i_side] + face_sign[i_side];}
+};
+
+template <>
+class Con_dir<Element>
+{
+  public:
+  int i_dim;
+  int i_face(int i_side) {return 2*i_dim + 1 - i_side;}
+  operator Con_dir<Deformed_element>() const {return {{i_dim, i_dim}, {1, 0}};}
 };
 
 /*

@@ -1,6 +1,16 @@
 #include <catch2/catch.hpp>
 #include <connection.hpp>
 
+TEST_CASE("direction conversion")
+{
+  cartdg::Con_dir<cartdg::Element> car {2};
+  cartdg::Con_dir<cartdg::Deformed_element> def = car;
+  REQUIRE(def.i_dim[0] == 2);
+  REQUIRE(def.i_dim[1] == 2);
+  REQUIRE(def.face_sign[0] == 1);
+  REQUIRE(def.face_sign[1] == 0);
+}
+
 TEST_CASE("Element_face_connection<Element>")
 {
   cartdg::Storage_params params {3, 5, 3, 6};
