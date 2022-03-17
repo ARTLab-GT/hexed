@@ -14,6 +14,9 @@ class Kernel_traits
   class base_t;
 };
 
+namespace kernel_lookup
+{
+
 template <template<int, int, int> typename kernel>
 using ptr_t = std::unique_ptr<typename Kernel_traits<kernel>::base_t>;
 
@@ -57,10 +60,12 @@ class Kernel_lookup<kernel, 1, 1>
   }
 };
 
+} // namespace kernel_lookup
+
 template <template<int, int, int> typename kernel>
-ptr_t<kernel> kernel_factory(int n_dim, int row_size)
+kernel_lookup::ptr_t<kernel> kernel_factory(int n_dim, int row_size)
 {
-  Kernel_lookup<kernel, 3, config::max_row_size> lookup;
+  kernel_lookup::Kernel_lookup<kernel, 3, config::max_row_size> lookup;
   return lookup.get(n_dim, row_size);
 }
 
