@@ -16,7 +16,7 @@ TEST_CASE("Typed_boundary_connection")
   cartdg::Typed_bound_connection<cartdg::Element> tbc0 {element, {1}, bc, false}; // FIXME: address inside_positive for deformed
   cartdg::Typed_bound_connection<cartdg::Element> tbc1 {element, {1}, bc, true};
   REQUIRE(tbc0.n_var() == 4);
-  REQUIRE(tbc0.size() == 4*4);
+  REQUIRE(tbc0.n_qpoint() == 4);
   // check that the correct face of the element is retrieved
   REQUIRE(tbc0.inside_face() == element.face() + (2*1 + 0)*4*4);
   REQUIRE(tbc1.inside_face() == element.face() + (2*1 + 1)*4*4);
