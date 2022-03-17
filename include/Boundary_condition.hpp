@@ -33,6 +33,26 @@ class Boundary_condition
 };
 
 /*
+ * Sets the ghost state to the provided freestream state.
+ */
+class Freestream : public Boundary_condition
+{
+  std::vector<double> fs;
+  public:
+  Freestream(std::vector<double> freestream_state);
+  virtual void apply(Boundary_face&);
+};
+
+/*
+ * Copies the inside state and flips the sign of the surface-normal velocity.
+ */
+class Nonpenetration : public Boundary_condition
+{
+  public:
+  virtual void apply(Boundary_face&);
+};
+
+/*
  * A `Boundary_face` that also provides details about the connection for the neighbor flux
  * computation and requests for a particular `Boundary_condition` to be applied to it.
  */
@@ -72,7 +92,7 @@ class Typed_bound_connection : public Boundary_connection
   virtual double* ghost_face() {return gh_face.data();}
   virtual double* inside_face() {return in_face;}
   virtual double* face(int i_side) {return (ifs == i_side) ? ghost_face() : inside_face();}
-  virtual double* jacobian() {return jacobian();}
+  virtual double* jacobian() {return Face_connection<Deformed_element>::jacobian();} // weird because we're inheriting an unimplemented version and an implemented version from different places
   virtual Con_dir<Deformed_element> direction() {return dir;}
   virtual const Boundary_condition* boundary_condition() {return &bound_cond;}
   const element_t& element() {return elem;}
