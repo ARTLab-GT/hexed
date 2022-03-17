@@ -15,6 +15,7 @@ namespace cartdg
 class Surface_rotation_dynamic
 {
   public:
+  virtual ~Surface_rotation_dynamic() = default;
   // performs transformation in-place
   virtual void to_surface(double* state) = 0;
   virtual void from_surface(double* state) = 0;
@@ -29,7 +30,7 @@ class Surface_rotation : public Surface_rotation_dynamic
   public:
   const int n_qpoint = custom_math::pow(row_size, n_dim);
   const int n_jac = n_dim*n_dim;
-  Surface_rotation(double* jacobian)
+  Surface_rotation(double* jacobian, int i_dim)
   {
   }
 
