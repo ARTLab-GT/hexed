@@ -4,9 +4,23 @@
 #include <memory>
 #include <cartdgConfig.hpp>
 
+/*
+ * The purpose of this file is to provide a way to specify the number of dimensions and
+ * row size of the kernels at run-time, whereas in the kernel implementations these are
+ * compile-time parameters. The idea is that if we require that the parameters be within
+ * a finite range, we can simply instantiate the kernel templates for every possible
+ * combination of parameters. This is obviously not efficient in terms of compilation
+ * work load or executable size, but it provides optimal execution speed and run-time
+ * flexibility, which for our purpose is more important.
+ */
+
 namespace cartdg
 {
 
+/*
+ * Inspired by `std::Iterator_traits`. Create specializations of this class template
+ * to define propreties of kernel temlates.
+ */
 template <template<int, int, int> typename kernel>
 class Kernel_traits
 {
@@ -17,6 +31,7 @@ class Kernel_traits
 namespace kernel_lookup
 {
 
+// comvenience definitions
 template <template<int, int, int> typename kernel>
 using ptr_t = std::unique_ptr<typename Kernel_traits<kernel>::base_t>;
 
@@ -26,18 +41,27 @@ ptr_t<kernel> pointer()
   return ptr_t<kernel>{new kernel<n_dim+2, n_dim, row_size>};
 }
 
+/*
+ * A recursive template to create the desired kernel instantiations. You can think
+ * of it as a compile-time linked list, where each template contains another template
+ * with one less row size. When the row size is 1, it wraps around to `config::max_row_size`
+ * but with one less dimension via specialization below. The second specialization below
+ * terminates the recursion when both the row size and the dimension are 1.
+ */
 template <template<int, int, int> typename kernel, int max_n_dim, int max_row_size>
 class Kernel_lookup
 {
-  Kernel_lookup<kernel, max_n_dim, max_row_size - 1> decremented;
+  Kernel_lookup<kernel, max_n_dim, max_row_size - 1> decremented; // the next "link" in the recursive hirarchy
   public:
+  // traverses the recursive hierarchy to find the desired template instance
   ptr_t<kernel> get(int n_dim, int row_size)
   {
-    if ((n_dim == max_n_dim) && (row_size == max_row_size)) return pointer<kernel, max_n_dim, max_row_size>();
-    else return decremented.get(n_dim, row_size);
+    if ((n_dim == max_n_dim) && (row_size == max_row_size)) return pointer<kernel, max_n_dim, max_row_size>(); // if I have the template you're looking for, return it
+    else return decremented.get(n_dim, row_size); // if I don't have it, delegate it to the next link (which is to say, "move along")
   }
 };
 
+// specialization to make the recursion wrap around to `config::max_row_size` of one less dimension
 template <template<int, int, int> typename kernel, int max_n_dim>
 class Kernel_lookup<kernel, max_n_dim, 1>
 {
@@ -50,6 +74,7 @@ class Kernel_lookup<kernel, max_n_dim, 1>
   }
 };
 
+// recursive base case
 template <template<int, int, int> typename kernel>
 class Kernel_lookup<kernel, 1, 1>
 {
@@ -62,9 +87,17 @@ class Kernel_lookup<kernel, 1, 1>
 
 } // namespace kernel_lookup
 
+/*
+ * Gets a `std::unique_ptr` to a `base_t` of `kernel`. The underlying kernel will be
+ * instantiated with `n_dim` and `row_size` provided as template arguments. Arguments
+ * must satisfy `3 >= n_dim > 0` and `config::max_row_size >= row_size > 1`.
+ */
 template <template<int, int, int> typename kernel>
 kernel_lookup::ptr_t<kernel> kernel_factory(int n_dim, int row_size)
 {
+  if ((n_dim < 1) || (n_dim > 3) || (row_size < 2) || (row_size > config::max_row_size)) {
+    throw std::runtime_error("demand for invalid kernel");
+  }
   kernel_lookup::Kernel_lookup<kernel, 3, config::max_row_size> lookup;
   return lookup.get(n_dim, row_size);
 }
