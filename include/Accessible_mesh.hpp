@@ -17,8 +17,46 @@ class View_by_type
 {
   public:
   virtual Sequence<element_t&>& elements() = 0;
-  virtual Sequence<Face_connection<element_t>&>& connections() = 0;
+  virtual Sequence<Face_connection<element_t>&>& face_connections() = 0;
+  virtual Sequence<Element_connection&>& element_connections() = 0;
   virtual Sequence<Refined_face&>& refined_faces() = 0;
+};
+
+// Stores numerical data of a particular type and provides free access.
+template <typename element_t>
+class Mesh_by_type : public View_by_type<element_t>
+{
+  public:
+  // where the data is kept
+  Complete_element_container<element_t> elems;
+  std::vector<Element_face_connection<element_t>> cons;
+  std::vector<Refined_connection<element_t>> ref_face_cons;
+  private:
+  // template spaghetti to get `Vector_view`s of the data with the right type
+  typename Complete_element_container<element_t>::view_t elem_v;
+  template <typename view_t>
+  class Connection_view : public Sequence<view_t>
+  {
+    Mesh_by_type& parent;
+    public:
+    Connection_view(Mesh_by_type& mbt) : parent{mbt} {}
+    virtual int size() {return parent.cons.size();}
+    virtual view_t operator[](int index) {return parent.cons[index];}
+  };
+  Connection_view<Face_connection<element_t>&> face_con_v;
+  Connection_view<Element_connection&> elem_con_v;
+  static Refined_face& ref_face(Refined_connection<element_t>& ref_con) {return ref_con.refined_face;}
+  Vector_view<Refined_face&, Refined_connection<element_t>, &ref_face> ref_v;
+  public:
+  // interface implementation
+  Mesh_by_type(Storage_params params, double root_spacing)
+  : elems{params, root_spacing}, elem_v{elems.elements()}, face_con_v{*this},
+    elem_con_v{*this}, ref_v{ref_face_cons}
+  {}
+  virtual Sequence<element_t&>& elements() {return elem_v;}
+  virtual Sequence<Face_connection<element_t>&>& face_connections() {return face_con_v;}
+  virtual Sequence<Element_connection&>& element_connections() {return elem_con_v;}
+  virtual Sequence<Refined_face&>& refined_faces() {return ref_v;}
 };
 
 /*
@@ -28,32 +66,6 @@ class View_by_type
  */
 class Accessible_mesh : public Mesh
 {
-  // Stores numerical data of a particular type and provides free access. Private because it allows
-  // open access rather than a neat interface.
-  template <typename element_t>
-  class Mesh_by_type : public View_by_type<element_t>
-  {
-    public:
-    // where the data is kept
-    Complete_element_container<element_t> elems;
-    std::vector<Element_face_connection<element_t>> cons;
-    std::vector<Refined_connection<element_t>> ref_face_cons;
-    private:
-    // template spaghetti to `Vector_view`s of the data with the right type
-    typename Complete_element_container<element_t>::view_t elem_v;
-    Vector_view<Face_connection<element_t>&, Element_face_connection<element_t>> con_v;
-    static Refined_face& ref_face(Refined_connection<element_t>& ref_con) {return ref_con.refined_face;}
-    Vector_view<Refined_face&, Refined_connection<element_t>, &ref_face> ref_v;
-    public:
-    // interface implementation
-    Mesh_by_type(Storage_params params, double root_spacing)
-    : elems{params, root_spacing}, elem_v{elems.elements()}, con_v{cons}, ref_v{ref_face_cons}
-    {}
-    virtual Sequence<element_t&>& elements() {return elem_v;}
-    virtual Sequence<Face_connection<element_t>&>& connections() {return con_v;}
-    virtual Sequence<Refined_face&>& refined_faces() {return ref_v;}
-  };
-
   Storage_params params;
   double root_sz;
   Element_container& container(bool is_deformed);
