@@ -4,17 +4,33 @@
 #include <cmath>
 #include <Eigen/Dense>
 
-namespace cartdg
-{
-namespace custom_math
+namespace cartdg::custom_math
 {
 
+/*
+ * Raises an arbitrary arithmetic type to an integer power. Can return
+ * `constexpr`, which `std::pow` is not allowed to do according to the standard
+ * (although the GCC implementation can anyway).
+ */
 template<typename number_t>
 constexpr number_t pow(number_t base, int exponent)
 {
   number_t result = 1;
   for (int i = 0; i < exponent; ++i) result *= base;
   for (int i = 0; i > exponent; --i) result /= base;
+  return result;
+}
+
+/*
+ * Integer logarithm. If base < 2, returns -1 to indicate failure.
+ * Otherwise, if arg < 1, returns 0. In the usual case where neither
+ * of the above are true, returns $\ciel{\log_{base}(arg)}$.
+ */
+constexpr int log(int base, int arg)
+{
+  if (base <= 1) return -1;
+  int result = 0;
+  for (int compare = 1; compare < arg; compare *= base) ++result;
   return result;
 }
 
@@ -82,6 +98,5 @@ Eigen::Matrix<double, n_dim, n_dim> orthonormal (Eigen::Matrix<double, n_dim, n_
   }
 }
 
-}
 }
 #endif
