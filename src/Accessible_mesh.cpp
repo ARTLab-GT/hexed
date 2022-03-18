@@ -65,9 +65,12 @@ void Accessible_mesh::connect_boundary(int ref_level, bool is_deformed, int elem
 {
   if (bc_serial_n >= int(bound_conds.size())) throw std::runtime_error("demand for non-existent `Boundary_condition`");
   Boundary_condition& bc {*bound_conds[bc_serial_n]};
-  #define EMPLACE(mbt) mbt.bound_cons.emplace_back(mbt.elems.at(ref_level, element_serial_n), i_dim, face_sign, bc)
-  if (is_deformed) EMPLACE(def);
-  else EMPLACE(car);
+  #define EMPLACE(mbt) { \
+    mbt.bound_cons.emplace_back(mbt.elems.at(ref_level, element_serial_n), i_dim, face_sign, bc); \
+    def.extra_cons.push_back(&mbt.bound_cons.back()); \
+  }
+  if (is_deformed) EMPLACE(def)
+  else EMPLACE(car)
   #undef EMPLACE
 }
 

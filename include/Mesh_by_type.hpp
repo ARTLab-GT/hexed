@@ -39,6 +39,7 @@ class Mesh_by_type : public View_by_type<element_t>
   std::vector<Element_face_connection<element_t>> cons;
   std::vector<Refined_connection<element_t>> ref_face_cons;
   std::vector<Typed_bound_connection<element_t>> bound_cons;
+  std::vector<Face_connection<element_t>*> extra_cons; // in case `Accessible_mesh` wants to tack some extra connections on
 
   private:
   // template spaghetti to get `Vector_view`s of the data with the right type
@@ -54,10 +55,13 @@ class Mesh_by_type : public View_by_type<element_t>
     {
       int i_refined = index - parent.cons.size();
       if (i_refined < 0) return parent.cons[index];
-      else return parent.ref_face_cons[i_refined/4].connection(i_refined%4);
+      return parent.ref_face_cons[i_refined/4].connection(i_refined%4);
     }
   };
-  Connection_view<Face_connection<element_t>&> face_con_v;
+  Connection_view<Face_connection<element_t>&> elem_face_con_v;
+  static Face_connection<element_t>& face_con_ref(Face_connection<element_t>*& ptr) {return *ptr;}
+  Vector_view<Face_connection<element_t>&, Face_connection<element_t>*, &face_con_ref> extra_con_v;
+  Concatenation<Face_connection<element_t>&> face_con_v;
   Connection_view<Element_connection&> elem_con_v;
   static Refined_face& ref_face(Refined_connection<element_t>& ref_con) {return ref_con.refined_face;}
   Vector_view<Refined_face&, Refined_connection<element_t>, &ref_face> ref_v;
@@ -65,8 +69,14 @@ class Mesh_by_type : public View_by_type<element_t>
 
   public:
   Mesh_by_type(Storage_params params, double root_spacing)
-  : elems{params, root_spacing}, elem_v{elems.elements()}, face_con_v{*this},
-    elem_con_v{*this}, ref_v{ref_face_cons}, bound_con_v{bound_cons}
+  : elems{params, root_spacing},
+    elem_v{elems.elements()},
+    elem_face_con_v{*this},
+    extra_con_v{extra_cons},
+    face_con_v{elem_face_con_v, extra_con_v},
+    elem_con_v{*this},
+    ref_v{ref_face_cons},
+    bound_con_v{bound_cons}
   {}
 
   // `View_by_type` interface implementation
