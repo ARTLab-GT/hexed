@@ -1,23 +1,28 @@
 #ifndef CARTDG_MESH_HPP_
 #define CARTDG_MESH_HPP_
 
-#include "Ghost_boundary_condition.hpp"
+#include "Boundary_condition.hpp"
 #include "connection.hpp"
 
 namespace cartdg
 {
 
 /*
- * Represents a collection of interconnected elements. This class only supports only manipulation of the
- * mesh itself, not access to the elements it contains.
+ * Represents a collection of interconnected elements. This class is an interface which supports
+ * only manipulation of the mesh itself, not access to the elements it contains. One common theme
+ * in this interface is the use of "serial numbers" to identify objects owned by the `Mesh` object.
+ * These "serial numbers" are unique (among objects of a specified class), nonnegative, and permanent,
+ * but otherwise arbitrary. Unlike indices, which are expected to be consecutive, the serial numbers
+ * remain valid regardless of any addition or deletion of objects. They are also preferable to
+ * pointers or references because they preclude (illegal) attempts to relate objects owned by different
+ * meshes.
  */
 class Mesh
 {
   public:
   /*
-   * Add an element at specified nominal position and return a permanent, nonnegative serial number which uniquely identifies it
-   * among elements of this mesh with the same refinement level and deformedness. Besides these properties, the
-   * serial number is arbitrary.
+   * Add an element at specified nominal position and serial number which uniquely identifies it
+   * among elements of this mesh with the same refinement level and deformedness.
    */
   virtual int add_element(int ref_level, bool is_deformed, std::vector<int> position) = 0;
   /*
@@ -34,9 +39,17 @@ class Mesh
    */
   virtual void connect_hanging_cartesian(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Element>,
                                          bool coarse_face_positive, bool coarse_deformed=false, bool fine_deformed=false) = 0;
+  /*
+   * Acquires owenership of a `Boundary_condition` object and return a serial number which uniquely
+   * identifies it among this `Mesh`'s boundary conditions.
+   */
+  virtual void add_boundary_condition(Boundary_condition&&) = 0;
+  /*
+   * Connect a face of an element to a boundary condition. This BC will now be applied to that face. `i_dim` and `face_sign`
+   * are used to identify which face of the element is participating in the boundary condition.
+   */
+  virtual void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n) = 0;
   #if 0
-  virtual void add_gbc(int ref_level, bool is_deformed, int serial_n, int i_dim, bool face_positive, Ghost_boundary_condition&) = 0;
-  virtual void add_wall(int ref_level, int serial_n, int i_dim, bool face_positive) = 0;
   virtual bool connectivity_valid() = 0;
   #endif
 };
