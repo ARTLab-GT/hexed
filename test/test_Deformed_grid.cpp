@@ -598,11 +598,10 @@ TEST_CASE("Deformed grid class")
     SECTION("perturbation") // make sure information near degenerate point is annihilated
     {
       for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint) {
-        // use stage 2 just to make sure you can
-        grid.element(0).stage(0)[i_qpoint] = grid.element(1).stage(2)[i_qpoint] = 0.;
+        grid.element(0).stage(0)[i_qpoint] = grid.element(1).stage(0)[i_qpoint] = 0.;
       }
-      grid.element(0).stage(0)[row_size] = grid.element(1).stage(2)[row_size] = 1.;
-      grid.element(0).stage(0)[(row_size - 2)*row_size] = grid.element(1).stage(2)[(row_size - 2)*row_size] = -1.;
+      grid.element(0).stage(0)[row_size] = grid.element(1).stage(0)[row_size] = 1.;
+      grid.element(0).stage(0)[(row_size - 2)*row_size] = grid.element(1).stage(0)[(row_size - 2)*row_size] = -1.;
       grid.project_degenerate();
       // compute a sort of uniform norm on the quadrature points to assess the amount of
       // oscillation suppression
