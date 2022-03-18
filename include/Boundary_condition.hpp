@@ -64,9 +64,6 @@ class Boundary_connection : public Boundary_face, public Face_connection<Deforme
 {
   public:
   inline Boundary_connection(Storage_params params) : Face_connection<Deformed_element>{params} {}
-  virtual Con_dir<Deformed_element> direction() = 0;
-  // return the faces in the order that the neighbor kernel will expect, regardless of ghost or inside status
-  virtual double* face(int i_side) = 0;
   virtual const Boundary_condition* boundary_condition() = 0;
 };
 
