@@ -13,6 +13,7 @@ namespace cartdg
 class Boundary_face
 {
   public:
+  virtual ~Boundary_face() = default;
   virtual Storage_params storage_params() = 0;
   virtual double* ghost_face() = 0;
   virtual double* inside_face() = 0;
@@ -31,6 +32,7 @@ class Boundary_condition
   public:
   // writes to the first `n_var()*size()` entries of `ghost_state()` (called on the provided `Boundary_face`.)
   virtual void apply(Boundary_face&) = 0;
+  virtual ~Boundary_condition() = default;
 };
 
 /*

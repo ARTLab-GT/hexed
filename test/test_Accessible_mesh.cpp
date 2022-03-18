@@ -40,6 +40,7 @@ TEST_CASE("Accessible_mesh")
   int def1 = mesh.add_element(2, true, {0, 0});
   int def2 = mesh.add_element(2, true, {0, 0});
   int def3 = mesh.add_element(2, true, {0, 0});
+
   SECTION("cartesian-cartesian connection")
   {
     mesh.connect_cartesian(0, {sn1, sn0}, {2});
@@ -51,6 +52,7 @@ TEST_CASE("Accessible_mesh")
     REQUIRE(&elem_con.element(0) == &mesh.element(0, false, sn1));
     REQUIRE(&elem_con.element(1) == &mesh.element(0, false, sn0));
   }
+
   SECTION("deformed-cartesian connection")
   {
     mesh.connect_cartesian(3, {sn2, sn3}, {1}, {true, false});
@@ -59,6 +61,7 @@ TEST_CASE("Accessible_mesh")
     REQUIRE(con.face(0) == mesh.element(3,  true, sn2).face() + (1*2 + 1)*5*row_size*row_size);
     REQUIRE(con.face(1) == mesh.element(3, false, sn3).face() + (1*2 + 0)*5*row_size*row_size);
   }
+
   SECTION("refined face connection")
   {
     // check that it can't find elements with the wrong deformedness
@@ -68,6 +71,7 @@ TEST_CASE("Accessible_mesh")
     auto& ref_face {mesh.cartesian().refined_faces()[0]};
     REQUIRE(ref_face.coarse_face() == mesh.element(1, false, car0).face() + (2*2 + 1)*5*row_size*row_size);
   }
+
   SECTION("deformed-deformed connection")
   {
     // if dimension is same, positivity must be different
@@ -82,6 +86,32 @@ TEST_CASE("Accessible_mesh")
     REQUIRE(con.face(0) == mesh.element(3, true, sn4).face() + (1*2 + 0)*5*row_size*row_size);
     REQUIRE(con.face(1) == mesh.element(3, true, sn2).face() + (0*2 + 1)*5*row_size*row_size);
   }
+
+  SECTION("boundary conditions")
+  {
+    int freestream = mesh.add_boundary_condition(new cartdg::Freestream({0, 0, 1., 1e5}));
+    int nonpen = mesh.add_boundary_condition(new cartdg::Nonpenetration);
+    REQUIRE_THROWS(mesh.connect_boundary(0, 0, sn0, 1, 0, freestream + 1));
+    mesh.connect_boundary(0, 0, sn1, 1, 0, freestream);
+    mesh.connect_boundary(0, 0, sn1, 1, 1, freestream);
+    mesh.connect_boundary(0, 0, sn0, 0, 1, nonpen);
+    auto& bc_cons {mesh.cartesian().boundary_connections()};
+    // check that it got the right face
+    REQUIRE(bc_cons[0].face(0) == mesh.element(0, 0, sn1).face() + (2*1 + 0)*5*row_size*row_size);
+    // check that there are two boundary conditions one of which is used twice and the other of
+    // which is used once.
+    auto& bcs = mesh.boundary_conditions();
+    REQUIRE(bcs.size() == 2);
+    int uses [2] {};
+    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+      for (int i_bc = 0; i_bc < 2; ++i_bc) {
+        if (bc_cons[i_con].boundary_condition() == &bcs[i_bc]) ++uses[i_bc];
+      }
+    }
+    REQUIRE(std::max(uses[0], uses[1]) == 2);
+    REQUIRE(std::min(uses[0], uses[1]) == 1);
+  }
+
   SECTION("view with multiple connections")
   {
     int sn5 = mesh.add_element(0, false, {0, 0});

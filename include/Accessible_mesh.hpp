@@ -18,10 +18,12 @@ template <typename element_t>
 class View_by_type
 {
   public:
+  virtual ~View_by_type() = default;
   virtual Sequence<element_t&>& elements() = 0;
   virtual Sequence<Face_connection<element_t>&>& face_connections() = 0;
   virtual Sequence<Element_connection&>& element_connections() = 0;
   virtual Sequence<Refined_face&>& refined_faces() = 0;
+  virtual Sequence<Boundary_connection&>& boundary_connections() = 0;
 };
 
 // Stores numerical data of a particular type and provides free access.
@@ -33,6 +35,7 @@ class Mesh_by_type : public View_by_type<element_t>
   Complete_element_container<element_t> elems;
   std::vector<Element_face_connection<element_t>> cons;
   std::vector<Refined_connection<element_t>> ref_face_cons;
+  std::vector<Typed_bound_connection<element_t>> bound_cons;
   private:
   // template spaghetti to get `Vector_view`s of the data with the right type
   typename Complete_element_container<element_t>::view_t elem_v;
@@ -54,16 +57,18 @@ class Mesh_by_type : public View_by_type<element_t>
   Connection_view<Element_connection&> elem_con_v;
   static Refined_face& ref_face(Refined_connection<element_t>& ref_con) {return ref_con.refined_face;}
   Vector_view<Refined_face&, Refined_connection<element_t>, &ref_face> ref_v;
+  Vector_view<Boundary_connection&, Typed_bound_connection<element_t>> bound_con_v;
   public:
   Mesh_by_type(Storage_params params, double root_spacing)
   : elems{params, root_spacing}, elem_v{elems.elements()}, face_con_v{*this},
-    elem_con_v{*this}, ref_v{ref_face_cons}
+    elem_con_v{*this}, ref_v{ref_face_cons}, bound_con_v{bound_cons}
   {}
   // interface implementation
   virtual Sequence<element_t&>& elements() {return elem_v;}
   virtual Sequence<Face_connection<element_t>&>& face_connections() {return face_con_v;}
   virtual Sequence<Element_connection&>& element_connections() {return elem_con_v;}
   virtual Sequence<Refined_face&>& refined_faces() {return ref_v;}
+  virtual Sequence<Boundary_connection&>& boundary_connections() {return bound_con_v;}
 };
 
 /*
@@ -82,6 +87,9 @@ class Accessible_mesh : public Mesh
   Vector_view<Element&, Deformed_element&, &trivial_convert<Element&, Deformed_element&>, Sequence> def_as_car;
   Concatenation<Element&> elems;
   Concatenation<Element_connection&> elem_cons;
+  std::vector<std::unique_ptr<Boundary_condition>> bound_conds;
+  static Boundary_condition& convert_bc (std::unique_ptr<Boundary_condition>& ptr) {return *ptr;}
+  Vector_view<Boundary_condition&, std::unique_ptr<Boundary_condition>, &convert_bc> bc_v;
 
   public:
   Accessible_mesh(Storage_params, double root_size);
@@ -98,6 +106,9 @@ class Accessible_mesh : public Mesh
   virtual void connect_hanging_cartesian(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Element>,
                                          bool coarse_face_positive, bool coarse_deformed=false, bool fine_deformed=false);
   Sequence<Element_connection&>& element_connections() {return elem_cons;}
+  virtual int add_boundary_condition(Boundary_condition* bc);
+  virtual void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n);
+  Sequence<Boundary_condition&>& boundary_conditions() {return bc_v;}
 };
 
 }

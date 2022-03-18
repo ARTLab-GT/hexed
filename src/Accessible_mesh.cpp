@@ -13,7 +13,7 @@ Element_container& Accessible_mesh::container(bool is_deformed)
 Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size)
 : params{params_arg}, root_sz{root_size}, car{params, root_sz}, def{params, root_sz},
   def_as_car{def.elements()}, elems{car.elements(), def_as_car},
-  elem_cons{car.element_connections(), def.element_connections()}
+  elem_cons{car.element_connections(), def.element_connections()}, bc_v{bound_conds}
 {}
 
 int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<int> position)
@@ -52,6 +52,16 @@ void Accessible_mesh::connect_hanging_cartesian(int coarse_ref_level, int coarse
   std::vector<Element*> fine;
   for (int fs : fine_serial) fine.push_back(&element(coarse_ref_level + 1, fine_deformed, fs));
   car.ref_face_cons.emplace_back(coarse, fine, dir, !coarse_face_positive);
+}
+
+int Accessible_mesh::add_boundary_condition(Boundary_condition* bc)
+{
+  bound_conds.emplace_back(bc);
+  return bound_conds.size() - 1;
+}
+
+void Accessible_mesh::connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n)
+{
 }
 
 }
