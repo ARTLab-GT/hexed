@@ -13,8 +13,7 @@ namespace cartdg
 class Boundary_face
 {
   public:
-  virtual int n_var() = 0;
-  virtual int n_qpoint() = 0;
+  virtual Storage_params storage_params() = 0;
   virtual double* ghost_face() = 0;
   virtual double* inside_face() = 0;
   virtual double* jacobian() = 0;
@@ -85,11 +84,10 @@ class Typed_bound_connection : public Boundary_connection
   Typed_bound_connection(element_t& elem_arg, Con_dir<element_t> dir_arg,
                          Boundary_condition& bound_cond_arg, bool inside_face_sign)
   : Boundary_connection{elem_arg.storage_params()}, elem{elem_arg}, dir(dir_arg),
-    bound_cond{bound_cond_arg}, ifs{inside_face_sign}, gh_face(n_var()*n_qpoint()),
-    in_face{elem.face() + dir_arg.i_face(1 - ifs)*n_var()*n_qpoint()}
+    bound_cond{bound_cond_arg}, ifs{inside_face_sign}, gh_face(elem.storage_params().n_dof()/elem.storage_params().row_size),
+    in_face{elem.face() + dir_arg.i_face(1 - ifs)*gh_face.size()}
   {}
-  int n_var() {return elem.storage_params().n_var;}
-  int n_qpoint() {return elem.storage_params().n_qpoint()/elem.storage_params().row_size;}
+  virtual Storage_params storage_params() {return elem.storage_params();}
   virtual double* ghost_face() {return gh_face.data();}
   virtual double* inside_face() {return in_face;}
   virtual double* face(int i_side) {return (ifs == i_side) ? ghost_face() : inside_face();}
