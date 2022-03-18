@@ -6,11 +6,11 @@ TEST_CASE("Surface_rotation")
 {
   const int n_dim = 2;
   const int row_size = std::min(7, cartdg::config::max_row_size);
-  const int n_qpoint = row_size*row_size;
+  const int n_qpoint = row_size;
   double state[(n_dim+2)*n_qpoint];
   double jacobian[n_dim*n_dim*n_qpoint];
   double jacobian_point1 [n_dim*n_dim] {3., 0., 0., 1.};
-  double jacobian_rest [n_dim*n_dim] {1., 2., 0., 2.};
+  double jacobian_rest [n_dim*n_dim] {2., 1., -2., 0.};
   const int point1 = 3;
   double state_all [n_dim+2] {2., 2., 1.3, 1e4};
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
@@ -32,7 +32,7 @@ TEST_CASE("Surface_rotation")
       REQUIRE(surf_rot->jacobian_determinant(i_qpoint) == Approx(3.));
     } else {
       REQUIRE(state[1*n_qpoint + i_qpoint] == Approx(2.*std::sqrt(2.)));
-      REQUIRE(surf_rot->jacobian_determinant(i_qpoint) == Approx(2.));
+      REQUIRE(surf_rot->jacobian_determinant(i_qpoint) == Approx(2.*std::sqrt(2.)));
     }
   }
 
