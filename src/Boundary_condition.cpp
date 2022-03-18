@@ -1,5 +1,7 @@
 #include <Boundary_condition.hpp>
 #include <math.hpp>
+#include <kernel_factory.hpp>
+#include <Surface_rotation.hpp>
 
 namespace cartdg
 {
@@ -22,11 +24,22 @@ void Freestream::apply(Boundary_face& bf)
 
 void Nonpenetration::apply(Boundary_face& bf)
 {
+  // fetch data
   auto params = bf.storage_params();
+  const int nq = params.n_qpoint()/params.row_size;
   double* gh_f = bf.ghost_face();
-  double* in_f = bf.ghost_face();
-  int i_dim = bf.direction.i_dim[0];
-  cartdg::kernel_factory<Surface_rotation>(params.n_dim, params.row_size, bf.jacobian(), i_dim);
+  double* in_f = bf.inside_face();
+  for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = in_f[i_dof];
+  // rotate into surface-based coordinates
+  int i_dim = bf.i_dim();
+  auto surf_rot = cartdg::kernel_factory<Surface_rotation>(params.n_dim, params.row_size, bf.jacobian(), i_dim);
+  surf_rot->to_surface(gh_f);
+  // reflect normal component of momentum
+  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+    gh_f[i_dim*nq + i_qpoint] *= -1;
+  }
+  // rotate back into universal coordinates
+  surf_rot->from_surface(gh_f);
 }
 
 };
