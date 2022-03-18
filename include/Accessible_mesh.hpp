@@ -63,6 +63,12 @@ class Mesh_by_type : public View_by_type<element_t>
   : elems{params, root_spacing}, elem_v{elems.elements()}, face_con_v{*this},
     elem_con_v{*this}, ref_v{ref_face_cons}, bound_con_v{bound_cons}
   {}
+
+  void emplace_boundary_connection(int ref_level, int serial_n, int i_dim, int face_sign, Boundary_condition& bc)
+  {
+    bound_cons.emplace_back(elems.at(ref_level, serial_n), i_dim, face_sign, bc);
+  }
+
   // interface implementation
   virtual Sequence<element_t&>& elements() {return elem_v;}
   virtual Sequence<Face_connection<element_t>&>& face_connections() {return face_con_v;}

@@ -91,11 +91,13 @@ TEST_CASE("Accessible_mesh")
   {
     int freestream = mesh.add_boundary_condition(new cartdg::Freestream({0, 0, 1., 1e5}));
     int nonpen = mesh.add_boundary_condition(new cartdg::Nonpenetration);
-    REQUIRE_THROWS(mesh.connect_boundary(0, 0, sn0, 1, 0, freestream + 1));
+    // check that connecting to an invalid serial number throws
+    REQUIRE_THROWS(mesh.connect_boundary(0, 0, sn0, 1, 0, nonpen + freestream + 1));
     mesh.connect_boundary(0, 0, sn1, 1, 0, freestream);
     mesh.connect_boundary(0, 0, sn1, 1, 1, freestream);
     mesh.connect_boundary(0, 0, sn0, 0, 1, nonpen);
     auto& bc_cons {mesh.cartesian().boundary_connections()};
+    REQUIRE(bc_cons.size() == 3);
     // check that it got the right face
     REQUIRE(bc_cons[0].face(0) == mesh.element(0, 0, sn1).face() + (2*1 + 0)*5*row_size*row_size);
     // check that there are two boundary conditions one of which is used twice and the other of

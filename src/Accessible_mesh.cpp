@@ -57,11 +57,16 @@ void Accessible_mesh::connect_hanging_cartesian(int coarse_ref_level, int coarse
 int Accessible_mesh::add_boundary_condition(Boundary_condition* bc)
 {
   bound_conds.emplace_back(bc);
+  // no reason to delete boundary conditions, so the serial number can just be the index
   return bound_conds.size() - 1;
 }
 
 void Accessible_mesh::connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n)
 {
+  if (bc_serial_n >= int(bound_conds.size())) throw std::runtime_error("demand for non-existent `Boundary_condition`");
+  Boundary_condition& bc {*bound_conds[bc_serial_n]};
+  if (is_deformed) def.emplace_boundary_connection(ref_level, element_serial_n, i_dim, face_sign, bc);
+  else             car.emplace_boundary_connection(ref_level, element_serial_n, i_dim, face_sign, bc);
 }
 
 }
