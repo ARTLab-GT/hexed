@@ -11,7 +11,7 @@ Element_container& Accessible_mesh::container(bool is_deformed)
 }
 
 Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size)
-: params{params_arg}, root_sz{root_size}, car{params, root_sz}, def{params, root_sz},
+: params{params_arg}, root_sz{root_size}, car{params, root_sz}, def{params, root_sz, car.bound_face_con_view},
   def_as_car{def.elements()}, elems{car.elements(), def_as_car},
   elem_cons{car.element_connections(), def.element_connections()}, bc_v{bound_conds}
 {}
@@ -67,7 +67,6 @@ void Accessible_mesh::connect_boundary(int ref_level, bool is_deformed, int elem
   Boundary_condition& bc {*bound_conds[bc_serial_n]};
   #define EMPLACE(mbt) { \
     mbt.bound_cons.emplace_back(mbt.elems.at(ref_level, element_serial_n), i_dim, face_sign, bc); \
-    def.extra_cons.push_back(&mbt.bound_cons.back()); \
   }
   if (is_deformed) EMPLACE(def)
   else EMPLACE(car)
