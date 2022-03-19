@@ -11,10 +11,20 @@ Element_container& Accessible_mesh::container(bool is_deformed)
 }
 
 Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size)
-: params{params_arg}, root_sz{root_size}, car{params, root_sz}, def{params, root_sz, car.bound_face_con_view},
-  def_as_car{def.elements()}, elems{car.elements(), def_as_car},
-  elem_cons{car.element_connections(), def.element_connections()}, bc_v{bound_conds}
-{}
+: params{params_arg},
+  root_sz{root_size},
+  car{params, root_sz},
+  def{params, root_sz},
+  def_as_car{def.elements()},
+  elems{car.elements(), def_as_car},
+  elem_cons{car.element_connections(),
+  def.element_connections()},
+  bc_v{bound_conds},
+  bound_face_cons{car.bound_face_con_view, def.bound_face_con_view},
+  def_face_cons{def.elem_face_con_v, bound_face_cons}
+{
+  def.face_con_v = def_face_cons;
+}
 
 int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<int> position)
 {

@@ -40,7 +40,6 @@ class Mesh_by_type : public View_by_type<element_t>
   std::vector<Refined_connection<element_t>> ref_face_cons;
   std::vector<Typed_bound_connection<element_t>> bound_cons;
 
-  private:
   // template spaghetti to get `Vector_view`s of the data with the right type
   typename Complete_element_container<element_t>::view_t elem_v;
   template <typename view_t>
@@ -61,27 +60,24 @@ class Mesh_by_type : public View_by_type<element_t>
   // this is useful to allow optional concatenation by providing an empty vector to concatenate
   static std::vector<Element_face_connection<element_t>> empty_con_vec;
   static Vector_view<Face_connection<element_t>&, Element_face_connection<element_t>> empty_con_view;
-  Concatenation<Face_connection<element_t>&> face_con_v;
   Connection_view<Element_connection&> elem_con_v;
   static Refined_face& ref_face(Refined_connection<element_t>& ref_con) {return ref_con.refined_face;}
   Vector_view<Refined_face&, Refined_connection<element_t>, &ref_face> ref_v;
   Vector_view<Boundary_connection&, Typed_bound_connection<element_t>> bound_con_v;
-
-  public:
   Vector_view<Face_connection<Deformed_element>&, Typed_bound_connection<element_t>> bound_face_con_view;
+  Concatenation<Face_connection<element_t>&> face_con_v;
 
   // `extra_con_v` let's us tack some extra connections on to the connection view if we want to.
   // In particular, `Accessible_mesh` uses this to put all the boundary connections into the deformed connections
-  Mesh_by_type(Storage_params params, double root_spacing,
-               Sequence<Face_connection<element_t>&>& extra_con_v = empty_con_view)
+  Mesh_by_type(Storage_params params, double root_spacing)
   : elems{params, root_spacing},
     elem_v{elems.elements()},
     elem_face_con_v{*this},
-    face_con_v{elem_face_con_v, extra_con_v},
     elem_con_v{*this},
     ref_v{ref_face_cons},
     bound_con_v{bound_cons},
-    bound_face_con_view{bound_cons}
+    bound_face_con_view{bound_cons},
+    face_con_v{elem_face_con_v, empty_con_view}
   {}
 
   // `View_by_type` interface implementation

@@ -62,23 +62,23 @@ class Vector_view : public Sequence<reference_t>
 template <typename T>
 class Concatenation : public Sequence<T>
 {
-  Sequence<T>& s0;
-  Sequence<T>& s1;
+  Sequence<T>* s0;
+  Sequence<T>* s1;
 
   public:
   Concatenation(Sequence<T>& seq0, Sequence<T>& seq1)
-  : s0{seq0}, s1{seq1}
+  : s0{&seq0}, s1{&seq1}
   {}
 
   int size()
   {
-    return s0.size() + s1.size();
+    return s0->size() + s1->size();
   }
 
   T operator[](int index)
   {
-    int index1 = index - s0.size();
-    return (index1 < 0) ? s0[index] : s1[index1];
+    int index1 = index - s0->size();
+    return (index1 < 0) ? (*s0)[index] : (*s1)[index1];
   }
 };
 

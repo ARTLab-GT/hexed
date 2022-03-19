@@ -26,6 +26,8 @@ class Accessible_mesh : public Mesh
   std::vector<std::unique_ptr<Boundary_condition>> bound_conds;
   static Boundary_condition& convert_bc (std::unique_ptr<Boundary_condition>& ptr) {return *ptr;}
   Vector_view<Boundary_condition&, std::unique_ptr<Boundary_condition>, &convert_bc> bc_v;
+  Concatenation<Face_connection<Deformed_element>&> bound_face_cons;
+  Concatenation<Face_connection<Deformed_element>&> def_face_cons;
 
   public:
   Accessible_mesh(Storage_params, double root_size);

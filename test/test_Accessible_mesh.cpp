@@ -78,6 +78,7 @@ TEST_CASE("Accessible_mesh")
     REQUIRE_THROWS(mesh.connect_deformed(3, {sn2, sn4}, {{0, 0}, {0, 0}}));
     REQUIRE_THROWS(mesh.connect_deformed(3, {sn2, sn4}, {{0, 0}, {1, 1}}));
     mesh.connect_deformed(3, {sn4, sn2}, {{1, 0}, {0, 1}});
+    REQUIRE(mesh.deformed().face_connections().size() == 1);
     auto& con = mesh.deformed().face_connections()[0];
     REQUIRE(con.direction().i_dim[0] == 1);
     REQUIRE(con.direction().i_dim[1] == 0);
@@ -132,9 +133,8 @@ TEST_CASE("Accessible_mesh")
     SECTION("deformed")
     {
       mesh.connect_boundary(3, true, sn2, 0, 1, nonpen);
-      auto& bc_cons {mesh.cartesian().boundary_connections()};
-      REQUIRE(bc_cons.size() == 1);
-      REQUIRE(bc_cons[0].inside_face() == mesh.element(3, true, sn2).face() + (2*0 + 1)*5*row_size*row_size);
+      auto& cons {mesh.deformed().face_connections()};
+      REQUIRE(cons.size() == 1);
     }
   }
 
