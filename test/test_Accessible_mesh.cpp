@@ -93,38 +93,48 @@ TEST_CASE("Accessible_mesh")
     int nonpen = mesh.add_boundary_condition(new cartdg::Nonpenetration);
     // check that connecting to an invalid serial number throws
     REQUIRE_THROWS(mesh.connect_boundary(0, 0, sn0, 1, 0, nonpen + freestream + 1));
-    mesh.connect_boundary(0, 0, sn1, 1, 0, freestream);
+    SECTION("cartesian")
     {
-      // check that it got the right face
+      mesh.connect_boundary(0, 0, sn1, 1, 0, freestream);
+      {
+        // check that it got the right face
+        auto& bc_cons {mesh.cartesian().boundary_connections()};
+        REQUIRE(bc_cons.size() == 1);
+        REQUIRE(bc_cons[0].inside_face() == mesh.element(0, 0, sn1).face() + (2*1 + 0)*5*row_size*row_size);
+        // check that the boundary connection is in the deformed connection sequence
+        auto& cons = mesh.deformed().face_connections();
+        REQUIRE(cons.size() == 1);
+        REQUIRE(cons[0].face(0) == bc_cons[0].face(0));
+        REQUIRE(cons[0].face(1) == bc_cons[0].face(1));
+        // ...and not in the Cartesian or element connection sequences
+        REQUIRE(mesh.cartesian().face_connections().size() == 0);
+        REQUIRE(mesh.element_connections().size() == 0);
+      }
+      mesh.connect_boundary(0, 0, sn1, 1, 1, freestream);
+      mesh.connect_boundary(0, 0, sn0, 0, 1, nonpen);
+      {
+        auto& bc_cons {mesh.cartesian().boundary_connections()};
+        REQUIRE(bc_cons.size() == 3);
+        // check that there are two boundary conditions one of which is used twice and the other of
+        // which is used once.
+        auto& bcs = mesh.boundary_conditions();
+        REQUIRE(bcs.size() == 2);
+        int uses [2] {};
+        for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+          for (int i_bc = 0; i_bc < 2; ++i_bc) {
+            if (bc_cons[i_con].boundary_condition() == &bcs[i_bc]) ++uses[i_bc];
+          }
+        }
+        REQUIRE(std::max(uses[0], uses[1]) == 2);
+        REQUIRE(std::min(uses[0], uses[1]) == 1);
+      }
+    }
+    SECTION("deformed")
+    {
+      mesh.connect_boundary(3, true, sn2, 0, 1, nonpen);
       auto& bc_cons {mesh.cartesian().boundary_connections()};
       REQUIRE(bc_cons.size() == 1);
-      REQUIRE(bc_cons[0].inside_face() == mesh.element(0, 0, sn1).face() + (2*1 + 0)*5*row_size*row_size);
-      // check that the boundary connection is in the deformed connection sequence
-      auto& cons = mesh.deformed().face_connections();
-      REQUIRE(cons.size() == 1);
-      REQUIRE(cons[0].face(0) == bc_cons[0].face(0));
-      REQUIRE(cons[0].face(1) == bc_cons[0].face(1));
-      // ...and not in the Cartesian or element connection sequences
-      REQUIRE(mesh.cartesian().face_connections().size() == 0);
-      REQUIRE(mesh.element_connections().size() == 0);
-    }
-    mesh.connect_boundary(0, 0, sn1, 1, 1, freestream);
-    mesh.connect_boundary(0, 0, sn0, 0, 1, nonpen);
-    {
-      auto& bc_cons {mesh.cartesian().boundary_connections()};
-      REQUIRE(bc_cons.size() == 3);
-      // check that there are two boundary conditions one of which is used twice and the other of
-      // which is used once.
-      auto& bcs = mesh.boundary_conditions();
-      REQUIRE(bcs.size() == 2);
-      int uses [2] {};
-      for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-        for (int i_bc = 0; i_bc < 2; ++i_bc) {
-          if (bc_cons[i_con].boundary_condition() == &bcs[i_bc]) ++uses[i_bc];
-        }
-      }
-      REQUIRE(std::max(uses[0], uses[1]) == 2);
-      REQUIRE(std::min(uses[0], uses[1]) == 1);
+      REQUIRE(bc_cons[0].inside_face() == mesh.element(3, true, sn2).face() + (2*0 + 1)*5*row_size*row_size);
     }
   }
 
