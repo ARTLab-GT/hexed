@@ -53,7 +53,8 @@ class Complete_element_container : public Element_container
 
   private:
   typedef std::unique_ptr<Compl_mesh_elem> ptr_t;
-  static element_t& convert(ptr_t& ptr) {return ptr->element;}
+  static element_t& convert_elem(ptr_t& ptr) {return ptr->element;}
+  static Mesh_element& convert_mesh(ptr_t& ptr) {return *ptr;}
   Storage_params params;
   double spacing;
   int next_sn;
@@ -81,8 +82,13 @@ class Complete_element_container : public Element_container
 
   // Provides a `Vector_view` which can be used to efficiently iterate through the elements,
   // in no particular order.
-  typedef Vector_view<element_t&, ptr_t, &convert> view_t;
+  typedef Vector_view<element_t&, ptr_t, &convert_elem> view_t;
   view_t elements()
+  {
+    return vec;
+  }
+
+  Vector_view<Mesh_element&, ptr_t, &convert_mesh> mesh_elements()
   {
     return vec;
   }

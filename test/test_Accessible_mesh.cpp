@@ -206,12 +206,12 @@ TEST_CASE("Accessible_mesh")
      */
     for (int i = 0; i < 2; ++i) {
       for (int j = 0; j < 2; ++j) {
-        car[2*i + j] = mesh.add_element(1, false, {i, j});
-        def[2*i + j] = mesh.add_element(1,  true, {i, j});
+        car[2*i + j] = mesh1.add_element(1, false, {i, j});
+        def[2*i + j] = mesh1.add_element(1,  true, {i, j});
       }
-      coarse[i] = mesh.add_element(0, false, {1, i});
+      coarse[i] = mesh1.add_element(0, false, {1, i});
     }
-    auto con_val = mesh.valid();
+    auto con_val = mesh1.valid();
     REQUIRE(con_val.n_duplicate == 0);
     REQUIRE(con_val.n_missing == 4*(4+4+2)); // every face has a missing connection
     REQUIRE(!con_val);

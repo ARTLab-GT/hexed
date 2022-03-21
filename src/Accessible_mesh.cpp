@@ -85,7 +85,19 @@ void Accessible_mesh::connect_boundary(int ref_level, bool is_deformed, int elem
 
 Mesh::Connection_validity Accessible_mesh::valid()
 {
-  return {0, 0};
+  int n_missing = 0;
+  // get a sequence of all the elements with connectivity information
+  auto ce = car.elems.mesh_elements();
+  auto de = def.elems.mesh_elements();
+  Concatenation<Element_container::Mesh_element&> elems {ce, de};
+  // count up the problems (if any)
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
+      if (elem.connectedness[i_face] == 0) ++n_missing;
+    }
+  }
+  return {0, n_missing};
 }
 
 }
