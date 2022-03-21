@@ -83,4 +83,9 @@ void Accessible_mesh::connect_boundary(int ref_level, bool is_deformed, int elem
   #undef EMPLACE
 }
 
+Mesh::Connection_validity Accessible_mesh::valid()
+{
+  return {0, 0};
+}
+
 }

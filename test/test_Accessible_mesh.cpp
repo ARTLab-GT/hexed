@@ -179,4 +179,42 @@ TEST_CASE("Accessible_mesh")
     REQUIRE(count2 == 1);
     REQUIRE(elem_cons.size() == 7);
   }
+
+  SECTION("connection validity testing")
+  {
+    cartdg::Storage_params params1 {3, 4, 2, row_size};
+    cartdg::Accessible_mesh mesh1 {params1, 0.64};
+    // serial numbers:
+    int car [4];
+    int def [4];
+    int coarse [2];
+    /*
+     * create the following grid (elements identified by serial numbers)
+     * +------+------+-------------+
+     * |      |      |             |
+     * |def[1]|def[3]|             |
+     * +------+------+             |
+     * |      |      |             |
+     * |def[0]|def[2]| coarse[1]   |
+     * +------+------+-------------+
+     * |      |      |             |
+     * |car[1]|car[3]|             |
+     * +------+------+             |
+     * |      |      |             |
+     * |car[0]|car[2]| coarse[0]   |
+     * +------+------+-------------+
+     */
+    for (int i = 0; i < 2; ++i) {
+      for (int j = 0; j < 2; ++j) {
+        car[2*i + j] = mesh.add_element(1, false, {i, j});
+        def[2*i + j] = mesh.add_element(1,  true, {i, j});
+      }
+      coarse[i] = mesh.add_element(0, false, {1, i});
+    }
+    auto con_val = mesh.valid();
+    REQUIRE(con_val.n_duplicate == 0);
+    REQUIRE(con_val.n_missing == 4*(4+4+2)); // every face has a missing connection
+    REQUIRE(!con_val);
+    REQUIRE_THROWS(con_val.assert_valid());
+  }
 }

@@ -1,6 +1,7 @@
 #ifndef CARTDG_MESH_HPP_
 #define CARTDG_MESH_HPP_
 
+#include <string>
 #include "Boundary_condition.hpp"
 #include "connection.hpp"
 
@@ -50,9 +51,33 @@ class Mesh
    * are used to identify which face of the element is participating in the boundary condition.
    */
   virtual void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n) = 0;
-  #if 0
-  virtual bool connectivity_valid() = 0;
-  #endif
+
+  // An object to provide information about whether the mesh connectivity is valid
+  // and if not, why.
+  class Connection_validity
+  {
+    public:
+    const int n_duplicate; // number of faces with duplicate connections
+    const int n_missing; // number of missing connections
+    // returns true if connectivity is valid
+    inline operator bool() {return (n_duplicate == 0) && (n_missing == 0);}
+    // if connectivity is invalid, throw an exception with a helpful message
+    inline void assert_valid()
+    {
+      if (!*this) {
+        auto message = "Invalid mesh with " + std::to_string(n_duplicate) + " duplicate connections and "
+                       + std::to_string(n_missing) + " missing connections.";
+        throw std::runtime_error(message);
+      }
+    }
+  };
+  /*
+   * returns a `Connection_validity` object describing whether the mesh connectivity is valid.
+   * Suggested uses:
+   * - `if (mesh.valid())` {...do something that requires a valid mesh}
+   * - `mesh.valid().assert_valid();`
+   */
+  virtual Connection_validity valid() = 0;
 };
 
 }

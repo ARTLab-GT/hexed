@@ -47,6 +47,7 @@ class Accessible_mesh : public Mesh
   virtual int add_boundary_condition(Boundary_condition* bc);
   virtual void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n);
   Sequence<Boundary_condition&>& boundary_conditions() {return bc_v;}
+  virtual Connection_validity valid();
 };
 
 }
