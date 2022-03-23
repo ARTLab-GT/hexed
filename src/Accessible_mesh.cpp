@@ -33,7 +33,7 @@ int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<in
 
 Element& Accessible_mesh::element(int ref_level, bool is_deformed, int serial_n)
 {
-  return container(is_deformed).at(ref_level, serial_n).get();
+  return container(is_deformed).at(ref_level, serial_n);
 }
 
 void Accessible_mesh::connect_cartesian(int ref_level, std::array<int, 2> serial_n, Con_dir<Element> direction, std::array<bool, 2> is_deformed)
@@ -50,7 +50,7 @@ void Accessible_mesh::connect_deformed(int ref_level, std::array<int, 2> serial_
   }
   std::array<Deformed_element*, 2> el_ar;
   for (int i_side : {0, 1}) {
-    el_ar[i_side] = &def.elems.at(ref_level, serial_n[i_side]).element;
+    el_ar[i_side] = &def.elems.at(ref_level, serial_n[i_side]);
   }
   def.cons.emplace_back(el_ar, direction);
 }
@@ -85,17 +85,21 @@ void Accessible_mesh::connect_boundary(int ref_level, bool is_deformed, int elem
 
 Mesh::Connection_validity Accessible_mesh::valid()
 {
-  int n_missing = 0;
-  // get a sequence of all the elements with connectivity information
-  auto ce = car.elems.mesh_elements();
-  auto de = def.elems.mesh_elements();
-  Concatenation<Element_container::Mesh_element&> elems {ce, de};
-  // count up the problems (if any)
+  // maps a pointer to an element face to the number of connections pointing to that face
+  std::map<double*, int> n_connections;
+  // add an entry for each face and initialize it to 0
+  auto& elems = elements();
+  int n_dof_face = params.n_dof()/params.n_qpoint();
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto& elem = elems[i_elem];
-    for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
-      if (elem.connectedness[i_face] == 0) ++n_missing;
+    double* faces = elems[i_elem].face();
+    for (int i_face = 0; i_face < params.n_dim*2; ++i_face) {
+      n_connections[faces + i_face*n_dof_face] = 0;
     }
+  }
+  // count up the number of faces with problems
+  int n_missing = 0;
+  for (auto pair : n_connections) {
+    if (pair.second == 0) ++n_missing;
   }
   return {0, n_missing};
 }

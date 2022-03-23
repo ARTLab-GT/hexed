@@ -18,20 +18,13 @@ namespace cartdg
 class Element_container
 {
   public:
-  // contains an `Element` with some additional data relevant to the mesh
-  class Mesh_element
-  {
-    public:
-    std::array<int, 6> connectedness;
-    virtual Element& get() = 0;
-  };
   /*
    * Construct an element, add it to the container, and return a permanent, arbitrary
    * serial number which is unique among elements of the same refinement level.
    */
   virtual int emplace(int ref_level, std::vector<int> position) = 0;
   // access an element by refinement level and serial number
-  virtual Mesh_element& at(int ref_level, int serial_n) = 0;
+  virtual Element& at(int ref_level, int serial_n) = 0;
 };
 
 /*
@@ -41,25 +34,13 @@ class Element_container
 template <typename element_t>
 class Complete_element_container : public Element_container
 {
-  public:
-  class Compl_mesh_elem : public Mesh_element
-  {
-    public:
-    element_t element;
-    Compl_mesh_elem(Storage_params par, std::vector<int> pos, double sz) : element{par, pos, sz} {connectedness.fill(0);}
-    operator element_t&() {return element;}
-    virtual Element& get() {return element;}
-  };
-
-  private:
-  typedef std::unique_ptr<Compl_mesh_elem> ptr_t;
-  static element_t& convert_elem(ptr_t& ptr) {return ptr->element;}
-  static Mesh_element& convert_mesh(ptr_t& ptr) {return *ptr;}
+  typedef std::unique_ptr<element_t> ptr_t;
+  static element_t& convert(ptr_t& ptr) {return *ptr;}
   Storage_params params;
   double spacing;
   int next_sn;
   std::vector<ptr_t> vec;
-  std::map<std::array<int, 2>, Compl_mesh_elem&> map;
+  std::map<std::array<int, 2>, element_t&> map;
 
   public:
   Complete_element_container(Storage_params storage_params, double root_spacing)
@@ -69,26 +50,21 @@ class Complete_element_container : public Element_container
   virtual int emplace(int ref_level, std::vector<int> position)
   {
     double level_spacing = spacing/custom_math::pow(2, ref_level);
-    vec.emplace_back(new Compl_mesh_elem {params, position, level_spacing});
+    vec.emplace_back(new element_t {params, position, level_spacing});
     std::array<int, 2> key = {ref_level, next_sn++};
-    map.insert(std::pair<std::array<int, 2>, Compl_mesh_elem&>(key, *vec.back()));
+    map.insert(std::pair<std::array<int, 2>, element_t&>(key, *vec.back()));
     return key[1];
   }
 
-  virtual Compl_mesh_elem& at(int ref_level, int serial_n)
+  virtual element_t& at(int ref_level, int serial_n)
   {
     return map.at({ref_level, serial_n});
   }
 
   // Provides a `Vector_view` which can be used to efficiently iterate through the elements,
   // in no particular order.
-  typedef Vector_view<element_t&, ptr_t, &convert_elem> view_t;
+  typedef Vector_view<element_t&, ptr_t, &convert> view_t;
   view_t elements()
-  {
-    return vec;
-  }
-
-  Vector_view<Mesh_element&, ptr_t, &convert_mesh> mesh_elements()
   {
     return vec;
   }
