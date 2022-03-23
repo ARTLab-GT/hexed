@@ -16,6 +16,12 @@ namespace cartdg
 template <typename T>
 void erase_if(std::vector<T>& vec, bool (*condition)(const T&))
 {
+  // FIXME: make this parallel
+  std::vector<T> erased;
+  for (unsigned i_elem = 0; i_elem < vec.size(); ++i_elem) {
+    if (!condition(vec[i_elem])) erased.push_back(std::move(vec[i_elem]));
+  }
+  vec = std::move(erased);
 }
 
 }
