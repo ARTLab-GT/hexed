@@ -213,38 +213,47 @@ TEST_CASE("Accessible_mesh")
       }
       coarse[i] = mesh1.add_element(0, false, {1, i});
     }
-    auto con_val = mesh1.valid();
-    REQUIRE(con_val.n_duplicate == 0);
-    REQUIRE(con_val.n_missing == 4*(4+4+2)); // every face has a missing connection
-    REQUIRE(!con_val);
-    REQUIRE_THROWS(con_val.assert_valid());
+    {
+      auto con_val = mesh1.valid();
+      REQUIRE(con_val.n_duplicate == 0);
+      REQUIRE(con_val.n_missing == 4*(4+4+2)); // every face has a missing connection
+      REQUIRE(!con_val);
+      REQUIRE_THROWS(con_val.assert_valid());
+    }
     // connect the two coarse elements
     mesh1.connect_cartesian(0, {coarse[0], coarse[1]}, {1});
-    REQUIRE(con_val.n_missing == 4*(4+4+2) - 1);
+    {
+      auto con_val = mesh1.valid();
+      REQUIRE(con_val.n_missing == 4*(4+4+2) - 2);
+    }
     // connect the fine elements
     for (int i = 0; i < 2; ++i) {
-      mesh.connect_cartesian(1, {car[  i], car[  i+2]}, {0});
-      mesh.connect_cartesian(1, {car[2*i], car[2*i+1]}, {1});
-      mesh.connect_deformed (1, {def[  i], def[  i+2]}, {{0, 0}, {1, 0}});
-      mesh.connect_deformed (1, {def[2*i], def[2*i+1]}, {{1, 1}, {1, 0}});
+      mesh1.connect_cartesian(1, {car[  i], car[  i+2]}, {0});
+      mesh1.connect_cartesian(1, {car[2*i], car[2*i+1]}, {1});
+      mesh1.connect_cartesian(1, {car[2*i+1], def[2*i]}, {1}, {false, true});
+      mesh1.connect_deformed (1, {def[  i], def[  i+2]}, {{0, 0}, {1, 0}});
+      mesh1.connect_deformed (1, {def[2*i], def[2*i+1]}, {{1, 1}, {1, 0}});
     }
     for (int kind = 0; kind < 2; ++kind) {
-      mesh.connect_hanging_cartesian(0, coarse[kind], {kinds[kind][2], kinds[kind][3]}, {0}, 0, false, 0);
+      mesh1.connect_hanging_cartesian(0, coarse[kind], {kinds[kind][2], kinds[kind][3]}, {0}, 0, false, kind);
     }
     // add boundary conditions
     int bcsn = mesh1.add_boundary_condition(new cartdg::Freestream {{0., 0., 1., 1.}});
     for (int i = 0; i < 2; ++i) {
       for (int kind = 0; kind < 2; ++kind) {
-        mesh.connect_boundary(1, kind, kinds[kind][i], 0, 0, bcsn); // left face
-        mesh.connect_boundary(1, kind, kinds[kind][2*i + kind], 1, kind, bcsn); // bottom/top face
-        mesh.connect_boundary(0, false, coarse[i], 0, 1, bcsn); // right face
-        mesh.connect_boundary(0, false, coarse[i], 1, i, bcsn); // bottom/top face
+        mesh1.connect_boundary(1, kind, kinds[kind][i], 0, 0, bcsn); // left face
+        mesh1.connect_boundary(1, kind, kinds[kind][2*i + kind], 1, kind, bcsn); // bottom/top face
+        mesh1.connect_boundary(0, false, coarse[i], 0, 1, bcsn); // right face
+        mesh1.connect_boundary(0, false, coarse[i], 1, i, bcsn); // bottom/top face
       }
     }
     // everything should be fine now
-    REQUIRE(con_val.n_duplicate == 0);
-    REQUIRE(con_val.n_missing == 0); // every face has a missing connection
-    REQUIRE(bool(con_val));
-    con_val.assert_valid();
+    {
+      auto con_val = mesh1.valid();
+      REQUIRE(con_val.n_duplicate == 0);
+      REQUIRE(con_val.n_missing == 0); // every face has a missing connection
+      REQUIRE(bool(con_val));
+      con_val.assert_valid();
+    }
   }
 }

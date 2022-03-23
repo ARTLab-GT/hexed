@@ -33,6 +33,8 @@ class View_by_type
 template <typename element_t>
 class Mesh_by_type : public View_by_type<element_t>
 {
+  const int n_ref_faces;
+
   public:
   // where the data is kept
   Complete_element_container<element_t> elems;
@@ -48,12 +50,12 @@ class Mesh_by_type : public View_by_type<element_t>
     Mesh_by_type& parent;
     public:
     Connection_view(Mesh_by_type& mbt) : parent{mbt} {}
-    virtual int size() {return parent.cons.size() + 4*parent.ref_face_cons.size();}
+    virtual int size() {return parent.cons.size() + parent.n_ref_faces*parent.ref_face_cons.size();}
     virtual view_t operator[](int index)
     {
       int i_refined = index - parent.cons.size();
       if (i_refined < 0) return parent.cons[index];
-      return parent.ref_face_cons[i_refined/4].connection(i_refined%4);
+      return parent.ref_face_cons[i_refined/parent.n_ref_faces].connection(i_refined%parent.n_ref_faces);
     }
   };
   Connection_view<Face_connection<element_t>&> elem_face_con_v;
@@ -69,8 +71,9 @@ class Mesh_by_type : public View_by_type<element_t>
 
   // `extra_con_v` let's us tack some extra connections on to the connection view if we want to.
   // In particular, `Accessible_mesh` uses this to put all the boundary connections into the deformed connections
-  Mesh_by_type(Storage_params params, double root_spacing)
-  : elems{params, root_spacing},
+  Mesh_by_type(Storage_params params, double root_spacing) :
+    n_ref_faces{custom_math::pow(2, params.n_dim - 1)},
+    elems{params, root_spacing},
     elem_v{elems.elements()},
     elem_face_con_v{*this},
     elem_con_v{*this},

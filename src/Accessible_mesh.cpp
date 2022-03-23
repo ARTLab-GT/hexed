@@ -10,8 +10,8 @@ Element_container& Accessible_mesh::container(bool is_deformed)
   return *containers[is_deformed];
 }
 
-Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size)
-: params{params_arg},
+Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size) :
+  params{params_arg},
   root_sz{root_size},
   car{params, root_sz},
   def{params, root_sz},
@@ -21,7 +21,8 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size)
   def.element_connections()},
   bc_v{bound_conds},
   bound_face_cons{car.bound_face_con_view, def.bound_face_con_view},
-  def_face_cons{def.elem_face_con_v, bound_face_cons}
+  def_face_cons{def.elem_face_con_v, bound_face_cons},
+  ref_face_v{car.refined_faces(), def.refined_faces()}
 {
   def.face_con_v = def_face_cons;
 }
@@ -89,12 +90,31 @@ Mesh::Connection_validity Accessible_mesh::valid()
   std::map<double*, int> n_connections;
   // add an entry for each face and initialize it to 0
   auto& elems = elements();
-  int n_dof_face = params.n_dof()/params.n_qpoint();
+  int n_dof_face = params.n_dof()/params.row_size;
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     double* faces = elems[i_elem].face();
     for (int i_face = 0; i_face < params.n_dim*2; ++i_face) {
       n_connections[faces + i_face*n_dof_face] = 0;
     }
+  }
+  // count up the number of connections for each face
+  #define COUNT_CONS(mbt) \
+  { \
+    auto& cons = mbt.face_connections(); \
+    for (int i_con = 0; i_con < cons.size(); ++i_con) { \
+      for (int i_side = 0; i_side < 2; ++i_side) { \
+        double* face = cons[i_con].face(i_side); \
+        if (n_connections.count(face)) { \
+          ++n_connections.at(face); \
+        } \
+      } \
+    } \
+  }
+  COUNT_CONS(car)
+  COUNT_CONS(def)
+  auto& ref_faces = refined_faces();
+  for (int i_ref = 0; i_ref < ref_faces.size(); ++i_ref) {
+    ++n_connections.at(ref_faces[i_ref].coarse_face());
   }
   // count up the number of faces with problems
   int n_missing = 0;
