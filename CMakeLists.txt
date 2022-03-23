@@ -31,12 +31,16 @@ if (sanitize)
 endif()
 
 # determine whether to parallelize
+include(ProcessorCount)
 option(threaded "If ON, allow multiple threads. Substantially reduces execution time." ON)
 if(threaded)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+    ProcessorCount(n_threads)
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
+    set(n_threads, 1)
 endif()
+
 
 # determine row_size of polynomial basis
 if(NOT DEFINED MAX_BASIS_ROW_SIZE)
