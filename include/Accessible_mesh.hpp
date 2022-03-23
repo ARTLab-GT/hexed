@@ -50,6 +50,7 @@ class Accessible_mesh : public Mesh
   Sequence<Boundary_condition&>& boundary_conditions() {return bc_v;}
   inline Sequence<Refined_face&>& refined_faces() {return ref_face_v;}
   virtual Connection_validity valid();
+  std::vector<Vertex*> vertices();
 };
 
 }

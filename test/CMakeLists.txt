@@ -13,6 +13,7 @@ test_deformed.cpp
 test_Deformed_element.cpp
 test_Deformed_grid.cpp
 test_Derivative.cpp
+test_erase_if.cpp
 test_Element.cpp
 test_Element_container.cpp
 test_func.cpp
