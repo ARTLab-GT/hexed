@@ -118,10 +118,12 @@ Mesh::Connection_validity Accessible_mesh::valid()
   }
   // count up the number of faces with problems
   int n_missing = 0;
+  int n_duplicates = 0;
   for (auto pair : n_connections) {
     if (pair.second == 0) ++n_missing;
+    if (pair.second > 1) ++n_duplicates;
   }
-  return {0, n_missing};
+  return {n_duplicates, n_missing};
 }
 
 }

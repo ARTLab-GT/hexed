@@ -243,8 +243,10 @@ TEST_CASE("Accessible_mesh")
       for (int kind = 0; kind < 2; ++kind) {
         mesh1.connect_boundary(1, kind, kinds[kind][i], 0, 0, bcsn); // left face
         mesh1.connect_boundary(1, kind, kinds[kind][2*i + kind], 1, kind, bcsn); // bottom/top face
+        #if 0
         mesh1.connect_boundary(0, false, coarse[i], 0, 1, bcsn); // right face
         mesh1.connect_boundary(0, false, coarse[i], 1, i, bcsn); // bottom/top face
+        #endif
       }
     }
     // everything should be fine now
@@ -254,6 +256,15 @@ TEST_CASE("Accessible_mesh")
       REQUIRE(con_val.n_missing == 0); // every face has a missing connection
       REQUIRE(bool(con_val));
       con_val.assert_valid();
+    }
+    // check that it can detect duplicate connections
+    mesh1.connect_cartesian(0, {coarse[0], coarse[1]}, {1});
+    {
+      auto con_val = mesh1.valid();
+      REQUIRE(con_val.n_missing == 0);
+      REQUIRE(con_val.n_duplicate == 1);
+      REQUIRE(!con_val);
+      REQUIRE_THROWS(con_val.assert_valid());
     }
   }
 }
