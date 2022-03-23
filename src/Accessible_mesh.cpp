@@ -121,7 +121,7 @@ Mesh::Connection_validity Accessible_mesh::valid()
   int n_duplicates = 0;
   for (auto pair : n_connections) {
     if (pair.second == 0) ++n_missing;
-    if (pair.second > 1) ++n_duplicates;
+    n_duplicates += std::max(pair.second - 1, 0);
   }
   return {n_duplicates, n_missing};
 }
