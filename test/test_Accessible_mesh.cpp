@@ -266,4 +266,16 @@ TEST_CASE("Accessible_mesh")
       REQUIRE_THROWS(con_val.assert_valid());
     }
   }
+  SECTION("vertices")
+  {
+    // check that the number of vertices is correct
+    auto vertices {mesh.vertices()};
+    REQUIRE(vertices.size() == 4*mesh.elements().size());
+    // spot-check: vertex 2 of element sn1 should be there
+    int count = 0;
+    for (int i_vert = 0; i_vert < vertices.size(); ++i_vert) {
+      if (&vertices[i_vert] == &mesh.element(0, false, sn1).vertex(2)) ++count;
+    }
+    REQUIRE(count == 1);
+  }
 }

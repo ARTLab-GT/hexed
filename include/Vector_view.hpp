@@ -22,6 +22,12 @@ S trivial_convert(T& t)
   return t;
 }
 
+template <typename ref_t, typename ptr_t>
+ref_t ptr_convert(ptr_t& ptr)
+{
+  return *ptr;
+}
+
 /*
  * Provides convenient but limited access to a `std::vector`. Supports read/write access
  * to the elements and evaluation of the size, but does not allow insertion or removal of

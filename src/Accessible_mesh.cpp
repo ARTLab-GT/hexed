@@ -12,6 +12,7 @@ Element_container& Accessible_mesh::container(bool is_deformed)
 
 Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size) :
   params{params_arg},
+  n_vert{custom_math::pow(2, params.n_dim - 1)},
   root_sz{root_size},
   car{params, root_sz},
   def{params, root_sz},
@@ -29,7 +30,10 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size) :
 
 int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<int> position)
 {
-  return container(is_deformed).emplace(ref_level, position);
+  int sn = container(is_deformed).emplace(ref_level, position);
+  Element& elem = element(ref_level, is_deformed, sn);
+  for (int i_vert = 0; i_vert < n_vert; ++i_vert) vert_ptrs.emplace_back(elem.vertex(i_vert));
+  return sn;
 }
 
 Element& Accessible_mesh::element(int ref_level, bool is_deformed, int serial_n)
@@ -124,6 +128,11 @@ Mesh::Connection_validity Accessible_mesh::valid()
     n_duplicates += std::max(pair.second - 1, 0);
   }
   return {n_duplicates, n_missing};
+}
+
+Accessible_mesh::vertex_view Accessible_mesh::vertices()
+{
+  return vert_ptrs;
 }
 
 }

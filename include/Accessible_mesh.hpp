@@ -15,6 +15,7 @@ namespace cartdg
 class Accessible_mesh : public Mesh
 {
   Storage_params params;
+  int n_vert;
   double root_sz;
   Element_container& container(bool is_deformed);
   Mesh_by_type<         Element> car;
@@ -29,6 +30,7 @@ class Accessible_mesh : public Mesh
   Concatenation<Face_connection<Deformed_element>&> bound_face_cons;
   Concatenation<Face_connection<Deformed_element>&> def_face_cons;
   Concatenation<Refined_face&> ref_face_v;
+  std::vector<Vertex::Non_transferable_ptr> vert_ptrs;
 
   public:
   Accessible_mesh(Storage_params, double root_size);
@@ -50,7 +52,8 @@ class Accessible_mesh : public Mesh
   Sequence<Boundary_condition&>& boundary_conditions() {return bc_v;}
   inline Sequence<Refined_face&>& refined_faces() {return ref_face_v;}
   virtual Connection_validity valid();
-  std::vector<Vertex*> vertices();
+  typedef Vector_view<Vertex&, Vertex::Non_transferable_ptr, &ptr_convert<Vertex&, Vertex::Non_transferable_ptr>> vertex_view;
+  vertex_view vertices();
 };
 
 }
