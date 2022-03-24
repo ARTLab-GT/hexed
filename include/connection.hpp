@@ -172,22 +172,18 @@ class Refined_connection
 
 inline std::array<std::vector<int>, 2> vertex_inds(int n_dim, Con_dir<Deformed_element> direction)
 {
-  int n_vert = custom_math::pow(2, n_dim - 1);
+  // get vertices involved
   std::array<std::vector<int>, 2> inds;
+  int n_vert = custom_math::pow(2, n_dim - 1);
   std::array<int, 2> strides;
   for (int i_side = 0; i_side < 2; ++i_side) {
-    int stride = n_vert;
-    for (int i = 0; i < direction.i_dim[i_side]; ++i) stride /= 2;
-    strides[i_side] = stride;
-    for (int i_vertex = 0; i_vertex < 2*n_vert; ++i_vertex)
-    {
-      if ((i_vertex/stride)%2 == int(direction.face_sign[i_side]))
-      {
+    strides[i_side] = std::pow(2, n_dim - direction.i_dim[i_side] - 1);
+    for (int i_vertex = 0; i_vertex < 2*n_vert; ++i_vertex) {
+      if ((i_vertex/strides[i_side])%2 == int(direction.face_sign[i_side])) {
         inds[i_side].push_back(i_vertex);
       }
     }
   }
-
   // reorder as necessary
   if (direction.flip_tangential()) {
     for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
