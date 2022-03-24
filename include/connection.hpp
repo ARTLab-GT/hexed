@@ -23,6 +23,30 @@ class Con_dir<Deformed_element>
   std::array<int, 2> i_dim;
   std::array<bool, 2> face_sign;
   int i_face(int i_side) {return 2*i_dim[i_side] + face_sign[i_side];}
+  /*
+   * Answers the question: Is it necessary to flip the normal of element `i_side` so that it
+   * points from element 0 into element 1?
+   */
+  bool flip_normal(int i_side) {return face_sign[i_side] == i_side;}
+  /*
+   * Answers the question: Is it neccesary to flip axis `face_index(0).i_dim` of element 1
+   * to match the coordinate systems?
+   */
+  bool flip_tangential()
+  {
+    // if you're swapping two axes, you have to flip one of them to make a valid rotation. If you're not
+    // flipping a normal (or flipping both of them) then you have to flip a tangential
+    return (i_dim[0] != i_dim[1]) && (flip_normal(0) == flip_normal(1));
+  }
+  /*
+   * Answers the question: Is it necessary to transpose the rows/columns of the face
+   * quadrature points of element 1 to match element 0? Only applicable to 3D, where some
+   * face combinations can create a row vs column major mismatch. If 2D, always returns `false`.
+   */
+  bool transpose()
+  {
+    return ((i_dim[0] == 0) && (i_dim[1] == 2)) || ((i_dim[0] == 2) && (i_dim[1] == 0));
+  }
 };
 
 template <>
@@ -150,9 +174,29 @@ inline std::array<std::vector<int>, 2> vertex_inds(int n_dim, Con_dir<Deformed_e
 {
   int n_vert = custom_math::pow(2, n_dim - 1);
   std::array<std::vector<int>, 2> inds;
+  std::array<int, 2> strides;
   for (int i_side = 0; i_side < 2; ++i_side) {
-    inds[i_side].resize(n_vert);
+    int stride = n_vert;
+    for (int i = 0; i < direction.i_dim[i_side]; ++i) stride /= 2;
+    strides[i_side] = stride;
+    for (int i_vertex = 0; i_vertex < 2*n_vert; ++i_vertex)
+    {
+      if ((i_vertex/stride)%2 == int(direction.face_sign[i_side]))
+      {
+        inds[i_side].push_back(i_vertex);
+      }
+    }
   }
+
+  // reorder as necessary
+  if (direction.flip_tangential()) {
+    for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
+      // this arithmetic is equivalent to swapping vertices along dimension i_dim[0]
+      int coord = (inds[1][i_vert]/strides[0])%2;
+      inds[1][i_vert] += ((coord + 1)%2 - coord)*strides[0];
+    }
+  }
+  if (direction.transpose()) std::swap(inds[1][1], inds[1][2]);
   return inds;
 }
 
