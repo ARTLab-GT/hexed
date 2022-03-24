@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 #include "Deformed_element.hpp"
 #include "Refined_face.hpp"
+#include "math.hpp"
 
 namespace cartdg
 {
@@ -144,6 +145,16 @@ class Refined_connection
   // fetch an object represting a connection between the face of a fine element and one of the mortar faces
   Fine_connection& connection(int i_fine) {return fine_cons[i_fine];}
 };
+
+inline std::array<std::vector<int>, 2> vertex_inds(int n_dim, Con_dir<Deformed_element> direction)
+{
+  int n_vert = custom_math::pow(2, n_dim - 1);
+  std::array<std::vector<int>, 2> inds;
+  for (int i_side = 0; i_side < 2; ++i_side) {
+    inds[i_side].resize(n_vert);
+  }
+  return inds;
+}
 
 }
 #endif

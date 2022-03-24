@@ -81,3 +81,151 @@ TEST_CASE("Refined_connection<Deformed_element>")
     REQUIRE(fine_con.face(1) == con.refined_face.fine_face(1));
   }
 }
+
+TEST_CASE("vertex_inds")
+{
+  SECTION("Same direction")
+  {
+    //grid3.connect({0, 1}, {0, 0}, {1, 0});
+    auto inds = cartdg::vertex_inds(3, {{0, 0}, {1, 0}});
+    REQUIRE(inds[0][0] == 4); REQUIRE(inds[1][0] == 0);
+    REQUIRE(inds[0][1] == 5); REQUIRE(inds[1][1] == 1);
+    REQUIRE(inds[0][2] == 6); REQUIRE(inds[1][2] == 2);
+    REQUIRE(inds[0][3] == 7); REQUIRE(inds[1][3] == 3);
+
+    //grid3.connect({0, 3}, {2, 2}, {0, 1});
+    inds = cartdg::vertex_inds(3, {{2, 2}, {0, 1}});
+    REQUIRE(inds[0][0] == 2); REQUIRE(inds[1][0] == 0);
+    REQUIRE(inds[0][1] == 3); REQUIRE(inds[1][1] == 1);
+    REQUIRE(inds[0][2] == 6); REQUIRE(inds[1][2] == 4);
+    REQUIRE(inds[0][3] == 7); REQUIRE(inds[1][3] == 5);
+
+    //grid3.connect({2, 0}, {1, 1}, {0, 1});
+    inds = cartdg::vertex_inds(3, {{1, 1}, {0, 1}});
+    REQUIRE(inds[0][0] == 0); REQUIRE(inds[1][0] == 1);
+    REQUIRE(inds[0][1] == 2); REQUIRE(inds[1][1] == 3);
+    REQUIRE(inds[0][2] == 4); REQUIRE(inds[1][2] == 5);
+    REQUIRE(inds[0][3] == 6); REQUIRE(inds[1][3] == 7);
+  }
+
+  SECTION("Different direction")
+  {
+    SECTION("0+ 1+")
+    {
+      //grid3.connect({0, 1}, {0, 1}, {1, 1});
+      auto inds = cartdg::vertex_inds(3, {{0, 1}, {1, 1}});
+      REQUIRE(inds[0][0] == 4); REQUIRE(inds[1][0] == 2);
+      REQUIRE(inds[0][1] == 5); REQUIRE(inds[1][1] == 3);
+      REQUIRE(inds[0][2] == 6); REQUIRE(inds[1][2] == 6);
+      REQUIRE(inds[0][3] == 7); REQUIRE(inds[1][3] == 7);
+    }
+
+    SECTION("0- 1-")
+    {
+      //grid3.connect({0, 1}, {0, 1}, {0, 0});
+      auto inds = cartdg::vertex_inds(3, {{0, 1}, {0, 0}});
+      REQUIRE(inds[0][0] == 0); REQUIRE(inds[1][0] == 0);
+      REQUIRE(inds[0][1] == 1); REQUIRE(inds[1][1] == 1);
+      REQUIRE(inds[0][2] == 2); REQUIRE(inds[1][2] == 4);
+      REQUIRE(inds[0][3] == 3); REQUIRE(inds[1][3] == 5);
+    }
+
+    SECTION("2+ 1+")
+    {
+      //grid3.connect({0, 1}, {2, 1}, {1, 1});
+      auto inds = cartdg::vertex_inds(3, {{2, 1}, {1, 1}});
+      REQUIRE(inds[0][0] == 1); REQUIRE(inds[1][0] == 2);
+      REQUIRE(inds[0][1] == 3); REQUIRE(inds[1][1] == 3);
+      REQUIRE(inds[0][2] == 5); REQUIRE(inds[1][2] == 6);
+      REQUIRE(inds[0][3] == 7); REQUIRE(inds[1][3] == 7);
+    }
+
+    SECTION("0+ 2+")
+    {
+      //grid3.connect({0, 1}, {0, 2}, {1, 1});
+      auto inds = cartdg::vertex_inds(3, {{0, 2}, {1, 1}});
+      REQUIRE(inds[0][0] == 4); REQUIRE(inds[1][0] == 1);
+      REQUIRE(inds[0][1] == 5); REQUIRE(inds[1][1] == 5);
+      REQUIRE(inds[0][2] == 6); REQUIRE(inds[1][2] == 3);
+      REQUIRE(inds[0][3] == 7); REQUIRE(inds[1][3] == 7);
+    }
+
+    SECTION("2+ 0+")
+    {
+      //grid3.connect({1, 0}, {2, 0}, {1, 1});
+      auto inds = cartdg::vertex_inds(3, {{2, 0}, {1, 1}});
+      REQUIRE(inds[0][0] == 4); REQUIRE(inds[1][0] == 1);
+      REQUIRE(inds[0][1] == 5); REQUIRE(inds[1][1] == 5);
+      REQUIRE(inds[0][2] == 6); REQUIRE(inds[1][2] == 3);
+      REQUIRE(inds[0][3] == 7); REQUIRE(inds[1][3] == 7);
+    }
+
+    SECTION("0+ 1-")
+    {
+      //grid3.connect({0, 1}, {0, 1}, {1, 0});
+      auto inds = cartdg::vertex_inds(3, {{0, 1}, {1, 0}});
+      REQUIRE(inds[0][0] == 4); REQUIRE(inds[1][0] == 4);
+      REQUIRE(inds[0][1] == 5); REQUIRE(inds[1][1] == 5);
+      REQUIRE(inds[0][2] == 6); REQUIRE(inds[1][2] == 0);
+      REQUIRE(inds[0][3] == 7); REQUIRE(inds[1][3] == 1);
+    }
+
+    SECTION("0- 1+")
+    {
+      //grid3.connect({1, 0}, {0, 1}, {0, 1});
+      auto inds = cartdg::vertex_inds(3, {{0, 1}, {0, 1}});
+      REQUIRE(inds[0][0] == 2); REQUIRE(inds[1][0] == 2);
+      REQUIRE(inds[0][1] == 3); REQUIRE(inds[1][1] == 3);
+      REQUIRE(inds[0][2] == 6); REQUIRE(inds[1][2] == 0);
+      REQUIRE(inds[0][3] == 7); REQUIRE(inds[1][3] == 1);
+    }
+
+    SECTION("1+ 0-")
+    {
+      //grid3.connect({0, 1}, {1, 0}, {1, 0});
+      auto inds = cartdg::vertex_inds(3, {{1, 0}, {1, 0}});
+      REQUIRE(inds[0][0] == 2); REQUIRE(inds[1][0] == 2);
+      REQUIRE(inds[0][1] == 3); REQUIRE(inds[1][1] == 3);
+      REQUIRE(inds[0][2] == 6); REQUIRE(inds[1][2] == 0);
+      REQUIRE(inds[0][3] == 7); REQUIRE(inds[1][3] == 1);
+    }
+
+    SECTION("1+ 2-")
+    {
+      //grid3.connect({0, 1}, {1, 2}, {1, 0});
+      auto inds = cartdg::vertex_inds(3, {{1, 2}, {1, 0}});
+      REQUIRE(inds[0][0] == 2); REQUIRE(inds[1][0] == 2);
+      REQUIRE(inds[0][1] == 3); REQUIRE(inds[1][1] == 0);
+      REQUIRE(inds[0][2] == 6); REQUIRE(inds[1][2] == 6);
+      REQUIRE(inds[0][3] == 7); REQUIRE(inds[1][3] == 4);
+    }
+
+    SECTION("2+ 0-")
+    {
+      //grid3.connect({0, 1}, {2, 0}, {1, 0});
+      auto inds = cartdg::vertex_inds(3, {{2, 0}, {1, 0}});
+      REQUIRE(inds[0][0] == 1); REQUIRE(inds[1][0] == 1);
+      REQUIRE(inds[0][1] == 3); REQUIRE(inds[1][1] == 3);
+      REQUIRE(inds[0][2] == 5); REQUIRE(inds[1][2] == 0);
+      REQUIRE(inds[0][3] == 7); REQUIRE(inds[1][3] == 2);
+    }
+
+    SECTION("2D")
+    {
+      //grid2.connect({0, 1}, {0, 0}, {1, 0});
+      auto inds = cartdg::vertex_inds(2, {{0, 0}, {1, 0}});
+      REQUIRE(inds[0][0] == 2); REQUIRE(inds[1][0] == 0);
+      REQUIRE(inds[0][1] == 3); REQUIRE(inds[1][1] == 1);
+
+      //grid2.connect({0, 2}, {0, 1}, {0, 1});
+      inds = cartdg::vertex_inds(2, {{0, 1}, {0, 1}});
+      REQUIRE(inds[0][0] == 0); REQUIRE(inds[1][0] == 3);
+      REQUIRE(inds[0][1] == 1); REQUIRE(inds[1][1] == 1);
+
+      //grid2.connect({0, 3}, {1, 0}, {0, 0});
+      inds = cartdg::vertex_inds(2, {{1, 0}, {0, 0}});
+      REQUIRE(inds[0][0] == 0); REQUIRE(inds[1][0] == 0);
+      REQUIRE(inds[0][1] == 2); REQUIRE(inds[1][1] == 1);
+    }
+  }
+}
