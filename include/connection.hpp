@@ -58,6 +58,32 @@ class Con_dir<Element>
   operator Con_dir<Deformed_element>() const {return {{i_dim, i_dim}, {1, 0}};}
 };
 
+inline std::array<std::vector<int>, 2> vertex_inds(int n_dim, Con_dir<Deformed_element> direction)
+{
+  // get vertices involved
+  std::array<std::vector<int>, 2> inds;
+  int n_vert = custom_math::pow(2, n_dim - 1);
+  std::array<int, 2> strides;
+  for (int i_side = 0; i_side < 2; ++i_side) {
+    strides[i_side] = std::pow(2, n_dim - direction.i_dim[i_side] - 1);
+    for (int i_vertex = 0; i_vertex < 2*n_vert; ++i_vertex) {
+      if ((i_vertex/strides[i_side])%2 == int(direction.face_sign[i_side])) {
+        inds[i_side].push_back(i_vertex);
+      }
+    }
+  }
+  // reorder as necessary
+  if (direction.flip_tangential()) {
+    for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
+      // this arithmetic is equivalent to swapping vertices along dimension i_dim[0]
+      int coord = (inds[1][i_vert]/strides[0])%2;
+      inds[1][i_vert] += ((coord + 1)%2 - coord)*strides[0];
+    }
+  }
+  if (direction.transpose()) std::swap(inds[1][1], inds[1][2]);
+  return inds;
+}
+
 /*
  * Represents a connection between faces (which may belong to elements or something else like
  * boundary conditions or `Refined_face`s).
@@ -111,6 +137,10 @@ class Element_face_connection : public Element_connection, public Face_connectio
     int face_size = params.n_dof()/params.row_size;
     for (int i_side : {0, 1}) {
       faces[i_side] = elements[i_side]->face() + dir.i_face(i_side)*face_size;
+    }
+    auto inds = vertex_inds(elements[0]->storage_params().n_dim, dir);
+    for (unsigned i_vert = 0; i_vert < inds[0].size(); ++i_vert) {
+      elements[0]->vertex(inds[0][i_vert]).eat(elements[1]->vertex(inds[1][i_vert]));
     }
   }
   virtual Con_dir<element_t> direction() {return dir;}
@@ -169,32 +199,6 @@ class Refined_connection
   // fetch an object represting a connection between the face of a fine element and one of the mortar faces
   Fine_connection& connection(int i_fine) {return fine_cons[i_fine];}
 };
-
-inline std::array<std::vector<int>, 2> vertex_inds(int n_dim, Con_dir<Deformed_element> direction)
-{
-  // get vertices involved
-  std::array<std::vector<int>, 2> inds;
-  int n_vert = custom_math::pow(2, n_dim - 1);
-  std::array<int, 2> strides;
-  for (int i_side = 0; i_side < 2; ++i_side) {
-    strides[i_side] = std::pow(2, n_dim - direction.i_dim[i_side] - 1);
-    for (int i_vertex = 0; i_vertex < 2*n_vert; ++i_vertex) {
-      if ((i_vertex/strides[i_side])%2 == int(direction.face_sign[i_side])) {
-        inds[i_side].push_back(i_vertex);
-      }
-    }
-  }
-  // reorder as necessary
-  if (direction.flip_tangential()) {
-    for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
-      // this arithmetic is equivalent to swapping vertices along dimension i_dim[0]
-      int coord = (inds[1][i_vert]/strides[0])%2;
-      inds[1][i_vert] += ((coord + 1)%2 - coord)*strides[0];
-    }
-  }
-  if (direction.transpose()) std::swap(inds[1][1], inds[1][2]);
-  return inds;
-}
 
 }
 #endif
