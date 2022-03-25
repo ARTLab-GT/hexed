@@ -180,8 +180,10 @@ class Refined_connection
     refined_face{params, coarse->face() + con_dir.i_face(rev)*params.n_dof()/params.row_size}
   {
     if (int(fine.size()) != params.n_vertices()/2) throw std::runtime_error("wrong number of elements in `Refined_connection`");
-    for (unsigned i_face = 0; i_face < fine.size(); ++i_face) {
-      fine_cons.emplace_back(*this, refined_face.fine_face(i_face), *fine[i_face]);
+    std::vector<int> permutation_inds {face_vertex_inds(params.n_dim, con_dir)};
+    for (int i_face = 0; i_face < int(fine.size()); ++i_face) {
+      int inds [] {i_face, permutation_inds[i_face]};
+      fine_cons.emplace_back(*this, refined_face.fine_face(inds[reverse_order]), *fine[inds[!reverse_order]]);
     }
   }
   Con_dir<element_t> direction() {return dir;}

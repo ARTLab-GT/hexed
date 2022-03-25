@@ -191,9 +191,9 @@ TEST_CASE("Refined_connection<Deformed_element>")
     REQUIRE(fine_con.direction().i_dim[0] == 0);
     REQUIRE(fine_con.direction().i_dim[1] == 2);
     REQUIRE(&fine_con.element(0) == &coarse);
-    REQUIRE(&fine_con.element(1) == &elem1);
+    REQUIRE(&fine_con.element(1) == &elem2); // note transposed
     REQUIRE(fine_con.face(0) == con.refined_face.fine_face(1));
-    REQUIRE(fine_con.face(1) == elem1.face() + (2*2 + 1)*5*6*6);
+    REQUIRE(fine_con.face(1) == elem2.face() + (2*2 + 1)*5*6*6);
   }
   SECTION("reversed")
   {
@@ -206,6 +206,6 @@ TEST_CASE("Refined_connection<Deformed_element>")
     REQUIRE(&fine_con.element(0) == &elem1);
     REQUIRE(&fine_con.element(1) == &coarse);
     REQUIRE(fine_con.face(0) == elem1.face() + (2*0 + 1)*5*6*6);
-    REQUIRE(fine_con.face(1) == con.refined_face.fine_face(1));
+    REQUIRE(fine_con.face(1) == con.refined_face.fine_face(2)); // note transposed
   }
 }
