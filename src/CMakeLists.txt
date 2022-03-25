@@ -3,6 +3,7 @@ target_sources(cartdg PRIVATE
 Accessible_mesh.cpp
 Basis.cpp
 Boundary_condition.cpp
+connection.cpp
 Deformed_element.cpp
 Deformed_grid.cpp
 Domain_func.cpp

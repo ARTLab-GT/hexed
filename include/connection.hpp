@@ -58,31 +58,15 @@ class Con_dir<Element>
   operator Con_dir<Deformed_element>() const {return {{i_dim, i_dim}, {1, 0}};}
 };
 
-inline std::array<std::vector<int>, 2> vertex_inds(int n_dim, Con_dir<Deformed_element> direction)
-{
-  // get vertices involved
-  std::array<std::vector<int>, 2> inds;
-  int n_vert = custom_math::pow(2, n_dim - 1);
-  std::array<int, 2> strides;
-  for (int i_side = 0; i_side < 2; ++i_side) {
-    strides[i_side] = std::pow(2, n_dim - direction.i_dim[i_side] - 1);
-    for (int i_vertex = 0; i_vertex < 2*n_vert; ++i_vertex) {
-      if ((i_vertex/strides[i_side])%2 == int(direction.face_sign[i_side])) {
-        inds[i_side].push_back(i_vertex);
-      }
-    }
-  }
-  // reorder as necessary
-  if (direction.flip_tangential()) {
-    for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
-      // this arithmetic is equivalent to swapping vertices along dimension i_dim[0]
-      int coord = (inds[1][i_vert]/strides[0])%2;
-      inds[1][i_vert] += ((coord + 1)%2 - coord)*strides[0];
-    }
-  }
-  if (direction.transpose()) std::swap(inds[1][1], inds[1][2]);
-  return inds;
-}
+// The indices required to permute the vertices of face 1 of a connection to match face 0.
+std::vector<int> face_vertex_inds(int n_dim, Con_dir<Deformed_element> direction);
+/*
+ * The indices of the vertices which participate in a deformed connection, ordered
+ * so that vertices which align in physical space correspond in the lists
+ * and the vertices of face 0 are ordered in the same way as they would be if the face
+ * were considered in isolation.
+ */
+std::array<std::vector<int>, 2> vertex_inds(int n_dim, Con_dir<Deformed_element> direction);
 
 /*
  * Represents a connection between faces (which may belong to elements or something else like
@@ -185,7 +169,12 @@ class Refined_connection
 
   public:
   Refined_face refined_face;
-  // if `reverse_order` is true, the fine elements will come before coarse in the connection. Otherwise, coarse will come first
+  /*
+   * if `reverse_order` is true, the fine elements will come before coarse in the connection.
+   * Otherwise, coarse will come first.
+   * Assumes fine elements are in the natural row-major order that they would be listed in a context
+   * other than a connection.
+   */
   Refined_connection(element_t* coarse, std::vector<element_t*> fine, Con_dir<element_t> con_dir, bool reverse_order=false)
   : c{*coarse}, params{coarse->storage_params()}, dir{con_dir}, rev{reverse_order},
     refined_face{params, coarse->face() + con_dir.i_face(rev)*params.n_dof()/params.row_size}
