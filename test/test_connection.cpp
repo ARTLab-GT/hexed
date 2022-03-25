@@ -194,6 +194,11 @@ TEST_CASE("Refined_connection<Deformed_element>")
     REQUIRE(&fine_con.element(1) == &elem2); // note transposed
     REQUIRE(fine_con.face(0) == con.refined_face.fine_face(1));
     REQUIRE(fine_con.face(1) == elem2.face() + (2*2 + 1)*5*6*6);
+    REQUIRE(&coarse.vertex(4) == &elem0.vertex(1));
+    REQUIRE(&coarse.vertex(5) == &elem2.vertex(5));
+    REQUIRE(&coarse.vertex(6) == &elem1.vertex(3));
+    REQUIRE(&coarse.vertex(7) == &elem3.vertex(7));
+    REQUIRE(&coarse.vertex(5) != &elem0.vertex(5));
   }
   SECTION("reversed")
   {
@@ -207,5 +212,10 @@ TEST_CASE("Refined_connection<Deformed_element>")
     REQUIRE(&fine_con.element(1) == &coarse);
     REQUIRE(fine_con.face(0) == elem1.face() + (2*0 + 1)*5*6*6);
     REQUIRE(fine_con.face(1) == con.refined_face.fine_face(2)); // note transposed
+    REQUIRE(&elem0.vertex(4) == &coarse.vertex(1));
+    REQUIRE(&elem1.vertex(5) == &coarse.vertex(5));
+    REQUIRE(&elem2.vertex(6) == &coarse.vertex(3));
+    REQUIRE(&elem3.vertex(7) == &coarse.vertex(7));
+    REQUIRE(&elem0.vertex(5) != &coarse.vertex(5));
   }
 }

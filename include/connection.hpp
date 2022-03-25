@@ -181,9 +181,13 @@ class Refined_connection
   {
     if (int(fine.size()) != params.n_vertices()/2) throw std::runtime_error("wrong number of elements in `Refined_connection`");
     std::vector<int> permutation_inds {face_vertex_inds(params.n_dim, con_dir)};
+    auto vert_inds {vertex_inds(params.n_dim, con_dir)};
     for (int i_face = 0; i_face < int(fine.size()); ++i_face) {
       int inds [] {i_face, permutation_inds[i_face]};
       fine_cons.emplace_back(*this, refined_face.fine_face(inds[reverse_order]), *fine[inds[!reverse_order]]);
+      auto& vert0 = coarse->vertex(vert_inds[reverse_order][i_face]);
+      auto& vert1 = fine[inds[!reverse_order]]->vertex(vert_inds[!reverse_order][i_face]);
+      vert0.eat(vert1);
     }
   }
   Con_dir<element_t> direction() {return dir;}
