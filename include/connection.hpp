@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 #include "Deformed_element.hpp"
 #include "Refined_face.hpp"
+#include "Hanging_vertex_matcher.hpp"
 #include "math.hpp"
 
 namespace cartdg
@@ -164,20 +165,33 @@ class Refined_connection
   element_t& c;
   Storage_params params;
   Con_dir<element_t> dir;
+  Con_dir<Deformed_element> def_dir;
   bool rev;
   std::vector<Fine_connection> fine_cons;
+  static std::vector<Element*> to_elementstar(std::vector<element_t*> elems)
+  {
+    std::vector<Element*> converted;
+    for (element_t* ptr : elems) converted.push_back(ptr);
+    return converted;
+  }
 
   public:
   Refined_face refined_face;
+  Hanging_vertex_matcher matcher;
   /*
    * if `reverse_order` is true, the fine elements will come before coarse in the connection.
    * Otherwise, coarse will come first.
    * Assumes fine elements are in the natural row-major order that they would be listed in a context
    * other than a connection.
    */
-  Refined_connection(element_t* coarse, std::vector<element_t*> fine, Con_dir<element_t> con_dir, bool reverse_order=false)
-  : c{*coarse}, params{coarse->storage_params()}, dir{con_dir}, rev{reverse_order},
-    refined_face{params, coarse->face() + con_dir.i_face(rev)*params.n_dof()/params.row_size}
+  Refined_connection(element_t* coarse, std::vector<element_t*> fine, Con_dir<element_t> con_dir, bool reverse_order=false) :
+    c{*coarse},
+    params{coarse->storage_params()},
+    dir{con_dir},
+    def_dir{Con_dir<Deformed_element>(dir)},
+    rev{reverse_order},
+    refined_face{params, coarse->face() + con_dir.i_face(rev)*params.n_dof()/params.row_size},
+    matcher{to_elementstar(fine), def_dir.i_dim[!reverse_order], def_dir.face_sign[!reverse_order]}
   {
     if (int(fine.size()) != params.n_vertices()/2) throw std::runtime_error("wrong number of elements in `Refined_connection`");
     std::vector<int> permutation_inds {face_vertex_inds(params.n_dim, con_dir)};

@@ -199,6 +199,11 @@ TEST_CASE("Refined_connection<Deformed_element>")
     REQUIRE(&coarse.vertex(6) == &elem1.vertex(3));
     REQUIRE(&coarse.vertex(7) == &elem3.vertex(7));
     REQUIRE(&coarse.vertex(5) != &elem0.vertex(5));
+    elem0.vertex_time_step_scale()[1] = 0.;
+    con.matcher.match(&cartdg::Element::vertex_time_step_scale);
+    REQUIRE(elem1.vertex_time_step_scale()[1] == Approx(0.5));
+    REQUIRE(elem2.vertex_time_step_scale()[3] == Approx(0.75));
+    REQUIRE(elem2.vertex_time_step_scale()[2] == Approx(1.));
   }
   SECTION("reversed")
   {
