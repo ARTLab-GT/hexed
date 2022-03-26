@@ -24,7 +24,8 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size) :
   bc_v{bound_conds},
   bound_face_cons{car.bound_face_con_view, def.bound_face_con_view},
   def_face_cons{def.elem_face_con_v, bound_face_cons},
-  ref_face_v{car.refined_faces(), def.refined_faces()}
+  ref_face_v{car.refined_faces(), def.refined_faces()},
+  matcher_v{car.hanging_vertex_matchers(), def.hanging_vertex_matchers()}
 {
   def.face_con_v = def_face_cons;
 }

@@ -30,6 +30,7 @@ class Accessible_mesh : public Mesh
   Concatenation<Face_connection<Deformed_element>&> bound_face_cons;
   Concatenation<Face_connection<Deformed_element>&> def_face_cons;
   Concatenation<Refined_face&> ref_face_v;
+  Concatenation<Hanging_vertex_matcher&> matcher_v;
   std::vector<Vertex::Non_transferable_ptr> vert_ptrs;
 
   public:
@@ -51,6 +52,7 @@ class Accessible_mesh : public Mesh
   virtual void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n);
   Sequence<Boundary_condition&>& boundary_conditions() {return bc_v;}
   inline Sequence<Refined_face&>& refined_faces() {return ref_face_v;}
+  inline Sequence<Hanging_vertex_matcher&>& hanging_vertex_matchers() {return matcher_v;}
   virtual Connection_validity valid();
   typedef Vector_view<Vertex&, Vertex::Non_transferable_ptr, &ptr_convert<Vertex&, Vertex::Non_transferable_ptr>> vertex_view;
   vertex_view vertices();

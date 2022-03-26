@@ -23,6 +23,7 @@ class View_by_type
   virtual Sequence<Face_connection<element_t>&>& face_connections() = 0;
   virtual Sequence<Element_connection&>& element_connections() = 0;
   virtual Sequence<Refined_face&>& refined_faces() = 0;
+  virtual Sequence<Hanging_vertex_matcher&>& hanging_vertex_matchers() = 0;
   virtual Sequence<Boundary_connection&>& boundary_connections() = 0;
 };
 
@@ -64,7 +65,9 @@ class Mesh_by_type : public View_by_type<element_t>
   static Vector_view<Face_connection<element_t>&, Element_face_connection<element_t>> empty_con_view;
   Connection_view<Element_connection&> elem_con_v;
   static Refined_face& ref_face(Refined_connection<element_t>& ref_con) {return ref_con.refined_face;}
+  static Hanging_vertex_matcher& matcher(Refined_connection<element_t>& ref_con) {return ref_con.matcher;}
   Vector_view<Refined_face&, Refined_connection<element_t>, &ref_face> ref_v;
+  Vector_view<Hanging_vertex_matcher&, Refined_connection<element_t>, &matcher> matcher_v;
   Vector_view<Boundary_connection&, Typed_bound_connection<element_t>> bound_con_v;
   Vector_view<Face_connection<Deformed_element>&, Typed_bound_connection<element_t>> bound_face_con_view;
   Concatenation<Face_connection<element_t>&> face_con_v;
@@ -78,6 +81,7 @@ class Mesh_by_type : public View_by_type<element_t>
     elem_face_con_v{*this},
     elem_con_v{*this},
     ref_v{ref_face_cons},
+    matcher_v{ref_face_cons},
     bound_con_v{bound_cons},
     bound_face_con_view{bound_cons},
     face_con_v{elem_face_con_v, empty_con_view}
@@ -88,6 +92,7 @@ class Mesh_by_type : public View_by_type<element_t>
   virtual Sequence<Face_connection<element_t>&>& face_connections() {return face_con_v;}
   virtual Sequence<Element_connection&>& element_connections() {return elem_con_v;}
   virtual Sequence<Refined_face&>& refined_faces() {return ref_v;}
+  virtual Sequence<Hanging_vertex_matcher&>& hanging_vertex_matchers() {return matcher_v;}
   virtual Sequence<Boundary_connection&>& boundary_connections() {return bound_con_v;}
 };
 
