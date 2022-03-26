@@ -1,5 +1,6 @@
 #include <Accessible_mesh.hpp>
 #include <math.hpp>
+#include <erase_if.hpp>
 
 namespace cartdg
 {
@@ -132,6 +133,7 @@ Mesh::Connection_validity Accessible_mesh::valid()
 
 Accessible_mesh::vertex_view Accessible_mesh::vertices()
 {
+  erase_if(vert_ptrs, &Vertex::Non_transferable_ptr::is_null);
   return vert_ptrs;
 }
 

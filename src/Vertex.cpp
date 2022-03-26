@@ -192,7 +192,7 @@ Vertex& Vertex::Non_transferable_ptr::operator*()
   return *ptr;
 }
 
-Vertex::Non_transferable_ptr::operator bool()
+Vertex::Non_transferable_ptr::operator bool() const
 {
   return ptr;
 }

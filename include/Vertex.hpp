@@ -106,12 +106,13 @@ class Vertex::Non_transferable_ptr
   Non_transferable_ptr& operator=(const Non_transferable_ptr&);
 
   // return `true` if vertex `this` points to exists and `false` if it does not
-  operator bool();
+  operator bool() const;
   // Warning: if `operator bool` is `false` the following will return `nullptr`!
   Vertex* operator->();
   Vertex& operator*();
   // assert that the vertex `this` points to no longer exists. `operator bool` will now return `false`
   void nullify();
+  static inline bool is_null(const Non_transferable_ptr& ntptr) {return !ntptr;}
 };
 
 }
