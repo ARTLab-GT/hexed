@@ -270,7 +270,7 @@ TEST_CASE("Accessible_mesh")
   {
     // check that the number of vertices is correct
     auto vertices {mesh.vertices()};
-    REQUIRE(vertices.size() == 4*mesh.elements().size());
+    REQUIRE(vertices.size() == 8*mesh.elements().size());
     // spot-check: vertex 2 of element sn1 should be there
     int count = 0;
     for (int i_vert = 0; i_vert < vertices.size(); ++i_vert) {
@@ -279,6 +279,6 @@ TEST_CASE("Accessible_mesh")
     REQUIRE(count == 1);
     // test that eaten vertices get dropped from the list
     mesh.connect_cartesian(0, {sn0, sn1}, {0});
-    REQUIRE(mesh.vertices().size() == 4*mesh.elements().size() - 2);
+    REQUIRE(mesh.vertices().size() == 8*mesh.elements().size() - 4);
   }
 }

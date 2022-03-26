@@ -13,7 +13,7 @@ Element_container& Accessible_mesh::container(bool is_deformed)
 
 Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size) :
   params{params_arg},
-  n_vert{custom_math::pow(2, params.n_dim - 1)},
+  n_vert{custom_math::pow(2, params.n_dim)},
   root_sz{root_size},
   car{params, root_sz},
   def{params, root_sz},
