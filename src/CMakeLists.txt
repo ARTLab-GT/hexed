@@ -22,6 +22,7 @@ Qpoint_func.cpp
 Refined_face.cpp
 Regular_grid.cpp
 Solution.cpp
+Solver.cpp
 Spacetime_func.cpp
 Stopwatch.cpp
 Stopwatch_tree.cpp

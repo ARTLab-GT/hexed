@@ -30,6 +30,7 @@ test_Regular_grid.cpp
 test_shock_capturing.cpp
 test_sinusoid.cpp
 test_Solution.cpp
+test_Solver.cpp
 test_Stopwatch.cpp
 test_Stopwatch_tree.cpp
 test_Storage_params.cpp
