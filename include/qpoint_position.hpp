@@ -2,7 +2,7 @@
 #define CARTDG_QPOINT_POSITION_HPP_
 
 #include <vector>
-#include <Element.hpp>
+#include <Deformed_element.hpp>
 #include <Basis.hpp>
 
 namespace cartdg
@@ -14,6 +14,13 @@ namespace cartdg
  * Jacobian will be the identity regardless of any deformity reflected in the qpoint position!
  */
 std::array<double, 3> qpoint_position(Element&, const Basis&, int i_qpoint);
+
+/*
+ * Sets the Jacobian of a deformed element based on the current position of the quadrature points.
+ * Jacobian is written to the `jacobian()` data member.
+ * Also sets the `vertex_time_step_scale` member based on the Jacobian.
+ */
+void set_jacobian(Deformed_element&, const Basis&);
 
 }
 #endif

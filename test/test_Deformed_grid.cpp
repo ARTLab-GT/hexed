@@ -131,47 +131,6 @@ TEST_CASE("Deformed grid class")
 
   SECTION("Jacobian calculation")
   {
-    double* jac;
-    grid2.add_element({0, 0});
-    grid2.add_element({1, 1});
-    grid2.deformed_element(0).vertex(3).pos = {0.8*0.2, 0.8*0.2, 0.};
-    grid2.deformed_element(1).node_adjustments()[6 + 1] = 0.1;
-    grid2.calc_jacobian();
-    // jacobian is correct
-    jac = grid2.deformed_element(0).jacobian();
-    REQUIRE(jac[0*9    ] == Approx(1.));
-    REQUIRE(jac[1*9    ] == Approx(0.));
-    REQUIRE(jac[2*9    ] == Approx(0.));
-    REQUIRE(jac[3*9    ] == Approx(1.));
-    REQUIRE(jac[0*9 + 6] == Approx(1.));
-    REQUIRE(jac[1*9 + 6] == Approx(-0.2));
-    REQUIRE(jac[2*9 + 6] == Approx(0.));
-    REQUIRE(jac[3*9 + 6] == Approx(0.8));
-    REQUIRE(jac[0*9 + 8] == Approx(0.8));
-    REQUIRE(jac[1*9 + 8] == Approx(-0.2));
-    REQUIRE(jac[2*9 + 8] == Approx(-0.2));
-    REQUIRE(jac[3*9 + 8] == Approx(0.8));
-    jac = grid2.deformed_element(1).jacobian();
-    REQUIRE(jac[0*9 + 5] == Approx(1.));
-    REQUIRE(jac[1*9 + 5] == Approx(0.));
-    REQUIRE(jac[2*9 + 5] == Approx(0.));
-    REQUIRE(jac[3*9 + 5] == Approx(0.9));
-    // time step is correct
-    // At corner 3, diagonal is locally scaled by 1 - 2*(1 - 0.8) = 0.6 = (min singular value)
-    REQUIRE(grid2.element(0).vertex_time_step_scale()[0] == 1.);
-    REQUIRE(grid2.element(0).vertex_time_step_scale()[3] == Approx(0.6));
-
-    grid3.add_element({0, 0, 0});
-    grid3.deformed_element(0).vertex(7).pos = {0.8*0.2, 0.8*0.2, 0.8*0.2};
-    grid3.calc_jacobian();
-    jac = grid3.deformed_element(0).jacobian();
-    REQUIRE(jac[0] == 1.);
-    REQUIRE(jac[0*27 + 26] == Approx( 0.8));
-    REQUIRE(jac[1*27 + 26] == Approx(-0.2));
-    REQUIRE(jac[2*27 + 26] == Approx(-0.2));
-    REQUIRE(jac[7*27 + 26] == Approx(-0.2));
-    REQUIRE(jac[8*27 + 26] == Approx( 0.8));
-
     SECTION("interface synch")
     {
       cartdg::Gauss_lobatto lin_basis {2};
