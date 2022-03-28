@@ -12,9 +12,9 @@ void Solver::initialize(const Spacetime_func& func)
 {
 }
 
-std::vector<double> Solver::sample(const Qpoint_func& func, std::vector<double> pos)
+std::vector<double> Solver::integral_field(const Qpoint_func& integrand)
 {
-  return {0.};
+  return {};
 }
 
 }
