@@ -4,8 +4,12 @@
 namespace cartdg
 {
 
-Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size)
-: params(params_arg), n_dim(params.n_dim), n_dof(params.n_dof()), n_vert(params.n_vertices()),
+Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size) :
+  params(params_arg),
+  n_dim(params.n_dim),
+  nom_pos(n_dim, 0),
+  n_dof(params.n_dof()),
+  n_vert(params.n_vertices()),
   data_size{params.n_stage*n_dof + n_dim*2*n_dof/params.row_size + params.n_qpoint()},
   nom_sz{mesh_size},
   data{Eigen::VectorXd::Zero(data_size)},
@@ -17,7 +21,10 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   // set position of vertex 0
   std::array<double, 3> first_pos;
   int n_pos_set = std::min<int>(pos.size(), n_dim);
-  for (int i_dim = 0; i_dim < n_pos_set; ++i_dim) first_pos[i_dim] = pos[i_dim]*mesh_size;
+  for (int i_dim = 0; i_dim < n_pos_set; ++i_dim) {
+    nom_pos[i_dim] = pos[i_dim];
+    first_pos[i_dim] = pos[i_dim]*mesh_size;
+  }
   for (int i_dim = n_pos_set; i_dim < 3; ++i_dim) first_pos[i_dim] = 0.;
   // construct vertices
   for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert)
@@ -42,6 +49,16 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
 Storage_params Element::storage_params()
 {
   return params;
+}
+
+std::vector<double> Element::position(const Basis& basis, int i_qpoint)
+{
+  std::vector<double> pos;
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+    const int stride = custom_math::pow(params.row_size, params.n_dim - i_dim - 1);
+    pos.push_back((basis.node((i_qpoint/stride)%params.row_size) + nom_pos[i_dim])*nom_sz);
+  }
+  return pos;
 }
 
 double* Element::stage(int i_stage)

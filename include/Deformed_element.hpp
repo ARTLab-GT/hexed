@@ -25,6 +25,9 @@ class Deformed_element : public Element
    * may be modified later.
    */
   Deformed_element(Storage_params, std::vector<int> pos={}, double mesh_size=1.);
+  virtual std::vector<double> position(const Basis&, int i_qpoint);
+  // sets the Jacobian based on the current vertex locations and face node adjustments
+  void set_jacobian(const Basis& basis);
   // Pointer to jacobian data. Use this for performance-cricial applications.
   double* jacobian(); // Layout: [i_dim][j_dim][i_qpoint]
   virtual double jacobian(int i_dim, int j_dim, int i_qpoint);

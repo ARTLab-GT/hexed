@@ -18,7 +18,6 @@ Kernel_settings.cpp
 math.cpp
 Output_data.cpp
 Physical_basis.cpp
-qpoint_position.cpp
 Qpoint_func.cpp
 Refined_face.cpp
 Regular_grid.cpp

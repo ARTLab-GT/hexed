@@ -25,7 +25,6 @@ test_neighbor.cpp
 test_math.cpp
 test_observing.cpp
 test_Physical_basis.cpp
-test_qpoint_position.cpp
 test_Refined_face.cpp
 test_Regular_grid.cpp
 test_shock_capturing.cpp

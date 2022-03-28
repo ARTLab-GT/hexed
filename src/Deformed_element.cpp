@@ -1,4 +1,5 @@
 #include <Deformed_element.hpp>
+#include <math.hpp>
 
 namespace cartdg
 {
@@ -7,6 +8,28 @@ Deformed_element::Deformed_element(Storage_params params, std::vector<int> pos, 
 : Element{params, pos, mesh_size}, n_qpoint{params.n_qpoint()}, jac{n_dim*n_dim*n_qpoint},
   node_adj{Eigen::VectorXd::Zero(n_qpoint/params.row_size*n_dim*2)}
 {}
+
+std::vector<double> Deformed_element::position(const Basis& basis, int i_qpoint)
+{
+  std::vector<double> pos (params.n_dim);
+  const int n_vert = params.n_vertices();
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+    Eigen::VectorXd vert_pos {n_vert};
+    for (int i_vert = 0; i_vert < n_vert; ++i_vert) vert_pos[i_vert] = vertex(i_vert).pos[i_dim];
+    for (int j_dim = params.n_dim - 1; j_dim >= 0; --j_dim) {
+      const int stride = custom_math::pow(params.row_size, params.n_dim - j_dim - 1);
+      double node = basis.node((i_qpoint/stride)%params.row_size);
+      Eigen::Matrix<double, 1, 2> interp {1. - node, node};
+      vert_pos = custom_math::dimension_matvec(interp, vert_pos, j_dim);
+    }
+    pos[i_dim] = vert_pos[0];
+  }
+  return pos;
+}
+
+void Deformed_element::set_jacobian(const Basis& basis)
+{
+}
 
 double* Deformed_element::jacobian()
 {

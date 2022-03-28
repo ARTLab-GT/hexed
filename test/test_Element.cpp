@@ -1,5 +1,6 @@
 #include <catch2/catch.hpp>
 #include <Element.hpp>
+#include <Equidistant.hpp>
 #include "testing_utils.hpp"
 
 TEST_CASE("Element")
@@ -100,5 +101,26 @@ TEST_CASE("Element")
     REQUIRE(element.viscosity()[0] == Approx(0.3));
     REQUIRE(element.viscosity()[1] == Approx(0.));
     REQUIRE(element.viscosity()[3] == Approx(0.2));
+  }
+
+  SECTION("position calculation")
+  {
+    const int row_size = 5;
+    cartdg::Storage_params params {2, 4, 2, row_size};
+    cartdg::Element elem {params, {1, 2}, 0.31};
+    cartdg::Equidistant basis {row_size};
+    // test first and last qpoints
+    REQUIRE(elem.position(basis, 0).size() == 2);
+    REQUIRE(elem.position(basis, 0)[0] == Approx(1*0.31).scale(1.));
+    REQUIRE(elem.position(basis, 0)[1] == Approx(2*0.31).scale(1.));
+    REQUIRE(elem.position(basis, params.n_qpoint() - 1)[0] == Approx(2*0.31).scale(1.));
+    REQUIRE(elem.position(basis, params.n_qpoint() - 1)[1] == Approx(3*0.31).scale(1.));
+    static_assert (row_size%2 == 1); // `row_size` must be odd for the following tests to work
+    // test the qpoint at the midpoint of the positive-dimension0 face (the right-hand face)
+    REQUIRE(elem.position(basis, row_size*(row_size - 1) + row_size/2)[0] == Approx(2*0.31).scale(1.));
+    REQUIRE(elem.position(basis, row_size*(row_size - 1) + row_size/2)[1] == Approx(2.5*0.31).scale(1.));
+    // test the qpoint at the middle of the element (the mean of the vertex positions)
+    REQUIRE(elem.position(basis, params.n_qpoint()/2)[0] == Approx(1.5*0.31).scale(1.));
+    REQUIRE(elem.position(basis, params.n_qpoint()/2)[1] == Approx(2.5*0.31).scale(1.));
   }
 }

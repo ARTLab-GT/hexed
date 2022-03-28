@@ -1,7 +1,6 @@
 #include <cmath>
 #include <Domain_func.hpp>
 #include <Spacetime_func.hpp>
-#include <qpoint_position.hpp>
 
 namespace cartdg
 {
@@ -10,13 +9,10 @@ std::vector<double> Domain_func::operator()(Element& element, const Basis& basis
 {
   Storage_params params {element.storage_params()};
   std::vector<double> qpoint_state;
-  auto pos {qpoint_position(element, basis, i_qpoint)};
-  std::vector<double> qpoint_pos {};
-  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) qpoint_pos.push_back(pos[i_dim]);
   for (int i_var = 0; i_var < params.n_var; ++i_var) {
     qpoint_state.push_back(element.stage(0)[i_var*params.n_qpoint() + i_qpoint]);
   }
-  return operator()(qpoint_pos, time, qpoint_state);
+  return operator()(element.position(basis, i_qpoint), time, qpoint_state);
 }
 
 std::vector<double> Domain_func::operator()(std::vector<double> pos, double time,

@@ -8,6 +8,7 @@
 
 #include "Storage_params.hpp"
 #include "Vertex.hpp"
+#include "Basis.hpp"
 
 namespace cartdg
 {
@@ -23,6 +24,7 @@ class Element
   protected:
   Storage_params params;
   int n_dim;
+  std::vector<int> nom_pos;
   std::vector<Vertex::Transferable_ptr> vertices;
 
   private:
@@ -47,6 +49,7 @@ class Element
   ~Element() = default;
 
   Storage_params storage_params();
+  virtual std::vector<double> position(const Basis&, int i_qpoint); // note: ignores vertex positions
   inline double nominal_size() {return nom_sz;}
   // Pointer to state data for `i_stage`th Runge-Kutta stage.
   double* stage(int i_stage); // Layout: [i_var][i_qpoint]
