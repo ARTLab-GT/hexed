@@ -10,9 +10,9 @@
 class Arbitrary_func : public cartdg::Spacetime_func
 {
   public:
-  virtual int n_var(int n_dim) {return n_dim;}
-  virtual std::string variable_name(int i_var) {return "arbitrary" + std::to_string(i_var);}
-  virtual std::vector<double> operator()(std::vector<double> pos, double time)
+  virtual int n_var(int n_dim) const {return n_dim;}
+  virtual std::string variable_name(int i_var) const {return "arbitrary" + std::to_string(i_var);}
+  virtual std::vector<double> operator()(std::vector<double> pos, double time) const
   {
     auto result = pos;
     double mult [] {-2, 0.3, 4, 0., 0.01};
@@ -277,7 +277,8 @@ TEST_CASE("Jacobian_det_func")
   grid.add_element({0, 1});
   grid.element(1).vertex(3).pos[0] -= 0.1;
   grid.calc_jacobian();
-  cartdg::Jacobian_det_func func;
+  cartdg::Jacobian_det_func jdfunc;
+  cartdg::Qpoint_func& func {jdfunc};
   REQUIRE(func.n_var(2) == 1);
   REQUIRE(func.n_var(3) == 1);
   REQUIRE(func(grid, 0, 0).size() == 1);

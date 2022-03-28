@@ -11,8 +11,8 @@ class Shock_initializer : public cartdg::Spacetime_func
   int dim;
   const std::vector<double> velocity {1., -1., 1.};
   Shock_initializer(int dim_arg) : dim(dim_arg) {}
-  virtual int n_var(int n_dim) {return n_dim + 2;}
-  std::vector<double> operator()(std::vector<double> position, double time)
+  virtual int n_var(int n_dim) const {return n_dim + 2;}
+  std::vector<double> operator()(std::vector<double> position, double time) const
   {
     double mass = 1.;
     double p0 = position[0] - 0.5;
@@ -36,18 +36,19 @@ class Shock_initializer : public cartdg::Spacetime_func
 class Time_step_scaled_residual : public cartdg::Qpoint_func
 {
   public:
-  virtual inline int n_var(int n_dim) {return n_dim + 2;}
-  virtual inline std::string variable_name(int i_var) {return "tss_residual";}
-  virtual std::vector<double> operator()(cartdg::Grid& grid, int i_element, int i_qpoint)
+  virtual inline int n_var(int n_dim) const {return n_dim + 2;}
+  virtual inline std::string variable_name(int i_var) const {return "tss_residual";}
+  virtual std::vector<double> operator()(cartdg::Element& element, const cartdg::Basis& basis, int i_qpoint, double time) const
   {
     std::vector<double> result;
-    for (int i_var = 0; i_var < grid.n_var; ++i_var) {
+    cartdg::Storage_params params {element.storage_params()};
+    for (int i_var = 0; i_var < params.n_var; ++i_var) {
       // cheat and use the RK reference stage to get the initial condition
       double diff = 0.;
       for (int i_stage : {0, 1}) {
-        diff += (1 - 2*i_stage)*grid.element(i_element).stage(i_stage)[i_var*grid.n_qpoint + i_qpoint];
+        diff += (1 - 2*i_stage)*element.stage(i_stage)[i_var*params.n_qpoint() + i_qpoint];
       }
-      result.push_back(diff/grid.element(i_element).time_step_scale()[i_qpoint]);
+      result.push_back(diff/element.time_step_scale()[i_qpoint]);
     }
     return result;
   }

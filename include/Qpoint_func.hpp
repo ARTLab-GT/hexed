@@ -3,6 +3,8 @@
 
 #include <vector>
 #include "Output_data.hpp"
+#include "Element.hpp"
+#include "Basis.hpp"
 
 namespace cartdg
 {
@@ -18,32 +20,33 @@ class Grid;
 class Qpoint_func : virtual public Output_data
 {
   public:
-  virtual std::vector<double> operator()(Grid& grid, int i_element, int i_qpoint) = 0;
+  virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const = 0;
+  virtual std::vector<double> operator()(Grid& grid, int i_element, int i_qpoint) const;
 };
 
 // Returns a vector with one element: the Jacobian determinant at the quadrature point.
 class Jacobian_det_func : public Qpoint_func
 {
   public:
-  virtual inline int n_var(int n_dim) {return 1;}
-  virtual inline std::string variable_name(int i_var) {return "jacobian_determinant";}
-  virtual std::vector<double> operator()(Grid& grid, int i_element, int i_qpoint);
+  virtual inline int n_var(int n_dim) const {return 1;}
+  virtual inline std::string variable_name(int i_var) const {return "jacobian_determinant";}
+  virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const;
 };
 
 class Time_step_scale_func : public Qpoint_func
 {
   public:
-  virtual inline int n_var(int n_dim) {return 1;}
-  virtual inline std::string variable_name(int i_var) {return "time_step_scale";}
-  virtual std::vector<double> operator()(Grid& grid, int i_element, int i_qpoint);
+  virtual inline int n_var(int n_dim) const {return 1;}
+  virtual inline std::string variable_name(int i_var) const {return "time_step_scale";}
+  virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const;
 };
 
 class Viscosity_func : public Qpoint_func
 {
   public:
-  virtual inline int n_var(int n_dim) {return 1;}
-  virtual inline std::string variable_name(int i_var) {return "artificial_visc_coef";}
-  virtual std::vector<double> operator()(Grid& grid, int i_element, int i_qpoint);
+  virtual inline int n_var(int n_dim) const {return 1;}
+  virtual inline std::string variable_name(int i_var) const {return "artificial_visc_coef";}
+  virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const;
 };
 
 }

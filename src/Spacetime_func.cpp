@@ -5,20 +5,20 @@ namespace cartdg
 {
 
 std::vector<double> Spacetime_func::operator()(const std::vector<double> pos, double time,
-                                               const std::vector<double> state)
+                                               const std::vector<double> state) const
 {
   return operator()(pos, time);
 }
 
 Constant_func::Constant_func(std::vector<double> value_arg) : value(value_arg) {}
-std::vector<double> Constant_func::operator()(std::vector<double> pos, double time)
+std::vector<double> Constant_func::operator()(std::vector<double> pos, double time) const
 {
   return value;
 }
 
 Isentropic_vortex::Isentropic_vortex(std::vector<double> state) : freestream(state) {}
 
-std::vector<double> Isentropic_vortex::operator()(std::vector<double> pos, double time)
+std::vector<double> Isentropic_vortex::operator()(std::vector<double> pos, double time) const
 {
   int n_dim = pos.size();
   double mass = freestream[n_dim];
@@ -44,25 +44,25 @@ std::vector<double> Isentropic_vortex::operator()(std::vector<double> pos, doubl
 }
 
 Doublet::Doublet(std::vector<double> freestream_state)
-: freestream{freestream_state}, n_v{int(freestream_state.size())}, n_dim{n_v - 2},
-  freestream_veloc(2)
+: freestream{freestream_state}, n_v{int(freestream_state.size())}, n_dim{n_v - 2}
 {
 }
 
-std::vector<double> Doublet::operator()(std::vector<double> pos, double time)
+std::vector<double> Doublet::operator()(std::vector<double> pos, double time) const
 {
   // compute freestream properties
-  freestream_speed = 0.;
+  double freestream_speed = 0.;
+  std::vector<double> freestream_veloc (2);
   for (int i_dim : {0, 1}) // ignore any axial (i_dim = 3) component of velocity as it does not affect the flowfield
   {
     freestream_veloc[i_dim] = freestream[i_dim]/freestream[n_v - 2];
     freestream_speed += freestream_veloc[i_dim]*freestream_veloc[i_dim];
   }
   freestream_speed = std::sqrt(freestream_speed);
-  angle_of_attack = std::atan2(freestream_veloc[1], freestream_veloc[0]);
+  double angle_of_attack = std::atan2(freestream_veloc[1], freestream_veloc[0]);
   double pres {(heat_rat - 1.)*(freestream[n_v - 1] - 0.5*freestream_speed*freestream_speed*freestream[n_v - 2])};
-  stag_enth_per_mass = (freestream[n_v - 1] + pres)/freestream[n_v - 2];
-  free_enth_per_mass = stag_enth_per_mass - 0.5*freestream_speed*freestream_speed;
+  double stag_enth_per_mass = (freestream[n_v - 1] + pres)/freestream[n_v - 2];
+  double free_enth_per_mass = stag_enth_per_mass - 0.5*freestream_speed*freestream_speed;
 
   std::vector<double> state {freestream}; // init to freestream so that if 3D momentum2 matches freestream
 

@@ -5,8 +5,8 @@
 class Radius_sq : public cartdg::Spacetime_func
 {
   public:
-  virtual inline int n_var(int n_dim) {return 1;}
-  virtual std::vector<double> operator()(std::vector<double> pos, double time)
+  virtual inline int n_var(int n_dim) const {return 1;}
+  virtual std::vector<double> operator()(std::vector<double> pos, double time) const
   {
     double radius_sq = 0.;
     for (unsigned i_dim = 0; i_dim < pos.size(); ++i_dim) radius_sq += pos[i_dim]*pos[i_dim];

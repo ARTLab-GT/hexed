@@ -7,8 +7,8 @@
 class Test_func : public cartdg::Spacetime_func
 {
   public:
-  virtual int n_var(int n_dim) {return 4;}
-  std::vector<double> operator()(std::vector<double> position, double time)
+  virtual int n_var(int n_dim) const {return 4;}
+  std::vector<double> operator()(std::vector<double> position, double time) const
   {
     return std::vector<double> {0.1, 0.2, position[0], 2.5};
   }
@@ -17,9 +17,9 @@ class Test_func : public cartdg::Spacetime_func
 class Arbitrary_integrand : public cartdg::Domain_func
 {
   public:
-  virtual int n_var(int n_dim) {return 3;}
+  virtual int n_var(int n_dim) const {return 3;}
   virtual std::vector<double> operator()(std::vector<double> pos, double time,
-                                         std::vector<double> state)
+                                         std::vector<double> state) const
   {
     return std::vector<double> {pos[0]*pos[0]*pos[1]*pos[1]*pos[1] - state[0] + time, 0., 0.};
   }
