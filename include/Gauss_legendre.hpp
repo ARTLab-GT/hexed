@@ -11,15 +11,15 @@ class Gauss_legendre : public Basis
 {
   public:
   Gauss_legendre (int row_size_arg);
-  virtual double node(int i);
-  virtual Eigen::VectorXd node_weights();
-  virtual Eigen::MatrixXd diff_mat();
-  virtual Eigen::MatrixXd boundary();
-  virtual Eigen::VectorXd orthogonal(int degree);
-  virtual Eigen::MatrixXd prolong  (int i_half);
-  virtual Eigen::MatrixXd restrict (int i_half);
-  virtual double max_cfl_convective();
-  virtual double max_cfl_diffusive();
+  virtual double node(int i) const;
+  virtual Eigen::VectorXd node_weights() const;
+  virtual Eigen::MatrixXd diff_mat() const;
+  virtual Eigen::MatrixXd boundary() const;
+  virtual Eigen::VectorXd orthogonal(int degree) const;
+  virtual Eigen::MatrixXd prolong  (int i_half) const;
+  virtual Eigen::MatrixXd restrict (int i_half) const;
+  virtual double max_cfl_convective() const;
+  virtual double max_cfl_diffusive() const;
 };
 
 }

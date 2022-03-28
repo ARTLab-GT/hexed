@@ -5,19 +5,19 @@ namespace cartdg
 
 Equidistant::Equidistant(int row_size_arg) : Basis(row_size_arg) {}
 
-double Equidistant::node(int i)
+double Equidistant::node(int i) const
 {
   return (double)i/(row_size - 1);
 }
 
-Eigen::VectorXd Equidistant::node_weights()
+Eigen::VectorXd Equidistant::node_weights() const
 {
   throw std::runtime_error("Not implemented.");
   Eigen::VectorXd unused (0);
   return unused;
 }
 
-Eigen::MatrixXd Equidistant::diff_mat()
+Eigen::MatrixXd Equidistant::diff_mat() const
 {
   Eigen::MatrixXd dm (row_size, row_size);
   for (int i_operand = 0; i_operand < row_size; ++i_operand)
@@ -56,7 +56,7 @@ Eigen::MatrixXd Equidistant::diff_mat()
   return dm;
 }
 
-Eigen::MatrixXd Equidistant::boundary()
+Eigen::MatrixXd Equidistant::boundary() const
 {
   Eigen::MatrixXd b {Eigen::MatrixXd::Zero(2, row_size)};
   b(0, 0) = 1.;
@@ -64,7 +64,7 @@ Eigen::MatrixXd Equidistant::boundary()
   return b;
 }
 
-Eigen::VectorXd Equidistant::orthogonal(int degree)
+Eigen::VectorXd Equidistant::orthogonal(int degree) const
 {
   throw std::runtime_error("Not implemented.");
   Eigen::VectorXd unused (0);

@@ -6,7 +6,7 @@ namespace cartdg
 Basis::Basis(int row_size_arg) : row_size(row_size_arg) {}
 Basis::~Basis() {}
 
-Eigen::MatrixXd Basis::interpolate(const Eigen::VectorXd& sample)
+Eigen::MatrixXd Basis::interpolate(const Eigen::VectorXd& sample) const
 {
   Eigen::MatrixXd interp {Eigen::MatrixXd::Ones(sample.size(), row_size)};
   for (int i_node = 0; i_node < row_size; ++i_node)
@@ -22,25 +22,25 @@ Eigen::MatrixXd Basis::interpolate(const Eigen::VectorXd& sample)
   return interp;
 }
 
-Eigen::MatrixXd Basis::prolong (int i_half)
+Eigen::MatrixXd Basis::prolong (int i_half) const
 {
   throw std::runtime_error("Not implemented for base class.");
   return Eigen::MatrixXd::Zero(row_size, row_size);
 }
 
-Eigen::MatrixXd Basis::restrict (int i_half)
+Eigen::MatrixXd Basis::restrict (int i_half) const
 {
   throw std::runtime_error("Not implemented for base class.");
   return Eigen::MatrixXd::Zero(row_size, row_size);
 }
 
-double Basis::max_cfl_convective()
+double Basis::max_cfl_convective() const
 {
   throw std::runtime_error("Not implemented for base class.");
   return 0.;
 }
 
-double Basis::max_cfl_diffusive()
+double Basis::max_cfl_diffusive() const
 {
   throw std::runtime_error("Not implemented for base class.");
   return 0.;

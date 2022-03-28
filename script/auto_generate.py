@@ -264,12 +264,12 @@ const double* const {member_name}s [{max_row_size + 1 - min_row_size}] {{"""
   }}""".format(min_row_size, max_row_size)
 
     text += f"""
-double {name}::node(int i)
+double {name}::node(int i) const
 {{{conditional_block}
   return {name}_lookup::nodes[row_size - {min_row_size}][i];
 }}
 
-Eigen::VectorXd {name}::node_weights()
+Eigen::VectorXd {name}::node_weights() const
 {{{conditional_block}
   Eigen::VectorXd nw (row_size);
   for (int i_node = 0; i_node < row_size; ++i_node)
@@ -279,7 +279,7 @@ Eigen::VectorXd {name}::node_weights()
   return nw;
 }}
 
-Eigen::MatrixXd {name}::diff_mat()
+Eigen::MatrixXd {name}::diff_mat() const
 {{{conditional_block}
   Eigen::MatrixXd dm (row_size, row_size);
   for (int i_entry = 0; i_entry < row_size*row_size; ++i_entry)
@@ -289,7 +289,7 @@ Eigen::MatrixXd {name}::diff_mat()
   return dm;
 }}
 
-Eigen::MatrixXd {name}::boundary()
+Eigen::MatrixXd {name}::boundary() const
 {{{conditional_block}
   Eigen::MatrixXd b {{2, row_size}};
   for (int is_positive : {{0, 1}})
@@ -302,7 +302,7 @@ Eigen::MatrixXd {name}::boundary()
   return b;
 }}
 
-Eigen::VectorXd {name}::orthogonal(int degree)
+Eigen::VectorXd {name}::orthogonal(int degree) const
 {{{conditional_block}
   Eigen::VectorXd orth (row_size);
   for (int i_node = 0; i_node < row_size; ++i_node)
@@ -312,12 +312,12 @@ Eigen::VectorXd {name}::orthogonal(int degree)
   return orth;
 }}
 
-double {name}::max_cfl_convective()
+double {name}::max_cfl_convective() const
 {{{conditional_block}
   return {name}_lookup::max_cfls[row_size - {min_row_size}][0];
 }}
 
-double {name}::max_cfl_diffusive()
+double {name}::max_cfl_diffusive() const
 {{{conditional_block}
   return {name}_lookup::max_cfls[row_size - {min_row_size}][1];
 }}
@@ -325,7 +325,7 @@ double {name}::max_cfl_diffusive()
 
     if "legendre" in name:
         text += f"""
-Eigen::MatrixXd {name}::prolong(int i_half)
+Eigen::MatrixXd {name}::prolong(int i_half) const
 {{{conditional_block}
   Eigen::MatrixXd p (row_size, row_size);
   for (int i_entry = 0; i_entry < row_size*row_size; ++i_entry) {{
@@ -334,7 +334,7 @@ Eigen::MatrixXd {name}::prolong(int i_half)
   return p;
 }}
 
-Eigen::MatrixXd {name}::restrict(int i_half)
+Eigen::MatrixXd {name}::restrict(int i_half) const
 {{{conditional_block}
   Eigen::MatrixXd r (row_size, row_size);
   for (int i_entry = 0; i_entry < row_size*row_size; ++i_entry) {{

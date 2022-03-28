@@ -4,7 +4,7 @@
 namespace cartdg
 {
 
-std::array<double, 3> qpoint_position(Element& element, Basis& basis, int i_qpoint)
+std::array<double, 3> qpoint_position(Element& element, const Basis& basis, int i_qpoint)
 {
   std::array<double, 3> pos;
   Storage_params par {element.storage_params()};

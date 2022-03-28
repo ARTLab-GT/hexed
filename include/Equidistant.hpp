@@ -10,11 +10,11 @@ class Equidistant : public Basis
 {
   public:
   Equidistant(int row_size_arg);
-  virtual double node(int i);
-  virtual Eigen::MatrixXd diff_mat();
-  virtual Eigen::VectorXd node_weights();
-  virtual Eigen::MatrixXd boundary();
-  virtual Eigen::VectorXd orthogonal(int degree);
+  virtual double node(int i) const;
+  virtual Eigen::MatrixXd diff_mat() const;
+  virtual Eigen::VectorXd node_weights() const;
+  virtual Eigen::MatrixXd boundary() const;
+  virtual Eigen::VectorXd orthogonal(int degree) const;
 };
 
 }

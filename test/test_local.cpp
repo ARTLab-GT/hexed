@@ -17,20 +17,20 @@ class Identity_basis : public cartdg::Basis
 {
   public:
   Identity_basis (int row_size_arg) : Basis(row_size_arg) {}
-  double node(int i) { return 0.;}
-  Eigen::MatrixXd diff_mat()
+  double node(int i) const { return 0.;}
+  Eigen::MatrixXd diff_mat() const
   {
     return Eigen::MatrixXd::Identity(row_size, row_size);
   }
-  Eigen::VectorXd node_weights()
+  Eigen::VectorXd node_weights() const
   {
     return Eigen::VectorXd::Ones(row_size);
   }
-  Eigen::MatrixXd boundary()
+  Eigen::MatrixXd boundary() const
   {
     return Eigen::MatrixXd::Zero(2, row_size);
   }
-  Eigen::VectorXd orthogonal(int degree)
+  Eigen::VectorXd orthogonal(int degree) const
   {
     return Eigen::VectorXd::Zero(row_size);
   }
