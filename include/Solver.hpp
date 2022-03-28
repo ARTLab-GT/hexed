@@ -14,6 +14,8 @@ class Solver
 {
   Storage_params params;
   Accessible_mesh acc_mesh;
+  Gauss_legendre basis;
+  double time;
   void share_vertex_data(Element::shareable_value_access, Vertex::reduction = Vertex::vector_max);
 
   public:

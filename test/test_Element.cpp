@@ -67,6 +67,7 @@ TEST_CASE("Element")
     // check that vertices start out in correct location
     cartdg::Storage_params params3d {3, 5, 3, 4};
     cartdg::Element elem3d {params3d, {1, 2, -1}, 0.2};
+    REQUIRE(elem3d.nominal_size() == Approx(0.2));
     assert_equal(elem3d.vertex(0).pos, {0.2, 0.4, -0.2});
     assert_equal(elem3d.vertex(1).pos, {0.2, 0.4,  0. });
     assert_equal(elem3d.vertex(2).pos, {0.2, 0.6, -0.2});

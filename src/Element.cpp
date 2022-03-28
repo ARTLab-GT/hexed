@@ -7,6 +7,7 @@ namespace cartdg
 Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size)
 : params(params_arg), n_dim(params.n_dim), n_dof(params.n_dof()), n_vert(params.n_vertices()),
   data_size{params.n_stage*n_dof + n_dim*2*n_dof/params.row_size + params.n_qpoint()},
+  nom_sz{mesh_size},
   data{Eigen::VectorXd::Zero(data_size)},
   visc_storage{Eigen::VectorXd::Zero(n_vert)}, vertex_tss{Eigen::VectorXd::Ones(n_vert)},
   derivative_storage(params.n_qpoint())

@@ -29,6 +29,7 @@ class Element
   int n_dof;
   int n_vert;
   int data_size;
+  double nom_sz;
   Eigen::VectorXd data;
   Eigen::VectorXd visc_storage;
   Eigen::VectorXd vertex_tss;
@@ -46,6 +47,7 @@ class Element
   ~Element() = default;
 
   Storage_params storage_params();
+  inline double nominal_size() {return nom_sz;}
   // Pointer to state data for `i_stage`th Runge-Kutta stage.
   double* stage(int i_stage); // Layout: [i_var][i_qpoint]
   // pointer to scaling factor for local time step.

@@ -37,9 +37,9 @@ TEST_CASE("Solver")
     SECTION("complex function, simple mesh")
     {
       sol.mesh().add_element(0, false, {0, 0, 0});
-      sol.initialize(cartdg::Constant_func({0.3}));
+      sol.initialize(cartdg::Constant_func({0.3, 0., 0., 0.}));
       auto integral = sol.integral_field(Arbitrary_integrand());
-      REQUIRE(integral.size() == 1);
+      REQUIRE(integral.size() == 3);
       REQUIRE(integral[0] == Approx(std::pow(0.8, 3)/3*std::pow(0.8, 4)/4 - 0.8*0.8*0.3));
     }
   }
