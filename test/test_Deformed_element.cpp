@@ -193,8 +193,8 @@ TEST_CASE("Deformed_elem_con")
     cartdg::Equidistant basis {row_size};
     double* jac;
     cartdg::Storage_params params2 {2, 4, 2, row_size};
-    cartdg::Deformed_element elem0 {params2, {0, 0}};
-    cartdg::Deformed_element elem1 {params2, {1, 1}};
+    cartdg::Deformed_element elem0 {params2, {0, 0}, 0.2};
+    cartdg::Deformed_element elem1 {params2, {1, 1}, 0.2};
     elem0.vertex(3).pos = {0.8*0.2, 0.8*0.2, 0.};
     elem1.node_adjustments()[6 + 1] = 0.1;
     // jacobian is correct
@@ -224,7 +224,7 @@ TEST_CASE("Deformed_elem_con")
     REQUIRE(elem0.vertex_time_step_scale()[3] == Approx(0.6));
 
     cartdg::Storage_params params3 {2, 5, 3, row_size};
-    cartdg::Deformed_element elem2 {params3, {0, 0, 0}};
+    cartdg::Deformed_element elem2 {params3, {0, 0, 0}, 0.2};
     elem2.vertex(7).pos = {0.8*0.2, 0.8*0.2, 0.8*0.2};
     elem2.set_jacobian(basis);
     jac = elem2.jacobian();

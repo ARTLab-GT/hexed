@@ -25,13 +25,13 @@ class Element
   Storage_params params;
   int n_dim;
   std::vector<int> nom_pos;
+  double nom_sz;
   std::vector<Vertex::Transferable_ptr> vertices;
 
   private:
   int n_dof;
   int n_vert;
   int data_size;
-  double nom_sz;
   Eigen::VectorXd data;
   Eigen::VectorXd visc_storage;
   Eigen::VectorXd vertex_tss;

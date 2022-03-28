@@ -29,6 +29,16 @@ std::vector<double> Deformed_element::position(const Basis& basis, int i_qpoint)
 
 void Deformed_element::set_jacobian(const Basis& basis)
 {
+  auto diff_mat = basis.diff_mat();
+  const int n_qpoint = params.n_qpoint();
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+    Eigen::VectorXd pos (n_qpoint);
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) pos(i_qpoint) = position(basis, i_qpoint)[i_dim];
+    for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+      auto jac_entry {jac.segment((i_dim*n_dim + j_dim)*n_qpoint, n_qpoint)};
+      jac_entry = custom_math::dimension_matvec(diff_mat, pos, j_dim)/nom_sz;
+    }
+  }
 }
 
 double* Deformed_element::jacobian()
