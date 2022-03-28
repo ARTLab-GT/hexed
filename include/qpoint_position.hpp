@@ -13,7 +13,7 @@ namespace cartdg
  * quadrature point, based on the positions of the vertices. Warning: for Cartesian elements,
  * Jacobian will be the identity regardless of any deformity reflected in the qpoint position!
  */
-std::array<double, 3> qpoint_position(const Element&, const Basis&, int i_qpoint);
+std::array<double, 3> qpoint_position(Element&, Basis&, int i_qpoint);
 
 }
 #endif

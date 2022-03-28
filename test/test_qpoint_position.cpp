@@ -19,8 +19,8 @@ TEST_CASE("qpoint_position")
   REQUIRE(qpoint_position(elem, basis, params.n_qpoint() - 1)[1] == Approx(.7).scale(1.));
   static_assert (row_size%2 == 1); // `row_size` must be odd for the following tests to work
   // test the qpoint at the midpoint of the positive-dimension0 face (the right-hand face)
-  REQUIRE(qpoint_position(elem, basis, row_size*(row_size/2) - 1)[0] == Approx(1. - 0.2/2).scale(1.));
-  REQUIRE(qpoint_position(elem, basis, row_size*(row_size/2) - 1)[1] == Approx(0.7/2).scale(1.));
+  REQUIRE(qpoint_position(elem, basis, row_size*(row_size - 1) + row_size/2)[0] == Approx(1. - 0.2/2).scale(1.));
+  REQUIRE(qpoint_position(elem, basis, row_size*(row_size - 1) + row_size/2)[1] == Approx(0.7/2).scale(1.));
   // test the qpoint at the middle of the element (the mean of the vertex positions)
   REQUIRE(qpoint_position(elem, basis, params.n_qpoint()/2)[0] == Approx(.5 - 0.2/4).scale(1.));
   REQUIRE(qpoint_position(elem, basis, params.n_qpoint()/2)[1] == Approx(.5 - 0.3/4).scale(1.));
