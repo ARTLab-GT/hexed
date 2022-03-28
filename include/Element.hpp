@@ -28,6 +28,7 @@ class Element
   private:
   int n_dof;
   int n_vert;
+  int data_size;
   Eigen::VectorXd data;
   Eigen::VectorXd visc_storage;
   Eigen::VectorXd vertex_tss;

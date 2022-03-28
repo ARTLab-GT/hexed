@@ -12,4 +12,9 @@ void Solver::initialize(const Spacetime_func& func)
 {
 }
 
+std::vector<double> Solver::sample(const Qpoint_func& func, std::vector<double> pos)
+{
+  return {0.};
+}
+
 }
