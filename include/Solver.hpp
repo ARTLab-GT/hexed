@@ -68,12 +68,6 @@ class Solver
   void visualize_field(const Qpoint_func& output_variables, std::string name);
   // write a visualization file describing all wall surfaces
   void visualize_surface(const Qpoint_func& output_variables, std::string name);
-  /*
-   * Evaluate a function at an arbitrary sample point. If the point is contained in multiple elements,
-   * no guarantees are made as to which element will be sampled. If the point is not contained in
-   * any elements, throws an exception.
-   */
-  std::vector<double> sample(const Qpoint_func&, std::vector<double> pos);
 };
 
 }
