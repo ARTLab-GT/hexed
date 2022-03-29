@@ -22,6 +22,7 @@ test_hll.cpp
 test_Hanging_vertex_matcher.cpp
 test_Iteration_status.cpp
 test_local.cpp
+test_Local_cartesian.cpp
 test_neighbor.cpp
 test_math.cpp
 test_observing.cpp
