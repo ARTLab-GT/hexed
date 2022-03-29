@@ -19,8 +19,7 @@ void Solver::share_vertex_data(Element::shareable_value_access access_func, Vert
 Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
   params{3, n_dim + 2, n_dim, row_size},
   acc_mesh{params, root_mesh_size},
-  basis{row_size},
-  time{0.}
+  basis{row_size}
 {}
 
 void Solver::relax_vertices()
@@ -68,12 +67,17 @@ void Solver::initialize(const Spacetime_func& func)
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
       std::vector<double> pos_vec {};
-      auto state = func(elements[i_elem].position(basis, i_qpoint), time);
+      auto state = func(elements[i_elem].position(basis, i_qpoint), status.flow_time);
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         elements[i_elem].stage(0)[i_var*params.n_qpoint() + i_qpoint] = state[i_var];
       }
     }
   }
+}
+
+Iteration_status Solver::iteration_status()
+{
+  return status;
 }
 
 std::vector<double> Solver::integral_field(const Qpoint_func& integrand)
@@ -95,7 +99,7 @@ std::vector<double> Solver::integral_field(const Qpoint_func& integrand)
     Element& element {elements[i_elem]};
     double volume = custom_math::pow(element.nominal_size(), params.n_dim);
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
-      auto qpoint_integrand {integrand(element, basis, i_qpoint, time)};
+      auto qpoint_integrand {integrand(element, basis, i_qpoint, status.flow_time)};
       for (unsigned i_var = 0; i_var < qpoint_integrand.size(); ++i_var) {
         integral[i_var] += weights[i_qpoint]*volume*qpoint_integrand[i_var]*element.jacobian_determinant(i_qpoint);
       }
@@ -106,7 +110,7 @@ std::vector<double> Solver::integral_field(const Qpoint_func& integrand)
 
 std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func& func)
 {
-  return func(acc_mesh.element(ref_level, is_deformed, serial_n), basis, i_qpoint, time);
+  return func(acc_mesh.element(ref_level, is_deformed, serial_n), basis, i_qpoint, status.flow_time);
 }
 
 }

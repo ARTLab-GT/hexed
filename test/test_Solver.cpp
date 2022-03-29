@@ -118,4 +118,14 @@ TEST_CASE("Solver")
       REQUIRE(integral[0] == Approx(std::pow(0.8, 3)/3*std::pow(0.8, 4)/4 - 0.8*0.8*0.3));
     }
   }
+
+  SECTION("iteration status and time marching")
+  {
+    SECTION("all cartesian")
+    {
+      auto status = sol.iteration_status();
+      REQUIRE(status.flow_time == 0.);
+      REQUIRE(status.iteration == 0);
+    }
+  }
 }
