@@ -44,8 +44,8 @@ TEST_CASE("write_face")
     cartdg::Kernel_settings settings;
     cartdg::Equidistant basis {row_size};
     cartdg::Storage_params params {2, 5, 3, row_size};
-    std::vector<cartdg::Element> elements;
-    elements.emplace_back(params);
+    cartdg::elem_vec elements;
+    elements.emplace_back(new cartdg::Element {params});
     const int n_qpoint {params.n_qpoint()};
     for (int i_var : {0, 1})
     {
@@ -55,12 +55,11 @@ TEST_CASE("write_face")
       {
         int i_qpoint = (i_row*row_size + j_row)*row_size + k_row;
         double value = 0.1*i_var + 0.2*basis.node(i_row) + 0.3*basis.node(j_row) + 0.4*basis.node(k_row);
-        elements[0].stage(0)[i_var*n_qpoint + i_qpoint] = value;
+        elements[0]->stage(0)[i_var*n_qpoint + i_qpoint] = value;
       }
     }
-    Vector_view<Element&, std::unique_ptr<Element>, &ptr_convert<Element&, std::unique_ptr<Element>>> elem_v {elements};
-    cartdg::get_write_face(3, row_size)(elem_v, basis, settings);
-    double* face = elements[0].face();
+    cartdg::get_write_face(3, row_size)(elements, basis, settings);
+    double* face = elements[0]->face();
     const int n_face {params.n_dof()/row_size};
     REQUIRE(face[0*n_face + 0*n_qpoint/row_size + 0] == Approx(0.).margin(1e-10));
     REQUIRE(face[0*n_face + 0*n_qpoint/row_size + 3] == Approx(0.75*0.4));

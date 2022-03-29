@@ -26,7 +26,6 @@ script/auto_generate.py and rerun CMake.
         text = f"""
 #include <Deformed_element.hpp>
 #include <Refined_face.hpp>
-#include <Vector_view.hpp>
 
 namespace cartdg
 {{
@@ -36,8 +35,6 @@ namespace cartdg
 }}
 """
     output += text
-    if "#if" in include:
-        output += "#endif\n"
     return output
 
 def pop(regex, string):
@@ -88,11 +85,7 @@ for file_name in header_names:
         call = re.sub("^ *", "", call)
         name = re.search(" (\w*)\(", decl).groups(1)[0]
         if "LOOKUP" in cmds:
-            hpp_include = f"""
-#ifndef CARTDG_GET_{name.upper()}_HPP_
-#define CARTDG_GET_{name.upper()}_HPP_
-"""[1:]
-
+            hpp_include = ""
             cpp_include = f"""
 #include <stdexcept>
 #include <{file_name[11:]}>

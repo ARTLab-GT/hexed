@@ -57,14 +57,12 @@ std::vector<double> Regular_grid::get_pos(int i_elem)
 
 double Regular_grid::max_reference_speed(Kernel_settings& settings)
 {
-  Vector_view<Element&, std::unique_ptr<Element>, &ptr_convert<Element&, std::unique_ptr<Element>>> elem_v {elements};
-  return get_mcs_convective(n_dim, basis.row_size)(elem_v, settings)/mesh_size;
+  return get_mcs_convective(n_dim, basis.row_size)(elements, settings)/mesh_size;
 }
 
 void Regular_grid::execute_write_face(Kernel_settings& settings)
 {
-  Vector_view<Element&, std::unique_ptr<Element>, &ptr_convert<Element&, std::unique_ptr<Element>>> elem_v {elements};
-  get_write_face(n_dim, basis.row_size)(elem_v, basis, settings);
+  get_write_face(n_dim, basis.row_size)(elements, basis, settings);
   // it's important that the `write_face` of lower-ref-level grids has already happened
   // if no refined faces, don't even call the function (to allow to use basis without prolong method as long as grid doesn't have hanging nodes)
   if (ref_faces[0].size()) get_prolong(n_dim, basis.row_size)(ref_faces, basis, settings);
@@ -79,8 +77,7 @@ void Regular_grid::execute_neighbor(Kernel_settings& settings)
 
 void Regular_grid::execute_local(Kernel_settings& settings)
 {
-  Vector_view<Element&, std::unique_ptr<Element>, &ptr_convert<Element&, std::unique_ptr<Element>>> elem_v {elements};
-  get_local_convective(n_dim, basis.row_size)(elem_v, basis, settings);
+  get_local_convective(n_dim, basis.row_size)(elements, basis, settings);
 }
 
 double Regular_grid::execute_req_visc(Kernel_settings& settings)
