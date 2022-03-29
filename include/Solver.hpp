@@ -58,6 +58,8 @@ class Solver
   Iteration_status iteration_status();
 
   /* ### OUTPUT ### */
+  // sample an arbitrary function at a particular quadrature point of a particular element
+  std::vector<double> sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func&);
   // obtain performance data
   const Stopwatch_tree& stopwatch_tree();
   // compute an integral over the entire flow field at the current time

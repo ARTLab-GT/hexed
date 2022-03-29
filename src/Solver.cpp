@@ -20,6 +20,9 @@ void Solver::calc_jacobian()
 
 void Solver::initialize(const Spacetime_func& func)
 {
+  if (func.n_var(params.n_dim) != params.n_var) {
+    throw std::runtime_error("initializer has wrong number of output variables");
+  }
   auto& elements = acc_mesh.elements();
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
@@ -58,6 +61,11 @@ std::vector<double> Solver::integral_field(const Qpoint_func& integrand)
     }
   }
   return integral;
+}
+
+std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func&)
+{
+  return {};
 }
 
 }

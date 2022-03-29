@@ -2,6 +2,26 @@
 #include <cartdgConfig.hpp>
 #include <Solver.hpp>
 
+class Arbitrary_initializer : public cartdg::Spacetime_func
+{
+  public:
+  virtual int n_var(int n_dim) const {return 4;}
+  virtual std::vector<double> operator()(std::vector<double> pos, double time) const
+  {
+    return {pos[0]*pos[1], 1., 2., 3.};
+  }
+};
+
+class Bad_initializer : public cartdg::Spacetime_func
+{
+  public:
+  virtual int n_var(int n_dim) const {return 2;}
+  virtual std::vector<double> operator()(std::vector<double> pos, double time) const
+  {
+    return {0., 0.};
+  }
+};
+
 class Arbitrary_integrand : public cartdg::Domain_func
 {
   public:
@@ -15,10 +35,28 @@ class Arbitrary_integrand : public cartdg::Domain_func
 
 TEST_CASE("Solver")
 {
-  static_assert (cartdg::config::max_row_size >= 4); // this test was written for row size 4
-  cartdg::Solver sol {2, 4, 0.8};
+  static_assert (cartdg::config::max_row_size >= 3); // this test was written for row size 3
+  cartdg::Solver sol {2, 3, 0.8};
 
-  SECTION("initialization and field integrals")
+  SECTION("initialization and sampling")
+  {
+    sol.mesh().add_element(0, false, {0, 0, 0});
+    int sn0 = sol.mesh().add_element(0, false, {1, 0, 0});
+    int sn1 = sol.mesh().add_element(2, true, {-1, 0, 0});
+    REQUIRE_THROWS(sol.initialize(Bad_initializer())); // if number of variables of func is wrong, should throw
+    sol.initialize(Arbitrary_initializer());
+    auto sample = sol.sample(0, false, sn0, 4, cartdg::State_variables()); // sample the midpoint of the element because we know the exact position
+    REQUIRE(sample.size() == 4);
+    REQUIRE(sample[0] == Approx(1.2*0.4));
+    REQUIRE(sample[1] == Approx(1.));
+    REQUIRE(sample[2] == Approx(2.));
+    REQUIRE(sample[3] == Approx(3.));
+    sample = sol.sample(2, true, sn1, 4, cartdg::State_variables());
+    REQUIRE(sample.size() == 4);
+    REQUIRE(sample[0] == Approx(-0.2*0.2));
+  }
+
+  SECTION("field integrals")
   {
     SECTION("simple function, complex mesh")
     {
