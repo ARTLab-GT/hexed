@@ -34,7 +34,7 @@ void neighbor_deformed_convective(def_elem_con_vec& def_connections, Basis& basi
       elem_face[i_side] = ind.element->face() + (ind.i_dim*2 + ind.is_positive)*face_size;
     }
     int i_dim = con.face_index(0).i_dim; // which dimension is the face normal in face coords
-    Surface_rotation<n_var, n_dim, row_size> rotation {jacobian, i_dim};
+    Surface_rotation<n_dim, row_size> rotation {jacobian, i_dim};
 
     // fetch face state from element storage
     for (int i_side : {0, 1}) {

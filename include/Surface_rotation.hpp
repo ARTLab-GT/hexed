@@ -24,7 +24,7 @@ class Surface_rotation_dynamic
   virtual double jacobian_determinant(int i_qpoint) = 0;
 };
 
-template<int n_var, int n_dim, int row_size>
+template<int n_dim, int row_size>
 class Surface_rotation : public Surface_rotation_dynamic
 {
   static const int n_qpoint = custom_math::pow(row_size, n_dim - 1);

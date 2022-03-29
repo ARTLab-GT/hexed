@@ -21,7 +21,7 @@ namespace cartdg
  * Inspired by `std::Iterator_traits`. Create specializations of this class template
  * to define propreties of kernel temlates.
  */
-template <template<int, int, int> typename kernel>
+template <template<int, int> typename kernel>
 class Kernel_traits
 {
   public:
@@ -32,13 +32,13 @@ namespace kernel_lookup
 {
 
 // comvenience definitions
-template <template<int, int, int> typename kernel>
+template <template<int, int> typename kernel>
 using ptr_t = std::unique_ptr<typename Kernel_traits<kernel>::base_t>;
 
-template <template<int, int, int> typename kernel, int n_dim, int row_size>
+template <template<int, int> typename kernel, int n_dim, int row_size>
 ptr_t<kernel> pointer()
 {
-  return ptr_t<kernel>{new kernel<n_dim+2, n_dim, row_size>};
+  return ptr_t<kernel>{new kernel<n_dim, row_size>};
 }
 
 /*
@@ -48,7 +48,7 @@ ptr_t<kernel> pointer()
  * but with one less dimension via specialization below. The second specialization below
  * terminates the recursion when both the row size and the dimension are 1.
  */
-template <template<int, int, int> typename kernel, int max_n_dim, int max_row_size>
+template <template<int, int> typename kernel, int max_n_dim, int max_row_size>
 class Kernel_lookup
 {
   Kernel_lookup<kernel, max_n_dim, max_row_size - 1> decremented; // the next "link" in the recursive hirarchy
@@ -57,13 +57,13 @@ class Kernel_lookup
   template<typename... constructor_args>
   ptr_t<kernel> get(int n_dim, int row_size, constructor_args&&... args)
   {
-    if ((n_dim == max_n_dim) && (row_size == max_row_size)) return ptr_t<kernel>{new kernel<max_n_dim+2, max_n_dim, max_row_size>(args...)}; // if I have the template you're looking for, return it
+    if ((n_dim == max_n_dim) && (row_size == max_row_size)) return ptr_t<kernel>{new kernel<max_n_dim, max_row_size>(args...)}; // if I have the template you're looking for, return it
     else return decremented.get(n_dim, row_size, args...); // if I don't have it, delegate it to the next link (which is to say, "move along")
   }
 };
 
 // specialization to make the recursion wrap around to `config::max_row_size` of one less dimension
-template <template<int, int, int> typename kernel, int max_n_dim>
+template <template<int, int> typename kernel, int max_n_dim>
 class Kernel_lookup<kernel, max_n_dim, 1>
 {
   Kernel_lookup<kernel, max_n_dim - 1, config::max_row_size> decremented;
@@ -71,20 +71,20 @@ class Kernel_lookup<kernel, max_n_dim, 1>
   template<typename... constructor_args>
   ptr_t<kernel> get(int n_dim, int row_size, constructor_args&&... args)
   {
-    if (n_dim == max_n_dim) return ptr_t<kernel>{new kernel<max_n_dim+2, max_n_dim, 1>(args...)};
+    if (n_dim == max_n_dim) return ptr_t<kernel>{new kernel<max_n_dim, 1>(args...)};
     else return decremented.get(n_dim, row_size, args...);
   }
 };
 
 // recursive base case
-template <template<int, int, int> typename kernel>
+template <template<int, int> typename kernel>
 class Kernel_lookup<kernel, 1, 1>
 {
   public:
   template<typename... constructor_args>
   ptr_t<kernel> get(int n_dim, int row_size, constructor_args&&... args)
   {
-    return ptr_t<kernel>{new kernel<3, 1, 1>(args...)};
+    return ptr_t<kernel>{new kernel<1, 1>(args...)};
   }
 };
 
@@ -95,7 +95,7 @@ class Kernel_lookup<kernel, 1, 1>
  * instantiated with `n_dim` and `row_size` provided as template arguments. Arguments
  * must satisfy `3 >= n_dim > 0` and `config::max_row_size >= row_size > 1`.
  */
-template <template<int, int, int> typename kernel, typename... constructor_args>
+template <template<int, int> typename kernel, typename... constructor_args>
 kernel_lookup::ptr_t<kernel> kernel_factory(int n_dim, int row_size, constructor_args&&... args)
 {
   if ((n_dim < 1) || (n_dim > 3) || (row_size < 2) || (row_size > config::max_row_size)) {
