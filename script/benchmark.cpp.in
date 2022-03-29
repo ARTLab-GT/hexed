@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <chrono>
 
+#include <Vector_view.hpp>
 #include <Gauss_lobatto.hpp>
 #include <Kernel_settings.hpp>
 #include <Deformed_element.hpp>
@@ -26,18 +27,19 @@ cartdg::Storage_params storage_params {3, n_var, dim, row_size};
 
 std::vector<double> read_vec (n_total);
 std::vector<double> write_vec (n_total, 0.);
-cartdg::elem_vec elements;
+cartdg::elem_vec elem_vec;
 cartdg::def_elem_vec def_elements;
 for (int i_elem = 0; i_elem < n_elem; ++i_elem)
 {
-  elements.emplace_back(new cartdg::Element {storage_params});
+  elem_vec.emplace_back(new cartdg::Element {storage_params});
   def_elements.emplace_back(new cartdg::Deformed_element {storage_params});
   for (int i_stage : {0, 1}) {
     for (int i_dof = 0; i_dof < n_var*n_qpoint; ++i_dof)
     {
       double state = (rand()%1000)/1000. + 10.; // "+ 10." avoids NaN due to nonpositive density
       if (i_dof/n_qpoint == n_var - 1) state += 100; // Avoid NaN due to negative pressure
-      elements    .back()->stage(0)[i_stage*n_var*n_qpoint + i_dof] = state;
+      elem_vec.back()->stage(0)[i_stage*n_var*n_qpoint + i_dof] = state;
+      elem_vec.back()->stage(1)[i_stage*n_var*n_qpoint + i_dof] = state;
       def_elements.back()->stage(0)[i_stage*n_var*n_qpoint + i_dof] = state;
     }
   }
@@ -51,6 +53,7 @@ for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     if ((i_entry/dim) == (i_entry%dim)) *jac += 1.;
   }
 }
+cartdg::Vector_view<cartdg::Element&, std::unique_ptr<cartdg::Element>, &cartdg::ptr_convert<cartdg::Element&, std::unique_ptr<cartdg::Element>>> elements {elem_vec};
 #pragma omp parallel for
 for (int i = 0; i < n_total; ++i)
 {
@@ -72,7 +75,7 @@ for (int i_dim = 0; i_dim < dim; ++i_dim)
     for (int i_side: {0, 1})
     {
       int i_elem = rand()%n_elem;
-      connections[i_dim].back()[i_side] = elements[i_elem]->face() + (2*i_dim + 1 - i_side)*n_qpoint/row_size;
+      connections[i_dim].back()[i_side] = elements[i_elem].face() + (2*i_dim + 1 - i_side)*n_qpoint/row_size;
       face_inds[i_side].element = def_elements[i_elem].get();
       face_inds[i_side].i_dim = rand()%dim;
       face_inds[i_side].is_positive = bool(rand()%2);

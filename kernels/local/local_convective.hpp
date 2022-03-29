@@ -5,13 +5,14 @@
 #include <Basis.hpp>
 #include <Element.hpp>
 #include <Derivative.hpp>
+#include <Vector_view.hpp>
 
 namespace cartdg
 {
 
 // AUTOGENERATE LOOKUP BENCHMARK(cartesian, 3)
 template<int n_var, int n_qpoint, int row_size>
-void local_convective(elem_vec& elements, Basis& basis, Kernel_settings& settings)
+void local_convective(Sequence<Element&>& elements, Basis& basis, Kernel_settings& settings)
 {
   Derivative<row_size> derivative (basis);
   const double d_t_by_d_pos = settings.d_t/settings.d_pos;
@@ -20,13 +21,13 @@ void local_convective(elem_vec& elements, Basis& basis, Kernel_settings& setting
   const double rk_weight = settings.rk_weight;
 
   #pragma omp parallel for
-  for (unsigned i_elem = 0; i_elem < elements.size(); ++i_elem)
+  for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
   {
-    double* state = elements[i_elem]->stage(0);
+    double* state = elements[i_elem].stage(0);
     double* rk_reference = state + n_var*n_qpoint;
     double time_rate [n_var][n_qpoint] {};
-    double* face = elements[i_elem]->face();
-    double* tss = elements[i_elem]->time_step_scale();
+    double* face = elements[i_elem].face();
+    double* tss = elements[i_elem].time_step_scale();
 
     // Compute update
     for (int stride = n_qpoint/row_size, n_rows = 1, i_dim = 0; n_rows < n_qpoint;

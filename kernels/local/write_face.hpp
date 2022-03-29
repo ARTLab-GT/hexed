@@ -1,6 +1,7 @@
 #ifndef CARTDG_WRITE_FACE_HPP_
 #define CARTDG_WRITE_FACE_HPP_
 
+#include <Vector_view.hpp>
 #include <Kernel_settings.hpp>
 #include <Basis.hpp>
 #include <Element.hpp>
@@ -36,20 +37,6 @@ void write_face_variable(double* read, double* face, int i_var, const Eigen::Mat
 }
 
 template<typename elem_vec_t, int n_var, int n_qpoint, int row_size>
-void write_face_general(elem_vec_t& elements, Basis& basis, Kernel_settings& settings)
-{
-  const Eigen::Matrix<double, 2, row_size> boundary {basis.boundary()};
-  #pragma omp parallel for
-  for (unsigned i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    double* read  = elements[i_elem]->stage(0);
-    double* face {elements[i_elem]->face()};
-    for (int i_var = 0; i_var < n_var; ++i_var) {
-      write_face_variable<n_var, n_qpoint, row_size>(read, face, i_var, boundary);
-    }
-  }
-}
-
-template<typename elem_vec_t, int n_var, int n_qpoint, int row_size>
 void write_face_general_scalar(elem_vec_t& elements, int i_var, Basis& basis, Kernel_settings& settings)
 {
   const Eigen::Matrix<double, 2, row_size> boundary {basis.boundary()};
@@ -77,9 +64,17 @@ void write_face_general_n_dim(elem_vec_t& elements, Basis& basis, Kernel_setting
 
 // AUTOGENERATE LOOKUP BENCHMARK(cartesian, 3)
 template<int n_var, int n_qpoint, int row_size>
-void write_face(elem_vec& elements, Basis& basis, Kernel_settings& settings)
+void write_face(Sequence<Element&>& elements, Basis& basis, Kernel_settings& settings)
 {
-  write_face_general<elem_vec, n_var, n_qpoint, row_size>(elements, basis, settings);
+  const Eigen::Matrix<double, 2, row_size> boundary {basis.boundary()};
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    double* read  = elements[i_elem].stage(0);
+    double* face {elements[i_elem].face()};
+    for (int i_var = 0; i_var < n_var; ++i_var) {
+      write_face_variable<n_var, n_qpoint, row_size>(read, face, i_var, boundary);
+    }
+  }
 }
 
 // AUTOGENERATE LOOKUP
@@ -100,7 +95,8 @@ void write_face_n_dim(elem_vec& elements, Basis& basis, Kernel_settings& setting
 template<int n_var, int n_qpoint, int row_size>
 void write_face_deformed(def_elem_vec& def_elements, Basis& basis, Kernel_settings& settings)
 {
-  write_face_general<def_elem_vec, n_var, n_qpoint, row_size>(def_elements, basis, settings);
+  Vector_view<Element&, std::unique_ptr<Deformed_element>, &ptr_convert<Element&, std::unique_ptr<Deformed_element>>> elem_view {def_elements};
+  write_face<n_var, n_qpoint, row_size>(elem_view, basis, settings);
 }
 
 

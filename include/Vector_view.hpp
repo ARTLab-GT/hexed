@@ -1,6 +1,8 @@
 #ifndef CARTDG_VECTOR_VIEW_HPP_
 #define CARTDG_VECTOR_VIEW_HPP_
 
+#include <vector>
+
 namespace cartdg
 {
 
