@@ -18,6 +18,7 @@ test_Element.cpp
 test_Element_container.cpp
 test_func.cpp
 test_Ghost_boundary_condition.cpp
+test_hll.cpp
 test_Hanging_vertex_matcher.cpp
 test_Iteration_status.cpp
 test_local.cpp
