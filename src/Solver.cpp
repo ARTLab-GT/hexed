@@ -3,6 +3,19 @@
 namespace cartdg
 {
 
+void Solver::share_vertex_data(Element::shareable_value_access access_func, Vertex::reduction reduce)
+{
+  auto& elements = acc_mesh.elements();
+  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    elements[i_elem].push_shareable_value(access_func);
+  }
+  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    elements[i_elem].fetch_shareable_value(access_func, reduce);
+  }
+  auto& matchers = acc_mesh.hanging_vertex_matchers();
+  for (int i_match = 0; i_match < matchers.size(); ++i_match) matchers[i_match].match(access_func);
+}
+
 Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
   params{3, n_dim + 2, n_dim, row_size},
   acc_mesh{params, root_mesh_size},
@@ -22,6 +35,27 @@ void Solver::calc_jacobian()
   auto& elements = acc_mesh.deformed().elements();
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     elements[i_elem].set_jacobian(basis);
+  }
+}
+
+void Solver::set_local_tss()
+{
+  // set time step to be continuous at vertices
+  share_vertex_data(&Element::vertex_time_step_scale, Vertex::vector_min);
+  // construct a matrix for 1D linear interpolation
+  Eigen::MatrixXd lin_interp {basis.row_size, 2};
+  for (int i_qpoint = 0; i_qpoint < basis.row_size; ++i_qpoint) {
+    double node {basis.node(i_qpoint)};
+    lin_interp(i_qpoint, 0) = 1. - node;
+    lin_interp(i_qpoint, 1) = node;
+  }
+  // interpolate tss to quadrature points
+  auto& elements = acc_mesh.elements();
+  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    Element& elem = elements[i_elem];
+    Eigen::Map<Eigen::VectorXd> vert_tss (elem.vertex_time_step_scale(), params.n_vertices());
+    Eigen::Map<Eigen::VectorXd> qpoint_tss (elem.time_step_scale(), params.n_qpoint());
+    qpoint_tss = custom_math::hypercube_matvec(lin_interp, vert_tss);
   }
 }
 

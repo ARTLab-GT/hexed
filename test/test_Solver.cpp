@@ -67,6 +67,27 @@ TEST_CASE("Solver")
     REQUIRE(sol.sample(0,  true, sn1, 4, cartdg::Position_func())[1] == Approx(0.8*0.5));
   }
 
+  SECTION("local time step scale")
+  {
+    int sn0 = sol.mesh().add_element(0,  true, {0, 0, 0});
+    int sn1 = sol.mesh().add_element(0,  true, {0, 0, 0});
+    int sn2 = sol.mesh().add_element(0, false, {-1, 0, 0});
+    int sn3 = sol.mesh().add_element(1, false, {-2, -1, 0});
+    int sn4 = sol.mesh().add_element(1, false, {-1, -1, 0});
+    sol.mesh().connect_deformed(0, {sn0, sn1}, {{0, 0}, {1, 0}});
+    sol.mesh().connect_cartesian(0, {sn2, sn0}, {0}, {false, true});
+    sol.mesh().connect_hanging_cartesian(0, sn2, {sn3, sn4}, {1}, 0);
+    sol.calc_jacobian();
+    sol.set_local_tss();
+    // in sn1, TSS is 0.5 because the element is stretched by a factor of 0.5
+    REQUIRE(sol.sample(0,  true, sn1, 4, cartdg::Time_step_scale_func())[0] == Approx(0.5));
+    // in sn2, TSS varies linearly between 1 and 0.5 (because it must be continuous with element sn1)
+    REQUIRE(sol.sample(0, false, sn2, 4, cartdg::Time_step_scale_func())[0] == Approx(0.75));
+    // TSS at hanging nodes should be set to match coarse element
+    REQUIRE(sol.sample(1, false, sn3, 4, cartdg::Time_step_scale_func())[0] == Approx(1. - 0.0625));
+    REQUIRE(sol.sample(1, false, sn4, 4, cartdg::Time_step_scale_func())[0] == Approx(0.5*(1. + 0.625)));
+  }
+
   SECTION("field integrals")
   {
     SECTION("simple function, complex mesh")
