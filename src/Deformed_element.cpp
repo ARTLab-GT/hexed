@@ -13,16 +13,43 @@ std::vector<double> Deformed_element::position(const Basis& basis, int i_qpoint)
 {
   std::vector<double> pos (params.n_dim);
   const int n_vert = params.n_vertices();
+  // calculate one component of the position at a time
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+    // find the positions of the vertices
     Eigen::VectorXd vert_pos {n_vert};
     for (int i_vert = 0; i_vert < n_vert; ++i_vert) vert_pos[i_vert] = vertex(i_vert).pos[i_dim];
+    // the adjustments due to face warping in each reference direction.
+    std::vector<Eigen::VectorXd> adjustments;
+    // initialize to the vertex positions. will be transformed to a scalar below by successively contracting in each reference direction
+    for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) adjustments.push_back(vert_pos*1);
+    // interpolate one reference direction at a time
     for (int j_dim = params.n_dim - 1; j_dim >= 0; --j_dim) {
+      // vertex interpolation
       const int stride = custom_math::pow(params.row_size, params.n_dim - j_dim - 1);
       double node = basis.node((i_qpoint/stride)%params.row_size);
       Eigen::Matrix<double, 1, 2> interp {1. - node, node};
-      vert_pos = custom_math::dimension_matvec(interp, vert_pos, j_dim);
+      vert_pos = custom_math::dimension_matvec(interp, vert_pos, j_dim); // dimensionality of vertex position array has been reduced by 1
+      // figure out which face quadrature point is in the same row as this quadrature point
+      int i_face_qpoint = 0;
+      for (int k_dim = 0, face_stride = params.n_qpoint()/params.row_size/params.row_size; k_dim < params.n_dim; ++k_dim) {
+        if (k_dim != j_dim) {
+          i_face_qpoint += ((i_qpoint/custom_math::pow(params.row_size, params.n_dim - k_dim - 1))%params.row_size)*face_stride;
+          face_stride /= params.row_size;
+        }
+      }
+      // contract adjustment in each direction
+      for (int k_dim = 0; k_dim < params.n_dim; ++k_dim) {
+        const int i_adjust = 2*j_dim*params.n_qpoint()/params.row_size + i_face_qpoint;
+        Eigen::Matrix<double, 1, 2> adjust {{node_adj[i_adjust], node_adj[i_adjust + params.n_qpoint()/params.row_size]}};
+        Eigen::Matrix<double, 2, 2> difference; difference << -1, 1, -1, 1;
+        // if the reference direction of contraction is the same as that of adjustment, then compute the adjustments.
+        // otherise performa a simple interpolation
+        Eigen::Matrix<double, 1, 2> contract = (j_dim == k_dim) ? adjust.cwiseProduct(interp)*difference : interp;
+        adjustments[k_dim] = custom_math::dimension_matvec(contract, adjustments[k_dim], j_dim);
+      }
     }
     pos[i_dim] = vert_pos[0];
+    for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) pos[i_dim] += adjustments[j_dim][0];
   }
   return pos;
 }
