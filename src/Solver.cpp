@@ -12,6 +12,9 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
 
 void Solver::relax_vertices()
 {
+  auto verts {acc_mesh.vertices()};
+  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) verts[i_vert].calc_relax();
+  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) verts[i_vert].apply_relax();
 }
 
 void Solver::calc_jacobian()

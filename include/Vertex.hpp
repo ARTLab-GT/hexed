@@ -38,12 +38,13 @@ class Vertex
   Vertex& operator=(Vertex&&) = delete;
   int mass();
   /*
-   * Specify that another vertex represents the same grid point as `*this`. `*this`
-   * will acquire `other`'s resources:
+   * Specify that another vertex represents the same grid point as `*this`.
+   * `*this` will acquire `other`'s resources:
    * - All `Transferable_ptr`s pointing to `other` will be changed to point to `this`.
    * - All `Non_transferable_ptr`s pointing to `other` will be `nullify`d.
    * - The mass of `other` will be added to that of `*this`.
    * - The `pos`s will be averaged, weighted by `mass`.
+   * - The vertex will be mobile if both vertices were mobile.
    * The fact that "eat" seemed like the obvious word to describe this might be a
    * sign that I've been reading too much SnK...
    */

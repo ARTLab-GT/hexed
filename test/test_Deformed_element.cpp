@@ -35,6 +35,7 @@ TEST_CASE("Deformed_element")
   element.node_adjustments()[4*2*2 - 1] = 0.04;
   REQUIRE(element.node_adjustments()[0] == 2.7);
   REQUIRE(element.node_adjustments()[4*2*2 - 1] == 0.04);
+  REQUIRE(element.vertex(1).mobile);
 
   cartdg::Storage_params params3d {1, 1, 3, 2};
   cartdg::Deformed_element element3d {params3d};
@@ -49,8 +50,7 @@ TEST_CASE("Deformed_element")
   SECTION("vertex relaxation")
   {
     cartdg::Storage_params params3d {3, 5, 3, 4};
-    cartdg::Element elem3d {params3d, {1, 2, -1}, 0.2};
-    elem3d.vertex(5).mobile = true;
+    cartdg::Deformed_element elem3d {params3d, {1, 2, -1}, 0.2};
     elem3d.vertex(5).calc_relax();
     elem3d.vertex(5).apply_relax();
     assert_equal(elem3d.vertex(5).pos, {0.4 - 0.1/3., 0.4 + 0.1/3., -0.1/3.});
@@ -60,7 +60,6 @@ TEST_CASE("Deformed_element")
     assert_equal(elem2d.vertex(0).pos, {1., 2., 0.});
     assert_equal(elem2d.vertex(1).pos, {1., 3., 0.});
     assert_equal(elem2d.vertex(2).pos, {2., 2., 0.});
-    elem2d.vertex(0).mobile = true;
     elem2d.vertex(0).calc_relax();
     elem2d.vertex(0).apply_relax();
     assert_equal(elem2d.vertex(0).pos, {1.25, 2.25, 0.});

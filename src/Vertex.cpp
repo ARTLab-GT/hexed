@@ -33,7 +33,7 @@ void Vertex::eat(Vertex& other)
     }
     m += other.m;
     other.m = 0;
-    mobile = mobile || other.mobile;
+    mobile = mobile && other.mobile;
     for (Vertex* neighbor : other.neighbors)
     {
       connect(*this, *neighbor);
