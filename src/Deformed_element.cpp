@@ -56,6 +56,7 @@ std::vector<double> Deformed_element::position(const Basis& basis, int i_qpoint)
 
 void Deformed_element::set_jacobian(const Basis& basis)
 {
+  // set Jacobian
   auto diff_mat = basis.diff_mat();
   const int n_qpoint = params.n_qpoint();
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -65,6 +66,23 @@ void Deformed_element::set_jacobian(const Basis& basis)
       auto jac_entry {jac.segment((i_dim*n_dim + j_dim)*n_qpoint, n_qpoint)};
       jac_entry = custom_math::dimension_matvec(diff_mat, pos, j_dim)/nom_sz;
     }
+  }
+  // set local TSS
+  auto bound_mat = basis.boundary();
+  Eigen::MatrixXd vertex_jacobian (params.n_vertices(), n_dim*n_dim);
+  for (int i_jac = 0; i_jac < n_dim*n_dim; ++i_jac) {
+    // extrapolate one entry of the Jacobian to the vertex
+    vertex_jacobian.col(i_jac) = custom_math::hypercube_matvec(bound_mat, jac.segment(i_jac*params.n_qpoint(), n_qpoint));
+  }
+  for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+    Eigen::MatrixXd vert_jac (n_dim, n_dim);
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+        vert_jac(i_dim, j_dim) = vertex_jacobian(i_vert, i_dim*n_dim + j_dim);
+      }
+    }
+    double min_sv = vert_jac.jacobiSvd().singularValues()(n_dim - 1);
+    vertex_time_step_scale()[i_vert] = min_sv;
   }
 }
 
