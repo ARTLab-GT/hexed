@@ -30,10 +30,7 @@ class Solver
    * calculation can begin.
    */
   Mesh& mesh() {return acc_mesh;}
-  /*
-   * incrementally moves the vertices to improve the mesh quality. *Should* converge to the optimal
-   * mesh in on the order of 10 iterations.
-   */
+  // moves all vertices to the mean of the current position and the mean of the neighbors' positions
   void relax_vertices();
   /*
    * compute the Jacobian of all elements based on the current position of the vertices and value of

@@ -31,6 +31,14 @@ class Constant_func : public Spacetime_func
   virtual std::vector<double> operator()(std::vector<double> pos, double time) const; // returns `value`
 };
 
+class Position_func : public Spacetime_func
+{
+  public:
+  virtual inline int n_var(int n_dim) const {return n_dim;}
+  virtual inline std::string variable_name(int i_var) const {return "position" + std::to_string(i_var);}
+  virtual inline std::vector<double> operator()(std::vector<double> pos, double time) const {return pos;}
+};
+
 class State_from_spacetime : public Spacetime_func
 {
   public:

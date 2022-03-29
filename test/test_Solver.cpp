@@ -56,6 +56,17 @@ TEST_CASE("Solver")
     REQUIRE(sample[0] == Approx(-0.1*0.1));
   }
 
+  SECTION("vertex relaxation")
+  {
+    int sn0 = sol.mesh().add_element(0, false, {0, 0, 0});
+    int sn1 = sol.mesh().add_element(0,  true, {1, 0, 0});
+    sol.mesh().connect_cartesian(0, {sn0, sn1}, {0}, {false, true});
+    sol.relax_vertices();
+    REQUIRE(sol.sample(0, false, sn0, 4, cartdg::Position_func())[0] == Approx(0.8*0.5));
+    REQUIRE(sol.sample(0,  true, sn1, 4, cartdg::Position_func())[0] == Approx(0.8*1.375));
+    REQUIRE(sol.sample(0,  true, sn1, 4, cartdg::Position_func())[1] == Approx(0.8*0.5));
+  }
+
   SECTION("field integrals")
   {
     SECTION("simple function, complex mesh")

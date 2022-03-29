@@ -10,6 +10,10 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
   time{0.}
 {}
 
+void Solver::relax_vertices()
+{
+}
+
 void Solver::calc_jacobian()
 {
   auto& elements = acc_mesh.deformed().elements();
