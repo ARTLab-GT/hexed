@@ -53,7 +53,7 @@ TEST_CASE("Solver")
     REQUIRE(sample[3] == Approx(3.));
     sample = sol.sample(2, true, sn1, 4, cartdg::State_variables());
     REQUIRE(sample.size() == 4);
-    REQUIRE(sample[0] == Approx(-0.2*0.2));
+    REQUIRE(sample[0] == Approx(-0.1*0.1));
   }
 
   SECTION("field integrals")

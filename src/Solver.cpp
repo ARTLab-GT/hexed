@@ -63,9 +63,9 @@ std::vector<double> Solver::integral_field(const Qpoint_func& integrand)
   return integral;
 }
 
-std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func&)
+std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func& func)
 {
-  return {};
+  return func(acc_mesh.element(ref_level, is_deformed, serial_n), basis, i_qpoint, time);
 }
 
 }
