@@ -25,11 +25,16 @@ TEST_CASE("Solver")
       sol.mesh().add_element(0, false, {0, 0, 0});
       sol.mesh().add_element(0, false, {1, 0, 0});
       sol.mesh().add_element(1, false, {2, 2, 0});
+      int sn0 = sol.mesh().add_element(0, true, {2, 0, 0});
+      int sn1 = sol.mesh().add_element(0, true, {4, 0, 0});
+      // connecting deformed elements with an empty space in between stretches them by a factor of 1.5
+      sol.mesh().connect_deformed(0, {sn0, sn1}, {{0, 0}, {1, 0}});
+      sol.calc_jacobian();
       std::vector<double> state {0.3, -10., 0.7, 32.};
       sol.initialize(cartdg::Constant_func(state));
       auto integral = sol.integral_field(cartdg::State_variables());
       REQUIRE(integral.size() == 4);
-      double area = 2.25*0.8*0.8;
+      double area = 5.25*0.8*0.8;
       for (int i_var = 0; i_var < 4; ++i_var) {
         REQUIRE(integral[i_var] == Approx(state[i_var]*area));
       }
@@ -43,25 +48,4 @@ TEST_CASE("Solver")
       REQUIRE(integral[0] == Approx(std::pow(0.8, 3)/3*std::pow(0.8, 4)/4 - 0.8*0.8*0.3));
     }
   }
-
-  #if 0
-  SECTION("Deformed integrals")
-  {
-    cartdg::Solution def_sol {4, 2, cartdg::config::max_row_size, 0.4};
-    def_sol.add_deformed_grid(1.);
-    cartdg::Deformed_grid& grid {def_sol.def_grids[0]};
-    grid.add_element({-1, 0});
-    grid.add_element({ 0, 0});
-    grid.deformed_element(1).vertex(0).pos[0] = 0.05;
-    grid.deformed_element(1).vertex(0).pos[1] = 0.07;
-    grid.calc_jacobian();
-    for (int i_elem : {0, 1}) {
-      double* stage = grid.deformed_element(i_elem).stage(0);
-      for (int i_qpoint = 0; i_qpoint < grid.n_qpoint; ++i_qpoint) stage[i_qpoint] = 1.2;
-    }
-    auto integral = def_sol.integral();
-    double area = 0.2*0.2*2. - 0.2*0.5*(0.05 + 0.07);
-    REQUIRE(integral[0] == Approx(1.2*area));
-  }
-  #endif
 }

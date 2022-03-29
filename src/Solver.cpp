@@ -10,6 +10,14 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
   time{0.}
 {}
 
+void Solver::calc_jacobian()
+{
+  auto& elements = acc_mesh.deformed().elements();
+  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    elements[i_elem].set_jacobian(basis);
+  }
+}
+
 void Solver::initialize(const Spacetime_func& func)
 {
   auto& elements = acc_mesh.elements();
@@ -45,7 +53,7 @@ std::vector<double> Solver::integral_field(const Qpoint_func& integrand)
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
       auto qpoint_integrand {integrand(element, basis, i_qpoint, time)};
       for (unsigned i_var = 0; i_var < qpoint_integrand.size(); ++i_var) {
-        integral[i_var] += weights[i_qpoint]*volume*qpoint_integrand[i_var];
+        integral[i_var] += weights[i_qpoint]*volume*qpoint_integrand[i_var]*element.jacobian_determinant(i_qpoint);
       }
     }
   }
