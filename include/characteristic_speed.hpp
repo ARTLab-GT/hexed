@@ -6,6 +6,10 @@
 namespace cartdg
 {
 
+/*
+ * Computes the maximum speed of characteristics in physical space,
+ * not accounting for local time stepping or any other numerical artifiacts.
+ */
 template<int n_dim, int n_qpoint>
 double characteristic_speed(double* read, double heat_rat)
 {
