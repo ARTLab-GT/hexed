@@ -3,6 +3,7 @@
 #include <Write_face.hpp>
 #include <Neighbor_cartesian.hpp>
 #include <Local_cartesian.hpp>
+#include <Tecplot_file.hpp>
 
 namespace cartdg
 {
@@ -92,7 +93,9 @@ void Solver::update(double stability_ratio)
     double* state = elems[i_elem].stage(0);
     for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] = state[i_dof];
   }
-  for (double rk_weight : rk_weights) {
+  std::vector<double> one;
+  one.push_back(1.);
+  for (double rk_weight : one) {
     kernel_factory<Write_face>(nd, rs, basis)->execute(elems);
     auto& bcs {acc_mesh.boundary_conditions()};
     auto& bc_cons {acc_mesh.cartesian().boundary_connections()};
@@ -112,6 +115,11 @@ void Solver::update(double stability_ratio)
 Iteration_status Solver::iteration_status()
 {
   return status;
+}
+
+std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func& func)
+{
+  return func(acc_mesh.element(ref_level, is_deformed, serial_n), basis, i_qpoint, status.flow_time);
 }
 
 std::vector<double> Solver::integral_field(const Qpoint_func& integrand)
@@ -142,9 +150,97 @@ std::vector<double> Solver::integral_field(const Qpoint_func& integrand)
   return integral;
 }
 
-std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func& func)
+void Solver::visualize_field(const Qpoint_func& output_variables, std::string name)
 {
-  return func(acc_mesh.element(ref_level, is_deformed, serial_n), basis, i_qpoint, status.flow_time);
+  const int n_dim = params.n_dim;
+  const int n_vis = output_variables.n_var(n_dim); // number of variables to visualize
+  const int n_sample = 20;
+  const int n_qpoint = params.n_qpoint();
+  const int n_corners {custom_math::pow(2, n_dim - 1)};
+  const int nfqpoint = n_qpoint/params.row_size;
+  const int n_block {custom_math::pow(n_sample, n_dim)};
+  Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
+  std::vector<std::string> var_names;
+  for (int i_vis = 0; i_vis < n_vis; ++i_vis) var_names.push_back(output_variables.variable_name(i_vis));
+  Tecplot_file file {name, n_dim, var_names, status.flow_time};
+
+  for (int i_elem = 0; i_elem < acc_mesh.elements().size(); ++i_elem)
+  {
+    Element& elem {acc_mesh.elements()[i_elem]};
+    std::vector<double> pos (n_qpoint*n_dim);
+    std::vector<double> to_vis (n_qpoint*n_vis);
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+      auto qpoint_vis = output_variables(elem, basis, i_qpoint, status.flow_time);
+      for (int i_vis = 0; i_vis < n_vis; ++i_vis) {
+        to_vis[i_vis*n_qpoint + i_qpoint] = qpoint_vis[i_vis];
+      }
+      auto qpoint_pos = elem.position(basis, i_qpoint);
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        pos[i_dim*n_qpoint + i_qpoint] = qpoint_pos[i_dim];
+      }
+    }
+    // note: each visualization stage is enclosed in `{}` to ensure that only one
+    // `Tecplot_file::Zone` is alive at a time
+
+    // visualize edges
+    if (n_dim > 1) // 1D elements don't really have edges
+    {
+      Tecplot_file::Line_segments edges {file, n_dim*n_corners, n_sample, "edges"};
+      Eigen::MatrixXd boundary {basis.boundary()};
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+      {
+        const int stride {custom_math::pow(params.row_size, n_dim - 1 - i_dim)};
+        const int n_outer {n_qpoint/stride/params.row_size};
+
+        auto extract_edge = [=](double* data, int n)
+        {
+          Eigen::MatrixXd edge {n_sample, n_corners*n};
+          for (int i = 0; i < n; ++i) {
+            Eigen::MatrixXd edge_qpoints {basis.row_size, n_corners};
+            for (int i_qpoint = 0; i_qpoint < basis.row_size; ++i_qpoint) {
+              Eigen::VectorXd qpoint_slab {nfqpoint};
+              for (int i_outer = 0; i_outer < n_outer; ++i_outer) {
+                for (int i_inner = 0; i_inner < stride; ++i_inner) {
+                  qpoint_slab[i_outer*stride + i_inner] = data[i*n_qpoint + i_qpoint*stride + i_outer*stride*basis.row_size + i_inner];
+                }
+              }
+              edge_qpoints.row(i_qpoint) = custom_math::hypercube_matvec(boundary, qpoint_slab);
+            }
+            for (int i_corner = 0; i_corner < n_corners; ++i_corner) {
+              edge.col(i_corner*n + i) = interp*edge_qpoints.col(i_corner);
+            }
+          }
+          return edge;
+        };
+
+        Eigen::MatrixXd edge_pos {extract_edge(pos.data(), n_dim)};
+        Eigen::MatrixXd edge_state {extract_edge(to_vis.data(), n_vis)};
+        for (int i_corner = 0; i_corner < n_corners; ++i_corner) {
+          edges.write(edge_pos.data() + i_corner*n_dim*n_sample, edge_state.data() + i_corner*n_vis*n_sample);
+        }
+      }
+    }
+
+    { // visualize quadrature points
+      Tecplot_file::Structured_block qpoints {file, basis.row_size, "element_qpoints"};
+      qpoints.write(pos.data(), to_vis.data());
+    }
+
+    { // visualize interior (that is, quadrature point data interpolated to a fine mesh of sample points)
+      Tecplot_file::Structured_block interior {file, n_sample, "element_interior"};
+      Eigen::VectorXd interp_pos {n_block*n_dim};
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        Eigen::Map<Eigen::VectorXd> qpoint_pos (pos.data() + i_dim*n_qpoint, n_qpoint);
+        interp_pos.segment(i_dim*n_block, n_block) = custom_math::hypercube_matvec(interp, qpoint_pos);
+      }
+      Eigen::VectorXd interp_state {n_block*n_vis};
+      for (int i_var = 0; i_var < n_vis; ++i_var) {
+        Eigen::Map<Eigen::VectorXd> var (to_vis.data() + i_var*n_qpoint, n_qpoint);
+        interp_state.segment(i_var*n_block, n_block) = custom_math::hypercube_matvec(interp, var);
+      }
+      interior.write(interp_pos.data(), interp_state.data());
+    }
+  }
 }
 
 }

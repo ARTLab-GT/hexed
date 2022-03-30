@@ -175,10 +175,12 @@ TEST_CASE("Solver time marching")
     }
     sol.mesh().valid().assert_valid();
     sol.initialize(Nonuniform_mass(std::sin));
+    sol.visualize_field(cartdg::State_variables(), "marching_test0");
     auto status = sol.iteration_status();
     REQUIRE(status.flow_time == 0.);
     REQUIRE(status.iteration == 0);
     sol.update();
+    sol.visualize_field(cartdg::State_variables(), "marching_test1");
     status = sol.iteration_status();
     REQUIRE(status.flow_time > 0.);
     REQUIRE(status.iteration == 1);
