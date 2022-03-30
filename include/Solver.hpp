@@ -17,6 +17,7 @@ class Solver
   Gauss_legendre basis;
   Iteration_status status;
   void share_vertex_data(Element::shareable_value_access, Vertex::reduction = Vertex::vector_max);
+  std::vector<double> rk_weights {1., 1./4., 2./3.};
 
   public:
   Solver(int n_dim, int row_size, double root_mesh_size);

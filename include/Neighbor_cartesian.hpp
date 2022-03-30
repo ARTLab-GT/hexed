@@ -35,11 +35,11 @@ class Neighbor_cartesian : public Neighbor_cartesian_dynamic
     constexpr int n_face_qpoint = custom_math::pow(row_size, n_dim - 1);
     constexpr int face_size = n_face_qpoint*n_var;
     #pragma omp parallel for
-    for (unsigned i_con = 0; i_con < connections.size(); ++i_con)
+    for (int i_con = 0; i_con < connections.size(); ++i_con)
     {
       double face [2*face_size];
       auto& con = connections[i_con];
-      const int i_dim = con.direction().i_dim();
+      const int i_dim = con.direction().i_dim;
       for (int i_side : {0, 1}) {
         double* con_face = con.face(i_side);
         for (int i_face_dof = 0; i_face_dof < face_size; ++i_face_dof) {

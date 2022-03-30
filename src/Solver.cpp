@@ -1,4 +1,8 @@
 #include <Solver.hpp>
+#include <Mcs_cartesian.hpp>
+#include <Write_face.hpp>
+#include <Neighbor_cartesian.hpp>
+#include <Local_cartesian.hpp>
 
 namespace cartdg
 {
@@ -77,6 +81,32 @@ void Solver::initialize(const Spacetime_func& func)
 
 void Solver::update(double stability_ratio)
 {
+  const int nd = params.n_dim;
+  const int rs = params.row_size;
+  auto& elems = acc_mesh.elements();
+  auto& car_elems = acc_mesh.cartesian().elements();
+  double mcs = kernel_factory<Mcs_cartesian>(nd, rs)->compute(car_elems);
+  double dt = basis.max_cfl_convective()/mcs;
+  const int n_dof = params.n_dof();
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    double* state = elems[i_elem].stage(0);
+    for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] = state[i_dof];
+  }
+  for (double rk_weight : rk_weights) {
+    kernel_factory<Write_face>(nd, rs, basis)->execute(elems);
+    auto& bcs {acc_mesh.boundary_conditions()};
+    auto& bc_cons {acc_mesh.cartesian().boundary_connections()};
+    for (int i_bcc = 0; i_bcc < bc_cons.size(); ++i_bcc) {
+      for (int i_bc = 0; i_bc < bcs.size(); ++i_bc) {
+        if (&bcs[i_bc] == bc_cons[i_bc].boundary_condition()) bcs[i_bc].apply(bc_cons[i_bc]);
+      }
+    }
+    kernel_factory<Neighbor_cartesian>(nd, rs)->execute(acc_mesh.cartesian().face_connections());
+    kernel_factory<Local_cartesian>(nd, rs, basis, dt, rk_weight)->execute(car_elems);
+  }
+  status.time_step = dt;
+  status.flow_time += dt;
+  ++status.iteration;
 }
 
 Iteration_status Solver::iteration_status()
