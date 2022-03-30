@@ -75,6 +75,10 @@ void Solver::initialize(const Spacetime_func& func)
   }
 }
 
+void Solver::update(double stability_ratio)
+{
+}
+
 Iteration_status Solver::iteration_status()
 {
   return status;

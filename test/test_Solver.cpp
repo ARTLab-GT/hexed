@@ -33,6 +33,38 @@ class Arbitrary_integrand : public cartdg::Domain_func
   }
 };
 
+class Nonuniform_mass : public cartdg::Spacetime_func
+{
+  double (*f)(double);
+
+  public:
+  constexpr static double velocs [3] {0.3, -0.7, 0.8};
+  constexpr static double wave_number [3] {-0.1, 0.3, 0.2};
+  static double scaled_veloc(int n_dim)
+  {
+    double result = 0.;
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) result += velocs[i_dim]*wave_number[i_dim];
+    return result;
+  }
+
+  Nonuniform_mass(double (*mass_function)(double)) : f{mass_function} {}
+
+  virtual int n_var(int n_dim) const {return n_dim + 2;};
+
+  virtual std::vector<double> operator()(std::vector<double> pos, double time) const
+  {
+    const int n_dim {int(pos.size())};
+    std::vector<double> result;
+    double scaled_pos = 0.;
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) scaled_pos += wave_number[i_dim]*pos[i_dim];
+    double mass = f(scaled_pos);
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) result.push_back(mass*velocs[i_dim]);
+    result.push_back(mass);
+    result.push_back(mass*1e5/0.4);
+    return result;
+  }
+};
+
 TEST_CASE("Solver")
 {
   static_assert (cartdg::config::max_row_size >= 3); // this test was written for row size 3
@@ -118,14 +150,47 @@ TEST_CASE("Solver")
       REQUIRE(integral[0] == Approx(std::pow(0.8, 3)/3*std::pow(0.8, 4)/4 - 0.8*0.8*0.3));
     }
   }
+}
 
-  SECTION("iteration status and time marching")
+TEST_CASE("Solver time marching")
+{
+  cartdg::Solver sol {3, cartdg::config::max_row_size, 1.};
+  int bc_sn = sol.mesh().add_boundary_condition(new cartdg::Copy);
+  SECTION("all cartesian")
   {
-    SECTION("all cartesian")
-    {
-      auto status = sol.iteration_status();
-      REQUIRE(status.flow_time == 0.);
-      REQUIRE(status.iteration == 0);
+    int sn [2][2][2];
+    for (int i = 0; i < 2; ++i) {
+      for (int j = 0; j < 2; ++j) {
+        for (int k = 0; k < 2; ++k) {
+          sn[i][j][k] = sol.mesh().add_element(0, false, {i, j, k});
+          if (i) sol.mesh().connect_cartesian(0, {sn[0][j][k], sn[1][j][k]}, {0});
+          if (j) sol.mesh().connect_cartesian(0, {sn[i][0][k], sn[i][1][k]}, {1});
+          if (k) sol.mesh().connect_cartesian(0, {sn[i][j][0], sn[i][j][1]}, {2});
+          int inds [] {i, j, k};
+          for (int i_dim = 0; i_dim < 3; ++i_dim) {
+            sol.mesh().connect_boundary(0, false, sn[i][j][k], i_dim, inds[i_dim], bc_sn);
+          }
+        }
+      }
+    }
+    sol.mesh().valid().assert_valid();
+    sol.initialize(Nonuniform_mass(std::sin));
+    auto status = sol.iteration_status();
+    REQUIRE(status.flow_time == 0.);
+    REQUIRE(status.iteration == 0);
+    sol.update();
+    status = sol.iteration_status();
+    REQUIRE(status.flow_time > 0.);
+    REQUIRE(status.iteration == 1);
+    for (int i_elem = 0; i_elem < 8; ++i_elem) {
+      for (int i_qpoint = 0; i_qpoint < std::pow(cartdg::config::max_row_size, 3); ++i_qpoint) {
+        for (int i_var = 0; i_var < 5; ++i_var) {
+          auto state = sol.sample(0, false, sn[0][0][i_elem], i_qpoint, cartdg::State_variables());
+          auto update = sol.sample(0, false, sn[0][0][i_elem], i_qpoint, cartdg::Physical_update());
+          auto cos = sol.sample(0, false, sn[0][0][i_elem], i_qpoint, Nonuniform_mass(std::cos));
+          REQUIRE(update[i_var]/status.time_step == Approx(-Nonuniform_mass::scaled_veloc(3)*cos[i_var]).scale(state[i_var]));
+        }
+      }
     }
   }
 }
