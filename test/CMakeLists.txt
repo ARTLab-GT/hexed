@@ -30,7 +30,6 @@ test_observing.cpp
 test_Physical_basis.cpp
 test_Refined_face.cpp
 test_Regular_grid.cpp
-test_shock_capturing.cpp
 test_Solution.cpp
 test_Solver.cpp
 test_Stopwatch.cpp
