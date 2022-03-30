@@ -42,4 +42,14 @@ void Nonpenetration::apply(Boundary_face& bf)
   surf_rot->from_surface(gh_f);
 }
 
-};
+
+void Copy::apply(Boundary_face& bf)
+{
+  double* in_f = bf.inside_face();
+  double* gh_f = bf.ghost_face();
+  for (int i_dof = 0; i_dof < bf.storage_params().n_dof()/bf.storage_params().row_size; ++i_dof) {
+    gh_f[i_dof] = in_f[i_dof];
+  }
+}
+
+}

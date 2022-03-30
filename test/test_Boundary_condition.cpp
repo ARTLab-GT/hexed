@@ -86,3 +86,30 @@ TEST_CASE("Nonpenetration")
     // require normal momentum flipped
   }
 }
+
+TEST_CASE("Copy")
+{
+  const int row_size = cartdg::config::max_row_size;
+  cartdg::Storage_params params {3, 5, 3, row_size};
+  cartdg::Element element {params};
+  const int n_qpoint = row_size*row_size;
+  cartdg::Copy copy;
+  cartdg::Typed_bound_connection<cartdg::Element> tbc {element, 1, false, copy};
+  // set inside face to something arbitrary
+  for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+    tbc.inside_face()[0*n_qpoint + i_qpoint] = 20.;
+    tbc.inside_face()[1*n_qpoint + i_qpoint] = -10.;
+    tbc.inside_face()[2*n_qpoint + i_qpoint] = 50.;
+    tbc.inside_face()[3*n_qpoint + i_qpoint] = 0.9;
+    tbc.inside_face()[4*n_qpoint + i_qpoint] = 1e4;
+  }
+  copy.apply(tbc);
+  // check that ghost face is equal to inside
+  for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+    REQUIRE(tbc.ghost_face()[0*n_qpoint + i_qpoint] == Approx(20.));
+    REQUIRE(tbc.ghost_face()[1*n_qpoint + i_qpoint] == Approx(-10.));
+    REQUIRE(tbc.ghost_face()[2*n_qpoint + i_qpoint] == Approx(50.));
+    REQUIRE(tbc.ghost_face()[3*n_qpoint + i_qpoint] == Approx(0.9));
+    REQUIRE(tbc.ghost_face()[4*n_qpoint + i_qpoint] == Approx(1e4));
+  }
+}

@@ -57,6 +57,16 @@ class Nonpenetration : public Boundary_condition
 };
 
 /*
+ * Copies the inside state.
+ * Mostly used for testing, but can be valid for supersonic outlets.
+ */
+class Copy : public Boundary_condition
+{
+  public:
+  virtual void apply(Boundary_face&);
+};
+
+/*
  * A `Boundary_face` that also provides details about the connection for the neighbor flux
  * computation and requests for a particular `Boundary_condition` to be applied to it.
  */
