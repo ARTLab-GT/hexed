@@ -2,6 +2,7 @@
 #include <Mcs_cartesian.hpp>
 #include <Write_face.hpp>
 #include <Neighbor_cartesian.hpp>
+#include <Neighbor_deformed.hpp>
 #include <Local_cartesian.hpp>
 #include <Tecplot_file.hpp>
 
@@ -39,6 +40,19 @@ void Solver::calc_jacobian()
   auto& elements = acc_mesh.deformed().elements();
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     elements[i_elem].set_jacobian(basis);
+  }
+  // set Jacobian of Cartesian boundary connections to identity
+  auto& bc_cons {acc_mesh.cartesian().boundary_connections()};
+  const int n_jac = params.n_dim*params.n_dim;
+  const int nfq = params.n_qpoint()/params.row_size;
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    double* jac = bc_cons[i_con].jacobian();
+    for (int i_jac = 0; i_jac < n_jac; ++i_jac) {
+      int sign = ((i_jac%params.n_dim == bc_cons[i_con].i_dim()) && !bc_cons[i_con].inside_face_sign()) ? -1 : 1;
+      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+        jac[i_jac*nfq + i_qpoint] = sign*(i_jac/params.n_dim == i_jac%params.n_dim); // 1 if row == col else 0
+      }
+    }
   }
 }
 
@@ -93,18 +107,17 @@ void Solver::update(double stability_ratio)
     double* state = elems[i_elem].stage(0);
     for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] = state[i_dof];
   }
-  std::vector<double> one;
-  one.push_back(1.);
-  for (double rk_weight : one) {
+  for (double rk_weight : rk_weights) {
     kernel_factory<Write_face>(nd, rs, basis)->execute(elems);
     auto& bcs {acc_mesh.boundary_conditions()};
     auto& bc_cons {acc_mesh.cartesian().boundary_connections()};
-    for (int i_bcc = 0; i_bcc < bc_cons.size(); ++i_bcc) {
+    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
       for (int i_bc = 0; i_bc < bcs.size(); ++i_bc) {
-        if (&bcs[i_bc] == bc_cons[i_bc].boundary_condition()) bcs[i_bc].apply(bc_cons[i_bc]);
+        if (&bcs[i_bc] == bc_cons[i_con].boundary_condition()) bcs[i_bc].apply(bc_cons[i_con]);
       }
     }
     kernel_factory<Neighbor_cartesian>(nd, rs)->execute(acc_mesh.cartesian().face_connections());
+    kernel_factory<Neighbor_deformed>(nd, rs)->execute(acc_mesh.deformed().face_connections());
     kernel_factory<Local_cartesian>(nd, rs, basis, dt, rk_weight)->execute(car_elems);
   }
   status.time_step = dt;

@@ -33,22 +33,18 @@ class Arbitrary_integrand : public cartdg::Domain_func
   }
 };
 
+constexpr double velocs [3] {0.3, -0.7, 0.8};
+constexpr double wave_number [3] {-0.1, 0.3, 0.2};
+double scaled_veloc(int n_dim)
+{
+  double result = 0.;
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) result += velocs[i_dim]*wave_number[i_dim];
+  return result;
+}
+
 class Nonuniform_mass : public cartdg::Spacetime_func
 {
-  double (*f)(double);
-
   public:
-  constexpr static double velocs [3] {0.3, -0.7, 0.8};
-  constexpr static double wave_number [3] {-0.1, 0.3, 0.2};
-  static double scaled_veloc(int n_dim)
-  {
-    double result = 0.;
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) result += velocs[i_dim]*wave_number[i_dim];
-    return result;
-  }
-
-  Nonuniform_mass(double (*mass_function)(double)) : f{mass_function} {}
-
   virtual int n_var(int n_dim) const {return n_dim + 2;};
 
   virtual std::vector<double> operator()(std::vector<double> pos, double time) const
@@ -56,11 +52,38 @@ class Nonuniform_mass : public cartdg::Spacetime_func
     const int n_dim {int(pos.size())};
     std::vector<double> result;
     double scaled_pos = 0.;
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) scaled_pos += wave_number[i_dim]*pos[i_dim];
-    double mass = f(scaled_pos);
+    double veloc_mag_sq;
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      scaled_pos += wave_number[i_dim]*pos[i_dim];
+      veloc_mag_sq += velocs[i_dim]*velocs[i_dim];
+    }
+    double mass = 1. + 0.1*std::sin(scaled_pos);
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) result.push_back(mass*velocs[i_dim]);
     result.push_back(mass);
-    result.push_back(mass*1e5/0.4);
+    result.push_back(1e5/0.4 + mass*0.5*veloc_mag_sq);
+    return result;
+  }
+};
+
+class Nonuniform_residual : public cartdg::Spacetime_func
+{
+  public:
+  virtual int n_var(int n_dim) const {return n_dim + 2;};
+
+  virtual std::vector<double> operator()(std::vector<double> pos, double time) const
+  {
+    const int n_dim {int(pos.size())};
+    std::vector<double> result;
+    double scaled_pos = 0.;
+    double veloc_mag_sq;
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      scaled_pos += wave_number[i_dim]*pos[i_dim];
+      veloc_mag_sq += velocs[i_dim]*velocs[i_dim];
+    }
+    double d_mass = -0.1*scaled_veloc(n_dim)*std::cos(scaled_pos);
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) result.push_back(d_mass*velocs[i_dim]);
+    result.push_back(d_mass);
+    result.push_back(d_mass*0.5*veloc_mag_sq);
     return result;
   }
 };
@@ -174,23 +197,28 @@ TEST_CASE("Solver time marching")
       }
     }
     sol.mesh().valid().assert_valid();
-    sol.initialize(Nonuniform_mass(std::sin));
+    sol.calc_jacobian();
+    sol.initialize(Nonuniform_mass());
     sol.visualize_field(cartdg::State_variables(), "marching_test0");
     auto status = sol.iteration_status();
     REQUIRE(status.flow_time == 0.);
     REQUIRE(status.iteration == 0);
     sol.update();
-    sol.visualize_field(cartdg::State_variables(), "marching_test1");
+    sol.visualize_field(cartdg::Physical_update(), "marching_test_diff");
     status = sol.iteration_status();
     REQUIRE(status.flow_time > 0.);
     REQUIRE(status.iteration == 1);
-    for (int i_elem = 0; i_elem < 8; ++i_elem) {
-      for (int i_qpoint = 0; i_qpoint < std::pow(cartdg::config::max_row_size, 3); ++i_qpoint) {
-        for (int i_var = 0; i_var < 5; ++i_var) {
-          auto state = sol.sample(0, false, sn[0][0][i_elem], i_qpoint, cartdg::State_variables());
-          auto update = sol.sample(0, false, sn[0][0][i_elem], i_qpoint, cartdg::Physical_update());
-          auto cos = sol.sample(0, false, sn[0][0][i_elem], i_qpoint, Nonuniform_mass(std::cos));
-          REQUIRE(update[i_var]/status.time_step == Approx(-Nonuniform_mass::scaled_veloc(3)*cos[i_var]).scale(state[i_var]));
+    for (int i = 0; i < 2; ++i) {
+      for (int j = 0; j < 2; ++j) {
+        for (int k = 0; k < 2; ++k) {
+          for (int i_qpoint = 0; i_qpoint < std::pow(cartdg::config::max_row_size, 3); ++i_qpoint) {
+            for (int i_var = 0; i_var < 5; ++i_var) {
+              auto state   = sol.sample(0, false, sn[i][j][k], i_qpoint, cartdg::State_variables());
+              auto update  = sol.sample(0, false, sn[i][j][k], i_qpoint, cartdg::Physical_update());
+              auto correct = sol.sample(0, false, sn[i][j][k], i_qpoint, Nonuniform_residual());
+              REQUIRE(update[i_var]/status.time_step == Approx(correct[i_var]).margin(1e-5*std::abs(state[i_var])));
+            }
+          }
         }
       }
     }
