@@ -1,5 +1,6 @@
 #include <Solver.hpp>
 #include <Mcs_cartesian.hpp>
+#include <Mcs_deformed.hpp>
 #include <Write_face.hpp>
 #include <Neighbor_cartesian.hpp>
 #include <Neighbor_deformed.hpp>
@@ -99,9 +100,9 @@ void Solver::update(double stability_ratio)
   const int nd = params.n_dim;
   const int rs = params.row_size;
   auto& elems = acc_mesh.elements();
-  auto& car_elems = acc_mesh.cartesian().elements();
   // compute time step
-  double mcs = (*kernel_factory<Mcs_cartesian>(nd, rs))(car_elems);
+  double mcs = std::max((*kernel_factory<Mcs_cartesian>(nd, rs))(acc_mesh.cartesian().elements()),
+                        (*kernel_factory<Mcs_deformed >(nd, rs))(acc_mesh.deformed ().elements()));
   double dt = stability_ratio*basis.max_cfl_convective()/params.n_dim/mcs;
   // record reference state for Runge-Kutta scheme
   const int n_dof = params.n_dof();
@@ -120,8 +121,8 @@ void Solver::update(double stability_ratio)
       }
     }
     (*kernel_factory<Neighbor_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections());
-    (*kernel_factory<Neighbor_deformed>(nd, rs))(acc_mesh.deformed().face_connections());
-    (*kernel_factory<Local_cartesian>(nd, rs, basis, dt, rk_weight))(car_elems);
+    (*kernel_factory<Neighbor_deformed >(nd, rs))(acc_mesh.deformed ().face_connections());
+    (*kernel_factory<Local_cartesian>(nd, rs, basis, dt, rk_weight))(acc_mesh.cartesian().elements());
   }
   // update status for reporting
   status.time_step = dt;
