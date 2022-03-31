@@ -33,6 +33,17 @@ class Arbitrary_integrand : public cartdg::Domain_func
   }
 };
 
+class Normal_1 : public cartdg::Surface_func
+{
+  public:
+  virtual int n_var(int n_dim) const {return 1;}
+  virtual std::vector<double> operator()(std::vector<double> pos, double time,
+                                         std::vector<double> state, std::vector<double> outward_normal) const
+  {
+    return {outward_normal[1]};
+  }
+};
+
 constexpr double velocs [3] {0.3, -0.7, 0.8};
 constexpr double wave_number [3] {-0.1, 0.3, 0.2};
 double scaled_veloc(int n_dim)
@@ -166,34 +177,60 @@ TEST_CASE("Solver")
     REQUIRE(sol.sample(1, false, sn4, 4, cartdg::Time_step_scale_func())[0] == Approx(0.5*(1. + 0.625)));
   }
 
-  SECTION("field integrals")
+  SECTION("integrals")
   {
     SECTION("simple function, complex mesh")
     {
-      sol.mesh().add_element(0, false, {0, 0, 0});
-      sol.mesh().add_element(0, false, {1, 0, 0});
-      sol.mesh().add_element(1, false, {2, 2, 0});
+      int car0 = sol.mesh().add_element(0, false, {0, 0, 0});
+      int car1 = sol.mesh().add_element(0, false, {1, 0, 0});
+      int car2 = sol.mesh().add_element(1, false, {2, 2, 0});
       int sn0 = sol.mesh().add_element(0, true, {2, 0, 0});
       int sn1 = sol.mesh().add_element(0, true, {4, 0, 0});
       // connecting deformed elements with an empty space in between stretches them by a factor of 1.5
       sol.mesh().connect_deformed(0, {sn0, sn1}, {{0, 0}, {1, 0}});
+      // add some boundary conditions for testing surface integrals
+      int bc0 = sol.mesh().add_boundary_condition(new cartdg::Copy ());
+      int bc1 = sol.mesh().add_boundary_condition(new cartdg::Copy ());
+      int i = 0;
+      for (int sn : {car0, car1, sn0, sn1}) {
+        sol.mesh().connect_boundary(0, i++ >= 2, sn, 1, 0, bc0);
+      }
+      sol.mesh().connect_boundary(1, false, car2, 0, 1, bc0);
+      sol.mesh().connect_boundary(1, false, car2, 1, 1, bc1);
+      // finish setup
       sol.calc_jacobian();
       std::vector<double> state {0.3, -10., 0.7, 32.};
       sol.initialize(cartdg::Constant_func(state));
+      // let's do some integrals
       auto integral = sol.integral_field(cartdg::State_variables());
       REQUIRE(integral.size() == 4);
       double area = 5.25*0.8*0.8;
       for (int i_var = 0; i_var < 4; ++i_var) {
         REQUIRE(integral[i_var] == Approx(state[i_var]*area));
       }
+      area = 5.5*0.8;
+      integral = sol.integral_surface(cartdg::State_variables(), bc0);
+      REQUIRE(integral.size() == 4);
+      for (int i_var = 0; i_var < 4; ++i_var) {
+        REQUIRE(integral[i_var] == Approx(state[i_var]*area));
+      }
+      integral = sol.integral_surface(Normal_1(), bc0);
+      REQUIRE(integral.size() == 1);
+      REQUIRE(integral[0] == Approx(-0.5*0.8));
     }
     SECTION("complex function, simple mesh")
     {
-      sol.mesh().add_element(0, false, {0, 0, 0});
+      int sn = sol.mesh().add_element(0, false, {0, 0, 0});
+      int bc0 = sol.mesh().add_boundary_condition(new cartdg::Nonpenetration ());
+      sol.mesh().connect_boundary(0, false, sn, 0, 1, bc0);
+      sol.calc_jacobian();
       sol.initialize(cartdg::Constant_func({0.3, 0., 0., 0.}));
       auto integral = sol.integral_field(Arbitrary_integrand());
       REQUIRE(integral.size() == 3);
       REQUIRE(integral[0] == Approx(std::pow(0.8, 3)/3*std::pow(0.8, 4)/4 - 0.8*0.8*0.3));
+      integral = sol.integral_surface(Arbitrary_integrand(), bc0);
+      REQUIRE(integral.size() == 3);
+      REQUIRE(integral[0] == Approx(std::pow(0.8, 4)/4 - 0.8*0.3));
     }
   }
 }

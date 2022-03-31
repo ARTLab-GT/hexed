@@ -248,7 +248,7 @@ std::vector<double> Solver::integral_field(const Qpoint_func& integrand)
   weights_1d.col(0) = basis.node_weights();
   Eigen::VectorXd weights = custom_math::hypercube_matvec(weights_1d, one);
   // now compute the integral with the above quadrature weights
-  std::vector<double> integral (integrand.n_var(params.n_dim));
+  std::vector<double> integral (integrand.n_var(params.n_dim), 0.);
   auto& elements = acc_mesh.elements();
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     Element& element {elements[i_elem]};
@@ -262,6 +262,12 @@ std::vector<double> Solver::integral_field(const Qpoint_func& integrand)
   }
   return integral;
 }
+
+std::vector<double> Solver::integral_surface(const Surface_func& integrand, int bc_sn)
+{
+  std::vector<double> integral (integrand.n_var(params.n_dim), 0.);
+  return integral;
+};
 
 void Solver::visualize_field(const Qpoint_func& output_variables, std::string name)
 {

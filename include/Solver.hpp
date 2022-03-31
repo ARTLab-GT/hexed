@@ -63,12 +63,12 @@ class Solver
   const Stopwatch_tree& stopwatch_tree();
   // compute an integral over the entire flow field at the current time
   std::vector<double> integral_field(const Qpoint_func& integrand);
-  // compute an integral over all wall surfaces
-  std::vector<double> integral_surface(const Surface_func& integrand);
+  // compute an integral over all surfaces where a particular boundary condition has been enforced
+  std::vector<double> integral_surface(const Surface_func& integrand, int bc_sn);
   // write a visualization file describing the entire flow field (but not identifying surfaces)
   void visualize_field(const Qpoint_func& output_variables, std::string name);
-  // write a visualization file describing all wall surfaces
-  void visualize_surface(const Qpoint_func& output_variables, std::string name);
+  // write a visualization file describing all surfaces where a particular boundary condition has been enforced
+  void visualize_surface(const Qpoint_func& output_variables, int bc_sn, std::string name);
 };
 
 }
