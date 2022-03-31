@@ -38,12 +38,22 @@ class Mcs_deformed : public Mcs_deformed_dynamic
     #pragma omp parallel for reduction(max:max_speed)
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
       Deformed_element& elem {elements[i_elem]};
-      double max_tss = 0.;
+      // account for jacobian and time step scale
       double* tss = elem.time_step_scale();
+      double* jac_data = elem.jacobian();
+      double min_scale = std::numeric_limits<double>::max();
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-        max_tss = std::max(max_tss, tss[i_qpoint]);
+        Eigen::Matrix<double, n_dim, n_dim> jac_mat;
+        for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+          for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+            jac_mat(i_dim, j_dim) = jac_data[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
+          }
+        }
+        // find minimum singular value (always at end of singular value vector) and divide by TSS
+        min_scale = std::min(min_scale, jac_mat.jacobiSvd().singularValues()(n_dim - 1)/tss[i_qpoint]);
       }
-      double speed = characteristic_speed<n_dim, n_qpoint>(elem.stage(0), heat_rat)*max_tss/elem.nominal_size();
+      // compute reference speed
+      double speed = characteristic_speed<n_dim, n_qpoint>(elem.stage(0), heat_rat)/min_scale/elem.nominal_size();
       max_speed = std::max(speed, max_speed);
     }
     return max_speed;
