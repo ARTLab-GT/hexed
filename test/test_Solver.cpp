@@ -65,6 +65,29 @@ class Nonuniform_mass : public cartdg::Spacetime_func
   }
 };
 
+class Random_perturbation : public cartdg::Spacetime_func
+{
+  double rand_perturb() const
+  {
+    const int n = 1000;
+    return 1. + 0.1/n*(rand()%n);
+  };
+
+  public:
+  virtual int n_var(int n_dim) const {return n_dim + 2;};
+
+  virtual std::vector<double> operator()(std::vector<double> pos, double time) const
+  {
+    const int n_dim {int(pos.size())};
+    std::vector<double> result;
+    double mass = 1.05;
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) result.push_back(mass*velocs[i_dim]*rand_perturb());
+    result.push_back(mass*rand_perturb());
+    result.push_back(1e5/0.4*rand_perturb());
+    return result;
+  }
+};
+
 class Nonuniform_residual : public cartdg::Spacetime_func
 {
   public:
@@ -321,6 +344,30 @@ void test_marching(Test_mesh& tm, std::string name)
   }
 }
 
+void test_conservation(Test_mesh& tm, std::string name)
+{
+  srand(406);
+  auto handles = tm.construct(new cartdg::Nonpenetration());
+  auto& sol = tm.solver();
+  sol.mesh().valid().assert_valid();
+  sol.calc_jacobian();
+  sol.initialize(Random_perturbation());
+  sol.visualize_field(cartdg::State_variables(), "conservation_" + name + "_init");
+  // check that the iteration status is right at the start
+  auto status = sol.iteration_status();
+  // update
+  sol.update();
+  sol.visualize_field(cartdg::Physical_update(), "conservation_" + name + "_diff");
+  status = sol.iteration_status();
+  // check that the computed update is approximately equal to the exact solution
+  //for (int i_var = 0; i_var < sol.storage_params().n_var; ++i_var) {
+  for (int i_var : {sol.storage_params().n_var - 2, sol.storage_params().n_var - 1}) {
+    auto state  = sol.integral_field(cartdg::State_variables());
+    auto update = sol.integral_field(cartdg::Physical_update());
+    REQUIRE(update[i_var]/status.time_step == Approx(0.).scale(std::abs(state[i_var])));
+  }
+}
+
 // test the solver on a sinusoid-derived initial condition which has a simple analytic solution
 TEST_CASE("Solver time marching")
 {
@@ -340,5 +387,27 @@ TEST_CASE("Solver time marching")
   {
     Hanging hg;
     test_marching(hg, "hanging");
+  }
+}
+
+// test the solver on a randomly perturbed input (for which it can't possibly be accurate) and verify conservation
+TEST_CASE("Solver conservation")
+{
+  SECTION("all cartesian")
+  {
+    All_cartesian ac;
+    test_conservation(ac, "car");
+  }
+  SECTION("all deformed")
+  {
+    All_deformed ad0 (0);
+    test_conservation(ad0, "def0");
+    All_deformed ad1 (1);
+    test_conservation(ad1, "def1");
+  }
+  SECTION("with hanging nodes")
+  {
+    Hanging hg;
+    test_conservation(hg, "hanging");
   }
 }
