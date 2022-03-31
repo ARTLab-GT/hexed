@@ -68,7 +68,7 @@ void Accessible_mesh::connect_hanging_cartesian(int coarse_ref_level, int coarse
   Element* coarse = &element(coarse_ref_level, coarse_deformed, coarse_serial);
   std::vector<Element*> fine;
   for (int fs : fine_serial) fine.push_back(&element(coarse_ref_level + 1, fine_deformed, fs));
-  car.ref_face_cons.emplace_back(coarse, fine, dir, !coarse_face_positive);
+  car.ref_face_cons.emplace_back(new Refined_connection<Element> {coarse, fine, dir, !coarse_face_positive});
 }
 
 int Accessible_mesh::add_boundary_condition(Boundary_condition* bc)

@@ -204,6 +204,10 @@ class Refined_connection
       vert0.eat(vert1);
     }
   }
+  // delete copy semantics which would mess up `Fine_connection`. Can implement later if we really need it.
+  Refined_connection(const Refined_connection&) = delete;
+  Refined_connection& operator=(const Refined_connection&) = delete;
+  virtual ~Refined_connection() = default;
   Con_dir<element_t> direction() {return dir;}
   // fetch an object represting a connection between the face of a fine element and one of the mortar faces
   Fine_connection& connection(int i_fine) {return fine_cons[i_fine];}

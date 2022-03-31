@@ -256,6 +256,39 @@ class All_deformed : public Test_mesh
   }
 };
 
+// creates a mesh involving hanging vertices
+class Hanging : public Test_mesh
+{
+  cartdg::Solver sol;
+  public:
+  Hanging() : sol{2, cartdg::config::max_row_size, 1.} {}
+  virtual cartdg::Solver& solver() {return sol;}
+  virtual std::vector<elem_handle> construct(cartdg::Boundary_condition* bc)
+  {
+    std::vector<elem_handle> handles;
+    int bc_sn = sol.mesh().add_boundary_condition(bc);
+    for (int i = 0; i < 2; ++i) {
+      handles.push_back({0, false, sol.mesh().add_element(0, false, {i  , 0})});
+      handles.push_back({1, false, sol.mesh().add_element(1, false, {i  , 2})});
+      handles.push_back({1,  true, sol.mesh().add_element(1,  true, {i+2, 2})});
+    }
+    sol.mesh().connect_cartesian(0, {handles[0].serial_n, handles[3].serial_n}, {0});
+    sol.mesh().connect_cartesian(1, {handles[1].serial_n, handles[4].serial_n}, {0});
+    sol.mesh().connect_deformed(1, {handles[2].serial_n, handles[5].serial_n}, {{0, 0}, {1, 0}});
+    sol.mesh().connect_cartesian(1, {handles[4].serial_n, handles[2].serial_n}, {0}, {false, true});
+    for (int i = 0; i < 2; ++i) {
+      sol.mesh().connect_hanging_cartesian(0, handles[3*i].serial_n, {handles[1 + i].serial_n, handles[4 + i].serial_n}, {1}, 1, false, i);
+      sol.mesh().connect_boundary(0, false, handles[3*i        ].serial_n, 1, 0, bc_sn);
+      sol.mesh().connect_boundary(0, false, handles[3*i        ].serial_n, 0, i, bc_sn);
+      sol.mesh().connect_boundary(1, false, handles[3*i + 1    ].serial_n, 1, 1, bc_sn);
+      sol.mesh().connect_boundary(1,  true, handles[3*i + 2    ].serial_n, 1, 1, bc_sn);
+      sol.mesh().connect_boundary(1,     i, handles[3*i + 1 + i].serial_n, 0, i, bc_sn);
+    }
+    for (int i = 0; i < 2; ++i) sol.relax_vertices();
+    return handles;
+  }
+};
+
 void test_marching(Test_mesh& tm, std::string name)
 {
   // use `Copy` BCs. This is unstable for this case but it will still give the right answer as long as only one time step is executed
@@ -302,5 +335,10 @@ TEST_CASE("Solver time marching")
     test_marching(ad0, "def0");
     All_deformed ad1 (1);
     test_marching(ad1, "def1");
+  }
+  SECTION("with hanging nodes")
+  {
+    Hanging hg;
+    test_marching(hg, "hanging");
   }
 }

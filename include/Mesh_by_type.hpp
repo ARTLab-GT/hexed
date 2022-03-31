@@ -40,7 +40,7 @@ class Mesh_by_type : public View_by_type<element_t>
   // where the data is kept
   Complete_element_container<element_t> elems;
   std::vector<Element_face_connection<element_t>> cons;
-  std::vector<Refined_connection<element_t>> ref_face_cons;
+  std::vector<std::unique_ptr<Refined_connection<element_t>>> ref_face_cons;
   std::vector<Typed_bound_connection<element_t>> bound_cons;
 
   // template spaghetti to get `Vector_view`s of the data with the right type
@@ -56,7 +56,7 @@ class Mesh_by_type : public View_by_type<element_t>
     {
       int i_refined = index - parent.cons.size();
       if (i_refined < 0) return parent.cons[index];
-      return parent.ref_face_cons[i_refined/parent.n_ref_faces].connection(i_refined%parent.n_ref_faces);
+      return parent.ref_face_cons[i_refined/parent.n_ref_faces]->connection(i_refined%parent.n_ref_faces);
     }
   };
   Connection_view<Face_connection<element_t>&> elem_face_con_v;
@@ -64,10 +64,10 @@ class Mesh_by_type : public View_by_type<element_t>
   static std::vector<Element_face_connection<element_t>> empty_con_vec;
   static Vector_view<Face_connection<element_t>&, Element_face_connection<element_t>> empty_con_view;
   Connection_view<Element_connection&> elem_con_v;
-  static Refined_face& ref_face(Refined_connection<element_t>& ref_con) {return ref_con.refined_face;}
-  static Hanging_vertex_matcher& matcher(Refined_connection<element_t>& ref_con) {return ref_con.matcher;}
-  Vector_view<Refined_face&, Refined_connection<element_t>, &ref_face> ref_v;
-  Vector_view<Hanging_vertex_matcher&, Refined_connection<element_t>, &matcher> matcher_v;
+  static Refined_face& ref_face(std::unique_ptr<Refined_connection<element_t>>& ref_con) {return ref_con->refined_face;}
+  static Hanging_vertex_matcher& matcher(std::unique_ptr<Refined_connection<element_t>>& ref_con) {return ref_con->matcher;}
+  Vector_view<Refined_face&, std::unique_ptr<Refined_connection<element_t>>, &ref_face> ref_v;
+  Vector_view<Hanging_vertex_matcher&, std::unique_ptr<Refined_connection<element_t>>, &matcher> matcher_v;
   Vector_view<Boundary_connection&, Typed_bound_connection<element_t>> bound_con_v;
   Vector_view<Face_connection<Deformed_element>&, Typed_bound_connection<element_t>> bound_face_con_view;
   Concatenation<Face_connection<element_t>&> face_con_v;
