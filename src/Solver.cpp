@@ -92,7 +92,7 @@ void Solver::calc_jacobian()
         auto dir = con.direction();
         for (int i_side : {0, 1}) {
           elem_jac[i_side] = con.face(i_side);
-          normal_sign[i_side] = ((j_dim == dir.i_dim[0]) && (dir.flip_normal(i_side))) ? -1 : 1;
+          normal_sign[i_side] = ((j_dim == dir.i_dim[i_side]) && (dir.flip_normal(i_side))) ? -1 : 1;
         }
         if (dir.transpose()) { // already implies n_dim == 3
           Eigen::Map<Eigen::MatrixXd> face (elem_jac[1], rs, rs);
@@ -192,7 +192,7 @@ void Solver::update(double stability_ratio)
     for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] = state[i_dof];
   }
   // perform update for each Runge-Kutta stage
-  for (double rk_weight : {rk_weights[0]}) {
+  for (double rk_weight : {rk_weights[0]}) { // FIXME
     (*kernel_factory<Write_face>(nd, rs, basis))(elems);
     auto& bcs {acc_mesh.boundary_conditions()};
     auto& bc_cons {acc_mesh.boundary_connections()};

@@ -46,6 +46,7 @@ TEST_CASE("Local_deformed")
     {
       elements.emplace_back(new cartdg::Deformed_element {params, {}, 2.});
       double* state = elements[i_elem]->stage(0);
+      double* jacobian = elements[i_elem]->jacobian();
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
         state[0*n_qpoint + i_qpoint] = mmtm;
@@ -53,6 +54,7 @@ TEST_CASE("Local_deformed")
         state[2*n_qpoint + i_qpoint] = ener;
         // set RK reference state
         for (int i_var = 0; i_var < 3; ++i_var) state[(3 + i_var)*n_qpoint + i_qpoint] = 30.;
+        jacobian[i_qpoint] = 1.;
       }
       for (int i_face = 0; i_face < n_qpoint/params.row_size*3*2*1; ++i_face) {
         elements[i_elem]->face()[i_face] = 0.;
@@ -87,6 +89,7 @@ TEST_CASE("Local_deformed")
     {
       elements.emplace_back(new cartdg::Deformed_element {params, {}, 2.});
       double* state = elements[i_elem]->stage(0);
+      double* jacobian = elements[i_elem]->jacobian();
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
         state[0*n_qpoint + i_qpoint] = mass*veloc0;
@@ -96,6 +99,8 @@ TEST_CASE("Local_deformed")
         state[4*n_qpoint + i_qpoint] = ener;
         // set RK reference state (since RK weight is 1., inializing to 0 works fine)
         for (int i_var = 0; i_var < 5; ++i_var) state[(5 + i_var)*n_qpoint + i_qpoint] = 0.;
+        // set Jacobian to identity
+        for (int i_jac = 0; i_jac < 9; ++i_jac) jacobian[i_jac*n_qpoint + i_qpoint] = (i_jac/3 == i_jac%3);
       }
       for (int i_face = 0; i_face < n_qpoint/params.row_size*5*2*3; ++i_face) {
         elements[i_elem]->face()[i_face] = 0.;
@@ -140,6 +145,7 @@ TEST_CASE("Local_deformed")
       elements.emplace_back(new cartdg::Deformed_element {params, {}, 2.});
       double* state = elements[i_elem]->stage(0);
       double* face = elements[i_elem]->face();
+      double* jacobian = elements[i_elem]->jacobian();
 
       #define SET_VARS \
         double mass = 1 + 0.1*pos0 + 0.2*pos1; \
@@ -163,6 +169,7 @@ TEST_CASE("Local_deformed")
           for (int i_var = 0; i_var < 4; ++i_var) {
             state[(4 + i_var)*n_qpoint + i_qpoint] = -state[i_var*n_qpoint + i_qpoint];
           }
+          for (int i_jac = 0; i_jac < 4; ++i_jac) jacobian[i_jac*n_qpoint + i_qpoint] = (i_jac/2 == i_jac%2);
         }
         // set face state to match interior state
         for (int i_dim : {0, 1})
