@@ -52,7 +52,7 @@ class Nonuniform_mass : public cartdg::Spacetime_func
     const int n_dim {int(pos.size())};
     std::vector<double> result;
     double scaled_pos = 0.;
-    double veloc_mag_sq;
+    double veloc_mag_sq = 0.;
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
       scaled_pos += wave_number[i_dim]*pos[i_dim];
       veloc_mag_sq += velocs[i_dim]*velocs[i_dim];
@@ -75,7 +75,7 @@ class Nonuniform_residual : public cartdg::Spacetime_func
     const int n_dim {int(pos.size())};
     std::vector<double> result;
     double scaled_pos = 0.;
-    double veloc_mag_sq;
+    double veloc_mag_sq = 0.;
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
       scaled_pos += wave_number[i_dim]*pos[i_dim];
       veloc_mag_sq += velocs[i_dim]*velocs[i_dim];

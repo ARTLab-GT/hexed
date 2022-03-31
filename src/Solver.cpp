@@ -101,7 +101,7 @@ void Solver::update(double stability_ratio)
   auto& elems = acc_mesh.elements();
   auto& car_elems = acc_mesh.cartesian().elements();
   double mcs = kernel_factory<Mcs_cartesian>(nd, rs)->compute(car_elems);
-  double dt = basis.max_cfl_convective()/mcs;
+  double dt = stability_ratio*basis.max_cfl_convective()/params.n_dim/mcs;
   const int n_dof = params.n_dof();
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     double* state = elems[i_elem].stage(0);

@@ -1,50 +1,50 @@
-#include <iostream>
-#include <chrono>
-
-#include <Solution.hpp>
+#include <Solver.hpp>
+#include <math.hpp>
 
 int main()
 {
   // Resolution parameters
   const int row_size = 6;
   const int ref_level = 3;
+  constexpr int n_side = cartdg::custom_math::pow(2, ref_level);
+  int sn [n_side][n_side];
 
   // Solution setup
-  cartdg::Solution solution (4, 2, row_size, 1.);
-  solution.add_block_grid(ref_level);
-  cartdg::Regular_grid& grid = solution.reg_grids[0];
-  int n_div = 1; for (int i = 0; i < ref_level; ++i) n_div *= 2;
-  std::vector<int> periods {n_div, n_div};
-  grid.auto_connect(periods);
+  cartdg::Solver solver (2, row_size, 1.);
+  for (int i = 0; i < n_side; ++i) {
+    for (int j = 0; j < n_side; ++j) {
+      sn[i][j] = solver.mesh().add_element(ref_level, false, {i, j});
+    }
+  }
+  for (int i = 0; i < n_side; ++i) {
+    for (int j = 0; j < n_side; ++j) {
+      solver.mesh().connect_cartesian(ref_level, {sn[i][j], sn[(i+1)%n_side][j]}, {0});
+      solver.mesh().connect_cartesian(ref_level, {sn[i][j], sn[i][(j+1)%n_side]}, {1});
+    }
+  }
+  solver.mesh().valid().assert_valid();
   cartdg::Isentropic_vortex vortex (std::vector<double> {100., 0., 1.225, 101325/0.4});
   vortex.center0 = 0.5; vortex.center1 = 0.5;
-  solution.initialize(vortex);
+  solver.initialize(vortex);
 
   // Let's go!
-  solution.visualize_field("demo_initial");
-  auto start = std::chrono::high_resolution_clock::now();
+  solver.visualize_field(cartdg::State_variables(), "demo_initial");
   double time = 0;
   for (int i = 0; i < 20; ++i)
   {
     time += 1e-3;
-    while (grid.time < time)
+    while (solver.iteration_status().flow_time < time)
     {
-      solution.update(0.9);
+      solver.update();
     }
     char buffer [100];
     snprintf(buffer, 100, "demo_time_%e", time);
-    solution.visualize_field(buffer);
+    solver.visualize_field(cartdg::State_variables(), buffer);
   }
   time = 0.2;
-  while (grid.time < time)
+  while (solver.iteration_status().flow_time < time)
   {
-    solution.update(0.9);
+    solver.update();
   }
-  auto stop = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start);
-  std::cout << "Execution completed in " << float(duration.count())*1e-9 << " s\n";
-  std::cout << "(" << grid.iter << " iterations at "
-            << float(duration.count())*1e-9/grid.iter << " s per iteration)\n";
-  std::cout << solution.stopwatch_tree().report();
-  solution.visualize_field("demo_final");
+  solver.visualize_field(cartdg::State_variables(), "demo_final");
 }
