@@ -100,13 +100,16 @@ void Solver::update(double stability_ratio)
   const int rs = params.row_size;
   auto& elems = acc_mesh.elements();
   auto& car_elems = acc_mesh.cartesian().elements();
+  // compute time step
   double mcs = kernel_factory<Mcs_cartesian>(nd, rs)->compute(car_elems);
   double dt = stability_ratio*basis.max_cfl_convective()/params.n_dim/mcs;
+  // record reference state for Runge-Kutta scheme
   const int n_dof = params.n_dof();
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     double* state = elems[i_elem].stage(0);
     for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] = state[i_dof];
   }
+  // perform update for each Runge-Kutta stage
   for (double rk_weight : rk_weights) {
     kernel_factory<Write_face>(nd, rs, basis)->execute(elems);
     auto& bcs {acc_mesh.boundary_conditions()};
@@ -120,6 +123,7 @@ void Solver::update(double stability_ratio)
     kernel_factory<Neighbor_deformed>(nd, rs)->execute(acc_mesh.deformed().face_connections());
     kernel_factory<Local_cartesian>(nd, rs, basis, dt, rk_weight)->execute(car_elems);
   }
+  // update status for reporting
   status.time_step = dt;
   status.flow_time += dt;
   ++status.iteration;

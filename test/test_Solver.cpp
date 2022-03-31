@@ -175,12 +175,15 @@ TEST_CASE("Solver")
   }
 }
 
+// test the solver on a sinusoid-derived initial condition which has a simple analytic solution
 TEST_CASE("Solver time marching")
 {
   cartdg::Solver sol {3, cartdg::config::max_row_size, 1.};
+  // use `Copy` BCs. This is unstable for this case but it will still give the right answer as long as only one time step is executed
   int bc_sn = sol.mesh().add_boundary_condition(new cartdg::Copy);
   SECTION("all cartesian")
   {
+    // create a 2x2x2 mesh
     int sn [2][2][2];
     for (int i = 0; i < 2; ++i) {
       for (int j = 0; j < 2; ++j) {
@@ -200,14 +203,17 @@ TEST_CASE("Solver time marching")
     sol.calc_jacobian();
     sol.initialize(Nonuniform_mass());
     sol.visualize_field(cartdg::State_variables(), "marching_test0");
+    // check that the iteration status is right at the start
     auto status = sol.iteration_status();
     REQUIRE(status.flow_time == 0.);
     REQUIRE(status.iteration == 0);
+    // update
     sol.update();
     sol.visualize_field(cartdg::Physical_update(), "marching_test_diff");
     status = sol.iteration_status();
     REQUIRE(status.flow_time > 0.);
     REQUIRE(status.iteration == 1);
+    // check that the computed update is approximately equal to the exact solution
     for (int i = 0; i < 2; ++i) {
       for (int j = 0; j < 2; ++j) {
         for (int k = 0; k < 2; ++k) {
