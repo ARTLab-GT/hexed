@@ -26,6 +26,7 @@ test_Local_cartesian.cpp
 test_neighbor.cpp
 test_math.cpp
 test_Mcs_cartesian.cpp
+test_Mcs_deformed.cpp
 test_observing.cpp
 test_Physical_basis.cpp
 test_Refined_face.cpp
