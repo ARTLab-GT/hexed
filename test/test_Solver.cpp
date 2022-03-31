@@ -175,58 +175,83 @@ TEST_CASE("Solver")
   }
 }
 
+class Test_mesh
+{
+  public:
+  virtual cartdg::Solver& solver() = 0;
+  virtual std::vector<int> construct(cartdg::Boundary_condition* bc) = 0;
+};
+
+// creates a 2x2x2 mesh
+class All_cartesian : public Test_mesh
+{
+  cartdg::Solver sol;
+  public:
+  All_cartesian()
+  : sol{3, cartdg::config::max_row_size, 1.}
+  {}
+
+  virtual cartdg::Solver& solver() {return sol;}
+
+  virtual std::vector<int> construct(cartdg::Boundary_condition* bc)
+  {
+    std::vector<int> sn;
+    int bc_sn = sol.mesh().add_boundary_condition(bc);
+    for (int i_elem = 0; i_elem < 8; ++i_elem) {
+      std::vector<int> strides;
+      std::vector<int> inds;
+      for (int i_dim = 0; i_dim < 3; ++i_dim) {
+        strides.push_back(std::pow(2, 2 - i_dim));
+        inds.push_back((i_elem/strides.back())%2);
+      }
+      sn.push_back(sol.mesh().add_element(0, false, inds));
+      for (int i_dim = 0; i_dim < 3; ++i_dim) {
+        if (inds[i_dim]) sol.mesh().connect_cartesian(0, {sn.back() - strides[i_dim], sn.back()}, {i_dim});
+        sol.mesh().connect_boundary(0, false, sn.back(), i_dim, inds[i_dim], bc_sn);
+      }
+    }
+    return sn;
+  }
+};
+
+void test_marching(Test_mesh& tm, std::string name)
+{
+  // use `Copy` BCs. This is unstable for this case but it will still give the right answer as long as only one time step is executed
+  auto sns = tm.construct(new cartdg::Copy);
+  auto& sol = tm.solver();
+  sol.mesh().valid().assert_valid();
+  sol.calc_jacobian();
+  sol.initialize(Nonuniform_mass());
+  sol.visualize_field(cartdg::State_variables(), "marching_" + name + "_init");
+  // check that the iteration status is right at the start
+  auto status = sol.iteration_status();
+  REQUIRE(status.flow_time == 0.);
+  REQUIRE(status.iteration == 0);
+  // update
+  sol.update();
+  sol.visualize_field(cartdg::Physical_update(), "marching_" + name + "_diff");
+  status = sol.iteration_status();
+  REQUIRE(status.flow_time > 0.);
+  REQUIRE(status.iteration == 1);
+  // check that the computed update is approximately equal to the exact solution
+  for (int sn : sns) {
+    for (int i_qpoint = 0; i_qpoint < std::pow(cartdg::config::max_row_size, 3); ++i_qpoint) {
+      for (int i_var = 0; i_var < 5; ++i_var) {
+        auto state   = sol.sample(0, false, sn, i_qpoint, cartdg::State_variables());
+        auto update  = sol.sample(0, false, sn, i_qpoint, cartdg::Physical_update());
+        auto correct = sol.sample(0, false, sn, i_qpoint, Nonuniform_residual());
+        REQUIRE(update[i_var]/status.time_step == Approx(correct[i_var]).margin(1e-5*std::abs(state[i_var])));
+      }
+    }
+  }
+}
+
 // test the solver on a sinusoid-derived initial condition which has a simple analytic solution
 TEST_CASE("Solver time marching")
 {
-  cartdg::Solver sol {3, cartdg::config::max_row_size, 1.};
-  // use `Copy` BCs. This is unstable for this case but it will still give the right answer as long as only one time step is executed
-  int bc_sn = sol.mesh().add_boundary_condition(new cartdg::Copy);
   SECTION("all cartesian")
   {
-    // create a 2x2x2 mesh
-    int sn [2][2][2];
-    for (int i = 0; i < 2; ++i) {
-      for (int j = 0; j < 2; ++j) {
-        for (int k = 0; k < 2; ++k) {
-          sn[i][j][k] = sol.mesh().add_element(0, false, {i, j, k});
-          if (i) sol.mesh().connect_cartesian(0, {sn[0][j][k], sn[1][j][k]}, {0});
-          if (j) sol.mesh().connect_cartesian(0, {sn[i][0][k], sn[i][1][k]}, {1});
-          if (k) sol.mesh().connect_cartesian(0, {sn[i][j][0], sn[i][j][1]}, {2});
-          int inds [] {i, j, k};
-          for (int i_dim = 0; i_dim < 3; ++i_dim) {
-            sol.mesh().connect_boundary(0, false, sn[i][j][k], i_dim, inds[i_dim], bc_sn);
-          }
-        }
-      }
-    }
-    sol.mesh().valid().assert_valid();
-    sol.calc_jacobian();
-    sol.initialize(Nonuniform_mass());
-    sol.visualize_field(cartdg::State_variables(), "marching_test0");
-    // check that the iteration status is right at the start
-    auto status = sol.iteration_status();
-    REQUIRE(status.flow_time == 0.);
-    REQUIRE(status.iteration == 0);
-    // update
-    sol.update();
-    sol.visualize_field(cartdg::Physical_update(), "marching_test_diff");
-    status = sol.iteration_status();
-    REQUIRE(status.flow_time > 0.);
-    REQUIRE(status.iteration == 1);
-    // check that the computed update is approximately equal to the exact solution
-    for (int i = 0; i < 2; ++i) {
-      for (int j = 0; j < 2; ++j) {
-        for (int k = 0; k < 2; ++k) {
-          for (int i_qpoint = 0; i_qpoint < std::pow(cartdg::config::max_row_size, 3); ++i_qpoint) {
-            for (int i_var = 0; i_var < 5; ++i_var) {
-              auto state   = sol.sample(0, false, sn[i][j][k], i_qpoint, cartdg::State_variables());
-              auto update  = sol.sample(0, false, sn[i][j][k], i_qpoint, cartdg::Physical_update());
-              auto correct = sol.sample(0, false, sn[i][j][k], i_qpoint, Nonuniform_residual());
-              REQUIRE(update[i_var]/status.time_step == Approx(correct[i_var]).margin(1e-5*std::abs(state[i_var])));
-            }
-          }
-        }
-      }
-    }
+    All_cartesian ac;
+    test_marching(ac, "car");
   }
 }
