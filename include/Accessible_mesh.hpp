@@ -28,6 +28,7 @@ class Accessible_mesh : public Mesh
   static Boundary_condition& convert_bc (std::unique_ptr<Boundary_condition>& ptr) {return *ptr;}
   Vector_view<Boundary_condition&, std::unique_ptr<Boundary_condition>, &convert_bc> bc_v;
   Concatenation<Face_connection<Deformed_element>&> bound_face_cons;
+  Concatenation<Boundary_connection&> bound_cons;
   Concatenation<Face_connection<Deformed_element>&> def_face_cons;
   Concatenation<Refined_face&> ref_face_v;
   Concatenation<Hanging_vertex_matcher&> matcher_v;
@@ -51,6 +52,7 @@ class Accessible_mesh : public Mesh
   virtual int add_boundary_condition(Boundary_condition* bc);
   virtual void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n);
   Sequence<Boundary_condition&>& boundary_conditions() {return bc_v;}
+  Sequence<Boundary_connection&>& boundary_connections() {return bound_cons;}
   inline Sequence<Refined_face&>& refined_faces() {return ref_face_v;}
   inline Sequence<Hanging_vertex_matcher&>& hanging_vertex_matchers() {return matcher_v;}
   virtual Connection_validity valid();

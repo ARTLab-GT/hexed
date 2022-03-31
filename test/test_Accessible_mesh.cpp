@@ -116,6 +116,7 @@ TEST_CASE("Accessible_mesh")
       {
         auto& bc_cons {mesh.cartesian().boundary_connections()};
         REQUIRE(bc_cons.size() == 3);
+        REQUIRE(mesh.boundary_connections().size() == 3);
         // check that there are two boundary conditions one of which is used twice and the other of
         // which is used once.
         auto& bcs = mesh.boundary_conditions();
@@ -135,6 +136,7 @@ TEST_CASE("Accessible_mesh")
       mesh.connect_boundary(3, true, sn2, 0, 1, nonpen);
       auto& cons {mesh.deformed().face_connections()};
       REQUIRE(cons.size() == 1);
+      REQUIRE(mesh.boundary_connections().size() == 1);
     }
   }
 

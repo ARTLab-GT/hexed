@@ -113,7 +113,7 @@ void Solver::update(double stability_ratio)
   for (double rk_weight : rk_weights) {
     (*kernel_factory<Write_face>(nd, rs, basis))(elems);
     auto& bcs {acc_mesh.boundary_conditions()};
-    auto& bc_cons {acc_mesh.cartesian().boundary_connections()};
+    auto& bc_cons {acc_mesh.boundary_connections()};
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
       for (int i_bc = 0; i_bc < bcs.size(); ++i_bc) {
         if (&bcs[i_bc] == bc_cons[i_con].boundary_condition()) bcs[i_bc].apply(bc_cons[i_con]);
