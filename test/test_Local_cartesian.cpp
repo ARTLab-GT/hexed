@@ -57,7 +57,7 @@ TEST_CASE("Local_cartesian")
     }
     double rk_weight = 0.9;
     car_elem_view elem_view {elements};
-    cartdg::kernel_factory<cartdg::Local_cartesian>(1, 2, basis, d_t, rk_weight)->execute(elem_view);
+    (*cartdg::kernel_factory<cartdg::Local_cartesian>(1, 2, basis, d_t, rk_weight))(elem_view);
     for (auto& element : elements)
     {
       double* state = element->stage(0);
@@ -100,7 +100,7 @@ TEST_CASE("Local_cartesian")
       elements[i_elem]->time_step_scale()[1] = 0.16;
     }
     car_elem_view elem_view {elements};
-    cartdg::kernel_factory<cartdg::Local_cartesian>(3, params.row_size, basis, d_t, 1.)->execute(elem_view);
+    (*cartdg::kernel_factory<cartdg::Local_cartesian>(3, params.row_size, basis, d_t, 1.))(elem_view);
     for (auto& element : elements)
     {
       double* state = element->stage(0);
@@ -181,7 +181,7 @@ TEST_CASE("Local_cartesian")
       #undef SET_VARS
     }
     car_elem_view elem_view {elements};
-    cartdg::kernel_factory<cartdg::Local_cartesian>(2, row_size, basis, d_t, rk_weight)->execute(elem_view);
+    (*cartdg::kernel_factory<cartdg::Local_cartesian>(2, row_size, basis, d_t, rk_weight))(elem_view);
     for (auto& element : elements) {
       double* state = element->stage(0);
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {

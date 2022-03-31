@@ -21,7 +21,7 @@ class Local_cartesian_dynamic
 {
   public:
   virtual ~Local_cartesian_dynamic() = default;
-  virtual void execute(Sequence<Element&>&) = 0;
+  virtual void operator()(Sequence<Element&>&) = 0;
 };
 
 template <int n_dim, int row_size>
@@ -40,7 +40,7 @@ class Local_cartesian : public Local_cartesian_dynamic
     heat_rat{heat_ratio}
   {}
 
-  virtual void execute(Sequence<Element&>& elements)
+  virtual void operator()(Sequence<Element&>& elements)
   {
     constexpr int n_var = n_dim + 2;
     constexpr int n_qpoint = custom_math::pow(row_size, n_dim);

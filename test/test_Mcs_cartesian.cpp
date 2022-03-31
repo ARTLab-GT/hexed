@@ -32,7 +32,7 @@ TEST_CASE("Mcs_cartesian")
       }
     }
     car_elem_view elem_view {elements};
-    double mcs = cartdg::kernel_factory<cartdg::Mcs_cartesian>(1, 2, heat_rat)->compute(elem_view);
+    double mcs = (*cartdg::kernel_factory<cartdg::Mcs_cartesian>(1, 2, heat_rat))(elem_view);
     REQUIRE(mcs == Approx(420*0.6/1.027));
   }
   SECTION("2D")
@@ -49,7 +49,7 @@ TEST_CASE("Mcs_cartesian")
       read[3*4 + i_qpoint] = 101235/0.4 + 0.5*1.225*500;
     }
     car_elem_view elem_view {elements};
-    double mcs = cartdg::kernel_factory<cartdg::Mcs_cartesian>(2, 2)->compute(elem_view);
+    double mcs = (*cartdg::kernel_factory<cartdg::Mcs_cartesian>(2, 2))(elem_view);
     REQUIRE(mcs == Approx(360).epsilon(0.01));
   }
 }

@@ -21,7 +21,7 @@ class Mcs_cartesian_dynamic
 {
   public:
   virtual ~Mcs_cartesian_dynamic() = default;
-  virtual double compute(Sequence<Element&>&) = 0;
+  virtual double operator()(Sequence<Element&>&) = 0;
 };
 
 template <int n_dim, int row_size>
@@ -32,7 +32,7 @@ class Mcs_cartesian : public Mcs_cartesian_dynamic
   public:
   Mcs_cartesian(double heat_ratio = 1.4) : heat_rat{heat_ratio} {}
 
-  virtual double compute(Sequence<Element&>& elements)
+  virtual double operator()(Sequence<Element&>& elements)
   {
     constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
     double max_speed = 0.;

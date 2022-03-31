@@ -25,7 +25,7 @@ TEST_CASE("Write_face")
     }
   }
   car_elem_view elem_view {elements};
-  cartdg::kernel_factory<cartdg::Write_face>(3, row_size, basis)->execute(elem_view);
+  (*cartdg::kernel_factory<cartdg::Write_face>(3, row_size, basis))(elem_view);
   double* face = elements[0]->face();
   const int n_face {params.n_dof()/row_size};
   REQUIRE(face[0*n_face + 0*n_qpoint/row_size + 0] == Approx(0.).margin(1e-10));

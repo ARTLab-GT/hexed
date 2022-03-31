@@ -19,7 +19,7 @@ class Neighbor_cartesian_dynamic
 {
   public:
   virtual ~Neighbor_cartesian_dynamic() = default;
-  virtual void execute(Sequence<Face_connection<Element>&>&) = 0;
+  virtual void operator()(Sequence<Face_connection<Element>&>&) = 0;
 };
 
 template <int n_dim, int row_size>
@@ -29,7 +29,7 @@ class Neighbor_cartesian : public Neighbor_cartesian_dynamic
   public:
   Neighbor_cartesian(double heat_ratio=1.4) : heat_rat{heat_ratio} {}
 
-  virtual void execute(Sequence<Face_connection<Element>&>& connections)
+  virtual void operator()(Sequence<Face_connection<Element>&>& connections)
   {
     constexpr int n_var = n_dim + 2;
     constexpr int n_face_qpoint = custom_math::pow(row_size, n_dim - 1);

@@ -20,7 +20,7 @@ class Neighbor_deformed_dynamic
 {
   public:
   virtual ~Neighbor_deformed_dynamic() = default;
-  virtual void execute(Sequence<Face_connection<Deformed_element>&>&) = 0;
+  virtual void operator()(Sequence<Face_connection<Deformed_element>&>&) = 0;
 };
 
 template <int n_dim, int row_size>
@@ -30,7 +30,7 @@ class Neighbor_deformed : public Neighbor_deformed_dynamic
   public:
   Neighbor_deformed(double heat_ratio=1.4) : heat_rat{heat_ratio} {}
 
-  virtual void execute(Sequence<Face_connection<Deformed_element>&>& connections)
+  virtual void operator()(Sequence<Face_connection<Deformed_element>&>& connections)
   {
     constexpr int n_var = n_dim + 2;
     constexpr int n_face_qpoint = custom_math::pow(row_size, n_dim - 1);
