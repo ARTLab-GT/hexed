@@ -214,14 +214,15 @@ class All_cartesian : public Test_mesh
   }
 };
 
-// creates a 3x3 mesh with vertex perturbations
+// creates a 3x3 mesh with the middle element rotated
 class All_deformed : public Test_mesh
 {
   cartdg::Solver sol;
+  bool rot_dir;
 
   public:
-  All_deformed()
-  : sol{2, cartdg::config::max_row_size, 1.}
+  All_deformed(bool rotation_direction)
+  : sol{2, cartdg::config::max_row_size, 1.}, rot_dir{rotation_direction}
   {}
 
   virtual cartdg::Solver& solver() {return sol;}
@@ -237,7 +238,17 @@ class All_deformed : public Test_mesh
       int sn = sol.mesh().add_element(0, true, inds);
       handles.push_back({0, true, sn});
       for (int i_dim = 0; i_dim < 2; ++i_dim) {
-        if (inds[i_dim] > 0) sol.mesh().connect_deformed(0, {handles[i_elem - strides[i_dim]].serial_n, sn}, {{i_dim, i_dim}, {1, 0}});
+        if (inds[i_dim] > 0) {
+          std::array<int, 2> i_elems {i_elem - strides[i_dim], i_elem};
+          cartdg::Con_dir<cartdg::Deformed_element> dir {{i_dim, i_dim}, {1, 0}};
+          for (int i_side = 0; i_side < 2; ++i_side) {
+            if (i_elems[i_side] == 4) {
+              dir.i_dim[i_side] = 1 - dir.i_dim[i_side];
+              if (i_dim == rot_dir) dir.face_sign[i_side] = !dir.face_sign[i_side];
+            }
+          }
+          sol.mesh().connect_deformed(0, {handles[i_elems[0]].serial_n, handles[i_elems[1]].serial_n}, dir);
+        }
         if (inds[i_dim] != 1) sol.mesh().connect_boundary(0, true, sn, i_dim, (inds[i_dim] > 0), bc_sn);
       }
     }
@@ -287,7 +298,9 @@ TEST_CASE("Solver time marching")
   }
   SECTION("all deformed")
   {
-    All_deformed ad;
-    test_marching(ad, "def");
+    All_deformed ad0 (0);
+    test_marching(ad0, "def0");
+    All_deformed ad1 (1);
+    test_marching(ad1, "def1");
   }
 }
