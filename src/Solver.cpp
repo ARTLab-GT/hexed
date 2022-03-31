@@ -203,7 +203,7 @@ void Solver::update(double stability_ratio)
     for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] = state[i_dof];
   }
   // perform update for each Runge-Kutta stage
-  for (double rk_weight : {rk_weights[0]}) { // FIXME
+  for (double rk_weight : rk_weights) {
     (*kernel_factory<Write_face>(nd, rs, basis))(elems);
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
     auto& bcs {acc_mesh.boundary_conditions()};
