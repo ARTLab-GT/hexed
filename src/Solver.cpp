@@ -5,6 +5,7 @@
 #include <Neighbor_cartesian.hpp>
 #include <Neighbor_deformed.hpp>
 #include <Local_cartesian.hpp>
+#include <Local_deformed.hpp>
 #include <Tecplot_file.hpp>
 
 namespace cartdg
@@ -38,14 +39,94 @@ void Solver::relax_vertices()
 
 void Solver::calc_jacobian()
 {
+  const int n_dim = params.n_dim;
+  const int n_jac = n_dim*n_dim;
+  const int rs = basis.row_size;
+  const int nfq = params.n_qpoint()/rs;
+
+  // compute element jacobians
   auto& elements = acc_mesh.deformed().elements();
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     elements[i_elem].set_jacobian(basis);
   }
+
+  // compute Jacobian for deformed connections
+  auto& def_cons {acc_mesh.deformed().face_connections()};
+  for (int i_con = 0; i_con < def_cons.size(); ++i_con) {
+    double* jac = def_cons[i_con].jacobian();
+    for (int i_data = 0; i_data < n_jac*nfq; ++i_data) jac[i_data] = 0.;
+  }
+  auto bound_mat = basis.boundary();
+  // compute 1 entry at a time
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+  {
+    for (int j_dim = 0; j_dim < n_dim; ++j_dim)
+    {
+      // compute the face jacobian of each element
+      for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
+      {
+        auto& elem = elements[i_elem];
+        Eigen::Map<Eigen::VectorXd> elem_jac (elem.jacobian() + (i_dim*n_dim + j_dim)*params.n_qpoint(), params.n_qpoint());
+        for (int k_dim = 0; k_dim < n_dim; ++k_dim) {
+          for (int i_side : {0, 1}) {
+            // use the element face storage to temporarily store one entry of the extrapolated jacobian
+            Eigen::Map<Eigen::VectorXd> face_jac (elem.face() + (2*k_dim + i_side)*params.n_var*nfq, nfq);
+            face_jac = custom_math::dimension_matvec(bound_mat.row(i_side), elem_jac, k_dim); // extrapolate jacobian to faces
+          }
+        }
+      }
+      // for BCs, copy Jacobian to ghost face
+      auto& def_bc_cons = acc_mesh.deformed().boundary_connections();
+      for (int i_con = 0; i_con < def_bc_cons.size(); ++i_con) {
+        double* in_f = def_bc_cons[i_con].inside_face();
+        double* gh_f = def_bc_cons[i_con].ghost_face();
+        for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) gh_f[i_qpoint] = in_f[i_qpoint];
+      }
+      // compute the shared face jacobian
+      for (int i_con = 0; i_con < def_cons.size(); ++i_con)
+      {
+        auto& con = def_cons[i_con];
+        double* shared_jac = con.jacobian();
+        double* elem_jac [2];
+        int normal_sign [2]; // record any sign change due to normal flipping
+        auto dir = con.direction();
+        for (int i_side : {0, 1}) {
+          elem_jac[i_side] = con.face(i_side);
+          normal_sign[i_side] = ((j_dim == dir.i_dim[0]) && (dir.flip_normal(i_side))) ? -1 : 1;
+        }
+        if (dir.transpose()) { // already implies n_dim == 3
+          Eigen::Map<Eigen::MatrixXd> face (elem_jac[1], rs, rs);
+          face.transposeInPlace();
+        }
+        if (dir.flip_tangential()) {
+          int free_dim = n_dim*(n_dim - 1)/2 - dir.i_dim[0] - dir.i_dim[1]; // which dimension is not involved in the connection?
+          int stride = ((n_dim == 3) && (dir.i_dim[1] < free_dim)) ? rs : 1; // along what stride do we need to reverse the elements?
+          for (int i_row = 0; i_row < nfq/rs; ++i_row) {
+            Eigen::Map<Eigen::VectorXd, 0, Eigen::InnerStride<>> row (elem_jac[1] + i_row*rs/stride, rs, Eigen::InnerStride<>(stride));
+            row.reverseInPlace();
+          }
+        }
+        for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+          // take average of element face jacobians with appropriate axis permutations
+          int col = j_dim;
+          int tangential_sign = 1;
+          // swap dir.i_dim[0] and dir.i_dim[1]
+          if (j_dim == dir.i_dim[1]) {
+            col = dir.i_dim[0];
+          }
+          if (j_dim == dir.i_dim[0]) {
+            col = dir.i_dim[1];
+            if (dir.flip_tangential()) tangential_sign = -1;
+          }
+          shared_jac[(i_dim*n_dim + j_dim)*nfq + i_qpoint] += 0.5*normal_sign[0]*elem_jac[0][i_qpoint];
+          shared_jac[(i_dim*n_dim + col)*nfq + i_qpoint] += 0.5*normal_sign[1]*tangential_sign*elem_jac[1][i_qpoint];
+        }
+      }
+    }
+  }
+
   // set Jacobian of Cartesian boundary connections to identity
   auto& bc_cons {acc_mesh.cartesian().boundary_connections()};
-  const int n_jac = params.n_dim*params.n_dim;
-  const int nfq = params.n_qpoint()/params.row_size;
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     double* jac = bc_cons[i_con].jacobian();
     for (int i_jac = 0; i_jac < n_jac; ++i_jac) {
@@ -111,7 +192,7 @@ void Solver::update(double stability_ratio)
     for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] = state[i_dof];
   }
   // perform update for each Runge-Kutta stage
-  for (double rk_weight : rk_weights) {
+  for (double rk_weight : {rk_weights[0]}) {
     (*kernel_factory<Write_face>(nd, rs, basis))(elems);
     auto& bcs {acc_mesh.boundary_conditions()};
     auto& bc_cons {acc_mesh.boundary_connections()};
@@ -123,6 +204,7 @@ void Solver::update(double stability_ratio)
     (*kernel_factory<Neighbor_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections());
     (*kernel_factory<Neighbor_deformed >(nd, rs))(acc_mesh.deformed ().face_connections());
     (*kernel_factory<Local_cartesian>(nd, rs, basis, dt, rk_weight))(acc_mesh.cartesian().elements());
+    (*kernel_factory<Local_deformed >(nd, rs, basis, dt, rk_weight))(acc_mesh.deformed ().elements());
   }
   // update status for reporting
   status.time_step = dt;
