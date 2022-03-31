@@ -170,31 +170,6 @@ TEST_CASE("local time step selection")
   REQUIRE(grid.element(0).time_step_scale()[4] == Approx(0.75));
 }
 
-TEST_CASE("Integration of deformed elements")
-{
-  auto sol_ptr {deformed_test_setup_2d(false)};
-  cartdg::Solution& sol = *sol_ptr;
-  cartdg::Isentropic_vortex init ({100., 0., 1.225, 2e5});
-  init.argmax_radius = 0.1;
-  init.max_nondim_veloc = 0.3;
-  init.center0 = 1.35;
-  init.center1 = 1.5;
-  sol.initialize(init);
-  int i {0};
-  mkdir("deformed_integration", 0700);
-  int buf_size {100};
-  char buffer [buf_size];
-  snprintf(buffer, buf_size, "deformed_integration/iter_%i", i);
-  sol.visualize_field(buffer);
-  for (; i < 10; ++i) {
-    for (int j = 0; j < 10; ++j) {
-      sol.update(0.5);
-    }
-    snprintf(buffer, buf_size, "deformed_integration/iter_%i", i);
-    sol.visualize_field(buffer);
-  }
-}
-
 TEST_CASE("Execution of non-penetration boundary condition")
 {
   const int row_size = cartdg::config::max_row_size;
