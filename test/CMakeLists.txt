@@ -30,7 +30,9 @@ test_Mcs_cartesian.cpp
 test_Mcs_deformed.cpp
 test_observing.cpp
 test_Physical_basis.cpp
+test_Prolong_refined.cpp
 test_Refined_face.cpp
+test_Restrict_refined.cpp
 test_Regular_grid.cpp
 test_Solution.cpp
 test_Solver.cpp
