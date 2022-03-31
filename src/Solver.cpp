@@ -32,9 +32,18 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
 
 void Solver::relax_vertices()
 {
+  // relax the vertices
   auto verts {acc_mesh.vertices()};
   for (int i_vert = 0; i_vert < verts.size(); ++i_vert) verts[i_vert].calc_relax();
   for (int i_vert = 0; i_vert < verts.size(); ++i_vert) verts[i_vert].apply_relax();
+  // vertex relaxation will cause hanging vertices to drift away from the faces they are supposed to be coincident with
+  // so now we put them back where they belong
+  auto& matchers = acc_mesh.hanging_vertex_matchers();
+  for (int i_match = 0; i_match < matchers.size(); ++i_match) {
+    matchers[i_match].match(&Element::vertex_position<0>);
+    matchers[i_match].match(&Element::vertex_position<1>);
+    matchers[i_match].match(&Element::vertex_position<2>);
+  }
 }
 
 void Solver::calc_jacobian()

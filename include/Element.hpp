@@ -38,8 +38,12 @@ class Element
   Eigen::VectorXd derivative_storage;
 
   public:
-  // this type represents a pointer to a function that can access some data member which is recorded at the vertices
-  typedef double* (Element::*shareable_value_access)();
+  /* note: the following two types do essentially the same thing, but it is useful to have both because
+     the natural way to store data associated with vertices can vary depending on the situation. */
+  // pointer to a function that can access some data member which can be shared through the vertices
+  typedef double* (Element::*shareable_value_access)(); // layout: [i_vertex]
+  // pointer to a function that can access some data associated with the vertices
+  typedef double& (Element::*vertex_value_access)(int i_vertex);
 
   Element(Storage_params, std::vector<int> pos={}, double mesh_size=1.);
   // Can't copy an Element. Doing so would have to either duplicate or break vertex connections,
@@ -68,6 +72,7 @@ class Element
   double jacobian_determinant(int i_qpoint); // returns 1.
 
   inline Vertex& vertex(int i_vertex) { return *vertices[i_vertex]; }
+  template <int i_dim> double& vertex_position(int i_vertex) {return vertices[i_vertex]->pos[i_dim];}
   // functions to communicate with nodal neighbors
   void push_shareable_value(shareable_value_access access_func); // writes shareable value to vertices so that shared value can be determined
   void fetch_shareable_value(shareable_value_access access_func, Vertex::reduction = Vertex::vector_max); // set `this`'s copy of shareable value to the shared values at the vertices
