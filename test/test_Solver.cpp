@@ -178,8 +178,9 @@ TEST_CASE("Solver")
 class Test_mesh
 {
   public:
+  struct elem_handle {int ref_level; bool is_deformed; int serial_n;};
   virtual cartdg::Solver& solver() = 0;
-  virtual std::vector<int> construct(cartdg::Boundary_condition* bc) = 0;
+  virtual std::vector<elem_handle> construct(cartdg::Boundary_condition* bc) = 0;
 };
 
 // creates a 2x2x2 mesh
@@ -187,37 +188,67 @@ class All_cartesian : public Test_mesh
 {
   cartdg::Solver sol;
   public:
+
   All_cartesian()
   : sol{3, cartdg::config::max_row_size, 1.}
   {}
 
   virtual cartdg::Solver& solver() {return sol;}
 
-  virtual std::vector<int> construct(cartdg::Boundary_condition* bc)
+  virtual std::vector<elem_handle> construct(cartdg::Boundary_condition* bc)
   {
-    std::vector<int> sn;
+    std::vector<elem_handle> handles;
     int bc_sn = sol.mesh().add_boundary_condition(bc);
     for (int i_elem = 0; i_elem < 8; ++i_elem) {
-      std::vector<int> strides;
+      std::vector<int> strides {4, 2, 1};
       std::vector<int> inds;
+      for (int i_dim = 0; i_dim < 3; ++i_dim) inds.push_back((i_elem/strides[i_dim])%2);
+      int sn = sol.mesh().add_element(0, false, inds);
+      handles.push_back({0, false, sn});
       for (int i_dim = 0; i_dim < 3; ++i_dim) {
-        strides.push_back(std::pow(2, 2 - i_dim));
-        inds.push_back((i_elem/strides.back())%2);
-      }
-      sn.push_back(sol.mesh().add_element(0, false, inds));
-      for (int i_dim = 0; i_dim < 3; ++i_dim) {
-        if (inds[i_dim]) sol.mesh().connect_cartesian(0, {sn.back() - strides[i_dim], sn.back()}, {i_dim});
-        sol.mesh().connect_boundary(0, false, sn.back(), i_dim, inds[i_dim], bc_sn);
+        if (inds[i_dim]) sol.mesh().connect_cartesian(0, {handles[i_elem - strides[i_dim]].serial_n, sn}, {i_dim});
+        sol.mesh().connect_boundary(0, false, sn, i_dim, inds[i_dim], bc_sn);
       }
     }
-    return sn;
+    return handles;
+  }
+};
+
+// creates a 3x3 mesh with vertex perturbations
+class All_deformed : public Test_mesh
+{
+  cartdg::Solver sol;
+
+  public:
+  All_deformed()
+  : sol{2, cartdg::config::max_row_size, 1.}
+  {}
+
+  virtual cartdg::Solver& solver() {return sol;}
+
+  virtual std::vector<elem_handle> construct(cartdg::Boundary_condition* bc)
+  {
+    std::vector<elem_handle> handles;
+    int bc_sn = sol.mesh().add_boundary_condition(bc);
+    for (int i_elem = 0; i_elem < 9; ++i_elem) {
+      std::vector<int> strides {3, 1};
+      std::vector<int> inds;
+      for (int i_dim = 0; i_dim < 2; ++i_dim) inds.push_back((i_elem/strides[i_dim])%3);
+      int sn = sol.mesh().add_element(0, true, inds);
+      handles.push_back({0, true, sn});
+      for (int i_dim = 0; i_dim < 2; ++i_dim) {
+        if (inds[i_dim] > 0) sol.mesh().connect_deformed(0, {handles[i_elem - strides[i_dim]].serial_n, sn}, {{i_dim, i_dim}, {1, 0}});
+        if (inds[i_dim] != 1) sol.mesh().connect_boundary(0, true, sn, i_dim, (inds[i_dim] > 0), bc_sn);
+      }
+    }
+    return handles;
   }
 };
 
 void test_marching(Test_mesh& tm, std::string name)
 {
   // use `Copy` BCs. This is unstable for this case but it will still give the right answer as long as only one time step is executed
-  auto sns = tm.construct(new cartdg::Copy);
+  auto handles = tm.construct(new cartdg::Copy);
   auto& sol = tm.solver();
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
@@ -234,12 +265,12 @@ void test_marching(Test_mesh& tm, std::string name)
   REQUIRE(status.flow_time > 0.);
   REQUIRE(status.iteration == 1);
   // check that the computed update is approximately equal to the exact solution
-  for (int sn : sns) {
-    for (int i_qpoint = 0; i_qpoint < std::pow(cartdg::config::max_row_size, 3); ++i_qpoint) {
-      for (int i_var = 0; i_var < 5; ++i_var) {
-        auto state   = sol.sample(0, false, sn, i_qpoint, cartdg::State_variables());
-        auto update  = sol.sample(0, false, sn, i_qpoint, cartdg::Physical_update());
-        auto correct = sol.sample(0, false, sn, i_qpoint, Nonuniform_residual());
+  for (auto handle : handles) {
+    for (int i_qpoint = 0; i_qpoint < sol.storage_params().n_qpoint(); ++i_qpoint) {
+      for (int i_var = 0; i_var < sol.storage_params().n_var; ++i_var) {
+        auto state   = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, cartdg::State_variables());
+        auto update  = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, cartdg::Physical_update());
+        auto correct = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, Nonuniform_residual());
         REQUIRE(update[i_var]/status.time_step == Approx(correct[i_var]).margin(1e-5*std::abs(state[i_var])));
       }
     }
@@ -253,5 +284,10 @@ TEST_CASE("Solver time marching")
   {
     All_cartesian ac;
     test_marching(ac, "car");
+  }
+  SECTION("all deformed")
+  {
+    All_deformed ad;
+    test_marching(ad, "def");
   }
 }

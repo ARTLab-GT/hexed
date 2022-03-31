@@ -31,6 +31,7 @@ class Solver
    * calculation can begin.
    */
   Mesh& mesh() {return acc_mesh;}
+  Storage_params storage_params() {return params;}
   // moves all vertices to the mean of the current position and the mean of the neighbors' positions
   void relax_vertices();
   /*
