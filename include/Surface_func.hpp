@@ -17,6 +17,8 @@ class Surface_func : virtual public Output_data
   // (normal magnitude is arbitrary -- does not have to be unit)
   virtual std::vector<double> operator()(std::vector<double> pos, double time,
                                          std::vector<double> state, std::vector<double> outward_normal) const = 0;
+  // FIXME: this should be the only method. other is only to support legacy code (which doesn't actually need it anyway)
+  virtual std::vector<double> operator()(std::vector<double> state, std::vector<double> outward_normal) const;
 };
 
 class Force_per_area : public Surface_func

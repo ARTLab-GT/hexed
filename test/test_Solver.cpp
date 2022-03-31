@@ -25,11 +25,21 @@ class Bad_initializer : public cartdg::Spacetime_func
 class Arbitrary_integrand : public cartdg::Domain_func
 {
   public:
-  virtual int n_var(int n_dim) const {return 3;}
+  virtual int n_var(int n_dim) const {return 4;}
   virtual std::vector<double> operator()(std::vector<double> pos, double time,
                                          std::vector<double> state) const
   {
-    return std::vector<double> {pos[0]*pos[0]*pos[1]*pos[1]*pos[1] - state[0] + time, 0., 0.};
+    return std::vector<double> {pos[0]*pos[0]*pos[1]*pos[1]*pos[1] - state[0] + time, 0., 0., 0.};
+  }
+};
+
+class Arbitrary_init : public cartdg::Spacetime_func
+{
+  public:
+  virtual int n_var(int n_dim) const {return 4;}
+  virtual std::vector<double> operator()(std::vector<double> pos, double time) const
+  {
+    return Arbitrary_integrand()(pos, time, {0, 0, 0, 0});
   }
 };
 
@@ -216,6 +226,9 @@ TEST_CASE("Solver")
       }
       integral = sol.integral_surface(Normal_1(), bc0);
       REQUIRE(integral.size() == 1);
+      REQUIRE(integral[0] == Approx(-area));
+      integral = sol.integral_surface(Normal_1(), bc1);
+      REQUIRE(integral.size() == 1);
       REQUIRE(integral[0] == Approx(-0.5*0.8));
     }
     SECTION("complex function, simple mesh")
@@ -226,11 +239,13 @@ TEST_CASE("Solver")
       sol.calc_jacobian();
       sol.initialize(cartdg::Constant_func({0.3, 0., 0., 0.}));
       auto integral = sol.integral_field(Arbitrary_integrand());
-      REQUIRE(integral.size() == 3);
+      REQUIRE(integral.size() == 4);
       REQUIRE(integral[0] == Approx(std::pow(0.8, 3)/3*std::pow(0.8, 4)/4 - 0.8*0.8*0.3));
-      integral = sol.integral_surface(Arbitrary_integrand(), bc0);
-      REQUIRE(integral.size() == 3);
-      REQUIRE(integral[0] == Approx(std::pow(0.8, 4)/4 - 0.8*0.3));
+      // surface function doesn't account for position, so this time initialize with integrand and integrate state variables
+      sol.initialize(Arbitrary_init());
+      integral = sol.integral_surface(cartdg::State_variables(), bc0);
+      REQUIRE(integral.size() == 4);
+      REQUIRE(integral[0] == Approx(std::pow(0.8, 4)/4));
     }
   }
 }

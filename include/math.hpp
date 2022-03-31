@@ -98,5 +98,7 @@ Eigen::Matrix<double, n_dim, n_dim> orthonormal (Eigen::Matrix<double, n_dim, n_
   }
 }
 
+Eigen::MatrixXd orthonormal (Eigen::MatrixXd basis, int i_dim);
+
 }
 #endif

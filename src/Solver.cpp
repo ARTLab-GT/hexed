@@ -265,7 +265,50 @@ std::vector<double> Solver::integral_field(const Qpoint_func& integrand)
 
 std::vector<double> Solver::integral_surface(const Surface_func& integrand, int bc_sn)
 {
-  std::vector<double> integral (integrand.n_var(params.n_dim), 0.);
+  // setup
+  const int nd = params.n_dim;
+  const int nv = params.n_var;
+  const int n_int = integrand.n_var(nd);
+  const int nq = params.n_qpoint();
+  const int nfq = nq/basis.row_size;
+  Eigen::MatrixXd boundary = basis.boundary();
+  Eigen::VectorXd one {Eigen::VectorXd::Zero(params.n_vertices()/2)};
+  one(0) = 1.;
+  Eigen::MatrixXd weights_1d {Eigen::MatrixXd::Zero(params.row_size, 2)};
+  weights_1d.col(0) = basis.node_weights();
+  Eigen::VectorXd weights = custom_math::hypercube_matvec(weights_1d, one);
+  // write the state to the faces so that the BCs can access it
+  (*kernel_factory<Write_face>(nd, params.row_size, basis))(acc_mesh.elements());
+  // compute the integral
+  std::vector<double> integral (n_int, 0.);
+  auto& bc_cons {acc_mesh.boundary_connections()};
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con)
+  {
+    auto& con {bc_cons[i_con]};
+    if (con.boundary_condition() == &acc_mesh.boundary_condition(bc_sn))
+    {
+      double* state = con.inside_face();
+      double* jac = con.jacobian();
+      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint)
+      {
+        std::vector<double> qpoint_state;
+        for (int i_var = 0; i_var < nv; ++i_var) {
+          qpoint_state.push_back(state[i_var*nfq + i_qpoint]);
+        }
+        Eigen::MatrixXd qpoint_jac (nd, nd);
+        for (int i_dim = 0; i_dim < nd; ++i_dim) {
+          for (int j_dim = 0; j_dim < nd; ++j_dim) {
+            qpoint_jac(i_dim, j_dim) = jac[(i_dim*nd + j_dim)*nfq + i_qpoint];
+          }
+        }
+        Eigen::MatrixXd orth = custom_math::orthonormal(qpoint_jac, con.i_dim());
+        std::vector<double> normal;
+        for (int i_dim = 0; i_dim < nd; ++i_dim) normal.push_back(orth(i_dim, con.i_dim()));
+        auto qpoint_integrand = integrand(qpoint_state, normal);
+        for (int i_var = 0; i_var < n_int; ++i_var) integral[i_var] += qpoint_integrand[i_var]*weights(i_qpoint);
+      }
+    }
+  }
   return integral;
 };
 

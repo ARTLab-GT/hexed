@@ -52,6 +52,7 @@ class Accessible_mesh : public Mesh
   virtual int add_boundary_condition(Boundary_condition* bc);
   virtual void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n);
   Sequence<Boundary_condition&>& boundary_conditions() {return bc_v;}
+  Boundary_condition& boundary_condition(int bc_sn) {return *bound_conds[bc_sn];}
   Sequence<Boundary_connection&>& boundary_connections() {return bound_cons;}
   inline Sequence<Refined_face&>& refined_faces() {return ref_face_v;}
   inline Sequence<Hanging_vertex_matcher&>& hanging_vertex_matchers() {return matcher_v;}
