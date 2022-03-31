@@ -74,6 +74,7 @@ class Boundary_connection : public Boundary_face, public Face_connection<Deforme
 {
   public:
   inline Boundary_connection(Storage_params params) : Face_connection<Deformed_element>{params} {}
+  virtual double nominal_size() = 0;
   virtual const Boundary_condition* boundary_condition() = 0;
 };
 
@@ -105,6 +106,7 @@ class Typed_bound_connection : public Boundary_connection
   virtual double* face(int i_side) {return i_side ? ghost_face() : inside_face();}
   virtual double* jacobian_mat() {return jacobian();}
   virtual Con_dir<Deformed_element> direction() {return {{i_d, i_d}, {ifs, !ifs}};}
+  virtual double nominal_size() {return elem.nominal_size();}
   virtual const Boundary_condition* boundary_condition() {return &bound_cond;}
   const element_t& element() {return elem;}
 };

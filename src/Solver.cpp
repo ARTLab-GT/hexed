@@ -285,6 +285,7 @@ std::vector<double> Solver::integral_surface(const Surface_func& integrand, int 
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con)
   {
     auto& con {bc_cons[i_con]};
+    double area = custom_math::pow(con.nominal_size(), nd - 1);
     if (con.boundary_condition() == &acc_mesh.boundary_condition(bc_sn))
     {
       double* state = con.inside_face();
@@ -305,7 +306,11 @@ std::vector<double> Solver::integral_surface(const Surface_func& integrand, int 
         std::vector<double> normal;
         for (int i_dim = 0; i_dim < nd; ++i_dim) normal.push_back(orth(i_dim, con.i_dim()));
         auto qpoint_integrand = integrand(qpoint_state, normal);
-        for (int i_var = 0; i_var < n_int; ++i_var) integral[i_var] += qpoint_integrand[i_var]*weights(i_qpoint);
+        qpoint_jac.col(con.i_dim()) = orth.col(con.i_dim());
+        double jac_det = std::abs(qpoint_jac.determinant());
+        for (int i_var = 0; i_var < n_int; ++i_var) {
+          integral[i_var] += qpoint_integrand[i_var]*weights(i_qpoint)*area*jac_det;
+        }
       }
     }
   }

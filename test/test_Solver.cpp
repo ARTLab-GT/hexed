@@ -226,7 +226,7 @@ TEST_CASE("Solver")
       }
       integral = sol.integral_surface(Normal_1(), bc0);
       REQUIRE(integral.size() == 1);
-      REQUIRE(integral[0] == Approx(-area));
+      REQUIRE(integral[0] == Approx(-5. + 0.5));
       integral = sol.integral_surface(Normal_1(), bc1);
       REQUIRE(integral.size() == 1);
       REQUIRE(integral[0] == Approx(-0.5*0.8));
@@ -245,7 +245,7 @@ TEST_CASE("Solver")
       sol.initialize(Arbitrary_init());
       integral = sol.integral_surface(cartdg::State_variables(), bc0);
       REQUIRE(integral.size() == 4);
-      REQUIRE(integral[0] == Approx(std::pow(0.8, 4)/4));
+      REQUIRE(integral[0] == Approx(0.8*0.8*std::pow(0.8, 4)/4));
     }
   }
 }
