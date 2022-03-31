@@ -2,8 +2,10 @@
 #include <Mcs_cartesian.hpp>
 #include <Mcs_deformed.hpp>
 #include <Write_face.hpp>
+#include <Prolong_refined.hpp>
 #include <Neighbor_cartesian.hpp>
 #include <Neighbor_deformed.hpp>
+#include <Restrict_refined.hpp>
 #include <Local_cartesian.hpp>
 #include <Local_deformed.hpp>
 #include <Tecplot_file.hpp>
@@ -203,6 +205,7 @@ void Solver::update(double stability_ratio)
   // perform update for each Runge-Kutta stage
   for (double rk_weight : {rk_weights[0]}) { // FIXME
     (*kernel_factory<Write_face>(nd, rs, basis))(elems);
+    (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
     auto& bcs {acc_mesh.boundary_conditions()};
     auto& bc_cons {acc_mesh.boundary_connections()};
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
@@ -212,6 +215,7 @@ void Solver::update(double stability_ratio)
     }
     (*kernel_factory<Neighbor_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections());
     (*kernel_factory<Neighbor_deformed >(nd, rs))(acc_mesh.deformed ().face_connections());
+    (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());
     (*kernel_factory<Local_cartesian>(nd, rs, basis, dt, rk_weight))(acc_mesh.cartesian().elements());
     (*kernel_factory<Local_deformed >(nd, rs, basis, dt, rk_weight))(acc_mesh.deformed ().elements());
   }

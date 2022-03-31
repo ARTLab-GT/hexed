@@ -1,5 +1,5 @@
-#ifndef CARTDG_PROLONG_REFINED_HPP_
-#define CARTDG_PROLONG_REFINED_HPP_
+#ifndef CARTDG_RESTRICT_REFINED_HPP_
+#define CARTDG_RESTRICT_REFINED_HPP_
 
 #include "Vector_view.hpp"
 #include "Refined_face.hpp"
