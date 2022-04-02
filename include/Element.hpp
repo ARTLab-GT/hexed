@@ -54,6 +54,8 @@ class Element
 
   Storage_params storage_params();
   virtual std::vector<double> position(const Basis&, int i_qpoint); // note: ignores vertex positions
+  // obtains face position based on interior qpoint positions (as defined by `position()`)
+  std::vector<double> face_position(const Basis&, int i_face, int i_face_qpoint);
   inline double nominal_size() {return nom_sz;}
   // Pointer to state data for `i_stage`th Runge-Kutta stage.
   double* stage(int i_stage); // Layout: [i_var][i_qpoint]

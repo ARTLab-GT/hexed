@@ -6,12 +6,6 @@
 namespace cartdg
 {
 
-std::vector<double> Surface_func::operator()(std::vector<double> state, std::vector<double> outward_normal) const
-{
-  std::vector<double> pos(state.size() - 2, 0.);
-  return (*this)(pos, 0., state, outward_normal);
-}
-
 Force_per_area::Force_per_area(double heat_rat) : hr{heat_rat} {}
 
 std::vector<double> Force_per_area::operator()(std::vector<double> pos, double time,

@@ -123,5 +123,21 @@ TEST_CASE("Element")
     // test the qpoint at the middle of the element (the mean of the vertex positions)
     REQUIRE(elem.position(basis, params.n_qpoint()/2)[0] == Approx(1.5*0.31).scale(1.));
     REQUIRE(elem.position(basis, params.n_qpoint()/2)[1] == Approx(2.5*0.31).scale(1.));
+    // test face position
+    REQUIRE(elem.face_position(basis, 1, 3)[0] == Approx(0.31*(1. + 1.)));
+    REQUIRE(elem.face_position(basis, 1, 3)[1] == Approx(0.31*(0.75 + 2.)));
+
+    // make sure that face position works in 3d
+    cartdg::Storage_params params3 {2, 5, 3, row_size};
+    cartdg::Element elem3 {params3};
+    REQUIRE(elem3.face_position(basis, 0, 7)[0] == Approx(0.));
+    REQUIRE(elem3.face_position(basis, 0, 7)[1] == Approx(.25));
+    REQUIRE(elem3.face_position(basis, 0, 7)[2] == Approx(.5));
+    REQUIRE(elem3.face_position(basis, 3, 7)[0] == Approx(.25));
+    REQUIRE(elem3.face_position(basis, 3, 7)[1] == Approx(1.));
+    REQUIRE(elem3.face_position(basis, 3, 7)[2] == Approx(.5));
+    REQUIRE(elem3.face_position(basis, 4, 7)[0] == Approx(.25));
+    REQUIRE(elem3.face_position(basis, 4, 7)[1] == Approx(.5));
+    REQUIRE(elem3.face_position(basis, 4, 7)[2] == Approx(0.));
   }
 }

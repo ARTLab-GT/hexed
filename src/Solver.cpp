@@ -285,13 +285,15 @@ std::vector<double> Solver::integral_surface(const Surface_func& integrand, int 
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con)
   {
     auto& con {bc_cons[i_con]};
-    double area = custom_math::pow(con.nominal_size(), nd - 1);
+    auto& elem = con.element();
+    double area = custom_math::pow(elem.nominal_size(), nd - 1);
     if (con.boundary_condition() == &acc_mesh.boundary_condition(bc_sn))
     {
       double* state = con.inside_face();
       double* jac = con.jacobian();
       for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint)
       {
+        std::vector<double> qpoint_pos {elem.face_position(basis, con.direction().i_face(0), i_qpoint)};
         std::vector<double> qpoint_state;
         for (int i_var = 0; i_var < nv; ++i_var) {
           qpoint_state.push_back(state[i_var*nfq + i_qpoint]);
@@ -305,7 +307,7 @@ std::vector<double> Solver::integral_surface(const Surface_func& integrand, int 
         Eigen::MatrixXd orth = custom_math::orthonormal(qpoint_jac, con.i_dim());
         std::vector<double> normal;
         for (int i_dim = 0; i_dim < nd; ++i_dim) normal.push_back(orth(i_dim, con.i_dim()));
-        auto qpoint_integrand = integrand(qpoint_state, normal);
+        auto qpoint_integrand = integrand(qpoint_pos, status.flow_time, qpoint_state, normal);
         qpoint_jac.col(con.i_dim()) = orth.col(con.i_dim());
         double jac_det = std::abs(qpoint_jac.determinant());
         for (int i_var = 0; i_var < n_int; ++i_var) {
@@ -317,11 +319,10 @@ std::vector<double> Solver::integral_surface(const Surface_func& integrand, int 
   return integral;
 };
 
-void Solver::visualize_field(const Qpoint_func& output_variables, std::string name)
+void Solver::visualize_field(const Qpoint_func& output_variables, std::string name, int n_sample)
 {
   const int n_dim = params.n_dim;
   const int n_vis = output_variables.n_var(n_dim); // number of variables to visualize
-  const int n_sample = 20;
   const int n_qpoint = params.n_qpoint();
   const int n_corners {custom_math::pow(2, n_dim - 1)};
   const int nfqpoint = n_qpoint/params.row_size;
@@ -406,6 +407,43 @@ void Solver::visualize_field(const Qpoint_func& output_variables, std::string na
         interp_state.segment(i_var*n_block, n_block) = custom_math::hypercube_matvec(interp, var);
       }
       interior.write(interp_pos.data(), interp_state.data());
+    }
+  }
+}
+
+void Solver::visualize_surface(const Qpoint_func& output_variables, int bc_sn, std::string name, int n_sample)
+{
+  if (params.n_dim == 1) throw std::runtime_error("cannot visualize surfaces in 1D");
+  Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
+  Eigen::MatrixXd boundary {basis.boundary()};
+  const int n_block {custom_math::pow(n_sample, params.n_dim - 1)};
+  auto& bc_cons {acc_mesh.boundary_connections()};
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con)
+  {
+    auto& con {bc_cons[i_con]};
+    if (con.boundary_condition() == &acc_mesh.boundary_condition(bc_sn))
+    {
+      #if 0
+      auto fi = wall.face_index();
+      std::vector<double> pos = get_pos(wall.i_elem());
+      Eigen::VectorXd interp_pos {n_block*n_dim};
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+      {
+        Eigen::Map<Eigen::VectorXd> qpoint_pos (pos.data() + i_dim*n_qpoint, n_qpoint);
+        auto face {custom_math::dimension_matvec(boundary.row(fi.is_positive), qpoint_pos, fi.i_dim)};
+        interp_pos.segment(i_dim*n_block, n_block) = custom_math::hypercube_matvec(interp, face);
+      }
+      double* state = element(wall.i_elem()).stage(0);
+      Eigen::VectorXd interp_state {n_block*n_var};
+      for (int i_var = 0; i_var < n_var; ++i_var)
+      {
+        Eigen::Map<Eigen::VectorXd> var (state + i_var*n_qpoint, n_qpoint);
+        auto face {custom_math::dimension_matvec(boundary.row(fi.is_positive), var, fi.i_dim)};
+        interp_state.segment(i_var*n_block, n_block) = custom_math::hypercube_matvec(interp, face);
+      }
+      Tecplot_file::Structured_block zone {file, n_sample, "face_interior", n_dim - 1};
+      zone.write(interp_pos.data(), interp_state.data());
+      #endif
     }
   }
 }

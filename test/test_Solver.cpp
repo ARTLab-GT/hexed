@@ -33,16 +33,6 @@ class Arbitrary_integrand : public cartdg::Domain_func
   }
 };
 
-class Arbitrary_init : public cartdg::Spacetime_func
-{
-  public:
-  virtual int n_var(int n_dim) const {return 4;}
-  virtual std::vector<double> operator()(std::vector<double> pos, double time) const
-  {
-    return Arbitrary_integrand()(pos, time, {0, 0, 0, 0});
-  }
-};
-
 class Normal_1 : public cartdg::Surface_func
 {
   public:
@@ -241,11 +231,9 @@ TEST_CASE("Solver")
       auto integral = sol.integral_field(Arbitrary_integrand());
       REQUIRE(integral.size() == 4);
       REQUIRE(integral[0] == Approx(std::pow(0.8, 3)/3*std::pow(0.8, 4)/4 - 0.8*0.8*0.3));
-      // surface function doesn't account for position, so this time initialize with integrand and integrate state variables
-      sol.initialize(Arbitrary_init());
-      integral = sol.integral_surface(cartdg::State_variables(), bc0);
+      integral = sol.integral_surface(Arbitrary_integrand(), bc0);
       REQUIRE(integral.size() == 4);
-      REQUIRE(integral[0] == Approx(0.8*0.8*std::pow(0.8, 4)/4));
+      REQUIRE(integral[0] == Approx(0.8*0.8*std::pow(0.8, 4)/4 - 0.8*0.3));
     }
   }
 }
@@ -255,12 +243,14 @@ class Test_mesh
   public:
   struct elem_handle {int ref_level; bool is_deformed; int serial_n;};
   virtual cartdg::Solver& solver() = 0;
+  virtual int bc_serial_n() = 0;
   virtual std::vector<elem_handle> construct(cartdg::Boundary_condition* bc) = 0;
 };
 
 // creates a 2x2x2 mesh
 class All_cartesian : public Test_mesh
 {
+  int bc_sn;
   cartdg::Solver sol;
   public:
 
@@ -269,11 +259,12 @@ class All_cartesian : public Test_mesh
   {}
 
   virtual cartdg::Solver& solver() {return sol;}
+  virtual int bc_serial_n() {return bc_sn;}
 
   virtual std::vector<elem_handle> construct(cartdg::Boundary_condition* bc)
   {
     std::vector<elem_handle> handles;
-    int bc_sn = sol.mesh().add_boundary_condition(bc);
+    bc_sn = sol.mesh().add_boundary_condition(bc);
     for (int i_elem = 0; i_elem < 8; ++i_elem) {
       std::vector<int> strides {4, 2, 1};
       std::vector<int> inds;
@@ -293,6 +284,7 @@ class All_cartesian : public Test_mesh
 class All_deformed : public Test_mesh
 {
   cartdg::Solver sol;
+  int bc_sn;
   bool rot_dir;
 
   public:
@@ -301,11 +293,12 @@ class All_deformed : public Test_mesh
   {}
 
   virtual cartdg::Solver& solver() {return sol;}
+  virtual int bc_serial_n() {return bc_sn;}
 
   virtual std::vector<elem_handle> construct(cartdg::Boundary_condition* bc)
   {
     std::vector<elem_handle> handles;
-    int bc_sn = sol.mesh().add_boundary_condition(bc);
+    bc_sn = sol.mesh().add_boundary_condition(bc);
     for (int i_elem = 0; i_elem < 9; ++i_elem) {
       std::vector<int> strides {3, 1};
       std::vector<int> inds;
@@ -335,13 +328,15 @@ class All_deformed : public Test_mesh
 class Hanging : public Test_mesh
 {
   cartdg::Solver sol;
+  int bc_sn;
   public:
   Hanging() : sol{2, cartdg::config::max_row_size, 1.} {}
   virtual cartdg::Solver& solver() {return sol;}
+  virtual int bc_serial_n() {return bc_sn;}
   virtual std::vector<elem_handle> construct(cartdg::Boundary_condition* bc)
   {
     std::vector<elem_handle> handles;
-    int bc_sn = sol.mesh().add_boundary_condition(bc);
+    bc_sn = sol.mesh().add_boundary_condition(bc);
     for (int i = 0; i < 2; ++i) {
       handles.push_back({0, false, sol.mesh().add_element(0, false, {i  , 0})});
       handles.push_back({1, false, sol.mesh().add_element(1, false, {i  , 2})});
@@ -373,6 +368,7 @@ void test_marching(Test_mesh& tm, std::string name)
   sol.calc_jacobian();
   sol.initialize(Nonuniform_mass());
   sol.visualize_field(cartdg::State_variables(), "marching_" + name + "_init");
+  sol.visualize_surface(cartdg::State_variables(), tm.bc_serial_n(), "marching_" + name + "_surface");
   // check that the iteration status is right at the start
   auto status = sol.iteration_status();
   REQUIRE(status.flow_time == 0.);
@@ -412,7 +408,6 @@ void test_conservation(Test_mesh& tm, std::string name)
   sol.visualize_field(cartdg::Physical_update(), "conservation_" + name + "_diff");
   status = sol.iteration_status();
   // check that the computed update is approximately equal to the exact solution
-  //for (int i_var = 0; i_var < sol.storage_params().n_var; ++i_var) {
   for (int i_var : {sol.storage_params().n_var - 2, sol.storage_params().n_var - 1}) {
     auto state  = sol.integral_field(cartdg::State_variables());
     auto update = sol.integral_field(cartdg::Physical_update());

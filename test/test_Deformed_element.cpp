@@ -68,7 +68,7 @@ TEST_CASE("Deformed_element")
     assert_equal(elem3d_1.vertex(0).pos, {3., 0., 0.});
   }
 
-  SECTION("warped face interpolation")
+  SECTION("position calculation")
   {
     const int row_size = 3;
     static_assert (row_size <= cartdg::config::max_row_size);
@@ -89,6 +89,11 @@ TEST_CASE("Deformed_element")
     REQUIRE(elem.position(basis, 3)[1] == Approx(0.0 + 0.2));
     REQUIRE(elem.position(basis, 4)[1] == Approx(0.5 + (0.2 - 0.1)/2));
     REQUIRE(elem.position(basis, 5)[1] == Approx(1.0 - 0.1));
+    // check that the face quadrature points are the same as the interior quadrature points
+    // that happen to lie on the faces (true for equidistant and Lobatto bases but not Legendre)
+    REQUIRE(elem.face_position(basis, 0, 2)[1] == elem.position(basis, 2)[1]);
+    REQUIRE(elem.face_position(basis, 2, 1)[0] == elem.position(basis, 3)[0]);
+    REQUIRE(elem.face_position(basis, 3, 1)[1] == elem.position(basis, 5)[1]);
 
     cartdg::Deformed_element elem1 {params2};
     elem1.node_adjustments()[1] = 0.1;

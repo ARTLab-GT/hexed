@@ -66,9 +66,9 @@ class Solver
   // compute an integral over all surfaces where a particular boundary condition has been enforced
   std::vector<double> integral_surface(const Surface_func& integrand, int bc_sn);
   // write a visualization file describing the entire flow field (but not identifying surfaces)
-  void visualize_field(const Qpoint_func& output_variables, std::string name);
+  void visualize_field(const Qpoint_func& output_variables, std::string name, int n_sample = 20);
   // write a visualization file describing all surfaces where a particular boundary condition has been enforced
-  void visualize_surface(const Qpoint_func& output_variables, int bc_sn, std::string name);
+  void visualize_surface(const Qpoint_func& output_variables, int bc_sn, std::string name, int n_sample = 20);
 };
 
 }
