@@ -226,10 +226,10 @@ TEST_CASE("Solver")
       }
       integral = sol.integral_surface(Normal_1(), bc0);
       REQUIRE(integral.size() == 1);
-      REQUIRE(integral[0] == Approx(-5. + 0.5));
+      REQUIRE(integral[0] == Approx(-5*0.8));
       integral = sol.integral_surface(Normal_1(), bc1);
       REQUIRE(integral.size() == 1);
-      REQUIRE(integral[0] == Approx(-0.5*0.8));
+      REQUIRE(integral[0] == Approx(0.5*0.8));
     }
     SECTION("complex function, simple mesh")
     {
