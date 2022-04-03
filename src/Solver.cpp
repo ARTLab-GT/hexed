@@ -29,8 +29,21 @@ void Solver::share_vertex_data(Element::shareable_value_access access_func, Vert
 Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
   params{3, n_dim + 2, n_dim, row_size},
   acc_mesh{params, root_mesh_size},
-  basis{row_size}
-{}
+  basis{row_size},
+  stopwatch{"(element*iteration)"}
+{
+  // setup categories for performance reporting
+  stopwatch.children.emplace("initialize RK", "(element*iteration)");
+  std::string unit = "(element*RK stage)";
+  stopwatch.children.emplace("write face", unit);
+  for (std::string type : {"cartesian", "deformed"}) {
+    stopwatch.children.emplace(type, unit);
+    auto& children = stopwatch.children.at(type).children;
+    children.emplace("max char speed", unit);
+    children.emplace("neighbor", unit);
+    children.emplace("local", unit);
+  }
+}
 
 void Solver::relax_vertices()
 {
@@ -189,6 +202,7 @@ void Solver::initialize(const Spacetime_func& func)
 
 void Solver::update(double stability_ratio)
 {
+  stopwatch.stopwatch.start();
   const int nd = params.n_dim;
   const int rs = params.row_size;
   auto& elems = acc_mesh.elements();
@@ -198,10 +212,15 @@ void Solver::update(double stability_ratio)
   double dt = stability_ratio*basis.max_cfl_convective()/params.n_dim/mcs;
   // record reference state for Runge-Kutta scheme
   const int n_dof = params.n_dof();
+  auto& irk = stopwatch.children.at("initialize RK");
+  irk.stopwatch.start();
+  #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     double* state = elems[i_elem].stage(0);
     for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] = state[i_dof];
   }
+  irk.stopwatch.pause();
+  irk.work_units_completed += elems.size();
   // perform update for each Runge-Kutta stage
   for (double rk_weight : rk_weights) {
     (*kernel_factory<Write_face>(nd, rs, basis))(elems);
@@ -223,11 +242,8 @@ void Solver::update(double stability_ratio)
   status.time_step = dt;
   status.flow_time += dt;
   ++status.iteration;
-}
-
-Iteration_status Solver::iteration_status()
-{
-  return status;
+  stopwatch.stopwatch.pause();
+  stopwatch.work_units_completed += elems.size();
 }
 
 std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func& func)

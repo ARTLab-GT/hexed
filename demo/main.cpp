@@ -1,11 +1,12 @@
+#include <iostream>
 #include <Solver.hpp>
 #include <math.hpp>
 
 int main()
 {
   // Resolution parameters
-  const int row_size = 6;
-  const int ref_level = 3;
+  constexpr int row_size = 6;
+  constexpr int ref_level = 3;
   constexpr int n_side = cartdg::custom_math::pow(2, ref_level);
   int sn [n_side][n_side];
 
@@ -47,4 +48,5 @@ int main()
     solver.update();
   }
   solver.visualize_field(cartdg::State_variables(), "demo_final");
+  std::cout << solver.stopwatch_tree().report() << "\n";
 }
