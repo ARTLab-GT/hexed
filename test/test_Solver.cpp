@@ -368,7 +368,7 @@ void test_marching(Test_mesh& tm, std::string name)
   sol.calc_jacobian();
   sol.initialize(Nonuniform_mass());
   sol.visualize_field(cartdg::State_variables(), "marching_" + name + "_init");
-  sol.visualize_surface(cartdg::State_variables(), tm.bc_serial_n(), "marching_" + name + "_surface");
+  sol.visualize_surface(tm.bc_serial_n(), "marching_" + name + "_surface");
   // check that the iteration status is right at the start
   auto status = sol.iteration_status();
   REQUIRE(status.flow_time == 0.);

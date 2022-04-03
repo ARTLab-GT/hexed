@@ -335,6 +335,7 @@ void Solver::visualize_field(const Qpoint_func& output_variables, std::string na
   for (int i_elem = 0; i_elem < acc_mesh.elements().size(); ++i_elem)
   {
     Element& elem {acc_mesh.elements()[i_elem]};
+    // fetch data at quadrature points
     std::vector<double> pos (n_qpoint*n_dim);
     std::vector<double> to_vis (n_qpoint*n_vis);
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
@@ -411,39 +412,50 @@ void Solver::visualize_field(const Qpoint_func& output_variables, std::string na
   }
 }
 
-void Solver::visualize_surface(const Qpoint_func& output_variables, int bc_sn, std::string name, int n_sample)
+void Solver::visualize_surface(int bc_sn, std::string name, int n_sample)
 {
   if (params.n_dim == 1) throw std::runtime_error("cannot visualize surfaces in 1D");
+  // convenience definitions
+  const int nfq = params.n_qpoint()/params.row_size;
+  const int nd = params.n_dim;
+  const int nv = params.n_var;
+  const int n_block {custom_math::pow(n_sample, nd - 1)};
+  // setup
+  std::vector<std::string> var_names;
+  for (int i_var = 0; i_var < nv; ++i_var) var_names.push_back(State_variables().variable_name(i_var));
+  Tecplot_file file {name, nd, var_names, status.flow_time};
   Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
-  Eigen::MatrixXd boundary {basis.boundary()};
-  const int n_block {custom_math::pow(n_sample, params.n_dim - 1)};
+  // write the state to the faces so that the BCs can access it
+  (*kernel_factory<Write_face>(nd, params.row_size, basis))(acc_mesh.elements());
+  // iterate through boundary connections and visualize a zone for each
   auto& bc_cons {acc_mesh.boundary_connections()};
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con)
   {
     auto& con {bc_cons[i_con]};
     if (con.boundary_condition() == &acc_mesh.boundary_condition(bc_sn))
     {
-      #if 0
-      auto fi = wall.face_index();
-      std::vector<double> pos = get_pos(wall.i_elem());
-      Eigen::VectorXd interp_pos {n_block*n_dim};
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-      {
-        Eigen::Map<Eigen::VectorXd> qpoint_pos (pos.data() + i_dim*n_qpoint, n_qpoint);
-        auto face {custom_math::dimension_matvec(boundary.row(fi.is_positive), qpoint_pos, fi.i_dim)};
-        interp_pos.segment(i_dim*n_block, n_block) = custom_math::hypercube_matvec(interp, face);
+      auto& elem = con.element();
+      // fetch the position
+      const int i_face = con.direction().i_face(0);
+      Eigen::MatrixXd qpoint_pos (nfq, nd);
+      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+        auto pos = elem.face_position(basis, i_face, i_qpoint);
+        for (int i_dim = 0; i_dim < nd; ++i_dim) qpoint_pos(i_qpoint, i_dim) = pos[i_dim];
       }
-      double* state = element(wall.i_elem()).stage(0);
-      Eigen::VectorXd interp_state {n_block*n_var};
-      for (int i_var = 0; i_var < n_var; ++i_var)
-      {
-        Eigen::Map<Eigen::VectorXd> var (state + i_var*n_qpoint, n_qpoint);
-        auto face {custom_math::dimension_matvec(boundary.row(fi.is_positive), var, fi.i_dim)};
-        interp_state.segment(i_var*n_block, n_block) = custom_math::hypercube_matvec(interp, face);
+      // interpolate from quadrature points to sample points
+      Eigen::MatrixXd interp_pos (n_block, nd);
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        interp_pos.col(i_dim) = custom_math::hypercube_matvec(interp, qpoint_pos.col(i_dim));
       }
-      Tecplot_file::Structured_block zone {file, n_sample, "face_interior", n_dim - 1};
+      // fetch/interpolate the state
+      Eigen::MatrixXd interp_state (n_block, nv);
+      for (int i_var = 0; i_var < nv; ++i_var) {
+        Eigen::Map<Eigen::VectorXd> qpoint_state (con.inside_face() + i_var*nfq, nfq);
+        interp_state.col(i_var) = custom_math::hypercube_matvec(interp, qpoint_state);
+      }
+      // visualize zone
+      Tecplot_file::Structured_block zone {file, n_sample, "face_interior", nd - 1};
       zone.write(interp_pos.data(), interp_state.data());
-      #endif
     }
   }
 }
