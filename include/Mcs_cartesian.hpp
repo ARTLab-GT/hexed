@@ -17,15 +17,8 @@ namespace cartdg
  * then the computed characteristic speed will be 340*0.3/0.1 = 1020.
  * This is inversely proportional to the maximum allowable time step.
  */
-class Mcs_cartesian_dynamic
-{
-  public:
-  virtual ~Mcs_cartesian_dynamic() = default;
-  virtual double operator()(Sequence<Element&>&) = 0;
-};
-
 template <int n_dim, int row_size>
-class Mcs_cartesian : public Mcs_cartesian_dynamic
+class Mcs_cartesian : public Kernel<Element&, double>
 {
   double heat_rat;
 
@@ -55,7 +48,7 @@ template<>
 class Kernel_traits<Mcs_cartesian>
 {
   public:
-  using base_t = Mcs_cartesian_dynamic;
+  using base_t = Kernel<Element&, double>;
 };
 
 }

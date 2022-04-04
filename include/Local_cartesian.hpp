@@ -17,15 +17,8 @@ namespace cartdg
  * This includes the interior term, the face flux correction, and the Runge-Kutta update.
  * The numerical flux must already have been written to the face storage (which is the neighbor kernel's job).
  */
-class Local_cartesian_dynamic
-{
-  public:
-  virtual ~Local_cartesian_dynamic() = default;
-  virtual void operator()(Sequence<Element&>&) = 0;
-};
-
 template <int n_dim, int row_size>
-class Local_cartesian : public Local_cartesian_dynamic
+class Local_cartesian : public Kernel<Element&>
 {
   Derivative<row_size> derivative;
   double dt;
@@ -131,7 +124,7 @@ template<>
 class Kernel_traits<Local_cartesian>
 {
   public:
-  using base_t = Local_cartesian_dynamic;
+  using base_t = Kernel<Element&>;
 };
 
 }

@@ -15,15 +15,8 @@ namespace cartdg
  * State is read from the `face`s of the face connections and the numerical flux is
  * written to the same location (the same flux is written to both faces).
  */
-class Neighbor_cartesian_dynamic
-{
-  public:
-  virtual ~Neighbor_cartesian_dynamic() = default;
-  virtual void operator()(Sequence<Face_connection<Element>&>&) = 0;
-};
-
 template <int n_dim, int row_size>
-class Neighbor_cartesian : public Neighbor_cartesian_dynamic
+class Neighbor_cartesian : public Kernel<Face_connection<Element>&>
 {
   const double heat_rat;
   public:
@@ -61,7 +54,7 @@ template<>
 class Kernel_traits<Neighbor_cartesian>
 {
   public:
-  using base_t = Neighbor_cartesian_dynamic;
+  using base_t = Kernel<Face_connection<Element>&>;
 };
 
 }

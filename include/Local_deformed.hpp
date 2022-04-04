@@ -14,15 +14,8 @@ namespace cartdg
  * Computes the local update for one Runge-Kutta stage.
  * See `Local_cartesian_dynamic`.
  */
-class Local_deformed_dynamic
-{
-  public:
-  virtual ~Local_deformed_dynamic() = default;
-  virtual void operator()(Sequence<Deformed_element&>&) = 0;
-};
-
 template <int n_dim, int row_size>
-class Local_deformed : public Local_deformed_dynamic
+class Local_deformed : public Kernel<Deformed_element&>
 {
   double dt;
   double rkw;
@@ -188,7 +181,7 @@ template<>
 class Kernel_traits<Local_deformed>
 {
   public:
-  using base_t = Local_deformed_dynamic;
+  using base_t = Kernel<Deformed_element&>;
 };
 
 }

@@ -16,15 +16,8 @@ namespace cartdg
  * the minimum singular value of the Jacobian is 0.5, and the local time step scale is 0.3,
  * then the computed characteristic speed will be 340*0.3/0.1/0.5 = 2040.
  */
-class Mcs_deformed_dynamic
-{
-  public:
-  virtual ~Mcs_deformed_dynamic() = default;
-  virtual double operator()(Sequence<Deformed_element&>&) = 0;
-};
-
 template <int n_dim, int row_size>
-class Mcs_deformed : public Mcs_deformed_dynamic
+class Mcs_deformed : public Kernel<Deformed_element&, double>
 {
   double heat_rat;
 
@@ -64,7 +57,7 @@ template<>
 class Kernel_traits<Mcs_deformed>
 {
   public:
-  using base_t = Mcs_deformed_dynamic;
+  using base_t = Kernel<Deformed_element&, double>;
 };
 
 }

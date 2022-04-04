@@ -3,6 +3,8 @@
 
 #include <memory>
 #include <cartdgConfig.hpp>
+#include <Vector_view.hpp>
+#include <Stopwatch_tree.hpp>
 
 /*
  * The purpose of this file is to provide a way to specify the number of dimensions and
@@ -89,6 +91,24 @@ class Kernel_lookup<kernel, 1, 1>
 };
 
 } // namespace kernel_lookup
+
+/*
+ * Base class for a "kernel", a word which here means a callable object which accepts dimensionality
+ * and row size as template arguments to improve performance.
+ */
+template <typename T, typename U = void>
+class Kernel
+{
+  public:
+  virtual ~Kernel() = default;
+  virtual U operator()(Sequence<T>&) = 0;
+  virtual U operator()(Sequence<T>& sequence, Stopwatch_tree& tree)
+  {
+    tree.work_units_completed += sequence.size();
+    Stopwatch::Operator oper (tree.stopwatch);
+    return (*this)(sequence);
+  }
+};
 
 /*
  * Gets a `std::unique_ptr` to a `base_t` of `kernel`. The underlying kernel will be

@@ -14,15 +14,8 @@ namespace cartdg
  * Extrapolates the state data in the elements to the faces.
  * For each `Element`, reads the data from `stage(0)` and writes the extrapolation to `face()`.
  */
-class Write_face_dynamic
-{
-  public:
-  virtual ~Write_face_dynamic() = default;
-  virtual void operator()(Sequence<Element&>&) = 0;
-};
-
 template <int n_dim, int row_size>
-class Write_face : public Write_face_dynamic
+class Write_face : public Kernel<Element&>
 {
   const Eigen::Matrix<double, 2, row_size> boundary;
 
@@ -74,7 +67,7 @@ template<>
 class Kernel_traits<Write_face>
 {
   public:
-  using base_t = Write_face_dynamic;
+  using base_t = Kernel<Element&>;
 };
 
 }

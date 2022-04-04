@@ -16,15 +16,8 @@ namespace cartdg
  * State is read from the `face`s of the face connections and the numerical flux is
  * written to the same location (the same flux is written to both faces).
  */
-class Neighbor_deformed_dynamic
-{
-  public:
-  virtual ~Neighbor_deformed_dynamic() = default;
-  virtual void operator()(Sequence<Face_connection<Deformed_element>&>&) = 0;
-};
-
 template <int n_dim, int row_size>
-class Neighbor_deformed : public Neighbor_deformed_dynamic
+class Neighbor_deformed : public Kernel<Face_connection<Deformed_element>&>
 {
   const double heat_rat;
   public:
@@ -107,7 +100,7 @@ template<>
 class Kernel_traits<Neighbor_deformed>
 {
   public:
-  using base_t = Neighbor_deformed_dynamic;
+  using base_t = Kernel<Face_connection<Deformed_element>&>;
 };
 
 }
