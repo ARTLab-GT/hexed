@@ -39,6 +39,14 @@ class Position_func : public Spacetime_func
   virtual inline std::vector<double> operator()(std::vector<double> pos, double time) const {return pos;}
 };
 
+// returns an empty vector. This is useful if you just want to visualize the position
+class Empty_func : public Spacetime_func
+{
+  public:
+  virtual inline int n_var(int i_dim) const {return 0;}
+  virtual inline std::vector<double> operator()(std::vector<double> pos, double time) const {return {};}
+};
+
 class State_from_spacetime : public Spacetime_func
 {
   public:

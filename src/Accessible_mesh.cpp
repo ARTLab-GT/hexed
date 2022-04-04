@@ -138,4 +138,8 @@ Accessible_mesh::vertex_view Accessible_mesh::vertices()
   return vert_ptrs;
 }
 
+void Accessible_mesh::extrude()
+{
+}
+
 }

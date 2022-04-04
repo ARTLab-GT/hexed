@@ -51,6 +51,18 @@ class Mesh
    * are used to identify which face of the element is participating in the boundary condition.
    */
   virtual void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n) = 0;
+  /*
+   * Extrudes a layer of elements from unconnected faces:
+   * 1. Extrudes one deformed element from every unconnected face of every deformed element.
+   * 2. Connects the new elements to the faces they were generated from.
+   * 3. Connects the new elements to each other to maintain the connectivity of the faces they were generated from.
+   * 4. If the parent elements have any boundary connections,
+   *    those are also applied to the corresponding faces of the extruded elements.
+   * When this is complete, the number of unconnected faces (of deformed elements) remains unchanged,
+   * but the unconnected faces now belong to new, extruded elements which can be snapped to surface geometry
+   * in a well-conditioned fashion.
+   */
+  virtual void extrude() = 0;
 
   // An object to provide information about whether the mesh connectivity is valid
   // and if not, why.

@@ -458,3 +458,56 @@ TEST_CASE("Solver conservation")
     test_conservation(hg, "hanging");
   }
 }
+
+TEST_CASE("face extrusion")
+{
+  SECTION("2D")
+  {
+    int serial_n [3][3];
+    serial_n[1][1] = -1; // so that we know if we accidentally use this
+    cartdg::Solver solver {2, 2, 1.};
+    for (int i = 0; i < 3; ++i) {
+      for (int j = 0; j < 3; ++j) {
+        if ((i != 1) || (j != 1)) {
+          serial_n[i][j] = solver.mesh().add_element(0, true, {i, j});
+          if ((i > 0) && (j != 1)) solver.mesh().connect_deformed(0, {serial_n[i-1][j], serial_n[i][j]}, {{0, 0}, {1, 0}});
+          if ((j > 0) && (i != 1)) solver.mesh().connect_deformed(0, {serial_n[i][j-1], serial_n[i][j]}, {{1, 1}, {1, 0}});
+        }
+      }
+    }
+    solver.mesh().extrude();
+    solver.calc_jacobian();
+    REQUIRE(solver.integral_field(cartdg::Constant_func({1.}))[0] == Approx(24.)); // check number of elements
+    for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
+    solver.visualize_field(cartdg::Empty_func(), "extrusion_2d");
+    auto valid = solver.mesh().valid();
+    REQUIRE(valid.n_duplicate == 0);
+    REQUIRE(valid.n_missing == 16);
+  }
+  SECTION("3D")
+  {
+    int serial_n [3][3][3];
+    serial_n[1][1][1] = -1; // so that we know if we accidentally use this
+    cartdg::Solver solver {3, 2, 1.};
+    for (int i = 0; i < 3; ++i) {
+      for (int j = 0; j < 3; ++j) {
+        for (int k = 0; k < 3; ++k) {
+          if ((i != 1) || (j != 1) || (k != 1)) {
+            serial_n[i][j][k] = solver.mesh().add_element(0, true, {i, j, k});
+            if ((i > 0) && ((j != 1) || (k != 1))) solver.mesh().connect_deformed(0, {serial_n[i-1][j][k], serial_n[i][j][k]}, {{0, 0}, {1, 0}});
+            if ((j > 0) && ((i != 1) || (k != 1))) solver.mesh().connect_deformed(0, {serial_n[i][j-1][k], serial_n[i][j][k]}, {{1, 1}, {1, 0}});
+            if ((k > 0) && ((i != 1) || (j != 1))) solver.mesh().connect_deformed(0, {serial_n[i][j][k-1], serial_n[i][j][k]}, {{2, 2}, {1, 0}});
+          }
+        }
+      }
+    }
+    solver.mesh().extrude();
+    solver.calc_jacobian();
+    REQUIRE(solver.integral_field(cartdg::Constant_func({1.}))[0] == Approx(86.)); // check number of elements
+    for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
+    solver.visualize_field(cartdg::Empty_func(), "extrusion_3d");
+    auto valid = solver.mesh().valid();
+    REQUIRE(valid.n_duplicate == 0);
+    REQUIRE(valid.n_missing == 60);
+  }
+}
