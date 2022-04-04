@@ -10,7 +10,7 @@ TEST_CASE("Write_face")
   const int row_size {5};
   cartdg::Equidistant basis {row_size};
   cartdg::Storage_params params {2, 5, 3, row_size};
-  cartdg::elem_vec elements;
+  std::vector<std::unique_ptr<cartdg::Element>> elements;
   elements.emplace_back(new cartdg::Element {params});
   const int n_qpoint {params.n_qpoint()};
   for (int i_var : {0, 1})

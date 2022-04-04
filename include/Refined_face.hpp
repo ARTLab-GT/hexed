@@ -29,7 +29,5 @@ class Refined_face
   double* coarse_face(); // pointer to the external (owned by element) coarse face storage
 };
 
-typedef std::vector<std::vector<std::unique_ptr<Refined_face>>> ref_face_vec;
-
 }
 #endif

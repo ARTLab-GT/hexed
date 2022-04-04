@@ -6,7 +6,7 @@ TEST_CASE("Hanging_vertex_matcher")
   SECTION("2D")
   {
     cartdg::Storage_params params {3, 4, 2, 3};
-    cartdg::elem_vec elements;
+    std::vector<std::unique_ptr<cartdg::Element>> elements;
     std::vector<cartdg::Element*> elem_refs;
     for (int i = 0; i < 2; ++i) {
       elements.emplace_back(new cartdg::Element {params});
@@ -26,7 +26,7 @@ TEST_CASE("Hanging_vertex_matcher")
   SECTION("3D")
   {
     cartdg::Storage_params params {3, 5, 3, 3};
-    cartdg::elem_vec elements;
+    std::vector<std::unique_ptr<cartdg::Element>> elements;
     std::vector<cartdg::Element*> elem_refs;
     // test that constructor throws if the number of elements is wrong
     for (int i = 0; i < 4; ++i) {

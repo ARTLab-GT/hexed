@@ -6,7 +6,7 @@ TEST_CASE("Mcs_deformed")
 {
   cartdg::Storage_params params {3, 5, 3, 4};
   int n_qpoint = params.n_qpoint();
-  cartdg::def_elem_vec elems;
+  std::vector<std::unique_ptr<cartdg::Deformed_element>> elems;
   for (int i_elem = 0; i_elem < 3; ++i_elem) {
     elems.emplace_back(new cartdg::Deformed_element {params, {}, 0.3});
     double* state = elems.back()->stage(0);

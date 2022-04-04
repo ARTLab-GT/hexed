@@ -38,7 +38,7 @@ TEST_CASE("Local_deformed")
     int n_elem = 5;
     cartdg::Storage_params params {2, 3, 1, 2};
     int n_qpoint = params.n_qpoint();
-    cartdg::def_elem_vec elements;
+    std::vector<std::unique_ptr<cartdg::Deformed_element>> elements;
     Identity_basis basis {int(params.row_size)};
     double mass = 1.225; double veloc = 10; double pres = 1e5;
     double mmtm = mass*veloc; double ener = pres/0.4 + 0.5*mass*veloc*veloc;
@@ -79,7 +79,7 @@ TEST_CASE("Local_deformed")
     const int n_elem = 5;
     cartdg::Storage_params params {2, 5, 3, 3};
     int n_qpoint = params.n_qpoint();
-    cartdg::def_elem_vec elements;
+    std::vector<std::unique_ptr<cartdg::Deformed_element>> elements;
     Identity_basis basis (params.row_size);
     double mass = 1.225;
     double veloc0 = 10; double veloc1 = -20; double veloc2 = 30;
@@ -130,7 +130,7 @@ TEST_CASE("Local_deformed")
     const int row_size = std::min<int>(6, int(cartdg::config::max_row_size));
     cartdg::Storage_params params {3, 4, 2, row_size};
     int n_qpoint = params.n_qpoint();
-    cartdg::def_elem_vec elements;
+    std::vector<std::unique_ptr<cartdg::Deformed_element>> elements;
     cartdg::Gauss_legendre basis (row_size);
     /*
      * to test the correctness of the time derivative, set the RK weight to 0.5
