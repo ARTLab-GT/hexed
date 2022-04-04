@@ -29,7 +29,7 @@ int main()
   solver.initialize(vortex);
 
   // Let's go!
-  solver.visualize_field(cartdg::State_variables(), "demo_initial");
+  solver.visualize_field(cartdg::State_variables(), "demo_time_0");
   double time = 0;
   for (int i = 0; i < 20; ++i)
   {
@@ -42,11 +42,5 @@ int main()
     snprintf(buffer, 100, "demo_time_%e", time);
     solver.visualize_field(cartdg::State_variables(), buffer);
   }
-  time = 0.2;
-  while (solver.iteration_status().flow_time < time)
-  {
-    solver.update();
-  }
-  solver.visualize_field(cartdg::State_variables(), "demo_final");
   std::cout << solver.stopwatch_tree().report() << "\n";
 }

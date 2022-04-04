@@ -15,15 +15,8 @@ namespace cartdg
  * Transforms data from coarse face to fine faces by polynomial interpolation.
  * This interpolation is exact (and therefore conservative).
  */
-class Prolong_refined_dynamic
-{
-  public:
-  virtual ~Prolong_refined_dynamic() = default;
-  virtual void operator()(Sequence<Refined_face&>&) = 0;
-};
-
 template <int n_dim, int row_size>
-class Prolong_refined : public Prolong_refined_dynamic
+class Prolong_refined : public Kernel<Refined_face&>
 {
   const Eigen::Matrix<double, row_size, row_size> prolong_mat [2];
 
@@ -81,7 +74,7 @@ template<>
 class Kernel_traits<Prolong_refined>
 {
   public:
-  using base_t = Prolong_refined_dynamic;
+  using base_t = Kernel<Refined_face&>;
 };
 
 }

@@ -108,6 +108,14 @@ class Kernel
     Stopwatch::Operator oper (tree.stopwatch);
     return (*this)(sequence);
   }
+  virtual U operator()(Sequence<T>& sequence, Stopwatch_tree& category_tree, std::string name)
+  {
+    auto& specific_tree {category_tree.children.at(name)};
+    specific_tree.work_units_completed += sequence.size();
+    Stopwatch::Operator cat_oper (category_tree.stopwatch);
+    Stopwatch::Operator spc_oper (specific_tree.stopwatch);
+    return (*this)(sequence);
+  }
 };
 
 /*

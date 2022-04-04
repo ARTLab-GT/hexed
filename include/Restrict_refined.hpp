@@ -16,15 +16,8 @@ namespace cartdg
  * This projection is conservative (in the sense that the integral of the face data does not change)
  * but of course not always exact.
  */
-class Restrict_refined_dynamic
-{
-  public:
-  virtual ~Restrict_refined_dynamic() = default;
-  virtual void operator()(Sequence<Refined_face&>&) = 0;
-};
-
 template <int n_dim, int row_size>
-class Restrict_refined : public Restrict_refined_dynamic
+class Restrict_refined : public Kernel<Refined_face&>
 {
   const Eigen::Matrix<double, row_size, row_size> restrict_mat [2];
 
@@ -83,7 +76,7 @@ template<>
 class Kernel_traits<Restrict_refined>
 {
   public:
-  using base_t = Restrict_refined_dynamic;
+  using base_t = Kernel<Refined_face&>;
 };
 
 }
