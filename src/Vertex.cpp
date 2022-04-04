@@ -1,7 +1,4 @@
-#include <iostream>
-
 #include <Vertex.hpp>
-#include <Deformed_grid.hpp>
 
 namespace cartdg
 {

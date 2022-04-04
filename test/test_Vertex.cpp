@@ -1,7 +1,6 @@
 #include <catch2/catch.hpp>
-
-#include <Deformed_grid.hpp>
 #include <Gauss_lobatto.hpp>
+#include <Vertex.hpp>
 
 TEST_CASE("Vertex")
 {

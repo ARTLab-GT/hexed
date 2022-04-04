@@ -1,14 +1,8 @@
 #include <Qpoint_func.hpp>
-#include <Grid.hpp>
 #include <math.hpp>
 
 namespace cartdg
 {
-
-std::vector<double> Qpoint_func::operator()(Grid& grid, int i_element, int i_qpoint) const
-{
-  return operator()(grid.element(i_element), grid.basis, i_qpoint, grid.time);
-}
 
 std::vector<double> Jacobian_det_func::operator()(Element& element, const Basis&, int i_qpoint, double time) const
 {

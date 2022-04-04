@@ -19,7 +19,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g -DDEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
 set(CMAKE_CXX_FLAGS "-Wall")
 
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "script/auto_generate.py;script/Basis.py;script/benchmark.cpp.in")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "script/auto_generate.py;script/Basis.py")
 
 # determine whether to compile with sanitizers
 option(sanitize "If ON, compile with sanitizer flags." OFF)
@@ -70,20 +70,6 @@ target_include_directories(cartdg PUBLIC
 add_subdirectory(src)
 add_subdirectory(test)
 add_subdirectory(demo)
-
-# object library to contain the kernels
-add_library(kernels OBJECT)
-set_property(TARGET kernels PROPERTY POSITION_INDEPENDENT_CODE ON)
-target_include_directories(kernels PRIVATE ${CMAKE_SOURCE_DIR}/kernels ${CMAKE_SOURCE_DIR}/include)
-target_include_directories(kernels PUBLIC $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/kernels/include>)
-add_subdirectory(${CMAKE_BINARY_DIR}/kernels/src)
-target_link_libraries(cartdg PRIVATE kernels)
-
-# add executable for benchmarking
-add_executable(benchmark benchmark/main.cpp)
-set_property(TARGET benchmark PROPERTY RUNTIME_OUTPUT_DIRECTORY benchmark)
-target_link_libraries(benchmark PRIVATE cartdg kernels)
-file(CREATE_LINK ${CMAKE_SOURCE_DIR}/script/benchmark.py benchmark.py SYMBOLIC)
 
 install(TARGETS cartdg DESTINATION lib EXPORT cartdgTargets)
 install(DIRECTORY include/ DESTINATION include/cartdg)

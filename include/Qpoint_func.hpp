@@ -21,7 +21,6 @@ class Qpoint_func : virtual public Output_data
 {
   public:
   virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const = 0;
-  virtual std::vector<double> operator()(Grid& grid, int i_element, int i_qpoint) const;
 };
 
 // Returns a vector with one element: the Jacobian determinant at the quadrature point.
