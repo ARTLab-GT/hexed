@@ -161,7 +161,11 @@ void Accessible_mesh::extrude()
   for (auto face : empty_faces) {
     auto nom_pos = face.elem.nominal_position();
     nom_pos[face.i_dim] += 2*face.face_sign - 1;
-    int sn = add_element(face.elem.refinement_level(), true, nom_pos);
+    const int ref_level = face.elem.refinement_level();
+    int sn = add_element(ref_level, true, nom_pos);
+    Con_dir<Deformed_element> dir {{face.i_dim, face.i_dim}, {!face.face_sign, bool(face.face_sign)}};
+    std::array<Deformed_element*, 2> el_arr {&def.elems.at(ref_level, sn), &face.elem};
+    def.cons.emplace_back(el_arr, dir);
   }
 }
 
