@@ -26,6 +26,7 @@ class Element
   int n_dim;
   std::vector<int> nom_pos;
   double nom_sz;
+  int r_level;
   std::vector<Vertex::Transferable_ptr> vertices;
 
   private:
@@ -33,9 +34,7 @@ class Element
   int n_vert;
   int data_size;
   Eigen::VectorXd data;
-  Eigen::VectorXd visc_storage;
   Eigen::VectorXd vertex_tss;
-  Eigen::VectorXd derivative_storage;
 
   public:
   /* note: the following two types do essentially the same thing, but it is useful to have both because
@@ -46,7 +45,13 @@ class Element
   typedef double& (Element::*vertex_value_access)(int i_vertex);
   std::array<int, 6> face_record; // for algorithms to book-keep information related to faces
 
-  Element(Storage_params, std::vector<int> pos={}, double mesh_size=1.);
+  /*
+   * The `Storage_params1 defines the amount of storage that must be allocated.
+   * `pos` specifies the position of vertex 0 in intervals of the nominal size.
+   * The nominal size is defined to be `mesh_size`/(2^`ref_level`).
+   * The vertices will be spaced at intervals of the nominal size.
+   */
+  Element(Storage_params, std::vector<int> pos={}, double mesh_size=1., int ref_level = 0);
   // Can't copy an Element. Doing so would have to either duplicate or break vertex connections,
   // both of which seem error prone.
   Element(const Element&) = delete;
@@ -58,6 +63,7 @@ class Element
   // obtains face position based on interior qpoint positions (as defined by `position()`)
   std::vector<double> face_position(const Basis&, int i_face, int i_face_qpoint);
   inline double nominal_size() {return nom_sz;}
+  inline int refinement_level() {return r_level;}
   inline std::vector<int> nominal_position() {return nom_pos;}
   // Pointer to state data for `i_stage`th Runge-Kutta stage.
   double* stage(int i_stage); // Layout: [i_var][i_qpoint]
@@ -80,13 +86,8 @@ class Element
   // functions to communicate with nodal neighbors
   void push_shareable_value(shareable_value_access access_func); // writes shareable value to vertices so that shared value can be determined
   void fetch_shareable_value(shareable_value_access access_func, Vertex::reduction = Vertex::vector_max); // set `this`'s copy of shareable value to the shared values at the vertices
-
-  double* viscosity(); // Artificial viscosity coefficient at corners.
-  bool viscous(); // Should artificial viscosity be applied in this element?
   // Time step scale at the vertices. TSS in the interior is set by interpolating this.
   double* vertex_time_step_scale();
-  // Pointer to storage for derivative. Must be populated by user.
-  double* derivative(); // Layout: [i_qpoint]
 };
 
 }

@@ -4,17 +4,17 @@
 namespace cartdg
 {
 
-Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size) :
+Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level) :
   params(params_arg),
   n_dim(params.n_dim),
   nom_pos(n_dim, 0),
-  nom_sz{mesh_size},
+  nom_sz{mesh_size/custom_math::pow(2, ref_level)},
+  r_level{ref_level},
   n_dof(params.n_dof()),
   n_vert(params.n_vertices()),
   data_size{params.n_stage*n_dof + n_dim*2*n_dof/params.row_size + params.n_qpoint()},
   data{Eigen::VectorXd::Zero(data_size)},
-  visc_storage{Eigen::VectorXd::Zero(n_vert)}, vertex_tss{Eigen::VectorXd::Ones(n_vert)},
-  derivative_storage(params.n_qpoint())
+  vertex_tss{Eigen::VectorXd::Ones(params.n_vertices())}
 {
   face_record.fill(0);
   // initialize local time step scaling to 1.
@@ -24,7 +24,7 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   int n_pos_set = std::min<int>(pos.size(), n_dim);
   for (int i_dim = 0; i_dim < n_pos_set; ++i_dim) {
     nom_pos[i_dim] = pos[i_dim];
-    first_pos[i_dim] = pos[i_dim]*mesh_size;
+    first_pos[i_dim] = pos[i_dim]*nom_sz;
   }
   for (int i_dim = n_pos_set; i_dim < 3; ++i_dim) first_pos[i_dim] = 0.;
   // construct vertices
@@ -37,7 +37,7 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
       stride[i_dim] = custom_math::pow(2, n_dim - i_dim - 1);
       i_row[i_dim] = (i_vert/stride[i_dim])%2;
-      vertex_pos[i_dim] += i_row[i_dim]*mesh_size;
+      vertex_pos[i_dim] += i_row[i_dim]*nom_sz;
     }
     vertices.emplace_back(vertex_pos);
     // establish vertex connections (that is, edges).
@@ -133,28 +133,9 @@ void Element::fetch_shareable_value(shareable_value_access access_func, Vertex::
   }
 }
 
-double* Element::viscosity()
-{
-  return visc_storage.data();
-}
-
-bool Element::viscous()
-{
-  bool visc {false};
-  for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
-    visc = visc || (visc_storage[i_vert] != 0.);
-  }
-  return visc;
-}
-
 double* Element::vertex_time_step_scale()
 {
   return vertex_tss.data();
-}
-
-double* Element::derivative()
-{
-  return derivative_storage.data();
 }
 
 }

@@ -19,12 +19,7 @@ class Deformed_element : public Element
   public:
   bool degenerate = 0;
 
-  /*
-   * `pos` sets the position of vertex 0 in increments of `mesh_size`. Unspecified
-   * components set to 0. `mesh_size` sets distance between vertices. Vertex positions
-   * may be modified later.
-   */
-  Deformed_element(Storage_params, std::vector<int> pos={}, double mesh_size=1.);
+  Deformed_element(Storage_params, std::vector<int> pos = {}, double mesh_size = 1., int ref_level = 0);
   virtual std::vector<double> position(const Basis&, int i_qpoint);
   // sets the Jacobian based on the current vertex locations and face node adjustments
   void set_jacobian(const Basis& basis);

@@ -161,7 +161,7 @@ void Accessible_mesh::extrude()
   for (auto face : empty_faces) {
     auto nom_pos = face.elem.nominal_position();
     nom_pos[face.i_dim] += 2*face.face_sign - 1;
-    int sn = add_element(0, true, nom_pos);
+    int sn = add_element(face.elem.refinement_level(), true, nom_pos);
   }
 }
 

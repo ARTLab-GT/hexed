@@ -27,7 +27,7 @@ void Solver::share_vertex_data(Element::shareable_value_access access_func, Vert
 }
 
 Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
-  params{3, n_dim + 2, n_dim, row_size},
+  params{2, n_dim + 2, n_dim, row_size},
   acc_mesh{params, root_mesh_size},
   basis{row_size},
   stopwatch{"(element*iteration)"}

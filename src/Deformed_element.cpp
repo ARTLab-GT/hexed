@@ -4,8 +4,10 @@
 namespace cartdg
 {
 
-Deformed_element::Deformed_element(Storage_params params, std::vector<int> pos, double mesh_size)
-: Element{params, pos, mesh_size}, n_qpoint{params.n_qpoint()}, jac{n_dim*n_dim*n_qpoint},
+Deformed_element::Deformed_element(Storage_params params, std::vector<int> pos, double mesh_size, int ref_level) :
+  Element{params, pos, mesh_size, ref_level},
+  n_qpoint{params.n_qpoint()},
+  jac{n_dim*n_dim*n_qpoint},
   node_adj{Eigen::VectorXd::Zero(n_qpoint/params.row_size*n_dim*2)}
 {
   for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) vertex(i_vert).mobile = true;

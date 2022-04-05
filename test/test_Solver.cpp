@@ -469,15 +469,15 @@ TEST_CASE("face extrusion")
     for (int i = 0; i < 3; ++i) {
       for (int j = 0; j < 3; ++j) {
         if ((i != 1) || (j != 1)) {
-          serial_n[i][j] = solver.mesh().add_element(0, true, {i, j});
-          if ((i > 0) && (j != 1)) solver.mesh().connect_deformed(0, {serial_n[i-1][j], serial_n[i][j]}, {{0, 0}, {1, 0}});
-          if ((j > 0) && (i != 1)) solver.mesh().connect_deformed(0, {serial_n[i][j-1], serial_n[i][j]}, {{1, 1}, {1, 0}});
+          serial_n[i][j] = solver.mesh().add_element(1, true, {i, j});
+          if ((i > 0) && (j != 1)) solver.mesh().connect_deformed(1, {serial_n[i-1][j], serial_n[i][j]}, {{0, 0}, {1, 0}});
+          if ((j > 0) && (i != 1)) solver.mesh().connect_deformed(1, {serial_n[i][j-1], serial_n[i][j]}, {{1, 1}, {1, 0}});
         }
       }
     }
     solver.mesh().extrude();
     solver.calc_jacobian();
-    REQUIRE(solver.integral_field(cartdg::Constant_func({1.}))[0] == Approx(24.)); // check number of elements
+    REQUIRE(solver.integral_field(cartdg::Constant_func({1.}))[0] == Approx(24./4.)); // check number of elements
     for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
     solver.visualize_field(cartdg::Empty_func(), "extrusion_2d");
     auto valid = solver.mesh().valid();

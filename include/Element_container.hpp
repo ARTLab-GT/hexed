@@ -49,8 +49,7 @@ class Complete_element_container : public Element_container
 
   virtual int emplace(int ref_level, std::vector<int> position)
   {
-    double level_spacing = spacing/custom_math::pow(2, ref_level);
-    vec.emplace_back(new element_t {params, position, level_spacing});
+    vec.emplace_back(new element_t {params, position, spacing, ref_level});
     std::array<int, 2> key = {ref_level, next_sn++};
     map.insert(std::pair<std::array<int, 2>, element_t&>(key, *vec.back()));
     return key[1];

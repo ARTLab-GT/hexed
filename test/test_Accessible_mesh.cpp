@@ -16,6 +16,7 @@ TEST_CASE("Accessible_mesh")
   REQUIRE_THROWS(&mesh.element(1, false, sn0)); // test that elements are identified with a specific ref level
   REQUIRE_THROWS(&mesh.element(0,  true, sn0)); // test that elements are identified with a specific deformedness
   REQUIRE(mesh.element(3, true, sn2).vertex(0).pos[0] == Approx(1./8.)); // test that ref level and pos are incorporated
+  REQUIRE(mesh.element(3, true, sn2).refinement_level() == 3);
   // test sequential access
   REQUIRE(mesh.cartesian().elements().size() == 2);
   REQUIRE(mesh.deformed().elements().size() == 1);
