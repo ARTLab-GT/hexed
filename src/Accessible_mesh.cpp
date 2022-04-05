@@ -122,8 +122,47 @@ Accessible_mesh::vertex_view Accessible_mesh::vertices()
   return vert_ptrs;
 }
 
+struct Empty_face
+{
+  Deformed_element& elem;
+  int i_dim;
+  int face_sign;
+};
+
 void Accessible_mesh::extrude()
 {
+  const int n_faces = 2*params.n_dim;
+  // initialize number of connections of each face to 0
+  {
+    auto& elems = elements();
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      for (int i_face = 0; i_face < n_faces; ++i_face) {
+        elems[i_elem].face_record[i_face] = 0;
+      }
+    }
+  }
+  // count up the number of connections for each face
+  car.record_connections();
+  def.record_connections();
+  // extrude elements
+  std::vector<Empty_face> empty_faces;
+  auto& elems = def.elements();
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+      for (int face_sign = 0; face_sign < 2; ++face_sign) {
+        const int i_face = 2*i_dim + face_sign;
+        auto& elem {elems[i_elem]};
+        if (elem.face_record[i_face] == 0) {
+          empty_faces.push_back({elem, i_dim, face_sign});
+        }
+      }
+    }
+  }
+  for (auto face : empty_faces) {
+    auto nom_pos = face.elem.nominal_position();
+    nom_pos[face.i_dim] += 2*face.face_sign - 1;
+    int sn = add_element(0, true, nom_pos);
+  }
 }
 
 }

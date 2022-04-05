@@ -58,6 +58,7 @@ class Element
   // obtains face position based on interior qpoint positions (as defined by `position()`)
   std::vector<double> face_position(const Basis&, int i_face, int i_face_qpoint);
   inline double nominal_size() {return nom_sz;}
+  inline std::vector<int> nominal_position() {return nom_pos;}
   // Pointer to state data for `i_stage`th Runge-Kutta stage.
   double* stage(int i_stage); // Layout: [i_var][i_qpoint]
   // pointer to scaling factor for local time step.
