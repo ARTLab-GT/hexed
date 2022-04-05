@@ -16,6 +16,7 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   visc_storage{Eigen::VectorXd::Zero(n_vert)}, vertex_tss{Eigen::VectorXd::Ones(n_vert)},
   derivative_storage(params.n_qpoint())
 {
+  face_record.fill(0);
   // initialize local time step scaling to 1.
   for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) time_step_scale()[i_qpoint] = 1.;
   // set position of vertex 0

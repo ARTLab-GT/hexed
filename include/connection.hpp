@@ -211,6 +211,7 @@ class Refined_connection
   Con_dir<element_t> direction() {return dir;}
   // fetch an object represting a connection between the face of a fine element and one of the mortar faces
   Fine_connection& connection(int i_fine) {return fine_cons[i_fine];}
+  bool order_reversed() {return rev;}
 };
 
 }

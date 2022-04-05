@@ -44,6 +44,7 @@ class Element
   typedef double* (Element::*shareable_value_access)(); // layout: [i_vertex]
   // pointer to a function that can access some data associated with the vertices
   typedef double& (Element::*vertex_value_access)(int i_vertex);
+  std::array<int, 6> face_record; // for algorithms to book-keep information related to faces
 
   Element(Storage_params, std::vector<int> pos={}, double mesh_size=1.);
   // Can't copy an Element. Doing so would have to either duplicate or break vertex connections,

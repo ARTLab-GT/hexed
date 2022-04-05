@@ -35,6 +35,7 @@ template <typename element_t>
 class Mesh_by_type : public View_by_type<element_t>
 {
   const int n_ref_faces;
+  const int n_faces;
 
   public:
   // where the data is kept
@@ -76,6 +77,7 @@ class Mesh_by_type : public View_by_type<element_t>
   // In particular, `Accessible_mesh` uses this to put all the boundary connections into the deformed connections
   Mesh_by_type(Storage_params params, double root_spacing) :
     n_ref_faces{custom_math::pow(2, params.n_dim - 1)},
+    n_faces{2*params.n_dim},
     elems{params, root_spacing},
     elem_v{elems.elements()},
     elem_face_con_v{*this},
@@ -94,6 +96,30 @@ class Mesh_by_type : public View_by_type<element_t>
   virtual Sequence<Refined_face&>& refined_faces() {return ref_v;}
   virtual Sequence<Hanging_vertex_matcher&>& hanging_vertex_matchers() {return matcher_v;}
   virtual Sequence<Boundary_connection&>& boundary_connections() {return bound_con_v;}
+
+  // miscellaneous functions
+  void record_connections() // write the number of connections for each face to `Element::face_record`. Assumes initialized to 0
+  {
+    // ordinary element connections
+    for (unsigned i_con = 0; i_con < cons.size(); ++i_con) {
+      for (int i_side = 0; i_side < 2; ++i_side) {
+        ++cons[i_con].element(i_side).face_record[cons[i_con].direction().i_face(i_side)];
+      }
+    }
+    // boundary connections
+    for (unsigned i_con = 0; i_con < bound_cons.size(); ++i_con) {
+      ++bound_cons[i_con].element().face_record[bound_cons[i_con].direction().i_face(0)];
+    }
+    // hanging node connections
+    for (unsigned i_con = 0; i_con < ref_face_cons.size(); ++i_con) {
+      auto& con {ref_face_cons[i_con]};
+      bool rev = con->order_reversed();
+      ++con->connection(0).element(rev).face_record[con->direction().i_face(rev)];
+      for (int i_fine = 0; i_fine < n_ref_faces; ++i_fine) {
+        ++con->connection(i_fine).element(!rev).face_record[con->direction().i_face(!rev)];
+      }
+    }
+  }
 };
 
 template <typename element_t>

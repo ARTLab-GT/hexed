@@ -92,42 +92,26 @@ void Accessible_mesh::connect_boundary(int ref_level, bool is_deformed, int elem
 
 Mesh::Connection_validity Accessible_mesh::valid()
 {
-  // maps a pointer to an element face to the number of connections pointing to that face
-  std::map<double*, int> n_connections;
-  // add an entry for each face and initialize it to 0
   auto& elems = elements();
-  int n_dof_face = params.n_dof()/params.row_size;
+  const int n_faces = 2*params.n_dim;
+  // initialize number of connections of each face to 0
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    double* faces = elems[i_elem].face();
-    for (int i_face = 0; i_face < params.n_dim*2; ++i_face) {
-      n_connections[faces + i_face*n_dof_face] = 0;
+    for (int i_face = 0; i_face < n_faces; ++i_face) {
+      elems[i_elem].face_record[i_face] = 0;
     }
   }
   // count up the number of connections for each face
-  #define COUNT_CONS(mbt) \
-  { \
-    auto& cons = mbt.face_connections(); \
-    for (int i_con = 0; i_con < cons.size(); ++i_con) { \
-      for (int i_side = 0; i_side < 2; ++i_side) { \
-        double* face = cons[i_con].face(i_side); \
-        if (n_connections.count(face)) { \
-          ++n_connections.at(face); \
-        } \
-      } \
-    } \
-  }
-  COUNT_CONS(car)
-  COUNT_CONS(def)
-  auto& ref_faces = refined_faces();
-  for (int i_ref = 0; i_ref < ref_faces.size(); ++i_ref) {
-    ++n_connections.at(ref_faces[i_ref].coarse_face());
-  }
+  car.record_connections();
+  def.record_connections();
   // count up the number of faces with problems
   int n_missing = 0;
   int n_duplicates = 0;
-  for (auto pair : n_connections) {
-    if (pair.second == 0) ++n_missing;
-    n_duplicates += std::max(pair.second - 1, 0);
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    for (int i_face = 0; i_face < n_faces; ++i_face) {
+      int rec = elems[i_elem].face_record[i_face];
+      if (rec == 0) ++n_missing;
+      if (rec > 1) n_duplicates += rec - 1;
+    }
   }
   return {n_duplicates, n_missing};
 }
