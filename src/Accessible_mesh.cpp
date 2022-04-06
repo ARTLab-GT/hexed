@@ -173,7 +173,7 @@ void Accessible_mesh::extrude()
     }
   }
   // create extruded elements
-  const int n_record = 3 + params.n_dim;
+  const int n_record = 4;
   for (auto face : empty_faces)
   {
     auto nom_pos = face.elem.nominal_position();
@@ -200,9 +200,8 @@ void Accessible_mesh::extrude()
         record.push_back(sn);
         // which face needs to be connected
         record.push_back(2*j_dim + face_sign);
-        // nominal position for deciding which face connections are valid
-        auto pos = elem.nominal_position();
-        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) record.push_back(pos[i_dim]);
+        // extrusion direction for deciding which face connections are valid
+        record.push_back(face.i_dim);
       }
     }
   }
@@ -217,19 +216,13 @@ void Accessible_mesh::extrude()
       // iterate through every possible pair of records created by an extruded elements above
       for (int i_record = 0; i_record < int(vert.record.size()); i_record += n_record)
       {
-        unsigned j_record;
-        for (j_record = i_record + n_record; j_record < vert.record.size(); j_record += n_record) {
+        for (unsigned j_record = i_record + n_record; j_record < vert.record.size(); j_record += n_record) {
           int ref_level = vert.record[i_record];
           std::array<int, 2> sn {vert.record[i_record + 1], vert.record[j_record + 1]};
           Con_dir<Deformed_element> dir {{     vert.record[i_record + 2]/2 ,      vert.record[j_record + 2]/2},
                                          {bool(vert.record[i_record + 2]%2), bool(vert.record[j_record + 2]%2)}};
           if ((dir.i_dim[0] == dir.i_dim[1]) && (dir.face_sign[0] != dir.face_sign[1])) {
-            const int i_dim = dir.i_dim[0];
-            bool aligned = (vert.record[j_record + 3 + i_dim] - vert.record[i_record + 3 + i_dim] == int(dir.face_sign[0]) - int(dir.face_sign[1]));
-            for (int j_dim = i_dim + 1; j_dim%params.n_dim != i_dim; ++j_dim) {
-              j_dim = j_dim%params.n_dim;
-              aligned = aligned && (vert.record[i_record + 3 + j_dim] == vert.record[j_record + 3 + j_dim]);
-            }
+            bool aligned = (vert.record[i_record + 3] == vert.record[j_record + 3]);
             if (aligned) {
               if (vert.record[j_record] != ref_level) throw std::runtime_error("attempt to connect extruded elements of different ref level");
               con_plans.push_back({ref_level, sn, dir}); // add prospective connection
@@ -248,23 +241,14 @@ void Accessible_mesh::extrude()
           std::array<int, 2> sn {vert.record[i_record + 1], vert.record[j_record + 1]};
           Con_dir<Deformed_element> dir {{     vert.record[i_record + 2]/2 ,      vert.record[j_record + 2]/2},
                                          {bool(vert.record[i_record + 2]%2), bool(vert.record[j_record + 2]%2)}};
-          if (dir.i_dim[0] != dir.i_dim[1]) {
-            printf("foo ");
-            bool aligned =    (vert.record[j_record + 3 + dir.i_dim[0]] - vert.record[i_record + 3 + dir.i_dim[0]] == 2*dir.face_sign[0] - 1)
-                           && (vert.record[i_record + 3 + dir.i_dim[1]] - vert.record[j_record + 3 + dir.i_dim[1]] == 2*dir.face_sign[1] - 1);
-            if (params.n_dim == 3) {
-              int unused_dim = 3 - dir.i_dim[0] - dir.i_dim[1];
-              aligned = aligned && (vert.record[i_record + 3 + unused_dim] == vert.record[j_record + 3 + unused_dim]);
-            }
-            if (aligned) {
-              printf("bar\n");
-              if (vert.record[j_record] != ref_level) throw std::runtime_error("attempt to connect extruded elements of different ref level");
-              con_plans.push_back({ref_level, sn, dir}); // add prospective connection
-              vert.record.erase(vert.record.begin() + j_record, vert.record.begin() + j_record + n_record);
-              vert.record.erase(vert.record.begin() + i_record, vert.record.begin() + i_record + n_record);
-              i_record -= n_record;
-              break;
-            }
+          bool aligned = ((dir.i_dim[0] == vert.record[j_record + 3]) && (dir.i_dim[1] == vert.record[i_record + 3]));
+          if (aligned) {
+            if (vert.record[j_record] != ref_level) throw std::runtime_error("attempt to connect extruded elements of different ref level");
+            con_plans.push_back({ref_level, sn, dir}); // add prospective connection
+            vert.record.erase(vert.record.begin() + j_record, vert.record.begin() + j_record + n_record);
+            vert.record.erase(vert.record.begin() + i_record, vert.record.begin() + i_record + n_record);
+            i_record -= n_record;
+            break;
           }
         }
       }
