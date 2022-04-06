@@ -285,3 +285,15 @@ TEST_CASE("Accessible_mesh")
     REQUIRE(mesh.vertices().size() == 8*mesh.elements().size() - 4);
   }
 }
+
+TEST_CASE("extruded BCs")
+{
+  cartdg::Storage_params params {2, 4, 2, 2};
+  cartdg::Accessible_mesh mesh {params, 1.};
+  int elem_sn = mesh.add_element(0, true, {0, 0});
+  int bc_sn = mesh.add_boundary_condition(new cartdg::Nonpenetration);
+  mesh.connect_boundary(0, true, elem_sn, 0, 1, bc_sn);
+  mesh.connect_boundary(0, true, elem_sn, 1, 0, bc_sn);
+  mesh.extrude();
+  REQUIRE(mesh.valid().n_missing == 2);
+}
