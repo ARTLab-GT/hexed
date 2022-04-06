@@ -129,6 +129,13 @@ struct Empty_face
   int face_sign;
 };
 
+struct Connection_plan
+{
+  int ref_level;
+  std::array<int, 2> serial_ns;
+  Con_dir<Deformed_element> dir;
+};
+
 void Accessible_mesh::extrude()
 {
   const int n_faces = 2*params.n_dim;
@@ -141,10 +148,17 @@ void Accessible_mesh::extrude()
       }
     }
   }
+  // initialize vertex records to empty
+  {
+    auto verts = vertices();
+    for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
+      verts[i_vert].record.clear();
+    }
+  }
   // count up the number of connections for each face
   car.record_connections();
   def.record_connections();
-  // extrude elements
+  // decide which faces to extrude from
   std::vector<Empty_face> empty_faces;
   auto& elems = def.elements();
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -158,14 +172,61 @@ void Accessible_mesh::extrude()
       }
     }
   }
-  for (auto face : empty_faces) {
+  // create extruded elements
+  for (auto face : empty_faces)
+  {
     auto nom_pos = face.elem.nominal_position();
     nom_pos[face.i_dim] += 2*face.face_sign - 1;
     const int ref_level = face.elem.refinement_level();
     int sn = add_element(ref_level, true, nom_pos);
     Con_dir<Deformed_element> dir {{face.i_dim, face.i_dim}, {!face.face_sign, bool(face.face_sign)}};
-    std::array<Deformed_element*, 2> el_arr {&def.elems.at(ref_level, sn), &face.elem};
+    auto& elem = def.elems.at(ref_level, sn);
+    std::array<Deformed_element*, 2> el_arr {&elem, &face.elem};
     def.cons.emplace_back(el_arr, dir);
+    // record the faces that still need to be connected at a vertex which is guaranteed to be shared with prospective neighbors
+    for (int j_dim = face.i_dim + 1; j_dim%params.n_dim != face.i_dim; ++j_dim)
+    {
+      j_dim = j_dim%params.n_dim;
+      for (int face_sign = 0; face_sign < 2; ++face_sign)
+      {
+        // record data at vertex which is on the face to be connected, on the face which was extruded from,
+        // and if applicable has the minimum index to satisfy the above consitions.
+        int i_vert =   face_sign*custom_math::pow(2, params.n_dim - 1 - j_dim)
+                     + (1 - face.face_sign)*custom_math::pow(2, params.n_dim - 1 - face.i_dim);
+        auto& record = elem.vertex(i_vert).record;
+        // which element it is
+        record.push_back(ref_level);
+        record.push_back(sn);
+        // which face needs to be connected
+        record.push_back(2*j_dim + face_sign);
+      }
+    }
+  }
+  // plan connections to make (don't make them yet, because that could result in `eat`ing vertices which have not been visited,
+  // and ultimately dereferencing null pointers)
+  std::vector<Connection_plan> con_plans;
+  {
+    auto verts = vertices(); // note: need to rebuild vertex vector because face connections above have `eat`en vertices
+    for (int i_vert = 0; i_vert < verts.size(); ++i_vert)
+    {
+      auto& vert {verts[i_vert]};
+      // iterate through every possible pair of records created by an extruded elements above
+      const int rec_size = vert.record.size();
+      for (int i_record = 0; i_record < rec_size; i_record += 3) {
+        for (int j_record = i_record + 3; j_record%rec_size != i_record; j_record += 3) {
+          j_record = j_record%rec_size;
+          int ref_level = vert.record[i_record];
+          if (vert.record[j_record] != ref_level) throw std::runtime_error("attempt to connect extruded elements of different ref level");
+          std::array<int, 2> sn {vert.record[i_record + 1], vert.record[j_record + 1]};
+          Con_dir<Deformed_element> dir {{     vert.record[i_record + 2]/2 ,      vert.record[j_record + 2]/2},
+                                         {bool(vert.record[i_record + 2]%2), bool(vert.record[j_record + 2]%2)}};
+          con_plans.push_back({ref_level, sn, dir});
+        }
+      }
+    }
+  }
+  for (auto con_plan : con_plans) {
+    connect_deformed(con_plan.ref_level, con_plan.serial_ns, con_plan.dir);
   }
 }
 

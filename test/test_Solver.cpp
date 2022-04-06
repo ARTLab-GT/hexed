@@ -44,6 +44,16 @@ class Normal_1 : public cartdg::Surface_func
   }
 };
 
+class Reciprocal_jacobian : public cartdg::Qpoint_func
+{
+  public:
+  virtual int n_var(int n_dim) const {return 1;}
+  virtual std::vector<double> operator()(cartdg::Element& elem, const cartdg::Basis&, int i_qpoint, double time) const
+  {
+    return {1./elem.jacobian_determinant(i_qpoint)};
+  }
+};
+
 constexpr double velocs [3] {0.3, -0.7, 0.8};
 constexpr double wave_number [3] {-0.1, 0.3, 0.2};
 double scaled_veloc(int n_dim)
@@ -477,7 +487,7 @@ TEST_CASE("face extrusion")
     }
     solver.mesh().extrude();
     solver.calc_jacobian();
-    REQUIRE(solver.integral_field(cartdg::Constant_func({1.}))[0] == Approx(24./4.)); // check number of elements
+    REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Approx(24./4.)); // check number of elements
     for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
     solver.visualize_field(cartdg::Empty_func(), "extrusion_2d");
     auto valid = solver.mesh().valid();
@@ -503,7 +513,7 @@ TEST_CASE("face extrusion")
     }
     solver.mesh().extrude();
     solver.calc_jacobian();
-    REQUIRE(solver.integral_field(cartdg::Constant_func({1.}))[0] == Approx(86.)); // check number of elements
+    REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Approx(86.)); // check number of elements
     for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
     solver.visualize_field(cartdg::Empty_func(), "extrusion_3d");
     auto valid = solver.mesh().valid();

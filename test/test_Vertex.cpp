@@ -21,6 +21,11 @@ TEST_CASE("Vertex")
 
   SECTION("eat")
   {
+    ptr0->record.push_back(1);
+    ptr0->record.push_back(-7);
+    ptr1->record.push_back(4);
+    ptr1->record.push_back(0);
+    ptr1->record.push_back(9);
     ptr0->eat(*ptr1);
     ptr0->eat(*ptr0); // autocannibalism does nothing
     REQUIRE(ptr0->mass() == 2);
@@ -31,6 +36,10 @@ TEST_CASE("Vertex")
     ptr1->pos[0] = 2.;
     REQUIRE(&*ptr0 == orig_addr);
     REQUIRE(&*ptr1 == orig_addr);
+    // records have been concatenated
+    REQUIRE(ptr0->record.size() == 5);
+    std::vector<double> correct {1, -7, 4, 0, 9};
+    REQUIRE(std::equal(ptr0->record.begin(), ptr0->record.end(), correct.begin()));
 
     cartdg::Vertex::Transferable_ptr ptr2 {{1., 0., 0.}};
     cartdg::Vertex::Transferable_ptr ptr3 {{1., 0., 0.}};
