@@ -21,6 +21,7 @@ class Boundary_face
   virtual bool inside_face_sign() = 0;
   virtual double* jacobian_mat() = 0;
 };
+class Boundary_connection;
 
 /*
  * Abstract class representing an arbitrary flow boundary condition (as opposed to a mesh BC).
@@ -43,8 +44,8 @@ class Flow_bc
 class Mesh_bc
 {
   public:
-  virtual void snap_vertices(Boundary_face&) = 0;
-  virtual void snap_node_adj(Boundary_face&) = 0;
+  virtual void snap_vertices(Boundary_connection&) = 0;
+  virtual void snap_node_adj(Boundary_connection&, const Basis&) = 0;
 };
 
 class Boundary_condition
@@ -88,8 +89,8 @@ class Copy : public Flow_bc
 class Null_mbc : public Mesh_bc
 {
   public:
-  virtual inline void snap_vertices(Boundary_face&) {}
-  virtual inline void snap_node_adj(Boundary_face&) {}
+  virtual inline void snap_vertices(Boundary_connection&) {}
+  virtual inline void snap_node_adj(Boundary_connection&, const Basis&) {}
 };
 
 // snaps to the nominal position along the `i_dim` of the boundary face.
@@ -97,8 +98,8 @@ class Null_mbc : public Mesh_bc
 class Nominal_pos : public Mesh_bc
 {
   public:
-  virtual void snap_vertices(Boundary_face&);
-  virtual void snap_node_adj(Boundary_face&) {}
+  virtual void snap_vertices(Boundary_connection&);
+  virtual inline void snap_node_adj(Boundary_connection&, const Basis&) {}
 };
 
 /*

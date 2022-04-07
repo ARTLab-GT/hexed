@@ -64,10 +64,20 @@ void Solver::relax_vertices()
 
 void Solver::snap_vertices()
 {
+  auto& bc_cons {acc_mesh.boundary_connections()};
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+    acc_mesh.boundary_condition(bc_sn).mesh_bc->snap_vertices(bc_cons[i_con]);
+  }
 }
 
 void Solver::snap_faces()
 {
+  auto& bc_cons {acc_mesh.boundary_connections()};
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+    acc_mesh.boundary_condition(bc_sn).mesh_bc->snap_node_adj(bc_cons[i_con], basis);
+  }
 }
 
 void Solver::calc_jacobian()

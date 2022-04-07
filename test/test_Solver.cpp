@@ -257,6 +257,7 @@ TEST_CASE("Solver")
       sol.relax_vertices();
       sol.snap_vertices();
       sol.snap_faces();
+      sol.calc_jacobian();
       // element should now be [(1 + 0.25)*0.8/2, (1 + 0.75)*0.8/2] x [(2 + 0.25)*0.8/2, 3*0.8/2]
       REQUIRE(sol.integral_field(cartdg::Constant_func({1.}))[0] == Approx(0.5*0.75*(0.8/2)*(0.8/2)));
     }

@@ -36,6 +36,8 @@ class Solver
   // moves all vertices to the mean of the current position and the mean of the neighbors' positions
   void relax_vertices();
   // apply `Mesh_bc`s
+  // Note: if some vertices participate in multiple BCs, then they may not satisfy all exactly.
+  //       However, if `snap_vertices()` is called multiple times, they should converge to the correct positions.
   void snap_vertices();
   void snap_faces();
   /*

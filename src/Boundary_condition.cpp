@@ -52,8 +52,15 @@ void Copy::apply(Boundary_face& bf)
   }
 }
 
-void Nominal_pos::snap_vertices(Boundary_face&)
+void Nominal_pos::snap_vertices(Boundary_connection& con)
 {
+  const int stride = custom_math::pow(2, con.storage_params().n_dim - 1 - con.i_dim());
+  for (int i_vert = 0; i_vert < con.storage_params().n_vertices(); ++i_vert) {
+    if ((i_vert/stride)%2 == con.inside_face_sign()) {
+      double pos = (con.element().nominal_position()[con.i_dim()] + con.inside_face_sign())*con.element().nominal_size();
+      con.element().vertex(i_vert).pos[con.i_dim()] = pos;
+    }
+  }
 }
 
 }
