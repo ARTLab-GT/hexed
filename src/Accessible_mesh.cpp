@@ -153,11 +153,20 @@ void Accessible_mesh::extrude()
     auto verts = vertices();
     for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
       verts[i_vert].record.clear();
+      verts[i_vert].record.resize(2, -1);
     }
   }
   // count up the number of connections for each face
   car.record_connections();
   def.record_connections();
+  // record which faces have boundary conditions
+  auto& bc_cons {boundary_connections()};
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    auto& con {bc_cons[i_con]};
+    int i_bc = 0;
+    for (; &boundary_conditions()[i_bc] != con.boundary_condition(); ++i_bc);
+    con.element().face_record[2*con.i_dim() + con.inside_face_sign()] = 2 + i_bc;
+  }
   // decide which faces to extrude from
   std::vector<Empty_face> empty_faces;
   auto& elems = def.elements();
@@ -190,18 +199,26 @@ void Accessible_mesh::extrude()
       j_dim = j_dim%params.n_dim;
       for (int face_sign = 0; face_sign < 2; ++face_sign)
       {
-        // record data at vertex which is on the face to be connected, on the face which was extruded from,
-        // and if applicable has the minimum index to satisfy the above consitions.
-        int i_vert =   face_sign*custom_math::pow(2, params.n_dim - 1 - j_dim)
-                     + (1 - face.face_sign)*custom_math::pow(2, params.n_dim - 1 - face.i_dim);
-        auto& record = elem.vertex(i_vert).record;
-        // which element it is
-        record.push_back(ref_level);
-        record.push_back(sn);
-        // which face needs to be connected
-        record.push_back(2*j_dim + face_sign);
-        // extrusion direction for deciding which face connections are valid
-        record.push_back(face.i_dim);
+        int face_rec = face.elem.face_record[2*j_dim + face_sign];
+        if (face_rec >= 2)
+        {
+          def.bound_cons.emplace_back(elem, j_dim, face_sign, boundary_conditions()[face_rec - 2]); \
+        }
+        else
+        {
+          // record data at vertex which is on the face to be connected, on the face which was extruded from,
+          // and if applicable has the minimum index to satisfy the above consitions.
+          int i_vert =   face_sign*custom_math::pow(2, params.n_dim - 1 - j_dim)
+                       + (1 - face.face_sign)*custom_math::pow(2, params.n_dim - 1 - face.i_dim);
+          auto& record = elem.vertex(i_vert).record;
+          // which element it is
+          record.push_back(ref_level);
+          record.push_back(sn);
+          // which face needs to be connected
+          record.push_back(2*j_dim + face_sign);
+          // extrusion direction for deciding which face connections are valid
+          record.push_back(face.i_dim);
+        }
       }
     }
   }
@@ -214,7 +231,7 @@ void Accessible_mesh::extrude()
     {
       auto& vert {verts[i_vert]};
       // iterate through every possible pair of records created by an extruded elements above
-      for (int i_record = 0; i_record < int(vert.record.size()); i_record += n_record)
+      for (int i_record = 2; i_record < int(vert.record.size()); i_record += n_record)
       {
         for (unsigned j_record = i_record + n_record; j_record < vert.record.size(); j_record += n_record) {
           int ref_level = vert.record[i_record];
@@ -234,7 +251,7 @@ void Accessible_mesh::extrude()
           }
         }
       }
-      for (int i_record = 0; i_record < int(vert.record.size()); i_record += n_record)
+      for (int i_record = 2; i_record < int(vert.record.size()); i_record += n_record)
       {
         for (unsigned j_record = i_record + n_record; j_record < vert.record.size(); j_record += n_record) {
           int ref_level = vert.record[i_record];
