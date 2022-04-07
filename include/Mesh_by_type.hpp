@@ -36,6 +36,7 @@ class Mesh_by_type : public View_by_type<element_t>
 {
   const int n_ref_faces;
   const int n_faces;
+  Storage_params par;
 
   public:
   // where the data is kept
@@ -78,6 +79,7 @@ class Mesh_by_type : public View_by_type<element_t>
   Mesh_by_type(Storage_params params, double root_spacing) :
     n_ref_faces{custom_math::pow(2, params.n_dim - 1)},
     n_faces{2*params.n_dim},
+    par{params},
     elems{params, root_spacing},
     elem_v{elems.elements()},
     elem_face_con_v{*this},
@@ -117,6 +119,29 @@ class Mesh_by_type : public View_by_type<element_t>
       ++con->connection(0).element(rev).face_record[con->direction().i_face(rev)];
       for (int i_fine = 0; i_fine < n_ref_faces; ++i_fine) {
         ++con->connection(i_fine).element(!rev).face_record[con->direction().i_face(!rev)];
+      }
+    }
+  }
+
+  void connect_rest(Boundary_condition& bc)
+  {
+    auto elem_seq = elems.elements();
+    // locate unconnected faces
+    for (int i_elem = 0; i_elem < elem_seq.size(); ++i_elem) {
+      for (int i_face = 0; i_face < n_faces; ++i_face) {
+        elem_seq[i_elem].face_record[i_face] = 0;
+      }
+    }
+    record_connections();
+    // connect unconnected faces
+    for (int i_elem = 0; i_elem < elem_seq.size(); ++i_elem) {
+      auto& elem = elem_seq[i_elem];
+      for (int i_dim = 0; i_dim < par.n_dim; ++i_dim) {
+        for (int face_sign = 0; face_sign < 2; ++face_sign) {
+          if (elem.face_record[2*i_dim + face_sign] == 0) {
+            bound_cons.emplace_back(elem, i_dim, face_sign, bc);
+          }
+        }
       }
     }
   }

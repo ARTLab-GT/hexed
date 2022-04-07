@@ -63,6 +63,8 @@ class Mesh
    * in a well-conditioned fashion.
    */
   virtual void extrude() = 0;
+  // connects all yet-unconnected faces to a boundary condition specified by serial number
+  virtual void connect_rest(int bc_sn) = 0;
 
   // An object to provide information about whether the mesh connectivity is valid
   // and if not, why.

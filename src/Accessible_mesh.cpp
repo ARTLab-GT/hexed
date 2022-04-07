@@ -276,4 +276,11 @@ void Accessible_mesh::extrude()
   }
 }
 
+void Accessible_mesh::connect_rest(int bc_sn)
+{
+  auto& bc {boundary_condition(bc_sn)};
+  car.connect_rest(bc);
+  def.connect_rest(bc);
+}
+
 }

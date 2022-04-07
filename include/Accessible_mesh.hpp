@@ -60,6 +60,7 @@ class Accessible_mesh : public Mesh
   typedef Vector_view<Vertex&, Vertex::Non_transferable_ptr, &ptr_convert<Vertex&, Vertex::Non_transferable_ptr>> vertex_view;
   vertex_view vertices();
   virtual void extrude(); // note: test for this is in `test_Solver.cpp` so that the result can be visualized
+  virtual void connect_rest(int bc_sn);
 };
 
 }

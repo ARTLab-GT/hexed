@@ -296,4 +296,8 @@ TEST_CASE("extruded BCs")
   mesh.connect_boundary(0, true, elem_sn, 1, 0, bc_sn);
   mesh.extrude();
   REQUIRE(mesh.valid().n_missing == 2);
+  // add another element to make sure `connect_rest` does Cartesian elements too
+  mesh.add_element(2, false, {-1, -1});
+  mesh.connect_rest(bc_sn);
+  mesh.valid().assert_valid();
 }
