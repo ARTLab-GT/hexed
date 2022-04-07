@@ -132,6 +132,26 @@ class Nonuniform_residual : public cartdg::Spacetime_func
   }
 };
 
+class Parabola : public cartdg::Surface_geometry
+{
+  public:
+  virtual std::vector<double> project_point(std::vector<double> point)
+  {
+    point.resize(2, 0.);
+    point[1] = 0.1*point[0]*point[0];
+    return point;
+  }
+  virtual std::vector<double> line_intersections(std::vector<double> point0, std::vector<double> point1)
+  {
+    point0.resize(2, 0.);
+    point1.resize(2, 0.);
+    // only works for vertical lines
+    if (point0[0] != point1[0]) throw std::runtime_error("only for toy cases where the line is vertical");
+    double intersection = point0[0]*point0[0];
+    return {10., intersection, -3.}; // add some other points just to try to confuse the face snapper
+  }
+};
+
 TEST_CASE("Solver")
 {
   static_assert (cartdg::config::max_row_size >= 3); // this test was written for row size 3
@@ -260,6 +280,20 @@ TEST_CASE("Solver")
       sol.calc_jacobian();
       // element should now be [(1 + 0.25)*0.8/2, (1 + 0.75)*0.8/2] x [(2 + 0.25)*0.8/2, 3*0.8/2]
       REQUIRE(sol.integral_field(cartdg::Constant_func({1.}))[0] == Approx(0.5*0.75*(0.8/2)*(0.8/2)));
+    }
+    SECTION("Surface_mbc")
+    {
+      int el_sn = sol.mesh().add_element(1, true, {0, 0});
+      int bc_sn = sol.mesh().add_boundary_condition(new cartdg::Copy, new cartdg::Surface_mbc{new Parabola});
+      sol.mesh().connect_boundary(1, true, el_sn, 1, 1, bc_sn);
+      sol.snap_vertices();
+      sol.calc_jacobian();
+      // element should be a triangle
+      REQUIRE(sol.integral_field(cartdg::Constant_func({1.}))[0] == Approx(0.5*(0.1*0.8*0.8)*0.8));
+      sol.snap_faces();
+      sol.calc_jacobian();
+      // top element face should now be a parabola
+      REQUIRE(sol.integral_field(cartdg::Constant_func({1.}))[0] == Approx(0.1*0.8*0.8*0.8/3.));
     }
   }
 }

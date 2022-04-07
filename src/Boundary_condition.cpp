@@ -63,4 +63,12 @@ void Nominal_pos::snap_vertices(Boundary_connection& con)
   }
 }
 
+void Surface_mbc::snap_vertices(Boundary_connection&)
+{
+}
+
+void Surface_mbc::snap_node_adj(Boundary_connection&, const Basis&)
+{
+}
+
 }

@@ -46,6 +46,7 @@ class Mesh_bc
   public:
   virtual void snap_vertices(Boundary_connection&) = 0;
   virtual void snap_node_adj(Boundary_connection&, const Basis&) = 0;
+  virtual ~Mesh_bc() = default;
 };
 
 class Boundary_condition
@@ -100,6 +101,37 @@ class Nominal_pos : public Mesh_bc
   public:
   virtual void snap_vertices(Boundary_connection&);
   virtual inline void snap_node_adj(Boundary_connection&, const Basis&) {}
+};
+
+// implicitly represents a surface by supporting a set of geometric operations
+class Surface_geometry
+{
+  public:
+  /*
+   * Return a point on the surface.
+   * Invoking this function on a point already on the surface should return the same point.
+   * Implementation suggestion: return the nearest point on the surface.
+   */
+  virtual std::vector<double> project_point(std::vector<double> point) = 0;
+  /*
+   * compute intersections between a line and the surface.
+   * Line is represented parametrically as a linear inter/extrapolation between 2 points.
+   * Each element of the return value represents the value of the parameter at an intersection between the line and the surface.
+   * That is, a value of 0 means that the line intersects at `point0`, a value of 1 means that the line intersects at `point1`,
+   * 0.5 means half way in between, etc.
+   */
+  virtual std::vector<double> line_intersections(std::vector<double> point0, std::vector<double> point1) = 0;
+  virtual ~Surface_geometry() = default;
+};
+
+class Surface_mbc : public Mesh_bc
+{
+  std::unique_ptr<Surface_geometry> sg;
+  public:
+  // acquire ownership of `*surf_geom`, which faces/vertices will be snapped to
+  inline Surface_mbc(Surface_geometry* surf_geom) : sg{surf_geom} {}
+  virtual void snap_vertices(Boundary_connection&);
+  virtual void snap_node_adj(Boundary_connection&, const Basis&);
 };
 
 /*
