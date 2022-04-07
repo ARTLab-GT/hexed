@@ -91,8 +91,8 @@ TEST_CASE("Accessible_mesh")
 
   SECTION("boundary conditions")
   {
-    int freestream = mesh.add_boundary_condition(new cartdg::Freestream({0, 0, 1., 1e5}));
-    int nonpen = mesh.add_boundary_condition(new cartdg::Nonpenetration);
+    int freestream = mesh.add_boundary_condition(new cartdg::Freestream({0, 0, 1., 1e5}), new cartdg::Null_mbc);
+    int nonpen = mesh.add_boundary_condition(new cartdg::Nonpenetration, new cartdg::Null_mbc);
     // check that connecting to an invalid serial number throws
     REQUIRE_THROWS(mesh.connect_boundary(0, 0, sn0, 1, 0, nonpen + freestream + 1));
     SECTION("cartesian")
@@ -241,7 +241,7 @@ TEST_CASE("Accessible_mesh")
       mesh1.connect_hanging_cartesian(0, coarse[kind], {kinds[kind][2], kinds[kind][3]}, {0}, 0, false, kind);
     }
     // add boundary conditions
-    int bcsn = mesh1.add_boundary_condition(new cartdg::Freestream {{0., 0., 1., 1.}});
+    int bcsn = mesh1.add_boundary_condition(new cartdg::Freestream {{0., 0., 1., 1.}}, new cartdg::Null_mbc);
     for (int i = 0; i < 2; ++i) {
       for (int kind = 0; kind < 2; ++kind) {
         mesh1.connect_boundary(1, kind, kinds[kind][i], 0, 0, bcsn); // left face
@@ -291,7 +291,7 @@ TEST_CASE("extruded BCs")
   cartdg::Storage_params params {2, 4, 2, 2};
   cartdg::Accessible_mesh mesh {params, 1.};
   int elem_sn = mesh.add_element(0, true, {0, 0});
-  int bc_sn = mesh.add_boundary_condition(new cartdg::Nonpenetration);
+  int bc_sn = mesh.add_boundary_condition(new cartdg::Nonpenetration, new cartdg::Null_mbc);
   mesh.connect_boundary(0, true, elem_sn, 0, 1, bc_sn);
   mesh.connect_boundary(0, true, elem_sn, 1, 0, bc_sn);
   mesh.extrude();

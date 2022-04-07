@@ -199,8 +199,8 @@ TEST_CASE("Solver")
       // connecting deformed elements with an empty space in between stretches them by a factor of 1.5
       sol.mesh().connect_deformed(0, {sn0, sn1}, {{0, 0}, {1, 0}});
       // add some boundary conditions for testing surface integrals
-      int bc0 = sol.mesh().add_boundary_condition(new cartdg::Copy ());
-      int bc1 = sol.mesh().add_boundary_condition(new cartdg::Copy ());
+      int bc0 = sol.mesh().add_boundary_condition(new cartdg::Copy, new cartdg::Null_mbc);
+      int bc1 = sol.mesh().add_boundary_condition(new cartdg::Copy, new cartdg::Null_mbc);
       int i = 0;
       for (int sn : {car0, car1, sn0, sn1}) {
         sol.mesh().connect_boundary(0, i++ >= 2, sn, 1, 0, bc0);
@@ -234,7 +234,7 @@ TEST_CASE("Solver")
     SECTION("complex function, simple mesh")
     {
       int sn = sol.mesh().add_element(0, false, {0, 0, 0});
-      int bc0 = sol.mesh().add_boundary_condition(new cartdg::Nonpenetration ());
+      int bc0 = sol.mesh().add_boundary_condition(new cartdg::Nonpenetration, new cartdg::Null_mbc);
       sol.mesh().connect_boundary(0, false, sn, 0, 1, bc0);
       sol.calc_jacobian();
       sol.initialize(cartdg::Constant_func({0.3, 0., 0., 0.}));
@@ -274,7 +274,7 @@ class All_cartesian : public Test_mesh
   virtual std::vector<elem_handle> construct(cartdg::Flow_bc* flow_bc)
   {
     std::vector<elem_handle> handles;
-    bc_sn = sol.mesh().add_boundary_condition(flow_bc);
+    bc_sn = sol.mesh().add_boundary_condition(flow_bc, new cartdg::Null_mbc);
     for (int i_elem = 0; i_elem < 8; ++i_elem) {
       std::vector<int> strides {4, 2, 1};
       std::vector<int> inds;
@@ -308,7 +308,7 @@ class All_deformed : public Test_mesh
   virtual std::vector<elem_handle> construct(cartdg::Flow_bc* flow_bc)
   {
     std::vector<elem_handle> handles;
-    bc_sn = sol.mesh().add_boundary_condition(flow_bc);
+    bc_sn = sol.mesh().add_boundary_condition(flow_bc, new cartdg::Null_mbc);
     for (int i_elem = 0; i_elem < 9; ++i_elem) {
       std::vector<int> strides {3, 1};
       std::vector<int> inds;
@@ -346,7 +346,7 @@ class Hanging : public Test_mesh
   virtual std::vector<elem_handle> construct(cartdg::Flow_bc* flow_bc)
   {
     std::vector<elem_handle> handles;
-    bc_sn = sol.mesh().add_boundary_condition(flow_bc);
+    bc_sn = sol.mesh().add_boundary_condition(flow_bc, new cartdg::Null_mbc);
     for (int i = 0; i < 2; ++i) {
       handles.push_back({0, false, sol.mesh().add_element(0, false, {i  , 0})});
       handles.push_back({1, false, sol.mesh().add_element(1, false, {i  , 2})});

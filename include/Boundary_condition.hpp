@@ -23,7 +23,7 @@ class Boundary_face
 };
 
 /*
- * Abstract class representing an arbitrary flow boundary condition (as opposed to a snapping BC).
+ * Abstract class representing an arbitrary flow boundary condition (as opposed to a mesh BC).
  * That is, something that computes a ghost state given an state on the boundary (inside state),
  * a face size, and a Jacobian.
  */
@@ -35,10 +35,23 @@ class Flow_bc
   virtual ~Flow_bc() = default;
 };
 
+/*
+ * Abstract class representing a mesh boundary condition.
+ * That is, a rule for snapping vertices and face node adjustments to the boundary.
+ * This is the means for providing surface geometry to CartDG.
+ */
+class Mesh_bc
+{
+  public:
+  virtual void snap_vertices(Boundary_face&) = 0;
+  virtual void snap_node_adj(Boundary_face&) = 0;
+};
+
 class Boundary_condition
 {
   public:
   std::unique_ptr<Flow_bc> flow_bc;
+  std::unique_ptr<Mesh_bc> mesh_bc;
 };
 
 /*
@@ -70,6 +83,13 @@ class Copy : public Flow_bc
 {
   public:
   virtual void apply(Boundary_face&);
+};
+
+class Null_mbc : public Mesh_bc
+{
+  public:
+  virtual inline void snap_vertices(Boundary_face&) {}
+  virtual inline void snap_node_adj(Boundary_face&) {}
 };
 
 /*
