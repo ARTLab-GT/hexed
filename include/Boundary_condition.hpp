@@ -112,7 +112,7 @@ class Surface_geometry
    * Invoking this function on a point already on the surface should return the same point.
    * Implementation suggestion: return the nearest point on the surface.
    */
-  virtual std::vector<double> project_point(std::vector<double> point) = 0;
+  virtual std::array<double, 3> project_point(std::array<double, 3> point) = 0;
   /*
    * compute intersections between a line and the surface.
    * Line is represented parametrically as a linear inter/extrapolation between 2 points.
@@ -120,7 +120,7 @@ class Surface_geometry
    * That is, a value of 0 means that the line intersects at `point0`, a value of 1 means that the line intersects at `point1`,
    * 0.5 means half way in between, etc.
    */
-  virtual std::vector<double> line_intersections(std::vector<double> point0, std::vector<double> point1) = 0;
+  virtual std::vector<double> line_intersections(std::array<double, 3> point0, std::array<double, 3> point1) = 0;
   virtual ~Surface_geometry() = default;
 };
 

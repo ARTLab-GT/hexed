@@ -27,7 +27,7 @@ class Deformed_element : public Element
   double* jacobian(); // Layout: [i_dim][j_dim][i_qpoint]
   virtual double jacobian(int i_dim, int j_dim, int i_qpoint);
   // No simple way to explain what this represents.
-  double* node_adjustments(); // Layout: [i_dim][is_positive][i_face_qpoint]
+  virtual double* node_adjustments(); // Layout: [i_dim][is_positive][i_face_qpoint]
 };
 
 }

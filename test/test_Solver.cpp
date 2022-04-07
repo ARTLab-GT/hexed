@@ -135,19 +135,16 @@ class Nonuniform_residual : public cartdg::Spacetime_func
 class Parabola : public cartdg::Surface_geometry
 {
   public:
-  virtual std::vector<double> project_point(std::vector<double> point)
+  virtual std::array<double, 3> project_point(std::array<double, 3> point)
   {
-    point.resize(2, 0.);
     point[1] = 0.1*point[0]*point[0];
     return point;
   }
-  virtual std::vector<double> line_intersections(std::vector<double> point0, std::vector<double> point1)
+  virtual std::vector<double> line_intersections(std::array<double, 3> point0, std::array<double, 3> point1)
   {
-    point0.resize(2, 0.);
-    point1.resize(2, 0.);
     // only works for vertical lines
     if (point0[0] != point1[0]) throw std::runtime_error("only for toy cases where the line is vertical");
-    double intersection = point0[0]*point0[0];
+    double intersection = 0.1*point0[0]*point0[0]/(point1[1] - point0[1]);
     return {10., intersection, -3.}; // add some other points just to try to confuse the face snapper
   }
 };
@@ -289,11 +286,11 @@ TEST_CASE("Solver")
       sol.snap_vertices();
       sol.calc_jacobian();
       // element should be a triangle
-      REQUIRE(sol.integral_field(cartdg::Constant_func({1.}))[0] == Approx(0.5*(0.1*0.8*0.8)*0.8));
+      REQUIRE(sol.integral_field(cartdg::Constant_func({1.}))[0] == Approx(0.5*(0.1*0.4*0.4)*0.4));
       sol.snap_faces();
       sol.calc_jacobian();
       // top element face should now be a parabola
-      REQUIRE(sol.integral_field(cartdg::Constant_func({1.}))[0] == Approx(0.1*0.8*0.8*0.8/3.));
+      REQUIRE(sol.integral_field(cartdg::Constant_func({1.}))[0] == Approx(0.1*0.4*0.4*0.4/3.));
     }
   }
 }

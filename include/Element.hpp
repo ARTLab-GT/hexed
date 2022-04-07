@@ -71,6 +71,7 @@ class Element
   double* time_step_scale(); // Layout: [i_qpoint]
   // Pointer state data at faces. Must be populated by user
   double* face(); // Layout: [i_dim][is_positive][i_var][i_face_qpoint]
+  virtual double* node_adjustments() {return nullptr;} // overriden by `Deformed_element`
 
   /*
    * Following two functions compute the Jacobian. I.e., derivative of `i_dim`th
