@@ -20,7 +20,6 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size) :
   def_as_car{def.elements()},
   elems{car.elements(), def_as_car},
   elem_cons{car.element_connections(), def.element_connections()},
-  bc_v{bound_conds},
   bound_face_cons{car.bound_face_con_view, def.bound_face_con_view},
   bound_cons{car.boundary_connections(), def.boundary_connections()},
   def_face_cons{def.elem_face_con_v, bound_face_cons},
@@ -71,9 +70,9 @@ void Accessible_mesh::connect_hanging_cartesian(int coarse_ref_level, int coarse
   car.ref_face_cons.emplace_back(new Refined_connection<Element> {coarse, fine, dir, !coarse_face_positive});
 }
 
-int Accessible_mesh::add_boundary_condition(Boundary_condition* bc)
+int Accessible_mesh::add_boundary_condition(Flow_bc* flow_bc)
 {
-  bound_conds.emplace_back(bc);
+  bound_conds.push_back({std::unique_ptr<Flow_bc>{flow_bc}});
   // no reason to delete boundary conditions, so the serial number can just be the index
   return bound_conds.size() - 1;
 }

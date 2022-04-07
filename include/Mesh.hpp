@@ -42,10 +42,11 @@ class Mesh
   virtual void connect_hanging_cartesian(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Element>,
                                          bool coarse_face_positive, bool coarse_deformed=false, bool fine_deformed=false) = 0;
   /*
-   * Acquires owenership of `*bc` and return a serial number which uniquely identifies it among this `Mesh`'s boundary conditions.
+   * Acquires owenership of `*fc`, constructs a `Boundary_condition` from it.
+   * Returns a serial number which uniquely identifies the new boundary condition among this `Mesh`'s boundary conditions.
    * It is recommended to use this with `new`, like the constructor for `std::unique_ptr`.
    */
-  virtual int add_boundary_condition(Boundary_condition* bc) = 0;
+  virtual int add_boundary_condition(Flow_bc* flow_bc) = 0;
   /*
    * Connect a face of an element to a boundary condition. This BC will now be applied to that face. `i_dim` and `face_sign`
    * are used to identify which face of the element is participating in the boundary condition.

@@ -24,9 +24,7 @@ class Accessible_mesh : public Mesh
   Vector_view<Element&, Deformed_element&, &trivial_convert<Element&, Deformed_element&>, Sequence> def_as_car;
   Concatenation<Element&> elems;
   Concatenation<Element_connection&> elem_cons;
-  std::vector<std::unique_ptr<Boundary_condition>> bound_conds;
-  static Boundary_condition& convert_bc (std::unique_ptr<Boundary_condition>& ptr) {return *ptr;}
-  Vector_view<Boundary_condition&, std::unique_ptr<Boundary_condition>, &convert_bc> bc_v;
+  std::vector<Boundary_condition> bound_conds;
   Concatenation<Face_connection<Deformed_element>&> bound_face_cons;
   Concatenation<Boundary_connection&> bound_cons;
   Concatenation<Face_connection<Deformed_element>&> def_face_cons;
@@ -49,10 +47,10 @@ class Accessible_mesh : public Mesh
   virtual void connect_hanging_cartesian(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Element>,
                                          bool coarse_face_positive, bool coarse_deformed=false, bool fine_deformed=false);
   Sequence<Element_connection&>& element_connections() {return elem_cons;}
-  virtual int add_boundary_condition(Boundary_condition* bc);
+  virtual int add_boundary_condition(Flow_bc*);
   virtual void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n);
-  Sequence<Boundary_condition&>& boundary_conditions() {return bc_v;}
-  Boundary_condition& boundary_condition(int bc_sn) {return *bound_conds[bc_sn];}
+  Vector_view<Boundary_condition&, Boundary_condition> boundary_conditions() {return bound_conds;}
+  Boundary_condition& boundary_condition(int bc_sn) {return bound_conds[bc_sn];}
   Sequence<Boundary_connection&>& boundary_connections() {return bound_cons;}
   inline Sequence<Refined_face&>& refined_faces() {return ref_face_v;}
   inline Sequence<Hanging_vertex_matcher&>& hanging_vertex_matchers() {return matcher_v;}
