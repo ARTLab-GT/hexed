@@ -62,6 +62,14 @@ void Solver::relax_vertices()
   }
 }
 
+void Solver::snap_vertices()
+{
+}
+
+void Solver::snap_faces()
+{
+}
+
 void Solver::calc_jacobian()
 {
   const int n_dim = params.n_dim;

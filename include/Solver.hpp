@@ -35,6 +35,9 @@ class Solver
   inline Storage_params storage_params() {return params;}
   // moves all vertices to the mean of the current position and the mean of the neighbors' positions
   void relax_vertices();
+  // apply `Mesh_bc`s
+  void snap_vertices();
+  void snap_faces();
   /*
    * compute the Jacobian of all elements based on the current position of the vertices and value of
    * any face warping.

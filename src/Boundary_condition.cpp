@@ -52,4 +52,8 @@ void Copy::apply(Boundary_face& bf)
   }
 }
 
+void Nominal_pos::snap_vertices(Boundary_face&)
+{
+}
+
 }

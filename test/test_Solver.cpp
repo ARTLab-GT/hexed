@@ -246,6 +246,21 @@ TEST_CASE("Solver")
       REQUIRE(integral[0] == Approx(0.8*0.8*std::pow(0.8, 4)/4 - 0.8*0.3));
     }
   }
+
+  SECTION("face/vertex snapping")
+  {
+    SECTION("Nominal_pos")
+    {
+      int el_sn = sol.mesh().add_element(1, true, {1, 2});
+      int bc_sn = sol.mesh().add_boundary_condition(new cartdg::Copy, new cartdg::Nominal_pos);
+      sol.mesh().connect_boundary(1, true, el_sn, 1, 1, bc_sn);
+      sol.relax_vertices();
+      sol.snap_vertices();
+      sol.snap_faces();
+      // element should now be [(1 + 0.25)*0.8/2, (1 + 0.75)*0.8/2] x [(2 + 0.25)*0.8/2, 3*0.8/2]
+      REQUIRE(sol.integral_field(cartdg::Constant_func({1.}))[0] == Approx(0.5*0.75*(0.8/2)*(0.8/2)));
+    }
+  }
 }
 
 class Test_mesh

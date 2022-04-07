@@ -92,6 +92,15 @@ class Null_mbc : public Mesh_bc
   virtual inline void snap_node_adj(Boundary_face&) {}
 };
 
+// snaps to the nominal position along the `i_dim` of the boundary face.
+// You can think of this as snapping to a Cartesian plane.
+class Nominal_pos : public Mesh_bc
+{
+  public:
+  virtual void snap_vertices(Boundary_face&);
+  virtual void snap_node_adj(Boundary_face&) {}
+};
+
 /*
  * A `Boundary_face` that also provides details about the connection for the neighbor flux
  * computation and requests for a particular `Boundary_condition` to be applied to it.
