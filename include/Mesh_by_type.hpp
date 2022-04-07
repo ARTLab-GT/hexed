@@ -123,16 +123,10 @@ class Mesh_by_type : public View_by_type<element_t>
     }
   }
 
-  void connect_rest(Boundary_condition& bc)
+  // helper function for `Accessible_mesh::connect_rest`
+  void connect_empty(Boundary_condition& bc)
   {
-    auto elem_seq = elems.elements();
-    // locate unconnected faces
-    for (int i_elem = 0; i_elem < elem_seq.size(); ++i_elem) {
-      for (int i_face = 0; i_face < n_faces; ++i_face) {
-        elem_seq[i_elem].face_record[i_face] = 0;
-      }
-    }
-    record_connections();
+    auto& elem_seq = elements();
     // connect unconnected faces
     for (int i_elem = 0; i_elem < elem_seq.size(); ++i_elem) {
       auto& elem = elem_seq[i_elem];

@@ -277,9 +277,18 @@ void Accessible_mesh::extrude()
 
 void Accessible_mesh::connect_rest(int bc_sn)
 {
+  auto& elem_seq = elements();
+  // locate unconnected faces
+  for (int i_elem = 0; i_elem < elem_seq.size(); ++i_elem) {
+    for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
+      elem_seq[i_elem].face_record[i_face] = 0;
+    }
+  }
+  car.record_connections();
+  def.record_connections();
   auto& bc {boundary_condition(bc_sn)};
-  car.connect_rest(bc);
-  def.connect_rest(bc);
+  car.connect_empty(bc);
+  def.connect_empty(bc);
 }
 
 }
