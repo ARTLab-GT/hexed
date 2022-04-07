@@ -228,12 +228,10 @@ void Solver::update(double stability_ratio)
   for (double rk_weight : rk_weights) {
     (*kernel_factory<Write_face>(nd, rs, basis))(elems, stopwatch.children.at("write face"));
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-    auto& bcs {acc_mesh.boundary_conditions()};
     auto& bc_cons {acc_mesh.boundary_connections()};
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-      for (int i_bc = 0; i_bc < bcs.size(); ++i_bc) {
-        if (&bcs[i_bc] == bc_cons[i_con].boundary_condition()) bcs[i_bc].apply(bc_cons[i_con]);
-      }
+      int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+      acc_mesh.boundary_condition(bc_sn).flow_bc->apply(bc_cons[i_con]);
     }
     (*kernel_factory<Neighbor_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor");
     (*kernel_factory<Neighbor_deformed >(nd, rs))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor");
@@ -308,7 +306,7 @@ std::vector<double> Solver::integral_surface(const Surface_func& integrand, int 
     auto& con {bc_cons[i_con]};
     auto& elem = con.element();
     double area = custom_math::pow(elem.nominal_size(), nd - 1);
-    if (con.boundary_condition() == &acc_mesh.boundary_condition(bc_sn))
+    if (con.bound_cond_serial_n() == bc_sn)
     {
       double* state = con.inside_face();
       double* jac = con.jacobian();
@@ -453,7 +451,7 @@ void Solver::visualize_surface(int bc_sn, std::string name, int n_sample)
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con)
   {
     auto& con {bc_cons[i_con]};
-    if (con.boundary_condition() == &acc_mesh.boundary_condition(bc_sn))
+    if (con.bound_cond_serial_n() == bc_sn)
     {
       auto& elem = con.element();
       // fetch the position

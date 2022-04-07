@@ -81,9 +81,8 @@ int Accessible_mesh::add_boundary_condition(Boundary_condition* bc)
 void Accessible_mesh::connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n)
 {
   if (bc_serial_n >= int(bound_conds.size())) throw std::runtime_error("demand for non-existent `Boundary_condition`");
-  Boundary_condition& bc {*bound_conds[bc_serial_n]};
   #define EMPLACE(mbt) { \
-    mbt.bound_cons.emplace_back(mbt.elems.at(ref_level, element_serial_n), i_dim, face_sign, bc); \
+    mbt.bound_cons.emplace_back(mbt.elems.at(ref_level, element_serial_n), i_dim, face_sign, bc_serial_n); \
   }
   if (is_deformed) EMPLACE(def)
   else EMPLACE(car)
@@ -171,11 +170,8 @@ void Accessible_mesh::extrude()
   auto& bc_cons {boundary_connections()};
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     auto& con {bc_cons[i_con]};
-    // find the index of the boundary condition
-    int i_bc = 0;
-    for (; &boundary_conditions()[i_bc] != con.boundary_condition(); ++i_bc);
     // no face has more than one connections (I really hope!) so use numbers greater than one to indentify boundary conditions
-    con.element().face_record[2*con.i_dim() + con.inside_face_sign()] = 2 + i_bc;
+    con.element().face_record[2*con.i_dim() + con.inside_face_sign()] = 2 + con.bound_cond_serial_n();
   }
   // decide which faces to extrude from
   std::vector<Empty_face> empty_faces;
@@ -212,7 +208,7 @@ void Accessible_mesh::extrude()
         int face_rec = face.elem.face_record[2*j_dim + face_sign];
         if (face_rec >= 2)
         {
-          def.bound_cons.emplace_back(elem, j_dim, face_sign, boundary_conditions()[face_rec - 2]);
+          def.bound_cons.emplace_back(elem, j_dim, face_sign, face_rec - 2);
         }
         else
         {
@@ -286,9 +282,8 @@ void Accessible_mesh::connect_rest(int bc_sn)
   }
   car.record_connections();
   def.record_connections();
-  auto& bc {boundary_condition(bc_sn)};
-  car.connect_empty(bc);
-  def.connect_empty(bc);
+  car.connect_empty(bc_sn);
+  def.connect_empty(bc_sn);
 }
 
 }

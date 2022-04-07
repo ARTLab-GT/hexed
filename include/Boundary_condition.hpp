@@ -23,22 +23,28 @@ class Boundary_face
 };
 
 /*
- * Abstract class representing an arbitrary boundary condition. That is, something that
- * computes a ghost state given an state on the boundary (inside state), a face size, and
- * a Jacobian.
+ * Abstract class representing an arbitrary flow boundary condition (as opposed to a snapping BC).
+ * That is, something that computes a ghost state given an state on the boundary (inside state),
+ * a face size, and a Jacobian.
  */
-class Boundary_condition
+class Flow_bc
 {
   public:
   // writes to the first `n_var()*size()` entries of `ghost_state()` (called on the provided `Boundary_face`.)
   virtual void apply(Boundary_face&) = 0;
-  virtual ~Boundary_condition() = default;
+  virtual ~Flow_bc() = default;
+};
+
+class Boundary_condition
+{
+  public:
+  std::unique_ptr<Flow_bc> flow_bc;
 };
 
 /*
  * Sets the ghost state to the provided freestream state.
  */
-class Freestream : public Boundary_condition
+class Freestream : public Flow_bc
 {
   std::vector<double> fs;
   public:
@@ -50,7 +56,7 @@ class Freestream : public Boundary_condition
 /*
  * Copies the inside state and flips the sign of the surface-normal velocity.
  */
-class Nonpenetration : public Boundary_condition
+class Nonpenetration : public Flow_bc
 {
   public:
   virtual void apply(Boundary_face&);
@@ -60,7 +66,7 @@ class Nonpenetration : public Boundary_condition
  * Copies the inside state.
  * Mostly used for testing, but can be valid for supersonic outlets.
  */
-class Copy : public Boundary_condition
+class Copy : public Flow_bc
 {
   public:
   virtual void apply(Boundary_face&);
@@ -75,7 +81,7 @@ class Boundary_connection : public Boundary_face, public Face_connection<Deforme
   public:
   inline Boundary_connection(Storage_params params) : Face_connection<Deformed_element>{params} {}
   virtual Element& element() = 0;
-  virtual const Boundary_condition* boundary_condition() = 0;
+  virtual int bound_cond_serial_n() = 0;
 };
 
 /*
@@ -88,14 +94,14 @@ class Typed_bound_connection : public Boundary_connection
   element_t& elem;
   int i_d;
   bool ifs;
-  Boundary_condition& bound_cond;
+  int bc_sn;
   Eigen::VectorXd gh_face;
   double* in_face;
 
   public:
-  Typed_bound_connection(element_t& elem_arg, int i_dim_arg, bool inside_face_sign_arg, Boundary_condition& bound_cond_arg)
+  Typed_bound_connection(element_t& elem_arg, int i_dim_arg, bool inside_face_sign_arg, int bc_serial_n)
   : Boundary_connection{elem_arg.storage_params()}, elem{elem_arg}, i_d{i_dim_arg}, ifs{inside_face_sign_arg},
-    bound_cond{bound_cond_arg}, gh_face(elem.storage_params().n_dof()/elem.storage_params().row_size),
+    bc_sn{bc_serial_n}, gh_face(elem.storage_params().n_dof()/elem.storage_params().row_size),
     in_face{elem.face() + (2*i_d + ifs)*gh_face.size()}
   {}
   virtual Storage_params storage_params() {return elem.storage_params();}
@@ -106,7 +112,7 @@ class Typed_bound_connection : public Boundary_connection
   virtual double* face(int i_side) {return i_side ? ghost_face() : inside_face();}
   virtual double* jacobian_mat() {return jacobian();}
   virtual Con_dir<Deformed_element> direction() {return {{i_d, i_d}, {ifs, !ifs}};}
-  virtual const Boundary_condition* boundary_condition() {return &bound_cond;}
+  virtual int bound_cond_serial_n() {return bc_sn;}
   element_t& element() {return elem;}
 };
 

@@ -124,7 +124,7 @@ class Mesh_by_type : public View_by_type<element_t>
   }
 
   // helper function for `Accessible_mesh::connect_rest`
-  void connect_empty(Boundary_condition& bc)
+  void connect_empty(int bc_sn)
   {
     auto& elem_seq = elements();
     // connect unconnected faces
@@ -133,7 +133,7 @@ class Mesh_by_type : public View_by_type<element_t>
       for (int i_dim = 0; i_dim < par.n_dim; ++i_dim) {
         for (int face_sign = 0; face_sign < 2; ++face_sign) {
           if (elem.face_record[2*i_dim + face_sign] == 0) {
-            bound_cons.emplace_back(elem, i_dim, face_sign, bc);
+            bound_cons.emplace_back(elem, i_dim, face_sign, bc_sn);
           }
         }
       }

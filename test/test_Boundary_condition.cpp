@@ -13,8 +13,8 @@ TEST_CASE("Typed_boundary_connection")
   cartdg::Storage_params params {3, 4, 2, 4};
   cartdg::Element element {params};
   Dummy bc;
-  cartdg::Typed_bound_connection<cartdg::Element> tbc0 {element, 1, false, bc}; // FIXME: address inside_positive for deformed
-  cartdg::Typed_bound_connection<cartdg::Element> tbc1 {element, 1,  true, bc};
+  cartdg::Typed_bound_connection<cartdg::Element> tbc0 {element, 1, false, 0};
+  cartdg::Typed_bound_connection<cartdg::Element> tbc1 {element, 1,  true, 1};
   REQUIRE(tbc0.storage_params().n_var == 4);
   // check that the correct face of the element is retrieved
   REQUIRE(tbc0.inside_face() == element.face() + (2*1 + 0)*4*4);
@@ -43,7 +43,7 @@ TEST_CASE("Freestream")
   cartdg::Element element {params};
   const int n_qpoint = row_size*row_size;
   cartdg::Freestream freestream {{10., 30., -20., 1.3, 1.2e5}};
-  cartdg::Typed_bound_connection<cartdg::Element> tbc {element, 1, false, freestream};
+  cartdg::Typed_bound_connection<cartdg::Element> tbc {element, 1, false, 0};
   // set inside face to something arbitrary
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
     tbc.inside_face()[0*n_qpoint + i_qpoint] = 20.;
@@ -69,7 +69,7 @@ TEST_CASE("Nonpenetration")
   cartdg::Storage_params params {3, 4, 2, row_size};
   cartdg::Deformed_element element {params};
   cartdg::Nonpenetration nonpen;
-  cartdg::Typed_bound_connection<cartdg::Deformed_element> tbc {element, 0, true, nonpen};
+  cartdg::Typed_bound_connection<cartdg::Deformed_element> tbc {element, 0, true, 0};
   for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
     double qpoint_jacobian [] {1., 3., 0., 4.};
     for (int i_jac = 0; i_jac < 4; ++i_jac) tbc.jacobian()[i_jac*row_size + i_qpoint] = qpoint_jacobian[i_jac];
@@ -94,7 +94,7 @@ TEST_CASE("Copy")
   cartdg::Element element {params};
   const int n_qpoint = row_size*row_size;
   cartdg::Copy copy;
-  cartdg::Typed_bound_connection<cartdg::Element> tbc {element, 1, false, copy};
+  cartdg::Typed_bound_connection<cartdg::Element> tbc {element, 1, false, 0};
   // set inside face to something arbitrary
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
     tbc.inside_face()[0*n_qpoint + i_qpoint] = 20.;
