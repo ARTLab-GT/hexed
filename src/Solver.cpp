@@ -343,7 +343,7 @@ std::vector<double> Solver::integral_surface(const Surface_func& integrand, int 
         }
         Eigen::MatrixXd orth = custom_math::orthonormal(qpoint_jac, con.i_dim());
         std::vector<double> normal;
-        for (int i_dim = 0; i_dim < nd; ++i_dim) normal.push_back(orth(i_dim, con.i_dim()));
+        for (int i_dim = 0; i_dim < nd; ++i_dim) normal.push_back(-orth(i_dim, con.i_dim()));
         auto qpoint_integrand = integrand(qpoint_pos, status.flow_time, qpoint_state, normal);
         qpoint_jac.col(con.i_dim()) = orth.col(con.i_dim());
         double jac_det = std::abs(qpoint_jac.determinant());
