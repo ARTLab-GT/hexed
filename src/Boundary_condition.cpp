@@ -99,7 +99,7 @@ void Surface_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
         distance = std::abs(adj);
       }
     }
-    con.element().node_adjustments()[(2*con.i_dim() + con.inside_face_sign())*nfq + i_qpoint] = best_adj;
+    con.element().node_adjustments()[(2*con.i_dim() + con.inside_face_sign())*nfq + i_qpoint] += best_adj;
   }
 }
 

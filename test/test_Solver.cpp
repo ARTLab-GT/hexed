@@ -291,6 +291,10 @@ TEST_CASE("Solver")
       sol.calc_jacobian();
       // top element face should now be a parabola
       REQUIRE(sol.integral_field(cartdg::Constant_func({1.}))[0] == Approx(0.1*0.4*0.4*0.4/3.));
+      // make sure that snapping again doesn't change anything
+      sol.snap_faces();
+      sol.calc_jacobian();
+      REQUIRE(sol.integral_field(cartdg::Constant_func({1.}))[0] == Approx(0.1*0.4*0.4*0.4/3.));
     }
   }
 }
