@@ -17,9 +17,9 @@ class Spacetime_func : public Domain_func
   // The following invokes `operator()(pos, time)`. Declared as private to avoid the
   // technicalities of overloading inherited functions.
   virtual std::vector<double> operator()(const std::vector<double> pos, double time,
-                                         const std::vector<double> state);
+                                         const std::vector<double> state) const;
   public:
-  virtual std::vector<double> operator()(std::vector<double> pos, double time) = 0;
+  virtual std::vector<double> operator()(std::vector<double> pos, double time) const = 0;
 };
 
 class Constant_func : public Spacetime_func
@@ -27,15 +27,31 @@ class Constant_func : public Spacetime_func
   std::vector<double> value;
   public:
   Constant_func(std::vector<double> value_arg);
-  virtual inline int n_var(int n_dim) {return value.size();}
-  virtual std::vector<double> operator()(std::vector<double> pos, double time); // returns `value`
+  virtual inline int n_var(int n_dim) const {return value.size();}
+  virtual std::vector<double> operator()(std::vector<double> pos, double time) const; // returns `value`
+};
+
+class Position_func : public Spacetime_func
+{
+  public:
+  virtual inline int n_var(int n_dim) const {return n_dim;}
+  virtual inline std::string variable_name(int i_var) const {return "position" + std::to_string(i_var);}
+  virtual inline std::vector<double> operator()(std::vector<double> pos, double time) const {return pos;}
+};
+
+// returns an empty vector. This is useful if you just want to visualize the position
+class Empty_func : public Spacetime_func
+{
+  public:
+  virtual inline int n_var(int i_dim) const {return 0;}
+  virtual inline std::vector<double> operator()(std::vector<double> pos, double time) const {return {};}
 };
 
 class State_from_spacetime : public Spacetime_func
 {
   public:
-  virtual inline int n_var(int n_dim) {return n_dim + 2;}
-  virtual inline std::string variable_name(int i_var) {return "state" + std::to_string(i_var);}
+  virtual inline int n_var(int n_dim) const {return n_dim + 2;}
+  virtual inline std::string variable_name(int i_var) const {return "state" + std::to_string(i_var);}
 };
 
 /*
@@ -55,7 +71,7 @@ class Isentropic_vortex : public State_from_spacetime
   double center0 = 0.;
   double center1 = 0.;
   Isentropic_vortex(std::vector<double> freestream_state);
-  virtual std::vector<double> operator()(std::vector<double> pos, double time);
+  virtual std::vector<double> operator()(std::vector<double> pos, double time) const;
 };
 
 /*
@@ -73,18 +89,13 @@ class Doublet : public State_from_spacetime
   std::vector<double> freestream;
   int n_v;
   int n_dim;
-  std::vector<double> freestream_veloc;
-  double freestream_speed;
-  double angle_of_attack;
-  double stag_enth_per_mass; // stag = stagnation
-  double free_enth_per_mass; // free = freestream
 
   public:
   std::array<double, 2> location {0., 0.};
   double radius {1.};
   double heat_rat {1.4};
   Doublet(std::vector<double> freestream_state);
-  virtual std::vector<double> operator()(std::vector<double> pos, double time);
+  virtual std::vector<double> operator()(std::vector<double> pos, double time) const;
 };
 
 }

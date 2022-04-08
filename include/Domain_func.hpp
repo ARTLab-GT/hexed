@@ -19,26 +19,23 @@ class Domain_func : public Qpoint_func, public Surface_func
   // the following invoke `operator()(const std::vector<double>, double, std::vector<double>)`
   // on the appropriate data at the quadrature point. Declared as private to hide the
   // technicalities of overloading inherited functions.
-  virtual std::vector<double> operator()(Grid& grid, int i_element, int i_qpoint);
+  virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const;
   virtual std::vector<double> operator()(std::vector<double> pos, double time,
-                                         std::vector<double> state, std::vector<double> outward_normal);
+                                         std::vector<double> state, std::vector<double> outward_normal) const;
 
   public:
   virtual std::vector<double> operator()(const std::vector<double> pos, double time,
-                                         const std::vector<double> state) = 0;
+                                         const std::vector<double> state) const = 0;
 };
 
 class State_variables : public Domain_func
 {
-  // This override improves performance by not evaluating position.
-  virtual std::vector<double> operator()(Grid& grid, int i_element, int i_qpoint);
-
   public:
-  virtual inline int n_var(int n_dim) {return n_dim + 2;}
-  virtual inline std::string variable_name(int i_var) {return "state" + std::to_string(i_var);}
+  virtual inline int n_var(int n_dim) const {return n_dim + 2;}
+  virtual inline std::string variable_name(int i_var) const {return "state" + std::to_string(i_var);}
   // returns `state`
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
-                                         const std::vector<double> state);
+                                         const std::vector<double> state) const;
 };
 
 class Diff_sq : public Domain_func
@@ -48,10 +45,10 @@ class Diff_sq : public Domain_func
   public:
   // arguments must return values of same size
   Diff_sq(Domain_func&, Domain_func&);
-  virtual inline int n_var(int n_dim) {return func0.n_var(n_dim);}
+  virtual inline int n_var(int n_dim) const {return func0.n_var(n_dim);}
   // returns elementwise squared difference between provided funcs
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
-                                         const std::vector<double> state);
+                                         const std::vector<double> state) const;
 };
 
 class Error_func : public Domain_func
@@ -59,11 +56,11 @@ class Error_func : public Domain_func
   Spacetime_func& correct;
   public:
   Error_func(Spacetime_func&);
-  virtual int n_var(int n_dim);
-  virtual std::string variable_name(int i_var);
+  virtual int n_var(int n_dim) const;
+  virtual std::string variable_name(int i_var) const;
   // returns elementwise difference between `state` and `correct(point_pos, point_time)`, squared
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
-                                         const std::vector<double> state);
+                                         const std::vector<double> state) const;
 };
 
 class Stag_pres : public Domain_func
@@ -71,10 +68,10 @@ class Stag_pres : public Domain_func
   double hr;
   public:
   Stag_pres(double heat_rat = 1.4);
-  virtual inline int n_var(int n_dim) {return 1;}
-  virtual inline std::string variable_name(int i_var) {return "stagnation_pressure";}
+  virtual inline int n_var(int n_dim) const {return 1;}
+  virtual inline std::string variable_name(int i_var) const {return "stagnation_pressure";}
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
-                                         const std::vector<double> state);
+                                         const std::vector<double> state) const;
 };
 
 }

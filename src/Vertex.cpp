@@ -1,7 +1,4 @@
-#include <iostream>
-
 #include <Vertex.hpp>
-#include <Deformed_grid.hpp>
 
 namespace cartdg
 {
@@ -27,17 +24,22 @@ void Vertex::eat(Vertex& other)
 {
   if (this != &other)
   {
+    // average position
     for (int i_dim = 0; i_dim < 3; ++i_dim)
     {
       pos[i_dim] = (m*pos[i_dim] + other.m*other.pos[i_dim])/(m + other.m);
     }
-    m += other.m;
+    m += other.m; // combine mass
     other.m = 0;
-    mobile = mobile || other.mobile;
+    mobile = mobile && other.mobile; // determine mobility
+    // steal neighbors
     for (Vertex* neighbor : other.neighbors)
     {
       connect(*this, *neighbor);
     }
+    // concatenate records
+    record.insert(record.end(), other.record.begin(), other.record.end());
+    // steal `Transferrable_ptr`s
     const Transferable_ptr& this_ptr = **trbl_ptrs.begin();
     int size = other.trbl_ptrs.size();
     for (int i_ptr = 0; i_ptr < size; ++i_ptr)
@@ -192,7 +194,7 @@ Vertex& Vertex::Non_transferable_ptr::operator*()
   return *ptr;
 }
 
-Vertex::Non_transferable_ptr::operator bool()
+Vertex::Non_transferable_ptr::operator bool() const
 {
   return ptr;
 }

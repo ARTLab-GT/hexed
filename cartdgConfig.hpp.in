@@ -1,5 +1,12 @@
-// the configured options and settings
+#ifndef CARTDG_CONFIG_HPP_
+#define CARTDG_CONFIG_HPP_
+
 namespace cartdg::config
 {
+
+// options configured by CMake
 constexpr int max_row_size {@MAX_BASIS_ROW_SIZE@};
+constexpr int n_threads {@n_threads@};
+
 }
+#endif

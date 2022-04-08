@@ -21,6 +21,14 @@ class Stopwatch
   std::chrono::high_resolution_clock::time_point time_started;
 
   public:
+  class Operator
+  {
+    Stopwatch& sw;
+    public:
+    Operator(Stopwatch& stopwatch) : sw{stopwatch} {sw.start();}
+    ~Operator() {sw.pause();}
+  };
+
   void start();
   void pause();
   void reset();

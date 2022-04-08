@@ -4,15 +4,15 @@
 #include <Domain_func.hpp>
 #include <Spacetime_func.hpp>
 #include <Surface_func.hpp>
-#include <Deformed_grid.hpp>
 #include <Gauss_lobatto.hpp>
+#include <Deformed_element.hpp>
 
 class Arbitrary_func : public cartdg::Spacetime_func
 {
   public:
-  virtual int n_var(int n_dim) {return n_dim;}
-  virtual std::string variable_name(int i_var) {return "arbitrary" + std::to_string(i_var);}
-  virtual std::vector<double> operator()(std::vector<double> pos, double time)
+  virtual int n_var(int n_dim) const {return n_dim;}
+  virtual std::string variable_name(int i_var) const {return "arbitrary" + std::to_string(i_var);}
+  virtual std::vector<double> operator()(std::vector<double> pos, double time) const
   {
     auto result = pos;
     double mult [] {-2, 0.3, 4, 0., 0.01};
@@ -93,12 +93,10 @@ TEST_CASE("Inherited methods")
   {
     Arbitrary_func af;
     cartdg::Gauss_lobatto basis {2};
-    cartdg::Deformed_grid grid {4, 2, 0, 1., basis};
-    grid.add_element({0, 0});
-    grid.add_element({0, 1});
-    grid.time = 5.;
+    cartdg::Storage_params params {2, 4, 2, 2};
+    cartdg::Deformed_element elem {params, {0, 1}};
     cartdg::Qpoint_func& af_ref {af};
-    auto result = af_ref(grid, 1, 1);
+    auto result = af_ref(elem, basis, 1, 5.);
     REQUIRE(result.size() == 2);
     REQUIRE(result[1] == Approx(0.3*2. - 10.));
   }
@@ -267,22 +265,4 @@ TEST_CASE("Force_per_area")
       }
     }
   }
-}
-
-TEST_CASE("Jacobian_det_func")
-{
-  cartdg::Gauss_lobatto basis {2};
-  cartdg::Deformed_grid grid {4, 2, 0, 1., basis};
-  grid.add_element({0, 0});
-  grid.add_element({0, 1});
-  grid.element(1).vertex(3).pos[0] -= 0.1;
-  grid.calc_jacobian();
-  cartdg::Jacobian_det_func func;
-  REQUIRE(func.n_var(2) == 1);
-  REQUIRE(func.n_var(3) == 1);
-  REQUIRE(func(grid, 0, 0).size() == 1);
-  REQUIRE(func(grid, 1, 3).size() == 1);
-  REQUIRE(func(grid, 0, 0)[0] == Approx(1.));
-  REQUIRE(func(grid, 0, 3)[0] == Approx(1.));
-  REQUIRE(func(grid, 1, 3)[0] == Approx(0.9));
 }

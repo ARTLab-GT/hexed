@@ -8,6 +8,7 @@
 
 #include "Storage_params.hpp"
 #include "Vertex.hpp"
+#include "Basis.hpp"
 
 namespace cartdg
 {
@@ -23,21 +24,34 @@ class Element
   protected:
   Storage_params params;
   int n_dim;
+  std::vector<int> nom_pos;
+  double nom_sz;
+  int r_level;
   std::vector<Vertex::Transferable_ptr> vertices;
 
   private:
   int n_dof;
   int n_vert;
+  int data_size;
   Eigen::VectorXd data;
-  Eigen::VectorXd visc_storage;
   Eigen::VectorXd vertex_tss;
-  Eigen::VectorXd derivative_storage;
 
   public:
-  // this type represents a pointer to a function that can access some data member which is recorded at the vertices
-  typedef double* (Element::*shareable_value_access)();
+  /* note: the following two types do essentially the same thing, but it is useful to have both because
+     the natural way to store data associated with vertices can vary depending on the situation. */
+  // pointer to a function that can access some data member which can be shared through the vertices
+  typedef double* (Element::*shareable_value_access)(); // layout: [i_vertex]
+  // pointer to a function that can access some data associated with the vertices
+  typedef double& (Element::*vertex_value_access)(int i_vertex);
+  std::array<int, 6> face_record; // for algorithms to book-keep information related to faces
 
-  Element(Storage_params, std::vector<int> pos={}, double mesh_size=1.);
+  /*
+   * The `Storage_params1 defines the amount of storage that must be allocated.
+   * `pos` specifies the position of vertex 0 in intervals of the nominal size.
+   * The nominal size is defined to be `mesh_size`/(2^`ref_level`).
+   * The vertices will be spaced at intervals of the nominal size.
+   */
+  Element(Storage_params, std::vector<int> pos={}, double mesh_size=1., int ref_level = 0);
   // Can't copy an Element. Doing so would have to either duplicate or break vertex connections,
   // both of which seem error prone.
   Element(const Element&) = delete;
@@ -45,12 +59,19 @@ class Element
   ~Element() = default;
 
   Storage_params storage_params();
+  virtual std::vector<double> position(const Basis&, int i_qpoint); // note: ignores vertex positions
+  // obtains face position based on interior qpoint positions (as defined by `position()`)
+  std::vector<double> face_position(const Basis&, int i_face, int i_face_qpoint);
+  inline double nominal_size() {return nom_sz;}
+  inline int refinement_level() {return r_level;}
+  inline std::vector<int> nominal_position() {return nom_pos;}
   // Pointer to state data for `i_stage`th Runge-Kutta stage.
   double* stage(int i_stage); // Layout: [i_var][i_qpoint]
   // pointer to scaling factor for local time step.
   double* time_step_scale(); // Layout: [i_qpoint]
   // Pointer state data at faces. Must be populated by user
   double* face(); // Layout: [i_dim][is_positive][i_var][i_face_qpoint]
+  virtual double* node_adjustments() {return nullptr;} // overriden by `Deformed_element`
 
   /*
    * Following two functions compute the Jacobian. I.e., derivative of `i_dim`th
@@ -62,22 +83,13 @@ class Element
   double jacobian_determinant(int i_qpoint); // returns 1.
 
   inline Vertex& vertex(int i_vertex) { return *vertices[i_vertex]; }
+  template <int i_dim> double& vertex_position(int i_vertex) {return vertices[i_vertex]->pos[i_dim];}
   // functions to communicate with nodal neighbors
   void push_shareable_value(shareable_value_access access_func); // writes shareable value to vertices so that shared value can be determined
   void fetch_shareable_value(shareable_value_access access_func, Vertex::reduction = Vertex::vector_max); // set `this`'s copy of shareable value to the shared values at the vertices
-
-  double* viscosity(); // Artificial viscosity coefficient at corners.
-  bool viscous(); // Should artificial viscosity be applied in this element?
   // Time step scale at the vertices. TSS in the interior is set by interpolating this.
   double* vertex_time_step_scale();
-  // Pointer to storage for derivative. Must be populated by user.
-  double* derivative(); // Layout: [i_qpoint]
 };
 
-typedef std::vector<std::unique_ptr<Element>> elem_vec;
-typedef std::array<double*, 2> elem_con; // pointers to the faces which are being connected
-typedef std::vector<std::vector<elem_con>> elem_con_vec;
-
 }
-
 #endif
