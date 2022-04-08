@@ -28,7 +28,7 @@ class Neighbor_deformed : public Kernel<Face_connection<Deformed_element>&>
     constexpr int n_var = n_dim + 2;
     constexpr int n_face_qpoint = custom_math::pow(row_size, n_dim - 1);
     constexpr int face_size = n_face_qpoint*n_var;
-    //#pragma omp parallel for
+    #pragma omp parallel for
     for (int i_con = 0; i_con < connections.size(); ++i_con)
     {
       double face [2*face_size];
