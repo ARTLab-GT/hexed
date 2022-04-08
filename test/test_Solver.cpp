@@ -143,7 +143,7 @@ class Parabola : public cartdg::Surface_geometry
   virtual std::vector<double> line_intersections(std::array<double, 3> point0, std::array<double, 3> point1)
   {
     // only works for vertical lines
-    if (point0[0] != point1[0]) throw std::runtime_error("only for toy cases where the line is vertical");
+    if (std::abs(point0[0] - point1[0]) > 1e12) throw std::runtime_error("only for toy cases where the line is vertical");
     double intersection = 0.1*point0[0]*point0[0]/(point1[1] - point0[1]);
     return {10., intersection, -3.}; // add some other points just to try to confuse the face snapper
   }
