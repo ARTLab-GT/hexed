@@ -90,4 +90,22 @@ std::vector<double> Doublet::operator()(std::vector<double> pos, double time) co
   return state;
 }
 
+std::vector<double> Sod::operator()(std::vector<double> pos, double time)
+{
+  double mass;
+  double pres;
+  if (pos[0] < 0.5) {
+    mass = 1.;
+    pres = 1.;
+  } else {
+    mass = 0.125;
+    pres = 0.1;
+  }
+  std::vector<double> state;
+  for (unsigned i_dim = 0; i_dim < pos.size(); ++i_dim) state.push_back(0.);
+  state.push_back(mass);
+  state.push_back(pres/(heat_rat - 1.));
+  return state;
+}
+
 }

@@ -98,5 +98,15 @@ class Doublet : public State_from_spacetime
   virtual std::vector<double> operator()(std::vector<double> pos, double time) const;
 };
 
+// Initial consition for classic Sod problem:
+// G. A. Sod. A survey of several finite difference methods for systems of nonlinear hyperbolic conservation laws. JCP 27 (1978). http://dx.doi.org/10.1016/0021-9991(78)90023-2
+// Only initial condition -- not time dependent
+class Sod : public State_from_spacetime
+{
+  public:
+  double heat_rat = 1.4;
+  virtual std::vector<double> operator()(std::vector<double> pos, double time);
+};
+
 }
 #endif
