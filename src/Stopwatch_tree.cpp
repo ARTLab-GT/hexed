@@ -5,12 +5,20 @@ namespace cartdg
 
 std::string Stopwatch_tree::indented_report(std::string indent) const
 {
+  std::string rpt;
   const int buf_size = 500;
   char buffer [buf_size];
-  const char* format = "%i %ss completed at %g s / %s.\n";
-  snprintf(buffer, buf_size, format, work_units_completed, work_unit_name.c_str(),
-           stopwatch.time()/work_units_completed, work_unit_name.c_str());
-  std::string rpt = buffer;
+  {
+    const char* format = "%i %ss completed in %g s";
+    snprintf(buffer, buf_size, format, work_units_completed, work_unit_name.c_str(), stopwatch.time());
+    rpt = buffer;
+  }
+  if (work_units_completed) {
+    const char* format = " at %g s / %s";
+    snprintf(buffer, buf_size, format, stopwatch.time()/work_units_completed, work_unit_name.c_str());
+    rpt += std::string(buffer);
+  }
+  rpt += ".\n";
   if (!children.empty()) {
     for (auto& child : children) {
       std::string child_rpt = child.second.indented_report(indent + "    ");

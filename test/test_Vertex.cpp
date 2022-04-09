@@ -1,20 +1,19 @@
 #include <catch2/catch.hpp>
-
-#include <Deformed_grid.hpp>
 #include <Gauss_lobatto.hpp>
+#include <Vertex.hpp>
 
 TEST_CASE("Vertex")
 {
   cartdg::Vertex::Transferable_ptr ptr0 {{1.1, -3.5, 0.05}};
   cartdg::Vertex* orig_addr = &*ptr0;
   cartdg::Vertex::Transferable_ptr ptr1 {{1., 1., 1.}};
-  ptr1->mobile = true;
+  REQUIRE(ptr1->mobile == false);
 
   REQUIRE(ptr0->mass() == 1);
   REQUIRE(ptr0->pos[0] == 1.1);
   REQUIRE((*ptr0).pos[1] == -3.5);
   REQUIRE(ptr0->pos[2] == 0.05);
-  REQUIRE(ptr0->mobile == false);
+  ptr0->mobile = true;
   (*ptr0).pos[1] = 2.;
   REQUIRE(ptr0->pos[1] == 2.);
   REQUIRE(ptr0.shareable_value == 0.);
@@ -22,25 +21,36 @@ TEST_CASE("Vertex")
 
   SECTION("eat")
   {
+    ptr0->record.push_back(1);
+    ptr0->record.push_back(-7);
+    ptr1->record.push_back(4);
+    ptr1->record.push_back(0);
+    ptr1->record.push_back(9);
     ptr0->eat(*ptr1);
     ptr0->eat(*ptr0); // autocannibalism does nothing
     REQUIRE(ptr0->mass() == 2);
-    REQUIRE(ptr0->mobile == true);
+    REQUIRE(ptr0->mobile == false);
     REQUIRE(ptr0->pos[0] == 1.05);
     REQUIRE(ptr0->pos[1] == 1.5);
     REQUIRE(ptr1->pos[2] == 0.525);
     ptr1->pos[0] = 2.;
     REQUIRE(&*ptr0 == orig_addr);
     REQUIRE(&*ptr1 == orig_addr);
+    // records have been concatenated
+    REQUIRE(ptr0->record.size() == 5);
+    std::vector<double> correct {1, -7, 4, 0, 9};
+    REQUIRE(std::equal(ptr0->record.begin(), ptr0->record.end(), correct.begin()));
 
     cartdg::Vertex::Transferable_ptr ptr2 {{1., 0., 0.}};
     cartdg::Vertex::Transferable_ptr ptr3 {{1., 0., 0.}};
     cartdg::Vertex::Transferable_ptr ptr4 {{1., 0., 0.}};
     ptr2->eat(*ptr3);
     ptr3->eat(*ptr4);
+    ptr1->mobile = ptr3->mobile = true;
     ptr1->eat(*ptr3);
     REQUIRE(ptr1->mass() == 5.);
     REQUIRE(ptr0->pos[0] == 1.4);
+    REQUIRE(ptr2->mobile);
   }
 
   SECTION("Pointer validity")
@@ -146,6 +156,7 @@ TEST_CASE("Vertex")
       cartdg::Vertex::connect(*vert3, *vert4);
       cartdg::Vertex::connect(*vert3, *vert1);
       vert0->eat(*vert3);
+      vert0->mobile = true;
       vert0->calc_relax();
       vert0->apply_relax();
       REQUIRE(vert0->pos == std::array<double, 3>{1./6., 1./6., .5});

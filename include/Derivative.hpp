@@ -22,7 +22,7 @@ class Derivative
   const Eigen::Matrix<double, row_size, 2> lift;
 
   public:
-  Derivative(Basis& basis)
+  Derivative(const Basis& basis)
   : diff_mat {basis.diff_mat()}, boundary {basis.boundary()},
     inv_weights {Eigen::Array<double, row_size, 1>::Constant(1.)/basis.node_weights().array()},
     lift {inv_weights.asDiagonal()*basis.boundary().transpose()*sign}

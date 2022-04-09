@@ -1,24 +1,22 @@
 target_sources(cartdg PRIVATE
 # please maintain alphabetical order
+Accessible_mesh.cpp
 Basis.cpp
+Boundary_condition.cpp
+connection.cpp
 Deformed_element.cpp
-Deformed_grid.cpp
 Domain_func.cpp
 Element.cpp
 Equidistant.cpp
-Ghost_boundary_condition.cpp
 global_hacks.cpp
-Grid.cpp
 Hanging_vertex_matcher.cpp
 Iteration_status.cpp
-Kernel_settings.cpp
 math.cpp
 Output_data.cpp
 Physical_basis.cpp
 Qpoint_func.cpp
 Refined_face.cpp
-Regular_grid.cpp
-Solution.cpp
+Solver.cpp
 Spacetime_func.cpp
 Stopwatch.cpp
 Stopwatch_tree.cpp

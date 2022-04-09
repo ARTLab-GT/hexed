@@ -11,8 +11,6 @@
 namespace cartdg
 {
 
-class Deformed_grid;
-
 /*
  * Represents a vertex in a deformed grid. Used by `Deformed_element`s to manage data
  * that is shared by nodal neighbors, including position and artificial viscosity coefficient.
@@ -29,6 +27,7 @@ class Vertex
   static constexpr reduction vector_min = &Eigen::VectorXd::minCoeff;
   std::array<double, 3> pos {0, 0, 0};
   bool mobile = false;
+  std::vector<int> record; // for algorithms to keep notes as they please
 
   ~Vertex();
   // if we have a reason to copy/move vertices, we can implement these
@@ -38,10 +37,15 @@ class Vertex
   Vertex& operator=(Vertex&&) = delete;
   int mass();
   /*
-   * Specify that another vertex represents the same grid point as this. All
-   * `Transferable_ptr`s pointing to `other` will be changed to point to `this`.
-   * All `Non_transferable_ptr`s pointing to `other` will be `nullify`d. The `mass`s
-   * will be summed and the `pos`s will be averaged, weighted by `mass`.
+   * Specify that another vertex represents the same grid point as `*this`.
+   * `*this` will acquire `other`'s resources:
+   * - All `Transferable_ptr`s pointing to `other` will be changed to point to `this`.
+   * - All `Non_transferable_ptr`s pointing to `other` will be `nullify`d.
+   * - The mass of `other` will be added to that of `*this`.
+   * - The `pos`s will be averaged, weighted by `mass`.
+   * - The vertex will be mobile if both vertices were mobile.
+   * The fact that "eat" seemed like the obvious word to describe this might be a
+   * sign that I've been reading too much SnK...
    */
   void eat(Vertex& other);
   void calc_relax(); // compute a (but do not apply) new position resulting in a smoother grid.
@@ -102,12 +106,13 @@ class Vertex::Non_transferable_ptr
   Non_transferable_ptr& operator=(const Non_transferable_ptr&);
 
   // return `true` if vertex `this` points to exists and `false` if it does not
-  operator bool();
+  operator bool() const;
   // Warning: if `operator bool` is `false` the following will return `nullptr`!
   Vertex* operator->();
   Vertex& operator*();
   // assert that the vertex `this` points to no longer exists. `operator bool` will now return `false`
   void nullify();
+  static inline bool is_null(const Non_transferable_ptr& ntptr) {return !ntptr;}
 };
 
 }

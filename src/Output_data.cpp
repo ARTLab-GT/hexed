@@ -3,7 +3,7 @@
 namespace cartdg
 {
 
-std::string Output_data::variable_name(int i_var)
+std::string Output_data::variable_name(int i_var) const
 {
   return "untitled";
 }

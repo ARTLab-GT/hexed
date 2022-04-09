@@ -4,33 +4,21 @@
 #include <cmath>
 #include <math.hpp>
 
-TEST_CASE("static_pow")
-{
-  {
-    constexpr int result = cartdg::custom_math::pow(2, 0);
-    REQUIRE(result == 1);
-  }
-  {
-    constexpr int result = cartdg::custom_math::pow(2, 1);
-    REQUIRE(result == 2);
-  }
-  {
-    constexpr int result = cartdg::custom_math::pow(2, -1);
-    REQUIRE(result == 0);
-  }
-  {
-    constexpr int result = cartdg::custom_math::pow(3, 4);
-    REQUIRE(result == 81);
-  }
-  {
-    constexpr double result = cartdg::custom_math::pow(1.5, 2);
-    REQUIRE(result == 2.25);
-  }
-  {
-    constexpr double result = cartdg::custom_math::pow(2., -1);
-    REQUIRE(result == 0.5);
-  }
-}
+// yo, compile time tests! Here we test constexpr `pow` and `log`
+static_assert (cartdg::custom_math::pow(2, 0) == 1);
+static_assert (cartdg::custom_math::pow(2, 1) == 2);
+static_assert (cartdg::custom_math::pow(2, -1) == 0);
+static_assert (cartdg::custom_math::pow(3, 4) == 81);
+static_assert (cartdg::custom_math::pow(1.5, 2) == 2.25);
+static_assert (cartdg::custom_math::pow(2., -1) == 0.5);
+static_assert (cartdg::custom_math::log(2, -1) == 0);
+static_assert (cartdg::custom_math::log(2, 1) == 0);
+static_assert (cartdg::custom_math::log(2, 2) == 1);
+static_assert (cartdg::custom_math::log(2, 16) == 4);
+static_assert (cartdg::custom_math::log(2, 15) == 4);
+static_assert (cartdg::custom_math::log(3, 27) == 3);
+static_assert (cartdg::custom_math::log(1, 27) == -1);
+static_assert (cartdg::custom_math::log(-1, 27) == -1);
 
 double lin_func(double x)
 {

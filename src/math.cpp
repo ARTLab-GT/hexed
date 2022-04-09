@@ -1,8 +1,6 @@
 #include <math.hpp>
 
-namespace cartdg
-{
-namespace custom_math
+namespace cartdg::custom_math
 {
 
 Eigen::VectorXd hypercube_matvec(const Eigen::MatrixXd& mat, const Eigen::VectorXd& vec)
@@ -69,5 +67,14 @@ Eigen::VectorXd dimension_matvec(const Eigen::MatrixXd& mat, const Eigen::Vector
   return prod;
 }
 
+Eigen::MatrixXd orthonormal (Eigen::MatrixXd basis, int i_dim)
+{
+  switch (basis.rows()) {
+    case (1) : return orthonormal<1>(basis, i_dim);
+    case (2) : return orthonormal<2>(basis, i_dim);
+    case (3) : return orthonormal<3>(basis, i_dim);
+    default : throw std::runtime_error("`orthonormal` only implemented for `1 <= n_dim <= 3`");
+  }
 }
+
 }

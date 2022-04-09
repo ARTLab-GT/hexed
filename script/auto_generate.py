@@ -10,8 +10,6 @@ src_dir += "/"
 src_dir = src_dir.replace("//", "/")
 max_row_size = int(sys.argv[2])
 
-### generate template lookup tables ###
-
 def format_file_text(include, text, namespace=True):
     if len(include) > 0:
         include = "\n" + include
@@ -26,6 +24,7 @@ script/auto_generate.py and rerun CMake.
         text = f"""
 #include <Deformed_element.hpp>
 #include <Refined_face.hpp>
+#include <Vector_view.hpp>
 
 namespace cartdg
 {{
@@ -35,130 +34,9 @@ namespace cartdg
 }}
 """
     output += text
+    if "#if" in include:
+        output += "#endif\n"
     return output
-
-def pop(regex, string):
-    return re.search(regex, string, re.DOTALL), re.sub(regex, "", string)
-
-param_funcs = {"int n_var":(lambda dim, row_size : dim + 2),
-               "int n_qpoint":(lambda dim, row_size : row_size**dim),
-               "int row_size":lambda dim, row_size : row_size}
-
-if "kernels" in os.listdir("."):
-    shutil.rmtree("kernels")
-os.mkdir("kernels")
-os.mkdir("kernels/include")
-os.mkdir("kernels/src")
-
-if "benchmark" in os.listdir("."):
-    shutil.rmtree("benchmark")
-os.mkdir("benchmark")
-
-header_names = []
-for dir_group in os.walk("../kernels"):
-    for file_name in dir_group[2]:
-        if file_name[-4:] == ".hpp":
-            header_names.append(dir_group[0] + "/" + file_name)
-
-avail_cmds = ["LOOKUP", "BENCHMARK(\([\w, ]*?\))?"]
-
-source_names = []
-benchmark_text = ""
-benchmark_include = ""
-for file_name in header_names:
-    with open(file_name, "r") as in_file:
-        text = in_file.read()
-    templates = re.split("AUTOGENERATE", text)[1:]
-    for template in templates:
-        cmds = []
-        for cmd in avail_cmds:
-            match, template = pop(cmd, template)
-            if match is not None:
-                cmds.append(match.group(0))
-        params, template = pop("\ntemplate *<([^\n]*)>", template)
-        params = re.split(" *, *", params.group(1))
-        full_sig, _  = pop("\n*(.*?[)])", template)
-        full_sig = re.sub("\n *", " ", full_sig.groups(1)[0])
-        decl = re.sub(" \w*?(,|\))", r"\1", full_sig)
-        decl = re.sub("^ *", "", decl)
-        call = re.sub("[\w*&:<>]+ ", r"", full_sig)
-        call = re.sub("^ *", "", call)
-        name = re.search(" (\w*)\(", decl).groups(1)[0]
-        if "LOOKUP" in cmds:
-            hpp_include = ""
-            cpp_include = f"""
-#include <stdexcept>
-#include <{file_name[11:]}>
-"""[1:]
-            cpp_include += f'#include "get_{name}.hpp"\n'
-            hpp_text = """
-class Basis;
-class Grid;
-class Kernel_settings;
-
-"""[1:]
-            hpp_text += f"typedef "
-            hpp_text += re.sub(" \w*\(", f" (*{name}_type)(", decl) + ";\n\n"
-            cpp_text = f"""
-{name}_type get_{name}(int n_dim, int row_size)
-{{
-  {name}_type {name}s [{max_dim}][{max_row_size - 1}]
-  {{
-"""[1:]
-            for dim in range(1, max_dim + 1):
-                for row_size in range(2, max_row_size + 1):
-                    cpp_text += f"    {name}<"
-                    for i_param in range(len(params)):
-                        cpp_text += f"{param_funcs[params[i_param]](dim, row_size)}, "
-                    cpp_text = cpp_text[:-2] + ">,\n"
-            cpp_text += f"""  }};
-
-  if ((n_dim > 0) && (n_dim <= {max_dim}) && (row_size >= 2) && (row_size <= {max_row_size}))
-  {{
-    return {name}s[n_dim - 1][row_size - 2];
-  }}
-  else throw std::runtime_error("Kernel not available.");
-}}"""
-            hpp_text += f"{name}_type get_{name}(int n_dim, int row_size);"
-            hpp_text = format_file_text(hpp_include, hpp_text)
-            cpp_text = format_file_text(cpp_include, cpp_text)
-            source_names.append(f"get_{name}.cpp")
-            with open(f"kernels/include/get_{name}.hpp", "w") as out_file:
-                out_file.write(hpp_text)
-            with open(f"kernels/src/get_{name}.cpp", "w") as out_file:
-                out_file.write(cpp_text)
-
-        benchmark_cmd = [cmd for cmd in cmds if "BENCHMARK" in cmd]
-        if len(benchmark_cmd) > 0:
-            args = re.search("\(.*\)", benchmark_cmd[0])
-            identifier = name
-            if args:
-                identifier += " " + args.group(0)
-            get_call = re.sub(r"\(", "(dim, row_size)(", call)
-            newline = r"\\n"
-            benchmark_text += f"""
-{{
-  auto start = std::chrono::high_resolution_clock::now();
-  cartdg::get_{get_call};
-  auto stop = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start);
-  printf("{identifier}: %e s{newline}", double(duration.count())*1e-9);
-}}
-"""[1:]
-            benchmark_include += f"#include <get_{name}.hpp>\n"
-
-cmake_text = "target_sources(kernels PRIVATE\n"
-for source in source_names:
-    cmake_text += source + "\n"
-cmake_text += ")\n"
-with open("kernels/src/CMakeLists.txt", "w") as cmake_file:
-    cmake_file.write(cmake_text)
-
-with open("../script/benchmark.cpp.in", "r") as in_file:
-    benchmark_text = re.sub("// *AUTOGENERATE", benchmark_text[:-1], in_file.read())
-benchmark_text = format_file_text(benchmark_include, benchmark_text, namespace=False)
-with open("benchmark/main.cpp", "w") as out_file:
-    out_file.write(benchmark_text)
 
 ### Calculate bases ###
 
@@ -264,12 +142,12 @@ const double* const {member_name}s [{max_row_size + 1 - min_row_size}] {{"""
   }}""".format(min_row_size, max_row_size)
 
     text += f"""
-double {name}::node(int i)
+double {name}::node(int i) const
 {{{conditional_block}
   return {name}_lookup::nodes[row_size - {min_row_size}][i];
 }}
 
-Eigen::VectorXd {name}::node_weights()
+Eigen::VectorXd {name}::node_weights() const
 {{{conditional_block}
   Eigen::VectorXd nw (row_size);
   for (int i_node = 0; i_node < row_size; ++i_node)
@@ -279,7 +157,7 @@ Eigen::VectorXd {name}::node_weights()
   return nw;
 }}
 
-Eigen::MatrixXd {name}::diff_mat()
+Eigen::MatrixXd {name}::diff_mat() const
 {{{conditional_block}
   Eigen::MatrixXd dm (row_size, row_size);
   for (int i_entry = 0; i_entry < row_size*row_size; ++i_entry)
@@ -289,7 +167,7 @@ Eigen::MatrixXd {name}::diff_mat()
   return dm;
 }}
 
-Eigen::MatrixXd {name}::boundary()
+Eigen::MatrixXd {name}::boundary() const
 {{{conditional_block}
   Eigen::MatrixXd b {{2, row_size}};
   for (int is_positive : {{0, 1}})
@@ -302,7 +180,7 @@ Eigen::MatrixXd {name}::boundary()
   return b;
 }}
 
-Eigen::VectorXd {name}::orthogonal(int degree)
+Eigen::VectorXd {name}::orthogonal(int degree) const
 {{{conditional_block}
   Eigen::VectorXd orth (row_size);
   for (int i_node = 0; i_node < row_size; ++i_node)
@@ -312,12 +190,12 @@ Eigen::VectorXd {name}::orthogonal(int degree)
   return orth;
 }}
 
-double {name}::max_cfl_convective()
+double {name}::max_cfl_convective() const
 {{{conditional_block}
   return {name}_lookup::max_cfls[row_size - {min_row_size}][0];
 }}
 
-double {name}::max_cfl_diffusive()
+double {name}::max_cfl_diffusive() const
 {{{conditional_block}
   return {name}_lookup::max_cfls[row_size - {min_row_size}][1];
 }}
@@ -325,7 +203,7 @@ double {name}::max_cfl_diffusive()
 
     if "legendre" in name:
         text += f"""
-Eigen::MatrixXd {name}::prolong(int i_half)
+Eigen::MatrixXd {name}::prolong(int i_half) const
 {{{conditional_block}
   Eigen::MatrixXd p (row_size, row_size);
   for (int i_entry = 0; i_entry < row_size*row_size; ++i_entry) {{
@@ -334,7 +212,7 @@ Eigen::MatrixXd {name}::prolong(int i_half)
   return p;
 }}
 
-Eigen::MatrixXd {name}::restrict(int i_half)
+Eigen::MatrixXd {name}::restrict(int i_half) const
 {{{conditional_block}
   Eigen::MatrixXd r (row_size, row_size);
   for (int i_entry = 0; i_entry < row_size*row_size; ++i_entry) {{
