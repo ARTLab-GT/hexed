@@ -119,23 +119,24 @@ double Element::jacobian_determinant(int i_qpoint)
   return jac_mat.determinant();
 }
 
-void Element::push_shareable_value(shareable_value_access access_func)
+void Element::push_shareable_value(vertex_value_access access_func)
 {
   for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {
-    vertices[i_vert].shareable_value = std::invoke(access_func, *this)[i_vert];
+    vertices[i_vert].shareable_value = std::invoke(access_func, *this, i_vert);
   }
 }
 
-void Element::fetch_shareable_value(shareable_value_access access_func, Vertex::reduction reduce)
+void Element::fetch_shareable_value(vertex_value_access access_func, Vertex::reduction reduce)
 {
   for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {
-    std::invoke(access_func, *this)[i_vert] = vertices[i_vert]->shared_value(reduce);
+    std::invoke(access_func, *this, i_vert) = vertices[i_vert]->shared_value(reduce);
   }
 }
 
-double* Element::vertex_time_step_scale()
+double& Element::vertex_time_step_scale(int i_vertex)
 {
-  return vertex_tss.data();
+  return vertex_tss[i_vertex];
 }
+
 
 }

@@ -18,7 +18,7 @@ class Solver
   Iteration_status status;
   Stopwatch_tree stopwatch;
   std::vector<double> rk_weights {1., 1./4., 2./3.};
-  void share_vertex_data(Element::shareable_value_access, Vertex::reduction = Vertex::vector_max);
+  void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
 
   public:
   Solver(int n_dim, int row_size, double root_mesh_size);

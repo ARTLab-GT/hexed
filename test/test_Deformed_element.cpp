@@ -150,8 +150,8 @@ TEST_CASE("Deformed_element")
     REQUIRE(jac[3*9 + 5] == Approx(0.9));
     // time step is correct
     // At corner 3, diagonal is locally scaled by 1 - 2*(1 - 0.8) = 0.6 = (min singular value)
-    REQUIRE(elem0.vertex_time_step_scale()[0] == 1.);
-    REQUIRE(elem0.vertex_time_step_scale()[3] == Approx(0.6));
+    REQUIRE(elem0.vertex_time_step_scale(0) == 1.);
+    REQUIRE(elem0.vertex_time_step_scale(3) == Approx(0.6));
 
     cartdg::Storage_params params3 {2, 5, 3, row_size};
     cartdg::Deformed_element elem2 {params3, {0, 0, 0}, 0.2};
