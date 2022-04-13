@@ -13,7 +13,7 @@
 namespace cartdg
 {
 
-void Solver::share_vertex_data(Element::shareable_value_access access_func, Vertex::reduction reduce)
+void Solver::share_vertex_data(Element::vertex_value_access access_func, Vertex::reduction reduce)
 {
   auto& elements = acc_mesh.elements();
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
@@ -196,7 +196,10 @@ void Solver::set_local_tss()
   auto& elements = acc_mesh.elements();
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     Element& elem = elements[i_elem];
-    Eigen::Map<Eigen::VectorXd> vert_tss (elem.vertex_time_step_scale(), params.n_vertices());
+    Eigen::VectorXd vert_tss (params.n_vertices());
+    for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+      vert_tss(i_vert) = elem.vertex_time_step_scale(i_vert);
+    }
     Eigen::Map<Eigen::VectorXd> qpoint_tss (elem.time_step_scale(), params.n_qpoint());
     qpoint_tss = custom_math::hypercube_matvec(lin_interp, vert_tss);
   }

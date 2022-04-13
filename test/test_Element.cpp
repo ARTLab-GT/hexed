@@ -42,7 +42,7 @@ TEST_CASE("Element")
   }
   // test that vertex time step scale is initialized to 1
   for (int i_vert = 0; i_vert < 8; ++i_vert) {
-    REQUIRE(element.vertex_time_step_scale()[i_vert] == 1.);
+    REQUIRE(element.vertex_time_step_scale(i_vert) == 1.);
   }
   for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint)
   {
@@ -73,11 +73,11 @@ TEST_CASE("Element")
   SECTION("push/fetch viscosity")
   {
     // test push_required_visc
-    element.time_step_scale()[0] = 0.1;
-    element.time_step_scale()[1] = 0.;
-    element.time_step_scale()[2] = 0.;
-    element.time_step_scale()[3] = 0.2;
-    element.push_shareable_value(&cartdg::Element::time_step_scale);
+    element.vertex_time_step_scale(0) = 0.1;
+    element.vertex_time_step_scale(1) = 0.;
+    element.vertex_time_step_scale(2) = 0.;
+    element.vertex_time_step_scale(3) = 0.2;
+    element.push_shareable_value(&cartdg::Element::vertex_time_step_scale);
     REQUIRE(element.vertex(0).shared_value() == Approx(0.1));
     REQUIRE(element.vertex(1).shared_value() == Approx(0.));
     REQUIRE(element.vertex(3).shared_value() == Approx(0.2));
@@ -88,10 +88,10 @@ TEST_CASE("Element")
     ptr.shareable_value = 0.3;
     REQUIRE(element.vertex(0).shared_value() == Approx(0.3));
     // test fetch_visc
-    element.fetch_shareable_value(&cartdg::Element::time_step_scale);
-    REQUIRE(element.time_step_scale()[0] == Approx(0.3));
-    REQUIRE(element.time_step_scale()[1] == Approx(0.));
-    REQUIRE(element.time_step_scale()[3] == Approx(0.2));
+    element.fetch_shareable_value(&cartdg::Element::vertex_time_step_scale);
+    REQUIRE(element.vertex_time_step_scale(0) == Approx(0.3));
+    REQUIRE(element.vertex_time_step_scale(1) == Approx(0.));
+    REQUIRE(element.vertex_time_step_scale(3) == Approx(0.2));
   }
 
   SECTION("position calculation")

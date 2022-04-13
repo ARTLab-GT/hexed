@@ -18,20 +18,17 @@ class Hanging_vertex_matcher
   bool isp;
   int n_dim;
   int n_vert;
-  void match(double** data);
 
   public:
   // Note: sensitive to the order in which elements are provided
   Hanging_vertex_matcher(std::vector<Element*> fine_elements, int i_dim, bool is_positive);
   /*
    * Sets the values at the hanging vertices to the proper interpolated values.
-   * Note: for argument type `Element::shareable_value_access`, the interpolation
-   * is based on the values at the non-hanging vertices of the fine elements, not the
-   * `Vertex::shared_max_value`.
+   * Note: the interpolation is based on the values at the non-hanging vertices
+   * of the fine elements, not the `Vertex::shared_max_value`.
    * So, if the shared value is desired, then this function should
    * be called after `Element::fetch_shareable_value`.
    */
-  void match(Element::shareable_value_access);
   void match(Element::vertex_value_access);
 };
 
