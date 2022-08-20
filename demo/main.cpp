@@ -1,9 +1,15 @@
 #include <iostream>
 #include <Solver.hpp>
 #include <math.hpp>
+#include <cartdgConfig.hpp>
+#include <otter/plot.hpp>
 
 int main()
 {
+  #if CARTDG_USE_OTTER
+  otter::plot plt;
+  plt.show();
+  #endif
   // Resolution parameters
   constexpr int row_size = 6;
   constexpr int ref_level = 3;

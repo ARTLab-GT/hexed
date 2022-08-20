@@ -41,7 +41,6 @@ else()
     set(n_threads, 1)
 endif()
 
-
 # determine row_size of polynomial basis
 if(NOT DEFINED MAX_BASIS_ROW_SIZE)
    set(MAX_BASIS_ROW_SIZE 8 CACHE STRING
@@ -49,18 +48,22 @@ if(NOT DEFINED MAX_BASIS_ROW_SIZE)
 endif()
 execute_process(COMMAND python3 ${CMAKE_SOURCE_DIR}/script/auto_generate.py ${CMAKE_BINARY_DIR} ${MAX_BASIS_ROW_SIZE})
 
+option(use_otter "include capability to use otter for plotting" ON)
+
 # add a configure file to pass CMake variables to the code
 configure_file(cartdgConfig.hpp.in cartdgConfig.hpp)
 
 # define main target, which is a library
 add_library(cartdg SHARED)
-
+# add external libraries
+if (use_otter)
+    find_package(otter REQUIRED)
+    target_link_libraries(cartdg PUBLIC otter)
+endif()
 # add tecio as external library
 target_link_libraries(cartdg PRIVATE tecio)
-
 # add automatically generated source files
 target_sources(cartdg PRIVATE ${CMAKE_BINARY_DIR}/Gauss_lobatto.cpp ${CMAKE_BINARY_DIR}/Gauss_legendre.cpp)
-
 target_include_directories(cartdg PUBLIC
                            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
                            $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>
