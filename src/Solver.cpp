@@ -224,7 +224,7 @@ void Solver::initialize(const Spacetime_func& func)
 
 void Solver::update(double stability_ratio)
 {
-  stopwatch.stopwatch.start();
+  stopwatch.stopwatch.start(); // ready or not the clock is countin'
   auto& sw_car {stopwatch.children.at("cartesian")};
   auto& sw_def {stopwatch.children.at("deformed" )};
   const int nd = params.n_dim;
