@@ -3,7 +3,9 @@
 
 #include <string>
 #include <vector>
+#include <cartdgConfig.hpp>
 
+#if CARTDG_USE_TECPLOT
 namespace cartdg
 {
 
@@ -77,4 +79,5 @@ class Tecplot_file
 };
 
 }
+#endif
 #endif

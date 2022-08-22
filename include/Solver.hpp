@@ -6,6 +6,7 @@
 #include "Spacetime_func.hpp"
 #include "Iteration_status.hpp"
 #include "Stopwatch_tree.hpp"
+#include <cartdgConfig.hpp>
 
 namespace cartdg
 {
@@ -71,12 +72,14 @@ class Solver
   std::vector<double> integral_field(const Qpoint_func& integrand);
   // compute an integral over all surfaces where a particular boundary condition has been enforced
   std::vector<double> integral_surface(const Surface_func& integrand, int bc_sn);
+  #if CARTDG_USE_TECPLOT
   // write a visualization file describing the entire flow field (but not identifying surfaces)
-  void visualize_field(const Qpoint_func& output_variables, std::string name, int n_sample = 20);
+  void visualize_field_tecplot(const Qpoint_func& output_variables, std::string name, int n_sample = 20);
   // write a visualization file describing all surfaces where a particular boundary condition has been enforced.
   // only does state variables because usually that's what you want
   // and I'm lazy
-  void visualize_surface(int bc_sn, std::string name, int n_sample = 20);
+  void visualize_surface_tecplot(int bc_sn, std::string name, int n_sample = 20);
+  #endif
 };
 
 }

@@ -1,6 +1,7 @@
+#include <cartdgConfig.hpp>
+#if CARTDG_USE_TECPLOT
 #include <TECIO.h>
 #include <MASTER.h>
-
 #include <Tecplot_file.hpp>
 #include <math.hpp>
 
@@ -152,3 +153,4 @@ Tecplot_file::Line_segments::~Line_segments()
 }
 
 }
+#endif

@@ -2,14 +2,9 @@
 #include <Solver.hpp>
 #include <math.hpp>
 #include <cartdgConfig.hpp>
-#include <otter/plot.hpp>
 
 int main()
 {
-  #if CARTDG_USE_OTTER
-  otter::plot plt;
-  plt.show();
-  #endif
   // Resolution parameters
   constexpr int row_size = 6;
   constexpr int ref_level = 3;
@@ -35,7 +30,9 @@ int main()
   solver.initialize(vortex);
 
   // Let's go!
-  solver.visualize_field(cartdg::State_variables(), "demo_time_0");
+  #if CARTDG_USE_TECPLOT
+  solver.visualize_field_tecplot(cartdg::State_variables(), "demo_time_0");
+  #endif
   double time = 0;
   for (int i = 0; i < 20; ++i)
   {
@@ -46,7 +43,9 @@ int main()
     }
     char buffer [100];
     snprintf(buffer, 100, "demo_time_%e", time);
-    solver.visualize_field(cartdg::State_variables(), buffer);
+    #if CARTDG_USE_TECPLOT
+    solver.visualize_field_tecplot(cartdg::State_variables(), buffer);
+    #endif
   }
   std::cout << solver.stopwatch_tree().report() << "\n";
 }

@@ -1,3 +1,4 @@
+#include <cartdgConfig.hpp>
 #include <Solver.hpp>
 #include <Mcs_cartesian.hpp>
 #include <Mcs_deformed.hpp>
@@ -359,7 +360,8 @@ std::vector<double> Solver::integral_surface(const Surface_func& integrand, int 
   return integral;
 };
 
-void Solver::visualize_field(const Qpoint_func& output_variables, std::string name, int n_sample)
+#if CARTDG_USE_TECPLOT
+void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::string name, int n_sample)
 {
   const int n_dim = params.n_dim;
   const int n_vis = output_variables.n_var(n_dim); // number of variables to visualize
@@ -452,7 +454,7 @@ void Solver::visualize_field(const Qpoint_func& output_variables, std::string na
   }
 }
 
-void Solver::visualize_surface(int bc_sn, std::string name, int n_sample)
+void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample)
 {
   if (params.n_dim == 1) throw std::runtime_error("cannot visualize surfaces in 1D");
   // convenience definitions
@@ -499,5 +501,6 @@ void Solver::visualize_surface(int bc_sn, std::string name, int n_sample)
     }
   }
 }
+#endif
 
 }
