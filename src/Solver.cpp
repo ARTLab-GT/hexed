@@ -1,4 +1,4 @@
-#include <cartdgConfig.hpp>
+#include <config.hpp>
 #include <Solver.hpp>
 #include <Mcs_cartesian.hpp>
 #include <Mcs_deformed.hpp>

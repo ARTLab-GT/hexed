@@ -1,4 +1,4 @@
-#include <cartdgConfig.hpp>
+#include <config.hpp>
 #if CARTDG_USE_TECPLOT
 #include <TECIO.h>
 #include <MASTER.h>

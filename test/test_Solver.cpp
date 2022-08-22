@@ -1,5 +1,5 @@
 #include <catch2/catch.hpp>
-#include <cartdgConfig.hpp>
+#include <config.hpp>
 #include <Solver.hpp>
 
 class Arbitrary_initializer : public cartdg::Spacetime_func

@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 
-#include <cartdgConfig.hpp>
+#include <config.hpp>
 #include <Equidistant.hpp>
 #include <Gauss_lobatto.hpp>
 #include <Gauss_legendre.hpp>

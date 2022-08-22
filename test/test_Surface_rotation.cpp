@@ -1,5 +1,5 @@
 #include <catch2/catch.hpp>
-#include <cartdgConfig.hpp>
+#include <config.hpp>
 #include <Surface_rotation.hpp>
 
 TEST_CASE("Surface_rotation")

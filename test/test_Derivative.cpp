@@ -1,5 +1,5 @@
 #include <catch2/catch.hpp>
-#include <cartdgConfig.hpp>
+#include <config.hpp>
 #include <Derivative.hpp>
 #include <Gauss_legendre.hpp>
 

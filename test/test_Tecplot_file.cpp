@@ -1,4 +1,4 @@
-#include <cartdgConfig.hpp>
+#include <config.hpp>
 #if CARTDG_USE_TECPLOT
 #include <catch2/catch.hpp>
 #include <Tecplot_file.hpp>

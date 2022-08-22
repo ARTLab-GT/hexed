@@ -2,7 +2,7 @@
 #define CARTDG_KERNEL_FACTORY_HPP_
 
 #include <memory>
-#include <cartdgConfig.hpp>
+#include "config.hpp"
 #include <Vector_view.hpp>
 #include <Stopwatch_tree.hpp>
 

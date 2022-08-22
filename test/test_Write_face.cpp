@@ -1,5 +1,5 @@
 #include <catch2/catch.hpp>
-#include <cartdgConfig.hpp>
+#include <config.hpp>
 #include <Write_face.hpp>
 #include <Equidistant.hpp>
 #include "testing_utils.hpp"

@@ -1,7 +1,7 @@
 #include <iostream>
 #include <Solver.hpp>
 #include <math.hpp>
-#include <cartdgConfig.hpp>
+#include <config.hpp>
 
 int main()
 {

@@ -1,5 +1,5 @@
 #include <catch2/catch.hpp>
-#include <cartdgConfig.hpp>
+#include <config.hpp>
 #include <Boundary_condition.hpp>
 
 class Dummy : public cartdg::Boundary_condition

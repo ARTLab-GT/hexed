@@ -52,7 +52,8 @@ option(use_otter "include capability to use otter for plotting" ON)
 option(use_tecplot "include capability to use tecplot for plotting" ON)
 
 # add a configure file to pass CMake variables to the code
-configure_file(cartdgConfig.hpp.in cartdgConfig.hpp)
+configure_file(config_build.hpp.in config_build.hpp)
+configure_file(config_build.hpp.in config.hpp)
 
 # define main target, which is a library
 add_library(cartdg SHARED)
@@ -78,7 +79,7 @@ add_subdirectory(demo)
 
 install(TARGETS cartdg DESTINATION lib EXPORT cartdgTargets)
 install(DIRECTORY include/ DESTINATION include/cartdg)
-install(FILES ${CMAKE_BINARY_DIR}/cartdgConfig.hpp DESTINATION include/cartdg)
+install(FILES ${CMAKE_BINARY_DIR}/config.hpp DESTINATION include/cartdg/)
 install(PROGRAMS script/cartdg-post-process script/cartdg-wrapped-post-process TYPE BIN)
 install(EXPORT cartdgTargets
         NAMESPACE cartdg::

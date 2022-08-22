@@ -3,7 +3,7 @@
 
 #include <string>
 #include <vector>
-#include <cartdgConfig.hpp>
+#include "config.hpp"
 
 #if CARTDG_USE_TECPLOT
 namespace cartdg

@@ -1,2 +1,2 @@
-#include <cartdgConfig.hpp>
+#include "config.hpp"
 #include "testing_utils.hpp"

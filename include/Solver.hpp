@@ -6,7 +6,7 @@
 #include "Spacetime_func.hpp"
 #include "Iteration_status.hpp"
 #include "Stopwatch_tree.hpp"
-#include <cartdgConfig.hpp>
+#include "config.hpp"
 
 namespace cartdg
 {
