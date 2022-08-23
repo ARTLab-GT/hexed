@@ -24,4 +24,5 @@ Storage_params.cpp
 Surface_func.cpp
 Tecplot_file.cpp
 Vertex.cpp
+Vis_data.cpp
 )

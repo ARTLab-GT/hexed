@@ -83,4 +83,20 @@ std::vector<double> Stag_pres::operator()(const std::vector<double> point_pos, d
   return {stag_pres};
 }
 
+std::string Velocity::variable_name(int i_var) const
+{
+  char buffer [100];
+  snprintf(buffer, 100, "velocity%i", i_var);
+  return buffer;
+}
+
+std::vector<double> Velocity::operator()(const std::vector<double> point_pos, double point_time,
+                                         const std::vector<double> state) const
+{
+  std::vector<double> veloc(3, 0.);
+  const int n_dim = state.size() - 2;
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) veloc[i_dim] = state[i_dim]/state[n_dim];
+  return veloc;
+}
+
 }

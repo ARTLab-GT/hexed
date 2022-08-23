@@ -33,6 +33,7 @@ test_Storage_params.cpp
 test_Surface_rotation.cpp
 test_Tecplot_file.cpp
 test_Vertex.cpp
+test_Vis_data.cpp
 test_Write_face.cpp
 )
 target_link_libraries(test PRIVATE cartdg Catch2::Catch2)
