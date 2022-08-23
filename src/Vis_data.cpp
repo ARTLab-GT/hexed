@@ -31,9 +31,9 @@ Eigen::MatrixXd Vis_data::edges(int n_div)
   {
     const int stride {custom_math::pow(row_size, n_dim - 1 - i_dim)};
     const int n_outer {n_qpoint/stride/row_size};
-
     // extract the `j_dim`th component of position
-    for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+    for (int j_dim = 0; j_dim < n_dim; ++j_dim)
+    {
       Eigen::MatrixXd edge_qpoints {row_size, n_edge/n_dim}; // quadrature points interpolated to the edge
       for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
         Eigen::VectorXd qpoint_slab {nfqpoint};
@@ -46,7 +46,7 @@ Eigen::MatrixXd Vis_data::edges(int n_div)
         edge_qpoints.row(i_qpoint) = custom_math::hypercube_matvec(boundary, qpoint_slab);
       }
       result(Eigen::seqN(j_dim*(n_div + 1), n_div + 1),
-      Eigen::seqN(i_dim*n_edge/n_dim, n_edge/n_dim)) = interp*edge_qpoints; // note: rhs auto resized to fit lhs
+             Eigen::seqN(i_dim*n_edge/n_dim, n_edge/n_dim)) = interp*edge_qpoints; // note: rhs auto resized to fit lhs
     }
   }
   return result;

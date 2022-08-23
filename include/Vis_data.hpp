@@ -8,6 +8,10 @@
 namespace cartdg
 {
 
+/*
+ * Computes data to be visualized (e.g. edge positions, non-conserved variables) without
+ * knowing anything about the choice of visualization software.
+ */
 class Vis_data
 {
   int n_dim;
