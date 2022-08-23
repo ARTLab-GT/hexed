@@ -11,12 +11,15 @@ namespace cartdg
 class Vis_data
 {
   int n_dim;
+  int n_edge;
+  int row_size;
+  int n_qpoint;
   const Basis& bas;
   Eigen::VectorXd pos;
   Eigen::VectorXd vars;
 
   public:
-  Vis_data(Element&, const Qpoint_func&, const Basis& basis);
+  Vis_data(Element&, const Qpoint_func&, const Basis&);
   Eigen::MatrixXd edges(int n_div = 20);
 };
 
