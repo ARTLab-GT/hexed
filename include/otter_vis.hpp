@@ -1,6 +1,6 @@
 #ifndef CARTDG_OTTER_VIS_HPP_
 #define CARTDG_OTTER_VIS_HPP_
-#include <config.hpp>
+#include "config.hpp"
 #if CARTDG_USE_OTTER
 
 #include <otter/plot.hpp>

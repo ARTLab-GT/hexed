@@ -41,5 +41,6 @@ add_executable(interactive)
 target_sources(interactive PRIVATE
 main.cpp
 test_otter_vis.cpp
+test_Solver_vis.cpp
 )
 target_link_libraries(interactive PRIVATE cartdg Catch2::Catch2)
