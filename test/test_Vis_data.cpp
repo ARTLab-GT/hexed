@@ -16,6 +16,8 @@ TEST_CASE("Vis_data")
   elem2.vertex(2).pos = {.8, .3, 0.};
   cartdg::Vis_data vis3(elem3, cartdg::Position(), basis);
   cartdg::Vis_data vis2(elem2, cartdg::Position(), basis);
+  cartdg::Vis_data vis_const(elem2, cartdg::Constant_func({0.3, 0.4, 0.5, 0.6}), basis);
+
   SECTION("edges")
   {
     SECTION("2D")
@@ -49,10 +51,36 @@ TEST_CASE("Vis_data")
       REQUIRE(edges(11 + 6*3*11) == Approx(.9).scale(1.));
       REQUIRE(edges(17 + 6*3*11) == Approx(.9).scale(1.));
     }
-    SECTION("non-position")
+    SECTION("constant")
     {
-      cartdg::Vis_data vis(elem2, cartdg::Constant_func({0.3, 0.4, 0.5, 0.6}), basis);
-      REQUIRE(vis.edges().size() == 21*4*4);
+      REQUIRE(vis_const.edges().size() == 21*4*4);
+    }
+  }
+
+  SECTION("interior")
+  {
+    SECTION("2D")
+    {
+      auto interior = vis2.interior();
+      REQUIRE(interior.size() == 21*21*2);
+      REQUIRE(interior(0) == Approx(0.).scale(1.));
+      REQUIRE(interior(         1) == Approx(0.).scale(1.));
+      REQUIRE(interior(21*21 +  1) == Approx(.05).scale(1.));
+      REQUIRE(interior(        21) == Approx(.05*.8).scale(1.));
+      REQUIRE(interior(21*21 + 21) == Approx(.05*.3).scale(1.));
+      REQUIRE(interior(21*21*1 - 1) == Approx(1.).scale(1.));
+      REQUIRE(interior(21*21*2 - 1) == Approx(1.).scale(1.));
+    }
+    SECTION("3D")
+    {
+      auto interior = vis3.interior();
+      REQUIRE(interior.size() == 21*21*21*3);
+      REQUIRE(interior(21*21*21*0) == Approx(0.).scale(1.));
+      REQUIRE(interior(21*21*21*1) == Approx(0.).scale(1.));
+      REQUIRE(interior(21*21*21*2) == Approx(0.).scale(1.));
+      REQUIRE(interior(21*21*21*1 - 1) == Approx(.9).scale(1.));
+      REQUIRE(interior(21*21*21*2 - 1) == Approx(.9).scale(1.));
+      REQUIRE(interior(21*21*21*3 - 1) == Approx(.9).scale(1.));
     }
   }
 }

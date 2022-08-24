@@ -56,7 +56,8 @@ Eigen::VectorXd Vis_data::edges(int n_sample)
 
 Eigen::VectorXd Vis_data::interior(int n_sample)
 {
-  return Eigen::MatrixXd::Zero(n_sample*n_sample, n_var);
+  const int n_block = custom_math::pow(n_sample, n_dim);
+  return Eigen::VectorXd::Zero(n_block*n_var);
 }
 
 }
