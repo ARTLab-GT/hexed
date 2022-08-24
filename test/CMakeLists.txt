@@ -1,6 +1,6 @@
 find_package(Catch2 REQUIRED)
-add_executable(test)
-target_sources(test PRIVATE
+add_executable(unit)
+target_sources(unit PRIVATE
 # please maintain alphabetical order
 main.cpp
 testing_utils.cpp
@@ -22,7 +22,6 @@ test_Local_deformed.cpp
 test_math.cpp
 test_Mcs_cartesian.cpp
 test_Mcs_deformed.cpp
-test_otter_vis.cpp
 test_Physical_basis.cpp
 test_Prolong_refined.cpp
 test_Refined_face.cpp
@@ -37,4 +36,10 @@ test_Vertex.cpp
 test_Vis_data.cpp
 test_Write_face.cpp
 )
-target_link_libraries(test PRIVATE cartdg Catch2::Catch2)
+target_link_libraries(unit PRIVATE cartdg Catch2::Catch2)
+add_executable(interactive)
+target_sources(interactive PRIVATE
+main.cpp
+test_otter_vis.cpp
+)
+target_link_libraries(interactive PRIVATE cartdg Catch2::Catch2)

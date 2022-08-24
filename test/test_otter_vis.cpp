@@ -13,6 +13,6 @@ TEST_CASE("otter_vis")
   otter::plot plt;
   plt.set_orthographic(true);
   cartdg::otter_vis::add_edges(plt, elem, cartdg::Gauss_legendre(cartdg::config::max_row_size));
-  //plt.show();
+  plt.show();
 }
 #endif

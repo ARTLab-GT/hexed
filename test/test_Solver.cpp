@@ -570,5 +570,8 @@ TEST_CASE("face extrusion")
     auto valid = solver.mesh().valid();
     REQUIRE(valid.n_duplicate == 0);
     REQUIRE(valid.n_missing == 60);
+    #if CARTDG_USE_TECPLOT
+    solver.visualize_field_tecplot(cartdg::State_variables(), "extrude");
+    #endif
   }
 }
