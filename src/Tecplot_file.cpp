@@ -51,7 +51,7 @@ Tecplot_file::Zone::~Zone()
   --n_zone_instances;
 }
 
-void Tecplot_file::Zone::write(double* pos, double* vars)
+void Tecplot_file::Zone::write(const double* pos, const double* vars)
 {
   INTEGER4 IsDouble {1};
   INTEGER4 size {file.n_dim*n_nodes};
@@ -121,7 +121,7 @@ Tecplot_file::Line_segments::Line_segments(Tecplot_file& file, int n_segs, int r
   ++file.i_zone;
 }
 
-void Tecplot_file::Line_segments::write(double* pos, double* vars)
+void Tecplot_file::Line_segments::write(const double* pos, const double* vars)
 {
   for (int i_node = 0; i_node < row_size; ++i_node)
   {

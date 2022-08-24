@@ -26,14 +26,16 @@ class Vis_data
   Vis_data(Element&, const Qpoint_func&, const Basis&, double time = 0.);
   /*
    * interpolate function to `n_sample + 1` uniformly spaced points along element edges
-   * layout: [n_sample][n_var (of Qpoint_func)][number of edges in element]
+   * layout: [number of edges in element][n_var (of Qpoint_func)][n_sample]
    */
   Eigen::VectorXd edges(int n_sample = 21);
   /*
    * interpolate function to uniformly-spaced block of sample points `n_sample` on a side
-   * layout: [n_sample]([n_sample]([n_sample]))[n_var]
+   * layout: [n_var][n_sample]([n_sample]([n_sample]))
    */
   Eigen::VectorXd interior(int n_sample = 21);
+  // return function evaluated at quadratre points. layout: [n_var][n_qpoint]
+  inline const Eigen::VectorXd& qpoints() {return vars;}
 };
 
 }

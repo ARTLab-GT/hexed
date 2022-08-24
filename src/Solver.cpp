@@ -367,7 +367,6 @@ void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::s
 {
   const int n_dim = params.n_dim;
   const int n_vis = output_variables.n_var(n_dim); // number of variables to visualize
-  const int n_qpoint = params.n_qpoint();
   const int n_corners {custom_math::pow(2, n_dim - 1)};
   Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
   std::vector<std::string> var_names;
@@ -379,22 +378,7 @@ void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::s
     Element& elem {acc_mesh.elements()[i_elem]};
     Vis_data vis_pos(elem, cartdg::Position(), basis, status.flow_time);
     Vis_data vis_out(elem, output_variables, basis, status.flow_time);
-    // fetch data at quadrature points
-    std::vector<double> pos (n_qpoint*n_dim);
-    std::vector<double> to_vis (n_qpoint*n_vis);
-    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-      auto qpoint_vis = output_variables(elem, basis, i_qpoint, status.flow_time);
-      for (int i_vis = 0; i_vis < n_vis; ++i_vis) {
-        to_vis[i_vis*n_qpoint + i_qpoint] = qpoint_vis[i_vis];
-      }
-      auto qpoint_pos = elem.position(basis, i_qpoint);
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        pos[i_dim*n_qpoint + i_qpoint] = qpoint_pos[i_dim];
-      }
-    }
-    // note: each visualization stage is enclosed in `{}` to ensure that only one
-    // `Tecplot_file::Zone` is alive at a time
-
+    // note: each visualization stage is enclosed in `{}` to ensure that only one `Tecplot_file::Zone` is alive at a time
     // visualize edges
     if (n_dim > 1) // 1D elements don't really have edges
     {
@@ -408,7 +392,7 @@ void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::s
 
     { // visualize quadrature points
       Tecplot_file::Structured_block qpoints {file, basis.row_size, "element_qpoints"};
-      qpoints.write(pos.data(), to_vis.data());
+      qpoints.write(vis_pos.qpoints().data(), vis_out.qpoints().data());
     }
 
     { // visualize interior (that is, quadrature point data interpolated to a fine mesh of sample points)

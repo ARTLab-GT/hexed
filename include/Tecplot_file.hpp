@@ -42,7 +42,7 @@ class Tecplot_file
     Zone(const Zone& other) = delete;
     Zone& operator=(const Zone& other) = delete;
     virtual ~Zone();
-    virtual void write(double* pos, double* vars);
+    virtual void write(const double* pos, const double* vars);
   };
   /*
    * Represents a single block of structured data. Call `write` exactly once before destructing.
@@ -67,7 +67,7 @@ class Tecplot_file
     std::vector<double> var_storage;
     public:
     Line_segments(Tecplot_file&, int n_segs, int row_size, std::string name_arg="line_segments");
-    virtual void write(double* pos, double* vars);
+    virtual void write(const double* pos, const double* vars);
     virtual ~Line_segments();
   };
 
