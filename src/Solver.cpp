@@ -378,7 +378,8 @@ void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::s
   for (int i_elem = 0; i_elem < acc_mesh.elements().size(); ++i_elem)
   {
     Element& elem {acc_mesh.elements()[i_elem]};
-    Vis_data vis(elem, output_variables, basis);
+    Vis_data vis_pos(elem, cartdg::Position(), basis);
+    Vis_data vis_out(elem, output_variables, basis);
     // fetch data at quadrature points
     std::vector<double> pos (n_qpoint*n_dim);
     std::vector<double> to_vis (n_qpoint*n_vis);
@@ -399,10 +400,10 @@ void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::s
     if (n_dim > 1) // 1D elements don't really have edges
     {
       Tecplot_file::Line_segments edges {file, n_dim*n_corners, n_sample, "edges"};
-      Eigen::MatrixXd edge_pos = vis.edges(n_sample - 1);
-      Eigen::MatrixXd edge_state = Eigen::MatrixXd::Zero(n_sample, output_variables.n_var(n_dim));
+      auto edge_pos = vis_pos.edges(n_sample);
+      auto edge_state = vis_out.edges(n_sample);
       for (int i_edge = 0; i_edge < n_corners*n_dim; ++i_edge) {
-        edges.write(edge_pos(Eigen::all, i_edge).data(), edge_state.data());
+        edges.write(edge_pos.data() + i_edge*n_sample*n_dim, edge_state.data() + i_edge*n_sample*n_vis);
       }
     }
 

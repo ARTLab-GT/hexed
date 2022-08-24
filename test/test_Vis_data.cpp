@@ -49,5 +49,10 @@ TEST_CASE("Vis_data")
       REQUIRE(edges(11 + 6*3*11) == Approx(.9).scale(1.));
       REQUIRE(edges(17 + 6*3*11) == Approx(.9).scale(1.));
     }
+    SECTION("non-position")
+    {
+      cartdg::Vis_data vis(elem2, cartdg::Constant_func({0.3, 0.4, 0.5, 0.6}), basis);
+      REQUIRE(vis.edges().size() == 21*4*4);
+    }
   }
 }
