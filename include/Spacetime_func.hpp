@@ -105,7 +105,22 @@ class Sod : public State_from_spacetime
 {
   public:
   double heat_rat = 1.4;
-  virtual std::vector<double> operator()(std::vector<double> pos, double time);
+  virtual std::vector<double> operator()(std::vector<double> pos, double time) const;
+};
+
+class Position : public Spacetime_func
+{
+  virtual inline int n_var(int n_dim) const {return n_dim;}
+  virtual inline std::string variable_name(int i_var) const
+  {
+    char buffer [100];
+    snprintf(buffer, 100, "position%i", i_var);
+    return buffer;
+  }
+  virtual inline std::vector<double> operator()(std::vector<double> pos, double time) const
+  {
+    return pos;
+  }
 };
 
 }

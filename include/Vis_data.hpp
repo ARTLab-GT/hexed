@@ -18,13 +18,22 @@ class Vis_data
   int n_edge;
   int row_size;
   int n_qpoint;
+  int n_var;
   const Basis& bas;
-  Eigen::VectorXd pos;
   Eigen::VectorXd vars;
 
   public:
-  Vis_data(Element&, const Qpoint_func&, const Basis&);
-  Eigen::MatrixXd edges(int n_div = 20);
+  Vis_data(Element&, const Qpoint_func&, const Basis&, double time = 0.);
+  /*
+   * interpolate function to `n_sample + 1` uniformly spaced points along element edges
+   * layout: [n_sample][n_var (of Qpoint_func)][number of edges in element]
+   */
+  Eigen::VectorXd edges(int n_sample = 21);
+  /*
+   * interpolate function to uniformly-spaced block of sample points `n_sample` on a side
+   * layout: [n_sample]([n_sample]([n_sample]))[n_var]
+   */
+  Eigen::VectorXd interior(int n_sample = 21);
 };
 
 }

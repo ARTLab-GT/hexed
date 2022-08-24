@@ -90,7 +90,7 @@ std::vector<double> Doublet::operator()(std::vector<double> pos, double time) co
   return state;
 }
 
-std::vector<double> Sod::operator()(std::vector<double> pos, double time)
+std::vector<double> Sod::operator()(std::vector<double> pos, double time) const
 {
   double mass;
   double pres;

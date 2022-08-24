@@ -84,7 +84,7 @@ class Solver
   void visualize_surface_tecplot(int bc_sn, std::string name, int n_sample = 20);
   #endif
   #if CARTDG_USE_OTTER
-  void visualize_edges_otter(otter::plot&, int n_div = 20);
+  void visualize_edges_otter(otter::plot&, int n_sample = 20);
   #endif
 };
 

@@ -478,11 +478,11 @@ void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample
 #endif
 
 #if CARTDG_USE_OTTER
-void Solver::visualize_edges_otter(otter::plot& plt, int n_div)
+void Solver::visualize_edges_otter(otter::plot& plt, int n_sample)
 {
   auto& elements = acc_mesh.elements();
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    otter_vis::add_edges(plt, elements[i_elem], basis, n_div);
+    otter_vis::add_edges(plt, elements[i_elem], basis, n_sample);
   }
 }
 #endif
