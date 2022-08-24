@@ -369,7 +369,6 @@ void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::s
   const int n_vis = output_variables.n_var(n_dim); // number of variables to visualize
   const int n_qpoint = params.n_qpoint();
   const int n_corners {custom_math::pow(2, n_dim - 1)};
-  const int n_block {custom_math::pow(n_sample, n_dim)};
   Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
   std::vector<std::string> var_names;
   for (int i_vis = 0; i_vis < n_vis; ++i_vis) var_names.push_back(output_variables.variable_name(i_vis));
@@ -378,8 +377,8 @@ void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::s
   for (int i_elem = 0; i_elem < acc_mesh.elements().size(); ++i_elem)
   {
     Element& elem {acc_mesh.elements()[i_elem]};
-    Vis_data vis_pos(elem, cartdg::Position(), basis);
-    Vis_data vis_out(elem, output_variables, basis);
+    Vis_data vis_pos(elem, cartdg::Position(), basis, status.flow_time);
+    Vis_data vis_out(elem, output_variables, basis, status.flow_time);
     // fetch data at quadrature points
     std::vector<double> pos (n_qpoint*n_dim);
     std::vector<double> to_vis (n_qpoint*n_vis);
@@ -414,17 +413,9 @@ void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::s
 
     { // visualize interior (that is, quadrature point data interpolated to a fine mesh of sample points)
       Tecplot_file::Structured_block interior {file, n_sample, "element_interior"};
-      Eigen::VectorXd interp_pos {n_block*n_dim};
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        Eigen::Map<Eigen::VectorXd> qpoint_pos (pos.data() + i_dim*n_qpoint, n_qpoint);
-        interp_pos.segment(i_dim*n_block, n_block) = custom_math::hypercube_matvec(interp, qpoint_pos);
-      }
-      Eigen::VectorXd interp_state {n_block*n_vis};
-      for (int i_var = 0; i_var < n_vis; ++i_var) {
-        Eigen::Map<Eigen::VectorXd> var (to_vis.data() + i_var*n_qpoint, n_qpoint);
-        interp_state.segment(i_var*n_block, n_block) = custom_math::hypercube_matvec(interp, var);
-      }
-      interior.write(interp_pos.data(), interp_state.data());
+      auto interp_pos = vis_pos.interior(n_sample);
+      auto interp_out = vis_out.interior(n_sample);
+      interior.write(interp_pos.data(), interp_out.data());
     }
   }
 }
