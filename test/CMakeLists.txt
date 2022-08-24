@@ -22,6 +22,7 @@ test_Local_deformed.cpp
 test_math.cpp
 test_Mcs_cartesian.cpp
 test_Mcs_deformed.cpp
+test_otter_vis.cpp
 test_Physical_basis.cpp
 test_Prolong_refined.cpp
 test_Refined_face.cpp

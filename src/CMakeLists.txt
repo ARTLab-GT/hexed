@@ -13,6 +13,7 @@ Hanging_vertex_matcher.cpp
 Iteration_status.cpp
 math.cpp
 Output_data.cpp
+otter_vis.cpp
 Physical_basis.cpp
 Qpoint_func.cpp
 Refined_face.cpp
