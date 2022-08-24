@@ -56,8 +56,13 @@ Eigen::VectorXd Vis_data::edges(int n_sample)
 
 Eigen::VectorXd Vis_data::interior(int n_sample)
 {
+  Eigen::MatrixXd interp {bas.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
   const int n_block = custom_math::pow(n_sample, n_dim);
-  return Eigen::VectorXd::Zero(n_block*n_var);
+  Eigen::VectorXd result(n_block*n_var);
+  for (int i_var = 0; i_var < n_var; ++i_var) {
+    result(Eigen::seqN(i_var*n_block, n_block)) = custom_math::hypercube_matvec(interp, vars(Eigen::seqN(i_var*n_qpoint, n_qpoint)));
+  }
+  return result;
 }
 
 }

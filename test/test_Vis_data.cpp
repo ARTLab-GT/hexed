@@ -82,5 +82,14 @@ TEST_CASE("Vis_data")
       REQUIRE(interior(21*21*21*2 - 1) == Approx(.9).scale(1.));
       REQUIRE(interior(21*21*21*3 - 1) == Approx(.9).scale(1.));
     }
+    SECTION("constant")
+    {
+      auto interior = vis_const.interior();
+      REQUIRE(interior.size() == 21*21*4);
+      REQUIRE(interior(21*21*0) == Approx(.3).scale(1.));
+      REQUIRE(interior(21*21*1) == Approx(.4).scale(1.));
+      REQUIRE(interior(21*21*2) == Approx(.5).scale(1.));
+      REQUIRE(interior(21*21*3) == Approx(.6).scale(1.));
+    }
   }
 }
