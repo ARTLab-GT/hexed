@@ -7,6 +7,9 @@
 #include "Iteration_status.hpp"
 #include "Stopwatch_tree.hpp"
 #include "config.hpp"
+#ifdef CARTDG_USE_OTTER
+#include <otter/plot.hpp>
+#endif
 
 namespace cartdg
 {
@@ -79,6 +82,9 @@ class Solver
   // only does state variables because usually that's what you want
   // and I'm lazy
   void visualize_surface_tecplot(int bc_sn, std::string name, int n_sample = 20);
+  #endif
+  #if CARTDG_USE_OTTER
+  void visualize_edges_otter(otter::plot&, int n_div = 20);
   #endif
 };
 

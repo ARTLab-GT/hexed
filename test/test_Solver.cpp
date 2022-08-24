@@ -573,5 +573,11 @@ TEST_CASE("face extrusion")
     #if CARTDG_USE_TECPLOT
     solver.visualize_field_tecplot(cartdg::State_variables(), "extrude");
     #endif
+    #if CARTDG_USE_OTTER
+    otter::plot plt;
+    plt.set_orthographic(true);
+    solver.visualize_edges_otter(plt);
+    plt.show();
+    #endif
   }
 }

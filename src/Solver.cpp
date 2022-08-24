@@ -11,6 +11,7 @@
 #include <Local_deformed.hpp>
 #include <Tecplot_file.hpp>
 #include <Vis_data.hpp>
+#include <otter_vis.hpp>
 
 namespace cartdg
 {
@@ -472,6 +473,16 @@ void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample
       Tecplot_file::Structured_block zone {file, n_sample, "face_interior", nd - 1};
       zone.write(interp_pos.data(), interp_state.data());
     }
+  }
+}
+#endif
+
+#if CARTDG_USE_OTTER
+void Solver::visualize_edges_otter(otter::plot& plt, int n_div)
+{
+  auto& elements = acc_mesh.elements();
+  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    otter_vis::add_edges(plt, elements[i_elem], basis, n_div);
   }
 }
 #endif
