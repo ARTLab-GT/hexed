@@ -92,4 +92,14 @@ TEST_CASE("Vis_data")
       REQUIRE(interior(21*21*3) == Approx(.6).scale(1.));
     }
   }
+
+  SECTION("face")
+  {
+    auto face = vis2.face(1, 0);
+    REQUIRE(face.size() == 21*2);
+    REQUIRE(face(0*21 + 0) ==Approx(0.).scale(1.));
+    REQUIRE(face(1*21 + 0) ==Approx(0.).scale(1.));
+    REQUIRE(face(0*21 + 2) ==Approx(2*.05 + .8).scale(1.));
+    REQUIRE(face(1*21 + 2) ==Approx(2*.05 + .3).scale(1.));
+  }
 }

@@ -65,4 +65,10 @@ Eigen::VectorXd Vis_data::interior(int n_sample)
   return result;
 }
 
+Eigen::VectorXd Vis_data::face(int i_dim, bool is_positive, int n_sample)
+{
+  const int n_block = custom_math::pow(n_sample, n_dim - 1);
+  return Eigen::VectorXd::Zero(n_block*n_var);
+}
+
 }

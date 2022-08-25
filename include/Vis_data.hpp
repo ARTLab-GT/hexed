@@ -34,6 +34,8 @@ class Vis_data
    * layout: [n_var][n_sample]([n_sample]([n_sample]))
    */
   Eigen::VectorXd interior(int n_sample = 21);
+  // interpolate function t a uniformly-spaced block of sample_points on a specified face
+  Eigen::VectorXd face(int i_dim, bool is_positive, int n_sample = 21);
   // return function evaluated at quadratre points. layout: [n_var][n_qpoint]
   inline const Eigen::VectorXd& qpoints() {return vars;}
 };
