@@ -67,8 +67,18 @@ Eigen::VectorXd Vis_data::interior(int n_sample)
 
 Eigen::VectorXd Vis_data::face(int i_dim, bool is_positive, int n_sample)
 {
+  Eigen::MatrixXd interp {bas.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
+  Eigen::MatrixXd bound = bas.boundary()(is_positive, Eigen::all);
   const int n_block = custom_math::pow(n_sample, n_dim - 1);
-  return Eigen::VectorXd::Zero(n_block*n_var);
+  Eigen::VectorXd result(n_block*n_var);
+  for (int i_var = 0; i_var < n_var; ++i_var) {
+    // interpolate quadrature points to face quadrature points
+    auto var = vars(Eigen::seqN(i_var*n_qpoint, n_qpoint));
+    Eigen::VectorXd face_qpoints = custom_math::dimension_matvec(bound, var, i_dim);
+    // interpolate face quadrature points to uniformly spaced
+    result(Eigen::seqN(i_var*n_block, n_block)) = custom_math::hypercube_matvec(interp, face_qpoints);
+  }
+  return result;
 }
 
 }

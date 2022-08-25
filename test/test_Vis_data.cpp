@@ -99,7 +99,7 @@ TEST_CASE("Vis_data")
     REQUIRE(face.size() == 21*2);
     REQUIRE(face(0*21 + 0) ==Approx(0.).scale(1.));
     REQUIRE(face(1*21 + 0) ==Approx(0.).scale(1.));
-    REQUIRE(face(0*21 + 2) ==Approx(2*.05 + .8).scale(1.));
-    REQUIRE(face(1*21 + 2) ==Approx(2*.05 + .3).scale(1.));
+    REQUIRE(face(0*21 + 2) ==Approx(2*.05*.8).scale(1.));
+    REQUIRE(face(1*21 + 2) ==Approx(2*.05*.3).scale(1.));
   }
 }
