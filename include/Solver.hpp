@@ -88,7 +88,8 @@ class Solver
   #if CARTDG_USE_OTTER
   void visualize_edges_otter(otter::plot&, int n_sample = 21);
   // plot the surface with optional color mapping. plotting takes whatever form is appropriate for dimensionality
-  void visualize_surface_otter(otter::plot&, int bc_sn, const otter::colormap& = otter::const_colormap(otter::colors::base["w"]),
+  // note: color_by must be a scalar
+  void visualize_surface_otter(otter::plot&, int bc_sn, const otter::colormap& = otter::const_colormap(otter::colors::css4["darkgrey"]),
                                const Qpoint_func& color_by = Pressure(), int n_sample = 21);
   #endif
 };
