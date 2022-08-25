@@ -74,6 +74,17 @@ class Stag_pres : public Domain_func
                                          const std::vector<double> state) const;
 };
 
+class Pressure : public Domain_func
+{
+  double hr;
+  public:
+  Pressure(double heat_rat = 1.4);
+  virtual inline int n_var(int n_dim) const {return 1;}
+  virtual inline std::string variable_name(int i_var) const {return "pressure";}
+  virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
+                                         const std::vector<double> state) const;
+};
+
 class Velocity : public Domain_func
 {
   public:

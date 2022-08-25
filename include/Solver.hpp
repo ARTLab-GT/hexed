@@ -9,6 +9,8 @@
 #include "config.hpp"
 #ifdef CARTDG_USE_OTTER
 #include <otter/plot.hpp>
+#include <otter/colormap.hpp>
+#include <otter/colors.hpp>
 #endif
 
 namespace cartdg
@@ -84,7 +86,10 @@ class Solver
   void visualize_surface_tecplot(int bc_sn, std::string name, int n_sample = 20);
   #endif
   #if CARTDG_USE_OTTER
-  void visualize_edges_otter(otter::plot&, int n_sample = 20);
+  void visualize_edges_otter(otter::plot&, int n_sample = 21);
+  // plot the surface with optional color mapping. plotting takes whatever form is appropriate for dimensionality
+  void visualize_surface_otter(otter::plot&, int bc_sn, const otter::colormap& = otter::const_colormap(otter::colors::base["w"]),
+                               const Qpoint_func& color_by = Pressure(), int n_sample = 21);
   #endif
 };
 

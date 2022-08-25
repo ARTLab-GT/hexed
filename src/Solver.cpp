@@ -461,6 +461,10 @@ void Solver::visualize_edges_otter(otter::plot& plt, int n_sample)
     otter_vis::add_edges(plt, elements[i_elem], basis, n_sample);
   }
 }
+
+void Solver::visualize_surface_otter(otter::plot& plt, int bc_sn, const otter::colormap& cmap, const Qpoint_func& color_by, int n_sample)
+{
+}
 #endif
 
 }
