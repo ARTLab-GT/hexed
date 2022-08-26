@@ -81,4 +81,9 @@ Eigen::VectorXd Vis_data::face(int i_dim, bool is_positive, int n_sample)
   return result;
 }
 
+Eigen::MatrixXd Vis_data::sample(Eigen::MatrixXd ref_coords)
+{
+  return Eigen::MatrixXd::Zero(n_var, ref_coords.cols());
+}
+
 }

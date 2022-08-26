@@ -38,6 +38,17 @@ class Vis_data
   Eigen::VectorXd face(int i_dim, bool is_positive, int n_sample = 21);
   // return function evaluated at quadratre points. layout: [n_var][n_qpoint]
   inline const Eigen::VectorXd& qpoints() {return vars;}
+
+  struct contour
+  {
+    Eigen::MatrixXd vert_ref_coords;
+    Eigen::MatrixXd normals;
+    Eigen::MatrixXi elem_vert_inds;
+  };
+  // sample the function at a set of points given in reference coordinates
+  // input layout: [n_dim][n_sample]
+  // output layout: [n_var][n_sample]
+  Eigen::MatrixXd sample(Eigen::MatrixXd ref_coords);
 };
 
 }

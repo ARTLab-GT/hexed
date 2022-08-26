@@ -102,4 +102,13 @@ TEST_CASE("Vis_data")
     REQUIRE(face(0*21 + 2) ==Approx(2*.05*.8).scale(1.));
     REQUIRE(face(1*21 + 2) ==Approx(2*.05*.3).scale(1.));
   }
+
+  SECTION("sample")
+  {
+    auto sample = vis3.sample(Eigen::Matrix<double, 3, 2>{{.5, 1.}, {.5, 0.}, {.5, 0.}});
+    REQUIRE(sample.rows() == 3);
+    REQUIRE(sample.cols() == 2);
+    REQUIRE((sample(Eigen::all, 0) - Eigen::Vector3d{.45, .45, .45}).norm() == Approx(0.).scale(1.));
+    REQUIRE((sample(Eigen::all, 1) - Eigen::Vector3d{1., 0., 0.}).norm() == Approx(0.).scale(1.));
+  }
 }
