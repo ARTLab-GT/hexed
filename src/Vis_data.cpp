@@ -4,6 +4,28 @@
 namespace cartdg
 {
 
+Eigen::MatrixXd Vis_data::sample_qpoint_data(Eigen::VectorXd qpoint_data, Eigen::MatrixXd ref_coords)
+{
+  int nv = qpoint_data.size()/n_qpoint;
+  const int n_sample = ref_coords.cols();
+  Eigen::MatrixXd result(nv, n_sample);
+  for (int i_sample = 0; i_sample < n_sample; ++i_sample) {
+    // ith row is the interpolation matrix along the ith dimension
+    auto interp = bas.interpolate(ref_coords(Eigen::all, i_sample));
+    for (int i_var = 0; i_var < nv; ++i_var) {
+      // start with all the data for this variable
+      Eigen::VectorXd var = qpoint_data(Eigen::seqN(i_var*n_qpoint, n_qpoint));
+      // interpolate one dimension at a time
+      for (int i_dim = n_dim - 1; i_dim >= 0; --i_dim) {
+        var = custom_math::dimension_matvec(interp(i_dim, Eigen::all), var, i_dim);
+      }
+      // ...until all you have left is a vector with one element
+      result(i_var, i_sample) = var(0);
+    }
+  }
+  return result;
+}
+
 Vis_data::Vis_data(Element& elem, const Qpoint_func& func, const Basis& basis, double time) :
   n_dim{elem.storage_params().n_dim},
   n_edge{custom_math::pow(2, n_dim - 1)*n_dim},
@@ -83,7 +105,7 @@ Eigen::VectorXd Vis_data::face(int i_dim, bool is_positive, int n_sample)
 
 Eigen::MatrixXd Vis_data::sample(Eigen::MatrixXd ref_coords)
 {
-  return Eigen::MatrixXd::Zero(n_var, ref_coords.cols());
+  return sample_qpoint_data(vars, ref_coords);
 }
 
 }

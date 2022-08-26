@@ -21,6 +21,7 @@ class Vis_data
   int n_var;
   const Basis& bas;
   Eigen::VectorXd vars;
+  Eigen::MatrixXd sample_qpoint_data(Eigen::VectorXd qpoint_data, Eigen::MatrixXd ref_coords);
 
   public:
   Vis_data(Element&, const Qpoint_func&, const Basis&, double time = 0.);
@@ -42,7 +43,7 @@ class Vis_data
   struct contour
   {
     Eigen::MatrixXd vert_ref_coords;
-    Eigen::MatrixXd normals;
+    Eigen::MatrixXd normals; // normals in physical space (not reference)
     Eigen::MatrixXi elem_vert_inds;
   };
   // sample the function at a set of points given in reference coordinates
