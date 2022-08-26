@@ -362,6 +362,17 @@ std::vector<double> Solver::integral_surface(const Surface_func& integrand, int 
   return integral;
 };
 
+std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func, int n_sample)
+{
+  std::vector<std::array<double, 2>> bounds(func.n_var(params.n_dim));
+  auto& elems = acc_mesh.elements();
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem)
+  {
+    Element& elem {elems[i_elem]};
+  }
+  return bounds;
+}
+
 #if CARTDG_USE_TECPLOT
 void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::string name, int n_sample)
 {
@@ -474,10 +485,13 @@ void Solver::visualize_surface_otter(otter::plot& plt, int bc_sn, const otter::c
       // fetch face data
       Vis_data vis_pos(con.element(), Position(), basis, status.flow_time);
       Vis_data vis_var(con.element(),   color_by, basis, status.flow_time);
+      // interpolate to boundary face
       auto dir = con.direction();
       Eigen::MatrixXd face_pos = vis_pos.face(dir.i_dim[0], dir.face_sign[0], n_sample);
       Eigen::VectorXd face_var = vis_var.face(dir.i_dim[0], dir.face_sign[0], n_sample);
+      // transform so that bounds[0] is the bottom of the color map and bounds[1] is the top
       face_var = (face_var - Eigen::VectorXd::Constant(face_var.size(), bounds[0]))/(bounds[1] - bounds[0]);
+      // add to plot
       if (params.n_dim == 3) {
         face_pos.resize(n_sample*n_sample, params.n_dim);
         otter::surface surf(n_sample, face_pos, cmap(face_var));

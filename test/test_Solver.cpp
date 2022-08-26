@@ -154,7 +154,7 @@ TEST_CASE("Solver")
   static_assert (cartdg::config::max_row_size >= 3); // this test was written for row size 3
   cartdg::Solver sol {2, 3, 0.8};
 
-  SECTION("initialization and sampling")
+  SECTION("initialization, sampling, and bounds")
   {
     sol.mesh().add_element(0, false, {0, 0, 0});
     int sn0 = sol.mesh().add_element(0, false, {1, 0, 0});
@@ -170,6 +170,12 @@ TEST_CASE("Solver")
     sample = sol.sample(2, true, sn1, 4, cartdg::State_variables());
     REQUIRE(sample.size() == 4);
     REQUIRE(sample[0] == Approx(-0.1*0.1));
+    auto bounds = sol.bounds_field(cartdg::State_variables());
+    REQUIRE(bounds.size() == 4);
+    REQUIRE(bounds[0][0] == Approx(0.).scale(1.));
+    REQUIRE(bounds[0][1] == Approx(.8*.8).scale(1.));
+    REQUIRE(bounds[2][0] == Approx(2.).scale(1.));
+    REQUIRE(bounds[2][1] == Approx(2.).scale(1.));
   }
 
   SECTION("vertex relaxation")
