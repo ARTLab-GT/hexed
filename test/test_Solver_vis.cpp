@@ -1,12 +1,16 @@
 #include <catch2/catch.hpp>
+#include <config.hpp>
 #include <Solver.hpp>
 
 TEST_CASE("Solver visualization")
 {
-  cartdg::Solver sol {3, 2, .1};
+  cartdg::Solver sol {3, cartdg::config::max_row_size, 1.};
   sol.mesh().add_element(0, true, {0, 0, 0});
   sol.mesh().extrude();
-  sol.initialize(cartdg::Isentropic_vortex({1., 0., 0., .01, 1./.4 + .5*100.}));
+  sol.calc_jacobian();
+  cartdg::Isentropic_vortex vortex({1., 0., 0., .01, 1./.4 + .5*100.});
+  vortex.argmax_radius = 1.;
+  sol.initialize(vortex);
   int bc_sn = sol.mesh().add_boundary_condition(new cartdg::Nonpenetration, new cartdg::Null_mbc);
   sol.mesh().connect_rest(bc_sn);
   #if CARTDG_USE_OTTER
@@ -15,7 +19,7 @@ TEST_CASE("Solver visualization")
   sol.visualize_edges_otter(plt);
   plt.show();
   SECTION("surface") {
-    sol.visualize_surface_otter(plt, bc_sn, otter::plasma);
+    sol.visualize_surface_otter(plt, bc_sn, otter::plasma, cartdg::Pressure(), {.999, 1});
     plt.show();
   }
   #endif

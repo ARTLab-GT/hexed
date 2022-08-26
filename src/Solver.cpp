@@ -462,10 +462,8 @@ void Solver::visualize_edges_otter(otter::plot& plt, int n_sample)
   }
 }
 
-void Solver::visualize_surface_otter(otter::plot& plt, int bc_sn, const otter::colormap& cmap, const Qpoint_func& color_by, int n_sample)
+void Solver::visualize_surface_otter(otter::plot& plt, int bc_sn, const otter::colormap& cmap, const Qpoint_func& color_by, std::array<double, 2> bounds, int n_sample)
 {
-  // write the state to the faces so that the BCs can access it
-  (*kernel_factory<Write_face>(params.n_dim, params.row_size, basis))(acc_mesh.elements());
   // iterate through boundary connections and visualize an `otter::surface` for each
   auto& bc_cons {acc_mesh.boundary_connections()};
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con)
@@ -479,6 +477,7 @@ void Solver::visualize_surface_otter(otter::plot& plt, int bc_sn, const otter::c
       auto dir = con.direction();
       Eigen::MatrixXd face_pos = vis_pos.face(dir.i_dim[0], dir.face_sign[0], n_sample);
       Eigen::VectorXd face_var = vis_var.face(dir.i_dim[0], dir.face_sign[0], n_sample);
+      face_var = (face_var - Eigen::VectorXd::Constant(face_var.size(), bounds[0]))/(bounds[1] - bounds[0]);
       if (params.n_dim == 3) {
         face_pos.resize(n_sample*n_sample, params.n_dim);
         otter::surface surf(n_sample, face_pos, cmap(face_var));
