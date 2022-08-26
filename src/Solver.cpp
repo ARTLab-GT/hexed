@@ -364,11 +364,22 @@ std::vector<double> Solver::integral_surface(const Surface_func& integrand, int 
 
 std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func, int n_sample)
 {
-  std::vector<std::array<double, 2>> bounds(func.n_var(params.n_dim));
+  const int n_var = func.n_var(params.n_dim);
+  std::vector<std::array<double, 2>> bounds(n_var);
+  for (int i_var = 0; i_var < n_var; ++i_var) {
+    bounds[i_var] = {std::numeric_limits<double>::max(), -std::numeric_limits<double>::max()};
+  }
+  const int n_block = custom_math::pow(n_sample, params.n_dim);
   auto& elems = acc_mesh.elements();
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem)
   {
     Element& elem {elems[i_elem]};
+    Eigen::VectorXd vars = Vis_data(elem, func, basis, status.flow_time).interior(n_sample);
+    for (int i_var = 0; i_var < n_var; ++i_var) {
+      auto var = vars(Eigen::seqN(i_var*n_block, n_block));
+      bounds[i_var][0] = std::min(var.minCoeff(), bounds[i_var][0]);
+      bounds[i_var][1] = std::max(var.maxCoeff(), bounds[i_var][1]);
+    }
   }
   return bounds;
 }

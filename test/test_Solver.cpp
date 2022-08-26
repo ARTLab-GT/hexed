@@ -172,8 +172,8 @@ TEST_CASE("Solver")
     REQUIRE(sample[0] == Approx(-0.1*0.1));
     auto bounds = sol.bounds_field(cartdg::State_variables());
     REQUIRE(bounds.size() == 4);
-    REQUIRE(bounds[0][0] == Approx(0.).scale(1.));
-    REQUIRE(bounds[0][1] == Approx(.8*.8).scale(1.));
+    REQUIRE(bounds[0][0] == Approx(-.2*.2).scale(1.));
+    REQUIRE(bounds[0][1] == Approx(1.6*.8).scale(1.));
     REQUIRE(bounds[2][0] == Approx(2.).scale(1.));
     REQUIRE(bounds[2][1] == Approx(2.).scale(1.));
   }
