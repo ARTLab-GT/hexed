@@ -92,8 +92,9 @@ class Solver
   void visualize_edges_otter(otter::plot&, int n_sample = 21);
   // plot the surface with optional color mapping. plotting takes whatever form is appropriate for dimensionality
   // note: color_by must be a scalar
+  // if either element of `bounds` is NaN, will substitute min & max of variable in domain
   void visualize_surface_otter(otter::plot&, int bc_sn, const otter::colormap& = otter::const_colormap(otter::colors::css4["darkgrey"]),
-                               const Qpoint_func& color_by = Pressure(), std::array<double, 2> bounds = {0, 1}, int n_sample = 21);
+                               const Qpoint_func& color_by = Pressure(), std::array<double, 2> bounds = {std::nan(""), std::nan("")}, int n_sample = 21);
   #endif
 };
 

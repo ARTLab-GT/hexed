@@ -486,6 +486,11 @@ void Solver::visualize_edges_otter(otter::plot& plt, int n_sample)
 
 void Solver::visualize_surface_otter(otter::plot& plt, int bc_sn, const otter::colormap& cmap, const Qpoint_func& color_by, std::array<double, 2> bounds, int n_sample)
 {
+  if (color_by.n_var(params.n_dim) != 1) throw std::runtime_error("`color_by` must be scalar");
+  // substitute bounds if necessary
+  if (std::isnan(bounds[0]) || std::isnan(bounds[1])) {
+    bounds = bounds_field(color_by)[0];
+  }
   // iterate through boundary connections and visualize an `otter::surface` for each
   auto& bc_cons {acc_mesh.boundary_connections()};
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con)
