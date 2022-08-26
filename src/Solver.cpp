@@ -516,6 +516,11 @@ void Solver::visualize_surface_otter(otter::plot& plt, int bc_sn, const otter::c
     }
   }
 }
+
+void Solver::visualize_field_otter(otter::plot& plt, const Qpoint_func& contour, int n_contour,
+                                   std::array<double, 2> bounds, const otter::colormap&, bool transparent, int n_sample)
+{
+}
 #endif
 
 }

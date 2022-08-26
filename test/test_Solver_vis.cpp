@@ -17,9 +17,12 @@ TEST_CASE("Solver visualization")
   otter::plot plt;
   plt.set_orthographic(true);
   sol.visualize_edges_otter(plt);
-  plt.show();
   SECTION("surface") {
     sol.visualize_surface_otter(plt, bc_sn, otter::plasma);
+    plt.show();
+  }
+  SECTION("field") {
+    sol.visualize_field_otter(plt);
     plt.show();
   }
   #endif
