@@ -131,7 +131,8 @@ TEST_CASE("Vis_data")
     SECTION("corner")
     {
       cartdg::Element elem({2, 5, 3, cartdg::config::max_row_size});
-      cartdg::Vis_data vis(elem, Rad_sq({0, 1, 0}), basis);
+      Rad_sq func({0, 1, 0});
+      cartdg::Vis_data vis(elem, func, basis);
       auto con = vis.compute_contour(.04, 2); // exact contour is quarter-sphere with radius .2 centered at (0, 1, 0)
       REQUIRE(con.vert_ref_coords.rows() == 7);
       REQUIRE(con.vert_ref_coords.cols() == 3);
@@ -139,6 +140,12 @@ TEST_CASE("Vis_data")
       REQUIRE(con.normals.cols() == 3);
       // don't test number of quads because there are some degenerate ones
       REQUIRE(con.elem_vert_inds.cols() == 4);
+      // test vertices are approximately on the correct contour surface
+      for (int i_vert = 0; i_vert < con.vert_ref_coords.rows(); ++i_vert) {
+        std::vector<double> pos(3);
+        for (int i_dim = 0; i_dim < 3; ++i_dim) pos[i_dim] = con.vert_ref_coords(i_vert, i_dim);
+        REQUIRE(func(pos, 0.)[0] == Approx(.04).margin(1e-6));
+      }
     }
     SECTION("center")
     {

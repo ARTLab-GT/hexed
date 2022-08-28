@@ -109,7 +109,7 @@ Eigen::MatrixXd Vis_data::sample(Eigen::MatrixXd ref_coords)
   return sample_qpoint_data(vars, ref_coords);
 }
 
-Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int i_var)
+Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int i_var, int n_newton)
 {
   Contour con;
   auto sample = interior(n_div + 1);
@@ -118,6 +118,7 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int i_var)
   const int n_corner = custom_math::pow(2, n_dim - 1);
   Eigen::VectorXi i_contour = Eigen::VectorXi::Constant(n_block, -1);
   std::vector<int> i_block;
+  std::vector<Eigen::VectorXd> directions;
   std::vector<int> faces;
   std::vector<int> strides_sample;
   std::vector<int> strides_block;
@@ -154,9 +155,11 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int i_var)
               if (i_contour(vert) < 0) {
                 ib = i_block.size();
                 i_block.push_back(vert);
+                directions.push_back(Eigen::VectorXd::Zero(n_dim));
                 i_contour(vert) = ib;
               } else ib = i_contour(vert);
               verts[i_vert] = ib;
+              directions[ib][i_dim] += (1 - 2*(sample[sample0] > value));;
             }
             for (int i_elem = 0; i_elem < n_corner; ++i_elem) {
               for (int i_corner = 0; i_corner < n_corner; ++i_corner) {
@@ -179,14 +182,27 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int i_var)
       con.vert_ref_coords(i, i_dim) = ((i_block[i]/strides_block[i_dim])%(2*n_div + 1))/(2.*n_div);
     }
   }
-  con.normals.resize(i_block.size(), n_dim);
-  con.normals.setZero();
+  Eigen::VectorXd gradient(n_qpoint*n_dim);
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+    gradient(Eigen::seqN(i_dim*n_qpoint, n_qpoint)) = custom_math::dimension_matvec(bas.diff_mat(), vars, i_dim);
+  }
+  for (int i_newton = 0; i_newton < n_newton; ++i_newton) {
+    for (int i_vert = 0; i_vert < con.vert_ref_coords.rows(); ++i_vert) {
+      auto coords = con.vert_ref_coords(i_vert, Eigen::all);
+      double curr_value = sample_qpoint_data(vars, coords.transpose())(0);
+      Eigen::VectorXd grad = sample_qpoint_data(gradient, coords.transpose());
+      auto dir = directions[i_vert].transpose();
+      coords += dir*(value - curr_value)/(dir*grad);
+    }
+  }
   con.elem_vert_inds.resize(faces.size()/n_corner, n_corner);
   for (int i_elem = 0; i_elem < int(faces.size())/n_corner; ++i_elem) {
     for (int i_corner = 0; i_corner < n_corner; ++i_corner) {
       con.elem_vert_inds(i_elem, i_corner) = faces[i_elem*n_corner + i_corner];
     }
   }
+  con.normals.resize(i_block.size(), n_dim);
+  con.normals.setZero();
   return con;
 }
 

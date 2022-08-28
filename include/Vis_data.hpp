@@ -52,7 +52,7 @@ class Vis_data
   Eigen::MatrixXd sample(Eigen::MatrixXd ref_coords);
   // compute a contour line/surface where the `i_var`th variable is equal to `value`
   // the number of sample points in each direction is `2*n_div + 1`
-  Contour compute_contour(double value, int n_div = 10, int i_var = 0);
+  Contour compute_contour(double value, int n_div = 10, int i_var = 0, int n_newton = 4);
 };
 
 }
