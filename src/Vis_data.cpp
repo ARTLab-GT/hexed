@@ -1,5 +1,8 @@
 #include <Vis_data.hpp>
 #include <math.hpp>
+#include <otter/plot.hpp>
+#include <otter/colors.hpp>
+#include <iostream>
 
 namespace cartdg
 {
@@ -106,6 +109,82 @@ Eigen::VectorXd Vis_data::face(int i_dim, bool is_positive, int n_sample)
 Eigen::MatrixXd Vis_data::sample(Eigen::MatrixXd ref_coords)
 {
   return sample_qpoint_data(vars, ref_coords);
+}
+
+Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int i_var)
+{
+  otter::plot plt;
+  Contour con;
+  auto sample = interior(n_div + 1);
+  const int n_sample = sample.size();
+  const int n_block = custom_math::pow(2*n_div + 1, n_dim);
+  Eigen::VectorXi i_contour = Eigen::VectorXi::Constant(n_block, -1);
+  std::vector<int> i_block;
+  std::vector<int> faces;
+  std::vector<int> strides_sample;
+  std::vector<int> strides_block;
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+    strides_sample.push_back(custom_math::pow(n_div + 1, n_dim - 1 - i_dim));
+    strides_block.push_back(custom_math::pow(2*n_div + 1, n_dim - 1 - i_dim));
+  }
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+    int stride = custom_math::pow(n_div + 1, n_dim - i_dim - 1);
+    for (int i_outer = 0; i_outer < n_sample/stride/(n_div + 1); ++i_outer) {
+      for (int i_inner = 0; i_inner < stride; ++i_inner) {
+        for (int i_row = 0; i_row < n_div; ++i_row) { // don't do the last point
+          int sample0 = (i_outer*(n_div + 1) + i_row)*stride + i_inner;
+          int sample1 = sample0 + stride;
+          Eigen::VectorXd coords(n_dim);
+          for (int j_dim = 0; j_dim < n_dim; ++j_dim) coords(j_dim) = ((sample0/strides_sample[j_dim])%(n_div + 1))/double(n_div);
+          plt.add(otter::points(coords.transpose(), otter::colors::tableau[1]));
+          if ((sample[sample0] > value) != (sample[sample1] > value)) {
+            int block = strides_block[i_dim];
+            bool boundary [3][2];
+            for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+              int row = (sample0/strides_sample[j_dim])%(n_div + 1);
+              boundary[j_dim][0] = row == 0;
+              boundary[j_dim][1] = row == n_div;
+              block += row*2*strides_block[j_dim];
+            }
+            int n_vert = custom_math::pow(3, n_dim - 1);
+            std::vector<int> verts(n_vert);
+            for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
+              int vert = block;
+              for (int j_dim = 0, k_dim = 0; j_dim < n_dim; ++j_dim) if (j_dim != i_dim) {
+                int row_incr = ((i_vert/custom_math::pow(3, n_dim - 2 - k_dim))%3 - 1);
+                vert += (!boundary[j_dim][row_incr > 0])*((i_vert/custom_math::pow(3, n_dim - 2 - k_dim))%3 - 1)*strides_block[j_dim];
+                ++k_dim;
+              }
+              int ib;
+              for (int j_dim = 0; j_dim < n_dim; ++j_dim) coords(j_dim) = ((vert/strides_block[j_dim])%(2*n_div + 1))/(2.*n_div);
+              plt.add(otter::points(coords.transpose(), otter::colors::tableau[2]));
+              if (i_contour(vert) < 0) {
+                ib = i_block.size();
+                i_block.push_back(vert);
+                i_contour(vert) = ib;
+              } else ib = i_contour(vert);
+              verts[i_vert] = ib;
+            }
+          }
+        }
+      }
+    }
+  }
+  con.vert_ref_coords.resize(i_block.size(), n_dim);
+  for (unsigned i = 0; i < i_block.size(); ++i) {
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      con.vert_ref_coords(i, i_dim) = ((i_block[i]/strides_block[i_dim])%(2*n_div + 1))/(2.*n_div);
+    }
+  }
+  con.normals.resize(i_block.size(), n_dim);
+  con.normals.setZero();
+  Eigen::MatrixXd verts(8, 3);
+  for (int i = 0; i < 2; ++i) for (int j = 0; j < 2; ++j) for (int k = 0; k < 2; ++k) {
+      verts(k + 2*(j + 2*i), Eigen::all) << i, j, k;
+  }
+  plt.add(otter::points(verts, otter::colors::tableau[0]));
+  plt.show();
+  return con;
 }
 
 }

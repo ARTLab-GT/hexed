@@ -6,6 +6,20 @@
 #include <config.hpp>
 #include <Spacetime_func.hpp>
 
+class Rad_sq : public cartdg::Spacetime_func
+{
+  Eigen::Vector3d center;
+  public:
+  Rad_sq(Eigen::Vector3d c) : center{c} {}
+  virtual int n_var(int n_dim) const {return 1;}
+  virtual std::vector<double> operator()(std::vector<double> pos, double time) const
+  {
+    Eigen::Map<Eigen::VectorXd> p(pos.data(), pos.size());
+    Eigen::Vector3d q = p - center;
+    return {(q.transpose()*q)[0]};
+  }
+};
+
 TEST_CASE("Vis_data")
 {
   // create some arbitrarily-shaped elements
@@ -97,10 +111,10 @@ TEST_CASE("Vis_data")
   {
     auto face = vis2.face(1, 0);
     REQUIRE(face.size() == 21*2);
-    REQUIRE(face(0*21 + 0) ==Approx(0.).scale(1.));
-    REQUIRE(face(1*21 + 0) ==Approx(0.).scale(1.));
-    REQUIRE(face(0*21 + 2) ==Approx(2*.05*.8).scale(1.));
-    REQUIRE(face(1*21 + 2) ==Approx(2*.05*.3).scale(1.));
+    REQUIRE(face(0*21 + 0) == Approx(0.).scale(1.));
+    REQUIRE(face(1*21 + 0) == Approx(0.).scale(1.));
+    REQUIRE(face(0*21 + 2) == Approx(2*.05*.8).scale(1.));
+    REQUIRE(face(1*21 + 2) == Approx(2*.05*.3).scale(1.));
   }
 
   SECTION("sample")
@@ -110,5 +124,33 @@ TEST_CASE("Vis_data")
     REQUIRE(sample.cols() == 2);
     REQUIRE((sample(Eigen::all, 0) - Eigen::VectorXd::Constant(3, .5 - .1/8.)).norm() == Approx(0.).scale(1.));
     REQUIRE((sample(Eigen::all, 1) - Eigen::Vector3d{1., 0., 0.}).norm() == Approx(0.).scale(1.));
+  }
+
+  SECTION("contour")
+  {
+    SECTION("corner")
+    {
+      cartdg::Element elem({2, 5, 3, cartdg::config::max_row_size});
+      cartdg::Vis_data vis(elem, Rad_sq({0, 1, 0}), basis);
+      auto con = vis.compute_contour(.04, 2); // exact contour is quarter-sphere with radius .2 centered at (0, 1, 0)
+      REQUIRE(con.vert_ref_coords.rows() == 7);
+      REQUIRE(con.vert_ref_coords.cols() == 3);
+      REQUIRE(con.normals.rows() == 7);
+      REQUIRE(con.normals.cols() == 3);
+      REQUIRE(con.elem_vert_inds.rows() == 3);
+      REQUIRE(con.elem_vert_inds.cols() == 4);
+    }
+    SECTION("center")
+    {
+      cartdg::Element elem({2, 5, 3, cartdg::config::max_row_size});
+      cartdg::Vis_data vis(elem, Rad_sq({.5, .5, .5}), basis);
+      auto con = vis.compute_contour(.04, 2); // exact contour is sphere with radius .2 centered at (.5, .5, .5)
+      REQUIRE(con.vert_ref_coords.rows() == 26);
+      REQUIRE(con.vert_ref_coords.cols() == 3);
+      REQUIRE(con.normals.rows() == 26);
+      REQUIRE(con.normals.cols() == 3);
+      REQUIRE(con.elem_vert_inds.rows() == 24);
+      REQUIRE(con.elem_vert_inds.cols() == 4);
+    }
   }
 }
