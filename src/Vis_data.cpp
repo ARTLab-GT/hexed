@@ -118,6 +118,7 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int i_var)
   auto sample = interior(n_div + 1);
   const int n_sample = sample.size();
   const int n_block = custom_math::pow(2*n_div + 1, n_dim);
+  const int n_corner = custom_math::pow(2, n_dim - 1);
   Eigen::VectorXi i_contour = Eigen::VectorXi::Constant(n_block, -1);
   std::vector<int> i_block;
   std::vector<int> faces;
@@ -165,6 +166,16 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int i_var)
               } else ib = i_contour(vert);
               verts[i_vert] = ib;
             }
+            for (int i_elem = 0; i_elem < n_corner; ++i_elem) {
+              for (int i_corner = 0; i_corner < n_corner; ++i_corner) {
+                int i_vert = 0;
+                for (int j_dim = 0; j_dim < n_dim - 1; ++j_dim) {
+                  int stride = custom_math::pow(2, n_dim - 2 - j_dim);
+                  i_vert += ((i_elem/stride)%2 + (i_corner/stride)%2)*custom_math::pow(3, n_dim - 2 - j_dim);
+                }
+                faces.push_back(verts[i_vert]);
+              }
+            }
           }
         }
       }
@@ -178,6 +189,12 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int i_var)
   }
   con.normals.resize(i_block.size(), n_dim);
   con.normals.setZero();
+  con.elem_vert_inds.resize(faces.size()/n_corner, n_corner);
+  for (int i_elem = 0; i_elem < int(faces.size())/n_corner; ++i_elem) {
+    for (int i_corner = 0; i_corner < n_corner; ++i_corner) {
+      con.elem_vert_inds(i_elem, i_corner) = faces[i_elem*n_corner + i_corner];
+    }
+  }
   Eigen::MatrixXd verts(8, 3);
   for (int i = 0; i < 2; ++i) for (int j = 0; j < 2; ++j) for (int k = 0; k < 2; ++k) {
       verts(k + 2*(j + 2*i), Eigen::all) << i, j, k;

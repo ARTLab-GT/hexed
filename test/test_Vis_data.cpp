@@ -137,7 +137,7 @@ TEST_CASE("Vis_data")
       REQUIRE(con.vert_ref_coords.cols() == 3);
       REQUIRE(con.normals.rows() == 7);
       REQUIRE(con.normals.cols() == 3);
-      REQUIRE(con.elem_vert_inds.rows() == 3);
+      // don't test number of quads because there are some degenerate ones
       REQUIRE(con.elem_vert_inds.cols() == 4);
     }
     SECTION("center")
