@@ -16,6 +16,12 @@ std::vector<double> Constant_func::operator()(std::vector<double> pos, double ti
   return value;
 }
 
+std::vector<double> Linear::operator()(std::vector<double> pos, double time) const
+{
+  int min_size = std::min<int>(coefs.size(), pos.size());
+  return {(coefs(Eigen::seq(0, min_size))*Eigen::Map<Eigen::VectorXd>(pos.data(), min_size))[0]};
+}
+
 Isentropic_vortex::Isentropic_vortex(std::vector<double> state) : freestream(state) {}
 
 std::vector<double> Isentropic_vortex::operator()(std::vector<double> pos, double time) const

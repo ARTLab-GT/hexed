@@ -22,7 +22,7 @@ struct color_spec
 
 void add_edges(otter::plot&, Element&, const Basis&, int n_div = 20);
 void add_contour(otter::plot&, Element&, const Basis&, const Qpoint_func&, double,
-                 int n_div = 10, color_spec = {});
+                 int n_div = 10, color_spec = {}, double time = 0., int i_var = 0);
 
 }
 #endif

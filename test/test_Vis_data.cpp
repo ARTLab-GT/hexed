@@ -28,8 +28,8 @@ TEST_CASE("Vis_data")
   cartdg::Gauss_legendre basis(cartdg::config::max_row_size);
   elem3.vertex(7).pos = {.9, .9, .9};
   elem2.vertex(2).pos = {.8, .3, 0.};
-  cartdg::Vis_data vis3(elem3, cartdg::Position(), basis);
-  cartdg::Vis_data vis2(elem2, cartdg::Position(), basis);
+  cartdg::Vis_data vis3(elem3, cartdg::Position_func(), basis);
+  cartdg::Vis_data vis2(elem2, cartdg::Position_func(), basis);
   cartdg::Vis_data vis_const(elem2, cartdg::Constant_func({0.3, 0.4, 0.5, 0.6}), basis);
 
   SECTION("edges")

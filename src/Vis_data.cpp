@@ -1,7 +1,5 @@
 #include <Vis_data.hpp>
 #include <math.hpp>
-#include <otter/plot.hpp>
-#include <otter/colors.hpp>
 #include <iostream>
 
 namespace cartdg
@@ -113,7 +111,6 @@ Eigen::MatrixXd Vis_data::sample(Eigen::MatrixXd ref_coords)
 
 Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int i_var)
 {
-  otter::plot plt;
   Contour con;
   auto sample = interior(n_div + 1);
   const int n_sample = sample.size();
@@ -135,9 +132,6 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int i_var)
         for (int i_row = 0; i_row < n_div; ++i_row) { // don't do the last point
           int sample0 = (i_outer*(n_div + 1) + i_row)*stride + i_inner;
           int sample1 = sample0 + stride;
-          Eigen::VectorXd coords(n_dim);
-          for (int j_dim = 0; j_dim < n_dim; ++j_dim) coords(j_dim) = ((sample0/strides_sample[j_dim])%(n_div + 1))/double(n_div);
-          plt.add(otter::points(coords.transpose(), otter::colors::tableau[1]));
           if ((sample[sample0] > value) != (sample[sample1] > value)) {
             int block = strides_block[i_dim];
             bool boundary [3][2];
@@ -157,8 +151,6 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int i_var)
                 ++k_dim;
               }
               int ib;
-              for (int j_dim = 0; j_dim < n_dim; ++j_dim) coords(j_dim) = ((vert/strides_block[j_dim])%(2*n_div + 1))/(2.*n_div);
-              plt.add(otter::points(coords.transpose(), otter::colors::tableau[2]));
               if (i_contour(vert) < 0) {
                 ib = i_block.size();
                 i_block.push_back(vert);
@@ -195,12 +187,6 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int i_var)
       con.elem_vert_inds(i_elem, i_corner) = faces[i_elem*n_corner + i_corner];
     }
   }
-  Eigen::MatrixXd verts(8, 3);
-  for (int i = 0; i < 2; ++i) for (int j = 0; j < 2; ++j) for (int k = 0; k < 2; ++k) {
-      verts(k + 2*(j + 2*i), Eigen::all) << i, j, k;
-  }
-  plt.add(otter::points(verts, otter::colors::tableau[0]));
-  plt.show();
   return con;
 }
 

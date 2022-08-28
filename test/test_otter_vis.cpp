@@ -3,6 +3,7 @@
 #include <catch2/catch.hpp>
 #include <Deformed_element.hpp>
 #include <Gauss_legendre.hpp>
+#include <Spacetime_func.hpp>
 
 TEST_CASE("otter_vis")
 {
@@ -11,7 +12,15 @@ TEST_CASE("otter_vis")
   elem.vertex(3).pos = {-.2, 1., 1.};
   otter::plot plt;
   plt.set_orthographic(true);
-  cartdg::otter_vis::add_edges(plt, elem, cartdg::Gauss_legendre(cartdg::config::max_row_size));
+  auto basis = cartdg::Gauss_legendre(cartdg::config::max_row_size);
+  cartdg::otter_vis::add_edges(plt, elem, basis);
+  cartdg::otter_vis::color_spec spec {
+    cartdg::Linear(Eigen::Vector3d{1., 0., 0.}),
+    {0., 1.},
+    otter::plasma,
+  };
+  cartdg::otter_vis::add_contour(plt, elem, basis, cartdg::Linear(Eigen::Vector3d{1., 1., 1.}),
+                                 1., 10, spec);
   plt.show();
 }
 #endif

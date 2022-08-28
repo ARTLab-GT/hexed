@@ -398,7 +398,7 @@ void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::s
   for (int i_elem = 0; i_elem < acc_mesh.elements().size(); ++i_elem)
   {
     Element& elem {acc_mesh.elements()[i_elem]};
-    Vis_data vis_pos(elem, cartdg::Position(), basis, status.flow_time);
+    Vis_data vis_pos(elem, cartdg::Position_func(), basis, status.flow_time);
     Vis_data vis_out(elem, output_variables, basis, status.flow_time);
     // note: each visualization stage is enclosed in `{}` to ensure that only one `Tecplot_file::Zone` is alive at a time
     // visualize edges
@@ -499,7 +499,7 @@ void Solver::visualize_surface_otter(otter::plot& plt, int bc_sn, const otter::c
     if (con.bound_cond_serial_n() == bc_sn)
     {
       // fetch face data
-      Vis_data vis_pos(con.element(), Position(), basis, status.flow_time);
+      Vis_data vis_pos(con.element(), Position_func(), basis, status.flow_time);
       Vis_data vis_var(con.element(),   color_by, basis, status.flow_time);
       // interpolate to boundary face
       auto dir = con.direction();
