@@ -167,6 +167,7 @@ TEST_CASE("Vis_data")
       for (int i_vert = 1; i_vert < 4; i_vert += 2) {
         elem.vertex(i_vert).pos[0] += 0.5;
       }
+      elem.set_jacobian(basis);
       cartdg::Vis_data vis(elem, cartdg::Linear(Eigen::Vector2d{1., 0.}), basis);
       auto con = vis.compute_contour(.5, 3);
       for (int i_vert = 0; i_vert < con.vert_ref_coords.rows(); ++i_vert) {

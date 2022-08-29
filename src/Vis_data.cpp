@@ -33,6 +33,7 @@ Vis_data::Vis_data(Element& elem, const Qpoint_func& func, const Basis& basis, d
   row_size{elem.storage_params().row_size},
   n_qpoint{elem.storage_params().n_qpoint()},
   n_var{func.n_var(n_dim)},
+  el{elem},
   bas{basis},
   vars(n_qpoint*n_var)
 {
@@ -196,10 +197,20 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int i_var, 
     }
   }
   con.normals.resize(i_block.size(), n_dim);
+  Eigen::VectorXd qpoint_jac(n_dim*n_dim*n_qpoint);
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+    for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        qpoint_jac((i_dim*n_dim + j_dim)*n_qpoint + i_qpoint) = el.jacobian(i_dim, j_dim, i_qpoint);
+      }
+    }
+  }
   for (unsigned i_vert = 0; i_vert < i_block.size(); ++i_vert) {
     Eigen::VectorXd coords = con.vert_ref_coords(i_vert, Eigen::all).transpose();
     Eigen::VectorXd grad = sample_qpoint_data(gradient, coords);
-    con.normals(i_vert, Eigen::all) = grad.normalized();
+    Eigen::MatrixXd jac_t = sample_qpoint_data(qpoint_jac, coords); // n_dim*n_dim by 1
+    jac_t.resize(n_dim, n_dim); // automatically transposed bc of storage order
+    con.normals(i_vert, Eigen::all) = (jac_t.householderQr().solve(grad)).normalized();
   }
   con.elem_vert_inds.resize(faces.size()/n_corner, n_corner);
   for (int i_elem = 0; i_elem < int(faces.size())/n_corner; ++i_elem) {

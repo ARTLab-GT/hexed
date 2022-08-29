@@ -10,9 +10,10 @@ TEST_CASE("otter_vis")
   cartdg::Deformed_element elem({2, 5, 3, cartdg::config::max_row_size});
   elem.vertex(0).pos = {.1, .2, .2};
   elem.vertex(3).pos = {-.2, 1., 1.};
+  auto basis = cartdg::Gauss_legendre(cartdg::config::max_row_size);
+  elem.set_jacobian(basis);
   otter::plot plt;
   plt.set_orthographic(true);
-  auto basis = cartdg::Gauss_legendre(cartdg::config::max_row_size);
   cartdg::otter_vis::add_edges(plt, elem, basis);
   cartdg::otter_vis::color_spec spec {
     cartdg::Linear(Eigen::Vector3d{1., 0., 0.}),

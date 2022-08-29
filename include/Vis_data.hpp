@@ -19,6 +19,7 @@ class Vis_data
   int row_size;
   int n_qpoint;
   int n_var;
+  Element& el;
   const Basis& bas;
   Eigen::VectorXd vars;
   Eigen::MatrixXd sample_qpoint_data(Eigen::VectorXd qpoint_data, Eigen::MatrixXd ref_coords);
