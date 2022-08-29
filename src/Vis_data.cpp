@@ -162,6 +162,7 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int i_var, 
               verts[i_vert] = ib;
               directions[ib][i_dim] += (1 - 2*(sample[sample0] > value));;
             }
+            bool flip = (sample[sample0] > value) != (i_dim == 1);
             for (int i_elem = 0; i_elem < n_corner; ++i_elem) {
               for (int i_corner = 0; i_corner < n_corner; ++i_corner) {
                 int i_vert = 0;
@@ -170,6 +171,12 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int i_var, 
                   i_vert += ((i_elem/stride)%2 + (i_corner/stride)%2)*custom_math::pow(3, n_dim - 2 - j_dim);
                 }
                 faces.push_back(verts[i_vert]);
+              }
+              if (flip) {
+                auto start = faces.end() - n_corner;
+                for (int i_row = 0; i_row < n_corner/2; ++i_row) {
+                  std::swap(start[2*i_row], start[2*i_row + 1]);
+                }
               }
             }
           }
