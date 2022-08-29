@@ -145,6 +145,8 @@ TEST_CASE("Vis_data")
         std::vector<double> pos(3);
         for (int i_dim = 0; i_dim < 3; ++i_dim) pos[i_dim] = con.vert_ref_coords(i_vert, i_dim);
         REQUIRE(func(pos, 0.)[0] == Approx(.04).margin(1e-6));
+        Eigen::MatrixXd rad = con.vert_ref_coords(i_vert, Eigen::all) - Eigen::Matrix<double, 1, 3>{0, 1, 0};
+        REQUIRE((con.normals(i_vert, Eigen::all) - rad.normalized()).norm() == Approx(0.).scale(1.));
       }
     }
     SECTION("center")
@@ -158,6 +160,18 @@ TEST_CASE("Vis_data")
       REQUIRE(con.normals.cols() == 3);
       REQUIRE(con.elem_vert_inds.rows() == 24);
       REQUIRE(con.elem_vert_inds.cols() == 4);
+    }
+    SECTION("warped")
+    {
+      cartdg::Deformed_element elem({2, 4, 2, cartdg::config::max_row_size});
+      for (int i_vert = 1; i_vert < 4; i_vert += 2) {
+        elem.vertex(i_vert).pos[0] += 0.5;
+      }
+      cartdg::Vis_data vis(elem, cartdg::Linear(Eigen::Vector2d{1., 0.}), basis);
+      auto con = vis.compute_contour(.5, 3);
+      for (int i_vert = 0; i_vert < con.vert_ref_coords.rows(); ++i_vert) {
+        REQUIRE((con.normals(i_vert, Eigen::all) - Eigen::Matrix<double, 1, 2>{1., 0.}).norm() == Approx(0.).scale(1.));
+      }
     }
   }
 }

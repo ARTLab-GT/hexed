@@ -195,14 +195,18 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int i_var, 
       coords += dir*(value - curr_value)/(dir*grad);
     }
   }
+  con.normals.resize(i_block.size(), n_dim);
+  for (unsigned i_vert = 0; i_vert < i_block.size(); ++i_vert) {
+    Eigen::VectorXd coords = con.vert_ref_coords(i_vert, Eigen::all).transpose();
+    Eigen::VectorXd grad = sample_qpoint_data(gradient, coords);
+    con.normals(i_vert, Eigen::all) = grad.normalized();
+  }
   con.elem_vert_inds.resize(faces.size()/n_corner, n_corner);
   for (int i_elem = 0; i_elem < int(faces.size())/n_corner; ++i_elem) {
     for (int i_corner = 0; i_corner < n_corner; ++i_corner) {
       con.elem_vert_inds(i_elem, i_corner) = faces[i_elem*n_corner + i_corner];
     }
   }
-  con.normals.resize(i_block.size(), n_dim);
-  con.normals.setZero();
   return con;
 }
 
