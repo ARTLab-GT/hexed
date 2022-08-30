@@ -7,14 +7,15 @@
 namespace cartdg::otter_vis
 {
 
-void add_edges(otter::plot& plt, Element& elem, const Basis& bas, int n_sample)
+void add_edges(otter::plot& plt, Element& elem, const Basis& bas,
+               Eigen::Matrix<double, 1, Eigen::Dynamic> color, int n_sample)
 {
   const int n_dim = elem.storage_params().n_dim;
   Vis_data vis(elem, Position_func(), bas);
   Eigen::MatrixXd edges = vis.edges(n_sample);
   edges.resize(n_sample, edges.size()/n_sample);
   for (int i_edge = 0; i_edge < edges.cols()/n_dim; ++i_edge) {
-    plt.add(otter::curve(edges(Eigen::all, Eigen::seqN(i_edge*n_dim, n_dim))));
+    plt.add(otter::curve(edges(Eigen::all, Eigen::seqN(i_edge*n_dim, n_dim)), color));
   }
 }
 

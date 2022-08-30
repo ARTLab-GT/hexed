@@ -89,7 +89,7 @@ class Solver
   void visualize_surface_tecplot(int bc_sn, std::string name, int n_sample = 20);
   #endif
   #if CARTDG_USE_OTTER
-  void visualize_edges_otter(otter::plot&, int n_sample = 21);
+  void visualize_edges_otter(otter::plot&, Eigen::Matrix<double, 1, Eigen::Dynamic> color = otter::colors::css4["white"], int n_sample = 21);
   // plot the surface with optional color mapping. plotting takes whatever form is appropriate for dimensionality
   // note: color_by must be a scalar
   // if either element of `bounds` is NaN, will substitute min & max of variable in domain
