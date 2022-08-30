@@ -18,21 +18,23 @@ void add_edges(otter::plot& plt, Element& elem, const Basis& bas, int n_sample)
   }
 }
 
-void add_contour(otter::plot& plt, Element& elem, const Basis& bas, const Qpoint_func& func,
-                 double value, int n_div, color_spec spec, double time, int i_var)
+void add_contour(otter::plot& plt, Element& elem, const Basis& bas,
+                 const Qpoint_func& contour_by, double contour_val, int n_div,
+                 const Qpoint_func& color_by, std::array<double, 2> bounds, const otter::colormap& map,
+                 double time)
 {
-  Vis_data vis(elem, func, bas, time);
-  auto con = vis.compute_contour(value, n_div, i_var);
+  Vis_data vis(elem, contour_by, bas, time);
+  auto con = vis.compute_contour(contour_val, n_div, 0);
   Vis_data vis_pos(elem, Position_func(), bas, time);
-  Vis_data vis_col(elem, spec.color_by, bas, time);
+  Vis_data vis_col(elem, color_by, bas, time);
   if (elem.storage_params().n_dim == 3) {
     otter::surface_data data;
     for (int i_vert = 0; i_vert < con.vert_ref_coords.rows(); ++i_vert) {
       otter::surface_data::vertex vert;
       vert.pos = vis_pos.sample(con.vert_ref_coords(i_vert, Eigen::all).transpose());
       vert.normal = con.normals(i_vert, Eigen::all).transpose();
-      Eigen::MatrixXd color = spec.map((vis_col.sample(vert.pos)(0) - spec.bounds[0])/(spec.bounds[1] - spec.bounds[0]));
-      vert.rgba(Eigen::seq(0, color.size())) = color.transpose();
+      Eigen::MatrixXd color = map((vis_col.sample(vert.pos)(0) - bounds[0])/(bounds[1] - bounds[0]));
+      vert.rgba(Eigen::seqN(0, color.size())) = color.transpose();
       data.verts.push_back(vert);
     }
     for (int i_quad = 0; i_quad < con.elem_vert_inds.rows(); ++i_quad) {

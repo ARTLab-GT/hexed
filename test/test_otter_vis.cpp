@@ -15,13 +15,9 @@ TEST_CASE("otter_vis")
   otter::plot plt;
   plt.set_orthographic(true);
   cartdg::otter_vis::add_edges(plt, elem, basis);
-  cartdg::otter_vis::color_spec spec {
-    cartdg::Linear(Eigen::Vector3d{1., 0., 0.}),
-    {0., 1.},
-    otter::plasma,
-  };
-  cartdg::otter_vis::add_contour(plt, elem, basis, cartdg::Linear(Eigen::Vector3d{1., 1., 1.}),
-                                 1., 10, spec);
+  cartdg::otter_vis::add_contour(plt, elem, basis,
+                                 cartdg::Linear(Eigen::Vector3d{1., 1., 1.}), 1., 10,
+                                 cartdg::Linear(Eigen::Vector3d{1., 0., 0.}), {0., 1.}, otter::plasma);
   plt.show();
 }
 #endif
