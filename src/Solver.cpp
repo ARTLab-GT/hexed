@@ -546,8 +546,10 @@ void Solver::visualize_field_otter(otter::plot& plt,
     for (int i_contour = 0; i_contour < n_contour; ++i_contour) {
       double contour_val = contour_bounds[0] + (i_contour + 1)/(n_contour + 1.)*(contour_bounds[1] - contour_bounds[0]);
       auto& elem = elements[i_elem];
+      // add contour line/surface
       otter_vis::add_contour(plt, elem, basis, contour, contour_val, n_div,
                              color_by, color_bounds, cmap_contour, status.flow_time);
+      // for 2d, color the flow field as well
       if (params.n_dim == 2) {
         const int n_sample = 2*n_div + 1;
         Vis_data vis_pos(elem, Position_func(), basis, status.flow_time);
@@ -556,8 +558,11 @@ void Solver::visualize_field_otter(otter::plot& plt,
         Eigen::MatrixXd pos = vis_pos.interior(n_sample);
         Eigen::MatrixXd var = vis_var.interior(n_sample);
         pos_3d(Eigen::all, Eigen::seqN(0, 2)) = pos;
+        // set z componento to slightly negative so that lines show up on top
         pos_3d(Eigen::all, 2).array() = -1e-4*elem.nominal_size();
+        // adjust color-by variable so that bound interval maps to [0, 1]
         var = (var - Eigen::VectorXd::Constant(var.size(), contour_bounds[0]))/(contour_bounds[1] - contour_bounds[0]);
+        // throw it up there
         plt.add(otter::surface(n_sample, pos_3d, cmap_field(var)));
       }
     }
