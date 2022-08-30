@@ -27,7 +27,22 @@ void add_contour(otter::plot& plt, Element& elem, const Basis& bas,
   auto con = vis.compute_contour(contour_val, n_div, 0);
   Vis_data vis_pos(elem, Position_func(), bas, time);
   Vis_data vis_col(elem, color_by, bas, time);
-  if (elem.storage_params().n_dim == 3) {
+  if (elem.storage_params().n_dim == 2) {
+    otter::curve_data data;
+    for (int i_vert = 0; i_vert < con.vert_ref_coords.rows(); ++i_vert) {
+      otter::curve_data::vertex vert;
+      auto coords = con.vert_ref_coords(i_vert, Eigen::all).transpose();
+      vert.pos(Eigen::seqN(0, 2)) = vis_pos.sample(coords);
+      Eigen::MatrixXd color = map((vis_col.sample(coords)(0) - bounds[0])/(bounds[1] - bounds[0]));
+      vert.rgba(Eigen::seqN(0, color.size())) = color.transpose();
+      data.verts.push_back(vert);
+    }
+    for (int i_seg = 0; i_seg < con.elem_vert_inds.rows(); ++i_seg) {
+      data.seg_inds.push_back(con.elem_vert_inds(i_seg, Eigen::all).transpose());
+    }
+    plt.add(otter::curve(data));
+  }
+  else if (elem.storage_params().n_dim == 3) {
     otter::surface_data data;
     for (int i_vert = 0; i_vert < con.vert_ref_coords.rows(); ++i_vert) {
       otter::surface_data::vertex vert;

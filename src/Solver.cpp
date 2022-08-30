@@ -549,13 +549,16 @@ void Solver::visualize_field_otter(otter::plot& plt,
       otter_vis::add_contour(plt, elem, basis, contour, contour_val, n_div,
                              color_by, color_bounds, cmap_contour, status.flow_time);
       if (params.n_dim == 2) {
+        const int n_sample = 2*n_div + 1;
         Vis_data vis_pos(elem, Position_func(), basis, status.flow_time);
         Vis_data vis_var(elem,         contour, basis, status.flow_time);
-        Eigen::MatrixXd pos = vis_pos.interior(2*n_div + 1);
-        Eigen::MatrixXd var = vis_var.interior(2*n_div + 1);
-        pos.resize(pos.size()/params.n_dim, params.n_dim);
+        Eigen::MatrixXd pos_3d(n_sample*n_sample, 3);
+        Eigen::MatrixXd pos = vis_pos.interior(n_sample);
+        Eigen::MatrixXd var = vis_var.interior(n_sample);
+        pos_3d(Eigen::all, Eigen::seqN(0, 2)) = pos;
+        pos_3d(Eigen::all, 2).array() = -1e-4*elem.nominal_size();
         var = (var - Eigen::VectorXd::Constant(var.size(), contour_bounds[0]))/(contour_bounds[1] - contour_bounds[0]);
-        plt.add(otter::surface(2*n_div + 1, pos, cmap_field(var)));
+        plt.add(otter::surface(n_sample, pos_3d, cmap_field(var)));
       }
     }
   }
