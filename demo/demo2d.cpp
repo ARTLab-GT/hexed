@@ -33,7 +33,7 @@ int main()
 
   // Let's go!
   #if CARTDG_USE_TECPLOT
-  solver.visualize_field_tecplot(cartdg::State_variables(), "demo_time_0");
+  solver.visualize_field_tecplot(cartdg::State_variables(), "demo2_time_0");
   #endif
   #if CARTDG_USE_OTTER
   {
@@ -52,7 +52,7 @@ int main()
       solver.update();
     }
     char buffer [100];
-    snprintf(buffer, 100, "demo_time_%e", time);
+    snprintf(buffer, 100, "demo2_time_%e", time);
     #if CARTDG_USE_TECPLOT
     solver.visualize_field_tecplot(cartdg::State_variables(), buffer);
     #endif

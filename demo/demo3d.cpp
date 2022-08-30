@@ -56,10 +56,10 @@ int main()
   double time = 0;
   for (int i = 0; i < 5; ++i)
   {
-    time += 1e-3;
+    time += 2e-3;
     while (solver.iteration_status().flow_time < time) solver.update();
     char buffer [100];
-    snprintf(buffer, 100, "demo_time_%e", time);
+    snprintf(buffer, 100, "demo3_time_%e", time);
     #if CARTDG_USE_TECPLOT
     solver.visualize_field_tecplot(cartdg::State_variables(), buffer);
     #endif
