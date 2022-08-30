@@ -508,7 +508,11 @@ void Solver::visualize_surface_otter(otter::plot& plt, int bc_sn, const otter::c
       // transform so that bounds[0] is the bottom of the color map and bounds[1] is the top
       face_var = (face_var - Eigen::VectorXd::Constant(face_var.size(), bounds[0]))/(bounds[1] - bounds[0]);
       // add to plot
-      if (params.n_dim == 3) {
+      if (params.n_dim == 2) {
+        face_pos.resize(n_sample, params.n_dim);
+        otter::curve curve(face_pos, cmap(face_var));
+        plt.add(curve);
+      } else if (params.n_dim == 3) {
         face_pos.resize(n_sample*n_sample, params.n_dim);
         otter::surface surf(n_sample, face_pos, cmap(face_var));
         plt.add(surf);
