@@ -517,9 +517,33 @@ void Solver::visualize_surface_otter(otter::plot& plt, int bc_sn, const otter::c
   }
 }
 
-void Solver::visualize_field_otter(otter::plot& plt, const Qpoint_func& contour, int n_contour,
-                                   std::array<double, 2> bounds, const otter::colormap&, bool transparent, int n_sample)
+void Solver::visualize_field_otter(otter::plot& plt,
+                                   const Qpoint_func& contour,
+                                   int n_contour,
+                                   std::array<double, 2> contour_bounds,
+                                   const Qpoint_func& color_by,
+                                   std::array<double, 2> color_bounds,
+                                   const otter::colormap& map,
+                                   bool transparent,
+                                   int n_div)
 {
+  if (contour.n_var(params.n_dim) != 1) throw std::runtime_error("`contour` must be scalar");
+  if (color_by.n_var(params.n_dim) != 1) throw std::runtime_error("`color_by` must be scalar");
+  // substitute bounds if necessary
+  if (std::isnan(contour_bounds[0]) || std::isnan(contour_bounds[1])) {
+    contour_bounds = bounds_field(contour)[0];
+  }
+  if (std::isnan(color_bounds[0]) || std::isnan(color_bounds[1])) {
+    color_bounds = bounds_field(color_by)[0];
+  }
+  auto& elements = acc_mesh.elements();
+  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    for (int i_contour = 0; i_contour < n_contour; ++i_contour) {
+      double contour_val = contour_bounds[0] + (i_contour + 1)/(n_contour + 1.)*(contour_bounds[1] - contour_bounds[0]);
+      otter_vis::add_contour(plt, elements[i_elem], basis, contour, contour_val, n_div,
+                             color_by, color_bounds, map, status.flow_time);
+    }
+  }
 }
 #endif
 

@@ -95,9 +95,15 @@ class Solver
   // if either element of `bounds` is NaN, will substitute min & max of variable in domain
   void visualize_surface_otter(otter::plot&, int bc_sn, const otter::colormap& = otter::const_colormap(otter::colors::css4["darkgrey"]),
                                const Qpoint_func& color_by = Pressure(), std::array<double, 2> bounds = {std::nan(""), std::nan("")}, int n_sample = 21);
-  void visualize_field_otter(otter::plot&, const Qpoint_func& contour = Pressure(), int n_contour = 2,
-                             std::array<double, 2> bounds = {std::nan(""), std::nan("")},
-                             const otter::colormap& = otter::const_colormap(Eigen::Vector4d{1., 1., 1., .1}), bool transparent = true, int n_sample = 21);
+  void visualize_field_otter(otter::plot&,
+                             const Qpoint_func& contour = Pressure(),
+                             int n_contour = 3,
+                             std::array<double, 2> contour_bounds = {std::nan(""), std::nan("")},
+                             const Qpoint_func& color_by = Pressure(),
+                             std::array<double, 2> color_bounds = {std::nan(""), std::nan("")},
+                             const otter::colormap& = otter::const_colormap(Eigen::Vector4d{1., 1., 1., .1}),
+                             bool transparent = true,
+                             int n_div = 10);
   #endif
 };
 
