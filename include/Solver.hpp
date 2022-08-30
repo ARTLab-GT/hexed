@@ -101,7 +101,8 @@ class Solver
                              std::array<double, 2> contour_bounds = {std::nan(""), std::nan("")},
                              const Qpoint_func& color_by = Pressure(),
                              std::array<double, 2> color_bounds = {std::nan(""), std::nan("")},
-                             const otter::colormap& = otter::const_colormap(Eigen::Vector4d{1., 1., 1., .1}),
+                             const otter::colormap& cmap_contour = otter::const_colormap(Eigen::Vector4d{1., 1., 1., .1}),
+                             const otter::colormap& cmap_field   = otter::plasma,
                              bool transparent = true,
                              int n_div = 10);
   #endif

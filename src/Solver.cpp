@@ -527,7 +527,8 @@ void Solver::visualize_field_otter(otter::plot& plt,
                                    std::array<double, 2> contour_bounds,
                                    const Qpoint_func& color_by,
                                    std::array<double, 2> color_bounds,
-                                   const otter::colormap& map,
+                                   const otter::colormap& cmap_contour,
+                                   const otter::colormap& cmap_field,
                                    bool transparent,
                                    int n_div)
 {
@@ -544,8 +545,18 @@ void Solver::visualize_field_otter(otter::plot& plt,
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     for (int i_contour = 0; i_contour < n_contour; ++i_contour) {
       double contour_val = contour_bounds[0] + (i_contour + 1)/(n_contour + 1.)*(contour_bounds[1] - contour_bounds[0]);
-      otter_vis::add_contour(plt, elements[i_elem], basis, contour, contour_val, n_div,
-                             color_by, color_bounds, map, status.flow_time);
+      auto& elem = elements[i_elem];
+      otter_vis::add_contour(plt, elem, basis, contour, contour_val, n_div,
+                             color_by, color_bounds, cmap_contour, status.flow_time);
+      if (params.n_dim == 2) {
+        Vis_data vis_pos(elem, Position_func(), basis, status.flow_time);
+        Vis_data vis_var(elem,         contour, basis, status.flow_time);
+        Eigen::MatrixXd pos = vis_pos.interior(2*n_div + 1);
+        Eigen::MatrixXd var = vis_var.interior(2*n_div + 1);
+        pos.resize(pos.size()/params.n_dim, params.n_dim);
+        var = (var - Eigen::VectorXd::Constant(var.size(), contour_bounds[0]))/(contour_bounds[1] - contour_bounds[0]);
+        plt.add(otter::surface(2*n_div + 1, pos, cmap_field(var)));
+      }
     }
   }
 }
