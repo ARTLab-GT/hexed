@@ -31,9 +31,10 @@ void add_contour(otter::plot& plt, Element& elem, const Basis& bas,
     otter::surface_data data;
     for (int i_vert = 0; i_vert < con.vert_ref_coords.rows(); ++i_vert) {
       otter::surface_data::vertex vert;
-      vert.pos = vis_pos.sample(con.vert_ref_coords(i_vert, Eigen::all).transpose());
+      auto coords = con.vert_ref_coords(i_vert, Eigen::all).transpose();
+      vert.pos = vis_pos.sample(coords);
       vert.normal = con.normals(i_vert, Eigen::all).transpose();
-      Eigen::MatrixXd color = map((vis_col.sample(vert.pos)(0) - bounds[0])/(bounds[1] - bounds[0]));
+      Eigen::MatrixXd color = map((vis_col.sample(coords)(0) - bounds[0])/(bounds[1] - bounds[0]));
       vert.rgba(Eigen::seqN(0, color.size())) = color.transpose();
       data.verts.push_back(vert);
     }
