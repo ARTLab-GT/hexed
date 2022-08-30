@@ -110,7 +110,7 @@ Eigen::MatrixXd Vis_data::sample(Eigen::MatrixXd ref_coords)
   return sample_qpoint_data(vars, ref_coords);
 }
 
-Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int i_var, int n_newton)
+Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int n_newton, double tol)
 {
   Contour con;
   // sample points used for identifying the contour vertices
@@ -147,7 +147,8 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int i_var, 
           int sample0 = (i_outer*(n_div + 1) + i_row)*stride + i_inner;
           int sample1 = sample0 + stride;
           // if this is true, then the correct contour surface is between `sample0` and `sample1`
-          if ((sample[sample0] > value) != (sample[sample1] > value)) {
+          if (((sample[sample0] > value) != (sample[sample1] > value))
+              && (std::abs(sample[sample0] - sample[sample1]) > tol)) { // comparison with `tol` avoids spurious contours on constant data
             int block = strides_block[i_dim]; // index of candidate vertex (calculation isn't done yet)
             bool boundary [3][2]; // in a given direction, are we on the boundary? layout: [j_dim][face_positive]
             // evaluate `boundary` and finish calculating `block`

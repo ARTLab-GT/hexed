@@ -484,12 +484,13 @@ void Solver::visualize_edges_otter(otter::plot& plt, Eigen::Matrix<double, 1, Ei
   }
 }
 
-void Solver::visualize_surface_otter(otter::plot& plt, int bc_sn, const otter::colormap& cmap, const Qpoint_func& color_by, std::array<double, 2> bounds, int n_sample)
+void Solver::visualize_surface_otter(otter::plot& plt, int bc_sn, const otter::colormap& cmap, const Qpoint_func& color_by, std::array<double, 2> bounds, int n_sample, double tol)
 {
   if (color_by.n_var(params.n_dim) != 1) throw std::runtime_error("`color_by` must be scalar");
   // substitute bounds if necessary
   if (std::isnan(bounds[0]) || std::isnan(bounds[1])) {
     bounds = bounds_field(color_by)[0];
+    bounds[1] += tol;
   }
   // iterate through boundary connections and visualize an `otter::surface` for each
   auto& bc_cons {acc_mesh.boundary_connections()};
@@ -530,16 +531,18 @@ void Solver::visualize_field_otter(otter::plot& plt,
                                    const otter::colormap& cmap_contour,
                                    const otter::colormap& cmap_field,
                                    bool transparent,
-                                   int n_div)
+                                   int n_div, double tol)
 {
   if (contour.n_var(params.n_dim) != 1) throw std::runtime_error("`contour` must be scalar");
   if (color_by.n_var(params.n_dim) != 1) throw std::runtime_error("`color_by` must be scalar");
   // substitute bounds if necessary
   if (std::isnan(contour_bounds[0]) || std::isnan(contour_bounds[1])) {
     contour_bounds = bounds_field(contour)[0];
+    contour_bounds[1] += tol;
   }
   if (std::isnan(color_bounds[0]) || std::isnan(color_bounds[1])) {
     color_bounds = bounds_field(color_by)[0];
+    color_bounds[1] += tol;
   }
   auto& elements = acc_mesh.elements();
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
@@ -548,7 +551,7 @@ void Solver::visualize_field_otter(otter::plot& plt,
       auto& elem = elements[i_elem];
       // add contour line/surface
       otter_vis::add_contour(plt, elem, basis, contour, contour_val, n_div,
-                             color_by, color_bounds, cmap_contour, transparent, status.flow_time);
+                             color_by, color_bounds, cmap_contour, transparent, status.flow_time, tol);
       // for 2d, color the flow field as well
       if (params.n_dim == 2) {
         const int n_sample = 2*n_div + 1;

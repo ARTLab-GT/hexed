@@ -94,7 +94,7 @@ class Solver
   // note: color_by must be a scalar
   // if either element of `bounds` is NaN, will substitute min & max of variable in domain
   void visualize_surface_otter(otter::plot&, int bc_sn, const otter::colormap& = otter::const_colormap(otter::colors::css4["darkgrey"]),
-                               const Qpoint_func& color_by = Pressure(), std::array<double, 2> bounds = {std::nan(""), std::nan("")}, int n_sample = 21);
+                               const Qpoint_func& color_by = Pressure(), std::array<double, 2> bounds = {std::nan(""), std::nan("")}, int n_sample = 21, double tol = 1e-3);
   // plot the flow field in the most appropriate way for the dimensionality
   // includes contour lines/surfaces, and for 2d also colors flowfield
   // note that this can also be used to plot slices if you contour by a `Linear` object
@@ -107,7 +107,7 @@ class Solver
                              const otter::colormap& cmap_contour = otter::const_colormap(Eigen::Vector4d{1., 1., 1., .1}),
                              const otter::colormap& cmap_field   = otter::plasma,
                              bool transparent = true,
-                             int n_div = 10);
+                             int n_div = 10, double tol = 1e-3);
   // convenience function to plot a slice
   // wrapper for `visualize_field_otter`
   inline void visualize_slice_otter(otter::plot& plt, int i_dim, double location,

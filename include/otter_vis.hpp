@@ -20,7 +20,7 @@ void add_contour(otter::plot&, Element&, const Basis&,
                  const Qpoint_func& color_by = Constant_func({1.}), std::array<double, 2> bounds = {0., 1.},
                  const otter::colormap& map = otter::const_colormap(otter::colors::css4["white"]),
                  bool transparent = true,
-                 double time = 0.);
+                 double time = 0., double tol = 1e-3);
 
 }
 #endif

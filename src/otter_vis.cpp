@@ -22,10 +22,10 @@ void add_edges(otter::plot& plt, Element& elem, const Basis& bas,
 void add_contour(otter::plot& plt, Element& elem, const Basis& bas,
                  const Qpoint_func& contour_by, double contour_val, int n_div,
                  const Qpoint_func& color_by, std::array<double, 2> bounds, const otter::colormap& map, bool transparent,
-                 double time)
+                 double time, double tol)
 {
   Vis_data vis(elem, contour_by, bas, time);
-  auto con = vis.compute_contour(contour_val, n_div, 0);
+  auto con = vis.compute_contour(contour_val, n_div, 4, tol*elem.nominal_size());
   Vis_data vis_pos(elem, Position_func(), bas, time);
   Vis_data vis_col(elem, color_by, bas, time);
   if (elem.storage_params().n_dim == 2) {
