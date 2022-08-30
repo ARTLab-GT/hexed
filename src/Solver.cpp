@@ -548,7 +548,7 @@ void Solver::visualize_field_otter(otter::plot& plt,
       auto& elem = elements[i_elem];
       // add contour line/surface
       otter_vis::add_contour(plt, elem, basis, contour, contour_val, n_div,
-                             color_by, color_bounds, cmap_contour, status.flow_time);
+                             color_by, color_bounds, cmap_contour, transparent, status.flow_time);
       // for 2d, color the flow field as well
       if (params.n_dim == 2) {
         const int n_sample = 2*n_div + 1;

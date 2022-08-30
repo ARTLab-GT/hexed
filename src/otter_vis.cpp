@@ -20,7 +20,7 @@ void add_edges(otter::plot& plt, Element& elem, const Basis& bas, int n_sample)
 
 void add_contour(otter::plot& plt, Element& elem, const Basis& bas,
                  const Qpoint_func& contour_by, double contour_val, int n_div,
-                 const Qpoint_func& color_by, std::array<double, 2> bounds, const otter::colormap& map,
+                 const Qpoint_func& color_by, std::array<double, 2> bounds, const otter::colormap& map, bool transparent,
                  double time)
 {
   Vis_data vis(elem, contour_by, bas, time);
@@ -51,6 +51,7 @@ void add_contour(otter::plot& plt, Element& elem, const Basis& bas,
       vert.normal = con.normals(i_vert, Eigen::all).transpose();
       Eigen::MatrixXd color = map((vis_col.sample(coords)(0) - bounds[0])/(bounds[1] - bounds[0]));
       vert.rgba(Eigen::seqN(0, color.size())) = color.transpose();
+      vert.rgba(3) = transparent ? .2 : 1.;
       data.verts.push_back(vert);
     }
     for (int i_quad = 0; i_quad < con.elem_vert_inds.rows(); ++i_quad) {
@@ -60,6 +61,7 @@ void add_contour(otter::plot& plt, Element& elem, const Basis& bas,
     otter::surface flipped(surface);
     flipped.flip_orientation();
     surface.append(flipped);
+    if (transparent) surface.transparency = otter::surface::transparent_add;
     plt.add(surface);
   }
 }
