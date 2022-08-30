@@ -23,7 +23,7 @@ TEST_CASE("Solver visualization")
   }
   SECTION("field") {
     sol.visualize_field_otter(plt);
-    sol.visualize_field_otter(plt, cartdg::Linear(Eigen::Vector3d{0., 0., 1.}), 1, {.7150815, .7150815}, cartdg::Pressure(), {std::nan(""), std::nan("")}, otter::plasma);
+    sol.visualize_field_otter(plt, cartdg::Linear(Eigen::Vector3d{0., 0., 1.}), 1, {.7, .7}, cartdg::Pressure(), {std::nan(""), std::nan("")}, otter::plasma);
     plt.show();
   }
   #endif

@@ -228,7 +228,7 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int i_var, 
       double curr_value = sample_qpoint_data(vars, coords.transpose())(0);
       Eigen::VectorXd grad = sample_qpoint_data(gradient, coords.transpose()); // interpolate gradient to current coordinates
       auto dir = directions[i_vert].transpose();
-      coords += dir*(value - curr_value)/(dir*grad);
+      coords += dir*(value - curr_value)/(dir*grad + 1e-4*grad.norm()); // small stabilization term accounts for cases where both numerator and denominator -> 0
     }
   }
   // fetch jacobian (used for normal calculation)
