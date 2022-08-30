@@ -54,6 +54,17 @@ class State_from_spacetime : public Spacetime_func
   virtual inline std::string variable_name(int i_var) const {return "state" + std::to_string(i_var);}
 };
 
+// linear combination of components of position
+class Linear : public Spacetime_func
+{
+  Eigen::Matrix<double, 1, Eigen::Dynamic> coefs;
+  public:
+  inline Linear(Eigen::VectorXd arg) : coefs{arg.transpose()} {}
+  virtual inline int n_var(int n_dim) const {return 1;}
+  // if size of `coefs` and `pos` don't match, truncate both to the minimum of the two sizes
+  virtual std::vector<double> operator()(std::vector<double> pos, double time) const;
+};
+
 /*
  * Isentropic vortex flow described by Gaussian function, a classic
  * CFD test problem. Flow field is an exact solution of the Euler equations
@@ -105,7 +116,7 @@ class Sod : public State_from_spacetime
 {
   public:
   double heat_rat = 1.4;
-  virtual std::vector<double> operator()(std::vector<double> pos, double time);
+  virtual std::vector<double> operator()(std::vector<double> pos, double time) const;
 };
 
 }

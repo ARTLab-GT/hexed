@@ -1,3 +1,5 @@
+#include <config.hpp>
+#if CARTDG_USE_TECPLOT
 #include <catch2/catch.hpp>
 #include <Tecplot_file.hpp>
 
@@ -19,3 +21,4 @@ TEST_CASE("Tecplot_file")
   cartdg::Tecplot_file::Structured_block zone (file0, 1);
   zone.write(&pos, &state);
 }
+#endif

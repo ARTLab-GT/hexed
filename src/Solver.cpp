@@ -1,3 +1,4 @@
+#include <config.hpp>
 #include <Solver.hpp>
 #include <Mcs_cartesian.hpp>
 #include <Mcs_deformed.hpp>
@@ -9,6 +10,8 @@
 #include <Local_cartesian.hpp>
 #include <Local_deformed.hpp>
 #include <Tecplot_file.hpp>
+#include <Vis_data.hpp>
+#include <otter_vis.hpp>
 
 namespace cartdg
 {
@@ -224,7 +227,7 @@ void Solver::initialize(const Spacetime_func& func)
 
 void Solver::update(double stability_ratio)
 {
-  stopwatch.stopwatch.start();
+  stopwatch.stopwatch.start(); // ready or not the clock is countin'
   auto& sw_car {stopwatch.children.at("cartesian")};
   auto& sw_def {stopwatch.children.at("deformed" )};
   const int nd = params.n_dim;
@@ -359,14 +362,34 @@ std::vector<double> Solver::integral_surface(const Surface_func& integrand, int 
   return integral;
 };
 
-void Solver::visualize_field(const Qpoint_func& output_variables, std::string name, int n_sample)
+std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func, int n_sample)
+{
+  const int n_var = func.n_var(params.n_dim);
+  std::vector<std::array<double, 2>> bounds(n_var);
+  for (int i_var = 0; i_var < n_var; ++i_var) {
+    bounds[i_var] = {std::numeric_limits<double>::max(), -std::numeric_limits<double>::max()};
+  }
+  const int n_block = custom_math::pow(n_sample, params.n_dim);
+  auto& elems = acc_mesh.elements();
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem)
+  {
+    Element& elem {elems[i_elem]};
+    Eigen::VectorXd vars = Vis_data(elem, func, basis, status.flow_time).interior(n_sample);
+    for (int i_var = 0; i_var < n_var; ++i_var) {
+      auto var = vars(Eigen::seqN(i_var*n_block, n_block));
+      bounds[i_var][0] = std::min(var.minCoeff(), bounds[i_var][0]);
+      bounds[i_var][1] = std::max(var.maxCoeff(), bounds[i_var][1]);
+    }
+  }
+  return bounds;
+}
+
+#if CARTDG_USE_TECPLOT
+void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::string name, int n_sample)
 {
   const int n_dim = params.n_dim;
   const int n_vis = output_variables.n_var(n_dim); // number of variables to visualize
-  const int n_qpoint = params.n_qpoint();
   const int n_corners {custom_math::pow(2, n_dim - 1)};
-  const int nfqpoint = n_qpoint/params.row_size;
-  const int n_block {custom_math::pow(n_sample, n_dim)};
   Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
   std::vector<std::string> var_names;
   for (int i_vis = 0; i_vis < n_vis; ++i_vis) var_names.push_back(output_variables.variable_name(i_vis));
@@ -375,84 +398,35 @@ void Solver::visualize_field(const Qpoint_func& output_variables, std::string na
   for (int i_elem = 0; i_elem < acc_mesh.elements().size(); ++i_elem)
   {
     Element& elem {acc_mesh.elements()[i_elem]};
-    // fetch data at quadrature points
-    std::vector<double> pos (n_qpoint*n_dim);
-    std::vector<double> to_vis (n_qpoint*n_vis);
-    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-      auto qpoint_vis = output_variables(elem, basis, i_qpoint, status.flow_time);
-      for (int i_vis = 0; i_vis < n_vis; ++i_vis) {
-        to_vis[i_vis*n_qpoint + i_qpoint] = qpoint_vis[i_vis];
-      }
-      auto qpoint_pos = elem.position(basis, i_qpoint);
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        pos[i_dim*n_qpoint + i_qpoint] = qpoint_pos[i_dim];
-      }
-    }
-    // note: each visualization stage is enclosed in `{}` to ensure that only one
-    // `Tecplot_file::Zone` is alive at a time
-
+    Vis_data vis_pos(elem, cartdg::Position_func(), basis, status.flow_time);
+    Vis_data vis_out(elem, output_variables, basis, status.flow_time);
+    // note: each visualization stage is enclosed in `{}` to ensure that only one `Tecplot_file::Zone` is alive at a time
     // visualize edges
     if (n_dim > 1) // 1D elements don't really have edges
     {
       Tecplot_file::Line_segments edges {file, n_dim*n_corners, n_sample, "edges"};
-      Eigen::MatrixXd boundary {basis.boundary()};
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-      {
-        const int stride {custom_math::pow(params.row_size, n_dim - 1 - i_dim)};
-        const int n_outer {n_qpoint/stride/params.row_size};
-
-        auto extract_edge = [=](double* data, int n)
-        {
-          Eigen::MatrixXd edge {n_sample, n_corners*n};
-          for (int i = 0; i < n; ++i) {
-            Eigen::MatrixXd edge_qpoints {basis.row_size, n_corners};
-            for (int i_qpoint = 0; i_qpoint < basis.row_size; ++i_qpoint) {
-              Eigen::VectorXd qpoint_slab {nfqpoint};
-              for (int i_outer = 0; i_outer < n_outer; ++i_outer) {
-                for (int i_inner = 0; i_inner < stride; ++i_inner) {
-                  qpoint_slab[i_outer*stride + i_inner] = data[i*n_qpoint + i_qpoint*stride + i_outer*stride*basis.row_size + i_inner];
-                }
-              }
-              edge_qpoints.row(i_qpoint) = custom_math::hypercube_matvec(boundary, qpoint_slab);
-            }
-            for (int i_corner = 0; i_corner < n_corners; ++i_corner) {
-              edge.col(i_corner*n + i) = interp*edge_qpoints.col(i_corner);
-            }
-          }
-          return edge;
-        };
-
-        Eigen::MatrixXd edge_pos {extract_edge(pos.data(), n_dim)};
-        Eigen::MatrixXd edge_state {extract_edge(to_vis.data(), n_vis)};
-        for (int i_corner = 0; i_corner < n_corners; ++i_corner) {
-          edges.write(edge_pos.data() + i_corner*n_dim*n_sample, edge_state.data() + i_corner*n_vis*n_sample);
-        }
+      auto edge_pos = vis_pos.edges(n_sample);
+      auto edge_state = vis_out.edges(n_sample);
+      for (int i_edge = 0; i_edge < n_corners*n_dim; ++i_edge) {
+        edges.write(edge_pos.data() + i_edge*n_sample*n_dim, edge_state.data() + i_edge*n_sample*n_vis);
       }
     }
 
     { // visualize quadrature points
       Tecplot_file::Structured_block qpoints {file, basis.row_size, "element_qpoints"};
-      qpoints.write(pos.data(), to_vis.data());
+      qpoints.write(vis_pos.qpoints().data(), vis_out.qpoints().data());
     }
 
     { // visualize interior (that is, quadrature point data interpolated to a fine mesh of sample points)
       Tecplot_file::Structured_block interior {file, n_sample, "element_interior"};
-      Eigen::VectorXd interp_pos {n_block*n_dim};
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        Eigen::Map<Eigen::VectorXd> qpoint_pos (pos.data() + i_dim*n_qpoint, n_qpoint);
-        interp_pos.segment(i_dim*n_block, n_block) = custom_math::hypercube_matvec(interp, qpoint_pos);
-      }
-      Eigen::VectorXd interp_state {n_block*n_vis};
-      for (int i_var = 0; i_var < n_vis; ++i_var) {
-        Eigen::Map<Eigen::VectorXd> var (to_vis.data() + i_var*n_qpoint, n_qpoint);
-        interp_state.segment(i_var*n_block, n_block) = custom_math::hypercube_matvec(interp, var);
-      }
-      interior.write(interp_pos.data(), interp_state.data());
+      auto interp_pos = vis_pos.interior(n_sample);
+      auto interp_out = vis_out.interior(n_sample);
+      interior.write(interp_pos.data(), interp_out.data());
     }
   }
 }
 
-void Solver::visualize_surface(int bc_sn, std::string name, int n_sample)
+void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample)
 {
   if (params.n_dim == 1) throw std::runtime_error("cannot visualize surfaces in 1D");
   // convenience definitions
@@ -499,5 +473,104 @@ void Solver::visualize_surface(int bc_sn, std::string name, int n_sample)
     }
   }
 }
+#endif
+
+#if CARTDG_USE_OTTER
+void Solver::visualize_edges_otter(otter::plot& plt, Eigen::Matrix<double, 1, Eigen::Dynamic> color, int n_sample)
+{
+  auto& elements = acc_mesh.elements();
+  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    otter_vis::add_edges(plt, elements[i_elem], basis, color, n_sample);
+  }
+}
+
+void Solver::visualize_surface_otter(otter::plot& plt, int bc_sn, const otter::colormap& cmap, const Qpoint_func& color_by, std::array<double, 2> bounds, int n_sample, double tol)
+{
+  if (color_by.n_var(params.n_dim) != 1) throw std::runtime_error("`color_by` must be scalar");
+  // substitute bounds if necessary
+  if (std::isnan(bounds[0]) || std::isnan(bounds[1])) {
+    bounds = bounds_field(color_by)[0];
+    bounds[1] += tol;
+  }
+  // iterate through boundary connections and visualize an `otter::surface` for each
+  auto& bc_cons {acc_mesh.boundary_connections()};
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con)
+  {
+    auto& con {bc_cons[i_con]};
+    if (con.bound_cond_serial_n() == bc_sn)
+    {
+      // fetch face data
+      Vis_data vis_pos(con.element(), Position_func(), basis, status.flow_time);
+      Vis_data vis_var(con.element(),   color_by, basis, status.flow_time);
+      // interpolate to boundary face
+      auto dir = con.direction();
+      Eigen::MatrixXd face_pos = vis_pos.face(dir.i_dim[0], dir.face_sign[0], n_sample);
+      Eigen::VectorXd face_var = vis_var.face(dir.i_dim[0], dir.face_sign[0], n_sample);
+      // transform so that bounds[0] is the bottom of the color map and bounds[1] is the top
+      face_var = (face_var - Eigen::VectorXd::Constant(face_var.size(), bounds[0]))/(bounds[1] - bounds[0]);
+      // add to plot
+      if (params.n_dim == 2) {
+        face_pos.resize(n_sample, params.n_dim);
+        otter::curve curve(face_pos, cmap(face_var));
+        plt.add(curve);
+      } else if (params.n_dim == 3) {
+        face_pos.resize(n_sample*n_sample, params.n_dim);
+        otter::surface surf(n_sample, face_pos, cmap(face_var));
+        plt.add(surf);
+      }
+    }
+  }
+}
+
+void Solver::visualize_field_otter(otter::plot& plt,
+                                   const Qpoint_func& contour,
+                                   int n_contour,
+                                   std::array<double, 2> contour_bounds,
+                                   const Qpoint_func& color_by,
+                                   std::array<double, 2> color_bounds,
+                                   const otter::colormap& cmap_contour,
+                                   const otter::colormap& cmap_field,
+                                   bool transparent,
+                                   int n_div, double tol)
+{
+  if (contour.n_var(params.n_dim) != 1) throw std::runtime_error("`contour` must be scalar");
+  if (color_by.n_var(params.n_dim) != 1) throw std::runtime_error("`color_by` must be scalar");
+  // substitute bounds if necessary
+  if (std::isnan(contour_bounds[0]) || std::isnan(contour_bounds[1])) {
+    contour_bounds = bounds_field(contour)[0];
+    contour_bounds[1] += tol;
+  }
+  if (std::isnan(color_bounds[0]) || std::isnan(color_bounds[1])) {
+    color_bounds = bounds_field(color_by)[0];
+    color_bounds[1] += tol;
+  }
+  auto& elements = acc_mesh.elements();
+  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    for (int i_contour = 0; i_contour < n_contour; ++i_contour) {
+      double contour_val = contour_bounds[0] + (i_contour + 1)/(n_contour + 1.)*(contour_bounds[1] - contour_bounds[0]);
+      auto& elem = elements[i_elem];
+      // add contour line/surface
+      otter_vis::add_contour(plt, elem, basis, contour, contour_val, n_div,
+                             color_by, color_bounds, cmap_contour, transparent, status.flow_time, tol);
+      // for 2d, color the flow field as well
+      if (params.n_dim == 2) {
+        const int n_sample = 2*n_div + 1;
+        Vis_data vis_pos(elem, Position_func(), basis, status.flow_time);
+        Vis_data vis_var(elem,         contour, basis, status.flow_time);
+        Eigen::MatrixXd pos_3d(n_sample*n_sample, 3);
+        Eigen::MatrixXd pos = vis_pos.interior(n_sample);
+        Eigen::MatrixXd var = vis_var.interior(n_sample);
+        pos_3d(Eigen::all, Eigen::seqN(0, 2)) = pos;
+        // set z componento to slightly negative so that lines show up on top
+        pos_3d(Eigen::all, 2).array() = -1e-4*elem.nominal_size();
+        // adjust color-by variable so that bound interval maps to [0, 1]
+        var = (var - Eigen::VectorXd::Constant(var.size(), contour_bounds[0]))/(contour_bounds[1] - contour_bounds[0]);
+        // throw it up there
+        plt.add(otter::surface(n_sample, pos_3d, cmap_field(var)));
+      }
+    }
+  }
+}
+#endif
 
 }

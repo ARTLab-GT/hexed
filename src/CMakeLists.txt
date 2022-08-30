@@ -13,6 +13,7 @@ Hanging_vertex_matcher.cpp
 Iteration_status.cpp
 math.cpp
 Output_data.cpp
+otter_vis.cpp
 Physical_basis.cpp
 Qpoint_func.cpp
 Refined_face.cpp
@@ -24,4 +25,5 @@ Storage_params.cpp
 Surface_func.cpp
 Tecplot_file.cpp
 Vertex.cpp
+Vis_data.cpp
 )

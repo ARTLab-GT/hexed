@@ -1,5 +1,5 @@
 #include <catch2/catch.hpp>
-#include <cartdgConfig.hpp>
+#include <config.hpp>
 #include <Accessible_mesh.hpp>
 
 TEST_CASE("Accessible_mesh")

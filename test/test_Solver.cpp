@@ -1,5 +1,5 @@
 #include <catch2/catch.hpp>
-#include <cartdgConfig.hpp>
+#include <config.hpp>
 #include <Solver.hpp>
 
 class Arbitrary_initializer : public cartdg::Spacetime_func
@@ -154,7 +154,7 @@ TEST_CASE("Solver")
   static_assert (cartdg::config::max_row_size >= 3); // this test was written for row size 3
   cartdg::Solver sol {2, 3, 0.8};
 
-  SECTION("initialization and sampling")
+  SECTION("initialization, sampling, and bounds")
   {
     sol.mesh().add_element(0, false, {0, 0, 0});
     int sn0 = sol.mesh().add_element(0, false, {1, 0, 0});
@@ -170,6 +170,12 @@ TEST_CASE("Solver")
     sample = sol.sample(2, true, sn1, 4, cartdg::State_variables());
     REQUIRE(sample.size() == 4);
     REQUIRE(sample[0] == Approx(-0.1*0.1));
+    auto bounds = sol.bounds_field(cartdg::State_variables());
+    REQUIRE(bounds.size() == 4);
+    REQUIRE(bounds[0][0] == Approx(-.2*.2).scale(1.));
+    REQUIRE(bounds[0][1] == Approx(1.6*.8).scale(1.));
+    REQUIRE(bounds[2][0] == Approx(2.).scale(1.));
+    REQUIRE(bounds[2][1] == Approx(2.).scale(1.));
   }
 
   SECTION("vertex relaxation")
@@ -428,15 +434,19 @@ void test_marching(Test_mesh& tm, std::string name)
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
   sol.initialize(Nonuniform_mass());
-  sol.visualize_field(cartdg::State_variables(), "marching_" + name + "_init");
-  sol.visualize_surface(tm.bc_serial_n(), "marching_" + name + "_surface");
+  #if CARTDG_USE_TECPLOT
+  sol.visualize_field_tecplot(cartdg::State_variables(), "marching_" + name + "_init");
+  sol.visualize_surface_tecplot(tm.bc_serial_n(), "marching_" + name + "_surface");
+  #endif
   // check that the iteration status is right at the start
   auto status = sol.iteration_status();
   REQUIRE(status.flow_time == 0.);
   REQUIRE(status.iteration == 0);
   // update
   sol.update();
-  sol.visualize_field(cartdg::Physical_update(), "marching_" + name + "_diff");
+  #if CARTDG_USE_TECPLOT
+  sol.visualize_field_tecplot(cartdg::Physical_update(), "marching_" + name + "_diff");
+  #endif
   status = sol.iteration_status();
   REQUIRE(status.flow_time > 0.);
   REQUIRE(status.iteration == 1);
@@ -461,12 +471,10 @@ void test_conservation(Test_mesh& tm, std::string name)
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
   sol.initialize(Random_perturbation());
-  sol.visualize_field(cartdg::State_variables(), "conservation_" + name + "_init");
   // check that the iteration status is right at the start
   auto status = sol.iteration_status();
   // update
   sol.update();
-  sol.visualize_field(cartdg::Physical_update(), "conservation_" + name + "_diff");
   status = sol.iteration_status();
   // check that the computed update is approximately equal to the exact solution
   for (int i_var : {sol.storage_params().n_var - 2, sol.storage_params().n_var - 1}) {
@@ -540,7 +548,6 @@ TEST_CASE("face extrusion")
     solver.calc_jacobian();
     REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Approx(24./4.)); // check number of elements
     for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
-    solver.visualize_field(cartdg::Empty_func(), "extrusion_2d");
     auto valid = solver.mesh().valid();
     REQUIRE(valid.n_duplicate == 0);
     REQUIRE(valid.n_missing == 16);
@@ -566,9 +573,11 @@ TEST_CASE("face extrusion")
     solver.calc_jacobian();
     REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Approx(86.)); // check number of elements
     for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
-    solver.visualize_field(cartdg::Empty_func(), "extrusion_3d");
     auto valid = solver.mesh().valid();
     REQUIRE(valid.n_duplicate == 0);
     REQUIRE(valid.n_missing == 60);
+    #if CARTDG_USE_TECPLOT
+    solver.visualize_field_tecplot(cartdg::State_variables(), "extrude");
+    #endif
   }
 }

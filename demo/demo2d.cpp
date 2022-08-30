@@ -1,6 +1,9 @@
 #include <iostream>
 #include <Solver.hpp>
 #include <math.hpp>
+#include <config.hpp>
+
+const bool interactive = false;
 
 int main()
 {
@@ -29,7 +32,17 @@ int main()
   solver.initialize(vortex);
 
   // Let's go!
-  solver.visualize_field(cartdg::State_variables(), "demo_time_0");
+  #if CARTDG_USE_TECPLOT
+  solver.visualize_field_tecplot(cartdg::State_variables(), "demo2_time_0");
+  #endif
+  #if CARTDG_USE_OTTER
+  {
+    otter::plot plt;
+    solver.visualize_edges_otter(plt, otter::colors::css4["darkgrey"]);
+    solver.visualize_field_otter(plt);
+    plt.show();
+  }
+  #endif
   double time = 0;
   for (int i = 0; i < 20; ++i)
   {
@@ -39,8 +52,26 @@ int main()
       solver.update();
     }
     char buffer [100];
-    snprintf(buffer, 100, "demo_time_%e", time);
-    solver.visualize_field(cartdg::State_variables(), buffer);
+    snprintf(buffer, 100, "demo2_time_%e", time);
+    #if CARTDG_USE_TECPLOT
+    solver.visualize_field_tecplot(cartdg::State_variables(), buffer);
+    #endif
+    #if CARTDG_USE_OTTER
+    if (interactive) {
+      otter::plot plt;
+      solver.visualize_edges_otter(plt, otter::colors::css4["darkgrey"]);
+      solver.visualize_field_otter(plt);
+      plt.show();
+    }
+  #endif
   }
   std::cout << solver.stopwatch_tree().report() << "\n";
+  #if CARTDG_USE_OTTER
+  {
+    otter::plot plt;
+    solver.visualize_edges_otter(plt, otter::colors::css4["darkgrey"]);
+    solver.visualize_field_otter(plt);
+    plt.show();
+  }
+  #endif
 }

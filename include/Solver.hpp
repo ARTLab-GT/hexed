@@ -6,6 +6,12 @@
 #include "Spacetime_func.hpp"
 #include "Iteration_status.hpp"
 #include "Stopwatch_tree.hpp"
+#include "config.hpp"
+#ifdef CARTDG_USE_OTTER
+#include <otter/plot.hpp>
+#include <otter/colormap.hpp>
+#include <otter/colors.hpp>
+#endif
 
 namespace cartdg
 {
@@ -71,12 +77,50 @@ class Solver
   std::vector<double> integral_field(const Qpoint_func& integrand);
   // compute an integral over all surfaces where a particular boundary condition has been enforced
   std::vector<double> integral_surface(const Surface_func& integrand, int bc_sn);
+  // compute the min and max of variables over entire flow field. layout: {{var0_min, var0_max}, {var1_min, var1_max}, ...}
+  // bounds are approximated by uniformly sampling a block `n_sample`-on-a-side in each element
+  std::vector<std::array<double, 2>> bounds_field(const Qpoint_func&, int n_sample = 20);
+  #if CARTDG_USE_TECPLOT
   // write a visualization file describing the entire flow field (but not identifying surfaces)
-  void visualize_field(const Qpoint_func& output_variables, std::string name, int n_sample = 20);
+  void visualize_field_tecplot(const Qpoint_func& output_variables, std::string name, int n_sample = 20);
   // write a visualization file describing all surfaces where a particular boundary condition has been enforced.
   // only does state variables because usually that's what you want
   // and I'm lazy
-  void visualize_surface(int bc_sn, std::string name, int n_sample = 20);
+  void visualize_surface_tecplot(int bc_sn, std::string name, int n_sample = 20);
+  #endif
+  #if CARTDG_USE_OTTER
+  void visualize_edges_otter(otter::plot&, Eigen::Matrix<double, 1, Eigen::Dynamic> color = otter::colors::css4["white"], int n_sample = 21);
+  // plot the surface with optional color mapping. plotting takes whatever form is appropriate for dimensionality
+  // note: color_by must be a scalar
+  // if either element of `bounds` is NaN, will substitute min & max of variable in domain
+  void visualize_surface_otter(otter::plot&, int bc_sn, const otter::colormap& = otter::const_colormap(otter::colors::css4["darkgrey"]),
+                               const Qpoint_func& color_by = Pressure(), std::array<double, 2> bounds = {std::nan(""), std::nan("")}, int n_sample = 21, double tol = 1e-3);
+  // plot the flow field in the most appropriate way for the dimensionality
+  // includes contour lines/surfaces, and for 2d also colors flowfield
+  // note that this can also be used to plot slices if you contour by a `Linear` object
+  void visualize_field_otter(otter::plot&,
+                             const Qpoint_func& contour = Pressure(),
+                             int n_contour = 3,
+                             std::array<double, 2> contour_bounds = {std::nan(""), std::nan("")},
+                             const Qpoint_func& color_by = Pressure(),
+                             std::array<double, 2> color_bounds = {std::nan(""), std::nan("")},
+                             const otter::colormap& cmap_contour = otter::const_colormap(Eigen::Vector4d{1., 1., 1., .1}),
+                             const otter::colormap& cmap_field   = otter::plasma,
+                             bool transparent = true,
+                             int n_div = 10, double tol = 1e-3);
+  // convenience function to plot a slice
+  // wrapper for `visualize_field_otter`
+  inline void visualize_slice_otter(otter::plot& plt, int i_dim, double location,
+                                    const Qpoint_func& color_by = Pressure(),
+                                    std::array<double, 2> bounds = {std::nan(""), std::nan("")},
+                                    const otter::colormap& cmap = otter::plasma,
+                                    int n_div = 10)
+  {
+    visualize_field_otter(plt, cartdg::Linear(Eigen::VectorXd::Unit(params.n_dim, i_dim)),
+                          1, {location, location},
+                          color_by, bounds, cmap, cmap, false, n_div);
+  }
+  #endif
 };
 
 }

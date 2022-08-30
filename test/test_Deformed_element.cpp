@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 
-#include <cartdgConfig.hpp>
+#include <config.hpp>
 #include <math.hpp>
 #include <Deformed_element.hpp>
 #include <Equidistant.hpp>

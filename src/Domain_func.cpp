@@ -83,4 +83,34 @@ std::vector<double> Stag_pres::operator()(const std::vector<double> point_pos, d
   return {stag_pres};
 }
 
+Pressure::Pressure(double heat_rat) : hr{heat_rat} {}
+
+std::vector<double> Pressure::operator()(const std::vector<double> point_pos, double point_time,
+                                         const std::vector<double> state) const
+{
+  double mass {state[state.size() - 2]};
+  double momentum_sq {0.};
+  for (unsigned i_dim = 0; i_dim < state.size() - 2; ++i_dim) {
+    momentum_sq += state[i_dim]*state[i_dim];
+  }
+  double kin_ener {0.5*momentum_sq/mass};
+  double pres {(hr - 1.)*(state[state.size() - 1] - kin_ener)};
+  return {pres};
+}
+std::string Velocity::variable_name(int i_var) const
+{
+  char buffer [100];
+  snprintf(buffer, 100, "velocity%i", i_var);
+  return buffer;
+}
+
+std::vector<double> Velocity::operator()(const std::vector<double> point_pos, double point_time,
+                                         const std::vector<double> state) const
+{
+  std::vector<double> veloc(3, 0.);
+  const int n_dim = state.size() - 2;
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) veloc[i_dim] = state[i_dim]/state[n_dim];
+  return veloc;
+}
+
 }
