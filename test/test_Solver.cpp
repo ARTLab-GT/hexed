@@ -467,12 +467,6 @@ void test_marching(Test_mesh& tm, std::string name)
   #if CARTDG_USE_TECPLOT
   sol.visualize_field_tecplot(cartdg::Physical_update(), "marching_" + name + "_diff");
   #endif
-  #if CARTDG_USE_OTTER
-  otter::plot plt;
-  //sol.visualize_field_otter(plt);
-  sol.visualize_slice_otter(plt, 1, .511);
-  plt.show();
-  #endif
   status = sol.iteration_status();
   REQUIRE(status.flow_time > 0.);
   REQUIRE(status.iteration == 1);
