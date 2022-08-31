@@ -20,10 +20,9 @@ template<int n_dim, int row_size>
 class Face_permutation : public Face_permutation_dynamic
 {
   static const int n_qpoint = custom_math::pow(row_size, n_dim - 1);
-  Face_connection<Deformed_element>& con;
 
   public:
-  Face_permutation(Face_connection<Deformed_element>& connection) : con{connection} {}
+  Face_permutation(Con_dir<Deformed_element> dir, double* target) {}
 
   virtual void match_faces()
   {

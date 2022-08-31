@@ -27,7 +27,7 @@ void test_mesh(cartdg::Accessible_mesh& mesh)
   auto& connections = mesh.deformed().face_connections();
   for (int i_con = 0; i_con < connections.size(); ++i_con) {
     auto& con = connections[i_con];
-    auto fp = cartdg::kernel_factory<cartdg::Face_permutation>(params.n_dim, params.row_size, con);
+    auto fp = cartdg::kernel_factory<cartdg::Face_permutation>(params.n_dim, params.row_size, con.direction(), con.face(1));
     fp->match_faces();
     for (int i_dof = 0; i_dof < n_face_dof; ++i_dof) {
       REQUIRE(con.face(0)[i_dof] == Approx(con.face(1)[i_dof]).scale(1.));
