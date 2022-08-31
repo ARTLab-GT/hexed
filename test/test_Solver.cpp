@@ -477,7 +477,7 @@ void test_marching(Test_mesh& tm, std::string name)
         auto state   = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, cartdg::State_variables());
         auto update  = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, cartdg::Physical_update());
         auto correct = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, Nonuniform_residual());
-        REQUIRE(update[i_var]/status.time_step == Approx(correct[i_var]).margin(1e-5*std::abs(state[i_var])));
+        REQUIRE(update[i_var]/status.time_step == Approx(correct[i_var]).margin(1e-3*std::abs(state[i_var])));
       }
     }
   }
