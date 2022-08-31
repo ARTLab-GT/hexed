@@ -59,6 +59,7 @@ class Accessible_mesh : public Mesh
   vertex_view vertices();
   virtual void extrude(); // note: test for this is in `test_Solver.cpp` so that the result can be visualized
   virtual void connect_rest(int bc_sn);
+  virtual std::vector<elem_handle> elem_handles();
 };
 
 }

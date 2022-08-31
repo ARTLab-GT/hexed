@@ -93,6 +93,11 @@ class Mesh
    * - `mesh.valid().assert_valid();`
    */
   virtual Connection_validity valid() = 0;
+  // minimum information required to identify an element
+  struct elem_handle {int ref_level; bool is_deformed; int serial_n;};
+  // get handles for all elements currently in the mesh, in no particular order
+  // (mostly for testing/debugging)
+  virtual std::vector<elem_handle> elem_handles() = 0;
 };
 
 }

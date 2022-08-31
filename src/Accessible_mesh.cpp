@@ -285,4 +285,15 @@ void Accessible_mesh::connect_rest(int bc_sn)
   def.connect_empty(bc_sn);
 }
 
+std::vector<Mesh::elem_handle> Accessible_mesh::elem_handles()
+{
+  std::vector<Mesh::elem_handle> handles;
+  for (bool is_deformed : {0, 1}) {
+    for (auto ref_sn : container(is_deformed).elem_handles()) {
+      handles.push_back({ref_sn[0], is_deformed, ref_sn[1]});
+    }
+  }
+  return handles;
+}
+
 }

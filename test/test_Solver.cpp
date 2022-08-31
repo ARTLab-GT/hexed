@@ -308,10 +308,9 @@ TEST_CASE("Solver")
 class Test_mesh
 {
   public:
-  struct elem_handle {int ref_level; bool is_deformed; int serial_n;};
   virtual cartdg::Solver& solver() = 0;
   virtual int bc_serial_n() = 0;
-  virtual std::vector<elem_handle> construct(cartdg::Flow_bc* flow_bc) = 0;
+  virtual void construct(cartdg::Flow_bc* flow_bc) = 0;
 };
 
 // creates a 2x2x2 mesh
@@ -328,22 +327,21 @@ class All_cartesian : public Test_mesh
   virtual cartdg::Solver& solver() {return sol;}
   virtual int bc_serial_n() {return bc_sn;}
 
-  virtual std::vector<elem_handle> construct(cartdg::Flow_bc* flow_bc)
+  virtual void construct(cartdg::Flow_bc* flow_bc)
   {
-    std::vector<elem_handle> handles;
     bc_sn = sol.mesh().add_boundary_condition(flow_bc, new cartdg::Null_mbc);
+    std::vector<int> serial_n;
     for (int i_elem = 0; i_elem < 8; ++i_elem) {
       std::vector<int> strides {4, 2, 1};
       std::vector<int> inds;
       for (int i_dim = 0; i_dim < 3; ++i_dim) inds.push_back((i_elem/strides[i_dim])%2);
       int sn = sol.mesh().add_element(0, false, inds);
-      handles.push_back({0, false, sn});
+      serial_n.push_back(sn);
       for (int i_dim = 0; i_dim < 3; ++i_dim) {
-        if (inds[i_dim]) sol.mesh().connect_cartesian(0, {handles[i_elem - strides[i_dim]].serial_n, sn}, {i_dim});
+        if (inds[i_dim]) sol.mesh().connect_cartesian(0, {serial_n[i_elem - strides[i_dim]], sn}, {i_dim});
         sol.mesh().connect_boundary(0, false, sn, i_dim, inds[i_dim], bc_sn);
       }
     }
-    return handles;
   }
 };
 
@@ -362,16 +360,16 @@ class All_deformed : public Test_mesh
   virtual cartdg::Solver& solver() {return sol;}
   virtual int bc_serial_n() {return bc_sn;}
 
-  virtual std::vector<elem_handle> construct(cartdg::Flow_bc* flow_bc)
+  virtual void construct(cartdg::Flow_bc* flow_bc)
   {
-    std::vector<elem_handle> handles;
     bc_sn = sol.mesh().add_boundary_condition(flow_bc, new cartdg::Null_mbc);
+    std::vector<int> serial_n;
     for (int i_elem = 0; i_elem < 9; ++i_elem) {
       std::vector<int> strides {3, 1};
       std::vector<int> inds;
       for (int i_dim = 0; i_dim < 2; ++i_dim) inds.push_back((i_elem/strides[i_dim])%3);
       int sn = sol.mesh().add_element(0, true, inds);
-      handles.push_back({0, true, sn});
+      serial_n.push_back(sn);
       for (int i_dim = 0; i_dim < 2; ++i_dim) {
         if (inds[i_dim] > 0) {
           std::array<int, 2> i_elems {i_elem - strides[i_dim], i_elem};
@@ -382,12 +380,11 @@ class All_deformed : public Test_mesh
               if (i_dim == rot_dir) dir.face_sign[i_side] = !dir.face_sign[i_side];
             }
           }
-          sol.mesh().connect_deformed(0, {handles[i_elems[0]].serial_n, handles[i_elems[1]].serial_n}, dir);
+          sol.mesh().connect_deformed(0, {serial_n[i_elems[0]], serial_n[i_elems[1]]}, dir);
         }
         if (inds[i_dim] != 1) sol.mesh().connect_boundary(0, true, sn, i_dim, (inds[i_dim] > 0), bc_sn);
       }
     }
-    return handles;
   }
 };
 
@@ -400,36 +397,59 @@ class Hanging : public Test_mesh
   Hanging() : sol{2, cartdg::config::max_row_size, 1.} {}
   virtual cartdg::Solver& solver() {return sol;}
   virtual int bc_serial_n() {return bc_sn;}
-  virtual std::vector<elem_handle> construct(cartdg::Flow_bc* flow_bc)
+  virtual void construct(cartdg::Flow_bc* flow_bc)
   {
-    std::vector<elem_handle> handles;
+    std::vector<int> serial_n;
     bc_sn = sol.mesh().add_boundary_condition(flow_bc, new cartdg::Null_mbc);
     for (int i = 0; i < 2; ++i) {
-      handles.push_back({0, false, sol.mesh().add_element(0, false, {i  , 0})});
-      handles.push_back({1, false, sol.mesh().add_element(1, false, {i  , 2})});
-      handles.push_back({1,  true, sol.mesh().add_element(1,  true, {i+2, 2})});
+      serial_n.push_back(sol.mesh().add_element(0, false, {i  , 0}));
+      serial_n.push_back(sol.mesh().add_element(1, false, {i  , 2}));
+      serial_n.push_back(sol.mesh().add_element(1,  true, {i+2, 2}));
     }
-    sol.mesh().connect_cartesian(0, {handles[0].serial_n, handles[3].serial_n}, {0});
-    sol.mesh().connect_cartesian(1, {handles[1].serial_n, handles[4].serial_n}, {0});
-    sol.mesh().connect_deformed(1, {handles[2].serial_n, handles[5].serial_n}, {{0, 0}, {1, 0}});
-    sol.mesh().connect_cartesian(1, {handles[4].serial_n, handles[2].serial_n}, {0}, {false, true});
+    sol.mesh().connect_cartesian(0, {serial_n[0], serial_n[3]}, {0});
+    sol.mesh().connect_cartesian(1, {serial_n[1], serial_n[4]}, {0});
+    sol.mesh().connect_deformed (1, {serial_n[2], serial_n[5]}, {{0, 0}, {1, 0}});
+    sol.mesh().connect_cartesian(1, {serial_n[4], serial_n[2]}, {0}, {false, true});
     for (int i = 0; i < 2; ++i) {
-      sol.mesh().connect_hanging_cartesian(0, handles[3*i].serial_n, {handles[1 + i].serial_n, handles[4 + i].serial_n}, {1}, 1, false, i);
-      sol.mesh().connect_boundary(0, false, handles[3*i        ].serial_n, 1, 0, bc_sn);
-      sol.mesh().connect_boundary(0, false, handles[3*i        ].serial_n, 0, i, bc_sn);
-      sol.mesh().connect_boundary(1, false, handles[3*i + 1    ].serial_n, 1, 1, bc_sn);
-      sol.mesh().connect_boundary(1,  true, handles[3*i + 2    ].serial_n, 1, 1, bc_sn);
-      sol.mesh().connect_boundary(1,     i, handles[3*i + 1 + i].serial_n, 0, i, bc_sn);
+      sol.mesh().connect_hanging_cartesian(0, serial_n[3*i], {serial_n[1 + i], serial_n[4 + i]}, {1}, 1, false, i);
+      sol.mesh().connect_boundary(0, false, serial_n[3*i        ], 1, 0, bc_sn);
+      sol.mesh().connect_boundary(0, false, serial_n[3*i        ], 0, i, bc_sn);
+      sol.mesh().connect_boundary(1, false, serial_n[3*i + 1    ], 1, 1, bc_sn);
+      sol.mesh().connect_boundary(1,  true, serial_n[3*i + 2    ], 1, 1, bc_sn);
+      sol.mesh().connect_boundary(1,     i, serial_n[3*i + 1 + i], 0, i, bc_sn);
     }
     for (int i = 0; i < 2; ++i) sol.relax_vertices();
-    return handles;
+  }
+};
+
+// creates a single 3d element and then extrudes all faces
+class Extrude_3d : public Test_mesh
+{
+  cartdg::Solver sol;
+  int bc_sn;
+
+  public:
+  Extrude_3d()
+  : sol{3, cartdg::config::max_row_size, .8}
+  {}
+
+  virtual cartdg::Solver& solver() {return sol;}
+  virtual int bc_serial_n() {return bc_sn;}
+
+  virtual void construct(cartdg::Flow_bc* flow_bc)
+  {
+    bc_sn = sol.mesh().add_boundary_condition(flow_bc, new cartdg::Null_mbc);
+    std::vector<cartdg::Mesh::elem_handle> handles;
+    sol.mesh().add_element(0, true, {0, 0, 0});
+    sol.mesh().extrude();
+    sol.mesh().connect_rest(bc_sn);
   }
 };
 
 void test_marching(Test_mesh& tm, std::string name)
 {
   // use `Copy` BCs. This is unstable for this case but it will still give the right answer as long as only one time step is executed
-  auto handles = tm.construct(new cartdg::Copy);
+  tm.construct(new cartdg::Copy);
   auto& sol = tm.solver();
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
@@ -451,7 +471,7 @@ void test_marching(Test_mesh& tm, std::string name)
   REQUIRE(status.flow_time > 0.);
   REQUIRE(status.iteration == 1);
   // check that the computed update is approximately equal to the exact solution
-  for (auto handle : handles) {
+  for (auto handle : sol.mesh().elem_handles()) {
     for (int i_qpoint = 0; i_qpoint < sol.storage_params().n_qpoint(); ++i_qpoint) {
       for (int i_var = 0; i_var < sol.storage_params().n_var; ++i_var) {
         auto state   = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, cartdg::State_variables());
@@ -466,7 +486,7 @@ void test_marching(Test_mesh& tm, std::string name)
 void test_conservation(Test_mesh& tm, std::string name)
 {
   srand(406);
-  auto handles = tm.construct(new cartdg::Nonpenetration());
+  tm.construct(new cartdg::Nonpenetration());
   auto& sol = tm.solver();
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
