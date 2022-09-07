@@ -31,6 +31,21 @@ TEST_CASE("Accessible_mesh")
     }
     REQUIRE(count == 1);
   }
+  // check that a correct handle for each of the elements appears exactly once in `mesh.elements()`
+  auto handles = mesh.elem_handles();
+  REQUIRE(handles.size() == 3);
+  cartdg::Mesh::elem_handle correct_handles [] {{0, false, sn0}, {0, false, sn1}, {3, true, sn2}};
+  for (auto corr_handle : correct_handles) {
+    int count = 0;
+    for (auto handle : handles) {
+      if ((corr_handle.ref_level == handle.ref_level)
+          && (corr_handle.is_deformed == handle.is_deformed)
+          && (corr_handle.serial_n == handle.serial_n)) {
+        ++count;
+      }
+    }
+    REQUIRE(count == 1);
+  }
   // test connections
   int sn3 = mesh.add_element(3, false, {0, 0});
   int sn4 = mesh.add_element(3, true, {1, 2}); // position doesn't really make sense, but I don't really care

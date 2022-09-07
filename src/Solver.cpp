@@ -9,6 +9,7 @@
 #include <Restrict_refined.hpp>
 #include <Local_cartesian.hpp>
 #include <Local_deformed.hpp>
+#include <Face_permutation.hpp>
 #include <Tecplot_file.hpp>
 #include <Vis_data.hpp>
 #include <otter_vis.hpp>
@@ -140,18 +141,8 @@ void Solver::calc_jacobian()
           elem_jac[i_side] = con.face(i_side);
           normal_sign[i_side] = ((j_dim == dir.i_dim[i_side]) && (dir.flip_normal(i_side))) ? -1 : 1;
         }
-        if (dir.transpose()) { // already implies n_dim == 3
-          Eigen::Map<Eigen::MatrixXd> face (elem_jac[1], rs, rs);
-          face.transposeInPlace();
-        }
-        if (dir.flip_tangential()) {
-          int free_dim = n_dim*(n_dim - 1)/2 - dir.i_dim[0] - dir.i_dim[1]; // which dimension is not involved in the connection?
-          int stride = ((n_dim == 3) && (dir.i_dim[1] < free_dim)) ? rs : 1; // along what stride do we need to reverse the elements?
-          for (int i_row = 0; i_row < nfq/rs; ++i_row) {
-            Eigen::Map<Eigen::VectorXd, 0, Eigen::InnerStride<>> row (elem_jac[1] + i_row*rs/stride, rs, Eigen::InnerStride<>(stride));
-            row.reverseInPlace();
-          }
-        }
+        // permute face 1 so that quadrature points match up
+        (*kernel_factory<Face_permutation>(n_dim, rs, dir, elem_jac[1])).match_faces();
         for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
           // take average of element face jacobians with appropriate axis permutations
           int col = j_dim;

@@ -25,6 +25,8 @@ class Element_container
   virtual int emplace(int ref_level, std::vector<int> position) = 0;
   // access an element by refinement level and serial number
   virtual Element& at(int ref_level, int serial_n) = 0;
+  // return the currently valid set of `ref_level`, `serial_n` combinations
+  virtual std::vector<std::array<int, 2>> elem_handles() = 0;
 };
 
 /*
@@ -66,6 +68,13 @@ class Complete_element_container : public Element_container
   view_t elements()
   {
     return vec;
+  }
+
+  virtual std::vector<std::array<int, 2>> elem_handles()
+  {
+    std::vector<std::array<int, 2>> handles;
+    for (auto pair : map) handles.push_back(pair.first);
+    return handles;
   }
 };
 

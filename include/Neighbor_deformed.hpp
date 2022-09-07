@@ -7,6 +7,7 @@
 #include "math.hpp"
 #include "hll.hpp"
 #include "Surface_rotation.hpp"
+#include "Face_permutation.hpp"
 
 namespace cartdg
 {
@@ -41,6 +42,7 @@ class Neighbor_deformed : public Kernel<Face_connection<Deformed_element>&>
       }
       const int i_dim = dir.i_dim[0]; // which dimension is the face normal in face coords
       Surface_rotation<n_dim, row_size> rotation {jacobian, i_dim};
+      Face_permutation<n_dim, row_size> permutation(dir, face + face_size);
 
       // fetch face state from element storage
       for (int i_side : {0, 1}) {
@@ -48,11 +50,7 @@ class Neighbor_deformed : public Kernel<Face_connection<Deformed_element>&>
           face[i_side*face_size + i_face_dof] = elem_face[i_side][i_face_dof];
         }
       }
-      // reverse tangential dimension
-      if (dir.flip_tangential()) {
-        Eigen::Map<Eigen::Matrix<double, row_size, n_var*n_face_qpoint/row_size>> rows {face + face_size};
-        rows.colwise().reverseInPlace();
-      }
+      permutation.match_faces();
       // rotate momentum into surface coordinates
       for (int i_side : {0, 1}) {
         rotation.to_surface(face + i_side*face_size);
@@ -71,11 +69,7 @@ class Neighbor_deformed : public Kernel<Face_connection<Deformed_element>&>
           face[i_var*n_face_qpoint + i_qpoint] *= rotation.jacobian_determinant(i_qpoint);
         }
       }
-      // re-reverse tangential dimension
-      if (dir.flip_tangential()) {
-        Eigen::Map<Eigen::Matrix<double, row_size, n_var*n_face_qpoint/row_size>> rows {face + face_size};
-        rows.colwise().reverseInPlace();
-      }
+      permutation.restore();
       // re-flip normal
       for (int i_side : {0, 1}) {
         if (dir.flip_normal(i_side)) {
