@@ -40,7 +40,7 @@ class Mesh
    * `coarse_ref_level + 1` via a Cartesian face
    */
   virtual void connect_hanging_cartesian(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Element>,
-                                         bool coarse_face_positive, bool coarse_deformed=false, bool fine_deformed=false) = 0;
+                                         bool coarse_face_positive, bool coarse_deformed=false, std::vector<bool> fine_deformed={false, false, false, false}) = 0;
   /*
    * Acquires owenership of `*flow_bc` and `*mesh_bc` and constructs a `Boundary_condition` from them.
    * Returns a serial number which uniquely identifies the new boundary condition among this `Mesh`'s boundary conditions.

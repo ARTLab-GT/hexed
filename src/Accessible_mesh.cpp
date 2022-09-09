@@ -62,11 +62,13 @@ void Accessible_mesh::connect_deformed(int ref_level, std::array<int, 2> serial_
 }
 
 void Accessible_mesh::connect_hanging_cartesian(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Element> dir,
-                                                bool coarse_face_positive, bool coarse_deformed, bool fine_deformed)
+                                                bool coarse_face_positive, bool coarse_deformed, std::vector<bool> fine_deformed)
 {
   Element* coarse = &element(coarse_ref_level, coarse_deformed, coarse_serial);
   std::vector<Element*> fine;
-  for (int fs : fine_serial) fine.push_back(&element(coarse_ref_level + 1, fine_deformed, fs));
+  for (int i_fine = 0; i_fine < n_vert/2; ++i_fine) {
+    fine.push_back(&element(coarse_ref_level + 1, fine_deformed[i_fine], fine_serial[i_fine]));
+  }
   car.ref_face_cons.emplace_back(new Refined_connection<Element> {coarse, fine, dir, !coarse_face_positive});
 }
 

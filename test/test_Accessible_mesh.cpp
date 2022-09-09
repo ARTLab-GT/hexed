@@ -81,9 +81,9 @@ TEST_CASE("Accessible_mesh")
   SECTION("refined face connection")
   {
     // check that it can't find elements with the wrong deformedness
-    REQUIRE_THROWS(mesh.connect_hanging_cartesian(1, car0, {def0, def1, def2, def3}, {2}, true, false, false));
+    REQUIRE_THROWS(mesh.connect_hanging_cartesian(1, car0, {def0, def1, def2, def3}, {2}, true, false, {true, true, true, false}));
     // make a good connection
-    mesh.connect_hanging_cartesian(1, car0, {def0, def1, def2, def3}, {2}, true, false, true);
+    mesh.connect_hanging_cartesian(1, car0, {def0, def1, def2, def3}, {2}, true, false, {true, true, true, true});
     auto& ref_face {mesh.cartesian().refined_faces()[0]};
     REQUIRE(ref_face.coarse_face() == mesh.element(1, false, car0).face() + (2*2 + 1)*5*row_size*row_size);
   }
@@ -161,7 +161,7 @@ TEST_CASE("Accessible_mesh")
     int sn5 = mesh.add_element(0, false, {0, 0});
     mesh.connect_cartesian(0, {sn1, sn0}, {0});
     mesh.connect_cartesian(0, {sn1, sn5}, {1});
-    mesh.connect_hanging_cartesian(1, car0, {def0, def1, def2, def3}, {2}, true, false, true);
+    mesh.connect_hanging_cartesian(1, car0, {def0, def1, def2, def3}, {2}, true, false, {true, true, true, true});
     mesh.connect_deformed(3, {sn4, sn2}, {{1, 0}, {0, 1}});
     REQUIRE(mesh.cartesian().face_connections().size() == 6);
     int count0 = 0;
@@ -253,7 +253,8 @@ TEST_CASE("Accessible_mesh")
       mesh1.connect_deformed (1, {def[2*i], def[2*i+1]}, {{1, 1}, {1, 0}});
     }
     for (int kind = 0; kind < 2; ++kind) {
-      mesh1.connect_hanging_cartesian(0, coarse[kind], {kinds[kind][2], kinds[kind][3]}, {0}, 0, false, kind);
+      bool fine_def = kind;
+      mesh1.connect_hanging_cartesian(0, coarse[kind], {kinds[kind][2], kinds[kind][3]}, {0}, 0, false, {fine_def, fine_def});
     }
     // add boundary conditions
     int bcsn = mesh1.add_boundary_condition(new cartdg::Freestream {{0., 0., 1., 1.}}, new cartdg::Null_mbc);

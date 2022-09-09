@@ -411,7 +411,7 @@ class Hanging : public Test_mesh
     sol.mesh().connect_deformed (1, {serial_n[2], serial_n[5]}, {{0, 0}, {1, 0}});
     sol.mesh().connect_cartesian(1, {serial_n[4], serial_n[2]}, {0}, {false, true});
     for (int i = 0; i < 2; ++i) {
-      sol.mesh().connect_hanging_cartesian(0, serial_n[3*i], {serial_n[1 + i], serial_n[4 + i]}, {1}, 1, false, i);
+      sol.mesh().connect_hanging_cartesian(0, serial_n[3*i], {serial_n[1 + i], serial_n[4 + i]}, {1}, 1, false, {i, i});
       sol.mesh().connect_boundary(0, false, serial_n[3*i        ], 1, 0, bc_sn);
       sol.mesh().connect_boundary(0, false, serial_n[3*i        ], 0, i, bc_sn);
       sol.mesh().connect_boundary(1, false, serial_n[3*i + 1    ], 1, 1, bc_sn);
