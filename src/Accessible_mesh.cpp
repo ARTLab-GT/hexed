@@ -72,6 +72,11 @@ void Accessible_mesh::connect_hanging_cartesian(int coarse_ref_level, int coarse
   car.ref_face_cons.emplace_back(new Refined_connection<Element> {coarse, fine, dir, !coarse_face_positive});
 }
 
+void Accessible_mesh::connect_hanging_deformed(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial,
+                                               Con_dir<Deformed_element> dir, std::vector<bool> stretch)
+{
+}
+
 int Accessible_mesh::add_boundary_condition(Flow_bc* flow_bc, Mesh_bc* mesh_bc)
 {
   bound_conds.push_back({std::unique_ptr<Flow_bc>{flow_bc}, std::unique_ptr<Mesh_bc>{mesh_bc}});

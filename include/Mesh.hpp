@@ -42,6 +42,16 @@ class Mesh
   virtual void connect_hanging_cartesian(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Element>,
                                          bool coarse_face_positive, bool coarse_deformed=false, std::vector<bool> fine_deformed={false, false, false, false}) = 0;
   /*
+   * specify that a deformed element of refinement level `coarse_ref_level` is connected to some deformed elements of refinement level
+   * `coarse_ref_level + 1` via a deformed face.
+   * Coarse element comes first in `Con_dir`.
+   * The number of deformed elements can be any power of 2 (with a maximum of 2^(`n_dim - 1`)).
+   * In order to match the faces when less than the maximum number of elements is used,
+   * `stretch` specifies along which dimensions the fine elements are to be stretched to match the coarse.
+   * `stretch.size()` must equal the number of dimensions.
+   */
+  virtual void connect_hanging_deformed(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Deformed_element>, std::vector<bool> stretch) = 0;
+  /*
    * Acquires owenership of `*flow_bc` and `*mesh_bc` and constructs a `Boundary_condition` from them.
    * Returns a serial number which uniquely identifies the new boundary condition among this `Mesh`'s boundary conditions.
    * It is recommended to use this with `new`, like the constructor for `std::unique_ptr`.

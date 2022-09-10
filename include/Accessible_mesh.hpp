@@ -46,6 +46,7 @@ class Accessible_mesh : public Mesh
   virtual void connect_deformed(int ref_level, std::array<int, 2> serial_n, Con_dir<Deformed_element> direction);
   virtual void connect_hanging_cartesian(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Element>,
                                          bool coarse_face_positive, bool coarse_deformed=false, std::vector<bool> fine_deformed={false, false, false, false});
+  virtual void connect_hanging_deformed(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Deformed_element>, std::vector<bool> stretch);
   Sequence<Element_connection&>& element_connections() {return elem_cons;}
   virtual int add_boundary_condition(Flow_bc*, Mesh_bc*);
   virtual void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n);
