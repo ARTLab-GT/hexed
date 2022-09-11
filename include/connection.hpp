@@ -184,7 +184,7 @@ class Refined_connection
    * Assumes fine elements are in the natural row-major order that they would be listed in a context
    * other than a connection.
    */
-  Refined_connection(element_t* coarse, std::vector<element_t*> fine, Con_dir<element_t> con_dir, bool reverse_order=false) :
+  Refined_connection(element_t* coarse, std::vector<element_t*> fine, Con_dir<element_t> con_dir, bool reverse_order = false, std::array<bool, 2> stretch = {false, false}) :
     c{*coarse},
     params{coarse->storage_params()},
     dir{con_dir},
@@ -193,14 +193,19 @@ class Refined_connection
     refined_face{params, coarse->face() + con_dir.i_face(rev)*params.n_dof()/params.row_size},
     matcher{to_elementstar(fine), def_dir.i_dim[!reverse_order], def_dir.face_sign[!reverse_order]}
   {
-    if (int(fine.size()) != params.n_vertices()/2) throw std::runtime_error("wrong number of elements in `Refined_connection`");
+    int n_fine_required = params.n_vertices()/2;
+    for (int i_dim = 0; i_dim < params.n_dim - 1; ++i_dim) {
+      if (stretch[i_dim]) n_fine_required /= 2; // if there is any stretching, don't expect as many elements
+    }
+    if (int(fine.size()) != n_fine_required) throw std::runtime_error("wrong number of elements in `Refined_connection`");
     std::vector<int> permutation_inds {face_vertex_inds(params.n_dim, con_dir)};
     auto vert_inds {vertex_inds(params.n_dim, con_dir)};
     for (int i_face = 0; i_face < int(fine.size()); ++i_face) {
       int inds [] {i_face, permutation_inds[i_face]};
-      fine_cons.emplace_back(*this, refined_face.fine_face(inds[reverse_order]), *fine[inds[!reverse_order]]);
+      int fine_ind = std::min<int>(inds[!reverse_order], fine.size() - 1); // if there is any stretching, this `min` expression happens to give the right result
+      fine_cons.emplace_back(*this, refined_face.fine_face(inds[reverse_order]), *fine[fine_ind]);
       auto& vert0 = coarse->vertex(vert_inds[reverse_order][i_face]);
-      auto& vert1 = fine[inds[!reverse_order]]->vertex(vert_inds[!reverse_order][i_face]);
+      auto& vert1 = fine[fine_ind]->vertex(vert_inds[!reverse_order][i_face]);
       vert0.eat(vert1);
     }
   }

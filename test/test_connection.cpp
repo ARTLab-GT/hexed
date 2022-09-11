@@ -223,4 +223,28 @@ TEST_CASE("Refined_connection<Deformed_element>")
     REQUIRE(&elem3.vertex(7) == &coarse.vertex(7));
     REQUIRE(&elem0.vertex(5) != &coarse.vertex(5));
   }
+  SECTION("stretched")
+  {
+    std::vector<cartdg::Deformed_element*> elems2 {&elem0, &elem1};
+    SECTION("invalid construction throws")
+    {
+      REQUIRE_THROWS(cartdg::Refined_connection<cartdg::Deformed_element>{&coarse, elem_ptrs, cartdg::Con_dir<cartdg::Deformed_element>{{0, 2}, {1, 1}}, false, {true, false}});
+      REQUIRE_THROWS(cartdg::Refined_connection<cartdg::Deformed_element>{&coarse, elem_ptrs, cartdg::Con_dir<cartdg::Deformed_element>{{0, 2}, {1, 1}}, false, {false, true}});
+      REQUIRE_THROWS(cartdg::Refined_connection<cartdg::Deformed_element>{&coarse, elem_ptrs, cartdg::Con_dir<cartdg::Deformed_element>{{0, 2}, {1, 1}}, false, {true, true}});
+      REQUIRE_THROWS(cartdg::Refined_connection<cartdg::Deformed_element>{&coarse, elems2, cartdg::Con_dir<cartdg::Deformed_element>{{0, 2}, {1, 1}}, false, {false, false}});
+      REQUIRE_THROWS(cartdg::Refined_connection<cartdg::Deformed_element>{&coarse, elems2, cartdg::Con_dir<cartdg::Deformed_element>{{0, 2}, {1, 1}}, false, {true, true}});
+    }
+    SECTION("stretch dimension 0")
+    {
+      cartdg::Refined_connection<cartdg::Deformed_element> con2 {&coarse, elems2, cartdg::Con_dir<cartdg::Deformed_element>{{0, 2}, {1, 1}}, false, {true, false}};
+    }
+    SECTION("stretch dimension 1")
+    {
+      cartdg::Refined_connection<cartdg::Deformed_element> con2 {&coarse, elems2, cartdg::Con_dir<cartdg::Deformed_element>{{0, 2}, {1, 1}}, false, {false, true}};
+    }
+    SECTION("stretch both")
+    {
+      cartdg::Refined_connection<cartdg::Deformed_element> con1 {&coarse, {&elem0}, cartdg::Con_dir<cartdg::Deformed_element>{{0, 2}, {1, 1}}, false, {true, true}};
+    }
+  }
 }

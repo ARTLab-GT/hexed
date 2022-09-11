@@ -73,7 +73,7 @@ void Accessible_mesh::connect_hanging_cartesian(int coarse_ref_level, int coarse
 }
 
 void Accessible_mesh::connect_hanging_deformed(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial,
-                                               Con_dir<Deformed_element> dir, std::vector<bool> stretch)
+                                               Con_dir<Deformed_element> dir, std::array<bool, 2> stretch)
 {
 }
 

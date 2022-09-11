@@ -48,9 +48,10 @@ class Mesh
    * The number of deformed elements can be any power of 2 (with a maximum of 2^(`n_dim - 1`)).
    * In order to match the faces when less than the maximum number of elements is used,
    * `stretch` specifies along which dimensions the fine elements are to be stretched to match the coarse.
-   * `stretch.size()` must equal the number of dimensions.
+   * Only the first `n_dim - 1` elements of `stretch` are meaningful.
+   * The rest are ignored.
    */
-  virtual void connect_hanging_deformed(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Deformed_element>, std::vector<bool> stretch) = 0;
+  virtual void connect_hanging_deformed(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Deformed_element>, std::array<bool, 2> stretch = {false, false}) = 0;
   /*
    * Acquires owenership of `*flow_bc` and `*mesh_bc` and constructs a `Boundary_condition` from them.
    * Returns a serial number which uniquely identifies the new boundary condition among this `Mesh`'s boundary conditions.
