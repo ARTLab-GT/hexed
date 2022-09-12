@@ -193,19 +193,38 @@ class Refined_connection
     refined_face{params, coarse->face() + con_dir.i_face(rev)*params.n_dof()/params.row_size},
     matcher{to_elementstar(fine), def_dir.i_dim[!reverse_order], def_dir.face_sign[!reverse_order]}
   {
+    int nd = params.n_dim;
     int n_fine_required = params.n_vertices()/2;
-    for (int i_dim = 0; i_dim < params.n_dim - 1; ++i_dim) {
+    for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
       if (stretch[i_dim]) n_fine_required /= 2; // if there is any stretching, don't expect as many elements
     }
     if (int(fine.size()) != n_fine_required) throw std::runtime_error("wrong number of elements in `Refined_connection`");
-    std::vector<int> permutation_inds {face_vertex_inds(params.n_dim, con_dir)};
-    auto vert_inds {vertex_inds(params.n_dim, con_dir)};
+    std::vector<int> permutation_inds {face_vertex_inds(nd, con_dir)};
+    auto vert_inds {vertex_inds(nd, con_dir)};
+    int max_face = fine.size() - 1;
+    // connect faces
     for (int i_face = 0; i_face < int(fine.size()); ++i_face) {
+      // if there is any stretching, fine indices are either 0 or `max_face`
+      int inds [] {std::min(i_face, max_face), std::min(permutation_inds[i_face], max_face)};
+      fine_cons.emplace_back(*this, refined_face.fine_face(inds[rev]), *fine[inds[!rev]]);
+    }
+    // merge vertices
+    for (int i_face = 0; i_face < params.n_vertices()/2; ++i_face) {
       int inds [] {i_face, permutation_inds[i_face]};
-      int fine_ind = std::min<int>(inds[!reverse_order], fine.size() - 1); // if there is any stretching, this `min` expression happens to give the right result
-      fine_cons.emplace_back(*this, refined_face.fine_face(inds[reverse_order]), *fine[fine_ind]);
+      // if there is stretching, `inds` may be out of bounds
+      // figure out which element it should refer to instead
+      for (int r : {0, 1}) {
+        for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
+          if (stretch[i_dim]) {
+            int stride = custom_math::pow(2, nd - 2 - i_dim);
+            inds[r] -= ((inds[r]/stride)%2)*stride;
+          }
+        }
+        inds[r] = std::min<int>(inds[r], fine.size() - 1);
+      }
+      // perform merging
       auto& vert0 = coarse->vertex(vert_inds[reverse_order][i_face]);
-      auto& vert1 = fine[fine_ind]->vertex(vert_inds[!reverse_order][i_face]);
+      auto& vert1 = fine[inds[!rev]]->vertex(vert_inds[!reverse_order][i_face]);
       vert0.eat(vert1);
     }
   }
