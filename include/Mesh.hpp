@@ -36,22 +36,22 @@ class Mesh
   // Specify that two elements are connected via a deformed face. Requires both elements to be deformed.
   virtual void connect_deformed(int ref_level, std::array<int, 2> serial_n, Con_dir<Deformed_element> direction) = 0;
   /*
-   * specify that an element of refinement level `coarse_ref_level` is connected to 2^(`n_dim - 1`) elements of refinement level
-   * `coarse_ref_level + 1` via a Cartesian face
-   */
-  virtual void connect_hanging_cartesian(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Element>,
-                                         bool coarse_face_positive, bool coarse_deformed=false, std::vector<bool> fine_deformed={false, false, false, false}) = 0;
-  /*
-   * specify that a deformed element of refinement level `coarse_ref_level` is connected to some deformed elements of refinement level
-   * `coarse_ref_level + 1` via a deformed face.
+   * specify that an element of refinement level `coarse_ref_level` is connected to some elements of refinement level
+   * `coarse_ref_level + 1`.
    * Coarse element comes first in `Con_dir`.
-   * The number of deformed elements can be any power of 2 (with a maximum of 2^(`n_dim - 1`)).
+   * `coarse_deformed` and `fine_deformed` specify whether the elements are Cartesian or deformed.
+   * If any of the elements are Cartesian, the entire face is assumed to be Cartesian.
+   * In this case, all the vertices must occupy their nominal positions and the `Con_dir` must be appropriate for a Cartesian connection.
+   * If these requirements are not satisfied, the invocation is incorrect.
+   * The number of fine elements can be any power of 2 (with a maximum of 2^(`n_dim - 1`)).
    * In order to match the faces when less than the maximum number of elements is used,
    * `stretch` specifies along which dimensions the fine elements are to be stretched to match the coarse.
    * Only the first `n_dim - 1` elements of `stretch` are meaningful.
    * The rest are ignored.
    */
-  virtual void connect_hanging_deformed(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Deformed_element>, std::array<bool, 2> stretch = {false, false}) = 0;
+  virtual void connect_hanging(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Deformed_element>,
+                               bool coarse_deformed = false, std::vector<bool> fine_deformed = {false, false, false, false},
+                               std::array<bool, 2> stretch = {false, false}) = 0;
   /*
    * Acquires owenership of `*flow_bc` and `*mesh_bc` and constructs a `Boundary_condition` from them.
    * Returns a serial number which uniquely identifies the new boundary condition among this `Mesh`'s boundary conditions.

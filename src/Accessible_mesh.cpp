@@ -61,20 +61,24 @@ void Accessible_mesh::connect_deformed(int ref_level, std::array<int, 2> serial_
   def.cons.emplace_back(el_ar, direction);
 }
 
-void Accessible_mesh::connect_hanging_cartesian(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Element> dir,
-                                                bool coarse_face_positive, bool coarse_deformed, std::vector<bool> fine_deformed)
+void Accessible_mesh::connect_hanging(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Deformed_element> dir,
+                                      bool coarse_deformed, std::vector<bool> fine_deformed, std::array<bool, 2> stretch)
 {
-  Element* coarse = &element(coarse_ref_level, coarse_deformed, coarse_serial);
-  std::vector<Element*> fine;
-  for (int i_fine = 0; i_fine < n_vert/2; ++i_fine) {
-    fine.push_back(&element(coarse_ref_level + 1, fine_deformed[i_fine], fine_serial[i_fine]));
+  bool is_car = !coarse_deformed;
+  for (bool fine_def : fine_deformed) is_car = (is_car||!fine_def);
+  if (is_car)
+  {
+    Element* coarse = &element(coarse_ref_level, coarse_deformed, coarse_serial);
+    std::vector<Element*> fine;
+    for (int i_fine = 0; i_fine < n_vert/2; ++i_fine) {
+      fine.push_back(&element(coarse_ref_level + 1, fine_deformed[i_fine], fine_serial[i_fine]));
+    }
+    car.ref_face_cons.emplace_back(new Refined_connection<Element> {coarse, fine, {dir.i_dim[0]}, dir.face_sign[1]});
   }
-  car.ref_face_cons.emplace_back(new Refined_connection<Element> {coarse, fine, dir, !coarse_face_positive});
-}
-
-void Accessible_mesh::connect_hanging_deformed(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial,
-                                               Con_dir<Deformed_element> dir, std::array<bool, 2> stretch)
-{
+  else
+  {
+    throw std::runtime_error("not implemented");
+  }
 }
 
 int Accessible_mesh::add_boundary_condition(Flow_bc* flow_bc, Mesh_bc* mesh_bc)
