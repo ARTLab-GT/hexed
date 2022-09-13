@@ -168,6 +168,7 @@ class Refined_connection
   Con_dir<Deformed_element> def_dir;
   bool rev;
   std::vector<Fine_connection> fine_cons;
+  std::array<bool, 2> str;
   static std::vector<Element*> to_elementstar(std::vector<element_t*> elems)
   {
     std::vector<Element*> converted;
@@ -184,19 +185,20 @@ class Refined_connection
    * Assumes fine elements are in the natural row-major order that they would be listed in a context
    * other than a connection.
    */
-  Refined_connection(element_t* coarse, std::vector<element_t*> fine, Con_dir<element_t> con_dir, bool reverse_order = false, std::array<bool, 2> stretch = {false, false}) :
+  Refined_connection(element_t* coarse, std::vector<element_t*> fine, Con_dir<element_t> con_dir, bool reverse_order = false, std::array<bool, 2> stretch_arg = {false, false}) :
     c{*coarse},
     params{coarse->storage_params()},
     dir{con_dir},
     def_dir{Con_dir<Deformed_element>(dir)},
     rev{reverse_order},
+    str{stretch_arg},
     refined_face{params, coarse->face() + con_dir.i_face(rev)*params.n_dof()/params.row_size},
-    matcher{to_elementstar(fine), def_dir.i_dim[!reverse_order], def_dir.face_sign[!reverse_order], stretch}
+    matcher{to_elementstar(fine), def_dir.i_dim[!reverse_order], def_dir.face_sign[!reverse_order], stretch_arg}
   {
     int nd = params.n_dim;
     int n_fine_required = params.n_vertices()/2;
     for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
-      if (stretch[i_dim]) n_fine_required /= 2; // if there is any stretching, don't expect as many elements
+      if (str[i_dim]) n_fine_required /= 2; // if there is any stretching, don't expect as many elements
     }
     if (int(fine.size()) != n_fine_required) throw std::runtime_error("wrong number of elements in `Refined_connection`");
     std::vector<int> permutation_inds {face_vertex_inds(nd, con_dir)};
@@ -210,11 +212,11 @@ class Refined_connection
     }
     // merge vertices
     for (int i_face = 0; i_face < params.n_vertices()/2; ++i_face) {
-      int inds [] {custom_math::stretched_ind(nd, i_face, stretch),
-                   custom_math::stretched_ind(nd, permutation_inds[i_face], stretch)};
+      int inds [] {custom_math::stretched_ind(nd, i_face, str),
+                   custom_math::stretched_ind(nd, permutation_inds[i_face], str)};
       // perform merging
-      auto& vert0 = coarse->vertex(vert_inds[reverse_order][i_face]);
-      auto& vert1 = fine[inds[!rev]]->vertex(vert_inds[!reverse_order][i_face]);
+      auto& vert0 = coarse->vertex(vert_inds[rev][i_face]);
+      auto& vert1 = fine[inds[!rev]]->vertex(vert_inds[!rev][i_face]);
       vert0.eat(vert1);
     }
   }
@@ -226,6 +228,7 @@ class Refined_connection
   // fetch an object represting a connection between the face of a fine element and one of the mortar faces
   Fine_connection& connection(int i_fine) {return fine_cons[i_fine];}
   bool order_reversed() {return rev;}
+  auto stretch() {return str;}
 };
 
 }

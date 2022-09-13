@@ -473,7 +473,7 @@ class Extrude_hanging : public Test_mesh
       }
     }
     sol.mesh().connect_hanging(0, coarse, fine, {{0, 2}, {1, 1}}, true, {true, true, true, true});
-    //sol.mesh().extrude();
+    sol.mesh().extrude();
     sol.mesh().connect_rest(bc_sn);
     sol.relax_vertices();
   }

@@ -250,6 +250,36 @@ void Accessible_mesh::extrude()
   // and ultimately dereferencing null pointers)
   std::vector<Connection_plan> con_plans;
   {
+    for (auto& ref_con : def.ref_face_cons)
+    {
+      bool rev = ref_con->order_reversed();
+      auto& coarse = ref_con->connection(0).element(rev);
+      auto vert_inds = vertex_inds(params.n_dim, ref_con->direction());
+      for (int i_face_vert = 0; i_face_vert < params.n_vertices()/2; ++i_face_vert) {
+        auto& vert = coarse.vertex(vert_inds[rev][i_face_vert]);
+        for (bool (*aligned)(Con_dir<Deformed_element>, std::array<int, 2>) : {&aligned_same_dim, &aligned_different_dim})
+        {
+          for (int i_record = 0; i_record < int(vert.record.size()); i_record += n_record)
+          {
+            for (unsigned j_record = i_record + n_record; j_record < vert.record.size(); j_record += n_record)
+            {
+              Con_dir<Deformed_element> dir {{     vert.record[i_record + 2]/2 ,      vert.record[j_record + 2]/2},
+                                             {bool(vert.record[i_record + 2]%2), bool(vert.record[j_record + 2]%2)}};
+              if (aligned(dir, {vert.record[i_record + 3], vert.record[j_record + 3]})) {
+                if (vert.record[j_record] != coarse.refinement_level()) {
+                  vert.record.erase(vert.record.begin() + j_record, vert.record.begin() + j_record + n_record);
+                  vert.record.erase(vert.record.begin() + i_record, vert.record.begin() + i_record + n_record);
+                  i_record -= n_record; // move index to account for erased elements
+                  break; // since we found a match, we can move on to the next `i_record`
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  {
     auto verts = vertices(); // note: need to rebuild vertex vector because face connections above have `eat`en vertices
     for (int i_vert = 0; i_vert < verts.size(); ++i_vert)
     {
