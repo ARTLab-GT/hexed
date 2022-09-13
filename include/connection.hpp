@@ -191,7 +191,7 @@ class Refined_connection
     def_dir{Con_dir<Deformed_element>(dir)},
     rev{reverse_order},
     refined_face{params, coarse->face() + con_dir.i_face(rev)*params.n_dof()/params.row_size},
-    matcher{to_elementstar(fine), def_dir.i_dim[!reverse_order], def_dir.face_sign[!reverse_order]}
+    matcher{to_elementstar(fine), def_dir.i_dim[!reverse_order], def_dir.face_sign[!reverse_order], stretch}
   {
     int nd = params.n_dim;
     int n_fine_required = params.n_vertices()/2;
@@ -210,18 +210,8 @@ class Refined_connection
     }
     // merge vertices
     for (int i_face = 0; i_face < params.n_vertices()/2; ++i_face) {
-      int inds [] {i_face, permutation_inds[i_face]};
-      // if there is stretching, `inds` may be out of bounds
-      // figure out which element it should refer to instead
-      for (int r : {0, 1}) {
-        for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
-          if (stretch[i_dim]) {
-            int stride = custom_math::pow(2, nd - 2 - i_dim);
-            inds[r] -= ((inds[r]/stride)%2)*stride;
-          }
-        }
-        inds[r] = std::min<int>(inds[r], fine.size() - 1);
-      }
+      int inds [] {custom_math::stretched_ind(nd, i_face, stretch),
+                   custom_math::stretched_ind(nd, permutation_inds[i_face], stretch)};
       // perform merging
       auto& vert0 = coarse->vertex(vert_inds[reverse_order][i_face]);
       auto& vert1 = fine[inds[!rev]]->vertex(vert_inds[!reverse_order][i_face]);

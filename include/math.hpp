@@ -100,5 +100,19 @@ Eigen::Matrix<double, n_dim, n_dim> orthonormal (Eigen::Matrix<double, n_dim, n_
 
 Eigen::MatrixXd orthonormal (Eigen::MatrixXd basis, int i_dim);
 
+// for indexing faces/vertices in refined faces with possible stretching
+inline int stretched_ind(int n_dim, int ind, std::array<bool, 2> stretch)
+{
+  int stride = 1;
+  int stretched = 0;
+  for (int i_dim = n_dim - 2; i_dim >= 0; --i_dim) {
+    if (!stretch[i_dim]) {
+      stretched += ((ind/custom_math::pow(2, n_dim - 2 - i_dim))%2)*stride;
+      stride *= 2;
+    }
+  }
+  return stretched;
+}
+
 }
 #endif

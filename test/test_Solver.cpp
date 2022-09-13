@@ -446,6 +446,39 @@ class Extrude_3d : public Test_mesh
   }
 };
 
+class Extrude_hanging : public Test_mesh
+{
+  cartdg::Solver sol;
+  int bc_sn;
+
+  public:
+  Extrude_hanging()
+  : sol{3, cartdg::config::max_row_size, .8}
+  {}
+
+  virtual cartdg::Solver& solver() {return sol;}
+  virtual int bc_serial_n() {return bc_sn;}
+
+  virtual void construct(cartdg::Flow_bc* flow_bc)
+  {
+    bc_sn = sol.mesh().add_boundary_condition(flow_bc, new cartdg::Null_mbc);
+    std::vector<cartdg::Mesh::elem_handle> handles;
+    int coarse = sol.mesh().add_element(0, true, {-1, 0, 0});
+    std::vector<int> fine(4);
+    for (int i = 0; i < 2; ++i) {
+      for (int j = 0; j < 2; ++j) {
+        fine[2*i + j] = sol.mesh().add_element(1, true, {i, j, -1});
+        if (i) sol.mesh().connect_deformed(1, {fine[  j], fine[2   + j]}, {{0, 0}, {1, 0}});
+        if (j) sol.mesh().connect_deformed(1, {fine[2*i], fine[2*i + 1]}, {{1, 1}, {1, 0}});
+      }
+    }
+    sol.mesh().connect_hanging(0, coarse, fine, {{0, 2}, {1, 1}}, true, {true, true, true, true});
+    //sol.mesh().extrude();
+    sol.mesh().connect_rest(bc_sn);
+    sol.relax_vertices();
+  }
+};
+
 void test_marching(Test_mesh& tm, std::string name)
 {
   // use `Copy` BCs. This is unstable for this case but it will still give the right answer as long as only one time step is executed
@@ -528,6 +561,17 @@ TEST_CASE("Solver time marching")
   {
     Extrude_3d e3;
     test_marching(e3, "extrude_3d");
+  }
+  SECTION("extruded with deformed hanging nodes")
+  {
+    Extrude_hanging eh;
+    #if CARTDG_USE_OTTER
+    eh.construct(new cartdg::Copy);
+    eh.solver().calc_jacobian();
+    otter::plot plt;
+    eh.solver().visualize_edges_otter(plt);
+    plt.show();
+    #endif
   }
 }
 
