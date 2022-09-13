@@ -73,11 +73,19 @@ void Accessible_mesh::connect_hanging(int coarse_ref_level, int coarse_serial, s
     for (int i_fine = 0; i_fine < n_vert/2; ++i_fine) {
       fine.push_back(&element(coarse_ref_level + 1, fine_deformed[i_fine], fine_serial[i_fine]));
     }
+    if ((dir.i_dim[0] != dir.i_dim[1]) || (dir.face_sign[0] == dir.face_sign[1])) {
+      throw std::runtime_error("attempted to form a cartesian hanging-node connection with incompatible `Con_dir`.");
+    }
     car.ref_face_cons.emplace_back(new Refined_connection<Element> {coarse, fine, {dir.i_dim[0]}, dir.face_sign[1]});
   }
   else
   {
-    throw std::runtime_error("not implemented");
+    Deformed_element* coarse = &def.elems.at(coarse_ref_level, coarse_serial);
+    std::vector<Deformed_element*> fine;
+    for (int i_fine = 0; i_fine < n_vert/2; ++i_fine) {
+      fine.push_back(&def.elems.at(coarse_ref_level + 1, fine_serial[i_fine]));
+    }
+    def.ref_face_cons.emplace_back(new Refined_connection<Deformed_element> {coarse, fine, dir, false, stretch});
   }
 }
 

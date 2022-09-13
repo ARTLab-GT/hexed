@@ -82,10 +82,19 @@ TEST_CASE("Accessible_mesh")
   {
     // check that it can't find elements with the wrong deformedness
     REQUIRE_THROWS(mesh.connect_hanging(1, car0, {def0, def1, def2, def3}, {{2, 2}, {1, 0}}, false, {true, true, true, false}));
-    // make a good connection
-    mesh.connect_hanging(1, car0, {def0, def1, def2, def3}, {{2, 2}, {1, 0}}, false, {true, true, true, true});
-    auto& ref_face {mesh.cartesian().refined_faces()[0]};
-    REQUIRE(ref_face.coarse_face() == mesh.element(1, false, car0).face() + (2*2 + 1)*5*row_size*row_size);
+    SECTION("cartesian")
+    {
+      mesh.connect_hanging(1, car0, {def0, def1, def2, def3}, {{2, 2}, {1, 0}}, false, {true, true, true, true});
+      auto& ref_face {mesh.cartesian().refined_faces()[0]};
+      REQUIRE(ref_face.coarse_face() == mesh.element(1, false, car0).face() + (2*2 + 1)*5*row_size*row_size);
+    }
+    SECTION("deformed")
+    {
+      int coarse = mesh.add_element(1, true, {0, 0});
+      mesh.connect_hanging(1, coarse, {def0, def1, def2, def3}, {{1, 0}, {1, 0}}, true, {true, true, true, true});
+      auto& ref_face {mesh.deformed().refined_faces()[0]};
+      REQUIRE(ref_face.coarse_face() == mesh.element(1, true, coarse).face() + (1*2 + 1)*5*row_size*row_size);
+    }
   }
 
   SECTION("deformed-deformed connection")
