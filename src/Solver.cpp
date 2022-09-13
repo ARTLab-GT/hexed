@@ -122,6 +122,8 @@ void Solver::calc_jacobian()
           }
         }
       }
+      // prolong Jacobian onto fine faces at hanging node connections
+      (*kernel_factory<Prolong_refined>(n_dim, rs, basis))(acc_mesh.deformed().refined_faces());
       // for BCs, copy Jacobian to ghost face
       auto& def_bc_cons = acc_mesh.deformed().boundary_connections();
       for (int i_con = 0; i_con < def_bc_cons.size(); ++i_con) {

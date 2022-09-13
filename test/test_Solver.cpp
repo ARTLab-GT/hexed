@@ -566,12 +566,16 @@ TEST_CASE("Solver time marching")
   {
     Extrude_hanging eh;
     #if CARTDG_USE_OTTER
-    eh.construct(new cartdg::Copy);
-    eh.solver().calc_jacobian();
-    otter::plot plt;
-    eh.solver().visualize_edges_otter(plt);
-    plt.show();
+    SECTION("vis")
+    {
+      eh.construct(new cartdg::Copy);
+      eh.solver().calc_jacobian();
+      otter::plot plt;
+      eh.solver().visualize_edges_otter(plt);
+      plt.show();
+    }
     #endif
+    test_marching(eh, "extrude_hanging");
   }
 }
 
@@ -599,6 +603,11 @@ TEST_CASE("Solver conservation")
   {
     Extrude_3d e3;
     test_conservation(e3, "extrude_3d");
+  }
+  SECTION("extruded with deformed hanging nodes")
+  {
+    Extrude_hanging eh;
+    test_conservation(eh, "extrude_hanging");
   }
 }
 
