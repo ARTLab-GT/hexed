@@ -562,6 +562,7 @@ TEST_CASE("Solver time marching")
     Extrude_3d e3;
     test_marching(e3, "extrude_3d");
   }
+  #if 0
   SECTION("extruded with deformed hanging nodes")
   {
     Extrude_hanging eh;
@@ -577,6 +578,7 @@ TEST_CASE("Solver time marching")
     #endif
     test_marching(eh, "extrude_hanging");
   }
+  #endif
 }
 
 // test the solver on a randomly perturbed input (for which it can't possibly be accurate) and verify conservation
@@ -604,11 +606,13 @@ TEST_CASE("Solver conservation")
     Extrude_3d e3;
     test_conservation(e3, "extrude_3d");
   }
+  #if 0
   SECTION("extruded with deformed hanging nodes")
   {
     Extrude_hanging eh;
     test_conservation(eh, "extrude_hanging");
   }
+  #endif
 }
 
 TEST_CASE("face extrusion")

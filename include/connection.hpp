@@ -169,6 +169,7 @@ class Refined_connection
   bool rev;
   std::vector<Fine_connection> fine_cons;
   std::array<bool, 2> str;
+  int n_fine;
   static std::vector<Element*> to_elementstar(std::vector<element_t*> elems)
   {
     std::vector<Element*> converted;
@@ -196,11 +197,11 @@ class Refined_connection
     matcher{to_elementstar(fine), def_dir.i_dim[!reverse_order], def_dir.face_sign[!reverse_order], stretch_arg}
   {
     int nd = params.n_dim;
-    int n_fine_required = params.n_vertices()/2;
+    n_fine = params.n_vertices()/2;
     for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
-      if (str[i_dim]) n_fine_required /= 2; // if there is any stretching, don't expect as many elements
+      if (str[i_dim]) n_fine /= 2; // if there is any stretching, don't expect as many elements
     }
-    if (int(fine.size()) != n_fine_required) throw std::runtime_error("wrong number of elements in `Refined_connection`");
+    if (int(fine.size()) != n_fine) throw std::runtime_error("wrong number of elements in `Refined_connection`");
     std::vector<int> permutation_inds {face_vertex_inds(nd, con_dir)};
     auto vert_inds {vertex_inds(nd, con_dir)};
     int max_face = fine.size() - 1;
@@ -229,6 +230,7 @@ class Refined_connection
   Fine_connection& connection(int i_fine) {return fine_cons[i_fine];}
   bool order_reversed() {return rev;}
   auto stretch() {return str;}
+  int n_fine_elements() {return n_fine;}
 };
 
 }
