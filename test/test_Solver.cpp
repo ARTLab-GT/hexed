@@ -571,19 +571,7 @@ TEST_CASE("Solver time marching")
   SECTION("extruded with deformed hanging nodes")
   {
     Extrude_hanging eh;
-    #if CARTDG_USE_OTTER
-    SECTION("vis")
-    {
-      eh.construct(new cartdg::Copy);
-      eh.solver().calc_jacobian();
-      otter::plot plt;
-      eh.solver().visualize_edges_otter(plt);
-      eh.solver().visualize_surface_otter(plt, eh.bc_serial_n(), otter::const_colormap(otter::colors::css4["darkgrey"]), cartdg::Pressure(), {0., 1.}, true);
-      plt.show();
-      eh.solver().mesh().valid().assert_valid();
-    }
-    #endif
-    //test_marching(eh, "extrude_hanging");
+    test_marching(eh, "extrude_hanging");
   }
 }
 

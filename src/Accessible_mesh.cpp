@@ -85,13 +85,6 @@ void Accessible_mesh::connect_hanging(int coarse_ref_level, int coarse_serial, s
     for (unsigned i_fine = 0; i_fine < fine_serial.size(); ++i_fine) {
       fine.push_back(&def.elems.at(coarse_ref_level + 1, fine_serial[i_fine]));
     }
-    printf("hanging con:");
-    for (int sn : fine_serial) {
-      auto& elem = element(coarse_ref_level + 1, true, sn);
-      auto pos = elem.nominal_position();
-      printf(" | %i %i %i", pos[0], pos[1], pos[2]);
-    }
-    printf("\n");
     def.ref_face_cons[custom_math::log(2, fine_serial.size())].emplace_back(new Refined_connection<Deformed_element> {coarse, fine, dir, false, stretch});
   }
 }
@@ -135,7 +128,6 @@ Mesh::Connection_validity Accessible_mesh::valid()
       int rec = elems[i_elem].face_record[i_face];
       if (rec == 0) ++n_missing;
       if (rec > 1) n_duplicates += rec - 1;
-      if (rec > 1)  printf("duplicate: %2i | %2i %2i %2i | %i\n", elems[i_elem].refinement_level(), elems[i_elem].nominal_position()[0], elems[i_elem].nominal_position()[1], elems[i_elem].nominal_position()[2], i_face);
     }
   }
   return {n_duplicates, n_missing};
@@ -230,7 +222,6 @@ void Accessible_mesh::extrude()
     nom_pos[face.i_dim] += 2*face.face_sign - 1;
     const int ref_level = face.elem.refinement_level();
     int sn = add_element(ref_level, true, nom_pos);
-    //if ((nom_pos[0] == -1) && (nom_pos[1] == 2) && (nom_pos[2] == 1)) printf("%i %i %i\n", face.i_dim, int(!face.face_sign), face.face_sign);
     Con_dir<Deformed_element> dir {{face.i_dim, face.i_dim}, {!face.face_sign, bool(face.face_sign)}};
     auto& elem = def.elems.at(ref_level, sn);
     std::array<Deformed_element*, 2> el_arr {&elem, &face.elem};

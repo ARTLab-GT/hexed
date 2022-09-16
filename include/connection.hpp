@@ -204,26 +204,21 @@ class Refined_connection
     if (int(fine.size()) != n_fine) throw std::runtime_error("wrong number of elements in `Refined_connection`");
     std::vector<int> permutation_inds {face_vertex_inds(nd, con_dir)};
     auto vert_inds {vertex_inds(nd, con_dir)};
-    int max_face = fine.size() - 1;
-    // connect faces
-    for (int i_face = 0; i_face < int(fine.size()); ++i_face) {
-      // if there is any stretching, fine indices are either 0 or `max_face`
-      int inds [] {custom_math::stretched_ind(nd, i_face, str),
-                   custom_math::stretched_ind(nd, permutation_inds[i_face], str)};
-      auto& elem = *fine[inds[!rev]];
-      auto pos = elem.nominal_position();
-      printf(" | %i, %i %i %i", inds[!rev], pos[0], pos[1], pos[2]);
-      fine_cons.emplace_back(*this, refined_face.fine_face(inds[rev]), *fine[inds[!rev]]);
-    }
-    printf("\n");
-    // merge vertices
+    int elem_inds [4];
     for (int i_face = 0; i_face < params.n_vertices()/2; ++i_face) {
       int inds [] {custom_math::stretched_ind(nd, i_face, str),
                    custom_math::stretched_ind(nd, permutation_inds[i_face], str)};
-      // perform merging
+      // merge vertices
       auto& vert0 = coarse->vertex(vert_inds[rev][i_face]);
       auto& vert1 = fine[inds[!rev]]->vertex(vert_inds[!rev][i_face]);
       vert0.eat(vert1);
+      // match fine face indices on both sides with permutation
+      elem_inds[inds[0]] = inds[1];
+    }
+    // connect faces
+    for (int i_face = 0; i_face < int(fine.size()); ++i_face) {
+      int inds [] {i_face, elem_inds[i_face]};
+      fine_cons.emplace_back(*this, refined_face.fine_face(inds[rev]), *fine[inds[!rev]]);
     }
   }
   // delete copy semantics which would mess up `Fine_connection`. Can implement later if we really need it.
