@@ -83,6 +83,10 @@ if n_dim > 1:
             if not ("interior" in zone.name):
                 fieldmap.contour.show = False
                 fieldmap.edge.show = False
+                if isinstance(fieldmap, tecplot.plot.Cartesian3DFieldmap):
+                    fieldmap.show_isosurfaces = False
+                    fieldmap.show_slices = False
+                    fieldmap.show_streamtraces = False
 else:
     plot.delete_linemaps()
     n_zones = data.num_zones
