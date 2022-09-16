@@ -467,15 +467,21 @@ class Extrude_hanging : public Test_mesh
     std::vector<int> fine(4);
     for (int i = 0; i < 2; ++i) {
       for (int j = 0; j < 2; ++j) {
-        fine[2*i + j] = sol.mesh().add_element(1, true, {i, j, -1});
-        if (i) sol.mesh().connect_deformed(1, {fine[  j], fine[2   + j]}, {{0, 0}, {1, 0}});
-        if (j) sol.mesh().connect_deformed(1, {fine[2*i], fine[2*i + 1]}, {{1, 1}, {1, 0}});
+        fine[2*i + j] = sol.mesh().add_element(1, true, {0, i, j});
+        if (i) sol.mesh().connect_deformed(1, {fine[  j], fine[2   + j]}, {{1, 1}, {1, 0}});
+        if (j) sol.mesh().connect_deformed(1, {fine[2*i], fine[2*i + 1]}, {{2, 2}, {1, 0}});
       }
     }
-    sol.mesh().connect_hanging(0, coarse, fine, {{0, 2}, {1, 1}}, true, {true, true, true, true});
+    int extra [2];
+    for (int i = 0; i < 2; ++i) {
+      extra[i] = sol.mesh().add_element(1, true, {0, 2, i});
+      sol.mesh().connect_deformed(1, {fine[2 + i], extra[i]}, {{1, 1}, {1, 0}});
+    }
+    sol.mesh().connect_deformed(1, {extra[0], extra[1]}, {{2, 2}, {1, 0}});
+    sol.mesh().connect_hanging(0, coarse, fine, {{0, 0}, {1, 0}}, true, {true, true, true, true});
     sol.mesh().extrude();
     sol.mesh().connect_rest(bc_sn);
-    sol.relax_vertices();
+    for (int i = 0; i < 2; ++i) sol.relax_vertices();
   }
 };
 
@@ -562,7 +568,6 @@ TEST_CASE("Solver time marching")
     Extrude_3d e3;
     test_marching(e3, "extrude_3d");
   }
-  #if 0
   SECTION("extruded with deformed hanging nodes")
   {
     Extrude_hanging eh;
@@ -573,12 +578,13 @@ TEST_CASE("Solver time marching")
       eh.solver().calc_jacobian();
       otter::plot plt;
       eh.solver().visualize_edges_otter(plt);
+      eh.solver().visualize_surface_otter(plt, eh.bc_serial_n(), otter::const_colormap(otter::colors::css4["darkgrey"]), cartdg::Pressure(), {0., 1.}, true);
       plt.show();
+      eh.solver().mesh().valid().assert_valid();
     }
     #endif
-    test_marching(eh, "extrude_hanging");
+    //test_marching(eh, "extrude_hanging");
   }
-  #endif
 }
 
 // test the solver on a randomly perturbed input (for which it can't possibly be accurate) and verify conservation
@@ -606,13 +612,11 @@ TEST_CASE("Solver conservation")
     Extrude_3d e3;
     test_conservation(e3, "extrude_3d");
   }
-  #if 0
   SECTION("extruded with deformed hanging nodes")
   {
     Extrude_hanging eh;
     test_conservation(eh, "extrude_hanging");
   }
-  #endif
 }
 
 TEST_CASE("face extrusion")

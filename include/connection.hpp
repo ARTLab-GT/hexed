@@ -208,9 +208,14 @@ class Refined_connection
     // connect faces
     for (int i_face = 0; i_face < int(fine.size()); ++i_face) {
       // if there is any stretching, fine indices are either 0 or `max_face`
-      int inds [] {std::min(i_face, max_face), std::min(permutation_inds[i_face], max_face)};
+      int inds [] {custom_math::stretched_ind(nd, i_face, str),
+                   custom_math::stretched_ind(nd, permutation_inds[i_face], str)};
+      auto& elem = *fine[inds[!rev]];
+      auto pos = elem.nominal_position();
+      printf(" | %i, %i %i %i", inds[!rev], pos[0], pos[1], pos[2]);
       fine_cons.emplace_back(*this, refined_face.fine_face(inds[rev]), *fine[inds[!rev]]);
     }
+    printf("\n");
     // merge vertices
     for (int i_face = 0; i_face < params.n_vertices()/2; ++i_face) {
       int inds [] {custom_math::stretched_ind(nd, i_face, str),

@@ -477,7 +477,7 @@ void Solver::visualize_edges_otter(otter::plot& plt, Eigen::Matrix<double, 1, Ei
   }
 }
 
-void Solver::visualize_surface_otter(otter::plot& plt, int bc_sn, const otter::colormap& cmap, const Qpoint_func& color_by, std::array<double, 2> bounds, int n_sample, double tol)
+void Solver::visualize_surface_otter(otter::plot& plt, int bc_sn, const otter::colormap& cmap, const Qpoint_func& color_by, std::array<double, 2> bounds, bool transparent, int n_sample, double tol)
 {
   if (color_by.n_var(params.n_dim) != 1) throw std::runtime_error("`color_by` must be scalar");
   // substitute bounds if necessary
@@ -508,7 +508,11 @@ void Solver::visualize_surface_otter(otter::plot& plt, int bc_sn, const otter::c
         plt.add(curve);
       } else if (params.n_dim == 3) {
         face_pos.resize(n_sample*n_sample, params.n_dim);
-        otter::surface surf(n_sample, face_pos, cmap(face_var));
+        Eigen::MatrixXd color = Eigen::MatrixXd::Constant(face_var.size(), 4, transparent ? .2 : 1.);
+        Eigen::MatrixXd mapped = cmap(face_var);
+        color(Eigen::all, Eigen::seqN(0, mapped.cols())) = mapped;
+        otter::surface surf(n_sample, face_pos, color);
+        if (transparent) surf.transparency = otter::surface::transparent_add;
         plt.add(surf);
       }
     }
