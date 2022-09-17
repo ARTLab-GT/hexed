@@ -48,7 +48,7 @@ class Vertex
    * sign that I've been reading too much SnK...
    */
   void eat(Vertex& other);
-  void calc_relax(); // compute a (but do not apply) new position resulting in a smoother grid.
+  void calc_relax(double factor = .5); // compute a (but do not apply) new position resulting in a smoother grid.
   void apply_relax(); // update `pos` to the position computed by `calc_relax`.
   // determine the shared `shareable_value` of all `Transferable_ptr`s to this by applying `reduction`. Thread safe.
   double shared_value(reduction = vector_max);

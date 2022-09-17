@@ -50,11 +50,11 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
   }
 }
 
-void Solver::relax_vertices()
+void Solver::relax_vertices(double factor)
 {
   // relax the vertices
   auto verts {acc_mesh.vertices()};
-  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) verts[i_vert].calc_relax();
+  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) verts[i_vert].calc_relax(factor);
   for (int i_vert = 0; i_vert < verts.size(); ++i_vert) verts[i_vert].apply_relax();
   // vertex relaxation will cause hanging vertices to drift away from the faces they are supposed to be coincident with
   // so now we put them back where they belong

@@ -40,7 +40,7 @@ class Solver
   inline Mesh& mesh() {return acc_mesh;}
   inline Storage_params storage_params() {return params;}
   // moves all vertices to the mean of the current position and the mean of the neighbors' positions
-  void relax_vertices();
+  void relax_vertices(double factor = .5);
   // apply `Mesh_bc`s
   // Note: if some elements participate in multiple BCs, then snapping may not satisfy all exactly.
   //       However, if performed multiple times, it should converge;

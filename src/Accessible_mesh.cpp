@@ -170,7 +170,7 @@ bool aligned_different_dim(Con_dir<Deformed_element> dir, std::array<int, 2> ext
   return (dir.i_dim[0] == extrude_dim[1]) && (dir.i_dim[1] == extrude_dim[0]);
 }
 
-void Accessible_mesh::extrude()
+void Accessible_mesh::extrude(bool collapse)
 {
   const int nd = params.n_dim;
   const int n_faces = 2*nd;
@@ -224,6 +224,13 @@ void Accessible_mesh::extrude()
     int sn = add_element(ref_level, true, nom_pos);
     Con_dir<Deformed_element> dir {{face.i_dim, face.i_dim}, {!face.face_sign, bool(face.face_sign)}};
     auto& elem = def.elems.at(ref_level, sn);
+    if (collapse) {
+      int stride = custom_math::pow(2, nd - 1 - face.i_dim);
+      for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
+        int i_collapse = i_vert + (face.face_sign - (i_vert/stride)%2)*stride;
+        elem.vertex(i_vert).pos = face.elem.vertex(i_collapse).pos;
+      }
+    }
     std::array<Deformed_element*, 2> el_arr {&elem, &face.elem};
     def.cons.emplace_back(el_arr, dir);
     // record the faces that still need to be connected at a vertex which is guaranteed to be shared with prospective neighbors

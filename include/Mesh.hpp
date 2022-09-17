@@ -74,7 +74,7 @@ class Mesh
    * but the unconnected faces now belong to new, extruded elements which can be snapped to surface geometry
    * in a well-conditioned fashion.
    */
-  virtual void extrude() = 0;
+  virtual void extrude(bool collapse = false) = 0;
   // connects all yet-unconnected faces to a boundary condition specified by serial number
   virtual void connect_rest(int bc_sn) = 0;
 

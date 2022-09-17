@@ -55,23 +55,17 @@ int Vertex::mass()
   return m;
 }
 
-void Vertex::calc_relax()
+void Vertex::calc_relax(double factor)
 {
-  for (int i_dim = 0; i_dim < 3; ++i_dim)
-  {
-    relax[i_dim] = 0.;
-  }
-  for (Vertex* neighbor : neighbors)
-  {
-    for (int i_dim = 0; i_dim < 3; ++i_dim)
-    {
+  for (int i_dim = 0; i_dim < 3; ++i_dim) relax[i_dim] = 0.;
+  for (Vertex* neighbor : neighbors) {
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
       relax[i_dim] += neighbor->pos[i_dim];
     }
   }
   int size = neighbors.size();
-  for (int i_dim = 0; i_dim < 3; ++i_dim)
-  {
-    relax[i_dim] = 0.5*(relax[i_dim]/size - pos[i_dim]);
+  for (int i_dim = 0; i_dim < 3; ++i_dim) {
+    relax[i_dim] = factor*(relax[i_dim]/size - pos[i_dim]);
   }
 }
 
