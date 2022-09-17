@@ -193,8 +193,8 @@ class Refined_connection
     def_dir{Con_dir<Deformed_element>(dir)},
     rev{reverse_order},
     str{stretch_arg},
-    refined_face{params, coarse->face() + con_dir.i_face(rev)*params.n_dof()/params.row_size},
-    matcher{to_elementstar(fine), def_dir.i_dim[!reverse_order], def_dir.face_sign[!reverse_order], stretch_arg}
+    refined_face{params, coarse->face() + con_dir.i_face(rev)*params.n_dof()/params.row_size, str},
+    matcher{to_elementstar(fine), def_dir.i_dim[!reverse_order], def_dir.face_sign[!reverse_order], str}
   {
     int nd = params.n_dim;
     n_fine = params.n_vertices()/2;

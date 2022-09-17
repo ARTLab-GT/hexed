@@ -36,7 +36,10 @@ class Restrict_refined : public Kernel<Refined_face&>
       auto& ref_face {ref_faces[i_ref_face]};
       double* coarse {ref_face.coarse_face()};
       for (int i_dof = 0; i_dof < n_var*nfq; ++i_dof) coarse[i_dof] = 0.;
-      for (int i_face = 0; i_face < n_face; ++i_face)
+      // update number of faces to reflect any face stretching
+      int nf = n_face;
+      for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) nf /= 1 + ref_face.stretch[i_dim];
+      for (int i_face = 0; i_face < nf; ++i_face)
       {
         double* fine {ref_face.fine_face(i_face)};
         for (int i_var = 0; i_var < n_var; ++i_var)
