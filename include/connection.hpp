@@ -198,26 +198,30 @@ class Refined_connection
   {
     int nd = params.n_dim;
     n_fine = params.n_vertices()/2;
+    bool any_str = false;
     for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
-      if (str[i_dim]) n_fine /= 2; // if there is any stretching, don't expect as many elements
+      if (str[i_dim]) {
+        n_fine /= 2; // if there is any stretching, don't expect as many elements
+        any_str = true;
+      }
     }
     if (int(fine.size()) != n_fine) throw std::runtime_error("wrong number of elements in `Refined_connection`");
     std::vector<int> permutation_inds {face_vertex_inds(nd, con_dir)};
     auto vert_inds {vertex_inds(nd, con_dir)};
-    int elem_inds [4];
+    // merge vertices
     for (int i_face = 0; i_face < params.n_vertices()/2; ++i_face) {
       int inds [] {custom_math::stretched_ind(nd, i_face, str),
                    custom_math::stretched_ind(nd, permutation_inds[i_face], str)};
-      // merge vertices
       auto& vert0 = coarse->vertex(vert_inds[rev][i_face]);
       auto& vert1 = fine[inds[!rev]]->vertex(vert_inds[!rev][i_face]);
       vert0.eat(vert1);
-      // match fine face indices on both sides with permutation
-      elem_inds[inds[0]] = inds[1];
     }
     // connect faces
     for (int i_face = 0; i_face < int(fine.size()); ++i_face) {
-      int inds [] {i_face, elem_inds[i_face]};
+      int inds [] {i_face, permutation_inds[i_face]};
+      // if there is any stretching happening, rather than use `permutation_inds`
+      // it is merely necessary to figure out whether we need to swap the fine elements
+      if (any_str) inds[1] = i_face != (def_dir.flip_tangential() && !str[2*def_dir.i_dim[rev] > 3 - def_dir.i_dim[!rev]]);
       fine_cons.emplace_back(*this, refined_face.fine_face(inds[rev]), *fine[inds[!rev]]);
     }
   }
