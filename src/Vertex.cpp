@@ -10,12 +10,10 @@ Vertex::Vertex (std::array<double, 3> pos)
 Vertex::~Vertex()
 {
   int size = nont_ptrs.size();
-  for (int i_ptr = 0; i_ptr < size; ++i_ptr)
-  {
+  for (int i_ptr = 0; i_ptr < size; ++i_ptr) {
     (*nont_ptrs.begin())->nullify();
   }
-  for (Vertex* neighbor : neighbors)
-  {
+  for (Vertex* neighbor : neighbors) {
     neighbor->neighbors.erase(this);
   }
 }
@@ -25,16 +23,14 @@ void Vertex::eat(Vertex& other)
   if (this != &other)
   {
     // average position
-    for (int i_dim = 0; i_dim < 3; ++i_dim)
-    {
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
       pos[i_dim] = (m*pos[i_dim] + other.m*other.pos[i_dim])/(m + other.m);
     }
     m += other.m; // combine mass
     other.m = 0;
     mobile = mobile && other.mobile; // determine mobility
     // steal neighbors
-    for (Vertex* neighbor : other.neighbors)
-    {
+    for (Vertex* neighbor : other.neighbors) {
       connect(*this, *neighbor);
     }
     // concatenate records
@@ -42,8 +38,7 @@ void Vertex::eat(Vertex& other)
     // steal `Transferrable_ptr`s
     const Transferable_ptr& this_ptr = **trbl_ptrs.begin();
     int size = other.trbl_ptrs.size();
-    for (int i_ptr = 0; i_ptr < size; ++i_ptr)
-    {
+    for (int i_ptr = 0; i_ptr < size; ++i_ptr) {
       Transferable_ptr& other_ptr = **other.trbl_ptrs.begin();
       other_ptr = this_ptr;
     } // `other` no longer exists!

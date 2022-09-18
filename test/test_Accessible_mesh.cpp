@@ -326,3 +326,29 @@ TEST_CASE("extruded BCs")
   mesh.connect_rest(bc_sn);
   mesh.valid().assert_valid();
 }
+
+TEST_CASE("extruded hanging node connection validity")
+{
+  // note: this tests for a bug originally discovered on the NASCART-GT side
+  cartdg::Storage_params params {2, 5, 3, 2};
+  cartdg::Accessible_mesh mesh {params, 1.};
+  int coarse = mesh.add_element(0, true, {0, 0, 0});
+  for (int i_dim = 0; i_dim < 2; ++i_dim) {
+    std::vector<int> fine;
+    for (int row = 0; row < 2; ++row) {
+      for (int col = 0; col < 2; ++col) {
+        std::vector<int> pos(3);
+        pos[i_dim] = -1;
+        pos[!i_dim] = row;
+        pos[2] = col;
+        fine.push_back(mesh.add_element(1, true, pos));
+        if (row) mesh.connect_deformed(1, {*(fine.end() - 3), fine.back()}, {{!i_dim, !i_dim}, {1, 0}});
+        if (col) mesh.connect_deformed(1, {*(fine.end() - 2), fine.back()}, {{2, 2},           {1, 0}});
+      }
+    }
+    mesh.connect_hanging(0, coarse, fine, {{i_dim, i_dim}, {0, 1}}, true, std::vector<bool>(false, 4));
+  }
+  mesh.extrude();
+  REQUIRE(mesh.valid().n_duplicate == 0);
+  REQUIRE(mesh.valid().n_missing == 2*(4 + 8) + 4);
+}
