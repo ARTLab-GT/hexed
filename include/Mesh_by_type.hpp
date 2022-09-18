@@ -23,6 +23,7 @@ class View_by_type
   virtual Sequence<Face_connection<element_t>&>& face_connections() = 0;
   virtual Sequence<Element_connection&>& element_connections() = 0;
   virtual Sequence<Refined_face&>& refined_faces() = 0;
+  virtual Sequence<Refined_connection<element_t>&>& refined_connections() = 0;
   virtual Sequence<Hanging_vertex_matcher&>& hanging_vertex_matchers() = 0;
   virtual Sequence<Boundary_connection&>& boundary_connections() = 0;
 };
@@ -82,8 +83,7 @@ class Mesh_by_type : public View_by_type<element_t>
   static Refined_face& ref_face(ref_con_t& ref_con) {return ref_con.refined_face;}
   static Hanging_vertex_matcher& matcher(ref_con_t& ref_con) {return ref_con.matcher;}
   // need to build up a vector view over the whole array `ref_face_cons`
-  std::array<Vector_view<Refined_connection<element_t>&,
-                         std::unique_ptr<ref_con_t>,
+  std::array<Vector_view<ref_con_t&, std::unique_ptr<ref_con_t>,
                          &ptr_convert<ref_con_t&, std::unique_ptr<ref_con_t>>>,
              3> ref_con_vs;
   Concatenation<ref_con_t&> ref_con_cat01;
@@ -119,6 +119,7 @@ class Mesh_by_type : public View_by_type<element_t>
   virtual Sequence<Face_connection<element_t>&>& face_connections() {return face_con_v;}
   virtual Sequence<Element_connection&>& element_connections() {return elem_con_v;}
   virtual Sequence<Refined_face&>& refined_faces() {return ref_v;}
+  virtual Sequence<Refined_connection<element_t>&>& refined_connections() {return ref_con_v;}
   virtual Sequence<Hanging_vertex_matcher&>& hanging_vertex_matchers() {return matcher_v;}
   virtual Sequence<Boundary_connection&>& boundary_connections() {return bound_con_v;}
 

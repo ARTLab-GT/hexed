@@ -422,30 +422,6 @@ class Hanging : public Test_mesh
   }
 };
 
-// creates a single 3d element and then extrudes all faces
-class Extrude_3d : public Test_mesh
-{
-  cartdg::Solver sol;
-  int bc_sn;
-
-  public:
-  Extrude_3d()
-  : sol{3, cartdg::config::max_row_size, .8}
-  {}
-
-  virtual cartdg::Solver& solver() {return sol;}
-  virtual int bc_serial_n() {return bc_sn;}
-
-  virtual void construct(cartdg::Flow_bc* flow_bc)
-  {
-    bc_sn = sol.mesh().add_boundary_condition(flow_bc, new cartdg::Null_mbc);
-    std::vector<cartdg::Mesh::elem_handle> handles;
-    sol.mesh().add_element(0, true, {0, 0, 0});
-    sol.mesh().extrude();
-    sol.mesh().connect_rest(bc_sn);
-  }
-};
-
 class Extrude_hanging : public Test_mesh
 {
   cartdg::Solver sol;
@@ -563,11 +539,6 @@ TEST_CASE("Solver time marching")
     Hanging hg;
     test_marching(hg, "hanging");
   }
-  SECTION("3d extruded")
-  {
-    Extrude_3d e3;
-    test_marching(e3, "extrude_3d");
-  }
   SECTION("extruded with deformed hanging nodes")
   {
     Extrude_hanging eh;
@@ -594,11 +565,6 @@ TEST_CASE("Solver conservation")
   {
     Hanging hg;
     test_conservation(hg, "hanging");
-  }
-  SECTION("3d extruded")
-  {
-    Extrude_3d e3;
-    test_conservation(e3, "extrude_3d");
   }
   SECTION("extruded with deformed hanging nodes")
   {

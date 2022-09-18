@@ -123,6 +123,19 @@ void Solver::calc_jacobian()
         }
       }
       // prolong Jacobian onto fine faces at hanging node connections
+      auto& ref_cons = acc_mesh.deformed().refined_connections();
+      // scale jacobian on refined faces with stretching
+      for (int i_ref = 0; i_ref < ref_cons.size(); ++i_ref) {
+        auto& ref = ref_cons[i_ref];
+        int face_dim = ref.direction().i_dim[ref.order_reversed()];
+        // if the column of the jacobian currently being processed is one that needs to be stretched...
+        if ((j_dim != face_dim) &&
+            ref.stretch()[(n_dim == 3) && (j_dim > 3 - j_dim - face_dim)]) {
+          // double this component of the jacobian for the benefit of the fine faces
+          double* data = ref.refined_face.coarse_face();
+          for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) data[i_qpoint] *= 2;
+        }
+      }
       (*kernel_factory<Prolong_refined>(n_dim, rs, basis))(acc_mesh.deformed().refined_faces());
       // for BCs, copy Jacobian to ghost face
       auto& def_bc_cons = acc_mesh.deformed().boundary_connections();
