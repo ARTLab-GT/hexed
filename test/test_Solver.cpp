@@ -217,12 +217,6 @@ TEST_CASE("Solver")
     sol.snap_vertices();
     sol.calc_jacobian();
     sol.set_local_tss();
-    #if CARTDG_USE_OTTER
-    otter::plot plt;
-    sol.visualize_edges_otter(plt);
-    sol.visualize_field_otter(plt, cartdg::Time_step_scale_func());
-    plt.show();
-    #endif
     // in sn0, TSS is 0.1 because the element is stretched by a factor of .1
     REQUIRE(sol.sample(0,  true, sn0, 4, cartdg::Time_step_scale_func())[0] == Approx(.1));
     // in sn1, TSS varies bilinearly
@@ -462,18 +456,6 @@ class Extrude_hanging : public Test_mesh
     sol.snap_vertices();
   }
 };
-
-void test_visualization(Test_mesh& tm)
-{
-  tm.construct(new cartdg::Copy);
-  auto& sol = tm.solver();
-  sol.calc_jacobian();
-  #if CARTDG_USE_OTTER
-  otter::plot plt;
-  sol.visualize_edges_otter(plt);
-  plt.show();
-  #endif
-}
 
 void test_marching(Test_mesh& tm, std::string name)
 {
