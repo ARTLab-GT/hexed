@@ -426,10 +426,13 @@ class Extrude_hanging : public Test_mesh
 {
   cartdg::Solver sol;
   int bc_sn;
+  int id;
+  int jd;
+  int kd;
 
   public:
-  Extrude_hanging()
-  : sol{3, cartdg::config::max_row_size, .8}
+  Extrude_hanging(int i_dim, int j_dim)
+  : sol{3, cartdg::config::max_row_size, .8}, id{i_dim}, jd{j_dim}, kd{3 - i_dim - j_dim}
   {}
 
   virtual cartdg::Solver& solver() {return sol;}
@@ -439,7 +442,9 @@ class Extrude_hanging : public Test_mesh
   {
     bc_sn = sol.mesh().add_boundary_condition(flow_bc, new cartdg::Null_mbc);
     std::vector<cartdg::Mesh::elem_handle> handles;
-    int coarse = sol.mesh().add_element(0, true, {-1, 0, 0});
+    std::vector<int> coarse_pos(3, 0);
+    coarse_pos[id] = -1;
+    int coarse = sol.mesh().add_element(0, true, coarse_pos);
     std::vector<int> fine(4);
     for (int i = 0; i < 2; ++i) {
       for (int j = 0; j < 2; ++j) {
@@ -458,8 +463,21 @@ class Extrude_hanging : public Test_mesh
     sol.mesh().extrude();
     sol.mesh().connect_rest(bc_sn);
     for (int i = 0; i < 2; ++i) sol.relax_vertices();
+    sol.snap_vertices();
   }
 };
+
+void test_visualization(Test_mesh& tm)
+{
+  tm.construct(new cartdg::Copy);
+  auto& sol = tm.solver();
+  sol.calc_jacobian();
+  #if CARTDG_USE_OTTER
+  otter::plot plt;
+  sol.visualize_edges_otter(plt);
+  plt.show();
+  #endif
+}
 
 void test_marching(Test_mesh& tm, std::string name)
 {
@@ -519,6 +537,25 @@ void test_conservation(Test_mesh& tm, std::string name)
   }
 }
 
+TEST_CASE("visualize solver test meshes")
+{
+  SECTION("extruded with deformed hanging nodes")
+  {
+    Extrude_hanging eh(0, 1);
+    test_visualization(eh);
+    #if 0
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+      for (int j_dim = 0; j_dim < 3; ++j_dim) {
+        if (i_dim != j_dim) {
+          Extrude_hanging eh(i_dim, j_dim);
+          test_visualization(eh);
+        }
+      }
+    }
+    #endif
+  }
+}
+
 // test the solver on a sinusoid-derived initial condition which has a simple analytic solution
 TEST_CASE("Solver time marching")
 {
@@ -541,7 +578,7 @@ TEST_CASE("Solver time marching")
   }
   SECTION("extruded with deformed hanging nodes")
   {
-    Extrude_hanging eh;
+    Extrude_hanging eh(0, 1);
     test_marching(eh, "extrude_hanging");
   }
 }
@@ -568,7 +605,7 @@ TEST_CASE("Solver conservation")
   }
   SECTION("extruded with deformed hanging nodes")
   {
-    Extrude_hanging eh;
+    Extrude_hanging eh(0, 1);
     test_conservation(eh, "extrude_hanging");
   }
 }

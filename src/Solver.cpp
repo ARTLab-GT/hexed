@@ -56,14 +56,6 @@ void Solver::relax_vertices(double factor)
   auto verts {acc_mesh.vertices()};
   for (int i_vert = 0; i_vert < verts.size(); ++i_vert) verts[i_vert].calc_relax(factor);
   for (int i_vert = 0; i_vert < verts.size(); ++i_vert) verts[i_vert].apply_relax();
-  // vertex relaxation will cause hanging vertices to drift away from the faces they are supposed to be coincident with
-  // so now we put them back where they belong
-  auto& matchers = acc_mesh.hanging_vertex_matchers();
-  for (int i_match = 0; i_match < matchers.size(); ++i_match) {
-    matchers[i_match].match(&Element::vertex_position<0>);
-    matchers[i_match].match(&Element::vertex_position<1>);
-    matchers[i_match].match(&Element::vertex_position<2>);
-  }
 }
 
 void Solver::snap_vertices()
@@ -72,6 +64,14 @@ void Solver::snap_vertices()
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh.boundary_condition(bc_sn).mesh_bc->snap_vertices(bc_cons[i_con]);
+  }
+  // vertex relaxation/snapping will cause hanging vertices to drift away from hanging vertex faces they are supposed to be coincident with
+  // so now we put them back where they belong
+  auto& matchers = acc_mesh.hanging_vertex_matchers();
+  for (int i_match = 0; i_match < matchers.size(); ++i_match) {
+    matchers[i_match].match(&Element::vertex_position<0>);
+    matchers[i_match].match(&Element::vertex_position<1>);
+    matchers[i_match].match(&Element::vertex_position<2>);
   }
 }
 
