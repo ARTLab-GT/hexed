@@ -388,40 +388,6 @@ class All_deformed : public Test_mesh
   }
 };
 
-// creates a mesh involving hanging vertices
-class Hanging : public Test_mesh
-{
-  cartdg::Solver sol;
-  int bc_sn;
-  public:
-  Hanging() : sol{2, cartdg::config::max_row_size, 1.} {}
-  virtual cartdg::Solver& solver() {return sol;}
-  virtual int bc_serial_n() {return bc_sn;}
-  virtual void construct(cartdg::Flow_bc* flow_bc)
-  {
-    std::vector<int> serial_n;
-    bc_sn = sol.mesh().add_boundary_condition(flow_bc, new cartdg::Null_mbc);
-    for (int i = 0; i < 2; ++i) {
-      serial_n.push_back(sol.mesh().add_element(0, false, {i  , 0}));
-      serial_n.push_back(sol.mesh().add_element(1, false, {i  , 2}));
-      serial_n.push_back(sol.mesh().add_element(1,  true, {i+2, 2}));
-    }
-    sol.mesh().connect_cartesian(0, {serial_n[0], serial_n[3]}, {0});
-    sol.mesh().connect_cartesian(1, {serial_n[1], serial_n[4]}, {0});
-    sol.mesh().connect_deformed (1, {serial_n[2], serial_n[5]}, {{0, 0}, {1, 0}});
-    sol.mesh().connect_cartesian(1, {serial_n[4], serial_n[2]}, {0}, {false, true});
-    for (int i = 0; i < 2; ++i) {
-      sol.mesh().connect_hanging(0, serial_n[3*i], {serial_n[1 + i], serial_n[4 + i]}, {{1, 1}, {1, 0}}, false, {bool(i), bool(i)});
-      sol.mesh().connect_boundary(0, false, serial_n[3*i        ], 1, 0, bc_sn);
-      sol.mesh().connect_boundary(0, false, serial_n[3*i        ], 0, i, bc_sn);
-      sol.mesh().connect_boundary(1, false, serial_n[3*i + 1    ], 1, 1, bc_sn);
-      sol.mesh().connect_boundary(1,  true, serial_n[3*i + 2    ], 1, 1, bc_sn);
-      sol.mesh().connect_boundary(1,     i, serial_n[3*i + 1 + i], 0, i, bc_sn);
-    }
-    for (int i = 0; i < 2; ++i) sol.relax_vertices();
-  }
-};
-
 class Extrude_hanging : public Test_mesh
 {
   cartdg::Solver sol;
@@ -446,20 +412,28 @@ class Extrude_hanging : public Test_mesh
     coarse_pos[id] = -1;
     int coarse = sol.mesh().add_element(0, true, coarse_pos);
     std::vector<int> fine(4);
+    int dim0 = std::min(jd, kd);
+    int dim1 = std::max(jd, kd);
     for (int i = 0; i < 2; ++i) {
       for (int j = 0; j < 2; ++j) {
-        fine[2*i + j] = sol.mesh().add_element(1, true, {0, i, j});
-        if (i) sol.mesh().connect_deformed(1, {fine[  j], fine[2   + j]}, {{1, 1}, {1, 0}});
-        if (j) sol.mesh().connect_deformed(1, {fine[2*i], fine[2*i + 1]}, {{2, 2}, {1, 0}});
+        std::vector<int> fine_pos(3, 0);
+        fine_pos[dim0] = i;
+        fine_pos[dim1] = j;
+        fine[2*i + j] = sol.mesh().add_element(1, true, fine_pos);
+        if (i) sol.mesh().connect_deformed(1, {fine[  j], fine[2   + j]}, {{dim0, dim0}, {1, 0}});
+        if (j) sol.mesh().connect_deformed(1, {fine[2*i], fine[2*i + 1]}, {{dim1, dim1}, {1, 0}});
       }
     }
     int extra [2];
     for (int i = 0; i < 2; ++i) {
-      extra[i] = sol.mesh().add_element(1, true, {0, 2, i});
-      sol.mesh().connect_deformed(1, {fine[2 + i], extra[i]}, {{1, 1}, {1, 0}});
+      std::vector<int> fine_pos(3, 0);
+      fine_pos[jd] = 2;
+      fine_pos[kd] = i;
+      extra[i] = sol.mesh().add_element(1, true, fine_pos);
+      sol.mesh().connect_deformed(1, {fine[1 + (jd < kd) + i*(1 + (jd > kd))], extra[i]}, {{jd, jd}, {1, 0}});
     }
-    sol.mesh().connect_deformed(1, {extra[0], extra[1]}, {{2, 2}, {1, 0}});
-    sol.mesh().connect_hanging(0, coarse, fine, {{0, 0}, {1, 0}}, true, {true, true, true, true});
+    sol.mesh().connect_deformed(1, {extra[0], extra[1]}, {{kd, kd}, {1, 0}});
+    sol.mesh().connect_hanging(0, coarse, fine, {{id, id}, {1, 0}}, true, {true, true, true, true});
     sol.mesh().extrude();
     sol.mesh().connect_rest(bc_sn);
     for (int i = 0; i < 2; ++i) sol.relax_vertices();
@@ -537,25 +511,6 @@ void test_conservation(Test_mesh& tm, std::string name)
   }
 }
 
-TEST_CASE("visualize solver test meshes")
-{
-  SECTION("extruded with deformed hanging nodes")
-  {
-    Extrude_hanging eh(0, 1);
-    test_visualization(eh);
-    #if 0
-    for (int i_dim = 0; i_dim < 3; ++i_dim) {
-      for (int j_dim = 0; j_dim < 3; ++j_dim) {
-        if (i_dim != j_dim) {
-          Extrude_hanging eh(i_dim, j_dim);
-          test_visualization(eh);
-        }
-      }
-    }
-    #endif
-  }
-}
-
 // test the solver on a sinusoid-derived initial condition which has a simple analytic solution
 TEST_CASE("Solver time marching")
 {
@@ -571,15 +526,20 @@ TEST_CASE("Solver time marching")
     All_deformed ad1 (1);
     test_marching(ad1, "def1");
   }
-  SECTION("with hanging nodes")
-  {
-    Hanging hg;
-    test_marching(hg, "hanging");
-  }
   SECTION("extruded with deformed hanging nodes")
   {
-    Extrude_hanging eh(0, 1);
-    test_marching(eh, "extrude_hanging");
+    #define TEST_MARCHING(i_dim, j_dim) \
+      SECTION("dimensions " #i_dim " " #j_dim) { \
+          Extrude_hanging eh(i_dim, j_dim); \
+          test_marching(eh, "extrude_hanging"); \
+      } \
+
+    TEST_MARCHING(0, 1)
+    TEST_MARCHING(0, 2)
+    TEST_MARCHING(1, 0)
+    TEST_MARCHING(1, 2)
+    TEST_MARCHING(2, 0)
+    TEST_MARCHING(2, 1)
   }
 }
 
@@ -597,11 +557,6 @@ TEST_CASE("Solver conservation")
     test_conservation(ad0, "def0");
     All_deformed ad1 (1);
     test_conservation(ad1, "def1");
-  }
-  SECTION("with hanging nodes")
-  {
-    Hanging hg;
-    test_conservation(hg, "hanging");
   }
   SECTION("extruded with deformed hanging nodes")
   {
