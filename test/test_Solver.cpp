@@ -149,6 +149,21 @@ class Parabola : public cartdg::Surface_geometry
   }
 };
 
+class Shrink_pos0 : public cartdg::Mesh_bc
+{
+  public:
+  virtual void snap_vertices(cartdg::Boundary_connection& con)
+  {
+    const int stride = cartdg::custom_math::pow(2, con.storage_params().n_dim - 1 - con.i_dim());
+    for (int i_vert = 0; i_vert < con.storage_params().n_vertices(); ++i_vert) {
+      if ((i_vert/stride)%2 == con.inside_face_sign()) {
+        con.element().vertex(i_vert).pos[0] = .1*.8;
+      }
+    }
+  }
+  virtual void snap_node_adj(cartdg::Boundary_connection&, const cartdg::Basis&) {}
+};
+
 TEST_CASE("Solver")
 {
   static_assert (cartdg::config::max_row_size >= 3); // this test was written for row size 3
@@ -192,22 +207,29 @@ TEST_CASE("Solver")
   SECTION("local time step scale")
   {
     int sn0 = sol.mesh().add_element(0,  true, {0, 0, 0});
-    int sn1 = sol.mesh().add_element(0,  true, {0, 0, 0});
-    int sn2 = sol.mesh().add_element(0, false, {-1, 0, 0});
-    int sn3 = sol.mesh().add_element(1, false, {-2, -1, 0});
-    int sn4 = sol.mesh().add_element(1, false, {-1, -1, 0});
-    sol.mesh().connect_deformed(0, {sn0, sn1}, {{0, 0}, {1, 0}});
-    sol.mesh().connect_cartesian(0, {sn2, sn0}, {0}, {false, true});
-    sol.mesh().connect_hanging(0, sn2, {sn3, sn4}, {{1, 1}, {0, 1}});
+    int sn1 = sol.mesh().add_element(0, false, {-1, 0, 0});
+    int sn2 = sol.mesh().add_element(1, false, {-2, -1, 0});
+    int sn3 = sol.mesh().add_element(1, false, {-1, -1, 0});
+    sol.mesh().connect_cartesian(0, {sn1, sn0}, {0}, {false, true});
+    sol.mesh().connect_hanging(0, sn1, {sn2, sn3}, {{1, 1}, {0, 1}});
+    int bc = sol.mesh().add_boundary_condition(new cartdg::Copy, new Shrink_pos0);
+    sol.mesh().connect_boundary(0, true, sn0, 0, 1, bc);
+    sol.snap_vertices();
     sol.calc_jacobian();
     sol.set_local_tss();
-    // in sn1, TSS is 0.5 because the element is stretched by a factor of 0.5
-    REQUIRE(sol.sample(0,  true, sn1, 4, cartdg::Time_step_scale_func())[0] == Approx(0.5));
-    // in sn2, TSS varies linearly between 1 and 0.25 (because it must be continuous with element sn1)
-    REQUIRE(sol.sample(0, false, sn2, 4, cartdg::Time_step_scale_func())[0] == Approx(.75));
+    #if CARTDG_USE_OTTER
+    otter::plot plt;
+    sol.visualize_edges_otter(plt);
+    sol.visualize_field_otter(plt, cartdg::Time_step_scale_func());
+    plt.show();
+    #endif
+    // in sn0, TSS is 0.1 because the element is stretched by a factor of .1
+    REQUIRE(sol.sample(0,  true, sn0, 4, cartdg::Time_step_scale_func())[0] == Approx(.1));
+    // in sn1, TSS varies bilinearly
+    REQUIRE(sol.sample(0, false, sn1, 4, cartdg::Time_step_scale_func())[0] == Approx((2*.1 + .5 + 1.)/4.));
     // TSS at hanging nodes should be set to match coarse element
-    REQUIRE(sol.sample(1, false, sn3, 4, cartdg::Time_step_scale_func())[0] == Approx(1. - 0.0625));
-    REQUIRE(sol.sample(1, false, sn4, 4, cartdg::Time_step_scale_func())[0] == Approx(0.5*(1. + 0.625)));
+    REQUIRE(sol.sample(1, false, sn2, 4, cartdg::Time_step_scale_func())[0] == Approx((3*.5 + .3)/4.));
+    REQUIRE(sol.sample(1, false, sn3, 4, cartdg::Time_step_scale_func())[0] == Approx((2*.5 + .3 + .1)/4.));
   }
 
   SECTION("integrals")
