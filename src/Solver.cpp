@@ -127,12 +127,12 @@ void Solver::calc_jacobian()
       // scale jacobian on refined faces with stretching
       for (int i_ref = 0; i_ref < ref_cons.size(); ++i_ref) {
         auto& ref = ref_cons[i_ref];
+        auto& rf = ref.refined_face;
         int face_dim = ref.direction().i_dim[ref.order_reversed()];
         // if the column of the jacobian currently being processed is one that needs to be stretched...
-        if ((j_dim != face_dim) &&
-            ref.stretch()[(n_dim == 3) && (j_dim > 3 - j_dim - face_dim)]) {
+        if ((j_dim != face_dim) && rf.stretch[(n_dim == 3) && (2*j_dim > 3 - face_dim)]) {
           // double this component of the jacobian for the benefit of the fine faces
-          double* data = ref.refined_face.coarse_face();
+          double* data = rf.coarse_face();
           for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) data[i_qpoint] *= 2;
         }
       }
@@ -162,7 +162,7 @@ void Solver::calc_jacobian()
           // take average of element face jacobians with appropriate axis permutations
           int col = j_dim;
           int tangential_sign = 1;
-          // swap dir.i_dim[0] and dir.i_dim[1]
+          // swap dimension `dir.i_dim[0]` and dimension `dir.i_dim[1]`
           if (j_dim == dir.i_dim[1]) {
             col = dir.i_dim[0];
           }

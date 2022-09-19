@@ -203,8 +203,8 @@ TEST_CASE("Solver")
     sol.set_local_tss();
     // in sn1, TSS is 0.5 because the element is stretched by a factor of 0.5
     REQUIRE(sol.sample(0,  true, sn1, 4, cartdg::Time_step_scale_func())[0] == Approx(0.5));
-    // in sn2, TSS varies linearly between 1 and 0.5 (because it must be continuous with element sn1)
-    REQUIRE(sol.sample(0, false, sn2, 4, cartdg::Time_step_scale_func())[0] == Approx(0.75));
+    // in sn2, TSS varies linearly between 1 and 0.25 (because it must be continuous with element sn1)
+    REQUIRE(sol.sample(0, false, sn2, 4, cartdg::Time_step_scale_func())[0] == Approx(.75));
     // TSS at hanging nodes should be set to match coarse element
     REQUIRE(sol.sample(1, false, sn3, 4, cartdg::Time_step_scale_func())[0] == Approx(1. - 0.0625));
     REQUIRE(sol.sample(1, false, sn4, 4, cartdg::Time_step_scale_func())[0] == Approx(0.5*(1. + 0.625)));
@@ -532,14 +532,15 @@ TEST_CASE("Solver time marching")
       SECTION("dimensions " #i_dim " " #j_dim) { \
           Extrude_hanging eh(i_dim, j_dim); \
           test_marching(eh, "extrude_hanging"); \
-      } \
-
+      }
     TEST_MARCHING(0, 1)
+    #if NDEBUG
     TEST_MARCHING(0, 2)
     TEST_MARCHING(1, 0)
     TEST_MARCHING(1, 2)
     TEST_MARCHING(2, 0)
     TEST_MARCHING(2, 1)
+    #endif
   }
 }
 
@@ -560,8 +561,20 @@ TEST_CASE("Solver conservation")
   }
   SECTION("extruded with deformed hanging nodes")
   {
-    Extrude_hanging eh(0, 1);
-    test_conservation(eh, "extrude_hanging");
+    #define TEST_CONSERVATION(i_dim, j_dim) \
+      SECTION("dimensions " #i_dim " " #j_dim) { \
+          Extrude_hanging eh(i_dim, j_dim); \
+          test_conservation(eh, "extrude_hanging"); \
+      } \
+
+    TEST_CONSERVATION(0, 1)
+    #if NDEBUG
+    TEST_CONSERVATION(0, 2)
+    TEST_CONSERVATION(1, 0)
+    TEST_CONSERVATION(1, 2)
+    TEST_CONSERVATION(2, 0)
+    TEST_CONSERVATION(2, 1)
+    #endif
   }
 }
 

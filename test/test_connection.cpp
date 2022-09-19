@@ -237,6 +237,8 @@ TEST_CASE("Refined_connection<Deformed_element>")
     SECTION("stretch dimension 0")
     {
       cartdg::Refined_connection<cartdg::Deformed_element> con {&coarse, elems2, cartdg::Con_dir<cartdg::Deformed_element>{{2, 0}, {1, 1}}, false, {true, false}};
+      REQUIRE(con.refined_face.stretch[0] == false);
+      REQUIRE(con.refined_face.stretch[1] == true);
       REQUIRE(con.refined_face.coarse_face() == coarse.face() + (2*2 + 1)*5*6*6);
       auto& fine_con = con.connection(1);
       REQUIRE(fine_con.direction().i_dim[0] == 2);
@@ -301,6 +303,12 @@ TEST_CASE("Refined_connection<Deformed_element>")
       REQUIRE(&elem0.vertex(6) == &coarse.vertex(3));
       REQUIRE(&elem0.vertex(7) == &coarse.vertex(7));
       REQUIRE(&elem0.vertex(5) != &coarse.vertex(1));
+    }
+    SECTION("not transposed")
+    {
+      cartdg::Refined_connection<cartdg::Deformed_element> con {&coarse, {elems2}, cartdg::Con_dir<cartdg::Deformed_element>{{0, 1}, {1, 1}}, true, {true, false}};
+      REQUIRE(con.refined_face.stretch[0] == true);
+      REQUIRE(con.refined_face.stretch[1] == false);
     }
   }
 }

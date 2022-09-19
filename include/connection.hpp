@@ -176,6 +176,11 @@ class Refined_connection
     for (element_t* ptr : elems) converted.push_back(ptr);
     return converted;
   }
+  std::array<bool, 2> coarse_stretch()
+  {
+    bool trans = def_dir.transpose();
+    return {str[trans], str[!trans]};
+  }
 
   public:
   Refined_face refined_face;
@@ -193,7 +198,7 @@ class Refined_connection
     def_dir{Con_dir<Deformed_element>(dir)},
     rev{reverse_order},
     str{stretch_arg},
-    refined_face{params, coarse->face() + con_dir.i_face(rev)*params.n_dof()/params.row_size, str},
+    refined_face{params, coarse->face() + con_dir.i_face(rev)*params.n_dof()/params.row_size, coarse_stretch()},
     matcher{to_elementstar(fine), def_dir.i_dim[!reverse_order], def_dir.face_sign[!reverse_order], str}
   {
     int nd = params.n_dim;
