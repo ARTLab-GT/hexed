@@ -168,11 +168,18 @@ class Refined_connection
   Con_dir<Deformed_element> def_dir;
   bool rev;
   std::vector<Fine_connection> fine_cons;
+  std::array<bool, 2> str;
+  int n_fine;
   static std::vector<Element*> to_elementstar(std::vector<element_t*> elems)
   {
     std::vector<Element*> converted;
     for (element_t* ptr : elems) converted.push_back(ptr);
     return converted;
+  }
+  std::array<bool, 2> coarse_stretch()
+  {
+    bool trans = def_dir.transpose();
+    return {str[trans], str[!trans]};
   }
 
   public:
@@ -184,24 +191,43 @@ class Refined_connection
    * Assumes fine elements are in the natural row-major order that they would be listed in a context
    * other than a connection.
    */
-  Refined_connection(element_t* coarse, std::vector<element_t*> fine, Con_dir<element_t> con_dir, bool reverse_order=false) :
+  Refined_connection(element_t* coarse, std::vector<element_t*> fine, Con_dir<element_t> con_dir, bool reverse_order = false, std::array<bool, 2> stretch_arg = {false, false}) :
     c{*coarse},
     params{coarse->storage_params()},
     dir{con_dir},
     def_dir{Con_dir<Deformed_element>(dir)},
     rev{reverse_order},
-    refined_face{params, coarse->face() + con_dir.i_face(rev)*params.n_dof()/params.row_size},
-    matcher{to_elementstar(fine), def_dir.i_dim[!reverse_order], def_dir.face_sign[!reverse_order]}
+    str{stretch_arg},
+    refined_face{params, coarse->face() + con_dir.i_face(rev)*params.n_dof()/params.row_size, coarse_stretch()},
+    matcher{to_elementstar(fine), def_dir.i_dim[!reverse_order], def_dir.face_sign[!reverse_order], str}
   {
-    if (int(fine.size()) != params.n_vertices()/2) throw std::runtime_error("wrong number of elements in `Refined_connection`");
-    std::vector<int> permutation_inds {face_vertex_inds(params.n_dim, con_dir)};
-    auto vert_inds {vertex_inds(params.n_dim, con_dir)};
+    int nd = params.n_dim;
+    n_fine = params.n_vertices()/2;
+    bool any_str = false;
+    for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
+      if (str[i_dim]) {
+        n_fine /= 2; // if there is any stretching, don't expect as many elements
+        any_str = true;
+      }
+    }
+    if (int(fine.size()) != n_fine) throw std::runtime_error("wrong number of elements in `Refined_connection`");
+    std::vector<int> permutation_inds {face_vertex_inds(nd, con_dir)};
+    auto vert_inds {vertex_inds(nd, con_dir)};
+    // merge vertices
+    for (int i_face = 0; i_face < params.n_vertices()/2; ++i_face) {
+      int inds [] {custom_math::stretched_ind(nd, i_face, str),
+                   custom_math::stretched_ind(nd, permutation_inds[i_face], str)};
+      auto& vert0 = coarse->vertex(vert_inds[rev][i_face]);
+      auto& vert1 = fine[inds[!rev]]->vertex(vert_inds[!rev][i_face]);
+      vert0.eat(vert1);
+    }
+    // connect faces
     for (int i_face = 0; i_face < int(fine.size()); ++i_face) {
       int inds [] {i_face, permutation_inds[i_face]};
-      fine_cons.emplace_back(*this, refined_face.fine_face(inds[reverse_order]), *fine[inds[!reverse_order]]);
-      auto& vert0 = coarse->vertex(vert_inds[reverse_order][i_face]);
-      auto& vert1 = fine[inds[!reverse_order]]->vertex(vert_inds[!reverse_order][i_face]);
-      vert0.eat(vert1);
+      // if there is any stretching happening, rather than use `permutation_inds`
+      // it is merely necessary to figure out whether we need to swap the fine elements
+      if (any_str) inds[1] = i_face != (def_dir.flip_tangential() && !str[2*def_dir.i_dim[rev] > 3 - def_dir.i_dim[!rev]]);
+      fine_cons.emplace_back(*this, refined_face.fine_face(inds[rev]), *fine[inds[!rev]]);
     }
   }
   // delete copy semantics which would mess up `Fine_connection`. Can implement later if we really need it.
@@ -212,6 +238,8 @@ class Refined_connection
   // fetch an object represting a connection between the face of a fine element and one of the mortar faces
   Fine_connection& connection(int i_fine) {return fine_cons[i_fine];}
   bool order_reversed() {return rev;}
+  auto stretch() {return str;}
+  int n_fine_elements() {return n_fine;}
 };
 
 }

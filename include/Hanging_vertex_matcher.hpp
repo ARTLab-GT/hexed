@@ -18,10 +18,11 @@ class Hanging_vertex_matcher
   bool isp;
   int n_dim;
   int n_vert;
+  std::array<bool, 2> str;
 
   public:
   // Note: sensitive to the order in which elements are provided
-  Hanging_vertex_matcher(std::vector<Element*> fine_elements, int i_dim, bool is_positive);
+  Hanging_vertex_matcher(std::vector<Element*> fine_elements, int i_dim, bool is_positive, std::array<bool, 2> stretch = {false, false});
   /*
    * Sets the values at the hanging vertices to the proper interpolated values.
    * Note: the interpolation is based on the values at the non-hanging vertices

@@ -81,11 +81,20 @@ TEST_CASE("Accessible_mesh")
   SECTION("refined face connection")
   {
     // check that it can't find elements with the wrong deformedness
-    REQUIRE_THROWS(mesh.connect_hanging_cartesian(1, car0, {def0, def1, def2, def3}, {2}, true, false, false));
-    // make a good connection
-    mesh.connect_hanging_cartesian(1, car0, {def0, def1, def2, def3}, {2}, true, false, true);
-    auto& ref_face {mesh.cartesian().refined_faces()[0]};
-    REQUIRE(ref_face.coarse_face() == mesh.element(1, false, car0).face() + (2*2 + 1)*5*row_size*row_size);
+    REQUIRE_THROWS(mesh.connect_hanging(1, car0, {def0, def1, def2, def3}, {{2, 2}, {1, 0}}, false, {true, true, true, false}));
+    SECTION("cartesian")
+    {
+      mesh.connect_hanging(1, car0, {def0, def1, def2, def3}, {{2, 2}, {1, 0}}, false, {true, true, true, true});
+      auto& ref_face {mesh.cartesian().refined_faces()[0]};
+      REQUIRE(ref_face.coarse_face() == mesh.element(1, false, car0).face() + (2*2 + 1)*5*row_size*row_size);
+    }
+    SECTION("deformed")
+    {
+      int coarse = mesh.add_element(1, true, {0, 0});
+      mesh.connect_hanging(1, coarse, {def0, def1, def2, def3}, {{1, 0}, {1, 0}}, true, {true, true, true, true});
+      auto& ref_face {mesh.deformed().refined_faces()[0]};
+      REQUIRE(ref_face.coarse_face() == mesh.element(1, true, coarse).face() + (1*2 + 1)*5*row_size*row_size);
+    }
   }
 
   SECTION("deformed-deformed connection")
@@ -161,7 +170,7 @@ TEST_CASE("Accessible_mesh")
     int sn5 = mesh.add_element(0, false, {0, 0});
     mesh.connect_cartesian(0, {sn1, sn0}, {0});
     mesh.connect_cartesian(0, {sn1, sn5}, {1});
-    mesh.connect_hanging_cartesian(1, car0, {def0, def1, def2, def3}, {2}, true, false, true);
+    mesh.connect_hanging(1, car0, {def0, def1, def2, def3}, {{2, 2}, {1, 0}}, false, {true, true, true, true});
     mesh.connect_deformed(3, {sn4, sn2}, {{1, 0}, {0, 1}});
     REQUIRE(mesh.cartesian().face_connections().size() == 6);
     int count0 = 0;
@@ -253,7 +262,8 @@ TEST_CASE("Accessible_mesh")
       mesh1.connect_deformed (1, {def[2*i], def[2*i+1]}, {{1, 1}, {1, 0}});
     }
     for (int kind = 0; kind < 2; ++kind) {
-      mesh1.connect_hanging_cartesian(0, coarse[kind], {kinds[kind][2], kinds[kind][3]}, {0}, 0, false, kind);
+      bool fine_def = kind;
+      mesh1.connect_hanging(0, coarse[kind], {kinds[kind][2], kinds[kind][3]}, {{0, 0}, {0, 1}}, false, {fine_def, fine_def});
     }
     // add boundary conditions
     int bcsn = mesh1.add_boundary_condition(new cartdg::Freestream {{0., 0., 1., 1.}}, new cartdg::Null_mbc);
@@ -315,4 +325,30 @@ TEST_CASE("extruded BCs")
   mesh.add_element(2, false, {-1, -1});
   mesh.connect_rest(bc_sn);
   mesh.valid().assert_valid();
+}
+
+TEST_CASE("extruded hanging node connection validity")
+{
+  // note: this tests for a bug originally discovered on the NASCART-GT side
+  cartdg::Storage_params params {2, 5, 3, 2};
+  cartdg::Accessible_mesh mesh {params, 1.};
+  int coarse = mesh.add_element(0, true, {0, 0, 0});
+  for (int i_dim = 0; i_dim < 2; ++i_dim) {
+    std::vector<int> fine;
+    for (int row = 0; row < 2; ++row) {
+      for (int col = 0; col < 2; ++col) {
+        std::vector<int> pos(3);
+        pos[i_dim] = -1;
+        pos[!i_dim] = row;
+        pos[2] = col;
+        fine.push_back(mesh.add_element(1, true, pos));
+        if (row) mesh.connect_deformed(1, {*(fine.end() - 3), fine.back()}, {{!i_dim, !i_dim}, {1, 0}});
+        if (col) mesh.connect_deformed(1, {*(fine.end() - 2), fine.back()}, {{2, 2},           {1, 0}});
+      }
+    }
+    mesh.connect_hanging(0, coarse, fine, {{i_dim, i_dim}, {0, 1}}, true, std::vector<bool>(false, 4));
+  }
+  mesh.extrude();
+  REQUIRE(mesh.valid().n_duplicate == 0);
+  REQUIRE(mesh.valid().n_missing == 2*(4 + 8) + 4);
 }

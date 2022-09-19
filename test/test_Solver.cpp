@@ -149,6 +149,21 @@ class Parabola : public cartdg::Surface_geometry
   }
 };
 
+class Shrink_pos0 : public cartdg::Mesh_bc
+{
+  public:
+  virtual void snap_vertices(cartdg::Boundary_connection& con)
+  {
+    const int stride = cartdg::custom_math::pow(2, con.storage_params().n_dim - 1 - con.i_dim());
+    for (int i_vert = 0; i_vert < con.storage_params().n_vertices(); ++i_vert) {
+      if ((i_vert/stride)%2 == con.inside_face_sign()) {
+        con.element().vertex(i_vert).pos[0] = .1*.8;
+      }
+    }
+  }
+  virtual void snap_node_adj(cartdg::Boundary_connection&, const cartdg::Basis&) {}
+};
+
 TEST_CASE("Solver")
 {
   static_assert (cartdg::config::max_row_size >= 3); // this test was written for row size 3
@@ -192,22 +207,23 @@ TEST_CASE("Solver")
   SECTION("local time step scale")
   {
     int sn0 = sol.mesh().add_element(0,  true, {0, 0, 0});
-    int sn1 = sol.mesh().add_element(0,  true, {0, 0, 0});
-    int sn2 = sol.mesh().add_element(0, false, {-1, 0, 0});
-    int sn3 = sol.mesh().add_element(1, false, {-2, -1, 0});
-    int sn4 = sol.mesh().add_element(1, false, {-1, -1, 0});
-    sol.mesh().connect_deformed(0, {sn0, sn1}, {{0, 0}, {1, 0}});
-    sol.mesh().connect_cartesian(0, {sn2, sn0}, {0}, {false, true});
-    sol.mesh().connect_hanging_cartesian(0, sn2, {sn3, sn4}, {1}, 0);
+    int sn1 = sol.mesh().add_element(0, false, {-1, 0, 0});
+    int sn2 = sol.mesh().add_element(1, false, {-2, -1, 0});
+    int sn3 = sol.mesh().add_element(1, false, {-1, -1, 0});
+    sol.mesh().connect_cartesian(0, {sn1, sn0}, {0}, {false, true});
+    sol.mesh().connect_hanging(0, sn1, {sn2, sn3}, {{1, 1}, {0, 1}});
+    int bc = sol.mesh().add_boundary_condition(new cartdg::Copy, new Shrink_pos0);
+    sol.mesh().connect_boundary(0, true, sn0, 0, 1, bc);
+    sol.snap_vertices();
     sol.calc_jacobian();
     sol.set_local_tss();
-    // in sn1, TSS is 0.5 because the element is stretched by a factor of 0.5
-    REQUIRE(sol.sample(0,  true, sn1, 4, cartdg::Time_step_scale_func())[0] == Approx(0.5));
-    // in sn2, TSS varies linearly between 1 and 0.5 (because it must be continuous with element sn1)
-    REQUIRE(sol.sample(0, false, sn2, 4, cartdg::Time_step_scale_func())[0] == Approx(0.75));
+    // in sn0, TSS is 0.1 because the element is stretched by a factor of .1
+    REQUIRE(sol.sample(0,  true, sn0, 4, cartdg::Time_step_scale_func())[0] == Approx(.1));
+    // in sn1, TSS varies bilinearly
+    REQUIRE(sol.sample(0, false, sn1, 4, cartdg::Time_step_scale_func())[0] == Approx((2*.1 + .5 + 1.)/4.));
     // TSS at hanging nodes should be set to match coarse element
-    REQUIRE(sol.sample(1, false, sn3, 4, cartdg::Time_step_scale_func())[0] == Approx(1. - 0.0625));
-    REQUIRE(sol.sample(1, false, sn4, 4, cartdg::Time_step_scale_func())[0] == Approx(0.5*(1. + 0.625)));
+    REQUIRE(sol.sample(1, false, sn2, 4, cartdg::Time_step_scale_func())[0] == Approx((3*.5 + .3)/4.));
+    REQUIRE(sol.sample(1, false, sn3, 4, cartdg::Time_step_scale_func())[0] == Approx((2*.5 + .3 + .1)/4.));
   }
 
   SECTION("integrals")
@@ -388,49 +404,17 @@ class All_deformed : public Test_mesh
   }
 };
 
-// creates a mesh involving hanging vertices
-class Hanging : public Test_mesh
+class Extrude_hanging : public Test_mesh
 {
   cartdg::Solver sol;
   int bc_sn;
-  public:
-  Hanging() : sol{2, cartdg::config::max_row_size, 1.} {}
-  virtual cartdg::Solver& solver() {return sol;}
-  virtual int bc_serial_n() {return bc_sn;}
-  virtual void construct(cartdg::Flow_bc* flow_bc)
-  {
-    std::vector<int> serial_n;
-    bc_sn = sol.mesh().add_boundary_condition(flow_bc, new cartdg::Null_mbc);
-    for (int i = 0; i < 2; ++i) {
-      serial_n.push_back(sol.mesh().add_element(0, false, {i  , 0}));
-      serial_n.push_back(sol.mesh().add_element(1, false, {i  , 2}));
-      serial_n.push_back(sol.mesh().add_element(1,  true, {i+2, 2}));
-    }
-    sol.mesh().connect_cartesian(0, {serial_n[0], serial_n[3]}, {0});
-    sol.mesh().connect_cartesian(1, {serial_n[1], serial_n[4]}, {0});
-    sol.mesh().connect_deformed (1, {serial_n[2], serial_n[5]}, {{0, 0}, {1, 0}});
-    sol.mesh().connect_cartesian(1, {serial_n[4], serial_n[2]}, {0}, {false, true});
-    for (int i = 0; i < 2; ++i) {
-      sol.mesh().connect_hanging_cartesian(0, serial_n[3*i], {serial_n[1 + i], serial_n[4 + i]}, {1}, 1, false, i);
-      sol.mesh().connect_boundary(0, false, serial_n[3*i        ], 1, 0, bc_sn);
-      sol.mesh().connect_boundary(0, false, serial_n[3*i        ], 0, i, bc_sn);
-      sol.mesh().connect_boundary(1, false, serial_n[3*i + 1    ], 1, 1, bc_sn);
-      sol.mesh().connect_boundary(1,  true, serial_n[3*i + 2    ], 1, 1, bc_sn);
-      sol.mesh().connect_boundary(1,     i, serial_n[3*i + 1 + i], 0, i, bc_sn);
-    }
-    for (int i = 0; i < 2; ++i) sol.relax_vertices();
-  }
-};
-
-// creates a single 3d element and then extrudes all faces
-class Extrude_3d : public Test_mesh
-{
-  cartdg::Solver sol;
-  int bc_sn;
+  int id;
+  int jd;
+  int kd;
 
   public:
-  Extrude_3d()
-  : sol{3, cartdg::config::max_row_size, .8}
+  Extrude_hanging(int i_dim, int j_dim)
+  : sol{3, cartdg::config::max_row_size, .8}, id{i_dim}, jd{j_dim}, kd{3 - i_dim - j_dim}
   {}
 
   virtual cartdg::Solver& solver() {return sol;}
@@ -440,9 +424,36 @@ class Extrude_3d : public Test_mesh
   {
     bc_sn = sol.mesh().add_boundary_condition(flow_bc, new cartdg::Null_mbc);
     std::vector<cartdg::Mesh::elem_handle> handles;
-    sol.mesh().add_element(0, true, {0, 0, 0});
+    std::vector<int> coarse_pos(3, 0);
+    coarse_pos[id] = -1;
+    int coarse = sol.mesh().add_element(0, true, coarse_pos);
+    std::vector<int> fine(4);
+    int dim0 = std::min(jd, kd);
+    int dim1 = std::max(jd, kd);
+    for (int i = 0; i < 2; ++i) {
+      for (int j = 0; j < 2; ++j) {
+        std::vector<int> fine_pos(3, 0);
+        fine_pos[dim0] = i;
+        fine_pos[dim1] = j;
+        fine[2*i + j] = sol.mesh().add_element(1, true, fine_pos);
+        if (i) sol.mesh().connect_deformed(1, {fine[  j], fine[2   + j]}, {{dim0, dim0}, {1, 0}});
+        if (j) sol.mesh().connect_deformed(1, {fine[2*i], fine[2*i + 1]}, {{dim1, dim1}, {1, 0}});
+      }
+    }
+    int extra [2];
+    for (int i = 0; i < 2; ++i) {
+      std::vector<int> fine_pos(3, 0);
+      fine_pos[jd] = 2;
+      fine_pos[kd] = i;
+      extra[i] = sol.mesh().add_element(1, true, fine_pos);
+      sol.mesh().connect_deformed(1, {fine[1 + (jd < kd) + i*(1 + (jd > kd))], extra[i]}, {{jd, jd}, {1, 0}});
+    }
+    sol.mesh().connect_deformed(1, {extra[0], extra[1]}, {{kd, kd}, {1, 0}});
+    sol.mesh().connect_hanging(0, coarse, fine, {{id, id}, {1, 0}}, true, {true, true, true, true});
     sol.mesh().extrude();
     sol.mesh().connect_rest(bc_sn);
+    for (int i = 0; i < 2; ++i) sol.relax_vertices();
+    sol.snap_vertices();
   }
 };
 
@@ -519,15 +530,21 @@ TEST_CASE("Solver time marching")
     All_deformed ad1 (1);
     test_marching(ad1, "def1");
   }
-  SECTION("with hanging nodes")
+  SECTION("extruded with deformed hanging nodes")
   {
-    Hanging hg;
-    test_marching(hg, "hanging");
-  }
-  SECTION("3d extruded")
-  {
-    Extrude_3d e3;
-    test_marching(e3, "extrude_3d");
+    #define TEST_MARCHING(i_dim, j_dim) \
+      SECTION("dimensions " #i_dim " " #j_dim) { \
+          Extrude_hanging eh(i_dim, j_dim); \
+          test_marching(eh, "extrude_hanging"); \
+      }
+    TEST_MARCHING(0, 1)
+    #if NDEBUG
+    TEST_MARCHING(0, 2)
+    TEST_MARCHING(1, 0)
+    TEST_MARCHING(1, 2)
+    TEST_MARCHING(2, 0)
+    TEST_MARCHING(2, 1)
+    #endif
   }
 }
 
@@ -546,15 +563,22 @@ TEST_CASE("Solver conservation")
     All_deformed ad1 (1);
     test_conservation(ad1, "def1");
   }
-  SECTION("with hanging nodes")
+  SECTION("extruded with deformed hanging nodes")
   {
-    Hanging hg;
-    test_conservation(hg, "hanging");
-  }
-  SECTION("3d extruded")
-  {
-    Extrude_3d e3;
-    test_conservation(e3, "extrude_3d");
+    #define TEST_CONSERVATION(i_dim, j_dim) \
+      SECTION("dimensions " #i_dim " " #j_dim) { \
+          Extrude_hanging eh(i_dim, j_dim); \
+          test_conservation(eh, "extrude_hanging"); \
+      } \
+
+    TEST_CONSERVATION(0, 1)
+    #if NDEBUG
+    TEST_CONSERVATION(0, 2)
+    TEST_CONSERVATION(1, 0)
+    TEST_CONSERVATION(1, 2)
+    TEST_CONSERVATION(2, 0)
+    TEST_CONSERVATION(2, 1)
+    #endif
   }
 }
 

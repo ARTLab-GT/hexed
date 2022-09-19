@@ -44,8 +44,9 @@ class Accessible_mesh : public Mesh
   virtual void connect_cartesian(int ref_level, std::array<int, 2> serial_n, Con_dir<Element> dir,
                                  std::array<bool, 2> is_deformed = {false, false});
   virtual void connect_deformed(int ref_level, std::array<int, 2> serial_n, Con_dir<Deformed_element> direction);
-  virtual void connect_hanging_cartesian(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Element>,
-                                         bool coarse_face_positive, bool coarse_deformed=false, bool fine_deformed=false);
+  virtual void connect_hanging(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Deformed_element>,
+                               bool coarse_deformed = false, std::vector<bool> fine_deformed = {false, false, false, false},
+                               std::array<bool, 2> stretch = {false, false});
   Sequence<Element_connection&>& element_connections() {return elem_cons;}
   virtual int add_boundary_condition(Flow_bc*, Mesh_bc*);
   virtual void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n);
@@ -57,7 +58,7 @@ class Accessible_mesh : public Mesh
   virtual Connection_validity valid();
   typedef Vector_view<Vertex&, Vertex::Non_transferable_ptr, &ptr_convert<Vertex&, Vertex::Non_transferable_ptr>> vertex_view;
   vertex_view vertices();
-  virtual void extrude(); // note: test for this is in `test_Solver.cpp` so that the result can be visualized
+  virtual void extrude(bool collapse = false); // note: test for this is in `test_Solver.cpp` so that the result can be visualized
   virtual void connect_rest(int bc_sn);
   virtual std::vector<elem_handle> elem_handles();
 };

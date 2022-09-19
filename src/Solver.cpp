@@ -50,20 +50,12 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
   }
 }
 
-void Solver::relax_vertices()
+void Solver::relax_vertices(double factor)
 {
   // relax the vertices
   auto verts {acc_mesh.vertices()};
-  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) verts[i_vert].calc_relax();
+  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) verts[i_vert].calc_relax(factor);
   for (int i_vert = 0; i_vert < verts.size(); ++i_vert) verts[i_vert].apply_relax();
-  // vertex relaxation will cause hanging vertices to drift away from the faces they are supposed to be coincident with
-  // so now we put them back where they belong
-  auto& matchers = acc_mesh.hanging_vertex_matchers();
-  for (int i_match = 0; i_match < matchers.size(); ++i_match) {
-    matchers[i_match].match(&Element::vertex_position<0>);
-    matchers[i_match].match(&Element::vertex_position<1>);
-    matchers[i_match].match(&Element::vertex_position<2>);
-  }
 }
 
 void Solver::snap_vertices()
@@ -72,6 +64,14 @@ void Solver::snap_vertices()
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh.boundary_condition(bc_sn).mesh_bc->snap_vertices(bc_cons[i_con]);
+  }
+  // vertex relaxation/snapping will cause hanging vertices to drift away from hanging vertex faces they are supposed to be coincident with
+  // so now we put them back where they belong
+  auto& matchers = acc_mesh.hanging_vertex_matchers();
+  for (int i_match = 0; i_match < matchers.size(); ++i_match) {
+    matchers[i_match].match(&Element::vertex_position<0>);
+    matchers[i_match].match(&Element::vertex_position<1>);
+    matchers[i_match].match(&Element::vertex_position<2>);
   }
 }
 
@@ -122,6 +122,21 @@ void Solver::calc_jacobian()
           }
         }
       }
+      // prolong Jacobian onto fine faces at hanging node connections
+      auto& ref_cons = acc_mesh.deformed().refined_connections();
+      // scale jacobian on refined faces with stretching
+      for (int i_ref = 0; i_ref < ref_cons.size(); ++i_ref) {
+        auto& ref = ref_cons[i_ref];
+        auto& rf = ref.refined_face;
+        int face_dim = ref.direction().i_dim[ref.order_reversed()];
+        // if the column of the jacobian currently being processed is one that needs to be stretched...
+        if ((j_dim != face_dim) && rf.stretch[(n_dim == 3) && (2*j_dim > 3 - face_dim)]) {
+          // double this component of the jacobian for the benefit of the fine faces
+          double* data = rf.coarse_face();
+          for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) data[i_qpoint] *= 2;
+        }
+      }
+      (*kernel_factory<Prolong_refined>(n_dim, rs, basis))(acc_mesh.deformed().refined_faces());
       // for BCs, copy Jacobian to ghost face
       auto& def_bc_cons = acc_mesh.deformed().boundary_connections();
       for (int i_con = 0; i_con < def_bc_cons.size(); ++i_con) {
@@ -147,7 +162,7 @@ void Solver::calc_jacobian()
           // take average of element face jacobians with appropriate axis permutations
           int col = j_dim;
           int tangential_sign = 1;
-          // swap dir.i_dim[0] and dir.i_dim[1]
+          // swap dimension `dir.i_dim[0]` and dimension `dir.i_dim[1]`
           if (j_dim == dir.i_dim[1]) {
             col = dir.i_dim[0];
           }
@@ -475,7 +490,7 @@ void Solver::visualize_edges_otter(otter::plot& plt, Eigen::Matrix<double, 1, Ei
   }
 }
 
-void Solver::visualize_surface_otter(otter::plot& plt, int bc_sn, const otter::colormap& cmap, const Qpoint_func& color_by, std::array<double, 2> bounds, int n_sample, double tol)
+void Solver::visualize_surface_otter(otter::plot& plt, int bc_sn, const otter::colormap& cmap, const Qpoint_func& color_by, std::array<double, 2> bounds, bool transparent, int n_sample, double tol)
 {
   if (color_by.n_var(params.n_dim) != 1) throw std::runtime_error("`color_by` must be scalar");
   // substitute bounds if necessary
@@ -506,7 +521,11 @@ void Solver::visualize_surface_otter(otter::plot& plt, int bc_sn, const otter::c
         plt.add(curve);
       } else if (params.n_dim == 3) {
         face_pos.resize(n_sample*n_sample, params.n_dim);
-        otter::surface surf(n_sample, face_pos, cmap(face_var));
+        Eigen::MatrixXd color = Eigen::MatrixXd::Constant(face_var.size(), 4, transparent ? .2 : 1.);
+        Eigen::MatrixXd mapped = cmap(face_var);
+        color(Eigen::all, Eigen::seqN(0, mapped.cols())) = mapped;
+        otter::surface surf(n_sample, face_pos, color);
+        if (transparent) surf.transparency = otter::surface::transparent_add;
         plt.add(surf);
       }
     }

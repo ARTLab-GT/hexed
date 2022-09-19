@@ -22,7 +22,8 @@ class Refined_face
   double* coarse;
 
   public:
-  Refined_face(Storage_params, double* coarse_face);
+  const std::array<bool, 2> stretch;
+  Refined_face(Storage_params, double* coarse_face, std::array<bool, 2> stretch_arg = {false, false});
   virtual ~Refined_face() = default;
   // The following return pointers to data for a single face.
   double* fine_face(int i_face); // pointer to the mortar (owned by `this`) fine face storage

@@ -86,7 +86,7 @@ void Deformed_element::set_jacobian(const Basis& basis)
       }
     }
     double min_sv = vert_jac.jacobiSvd().singularValues()(n_dim - 1);
-    vertex_time_step_scale(i_vert) = min_sv;
+    vertex_time_step_scale(i_vert) = min_sv/custom_math::pow(2, r_level);
   }
 }
 

@@ -223,4 +223,92 @@ TEST_CASE("Refined_connection<Deformed_element>")
     REQUIRE(&elem3.vertex(7) == &coarse.vertex(7));
     REQUIRE(&elem0.vertex(5) != &coarse.vertex(5));
   }
+  SECTION("stretched")
+  {
+    std::vector<cartdg::Deformed_element*> elems2 {&elem0, &elem1};
+    SECTION("invalid construction throws")
+    {
+      REQUIRE_THROWS(cartdg::Refined_connection<cartdg::Deformed_element>{&coarse, elem_ptrs, cartdg::Con_dir<cartdg::Deformed_element>{{0, 2}, {1, 1}}, true, {true, false}});
+      REQUIRE_THROWS(cartdg::Refined_connection<cartdg::Deformed_element>{&coarse, elem_ptrs, cartdg::Con_dir<cartdg::Deformed_element>{{0, 2}, {1, 1}}, true, {false, true}});
+      REQUIRE_THROWS(cartdg::Refined_connection<cartdg::Deformed_element>{&coarse, elem_ptrs, cartdg::Con_dir<cartdg::Deformed_element>{{0, 2}, {1, 1}}, true, {true, true}});
+      REQUIRE_THROWS(cartdg::Refined_connection<cartdg::Deformed_element>{&coarse, elems2, cartdg::Con_dir<cartdg::Deformed_element>{{0, 2}, {1, 1}}, true, {false, false}});
+      REQUIRE_THROWS(cartdg::Refined_connection<cartdg::Deformed_element>{&coarse, elems2, cartdg::Con_dir<cartdg::Deformed_element>{{0, 2}, {1, 1}}, true, {true, true}});
+    }
+    SECTION("stretch dimension 0")
+    {
+      cartdg::Refined_connection<cartdg::Deformed_element> con {&coarse, elems2, cartdg::Con_dir<cartdg::Deformed_element>{{2, 0}, {1, 1}}, false, {true, false}};
+      REQUIRE(con.refined_face.stretch[0] == false);
+      REQUIRE(con.refined_face.stretch[1] == true);
+      REQUIRE(con.refined_face.coarse_face() == coarse.face() + (2*2 + 1)*5*6*6);
+      auto& fine_con = con.connection(1);
+      REQUIRE(fine_con.direction().i_dim[0] == 2);
+      REQUIRE(fine_con.direction().i_dim[1] == 0);
+      REQUIRE(&fine_con.element(0) == &coarse);
+      REQUIRE(&fine_con.element(1) == &elem1);
+      REQUIRE(fine_con.face(0) == con.refined_face.fine_face(1));
+      REQUIRE(fine_con.face(1) == elem1.face() + (2*0 + 1)*5*6*6);
+      REQUIRE(&elem0.vertex(4) == &coarse.vertex(1));
+      REQUIRE(&elem1.vertex(5) == &coarse.vertex(5));
+      REQUIRE(&elem0.vertex(6) == &coarse.vertex(3));
+      REQUIRE(&elem1.vertex(7) == &coarse.vertex(7));
+      REQUIRE(&elem0.vertex(5) != &coarse.vertex(5));
+    }
+    SECTION("stretch dimension 0 reverse")
+    {
+      cartdg::Refined_connection<cartdg::Deformed_element> con {&coarse, elems2, cartdg::Con_dir<cartdg::Deformed_element>{{0, 2}, {1, 1}}, true, {true, false}};
+      REQUIRE(con.refined_face.coarse_face() == coarse.face() + (2*2 + 1)*5*6*6);
+      auto& fine_con = con.connection(1);
+      REQUIRE(fine_con.direction().i_dim[0] == 0);
+      REQUIRE(fine_con.direction().i_dim[1] == 2);
+      REQUIRE(&fine_con.element(0) == &elem1);
+      REQUIRE(&fine_con.element(1) == &coarse);
+      REQUIRE(fine_con.face(0) == elem1.face() + (2*0 + 1)*5*6*6);
+      REQUIRE(fine_con.face(1) == con.refined_face.fine_face(1));
+      REQUIRE(&elem0.vertex(4) == &coarse.vertex(1));
+      REQUIRE(&elem1.vertex(5) == &coarse.vertex(5));
+      REQUIRE(&elem0.vertex(6) == &coarse.vertex(3));
+      REQUIRE(&elem1.vertex(7) == &coarse.vertex(7));
+      REQUIRE(&elem0.vertex(5) != &coarse.vertex(5));
+    }
+    SECTION("stretch dimension 1")
+    {
+      cartdg::Refined_connection<cartdg::Deformed_element> con {&coarse, elems2, cartdg::Con_dir<cartdg::Deformed_element>{{2, 0}, {1, 1}}, false, {false, true}};
+      REQUIRE(con.refined_face.coarse_face() == coarse.face() + (2*2 + 1)*5*6*6);
+      auto& fine_con = con.connection(1);
+      REQUIRE(fine_con.direction().i_dim[0] == 2);
+      REQUIRE(fine_con.direction().i_dim[1] == 0);
+      REQUIRE(&fine_con.element(0) == &coarse);
+      REQUIRE(&fine_con.element(1) == &elem1);
+      REQUIRE(fine_con.face(0) == con.refined_face.fine_face(1));
+      REQUIRE(fine_con.face(1) == elem1.face() + (2*0 + 1)*5*6*6);
+      REQUIRE(&elem0.vertex(4) == &coarse.vertex(1));
+      REQUIRE(&elem0.vertex(5) == &coarse.vertex(5));
+      REQUIRE(&elem1.vertex(6) == &coarse.vertex(3));
+      REQUIRE(&elem1.vertex(7) == &coarse.vertex(7));
+      REQUIRE(&elem1.vertex(5) != &coarse.vertex(5));
+    }
+    SECTION("stretch both")
+    {
+      cartdg::Refined_connection<cartdg::Deformed_element> con {&coarse, {&elem0}, cartdg::Con_dir<cartdg::Deformed_element>{{0, 2}, {1, 1}}, true, {true, true}};
+      REQUIRE(con.refined_face.coarse_face() == coarse.face() + (2*2 + 1)*5*6*6);
+      auto& fine_con = con.connection(0);
+      REQUIRE(fine_con.direction().i_dim[0] == 0);
+      REQUIRE(fine_con.direction().i_dim[1] == 2);
+      REQUIRE(&fine_con.element(0) == &elem0);
+      REQUIRE(&fine_con.element(1) == &coarse);
+      REQUIRE(fine_con.face(0) == elem0.face() + (2*0 + 1)*5*6*6);
+      REQUIRE(fine_con.face(1) == con.refined_face.fine_face(0));
+      REQUIRE(&elem0.vertex(4) == &coarse.vertex(1));
+      REQUIRE(&elem0.vertex(5) == &coarse.vertex(5));
+      REQUIRE(&elem0.vertex(6) == &coarse.vertex(3));
+      REQUIRE(&elem0.vertex(7) == &coarse.vertex(7));
+      REQUIRE(&elem0.vertex(5) != &coarse.vertex(1));
+    }
+    SECTION("not transposed")
+    {
+      cartdg::Refined_connection<cartdg::Deformed_element> con {&coarse, {elems2}, cartdg::Con_dir<cartdg::Deformed_element>{{0, 1}, {1, 1}}, true, {true, false}};
+      REQUIRE(con.refined_face.stretch[0] == true);
+      REQUIRE(con.refined_face.stretch[1] == false);
+    }
+  }
 }

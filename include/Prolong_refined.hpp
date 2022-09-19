@@ -34,21 +34,28 @@ class Prolong_refined : public Kernel<Refined_face&>
     {
       auto& ref_face {ref_faces[i_ref_face]};
       double* coarse {ref_face.coarse_face()};
-      for (int i_face = 0; i_face < n_face; ++i_face)
+      const auto str = ref_face.stretch;
+      // update number of faces to reflect any face stretching
+      int nf = n_face;
+      for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) nf /= 1 + str[i_dim];
+      for (int i_face = 0; i_face < nf; ++i_face)
       {
         double* fine {ref_face.fine_face(i_face)};
         for (int i_var = 0; i_var < n_var; ++i_var)
         {
           double* var_face {fine + i_var*nfq};
+          // initialize fine face to be equal to coarse face
           for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
             var_face[i_qpoint] = coarse[i_var*nfq + i_qpoint];
           }
-          for (int j_dim = 0; j_dim < n_dim - 1; ++j_dim)
+          // interpolate one dimension at a time, in-place
+          for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim)
           {
-            const int pow {n_dim - 2 - j_dim};
-            const int face_stride {custom_math::pow(2, pow)};
+            if (str[i_dim]) continue;
+            const int pow {n_dim - 2 - i_dim};
+            const int face_stride {str[n_dim - 2] ? 1 : custom_math::pow(2, pow)};
             const int qpoint_stride {custom_math::pow(row_size, pow)};
-            const int i_half {(i_face/face_stride)%2};
+            const int i_half {(i_face/face_stride)%2}; // is this face covering the upper or lower half of the coarse face with respect to the current dimension?
             for (int i_outer = 0; i_outer < nfq/(row_size*qpoint_stride); ++i_outer)
             {
               for (int i_inner = 0; i_inner < qpoint_stride; ++i_inner)

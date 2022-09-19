@@ -1,6 +1,5 @@
 #include <Vis_data.hpp>
 #include <math.hpp>
-#include <iostream>
 
 namespace cartdg
 {

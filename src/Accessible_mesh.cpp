@@ -61,13 +61,32 @@ void Accessible_mesh::connect_deformed(int ref_level, std::array<int, 2> serial_
   def.cons.emplace_back(el_ar, direction);
 }
 
-void Accessible_mesh::connect_hanging_cartesian(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Element> dir,
-                                                bool coarse_face_positive, bool coarse_deformed, bool fine_deformed)
+void Accessible_mesh::connect_hanging(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Deformed_element> dir,
+                                      bool coarse_deformed, std::vector<bool> fine_deformed, std::array<bool, 2> stretch)
 {
-  Element* coarse = &element(coarse_ref_level, coarse_deformed, coarse_serial);
-  std::vector<Element*> fine;
-  for (int fs : fine_serial) fine.push_back(&element(coarse_ref_level + 1, fine_deformed, fs));
-  car.ref_face_cons.emplace_back(new Refined_connection<Element> {coarse, fine, dir, !coarse_face_positive});
+  bool is_car = !coarse_deformed;
+  for (bool fine_def : fine_deformed) is_car = (is_car||!fine_def);
+  if (is_car)
+  {
+    Element* coarse = &element(coarse_ref_level, coarse_deformed, coarse_serial);
+    std::vector<Element*> fine;
+    for (int i_fine = 0; i_fine < n_vert/2; ++i_fine) {
+      fine.push_back(&element(coarse_ref_level + 1, fine_deformed[i_fine], fine_serial[i_fine]));
+    }
+    if ((dir.i_dim[0] != dir.i_dim[1]) || (dir.face_sign[0] == dir.face_sign[1])) {
+      throw std::runtime_error("attempted to form a cartesian hanging-node connection with incompatible `Con_dir`.");
+    }
+    car.ref_face_cons[params.n_dim - 1].emplace_back(new Refined_connection<Element> {coarse, fine, {dir.i_dim[0]}, dir.face_sign[1]});
+  }
+  else
+  {
+    Deformed_element* coarse = &def.elems.at(coarse_ref_level, coarse_serial);
+    std::vector<Deformed_element*> fine;
+    for (unsigned i_fine = 0; i_fine < fine_serial.size(); ++i_fine) {
+      fine.push_back(&def.elems.at(coarse_ref_level + 1, fine_serial[i_fine]));
+    }
+    def.ref_face_cons[custom_math::log(2, fine_serial.size())].emplace_back(new Refined_connection<Deformed_element> {coarse, fine, dir, false, stretch});
+  }
 }
 
 int Accessible_mesh::add_boundary_condition(Flow_bc* flow_bc, Mesh_bc* mesh_bc)
@@ -133,6 +152,14 @@ struct Connection_plan
   std::array<int, 2> serial_ns;
   Con_dir<Deformed_element> dir;
 };
+struct Refined_connection_plan
+{
+  int coarse_ref;
+  int coarse_sn;
+  std::vector<int> fine_sn;
+  Con_dir<Deformed_element> dir;
+  std::array<bool, 2> stretch;
+};
 bool aligned_same_dim(Con_dir<Deformed_element> dir, std::array<int, 2> extrude_dim)
 {
   return (dir.i_dim[0] == dir.i_dim[1]) && (dir.face_sign[0] != dir.face_sign[1])
@@ -143,9 +170,10 @@ bool aligned_different_dim(Con_dir<Deformed_element> dir, std::array<int, 2> ext
   return (dir.i_dim[0] == extrude_dim[1]) && (dir.i_dim[1] == extrude_dim[0]);
 }
 
-void Accessible_mesh::extrude()
+void Accessible_mesh::extrude(bool collapse)
 {
-  const int n_faces = 2*params.n_dim;
+  const int nd = params.n_dim;
+  const int n_faces = 2*nd;
   // initialize number of connections of each face to 0
   {
     auto& elems = elements();
@@ -176,7 +204,7 @@ void Accessible_mesh::extrude()
   std::vector<Empty_face> empty_faces;
   auto& elems = def.elements();
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
       for (int face_sign = 0; face_sign < 2; ++face_sign) {
         const int i_face = 2*i_dim + face_sign;
         auto& elem {elems[i_elem]};
@@ -196,12 +224,19 @@ void Accessible_mesh::extrude()
     int sn = add_element(ref_level, true, nom_pos);
     Con_dir<Deformed_element> dir {{face.i_dim, face.i_dim}, {!face.face_sign, bool(face.face_sign)}};
     auto& elem = def.elems.at(ref_level, sn);
+    if (collapse) {
+      int stride = custom_math::pow(2, nd - 1 - face.i_dim);
+      for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
+        int i_collapse = i_vert + (face.face_sign - (i_vert/stride)%2)*stride;
+        elem.vertex(i_vert).pos = face.elem.vertex(i_collapse).pos;
+      }
+    }
     std::array<Deformed_element*, 2> el_arr {&elem, &face.elem};
     def.cons.emplace_back(el_arr, dir);
     // record the faces that still need to be connected at a vertex which is guaranteed to be shared with prospective neighbors
-    for (int j_dim = face.i_dim + 1; j_dim%params.n_dim != face.i_dim; ++j_dim)
+    for (int j_dim = face.i_dim + 1; j_dim%nd != face.i_dim; ++j_dim)
     {
-      j_dim = j_dim%params.n_dim;
+      j_dim = j_dim%nd;
       for (int face_sign = 0; face_sign < 2; ++face_sign)
       {
         int face_rec = face.elem.face_record[2*j_dim + face_sign];
@@ -213,8 +248,8 @@ void Accessible_mesh::extrude()
         {
           // record data at vertex which is on the face to be connected, on the face which was extruded from,
           // and if applicable has the minimum index to satisfy the above consitions.
-          int i_vert =   face_sign*custom_math::pow(2, params.n_dim - 1 - j_dim)
-                       + (1 - face.face_sign)*custom_math::pow(2, params.n_dim - 1 - face.i_dim);
+          int i_vert =   face_sign*custom_math::pow(2, nd - 1 - j_dim)
+                       + (1 - face.face_sign)*custom_math::pow(2, nd - 1 - face.i_dim);
           auto& record = elem.vertex(i_vert).record;
           // which element it is
           record.push_back(ref_level);
@@ -222,7 +257,7 @@ void Accessible_mesh::extrude()
           // which face needs to be connected
           record.push_back(2*j_dim + face_sign);
           // extrusion direction for deciding which face connections are valid
-          record.push_back(face.i_dim);
+          record.push_back(2*face.i_dim + face.face_sign);
         }
       }
     }
@@ -230,41 +265,107 @@ void Accessible_mesh::extrude()
   // plan connections to make (don't make them yet, because that could result in `eat`ing vertices which have not been visited,
   // and ultimately dereferencing null pointers)
   std::vector<Connection_plan> con_plans;
+  std::vector<Refined_connection_plan> ref_con_plans;
+
+  #define VERTEX_LOOP(code) \
+    /* connections without hanging nodes */ \
+    for (int i_vert = 0; i_vert < verts.size(); ++i_vert) \
+    { \
+      auto& vert {verts[i_vert]}; \
+      /* first make connections where dimension matches and then make connections among differing dimensions. */ \
+      /* This order prevents incorrect connections where both same-dimension and different-dimension candidates are available. */ \
+      for (bool (*aligned)(Con_dir<Deformed_element>, std::array<int, 2>) : {&aligned_same_dim, &aligned_different_dim}) \
+      { \
+        /* iterate through every possible pair of records created by an extruded elements above */ \
+        for (int i_record = 0; i_record < int(vert.record.size()); i_record += n_record) \
+        { \
+          for (int j_record = i_record + n_record; j_record < int(vert.record.size()); j_record += n_record) \
+          { \
+            int ref_level = vert.record[i_record]; \
+            Con_dir<Deformed_element> dir {{     vert.record[i_record + 2]/2 ,      vert.record[j_record + 2]/2}, \
+                                           {bool(vert.record[i_record + 2]%2), bool(vert.record[j_record + 2]%2)}}; \
+            /* only connect elements that are suitably positioned. */ \
+            /* This prevents incorrect connections at places like a 3D corner where there are many (incorrect) candidates available */ \
+            if (aligned(dir, {vert.record[i_record + 3]/2, vert.record[j_record + 3]/2})) { \
+              code \
+            } \
+          } \
+        } \
+      } \
+    } \
+
+  #define CONNECT_SAME_CONFORMING \
+    if (vert.record[j_record] == ref_level) { \
+      std::array<int, 2> sn {vert.record[i_record + 1], vert.record[j_record + 1]}; \
+      con_plans.push_back({ref_level, sn, dir}); /* add prospective connection */ \
+      /* erase unconnected face record to prevent duplicate connections */ \
+      vert.record.erase(vert.record.begin() + j_record, vert.record.begin() + j_record + n_record); \
+      vert.record.erase(vert.record.begin() + i_record, vert.record.begin() + i_record + n_record); \
+      i_record -= n_record; /* move index to account for erased elements */ \
+      break; /* since we found a match, we can move on to the next `i_record` */ \
+    } \
+
+  #define CONNECT_HANGING \
+    if (vert.record[j_record] != ref_level) { \
+      int which_fine = vert.record[j_record] > vert.record[i_record]; \
+      int rec [] {i_record, j_record}; \
+      /* ref_level, sn, i_face, extrude_dim */ \
+      std::vector<int> sn(n_vert/4); \
+      int* vert_rec = vert.record.data() + rec[which_fine]; \
+      sn[0] = vert_rec[1]; \
+      int stretch_dim = 0; \
+      int face_dim = vert_rec[2]/2; \
+      int face_sign = vert_rec[2]%2; \
+      int extr_dim = vert_rec[3]/2; \
+      int extr_sign = vert_rec[3]%2; \
+      if (nd == 3) { \
+        auto& elem = def.elems.at(vert_rec[0], sn[0]); \
+        int free_dim = 3 - face_dim - extr_dim; \
+        int iv = face_sign*custom_math::pow(2, nd - 1 - face_dim) \
+                 + (1 - extr_sign)*custom_math::pow(2, nd - 1 - extr_dim) \
+                 + custom_math::pow(2, nd - 1 - free_dim); \
+        Vertex& fine_vert = elem.vertex(iv); \
+        /* vertex should have exactly one record */ \
+        sn[1] = fine_vert.record[1]; \
+        stretch_dim = extr_dim > free_dim; \
+        fine_vert.record.erase(fine_vert.record.begin(), fine_vert.record.begin() + n_record); \
+      } \
+      std::array<bool, 2> stretch {false, false}; \
+      stretch[stretch_dim] = true; \
+      int* coarse_rec = vert.record.data() + rec[!which_fine]; \
+      ref_con_plans.push_back({coarse_rec[0], coarse_rec[1], sn, {{coarse_rec[2]/2, face_dim}, {bool(coarse_rec[2]%2), bool(face_sign)}}, stretch}); \
+      /* erase unconnected face record to prevent duplicate connections */ \
+      vert.record.erase(vert.record.begin() + j_record, vert.record.begin() + j_record + n_record); \
+      vert.record.erase(vert.record.begin() + i_record, vert.record.begin() + i_record + n_record); \
+      i_record -= n_record; /* move index to account for erased elements */ \
+      break; /* since we found a match, we can move on to the next `i_record` */ \
+    } \
+
+  {
+    auto verts = vertices();
+    VERTEX_LOOP(CONNECT_SAME_CONFORMING)
+    VERTEX_LOOP(CONNECT_HANGING)
+  }
+  // create the planned connections
+  for (auto con_plan : con_plans) {
+    connect_deformed(con_plan.ref_level, con_plan.serial_ns, con_plan.dir);
+  }
+  for (auto ref_plan : ref_con_plans) {
+    connect_hanging(ref_plan.coarse_ref, ref_plan.coarse_sn, ref_plan.fine_sn, ref_plan.dir, true, std::vector<bool>(n_vert/4, true), ref_plan.stretch);
+  }
+  con_plans.clear();
   {
     auto verts = vertices(); // note: need to rebuild vertex vector because face connections above have `eat`en vertices
-    for (int i_vert = 0; i_vert < verts.size(); ++i_vert)
-    {
-      auto& vert {verts[i_vert]};
-      // first make connections where dimension matches and then make connections among differing dimensions.
-      // This order prevents incorrect connections where both same-dimension and different-dimension candidates are available.
-      for (bool (*aligned)(Con_dir<Deformed_element>, std::array<int, 2>) : {&aligned_same_dim, &aligned_different_dim})
-      {
-        // iterate through every possible pair of records created by an extruded elements above
-        for (int i_record = 0; i_record < int(vert.record.size()); i_record += n_record)
-        {
-          for (unsigned j_record = i_record + n_record; j_record < vert.record.size(); j_record += n_record)
-          {
-            int ref_level = vert.record[i_record];
-            std::array<int, 2> sn {vert.record[i_record + 1], vert.record[j_record + 1]};
-            Con_dir<Deformed_element> dir {{     vert.record[i_record + 2]/2 ,      vert.record[j_record + 2]/2},
-                                           {bool(vert.record[i_record + 2]%2), bool(vert.record[j_record + 2]%2)}};
-            // only connect elements that are suitably positioned.
-            // This prevents incorrect connections at places like a 3D corner where there are many (incorrect) candidates available
-            if (aligned(dir, {vert.record[i_record + 3], vert.record[j_record + 3]})) {
-              if (vert.record[j_record] != ref_level) throw std::runtime_error("attempt to connect extruded elements of different ref level");
-              con_plans.push_back({ref_level, sn, dir}); // add prospective connection
-              // erase unconnected face record to prevent duplicate connections
-              vert.record.erase(vert.record.begin() + j_record, vert.record.begin() + j_record + n_record);
-              vert.record.erase(vert.record.begin() + i_record, vert.record.begin() + i_record + n_record);
-              i_record -= n_record; // move index to account for erased elements
-              break; // since we found a match, we can move on to the next `i_record`
-            }
-          }
-        }
+    VERTEX_LOOP(CONNECT_SAME_CONFORMING)
+    for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
+      auto& vert = verts[i_vert];
+      if (!vert.record.empty()) {
+        char buffer [100];
+        snprintf(buffer, 100, "vertex detected with %lu unprocessed connection requests", vert.record.size()/n_record);
+        throw std::runtime_error(buffer);
       }
     }
   }
-  // create the planned connections
   for (auto con_plan : con_plans) {
     connect_deformed(con_plan.ref_level, con_plan.serial_ns, con_plan.dir);
   }
