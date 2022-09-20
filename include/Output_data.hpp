@@ -1,9 +1,9 @@
-#ifndef CARTDG_OUTPUT_DATA_HPP_
-#define CARTDG_OUTPUT_DATA_HPP_
+#ifndef HEXED_OUTPUT_DATA_HPP_
+#define HEXED_OUTPUT_DATA_HPP_
 
 #include <string>
 
-namespace cartdg
+namespace hexed
 {
 
 /*

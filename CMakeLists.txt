@@ -1,6 +1,6 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.16)
 
-project(cartdg VERSION 0.0
+project(hexed VERSION 0.0
         DESCRIPTION "Discontinuous Galerkin numerics for CFD on a Cartesian grid"
         LANGUAGES CXX)
 
@@ -61,18 +61,18 @@ configure_file(config_build.hpp.in config_build.hpp)
 configure_file(config_build.hpp.in config.hpp)
 
 # define main target, which is a library
-add_library(cartdg SHARED)
+add_library(hexed SHARED)
 # add external libraries
 if (use_otter)
     find_package(otter REQUIRED)
-    target_link_libraries(cartdg PUBLIC otter)
+    target_link_libraries(hexed PUBLIC otter)
 endif()
 if (use_tecplot)
-    target_link_libraries(cartdg PRIVATE tecio)
+    target_link_libraries(hexed PRIVATE tecio)
 endif()
 # add automatically generated source files
-target_sources(cartdg PRIVATE ${CMAKE_BINARY_DIR}/Gauss_lobatto.cpp ${CMAKE_BINARY_DIR}/Gauss_legendre.cpp)
-target_include_directories(cartdg PUBLIC
+target_sources(hexed PRIVATE ${CMAKE_BINARY_DIR}/Gauss_lobatto.cpp ${CMAKE_BINARY_DIR}/Gauss_legendre.cpp)
+target_include_directories(hexed PUBLIC
                            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
                            $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>
                            $<INSTALL_INTERFACE:include>
@@ -82,33 +82,33 @@ add_subdirectory(src)
 add_subdirectory(test)
 add_subdirectory(demo)
 
-install(TARGETS cartdg DESTINATION lib EXPORT cartdgTargets)
-install(DIRECTORY include/ DESTINATION include/cartdg)
-install(FILES ${CMAKE_BINARY_DIR}/config.hpp DESTINATION include/cartdg/)
-install(PROGRAMS script/cartdg-post-process script/cartdg-wrapped-post-process TYPE BIN)
-install(EXPORT cartdgTargets
-        NAMESPACE cartdg::
-        FILE cartdgTargets.cmake
-        DESTINATION lib/cmake/cartdg
+install(TARGETS hexed DESTINATION lib EXPORT hexedTargets)
+install(DIRECTORY include/ DESTINATION include/hexed)
+install(FILES ${CMAKE_BINARY_DIR}/config.hpp DESTINATION include/hexed/)
+install(PROGRAMS script/hexed-post-process script/hexed-wrapped-post-process TYPE BIN)
+install(EXPORT hexedTargets
+        NAMESPACE hexed::
+        FILE hexedTargets.cmake
+        DESTINATION lib/cmake/hexed
 )
 
 include(CMakePackageConfigHelpers)
 # generate the config file that is includes the exports
 configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in
-"${CMAKE_CURRENT_BINARY_DIR}/cartdgConfig.cmake"
+"${CMAKE_CURRENT_BINARY_DIR}/hexedConfig.cmake"
 INSTALL_DESTINATION "lib/cmake"
 NO_SET_AND_CHECK_MACRO
 NO_CHECK_REQUIRED_COMPONENTS_MACRO
 )
 # generate the version file for the config file
 write_basic_package_version_file(
-"${CMAKE_CURRENT_BINARY_DIR}/cartdgConfigVersion.cmake"
-VERSION "${cartdg_VERSION_MAJOR}.${cartdg_VERSION_MINOR}"
+"${CMAKE_CURRENT_BINARY_DIR}/hexedConfigVersion.cmake"
+VERSION "${hexed_VERSION_MAJOR}.${hexed_VERSION_MINOR}"
 COMPATIBILITY AnyNewerVersion
 )
 
 # install the configuration file
 install(FILES
-${CMAKE_CURRENT_BINARY_DIR}/cartdgConfig.cmake
-DESTINATION lib/cmake/cartdg
+${CMAKE_CURRENT_BINARY_DIR}/hexedConfig.cmake
+DESTINATION lib/cmake/hexed
 )

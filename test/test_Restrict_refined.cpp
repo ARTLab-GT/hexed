@@ -5,12 +5,12 @@
 TEST_CASE("Restrict_refined")
 {
   // test that restriction operator is approximately correct for an exponential function
-  const int row_size {cartdg::config::max_row_size};
-  cartdg::Storage_params params {2, 5, 3, row_size};
-  cartdg::Gauss_legendre basis {row_size};
+  const int row_size {hexed::config::max_row_size};
+  hexed::Storage_params params {2, 5, 3, row_size};
+  hexed::Gauss_legendre basis {row_size};
   double coarse [5][row_size][row_size] {};
-  std::vector<cartdg::Refined_face> ref_faces;
-  cartdg::Vector_view<cartdg::Refined_face&, cartdg::Refined_face> ref_face_v {ref_faces};
+  std::vector<hexed::Refined_face> ref_faces;
+  hexed::Vector_view<hexed::Refined_face&, hexed::Refined_face> ref_face_v {ref_faces};
   auto check = [&](double factor) {
     for (int i_var = 0; i_var < 5; ++i_var) {
       for (int i_node = 0; i_node < row_size; ++i_node) {
@@ -38,7 +38,7 @@ TEST_CASE("Restrict_refined")
         }
       }
     }
-    (*cartdg::kernel_factory<cartdg::Restrict_refined>(3, row_size, basis))(ref_face_v);
+    (*hexed::kernel_factory<hexed::Restrict_refined>(3, row_size, basis))(ref_face_v);
     check(1.);
   }
 
@@ -55,7 +55,7 @@ TEST_CASE("Restrict_refined")
         }
       }
     }
-    (*cartdg::kernel_factory<cartdg::Restrict_refined>(3, row_size, basis))(ref_face_v);
+    (*hexed::kernel_factory<hexed::Restrict_refined>(3, row_size, basis))(ref_face_v);
     check(.5);
   }
 
@@ -72,7 +72,7 @@ TEST_CASE("Restrict_refined")
         }
       }
     }
-    (*cartdg::kernel_factory<cartdg::Restrict_refined>(3, row_size, basis))(ref_face_v);
+    (*hexed::kernel_factory<hexed::Restrict_refined>(3, row_size, basis))(ref_face_v);
     check(.5);
   }
 }

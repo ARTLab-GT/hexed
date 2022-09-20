@@ -1,6 +1,6 @@
 #include <Refined_face.hpp>
 
-namespace cartdg
+namespace hexed
 {
 
 Refined_face::Refined_face(Storage_params params, double* cf, std::array<bool, 2> str)

@@ -10,9 +10,9 @@ double arbitrary_polynomial(double pos, int i)
 
 TEST_CASE("Derivative")
 {
-  const int row_size = cartdg::config::max_row_size;
+  const int row_size = hexed::config::max_row_size;
   static_assert (row_size >= 3); // this test requires at least quadratic basis
-  cartdg::Gauss_legendre basis (row_size);
+  hexed::Gauss_legendre basis (row_size);
   Eigen::Matrix<double, row_size, 3> qpoint_vals;
   Eigen::Matrix<double, 2, 3> boundary_vals;
   for (int i_var = 0; i_var < 3; ++i_var) {
@@ -28,7 +28,7 @@ TEST_CASE("Derivative")
   // mess with the boundary values of the last variable so we can check conservation
   boundary_vals(0, 2) = 0.2;
   boundary_vals(1, 2) = 0.5;
-  cartdg::Derivative<row_size> derivative (basis);
+  hexed::Derivative<row_size> derivative (basis);
   auto result = derivative(qpoint_vals, boundary_vals);
   // test that the derivative is correct when the boundary values match the interior
   for (int i_var = 0; i_var < 2; ++i_var) {

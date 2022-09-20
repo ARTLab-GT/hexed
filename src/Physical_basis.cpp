@@ -4,7 +4,7 @@
 #include <math.hpp>
 #include <Physical_basis.hpp>
 
-namespace cartdg
+namespace hexed
 {
 
 Physical_basis::Physical_basis(int n_dim, int row_size, std::vector<double> qpoint_pos)

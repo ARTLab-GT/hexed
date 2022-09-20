@@ -3,7 +3,7 @@
 #include <Local_cartesian.hpp>
 #include <Gauss_legendre.hpp>
 
-class Identity_basis : public cartdg::Basis
+class Identity_basis : public hexed::Basis
 {
   public:
   Identity_basis (int row_size_arg) : Basis(row_size_arg) {}
@@ -33,15 +33,15 @@ TEST_CASE("Local_cartesian")
   SECTION("1D")
   {
     int n_elem = 5;
-    cartdg::Storage_params params {2, 3, 1, 2};
+    hexed::Storage_params params {2, 3, 1, 2};
     int n_qpoint = params.n_qpoint();
-    std::vector<std::unique_ptr<cartdg::Element>> elements;
+    std::vector<std::unique_ptr<hexed::Element>> elements;
     Identity_basis basis {int(params.row_size)};
     double mass = 1.225; double veloc = 10; double pres = 1e5;
     double mmtm = mass*veloc; double ener = pres/0.4 + 0.5*mass*veloc*veloc;
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
-      elements.emplace_back(new cartdg::Element {params, {}, 2.});
+      elements.emplace_back(new hexed::Element {params, {}, 2.});
       double* state = elements[i_elem]->stage(0);
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
@@ -57,7 +57,7 @@ TEST_CASE("Local_cartesian")
     }
     double rk_weight = 0.9;
     car_elem_view elem_view {elements};
-    (*cartdg::kernel_factory<cartdg::Local_cartesian>(1, 2, basis, d_t, rk_weight))(elem_view);
+    (*hexed::kernel_factory<hexed::Local_cartesian>(1, 2, basis, d_t, rk_weight))(elem_view);
     for (auto& element : elements)
     {
       double* state = element->stage(0);
@@ -72,9 +72,9 @@ TEST_CASE("Local_cartesian")
   SECTION("3D")
   {
     const int n_elem = 5;
-    cartdg::Storage_params params {2, 5, 3, 3};
+    hexed::Storage_params params {2, 5, 3, 3};
     int n_qpoint = params.n_qpoint();
-    std::vector<std::unique_ptr<cartdg::Element>> elements;
+    std::vector<std::unique_ptr<hexed::Element>> elements;
     Identity_basis basis (params.row_size);
     double mass = 1.225;
     double veloc0 = 10; double veloc1 = -20; double veloc2 = 30;
@@ -82,7 +82,7 @@ TEST_CASE("Local_cartesian")
     double ener = pres/0.4 + 0.5*mass*(veloc0*veloc0 + veloc1*veloc1 + veloc2*veloc2);
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
-      elements.emplace_back(new cartdg::Element {params, {}, 2.});
+      elements.emplace_back(new hexed::Element {params, {}, 2.});
       double* state = elements[i_elem]->stage(0);
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
       {
@@ -100,7 +100,7 @@ TEST_CASE("Local_cartesian")
       elements[i_elem]->time_step_scale()[1] = 0.16;
     }
     car_elem_view elem_view {elements};
-    (*cartdg::kernel_factory<cartdg::Local_cartesian>(3, params.row_size, basis, d_t, 1.))(elem_view);
+    (*hexed::kernel_factory<hexed::Local_cartesian>(3, params.row_size, basis, d_t, 1.))(elem_view);
     for (auto& element : elements)
     {
       double* state = element->stage(0);
@@ -119,11 +119,11 @@ TEST_CASE("Local_cartesian")
   SECTION("2D non-constant")
   {
     const int n_elem = 5;
-    const int row_size = std::min<int>(6, int(cartdg::config::max_row_size));
-    cartdg::Storage_params params {3, 4, 2, row_size};
+    const int row_size = std::min<int>(6, int(hexed::config::max_row_size));
+    hexed::Storage_params params {3, 4, 2, row_size};
     int n_qpoint = params.n_qpoint();
-    std::vector<std::unique_ptr<cartdg::Element>> elements;
-    cartdg::Gauss_legendre basis (row_size);
+    std::vector<std::unique_ptr<hexed::Element>> elements;
+    hexed::Gauss_legendre basis (row_size);
     /*
      * to test the correctness of the time derivative, set the RK weight to 0.5
      * and the RK reference state to minus the initial state. Thus the initial state
@@ -134,7 +134,7 @@ TEST_CASE("Local_cartesian")
 
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
-      elements.emplace_back(new cartdg::Element {params, {}, 2.});
+      elements.emplace_back(new hexed::Element {params, {}, 2.});
       double* state = elements[i_elem]->stage(0);
       double* face = elements[i_elem]->face();
 
@@ -181,7 +181,7 @@ TEST_CASE("Local_cartesian")
       #undef SET_VARS
     }
     car_elem_view elem_view {elements};
-    (*cartdg::kernel_factory<cartdg::Local_cartesian>(2, row_size, basis, d_t, rk_weight))(elem_view);
+    (*hexed::kernel_factory<hexed::Local_cartesian>(2, row_size, basis, d_t, rk_weight))(elem_view);
     for (auto& element : elements) {
       double* state = element->stage(0);
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {

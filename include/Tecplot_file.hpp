@@ -1,12 +1,12 @@
-#ifndef CARTDG_TECPLOT_FILE_HPP_
-#define CARTDG_TECPLOT_FILE_HPP_
+#ifndef HEXED_TECPLOT_FILE_HPP_
+#define HEXED_TECPLOT_FILE_HPP_
 
 #include <string>
 #include <vector>
 #include "config.hpp"
 
-#if CARTDG_USE_TECPLOT
-namespace cartdg
+#if HEXED_USE_TECPLOT
+namespace hexed
 {
 
 /*

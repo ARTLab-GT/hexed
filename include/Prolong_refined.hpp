@@ -1,5 +1,5 @@
-#ifndef CARTDG_PROLONG_REFINED_HPP_
-#define CARTDG_PROLONG_REFINED_HPP_
+#ifndef HEXED_PROLONG_REFINED_HPP_
+#define HEXED_PROLONG_REFINED_HPP_
 
 #include "Vector_view.hpp"
 #include "Refined_face.hpp"
@@ -7,7 +7,7 @@
 #include "kernel_factory.hpp"
 #include "math.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 /*

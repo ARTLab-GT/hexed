@@ -1,5 +1,5 @@
-#ifndef CARTDG_MCS_DEFORMED_HPP_
-#define CARTDG_MCS_DEFORMED_HPP_
+#ifndef HEXED_MCS_DEFORMED_HPP_
+#define HEXED_MCS_DEFORMED_HPP_
 
 #include "Vector_view.hpp"
 #include "kernel_factory.hpp"
@@ -7,7 +7,7 @@
 #include "math.hpp"
 #include "characteristic_speed.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 /*

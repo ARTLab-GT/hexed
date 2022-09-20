@@ -1,7 +1,7 @@
 #include <Hanging_vertex_matcher.hpp>
 #include <math.hpp>
 
-namespace cartdg
+namespace hexed
 {
 
 Hanging_vertex_matcher::Hanging_vertex_matcher(std::vector<Element*> fine_elements, int i_dim, bool is_positive, std::array<bool, 2> stretch)

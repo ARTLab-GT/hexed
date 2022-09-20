@@ -6,16 +6,16 @@ TEST_CASE("Solver visualization")
 {
   SECTION("2D")
   {
-    cartdg::Solver sol {2, cartdg::config::max_row_size, 1.};
+    hexed::Solver sol {2, hexed::config::max_row_size, 1.};
     sol.mesh().add_element(0, true, {0, 0});
     sol.mesh().extrude();
     sol.calc_jacobian();
-    cartdg::Isentropic_vortex vortex({100., 0., 1., 3e5});
+    hexed::Isentropic_vortex vortex({100., 0., 1., 3e5});
     vortex.argmax_radius = 1.;
     sol.initialize(vortex);
-    int bc_sn = sol.mesh().add_boundary_condition(new cartdg::Nonpenetration, new cartdg::Null_mbc);
+    int bc_sn = sol.mesh().add_boundary_condition(new hexed::Nonpenetration, new hexed::Null_mbc);
     sol.mesh().connect_rest(bc_sn);
-    #if CARTDG_USE_OTTER
+    #if HEXED_USE_OTTER
     otter::plot plt;
     plt.set_orthographic(true);
     SECTION("surface") {
@@ -31,16 +31,16 @@ TEST_CASE("Solver visualization")
   }
   SECTION("3D")
   {
-    cartdg::Solver sol {3, cartdg::config::max_row_size, 1.};
+    hexed::Solver sol {3, hexed::config::max_row_size, 1.};
     sol.mesh().add_element(0, true, {0, 0, 0});
     sol.mesh().extrude();
     sol.calc_jacobian();
-    cartdg::Isentropic_vortex vortex({100., 0., 0., 1., 3e5});
+    hexed::Isentropic_vortex vortex({100., 0., 0., 1., 3e5});
     vortex.argmax_radius = 1.;
     sol.initialize(vortex);
-    int bc_sn = sol.mesh().add_boundary_condition(new cartdg::Nonpenetration, new cartdg::Null_mbc);
+    int bc_sn = sol.mesh().add_boundary_condition(new hexed::Nonpenetration, new hexed::Null_mbc);
     sol.mesh().connect_rest(bc_sn);
-    #if CARTDG_USE_OTTER
+    #if HEXED_USE_OTTER
     otter::plot plt;
     plt.set_orthographic(true);
     sol.visualize_edges_otter(plt);

@@ -6,12 +6,12 @@
 
 TEST_CASE("Write_face")
 {
-  static_assert (cartdg::config::max_row_size >= 5); // this test was written for row size 5
+  static_assert (hexed::config::max_row_size >= 5); // this test was written for row size 5
   const int row_size {5};
-  cartdg::Equidistant basis {row_size};
-  cartdg::Storage_params params {2, 5, 3, row_size};
-  std::vector<std::unique_ptr<cartdg::Element>> elements;
-  elements.emplace_back(new cartdg::Element {params});
+  hexed::Equidistant basis {row_size};
+  hexed::Storage_params params {2, 5, 3, row_size};
+  std::vector<std::unique_ptr<hexed::Element>> elements;
+  elements.emplace_back(new hexed::Element {params});
   const int n_qpoint {params.n_qpoint()};
   for (int i_var : {0, 1})
   {
@@ -25,7 +25,7 @@ TEST_CASE("Write_face")
     }
   }
   car_elem_view elem_view {elements};
-  (*cartdg::kernel_factory<cartdg::Write_face>(3, row_size, basis))(elem_view);
+  (*hexed::kernel_factory<hexed::Write_face>(3, row_size, basis))(elem_view);
   double* face = elements[0]->face();
   const int n_face {params.n_dof()/row_size};
   REQUIRE(face[0*n_face + 0*n_qpoint/row_size + 0] == Approx(0.).margin(1e-10));

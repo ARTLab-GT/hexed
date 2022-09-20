@@ -1,5 +1,5 @@
-#ifndef CARTDG_WRITE_FACE_HPP_
-#define CARTDG_WRITE_FACE_HPP_
+#ifndef HEXED_WRITE_FACE_HPP_
+#define HEXED_WRITE_FACE_HPP_
 
 #include <Eigen/Dense>
 #include "Vector_view.hpp"
@@ -7,7 +7,7 @@
 #include "kernel_factory.hpp"
 #include "math.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 /*

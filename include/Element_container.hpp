@@ -1,5 +1,5 @@
-#ifndef CARTDG_ELEMENT_CONTAINER_HPP_
-#define CARTDG_ELEMENT_CONTAINER_HPP_
+#ifndef HEXED_ELEMENT_CONTAINER_HPP_
+#define HEXED_ELEMENT_CONTAINER_HPP_
 
 #include <vector>
 #include <map>
@@ -8,7 +8,7 @@
 #include "Element.hpp"
 #include "Deformed_element.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 /*

@@ -23,7 +23,7 @@ TEST_CASE("hll")
       }
     }
     for (int i = 0; i < 20; ++i) read[i] = backup[i];
-    cartdg::hll<3, 2>(read, 0, 1.4);
+    hexed::hll<3, 2>(read, 0, 1.4);
     for (int j = 0; j < 2; ++j) {
       for (int i_var = 0; i_var < 5; ++i_var) {
         double correct_flux = backup[2*i_var];
@@ -35,7 +35,7 @@ TEST_CASE("hll")
       }
     }
     for (int i = 0; i < 20; ++i) read[i] = backup[i];
-    cartdg::hll<3, 2>(read, 1, 1.4);
+    hexed::hll<3, 2>(read, 1, 1.4);
     for (int j = 0; j < 2; ++j) {
       for (int i_var = 0; i_var < 5; ++i_var) {
         double correct_flux = backup[2*i_var + 10];
@@ -60,7 +60,7 @@ TEST_CASE("hll")
         read[i + 10*j + 8] = pressure/0.4 + 0.5*mass*velocity0[j]*velocity0[j];
       }
     }
-    cartdg::hll<3, 2>(read, 0, 1.4);
+    hexed::hll<3, 2>(read, 0, 1.4);
     REQUIRE(read[2*3     ] == Approx(0).margin(1e-8));
     REQUIRE(read[2*3 + 10] == Approx(0).margin(1e-8));
   }

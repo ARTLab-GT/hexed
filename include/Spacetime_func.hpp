@@ -1,11 +1,11 @@
-#ifndef CARTDG_SPACETIME_FUNC_HPP_
-#define CARTDG_SPACETIME_FUNC_HPP_
+#ifndef HEXED_SPACETIME_FUNC_HPP_
+#define HEXED_SPACETIME_FUNC_HPP_
 
 #include <vector>
 #include <array>
 #include "Domain_func.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 /*

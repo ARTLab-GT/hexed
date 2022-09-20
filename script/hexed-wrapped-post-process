@@ -5,7 +5,7 @@ setup script first. This is because the
 developers, in their infinite wisdom, decided to make Tecplot
 install in its own little world with its own version of system
 files rather than in the standard system directories. To peform
-post-processing, execute `cartdg-post-process`, which will
+post-processing, execute `hexed-post-process`, which will
 effect the necessary configuration and then invoke this script.
 """
 

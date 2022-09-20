@@ -4,7 +4,7 @@
 
 TEST_CASE("Stopwatch")
 {
-  cartdg::Stopwatch watch;
+  hexed::Stopwatch watch;
   REQUIRE(watch.n_calls() == 0);
   REQUIRE(watch.time() == 0.);
   REQUIRE(!watch.running());

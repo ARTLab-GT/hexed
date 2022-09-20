@@ -1,11 +1,11 @@
-#ifndef CARTDG_MESH_HPP_
-#define CARTDG_MESH_HPP_
+#ifndef HEXED_MESH_HPP_
+#define HEXED_MESH_HPP_
 
 #include <string>
 #include "Boundary_condition.hpp"
 #include "connection.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 /*

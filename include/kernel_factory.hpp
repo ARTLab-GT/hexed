@@ -1,5 +1,5 @@
-#ifndef CARTDG_KERNEL_FACTORY_HPP_
-#define CARTDG_KERNEL_FACTORY_HPP_
+#ifndef HEXED_KERNEL_FACTORY_HPP_
+#define HEXED_KERNEL_FACTORY_HPP_
 
 #include <memory>
 #include "config.hpp"
@@ -16,7 +16,7 @@
  * flexibility, which for our purpose is more important.
  */
 
-namespace cartdg
+namespace hexed
 {
 
 /*

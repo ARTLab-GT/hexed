@@ -1,12 +1,12 @@
-#ifndef CARTDG_QPOINT_FUNC_HPP_
-#define CARTDG_QPOINT_FUNC_HPP_
+#ifndef HEXED_QPOINT_FUNC_HPP_
+#define HEXED_QPOINT_FUNC_HPP_
 
 #include <vector>
 #include "Output_data.hpp"
 #include "Element.hpp"
 #include "Basis.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 class Grid;

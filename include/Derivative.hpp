@@ -1,10 +1,10 @@
-#ifndef CARTDG_DERIVATIVE_HPP_
-#define CARTDG_DERIVATIVE_HPP_
+#ifndef HEXED_DERIVATIVE_HPP_
+#define HEXED_DERIVATIVE_HPP_
 
 #include <Eigen/Dense>
 #include "Basis.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 /*

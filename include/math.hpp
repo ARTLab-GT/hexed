@@ -1,10 +1,10 @@
-#ifndef CARTDG_MATH_HPP_
-#define CARTDG_MATH_HPP_
+#ifndef HEXED_MATH_HPP_
+#define HEXED_MATH_HPP_
 
 #include <cmath>
 #include <Eigen/Dense>
 
-namespace cartdg::custom_math
+namespace hexed::custom_math
 {
 
 /*

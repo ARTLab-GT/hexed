@@ -4,7 +4,7 @@
 #include <Accessible_mesh.hpp>
 #include <Gauss_legendre.hpp>
 
-void test_mesh(cartdg::Accessible_mesh& mesh)
+void test_mesh(hexed::Accessible_mesh& mesh)
 {
   // construct a mesh that has every possible connection configuration by creating a single element
   // and then extruding all its faces
@@ -17,7 +17,7 @@ void test_mesh(cartdg::Accessible_mesh& mesh)
   // set the face data based on the physical position
   // this implies that for every face connection, data for both faces should be equal,
   // so it can be used to check that the ordering is correct
-  cartdg::Gauss_legendre basis(params.row_size);
+  hexed::Gauss_legendre basis(params.row_size);
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
@@ -33,7 +33,7 @@ void test_mesh(cartdg::Accessible_mesh& mesh)
   auto& connections = mesh.deformed().face_connections();
   for (int i_con = 0; i_con < connections.size(); ++i_con) {
     auto& con = connections[i_con];
-    auto fp = cartdg::kernel_factory<cartdg::Face_permutation>(params.n_dim, params.row_size, con.direction(), con.face(1));
+    auto fp = hexed::kernel_factory<hexed::Face_permutation>(params.n_dim, params.row_size, con.direction(), con.face(1));
     fp->match_faces();
     for (int i_dof = 0; i_dof < n_face_dof; ++i_dof) {
       REQUIRE(con.face(0)[i_dof] == Approx(con.face(1)[i_dof]).scale(1.));
@@ -59,11 +59,11 @@ void test_mesh(cartdg::Accessible_mesh& mesh)
 TEST_CASE("Face_permutation")
 {
   SECTION("2d") {
-    cartdg::Accessible_mesh mesh {{1, 4, 2, cartdg::config::max_row_size}, 1.};
+    hexed::Accessible_mesh mesh {{1, 4, 2, hexed::config::max_row_size}, 1.};
     test_mesh(mesh);
   }
   SECTION("3d") {
-    cartdg::Accessible_mesh mesh {{1, 5, 3, cartdg::config::max_row_size}, 1.};
+    hexed::Accessible_mesh mesh {{1, 5, 3, hexed::config::max_row_size}, 1.};
     test_mesh(mesh);
   }
 }

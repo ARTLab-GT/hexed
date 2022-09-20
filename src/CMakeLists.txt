@@ -1,4 +1,4 @@
-target_sources(cartdg PRIVATE
+target_sources(hexed PRIVATE
 # please maintain alphabetical order
 Accessible_mesh.cpp
 Basis.cpp

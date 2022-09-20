@@ -1,7 +1,7 @@
 #include <Element.hpp>
 #include <math.hpp>
 
-namespace cartdg
+namespace hexed
 {
 
 Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level) :

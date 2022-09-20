@@ -1,10 +1,10 @@
-#ifndef CARTDG_ITERATION_STATUS_HPP_
-#define CARTDG_ITERATION_STATUS_HPP_
+#ifndef HEXED_ITERATION_STATUS_HPP_
+#define HEXED_ITERATION_STATUS_HPP_
 
 #include <vector>
 #include <string>
 
-namespace cartdg
+namespace hexed
 {
 
 /*

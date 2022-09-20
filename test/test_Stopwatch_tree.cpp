@@ -6,7 +6,7 @@
 TEST_CASE("Stopwatch_tree")
 {
   // no good way to really test this, so just do a silly example and look at the output
-  cartdg::Stopwatch_tree rocinante {"gunship"};
+  hexed::Stopwatch_tree rocinante {"gunship"};
   rocinante.children.emplace("armaments", "weapon system");
   rocinante.children.at("armaments").children.emplace("defensive", "PDC");
   rocinante.children.at("armaments").children.emplace("long range", "missile");

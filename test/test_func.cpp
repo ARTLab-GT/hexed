@@ -7,7 +7,7 @@
 #include <Gauss_lobatto.hpp>
 #include <Deformed_element.hpp>
 
-class Arbitrary_func : public cartdg::Spacetime_func
+class Arbitrary_func : public hexed::Spacetime_func
 {
   public:
   virtual int n_var(int n_dim) const {return n_dim;}
@@ -60,7 +60,7 @@ std::vector<std::vector<double>> test_error
 TEST_CASE("Constant_func")
 {
   std::vector<double> value {0.3, -0.7};
-  cartdg::Constant_func cf (value);
+  hexed::Constant_func cf (value);
   REQUIRE(cf.n_var(2) == 2);
   REQUIRE(cf.n_var(3) == 2);
   for (auto pos : test_pos) {
@@ -74,7 +74,7 @@ TEST_CASE("Constant_func")
 TEST_CASE("Error_func")
 {
   Arbitrary_func af;
-  cartdg::Error_func ef(af);
+  hexed::Error_func ef(af);
   REQUIRE(ef.n_var(2) == 2);
   REQUIRE(ef.n_var(3) == 3);
   REQUIRE(ef.variable_name(1) == "state1_errsq");
@@ -92,10 +92,10 @@ TEST_CASE("Inherited methods")
   SECTION("Qpoint_func")
   {
     Arbitrary_func af;
-    cartdg::Gauss_lobatto basis {2};
-    cartdg::Storage_params params {2, 4, 2, 2};
-    cartdg::Deformed_element elem {params, {0, 1}};
-    cartdg::Qpoint_func& af_ref {af};
+    hexed::Gauss_lobatto basis {2};
+    hexed::Storage_params params {2, 4, 2, 2};
+    hexed::Deformed_element elem {params, {0, 1}};
+    hexed::Qpoint_func& af_ref {af};
     auto result = af_ref(elem, basis, 1, 5.);
     REQUIRE(result.size() == 2);
     REQUIRE(result[1] == Approx(0.3*2. - 10.));
@@ -104,8 +104,8 @@ TEST_CASE("Inherited methods")
   {
     // Verify that (Surface_func&)(State_variables&) gives you state variables
     // regardless of the other inputs
-    cartdg::State_variables sv;
-    cartdg::Surface_func& surface {sv};
+    hexed::State_variables sv;
+    hexed::Surface_func& surface {sv};
     for (auto pos : test_pos) {
       for (auto time : test_time) {
         for (auto state : test_state) {
@@ -123,7 +123,7 @@ TEST_CASE("Vortex")
   SECTION("Solves inviscid flow equations")
   {
     std::vector<double> freestream {9., -0.2, 0.8, 2e5};
-    cartdg::Isentropic_vortex vortex(freestream);
+    hexed::Isentropic_vortex vortex(freestream);
     REQUIRE(vortex.n_var(2) == 4);
 
     std::vector<double> test_pos []
@@ -184,7 +184,7 @@ TEST_CASE("Vortex")
   SECTION("Max tangential velocity is correct")
   {
     std::vector<double> freestream = {0., 0., 1., 2e5};
-    cartdg::Isentropic_vortex vortex (freestream);
+    hexed::Isentropic_vortex vortex (freestream);
     auto state = vortex(std::vector<double> {0., vortex.argmax_radius}, 0.);
     double sound_speed = std::sqrt(vortex.heat_rat*(vortex.heat_rat - 1.)*freestream[3]);
     double tang_veloc = -state[0]/state[2];
@@ -201,7 +201,7 @@ TEST_CASE("Doublet")
   double pres {101000.};
   double ener {pres/0.3 + 0.5*mass*speed_sq};
   std::vector<double> freestream = {veloc[0]*mass, veloc[1]*mass, mass, ener};
-  cartdg::Doublet doublet {freestream};
+  hexed::Doublet doublet {freestream};
   REQUIRE(doublet.n_var(2) == 4);
   doublet.radius = 0.8;
   doublet.heat_rat = 1.3; // just to make sure 1.4 isn't hardcoded anywhere
@@ -242,7 +242,7 @@ TEST_CASE("Force_per_area")
     {1.},
     {0., 0., 1.},
   };
-  cartdg::Force_per_area fpa {1.2};
+  hexed::Force_per_area fpa {1.2};
   // verify that when you back out the state,
   // Force_per_area gives you pressure times unit normal
   for (unsigned i_normal = 0; i_normal < test_normal.size(); ++i_normal)

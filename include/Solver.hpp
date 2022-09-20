@@ -1,5 +1,5 @@
-#ifndef CARTDG_SOLVER_HPP_
-#define CARTDG_SOLVER_HPP_
+#ifndef HEXED_SOLVER_HPP_
+#define HEXED_SOLVER_HPP_
 
 #include "Accessible_mesh.hpp"
 #include "Gauss_legendre.hpp"
@@ -7,13 +7,13 @@
 #include "Iteration_status.hpp"
 #include "Stopwatch_tree.hpp"
 #include "config.hpp"
-#ifdef CARTDG_USE_OTTER
+#ifdef HEXED_USE_OTTER
 #include <otter/plot.hpp>
 #include <otter/colormap.hpp>
 #include <otter/colors.hpp>
 #endif
 
-namespace cartdg
+namespace hexed
 {
 
 class Solver
@@ -80,7 +80,7 @@ class Solver
   // compute the min and max of variables over entire flow field. layout: {{var0_min, var0_max}, {var1_min, var1_max}, ...}
   // bounds are approximated by uniformly sampling a block `n_sample`-on-a-side in each element
   std::vector<std::array<double, 2>> bounds_field(const Qpoint_func&, int n_sample = 20);
-  #if CARTDG_USE_TECPLOT
+  #if HEXED_USE_TECPLOT
   // write a visualization file describing the entire flow field (but not identifying surfaces)
   void visualize_field_tecplot(const Qpoint_func& output_variables, std::string name, int n_sample = 20);
   // write a visualization file describing all surfaces where a particular boundary condition has been enforced.
@@ -88,7 +88,7 @@ class Solver
   // and I'm lazy
   void visualize_surface_tecplot(int bc_sn, std::string name, int n_sample = 20);
   #endif
-  #if CARTDG_USE_OTTER
+  #if HEXED_USE_OTTER
   void visualize_edges_otter(otter::plot&, Eigen::Matrix<double, 1, Eigen::Dynamic> color = otter::colors::css4["white"], int n_sample = 21);
   // plot the surface with optional color mapping. plotting takes whatever form is appropriate for dimensionality
   // note: color_by must be a scalar
@@ -116,7 +116,7 @@ class Solver
                                     const otter::colormap& cmap = otter::plasma,
                                     int n_div = 10)
   {
-    visualize_field_otter(plt, cartdg::Linear(Eigen::VectorXd::Unit(params.n_dim, i_dim)),
+    visualize_field_otter(plt, hexed::Linear(Eigen::VectorXd::Unit(params.n_dim, i_dim)),
                           1, {location, location},
                           color_by, bounds, cmap, cmap, false, n_div);
   }
