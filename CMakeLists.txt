@@ -19,6 +19,11 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g -DDEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
 set(CMAKE_CXX_FLAGS "-Wall")
 
+# default installation directory is one that we have access to on lab machines
+if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    set(CMAKE_INSTALL_PREFIX "~/.local" CACHE PATH "where to install hexed" FORCE)
+endif()
+
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "script/auto_generate.py;script/Basis.py")
 
 # determine whether to compile with sanitizers
