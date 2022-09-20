@@ -53,7 +53,7 @@ if(NOT DEFINED MAX_BASIS_ROW_SIZE)
 endif()
 execute_process(COMMAND python3 ${CMAKE_SOURCE_DIR}/script/auto_generate.py ${CMAKE_BINARY_DIR} ${MAX_BASIS_ROW_SIZE})
 
-option(use_otter "include capability to use otter for plotting" ON)
+option(use_otter "include capability to use otter for plotting" OFF)
 option(use_tecplot "include capability to use tecplot for plotting" ON)
 
 # add a configure file to pass CMake variables to the code
