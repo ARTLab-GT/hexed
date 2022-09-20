@@ -1,71 +1,91 @@
 <img src="../assets/header.png" alt="header" height="400"/>
 
-# CartDG
-Provides a discontinuous Galerkin scheme as a library for Cartesian grid CFD solvers.
+# hexed
+Discontinuous Galerkin engine for CFD with automated, unstructured quad/hex meshing.
 
-## Overview
-CartDG implements the core numerical algorithms for a discontinuous Galerkin scheme operating on the equations of fluid flow
-defined on a Cartesian grid. It takes advantage of mathematical simplifications resulting from the Cartesian,
-isotropic nature of the majority of the grid to produce concise and efficient code. It is designed to be integrated with NASCART-GT as
-an accuracy boost, but it is meant to be encapsulated well enough that it can survive major changes to NASCART-GT or even be
-used with other similar codes.
+**hex** *(noun)*
+1. (technical) abbreviation for "hexahedron", a six-sided solid (e.g., a cube)
+2. curse; jinx; evil spell
 
-CartDG is:
-* An implementation of the discontinuous Galerkin scheme for CFD solvers.
-* Fast.
-* Simple (relatively).
+**hex** *(verb)*
+1. to cast a hex
 
-CartDG is not:
-* A stand-alone CFD code.
-* A general framework for CFD on arbitrary grids.
-* A solver for arbitrary PDEs.
-
-This document provides an overview of CartDG. More detailed documentation can be found in [`doc`](doc/). In particular, for
+This document provides an overview of Hexed. More detailed documentation can be found in [`doc`](doc/). In particular, for
 installation instructions, see [`install.md`](doc/install.md).
 
-## Motivation
-The motivation for this project came from my experience with NASCART-GT. With it's highly automated adaptive Cartesian grid
-strategy, NASCART-GT represents the holy grail of modern CFD, in that the user merely provides the geometry and a few
-basic parameters and the code does the rest. However, it still takes a long time to solve even relatively basic problems
-(which is, to a certain extent, a feature of mainstream CFD methods rather than of NASCART-GT in particular). For that reason I am attempting
-to use a high-order-accurate discontinuous Galerkin method to achieve the same accuracy with many fewer cells and less overall
-time.
+## Overview
+Anyone who has spent a substantial amount of time working with CFD can attest that it is decidedly arcane and sometimes tends toward evil.
+As its name suggests, Hexed scarcely presumes to change that.
+What it *can* provide is a faster, more automated solver, enabling you to practice your witchcraft on a previously unattainable scale.
+Specifically, Hexed is a C++ library which can solve the compressible Euler equations of aerodynamics on unstructured quad/hex meshes.
+It can handle Cartesian meshes with hanging-node refinement, and it also provides a mechanism to automatically generate a body-fitted mesh
+from a Cartesian starting point.
+The high-order discontinuous Galerkin (DG) scheme is designed to achieve whatever level of accuracy is required with a much coarser mesh,
+reducing (hopefully) the overall computational cost.
+Hexed is used as a backend by NASCART-GT to combine the speed and accuracy of the DG method with the automation and versatility of its
+adaptive Cartesian mesh.
+However, it is meant to be encapsulated well enough that it could survive a complete refactor of NASCART-GT,
+or even be used with other frontends.
+Hexed is still a work in progress and there are many more features to implement, but hopefully it can make your CFD, if not easier, at least less tedious.
+
+To summarize, Hexed is:
+* fast
+* high-order accurate
+* automatable
+* unstructured
+
+Hexed is not:
+* a stand-alone application
+* for arbitrary PDEs
+* for tri/tet grids
+
+Or as Shakespeare would put it:
+>Double, `double` *Δh* and trouble;
+>
+>CPU burn and cauldron bubble.
 
 ## Some notes on the implementation
-Most of the performance critical code is placed in what I call "kernels". These are highly optimized functions that perform
-the basic operations of the DG method. They take things like the number of dimensions and the polynomial degree of the basis
-as template parameters, allowing Eigen matrices and local arrays to be allocated on the stack and allowing the compiler to
-unroll loops effectively. The ability to specify the degree of the basis and the dimensionality at runtime is recovered by
-a very ugly file that assigns an array of function pointers to kernels with different template arguments (this file is
-generated automatically by a python script). The kernels also make minimal use of abstraction. This means that the same
-code is sometimes written multiple times, but it gives the compiler maximal freedom to optimize.
-
-All of these things are
-disasterous from a software engineering perspective, but have shown significant performance benefits. For the kernels
-I am willing to make this trade, but for the rest of the code I have priortized readability and modularity over performance.
-The speed of the kernels is measured by the script [`benchmark.py`](script/benchmark.py). The speed of the code as a whole
-has shown good agreement with the measurements made by `benchmark.py`.
+Most of the performance critical code is placed in what I call "kernels".
+These are highly optimized functions that perform the basic operations of the DG method.
+They take the number of dimensions and the polynomial degree of the basis as template parameters,
+allowing local arrays to be allocated on the stack and allowing the compiler to unroll loops effectively.
+The ability to specify the degree of the basis and the dimensionality at runtime is recovered by
+some truly cursed recursive templates, which gets the end result that the user needs, but takes *forever* to compile
+and gives me a headache every time I look at it.
+The kernels also often trade abstraction for optimizability.
+All of these things are disasterous from a software engineering perspective, but have shown significant performance benefits.
+For the kernels I am willing to make this trade, but for the rest of the code I have priortized readability and modularity over performance.
+If you end up attempting to understand the kernels, for one reason or another, all I can say is... *sorry*.
  
 ## Dependencies
-Eigen must be available in your include path. Tecplot must be installed with path environment variables configured accordingly.
-Catch2 must be available in a location that CMake can find.
-Python3 must also be available, along with the libraries NumPy, SymPy, and MatPlotLib. See [installation instructions](doc/install.md)
+The following are required to be installed before compiling Hexed:
+- GCC (of course)
+- CMake
+- Eigen
+- Python3
+- Numpy
+- Scipy
+- Sympy
+
+The following are techincally not necessary, but are required by certain optional features:
+- Catch2 (unit testing)
+- Tecplot (flow visualization, required in order to build with NASCART-GT)
+- Otter (flow visualization, not yet publicly available)
+
+See [installation instructions](doc/install.md)
 for guidance on obtaining these.
  
 ## Features
 Currently implemented features:
-* Standard DG method.
 * Gauss-Lobatto and Gauss-Legendre nodal bases.
-* Body-fitted quasi-Cartesian quad mesh.
-* Cartesian hex mesh.
+* Unstructured, body-fitted quad/hex mesh.
 * 3-stage Runge-Kutta explicit time integration.
 * CFL-based time step selection.
 * Visualization with Tecplot.
 * Integration with NASCART-GT.
-* Isotropic hanging-node refinement.
+* Hanging-node refinement.
  
 Planned or in-progress features (roughly in order of planned implementation):
 * Shock capturing (in progress).
-* Body-fitted quasi-Cartesian hex mesh.
 * Viscous flows with anisotropic refinement.
 * Grid adaptation.
