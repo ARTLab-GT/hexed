@@ -14,7 +14,8 @@ This document provides an overview of Hexed. More detailed documentation can be 
 installation instructions, see [`install.md`](doc/install.md).
 
 ## Overview
-Anyone who has spent a substantial amount of time working with CFD can attest that it is decidedly arcane and sometimes tends toward evil.
+Anyone who has spent a substantial amount of time working with computational fluid dynamics (CFD)
+can attest that it is decidedly arcane and sometimes tends toward evil.
 As its name suggests, Hexed scarcely presumes to change that.
 What it *can* provide is a faster, more automated solver, enabling you to practice your witchcraft on a previously unattainable scale.
 Specifically, Hexed is a C++ library which can solve the compressible Euler equations of aerodynamics on unstructured quad/hex meshes.
