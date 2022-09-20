@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
-#include <config.hpp>
-#include <Surface_rotation.hpp>
+#include <hexed/config.hpp>
+#include <hexed/Surface_rotation.hpp>
 
 TEST_CASE("Surface_rotation")
 {

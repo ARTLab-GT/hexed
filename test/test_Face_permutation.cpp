@@ -1,8 +1,8 @@
 #include <catch2/catch.hpp>
-#include <config.hpp>
-#include <Face_permutation.hpp>
-#include <Accessible_mesh.hpp>
-#include <Gauss_legendre.hpp>
+#include <hexed/config.hpp>
+#include <hexed/Face_permutation.hpp>
+#include <hexed/Accessible_mesh.hpp>
+#include <hexed/Gauss_legendre.hpp>
 
 void test_mesh(hexed::Accessible_mesh& mesh)
 {

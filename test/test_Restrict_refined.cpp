@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
-#include <Restrict_refined.hpp>
-#include <Gauss_legendre.hpp>
+#include <hexed/Restrict_refined.hpp>
+#include <hexed/Gauss_legendre.hpp>
 
 TEST_CASE("Restrict_refined")
 {

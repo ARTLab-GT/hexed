@@ -1,7 +1,7 @@
 #include <catch2/catch.hpp>
 #include "testing_utils.hpp"
-#include <Local_deformed.hpp>
-#include <Gauss_legendre.hpp>
+#include <hexed/Local_deformed.hpp>
+#include <hexed/Gauss_legendre.hpp>
 
 // note: this test is essentially the same as for Cartesian because anything else is pretty hard to implement.
 // The real test happens at the integration level in `test_Solver`.

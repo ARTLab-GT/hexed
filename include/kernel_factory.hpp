@@ -3,8 +3,8 @@
 
 #include <memory>
 #include "config.hpp"
-#include <Vector_view.hpp>
-#include <Stopwatch_tree.hpp>
+#include "Vector_view.hpp"
+#include "Stopwatch_tree.hpp"
 
 /*
  * The purpose of this file is to provide a way to specify the number of dimensions and

@@ -1,7 +1,7 @@
 #include <catch2/catch.hpp>
-#include <config.hpp>
-#include <Derivative.hpp>
-#include <Gauss_legendre.hpp>
+#include <hexed/config.hpp>
+#include <hexed/Derivative.hpp>
+#include <hexed/Gauss_legendre.hpp>
 
 double arbitrary_polynomial(double pos, int i)
 {

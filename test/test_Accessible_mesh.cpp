@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
-#include <config.hpp>
-#include <Accessible_mesh.hpp>
+#include <hexed/config.hpp>
+#include <hexed/Accessible_mesh.hpp>
 
 TEST_CASE("Accessible_mesh")
 {

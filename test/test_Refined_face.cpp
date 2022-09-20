@@ -1,7 +1,7 @@
 #include <catch2/catch.hpp>
 
-#include <Storage_params.hpp>
-#include <Refined_face.hpp>
+#include <hexed/Storage_params.hpp>
+#include <hexed/Refined_face.hpp>
 
 TEST_CASE("Refined_face")
 {

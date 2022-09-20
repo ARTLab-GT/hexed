@@ -1,7 +1,7 @@
-#include <config.hpp>
+#include <hexed/config.hpp>
 #if HEXED_USE_TECPLOT
 #include <catch2/catch.hpp>
-#include <Tecplot_file.hpp>
+#include <hexed/Tecplot_file.hpp>
 
 TEST_CASE("Tecplot_file")
 {

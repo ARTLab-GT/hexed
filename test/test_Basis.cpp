@@ -1,9 +1,9 @@
 #include <catch2/catch.hpp>
 
-#include <config.hpp>
-#include <Equidistant.hpp>
-#include <Gauss_lobatto.hpp>
-#include <Gauss_legendre.hpp>
+#include <hexed/config.hpp>
+#include <hexed/Equidistant.hpp>
+#include <hexed/Gauss_lobatto.hpp>
+#include <hexed/Gauss_legendre.hpp>
 
 void test_diff_mat(hexed::Basis& basis)
 {

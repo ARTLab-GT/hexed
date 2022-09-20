@@ -1,11 +1,11 @@
 #include <catch2/catch.hpp>
 
-#include <Qpoint_func.hpp>
-#include <Domain_func.hpp>
-#include <Spacetime_func.hpp>
-#include <Surface_func.hpp>
-#include <Gauss_lobatto.hpp>
-#include <Deformed_element.hpp>
+#include <hexed/Qpoint_func.hpp>
+#include <hexed/Domain_func.hpp>
+#include <hexed/Spacetime_func.hpp>
+#include <hexed/Surface_func.hpp>
+#include <hexed/Gauss_lobatto.hpp>
+#include <hexed/Deformed_element.hpp>
 
 class Arbitrary_func : public hexed::Spacetime_func
 {

@@ -1,7 +1,7 @@
 #include <catch2/catch.hpp>
-#include <config.hpp>
-#include <Write_face.hpp>
-#include <Equidistant.hpp>
+#include <hexed/config.hpp>
+#include <hexed/Write_face.hpp>
+#include <hexed/Equidistant.hpp>
 #include "testing_utils.hpp"
 
 TEST_CASE("Write_face")

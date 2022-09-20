@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
-#include <Gauss_lobatto.hpp>
-#include <Vertex.hpp>
+#include <hexed/Gauss_lobatto.hpp>
+#include <hexed/Vertex.hpp>
 
 TEST_CASE("Vertex")
 {

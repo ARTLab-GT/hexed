@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
-#include <config.hpp>
-#include <Solver.hpp>
+#include <hexed/config.hpp>
+#include <hexed/Solver.hpp>
 
 class Arbitrary_initializer : public hexed::Spacetime_func
 {

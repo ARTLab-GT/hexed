@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 #include "testing_utils.hpp"
-#include <Mcs_deformed.hpp>
+#include <hexed/Mcs_deformed.hpp>
 
 TEST_CASE("Mcs_deformed")
 {

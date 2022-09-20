@@ -1,5 +1,5 @@
 #include <catch2/catch.hpp>
-#include <connection.hpp>
+#include <hexed/connection.hpp>
 
 TEST_CASE("direction conversion")
 {

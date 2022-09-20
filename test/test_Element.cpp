@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
-#include <Element.hpp>
-#include <Equidistant.hpp>
+#include <hexed/Element.hpp>
+#include <hexed/Equidistant.hpp>
 #include "testing_utils.hpp"
 
 TEST_CASE("Element")

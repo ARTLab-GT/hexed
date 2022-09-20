@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 #include "testing_utils.hpp"
-#include <Mcs_cartesian.hpp>
+#include <hexed/Mcs_cartesian.hpp>
 
 TEST_CASE("Mcs_cartesian")
 {

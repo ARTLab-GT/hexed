@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
-#include <config.hpp>
-#include <Boundary_condition.hpp>
+#include <hexed/config.hpp>
+#include <hexed/Boundary_condition.hpp>
 
 class Dummy : public hexed::Boundary_condition
 {

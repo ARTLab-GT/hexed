@@ -1,7 +1,7 @@
 #include <iostream>
-#include <Solver.hpp>
-#include <math.hpp>
-#include <config.hpp>
+#include <hexed/Solver.hpp>
+#include <hexed/math.hpp>
+#include <hexed/config.hpp>
 
 const bool interactive = true;
 

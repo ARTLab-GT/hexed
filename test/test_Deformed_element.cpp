@@ -1,10 +1,10 @@
 #include <catch2/catch.hpp>
 
-#include <config.hpp>
-#include <math.hpp>
-#include <Deformed_element.hpp>
-#include <Equidistant.hpp>
-#include <Gauss_legendre.hpp>
+#include <hexed/config.hpp>
+#include <hexed/math.hpp>
+#include <hexed/Deformed_element.hpp>
+#include <hexed/Equidistant.hpp>
+#include <hexed/Gauss_legendre.hpp>
 #include "testing_utils.hpp"
 
 TEST_CASE("Deformed_element")

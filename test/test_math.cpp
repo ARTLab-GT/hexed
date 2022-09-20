@@ -2,7 +2,7 @@
 
 #include <catch2/catch.hpp>
 #include <cmath>
-#include <math.hpp>
+#include <hexed/math.hpp>
 
 // yo, compile time tests! Here we test constexpr `pow` and `log`
 static_assert (hexed::custom_math::pow(2, 0) == 1);

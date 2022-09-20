@@ -1,6 +1,6 @@
 #include <thread>
 #include <catch2/catch.hpp>
-#include <Stopwatch.hpp>
+#include <hexed/Stopwatch.hpp>
 
 TEST_CASE("Stopwatch")
 {

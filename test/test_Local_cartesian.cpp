@@ -1,7 +1,7 @@
 #include <catch2/catch.hpp>
 #include "testing_utils.hpp"
-#include <Local_cartesian.hpp>
-#include <Gauss_legendre.hpp>
+#include <hexed/Local_cartesian.hpp>
+#include <hexed/Gauss_legendre.hpp>
 
 class Identity_basis : public hexed::Basis
 {

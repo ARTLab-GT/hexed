@@ -1,10 +1,10 @@
 #include <catch2/catch.hpp>
-#include <Vis_data.hpp>
-#include <Deformed_element.hpp>
-#include <Domain_func.hpp>
-#include <Gauss_legendre.hpp>
-#include <config.hpp>
-#include <Spacetime_func.hpp>
+#include <hexed/Vis_data.hpp>
+#include <hexed/Deformed_element.hpp>
+#include <hexed/Domain_func.hpp>
+#include <hexed/Gauss_legendre.hpp>
+#include <hexed/config.hpp>
+#include <hexed/Spacetime_func.hpp>
 
 class Rad_sq : public hexed::Spacetime_func
 {

@@ -1,5 +1,5 @@
 #include <catch2/catch.hpp>
-#include <Hanging_vertex_matcher.hpp>
+#include <hexed/Hanging_vertex_matcher.hpp>
 
 TEST_CASE("Hanging_vertex_matcher")
 {

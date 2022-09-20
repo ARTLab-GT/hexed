@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 #include <Eigen/Dense>
-#include <Physical_basis.hpp>
+#include <hexed/Physical_basis.hpp>
 
 TEST_CASE("Physical_basis")
 {
