@@ -83,7 +83,7 @@ endif()
 # add include/source files
 target_sources(hexed PRIVATE ${CMAKE_BINARY_DIR}/Gauss_lobatto.cpp ${CMAKE_BINARY_DIR}/Gauss_legendre.cpp)
 target_include_directories(hexed PUBLIC ${CMAKE_BINARY_DIR}/include/auto)
-target_include_directories(hexed PRIVATE ${CMAKE_BINARY_DIR}/include/hexed)
+target_include_directories(hexed PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(hexed INTERFACE ${CMAKE_BINARY_DIR}/include)
 add_subdirectory(src)
 add_subdirectory(demo)
@@ -94,13 +94,4 @@ endif()
 # install
 install(PROGRAMS script/hexed-post-process script/hexed-wrapped-post-process TYPE BIN)
 export(TARGETS hexed FILE hexed-targets.cmake)
-#install(DIRECTORY include/ DESTINATION include/hexed)
-#install(FILES ${CMAKE_BINARY_DIR}/config.hpp DESTINATION include/hexed)
 install(FILES ${CMAKE_BINARY_DIR}/hexed-config.cmake DESTINATION lib/cmake/hexed)
-#install(TARGETS hexed EXPORT hexed-targets)
-#install(
-#    EXPORT hexed-targets
-#    NAMESPACE hexed::
-#    FILE hexed-targets.cmake
-#    DESTINATION lib/cmake/hexed
-#)
