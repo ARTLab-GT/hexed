@@ -1,9 +1,9 @@
-#ifndef CARTDG_GAUSS_LEGENDRE_HPP_
-#define CARTDG_GAUSS_LEGENDRE_HPP_
+#ifndef HEXED_GAUSS_LEGENDRE_HPP_
+#define HEXED_GAUSS_LEGENDRE_HPP_
 
 #include "Basis.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 // Basis based on Gauss-Legendre quadrature, which is exact for polynomials of degree `2*row_size - 1`

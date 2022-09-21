@@ -4,7 +4,7 @@
 #include <map>
 #include "Stopwatch.hpp"
 
-namespace cartdg::global_hacks
+namespace hexed::global_hacks
 {
 
 extern std::map<std::string, int> debug_message;

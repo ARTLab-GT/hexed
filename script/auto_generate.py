@@ -26,7 +26,7 @@ script/auto_generate.py and rerun CMake.
 #include <Refined_face.hpp>
 #include <Vector_view.hpp>
 
-namespace cartdg
+namespace hexed
 {{
 
 {text}

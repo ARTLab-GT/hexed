@@ -1,11 +1,11 @@
 #include <catch2/catch.hpp>
 
-#include <config.hpp>
-#include <Equidistant.hpp>
-#include <Gauss_lobatto.hpp>
-#include <Gauss_legendre.hpp>
+#include <hexed/config.hpp>
+#include <hexed/Equidistant.hpp>
+#include <hexed/Gauss_lobatto.hpp>
+#include <hexed/Gauss_legendre.hpp>
 
-void test_diff_mat(cartdg::Basis& basis)
+void test_diff_mat(hexed::Basis& basis)
 {
   Eigen::MatrixXd diff_mat = basis.diff_mat();
   for (int i_result = 0; i_result < basis.row_size; ++i_result)
@@ -47,7 +47,7 @@ void test_diff_mat(cartdg::Basis& basis)
   }
 }
 
-void test_quadrature(cartdg::Basis& basis)
+void test_quadrature(hexed::Basis& basis)
 {
   Eigen::VectorXd weights = basis.node_weights();
   REQUIRE(weights.sum() == Approx(1.));
@@ -62,7 +62,7 @@ void test_quadrature(cartdg::Basis& basis)
   }
 }
 
-void test_boundary(cartdg::Basis& basis)
+void test_boundary(hexed::Basis& basis)
 {
   auto boundary = basis.boundary();
   REQUIRE(boundary.rows() == 2);
@@ -77,7 +77,7 @@ void test_boundary(cartdg::Basis& basis)
   REQUIRE(boundary_vals(1) == Approx(0.52));
 }
 
-void test_orthogonal(cartdg::Basis& basis)
+void test_orthogonal(hexed::Basis& basis)
 {
   Eigen::VectorXd weights = basis.node_weights();
   for (int i_orth = 0; i_orth < basis.row_size; ++i_orth)
@@ -91,7 +91,7 @@ void test_orthogonal(cartdg::Basis& basis)
   }
 }
 
-void test_transform(cartdg::Basis& basis)
+void test_transform(hexed::Basis& basis)
 {
   const int rs {basis.row_size};
   const double tol {1e-10};
@@ -122,7 +122,7 @@ TEST_CASE("Equidistant Basis")
 {
   for (int row_size = 2; row_size < 10; ++row_size)
   {
-    cartdg::Equidistant equi (row_size);
+    hexed::Equidistant equi (row_size);
     test_diff_mat(equi);
     test_boundary(equi);
   }
@@ -130,9 +130,9 @@ TEST_CASE("Equidistant Basis")
 
 TEST_CASE("Gauss_lobatto Basis")
 {
-  for (int row_size = 2; row_size <= cartdg::config::max_row_size; ++row_size)
+  for (int row_size = 2; row_size <= hexed::config::max_row_size; ++row_size)
   {
-    cartdg::Gauss_lobatto GLo (row_size);
+    hexed::Gauss_lobatto GLo (row_size);
     test_diff_mat(GLo);
     test_quadrature(GLo);
     test_orthogonal(GLo);
@@ -142,9 +142,9 @@ TEST_CASE("Gauss_lobatto Basis")
 
 TEST_CASE("Gauss_legendre Basis")
 {
-  for (int row_size = 2; row_size <= cartdg::config::max_row_size; ++row_size)
+  for (int row_size = 2; row_size <= hexed::config::max_row_size; ++row_size)
   {
-    cartdg::Gauss_legendre GLe (row_size);
+    hexed::Gauss_legendre GLe (row_size);
     test_diff_mat(GLe);
     test_quadrature(GLe);
     test_orthogonal(GLe);
@@ -155,7 +155,7 @@ TEST_CASE("Gauss_legendre Basis")
 
 TEST_CASE("interpolation")
 {
-  cartdg::Equidistant basis {5};
+  hexed::Equidistant basis {5};
   Eigen::VectorXd values {5};
   for (int i = 0; i < 5; ++i) values[i] = std::pow(i/4., 3);
   SECTION("large sample")

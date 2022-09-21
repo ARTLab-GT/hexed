@@ -37,11 +37,11 @@ test_Vertex.cpp
 test_Vis_data.cpp
 test_Write_face.cpp
 )
-target_link_libraries(unit PRIVATE cartdg Catch2::Catch2)
+target_link_libraries(unit PRIVATE hexed Catch2::Catch2)
 add_executable(interactive)
 target_sources(interactive PRIVATE
 main.cpp
 test_otter_vis.cpp
 test_Solver_vis.cpp
 )
-target_link_libraries(interactive PRIVATE cartdg Catch2::Catch2)
+target_link_libraries(interactive PRIVATE hexed Catch2::Catch2)

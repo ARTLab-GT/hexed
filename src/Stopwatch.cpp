@@ -1,7 +1,7 @@
 #include <stdexcept>
 #include <Stopwatch.hpp>
 
-namespace cartdg
+namespace hexed
 {
 
 void Stopwatch::start()

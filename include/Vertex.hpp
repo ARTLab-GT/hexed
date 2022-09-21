@@ -1,5 +1,5 @@
-#ifndef CARTDG_VERTEX_HPP_
-#define CARTDG_VERTEX_HPP_
+#ifndef HEXED_VERTEX_HPP_
+#define HEXED_VERTEX_HPP_
 
 #include <array>
 #include <vector>
@@ -8,7 +8,7 @@
 #include <unordered_set>
 #include <Eigen/Dense>
 
-namespace cartdg
+namespace hexed
 {
 
 /*

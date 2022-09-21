@@ -1,11 +1,11 @@
-#ifndef CARTDG_REFINED_FACE_HPP_
-#define CARTDG_REFINED_FACE_HPP_
+#ifndef HEXED_REFINED_FACE_HPP_
+#define HEXED_REFINED_FACE_HPP_
 
 #include <memory>
 #include <Eigen/Dense>
 #include "Storage_params.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 /*

@@ -1,6 +1,6 @@
 #include <Stopwatch_tree.hpp>
 
-namespace cartdg
+namespace hexed
 {
 
 std::string Stopwatch_tree::indented_report(std::string indent) const

@@ -1,6 +1,6 @@
 #include <Output_data.hpp>
 
-namespace cartdg
+namespace hexed
 {
 
 std::string Output_data::variable_name(int i_var) const

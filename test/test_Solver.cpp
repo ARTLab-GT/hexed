@@ -1,8 +1,8 @@
 #include <catch2/catch.hpp>
-#include <config.hpp>
-#include <Solver.hpp>
+#include <hexed/config.hpp>
+#include <hexed/Solver.hpp>
 
-class Arbitrary_initializer : public cartdg::Spacetime_func
+class Arbitrary_initializer : public hexed::Spacetime_func
 {
   public:
   virtual int n_var(int n_dim) const {return 4;}
@@ -12,7 +12,7 @@ class Arbitrary_initializer : public cartdg::Spacetime_func
   }
 };
 
-class Bad_initializer : public cartdg::Spacetime_func
+class Bad_initializer : public hexed::Spacetime_func
 {
   public:
   virtual int n_var(int n_dim) const {return 2;}
@@ -22,7 +22,7 @@ class Bad_initializer : public cartdg::Spacetime_func
   }
 };
 
-class Arbitrary_integrand : public cartdg::Domain_func
+class Arbitrary_integrand : public hexed::Domain_func
 {
   public:
   virtual int n_var(int n_dim) const {return 4;}
@@ -33,7 +33,7 @@ class Arbitrary_integrand : public cartdg::Domain_func
   }
 };
 
-class Normal_1 : public cartdg::Surface_func
+class Normal_1 : public hexed::Surface_func
 {
   public:
   virtual int n_var(int n_dim) const {return 1;}
@@ -44,11 +44,11 @@ class Normal_1 : public cartdg::Surface_func
   }
 };
 
-class Reciprocal_jacobian : public cartdg::Qpoint_func
+class Reciprocal_jacobian : public hexed::Qpoint_func
 {
   public:
   virtual int n_var(int n_dim) const {return 1;}
-  virtual std::vector<double> operator()(cartdg::Element& elem, const cartdg::Basis&, int i_qpoint, double time) const
+  virtual std::vector<double> operator()(hexed::Element& elem, const hexed::Basis&, int i_qpoint, double time) const
   {
     return {1./elem.jacobian_determinant(i_qpoint)};
   }
@@ -63,7 +63,7 @@ double scaled_veloc(int n_dim)
   return result;
 }
 
-class Nonuniform_mass : public cartdg::Spacetime_func
+class Nonuniform_mass : public hexed::Spacetime_func
 {
   public:
   virtual int n_var(int n_dim) const {return n_dim + 2;};
@@ -86,7 +86,7 @@ class Nonuniform_mass : public cartdg::Spacetime_func
   }
 };
 
-class Random_perturbation : public cartdg::Spacetime_func
+class Random_perturbation : public hexed::Spacetime_func
 {
   double rand_perturb() const
   {
@@ -109,7 +109,7 @@ class Random_perturbation : public cartdg::Spacetime_func
   }
 };
 
-class Nonuniform_residual : public cartdg::Spacetime_func
+class Nonuniform_residual : public hexed::Spacetime_func
 {
   public:
   virtual int n_var(int n_dim) const {return n_dim + 2;};
@@ -132,7 +132,7 @@ class Nonuniform_residual : public cartdg::Spacetime_func
   }
 };
 
-class Parabola : public cartdg::Surface_geometry
+class Parabola : public hexed::Surface_geometry
 {
   public:
   virtual std::array<double, 3> project_point(std::array<double, 3> point)
@@ -149,25 +149,25 @@ class Parabola : public cartdg::Surface_geometry
   }
 };
 
-class Shrink_pos0 : public cartdg::Mesh_bc
+class Shrink_pos0 : public hexed::Mesh_bc
 {
   public:
-  virtual void snap_vertices(cartdg::Boundary_connection& con)
+  virtual void snap_vertices(hexed::Boundary_connection& con)
   {
-    const int stride = cartdg::custom_math::pow(2, con.storage_params().n_dim - 1 - con.i_dim());
+    const int stride = hexed::custom_math::pow(2, con.storage_params().n_dim - 1 - con.i_dim());
     for (int i_vert = 0; i_vert < con.storage_params().n_vertices(); ++i_vert) {
       if ((i_vert/stride)%2 == con.inside_face_sign()) {
         con.element().vertex(i_vert).pos[0] = .1*.8;
       }
     }
   }
-  virtual void snap_node_adj(cartdg::Boundary_connection&, const cartdg::Basis&) {}
+  virtual void snap_node_adj(hexed::Boundary_connection&, const hexed::Basis&) {}
 };
 
 TEST_CASE("Solver")
 {
-  static_assert (cartdg::config::max_row_size >= 3); // this test was written for row size 3
-  cartdg::Solver sol {2, 3, 0.8};
+  static_assert (hexed::config::max_row_size >= 3); // this test was written for row size 3
+  hexed::Solver sol {2, 3, 0.8};
 
   SECTION("initialization, sampling, and bounds")
   {
@@ -176,16 +176,16 @@ TEST_CASE("Solver")
     int sn1 = sol.mesh().add_element(2, true, {-1, 0, 0});
     REQUIRE_THROWS(sol.initialize(Bad_initializer())); // if number of variables of func is wrong, should throw
     sol.initialize(Arbitrary_initializer());
-    auto sample = sol.sample(0, false, sn0, 4, cartdg::State_variables()); // sample the midpoint of the element because we know the exact position
+    auto sample = sol.sample(0, false, sn0, 4, hexed::State_variables()); // sample the midpoint of the element because we know the exact position
     REQUIRE(sample.size() == 4);
     REQUIRE(sample[0] == Approx(1.2*0.4));
     REQUIRE(sample[1] == Approx(1.));
     REQUIRE(sample[2] == Approx(2.));
     REQUIRE(sample[3] == Approx(3.));
-    sample = sol.sample(2, true, sn1, 4, cartdg::State_variables());
+    sample = sol.sample(2, true, sn1, 4, hexed::State_variables());
     REQUIRE(sample.size() == 4);
     REQUIRE(sample[0] == Approx(-0.1*0.1));
-    auto bounds = sol.bounds_field(cartdg::State_variables());
+    auto bounds = sol.bounds_field(hexed::State_variables());
     REQUIRE(bounds.size() == 4);
     REQUIRE(bounds[0][0] == Approx(-.2*.2).scale(1.));
     REQUIRE(bounds[0][1] == Approx(1.6*.8).scale(1.));
@@ -199,9 +199,9 @@ TEST_CASE("Solver")
     int sn1 = sol.mesh().add_element(0,  true, {1, 0, 0});
     sol.mesh().connect_cartesian(0, {sn0, sn1}, {0}, {false, true});
     sol.relax_vertices();
-    REQUIRE(sol.sample(0, false, sn0, 4, cartdg::Position_func())[0] == Approx(0.8*0.5));
-    REQUIRE(sol.sample(0,  true, sn1, 4, cartdg::Position_func())[0] == Approx(0.8*1.375));
-    REQUIRE(sol.sample(0,  true, sn1, 4, cartdg::Position_func())[1] == Approx(0.8*0.5));
+    REQUIRE(sol.sample(0, false, sn0, 4, hexed::Position_func())[0] == Approx(0.8*0.5));
+    REQUIRE(sol.sample(0,  true, sn1, 4, hexed::Position_func())[0] == Approx(0.8*1.375));
+    REQUIRE(sol.sample(0,  true, sn1, 4, hexed::Position_func())[1] == Approx(0.8*0.5));
   }
 
   SECTION("local time step scale")
@@ -212,18 +212,18 @@ TEST_CASE("Solver")
     int sn3 = sol.mesh().add_element(1, false, {-1, -1, 0});
     sol.mesh().connect_cartesian(0, {sn1, sn0}, {0}, {false, true});
     sol.mesh().connect_hanging(0, sn1, {sn2, sn3}, {{1, 1}, {0, 1}});
-    int bc = sol.mesh().add_boundary_condition(new cartdg::Copy, new Shrink_pos0);
+    int bc = sol.mesh().add_boundary_condition(new hexed::Copy, new Shrink_pos0);
     sol.mesh().connect_boundary(0, true, sn0, 0, 1, bc);
     sol.snap_vertices();
     sol.calc_jacobian();
     sol.set_local_tss();
     // in sn0, TSS is 0.1 because the element is stretched by a factor of .1
-    REQUIRE(sol.sample(0,  true, sn0, 4, cartdg::Time_step_scale_func())[0] == Approx(.1));
+    REQUIRE(sol.sample(0,  true, sn0, 4, hexed::Time_step_scale_func())[0] == Approx(.1));
     // in sn1, TSS varies bilinearly
-    REQUIRE(sol.sample(0, false, sn1, 4, cartdg::Time_step_scale_func())[0] == Approx((2*.1 + .5 + 1.)/4.));
+    REQUIRE(sol.sample(0, false, sn1, 4, hexed::Time_step_scale_func())[0] == Approx((2*.1 + .5 + 1.)/4.));
     // TSS at hanging nodes should be set to match coarse element
-    REQUIRE(sol.sample(1, false, sn2, 4, cartdg::Time_step_scale_func())[0] == Approx((3*.5 + .3)/4.));
-    REQUIRE(sol.sample(1, false, sn3, 4, cartdg::Time_step_scale_func())[0] == Approx((2*.5 + .3 + .1)/4.));
+    REQUIRE(sol.sample(1, false, sn2, 4, hexed::Time_step_scale_func())[0] == Approx((3*.5 + .3)/4.));
+    REQUIRE(sol.sample(1, false, sn3, 4, hexed::Time_step_scale_func())[0] == Approx((2*.5 + .3 + .1)/4.));
   }
 
   SECTION("integrals")
@@ -238,8 +238,8 @@ TEST_CASE("Solver")
       // connecting deformed elements with an empty space in between stretches them by a factor of 1.5
       sol.mesh().connect_deformed(0, {sn0, sn1}, {{0, 0}, {1, 0}});
       // add some boundary conditions for testing surface integrals
-      int bc0 = sol.mesh().add_boundary_condition(new cartdg::Copy, new cartdg::Null_mbc);
-      int bc1 = sol.mesh().add_boundary_condition(new cartdg::Copy, new cartdg::Null_mbc);
+      int bc0 = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Null_mbc);
+      int bc1 = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Null_mbc);
       int i = 0;
       for (int sn : {car0, car1, sn0, sn1}) {
         sol.mesh().connect_boundary(0, i++ >= 2, sn, 1, 0, bc0);
@@ -249,16 +249,16 @@ TEST_CASE("Solver")
       // finish setup
       sol.calc_jacobian();
       std::vector<double> state {0.3, -10., 0.7, 32.};
-      sol.initialize(cartdg::Constant_func(state));
+      sol.initialize(hexed::Constant_func(state));
       // let's do some integrals
-      auto integral = sol.integral_field(cartdg::State_variables());
+      auto integral = sol.integral_field(hexed::State_variables());
       REQUIRE(integral.size() == 4);
       double area = 5.25*0.8*0.8;
       for (int i_var = 0; i_var < 4; ++i_var) {
         REQUIRE(integral[i_var] == Approx(state[i_var]*area));
       }
       area = 5.5*0.8;
-      integral = sol.integral_surface(cartdg::State_variables(), bc0);
+      integral = sol.integral_surface(hexed::State_variables(), bc0);
       REQUIRE(integral.size() == 4);
       for (int i_var = 0; i_var < 4; ++i_var) {
         REQUIRE(integral[i_var] == Approx(state[i_var]*area));
@@ -273,10 +273,10 @@ TEST_CASE("Solver")
     SECTION("complex function, simple mesh")
     {
       int sn = sol.mesh().add_element(0, false, {0, 0, 0});
-      int bc0 = sol.mesh().add_boundary_condition(new cartdg::Nonpenetration, new cartdg::Null_mbc);
+      int bc0 = sol.mesh().add_boundary_condition(new hexed::Nonpenetration, new hexed::Null_mbc);
       sol.mesh().connect_boundary(0, false, sn, 0, 1, bc0);
       sol.calc_jacobian();
-      sol.initialize(cartdg::Constant_func({0.3, 0., 0., 0.}));
+      sol.initialize(hexed::Constant_func({0.3, 0., 0., 0.}));
       auto integral = sol.integral_field(Arbitrary_integrand());
       REQUIRE(integral.size() == 4);
       REQUIRE(integral[0] == Approx(std::pow(0.8, 3)/3*std::pow(0.8, 4)/4 - 0.8*0.8*0.3));
@@ -291,32 +291,32 @@ TEST_CASE("Solver")
     SECTION("Nominal_pos")
     {
       int el_sn = sol.mesh().add_element(1, true, {1, 2});
-      int bc_sn = sol.mesh().add_boundary_condition(new cartdg::Copy, new cartdg::Nominal_pos);
+      int bc_sn = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Nominal_pos);
       sol.mesh().connect_boundary(1, true, el_sn, 1, 1, bc_sn);
       sol.relax_vertices();
       sol.snap_vertices();
       sol.snap_faces();
       sol.calc_jacobian();
       // element should now be [(1 + 0.25)*0.8/2, (1 + 0.75)*0.8/2] x [(2 + 0.25)*0.8/2, 3*0.8/2]
-      REQUIRE(sol.integral_field(cartdg::Constant_func({1.}))[0] == Approx(0.5*0.75*(0.8/2)*(0.8/2)));
+      REQUIRE(sol.integral_field(hexed::Constant_func({1.}))[0] == Approx(0.5*0.75*(0.8/2)*(0.8/2)));
     }
     SECTION("Surface_mbc")
     {
       int el_sn = sol.mesh().add_element(1, true, {0, 0});
-      int bc_sn = sol.mesh().add_boundary_condition(new cartdg::Copy, new cartdg::Surface_mbc{new Parabola});
+      int bc_sn = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Surface_mbc{new Parabola});
       sol.mesh().connect_boundary(1, true, el_sn, 1, 1, bc_sn);
       sol.snap_vertices();
       sol.calc_jacobian();
       // element should be a triangle
-      REQUIRE(sol.integral_field(cartdg::Constant_func({1.}))[0] == Approx(0.5*(0.1*0.4*0.4)*0.4));
+      REQUIRE(sol.integral_field(hexed::Constant_func({1.}))[0] == Approx(0.5*(0.1*0.4*0.4)*0.4));
       sol.snap_faces();
       sol.calc_jacobian();
       // top element face should now be a parabola
-      REQUIRE(sol.integral_field(cartdg::Constant_func({1.}))[0] == Approx(0.1*0.4*0.4*0.4/3.));
+      REQUIRE(sol.integral_field(hexed::Constant_func({1.}))[0] == Approx(0.1*0.4*0.4*0.4/3.));
       // make sure that snapping again doesn't change anything
       sol.snap_faces();
       sol.calc_jacobian();
-      REQUIRE(sol.integral_field(cartdg::Constant_func({1.}))[0] == Approx(0.1*0.4*0.4*0.4/3.));
+      REQUIRE(sol.integral_field(hexed::Constant_func({1.}))[0] == Approx(0.1*0.4*0.4*0.4/3.));
     }
   }
 }
@@ -324,28 +324,28 @@ TEST_CASE("Solver")
 class Test_mesh
 {
   public:
-  virtual cartdg::Solver& solver() = 0;
+  virtual hexed::Solver& solver() = 0;
   virtual int bc_serial_n() = 0;
-  virtual void construct(cartdg::Flow_bc* flow_bc) = 0;
+  virtual void construct(hexed::Flow_bc* flow_bc) = 0;
 };
 
 // creates a 2x2x2 mesh
 class All_cartesian : public Test_mesh
 {
   int bc_sn;
-  cartdg::Solver sol;
+  hexed::Solver sol;
   public:
 
   All_cartesian()
-  : sol{3, cartdg::config::max_row_size, 1.}
+  : sol{3, hexed::config::max_row_size, 1.}
   {}
 
-  virtual cartdg::Solver& solver() {return sol;}
+  virtual hexed::Solver& solver() {return sol;}
   virtual int bc_serial_n() {return bc_sn;}
 
-  virtual void construct(cartdg::Flow_bc* flow_bc)
+  virtual void construct(hexed::Flow_bc* flow_bc)
   {
-    bc_sn = sol.mesh().add_boundary_condition(flow_bc, new cartdg::Null_mbc);
+    bc_sn = sol.mesh().add_boundary_condition(flow_bc, new hexed::Null_mbc);
     std::vector<int> serial_n;
     for (int i_elem = 0; i_elem < 8; ++i_elem) {
       std::vector<int> strides {4, 2, 1};
@@ -364,21 +364,21 @@ class All_cartesian : public Test_mesh
 // creates a 3x3 mesh with the middle element rotated
 class All_deformed : public Test_mesh
 {
-  cartdg::Solver sol;
+  hexed::Solver sol;
   int bc_sn;
   bool rot_dir;
 
   public:
   All_deformed(bool rotation_direction)
-  : sol{2, cartdg::config::max_row_size, 1.}, rot_dir{rotation_direction}
+  : sol{2, hexed::config::max_row_size, 1.}, rot_dir{rotation_direction}
   {}
 
-  virtual cartdg::Solver& solver() {return sol;}
+  virtual hexed::Solver& solver() {return sol;}
   virtual int bc_serial_n() {return bc_sn;}
 
-  virtual void construct(cartdg::Flow_bc* flow_bc)
+  virtual void construct(hexed::Flow_bc* flow_bc)
   {
-    bc_sn = sol.mesh().add_boundary_condition(flow_bc, new cartdg::Null_mbc);
+    bc_sn = sol.mesh().add_boundary_condition(flow_bc, new hexed::Null_mbc);
     std::vector<int> serial_n;
     for (int i_elem = 0; i_elem < 9; ++i_elem) {
       std::vector<int> strides {3, 1};
@@ -389,7 +389,7 @@ class All_deformed : public Test_mesh
       for (int i_dim = 0; i_dim < 2; ++i_dim) {
         if (inds[i_dim] > 0) {
           std::array<int, 2> i_elems {i_elem - strides[i_dim], i_elem};
-          cartdg::Con_dir<cartdg::Deformed_element> dir {{i_dim, i_dim}, {1, 0}};
+          hexed::Con_dir<hexed::Deformed_element> dir {{i_dim, i_dim}, {1, 0}};
           for (int i_side = 0; i_side < 2; ++i_side) {
             if (i_elems[i_side] == 4) {
               dir.i_dim[i_side] = 1 - dir.i_dim[i_side];
@@ -406,7 +406,7 @@ class All_deformed : public Test_mesh
 
 class Extrude_hanging : public Test_mesh
 {
-  cartdg::Solver sol;
+  hexed::Solver sol;
   int bc_sn;
   int id;
   int jd;
@@ -414,16 +414,16 @@ class Extrude_hanging : public Test_mesh
 
   public:
   Extrude_hanging(int i_dim, int j_dim)
-  : sol{3, cartdg::config::max_row_size, .8}, id{i_dim}, jd{j_dim}, kd{3 - i_dim - j_dim}
+  : sol{3, hexed::config::max_row_size, .8}, id{i_dim}, jd{j_dim}, kd{3 - i_dim - j_dim}
   {}
 
-  virtual cartdg::Solver& solver() {return sol;}
+  virtual hexed::Solver& solver() {return sol;}
   virtual int bc_serial_n() {return bc_sn;}
 
-  virtual void construct(cartdg::Flow_bc* flow_bc)
+  virtual void construct(hexed::Flow_bc* flow_bc)
   {
-    bc_sn = sol.mesh().add_boundary_condition(flow_bc, new cartdg::Null_mbc);
-    std::vector<cartdg::Mesh::elem_handle> handles;
+    bc_sn = sol.mesh().add_boundary_condition(flow_bc, new hexed::Null_mbc);
+    std::vector<hexed::Mesh::elem_handle> handles;
     std::vector<int> coarse_pos(3, 0);
     coarse_pos[id] = -1;
     int coarse = sol.mesh().add_element(0, true, coarse_pos);
@@ -460,13 +460,13 @@ class Extrude_hanging : public Test_mesh
 void test_marching(Test_mesh& tm, std::string name)
 {
   // use `Copy` BCs. This is unstable for this case but it will still give the right answer as long as only one time step is executed
-  tm.construct(new cartdg::Copy);
+  tm.construct(new hexed::Copy);
   auto& sol = tm.solver();
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
   sol.initialize(Nonuniform_mass());
-  #if CARTDG_USE_TECPLOT
-  sol.visualize_field_tecplot(cartdg::State_variables(), "marching_" + name + "_init");
+  #if HEXED_USE_TECPLOT
+  sol.visualize_field_tecplot(hexed::State_variables(), "marching_" + name + "_init");
   sol.visualize_surface_tecplot(tm.bc_serial_n(), "marching_" + name + "_surface");
   #endif
   // check that the iteration status is right at the start
@@ -475,8 +475,8 @@ void test_marching(Test_mesh& tm, std::string name)
   REQUIRE(status.iteration == 0);
   // update
   sol.update();
-  #if CARTDG_USE_TECPLOT
-  sol.visualize_field_tecplot(cartdg::Physical_update(), "marching_" + name + "_diff");
+  #if HEXED_USE_TECPLOT
+  sol.visualize_field_tecplot(hexed::Physical_update(), "marching_" + name + "_diff");
   #endif
   status = sol.iteration_status();
   REQUIRE(status.flow_time > 0.);
@@ -485,8 +485,8 @@ void test_marching(Test_mesh& tm, std::string name)
   for (auto handle : sol.mesh().elem_handles()) {
     for (int i_qpoint = 0; i_qpoint < sol.storage_params().n_qpoint(); ++i_qpoint) {
       for (int i_var = 0; i_var < sol.storage_params().n_var; ++i_var) {
-        auto state   = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, cartdg::State_variables());
-        auto update  = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, cartdg::Physical_update());
+        auto state   = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::State_variables());
+        auto update  = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Physical_update());
         auto correct = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, Nonuniform_residual());
         REQUIRE(update[i_var]/status.time_step == Approx(correct[i_var]).margin(1e-3*std::abs(state[i_var])));
       }
@@ -497,7 +497,7 @@ void test_marching(Test_mesh& tm, std::string name)
 void test_conservation(Test_mesh& tm, std::string name)
 {
   srand(406);
-  tm.construct(new cartdg::Nonpenetration());
+  tm.construct(new hexed::Nonpenetration());
   auto& sol = tm.solver();
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
@@ -509,8 +509,8 @@ void test_conservation(Test_mesh& tm, std::string name)
   status = sol.iteration_status();
   // check that the computed update is approximately equal to the exact solution
   for (int i_var : {sol.storage_params().n_var - 2, sol.storage_params().n_var - 1}) {
-    auto state  = sol.integral_field(cartdg::State_variables());
-    auto update = sol.integral_field(cartdg::Physical_update());
+    auto state  = sol.integral_field(hexed::State_variables());
+    auto update = sol.integral_field(hexed::Physical_update());
     REQUIRE(update[i_var]/status.time_step == Approx(0.).scale(std::abs(state[i_var])));
   }
 }
@@ -588,7 +588,7 @@ TEST_CASE("face extrusion")
   {
     int serial_n [3][3];
     serial_n[1][1] = -1; // so that we know if we accidentally use this
-    cartdg::Solver solver {2, 2, 1.};
+    hexed::Solver solver {2, 2, 1.};
     for (int i = 0; i < 3; ++i) {
       for (int j = 0; j < 3; ++j) {
         if ((i != 1) || (j != 1)) {
@@ -610,7 +610,7 @@ TEST_CASE("face extrusion")
   {
     int serial_n [3][3][3];
     serial_n[1][1][1] = -1; // so that we know if we accidentally use this
-    cartdg::Solver solver {3, 2, 1.};
+    hexed::Solver solver {3, 2, 1.};
     for (int i = 0; i < 3; ++i) {
       for (int j = 0; j < 3; ++j) {
         for (int k = 0; k < 3; ++k) {
@@ -630,8 +630,8 @@ TEST_CASE("face extrusion")
     auto valid = solver.mesh().valid();
     REQUIRE(valid.n_duplicate == 0);
     REQUIRE(valid.n_missing == 60);
-    #if CARTDG_USE_TECPLOT
-    solver.visualize_field_tecplot(cartdg::State_variables(), "extrude");
+    #if HEXED_USE_TECPLOT
+    solver.visualize_field_tecplot(hexed::State_variables(), "extrude");
     #endif
   }
 }

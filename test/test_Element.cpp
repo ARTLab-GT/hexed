@@ -1,13 +1,13 @@
 #include <catch2/catch.hpp>
-#include <Element.hpp>
-#include <Equidistant.hpp>
+#include <hexed/Element.hpp>
+#include <hexed/Equidistant.hpp>
 #include "testing_utils.hpp"
 
 TEST_CASE("Element")
 {
-  cartdg::Storage_params params {4, 5, 3, 6};
+  hexed::Storage_params params {4, 5, 3, 6};
   int n_dof = params.n_dof();
-  cartdg::Element element {params};
+  hexed::Element element {params};
   // test that Storage_params are the same
   REQUIRE(element.storage_params().n_stage == params.n_stage);
   REQUIRE(element.storage_params().n_var == params.n_var);
@@ -57,17 +57,17 @@ TEST_CASE("Element")
   SECTION("vertex arrangement")
   {
     // check that vertices start out in correct location
-    cartdg::Storage_params params3d {3, 5, 3, 4};
-    cartdg::Element elem3d {params3d, {1, 2, -1}, 0.8, 2};
+    hexed::Storage_params params3d {3, 5, 3, 4};
+    hexed::Element elem3d {params3d, {1, 2, -1}, 0.8, 2};
     REQUIRE(elem3d.nominal_size() == Approx(0.2));
     assert_equal(elem3d.vertex(0).pos, {0.2, 0.4, -0.2});
     assert_equal(elem3d.vertex(1).pos, {0.2, 0.4,  0. });
     assert_equal(elem3d.vertex(2).pos, {0.2, 0.6, -0.2});
     assert_equal(elem3d.vertex(5).pos, {0.4, 0.4,  0. });
     assert_equal(elem3d.vertex(7).pos, {0.4, 0.6,  0. });
-    REQUIRE( cartdg::Vertex::are_neighbors(elem3d.vertex(0), elem3d.vertex(1)));
-    REQUIRE( cartdg::Vertex::are_neighbors(elem3d.vertex(0), elem3d.vertex(2)));
-    REQUIRE(!cartdg::Vertex::are_neighbors(elem3d.vertex(0), elem3d.vertex(3)));
+    REQUIRE( hexed::Vertex::are_neighbors(elem3d.vertex(0), elem3d.vertex(1)));
+    REQUIRE( hexed::Vertex::are_neighbors(elem3d.vertex(0), elem3d.vertex(2)));
+    REQUIRE(!hexed::Vertex::are_neighbors(elem3d.vertex(0), elem3d.vertex(3)));
   }
 
   SECTION("push/fetch viscosity")
@@ -77,18 +77,18 @@ TEST_CASE("Element")
     element.vertex_time_step_scale(1) = 0.;
     element.vertex_time_step_scale(2) = 0.;
     element.vertex_time_step_scale(3) = 0.2;
-    element.push_shareable_value(&cartdg::Element::vertex_time_step_scale);
+    element.push_shareable_value(&hexed::Element::vertex_time_step_scale);
     REQUIRE(element.vertex(0).shared_value() == Approx(0.1));
     REQUIRE(element.vertex(1).shared_value() == Approx(0.));
     REQUIRE(element.vertex(3).shared_value() == Approx(0.2));
     // make sure vertex combination doesn't break anything
-    cartdg::Vertex::Transferable_ptr ptr ({0, 0, 0});
+    hexed::Vertex::Transferable_ptr ptr ({0, 0, 0});
     ptr->eat(element.vertex(0));
     REQUIRE(element.vertex(0).shared_value() == Approx(0.1));
     ptr.shareable_value = 0.3;
     REQUIRE(element.vertex(0).shared_value() == Approx(0.3));
     // test fetch_visc
-    element.fetch_shareable_value(&cartdg::Element::vertex_time_step_scale);
+    element.fetch_shareable_value(&hexed::Element::vertex_time_step_scale);
     REQUIRE(element.vertex_time_step_scale(0) == Approx(0.3));
     REQUIRE(element.vertex_time_step_scale(1) == Approx(0.));
     REQUIRE(element.vertex_time_step_scale(3) == Approx(0.2));
@@ -97,9 +97,9 @@ TEST_CASE("Element")
   SECTION("position calculation")
   {
     const int row_size = 5;
-    cartdg::Storage_params params {2, 4, 2, row_size};
-    cartdg::Element elem {params, {1, 2}, 0.31};
-    cartdg::Equidistant basis {row_size};
+    hexed::Storage_params params {2, 4, 2, row_size};
+    hexed::Element elem {params, {1, 2}, 0.31};
+    hexed::Equidistant basis {row_size};
     // test first and last qpoints
     REQUIRE(elem.position(basis, 0).size() == 2);
     REQUIRE(elem.position(basis, 0)[0] == Approx(1*0.31).scale(1.));
@@ -118,8 +118,8 @@ TEST_CASE("Element")
     REQUIRE(elem.face_position(basis, 1, 3)[1] == Approx(0.31*(0.75 + 2.)));
 
     // make sure that face position works in 3d
-    cartdg::Storage_params params3 {2, 5, 3, row_size};
-    cartdg::Element elem3 {params3};
+    hexed::Storage_params params3 {2, 5, 3, row_size};
+    hexed::Element elem3 {params3};
     REQUIRE(elem3.face_position(basis, 0, 7)[0] == Approx(0.));
     REQUIRE(elem3.face_position(basis, 0, 7)[1] == Approx(.25));
     REQUIRE(elem3.face_position(basis, 0, 7)[2] == Approx(.5));

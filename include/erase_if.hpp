@@ -1,9 +1,9 @@
-#ifndef CARTDG_ERASE_IF_HPP_
-#define CARTDG_ERASE_IF_HPP_
+#ifndef HEXED_ERASE_IF_HPP_
+#define HEXED_ERASE_IF_HPP_
 
 #include <vector>
 
-namespace cartdg
+namespace hexed
 {
 
 /*

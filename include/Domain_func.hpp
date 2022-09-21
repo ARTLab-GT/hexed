@@ -1,10 +1,10 @@
-#ifndef CARTDG_DOMAIN_FUNC_HPP_
-#define CARTDG_DOMAIN_FUNC_HPP_
+#ifndef HEXED_DOMAIN_FUNC_HPP_
+#define HEXED_DOMAIN_FUNC_HPP_
 
 #include "Qpoint_func.hpp"
 #include "Surface_func.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 class Spacetime_func;

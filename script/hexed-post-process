@@ -3,4 +3,4 @@
 # the Tecplot directories and then executes the PP script.
 
 eval $(tec360-env)
-cartdg-wrapped-post-process $@
+hexed-wrapped-post-process $@

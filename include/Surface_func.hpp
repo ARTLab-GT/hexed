@@ -1,10 +1,10 @@
-#ifndef CARTDG_SURFACE_FUNC_HPP_
-#define CARTDG_SURFACE_FUNC_HPP_
+#ifndef HEXED_SURFACE_FUNC_HPP_
+#define HEXED_SURFACE_FUNC_HPP_
 
 #include <vector>
 #include "Output_data.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 class Domain_func;

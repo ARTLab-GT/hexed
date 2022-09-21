@@ -1,10 +1,10 @@
-#ifndef CARTDG_ACCESSIBLE_MESH_HPP_
-#define CARTDG_ACCESSIBLE_MESH_HPP_
+#ifndef HEXED_ACCESSIBLE_MESH_HPP_
+#define HEXED_ACCESSIBLE_MESH_HPP_
 
 #include "Mesh.hpp"
 #include "Mesh_by_type.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 /*

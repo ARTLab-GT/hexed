@@ -1,5 +1,5 @@
 #include <catch2/catch.hpp>
-#include <Iteration_status.hpp>
+#include <hexed/Iteration_status.hpp>
 
 bool in(std::string str0, std::string str1)
 {
@@ -8,7 +8,7 @@ bool in(std::string str0, std::string str1)
 
 TEST_CASE("Iteration_status")
 {
-  cartdg::Iteration_status stat;
+  hexed::Iteration_status stat;
   std::vector<std::string> lines;
   lines.push_back(stat.header());
   stat.art_visc_iters = 3;

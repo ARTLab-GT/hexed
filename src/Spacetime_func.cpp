@@ -1,7 +1,7 @@
 #include <cmath>
 #include <Spacetime_func.hpp>
 
-namespace cartdg
+namespace hexed
 {
 
 std::vector<double> Spacetime_func::operator()(const std::vector<double> pos, double time,

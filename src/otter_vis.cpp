@@ -1,10 +1,10 @@
 #include <otter_vis.hpp>
-#if CARTDG_USE_OTTER
+#if HEXED_USE_OTTER
 #include <otter/points.hpp>
 #include <Vis_data.hpp>
 #include <Spacetime_func.hpp>
 
-namespace cartdg::otter_vis
+namespace hexed::otter_vis
 {
 
 void add_edges(otter::plot& plt, Element& elem, const Basis& bas,

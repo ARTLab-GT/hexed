@@ -1,5 +1,5 @@
-#ifndef CARTDG_DEFORMED_CARTESIAN_HPP_
-#define CARTDG_DEFORMED_CARTESIAN_HPP_
+#ifndef HEXED_DEFORMED_CARTESIAN_HPP_
+#define HEXED_DEFORMED_CARTESIAN_HPP_
 
 #include "Vector_view.hpp"
 #include "connection.hpp"
@@ -9,7 +9,7 @@
 #include "Surface_rotation.hpp"
 #include "Face_permutation.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 /*

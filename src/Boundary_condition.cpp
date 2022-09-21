@@ -3,7 +3,7 @@
 #include <kernel_factory.hpp>
 #include <Surface_rotation.hpp>
 
-namespace cartdg
+namespace hexed
 {
 
 Freestream::Freestream(std::vector<double> freestream_state)
@@ -32,7 +32,7 @@ void Nonpenetration::apply(Boundary_face& bf)
   for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = in_f[i_dof];
   // rotate into surface-based coordinates
   int i_dim = bf.i_dim();
-  auto surf_rot = cartdg::kernel_factory<Surface_rotation>(params.n_dim, params.row_size, bf.jacobian_mat(), i_dim);
+  auto surf_rot = hexed::kernel_factory<Surface_rotation>(params.n_dim, params.row_size, bf.jacobian_mat(), i_dim);
   surf_rot->to_surface(gh_f);
   // reflect normal component of momentum
   for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {

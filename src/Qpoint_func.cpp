@@ -1,7 +1,7 @@
 #include <Qpoint_func.hpp>
 #include <math.hpp>
 
-namespace cartdg
+namespace hexed
 {
 
 std::vector<double> Jacobian_det_func::operator()(Element& element, const Basis&, int i_qpoint, double time) const

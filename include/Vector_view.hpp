@@ -1,7 +1,7 @@
-#ifndef CARTDG_VECTOR_VIEW_HPP_
-#define CARTDG_VECTOR_VIEW_HPP_
+#ifndef HEXED_VECTOR_VIEW_HPP_
+#define HEXED_VECTOR_VIEW_HPP_
 
-namespace cartdg
+namespace hexed
 {
 
 /*

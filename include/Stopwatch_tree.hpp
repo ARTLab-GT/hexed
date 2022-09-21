@@ -1,10 +1,10 @@
-#ifndef CARTDG_STOPWATCH_TREE_HPP_
-#define CARTDG_STOPWATCH_TREE_HPP_
+#ifndef HEXED_STOPWATCH_TREE_HPP_
+#define HEXED_STOPWATCH_TREE_HPP_
 
 #include <map>
 #include "Stopwatch.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 /*

@@ -1,10 +1,10 @@
-#ifndef CARTDG_PHYSICAL_BASIS_HPP_
-#define CARTDG_PHYSICAL_BASIS_HPP_
+#ifndef HEXED_PHYSICAL_BASIS_HPP_
+#define HEXED_PHYSICAL_BASIS_HPP_
 
 #include <vector>
 #include <Eigen/Dense>
 
-namespace cartdg
+namespace hexed
 {
 
 /*

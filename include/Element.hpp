@@ -1,5 +1,5 @@
-#ifndef CARTDG_ELEMENT_HPP_
-#define CARTDG_ELEMENT_HPP_
+#ifndef HEXED_ELEMENT_HPP_
+#define HEXED_ELEMENT_HPP_
 
 #include <memory>
 #include <vector>
@@ -10,7 +10,7 @@
 #include "Vertex.hpp"
 #include "Basis.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 /*

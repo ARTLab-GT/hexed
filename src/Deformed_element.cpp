@@ -1,7 +1,7 @@
 #include <Deformed_element.hpp>
 #include <math.hpp>
 
-namespace cartdg
+namespace hexed
 {
 
 Deformed_element::Deformed_element(Storage_params params, std::vector<int> pos, double mesh_size, int ref_level) :

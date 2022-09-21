@@ -1,7 +1,7 @@
 #include <math.hpp>
 #include <Storage_params.hpp>
 
-namespace cartdg
+namespace hexed
 {
 
 int Storage_params::n_qpoint()
