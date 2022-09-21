@@ -7,7 +7,7 @@
 #include "Iteration_status.hpp"
 #include "Stopwatch_tree.hpp"
 #include "config.hpp"
-#ifdef HEXED_USE_OTTER
+#if HEXED_USE_OTTER
 #include <otter/plot.hpp>
 #include <otter/colormap.hpp>
 #include <otter/colors.hpp>
