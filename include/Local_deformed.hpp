@@ -7,6 +7,7 @@
 #include "kernel_factory.hpp"
 #include "math.hpp"
 #include "Derivative.hpp"
+#include "Write_face.hpp"
 
 namespace hexed
 {
@@ -19,6 +20,7 @@ template <int n_dim, int row_size>
 class Local_deformed : public Kernel<Deformed_element&>
 {
   Derivative<row_size> derivative;
+  Write_face<n_dim, row_size> write_face;
   double dt;
   double rkw;
   const double heat_rat;
@@ -26,6 +28,7 @@ class Local_deformed : public Kernel<Deformed_element&>
   public:
   Local_deformed(const Basis& basis, double d_time, double rk_weight, double heat_ratio=1.4) :
     derivative{basis},
+    write_face{basis},
     dt{d_time},
     rkw{rk_weight},
     heat_rat{heat_ratio}
@@ -128,6 +131,7 @@ class Local_deformed : public Kernel<Deformed_element&>
           state[i_dof] = rkw*updated + (1. - rkw)*rk_reference[i_dof];
         }
       }
+      write_face(state, face);
     }
   }
 };

@@ -39,7 +39,6 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
   // setup categories for performance reporting
   stopwatch.children.emplace("initialize RK", stopwatch.work_unit_name);
   std::string unit = "(element*RK stage)";
-  stopwatch.children.emplace("write face", unit);
   stopwatch.children.emplace("prolong/restrict", unit);
   for (std::string type : {"cartesian", "deformed"}) {
     stopwatch.children.emplace(type, stopwatch.work_unit_name);
@@ -229,6 +228,7 @@ void Solver::initialize(const Spacetime_func& func)
       }
     }
   }
+  (*kernel_factory<Write_face>(params.n_dim, params.row_size, basis))(elements);
 }
 
 void Solver::update(double stability_ratio)
@@ -256,7 +256,6 @@ void Solver::update(double stability_ratio)
   irk.work_units_completed += elems.size();
   // perform update for each Runge-Kutta stage
   for (double rk_weight : rk_weights) {
-    (*kernel_factory<Write_face>(nd, rs, basis))(elems, stopwatch.children.at("write face"));
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
     auto& bc_cons {acc_mesh.boundary_connections()};
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
