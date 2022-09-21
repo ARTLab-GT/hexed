@@ -1,6 +1,11 @@
 # Installation
 
 ## Quick Start
+If you don't know what I'm talking about, skip to "Detailed instructions".
+* Ensure that all of the following are installed:
+  [Tecplot](https://www.tecplot.com/)/[TecIO](https://www.tecplot.com/products/tecio-library/),
+  [Eigen](https://eigen.tuxfamily.org/), [Catch2](https://github.com/catchorg/Catch2),
+  and the Python packages numpy, scipy, sympy, and pytecplot (for Python3).
 * Create and navigate to a build directory (git will ignore names that start with "build").
 * Use `ccmake` to configure build options.
   This project has been configured to show you the available options and their defaults specifically with the `ccmake` interface for CMake.
@@ -53,21 +58,13 @@ a few 3rd-party libraries.
   * `pip3 install pytecplot`
 * Install sympy (used to generate quadrature rules):
   * `pip3 install sympy`
-### 3. Install Catch2
-* Visit the Catch2 [Releases](https://github.com/catchorg/Catch2/releases) page and download the source code
-  for the latest one (do not clone the `devel` branch from the github repo, as that is not a stable release).
-* Extract (e.g., unzip) the source code and place it in `~/codes`. `~/codes` should now contain a directory named something like `Catch2-2.XX.X`,
-  except instead of "X"s there will be a version number.
-* `cd ~/Catch2-2.XX.X` (replace the "X"s to match whatever the actual directory name is).
-* `cmake -Bbuild -H. -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=~/.local`
-* `cmake --build build/ --target install`
-### 4. Install Eigen
+### 3. Install Eigen
 * Download the Eigen [source code](http://eigen.tuxfamily.org/index.php?title=Main_Page#Download) (latest stable release).
 * Unpack the Eigen source in `~/codes`. `~/codes` should now contain a directory named something like `eigen-X.X.X`, depending on the
   current version number.
 * `cd eigen-X.X.X` (replace "X"s with appropriate numbers).
 * `cp -r Eigen/ ~/.local/include/`
-### 5. Install Hexed
+### 4. Install Hexed
   * `cd ~/codes`
   * `git clone git@github.gatech.edu:ARTLab/hexed.git`
   * `cd hexed`
@@ -81,10 +78,8 @@ a few 3rd-party libraries.
     * Press `c` again.
     * Press `g`. The GUI should exit.
   * `make -j install`
-### 6. Verify success
+### 5. Verify success
 *  You should still be in the build directory.
-* `test/unit`
-  * This executes the unit tests. It should say "All tests passed".
 * `demo/demo2d`
   * This runs a simple demonstration simulation. It should create a bunch of `.szplt` files.
 * `hexed-post-process "*.szplt"`
@@ -92,3 +87,44 @@ a few 3rd-party libraries.
     a vortex travel out one side of the domain and in the other. If you try to open the `.szplt` files directly, you should see the same
     thing but not as pretty, because the quadrature points are overlayed on top of the visualization points and auxiliary variables have not been computed.
 * If you want, you can also run `demo/demo3d`.
+
+## Development build
+The above instructions are sufficient if you just want to run simulations.
+However, if you're going to be doing any development of Hexed, I recommend you perform the following additional steps.
+
+### 1. Install Catch2
+Hexed uses Catch2 is for unit testing. Install Catch2 so that you can compile the unit tests.
+* Visit the Catch2 [Releases](https://github.com/catchorg/Catch2/releases) page and download the source code
+  for the latest one (do not clone the `devel` branch from the github repo, as that is not a stable release).
+* Extract (e.g., unzip) the source code and place it in `~/codes`. `~/codes` should now contain a directory named something like `Catch2-2.XX.X`,
+  except instead of "X"s there will be a version number.
+* `cd ~/codes/Catch2-2.XX.X` (replace the "X"s to match whatever the actual directory name is).
+* `cmake -Bbuild -H. -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=~/.local`
+* `cmake --build build/ --target install`
+
+### 2. Build unit tests
+Now you need to update your Hexed build to include the unit tests, as follows:
+* `cd ~/codes/hexed/build_Release`
+* `ccmake ..`
+* Set the option `build_tests` to `ON`.
+  You can accomplish this by using the arrow keys to move the cursor down to the appropriate line and then hitting "Enter" to toggle between `OFF` and `ON`.
+* Hit `c` as many times as you need to and then `g`.
+* `make -j` (you only need `install` again if you've changed any of the code and want to propogate the new version to NASCART).
+* The code is now compiled. you can run the unit tests with the command `test/unit` (executed from the build directory, still).
+* You should see "All tests passed".
+
+### 3. Create debug build
+So far, we've only compiled Hexed in Release mode, which is designed to run as fast as possible at the expense of ease of debugging.
+That's what you want when you're running simulations, but if you're in the process of implementing and debugging new features,
+you would probably prefer to be able to use debugging tools like [GDB](https://www.sourceware.org/gdb/) and the [sanitizers](https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html).
+So, we will create an new build directory where we compile in Debug mode.
+* `cd ~/codes/hexed`
+* `mkdir build_Debug`
+* `ccmake ..`.
+  * this time, set `CMAKE_BUILD_TYPE` to `Debug` ("Enter" toggles between `Release` and `Debug`),
+    `build_tests` to `ON`, and `sanitize` to `ON`.
+  * `c` as many times as you need and then `g`.
+* `make -j` (**don't** add `install`, since you will want to be running simulations with your nice and fast Release mode).
+* `test/unit`. Again, you should see "All tests passed".
+   However, now if you were to, for example, write to an array out of bounds, you will get an error message with the line number of the problem
+   instead of just a segfault.
