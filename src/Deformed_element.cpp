@@ -4,21 +4,6 @@
 namespace hexed
 {
 
-int Deformed_element::i_jac(int i_dim, int j_dim, int i_qpoint)
-{
-  int size = params.row_size;
-  int i_transposed = 0;
-  for (int k_dim = 0, new_stride = n_qpoint; k_dim < n_dim; ++k_dim) {
-    if (k_dim != i_dim) {
-      new_stride /= size;
-      int old_stride = custom_math::pow(size, n_dim - 1 - k_dim);
-      i_transposed += ((i_qpoint/old_stride)%size)*new_stride;
-    }
-  }
-  i_transposed += (i_qpoint/custom_math::pow(size, n_dim - 1 - i_dim))%size;
-  return (i_dim*n_qpoint + i_transposed)*n_dim + j_dim;
-}
-
 Deformed_element::Deformed_element(Storage_params params, std::vector<int> pos, double mesh_size, int ref_level) :
   Element{params, pos, mesh_size, ref_level},
   n_qpoint{params.n_qpoint()},
@@ -99,7 +84,7 @@ void Deformed_element::set_jacobian(const Basis& basis)
       Eigen::MatrixXd copy = qpoint_jac;
       for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
         copy(Eigen::all, i_dim).setUnit(j_dim);
-        jac_dat(i_jac(i_dim, j_dim, i_qpoint)) = copy.determinant();
+        jac_dat((i_dim*n_dim + j_dim)*n_qpoint + i_qpoint) = copy.determinant();
       }
     }
   }
@@ -137,7 +122,7 @@ double Deformed_element::jacobian(int i_dim, int j_dim, int i_qpoint)
   Eigen::MatrixXd inv(n_dim, n_dim);
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-      inv(i_dim, j_dim) = jac_dat(i_jac(i_dim, j_dim, i_qpoint));
+      inv(i_dim, j_dim) = jac_dat((i_dim*n_dim + j_dim)*n_qpoint + i_qpoint);
     }
   }
   return inv.inverse()(i_dim, j_dim)*jac_dat(n_dim*n_dim*n_qpoint + i_qpoint);

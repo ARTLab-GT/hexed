@@ -42,12 +42,12 @@ class Local_deformed : public Kernel<Deformed_element&>
     {
       auto& elem {elements[i_elem]};
       double* state  = elem.stage(0);
-      const double* rk_reference = state + n_var*n_qpoint;
+      double* rk_reference = state + n_var*n_qpoint;
       double time_rate [n_var][n_qpoint] {};
-      const double* normals = elem.jacobian_data();
-      const double* determinant = normals + n_dim*n_dim*n_qpoint;
-      const double* face = elem.face();
-      const double* tss = elem.time_step_scale();
+      double* normals = elem.jacobian_data();
+      double* determinant = normals + n_dim*n_dim*n_qpoint;
+      double* face = elem.face();
+      double* tss = elem.time_step_scale();
       const double d_t_by_d_pos = dt/elem.nominal_size();
 
       // Compute update
@@ -61,32 +61,38 @@ class Local_deformed : public Kernel<Deformed_element&>
           {
             // Fetch this row of data
             double row_r [n_var][row_size];
+            double row_n [n_dim][row_size];
             for (int i_var = 0; i_var < n_var; ++i_var) {
               for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
                 row_r[i_var][i_qpoint] = state[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
+              }
+            }
+            for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+              for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+                row_n[j_dim][i_qpoint] = normals[(i_dim*n_dim + j_dim)*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
               }
             }
             // Calculate flux
             Eigen::Matrix<double, row_size, n_var> flux;
             for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
             {
-              double nrml [n_dim];
               #define READ(i) row_r[i][i_qpoint]
+              #define NRML(i) row_n[i][i_qpoint]
               #define FLUX(i) flux(i_qpoint, i)
               FLUX(n_dim) = 0.;
               double pres = 0;
               for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-                nrml[j_dim] = *(normals++);
-                FLUX(n_dim) += READ(j_dim)*nrml[j_dim];
+                FLUX(n_dim) += READ(j_dim)*NRML(j_dim);
                 pres += READ(j_dim)*READ(j_dim)/READ(n_dim);
               }
               pres = (heat_rat - 1.)*(READ(n_var - 1) - 0.5*pres);
               double scaled = FLUX(n_dim)/READ(n_dim);
               FLUX(n_var - 1) = (READ(n_var - 1) + pres)*scaled;
               for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-                FLUX(j_dim) = READ(j_dim)*scaled + pres*nrml[j_dim];
+                FLUX(j_dim) = READ(j_dim)*scaled + pres*NRML(j_dim);
               }
               #undef FLUX
+              #undef NRML
               #undef READ
             }
 
@@ -100,11 +106,17 @@ class Local_deformed : public Kernel<Deformed_element&>
 
             Eigen::Matrix<double, row_size, n_var> row_w = -derivative(flux, boundary_values);
 
+            // fetch jacobian determinant
+            Eigen::Array<double, row_size, 1> row_det;
+            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+              row_det(i_qpoint) = determinant[i_outer*stride*row_size + i_inner + i_qpoint*stride];
+            }
+
             // Add dimensional component to update
             for (int i_var = 0; i_var < n_var; ++i_var) {
               for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
                 int offset = i_outer*stride*row_size + i_inner + i_qpoint*stride;
-                time_rate[i_var][offset] += row_w(i_qpoint, i_var);
+                time_rate[i_var][offset] += row_w(i_qpoint, i_var)/row_det(i_qpoint);
               }
             }
             ++i_face_qpoint;
@@ -116,7 +128,7 @@ class Local_deformed : public Kernel<Deformed_element&>
       for (int i_var = 0; i_var < n_var; ++i_var) {
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           const int i_dof = i_var*n_qpoint + i_qpoint;
-          double updated = time_rate[i_var][i_qpoint]/determinant[i_qpoint]*d_t_by_d_pos*tss[i_qpoint] + state[i_dof];
+          double updated = time_rate[i_var][i_qpoint]*d_t_by_d_pos*tss[i_qpoint] + state[i_dof];
           state[i_dof] = rkw*updated + (1. - rkw)*rk_reference[i_dof];
         }
       }

@@ -16,7 +16,6 @@ class Deformed_element : public Element
   Eigen::VectorXd jac;
   Eigen::VectorXd jac_dat;
   Eigen::VectorXd node_adj;
-  int i_jac(int i_dim, int j_dim, int i_qpoint);
 
   public:
   bool degenerate = 0;
