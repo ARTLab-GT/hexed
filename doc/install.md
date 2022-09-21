@@ -1,7 +1,7 @@
 # Installation
 
 ## Quick Start
-If you don't know what I'm talking about, skip to "Detailed instructions".
+If look at these instructions and don't know what I'm talking about, skip to "Detailed instructions".
 * Ensure that all of the following are installed:
   [Tecplot](https://www.tecplot.com/)/[TecIO](https://www.tecplot.com/products/tecio-library/),
   [Eigen](https://eigen.tuxfamily.org/), [Catch2](https://github.com/catchorg/Catch2),
@@ -35,8 +35,8 @@ My solution is to install things in `~/.local` instead.
 However, this requires us to edit an environment variable so that the system knows what we're doing.
 Plus, we need to edit a *whole bunch* of environment variables to accommodate Tecplot being a little... *unique*.
 * To start with, type `cd` to make sure you're in your home directory.
-* We need to tell the shell to look for libraries in `~/codes`. We do this by editing the file `~/.bashrc`. First,
-  it is recommended that you make a backup copy:
+* You can change environment variables by editing the file `.bashrc`.
+  First, it is recommended that you make a backup copy:
   * `cp .bashrc .bashrc_backup`
   * Now edit `.bashrc` and add the following lines at the end:
   ```bash
@@ -54,10 +54,13 @@ Plus, we need to edit a *whole bunch* of environment variables to accommodate Te
 ### 2. Install Python libraries
 CartDG uses Python scripts for some small tasks during the build process and output post-processing and requires
 a few 3rd-party libraries.
+* Install the numerical computing libraries numpy and scipy (althought you likely have them already):
+  * `pip3 install numpy`
+  * `pip3 install scipy`
+* Install the symbolic computation library sympy (used to generate quadrature rules):
+  * `pip3 install sympy`
 * Install PyTecplot (Tecplot's Python API):
   * `pip3 install pytecplot`
-* Install sympy (used to generate quadrature rules):
-  * `pip3 install sympy`
 ### 3. Install Eigen
 * Download the Eigen [source code](http://eigen.tuxfamily.org/index.php?title=Main_Page#Download) (latest stable release).
 * Unpack the Eigen source in `~/codes`. `~/codes` should now contain a directory named something like `eigen-X.X.X`, depending on the
@@ -71,12 +74,14 @@ a few 3rd-party libraries.
   * `mkdir build_Release`
   * `cd build_Release`
   * `ccmake ../`
-    * This will open a sort-of-GUI for the tool CMake. This allows you to choose some options for how to build CartDG. You should see `EMPTY_CACHE`
-      and no error messages.
-    * Press `c`. You should now see a list of options. However, the default options are fine for a release build, so you don't have to do anything.
+    * This will open [ccmake](https://cmake.org/cmake/help/latest/manual/ccmake.1.html), which is a sort-of-GUI for [CMake](https://cmake.org/).
+      This allows you to choose some options for how to build Hexed.
+      You should see `EMPTY_CACHE` and no error messages.
+    * Press `c`. You should now see a list of options. The default options are fine for a release build, so you don't have to do anything.
       * If you want to edit any of the options, use the arrow keys to move the cursor and Enter to edit the option under the cursor.
     * Press `c` again.
-    * Press `g`. The GUI should exit.
+    * Press `g`. The GUI should exit (sometimes you have to hit `c` several times before it will let you exit with `g`).
+      If something goes wrong and you can't get `g` to work, you can abort with `q`.
   * `make -j install`
 ### 5. Verify success
 *  You should still be in the build directory.
@@ -109,7 +114,7 @@ Now you need to update your Hexed build to include the unit tests, as follows:
 * Set the option `build_tests` to `ON`.
   You can accomplish this by using the arrow keys to move the cursor down to the appropriate line and then hitting "Enter" to toggle between `OFF` and `ON`.
 * Hit `c` as many times as you need to and then `g`.
-* `make -j` (you only need `install` again if you've changed any of the code and want to propogate the new version to NASCART).
+* `make -j` (you only need `install` again if you've changed any of the code and want to propogate the new version to NASCART-GT).
 * The code is now compiled. you can run the unit tests with the command `test/unit` (executed from the build directory, still).
 * You should see "All tests passed".
 
@@ -124,7 +129,7 @@ So, we will create an new build directory where we compile in Debug mode.
   * this time, set `CMAKE_BUILD_TYPE` to `Debug` ("Enter" toggles between `Release` and `Debug`),
     `build_tests` to `ON`, and `sanitize` to `ON`.
   * `c` as many times as you need and then `g`.
-* `make -j` (**don't** add `install`, since you will want to be running simulations with your nice and fast Release mode).
+* `make -j` (**don't** add `install`, since you still want to be running simulations with your nice and fast Release mode).
 * `test/unit`. Again, you should see "All tests passed".
    However, now if you were to, for example, write to an array out of bounds, you will get an error message with the line number of the problem
    instead of just a segfault.
