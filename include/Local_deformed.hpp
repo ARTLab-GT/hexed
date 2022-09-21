@@ -48,29 +48,7 @@ class Local_deformed : public Kernel<Deformed_element&>
       double* determinant = normals + n_dim*n_dim*n_qpoint;
       double* face = elem.face();
       double* tss = elem.time_step_scale();
-      double flux [n_dim][n_var][n_qpoint];
       const double d_t_by_d_pos = dt/elem.nominal_size();
-
-      // precompute flux
-      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-        for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-          #define READ(i) state[(i)*n_qpoint + i_qpoint]
-          #define FLUX(i) flux[i_dim][i][i_qpoint]
-          double veloc = READ(i_dim)/READ(n_var - 2);
-          double pres = 0;
-          for (int j_dim = 0; j_dim < n_var - 2; ++j_dim)
-          {
-            FLUX(j_dim) = READ(j_dim)*veloc;
-            pres += READ(j_dim)*READ(j_dim)/READ(n_var - 2);
-          }
-          pres = (heat_rat - 1.)*(READ(n_var - 1) - 0.5*pres);
-          FLUX(i_dim) += pres;
-          FLUX(n_var - 2) = READ(i_dim);
-          FLUX(n_var - 1) = (READ(n_var - 1) + pres)*veloc;
-          #undef FLUX
-          #undef READ
-        }
-      }
 
       // Compute update
       for (int stride = n_qpoint/row_size, n_rows = 1, i_dim = 0; n_rows < n_qpoint;
@@ -81,23 +59,41 @@ class Local_deformed : public Kernel<Deformed_element&>
         {
           for (int i_inner = 0; i_inner < stride; ++i_inner)
           {
-            // fetch flux
-            Eigen::Matrix<double, row_size, n_var> row_f;
-            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-              for (int i_var = 0; i_var < n_var; ++i_var) {
-                double f = 0.;
-                for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-                  f += flux[j_dim][i_var][i_outer*stride*row_size + i_inner + i_qpoint*stride]
-                       *normals[(i_dim*n_dim + j_dim)*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
-                }
-                row_f(i_qpoint, i_var) = f;
+            // Fetch this row of data
+            double row_r [n_var][row_size];
+            double row_n [n_dim][row_size];
+            for (int i_var = 0; i_var < n_var; ++i_var) {
+              for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+                row_r[i_var][i_qpoint] = state[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
               }
             }
-
-            // fetch jacobian determinant
-            Eigen::Array<double, row_size, 1> row_det;
-            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-              row_det(i_qpoint) = determinant[i_outer*stride*row_size + i_inner + i_qpoint*stride];
+            for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+              for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+                row_n[j_dim][i_qpoint] = normals[(i_dim*n_dim + j_dim)*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
+              }
+            }
+            // Calculate flux
+            Eigen::Matrix<double, row_size, n_var> flux;
+            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
+            {
+              #define READ(i) row_r[i][i_qpoint]
+              #define NRML(i) row_n[i][i_qpoint]
+              #define FLUX(i) flux(i_qpoint, i)
+              FLUX(n_dim) = 0.;
+              double pres = 0;
+              for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+                FLUX(n_dim) += READ(j_dim)*NRML(j_dim);
+                pres += READ(j_dim)*READ(j_dim)/READ(n_dim);
+              }
+              pres = (heat_rat - 1.)*(READ(n_var - 1) - 0.5*pres);
+              double scaled = FLUX(n_dim)/READ(n_dim);
+              FLUX(n_var - 1) = (READ(n_var - 1) + pres)*scaled;
+              for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+                FLUX(j_dim) = READ(j_dim)*scaled + pres*NRML(j_dim);
+              }
+              #undef FLUX
+              #undef NRML
+              #undef READ
             }
 
             // fetch boundary flux
@@ -108,7 +104,13 @@ class Local_deformed : public Kernel<Deformed_element&>
               }
             }
 
-            Eigen::Matrix<double, row_size, n_var> row_w = -derivative(row_f, boundary_values);
+            Eigen::Matrix<double, row_size, n_var> row_w = -derivative(flux, boundary_values);
+
+            // fetch jacobian determinant
+            Eigen::Array<double, row_size, 1> row_det;
+            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+              row_det(i_qpoint) = determinant[i_outer*stride*row_size + i_inner + i_qpoint*stride];
+            }
 
             // Add dimensional component to update
             for (int i_var = 0; i_var < n_var; ++i_var) {
