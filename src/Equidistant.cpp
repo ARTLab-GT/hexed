@@ -1,6 +1,6 @@
 #include <Equidistant.hpp>
 
-namespace cartdg
+namespace hexed
 {
 
 Equidistant::Equidistant(int row_size_arg) : Basis(row_size_arg) {}

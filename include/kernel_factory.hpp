@@ -1,10 +1,10 @@
-#ifndef CARTDG_KERNEL_FACTORY_HPP_
-#define CARTDG_KERNEL_FACTORY_HPP_
+#ifndef HEXED_KERNEL_FACTORY_HPP_
+#define HEXED_KERNEL_FACTORY_HPP_
 
 #include <memory>
 #include "config.hpp"
-#include <Vector_view.hpp>
-#include <Stopwatch_tree.hpp>
+#include "Vector_view.hpp"
+#include "Stopwatch_tree.hpp"
 
 /*
  * The purpose of this file is to provide a way to specify the number of dimensions and
@@ -16,7 +16,7 @@
  * flexibility, which for our purpose is more important.
  */
 
-namespace cartdg
+namespace hexed
 {
 
 /*

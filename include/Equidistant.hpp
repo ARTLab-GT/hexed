@@ -1,9 +1,9 @@
-#ifndef CARTDG_EQUIDISTANT_HPP_
-#define CARTDG_EQUIDISTANT_HPP_
+#ifndef HEXED_EQUIDISTANT_HPP_
+#define HEXED_EQUIDISTANT_HPP_
 
 #include "Basis.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 class Equidistant : public Basis

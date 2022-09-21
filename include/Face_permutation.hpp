@@ -1,11 +1,11 @@
-#ifndef CARTDG_FACE_PERMUTATION_HPP_
-#define CARTDG_FACE_PERMUTATION_HPP_
+#ifndef HEXED_FACE_PERMUTATION_HPP_
+#define HEXED_FACE_PERMUTATION_HPP_
 
 #include <Eigen/Dense>
 #include "kernel_factory.hpp"
 #include "connection.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 /*

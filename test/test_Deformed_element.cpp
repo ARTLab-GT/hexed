@@ -1,16 +1,16 @@
 #include <catch2/catch.hpp>
 
-#include <config.hpp>
-#include <math.hpp>
-#include <Deformed_element.hpp>
-#include <Equidistant.hpp>
-#include <Gauss_legendre.hpp>
+#include <hexed/config.hpp>
+#include <hexed/math.hpp>
+#include <hexed/Deformed_element.hpp>
+#include <hexed/Equidistant.hpp>
+#include <hexed/Gauss_legendre.hpp>
 #include "testing_utils.hpp"
 
 TEST_CASE("Deformed_element")
 {
-  cartdg::Storage_params params {2, 2, 2, 4};
-  cartdg::Deformed_element element {params};
+  hexed::Storage_params params {2, 2, 2, 4};
+  hexed::Deformed_element element {params};
   for (int i_jac = 0; i_jac < 2*2*16; ++i_jac) {
     element.jacobian()[i_jac] = i_jac/4.;
   }
@@ -37,8 +37,8 @@ TEST_CASE("Deformed_element")
   REQUIRE(element.node_adjustments()[4*2*2 - 1] == 0.04);
   REQUIRE(element.vertex(1).mobile);
 
-  cartdg::Storage_params params3d {1, 1, 3, 2};
-  cartdg::Deformed_element element3d {params3d};
+  hexed::Storage_params params3d {1, 1, 3, 2};
+  hexed::Deformed_element element3d {params3d};
   double jacobian [9] {2., 1., -.7,
                        .5, 1.,  0.,
                        1., 0.,  .3};
@@ -49,14 +49,14 @@ TEST_CASE("Deformed_element")
 
   SECTION("vertex relaxation")
   {
-    cartdg::Storage_params params3d {3, 5, 3, 4};
-    cartdg::Deformed_element elem3d {params3d, {1, 2, -1}, 0.2};
+    hexed::Storage_params params3d {3, 5, 3, 4};
+    hexed::Deformed_element elem3d {params3d, {1, 2, -1}, 0.2};
     elem3d.vertex(5).calc_relax();
     elem3d.vertex(5).apply_relax();
     assert_equal(elem3d.vertex(5).pos, {0.4 - 0.1/3., 0.4 + 0.1/3., -0.1/3.});
 
-    cartdg::Storage_params params2d {3, 4, 2, 4};
-    cartdg::Deformed_element elem2d {params2d, {1, 2, -1}, 1.};
+    hexed::Storage_params params2d {3, 4, 2, 4};
+    hexed::Deformed_element elem2d {params2d, {1, 2, -1}, 1.};
     assert_equal(elem2d.vertex(0).pos, {1., 2., 0.});
     assert_equal(elem2d.vertex(1).pos, {1., 3., 0.});
     assert_equal(elem2d.vertex(2).pos, {2., 2., 0.});
@@ -64,17 +64,17 @@ TEST_CASE("Deformed_element")
     elem2d.vertex(0).apply_relax();
     assert_equal(elem2d.vertex(0).pos, {1.25, 2.25, 0.});
 
-    cartdg::Deformed_element elem3d_1 {params3d, {3,}, 1.};
+    hexed::Deformed_element elem3d_1 {params3d, {3,}, 1.};
     assert_equal(elem3d_1.vertex(0).pos, {3., 0., 0.});
   }
 
   SECTION("position calculation")
   {
     const int row_size = 3;
-    static_assert (row_size <= cartdg::config::max_row_size);
-    cartdg::Equidistant basis {row_size};
-    cartdg::Storage_params params2 {2, 4, 2, row_size};
-    cartdg::Deformed_element elem {params2};
+    static_assert (row_size <= hexed::config::max_row_size);
+    hexed::Equidistant basis {row_size};
+    hexed::Storage_params params2 {2, 4, 2, row_size};
+    hexed::Deformed_element elem {params2};
     elem.vertex(3).pos[0] = 0.6;
     elem.node_adjustments()[2*3 + 1] =  0.2;
     elem.node_adjustments()[3*3 + 1] = -0.1;
@@ -95,21 +95,21 @@ TEST_CASE("Deformed_element")
     REQUIRE(elem.face_position(basis, 2, 1)[0] == elem.position(basis, 3)[0]);
     REQUIRE(elem.face_position(basis, 3, 1)[1] == elem.position(basis, 5)[1]);
 
-    cartdg::Deformed_element elem1 {params2};
+    hexed::Deformed_element elem1 {params2};
     elem1.node_adjustments()[1] = 0.1;
     REQUIRE(elem1.position(basis, 0)[0] == Approx(0.0));
     REQUIRE(elem1.position(basis, 6)[0] == Approx(1.0));
     REQUIRE(elem1.position(basis, 4)[0] == Approx(0.55));
 
-    cartdg::Storage_params params3 {2, 5, 3, row_size};
-    cartdg::Deformed_element elem2 {params3, {}, 0.2};
+    hexed::Storage_params params3 {2, 5, 3, row_size};
+    hexed::Deformed_element elem2 {params3, {}, 0.2};
     elem2.node_adjustments()[4] = 0.01;
     REQUIRE(elem2.position(basis, 13)[0] == Approx(0.101));
     REQUIRE(elem2.position(basis, 13)[1] == Approx(.1));
     REQUIRE(elem2.position(basis, 13)[2] == Approx(.1));
 
-    cartdg::Gauss_legendre leg_basis {row_size};
-    cartdg::Deformed_element elem3 {params2, {}, 0.2};
+    hexed::Gauss_legendre leg_basis {row_size};
+    hexed::Deformed_element elem3 {params2, {}, 0.2};
     elem3.node_adjustments()[1] = 0.1;
     elem3.node_adjustments()[3] = -0.2;
     REQUIRE(elem3.position(leg_basis, 3)[0] == Approx(0.08));
@@ -119,12 +119,12 @@ TEST_CASE("Deformed_element")
   SECTION("jacobian calculation")
   {
     const int row_size = 3;
-    static_assert (row_size <= cartdg::config::max_row_size);
-    cartdg::Equidistant basis {row_size};
+    static_assert (row_size <= hexed::config::max_row_size);
+    hexed::Equidistant basis {row_size};
     double* jac;
-    cartdg::Storage_params params2 {2, 4, 2, row_size};
-    cartdg::Deformed_element elem0 {params2, {0, 0}, 0.2};
-    cartdg::Deformed_element elem1 {params2, {1, 1}, 0.2};
+    hexed::Storage_params params2 {2, 4, 2, row_size};
+    hexed::Deformed_element elem0 {params2, {0, 0}, 0.2};
+    hexed::Deformed_element elem1 {params2, {1, 1}, 0.2};
     elem0.vertex(3).pos = {0.8*0.2, 0.8*0.2, 0.};
     elem1.node_adjustments()[6 + 1] = 0.1;
     // jacobian is correct
@@ -153,8 +153,8 @@ TEST_CASE("Deformed_element")
     REQUIRE(elem0.vertex_time_step_scale(0) == 1.);
     REQUIRE(elem0.vertex_time_step_scale(3) == Approx(0.6));
 
-    cartdg::Storage_params params3 {2, 5, 3, row_size};
-    cartdg::Deformed_element elem2 {params3, {0, 0, 0}, 0.2};
+    hexed::Storage_params params3 {2, 5, 3, row_size};
+    hexed::Deformed_element elem2 {params3, {0, 0, 0}, 0.2};
     elem2.vertex(7).pos = {0.8*0.2, 0.8*0.2, 0.8*0.2};
     elem2.set_jacobian(basis);
     jac = elem2.jacobian();

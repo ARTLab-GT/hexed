@@ -1,6 +1,6 @@
 #include <Vertex.hpp>
 
-namespace cartdg
+namespace hexed
 {
 
 Vertex::Vertex (std::array<double, 3> pos)

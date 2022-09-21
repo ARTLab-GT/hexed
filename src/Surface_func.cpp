@@ -3,7 +3,7 @@
 #include <Surface_func.hpp>
 #include <Domain_func.hpp>
 
-namespace cartdg
+namespace hexed
 {
 
 Force_per_area::Force_per_area(double heat_rat) : hr{heat_rat} {}

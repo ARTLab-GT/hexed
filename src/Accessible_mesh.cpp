@@ -2,7 +2,7 @@
 #include <math.hpp>
 #include <erase_if.hpp>
 
-namespace cartdg
+namespace hexed
 {
 
 Element_container& Accessible_mesh::container(bool is_deformed)

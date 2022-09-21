@@ -1,5 +1,5 @@
-#ifndef CARTDG_CONNECTION_HPP_
-#define CARTDG_CONNECTION_HPP_
+#ifndef HEXED_CONNECTION_HPP_
+#define HEXED_CONNECTION_HPP_
 
 #include <Eigen/Dense>
 #include "Deformed_element.hpp"
@@ -7,7 +7,7 @@
 #include "Hanging_vertex_matcher.hpp"
 #include "math.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 /*

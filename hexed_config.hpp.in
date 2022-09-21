@@ -1,0 +1,18 @@
+#ifndef HEXED_CONFIG_HPP_
+#define HEXED_CONFIG_HPP_
+
+namespace hexed::config
+{
+
+// for translating CMake options into c++ values
+#define HEXED_ON true
+#define HEXED_OFF false
+
+// options configured by CMake
+constexpr int max_row_size = @MAX_BASIS_ROW_SIZE@;
+constexpr int n_threads = @n_threads@;
+#define HEXED_USE_OTTER HEXED_@use_otter@
+#define HEXED_USE_TECPLOT HEXED_@use_tecplot@
+
+}
+#endif

@@ -1,12 +1,12 @@
-#ifndef CARTDG_MESH_BY_TYPE_HPP_
-#define CARTDG_MESH_BY_TYPE_HPP_
+#ifndef HEXED_MESH_BY_TYPE_HPP_
+#define HEXED_MESH_BY_TYPE_HPP_
 
 #include "Storage_params.hpp"
 #include "Element.hpp"
 #include "Deformed_element.hpp"
 #include "Element_container.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 /*

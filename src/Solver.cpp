@@ -14,7 +14,7 @@
 #include <Vis_data.hpp>
 #include <otter_vis.hpp>
 
-namespace cartdg
+namespace hexed
 {
 
 void Solver::share_vertex_data(Element::vertex_value_access access_func, Vertex::reduction reduce)
@@ -390,7 +390,7 @@ std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func,
   return bounds;
 }
 
-#if CARTDG_USE_TECPLOT
+#if HEXED_USE_TECPLOT
 void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::string name, int n_sample)
 {
   const int n_dim = params.n_dim;
@@ -404,7 +404,7 @@ void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::s
   for (int i_elem = 0; i_elem < acc_mesh.elements().size(); ++i_elem)
   {
     Element& elem {acc_mesh.elements()[i_elem]};
-    Vis_data vis_pos(elem, cartdg::Position_func(), basis, status.flow_time);
+    Vis_data vis_pos(elem, hexed::Position_func(), basis, status.flow_time);
     Vis_data vis_out(elem, output_variables, basis, status.flow_time);
     // note: each visualization stage is enclosed in `{}` to ensure that only one `Tecplot_file::Zone` is alive at a time
     // visualize edges
@@ -481,7 +481,7 @@ void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample
 }
 #endif
 
-#if CARTDG_USE_OTTER
+#if HEXED_USE_OTTER
 void Solver::visualize_edges_otter(otter::plot& plt, Eigen::Matrix<double, 1, Eigen::Dynamic> color, int n_sample)
 {
   auto& elements = acc_mesh.elements();

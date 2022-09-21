@@ -1,6 +1,6 @@
 #include <connection.hpp>
 
-namespace cartdg
+namespace hexed
 {
 
 std::vector<int> face_vertex_inds(int n_dim, Con_dir<Deformed_element> direction)

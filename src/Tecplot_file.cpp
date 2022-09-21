@@ -1,11 +1,11 @@
 #include <config.hpp>
-#if CARTDG_USE_TECPLOT
+#if HEXED_USE_TECPLOT
 #include <TECIO.h>
 #include <MASTER.h>
 #include <Tecplot_file.hpp>
 #include <math.hpp>
 
-namespace cartdg
+namespace hexed
 {
 
 int Tecplot_file::n_instances {0};

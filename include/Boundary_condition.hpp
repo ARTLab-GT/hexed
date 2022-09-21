@@ -1,9 +1,9 @@
-#ifndef CARTDG_BOUNDARY_CONDITION_HPP_
-#define CARTDG_BOUNDARY_CONDITION_HPP_
+#ifndef HEXED_BOUNDARY_CONDITION_HPP_
+#define HEXED_BOUNDARY_CONDITION_HPP_
 
 #include "connection.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 /*
@@ -39,7 +39,7 @@ class Flow_bc
 /*
  * Abstract class representing a mesh boundary condition.
  * That is, a rule for snapping vertices and face node adjustments to the boundary.
- * This is the means for providing surface geometry to CartDG.
+ * This is the means for providing surface geometry to hexed.
  */
 class Mesh_bc
 {

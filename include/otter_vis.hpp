@@ -1,7 +1,7 @@
-#ifndef CARTDG_OTTER_VIS_HPP_
-#define CARTDG_OTTER_VIS_HPP_
+#ifndef HEXED_OTTER_VIS_HPP_
+#define HEXED_OTTER_VIS_HPP_
 #include "config.hpp"
-#if CARTDG_USE_OTTER
+#if HEXED_USE_OTTER
 
 #include <otter/plot.hpp>
 #include <otter/colormap.hpp>
@@ -10,7 +10,7 @@
 #include "Basis.hpp"
 #include "Spacetime_func.hpp"
 
-namespace cartdg::otter_vis
+namespace hexed::otter_vis
 {
 
 void add_edges(otter::plot&, Element&, const Basis&,

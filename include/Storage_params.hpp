@@ -1,7 +1,7 @@
-#ifndef CARTDG_STORAGE_PARAMS_HPP_
-#define CARTDG_STORAGE_PARAMS_HPP_
+#ifndef HEXED_STORAGE_PARAMS_HPP_
+#define HEXED_STORAGE_PARAMS_HPP_
 
-namespace cartdg
+namespace hexed
 {
 
 class Storage_params

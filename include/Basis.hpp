@@ -1,9 +1,9 @@
-#ifndef CARTDG_BASIS_HPP_
-#define CARTDG_BASIS_HPP_
+#ifndef HEXED_BASIS_HPP_
+#define HEXED_BASIS_HPP_
 
 #include <Eigen/Dense>
 
-namespace cartdg
+namespace hexed
 {
 
 /*

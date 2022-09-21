@@ -1,11 +1,11 @@
-#ifndef CARTDG_SURFACE_ROTATION_HPP_
-#define CARTDG_SURFACE_ROTATION_HPP_
+#ifndef HEXED_SURFACE_ROTATION_HPP_
+#define HEXED_SURFACE_ROTATION_HPP_
 
 #include <Eigen/Dense>
 #include "math.hpp"
 #include "kernel_factory.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 /*

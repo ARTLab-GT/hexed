@@ -1,10 +1,10 @@
-#ifndef CARTDG_HLL_HPP_
-#define CARTDG_HLL_HPP_
+#ifndef HEXED_HLL_HPP_
+#define HEXED_HLL_HPP_
 
 #include <algorithm>
 #include <cmath>
 
-namespace cartdg
+namespace hexed
 {
 
 /*

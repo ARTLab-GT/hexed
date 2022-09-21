@@ -1,11 +1,11 @@
-#ifndef CARTDG_VIS_DATA_HPP_
-#define CARTDG_VIS_DATA_HPP_
+#ifndef HEXED_VIS_DATA_HPP_
+#define HEXED_VIS_DATA_HPP_
 
 #include "Element.hpp"
 #include "Qpoint_func.hpp"
 #include "Basis.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 /*

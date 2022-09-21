@@ -1,9 +1,9 @@
-#ifndef CARTDG_HANGING_VERTEX_MATCHER_HPP_
-#define CARTDG_HANGING_VERTEX_MATCHER_HPP_
+#ifndef HEXED_HANGING_VERTEX_MATCHER_HPP_
+#define HEXED_HANGING_VERTEX_MATCHER_HPP_
 
 #include "Element.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 /*

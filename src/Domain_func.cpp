@@ -2,7 +2,7 @@
 #include <Domain_func.hpp>
 #include <Spacetime_func.hpp>
 
-namespace cartdg
+namespace hexed
 {
 
 std::vector<double> Domain_func::operator()(Element& element, const Basis& basis, int i_qpoint, double time) const

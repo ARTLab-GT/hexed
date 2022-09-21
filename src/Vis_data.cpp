@@ -1,7 +1,7 @@
 #include <Vis_data.hpp>
 #include <math.hpp>
 
-namespace cartdg
+namespace hexed
 {
 
 Eigen::MatrixXd Vis_data::sample_qpoint_data(Eigen::VectorXd qpoint_data, Eigen::MatrixXd ref_coords)

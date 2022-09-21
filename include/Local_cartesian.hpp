@@ -1,5 +1,5 @@
-#ifndef CARTDG_LOCAL_CARTESIAN_HPP_
-#define CARTDG_LOCAL_CARTESIAN_HPP_
+#ifndef HEXED_LOCAL_CARTESIAN_HPP_
+#define HEXED_LOCAL_CARTESIAN_HPP_
 
 #include "Vector_view.hpp"
 #include "Element.hpp"
@@ -8,7 +8,7 @@
 #include "math.hpp"
 #include "Derivative.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 /*

@@ -1,5 +1,5 @@
-#ifndef CARTDG_LOCAL_DEFORMED_HPP_
-#define CARTDG_LOCAL_DEFORMED_HPP_
+#ifndef HEXED_LOCAL_DEFORMED_HPP_
+#define HEXED_LOCAL_DEFORMED_HPP_
 
 #include "Vector_view.hpp"
 #include "Deformed_element.hpp"
@@ -7,7 +7,7 @@
 #include "kernel_factory.hpp"
 #include "math.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 /*

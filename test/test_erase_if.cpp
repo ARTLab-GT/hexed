@@ -1,5 +1,5 @@
 #include <catch2/catch.hpp>
-#include <erase_if.hpp>
+#include <hexed/erase_if.hpp>
 
 bool is_6(const int& i)
 {
@@ -13,8 +13,8 @@ TEST_CASE("erase_if")
   big[0] = 6;
   big[4] = 6;
   big[99] = 6;
-  cartdg::erase_if(small, &is_6);
-  cartdg::erase_if(big, &is_6);
+  hexed::erase_if(small, &is_6);
+  hexed::erase_if(big, &is_6);
   std::vector<int> correct_small {1, 3, 4, 0};
   REQUIRE(std::equal(correct_small.begin(), correct_small.end(), small.begin()));
   REQUIRE(big.size() == 97);

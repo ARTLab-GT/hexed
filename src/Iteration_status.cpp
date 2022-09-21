@@ -1,6 +1,6 @@
 #include <Iteration_status.hpp>
 
-namespace cartdg
+namespace hexed
 {
 
 int Iteration_status::width()

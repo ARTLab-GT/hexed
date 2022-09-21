@@ -1,12 +1,12 @@
 #include <catch2/catch.hpp>
-#include <Vis_data.hpp>
-#include <Deformed_element.hpp>
-#include <Domain_func.hpp>
-#include <Gauss_legendre.hpp>
-#include <config.hpp>
-#include <Spacetime_func.hpp>
+#include <hexed/Vis_data.hpp>
+#include <hexed/Deformed_element.hpp>
+#include <hexed/Domain_func.hpp>
+#include <hexed/Gauss_legendre.hpp>
+#include <hexed/config.hpp>
+#include <hexed/Spacetime_func.hpp>
 
-class Rad_sq : public cartdg::Spacetime_func
+class Rad_sq : public hexed::Spacetime_func
 {
   Eigen::Vector3d center;
   public:
@@ -23,14 +23,14 @@ class Rad_sq : public cartdg::Spacetime_func
 TEST_CASE("Vis_data")
 {
   // create some arbitrarily-shaped elements
-  cartdg::Deformed_element elem3({2, 5, 3, cartdg::config::max_row_size});
-  cartdg::Deformed_element elem2({2, 4, 2, cartdg::config::max_row_size});
-  cartdg::Gauss_legendre basis(cartdg::config::max_row_size);
+  hexed::Deformed_element elem3({2, 5, 3, hexed::config::max_row_size});
+  hexed::Deformed_element elem2({2, 4, 2, hexed::config::max_row_size});
+  hexed::Gauss_legendre basis(hexed::config::max_row_size);
   elem3.vertex(7).pos = {.9, .9, .9};
   elem2.vertex(2).pos = {.8, .3, 0.};
-  cartdg::Vis_data vis3(elem3, cartdg::Position_func(), basis);
-  cartdg::Vis_data vis2(elem2, cartdg::Position_func(), basis);
-  cartdg::Vis_data vis_const(elem2, cartdg::Constant_func({0.3, 0.4, 0.5, 0.6}), basis);
+  hexed::Vis_data vis3(elem3, hexed::Position_func(), basis);
+  hexed::Vis_data vis2(elem2, hexed::Position_func(), basis);
+  hexed::Vis_data vis_const(elem2, hexed::Constant_func({0.3, 0.4, 0.5, 0.6}), basis);
 
   SECTION("edges")
   {
@@ -130,9 +130,9 @@ TEST_CASE("Vis_data")
   {
     SECTION("corner")
     {
-      cartdg::Element elem({2, 5, 3, cartdg::config::max_row_size});
+      hexed::Element elem({2, 5, 3, hexed::config::max_row_size});
       Rad_sq func({0, 1, 0});
-      cartdg::Vis_data vis(elem, func, basis);
+      hexed::Vis_data vis(elem, func, basis);
       auto con = vis.compute_contour(.04, 2); // exact contour is quarter-sphere with radius .2 centered at (0, 1, 0)
       REQUIRE(con.vert_ref_coords.rows() == 7);
       REQUIRE(con.vert_ref_coords.cols() == 3);
@@ -151,8 +151,8 @@ TEST_CASE("Vis_data")
     }
     SECTION("center")
     {
-      cartdg::Element elem({2, 5, 3, cartdg::config::max_row_size});
-      cartdg::Vis_data vis(elem, Rad_sq({.5, .5, .5}), basis);
+      hexed::Element elem({2, 5, 3, hexed::config::max_row_size});
+      hexed::Vis_data vis(elem, Rad_sq({.5, .5, .5}), basis);
       auto con = vis.compute_contour(.04, 2); // exact contour is sphere with radius .2 centered at (.5, .5, .5)
       REQUIRE(con.vert_ref_coords.rows() == 26);
       REQUIRE(con.vert_ref_coords.cols() == 3);
@@ -163,12 +163,12 @@ TEST_CASE("Vis_data")
     }
     SECTION("warped")
     {
-      cartdg::Deformed_element elem({2, 4, 2, cartdg::config::max_row_size});
+      hexed::Deformed_element elem({2, 4, 2, hexed::config::max_row_size});
       for (int i_vert = 1; i_vert < 4; i_vert += 2) {
         elem.vertex(i_vert).pos[0] += 0.5;
       }
       elem.set_jacobian(basis);
-      cartdg::Vis_data vis(elem, cartdg::Linear(Eigen::Vector2d{1., 0.}), basis);
+      hexed::Vis_data vis(elem, hexed::Linear(Eigen::Vector2d{1., 0.}), basis);
       auto con = vis.compute_contour(.5, 3);
       for (int i_vert = 0; i_vert < con.vert_ref_coords.rows(); ++i_vert) {
         REQUIRE((con.normals(i_vert, Eigen::all) - Eigen::Matrix<double, 1, 2>{1., 0.}).norm() == Approx(0.).scale(1.));

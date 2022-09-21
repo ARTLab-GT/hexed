@@ -37,7 +37,7 @@ to create our own install directory. If you already have one set up, you can use
   * `TECPLOT_DIR=/opt/local/tecplot/360ex`
     * If you are not on an ARTLAB machine, ensure that you have Tecplot installed and change this path to match your Tecplot installation.
   * `TECPLOT_LIB_PATH=$TECPLOT_DIR/bin/`
-  * `export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:~/codes/include/:$TECPLOT_DIR/include/`
+  * `export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:~/.local/include/:$TECPLOT_DIR/include/`
   * `export LIBRARY_PATH=$LIBRARY_PATH:$TECPLOT_LIB_PATH`
   * `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$TECPLOT_LIB_PATH`
 * Close and reopen the terminal.

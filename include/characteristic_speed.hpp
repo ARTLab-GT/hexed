@@ -1,9 +1,9 @@
-#ifndef CARTDG_CHARACTERISTIC_SPEED_HPP_
-#define CARTDG_CHARACTERISTIC_SPEED_HPP_
+#ifndef HEXED_CHARACTERISTIC_SPEED_HPP_
+#define HEXED_CHARACTERISTIC_SPEED_HPP_
 
 #include <cmath>
 
-namespace cartdg
+namespace hexed
 {
 
 /*

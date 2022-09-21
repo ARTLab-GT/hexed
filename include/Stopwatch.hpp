@@ -1,9 +1,9 @@
-#ifndef CARTDG_STOPWATCH_HPP_
-#define CARTDG_STOPWATCH_HPP_
+#ifndef HEXED_STOPWATCH_HPP_
+#define HEXED_STOPWATCH_HPP_
 
 #include <chrono>
 
-namespace cartdg
+namespace hexed
 {
 
 /*

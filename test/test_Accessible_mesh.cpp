@@ -1,12 +1,12 @@
 #include <catch2/catch.hpp>
-#include <config.hpp>
-#include <Accessible_mesh.hpp>
+#include <hexed/config.hpp>
+#include <hexed/Accessible_mesh.hpp>
 
 TEST_CASE("Accessible_mesh")
 {
-  const int row_size = cartdg::config::max_row_size;
-  cartdg::Storage_params params {3, 5, 3, row_size};
-  cartdg::Accessible_mesh mesh {params, 1.};
+  const int row_size = hexed::config::max_row_size;
+  hexed::Storage_params params {3, 5, 3, row_size};
+  hexed::Accessible_mesh mesh {params, 1.};
   int sn0 = mesh.add_element(0, false, {0, 0});
   int sn1 = mesh.add_element(0, false, {0, 0});
   REQUIRE(sn0 != sn1); // test uniqueness of serial numbers
@@ -22,11 +22,11 @@ TEST_CASE("Accessible_mesh")
   REQUIRE(mesh.deformed().elements().size() == 1);
   REQUIRE(mesh.elements().size() == 3);
   // check that each of the elements appears exactly once in `mesh.elements()`
-  cartdg::Element* ptrs [] {&mesh.element(0, false, sn0), &mesh.element(0, false, sn1), &mesh.element(3, true, sn2)};
+  hexed::Element* ptrs [] {&mesh.element(0, false, sn0), &mesh.element(0, false, sn1), &mesh.element(3, true, sn2)};
   for (int i_elem = 0; i_elem < 3; ++i_elem) {
     int count = 0;
     for (int j_elem = 0; j_elem < 3; ++j_elem) {
-      cartdg::Element& elem {mesh.elements()[j_elem]};
+      hexed::Element& elem {mesh.elements()[j_elem]};
       if (&elem == ptrs[i_elem]) ++count;
     }
     REQUIRE(count == 1);
@@ -34,7 +34,7 @@ TEST_CASE("Accessible_mesh")
   // check that a correct handle for each of the elements appears exactly once in `mesh.elements()`
   auto handles = mesh.elem_handles();
   REQUIRE(handles.size() == 3);
-  cartdg::Mesh::elem_handle correct_handles [] {{0, false, sn0}, {0, false, sn1}, {3, true, sn2}};
+  hexed::Mesh::elem_handle correct_handles [] {{0, false, sn0}, {0, false, sn1}, {3, true, sn2}};
   for (auto corr_handle : correct_handles) {
     int count = 0;
     for (auto handle : handles) {
@@ -115,8 +115,8 @@ TEST_CASE("Accessible_mesh")
 
   SECTION("boundary conditions")
   {
-    int freestream = mesh.add_boundary_condition(new cartdg::Freestream({0, 0, 1., 1e5}), new cartdg::Null_mbc);
-    int nonpen = mesh.add_boundary_condition(new cartdg::Nonpenetration, new cartdg::Null_mbc);
+    int freestream = mesh.add_boundary_condition(new hexed::Freestream({0, 0, 1., 1e5}), new hexed::Null_mbc);
+    int nonpen = mesh.add_boundary_condition(new hexed::Nonpenetration, new hexed::Null_mbc);
     // check that connecting to an invalid serial number throws
     REQUIRE_THROWS(mesh.connect_boundary(0, 0, sn0, 1, 0, nonpen + freestream + 1));
     SECTION("cartesian")
@@ -209,8 +209,8 @@ TEST_CASE("Accessible_mesh")
 
   SECTION("connection validity testing")
   {
-    cartdg::Storage_params params1 {3, 4, 2, row_size};
-    cartdg::Accessible_mesh mesh1 {params1, 0.64};
+    hexed::Storage_params params1 {3, 4, 2, row_size};
+    hexed::Accessible_mesh mesh1 {params1, 0.64};
     // serial numbers:
     int car [4];
     int def [4];
@@ -266,7 +266,7 @@ TEST_CASE("Accessible_mesh")
       mesh1.connect_hanging(0, coarse[kind], {kinds[kind][2], kinds[kind][3]}, {{0, 0}, {0, 1}}, false, {fine_def, fine_def});
     }
     // add boundary conditions
-    int bcsn = mesh1.add_boundary_condition(new cartdg::Freestream {{0., 0., 1., 1.}}, new cartdg::Null_mbc);
+    int bcsn = mesh1.add_boundary_condition(new hexed::Freestream {{0., 0., 1., 1.}}, new hexed::Null_mbc);
     for (int i = 0; i < 2; ++i) {
       for (int kind = 0; kind < 2; ++kind) {
         mesh1.connect_boundary(1, kind, kinds[kind][i], 0, 0, bcsn); // left face
@@ -313,10 +313,10 @@ TEST_CASE("Accessible_mesh")
 
 TEST_CASE("extruded BCs")
 {
-  cartdg::Storage_params params {2, 4, 2, 2};
-  cartdg::Accessible_mesh mesh {params, 1.};
+  hexed::Storage_params params {2, 4, 2, 2};
+  hexed::Accessible_mesh mesh {params, 1.};
   int elem_sn = mesh.add_element(0, true, {0, 0});
-  int bc_sn = mesh.add_boundary_condition(new cartdg::Nonpenetration, new cartdg::Null_mbc);
+  int bc_sn = mesh.add_boundary_condition(new hexed::Nonpenetration, new hexed::Null_mbc);
   mesh.connect_boundary(0, true, elem_sn, 0, 1, bc_sn);
   mesh.connect_boundary(0, true, elem_sn, 1, 0, bc_sn);
   mesh.extrude();
@@ -330,8 +330,8 @@ TEST_CASE("extruded BCs")
 TEST_CASE("extruded hanging node connection validity")
 {
   // note: this tests for a bug originally discovered on the NASCART-GT side
-  cartdg::Storage_params params {2, 5, 3, 2};
-  cartdg::Accessible_mesh mesh {params, 1.};
+  hexed::Storage_params params {2, 5, 3, 2};
+  hexed::Accessible_mesh mesh {params, 1.};
   int coarse = mesh.add_element(0, true, {0, 0, 0});
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
     std::vector<int> fine;

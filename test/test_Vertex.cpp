@@ -1,12 +1,12 @@
 #include <catch2/catch.hpp>
-#include <Gauss_lobatto.hpp>
-#include <Vertex.hpp>
+#include <hexed/Gauss_lobatto.hpp>
+#include <hexed/Vertex.hpp>
 
 TEST_CASE("Vertex")
 {
-  cartdg::Vertex::Transferable_ptr ptr0 {{1.1, -3.5, 0.05}};
-  cartdg::Vertex* orig_addr = &*ptr0;
-  cartdg::Vertex::Transferable_ptr ptr1 {{1., 1., 1.}};
+  hexed::Vertex::Transferable_ptr ptr0 {{1.1, -3.5, 0.05}};
+  hexed::Vertex* orig_addr = &*ptr0;
+  hexed::Vertex::Transferable_ptr ptr1 {{1., 1., 1.}};
   REQUIRE(ptr1->mobile == false);
 
   REQUIRE(ptr0->mass() == 1);
@@ -41,9 +41,9 @@ TEST_CASE("Vertex")
     std::vector<double> correct {1, -7, 4, 0, 9};
     REQUIRE(std::equal(ptr0->record.begin(), ptr0->record.end(), correct.begin()));
 
-    cartdg::Vertex::Transferable_ptr ptr2 {{1., 0., 0.}};
-    cartdg::Vertex::Transferable_ptr ptr3 {{1., 0., 0.}};
-    cartdg::Vertex::Transferable_ptr ptr4 {{1., 0., 0.}};
+    hexed::Vertex::Transferable_ptr ptr2 {{1., 0., 0.}};
+    hexed::Vertex::Transferable_ptr ptr3 {{1., 0., 0.}};
+    hexed::Vertex::Transferable_ptr ptr4 {{1., 0., 0.}};
     ptr2->eat(*ptr3);
     ptr3->eat(*ptr4);
     ptr1->mobile = ptr3->mobile = true;
@@ -57,23 +57,23 @@ TEST_CASE("Vertex")
   {
     //Note: If you choose to delete any of this test, do so with caution. Some seemingly
     //      harmless lines are capable of exposing dangling pointers in faulty implementations
-    cartdg::Vertex::Transferable_ptr ptr1_1 {ptr1};
-    cartdg::Vertex::Transferable_ptr ptr1_2 {{0., 0., 0.}};
+    hexed::Vertex::Transferable_ptr ptr1_1 {ptr1};
+    hexed::Vertex::Transferable_ptr ptr1_2 {{0., 0., 0.}};
     ptr1_2 = ptr1;
 
     // verifies that destructors and move semantics do not leave dangling pointers
-    cartdg::Vertex::Transferable_ptr* ptr1_3 = new cartdg::Vertex::Transferable_ptr {ptr1};
+    hexed::Vertex::Transferable_ptr* ptr1_3 = new hexed::Vertex::Transferable_ptr {ptr1};
     delete ptr1_3;
-    cartdg::Vertex::Transferable_ptr* ptr1_4 = new cartdg::Vertex::Transferable_ptr {ptr1};
-    cartdg::Vertex::Transferable_ptr ptr1_5 {{0., 0., 0.}};
+    hexed::Vertex::Transferable_ptr* ptr1_4 = new hexed::Vertex::Transferable_ptr {ptr1};
+    hexed::Vertex::Transferable_ptr ptr1_5 {{0., 0., 0.}};
     ptr1_5 = std::move(*ptr1_4);
     delete ptr1_4;
 
-    cartdg::Vertex::Non_transferable_ptr ptr0_1 {*ptr0};
-    cartdg::Vertex::Non_transferable_ptr ptr1_6 {*ptr1};
-    cartdg::Vertex::Non_transferable_ptr ptr1_7 {*ptr1};
-    cartdg::Vertex::Non_transferable_ptr ptr1_8 {ptr1_6};
-    cartdg::Vertex::Non_transferable_ptr ptr1_9 {*ptr0};
+    hexed::Vertex::Non_transferable_ptr ptr0_1 {*ptr0};
+    hexed::Vertex::Non_transferable_ptr ptr1_6 {*ptr1};
+    hexed::Vertex::Non_transferable_ptr ptr1_7 {*ptr1};
+    hexed::Vertex::Non_transferable_ptr ptr1_8 {ptr1_6};
+    hexed::Vertex::Non_transferable_ptr ptr1_9 {*ptr0};
     ptr1_9 = ptr1_6;
     // test that pointers are valid and point to the right Vertex
     REQUIRE(bool(ptr0_1));
@@ -87,11 +87,11 @@ TEST_CASE("Vertex")
     REQUIRE(&*ptr1_9 == &*ptr1_6);
 
     // destructor doesn't leave dangling pointer
-    cartdg::Vertex::Non_transferable_ptr* ptr1_10 = new cartdg::Vertex::Non_transferable_ptr {*ptr1};
+    hexed::Vertex::Non_transferable_ptr* ptr1_10 = new hexed::Vertex::Non_transferable_ptr {*ptr1};
     delete ptr1_10;
 
     // explicitly nullifying works
-    cartdg::Vertex::Non_transferable_ptr ptr0_2 {*ptr0};
+    hexed::Vertex::Non_transferable_ptr ptr0_2 {*ptr0};
     ptr0_2.nullify();
     REQUIRE(!ptr0_2);
 
@@ -111,16 +111,16 @@ TEST_CASE("Vertex")
 
   SECTION("connection and position relaxation")
   {
-    cartdg::Vertex::Transferable_ptr vert0 {{0., 0., 0.}};
-    cartdg::Vertex::Transferable_ptr vert1 {{2., 0., 0.}};
-    cartdg::Vertex::Transferable_ptr vert2 {{0., 2., 0.}};
-    cartdg::Vertex::connect(*vert0, *vert1);
-    cartdg::Vertex::connect(*vert2, *vert0);
+    hexed::Vertex::Transferable_ptr vert0 {{0., 0., 0.}};
+    hexed::Vertex::Transferable_ptr vert1 {{2., 0., 0.}};
+    hexed::Vertex::Transferable_ptr vert2 {{0., 2., 0.}};
+    hexed::Vertex::connect(*vert0, *vert1);
+    hexed::Vertex::connect(*vert2, *vert0);
     // check neighbors are correct
-    REQUIRE( cartdg::Vertex::are_neighbors(*vert0, *vert1));
-    REQUIRE( cartdg::Vertex::are_neighbors(*vert1, *vert0));
-    REQUIRE(!cartdg::Vertex::are_neighbors(*vert1, *vert2));
-    REQUIRE(!cartdg::Vertex::are_neighbors(*vert2, *vert1));
+    REQUIRE( hexed::Vertex::are_neighbors(*vert0, *vert1));
+    REQUIRE( hexed::Vertex::are_neighbors(*vert1, *vert0));
+    REQUIRE(!hexed::Vertex::are_neighbors(*vert1, *vert2));
+    REQUIRE(!hexed::Vertex::are_neighbors(*vert2, *vert1));
 
     SECTION("calling once")
     {
@@ -148,13 +148,13 @@ TEST_CASE("Vertex")
 
     SECTION("eating and deleting")
     {
-      cartdg::Vertex::Transferable_ptr* temp = new cartdg::Vertex::Transferable_ptr {{-1., -1., -1.}};
-      cartdg::Vertex::connect(*vert0, **temp);
+      hexed::Vertex::Transferable_ptr* temp = new hexed::Vertex::Transferable_ptr {{-1., -1., -1.}};
+      hexed::Vertex::connect(*vert0, **temp);
       delete temp;
-      cartdg::Vertex::Transferable_ptr vert3 {{0., 0., 2.}};
-      cartdg::Vertex::Transferable_ptr vert4 {{-1., -1., 0.}};
-      cartdg::Vertex::connect(*vert3, *vert4);
-      cartdg::Vertex::connect(*vert3, *vert1);
+      hexed::Vertex::Transferable_ptr vert3 {{0., 0., 2.}};
+      hexed::Vertex::Transferable_ptr vert4 {{-1., -1., 0.}};
+      hexed::Vertex::connect(*vert3, *vert4);
+      hexed::Vertex::connect(*vert3, *vert1);
       vert0->eat(*vert3);
       vert0->mobile = true;
       vert0->calc_relax();
@@ -164,7 +164,7 @@ TEST_CASE("Vertex")
 
     SECTION("self-connection does nothing")
     {
-      cartdg::Vertex::connect(*vert0, *vert0);
+      hexed::Vertex::connect(*vert0, *vert0);
       vert0->calc_relax();
       vert0->apply_relax();
       REQUIRE(vert0->pos == std::array<double, 3>{.5, .5, 0.});
@@ -174,7 +174,7 @@ TEST_CASE("Vertex")
   SECTION("maximum viscosity")
   {
     ptr0->eat(*ptr1);
-    cartdg::Vertex::Transferable_ptr ptr2 = ptr0;
+    hexed::Vertex::Transferable_ptr ptr2 = ptr0;
     ptr0.shareable_value = 0.1;
     ptr1.shareable_value = 0.3;
     ptr2.shareable_value = 0.2;

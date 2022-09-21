@@ -1,9 +1,9 @@
-#ifndef CARTDG_DEFORMED_ELEMENT_HPP_
-#define CARTDG_DEFORMED_ELEMENT_HPP_
+#ifndef HEXED_DEFORMED_ELEMENT_HPP_
+#define HEXED_DEFORMED_ELEMENT_HPP_
 
 #include "Element.hpp"
 
-namespace cartdg
+namespace hexed
 {
 
 /*

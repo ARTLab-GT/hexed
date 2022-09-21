@@ -1,11 +1,11 @@
 #include <catch2/catch.hpp>
-#include <config.hpp>
-#include <Surface_rotation.hpp>
+#include <hexed/config.hpp>
+#include <hexed/Surface_rotation.hpp>
 
 TEST_CASE("Surface_rotation")
 {
   const int n_dim = 2;
-  const int row_size = std::min(7, cartdg::config::max_row_size);
+  const int row_size = std::min(7, hexed::config::max_row_size);
   const int n_qpoint = row_size;
   double state[(n_dim+2)*n_qpoint];
   double jacobian[n_dim*n_dim*n_qpoint];
@@ -22,7 +22,7 @@ TEST_CASE("Surface_rotation")
   for (int i_jac = 0; i_jac < n_dim*n_dim; ++i_jac) {
     jacobian[i_jac*n_qpoint + point1] = jacobian_point1[i_jac];
   }
-  auto surf_rot {cartdg::kernel_factory<cartdg::Surface_rotation>(n_dim, row_size, (double*)jacobian, 1)};
+  auto surf_rot {hexed::kernel_factory<hexed::Surface_rotation>(n_dim, row_size, (double*)jacobian, 1)};
 
   // test that the transformed normal component is correct and Jacobian determinant are correct
   surf_rot->to_surface(state);
