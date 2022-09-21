@@ -40,11 +40,6 @@ Hexed is not:
 * for arbitrary PDEs
 * for tri/tet grids
 
-Or as Shakespeare would put it:
->Double, `double` *Δh* and trouble;
->
->CPU burn and cauldron bubble.
-
 ## Some notes on the implementation
 Most of the performance critical code is placed in what I call "kernels".
 These are highly optimized functions that perform the basic operations of the DG method.
