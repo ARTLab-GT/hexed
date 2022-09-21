@@ -2,30 +2,30 @@
 
 ## Quick Start
 * Create and navigate to a build directory (git will ignore names that start with "build").
-* Use `ccmake` to configure build options. This project has been configured to show you the available options and their defaults specifically with
-  the `ccmake` interface for CMake.
-  * Ensure that your system can find Tecplot/TecIO header and library files. You may need to edit `CPLUS_INCLUDE_PATH`, `LIBRARY_PATH`, and `LD_LIBRARY_PATH`.
-    Much to my disappointment, TecIO does not cooperate with CMake, so this must be setup manually.
-  * Set `CMAKE_INSTALL_PREFIX` to the location where you want to install CartDG. Alas, there is no reasonable default for this,
-    because we do not have write permission above our respective home directories on ARTLAB machines.
-  * Otherwise, the default options should be appropriate for a release build.
+* Use `ccmake` to configure build options.
+  This project has been configured to show you the available options and their defaults specifically with the `ccmake` interface for CMake.
+  * The default options should be appropriate for a release build.
+  * Note that `CMAKE_INSTALL_PREFIX` defaults to `~/.local` instead of `/usr/local`, so that it can be installed on the lab machines without root access.
+* Ensure that your system can find Tecplot/TecIO header and library files. You may need to edit `CPLUS_INCLUDE_PATH`, `LIBRARY_PATH`, and `LD_LIBRARY_PATH`.
+  Much to my disappointment, TecIO does not cooperate with CMake, so this must be setup manually.
 * `make -j install`
-* CartDG is now ready to use. To verify the success of the build, execute the following:
-  * `test/test`. This will execute the unit tests.
-  * `python3 benchmark.py`. This will execute the performance benchmarking script.
-  * `demo/demo`. This will run a very simple toy problem and output visualization files in a directory called `simulation`.
-    To create a prettier version of the visualization files, execute `cartdg-post-process simulation/`.
+* Hexed is now ready to use. To verify the success of the build, execute the following:
+  * `test/unit` to run the unit tests.
+  * This will execute the performance benchmarking script.
+  * `demo/demo2d`. This will run a very simple toy problem and output tecplot visualization files.
+    To create a prettier version of the visualization, execute `hexed-post-process ".*szplt"` and use Tecplot to view the file `all.lay`.
 
 ## Detailed instructions
 This section is provided in case you need more information than the Quick Start section includes. It assumes you have access to an ARTLAB
 machine and are familiar with basic directory and file management in Linux. If you have more than that, it is assumed that you can adapt these
 instructions to suit your environment. If you have less than that, consider asking for help. If you have any trouble following these instructions,
-please discuss it so that this documentation can be improved.
+please let Micaiah know so that this documentation can be improved.
 
-### 1. Create install directory.
-You need somewhere to install libraries so that your other codes can find them. On a system where you have
-superuser privileges, you can use `/usr/local`. However, on the ARTLAB machines, we can only write within our home directory, so we need
-to create our own install directory. If you already have one set up, you can use that. Otherwise, follow these instructions to create one:
+### 1. Configure environment
+When you compile and install programs that rely on other programs,
+your system uses so-called *environment variables* to remember where all the different programs are kept.
+It is common to install programs you compile in `/usr/local`.
+However, this requires superuser privileges, which we do not 
 * `cd`
 * `mkdir codes`
 * We need to tell the shell to look for libraries in `~/codes`. We do this by editing the file `~/.bashrc`. First,
@@ -33,13 +33,14 @@ to create our own install directory. If you already have one set up, you can use
   * `cp .bashrc .bashrc_backup`
 
   Now edit `.bashrc` and add the following lines at the end:
-  * `export PATH=$PATH:~/codes/bin`
-  * `TECPLOT_DIR=/opt/local/tecplot/360ex`
+  ```bash
+  TECPLOT_DIR=/opt/local/tecplot/360ex
+  TECPLOT_LIB_PATH=$TECPLOT_DIR/bin/
+  export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:$TECPLOT_DIR/include/
+  export LIBRARY_PATH=$LIBRARY_PATH:$TECPLOT_LIB_PATH
+  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$TECPLOT_LIB_PATH
+  ```
     * If you are not on an ARTLAB machine, ensure that you have Tecplot installed and change this path to match your Tecplot installation.
-  * `TECPLOT_LIB_PATH=$TECPLOT_DIR/bin/`
-  * `export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:~/codes/include/:$TECPLOT_DIR/include/`
-  * `export LIBRARY_PATH=$LIBRARY_PATH:$TECPLOT_LIB_PATH`
-  * `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$TECPLOT_LIB_PATH`
 * Close and reopen the terminal.
 
 ### 2. Install Python libraries
