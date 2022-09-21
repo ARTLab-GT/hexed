@@ -1,7 +1,7 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.16)
 
 project(hexed VERSION 0.0
-        DESCRIPTION "Discontinuous Galerkin numerics for CFD on a Cartesian grid"
+        DESCRIPTION "Discontinuous Galerkin engine for CFD with automated, unstructured quad/hex meshing."
         LANGUAGES CXX)
 
 # specify the C++ standard
