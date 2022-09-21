@@ -8,6 +8,7 @@ Deformed_element::Deformed_element(Storage_params params, std::vector<int> pos, 
   Element{params, pos, mesh_size, ref_level},
   n_qpoint{params.n_qpoint()},
   jac{n_dim*n_dim*n_qpoint},
+  jac_dat{(n_dim*n_dim + 1)*n_qpoint},
   node_adj{Eigen::VectorXd::Zero(n_qpoint/params.row_size*n_dim*2)}
 {
   for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) vertex(i_vert).mobile = true;
@@ -71,6 +72,22 @@ void Deformed_element::set_jacobian(const Basis& basis)
       jac_entry = custom_math::dimension_matvec(diff_mat, pos, j_dim)/nom_sz;
     }
   }
+  for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+    Eigen::MatrixXd qpoint_jac(n_dim, n_dim);
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+        qpoint_jac(i_dim, j_dim) = jac[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
+      }
+    }
+    jac_dat(n_dim*n_dim*n_qpoint + i_qpoint) = qpoint_jac.determinant();
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      Eigen::MatrixXd copy = qpoint_jac;
+      for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+        copy(Eigen::all, i_dim).setUnit(j_dim);
+        jac_dat((i_dim*n_dim + j_dim)*n_qpoint + i_qpoint) = copy.determinant();
+      }
+    }
+  }
   // set local TSS
   auto bound_mat = basis.boundary();
   Eigen::MatrixXd vertex_jacobian (params.n_vertices(), n_dim*n_dim);
@@ -95,9 +112,25 @@ double* Deformed_element::jacobian()
   return jac.data();
 }
 
+double* Deformed_element::jacobian_data()
+{
+  return jac_dat.data();
+}
+
 double Deformed_element::jacobian(int i_dim, int j_dim, int i_qpoint)
 {
-  return jac[(n_dim*i_dim + j_dim)*n_qpoint + i_qpoint];
+  Eigen::MatrixXd inv(n_dim, n_dim);
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+    for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+      inv(i_dim, j_dim) = jac_dat((i_dim*n_dim + j_dim)*n_qpoint + i_qpoint);
+    }
+  }
+  return inv.inverse()(i_dim, j_dim)*jac_dat(n_dim*n_dim*n_qpoint + i_qpoint);
+}
+
+double Deformed_element::jacobian_determinant(int i_qpoint)
+{
+  return jac_dat(n_dim*n_dim*n_qpoint + i_qpoint);
 }
 
 double* Deformed_element::node_adjustments()

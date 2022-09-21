@@ -108,17 +108,6 @@ double Element::jacobian(int i_dim, int j_dim, int i_qpoint)
   return (i_dim == j_dim) ? 1. : 0.;
 }
 
-double Element::jacobian_determinant(int i_qpoint)
-{
-  Eigen::MatrixXd jac_mat (n_dim, n_dim);
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-    for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-      jac_mat(i_dim, j_dim) = jacobian(i_dim, j_dim, i_qpoint);
-    }
-  }
-  return jac_mat.determinant();
-}
-
 void Element::push_shareable_value(vertex_value_access access_func)
 {
   for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {

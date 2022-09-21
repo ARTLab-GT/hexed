@@ -14,6 +14,7 @@ class Deformed_element : public Element
 {
   int n_qpoint;
   Eigen::VectorXd jac;
+  Eigen::VectorXd jac_dat;
   Eigen::VectorXd node_adj;
 
   public:
@@ -25,7 +26,9 @@ class Deformed_element : public Element
   void set_jacobian(const Basis& basis);
   // Pointer to jacobian data. Use this for performance-cricial applications.
   double* jacobian(); // Layout: [i_dim][j_dim][i_qpoint]
+  double* jacobian_data();
   virtual double jacobian(int i_dim, int j_dim, int i_qpoint);
+  virtual double jacobian_determinant(int i_qpoint);
   // No simple way to explain what this represents.
   virtual double* node_adjustments(); // Layout: [i_dim][is_positive][i_face_qpoint]
 };

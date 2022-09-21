@@ -76,7 +76,7 @@ class Element
    * convenience, not performance.
    */
   virtual double jacobian(int i_dim, int j_dim, int i_qpoint); // identity matrix
-  double jacobian_determinant(int i_qpoint); // returns 1.
+  virtual inline double jacobian_determinant(int i_qpoint) {return 1.;}
 
   inline Vertex& vertex(int i_vertex) { return *vertices[i_vertex]; }
   template <int i_dim> double& vertex_position(int i_vertex) {return vertices[i_vertex]->pos[i_dim];}
