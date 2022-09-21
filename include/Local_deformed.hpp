@@ -72,6 +72,7 @@ class Local_deformed : public Kernel<Deformed_element&>
                 row_n[j_dim][i_qpoint] = normals[(i_dim*n_dim + j_dim)*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
               }
             }
+
             // Calculate flux
             Eigen::Matrix<double, row_size, n_var> flux;
             for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
@@ -104,19 +105,14 @@ class Local_deformed : public Kernel<Deformed_element&>
               }
             }
 
+            // compute derivative
             Eigen::Matrix<double, row_size, n_var> row_w = -derivative(flux, boundary_values);
-
-            // fetch jacobian determinant
-            Eigen::Array<double, row_size, 1> row_det;
-            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-              row_det(i_qpoint) = determinant[i_outer*stride*row_size + i_inner + i_qpoint*stride];
-            }
 
             // Add dimensional component to update
             for (int i_var = 0; i_var < n_var; ++i_var) {
               for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
                 int offset = i_outer*stride*row_size + i_inner + i_qpoint*stride;
-                time_rate[i_var][offset] += row_w(i_qpoint, i_var)/row_det(i_qpoint);
+                time_rate[i_var][offset] += row_w(i_qpoint, i_var);
               }
             }
             ++i_face_qpoint;
@@ -128,7 +124,7 @@ class Local_deformed : public Kernel<Deformed_element&>
       for (int i_var = 0; i_var < n_var; ++i_var) {
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           const int i_dof = i_var*n_qpoint + i_qpoint;
-          double updated = time_rate[i_var][i_qpoint]*d_t_by_d_pos*tss[i_qpoint] + state[i_dof];
+          double updated = time_rate[i_var][i_qpoint]/determinant[i_qpoint]*d_t_by_d_pos*tss[i_qpoint] + state[i_dof];
           state[i_dof] = rkw*updated + (1. - rkw)*rk_reference[i_dof];
         }
       }
