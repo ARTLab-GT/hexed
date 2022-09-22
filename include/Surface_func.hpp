@@ -13,8 +13,7 @@ class Surface_func : virtual public Output_data
 {
   public:
   virtual ~Surface_func() = default;
-  // `normal` is surface normal vector pointing out of the surface (into the domain)
-  // (normal magnitude is arbitrary -- does not have to be unit)
+  // `normal` is surface unit normal vector pointing out of the surface (into the domain)
   virtual std::vector<double> operator()(std::vector<double> pos, double time,
                                          std::vector<double> state, std::vector<double> outward_normal) const = 0;
 };

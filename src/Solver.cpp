@@ -302,20 +302,18 @@ std::vector<double> Solver::integral_surface(const Surface_func& integrand, int 
         for (int i_var = 0; i_var < nv; ++i_var) {
           qpoint_state.push_back(state[i_var*nfq + i_qpoint]);
         }
-        Eigen::MatrixXd qpoint_jac (nd, nd);
-        for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          for (int j_dim = 0; j_dim < nd; ++j_dim) {
-            qpoint_jac(i_dim, j_dim) = jac[(i_dim*nd + j_dim)*nfq + i_qpoint];
-          }
-        }
-        Eigen::MatrixXd orth = custom_math::orthonormal(qpoint_jac, con.i_dim());
         std::vector<double> normal;
-        for (int i_dim = 0; i_dim < nd; ++i_dim) normal.push_back(-orth(i_dim, con.i_dim()));
+        double nrml_mag = 0;
+        for (int i_dim = 0; i_dim < nd; ++i_dim) {
+          double comp = -jac[i_dim*nfq + i_qpoint];
+          normal.push_back(comp);
+          nrml_mag += comp*comp;
+        }
+        nrml_mag = std::sqrt(nrml_mag);
+        for (int i_dim = 0; i_dim < nd; ++i_dim) normal[i_dim] /= nrml_mag;
         auto qpoint_integrand = integrand(qpoint_pos, status.flow_time, qpoint_state, normal);
-        qpoint_jac.col(con.i_dim()) = orth.col(con.i_dim());
-        double jac_det = std::abs(qpoint_jac.determinant());
         for (int i_var = 0; i_var < n_int; ++i_var) {
-          integral[i_var] += qpoint_integrand[i_var]*weights(i_qpoint)*area*jac_det;
+          integral[i_var] += qpoint_integrand[i_var]*weights(i_qpoint)*area*nrml_mag;
         }
       }
     }
