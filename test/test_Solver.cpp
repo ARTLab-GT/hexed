@@ -507,10 +507,9 @@ void test_conservation(Test_mesh& tm, std::string name)
   // update
   sol.update();
   status = sol.iteration_status();
-  // check that the computed update is approximately equal to the exact solution
+  auto state  = sol.integral_field(hexed::State_variables());
+  auto update = sol.integral_field(hexed::Physical_update());
   for (int i_var : {sol.storage_params().n_var - 2, sol.storage_params().n_var - 1}) {
-    auto state  = sol.integral_field(hexed::State_variables());
-    auto update = sol.integral_field(hexed::Physical_update());
     REQUIRE(update[i_var]/status.time_step == Approx(0.).scale(std::abs(state[i_var])));
   }
 }

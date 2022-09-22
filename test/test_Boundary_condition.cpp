@@ -71,8 +71,8 @@ TEST_CASE("Nonpenetration")
   hexed::Nonpenetration nonpen;
   hexed::Typed_bound_connection<hexed::Deformed_element> tbc {element, 0, true, 0};
   for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-    double qpoint_jacobian [] {1., 3., 0., 4.};
-    for (int i_jac = 0; i_jac < 4; ++i_jac) tbc.jacobian()[i_jac*row_size + i_qpoint] = qpoint_jacobian[i_jac];
+    double qpoint_nrml [] {-4., 3.};
+    for (int i_dim = 0; i_dim < 2; ++i_dim) tbc.jacobian()[i_dim*row_size + i_qpoint] = qpoint_nrml[i_dim];
     double state [] {1., 1., 1.2, 1e5/0.4 + 0.5*1.2*2.};
     for (int i_var = 0; i_var < 4; ++i_var) tbc.inside_face()[i_var*row_size + i_qpoint] = state[i_var];
   }
@@ -81,9 +81,9 @@ TEST_CASE("Nonpenetration")
     // require tangential momentum unchanged
     REQUIRE(  3*tbc.ghost_face()[0*row_size + i_qpoint]
             + 4*tbc.ghost_face()[1*row_size + i_qpoint] == Approx(7.));
+    // require normal momentum flipped
     REQUIRE( -4*tbc.ghost_face()[0*row_size + i_qpoint]
             + 3*tbc.ghost_face()[1*row_size + i_qpoint] == Approx(1.));
-    // require normal momentum flipped
   }
 }
 

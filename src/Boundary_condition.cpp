@@ -1,7 +1,6 @@
 #include <Boundary_condition.hpp>
 #include <math.hpp>
 #include <kernel_factory.hpp>
-#include <Surface_rotation.hpp>
 
 namespace hexed
 {
@@ -29,17 +28,22 @@ void Nonpenetration::apply(Boundary_face& bf)
   const int nq = params.n_qpoint()/params.row_size;
   double* gh_f = bf.ghost_face();
   double* in_f = bf.inside_face();
+  double* nrml = bf.jacobian_mat();
   for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = in_f[i_dof];
-  // rotate into surface-based coordinates
-  int i_dim = bf.i_dim();
-  auto surf_rot = hexed::kernel_factory<Surface_rotation>(params.n_dim, params.row_size, bf.jacobian_mat(), i_dim);
-  surf_rot->to_surface(gh_f);
   // reflect normal component of momentum
-  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-    gh_f[i_dim*nq + i_qpoint] *= -1;
+  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint)
+  {
+    double dot = 0.;
+    double norm_sq = 0.;
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+      double n = nrml[i_dim*nq + i_qpoint];
+      dot += gh_f[i_dim*nq + i_qpoint]*n;
+      norm_sq += n*n;
+    }
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+      gh_f[i_dim*nq + i_qpoint] -= 2*dot*nrml[i_dim*nq + i_qpoint]/norm_sq;
+    }
   }
-  // rotate back into universal coordinates
-  surf_rot->from_surface(gh_f);
 }
 
 
