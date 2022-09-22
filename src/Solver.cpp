@@ -86,104 +86,60 @@ void Solver::snap_faces()
 void Solver::calc_jacobian()
 {
   const int n_dim = params.n_dim;
-  const int n_jac = n_dim*n_dim;
   const int rs = basis.row_size;
   const int nfq = params.n_qpoint()/rs;
 
   // compute element jacobians
-  auto& elements = acc_mesh.deformed().elements();
+  auto& elements = acc_mesh.elements();
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     elements[i_elem].set_jacobian(basis);
   }
 
-  // compute Jacobian for deformed connections
+  /*
+   * compute surface normals for deformed connections
+   */
   auto& def_cons {acc_mesh.deformed().face_connections()};
   for (int i_con = 0; i_con < def_cons.size(); ++i_con) {
     double* jac = def_cons[i_con].jacobian();
-    for (int i_data = 0; i_data < n_jac*nfq; ++i_data) jac[i_data] = 0.;
+    for (int i_data = 0; i_data < n_dim*nfq; ++i_data) jac[i_data] = 0.;
   }
-  auto bound_mat = basis.boundary();
-  // compute 1 entry at a time
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-  {
-    for (int j_dim = 0; j_dim < n_dim; ++j_dim)
-    {
-      // compute the face jacobian of each element
-      for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
-      {
-        auto& elem = elements[i_elem];
-        Eigen::Map<Eigen::VectorXd> elem_jac (elem.jacobian() + (i_dim*n_dim + j_dim)*params.n_qpoint(), params.n_qpoint());
-        for (int k_dim = 0; k_dim < n_dim; ++k_dim) {
-          for (int i_side : {0, 1}) {
-            // use the element face storage to temporarily store one entry of the extrapolated jacobian
-            Eigen::Map<Eigen::VectorXd> face_jac (elem.face() + (2*k_dim + i_side)*params.n_var*nfq, nfq);
-            face_jac = custom_math::dimension_matvec(bound_mat.row(i_side), elem_jac, k_dim); // extrapolate jacobian to faces
-          }
-        }
-      }
-      // prolong Jacobian onto fine faces at hanging node connections
-      auto& ref_cons = acc_mesh.deformed().refined_connections();
-      // scale jacobian on refined faces with stretching
-      for (int i_ref = 0; i_ref < ref_cons.size(); ++i_ref) {
-        auto& ref = ref_cons[i_ref];
-        auto& rf = ref.refined_face;
-        int face_dim = ref.direction().i_dim[ref.order_reversed()];
-        // if the column of the jacobian currently being processed is one that needs to be stretched...
-        if ((j_dim != face_dim) && rf.stretch[(n_dim == 3) && (2*j_dim > 3 - face_dim)]) {
-          // double this component of the jacobian for the benefit of the fine faces
-          double* data = rf.coarse_face();
-          for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) data[i_qpoint] *= 2;
-        }
-      }
-      (*kernel_factory<Prolong_refined>(n_dim, rs, basis))(acc_mesh.deformed().refined_faces());
-      // for BCs, copy Jacobian to ghost face
-      auto& def_bc_cons = acc_mesh.deformed().boundary_connections();
-      for (int i_con = 0; i_con < def_bc_cons.size(); ++i_con) {
-        double* in_f = def_bc_cons[i_con].inside_face();
-        double* gh_f = def_bc_cons[i_con].ghost_face();
-        for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) gh_f[i_qpoint] = in_f[i_qpoint];
-      }
-      // compute the shared face jacobian
-      for (int i_con = 0; i_con < def_cons.size(); ++i_con)
-      {
-        auto& con = def_cons[i_con];
-        double* shared_jac = con.jacobian();
-        double* elem_jac [2];
-        int normal_sign [2]; // record any sign change due to normal flipping
-        auto dir = con.direction();
-        for (int i_side : {0, 1}) {
-          elem_jac[i_side] = con.face(i_side);
-          normal_sign[i_side] = ((j_dim == dir.i_dim[i_side]) && (dir.flip_normal(i_side))) ? -1 : 1;
-        }
-        // permute face 1 so that quadrature points match up
-        (*kernel_factory<Face_permutation>(n_dim, rs, dir, elem_jac[1])).match_faces();
-        for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-          // take average of element face jacobians with appropriate axis permutations
-          int col = j_dim;
-          int tangential_sign = 1;
-          // swap dimension `dir.i_dim[0]` and dimension `dir.i_dim[1]`
-          if (j_dim == dir.i_dim[1]) {
-            col = dir.i_dim[0];
-          }
-          if (j_dim == dir.i_dim[0]) {
-            col = dir.i_dim[1];
-            if (dir.flip_tangential()) tangential_sign = -1;
-          }
-          shared_jac[(i_dim*n_dim + j_dim)*nfq + i_qpoint] += 0.5*normal_sign[0]*elem_jac[0][i_qpoint];
-          shared_jac[(i_dim*n_dim + col)*nfq + i_qpoint] += 0.5*normal_sign[1]*tangential_sign*elem_jac[1][i_qpoint];
-        }
-      }
+  // for deformed refined faces, set normal to fine face normal (for Cartesian, setting normal is not necessary)
+  auto& ref_cons = acc_mesh.deformed().refined_connections();
+  for (int i_ref = 0; i_ref < ref_cons.size(); ++i_ref) {
+    auto& ref = ref_cons[i_ref];
+    bool rev = ref.order_reversed();
+    auto dir = ref.direction();
+    int sign = 1 - 2*(dir.flip_normal(0) != dir.flip_normal(1));
+    for (int i_fine = 0; i_fine < ref.n_fine_elements(); ++i_fine) {
+      auto& fine = ref.connection(i_fine);
+      double* face [2] {fine.face(rev), fine.face(!rev)};
+      auto fp = kernel_factory<Face_permutation>(n_dim, rs, dir, face[1]);
+      fp->match_faces();
+      for (int i_data = 0; i_data < n_dim*nfq; ++i_data) face[0][i_data] = sign*face[1][i_data];
+      fp->restore();
     }
   }
-
-  // set Jacobian of Cartesian boundary connections to identity
-  auto& bc_cons {acc_mesh.cartesian().boundary_connections()};
+  // for BCs, copy normal to ghost face
+  auto& bc_cons = acc_mesh.boundary_connections();
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    double* jac = bc_cons[i_con].jacobian();
-    for (int i_jac = 0; i_jac < n_jac; ++i_jac) {
-      int sign = ((i_jac%params.n_dim == bc_cons[i_con].i_dim()) && !bc_cons[i_con].inside_face_sign()) ? -1 : 1;
-      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-        jac[i_jac*nfq + i_qpoint] = sign*(i_jac/params.n_dim == i_jac%params.n_dim); // 1 if row == col else 0
+    double* in_f = bc_cons[i_con].inside_face();
+    double* gh_f = bc_cons[i_con].ghost_face();
+    for (int i_data = 0; i_data < n_dim*nfq; ++i_data) gh_f[i_data] = in_f[i_data];
+  }
+  // compute the shared face normal
+  for (int i_con = 0; i_con < def_cons.size(); ++i_con)
+  {
+    auto& con = def_cons[i_con];
+    double* shared_jac = con.jacobian();
+    double* elem_jac [2] {con.face(0), con.face(1)};
+    auto dir = con.direction();
+    // permute face 1 so that quadrature points match up
+    (*kernel_factory<Face_permutation>(n_dim, rs, dir, elem_jac[1])).match_faces();
+    // take average of element face normals with appropriate flipping
+    for (int i_side : {0, 1}) {
+      int sign = 1 - 2*dir.flip_normal(i_side);
+      for (int i_data = 0; i_data < n_dim*nfq; ++i_data) {
+        shared_jac[i_data] += 0.5*sign*elem_jac[i_side][i_data];
       }
     }
   }

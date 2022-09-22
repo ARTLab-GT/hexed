@@ -39,25 +39,7 @@ class Neighbor_deformed : public Kernel<Face_connection<Deformed_element>&>
       for (int i_side : {0, 1}) {
         elem_face[i_side] = con.face(i_side);
       }
-      const int i_dim = dir.i_dim[0]; // which dimension is the face normal in face coords
       Face_permutation<n_dim, row_size> permutation(dir, face + face_size);
-
-      // compute surface normals
-      double normals [n_dim][n_face_qpoint];
-      for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
-        Eigen::Matrix<double, n_dim, n_dim> jac;
-        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-          for (int k_dim = 0; k_dim < n_dim; ++k_dim) {
-            jac(j_dim, k_dim) = jacobian[(j_dim*n_dim + k_dim)*n_face_qpoint + i_qpoint];
-          }
-        }
-        auto orthonormal = custom_math::orthonormal(jac, i_dim);
-        jac.col(i_dim) = orthonormal.col(i_dim);
-        double jac_det = std::abs(jac.determinant()); // `abs` since surface coordinates not guaranteed to be right-hand
-        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-          normals[j_dim][i_qpoint] = orthonormal(j_dim, i_dim)*jac_det;
-        }
-      }
 
       // fetch face state from element storage
       for (int i_side : {0, 1}) {
@@ -68,7 +50,7 @@ class Neighbor_deformed : public Kernel<Face_connection<Deformed_element>&>
 
       // compute upwind flux
       permutation.match_faces();
-      hll<n_dim, n_face_qpoint>(face, normals[0], heat_rat);
+      hll<n_dim, n_face_qpoint>(face, jacobian, heat_rat);
       permutation.restore();
 
       // flip normal
