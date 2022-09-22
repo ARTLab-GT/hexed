@@ -130,4 +130,17 @@ TEST_CASE("Element")
     REQUIRE(elem3.face_position(basis, 4, 7)[1] == Approx(.5));
     REQUIRE(elem3.face_position(basis, 4, 7)[2] == Approx(0.));
   }
+
+  SECTION("writing jacobian to faces")
+  {
+    hexed::Equidistant basis(6);
+    element.set_jacobian(basis);
+    REQUIRE(element.face()[0] == Approx(1.));
+    REQUIRE(element.face()[1] == Approx(1.));
+    REQUIRE(element.face()[36] == Approx(0.));
+    REQUIRE(element.face()[5*36] == Approx(1.));
+    REQUIRE(element.face()[2*5*36] == Approx(0.));
+    REQUIRE(element.face()[(2*5 + 1)*36] == Approx(1.));
+    REQUIRE(element.face()[(2*5 + 2)*36] == Approx(0.));
+  }
 }

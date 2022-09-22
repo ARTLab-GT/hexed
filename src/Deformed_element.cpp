@@ -88,6 +88,30 @@ void Deformed_element::set_jacobian(const Basis& basis)
       }
     }
   }
+  // write surface normals to faces
+  int nfq = n_qpoint/params.row_size;
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+    for (int sign = 0; sign < 2; ++sign) {
+      Eigen::MatrixXd bound_mat = basis.boundary()(sign, Eigen::all);
+      double* face_data = face() + (2*i_dim + sign)*params.n_var*nfq;
+      Eigen::MatrixXd face_jac(nfq, n_dim*n_dim);
+      for (int i_jac = 0; i_jac < n_dim*n_dim; ++i_jac) {
+        face_jac(Eigen::all, i_jac) = custom_math::dimension_matvec(bound_mat, jac(Eigen::seqN(i_jac*n_qpoint, n_qpoint)), i_dim);
+      }
+      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+        Eigen::MatrixXd qpoint_jac(n_dim, n_dim);
+        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+          for (int k_dim = 0; k_dim < n_dim; ++k_dim) {
+            qpoint_jac(j_dim, k_dim) = face_jac(i_qpoint, j_dim*n_dim + k_dim);
+          }
+        }
+        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+          qpoint_jac(Eigen::all, i_dim).setUnit(j_dim);
+          face_data[j_dim*nfq + i_qpoint] = qpoint_jac.determinant();
+        }
+      }
+    }
+  }
   // set local TSS
   auto bound_mat = basis.boundary();
   Eigen::MatrixXd vertex_jacobian (params.n_vertices(), n_dim*n_dim);

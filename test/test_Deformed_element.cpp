@@ -127,6 +127,11 @@ TEST_CASE("Deformed_element")
     REQUIRE(elem1.jacobian(0, 1, 5) == Approx(0.));
     REQUIRE(elem1.jacobian(1, 0, 5) == Approx(0.));
     REQUIRE(elem1.jacobian(1, 1, 5) == Approx(0.9));
+    // surface normal is written to face data
+    REQUIRE(elem0.face()[0] == Approx(1.));
+    REQUIRE(elem0.face()[row_size] == Approx(0.));
+    REQUIRE(elem0.face()[3*4*row_size + 2] == Approx(.2));
+    REQUIRE(elem0.face()[(3*4 + 1)*row_size + 2] == Approx(.8));
     // check time step scale
     REQUIRE(elem0.vertex_time_step_scale(0) == 1.);
     REQUIRE(elem0.vertex_time_step_scale(3) == Approx((.8*.8 - .2*.2)/std::sqrt(.8*.8 + .2*.2)));

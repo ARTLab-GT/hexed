@@ -58,6 +58,7 @@ class Element
   virtual std::vector<double> position(const Basis&, int i_qpoint); // note: ignores vertex positions
   // obtains face position based on interior qpoint positions (as defined by `position()`)
   std::vector<double> face_position(const Basis&, int i_face, int i_face_qpoint);
+  virtual void set_jacobian(const Basis& basis);
   inline double nominal_size() {return nom_sz;}
   inline int refinement_level() {return r_level;}
   inline std::vector<int> nominal_position() {return nom_pos;}
