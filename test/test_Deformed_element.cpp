@@ -127,10 +127,9 @@ TEST_CASE("Deformed_element")
     REQUIRE(elem1.jacobian(0, 1, 5) == Approx(0.));
     REQUIRE(elem1.jacobian(1, 0, 5) == Approx(0.));
     REQUIRE(elem1.jacobian(1, 1, 5) == Approx(0.9));
-    // time step is correct
-    // At corner 3, diagonal is locally scaled by 1 - 2*(1 - 0.8) = 0.6 = (min singular value)
+    // check time step scale
     REQUIRE(elem0.vertex_time_step_scale(0) == 1.);
-    REQUIRE(elem0.vertex_time_step_scale(3) == Approx(0.6));
+    REQUIRE(elem0.vertex_time_step_scale(3) == Approx((.8*.8 - .2*.2)/std::sqrt(.8*.8 + .2*.2)));
 
     hexed::Storage_params params3 {2, 5, 3, row_size};
     hexed::Deformed_element elem2 {params3, {0, 0, 0}, 0.2};

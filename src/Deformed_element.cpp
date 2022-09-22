@@ -96,14 +96,16 @@ void Deformed_element::set_jacobian(const Basis& basis)
     vertex_jacobian.col(i_jac) = custom_math::hypercube_matvec(bound_mat, jac.segment(i_jac*params.n_qpoint(), n_qpoint));
   }
   for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-    Eigen::MatrixXd vert_jac (n_dim, n_dim);
+    Eigen::MatrixXd vert_jac(n_dim, n_dim);
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-      for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-        vert_jac(i_dim, j_dim) = vertex_jacobian(i_vert, i_dim*n_dim + j_dim);
-      }
+      vert_jac(i_dim, Eigen::all) = vertex_jacobian(i_vert, Eigen::seqN(i_dim*n_dim, n_dim));
     }
-    double min_sv = vert_jac.jacobiSvd().singularValues()(n_dim - 1);
-    vertex_time_step_scale(i_vert) = min_sv/custom_math::pow(2, r_level);
+    Eigen::MatrixXd inv = vert_jac.inverse();
+    double norm_sum = 0.;
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      norm_sum += inv(Eigen::all, i_dim).norm();
+    }
+    vertex_time_step_scale(i_vert) = n_dim/norm_sum/custom_math::pow(2, r_level);
   }
 }
 
