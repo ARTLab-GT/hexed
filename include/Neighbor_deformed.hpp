@@ -6,7 +6,6 @@
 #include "kernel_factory.hpp"
 #include "math.hpp"
 #include "hll.hpp"
-#include "Surface_rotation.hpp"
 #include "Face_permutation.hpp"
 
 namespace hexed
@@ -41,8 +40,24 @@ class Neighbor_deformed : public Kernel<Face_connection<Deformed_element>&>
         elem_face[i_side] = con.face(i_side);
       }
       const int i_dim = dir.i_dim[0]; // which dimension is the face normal in face coords
-      Surface_rotation<n_dim, row_size> rotation {jacobian, i_dim};
       Face_permutation<n_dim, row_size> permutation(dir, face + face_size);
+
+      // compute surface normals
+      double normals [n_dim][n_face_qpoint];
+      for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
+        Eigen::Matrix<double, n_dim, n_dim> jac;
+        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+          for (int k_dim = 0; k_dim < n_dim; ++k_dim) {
+            jac(j_dim, k_dim) = jacobian[(j_dim*n_dim + k_dim)*n_face_qpoint + i_qpoint];
+          }
+        }
+        auto orthonormal = custom_math::orthonormal(jac, i_dim);
+        jac.col(i_dim) = orthonormal.col(i_dim);
+        double jac_det = std::abs(jac.determinant()); // `abs` since surface coordinates not guaranteed to be right-hand
+        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+          normals[j_dim][i_qpoint] = orthonormal(j_dim, i_dim)*jac_det;
+        }
+      }
 
       // fetch face state from element storage
       for (int i_side : {0, 1}) {
@@ -50,27 +65,13 @@ class Neighbor_deformed : public Kernel<Face_connection<Deformed_element>&>
           face[i_side*face_size + i_face_dof] = elem_face[i_side][i_face_dof];
         }
       }
-      permutation.match_faces();
-      // rotate momentum into surface coordinates
-      for (int i_side : {0, 1}) {
-        rotation.to_surface(face + i_side*face_size);
-      }
 
       // compute upwind flux
-      hll<n_dim, n_face_qpoint>(face, i_dim, heat_rat);
-
-      // rotate momentum back into physical coordinates
-      for (int i_side : {0, 1}) {
-        rotation.from_surface(face + i_side*face_size);
-      }
-      // multiply flux by Jacobian determinant. `2*i_var` to cover both sides
-      for (int i_var = 0; i_var < 2*n_var; ++i_var) {
-        for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
-          face[i_var*n_face_qpoint + i_qpoint] *= rotation.jacobian_determinant(i_qpoint);
-        }
-      }
+      permutation.match_faces();
+      hll<n_dim, n_face_qpoint>(face, normals[0], heat_rat);
       permutation.restore();
-      // re-flip normal
+
+      // flip normal
       for (int i_side : {0, 1}) {
         if (dir.flip_normal(i_side)) {
           for (int i_var = 0; i_var < n_var; ++i_var) {
