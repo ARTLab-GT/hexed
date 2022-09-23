@@ -12,9 +12,11 @@ TEST_CASE("Deformed_element")
   hexed::Storage_params params {2, 2, 2, 4};
   hexed::Deformed_element element {params};
 
-  // test that accessing the elements doesn't segfault
-  element.jacobian_data()[0] = 0.;
-  element.jacobian_data()[5*16 - 1] = 0.;
+  // test that accessing the data doesn't segfault
+  element.reference_level_normals()[0] = 0.;
+  element.reference_level_normals()[4*16 - 1] = 0.;
+  element.jacobian_determinant()[0] = 0.;
+  element.jacobian_determinant()[16 - 1] = 0.;
 
   for (int i_adj = 0; i_adj < 16; ++i_adj) {
     REQUIRE(element.node_adjustments()[i_adj] == 0.);

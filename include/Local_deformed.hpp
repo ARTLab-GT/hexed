@@ -47,8 +47,8 @@ class Local_deformed : public Kernel<Deformed_element&>
       double* state  = elem.stage(0);
       double* rk_reference = state + n_var*n_qpoint;
       double time_rate [n_var][n_qpoint] {};
-      double* normals = elem.jacobian_data();
-      double* determinant = normals + n_dim*n_dim*n_qpoint;
+      double* normals = elem.reference_level_normals();
+      double* determinant = elem.jacobian_determinant();
       double* face = elem.face();
       double* tss = elem.time_step_scale();
       const double d_t_by_d_pos = dt/elem.nominal_size();

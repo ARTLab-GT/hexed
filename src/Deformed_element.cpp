@@ -7,7 +7,6 @@ namespace hexed
 Deformed_element::Deformed_element(Storage_params params, std::vector<int> pos, double mesh_size, int ref_level) :
   Element{params, pos, mesh_size, ref_level},
   n_qpoint{params.n_qpoint()},
-  jac{n_dim*n_dim*n_qpoint},
   jac_dat{(n_dim*n_dim + 1)*n_qpoint},
   node_adj{Eigen::VectorXd::Zero(n_qpoint/params.row_size*n_dim*2)}
 {
@@ -61,9 +60,10 @@ std::vector<double> Deformed_element::position(const Basis& basis, int i_qpoint)
 
 void Deformed_element::set_jacobian(const Basis& basis)
 {
-  // set Jacobian
   auto diff_mat = basis.diff_mat();
   const int n_qpoint = params.n_qpoint();
+  // compute jacobian
+  Eigen::VectorXd jac(n_dim*n_dim*n_qpoint);;
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     Eigen::VectorXd pos (n_qpoint);
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) pos(i_qpoint) = position(basis, i_qpoint)[i_dim];
@@ -72,11 +72,12 @@ void Deformed_element::set_jacobian(const Basis& basis)
       jac_entry = custom_math::dimension_matvec(diff_mat, pos, j_dim)/nom_sz;
     }
   }
+  // compute interior normals
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
     Eigen::MatrixXd qpoint_jac(n_dim, n_dim);
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
       for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-        qpoint_jac(i_dim, j_dim) = jac[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
+        qpoint_jac(i_dim, j_dim) = jac((i_dim*n_dim + j_dim)*n_qpoint + i_qpoint);
       }
     }
     jac_dat(n_dim*n_dim*n_qpoint + i_qpoint) = qpoint_jac.determinant();
@@ -133,14 +134,14 @@ void Deformed_element::set_jacobian(const Basis& basis)
   }
 }
 
-double* Deformed_element::jacobian()
-{
-  return jac.data();
-}
-
-double* Deformed_element::jacobian_data()
+double* Deformed_element::reference_level_normals()
 {
   return jac_dat.data();
+}
+
+double* Deformed_element::jacobian_determinant()
+{
+  return jac_dat.data() + n_dim*n_dim*n_qpoint;
 }
 
 double Deformed_element::jacobian(int i_dim, int j_dim, int i_qpoint)
