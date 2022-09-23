@@ -58,6 +58,7 @@ class Element
   virtual std::vector<double> position(const Basis&, int i_qpoint); // note: ignores vertex positions
   // obtains face position based on interior qpoint positions (as defined by `position()`)
   std::vector<double> face_position(const Basis&, int i_face, int i_face_qpoint);
+  virtual void set_jacobian(const Basis& basis);
   inline double nominal_size() {return nom_sz;}
   inline int refinement_level() {return r_level;}
   inline std::vector<int> nominal_position() {return nom_pos;}
@@ -76,7 +77,7 @@ class Element
    * convenience, not performance.
    */
   virtual double jacobian(int i_dim, int j_dim, int i_qpoint); // identity matrix
-  double jacobian_determinant(int i_qpoint); // returns 1.
+  virtual inline double jacobian_determinant(int i_qpoint) {return 1.;}
 
   inline Vertex& vertex(int i_vertex) { return *vertices[i_vertex]; }
   template <int i_dim> double& vertex_position(int i_vertex) {return vertices[i_vertex]->pos[i_dim];}

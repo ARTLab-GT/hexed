@@ -7,7 +7,7 @@ namespace hexed
 Deformed_element::Deformed_element(Storage_params params, std::vector<int> pos, double mesh_size, int ref_level) :
   Element{params, pos, mesh_size, ref_level},
   n_qpoint{params.n_qpoint()},
-  jac{n_dim*n_dim*n_qpoint},
+  jac_dat{(n_dim*n_dim + 1)*n_qpoint},
   node_adj{Eigen::VectorXd::Zero(n_qpoint/params.row_size*n_dim*2)}
 {
   for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) vertex(i_vert).mobile = true;
@@ -60,15 +60,57 @@ std::vector<double> Deformed_element::position(const Basis& basis, int i_qpoint)
 
 void Deformed_element::set_jacobian(const Basis& basis)
 {
-  // set Jacobian
   auto diff_mat = basis.diff_mat();
   const int n_qpoint = params.n_qpoint();
+  // compute jacobian
+  Eigen::VectorXd jac(n_dim*n_dim*n_qpoint);;
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     Eigen::VectorXd pos (n_qpoint);
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) pos(i_qpoint) = position(basis, i_qpoint)[i_dim];
     for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
       auto jac_entry {jac.segment((i_dim*n_dim + j_dim)*n_qpoint, n_qpoint)};
       jac_entry = custom_math::dimension_matvec(diff_mat, pos, j_dim)/nom_sz;
+    }
+  }
+  // compute interior normals
+  for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+    Eigen::MatrixXd qpoint_jac(n_dim, n_dim);
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+        qpoint_jac(i_dim, j_dim) = jac((i_dim*n_dim + j_dim)*n_qpoint + i_qpoint);
+      }
+    }
+    jac_dat(n_dim*n_dim*n_qpoint + i_qpoint) = qpoint_jac.determinant();
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      Eigen::MatrixXd copy = qpoint_jac;
+      for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+        copy(Eigen::all, i_dim).setUnit(j_dim);
+        jac_dat((i_dim*n_dim + j_dim)*n_qpoint + i_qpoint) = copy.determinant();
+      }
+    }
+  }
+  // write surface normals to faces
+  int nfq = n_qpoint/params.row_size;
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+    for (int sign = 0; sign < 2; ++sign) {
+      Eigen::MatrixXd bound_mat = basis.boundary()(sign, Eigen::all);
+      double* face_data = face() + (2*i_dim + sign)*params.n_var*nfq;
+      Eigen::MatrixXd face_jac(nfq, n_dim*n_dim);
+      for (int i_jac = 0; i_jac < n_dim*n_dim; ++i_jac) {
+        face_jac(Eigen::all, i_jac) = custom_math::dimension_matvec(bound_mat, jac(Eigen::seqN(i_jac*n_qpoint, n_qpoint)), i_dim);
+      }
+      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+        Eigen::MatrixXd qpoint_jac(n_dim, n_dim);
+        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+          for (int k_dim = 0; k_dim < n_dim; ++k_dim) {
+            qpoint_jac(j_dim, k_dim) = face_jac(i_qpoint, j_dim*n_dim + k_dim);
+          }
+        }
+        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+          qpoint_jac(Eigen::all, i_dim).setUnit(j_dim);
+          face_data[j_dim*nfq + i_qpoint] = qpoint_jac.determinant();
+        }
+      }
     }
   }
   // set local TSS
@@ -79,25 +121,43 @@ void Deformed_element::set_jacobian(const Basis& basis)
     vertex_jacobian.col(i_jac) = custom_math::hypercube_matvec(bound_mat, jac.segment(i_jac*params.n_qpoint(), n_qpoint));
   }
   for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-    Eigen::MatrixXd vert_jac (n_dim, n_dim);
+    Eigen::MatrixXd vert_jac(n_dim, n_dim);
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-      for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-        vert_jac(i_dim, j_dim) = vertex_jacobian(i_vert, i_dim*n_dim + j_dim);
-      }
+      vert_jac(i_dim, Eigen::all) = vertex_jacobian(i_vert, Eigen::seqN(i_dim*n_dim, n_dim));
     }
-    double min_sv = vert_jac.jacobiSvd().singularValues()(n_dim - 1);
-    vertex_time_step_scale(i_vert) = min_sv/custom_math::pow(2, r_level);
+    Eigen::MatrixXd inv = vert_jac.inverse();
+    double norm_sum = 0.;
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      norm_sum += inv(Eigen::all, i_dim).norm();
+    }
+    vertex_time_step_scale(i_vert) = n_dim/norm_sum/custom_math::pow(2, r_level);
   }
 }
 
-double* Deformed_element::jacobian()
+double* Deformed_element::reference_level_normals()
 {
-  return jac.data();
+  return jac_dat.data();
+}
+
+double* Deformed_element::jacobian_determinant()
+{
+  return jac_dat.data() + n_dim*n_dim*n_qpoint;
 }
 
 double Deformed_element::jacobian(int i_dim, int j_dim, int i_qpoint)
 {
-  return jac[(n_dim*i_dim + j_dim)*n_qpoint + i_qpoint];
+  Eigen::MatrixXd inv(n_dim, n_dim);
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+    for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+      inv(i_dim, j_dim) = jac_dat((i_dim*n_dim + j_dim)*n_qpoint + i_qpoint);
+    }
+  }
+  return inv.inverse()(i_dim, j_dim)*jac_dat(n_dim*n_dim*n_qpoint + i_qpoint);
+}
+
+double Deformed_element::jacobian_determinant(int i_qpoint)
+{
+  return jac_dat(n_dim*n_dim*n_qpoint + i_qpoint);
 }
 
 double* Deformed_element::node_adjustments()

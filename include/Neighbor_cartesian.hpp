@@ -27,6 +27,16 @@ class Neighbor_cartesian : public Kernel<Face_connection<Element>&>
     constexpr int n_var = n_dim + 2;
     constexpr int n_face_qpoint = custom_math::pow(row_size, n_dim - 1);
     constexpr int face_size = n_face_qpoint*n_var;
+    // all possible face normals we might need to be used in the hll flux
+    double normal [n_dim][n_dim][n_face_qpoint];
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+        for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
+          normal[i_dim][j_dim][i_qpoint] = i_dim == j_dim;
+        }
+      }
+    }
+
     #pragma omp parallel for
     for (int i_con = 0; i_con < connections.size(); ++i_con)
     {
@@ -39,7 +49,7 @@ class Neighbor_cartesian : public Kernel<Face_connection<Element>&>
           face[i_side*face_size + i_face_dof] = con_face[i_face_dof];
         }
       }
-      hll<n_dim, n_face_qpoint>(face, i_dim, heat_rat);
+      hll<n_dim, n_face_qpoint>(face, normal[i_dim][0], heat_rat);
       for (int i_side : {0, 1}) {
         double* con_face = con.face(i_side);
         for (int i_face_dof = 0; i_face_dof < face_size; ++i_face_dof) {

@@ -13,7 +13,9 @@ namespace hexed
 class Deformed_element : public Element
 {
   int n_qpoint;
-  Eigen::VectorXd jac;
+  // jacobian data (first `n_dim*n_dim*n_qpoints` are `reference_level_normals`
+  // and rest is `jacobian_determinat`)
+  Eigen::VectorXd jac_dat;
   Eigen::VectorXd node_adj;
 
   public:
@@ -22,11 +24,23 @@ class Deformed_element : public Element
   Deformed_element(Storage_params, std::vector<int> pos = {}, double mesh_size = 1., int ref_level = 0);
   virtual std::vector<double> position(const Basis&, int i_qpoint);
   // sets the Jacobian based on the current vertex locations and face node adjustments
-  void set_jacobian(const Basis& basis);
-  // Pointer to jacobian data. Use this for performance-cricial applications.
-  double* jacobian(); // Layout: [i_dim][j_dim][i_qpoint]
+  virtual void set_jacobian(const Basis& basis);
+
+  /* the `j_dim`th component (in physical space) of the normal vector of the level surface
+   * of the `i_dim`th reference coordinate which passes through the `i_qpoint`th quadrature point.
+   * the magnitude of the normal vector is weighted by the surface area in physical space.
+   * equivalent definition (note `i_dim`, `j_dim` transposed):
+   * $$ J^{-1}_{j_dim, i_dim} |J| $$
+   * where is jacobian of transformation from reference to physical coordinates at `i_qpoint`th quadrature point.
+   * layout: [i_dim][j_dim][i_qpoint]
+   */
+  double* reference_level_normals();
+  // jacobian determinant data
+  double* jacobian_determinant();
+
   virtual double jacobian(int i_dim, int j_dim, int i_qpoint);
-  // No simple way to explain what this represents.
+  virtual double jacobian_determinant(int i_qpoint);
+  // represents adjustments to face quadrature points to fit surfaces (details are complicated)
   virtual double* node_adjustments(); // Layout: [i_dim][is_positive][i_face_qpoint]
 };
 

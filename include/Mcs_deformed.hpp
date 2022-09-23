@@ -33,17 +33,21 @@ class Mcs_deformed : public Kernel<Deformed_element&, double>
       Deformed_element& elem {elements[i_elem]};
       // account for jacobian and time step scale
       double* tss = elem.time_step_scale();
-      double* jac_data = elem.jacobian();
+      double* ref_nrml = elem.reference_level_normals();
+      double* jac_det = elem.jacobian_determinant();
       double min_scale = std::numeric_limits<double>::max();
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-        Eigen::Matrix<double, n_dim, n_dim> jac_mat;
+        double norm_sum = 0.;
         for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+          double norm_sq = 0.;
           for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-            jac_mat(i_dim, j_dim) = jac_data[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
+            double coef = ref_nrml[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
+            norm_sq += coef*coef;
           }
+          norm_sum += std::sqrt(norm_sq);
         }
-        // find minimum singular value (always at end of singular value vector) and divide by TSS
-        min_scale = std::min(min_scale, jac_mat.jacobiSvd().singularValues()(n_dim - 1)/tss[i_qpoint]);
+        double determinant = jac_det[i_qpoint];
+        min_scale = std::min(min_scale, n_dim*determinant/tss[i_qpoint]/norm_sum);
       }
       // compute reference speed
       double speed = characteristic_speed<n_dim, n_qpoint>(elem.stage(0), heat_rat)/min_scale/elem.nominal_size();

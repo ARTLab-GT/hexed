@@ -11,22 +11,12 @@ TEST_CASE("Deformed_element")
 {
   hexed::Storage_params params {2, 2, 2, 4};
   hexed::Deformed_element element {params};
-  for (int i_jac = 0; i_jac < 2*2*16; ++i_jac) {
-    element.jacobian()[i_jac] = i_jac/4.;
-  }
-  for (int i_dim = 0, i_jac = 0; i_dim < 2; ++i_dim) {
-    for (int j_dim = 0; j_dim < 2; ++j_dim) {
-      for (int i_qpoint = 0; i_qpoint < 16; ++i_qpoint) {
-        REQUIRE(element.jacobian(i_dim, j_dim, i_qpoint) == i_jac++/4.);
-      }
-    }
-  }
 
-  element.jacobian()[0*16 + 15] = 1.;
-  element.jacobian()[1*16 + 15] = 2.;
-  element.jacobian()[2*16 + 15] = .1;
-  element.jacobian()[3*16 + 15] = 3.;
-  REQUIRE(element.jacobian_determinant(15) == Approx(2.8));
+  // test that accessing the data doesn't segfault
+  element.reference_level_normals()[0] = 0.;
+  element.reference_level_normals()[4*16 - 1] = 0.;
+  element.jacobian_determinant()[0] = 0.;
+  element.jacobian_determinant()[16 - 1] = 0.;
 
   for (int i_adj = 0; i_adj < 16; ++i_adj) {
     REQUIRE(element.node_adjustments()[i_adj] == 0.);
@@ -39,13 +29,6 @@ TEST_CASE("Deformed_element")
 
   hexed::Storage_params params3d {1, 1, 3, 2};
   hexed::Deformed_element element3d {params3d};
-  double jacobian [9] {2., 1., -.7,
-                       .5, 1.,  0.,
-                       1., 0.,  .3};
-  for (int i_jac = 0; i_jac < 9; ++i_jac) {
-    element3d.jacobian()[i_jac*8] = jacobian[i_jac];
-  }
-  REQUIRE(element3d.jacobian_determinant(0) == Approx(1.*.7 + 0.3*1.5));
 
   SECTION("vertex relaxation")
   {
@@ -121,7 +104,6 @@ TEST_CASE("Deformed_element")
     const int row_size = 3;
     static_assert (row_size <= hexed::config::max_row_size);
     hexed::Equidistant basis {row_size};
-    double* jac;
     hexed::Storage_params params2 {2, 4, 2, row_size};
     hexed::Deformed_element elem0 {params2, {0, 0}, 0.2};
     hexed::Deformed_element elem1 {params2, {1, 1}, 0.2};
@@ -129,40 +111,42 @@ TEST_CASE("Deformed_element")
     elem1.node_adjustments()[6 + 1] = 0.1;
     // jacobian is correct
     elem0.set_jacobian(basis);
-    jac = elem0.jacobian();
-    REQUIRE(jac[0*9    ] == Approx(1.));
-    REQUIRE(jac[1*9    ] == Approx(0.));
-    REQUIRE(jac[2*9    ] == Approx(0.));
-    REQUIRE(jac[3*9    ] == Approx(1.));
-    REQUIRE(jac[0*9 + 6] == Approx(1.));
-    REQUIRE(jac[1*9 + 6] == Approx(-0.2));
-    REQUIRE(jac[2*9 + 6] == Approx(0.));
-    REQUIRE(jac[3*9 + 6] == Approx(0.8));
-    REQUIRE(jac[0*9 + 8] == Approx(0.8));
-    REQUIRE(jac[1*9 + 8] == Approx(-0.2));
-    REQUIRE(jac[2*9 + 8] == Approx(-0.2));
-    REQUIRE(jac[3*9 + 8] == Approx(0.8));
+    REQUIRE(elem0.jacobian(0, 0, 0) == Approx(1.));
+    REQUIRE(elem0.jacobian(0, 1, 0) == Approx(0.));
+    REQUIRE(elem0.jacobian(1, 0, 0) == Approx(0.));
+    REQUIRE(elem0.jacobian(1, 1, 0) == Approx(1.));
+    REQUIRE(elem0.jacobian(0, 0, 6) == Approx(1.));
+    REQUIRE(elem0.jacobian(0, 1, 6) == Approx(-0.2));
+    REQUIRE(elem0.jacobian(1, 0, 6) == Approx(0.));
+    REQUIRE(elem0.jacobian(1, 1, 6) == Approx(0.8));
+    REQUIRE(elem0.jacobian(0, 0, 8) == Approx(0.8));
+    REQUIRE(elem0.jacobian(0, 1, 8) == Approx(-0.2));
+    REQUIRE(elem0.jacobian(1, 0, 8) == Approx(-0.2));
+    REQUIRE(elem0.jacobian(1, 1, 8) == Approx(0.8));
+    REQUIRE(elem0.jacobian_determinant(6) == Approx(.8));
     elem1.set_jacobian(basis);
-    jac = elem1.jacobian();
-    REQUIRE(jac[0*9 + 5] == Approx(1.));
-    REQUIRE(jac[1*9 + 5] == Approx(0.));
-    REQUIRE(jac[2*9 + 5] == Approx(0.));
-    REQUIRE(jac[3*9 + 5] == Approx(0.9));
-    // time step is correct
-    // At corner 3, diagonal is locally scaled by 1 - 2*(1 - 0.8) = 0.6 = (min singular value)
+    REQUIRE(elem1.jacobian(0, 0, 5) == Approx(1.));
+    REQUIRE(elem1.jacobian(0, 1, 5) == Approx(0.));
+    REQUIRE(elem1.jacobian(1, 0, 5) == Approx(0.));
+    REQUIRE(elem1.jacobian(1, 1, 5) == Approx(0.9));
+    // surface normal is written to face data
+    REQUIRE(elem0.face()[0] == Approx(1.));
+    REQUIRE(elem0.face()[row_size] == Approx(0.));
+    REQUIRE(elem0.face()[3*4*row_size + 2] == Approx(.2));
+    REQUIRE(elem0.face()[(3*4 + 1)*row_size + 2] == Approx(.8));
+    // check time step scale
     REQUIRE(elem0.vertex_time_step_scale(0) == 1.);
-    REQUIRE(elem0.vertex_time_step_scale(3) == Approx(0.6));
+    REQUIRE(elem0.vertex_time_step_scale(3) == Approx((.8*.8 - .2*.2)/std::sqrt(.8*.8 + .2*.2)));
 
     hexed::Storage_params params3 {2, 5, 3, row_size};
     hexed::Deformed_element elem2 {params3, {0, 0, 0}, 0.2};
     elem2.vertex(7).pos = {0.8*0.2, 0.8*0.2, 0.8*0.2};
     elem2.set_jacobian(basis);
-    jac = elem2.jacobian();
-    REQUIRE(jac[0] == 1.);
-    REQUIRE(jac[0*27 + 26] == Approx( 0.8));
-    REQUIRE(jac[1*27 + 26] == Approx(-0.2));
-    REQUIRE(jac[2*27 + 26] == Approx(-0.2));
-    REQUIRE(jac[7*27 + 26] == Approx(-0.2));
-    REQUIRE(jac[8*27 + 26] == Approx( 0.8));
+    REQUIRE(elem2.jacobian(0, 0,  0) == 1.);
+    REQUIRE(elem2.jacobian(0, 0, 26) == Approx( 0.8));
+    REQUIRE(elem2.jacobian(0, 1, 26) == Approx(-0.2));
+    REQUIRE(elem2.jacobian(0, 2, 26) == Approx(-0.2));
+    REQUIRE(elem2.jacobian(2, 1, 26) == Approx(-0.2));
+    REQUIRE(elem2.jacobian(2, 2, 26) == Approx( 0.8));
   }
 }

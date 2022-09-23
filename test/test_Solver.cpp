@@ -217,13 +217,13 @@ TEST_CASE("Solver")
     sol.snap_vertices();
     sol.calc_jacobian();
     sol.set_local_tss();
-    // in sn0, TSS is 0.1 because the element is stretched by a factor of .1
-    REQUIRE(sol.sample(0,  true, sn0, 4, hexed::Time_step_scale_func())[0] == Approx(.1));
+    // in sn0, TSS is 2/(1. + 1./.1) == 2./11. for reasons that i'm too tired to explain rn
+    REQUIRE(sol.sample(0,  true, sn0, 4, hexed::Time_step_scale_func())[0] == Approx(2/11.));
     // in sn1, TSS varies bilinearly
-    REQUIRE(sol.sample(0, false, sn1, 4, hexed::Time_step_scale_func())[0] == Approx((2*.1 + .5 + 1.)/4.));
+    REQUIRE(sol.sample(0, false, sn1, 4, hexed::Time_step_scale_func())[0] == Approx((2*2/11. + .5 + 1.)/4.));
     // TSS at hanging nodes should be set to match coarse element
-    REQUIRE(sol.sample(1, false, sn2, 4, hexed::Time_step_scale_func())[0] == Approx((3*.5 + .3)/4.));
-    REQUIRE(sol.sample(1, false, sn3, 4, hexed::Time_step_scale_func())[0] == Approx((2*.5 + .3 + .1)/4.));
+    REQUIRE(sol.sample(1, false, sn2, 4, hexed::Time_step_scale_func())[0] == Approx((3*.5 + (.5 + 2/11.)/2.)/4.));
+    REQUIRE(sol.sample(1, false, sn3, 4, hexed::Time_step_scale_func())[0] == Approx((2*.5 + (.5 + 2/11.)/2. + 2/11.)/4.));
   }
 
   SECTION("integrals")
@@ -507,10 +507,9 @@ void test_conservation(Test_mesh& tm, std::string name)
   // update
   sol.update();
   status = sol.iteration_status();
-  // check that the computed update is approximately equal to the exact solution
+  auto state  = sol.integral_field(hexed::State_variables());
+  auto update = sol.integral_field(hexed::Physical_update());
   for (int i_var : {sol.storage_params().n_var - 2, sol.storage_params().n_var - 1}) {
-    auto state  = sol.integral_field(hexed::State_variables());
-    auto update = sol.integral_field(hexed::Physical_update());
     REQUIRE(update[i_var]/status.time_step == Approx(0.).scale(std::abs(state[i_var])));
   }
 }

@@ -85,14 +85,14 @@ class Face_connection
 template <>
 class Face_connection<Deformed_element>
 {
-  Eigen::VectorXd jac;
+  Eigen::VectorXd nrml;
   public:
   Face_connection<Deformed_element>(Storage_params params)
-  : jac{params.n_dim*params.n_dim*params.n_qpoint()/params.row_size}
+  : nrml{params.n_dim*params.n_qpoint()/params.row_size}
   {}
   virtual Con_dir<Deformed_element> direction() = 0;
   virtual double* face(int i_side) = 0;
-  double* jacobian() {return jac.data();} // every deformed face connection must contain a numerical Jacobian to ensure the numerical reference flux fully matches
+  double* normal() {return nrml.data();} // area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
 };
 
 /*
