@@ -100,8 +100,8 @@ void Solver::calc_jacobian()
    */
   auto& def_cons {acc_mesh.deformed().face_connections()};
   for (int i_con = 0; i_con < def_cons.size(); ++i_con) {
-    double* jac = def_cons[i_con].jacobian();
-    for (int i_data = 0; i_data < n_dim*nfq; ++i_data) jac[i_data] = 0.;
+    double* nrml = def_cons[i_con].normal();
+    for (int i_data = 0; i_data < n_dim*nfq; ++i_data) nrml[i_data] = 0.;
   }
   // for deformed refined faces, set normal to fine face normal (for Cartesian, setting normal is not necessary)
   auto& ref_cons = acc_mesh.deformed().refined_connections();
@@ -109,6 +109,7 @@ void Solver::calc_jacobian()
     auto& ref = ref_cons[i_ref];
     bool rev = ref.order_reversed();
     auto dir = ref.direction();
+    // might need to flip the direction of the normal vector depending on connection direction
     int sign = 1 - 2*(dir.flip_normal(0) != dir.flip_normal(1));
     for (int i_fine = 0; i_fine < ref.n_fine_elements(); ++i_fine) {
       auto& fine = ref.connection(i_fine);
@@ -130,16 +131,16 @@ void Solver::calc_jacobian()
   for (int i_con = 0; i_con < def_cons.size(); ++i_con)
   {
     auto& con = def_cons[i_con];
-    double* shared_jac = con.jacobian();
-    double* elem_jac [2] {con.face(0), con.face(1)};
+    double* shared_nrml = con.normal();
+    double* elem_nrml [2] {con.face(0), con.face(1)};
     auto dir = con.direction();
     // permute face 1 so that quadrature points match up
-    (*kernel_factory<Face_permutation>(n_dim, rs, dir, elem_jac[1])).match_faces();
+    (*kernel_factory<Face_permutation>(n_dim, rs, dir, elem_nrml[1])).match_faces();
     // take average of element face normals with appropriate flipping
     for (int i_side : {0, 1}) {
       int sign = 1 - 2*dir.flip_normal(i_side);
       for (int i_data = 0; i_data < n_dim*nfq; ++i_data) {
-        shared_jac[i_data] += 0.5*sign*elem_jac[i_side][i_data];
+        shared_nrml[i_data] += 0.5*sign*elem_nrml[i_side][i_data];
       }
     }
   }
@@ -294,7 +295,7 @@ std::vector<double> Solver::integral_surface(const Surface_func& integrand, int 
     if (con.bound_cond_serial_n() == bc_sn)
     {
       double* state = con.inside_face();
-      double* jac = con.jacobian();
+      double* nrml = con.normal();
       for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint)
       {
         std::vector<double> qpoint_pos {elem.face_position(basis, con.direction().i_face(0), i_qpoint)};
@@ -305,7 +306,7 @@ std::vector<double> Solver::integral_surface(const Surface_func& integrand, int 
         std::vector<double> normal;
         double nrml_mag = 0;
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          double comp = -jac[i_dim*nfq + i_qpoint];
+          double comp = -nrml[i_dim*nfq + i_qpoint];
           normal.push_back(comp);
           nrml_mag += comp*comp;
         }

@@ -19,7 +19,7 @@ class Boundary_face
   virtual double* inside_face() = 0;
   virtual int i_dim() = 0;
   virtual bool inside_face_sign() = 0;
-  virtual double* jacobian_mat() = 0;
+  virtual double* surface_normal() = 0; // note: has to have a name that's different from `Face_connection`
 };
 class Boundary_connection;
 
@@ -172,7 +172,7 @@ class Typed_bound_connection : public Boundary_connection
   virtual int i_dim() {return i_d;}
   virtual bool inside_face_sign() {return ifs;}
   virtual double* face(int i_side) {return i_side ? ghost_face() : inside_face();}
-  virtual double* jacobian_mat() {return jacobian();}
+  virtual double* surface_normal() {return normal();}
   virtual Con_dir<Deformed_element> direction() {return {{i_d, i_d}, {ifs, !ifs}};}
   virtual int bound_cond_serial_n() {return bc_sn;}
   element_t& element() {return elem;}

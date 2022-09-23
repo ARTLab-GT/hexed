@@ -33,7 +33,6 @@ class Neighbor_deformed : public Kernel<Face_connection<Deformed_element>&>
     {
       double face [2*face_size];
       auto& con = connections[i_con];
-      double* jacobian = con.jacobian();
       double* elem_face [2];
       auto dir = con.direction();
       for (int i_side : {0, 1}) {
@@ -50,7 +49,7 @@ class Neighbor_deformed : public Kernel<Face_connection<Deformed_element>&>
 
       // compute upwind flux
       permutation.match_faces();
-      hll<n_dim, n_face_qpoint>(face, jacobian, heat_rat);
+      hll<n_dim, n_face_qpoint>(face, con.normal(), heat_rat);
       permutation.restore();
 
       // flip normal

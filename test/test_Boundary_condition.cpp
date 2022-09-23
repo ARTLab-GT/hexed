@@ -72,7 +72,7 @@ TEST_CASE("Nonpenetration")
   hexed::Typed_bound_connection<hexed::Deformed_element> tbc {element, 0, true, 0};
   for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
     double qpoint_nrml [] {-4., 3.};
-    for (int i_dim = 0; i_dim < 2; ++i_dim) tbc.jacobian()[i_dim*row_size + i_qpoint] = qpoint_nrml[i_dim];
+    for (int i_dim = 0; i_dim < 2; ++i_dim) tbc.normal()[i_dim*row_size + i_qpoint] = qpoint_nrml[i_dim];
     double state [] {1., 1., 1.2, 1e5/0.4 + 0.5*1.2*2.};
     for (int i_var = 0; i_var < 4; ++i_var) tbc.inside_face()[i_var*row_size + i_qpoint] = state[i_var];
   }

@@ -28,7 +28,7 @@ void Nonpenetration::apply(Boundary_face& bf)
   const int nq = params.n_qpoint()/params.row_size;
   double* gh_f = bf.ghost_face();
   double* in_f = bf.inside_face();
-  double* nrml = bf.jacobian_mat();
+  double* nrml = bf.surface_normal();
   for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = in_f[i_dof];
   // reflect normal component of momentum
   for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint)
