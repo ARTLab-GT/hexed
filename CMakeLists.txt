@@ -56,8 +56,6 @@ endif()
 
 # configure files
 configure_file(hexed-config.cmake.in hexed-config.cmake)
-file(MAKE_DIRECTORY include)
-file(MAKE_DIRECTORY include/auto)
 configure_file(hexed_config.hpp.in include/auto/hexed_config.hpp)
 file(CREATE_LINK ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/include/hexed SYMBOLIC)
 add_custom_command(
