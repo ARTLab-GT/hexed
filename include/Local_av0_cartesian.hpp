@@ -81,9 +81,7 @@ class Local_av0_cartesian : public Kernel<Element&>
             // calculate flux
             Eigen::Matrix<double, row_size, n_var> flux = -derivative(row_r, boundary_values)/nom_sz;
             flux.array().colwise() *= row_avc;
-            boundary_values.setZero();
-            Eigen::Matrix<double, row_size, n_var> row_w = -derivative(flux, boundary_values);
-            boundary_values = boundary*flux;
+            Eigen::Matrix<double, row_size, n_var> row_w = -derivative.interior_term(flux, boundary_values);
             for (int i_var = 0; i_var < n_var; ++i_var) {
               for (int is_positive : {0, 1}) {
                 face[(i_dim*2 + is_positive)*n_face_dof + i_var*n_qpoint/row_size + i_face_qpoint] = boundary_values(is_positive, i_var);

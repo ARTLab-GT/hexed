@@ -36,8 +36,20 @@ class Derivative
    * that the integral of the return value is equal to the difference between the specified boundary values.
    */
   template<int n_var>
-  Eigen::Matrix<double, row_size, n_var> operator()(Eigen::Matrix<double, row_size, n_var>& qpoint_vals,
-                                                    Eigen::Matrix<double, 2, n_var>& boundary_vals)
+  Eigen::Matrix<double, row_size, n_var> interior_term(const Eigen::Matrix<double, row_size, n_var>& qpoint_vals,
+                                                       Eigen::Matrix<double, 2, n_var>& boundary_vals)
+  {
+    boundary_vals = boundary*qpoint_vals;
+    return diff_mat*qpoint_vals - lift*boundary_vals;
+  }
+  template<int n_var>
+  Eigen::Matrix<double, row_size, n_var> boundary_term(const Eigen::Matrix<double, 2, n_var>& boundary_vals)
+  {
+    return lift*boundary_vals;
+  }
+  template<int n_var>
+  Eigen::Matrix<double, row_size, n_var> operator()(const Eigen::Matrix<double, row_size, n_var>& qpoint_vals,
+                                                    const Eigen::Matrix<double, 2, n_var>& boundary_vals)
   {
     return diff_mat*qpoint_vals + lift*(boundary_vals - boundary*qpoint_vals);
   }

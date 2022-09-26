@@ -67,7 +67,7 @@ class Local_av1_cartesian : public Kernel<Element&>
             }
             Eigen::Matrix<double, row_size, n_var> flux;
             flux.setZero();
-            Eigen::Matrix<double, row_size, n_var> row_w = -derivative(flux, boundary_values);
+            Eigen::Matrix<double, row_size, n_var> row_w = -derivative.boundary_term(boundary_values);
             // Add dimensional component to update
             for (int i_var = 0; i_var < n_var; ++i_var) {
               for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
