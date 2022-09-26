@@ -1,11 +1,12 @@
 #include <catch2/catch.hpp>
 #include "testing_utils.hpp"
 #include <hexed/Local_av0_cartesian.hpp>
+#include <hexed/Local_av1_cartesian.hpp>
 #include <hexed/Gauss_legendre.hpp>
 #include <hexed/Qpoint_func.hpp>
 #include <hexed/Write_face.hpp>
 
-TEST_CASE("Local_av0_cartesian.hpp")
+TEST_CASE("local cartesian artificial viscosity")
 {
   const int row_size = hexed::config::max_row_size;
   static_assert(row_size >= 5); // must be able to represent quartic polynomial exactly
@@ -67,7 +68,7 @@ TEST_CASE("Local_av0_cartesian.hpp")
     }
   }
 
-  SECTION("flux writing")
+  SECTION("face terms")
   {
     for (int i = 0; i < row_size; ++i) {
       for (int j = 0; j < row_size; ++j) {
@@ -89,11 +90,31 @@ TEST_CASE("Local_av0_cartesian.hpp")
       }
     }
     (hexed::Write_face<3, row_size>(basis))(elem_view); // `Local_av0_cartesian` expects faces to contain numerical LDG state
+    double face_data [6*5*n_qpoint/row_size];
+    for (int i_data = 0; i_data < 6*5*n_qpoint/row_size; ++i_data) {
+      face_data[i_data] = elem.face()[i_data];
+    }
     (hexed::Local_av0_cartesian<3, row_size>(basis, .314, 1.))(elem_view);
-    int i_row = row_size/2; // set an arbitrary quadrature point to sample on each face
-    CHECK(elem.face()[0*5*n_qpoint/row_size + i_row*(row_size + 1)] == Approx(.73/.4*2*-scale[0]).scale(1.));
-    CHECK(elem.face()[1*5*n_qpoint/row_size + i_row*(row_size + 1)] == Approx(.73/.4*2*-scale[0]).scale(1.));
-    CHECK(elem.face()[2*5*n_qpoint/row_size + i_row*(row_size + 1)] == Approx(.73/.4*2*-scale[1]).scale(1.));
-    CHECK(elem.face()[4*5*n_qpoint/row_size + i_row*(row_size + 1)] == Approx(.73/.4*2*-scale[2]).scale(1.));
+    SECTION("flux writing")
+    {
+      int i_row = row_size/2; // set an arbitrary quadrature point to sample on each face
+      REQUIRE(elem.face()[0*5*n_qpoint/row_size + i_row*(row_size + 1)] == Approx(.73/.4*2*-scale[0]).scale(1.));
+      REQUIRE(elem.face()[1*5*n_qpoint/row_size + i_row*(row_size + 1)] == Approx(.73/.4*2*-scale[0]).scale(1.));
+      REQUIRE(elem.face()[2*5*n_qpoint/row_size + i_row*(row_size + 1)] == Approx(.73/.4*2*-scale[1]).scale(1.));
+      REQUIRE(elem.face()[4*5*n_qpoint/row_size + i_row*(row_size + 1)] == Approx(.73/.4*2*-scale[2]).scale(1.));
+    }
+    SECTION("face local term")
+    {
+      (hexed::Local_av1_cartesian<3, row_size>(basis, .314, 1.))(elem_view);
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        // correct answer is 0 because 2nd derivative is 0
+        // if face term is not correctly added answer may be nonzero
+        REQUIRE(hexed::Physical_update()(elem, basis, i_qpoint, 0)[0] == Approx(0.).scale(1.));
+      }
+      // check that the correct state has been written to the faces
+      for (int i_data = 0; i_data < 6*5*n_qpoint/row_size; ++i_data) {
+        REQUIRE(elem.face()[i_data] == Approx(face_data[i_data]).scale(1.));
+      }
+    }
   }
 }
