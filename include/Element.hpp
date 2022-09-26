@@ -66,6 +66,7 @@ class Element
   double* stage(int i_stage); // Layout: [i_var][i_qpoint]
   // pointer to scaling factor for local time step.
   double* time_step_scale(); // Layout: [i_qpoint]
+  double* art_visc_coef(); // layout: [i_qpoint]
   // Pointer state data at faces. Must be populated by user
   double* face(); // Layout: [i_dim][is_positive][i_var][i_face_qpoint]
   virtual double* node_adjustments() {return nullptr;} // overriden by `Deformed_element`
