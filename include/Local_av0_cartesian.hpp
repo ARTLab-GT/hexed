@@ -1,5 +1,5 @@
-#ifndef HEXED_LOCAL_CARTESIAN_HPP_
-#define HEXED_LOCAL_CARTESIAN_HPP_
+#ifndef HEXED_LOCAL_AV0_CARTESIAN_HPP_
+#define HEXED_LOCAL_AV0_CARTESIAN_HPP_
 
 #include "Vector_view.hpp"
 #include "Element.hpp"
@@ -13,27 +13,23 @@ namespace hexed
 {
 
 /*
- * Computes the local update for one Runge-Kutta stage.
- * Here, "local" means that all of the necessary data is contained within each `Element` object.
- * This includes the interior term, the face flux correction, and the Runge-Kutta update.
- * The numerical flux must already have been written to the face storage (which is the neighbor kernel's job).
+ * Computes the local update for the first phase of the artificial viscosity operator (for Cartesian elements).
+ * Requires that faces contain the shared LDG state.
  */
 template <int n_dim, int row_size>
-class Local_cartesian : public Kernel<Element&>
+class Local_av0_cartesian : public Kernel<Element&>
 {
   Derivative<row_size> derivative;
   Write_face<n_dim, row_size> write_face;
   double dt;
   double rkw;
-  const double heat_rat;
 
   public:
-  Local_cartesian(const Basis& basis, double d_time, double rk_weight, double heat_ratio=1.4) :
+  Local_av0_cartesian(const Basis& basis, double d_time, double rk_weight) :
     derivative{basis},
     write_face{basis},
     dt{d_time},
-    rkw{rk_weight},
-    heat_rat{heat_ratio}
+    rkw{rk_weight}
   {}
 
   virtual void operator()(Sequence<Element&>& elements)
@@ -68,7 +64,7 @@ class Local_cartesian : public Kernel<Element&>
                 row_r[i_var][i_qpoint] = state[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
               }
             }
-            // fetch boundary flux
+            // fetch numerical face state
             Eigen::Matrix<double, 2, n_var> boundary_values;
             for (int i_var = 0; i_var < n_var; ++i_var) {
               for (int is_positive : {0, 1}) {
@@ -76,25 +72,9 @@ class Local_cartesian : public Kernel<Element&>
               }
             }
 
+            #if 0
             // Calculate flux
             Eigen::Matrix<double, row_size, n_var> flux;
-            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
-            {
-              #define READ(i) row_r[i][i_qpoint]
-              #define FLUX(i) flux(i_qpoint, i)
-              double veloc = READ(i_dim)/READ(n_var - 2);
-              double pres = 0;
-              for (int j_dim = 0; j_dim < n_var - 2; ++j_dim) {
-                FLUX(j_dim) = READ(j_dim)*veloc;
-                pres += READ(j_dim)*READ(j_dim)/READ(n_var - 2);
-              }
-              pres = (heat_rat - 1.)*(READ(n_var - 1) - 0.5*pres);
-              FLUX(i_dim) += pres;
-              FLUX(n_var - 2) = READ(i_dim);
-              FLUX(n_var - 1) = (READ(n_var - 1) + pres)*veloc;
-              #undef FLUX
-              #undef READ
-            }
             // Differentiate flux
             Eigen::Matrix<double, row_size, n_var> row_w = -derivative(flux, boundary_values);
 
@@ -105,6 +85,7 @@ class Local_cartesian : public Kernel<Element&>
                 time_rate[i_var][offset] += row_w(i_qpoint, i_var);
               }
             }
+            #endif
             ++i_face_qpoint;
           }
         }
@@ -124,7 +105,7 @@ class Local_cartesian : public Kernel<Element&>
 };
 
 template<>
-class Kernel_traits<Local_cartesian>
+class Kernel_traits<Local_av0_cartesian>
 {
   public:
   using base_t = Kernel<Element&>;
