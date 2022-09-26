@@ -5,7 +5,7 @@ Discontinuous Galerkin engine for CFD with automated, unstructured quad/hex mesh
 
 **hex** *(noun)*
 1. (technical) abbreviation for "hexahedron", a six-sided solid (e.g., a cube)
-2. curse; jinx; evil spell
+2. curse; jinx; evil magic spell
 
 **hex** *(verb)*
 1. to cast a hex
@@ -13,11 +13,11 @@ Discontinuous Galerkin engine for CFD with automated, unstructured quad/hex mesh
 This document provides an overview of Hexed. More detailed documentation can be found in [`doc`](doc/). In particular, for
 installation instructions, see [`install.md`](doc/install.md).
 
-## Overview
+## About
 Anyone who has spent a substantial amount of time working with computational fluid dynamics (CFD)
 can attest that it is decidedly arcane and sometimes tends toward evil.
 As its name suggests, Hexed scarcely presumes to change that.
-What it *can* provide is a faster, more automated solver, enabling you to practice your witchcraft on a previously unattainable scale.
+What it *does* aim to provide is a faster, more automated solver, enabling you to practice your witchcraft on a previously unattainable scale.
 Specifically, Hexed is a C++ library which can solve the compressible Euler equations of aerodynamics on unstructured quad/hex meshes.
 It can handle Cartesian meshes with hanging-node refinement, and it also provides a mechanism to automatically generate a body-fitted mesh
 from a Cartesian starting point.
