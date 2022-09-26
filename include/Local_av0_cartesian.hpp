@@ -7,7 +7,6 @@
 #include "kernel_factory.hpp"
 #include "math.hpp"
 #include "Derivative.hpp"
-#include "Write_face.hpp"
 
 namespace hexed
 {
@@ -20,14 +19,14 @@ template <int n_dim, int row_size>
 class Local_av0_cartesian : public Kernel<Element&>
 {
   Derivative<row_size> derivative;
-  Write_face<n_dim, row_size> write_face;
+  Eigen::Matrix<double, 2, row_size> boundary;
   double dt;
   double rkw;
 
   public:
   Local_av0_cartesian(const Basis& basis, double d_time, double rk_weight) :
     derivative{basis},
-    write_face{basis},
+    boundary{basis.boundary()},
     dt{d_time},
     rkw{rk_weight}
   {}
@@ -41,12 +40,15 @@ class Local_av0_cartesian : public Kernel<Element&>
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
     {
-      double* state = elements[i_elem].stage(0);
+      auto& elem = elements[i_elem];
+      double* state = elem.stage(0);
       double* rk_reference = state + n_var*n_qpoint;
       double time_rate [n_var][n_qpoint] {};
-      double* face = elements[i_elem].face();
-      double* tss = elements[i_elem].time_step_scale();
-      const double d_t_by_d_pos = dt/elements[i_elem].nominal_size();
+      double* face = elem.face();
+      double* tss = elem.time_step_scale();
+      double* av_coef = elem.art_visc_coef();
+      double nom_sz = elem.nominal_size();
+      const double d_t_by_d_pos = dt/nom_sz;
 
       // Compute update
       for (int stride = n_qpoint/row_size, n_rows = 1, i_dim = 0; n_rows < n_qpoint;
@@ -58,11 +60,15 @@ class Local_av0_cartesian : public Kernel<Element&>
           for (int i_inner = 0; i_inner < stride; ++i_inner)
           {
             // Fetch this row of data
-            double row_r [n_var][row_size];
+            Eigen::Matrix<double, row_size, n_var> row_r;
             for (int i_var = 0; i_var < n_var; ++i_var) {
               for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-                row_r[i_var][i_qpoint] = state[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
+                row_r(i_qpoint, i_var) = state[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
               }
+            }
+            Eigen::Array<double, row_size, 1> row_avc;
+            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+              row_avc(i_qpoint) = av_coef[i_outer*stride*row_size + i_inner + i_qpoint*stride];
             }
             // fetch numerical face state
             Eigen::Matrix<double, 2, n_var> boundary_values;
@@ -72,10 +78,10 @@ class Local_av0_cartesian : public Kernel<Element&>
               }
             }
 
-            #if 0
             // Calculate flux
-            Eigen::Matrix<double, row_size, n_var> flux;
-            // Differentiate flux
+            Eigen::Matrix<double, row_size, n_var> flux = -derivative(row_r, boundary_values)/nom_sz;
+            flux.array().colwise() *= row_avc;
+            boundary_values.setZero();
             Eigen::Matrix<double, row_size, n_var> row_w = -derivative(flux, boundary_values);
 
             // Add dimensional component to update
@@ -85,7 +91,6 @@ class Local_av0_cartesian : public Kernel<Element&>
                 time_rate[i_var][offset] += row_w(i_qpoint, i_var);
               }
             }
-            #endif
             ++i_face_qpoint;
           }
         }
@@ -99,7 +104,6 @@ class Local_av0_cartesian : public Kernel<Element&>
           state[i_dof] = rkw*updated + (1. - rkw)*rk_reference[i_dof];
         }
       }
-      write_face(state, face);
     }
   }
 };
