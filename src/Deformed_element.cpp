@@ -8,7 +8,8 @@ Deformed_element::Deformed_element(Storage_params params, std::vector<int> pos, 
   Element{params, pos, mesh_size, ref_level},
   n_qpoint{params.n_qpoint()},
   jac_dat{(n_dim*n_dim + 1)*n_qpoint},
-  node_adj{Eigen::VectorXd::Zero(n_qpoint/params.row_size*n_dim*2)}
+  node_adj{Eigen::VectorXd::Zero(n_qpoint/params.row_size*n_dim*2)},
+  f_nrml{}
 {
   for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) vertex(i_vert).mobile = true;
 }
@@ -142,6 +143,11 @@ double* Deformed_element::reference_level_normals()
 double* Deformed_element::jacobian_determinant()
 {
   return jac_dat.data() + n_dim*n_dim*n_qpoint;
+}
+
+double*& Deformed_element::face_normal(int i_face)
+{
+  return f_nrml[i_face];
 }
 
 double Deformed_element::jacobian(int i_dim, int j_dim, int i_qpoint)
