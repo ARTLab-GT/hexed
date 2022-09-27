@@ -169,11 +169,12 @@ TEST_CASE("Solver")
   static_assert (hexed::config::max_row_size >= 3); // this test was written for row size 3
   hexed::Solver sol {2, 3, 0.8};
 
-  SECTION("initialization, sampling, and bounds")
+  SECTION("initialization and introspection")
   {
     sol.mesh().add_element(0, false, {0, 0, 0});
     int sn0 = sol.mesh().add_element(0, false, {1, 0, 0});
     int sn1 = sol.mesh().add_element(2, true, {-1, 0, 0});
+    // initialization/sampling
     REQUIRE_THROWS(sol.initialize(Bad_initializer())); // if number of variables of func is wrong, should throw
     sol.initialize(Arbitrary_initializer());
     auto sample = sol.sample(0, false, sn0, 4, hexed::State_variables()); // sample the midpoint of the element because we know the exact position
@@ -185,12 +186,16 @@ TEST_CASE("Solver")
     sample = sol.sample(2, true, sn1, 4, hexed::State_variables());
     REQUIRE(sample.size() == 4);
     REQUIRE(sample[0] == Approx(-0.1*0.1));
+    // variable bounds calculation
     auto bounds = sol.bounds_field(hexed::State_variables());
     REQUIRE(bounds.size() == 4);
     REQUIRE(bounds[0][0] == Approx(-.2*.2).scale(1.));
     REQUIRE(bounds[0][1] == Approx(1.6*.8).scale(1.));
     REQUIRE(bounds[2][0] == Approx(2.).scale(1.));
     REQUIRE(bounds[2][1] == Approx(2.).scale(1.));
+    // artificial viscosity setting
+    sol.set_art_visc_constant(.28);
+    REQUIRE(sol.sample(0, false, sn0, 4, hexed::Art_visc_coef())[0] == Approx(.28));
   }
 
   SECTION("vertex relaxation")

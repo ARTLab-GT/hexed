@@ -188,6 +188,23 @@ void Solver::initialize(const Spacetime_func& func)
   (*kernel_factory<Write_face>(params.n_dim, params.row_size, basis))(elements);
 }
 
+void Solver::set_art_visc_off()
+{
+  use_art_visc = false;
+}
+
+void Solver::set_art_visc_constant(double value)
+{
+  use_art_visc = true;
+  auto& elements = acc_mesh.elements();
+  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    double* av = elements[i_elem].art_visc_coef();
+    for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
+      av[i_qpoint] = value;
+    }
+  }
+}
+
 void Solver::update(double stability_ratio)
 {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'

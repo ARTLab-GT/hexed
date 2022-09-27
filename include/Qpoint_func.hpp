@@ -49,5 +49,13 @@ class Physical_update : public Qpoint_func
   virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const;
 };
 
+class Art_visc_coef : public Qpoint_func
+{
+  public:
+  virtual inline int n_var(int n_dim) const {return 1;}
+  virtual inline std::string variable_name(int i_var) const {return "artificial_viscosity_coefficient";}
+  virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const;
+};
+
 }
 #endif
