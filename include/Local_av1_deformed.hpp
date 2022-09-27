@@ -1,8 +1,8 @@
-#ifndef HEXED_LOCAL_AV1_CARTESIAN_HPP_
-#define HEXED_LOCAL_AV1_CARTESIAN_HPP_
+#ifndef HEXED_LOCAL_AV1_DEFORMED_HPP_
+#define HEXED_LOCAL_AV1_DEFORMED_HPP_
 
 #include "Vector_view.hpp"
-#include "Element.hpp"
+#include "Deformed_element.hpp"
 #include "Basis.hpp"
 #include "kernel_factory.hpp"
 #include "math.hpp"
@@ -17,7 +17,7 @@ namespace hexed
  * Requires that faces contain the shared LDG state.
  */
 template <int n_dim, int row_size>
-class Local_av1_cartesian : public Kernel<Element&>
+class Local_av1_deformed : public Kernel<Deformed_element&>
 {
   Derivative<row_size> derivative;
   Write_face<n_dim, row_size> write_face;
@@ -25,14 +25,14 @@ class Local_av1_cartesian : public Kernel<Element&>
   double rkw;
 
   public:
-  Local_av1_cartesian(const Basis& basis, double d_time, double rk_weight) :
+  Local_av1_deformed(const Basis& basis, double d_time, double rk_weight) :
     derivative{basis},
     write_face{basis},
     dt{d_time},
     rkw{rk_weight}
   {}
 
-  virtual void operator()(Sequence<Element&>& elements)
+  virtual void operator()(Sequence<Deformed_element&>& elements)
   {
     constexpr int n_var = n_dim + 2;
     constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
@@ -91,10 +91,10 @@ class Local_av1_cartesian : public Kernel<Element&>
 };
 
 template<>
-class Kernel_traits<Local_av1_cartesian>
+class Kernel_traits<Local_av1_deformed>
 {
   public:
-  using base_t = Kernel<Element&>;
+  using base_t = Kernel<Deformed_element&>;
 };
 
 }
