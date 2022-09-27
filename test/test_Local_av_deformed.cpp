@@ -9,7 +9,6 @@
 TEST_CASE("local deformed artificial viscosity")
 {
   const int row_size = hexed::config::max_row_size;
-  static_assert(row_size >= 5); // must be able to represent quartic polynomial exactly
   hexed::Storage_params params {2, 5, 3, row_size};
   const int n_qpoint = params.n_qpoint();
   hexed::Gauss_legendre basis(row_size);
@@ -17,6 +16,7 @@ TEST_CASE("local deformed artificial viscosity")
   elems.emplace_back(new hexed::Deformed_element(params, {}, .4, 1));
   auto& elem = *elems.back();
   elem.vertex(1).pos = {.05*.2, -.1*.2, 0.94*.2};
+  // set jacobian and numerical face normals
   elem.set_jacobian(basis);
   double face_normal [6][3*n_qpoint];
   for (int i_face = 0; i_face < 6; ++i_face) {
@@ -27,7 +27,8 @@ TEST_CASE("local deformed artificial viscosity")
   }
   def_elem_view elem_view {elems};
 
-  // test on a rational function. Expect only approximate agreement
+  // test on a rational function
+  // expect only approximate agreement
   double scale [] {.1, .2, -.5};
   double arg [n_qpoint];
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {

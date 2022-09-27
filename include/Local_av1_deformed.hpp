@@ -50,7 +50,7 @@ class Local_av1_deformed : public Kernel<Deformed_element&>
       double nom_sz = elem.nominal_size();
       const double d_t_by_d_pos = dt/nom_sz;
 
-      // Compute update
+      // compute update
       for (int stride = n_qpoint/row_size, n_rows = 1, i_dim = 0; n_rows < n_qpoint;
            stride /= row_size, n_rows *= row_size, ++i_dim)
       {
@@ -67,7 +67,7 @@ class Local_av1_deformed : public Kernel<Deformed_element&>
               }
             }
             Eigen::Matrix<double, row_size, n_var> row_w = -derivative.boundary_term(boundary_values);
-            // Add dimensional component to update
+            // add dimensional component to update
             for (int i_var = 0; i_var < n_var; ++i_var) {
               for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
                 int offset = i_outer*stride*row_size + i_inner + i_qpoint*stride;

@@ -19,14 +19,12 @@ template <int n_dim, int row_size>
 class Local_av0_cartesian : public Kernel<Element&>
 {
   Derivative<row_size> derivative;
-  Eigen::Matrix<double, 2, row_size> boundary;
   double dt;
   double rkw;
 
   public:
   Local_av0_cartesian(const Basis& basis, double d_time, double rk_weight) :
     derivative{basis},
-    boundary{basis.boundary()},
     dt{d_time},
     rkw{rk_weight}
   {}
