@@ -46,6 +46,7 @@ class Local_av1_deformed : public Kernel<Deformed_element&>
       double time_rate [n_var][n_qpoint] {};
       double* face = elem.face();
       double* tss = elem.time_step_scale();
+      double* det = elem.jacobian_determinant();
       double nom_sz = elem.nominal_size();
       const double d_t_by_d_pos = dt/nom_sz;
 
@@ -82,7 +83,7 @@ class Local_av1_deformed : public Kernel<Deformed_element&>
       for (int i_var = 0; i_var < n_var; ++i_var) {
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           const int i_dof = i_var*n_qpoint + i_qpoint;
-          state[i_dof] += rkw*time_rate[i_var][i_qpoint]*d_t_by_d_pos*tss[i_qpoint];
+          state[i_dof] += rkw*time_rate[i_var][i_qpoint]*d_t_by_d_pos*tss[i_qpoint]/det[i_qpoint];
         }
       }
       write_face(state, face);
