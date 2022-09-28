@@ -523,19 +523,17 @@ void test_art_visc(Test_mesh& tm, std::string name)
   sol.update();
   auto status = sol.iteration_status();
   #if HEXED_USE_OTTER
-  if (n_dim == 2) {
-    otter::plot plt;
-    sol.visualize_edges_otter(plt);
-    sol.visualize_field_otter(plt);
-    plt.show();
-  }
+  otter::plot plt;
+  sol.visualize_edges_otter(plt);
+  sol.visualize_field_otter(plt, hexed::Component(hexed::Physical_update(), n_dim), 10, {std::nan(""), std::nan("")}, hexed::Component(hexed::Physical_update(), n_dim));
+  plt.show();
   #endif
   // check that the computed update is approximately equal to the exact solution
   for (auto handle : sol.mesh().elem_handles()) {
     for (int i_qpoint = 0; i_qpoint < sol.storage_params().n_qpoint(); ++i_qpoint) {
       auto state   = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::State_variables());
       auto update  = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Physical_update());
-      REQUIRE(update[n_dim]/status.time_step == Approx(-n_dim*300.*state[n_dim] - 1.).margin(1e-3));
+      REQUIRE(update[n_dim]/status.time_step == Approx(-n_dim*300.*(state[n_dim] - update[n_dim] - 1.)).margin(1e-3));
     }
   }
 }

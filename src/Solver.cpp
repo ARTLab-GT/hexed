@@ -1,18 +1,27 @@
 #include <config.hpp>
 #include <Solver.hpp>
-#include <Mcs_cartesian.hpp>
-#include <Mcs_deformed.hpp>
-#include <Write_face.hpp>
-#include <Prolong_refined.hpp>
-#include <Neighbor_cartesian.hpp>
-#include <Neighbor_deformed.hpp>
-#include <Restrict_refined.hpp>
-#include <Local_cartesian.hpp>
-#include <Local_deformed.hpp>
-#include <Face_permutation.hpp>
 #include <Tecplot_file.hpp>
 #include <Vis_data.hpp>
 #include <otter_vis.hpp>
+
+// kernels
+#include <Mcs_cartesian.hpp>
+#include <Mcs_deformed.hpp>
+
+#include <Write_face.hpp>
+#include <Restrict_refined.hpp>
+#include <Prolong_refined.hpp>
+#include <Face_permutation.hpp>
+
+#include <Neighbor_cartesian.hpp>
+#include <Neighbor_deformed.hpp>
+
+#include <Local_cartesian.hpp>
+#include <Local_deformed.hpp>
+#include <Local_av0_cartesian.hpp>
+#include <Local_av0_deformed.hpp>
+#include <Local_av1_cartesian.hpp>
+#include <Local_av1_deformed.hpp>
 
 namespace hexed
 {
@@ -242,6 +251,11 @@ void Solver::update(double stability_ratio)
     (*kernel_factory<Local_cartesian>(nd, rs, basis, dt, rk_weight))(acc_mesh.cartesian().elements(), sw_car, "local");
     (*kernel_factory<Local_deformed >(nd, rs, basis, dt, rk_weight))(acc_mesh.deformed ().elements(), sw_def, "local");
   }
+
+  (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, dt, 1.))(acc_mesh.cartesian().elements());
+  (*kernel_factory<Local_av0_deformed >(nd, rs, basis, dt, 1.))(acc_mesh.deformed ().elements());
+  (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, dt, 1.))(acc_mesh.cartesian().elements());
+  (*kernel_factory<Local_av1_deformed >(nd, rs, basis, dt, 1.))(acc_mesh.deformed ().elements());
   // update status for reporting
   status.time_step = dt;
   status.flow_time += dt;
@@ -528,10 +542,10 @@ void Solver::visualize_field_otter(otter::plot& plt,
   auto& elements = acc_mesh.elements();
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     for (int i_contour = 0; i_contour < n_contour; ++i_contour) {
-      double contour_val = contour_bounds[0] + (i_contour + 1)/(n_contour + 1.)*(contour_bounds[1] - contour_bounds[0]);
+      double contour_val = (i_contour + 1)/(n_contour + 1.);
       auto& elem = elements[i_elem];
       // add contour line/surface
-      otter_vis::add_contour(plt, elem, basis, contour, contour_val, n_div,
+      otter_vis::add_contour(plt, elem, basis, Scaled(contour, contour_bounds), contour_val, n_div,
                              color_by, color_bounds, cmap_contour, transparent, status.flow_time, tol);
       // for 2d, color the flow field as well
       if (params.n_dim == 2) {

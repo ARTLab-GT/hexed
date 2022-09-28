@@ -35,6 +35,15 @@ class Local_av0_deformed : public Kernel<Deformed_element&>
     constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
     constexpr int n_face_dof = n_var*n_qpoint/row_size;
 
+    // no point allocating this on the stack since face normals will usually be on the heap anyway
+    Eigen::MatrixXd cartesian_normals(n_dim*n_dim, n_qpoint/row_size);
+    double* cartesian_normal_ptr [n_dim];
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      auto view = cartesian_normals(Eigen::seqN(i_dim*n_dim, n_dim), Eigen::all);
+      cartesian_normal_ptr[i_dim] = view.data();
+      view = Eigen::VectorXd::Unit(n_dim, i_dim)*Eigen::MatrixXd::Ones(1, n_qpoint/row_size);
+    }
+
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
     {
@@ -47,7 +56,10 @@ class Local_av0_deformed : public Kernel<Deformed_element&>
       double flux [n_var][n_dim][n_qpoint] {};
       double* face = elem.face();
       double* face_nrml [2*n_dim];
-      for (int i_face = 0; i_face < 2*n_dim; ++i_face) face_nrml[i_face] = elem.face_normal(i_face);
+      for (int i_face = 0; i_face < 2*n_dim; ++i_face) {
+        face_nrml[i_face] = elem.face_normal(i_face);
+        if (!face_nrml[i_face]) face_nrml[i_face] = cartesian_normal_ptr[i_face/2];
+      }
       double* tss = elem.time_step_scale();
       double* av_coef = elem.art_visc_coef();
       double nom_sz = elem.nominal_size();
@@ -87,7 +99,7 @@ class Local_av0_deformed : public Kernel<Deformed_element&>
               for (int is_positive : {0, 1}) {
                 temp_face(is_positive, Eigen::all) *= face_nrml[2*i_dim + is_positive][j_dim*n_qpoint/row_size + i_face_qpoint];
               }
-              auto row_f = -derivative(temp_row, temp_face)/nom_sz;
+              Eigen::Matrix<double, row_size, n_var> row_f = -derivative(temp_row, temp_face)/nom_sz;
               // add dimensional component to gradient
               for (int i_var = 0; i_var < n_var; ++i_var) {
                 for (int i_row = 0; i_row < row_size; ++i_row) {
