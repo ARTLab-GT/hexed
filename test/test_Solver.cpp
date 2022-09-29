@@ -181,6 +181,22 @@ class Shrink_pos0 : public hexed::Mesh_bc
   virtual void snap_node_adj(hexed::Boundary_connection&, const hexed::Basis&) {}
 };
 
+class Boundary_perturbation : public hexed::Mesh_bc
+{
+  public:
+  virtual void snap_vertices(hexed::Boundary_connection&) {}
+  virtual void snap_node_adj(hexed::Boundary_connection& con, const hexed::Basis&)
+  {
+    if (!con.element().node_adjustments()) return; // Cartesian elements don't have `node_adjustments()`, so in this case just exit
+    auto params {con.storage_params()};
+    const int nfq = params.n_qpoint()/params.row_size;
+    for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+      int n = 1000;
+      con.element().node_adjustments()[(2*con.i_dim() + con.inside_face_sign())*nfq + i_qpoint] += 0.1/n*(rand()%n);
+    }
+  }
+};
+
 TEST_CASE("Solver")
 {
   static_assert (hexed::config::max_row_size >= 3); // this test was written for row size 3
@@ -348,7 +364,7 @@ class Test_mesh
   public:
   virtual hexed::Solver& solver() = 0;
   virtual int bc_serial_n() = 0;
-  virtual void construct(hexed::Flow_bc* flow_bc) = 0;
+  virtual void construct(hexed::Flow_bc* flow_bc, hexed::Mesh_bc* mesh_bc) = 0;
 };
 
 // creates a 2x2x2 mesh
@@ -365,9 +381,9 @@ class All_cartesian : public Test_mesh
   virtual hexed::Solver& solver() {return sol;}
   virtual int bc_serial_n() {return bc_sn;}
 
-  virtual void construct(hexed::Flow_bc* flow_bc)
+  virtual void construct(hexed::Flow_bc* flow_bc, hexed::Mesh_bc* mesh_bc)
   {
-    bc_sn = sol.mesh().add_boundary_condition(flow_bc, new hexed::Null_mbc);
+    bc_sn = sol.mesh().add_boundary_condition(flow_bc, mesh_bc);
     std::vector<int> serial_n;
     for (int i_elem = 0; i_elem < 8; ++i_elem) {
       std::vector<int> strides {4, 2, 1};
@@ -398,9 +414,9 @@ class All_deformed : public Test_mesh
   virtual hexed::Solver& solver() {return sol;}
   virtual int bc_serial_n() {return bc_sn;}
 
-  virtual void construct(hexed::Flow_bc* flow_bc)
+  virtual void construct(hexed::Flow_bc* flow_bc, hexed::Mesh_bc* mesh_bc)
   {
-    bc_sn = sol.mesh().add_boundary_condition(flow_bc, new hexed::Null_mbc);
+    bc_sn = sol.mesh().add_boundary_condition(flow_bc, mesh_bc);
     std::vector<int> serial_n;
     for (int i_elem = 0; i_elem < 9; ++i_elem) {
       std::vector<int> strides {3, 1};
@@ -442,9 +458,9 @@ class Extrude_hanging : public Test_mesh
   virtual hexed::Solver& solver() {return sol;}
   virtual int bc_serial_n() {return bc_sn;}
 
-  virtual void construct(hexed::Flow_bc* flow_bc)
+  virtual void construct(hexed::Flow_bc* flow_bc, hexed::Mesh_bc* mesh_bc)
   {
-    bc_sn = sol.mesh().add_boundary_condition(flow_bc, new hexed::Null_mbc);
+    bc_sn = sol.mesh().add_boundary_condition(flow_bc, mesh_bc);
     std::vector<hexed::Mesh::elem_handle> handles;
     std::vector<int> coarse_pos(3, 0);
     coarse_pos[id] = -1;
@@ -482,7 +498,7 @@ class Extrude_hanging : public Test_mesh
 void test_marching(Test_mesh& tm, std::string name)
 {
   // use `Copy` BCs. This is unstable for this case but it will still give the right answer as long as only one time step is executed
-  tm.construct(new hexed::Copy);
+  tm.construct(new hexed::Copy, new hexed::Null_mbc);
   auto& sol = tm.solver();
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
@@ -512,7 +528,7 @@ void test_marching(Test_mesh& tm, std::string name)
 void test_art_visc(Test_mesh& tm, std::string name)
 {
   // use `Copy` BCs. This is unstable for this case but it will still give the right answer as long as only one time step is executed
-  tm.construct(new hexed::Copy);
+  tm.construct(new hexed::Copy, new hexed::Null_mbc);
   auto& sol = tm.solver();
   const int n_dim = sol.storage_params().n_dim;
   sol.mesh().valid().assert_valid();
@@ -522,7 +538,8 @@ void test_art_visc(Test_mesh& tm, std::string name)
   // update
   sol.update();
   auto status = sol.iteration_status();
-  #if HEXED_USE_OTTER
+  //#if HEXED_USE_OTTER
+  #if false
   otter::plot plt;
   sol.visualize_edges_otter(plt);
   sol.visualize_field_otter(plt, hexed::Component(hexed::Physical_update(), n_dim), 10, {std::nan(""), std::nan("")}, hexed::Component(hexed::Physical_update(), n_dim));
@@ -531,8 +548,8 @@ void test_art_visc(Test_mesh& tm, std::string name)
   // check that the computed update is approximately equal to the exact solution
   for (auto handle : sol.mesh().elem_handles()) {
     for (int i_qpoint = 0; i_qpoint < sol.storage_params().n_qpoint(); ++i_qpoint) {
-      auto state   = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::State_variables());
-      auto update  = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Physical_update());
+      auto state  = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::State_variables());
+      auto update = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Physical_update());
       REQUIRE(update[n_dim]/status.time_step == Approx(-n_dim*300.*(state[n_dim] - update[n_dim] - 1.)).margin(1e-3));
     }
   }
@@ -541,12 +558,13 @@ void test_art_visc(Test_mesh& tm, std::string name)
 void test_conservation(Test_mesh& tm, std::string name)
 {
   srand(406);
-  tm.construct(new hexed::Nonpenetration());
+  tm.construct(new hexed::Nonpenetration(), new Boundary_perturbation);
   auto& sol = tm.solver();
   sol.mesh().valid().assert_valid();
+  sol.snap_faces();
   sol.calc_jacobian();
   sol.initialize(Random_perturbation());
-  sol.set_art_visc_constant(300.);
+  //sol.set_art_visc_constant(300.);
   // check that the iteration status is right at the start
   auto status = sol.iteration_status();
   // update

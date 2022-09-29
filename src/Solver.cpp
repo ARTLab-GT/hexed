@@ -112,20 +112,29 @@ void Solver::calc_jacobian()
     double* nrml = def_cons[i_con].normal();
     for (int i_data = 0; i_data < n_dim*nfq; ++i_data) nrml[i_data] = 0.;
   }
-  // for deformed refined faces, set normal to fine face normal (for Cartesian, setting normal is not necessary)
+  // for deformed refined faces, set normal to coarse face normal (for Cartesian, setting normal is not necessary)
   auto& ref_cons = acc_mesh.deformed().refined_connections();
+  (*kernel_factory<Prolong_refined>(n_dim, rs, basis))(acc_mesh.refined_faces());
   for (int i_ref = 0; i_ref < ref_cons.size(); ++i_ref) {
     auto& ref = ref_cons[i_ref];
     bool rev = ref.order_reversed();
     auto dir = ref.direction();
     // might need to flip the direction of the normal vector depending on connection direction
     int sign = 1 - 2*(dir.flip_normal(0) != dir.flip_normal(1));
+    // if there is stretching, magnitude of normal vector will be inconsistent
+    int scale = 1;
+    for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) {
+      if (ref.stretch()[i_dim]) scale *= 2;
+    }
     for (int i_fine = 0; i_fine < ref.n_fine_elements(); ++i_fine) {
       auto& fine = ref.connection(i_fine);
       double* face [2] {fine.face(rev), fine.face(!rev)};
       auto fp = kernel_factory<Face_permutation>(n_dim, rs, dir, face[1]);
       fp->match_faces();
-      for (int i_data = 0; i_data < n_dim*nfq; ++i_data) face[0][i_data] = sign*face[1][i_data];
+      for (int i_data = 0; i_data < n_dim*nfq; ++i_data) {
+        face[0][i_data] *= scale;
+        face[1][i_data] = sign*face[0][i_data];
+      }
       fp->restore();
     }
   }
