@@ -63,6 +63,10 @@ if includes_state: # if this file has flow variables in it, compute auxiliary fl
     tecplot.data.operate.execute_equation(equations, ignore_divide_by_zero=True)
     if n_dim >= 2:
         plot.contour(0).variable = data.variable("mach")
+        tecplot.macro.execute_command("$!LoadColorMap  '/home/micaiah/organizations/artlab/hexed/build_Release/colormaps/plasma.map'")
+        tecplot.macro.execute_command("$!LoadColorMap  '/home/micaiah/organizations/artlab/hexed/build_Release/colormaps/inferno.map'")
+        tecplot.macro.execute_command("$!LoadColorMap  '/home/micaiah/organizations/artlab/hexed/build_Release/colormaps/viridis.map'")
+        plot.contour(0).colormap_name = "inferno"
         plot.vector.u_variable = data.variable("velocity0")
         plot.vector.v_variable = data.variable("velocity1")
     if n_dim >= 3:
