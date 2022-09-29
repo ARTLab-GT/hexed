@@ -19,7 +19,9 @@ frame = tecplot.active_frame()
 
 # load custom colormaps
 for colormap_file in "@colormap_files@".split(";"):
-    tecplot.macro.execute_command(f"$!LoadColorMap '@CMAKE_BINARY_DIR@/{colormap_file}'")
+    colormap_file = f"@CMAKE_BINARY_DIR@/{colormap_file}"
+    if os.path.exists(colormap_file):
+        tecplot.macro.execute_command(f"$!LoadColorMap '{colormap_file}'")
 colormap = "hexed_plasma"
 
 # parse command line arguments
