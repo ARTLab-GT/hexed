@@ -65,8 +65,6 @@ add_custom_command(
         ${CMAKE_SOURCE_DIR}/script/auto_generate.py
         ${CMAKE_SOURCE_DIR}/script/Basis.py
 )
-
-# generate colormaps to use in tecplot
 set(colormap_files
     colormaps/cividis.map
     colormaps/inferno.map
@@ -76,6 +74,9 @@ set(colormap_files
     colormaps/twilight.map
     colormaps/viridis.map
 )
+configure_file(script/hexed-wrapped-post-process.in hexed-wrapped-post-process)
+
+# generate colormaps to use in tecplot
 add_custom_command(
     OUTPUT ${colormap_files}
     COMMAND python3 ${CMAKE_SOURCE_DIR}/script/colormaps.py
@@ -110,6 +111,6 @@ if (build_tests)
 endif()
 
 # install
-install(PROGRAMS script/hexed-post-process script/hexed-wrapped-post-process TYPE BIN)
+install(PROGRAMS script/hexed-post-process ${CMAKE_BINARY_DIR}/hexed-wrapped-post-process TYPE BIN)
 export(TARGETS hexed FILE hexed-targets.cmake)
 install(FILES ${CMAKE_BINARY_DIR}/hexed-config.cmake DESTINATION lib/cmake/hexed)

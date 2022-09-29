@@ -14,27 +14,27 @@ for name in names:
     cmap = get_cmap(name)
     text = f"""
 #!MC 1410
-$!CREATECOLORMAP
-NAME = '{name}'
-NUMCONTROLPOINTS = {n_point}
+$!CreateColorMap
+  Name = 'hexed_{name}'
+  NumControlPoints = {n_point}
 """[1:]
     for i_point in range(n_point):
         frac = i_point/(n_point - 1)
         color = cmap(frac)
-        rgb = "\n    ".join([f"{'RGB'[i]} = {int(color[i]*255)}" for i in range(3)])
+        rgb = "\n      ".join([f"{'RGB'[i]} = {int(color[i]*255)}" for i in range(3)])
         text += f"""
-CONTROLPOINT {i_point + 1}
-{{
-  COLORMAPFRACTION = {frac}
-  LEADRGB
+  ControlPoint {i_point + 1}
   {{
-    {rgb}
+    ColorMapFraction = {frac}
+    LeadRGB
+    {{
+      {rgb}
+    }}
+    TrailRGB
+    {{
+      {rgb}
+    }}
   }}
-  TRAILRGB
-  {{
-    {rgb}
-  }}
-}}
 """[1:]
     with open(f"{dir_name}/{name}.map", "w") as output_file:
         output_file.write(text)
