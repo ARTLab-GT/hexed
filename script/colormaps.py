@@ -11,18 +11,19 @@ if dir_name not in os.listdir():
     os.mkdir(dir_name)
 
 for name in names:
-    cmap = get_cmap(name)
-    text = f"""
+    try:
+        cmap = get_cmap(name)
+        text = f"""
 #!MC 1410
 $!CreateColorMap
   Name = 'hexed_{name}'
   NumControlPoints = {n_point}
 """[1:]
-    for i_point in range(n_point):
-        frac = i_point/(n_point - 1)
-        color = cmap(frac)
-        rgb = "\n      ".join([f"{'RGB'[i]} = {int(color[i]*255)}" for i in range(3)])
-        text += f"""
+        for i_point in range(n_point):
+            frac = i_point/(n_point - 1)
+            color = cmap(frac)
+            rgb = "\n      ".join([f"{'RGB'[i]} = {int(color[i]*255)}" for i in range(3)])
+            text += f"""
   ControlPoint {i_point + 1}
   {{
     ColorMapFraction = {frac}
@@ -36,5 +37,7 @@ $!CreateColorMap
     }}
   }}
 """[1:]
-    with open(f"{dir_name}/{name}.map", "w") as output_file:
-        output_file.write(text)
+        with open(f"{dir_name}/{name}.map", "w") as output_file:
+            output_file.write(text)
+    except:
+        pass
