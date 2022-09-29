@@ -1,12 +1,11 @@
 #! /usr/bin/python3
 """
-This script won't work unless you run Tecplot's environment
-setup script first. This is because the
-developers, in their infinite wisdom, decided to make Tecplot
-install in its own little world with its own version of system
-files rather than in the standard system directories. To peform
-post-processing, execute `hexed-post-process`, which will
-effect the necessary configuration and then invoke this script.
+This script won't work unless you run Tecplot's environment setup script first.
+This is because the developers, in their infinite wisdom,
+decided to make Tecplot install in its own little world
+with its own version of system files rather than in the standard system directories.
+To peform post-processing, execute `hexed-post-process`,
+which will effect the necessary configuration and then invoke this script.
 """
 
 import tecplot
@@ -17,10 +16,25 @@ import sys
 # basic plot setup
 tecplot.new_layout()
 frame = tecplot.active_frame()
-if len(sys.argv) <= 1:
+
+# load custom colormaps
+for colormap_file in "@colormap_files@".split(";"):
+    colormap_file = f"@CMAKE_BINARY_DIR@/{colormap_file}"
+    if os.path.exists(colormap_file):
+        tecplot.macro.execute_command(f"$!LoadColorMap '{colormap_file}'")
+colormap = "hexed_plasma"
+
+# parse command line arguments
+args = sys.argv.copy()
+for i_arg in range(1, len(args)):
+    if "colormap=" in args[i_arg]:
+        colormap = args[i_arg].split("=")[1].replace("__", " ")
+        args.pop(i_arg)
+        break
+if len(args) <= 1:
     regex = r".*\.szplt"
 else:
-    regex = sys.argv[1]
+    regex = args[1]
 files = os.listdir(".")
 files = [f for f in files if re.match(regex, f)]
 if not files:
@@ -63,6 +77,7 @@ if includes_state: # if this file has flow variables in it, compute auxiliary fl
     tecplot.data.operate.execute_equation(equations, ignore_divide_by_zero=True)
     if n_dim >= 2:
         plot.contour(0).variable = data.variable("mach")
+        plot.contour(0).colormap_name = f"{colormap}"
         plot.vector.u_variable = data.variable("velocity0")
         plot.vector.v_variable = data.variable("velocity1")
     if n_dim >= 3:
