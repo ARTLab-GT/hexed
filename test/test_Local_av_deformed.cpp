@@ -18,11 +18,9 @@ TEST_CASE("local deformed artificial viscosity")
   elem.vertex(1).pos = {.05*.2, -.1*.2, 0.94*.2};
   // set jacobian and numerical face normals
   elem.set_jacobian(basis);
-  double face_normal [6][3*n_qpoint];
   for (int i_face = 0; i_face < 6; ++i_face) {
-    elem.face_normal(i_face) = face_normal[i_face];
     for (int i_data = 0; i_data < n_qpoint/row_size*3; ++i_data) {
-      face_normal[i_face][i_data] = elem.face()[i_face*n_qpoint/row_size*5 + i_data];
+      elem.face_normals()[i_face*n_qpoint/row_size*3 + i_data] = elem.face()[i_face*n_qpoint/row_size*5 + i_data];
     }
   }
   def_elem_view elem_view {elems};

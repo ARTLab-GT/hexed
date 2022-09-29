@@ -145,11 +145,6 @@ double* Deformed_element::jacobian_determinant()
   return jac_dat.data() + n_dim*n_dim*n_qpoint;
 }
 
-double*& Deformed_element::face_normal(int i_face)
-{
-  return f_nrml[i_face];
-}
-
 double* Deformed_element::face_normals()
 {
   return jacobian_determinant() + n_qpoint;

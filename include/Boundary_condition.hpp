@@ -176,7 +176,18 @@ class Typed_bound_connection : public Boundary_connection
   virtual Con_dir<Deformed_element> direction() {return {{i_d, i_d}, {ifs, !ifs}};}
   virtual int bound_cond_serial_n() {return bc_sn;}
   element_t& element() {return elem;}
+  virtual double* normal();
 };
+
+template<> inline double* Typed_bound_connection<Element>::normal()
+{
+  throw std::runtime_error("attempted to access the face normal of cartesian element (`Typed_bound_connection<Element>::normal`)");
+}
+
+template<> inline double* Typed_bound_connection<Deformed_element>::normal()
+{
+  return elem.face_normals();
+}
 
 }
 #endif
