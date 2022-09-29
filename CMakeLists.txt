@@ -66,6 +66,26 @@ add_custom_command(
         ${CMAKE_SOURCE_DIR}/script/Basis.py
 )
 
+# generate colormaps to use in tecplot
+set(colormap_files
+    colormaps/cividis.map
+    colormaps/inferno.map
+    colormaps/magma.map
+    colormaps/plasma.map
+    colormaps/turbo.map
+    colormaps/twilight.map
+    colormaps/viridis.map
+)
+add_custom_command(
+    OUTPUT ${colormap_files}
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/script/colormaps.py
+    DEPENDS ${CMAKE_SOURCE_DIR}/script/colormaps.py
+)
+add_custom_target(
+    colormaps ALL
+    DEPENDS ${colormap_files}
+)
+
 # define main target, which is a library
 add_library(hexed SHARED)
 
