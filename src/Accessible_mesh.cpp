@@ -59,6 +59,9 @@ void Accessible_mesh::connect_deformed(int ref_level, std::array<int, 2> serial_
     el_ar[i_side] = &def.elems.at(ref_level, serial_n[i_side]);
   }
   def.cons.emplace_back(el_ar, direction);
+  for (int i_side : {0, 1}) {
+    el_ar[i_side]->face_normal(direction.i_face(i_side)) = def.cons.back().normal(i_side);
+  }
 }
 
 void Accessible_mesh::connect_hanging(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Deformed_element> dir,
@@ -102,7 +105,11 @@ void Accessible_mesh::connect_boundary(int ref_level, bool is_deformed, int elem
   #define EMPLACE(mbt) { \
     mbt.bound_cons.emplace_back(mbt.elems.at(ref_level, element_serial_n), i_dim, face_sign, bc_serial_n); \
   }
-  if (is_deformed) EMPLACE(def)
+  if (is_deformed) {
+    EMPLACE(def)
+    auto& con = def.bound_cons.back();
+    con.element().face_normal(2*i_dim + face_sign) = con.normal(0);
+  }
   else EMPLACE(car)
   #undef EMPLACE
 }

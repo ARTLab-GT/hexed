@@ -159,7 +159,9 @@ TEST_CASE("Element_face_connection<Deformed_element>")
   REQUIRE(con.direction().face_sign[1] == 1);
   REQUIRE(&con.element(0) == &elem0);
   REQUIRE(&con.element(1) == &elem1);
-  con.normal()[3*6*6 - 1] = 1; // check that normal storage is big enough (otherwise segfault)
+  con.normal(0)[3*6*6 - 1] = 1; // check that normal storage is big enough (otherwise segfault)
+  con.normal(1)[3*6*6 - 1] = 1; // check that normal storage is big enough (otherwise segfault)
+  REQUIRE(con.normal() == con.normal(0));
   REQUIRE(con.face(0) == elem0.face() + 4*5*36);
   REQUIRE(con.face(1) == elem1.face() + 3*5*36);
   REQUIRE(&elem0.vertex(0) == &elem1.vertex(3));

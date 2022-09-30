@@ -85,13 +85,15 @@ class Face_connection
 template <>
 class Face_connection<Deformed_element>
 {
+  int nrml_sz;
   Eigen::VectorXd nrml;
   public:
   Face_connection<Deformed_element>(Storage_params params)
-  : nrml{params.n_dim*params.n_qpoint()/params.row_size}
+  : nrml_sz{params.n_dim*params.n_qpoint()/params.row_size}, nrml{2*nrml_sz}
   {}
   virtual Con_dir<Deformed_element> direction() = 0;
   virtual double* face(int i_side) = 0;
+  double* normal(int i_side) {return nrml.data() + i_side*nrml_sz;}
   double* normal() {return nrml.data();} // area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
 };
 

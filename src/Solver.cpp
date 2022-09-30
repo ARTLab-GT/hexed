@@ -149,16 +149,25 @@ void Solver::calc_jacobian()
   for (int i_con = 0; i_con < def_cons.size(); ++i_con)
   {
     auto& con = def_cons[i_con];
-    double* shared_nrml = con.normal();
     double* elem_nrml [2] {con.face(0), con.face(1)};
     auto dir = con.direction();
     // permute face 1 so that quadrature points match up
-    (*kernel_factory<Face_permutation>(n_dim, rs, dir, elem_nrml[1])).match_faces();
+    auto fp = kernel_factory<Face_permutation>(n_dim, rs, dir, elem_nrml[1]);
+    fp->match_faces();
     // take average of element face normals with appropriate flipping
-    for (int i_side : {0, 1}) {
-      int sign = 1 - 2*dir.flip_normal(i_side);
+    int sign [2];
+    for (int i_side : {0, 1}) sign[i_side] = 1 - 2*dir.flip_normal(i_side);
+    for (int i_data = 0; i_data < n_dim*nfq; ++i_data) {
+      double n = 0;
+      for (int i_side : {0, 1}) n += 0.5*sign[i_side]*elem_nrml[i_side][i_data];
+      for (int i_side : {0, 1}) elem_nrml[i_side][i_data] = sign[i_side]*n;
+    }
+    // put face 1 back in its original order (except now we're working with the normal data not state data)
+    fp->restore();
+    for (int i_side = 0; i_side < 2; ++i_side) {
+      double* n = con.normal(i_side);
       for (int i_data = 0; i_data < n_dim*nfq; ++i_data) {
-        shared_nrml[i_data] += 0.5*sign*elem_nrml[i_side][i_data];
+        n[i_data] = elem_nrml[i_side][i_data];
       }
     }
   }
@@ -265,6 +274,7 @@ void Solver::update(double stability_ratio)
   (*kernel_factory<Local_av0_deformed >(nd, rs, basis, dt, 1.))(acc_mesh.deformed ().elements());
   (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, dt, 1.))(acc_mesh.cartesian().elements());
   (*kernel_factory<Local_av1_deformed >(nd, rs, basis, dt, 1.))(acc_mesh.deformed ().elements());
+
   // update status for reporting
   status.time_step = dt;
   status.flow_time += dt;
@@ -345,8 +355,9 @@ std::vector<double> Solver::integral_surface(const Surface_func& integrand, int 
         }
         std::vector<double> normal;
         double nrml_mag = 0;
+        int nrml_sign = 2*con.direction().flip_normal(0) - 1;
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          double comp = -nrml[i_dim*nfq + i_qpoint];
+          double comp = nrml_sign*nrml[i_dim*nfq + i_qpoint];
           normal.push_back(comp);
           nrml_mag += comp*comp;
         }
