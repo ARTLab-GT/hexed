@@ -38,6 +38,7 @@ class Deformed_element : public Element
   double* reference_level_normals();
   // jacobian determinant data
   double* jacobian_determinant();
+  double*& face_normal(int i_face);
   double* face_normals();
 
   virtual double jacobian(int i_dim, int j_dim, int i_qpoint);

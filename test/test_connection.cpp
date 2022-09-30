@@ -194,8 +194,6 @@ TEST_CASE("Refined_connection<Deformed_element>")
     REQUIRE(&fine_con.element(1) == &elem2); // note transposed
     REQUIRE(fine_con.face(0) == con.refined_face.fine_face(1));
     REQUIRE(fine_con.face(1) == elem2.face() + (2*2 + 1)*5*6*6);
-    // check no segfault
-    fine_con.normal()[2*3*3*6*6 - 1] = 1.;
     REQUIRE(&coarse.vertex(4) == &elem0.vertex(1));
     REQUIRE(&coarse.vertex(5) == &elem2.vertex(5));
     REQUIRE(&coarse.vertex(6) == &elem1.vertex(3));

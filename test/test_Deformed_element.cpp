@@ -19,6 +19,11 @@ TEST_CASE("Deformed_element")
   element.jacobian_determinant()[16 - 1] = 0.;
   element.face_normals()[0] = 0.;
   element.face_normals()[4*2*4 - 1] = 0.;
+  double some_variable = 0;
+  REQUIRE(element.face_normal(0) == nullptr);
+  REQUIRE(element.face_normal(3) == nullptr);
+  element.face_normal(0) = &some_variable;
+  element.face_normal(3) = &some_variable;
 
   for (int i_adj = 0; i_adj < 16; ++i_adj) {
     REQUIRE(element.node_adjustments()[i_adj] == 0.);

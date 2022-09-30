@@ -85,11 +85,14 @@ class Face_connection
 template <>
 class Face_connection<Deformed_element>
 {
+  Eigen::VectorXd nrml;
   public:
-  Face_connection<Deformed_element>(Storage_params params) {}
+  Face_connection<Deformed_element>(Storage_params params)
+  : nrml{params.n_dim*params.n_qpoint()/params.row_size}
+  {}
   virtual Con_dir<Deformed_element> direction() = 0;
   virtual double* face(int i_side) = 0;
-  virtual double* normal() = 0; // area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
+  double* normal() {return nrml.data();} // area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
 };
 
 /*
@@ -106,13 +109,13 @@ class Element_connection
  * Represents a connection between specific faces of two elements of the same refinement level.
  */
 template <typename element_t>
-class Element_face_connection_common : public Element_connection, public Face_connection<element_t>
+class Element_face_connection : public Element_connection, public Face_connection<element_t>
 {
   Con_dir<element_t> dir;
   std::array<element_t*, 2> elems;
   std::array<double*, 2> faces;
   public:
-  Element_face_connection_common(std::array<element_t*, 2> elements, Con_dir<element_t> con_dir)
+  Element_face_connection(std::array<element_t*, 2> elements, Con_dir<element_t> con_dir)
   : Face_connection<element_t>{elements[0]->storage_params()}, dir{con_dir}, elems{elements}
   {
     Storage_params params {elements[0]->storage_params()};
@@ -128,25 +131,6 @@ class Element_face_connection_common : public Element_connection, public Face_co
   virtual Con_dir<element_t> direction() {return dir;}
   virtual double* face(int i_side) {return faces[i_side];}
   virtual element_t& element(int i_side) {return *elems[i_side];}
-};
-
-template <typename element_t>
-class Element_face_connection : public Element_face_connection_common<element_t>
-{
-  public:
-  Element_face_connection(std::array<element_t*, 2> elements, Con_dir<element_t> con_dir)
-  : Element_face_connection_common<element_t>(elements, con_dir)
-  {}
-};
-
-template <>
-class Element_face_connection<Deformed_element> : public Element_face_connection_common<Deformed_element>
-{
-  public:
-  Element_face_connection(std::array<Deformed_element*, 2> elements, Con_dir<Deformed_element> con_dir)
-  : Element_face_connection_common<Deformed_element>(elements, con_dir)
-  {}
-  virtual double* normal() {return element(0).face_normals();}
 };
 
 /*
@@ -165,18 +149,15 @@ class Refined_connection
     Refined_connection& ref_con;
     element_t& fine_elem;
     std::array<double*, 2> faces;
-    Eigen::VectorXd nrml;
-    int normal_size(Storage_params);
     public:
     Fine_connection(Refined_connection& r, double* mortar_face, element_t& f)
-    : Face_connection<element_t>{r.params}, ref_con{r}, fine_elem{f}, nrml(normal_size(r.params))
+    : Face_connection<element_t>{r.params}, ref_con{r}, fine_elem{f}
     {
       faces[ref_con.rev] = mortar_face;
       faces[!ref_con.rev] = fine_elem.face() + r.direction().i_face(!ref_con.rev)*r.params.n_dof()/r.params.row_size;
     }
     virtual Con_dir<element_t> direction() {return ref_con.direction();}
     virtual double* face(int i_side) {return faces[i_side];}
-    virtual double* normal() {return nrml.data();}
     virtual element_t& element(int i_side) {return (i_side != ref_con.rev) ? fine_elem : ref_con.c;}
   };
 
@@ -260,18 +241,6 @@ class Refined_connection
   auto stretch() {return str;}
   int n_fine_elements() {return n_fine;}
 };
-
-template<>
-inline int Refined_connection<Element>::Fine_connection::normal_size(Storage_params)
-{
-  return 0;
-}
-
-template<>
-inline int Refined_connection<Deformed_element>::Fine_connection::normal_size(Storage_params params)
-{
-  return 2*params.n_dim*params.n_dim*params.n_qpoint()/params.row_size;
-}
 
 }
 #endif
