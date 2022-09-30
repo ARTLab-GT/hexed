@@ -551,8 +551,9 @@ void Solver::visualize_field_otter(otter::plot& plt,
   if (contour.n_var(params.n_dim) != 1) throw std::runtime_error("`contour` must be scalar");
   if (color_by.n_var(params.n_dim) != 1) throw std::runtime_error("`color_by` must be scalar");
   // substitute bounds if necessary
+  auto bf = bounds_field(contour)[0];
   if (std::isnan(contour_bounds[0]) || std::isnan(contour_bounds[1])) {
-    contour_bounds = bounds_field(contour)[0];
+    contour_bounds = bf;
     contour_bounds[1] += tol;
   }
   if (std::isnan(color_bounds[0]) || std::isnan(color_bounds[1])) {
@@ -563,9 +564,11 @@ void Solver::visualize_field_otter(otter::plot& plt,
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     for (int i_contour = 0; i_contour < n_contour; ++i_contour) {
       double contour_val = (i_contour + 1)/(n_contour + 1.);
+      contour_val = contour_val*(contour_bounds[1] - contour_bounds[0]) + contour_bounds[0];
+      contour_val = (contour_val - bf[0])/(bf[1] - bf[0]);
       auto& elem = elements[i_elem];
       // add contour line/surface
-      otter_vis::add_contour(plt, elem, basis, Scaled(contour, contour_bounds), contour_val, n_div,
+      otter_vis::add_contour(plt, elem, basis, Scaled(contour, bf), contour_val, n_div,
                              color_by, color_bounds, cmap_contour, transparent, status.flow_time, tol);
       // for 2d, color the flow field as well
       if (params.n_dim == 2) {
