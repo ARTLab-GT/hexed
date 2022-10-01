@@ -537,6 +537,18 @@ void test_art_visc(Test_mesh& tm, std::string name)
   sol.set_art_visc_constant(300.);
   // update
   sol.update();
+  #if HEXED_USE_OTTER
+  otter::plot plt;
+  sol.visualize_edges_otter(plt);
+  sol.visualize_field_otter(plt, hexed::Component(hexed::Physical_update(), n_dim), 10, {std::nan(""), std::nan("")}, hexed::Component(hexed::Physical_update(), n_dim));
+  if (sol.storage_params().n_dim == 3) {
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      double centroid = sol.integral_field(hexed::Position_func())[i_dim]/sol.integral_field(hexed::Constant_func({1.}))[0];
+      sol.visualize_slice_otter(plt, i_dim, centroid, hexed::Component(hexed::Physical_update(), n_dim));
+    }
+  }
+  plt.show();
+  #endif
   auto status = sol.iteration_status();
   // check that the computed update is approximately equal to the exact solution
   for (auto handle : sol.mesh().elem_handles()) {

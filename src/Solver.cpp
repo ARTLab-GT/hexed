@@ -279,16 +279,27 @@ void Solver::update(double stability_ratio)
     (*kernel_factory<Local_deformed >(nd, rs, basis, dt, rk_weight))(acc_mesh.deformed ().elements(), sw_def, "local");
   }
 
+  (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+    acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
+  }
+  (*kernel_factory<Neighbor_avg_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections());
+  (*kernel_factory<Neighbor_avg_deformed >(nd, rs, false))(acc_mesh.deformed ().face_connections());
+  (*kernel_factory<Restrict_refined>(nd, rs, basis, false))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+
   (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, dt, 1.))(acc_mesh.cartesian().elements());
   (*kernel_factory<Local_av0_deformed >(nd, rs, basis, dt, 1.))(acc_mesh.deformed ().elements());
-  (*kernel_factory<Prolong_refined>(nd, rs, basis, 2))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+
+  (*kernel_factory<Prolong_refined>(nd, rs, basis, true))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh.boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
   }
   (*kernel_factory<Neighbor_avg_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections());
-  (*kernel_factory<Neighbor_avg_deformed >(nd, rs))(acc_mesh.deformed ().face_connections());
+  (*kernel_factory<Neighbor_avg_deformed >(nd, rs, true))(acc_mesh.deformed ().face_connections());
   (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+
   (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, dt, 1.))(acc_mesh.cartesian().elements());
   (*kernel_factory<Local_av1_deformed >(nd, rs, basis, dt, 1.))(acc_mesh.deformed ().elements());
 
