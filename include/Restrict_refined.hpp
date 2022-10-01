@@ -20,9 +20,10 @@ template <int n_dim, int row_size>
 class Restrict_refined : public Kernel<Refined_face&>
 {
   const Eigen::Matrix<double, row_size, row_size> restrict_mat [2];
+  bool scl;
 
   public:
-  Restrict_refined(const Basis& basis) : restrict_mat{basis.restrict(0), basis.restrict(1)} {}
+  Restrict_refined(const Basis& basis, bool scale = true) : restrict_mat{basis.restrict(0), basis.restrict(1)}, scl{scale} {}
 
   virtual void operator()(Sequence<Refined_face&>& ref_faces)
   {
@@ -46,15 +47,15 @@ class Restrict_refined : public Kernel<Refined_face&>
         for (int i_var = 0; i_var < n_var; ++i_var)
         {
           double* var_face {fine + i_var*nfq};
-          for (int j_dim = 0; j_dim < n_dim - 1; ++j_dim)
+          for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim)
           {
-            if (str[j_dim])
+            if (str[i_dim])
             {
-              for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) var_face[i_qpoint] /= 2;
+              for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) var_face[i_qpoint] /= 1 + scl;
             }
             else
             {
-              const int pow {n_dim - 2 - j_dim};
+              const int pow {n_dim - 2 - i_dim};
               const int face_stride {str[n_dim - 2] ? 1 : custom_math::pow(2, pow)};
               const int qpoint_stride {custom_math::pow(row_size, pow)};
               const int i_half {(i_face/face_stride)%2}; // is this face covering the upper or lower half of the coarse face with respect to the current dimension?
