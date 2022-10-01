@@ -22,14 +22,12 @@ class Local_av1_cartesian : public Kernel<Element&>
   Derivative<row_size> derivative;
   Write_face<n_dim, row_size> write_face;
   double dt;
-  double rkw;
 
   public:
-  Local_av1_cartesian(const Basis& basis, double d_time, double rk_weight) :
+  Local_av1_cartesian(const Basis& basis, double d_time) :
     derivative{basis},
     write_face{basis},
-    dt{d_time},
-    rkw{rk_weight}
+    dt{d_time}
   {}
 
   virtual void operator()(Sequence<Element&>& elements)
@@ -82,7 +80,7 @@ class Local_av1_cartesian : public Kernel<Element&>
       for (int i_var = 0; i_var < n_var; ++i_var) {
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           const int i_dof = i_var*n_qpoint + i_qpoint;
-          state[i_dof] += rkw*time_rate[i_var][i_qpoint]*d_t_by_d_pos*tss[i_qpoint];
+          state[i_dof] += time_rate[i_var][i_qpoint]*d_t_by_d_pos*tss[i_qpoint];
         }
       }
       write_face(state, face);

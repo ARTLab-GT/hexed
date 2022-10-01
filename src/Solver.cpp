@@ -249,10 +249,12 @@ void Solver::update(double stability_ratio)
   const int nd = params.n_dim;
   const int rs = params.row_size;
   auto& elems = acc_mesh.elements();
+
   // compute time step
   double mcs = std::max((*kernel_factory<Mcs_cartesian>(nd, rs))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
                         (*kernel_factory<Mcs_deformed >(nd, rs))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
   double dt = stability_ratio*basis.max_cfl_convective()/params.n_dim/mcs;
+
   // record reference state for Runge-Kutta scheme
   const int n_dof = params.n_dof();
   auto& irk = stopwatch.children.at("initialize RK");
@@ -264,7 +266,8 @@ void Solver::update(double stability_ratio)
   }
   irk.stopwatch.pause();
   irk.work_units_completed += elems.size();
-  // perform update for each Runge-Kutta stage
+
+  // compute inviscid update
   auto& bc_cons {acc_mesh.boundary_connections()};
   for (double rk_weight : rk_weights) {
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
@@ -279,6 +282,7 @@ void Solver::update(double stability_ratio)
     (*kernel_factory<Local_deformed >(nd, rs, basis, dt, rk_weight))(acc_mesh.deformed ().elements(), sw_def, "local");
   }
 
+  // compute viscous update
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
@@ -287,10 +291,8 @@ void Solver::update(double stability_ratio)
   (*kernel_factory<Neighbor_avg_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections());
   (*kernel_factory<Neighbor_avg_deformed >(nd, rs, false))(acc_mesh.deformed ().face_connections());
   (*kernel_factory<Restrict_refined>(nd, rs, basis, false))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-
-  (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, dt, 1.))(acc_mesh.cartesian().elements());
-  (*kernel_factory<Local_av0_deformed >(nd, rs, basis, dt, 1.))(acc_mesh.deformed ().elements());
-
+  (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, dt))(acc_mesh.cartesian().elements());
+  (*kernel_factory<Local_av0_deformed >(nd, rs, basis, dt))(acc_mesh.deformed ().elements());
   (*kernel_factory<Prolong_refined>(nd, rs, basis, true))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
@@ -299,9 +301,8 @@ void Solver::update(double stability_ratio)
   (*kernel_factory<Neighbor_avg_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections());
   (*kernel_factory<Neighbor_avg_deformed >(nd, rs, true))(acc_mesh.deformed ().face_connections());
   (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-
-  (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, dt, 1.))(acc_mesh.cartesian().elements());
-  (*kernel_factory<Local_av1_deformed >(nd, rs, basis, dt, 1.))(acc_mesh.deformed ().elements());
+  (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, dt))(acc_mesh.cartesian().elements());
+  (*kernel_factory<Local_av1_deformed >(nd, rs, basis, dt))(acc_mesh.deformed ().elements());
 
   // update status for reporting
   status.time_step = dt;

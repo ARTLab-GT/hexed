@@ -52,7 +52,7 @@ TEST_CASE("local cartesian artificial viscosity")
       }
     }
     (hexed::Write_face<3, row_size>(basis))(elem_view); // `Local_av0_cartesian` expects faces to contain numerical LDG state
-    (hexed::Local_av0_cartesian<3, row_size>(basis, .3, 1.))(elem_view);
+    (hexed::Local_av0_cartesian<3, row_size>(basis, .3))(elem_view);
     for (int i = 0; i < row_size; ++i) {
       for (int j = 0; j < row_size; ++j) {
         for (int k = 0; k < row_size; ++k) {
@@ -94,7 +94,7 @@ TEST_CASE("local cartesian artificial viscosity")
     for (int i_data = 0; i_data < 6*5*n_qpoint/row_size; ++i_data) {
       face_data[i_data] = elem.face()[i_data];
     }
-    (hexed::Local_av0_cartesian<3, row_size>(basis, .314, 1.))(elem_view);
+    (hexed::Local_av0_cartesian<3, row_size>(basis, .314))(elem_view);
     SECTION("flux writing")
     {
       int i_row = row_size/2; // set an arbitrary quadrature point to sample on each face
@@ -105,7 +105,7 @@ TEST_CASE("local cartesian artificial viscosity")
     }
     SECTION("face local term")
     {
-      (hexed::Local_av1_cartesian<3, row_size>(basis, .314, 1.))(elem_view);
+      (hexed::Local_av1_cartesian<3, row_size>(basis, .314))(elem_view);
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
         // correct answer is 0 because 2nd derivative is 0
         // if face term is not correctly added answer may be nonzero

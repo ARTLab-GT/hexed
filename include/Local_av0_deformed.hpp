@@ -20,13 +20,11 @@ class Local_av0_deformed : public Kernel<Deformed_element&>
 {
   Derivative<row_size> derivative;
   double dt;
-  double rkw;
 
   public:
-  Local_av0_deformed(const Basis& basis, double d_time, double rk_weight) :
+  Local_av0_deformed(const Basis& basis, double d_time) :
     derivative{basis},
-    dt{d_time},
-    rkw{rk_weight}
+    dt{d_time}
   {}
 
   virtual void operator()(Sequence<Deformed_element&>& elements)
@@ -78,7 +76,7 @@ class Local_av0_deformed : public Kernel<Deformed_element&>
             Eigen::Matrix<double, row_size, n_var> row_r;
             for (int i_var = 0; i_var < n_var; ++i_var) {
               for (int i_row = 0; i_row < row_size; ++i_row) {
-                row_r(i_row, i_var) = state[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_row*stride];
+                row_r(i_row, i_var) = rk_reference[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_row*stride];
               }
             }
             // fetch numerical face state
@@ -168,8 +166,7 @@ class Local_av0_deformed : public Kernel<Deformed_element&>
       for (int i_var = 0; i_var < n_var; ++i_var) {
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           const int i_dof = i_var*n_qpoint + i_qpoint;
-          double updated = time_rate[i_var][i_qpoint]*d_t_by_d_pos*tss[i_qpoint]/det[i_qpoint] + state[i_dof];
-          state[i_dof] = rkw*updated + (1. - rkw)*rk_reference[i_dof];
+          state[i_dof] += time_rate[i_var][i_qpoint]*d_t_by_d_pos*tss[i_qpoint]/det[i_qpoint];
         }
       }
     }

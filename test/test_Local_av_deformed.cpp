@@ -47,8 +47,8 @@ TEST_CASE("local deformed artificial viscosity")
   }
   hexed::Vector_view<hexed::Element&, std::unique_ptr<hexed::Deformed_element>, &hexed::ptr_convert<hexed::Element&, std::unique_ptr<hexed::Deformed_element>>> car {elems};
   (hexed::Write_face<3, row_size>(basis))(car); // `Local_av0_deformed` expects faces to contain numerical LDG state
-  (hexed::Local_av0_deformed<3, row_size>(basis, .3, 1.))(elem_view);
-  (hexed::Local_av1_deformed<3, row_size>(basis, .3, 1.))(elem_view);
+  (hexed::Local_av0_deformed<3, row_size>(basis, .3))(elem_view);
+  (hexed::Local_av1_deformed<3, row_size>(basis, .3))(elem_view);
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
     double correct = 0.;
     for (int i_dim = 0; i_dim < 3; ++i_dim) correct += scale[i_dim]*scale[i_dim];
