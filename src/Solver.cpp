@@ -15,6 +15,7 @@
 
 #include <Neighbor_cartesian.hpp>
 #include <Neighbor_deformed.hpp>
+#include <Neighbor_avg.hpp>
 
 #include <Local_cartesian.hpp>
 #include <Local_deformed.hpp>
