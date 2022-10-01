@@ -171,6 +171,19 @@ void Solver::calc_jacobian()
       }
     }
   }
+  // write face normal for coarse hanging node faces
+  for (int i_ref = 0; i_ref < ref_cons.size(); ++i_ref) {
+    auto& ref = ref_cons[i_ref];
+    bool rev = ref.order_reversed();
+    auto& elem = ref.connection(0).element(rev);
+    auto dir = ref.direction();
+    int i_face = 2*dir.i_dim[rev] + dir.face_sign[rev];
+    double* nrml = elem.face_normal(i_face);
+    double* state = elem.face() + i_face*params.n_var*nfq;
+    for (int i_data = 0; i_data < n_dim*nfq; ++i_data) {
+      nrml[i_data] = state[i_data];
+    }
+  }
 }
 
 void Solver::set_local_tss()

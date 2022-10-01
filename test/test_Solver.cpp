@@ -488,7 +488,7 @@ class Extrude_hanging : public Test_mesh
     }
     sol.mesh().connect_deformed(1, {extra[0], extra[1]}, {{kd, kd}, {1, 0}});
     sol.mesh().connect_hanging(0, coarse, fine, {{id, id}, {1, 0}}, true, {true, true, true, true});
-    sol.mesh().extrude();
+    //sol.mesh().extrude();
     sol.mesh().connect_rest(bc_sn);
     for (int i = 0; i < 2; ++i) sol.relax_vertices();
     sol.snap_vertices();
@@ -542,13 +542,12 @@ void test_art_visc(Test_mesh& tm, std::string name)
   //#if false
   otter::plot plt;
   sol.visualize_edges_otter(plt);
+  sol.visualize_field_otter(plt, hexed::Component(hexed::Physical_update(), n_dim), 10, {std::nan(""), std::nan("")}, hexed::Component(hexed::Physical_update(), n_dim));
   if (sol.storage_params().n_dim == 3) {
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
       double centroid = sol.integral_field(hexed::Position_func())[i_dim]/sol.integral_field(hexed::Constant_func({1.}))[0];
       sol.visualize_slice_otter(plt, i_dim, centroid, hexed::Component(hexed::Physical_update(), n_dim));
     }
-  } else {
-    sol.visualize_field_otter(plt, hexed::Component(hexed::Physical_update(), n_dim), 10, {std::nan(""), std::nan("")}, hexed::Component(hexed::Physical_update(), n_dim));
   }
   plt.show();
   #endif
@@ -640,6 +639,7 @@ TEST_CASE("Solver artificial viscosity")
           Extrude_hanging eh(i_dim, j_dim); \
           test_art_visc(eh, "extrude_hanging"); \
       }
+    printf("foo\n");
     TEST_DIMENSIONS(0, 1)
     #if NDEBUG
     TEST_DIMENSIONS(0, 2)

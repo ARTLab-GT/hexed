@@ -116,6 +116,8 @@ class Element_face_connection : public Element_connection, public Face_connectio
   Con_dir<element_t> dir;
   std::array<element_t*, 2> elems;
   std::array<double*, 2> faces;
+  void connect_normal();
+
   public:
   Element_face_connection(std::array<element_t*, 2> elements, Con_dir<element_t> con_dir)
   : Face_connection<element_t>{elements[0]->storage_params()}, dir{con_dir}, elems{elements}
@@ -129,11 +131,24 @@ class Element_face_connection : public Element_connection, public Face_connectio
     for (unsigned i_vert = 0; i_vert < inds[0].size(); ++i_vert) {
       elements[0]->vertex(inds[0][i_vert]).eat(elements[1]->vertex(inds[1][i_vert]));
     }
+    connect_normal();
   }
   virtual Con_dir<element_t> direction() {return dir;}
   virtual double* face(int i_side) {return faces[i_side];}
   virtual element_t& element(int i_side) {return *elems[i_side];}
 };
+
+template <>
+inline void Element_face_connection<Element>::connect_normal()
+{}
+
+template <>
+inline void Element_face_connection<Deformed_element>::connect_normal()
+{
+  for (int i_side = 0; i_side < 2; ++i_side) {
+    elems[i_side]->face_normal(dir.i_face(i_side)) = normal(i_side);
+  }
+}
 
 /*
  * Represents a connection between elements whose refinement levels differ by 1. This involves
@@ -172,6 +187,7 @@ class Refined_connection
   std::vector<Fine_connection> fine_cons;
   std::array<bool, 2> str;
   int n_fine;
+  Eigen::VectorXd coarse_normal;
   static std::vector<Element*> to_elementstar(std::vector<element_t*> elems)
   {
     std::vector<Element*> converted;
@@ -183,6 +199,7 @@ class Refined_connection
     bool trans = def_dir.transpose();
     return {str[trans], str[!trans]};
   }
+  void connect_normal();
 
   public:
   Refined_face refined_face;
@@ -231,6 +248,7 @@ class Refined_connection
       if (any_str) inds[1] = i_face != (def_dir.flip_tangential() && !str[2*def_dir.i_dim[rev] > 3 - def_dir.i_dim[!rev]]);
       fine_cons.emplace_back(*this, refined_face.fine_face(inds[rev]), *fine[inds[!rev]]);
     }
+    connect_normal();
   }
   // delete copy semantics which would mess up `Fine_connection`. Can implement later if we really need it.
   Refined_connection(const Refined_connection&) = delete;
@@ -243,6 +261,21 @@ class Refined_connection
   auto stretch() {return str;}
   int n_fine_elements() {return n_fine;}
 };
+
+template <>
+inline void Refined_connection<Element>::connect_normal()
+{}
+
+template <>
+inline void Refined_connection<Deformed_element>::connect_normal()
+{
+  coarse_normal.resize(params.n_dim*params.n_qpoint()/params.row_size);
+  c.face_normal(dir.i_dim[rev] + dir.face_sign[rev]) = coarse_normal.data();
+  for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
+    auto n = fine_cons[i_fine].normal(!rev);
+    fine_cons[i_fine].element(!rev).face_normal(dir.i_dim[!rev] + dir.face_sign[!rev]) = n;
+  }
+}
 
 }
 #endif
