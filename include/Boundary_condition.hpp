@@ -31,8 +31,11 @@ class Boundary_connection;
 class Flow_bc
 {
   public:
+  // applies boundary condition to state variables (Dirichlet BCs)
   // writes to the first `n_var()*size()` entries of `ghost_state()` (called on the provided `Boundary_face`.)
-  virtual void apply(Boundary_face&) = 0;
+  virtual void apply_state(Boundary_face&) = 0;
+  // applies boundary condition to viscous fluxes (if applicable)
+  virtual void apply_flux(Boundary_face&) = 0;
   virtual ~Flow_bc() = default;
 };
 
@@ -58,14 +61,19 @@ class Boundary_condition
 
 /*
  * Sets the ghost state to the provided freestream state.
+ * Technically this can result in an ill-posed problem if used
+ * in anything other than a supersonic inlet,
+ * but in numerical practice it often gets you the right answer anyway.
+ * Should implement Riemann invariants as a more robust alternative.
  */
 class Freestream : public Flow_bc
 {
   std::vector<double> fs;
   public:
-  // `freestream_state.size()` must equal the `n_var()` of the `Boundary_face` you apply it to
+  // `freestream_state.size()` must equal the `n_var()` of the `Boundary_face` you apply_state it to
   Freestream(std::vector<double> freestream_state);
-  virtual void apply(Boundary_face&);
+  virtual void apply_state(Boundary_face&);
+  virtual void apply_flux(Boundary_face&);
 };
 
 /*
@@ -73,8 +81,10 @@ class Freestream : public Flow_bc
  */
 class Nonpenetration : public Flow_bc
 {
+  void reflect_normal(double*, double*, int, int);
   public:
-  virtual void apply(Boundary_face&);
+  virtual void apply_state(Boundary_face&);
+  virtual void apply_flux(Boundary_face&);
 };
 
 /*
@@ -84,7 +94,8 @@ class Nonpenetration : public Flow_bc
 class Copy : public Flow_bc
 {
   public:
-  virtual void apply(Boundary_face&);
+  virtual void apply_state(Boundary_face&);
+  virtual void apply_flux(Boundary_face&);
 };
 
 class Null_mbc : public Mesh_bc

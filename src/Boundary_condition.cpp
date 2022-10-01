@@ -9,7 +9,16 @@ Freestream::Freestream(std::vector<double> freestream_state)
 : fs{freestream_state}
 {}
 
-void Freestream::apply(Boundary_face& bf)
+void copy_state(Boundary_face& bf)
+{
+  double* in_f = bf.inside_face();
+  double* gh_f = bf.ghost_face();
+  for (int i_dof = 0; i_dof < bf.storage_params().n_dof()/bf.storage_params().row_size; ++i_dof) {
+    gh_f[i_dof] = in_f[i_dof];
+  }
+}
+
+void Freestream::apply_state(Boundary_face& bf)
 {
   auto params = bf.storage_params();
   const int nq = params.n_qpoint()/params.row_size;
@@ -21,39 +30,58 @@ void Freestream::apply(Boundary_face& bf)
   }
 }
 
-void Nonpenetration::apply(Boundary_face& bf)
+void Freestream::apply_flux(Boundary_face& bf)
 {
-  // fetch data
-  auto params = bf.storage_params();
-  const int nq = params.n_qpoint()/params.row_size;
-  double* gh_f = bf.ghost_face();
-  double* in_f = bf.inside_face();
-  double* nrml = bf.surface_normal();
-  for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = in_f[i_dof];
-  // reflect normal component of momentum
+  copy_state(bf);
+}
+
+void Nonpenetration::reflect_normal(double* gh_f, double* nrml, int nq, int nd)
+{
   for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint)
   {
     double dot = 0.;
     double norm_sq = 0.;
-    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
       double n = nrml[i_dim*nq + i_qpoint];
       dot += gh_f[i_dim*nq + i_qpoint]*n;
       norm_sq += n*n;
     }
-    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
       gh_f[i_dim*nq + i_qpoint] -= 2*dot*nrml[i_dim*nq + i_qpoint]/norm_sq;
     }
   }
 }
 
-
-void Copy::apply(Boundary_face& bf)
+void Nonpenetration::apply_state(Boundary_face& bf)
 {
-  double* in_f = bf.inside_face();
+  // fetch data
+  auto params = bf.storage_params();
   double* gh_f = bf.ghost_face();
-  for (int i_dof = 0; i_dof < bf.storage_params().n_dof()/bf.storage_params().row_size; ++i_dof) {
-    gh_f[i_dof] = in_f[i_dof];
-  }
+  double* in_f = bf.inside_face();
+  for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = in_f[i_dof];
+  reflect_normal(gh_f, bf.surface_normal(), params.n_qpoint()/params.row_size, params.n_dim);
+}
+
+void Nonpenetration::apply_flux(Boundary_face& bf)
+{
+  // fetch data
+  auto params = bf.storage_params();
+  double* gh_f = bf.ghost_face();
+  double* in_f = bf.inside_face();
+  // initialize to negative of inside flux
+  for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
+  // un-invert normal component of momentum
+  reflect_normal(gh_f, bf.surface_normal(), params.n_qpoint()/params.row_size, params.n_dim);
+}
+
+void Copy::apply_state(Boundary_face& bf)
+{
+  copy_state(bf);
+}
+
+void Copy::apply_flux(Boundary_face& bf)
+{
+  copy_state(bf);
 }
 
 void Nominal_pos::snap_vertices(Boundary_connection& con)

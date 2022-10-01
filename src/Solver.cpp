@@ -270,12 +270,12 @@ void Solver::update(double stability_ratio)
   irk.stopwatch.pause();
   irk.work_units_completed += elems.size();
   // perform update for each Runge-Kutta stage
+  auto& bc_cons {acc_mesh.boundary_connections()};
   for (double rk_weight : rk_weights) {
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-    auto& bc_cons {acc_mesh.boundary_connections()};
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
       int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-      acc_mesh.boundary_condition(bc_sn).flow_bc->apply(bc_cons[i_con]);
+      acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
     }
     (*kernel_factory<Neighbor_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor");
     (*kernel_factory<Neighbor_deformed >(nd, rs))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor");
@@ -286,6 +286,14 @@ void Solver::update(double stability_ratio)
 
   (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, dt, 1.))(acc_mesh.cartesian().elements());
   (*kernel_factory<Local_av0_deformed >(nd, rs, basis, dt, 1.))(acc_mesh.deformed ().elements());
+  (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+    acc_mesh.boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
+  }
+  (*kernel_factory<Neighbor_avg_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections());
+  (*kernel_factory<Neighbor_avg_deformed >(nd, rs))(acc_mesh.deformed ().face_connections());
+  (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
   (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, dt, 1.))(acc_mesh.cartesian().elements());
   (*kernel_factory<Local_av1_deformed >(nd, rs, basis, dt, 1.))(acc_mesh.deformed ().elements());
 
