@@ -58,10 +58,7 @@ class Local_av0_deformed : public Kernel<Deformed_element&>
       double* face_nrml [2*n_dim];
       for (int i_face = 0; i_face < 2*n_dim; ++i_face) {
         face_nrml[i_face] = elem.face_normal(i_face);
-        if (!face_nrml[i_face]) {
-          printf("element %p face %i\n", (void*)&elem, i_face);
-          face_nrml[i_face] = cartesian_normal_ptr[i_face/2];
-        }
+        if (!face_nrml[i_face]) face_nrml[i_face] = cartesian_normal_ptr[i_face/2];
       }
       double* tss = elem.time_step_scale();
       double* av_coef = elem.art_visc_coef();

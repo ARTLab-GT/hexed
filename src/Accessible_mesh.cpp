@@ -102,9 +102,7 @@ void Accessible_mesh::connect_boundary(int ref_level, bool is_deformed, int elem
   #define EMPLACE(mbt) { \
     mbt.bound_cons.emplace_back(mbt.elems.at(ref_level, element_serial_n), i_dim, face_sign, bc_serial_n); \
   }
-  if (is_deformed) {
-    EMPLACE(def)
-  }
+  if (is_deformed) EMPLACE(def)
   else EMPLACE(car)
   #undef EMPLACE
 }
