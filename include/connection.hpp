@@ -270,10 +270,10 @@ template <>
 inline void Refined_connection<Deformed_element>::connect_normal()
 {
   coarse_normal.resize(params.n_dim*params.n_qpoint()/params.row_size);
-  c.face_normal(dir.i_dim[rev] + dir.face_sign[rev]) = coarse_normal.data();
+  c.face_normal(2*dir.i_dim[rev] + dir.face_sign[rev]) = coarse_normal.data();
   for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
     auto n = fine_cons[i_fine].normal(!rev);
-    fine_cons[i_fine].element(!rev).face_normal(dir.i_dim[!rev] + dir.face_sign[!rev]) = n;
+    fine_cons[i_fine].element(!rev).face_normal(2*dir.i_dim[!rev] + dir.face_sign[!rev]) = n;
   }
 }
 
