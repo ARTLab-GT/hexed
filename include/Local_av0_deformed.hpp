@@ -34,12 +34,13 @@ class Local_av0_deformed : public Kernel<Deformed_element&>
     constexpr int n_face_dof = n_var*n_qpoint/row_size;
 
     // no point allocating this on the stack since face normals will usually be on the heap anyway
-    Eigen::MatrixXd cartesian_normals(n_dim*n_dim, n_qpoint/row_size);
-    double* cartesian_normal_ptr [n_dim];
+    double cartesian_normal [n_dim][n_dim][n_qpoint/row_size];
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-      auto view = cartesian_normals(Eigen::seqN(i_dim*n_dim, n_dim), Eigen::all);
-      cartesian_normal_ptr[i_dim] = view.data();
-      view = Eigen::VectorXd::Unit(n_dim, i_dim)*Eigen::MatrixXd::Ones(1, n_qpoint/row_size);
+      for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+        for (int i_qpoint = 0; i_qpoint < n_qpoint/row_size; ++i_qpoint) {
+          cartesian_normal[i_dim][j_dim][i_qpoint] = i_dim == j_dim;
+        }
+      }
     }
 
     #pragma omp parallel for
@@ -56,7 +57,7 @@ class Local_av0_deformed : public Kernel<Deformed_element&>
       double* face_nrml [2*n_dim];
       for (int i_face = 0; i_face < 2*n_dim; ++i_face) {
         face_nrml[i_face] = elem.face_normal(i_face);
-        if (!face_nrml[i_face]) face_nrml[i_face] = cartesian_normal_ptr[i_face/2];
+        if (!face_nrml[i_face]) face_nrml[i_face] = cartesian_normal[i_face/2][0];
       }
       double* tss = elem.time_step_scale();
       double* av_coef = elem.art_visc_coef();
