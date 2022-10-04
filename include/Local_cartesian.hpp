@@ -82,6 +82,7 @@ class Local_cartesian : public Kernel<Element&>
             {
               #define READ(i) row_r[i][i_qpoint]
               #define FLUX(i) flux(i_qpoint, i)
+              if (READ(n_var - 2) <= 0.) throw std::runtime_error("nonpositive density in `Local_cartesian`!");
               double veloc = READ(i_dim)/READ(n_var - 2);
               double pres = 0;
               for (int j_dim = 0; j_dim < n_var - 2; ++j_dim) {
