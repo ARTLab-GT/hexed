@@ -99,8 +99,7 @@ class Local_cartesian : public Kernel<Element&>
             Eigen::Matrix<double, row_size, n_var> row_w = -derivative(flux, boundary_values);
 
             // Add dimensional component to update
-            for (int i_var = 0; i_var < n_var; ++i_var)
-            {
+            for (int i_var = 0; i_var < n_var; ++i_var) {
               for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
                 int offset = i_outer*stride*row_size + i_inner + i_qpoint*stride;
                 time_rate[i_var][offset] += row_w(i_qpoint, i_var);

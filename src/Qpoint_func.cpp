@@ -24,4 +24,10 @@ std::vector<double> Physical_update::operator()(Element& element, const Basis&, 
   return result;
 }
 
+std::vector<double> Art_visc_coef::operator()(Element& element, const Basis&, int i_qpoint, double time) const
+{
+  return {element.art_visc_coef()[i_qpoint]};
+}
+
+
 }

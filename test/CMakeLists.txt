@@ -18,6 +18,8 @@ test_Face_permutation.cpp
 test_hll.cpp
 test_Hanging_vertex_matcher.cpp
 test_Iteration_status.cpp
+test_Local_av_cartesian.cpp
+test_Local_av_deformed.cpp
 test_Local_cartesian.cpp
 test_Local_deformed.cpp
 test_math.cpp

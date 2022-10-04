@@ -5,7 +5,7 @@
 class Dummy : public hexed::Boundary_condition
 {
   public:
-  virtual void apply(hexed::Boundary_face&) {}
+  virtual void apply_state(hexed::Boundary_face&) {}
 };
 
 TEST_CASE("Typed_boundary_connection")
@@ -52,7 +52,7 @@ TEST_CASE("Freestream")
     tbc.inside_face()[3*n_qpoint + i_qpoint] = 0.9;
     tbc.inside_face()[4*n_qpoint + i_qpoint] = 1e4;
   }
-  freestream.apply(tbc);
+  freestream.apply_state(tbc);
   // check that ghost face is equal to freestream
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
     REQUIRE(tbc.ghost_face()[0*n_qpoint + i_qpoint] == Approx(10.));
@@ -76,14 +76,32 @@ TEST_CASE("Nonpenetration")
     double state [] {1., 1., 1.2, 1e5/0.4 + 0.5*1.2*2.};
     for (int i_var = 0; i_var < 4; ++i_var) tbc.inside_face()[i_var*row_size + i_qpoint] = state[i_var];
   }
-  nonpen.apply(tbc);
-  for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-    // require tangential momentum unchanged
-    REQUIRE(  3*tbc.ghost_face()[0*row_size + i_qpoint]
-            + 4*tbc.ghost_face()[1*row_size + i_qpoint] == Approx(7.));
-    // require normal momentum flipped
-    REQUIRE( -4*tbc.ghost_face()[0*row_size + i_qpoint]
-            + 3*tbc.ghost_face()[1*row_size + i_qpoint] == Approx(1.));
+  SECTION("apply_state")
+  {
+    nonpen.apply_state(tbc);
+    for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+      // require tangential momentum unchanged
+      REQUIRE(  3*tbc.ghost_face()[0*row_size + i_qpoint]
+              + 4*tbc.ghost_face()[1*row_size + i_qpoint] == Approx(7.));
+      // require normal momentum flipped
+      REQUIRE( -4*tbc.ghost_face()[0*row_size + i_qpoint]
+              + 3*tbc.ghost_face()[1*row_size + i_qpoint] == Approx(1.));
+    }
+  }
+  SECTION("apply_flux")
+  {
+    nonpen.apply_flux(tbc);
+    for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+      // require tangential momentum flux flipped
+      REQUIRE(  3*tbc.ghost_face()[0*row_size + i_qpoint]
+              + 4*tbc.ghost_face()[1*row_size + i_qpoint] == Approx(-7.));
+      // require normal momentum flux unchanged
+      REQUIRE( -4*tbc.ghost_face()[0*row_size + i_qpoint]
+              + 3*tbc.ghost_face()[1*row_size + i_qpoint] == Approx(-1.));
+      // require scalar flux flipped
+      REQUIRE(tbc.ghost_face()[2*row_size + i_qpoint] == Approx(-tbc.inside_face()[2*row_size + i_qpoint]));
+      REQUIRE(tbc.ghost_face()[3*row_size + i_qpoint] == Approx(-tbc.inside_face()[3*row_size + i_qpoint]));
+    }
   }
 }
 
@@ -103,7 +121,7 @@ TEST_CASE("Copy")
     tbc.inside_face()[3*n_qpoint + i_qpoint] = 0.9;
     tbc.inside_face()[4*n_qpoint + i_qpoint] = 1e4;
   }
-  copy.apply(tbc);
+  copy.apply_state(tbc);
   // check that ghost face is equal to inside
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
     REQUIRE(tbc.ghost_face()[0*n_qpoint + i_qpoint] == Approx(20.));

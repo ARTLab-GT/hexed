@@ -1,18 +1,29 @@
 #include <config.hpp>
 #include <Solver.hpp>
-#include <Mcs_cartesian.hpp>
-#include <Mcs_deformed.hpp>
-#include <Write_face.hpp>
-#include <Prolong_refined.hpp>
-#include <Neighbor_cartesian.hpp>
-#include <Neighbor_deformed.hpp>
-#include <Restrict_refined.hpp>
-#include <Local_cartesian.hpp>
-#include <Local_deformed.hpp>
-#include <Face_permutation.hpp>
 #include <Tecplot_file.hpp>
 #include <Vis_data.hpp>
 #include <otter_vis.hpp>
+
+// kernels
+#include <Mcs_cartesian.hpp>
+#include <Mcs_deformed.hpp>
+
+#include <Write_face.hpp>
+#include <Restrict_refined.hpp>
+#include <Prolong_refined.hpp>
+#include <Face_permutation.hpp>
+
+#include <Neighbor_cartesian.hpp>
+#include <Neighbor_deformed.hpp>
+#include <Neighbor_avg_cartesian.hpp>
+#include <Neighbor_avg_deformed.hpp>
+
+#include <Local_cartesian.hpp>
+#include <Local_deformed.hpp>
+#include <Local_av0_cartesian.hpp>
+#include <Local_av0_deformed.hpp>
+#include <Local_av1_cartesian.hpp>
+#include <Local_av1_deformed.hpp>
 
 namespace hexed
 {
@@ -34,7 +45,8 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
   params{2, n_dim + 2, n_dim, row_size},
   acc_mesh{params, root_mesh_size},
   basis{row_size},
-  stopwatch{"(element*iteration)"}
+  stopwatch{"(element*iteration)"},
+  use_art_visc{false}
 {
   // setup categories for performance reporting
   stopwatch.children.emplace("initialize RK", stopwatch.work_unit_name);
@@ -103,8 +115,9 @@ void Solver::calc_jacobian()
     double* nrml = def_cons[i_con].normal();
     for (int i_data = 0; i_data < n_dim*nfq; ++i_data) nrml[i_data] = 0.;
   }
-  // for deformed refined faces, set normal to fine face normal (for Cartesian, setting normal is not necessary)
+  // for deformed refined faces, set normal to coarse face normal (for Cartesian, setting normal is not necessary)
   auto& ref_cons = acc_mesh.deformed().refined_connections();
+  (*kernel_factory<Prolong_refined>(n_dim, rs, basis, true))(acc_mesh.refined_faces());
   for (int i_ref = 0; i_ref < ref_cons.size(); ++i_ref) {
     auto& ref = ref_cons[i_ref];
     bool rev = ref.order_reversed();
@@ -116,7 +129,9 @@ void Solver::calc_jacobian()
       double* face [2] {fine.face(rev), fine.face(!rev)};
       auto fp = kernel_factory<Face_permutation>(n_dim, rs, dir, face[1]);
       fp->match_faces();
-      for (int i_data = 0; i_data < n_dim*nfq; ++i_data) face[0][i_data] = sign*face[1][i_data];
+      for (int i_data = 0; i_data < n_dim*nfq; ++i_data) {
+        face[1][i_data] = sign*face[0][i_data];
+      }
       fp->restore();
     }
   }
@@ -131,17 +146,39 @@ void Solver::calc_jacobian()
   for (int i_con = 0; i_con < def_cons.size(); ++i_con)
   {
     auto& con = def_cons[i_con];
-    double* shared_nrml = con.normal();
     double* elem_nrml [2] {con.face(0), con.face(1)};
     auto dir = con.direction();
     // permute face 1 so that quadrature points match up
-    (*kernel_factory<Face_permutation>(n_dim, rs, dir, elem_nrml[1])).match_faces();
+    auto fp = kernel_factory<Face_permutation>(n_dim, rs, dir, elem_nrml[1]);
+    fp->match_faces();
     // take average of element face normals with appropriate flipping
-    for (int i_side : {0, 1}) {
-      int sign = 1 - 2*dir.flip_normal(i_side);
+    int sign [2];
+    for (int i_side : {0, 1}) sign[i_side] = 1 - 2*dir.flip_normal(i_side);
+    for (int i_data = 0; i_data < n_dim*nfq; ++i_data) {
+      double n = 0;
+      for (int i_side : {0, 1}) n += 0.5*sign[i_side]*elem_nrml[i_side][i_data];
+      for (int i_side : {0, 1}) elem_nrml[i_side][i_data] = sign[i_side]*n;
+    }
+    // put face 1 back in its original order (except now we're working with the normal data not state data)
+    fp->restore();
+    for (int i_side = 0; i_side < 2; ++i_side) {
+      double* n = con.normal(i_side);
       for (int i_data = 0; i_data < n_dim*nfq; ++i_data) {
-        shared_nrml[i_data] += 0.5*sign*elem_nrml[i_side][i_data];
+        n[i_data] = elem_nrml[i_side][i_data];
       }
+    }
+  }
+  // write face normal for coarse hanging node faces
+  for (int i_ref = 0; i_ref < ref_cons.size(); ++i_ref) {
+    auto& ref = ref_cons[i_ref];
+    bool rev = ref.order_reversed();
+    auto& elem = ref.connection(0).element(rev);
+    auto dir = ref.direction();
+    int i_face = 2*dir.i_dim[rev] + dir.face_sign[rev];
+    double* nrml = elem.face_normal(i_face);
+    double* state = elem.face() + i_face*params.n_var*nfq;
+    for (int i_data = 0; i_data < n_dim*nfq; ++i_data) {
+      nrml[i_data] = state[i_data];
     }
   }
 }
@@ -188,6 +225,23 @@ void Solver::initialize(const Spacetime_func& func)
   (*kernel_factory<Write_face>(params.n_dim, params.row_size, basis))(elements);
 }
 
+void Solver::set_art_visc_off()
+{
+  use_art_visc = false;
+}
+
+void Solver::set_art_visc_constant(double value)
+{
+  use_art_visc = true;
+  auto& elements = acc_mesh.elements();
+  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    double* av = elements[i_elem].art_visc_coef();
+    for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
+      av[i_qpoint] = value;
+    }
+  }
+}
+
 void Solver::update(double stability_ratio)
 {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
@@ -196,10 +250,12 @@ void Solver::update(double stability_ratio)
   const int nd = params.n_dim;
   const int rs = params.row_size;
   auto& elems = acc_mesh.elements();
+
   // compute time step
   double mcs = std::max((*kernel_factory<Mcs_cartesian>(nd, rs))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
                         (*kernel_factory<Mcs_deformed >(nd, rs))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
   double dt = stability_ratio*basis.max_cfl_convective()/params.n_dim/mcs;
+
   // record reference state for Runge-Kutta scheme
   const int n_dof = params.n_dof();
   auto& irk = stopwatch.children.at("initialize RK");
@@ -211,13 +267,14 @@ void Solver::update(double stability_ratio)
   }
   irk.stopwatch.pause();
   irk.work_units_completed += elems.size();
-  // perform update for each Runge-Kutta stage
+
+  // compute inviscid update
+  auto& bc_cons {acc_mesh.boundary_connections()};
   for (double rk_weight : rk_weights) {
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-    auto& bc_cons {acc_mesh.boundary_connections()};
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
       int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-      acc_mesh.boundary_condition(bc_sn).flow_bc->apply(bc_cons[i_con]);
+      acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
     }
     (*kernel_factory<Neighbor_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor");
     (*kernel_factory<Neighbor_deformed >(nd, rs))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor");
@@ -225,6 +282,32 @@ void Solver::update(double stability_ratio)
     (*kernel_factory<Local_cartesian>(nd, rs, basis, dt, rk_weight))(acc_mesh.cartesian().elements(), sw_car, "local");
     (*kernel_factory<Local_deformed >(nd, rs, basis, dt, rk_weight))(acc_mesh.deformed ().elements(), sw_def, "local");
   }
+
+  // compute viscous update
+  if (use_art_visc)
+  {
+    (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+      int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+      acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
+    }
+    (*kernel_factory<Neighbor_avg_cartesian>(nd, rs       ))(acc_mesh.cartesian().face_connections());
+    (*kernel_factory<Neighbor_avg_deformed >(nd, rs, false))(acc_mesh.deformed ().face_connections());
+    (*kernel_factory<Restrict_refined>(nd, rs, basis, false))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+    (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, dt))(acc_mesh.cartesian().elements());
+    (*kernel_factory<Local_av0_deformed >(nd, rs, basis, dt))(acc_mesh.deformed ().elements());
+    (*kernel_factory<Prolong_refined>(nd, rs, basis, true))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+      int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+      acc_mesh.boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
+    }
+    (*kernel_factory<Neighbor_avg_cartesian>(nd, rs      ))(acc_mesh.cartesian().face_connections());
+    (*kernel_factory<Neighbor_avg_deformed >(nd, rs, true))(acc_mesh.deformed ().face_connections());
+    (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+    (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, dt))(acc_mesh.cartesian().elements());
+    (*kernel_factory<Local_av1_deformed >(nd, rs, basis, dt))(acc_mesh.deformed ().elements());
+  }
+
   // update status for reporting
   status.time_step = dt;
   status.flow_time += dt;
@@ -305,8 +388,9 @@ std::vector<double> Solver::integral_surface(const Surface_func& integrand, int 
         }
         std::vector<double> normal;
         double nrml_mag = 0;
+        int nrml_sign = 2*con.direction().flip_normal(0) - 1;
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          double comp = -nrml[i_dim*nfq + i_qpoint];
+          double comp = nrml_sign*nrml[i_dim*nfq + i_qpoint];
           normal.push_back(comp);
           nrml_mag += comp*comp;
         }
@@ -500,8 +584,9 @@ void Solver::visualize_field_otter(otter::plot& plt,
   if (contour.n_var(params.n_dim) != 1) throw std::runtime_error("`contour` must be scalar");
   if (color_by.n_var(params.n_dim) != 1) throw std::runtime_error("`color_by` must be scalar");
   // substitute bounds if necessary
+  auto bf = bounds_field(contour)[0];
   if (std::isnan(contour_bounds[0]) || std::isnan(contour_bounds[1])) {
-    contour_bounds = bounds_field(contour)[0];
+    contour_bounds = bf;
     contour_bounds[1] += tol;
   }
   if (std::isnan(color_bounds[0]) || std::isnan(color_bounds[1])) {
@@ -511,10 +596,12 @@ void Solver::visualize_field_otter(otter::plot& plt,
   auto& elements = acc_mesh.elements();
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     for (int i_contour = 0; i_contour < n_contour; ++i_contour) {
-      double contour_val = contour_bounds[0] + (i_contour + 1)/(n_contour + 1.)*(contour_bounds[1] - contour_bounds[0]);
+      double contour_val = (i_contour + 1)/(n_contour + 1.);
+      contour_val = contour_val*(contour_bounds[1] - contour_bounds[0]) + contour_bounds[0];
+      contour_val = (contour_val - bf[0])/(bf[1] - bf[0]);
       auto& elem = elements[i_elem];
       // add contour line/surface
-      otter_vis::add_contour(plt, elem, basis, contour, contour_val, n_div,
+      otter_vis::add_contour(plt, elem, basis, Scaled(contour, bf), contour_val, n_div,
                              color_by, color_bounds, cmap_contour, transparent, status.flow_time, tol);
       // for 2d, color the flow field as well
       if (params.n_dim == 2) {

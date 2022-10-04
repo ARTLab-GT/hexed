@@ -19,9 +19,10 @@ template <int n_dim, int row_size>
 class Prolong_refined : public Kernel<Refined_face&>
 {
   const Eigen::Matrix<double, row_size, row_size> prolong_mat [2];
+  bool scl;
 
   public:
-  Prolong_refined(const Basis& basis) : prolong_mat{basis.prolong(0), basis.prolong(1)} {}
+  Prolong_refined(const Basis& basis, bool scale = false) : prolong_mat{basis.prolong(0), basis.prolong(1)}, scl{scale} {}
 
   virtual void operator()(Sequence<Refined_face&>& ref_faces)
   {
@@ -51,22 +52,28 @@ class Prolong_refined : public Kernel<Refined_face&>
           // interpolate one dimension at a time, in-place
           for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim)
           {
-            if (str[i_dim]) continue;
-            const int pow {n_dim - 2 - i_dim};
-            const int face_stride {str[n_dim - 2] ? 1 : custom_math::pow(2, pow)};
-            const int qpoint_stride {custom_math::pow(row_size, pow)};
-            const int i_half {(i_face/face_stride)%2}; // is this face covering the upper or lower half of the coarse face with respect to the current dimension?
-            for (int i_outer = 0; i_outer < nfq/(row_size*qpoint_stride); ++i_outer)
+            if (str[i_dim])
             {
-              for (int i_inner = 0; i_inner < qpoint_stride; ++i_inner)
+              for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) var_face[i_qpoint] *= 1 + scl;
+            }
+            else
+            {
+              const int pow {n_dim - 2 - i_dim};
+              const int face_stride {str[n_dim - 2] ? 1 : custom_math::pow(2, pow)};
+              const int qpoint_stride {custom_math::pow(row_size, pow)};
+              const int i_half {(i_face/face_stride)%2}; // is this face covering the upper or lower half of the coarse face with respect to the current dimension?
+              for (int i_outer = 0; i_outer < nfq/(row_size*qpoint_stride); ++i_outer)
               {
-                Eigen::Matrix<double, row_size, 1> row;
-                for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-                  row(i_qpoint) = var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner];
-                }
-                row = prolong_mat[i_half]*row;
-                for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-                  var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner] = row(i_qpoint);
+                for (int i_inner = 0; i_inner < qpoint_stride; ++i_inner)
+                {
+                  Eigen::Matrix<double, row_size, 1> row;
+                  for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+                    row(i_qpoint) = var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner];
+                  }
+                  row = prolong_mat[i_half]*row;
+                  for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+                    var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner] = row(i_qpoint);
+                  }
                 }
               }
             }

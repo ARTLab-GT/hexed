@@ -94,5 +94,16 @@ class Velocity : public Domain_func
                                          const std::vector<double> state) const;
 };
 
+class Mass : public Domain_func
+{
+  virtual inline int n_var(int n_dim) const {return 1;}
+  virtual inline std::string variable_name(int i_var) const {return "mass";}
+  virtual inline std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
+                                                const std::vector<double> state) const
+  {
+    return {state[point_pos.size()]};
+  }
+};
+
 }
 #endif

@@ -242,6 +242,7 @@ void Accessible_mesh::extrude(bool collapse)
         int face_rec = face.elem.face_record[2*j_dim + face_sign];
         if (face_rec >= 2)
         {
+          // if parent element has boundary connections on other faces
           def.bound_cons.emplace_back(elem, j_dim, face_sign, face_rec - 2);
         }
         else
