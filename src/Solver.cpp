@@ -248,8 +248,19 @@ void Solver::fix_admissibility(double stability_ratio)
   const int nd = params.n_dim;
   const int nq = params.n_qpoint();
   const int rs = params.row_size;
-  int i;
-  for (i = 0; i < 100; ++i) {
+  for (status.fix_admis_iters = 0;; ++status.fix_admis_iters) {
+    if (status.fix_admis_iters > 999) {
+      #if HEXED_USE_OTTER
+      otter::plot plt;
+      visualize_field_otter(plt, Pressure(), 1, {0, 0}, Pressure(), {0, 0}, otter::const_colormap(Eigen::Vector4d{1., 0., 0., .1}), otter::plasma, false, false);
+      visualize_field_otter(plt, Pressure(), 0);
+      visualize_edges_otter(plt);
+      plt.show();
+      #endif
+      char buffer [200];
+      snprintf(buffer, 200, "failed to fix thermodynamic admissability in %i iterations", status.fix_admis_iters);
+      throw std::runtime_error(buffer);
+    }
     bool admiss = 1;
     #pragma omp parallel for reduction (&&:admiss)
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -260,18 +271,8 @@ void Solver::fix_admissibility(double stability_ratio)
       }
     }
     if (admiss) break;
-    else {
-      #if HEXED_USE_OTTER
-      otter::plot plt;
-      visualize_field_otter(plt, Pressure(), 1, {0, 0}, Pressure(), {0, 0}, otter::const_colormap(Eigen::Vector4d{1., 1., 1., .1}), otter::plasma, false, false);
-      visualize_field_otter(plt, Pressure(), 0);
-      visualize_edges_otter(plt);
-      plt.show();
-      #endif
-      update_art_visc(status.time_step);
-    }
+    else update_art_visc(status.time_step);
   }
-  printf("%i admissibility-preserving iterations\n", i);
 }
 
 void Solver::update(double stability_ratio)
@@ -303,7 +304,6 @@ void Solver::update(double stability_ratio)
 
   // compute inviscid update
   for (double rk_weight : rk_weights) {
-    fix_admissibility(stability_ratio);
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
     auto& bc_cons {acc_mesh.boundary_connections()};
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
