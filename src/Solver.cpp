@@ -59,6 +59,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
     children.emplace("neighbor", "(connection*RK stage)");
     children.emplace("local", unit);
   }
+  stopwatch.children.emplace("fix admis.", "(element*(fix admis. iter))");
 }
 
 void Solver::relax_vertices(double factor)
@@ -245,12 +246,15 @@ void Solver::set_art_visc_constant(double value)
 
 void Solver::fix_admissibility(double stability_ratio)
 {
+  auto& sw_fix = stopwatch.children.at("fix admis.");
+  sw_fix.stopwatch.start();
   auto& elems = acc_mesh.elements();
   const int nd = params.n_dim;
   const int nq = params.n_qpoint();
   const int rs = params.row_size;
-  for (status.fix_admis_iters = 0;; ++status.fix_admis_iters) {
-    if (status.fix_admis_iters > 999) {
+  int iter;
+  for (iter = 0;; ++iter) {
+    if (iter > 999) {
       #if HEXED_USE_OTTER
       otter::plot plt;
       visualize_field_otter(plt, Pressure(), 1, {0, 0}, Pressure(), {0, 0}, otter::const_colormap(Eigen::Vector4d{1., 0., 0., .1}), otter::plasma, false, false);
@@ -259,7 +263,7 @@ void Solver::fix_admissibility(double stability_ratio)
       plt.show();
       #endif
       char buffer [200];
-      snprintf(buffer, 200, "failed to fix thermodynamic admissability in %i iterations", status.fix_admis_iters);
+      snprintf(buffer, 200, "failed to fix thermodynamic admissability in %i iterations", iter);
       throw std::runtime_error(buffer);
     }
     bool admiss = 1;
@@ -285,6 +289,9 @@ void Solver::fix_admissibility(double stability_ratio)
     if (admiss && refined_admiss) break;
     else update_art_visc(status.time_step);
   }
+  status.fix_admis_iters += iter;
+  sw_fix.work_units_completed += acc_mesh.elements().size()*iter;
+  sw_fix.stopwatch.pause();
 }
 
 void Solver::update(double stability_ratio)
@@ -352,20 +359,25 @@ void Solver::update_art_visc(double dt)
   }
   (*kernel_factory<Neighbor_avg_cartesian>(nd, rs       ))(acc_mesh.cartesian().face_connections());
   (*kernel_factory<Neighbor_avg_deformed >(nd, rs, false))(acc_mesh.deformed ().face_connections());
-  (*kernel_factory<Restrict_refined>(nd, rs, basis, false))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+  (*kernel_factory<Restrict_refined>(nd, rs, basis, false))(acc_mesh.refined_faces());
   (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, dt))(acc_mesh.cartesian().elements());
   (*kernel_factory<Local_av0_deformed >(nd, rs, basis, dt))(acc_mesh.deformed ().elements());
-  (*kernel_factory<Prolong_refined>(nd, rs, basis, true))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+  (*kernel_factory<Prolong_refined>(nd, rs, basis, true))(acc_mesh.refined_faces());
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh.boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
   }
   (*kernel_factory<Neighbor_avg_cartesian>(nd, rs      ))(acc_mesh.cartesian().face_connections());
   (*kernel_factory<Neighbor_avg_deformed >(nd, rs, true))(acc_mesh.deformed ().face_connections());
-  (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+  (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());
   (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, dt))(acc_mesh.cartesian().elements());
   (*kernel_factory<Local_av1_deformed >(nd, rs, basis, dt))(acc_mesh.deformed ().elements());
-  (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+  (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+}
+
+void Solver::reset_counters()
+{
+  status.fix_admis_iters = 0;
 }
 
 std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func& func)

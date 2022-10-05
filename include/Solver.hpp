@@ -72,6 +72,7 @@ class Solver
   void fix_admissibility(double stability_ratio);
   // an object providing all available information about the status of the time marching iteration.
   Iteration_status iteration_status() {return status;}
+  void reset_counters();
 
   /* ### OUTPUT ### */
   // sample an arbitrary function at a particular quadrature point of a particular element
