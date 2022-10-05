@@ -223,6 +223,7 @@ void Solver::initialize(const Spacetime_func& func)
     }
   }
   (*kernel_factory<Write_face>(params.n_dim, params.row_size, basis))(elements);
+  (*kernel_factory<Prolong_refined>(params.n_dim, params.row_size, basis))(acc_mesh.refined_faces());
 }
 
 void Solver::set_art_visc_off()
@@ -270,7 +271,18 @@ void Solver::fix_admissibility(double stability_ratio)
         admiss = admiss && hexed::thermo::admissible(elem.face() + i_face*(nd + 2)*nq/rs, nd, nq/rs);
       }
     }
-    if (admiss) break;
+    auto& ref_faces = acc_mesh.refined_faces();
+    bool refined_admiss = 1;
+    #pragma omp parallel for reduction (&&:refined_admiss)
+    for (int i_face = 0; i_face < ref_faces.size(); ++i_face) {
+      auto& ref = ref_faces[i_face];
+      int n_fine = params.n_vertices()/2;
+      for (int i_dim = 0; i_dim < nd - 1; ++i_dim) n_fine /= 1 + ref.stretch[i_dim];
+      for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
+        refined_admiss = refined_admiss && hexed::thermo::admissible(ref.fine_face(i_fine), nd, nq/rs);
+      }
+    }
+    if (admiss && refined_admiss) break;
     else update_art_visc(status.time_step);
   }
 }
@@ -304,7 +316,6 @@ void Solver::update(double stability_ratio)
 
   // compute inviscid update
   for (double rk_weight : rk_weights) {
-    (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
     auto& bc_cons {acc_mesh.boundary_connections()};
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
       int bc_sn = bc_cons[i_con].bound_cond_serial_n();
@@ -315,6 +326,7 @@ void Solver::update(double stability_ratio)
     (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
     (*kernel_factory<Local_cartesian>(nd, rs, basis, dt, rk_weight))(acc_mesh.cartesian().elements(), sw_car, "local");
     (*kernel_factory<Local_deformed >(nd, rs, basis, dt, rk_weight))(acc_mesh.deformed ().elements(), sw_def, "local");
+    (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
     fix_admissibility(stability_ratio);
   }
 
@@ -334,7 +346,6 @@ void Solver::update_art_visc(double dt)
   const int nd = params.n_dim;
   const int rs = params.row_size;
   auto& bc_cons {acc_mesh.boundary_connections()};
-  (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
@@ -354,6 +365,7 @@ void Solver::update_art_visc(double dt)
   (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
   (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, dt))(acc_mesh.cartesian().elements());
   (*kernel_factory<Local_av1_deformed >(nd, rs, basis, dt))(acc_mesh.deformed ().elements());
+  (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
 }
 
 std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func& func)
