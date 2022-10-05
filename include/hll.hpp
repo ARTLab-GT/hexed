@@ -36,6 +36,7 @@ void hll(double* data, const double* normal, double heat_rat)
       #define READ(i) data[(i)*n_face_qpoint + i_qpoint + i_side*face_size]
       #define FLUX(i) flux[i_side][i]
       HEXED_COMPUTE_SCALARS
+      HEXED_ASSERT_ADMISSIBLE
       double veloc = 0;
       for (int j_dim = 0; j_dim < n_var - 2; ++j_dim) {
         veloc += READ(j_dim)/mass*nrml[j_dim];

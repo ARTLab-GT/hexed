@@ -85,6 +85,7 @@ class Local_deformed : public Kernel<Deformed_element&>
               #define NRML(i) row_n[i][i_qpoint]
               #define FLUX(i) flux(i_qpoint, i)
               HEXED_COMPUTE_SCALARS
+              HEXED_ASSERT_ADMISSIBLE
               FLUX(n_dim) = 0.;
               for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
                 FLUX(n_dim) += READ(j_dim)*NRML(j_dim);

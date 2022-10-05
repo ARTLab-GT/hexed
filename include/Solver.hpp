@@ -24,8 +24,9 @@ class Solver
   Iteration_status status;
   Stopwatch_tree stopwatch;
   std::vector<double> rk_weights {1., 1./4., 2./3.};
-  void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
   bool use_art_visc;
+  void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
+  void update_art_visc(double dt);
 
   public:
   Solver(int n_dim, int row_size, double root_mesh_size);
@@ -68,6 +69,7 @@ class Solver
    * maximum stable time step.
    */
   void update(double stability_ratio = 0.8);
+  void fix_admissibility(double stability_ratio);
   // an object providing all available information about the status of the time marching iteration.
   Iteration_status iteration_status() {return status;}
 
@@ -109,7 +111,7 @@ class Solver
                              std::array<double, 2> color_bounds = {std::nan(""), std::nan("")},
                              const otter::colormap& cmap_contour = otter::const_colormap(Eigen::Vector4d{1., 1., 1., .1}),
                              const otter::colormap& cmap_field   = otter::plasma,
-                             bool transparent = true,
+                             bool transparent = true, bool show_color = true,
                              int n_div = 10, double tol = 1e-3);
   // convenience function to plot a slice
   // wrapper for `visualize_field_otter`

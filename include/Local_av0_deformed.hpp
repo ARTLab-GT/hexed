@@ -48,7 +48,6 @@ class Local_av0_deformed : public Kernel<Deformed_element&>
     {
       auto& elem = elements[i_elem];
       double* state = elem.stage(0);
-      double* rk_reference = state + n_var*n_qpoint;
       double* normals = elem.reference_level_normals();
       double* det = elem.jacobian_determinant();
       double time_rate [n_var][n_qpoint] {};
@@ -77,7 +76,7 @@ class Local_av0_deformed : public Kernel<Deformed_element&>
             Eigen::Matrix<double, row_size, n_var> row_r;
             for (int i_var = 0; i_var < n_var; ++i_var) {
               for (int i_row = 0; i_row < row_size; ++i_row) {
-                row_r(i_row, i_var) = rk_reference[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_row*stride];
+                row_r(i_row, i_var) = state[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_row*stride];
               }
             }
             // fetch numerical face state

@@ -38,7 +38,6 @@ class Local_av0_cartesian : public Kernel<Element&>
     {
       auto& elem = elements[i_elem];
       double* state = elem.stage(0);
-      double* rk_reference = state + n_var*n_qpoint;
       double time_rate [n_var][n_qpoint] {};
       double* face = elem.face();
       double* tss = elem.time_step_scale();
@@ -59,7 +58,7 @@ class Local_av0_cartesian : public Kernel<Element&>
             Eigen::Matrix<double, row_size, n_var> row_r;
             for (int i_var = 0; i_var < n_var; ++i_var) {
               for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-                row_r(i_qpoint, i_var) = rk_reference[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
+                row_r(i_qpoint, i_var) = state[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
               }
             }
             Eigen::Array<double, row_size, 1> row_avc;

@@ -242,6 +242,38 @@ void Solver::set_art_visc_constant(double value)
   }
 }
 
+void Solver::fix_admissibility(double stability_ratio)
+{
+  auto& elems = acc_mesh.elements();
+  const int nd = params.n_dim;
+  const int nq = params.n_qpoint();
+  const int rs = params.row_size;
+  int i;
+  for (i = 0; i < 100; ++i) {
+    bool admiss = 1;
+    #pragma omp parallel for reduction (&&:admiss)
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      admiss = admiss && hexed::thermo::admissible(elem.stage(0), nd, nq);
+      for (int i_face = 0; i_face < params.n_dim*2; ++i_face) {
+        admiss = admiss && hexed::thermo::admissible(elem.face() + i_face*(nd + 2)*nq/rs, nd, nq/rs);
+      }
+    }
+    if (admiss) break;
+    else {
+      #if HEXED_USE_OTTER
+      otter::plot plt;
+      visualize_field_otter(plt, Pressure(), 1, {0, 0}, Pressure(), {0, 0}, otter::const_colormap(Eigen::Vector4d{1., 1., 1., .1}), otter::plasma, false, false);
+      visualize_field_otter(plt, Pressure(), 0);
+      visualize_edges_otter(plt);
+      plt.show();
+      #endif
+      update_art_visc(status.time_step);
+    }
+  }
+  printf("%i admissibility-preserving iterations\n", i);
+}
+
 void Solver::update(double stability_ratio)
 {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
@@ -255,6 +287,7 @@ void Solver::update(double stability_ratio)
   double mcs = std::max((*kernel_factory<Mcs_cartesian>(nd, rs))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
                         (*kernel_factory<Mcs_deformed >(nd, rs))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
   double dt = stability_ratio*basis.max_cfl_convective()/params.n_dim/mcs;
+  status.time_step = dt;
 
   // record reference state for Runge-Kutta scheme
   const int n_dof = params.n_dof();
@@ -269,9 +302,10 @@ void Solver::update(double stability_ratio)
   irk.work_units_completed += elems.size();
 
   // compute inviscid update
-  auto& bc_cons {acc_mesh.boundary_connections()};
   for (double rk_weight : rk_weights) {
+    fix_admissibility(stability_ratio);
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+    auto& bc_cons {acc_mesh.boundary_connections()};
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
       int bc_sn = bc_cons[i_con].bound_cond_serial_n();
       acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
@@ -281,41 +315,45 @@ void Solver::update(double stability_ratio)
     (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
     (*kernel_factory<Local_cartesian>(nd, rs, basis, dt, rk_weight))(acc_mesh.cartesian().elements(), sw_car, "local");
     (*kernel_factory<Local_deformed >(nd, rs, basis, dt, rk_weight))(acc_mesh.deformed ().elements(), sw_def, "local");
+    fix_admissibility(stability_ratio);
   }
 
-  // compute viscous update
-  if (use_art_visc)
-  {
-    (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-      int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-      acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
-    }
-    (*kernel_factory<Neighbor_avg_cartesian>(nd, rs       ))(acc_mesh.cartesian().face_connections());
-    (*kernel_factory<Neighbor_avg_deformed >(nd, rs, false))(acc_mesh.deformed ().face_connections());
-    (*kernel_factory<Restrict_refined>(nd, rs, basis, false))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-    (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, dt))(acc_mesh.cartesian().elements());
-    (*kernel_factory<Local_av0_deformed >(nd, rs, basis, dt))(acc_mesh.deformed ().elements());
-    (*kernel_factory<Prolong_refined>(nd, rs, basis, true))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-      int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-      acc_mesh.boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
-    }
-    (*kernel_factory<Neighbor_avg_cartesian>(nd, rs      ))(acc_mesh.cartesian().face_connections());
-    (*kernel_factory<Neighbor_avg_deformed >(nd, rs, true))(acc_mesh.deformed ().face_connections());
-    (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-    (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, dt))(acc_mesh.cartesian().elements());
-    (*kernel_factory<Local_av1_deformed >(nd, rs, basis, dt))(acc_mesh.deformed ().elements());
-  }
+  //if (use_art_visc) update_art_visc(dt);
 
   // update status for reporting
-  status.time_step = dt;
   status.flow_time += dt;
   ++status.iteration;
   stopwatch.stopwatch.pause();
   stopwatch.work_units_completed += elems.size();
   sw_car.work_units_completed += acc_mesh.cartesian().elements().size();
   sw_def.work_units_completed += acc_mesh.deformed ().elements().size();
+}
+
+void Solver::update_art_visc(double dt)
+{
+  const int nd = params.n_dim;
+  const int rs = params.row_size;
+  auto& bc_cons {acc_mesh.boundary_connections()};
+  (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+    acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
+  }
+  (*kernel_factory<Neighbor_avg_cartesian>(nd, rs       ))(acc_mesh.cartesian().face_connections());
+  (*kernel_factory<Neighbor_avg_deformed >(nd, rs, false))(acc_mesh.deformed ().face_connections());
+  (*kernel_factory<Restrict_refined>(nd, rs, basis, false))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+  (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, dt))(acc_mesh.cartesian().elements());
+  (*kernel_factory<Local_av0_deformed >(nd, rs, basis, dt))(acc_mesh.deformed ().elements());
+  (*kernel_factory<Prolong_refined>(nd, rs, basis, true))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+    acc_mesh.boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
+  }
+  (*kernel_factory<Neighbor_avg_cartesian>(nd, rs      ))(acc_mesh.cartesian().face_connections());
+  (*kernel_factory<Neighbor_avg_deformed >(nd, rs, true))(acc_mesh.deformed ().face_connections());
+  (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+  (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, dt))(acc_mesh.cartesian().elements());
+  (*kernel_factory<Local_av1_deformed >(nd, rs, basis, dt))(acc_mesh.deformed ().elements());
 }
 
 std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func& func)
@@ -578,7 +616,7 @@ void Solver::visualize_field_otter(otter::plot& plt,
                                    std::array<double, 2> color_bounds,
                                    const otter::colormap& cmap_contour,
                                    const otter::colormap& cmap_field,
-                                   bool transparent,
+                                   bool transparent, bool show_color,
                                    int n_div, double tol)
 {
   if (contour.n_var(params.n_dim) != 1) throw std::runtime_error("`contour` must be scalar");
@@ -595,30 +633,30 @@ void Solver::visualize_field_otter(otter::plot& plt,
   }
   auto& elements = acc_mesh.elements();
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    auto& elem = elements[i_elem];
     for (int i_contour = 0; i_contour < n_contour; ++i_contour) {
       double contour_val = (i_contour + 1)/(n_contour + 1.);
       contour_val = contour_val*(contour_bounds[1] - contour_bounds[0]) + contour_bounds[0];
       contour_val = (contour_val - bf[0])/(bf[1] - bf[0]);
-      auto& elem = elements[i_elem];
       // add contour line/surface
       otter_vis::add_contour(plt, elem, basis, Scaled(contour, bf), contour_val, n_div,
                              color_by, color_bounds, cmap_contour, transparent, status.flow_time, tol);
       // for 2d, color the flow field as well
-      if (params.n_dim == 2) {
-        const int n_sample = 2*n_div + 1;
-        Vis_data vis_pos(elem, Position_func(), basis, status.flow_time);
-        Vis_data vis_var(elem,         contour, basis, status.flow_time);
-        Eigen::MatrixXd pos_3d(n_sample*n_sample, 3);
-        Eigen::MatrixXd pos = vis_pos.interior(n_sample);
-        Eigen::MatrixXd var = vis_var.interior(n_sample);
-        pos_3d(Eigen::all, Eigen::seqN(0, 2)) = pos;
-        // set z componento to slightly negative so that lines show up on top
-        pos_3d(Eigen::all, 2).array() = -1e-4*elem.nominal_size();
-        // adjust color-by variable so that bound interval maps to [0, 1]
-        var = (var - Eigen::VectorXd::Constant(var.size(), contour_bounds[0]))/(contour_bounds[1] - contour_bounds[0]);
-        // throw it up there
-        plt.add(otter::surface(n_sample, pos_3d, cmap_field(var)));
-      }
+    }
+    if ((params.n_dim == 2) && show_color) {
+      const int n_sample = 2*n_div + 1;
+      Vis_data vis_pos(elem, Position_func(), basis, status.flow_time);
+      Vis_data vis_var(elem,         contour, basis, status.flow_time);
+      Eigen::MatrixXd pos_3d(n_sample*n_sample, 3);
+      Eigen::MatrixXd pos = vis_pos.interior(n_sample);
+      Eigen::MatrixXd var = vis_var.interior(n_sample);
+      pos_3d(Eigen::all, Eigen::seqN(0, 2)) = pos;
+      // set z componento to slightly negative so that lines show up on top
+      pos_3d(Eigen::all, 2).array() = -1e-4*elem.nominal_size();
+      // adjust color-by variable so that bound interval maps to [0, 1]
+      var = (var - Eigen::VectorXd::Constant(var.size(), contour_bounds[0]))/(contour_bounds[1] - contour_bounds[0]);
+      // throw it up there
+      plt.add(otter::surface(n_sample, pos_3d, cmap_field(var)));
     }
   }
 }
