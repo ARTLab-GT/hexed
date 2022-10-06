@@ -22,6 +22,7 @@ class Mesh
 {
   public:
   virtual ~Mesh() = default;
+  virtual double root_size() = 0;
   /*
    * Add an element at specified nominal position and serial number which uniquely identifies it
    * among elements of this mesh with the same refinement level and deformedness.

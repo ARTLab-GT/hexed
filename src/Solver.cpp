@@ -254,7 +254,7 @@ void Solver::fix_admissibility(double stability_ratio)
   const int rs = params.row_size;
   int iter;
   for (iter = 0;; ++iter) {
-    if (iter > 999) {
+    if (iter > 9999) {
       #if HEXED_USE_OTTER
       otter::plot plt;
       visualize_field_otter(plt, Pressure(), 1, {0, 0}, Pressure(), {0, 0}, otter::const_colormap(Eigen::Vector4d{1., 0., 0., .1}), otter::plasma, false, false);
@@ -287,7 +287,10 @@ void Solver::fix_admissibility(double stability_ratio)
       }
     }
     if (admiss && refined_admiss) break;
-    else update_art_visc(status.time_step);
+    else {
+      double root_sz = acc_mesh.root_size();
+      update_art_visc(.5*basis.max_cfl_diffusive()*root_sz*root_sz);
+    }
   }
   status.fix_admis_iters += iter;
   sw_fix.work_units_completed += acc_mesh.elements().size()*iter;
@@ -307,7 +310,6 @@ void Solver::update(double stability_ratio)
   double mcs = std::max((*kernel_factory<Mcs_cartesian>(nd, rs))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
                         (*kernel_factory<Mcs_deformed >(nd, rs))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
   double dt = stability_ratio*basis.max_cfl_convective()/params.n_dim/mcs;
-  status.time_step = dt;
 
   // record reference state for Runge-Kutta scheme
   const int n_dof = params.n_dof();
@@ -340,6 +342,7 @@ void Solver::update(double stability_ratio)
   //if (use_art_visc) update_art_visc(dt);
 
   // update status for reporting
+  status.time_step = dt;
   status.flow_time += dt;
   ++status.iteration;
   stopwatch.stopwatch.pause();
