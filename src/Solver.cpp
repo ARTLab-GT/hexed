@@ -339,7 +339,10 @@ void Solver::update(double stability_ratio)
     fix_admissibility(stability_ratio);
   }
 
-  if (use_art_visc) update_art_visc(dt, true);
+  if (use_art_visc) {
+    update_art_visc(dt, true);
+    fix_admissibility(stability_ratio);
+  }
 
   // update status for reporting
   status.time_step = dt;

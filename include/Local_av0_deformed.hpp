@@ -122,8 +122,9 @@ class Local_av0_deformed : public Kernel<Deformed_element&>
               temp_flux[i_dim] += normals[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint]*flux[i_var][j_dim][i_qpoint];
             }
           }
-          if (use_coef) for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-            flux[i_var][i_dim][i_qpoint] = temp_flux[i_dim]*av_coef[i_qpoint]/det[i_qpoint];
+          double scalar = (use_coef ? av_coef[i_qpoint] : 1)/det[i_qpoint];
+          for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+            flux[i_var][i_dim][i_qpoint] = temp_flux[i_dim]*scalar;
           }
         }
       }
