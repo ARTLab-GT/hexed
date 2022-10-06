@@ -26,7 +26,7 @@ class Solver
   std::vector<double> rk_weights {1., 1./4., 2./3.};
   bool use_art_visc;
   void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
-  void update_art_visc(double dt);
+  void update_art_visc(double dt, bool use_av_coef);
 
   public:
   Solver(int n_dim, int row_size, double root_mesh_size);
