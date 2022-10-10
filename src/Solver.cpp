@@ -46,7 +46,8 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
   acc_mesh{params, root_mesh_size},
   basis{row_size},
   stopwatch{"(element*iteration)"},
-  use_art_visc{false}
+  use_art_visc{false},
+  fix_admis{false}
 {
   // setup categories for performance reporting
   stopwatch.children.emplace("initialize RK", stopwatch.work_unit_name);
@@ -239,13 +240,103 @@ void Solver::set_art_visc_constant(double value)
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* av = elements[i_elem].art_visc_coef();
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
-      av[i_qpoint] = value;
+     av[i_qpoint] = value;
     }
   }
 }
 
+void Solver::set_fix_admissibility(bool value)
+{
+  fix_admis = value;
+}
+
+void Solver::update(double stability_ratio)
+{
+  stopwatch.stopwatch.start(); // ready or not the clock is countin'
+  auto& sw_car {stopwatch.children.at("cartesian")};
+  auto& sw_def {stopwatch.children.at("deformed" )};
+  const int nd = params.n_dim;
+  const int rs = params.row_size;
+  auto& elems = acc_mesh.elements();
+
+  // compute time step
+  double mcs = std::max((*kernel_factory<Mcs_cartesian>(nd, rs))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
+                        (*kernel_factory<Mcs_deformed >(nd, rs))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
+  double dt = stability_ratio*basis.max_cfl_convective()/params.n_dim/mcs;
+
+  // record reference state for Runge-Kutta scheme
+  const int n_dof = params.n_dof();
+  auto& irk = stopwatch.children.at("initialize RK");
+  irk.stopwatch.start();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    double* state = elems[i_elem].stage(0);
+    for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] = state[i_dof];
+  }
+  irk.stopwatch.pause();
+  irk.work_units_completed += elems.size();
+
+  // compute inviscid update
+  for (double rk_weight : rk_weights) {
+    auto& bc_cons {acc_mesh.boundary_connections()};
+    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+      int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+      acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
+    }
+    (*kernel_factory<Neighbor_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor");
+    (*kernel_factory<Neighbor_deformed >(nd, rs))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor");
+    (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+    (*kernel_factory<Local_cartesian>(nd, rs, basis, dt, rk_weight))(acc_mesh.cartesian().elements(), sw_car, "local");
+    (*kernel_factory<Local_deformed >(nd, rs, basis, dt, rk_weight))(acc_mesh.deformed ().elements(), sw_def, "local");
+    (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+    fix_admissibility(fix_stab_rat*stability_ratio);
+  }
+
+  if (use_art_visc) {
+    update_art_visc(dt, true);
+    fix_admissibility(fix_stab_rat*stability_ratio);
+  }
+
+  // update status for reporting
+  status.time_step = dt;
+  status.flow_time += dt;
+  ++status.iteration;
+  stopwatch.stopwatch.pause();
+  stopwatch.work_units_completed += elems.size();
+  sw_car.work_units_completed += acc_mesh.cartesian().elements().size();
+  sw_def.work_units_completed += acc_mesh.deformed ().elements().size();
+}
+
+void Solver::update_art_visc(double dt, bool use_av_coef)
+{
+  const int nd = params.n_dim;
+  const int rs = params.row_size;
+  auto& bc_cons {acc_mesh.boundary_connections()};
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+    acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
+  }
+  (*kernel_factory<Neighbor_avg_cartesian>(nd, rs       ))(acc_mesh.cartesian().face_connections());
+  (*kernel_factory<Neighbor_avg_deformed >(nd, rs, false))(acc_mesh.deformed ().face_connections());
+  (*kernel_factory<Restrict_refined>(nd, rs, basis, false))(acc_mesh.refined_faces());
+  (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, dt, use_av_coef))(acc_mesh.cartesian().elements());
+  (*kernel_factory<Local_av0_deformed >(nd, rs, basis, dt, use_av_coef))(acc_mesh.deformed ().elements());
+  (*kernel_factory<Prolong_refined>(nd, rs, basis, true))(acc_mesh.refined_faces());
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+    acc_mesh.boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
+  }
+  (*kernel_factory<Neighbor_avg_cartesian>(nd, rs      ))(acc_mesh.cartesian().face_connections());
+  (*kernel_factory<Neighbor_avg_deformed >(nd, rs, true))(acc_mesh.deformed ().face_connections());
+  (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+  (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, dt, use_av_coef))(acc_mesh.cartesian().elements());
+  (*kernel_factory<Local_av1_deformed >(nd, rs, basis, dt, use_av_coef))(acc_mesh.deformed ().elements());
+  (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+}
+
 void Solver::fix_admissibility(double stability_ratio)
 {
+  if (!fix_admis) return;
   auto& sw_fix = stopwatch.children.at("fix admis.");
   sw_fix.stopwatch.start();
   auto& elems = acc_mesh.elements();
@@ -289,96 +380,12 @@ void Solver::fix_admissibility(double stability_ratio)
     if (admiss && refined_admiss) break;
     else {
       double root_sz = acc_mesh.root_size();
-      update_art_visc(.5*basis.max_cfl_diffusive()*root_sz*root_sz, false);
+      update_art_visc(stability_ratio*basis.max_cfl_diffusive()*root_sz*root_sz, false);
     }
   }
   status.fix_admis_iters += iter;
   sw_fix.work_units_completed += acc_mesh.elements().size()*iter;
   sw_fix.stopwatch.pause();
-}
-
-void Solver::update(double stability_ratio)
-{
-  stopwatch.stopwatch.start(); // ready or not the clock is countin'
-  auto& sw_car {stopwatch.children.at("cartesian")};
-  auto& sw_def {stopwatch.children.at("deformed" )};
-  const int nd = params.n_dim;
-  const int rs = params.row_size;
-  auto& elems = acc_mesh.elements();
-
-  // compute time step
-  double mcs = std::max((*kernel_factory<Mcs_cartesian>(nd, rs))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
-                        (*kernel_factory<Mcs_deformed >(nd, rs))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
-  double dt = stability_ratio*basis.max_cfl_convective()/params.n_dim/mcs;
-
-  // record reference state for Runge-Kutta scheme
-  const int n_dof = params.n_dof();
-  auto& irk = stopwatch.children.at("initialize RK");
-  irk.stopwatch.start();
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    double* state = elems[i_elem].stage(0);
-    for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] = state[i_dof];
-  }
-  irk.stopwatch.pause();
-  irk.work_units_completed += elems.size();
-
-  // compute inviscid update
-  for (double rk_weight : rk_weights) {
-    auto& bc_cons {acc_mesh.boundary_connections()};
-    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-      int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-      acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
-    }
-    (*kernel_factory<Neighbor_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor");
-    (*kernel_factory<Neighbor_deformed >(nd, rs))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor");
-    (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-    (*kernel_factory<Local_cartesian>(nd, rs, basis, dt, rk_weight))(acc_mesh.cartesian().elements(), sw_car, "local");
-    (*kernel_factory<Local_deformed >(nd, rs, basis, dt, rk_weight))(acc_mesh.deformed ().elements(), sw_def, "local");
-    (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-    fix_admissibility(stability_ratio);
-  }
-
-  if (use_art_visc) {
-    update_art_visc(dt, true);
-    fix_admissibility(stability_ratio);
-  }
-
-  // update status for reporting
-  status.time_step = dt;
-  status.flow_time += dt;
-  ++status.iteration;
-  stopwatch.stopwatch.pause();
-  stopwatch.work_units_completed += elems.size();
-  sw_car.work_units_completed += acc_mesh.cartesian().elements().size();
-  sw_def.work_units_completed += acc_mesh.deformed ().elements().size();
-}
-
-void Solver::update_art_visc(double dt, bool use_av_coef)
-{
-  const int nd = params.n_dim;
-  const int rs = params.row_size;
-  auto& bc_cons {acc_mesh.boundary_connections()};
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
-  }
-  (*kernel_factory<Neighbor_avg_cartesian>(nd, rs       ))(acc_mesh.cartesian().face_connections());
-  (*kernel_factory<Neighbor_avg_deformed >(nd, rs, false))(acc_mesh.deformed ().face_connections());
-  (*kernel_factory<Restrict_refined>(nd, rs, basis, false))(acc_mesh.refined_faces());
-  (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, dt, use_av_coef))(acc_mesh.cartesian().elements());
-  (*kernel_factory<Local_av0_deformed >(nd, rs, basis, dt, use_av_coef))(acc_mesh.deformed ().elements());
-  (*kernel_factory<Prolong_refined>(nd, rs, basis, true))(acc_mesh.refined_faces());
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh.boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
-  }
-  (*kernel_factory<Neighbor_avg_cartesian>(nd, rs      ))(acc_mesh.cartesian().face_connections());
-  (*kernel_factory<Neighbor_avg_deformed >(nd, rs, true))(acc_mesh.deformed ().face_connections());
-  (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-  (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, dt, use_av_coef))(acc_mesh.cartesian().elements());
-  (*kernel_factory<Local_av1_deformed >(nd, rs, basis, dt, use_av_coef))(acc_mesh.deformed ().elements());
-  (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
 }
 
 void Solver::reset_counters()

@@ -25,8 +25,11 @@ class Solver
   Stopwatch_tree stopwatch;
   std::vector<double> rk_weights {1., 1./4., 2./3.};
   bool use_art_visc;
+  bool fix_admis;
+  const double fix_stab_rat = .6;
   void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
   void update_art_visc(double dt, bool use_av_coef);
+  void fix_admissibility(double stability_ratio);
 
   public:
   Solver(int n_dim, int row_size, double root_mesh_size);
@@ -62,6 +65,7 @@ class Solver
   void initialize(const Spacetime_func&);
   void set_art_visc_off();
   void set_art_visc_constant(double);
+  void set_fix_admissibility(bool);
 
   /* ### TIME MARCHING ### */
   /*
@@ -69,7 +73,6 @@ class Solver
    * maximum stable time step.
    */
   void update(double stability_ratio = 0.8);
-  void fix_admissibility(double stability_ratio);
   // an object providing all available information about the status of the time marching iteration.
   Iteration_status iteration_status() {return status;}
   void reset_counters();
