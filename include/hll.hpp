@@ -47,7 +47,7 @@ void hll(double* data, const double* normal, double heat_rat)
       FLUX(n_var - 2) = mass*veloc;
       FLUX(n_var - 1) = (ener + pres)*veloc;
       velocity[i_side] = veloc;
-      sound_speed[i_side] = std::max(std::sqrt(heat_rat*pres/mass), thermo::min_sound_speed)*nrml_mag;
+      sound_speed[i_side] = std::sqrt(heat_rat*pres/mass)*nrml_mag;
       if (std::isnan(sound_speed[i_side])) throw std::runtime_error("speed of sound is NaN in `hll`!");
       #undef FLUX
       #undef READ

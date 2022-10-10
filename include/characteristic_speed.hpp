@@ -20,7 +20,8 @@ double characteristic_speed(double* read, double heat_rat)
   {
     #define READ(i) read[(i)*n_qpoint + i_qpoint]
     HEXED_COMPUTE_SCALARS
-    const double sound_speed = std::max(std::sqrt(heat_rat*pres/mass), thermo::min_sound_speed);
+    HEXED_ASSERT_ADMISSIBLE
+    const double sound_speed = std::sqrt(heat_rat*pres/mass);
     const double veloc = std::sqrt(mmtm_sq/mass/mass);
     max_speed = std::max(max_speed, sound_speed + veloc);
     #undef READ
