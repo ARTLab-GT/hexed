@@ -20,11 +20,13 @@ class Local_av0_deformed : public Kernel<Deformed_element&>
 {
   Derivative<row_size> derivative;
   double dt;
+  bool use_coef;
 
   public:
-  Local_av0_deformed(const Basis& basis, double d_time) :
+  Local_av0_deformed(const Basis& basis, double d_time, bool use_av_coef = true) :
     derivative{basis},
-    dt{d_time}
+    dt{d_time},
+    use_coef{use_av_coef}
   {}
 
   virtual void operator()(Sequence<Deformed_element&>& elements)
@@ -48,7 +50,6 @@ class Local_av0_deformed : public Kernel<Deformed_element&>
     {
       auto& elem = elements[i_elem];
       double* state = elem.stage(0);
-      double* rk_reference = state + n_var*n_qpoint;
       double* normals = elem.reference_level_normals();
       double* det = elem.jacobian_determinant();
       double time_rate [n_var][n_qpoint] {};
@@ -77,7 +78,7 @@ class Local_av0_deformed : public Kernel<Deformed_element&>
             Eigen::Matrix<double, row_size, n_var> row_r;
             for (int i_var = 0; i_var < n_var; ++i_var) {
               for (int i_row = 0; i_row < row_size; ++i_row) {
-                row_r(i_row, i_var) = rk_reference[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_row*stride];
+                row_r(i_row, i_var) = state[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_row*stride];
               }
             }
             // fetch numerical face state
@@ -121,8 +122,9 @@ class Local_av0_deformed : public Kernel<Deformed_element&>
               temp_flux[i_dim] += normals[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint]*flux[i_var][j_dim][i_qpoint];
             }
           }
+          double scalar = (use_coef ? av_coef[i_qpoint] : 1)/det[i_qpoint];
           for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-            flux[i_var][i_dim][i_qpoint] = temp_flux[i_dim]*av_coef[i_qpoint]/det[i_qpoint];
+            flux[i_var][i_dim][i_qpoint] = temp_flux[i_dim]*scalar;
           }
         }
       }
@@ -167,7 +169,8 @@ class Local_av0_deformed : public Kernel<Deformed_element&>
       for (int i_var = 0; i_var < n_var; ++i_var) {
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           const int i_dof = i_var*n_qpoint + i_qpoint;
-          state[i_dof] += time_rate[i_var][i_qpoint]*d_t_by_d_pos*tss[i_qpoint]/det[i_qpoint];
+          state[i_dof] += time_rate[i_var][i_qpoint]*d_t_by_d_pos*tss[i_qpoint]/det[i_qpoint]
+                          *(use_coef ? 1 : tss[i_qpoint]);
         }
       }
     }

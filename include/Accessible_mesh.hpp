@@ -34,6 +34,7 @@ class Accessible_mesh : public Mesh
 
   public:
   Accessible_mesh(Storage_params, double root_size);
+  virtual inline double root_size() {return root_sz;}
   inline View_by_type<         Element>& cartesian() {return car;}
   inline View_by_type<Deformed_element>&  deformed() {return def;}
   virtual int add_element(int ref_level, bool is_deformed, std::vector<int> position);

@@ -502,6 +502,7 @@ void test_marching(Test_mesh& tm, std::string name)
   auto& sol = tm.solver();
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
+  sol.set_local_tss();
   sol.initialize(Nonuniform_mass());
   // check that the iteration status is right at the start
   auto status = sol.iteration_status();
@@ -533,6 +534,7 @@ void test_art_visc(Test_mesh& tm, std::string name)
   const int n_dim = sol.storage_params().n_dim;
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
+  sol.set_local_tss();
   sol.initialize(Sinusoid());
   sol.set_art_visc_constant(300.);
   // update
@@ -543,7 +545,8 @@ void test_art_visc(Test_mesh& tm, std::string name)
     for (int i_qpoint = 0; i_qpoint < sol.storage_params().n_qpoint(); ++i_qpoint) {
       auto state  = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::State_variables());
       auto update = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Physical_update());
-      REQUIRE(update[n_dim]/status.time_step == Approx(-n_dim*300.*(state[n_dim] - update[n_dim] - 1.)).margin(1e-3));
+      auto tss    = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Time_step_scale_func());
+      REQUIRE(update[n_dim]/status.time_step == Approx(-n_dim*300.*(state[n_dim] - update[n_dim]*tss[0] - 1.)).margin(1e-3));
     }
   }
 }

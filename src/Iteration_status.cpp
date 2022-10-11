@@ -16,7 +16,7 @@ std::string Iteration_status::value_string()
   r += format("i", iteration);
   r += format(".14e", flow_time);
   r += format(".14e", time_step);
-  r += format("i", art_visc_iters);
+  r += format("i", fix_admis_iters);
   return r;
 }
 

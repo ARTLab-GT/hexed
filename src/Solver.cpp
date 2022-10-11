@@ -46,7 +46,8 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
   acc_mesh{params, root_mesh_size},
   basis{row_size},
   stopwatch{"(element*iteration)"},
-  use_art_visc{false}
+  use_art_visc{false},
+  fix_admis{false}
 {
   // setup categories for performance reporting
   stopwatch.children.emplace("initialize RK", stopwatch.work_unit_name);
@@ -59,6 +60,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
     children.emplace("neighbor", "(connection*RK stage)");
     children.emplace("local", unit);
   }
+  stopwatch.children.emplace("fix admis.", "(element*(fix admis. iter))");
 }
 
 void Solver::relax_vertices(double factor)
@@ -223,6 +225,7 @@ void Solver::initialize(const Spacetime_func& func)
     }
   }
   (*kernel_factory<Write_face>(params.n_dim, params.row_size, basis))(elements);
+  (*kernel_factory<Prolong_refined>(params.n_dim, params.row_size, basis))(acc_mesh.refined_faces());
 }
 
 void Solver::set_art_visc_off()
@@ -237,9 +240,14 @@ void Solver::set_art_visc_constant(double value)
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* av = elements[i_elem].art_visc_coef();
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
-      av[i_qpoint] = value;
+     av[i_qpoint] = value;
     }
   }
+}
+
+void Solver::set_fix_admissibility(bool value)
+{
+  fix_admis = value;
 }
 
 void Solver::update(double stability_ratio)
@@ -269,9 +277,8 @@ void Solver::update(double stability_ratio)
   irk.work_units_completed += elems.size();
 
   // compute inviscid update
-  auto& bc_cons {acc_mesh.boundary_connections()};
   for (double rk_weight : rk_weights) {
-    (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+    auto& bc_cons {acc_mesh.boundary_connections()};
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
       int bc_sn = bc_cons[i_con].bound_cond_serial_n();
       acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
@@ -281,31 +288,13 @@ void Solver::update(double stability_ratio)
     (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
     (*kernel_factory<Local_cartesian>(nd, rs, basis, dt, rk_weight))(acc_mesh.cartesian().elements(), sw_car, "local");
     (*kernel_factory<Local_deformed >(nd, rs, basis, dt, rk_weight))(acc_mesh.deformed ().elements(), sw_def, "local");
+    (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+    fix_admissibility(fix_stab_rat*stability_ratio);
   }
 
-  // compute viscous update
-  if (use_art_visc)
-  {
-    (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-      int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-      acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
-    }
-    (*kernel_factory<Neighbor_avg_cartesian>(nd, rs       ))(acc_mesh.cartesian().face_connections());
-    (*kernel_factory<Neighbor_avg_deformed >(nd, rs, false))(acc_mesh.deformed ().face_connections());
-    (*kernel_factory<Restrict_refined>(nd, rs, basis, false))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-    (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, dt))(acc_mesh.cartesian().elements());
-    (*kernel_factory<Local_av0_deformed >(nd, rs, basis, dt))(acc_mesh.deformed ().elements());
-    (*kernel_factory<Prolong_refined>(nd, rs, basis, true))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-      int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-      acc_mesh.boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
-    }
-    (*kernel_factory<Neighbor_avg_cartesian>(nd, rs      ))(acc_mesh.cartesian().face_connections());
-    (*kernel_factory<Neighbor_avg_deformed >(nd, rs, true))(acc_mesh.deformed ().face_connections());
-    (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-    (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, dt))(acc_mesh.cartesian().elements());
-    (*kernel_factory<Local_av1_deformed >(nd, rs, basis, dt))(acc_mesh.deformed ().elements());
+  if (use_art_visc) {
+    update_art_visc(dt, true);
+    fix_admissibility(fix_stab_rat*stability_ratio);
   }
 
   // update status for reporting
@@ -316,6 +305,92 @@ void Solver::update(double stability_ratio)
   stopwatch.work_units_completed += elems.size();
   sw_car.work_units_completed += acc_mesh.cartesian().elements().size();
   sw_def.work_units_completed += acc_mesh.deformed ().elements().size();
+}
+
+void Solver::update_art_visc(double dt, bool use_av_coef)
+{
+  const int nd = params.n_dim;
+  const int rs = params.row_size;
+  auto& bc_cons {acc_mesh.boundary_connections()};
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+    acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
+  }
+  (*kernel_factory<Neighbor_avg_cartesian>(nd, rs       ))(acc_mesh.cartesian().face_connections());
+  (*kernel_factory<Neighbor_avg_deformed >(nd, rs, false))(acc_mesh.deformed ().face_connections());
+  (*kernel_factory<Restrict_refined>(nd, rs, basis, false))(acc_mesh.refined_faces());
+  (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, dt, use_av_coef))(acc_mesh.cartesian().elements());
+  (*kernel_factory<Local_av0_deformed >(nd, rs, basis, dt, use_av_coef))(acc_mesh.deformed ().elements());
+  (*kernel_factory<Prolong_refined>(nd, rs, basis, true))(acc_mesh.refined_faces());
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+    acc_mesh.boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
+  }
+  (*kernel_factory<Neighbor_avg_cartesian>(nd, rs      ))(acc_mesh.cartesian().face_connections());
+  (*kernel_factory<Neighbor_avg_deformed >(nd, rs, true))(acc_mesh.deformed ().face_connections());
+  (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+  (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, dt, use_av_coef))(acc_mesh.cartesian().elements());
+  (*kernel_factory<Local_av1_deformed >(nd, rs, basis, dt, use_av_coef))(acc_mesh.deformed ().elements());
+  (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+}
+
+void Solver::fix_admissibility(double stability_ratio)
+{
+  if (!fix_admis) return;
+  auto& sw_fix = stopwatch.children.at("fix admis.");
+  sw_fix.stopwatch.start();
+  auto& elems = acc_mesh.elements();
+  const int nd = params.n_dim;
+  const int nq = params.n_qpoint();
+  const int rs = params.row_size;
+  int iter;
+  for (iter = 0;; ++iter) {
+    if (iter > 9999) {
+      #if HEXED_USE_OTTER
+      otter::plot plt;
+      visualize_field_otter(plt, Pressure(), 1, {0, 0}, Pressure(), {0, 0}, otter::const_colormap(Eigen::Vector4d{1., 0., 0., .1}), otter::plasma, false, false);
+      visualize_field_otter(plt, Pressure(), 0);
+      visualize_edges_otter(plt);
+      plt.show();
+      #endif
+      char buffer [200];
+      snprintf(buffer, 200, "failed to fix thermodynamic admissability in %i iterations", iter);
+      throw std::runtime_error(buffer);
+    }
+    bool admiss = 1;
+    #pragma omp parallel for reduction (&&:admiss)
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      admiss = admiss && hexed::thermo::admissible(elem.stage(0), nd, nq);
+      for (int i_face = 0; i_face < params.n_dim*2; ++i_face) {
+        admiss = admiss && hexed::thermo::admissible(elem.face() + i_face*(nd + 2)*nq/rs, nd, nq/rs);
+      }
+    }
+    auto& ref_faces = acc_mesh.refined_faces();
+    bool refined_admiss = 1;
+    #pragma omp parallel for reduction (&&:refined_admiss)
+    for (int i_face = 0; i_face < ref_faces.size(); ++i_face) {
+      auto& ref = ref_faces[i_face];
+      int n_fine = params.n_vertices()/2;
+      for (int i_dim = 0; i_dim < nd - 1; ++i_dim) n_fine /= 1 + ref.stretch[i_dim];
+      for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
+        refined_admiss = refined_admiss && hexed::thermo::admissible(ref.fine_face(i_fine), nd, nq/rs);
+      }
+    }
+    if (admiss && refined_admiss) break;
+    else {
+      double root_sz = acc_mesh.root_size();
+      update_art_visc(stability_ratio*basis.max_cfl_diffusive()*root_sz*root_sz, false);
+    }
+  }
+  status.fix_admis_iters += iter;
+  sw_fix.work_units_completed += acc_mesh.elements().size()*iter;
+  sw_fix.stopwatch.pause();
+}
+
+void Solver::reset_counters()
+{
+  status.fix_admis_iters = 0;
 }
 
 std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func& func)
@@ -578,7 +653,7 @@ void Solver::visualize_field_otter(otter::plot& plt,
                                    std::array<double, 2> color_bounds,
                                    const otter::colormap& cmap_contour,
                                    const otter::colormap& cmap_field,
-                                   bool transparent,
+                                   bool transparent, bool show_color,
                                    int n_div, double tol)
 {
   if (contour.n_var(params.n_dim) != 1) throw std::runtime_error("`contour` must be scalar");
@@ -595,30 +670,30 @@ void Solver::visualize_field_otter(otter::plot& plt,
   }
   auto& elements = acc_mesh.elements();
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    auto& elem = elements[i_elem];
     for (int i_contour = 0; i_contour < n_contour; ++i_contour) {
       double contour_val = (i_contour + 1)/(n_contour + 1.);
       contour_val = contour_val*(contour_bounds[1] - contour_bounds[0]) + contour_bounds[0];
       contour_val = (contour_val - bf[0])/(bf[1] - bf[0]);
-      auto& elem = elements[i_elem];
       // add contour line/surface
       otter_vis::add_contour(plt, elem, basis, Scaled(contour, bf), contour_val, n_div,
                              color_by, color_bounds, cmap_contour, transparent, status.flow_time, tol);
       // for 2d, color the flow field as well
-      if (params.n_dim == 2) {
-        const int n_sample = 2*n_div + 1;
-        Vis_data vis_pos(elem, Position_func(), basis, status.flow_time);
-        Vis_data vis_var(elem,         contour, basis, status.flow_time);
-        Eigen::MatrixXd pos_3d(n_sample*n_sample, 3);
-        Eigen::MatrixXd pos = vis_pos.interior(n_sample);
-        Eigen::MatrixXd var = vis_var.interior(n_sample);
-        pos_3d(Eigen::all, Eigen::seqN(0, 2)) = pos;
-        // set z componento to slightly negative so that lines show up on top
-        pos_3d(Eigen::all, 2).array() = -1e-4*elem.nominal_size();
-        // adjust color-by variable so that bound interval maps to [0, 1]
-        var = (var - Eigen::VectorXd::Constant(var.size(), contour_bounds[0]))/(contour_bounds[1] - contour_bounds[0]);
-        // throw it up there
-        plt.add(otter::surface(n_sample, pos_3d, cmap_field(var)));
-      }
+    }
+    if ((params.n_dim == 2) && show_color) {
+      const int n_sample = 2*n_div + 1;
+      Vis_data vis_pos(elem, Position_func(), basis, status.flow_time);
+      Vis_data vis_var(elem,         contour, basis, status.flow_time);
+      Eigen::MatrixXd pos_3d(n_sample*n_sample, 3);
+      Eigen::MatrixXd pos = vis_pos.interior(n_sample);
+      Eigen::MatrixXd var = vis_var.interior(n_sample);
+      pos_3d(Eigen::all, Eigen::seqN(0, 2)) = pos;
+      // set z componento to slightly negative so that lines show up on top
+      pos_3d(Eigen::all, 2).array() = -1e-4*elem.nominal_size();
+      // adjust color-by variable so that bound interval maps to [0, 1]
+      var = (var - Eigen::VectorXd::Constant(var.size(), contour_bounds[0]))/(contour_bounds[1] - contour_bounds[0]);
+      // throw it up there
+      plt.add(otter::surface(n_sample, pos_3d, cmap_field(var)));
     }
   }
 }

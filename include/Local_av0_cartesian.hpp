@@ -20,11 +20,13 @@ class Local_av0_cartesian : public Kernel<Element&>
 {
   Derivative<row_size> derivative;
   double dt;
+  bool use_coef;
 
   public:
-  Local_av0_cartesian(const Basis& basis, double d_time) :
+  Local_av0_cartesian(const Basis& basis, double d_time, bool use_av_coef = true) :
     derivative{basis},
-    dt{d_time}
+    dt{d_time},
+    use_coef{use_av_coef}
   {}
 
   virtual void operator()(Sequence<Element&>& elements)
@@ -38,7 +40,6 @@ class Local_av0_cartesian : public Kernel<Element&>
     {
       auto& elem = elements[i_elem];
       double* state = elem.stage(0);
-      double* rk_reference = state + n_var*n_qpoint;
       double time_rate [n_var][n_qpoint] {};
       double* face = elem.face();
       double* tss = elem.time_step_scale();
@@ -59,7 +60,7 @@ class Local_av0_cartesian : public Kernel<Element&>
             Eigen::Matrix<double, row_size, n_var> row_r;
             for (int i_var = 0; i_var < n_var; ++i_var) {
               for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-                row_r(i_qpoint, i_var) = rk_reference[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
+                row_r(i_qpoint, i_var) = state[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
               }
             }
             Eigen::Array<double, row_size, 1> row_avc;
@@ -76,7 +77,7 @@ class Local_av0_cartesian : public Kernel<Element&>
 
             // calculate flux
             Eigen::Matrix<double, row_size, n_var> flux = -derivative(row_r, boundary_values)/nom_sz;
-            flux.array().colwise() *= row_avc;
+            if (use_coef) flux.array().colwise() *= row_avc;
             Eigen::Matrix<double, row_size, n_var> row_w = -derivative.interior_term(flux, boundary_values);
             for (int i_var = 0; i_var < n_var; ++i_var) {
               for (int is_positive : {0, 1}) {
@@ -100,7 +101,8 @@ class Local_av0_cartesian : public Kernel<Element&>
       for (int i_var = 0; i_var < n_var; ++i_var) {
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           const int i_dof = i_var*n_qpoint + i_qpoint;
-          state[i_dof] += time_rate[i_var][i_qpoint]*d_t_by_d_pos*tss[i_qpoint];
+          state[i_dof] += time_rate[i_var][i_qpoint]*d_t_by_d_pos*tss[i_qpoint]
+                          *(use_coef ? 1 : tss[i_qpoint]);
         }
       }
     }
