@@ -8,6 +8,7 @@
 #include "math.hpp"
 #include "Derivative.hpp"
 #include "Write_face.hpp"
+#include "thermo.hpp"
 
 namespace hexed
 {
@@ -82,17 +83,15 @@ class Local_cartesian : public Kernel<Element&>
             {
               #define READ(i) row_r[i][i_qpoint]
               #define FLUX(i) flux(i_qpoint, i)
-              if (READ(n_var - 2) <= 0.) throw std::runtime_error("nonpositive density in `Local_cartesian`!");
-              double veloc = READ(i_dim)/READ(n_var - 2);
-              double pres = 0;
+              HEXED_COMPUTE_SCALARS
+              HEXED_ASSERT_ADMISSIBLE
+              double veloc = READ(i_dim)/mass;
               for (int j_dim = 0; j_dim < n_var - 2; ++j_dim) {
                 FLUX(j_dim) = READ(j_dim)*veloc;
-                pres += READ(j_dim)*READ(j_dim)/READ(n_var - 2);
               }
-              pres = (heat_rat - 1.)*(READ(n_var - 1) - 0.5*pres);
               FLUX(i_dim) += pres;
               FLUX(n_var - 2) = READ(i_dim);
-              FLUX(n_var - 1) = (READ(n_var - 1) + pres)*veloc;
+              FLUX(n_var - 1) = (ener + pres)*veloc;
               #undef FLUX
               #undef READ
             }

@@ -48,7 +48,7 @@ void hll(double* data, const double* normal, double heat_rat)
       FLUX(n_var - 1) = (ener + pres)*veloc;
       velocity[i_side] = veloc;
       sound_speed[i_side] = std::sqrt(heat_rat*pres/mass)*nrml_mag;
-      if (std::isnan(sound_speed[i_side])) throw std::runtime_error("speed of sound is NaN in `hll`!");
+      HEXED_ASSERT(!std::isnan(sound_speed[i_side]), "speed of sound is NaN")
       #undef FLUX
       #undef READ
     }

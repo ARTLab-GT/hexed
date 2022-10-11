@@ -1,8 +1,8 @@
 #ifndef HEXED_THERMO_HPP_
 #define HEXED_THERMO_HPP_
 
-#include <algorithm>
 #include <cmath>
+#include "assert.hpp"
 
 namespace hexed::thermo
 {
@@ -26,12 +26,8 @@ bool admissible(const double* data, const int n_dim, const int n_qpoint, double 
 #pragma GCC diagnostic pop
 
 #define HEXED_ASSERT_ADMISSIBLE \
-  { \
-    auto loc = " in `" + std::string(__PRETTY_FUNCTION__) + "`!"; \
-    /* note: `!(x > 0.)` is not equivalent to `x <= 0.` because `x` could be NaN */ \
-    if (!(mass > 0.)) throw std::runtime_error("nonpositive density" + loc); \
-    if (!(ener >= 0.)) throw std::runtime_error("negative energy" + loc); \
-    if (!(pres >= 0.)) throw std::runtime_error("negative pressure" + loc); \
-  } \
+  HEXED_ASSERT(mass > 0., "nonpositive density") \
+  HEXED_ASSERT(ener >= 0., "negative energy") \
+  HEXED_ASSERT(pres >= 0., "negative pressure") \
 
 #endif
