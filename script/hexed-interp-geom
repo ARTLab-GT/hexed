@@ -1,16 +1,35 @@
 #! /usr/bin/python3
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.optimize import minimize
+import sys
 
-#points = np.loadtxt("RAE2822.geom", skiprows=2)
-points = np.loadtxt("boeing737_outboard.txt")
+args = sys.argv[1:]
+found_file = False
+uncluster_trailing = False
+optimize = False
 n_poly = 10
 n_interp = 1000
+for arg in args:
+    if ".geom" in arg:
+        points = np.loadtxt(arg, skiprows=2)
+        found_file = True
+    elif ".txt" in arg or ".csv" in arg:
+        points = np.loadtxt(arg)
+        found_file = True
+    elif arg == "--uncluster-trailing":
+        uncluster_trailing = True
+    elif arg == "--optimize":
+        optimize = True
+    else:
+        parts = arg.split("=")
+        if parts[0] == "--polynomial":
+            n_poly = int(parts[1])
+        if parts[0] == "--num-points":
+            n_interp = int(parts[1])
+assert found_file, "must specify a file to process"
 
 def cheby(i_poly, param):
     return np.cos(i_poly*np.arccos(param))
-
 def monde(param):
     n_point = param.size
     mat = np.zeros((n_point, n_poly))
@@ -19,15 +38,23 @@ def monde(param):
             mat[i_point, i_poly] = cheby(i_poly, param[i_point])
     return mat
 
-param_in = np.linspace(-1, 1, points.shape[0])
-#param_in = np.cos(np.linspace(np.pi, 0, points.shape[0]))
+if uncluster_trailing:
+    param_in = np.cos(np.linspace(np.pi, 0, points.shape[0]))
+else:
+    param_in = np.linspace(-1, 1, points.shape[0])
+
 def soln(p):
     return np.linalg.lstsq(monde(p), points, rcond=None)
-def res(theta):
-    return (soln(np.cos(theta))[1]).sum()
-min_result = minimize(res, np.arccos(param_in))
-print(min_result)
-param_in = np.cos(min_result.x)
+
+if optimize:
+    def res(theta):
+        return (soln(np.cos(theta))[1]).sum()
+    from scipy.optimize import minimize
+    min_result = minimize(res, np.arccos(param_in))
+    print("optimization result:")
+    print(min_result)
+    param_in = np.cos(min_result.x)
+
 s = soln(param_in)
 coef = s[0]
 print(s[1].sum())
