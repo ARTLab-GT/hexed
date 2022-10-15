@@ -1,6 +1,5 @@
 #! /usr/bin/python3
 import numpy as np
-import matplotlib.pyplot as plt
 import sys
 
 args = sys.argv[1:]
@@ -8,6 +7,7 @@ found_file = False
 uncluster_trailing = False
 optimize = False
 close = False
+quiet = False
 n_poly = 10
 n_interp = 1000
 for arg in args:
@@ -23,6 +23,8 @@ for arg in args:
         optimize = True
     elif arg == "--close":
         close = True
+    elif arg == "--quiet":
+        quiet = True
     else:
         parts = arg.split("=")
         if parts[0] == "--polynomial":
@@ -56,27 +58,40 @@ if optimize:
         return (soln(np.cos(theta))[1]).sum()
     from scipy.optimize import minimize
     min_result = minimize(res, np.arccos(param_in))
-    print("optimization result:")
-    print(min_result)
+    if not quiet:
+        print("optimization result:")
+        print(min_result)
+        print()
     param_in = np.cos(min_result.x)
 
 s = soln(param_in)
 coef = s[0]
-print(s[1].sum())
+if not quiet:
+    print(f"curve fit residual: {s[1].sum()**.5}")
 param_out = np.linspace(-1, 1, n_interp)
 interp = monde(param_out) @ coef
-plt.scatter(param_in, points[:, 0], marker="+")
-plt.scatter(param_in, points[:, 1], marker="+")
-plt.plot(param_out, interp[:, 0], color="k")
-plt.plot(param_out, interp[:, 1], color="k")
-plt.show()
+if not quiet:
+    import matplotlib.pyplot as plt
+    plt.scatter(param_in, points[:, 0], marker="+", label="x (data)")
+    plt.scatter(param_in, points[:, 1], marker="+", label="y (data)")
+    plt.plot(param_out, interp[:, 0], label="x (fit)")
+    plt.plot(param_out, interp[:, 1], label="y (fit)")
+    plt.legend()
+    plt.title("curve fit in parametric space")
+    plt.xlabel("parameter")
+    plt.grid(True)
+    plt.show()
 
 if close:
     interp -= np.outer(param_out, (interp[-1, :] - interp[0, :])/2.)
 else:
     interp = np.concatenate([interp, interp[[0], :]])
 
-plt.scatter(points[:, 0], points[:, 1], marker="+")
-plt.plot(interp[:, 0], interp[:, 1], color="k")
-plt.axis("equal")
-plt.show()
+if not quiet:
+    plt.scatter(points[:, 0], points[:, 1], marker="+", label="data")
+    plt.plot(interp[:, 0], interp[:, 1], color="k", label="fit")
+    plt.legend()
+    plt.title("curve fit in physical space")
+    plt.axis("equal")
+    plt.grid(True)
+    plt.show()
