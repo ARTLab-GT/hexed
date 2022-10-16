@@ -21,8 +21,11 @@ for arg in args:
     if ".geom" in arg:
         points = np.loadtxt(arg, skiprows=2)
         fname = arg
-    elif ".txt" in arg or ".csv" in arg:
+    elif ".txt" in arg:
         points = np.loadtxt(arg)
+        fname = arg
+    elif ".csv" in arg:
+        points = np.loadtxt(arg, delimiter=",")
         fname = arg
     elif arg == "--uncluster-trailing":
         uncluster_trailing = True
