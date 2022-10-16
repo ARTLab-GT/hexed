@@ -2,6 +2,13 @@
 import numpy as np
 import sys
 
+"""
+computes a smooth curve fit to discrete data points representing a 2D geometry.
+useful when the resolution is poor and/or the precision of the points is low.
+primarily designed for airfoils but may work for other smooth geometries.
+"""
+
+# configure command line arguments
 args = sys.argv[1:]
 fname = ""
 uncluster_trailing = False
@@ -35,6 +42,7 @@ for arg in args:
             raise Exception(f"unrecognized argument `{arg}`")
 assert fname, "must specify a file to process"
 
+# compute van der Monde matrix for Chebyshev polynomials
 def cheby(i_poly, param):
     return np.cos(i_poly*np.arccos(param))
 def monde(param):
@@ -45,15 +53,19 @@ def monde(param):
             mat[i_point, i_poly] = cheby(i_poly, param[i_point])
     return mat
 
+# alter distribution of data points to reduce overfitting at trailing edge if desired
 if uncluster_trailing:
     param_in = np.cos(np.linspace(np.pi, 0, points.shape[0]))
 else:
     param_in = np.linspace(-1, 1, points.shape[0])
 
+# compute polynomial coefficients in chebyshev basis as a least squares fit to the data points
 def soln(p):
     return np.linalg.lstsq(monde(p), points, rcond=None)
 
+# optimize distribution of data points in parametric space if desired
 if optimize:
+    # optimization minimizes residual of curve fit
     def res(theta):
         return (soln(np.cos(theta))[1]).sum()
     from scipy.optimize import minimize
@@ -64,12 +76,16 @@ if optimize:
         print()
     param_in = np.cos(min_result.x)
 
+# obtain final curve fit with whatever distribution of data points we have
 s = soln(param_in)
 coef = s[0]
 if not quiet:
     print(f"curve fit residual: {s[1].sum()**.5}")
+# sample at uniformly-spaced (in parameter space) interpolation points
 param_out = np.linspace(-1, 1, n_interp)
 interp = monde(param_out) @ coef
+
+# plot results in parameter space
 if not quiet:
     import matplotlib.pyplot as plt
     plt.scatter(param_in, points[:, 0], marker="+", label="x (data)")
@@ -82,12 +98,16 @@ if not quiet:
     plt.grid(True)
     plt.show()
 
+# make geometry watertight
 if close:
+    # close trailing edge by deforming geometry
     interp -= np.outer(param_out, (interp[-1, :] - interp[0, :])/2.)
 else:
+    # add an extra point at the end to match the first point
     interp = np.concatenate([interp, interp[[0], :]])
     n_interp += 1
 
+# plot results in physical space
 if not quiet:
     plt.scatter(points[:, 0], points[:, 1], marker="+", label="data")
     plt.plot(interp[:, 0], interp[:, 1], color="k", label="fit")
@@ -97,6 +117,7 @@ if not quiet:
     plt.grid(True)
     plt.show()
 
+# write output file
 text = f"""
 1
 {n_interp} 1
