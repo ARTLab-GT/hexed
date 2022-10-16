@@ -54,9 +54,7 @@ TEST_CASE("Local_advection_cartesian")
           double pos0 {i_dim ? basis.node(i) : positive};
           double pos1 {i_dim ? positive : basis.node(i)};
           SET_VARS
-          qpoint_start[0*row_size] = veloc[0];
-          qpoint_start[1*row_size] = veloc[1];
-          qpoint_start[2*row_size] = scalar;
+          qpoint_start[2*row_size] = scalar*veloc[i_dim];
         }
       }
     }
@@ -67,8 +65,8 @@ TEST_CASE("Local_advection_cartesian")
   for (auto& element : elements) {
     double* state = element->stage(0);
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-      double pos0 = i_qpoint/row_size;
-      REQUIRE(state[2*n_qpoint + i_qpoint] == Approx(.5*.2*(2 + pos0)).scale(1.));
+      double pos0 = basis.node(i_qpoint/row_size);
+      REQUIRE(state[2*n_qpoint + i_qpoint] == Approx(-.5*.2/2.*(2 + pos0)).scale(1.));
     }
   }
 }

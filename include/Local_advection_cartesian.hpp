@@ -8,17 +8,17 @@
 #include "math.hpp"
 #include "Derivative.hpp"
 #include "Write_face.hpp"
-#include "thermo.hpp"
 
 namespace hexed
 {
 
 /*
  * Computes the local update for the advection equation for one Runge-Kutta stage.
- * For both interior data stage 0 and face data, the first `n_dim` variables
- * should contain the advection velocity,
+ * For stage 0 of the interior data, the first `n_dim` variables
+ * should contain the advection velocity
  * and variable `n_dim` should contain the advected scalar.
  * Variable `n_dim` of stage 1 should contain the RK reference for the scalar.
+ * Variable `n_dim` of face data should contain the flux of the scalar.
  */
 template <int n_dim, int row_size>
 class Local_advection_cartesian : public Kernel<Element&>
@@ -45,15 +45,14 @@ class Local_advection_cartesian : public Kernel<Element&>
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
     {
-      double* veloc = elements[i_elem].stage(0);
-      double* state = elements[i_elem].stage(0) + n_dim*n_qpoint;
+      double* veloc = elements[i_elem].stage(0); // advection velocity, not physical velocity
+      double* state = veloc + n_dim*n_qpoint;
       double* rk_reference = state + n_var*n_qpoint;
-      double time_rate [n_var][n_qpoint] {};
+      double time_rate [n_qpoint] {};
       double* face = elements[i_elem].face();
       double* tss = elements[i_elem].time_step_scale();
       const double d_t_by_d_pos = dt/elements[i_elem].nominal_size();
 
-      #if 0
       // Compute update
       for (int stride = n_qpoint/row_size, n_rows = 1, i_dim = 0; n_rows < n_qpoint;
            stride /= row_size, n_rows *= row_size, ++i_dim)
@@ -64,47 +63,30 @@ class Local_advection_cartesian : public Kernel<Element&>
           for (int i_inner = 0; i_inner < stride; ++i_inner)
           {
             // Fetch this row of data
-            double row_r [n_var][row_size];
-            for (int i_var = 0; i_var < n_var; ++i_var) {
-              for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-                row_r[i_var][i_qpoint] = state[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
-              }
+            double row_v [row_size];
+            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+              row_v[i_qpoint] = veloc[i_dim*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
+            }
+            double row_s [row_size];
+            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+              row_s[i_qpoint] = state[i_outer*stride*row_size + i_inner + i_qpoint*stride];
+            }
+            // Calculate flux
+            Eigen::Matrix<double, row_size, 1> flux;
+            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+              flux(i_qpoint) = row_v[i_qpoint]*row_s[i_qpoint];
             }
             // fetch boundary flux
-            Eigen::Matrix<double, 2, n_var> boundary_values;
-            for (int i_var = 0; i_var < n_var; ++i_var) {
-              for (int is_positive : {0, 1}) {
-                boundary_values(is_positive, i_var) = face[(i_dim*2 + is_positive)*n_face_dof + i_var*n_qpoint/row_size + i_face_qpoint];
-              }
-            }
-
-            // Calculate flux
-            Eigen::Matrix<double, row_size, n_var> flux;
-            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
-            {
-              #define READ(i) row_r[i][i_qpoint]
-              #define FLUX(i) flux(i_qpoint, i)
-              HEXED_COMPUTE_SCALARS
-              HEXED_ASSERT_ADMISSIBLE
-              double veloc = READ(i_dim)/mass;
-              for (int j_dim = 0; j_dim < n_var - 2; ++j_dim) {
-                FLUX(j_dim) = READ(j_dim)*veloc;
-              }
-              FLUX(i_dim) += pres;
-              FLUX(n_var - 2) = READ(i_dim);
-              FLUX(n_var - 1) = (ener + pres)*veloc;
-              #undef FLUX
-              #undef READ
+            Eigen::Matrix<double, 2, 1> boundary_values;
+            for (int is_positive : {0, 1}) {
+              boundary_values(is_positive) = face[(i_dim*2 + is_positive)*n_face_dof + n_dim*n_qpoint/row_size + i_face_qpoint];
             }
             // Differentiate flux
-            Eigen::Matrix<double, row_size, n_var> row_w = -derivative(flux, boundary_values);
-
+            Eigen::Matrix<double, row_size, 1> row_w = -derivative(flux, boundary_values);
             // Add dimensional component to update
-            for (int i_var = 0; i_var < n_var; ++i_var) {
-              for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-                int offset = i_outer*stride*row_size + i_inner + i_qpoint*stride;
-                time_rate[i_var][offset] += row_w(i_qpoint, i_var);
-              }
+            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+              int offset = i_outer*stride*row_size + i_inner + i_qpoint*stride;
+              time_rate[offset] += row_w(i_qpoint);
             }
             ++i_face_qpoint;
           }
@@ -112,15 +94,11 @@ class Local_advection_cartesian : public Kernel<Element&>
       }
 
       // write the updated solution
-      for (int i_var = 0; i_var < n_var; ++i_var) {
-        for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-          const int i_dof = i_var*n_qpoint + i_qpoint;
-          double updated = time_rate[i_var][i_qpoint]*d_t_by_d_pos*tss[i_qpoint] + state[i_dof];
-          state[i_dof] = rkw*updated + (1. - rkw)*rk_reference[i_dof];
-        }
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        double updated = time_rate[i_qpoint]*d_t_by_d_pos*tss[i_qpoint] + state[i_qpoint];
+        state[i_qpoint] = rkw*updated + (1. - rkw)*rk_reference[i_qpoint];
       }
       write_face(state, face);
-      #endif
     }
   }
 };
