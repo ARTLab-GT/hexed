@@ -308,6 +308,9 @@ void Accessible_mesh::extrude(bool collapse)
 
   #define CONNECT_HANGING \
     if (vert.record[j_record] != ref_level) { \
+      if (std::abs(vert.record[j_record] - ref_level) != 1) { \
+        throw std::runtime_error("ref levels of neighboring extrusion faces differ by > 1"); \
+      } \
       int which_fine = vert.record[j_record] > vert.record[i_record]; \
       int rec [] {i_record, j_record}; \
       /* ref_level, sn, i_face, extrude_dim */ \
