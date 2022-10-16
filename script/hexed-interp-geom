@@ -3,7 +3,7 @@ import numpy as np
 import sys
 
 args = sys.argv[1:]
-found_file = False
+fname = ""
 uncluster_trailing = False
 optimize = False
 close = False
@@ -13,10 +13,10 @@ n_interp = 1000
 for arg in args:
     if ".geom" in arg:
         points = np.loadtxt(arg, skiprows=2)
-        found_file = True
+        fname = arg
     elif ".txt" in arg or ".csv" in arg:
         points = np.loadtxt(arg)
-        found_file = True
+        fname = arg
     elif arg == "--uncluster-trailing":
         uncluster_trailing = True
     elif arg == "--optimize":
@@ -33,7 +33,7 @@ for arg in args:
             n_interp = int(parts[1])
         else:
             raise Exception(f"unrecognized argument `{arg}`")
-assert found_file, "must specify a file to process"
+assert fname, "must specify a file to process"
 
 def cheby(i_poly, param):
     return np.cos(i_poly*np.arccos(param))
@@ -86,6 +86,7 @@ if close:
     interp -= np.outer(param_out, (interp[-1, :] - interp[0, :])/2.)
 else:
     interp = np.concatenate([interp, interp[[0], :]])
+    n_interp += 1
 
 if not quiet:
     plt.scatter(points[:, 0], points[:, 1], marker="+", label="data")
@@ -95,3 +96,14 @@ if not quiet:
     plt.axis("equal")
     plt.grid(True)
     plt.show()
+
+text = f"""
+1
+{n_interp} 1
+"""[1:]
+for i in range(n_interp):
+    text += f"{interp[i, 0]:.18e} {interp[i, 1]:.18e}\n"
+fname = ".".join(fname.split(".")[:-1])
+fname = fname + "_fitted.geom"
+with open(fname, "w") as out_file:
+    out_file.write(text)
