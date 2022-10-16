@@ -595,8 +595,8 @@ TEST_CASE("Solver time marching")
           Extrude_hanging eh(i_dim, j_dim); \
           test_marching(eh, "extrude_hanging"); \
       }
-    TEST_DIMENSIONS(0, 1)
     #if NDEBUG
+    TEST_DIMENSIONS(0, 1)
     TEST_DIMENSIONS(0, 2)
     TEST_DIMENSIONS(1, 0)
     TEST_DIMENSIONS(1, 2)
@@ -629,8 +629,8 @@ TEST_CASE("Solver artificial viscosity")
           Extrude_hanging eh(i_dim, j_dim); \
           test_art_visc(eh, "extrude_hanging"); \
       }
-    TEST_DIMENSIONS(0, 1)
     #if NDEBUG
+    TEST_DIMENSIONS(0, 1)
     TEST_DIMENSIONS(0, 2)
     TEST_DIMENSIONS(1, 0)
     TEST_DIMENSIONS(1, 2)
@@ -664,8 +664,8 @@ TEST_CASE("Solver conservation")
           test_conservation(eh, "extrude_hanging"); \
       } \
 
-    TEST_CONSERVATION(0, 1)
     #if NDEBUG
+    TEST_CONSERVATION(0, 1)
     TEST_CONSERVATION(0, 2)
     TEST_CONSERVATION(1, 0)
     TEST_CONSERVATION(1, 2)
