@@ -50,7 +50,6 @@ class Local_advection_cartesian : public Kernel<Element&>
       double* rk_reference = state + n_var*n_qpoint;
       double time_rate [n_qpoint] {};
       double* face = elements[i_elem].face();
-      double* tss = elements[i_elem].time_step_scale();
       const double d_t_by_d_pos = dt/elements[i_elem].nominal_size();
 
       // Compute update
@@ -95,7 +94,7 @@ class Local_advection_cartesian : public Kernel<Element&>
 
       // write the updated solution
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-        double updated = time_rate[i_qpoint]*d_t_by_d_pos*tss[i_qpoint] + state[i_qpoint];
+        double updated = time_rate[i_qpoint]*d_t_by_d_pos + state[i_qpoint];
         state[i_qpoint] = rkw*updated + (1. - rkw)*rk_reference[i_qpoint];
       }
       write_face(state, face);
