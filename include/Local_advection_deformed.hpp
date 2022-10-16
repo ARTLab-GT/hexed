@@ -55,16 +55,21 @@ class Local_advection_deformed : public Kernel<Deformed_element&>
       for (int stride = n_qpoint/row_size, n_rows = 1, i_dim = 0; n_rows < n_qpoint;
            stride /= row_size, n_rows *= row_size, ++i_dim)
       {
+        double* dim_nrml = normals + i_dim*n_dim*n_qpoint;
         int i_face_qpoint {0};
         for (int i_outer = 0; i_outer < n_rows; ++i_outer)
         {
           for (int i_inner = 0; i_inner < stride; ++i_inner)
           {
-            // Fetch this row of data
-            double row_v [row_size];
-            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-              row_v[i_qpoint] = veloc[i_dim*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
+            // compute velocity in reference space by taking dot product with normals
+            double row_v [row_size] {};
+            for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+              for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+                int i = j_dim*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride;
+                row_v[i_qpoint] += veloc[i]*dim_nrml[i];
+              }
             }
+            // fetch state
             double row_s [row_size];
             for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
               row_s[i_qpoint] = state[i_outer*stride*row_size + i_inner + i_qpoint*stride];
