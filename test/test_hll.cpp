@@ -2,7 +2,7 @@
 #include <Eigen/Dense>
 #include <hexed/hll.hpp>
 
-TEST_CASE("hll")
+TEST_CASE("hll::inviscid")
 {
   double mass = 1.225;
   double pressure = 101325;
@@ -82,5 +82,32 @@ TEST_CASE("hll")
     hexed::hll::inviscid<3, 2>(read, normal.data(), 1.4);
     REQUIRE(read[2*3     ] == Approx(0).margin(1e-8));
     REQUIRE(read[2*3 + 10] == Approx(0).margin(1e-8));
+  }
+}
+
+TEST_CASE("hll::advection")
+{
+  double state [2][4][3];
+  double nrml [2][2][3];
+  double scalar [2] {1.3, 0.7};
+  for (int i_side = 0; i_side < 2; ++i_side) {
+    for (int i_qpoint = 0; i_qpoint < 3; ++i_qpoint) {
+      // set surface normal
+      nrml[i_side][0][i_qpoint] = .4;
+      nrml[i_side][1][i_qpoint] = .5;
+      // set advection velocity
+      state[i_side][0][i_qpoint] = -.1;
+      state[i_side][1][i_qpoint] = -.9;
+      // set scalar state;
+      state[i_side][2][i_qpoint] = scalar[i_side];
+    }
+  }
+  hexed::hll::advection<2, 3>(state[0][0], nrml[0][0]);
+  for (int i_side = 0; i_side < 2; ++i_side) {
+    for (int i_qpoint = 0; i_qpoint < 3; ++i_qpoint) {
+      REQUIRE(state[i_side][0][i_qpoint] == Approx(.4));
+      REQUIRE(state[i_side][1][i_qpoint] == Approx(.5));
+      REQUIRE(state[i_side][2][i_qpoint] == Approx((-.1*.4 - .9*.5)*0.7));
+    }
   }
 }

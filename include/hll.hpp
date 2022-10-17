@@ -9,7 +9,7 @@ namespace hexed::hll
 typedef std::array<double, 2> arr2;
 
 // core formula of Harten-Lax-van Leer (HLL) flux.
-double hll(arr2 speed, arr2 flux, arr2 state)
+inline double hll(arr2 speed, arr2 flux, arr2 state)
 {
   if (speed[0] >= 0) return flux[0];
   if (speed[1] <= 0) return flux[1];
