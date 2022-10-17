@@ -96,13 +96,19 @@ void advection(double* data, const double* normal)
     }
     // compute flux on each side
     // note: flux and velocity are in **reference space**
-    arr2 wave_speed;
+    arr2 wave_speed {0., 0.};
     arr2 flux;
     arr2 state;
     for (int i_side = 0; i_side < 2; ++i_side) {
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        wave_speed[i_side] += data[(i_dim + i_side*n_var)*n_face_qpoint + i_qpoint]*nrml[i_dim];
+      }
+      state[i_side] = data[(n_dim + i_side*n_var)*n_face_qpoint + i_qpoint];
+      flux[i_side] = state[i_side]*wave_speed[i_side];
     }
     // get numerical flux from the flux/state on both sides
-    data[i_qpoint] = data[i_qpoint + face_size] = hll(wave_speed, flux, state);
+    double* scalar_flux = data + 2*n_face_qpoint + i_qpoint;
+    scalar_flux[0] = scalar_flux[face_size] = hll(wave_speed, flux, state);
   }
 }
 
