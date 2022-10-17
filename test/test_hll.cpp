@@ -26,7 +26,7 @@ TEST_CASE("hll")
     }
     for (int i = 0; i < 20; ++i) read[i] = backup[i];
     normal = Eigen::VectorXd::Ones(2)*Eigen::VectorXd::Unit(3, 0).transpose();
-    hexed::hll<3, 2>(read, normal.data(), 1.4);
+    hexed::hll::inviscid<3, 2>(read, normal.data(), 1.4);
     for (int j = 0; j < 2; ++j) {
       for (int i_var = 0; i_var < 5; ++i_var) {
         double correct_flux = backup[2*i_var];
@@ -39,7 +39,7 @@ TEST_CASE("hll")
     }
     for (int i = 0; i < 20; ++i) read[i] = backup[i];
     normal = Eigen::VectorXd::Ones(2)*Eigen::VectorXd::Unit(3, 1).transpose();
-    hexed::hll<3, 2>(read, normal.data(), 1.4);
+    hexed::hll::inviscid<3, 2>(read, normal.data(), 1.4);
     for (int j = 0; j < 2; ++j) {
       for (int i_var = 0; i_var < 5; ++i_var) {
         double correct_flux = backup[2*i_var + 10];
@@ -53,7 +53,7 @@ TEST_CASE("hll")
     for (int i = 0; i < 20; ++i) read[i] = backup[i];
     Eigen::Vector3d n = Eigen::Vector3d{.8, .1, 0.};
     normal = Eigen::VectorXd::Ones(2)*n.transpose();
-    hexed::hll<3, 2>(read, normal.data(), 1.4);
+    hexed::hll::inviscid<3, 2>(read, normal.data(), 1.4);
     for (int j = 0; j < 2; ++j) {
       for (int i_var = 0; i_var < 5; ++i_var) {
         double correct_flux = backup[2*i_var];
@@ -79,7 +79,7 @@ TEST_CASE("hll")
       }
     }
     normal = Eigen::VectorXd::Unit(3, 0)*Eigen::VectorXd::Ones(2).transpose();
-    hexed::hll<3, 2>(read, normal.data(), 1.4);
+    hexed::hll::inviscid<3, 2>(read, normal.data(), 1.4);
     REQUIRE(read[2*3     ] == Approx(0).margin(1e-8));
     REQUIRE(read[2*3 + 10] == Approx(0).margin(1e-8));
   }

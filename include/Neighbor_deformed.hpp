@@ -58,7 +58,7 @@ class Neighbor_deformed : public Kernel<Face_connection<Deformed_element>&>
 
       // compute upwind flux
       permutation.match_faces();
-      hll<n_dim, n_face_qpoint>(face, face_nrml, heat_rat);
+      hll::inviscid<n_dim, n_face_qpoint>(face, face_nrml, heat_rat);
       permutation.restore();
 
       // flip normal
