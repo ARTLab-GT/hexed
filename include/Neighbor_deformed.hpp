@@ -19,10 +19,10 @@ namespace hexed
 template <int n_dim, int row_size>
 class Neighbor_deformed : public Kernel<Face_connection<Deformed_element>&>
 {
-  const double heat_rat;
-  public:
-  Neighbor_deformed(double heat_ratio=1.4) : heat_rat{heat_ratio} {}
+  protected:
+  virtual void compute_flux(double*, double*) = 0;
 
+  public:
   virtual void operator()(Sequence<Face_connection<Deformed_element>&>& connections)
   {
     constexpr int n_var = n_dim + 2;
@@ -58,7 +58,7 @@ class Neighbor_deformed : public Kernel<Face_connection<Deformed_element>&>
 
       // compute upwind flux
       permutation.match_faces();
-      hll::inviscid<n_dim, n_face_qpoint>(face, face_nrml, heat_rat);
+      compute_flux(face, face_nrml);
       permutation.restore();
 
       // flip normal
@@ -81,8 +81,39 @@ class Neighbor_deformed : public Kernel<Face_connection<Deformed_element>&>
   }
 };
 
+template <int n_dim, int row_size>
+class Neighbor_inviscid_deformed : public Neighbor_deformed<n_dim, row_size>
+{
+  protected:
+  const double heat_rat;
+  virtual void compute_flux(double* face, double* face_nrml)
+  {
+    hll::inviscid<n_dim, custom_math::pow(row_size, n_dim - 1)>(face, face_nrml, heat_rat);
+  }
+
+  public:
+  Neighbor_inviscid_deformed(double heat_ratio=1.4) : heat_rat{heat_ratio} {}
+};
+
+template <int n_dim, int row_size>
+class Neighbor_advection_deformed : public Neighbor_deformed<n_dim, row_size>
+{
+  protected:
+  virtual void compute_flux(double* face, double* face_nrml)
+  {
+    hll::advection<n_dim, custom_math::pow(row_size, n_dim - 1)>(face, face_nrml);
+  }
+};
+
 template<>
-class Kernel_traits<Neighbor_deformed>
+class Kernel_traits<Neighbor_inviscid_deformed>
+{
+  public:
+  using base_t = Kernel<Face_connection<Deformed_element>&>;
+};
+
+template<>
+class Kernel_traits<Neighbor_advection_deformed>
 {
   public:
   using base_t = Kernel<Face_connection<Deformed_element>&>;
