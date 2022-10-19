@@ -51,7 +51,7 @@ TEST_CASE("Local_advection_deformed")
       state[1*n_qpoint + i_qpoint] = veloc[1];
       state[2*n_qpoint + i_qpoint] = scalar;
       // set RK reference state to negative of initial state
-      state[6*n_qpoint + i_qpoint] = -state[2*n_qpoint + i_qpoint];
+      state[3*n_qpoint + i_qpoint] = -state[2*n_qpoint + i_qpoint];
     }
   }
   #undef SET_VARS

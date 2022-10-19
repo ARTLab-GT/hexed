@@ -14,11 +14,10 @@ namespace hexed
 
 /*
  * Computes the local update for the advection equation for one Runge-Kutta stage.
- * For stage 0 of the interior data, the first `n_dim` variables
+ * For the face data and stage 0 of the interior data, the first `n_dim` variables
  * should contain the advection velocity
  * and variable `n_dim` should contain the advected scalar.
- * Variable `n_dim` of stage 1 should contain the RK reference for the scalar.
- * Variable `n_dim` of face data should contain the flux of the scalar.
+ * Variable `n_dim + 1` of stage 0 should contain the RK reference for the scalar.
  */
 template <int n_dim, int row_size>
 class Local_advection_cartesian : public Kernel<Element&>
@@ -47,7 +46,7 @@ class Local_advection_cartesian : public Kernel<Element&>
     {
       double* veloc = elements[i_elem].stage(0); // advection velocity, not physical velocity
       double* state = veloc + n_dim*n_qpoint;
-      double* rk_reference = state + n_var*n_qpoint;
+      double* rk_reference = state + n_qpoint;
       double time_rate [n_qpoint] {};
       double* face = elements[i_elem].face();
       const double d_t_by_d_pos = dt/elements[i_elem].nominal_size();

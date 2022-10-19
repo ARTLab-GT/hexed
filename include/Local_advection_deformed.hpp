@@ -44,7 +44,7 @@ class Local_advection_deformed : public Kernel<Deformed_element&>
       auto& elem {elements[i_elem]};
       double* veloc = elements[i_elem].stage(0); // advection velocity, not physical velocity
       double* state = veloc + n_dim*n_qpoint;
-      double* rk_reference = state + n_var*n_qpoint;
+      double* rk_reference = state + n_qpoint;
       double time_rate [n_qpoint] {};
       double* normals = elem.reference_level_normals();
       double* determinant = elem.jacobian_determinant();
