@@ -249,6 +249,7 @@ void Solver::set_art_visc_constant(double value)
 
 void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double stab_rat)
 {
+  double heat_rat = 1.4;
   const int nq = params.n_qpoint();
   const int nd = params.n_dim;
   const int rs = params.row_size;
@@ -260,10 +261,10 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
     double* av = elements[i_elem].art_visc_coef();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       av[i_qpoint] = 0.;
-      double scale_sq = 2*state[(nd + 1)*nq + i_qpoint]*state[nd*nq + i_qpoint];
+      double scale_sq = 2*heat_rat*state[(nd + 1)*nq + i_qpoint]*state[nd*nq + i_qpoint];
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         double mmtm = state[i_dim*nq + i_qpoint];
-        scale_sq += mmtm*mmtm;
+        scale_sq += (1. - heat_rat)*mmtm*mmtm;
       }
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         int i = i_var*nq + i_qpoint;
@@ -277,6 +278,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
   }
   (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+  visualize_field_tecplot(State_variables(), "smoothness_init");
 
   double done = 0.;
   Gauss_legendre proj_basis(proj_rs);
