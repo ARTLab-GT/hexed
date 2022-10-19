@@ -149,6 +149,23 @@ class Nonuniform_residual : public hexed::Spacetime_func
   }
 };
 
+class Tanh : public hexed::Spacetime_func
+{
+  double scale;
+  public:
+  Tanh(double scale_arg) : scale{scale_arg} {}
+  virtual int n_var(int n_dim) const {return n_dim + 2;}
+  virtual std::vector<double> operator()(std::vector<double> pos, double time) const
+  {
+    const int n_dim {int(pos.size())};
+    std::vector<double> result(n_dim + 2, 0.);
+    result[0] = 1. - .1*std::tanh((pos[0] - .5)/scale);
+    result[n_dim] = 1.;
+    result[n_dim + 1] = 1.5;
+    return result;
+  }
+};
+
 class Parabola : public hexed::Surface_geometry
 {
   public:
@@ -727,4 +744,43 @@ TEST_CASE("face extrusion")
     solver.visualize_field_tecplot(hexed::State_variables(), "extrude");
     #endif
   }
+}
+
+TEST_CASE("artificial viscosity convergence")
+{
+  #if NDEBUG
+  const int len0 = 100;
+  const int len1 = 2;
+  hexed::Solver sol(2, hexed::config::max_row_size, 1./len0);
+  int sn [len0][len1];
+  for (int i = 0; i < len0; ++i) {
+    for (int j = 0; j < len1; ++j) {
+      sn[i][j] = sol.mesh().add_element(0, 0, {i, j});
+      if (i) sol.mesh().connect_cartesian(0, {sn[i - 1][j], sn[i][j]}, {0});
+      if (j) sol.mesh().connect_cartesian(0, {sn[i][j - 1], sn[i][j]}, {1});
+    }
+  }
+  int nonpen = sol.mesh().add_boundary_condition(new hexed::Nonpenetration, new hexed::Null_mbc);
+  int pen [2];
+  pen[0] = sol.mesh().add_boundary_condition(new hexed::Freestream({1.1, 0., 1., 1.5}), new hexed::Null_mbc);
+  pen[1] = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Null_mbc);
+  for (int positive = 0; positive < 2; ++positive) {
+    for (int i = 0; i < len0; ++i) sol.mesh().connect_boundary(0, 0, sn[i][positive*(len1 - 1)], 1, positive, nonpen);
+    for (int j = 0; j < len1; ++j) sol.mesh().connect_boundary(0, 0, sn[positive*(len0 - 1)][j], 0, positive, pen[positive]);
+  }
+  sol.mesh().valid().assert_valid();
+  sol.calc_jacobian();
+  double flow_width = .01;
+  double adv_width = .02;
+  sol.initialize(Tanh(flow_width));
+  sol.set_art_visc_smoothness(hexed::config::max_row_size, adv_width, 1e-4);
+  double init_max = sol.bounds_field(hexed::Art_visc_coef())[0][1];
+  // check that doubling the advection length multiplies the viscosity by 2^(max_row_size - 1)
+  sol.set_art_visc_smoothness(hexed::config::max_row_size, 2*adv_width, 1e-4);
+  REQUIRE(std::log(sol.bounds_field(hexed::Art_visc_coef())[0][1]/init_max)/std::log(2) > 6.);
+  // check that doubling the length scale of the flow divides the viscosity by ~2^(max_row_size - 1)
+  sol.initialize(Tanh(2*flow_width));
+  sol.set_art_visc_smoothness(hexed::config::max_row_size, adv_width, 1e-4);
+  REQUIRE(std::log(init_max/sol.bounds_field(hexed::Art_visc_coef())[0][1])/std::log(2) > 6.);
+  #endif
 }
