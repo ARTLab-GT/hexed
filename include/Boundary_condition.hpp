@@ -36,6 +36,8 @@ class Flow_bc
   virtual void apply_state(Boundary_face&) = 0;
   // applies boundary condition to viscous fluxes (if applicable)
   virtual void apply_flux(Boundary_face&) = 0;
+  // applies boundary condition to linear advection equation used to compute nonsmoothness indicator
+  virtual inline void apply_advection(Boundary_face& bf) {apply_state(bf);}
   virtual ~Flow_bc() = default;
 };
 
@@ -74,6 +76,7 @@ class Freestream : public Flow_bc
   Freestream(std::vector<double> freestream_state);
   virtual void apply_state(Boundary_face&);
   virtual void apply_flux(Boundary_face&);
+  virtual void apply_advection(Boundary_face&);
 };
 
 /*

@@ -101,7 +101,7 @@ class Local_advection_deformed : public Kernel<Deformed_element&>
         double updated = time_rate[i_qpoint]/determinant[i_qpoint]*d_t_by_d_pos + state[i_qpoint];
         state[i_qpoint] = rkw*updated + (1. - rkw)*rk_reference[i_qpoint];
       }
-      write_face(state, face);
+      write_face(veloc, face);
     }
   }
 };

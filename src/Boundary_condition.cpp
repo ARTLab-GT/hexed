@@ -35,6 +35,17 @@ void Freestream::apply_flux(Boundary_face& bf)
   copy_state(bf);
 }
 
+void Freestream::apply_advection(Boundary_face& bf)
+{
+  copy_state(bf);
+  const int nq = bf.storage_params().n_qpoint()/bf.storage_params().row_size;
+  int nd = bf.storage_params().n_dim;
+  double* gf = bf.ghost_face();
+  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+    gf[nd*nq + i_qpoint] = 1.;
+  }
+}
+
 void Nonpenetration::reflect_normal(double* gh_f, double* nrml, int nq, int nd)
 {
   for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint)
