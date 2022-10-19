@@ -60,13 +60,33 @@ class Sinusoid : public hexed::Spacetime_func
   virtual int n_var(int n_dim) const {return n_dim + 2;}
   virtual std::vector<double> operator()(std::vector<double> pos, double time) const
   {
-    // zero velocity, constant, pressure, and mass which is a product of cosines in each direction
+    // zero velocity, constant pressure, and mass which is a product of cosines in each direction
     const int n_dim = pos.size();
     double exp_part = .1;
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) exp_part *= std::cos(pos[i_dim]);
     std::vector<double> state(n_var(n_dim), 0.);
     state[n_dim] = 1. + exp_part;
     state[n_dim + 1] = 1e5/0.4;
+    return state;
+  }
+};
+
+class Sinusoid_veloc : public hexed::Spacetime_func
+{
+  public:
+  virtual int n_var(int n_dim) const {return n_dim + 2;}
+  // requires `n_dim >= 2`
+  virtual std::vector<double> operator()(std::vector<double> pos, double time) const
+  {
+    const int n_dim = pos.size();
+    std::vector<double> state(n_var(n_dim), 0.);
+    state[n_dim] = 2.3;
+    state[0] =  state[n_dim]*.1*std::sin(pos[0]);
+    state[1] = -state[n_dim]*.2*std::cos(pos[1]);
+    // set the energy so that 2*h_0 == 1.
+    double kin_ener = (state[0]*state[0] + state[1]*state[1])/(2.*state[n_dim]*state[n_dim]);
+    double enth = .5 - kin_ener;
+    state[n_dim + 1] = state[n_dim]*(enth/1.4 + kin_ener);
     return state;
   }
 };
@@ -590,6 +610,34 @@ void test_conservation(Test_mesh& tm, std::string name)
   }
 }
 
+void test_advection(Test_mesh& tm, std::string name)
+{
+  tm.construct(new hexed::Copy, new hexed::Null_mbc);
+  auto& sol = tm.solver();
+  sol.mesh().valid().assert_valid();
+  sol.calc_jacobian();
+  sol.set_local_tss(); // this shouldn't affect the answer
+  sol.initialize(Sinusoid_veloc());
+  double dt = 1e-3;
+  sol.set_art_visc_smoothness(2, dt, dt); // .9 to make sure we don't confuse the ciel function
+  hexed::Gauss_legendre basis(2);
+  double norm = 0.;
+  for (int i_node = 0; i_node < 2; ++i_node) {
+    norm += basis.node(i_node)*basis.orthogonal(1)(i_node)*basis.node_weights()(i_node);
+  }
+  otter::plot plt;
+  sol.visualize_field_otter(plt, hexed::Art_visc_coef());
+  plt.show();
+  // check that the computed artificial viscosity is proportional to divergence of velocity
+  for (auto handle : sol.mesh().elem_handles()) {
+    for (int i_qpoint = 0; i_qpoint < sol.storage_params().n_qpoint(); ++i_qpoint) {
+      double art_visc = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Art_visc_coef())[0];
+      auto pos = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Position_func());
+      REQUIRE(art_visc/(dt*norm) == Approx(-.1*std::cos(pos[0]) - .2*std::sin(pos[1])).margin(1e-3));
+    }
+  }
+}
+
 // test the solver on a sinusoid-derived initial condition which has a simple analytic solution
 TEST_CASE("Solver time marching")
 {
@@ -688,6 +736,41 @@ TEST_CASE("Solver conservation")
     TEST_CONSERVATION(1, 2)
     TEST_CONSERVATION(2, 0)
     TEST_CONSERVATION(2, 1)
+    #endif
+  }
+}
+
+TEST_CASE("Solver advection")
+{
+  SECTION("all cartesian")
+  {
+    All_cartesian ac;
+    test_advection(ac, "car");
+  }
+  SECTION("all deformed")
+  {
+    All_deformed ad0 (0);
+    test_advection(ad0, "def0");
+    All_deformed ad1 (1);
+    test_advection(ad1, "def1");
+  }
+  SECTION("extruded with deformed hanging nodes")
+  {
+    #if 0
+    #define TEST_DIMENSIONS(i_dim, j_dim) \
+      SECTION("dimensions " #i_dim " " #j_dim) { \
+          Extrude_hanging eh(i_dim, j_dim); \
+          test_advection(eh, "extrude_hanging"); \
+      }
+    #if NDEBUG
+    TEST_DIMENSIONS(0, 1)
+    TEST_DIMENSIONS(0, 2)
+    TEST_DIMENSIONS(1, 0)
+    TEST_DIMENSIONS(1, 2)
+    TEST_DIMENSIONS(2, 0)
+    TEST_DIMENSIONS(2, 1)
+    #endif
+    #undef TEST_DIMENSIONS
     #endif
   }
 }
