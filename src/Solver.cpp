@@ -329,6 +329,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
     }
   }
 
+  visualize_field_tecplot(Art_visc_coef(), "art_visc");
   otter::plot plt;
   visualize_field_otter(plt, Art_visc_coef());
   plt.show();
