@@ -257,18 +257,18 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
-    double* rk_ref = elements[i_elem].stage(0);
+    double* rk_ref = elements[i_elem].stage(1);
     double* av = elements[i_elem].art_visc_coef();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       av[i_qpoint] = 0.;
+      for (int i_var = 0; i_var < params.n_var; ++i_var) {
+        int i = i_var*nq + i_qpoint;
+        rk_ref[i] = state[i];
+      }
       double scale_sq = 2*heat_rat*state[(nd + 1)*nq + i_qpoint]*state[nd*nq + i_qpoint];
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         double mmtm = state[i_dim*nq + i_qpoint];
         scale_sq += (1. - heat_rat)*mmtm*mmtm;
-      }
-      for (int i_var = 0; i_var < params.n_var; ++i_var) {
-        int i = i_var*nq + i_qpoint;
-        rk_ref[i] = state[i];
       }
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         state[i_dim*nq + i_qpoint] /= std::sqrt(scale_sq);
@@ -278,7 +278,6 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
   }
   (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-  visualize_field_tecplot(State_variables(), "smoothness_init");
 
   double done = 0.;
   Gauss_legendre proj_basis(proj_rs);
@@ -322,7 +321,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
-    double* rk_ref = elements[i_elem].stage(0);
+    double* rk_ref = elements[i_elem].stage(1);
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         int i = i_var*nq + i_qpoint;
@@ -330,11 +329,8 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
       }
     }
   }
-
-  visualize_field_tecplot(Art_visc_coef(), "art_visc");
-  otter::plot plt;
-  visualize_field_otter(plt, Art_visc_coef());
-  plt.show();
+  (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
+  (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
 }
 
 void Solver::set_fix_admissibility(bool value)
