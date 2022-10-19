@@ -109,7 +109,7 @@ void advection(double* data, const double* normal)
     arr2 wave_speed;
     for (int i_side = 0; i_side < 2; ++i_side) {
       int sign = 2*i_side - 1;
-      wave_speed[i_side] = std::min(veloc[0] + sign*.1, veloc[1] + sign*.1);
+      wave_speed[i_side] = std::min(veloc[0] + sign*.01, veloc[1] + sign*.01);
     }
     // get numerical flux from the flux/state on both sides
     double* scalar_flux = data + 2*n_face_qpoint + i_qpoint;
