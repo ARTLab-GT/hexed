@@ -92,7 +92,11 @@ void Copy::apply_state(Boundary_face& bf)
 
 void Copy::apply_flux(Boundary_face& bf)
 {
-  copy_state(bf);
+  // set to negative of inside flux
+  auto params = bf.storage_params();
+  double* gh_f = bf.ghost_face();
+  double* in_f = bf.inside_face();
+  for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
 }
 
 void Nominal_pos::snap_vertices(Boundary_connection& con)
