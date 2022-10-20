@@ -377,7 +377,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* av = elements[i_elem].art_visc_coef();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      av[i_qpoint] = std::sqrt(std::max(0., av[i_qpoint]));
+      av[i_qpoint] = 100.*std::sqrt(std::max(0., av[i_qpoint]));
     }
   }
 
