@@ -247,6 +247,35 @@ void Solver::set_art_visc_constant(double value)
   }
 }
 
+void Solver::advect(double len, int n_iter)
+{
+  const int nq = params.n_qpoint();
+  const int nd = params.n_dim;
+  const int rs = params.row_size;
+  auto& elements = acc_mesh.elements();
+  double dt = len/n_iter;
+  for (int i_iter = 0; i_iter < n_iter; ++i_iter) {
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+      double* state = elements[i_elem].stage(0) + nd*nq;
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) state[i_qpoint + nq] = state[i_qpoint];
+    }
+    for (double rk_weight : rk_weights) {
+      auto& bc_cons {acc_mesh.boundary_connections()};
+      for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+        int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+        acc_mesh.boundary_condition(bc_sn).flow_bc->apply_advection(bc_cons[i_con]);
+      }
+      (*kernel_factory<Neighbor_advection_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections());
+      (*kernel_factory<Neighbor_advection_deformed >(nd, rs))(acc_mesh.deformed ().face_connections());
+      (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+      (*kernel_factory<Local_advection_cartesian>(nd, rs, basis, dt, rk_weight))(acc_mesh.cartesian().elements());
+      (*kernel_factory<Local_advection_deformed >(nd, rs, basis, dt, rk_weight))(acc_mesh.deformed ().elements());
+      (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+    }
+  }
+}
+
 void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_length, double shift, double stab_rat, double diff_time, double diff_stab_rat)
 {
   double heat_rat = 1.4;
@@ -294,27 +323,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_le
     double len = advect_length*proj_basis.node(i_proj) - done;
     done += len;
     int n_iter = ceil(len/stab_rat);
-    double dt = len/n_iter;
-    for (int i_iter = 0; i_iter < n_iter; ++i_iter) {
-      #pragma omp parallel for
-      for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-        double* state = elements[i_elem].stage(0) + nd*nq;
-        for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) state[i_qpoint + nq] = state[i_qpoint];
-      }
-      for (double rk_weight : rk_weights) {
-        auto& bc_cons {acc_mesh.boundary_connections()};
-        for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-          int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-          acc_mesh.boundary_condition(bc_sn).flow_bc->apply_advection(bc_cons[i_con]);
-        }
-        (*kernel_factory<Neighbor_advection_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections());
-        (*kernel_factory<Neighbor_advection_deformed >(nd, rs))(acc_mesh.deformed ().face_connections());
-        (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-        (*kernel_factory<Local_advection_cartesian>(nd, rs, basis, dt, rk_weight))(acc_mesh.cartesian().elements());
-        (*kernel_factory<Local_advection_deformed >(nd, rs, basis, dt, rk_weight))(acc_mesh.deformed ().elements());
-        (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-      }
-    }
+    advect(len, n_iter);
     double coef = proj_basis.orthogonal(proj_rs - 1)(i_proj)*proj_basis.node_weights()(i_proj);
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
@@ -328,18 +337,10 @@ void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_le
 
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    double* av = elements[i_elem].art_visc_coef();
-    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      av[i_qpoint] *= av[i_qpoint];
-    }
-  }
-  // need to generalize kernels to clean up this middle section
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
     double* av = elements[i_elem].art_visc_coef();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      state[nd*nq + i_qpoint] = av[i_qpoint];
+      state[nd*nq + i_qpoint] = av[i_qpoint]*av[i_qpoint];
     }
   }
   (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
@@ -357,8 +358,8 @@ void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_le
     (*kernel_factory<Neighbor_avg_cartesian>(nd, rs       ))(acc_mesh.cartesian().face_connections());
     (*kernel_factory<Neighbor_avg_deformed >(nd, rs, false))(acc_mesh.deformed ().face_connections());
     (*kernel_factory<Restrict_refined>(nd, rs, basis, false))(acc_mesh.refined_faces());
-    (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, dt, false))(acc_mesh.cartesian().elements());
-    (*kernel_factory<Local_av0_deformed >(nd, rs, basis, dt, false))(acc_mesh.deformed ().elements());
+    (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, dt, false, true))(acc_mesh.cartesian().elements());
+    (*kernel_factory<Local_av0_deformed >(nd, rs, basis, dt, false, true))(acc_mesh.deformed ().elements());
     (*kernel_factory<Prolong_refined>(nd, rs, basis, true))(acc_mesh.refined_faces());
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
       double* in_f = bc_cons[i_con].inside_face() + nd*nq/rs;
@@ -368,9 +369,16 @@ void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_le
     (*kernel_factory<Neighbor_avg_cartesian>(nd, rs      ))(acc_mesh.cartesian().face_connections());
     (*kernel_factory<Neighbor_avg_deformed >(nd, rs, true))(acc_mesh.deformed ().face_connections());
     (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-    (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, dt, false))(acc_mesh.cartesian().elements());
-    (*kernel_factory<Local_av1_deformed >(nd, rs, basis, dt, false))(acc_mesh.deformed ().elements());
+    (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, dt, false, true))(acc_mesh.cartesian().elements());
+    (*kernel_factory<Local_av1_deformed >(nd, rs, basis, dt, false, true))(acc_mesh.deformed ().elements());
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+  }
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    double* state = elements[i_elem].stage(0);
+    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+      state[nd*nq + i_qpoint] = scale*std::sqrt(std::max(0., state[nd*nq + i_qpoint]));
+    }
   }
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
@@ -378,13 +386,6 @@ void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_le
     double* av = elements[i_elem].art_visc_coef();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       av[i_qpoint] = state[nd*nq + i_qpoint];
-    }
-  }
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    double* av = elements[i_elem].art_visc_coef();
-    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      av[i_qpoint] = scale*std::sqrt(std::max(0., av[i_qpoint]));
     }
   }
 
