@@ -273,11 +273,19 @@ void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_le
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         state[i_dim*nq + i_qpoint] /= std::sqrt(scale_sq);
       }
-      state[nd*nq + i_qpoint] = 1.;
+      state[nd*nq + i_qpoint] = state[(nd + 1)*nq + i_qpoint] = 1.;
     }
   }
   (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+  auto& bc_cons {acc_mesh.boundary_connections()};
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    double* in_f = bc_cons[i_con].inside_face();
+    double* cache = bc_cons[i_con].cache();
+    for (int i_qpoint = 0; i_qpoint < nq/rs; ++i_qpoint) {
+      cache[i_qpoint] = in_f[nd*nq/rs + i_qpoint];
+    }
+  }
 
   double done = 0.;
   Gauss_legendre proj_basis(proj_rs);
@@ -339,7 +347,6 @@ void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_le
   int n_iter = ceil(diff_time/diff_stab_rat);
   double dt = diff_time/n_iter;
   for (int i_iter = 0; i_iter < n_iter; ++i_iter) {
-    auto& bc_cons {acc_mesh.boundary_connections()};
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
       double* in_f = bc_cons[i_con].inside_face();
       double* gh_f = bc_cons[i_con].ghost_face();

@@ -5,6 +5,26 @@
 namespace hexed
 {
 
+void Flow_bc::apply_advection(Boundary_face& bf)
+{
+  auto params = bf.storage_params();
+  const int nd = params.n_dim;
+  const int nq = params.n_qpoint()/params.row_size;
+  double* in_f = bf.inside_face();
+  double* gh_f = bf.ghost_face();
+  double* cache = bf.cache();
+  // set velocity equal to inside
+  for (int i_dim = 0; i_dim < nd; ++i_dim) {
+    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+      gh_f[i_dim*nq + i_qpoint] = in_f[i_dim*nq + i_qpoint];
+    }
+  }
+  // set advected scalar to cached value
+  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+    gh_f[nd*nq + i_qpoint] = cache[i_qpoint];
+  }
+}
+
 Freestream::Freestream(std::vector<double> freestream_state)
 : fs{freestream_state}
 {}
@@ -33,17 +53,6 @@ void Freestream::apply_state(Boundary_face& bf)
 void Freestream::apply_flux(Boundary_face& bf)
 {
   copy_state(bf);
-}
-
-void Freestream::apply_advection(Boundary_face& bf)
-{
-  copy_state(bf);
-  const int nq = bf.storage_params().n_qpoint()/bf.storage_params().row_size;
-  int nd = bf.storage_params().n_dim;
-  double* gf = bf.ghost_face();
-  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-    gf[nd*nq + i_qpoint] = 1.;
-  }
 }
 
 void Nonpenetration::reflect_normal(double* gh_f, double* nrml, int nq, int nd)
@@ -85,12 +94,22 @@ void Nonpenetration::apply_flux(Boundary_face& bf)
   reflect_normal(gh_f, bf.surface_normal(), params.n_qpoint()/params.row_size, params.n_dim);
 }
 
+void Nonpenetration::apply_advection(Boundary_face& bf)
+{
+  apply_state(bf);
+}
+
 void Copy::apply_state(Boundary_face& bf)
 {
   copy_state(bf);
 }
 
 void Copy::apply_flux(Boundary_face& bf)
+{
+  copy_state(bf);
+}
+
+void Copy::apply_advection(Boundary_face& bf)
 {
   copy_state(bf);
 }
