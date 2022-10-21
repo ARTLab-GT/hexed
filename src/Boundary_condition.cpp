@@ -92,6 +92,11 @@ void Copy::apply_state(Boundary_face& bf)
 
 void Copy::apply_flux(Boundary_face& bf)
 {
+  copy_state(bf);
+}
+
+void Outflow::apply_flux(Boundary_face& bf)
+{
   // set to negative of inside flux
   auto params = bf.storage_params();
   double* gh_f = bf.ghost_face();

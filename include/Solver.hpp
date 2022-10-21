@@ -65,7 +65,7 @@ class Solver
   void initialize(const Spacetime_func&);
   void set_art_visc_off();
   void set_art_visc_constant(double);
-  void set_art_visc_smoothness(int projection_row_size, double advect_length, double stability_ratio = .8, double diff_time = 0., double diff_stab_rat = .8);
+  void set_art_visc_smoothness(int projection_row_size, double scale, double advect_length, double shift = .5, double stability_ratio = .8, double diff_time = 0., double diff_stab_rat = .8);
   void set_fix_admissibility(bool);
 
   /* ### TIME MARCHING ### */

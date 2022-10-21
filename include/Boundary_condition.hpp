@@ -90,14 +90,21 @@ class Nonpenetration : public Flow_bc
   virtual void apply_flux(Boundary_face&);
 };
 
-/*
- * Copies the inside state.
- * Mostly used for testing, but can be valid for supersonic outlets.
- */
+// mostly used for testing, but you can maybe get away with it for supersonic outlets.
 class Copy : public Flow_bc
 {
   public:
+  // copies inside state
   virtual void apply_state(Boundary_face&);
+  // copies inside flux
+  virtual void apply_flux(Boundary_face&);
+};
+
+// for supersonic outlets
+class Outflow : public Copy
+{
+  public:
+  // inverts flux (so that avg is zero)
   virtual void apply_flux(Boundary_face&);
 };
 

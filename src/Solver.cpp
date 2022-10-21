@@ -247,7 +247,7 @@ void Solver::set_art_visc_constant(double value)
   }
 }
 
-void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double stab_rat, double diff_time, double diff_stab_rat)
+void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_length, double shift, double stab_rat, double diff_time, double diff_stab_rat)
 {
   double heat_rat = 1.4;
   const int nq = params.n_qpoint();
@@ -377,7 +377,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* av = elements[i_elem].art_visc_coef();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      av[i_qpoint] = 100.*std::sqrt(std::max(0., av[i_qpoint]));
+      av[i_qpoint] = scale*std::sqrt(std::max(0., av[i_qpoint]));
     }
   }
 
