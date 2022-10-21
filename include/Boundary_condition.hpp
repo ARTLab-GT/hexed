@@ -102,10 +102,11 @@ class Copy : public Flow_bc
 };
 
 // for supersonic outlets
-class Outflow : public Copy
+class Outflow : public Flow_bc
 {
   public:
   // inverts flux (so that avg is zero)
+  virtual void apply_state(Boundary_face&);
   virtual void apply_flux(Boundary_face&);
 };
 

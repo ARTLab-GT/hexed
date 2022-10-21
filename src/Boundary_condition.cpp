@@ -114,6 +114,11 @@ void Copy::apply_advection(Boundary_face& bf)
   copy_state(bf);
 }
 
+void Outflow::apply_state(Boundary_face& bf)
+{
+  copy_state(bf);
+}
+
 void Outflow::apply_flux(Boundary_face& bf)
 {
   // set to negative of inside flux

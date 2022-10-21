@@ -619,11 +619,12 @@ void test_advection(Test_mesh& tm, std::string name)
   sol.set_local_tss(); // this shouldn't affect the answer
   sol.initialize(Sinusoid_veloc());
   double dt = 1e-2;
-  sol.set_art_visc_smoothness(2, 1., dt, .5, dt); // .9 to make sure we don't confuse the ciel function
+  double shift = .4;
+  sol.set_art_visc_smoothness(2, 1., dt, shift, dt); // .9 to make sure we don't confuse the ciel function
   hexed::Gauss_legendre basis(2);
   double norm = 0.;
   for (int i_node = 0; i_node < 2; ++i_node) {
-    norm += basis.node(i_node)*basis.orthogonal(1)(i_node)*basis.node_weights()(i_node);
+    norm += (basis.node(i_node) - shift)*basis.orthogonal(1)(i_node)*basis.node_weights()(i_node);
   }
   // check that the computed artificial viscosity is proportional to divergence of velocity
   for (auto handle : sol.mesh().elem_handles()) {

@@ -283,6 +283,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_le
   const int nd = params.n_dim;
   const int rs = params.row_size;
   auto& elements = acc_mesh.elements();
+  auto& bc_cons {acc_mesh.boundary_connections()};
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
@@ -294,43 +295,54 @@ void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_le
         int i = i_var*nq + i_qpoint;
         rk_ref[i] = state[i];
       }
-      double scale_sq = 2*heat_rat*state[(nd + 1)*nq + i_qpoint]*state[nd*nq + i_qpoint];
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        double mmtm = state[i_dim*nq + i_qpoint];
-        scale_sq += (1. - heat_rat)*mmtm*mmtm;
-      }
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        state[i_dim*nq + i_qpoint] /= std::sqrt(scale_sq);
-      }
-      state[nd*nq + i_qpoint] = state[(nd + 1)*nq + i_qpoint] = 1.;
     }
   }
-  (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
-  (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-  auto& bc_cons {acc_mesh.boundary_connections()};
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    double* in_f = bc_cons[i_con].inside_face();
-    double* cache = bc_cons[i_con].cache();
-    for (int i_qpoint = 0; i_qpoint < nq/rs; ++i_qpoint) {
-      cache[i_qpoint] = in_f[nd*nq/rs + i_qpoint];
-    }
-  }
-
-  double done = 0.;
-  Gauss_legendre proj_basis(proj_rs);
-  for (int i_proj = 0; i_proj < proj_rs; ++i_proj)
+  for (int sign : {-1, 1})
   {
-    double len = advect_length*proj_basis.node(i_proj) - done;
-    done += len;
-    int n_iter = ceil(len/stab_rat);
-    advect(len, n_iter);
-    double coef = proj_basis.orthogonal(proj_rs - 1)(i_proj)*proj_basis.node_weights()(i_proj);
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
       double* state = elements[i_elem].stage(0);
-      double* av = elements[i_elem].art_visc_coef();
+      double* rk_ref = elements[i_elem].stage(1);
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        av[i_qpoint] += coef*state[nd*nq + i_qpoint];
+        double scale_sq = 2*heat_rat*rk_ref[(nd + 1)*nq + i_qpoint]*rk_ref[nd*nq + i_qpoint];
+        for (int i_dim = 0; i_dim < nd; ++i_dim) {
+          double mmtm = rk_ref[i_dim*nq + i_qpoint];
+          scale_sq += (1. - heat_rat)*mmtm*mmtm;
+        }
+        for (int i_dim = 0; i_dim < nd; ++i_dim) {
+          state[i_dim*nq + i_qpoint] = sign*rk_ref[i_dim*nq + i_qpoint]/std::sqrt(scale_sq);
+        }
+        state[nd*nq + i_qpoint] = state[(nd + 1)*nq + i_qpoint] = 1.;
+      }
+    }
+    (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
+    (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+      double* in_f = bc_cons[i_con].inside_face();
+      double* cache = bc_cons[i_con].cache();
+      for (int i_qpoint = 0; i_qpoint < nq/rs; ++i_qpoint) {
+        cache[i_qpoint] = in_f[nd*nq/rs + i_qpoint];
+      }
+    }
+
+    double done = shift*advect_length;
+    Gauss_legendre proj_basis(proj_rs);
+    for (int i_proj = 0; i_proj < proj_rs; ++i_proj)
+    {
+      int i_node = (sign > 0) ? i_proj : proj_rs - 1 - i_proj;
+      double len = sign*(advect_length*proj_basis.node(i_node) - done);
+      if (len < 0) continue;
+      done += sign*len;
+      int n_iter = ceil(len/stab_rat);
+      advect(len, n_iter);
+      double coef = proj_basis.orthogonal(proj_rs - 1)(i_node)*proj_basis.node_weights()(i_node);
+      #pragma omp parallel for
+      for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+        double* state = elements[i_elem].stage(0);
+        double* av = elements[i_elem].art_visc_coef();
+        for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+          av[i_qpoint] += coef*state[nd*nq + i_qpoint];
+        }
       }
     }
   }
@@ -378,8 +390,24 @@ void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_le
     double* state = elements[i_elem].stage(0);
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       state[nd*nq + i_qpoint] = scale*std::sqrt(std::max(0., state[nd*nq + i_qpoint]));
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        state[i_dim*nq + i_qpoint] *= -1;
+      }
     }
   }
+  (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
+  (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    double* in_f = bc_cons[i_con].inside_face();
+    double* cache = bc_cons[i_con].cache();
+    for (int i_qpoint = 0; i_qpoint < nq/rs; ++i_qpoint) {
+      cache[i_qpoint] = in_f[nd*nq/rs + i_qpoint];
+    }
+  }
+  #if 0
+  n_iter = ceil(shift*advect_length/stab_rat);
+  advect(shift*advect_length, n_iter);
+  #endif
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
