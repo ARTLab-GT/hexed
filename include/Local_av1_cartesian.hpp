@@ -95,12 +95,5 @@ class Local_av1_cartesian : public Kernel<Element&>
   }
 };
 
-template<>
-class Kernel_traits<Local_av1_cartesian>
-{
-  public:
-  using base_t = Kernel<Element&>;
-};
-
 }
 #endif

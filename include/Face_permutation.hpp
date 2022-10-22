@@ -84,12 +84,5 @@ class Face_permutation : public Face_permutation_dynamic
   typedef std::unique_ptr<Face_permutation_dynamic> ptr_t;
 };
 
-template<>
-class Kernel_traits<Face_permutation>
-{
-  public:
-  using base_t = Face_permutation_dynamic;
-};
-
 };
 #endif

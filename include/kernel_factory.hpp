@@ -20,17 +20,6 @@ namespace hexed
 {
 
 /*
- * Inspired by `std::Iterator_traits`. Create specializations of this class template
- * to define propreties of kernel temlates.
- */
-template <template<int, int> typename kernel>
-class Kernel_traits
-{
-  public:
-  class base_t;
-};
-
-/*
  * Base class for a "kernel", a word which here means a callable object which accepts dimensionality
  * and row size as template arguments to improve performance.
  */

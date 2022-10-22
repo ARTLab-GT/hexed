@@ -68,12 +68,5 @@ class Write_face : public Kernel<Element&>
   }
 };
 
-template<>
-class Kernel_traits<Write_face>
-{
-  public:
-  using base_t = Kernel<Element&>;
-};
-
 }
 #endif

@@ -44,12 +44,5 @@ class Mcs_cartesian : public Kernel<Element&, double>
   }
 };
 
-template<>
-class Kernel_traits<Mcs_cartesian>
-{
-  public:
-  using base_t = Kernel<Element&, double>;
-};
-
 }
 #endif

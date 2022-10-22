@@ -105,19 +105,5 @@ class Neighbor_advection_deformed : public Neighbor_deformed<n_dim, row_size>
   }
 };
 
-template<>
-class Kernel_traits<Neighbor_inviscid_deformed>
-{
-  public:
-  using base_t = Kernel<Face_connection<Deformed_element>&>;
-};
-
-template<>
-class Kernel_traits<Neighbor_advection_deformed>
-{
-  public:
-  using base_t = Kernel<Face_connection<Deformed_element>&>;
-};
-
 }
 #endif

@@ -96,12 +96,5 @@ class Local_av1_deformed : public Kernel<Deformed_element&>
   }
 };
 
-template<>
-class Kernel_traits<Local_av1_deformed>
-{
-  public:
-  using base_t = Kernel<Deformed_element&>;
-};
-
 }
 #endif

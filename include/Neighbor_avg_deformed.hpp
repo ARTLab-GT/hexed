@@ -47,12 +47,5 @@ class Neighbor_avg_deformed : public Kernel<Face_connection<Deformed_element>&>
   }
 };
 
-template<>
-class Kernel_traits<Neighbor_avg_deformed>
-{
-  public:
-  using base_t = Kernel<Face_connection<Deformed_element>&>;
-};
-
 }
 #endif

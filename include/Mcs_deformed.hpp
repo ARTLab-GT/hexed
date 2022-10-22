@@ -57,12 +57,5 @@ class Mcs_deformed : public Kernel<Deformed_element&, double>
   }
 };
 
-template<>
-class Kernel_traits<Mcs_deformed>
-{
-  public:
-  using base_t = Kernel<Deformed_element&, double>;
-};
-
 }
 #endif

@@ -84,12 +84,5 @@ class Prolong_refined : public Kernel<Refined_face&>
   }
 };
 
-template<>
-class Kernel_traits<Prolong_refined>
-{
-  public:
-  using base_t = Kernel<Refined_face&>;
-};
-
 }
 #endif
