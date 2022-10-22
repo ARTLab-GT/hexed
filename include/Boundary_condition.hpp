@@ -17,7 +17,6 @@ class Boundary_face
   virtual Storage_params storage_params() = 0;
   virtual double* ghost_face() = 0;
   virtual double* inside_face() = 0;
-  virtual double* cache() = 0;
   virtual int i_dim() = 0;
   virtual bool inside_face_sign() = 0;
   virtual double* surface_normal() = 0; // note: has to have a name that's different from `Face_connection`
@@ -181,7 +180,6 @@ class Typed_bound_connection : public Boundary_connection
   bool ifs;
   int bc_sn;
   Eigen::VectorXd gh_face;
-  Eigen::VectorXd c;
   double* in_face;
   void connect_normal();
 
@@ -193,7 +191,6 @@ class Typed_bound_connection : public Boundary_connection
     ifs{inside_face_sign_arg},
     bc_sn{bc_serial_n},
     gh_face(elem.storage_params().n_dof()/elem.storage_params().row_size),
-    c(elem.storage_params().n_qpoint()/elem.storage_params().row_size),
     in_face{elem.face() + (2*i_d + ifs)*gh_face.size()}
   {
     connect_normal();
@@ -201,7 +198,6 @@ class Typed_bound_connection : public Boundary_connection
   virtual Storage_params storage_params() {return elem.storage_params();}
   virtual double* ghost_face() {return gh_face.data();}
   virtual double* inside_face() {return in_face;}
-  virtual double* cache() {return c.data();}
   virtual int i_dim() {return i_d;}
   virtual bool inside_face_sign() {return ifs;}
   virtual double* face(int i_side) {return i_side ? ghost_face() : inside_face();}

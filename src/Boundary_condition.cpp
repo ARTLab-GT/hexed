@@ -12,16 +12,15 @@ void Flow_bc::apply_advection(Boundary_face& bf)
   const int nq = params.n_qpoint()/params.row_size;
   double* in_f = bf.inside_face();
   double* gh_f = bf.ghost_face();
-  double* cache = bf.cache();
   // set velocity equal to inside
   for (int i_dim = 0; i_dim < nd; ++i_dim) {
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       gh_f[i_dim*nq + i_qpoint] = in_f[i_dim*nq + i_qpoint];
     }
   }
-  // set advected scalar to cached value
+  // set advected scalar to initial value
   for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-    gh_f[nd*nq + i_qpoint] = cache[i_qpoint];
+    gh_f[nd*nq + i_qpoint] = 1.;
   }
 }
 

@@ -247,35 +247,6 @@ void Solver::set_art_visc_constant(double value)
   }
 }
 
-void Solver::advect(double len, int n_iter)
-{
-  const int nq = params.n_qpoint();
-  const int nd = params.n_dim;
-  const int rs = params.row_size;
-  auto& elements = acc_mesh.elements();
-  double dt = len/n_iter;
-  for (int i_iter = 0; i_iter < n_iter; ++i_iter) {
-    #pragma omp parallel for
-    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-      double* state = elements[i_elem].stage(0) + nd*nq;
-      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) state[i_qpoint + nq] = state[i_qpoint];
-    }
-    for (double rk_weight : rk_weights) {
-      auto& bc_cons {acc_mesh.boundary_connections()};
-      for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-        int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-        acc_mesh.boundary_condition(bc_sn).flow_bc->apply_advection(bc_cons[i_con]);
-      }
-      (*kernel_factory<Neighbor_advection_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections());
-      (*kernel_factory<Neighbor_advection_deformed >(nd, rs))(acc_mesh.deformed ().face_connections());
-      (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-      (*kernel_factory<Local_advection_cartesian>(nd, rs, basis, dt, rk_weight))(acc_mesh.cartesian().elements());
-      (*kernel_factory<Local_advection_deformed >(nd, rs, basis, dt, rk_weight))(acc_mesh.deformed ().elements());
-      (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-    }
-  }
-}
-
 void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_length, double shift, double stab_rat, double diff_time, double diff_stab_rat)
 {
   double heat_rat = 1.4;
@@ -284,6 +255,10 @@ void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_le
   const int rs = params.row_size;
   auto& elements = acc_mesh.elements();
   auto& bc_cons {acc_mesh.boundary_connections()};
+
+  // initialize artificial viscosity coefficient to 0
+  // and use stage 1 (normally the RK reference) to store the current state,
+  // so we can use stage 0 for solving the advection equation
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
@@ -297,44 +272,69 @@ void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_le
       }
     }
   }
-  for (int sign : {-1, 1})
+  // solve advection equation
+  for (int sign : {-1, 1}) // do forward and backward advection separately
   {
+    // initialize
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
       double* state = elements[i_elem].stage(0);
       double* rk_ref = elements[i_elem].stage(1);
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        // set advection velocity
         double scale_sq = 2*heat_rat*rk_ref[(nd + 1)*nq + i_qpoint]*rk_ref[nd*nq + i_qpoint];
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
           double mmtm = rk_ref[i_dim*nq + i_qpoint];
           scale_sq += (1. - heat_rat)*mmtm*mmtm;
         }
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
+          // use `sign` to determine whether advection is forward or backward
           state[i_dim*nq + i_qpoint] = sign*rk_ref[i_dim*nq + i_qpoint]/std::sqrt(scale_sq);
         }
-        state[nd*nq + i_qpoint] = state[(nd + 1)*nq + i_qpoint] = 1.;
+        // initialize state to 1.
+        state[nd*nq + i_qpoint] = 1.;
       }
     }
     (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-      double* in_f = bc_cons[i_con].inside_face();
-      double* cache = bc_cons[i_con].cache();
-      for (int i_qpoint = 0; i_qpoint < nq/rs; ++i_qpoint) {
-        cache[i_qpoint] = in_f[nd*nq/rs + i_qpoint];
-      }
-    }
 
-    double done = shift*advect_length;
+    // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
+    double advect_time = shift*advect_length; // current time of advection solution (initialization is at time zero)
+    // ^note always positive since advection direction is controlled by the sign of advection velocity
+    // basis on which advection solution will be projected (in time domain) to compute nonsmoothness
     Gauss_legendre proj_basis(proj_rs);
+    // loop through nodes of projection basis
     for (int i_proj = 0; i_proj < proj_rs; ++i_proj)
     {
-      int i_node = (sign > 0) ? i_proj : proj_rs - 1 - i_proj;
-      double len = sign*(advect_length*proj_basis.node(i_node) - done);
-      if (len < 0) continue;
-      done += sign*len;
+      // compute the length of time to reach the next node
+      int i_node = (sign > 0) ? i_proj : proj_rs - 1 - i_proj; // if sign < 0 we are looping through the nodes backward
+      double len = sign*(advect_length*proj_basis.node(i_node) - advect_time);
+      if (len < 0) continue; // ...but not if the next node is behind us
+      // advect to the next node
+      advect_time += sign*len;
       int n_iter = ceil(len/stab_rat);
-      advect(len, n_iter);
+      double dt = len/n_iter;
+      for (int i_iter = 0; i_iter < n_iter; ++i_iter) {
+        #pragma omp parallel for
+        for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+          double* state = elements[i_elem].stage(0) + nd*nq;
+          for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) state[i_qpoint + nq] = state[i_qpoint];
+        }
+        for (double rk_weight : rk_weights) {
+          auto& bc_cons {acc_mesh.boundary_connections()};
+          for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+            int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+            acc_mesh.boundary_condition(bc_sn).flow_bc->apply_advection(bc_cons[i_con]);
+          }
+          (*kernel_factory<Neighbor_advection_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections());
+          (*kernel_factory<Neighbor_advection_deformed >(nd, rs))(acc_mesh.deformed ().face_connections());
+          (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+          (*kernel_factory<Local_advection_cartesian>(nd, rs, basis, dt, rk_weight))(acc_mesh.cartesian().elements());
+          (*kernel_factory<Local_advection_deformed >(nd, rs, basis, dt, rk_weight))(acc_mesh.deformed ().elements());
+          (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+        }
+      }
+      // add this node's contribution to the projection to `art_visc_coef`
       double coef = proj_basis.orthogonal(proj_rs - 1)(i_node)*proj_basis.node_weights()(i_node);
       #pragma omp parallel for
       for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
@@ -345,8 +345,10 @@ void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_le
         }
       }
     }
-  }
+  } // Cauchy-Kovalevskaya-style derivative estimate complete!
 
+  // begin root-smear-square operation
+  // set scalar state to square of projection
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
@@ -357,6 +359,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_le
   }
   (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+  // diffuse scalar state by specified amount
   int n_iter = ceil(diff_time/diff_stab_rat);
   double dt = diff_time/n_iter;
   for (int i_iter = 0; i_iter < n_iter; ++i_iter) {
@@ -385,49 +388,23 @@ void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_le
     (*kernel_factory<Local_av1_deformed >(nd, rs, basis, dt, false, true))(acc_mesh.deformed ().elements());
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
   }
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    double* state = elements[i_elem].stage(0);
-    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      state[nd*nq + i_qpoint] = scale*std::sqrt(std::max(0., state[nd*nq + i_qpoint]));
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        state[i_dim*nq + i_qpoint] *= -1;
-      }
-    }
-  }
-  (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
-  (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    double* in_f = bc_cons[i_con].inside_face();
-    double* cache = bc_cons[i_con].cache();
-    for (int i_qpoint = 0; i_qpoint < nq/rs; ++i_qpoint) {
-      cache[i_qpoint] = in_f[nd*nq/rs + i_qpoint];
-    }
-  }
-  #if 0
-  n_iter = ceil(shift*advect_length/stab_rat);
-  advect(shift*advect_length, n_iter);
-  #endif
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    double* state = elements[i_elem].stage(0);
-    double* av = elements[i_elem].art_visc_coef();
-    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      av[i_qpoint] = state[nd*nq + i_qpoint];
-    }
-  }
-
+  // clean up
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
     double* rk_ref = elements[i_elem].stage(1);
+    double* av = elements[i_elem].art_visc_coef();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+      // set artificial viscosity to square root of diffused scalar state. root-smear-square complete!
+      av[i_qpoint] = scale*std::sqrt(std::max(0., state[nd*nq + i_qpoint]));
+      // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         int i = i_var*nq + i_qpoint;
         state[i] = rk_ref[i];
       }
     }
   }
+  // update the face state
   (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
 }
