@@ -84,19 +84,5 @@ class Neighbor_advection_cartesian : public Neighbor_cartesian<n_dim, row_size>
   }
 };
 
-template<>
-class Kernel_traits<Neighbor_inviscid_cartesian>
-{
-  public:
-  using base_t = Kernel<Face_connection<Element>&>;
-};
-
-template<>
-class Kernel_traits<Neighbor_advection_cartesian>
-{
-  public:
-  using base_t = Kernel<Face_connection<Element>&>;
-};
-
 }
 #endif

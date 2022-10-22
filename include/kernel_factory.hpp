@@ -20,28 +20,39 @@ namespace hexed
 {
 
 /*
- * Inspired by `std::Iterator_traits`. Create specializations of this class template
- * to define propreties of kernel temlates.
+ * Base class for a "kernel", a word which here means a callable object which accepts dimensionality
+ * and row size as template arguments to improve performance.
  */
-template <template<int, int> typename kernel>
-class Kernel_traits
+template <typename T, typename U = void>
+class Kernel
 {
   public:
-  class base_t;
+  virtual ~Kernel() = default;
+  virtual U operator()(Sequence<T>&) = 0;
+  virtual U operator()(Sequence<T>& sequence, Stopwatch_tree& tree)
+  {
+    tree.work_units_completed += sequence.size();
+    Stopwatch::Operator oper (tree.stopwatch);
+    return (*this)(sequence);
+  }
+  virtual U operator()(Sequence<T>& sequence, Stopwatch_tree& category_tree, std::string name)
+  {
+    auto& specific_tree {category_tree.children.at(name)};
+    specific_tree.work_units_completed += sequence.size();
+    Stopwatch::Operator cat_oper (category_tree.stopwatch);
+    Stopwatch::Operator spc_oper (specific_tree.stopwatch);
+    return (*this)(sequence);
+  }
+  typedef std::unique_ptr<Kernel<T, U>> ptr_t; // default definition of `ptr_t` below
 };
 
 namespace kernel_lookup
 {
 
-// comvenience definitions
+// declares a pointer type which can point to any template instantiation.
+// must be defined by each kernel class.
 template <template<int, int> typename kernel>
-using ptr_t = std::unique_ptr<typename Kernel_traits<kernel>::base_t>;
-
-template <template<int, int> typename kernel, int n_dim, int row_size>
-ptr_t<kernel> pointer()
-{
-  return ptr_t<kernel>{new kernel<n_dim, row_size>};
-}
+using ptr_t = typename kernel<1, 2>::ptr_t;
 
 /*
  * A recursive template to create the desired kernel instantiations. You can think
@@ -91,32 +102,6 @@ class Kernel_lookup<kernel, 1, 1>
 };
 
 } // namespace kernel_lookup
-
-/*
- * Base class for a "kernel", a word which here means a callable object which accepts dimensionality
- * and row size as template arguments to improve performance.
- */
-template <typename T, typename U = void>
-class Kernel
-{
-  public:
-  virtual ~Kernel() = default;
-  virtual U operator()(Sequence<T>&) = 0;
-  virtual U operator()(Sequence<T>& sequence, Stopwatch_tree& tree)
-  {
-    tree.work_units_completed += sequence.size();
-    Stopwatch::Operator oper (tree.stopwatch);
-    return (*this)(sequence);
-  }
-  virtual U operator()(Sequence<T>& sequence, Stopwatch_tree& category_tree, std::string name)
-  {
-    auto& specific_tree {category_tree.children.at(name)};
-    specific_tree.work_units_completed += sequence.size();
-    Stopwatch::Operator cat_oper (category_tree.stopwatch);
-    Stopwatch::Operator spc_oper (specific_tree.stopwatch);
-    return (*this)(sequence);
-  }
-};
 
 /*
  * Gets a `std::unique_ptr` to a `base_t` of `kernel`. The underlying kernel will be

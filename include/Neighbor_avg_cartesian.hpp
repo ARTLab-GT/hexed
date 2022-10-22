@@ -36,12 +36,5 @@ class Neighbor_avg_cartesian : public Kernel<Face_connection<Element>&>
   }
 };
 
-template<>
-class Kernel_traits<Neighbor_avg_cartesian>
-{
-  public:
-  using base_t = Kernel<Face_connection<Element>&>;
-};
-
 }
 #endif
