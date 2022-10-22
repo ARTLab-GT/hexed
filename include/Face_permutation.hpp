@@ -81,6 +81,7 @@ class Face_permutation : public Face_permutation_dynamic
   // reordering can consist of order reversal and/or transpose operations
   virtual void match_faces() {transpose(); flip();}
   virtual void restore()     {flip(); transpose();}
+  typedef std::unique_ptr<Face_permutation_dynamic> ptr_t;
 };
 
 template<>
