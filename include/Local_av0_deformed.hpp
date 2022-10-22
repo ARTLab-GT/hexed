@@ -21,12 +21,14 @@ class Local_av0_deformed : public Kernel<Deformed_element&>
   Derivative<row_size> derivative;
   double dt;
   bool use_coef;
+  bool scalar;
 
   public:
-  Local_av0_deformed(const Basis& basis, double d_time, bool use_av_coef = true) :
+  Local_av0_deformed(const Basis& basis, double d_time, bool use_av_coef = true, bool scalar_only = false) :
     derivative{basis},
     dt{d_time},
-    use_coef{use_av_coef}
+    use_coef{use_av_coef},
+    scalar{scalar_only}
   {}
 
   virtual void operator()(Sequence<Deformed_element&>& elements)
@@ -166,7 +168,9 @@ class Local_av0_deformed : public Kernel<Deformed_element&>
       }
 
       // write the updated solution
-      for (int i_var = 0; i_var < n_var; ++i_var) {
+      int start = n_dim*scalar;
+      int n = scalar ? 1 : n_var;
+      for (int i_var = start; i_var < n + start; ++i_var) {
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           const int i_dof = i_var*n_qpoint + i_qpoint;
           state[i_dof] += time_rate[i_var][i_qpoint]*d_t_by_d_pos*tss[i_qpoint]/det[i_qpoint]

@@ -18,10 +18,10 @@ namespace hexed
 template <int n_dim, int row_size>
 class Neighbor_cartesian : public Kernel<Face_connection<Element>&>
 {
-  const double heat_rat;
-  public:
-  Neighbor_cartesian(double heat_ratio=1.4) : heat_rat{heat_ratio} {}
+  protected:
+  virtual void compute_flux(double*, double*) = 0;
 
+  public:
   virtual void operator()(Sequence<Face_connection<Element>&>& connections)
   {
     constexpr int n_var = n_dim + 2;
@@ -49,7 +49,7 @@ class Neighbor_cartesian : public Kernel<Face_connection<Element>&>
           face[i_side*face_size + i_face_dof] = con_face[i_face_dof];
         }
       }
-      hll<n_dim, n_face_qpoint>(face, normal[i_dim][0], heat_rat);
+      compute_flux(face, normal[i_dim][0]);
       for (int i_side : {0, 1}) {
         double* con_face = con.face(i_side);
         for (int i_face_dof = 0; i_face_dof < face_size; ++i_face_dof) {
@@ -60,8 +60,39 @@ class Neighbor_cartesian : public Kernel<Face_connection<Element>&>
   }
 };
 
+template <int n_dim, int row_size>
+class Neighbor_inviscid_cartesian : public Neighbor_cartesian<n_dim, row_size>
+{
+  protected:
+  const double heat_rat;
+  virtual void compute_flux(double* face, double* face_nrml)
+  {
+    hll::inviscid<n_dim, custom_math::pow(row_size, n_dim - 1)>(face, face_nrml, heat_rat);
+  }
+
+  public:
+  Neighbor_inviscid_cartesian(double heat_ratio=1.4) : heat_rat{heat_ratio} {}
+};
+
+template <int n_dim, int row_size>
+class Neighbor_advection_cartesian : public Neighbor_cartesian<n_dim, row_size>
+{
+  protected:
+  virtual void compute_flux(double* face, double* face_nrml)
+  {
+    hll::advection<n_dim, custom_math::pow(row_size, n_dim - 1)>(face, face_nrml);
+  }
+};
+
 template<>
-class Kernel_traits<Neighbor_cartesian>
+class Kernel_traits<Neighbor_inviscid_cartesian>
+{
+  public:
+  using base_t = Kernel<Face_connection<Element>&>;
+};
+
+template<>
+class Kernel_traits<Neighbor_advection_cartesian>
 {
   public:
   using base_t = Kernel<Face_connection<Element>&>;

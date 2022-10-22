@@ -2,7 +2,7 @@
 #include <Eigen/Dense>
 #include <hexed/hll.hpp>
 
-TEST_CASE("hll")
+TEST_CASE("hll::inviscid")
 {
   double mass = 1.225;
   double pressure = 101325;
@@ -26,7 +26,7 @@ TEST_CASE("hll")
     }
     for (int i = 0; i < 20; ++i) read[i] = backup[i];
     normal = Eigen::VectorXd::Ones(2)*Eigen::VectorXd::Unit(3, 0).transpose();
-    hexed::hll<3, 2>(read, normal.data(), 1.4);
+    hexed::hll::inviscid<3, 2>(read, normal.data(), 1.4);
     for (int j = 0; j < 2; ++j) {
       for (int i_var = 0; i_var < 5; ++i_var) {
         double correct_flux = backup[2*i_var];
@@ -39,7 +39,7 @@ TEST_CASE("hll")
     }
     for (int i = 0; i < 20; ++i) read[i] = backup[i];
     normal = Eigen::VectorXd::Ones(2)*Eigen::VectorXd::Unit(3, 1).transpose();
-    hexed::hll<3, 2>(read, normal.data(), 1.4);
+    hexed::hll::inviscid<3, 2>(read, normal.data(), 1.4);
     for (int j = 0; j < 2; ++j) {
       for (int i_var = 0; i_var < 5; ++i_var) {
         double correct_flux = backup[2*i_var + 10];
@@ -53,7 +53,7 @@ TEST_CASE("hll")
     for (int i = 0; i < 20; ++i) read[i] = backup[i];
     Eigen::Vector3d n = Eigen::Vector3d{.8, .1, 0.};
     normal = Eigen::VectorXd::Ones(2)*n.transpose();
-    hexed::hll<3, 2>(read, normal.data(), 1.4);
+    hexed::hll::inviscid<3, 2>(read, normal.data(), 1.4);
     for (int j = 0; j < 2; ++j) {
       for (int i_var = 0; i_var < 5; ++i_var) {
         double correct_flux = backup[2*i_var];
@@ -79,8 +79,35 @@ TEST_CASE("hll")
       }
     }
     normal = Eigen::VectorXd::Unit(3, 0)*Eigen::VectorXd::Ones(2).transpose();
-    hexed::hll<3, 2>(read, normal.data(), 1.4);
+    hexed::hll::inviscid<3, 2>(read, normal.data(), 1.4);
     REQUIRE(read[2*3     ] == Approx(0).margin(1e-8));
     REQUIRE(read[2*3 + 10] == Approx(0).margin(1e-8));
+  }
+}
+
+TEST_CASE("hll::advection")
+{
+  double state [2][4][3];
+  double nrml [2][3];
+  double scalar [2] {1.3, 0.7};
+  for (int i_side = 0; i_side < 2; ++i_side) {
+    for (int i_qpoint = 0; i_qpoint < 3; ++i_qpoint) {
+      // set surface normal
+      nrml[0][i_qpoint] = .4;
+      nrml[1][i_qpoint] = .5;
+      // set advection velocity
+      state[i_side][0][i_qpoint] = -.1;
+      state[i_side][1][i_qpoint] = -.9;
+      // set scalar state;
+      state[i_side][2][i_qpoint] = scalar[i_side];
+    }
+  }
+  hexed::hll::advection<2, 3>(state[0][0], nrml[0]);
+  for (int i_side = 0; i_side < 2; ++i_side) {
+    for (int i_qpoint = 0; i_qpoint < 3; ++i_qpoint) {
+      REQUIRE(state[i_side][0][i_qpoint] == Approx(-.1));
+      REQUIRE(state[i_side][1][i_qpoint] == Approx(-.9));
+      REQUIRE(state[i_side][2][i_qpoint] == Approx((-.1*.4 - .9*.5)*0.7));
+    }
   }
 }

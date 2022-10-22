@@ -36,6 +36,8 @@ class Flow_bc
   virtual void apply_state(Boundary_face&) = 0;
   // applies boundary condition to viscous fluxes (if applicable)
   virtual void apply_flux(Boundary_face&) = 0;
+  // applies boundary condition to linear advection equation used to compute nonsmoothness indicator
+  virtual void apply_advection(Boundary_face&);
   virtual ~Flow_bc() = default;
 };
 
@@ -85,15 +87,24 @@ class Nonpenetration : public Flow_bc
   public:
   virtual void apply_state(Boundary_face&);
   virtual void apply_flux(Boundary_face&);
+  virtual void apply_advection(Boundary_face&);
 };
 
-/*
- * Copies the inside state.
- * Mostly used for testing, but can be valid for supersonic outlets.
- */
+// mostly used for testing, but you can maybe get away with it for supersonic outlets.
+// all members just copy the inside data
 class Copy : public Flow_bc
 {
   public:
+  virtual void apply_state(Boundary_face&);
+  virtual void apply_flux(Boundary_face&);
+  virtual void apply_advection(Boundary_face&);
+};
+
+// for supersonic outlets
+class Outflow : public Flow_bc
+{
+  public:
+  // inverts flux (so that avg is zero)
   virtual void apply_state(Boundary_face&);
   virtual void apply_flux(Boundary_face&);
 };
@@ -174,8 +185,12 @@ class Typed_bound_connection : public Boundary_connection
 
   public:
   Typed_bound_connection(element_t& elem_arg, int i_dim_arg, bool inside_face_sign_arg, int bc_serial_n)
-  : Boundary_connection{elem_arg.storage_params()}, elem{elem_arg}, i_d{i_dim_arg}, ifs{inside_face_sign_arg},
-    bc_sn{bc_serial_n}, gh_face(elem.storage_params().n_dof()/elem.storage_params().row_size),
+  : Boundary_connection{elem_arg.storage_params()},
+    elem{elem_arg},
+    i_d{i_dim_arg},
+    ifs{inside_face_sign_arg},
+    bc_sn{bc_serial_n},
+    gh_face(elem.storage_params().n_dof()/elem.storage_params().row_size),
     in_face{elem.face() + (2*i_d + ifs)*gh_face.size()}
   {
     connect_normal();

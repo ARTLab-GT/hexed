@@ -5,6 +5,25 @@
 namespace hexed
 {
 
+void Flow_bc::apply_advection(Boundary_face& bf)
+{
+  auto params = bf.storage_params();
+  const int nd = params.n_dim;
+  const int nq = params.n_qpoint()/params.row_size;
+  double* in_f = bf.inside_face();
+  double* gh_f = bf.ghost_face();
+  // set velocity equal to inside
+  for (int i_dim = 0; i_dim < nd; ++i_dim) {
+    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+      gh_f[i_dim*nq + i_qpoint] = in_f[i_dim*nq + i_qpoint];
+    }
+  }
+  // set advected scalar to initial value
+  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+    gh_f[nd*nq + i_qpoint] = 1.;
+  }
+}
+
 Freestream::Freestream(std::vector<double> freestream_state)
 : fs{freestream_state}
 {}
@@ -74,6 +93,11 @@ void Nonpenetration::apply_flux(Boundary_face& bf)
   reflect_normal(gh_f, bf.surface_normal(), params.n_qpoint()/params.row_size, params.n_dim);
 }
 
+void Nonpenetration::apply_advection(Boundary_face& bf)
+{
+  apply_state(bf);
+}
+
 void Copy::apply_state(Boundary_face& bf)
 {
   copy_state(bf);
@@ -82,6 +106,25 @@ void Copy::apply_state(Boundary_face& bf)
 void Copy::apply_flux(Boundary_face& bf)
 {
   copy_state(bf);
+}
+
+void Copy::apply_advection(Boundary_face& bf)
+{
+  copy_state(bf);
+}
+
+void Outflow::apply_state(Boundary_face& bf)
+{
+  copy_state(bf);
+}
+
+void Outflow::apply_flux(Boundary_face& bf)
+{
+  // set to negative of inside flux
+  auto params = bf.storage_params();
+  double* gh_f = bf.ghost_face();
+  double* in_f = bf.inside_face();
+  for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
 }
 
 void Nominal_pos::snap_vertices(Boundary_connection& con)
