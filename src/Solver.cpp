@@ -247,7 +247,7 @@ void Solver::set_art_visc_constant(double value)
   }
 }
 
-void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_length, double shift, double stab_rat, double diff_time, double diff_stab_rat)
+void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_length, double shift, double diff_ratio, double stab_rat, double diff_stab_rat)
 {
   double heat_rat = 1.4;
   const int nq = params.n_qpoint();
@@ -362,8 +362,12 @@ void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_le
   }
   (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+  double mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Unit(), 2, 1))(acc_mesh.cartesian().elements()),
+                             (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Unit(), 2, 1))(acc_mesh.deformed ().elements()));
+  double dt_diff = diff_stab_rat/params.n_dim/(mcs_diff/basis.max_cfl_diffusive());
   // diffuse scalar state by specified amount
-  int n_iter = ceil(diff_time/diff_stab_rat);
+  double diff_time = advect_length*advect_length*diff_ratio;
+  int n_iter = ceil(diff_time/dt_diff);
   double dt = diff_time/n_iter;
   for (int i_iter = 0; i_iter < n_iter; ++i_iter) {
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
