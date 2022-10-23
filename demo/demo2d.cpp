@@ -27,7 +27,9 @@ int main()
     }
   }
   solver.mesh().valid().assert_valid();
-  hexed::Isentropic_vortex vortex (std::vector<double> {100., 0., 1.225, 101325/0.4});
+  double veloc = 100.;
+  double mass = 1.225;
+  hexed::Isentropic_vortex vortex (std::vector<double> {veloc*mass, 0., mass, 101325/0.4 + veloc*veloc*mass/2.});
   vortex.center0 = 0.5; vortex.center1 = 0.5;
   solver.initialize(vortex);
 
@@ -49,7 +51,7 @@ int main()
     time += 1e-3;
     while (solver.iteration_status().flow_time < time)
     {
-      solver.update();
+      solver.update(.9);
     }
     char buffer [100];
     snprintf(buffer, 100, "demo2_time_%e", time);
