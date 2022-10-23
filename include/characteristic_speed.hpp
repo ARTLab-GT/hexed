@@ -57,6 +57,7 @@ class Inviscid : public Char_speed
 
 class Art_visc : public Char_speed
 {
+  public:
   virtual inline double operator()(double* state, int n_var) const
   {
     return state[n_var];
@@ -65,9 +66,23 @@ class Art_visc : public Char_speed
 
 class Unit : public Char_speed
 {
+  public:
   virtual inline double operator()(double* state, int n_var) const
   {
     return 1.;
+  }
+};
+
+class Advection : public Char_speed
+{
+  public:
+  virtual inline double operator()(double* state, int n_var) const
+  {
+    double norm_sq = 0;
+    for (int i_dim = 0; i_dim < n_var - 2; ++i_dim) {
+      norm_sq += state[i_dim]*state[i_dim];
+    }
+    return std::sqrt(norm_sq);
   }
 };
 
