@@ -63,6 +63,14 @@ class Art_visc : public Char_speed
   }
 };
 
+class Unit : public Char_speed
+{
+  virtual inline double operator()(double* state, int n_var) const
+  {
+    return 1.;
+  }
+};
+
 }
 
 }

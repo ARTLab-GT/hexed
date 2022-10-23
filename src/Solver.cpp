@@ -550,8 +550,10 @@ void Solver::fix_admissibility(double stability_ratio)
     }
     if (admiss && refined_admiss) break;
     else {
-      double root_sz = acc_mesh.root_size();
-      update_art_visc(stability_ratio*basis.max_cfl_diffusive()*root_sz*root_sz, false);
+      double mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Unit(), 2, 2))(acc_mesh.cartesian().elements()),
+                                 (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Unit(), 2, 2))(acc_mesh.deformed ().elements()));
+      double dt = stability_ratio/params.n_dim/(mcs_diff/basis.max_cfl_diffusive());
+      update_art_visc(dt, false);
     }
   }
   status.fix_admis_iters += iter;
