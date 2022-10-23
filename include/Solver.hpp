@@ -29,7 +29,6 @@ class Solver
   const double fix_stab_rat = .6;
   void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
   void update_art_visc(double dt, bool use_av_coef);
-  void advect(double len, int n_iter);
   void fix_admissibility(double stability_ratio);
 
   public:

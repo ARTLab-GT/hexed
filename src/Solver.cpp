@@ -416,6 +416,7 @@ void Solver::set_fix_admissibility(bool value)
 
 void Solver::update(double stability_ratio)
 {
+  const double heat_rat = 1.4;
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
   auto& sw_car {stopwatch.children.at("cartesian")};
   auto& sw_def {stopwatch.children.at("deformed" )};
@@ -424,7 +425,7 @@ void Solver::update(double stability_ratio)
   auto& elems = acc_mesh.elements();
 
   // compute time step
-  double mcs = std::max((*kernel_factory<Mcs_cartesian>(nd, rs))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
+  double mcs = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Inviscid(heat_rat)))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
                         (*kernel_factory<Mcs_deformed >(nd, rs))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
   double dt = stability_ratio*basis.max_cfl_convective()/params.n_dim/mcs;
 

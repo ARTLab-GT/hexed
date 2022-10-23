@@ -20,29 +20,62 @@ namespace hexed
 template <int n_dim, int row_size>
 class Mcs_cartesian : public Kernel<Element&, double>
 {
-  double heat_rat;
+  protected:
+  const char_speed::Char_speed& spd;
+  const int sz_pow;
+  const int tss_pow;
 
   public:
-  Mcs_cartesian(double heat_ratio = 1.4) : heat_rat{heat_ratio} {}
+  Mcs_cartesian(const char_speed::Char_speed& speed, int size_power = 1, int tss_power = 1)
+  : spd{speed}, sz_pow{size_power}, tss_pow{tss_power}
+  {}
 
   virtual double operator()(Sequence<Element&>& elements)
   {
     constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
+    constexpr int n_var = n_dim + 2;
     double max_speed = 0.;
     #pragma omp parallel for reduction(max:max_speed)
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
       Element& elem {elements[i_elem]};
       double max_tss = 0.;
+      double max_qpoint_speed = 0.;
+      double* state = elem.stage(0);
       double* tss = elem.time_step_scale();
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
         max_tss = std::max(max_tss, tss[i_qpoint]);
+        double qpoint_state [n_var];
+        for (int i_var = 0; i_var < n_var; ++i_var) {
+          qpoint_state[i_var] = state[i_var*n_qpoint  +  i_qpoint];
+        }
+        max_qpoint_speed = std::max(spd(qpoint_state, n_var), max_qpoint_speed);
       }
-      double speed = characteristic_speed<n_dim, n_qpoint>(elem.stage(0), heat_rat)*max_tss/elem.nominal_size();
+      double speed = max_qpoint_speed*custom_math::pow(max_tss, tss_pow)/custom_math::pow(elem.nominal_size(), sz_pow);
       max_speed = std::max(speed, max_speed);
     }
     return max_speed;
   }
 };
+
+#if 0
+template <int n_dim, int row_size>
+class Mcs_inviscid_cartesian : public Mcs_cartesian<n_dim, row_size>
+{
+  double heat_rat;
+
+  protected:
+  virtual double char_speed(Element& elem)
+  {
+    constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
+    return characteristic_speed<n_dim, n_qpoint>(elem.stage(0), heat_rat);
+  }
+  virtual int size_pow() {return 1;}
+  virtual int tss_pow() {return 1;}
+
+  public:
+  Mcs_inviscid_cartesian(double heat_ratio = 1.4) : heat_rat{heat_ratio} {}
+};
+#endif
 
 }
 #endif

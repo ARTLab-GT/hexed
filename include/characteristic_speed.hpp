@@ -29,5 +29,33 @@ double characteristic_speed(double* read, double heat_rat)
   return max_speed;
 }
 
+namespace char_speed
+{
+
+class Char_speed
+{
+  public:
+  virtual double operator()(double* state, int n_var) const = 0;
+};
+
+class Inviscid : public Char_speed
+{
+  double heat_rat;
+  public:
+  Inviscid(double heat_ratio) : heat_rat{heat_ratio} {}
+  virtual double operator()(double* state, int n_var) const
+  {
+    #define READ(i) state[i]
+    HEXED_COMPUTE_SCALARS
+    HEXED_ASSERT_ADMISSIBLE
+    const double sound_speed = std::sqrt(heat_rat*pres/mass);
+    const double veloc = std::sqrt(mmtm_sq/mass/mass);
+    return sound_speed + veloc;
+    #undef READ
+  }
+};
+
+}
+
 }
 #endif
