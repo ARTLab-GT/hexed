@@ -426,8 +426,12 @@ void Solver::update(double stability_ratio)
 
   // compute time step
   double mcs_conv = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Inviscid(heat_rat)))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
-                             (*kernel_factory<Mcs_deformed >(nd, rs))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
-  double mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Art_visc(), 2, 1  ))(acc_mesh.cartesian().elements(), sw_car, "max char speed"), 0.);
+                             (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Inviscid(heat_rat)))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
+  double mcs_diff = 0.;
+  if (use_art_visc) {
+    mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Art_visc(), 2, 1))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
+                        (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Art_visc(), 2, 1))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
+  }
   double dt = stability_ratio/params.n_dim/(mcs_conv/basis.max_cfl_convective() + mcs_diff/basis.max_cfl_diffusive());
 
   // record reference state for Runge-Kutta scheme
@@ -467,6 +471,7 @@ void Solver::update(double stability_ratio)
   status.time_step = dt;
   status.flow_time += dt;
   ++status.iteration;
+  status.mcs_rat = mcs_diff/mcs_conv;
   stopwatch.stopwatch.pause();
   stopwatch.work_units_completed += elems.size();
   sw_car.work_units_completed += acc_mesh.cartesian().elements().size();
