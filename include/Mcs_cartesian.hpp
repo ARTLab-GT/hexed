@@ -41,14 +41,16 @@ class Mcs_cartesian : public Kernel<Element&, double>
       double max_tss = 0.;
       double max_qpoint_speed = 0.;
       double* state = elem.stage(0);
+      double* art_visc = elem.art_visc_coef();
       double* tss = elem.time_step_scale();
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
         max_tss = std::max(max_tss, tss[i_qpoint]);
-        double qpoint_state [n_var];
+        double qpoint_data [n_var + 1];
         for (int i_var = 0; i_var < n_var; ++i_var) {
-          qpoint_state[i_var] = state[i_var*n_qpoint  +  i_qpoint];
+          qpoint_data[i_var] = state[i_var*n_qpoint + i_qpoint];
         }
-        max_qpoint_speed = std::max(spd(qpoint_state, n_var), max_qpoint_speed);
+        qpoint_data[n_var] = art_visc[i_qpoint];
+        max_qpoint_speed = std::max(spd(qpoint_data, n_var), max_qpoint_speed);
       }
       double speed = max_qpoint_speed*custom_math::pow(max_tss, tss_pow)/custom_math::pow(elem.nominal_size(), sz_pow);
       max_speed = std::max(speed, max_speed);
@@ -56,26 +58,6 @@ class Mcs_cartesian : public Kernel<Element&, double>
     return max_speed;
   }
 };
-
-#if 0
-template <int n_dim, int row_size>
-class Mcs_inviscid_cartesian : public Mcs_cartesian<n_dim, row_size>
-{
-  double heat_rat;
-
-  protected:
-  virtual double char_speed(Element& elem)
-  {
-    constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
-    return characteristic_speed<n_dim, n_qpoint>(elem.stage(0), heat_rat);
-  }
-  virtual int size_pow() {return 1;}
-  virtual int tss_pow() {return 1;}
-
-  public:
-  Mcs_inviscid_cartesian(double heat_ratio = 1.4) : heat_rat{heat_ratio} {}
-};
-#endif
 
 }
 #endif

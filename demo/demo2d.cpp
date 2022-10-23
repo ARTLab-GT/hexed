@@ -27,11 +27,12 @@ int main()
     }
   }
   solver.mesh().valid().assert_valid();
-  double veloc = 100.;
+  double veloc = 0.;
   double mass = 1.225;
   hexed::Isentropic_vortex vortex (std::vector<double> {veloc*mass, 0., mass, 101325/0.4 + veloc*veloc*mass/2.});
   vortex.center0 = 0.5; vortex.center1 = 0.5;
   solver.initialize(vortex);
+  solver.set_art_visc_constant(100.);
 
   // Let's go!
   #if HEXED_USE_TECPLOT

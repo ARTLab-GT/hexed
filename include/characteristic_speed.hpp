@@ -43,7 +43,7 @@ class Inviscid : public Char_speed
   double heat_rat;
   public:
   Inviscid(double heat_ratio) : heat_rat{heat_ratio} {}
-  virtual double operator()(double* state, int n_var) const
+  virtual inline double operator()(double* state, int n_var) const
   {
     #define READ(i) state[i]
     HEXED_COMPUTE_SCALARS
@@ -52,6 +52,14 @@ class Inviscid : public Char_speed
     const double veloc = std::sqrt(mmtm_sq/mass/mass);
     return sound_speed + veloc;
     #undef READ
+  }
+};
+
+class Art_visc : public Char_speed
+{
+  virtual inline double operator()(double* state, int n_var) const
+  {
+    return state[n_var];
   }
 };
 
