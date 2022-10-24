@@ -15,7 +15,8 @@ uncluster_trailing = False
 optimize = False
 close = False
 quiet = False
-n_poly = 10
+periodic = False
+order = 10
 n_interp = 1000
 for arg in args:
     if ".geom" in arg:
@@ -35,25 +36,38 @@ for arg in args:
         close = True
     elif arg == "--quiet":
         quiet = True
+    elif arg == "--periodic":
+        periodic = True
     else:
         parts = arg.split("=")
-        if parts[0] == "--polynomial":
-            n_poly = int(parts[1])
+        if parts[0] == "--order":
+            order = int(parts[1])
         elif parts[0] == "--num-points":
             n_interp = int(parts[1])
         else:
             raise Exception(f"unrecognized argument `{arg}`")
 assert fname, "must specify a file to process"
 
-# compute van der Monde matrix for Chebyshev polynomials
-def cheby(i_poly, param):
-    return np.cos(i_poly*np.arccos(param))
+n_mode = order
+if periodic:
+    n_mode *= 2
+
+# compute van der Monde matrix
+def eval_mode(i_mode, param):
+    if periodic:
+        # Fourier series
+        if i_mode%2:
+            return np.cos((i_mode//2)*np.pi*param)
+        else:
+            return np.sin((i_mode//2)*np.pi*param)
+    # Chebyshev polynomial
+    return np.cos(i_mode*np.arccos(param))
 def monde(param):
     n_point = param.size
-    mat = np.zeros((n_point, n_poly))
-    for i_poly in range(n_poly):
+    mat = np.zeros((n_point, n_mode))
+    for i_mode in range(n_mode):
         for i_point in range(n_point):
-            mat[i_point, i_poly] = cheby(i_poly, param[i_point])
+            mat[i_point, i_mode] = eval_mode(i_mode, param[i_point])
     return mat
 
 # alter distribution of data points to reduce overfitting at trailing edge if desired
@@ -62,7 +76,7 @@ if uncluster_trailing:
 else:
     param_in = np.linspace(-1, 1, points.shape[0])
 
-# compute polynomial coefficients in chebyshev basis as a least squares fit to the data points
+# compute mode coefficients as a least squares fit to the data points
 def soln(p):
     return np.linalg.lstsq(monde(p), points, rcond=None)
 
@@ -102,7 +116,7 @@ if not quiet:
     plt.show()
 
 # make geometry watertight
-if close:
+if close or periodic:
     # close trailing edge by deforming geometry
     interp -= np.outer(param_out, (interp[-1, :] - interp[0, :])/2.)
 else:

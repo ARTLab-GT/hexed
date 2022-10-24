@@ -33,8 +33,13 @@ The following arguments are optional:
   Otherwise, a segment will be added to connect the first and last points.
   For airfoils, it is generally recommended that you use this option, especially if the trailing edge of your original geometry was closed.
 - `--quiet`: If provided, disable all command-line output and diagnostic plots.
-- `--polynomial=[n]`: Specifies that `[n]` polynomial coefficients should be used.
-  E.g. `--polynomial=20` specifies a 19th-degree polynomial curve fit.
+- `--periodic`: Specifies that a trigonometric basis shall be used instead of a polynomial one.
+  Use this if the end of your geometry curve is supposed to blend smoothly into the beginning (e.g., the starfish case).
+  Do not use this if your geometry has an edge that coincides with the start/end of the curve (e.g., an airfoil).
+- `--order=[n]`: Specifies an `[n]`th order curve fit.
+  If not periodic, this is the number of polynomial coefficients.
+  E.g. `--order=20` specifies a 19th-degree polynomial curve fit.
+  If periodic, this is the number of cosine *and* sine functions that will be used.
   If not provided, defaults to 10.
 - `--num-points=[n]`: Specifies that the output file should include `[n]` sample points.
   If not provided, defaults to 1000.
@@ -52,5 +57,5 @@ If you can get past the abstractness of it, it is useful for troubleshooting the
 The second plot shows the curve fit in physical space.
 By this plot you can decide whether you're satisfied with the accuracy of the fit and the smoothness of the curve.
 
-Finally, an output file named `[name]_fitted.geom` where `[name]` is the name of the input file with the extension removed.
+Finally, an output file named `[name]_fitted.geom` where `[name]` is the name of the input file with the extension removed will be generated.
 This will contain the curve-fit geometry in the NASCART-GT 2D geometry file format.
