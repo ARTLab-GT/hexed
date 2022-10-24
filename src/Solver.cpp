@@ -247,7 +247,7 @@ void Solver::set_art_visc_constant(double value)
   }
 }
 
-void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_length, double shift, double diff_ratio, double stab_rat, double diff_stab_rat)
+void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double shift, double diff_ratio, double diff_mult, double stab_rat, double diff_stab_rat)
 {
   double heat_rat = 1.4;
   const int nq = params.n_qpoint();
@@ -402,8 +402,14 @@ void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_le
     double* rk_ref = elements[i_elem].stage(1);
     double* av = elements[i_elem].art_visc_coef();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      // set artificial viscosity to square root of diffused scalar state. root-smear-square complete!
-      av[i_qpoint] = scale*std::sqrt(std::max(0., state[nd*nq + i_qpoint]));
+      // set artificial viscosity to square root of diffused scalar state times stagnation enthalpy (with user-defined multiplier)
+      double mass = rk_ref[nd*nq + i_qpoint];
+      double scale_sq = 2*heat_rat*rk_ref[(nd + 1)*nq + i_qpoint]/mass;
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        double veloc = rk_ref[i_dim*nq + i_qpoint]/mass;
+        scale_sq += (1. - heat_rat)*veloc*veloc;
+      }
+      av[i_qpoint] = diff_mult*advect_length*advect_length*std::sqrt(std::max(0., state[nd*nq + i_qpoint]*scale_sq)); // root-smear-square complete!
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         int i = i_var*nq + i_qpoint;
