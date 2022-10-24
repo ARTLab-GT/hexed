@@ -5,7 +5,7 @@
 #include "kernel_factory.hpp"
 #include "Deformed_element.hpp"
 #include "math.hpp"
-#include "characteristic_speed.hpp"
+#include "char_speed.hpp"
 
 namespace hexed
 {
