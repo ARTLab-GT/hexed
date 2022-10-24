@@ -247,7 +247,7 @@ void Solver::set_art_visc_constant(double value)
   }
 }
 
-void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_length, double shift, double stab_rat, double diff_time, double diff_stab_rat)
+void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double shift, double diff_ratio, double diff_mult, double stab_rat, double diff_stab_rat)
 {
   double heat_rat = 1.4;
   const int nq = params.n_qpoint();
@@ -297,6 +297,9 @@ void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_le
     }
     (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+    double mcs_adv = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Advection()))(acc_mesh.cartesian().elements()),
+                              (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Advection()))(acc_mesh.deformed ().elements()));
+    double dt_adv = stab_rat/params.n_dim/(mcs_adv/basis.max_cfl_convective());
 
     // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
     double advect_time = shift*advect_length; // current time of advection solution (initialization is at time zero)
@@ -312,7 +315,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_le
       if (len < 0) continue; // ...but not if the next node is behind us
       // advect to the next node
       advect_time += sign*len;
-      int n_iter = ceil(len/stab_rat);
+      int n_iter = ceil(len/dt_adv);
       double dt = len/n_iter;
       for (int i_iter = 0; i_iter < n_iter; ++i_iter) {
         #pragma omp parallel for
@@ -359,8 +362,12 @@ void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_le
   }
   (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+  double mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Unit(), 2, 1))(acc_mesh.cartesian().elements()),
+                             (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Unit(), 2, 1))(acc_mesh.deformed ().elements()));
+  double dt_diff = diff_stab_rat/params.n_dim/(mcs_diff/basis.max_cfl_diffusive());
   // diffuse scalar state by specified amount
-  int n_iter = ceil(diff_time/diff_stab_rat);
+  double diff_time = advect_length*advect_length*diff_ratio;
+  int n_iter = ceil(diff_time/dt_diff);
   double dt = diff_time/n_iter;
   for (int i_iter = 0; i_iter < n_iter; ++i_iter) {
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
@@ -395,8 +402,14 @@ void Solver::set_art_visc_smoothness(int proj_rs, double scale, double advect_le
     double* rk_ref = elements[i_elem].stage(1);
     double* av = elements[i_elem].art_visc_coef();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      // set artificial viscosity to square root of diffused scalar state. root-smear-square complete!
-      av[i_qpoint] = scale*std::sqrt(std::max(0., state[nd*nq + i_qpoint]));
+      // set artificial viscosity to square root of diffused scalar state times stagnation enthalpy (with user-defined multiplier)
+      double mass = rk_ref[nd*nq + i_qpoint];
+      double scale_sq = 2*heat_rat*rk_ref[(nd + 1)*nq + i_qpoint]/mass;
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        double veloc = rk_ref[i_dim*nq + i_qpoint]/mass;
+        scale_sq += (1. - heat_rat)*veloc*veloc;
+      }
+      av[i_qpoint] = diff_mult*advect_length*advect_length*std::sqrt(std::max(0., state[nd*nq + i_qpoint]*scale_sq)); // root-smear-square complete!
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         int i = i_var*nq + i_qpoint;
@@ -416,6 +429,7 @@ void Solver::set_fix_admissibility(bool value)
 
 void Solver::update(double stability_ratio)
 {
+  const double heat_rat = 1.4;
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
   auto& sw_car {stopwatch.children.at("cartesian")};
   auto& sw_def {stopwatch.children.at("deformed" )};
@@ -424,9 +438,14 @@ void Solver::update(double stability_ratio)
   auto& elems = acc_mesh.elements();
 
   // compute time step
-  double mcs = std::max((*kernel_factory<Mcs_cartesian>(nd, rs))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
-                        (*kernel_factory<Mcs_deformed >(nd, rs))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
-  double dt = stability_ratio*basis.max_cfl_convective()/params.n_dim/mcs;
+  double mcs_conv = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Inviscid(heat_rat)))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
+                             (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Inviscid(heat_rat)))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
+  double mcs_diff = 0.;
+  if (use_art_visc) {
+    mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Art_visc(), 2, 1))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
+                        (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Art_visc(), 2, 1))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
+  }
+  double dt = stability_ratio/params.n_dim/(mcs_conv/basis.max_cfl_convective() + mcs_diff/basis.max_cfl_diffusive());
 
   // record reference state for Runge-Kutta scheme
   const int n_dof = params.n_dof();
@@ -465,6 +484,7 @@ void Solver::update(double stability_ratio)
   status.time_step = dt;
   status.flow_time += dt;
   ++status.iteration;
+  status.dt_rat = (mcs_conv/basis.max_cfl_convective())/(mcs_diff/basis.max_cfl_diffusive());
   stopwatch.stopwatch.pause();
   stopwatch.work_units_completed += elems.size();
   sw_car.work_units_completed += acc_mesh.cartesian().elements().size();
@@ -543,8 +563,10 @@ void Solver::fix_admissibility(double stability_ratio)
     }
     if (admiss && refined_admiss) break;
     else {
-      double root_sz = acc_mesh.root_size();
-      update_art_visc(stability_ratio*basis.max_cfl_diffusive()*root_sz*root_sz, false);
+      double mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Unit(), 2, 2))(acc_mesh.cartesian().elements()),
+                                 (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Unit(), 2, 2))(acc_mesh.deformed ().elements()));
+      double dt = stability_ratio/params.n_dim/(mcs_diff/basis.max_cfl_diffusive());
+      update_art_visc(dt, false);
     }
   }
   status.fix_admis_iters += iter;

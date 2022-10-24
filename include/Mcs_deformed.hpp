@@ -5,7 +5,7 @@
 #include "kernel_factory.hpp"
 #include "Deformed_element.hpp"
 #include "math.hpp"
-#include "characteristic_speed.hpp"
+#include "char_speed.hpp"
 
 namespace hexed
 {
@@ -19,23 +19,31 @@ namespace hexed
 template <int n_dim, int row_size>
 class Mcs_deformed : public Kernel<Deformed_element&, double>
 {
-  double heat_rat;
+  const char_speed::Char_speed& spd;
+  const int sz_pow;
+  const int tss_pow;
 
   public:
-  Mcs_deformed(double heat_ratio = 1.4) : heat_rat{heat_ratio} {}
+  Mcs_deformed(const char_speed::Char_speed& speed, int size_power = 1, int tss_power = 1)
+  : spd{speed}, sz_pow{size_power}, tss_pow{tss_power}
+  {}
 
   virtual double operator()(Sequence<Deformed_element&>& elements)
   {
     constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
+    constexpr int n_var = n_dim + 2;
     double max_speed = 0.;
     #pragma omp parallel for reduction(max:max_speed)
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
       Deformed_element& elem {elements[i_elem]};
       // account for jacobian and time step scale
+      double* state = elem.stage(0);
+      double* art_visc = elem.art_visc_coef();
       double* tss = elem.time_step_scale();
       double* ref_nrml = elem.reference_level_normals();
       double* jac_det = elem.jacobian_determinant();
       double min_scale = std::numeric_limits<double>::max();
+      double max_qpoint_speed = 0.;
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
         double norm_sum = 0.;
         for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -46,11 +54,19 @@ class Mcs_deformed : public Kernel<Deformed_element&, double>
           }
           norm_sum += std::sqrt(norm_sq);
         }
+        double qpoint_data [n_var + 1];
+        for (int i_var = 0; i_var < n_var; ++i_var) {
+          qpoint_data[i_var] = state[i_var*n_qpoint + i_qpoint];
+        }
+        qpoint_data[n_var] = art_visc[i_qpoint];
+        max_qpoint_speed = std::max(spd(qpoint_data, n_var), max_qpoint_speed);
         double determinant = jac_det[i_qpoint];
-        min_scale = std::min(min_scale, n_dim*determinant/tss[i_qpoint]/norm_sum);
+        double tss_factor = custom_math::pow(tss[i_qpoint], tss_pow);
+        double sz_factor = custom_math::pow(determinant/norm_sum, sz_pow);
+        min_scale = std::min(min_scale, n_dim*sz_factor/tss_factor);
       }
       // compute reference speed
-      double speed = characteristic_speed<n_dim, n_qpoint>(elem.stage(0), heat_rat)/min_scale/elem.nominal_size();
+      double speed = max_qpoint_speed/min_scale/custom_math::pow(elem.nominal_size(), sz_pow);
       max_speed = std::max(speed, max_speed);
     }
     return max_speed;

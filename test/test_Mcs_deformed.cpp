@@ -23,7 +23,7 @@ TEST_CASE("Mcs_deformed")
   }
   // test that actual characteristic speed is measured correctly
   def_elem_view elem_view {elems};
-  REQUIRE((*hexed::kernel_factory<hexed::Mcs_deformed>(3, 4))(elem_view) == Approx(1e3/0.3));
+  REQUIRE((*hexed::kernel_factory<hexed::Mcs_deformed>(3, 4, hexed::char_speed::Inviscid(1.4)))(elem_view) == Approx(1e3/0.3));
   // scale 2 entries of jacobian
   for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
     auto& pos = elems[1]->vertex(i_vert).pos;
@@ -36,5 +36,5 @@ TEST_CASE("Mcs_deformed")
   }
   elems[1]->time_step_scale()[2] = 0.95;
   // test that jacobian & time step scale are accounted for
-  REQUIRE((*hexed::kernel_factory<hexed::Mcs_deformed>(3, 4))(elem_view) == Approx(1e3*0.95*(1. + 2*2.)/3./0.3));
+  REQUIRE((*hexed::kernel_factory<hexed::Mcs_deformed>(3, 4, hexed::char_speed::Inviscid(1.4)))(elem_view) == Approx(1e3*0.95*(1. + 2*2.)/3./0.3));
 }

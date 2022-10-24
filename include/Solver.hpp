@@ -26,10 +26,9 @@ class Solver
   std::vector<double> rk_weights {1., 1./4., 2./3.};
   bool use_art_visc;
   bool fix_admis;
-  const double fix_stab_rat = .6;
+  const double fix_stab_rat = 1.;
   void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
   void update_art_visc(double dt, bool use_av_coef);
-  void advect(double len, int n_iter);
   void fix_admissibility(double stability_ratio);
 
   public:
@@ -66,7 +65,7 @@ class Solver
   void initialize(const Spacetime_func&);
   void set_art_visc_off();
   void set_art_visc_constant(double);
-  void set_art_visc_smoothness(int projection_row_size, double scale, double advect_length, double shift = .5, double stability_ratio = .8, double diff_time = 0., double diff_stab_rat = .8);
+  void set_art_visc_smoothness(int projection_row_size, double advect_length, double shift = .5, double diff_ratio = 5e-3, double visc_mult = 2., double stability_ratio = .8, double diff_stab_rat = .8);
   void set_fix_admissibility(bool);
 
   /* ### TIME MARCHING ### */

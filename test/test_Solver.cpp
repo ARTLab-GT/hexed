@@ -618,9 +618,10 @@ void test_advection(Test_mesh& tm, std::string name)
   sol.calc_jacobian();
   sol.set_local_tss(); // this shouldn't affect the answer
   sol.initialize(Sinusoid_veloc());
-  double dt = 1e-2;
+  double width = 1e-2;
   double shift = .4;
-  sol.set_art_visc_smoothness(2, 1., dt, shift, dt); // .9 to make sure we don't confuse the ciel function
+  double mult = .9;
+  sol.set_art_visc_smoothness(2, width, shift, 0., mult);
   hexed::Gauss_legendre basis(2);
   double norm = 0.;
   for (int i_node = 0; i_node < 2; ++i_node) {
@@ -631,7 +632,7 @@ void test_advection(Test_mesh& tm, std::string name)
     for (int i_qpoint = 0; i_qpoint < sol.storage_params().n_qpoint(); ++i_qpoint) {
       double art_visc = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Art_visc_coef())[0];
       auto pos = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Position_func());
-      REQUIRE(art_visc/(dt*norm) == Approx(std::abs(-.1*std::cos(pos[0]) - .2*std::sin(pos[1]))).margin(1e-3));
+      REQUIRE(art_visc/(width*width*width*norm*mult) == Approx(std::abs(-.1*std::cos(pos[0]) - .2*std::sin(pos[1]))).margin(1e-3));
     }
   }
 }
@@ -852,14 +853,14 @@ TEST_CASE("artificial viscosity convergence")
   double flow_width = .01;
   double adv_width = .02;
   sol.initialize(Tanh(flow_width));
-  sol.set_art_visc_smoothness(hexed::config::max_row_size, 1., adv_width, .5, 1e-4);
+  sol.set_art_visc_smoothness(hexed::config::max_row_size, adv_width);
   double init_max = sol.bounds_field(hexed::Art_visc_coef())[0][1];
   // check that doubling the advection length multiplies the viscosity by 2^(max_row_size - 1)
-  sol.set_art_visc_smoothness(hexed::config::max_row_size, 2*adv_width, .5, 1e-4);
+  sol.set_art_visc_smoothness(hexed::config::max_row_size, 2*adv_width);
   REQUIRE(std::log(sol.bounds_field(hexed::Art_visc_coef())[0][1]/init_max)/std::log(2) > 6.);
   // check that doubling the length scale of the flow divides the viscosity by ~2^(max_row_size - 1)
   sol.initialize(Tanh(2*flow_width));
-  sol.set_art_visc_smoothness(hexed::config::max_row_size, 1., adv_width, .5, 1e-4);
+  sol.set_art_visc_smoothness(hexed::config::max_row_size, adv_width);
   REQUIRE(std::log(init_max/sol.bounds_field(hexed::Art_visc_coef())[0][1])/std::log(2) > 6.);
   #endif
 }
