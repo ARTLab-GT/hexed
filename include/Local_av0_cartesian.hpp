@@ -104,9 +104,10 @@ class Local_av0_cartesian : public Kernel<Element&>
       int n = scalar ? 1 : n_var;
       for (int i_var = start; i_var < n + start; ++i_var) {
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+          double scale = scalar ? 1 : tss[i_qpoint];
           const int i_dof = i_var*n_qpoint + i_qpoint;
-          state[i_dof] += time_rate[i_var][i_qpoint]*d_t_by_d_pos*tss[i_qpoint]
-                          *(use_coef ? 1 : tss[i_qpoint]);
+          state[i_dof] += time_rate[i_var][i_qpoint]*d_t_by_d_pos*scale
+                          *(use_coef ? 1 : scale);
         }
       }
     }

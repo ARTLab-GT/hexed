@@ -297,8 +297,8 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
     }
     (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-    double mcs_adv = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Advection()))(acc_mesh.cartesian().elements()),
-                              (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Advection()))(acc_mesh.deformed ().elements()));
+    double mcs_adv = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Advection(), 1, 0))(acc_mesh.cartesian().elements()),
+                              (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Advection(), 1, 0))(acc_mesh.deformed ().elements()));
     double dt_adv = stab_rat/params.n_dim/(mcs_adv/basis.max_cfl_convective());
 
     // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
@@ -362,8 +362,8 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
   }
   (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-  double mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Unit(), 2, 1))(acc_mesh.cartesian().elements()),
-                             (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Unit(), 2, 1))(acc_mesh.deformed ().elements()));
+  double mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Unit(), 2, 0))(acc_mesh.cartesian().elements()),
+                             (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Unit(), 2, 0))(acc_mesh.deformed ().elements()));
   double dt_diff = diff_stab_rat/params.n_dim/(mcs_diff/basis.max_cfl_diffusive());
   // diffuse scalar state by specified amount
   double diff_time = advect_length*advect_length*diff_ratio;
