@@ -1,10 +1,13 @@
 #include <catch2/catch.hpp>
 
+#include <hexed/config.hpp>
+#include <hexed/Element_func.hpp>
 #include <hexed/Qpoint_func.hpp>
 #include <hexed/Domain_func.hpp>
 #include <hexed/Spacetime_func.hpp>
 #include <hexed/Surface_func.hpp>
 #include <hexed/Gauss_lobatto.hpp>
+#include <hexed/Gauss_legendre.hpp>
 #include <hexed/Deformed_element.hpp>
 
 class Arbitrary_func : public hexed::Spacetime_func
@@ -264,5 +267,27 @@ TEST_CASE("Force_per_area")
         REQUIRE(-computed[i_dim]/pres == Approx(unit_normal[i_normal][i_dim]).scale(1.));
       }
     }
+  }
+}
+
+TEST_CASE("element average and L2 norm")
+{
+  hexed::Element elem({2, 4, 2, hexed::config::max_row_size}, {}, .3);
+  hexed::Gauss_legendre basis(hexed::config::max_row_size);
+  SECTION("average")
+  {
+    hexed::Elem_average avg{Arbitrary_func()};
+    auto result = avg(elem, basis, 7.);
+    REQUIRE(result.size() == 2);
+    REQUIRE(result[0] == Approx(-2/2. - 2*7.));
+    REQUIRE(result[1] == Approx(.3/2. - 2*7.));
+  }
+  SECTION("L2 norm")
+  {
+    hexed::Elem_l2 l2{Arbitrary_func()};
+    auto result = l2(elem, basis, 7.);
+    REQUIRE(result.size() == 2);
+    REQUIRE(result[0] == Approx(std::sqrt(2.*2.*.3/3. + 14*14)));
+    REQUIRE(result[1] == Approx(std::sqrt(.3*.3*.3/3. + 14*14)));
   }
 }
