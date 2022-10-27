@@ -9,8 +9,6 @@
 namespace hexed
 {
 
-class Grid;
-
 /*
  * Represents a function which can be evaluated at quadrature points. Can depend on
  * flow state, position, time, or on mathematical parameters like element Jabobian,
