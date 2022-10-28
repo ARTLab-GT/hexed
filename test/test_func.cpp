@@ -280,15 +280,15 @@ TEST_CASE("element average and L2 norm")
     hexed::Elem_average avg(func);
     auto result = avg(elem, basis, 7.);
     REQUIRE(result.size() == 2);
-    REQUIRE(result[0] == Approx(-2/2. - 2*7.));
-    REQUIRE(result[1] == Approx(.3/2. - 2*7.));
+    REQUIRE(result[0] == Approx(-2*.3/2. - 2*7.));
+    REQUIRE(result[1] == Approx(.3*.3/2. - 2*7.));
   }
   SECTION("L2 norm")
   {
     hexed::Elem_l2 l2(func);
     auto result = l2(elem, basis, 7.);
     REQUIRE(result.size() == 2);
-    REQUIRE(result[0] == Approx(std::sqrt(2.*2.*.3/3. + 14*14)));
-    REQUIRE(result[1] == Approx(std::sqrt(.3*.3*.3/3. + 14*14)));
+    REQUIRE(result[0] == Approx(std::sqrt(2.*2.*.3*.3/3. + 2*2.*.3/2.*2*7. + 14*14)));
+    REQUIRE(result[1] == Approx(std::sqrt(.3*.3*.3*.3/3. - 2*.3*.3/2.*2*7.+ 14*14)));
   }
 }
