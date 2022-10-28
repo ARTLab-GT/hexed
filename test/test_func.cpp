@@ -274,9 +274,10 @@ TEST_CASE("element average and L2 norm")
 {
   hexed::Element elem({2, 4, 2, hexed::config::max_row_size}, {}, .3);
   hexed::Gauss_legendre basis(hexed::config::max_row_size);
+  Arbitrary_func func;
   SECTION("average")
   {
-    hexed::Elem_average avg{Arbitrary_func()};
+    hexed::Elem_average avg(func);
     auto result = avg(elem, basis, 7.);
     REQUIRE(result.size() == 2);
     REQUIRE(result[0] == Approx(-2/2. - 2*7.));
@@ -284,7 +285,7 @@ TEST_CASE("element average and L2 norm")
   }
   SECTION("L2 norm")
   {
-    hexed::Elem_l2 l2{Arbitrary_func()};
+    hexed::Elem_l2 l2(func);
     auto result = l2(elem, basis, 7.);
     REQUIRE(result.size() == 2);
     REQUIRE(result[0] == Approx(std::sqrt(2.*2.*.3/3. + 14*14)));

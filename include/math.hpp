@@ -52,8 +52,27 @@ double root(Func_type func, double init_guess, double atol=1e-10, double init_di
   return guess;
 }
 
+/* Multiply every dimension of a (flattened) N-dimensional array by a matrix.
+ * Size of array along each dimension must be equal (i.e. the array is hypercube-shaped).
+ * Matrix does not have to be square.
+ * Dimensionality of the array is inferred automatically
+ * by comparing the number of matrix columns to the array size.
+ * Array size must be a power of the number of matrix columns.
+ */
 Eigen::VectorXd hypercube_matvec(const Eigen::MatrixXd&, const Eigen::VectorXd&);
+
+/*
+ * Multiply a single dimension of a hypercubic ND array by a matrix (c.f. hypercube_matvec).
+ * If matrix is not either square or a row vector, the resulting array will no longer be hypercubic.
+ */
 Eigen::VectorXd dimension_matvec(const Eigen::MatrixXd&, const Eigen::VectorXd&, int i_dim);
+
+/*
+ * Raises a vector to a power via ND outer products.
+ * That is, takes an outer product with the vector {1} `n_dim` times along different dimensions
+ * to produce an `n_dim`-dimensional hypercubic array.
+ */
+Eigen::VectorXd pow_outer(const Eigen::VectorXd&, int n_dim);
 
 /*
  * Orthonormalize a basis. Assumes `basis` is invertible. Returns a matrix with the

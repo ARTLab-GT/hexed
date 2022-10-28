@@ -40,11 +40,11 @@ class State_variables : public Domain_func
 
 class Diff_sq : public Domain_func
 {
-  const Domain_func& func0;
-  const Domain_func& func1;
+  Domain_func& func0;
+  Domain_func& func1;
   public:
   // arguments must return values of same size
-  Diff_sq(const Domain_func&, const Domain_func&);
+  Diff_sq(Domain_func&, Domain_func&); // note: don't use const references because they would allow invalid passing of temporary object
   virtual inline int n_var(int n_dim) const {return func0.n_var(n_dim);}
   // returns elementwise squared difference between provided funcs
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
@@ -53,9 +53,9 @@ class Diff_sq : public Domain_func
 
 class Error_func : public Domain_func
 {
-  const Spacetime_func& correct;
+  Spacetime_func& correct;
   public:
-  Error_func(const Spacetime_func&);
+  Error_func(Spacetime_func&);
   virtual int n_var(int n_dim) const;
   virtual std::string variable_name(int i_var) const;
   // returns elementwise difference between `state` and `correct(point_pos, point_time)`, squared
