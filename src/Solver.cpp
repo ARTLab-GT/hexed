@@ -427,6 +427,14 @@ void Solver::set_fix_admissibility(bool value)
   fix_admis = value;
 }
 
+void Solver::set_resolution_badness(const Element_func& func)
+{
+}
+
+void Solver::synch_extruded_res_bad()
+{
+}
+
 void Solver::update(double stability_ratio)
 {
   const double heat_rat = 1.4;
@@ -582,6 +590,11 @@ void Solver::reset_counters()
 std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func& func)
 {
   return func(acc_mesh.element(ref_level, is_deformed, serial_n), basis, i_qpoint, status.flow_time);
+}
+
+std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n, const Element_func& func)
+{
+  return func(acc_mesh.element(ref_level, is_deformed, serial_n), basis, status.flow_time);
 }
 
 std::vector<double> Solver::integral_field(const Qpoint_func& integrand)

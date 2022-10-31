@@ -864,3 +864,19 @@ TEST_CASE("artificial viscosity convergence")
   REQUIRE(std::log(init_max/sol.bounds_field(hexed::Art_visc_coef())[0][1])/std::log(2) > 6.);
   #endif
 }
+
+TEST_CASE("resolution badness")
+{
+  hexed::Solver sol(2, 2, 1.);
+  int sn = sol.mesh().add_element(0, true, {0, 0});
+  sol.mesh().extrude();
+  sol.mesh().extrude();
+  hexed::Position_func pos;
+  hexed::Component comp(pos, 0);
+  sol.set_resolution_badness(hexed::Elem_average(comp));
+  // check that the resolution badness of the middle element is the x-coordinate of its centroid
+  REQUIRE(sol.sample(0, true, sn, hexed::Resolution_badness())[0] == Approx(.5));
+  // resolution badness of the middle element will be set equal to the centroid of the (collapsed) element extruded 2 layers in the positive-x direction
+  sol.synch_extruded_res_bad();
+  REQUIRE(sol.sample(0, true, sn, hexed::Resolution_badness())[0] == Approx(1.75));
+}

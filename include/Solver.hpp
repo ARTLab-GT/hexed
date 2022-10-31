@@ -4,6 +4,7 @@
 #include "Accessible_mesh.hpp"
 #include "Gauss_legendre.hpp"
 #include "Spacetime_func.hpp"
+#include "Element_func.hpp"
 #include "Iteration_status.hpp"
 #include "Stopwatch_tree.hpp"
 #include "config.hpp"
@@ -67,6 +68,14 @@ class Solver
   void set_art_visc_constant(double);
   void set_art_visc_smoothness(int projection_row_size, double advect_length, double shift = .5, double diff_ratio = 5e-3, double visc_mult = 2., double stability_ratio = .8, double diff_stab_rat = .8);
   void set_fix_admissibility(bool);
+  /*
+   * set the resolution badness for each element according to `func`.
+   * Resoltuion badness can be evaluated via `sample(ref_level, is_deformed, serial_n, Resolution_badness())`.
+   * Do not use `sample(ref_level, is_deformed, serial_n, func)` directly if you intend to perform any logic
+   * to enforce assumptions about neighboring elements.
+   */
+  void set_resolution_badness(const Element_func& func);
+  void synch_extruded_res_bad();
 
   /* ### TIME MARCHING ### */
   /*
@@ -79,8 +88,9 @@ class Solver
   void reset_counters();
 
   /* ### OUTPUT ### */
-  // sample an arbitrary function at a particular quadrature point of a particular element
+  // evaluate arbitrary functions at arbitrary locations
   std::vector<double> sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func&);
+  std::vector<double> sample(int ref_level, bool is_deformed, int serial_n, const Element_func&);
   // obtain performance data
   inline const Stopwatch_tree& stopwatch_tree() {return stopwatch;}
   // compute an integral over the entire flow field at the current time

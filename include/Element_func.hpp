@@ -13,6 +13,16 @@ class Element_func : virtual public Output_data
   virtual std::vector<double> operator()(Element& elem, const Basis&, double time) const = 0;
 };
 
+class Resolution_badness : virtual public Element_func
+{
+  public:
+  virtual inline int n_var(int n_dim) const {return 1;}
+  virtual std::vector<double> operator()(Element& elem, const Basis&, double time) const
+  {
+    return {elem.resolution_badness};
+  }
+};
+
 // compute the average of the provided `Qpoint_func` within the element by Gaussian quadrature
 class Elem_average : public Element_func
 {
