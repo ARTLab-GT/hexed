@@ -21,10 +21,11 @@ std::vector<double> avg(const Qpoint_func& qf, Element& elem, const Basis& basis
   double volume = 0.;
   for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
     auto qpoint = qf(elem, basis, i_qpoint, time);
+    double w = weights[i_qpoint]*elem.jacobian_determinant(i_qpoint);
     for (int i_var = 0; i_var < nv; ++i_var) {
-      result[i_var] += custom_math::pow(qpoint[i_var], pow)*weights[i_qpoint];
+      result[i_var] += custom_math::pow(qpoint[i_var], pow)*w;
     }
-    volume += elem.jacobian_determinant(i_qpoint)*weights[i_qpoint];
+    volume += w;
   }
   for (int i_var = 0; i_var < nv; ++i_var) result[i_var] /= volume;
   return result;

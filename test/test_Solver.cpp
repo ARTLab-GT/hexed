@@ -878,5 +878,6 @@ TEST_CASE("resolution badness")
   REQUIRE(sol.sample(0, true, sn, hexed::Resolution_badness())[0] == Approx(.5));
   // resolution badness of the middle element will be set equal to the centroid of the (collapsed) element extruded 2 layers in the positive-x direction
   sol.synch_extruded_res_bad();
-  REQUIRE(sol.sample(0, true, sn, hexed::Resolution_badness())[0] == Approx(1.75));
+  double correct = ((2*2*2 - 1.5*1.5*1.5)/3. - .5*(2.*2. - 1.5*1.5)/2.)/((1.5*1.5 - 1.)/2.);
+  REQUIRE(sol.sample(0, true, sn, hexed::Resolution_badness())[0] == Approx(correct));
 }

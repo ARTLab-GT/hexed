@@ -437,6 +437,21 @@ void Solver::set_resolution_badness(const Element_func& func)
 
 void Solver::synch_extruded_res_bad()
 {
+  auto cons = acc_mesh.extruded_connections();
+  bool changed = true;
+  while(changed) {
+    changed = false;
+    for (int i_con = 0; i_con < cons.size(); ++i_con) {
+      double* bad [2];
+      for (int i_side = 0; i_side < 2; ++i_side) {
+        bad[i_side] = &cons[i_con].element(i_side).resolution_badness;
+      }
+      if (*bad[0] > *bad[1] + 1e-14) {
+        *bad[1] = *bad[0];
+        changed = true;
+      }
+    }
+  }
 }
 
 void Solver::update(double stability_ratio)

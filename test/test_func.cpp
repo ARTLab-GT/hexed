@@ -272,8 +272,11 @@ TEST_CASE("Force_per_area")
 
 TEST_CASE("element average and L2 norm")
 {
-  hexed::Element elem({2, 4, 2, hexed::config::max_row_size}, {}, .3);
   hexed::Gauss_legendre basis(hexed::config::max_row_size);
+  hexed::Deformed_element elem({2, 4, 2, hexed::config::max_row_size}, {}, .3);
+  elem.vertex(1).pos[1] *= 2.;
+  elem.vertex(3).pos[1] *= 2.;
+  elem.set_jacobian(basis);
   Arbitrary_func func;
   SECTION("average")
   {
@@ -281,7 +284,7 @@ TEST_CASE("element average and L2 norm")
     auto result = avg(elem, basis, 7.);
     REQUIRE(result.size() == 2);
     REQUIRE(result[0] == Approx(-2*.3/2. - 2*7.));
-    REQUIRE(result[1] == Approx(.3*.3/2. - 2*7.));
+    REQUIRE(result[1] == Approx(.3*.6/2. - 2*7.));
   }
   SECTION("L2 norm")
   {
@@ -289,7 +292,7 @@ TEST_CASE("element average and L2 norm")
     auto result = l2(elem, basis, 7.);
     REQUIRE(result.size() == 2);
     REQUIRE(result[0] == Approx(std::sqrt(2.*2.*.3*.3/3. + 2*2.*.3/2.*2*7. + 14*14)));
-    REQUIRE(result[1] == Approx(std::sqrt(.3*.3*.3*.3/3. - 2*.3*.3/2.*2*7.+ 14*14)));
+    REQUIRE(result[1] == Approx(std::sqrt(.3*.3*.6*.6/3. - 2*.3*.6/2.*2*7.+ 14*14)));
   }
 }
 

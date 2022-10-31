@@ -57,11 +57,12 @@ class Art_visc_coef : public Qpoint_func
 
 class Component : public Qpoint_func
 {
-  Qpoint_func& qf;
+  const Qpoint_func& qf;
   int iv;
 
   public:
-  inline Component(Qpoint_func& base, int i_var) : qf{base}, iv{i_var} {}
+  inline Component(const Qpoint_func& base, int i_var) : qf{base}, iv{i_var} {}
+  inline Component(Qpoint_func&& base, int i_var) = delete; // can't accept temporaries. would cause dangling reference
   virtual inline int n_var(int n_dim) const {return 1;}
   virtual inline std::string variable_name(int i_var) const {return qf.variable_name(iv);}
   virtual inline std::vector<double> operator()(Element& e, const Basis& b, int i_qpoint, double time) const
@@ -72,11 +73,12 @@ class Component : public Qpoint_func
 
 class Scaled : public Qpoint_func
 {
-  Qpoint_func& qf;
+  const Qpoint_func& qf;
   std::array<double, 2> bnd;
 
   public:
-  inline Scaled(Qpoint_func& base, std::array<double, 2> bounds) : qf{base}, bnd{bounds} {}
+  inline Scaled(const Qpoint_func& base, std::array<double, 2> bounds) : qf{base}, bnd{bounds} {}
+  Scaled(Qpoint_func&& base, std::array<double, 2> bounds) = delete;
   virtual inline int n_var(int n_dim) const {return 1;}
   virtual inline std::string variable_name(int i_var) const {return "scaled_" + qf.variable_name(0);}
   virtual inline std::vector<double> operator()(Element& e, const Basis& b, int i_qpoint, double time) const

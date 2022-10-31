@@ -75,6 +75,7 @@ class Solver
    * to enforce assumptions about neighboring elements.
    */
   void set_resolution_badness(const Element_func& func);
+  // set resolution badness of each element to be at least the maximum badness of any elements extruded from it
   void synch_extruded_res_bad();
 
   /* ### TIME MARCHING ### */
