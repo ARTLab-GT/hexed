@@ -429,6 +429,10 @@ void Solver::set_fix_admissibility(bool value)
 
 void Solver::set_resolution_badness(const Element_func& func)
 {
+  auto& elems = acc_mesh.elements();
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    elems[i_elem].resolution_badness = func(elems[i_elem], basis, status.flow_time)[0];
+  }
 }
 
 void Solver::synch_extruded_res_bad()

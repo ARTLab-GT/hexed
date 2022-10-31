@@ -871,9 +871,9 @@ TEST_CASE("resolution badness")
   int sn = sol.mesh().add_element(0, true, {0, 0});
   sol.mesh().extrude();
   sol.mesh().extrude();
+  sol.calc_jacobian();
   hexed::Position_func pos;
-  hexed::Component comp(pos, 0);
-  sol.set_resolution_badness(hexed::Elem_average(comp));
+  sol.set_resolution_badness(hexed::Elem_average(pos));
   // check that the resolution badness of the middle element is the x-coordinate of its centroid
   REQUIRE(sol.sample(0, true, sn, hexed::Resolution_badness())[0] == Approx(.5));
   // resolution badness of the middle element will be set equal to the centroid of the (collapsed) element extruded 2 layers in the positive-x direction
