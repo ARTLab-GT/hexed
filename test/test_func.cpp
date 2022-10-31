@@ -292,3 +292,14 @@ TEST_CASE("element average and L2 norm")
     REQUIRE(result[1] == Approx(std::sqrt(.3*.3*.3*.3/3. - 2*.3*.3/2.*2*7.+ 14*14)));
   }
 }
+
+TEST_CASE("Spatial_gaussian")
+{
+  REQUIRE_THROWS(hexed::Spatial_gaussian({}));
+  hexed::Spatial_gaussian gaus({.8, .5});
+  REQUIRE(gaus({0., 0.}, 0.).size() == 1);
+  REQUIRE(gaus({0., 0.}, 1.7)[0] == Approx(1.));
+  REQUIRE(gaus({.8, 0., 0.}, 1.7)[0]/gaus({0., .5, 0.}, 1.)[0] == Approx(1.));
+  REQUIRE(gaus({.8, 0., 0.}, 1.7)[0]/gaus({0., 0., .5}, 1.)[0] == Approx(1.));
+  REQUIRE(gaus({0., .5, 0.}, 1.7)[0]/gaus({0., 1., 0.}, 1.)[0] == Approx(std::exp(1.5)));
+}

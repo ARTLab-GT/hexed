@@ -119,5 +119,18 @@ class Sod : public State_from_spacetime
   virtual std::vector<double> operator()(std::vector<double> pos, double time) const;
 };
 
+// multivariate Gaussian distribution in terms of spatial coordinates
+// normalized to evaluate to 1 at the zero vector
+class Spatial_gaussian : public Spacetime_func
+{
+  std::vector<double> dev;
+  public:
+  // specify the standard deviation for each variable
+  // trailing variables can be left unspecified and default to the last specified component of std_dev
+  Spatial_gaussian(std::vector<double> std_dev);
+  inline int n_var(int n_dim) const {return 1;}
+  virtual std::vector<double> operator()(std::vector<double> pos, double time) const;
+};
+
 }
 #endif
