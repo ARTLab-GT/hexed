@@ -4,8 +4,13 @@
 namespace hexed
 {
 
-Elem_average::Elem_average(Qpoint_func& func) : qf{func} {}
-Elem_l2::Elem_l2(Qpoint_func& func) : qf{func} {}
+std::vector<double> Element_func::operator()(Element& elem, const Basis& basis, int, double time) const
+{
+  return operator()(elem, basis, time);
+}
+
+Elem_average::Elem_average(const Qpoint_func& func) : qf{func} {}
+Elem_l2::Elem_l2(const Qpoint_func& func) : qf{func} {}
 
 int Elem_average::n_var(int n_dim) const
 {

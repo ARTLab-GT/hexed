@@ -7,10 +7,11 @@
 namespace hexed
 {
 
-class Element_func : virtual public Output_data
+class Element_func : virtual public Qpoint_func
 {
   public:
   virtual std::vector<double> operator()(Element& elem, const Basis&, double time) const = 0;
+  virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const;
 };
 
 class Resolution_badness : virtual public Element_func
@@ -28,7 +29,8 @@ class Elem_average : public Element_func
 {
   const Qpoint_func& qf;
   public:
-  Elem_average(Qpoint_func& func);
+  Elem_average(const Qpoint_func&);
+  Elem_average(Qpoint_func&&) = delete; // can't accept temporaries because that could create a dangling reference
   virtual int n_var(int n_dim) const;
   virtual inline std::string variable_name(int i_var) const {return qf.variable_name(i_var);}
   virtual std::vector<double> operator()(Element& elem, const Basis&, double time) const;
@@ -39,7 +41,8 @@ class Elem_l2 : public Element_func
 {
   const Qpoint_func& qf;
   public:
-  Elem_l2(Qpoint_func&);
+  Elem_l2(const Qpoint_func&);
+  Elem_l2(Qpoint_func&&) = delete;
   virtual inline int n_var(int n_dim) const {return qf.n_var(n_dim);}
   virtual inline std::string variable_name(int i_var) const {return qf.variable_name(i_var);}
   virtual std::vector<double> operator()(Element& elem, const Basis&, double time) const;
