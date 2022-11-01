@@ -402,4 +402,8 @@ std::vector<Mesh::elem_handle> Accessible_mesh::elem_handles()
   return handles;
 }
 
+void Accessible_mesh::clear()
+{
+}
+
 }

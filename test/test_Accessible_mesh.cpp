@@ -309,6 +309,25 @@ TEST_CASE("Accessible_mesh")
     mesh.connect_cartesian(0, {sn0, sn1}, {0});
     REQUIRE(mesh.vertices().size() == 8*mesh.elements().size() - 4);
   }
+  SECTION("clear")
+  {
+    int freestream = mesh.add_boundary_condition(new hexed::Freestream({0, 0, 1., 1e5}), new hexed::Null_mbc);
+    int nonpen = mesh.add_boundary_condition(new hexed::Nonpenetration, new hexed::Null_mbc);
+    mesh.clear();
+    // make sure that everything has been properly deleted
+    REQUIRE(mesh.elements().size() == 0);
+    REQUIRE(mesh.element_connections().size() == 0);
+    REQUIRE(mesh.boundary_connections().size() == 0);
+    REQUIRE(mesh.refined_faces().size() == 0);
+    REQUIRE(mesh.hanging_vertex_matchers().size() == 0);
+    REQUIRE(mesh.vertices().size() == 0);
+    REQUIRE(mesh.elem_handles().size() == 0);
+    REQUIRE(mesh.extruded_connections().size() == 0);
+    REQUIRE(mesh.cartesian().face_connections().size() == 0);
+    // make sure can still access BCs without throwing
+    mesh.boundary_condition(freestream);
+    mesh.boundary_condition(nonpen);
+  }
 }
 
 TEST_CASE("extruded BCs")
