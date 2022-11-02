@@ -9,8 +9,9 @@ std::vector<double> Element_func::operator()(Element& elem, const Basis& basis, 
   return operator()(elem, basis, time);
 }
 
-Elem_average::Elem_average(const Qpoint_func& func) : qf{func} {}
-Elem_l2::Elem_l2(const Qpoint_func& func) : qf{func} {}
+Elem_average::Elem_average    (const Qpoint_func& func) : qf{func} {}
+Elem_l2::Elem_l2              (const Qpoint_func& func) : qf{func} {}
+Elem_nonsmooth::Elem_nonsmooth(const Qpoint_func& func) : qf{func} {}
 
 int Elem_average::n_var(int n_dim) const
 {
@@ -46,6 +47,11 @@ std::vector<double> Elem_l2::operator()(Element& elem, const Basis& basis, doubl
   auto result = avg(qf, elem, basis, time, 2);
   for (double& val : result) val = std::sqrt(val);
   return result;
+}
+
+std::vector<double> Elem_nonsmooth::operator()(Element& elem, const Basis& basis, double time) const
+{
+  return {};
 }
 
 };
