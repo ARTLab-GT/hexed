@@ -51,7 +51,30 @@ std::vector<double> Elem_l2::operator()(Element& elem, const Basis& basis, doubl
 
 std::vector<double> Elem_nonsmooth::operator()(Element& elem, const Basis& basis, double time) const
 {
-  return {};
+  auto params = elem.storage_params();
+  auto weights = custom_math::pow_outer(basis.node_weights(), params.n_dim - 1);
+  const int nv = qf.n_var(params.n_dim);
+  const int nq = params.n_qpoint();
+  std::vector<double> result(nv, 0.);
+  // find the value of the function we're taking the nonsmoothness of
+  Eigen::MatrixXd vals(nq, nv);
+  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+    auto qpoint = qf(elem, basis, i_qpoint, time);
+    for (int i_var = 0; i_var < nv; ++i_var) vals(i_qpoint, i_var) = qpoint[i_var];
+  }
+  // projector onto the highest-order hierarchical orthogonal basis function
+  Eigen::MatrixXd max_orth = (basis.orthogonal(params.row_size - 1).cwiseProduct(basis.node_weights())).transpose();
+  for (int i_var = 0; i_var < nv; ++i_var) {
+    // compute RMS of the following for each dimension:
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+      // take the highest-order component in each dimension...
+      Eigen::VectorXd proj = custom_math::dimension_matvec(max_orth, vals(Eigen::all, i_var), i_dim);
+      // ...and compute L2 norm of it in the other dimensions
+      result[i_var] += proj.dot(proj.cwiseProduct(weights));
+    }
+    result[i_var] = std::sqrt(result[i_var]/params.n_dim);
+  }
+  return result;
 }
 
 };

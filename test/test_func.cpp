@@ -310,9 +310,14 @@ TEST_CASE("elementwise functions")
     srand(406);
     Nonsmooth_test nonsm;
     auto result = hexed::Elem_nonsmooth(nonsm)(elem, basis, .7);
+    auto norm = hexed::Elem_l2(nonsm)(elem, basis, .7);
     REQUIRE(result.size() == 2);
-    // results should not be greater than 1
-    for (int i = 0; i < 2; ++i)  REQUIRE(result[i] <= 1 + 1e-14);
+    REQUIRE(norm.size() == 2);
+    // results should not be greater than the l2 norm
+    for (int i = 0; i < 2; ++i) {
+      result[i] /= norm[i];
+      REQUIRE(result[i] <= 1 + 1e-14);
+    }
     REQUIRE(result[0] > .1); // random input should have nonsmoothness on the order of 1.
     REQUIRE(result[1] < .01); // analytic input should have small nonsmoothness
   }
