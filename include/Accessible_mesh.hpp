@@ -64,7 +64,6 @@ class Accessible_mesh : public Mesh
   virtual void connect_rest(int bc_sn);
   virtual std::vector<elem_handle> elem_handles();
   inline Index<Element_connection&> extruded_connections() {return {deformed().element_connections(), extrude_cons};}
-  virtual void clear();
 };
 
 }

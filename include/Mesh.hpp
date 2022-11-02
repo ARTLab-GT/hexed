@@ -78,8 +78,6 @@ class Mesh
   virtual void extrude(bool collapse = false) = 0;
   // connects all yet-unconnected faces to a boundary condition specified by serial number
   virtual void connect_rest(int bc_sn) = 0;
-  // deletes all elements and connections
-  virtual void clear() = 0;
 
   // An object to provide information about whether the mesh connectivity is valid
   // and if not, why.
