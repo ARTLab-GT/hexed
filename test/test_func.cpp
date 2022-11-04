@@ -1,10 +1,13 @@
 #include <catch2/catch.hpp>
 
+#include <hexed/config.hpp>
+#include <hexed/Element_func.hpp>
 #include <hexed/Qpoint_func.hpp>
 #include <hexed/Domain_func.hpp>
 #include <hexed/Spacetime_func.hpp>
 #include <hexed/Surface_func.hpp>
 #include <hexed/Gauss_lobatto.hpp>
+#include <hexed/Gauss_legendre.hpp>
 #include <hexed/Deformed_element.hpp>
 
 class Arbitrary_func : public hexed::Spacetime_func
@@ -265,4 +268,68 @@ TEST_CASE("Force_per_area")
       }
     }
   }
+}
+
+class Nonsmooth_test : public hexed::Spacetime_func
+{
+  public:
+  int n_var(int n_dim) const {return 2;}
+  virtual std::vector<double> operator()(std::vector<double> pos, double time) const
+  {
+    const int n = 10000;
+    return {double(std::rand()%n)/n, std::exp(pos[1]/.3)};
+  }
+};
+
+TEST_CASE("elementwise functions")
+{
+  hexed::Gauss_legendre basis(hexed::config::max_row_size);
+  hexed::Deformed_element elem({2, 4, 2, hexed::config::max_row_size}, {}, .3);
+  elem.vertex(1).pos[1] *= 2.;
+  elem.vertex(3).pos[1] *= 2.;
+  elem.set_jacobian(basis);
+  Arbitrary_func func;
+  SECTION("average")
+  {
+    hexed::Elem_average avg(func);
+    auto result = avg(elem, basis, 7.);
+    REQUIRE(result.size() == 2);
+    REQUIRE(result[0] == Approx(-2*.3/2. - 2*7.));
+    REQUIRE(result[1] == Approx(.3*.6/2. - 2*7.));
+  }
+  SECTION("L2 norm")
+  {
+    hexed::Elem_l2 l2(func);
+    auto result = l2(elem, basis, 7.);
+    REQUIRE(result.size() == 2);
+    REQUIRE(result[0] == Approx(std::sqrt(2.*2.*.3*.3/3. + 2*2.*.3/2.*2*7. + 14*14)));
+    REQUIRE(result[1] == Approx(std::sqrt(.3*.3*.6*.6/3. - 2*.3*.6/2.*2*7.+ 14*14)));
+  }
+  SECTION("nonsmoothness")
+  {
+    srand(406);
+    Nonsmooth_test nonsm;
+    auto result = hexed::Elem_nonsmooth(nonsm)(elem, basis, .7);
+    auto norm = hexed::Elem_l2(nonsm)(elem, basis, .7);
+    REQUIRE(result.size() == 2);
+    REQUIRE(norm.size() == 2);
+    // results should not be greater than the l2 norm
+    for (int i = 0; i < 2; ++i) {
+      result[i] /= norm[i];
+      REQUIRE(result[i] <= 1 + 1e-14);
+    }
+    REQUIRE(result[0] > .1); // random input should have nonsmoothness on the order of 1.
+    REQUIRE(result[1] < .01); // analytic input should have small nonsmoothness
+  }
+}
+
+TEST_CASE("Spatial_gaussian")
+{
+  REQUIRE_THROWS(hexed::Spatial_gaussian({}));
+  hexed::Spatial_gaussian gaus({.8, .5});
+  REQUIRE(gaus({0., 0.}, 0.).size() == 1);
+  REQUIRE(gaus({0., 0.}, 1.7)[0] == Approx(1.));
+  REQUIRE(gaus({.8, 0., 0.}, 1.7)[0]/gaus({0., .5, 0.}, 1.)[0] == Approx(1.));
+  REQUIRE(gaus({.8, 0., 0.}, 1.7)[0]/gaus({0., 0., .5}, 1.)[0] == Approx(1.));
+  REQUIRE(gaus({0., .5, 0.}, 1.7)[0]/gaus({0., 1., 0.}, 1.)[0] == Approx(std::exp(1.5)));
 }

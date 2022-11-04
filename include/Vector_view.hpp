@@ -88,5 +88,23 @@ class Concatenation : public Sequence<T>
   }
 };
 
+template <typename T, typename seq_t = std::vector<int>>
+class Index : public Sequence<T>
+{
+  Sequence<T>& s;
+  seq_t i;
+  public:
+  Index(Sequence<T>& seq, seq_t inds) : s{seq}, i{inds} {}
+  int size()
+  {
+    return i.size();
+  }
+
+  T operator[](int index)
+  {
+    return s[i[index]];
+  }
+};
+
 }
 #endif

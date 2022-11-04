@@ -67,6 +67,16 @@ Eigen::VectorXd dimension_matvec(const Eigen::MatrixXd& mat, const Eigen::Vector
   return prod;
 }
 
+Eigen::VectorXd pow_outer(const Eigen::VectorXd& vec, int n_dim)
+{
+  // we basically have this logic already in `hypercube_matvec`
+  // we just need it to be able to figure out the number of dimensions
+  // so add an extra column to `vec` and pad it with zeros
+  Eigen::MatrixXd padded = Eigen::MatrixXd::Zero(vec.size(), 2);
+  padded(Eigen::all, 0) = vec;
+  return hypercube_matvec(padded, Eigen::VectorXd::Unit(pow(2, n_dim), 0));
+}
+
 Eigen::MatrixXd orthonormal (Eigen::MatrixXd basis, int i_dim)
 {
   switch (basis.rows()) {

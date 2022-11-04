@@ -427,6 +427,33 @@ void Solver::set_fix_admissibility(bool value)
   fix_admis = value;
 }
 
+void Solver::set_resolution_badness(const Element_func& func)
+{
+  auto& elems = acc_mesh.elements();
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    elems[i_elem].resolution_badness = func(elems[i_elem], basis, status.flow_time)[0];
+  }
+}
+
+void Solver::synch_extruded_res_bad()
+{
+  auto cons = acc_mesh.extruded_connections();
+  bool changed = true;
+  while(changed) {
+    changed = false;
+    for (int i_con = 0; i_con < cons.size(); ++i_con) {
+      double* bad [2];
+      for (int i_side = 0; i_side < 2; ++i_side) {
+        bad[i_side] = &cons[i_con].element(i_side).resolution_badness;
+      }
+      if (*bad[0] > *bad[1] + 1e-14) {
+        *bad[1] = *bad[0];
+        changed = true;
+      }
+    }
+  }
+}
+
 void Solver::update(double stability_ratio)
 {
   const double heat_rat = 1.4;
@@ -584,18 +611,15 @@ std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n
   return func(acc_mesh.element(ref_level, is_deformed, serial_n), basis, i_qpoint, status.flow_time);
 }
 
+std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n, const Element_func& func)
+{
+  return func(acc_mesh.element(ref_level, is_deformed, serial_n), basis, status.flow_time);
+}
+
 std::vector<double> Solver::integral_field(const Qpoint_func& integrand)
 {
-  /*
-   * compute the quadrature point weights as an `n_dim`-dimensional outer product
-   * I added some extra rows/columns of zeros so that `hypercube_matvec` doesn't get confused
-   * about the dimensionality.
-   */
-  Eigen::VectorXd one {Eigen::VectorXd::Zero(params.n_vertices())};
-  one(0) = 1.;
-  Eigen::MatrixXd weights_1d {Eigen::MatrixXd::Zero(params.row_size, 2)};
-  weights_1d.col(0) = basis.node_weights();
-  Eigen::VectorXd weights = custom_math::hypercube_matvec(weights_1d, one);
+  // compute `n_dim`-dimensional quadrature weights from 1D weights
+  Eigen::VectorXd weights = custom_math::pow_outer(basis.node_weights(), params.n_dim);
   // now compute the integral with the above quadrature weights
   std::vector<double> integral (integrand.n_var(params.n_dim), 0.);
   auto& elements = acc_mesh.elements();
@@ -621,11 +645,7 @@ std::vector<double> Solver::integral_surface(const Surface_func& integrand, int 
   const int nq = params.n_qpoint();
   const int nfq = nq/basis.row_size;
   Eigen::MatrixXd boundary = basis.boundary();
-  Eigen::VectorXd one {Eigen::VectorXd::Zero(params.n_vertices()/2)};
-  one(0) = 1.;
-  Eigen::MatrixXd weights_1d {Eigen::MatrixXd::Zero(params.row_size, 2)};
-  weights_1d.col(0) = basis.node_weights();
-  Eigen::VectorXd weights = custom_math::hypercube_matvec(weights_1d, one);
+  Eigen::VectorXd weights = custom_math::pow_outer(basis.node_weights(), params.n_dim - 1);
   // write the state to the faces so that the BCs can access it
   (*kernel_factory<Write_face>(nd, params.row_size, basis))(acc_mesh.elements());
   // compute the integral

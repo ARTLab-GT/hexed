@@ -40,6 +40,7 @@ class Element
   // pointer to a function that can access some data associated with the vertices
   typedef double& (Element::*vertex_value_access)(int i_vertex);
   std::array<int, 6> face_record; // for algorithms to book-keep information related to faces
+  double resolution_badness = 0;
 
   /*
    * The `Storage_params1 defines the amount of storage that must be allocated.

@@ -31,6 +31,7 @@ class Accessible_mesh : public Mesh
   Concatenation<Refined_face&> ref_face_v;
   Concatenation<Hanging_vertex_matcher&> matcher_v;
   std::vector<Vertex::Non_transferable_ptr> vert_ptrs;
+  std::vector<int> extrude_cons;
 
   public:
   Accessible_mesh(Storage_params, double root_size);
@@ -62,6 +63,7 @@ class Accessible_mesh : public Mesh
   virtual void extrude(bool collapse = false); // note: test for this is in `test_Solver.cpp` so that the result can be visualized
   virtual void connect_rest(int bc_sn);
   virtual std::vector<elem_handle> elem_handles();
+  inline Index<Element_connection&> extruded_connections() {return {deformed().element_connections(), extrude_cons};}
 };
 
 }

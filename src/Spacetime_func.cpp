@@ -114,4 +114,20 @@ std::vector<double> Sod::operator()(std::vector<double> pos, double time) const
   return state;
 }
 
+Spatial_gaussian::Spatial_gaussian(std::vector<double> std_dev)
+: dev(std_dev)
+{
+  if (dev.empty()) throw std::runtime_error("`hexed::Spatial_gaussian` requires non-empty `std_dev`");
+}
+
+std::vector<double> Spatial_gaussian::operator()(std::vector<double> pos, double time) const
+{
+  double radius_sq = 0.;
+  for (unsigned i_dim = 0; i_dim < pos.size(); ++i_dim) {
+    double normalized = pos[i_dim]/dev[std::min<unsigned>(i_dim, dev.size() - 1)];
+    radius_sq += normalized*normalized;
+  }
+  return {std::exp(-radius_sq/2.)};
+}
+
 }

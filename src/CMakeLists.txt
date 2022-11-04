@@ -7,6 +7,7 @@ connection.cpp
 Deformed_element.cpp
 Domain_func.cpp
 Element.cpp
+Element_func.cpp
 Equidistant.cpp
 global_hacks.cpp
 Hanging_vertex_matcher.cpp

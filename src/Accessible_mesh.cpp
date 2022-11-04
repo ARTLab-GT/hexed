@@ -232,6 +232,7 @@ void Accessible_mesh::extrude(bool collapse)
       }
     }
     std::array<Deformed_element*, 2> el_arr {&elem, &face.elem};
+    extrude_cons.push_back(def.cons.size());
     def.cons.emplace_back(el_arr, dir);
     // record the faces that still need to be connected at a vertex which is guaranteed to be shared with prospective neighbors
     for (int j_dim = face.i_dim + 1; j_dim%nd != face.i_dim; ++j_dim)
