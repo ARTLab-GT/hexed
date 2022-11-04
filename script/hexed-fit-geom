@@ -13,7 +13,8 @@ args = sys.argv[1:]
 fname = ""
 uncluster_trailing = False
 optimize = False
-close = False
+close_deform = False
+close_segment = False
 quiet = False
 periodic = False
 order = 10
@@ -32,8 +33,10 @@ for arg in args:
         uncluster_trailing = True
     elif arg == "--optimize":
         optimize = True
-    elif arg == "--close":
-        close = True
+    elif arg == "--close-deform":
+        close_deform = True
+    elif arg == "--close-segment":
+        close_segment = True
     elif arg == "--quiet":
         quiet = True
     elif arg == "--periodic":
@@ -115,11 +118,11 @@ if not quiet:
     plt.grid(True)
     plt.show()
 
-# make geometry watertight
-if close or periodic:
+# close geometry if desired
+if close_deform:
     # close trailing edge by deforming geometry
     interp -= np.outer(param_out, (interp[-1, :] - interp[0, :])/2.)
-else:
+if close_segment:
     # add an extra point at the end to match the first point
     interp = np.concatenate([interp, interp[[0], :]])
     n_interp += 1
