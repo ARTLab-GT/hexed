@@ -66,17 +66,22 @@ class Stability_solver : public hexed::Solver
       return   (bounds_after [2][1] - bounds_after [2][0])
              - (bounds_before[2][1] - bounds_before[2][0]);
     };
-    return hexed::custom_math::bisection(amplification, {1e-6, 1}, 1e-7);
+    double result = hexed::custom_math::bisection(amplification, {1e-6, 1}, 1e-7);
+    return (result < .1) ? result : 0;
   }
 } sol(2, 6, 1);
 
+int i = 0;
+
 double objective(const std::vector<double> &x, std::vector<double> &grad, void*)
 {
-  printf("%e", x[0]);
+  for (int j = 0; j < int(x.size()); ++j) {
+    printf("%e ", x[j]);
+    sol.coef[i + j] = x[j];
+  }
   std::cout << std::flush;
-  sol.coef[0] = x[0];
   double dt = sol.time_step();
-  printf(" %e\n", dt);
+  printf("| %e\n", dt);
   return -dt;
 }
 
@@ -98,17 +103,34 @@ int main()
   }
   sol.mesh().valid().assert_valid();
   sol.set_art_visc_constant(1.);
-  #if 1
-  nlopt::opt opt(nlopt::LN_SBPLX, 1);
-  opt.set_min_objective(objective, nullptr);
-  opt.set_xtol_rel(1e-2);
-  std::vector<double> x {1e-4};
-  double min_obj;
-  opt.optimize(x, min_obj);
-  printf("coefs: {%e}\ntime step: %e\n", x[0], -objective(x, x, nullptr));
-  #else
-  printf("time step: %e\n", sol.time_step());
-  #endif
+  printf("unmodified time step: %e\n", sol.time_step());
+  {
+    nlopt::opt opt(nlopt::LN_SBPLX, 1);
+    opt.set_min_objective(objective, nullptr);
+    opt.set_xtol_rel(1e-2);
+    std::vector<double> x {1e-5};
+    double min_obj;
+    opt.optimize(x, min_obj);
+    printf("coefs: {%e}\ntime step: %e\n", x[0], -objective(x, x, nullptr));
+  }{
+    i = 1;
+    nlopt::opt opt(nlopt::LN_SBPLX, 1);
+    opt.set_min_objective(objective, nullptr);
+    opt.set_xtol_rel(1e-2);
+    std::vector<double> x {1e-10};
+    double min_obj;
+    opt.optimize(x, min_obj);
+    printf("coefs: {%e}\ntime step: %e\n", x[0], -objective(x, x, nullptr));
+  }{
+    i = 0;
+    nlopt::opt opt(nlopt::LN_SBPLX, 2);
+    opt.set_min_objective(objective, nullptr);
+    opt.set_xtol_rel(1e-5);
+    std::vector<double> x {sol.coef[0], sol.coef[1]};
+    double min_obj;
+    opt.optimize(x, min_obj);
+    printf("coefs: {%e, %e}\ntime step: %e\n", x[0], x[1], -objective(x, x, nullptr));
+  }
   #if HEXED_USE_OTTER
   otter::plot plt;
   sol.visualize_field_otter(plt, comp);
