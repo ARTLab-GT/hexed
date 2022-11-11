@@ -29,10 +29,11 @@ class Solver
   bool fix_admis;
   const double fix_stab_rat = 1.;
   void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
-  void update_art_visc(double dt, bool use_av_coef);
+  void update_art_visc(double dt, bool use_av_coef, bool bcs = 1);
   void fix_admissibility(double stability_ratio);
 
   public:
+  double coef [3] {};
   Solver(int n_dim, int row_size, double root_mesh_size);
   virtual ~Solver() = default;
 
