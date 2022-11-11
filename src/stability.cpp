@@ -74,8 +74,9 @@ int main()
   hexed::Component comp(state, 2);
   hexed::Constant_func mean({0., 0., 1., 2e5});
   hexed::Diff_sq diff(state, mean);
+  sol.coef[0] = 6e-4;
   printf("%e\n", sol.bounds_field(diff)[2][1]);
-  sol.run_diffusive(1.3e-3);
+  sol.run_diffusive(4e-3);
   printf("%e\n", sol.bounds_field(diff)[2][1]);
   #if HEXED_USE_OTTER
   otter::plot plt;
