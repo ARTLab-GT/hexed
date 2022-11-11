@@ -96,13 +96,6 @@ class Basis:
         assert np.linalg.norm(global_weights@diffusion) < 1e-12
         def euler(dt, mat):
             return ident + dt*mat
-        def polynomial(dt, mat, coefs):
-            arg = mat + 0
-            result = ident + dt*arg
-            for c in coefs:
-                arg = mat @ arg
-                result += c*dt*arg
-            return result
         def rk(dt, step_weights, mat):
             step_mat = ident
             for weight in step_weights:
@@ -116,17 +109,4 @@ class Basis:
                 eigvals, eigvecs = np.linalg.eig(time_scheme(dt, mat))
                 return np.max(np.abs(eigvals)) - 1.
             return np.exp(fsolve(error, -np.log(self.row_size))[0])
-        dt = max_cfl(diffusion, euler)
-        eigvals, eigvecs = np.linalg.eig(euler(dt, diffusion))
-        print(self.row_size)
-        print(np.max(np.abs(eigvals)))
-        dt *= 10
-        def obj(coefs):
-            eigvals, eigvecs = np.linalg.eig(polynomial(dt, diffusion, coefs))
-            return np.max(np.abs(eigvals))
-        result = minimize(obj, [0, 0], method="Nelder-Mead")
-        print(result)
-        eigvals, eigvecs = np.linalg.eig(polynomial(dt, diffusion, result.x))
-        print(np.max(np.abs(eigvals)))
-        print()
         return max_cfl(advection, ssp_rk3), max_cfl(diffusion, euler)
