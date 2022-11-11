@@ -57,13 +57,23 @@ hexed::Diff_sq diff(state, mean);
 
 double objective(const std::vector<double> &x, std::vector<double> &grad, void*)
 {
+  printf("%e\n", x[0]);
+  return -x[0]*x[0];
+}
+
+double constraint(const std::vector<double> &x, std::vector<double> &grad, void*)
+{
   auto bounds_before = sol.bounds_field(state);
+  srand(406);
   sol.initialize(hexed::Random_func({0., 0., 1., 2e5}, {0., 0., .1, 2e4}));
+  sol.coef[0] = 6e-4;
   sol.run_diffusive(x[0]);
   auto bounds_after = sol.bounds_field(state);
-  double spread_diff =   (bounds_before[2][1] - bounds_before[2][0])
-                       - (bounds_after [2][1] - bounds_after [2][0]);
-  return spread_diff*spread_diff - x[0]*x[0];
+  double result =   (bounds_before[2][1] - bounds_before[2][0])
+                  - (bounds_after [2][1] - bounds_after [2][0]);
+  result = std::asinh(result);
+  printf("  %e\n", result);
+  return result;
 }
 
 constexpr int n_side = 10;
@@ -83,15 +93,15 @@ int main()
     }
   }
   sol.mesh().valid().assert_valid();
-  srand(406);
   sol.set_art_visc_constant(1.);
-  nlopt::opt opt(nlopt::LN_SBPLX, 1);
-  opt.set_min_objective(objective, NULL);
-  sol.coef[0] = 6e-4;
-  std::vector<double> x {1e-3};
+  nlopt::opt opt(nlopt::LN_COBYLA, 1);
+  opt.set_min_objective(objective, nullptr);
+  opt.add_inequality_constraint(constraint, nullptr, 1e-8);
+  opt.set_ftol_rel(1e-5);
+  std::vector<double> x {1e-4};
   double min_obj;
   opt.optimize(x, min_obj);
-  printf("%e %e\n", x[0], objective(x, x, nullptr));
+  printf("%e %e\n", x[0], constraint(x, x, nullptr));
   #if HEXED_USE_OTTER
   otter::plot plt;
   sol.visualize_field_otter(plt, comp);
