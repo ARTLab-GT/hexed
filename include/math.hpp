@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <Eigen/Dense>
+#include "assert.hpp"
 
 namespace hexed::custom_math
 {
@@ -35,13 +36,12 @@ constexpr int log(int base, int arg)
 }
 
 template <typename Func_type>
-double root(Func_type func, double init_guess, double atol=1e-10, double init_diff=1e-3)
+double broyden(Func_type func, double init_guess, double atol=1e-10, double init_diff=1e-3)
 {
   double guess_prev = init_guess - init_diff;
   double func_prev = func(guess_prev);
   double guess = init_guess;
-  do
-  {
+  do {
     double func_curr = func(guess);
     double slope = (func_curr - func_prev)/(guess - guess_prev);
     guess_prev = guess;
@@ -50,6 +50,23 @@ double root(Func_type func, double init_guess, double atol=1e-10, double init_di
   }
   while (std::abs(guess - guess_prev) > atol);
   return guess;
+}
+
+template <typename Func_type>
+double bisection(Func_type func, std::array<double, 2> bounds, double atol=1e-10)
+{
+  double midpoint;
+  std::array<double, 2> func_bounds {func(bounds[0]), func(bounds[1])};
+  HEXED_ASSERT(func_bounds[0]*func_bounds[1] <= 0, "bounds must bracket a root");
+  do {
+    midpoint = (bounds[0] + bounds[1])/2;
+    double mid_func = func(midpoint);
+    int i = (mid_func*func_bounds[0] <= 0);
+    bounds[i] = midpoint;
+    func_bounds[i] = mid_func;
+  }
+  while(bounds[1] - bounds[0] > atol);
+  return midpoint;
 }
 
 /* Multiply every dimension of a (flattened) N-dimensional array by a matrix.
