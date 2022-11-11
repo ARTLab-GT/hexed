@@ -3,6 +3,7 @@
 #include <hexed/kernel_factory.hpp>
 #include <hexed/Write_face.hpp>
 #include <hexed/Prolong_refined.hpp>
+#include <iostream>
 
 hexed::State_variables state;
 hexed::Component comp(state, 2);
@@ -56,40 +57,27 @@ class Stability_solver : public hexed::Solver
 
   double time_step()
   {
-    coef[0] = 0;
     auto amplification = [this](double dt){
       srand(406);
       initialize(hexed::Random_func({0., 0., 1., 2e5}, {0., 0., .1, 2e4}));
-      printf("%e\n", dt);
       auto bounds_before = bounds_field(state);
       run_diffusive(dt);
       auto bounds_after = bounds_field(state);
       return   (bounds_after [2][1] - bounds_after [2][0])
              - (bounds_before[2][1] - bounds_before[2][0]);
     };
-    return hexed::custom_math::bisection(amplification, {1e-6, 1});
+    return hexed::custom_math::bisection(amplification, {1e-6, 1}, 1e-7);
   }
 } sol(2, 6, 1);
 
 double objective(const std::vector<double> &x, std::vector<double> &grad, void*)
 {
-  printf("%e\n", x[0]);
-  return -x[0]*x[0];
-}
-
-double constraint(const std::vector<double> &x, std::vector<double> &grad, void*)
-{
-  auto bounds_before = sol.bounds_field(state);
-  srand(406);
-  sol.initialize(hexed::Random_func({0., 0., 1., 2e5}, {0., 0., .1, 2e4}));
-  sol.coef[0] = 6e-4;
-  sol.run_diffusive(x[0]);
-  auto bounds_after = sol.bounds_field(state);
-  double result =   (bounds_before[2][1] - bounds_before[2][0])
-                  - (bounds_after [2][1] - bounds_after [2][0]);
-  result = std::asinh(result);
-  printf("  %e\n", result);
-  return result;
+  printf("%e", x[0]);
+  std::cout << std::flush;
+  sol.coef[0] = x[0];
+  double dt = sol.time_step();
+  printf(" %e\n", dt);
+  return -dt;
 }
 
 constexpr int n_side = 10;
@@ -110,15 +98,14 @@ int main()
   }
   sol.mesh().valid().assert_valid();
   sol.set_art_visc_constant(1.);
-  #if 0
-  nlopt::opt opt(nlopt::LN_COBYLA, 1);
+  #if 1
+  nlopt::opt opt(nlopt::LN_SBPLX, 1);
   opt.set_min_objective(objective, nullptr);
-  opt.add_inequality_constraint(constraint, nullptr, 1e-8);
-  opt.set_ftol_rel(1e-5);
+  opt.set_xtol_rel(1e-2);
   std::vector<double> x {1e-4};
   double min_obj;
   opt.optimize(x, min_obj);
-  printf("%e %e\n", x[0], constraint(x, x, nullptr));
+  printf("coefs: {%e}\ntime step: %e\n", x[0], -objective(x, x, nullptr));
   #else
   printf("time step: %e\n", sol.time_step());
   #endif
