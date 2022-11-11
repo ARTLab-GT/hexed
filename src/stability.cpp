@@ -4,6 +4,11 @@
 #include <hexed/Write_face.hpp>
 #include <hexed/Prolong_refined.hpp>
 
+hexed::State_variables state;
+hexed::Component comp(state, 2);
+hexed::Constant_func mean({0., 0., 1., 2e5});
+hexed::Diff_sq diff(state, mean);
+
 class Stability_solver : public hexed::Solver
 {
   public:
@@ -48,12 +53,23 @@ class Stability_solver : public hexed::Solver
       (*hexed::kernel_factory<hexed::Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
     }
   }
-} sol(2, 6, 1);
 
-hexed::State_variables state;
-hexed::Component comp(state, 2);
-hexed::Constant_func mean({0., 0., 1., 2e5});
-hexed::Diff_sq diff(state, mean);
+  double time_step()
+  {
+    coef[0] = 0;
+    auto amplification = [this](double dt){
+      srand(406);
+      initialize(hexed::Random_func({0., 0., 1., 2e5}, {0., 0., .1, 2e4}));
+      printf("%e\n", dt);
+      auto bounds_before = bounds_field(state);
+      run_diffusive(dt);
+      auto bounds_after = bounds_field(state);
+      return   (bounds_after [2][1] - bounds_after [2][0])
+             - (bounds_before[2][1] - bounds_before[2][0]);
+    };
+    return hexed::custom_math::bisection(amplification, {1e-6, 1});
+  }
+} sol(2, 6, 1);
 
 double objective(const std::vector<double> &x, std::vector<double> &grad, void*)
 {
@@ -94,6 +110,7 @@ int main()
   }
   sol.mesh().valid().assert_valid();
   sol.set_art_visc_constant(1.);
+  #if 0
   nlopt::opt opt(nlopt::LN_COBYLA, 1);
   opt.set_min_objective(objective, nullptr);
   opt.add_inequality_constraint(constraint, nullptr, 1e-8);
@@ -102,6 +119,9 @@ int main()
   double min_obj;
   opt.optimize(x, min_obj);
   printf("%e %e\n", x[0], constraint(x, x, nullptr));
+  #else
+  printf("time step: %e\n", sol.time_step());
+  #endif
   #if HEXED_USE_OTTER
   otter::plot plt;
   sol.visualize_field_otter(plt, comp);

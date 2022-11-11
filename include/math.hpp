@@ -57,7 +57,7 @@ double bisection(Func_type func, std::array<double, 2> bounds, double atol=1e-10
 {
   double midpoint;
   std::array<double, 2> func_bounds {func(bounds[0]), func(bounds[1])};
-  HEXED_ASSERT(func_bounds[0]*func_bounds[1] <= 0, "bounds must bracket a root");
+  HEXED_ASSERT(!(func_bounds[0]*func_bounds[1] > 0), "bounds must bracket a root");
   do {
     midpoint = (bounds[0] + bounds[1])/2;
     double mid_func = func(midpoint);
