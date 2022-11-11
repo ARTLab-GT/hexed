@@ -1,3 +1,4 @@
+#include <nlopt.hpp>
 #include <hexed/Solver.hpp>
 #include <hexed/kernel_factory.hpp>
 #include <hexed/Write_face.hpp>
@@ -47,13 +48,28 @@ class Stability_solver : public hexed::Solver
       (*hexed::kernel_factory<hexed::Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
     }
   }
-};
+} sol(2, 6, 1);
+
+hexed::State_variables state;
+hexed::Component comp(state, 2);
+hexed::Constant_func mean({0., 0., 1., 2e5});
+hexed::Diff_sq diff(state, mean);
+
+double objective(const std::vector<double> &x, std::vector<double> &grad, void*)
+{
+  auto bounds_before = sol.bounds_field(state);
+  sol.initialize(hexed::Random_func({0., 0., 1., 2e5}, {0., 0., .1, 2e4}));
+  sol.run_diffusive(x[0]);
+  auto bounds_after = sol.bounds_field(state);
+  double spread_diff =   (bounds_before[2][1] - bounds_before[2][0])
+                       - (bounds_after [2][1] - bounds_after [2][0]);
+  return spread_diff*spread_diff - x[0]*x[0];
+}
 
 constexpr int n_side = 10;
 
 int main()
 {
-  Stability_solver sol(2, 6, 1.);
   int sn [n_side][n_side];
   for (int i = 0; i < n_side; ++i) {
     for (int j = 0; j < n_side; ++j) {
@@ -68,16 +84,14 @@ int main()
   }
   sol.mesh().valid().assert_valid();
   srand(406);
-  sol.initialize(hexed::Random_func({0., 0., 1., 2e5}, {0., 0., .1, 2e4}));
   sol.set_art_visc_constant(1.);
-  hexed::State_variables state;
-  hexed::Component comp(state, 2);
-  hexed::Constant_func mean({0., 0., 1., 2e5});
-  hexed::Diff_sq diff(state, mean);
+  nlopt::opt opt(nlopt::LN_SBPLX, 1);
+  opt.set_min_objective(objective, NULL);
   sol.coef[0] = 6e-4;
-  printf("%e\n", sol.bounds_field(diff)[2][1]);
-  sol.run_diffusive(4e-3);
-  printf("%e\n", sol.bounds_field(diff)[2][1]);
+  std::vector<double> x {1e-3};
+  double min_obj;
+  opt.optimize(x, min_obj);
+  printf("%e %e\n", x[0], objective(x, x, nullptr));
   #if HEXED_USE_OTTER
   otter::plot plt;
   sol.visualize_field_otter(plt, comp);
