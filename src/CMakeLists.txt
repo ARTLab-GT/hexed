@@ -29,3 +29,6 @@ thermo.cpp
 Vertex.cpp
 Vis_data.cpp
 )
+
+add_executable(stability stability.cpp)
+target_link_libraries(stability PRIVATE hexed)

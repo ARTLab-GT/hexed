@@ -43,8 +43,19 @@ class Position_func : public Spacetime_func
 class Empty_func : public Spacetime_func
 {
   public:
-  virtual inline int n_var(int i_dim) const {return 0;}
+  virtual inline int n_var(int n_dim) const {return 0;}
   virtual inline std::vector<double> operator()(std::vector<double> pos, double time) const {return {};}
+};
+
+class Random_func : public Spacetime_func
+{
+  std::vector<double> m;
+  std::vector<double> v;
+  int gran;
+  public:
+  Random_func(std::vector<double> means, std::vector<double> variations, int granularity = 1e5);
+  virtual inline int n_var(int n_dim) const {return m.size();}
+  virtual std::vector<double> operator()(std::vector<double> pos, double time) const;
 };
 
 class State_from_spacetime : public Spacetime_func
