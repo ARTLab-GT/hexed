@@ -470,9 +470,11 @@ void Solver::update(double stability_ratio)
   double mcs_diff = 0.;
   if (use_art_visc) {
     mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Art_visc(), 2, 1))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
-                        (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Art_visc(), 2, 1))(acc_mesh.deformed ().elements(), sw_def, "max char speed"))/coef[2];
+                        (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Art_visc(), 2, 1))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
   }
-  double dt = stability_ratio/params.n_dim/(mcs_conv/basis.max_cfl_convective() + mcs_diff/basis.max_cfl_diffusive());
+  mcs_conv *= params.n_dim/basis.max_cfl_convective();
+  mcs_diff /= coef[1];
+  double dt = stability_ratio/(mcs_conv + mcs_diff);
 
   // record reference state for Runge-Kutta scheme
   const int n_dof = params.n_dof();
@@ -512,26 +514,15 @@ void Solver::update(double stability_ratio)
       double* state = elems[i_elem].stage(0);
       for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] += dt*state[i_dof];
     }
-    (*kernel_factory<Write_face>(nd, params.row_size, basis))(elems);
-    (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
     update_art_visc(1., true, false);
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       double* state = elems[i_elem].stage(0);
-      for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] += coef[0]*dt*state[i_dof];
+      for (int i_dof = 0; i_dof < n_dof; ++i_dof) {
+        state[i_dof] = coef[0]*dt*state[i_dof] + state[i_dof + n_dof];
+      }
     }
-    (*kernel_factory<Write_face>(nd, params.row_size, basis))(elems);
-    (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-    update_art_visc(1., true, false);
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      double* state = elems[i_elem].stage(0);
-      for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] += coef[1]*dt*state[i_dof];
-    }
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      double* state = elems[i_elem].stage(0);
-      for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof] = state[i_dof + n_dof];
-    }
-    (*kernel_factory<Write_face>(nd, params.row_size, basis))(elems);
-    (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+    (*hexed::kernel_factory<hexed::Write_face>(nd, params.row_size, basis))(elems);
+    (*hexed::kernel_factory<hexed::Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
     fix_admissibility(fix_stab_rat*stability_ratio);
   }
 
@@ -539,7 +530,7 @@ void Solver::update(double stability_ratio)
   status.time_step = dt;
   status.flow_time += dt;
   ++status.iteration;
-  status.dt_rat = (mcs_conv/basis.max_cfl_convective())/(mcs_diff/basis.max_cfl_diffusive());
+  status.dt_rat = mcs_conv/mcs_diff;
   stopwatch.stopwatch.pause();
   stopwatch.work_units_completed += elems.size();
   sw_car.work_units_completed += acc_mesh.cartesian().elements().size();

@@ -32,23 +32,12 @@ class Stability_solver : public hexed::Solver
         double* state = elems[i_elem].stage(0);
         for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] += dt*state[i_dof];
       }
-      (*hexed::kernel_factory<hexed::Write_face>(nd, params.row_size, basis))(elems);
-      (*hexed::kernel_factory<hexed::Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
       update_art_visc(1., true, false);
       for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
         double* state = elems[i_elem].stage(0);
-        for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] += coef[0]*dt*state[i_dof];
-      }
-      (*hexed::kernel_factory<hexed::Write_face>(nd, params.row_size, basis))(elems);
-      (*hexed::kernel_factory<hexed::Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-      update_art_visc(1., true, false);
-      for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-        double* state = elems[i_elem].stage(0);
-        for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] += coef[1]*dt*state[i_dof];
-      }
-      for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-        double* state = elems[i_elem].stage(0);
-        for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof] = state[i_dof + n_dof];
+        for (int i_dof = 0; i_dof < n_dof; ++i_dof) {
+          state[i_dof] = coef[0]*dt*state[i_dof] + state[i_dof + n_dof];
+        }
       }
       (*hexed::kernel_factory<hexed::Write_face>(nd, params.row_size, basis))(elems);
       (*hexed::kernel_factory<hexed::Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
@@ -69,7 +58,7 @@ class Stability_solver : public hexed::Solver
     double result = hexed::custom_math::bisection(amplification, {1e-6, 1}, 1e-7);
     return (result < .1) ? result : 0;
   }
-} sol(2, 6, 1);
+} sol(2, 6, .9);
 
 int i = 0;
 
@@ -102,35 +91,20 @@ int main()
     }
   }
   sol.mesh().valid().assert_valid();
+  sol.calc_jacobian();
+  //sol.set_local_tss();
   sol.set_art_visc_constant(1.);
   printf("unmodified time step: %e\n", sol.time_step());
-  {
-    nlopt::opt opt(nlopt::LN_SBPLX, 1);
-    opt.set_min_objective(objective, nullptr);
-    opt.set_xtol_rel(1e-2);
-    std::vector<double> x {1e-5};
-    double min_obj;
-    opt.optimize(x, min_obj);
-    printf("coefs: {%e}\ntime step: %e\n", x[0], -objective(x, x, nullptr));
-  }{
-    i = 1;
-    nlopt::opt opt(nlopt::LN_SBPLX, 1);
-    opt.set_min_objective(objective, nullptr);
-    opt.set_xtol_rel(1e-2);
-    std::vector<double> x {1e-10};
-    double min_obj;
-    opt.optimize(x, min_obj);
-    printf("coefs: {%e}\ntime step: %e\n", x[0], -objective(x, x, nullptr));
-  }{
-    i = 0;
-    nlopt::opt opt(nlopt::LN_SBPLX, 2);
-    opt.set_min_objective(objective, nullptr);
-    opt.set_xtol_rel(1e-5);
-    std::vector<double> x {sol.coef[0], sol.coef[1]};
-    double min_obj;
-    opt.optimize(x, min_obj);
-    printf("coefs: {%e, %e}\ntime step: %e\n", x[0], x[1], -objective(x, x, nullptr));
-  }
+  nlopt::opt opt(nlopt::LN_SBPLX, 1);
+  opt.set_min_objective(objective, nullptr);
+  opt.set_xtol_rel(1e-2);
+  std::vector<double> x {1e-5};
+  double min_obj;
+  opt.optimize(x, min_obj);
+  printf("coefs: {%e}\ntime step: %e\n", x[0], -objective(x, x, nullptr));
+  srand(406);
+  sol.initialize(hexed::Random_func({0., 0., 1., 2e5}, {0., 0., .1, 2e4}));
+  for (int i = 0; i < 1000; ++i) sol.update(.9);
   #if HEXED_USE_OTTER
   otter::plot plt;
   sol.visualize_field_otter(plt, comp);
