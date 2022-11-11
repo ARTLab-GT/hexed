@@ -19,6 +19,7 @@ namespace hexed
 
 class Solver
 {
+  protected:
   Storage_params params;
   Accessible_mesh acc_mesh;
   Gauss_legendre basis;
