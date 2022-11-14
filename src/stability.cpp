@@ -3,6 +3,7 @@
 #include <hexed/kernel_factory.hpp>
 #include <hexed/Write_face.hpp>
 #include <hexed/Prolong_refined.hpp>
+#include <hexed/Mcs_cartesian.hpp>
 #include <iostream>
 
 hexed::State_variables state;
@@ -16,12 +17,14 @@ class Stability_solver : public hexed::Solver
   Stability_solver(int n_dim, int row_size, double root_mesh_size)
   : hexed::Solver(n_dim, row_size, root_mesh_size)
   {}
-  void run_diffusive(double dt)
+  void run_diffusive(double stab_rat)
   {
     const int nd = params.n_dim;
     const int rs = params.row_size;
     const int n_dof = params.n_dof();
     auto& elems = acc_mesh.elements();
+    double mcs = (*hexed::kernel_factory<hexed::Mcs_cartesian>(nd, rs, hexed::char_speed::Art_visc(), 2, 1))(acc_mesh.cartesian().elements());
+    double dt = stab_rat/mcs;
     for (int iter = 0; iter < 100; ++iter) {
       for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
         double* state = elems[i_elem].stage(0);
@@ -36,7 +39,7 @@ class Stability_solver : public hexed::Solver
       for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
         double* state = elems[i_elem].stage(0);
         for (int i_dof = 0; i_dof < n_dof; ++i_dof) {
-          state[i_dof] = coef[0]*dt*state[i_dof] + state[i_dof + n_dof];
+          state[i_dof] = coef[0]*dt/mcs*state[i_dof] + state[i_dof + n_dof];
         }
       }
       (*hexed::kernel_factory<hexed::Write_face>(nd, params.row_size, basis))(elems);
@@ -55,10 +58,10 @@ class Stability_solver : public hexed::Solver
       return   (bounds_after [2][1] - bounds_after [2][0])
              - (bounds_before[2][1] - bounds_before[2][0]);
     };
-    double result = hexed::custom_math::bisection(amplification, {1e-6, 1}, 1e-7);
+    double result = hexed::custom_math::bisection(amplification, {1e-7, 1}, 1e-7);
     return (result < .1) ? result : 0;
   }
-} sol(2, 6, .9);
+} sol(2, 6, .13);
 
 int i = 0;
 
@@ -92,8 +95,8 @@ int main()
   }
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
-  //sol.set_local_tss();
-  sol.set_art_visc_constant(1.);
+  sol.set_local_tss();
+  sol.set_art_visc_constant(3.4);
   printf("unmodified time step: %e\n", sol.time_step());
   nlopt::opt opt(nlopt::LN_SBPLX, 1);
   opt.set_min_objective(objective, nullptr);
