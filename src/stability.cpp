@@ -108,10 +108,10 @@ int main()
   double min_obj;
   opt.optimize(x, min_obj);
   double cfl = -objective(x, x, nullptr);
-  printf("coefs: {%e}\nCFL: %e\n", x[0], cfl);
-  int n = 20;
   sol.coef[0] = x[0];
   sol.coef[1] = cfl*.95;
+  printf("coefs: {%e}\nCFL: %e\n", sol.coef[0], sol.coef[1]);
+  int n = 20;
   sol.square = true;
   for (int i = 0; i <= n; ++i) {
     double stab_rat = double(i)/n;
