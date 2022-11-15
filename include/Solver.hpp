@@ -34,7 +34,7 @@ class Solver
   void fix_admissibility(double stability_ratio);
 
   public:
-  double coef [2] {6.787500e-04, 5.449157e-03};
+  double coef [2] {6.787500e-04, 5.449096e-03};
   Solver(int n_dim, int row_size, double root_mesh_size);
   virtual ~Solver() = default;
 

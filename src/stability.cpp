@@ -14,17 +14,18 @@ hexed::Diff_sq diff(state, mean);
 class Stability_solver : public hexed::Solver
 {
   public:
+  bool square = false;
   Stability_solver(int n_dim, int row_size, double root_mesh_size)
   : hexed::Solver(n_dim, row_size, root_mesh_size)
   {}
-  void run_diffusive(double stab_rat)
+  void run_diffusive(double cfl)
   {
     const int nd = params.n_dim;
     const int rs = params.row_size;
     const int n_dof = params.n_dof();
     auto& elems = acc_mesh.elements();
     double mcs = (*hexed::kernel_factory<hexed::Mcs_cartesian>(nd, rs, hexed::char_speed::Art_visc(), 2, 1))(acc_mesh.cartesian().elements());
-    double dt = stab_rat/mcs;
+    double dt = cfl/mcs;
     for (int iter = 0; iter < 100; ++iter) {
       for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
         double* state = elems[i_elem].stage(0);
@@ -39,7 +40,7 @@ class Stability_solver : public hexed::Solver
       for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
         double* state = elems[i_elem].stage(0);
         for (int i_dof = 0; i_dof < n_dof; ++i_dof) {
-          state[i_dof] = coef[0]*dt/mcs*state[i_dof] + state[i_dof + n_dof];
+          state[i_dof] = coef[0]*dt*(square ? cfl/coef[1] : 1.)/mcs*state[i_dof] + state[i_dof + n_dof];
         }
       }
       (*hexed::kernel_factory<hexed::Write_face>(nd, params.row_size, basis))(elems);
@@ -47,18 +48,20 @@ class Stability_solver : public hexed::Solver
     }
   }
 
+  double amplification(double dt)
+  {
+    srand(406);
+    initialize(hexed::Random_func({0., 0., 1., 2e5}, {0., 0., .1, 2e4}));
+    auto bounds_before = bounds_field(state);
+    run_diffusive(dt);
+    auto bounds_after = bounds_field(state);
+    return   (bounds_after [2][1] - bounds_after [2][0])
+           - (bounds_before[2][1] - bounds_before[2][0]);
+  }
+
   double time_step()
   {
-    auto amplification = [this](double dt){
-      srand(406);
-      initialize(hexed::Random_func({0., 0., 1., 2e5}, {0., 0., .1, 2e4}));
-      auto bounds_before = bounds_field(state);
-      run_diffusive(dt);
-      auto bounds_after = bounds_field(state);
-      return   (bounds_after [2][1] - bounds_after [2][0])
-             - (bounds_before[2][1] - bounds_before[2][0]);
-    };
-    double result = hexed::custom_math::bisection(amplification, {1e-7, 1}, 1e-7);
+    double result = hexed::custom_math::bisection([this](double dt){return amplification(dt);}, {1e-7, 1}, 1e-7);
     return (result < .1) ? result : 0;
   }
 } sol(2, 6, .13);
@@ -104,7 +107,16 @@ int main()
   std::vector<double> x {1e-5};
   double min_obj;
   opt.optimize(x, min_obj);
-  printf("coefs: {%e}\ntime step: %e\n", x[0], -objective(x, x, nullptr));
+  double cfl = -objective(x, x, nullptr);
+  printf("coefs: {%e}\nCFL: %e\n", x[0], cfl);
+  int n = 20;
+  sol.coef[0] = x[0];
+  sol.coef[1] = cfl*.95;
+  sol.square = true;
+  for (int i = 0; i <= n; ++i) {
+    double stab_rat = double(i)/n;
+    printf("%e: %e\n", stab_rat, sol.amplification(stab_rat*sol.coef[1]));
+  }
   srand(406);
   sol.initialize(hexed::Random_func({0., 0., 1., 2e5}, {0., 0., .1, 2e4}));
   for (int i = 0; i < 1000; ++i) sol.update(.9);

@@ -518,7 +518,7 @@ void Solver::update(double stability_ratio)
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       double* state = elems[i_elem].stage(0);
       for (int i_dof = 0; i_dof < n_dof; ++i_dof) {
-        state[i_dof] = coef[0]*dt*state[i_dof] + state[i_dof + n_dof];
+        state[i_dof] = coef[0]*dt*dt/stability_ratio*state[i_dof] + state[i_dof + n_dof];
       }
     }
     (*hexed::kernel_factory<hexed::Write_face>(nd, params.row_size, basis))(elems);
