@@ -505,24 +505,7 @@ void Solver::update(double stability_ratio)
   }
 
   if (use_art_visc) {
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      double* state = elems[i_elem].stage(0);
-      for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] = state[i_dof];
-    }
-    update_art_visc(1., true);
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      double* state = elems[i_elem].stage(0);
-      for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] += dt*state[i_dof];
-    }
-    update_art_visc(1., true, false);
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      double* state = elems[i_elem].stage(0);
-      for (int i_dof = 0; i_dof < n_dof; ++i_dof) {
-        state[i_dof] = coef[0]*dt*dt/coef[1]*state[i_dof] + state[i_dof + n_dof];
-      }
-    }
-    (*hexed::kernel_factory<hexed::Write_face>(nd, params.row_size, basis))(elems);
-    (*hexed::kernel_factory<hexed::Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+    update_art_visc(dt, true);
     fix_admissibility(fix_stab_rat*stability_ratio);
   }
 
@@ -537,7 +520,7 @@ void Solver::update(double stability_ratio)
   sw_def.work_units_completed += acc_mesh.deformed ().elements().size();
 }
 
-void Solver::update_art_visc(double dt, bool use_av_coef, bool bcs)
+void Solver::update_laplacian(double dt, bool use_av_coef, bool bcs)
 {
   const int nd = params.n_dim;
   const int rs = params.row_size;
@@ -578,6 +561,32 @@ void Solver::update_art_visc(double dt, bool use_av_coef, bool bcs)
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
 }
 
+void Solver::update_art_visc(double dt, bool use_av_coef)
+{
+  auto& elems = acc_mesh.elements();
+  const int n_dof = params.n_dof();
+  const int nd = params.n_dim;
+  const int rs = params.row_size;
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    double* state = elems[i_elem].stage(0);
+    for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] = state[i_dof];
+  }
+  update_laplacian(dt, use_av_coef);
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    double* state = elems[i_elem].stage(0);
+    for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] += state[i_dof];
+  }
+  update_laplacian(coef[0]/coef[1]*dt, use_av_coef, false);
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    double* state = elems[i_elem].stage(0);
+    for (int i_dof = 0; i_dof < n_dof; ++i_dof) {
+      state[i_dof] = state[i_dof] + state[i_dof + n_dof];
+    }
+  }
+  (*hexed::kernel_factory<hexed::Write_face>(nd, rs, basis))(elems);
+  (*hexed::kernel_factory<hexed::Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+}
+
 void Solver::fix_admissibility(double stability_ratio)
 {
   if (!fix_admis) return;
@@ -589,18 +598,6 @@ void Solver::fix_admissibility(double stability_ratio)
   const int rs = params.row_size;
   int iter;
   for (iter = 0;; ++iter) {
-    if (iter > 9999) {
-      #if HEXED_USE_OTTER
-      otter::plot plt;
-      visualize_field_otter(plt, Pressure(), 1, {0, 0}, Pressure(), {0, 0}, otter::const_colormap(Eigen::Vector4d{1., 0., 0., .1}), otter::plasma, false, false);
-      visualize_field_otter(plt, Pressure(), 0);
-      visualize_edges_otter(plt);
-      plt.show();
-      #endif
-      char buffer [200];
-      snprintf(buffer, 200, "failed to fix thermodynamic admissability in %i iterations", iter);
-      throw std::runtime_error(buffer);
-    }
     bool admiss = 1;
     #pragma omp parallel for reduction (&&:admiss)
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -625,7 +622,7 @@ void Solver::fix_admissibility(double stability_ratio)
     else {
       double mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Unit(), 2, 2))(acc_mesh.cartesian().elements()),
                                  (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Unit(), 2, 2))(acc_mesh.deformed ().elements()));
-      double dt = stability_ratio/params.n_dim/(mcs_diff/basis.max_cfl_diffusive());
+      double dt = stability_ratio/(mcs_diff/coef[1]);
       update_art_visc(dt, false);
     }
   }

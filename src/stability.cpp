@@ -31,12 +31,12 @@ class Stability_solver : public hexed::Solver
         double* state = elems[i_elem].stage(0);
         for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] = state[i_dof];
       }
-      update_art_visc(1., true);
+      update_laplacian(1., true);
       for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
         double* state = elems[i_elem].stage(0);
         for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] += dt*state[i_dof];
       }
-      update_art_visc(1., true, false);
+      update_laplacian(1., true, false);
       for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
         double* state = elems[i_elem].stage(0);
         for (int i_dof = 0; i_dof < n_dof; ++i_dof) {
