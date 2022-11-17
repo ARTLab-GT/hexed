@@ -357,42 +357,68 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
     double* state = elements[i_elem].stage(0);
     double* av = elements[i_elem].art_visc_coef();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      state[nd*nq + i_qpoint] = av[i_qpoint]*av[i_qpoint];
+      double sqr = av[i_qpoint]*av[i_qpoint];
+      state[nd*nq + i_qpoint] = 1e6*sqr/(1e6 + sqr);
     }
   }
   (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
   double mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Unit(), 2, 0))(acc_mesh.cartesian().elements()),
                              (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Unit(), 2, 0))(acc_mesh.deformed ().elements()));
-  double dt_diff = diff_stab_rat/params.n_dim/(mcs_diff/basis.max_cfl_diffusive());
+  double dt_diff = diff_stab_rat*coef[1]/mcs_diff;
   // diffuse scalar state by specified amount
   double diff_time = advect_length*advect_length*diff_ratio;
   int n_iter = ceil(diff_time/dt_diff);
   double dt = diff_time/n_iter;
   for (int i_iter = 0; i_iter < n_iter; ++i_iter) {
-    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-      double* in_f = bc_cons[i_con].inside_face();
-      double* gh_f = bc_cons[i_con].ghost_face();
-      for (int i_dof = 0; i_dof < (nd + 2)*nq/rs; ++i_dof) {
-        gh_f[i_dof] = in_f[i_dof];
+    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+      double* state = elements[i_elem].stage(0);
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        state[(nd + 1)*nq + i_qpoint] = state[nd*nq + i_qpoint];
       }
     }
-    (*kernel_factory<Neighbor_avg_cartesian>(nd, rs       ))(acc_mesh.cartesian().face_connections());
-    (*kernel_factory<Neighbor_avg_deformed >(nd, rs, false))(acc_mesh.deformed ().face_connections());
-    (*kernel_factory<Restrict_refined>(nd, rs, basis, false))(acc_mesh.refined_faces());
-    (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, dt, false, true))(acc_mesh.cartesian().elements());
-    (*kernel_factory<Local_av0_deformed >(nd, rs, basis, dt, false, true))(acc_mesh.deformed ().elements());
-    (*kernel_factory<Prolong_refined>(nd, rs, basis, true))(acc_mesh.refined_faces());
-    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-      double* in_f = bc_cons[i_con].inside_face() + nd*nq/rs;
-      double* gh_f = bc_cons[i_con].ghost_face() + nd*nq/rs;
-      for (int i_qpoint = 0; i_qpoint < nq/rs; ++i_qpoint) gh_f[i_qpoint] = -in_f[i_qpoint];
+    auto update_av = [&]() {
+      for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+        double* in_f = bc_cons[i_con].inside_face();
+        double* gh_f = bc_cons[i_con].ghost_face();
+        for (int i_dof = 0; i_dof < (nd + 2)*nq/rs; ++i_dof) {
+          gh_f[i_dof] = in_f[i_dof];
+        }
+      }
+      (*kernel_factory<Neighbor_avg_cartesian>(nd, rs       ))(acc_mesh.cartesian().face_connections());
+      (*kernel_factory<Neighbor_avg_deformed >(nd, rs, false))(acc_mesh.deformed ().face_connections());
+      (*kernel_factory<Restrict_refined>(nd, rs, basis, false))(acc_mesh.refined_faces());
+      (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, dt, false, true))(acc_mesh.cartesian().elements());
+      (*kernel_factory<Local_av0_deformed >(nd, rs, basis, dt, false, true))(acc_mesh.deformed ().elements());
+      (*kernel_factory<Prolong_refined>(nd, rs, basis, true))(acc_mesh.refined_faces());
+      for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+        double* in_f = bc_cons[i_con].inside_face() + nd*nq/rs;
+        double* gh_f = bc_cons[i_con].ghost_face() + nd*nq/rs;
+        for (int i_qpoint = 0; i_qpoint < nq/rs; ++i_qpoint) gh_f[i_qpoint] = -in_f[i_qpoint];
+      }
+      (*kernel_factory<Neighbor_avg_cartesian>(nd, rs      ))(acc_mesh.cartesian().face_connections());
+      (*kernel_factory<Neighbor_avg_deformed >(nd, rs, true))(acc_mesh.deformed ().face_connections());
+      (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+      (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, dt, false, true))(acc_mesh.cartesian().elements());
+      (*kernel_factory<Local_av1_deformed >(nd, rs, basis, dt, false, true))(acc_mesh.deformed ().elements());
+      (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+    };
+    update_av();
+    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+      double* state = elements[i_elem].stage(0);
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        state[(nd + 1)*nq + i_qpoint] += state[nd*nq + i_qpoint];
+      }
     }
-    (*kernel_factory<Neighbor_avg_cartesian>(nd, rs      ))(acc_mesh.cartesian().face_connections());
-    (*kernel_factory<Neighbor_avg_deformed >(nd, rs, true))(acc_mesh.deformed ().face_connections());
-    (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-    (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, dt, false, true))(acc_mesh.cartesian().elements());
-    (*kernel_factory<Local_av1_deformed >(nd, rs, basis, dt, false, true))(acc_mesh.deformed ().elements());
+    update_av();
+    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+      double* state = elements[i_elem].stage(0);
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        state[nd*nq + i_qpoint] *= coef[0]/coef[1];
+        state[nd*nq + i_qpoint] += state[(nd + 1)*nq + i_qpoint];
+      }
+    }
+    (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
   }
   // clean up
