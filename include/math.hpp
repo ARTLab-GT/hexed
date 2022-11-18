@@ -58,12 +58,17 @@ double bisection(Func_type func, std::array<double, 2> bounds, double atol=1e-10
   double midpoint;
   std::array<double, 2> func_bounds {func(bounds[0]), func(bounds[1])};
   HEXED_ASSERT(!(func_bounds[0]*func_bounds[1] > 0), "bounds must bracket a root");
+  HEXED_ASSERT(!(std::isnan(func_bounds[0]) && std::isnan(func_bounds[1])),
+               "`func` evaluates to NaN at bouth bounds");
   do {
     midpoint = (bounds[0] + bounds[1])/2;
     double mid_func = func(midpoint);
-    int i = (mid_func*func_bounds[0] <= 0);
-    bounds[i] = midpoint;
-    func_bounds[i] = mid_func;
+    int i_repl = (mid_func*func_bounds[0] <= 0);
+    for (int i = 0; i < 2; ++i) {
+      if (std::isnan(func_bounds[i])) i_repl = i;
+    }
+    bounds[i_repl] = midpoint;
+    func_bounds[i_repl] = mid_func;
   }
   while(bounds[1] - bounds[0] > atol);
   return midpoint;
