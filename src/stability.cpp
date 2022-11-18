@@ -15,6 +15,7 @@ class Stability_solver : public hexed::Solver
 {
   public:
   bool square = false;
+  double coef [2] {};
   Stability_solver(int n_dim, int row_size, double root_mesh_size)
   : hexed::Solver(n_dim, row_size, root_mesh_size)
   {}
@@ -110,7 +111,7 @@ int main()
   double cfl = -objective(x, x, nullptr);
   sol.coef[0] = x[0];
   sol.coef[1] = cfl*.95;
-  printf("coefs: {%e}\nCFL: %e\n", sol.coef[0], sol.coef[1]);
+  printf("cancellation: {%e}\nCFL: %e\n", sol.coef[0], sol.coef[1]);
   int n = 20;
   sol.square = true;
   for (int i = 0; i <= n; ++i) {

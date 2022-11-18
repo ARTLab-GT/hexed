@@ -365,7 +365,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
   double mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Unit(), 2, 0))(acc_mesh.cartesian().elements()),
                              (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Unit(), 2, 0))(acc_mesh.deformed ().elements()));
-  double dt_diff = diff_stab_rat*coef[1]/mcs_diff;
+  double dt_diff = diff_stab_rat*basis.max_cfl_diffusive()/mcs_diff;
   // diffuse scalar state by specified amount
   double diff_time = advect_length*advect_length*diff_ratio;
   int n_iter = ceil(diff_time/dt_diff);
@@ -414,7 +414,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
       double* state = elements[i_elem].stage(0);
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        state[nd*nq + i_qpoint] *= coef[0]/coef[1];
+        state[nd*nq + i_qpoint] *= basis.cancellation_diffusive()/basis.max_cfl_diffusive();
         state[nd*nq + i_qpoint] += state[(nd + 1)*nq + i_qpoint];
       }
     }
@@ -496,10 +496,10 @@ void Solver::update(double stability_ratio)
   double mcs_diff = 0.;
   if (use_art_visc) {
     mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Art_visc(), 2, 1))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
-                        (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Art_visc(), 2, 1))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
+                        (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Art_visc(), 2, 1))(acc_mesh.deformed ().elements(), sw_def, "max char speed"))
+               /basis.max_cfl_diffusive();
   }
   mcs_conv *= params.n_dim/basis.max_cfl_convective();
-  mcs_diff /= coef[1];
   double dt = stability_ratio/(mcs_conv + mcs_diff);
 
   // record reference state for Runge-Kutta scheme
@@ -602,7 +602,7 @@ void Solver::update_art_visc(double dt, bool use_av_coef)
     double* state = elems[i_elem].stage(0);
     for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] += state[i_dof];
   }
-  update_laplacian(coef[0]/coef[1]*dt, use_av_coef, false);
+  update_laplacian(basis.cancellation_diffusive()/basis.max_cfl_diffusive()*dt, use_av_coef, false);
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     double* state = elems[i_elem].stage(0);
     for (int i_dof = 0; i_dof < n_dof; ++i_dof) {
@@ -647,8 +647,9 @@ void Solver::fix_admissibility(double stability_ratio)
     if (admiss && refined_admiss) break;
     else {
       double mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Unit(), 2, 2))(acc_mesh.cartesian().elements()),
-                                 (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Unit(), 2, 2))(acc_mesh.deformed ().elements()));
-      double dt = stability_ratio/(mcs_diff/coef[1]);
+                                 (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Unit(), 2, 2))(acc_mesh.deformed ().elements()))
+                        /basis.max_cfl_diffusive();
+      double dt = stability_ratio/mcs_diff;
       update_art_visc(dt, false);
     }
   }

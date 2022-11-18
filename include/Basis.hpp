@@ -44,6 +44,7 @@ class Basis
   virtual Eigen::MatrixXd restrict(int i_half) const;
   virtual double max_cfl_convective() const; // placeholder implementation that should be overriden
   virtual double max_cfl_diffusive() const; // placeholder implementation that should be overriden
+  virtual double cancellation_diffusive() const; // placeholder implementation that should be overriden
 };
 
 }

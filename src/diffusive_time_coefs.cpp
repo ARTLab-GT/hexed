@@ -1,17 +1,16 @@
 #include <Gauss_legendre.hpp>
-#include <Gauss_lobatto.hpp>
 
 namespace hexed
 {
 
 double Gauss_legendre::max_cfl_diffusive() const
 {
-  return 0;
+  return 5.176642e-03;
 };
 
-double Gauss_lobatto::max_cfl_diffusive() const
+double Gauss_legendre::cancellation_diffusive() const
 {
-  return 0;
+  return 6.787500e-04;
 };
 
 }
