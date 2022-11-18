@@ -90,10 +90,8 @@ class Basis:
                             neighb_avrg[row, col] += 0.5*(2*j_side - 1)*boundary
                             neighb_jump[row, col] += 0.5*(1 - 2*(j_side == i_side))*boundary
         advection = -local_grad + -neighb_avrg + neighb_jump
-        diffusion = (local_grad + neighb_avrg)@(local_grad + neighb_avrg)
         ident = np.identity(n_elem*self.row_size)
         assert np.linalg.norm(global_weights@advection) < 1e-12
-        assert np.linalg.norm(global_weights@diffusion) < 1e-12
         def euler(dt, mat):
             return ident + dt*mat
         def rk(dt, step_weights, mat):
@@ -109,4 +107,4 @@ class Basis:
                 eigvals, eigvecs = np.linalg.eig(time_scheme(dt, mat))
                 return np.max(np.abs(eigvals)) - 1.
             return np.exp(fsolve(error, -np.log(self.row_size))[0])
-        return max_cfl(advection, ssp_rk3), max_cfl(diffusion, euler)
+        return max_cfl(advection, ssp_rk3)

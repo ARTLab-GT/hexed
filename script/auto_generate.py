@@ -101,7 +101,7 @@ const double orthogonal{row_size} [{row_size**2}] {{
         text += "};\n"
 
         max_cfl = basis.max_cfl()
-        text  += f"\nconst double max_cfl{row_size} [2] {{{max_cfl[0]}, {max_cfl[1]}}};\n"
+        text  += f"\nconst double max_cfl{row_size} [1] = {{{max_cfl}}};\n"
 
         if "legendre" in name:
             text += f"""
@@ -193,11 +193,6 @@ Eigen::VectorXd {name}::orthogonal(int degree) const
 double {name}::max_cfl_convective() const
 {{{conditional_block}
   return {name}_lookup::max_cfls[row_size - {min_row_size}][0];
-}}
-
-double {name}::max_cfl_diffusive() const
-{{{conditional_block}
-  return {name}_lookup::max_cfls[row_size - {min_row_size}][1];
 }}
 """
 
