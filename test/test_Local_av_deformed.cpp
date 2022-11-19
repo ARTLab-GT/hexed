@@ -3,7 +3,6 @@
 #include <hexed/Local_av0_deformed.hpp>
 #include <hexed/Local_av1_deformed.hpp>
 #include <hexed/Gauss_legendre.hpp>
-#include <hexed/Qpoint_func.hpp>
 #include <hexed/Write_face.hpp>
 
 TEST_CASE("local deformed artificial viscosity")
@@ -53,6 +52,6 @@ TEST_CASE("local deformed artificial viscosity")
     double correct = 0.;
     for (int i_dim = 0; i_dim < 3; ++i_dim) correct += scale[i_dim]*scale[i_dim];
     correct *= .3/arg[i_qpoint]/arg[i_qpoint];
-    REQUIRE(hexed::Physical_update()(elem, basis, i_qpoint, 0)[3] == Approx(correct).scale(1.));
+    REQUIRE(elem.stage(0)[3*n_qpoint + i_qpoint] == Approx(correct).scale(1.));
   }
 }
