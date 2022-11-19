@@ -365,7 +365,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
   double mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Unit(), 2, 0))(acc_mesh.cartesian().elements()),
                              (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Unit(), 2, 0))(acc_mesh.deformed ().elements()));
-  double dt_diff = diff_stab_rat*basis.max_cfl_diffusive()/mcs_diff;
+  double dt_diff = diff_stab_rat*basis.max_cfl_diffusive()/nd/mcs_diff;
   // diffuse scalar state by specified amount
   double diff_time = advect_length*advect_length*diff_ratio;
   int n_iter = ceil(diff_time/dt_diff);
@@ -492,15 +492,15 @@ void Solver::update(double stability_ratio)
 
   // compute time step
   double mcs_conv = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Inviscid(heat_rat)))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
-                             (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Inviscid(heat_rat)))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
+                             (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Inviscid(heat_rat)))(acc_mesh.deformed ().elements(), sw_def, "max char speed"))
+                    /basis.max_cfl_convective();
   double mcs_diff = 0.;
   if (use_art_visc) {
     mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Art_visc(), 2, 1))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
                         (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Art_visc(), 2, 1))(acc_mesh.deformed ().elements(), sw_def, "max char speed"))
                /basis.max_cfl_diffusive();
   }
-  mcs_conv *= params.n_dim/basis.max_cfl_convective();
-  double dt = stability_ratio/(mcs_conv + mcs_diff);
+  double dt = stability_ratio/nd/(mcs_conv + mcs_diff);
 
   // record reference state for Runge-Kutta scheme
   const int n_dof = params.n_dof();
@@ -649,7 +649,7 @@ void Solver::fix_admissibility(double stability_ratio)
       double mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Unit(), 2, 2))(acc_mesh.cartesian().elements()),
                                  (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Unit(), 2, 2))(acc_mesh.deformed ().elements()))
                         /basis.max_cfl_diffusive();
-      double dt = stability_ratio/mcs_diff;
+      double dt = stability_ratio/nd/mcs_diff;
       update_art_visc(dt, false);
     }
   }

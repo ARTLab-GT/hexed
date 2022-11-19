@@ -5,12 +5,12 @@ namespace hexed
 
 double Gauss_legendre::max_cfl_diffusive() const
 {
-  return 5.176642e-03;
+  return 1.043577e-02;
 };
 
 double Gauss_legendre::cancellation_diffusive() const
 {
-  return 6.787500e-04;
+  return 1.365625e-03;
 };
 
 }
