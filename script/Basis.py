@@ -122,6 +122,14 @@ class Basis:
                 eigvals, eigvecs = np.linalg.eig(time_scheme(dt, mat))
                 return np.max(np.abs(eigvals)) - 1.
             return np.exp(fsolve(error, -np.log(self.row_size))[0])
+        """
+        def objective(coefs):
+            p = polynomial(coefs)
+            return -max_cfl(advection, p)
+        opt = minimize(objective, [1e-5], method="Nelder-Mead", tol=1e-10)
+        print(opt)
+        assert self.row_size != 8
+        """
         def objective(coefs):
             p = polynomial(coefs)
             return -max_cfl(diffusion, p)
