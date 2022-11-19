@@ -70,14 +70,16 @@ class Basis:
         result = self.weights[i_operand]/2*self.prolong(i_operand, i_result, i_half, True)/self.weights[i_result]
         return sp.Float(result, self.repr_digits)
 
-    def max_cfl(self, n_elem = 4):
+    def time_coefs(self, n_elem = 4):
         global_weights = np.zeros(n_elem*self.row_size)
         local_grad = np.zeros((n_elem*self.row_size, n_elem*self.row_size))
         neighb_avrg = np.zeros((n_elem*self.row_size, n_elem*self.row_size))
         neighb_jump = np.zeros((n_elem*self.row_size, n_elem*self.row_size))
+        global_nodes = global_weights*0
         for i_elem in range(n_elem):
             for i_row in range(self.row_size):
                 global_weights[i_elem*self.row_size + i_row] = self.weights[i_row]
+                global_nodes[i_elem*self.row_size + i_row] = i_elem + self.nodes[i_row]
                 for i_col in range(self.row_size):
                     row = i_elem*self.row_size + i_row
                     col = i_elem*self.row_size + i_col
@@ -90,21 +92,37 @@ class Basis:
                             neighb_avrg[row, col] += 0.5*(2*j_side - 1)*boundary
                             neighb_jump[row, col] += 0.5*(1 - 2*(j_side == i_side))*boundary
         advection = -local_grad + -neighb_avrg + neighb_jump
+        diffusion = (local_grad + neighb_avrg)@(local_grad + neighb_avrg)
         ident = np.identity(n_elem*self.row_size)
         assert np.linalg.norm(global_weights@advection) < 1e-12
+        assert np.linalg.norm(global_weights@diffusion) < 1e-12
         def euler(dt, mat):
             return ident + dt*mat
         def rk(dt, step_weights, mat):
-            step_mat = ident
+            step_mat = ident + 0
             for weight in step_weights:
                 step_mat = (1. - weight)*ident + weight*euler(dt, mat)@step_mat
             return step_mat
         def ssp_rk3(dt, mat):
             return rk(dt, [1., 1./4., 2./3.], mat)
+        class polynomial:
+            def __init__(self, coefs):
+                self.coefs = coefs
+            def __call__(self, dt, mat):
+                step_mat = ident + dt*mat
+                mat_pow = mat + 0
+                for coef in self.coefs:
+                    mat_pow = mat @ mat_pow
+                    step_mat += dt*coef*mat_pow
+                return step_mat
         def max_cfl(mat, time_scheme):
             def error(log_dt):
                 dt = np.exp(log_dt)
                 eigvals, eigvecs = np.linalg.eig(time_scheme(dt, mat))
                 return np.max(np.abs(eigvals)) - 1.
             return np.exp(fsolve(error, -np.log(self.row_size))[0])
-        return max_cfl(advection, ssp_rk3)
+        def objective(coefs):
+            p = polynomial(coefs)
+            return -max_cfl(diffusion, p)
+        opt = minimize(objective, [1e-5], method="Nelder-Mead", tol=1e-10)
+        return max_cfl(advection, ssp_rk3), -objective(opt.x)*.95, opt.x[0]

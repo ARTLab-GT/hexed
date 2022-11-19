@@ -57,7 +57,7 @@ for basis_params in [("Gauss_legendre", gauss_legendre), ("Gauss_lobatto", gauss
         nodes = [(node + 1)/2 for node in nodes]
         weights = [weight/2 for weight in weights]
         basis = Basis(nodes, weights, calc_digits=calc_digits)
-        member_names = ["node", "weight", "diff_mat", "boundary", "orthogonal", "max_cfl"]
+        member_names = ["node", "weight", "diff_mat", "boundary", "orthogonal", "time_coefs"]
 
         text += f"""
 const double node{row_size} [{row_size}] {{
@@ -100,8 +100,8 @@ const double orthogonal{row_size} [{row_size**2}] {{
             text += "\n"
         text += "};\n"
 
-        max_cfl = basis.max_cfl()
-        text  += f"\nconst double max_cfl{row_size} [1] = {{{max_cfl}}};\n"
+        time_coefs = basis.time_coefs()
+        text  += f"\nconst double time_coefs{row_size} [3] {{{time_coefs[0]}, {time_coefs[1]}, {time_coefs[2]}}};\n"
 
         if "legendre" in name:
             text += f"""
@@ -192,7 +192,17 @@ Eigen::VectorXd {name}::orthogonal(int degree) const
 
 double {name}::max_cfl_convective() const
 {{{conditional_block}
-  return {name}_lookup::max_cfls[row_size - {min_row_size}][0];
+  return {name}_lookup::time_coefss[row_size - {min_row_size}][0];
+}}
+
+double {name}::max_cfl_diffusive() const
+{{{conditional_block}
+  return {name}_lookup::time_coefss[row_size - {min_row_size}][1];
+}}
+
+double {name}::cancellation_diffusive() const
+{{{conditional_block}
+  return {name}_lookup::time_coefss[row_size - {min_row_size}][2];
 }}
 """
 
