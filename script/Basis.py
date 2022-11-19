@@ -1,6 +1,7 @@
 import sympy as sp
 import numpy as np
 from scipy.optimize import fsolve, minimize
+import warnings
 
 class Basis:
     def __init__(self, nodes, weights, repr_digits=20, calc_digits=50):
@@ -124,5 +125,7 @@ class Basis:
         def objective(coefs):
             p = polynomial(coefs)
             return -max_cfl(diffusion, p)
-        opt = minimize(objective, [1e-5], method="Nelder-Mead", tol=1e-10)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            opt = minimize(objective, [1e-5], method="Nelder-Mead", tol=1e-10)
         return max_cfl(advection, ssp_rk3), -objective(opt.x)*.95, opt.x[0]
