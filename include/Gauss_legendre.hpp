@@ -20,6 +20,7 @@ class Gauss_legendre : public Basis
   virtual Eigen::MatrixXd restrict (int i_half) const;
   virtual double max_cfl_convective() const;
   virtual double max_cfl_diffusive() const;
+  virtual double cancellation_convective() const;
   virtual double cancellation_diffusive() const;
 };
 

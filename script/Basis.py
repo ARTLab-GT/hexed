@@ -122,21 +122,15 @@ class Basis:
                 eigvals, eigvecs = np.linalg.eig(time_scheme(dt, mat))
                 return np.max(np.abs(eigvals)) - 1.
             return np.exp(fsolve(error, -np.log(self.row_size))[0])
-        """
-        def objective(coefs):
-            p = polynomial(coefs)
-            return -max_cfl(advection, p)
-        opt = minimize(objective, [1e-5], method="Nelder-Mead", tol=1e-10)
-        print(opt)
-        assert self.row_size != 8
-        """
-        def objective(coefs):
-            p = polynomial(coefs)
-            return -max_cfl(diffusion, p)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            opt = minimize(objective, [1e-5], method="Nelder-Mead", tol=1e-10)
-        cancel = opt.x[0]
-        cfl = -objective(opt.x)*.95
-        assert cancel/cfl < 4, "negative discriminant for alternating scheme detected"
-        return max_cfl(advection, ssp_rk3), cfl, cancel
+        def compute_coefs(mat):
+            def objective(coefs):
+                p = polynomial(coefs)
+                return -max_cfl(mat, p)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                opt = minimize(objective, [1e-5], method="Nelder-Mead", tol=1e-10)
+                cancel = opt.x[0]
+                cfl = -objective(opt.x)*.95
+            assert cancel/cfl < .25, "negative discriminant for alternating scheme detected"
+            return cfl, cancel
+        return (max_cfl(advection, ssp_rk3), 0), compute_coefs(diffusion)

@@ -46,6 +46,12 @@ double Basis::max_cfl_diffusive() const
   return 0.;
 }
 
+double Basis::cancellation_convective() const
+{
+  throw std::runtime_error("Not implemented for base class.");
+  return 0.;
+}
+
 double Basis::cancellation_diffusive() const
 {
   throw std::runtime_error("Not implemented for base class.");
