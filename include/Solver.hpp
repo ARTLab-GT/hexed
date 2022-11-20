@@ -19,7 +19,6 @@ namespace hexed
 
 class Solver
 {
-  protected:
   Storage_params params;
   Accessible_mesh acc_mesh;
   Gauss_legendre basis;
@@ -28,9 +27,8 @@ class Solver
   std::vector<double> rk_weights {1., 1./4., 2./3.};
   bool use_art_visc;
   bool fix_admis;
-  const double fix_stab_rat = .7;
+  const double fix_stab_rat = 1.;
   void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
-  void update_laplacian(double dt, bool use_av_coef, bool bcs = 1);
   void update_art_visc(double dt, bool use_av_coef);
   void fix_admissibility(double stability_ratio);
 

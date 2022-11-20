@@ -3,6 +3,7 @@
 #include <hexed/Local_av0_cartesian.hpp>
 #include <hexed/Local_av1_cartesian.hpp>
 #include <hexed/Gauss_legendre.hpp>
+#include <hexed/Qpoint_func.hpp>
 #include <hexed/Write_face.hpp>
 
 TEST_CASE("local cartesian artificial viscosity")
@@ -61,7 +62,7 @@ TEST_CASE("local cartesian artificial viscosity")
           correct += scale[2]*deriv_cubic(k);
           correct *= .3/(.4*.4/2/2); // .3 for time step, .4 for mesh size, 2 for ref level
           int i_qpoint = (i*row_size + j)*row_size + k;
-          REQUIRE(elem.stage(0)[n_qpoint + i_qpoint] == Approx(correct).scale(1.));
+          REQUIRE(hexed::Physical_update()(elem, basis, i_qpoint, 0)[1] == Approx(correct).scale(1.));
         }
       }
     }
@@ -89,6 +90,10 @@ TEST_CASE("local cartesian artificial viscosity")
       }
     }
     (hexed::Write_face<3, row_size>(basis))(elem_view); // `Local_av0_cartesian` expects faces to contain numerical LDG state
+    double face_data [6*5*n_qpoint/row_size];
+    for (int i_data = 0; i_data < 6*5*n_qpoint/row_size; ++i_data) {
+      face_data[i_data] = elem.face()[i_data];
+    }
     (hexed::Local_av0_cartesian<3, row_size>(basis, .314))(elem_view);
     SECTION("flux writing")
     {
@@ -104,11 +109,11 @@ TEST_CASE("local cartesian artificial viscosity")
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
         // correct answer is 0 because 2nd derivative is 0
         // if face term is not correctly added answer may be nonzero
-        REQUIRE(elem.stage(0)[i_qpoint] == Approx(0.).scale(1.));
+        REQUIRE(hexed::Physical_update()(elem, basis, i_qpoint, 0)[0] == Approx(0.).scale(1.));
       }
       // check that the correct state has been written to the faces
       for (int i_data = 0; i_data < 6*5*n_qpoint/row_size; ++i_data) {
-        REQUIRE(elem.face()[i_data] == Approx(0).scale(1.));
+        REQUIRE(elem.face()[i_data] == Approx(face_data[i_data]).scale(1.));
       }
     }
   }

@@ -174,8 +174,8 @@ class Local_av0_deformed : public Kernel<Deformed_element&>
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           double scale = scalar ? 1 : tss[i_qpoint];
           const int i_dof = i_var*n_qpoint + i_qpoint;
-          state[i_dof] = time_rate[i_var][i_qpoint]*d_t_by_d_pos*scale/det[i_qpoint]
-                         *(use_coef ? 1 : scale);
+          state[i_dof] += time_rate[i_var][i_qpoint]*d_t_by_d_pos*scale/det[i_qpoint]
+                          *(use_coef ? 1 : scale);
         }
       }
     }
