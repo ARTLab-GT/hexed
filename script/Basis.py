@@ -136,4 +136,7 @@ class Basis:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             opt = minimize(objective, [1e-5], method="Nelder-Mead", tol=1e-10)
-        return max_cfl(advection, ssp_rk3), -objective(opt.x)*.95, opt.x[0]
+        cancel = opt.x[0]
+        cfl = -objective(opt.x)*.95
+        assert cancel/cfl < 4, "negative discriminant for alternating scheme detected"
+        return max_cfl(advection, ssp_rk3), cfl, cancel
