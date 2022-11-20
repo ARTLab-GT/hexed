@@ -597,17 +597,17 @@ void Solver::update_art_visc(double dt, bool use_av_coef)
     double* state = elems[i_elem].stage(0);
     for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] = state[i_dof];
   }
+  update_laplacian(basis.cancellation_diffusive()/basis.max_cfl_diffusive()*dt, use_av_coef);
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    double* state = elems[i_elem].stage(0);
+    for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof] += state[i_dof + n_dof];
+  }
+  (*hexed::kernel_factory<hexed::Write_face>(nd, rs, basis))(elems);
+  (*hexed::kernel_factory<hexed::Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
   update_laplacian(dt, use_av_coef);
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     double* state = elems[i_elem].stage(0);
-    for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] += state[i_dof];
-  }
-  update_laplacian(basis.cancellation_diffusive()/basis.max_cfl_diffusive()*dt, use_av_coef, false);
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    double* state = elems[i_elem].stage(0);
-    for (int i_dof = 0; i_dof < n_dof; ++i_dof) {
-      state[i_dof] = state[i_dof] + state[i_dof + n_dof];
-    }
+    for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof] += state[i_dof + n_dof];
   }
   (*hexed::kernel_factory<hexed::Write_face>(nd, rs, basis))(elems);
   (*hexed::kernel_factory<hexed::Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
