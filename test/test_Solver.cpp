@@ -554,10 +554,11 @@ void test_marching(Test_mesh& tm, std::string name)
   for (auto handle : sol.mesh().elem_handles()) {
     for (int i_qpoint = 0; i_qpoint < sol.storage_params().n_qpoint(); ++i_qpoint) {
       for (int i_var = 0; i_var < sol.storage_params().n_var; ++i_var) {
-        auto state   = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::State_variables());
-        auto update  = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Physical_update());
-        auto correct = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, Nonuniform_residual());
-        REQUIRE(update[i_var]/status.time_step == Approx(correct[i_var]).margin(1e-3*std::abs(state[i_var])));
+        auto state      = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::State_variables());
+        auto init_state = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, Nonuniform_mass());
+        auto tss        = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Time_step_scale_func());
+        auto correct    = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, Nonuniform_residual());
+        REQUIRE((state[i_var] - init_state[i_var])/tss[0]/status.time_step == Approx(correct[i_var]).margin(1e-3*std::abs(state[i_var])));
       }
     }
   }
@@ -580,10 +581,10 @@ void test_art_visc(Test_mesh& tm, std::string name)
   // check that the computed update is approximately equal to the exact solution
   for (auto handle : sol.mesh().elem_handles()) {
     for (int i_qpoint = 0; i_qpoint < sol.storage_params().n_qpoint(); ++i_qpoint) {
-      auto state  = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::State_variables());
-      auto update = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Physical_update());
-      auto tss    = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Time_step_scale_func());
-      REQUIRE(update[n_dim]/status.time_step == Approx(-n_dim*300.*(state[n_dim] - update[n_dim]*tss[0] - 1.)).margin(1e-3));
+      auto state      = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::State_variables());
+      auto init_state = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, Sinusoid());
+      auto tss        = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Time_step_scale_func());
+      REQUIRE((state[n_dim] - init_state[n_dim])/tss[0]/status.time_step == Approx(-n_dim*300.*(init_state[n_dim] - 1.)).margin(1e-3));
     }
   }
 }
