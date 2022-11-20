@@ -502,6 +502,7 @@ void Solver::update(double stability_ratio)
     fix_admissibility(fix_stab_rat*stability_ratio);
   }
 
+  // compute viscous update
   if (use_art_visc) {
     update_art_visc(dt, true);
     fix_admissibility(fix_stab_rat*stability_ratio);
@@ -523,26 +524,29 @@ void Solver::update_art_visc(double dt, bool use_av_coef)
   const int nd = params.n_dim;
   const int rs = params.row_size;
   auto& bc_cons {acc_mesh.boundary_connections()};
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
+  for (double coef : {basis.cancellation_diffusive()/basis.max_cfl_diffusive()*dt, dt})
+  {
+    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+      int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+      acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
+    }
+    (*kernel_factory<Neighbor_avg_cartesian>(nd, rs       ))(acc_mesh.cartesian().face_connections());
+    (*kernel_factory<Neighbor_avg_deformed >(nd, rs, false))(acc_mesh.deformed ().face_connections());
+    (*kernel_factory<Restrict_refined>(nd, rs, basis, false))(acc_mesh.refined_faces());
+    (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, coef, use_av_coef))(acc_mesh.cartesian().elements());
+    (*kernel_factory<Local_av0_deformed >(nd, rs, basis, coef, use_av_coef))(acc_mesh.deformed ().elements());
+    (*kernel_factory<Prolong_refined>(nd, rs, basis, true))(acc_mesh.refined_faces());
+    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+      int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+      acc_mesh.boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
+    }
+    (*kernel_factory<Neighbor_avg_cartesian>(nd, rs      ))(acc_mesh.cartesian().face_connections());
+    (*kernel_factory<Neighbor_avg_deformed >(nd, rs, true))(acc_mesh.deformed ().face_connections());
+    (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+    (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, coef, use_av_coef))(acc_mesh.cartesian().elements());
+    (*kernel_factory<Local_av1_deformed >(nd, rs, basis, coef, use_av_coef))(acc_mesh.deformed ().elements());
+    (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
   }
-  (*kernel_factory<Neighbor_avg_cartesian>(nd, rs       ))(acc_mesh.cartesian().face_connections());
-  (*kernel_factory<Neighbor_avg_deformed >(nd, rs, false))(acc_mesh.deformed ().face_connections());
-  (*kernel_factory<Restrict_refined>(nd, rs, basis, false))(acc_mesh.refined_faces());
-  (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, dt, use_av_coef))(acc_mesh.cartesian().elements());
-  (*kernel_factory<Local_av0_deformed >(nd, rs, basis, dt, use_av_coef))(acc_mesh.deformed ().elements());
-  (*kernel_factory<Prolong_refined>(nd, rs, basis, true))(acc_mesh.refined_faces());
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh.boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
-  }
-  (*kernel_factory<Neighbor_avg_cartesian>(nd, rs      ))(acc_mesh.cartesian().face_connections());
-  (*kernel_factory<Neighbor_avg_deformed >(nd, rs, true))(acc_mesh.deformed ().face_connections());
-  (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-  (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, dt, use_av_coef))(acc_mesh.cartesian().elements());
-  (*kernel_factory<Local_av1_deformed >(nd, rs, basis, dt, use_av_coef))(acc_mesh.deformed ().elements());
-  (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
 }
 
 void Solver::fix_admissibility(double stability_ratio)
