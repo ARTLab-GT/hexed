@@ -48,16 +48,15 @@ TEST_CASE("Local_cartesian")
         state[0*n_qpoint + i_qpoint] = mmtm;
         state[1*n_qpoint + i_qpoint] = mass;
         state[2*n_qpoint + i_qpoint] = ener;
-        // set RK reference state
+        // set reference stage
         for (int i_var = 0; i_var < 3; ++i_var) state[(3 + i_var)*n_qpoint + i_qpoint] = 30.;
       }
       for (int i_face = 0; i_face < n_qpoint/params.row_size*3*2*1; ++i_face) {
         elements[i_elem]->face()[i_face] = 0.;
       }
     }
-    double rk_weight = 0.9;
     car_elem_view elem_view {elements};
-    (*hexed::kernel_factory<hexed::Local_cartesian>(1, 2, basis, d_t, rk_weight))(elem_view);
+    (*hexed::kernel_factory<hexed::Local_cartesian>(1, 2, basis, d_t*.9, .9, .1))(elem_view);
     for (auto& element : elements)
     {
       double* state = element->stage(0);
@@ -91,7 +90,7 @@ TEST_CASE("Local_cartesian")
         state[2*n_qpoint + i_qpoint] = mass*veloc2;
         state[3*n_qpoint + i_qpoint] = mass;
         state[4*n_qpoint + i_qpoint] = ener;
-        // set RK reference state (since RK weight is 1., inializing to 0 works fine)
+        // set reference stage (since reference weight is 1., inializing to 0 works fine)
         for (int i_var = 0; i_var < 5; ++i_var) state[(5 + i_var)*n_qpoint + i_qpoint] = 0.;
       }
       for (int i_face = 0; i_face < n_qpoint/params.row_size*5*2*3; ++i_face) {
@@ -100,7 +99,7 @@ TEST_CASE("Local_cartesian")
       elements[i_elem]->time_step_scale()[1] = 0.16;
     }
     car_elem_view elem_view {elements};
-    (*hexed::kernel_factory<hexed::Local_cartesian>(3, params.row_size, basis, d_t, 1.))(elem_view);
+    (*hexed::kernel_factory<hexed::Local_cartesian>(3, params.row_size, basis, d_t, 1., 0.))(elem_view);
     for (auto& element : elements)
     {
       double* state = element->stage(0);
@@ -124,14 +123,6 @@ TEST_CASE("Local_cartesian")
     int n_qpoint = params.n_qpoint();
     std::vector<std::unique_ptr<hexed::Element>> elements;
     hexed::Gauss_legendre basis (row_size);
-    /*
-     * to test the correctness of the time derivative, set the RK weight to 0.5
-     * and the RK reference state to minus the initial state. Thus the initial state
-     * and the reference state cancel out, and the result is 0.5 times the time derivative
-     * being written to the state.
-     */
-    double rk_weight = 0.5;
-
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
       elements.emplace_back(new hexed::Element {params, {}, 2.});
@@ -156,9 +147,9 @@ TEST_CASE("Local_cartesian")
           state[1*n_qpoint + i_qpoint] = mass*veloc[1];
           state[2*n_qpoint + i_qpoint] = mass;
           state[3*n_qpoint + i_qpoint] = ener;
-          // set RK reference state to negative of initial state
+          // set reference stage to zero
           for (int i_var = 0; i_var < 4; ++i_var) {
-            state[(4 + i_var)*n_qpoint + i_qpoint] = -state[i_var*n_qpoint + i_qpoint];
+            state[(4 + i_var)*n_qpoint + i_qpoint] = 0;
           }
         }
         // set face state to match interior state
@@ -181,12 +172,12 @@ TEST_CASE("Local_cartesian")
       #undef SET_VARS
     }
     car_elem_view elem_view {elements};
-    (*hexed::kernel_factory<hexed::Local_cartesian>(2, row_size, basis, d_t, rk_weight))(elem_view);
+    (*hexed::kernel_factory<hexed::Local_cartesian>(2, row_size, basis, d_t, 0, 0))(elem_view);
     for (auto& element : elements) {
       double* state = element->stage(0);
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-        REQUIRE(state[2*n_qpoint + i_qpoint] == Approx(-0.05*(0.1*10 - 0.2*20)));
-        REQUIRE(state[3*n_qpoint + i_qpoint] == Approx(-0.05*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20)
+        REQUIRE(state[2*n_qpoint + i_qpoint] == Approx(-0.1*(0.1*10 - 0.2*20)));
+        REQUIRE(state[3*n_qpoint + i_qpoint] == Approx(-0.1*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20)
                                                        + 0.5*(10*10 + 20*20)*(0.1*10 - 0.2*20))));
       }
     }
