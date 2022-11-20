@@ -496,7 +496,10 @@ void Solver::update(double stability_ratio)
   irk.work_units_completed += elems.size();
 
   // compute inviscid update
-  for (double rk_weight : rk_weights) {
+  double update = dt;
+  double curr = 1;
+  double ref = 0;
+  for (int i = 0; i < 2; ++i) {
     auto& bc_cons {acc_mesh.boundary_connections()};
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
       int bc_sn = bc_cons[i_con].bound_cond_serial_n();
@@ -505,10 +508,13 @@ void Solver::update(double stability_ratio)
     (*kernel_factory<Neighbor_inviscid_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor");
     (*kernel_factory<Neighbor_inviscid_deformed >(nd, rs))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor");
     (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-    (*kernel_factory<Local_cartesian>(nd, rs, basis, dt*rk_weight, rk_weight, 1. - rk_weight))(acc_mesh.cartesian().elements(), sw_car, "local");
-    (*kernel_factory<Local_deformed >(nd, rs, basis, dt*rk_weight, rk_weight, 1. - rk_weight))(acc_mesh.deformed ().elements(), sw_def, "local");
+    (*kernel_factory<Local_cartesian>(nd, rs, basis, update, curr, ref))(acc_mesh.cartesian().elements(), sw_car, "local");
+    (*kernel_factory<Local_deformed >(nd, rs, basis, update, curr, ref))(acc_mesh.deformed ().elements(), sw_def, "local");
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
     fix_admissibility(fix_stab_rat*stability_ratio);
+    update = dt*dt*basis.cancellation_convective()/basis.max_cfl_convective();
+    curr = 1 - update;
+    ref = update;
   }
 
   // compute viscous update

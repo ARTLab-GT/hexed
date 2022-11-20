@@ -131,6 +131,5 @@ class Basis:
                 opt = minimize(objective, [1e-5], method="Nelder-Mead", tol=1e-10)
                 cancel = opt.x[0]
                 cfl = -objective(opt.x)*.95
-            assert cancel/cfl < .25, "negative discriminant for alternating scheme detected"
             return cfl, cancel
-        return (max_cfl(advection, ssp_rk3), 0), compute_coefs(diffusion)
+        return compute_coefs(advection), compute_coefs(diffusion)
