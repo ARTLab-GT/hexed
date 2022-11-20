@@ -97,15 +97,6 @@ class Basis:
         ident = np.identity(n_elem*self.row_size)
         assert np.linalg.norm(global_weights@advection) < 1e-12
         assert np.linalg.norm(global_weights@diffusion) < 1e-12
-        def euler(dt, mat):
-            return ident + dt*mat
-        def rk(dt, step_weights, mat):
-            step_mat = ident + 0
-            for weight in step_weights:
-                step_mat = (1. - weight)*ident + weight*euler(dt, mat)@step_mat
-            return step_mat
-        def ssp_rk3(dt, mat):
-            return rk(dt, [1., 1./4., 2./3.], mat)
         class polynomial:
             def __init__(self, coefs):
                 self.coefs = coefs
@@ -131,11 +122,5 @@ class Basis:
                 opt = minimize(objective, [1e-5], method="Nelder-Mead", tol=1e-10)
                 cancel = opt.x[0]
                 cfl = -objective(opt.x)*.95
-            if self.row_size == 6:
-                for dt in np.linspace(0, cfl, 20):
-                    p = polynomial([cancel*dt/cfl])
-                    eigvals, eigvecs = np.linalg.eig(p(dt, mat))
-                    print(np.max(np.abs(eigvals)))
-                print()
             return cfl, cancel
         return compute_coefs(advection), compute_coefs(diffusion)
