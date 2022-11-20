@@ -556,7 +556,7 @@ void Solver::fix_admissibility(double stability_ratio)
   const int rs = params.row_size;
   int iter;
   for (iter = 0;; ++iter) {
-    if (iter > 9999) {
+    if (iter > 99999) {
       #if HEXED_USE_OTTER
       otter::plot plt;
       visualize_field_otter(plt, Pressure(), 1, {0, 0}, Pressure(), {0, 0}, otter::const_colormap(Eigen::Vector4d{1., 0., 0., .1}), otter::plasma, false, false);
