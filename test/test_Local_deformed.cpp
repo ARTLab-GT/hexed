@@ -59,9 +59,8 @@ TEST_CASE("Local_deformed")
         elements[i_elem]->face()[i_face] = 0.;
       }
     }
-    double rk_weight = 0.9;
     def_elem_view elem_view {elements};
-    (*hexed::kernel_factory<hexed::Local_deformed>(1, 2, basis, d_t, rk_weight))(elem_view);
+    (*hexed::kernel_factory<hexed::Local_deformed>(1, 2, basis, d_t*.9, .9, .1))(elem_view);
     for (auto& element : elements)
     {
       double* state = element->stage(0);
@@ -106,7 +105,7 @@ TEST_CASE("Local_deformed")
       elements[i_elem]->time_step_scale()[1] = 0.16;
     }
     def_elem_view elem_view {elements};
-    (*hexed::kernel_factory<hexed::Local_deformed>(3, params.row_size, basis, d_t, 1.))(elem_view);
+    (*hexed::kernel_factory<hexed::Local_deformed>(3, params.row_size, basis, d_t, 1., 0.))(elem_view);
     for (auto& element : elements)
     {
       double* state = element->stage(0);
@@ -130,13 +129,6 @@ TEST_CASE("Local_deformed")
     int n_qpoint = params.n_qpoint();
     std::vector<std::unique_ptr<hexed::Deformed_element>> elements;
     hexed::Gauss_legendre basis (row_size);
-    /*
-     * to test the correctness of the time derivative, set the RK weight to 0.5
-     * and the RK reference state to minus the initial state. Thus the initial state
-     * and the reference state cancel out, and the result is 0.5 times the time derivative
-     * being written to the state.
-     */
-    double rk_weight = 0.5;
 
     for (int i_elem = 0; i_elem < n_elem; ++i_elem)
     {
@@ -188,12 +180,12 @@ TEST_CASE("Local_deformed")
       #undef SET_VARS
     }
     def_elem_view elem_view {elements};
-    (*hexed::kernel_factory<hexed::Local_deformed>(2, row_size, basis, d_t, rk_weight))(elem_view);
+    (*hexed::kernel_factory<hexed::Local_deformed>(2, row_size, basis, d_t, 0, 0))(elem_view);
     for (auto& element : elements) {
       double* state = element->stage(0);
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-        REQUIRE(state[2*n_qpoint + i_qpoint] == Approx(-0.05*(0.1*10 - 0.2*20)));
-        REQUIRE(state[3*n_qpoint + i_qpoint] == Approx(-0.05*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20)
+        REQUIRE(state[2*n_qpoint + i_qpoint] == Approx(-0.1*(0.1*10 - 0.2*20)));
+        REQUIRE(state[3*n_qpoint + i_qpoint] == Approx(-0.1*(1e5*(1./0.4 + 1.)*(-0.3*10 - 0.5*20)
                                                        + 0.5*(10*10 + 20*20)*(0.1*10 - 0.2*20))));
       }
     }

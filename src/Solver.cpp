@@ -506,7 +506,7 @@ void Solver::update(double stability_ratio)
     (*kernel_factory<Neighbor_inviscid_deformed >(nd, rs))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor");
     (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
     (*kernel_factory<Local_cartesian>(nd, rs, basis, dt*rk_weight, rk_weight, 1. - rk_weight))(acc_mesh.cartesian().elements(), sw_car, "local");
-    (*kernel_factory<Local_deformed >(nd, rs, basis, dt, rk_weight))(acc_mesh.deformed ().elements(), sw_def, "local");
+    (*kernel_factory<Local_deformed >(nd, rs, basis, dt*rk_weight, rk_weight, 1. - rk_weight))(acc_mesh.deformed ().elements(), sw_def, "local");
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
     fix_admissibility(fix_stab_rat*stability_ratio);
   }
