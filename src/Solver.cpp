@@ -512,9 +512,9 @@ void Solver::update(double stability_ratio)
     (*kernel_factory<Local_deformed >(nd, rs, basis, update, curr, ref))(acc_mesh.deformed ().elements(), sw_def, "local");
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
     fix_admissibility(fix_stab_rat*stability_ratio);
-    update = dt*dt*basis.cancellation_convective()/basis.max_cfl_convective();
-    curr = 1 - update;
-    ref = update;
+    update = dt*basis.cancellation_convective()/basis.max_cfl_convective();
+    curr = 1 - update/dt;
+    ref = 1 - curr;
   }
 
   // compute viscous update

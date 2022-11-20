@@ -131,5 +131,11 @@ class Basis:
                 opt = minimize(objective, [1e-5], method="Nelder-Mead", tol=1e-10)
                 cancel = opt.x[0]
                 cfl = -objective(opt.x)*.95
+            if self.row_size == 6:
+                for dt in np.linspace(0, cfl, 20):
+                    p = polynomial([cancel*dt/cfl])
+                    eigvals, eigvecs = np.linalg.eig(p(dt, mat))
+                    print(np.max(np.abs(eigvals)))
+                print()
             return cfl, cancel
         return compute_coefs(advection), compute_coefs(diffusion)

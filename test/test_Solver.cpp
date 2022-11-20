@@ -546,7 +546,7 @@ void test_marching(Test_mesh& tm, std::string name)
   REQUIRE(status.flow_time == 0.);
   REQUIRE(status.iteration == 0);
   // update
-  sol.update();
+  sol.update(1e-3);
   status = sol.iteration_status();
   REQUIRE(status.flow_time > 0.);
   REQUIRE(status.iteration == 1);
