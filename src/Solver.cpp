@@ -323,7 +323,10 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
           double* state = elements[i_elem].stage(0) + nd*nq;
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) state[i_qpoint + nq] = state[i_qpoint];
         }
-        for (double rk_weight : rk_weights) {
+        double update = dt;
+        double curr = 1;
+        double ref = 0;
+        for (int i = 0; i < 2; ++i) {
           auto& bc_cons {acc_mesh.boundary_connections()};
           for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
             int bc_sn = bc_cons[i_con].bound_cond_serial_n();
@@ -332,9 +335,12 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
           (*kernel_factory<Neighbor_advection_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections());
           (*kernel_factory<Neighbor_advection_deformed >(nd, rs))(acc_mesh.deformed ().face_connections());
           (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-          (*kernel_factory<Local_advection_cartesian>(nd, rs, basis, dt, rk_weight))(acc_mesh.cartesian().elements());
-          (*kernel_factory<Local_advection_deformed >(nd, rs, basis, dt, rk_weight))(acc_mesh.deformed ().elements());
+          (*kernel_factory<Local_advection_cartesian>(nd, rs, basis, update, curr, ref))(acc_mesh.cartesian().elements());
+          (*kernel_factory<Local_advection_deformed >(nd, rs, basis, update, curr, ref))(acc_mesh.deformed ().elements());
           (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+          update = dt*basis.cancellation_convective()/basis.max_cfl_convective();
+          curr = 1 - update/dt;
+          ref = 1 - curr;
         }
       }
       // add this node's contribution to the projection to `art_visc_coef`

@@ -21,15 +21,17 @@ class Local_advection_deformed : public Kernel<Deformed_element&>
 {
   Derivative<row_size> derivative;
   Write_face<n_dim, row_size> write_face;
-  double dt;
-  double rkw;
+  double update;
+  double curr;
+  double ref;
 
   public:
-  Local_advection_deformed(const Basis& basis, double d_time, double rk_weight) :
+  Local_advection_deformed(const Basis& basis, double update_coef, double current_coef, double reference_coef) :
     derivative{basis},
     write_face{basis},
-    dt{d_time},
-    rkw{rk_weight}
+    update{update_coef},
+    curr{current_coef},
+    ref{reference_coef}
   {}
 
   virtual void operator()(Sequence<Deformed_element&>& elements)
@@ -49,7 +51,7 @@ class Local_advection_deformed : public Kernel<Deformed_element&>
       double* normals = elem.reference_level_normals();
       double* determinant = elem.jacobian_determinant();
       double* face = elem.face();
-      const double d_t_by_d_pos = dt/elem.nominal_size();
+      const double d_pos = elem.nominal_size();
 
       // Compute update
       for (int stride = n_qpoint/row_size, n_rows = 1, i_dim = 0; n_rows < n_qpoint;
@@ -98,8 +100,9 @@ class Local_advection_deformed : public Kernel<Deformed_element&>
 
       // write the updated solution
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-        double updated = time_rate[i_qpoint]/determinant[i_qpoint]*d_t_by_d_pos + state[i_qpoint];
-        state[i_qpoint] = rkw*updated + (1. - rkw)*rk_reference[i_qpoint];
+        state[i_qpoint] = update*time_rate[i_qpoint]/determinant[i_qpoint]/d_pos
+                          + curr*state[i_qpoint]
+                          + ref*rk_reference[i_qpoint];
       }
       write_face(veloc, face);
     }
