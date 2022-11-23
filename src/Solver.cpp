@@ -328,7 +328,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
             state[nd*nq + i_qpoint] = state[(nd + 1)*nq + i_qpoint] = adv[i_node*nq + i_qpoint];
             for (int j_proj = 0; j_proj < rs; ++j_proj) {
-              adv[i_node*nq + i_qpoint] -= dt_adv*diff_mat(i_node, j_proj)*adv[j_proj*nq + i_qpoint]*(2*sign - 1)/advect_length;
+              adv[i_node*nq + i_qpoint] -= dt_adv*adv[j_proj*nq + i_qpoint]*(2*sign - 1)/advect_length;
             }
           }
         }
@@ -371,7 +371,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
           double* state = elements[i_elem].stage(0);
           double* adv = elements[i_elem].advection_state();
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-            adv[i_node*nq + i_qpoint] += state[nd*nq + i_qpoint] - state[(nd + 1)*nq + i_qpoint];
+            adv[(i_node + rs)*nq + i_qpoint] = state[nd*nq + i_qpoint] - state[(nd + 1)*nq + i_qpoint];
           }
         }
         printf("%i %i\n", sign, i_node);
@@ -431,6 +431,18 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
       double* adv = elements[i_elem].advection_state();
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        Eigen::VectorXd res(rs + 1);
+        res(rs) = 0;
+        for (int i_proj = 0; i_proj < rs; ++i_proj) {
+          res(i_proj) = adv[(i_proj + rs)*nq + i_qpoint];
+        }
+        Eigen::MatrixXd mat(rs + 1, rs);
+        mat(Eigen::seqN(0, rs), Eigen::all) = diff_mat;
+        mat(rs, Eigen::all) = interp;
+        Eigen::VectorXd soln = mat.colPivHouseholderQr().solve(res);
+        for (int i_proj = 0; i_proj < rs; ++i_proj) {
+          adv[i_proj*nq + i_qpoint] += soln(i_proj);
+        }
         double total = -1;
         for (int i_proj = 0; i_proj < rs; ++i_proj) {
           total += interp(i_proj)*adv[i_proj*nq + i_qpoint];
