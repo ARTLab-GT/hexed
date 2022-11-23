@@ -66,7 +66,7 @@ class Solver
   void initialize(const Spacetime_func&);
   void set_art_visc_off();
   void set_art_visc_constant(double);
-  void set_art_visc_smoothness(int projection_row_size, double advect_length, double shift = .5, double diff_ratio = 5e-3, double visc_mult = 2., double stability_ratio = .1, double diff_stab_rat = .8);
+  void set_art_visc_smoothness(int projection_row_size, double advect_length, double shift = .5, double diff_ratio = 5e-3, double visc_mult = 2., double stability_ratio = 1e-2, double diff_stab_rat = .8);
   void set_fix_admissibility(bool);
   /*
    * set the resolution badness for each element according to `func`.

@@ -303,9 +303,9 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
   Gauss_legendre proj_basis(proj_rs); // basis on which advection solution will be projected (in time domain) to compute nonsmoothness
   Eigen::MatrixXd diff_mat = basis.diff_mat();
-  Eigen::MatrixXd interp = basis.interpolate(Eigen::VectorXd::Zero(1));
+  Eigen::MatrixXd interp = basis.interpolate(Eigen::VectorXd::Constant(1, .5));
   HEXED_ASSERT(proj_rs == rs, "");
-  for (int iter = 0; iter < 1000; ++iter)
+  for (int iter = 0; iter < 10000; ++iter)
   {
     for (int sign : {-1, 1}) // do forward and backward advection separately
     {
@@ -319,16 +319,20 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
       // loop through nodes of projection basis
       for (int i_proj = proj_rs - proj_rs/2; i_proj < proj_rs; ++i_proj)
       {
+        State_variables sv;
         // find out which node we're looking at
         int i_node = (sign > 0) ? i_proj : proj_rs - 1 - i_proj; // if sign < 0 we are looping through the nodes backward
         #pragma omp parallel for
         for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
           double* state = elements[i_elem].stage(0);
           double* adv = elements[i_elem].advection_state();
+          double* av = elements[i_elem].art_visc_coef();
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
             state[nd*nq + i_qpoint] = state[(nd + 1)*nq + i_qpoint] = adv[i_node*nq + i_qpoint];
             for (int j_proj = 0; j_proj < rs; ++j_proj) {
-              adv[i_node*nq + i_qpoint] -= dt_adv*diff_mat(i_node, j_proj)*adv[j_proj*nq + i_qpoint]*(2*sign - 1)/advect_length;
+              double d = dt_adv*diff_mat(i_node, j_proj)*adv[j_proj*nq + i_qpoint]*(2*sign - 1)/advect_length;
+              if (i_node == 0) av[i_qpoint] = -d;
+              adv[i_node*nq + i_qpoint] -= d;
             }
           }
         }
@@ -370,66 +374,27 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
         for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
           double* state = elements[i_elem].stage(0);
           double* adv = elements[i_elem].advection_state();
+          double* av = elements[i_elem].art_visc_coef();
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-            adv[i_node*nq + i_qpoint] += state[nd*nq + i_qpoint] - state[(nd + 1)*nq + i_qpoint];
+            double d = state[nd*nq + i_qpoint] - state[(nd + 1)*nq + i_qpoint];
+            if (i_node == 0) av[i_qpoint] += d;
+            adv[i_node*nq + i_qpoint] += d;
           }
         }
-        printf("%i %i\n", sign, i_node);
-        State_variables sv;
-        if (iter%100 == 0) {
+        //printf("%i %i\n", sign, i_node);
+        if (iter%1000 == 0) {
           #if HEXED_USE_OTTER
           otter::plot plt;
           visualize_field_otter(plt, Component(sv, nd));
           plt.show();
           #endif
         }
-        #if 0
-        // advect to the next node
-        advect_time += sign*len;
-        int n_iter = ceil(len/dt_adv);
-        double dt = len/n_iter;
-        for (int i_iter = 0; i_iter < n_iter; ++i_iter) {
-          #pragma omp parallel for
-          for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-            double* state = elements[i_elem].stage(0) + nd*nq;
-            for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) state[i_qpoint + nq] = state[i_qpoint];
-          }
-          double update = dt;
-          double curr = 1;
-          double ref = 0;
-          for (int i = 0; i < 2; ++i) {
-            auto& bc_cons {acc_mesh.boundary_connections()};
-            for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-              int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-              acc_mesh.boundary_condition(bc_sn).flow_bc->apply_advection(bc_cons[i_con]);
-            }
-            (*kernel_factory<Neighbor_advection_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections());
-            (*kernel_factory<Neighbor_advection_deformed >(nd, rs))(acc_mesh.deformed ().face_connections());
-            (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-            (*kernel_factory<Local_advection_cartesian>(nd, rs, basis, update, curr, ref))(acc_mesh.cartesian().elements());
-            (*kernel_factory<Local_advection_deformed >(nd, rs, basis, update, curr, ref))(acc_mesh.deformed ().elements());
-            (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-            update = dt*basis.cancellation_convective()/basis.max_cfl_convective();
-            curr = 1 - update/dt;
-            ref = 1 - curr;
-          }
-        }
-        // add this node's contribution to the projection to `art_visc_coef`
-        double coef = proj_basis.orthogonal(proj_rs - 1)(i_node)*proj_basis.node_weights()(i_node);
-        #pragma omp parallel for
-        for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-          double* state = elements[i_elem].stage(0);
-          double* av = elements[i_elem].art_visc_coef();
-          for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-            av[i_qpoint] += coef*state[nd*nq + i_qpoint];
-          }
-        }
-        #endif
       }
     }
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
       double* adv = elements[i_elem].advection_state();
+      double* av = elements[i_elem].art_visc_coef();
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
         double total = -1;
         for (int i_proj = 0; i_proj < rs; ++i_proj) {
@@ -438,8 +403,19 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
         for (int i_proj = 0; i_proj < rs; ++i_proj) {
           adv[i_proj*nq + i_qpoint] -= total;
         }
+        av[i_qpoint] -= total;
       }
     }
+    double diff = 0;
+    #pragma omp parallel for reduction(+:diff)
+    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+      double* av = elements[i_elem].art_visc_coef();
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        diff += av[i_qpoint]*av[i_qpoint];
+      }
+    }
+    diff /= elements.size()*rs*rs;
+    printf("%i %e\n", iter, diff);
   } // Cauchy-Kovalevskaya-style derivative estimate complete!
 
   // begin root-smear-square operation
