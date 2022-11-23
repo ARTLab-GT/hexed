@@ -828,7 +828,7 @@ TEST_CASE("face extrusion")
 
 TEST_CASE("artificial viscosity convergence")
 {
-  #if NDEBUG
+  #if 1
   const int len0 = 100;
   const int len1 = 2;
   hexed::Solver sol(2, hexed::config::max_row_size, 1./len0);
@@ -843,7 +843,7 @@ TEST_CASE("artificial viscosity convergence")
   int nonpen = sol.mesh().add_boundary_condition(new hexed::Nonpenetration, new hexed::Null_mbc);
   int pen [2];
   pen[0] = sol.mesh().add_boundary_condition(new hexed::Freestream({1.1, 0., 1., 1.5}), new hexed::Null_mbc);
-  pen[1] = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Null_mbc);
+  pen[1] = sol.mesh().add_boundary_condition(new hexed::Freestream({0.9, 0., 1., 1.5}), new hexed::Null_mbc);
   for (int positive = 0; positive < 2; ++positive) {
     for (int i = 0; i < len0; ++i) sol.mesh().connect_boundary(0, 0, sn[i][positive*(len1 - 1)], 1, positive, nonpen);
     for (int j = 0; j < len1; ++j) sol.mesh().connect_boundary(0, 0, sn[positive*(len0 - 1)][j], 0, positive, pen[positive]);
