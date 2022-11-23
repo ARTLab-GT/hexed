@@ -391,7 +391,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
       double* adv = elements[i_elem].advection_state();
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        double total = -.9;
+        double total = -1;
         for (int i_proj = 0; i_proj < rs; ++i_proj) {
           total += interp(i_proj)*adv[i_proj*nq + i_qpoint];
         }
@@ -406,11 +406,31 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
       double* adv = elements[i_elem].advection_state();
       double* av = elements[i_elem].art_visc_coef();
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) av[i_qpoint] = 0;
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        double total = -1;
+        for (int i_proj = 0; i_proj < rs; ++i_proj) {
+          total += interp(i_proj)*adv[i_proj*nq + i_qpoint];
+        }
+        diff += total*total;
+      }
       for (int i_proj = 0; i_proj < rs; ++i_proj) {
         for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
           double d = adv[i_proj*nq + i_qpoint] - adv[(i_proj + rs)*nq + i_qpoint];
           av[i_qpoint] += d*d*1e6;
-          diff += d*d;
+          //diff += d*d;
+        }
+      }
+    }
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+      double* adv = elements[i_elem].advection_state();
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        double total = -1;
+        for (int i_proj = 0; i_proj < rs; ++i_proj) {
+          total += interp(i_proj)*adv[i_proj*nq + i_qpoint];
+        }
+        for (int i_proj = 0; i_proj < rs; ++i_proj) {
+          adv[i_proj*nq + i_qpoint] -= total;
         }
       }
     }
