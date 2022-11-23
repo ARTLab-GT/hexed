@@ -82,7 +82,7 @@ class Sinusoid_veloc : public hexed::Spacetime_func
     std::vector<double> state(n_var(n_dim), 0.);
     state[n_dim] = 2.3;
     state[0] =  state[n_dim]*.1*std::sin(pos[0]);
-    state[1] = 0;//-state[n_dim]*.2*std::cos(pos[1]);
+    state[1] = -state[n_dim]*.2*std::cos(pos[1]);
     // set the energy so that 2*h_0 == 1.
     double kin_ener = (state[0]*state[0] + state[1]*state[1])/(2.*state[n_dim]*state[n_dim]);
     double enth = .5 - kin_ener;
@@ -831,18 +831,13 @@ TEST_CASE("artificial viscosity convergence")
   #if 1
   const int len0 = 100;
   const int len1 = 2;
-  hexed::Solver sol(2, hexed::config::max_row_size, 2*M_PI/len0);
+  hexed::Solver sol(2, hexed::config::max_row_size, 1./len0);
   int sn [len0][len1];
   for (int i = 0; i < len0; ++i) {
     for (int j = 0; j < len1; ++j) {
       sn[i][j] = sol.mesh().add_element(0, 0, {i, j});
-      //if (i) sol.mesh().connect_cartesian(0, {sn[i - 1][j], sn[i][j]}, {0});
+      if (i) sol.mesh().connect_cartesian(0, {sn[i - 1][j], sn[i][j]}, {0});
       if (j) sol.mesh().connect_cartesian(0, {sn[i][j - 1], sn[i][j]}, {1});
-    }
-  }
-  for (int i = 0; i < len0; ++i) {
-    for (int j = 0; j < len1; ++j) {
-      sol.mesh().connect_cartesian(0, {sn[i][j], sn[(i + 1)%len0][j]}, {0});
     }
   }
   int nonpen = sol.mesh().add_boundary_condition(new hexed::Nonpenetration, new hexed::Null_mbc);
@@ -851,20 +846,20 @@ TEST_CASE("artificial viscosity convergence")
   pen[1] = sol.mesh().add_boundary_condition(new hexed::Freestream({0.9, 0., 1., 1.5}), new hexed::Null_mbc);
   for (int positive = 0; positive < 2; ++positive) {
     for (int i = 0; i < len0; ++i) sol.mesh().connect_boundary(0, 0, sn[i][positive*(len1 - 1)], 1, positive, nonpen);
-    //for (int j = 0; j < len1; ++j) sol.mesh().connect_boundary(0, 0, sn[positive*(len0 - 1)][j], 0, positive, pen[positive]);
+    for (int j = 0; j < len1; ++j) sol.mesh().connect_boundary(0, 0, sn[positive*(len0 - 1)][j], 0, positive, pen[positive]);
   }
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
   double flow_width = .01;
   double adv_width = .02;
-  sol.initialize(Sinusoid_veloc());
+  sol.initialize(Tanh(flow_width));
   sol.set_art_visc_smoothness(hexed::config::max_row_size, adv_width);
   double init_max = sol.bounds_field(hexed::Art_visc_coef())[0][1];
   // check that doubling the advection length multiplies the viscosity by 2^(max_row_size - 1)
   sol.set_art_visc_smoothness(hexed::config::max_row_size, 2*adv_width);
   REQUIRE(std::log(sol.bounds_field(hexed::Art_visc_coef())[0][1]/init_max)/std::log(2) > 6.);
   // check that doubling the length scale of the flow divides the viscosity by ~2^(max_row_size - 1)
-  sol.initialize(Sinusoid_veloc());
+  sol.initialize(Tanh(2*flow_width));
   sol.set_art_visc_smoothness(hexed::config::max_row_size, adv_width);
   REQUIRE(std::log(init_max/sol.bounds_field(hexed::Art_visc_coef())[0][1])/std::log(2) > 6.);
   #endif

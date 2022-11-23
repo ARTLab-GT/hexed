@@ -304,6 +304,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
   Gauss_legendre proj_basis(proj_rs); // basis on which advection solution will be projected (in time domain) to compute nonsmoothness
   Eigen::MatrixXd diff_mat = basis.diff_mat();
   Eigen::MatrixXd interp = basis.interpolate(Eigen::VectorXd::Constant(1, .5));
+  Eigen::VectorXd weights = basis.node_weights();
   HEXED_ASSERT(proj_rs == rs, "");
   for (int iter = 0; iter < 10000; ++iter)
   {
@@ -339,8 +340,6 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
         double curr = 1;
         double ref = 0;
         for (int i = 0; i < 2; ++i) {
-          (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
-          (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
           auto& bc_cons {acc_mesh.boundary_connections()};
           for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
             #if 1
@@ -376,41 +375,54 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
           }
         }
         //printf("%i %i\n", sign, i_node);
+        #if 1
         if (iter%1000 == 0) {
           #if HEXED_USE_OTTER
           otter::plot plt;
           visualize_field_otter(plt, Component(sv, nd));
+          visualize_field_tecplot(Component(sv, nd), "foo");
           plt.show();
           #endif
         }
+        #endif
       }
     }
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
       double* adv = elements[i_elem].advection_state();
-      double* av = elements[i_elem].art_visc_coef();
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        double total = -1;
+        double total = -.9;
         for (int i_proj = 0; i_proj < rs; ++i_proj) {
           total += interp(i_proj)*adv[i_proj*nq + i_qpoint];
         }
         for (int i_proj = 0; i_proj < rs; ++i_proj) {
-          adv[i_proj*nq + i_qpoint] -= total;
+          adv[i_proj*nq + i_qpoint] -= total*interp(i_proj);
         }
-        av[i_qpoint] -= total;
       }
     }
     double diff = 0;
     #pragma omp parallel for reduction(+:diff)
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
       double* adv = elements[i_elem].advection_state();
+      double* av = elements[i_elem].art_visc_coef();
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) av[i_qpoint] = 0;
       for (int i_proj = 0; i_proj < rs; ++i_proj) {
         for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
           double d = adv[i_proj*nq + i_qpoint] - adv[(i_proj + rs)*nq + i_qpoint];
+          av[i_qpoint] += d*d*1e6;
           diff += d*d;
         }
       }
     }
+    #if 0
+    if (iter%1000 == 0) {
+      #if HEXED_USE_OTTER
+      otter::plot plt;
+      visualize_field_otter(plt, Art_visc_coef());
+      plt.show();
+      #endif
+    }
+    #endif
     diff = std::sqrt(diff/(elements.size()*rs*rs));
     printf("%i %e\n", iter, diff);
   } // Cauchy-Kovalevskaya-style derivative estimate complete!
