@@ -63,6 +63,17 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
     children.emplace("local", unit);
   }
   stopwatch.children.emplace("fix admis.", "(element*(fix admis. iter))");
+  // initialize advection state to 1
+  auto& elements = acc_mesh.elements();
+  const int nq = params.n_qpoint();
+  const int rs = params.row_size;
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    double* adv = elements[i_elem].advection_state();
+    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+      for (int i_adv = 0; i_adv < rs; ++i_adv) adv[i_adv*nq + i_qpoint] = 1.;
+    }
+  }
 }
 
 void Solver::relax_vertices(double factor)
@@ -278,7 +289,6 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
     double* rk_ref = elements[i_elem].stage(1);
-    double* adv = elements[i_elem].advection_state();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       // set advection velocity
       double scale_sq = 2*heat_rat*rk_ref[(nd + 1)*nq + i_qpoint]*rk_ref[nd*nq + i_qpoint];
@@ -290,8 +300,6 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
         // use `sign` to determine whether advection is forward or backward
         state[i_dim*nq + i_qpoint] = rk_ref[i_dim*nq + i_qpoint]/std::sqrt(scale_sq);
       }
-      // initialize state to 1.
-      for (int i_adv = 0; i_adv < rs; ++i_adv) adv[i_adv*nq + i_qpoint] = 1.;
     }
   }
   (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
@@ -306,7 +314,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
   Eigen::MatrixXd interp = basis.interpolate(Eigen::VectorXd::Constant(1, .5));
   Eigen::VectorXd weights = basis.node_weights();
   HEXED_ASSERT(proj_rs == rs, "");
-  for (int iter = 0; iter < 3000; ++iter)
+  for (int iter = 0; iter < 300; ++iter)
   {
     for (int sign : {-1, 1}) // do forward and backward advection separately
     {
@@ -429,22 +437,13 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
       state[nd*nq + i_qpoint] = 1e7*proj*proj;
     }
   }
-  {
-    State_variables sv;
-    #if HEXED_USE_OTTER
-    otter::plot plt;
-    visualize_field_otter(plt, Component(sv, nd));
-    visualize_field_tecplot(Component(sv, nd), "foo");
-    plt.show();
-    #endif
-  }
   (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
   double mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Unit(), 2, 0))(acc_mesh.cartesian().elements()),
                              (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Unit(), 2, 0))(acc_mesh.deformed ().elements()));
   double dt_diff = diff_stab_rat/params.n_dim/(mcs_diff/basis.max_cfl_diffusive());
   // diffuse scalar state by specified amount
-  double diff_time = diff_ratio*.01;
+  double diff_time = diff_ratio*advect_length;
   int n_iter = ceil(diff_time/dt_diff);
   double dt = diff_time/n_iter;
   double linear = dt;
