@@ -12,7 +12,7 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   r_level{ref_level},
   n_dof(params.n_dof()),
   n_vert(params.n_vertices()),
-  data_size{params.n_stage*n_dof + n_dim*2*n_dof/params.row_size + (2 + 2*params.row_size)*params.n_qpoint()},
+  data_size{params.n_stage*n_dof + n_dim*2*n_dof/params.row_size + (3 + 2*params.row_size)*params.n_qpoint()},
   data{Eigen::VectorXd::Zero(data_size)},
   vertex_tss{Eigen::VectorXd::Constant(params.n_vertices(), 1./custom_math::pow(2, r_level))}
 {
@@ -110,7 +110,7 @@ double* Element::stage(int i_stage)
 
 double* Element::advection_state()
 {
-  return art_visc_coef() + params.n_qpoint();
+  return art_visc_forcing() + params.n_qpoint();
 }
 
 double* Element::time_step_scale()
@@ -121,6 +121,11 @@ double* Element::time_step_scale()
 double* Element::art_visc_coef()
 {
   return time_step_scale() + params.n_qpoint();
+}
+
+double* Element::art_visc_forcing()
+{
+  return art_visc_coef() + params.n_qpoint();
 }
 
 double* Element::face()
