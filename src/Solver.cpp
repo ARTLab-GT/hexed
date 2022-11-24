@@ -306,7 +306,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
   Eigen::MatrixXd interp = basis.interpolate(Eigen::VectorXd::Constant(1, .5));
   Eigen::VectorXd weights = basis.node_weights();
   HEXED_ASSERT(proj_rs == rs, "");
-  for (int iter = 0; iter < 1000; ++iter)
+  for (int iter = 0; iter < 3000; ++iter)
   {
     for (int sign : {-1, 1}) // do forward and backward advection separately
     {
@@ -386,20 +386,6 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
         #endif
       }
     }
-    double diff = 0;
-    #pragma omp parallel for reduction(+:diff)
-    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-      double* adv = elements[i_elem].advection_state();
-      double* av = elements[i_elem].art_visc_coef();
-      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) av[i_qpoint] = 0;
-      for (int i_proj = 0; i_proj < rs; ++i_proj) {
-        for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-          double d = adv[i_proj*nq + i_qpoint] - adv[(i_proj + rs)*nq + i_qpoint];
-          av[i_qpoint] += d*d*1e6;
-          diff += d*d;
-        }
-      }
-    }
     #if 0
     if (iter%1000 == 0) {
       #if HEXED_USE_OTTER
@@ -409,9 +395,23 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
       #endif
     }
     #endif
-    diff = std::sqrt(diff/(elements.size()*rs*rs));
-    printf("%i %e\n", iter, diff);
   } // Cauchy-Kovalevskaya-style derivative estimate complete!
+  double diff = 0;
+  #pragma omp parallel for reduction(+:diff)
+  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    double* adv = elements[i_elem].advection_state();
+    double* av = elements[i_elem].art_visc_coef();
+    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) av[i_qpoint] = 0;
+    for (int i_proj = 0; i_proj < rs; ++i_proj) {
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        double d = adv[i_proj*nq + i_qpoint] - adv[(i_proj + rs)*nq + i_qpoint];
+        av[i_qpoint] += d*d*1e6;
+        diff += d*d;
+      }
+    }
+  }
+  diff = std::sqrt(diff/(elements.size()*rs*rs));
+  printf("diff: %e\n", diff);
 
   // begin root-smear-square operation
   // set scalar state to square of projection
@@ -496,7 +496,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
         double veloc = rk_ref[i_dim*nq + i_qpoint]/mass;
         scale_sq += (1. - heat_rat)*veloc*veloc;
       }
-      av[i_qpoint] = diff_mult*advect_length*advect_length*std::sqrt(std::max(0., state[nd*nq + i_qpoint]*scale_sq)); // root-smear-square complete!
+      av[i_qpoint] = diff_mult*advect_length*std::sqrt(std::max(0., state[nd*nq + i_qpoint]*scale_sq)); // root-smear-square complete!
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         int i = i_var*nq + i_qpoint;
