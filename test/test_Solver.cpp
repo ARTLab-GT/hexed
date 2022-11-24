@@ -850,10 +850,13 @@ TEST_CASE("artificial viscosity convergence")
   }
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
-  double flow_width = .01;
-  double adv_width = .02;
+  double flow_width = .02;
+  double adv_width = .01;
   sol.initialize(Tanh(flow_width));
   sol.set_art_visc_smoothness(hexed::config::max_row_size, adv_width);
+  otter::plot plt;
+  sol.visualize_field_otter(plt, hexed::Art_visc_coef());
+  plt.show();
   double init_max = sol.bounds_field(hexed::Art_visc_coef())[0][1];
   // check that doubling the advection length multiplies the viscosity by 2^(max_row_size - 1)
   sol.set_art_visc_smoothness(hexed::config::max_row_size, 2*adv_width);

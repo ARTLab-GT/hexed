@@ -306,7 +306,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
   Eigen::MatrixXd interp = basis.interpolate(Eigen::VectorXd::Constant(1, .5));
   Eigen::VectorXd weights = basis.node_weights();
   HEXED_ASSERT(proj_rs == rs, "");
-  for (int iter = 0; iter < 10000; ++iter)
+  for (int iter = 0; iter < 1000; ++iter)
   {
     for (int sign : {-1, 1}) // do forward and backward advection separately
     {
@@ -329,14 +329,13 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
           double* adv = elements[i_elem].advection_state();
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
             state[nd*nq + i_qpoint] = state[(nd + 1)*nq + i_qpoint] = adv[(i_node + rs)*nq + i_qpoint] = adv[i_node*nq + i_qpoint];
-            for (int j_proj = 0; j_proj < rs; ++j_proj) {
-              adv[i_node*nq + i_qpoint] -= dt_adv*diff_mat(i_node, j_proj)*adv[j_proj*nq + i_qpoint]*(2*sign - 1)/advect_length;
-            }
+            adv[i_node*nq + i_qpoint] -= dt_adv*(adv[i_node*nq + i_qpoint] - 1.)*2/advect_length;
           }
         }
         (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
         (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-        double update = dt_adv;
+        double dt_scaled = dt_adv*std::abs(basis.node(i_node) - .5)*2;
+        double update = dt_scaled;
         double curr = 1;
         double ref = 0;
         for (int i = 0; i < 2; ++i) {
@@ -362,8 +361,8 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
           (*kernel_factory<Local_advection_cartesian>(nd, rs, basis, update, curr, ref))(acc_mesh.cartesian().elements());
           (*kernel_factory<Local_advection_deformed >(nd, rs, basis, update, curr, ref))(acc_mesh.deformed ().elements());
           (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-          update = dt_adv*basis.cancellation_convective()/basis.max_cfl_convective();
-          curr = 1 - update/dt_adv;
+          update = dt_scaled*basis.cancellation_convective()/basis.max_cfl_convective();
+          curr = 1 - update/dt_scaled;
           ref = 1 - curr;
         }
         #pragma omp parallel for
@@ -375,7 +374,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
           }
         }
         //printf("%i %i\n", sign, i_node);
-        #if 1
+        #if 0
         if (iter%1000 == 0) {
           #if HEXED_USE_OTTER
           otter::plot plt;
@@ -387,50 +386,17 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
         #endif
       }
     }
-    #pragma omp parallel for
-    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-      double* adv = elements[i_elem].advection_state();
-      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        double total = -1;
-        for (int i_proj = 0; i_proj < rs; ++i_proj) {
-          total += interp(i_proj)*adv[i_proj*nq + i_qpoint];
-        }
-        for (int i_proj = 0; i_proj < rs; ++i_proj) {
-          adv[i_proj*nq + i_qpoint] -= total*interp(i_proj);
-        }
-      }
-    }
     double diff = 0;
     #pragma omp parallel for reduction(+:diff)
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
       double* adv = elements[i_elem].advection_state();
       double* av = elements[i_elem].art_visc_coef();
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) av[i_qpoint] = 0;
-      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        double total = -1;
-        for (int i_proj = 0; i_proj < rs; ++i_proj) {
-          total += interp(i_proj)*adv[i_proj*nq + i_qpoint];
-        }
-        diff += total*total;
-      }
       for (int i_proj = 0; i_proj < rs; ++i_proj) {
         for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
           double d = adv[i_proj*nq + i_qpoint] - adv[(i_proj + rs)*nq + i_qpoint];
           av[i_qpoint] += d*d*1e6;
-          //diff += d*d;
-        }
-      }
-    }
-    #pragma omp parallel for
-    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-      double* adv = elements[i_elem].advection_state();
-      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        double total = -1;
-        for (int i_proj = 0; i_proj < rs; ++i_proj) {
-          total += interp(i_proj)*adv[i_proj*nq + i_qpoint];
-        }
-        for (int i_proj = 0; i_proj < rs; ++i_proj) {
-          adv[i_proj*nq + i_qpoint] -= total;
+          diff += d*d;
         }
       }
     }
@@ -449,13 +415,28 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
 
   // begin root-smear-square operation
   // set scalar state to square of projection
+  Eigen::VectorXd orth = basis.orthogonal(rs - 1);
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
-    double* av = elements[i_elem].art_visc_coef();
+    //double* av = elements[i_elem].art_visc_coef();
+    double* adv = elements[i_elem].advection_state();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      state[nd*nq + i_qpoint] = av[i_qpoint]*av[i_qpoint];
+      double proj = 0;
+      for (int i_proj = 0; i_proj < rs; ++i_proj) {
+        proj += adv[i_proj*nq + i_qpoint]*weights(i_proj)*orth(i_proj);
+      }
+      state[nd*nq + i_qpoint] = 1e7*proj*proj;
     }
+  }
+  {
+    State_variables sv;
+    #if HEXED_USE_OTTER
+    otter::plot plt;
+    visualize_field_otter(plt, Component(sv, nd));
+    visualize_field_tecplot(Component(sv, nd), "foo");
+    plt.show();
+    #endif
   }
   (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
@@ -463,7 +444,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
                              (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Unit(), 2, 0))(acc_mesh.deformed ().elements()));
   double dt_diff = diff_stab_rat/params.n_dim/(mcs_diff/basis.max_cfl_diffusive());
   // diffuse scalar state by specified amount
-  double diff_time = advect_length*advect_length*diff_ratio;
+  double diff_time = diff_ratio*.01;
   int n_iter = ceil(diff_time/dt_diff);
   double dt = diff_time/n_iter;
   double linear = dt;
