@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.special import legendre, hermite
 
-#for n in range(1, 10):
-for n in [3]:
+for n in range(1, 10):
+#for n in [3]:
     rs = 2*n
     x = np.linspace(-7, 7, int(1e3) + 1)
 
@@ -13,8 +13,8 @@ for n in [3]:
     fig, axs = plt.subplots(2, 2)
     fig.set_size_inches(14, 8)
 
-    smear_rs = rs
-    scale = 7/rs
+    smear_rs = 50
+    scale = 10/rs
     smear_weight = np.exp(-(x/scale)**2)
     smear_quad = hermite(2*smear_rs + 1).weights
     smear_quad[:, 0] *= scale
