@@ -39,14 +39,25 @@ for n in [3]:
     shifted = f(proj_width*nodes[:, np.newaxis] + x)
     proj = poly(nodes)*weights
     projd = proj@shifted
-    smeared = projd**2
+    sq = projd**2
+    smeared = sq + 0
+    step = .45
     for it in range(10000):
-        smeared += .45*diffusion(smeared)
+        smeared += step*diffusion(smeared)
+    pseudo = sq + 0
+    diff = 30000
+    iters = int(1e5)
+    for it in range(iters):
+        pseudo += step*(diffusion(pseudo) + (sq - pseudo)/diff)
+        if it == iters//2:
+            half = pseudo + 0
 
     axs[0, 0].plot(x, shifted[n, :])
     axs[1, 0].plot(x, projd)
-    axs[1, 1].plot(x, projd**2)
+    axs[1, 1].plot(x, sq)
     axs[1, 1].plot(x, smeared)
+    axs[1, 1].plot(x, half)
+    axs[1, 1].plot(x, pseudo)
 
     for ax in axs.flatten():
         ax.grid(True)
