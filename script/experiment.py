@@ -1,11 +1,34 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.special import legendre, hermite
+from scipy.special import legendre, hermite, chebyt
+
+def interp(dest_nodes, src_nodes):
+    mat = np.zeros((dest_nodes.size, src_nodes.size))
+    for i_dest in range(dest_nodes.size):
+        for i_src in range(src_nodes.size):
+            lagrange = 1.
+            for j_src in range(src_nodes.size):
+                if i_src != j_src:
+                    dest = dest_nodes[i_dest]
+                    src0 = src_nodes[i_src]
+                    src1 = src_nodes[j_src]
+                    lagrange *= (dest - src1)/(src0 - src1)
+            mat[i_dest, i_src] = lagrange
+    return mat
+
+def f(x):
+    return np.tanh(1.*x)
+x = np.linspace(-7, 7, int(1e3) + 1)
+plt.plot(x, np.exp(x/7), color="k")
+nodes = chebyt(4).weights[:, 0]*7
+plt.scatter(nodes, np.exp(nodes/7))
+plt.plot(x, interp(x, nodes)@np.exp(nodes/7))
+plt.show()
+exit()
 
 for n in range(1, 10):
 #for n in [3]:
     rs = 2*n
-    x = np.linspace(-7, 7, int(1e3) + 1)
 
     quad = legendre(rs + 1).weights
     nodes = quad[:, 0]
@@ -19,8 +42,6 @@ for n in range(1, 10):
     smear_quad = hermite(2*smear_rs + 1).weights
     smear_quad[:, 0] *= scale
 
-    def f(x):
-        return np.tanh(1.*x)
     poly = legendre(rs)
     shifted = f(3*nodes[np.newaxis, :, np.newaxis] + smear_quad[:, 0, np.newaxis, np.newaxis] + x)
     proj = poly(nodes)*weights
