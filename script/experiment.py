@@ -16,15 +16,22 @@ def interp(dest_nodes, src_nodes):
             mat[i_dest, i_src] = lagrange
     return mat
 
-def diffusion(vec):
-    res = np.zeros(vec.size)
-    res[1:-1] = vec[:-2] - 2*vec[1:-1] + vec[2:]
-    return res
-
 def f(x):
     return np.tanh(1.*x)
 x = np.linspace(-7, 7, int(1e3) + 1)
 proj_width = 3
+
+dx = x[1] - x[0]
+
+def gradient(vec):
+    grad = np.zeros(vec.size)
+    grad[1:-1] = (vec[2:] - vec[:-2])/2/dx
+    return grad
+
+def diffusion(vec):
+    res = np.zeros(vec.size)
+    res[1:-1] = (vec[:-2] - 2*vec[1:-1] + vec[2:])/2/dx**2
+    return res
 
 #for n in range(1, 10):
 for n in [3]:
@@ -41,19 +48,27 @@ for n in [3]:
     projd = proj@shifted
     sq = projd**2
     smeared = sq + 0
-    step = .45
+    step = .9*dx**2
     for it in range(10000):
         smeared += step*diffusion(smeared)
     pseudo = sq + 0
-    diff = 30000
+    diff = 30
     iters = int(1e5)
     for it in range(iters):
         pseudo += step*(diffusion(pseudo) + (sq - pseudo)/diff)
         if it == iters//2:
             half = pseudo + 0
+    smeared_shifted = shifted + 0
+    grad = gradient(proj@smeared_shifted)**2
+    for i in range(rs + 1):
+        smeared_shifted[i, :] = grad
 
-    axs[0, 0].plot(x, shifted[n, :])
+    #axs[0, 0].plot(x, shifted[n, :])
+    for i in range(rs + 1):
+        axs[0, 0].plot(x, shifted[i, :])
     axs[1, 0].plot(x, projd)
+    for i in range(rs + 1):
+        axs[0, 1].plot(x, smeared_shifted[i, :])
     axs[1, 1].plot(x, sq)
     axs[1, 1].plot(x, smeared)
     axs[1, 1].plot(x, half)
