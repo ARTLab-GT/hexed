@@ -33,8 +33,8 @@ def diffusion(vec):
     res[1:-1] = (vec[:-2] - 2*vec[1:-1] + vec[2:])/2/dx**2
     return res
 
-#for n in range(1, 10):
-for n in [3]:
+#for n in [3]:
+for n in range(1, 10):
     rs = 2*n
     quad = legendre(rs + 1).weights
     nodes = quad[:, 0]
@@ -46,15 +46,14 @@ for n in [3]:
     shifted = f(proj_width*nodes[:, np.newaxis] + x)
     proj = poly(nodes)*weights
     projd = proj@shifted
-    sq = projd**2
-    smeared = sq + 0
+
     step = .9*dx**2
-    for it in range(10000):
-        smeared += step*diffusion(smeared)
+    sq = projd**2
     orig = sq + 0
     axs[0, 1].plot(x, orig)
+    total = 0
     for j in range(3):
-        diff = .7
+        diff = 4/rs
         pseudo = orig + 0
         iters = int(1e4)
         for it in range(iters):
@@ -64,6 +63,10 @@ for n in [3]:
         orig = pseudo
         axs[0, 1].plot(x, half, linestyle="--")
         axs[0, 1].plot(x, pseudo)
+        total += diff
+    smeared = sq + 0
+    for it in range(int(total/step)):
+        smeared += step*diffusion(smeared)
 
     axs[0, 0].plot(x, shifted[n, :])
     axs[1, 0].plot(x, projd)
