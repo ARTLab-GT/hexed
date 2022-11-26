@@ -51,28 +51,25 @@ for n in [3]:
     step = .9*dx**2
     for it in range(10000):
         smeared += step*diffusion(smeared)
-    pseudo = sq + 0
-    diff = 30
-    iters = int(1e5)
-    for it in range(iters):
-        pseudo += step*(diffusion(pseudo) + (sq - pseudo)/diff)
-        if it == iters//2:
-            half = pseudo + 0
-    smeared_shifted = shifted + 0
-    grad = gradient(proj@smeared_shifted)**2
-    for i in range(rs + 1):
-        smeared_shifted[i, :] = grad
+    orig = sq + 0
+    axs[0, 1].plot(x, orig)
+    for j in range(3):
+        diff = .7
+        pseudo = orig + 0
+        iters = int(1e4)
+        for it in range(iters):
+            pseudo += step*(diffusion(pseudo) + (orig - pseudo)/diff)
+            if it == iters//2:
+                half = pseudo + 0
+        orig = pseudo
+        axs[0, 1].plot(x, half, linestyle="--")
+        axs[0, 1].plot(x, pseudo)
 
-    #axs[0, 0].plot(x, shifted[n, :])
-    for i in range(rs + 1):
-        axs[0, 0].plot(x, shifted[i, :])
+    axs[0, 0].plot(x, shifted[n, :])
     axs[1, 0].plot(x, projd)
-    for i in range(rs + 1):
-        axs[0, 1].plot(x, smeared_shifted[i, :])
     axs[1, 1].plot(x, sq)
     axs[1, 1].plot(x, smeared)
     axs[1, 1].plot(x, half)
-    axs[1, 1].plot(x, pseudo)
 
     for ax in axs.flatten():
         ax.grid(True)
