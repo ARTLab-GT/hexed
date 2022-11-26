@@ -19,31 +19,33 @@ def interp(dest_nodes, src_nodes):
 def f(x):
     return np.tanh(1.*x)
 x = np.linspace(-7, 7, int(1e3) + 1)
-plt.plot(x, np.exp(x/7), color="k")
-nodes = chebyt(4).weights[:, 0]*7
-plt.scatter(nodes, np.exp(nodes/7))
-plt.plot(x, interp(x, nodes)@np.exp(nodes/7))
-plt.show()
-exit()
+proj_width = 3
 
-for n in range(1, 10):
-#for n in [3]:
+#for n in range(1, 10):
+for n in [3]:
     rs = 2*n
-
     quad = legendre(rs + 1).weights
     nodes = quad[:, 0]
     weights = quad[:, 1]
     fig, axs = plt.subplots(2, 2)
     fig.set_size_inches(14, 8)
 
-    smear_rs = 50
+    smear_rs = 10
     scale = 10/rs
     smear_weight = np.exp(-(x/scale)**2)
     smear_quad = hermite(2*smear_rs + 1).weights
     smear_quad[:, 0] *= scale
 
     poly = legendre(rs)
-    shifted = f(3*nodes[np.newaxis, :, np.newaxis] + smear_quad[:, 0, np.newaxis, np.newaxis] + x)
+    sample_width = 15.
+    shift = chebyt(100).weights[:, 0]*sample_width
+    raw = f(shift[:, np.newaxis] + x)
+    shifted = np.zeros((smear_quad.shape[0], rs + 1, x.size))
+    for i_node in range(rs + 1):
+        shifted[:, i_node, :] = interp(smear_quad[:, 0] + proj_width*nodes[i_node], shift)@raw
+    """
+    shifted = f(proj_width*nodes[np.newaxis, :, np.newaxis] + smear_quad[:, 0, np.newaxis, np.newaxis] + x)
+    """
     proj = poly(nodes)*weights
     projd = proj@shifted
     smeared = smear_quad[:, 1]@projd**2
