@@ -312,8 +312,12 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
   Eigen::MatrixXd interp = basis.interpolate(Eigen::VectorXd::Constant(1, .5));
   Eigen::VectorXd weights = basis.node_weights();
   HEXED_ASSERT(proj_rs == rs, "");
-  for (int iter = 0; iter < 300; ++iter)
+  double diff;
+  int n_avg;
+  for (int iter = 0; iter < 1; ++iter)
   {
+    diff = 0;
+    n_avg = 0;
     for (int sign : {-1, 1}) // do forward and backward advection separately
     {
       #pragma omp parallel for
@@ -333,9 +337,12 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
         for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
           double* state = elements[i_elem].stage(0);
           double* adv = elements[i_elem].advection_state();
+          double* av = elements[i_elem].art_visc_coef();
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
             state[nd*nq + i_qpoint] = state[(nd + 1)*nq + i_qpoint] = adv[i_node*nq + i_qpoint];
-            adv[i_node*nq + i_qpoint] -= dt_adv*(adv[i_node*nq + i_qpoint] - 1.)*2/advect_length;
+            double d = dt_adv*(adv[i_node*nq + i_qpoint] - 1.)*2/advect_length;
+            adv[i_node*nq + i_qpoint] -= d;
+            av[i_qpoint] = d;
           }
         }
         (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
@@ -360,17 +367,23 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
           curr = 1 - update/dt_scaled;
           ref = 1 - curr;
         }
-        #pragma omp parallel for
+        #pragma omp parallel for reduction(+:diff, n_avg)
         for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
           double* state = elements[i_elem].stage(0);
           double* adv = elements[i_elem].advection_state();
+          double* av = elements[i_elem].art_visc_coef();
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-            adv[i_node*nq + i_qpoint] += state[nd*nq + i_qpoint] - state[(nd + 1)*nq + i_qpoint];
+            double d = state[nd*nq + i_qpoint] - state[(nd + 1)*nq + i_qpoint];
+            adv[i_node*nq + i_qpoint] += d;
+            d -= av[i_qpoint];
+            diff += d*d/dt_scaled/dt_scaled;
+            ++n_avg;
           }
         }
       }
     }
   } // Cauchy-Kovalevskaya-style derivative estimate complete!
+  status.adv_res = std::sqrt(diff/n_avg);
 
   // begin root-smear-square operation
   // set scalar state to square of projection
@@ -388,6 +401,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
     }
   }
   int n_real = 3;
+  status.diff_res = 0;
   for (int real_step = 0; real_step < n_real; ++real_step)
   {
     #pragma omp parallel for
@@ -410,8 +424,18 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
     std::array<double, 2> step;
     step[1] = (linear + std::sqrt(linear*linear - 4*quadratic))/2.;
     step[0] = quadratic/step[1];
-    for (int i_iter = 0; i_iter < 1000; ++i_iter)
+    diff = 0;
+    n_avg = 0;
+    for (int i_iter = 0; i_iter < 1; ++i_iter)
     {
+      #pragma omp parallel for
+      for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+        double* state = elements[i_elem].stage(0);
+        double* av = elements[i_elem].art_visc_coef();
+        for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+          av[i_qpoint] = state[nd*nq + i_qpoint];
+        }
+      }
       for (double s : step)
       {
         for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
@@ -455,6 +479,17 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
         }
       }
     }
+    #pragma omp parallel for reduction(+:diff, n_avg)
+    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+      double* state = elements[i_elem].stage(0);
+      double* av = elements[i_elem].art_visc_coef();
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        double d = state[nd*nq + i_qpoint] - av[i_qpoint];
+        diff += d*d/dt_diff/dt_diff;
+        ++n_avg;
+      }
+    }
+    status.diff_res += diff/n_avg;
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
       double* state = elements[i_elem].stage(0);
@@ -464,6 +499,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
       }
     }
   }
+  status.diff_res = std::sqrt(status.diff_res/n_real);
   // clean up
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {

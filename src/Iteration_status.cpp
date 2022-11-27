@@ -18,6 +18,8 @@ std::string Iteration_status::value_string()
   r += format(".14e", time_step);
   r += format("i", fix_admis_iters);
   r += format(".14e", dt_rat);
+  r += format(".14e", adv_res);
+  r += format(".14e", diff_res);
   return r;
 }
 
