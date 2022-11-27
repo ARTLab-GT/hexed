@@ -428,7 +428,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
       for (int i_proj = 0; i_proj < rs; ++i_proj) {
         proj += adv[i_proj*nq + i_qpoint]*weights(i_proj)*orth(i_proj);
       }
-      forcing[i_qpoint] = 1e7*proj*proj;
+      forcing[i_qpoint] = proj*proj;
     }
   }
   int n_real = 3;
