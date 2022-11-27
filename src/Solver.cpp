@@ -421,73 +421,90 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
   Eigen::VectorXd orth = basis.orthogonal(rs - 1);
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    double* state = elements[i_elem].stage(0);
     double* forcing = elements[i_elem].art_visc_forcing();
     double* adv = elements[i_elem].advection_state();
-    double* av = elements[i_elem].art_visc_coef();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       double proj = 0;
       for (int i_proj = 0; i_proj < rs; ++i_proj) {
         proj += adv[i_proj*nq + i_qpoint]*weights(i_proj)*orth(i_proj);
       }
       forcing[i_qpoint] = 1e7*proj*proj;
-      state[nd*nq + i_qpoint] = av[i_qpoint]*av[i_qpoint];
     }
   }
-  (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
-  (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-  double mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Unit(), 2, 0))(acc_mesh.cartesian().elements()),
-                             (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Unit(), 2, 0))(acc_mesh.deformed ().elements()));
-  double dt_diff = diff_stab_rat/params.n_dim/(mcs_diff/basis.max_cfl_diffusive());
-  // diffuse scalar state by specified amount
-  double diff_time = diff_ratio*advect_length;
-  double linear = dt_diff;
-  double quadratic = basis.cancellation_diffusive()/basis.max_cfl_diffusive()*dt_diff*dt_diff;
-  std::array<double, 2> step;
-  step[1] = (linear + std::sqrt(linear*linear - 4*quadratic))/2.;
-  step[0] = quadratic/step[1];
-  for (int i_iter = 0; i_iter < 1000; ++i_iter)
+  int n_real = 3;
+  for (int real_step = 0; real_step < n_real; ++real_step)
   {
-    for (double s : step)
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+      double* state = elements[i_elem].stage(0);
+      double* forcing = elements[i_elem].art_visc_forcing();
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        state[nd*nq + i_qpoint] = forcing[(real_step + 1)*nq + i_qpoint];
+      }
+    }
+    (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
+    (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+    double mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Unit(), 2, 0))(acc_mesh.cartesian().elements()),
+                               (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Unit(), 2, 0))(acc_mesh.deformed ().elements()));
+    double dt_diff = diff_stab_rat/params.n_dim/(mcs_diff/basis.max_cfl_diffusive());
+    // diffuse scalar state by specified amount
+    double diff_time = diff_ratio*advect_length/n_real;
+    double linear = dt_diff;
+    double quadratic = basis.cancellation_diffusive()/basis.max_cfl_diffusive()*dt_diff*dt_diff;
+    std::array<double, 2> step;
+    step[1] = (linear + std::sqrt(linear*linear - 4*quadratic))/2.;
+    step[0] = quadratic/step[1];
+    for (int i_iter = 0; i_iter < 1000; ++i_iter)
     {
-      for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-        double* in_f = bc_cons[i_con].inside_face();
-        double* gh_f = bc_cons[i_con].ghost_face();
-        for (int i_dof = 0; i_dof < (nd + 2)*nq/rs; ++i_dof) {
-          gh_f[i_dof] = in_f[i_dof];
+      for (double s : step)
+      {
+        for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+          double* in_f = bc_cons[i_con].inside_face();
+          double* gh_f = bc_cons[i_con].ghost_face();
+          for (int i_dof = 0; i_dof < (nd + 2)*nq/rs; ++i_dof) {
+            gh_f[i_dof] = in_f[i_dof];
+          }
+        }
+        #pragma omp parallel for
+        for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+          double* state = elements[i_elem].stage(0);
+          double* forcing = elements[i_elem].art_visc_forcing();
+          for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+            state[(nd + 1)*nq + i_qpoint] = s*(forcing[real_step*nq + i_qpoint] - state[nd*nq + i_qpoint])/diff_time;
+          }
+        }
+        (*kernel_factory<Neighbor_avg_cartesian>(nd, rs       ))(acc_mesh.cartesian().face_connections());
+        (*kernel_factory<Neighbor_avg_deformed >(nd, rs, false))(acc_mesh.deformed ().face_connections());
+        (*kernel_factory<Restrict_refined>(nd, rs, basis, false))(acc_mesh.refined_faces());
+        (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, s, false, true))(acc_mesh.cartesian().elements());
+        (*kernel_factory<Local_av0_deformed >(nd, rs, basis, s, false, true))(acc_mesh.deformed ().elements());
+        (*kernel_factory<Prolong_refined>(nd, rs, basis, true))(acc_mesh.refined_faces());
+        for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+          double* in_f = bc_cons[i_con].inside_face() + nd*nq/rs;
+          double* gh_f = bc_cons[i_con].ghost_face() + nd*nq/rs;
+          for (int i_qpoint = 0; i_qpoint < nq/rs; ++i_qpoint) gh_f[i_qpoint] = -in_f[i_qpoint];
+        }
+        (*kernel_factory<Neighbor_avg_cartesian>(nd, rs      ))(acc_mesh.cartesian().face_connections());
+        (*kernel_factory<Neighbor_avg_deformed >(nd, rs, true))(acc_mesh.deformed ().face_connections());
+        (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+        (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, s, false, true))(acc_mesh.cartesian().elements());
+        (*kernel_factory<Local_av1_deformed >(nd, rs, basis, s, false, true))(acc_mesh.deformed ().elements());
+        (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+        #pragma omp parallel for
+        for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+          double* state = elements[i_elem].stage(0);
+          for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+            state[nd*nq + i_qpoint] += state[(nd + 1)*nq + i_qpoint];
+          }
         }
       }
-      #pragma omp parallel for
-      for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-        double* state = elements[i_elem].stage(0);
-        double* forcing = elements[i_elem].art_visc_forcing();
-        for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-          state[(nd + 1)*nq + i_qpoint] = s*(forcing[i_qpoint] - state[nd*nq + i_qpoint])/diff_time;
-        }
-      }
-      (*kernel_factory<Neighbor_avg_cartesian>(nd, rs       ))(acc_mesh.cartesian().face_connections());
-      (*kernel_factory<Neighbor_avg_deformed >(nd, rs, false))(acc_mesh.deformed ().face_connections());
-      (*kernel_factory<Restrict_refined>(nd, rs, basis, false))(acc_mesh.refined_faces());
-      (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, s, false, true))(acc_mesh.cartesian().elements());
-      (*kernel_factory<Local_av0_deformed >(nd, rs, basis, s, false, true))(acc_mesh.deformed ().elements());
-      (*kernel_factory<Prolong_refined>(nd, rs, basis, true))(acc_mesh.refined_faces());
-      for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-        double* in_f = bc_cons[i_con].inside_face() + nd*nq/rs;
-        double* gh_f = bc_cons[i_con].ghost_face() + nd*nq/rs;
-        for (int i_qpoint = 0; i_qpoint < nq/rs; ++i_qpoint) gh_f[i_qpoint] = -in_f[i_qpoint];
-      }
-      (*kernel_factory<Neighbor_avg_cartesian>(nd, rs      ))(acc_mesh.cartesian().face_connections());
-      (*kernel_factory<Neighbor_avg_deformed >(nd, rs, true))(acc_mesh.deformed ().face_connections());
-      (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-      (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, s, false, true))(acc_mesh.cartesian().elements());
-      (*kernel_factory<Local_av1_deformed >(nd, rs, basis, s, false, true))(acc_mesh.deformed ().elements());
-      (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-      #pragma omp parallel for
-      for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-        double* state = elements[i_elem].stage(0);
-        for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-          state[nd*nq + i_qpoint] += state[(nd + 1)*nq + i_qpoint];
-        }
+    }
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+      double* state = elements[i_elem].stage(0);
+      double* forcing = elements[i_elem].art_visc_forcing();
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        forcing[(real_step + 1)*nq + i_qpoint] = state[nd*nq + i_qpoint];
       }
     }
   }
@@ -497,6 +514,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
     double* state = elements[i_elem].stage(0);
     double* rk_ref = elements[i_elem].stage(1);
     double* av = elements[i_elem].art_visc_coef();
+    double* forcing = elements[i_elem].art_visc_forcing();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       // set artificial viscosity to square root of diffused scalar state times stagnation enthalpy (with user-defined multiplier)
       double mass = rk_ref[nd*nq + i_qpoint];
@@ -505,7 +523,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
         double veloc = rk_ref[i_dim*nq + i_qpoint]/mass;
         scale_sq += (1. - heat_rat)*veloc*veloc;
       }
-      av[i_qpoint] = diff_mult*advect_length*std::sqrt(std::max(0., state[nd*nq + i_qpoint]*scale_sq)); // root-smear-square complete!
+      av[i_qpoint] = diff_mult*advect_length*std::sqrt(std::max(0., forcing[n_real*nq + i_qpoint]*scale_sq)); // root-smear-square complete!
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         int i = i_var*nq + i_qpoint;

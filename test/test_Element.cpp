@@ -41,7 +41,7 @@ TEST_CASE("Element")
   REQUIRE(element.art_visc_coef()[0] == 0.);
   REQUIRE(element.art_visc_coef()[params.n_qpoint() - 1] == 0.);
   REQUIRE(element.art_visc_forcing()[0] == 0.);
-  REQUIRE(element.art_visc_forcing()[params.n_qpoint() - 1] == 0.);
+  REQUIRE(element.art_visc_forcing()[4*params.n_qpoint() - 1] == 0.);
   REQUIRE(element.advection_state()[0] == 0.);
   REQUIRE(element.advection_state()[6*params.n_qpoint() - 1] == 0.);
   for (int i_face_data = 0; i_face_data < n_dof/params.row_size*3*2; ++i_face_data) {
