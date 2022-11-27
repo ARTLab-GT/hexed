@@ -334,7 +334,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
           double* state = elements[i_elem].stage(0);
           double* adv = elements[i_elem].advection_state();
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-            state[nd*nq + i_qpoint] = state[(nd + 1)*nq + i_qpoint] = adv[(i_node + rs)*nq + i_qpoint] = adv[i_node*nq + i_qpoint];
+            state[nd*nq + i_qpoint] = state[(nd + 1)*nq + i_qpoint] = adv[i_node*nq + i_qpoint];
             adv[i_node*nq + i_qpoint] -= dt_adv*(adv[i_node*nq + i_qpoint] - 1.)*2/advect_length;
           }
         }
@@ -347,19 +347,8 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
         for (int i = 0; i < 2; ++i) {
           auto& bc_cons {acc_mesh.boundary_connections()};
           for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-            #if 1
             int bc_sn = bc_cons[i_con].bound_cond_serial_n();
             acc_mesh.boundary_condition(bc_sn).flow_bc->apply_advection(bc_cons[i_con]);
-            #else
-            double* in_f = bc_cons[i_con].inside_face();
-            double* gh_f = bc_cons[i_con].ghost_face();
-            for (int i_dof = 0; i_dof < nd*nq/rs; ++i_dof) {
-              gh_f[i_dof] = in_f[i_dof];
-            }
-            for (int i_dof = nd*nq/rs; i_dof < (nd + 2)*nq/rs; ++i_dof) {
-              gh_f[i_dof] = 1;
-            }
-            #endif
           }
           (*kernel_factory<Neighbor_advection_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections());
           (*kernel_factory<Neighbor_advection_deformed >(nd, rs))(acc_mesh.deformed ().face_connections());
@@ -379,42 +368,9 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
             adv[i_node*nq + i_qpoint] += state[nd*nq + i_qpoint] - state[(nd + 1)*nq + i_qpoint];
           }
         }
-        //printf("%i %i\n", sign, i_node);
-        #if 0
-        if (iter%1000 == 0) {
-          #if HEXED_USE_OTTER
-          otter::plot plt;
-          visualize_field_otter(plt, Component(sv, nd));
-          visualize_field_tecplot(Component(sv, nd), "foo");
-          plt.show();
-          #endif
-        }
-        #endif
       }
     }
-    #if 0
-    if (iter%1000 == 0) {
-      #if HEXED_USE_OTTER
-      otter::plot plt;
-      visualize_field_otter(plt, Art_visc_coef());
-      plt.show();
-      #endif
-    }
-    #endif
   } // Cauchy-Kovalevskaya-style derivative estimate complete!
-  double diff = 0;
-  #pragma omp parallel for reduction(+:diff)
-  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    double* adv = elements[i_elem].advection_state();
-    for (int i_proj = 0; i_proj < rs; ++i_proj) {
-      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        double d = adv[i_proj*nq + i_qpoint] - adv[(i_proj + rs)*nq + i_qpoint];
-        diff += d*d;
-      }
-    }
-  }
-  diff = std::sqrt(diff/(elements.size()*rs*rs));
-  printf("diff: %e\n", diff);
 
   // begin root-smear-square operation
   // set scalar state to square of projection
