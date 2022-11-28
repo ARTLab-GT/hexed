@@ -258,7 +258,7 @@ void Solver::set_art_visc_constant(double value)
   }
 }
 
-void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double shift, double diff_ratio, double diff_mult, double stab_rat, double diff_stab_rat)
+void Solver::set_art_visc_smoothness(double advect_length)
 {
   double heat_rat = 1.4;
   const int nq = params.n_qpoint();
@@ -304,14 +304,12 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
   double mcs_adv = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Advection(), 1, 1))(acc_mesh.cartesian().elements()),
                             (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Advection(), 1, 1))(acc_mesh.deformed ().elements()));
-  double dt_adv = stab_rat/params.n_dim/(mcs_adv/basis.max_cfl_convective());
+  double dt_adv = av_advect_stab_rat/params.n_dim/(mcs_adv/basis.max_cfl_convective());
 
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
-  Gauss_legendre proj_basis(proj_rs); // basis on which advection solution will be projected (in time domain) to compute nonsmoothness
   Eigen::MatrixXd diff_mat = basis.diff_mat();
   Eigen::MatrixXd interp = basis.interpolate(Eigen::VectorXd::Constant(1, .5));
   Eigen::VectorXd weights = basis.node_weights();
-  HEXED_ASSERT(proj_rs == rs, "");
   double diff;
   int n_avg;
   for (int iter = 0; iter < 1; ++iter)
@@ -328,11 +326,11 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
         }
       }
       // loop through nodes of projection basis
-      for (int i_proj = proj_rs - proj_rs/2; i_proj < proj_rs; ++i_proj)
+      for (int i_proj = rs - rs/2; i_proj < rs; ++i_proj)
       {
         State_variables sv;
         // find out which node we're looking at
-        int i_node = (sign > 0) ? i_proj : proj_rs - 1 - i_proj; // if sign < 0 we are looping through the nodes backward
+        int i_node = (sign > 0) ? i_proj : rs - 1 - i_proj; // if sign < 0 we are looping through the nodes backward
         #pragma omp parallel for
         for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
           double* state = elements[i_elem].stage(0);
@@ -417,9 +415,9 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
     double mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Unit(), 2, 2))(acc_mesh.cartesian().elements()),
                                (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Unit(), 2, 2))(acc_mesh.deformed ().elements()));
-    double dt_diff = diff_stab_rat/params.n_dim/(mcs_diff/basis.max_cfl_diffusive());
+    double dt_diff = av_diff_stab_rat/params.n_dim/(mcs_diff/basis.max_cfl_diffusive());
     // diffuse scalar state by specified amount
-    double diff_time = diff_ratio*advect_length/n_real;
+    double diff_time = av_diff_ratio*advect_length/n_real;
     double max_rat = 0;
     #pragma omp parallel for reduction(max:max_rat)
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
@@ -428,7 +426,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
         max_rat = std::max(max_rat, dt_diff/diff_time*tss[i_qpoint]*tss[i_qpoint]);
       }
     }
-    dt_diff /= std::max(max_rat/diff_stab_rat, 1.);
+    dt_diff /= std::max(max_rat/av_diff_stab_rat, 1.);
     double linear = dt_diff;
     double quadratic = basis.cancellation_diffusive()/basis.max_cfl_diffusive()*dt_diff*dt_diff;
     std::array<double, 2> step;
@@ -526,7 +524,7 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
         double veloc = rk_ref[i_dim*nq + i_qpoint]/mass;
         scale_sq += (1. - heat_rat)*veloc*veloc;
       }
-      av[i_qpoint] = diff_mult*advect_length*std::sqrt(std::max(0., forcing[n_real*nq + i_qpoint]*scale_sq)); // root-smear-square complete!
+      av[i_qpoint] = av_visc_mult*advect_length*std::sqrt(std::max(0., forcing[n_real*nq + i_qpoint]*scale_sq)); // root-smear-square complete!
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         int i = i_var*nq + i_qpoint;
@@ -619,7 +617,7 @@ void Solver::update(double stability_ratio)
     (*kernel_factory<Local_cartesian>(nd, rs, basis, update, curr, ref))(acc_mesh.cartesian().elements(), sw_car, "local");
     (*kernel_factory<Local_deformed >(nd, rs, basis, update, curr, ref))(acc_mesh.deformed ().elements(), sw_def, "local");
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-    fix_admissibility(fix_stab_rat*stability_ratio);
+    fix_admissibility(fix_admis_stab_rat*stability_ratio);
     update = dt*basis.cancellation_convective()/basis.max_cfl_convective();
     curr = 1 - update/dt;
     ref = 1 - curr;
@@ -628,7 +626,7 @@ void Solver::update(double stability_ratio)
   // compute viscous update
   if (use_art_visc) {
     update_art_visc(dt, true);
-    fix_admissibility(fix_stab_rat*stability_ratio);
+    fix_admissibility(fix_admis_stab_rat*stability_ratio);
   }
 
   // update status for reporting
