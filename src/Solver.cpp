@@ -302,8 +302,8 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
   }
   (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-  double mcs_adv = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Advection(), 1, 0))(acc_mesh.cartesian().elements()),
-                            (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Advection(), 1, 0))(acc_mesh.deformed ().elements()));
+  double mcs_adv = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Advection(), 1, 1))(acc_mesh.cartesian().elements()),
+                            (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Advection(), 1, 1))(acc_mesh.deformed ().elements()));
   double dt_adv = stab_rat/params.n_dim/(mcs_adv/basis.max_cfl_convective());
 
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
@@ -336,11 +336,12 @@ void Solver::set_art_visc_smoothness(int proj_rs, double advect_length, double s
         #pragma omp parallel for
         for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
           double* state = elements[i_elem].stage(0);
+          double* tss = elements[i_elem].time_step_scale();
           double* adv = elements[i_elem].advection_state();
           double* av = elements[i_elem].art_visc_coef();
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
             state[nd*nq + i_qpoint] = state[(nd + 1)*nq + i_qpoint] = adv[i_node*nq + i_qpoint];
-            double d = dt_adv*(adv[i_node*nq + i_qpoint] - 1.)*2/advect_length;
+            double d = dt_adv*tss[i_qpoint]*(adv[i_node*nq + i_qpoint] - 1.)*2/advect_length;
             adv[i_node*nq + i_qpoint] -= d;
             av[i_qpoint] = d;
           }
