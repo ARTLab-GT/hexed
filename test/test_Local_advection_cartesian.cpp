@@ -38,7 +38,7 @@ TEST_CASE("Local_advection_cartesian")
         state[2*n_qpoint + i_qpoint] = scalar;
         // set RK reference state to 0
         state[3*n_qpoint + i_qpoint] = 0;
-        tss[i_qpoint] = .7; // make sure time step scale has not effect
+        tss[i_qpoint] = .7;
       }
       // set face state to match interior state
       for (int i_dim : {0, 1})
@@ -61,7 +61,7 @@ TEST_CASE("Local_advection_cartesian")
     double* state = element->stage(0);
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
       double pos0 = 2*basis.node(i_qpoint/row_size);
-      REQUIRE(state[2*n_qpoint + i_qpoint] == Approx(-.2*(2 + pos0)).scale(1.));
+      REQUIRE(state[2*n_qpoint + i_qpoint] == Approx(-.2*(2 + pos0)*.7).scale(1.));
     }
   }
 }

@@ -49,7 +49,8 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
   basis{row_size},
   stopwatch{"(element*iteration)"},
   use_art_visc{false},
-  fix_admis{false}
+  fix_admis{false},
+  av_rs{basis.row_size}
 {
   // setup categories for performance reporting
   stopwatch.children.emplace("initialize RK", stopwatch.work_unit_name);
@@ -305,14 +306,23 @@ void Solver::set_art_visc_smoothness(double advect_length)
   double mcs_adv = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Advection(), 1, 1))(acc_mesh.cartesian().elements()),
                             (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Advection(), 1, 1))(acc_mesh.deformed ().elements()));
   double dt_adv = av_advect_stab_rat/params.n_dim/(mcs_adv/basis.max_cfl_convective());
+  double max_rat = 0;
+  #pragma omp parallel for reduction(max:max_rat)
+  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    double* tss = elements[i_elem].time_step_scale();
+    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+      max_rat = std::max(max_rat, dt_adv/advect_length*tss[i_qpoint]);
+    }
+  }
+  dt_adv /= std::max(max_rat/av_advect_stab_rat, 1.);
 
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
   Eigen::MatrixXd diff_mat = basis.diff_mat();
   Eigen::MatrixXd interp = basis.interpolate(Eigen::VectorXd::Constant(1, .5));
   Eigen::VectorXd weights = basis.node_weights();
-  double diff;
-  int n_avg;
-  for (int iter = 0; iter < 1; ++iter)
+  double diff = 0;
+  int n_avg = 0;
+  for (int iter = 0; iter < av_advect_iters; ++iter)
   {
     diff = 0;
     n_avg = 0;
@@ -386,7 +396,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
 
   // begin root-smear-square operation
   // set scalar state to square of projection
-  Eigen::VectorXd orth = basis.orthogonal(rs - 1);
+  Eigen::VectorXd orth = basis.orthogonal(av_rs - 1);
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* forcing = elements[i_elem].art_visc_forcing();
@@ -434,7 +444,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
     step[0] = quadratic/step[1];
     diff = 0;
     n_avg = 0;
-    for (int i_iter = 0; i_iter < 1; ++i_iter)
+    for (int i_iter = 0; i_iter < av_diff_iters; ++i_iter)
     {
       #pragma omp parallel for
       for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
@@ -535,6 +545,13 @@ void Solver::set_art_visc_smoothness(double advect_length)
   // update the face state
   (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+}
+
+void Solver::set_art_visc_row_size(int row_size)
+{
+  HEXED_ASSERT(row_size >= 2, "`row_size` must be >= 2");
+  HEXED_ASSERT(row_size <= basis.row_size, "`row_size` must be <= discretization row size");
+  av_rs = row_size;
 }
 
 void Solver::set_fix_admissibility(bool value)

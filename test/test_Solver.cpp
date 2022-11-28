@@ -620,8 +620,14 @@ void test_advection(Test_mesh& tm, std::string name)
   sol.initialize(Sinusoid_veloc());
   double width = 1e-2;
   sol.av_advect_shift = .4;
-  sol.av_diff_ratio = .9;
+  sol.av_visc_mult = .9;
+  sol.av_advect_iters = 100;
+  sol.av_diff_iters = 0;
+  REQUIRE_THROWS(sol.set_art_visc_row_size(1));
+  REQUIRE_THROWS(sol.set_art_visc_row_size(hexed::config::max_row_size + 1));
+  sol.set_art_visc_row_size(2);
   sol.set_art_visc_smoothness(width);
+  REQUIRE(sol.iteration_status().adv_res < 1e-6);
   hexed::Gauss_legendre basis(2);
   double norm = 0.;
   for (int i_node = 0; i_node < 2; ++i_node) {
@@ -632,7 +638,7 @@ void test_advection(Test_mesh& tm, std::string name)
     for (int i_qpoint = 0; i_qpoint < sol.storage_params().n_qpoint(); ++i_qpoint) {
       double art_visc = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Art_visc_coef())[0];
       auto pos = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Position_func());
-      REQUIRE(art_visc/(width*width*width*norm*sol.av_diff_ratio) == Approx(std::abs(-.1*std::cos(pos[0]) - .2*std::sin(pos[1]))).margin(1e-3));
+      REQUIRE(art_visc/(width*width*width*norm*sol.av_visc_mult) == Approx(std::abs(-.1*std::cos(pos[0]) - .2*std::sin(pos[1]))).margin(1e-3));
     }
   }
 }
@@ -853,14 +859,22 @@ TEST_CASE("artificial viscosity convergence")
   double flow_width = .02;
   double adv_width = .01;
   sol.initialize(Tanh(flow_width));
+  sol.av_advect_iters = 1000;
+  sol.av_diff_iters = 1000;
   sol.set_art_visc_smoothness(adv_width);
+  REQUIRE(sol.iteration_status().adv_res < 1e-12);
+  REQUIRE(sol.iteration_status().diff_res < 1e-12);
   double init_max = sol.bounds_field(hexed::Art_visc_coef())[0][1];
   // check that doubling the advection length multiplies the viscosity by 2^(max_row_size - 1)
   sol.set_art_visc_smoothness(adv_width);
+  REQUIRE(sol.iteration_status().adv_res < 1e-12);
+  REQUIRE(sol.iteration_status().diff_res < 1e-12);
   CHECK(std::log(sol.bounds_field(hexed::Art_visc_coef())[0][1]/init_max)/std::log(2) > 6.);
   // check that doubling the length scale of the flow divides the viscosity by ~2^(max_row_size - 1)
   sol.initialize(Tanh(2*flow_width));
   sol.set_art_visc_smoothness(adv_width);
+  REQUIRE(sol.iteration_status().adv_res < 1e-12);
+  REQUIRE(sol.iteration_status().diff_res < 1e-12);
   CHECK(std::log(init_max/sol.bounds_field(hexed::Art_visc_coef())[0][1])/std::log(2) > 6.);
   #endif
 }
