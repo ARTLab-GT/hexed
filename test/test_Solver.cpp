@@ -621,13 +621,15 @@ void test_advection(Test_mesh& tm, std::string name)
   double width = 1e-2;
   sol.av_advect_shift = .4;
   sol.av_visc_mult = .9;
-  sol.av_advect_iters = 100;
-  sol.av_diff_iters = 0;
-  REQUIRE_THROWS(sol.set_art_visc_row_size(1));
-  REQUIRE_THROWS(sol.set_art_visc_row_size(hexed::config::max_row_size + 1));
+  sol.av_advect_iters = 300;
+  sol.av_diff_iters = 300;
+  sol.av_diff_ratio = 1e-6;
+  //REQUIRE_THROWS(sol.set_art_visc_row_size(1));
+  //REQUIRE_THROWS(sol.set_art_visc_row_size(hexed::config::max_row_size + 1));
   sol.set_art_visc_row_size(2);
   sol.set_art_visc_smoothness(width);
   REQUIRE(sol.iteration_status().adv_res < 1e-6);
+  REQUIRE(sol.iteration_status().diff_res < 1e-9);
   hexed::Gauss_legendre basis(2);
   double norm = 0.;
   for (int i_node = 0; i_node < 2; ++i_node) {
@@ -638,7 +640,7 @@ void test_advection(Test_mesh& tm, std::string name)
     for (int i_qpoint = 0; i_qpoint < sol.storage_params().n_qpoint(); ++i_qpoint) {
       double art_visc = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Art_visc_coef())[0];
       auto pos = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Position_func());
-      REQUIRE(art_visc/(width*width*width*norm*sol.av_visc_mult) == Approx(std::abs(-.1*std::cos(pos[0]) - .2*std::sin(pos[1]))).margin(1e-3));
+      REQUIRE(art_visc/(width*width*norm*sol.av_visc_mult) == Approx(std::abs(-.1*std::cos(pos[0]) - .2*std::sin(pos[1]))).margin(1e-3));
     }
   }
 }
