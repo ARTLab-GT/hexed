@@ -624,8 +624,8 @@ void test_advection(Test_mesh& tm, std::string name)
   sol.av_advect_iters = 300;
   sol.av_diff_iters = 300;
   sol.av_diff_ratio = 1e-6;
-  //REQUIRE_THROWS(sol.set_art_visc_row_size(1));
-  //REQUIRE_THROWS(sol.set_art_visc_row_size(hexed::config::max_row_size + 1));
+  REQUIRE_THROWS(sol.set_art_visc_row_size(1));
+  REQUIRE_THROWS(sol.set_art_visc_row_size(hexed::config::max_row_size + 1));
   sol.set_art_visc_row_size(2);
   sol.set_art_visc_smoothness(width);
   REQUIRE(sol.iteration_status().adv_res < 1e-6);
@@ -836,7 +836,7 @@ TEST_CASE("face extrusion")
 
 TEST_CASE("artificial viscosity convergence")
 {
-  #if 1
+  #if NDEBUG
   const int len0 = 100;
   const int len1 = 2;
   hexed::Solver sol(2, hexed::config::max_row_size, 1./len0);
@@ -861,14 +861,16 @@ TEST_CASE("artificial viscosity convergence")
   double flow_width = .02;
   double adv_width = .01;
   sol.initialize(Tanh(flow_width));
-  sol.av_advect_iters = 1000;
-  sol.av_diff_iters = 1000;
+  sol.av_advect_iters = 3000;
+  sol.av_diff_iters = 3000;
+  sol.av_visc_mult = 1e6;
+  sol.av_diff_ratio = 1e-6;
   sol.set_art_visc_smoothness(adv_width);
   REQUIRE(sol.iteration_status().adv_res < 1e-12);
   REQUIRE(sol.iteration_status().diff_res < 1e-12);
   double init_max = sol.bounds_field(hexed::Art_visc_coef())[0][1];
   // check that doubling the advection length multiplies the viscosity by 2^(max_row_size - 1)
-  sol.set_art_visc_smoothness(adv_width);
+  sol.set_art_visc_smoothness(adv_width*2);
   REQUIRE(sol.iteration_status().adv_res < 1e-12);
   REQUIRE(sol.iteration_status().diff_res < 1e-12);
   CHECK(std::log(sol.bounds_field(hexed::Art_visc_coef())[0][1]/init_max)/std::log(2) > 6.);
