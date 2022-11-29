@@ -102,6 +102,8 @@ class Local_av0_cartesian : public Kernel<Element&>
       }
 
       // write the updated solution
+      #pragma GCC diagnostic push
+      #pragma GCC diagnostic ignored "-Wstrict-overflow"
       int start = n_dim*scalar;
       int n = scalar ? 1 : n_var;
       for (int i_var = start; i_var < n + start; ++i_var) {
@@ -110,6 +112,7 @@ class Local_av0_cartesian : public Kernel<Element&>
           state[i_dof] += time_rate[i_var][i_qpoint]*d_t_by_d_pos*custom_math::pow(tss[i_qpoint], tss_pow);
         }
       }
+      #pragma GCC diagnostic pop
     }
   }
 };
