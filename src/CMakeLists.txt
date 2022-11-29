@@ -29,9 +29,3 @@ thermo.cpp
 Vertex.cpp
 Vis_data.cpp
 )
-
-if (build_stability)
-    find_package(NLopt REQUIRED)
-    add_executable(stability stability.cpp)
-    target_link_libraries(stability PRIVATE hexed nlopt)
-endif ()

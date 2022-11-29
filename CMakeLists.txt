@@ -29,7 +29,6 @@ option(sanitize "If ON, compile with sanitizer flags." OFF)
 option(threaded "If ON, allow multiple threads. Substantially reduces execution time." ON)
 option(use_otter "include capability to use otter for plotting" OFF)
 option(use_tecplot "include capability to use tecplot for plotting" ON)
-option(build_stability "build the executable to derive CFL conditions and time integration schemes")
 
 # determine whether to compile with sanitizers
 if (sanitize)
