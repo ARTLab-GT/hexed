@@ -22,16 +22,20 @@ class Local_deformed : public Kernel<Deformed_element&>
 {
   Derivative<row_size> derivative;
   Write_face<n_dim, row_size> write_face;
-  double dt;
-  double rkw;
+  double update;
+  double curr;
+  double ref;
   const double heat_rat;
 
   public:
-  Local_deformed(const Basis& basis, double d_time, double rk_weight, double heat_ratio=1.4) :
+  Local_deformed(const Basis& basis,
+                 double update_coef, double current_coef, double reference_coef,
+                 double heat_ratio=1.4) :
     derivative{basis},
     write_face{basis},
-    dt{d_time},
-    rkw{rk_weight},
+    update{update_coef},
+    curr{current_coef},
+    ref{reference_coef},
     heat_rat{heat_ratio}
   {}
 
@@ -52,7 +56,7 @@ class Local_deformed : public Kernel<Deformed_element&>
       double* determinant = elem.jacobian_determinant();
       double* face = elem.face();
       double* tss = elem.time_step_scale();
-      const double d_t_by_d_pos = dt/elem.nominal_size();
+      const double d_pos = elements[i_elem].nominal_size();
 
       // Compute update
       for (int stride = n_qpoint/row_size, n_rows = 1, i_dim = 0; n_rows < n_qpoint;
@@ -127,8 +131,9 @@ class Local_deformed : public Kernel<Deformed_element&>
       for (int i_var = 0; i_var < n_var; ++i_var) {
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           const int i_dof = i_var*n_qpoint + i_qpoint;
-          double updated = time_rate[i_var][i_qpoint]/determinant[i_qpoint]*d_t_by_d_pos*tss[i_qpoint] + state[i_dof];
-          state[i_dof] = rkw*updated + (1. - rkw)*rk_reference[i_dof];
+          state[i_dof] = update*time_rate[i_var][i_qpoint]/determinant[i_qpoint]/d_pos*tss[i_qpoint]
+                         + curr*state[i_dof]
+                         + ref*rk_reference[i_dof];
         }
       }
       write_face(state, face);

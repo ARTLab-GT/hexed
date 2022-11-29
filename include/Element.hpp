@@ -65,9 +65,12 @@ class Element
   inline std::vector<int> nominal_position() {return nom_pos;}
   // Pointer to state data for `i_stage`th Runge-Kutta stage.
   double* stage(int i_stage); // Layout: [i_var][i_qpoint]
+  // pointer to advection state data
+  double* advection_state();
   // pointer to scaling factor for local time step.
   double* time_step_scale(); // Layout: [i_qpoint]
   double* art_visc_coef(); // layout: [i_qpoint]
+  double* art_visc_forcing(); // layout: [i_qpoint]
   // Pointer state data at faces. Must be populated by user
   double* face(); // Layout: [i_dim][is_positive][i_var][i_face_qpoint]
   virtual double* node_adjustments() {return nullptr;} // overriden by `Deformed_element`

@@ -37,7 +37,7 @@ class Iteration_status
   // numbers will be justified to fit in columns of this width. Should be >= maximum width of formatted numbers
   int number_width = 21;
   // label of each column to print
-  std::vector<std::string> labels {"iteration", "flow time", "time step", "fix admis. iters", "(dt diff)/(dt conv)"};
+  std::vector<std::string> labels {"iteration", "flow time", "time step", "fix admis. iters", "(dt diff)/(dt conv)", "advection residual", "diffusion residual"};
   // return a string containing the data for each column followed by `sep`
   virtual std::string value_string();
 
@@ -48,6 +48,8 @@ class Iteration_status
   int iteration = 0;
   int fix_admis_iters = 0;
   double dt_rat;
+  double adv_res = 0;
+  double diff_res = 0;
   // return string containing the column labels separated by `sep`,
   // justified to align with numerical data in `report()`.
   std::string header();

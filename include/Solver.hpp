@@ -24,15 +24,24 @@ class Solver
   Gauss_legendre basis;
   Iteration_status status;
   Stopwatch_tree stopwatch;
-  std::vector<double> rk_weights {1., 1./4., 2./3.};
   bool use_art_visc;
   bool fix_admis;
-  const double fix_stab_rat = 1.;
+  int av_rs;
   void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
   void update_art_visc(double dt, bool use_av_coef);
   void fix_admissibility(double stability_ratio);
 
   public:
+  // tweakable parameters for the numerical scheme
+  double fix_admis_stab_rat = .7;
+  double av_advect_shift = .5;
+  double av_diff_ratio = 5e-3;
+  double av_visc_mult = 100.;
+  double av_advect_stab_rat = .9;
+  double av_diff_stab_rat = .5;
+  int av_advect_iters = 1;
+  int av_diff_iters = 1;
+
   Solver(int n_dim, int row_size, double root_mesh_size);
   virtual ~Solver() = default;
 
@@ -66,7 +75,8 @@ class Solver
   void initialize(const Spacetime_func&);
   void set_art_visc_off();
   void set_art_visc_constant(double);
-  void set_art_visc_smoothness(int projection_row_size, double advect_length, double shift = .5, double diff_ratio = 5e-3, double visc_mult = 2., double stability_ratio = .8, double diff_stab_rat = .8);
+  void set_art_visc_smoothness(double advect_length);
+  void set_art_visc_row_size(int); // modify the polynomial order of smoothness-based artificial viscosity (must be <= row size of discretization (which is the default))
   void set_fix_admissibility(bool);
   /*
    * set the resolution badness for each element according to `func`.

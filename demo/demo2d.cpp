@@ -3,7 +3,7 @@
 #include <hexed/math.hpp>
 #include <hexed/config.hpp>
 
-const bool interactive = false;
+const bool interactive = true;
 
 int main()
 {

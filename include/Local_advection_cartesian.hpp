@@ -24,15 +24,17 @@ class Local_advection_cartesian : public Kernel<Element&>
 {
   Derivative<row_size> derivative;
   Write_face<n_dim, row_size> write_face;
-  double dt;
-  double rkw;
+  double update;
+  double curr;
+  double ref;
 
   public:
-  Local_advection_cartesian(const Basis& basis, double d_time, double rk_weight) :
+  Local_advection_cartesian(const Basis& basis, double update_coef, double current_coef, double reference_coef) :
     derivative{basis},
     write_face{basis},
-    dt{d_time},
-    rkw{rk_weight}
+    update{update_coef},
+    curr{current_coef},
+    ref{reference_coef}
   {}
 
   virtual void operator()(Sequence<Element&>& elements)
@@ -47,9 +49,10 @@ class Local_advection_cartesian : public Kernel<Element&>
       double* veloc = elements[i_elem].stage(0); // advection velocity, not physical velocity
       double* state = veloc + n_dim*n_qpoint;
       double* rk_reference = state + n_qpoint;
+      double* tss = elements[i_elem].time_step_scale();
       double time_rate [n_qpoint] {};
       double* face = elements[i_elem].face();
-      const double d_t_by_d_pos = dt/elements[i_elem].nominal_size();
+      const double d_pos = elements[i_elem].nominal_size();
 
       // Compute update
       for (int stride = n_qpoint/row_size, n_rows = 1, i_dim = 0; n_rows < n_qpoint;
@@ -93,8 +96,9 @@ class Local_advection_cartesian : public Kernel<Element&>
 
       // write the updated solution
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-        double updated = time_rate[i_qpoint]*d_t_by_d_pos + state[i_qpoint];
-        state[i_qpoint] = rkw*updated + (1. - rkw)*rk_reference[i_qpoint];
+        state[i_qpoint] = update*time_rate[i_qpoint]/d_pos*tss[i_qpoint]
+                          + curr*state[i_qpoint]
+                          + ref*rk_reference[i_qpoint];
       }
       write_face(veloc, face);
     }

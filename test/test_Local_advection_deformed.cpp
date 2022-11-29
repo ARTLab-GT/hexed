@@ -12,13 +12,6 @@ TEST_CASE("Local_advection_deformed")
   int n_qpoint = params.n_qpoint();
   std::vector<std::unique_ptr<hexed::Deformed_element>> elements;
   hexed::Gauss_legendre basis (row_size);
-  /*
-   * to test the correctness of the time derivative, set the RK weight to 0.5
-   * and the RK reference state to minus the initial state. Thus the initial state
-   * and the reference state cancel out, and the result is 0.5 times the time derivative
-   * being written to the state.
-   */
-  double rk_weight = 0.5;
 
   elements.emplace_back(new hexed::Deformed_element {params, {}, 2.});
   auto& elem = *elements.back();
@@ -50,8 +43,8 @@ TEST_CASE("Local_advection_deformed")
       state[0*n_qpoint + i_qpoint] = veloc[0];
       state[1*n_qpoint + i_qpoint] = veloc[1];
       state[2*n_qpoint + i_qpoint] = scalar;
-      // set RK reference state to negative of initial state
-      state[3*n_qpoint + i_qpoint] = -state[2*n_qpoint + i_qpoint];
+      // set RK reference state to zero
+      state[3*n_qpoint + i_qpoint] = 0;
     }
   }
   #undef SET_VARS
@@ -75,13 +68,13 @@ TEST_CASE("Local_advection_deformed")
   }
   {
     def_elem_view elem_view {elements};
-    (*hexed::kernel_factory<hexed::Local_advection_deformed>(2, row_size, basis, d_t, rk_weight))(elem_view);
+    (*hexed::kernel_factory<hexed::Local_advection_deformed>(2, row_size, basis, d_t, 0, 0))(elem_view);
   }
   for (auto& element : elements) {
     double* state = element->stage(0);
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
       double pos0 = elem.position(basis, i_qpoint)[0];
-      REQUIRE(state[2*n_qpoint + i_qpoint] == Approx(-.5*.2*(2 + pos0)).scale(1.));
+      REQUIRE(state[2*n_qpoint + i_qpoint] == Approx(-.2*(2 + pos0)).scale(1.));
     }
   }
 }

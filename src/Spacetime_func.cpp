@@ -16,6 +16,19 @@ std::vector<double> Constant_func::operator()(std::vector<double> pos, double ti
   return value;
 }
 
+Random_func::Random_func(std::vector<double> means, std::vector<double> variations, int granularity)
+: m{means}, v{variations}, gran{granularity}
+{}
+
+std::vector<double> Random_func::operator()(std::vector<double> pos, double time) const
+{
+  std::vector<double> result = m;
+  for (unsigned i_var = 0; i_var < m.size(); ++i_var) {
+    result[i_var] += (rand()%gran)*v[i_var]/2./gran;
+  }
+  return result;
+}
+
 std::vector<double> Linear::operator()(std::vector<double> pos, double time) const
 {
   int min_size = std::min<int>(coefs.size(), pos.size());

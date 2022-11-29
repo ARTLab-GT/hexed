@@ -29,12 +29,21 @@ double quad_func(double x)
   return (x + .6)*(4.*x - 8.);
 }
 
-TEST_CASE("root finder")
+TEST_CASE("broyden root finder")
 {
-  REQUIRE(hexed::custom_math::root(lin_func, -1e7) == Approx(0.5));
-  REQUIRE(hexed::custom_math::root(quad_func, -0.8) == Approx(-.6));
-  REQUIRE(hexed::custom_math::root(quad_func, 2.3) == Approx(2.));
-  REQUIRE(hexed::custom_math::root([](double x){return std::exp(x) - 2.;}, 0.)
+  REQUIRE(hexed::custom_math::broyden(lin_func, -1e7) == Approx(0.5));
+  REQUIRE(hexed::custom_math::broyden(quad_func, -0.8) == Approx(-.6));
+  REQUIRE(hexed::custom_math::broyden(quad_func, 2.3) == Approx(2.));
+  REQUIRE(hexed::custom_math::broyden([](double x){return std::exp(x) - 2.;}, 0.)
+          == Approx(std::log(2.)));
+}
+
+TEST_CASE("bisection root finder")
+{
+  REQUIRE(hexed::custom_math::bisection(lin_func , {  0,   2}) == Approx(0.5));
+  REQUIRE(hexed::custom_math::bisection(quad_func, { -1,   0}) == Approx(-.6));
+  REQUIRE(hexed::custom_math::bisection(quad_func, {0.1, 3.4}) == Approx(2.));
+  REQUIRE(hexed::custom_math::bisection([](double x){return std::exp(x) - 2.;}, {0, 1})
           == Approx(std::log(2.)));
 }
 

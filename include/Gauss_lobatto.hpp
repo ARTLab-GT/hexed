@@ -18,6 +18,8 @@ class Gauss_lobatto : public Basis
   virtual Eigen::VectorXd orthogonal(int degree) const;
   virtual double max_cfl_convective() const;
   virtual double max_cfl_diffusive() const;
+  virtual double cancellation_convective() const;
+  virtual double cancellation_diffusive() const;
 };
 
 }
