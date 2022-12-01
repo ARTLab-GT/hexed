@@ -1,4 +1,5 @@
 <img src="../assets/header.png" alt="header" height="400"/>
+Above: Temperature (K) contours on a Mach 10 starfish (inviscid, 2D, CPG).
 
 # hexed
 Discontinuous Galerkin engine for CFD with automated, unstructured quad/hex meshing.
