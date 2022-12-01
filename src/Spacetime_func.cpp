@@ -143,4 +143,18 @@ std::vector<double> Spatial_gaussian::operator()(std::vector<double> pos, double
   return {std::exp(-radius_sq/2.)};
 }
 
+Annular_diffusion_test::Annular_diffusion_test(double reference_mass, double reference_radius, double energy)
+: ref_mass{reference_mass}, ref_radius{reference_radius}, ener{energy}
+{}
+
+std::vector<double> Annular_diffusion_test::operator()(std::vector<double> pos, double time) const
+{
+  std::vector<double> state(pos.size() + 2, 0.);
+  state.back() = ener;
+  double radius_sq = 0;
+  for (double p : pos) radius_sq += p*p;
+  state[pos.size()] = ref_mass*std::log(std::sqrt(radius_sq)/ref_radius);
+  return state;
+}
+
 }
