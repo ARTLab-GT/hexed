@@ -14,7 +14,7 @@ Discontinuous Galerkin engine for CFD with automated, unstructured quad/hex mesh
 This document provides an overview of Hexed. More detailed documentation can be found in [`doc`](doc/). In particular, for
 installation instructions, see [`install.md`](doc/install.md).
 
-## About
+## Overview
 Anyone who has spent a substantial amount of time working with computational fluid dynamics (CFD)
 can attest that it is decidedly arcane and sometimes tends toward evil.
 As its name suggests, Hexed scarcely presumes to change that.
@@ -45,7 +45,7 @@ Hexed is not:
 Most of the performance critical code is placed in what I call "kernels".
 These are highly optimized functions that perform the basic operations of the DG method.
 They take the number of dimensions and the polynomial degree of the basis as template parameters,
-allowing local arrays to be allocated on the stack and allowing the compiler to unroll loops effectively.
+providing as many opportunities as possible for compiler optimization (and making it roughly twice as fast).
 The ability to specify the degree of the basis and the dimensionality at runtime is recovered by
 some truly cursed recursive templates, which gets the end result that the user needs, but takes *forever* to compile
 and gives me a headache every time I look at it.
@@ -76,13 +76,12 @@ for guidance on obtaining these.
 Currently implemented features:
 * Gauss-Lobatto and Gauss-Legendre nodal bases.
 * Unstructured, body-fitted quad/hex mesh.
-* 3-stage Runge-Kutta explicit time integration.
-* CFL-based time step selection.
+* Explicit time integration.
 * Visualization with Tecplot.
 * Integration with NASCART-GT.
 * Hanging-node refinement.
+* Shock capturing with an original artificial viscosity scheme.
  
 Planned or in-progress features (roughly in order of planned implementation):
-* Shock capturing (in progress).
 * Viscous flows with anisotropic refinement.
-* Grid adaptation.
+* Grid adaption.
