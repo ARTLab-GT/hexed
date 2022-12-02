@@ -147,12 +147,12 @@ class Spatial_gaussian : public Spacetime_func
 // velocity is uniformly zero, total energy is uniform, and mass is proportional to log of distance from origin
 class Annular_diffusion_test : public State_from_spacetime
 {
-  double ref_mass;
-  double ref_radius;
+  double val_scale;
+  double rad_scale;
   double ener;
   public:
-  // `reference_mass` is the value of mass at `reference_radius`
-  Annular_diffusion_test(double reference_mass, double reference_radius, double energy);
+  // mass = value_scalar*std::log(radius/radius_scalar)
+  Annular_diffusion_test(double value_scalar, double radius_scalar, double energy);
   virtual std::vector<double> operator()(std::vector<double> pos, double time) const;
 };
 

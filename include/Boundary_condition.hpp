@@ -2,6 +2,7 @@
 #define HEXED_BOUNDARY_CONDITION_HPP_
 
 #include "connection.hpp"
+#include "Surface_func.hpp"
 
 namespace hexed
 {
@@ -75,6 +76,19 @@ class Freestream : public Flow_bc
   public:
   // `freestream_state.size()` must equal the `n_var()` of the `Boundary_face` you apply_state it to
   Freestream(std::vector<double> freestream_state);
+  virtual void apply_state(Boundary_face&);
+  virtual void apply_flux(Boundary_face&);
+};
+
+/* Like `Freestream`, but sets state to the value of an arbitrary `Surface_func`
+ * instead of a constant.
+ */
+class Function_bc : public Flow_bc
+{
+  const Surface_func& func;
+  public:
+  Function_bc(const Surface_func&);
+  Function_bc(Surface_func&&) = delete;
   virtual void apply_state(Boundary_face&);
   virtual void apply_flux(Boundary_face&);
 };

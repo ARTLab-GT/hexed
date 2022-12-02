@@ -1,6 +1,7 @@
 #include <catch2/catch.hpp>
 #include <hexed/config.hpp>
 #include <hexed/Boundary_condition.hpp>
+#include <hexed/Spacetime_func.hpp>
 
 class Dummy : public hexed::Boundary_condition
 {
@@ -61,6 +62,37 @@ TEST_CASE("Freestream")
     REQUIRE(tbc.ghost_face()[3*n_qpoint + i_qpoint] == Approx(1.3));
     REQUIRE(tbc.ghost_face()[4*n_qpoint + i_qpoint] == Approx(1.2e5));
   }
+}
+
+TEST_CASE("Function_bc")
+{
+  const int row_size = hexed::config::max_row_size;
+  hexed::Storage_params params {2, 4, 2, row_size};
+  hexed::Element element {params};
+  const int n_qpoint = row_size;
+  hexed::Annular_diffusion_test func(1.7, 2., 1e5);
+  hexed::Function_bc bc(func);
+  hexed::Typed_bound_connection<hexed::Element> tbc {element, 1, false, 0};
+  for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+    // set inside face to something arbitrary
+    tbc.inside_face()[0*n_qpoint + i_qpoint] = 20.;
+    tbc.inside_face()[1*n_qpoint + i_qpoint] = -10.;
+    tbc.inside_face()[2*n_qpoint + i_qpoint] = 5.;
+    tbc.inside_face()[3*n_qpoint + i_qpoint] = 1e4;
+  }
+  // set position at node 0 to have radius 2*e (not the actual position, but for this test that doesn't matter)
+  tbc.surface_position()[0*n_qpoint + 0] =  1.2*std::exp(1.);
+  tbc.surface_position()[1*n_qpoint + 0] = -1.6*std::exp(1.);
+  // set position at node 4 to have radius 2*e^2
+  tbc.surface_position()[0*n_qpoint + 4] =  1.2*std::exp(2.);
+  tbc.surface_position()[1*n_qpoint + 4] =  1.6*std::exp(2.);
+  bc.apply_state(tbc);
+  // check that ghost face state is correct at the qpoints where position was set
+  REQUIRE(tbc.ghost_face()[0*n_qpoint + 0] == Approx(0.).scale(1.));
+  REQUIRE(tbc.ghost_face()[1*n_qpoint + 0] == Approx(0.).scale(1.));
+  REQUIRE(tbc.ghost_face()[2*n_qpoint + 0] == Approx(1.7));
+  REQUIRE(tbc.ghost_face()[3*n_qpoint + 0] == Approx(1e5));
+  REQUIRE(tbc.ghost_face()[2*n_qpoint + 4] == Approx(3.4));
 }
 
 TEST_CASE("Nonpenetration")
