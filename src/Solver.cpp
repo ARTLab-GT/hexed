@@ -197,6 +197,18 @@ void Solver::calc_jacobian()
       nrml[i_data] = state[i_data];
     }
   }
+  // set position at boundary faces
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    Element& elem = bc_cons[i_con].element();
+    double* surf_pos = bc_cons[i_con].surface_position();
+    int i_face = bc_cons[i_con].direction().i_face(0);
+    for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+      auto pos = elem.face_position(basis, i_face, i_qpoint);
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        surf_pos[i_dim*nfq + i_qpoint] = pos[i_dim];
+      }
+    }
+  }
 }
 
 void Solver::set_local_tss()
@@ -821,17 +833,21 @@ std::vector<double> Solver::integral_surface(const Surface_func& integrand, int 
     {
       double* state = con.inside_face();
       double* nrml = con.normal();
+      double* pos = con.surface_position();
       for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint)
       {
-        std::vector<double> qpoint_pos {elem.face_position(basis, con.direction().i_face(0), i_qpoint)};
+        // fetch state
         std::vector<double> qpoint_state;
         for (int i_var = 0; i_var < nv; ++i_var) {
           qpoint_state.push_back(state[i_var*nfq + i_qpoint]);
         }
+        // fetch position and normal vector
+        std::vector<double> qpoint_pos;
         std::vector<double> normal;
         double nrml_mag = 0;
         int nrml_sign = 2*con.direction().flip_normal(0) - 1;
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
+          qpoint_pos.push_back(pos[i_dim*nfq + i_qpoint]);
           double comp = nrml_sign*nrml[i_dim*nfq + i_qpoint];
           normal.push_back(comp);
           nrml_mag += comp*comp;
