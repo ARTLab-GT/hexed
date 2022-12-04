@@ -333,3 +333,17 @@ TEST_CASE("Spatial_gaussian")
   REQUIRE(gaus({.8, 0., 0.}, 1.7)[0]/gaus({0., 0., .5}, 1.)[0] == Approx(1.));
   REQUIRE(gaus({0., .5, 0.}, 1.7)[0]/gaus({0., 1., 0.}, 1.)[0] == Approx(std::exp(1.5)));
 }
+
+TEST_CASE("Pow")
+{
+  hexed::Gauss_lobatto basis(2);
+  hexed::Element elem({2, 4, 2, 2}, {}, 10. + 2./3.);
+  Arbitrary_func func;
+  hexed::Pow p(func, 3);
+  REQUIRE(p.n_var(2) == 2);
+  REQUIRE(p.variable_name(1) == "(arbitrary1)^3");
+  auto result = p(elem, basis, 1, .1);
+  REQUIRE(result.size() == 2);
+  REQUIRE(result[0] == Approx(-.008));
+  REQUIRE(result[1] == Approx(27));
+}

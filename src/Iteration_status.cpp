@@ -14,12 +14,15 @@ std::string Iteration_status::value_string()
 {
   std::string r = "";
   r += format("i", iteration);
-  r += format(".14e", flow_time);
-  r += format(".14e", time_step);
+  r += format(double_format, mmtm_res);
+  r += format(double_format, mass_res);
+  r += format(double_format, ener_res);
+  r += format(double_format, adv_res);
+  r += format(double_format, diff_res);
+  r += format(double_format, flow_time);
+  r += format(double_format, time_step);
   r += format("i", fix_admis_iters);
-  r += format(".14e", dt_rat);
-  r += format(".14e", adv_res);
-  r += format(".14e", diff_res);
+  r += format(double_format, dt_rat);
   return r;
 }
 

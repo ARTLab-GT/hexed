@@ -683,6 +683,21 @@ void Solver::update(double stability_ratio)
   sw_def.work_units_completed += acc_mesh.deformed ().elements().size();
 }
 
+Iteration_status Solver::iteration_status()
+{
+  Iteration_status stat = status;
+  Physical_update update;
+  auto res = integral_field(Pow(update, 2));
+  for (double& r : res) r /= stat.time_step*stat.time_step;
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+    stat.mmtm_res += res[i_dim];
+  }
+  stat.mmtm_res = std::sqrt(stat.mmtm_res);
+  stat.mass_res = std::sqrt(res[params.n_dim]);
+  stat.ener_res = std::sqrt(res[params.n_dim + 1]);
+  return stat;
+}
+
 void Solver::update_art_visc(double dt, bool use_av_coef)
 {
   const int nd = params.n_dim;

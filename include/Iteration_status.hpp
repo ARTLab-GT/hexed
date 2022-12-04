@@ -33,23 +33,28 @@ class Iteration_status
    * User can implement custom printing functionality by overriding the following members
    */
   // string used to separate columns
-  std::string sep = ",   ";
+  std::string sep = ", ";
   // numbers will be justified to fit in columns of this width. Should be >= maximum width of formatted numbers
-  int number_width = 21;
+  int number_width = 15;
+  std::string double_format = ".8e";
   // label of each column to print
-  std::vector<std::string> labels {"iteration", "flow time", "time step", "fix admis. iters", "(dt diff)/(dt conv)", "advection residual", "diffusion residual"};
+  std::vector<std::string> labels {"iteration", "momtm resid", "mass resid", "energy resid", "av adv resid", "av diff resid",
+                                   "flow time", "time step", "fix adm iters", "diff dt rat"};
   // return a string containing the data for each column followed by `sep`
   virtual std::string value_string();
 
   public:
   // data storage. User can overwrite -- this class is just a container
   double flow_time = 0.;
+  double mmtm_res = 0;
+  double mass_res = 0;
+  double ener_res = 0;
+  double adv_res = 0;
+  double diff_res = 0;
   double time_step = 0.;
   int iteration = 0;
   int fix_admis_iters = 0;
   double dt_rat;
-  double adv_res = 0;
-  double diff_res = 0;
   // return string containing the column labels separated by `sep`,
   // justified to align with numerical data in `report()`.
   std::string header();

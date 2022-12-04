@@ -95,7 +95,7 @@ class Solver
    */
   void update(double stability_ratio = 0.8);
   // an object providing all available information about the status of the time marching iteration.
-  Iteration_status iteration_status() {return status;}
+  Iteration_status iteration_status();
   void reset_counters();
 
   /* ### OUTPUT ### */
