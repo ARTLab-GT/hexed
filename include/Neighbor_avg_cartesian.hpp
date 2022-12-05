@@ -15,9 +15,7 @@ namespace hexed
 template <int n_dim, int row_size>
 class Neighbor_avg_cartesian : public Kernel<Face_connection<Element>&>
 {
-  int side;
   public:
-  Neighbor_avg_cartesian(int which_side = 0) : side{which_side} {}
   virtual void operator()(Sequence<Face_connection<Element>&>& connections)
   {
     constexpr int n_var = n_dim + 2;
@@ -30,7 +28,8 @@ class Neighbor_avg_cartesian : public Kernel<Face_connection<Element>&>
       auto& con = connections[i_con];
       double* face [2] {con.face(0), con.face(1)};
       for (int i_dof = 0; i_dof < face_size; ++i_dof) {
-        double avg = face[side][i_dof];
+        double avg = 0.;
+        for (int i_side : {0, 1}) avg += .5*face[i_side][i_dof];
         for (int i_side : {0, 1}) face[i_side][i_dof] = avg;
       }
     }

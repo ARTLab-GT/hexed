@@ -18,10 +18,9 @@ template <int n_dim, int row_size>
 class Neighbor_avg_deformed : public Kernel<Face_connection<Deformed_element>&>
 {
   bool f;
-  int side;
 
   public:
-  Neighbor_avg_deformed(bool flip, int which_side = 0) : f{flip}, side{which_side} {}
+  Neighbor_avg_deformed(bool flip) : f{flip} {}
 
   virtual void operator()(Sequence<Face_connection<Deformed_element>&>& connections)
   {
@@ -39,7 +38,8 @@ class Neighbor_avg_deformed : public Kernel<Face_connection<Deformed_element>&>
       Face_permutation<n_dim, row_size> permutation(dir, face[1]);
       permutation.match_faces();
       for (int i_dof = 0; i_dof < face_size; ++i_dof) {
-        double avg = sign[side]*face[side][i_dof];
+        double avg = 0.;
+        for (int i_side : {0, 1}) avg += .5*sign[i_side]*face[i_side][i_dof];
         for (int i_side : {0, 1}) face[i_side][i_dof] = sign[i_side]*avg;
       }
       permutation.restore();
