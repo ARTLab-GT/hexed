@@ -708,14 +708,15 @@ void Solver::update_art_visc(double dt, bool use_av_coef)
   std::array<double, 2> step;
   step[1] = (linear + std::sqrt(linear*linear - 4*quadratic))/2.;
   step[0] = quadratic/step[1];
+  bool side = status.iteration%2;
   for (double s : step)
   {
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
       int bc_sn = bc_cons[i_con].bound_cond_serial_n();
       acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
     }
-    (*kernel_factory<Neighbor_avg_cartesian>(nd, rs       ))(acc_mesh.cartesian().face_connections());
-    (*kernel_factory<Neighbor_avg_deformed >(nd, rs, false))(acc_mesh.deformed ().face_connections());
+    (*kernel_factory<Neighbor_avg_cartesian>(nd, rs       , side))(acc_mesh.cartesian().face_connections());
+    (*kernel_factory<Neighbor_avg_deformed >(nd, rs, false, side))(acc_mesh.deformed ().face_connections());
     (*kernel_factory<Restrict_refined>(nd, rs, basis, false))(acc_mesh.refined_faces());
     (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, s, use_av_coef, false, 2 - use_av_coef))(acc_mesh.cartesian().elements());
     (*kernel_factory<Local_av0_deformed >(nd, rs, basis, s, use_av_coef, false, 2 - use_av_coef))(acc_mesh.deformed ().elements());
@@ -724,8 +725,8 @@ void Solver::update_art_visc(double dt, bool use_av_coef)
       int bc_sn = bc_cons[i_con].bound_cond_serial_n();
       acc_mesh.boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
     }
-    (*kernel_factory<Neighbor_avg_cartesian>(nd, rs      ))(acc_mesh.cartesian().face_connections());
-    (*kernel_factory<Neighbor_avg_deformed >(nd, rs, true))(acc_mesh.deformed ().face_connections());
+    (*kernel_factory<Neighbor_avg_cartesian>(nd, rs      , !side))(acc_mesh.cartesian().face_connections());
+    (*kernel_factory<Neighbor_avg_deformed >(nd, rs, true, !side))(acc_mesh.deformed ().face_connections());
     (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());
     (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, s, use_av_coef, false, 2 - use_av_coef))(acc_mesh.cartesian().elements());
     (*kernel_factory<Local_av1_deformed >(nd, rs, basis, s, use_av_coef, false, 2 - use_av_coef))(acc_mesh.deformed ().elements());
