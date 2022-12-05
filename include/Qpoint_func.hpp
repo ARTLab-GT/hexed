@@ -98,5 +98,18 @@ class Scaled : public Qpoint_func
   }
 };
 
+class Pow : public Qpoint_func
+{
+  const Qpoint_func& qf;
+  int exp;
+
+  public:
+  inline Pow(const Qpoint_func& base, int exponent) : qf{base}, exp{exponent} {}
+  Pow(Qpoint_func&&, int) = delete;
+  virtual inline int n_var(int n_dim) const {return qf.n_var(n_dim);}
+  virtual std::string variable_name(int i_var) const;
+  virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const;
+};
+
 }
 #endif

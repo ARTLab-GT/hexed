@@ -143,5 +143,18 @@ class Spatial_gaussian : public Spacetime_func
   virtual std::vector<double> operator()(std::vector<double> pos, double time) const;
 };
 
+// steady-state solution to Laplacian diffusion in an anular domain (for verification testing)
+// velocity is uniformly zero, total energy is uniform, and mass is proportional to log of distance from origin
+class Annular_diffusion_test : public State_from_spacetime
+{
+  double val_scale;
+  double rad_scale;
+  double ener;
+  public:
+  // mass = value_scalar*std::log(radius/radius_scalar)
+  Annular_diffusion_test(double value_scalar, double radius_scalar, double energy);
+  virtual std::vector<double> operator()(std::vector<double> pos, double time) const;
+};
+
 }
 #endif

@@ -3,5 +3,5 @@
 namespace hexed::global_hacks
 {
 std::map<std::string, int> debug_message;
-Stopwatch stopwatch;
+Stopwatch_tree stopwatch("task");
 }

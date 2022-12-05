@@ -49,6 +49,42 @@ void Freestream::apply_state(Boundary_face& bf)
   }
 }
 
+Function_bc::Function_bc(const Surface_func& func_arg) : func{func_arg} {}
+
+void Function_bc::apply_state(Boundary_face& bf)
+{
+  auto params = bf.storage_params();
+  const int nq = params.n_qpoint()/params.row_size;
+  const int nd = params.n_dim;
+  const int nv = params.n_var;
+  double* gh_f = bf.ghost_face();
+  double* in_f = bf.inside_face();
+  double* nrml = bf.surface_normal();
+  double* pos = bf.surface_position();
+  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+    // fetch shared/inside face data
+    std::vector<double> n(nd);
+    std::vector<double> p(nd);
+    std::vector<double> s(nv);
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      n[i_dim] = nrml[i_dim*nq + i_qpoint];
+      p[i_dim] =  pos[i_dim*nq + i_qpoint];
+    }
+    for (int i_var = 0; i_var < nv; ++i_var) s[i_var] = in_f[i_var*nq + i_qpoint];
+    // apply function
+    auto state = func(p, 0, s, n);
+    // write result to ghost face
+    for (int i_var = 0; i_var < nv; ++i_var) {
+      gh_f[i_var*nq + i_qpoint] = state[i_var];
+    }
+  }
+}
+
+void Function_bc::apply_flux(Boundary_face& bf)
+{
+  copy_state(bf);
+}
+
 void Freestream::apply_flux(Boundary_face& bf)
 {
   copy_state(bf);
@@ -136,6 +172,39 @@ void Nominal_pos::snap_vertices(Boundary_connection& con)
       con.element().vertex(i_vert).pos[con.i_dim()] = pos;
     }
   }
+}
+
+Surface_set::Surface_set(std::vector<Surface_geometry*> ptrs)
+{
+  for (Surface_geometry* ptr : ptrs) geoms.emplace_back(ptr);
+}
+
+std::array<double, 3> Surface_set::project_point(std::array<double, 3> point)
+{
+  std::array<double, 3> proj;
+  double dist_sq = std::numeric_limits<double>::max();
+  for (auto& geom : geoms) {
+    auto p = geom->project_point(point);
+    double d = 0;
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+      d += (p[i_dim] - point[i_dim])*(p[i_dim] - point[i_dim]);
+    }
+    if (d < dist_sq) {
+      proj = p;
+      dist_sq = d;
+    }
+  }
+  return proj;
+}
+
+std::vector<double> Surface_set::line_intersections(std::array<double, 3> point0, std::array<double, 3> point1)
+{
+  std::vector<double> inter;
+  for (auto& geom : geoms) {
+    auto geom_inter = geom->line_intersections(point0, point1);
+    inter.insert(inter.end(), geom_inter.begin(), geom_inter.end());
+  }
+  return inter;
 }
 
 void Surface_mbc::snap_vertices(Boundary_connection& con)

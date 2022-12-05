@@ -34,5 +34,18 @@ std::vector<double> Art_visc_coef::operator()(Element& element, const Basis&, in
   return {element.art_visc_coef()[i_qpoint]};
 }
 
+std::string Pow::variable_name(int i_var) const
+{
+  char buffer [1000];
+  snprintf(buffer, 1000, "(%s)^%i", qf.variable_name(i_var).c_str(), exp);
+  return buffer;
+}
+
+std::vector<double> Pow::operator()(Element& e, const Basis& b, int i_qpoint, double time) const
+{
+  std::vector<double> result = qf(e, b, i_qpoint, time);
+  for (double& r : result) r = custom_math::pow(r, exp);
+  return result;
+}
 
 }
