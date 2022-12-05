@@ -161,6 +161,19 @@ class Surface_geometry
   virtual ~Surface_geometry() = default;
 };
 
+// a `Surface_geometry` which represents the union of other `Surface_geometry`s
+class Surface_set : public Surface_geometry
+{
+  std::vector<std::unique_ptr<Surface_geometry>> geoms;
+  public:
+  // acquires ownership of surface geometries
+  Surface_set(std::vector<Surface_geometry*>);
+  // finds projection from all member surface geometries and takes nearest
+  virtual std::array<double, 3> project_point(std::array<double, 3> point);
+  // returns union of line intersections of all member surface geometries
+  virtual std::vector<double> line_intersections(std::array<double, 3> point0, std::array<double, 3> point1);
+};
+
 class Surface_mbc : public Mesh_bc
 {
   std::unique_ptr<Surface_geometry> sg;

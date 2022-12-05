@@ -174,6 +174,39 @@ void Nominal_pos::snap_vertices(Boundary_connection& con)
   }
 }
 
+Surface_set::Surface_set(std::vector<Surface_geometry*> ptrs)
+{
+  for (Surface_geometry* ptr : ptrs) geoms.emplace_back(ptr);
+}
+
+std::array<double, 3> Surface_set::project_point(std::array<double, 3> point)
+{
+  std::array<double, 3> proj;
+  double dist_sq = std::numeric_limits<double>::max();
+  for (auto& geom : geoms) {
+    auto p = geom->project_point(point);
+    double d = 0;
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+      d += (p[i_dim] - point[i_dim])*(p[i_dim] - point[i_dim]);
+    }
+    if (d < dist_sq) {
+      proj = p;
+      dist_sq = d;
+    }
+  }
+  return proj;
+}
+
+std::vector<double> Surface_set::line_intersections(std::array<double, 3> point0, std::array<double, 3> point1)
+{
+  std::vector<double> inter;
+  for (auto& geom : geoms) {
+    auto geom_inter = geom->line_intersections(point0, point1);
+    inter.insert(inter.end(), geom_inter.begin(), geom_inter.end());
+  }
+  return inter;
+}
+
 void Surface_mbc::snap_vertices(Boundary_connection& con)
 {
   const int stride = custom_math::pow(2, con.storage_params().n_dim - 1 - con.i_dim());
