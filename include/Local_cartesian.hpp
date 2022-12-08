@@ -13,6 +13,37 @@
 namespace hexed
 {
 
+class Nd_index
+{
+  int i_outer = 0;
+  int i_inner = 0;
+  int i_fq = 0;
+  public:
+  const int n_dim;
+  const int row_size;
+  const int n_qpoint;
+  const int n_fqpoint;
+  const int stride;
+  constexpr Nd_index(int nd, int rs, int id)
+  : n_dim{nd}, row_size{rs},
+    n_qpoint{custom_math::pow(row_size, n_dim)},
+    n_fqpoint{n_qpoint/row_size},
+    stride{custom_math::pow(row_size, n_dim - 1 - id)}
+  {}
+  constexpr void operator++()
+  {
+    ++i_fq;
+    ++i_inner;
+    if (i_inner == stride) {
+      i_inner = 0;
+      ++i_outer;
+    }
+  }
+  constexpr operator bool() const {return i_fq < n_fqpoint;}
+  constexpr int i_face_qpoint() const {return i_fq;}
+  constexpr int i_qpoint(int i_node) const {return i_outer*stride*row_size + i_inner + i_node*stride;}
+};
+
 /*
  * Computes the local update for one Runge-Kutta stage.
  * Here, "local" means that all of the necessary data is contained within each `Element` object.
@@ -58,58 +89,51 @@ class Local_cartesian : public Kernel<Element&>
       const double d_pos = elements[i_elem].nominal_size();
 
       // Compute update
-      for (int stride = n_qpoint/row_size, n_rows = 1, i_dim = 0; n_rows < n_qpoint;
-           stride /= row_size, n_rows *= row_size, ++i_dim)
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim)
       {
-        int i_face_qpoint {0};
-        for (int i_outer = 0; i_outer < n_rows; ++i_outer)
+        for (Nd_index ind(n_dim, row_size, i_dim); ind; ++ind)
         {
-          for (int i_inner = 0; i_inner < stride; ++i_inner)
+          // Fetch this row of data
+          double row_r [n_var][row_size];
+          for (int i_var = 0; i_var < n_var; ++i_var) {
+            for (int i_row = 0; i_row < row_size; ++i_row) {
+              row_r[i_var][i_row] = state[i_var*n_qpoint + ind.i_qpoint(i_row)];
+            }
+          }
+          // fetch boundary flux
+          Eigen::Matrix<double, 2, n_var> boundary_values;
+          for (int i_var = 0; i_var < n_var; ++i_var) {
+            for (int is_positive : {0, 1}) {
+              boundary_values(is_positive, i_var) = face[(i_dim*2 + is_positive)*n_face_dof + i_var*n_qpoint/row_size + ind.i_face_qpoint()];
+            }
+          }
+
+          // Calculate flux
+          Eigen::Matrix<double, row_size, n_var> flux;
+          for (int i_row = 0; i_row < row_size; ++i_row)
           {
-            // Fetch this row of data
-            double row_r [n_var][row_size];
-            for (int i_var = 0; i_var < n_var; ++i_var) {
-              for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-                row_r[i_var][i_qpoint] = state[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
-              }
+            #define READ(i) row_r[i][i_row]
+            #define FLUX(i) flux(i_row, i)
+            HEXED_COMPUTE_SCALARS
+            HEXED_ASSERT_ADMISSIBLE
+            double veloc = READ(i_dim)/mass;
+            for (int j_dim = 0; j_dim < n_var - 2; ++j_dim) {
+              FLUX(j_dim) = READ(j_dim)*veloc;
             }
-            // fetch boundary flux
-            Eigen::Matrix<double, 2, n_var> boundary_values;
-            for (int i_var = 0; i_var < n_var; ++i_var) {
-              for (int is_positive : {0, 1}) {
-                boundary_values(is_positive, i_var) = face[(i_dim*2 + is_positive)*n_face_dof + i_var*n_qpoint/row_size + i_face_qpoint];
-              }
-            }
+            FLUX(i_dim) += pres;
+            FLUX(n_var - 2) = READ(i_dim);
+            FLUX(n_var - 1) = (ener + pres)*veloc;
+            #undef FLUX
+            #undef READ
+          }
+          // Differentiate flux
+          Eigen::Matrix<double, row_size, n_var> row_w = -derivative(flux, boundary_values);
 
-            // Calculate flux
-            Eigen::Matrix<double, row_size, n_var> flux;
-            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint)
-            {
-              #define READ(i) row_r[i][i_qpoint]
-              #define FLUX(i) flux(i_qpoint, i)
-              HEXED_COMPUTE_SCALARS
-              HEXED_ASSERT_ADMISSIBLE
-              double veloc = READ(i_dim)/mass;
-              for (int j_dim = 0; j_dim < n_var - 2; ++j_dim) {
-                FLUX(j_dim) = READ(j_dim)*veloc;
-              }
-              FLUX(i_dim) += pres;
-              FLUX(n_var - 2) = READ(i_dim);
-              FLUX(n_var - 1) = (ener + pres)*veloc;
-              #undef FLUX
-              #undef READ
+          // Add dimensional component to update
+          for (int i_var = 0; i_var < n_var; ++i_var) {
+            for (int i_row = 0; i_row < row_size; ++i_row) {
+              time_rate[i_var][ind.i_qpoint(i_row)] += row_w(i_row, i_var);
             }
-            // Differentiate flux
-            Eigen::Matrix<double, row_size, n_var> row_w = -derivative(flux, boundary_values);
-
-            // Add dimensional component to update
-            for (int i_var = 0; i_var < n_var; ++i_var) {
-              for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-                int offset = i_outer*stride*row_size + i_inner + i_qpoint*stride;
-                time_rate[i_var][offset] += row_w(i_qpoint, i_var);
-              }
-            }
-            ++i_face_qpoint;
           }
         }
       }
