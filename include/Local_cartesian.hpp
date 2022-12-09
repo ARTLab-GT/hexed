@@ -21,14 +21,15 @@ class Nd_index
   public:
   const int n_dim;
   const int row_size;
+  const int i_dim;
   const int n_qpoint;
   const int n_fqpoint;
   const int stride;
   constexpr Nd_index(int nd, int rs, int id)
-  : n_dim{nd}, row_size{rs},
+  : n_dim{nd}, row_size{rs}, i_dim{id},
     n_qpoint{custom_math::pow(row_size, n_dim)},
     n_fqpoint{n_qpoint/row_size},
-    stride{custom_math::pow(row_size, n_dim - 1 - id)}
+    stride{custom_math::pow(row_size, n_dim - 1 - i_dim)}
   {}
   constexpr void operator++()
   {
@@ -44,17 +45,21 @@ class Nd_index
   constexpr int i_qpoint(int i_node) const {return i_outer*stride*row_size + i_inner + i_node*stride;}
 };
 
+template <int rows, int cols = 1>
+using Mat = Eigen::Matrix<double, rows, cols>;
+
 template <int n_var, int row_size>
 class Numerics
 {
   public:
-  typedef Eigen::Matrix<double, row_size, n_var> row;
+  typedef Mat<row_size, n_var> Row;
+  typedef Mat<2, n_var> Bound;
 
   Numerics() = delete;
 
-  static row read_row(double* data, Nd_index ind)
+  static Row read_row(const double* data, Nd_index ind)
   {
-    row r;
+    Row r;
     for (int i_var = 0; i_var < n_var; ++i_var) {
       for (int i_row = 0; i_row < row_size; ++i_row) {
         r(i_row, i_var) = data[i_var*ind.n_qpoint + ind.i_qpoint(i_row)];
@@ -63,7 +68,7 @@ class Numerics
     return r;
   }
 
-  static void write_row(row w, double* data, Nd_index ind, double coef)
+  static void write_row(Row w, double* data, Nd_index ind, double coef)
   {
     for (int i_var = 0; i_var < n_var; ++i_var) {
       for (int i_row = 0; i_row < row_size; ++i_row) {
@@ -73,24 +78,62 @@ class Numerics
     }
   }
 
-  static row flux(row state, int i_dim)
+  static Bound read_bound(const double* face, Nd_index ind)
   {
-    const double heat_rat = 1.4;
-    row f;
-    for (int i_row = 0; i_row < row_size; ++i_row) {
-      #define READ(i) state(i_row, i)
-      #define FLUX(i) f(i_row, i)
-      HEXED_COMPUTE_SCALARS
-      HEXED_ASSERT_ADMISSIBLE
-      double veloc = READ(i_dim)/mass;
-      for (int j_dim = 0; j_dim < n_var - 2; ++j_dim) {
-        FLUX(j_dim) = READ(j_dim)*veloc;
+    Bound b;
+    for (int i_var = 0; i_var < n_var; ++i_var) {
+      for (int is_positive : {0, 1}) {
+        b(is_positive, i_var) = face[((ind.i_dim*2 + is_positive)*n_var + i_var)*ind.n_fqpoint + ind.i_face_qpoint()];
       }
-      FLUX(i_dim) += pres;
-      FLUX(n_var - 2) = READ(i_dim);
-      FLUX(n_var - 1) = (ener + pres)*veloc;
-      #undef FLUX
-      #undef READ
+    }
+    return b;
+  }
+
+  static void write_bound(Bound b, double* face, Nd_index ind)
+  {
+    for (int i_var = 0; i_var < n_var; ++i_var) {
+      for (int is_positive : {0, 1}) {
+        face[((ind.i_dim*2 + is_positive)*n_var + i_var)*ind.n_fqpoint + ind.i_face_qpoint()] = b(is_positive, i_var);
+      }
+    }
+  }
+};
+
+#define HEXED_ASSERT_THERM_ADMIS \
+  HEXED_ASSERT(state(n_dim) > 0, "nonpositive density"); \
+  HEXED_ASSERT(state(n_dim + 1) >= 0, "negative energy"); \
+  HEXED_ASSERT(pres >= 0, "negative pressure"); \
+
+template <int n_dim>
+class Physics
+{
+  public:
+  Physics() = delete;
+  static constexpr int n_var = n_dim + 2;
+  static constexpr double heat_rat = 1.4;
+
+  static constexpr double pressure(Mat<n_var> state)
+  {
+    double mmtm_sq = 0.;
+    for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+      mmtm_sq += (state(j_dim))*(state(j_dim));
+    }
+    return (heat_rat - 1.)*((state(n_dim + 1)) - 0.5*mmtm_sq/(state(n_dim)));
+  }
+
+  static constexpr Mat<n_var> flux(Mat<n_var> state, Mat<n_dim> normal, int i_dim)
+  {
+    Mat<n_var> f;
+    f(n_dim) = 0.;
+    for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+      f(n_dim) += state(j_dim)*normal(j_dim);
+    }
+    double scaled = f(n_dim)/state(n_dim);
+    double pres = pressure(state);
+    HEXED_ASSERT_THERM_ADMIS
+    f(n_var - 1) = (state(n_dim + 1) + pres)*scaled;
+    for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+      f(j_dim) = state(j_dim)*scaled + pres*normal(j_dim);
     }
     return f;
   }
@@ -105,16 +148,16 @@ class Numerics
 template <int n_dim, int row_size>
 class Local_cartesian : public Kernel<Element&>
 {
+  using Phys = Physics<n_dim>;
+  using Num = Numerics<Phys::n_var, row_size>;
   Derivative<row_size> derivative;
   Write_face<n_dim, row_size> write_face;
   double update;
   double curr;
   double ref;
   const double heat_rat;
-  static constexpr int n_var = n_dim + 2;
   static constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
-  static constexpr int n_face_dof = n_var*n_qpoint/row_size;
-  using Num = Numerics<n_var, row_size>;
+  static constexpr int n_face_dof = Phys::n_var*n_qpoint/row_size;
 
   public:
   Local_cartesian(const Basis& basis,
@@ -130,40 +173,39 @@ class Local_cartesian : public Kernel<Element&>
 
   virtual void operator()(Sequence<Element&>& elements)
   {
+    Mat<n_dim> normal [row_size][n_dim];
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+        for (int i_row = 0; i_row < row_size; ++i_row) {
+          normal[i_row][i_dim](j_dim) = (i_dim == j_dim);
+        }
+      }
+    }
 
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
     {
       double* state = elements[i_elem].stage(0);
-      double* rk_reference = state + n_var*n_qpoint;
-      double time_rate [n_var][n_qpoint] {};
+      double* rk_reference = state + Phys::n_var*n_qpoint;
+      double time_rate [Phys::n_var][n_qpoint] {};
       double* face = elements[i_elem].face();
       double* tss = elements[i_elem].time_step_scale();
       const double d_pos = elements[i_elem].nominal_size();
 
-      // Compute update
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-      {
-        for (Nd_index ind(n_dim, row_size, i_dim); ind; ++ind)
-        {
-          // Fetch this row of data
+      // compute update
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        for (Nd_index ind(n_dim, row_size, i_dim); ind; ++ind) {
           auto row_r = Num::read_row(state, ind);
-          // fetch boundary flux
-          Eigen::Matrix<double, 2, n_var> boundary_values;
-          for (int i_var = 0; i_var < n_var; ++i_var) {
-            for (int is_positive : {0, 1}) {
-              boundary_values(is_positive, i_var) = face[(i_dim*2 + is_positive)*n_face_dof + i_var*n_qpoint/row_size + ind.i_face_qpoint()];
-            }
+          Mat<row_size, Phys::n_var> flux;
+          for (int i_row = 0; i_row < row_size; ++i_row) {
+            flux(i_row, Eigen::all) = Phys::flux(row_r(i_row, Eigen::all), normal[i_row][i_dim], i_dim);
           }
-
-          // compute update
-          Eigen::Matrix<double, row_size, n_var> row_w = -derivative(Num::flux(row_r, i_dim), boundary_values);
-          Num::write_row(row_w, time_rate[0], ind, 1.);
+          Num::write_row(-derivative(flux, Num::read_bound(face, ind)), time_rate[0], ind, 1.);
         }
       }
 
       // write the updated solution
-      for (int i_var = 0; i_var < n_var; ++i_var) {
+      for (int i_var = 0; i_var < Phys::n_var; ++i_var) {
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           const int i_dof = i_var*n_qpoint + i_qpoint;
           state[i_dof] = update*time_rate[i_var][i_qpoint]/d_pos*tss[i_qpoint]
