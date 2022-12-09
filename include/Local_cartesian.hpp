@@ -139,83 +139,108 @@ class Physics
   }
 };
 
-/*
- * Computes the local update for one Runge-Kutta stage.
- * Here, "local" means that all of the necessary data is contained within each `Element` object.
- * This includes the interior term, the face flux correction, and the Runge-Kutta update.
- * The numerical flux must already have been written to the face storage (which is the neighbor kernel's job).
- */
-template <int n_dim, int row_size>
-class Local_cartesian : public Kernel<Element&>
+template <typename element_t>
+class Transform_data
 {
-  using Phys = Physics<n_dim>;
-  using Num = Numerics<Phys::n_var, row_size>;
-  Derivative<row_size> derivative;
-  Write_face<n_dim, row_size> write_face;
-  double update;
-  double curr;
-  double ref;
-  const double heat_rat;
-  static constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
-  static constexpr int n_face_dof = Phys::n_var*n_qpoint/row_size;
-
   public:
-  Local_cartesian(const Basis& basis,
-                  double update_coef, double current_coef, double reference_coef,
-                  double heat_ratio=1.4) :
-    derivative{basis},
-    write_face{basis},
-    update{update_coef},
-    curr{current_coef},
-    ref{reference_coef},
-    heat_rat{heat_ratio}
-  {}
+  double const* normal;
+  double const* jac_det;
+  Transform_data(element_t&, double*);
+};
 
-  virtual void operator()(Sequence<Element&>& elements)
+template<>
+Transform_data<Element>::Transform_data(Element& elem, double* dummy) :
+  normal{dummy},
+  jac_det{dummy}
+{}
+
+template<>
+Transform_data<Deformed_element>::Transform_data(Deformed_element& elem, double* dummy) :
+  normal{elem.reference_level_normals()},
+  jac_det{elem.jacobian_determinant()}
+{}
+
+template <typename element_t>
+class Spatial
+{
+  public:
+  Spatial() = delete;
+
+  template <int n_dim, int row_size>
+  class Local : public Kernel<element_t&>
   {
-    Mat<n_dim> normal [row_size][n_dim];
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-      for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-        for (int i_row = 0; i_row < row_size; ++i_row) {
-          normal[i_row][i_dim](j_dim) = (i_dim == j_dim);
-        }
-      }
-    }
+    using Phys = Physics<n_dim>;
+    using Num = Numerics<Phys::n_var, row_size>;
+    Derivative<row_size> derivative;
+    Write_face<n_dim, row_size> write_face;
+    double update;
+    double curr;
+    double ref;
+    const double heat_rat;
+    static constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
+    static constexpr int n_face_dof = Phys::n_var*n_qpoint/row_size;
+    double dummy [n_dim][n_dim][n_qpoint];
 
-    #pragma omp parallel for
-    for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
+    public:
+    Local(const Basis& basis,
+          double update_coef, double current_coef, double reference_coef,
+          double heat_ratio=1.4) :
+      derivative{basis},
+      write_face{basis},
+      update{update_coef},
+      curr{current_coef},
+      ref{reference_coef},
+      heat_rat{heat_ratio}
     {
-      double* state = elements[i_elem].stage(0);
-      double* rk_reference = state + Phys::n_var*n_qpoint;
-      double time_rate [Phys::n_var][n_qpoint] {};
-      double* face = elements[i_elem].face();
-      double* tss = elements[i_elem].time_step_scale();
-      const double d_pos = elements[i_elem].nominal_size();
-
-      // compute update
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        for (Nd_index ind(n_dim, row_size, i_dim); ind; ++ind) {
-          auto row_r = Num::read_row(state, ind);
-          Mat<row_size, Phys::n_var> flux;
-          for (int i_row = 0; i_row < row_size; ++i_row) {
-            flux(i_row, Eigen::all) = Phys::flux(row_r(i_row, Eigen::all), normal[i_row][i_dim], i_dim);
+        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+          for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+            dummy[i_dim][j_dim][i_qpoint] = (i_dim == j_dim);
           }
-          Num::write_row(-derivative(flux, Num::read_bound(face, ind)), time_rate[0], ind, 1.);
         }
       }
-
-      // write the updated solution
-      for (int i_var = 0; i_var < Phys::n_var; ++i_var) {
-        for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-          const int i_dof = i_var*n_qpoint + i_qpoint;
-          state[i_dof] = update*time_rate[i_var][i_qpoint]/d_pos*tss[i_qpoint]
-                         + curr*state[i_dof]
-                         + ref*rk_reference[i_dof];
-        }
-      }
-      write_face(state, face);
     }
-  }
+
+    virtual void operator()(Sequence<element_t&>& elements)
+    {
+      #pragma omp parallel for
+      for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
+      {
+        auto& elem = elements[i_elem];
+        double* active_state = elem.stage(0);
+        double* reference_state = active_state + Phys::n_var*n_qpoint;
+        double* face = elem.face();
+        double* tss = elem.time_step_scale();
+        double d_pos = elem.nominal_size();
+        Transform_data dat(elem, dummy[0][0]);
+        double time_rate [Phys::n_var][n_qpoint] {};
+
+        // compute update
+        for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+          for (Nd_index ind(n_dim, row_size, i_dim); ind; ++ind) {
+            auto row_r = Num::read_row(active_state, ind);
+            auto row_n = Numerics<n_dim, row_size>::read_row(dat.normal + i_dim*n_dim*n_qpoint, ind);
+            Mat<row_size, Phys::n_var> flux;
+            for (int i_row = 0; i_row < row_size; ++i_row) {
+              flux(i_row, Eigen::all) = Phys::flux(row_r(i_row, Eigen::all), row_n(i_row, Eigen::all), i_dim);
+            }
+            Num::write_row(-derivative(flux, Num::read_bound(face, ind)), time_rate[0], ind, 1.);
+          }
+        }
+
+        // write the updated solution
+        for (int i_var = 0; i_var < Phys::n_var; ++i_var) {
+          for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+            const int i_dof = i_var*n_qpoint + i_qpoint;
+            active_state[i_dof] = update*time_rate[i_var][i_qpoint]/d_pos*tss[i_qpoint]/dat.jac_det[i_qpoint]
+                                  + curr*active_state[i_dof]
+                                  + ref*reference_state[i_dof];
+          }
+        }
+        write_face(active_state, face);
+      }
+    }
+  };
 };
 
 }

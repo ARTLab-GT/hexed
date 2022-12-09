@@ -22,8 +22,6 @@ test_Local_advection_cartesian.cpp
 test_Local_advection_deformed.cpp
 test_Local_av_cartesian.cpp
 test_Local_av_deformed.cpp
-test_Local_cartesian.cpp
-test_Local_deformed.cpp
 test_math.cpp
 test_Mcs_cartesian.cpp
 test_Mcs_deformed.cpp
