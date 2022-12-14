@@ -48,6 +48,9 @@ class Nd_index
 template <int rows, int cols = 1>
 using Mat = Eigen::Matrix<double, rows, cols>;
 
+template <int rows = Eigen::Dynamic, int cols = Eigen::Dynamic>
+using Map = Eigen::Map<Mat<rows, cols>>;
+
 template <int n_var, int row_size>
 class Numerics
 {
@@ -99,6 +102,37 @@ class Numerics
   }
 };
 
+class Row_ops
+{
+  public:
+  const int n_dim;
+  const int row_size;
+  const int n_qpoint;
+  const int n_fqpoint;
+  constexpr int stride(int i_dim) const {return custom_math::pow(row_size, n_dim - 1 - i_dim);}
+  constexpr Row_ops(int nd, int rs) :
+    n_dim{nd},
+    row_size{rs},
+    n_qpoint{custom_math::pow(row_size, n_dim)},
+    n_fqpoint{n_qpoint/row_size}
+  {}
+
+  auto row(double* data, int n_var, int i_fqpoint, int i_dim) const
+  {
+    Map<> m(data, n_qpoint, n_var);
+    int s = stride(i_dim);
+    return m(Eigen::seqN(i_fqpoint%s + row_size*s*(i_fqpoint/s), row_size, s), Eigen::all);
+  }
+
+  auto boundary(double* face, int n_var, int i_fqpoint, int i_dim, int offset = 0, int n_var_read = 0) const
+  {
+    Map<> m(face, n_var*n_fqpoint, 2*n_dim);
+    Eigen::MatrixXd m1 = m(Eigen::seqN(i_fqpoint + offset*n_fqpoint, (n_var_read ? n_var_read : n_var), n_fqpoint), Eigen::seqN(2*i_dim, 2));
+    Eigen::MatrixXd m2 = m1.transpose();
+    return m2;
+  }
+};
+
 #define HEXED_ASSERT_THERM_ADMIS \
   HEXED_ASSERT(state(n_dim) > 0, "nonpositive density"); \
   HEXED_ASSERT(state(n_dim + 1) >= 0, "negative energy"); \
@@ -143,8 +177,8 @@ template <typename element_t>
 class Transform_data
 {
   public:
-  double const* normal;
-  double const* jac_det;
+  double* normal;
+  double* jac_det;
   Transform_data(element_t&, double*);
 };
 
@@ -171,6 +205,7 @@ class Spatial
   {
     using Phys = Physics<n_dim>;
     using Num = Numerics<Phys::n_var, row_size>;
+    static constexpr Row_ops ro{n_dim, row_size};
     Derivative<row_size> derivative;
     Write_face<n_dim, row_size> write_face;
     double update;
@@ -217,14 +252,15 @@ class Spatial
 
         // compute update
         for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-          for (Nd_index ind(n_dim, row_size, i_dim); ind; ++ind) {
-            auto row_r = Num::read_row(active_state, ind);
-            auto row_n = Numerics<n_dim, row_size>::read_row(dat.normal + i_dim*n_dim*n_qpoint, ind);
+          for (int i_fqpoint = 0; i_fqpoint < ro.n_fqpoint; ++i_fqpoint) {
+            Mat<row_size, Phys::n_var> row_r = ro.row(active_state, Phys::n_var, i_fqpoint, i_dim);
+            Mat<row_size, n_dim      > row_n = ro.row(dat.normal + i_dim*n_dim*n_qpoint, n_dim, i_fqpoint, i_dim);
             Mat<row_size, Phys::n_var> flux;
             for (int i_row = 0; i_row < row_size; ++i_row) {
               flux(i_row, Eigen::all) = Phys::flux(row_r(i_row, Eigen::all), row_n(i_row, Eigen::all), i_dim);
             }
-            Num::write_row(-derivative(flux, Num::read_bound(face, ind)), time_rate[0], ind, 1.);
+            Mat<2, Phys::n_var> face_r = ro.boundary(face, Phys::n_var, i_fqpoint, i_dim);
+            ro.row(time_rate[0], Phys::n_var, i_fqpoint, i_dim) -= derivative(flux, face_r);
           }
         }
 
