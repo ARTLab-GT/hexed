@@ -203,6 +203,15 @@ class Spatial
 
     virtual void operator()(Sequence<element_t&>& elements)
     {
+      Mat<row_size, n_dim> dummy_nrml [n_dim];
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+          for (int i_row = 0; i_row < row_size; ++i_row) {
+            dummy_nrml[i_dim](i_row, j_dim) = (i_dim == j_dim);
+          }
+        }
+      }
+
       #pragma omp parallel for
       for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
       {
@@ -219,7 +228,12 @@ class Spatial
         for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
           for (Nd_index ind(n_dim, row_size, i_dim); ind; ++ind) {
             auto row_r = Num::read_row(active_state, ind);
-            auto row_n = Numerics<n_dim, row_size>::read_row(dat.normal + i_dim*n_dim*n_qpoint, ind);
+            Mat<row_size, n_dim> row_n;
+            if constexpr (element_t::is_deformed) {
+              row_n = Numerics<n_dim, row_size>::read_row(dat.normal + i_dim*n_dim*n_qpoint, ind);
+            } else {
+              row_n = dummy_nrml[i_dim];
+            }
             Mat<row_size, Phys::n_var> flux;
             for (int i_row = 0; i_row < row_size; ++i_row) {
               flux(i_row, Eigen::all) = Phys::flux(row_r(i_row, Eigen::all), row_n(i_row, Eigen::all), i_dim);
@@ -232,7 +246,9 @@ class Spatial
         for (int i_var = 0; i_var < Phys::n_var; ++i_var) {
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
             const int i_dof = i_var*n_qpoint + i_qpoint;
-            active_state[i_dof] = update*time_rate[i_var][i_qpoint]/d_pos*tss[i_qpoint]/dat.jac_det[i_qpoint]
+            double det = 1;
+            if constexpr (element_t::is_deformed) det = dat.jac_det[i_qpoint];
+            active_state[i_dof] = update*time_rate[i_var][i_qpoint]/d_pos*tss[i_qpoint]/det
                                   + curr*active_state[i_dof]
                                   + ref*reference_state[i_dof];
           }
