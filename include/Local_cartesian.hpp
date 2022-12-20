@@ -140,27 +140,6 @@ class Physics
 };
 
 template <typename element_t>
-class Transform_data
-{
-  public:
-  double const* normal;
-  double const* jac_det;
-  Transform_data(element_t&, double*);
-};
-
-template<>
-Transform_data<Element>::Transform_data(Element& elem, double* dummy) :
-  normal{dummy},
-  jac_det{dummy}
-{}
-
-template<>
-Transform_data<Deformed_element>::Transform_data(Deformed_element& elem, double* dummy) :
-  normal{elem.reference_level_normals()},
-  jac_det{elem.jacobian_determinant()}
-{}
-
-template <typename element_t>
 class Spatial
 {
   public:
@@ -179,7 +158,6 @@ class Spatial
     const double heat_rat;
     static constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
     static constexpr int n_face_dof = Phys::n_var*n_qpoint/row_size;
-    double dummy [n_dim][n_dim][n_qpoint];
 
     public:
     Local(const Basis& basis,
@@ -191,27 +169,10 @@ class Spatial
       curr{current_coef},
       ref{reference_coef},
       heat_rat{heat_ratio}
-    {
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-          for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-            dummy[i_dim][j_dim][i_qpoint] = (i_dim == j_dim);
-          }
-        }
-      }
-    }
+    {}
 
     virtual void operator()(Sequence<element_t&>& elements)
     {
-      Mat<row_size, n_dim> dummy_nrml [n_dim];
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-          for (int i_row = 0; i_row < row_size; ++i_row) {
-            dummy_nrml[i_dim](i_row, j_dim) = (i_dim == j_dim);
-          }
-        }
-      }
-
       #pragma omp parallel for
       for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
       {
@@ -221,18 +182,15 @@ class Spatial
         double* face = elem.face();
         double* tss = elem.time_step_scale();
         double d_pos = elem.nominal_size();
-        Transform_data dat(elem, dummy[0][0]);
         double time_rate [Phys::n_var][n_qpoint] {};
 
         // compute update
         for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
           for (Nd_index ind(n_dim, row_size, i_dim); ind; ++ind) {
             auto row_r = Num::read_row(active_state, ind);
-            Mat<row_size, n_dim> row_n;
+            Mat<row_size, n_dim> row_n = Mat<row_size, 1>::Ones()*Mat<1, n_dim>::Unit(i_dim);
             if constexpr (element_t::is_deformed) {
-              row_n = Numerics<n_dim, row_size>::read_row(dat.normal + i_dim*n_dim*n_qpoint, ind);
-            } else {
-              row_n = dummy_nrml[i_dim];
+              row_n = Numerics<n_dim, row_size>::read_row(elem.reference_level_normals() + i_dim*n_dim*n_qpoint, ind);
             }
             Mat<row_size, Phys::n_var> flux;
             for (int i_row = 0; i_row < row_size; ++i_row) {
@@ -243,11 +201,13 @@ class Spatial
         }
 
         // write the updated solution
+        double* elem_det = nullptr;
+        if constexpr (element_t::is_deformed) elem_det = elem.jacobian_determinant();
         for (int i_var = 0; i_var < Phys::n_var; ++i_var) {
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-            const int i_dof = i_var*n_qpoint + i_qpoint;
             double det = 1;
-            if constexpr (element_t::is_deformed) det = dat.jac_det[i_qpoint];
+            if constexpr (element_t::is_deformed) det = elem_det[i_qpoint];
+            const int i_dof = i_var*n_qpoint + i_qpoint;
             active_state[i_dof] = update*time_rate[i_var][i_qpoint]/d_pos*tss[i_qpoint]/det
                                   + curr*active_state[i_dof]
                                   + ref*reference_state[i_dof];
