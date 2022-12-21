@@ -48,52 +48,66 @@ class Nd_index
 template <int rows, int cols = 1>
 using Mat = Eigen::Matrix<double, rows, cols>;
 
-template <int n_var, int row_size>
+template <int n_var, int n_dim, int row_size>
 class Numerics
 {
   public:
+  static constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
+  static constexpr int n_fqpoint = n_qpoint/row_size;
   typedef Mat<row_size, n_var> Row;
   typedef Mat<2, n_var> Bound;
 
-  Numerics() = delete;
+  const int i_dim;
+  const int i_fqpoint;
+  private:
+  const int stride;
+  const int row_start;
 
-  static Row read_row(const double* data, Nd_index ind)
+  public:
+  constexpr Numerics(int id, int ifq) :
+    i_dim{id},
+    i_fqpoint{ifq},
+    stride{custom_math::pow(row_size, n_dim - 1 - i_dim)},
+    row_start{i_fqpoint%stride + row_size*(i_fqpoint/stride)*stride}
+  {}
+
+  Row read_row(const double* data)
   {
     Row r;
     for (int i_var = 0; i_var < n_var; ++i_var) {
       for (int i_row = 0; i_row < row_size; ++i_row) {
-        r(i_row, i_var) = data[i_var*ind.n_qpoint + ind.i_qpoint(i_row)];
+        r(i_row, i_var) = data[i_var*n_qpoint + row_start + i_row*stride];
       }
     }
     return r;
   }
 
-  static void write_row(Row w, double* data, Nd_index ind, double coef)
+  void write_row(Row w, double* data, double coef)
   {
     for (int i_var = 0; i_var < n_var; ++i_var) {
       for (int i_row = 0; i_row < row_size; ++i_row) {
-        double& d = data[i_var*ind.n_qpoint + ind.i_qpoint(i_row)];
+        double& d = data[i_var*n_qpoint + row_start + i_row*stride];
         d = coef*d + w(i_row, i_var);
       }
     }
   }
 
-  static Bound read_bound(const double* face, Nd_index ind)
+  Bound read_bound(const double* face)
   {
     Bound b;
     for (int i_var = 0; i_var < n_var; ++i_var) {
       for (int is_positive : {0, 1}) {
-        b(is_positive, i_var) = face[((ind.i_dim*2 + is_positive)*n_var + i_var)*ind.n_fqpoint + ind.i_face_qpoint()];
+        b(is_positive, i_var) = face[((i_dim*2 + is_positive)*n_var + i_var)*n_fqpoint + i_fqpoint];
       }
     }
     return b;
   }
 
-  static void write_bound(Bound b, double* face, Nd_index ind)
+  void write_bound(Bound b, double* face)
   {
     for (int i_var = 0; i_var < n_var; ++i_var) {
       for (int is_positive : {0, 1}) {
-        face[((ind.i_dim*2 + is_positive)*n_var + i_var)*ind.n_fqpoint + ind.i_face_qpoint()] = b(is_positive, i_var);
+        face[((i_dim*2 + is_positive)*n_var + i_var)*n_fqpoint + i_fqpoint] = b(is_positive, i_var);
       }
     }
   }
@@ -149,7 +163,6 @@ class Spatial
   class Local : public Kernel<element_t&>
   {
     using Phys = Physics<n_dim>;
-    using Num = Numerics<Phys::n_var, row_size>;
     Derivative<row_size> derivative;
     Write_face<n_dim, row_size> write_face;
     double update;
@@ -186,17 +199,19 @@ class Spatial
 
         // compute update
         for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-          for (Nd_index ind(n_dim, row_size, i_dim); ind; ++ind) {
-            auto row_r = Num::read_row(active_state, ind);
+          for (int i_fqpoint = 0; i_fqpoint < Numerics<1, n_dim, row_size>::n_fqpoint; ++i_fqpoint) {
+            Numerics<Phys::n_var, n_dim, row_size> numnv(i_dim, i_fqpoint);
+            auto row_r = numnv.read_row(active_state);
             Mat<row_size, n_dim> row_n = Mat<row_size, 1>::Ones()*Mat<1, n_dim>::Unit(i_dim);
             if constexpr (element_t::is_deformed) {
-              row_n = Numerics<n_dim, row_size>::read_row(elem.reference_level_normals() + i_dim*n_dim*n_qpoint, ind);
+              Numerics<n_dim, n_dim, row_size> numnd(i_dim, i_fqpoint);
+              row_n = numnd.read_row(elem.reference_level_normals() + i_dim*n_dim*n_qpoint);
             }
             Mat<row_size, Phys::n_var> flux;
             for (int i_row = 0; i_row < row_size; ++i_row) {
               flux(i_row, Eigen::all) = Phys::flux(row_r(i_row, Eigen::all), row_n(i_row, Eigen::all), i_dim);
             }
-            Num::write_row(-derivative(flux, Num::read_bound(face, ind)), time_rate[0], ind, 1.);
+            numnv.write_row(-derivative(flux, numnv.read_bound(face)), time_rate[0], 1.);
           }
         }
 
