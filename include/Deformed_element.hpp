@@ -21,6 +21,7 @@ class Deformed_element : public Element
 
   public:
   bool degenerate = 0;
+  static constexpr bool is_deformed = true;
 
   Deformed_element(Storage_params, std::vector<int> pos = {}, double mesh_size = 1., int ref_level = 0);
   virtual std::vector<double> position(const Basis&, int i_qpoint);
