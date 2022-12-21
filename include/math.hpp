@@ -5,7 +5,13 @@
 #include <Eigen/Dense>
 #include "assert.hpp"
 
-namespace hexed::custom_math
+namespace hexed
+{
+
+template <int rows, int cols = 1>
+using Mat = Eigen::Matrix<double, rows, cols>;
+
+namespace custom_math
 {
 
 /*
@@ -155,5 +161,6 @@ inline int stretched_ind(int n_dim, int ind, std::array<bool, 2> stretch)
   return stretched;
 }
 
+}
 }
 #endif
