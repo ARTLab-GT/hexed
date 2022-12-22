@@ -18,7 +18,8 @@
 #include <Neighbor_avg_cartesian.hpp>
 #include <Neighbor_avg_deformed.hpp>
 
-#include <Local_cartesian.hpp>
+#include <pde.hpp>
+#include <Spatial.hpp>
 #include <Local_deformed.hpp>
 #include <Local_advection_cartesian.hpp>
 #include <Local_advection_deformed.hpp>
@@ -657,8 +658,8 @@ void Solver::update(double stability_ratio)
     (*kernel_factory<Neighbor_inviscid_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor");
     (*kernel_factory<Neighbor_inviscid_deformed >(nd, rs))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor");
     (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-    (*kernel_factory<Spatial<Element         >::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.cartesian().elements(), sw_car, "local");
-    (*kernel_factory<Spatial<Deformed_element>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.deformed ().elements(), sw_def, "local");
+    (*kernel_factory<Spatial<Element         , pde::Euler>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.cartesian().elements(), sw_car, "local");
+    (*kernel_factory<Spatial<Deformed_element, pde::Euler>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.deformed ().elements(), sw_def, "local");
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
     fix_admissibility(fix_admis_stab_rat*stability_ratio);
     update = dt*basis.cancellation_convective()/basis.max_cfl_convective();

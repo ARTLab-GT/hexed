@@ -1,5 +1,5 @@
-#ifndef HEXED_LOCAL_CARTESIAN_HPP_
-#define HEXED_LOCAL_CARTESIAN_HPP_
+#ifndef HEXED_SPATIAL_HPP_
+#define HEXED_SPATIAL_HPP_
 
 #include "Vector_view.hpp"
 #include "Element.hpp"
@@ -8,13 +8,12 @@
 #include "math.hpp"
 #include "Derivative.hpp"
 #include "Write_face.hpp"
-#include "pde.hpp"
 #include "Row_rw.hpp"
 
 namespace hexed
 {
 
-template <typename element_t>
+template <typename element_t, template<int> typename Pde_templ>
 class Spatial
 {
   public:
@@ -23,7 +22,7 @@ class Spatial
   template <int n_dim, int row_size>
   class Local : public Kernel<element_t&>
   {
-    using Pde = pde::Euler<n_dim>;
+    using Pde = Pde_templ<n_dim>;
     using Rrw = Row_rw<Pde::n_var, row_size>;
     Derivative<row_size> derivative;
     Write_face<n_dim, row_size> write_face;
@@ -32,7 +31,6 @@ class Spatial
     double ref;
     const double heat_rat;
     static constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
-    static constexpr int n_face_dof = Pde::n_var*n_qpoint/row_size;
 
     public:
     Local(const Basis& basis,
