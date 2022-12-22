@@ -41,7 +41,7 @@ class Row_rw
     Bound b;
     for (int i_var = 0; i_var < n_var; ++i_var) {
       for (int is_positive : {0, 1}) {
-        b(is_positive, i_var) = face[((ind.i_dim*2 + is_positive)*n_var + i_var)*ind.n_fqpoint + ind.i_face_qpoint()];
+        b(is_positive, i_var) = face[((ind.i_dim*2 + is_positive)*(ind.n_dim + 2) + i_var)*ind.n_fqpoint + ind.i_face_qpoint()];
       }
     }
     return b;
@@ -51,7 +51,7 @@ class Row_rw
   {
     for (int i_var = 0; i_var < n_var; ++i_var) {
       for (int is_positive : {0, 1}) {
-        face[((ind.i_dim*2 + is_positive)*n_var + i_var)*ind.n_fqpoint + ind.i_face_qpoint()] = b(is_positive, i_var);
+        face[((ind.i_dim*2 + is_positive)*(ind.n_dim + 2) + i_var)*ind.n_fqpoint + ind.i_face_qpoint()] = b(is_positive, i_var);
       }
     }
   }
