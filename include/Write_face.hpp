@@ -32,8 +32,8 @@ class Write_face : public Kernel<Element&>
 
   virtual void operator()(Sequence<Element&>& elements)
   {
-    for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
-    {
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
       Element& elem {elements[i_elem]};
       double* read = elem.stage(0);
       double* face = elem.face();

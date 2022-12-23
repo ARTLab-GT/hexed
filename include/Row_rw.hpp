@@ -14,6 +14,8 @@ class Row_rw
   typedef Mat<2, n_var> Bound;
 
   Row_rw() = delete;
+  Row_rw(const Row_rw&) = delete;
+  Row_rw(Row_rw&&) = delete;
 
   static Row read_row(const double* data, Row_index ind)
   {

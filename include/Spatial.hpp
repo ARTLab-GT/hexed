@@ -7,7 +7,6 @@
 #include "kernel_factory.hpp"
 #include "math.hpp"
 #include "Derivative.hpp"
-#include "Write_face.hpp"
 #include "Row_rw.hpp"
 
 namespace hexed
@@ -18,18 +17,54 @@ class Spatial
 {
   public:
   Spatial() = delete;
+  Spatial(const Spatial&) = delete;
+  Spatial(Spatial&&) = delete;
+
+  template <int n_dim, int row_size>
+  class Write_face : public Kernel<element_t&>
+  {
+    using Pde = Pde_templ<n_dim>;
+    const Eigen::Matrix<double, 2, row_size> boundary;
+
+    public:
+    Write_face(const Basis& basis) : boundary{basis.boundary()} {}
+
+    void operator()(const double* read, double* face)
+    {
+      //read += Pde::curr_start*custom_math::pow(row_size, n_dim);
+      //face += Pde::curr_start*custom_math::pow(row_size, n_dim - 1);
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
+          auto row_r = Row_rw<Pde::n_var, row_size>::read_row(read, ind);
+          Mat<2, Pde::n_var> bound = boundary*row_r;
+          Row_rw<Pde::n_var, row_size>::write_bound(bound, face, ind);
+        }
+      }
+    }
+
+    virtual void operator()(Sequence<element_t&>& elements)
+    {
+      #pragma omp parallel for
+      for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+        element_t& elem {elements[i_elem]};
+        double* read = elem.stage(0);
+        double* face = elem.face();
+        operator()(read, face);
+      }
+    }
+  };
 
   template <int n_dim, int row_size>
   class Local : public Kernel<element_t&>
   {
     using Pde = Pde_templ<n_dim>;
+    static constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
     Derivative<row_size> derivative;
     Write_face<n_dim, row_size> write_face;
     double update;
     double curr;
     double ref;
     const double heat_rat;
-    static constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
 
     public:
     Local(const Basis& basis,
