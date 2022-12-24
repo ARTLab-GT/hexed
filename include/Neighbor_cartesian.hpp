@@ -6,6 +6,7 @@
 #include "kernel_factory.hpp"
 #include "math.hpp"
 #include "hll.hpp"
+#include "pde.hpp"
 
 namespace hexed
 {
@@ -58,20 +59,6 @@ class Neighbor_cartesian : public Kernel<Face_connection<Element>&>
       }
     }
   }
-};
-
-template <int n_dim, int row_size>
-class Neighbor_inviscid_cartesian : public Neighbor_cartesian<n_dim, row_size>
-{
-  protected:
-  const double heat_rat;
-  virtual void compute_flux(double* face, double* face_nrml)
-  {
-    hll::inviscid<n_dim, custom_math::pow(row_size, n_dim - 1)>(face, face_nrml, heat_rat);
-  }
-
-  public:
-  Neighbor_inviscid_cartesian(double heat_ratio=1.4) : heat_rat{heat_ratio} {}
 };
 
 template <int n_dim, int row_size>

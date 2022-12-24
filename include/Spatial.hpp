@@ -124,6 +124,40 @@ class Spatial
       }
     }
   };
+
+  template <int n_dim, int row_size>
+  class Neighbor : public Kernel<Face_connection<Element>&>
+  {
+    using Pde = Pde_templ<n_dim>;
+    static constexpr int n_fqpoint = custom_math::pow(row_size, n_dim - 1);
+    public:
+    virtual void operator()(Sequence<Face_connection<Element>&>& connections)
+    {
+      #pragma omp parallel for
+      for (int i_con = 0; i_con < connections.size(); ++i_con)
+      {
+        auto& con = connections[i_con];
+        const int i_dim = con.direction().i_dim;
+        double* face[2] {con.face(0), con.face(1)};
+        for (int i_qpoint = 0; i_qpoint < n_fqpoint; ++i_qpoint)
+        {
+          auto nrml = Mat<n_dim>::Unit(i_dim);
+          Mat<Pde::n_var, 2> state;
+          for (int i_side = 0; i_side < 2; ++i_side) {
+            for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
+              state(i_var, i_side) = face[i_side][i_var*n_fqpoint + i_qpoint];
+            }
+          }
+          auto flux = Pde::flux_num(state, nrml);
+          for (int i_side = 0; i_side < 2; ++i_side) {
+            for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
+              face[i_side][i_var*n_fqpoint + i_qpoint] = flux(i_var);
+            }
+          }
+        }
+      }
+    }
+  };
 };
 
 }

@@ -683,7 +683,8 @@ void Solver::update(double stability_ratio)
       int bc_sn = bc_cons[i_con].bound_cond_serial_n();
       acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
     }
-    (*kernel_factory<Neighbor_inviscid_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor");
+    (*kernel_factory<Spatial<Element         , pde::Euler>::Neighbor>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor");
+    //(*kernel_factory<Neighbor_inviscid_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor");
     (*kernel_factory<Neighbor_inviscid_deformed >(nd, rs))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor");
     (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
     (*kernel_factory<Spatial<Element         , pde::Euler>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.cartesian().elements(), sw_car, "local");
