@@ -181,9 +181,7 @@ class Spatial
             }
           }
         }
-        if constexpr (element_t::is_deformed) {
-          perm.restore();
-        }
+        if constexpr (element_t::is_deformed) perm.restore();
         for (int i_side = 0; i_side < 2; ++i_side) {
           double* f = con.face(i_side);
           for (int i_dof = 0; i_dof < Pde::n_var*n_fqpoint; ++i_dof) {
