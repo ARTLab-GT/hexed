@@ -136,6 +136,8 @@ class Spatial
       #pragma omp parallel for
       for (int i_con = 0; i_con < connections.size(); ++i_con)
       {
+        #pragma GCC diagnostic push
+        #pragma GCC diagnostic ignored "-Wunused-but-set-variable" // otherwise `'face_nrml' set but not used`
         auto& con = connections[i_con];
         auto dir = con.direction();
         double face [2][Pde::n_var*n_fqpoint];
@@ -188,6 +190,7 @@ class Spatial
             f[i_dof] = face[i_side][i_dof];
           }
         }
+        #pragma GCC diagnostic pop
       }
     }
   };
