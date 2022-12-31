@@ -126,22 +126,36 @@ class Spatial
   };
 
   template <int n_dim, int row_size>
-  class Neighbor : public Kernel<Face_connection<Element>&>
+  class Neighbor : public Kernel<Face_connection<element_t>&>
   {
     using Pde = Pde_templ<n_dim>;
     static constexpr int n_fqpoint = custom_math::pow(row_size, n_dim - 1);
     public:
-    virtual void operator()(Sequence<Face_connection<Element>&>& connections)
+    virtual void operator()(Sequence<Face_connection<element_t>&>& connections)
     {
       #pragma omp parallel for
       for (int i_con = 0; i_con < connections.size(); ++i_con)
       {
         auto& con = connections[i_con];
-        const int i_dim = con.direction().i_dim;
+        auto dir = con.direction();
         double* face[2] {con.face(0), con.face(1)};
+        double* face_nrml = nullptr;
+        int sign [2] {1, 1};
+        Mat<n_dim> nrml;
+        if constexpr (element_t::is_deformed) {
+          face_nrml = con.normal();
+          Face_permutation<n_dim, row_size>(dir, face[1]).match_faces();
+          for (int i_side : {0, 1}) sign[i_side] = 1 - 2*dir.flip_normal(i_side);
+        } else {
+          nrml.setUnit(dir.i_dim);
+        }
         for (int i_qpoint = 0; i_qpoint < n_fqpoint; ++i_qpoint)
         {
-          auto nrml = Mat<n_dim>::Unit(i_dim);
+          if constexpr (element_t::is_deformed) {
+            for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+              nrml(i_dim) = sign[0]*face_nrml[i_dim*n_fqpoint + i_qpoint];
+            }
+          }
           Mat<Pde::n_var, 2> state;
           for (int i_side = 0; i_side < 2; ++i_side) {
             for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
@@ -151,9 +165,12 @@ class Spatial
           auto flux = Pde::flux_num(state, nrml);
           for (int i_side = 0; i_side < 2; ++i_side) {
             for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
-              face[i_side][i_var*n_fqpoint + i_qpoint] = flux(i_var);
+              face[i_side][i_var*n_fqpoint + i_qpoint] = sign[i_side]*flux(i_var);
             }
           }
+        }
+        if constexpr (element_t::is_deformed) {
+          Face_permutation<n_dim, row_size>(dir, face[1]).restore();
         }
       }
     }
