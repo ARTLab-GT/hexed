@@ -138,14 +138,24 @@ class Spatial
       {
         auto& con = connections[i_con];
         auto dir = con.direction();
-        double* face[2] {con.face(0), con.face(1)};
-        double* face_nrml = nullptr;
+        double face [2][Pde::n_var*n_fqpoint];
+        double face_nrml [n_dim*n_fqpoint];
         int sign [2] {1, 1};
+        for (int i_side = 0; i_side < 2; ++i_side) {
+          double* f = con.face(i_side);
+          for (int i_dof = 0; i_dof < Pde::n_var*n_fqpoint; ++i_dof) {
+            face[i_side][i_dof] = f[i_dof];
+          }
+        }
         Mat<n_dim> nrml;
+        Face_permutation<n_dim, row_size> perm(dir, face[1]);
         if constexpr (element_t::is_deformed) {
-          face_nrml = con.normal();
-          Face_permutation<n_dim, row_size>(dir, face[1]).match_faces();
+          perm.match_faces();
           for (int i_side : {0, 1}) sign[i_side] = 1 - 2*dir.flip_normal(i_side);
+          double* n = con.normal();
+          for (int i_dof = 0; i_dof < n_dim*n_fqpoint; ++i_dof) {
+            face_nrml[i_dof] = n[i_dof];
+          }
         } else {
           nrml.setUnit(dir.i_dim);
         }
@@ -170,7 +180,13 @@ class Spatial
           }
         }
         if constexpr (element_t::is_deformed) {
-          Face_permutation<n_dim, row_size>(dir, face[1]).restore();
+          perm.restore();
+        }
+        for (int i_side = 0; i_side < 2; ++i_side) {
+          double* f = con.face(i_side);
+          for (int i_dof = 0; i_dof < Pde::n_var*n_fqpoint; ++i_dof) {
+            f[i_dof] = face[i_side][i_dof];
+          }
         }
       }
     }
