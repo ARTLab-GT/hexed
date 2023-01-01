@@ -26,6 +26,7 @@ test_Physical_basis.cpp
 test_Prolong_refined.cpp
 test_Refined_face.cpp
 test_Restrict_refined.cpp
+test_Row_index.cpp
 test_Solver.cpp
 test_Stopwatch.cpp
 test_Stopwatch_tree.cpp

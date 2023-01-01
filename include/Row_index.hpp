@@ -1,6 +1,8 @@
 #ifndef HEXED_ROW_INDEX_HPP_
 #define HEXED_ROW_INDEX_HPP_
 
+#include "math.hpp"
+
 namespace hexed
 {
 
