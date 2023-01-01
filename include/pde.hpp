@@ -107,6 +107,19 @@ class Advection
     }
     return Mat<1>::Constant(nrml_veloc*state(n_dim));
   }
+
+  static constexpr Mat<1> flux_num(Mat<n_var, 2> face_vars, Mat<n_dim> normal)
+  {
+    Mat<1, 2> vol_flux = normal.transpose()*face_vars(Eigen::seqN(0, n_dim), Eigen::all);
+    Mat<1, 2> face_state = face_vars(n_dim, Eigen::all);
+    Mat<1, 2> face_flux = face_state.cwiseProduct(vol_flux);
+    Mat<2> wave_speed;
+    for (int i_side = 0; i_side < 2; ++i_side) {
+      int sign = 2*i_side - 1;
+      wave_speed(i_side) = std::min(vol_flux(0) + sign*.01, vol_flux(1) + sign*.01);
+    }
+    return hll(wave_speed, face_flux, face_state);
+  }
 };
 
 }

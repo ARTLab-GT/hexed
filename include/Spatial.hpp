@@ -176,16 +176,17 @@ class Spatial
           }
           auto flux = Pde::flux_num(state, nrml);
           for (int i_side = 0; i_side < 2; ++i_side) {
-            for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
-              face[i_side][i_var*n_fqpoint + i_qpoint] = sign[i_side]*flux(i_var);
+            for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
+              face[i_side][(i_var + Pde::curr_start)*n_fqpoint + i_qpoint] = sign[i_side]*flux(i_var);
             }
           }
         }
         if constexpr (element_t::is_deformed) perm.restore();
         for (int i_side = 0; i_side < 2; ++i_side) {
           double* f = con.face(i_side);
-          for (int i_dof = 0; i_dof < Pde::n_var*n_fqpoint; ++i_dof) {
-            f[i_dof] = face[i_side][i_dof];
+          int offset = Pde::curr_start*n_fqpoint;
+          for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
+            f[offset + i_dof] = face[i_side][offset + i_dof];
           }
         }
         #pragma GCC diagnostic pop

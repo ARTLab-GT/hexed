@@ -12,8 +12,6 @@
 #include <Prolong_refined.hpp>
 #include <Face_permutation.hpp>
 
-#include <Neighbor_cartesian.hpp>
-#include <Neighbor_deformed.hpp>
 #include <Neighbor_avg_cartesian.hpp>
 #include <Neighbor_avg_deformed.hpp>
 
@@ -393,8 +391,8 @@ void Solver::set_art_visc_smoothness(double advect_length)
           }
           sw_adv.children.at("BCs").stopwatch.pause();
           sw_adv.children.at("BCs").work_units_completed += acc_mesh.elements().size();
-          (*kernel_factory<Neighbor_advection_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_adv.children.at("cartesian"), "neighbor");
-          (*kernel_factory<Neighbor_advection_deformed >(nd, rs))(acc_mesh.deformed ().face_connections(), sw_adv.children.at("deformed" ), "neighbor");
+          (*kernel_factory<Spatial<Element         , pde::Advection>::Neighbor>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_adv.children.at("cartesian"), "neighbor");
+          (*kernel_factory<Spatial<Deformed_element, pde::Advection>::Neighbor>(nd, rs))(acc_mesh.deformed ().face_connections(), sw_adv.children.at("deformed" ), "neighbor");
           (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());
           (*kernel_factory<Spatial<Element         , pde::Advection>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.cartesian().elements(), sw_adv.children.at("cartesian"), "local");
           (*kernel_factory<Spatial<Deformed_element, pde::Advection>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.deformed ().elements(), sw_adv.children.at("deformed" ), "local");
