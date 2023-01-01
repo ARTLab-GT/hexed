@@ -6,6 +6,22 @@ TEST_CASE("Euler")
   double mass = 1.225;
   double pressure = 101325;
 
+  SECTION("flux")
+  {
+    hexed::Mat<2> normal(.6, .8);
+    hexed::Mat<2> orth(-.8, .6);
+    double nrml_veloc = 7.3;
+    double orth_veloc = -4.8;
+    hexed::Mat<2> veloc = nrml_veloc*normal + orth_veloc*orth;
+    hexed::Mat<4> state {mass*veloc(0), mass*veloc(1), mass, pressure/.4 + .5*veloc.squaredNorm()*mass};
+    REQUIRE(hexed::pde::Euler<2>::pressure(state) == Approx(pressure));
+    auto flux = hexed::pde::Euler<2>::flux(state, normal);
+    REQUIRE(flux(0) == Approx(state(0)*nrml_veloc + pressure*normal(0)));
+    REQUIRE(flux(1) == Approx(state(1)*nrml_veloc + pressure*normal(1)));
+    REQUIRE(flux(2) == Approx(mass*nrml_veloc));
+    REQUIRE(flux(3) == Approx(nrml_veloc*(state(3) + pressure)));
+  }
+
   SECTION("flux_num")
   {
     hexed::Mat<5, 2> state;
