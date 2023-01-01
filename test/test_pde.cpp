@@ -15,7 +15,7 @@ TEST_CASE("Euler")
     hexed::Mat<2> veloc = nrml_veloc*normal + orth_veloc*orth;
     hexed::Mat<4> state {mass*veloc(0), mass*veloc(1), mass, pressure/.4 + .5*veloc.squaredNorm()*mass};
     REQUIRE(hexed::pde::Euler<2>::pressure(state) == Approx(pressure));
-    auto flux = hexed::pde::Euler<2>::flux(state, normal);
+    hexed::Mat<4> flux = hexed::pde::Euler<2>::flux(state, normal);
     REQUIRE(flux(0) == Approx(state(0)*nrml_veloc + pressure*normal(0)));
     REQUIRE(flux(1) == Approx(state(1)*nrml_veloc + pressure*normal(1)));
     REQUIRE(flux(2) == Approx(mass*nrml_veloc));
@@ -77,31 +77,28 @@ TEST_CASE("Euler")
   }
 }
 
-#if 0
-TEST_CASE("hll::advection")
+TEST_CASE("Advection")
 {
-  double state [2][4][3];
-  double nrml [2][3];
-  double scalar [2] {1.3, 0.7};
-  for (int i_side = 0; i_side < 2; ++i_side) {
-    for (int i_qpoint = 0; i_qpoint < 3; ++i_qpoint) {
-      // set surface normal
-      nrml[0][i_qpoint] = .4;
-      nrml[1][i_qpoint] = .5;
-      // set advection velocity
-      state[i_side][0][i_qpoint] = -.1;
-      state[i_side][1][i_qpoint] = -.9;
-      // set scalar state;
-      state[i_side][2][i_qpoint] = scalar[i_side];
-    }
+  SECTION("flux")
+  {
+    hexed::Mat<2> normal {.6, .8};
+    hexed::Mat<2> orth {-.8, .6};
+    double nrml_veloc = 7.3;
+    double orth_veloc = -4.8;
+    hexed::Mat<2> veloc = nrml_veloc*normal + orth_veloc*orth;
+    double scalar = 0.81;
+    hexed::Mat<3> state {veloc(0), veloc(1), scalar};
+    hexed::Mat<1> flux = hexed::pde::Advection<2>::flux(state, normal);
+    REQUIRE(flux(0) == Approx(nrml_veloc*scalar));
   }
-  hexed::hll::advection<2, 3>(state[0][0], nrml[0]);
-  for (int i_side = 0; i_side < 2; ++i_side) {
-    for (int i_qpoint = 0; i_qpoint < 3; ++i_qpoint) {
-      REQUIRE(state[i_side][0][i_qpoint] == Approx(-.1));
-      REQUIRE(state[i_side][1][i_qpoint] == Approx(-.9));
-      REQUIRE(state[i_side][2][i_qpoint] == Approx((-.1*.4 - .9*.5)*0.7));
-    }
+
+  SECTION("flux_num")
+  {
+    auto normal = hexed::Mat<1>::Constant(1.);
+    hexed::Mat<2, 2> state;
+    state << -3., -2.,
+             .21, .23;
+    hexed::Mat<1> flux = hexed::pde::Advection<1>::flux_num(state, normal);
+    REQUIRE(flux(0) == Approx(-2.*.23*1.));
   }
 }
-#endif
