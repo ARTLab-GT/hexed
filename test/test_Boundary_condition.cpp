@@ -15,7 +15,11 @@ TEST_CASE("Typed_boundary_connection")
   hexed::Element element {params};
   Dummy bc;
   hexed::Typed_bound_connection<hexed::Element> tbc0 {element, 1, false, 0};
+  REQUIRE(element.faces[2] == tbc0.state());
+  REQUIRE(tbc0.ghost_face() == tbc0.state() + params.n_dof()/params.row_size);
   hexed::Typed_bound_connection<hexed::Element> tbc1 {element, 1,  true, 1};
+  REQUIRE(element.faces[3] == tbc1.state());
+  REQUIRE(tbc1.ghost_face() == tbc1.state() + params.n_dof()/params.row_size);
   REQUIRE(tbc0.storage_params().n_var == 4);
   // check that the correct face of the element is retrieved
   REQUIRE(tbc0.inside_face() == element.face() + (2*1 + 0)*4*4);

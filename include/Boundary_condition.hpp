@@ -208,7 +208,6 @@ class Typed_bound_connection : public Boundary_connection
   int i_d;
   bool ifs;
   int bc_sn;
-  Eigen::VectorXd gh_face;
   Eigen::VectorXd pos;
   double* in_face;
   void connect_normal();
@@ -221,14 +220,14 @@ class Typed_bound_connection : public Boundary_connection
     i_d{i_dim_arg},
     ifs{inside_face_sign_arg},
     bc_sn{bc_serial_n},
-    gh_face(params.n_dof()/params.row_size),
     pos(params.n_dim*params.n_qpoint()/params.row_size),
-    in_face{elem.face() + (2*i_d + ifs)*gh_face.size()}
+    in_face{elem.face() + (2*i_d + ifs)*params.n_dof()/params.row_size}
   {
     connect_normal();
+    elem.faces[direction().i_face(0)] = state();
   }
   virtual Storage_params storage_params() {return params;}
-  virtual double* ghost_face() {return gh_face.data();}
+  virtual double* ghost_face() {return state() + params.n_dof()/params.row_size;}
   virtual double* inside_face() {return in_face;}
   virtual int i_dim() {return i_d;}
   virtual bool inside_face_sign() {return ifs;}
