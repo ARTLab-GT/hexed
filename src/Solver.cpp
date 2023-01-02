@@ -874,7 +874,7 @@ std::vector<double> Solver::integral_surface(const Surface_func& integrand, int 
     double area = custom_math::pow(elem.nominal_size(), nd - 1);
     if (con.bound_cond_serial_n() == bc_sn)
     {
-      double* state = con.inside_face();
+      double* state = con.state();
       double* nrml = con.normal();
       double* pos = con.surface_position();
       for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint)
@@ -1009,7 +1009,7 @@ void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample
       // fetch/interpolate the state
       Eigen::MatrixXd interp_state (n_block, nv);
       for (int i_var = 0; i_var < nv; ++i_var) {
-        Eigen::Map<Eigen::VectorXd> qpoint_state (con.inside_face() + i_var*nfq, nfq);
+        Eigen::Map<Eigen::VectorXd> qpoint_state (con.state() + i_var*nfq, nfq);
         interp_state.col(i_var) = custom_math::hypercube_matvec(interp, qpoint_state);
       }
       // visualize zone
