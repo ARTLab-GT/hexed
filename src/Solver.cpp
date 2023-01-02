@@ -8,20 +8,15 @@
 #include <Mcs_cartesian.hpp>
 #include <Mcs_deformed.hpp>
 
-#include <Write_face.hpp>
 #include <Restrict_refined.hpp>
 #include <Prolong_refined.hpp>
 #include <Face_permutation.hpp>
 
-#include <Neighbor_cartesian.hpp>
-#include <Neighbor_deformed.hpp>
 #include <Neighbor_avg_cartesian.hpp>
 #include <Neighbor_avg_deformed.hpp>
 
-#include <Local_cartesian.hpp>
-#include <Local_deformed.hpp>
-#include <Local_advection_cartesian.hpp>
-#include <Local_advection_deformed.hpp>
+#include <pde.hpp>
+#include <Spatial.hpp>
 #include <Local_av0_cartesian.hpp>
 #include <Local_av0_deformed.hpp>
 #include <Local_av1_cartesian.hpp>
@@ -53,17 +48,25 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
   av_rs{basis.row_size}
 {
   // setup categories for performance reporting
-  stopwatch.children.emplace("initialize RK", stopwatch.work_unit_name);
-  std::string unit = "(element*RK stage)";
+  stopwatch.children.emplace("initialize reference", stopwatch.work_unit_name);
+  std::string unit = "(element*(time integration stage))";
   stopwatch.children.emplace("prolong/restrict", unit);
-  for (std::string type : {"cartesian", "deformed"}) {
-    stopwatch.children.emplace(type, stopwatch.work_unit_name);
-    auto& children = stopwatch.children.at(type).children;
-    children.emplace("max char speed", stopwatch.work_unit_name);
-    children.emplace("neighbor", "(connection*RK stage)");
-    children.emplace("local", unit);
-  }
   stopwatch.children.emplace("fix admis.", "(element*(fix admis. iter))");
+  stopwatch.children.emplace("set art visc", stopwatch.work_unit_name);
+  stopwatch.children.at("set art visc").children.emplace("initialize", stopwatch.work_unit_name);
+  stopwatch.children.at("set art visc").children.emplace("advection", stopwatch.work_unit_name);
+  stopwatch.children.at("set art visc").children.at("advection").children.emplace("update", unit);
+  stopwatch.children.at("set art visc").children.at("advection").children.emplace("setup", stopwatch.work_unit_name);
+  stopwatch.children.at("set art visc").children.at("advection").children.emplace("BCs", unit);
+  for (auto* sw : {&stopwatch, &stopwatch.children.at("set art visc").children.at("advection")}) {
+    for (std::string type : {"cartesian", "deformed"}) {
+      sw->children.emplace(type, stopwatch.work_unit_name);
+      auto& children = sw->children.at(type).children;
+      children.emplace("max char speed", stopwatch.work_unit_name);
+      children.emplace("neighbor", "(connection*(time integration stage))");
+      children.emplace("local", unit);
+    }
+  }
   // initialize advection state to 1
   auto& elements = acc_mesh.elements();
   const int nq = params.n_qpoint();
@@ -250,7 +253,7 @@ void Solver::initialize(const Spacetime_func& func)
       }
     }
   }
-  (*kernel_factory<Write_face>(params.n_dim, params.row_size, basis))(elements);
+  (*kernel_factory<Spatial<Element, pde::Euler>::Write_face>(params.n_dim, params.row_size, basis))(elements);
   (*kernel_factory<Prolong_refined>(params.n_dim, params.row_size, basis))(acc_mesh.refined_faces());
 }
 
@@ -273,6 +276,8 @@ void Solver::set_art_visc_constant(double value)
 
 void Solver::set_art_visc_smoothness(double advect_length)
 {
+  stopwatch.stopwatch.start();
+  stopwatch.children.at("set art visc").stopwatch.start();
   double heat_rat = 1.4;
   const int nq = params.n_qpoint();
   const int nd = params.n_dim;
@@ -280,8 +285,9 @@ void Solver::set_art_visc_smoothness(double advect_length)
   auto& elements = acc_mesh.elements();
   auto& bc_cons {acc_mesh.boundary_connections()};
 
-  // store the current state in stage 1 (normally the RK reference)
+  // store the current state in stage 1 (normally the time integration reference)
   // so we can use stage 0 for solving the advection equation
+  stopwatch.children.at("set art visc").children.at("initialize").stopwatch.start();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
@@ -310,11 +316,15 @@ void Solver::set_art_visc_smoothness(double advect_length)
       }
     }
   }
+  stopwatch.children.at("set art visc").children.at("initialize").stopwatch.pause();
+  stopwatch.children.at("set art visc").children.at("initialize").work_units_completed += elements.size();
   // enforce CFL condition
-  (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
+  auto& sw_adv = stopwatch.children.at("set art visc").children.at("advection");
+  sw_adv.stopwatch.start();
+  (*kernel_factory<Spatial<Element, pde::Euler>::Write_face>(nd, rs, basis))(elements);
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-  double mcs_adv = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Advection(), 1, 1))(acc_mesh.cartesian().elements()),
-                            (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Advection(), 1, 1))(acc_mesh.deformed ().elements()));
+  double mcs_adv = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Advection(), 1, 1))(acc_mesh.cartesian().elements(), sw_adv.children.at("cartesian"), "max char speed"),
+                            (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Advection(), 1, 1))(acc_mesh.deformed ().elements(), sw_adv.children.at("deformed" ), "max char speed"));
   double dt_adv = av_advect_stab_rat/params.n_dim/(mcs_adv/basis.max_cfl_convective());
   // ensure that time step is small enough that the time derivative term will be stable
   {
@@ -354,6 +364,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
         // find out which node we're advecting to
         int i_node = (sign > 0) ? i_proj : rs - 1 - i_proj; // if sign < 0 we are looping through the nodes backward
         // copy advection state to the scalar variables of stage 1
+        sw_adv.children.at("setup").stopwatch.start();
         #pragma omp parallel for
         for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
           double* state = elements[i_elem].stage(0);
@@ -363,29 +374,37 @@ void Solver::set_art_visc_smoothness(double advect_length)
           }
         }
         // evaluate advection operator
-        (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
+        (*kernel_factory<Spatial<Element, pde::Advection>::Write_face>(nd, rs, basis))(elements);
         (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+        sw_adv.children.at("setup").stopwatch.pause();
         double dt_scaled = dt_adv*std::abs(basis.node(i_node) - .5)*2;
         double update = dt_scaled;
         double curr = 1;
         double ref = 0;
         for (int i = 0; i < 2; ++i) {
+          sw_adv.children.at("BCs").stopwatch.start();
           auto& bc_cons {acc_mesh.boundary_connections()};
+          #pragma omp parallel for
           for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
             int bc_sn = bc_cons[i_con].bound_cond_serial_n();
             acc_mesh.boundary_condition(bc_sn).flow_bc->apply_advection(bc_cons[i_con]);
           }
-          (*kernel_factory<Neighbor_advection_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections());
-          (*kernel_factory<Neighbor_advection_deformed >(nd, rs))(acc_mesh.deformed ().face_connections());
+          sw_adv.children.at("BCs").stopwatch.pause();
+          sw_adv.children.at("BCs").work_units_completed += acc_mesh.elements().size();
+          (*kernel_factory<Spatial<Element         , pde::Advection>::Neighbor>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_adv.children.at("cartesian"), "neighbor");
+          (*kernel_factory<Spatial<Deformed_element, pde::Advection>::Neighbor>(nd, rs))(acc_mesh.deformed ().face_connections(), sw_adv.children.at("deformed" ), "neighbor");
           (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-          (*kernel_factory<Local_advection_cartesian>(nd, rs, basis, update, curr, ref))(acc_mesh.cartesian().elements());
-          (*kernel_factory<Local_advection_deformed >(nd, rs, basis, update, curr, ref))(acc_mesh.deformed ().elements());
+          (*kernel_factory<Spatial<Element         , pde::Advection>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.cartesian().elements(), sw_adv.children.at("cartesian"), "local");
+          (*kernel_factory<Spatial<Deformed_element, pde::Advection>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.deformed ().elements(), sw_adv.children.at("deformed" ), "local");
           (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
           update = dt_scaled*basis.cancellation_convective()/basis.max_cfl_convective();
           curr = 1 - update/dt_scaled;
           ref = 1 - curr;
         }
+        sw_adv.children.at("cartesian").work_units_completed += acc_mesh.cartesian().elements().size();
+        sw_adv.children.at("deformed" ).work_units_completed += acc_mesh.deformed ().elements().size();
         // update advection state and residual
+        sw_adv.children.at("update").stopwatch.start();
         #pragma omp parallel for reduction(+:diff, n_avg)
         for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
           double* state = elements[i_elem].stage(0);
@@ -401,9 +420,14 @@ void Solver::set_art_visc_smoothness(double advect_length)
             ++n_avg;
           }
         }
+        sw_adv.children.at("update").stopwatch.pause();
       }
+      sw_adv.children.at("setup").work_units_completed += elements.size();
+      sw_adv.children.at("update").work_units_completed += elements.size();
     }
   }
+  stopwatch.children.at("set art visc").children.at("advection").stopwatch.pause();
+  stopwatch.children.at("set art visc").children.at("advection").work_units_completed += elements.size();
   // update iteration status for printing to screen
   status.adv_res = std::sqrt(diff/n_avg);
   // compute projection onto Legendre polynomial
@@ -454,7 +478,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
         state[nd*nq + i_qpoint] = forcing[(real_step + 1)*nq + i_qpoint];
       }
     }
-    (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
+    (*kernel_factory<Spatial<Element, pde::Euler>::Write_face>(nd, rs, basis))(elements);
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
     // set up multistage scheme
     double linear = dt_diff;
@@ -569,8 +593,11 @@ void Solver::set_art_visc_smoothness(double advect_length)
     }
   }
   // update the face state
-  (*kernel_factory<Write_face>(nd, params.row_size, basis))(elements);
+  (*kernel_factory<Spatial<Element, pde::Euler>::Write_face>(nd, rs, basis))(elements);
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+  stopwatch.children.at("set art visc").stopwatch.pause();
+  stopwatch.children.at("set art visc").work_units_completed += elements.size();
+  stopwatch.stopwatch.pause();
 }
 
 void Solver::set_art_visc_row_size(int row_size)
@@ -634,7 +661,7 @@ void Solver::update(double stability_ratio)
 
   // record reference state for Runge-Kutta scheme
   const int n_dof = params.n_dof();
-  auto& irk = stopwatch.children.at("initialize RK");
+  auto& irk = stopwatch.children.at("initialize reference");
   irk.stopwatch.start();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -654,11 +681,11 @@ void Solver::update(double stability_ratio)
       int bc_sn = bc_cons[i_con].bound_cond_serial_n();
       acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
     }
-    (*kernel_factory<Neighbor_inviscid_cartesian>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor");
-    (*kernel_factory<Neighbor_inviscid_deformed >(nd, rs))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor");
+    (*kernel_factory<Spatial<Element         , pde::Euler>::Neighbor>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor");
+    (*kernel_factory<Spatial<Deformed_element, pde::Euler>::Neighbor>(nd, rs))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor");
     (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-    (*kernel_factory<Local_cartesian>(nd, rs, basis, update, curr, ref))(acc_mesh.cartesian().elements(), sw_car, "local");
-    (*kernel_factory<Local_deformed >(nd, rs, basis, update, curr, ref))(acc_mesh.deformed ().elements(), sw_def, "local");
+    (*kernel_factory<Spatial<Element         , pde::Euler>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.cartesian().elements(), sw_car, "local");
+    (*kernel_factory<Spatial<Deformed_element, pde::Euler>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.deformed ().elements(), sw_def, "local");
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
     fix_admissibility(fix_admis_stab_rat*stability_ratio);
     update = dt*basis.cancellation_convective()/basis.max_cfl_convective();
@@ -835,7 +862,7 @@ std::vector<double> Solver::integral_surface(const Surface_func& integrand, int 
   Eigen::MatrixXd boundary = basis.boundary();
   Eigen::VectorXd weights = custom_math::pow_outer(basis.node_weights(), params.n_dim - 1);
   // write the state to the faces so that the BCs can access it
-  (*kernel_factory<Write_face>(nd, params.row_size, basis))(acc_mesh.elements());
+  (*kernel_factory<Spatial<Element, pde::Euler>::Write_face>(nd, params.row_size, basis))(acc_mesh.elements());
   // compute the integral
   std::vector<double> integral (n_int, 0.);
   auto& bc_cons {acc_mesh.boundary_connections()};
@@ -957,7 +984,7 @@ void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample
   Tecplot_file file {name, nd, var_names, status.flow_time};
   Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
   // write the state to the faces so that the BCs can access it
-  (*kernel_factory<Write_face>(nd, params.row_size, basis))(acc_mesh.elements());
+  (*kernel_factory<Spatial<Element, pde::Euler>::Write_face>(nd, params.row_size, basis))(acc_mesh.elements());
   // iterate through boundary connections and visualize a zone for each
   auto& bc_cons {acc_mesh.boundary_connections()};
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con)

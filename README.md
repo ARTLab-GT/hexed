@@ -41,19 +41,6 @@ Hexed is not:
 * for arbitrary PDEs
 * for tri/tet grids
 
-## Some notes on the implementation
-Most of the performance critical code is placed in what I call "kernels".
-These are highly optimized functions that perform the basic operations of the DG method.
-They take the number of dimensions and the polynomial degree of the basis as template parameters,
-providing as many opportunities as possible for compiler optimization (and making it roughly twice as fast).
-The ability to specify the degree of the basis and the dimensionality at runtime is recovered by
-some truly cursed recursive templates, which gets the end result that the user needs, but takes *forever* to compile
-and gives me a headache every time I look at it.
-The kernels also often trade abstraction for optimizability.
-All of these things are disasterous from a software engineering perspective, but have shown significant performance benefits.
-For the kernels I am willing to make this trade, but for the rest of the code I have priortized readability and modularity over performance.
-If you end up attempting to understand the kernels, for one reason or another, all I can say is... *sorry*.
- 
 ## Dependencies
 The following are required to be installed before compiling Hexed:
 - GCC (of course)
