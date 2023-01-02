@@ -56,7 +56,7 @@ TEST_CASE("Euler")
       correct = hexed::pde::Euler<3>::flux(state(Eigen::all, 1), normal);
       REQUIRE((flux - correct).norm() == Approx(0).scale(1.));
 
-      normal.setOnes(1);
+      normal.setOnes();
       flux = hexed::pde::Euler<3>::flux_num(state, normal);
       REQUIRE(flux(3) == Approx(0.).scale(1.));
     }
