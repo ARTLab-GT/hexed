@@ -244,8 +244,11 @@ TEST_CASE("Solver")
     sol.mesh().add_element(0, false, {0, 0, 0});
     int sn0 = sol.mesh().add_element(0, false, {1, 0, 0});
     int sn1 = sol.mesh().add_element(2, true, {-1, 0, 0});
+    int bcsn = sol.mesh().add_boundary_condition(new hexed::Copy(), new hexed::Null_mbc());
     // initialization/sampling
     REQUIRE_THROWS(sol.initialize(Bad_initializer())); // if number of variables of func is wrong, should throw
+    REQUIRE_THROWS(sol.initialize(Arbitrary_initializer())); // mesh must be valid before you can initialize
+    sol.mesh().connect_rest(bcsn);
     sol.initialize(Arbitrary_initializer());
     auto sample = sol.sample(0, false, sn0, 4, hexed::State_variables()); // sample the midpoint of the element because we know the exact position
     REQUIRE(sample.size() == 4);
@@ -315,12 +318,14 @@ TEST_CASE("Solver")
       // add some boundary conditions for testing surface integrals
       int bc0 = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Null_mbc);
       int bc1 = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Null_mbc);
+      int bc2 = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Null_mbc);
       int i = 0;
       for (int sn : {car0, car1, sn0, sn1}) {
         sol.mesh().connect_boundary(0, i++ >= 2, sn, 1, 0, bc0);
       }
       sol.mesh().connect_boundary(1, false, car2, 0, 1, bc0);
       sol.mesh().connect_boundary(1, false, car2, 1, 1, bc1);
+      sol.mesh().connect_rest(bc2);
       // finish setup
       sol.calc_jacobian();
       std::vector<double> state {0.3, -10., 0.7, 32.};
@@ -349,7 +354,9 @@ TEST_CASE("Solver")
     {
       int sn = sol.mesh().add_element(0, false, {0, 0, 0});
       int bc0 = sol.mesh().add_boundary_condition(new hexed::Nonpenetration, new hexed::Null_mbc);
+      int bc1 = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Null_mbc);
       sol.mesh().connect_boundary(0, false, sn, 0, 1, bc0);
+      sol.mesh().connect_rest(bc1);
       sol.calc_jacobian();
       sol.initialize(hexed::Constant_func({0.3, 0., 0., 0.}));
       auto integral = sol.integral_field(Arbitrary_integrand());

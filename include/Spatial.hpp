@@ -46,6 +46,19 @@ class Spatial
       }
     }
 
+    void operator()(const double* read, std::array<double*, 6> faces)
+    {
+      //read += Pde::curr_start*custom_math::pow(row_size, n_dim);
+      //face += Pde::curr_start*custom_math::pow(row_size, n_dim - 1);
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
+          auto row_r = Row_rw<Pde::n_var, row_size>::read_row(read, ind);
+          Mat<2, Pde::n_var> bound = boundary*row_r;
+          Row_rw<Pde::n_var, row_size>::write_bound(bound, faces, ind);
+        }
+      }
+    }
+
     virtual void operator()(Sequence<element_t&>& elements)
     {
       #pragma omp parallel for
@@ -53,7 +66,9 @@ class Spatial
         element_t& elem {elements[i_elem]};
         double* read = elem.stage(0);
         double* face = elem.face();
+        auto faces = elem.faces;
         operator()(read, face);
+        operator()(read, faces);
       }
     }
   };
@@ -138,6 +153,7 @@ class Spatial
         }
         // write updated state to face storage
         write_face(state, face);
+        write_face(state, elem.faces);
       }
     }
   };

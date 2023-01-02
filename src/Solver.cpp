@@ -240,6 +240,7 @@ void Solver::set_local_tss()
 
 void Solver::initialize(const Spacetime_func& func)
 {
+  acc_mesh.valid().assert_valid();
   if (func.n_var(params.n_dim) != params.n_var) {
     throw std::runtime_error("initializer has wrong number of output variables");
   }
