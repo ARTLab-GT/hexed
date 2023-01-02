@@ -20,7 +20,10 @@ TEST_CASE("Element")
       element.stage(i_stage)[i_dof] = 0.;
     }
   }
-  for (int i_face = 0; i_face < 6; ++i_face) REQUIRE(element.face_record[i_face] == 0);
+  for (int i_face = 0; i_face < 6; ++i_face) {
+    REQUIRE(element.face_record[i_face] == 0);
+    REQUIRE(element.faces[i_face] == nullptr);
+  }
   for (int i_face_data = 0; i_face_data < n_dof/params.row_size*3*2; ++i_face_data) {
     element.face()[i_face_data] = 1.;
   }

@@ -17,6 +17,7 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   vertex_tss{Eigen::VectorXd::Constant(params.n_vertices(), 1./custom_math::pow(2, r_level))}
 {
   face_record.fill(0);
+  faces.fill(nullptr);
   // initialize local time step scaling to 1.
   for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) time_step_scale()[i_qpoint] = 1.;
   // set position of vertex 0

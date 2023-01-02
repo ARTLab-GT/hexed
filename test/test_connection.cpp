@@ -136,6 +136,8 @@ TEST_CASE("Element_face_connection<Element>")
   hexed::Element elem0 (params);
   hexed::Element elem1 (params);
   hexed::Element_face_connection<hexed::Element> con ({&elem0, &elem1}, hexed::Con_dir<hexed::Element>{1});
+  REQUIRE(elem0.faces[3] == con.state());
+  REQUIRE(elem1.faces[2] == con.state() + params.n_dof()/params.row_size);
   REQUIRE(con.direction().i_dim == 1);
   REQUIRE(&con.element(0) == &elem0);
   REQUIRE(&con.element(1) == &elem1);
@@ -153,6 +155,8 @@ TEST_CASE("Element_face_connection<Deformed_element>")
   hexed::Deformed_element elem0 (params);
   hexed::Deformed_element elem1 (params);
   hexed::Element_face_connection<hexed::Deformed_element> con ({&elem0, &elem1}, hexed::Con_dir<hexed::Deformed_element>{{2, 1}, {0, 1}});
+  REQUIRE(elem0.faces[4] == con.state());
+  REQUIRE(elem1.faces[3] == con.state() + params.n_dof()/params.row_size);
   REQUIRE(con.direction().i_dim[0] == 2);
   REQUIRE(con.direction().i_dim[1] == 1);
   REQUIRE(con.direction().face_sign[0] == 0);
@@ -160,7 +164,7 @@ TEST_CASE("Element_face_connection<Deformed_element>")
   REQUIRE(&con.element(0) == &elem0);
   REQUIRE(&con.element(1) == &elem1);
   con.normal(0)[3*6*6 - 1] = 1; // check that normal storage is big enough (otherwise segfault)
-  con.normal(1)[3*6*6 - 1] = 1; // check that normal storage is big enough (otherwise segfault)
+  con.normal(1)[3*6*6 - 1] = 1;
   REQUIRE(con.normal() == con.normal(0));
   REQUIRE(con.face(0) == elem0.face() + 4*5*36);
   REQUIRE(con.face(1) == elem1.face() + 3*5*36);

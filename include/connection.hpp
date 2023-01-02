@@ -132,6 +132,7 @@ class Element_face_connection : public Element_connection, public Face_connectio
     int face_size = params.n_dof()/params.row_size;
     for (int i_side : {0, 1}) {
       faces[i_side] = elements[i_side]->face() + dir.i_face(i_side)*face_size;
+      elements[i_side]->faces[dir.i_face(i_side)] = Face_connection<element_t>::state() + i_side*face_size;
     }
     auto inds = vertex_inds(elements[0]->storage_params().n_dim, dir);
     for (unsigned i_vert = 0; i_vert < inds[0].size(); ++i_vert) {
