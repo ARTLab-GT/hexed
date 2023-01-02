@@ -76,9 +76,11 @@ std::array<std::vector<int>, 2> vertex_inds(int n_dim, Con_dir<Deformed_element>
 template <class element_t>
 class Face_connection
 {
+  Eigen::VectorXd data;
   public:
-  Face_connection(Storage_params) {}
+  Face_connection(Storage_params params) : data(2*params.n_dof()/params.row_size) {}
   virtual Con_dir<element_t> direction() = 0;
+  virtual double* state() {return data.data();}
   virtual double* face(int i_side) = 0;
 };
 
@@ -86,15 +88,19 @@ template <>
 class Face_connection<Deformed_element>
 {
   int nrml_sz;
-  Eigen::VectorXd nrml;
+  int state_sz;
+  Eigen::VectorXd data;
   public:
   Face_connection<Deformed_element>(Storage_params params)
-  : nrml_sz{params.n_dim*params.n_qpoint()/params.row_size}, nrml{2*nrml_sz}
+  : nrml_sz{params.n_dim*params.n_qpoint()/params.row_size},
+    state_sz{params.n_dof()/params.row_size},
+    data(2*(nrml_sz + state_sz))
   {}
   virtual Con_dir<Deformed_element> direction() = 0;
   virtual double* face(int i_side) = 0;
-  double* normal(int i_side) {return nrml.data() + i_side*nrml_sz;}
-  double* normal() {return nrml.data();} // area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
+  virtual double* state() {return data.data();}
+  double* normal(int i_side) {return data.data() + 2*state_sz + i_side*nrml_sz;}
+  double* normal() {return data.data() + 2*state_sz;} // area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
 };
 
 /*
