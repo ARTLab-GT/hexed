@@ -161,7 +161,7 @@ class Spatial
         #pragma GCC diagnostic ignored "-Wunused-but-set-variable" // otherwise `'face_nrml' set but not used` (not sure why)
         auto& con = connections[i_con];
         auto dir = con.direction();
-        double face [2][Pde::n_var*n_fqpoint]; // copying face data to temporary stack storage improves efficiency
+        double face [2][(n_dim + 2)*n_fqpoint]; // copying face data to temporary stack storage improves efficiency
         double face_nrml [n_dim*n_fqpoint]; // only set for deformed
         int sign [2] {1, 1}; // records whether the normal vector on each side needs to be flipped to obey sign convention
         // fetch face data
