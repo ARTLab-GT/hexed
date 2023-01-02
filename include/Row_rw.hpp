@@ -72,6 +72,28 @@ class Row_rw
       }
     }
   }
+
+  // reads from the face values associated with a given row
+  static Bound read_bound(const std::array<double*, 6> faces, Row_index ind)
+  {
+    Bound b;
+    for (int i_var = 0; i_var < n_var; ++i_var) {
+      for (int is_positive : {0, 1}) {
+        b(is_positive, i_var) = faces[ind.i_dim*2 + is_positive][i_var*ind.n_fqpoint + ind.i_face_qpoint()];
+      }
+    }
+    return b;
+  }
+
+  // writes the values in `b` to the face data associated with the specified row
+  static void write_bound(Bound b, std::array<double*, 6> faces, Row_index ind)
+  {
+    for (int i_var = 0; i_var < n_var; ++i_var) {
+      for (int is_positive : {0, 1}) {
+        faces[ind.i_dim*2 + is_positive][i_var*ind.n_fqpoint + ind.i_face_qpoint()] = b(is_positive, i_var);
+      }
+    }
+  }
 };
 
 }
