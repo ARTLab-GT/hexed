@@ -178,7 +178,9 @@ class Refined_connection
     : Face_connection<element_t>{r.params}, ref_con{r}, fine_elem{f}
     {
       faces[ref_con.rev] = mortar_face;
-      faces[!ref_con.rev] = fine_elem.face() + r.direction().i_face(!ref_con.rev)*r.params.n_dof()/r.params.row_size;
+      int face_sz = r.params.n_dof()/r.params.row_size;
+      faces[!ref_con.rev] = fine_elem.face() + r.direction().i_face(!ref_con.rev)*face_sz;
+      f.faces[ref_con.dir.i_face(!ref_con.rev)] = Face_connection<element_t>::state() + (!ref_con.rev)*face_sz;
     }
     virtual Con_dir<element_t> direction() {return ref_con.direction();}
     virtual double* face(int i_side) {return faces[i_side];}
@@ -195,6 +197,7 @@ class Refined_connection
   std::array<bool, 2> str;
   int n_fine;
   Eigen::VectorXd coarse_normal;
+  Eigen::VectorXd coarse_state_data;
   static std::vector<Element*> to_elementstar(std::vector<element_t*> elems)
   {
     std::vector<Element*> converted;
@@ -224,9 +227,11 @@ class Refined_connection
     def_dir{Con_dir<Deformed_element>(dir)},
     rev{reverse_order},
     str{stretch_arg},
+    coarse_state_data{params.n_dof()/params.row_size},
     refined_face{params, coarse->face() + con_dir.i_face(rev)*params.n_dof()/params.row_size, coarse_stretch()},
     matcher{to_elementstar(fine), def_dir.i_dim[!reverse_order], def_dir.face_sign[!reverse_order], str}
   {
+    coarse->faces[dir.i_face(rev)] = coarse_state();
     int nd = params.n_dim;
     n_fine = params.n_vertices()/2;
     bool any_str = false;
@@ -267,6 +272,7 @@ class Refined_connection
   bool order_reversed() {return rev;}
   auto stretch() {return str;}
   int n_fine_elements() {return n_fine;}
+  double* coarse_state() {return coarse_state_data.data();}
 };
 
 template <>

@@ -210,6 +210,11 @@ TEST_CASE("Refined_connection<Deformed_element>")
     REQUIRE(elem1.vertex_time_step_scale(1) == Approx(0.5));
     REQUIRE(elem2.vertex_time_step_scale(3) == Approx(0.75));
     REQUIRE(elem2.vertex_time_step_scale(2) == Approx(1.));
+    REQUIRE(coarse.faces[1] == con.coarse_state());
+    for (int i_con = 0; i_con < 4; ++i_con) {
+      auto& c = con.connection(i_con);
+      REQUIRE(c.element(1).faces[5] == c.state() + params.n_dof()/params.row_size);
+    }
   }
   SECTION("reversed")
   {
