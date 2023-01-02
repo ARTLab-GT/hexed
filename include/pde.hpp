@@ -3,9 +3,24 @@
 
 #include "math.hpp"
 
+/*
+ * This namespace contains classes representing the different PDEs Hexed can solve.
+ * They are all possible arguments to the `Spatial` class.
+ * Each PDE class must have:
+ * - `static constexpr int n_var`: the number of state variables required to compute the flux
+ *   (some of which may be conserved variables and some of which can be pasive data, e.g. advection velocity)
+ * - `static constexpr int curr_start`: index of the variable representing the current state
+ * - `static constexpr int ref_start`: index of the variable representing the reference state (for multistage time integration)
+ * - `static constexpr int n_update`: the number of conserved variables to be updated
+ * - a `flux` function which computes the flux of conserved
+ *   variables given a state vector and a (non-unit) reference level normal vector
+ * - a `flux_num` function which computes the shared numerical flux given the
+ *   state for two neighboring elements and the shared face normal
+ */
 namespace hexed::pde
 {
 
+// computes HLL (Harten-Lax-Van Leer) numerical flux based on wave speed estimate
 template <int n_var>
 Mat<n_var> hll(Mat<2> speed, Mat<n_var, 2> flux, Mat<n_var, 2> state)
 {
@@ -22,6 +37,7 @@ Mat<n_var> hll(Mat<2> speed, Mat<n_var, 2> flux, Mat<n_var, 2> state)
   HEXED_ASSERT(state(n_dim + 1) >= 0, "negative energy"); \
   HEXED_ASSERT(pres >= 0, "negative pressure"); \
 
+// represents the Euler equations for inviscid fluid flow
 template <int n_dim>
 class Euler
 {
@@ -89,6 +105,8 @@ class Euler
   }
 };
 
+// represents the nonuniform linear advection equation
+// used in the smoothness-based artificial viscosity scheme
 template <int n_dim>
 class Advection
 {

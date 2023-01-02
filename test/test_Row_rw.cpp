@@ -3,6 +3,7 @@
 
 TEST_CASE("Row_rw")
 {
+  // test interior row operations
   double interior [3*7*7];
   for (int i = 0; i < 3*7*7; ++i) interior[i] = i;
   hexed::Row_index ind(2, 7, 0);
@@ -20,6 +21,7 @@ TEST_CASE("Row_rw")
   REQUIRE(interior[17] == Approx(16 + 1.7));
   REQUIRE(interior[2] == Approx(2));
 
+  // test face operations
   double face[4*7*2*2];
   for (int i_face = 0; i_face < 4; ++i_face) {
     for (int i = 0; i < 4*7; ++i) {
