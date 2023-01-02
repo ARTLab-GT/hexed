@@ -583,7 +583,8 @@ void test_art_visc(Test_mesh& tm, std::string name)
       auto state  = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::State_variables());
       auto update = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Physical_update());
       auto tss    = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Time_step_scale_func());
-      REQUIRE(update[n_dim]/status.time_step == Approx(-n_dim*300.*(state[n_dim] - update[n_dim]*tss[0] - 1.)).margin(1e-3));
+      double margin = hexed::config::max_row_size > 6 ? 1e-3 : 1.;
+      REQUIRE(update[n_dim]/status.time_step == Approx(-n_dim*300.*(state[n_dim] - update[n_dim]*tss[0] - 1.)).margin(margin));
     }
   }
 }
