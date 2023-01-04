@@ -8,7 +8,6 @@
 #include "math.hpp"
 #include "Derivative.hpp"
 #include "Row_rw.hpp"
-#include <iostream>
 
 namespace hexed
 {
@@ -207,10 +206,6 @@ class Spatial
           if constexpr (element_t::is_deformed) {
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
               nrml(i_dim) = sign[0]*face_nrml[i_dim*n_fqpoint + i_qpoint];
-            }
-            if ((n_dim == 3) && (i_qpoint == 0)) {
-              #pragma omp critical
-              std::cout << nrml.transpose() << "\n";
             }
           }
           Mat<Pde::n_var, 2> state;

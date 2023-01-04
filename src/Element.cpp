@@ -91,13 +91,12 @@ std::vector<double> Element::face_position(const Basis& basis, int i_face, int i
 
 void Element::set_jacobian(const Basis& basis)
 {
-  double* f = face();
   int nfq = params.n_qpoint()/params.row_size;
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
       for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
         for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-          f[((2*i_dim + sign)*params.n_var + j_dim)*nfq + i_qpoint] = i_dim == j_dim;
+          faces[2*i_dim + sign][j_dim*nfq + i_qpoint] = i_dim == j_dim;
         }
       }
     }
