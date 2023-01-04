@@ -62,8 +62,9 @@ class Solver
   void snap_vertices();
   void snap_faces();
   /*
-   * compute the Jacobian of all elements based on the current position of the vertices and value of
-   * any face warping.
+   * compute the Jacobian of all elements based on the current position of the vertices
+   * and value of any face warping.
+   * Mesh topology must be valid (no duplicate or missing connections) before calling this function.
    */
   void calc_jacobian();
   /*

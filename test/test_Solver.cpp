@@ -238,17 +238,17 @@ TEST_CASE("Solver")
 {
   static_assert (hexed::config::max_row_size >= 3); // this test was written for row size 3
   hexed::Solver sol {2, 3, 0.8};
+  int catchall_bc = sol.mesh().add_boundary_condition(new hexed::Copy(), new hexed::Null_mbc());
 
   SECTION("initialization and introspection")
   {
     sol.mesh().add_element(0, false, {0, 0, 0});
     int sn0 = sol.mesh().add_element(0, false, {1, 0, 0});
     int sn1 = sol.mesh().add_element(2, true, {-1, 0, 0});
-    int bcsn = sol.mesh().add_boundary_condition(new hexed::Copy(), new hexed::Null_mbc());
     // initialization/sampling
     REQUIRE_THROWS(sol.initialize(Bad_initializer())); // if number of variables of func is wrong, should throw
     REQUIRE_THROWS(sol.initialize(Arbitrary_initializer())); // mesh must be valid before you can initialize
-    sol.mesh().connect_rest(bcsn);
+    sol.mesh().connect_rest(catchall_bc);
     sol.initialize(Arbitrary_initializer());
     auto sample = sol.sample(0, false, sn0, 4, hexed::State_variables()); // sample the midpoint of the element because we know the exact position
     REQUIRE(sample.size() == 4);
@@ -292,6 +292,7 @@ TEST_CASE("Solver")
     sol.mesh().connect_hanging(0, sn1, {sn2, sn3}, {{1, 1}, {0, 1}});
     int bc = sol.mesh().add_boundary_condition(new hexed::Copy, new Shrink_pos0);
     sol.mesh().connect_boundary(0, true, sn0, 0, 1, bc);
+    sol.mesh().connect_rest(catchall_bc);
     sol.mesh().valid().assert_valid();
     sol.snap_vertices();
     sol.calc_jacobian();
@@ -376,6 +377,7 @@ TEST_CASE("Solver")
       int el_sn = sol.mesh().add_element(1, true, {1, 2});
       int bc_sn = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Nominal_pos);
       sol.mesh().connect_boundary(1, true, el_sn, 1, 1, bc_sn);
+      sol.mesh().connect_rest(catchall_bc);
       sol.relax_vertices();
       sol.snap_vertices();
       sol.snap_faces();
@@ -389,6 +391,7 @@ TEST_CASE("Solver")
       int el_sn = sol.mesh().add_element(1, true, {0, 0});
       int bc_sn = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Surface_mbc{new Parabola});
       sol.mesh().connect_boundary(1, true, el_sn, 1, 1, bc_sn);
+      sol.mesh().connect_rest(catchall_bc);
       sol.snap_vertices();
       sol.mesh().valid().assert_valid();
       sol.calc_jacobian();
@@ -816,12 +819,14 @@ TEST_CASE("face extrusion")
       }
     }
     solver.mesh().extrude();
-    solver.calc_jacobian();
-    REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Approx(24./4.)); // check number of elements
-    for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
     auto valid = solver.mesh().valid();
     REQUIRE(valid.n_duplicate == 0);
     REQUIRE(valid.n_missing == 16);
+    int bc_sn = solver.mesh().add_boundary_condition(new hexed::Copy(), new hexed::Null_mbc());
+    solver.mesh().connect_rest(bc_sn);
+    solver.calc_jacobian();
+    REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Approx(24./4.)); // check number of elements
+    for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
   }
   SECTION("3D")
   {
@@ -841,12 +846,14 @@ TEST_CASE("face extrusion")
       }
     }
     solver.mesh().extrude();
-    solver.calc_jacobian();
-    REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Approx(86.)); // check number of elements
-    for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
     auto valid = solver.mesh().valid();
     REQUIRE(valid.n_duplicate == 0);
     REQUIRE(valid.n_missing == 60);
+    int bc_sn = solver.mesh().add_boundary_condition(new hexed::Copy(), new hexed::Null_mbc());
+    solver.mesh().connect_rest(bc_sn);
+    solver.calc_jacobian();
+    REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Approx(86.)); // check number of elements
+    for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
     #if HEXED_USE_TECPLOT
     solver.visualize_field_tecplot(hexed::State_variables(), "extrude");
     #endif
@@ -908,6 +915,8 @@ TEST_CASE("resolution badness")
   int sn = sol.mesh().add_element(0, true, {0, 0});
   sol.mesh().extrude();
   sol.mesh().extrude();
+  int bc_sn = sol.mesh().add_boundary_condition(new hexed::Copy(), new hexed::Null_mbc());
+  sol.mesh().connect_rest(bc_sn);
   sol.calc_jacobian();
   hexed::Position_func pos;
   sol.set_resolution_badness(hexed::Elem_average(pos));

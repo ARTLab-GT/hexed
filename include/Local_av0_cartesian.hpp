@@ -37,7 +37,6 @@ class Local_av0_cartesian : public Kernel<Element&>
   {
     constexpr int n_var = n_dim + 2;
     constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
-    constexpr int n_face_dof = n_var*n_qpoint/row_size;
 
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
@@ -45,7 +44,7 @@ class Local_av0_cartesian : public Kernel<Element&>
       auto& elem = elements[i_elem];
       double* state = elem.stage(0);
       double time_rate [n_var][n_qpoint] {};
-      double* face = elem.face();
+      auto faces = elem.faces;
       double* tss = elem.time_step_scale();
       double* av_coef = elem.art_visc_coef();
       double nom_sz = elem.nominal_size();
@@ -75,7 +74,7 @@ class Local_av0_cartesian : public Kernel<Element&>
             Eigen::Matrix<double, 2, n_var> boundary_values;
             for (int i_var = 0; i_var < n_var; ++i_var) {
               for (int is_positive : {0, 1}) {
-                boundary_values(is_positive, i_var) = face[(i_dim*2 + is_positive)*n_face_dof + i_var*n_qpoint/row_size + i_face_qpoint];
+                boundary_values(is_positive, i_var) = faces[i_dim*2 + is_positive][i_var*n_qpoint/row_size + i_face_qpoint];
               }
             }
 
@@ -85,7 +84,7 @@ class Local_av0_cartesian : public Kernel<Element&>
             Eigen::Matrix<double, row_size, n_var> row_w = -derivative.interior_term(flux, boundary_values);
             for (int i_var = 0; i_var < n_var; ++i_var) {
               for (int is_positive : {0, 1}) {
-                face[(i_dim*2 + is_positive)*n_face_dof + i_var*n_qpoint/row_size + i_face_qpoint] = boundary_values(is_positive, i_var);
+                faces[i_dim*2 + is_positive][i_var*n_qpoint/row_size + i_face_qpoint] = boundary_values(is_positive, i_var);
               }
             }
 

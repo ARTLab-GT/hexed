@@ -167,6 +167,9 @@ TEST_CASE("Vis_data")
       for (int i_vert = 1; i_vert < 4; i_vert += 2) {
         elem.vertex(i_vert).pos[0] += 0.5;
       }
+      // give element some face storage so that `set_jacobian` doesn't segfault
+      double face_data [4][4*hexed::config::max_row_size];
+      for (int i_face = 0; i_face < 4; ++i_face) elem.faces[i_face] = face_data[i_face];
       elem.set_jacobian(basis);
       hexed::Vis_data vis(elem, hexed::Linear(Eigen::Vector2d{1., 0.}), basis);
       auto con = vis.compute_contour(.5, 3);

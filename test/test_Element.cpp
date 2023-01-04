@@ -144,13 +144,15 @@ TEST_CASE("Element")
   SECTION("writing jacobian to faces")
   {
     hexed::Equidistant basis(6);
+    double faces[6][5*36];
+    for (int i_face = 0; i_face < 6; ++i_face) element.faces[i_face] = faces[i_face];
     element.set_jacobian(basis);
-    REQUIRE(element.face()[0] == Approx(1.));
-    REQUIRE(element.face()[1] == Approx(1.));
-    REQUIRE(element.face()[36] == Approx(0.));
-    REQUIRE(element.face()[5*36] == Approx(1.));
-    REQUIRE(element.face()[2*5*36] == Approx(0.));
-    REQUIRE(element.face()[(2*5 + 1)*36] == Approx(1.));
-    REQUIRE(element.face()[(2*5 + 2)*36] == Approx(0.));
+    REQUIRE(element.faces[0][0] == Approx(1.));
+    REQUIRE(element.faces[0][1] == Approx(1.));
+    REQUIRE(element.faces[0][36] == Approx(0.));
+    REQUIRE(element.faces[1][0] == Approx(1.));
+    REQUIRE(element.faces[2][0] == Approx(0.));
+    REQUIRE(element.faces[2][1*36] == Approx(1.));
+    REQUIRE(element.faces[2][2*36] == Approx(0.));
   }
 }

@@ -66,6 +66,32 @@ class Write_face : public Kernel<Element&>
       }
     }
   }
+
+  void operator()(const double* read, std::array<double*, 6> faces)
+  {
+    for (int i_var = 0; i_var < n_var; ++i_var)
+    {
+      for (int stride = n_qpoint/row_size, n_rows = 1, i_dim = 0; n_rows < n_qpoint;
+           stride /= row_size, n_rows *= row_size, ++i_dim)
+      {
+        int i_face_qpoint {0};
+        for (int i_outer = 0; i_outer < n_rows; ++i_outer) {
+          for (int i_inner = 0; i_inner < stride; ++i_inner) {
+            Eigen::Matrix<double, row_size, 1> row_r;
+            for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+              row_r[i_qpoint] = read[i_var*n_qpoint + i_outer*stride*row_size + i_inner + i_qpoint*stride];
+            }
+            Eigen::Matrix<double, 2, 1> face_vals;
+            face_vals.noalias() = boundary*row_r;
+            for (int is_positive : {0, 1}) {
+              faces[i_dim*2 + is_positive][i_var*n_face_qpoint + i_face_qpoint] = face_vals[is_positive];
+            }
+            ++i_face_qpoint;
+          }
+        }
+      }
+    }
+  }
 };
 
 }

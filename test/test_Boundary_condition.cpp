@@ -22,8 +22,8 @@ TEST_CASE("Typed_boundary_connection")
   REQUIRE(tbc1.ghost_face() == tbc1.state() + params.n_dof()/params.row_size);
   REQUIRE(tbc0.storage_params().n_var == 4);
   // check that the correct face of the element is retrieved
-  REQUIRE(tbc0.inside_face() == element.face() + (2*1 + 0)*4*4);
-  REQUIRE(tbc1.inside_face() == element.face() + (2*1 + 1)*4*4);
+  REQUIRE(tbc0.inside_face() == element.faces[2*1 + 0]);
+  REQUIRE(tbc1.inside_face() == element.faces[2*1 + 1]);
   // check that ghost data exists (otherwise segfault)
   tbc0.ghost_face()[0] = 1.;
   tbc0.ghost_face()[4*4 - 1] = 1.;

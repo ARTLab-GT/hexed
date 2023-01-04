@@ -116,6 +116,7 @@ void Solver::snap_faces()
 
 void Solver::calc_jacobian()
 {
+  acc_mesh.valid().assert_valid();
   const int n_dim = params.n_dim;
   const int rs = basis.row_size;
   const int nfq = params.n_qpoint()/rs;

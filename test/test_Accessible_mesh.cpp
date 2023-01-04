@@ -126,7 +126,7 @@ TEST_CASE("Accessible_mesh")
         // check that it got the right face
         auto& bc_cons {mesh.cartesian().boundary_connections()};
         REQUIRE(bc_cons.size() == 1);
-        REQUIRE(bc_cons[0].inside_face() == mesh.element(0, 0, sn1).face() + (2*1 + 0)*5*row_size*row_size);
+        REQUIRE(bc_cons[0].inside_face() == mesh.element(0, 0, sn1).faces[2*1 + 0]);
         // check that the boundary connection is in the deformed connection sequence
         auto& cons = mesh.deformed().face_connections();
         REQUIRE(cons.size() == 1);
