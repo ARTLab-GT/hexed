@@ -23,7 +23,6 @@ test_Mcs_deformed.cpp
 test_pde.cpp
 test_Physical_basis.cpp
 test_Prolong_refined.cpp
-test_Refined_face.cpp
 test_Restrict_refined.cpp
 test_Row_index.cpp
 test_Row_rw.cpp

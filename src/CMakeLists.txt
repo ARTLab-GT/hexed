@@ -17,7 +17,6 @@ Output_data.cpp
 otter_vis.cpp
 Physical_basis.cpp
 Qpoint_func.cpp
-Refined_face.cpp
 Solver.cpp
 Spacetime_func.cpp
 Stopwatch.cpp

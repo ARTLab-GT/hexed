@@ -2,7 +2,7 @@
 #define HEXED_PROLONG_REFINED_HPP_
 
 #include "Vector_view.hpp"
-#include "Refined_face.hpp"
+#include "connection.hpp"
 #include "Basis.hpp"
 #include "kernel_factory.hpp"
 #include "math.hpp"
@@ -34,14 +34,14 @@ class Prolong_refined : public Kernel<Refined_face&>
     for (int i_ref_face = 0; i_ref_face < ref_faces.size(); ++i_ref_face)
     {
       auto& ref_face {ref_faces[i_ref_face]};
-      double* coarse {ref_face.coarse_face()};
+      double* coarse {ref_face.coarse};
       const auto str = ref_face.stretch;
       // update number of faces to reflect any face stretching
       int nf = n_face;
       for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) nf /= 1 + str[i_dim];
       for (int i_face = 0; i_face < nf; ++i_face)
       {
-        double* fine {ref_face.fine_face(i_face)};
+        double* fine {ref_face.fine[i_face]};
         for (int i_var = 0; i_var < n_var; ++i_var)
         {
           double* var_face {fine + i_var*nfq};

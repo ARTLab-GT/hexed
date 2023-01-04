@@ -803,7 +803,7 @@ void Solver::fix_admissibility(double stability_ratio)
       int n_fine = params.n_vertices()/2;
       for (int i_dim = 0; i_dim < nd - 1; ++i_dim) n_fine /= 1 + ref.stretch[i_dim];
       for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
-        refined_admiss = refined_admiss && hexed::thermo::admissible(ref.fine_face(i_fine), nd, nq/rs);
+        refined_admiss = refined_admiss && hexed::thermo::admissible(ref.fine[i_fine], nd, nq/rs);
       }
     }
     if (admiss && refined_admiss) break;

@@ -3,7 +3,6 @@
 
 #include <Eigen/Dense>
 #include "Deformed_element.hpp"
-#include "Refined_face.hpp"
 #include "Hanging_vertex_matcher.hpp"
 #include "math.hpp"
 
@@ -157,6 +156,14 @@ inline void Element_face_connection<Deformed_element>::connect_normal()
   }
 }
 
+class Refined_face
+{
+  public:
+  double* coarse = nullptr;
+  std::array<double*, 4> fine {};
+  std::array<bool, 2> stretch;
+};
+
 /*
  * Represents a connection between elements whose refinement levels differ by 1. This involves
  * a `Refined_face` object to facilitate interpolating/projecting between the coarse face and the
@@ -174,12 +181,10 @@ class Refined_connection
     element_t& fine_elem;
     std::array<double*, 2> faces;
     public:
-    Fine_connection(Refined_connection& r, double* mortar_face, element_t& f)
+    Fine_connection(Refined_connection& r, element_t& f)
     : Face_connection<element_t>{r.params}, ref_con{r}, fine_elem{f}
     {
-      faces[ref_con.rev] = mortar_face;
       int face_sz = r.params.n_dof()/r.params.row_size;
-      faces[!ref_con.rev] = fine_elem.face() + r.direction().i_face(!ref_con.rev)*face_sz;
       f.faces[ref_con.dir.i_face(!ref_con.rev)] = Face_connection<element_t>::state() + (!ref_con.rev)*face_sz;
     }
     virtual Con_dir<element_t> direction() {return ref_con.direction();}
@@ -212,7 +217,7 @@ class Refined_connection
   void connect_normal();
 
   public:
-  Refined_face refined_face;
+  Refined_face refined_face; // pretty please don't write to this!! this should be const and/or private, but i have bigger problems rn :( FIXME
   Hanging_vertex_matcher matcher;
   /*
    * if `reverse_order` is true, the fine elements will come before coarse in the connection.
@@ -228,10 +233,10 @@ class Refined_connection
     rev{reverse_order},
     str{stretch_arg},
     coarse_state_data{params.n_dof()/params.row_size},
-    refined_face{params, coarse->face() + con_dir.i_face(rev)*params.n_dof()/params.row_size, coarse_stretch()},
     matcher{to_elementstar(fine), def_dir.i_dim[!reverse_order], def_dir.face_sign[!reverse_order], str}
   {
-    coarse->faces[dir.i_face(rev)] = coarse_state();
+    refined_face.stretch = coarse_stretch();
+    coarse->faces[dir.i_face(rev)] = refined_face.coarse = coarse_state();
     int nd = params.n_dim;
     n_fine = params.n_vertices()/2;
     bool any_str = false;
@@ -258,7 +263,8 @@ class Refined_connection
       // if there is any stretching happening, rather than use `permutation_inds`
       // it is merely necessary to figure out whether we need to swap the fine elements
       if (any_str) inds[1] = i_face != (def_dir.flip_tangential() && !str[2*def_dir.i_dim[rev] > 3 - def_dir.i_dim[!rev]]);
-      fine_cons.emplace_back(*this, refined_face.fine_face(inds[rev]), *fine[inds[!rev]]);
+      fine_cons.emplace_back(*this, *fine[inds[!rev]]);
+      refined_face.fine[inds[rev]] = fine_cons.back().state() + rev*params.n_dof()/params.row_size;
     }
     connect_normal();
   }
