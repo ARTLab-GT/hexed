@@ -119,6 +119,7 @@ void Solver::calc_jacobian()
   const int n_dim = params.n_dim;
   const int rs = basis.row_size;
   const int nfq = params.n_qpoint()/rs;
+  const int nfdof = nfq*params.n_var;
 
   // compute element jacobians
   auto& elements = acc_mesh.elements();
@@ -145,7 +146,7 @@ void Solver::calc_jacobian()
     int sign = 1 - 2*(dir.flip_normal(0) != dir.flip_normal(1));
     for (int i_fine = 0; i_fine < ref.n_fine_elements(); ++i_fine) {
       auto& fine = ref.connection(i_fine);
-      double* face [2] {fine.face(rev), fine.face(!rev)};
+      double* face [2] {fine.state() + rev*nfdof, fine.state() + (!rev)*nfdof};
       auto fp = kernel_factory<Face_permutation>(n_dim, rs, dir, face[1]);
       fp->match_faces();
       for (int i_data = 0; i_data < n_dim*nfq; ++i_data) {
@@ -165,7 +166,7 @@ void Solver::calc_jacobian()
   for (int i_con = 0; i_con < def_cons.size(); ++i_con)
   {
     auto& con = def_cons[i_con];
-    double* elem_nrml [2] {con.face(0), con.face(1)};
+    double* elem_nrml [2] {con.state(), con.state() + nfdof};
     auto dir = con.direction();
     // permute face 1 so that quadrature points match up
     auto fp = kernel_factory<Face_permutation>(n_dim, rs, dir, elem_nrml[1]);
@@ -195,7 +196,7 @@ void Solver::calc_jacobian()
     auto dir = ref.direction();
     int i_face = 2*dir.i_dim[rev] + dir.face_sign[rev];
     double* nrml = elem.face_normal(i_face);
-    double* state = elem.face() + i_face*params.n_var*nfq;
+    double* state = elem.faces[i_face];
     for (int i_data = 0; i_data < n_dim*nfq; ++i_data) {
       nrml[i_data] = state[i_data];
     }

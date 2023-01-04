@@ -228,7 +228,7 @@ class Typed_bound_connection : public Boundary_connection
   }
   virtual Storage_params storage_params() {return params;}
   virtual double* ghost_face() {return state() + params.n_dof()/params.row_size;}
-  virtual double* inside_face() {return in_face;}
+  virtual double* inside_face() {return state();}
   virtual int i_dim() {return i_d;}
   virtual bool inside_face_sign() {return ifs;}
   virtual double* face(int i_side) {return i_side ? ghost_face() : inside_face();}

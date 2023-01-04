@@ -292,6 +292,7 @@ TEST_CASE("Solver")
     sol.mesh().connect_hanging(0, sn1, {sn2, sn3}, {{1, 1}, {0, 1}});
     int bc = sol.mesh().add_boundary_condition(new hexed::Copy, new Shrink_pos0);
     sol.mesh().connect_boundary(0, true, sn0, 0, 1, bc);
+    sol.mesh().valid().assert_valid();
     sol.snap_vertices();
     sol.calc_jacobian();
     sol.set_local_tss();
@@ -378,6 +379,7 @@ TEST_CASE("Solver")
       sol.relax_vertices();
       sol.snap_vertices();
       sol.snap_faces();
+      sol.mesh().valid().assert_valid();
       sol.calc_jacobian();
       // element should now be [(1 + 0.25)*0.8/2, (1 + 0.75)*0.8/2] x [(2 + 0.25)*0.8/2, 3*0.8/2]
       REQUIRE(sol.integral_field(hexed::Constant_func({1.}))[0] == Approx(0.5*0.75*(0.8/2)*(0.8/2)));
@@ -388,6 +390,7 @@ TEST_CASE("Solver")
       int bc_sn = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Surface_mbc{new Parabola});
       sol.mesh().connect_boundary(1, true, el_sn, 1, 1, bc_sn);
       sol.snap_vertices();
+      sol.mesh().valid().assert_valid();
       sol.calc_jacobian();
       // element should be a triangle
       REQUIRE(sol.integral_field(hexed::Constant_func({1.}))[0] == Approx(0.5*(0.1*0.4*0.4)*0.4));
@@ -437,6 +440,7 @@ class All_cartesian : public Test_mesh
       serial_n.push_back(sn);
       for (int i_dim = 0; i_dim < 3; ++i_dim) {
         if (inds[i_dim]) sol.mesh().connect_cartesian(0, {serial_n[i_elem - strides[i_dim]], sn}, {i_dim});
+        //if (inds[i_dim]) sol.mesh().connect_cartesian(0, {sn, serial_n[i_elem - strides[i_dim]]}, {i_dim});
         sol.mesh().connect_boundary(0, false, sn, i_dim, inds[i_dim], bc_sn);
       }
     }
@@ -554,6 +558,13 @@ void test_marching(Test_mesh& tm, std::string name)
   REQUIRE(status.iteration == 0);
   // update
   sol.update(1e-3);
+  #if HEXED_USE_OTTER
+  otter::plot plt;
+  sol.visualize_edges_otter(plt);
+  hexed::State_variables sv;
+  sol.visualize_field_otter(plt, hexed::Component(sv, 0));
+  plt.show();
+  #endif
   status = sol.iteration_status();
   REQUIRE(status.flow_time > 0.);
   REQUIRE(status.iteration == 1);
