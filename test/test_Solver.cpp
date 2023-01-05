@@ -561,13 +561,6 @@ void test_marching(Test_mesh& tm, std::string name)
   REQUIRE(status.iteration == 0);
   // update
   sol.update(1e-3);
-  #if HEXED_USE_OTTER
-  otter::plot plt;
-  sol.visualize_edges_otter(plt);
-  hexed::State_variables sv;
-  sol.visualize_field_otter(plt, hexed::Component(sv, 0));
-  plt.show();
-  #endif
   status = sol.iteration_status();
   REQUIRE(status.flow_time > 0.);
   REQUIRE(status.iteration == 1);
