@@ -6,12 +6,15 @@
 TEST_CASE("Mcs_deformed")
 {
   hexed::Storage_params params {3, 5, 3, 4};
+  static_assert (hexed::config::max_row_size >= 4);
   hexed::Gauss_legendre basis(params.row_size);
   int n_qpoint = params.n_qpoint();
   std::vector<std::unique_ptr<hexed::Deformed_element>> elems;
+  double faces [6][5*4*4];
   for (int i_elem = 0; i_elem < 3; ++i_elem) {
     elems.emplace_back(new hexed::Deformed_element {params, {}, 0.3});
     double* state = elems.back()->stage(0);
+    for (int i_face = 0; i_face < 6; ++i_face) elems.back()->faces[i_face] = faces[i_face];
     elems.back()->set_jacobian(basis);
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
       // set state to 0 velocity and speed of sound 100

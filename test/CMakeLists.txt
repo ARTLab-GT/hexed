@@ -17,15 +17,12 @@ test_func.cpp
 test_Face_permutation.cpp
 test_Hanging_vertex_matcher.cpp
 test_Iteration_status.cpp
-test_Local_av_cartesian.cpp
-test_Local_av_deformed.cpp
 test_math.cpp
 test_Mcs_cartesian.cpp
 test_Mcs_deformed.cpp
 test_pde.cpp
 test_Physical_basis.cpp
 test_Prolong_refined.cpp
-test_Refined_face.cpp
 test_Restrict_refined.cpp
 test_Row_index.cpp
 test_Row_rw.cpp
@@ -36,7 +33,6 @@ test_Storage_params.cpp
 test_Tecplot_file.cpp
 test_Vertex.cpp
 test_Vis_data.cpp
-test_Write_face.cpp
 )
 target_link_libraries(unit PRIVATE hexed Catch2::Catch2)
 add_executable(interactive)

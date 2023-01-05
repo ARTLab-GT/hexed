@@ -287,6 +287,8 @@ TEST_CASE("elementwise functions")
   hexed::Deformed_element elem({2, 4, 2, hexed::config::max_row_size}, {}, .3);
   elem.vertex(1).pos[1] *= 2.;
   elem.vertex(3).pos[1] *= 2.;
+  double faces [6][6*hexed::config::max_row_size];
+  for (int i_face = 0; i_face < 6; ++i_face) elem.faces[i_face] = faces[i_face];
   elem.set_jacobian(basis);
   Arbitrary_func func;
   SECTION("average")

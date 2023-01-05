@@ -116,9 +116,11 @@ void Solver::snap_faces()
 
 void Solver::calc_jacobian()
 {
+  acc_mesh.valid().assert_valid();
   const int n_dim = params.n_dim;
   const int rs = basis.row_size;
   const int nfq = params.n_qpoint()/rs;
+  const int nfdof = nfq*params.n_var;
 
   // compute element jacobians
   auto& elements = acc_mesh.elements();
@@ -145,7 +147,7 @@ void Solver::calc_jacobian()
     int sign = 1 - 2*(dir.flip_normal(0) != dir.flip_normal(1));
     for (int i_fine = 0; i_fine < ref.n_fine_elements(); ++i_fine) {
       auto& fine = ref.connection(i_fine);
-      double* face [2] {fine.face(rev), fine.face(!rev)};
+      double* face [2] {fine.state() + rev*nfdof, fine.state() + (!rev)*nfdof};
       auto fp = kernel_factory<Face_permutation>(n_dim, rs, dir, face[1]);
       fp->match_faces();
       for (int i_data = 0; i_data < n_dim*nfq; ++i_data) {
@@ -165,7 +167,7 @@ void Solver::calc_jacobian()
   for (int i_con = 0; i_con < def_cons.size(); ++i_con)
   {
     auto& con = def_cons[i_con];
-    double* elem_nrml [2] {con.face(0), con.face(1)};
+    double* elem_nrml [2] {con.state(), con.state() + nfdof};
     auto dir = con.direction();
     // permute face 1 so that quadrature points match up
     auto fp = kernel_factory<Face_permutation>(n_dim, rs, dir, elem_nrml[1]);
@@ -195,7 +197,7 @@ void Solver::calc_jacobian()
     auto dir = ref.direction();
     int i_face = 2*dir.i_dim[rev] + dir.face_sign[rev];
     double* nrml = elem.face_normal(i_face);
-    double* state = elem.face() + i_face*params.n_var*nfq;
+    double* state = elem.faces[i_face];
     for (int i_data = 0; i_data < n_dim*nfq; ++i_data) {
       nrml[i_data] = state[i_data];
     }
@@ -240,6 +242,7 @@ void Solver::set_local_tss()
 
 void Solver::initialize(const Spacetime_func& func)
 {
+  acc_mesh.valid().assert_valid();
   if (func.n_var(params.n_dim) != params.n_var) {
     throw std::runtime_error("initializer has wrong number of output variables");
   }
@@ -789,7 +792,7 @@ void Solver::fix_admissibility(double stability_ratio)
       auto& elem = elems[i_elem];
       admiss = admiss && hexed::thermo::admissible(elem.stage(0), nd, nq);
       for (int i_face = 0; i_face < params.n_dim*2; ++i_face) {
-        admiss = admiss && hexed::thermo::admissible(elem.face() + i_face*(nd + 2)*nq/rs, nd, nq/rs);
+        admiss = admiss && hexed::thermo::admissible(elem.faces[i_face], nd, nq/rs);
       }
     }
     auto& ref_faces = acc_mesh.refined_faces();
@@ -800,7 +803,7 @@ void Solver::fix_admissibility(double stability_ratio)
       int n_fine = params.n_vertices()/2;
       for (int i_dim = 0; i_dim < nd - 1; ++i_dim) n_fine /= 1 + ref.stretch[i_dim];
       for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
-        refined_admiss = refined_admiss && hexed::thermo::admissible(ref.fine_face(i_fine), nd, nq/rs);
+        refined_admiss = refined_admiss && hexed::thermo::admissible(ref.fine[i_fine], nd, nq/rs);
       }
     }
     if (admiss && refined_admiss) break;
@@ -873,7 +876,7 @@ std::vector<double> Solver::integral_surface(const Surface_func& integrand, int 
     double area = custom_math::pow(elem.nominal_size(), nd - 1);
     if (con.bound_cond_serial_n() == bc_sn)
     {
-      double* state = con.inside_face();
+      double* state = con.state();
       double* nrml = con.normal();
       double* pos = con.surface_position();
       for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint)
@@ -1008,7 +1011,7 @@ void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample
       // fetch/interpolate the state
       Eigen::MatrixXd interp_state (n_block, nv);
       for (int i_var = 0; i_var < nv; ++i_var) {
-        Eigen::Map<Eigen::VectorXd> qpoint_state (con.inside_face() + i_var*nfq, nfq);
+        Eigen::Map<Eigen::VectorXd> qpoint_state (con.state() + i_var*nfq, nfq);
         interp_state.col(i_var) = custom_math::hypercube_matvec(interp, qpoint_state);
       }
       // visualize zone

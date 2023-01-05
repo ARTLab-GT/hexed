@@ -23,7 +23,6 @@ script/auto_generate.py and rerun CMake.
     if namespace:
         text = f"""
 #include <Deformed_element.hpp>
-#include <Refined_face.hpp>
 #include <Vector_view.hpp>
 
 namespace hexed

@@ -33,7 +33,7 @@ class Spatial
     public:
     Write_face(const Basis& basis) : boundary{basis.boundary()} {}
 
-    void operator()(const double* read, double* face)
+    void operator()(const double* read, std::array<double*, 6> faces)
     {
       //read += Pde::curr_start*custom_math::pow(row_size, n_dim);
       //face += Pde::curr_start*custom_math::pow(row_size, n_dim - 1);
@@ -41,7 +41,7 @@ class Spatial
         for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
           auto row_r = Row_rw<Pde::n_var, row_size>::read_row(read, ind);
           Mat<2, Pde::n_var> bound = boundary*row_r;
-          Row_rw<Pde::n_var, row_size>::write_bound(bound, face, ind);
+          Row_rw<Pde::n_var, row_size>::write_bound(bound, faces, ind);
         }
       }
     }
@@ -52,8 +52,8 @@ class Spatial
       for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
         element_t& elem {elements[i_elem]};
         double* read = elem.stage(0);
-        double* face = elem.face();
-        operator()(read, face);
+        auto faces = elem.faces;
+        operator()(read, faces);
       }
     }
   };
@@ -97,7 +97,8 @@ class Spatial
       {
         auto& elem = elements[i_elem];
         double* state = elem.stage(0);
-        double* face = elem.face();
+        std::array<double*, 6> faces = elem.faces;
+        for (double*& face : faces) face += Pde::curr_start*n_qpoint/row_size;
         double* tss = elem.time_step_scale();
         double d_pos = elem.nominal_size();
         double time_rate [Pde::n_update][n_qpoint] {};
@@ -117,7 +118,7 @@ class Spatial
               flux(i_row, Eigen::all) = Pde::flux(row_r(i_row, Eigen::all), row_n(i_row, Eigen::all));
             }
             // fetch boundary data
-            auto bound_f = Row_rw<Pde::n_update, row_size>::read_bound(face + Pde::curr_start*n_qpoint/row_size, ind);
+            auto bound_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
             // differentiate and write to temporary storage
             Row_rw<Pde::n_update, row_size>::write_row(-derivative(flux, bound_f), time_rate[0], ind, 1.);
           }
@@ -137,7 +138,7 @@ class Spatial
           }
         }
         // write updated state to face storage
-        write_face(state, face);
+        write_face(state, elem.faces);
       }
     }
   };
@@ -166,7 +167,7 @@ class Spatial
         int sign [2] {1, 1}; // records whether the normal vector on each side needs to be flipped to obey sign convention
         // fetch face data
         for (int i_side = 0; i_side < 2; ++i_side) {
-          double* f = con.face(i_side);
+          double* f = con.state() + i_side*n_fqpoint*(n_dim + 2);
           for (int i_dof = 0; i_dof < Pde::n_var*n_fqpoint; ++i_dof) {
             face[i_side][i_dof] = f[i_dof];
           }
@@ -210,7 +211,7 @@ class Spatial
         if constexpr (element_t::is_deformed) perm.restore(); // restore data of face 1 to original order
         // write data to actual face storage on heap
         for (int i_side = 0; i_side < 2; ++i_side) {
-          double* f = con.face(i_side);
+          double* f = con.state() + i_side*n_fqpoint*(n_dim + 2);
           int offset = Pde::curr_start*n_fqpoint;
           for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
             f[offset + i_dof] = face[i_side][offset + i_dof];

@@ -35,13 +35,11 @@ class Write_face : public Kernel<Element&>
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
       Element& elem {elements[i_elem]};
-      double* read = elem.stage(0);
-      double* face = elem.face();
-      operator()(read, face);
+      operator()(elem.stage(0), elem.faces);
     }
   }
 
-  void operator()(double* read, double* face)
+  void operator()(const double* read, std::array<double*, 6> faces)
   {
     for (int i_var = 0; i_var < n_var; ++i_var)
     {
@@ -58,7 +56,7 @@ class Write_face : public Kernel<Element&>
             Eigen::Matrix<double, 2, 1> face_vals;
             face_vals.noalias() = boundary*row_r;
             for (int is_positive : {0, 1}) {
-              face[(i_dim*2 + is_positive)*n_face_dof + i_var*n_face_qpoint + i_face_qpoint] = face_vals[is_positive];
+              faces[i_dim*2 + is_positive][i_var*n_face_qpoint + i_face_qpoint] = face_vals[is_positive];
             }
             ++i_face_qpoint;
           }

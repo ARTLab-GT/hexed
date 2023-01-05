@@ -3,7 +3,6 @@
 
 #include <Eigen/Dense>
 #include "Deformed_element.hpp"
-#include "Refined_face.hpp"
 #include "Hanging_vertex_matcher.hpp"
 #include "math.hpp"
 
@@ -76,25 +75,29 @@ std::array<std::vector<int>, 2> vertex_inds(int n_dim, Con_dir<Deformed_element>
 template <class element_t>
 class Face_connection
 {
+  Eigen::VectorXd data;
   public:
-  Face_connection(Storage_params) {}
+  Face_connection(Storage_params params) : data(2*params.n_dof()/params.row_size) {}
   virtual Con_dir<element_t> direction() = 0;
-  virtual double* face(int i_side) = 0;
+  virtual double* state() {return data.data();}
 };
 
 template <>
 class Face_connection<Deformed_element>
 {
   int nrml_sz;
-  Eigen::VectorXd nrml;
+  int state_sz;
+  Eigen::VectorXd data;
   public:
   Face_connection<Deformed_element>(Storage_params params)
-  : nrml_sz{params.n_dim*params.n_qpoint()/params.row_size}, nrml{2*nrml_sz}
+  : nrml_sz{params.n_dim*params.n_qpoint()/params.row_size},
+    state_sz{params.n_dof()/params.row_size},
+    data(2*(nrml_sz + state_sz))
   {}
   virtual Con_dir<Deformed_element> direction() = 0;
-  virtual double* face(int i_side) = 0;
-  double* normal(int i_side) {return nrml.data() + i_side*nrml_sz;}
-  double* normal() {return nrml.data();} // area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
+  virtual double* state() {return data.data();}
+  double* normal(int i_side) {return data.data() + 2*state_sz + i_side*nrml_sz;}
+  double* normal() {return data.data() + 2*state_sz;} // area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
 };
 
 /*
@@ -115,7 +118,6 @@ class Element_face_connection : public Element_connection, public Face_connectio
 {
   Con_dir<element_t> dir;
   std::array<element_t*, 2> elems;
-  std::array<double*, 2> faces;
   void connect_normal();
 
   public:
@@ -125,7 +127,7 @@ class Element_face_connection : public Element_connection, public Face_connectio
     Storage_params params {elements[0]->storage_params()};
     int face_size = params.n_dof()/params.row_size;
     for (int i_side : {0, 1}) {
-      faces[i_side] = elements[i_side]->face() + dir.i_face(i_side)*face_size;
+      elements[i_side]->faces[dir.i_face(i_side)] = Face_connection<element_t>::state() + i_side*face_size;
     }
     auto inds = vertex_inds(elements[0]->storage_params().n_dim, dir);
     for (unsigned i_vert = 0; i_vert < inds[0].size(); ++i_vert) {
@@ -134,7 +136,6 @@ class Element_face_connection : public Element_connection, public Face_connectio
     connect_normal();
   }
   virtual Con_dir<element_t> direction() {return dir;}
-  virtual double* face(int i_side) {return faces[i_side];}
   virtual element_t& element(int i_side) {return *elems[i_side];}
 };
 
@@ -149,6 +150,14 @@ inline void Element_face_connection<Deformed_element>::connect_normal()
     elems[i_side]->face_normal(dir.i_face(i_side)) = normal(i_side);
   }
 }
+
+class Refined_face
+{
+  public:
+  double* coarse = nullptr;
+  std::array<double*, 4> fine {};
+  std::array<bool, 2> stretch;
+};
 
 /*
  * Represents a connection between elements whose refinement levels differ by 1. This involves
@@ -165,16 +174,14 @@ class Refined_connection
   {
     Refined_connection& ref_con;
     element_t& fine_elem;
-    std::array<double*, 2> faces;
     public:
-    Fine_connection(Refined_connection& r, double* mortar_face, element_t& f)
+    Fine_connection(Refined_connection& r, element_t& f)
     : Face_connection<element_t>{r.params}, ref_con{r}, fine_elem{f}
     {
-      faces[ref_con.rev] = mortar_face;
-      faces[!ref_con.rev] = fine_elem.face() + r.direction().i_face(!ref_con.rev)*r.params.n_dof()/r.params.row_size;
+      int face_sz = r.params.n_dof()/r.params.row_size;
+      f.faces[ref_con.dir.i_face(!ref_con.rev)] = Face_connection<element_t>::state() + (!ref_con.rev)*face_sz;
     }
     virtual Con_dir<element_t> direction() {return ref_con.direction();}
-    virtual double* face(int i_side) {return faces[i_side];}
     virtual element_t& element(int i_side) {return (i_side != ref_con.rev) ? fine_elem : ref_con.c;}
   };
 
@@ -188,6 +195,7 @@ class Refined_connection
   std::array<bool, 2> str;
   int n_fine;
   Eigen::VectorXd coarse_normal;
+  Eigen::VectorXd coarse_state_data;
   static std::vector<Element*> to_elementstar(std::vector<element_t*> elems)
   {
     std::vector<Element*> converted;
@@ -202,7 +210,7 @@ class Refined_connection
   void connect_normal();
 
   public:
-  Refined_face refined_face;
+  Refined_face refined_face; // pretty please don't write to this!! this should be const and/or private, but i have bigger problems rn :( FIXME
   Hanging_vertex_matcher matcher;
   /*
    * if `reverse_order` is true, the fine elements will come before coarse in the connection.
@@ -217,9 +225,11 @@ class Refined_connection
     def_dir{Con_dir<Deformed_element>(dir)},
     rev{reverse_order},
     str{stretch_arg},
-    refined_face{params, coarse->face() + con_dir.i_face(rev)*params.n_dof()/params.row_size, coarse_stretch()},
+    coarse_state_data{params.n_dof()/params.row_size},
     matcher{to_elementstar(fine), def_dir.i_dim[!reverse_order], def_dir.face_sign[!reverse_order], str}
   {
+    refined_face.stretch = coarse_stretch();
+    coarse->faces[dir.i_face(rev)] = refined_face.coarse = coarse_state();
     int nd = params.n_dim;
     n_fine = params.n_vertices()/2;
     bool any_str = false;
@@ -246,7 +256,8 @@ class Refined_connection
       // if there is any stretching happening, rather than use `permutation_inds`
       // it is merely necessary to figure out whether we need to swap the fine elements
       if (any_str) inds[1] = i_face != (def_dir.flip_tangential() && !str[2*def_dir.i_dim[rev] > 3 - def_dir.i_dim[!rev]]);
-      fine_cons.emplace_back(*this, refined_face.fine_face(inds[rev]), *fine[inds[!rev]]);
+      fine_cons.emplace_back(*this, *fine[inds[!rev]]);
+      refined_face.fine[inds[rev]] = fine_cons.back().state() + rev*params.n_dof()/params.row_size;
     }
     connect_normal();
   }
@@ -260,6 +271,7 @@ class Refined_connection
   bool order_reversed() {return rev;}
   auto stretch() {return str;}
   int n_fine_elements() {return n_fine;}
+  double* coarse_state() {return coarse_state_data.data();}
 };
 
 template <>

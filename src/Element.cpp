@@ -12,11 +12,12 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   r_level{ref_level},
   n_dof(params.n_dof()),
   n_vert(params.n_vertices()),
-  data_size{params.n_stage*n_dof + n_dim*2*n_dof/params.row_size + (6 + params.row_size)*params.n_qpoint()},
+  data_size{params.n_stage*n_dof + (6 + params.row_size)*params.n_qpoint()},
   data{Eigen::VectorXd::Zero(data_size)},
   vertex_tss{Eigen::VectorXd::Constant(params.n_vertices(), 1./custom_math::pow(2, r_level))}
 {
   face_record.fill(0);
+  faces.fill(nullptr);
   // initialize local time step scaling to 1.
   for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) time_step_scale()[i_qpoint] = 1.;
   // set position of vertex 0
@@ -90,13 +91,12 @@ std::vector<double> Element::face_position(const Basis& basis, int i_face, int i
 
 void Element::set_jacobian(const Basis& basis)
 {
-  double* f = face();
   int nfq = params.n_qpoint()/params.row_size;
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
       for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
         for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-          f[((2*i_dim + sign)*params.n_var + j_dim)*nfq + i_qpoint] = i_dim == j_dim;
+          faces[2*i_dim + sign][j_dim*nfq + i_qpoint] = i_dim == j_dim;
         }
       }
     }
@@ -108,14 +108,9 @@ double* Element::stage(int i_stage)
   return data.data() + i_stage*n_dof;
 }
 
-double* Element::advection_state()
-{
-  return art_visc_forcing() + 4*params.n_qpoint();
-}
-
 double* Element::time_step_scale()
 {
-  return face() + n_dim*2*n_dof/params.row_size;
+  return data.data() + params.n_stage*n_dof;
 }
 
 double* Element::art_visc_coef()
@@ -128,9 +123,9 @@ double* Element::art_visc_forcing()
   return art_visc_coef() + params.n_qpoint();
 }
 
-double* Element::face()
+double* Element::advection_state()
 {
-  return data.data() + params.n_stage*n_dof;
+  return art_visc_forcing() + 4*params.n_qpoint();
 }
 
 double Element::jacobian(int i_dim, int j_dim, int i_qpoint)

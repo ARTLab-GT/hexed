@@ -32,7 +32,7 @@ class Neighbor_avg_deformed : public Kernel<Face_connection<Deformed_element>&>
     for (int i_con = 0; i_con < connections.size(); ++i_con)
     {
       auto& con = connections[i_con];
-      double* face [2] {con.face(0), con.face(1)};
+      double* face [2] {con.state(), con.state() + face_size};
       auto dir = con.direction();
       int sign [] {1, 1 - 2*(f && (dir.flip_normal(0) != dir.flip_normal(1)))};
       Face_permutation<n_dim, row_size> permutation(dir, face[1]);

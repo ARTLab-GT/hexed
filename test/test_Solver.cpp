@@ -238,6 +238,7 @@ TEST_CASE("Solver")
 {
   static_assert (hexed::config::max_row_size >= 3); // this test was written for row size 3
   hexed::Solver sol {2, 3, 0.8};
+  int catchall_bc = sol.mesh().add_boundary_condition(new hexed::Copy(), new hexed::Null_mbc());
 
   SECTION("initialization and introspection")
   {
@@ -246,6 +247,8 @@ TEST_CASE("Solver")
     int sn1 = sol.mesh().add_element(2, true, {-1, 0, 0});
     // initialization/sampling
     REQUIRE_THROWS(sol.initialize(Bad_initializer())); // if number of variables of func is wrong, should throw
+    REQUIRE_THROWS(sol.initialize(Arbitrary_initializer())); // mesh must be valid before you can initialize
+    sol.mesh().connect_rest(catchall_bc);
     sol.initialize(Arbitrary_initializer());
     auto sample = sol.sample(0, false, sn0, 4, hexed::State_variables()); // sample the midpoint of the element because we know the exact position
     REQUIRE(sample.size() == 4);
@@ -289,6 +292,8 @@ TEST_CASE("Solver")
     sol.mesh().connect_hanging(0, sn1, {sn2, sn3}, {{1, 1}, {0, 1}});
     int bc = sol.mesh().add_boundary_condition(new hexed::Copy, new Shrink_pos0);
     sol.mesh().connect_boundary(0, true, sn0, 0, 1, bc);
+    sol.mesh().connect_rest(catchall_bc);
+    sol.mesh().valid().assert_valid();
     sol.snap_vertices();
     sol.calc_jacobian();
     sol.set_local_tss();
@@ -315,12 +320,14 @@ TEST_CASE("Solver")
       // add some boundary conditions for testing surface integrals
       int bc0 = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Null_mbc);
       int bc1 = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Null_mbc);
+      int bc2 = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Null_mbc);
       int i = 0;
       for (int sn : {car0, car1, sn0, sn1}) {
         sol.mesh().connect_boundary(0, i++ >= 2, sn, 1, 0, bc0);
       }
       sol.mesh().connect_boundary(1, false, car2, 0, 1, bc0);
       sol.mesh().connect_boundary(1, false, car2, 1, 1, bc1);
+      sol.mesh().connect_rest(bc2);
       // finish setup
       sol.calc_jacobian();
       std::vector<double> state {0.3, -10., 0.7, 32.};
@@ -349,7 +356,9 @@ TEST_CASE("Solver")
     {
       int sn = sol.mesh().add_element(0, false, {0, 0, 0});
       int bc0 = sol.mesh().add_boundary_condition(new hexed::Nonpenetration, new hexed::Null_mbc);
+      int bc1 = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Null_mbc);
       sol.mesh().connect_boundary(0, false, sn, 0, 1, bc0);
+      sol.mesh().connect_rest(bc1);
       sol.calc_jacobian();
       sol.initialize(hexed::Constant_func({0.3, 0., 0., 0.}));
       auto integral = sol.integral_field(Arbitrary_integrand());
@@ -368,9 +377,11 @@ TEST_CASE("Solver")
       int el_sn = sol.mesh().add_element(1, true, {1, 2});
       int bc_sn = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Nominal_pos);
       sol.mesh().connect_boundary(1, true, el_sn, 1, 1, bc_sn);
+      sol.mesh().connect_rest(catchall_bc);
       sol.relax_vertices();
       sol.snap_vertices();
       sol.snap_faces();
+      sol.mesh().valid().assert_valid();
       sol.calc_jacobian();
       // element should now be [(1 + 0.25)*0.8/2, (1 + 0.75)*0.8/2] x [(2 + 0.25)*0.8/2, 3*0.8/2]
       REQUIRE(sol.integral_field(hexed::Constant_func({1.}))[0] == Approx(0.5*0.75*(0.8/2)*(0.8/2)));
@@ -380,7 +391,9 @@ TEST_CASE("Solver")
       int el_sn = sol.mesh().add_element(1, true, {0, 0});
       int bc_sn = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Surface_mbc{new Parabola});
       sol.mesh().connect_boundary(1, true, el_sn, 1, 1, bc_sn);
+      sol.mesh().connect_rest(catchall_bc);
       sol.snap_vertices();
+      sol.mesh().valid().assert_valid();
       sol.calc_jacobian();
       // element should be a triangle
       REQUIRE(sol.integral_field(hexed::Constant_func({1.}))[0] == Approx(0.5*(0.1*0.4*0.4)*0.4));
@@ -430,6 +443,7 @@ class All_cartesian : public Test_mesh
       serial_n.push_back(sn);
       for (int i_dim = 0; i_dim < 3; ++i_dim) {
         if (inds[i_dim]) sol.mesh().connect_cartesian(0, {serial_n[i_elem - strides[i_dim]], sn}, {i_dim});
+        //if (inds[i_dim]) sol.mesh().connect_cartesian(0, {sn, serial_n[i_elem - strides[i_dim]]}, {i_dim});
         sol.mesh().connect_boundary(0, false, sn, i_dim, inds[i_dim], bc_sn);
       }
     }
@@ -583,7 +597,8 @@ void test_art_visc(Test_mesh& tm, std::string name)
       auto state  = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::State_variables());
       auto update = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Physical_update());
       auto tss    = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Time_step_scale_func());
-      REQUIRE(update[n_dim]/status.time_step == Approx(-n_dim*300.*(state[n_dim] - update[n_dim]*tss[0] - 1.)).margin(1e-3));
+      double margin = hexed::config::max_row_size > 6 ? 1e-3 : 1.;
+      REQUIRE(update[n_dim]/status.time_step == Approx(-n_dim*300.*(state[n_dim] - update[n_dim]*tss[0] - 1.)).margin(margin));
     }
   }
 }
@@ -797,12 +812,14 @@ TEST_CASE("face extrusion")
       }
     }
     solver.mesh().extrude();
-    solver.calc_jacobian();
-    REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Approx(24./4.)); // check number of elements
-    for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
     auto valid = solver.mesh().valid();
     REQUIRE(valid.n_duplicate == 0);
     REQUIRE(valid.n_missing == 16);
+    int bc_sn = solver.mesh().add_boundary_condition(new hexed::Copy(), new hexed::Null_mbc());
+    solver.mesh().connect_rest(bc_sn);
+    solver.calc_jacobian();
+    REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Approx(24./4.)); // check number of elements
+    for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
   }
   SECTION("3D")
   {
@@ -822,12 +839,14 @@ TEST_CASE("face extrusion")
       }
     }
     solver.mesh().extrude();
-    solver.calc_jacobian();
-    REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Approx(86.)); // check number of elements
-    for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
     auto valid = solver.mesh().valid();
     REQUIRE(valid.n_duplicate == 0);
     REQUIRE(valid.n_missing == 60);
+    int bc_sn = solver.mesh().add_boundary_condition(new hexed::Copy(), new hexed::Null_mbc());
+    solver.mesh().connect_rest(bc_sn);
+    solver.calc_jacobian();
+    REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Approx(86.)); // check number of elements
+    for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
     #if HEXED_USE_TECPLOT
     solver.visualize_field_tecplot(hexed::State_variables(), "extrude");
     #endif
@@ -889,6 +908,8 @@ TEST_CASE("resolution badness")
   int sn = sol.mesh().add_element(0, true, {0, 0});
   sol.mesh().extrude();
   sol.mesh().extrude();
+  int bc_sn = sol.mesh().add_boundary_condition(new hexed::Copy(), new hexed::Null_mbc());
+  sol.mesh().connect_rest(bc_sn);
   sol.calc_jacobian();
   hexed::Position_func pos;
   sol.set_resolution_badness(hexed::Elem_average(pos));

@@ -40,7 +40,6 @@ class Local_av1_deformed : public Kernel<Deformed_element&>
   {
     constexpr int n_var = n_dim + 2;
     constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
-    constexpr int n_face_dof = n_var*n_qpoint/row_size;
 
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
@@ -48,7 +47,7 @@ class Local_av1_deformed : public Kernel<Deformed_element&>
       auto& elem = elements[i_elem];
       double* state = elem.stage(0);
       double time_rate [n_var][n_qpoint] {};
-      double* face = elem.face();
+      auto faces = elem.faces;
       double* tss = elem.time_step_scale();
       double* det = elem.jacobian_determinant();
       double nom_sz = elem.nominal_size();
@@ -67,7 +66,7 @@ class Local_av1_deformed : public Kernel<Deformed_element&>
             Eigen::Matrix<double, 2, n_var> boundary_values;
             for (int i_var = 0; i_var < n_var; ++i_var) {
               for (int is_positive : {0, 1}) {
-                boundary_values(is_positive, i_var) = face[(i_dim*2 + is_positive)*n_face_dof + i_var*n_qpoint/row_size + i_face_qpoint];
+                boundary_values(is_positive, i_var) = faces[i_dim*2 + is_positive][i_var*n_qpoint/row_size + i_face_qpoint];
               }
             }
             Eigen::Matrix<double, row_size, n_var> row_w = -derivative.boundary_term(boundary_values);
@@ -95,7 +94,7 @@ class Local_av1_deformed : public Kernel<Deformed_element&>
         }
       }
       #pragma GCC diagnostic pop
-      write_face(state, face);
+      write_face(state, faces);
     }
   }
 };

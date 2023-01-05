@@ -26,7 +26,7 @@ class Neighbor_avg_cartesian : public Kernel<Face_connection<Element>&>
     for (int i_con = 0; i_con < connections.size(); ++i_con)
     {
       auto& con = connections[i_con];
-      double* face [2] {con.face(0), con.face(1)};
+      double* face [2] {con.state(), con.state() + face_size};
       for (int i_dof = 0; i_dof < face_size; ++i_dof) {
         double avg = 0.;
         for (int i_side : {0, 1}) avg += .5*face[i_side][i_dof];

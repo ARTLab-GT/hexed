@@ -22,22 +22,24 @@ TEST_CASE("Row_rw")
   REQUIRE(interior[2] == Approx(2));
 
   // test face operations
-  double face[4*7*2*2];
+  double face_data[4][7*2*2];
+  std::array<double*, 6> faces;
   for (int i_face = 0; i_face < 4; ++i_face) {
+    faces[i_face] = face_data[i_face];
     for (int i = 0; i < 4*7; ++i) {
-      face[i_face*4*7 + i] = i + .1*i_face;
+      faces[i_face][i] = i + .1*i_face;
     }
   }
-  auto bound = hexed::Row_rw<3, 7>::read_bound(face, ind);
+  auto bound = hexed::Row_rw<3, 7>::read_bound(faces, ind);
   REQUIRE(bound.rows() == 2);
   REQUIRE(bound.cols() == 3);
   REQUIRE(bound(0, 0) == Approx(3.0));
   REQUIRE(bound(1, 0) == Approx(3.1));
   REQUIRE(bound(0, 1) == Approx(10.0));
-  bound = hexed::Row_rw<3, 7>::read_bound(face, hexed::Row_index(2, 7, 1));
+  bound = hexed::Row_rw<3, 7>::read_bound(faces, hexed::Row_index(2, 7, 1));
   REQUIRE(bound(0, 0) == Approx(0.2));
   REQUIRE(bound(1, 0) == Approx(0.3));
-  hexed::Row_rw<3, 7>::write_bound(Eigen::Matrix<double, 2, 3>::Ones(), face, ind);
-  REQUIRE(face[ 3] == Approx(1));
-  REQUIRE(face[31] == Approx(1));
+  hexed::Row_rw<3, 7>::write_bound(Eigen::Matrix<double, 2, 3>::Ones(), faces, ind);
+  REQUIRE(faces[0][3] == Approx(1));
+  REQUIRE(faces[1][3] == Approx(1));
 }

@@ -208,9 +208,7 @@ class Typed_bound_connection : public Boundary_connection
   int i_d;
   bool ifs;
   int bc_sn;
-  Eigen::VectorXd gh_face;
   Eigen::VectorXd pos;
-  double* in_face;
   void connect_normal();
 
   public:
@@ -221,18 +219,16 @@ class Typed_bound_connection : public Boundary_connection
     i_d{i_dim_arg},
     ifs{inside_face_sign_arg},
     bc_sn{bc_serial_n},
-    gh_face(params.n_dof()/params.row_size),
-    pos(params.n_dim*params.n_qpoint()/params.row_size),
-    in_face{elem.face() + (2*i_d + ifs)*gh_face.size()}
+    pos(params.n_dim*params.n_qpoint()/params.row_size)
   {
     connect_normal();
+    elem.faces[direction().i_face(0)] = state();
   }
   virtual Storage_params storage_params() {return params;}
-  virtual double* ghost_face() {return gh_face.data();}
-  virtual double* inside_face() {return in_face;}
+  virtual double* ghost_face() {return state() + params.n_dof()/params.row_size;}
+  virtual double* inside_face() {return state();}
   virtual int i_dim() {return i_d;}
   virtual bool inside_face_sign() {return ifs;}
-  virtual double* face(int i_side) {return i_side ? ghost_face() : inside_face();}
   virtual double* surface_normal() {return normal();}
   virtual double* surface_position() {return pos.data();}
   virtual Con_dir<Deformed_element> direction() {return {{i_d, i_d}, {ifs, !ifs}};}

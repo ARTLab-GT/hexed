@@ -37,7 +37,6 @@ class Local_av0_deformed : public Kernel<Deformed_element&>
   {
     constexpr int n_var = n_dim + 2;
     constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
-    constexpr int n_face_dof = n_var*n_qpoint/row_size;
 
     // no point allocating this on the stack since face normals will usually be on the heap anyway
     double cartesian_normal [n_dim][n_dim][n_qpoint/row_size];
@@ -58,7 +57,7 @@ class Local_av0_deformed : public Kernel<Deformed_element&>
       double* det = elem.jacobian_determinant();
       double time_rate [n_var][n_qpoint] {};
       double flux [n_var][n_dim][n_qpoint] {};
-      double* face = elem.face();
+      auto faces = elem.faces;
       double* face_nrml [2*n_dim];
       for (int i_face = 0; i_face < 2*n_dim; ++i_face) {
         face_nrml[i_face] = elem.face_normal(i_face);
@@ -89,7 +88,7 @@ class Local_av0_deformed : public Kernel<Deformed_element&>
             Eigen::Matrix<double, 2, n_var> boundary_values;
             for (int i_var = 0; i_var < n_var; ++i_var) {
               for (int is_positive : {0, 1}) {
-                boundary_values(is_positive, i_var) = face[(i_dim*2 + is_positive)*n_face_dof + i_var*n_qpoint/row_size + i_face_qpoint];
+                boundary_values(is_positive, i_var) = faces[i_dim*2 + is_positive][i_var*n_qpoint/row_size + i_face_qpoint];
               }
             }
             // compute gradient
@@ -154,7 +153,7 @@ class Local_av0_deformed : public Kernel<Deformed_element&>
             Eigen::Matrix<double, row_size, n_var> row_w = -derivative.interior_term(row_f, boundary_values);
             for (int i_var = 0; i_var < n_var; ++i_var) {
               for (int is_positive : {0, 1}) {
-                face[(i_dim*2 + is_positive)*n_face_dof + i_var*n_qpoint/row_size + i_face_qpoint] = boundary_values(is_positive, i_var);
+                faces[i_dim*2 + is_positive][i_var*n_qpoint/row_size + i_face_qpoint] = boundary_values(is_positive, i_var);
               }
             }
             // add dimensional component to update
