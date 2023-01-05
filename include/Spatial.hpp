@@ -33,19 +33,6 @@ class Spatial
     public:
     Write_face(const Basis& basis) : boundary{basis.boundary()} {}
 
-    void operator()(const double* read, double* face)
-    {
-      //read += Pde::curr_start*custom_math::pow(row_size, n_dim);
-      //face += Pde::curr_start*custom_math::pow(row_size, n_dim - 1);
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
-          auto row_r = Row_rw<Pde::n_var, row_size>::read_row(read, ind);
-          Mat<2, Pde::n_var> bound = boundary*row_r;
-          Row_rw<Pde::n_var, row_size>::write_bound(bound, face, ind);
-        }
-      }
-    }
-
     void operator()(const double* read, std::array<double*, 6> faces)
     {
       //read += Pde::curr_start*custom_math::pow(row_size, n_dim);
@@ -65,9 +52,7 @@ class Spatial
       for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
         element_t& elem {elements[i_elem]};
         double* read = elem.stage(0);
-        double* face = elem.face();
         auto faces = elem.faces;
-        operator()(read, face);
         operator()(read, faces);
       }
     }

@@ -28,10 +28,10 @@ TEST_CASE("Typed_boundary_connection")
   tbc0.ghost_face()[0] = 1.;
   tbc0.ghost_face()[4*4 - 1] = 1.;
   // check that order of faces is correct
-  REQUIRE(tbc0.face(0) == tbc0.inside_face());
-  REQUIRE(tbc0.face(1) == tbc0.ghost_face());
-  REQUIRE(tbc1.face(0) == tbc1.inside_face());
-  REQUIRE(tbc1.face(1) == tbc1.ghost_face());
+  REQUIRE(tbc0.state()                                  == tbc0.inside_face());
+  REQUIRE(tbc0.state() + params.n_dof()/params.row_size == tbc0.ghost_face());
+  REQUIRE(tbc1.state()                                  == tbc1.inside_face());
+  REQUIRE(tbc1.state() + params.n_dof()/params.row_size == tbc1.ghost_face());
   // check that the direction info is correct
   REQUIRE(tbc0.direction().i_dim[0] == 1);
   REQUIRE(tbc0.direction().i_dim[1] == 1);

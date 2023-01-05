@@ -62,8 +62,8 @@ TEST_CASE("Accessible_mesh")
     mesh.connect_cartesian(0, {sn1, sn0}, {2});
     auto& con = mesh.cartesian().face_connections()[0];
     REQUIRE(con.direction().i_dim == 2);
-    REQUIRE(con.face(0) == mesh.element(0, false, sn1).face() + (2*2 + 1)*5*row_size*row_size);
-    REQUIRE(con.face(1) == mesh.element(0, false, sn0).face() + (2*2 + 0)*5*row_size*row_size);
+    REQUIRE(con.state()                       == mesh.element(0, false, sn1).faces[2*2 + 1]);
+    REQUIRE(con.state() + 5*row_size*row_size == mesh.element(0, false, sn0).faces[2*2 + 0]);
     auto& elem_con = mesh.cartesian().element_connections()[0];
     REQUIRE(&elem_con.element(0) == &mesh.element(0, false, sn1));
     REQUIRE(&elem_con.element(1) == &mesh.element(0, false, sn0));
@@ -74,8 +74,8 @@ TEST_CASE("Accessible_mesh")
     mesh.connect_cartesian(3, {sn2, sn3}, {1}, {true, false});
     auto& con = mesh.cartesian().face_connections()[0];
     REQUIRE(con.direction().i_dim == 1);
-    REQUIRE(con.face(0) == mesh.element(3,  true, sn2).face() + (1*2 + 1)*5*row_size*row_size);
-    REQUIRE(con.face(1) == mesh.element(3, false, sn3).face() + (1*2 + 0)*5*row_size*row_size);
+    REQUIRE(con.state()                       == mesh.element(3,  true, sn2).faces[1*2 + 1]);
+    REQUIRE(con.state() + 5*row_size*row_size == mesh.element(3, false, sn3).faces[1*2 + 0]);
   }
 
   SECTION("refined face connection")
@@ -109,8 +109,8 @@ TEST_CASE("Accessible_mesh")
     REQUIRE(con.direction().i_dim[1] == 0);
     REQUIRE(con.direction().face_sign[0] == 0);
     REQUIRE(con.direction().face_sign[1] == 1);
-    REQUIRE(con.face(0) == mesh.element(3, true, sn4).face() + (1*2 + 0)*5*row_size*row_size);
-    REQUIRE(con.face(1) == mesh.element(3, true, sn2).face() + (0*2 + 1)*5*row_size*row_size);
+    REQUIRE(con.state()                       == mesh.element(3, true, sn4).faces[1*2 + 0]);
+    REQUIRE(con.state() + 5*row_size*row_size == mesh.element(3, true, sn2).faces[0*2 + 1]);
   }
 
   SECTION("boundary conditions")
@@ -130,8 +130,7 @@ TEST_CASE("Accessible_mesh")
         // check that the boundary connection is in the deformed connection sequence
         auto& cons = mesh.deformed().face_connections();
         REQUIRE(cons.size() == 1);
-        REQUIRE(cons[0].face(0) == bc_cons[0].face(0));
-        REQUIRE(cons[0].face(1) == bc_cons[0].face(1));
+        REQUIRE(&cons[0] == &bc_cons[0]);
         // ...and not in the Cartesian or element connection sequences
         REQUIRE(mesh.cartesian().face_connections().size() == 0);
         REQUIRE(mesh.element_connections().size() == 0);

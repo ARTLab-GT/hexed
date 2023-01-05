@@ -141,8 +141,8 @@ TEST_CASE("Element_face_connection<Element>")
   REQUIRE(con.direction().i_dim == 1);
   REQUIRE(&con.element(0) == &elem0);
   REQUIRE(&con.element(1) == &elem1);
-  REQUIRE(con.face(0) == elem0.face() + 3*5*36);
-  REQUIRE(con.face(1) == elem1.face() + 2*5*36);
+  REQUIRE(con.state()        == elem0.faces[3]);
+  REQUIRE(con.state() + 5*36 == elem1.faces[2]);
   REQUIRE(&elem0.vertex(2) == &elem1.vertex(0));
   REQUIRE(&elem0.vertex(7) == &elem1.vertex(5));
   // make sure it didn't just combine all the vertices or something stupid like that
@@ -166,8 +166,8 @@ TEST_CASE("Element_face_connection<Deformed_element>")
   con.normal(0)[3*6*6 - 1] = 1; // check that normal storage is big enough (otherwise segfault)
   con.normal(1)[3*6*6 - 1] = 1;
   REQUIRE(con.normal() == con.normal(0));
-  REQUIRE(con.face(0) == elem0.face() + 4*5*36);
-  REQUIRE(con.face(1) == elem1.face() + 3*5*36);
+  REQUIRE(con.state()        == elem0.faces[4]);
+  REQUIRE(con.state() + 5*36 == elem1.faces[3]);
   REQUIRE(&elem0.vertex(0) == &elem1.vertex(3));
   REQUIRE(&elem0.vertex(2) == &elem1.vertex(2));
   REQUIRE(&elem0.vertex(4) == &elem1.vertex(7));

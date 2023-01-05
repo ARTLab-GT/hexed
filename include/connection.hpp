@@ -80,7 +80,6 @@ class Face_connection
   Face_connection(Storage_params params) : data(2*params.n_dof()/params.row_size) {}
   virtual Con_dir<element_t> direction() = 0;
   virtual double* state() {return data.data();}
-  virtual double* face(int i_side) = 0;
 };
 
 template <>
@@ -96,7 +95,6 @@ class Face_connection<Deformed_element>
     data(2*(nrml_sz + state_sz))
   {}
   virtual Con_dir<Deformed_element> direction() = 0;
-  virtual double* face(int i_side) = 0;
   virtual double* state() {return data.data();}
   double* normal(int i_side) {return data.data() + 2*state_sz + i_side*nrml_sz;}
   double* normal() {return data.data() + 2*state_sz;} // area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
@@ -120,7 +118,6 @@ class Element_face_connection : public Element_connection, public Face_connectio
 {
   Con_dir<element_t> dir;
   std::array<element_t*, 2> elems;
-  std::array<double*, 2> faces;
   void connect_normal();
 
   public:
@@ -130,7 +127,6 @@ class Element_face_connection : public Element_connection, public Face_connectio
     Storage_params params {elements[0]->storage_params()};
     int face_size = params.n_dof()/params.row_size;
     for (int i_side : {0, 1}) {
-      faces[i_side] = elements[i_side]->face() + dir.i_face(i_side)*face_size;
       elements[i_side]->faces[dir.i_face(i_side)] = Face_connection<element_t>::state() + i_side*face_size;
     }
     auto inds = vertex_inds(elements[0]->storage_params().n_dim, dir);
@@ -140,7 +136,6 @@ class Element_face_connection : public Element_connection, public Face_connectio
     connect_normal();
   }
   virtual Con_dir<element_t> direction() {return dir;}
-  virtual double* face(int i_side) {return faces[i_side];}
   virtual element_t& element(int i_side) {return *elems[i_side];}
 };
 
@@ -179,7 +174,6 @@ class Refined_connection
   {
     Refined_connection& ref_con;
     element_t& fine_elem;
-    std::array<double*, 2> faces;
     public:
     Fine_connection(Refined_connection& r, element_t& f)
     : Face_connection<element_t>{r.params}, ref_con{r}, fine_elem{f}
@@ -188,7 +182,6 @@ class Refined_connection
       f.faces[ref_con.dir.i_face(!ref_con.rev)] = Face_connection<element_t>::state() + (!ref_con.rev)*face_sz;
     }
     virtual Con_dir<element_t> direction() {return ref_con.direction();}
-    virtual double* face(int i_side) {return faces[i_side];}
     virtual element_t& element(int i_side) {return (i_side != ref_con.rev) ? fine_elem : ref_con.c;}
   };
 

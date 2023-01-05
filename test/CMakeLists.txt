@@ -33,7 +33,6 @@ test_Storage_params.cpp
 test_Tecplot_file.cpp
 test_Vertex.cpp
 test_Vis_data.cpp
-test_Write_face.cpp
 )
 target_link_libraries(unit PRIVATE hexed Catch2::Catch2)
 add_executable(interactive)

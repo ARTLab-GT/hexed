@@ -792,7 +792,7 @@ void Solver::fix_admissibility(double stability_ratio)
       auto& elem = elems[i_elem];
       admiss = admiss && hexed::thermo::admissible(elem.stage(0), nd, nq);
       for (int i_face = 0; i_face < params.n_dim*2; ++i_face) {
-        admiss = admiss && hexed::thermo::admissible(elem.face() + i_face*(nd + 2)*nq/rs, nd, nq/rs);
+        admiss = admiss && hexed::thermo::admissible(elem.faces[i_face], nd, nq/rs);
       }
     }
     auto& ref_faces = acc_mesh.refined_faces();

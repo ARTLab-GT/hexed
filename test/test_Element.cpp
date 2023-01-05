@@ -24,9 +24,6 @@ TEST_CASE("Element")
     REQUIRE(element.face_record[i_face] == 0);
     REQUIRE(element.faces[i_face] == nullptr);
   }
-  for (int i_face_data = 0; i_face_data < n_dof/params.row_size*3*2; ++i_face_data) {
-    element.face()[i_face_data] = 1.;
-  }
   for (int i_dof = 0; i_dof < n_dof; ++i_dof) element.stage(0)[i_dof] = 1.2;
   for (int i_dof = 0; i_dof < n_dof; ++i_dof) REQUIRE(element.stage(3)[i_dof] == 0.);
   for (int i_dof = 0; i_dof < n_dof; ++i_dof) element.stage(3)[i_dof] = 1.3;
@@ -47,9 +44,6 @@ TEST_CASE("Element")
   REQUIRE(element.art_visc_forcing()[4*params.n_qpoint() - 1] == 0.);
   REQUIRE(element.advection_state()[0] == 0.);
   REQUIRE(element.advection_state()[6*params.n_qpoint() - 1] == 0.);
-  for (int i_face_data = 0; i_face_data < n_dof/params.row_size*3*2; ++i_face_data) {
-    REQUIRE(element.face()[i_face_data] == 1.);
-  }
   // test that vertex time step scale is initialized to 1
   for (int i_vert = 0; i_vert < 8; ++i_vert) {
     REQUIRE(element.vertex_time_step_scale(i_vert) == 1.);
