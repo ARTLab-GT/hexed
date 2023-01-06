@@ -10,12 +10,15 @@ namespace hexed::assert
 
 inline void throw_critical(const char* message)
 {
+  #if HEXED_THREADED
   if (omp_get_level()) {
     // if this is in a parallel region, only let one thread throw
     // or else instead of the error message all you see is "terminate called recursively"
     #pragma omp critical
     throw std::runtime_error(message);
-  } else {
+  } else
+  #endif
+  {
     // if not in a parallel region, don't use the pragma cause that messes up try/catch
     throw std::runtime_error(message);
   }
