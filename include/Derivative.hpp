@@ -53,6 +53,11 @@ class Derivative
   {
     return diff_mat*qpoint_vals + lift*(boundary_vals - boundary*qpoint_vals);
   }
+  template<int n_var>
+  Eigen::Matrix<double, row_size, n_var> operator()(const Eigen::Matrix<double, row_size, n_var>& qpoint_vals)
+  {
+    return diff_mat*qpoint_vals;
+  }
 };
 
 }

@@ -14,7 +14,7 @@ namespace hexed
 
 // class to contain all the kernels in a scope
 // parameterized by the type of element (deformed/cartesian) and the PDE
-template <typename element_t, template<int> typename Pde_templ>
+template <typename element_t, template<int> typename Pde_templ, bool is_viscous = false>
 class Spatial
 {
   public:
@@ -57,6 +57,29 @@ class Spatial
       }
     }
   };
+
+  template <int n_dim, row_size, n_var>
+  void compute_gradient(double* state, double* normal, double* grad)
+  {
+    constexpr int n_qpoint = custom_math::pow(n_dim, row_size);
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
+        // fetch row data
+        auto row_r = Row_rw<n_var, row_size>::read_row(state, ind);
+        Mat<row_size, n_dim> row_n = Mat<row_size, 1>::Ones()*Mat<1, n_dim>::Unit(i_dim);
+        if constexpr (element_t::is_deformed) {
+          row_n = Row_rw<n_dim, row_size>::read_row(normal + i_dim*n_dim*n_qpoint, ind);
+        }
+        // differentiate and write to temporary storage
+        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+          for (int i_var = 0; i_var < n_var; ++i_var) {
+            Mat<row_size, 1> deriv = derivative(row_n(Eigen::all, j_dim).cwiseProduct(row_r(Eigen::all, i_var)));
+            Row_rw<1, row_size>::write_row(deriv, visc_storage + (j_dim*n_var + i_var)*n_qpoint, ind, 0.);
+          }
+        }
+      }
+    }
+  }
 
   // performs the update to the element state after the shared numerical flux
   // has been computed.
@@ -102,6 +125,13 @@ class Spatial
         double* tss = elem.time_step_scale();
         double d_pos = elem.nominal_size();
         double time_rate [Pde::n_update][n_qpoint] {};
+        double visc_storage [n_dim][Pde::n_update][n_qpoint];
+        double* nrml = nullptr;
+        if constexpr (element_t::is_deformed) nrml = elem.reference_level_normals();
+
+        if constexpr (is_viscous) {
+          compute_gradient<n_dim, row_size, n_var>(state, nrml, visc_storage[n_dim][0]);
+        }
 
         // compute residual
         for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -110,7 +140,7 @@ class Spatial
             auto row_r = Row_rw<Pde::n_var, row_size>::read_row(state, ind);
             Mat<row_size, n_dim> row_n = Mat<row_size, 1>::Ones()*Mat<1, n_dim>::Unit(i_dim);
             if constexpr (element_t::is_deformed) {
-              row_n = Row_rw<n_dim, row_size>::read_row(elem.reference_level_normals() + i_dim*n_dim*n_qpoint, ind);
+              row_n = Row_rw<n_dim, row_size>::read_row(nrml + i_dim*n_dim*n_qpoint, ind);
             }
             // compute flux
             Mat<row_size, Pde::n_update> flux;
