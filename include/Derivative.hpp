@@ -37,24 +37,24 @@ class Derivative
    */
   template<int n_var>
   Eigen::Matrix<double, row_size, n_var> interior_term(const Eigen::Matrix<double, row_size, n_var>& qpoint_vals,
-                                                       Eigen::Matrix<double, 2, n_var>& boundary_vals)
+                                                       Eigen::Matrix<double, 2, n_var>& boundary_vals) const
   {
     boundary_vals = boundary*qpoint_vals;
     return diff_mat*qpoint_vals - lift*boundary_vals;
   }
   template<int n_var>
-  Eigen::Matrix<double, row_size, n_var> boundary_term(const Eigen::Matrix<double, 2, n_var>& boundary_vals)
+  Eigen::Matrix<double, row_size, n_var> boundary_term(const Eigen::Matrix<double, 2, n_var>& boundary_vals) const
   {
     return lift*boundary_vals;
   }
   template<int n_var>
   Eigen::Matrix<double, row_size, n_var> operator()(const Eigen::Matrix<double, row_size, n_var>& qpoint_vals,
-                                                    const Eigen::Matrix<double, 2, n_var>& boundary_vals)
+                                                    const Eigen::Matrix<double, 2, n_var>& boundary_vals) const
   {
     return diff_mat*qpoint_vals + lift*(boundary_vals - boundary*qpoint_vals);
   }
   template<int n_var>
-  Eigen::Matrix<double, row_size, n_var> operator()(const Eigen::Matrix<double, row_size, n_var>& qpoint_vals)
+  Eigen::Matrix<double, row_size, n_var> operator()(const Eigen::Matrix<double, row_size, n_var>& qpoint_vals) const
   {
     return diff_mat*qpoint_vals;
   }

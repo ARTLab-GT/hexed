@@ -8,6 +8,8 @@
 #include "math.hpp"
 #include "Derivative.hpp"
 #include "Row_rw.hpp"
+#include "connection.hpp"
+#include "Face_permutation.hpp"
 
 namespace hexed
 {
@@ -58,10 +60,10 @@ class Spatial
     }
   };
 
-  template <int n_dim, row_size, n_var>
-  void compute_gradient(double* state, double* normal, double* grad)
+  template <int n_dim, int row_size, int n_var>
+  static void compute_gradient(double* state, double* normal, double* grad, const Derivative<row_size>& derivative)
   {
-    constexpr int n_qpoint = custom_math::pow(n_dim, row_size);
+    constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
       for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
         // fetch row data
@@ -73,8 +75,8 @@ class Spatial
         // differentiate and write to temporary storage
         for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
           for (int i_var = 0; i_var < n_var; ++i_var) {
-            Mat<row_size, 1> deriv = derivative(row_n(Eigen::all, j_dim).cwiseProduct(row_r(Eigen::all, i_var)));
-            Row_rw<1, row_size>::write_row(deriv, visc_storage + (j_dim*n_var + i_var)*n_qpoint, ind, 0.);
+            Mat<row_size, 1> prod = row_n(Eigen::all, j_dim).cwiseProduct(row_r(Eigen::all, i_var));
+            Row_rw<1, row_size>::write_row(derivative(prod), grad + (j_dim*n_var + i_var)*n_qpoint, ind, 0.);
           }
         }
       }
@@ -130,7 +132,7 @@ class Spatial
         if constexpr (element_t::is_deformed) nrml = elem.reference_level_normals();
 
         if constexpr (is_viscous) {
-          compute_gradient<n_dim, row_size, n_var>(state, nrml, visc_storage[n_dim][0]);
+          compute_gradient<n_dim, row_size, Pde::n_var>(state, nrml, visc_storage[n_dim][0], derivative);
         }
 
         // compute residual
