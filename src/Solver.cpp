@@ -687,36 +687,42 @@ void Solver::update(double stability_ratio)
       int bc_sn = bc_cons[i_con].bound_cond_serial_n();
       acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
     }
-    if (use_art_visc) {
-      (*kernel_factory<Spatial<Element         , pde::Euler, true>::Neighbor>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor");
-      (*kernel_factory<Spatial<Deformed_element, pde::Euler, true>::Neighbor>(nd, rs))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor");
-      (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-      (*kernel_factory<Restrict_refined>(nd, rs, basis, false, true))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-      (*kernel_factory<Spatial<Element         , pde::Euler, true>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.cartesian().elements(), sw_car, "local");
-      (*kernel_factory<Spatial<Deformed_element, pde::Euler, true>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.deformed ().elements(), sw_def, "local");
-      (*kernel_factory<Prolong_refined>(nd, rs, basis, true, true))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-      #pragma omp parallel for
-      for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-        int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-        acc_mesh.boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
-      }
-      (*kernel_factory<Spatial<Element         , pde::Euler>::Neighbor_reconcile>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor");
-      (*kernel_factory<Spatial<Deformed_element, pde::Euler>::Neighbor_reconcile>(nd, rs))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor");
-      (*kernel_factory<Restrict_refined>(nd, rs, basis, true, true))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-      (*kernel_factory<Spatial<Element         , pde::Euler, true>::Reconcile_ldg_flux>(nd, rs, basis, update))(acc_mesh.cartesian().elements(), sw_car, "reconcile LDG flux");
-      (*kernel_factory<Spatial<Deformed_element, pde::Euler, true>::Reconcile_ldg_flux>(nd, rs, basis, update))(acc_mesh.deformed ().elements(), sw_def, "reconcile LDG flux");
-    } else {
-      (*kernel_factory<Spatial<Element         , pde::Euler>::Neighbor>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor");
-      (*kernel_factory<Spatial<Deformed_element, pde::Euler>::Neighbor>(nd, rs))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor");
-      (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-      (*kernel_factory<Spatial<Element         , pde::Euler>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.cartesian().elements(), sw_car, "local");
-      (*kernel_factory<Spatial<Deformed_element, pde::Euler>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.deformed ().elements(), sw_def, "local");
-    }
+    (*kernel_factory<Spatial<Element         , pde::Euler>::Neighbor>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor");
+    (*kernel_factory<Spatial<Deformed_element, pde::Euler>::Neighbor>(nd, rs))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor");
+    (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+    (*kernel_factory<Spatial<Element         , pde::Euler>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.cartesian().elements(), sw_car, "local");
+    (*kernel_factory<Spatial<Deformed_element, pde::Euler>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.deformed ().elements(), sw_def, "local");
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
     fix_admissibility(fix_admis_stab_rat*stability_ratio);
     update = dt*basis.cancellation_convective()/basis.max_cfl_convective();
     curr = 1 - update/dt;
     ref = 1 - curr;
+  }
+  if (use_art_visc) {
+    auto& bc_cons {acc_mesh.boundary_connections()};
+    #pragma omp parallel for
+    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+      int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+      acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
+    }
+    (*kernel_factory<Spatial<Element         , pde::Euler, true>::Neighbor>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor");
+    (*kernel_factory<Spatial<Deformed_element, pde::Euler, true>::Neighbor>(nd, rs))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor");
+    (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+    (*kernel_factory<Restrict_refined>(nd, rs, basis, false, true))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+    (*kernel_factory<Spatial<Element         , pde::Euler, true>::Local>(nd, rs, basis, dt, 1, 0))(acc_mesh.cartesian().elements(), sw_car, "local");
+    (*kernel_factory<Spatial<Deformed_element, pde::Euler, true>::Local>(nd, rs, basis, dt, 1, 0))(acc_mesh.deformed ().elements(), sw_def, "local");
+    (*kernel_factory<Prolong_refined>(nd, rs, basis, true, true))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+    #pragma omp parallel for
+    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+      int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+      acc_mesh.boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
+    }
+    (*kernel_factory<Spatial<Element         , pde::Euler>::Neighbor_reconcile>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor");
+    (*kernel_factory<Spatial<Deformed_element, pde::Euler>::Neighbor_reconcile>(nd, rs))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor");
+    (*kernel_factory<Restrict_refined>(nd, rs, basis, true, true))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
+    (*kernel_factory<Spatial<Element         , pde::Euler, true>::Reconcile_ldg_flux>(nd, rs, basis, dt))(acc_mesh.cartesian().elements(), sw_car, "reconcile LDG flux");
+    (*kernel_factory<Spatial<Deformed_element, pde::Euler, true>::Reconcile_ldg_flux>(nd, rs, basis, dt))(acc_mesh.deformed ().elements(), sw_def, "reconcile LDG flux");
+    (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
   }
 
   // update status for reporting
