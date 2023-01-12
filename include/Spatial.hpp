@@ -128,12 +128,35 @@ class Spatial
         double* tss = elem.time_step_scale();
         double d_pos = elem.nominal_size();
         double time_rate [Pde::n_update][n_qpoint] {};
-        double visc_storage [n_dim][Pde::n_update][n_qpoint];
+        double visc_storage [n_dim][Pde::n_var][n_qpoint];
+        double* av_coef = elem.art_visc_coef();
         double* nrml = nullptr;
-        if constexpr (element_t::is_deformed) nrml = elem.reference_level_normals();
+        double* elem_det = nullptr;
+        if constexpr (element_t::is_deformed) {
+          elem_det = elem.jacobian_determinant();
+          nrml = elem.reference_level_normals();
+        }
 
         if constexpr (is_viscous) {
-          compute_gradient<n_dim, row_size, Pde::n_var>(state, nrml, visc_storage[n_dim][0], derivative, d_pos);
+          compute_gradient<n_dim, row_size, Pde::n_var>(state, nrml, visc_storage[0][0], derivative, d_pos);
+          // compute viscous flux from gradient
+          for (int i_var = Pde::curr_start; i_var < Pde::n_var; ++i_var) {
+            for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+              double temp_flux [n_dim] {};
+              for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+                for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+                  double n = (i_dim == j_dim);
+                  if constexpr (element_t::is_deformed) n = nrml[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
+                  temp_flux[i_dim] += n*visc_storage[j_dim][i_var][i_qpoint];
+                }
+              }
+              double scalar = -av_coef[i_qpoint];
+              if constexpr (element_t::is_deformed) scalar /= elem_det[i_qpoint];
+              for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+                visc_storage[i_dim][i_var][i_qpoint] = temp_flux[i_dim]*scalar;
+              }
+            }
+          }
         }
 
         // compute residual
@@ -154,12 +177,11 @@ class Spatial
             auto bound_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
             // differentiate and write to temporary storage
             Row_rw<Pde::n_update, row_size>::write_row(-derivative(flux, bound_f), time_rate[0], ind, 1.);
+            if constexpr (is_viscous) Row_rw<Pde::n_update, row_size>::write_row(-derivative(Row_rw<Pde::n_var, row_size>::read_row(visc_storage[i_dim][0], ind)), time_rate[0], ind, 1.);
           }
         }
 
         // write update to interior
-        double* elem_det = nullptr;
-        if constexpr (element_t::is_deformed) elem_det = elem.jacobian_determinant();
         for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
           double* curr_state = state + (Pde::curr_start + i_var)*n_qpoint;
           double* ref_state = state + (Pde::ref_start + i_var)*n_qpoint;

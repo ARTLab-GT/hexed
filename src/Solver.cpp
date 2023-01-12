@@ -687,19 +687,18 @@ void Solver::update(double stability_ratio)
     (*kernel_factory<Spatial<Element         , pde::Euler>::Neighbor>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor");
     (*kernel_factory<Spatial<Deformed_element, pde::Euler>::Neighbor>(nd, rs))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor");
     (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
-    (*kernel_factory<Spatial<Element         , pde::Euler>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.cartesian().elements(), sw_car, "local");
-    (*kernel_factory<Spatial<Deformed_element, pde::Euler>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.deformed ().elements(), sw_def, "local");
+    if (use_art_visc) {
+      (*kernel_factory<Spatial<Element         , pde::Euler, true>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.cartesian().elements(), sw_car, "local");
+      (*kernel_factory<Spatial<Deformed_element, pde::Euler, true>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.deformed ().elements(), sw_def, "local");
+    } else {
+      (*kernel_factory<Spatial<Element         , pde::Euler>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.cartesian().elements(), sw_car, "local");
+      (*kernel_factory<Spatial<Deformed_element, pde::Euler>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.deformed ().elements(), sw_def, "local");
+    }
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
     fix_admissibility(fix_admis_stab_rat*stability_ratio);
     update = dt*basis.cancellation_convective()/basis.max_cfl_convective();
     curr = 1 - update/dt;
     ref = 1 - curr;
-  }
-
-  // compute viscous update
-  if (use_art_visc) {
-    update_art_visc(dt, true);
-    fix_admissibility(fix_admis_stab_rat*stability_ratio);
   }
 
   // update status for reporting

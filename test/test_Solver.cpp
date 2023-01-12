@@ -612,7 +612,7 @@ void test_conservation(Test_mesh& tm, std::string name)
   sol.snap_faces();
   sol.calc_jacobian();
   sol.initialize(Random_perturbation());
-  sol.set_art_visc_constant(300.);
+  sol.set_art_visc_constant(30.);
   // check that the iteration status is right at the start
   auto status = sol.iteration_status();
   // update
