@@ -95,6 +95,7 @@ class Spatial
     using Pde = Pde_templ<n_dim>;
     static constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
     Derivative<row_size> derivative;
+    Mat<2, row_size> boundary;
     Write_face<n_dim, row_size> write_face;
     double update;
     double curr;
@@ -109,6 +110,7 @@ class Spatial
           double update_coef, double current_coef, double reference_coef,
           double heat_ratio=1.4) :
       derivative{basis},
+      boundary{basis.boundary()},
       write_face{basis},
       update{update_coef},
       curr{current_coef},
@@ -175,9 +177,20 @@ class Spatial
             }
             // fetch boundary data
             auto bound_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
+            // add interior viscous flux if necessary
+            if constexpr (is_viscous) {
+              auto flux_visc = Row_rw<Pde::n_update, row_size>::read_row(visc_storage[i_dim][Pde::curr_start], ind);
+              flux += flux_visc;
+              Mat<2, Pde::n_update> bound_f_visc = boundary*flux_visc;
+              for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
+                for (int is_positive : {0, 1}) {
+                  faces[ind.i_dim*2 + is_positive][(2*(n_dim + 2) + i_var)*ind.n_fqpoint + ind.i_face_qpoint()] = bound_f_visc(is_positive, i_var);
+                }
+              }
+              bound_f += bound_f_visc;
+            }
             // differentiate and write to temporary storage
             Row_rw<Pde::n_update, row_size>::write_row(-derivative(flux, bound_f), time_rate[0], ind, 1.);
-            if constexpr (is_viscous) Row_rw<Pde::n_update, row_size>::write_row(-derivative(Row_rw<Pde::n_var, row_size>::read_row(visc_storage[i_dim][0], ind)), time_rate[0], ind, 1.);
           }
         }
 
@@ -193,6 +206,58 @@ class Spatial
           }
         }
         // write updated state to face storage
+        if constexpr (!is_viscous) write_face(state, elem.faces);
+      }
+    }
+  };
+
+  template <int n_dim, int row_size>
+  class Reconcile_ldg_flux : public Kernel<element_t&>
+  {
+    using Pde = Pde_templ<n_dim>;
+    static constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
+    Derivative<row_size> derivative;
+    Write_face<n_dim, row_size> write_face;
+    double update;
+
+    public:
+    Reconcile_ldg_flux(const Basis& basis, double update_coef) :
+      derivative{basis},
+      write_face{basis},
+      update{update_coef}
+    {}
+
+    virtual void operator()(Sequence<element_t&>& elements)
+    {
+      #pragma omp parallel for
+      for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
+      {
+        auto& elem = elements[i_elem];
+        double* state = elem.stage(0);
+        std::array<double*, 6> faces = elem.faces;
+        for (double*& face : faces) face += (2*(n_dim + 2) + Pde::curr_start)*n_qpoint/row_size;
+        double* tss = elem.time_step_scale();
+        double d_pos = elem.nominal_size();
+        double time_rate [Pde::n_update][n_qpoint] {};
+        double* elem_det = nullptr;
+        if constexpr (element_t::is_deformed) {
+          elem_det = elem.jacobian_determinant();
+        }
+        for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+          for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
+            auto bound_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
+            Row_rw<Pde::n_update, row_size>::write_row(-derivative.boundary_term(bound_f), time_rate[0], ind, 1.);
+          }
+        }
+        // write update to interior
+        for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
+          double* curr_state = state + (Pde::curr_start + i_var)*n_qpoint;
+          for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+            double det = 1;
+            if constexpr (element_t::is_deformed) det = elem_det[i_qpoint];
+            curr_state[i_qpoint] += update*time_rate[i_var][i_qpoint]/d_pos*tss[i_qpoint]/det;
+          }
+        }
         write_face(state, elem.faces);
       }
     }
@@ -267,6 +332,64 @@ class Spatial
         // write data to actual face storage on heap
         for (int i_side = 0; i_side < 2; ++i_side) {
           double* f = con.state() + i_side*n_fqpoint*(n_dim + 2);
+          int offset = Pde::curr_start*n_fqpoint;
+          for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
+            f[offset + i_dof] = face[i_side][offset + i_dof];
+          }
+        }
+        #pragma GCC diagnostic pop
+      }
+    }
+  };
+
+  template <int n_dim, int row_size>
+  class Neighbor_reconcile : public Kernel<Face_connection<element_t>&>
+  {
+    using Pde = Pde_templ<n_dim>;
+    static constexpr int n_fqpoint = custom_math::pow(row_size, n_dim - 1);
+
+    public:
+    virtual void operator()(Sequence<Face_connection<element_t>&>& connections)
+    {
+      #pragma omp parallel for
+      for (int i_con = 0; i_con < connections.size(); ++i_con)
+      {
+        #pragma GCC diagnostic push
+        #pragma GCC diagnostic ignored "-Wunused-but-set-variable" // otherwise `'face_nrml' set but not used` (not sure why)
+        auto& con = connections[i_con];
+        auto dir = con.direction();
+        double face [2][(n_dim + 2)*n_fqpoint]; // copying face data to temporary stack storage improves efficiency
+        int sign [2] {1, 1}; // records whether the normal vector on each side needs to be flipped to obey sign convention
+        // fetch face data
+        for (int i_side = 0; i_side < 2; ++i_side) {
+          double* f = con.state() + (2 + i_side)*n_fqpoint*(n_dim + 2);
+          for (int i_dof = 0; i_dof < Pde::n_var*n_fqpoint; ++i_dof) {
+            face[i_side][i_dof] = f[i_dof];
+          }
+        }
+        Face_permutation<n_dim, row_size> perm(dir, face[1]); // only used for deformed
+        if constexpr (element_t::is_deformed) {
+          perm.match_faces(); // if order of quadrature points on both faces does not match, reorder face 1 to match face 0
+          for (int i_side : {0, 1}) sign[i_side] = 1 - 2*dir.flip_normal(i_side);
+        }
+        // compute flux
+        for (int i_qpoint = 0; i_qpoint < n_fqpoint; ++i_qpoint) {
+          // fetch data
+          for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
+            double avg = 0;
+            for (int i_side = 0; i_side < 2; ++i_side) {
+              avg += .5*sign[i_side]*face[i_side][i_var*n_fqpoint + i_qpoint];
+            }
+            for (int i_side = 0; i_side < 2; ++i_side) {
+              double& f = face[i_side][i_var*n_fqpoint + i_qpoint];
+              f = sign[i_side]*avg - f;
+            }
+          }
+        }
+        if constexpr (element_t::is_deformed) perm.restore(); // restore data of face 1 to original order
+        // write data to actual face storage on heap
+        for (int i_side = 0; i_side < 2; ++i_side) {
+          double* f = con.state() + (2 + i_side)*n_fqpoint*(n_dim + 2);
           int offset = Pde::curr_start*n_fqpoint;
           for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
             f[offset + i_dof] = face[i_side][offset + i_dof];

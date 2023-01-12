@@ -67,6 +67,8 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
       children.emplace("local", unit);
     }
   }
+  stopwatch.children.at("cartesian").children.emplace("reconcile LDG flux", unit);
+  stopwatch.children.at("deformed" ).children.emplace("reconcile LDG flux", unit);
   // initialize advection state to 1
   auto& elements = acc_mesh.elements();
   const int nq = params.n_qpoint();
@@ -680,6 +682,7 @@ void Solver::update(double stability_ratio)
   double ref = 0;
   for (int i = 0; i < 2; ++i) {
     auto& bc_cons {acc_mesh.boundary_connections()};
+    #pragma omp parallel for
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
       int bc_sn = bc_cons[i_con].bound_cond_serial_n();
       acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
@@ -690,6 +693,15 @@ void Solver::update(double stability_ratio)
     if (use_art_visc) {
       (*kernel_factory<Spatial<Element         , pde::Euler, true>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.cartesian().elements(), sw_car, "local");
       (*kernel_factory<Spatial<Deformed_element, pde::Euler, true>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.deformed ().elements(), sw_def, "local");
+      #pragma omp parallel for
+      for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+        int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+        acc_mesh.boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
+      }
+      (*kernel_factory<Spatial<Element         , pde::Euler>::Neighbor_reconcile>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor");
+      (*kernel_factory<Spatial<Deformed_element, pde::Euler>::Neighbor_reconcile>(nd, rs))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor");
+      (*kernel_factory<Spatial<Element         , pde::Euler, true>::Reconcile_ldg_flux>(nd, rs, basis, update))(acc_mesh.cartesian().elements(), sw_car, "reconcile LDG flux");
+      (*kernel_factory<Spatial<Deformed_element, pde::Euler, true>::Reconcile_ldg_flux>(nd, rs, basis, update))(acc_mesh.deformed ().elements(), sw_def, "reconcile LDG flux");
     } else {
       (*kernel_factory<Spatial<Element         , pde::Euler>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.cartesian().elements(), sw_car, "local");
       (*kernel_factory<Spatial<Deformed_element, pde::Euler>::Local>(nd, rs, basis, update, curr, ref))(acc_mesh.deformed ().elements(), sw_def, "local");

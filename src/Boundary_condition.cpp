@@ -32,8 +32,10 @@ void copy_state(Boundary_face& bf)
 {
   double* in_f = bf.inside_face();
   double* gh_f = bf.ghost_face();
-  for (int i_dof = 0; i_dof < bf.storage_params().n_dof()/bf.storage_params().row_size; ++i_dof) {
+  int n_face_dof = bf.storage_params().n_dof()/bf.storage_params().row_size;
+  for (int i_dof = 0; i_dof < n_face_dof; ++i_dof) {
     gh_f[i_dof] = in_f[i_dof];
+    gh_f[i_dof + 2*n_face_dof] = in_f[i_dof + 2*n_face_dof];
   }
 }
 
@@ -121,12 +123,15 @@ void Nonpenetration::apply_flux(Boundary_face& bf)
 {
   // fetch data
   auto params = bf.storage_params();
-  double* gh_f = bf.ghost_face();
-  double* in_f = bf.inside_face();
-  // initialize to negative of inside flux
-  for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
-  // un-invert normal component of momentum
-  reflect_normal(gh_f, bf.surface_normal(), params.n_qpoint()/params.row_size, params.n_dim);
+  // FIXME: the first iteration here is deprecated
+  for (int offset : {0, 2*params.n_dof()/params.row_size}) {
+    double* gh_f = bf.ghost_face() + offset;
+    double* in_f = bf.inside_face() + offset;
+    // initialize to negative of inside flux
+    for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
+    // un-invert normal component of momentum
+    reflect_normal(gh_f, bf.surface_normal(), params.n_qpoint()/params.row_size, params.n_dim);
+  }
 }
 
 void Nonpenetration::apply_advection(Boundary_face& bf)
@@ -158,9 +163,12 @@ void Outflow::apply_flux(Boundary_face& bf)
 {
   // set to negative of inside flux
   auto params = bf.storage_params();
-  double* gh_f = bf.ghost_face();
-  double* in_f = bf.inside_face();
-  for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
+  // FIXME: the first iteration here is deprecated
+  for (int offset : {0, 2*params.n_dof()/params.row_size}) {
+    double* gh_f = bf.ghost_face() + offset;
+    double* in_f = bf.inside_face() + offset;
+    for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
+  }
 }
 
 void Nominal_pos::snap_vertices(Boundary_connection& con)
