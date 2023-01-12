@@ -15,7 +15,6 @@ test_Element.cpp
 test_Element_container.cpp
 test_func.cpp
 test_Face_permutation.cpp
-test_gradient.cpp
 test_Hanging_vertex_matcher.cpp
 test_Iteration_status.cpp
 test_math.cpp

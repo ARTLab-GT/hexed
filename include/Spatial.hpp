@@ -60,30 +60,6 @@ class Spatial
     }
   };
 
-  template <int n_dim, int row_size, int n_var>
-  static void compute_gradient(double* state, double* normal, double* grad, const Derivative<row_size>& derivative, double d_pos)
-  {
-    constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
-    for (int i_grad = 0; i_grad < n_dim*n_var*n_qpoint; ++i_grad) grad[i_grad] = 0;
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-      for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
-        // fetch row data
-        auto row_r = Row_rw<n_var, row_size>::read_row(state, ind);
-        Mat<row_size, n_dim> row_n = Mat<row_size, 1>::Ones()*Mat<1, n_dim>::Unit(i_dim);
-        if constexpr (element_t::is_deformed) {
-          row_n = Row_rw<n_dim, row_size>::read_row(normal + i_dim*n_dim*n_qpoint, ind);
-        }
-        // differentiate and write to temporary storage
-        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-          for (int i_var = 0; i_var < n_var; ++i_var) {
-            Mat<row_size, 1> prod = row_n(Eigen::all, j_dim).cwiseProduct(row_r(Eigen::all, i_var));
-            Row_rw<1, row_size>::write_row(derivative(prod)/d_pos, grad + (j_dim*n_var + i_var)*n_qpoint, ind, 1.);
-          }
-        }
-      }
-    }
-  }
-
   // performs the update to the element state after the shared numerical flux
   // has been computed.
   // In other words, performs the part of the algorithm that only uses local data
@@ -120,6 +96,15 @@ class Spatial
 
     virtual void operator()(Sequence<element_t&>& elements)
     {
+      double cartesian_normal [n_dim][n_dim][n_qpoint/row_size];
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+          for (int i_qpoint = 0; i_qpoint < n_qpoint/row_size; ++i_qpoint) {
+            cartesian_normal[i_dim][j_dim][i_qpoint] = i_dim == j_dim;
+          }
+        }
+      }
+
       #pragma omp parallel for
       for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
       {
@@ -130,17 +115,47 @@ class Spatial
         double* tss = elem.time_step_scale();
         double d_pos = elem.nominal_size();
         double time_rate [Pde::n_update][n_qpoint] {};
-        double visc_storage [n_dim][Pde::n_var][n_qpoint];
+        double visc_storage [n_dim][Pde::n_var][n_qpoint] {};
         double* av_coef = elem.art_visc_coef();
         double* nrml = nullptr;
         double* elem_det = nullptr;
+        std::array<double*, 6> face_nrml;
         if constexpr (element_t::is_deformed) {
           elem_det = elem.jacobian_determinant();
           nrml = elem.reference_level_normals();
+          for (int i_face = 0; i_face < 2*n_dim; ++i_face) {
+            face_nrml[i_face] = elem.face_normal(i_face);
+            if (!face_nrml[i_face]) face_nrml[i_face] = cartesian_normal[i_face/2][0];
+          }
         }
 
         if constexpr (is_viscous) {
-          compute_gradient<n_dim, row_size, Pde::n_var>(state, nrml, visc_storage[0][0], derivative, d_pos);
+          // compute gradient
+          constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
+          std::array<double*, 6> visc_faces;
+          for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.faces[i_face] + 2*(n_dim + 2)*n_qpoint/row_size;
+          for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+            for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
+              // fetch row data
+              auto row_r = Row_rw<Pde::n_var, row_size>::read_row(state, ind);
+              Mat<row_size, n_dim> row_n = Mat<row_size, 1>::Ones()*Mat<1, n_dim>::Unit(i_dim);
+              if constexpr (element_t::is_deformed) {
+                row_n = Row_rw<n_dim, row_size>::read_row(nrml + i_dim*n_dim*n_qpoint, ind);
+              }
+              // fetch face data
+              auto bound_state = Row_rw<Pde::n_var, row_size>::read_bound(visc_faces, ind);
+              Mat<2, n_dim> bound_nrml = Mat<2, 1>::Ones()*Mat<1, n_dim>::Unit(i_dim);
+              if constexpr (element_t::is_deformed) bound_nrml  = Row_rw<n_dim, row_size>::read_bound(face_nrml, ind);
+              // differentiate and write to temporary storage
+              for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+                for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
+                  Mat<row_size, 1> row = row_n(Eigen::all, j_dim).cwiseProduct(row_r(Eigen::all, i_var));
+                  Mat<2, 1> bound = bound_nrml(Eigen::all, j_dim).cwiseProduct(bound_state(Eigen::all, i_var));
+                  Row_rw<1, row_size>::write_row(derivative(row, bound)/d_pos, visc_storage[j_dim][i_var], ind, 1.);
+                }
+              }
+            }
+          }
           // compute viscous flux from gradient
           for (int i_var = Pde::curr_start; i_var < Pde::n_var; ++i_var) {
             for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
@@ -282,7 +297,7 @@ class Spatial
         #pragma GCC diagnostic ignored "-Wunused-but-set-variable" // otherwise `'face_nrml' set but not used` (not sure why)
         auto& con = connections[i_con];
         auto dir = con.direction();
-        double face [2][(n_dim + 2)*n_fqpoint]; // copying face data to temporary stack storage improves efficiency
+        double face [4][(n_dim + 2)*n_fqpoint]; // copying face data to temporary stack storage improves efficiency
         double face_nrml [n_dim*n_fqpoint]; // only set for deformed
         int sign [2] {1, 1}; // records whether the normal vector on each side needs to be flipped to obey sign convention
         // fetch face data
@@ -326,15 +341,28 @@ class Spatial
             for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
               face[i_side][(i_var + Pde::curr_start)*n_fqpoint + i_qpoint] = sign[i_side]*flux(i_var);
             }
+            if constexpr (is_viscous) {
+              for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
+                face[2 + i_side][i_var*n_fqpoint + i_qpoint] = .5*(state(i_var, 0) + state(i_var, 1));
+              }
+            }
           }
         }
-        if constexpr (element_t::is_deformed) perm.restore(); // restore data of face 1 to original order
+        if constexpr (element_t::is_deformed) {
+          perm.restore(); // restore data of face 1 to original order
+          if constexpr (is_viscous) Face_permutation<n_dim, row_size>(dir, face[3]).restore();
+        }
         // write data to actual face storage on heap
         for (int i_side = 0; i_side < 2; ++i_side) {
           double* f = con.state() + i_side*n_fqpoint*(n_dim + 2);
           int offset = Pde::curr_start*n_fqpoint;
           for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
             f[offset + i_dof] = face[i_side][offset + i_dof];
+          }
+          if constexpr (is_viscous) {
+            for (int i_dof = 0; i_dof < Pde::n_var*n_fqpoint; ++i_dof) {
+              f[2*(n_dim + 2)*n_fqpoint + i_dof] = face[2 + i_side][i_dof];
+            }
           }
         }
         #pragma GCC diagnostic pop
