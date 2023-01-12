@@ -61,9 +61,10 @@ class Spatial
   };
 
   template <int n_dim, int row_size, int n_var>
-  static void compute_gradient(double* state, double* normal, double* grad, const Derivative<row_size>& derivative)
+  static void compute_gradient(double* state, double* normal, double* grad, const Derivative<row_size>& derivative, double d_pos)
   {
     constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
+    for (int i_grad = 0; i_grad < n_dim*n_var*n_qpoint; ++i_grad) grad[i_grad] = 0;
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
       for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
         // fetch row data
@@ -76,7 +77,7 @@ class Spatial
         for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
           for (int i_var = 0; i_var < n_var; ++i_var) {
             Mat<row_size, 1> prod = row_n(Eigen::all, j_dim).cwiseProduct(row_r(Eigen::all, i_var));
-            Row_rw<1, row_size>::write_row(derivative(prod), grad + (j_dim*n_var + i_var)*n_qpoint, ind, 0.);
+            Row_rw<1, row_size>::write_row(derivative(prod)/d_pos, grad + (j_dim*n_var + i_var)*n_qpoint, ind, 1.);
           }
         }
       }
@@ -132,7 +133,7 @@ class Spatial
         if constexpr (element_t::is_deformed) nrml = elem.reference_level_normals();
 
         if constexpr (is_viscous) {
-          compute_gradient<n_dim, row_size, Pde::n_var>(state, nrml, visc_storage[n_dim][0], derivative);
+          compute_gradient<n_dim, row_size, Pde::n_var>(state, nrml, visc_storage[n_dim][0], derivative, d_pos);
         }
 
         // compute residual

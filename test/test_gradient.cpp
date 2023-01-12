@@ -26,14 +26,11 @@ TEST_CASE("Spatial::gradient")
   }
   double gradient[2][3][row_size*row_size];
   hexed::Derivative<row_size> deriv(basis);
-  hexed::Spatial<hexed::Deformed_element, hexed::pde::Euler, true>::compute_gradient<2, row_size, 3>(elem.stage(0), elem.reference_level_normals(), gradient[0][0], deriv);
+  hexed::Spatial<hexed::Deformed_element, hexed::pde::Euler, true>::compute_gradient<2, row_size, 3>(elem.stage(0), elem.reference_level_normals(), gradient[0][0], deriv, elem.nominal_size());
   for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
     for (int i_var = 0; i_var < 3; ++i_var) {
-      auto pos = elem.position(basis, i_qpoint);
-      double total = 0;
-      for (int i_dim = 0; i_dim < 2; ++i_dim) total += coefs(i_dim, i_var)*pos[i_var];
       for (int i_dim = 0; i_dim < 2; ++i_dim) {
-        REQUIRE(gradient[i_dim][i_var][i_qpoint] == Approx(coefs(i_dim, i_var)*elem.stage(0)[i_var*params.n_qpoint() + i_qpoint]).epsilon(1e-4));
+        REQUIRE(gradient[i_dim][i_var][i_qpoint] == Approx(coefs(i_dim, i_var)*elem.stage(0)[i_var*params.n_qpoint() + i_qpoint]*elem.jacobian_determinant(i_qpoint)).epsilon(1e-4));
       }
     }
   }
