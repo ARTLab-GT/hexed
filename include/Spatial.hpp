@@ -73,24 +73,26 @@ class Spatial
     Derivative<row_size> derivative;
     Mat<2, row_size> boundary;
     Write_face<n_dim, row_size> write_face;
-    double update;
-    double curr;
-    double ref;
+    const int stage;
+    const double update_conv;
+    const double update_diff;
+    const double ref;
+    const double curr;
     const double heat_rat;
 
     // note: `.*_coef` are the coefficients for multistage time integration.
     // The final result is
     // `update_coef`*[residual] + `current_coef`*[current state] + `reference_coef`*[reference state]
     public:
-    Local(const Basis& basis,
-          double update_coef, double current_coef, double reference_coef,
-          double heat_ratio=1.4) :
+    Local(const Basis& basis, double dt, bool which_stage, double heat_ratio=1.4) :
       derivative{basis},
       boundary{basis.boundary()},
       write_face{basis},
-      update{update_coef},
-      curr{current_coef},
-      ref{reference_coef},
+      stage{which_stage},
+      update_conv{stage ? dt*basis.cancellation_convective()/basis.max_cfl_convective() : dt},
+      update_diff{stage ? dt*basis.cancellation_diffusive()/basis.max_cfl_diffusive() : dt},
+      ref{stage ? update_conv/dt : 0},
+      curr{1 - ref},
       heat_rat{heat_ratio}
     {}
 
@@ -114,7 +116,7 @@ class Spatial
         for (double*& face : faces) face += Pde::curr_start*n_qpoint/row_size;
         double* tss = elem.time_step_scale();
         double d_pos = elem.nominal_size();
-        double time_rate [Pde::n_update][n_qpoint] {};
+        double time_rate [2][Pde::n_update][n_qpoint] {};
         double visc_storage [n_dim][Pde::n_var][n_qpoint] {};
         double* av_coef = elem.art_visc_coef();
         double* nrml = nullptr;
@@ -179,6 +181,7 @@ class Spatial
         // compute residual
         for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
           for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
+            // compute convective update
             // fetch row data
             auto row_r = Row_rw<Pde::n_var, row_size>::read_row(state, ind);
             Mat<row_size, n_dim> row_n = Mat<row_size, 1>::Ones()*Mat<1, n_dim>::Unit(i_dim);
@@ -192,20 +195,19 @@ class Spatial
             }
             // fetch boundary data
             auto bound_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
-            // add interior viscous flux if necessary
+            // differentiate and write to temporary storage
+            Row_rw<Pde::n_update, row_size>::write_row(-derivative(flux, bound_f), time_rate[0][0], ind, 1.);
+            // compute viscous update
             if constexpr (is_viscous) {
-              auto flux_visc = Row_rw<Pde::n_update, row_size>::read_row(visc_storage[i_dim][Pde::curr_start], ind);
-              flux += flux_visc;
-              Mat<2, Pde::n_update> bound_f_visc = boundary*flux_visc;
+              flux = Row_rw<Pde::n_update, row_size>::read_row(visc_storage[i_dim][Pde::curr_start], ind);
+              bound_f = boundary*flux;
               for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
                 for (int is_positive : {0, 1}) {
-                  faces[ind.i_dim*2 + is_positive][(2*(n_dim + 2) + i_var)*ind.n_fqpoint + ind.i_face_qpoint()] = bound_f_visc(is_positive, i_var);
+                  faces[ind.i_dim*2 + is_positive][(2*(n_dim + 2) + i_var)*ind.n_fqpoint + ind.i_face_qpoint()] = bound_f(is_positive, i_var);
                 }
               }
-              bound_f += bound_f_visc;
+              Row_rw<Pde::n_update, row_size>::write_row(-derivative(flux), time_rate[1][0], ind, 1.);
             }
-            // differentiate and write to temporary storage
-            Row_rw<Pde::n_update, row_size>::write_row(-derivative(flux, bound_f), time_rate[0], ind, 1.);
           }
         }
 
@@ -213,11 +215,17 @@ class Spatial
         for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
           double* curr_state = state + (Pde::curr_start + i_var)*n_qpoint;
           double* ref_state = state + (Pde::ref_start + i_var)*n_qpoint;
+          double* visc_state = state + (Pde::visc_start + i_var)*n_qpoint;
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
             double det = 1;
             if constexpr (element_t::is_deformed) det = elem_det[i_qpoint];
-            curr_state[i_qpoint] = update*time_rate[i_var][i_qpoint]/d_pos*tss[i_qpoint]/det
-                                   + curr*curr_state[i_qpoint] + ref*ref_state[i_qpoint];
+            double u = update_conv*time_rate[0][i_var][i_qpoint];
+            if constexpr (is_viscous) {
+              u += update_diff*time_rate[1][i_var][i_qpoint];
+              if (stage) u += (update_conv - update_diff)*visc_state[i_qpoint];
+              else visc_state[i_qpoint] = time_rate[1][i_var][i_qpoint];
+            }
+            curr_state[i_qpoint] = u/d_pos*tss[i_qpoint]/det + curr*curr_state[i_qpoint] + ref*ref_state[i_qpoint];
           }
         }
         // write updated state to face storage
@@ -233,13 +241,15 @@ class Spatial
     static constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
     Derivative<row_size> derivative;
     Write_face<n_dim, row_size> write_face;
+    int stage;
     double update;
 
     public:
-    Reconcile_ldg_flux(const Basis& basis, double update_coef) :
+    Reconcile_ldg_flux(const Basis& basis, double dt, int which_stage) :
       derivative{basis},
       write_face{basis},
-      update{update_coef}
+      stage{which_stage},
+      update{stage ? dt*basis.cancellation_diffusive()/basis.max_cfl_diffusive() : dt}
     {}
 
     virtual void operator()(Sequence<element_t&>& elements)
@@ -267,10 +277,12 @@ class Spatial
         // write update to interior
         for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
           double* curr_state = state + (Pde::curr_start + i_var)*n_qpoint;
+          double* visc_state = state + (Pde::visc_start + i_var)*n_qpoint;
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
             double det = 1;
             if constexpr (element_t::is_deformed) det = elem_det[i_qpoint];
             curr_state[i_qpoint] += update*time_rate[i_var][i_qpoint]/d_pos*tss[i_qpoint]/det;
+            if (!stage) visc_state[i_qpoint] += time_rate[i_var][i_qpoint];
           }
         }
         write_face(state, elem.faces);
