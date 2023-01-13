@@ -96,87 +96,6 @@ class Spatial
 
     virtual void operator()(Sequence<element_t&>& elements)
     {
-      #pragma omp parallel for
-      for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
-      {
-        auto& elem = elements[i_elem];
-        double* state = elem.stage(0);
-        std::array<double*, 6> faces = elem.faces;
-        for (double*& face : faces) face += Pde::curr_start*n_qpoint/row_size;
-        double* tss = elem.time_step_scale();
-        double d_pos = elem.nominal_size();
-        double time_rate [Pde::n_update][n_qpoint] {};
-        double* nrml = nullptr;
-        double* elem_det = nullptr;
-        if constexpr (element_t::is_deformed) {
-          elem_det = elem.jacobian_determinant();
-          nrml = elem.reference_level_normals();
-        }
-
-        // compute residual
-        for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-          for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
-            // fetch row data
-            auto row_r = Row_rw<Pde::n_var, row_size>::read_row(state, ind);
-            Mat<row_size, n_dim> row_n = Mat<row_size, 1>::Ones()*Mat<1, n_dim>::Unit(i_dim);
-            if constexpr (element_t::is_deformed) {
-              row_n = Row_rw<n_dim, row_size>::read_row(nrml + i_dim*n_dim*n_qpoint, ind);
-            }
-            Mat<row_size, Pde::n_update> flux;
-            // compute flux
-            for (int i_row = 0; i_row < row_size; ++i_row) {
-              flux(i_row, Eigen::all) = Pde::flux(row_r(i_row, Eigen::all), row_n(i_row, Eigen::all));
-            }
-            // fetch boundary data
-            auto bound_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
-            // differentiate and write to temporary storage
-            Row_rw<Pde::n_update, row_size>::write_row(-derivative(flux, bound_f), time_rate[0], ind, 1.);
-          }
-        }
-
-        // write update to interior
-        for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
-          double* curr_state = state + (Pde::curr_start + i_var)*n_qpoint;
-          double* ref_state = state + (Pde::ref_start + i_var)*n_qpoint;
-          for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-            double det = 1;
-            if constexpr (element_t::is_deformed) det = elem_det[i_qpoint];
-            curr_state[i_qpoint] = update*time_rate[i_var][i_qpoint]/d_pos*tss[i_qpoint]/det
-                                   + curr*curr_state[i_qpoint] + ref*ref_state[i_qpoint];
-          }
-        }
-        // write updated state to face storage
-        write_face(state, elem.faces);
-      }
-    }
-  };
-
-  template <int n_dim, int row_size>
-  class Local_diff0 : public Kernel<element_t&>
-  {
-    using Pde = Pde_templ<n_dim>;
-    static constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
-    Derivative<row_size> derivative;
-    Mat<2, row_size> boundary;
-    Write_face<n_dim, row_size> write_face;
-    double update;
-    const double heat_rat;
-
-    // note: `.*_coef` are the coefficients for multistage time integration.
-    // The final result is
-    // `update_coef`*[residual] + `current_coef`*[current state] + `reference_coef`*[reference state]
-    public:
-    Local_diff0(const Basis& basis,
-                double update_coef, double heat_ratio=1.4) :
-      derivative{basis},
-      boundary{basis.boundary()},
-      write_face{basis},
-      update{update_coef},
-      heat_rat{heat_ratio}
-    {}
-
-    virtual void operator()(Sequence<element_t&>& elements)
-    {
       double cartesian_normal [n_dim][n_dim][n_qpoint/row_size];
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
         for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
@@ -210,47 +129,49 @@ class Spatial
           }
         }
 
-        // compute gradient
-        constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
-        std::array<double*, 6> visc_faces;
-        for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.faces[i_face] + 2*(n_dim + 2)*n_qpoint/row_size;
-        for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-          for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
-            // fetch row data
-            auto row_r = Row_rw<Pde::n_var, row_size>::read_row(state, ind);
-            Mat<row_size, n_dim> row_n = Mat<row_size, 1>::Ones()*Mat<1, n_dim>::Unit(i_dim);
-            if constexpr (element_t::is_deformed) {
-              row_n = Row_rw<n_dim, row_size>::read_row(nrml + i_dim*n_dim*n_qpoint, ind);
-            }
-            // fetch face data
-            auto bound_state = Row_rw<Pde::n_var, row_size>::read_bound(visc_faces, ind);
-            Mat<2, n_dim> bound_nrml = Mat<2, 1>::Ones()*Mat<1, n_dim>::Unit(i_dim);
-            if constexpr (element_t::is_deformed) bound_nrml  = Row_rw<n_dim, row_size>::read_bound(face_nrml, ind);
-            // differentiate and write to temporary storage
-            for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-              for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
-                Mat<row_size, 1> row = row_n(Eigen::all, j_dim).cwiseProduct(row_r(Eigen::all, i_var));
-                Mat<2, 1> bound = bound_nrml(Eigen::all, j_dim).cwiseProduct(bound_state(Eigen::all, i_var));
-                Row_rw<1, row_size>::write_row(derivative(row, bound)/d_pos, visc_storage[j_dim][i_var], ind, 1.);
+        if constexpr (is_viscous) {
+          // compute gradient
+          constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
+          std::array<double*, 6> visc_faces;
+          for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.faces[i_face] + 2*(n_dim + 2)*n_qpoint/row_size;
+          for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+            for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
+              // fetch row data
+              auto row_r = Row_rw<Pde::n_var, row_size>::read_row(state, ind);
+              Mat<row_size, n_dim> row_n = Mat<row_size, 1>::Ones()*Mat<1, n_dim>::Unit(i_dim);
+              if constexpr (element_t::is_deformed) {
+                row_n = Row_rw<n_dim, row_size>::read_row(nrml + i_dim*n_dim*n_qpoint, ind);
+              }
+              // fetch face data
+              auto bound_state = Row_rw<Pde::n_var, row_size>::read_bound(visc_faces, ind);
+              Mat<2, n_dim> bound_nrml = Mat<2, 1>::Ones()*Mat<1, n_dim>::Unit(i_dim);
+              if constexpr (element_t::is_deformed) bound_nrml  = Row_rw<n_dim, row_size>::read_bound(face_nrml, ind);
+              // differentiate and write to temporary storage
+              for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+                for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
+                  Mat<row_size, 1> row = row_n(Eigen::all, j_dim).cwiseProduct(row_r(Eigen::all, i_var));
+                  Mat<2, 1> bound = bound_nrml(Eigen::all, j_dim).cwiseProduct(bound_state(Eigen::all, i_var));
+                  Row_rw<1, row_size>::write_row(derivative(row, bound)/d_pos, visc_storage[j_dim][i_var], ind, 1.);
+                }
               }
             }
           }
-        }
-        // compute viscous flux from gradient
-        for (int i_var = Pde::curr_start; i_var < Pde::n_var; ++i_var) {
-          for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-            double temp_flux [n_dim] {};
-            for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-              for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-                double n = (i_dim == j_dim);
-                if constexpr (element_t::is_deformed) n = nrml[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
-                temp_flux[i_dim] += n*visc_storage[j_dim][i_var][i_qpoint];
+          // compute viscous flux from gradient
+          for (int i_var = Pde::curr_start; i_var < Pde::n_var; ++i_var) {
+            for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+              double temp_flux [n_dim] {};
+              for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+                for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+                  double n = (i_dim == j_dim);
+                  if constexpr (element_t::is_deformed) n = nrml[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
+                  temp_flux[i_dim] += n*visc_storage[j_dim][i_var][i_qpoint];
+                }
               }
-            }
-            double scalar = -av_coef[i_qpoint];
-            if constexpr (element_t::is_deformed) scalar /= elem_det[i_qpoint];
-            for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-              visc_storage[i_dim][i_var][i_qpoint] = temp_flux[i_dim]*scalar;
+              double scalar = -av_coef[i_qpoint];
+              if constexpr (element_t::is_deformed) scalar /= elem_det[i_qpoint];
+              for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+                visc_storage[i_dim][i_var][i_qpoint] = temp_flux[i_dim]*scalar;
+              }
             }
           }
         }
@@ -261,12 +182,27 @@ class Spatial
             Mat<row_size, Pde::n_update> flux;
             Mat<2, Pde::n_update> bound_f;
             // add interior viscous flux if necessary
-            flux = Row_rw<Pde::n_update, row_size>::read_row(visc_storage[i_dim][Pde::curr_start], ind);
-            bound_f = boundary*flux;
-            for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
-              for (int is_positive : {0, 1}) {
-                faces[ind.i_dim*2 + is_positive][(2*(n_dim + 2) + i_var)*ind.n_fqpoint + ind.i_face_qpoint()] = bound_f(is_positive, i_var);
+            if constexpr (is_viscous) {
+              flux = Row_rw<Pde::n_update, row_size>::read_row(visc_storage[i_dim][Pde::curr_start], ind);
+              bound_f = boundary*flux;
+              for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
+                for (int is_positive : {0, 1}) {
+                  faces[ind.i_dim*2 + is_positive][(2*(n_dim + 2) + i_var)*ind.n_fqpoint + ind.i_face_qpoint()] = bound_f(is_positive, i_var);
+                }
               }
+            } else {
+              // fetch row data
+              auto row_r = Row_rw<Pde::n_var, row_size>::read_row(state, ind);
+              Mat<row_size, n_dim> row_n = Mat<row_size, 1>::Ones()*Mat<1, n_dim>::Unit(i_dim);
+              if constexpr (element_t::is_deformed) {
+                row_n = Row_rw<n_dim, row_size>::read_row(nrml + i_dim*n_dim*n_qpoint, ind);
+              }
+              // compute flux
+              for (int i_row = 0; i_row < row_size; ++i_row) {
+                flux(i_row, Eigen::all) = Pde::flux(row_r(i_row, Eigen::all), row_n(i_row, Eigen::all));
+              }
+              // fetch boundary data
+              bound_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
             }
             // differentiate and write to temporary storage
             Row_rw<Pde::n_update, row_size>::write_row(-derivative(flux, bound_f), time_rate[0], ind, 1.);
@@ -276,12 +212,16 @@ class Spatial
         // write update to interior
         for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
           double* curr_state = state + (Pde::curr_start + i_var)*n_qpoint;
+          double* ref_state = state + (Pde::ref_start + i_var)*n_qpoint;
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
             double det = 1;
             if constexpr (element_t::is_deformed) det = elem_det[i_qpoint];
-            curr_state[i_qpoint] += update*time_rate[i_var][i_qpoint]/d_pos*tss[i_qpoint]/det;
+            curr_state[i_qpoint] = update*time_rate[i_var][i_qpoint]/d_pos*tss[i_qpoint]/det
+                                   + curr*curr_state[i_qpoint] + ref*ref_state[i_qpoint];
           }
         }
+        // write updated state to face storage
+        if constexpr (!is_viscous) write_face(state, elem.faces);
       }
     }
   };
@@ -401,10 +341,16 @@ class Spatial
             for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
               face[i_side][(i_var + Pde::curr_start)*n_fqpoint + i_qpoint] = sign[i_side]*flux(i_var);
             }
+            if constexpr (is_viscous) {
+              for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
+                face[2 + i_side][i_var*n_fqpoint + i_qpoint] = .5*(state(i_var, 0) + state(i_var, 1));
+              }
+            }
           }
         }
         if constexpr (element_t::is_deformed) {
           perm.restore(); // restore data of face 1 to original order
+          if constexpr (is_viscous) Face_permutation<n_dim, row_size>(dir, face[3]).restore();
         }
         // write data to actual face storage on heap
         for (int i_side = 0; i_side < 2; ++i_side) {
@@ -412,6 +358,11 @@ class Spatial
           int offset = Pde::curr_start*n_fqpoint;
           for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
             f[offset + i_dof] = face[i_side][offset + i_dof];
+          }
+          if constexpr (is_viscous) {
+            for (int i_dof = 0; i_dof < Pde::n_var*n_fqpoint; ++i_dof) {
+              f[2*(n_dim + 2)*n_fqpoint + i_dof] = face[2 + i_side][i_dof];
+            }
           }
         }
         #pragma GCC diagnostic pop
