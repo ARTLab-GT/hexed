@@ -123,4 +123,4 @@ class Basis:
                 cancel = opt.x[0]
                 cfl = -objective(opt.x)*.95
             return cfl, cancel
-        return compute_coefs(advection), (max_cfl(diffusion, polynomial([])), 0)
+        return compute_coefs(advection), compute_coefs(diffusion)

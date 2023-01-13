@@ -179,30 +179,30 @@ class Spatial
         // compute residual
         for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
           for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
+            // fetch row data
+            auto row_r = Row_rw<Pde::n_var, row_size>::read_row(state, ind);
+            Mat<row_size, n_dim> row_n = Mat<row_size, 1>::Ones()*Mat<1, n_dim>::Unit(i_dim);
+            if constexpr (element_t::is_deformed) {
+              row_n = Row_rw<n_dim, row_size>::read_row(nrml + i_dim*n_dim*n_qpoint, ind);
+            }
+            // compute flux
             Mat<row_size, Pde::n_update> flux;
-            Mat<2, Pde::n_update> bound_f;
+            for (int i_row = 0; i_row < row_size; ++i_row) {
+              flux(i_row, Eigen::all) = Pde::flux(row_r(i_row, Eigen::all), row_n(i_row, Eigen::all));
+            }
+            // fetch boundary data
+            auto bound_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
             // add interior viscous flux if necessary
             if constexpr (is_viscous) {
-              flux = Row_rw<Pde::n_update, row_size>::read_row(visc_storage[i_dim][Pde::curr_start], ind);
-              bound_f = boundary*flux;
+              auto flux_visc = Row_rw<Pde::n_update, row_size>::read_row(visc_storage[i_dim][Pde::curr_start], ind);
+              flux += flux_visc;
+              Mat<2, Pde::n_update> bound_f_visc = boundary*flux_visc;
               for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
                 for (int is_positive : {0, 1}) {
-                  faces[ind.i_dim*2 + is_positive][(2*(n_dim + 2) + i_var)*ind.n_fqpoint + ind.i_face_qpoint()] = bound_f(is_positive, i_var);
+                  faces[ind.i_dim*2 + is_positive][(2*(n_dim + 2) + i_var)*ind.n_fqpoint + ind.i_face_qpoint()] = bound_f_visc(is_positive, i_var);
                 }
               }
-            } else {
-              // fetch row data
-              auto row_r = Row_rw<Pde::n_var, row_size>::read_row(state, ind);
-              Mat<row_size, n_dim> row_n = Mat<row_size, 1>::Ones()*Mat<1, n_dim>::Unit(i_dim);
-              if constexpr (element_t::is_deformed) {
-                row_n = Row_rw<n_dim, row_size>::read_row(nrml + i_dim*n_dim*n_qpoint, ind);
-              }
-              // compute flux
-              for (int i_row = 0; i_row < row_size; ++i_row) {
-                flux(i_row, Eigen::all) = Pde::flux(row_r(i_row, Eigen::all), row_n(i_row, Eigen::all));
-              }
-              // fetch boundary data
-              bound_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
+              bound_f += bound_f_visc;
             }
             // differentiate and write to temporary storage
             Row_rw<Pde::n_update, row_size>::write_row(-derivative(flux, bound_f), time_rate[0], ind, 1.);
