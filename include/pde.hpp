@@ -115,7 +115,7 @@ class Navier_stokes
   static constexpr int n_var = n_dim + 2;
   static constexpr int curr_start = 0;
   static constexpr int ref_start = n_var;
-  static constexpr int visc_start = n_dim + 2;
+  static constexpr int visc_start = 2*n_var;
   static constexpr int n_update = n_var;
   static constexpr double heat_rat = 1.4;
 
