@@ -69,6 +69,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
   }
   stopwatch.children.at("cartesian").children.emplace("reconcile LDG flux", unit);
   stopwatch.children.at("deformed" ).children.emplace("reconcile LDG flux", unit);
+  stopwatch.children.emplace("residual computation", "element*evaluation");
   // initialize advection state to 1
   auto& elements = acc_mesh.elements();
   const int nq = params.n_qpoint();
@@ -721,6 +722,7 @@ void Solver::update(double stability_ratio)
 Iteration_status Solver::iteration_status()
 {
   Iteration_status stat = status;
+  stopwatch.children.at("residual computation").stopwatch.start();
   Physical_update update;
   auto res = integral_field(Pow(update, 2));
   for (double& r : res) r /= stat.time_step*stat.time_step;
@@ -730,6 +732,8 @@ Iteration_status Solver::iteration_status()
   stat.mmtm_res = std::sqrt(stat.mmtm_res);
   stat.mass_res = std::sqrt(res[params.n_dim]);
   stat.ener_res = std::sqrt(res[params.n_dim + 1]);
+  stopwatch.children.at("residual computation").stopwatch.pause();
+  stopwatch.children.at("residual computation").work_units_completed += acc_mesh.elements().size();
   return stat;
 }
 
