@@ -16,7 +16,7 @@ namespace hexed
 
 // class to contain all the kernels in a scope
 // parameterized by the type of element (deformed/cartesian) and the PDE
-template <typename element_t, template<int> typename Pde_templ, bool is_viscous = false>
+template <typename element_t, template<int> typename Pde_templ>
 class Spatial
 {
   public:
@@ -98,7 +98,10 @@ class Spatial
 
     virtual void operator()(Sequence<element_t&>& elements)
     {
+      #pragma GCC diagnostic push
+      #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
       double cartesian_normal [n_dim][n_dim][n_qpoint/row_size];
+      #pragma GCC diagnostic pop
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
         for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
           for (int i_qpoint = 0; i_qpoint < n_qpoint/row_size; ++i_qpoint) {
@@ -117,11 +120,14 @@ class Spatial
         double* tss = elem.time_step_scale();
         double d_pos = elem.nominal_size();
         double time_rate [2][Pde::n_update][n_qpoint] {};
-        double visc_storage [n_dim][Pde::n_var][n_qpoint] {};
         double* av_coef = elem.art_visc_coef();
         double* nrml = nullptr;
         double* elem_det = nullptr;
+        #pragma GCC diagnostic push
+        #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
         std::array<double*, 6> face_nrml;
+        double visc_storage [n_dim][Pde::n_var][n_qpoint] {};
+        #pragma GCC diagnostic pop
         if constexpr (element_t::is_deformed) {
           elem_det = elem.jacobian_determinant();
           nrml = elem.reference_level_normals();
@@ -131,7 +137,7 @@ class Spatial
           }
         }
 
-        if constexpr (is_viscous) {
+        if constexpr (Pde::is_viscous) {
           // compute gradient
           constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
           std::array<double*, 6> visc_faces;
@@ -198,7 +204,7 @@ class Spatial
             // differentiate and write to temporary storage
             Row_rw<Pde::n_update, row_size>::write_row(-derivative(flux, bound_f), time_rate[0][0], ind, 1.);
             // compute viscous update
-            if constexpr (is_viscous) {
+            if constexpr (Pde::is_viscous) {
               flux = Row_rw<Pde::n_update, row_size>::read_row(visc_storage[i_dim][Pde::curr_start], ind);
               bound_f = boundary*flux;
               for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
@@ -215,12 +221,13 @@ class Spatial
         for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
           double* curr_state = state + (Pde::curr_start + i_var)*n_qpoint;
           double* ref_state = state + (Pde::ref_start + i_var)*n_qpoint;
-          double* visc_state = state + (Pde::visc_start + i_var)*n_qpoint;
+          double* visc_state = nullptr;
+          if constexpr (Pde::is_viscous) visc_state = state + (Pde::visc_start + i_var)*n_qpoint;
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
             double det = 1;
             if constexpr (element_t::is_deformed) det = elem_det[i_qpoint];
             double u = update_conv*time_rate[0][i_var][i_qpoint];
-            if constexpr (is_viscous) {
+            if constexpr (Pde::is_viscous) {
               u += update_diff*time_rate[1][i_var][i_qpoint];
               if (stage) u += (update_conv - update_diff)*visc_state[i_qpoint];
               else visc_state[i_qpoint] = time_rate[1][i_var][i_qpoint];
@@ -229,7 +236,7 @@ class Spatial
           }
         }
         // write updated state to face storage
-        if constexpr (!is_viscous) write_face(state, elem.faces);
+        if constexpr (!Pde::is_viscous) write_face(state, elem.faces);
       }
     }
   };
@@ -305,12 +312,13 @@ class Spatial
       #pragma omp parallel for
       for (int i_con = 0; i_con < connections.size(); ++i_con)
       {
-        #pragma GCC diagnostic push
-        #pragma GCC diagnostic ignored "-Wunused-but-set-variable" // otherwise `'face_nrml' set but not used` (not sure why)
         auto& con = connections[i_con];
         auto dir = con.direction();
         double face [4][(n_dim + 2)*n_fqpoint]; // copying face data to temporary stack storage improves efficiency
+        #pragma GCC diagnostic push
+        #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
         double face_nrml [n_dim*n_fqpoint]; // only set for deformed
+        #pragma GCC diagnostic pop
         int sign [2] {1, 1}; // records whether the normal vector on each side needs to be flipped to obey sign convention
         // fetch face data
         for (int i_side = 0; i_side < 2; ++i_side) {
@@ -353,7 +361,7 @@ class Spatial
             for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
               face[i_side][(i_var + Pde::curr_start)*n_fqpoint + i_qpoint] = sign[i_side]*flux(i_var);
             }
-            if constexpr (is_viscous) {
+            if constexpr (Pde::is_viscous) {
               for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
                 face[2 + i_side][i_var*n_fqpoint + i_qpoint] = .5*(state(i_var, 0) + state(i_var, 1));
               }
@@ -362,7 +370,7 @@ class Spatial
         }
         if constexpr (element_t::is_deformed) {
           perm.restore(); // restore data of face 1 to original order
-          if constexpr (is_viscous) Face_permutation<n_dim, row_size>(dir, face[3]).restore();
+          if constexpr (Pde::is_viscous) Face_permutation<n_dim, row_size>(dir, face[3]).restore();
         }
         // write data to actual face storage on heap
         for (int i_side = 0; i_side < 2; ++i_side) {
@@ -371,7 +379,7 @@ class Spatial
           for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
             f[offset + i_dof] = face[i_side][offset + i_dof];
           }
-          if constexpr (is_viscous) {
+          if constexpr (Pde::is_viscous) {
             for (int i_dof = 0; i_dof < Pde::n_var*n_fqpoint; ++i_dof) {
               f[2*(n_dim + 2)*n_fqpoint + i_dof] = face[2 + i_side][i_dof];
             }

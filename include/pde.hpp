@@ -43,10 +43,10 @@ class Euler
 {
   public:
   Euler() = delete;
+  static constexpr bool is_viscous = false;
   static constexpr int n_var = n_dim + 2;
   static constexpr int curr_start = 0;
   static constexpr int ref_start = n_var;
-  static constexpr int visc_start = 2*n_var;
   static constexpr int n_update = n_var;
   static constexpr double heat_rat = 1.4;
 
@@ -106,6 +106,23 @@ class Euler
   }
 };
 
+template <int n_dim>
+class Navier_stokes
+{
+  public:
+  Navier_stokes() = delete;
+  static constexpr bool is_viscous = true;
+  static constexpr int n_var = n_dim + 2;
+  static constexpr int curr_start = 0;
+  static constexpr int ref_start = n_var;
+  static constexpr int visc_start = n_dim + 2;
+  static constexpr int n_update = n_var;
+  static constexpr double heat_rat = 1.4;
+
+  static constexpr Mat<n_var> flux(Mat<n_var> state, Mat<n_dim> normal) {return Euler<n_dim>::flux(state, normal);}
+  static constexpr Mat<n_var> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) {return Euler<n_dim>::flux_num(face_state, normal);}
+};
+
 // represents the nonuniform linear advection equation
 // used in the smoothness-based artificial viscosity scheme
 template <int n_dim>
@@ -113,10 +130,10 @@ class Advection
 {
   public:
   Advection() = delete;
+  static constexpr bool is_viscous = false;
   static constexpr int n_var = n_dim + 1;
   static constexpr int curr_start = n_dim;
   static constexpr int ref_start = n_dim + 1;
-  static constexpr int visc_start = n_dim + 2;
   static constexpr int n_update = 1;
 
   static constexpr Mat<1> flux(Mat<n_var> state, Mat<n_dim> normal)
