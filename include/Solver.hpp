@@ -30,6 +30,8 @@ class Solver
   void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
   void update_art_visc(double dt, bool use_av_coef);
   void fix_admissibility(double stability_ratio);
+  void navier_stokes(double dt, int i_stage);
+  void euler(double dt, int i_stage);
 
   public:
   // tweakable parameters for the numerical scheme
