@@ -137,35 +137,39 @@ class Spatial
           }
         }
 
-        if constexpr (Pde::is_viscous) {
+        if constexpr (Pde::is_viscous)
+        {
           // compute gradient
           constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
           std::array<double*, 6> visc_faces;
           for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.faces[i_face] + 2*(n_dim + 2)*n_qpoint/row_size;
-          for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-            for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
-              // fetch row data
+          for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+          {
+            for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind)
+            {
+              // fetch state data
               auto row_r = Row_rw<Pde::n_var, row_size>::read_row(state, ind);
-              Mat<row_size, n_dim> row_n = Mat<row_size, 1>::Ones()*Mat<1, n_dim>::Unit(i_dim);
-              if constexpr (element_t::is_deformed) {
-                row_n = Row_rw<n_dim, row_size>::read_row(nrml + i_dim*n_dim*n_qpoint, ind);
-              }
-              // fetch face data
               auto bound_state = Row_rw<Pde::n_var, row_size>::read_bound(visc_faces, ind);
-              Mat<2, n_dim> bound_nrml = Mat<2, 1>::Ones()*Mat<1, n_dim>::Unit(i_dim);
-              if constexpr (element_t::is_deformed) bound_nrml  = Row_rw<n_dim, row_size>::read_bound(face_nrml, ind);
-              // differentiate and write to temporary storage
-              for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-                for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
-                  Mat<row_size, 1> row = row_n(Eigen::all, j_dim).cwiseProduct(row_r(Eigen::all, i_var));
-                  Mat<2, 1> bound = bound_nrml(Eigen::all, j_dim).cwiseProduct(bound_state(Eigen::all, i_var));
-                  Row_rw<1, row_size>::write_row(derivative(row, bound)/d_pos, visc_storage[j_dim][i_var], ind, 1.);
+              if constexpr (element_t::is_deformed) {
+                // fetch normal data
+                auto row_n = Row_rw<n_dim, row_size>::read_row(nrml + i_dim*n_dim*n_qpoint, ind);
+                auto bound_nrml = Row_rw<n_dim, row_size>::read_bound(face_nrml, ind);
+                // differentiate and write to temporary storage
+                for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+                  for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
+                    Mat<row_size, 1> row = row_n(Eigen::all, j_dim).cwiseProduct(row_r(Eigen::all, i_var));
+                    Mat<2, 1> bound = bound_nrml(Eigen::all, j_dim).cwiseProduct(bound_state(Eigen::all, i_var));
+                    Row_rw<1, row_size>::write_row(derivative(row, bound)/d_pos, visc_storage[j_dim][i_var], ind, 1.);
+                  }
                 }
+              } else {
+                Row_rw<Pde::n_var, row_size>::write_row(derivative(row_r, bound_state)/d_pos, visc_storage[i_dim][0], ind, 0);
               }
             }
           }
           // compute viscous flux from gradient
-          for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+          for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
+          {
             Mat<n_dim, Pde::n_var> qpoint_grad;
             Mat<n_dim, n_dim> qpoint_nrmls;
             qpoint_nrmls.setIdentity();
@@ -188,8 +192,10 @@ class Spatial
         }
 
         // compute residual
-        for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-          for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
+        for (int i_dim = 0; i_dim < n_dim; ++i_dim)
+        {
+          for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind)
+          {
             // compute convective update
             // fetch row data
             auto row_r = Row_rw<Pde::n_var, row_size>::read_row(state, ind);
@@ -221,7 +227,8 @@ class Spatial
         }
 
         // write update to interior
-        for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
+        for (int i_var = 0; i_var < Pde::n_update; ++i_var)
+        {
           double* curr_state = state + (Pde::curr_start + i_var)*n_qpoint;
           double* ref_state = state + (Pde::ref_start + i_var)*n_qpoint;
           double* visc_state = nullptr;
