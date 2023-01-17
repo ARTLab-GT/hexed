@@ -8,6 +8,7 @@
 #include "Iteration_status.hpp"
 #include "Stopwatch_tree.hpp"
 #include "config.hpp"
+#include "kernel_factory.hpp"
 #if HEXED_USE_OTTER
 #include <otter/plot.hpp>
 #include <otter/colormap.hpp>
@@ -32,6 +33,7 @@ class Solver
   void fix_admissibility(double stability_ratio);
   void navier_stokes(double dt, int i_stage);
   void euler(double dt, int i_stage);
+  std::unique_ptr<Kernel<Element&>> write_face;
 
   public:
   // tweakable parameters for the numerical scheme

@@ -45,7 +45,8 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
   stopwatch{"(element*iteration)"},
   use_art_visc{false},
   fix_admis{false},
-  av_rs{basis.row_size}
+  av_rs{basis.row_size},
+  write_face(kernel_factory<Spatial<Element, pde::Navier_stokes<false>::Pde>::Write_face>(params.n_dim, params.row_size, basis)) // note: for now, false and true are equivalent for `Write_face`
 {
   // setup categories for performance reporting
   stopwatch.children.emplace("initialize reference", stopwatch.work_unit_name);
@@ -259,7 +260,7 @@ void Solver::initialize(const Spacetime_func& func)
       }
     }
   }
-  (*kernel_factory<Spatial<Element, pde::Euler>::Write_face>(params.n_dim, params.row_size, basis))(elements);
+  (*write_face)(elements);
   (*kernel_factory<Prolong_refined>(params.n_dim, params.row_size, basis))(acc_mesh.refined_faces());
 }
 
@@ -327,7 +328,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
   // enforce CFL condition
   auto& sw_adv = stopwatch.children.at("set art visc").children.at("advection");
   sw_adv.stopwatch.start();
-  (*kernel_factory<Spatial<Element, pde::Euler>::Write_face>(nd, rs, basis))(elements);
+  (*write_face)(elements);
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
   double mcs_adv = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Advection(), 1, 1))(acc_mesh.cartesian().elements(), sw_adv.children.at("cartesian"), "max char speed"),
                             (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Advection(), 1, 1))(acc_mesh.deformed ().elements(), sw_adv.children.at("deformed" ), "max char speed"));
@@ -380,7 +381,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
           }
         }
         // evaluate advection operator
-        (*kernel_factory<Spatial<Element, pde::Advection>::Write_face>(nd, rs, basis))(elements);
+        (*write_face)(elements);
         (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
         sw_adv.children.at("setup").stopwatch.pause();
         double dt_scaled = dt_adv*std::abs(basis.node(i_node) - .5)*2;
@@ -478,7 +479,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
         state[nd*nq + i_qpoint] = forcing[(real_step + 1)*nq + i_qpoint];
       }
     }
-    (*kernel_factory<Spatial<Element, pde::Euler>::Write_face>(nd, rs, basis))(elements);
+    (*write_face)(elements);
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
     // set up multistage scheme
     double linear = dt_diff;
@@ -593,7 +594,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
     }
   }
   // update the face state
-  (*kernel_factory<Spatial<Element, pde::Euler>::Write_face>(nd, rs, basis))(elements);
+  (*write_face)(elements);
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
   stopwatch.children.at("set art visc").stopwatch.pause();
   stopwatch.children.at("set art visc").work_units_completed += elements.size();
@@ -851,7 +852,7 @@ std::vector<double> Solver::integral_surface(const Surface_func& integrand, int 
   Eigen::MatrixXd boundary = basis.boundary();
   Eigen::VectorXd weights = custom_math::pow_outer(basis.node_weights(), params.n_dim - 1);
   // write the state to the faces so that the BCs can access it
-  (*kernel_factory<Spatial<Element, pde::Euler>::Write_face>(nd, params.row_size, basis))(acc_mesh.elements());
+  (*write_face)(acc_mesh.elements());
   // compute the integral
   std::vector<double> integral (n_int, 0.);
   auto& bc_cons {acc_mesh.boundary_connections()};
@@ -973,7 +974,7 @@ void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample
   Tecplot_file file {name, nd, var_names, status.flow_time};
   Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
   // write the state to the faces so that the BCs can access it
-  (*kernel_factory<Spatial<Element, pde::Euler>::Write_face>(nd, params.row_size, basis))(acc_mesh.elements());
+  (*write_face)(acc_mesh.elements());
   // iterate through boundary connections and visualize a zone for each
   auto& bc_cons {acc_mesh.boundary_connections()};
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con)
