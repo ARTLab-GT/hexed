@@ -242,7 +242,8 @@ class Spatial
               if (stage) u += (update_conv - update_diff)*visc_state[i_qpoint];
               else visc_state[i_qpoint] = time_rate[1][i_var][i_qpoint];
             }
-            curr_state[i_qpoint] = u/d_pos*tss[i_qpoint]/det + curr*curr_state[i_qpoint] + ref*ref_state[i_qpoint];
+            u *= custom_math::pow(tss[i_qpoint], Pde::tss_pow)/det/d_pos;
+            curr_state[i_qpoint] = u + curr*curr_state[i_qpoint] + ref*ref_state[i_qpoint];
           }
         }
         // write updated state to face storage

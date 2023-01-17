@@ -38,6 +38,26 @@ void Solver::share_vertex_data(Element::vertex_value_access access_func, Vertex:
   for (int i_match = 0; i_match < matchers.size(); ++i_match) matchers[i_match].match(access_func);
 }
 
+void Solver::apply_state_bcs()
+{
+  auto& bc_cons {acc_mesh.boundary_connections()};
+  #pragma omp parallel for
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+    acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
+  }
+}
+
+void Solver::apply_flux_bcs()
+{
+  auto& bc_cons {acc_mesh.boundary_connections()};
+  #pragma omp parallel for
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+    acc_mesh.boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
+  }
+}
+
 Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
   params{3, n_dim + 2, n_dim, row_size},
   acc_mesh{params, root_mesh_size},
@@ -674,14 +694,9 @@ void Solver::update(double stability_ratio)
 
   // compute inviscid update
   for (int i = 0; i < 2; ++i) {
-    auto& bc_cons {acc_mesh.boundary_connections()};
-    #pragma omp parallel for
-    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-      int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-      acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
-    }
-    if (use_art_visc) navier_stokes(dt, i);
-    else euler(dt, i);
+    apply_state_bcs();
+    if (use_art_visc) compute_viscous(dt, i);
+    else compute_inviscid(dt, i);
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
     fix_admissibility(fix_admis_stab_rat*stability_ratio);
   }
@@ -719,7 +734,6 @@ void Solver::update_art_visc(double dt, bool use_av_coef)
 {
   const int nd = params.n_dim;
   const int rs = params.row_size;
-  auto& bc_cons {acc_mesh.boundary_connections()};
   double linear = dt;
   double quadratic = basis.cancellation_diffusive()/basis.max_cfl_diffusive()*dt*dt;
   std::array<double, 2> step;
@@ -727,20 +741,14 @@ void Solver::update_art_visc(double dt, bool use_av_coef)
   step[0] = quadratic/step[1];
   for (double s : step)
   {
-    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-      int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-      acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
-    }
+    apply_state_bcs();
     (*kernel_factory<Neighbor_avg_cartesian>(nd, rs       ))(acc_mesh.cartesian().face_connections());
     (*kernel_factory<Neighbor_avg_deformed >(nd, rs, false))(acc_mesh.deformed ().face_connections());
     (*kernel_factory<Restrict_refined>(nd, rs, basis, false))(acc_mesh.refined_faces());
     (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, s, use_av_coef, false, 2 - use_av_coef))(acc_mesh.cartesian().elements());
     (*kernel_factory<Local_av0_deformed >(nd, rs, basis, s, use_av_coef, false, 2 - use_av_coef))(acc_mesh.deformed ().elements());
     (*kernel_factory<Prolong_refined>(nd, rs, basis, true))(acc_mesh.refined_faces());
-    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-      int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-      acc_mesh.boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
-    }
+    apply_flux_bcs();
     (*kernel_factory<Neighbor_avg_cartesian>(nd, rs      ))(acc_mesh.cartesian().face_connections());
     (*kernel_factory<Neighbor_avg_deformed >(nd, rs, true))(acc_mesh.deformed ().face_connections());
     (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());

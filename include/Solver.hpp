@@ -31,8 +31,11 @@ class Solver
   void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
   void update_art_visc(double dt, bool use_av_coef);
   void fix_admissibility(double stability_ratio);
-  void navier_stokes(double dt, int i_stage);
-  void euler(double dt, int i_stage);
+  void apply_state_bcs();
+  void apply_flux_bcs();
+  void compute_inviscid(double dt, int i_stage);
+  void compute_viscous(double dt, int i_stage);
+  void fta(double dt, int i_stage);
   std::unique_ptr<Kernel<Element&>> write_face;
 
   public:

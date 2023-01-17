@@ -57,6 +57,7 @@ class Navier_stokes
     static constexpr int visc_start = 2*n_var;
     static constexpr int n_update = n_var;
     static constexpr double heat_rat = 1.4;
+    static constexpr int tss_pow = 1;
 
     static constexpr double pressure(Mat<n_var> state)
     {
@@ -112,6 +113,7 @@ class Navier_stokes
       wave_speed(1) = std::max(vol_flux(0) + sound_speed(0), vol_flux(1) + sound_speed(1));
       return hll(wave_speed, face_flux, face_state);
     }
+
     static constexpr Mat<n_dim, n_update> flux_visc(Mat<n_dim, n_var> grad, Mat<n_dim, n_dim> nrmls, double av_coef)
     {
       return -av_coef*nrmls*grad;
@@ -131,6 +133,7 @@ class Advection
   static constexpr int curr_start = n_dim;
   static constexpr int ref_start = n_dim + 1;
   static constexpr int n_update = 1;
+  static constexpr int tss_pow = 1;
 
   static constexpr Mat<1> flux(Mat<n_var> state, Mat<n_dim> normal)
   {
@@ -152,6 +155,27 @@ class Advection
       wave_speed(i_side) = std::min(vol_flux(0) + sign*.01, vol_flux(1) + sign*.01);
     }
     return hll(wave_speed, face_flux, face_state);
+  }
+};
+
+template <int n_dim>
+class Fix_therm_admis
+{
+  public:
+  Fix_therm_admis() = delete;
+  static constexpr bool is_viscous = true;
+  static constexpr int n_var = n_dim + 2;
+  static constexpr int curr_start = 0;
+  static constexpr int ref_start = n_var;
+  static constexpr int visc_start = 2*n_var;
+  static constexpr int n_update = n_var;
+  static constexpr int tss_pow = 2;
+
+  static constexpr Mat<n_update> flux(Mat<n_var> state, Mat<n_dim> normal) {return Mat<n_update>::Zero();}
+  static constexpr Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) {return Mat<n_update>::Zero();}
+  static constexpr Mat<n_dim, n_update> flux_visc(Mat<n_dim, n_var> grad, Mat<n_dim, n_dim> nrmls, double av_coef)
+  {
+    return -nrmls*grad;
   }
 };
 
