@@ -165,20 +165,23 @@ class Spatial
             }
           }
           // compute viscous flux from gradient
-          for (int i_var = Pde::curr_start; i_var < Pde::n_var; ++i_var) {
-            for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-              double temp_flux [n_dim] {};
-              for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-                for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-                  double n = (i_dim == j_dim);
-                  if constexpr (element_t::is_deformed) n = nrml[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
-                  temp_flux[i_dim] += n*visc_storage[j_dim][i_var][i_qpoint];
+          for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+            Mat<n_dim, Pde::n_var> qpoint_grad;
+            Mat<n_dim, n_dim> qpoint_nrmls;
+            qpoint_nrmls.setIdentity();
+            for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+              for (int i_var = 0; i_var < Pde::n_var; ++i_var) qpoint_grad(i_dim, i_var) = visc_storage[i_dim][i_var][i_qpoint];
+              for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+                if constexpr (element_t::is_deformed) {
+                  qpoint_nrmls(i_dim, j_dim) = nrml[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
                 }
               }
-              double scalar = -av_coef[i_qpoint];
-              if constexpr (element_t::is_deformed) scalar /= elem_det[i_qpoint];
-              for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-                visc_storage[i_dim][i_var][i_qpoint] = temp_flux[i_dim]*scalar;
+            }
+            if constexpr (element_t::is_deformed) qpoint_grad /= elem_det[i_qpoint];
+            auto flux = Pde::flux_visc(qpoint_grad, qpoint_nrmls, av_coef[i_qpoint]);
+            for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+              for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
+                visc_storage[i_dim][Pde::curr_start + i_var][i_qpoint] = flux(i_dim, i_var);
               }
             }
           }

@@ -59,7 +59,7 @@ class Euler
     return (heat_rat - 1.)*((state(n_dim + 1)) - 0.5*mmtm_sq/(state(n_dim)));
   }
 
-  static constexpr Mat<n_var> flux(Mat<n_var> state, Mat<n_dim> normal)
+  static constexpr Mat<n_update> flux(Mat<n_var> state, Mat<n_dim> normal)
   {
     Mat<n_var> f;
     f(n_dim) = 0.;
@@ -76,7 +76,7 @@ class Euler
     return f;
   }
 
-  static constexpr Mat<n_var> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal)
+  static constexpr Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal)
   {
     Mat<n_var, 2> face_flux;
     Mat<2> vol_flux;
@@ -119,8 +119,12 @@ class Navier_stokes
   static constexpr int n_update = n_var;
   static constexpr double heat_rat = 1.4;
 
-  static constexpr Mat<n_var> flux(Mat<n_var> state, Mat<n_dim> normal) {return Euler<n_dim>::flux(state, normal);}
-  static constexpr Mat<n_var> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) {return Euler<n_dim>::flux_num(face_state, normal);}
+  static constexpr Mat<n_update> flux(Mat<n_var> state, Mat<n_dim> normal) {return Euler<n_dim>::flux(state, normal);}
+  static constexpr Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) {return Euler<n_dim>::flux_num(face_state, normal);}
+  static constexpr Mat<n_dim, n_update> flux_visc(Mat<n_dim, n_var> grad, Mat<n_dim, n_dim> nrmls, double av_coef)
+  {
+    return -av_coef*nrmls*grad;
+  }
 };
 
 // represents the nonuniform linear advection equation
