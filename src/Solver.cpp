@@ -79,17 +79,18 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
   stopwatch.children.at("set art visc").children.at("advection").children.emplace("update", unit);
   stopwatch.children.at("set art visc").children.at("advection").children.emplace("setup", stopwatch.work_unit_name);
   stopwatch.children.at("set art visc").children.at("advection").children.emplace("BCs", unit);
-  for (auto* sw : {&stopwatch, &stopwatch.children.at("set art visc").children.at("advection")}) {
-    for (std::string type : {"cartesian", "deformed"}) {
+  for (std::string type : {"cartesian", "deformed"}) {
+    for (auto* sw : {&stopwatch, &stopwatch.children.at("set art visc").children.at("advection"), &stopwatch.children.at("fix admis.")}) {
       sw->children.emplace(type, stopwatch.work_unit_name);
       auto& children = sw->children.at(type).children;
       children.emplace("max char speed", stopwatch.work_unit_name);
       children.emplace("neighbor", "(connection*(time integration stage))");
       children.emplace("local", unit);
     }
+    for (auto* sw : {&stopwatch, &stopwatch.children.at("fix admis.")}) {
+      sw->children.at(type).children.emplace("reconcile LDG flux", unit);
+    }
   }
-  stopwatch.children.at("cartesian").children.emplace("reconcile LDG flux", unit);
-  stopwatch.children.at("deformed" ).children.emplace("reconcile LDG flux", unit);
   stopwatch.children.emplace("residual computation", "element*evaluation");
   // initialize advection state to 1
   auto& elements = acc_mesh.elements();
@@ -415,12 +416,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
           }
           sw_adv.children.at("BCs").stopwatch.pause();
           sw_adv.children.at("BCs").work_units_completed += acc_mesh.elements().size();
-          (*kernel_factory<Spatial<Element         , pde::Advection>::Neighbor>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_adv.children.at("cartesian"), "neighbor");
-          (*kernel_factory<Spatial<Deformed_element, pde::Advection>::Neighbor>(nd, rs))(acc_mesh.deformed ().face_connections(), sw_adv.children.at("deformed" ), "neighbor");
-          (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-          (*kernel_factory<Spatial<Element         , pde::Advection>::Local>(nd, rs, basis, dt_scaled, i))(acc_mesh.cartesian().elements(), sw_adv.children.at("cartesian"), "local");
-          (*kernel_factory<Spatial<Deformed_element, pde::Advection>::Local>(nd, rs, basis, dt_scaled, i))(acc_mesh.deformed ().elements(), sw_adv.children.at("deformed" ), "local");
-          (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+          compute_advection(dt_scaled, i);
         }
         sw_adv.children.at("cartesian").work_units_completed += acc_mesh.cartesian().elements().size();
         sw_adv.children.at("deformed" ).work_units_completed += acc_mesh.deformed ().elements().size();
@@ -697,7 +693,6 @@ void Solver::update(double stability_ratio)
     apply_state_bcs();
     if (use_art_visc) compute_viscous(dt, i);
     else compute_inviscid(dt, i);
-    (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict"));
     fix_admissibility(fix_admis_stab_rat*stability_ratio);
   }
 
@@ -728,34 +723,6 @@ Iteration_status Solver::iteration_status()
   stopwatch.children.at("residual computation").stopwatch.pause();
   stopwatch.children.at("residual computation").work_units_completed += acc_mesh.elements().size();
   return stat;
-}
-
-void Solver::update_art_visc(double dt, bool use_av_coef)
-{
-  const int nd = params.n_dim;
-  const int rs = params.row_size;
-  double linear = dt;
-  double quadratic = basis.cancellation_diffusive()/basis.max_cfl_diffusive()*dt*dt;
-  std::array<double, 2> step;
-  step[1] = (linear + std::sqrt(linear*linear - 4*quadratic))/2.;
-  step[0] = quadratic/step[1];
-  for (double s : step)
-  {
-    apply_state_bcs();
-    (*kernel_factory<Neighbor_avg_cartesian>(nd, rs       ))(acc_mesh.cartesian().face_connections());
-    (*kernel_factory<Neighbor_avg_deformed >(nd, rs, false))(acc_mesh.deformed ().face_connections());
-    (*kernel_factory<Restrict_refined>(nd, rs, basis, false))(acc_mesh.refined_faces());
-    (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, s, use_av_coef, false, 2 - use_av_coef))(acc_mesh.cartesian().elements());
-    (*kernel_factory<Local_av0_deformed >(nd, rs, basis, s, use_av_coef, false, 2 - use_av_coef))(acc_mesh.deformed ().elements());
-    (*kernel_factory<Prolong_refined>(nd, rs, basis, true))(acc_mesh.refined_faces());
-    apply_flux_bcs();
-    (*kernel_factory<Neighbor_avg_cartesian>(nd, rs      ))(acc_mesh.cartesian().face_connections());
-    (*kernel_factory<Neighbor_avg_deformed >(nd, rs, true))(acc_mesh.deformed ().face_connections());
-    (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-    (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, s, use_av_coef, false, 2 - use_av_coef))(acc_mesh.cartesian().elements());
-    (*kernel_factory<Local_av1_deformed >(nd, rs, basis, s, use_av_coef, false, 2 - use_av_coef))(acc_mesh.deformed ().elements());
-    (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-  }
 }
 
 void Solver::fix_admissibility(double stability_ratio)
@@ -806,7 +773,15 @@ void Solver::fix_admissibility(double stability_ratio)
       double mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Unit(), 2, 2))(acc_mesh.cartesian().elements()),
                                  (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Unit(), 2, 2))(acc_mesh.deformed ().elements()));
       double dt = stability_ratio/params.n_dim/(mcs_diff/basis.max_cfl_diffusive());
-      update_art_visc(dt, false);
+      double linear = dt;
+      double quadratic = basis.cancellation_diffusive()/basis.max_cfl_diffusive()*dt*dt;
+      std::array<double, 2> step;
+      step[1] = (linear + std::sqrt(linear*linear - 4*quadratic))/2.;
+      step[0] = quadratic/step[1];
+      for (double s : step) {
+        apply_state_bcs();
+        compute_fta(s, 0);
+      }
     }
   }
   status.fix_admis_iters += iter;

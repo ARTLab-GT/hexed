@@ -2,6 +2,7 @@
 #include <Spatial.hpp>
 #include <pde.hpp>
 #include <Restrict_refined.hpp>
+#include <Prolong_refined.hpp>
 
 namespace hexed
 {
@@ -16,10 +17,16 @@ namespace hexed
   (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict")); \
   (*kernel_factory<Spatial<Element         , Pde_templ>::Local>(nd, rs, basis, dt, i_stage))(acc_mesh.cartesian().elements(), sw_car, "local"); \
   (*kernel_factory<Spatial<Deformed_element, Pde_templ>::Local>(nd, rs, basis, dt, i_stage))(acc_mesh.deformed ().elements(), sw_def, "local"); \
+  (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict")); \
 
 void Solver::compute_inviscid(double dt, int i_stage)
 {
   COMPUTE_CONVECTION(pde::Navier_stokes<false>::Pde, stopwatch)
+}
+
+void Solver::compute_advection(double dt, int i_stage)
+{
+  COMPUTE_CONVECTION(pde::Advection, stopwatch.children.at("set art visc").children.at("advection"))
 }
 
 #undef COMPUTE_CONVECTION

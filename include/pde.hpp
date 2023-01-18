@@ -51,6 +51,7 @@ class Navier_stokes
     public:
     Pde() = delete;
     static constexpr bool is_viscous = artificial_visc;
+    static constexpr bool has_convection = true;
     static constexpr int n_var = n_dim + 2;
     static constexpr int curr_start = 0;
     static constexpr int ref_start = n_var;
@@ -129,6 +130,7 @@ class Advection
   public:
   Advection() = delete;
   static constexpr bool is_viscous = false;
+  static constexpr bool has_convection = true;
   static constexpr int n_var = n_dim + 1;
   static constexpr int curr_start = n_dim;
   static constexpr int ref_start = n_dim + 1;
@@ -164,6 +166,7 @@ class Fix_therm_admis
   public:
   Fix_therm_admis() = delete;
   static constexpr bool is_viscous = true;
+  static constexpr bool has_convection = false;
   static constexpr int n_var = n_dim + 2;
   static constexpr int curr_start = 0;
   static constexpr int ref_start = n_var;
@@ -171,7 +174,6 @@ class Fix_therm_admis
   static constexpr int n_update = n_var;
   static constexpr int tss_pow = 2;
 
-  static constexpr Mat<n_update> flux(Mat<n_var> state, Mat<n_dim> normal) {return Mat<n_update>::Zero();}
   static constexpr Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) {return Mat<n_update>::Zero();}
   static constexpr Mat<n_dim, n_update> flux_visc(Mat<n_dim, n_var> grad, Mat<n_dim, n_dim> nrmls, double av_coef)
   {

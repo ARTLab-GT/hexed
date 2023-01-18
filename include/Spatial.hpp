@@ -94,7 +94,9 @@ class Spatial
       ref{stage ? update_conv/dt : 0},
       curr{1 - ref},
       heat_rat{heat_ratio}
-    {}
+    {
+      HEXED_ASSERT(Pde::has_convection || !which_stage, "for pure diffusion use alternating time steps");
+    }
 
     virtual void operator()(Sequence<element_t&>& elements)
     {
@@ -197,21 +199,24 @@ class Spatial
           for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind)
           {
             // compute convective update
-            // fetch row data
-            auto row_r = Row_rw<Pde::n_var, row_size>::read_row(state, ind);
-            Mat<row_size, n_dim> row_n = Mat<row_size, 1>::Ones()*Mat<1, n_dim>::Unit(i_dim);
-            if constexpr (element_t::is_deformed) {
-              row_n = Row_rw<n_dim, row_size>::read_row(nrml + i_dim*n_dim*n_qpoint, ind);
-            }
-            // compute flux
             Mat<row_size, Pde::n_update> flux;
-            for (int i_row = 0; i_row < row_size; ++i_row) {
-              flux(i_row, Eigen::all) = Pde::flux(row_r(i_row, Eigen::all), row_n(i_row, Eigen::all));
+            Mat<2, Pde::n_update> bound_f;
+            if constexpr (Pde::has_convection) {
+              // fetch row data
+              auto row_r = Row_rw<Pde::n_var, row_size>::read_row(state, ind);
+              Mat<row_size, n_dim> row_n = Mat<row_size, 1>::Ones()*Mat<1, n_dim>::Unit(i_dim);
+              if constexpr (element_t::is_deformed) {
+                row_n = Row_rw<n_dim, row_size>::read_row(nrml + i_dim*n_dim*n_qpoint, ind);
+              }
+              // compute flux
+              for (int i_row = 0; i_row < row_size; ++i_row) {
+                flux(i_row, Eigen::all) = Pde::flux(row_r(i_row, Eigen::all), row_n(i_row, Eigen::all));
+              }
+              // fetch boundary data
+              bound_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
+              // differentiate and write to temporary storage
+              Row_rw<Pde::n_update, row_size>::write_row(-derivative(flux, bound_f), time_rate[0][0], ind, 1.);
             }
-            // fetch boundary data
-            auto bound_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
-            // differentiate and write to temporary storage
-            Row_rw<Pde::n_update, row_size>::write_row(-derivative(flux, bound_f), time_rate[0][0], ind, 1.);
             // compute viscous update
             if constexpr (Pde::is_viscous) {
               flux = Row_rw<Pde::n_update, row_size>::read_row(visc_storage[i_dim][Pde::curr_start], ind);
@@ -236,14 +241,18 @@ class Spatial
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
             double det = 1;
             if constexpr (element_t::is_deformed) det = elem_det[i_qpoint];
-            double u = update_conv*time_rate[0][i_var][i_qpoint];
-            if constexpr (Pde::is_viscous) {
-              u += update_diff*time_rate[1][i_var][i_qpoint];
-              if (stage) u += (update_conv - update_diff)*visc_state[i_qpoint];
-              else visc_state[i_qpoint] = time_rate[1][i_var][i_qpoint];
+            if constexpr (Pde::has_convection) {
+              double u = update_conv*time_rate[0][i_var][i_qpoint];
+              if constexpr (Pde::is_viscous) {
+                u += update_diff*time_rate[1][i_var][i_qpoint];
+                if (stage) u += (update_conv - update_diff)*visc_state[i_qpoint];
+                else visc_state[i_qpoint] = time_rate[1][i_var][i_qpoint];
+              }
+              u *= custom_math::pow(tss[i_qpoint], Pde::tss_pow)/det/d_pos;
+              curr_state[i_qpoint] = u + curr*curr_state[i_qpoint] + ref*ref_state[i_qpoint];
+            } else {
+              curr_state[i_qpoint] += update_diff*time_rate[1][i_var][i_qpoint]*custom_math::pow(tss[i_qpoint], Pde::tss_pow)/det/d_pos;
             }
-            u *= custom_math::pow(tss[i_qpoint], Pde::tss_pow)/det/d_pos;
-            curr_state[i_qpoint] = u + curr*curr_state[i_qpoint] + ref*ref_state[i_qpoint];
           }
         }
         // write updated state to face storage
@@ -268,7 +277,9 @@ class Spatial
       write_face{basis},
       stage{which_stage},
       update{stage ? dt*basis.cancellation_diffusive()/basis.max_cfl_diffusive() : dt}
-    {}
+    {
+      HEXED_ASSERT(Pde::has_convection || !which_stage, "for pure diffusion use alternating time steps");
+    }
 
     virtual void operator()(Sequence<element_t&>& elements)
     {
@@ -299,8 +310,8 @@ class Spatial
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
             double det = 1;
             if constexpr (element_t::is_deformed) det = elem_det[i_qpoint];
-            curr_state[i_qpoint] += update*time_rate[i_var][i_qpoint]/d_pos*tss[i_qpoint]/det;
-            if (!stage) visc_state[i_qpoint] += time_rate[i_var][i_qpoint];
+            curr_state[i_qpoint] += update*time_rate[i_var][i_qpoint]/d_pos*custom_math::pow(tss[i_qpoint], Pde::tss_pow)/det;
+            if constexpr (Pde::has_convection) if (!stage) visc_state[i_qpoint] += time_rate[i_var][i_qpoint];
           }
         }
         write_face(state, elem.faces);
