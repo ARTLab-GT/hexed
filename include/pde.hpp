@@ -161,6 +161,27 @@ class Advection
 };
 
 template <int n_dim>
+class Smooth_art_visc
+{
+  public:
+  Smooth_art_visc() = delete;
+  static constexpr bool is_viscous = true;
+  static constexpr bool has_convection = false;
+  static constexpr int n_var = 1;
+  static constexpr int curr_start = 0;
+  static constexpr int ref_start = 1;
+  static constexpr int visc_start = 2;
+  static constexpr int n_update = 1;
+  static constexpr int tss_pow = 2;
+
+  static constexpr Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) {return Mat<n_update>::Zero();}
+  static constexpr Mat<n_dim, n_update> flux_visc(Mat<n_dim, n_var> grad, Mat<n_dim, n_dim> nrmls, double av_coef)
+  {
+    return -nrmls*grad;
+  }
+};
+
+template <int n_dim>
 class Fix_therm_admis
 {
   public:

@@ -79,15 +79,17 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
   stopwatch.children.at("set art visc").children.at("advection").children.emplace("update", unit);
   stopwatch.children.at("set art visc").children.at("advection").children.emplace("setup", stopwatch.work_unit_name);
   stopwatch.children.at("set art visc").children.at("advection").children.emplace("BCs", unit);
+  stopwatch.children.at("set art visc").children.emplace("diffusion", stopwatch.work_unit_name);
   for (std::string type : {"cartesian", "deformed"}) {
-    for (auto* sw : {&stopwatch, &stopwatch.children.at("set art visc").children.at("advection"), &stopwatch.children.at("fix admis.")}) {
+    for (auto* sw : {&stopwatch, &stopwatch.children.at("set art visc").children.at("advection"),
+                     &stopwatch.children.at("set art visc").children.at("diffusion"), &stopwatch.children.at("fix admis.")}) {
       sw->children.emplace(type, stopwatch.work_unit_name);
       auto& children = sw->children.at(type).children;
       children.emplace("max char speed", stopwatch.work_unit_name);
       children.emplace("neighbor", "(connection*(time integration stage))");
       children.emplace("local", unit);
     }
-    for (auto* sw : {&stopwatch, &stopwatch.children.at("fix admis.")}) {
+    for (auto* sw : {&stopwatch, &stopwatch.children.at("fix admis."), &stopwatch.children.at("set art visc").children.at("diffusion")}) {
       sw->children.at(type).children.emplace("reconcile LDG flux", unit);
     }
   }
@@ -492,7 +494,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
       double* state = elements[i_elem].stage(0);
       double* forcing = elements[i_elem].art_visc_forcing();
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        state[nd*nq + i_qpoint] = forcing[(real_step + 1)*nq + i_qpoint];
+        state[i_qpoint] = forcing[(real_step + 1)*nq + i_qpoint];
       }
     }
     (*write_face)(elements);
@@ -514,7 +516,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
         double* state = elements[i_elem].stage(0);
         double* forcing = elements[i_elem].art_visc_forcing();
         for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-          forcing[(real_step + 1)*nq + i_qpoint] = state[nd*nq + i_qpoint];
+          forcing[(real_step + 1)*nq + i_qpoint] = state[i_qpoint];
         }
       }
       for (double s : step)
@@ -526,7 +528,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
           double* forcing = elements[i_elem].art_visc_forcing();
           double* tss = elements[i_elem].time_step_scale();
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-            state[(nd + 1)*nq + i_qpoint] = s*(forcing[real_step*nq + i_qpoint] - state[nd*nq + i_qpoint])/diff_time*tss[i_qpoint]*tss[i_qpoint];
+            state[nq + i_qpoint] = s*(forcing[real_step*nq + i_qpoint] - state[i_qpoint])/diff_time*tss[i_qpoint]*tss[i_qpoint];
           }
         }
         // apply value boundary condition (or lack thereof, in this case)
@@ -534,37 +536,40 @@ void Solver::set_art_visc_smoothness(double advect_length)
         for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
           double* in_f = bc_cons[i_con].inside_face();
           double* gh_f = bc_cons[i_con].ghost_face();
-          for (int i_dof = 0; i_dof < (nd + 2)*nq/rs; ++i_dof) {
+          for (int i_dof = 0; i_dof < nq/rs; ++i_dof) {
             gh_f[i_dof] = in_f[i_dof];
           }
         }
+        auto& sw_car = stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian");
+        auto& sw_def = stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed");
         // perform first pass of LDG scheme
-        (*kernel_factory<Neighbor_avg_cartesian>(nd, rs       ))(acc_mesh.cartesian().face_connections());
-        (*kernel_factory<Neighbor_avg_deformed >(nd, rs, false))(acc_mesh.deformed ().face_connections());
-        (*kernel_factory<Restrict_refined>(nd, rs, basis, false))(acc_mesh.refined_faces());
-        (*kernel_factory<Local_av0_cartesian>(nd, rs, basis, s, false, true, 2))(acc_mesh.cartesian().elements());
-        (*kernel_factory<Local_av0_deformed >(nd, rs, basis, s, false, true, 2))(acc_mesh.deformed ().elements());
-        (*kernel_factory<Prolong_refined>(nd, rs, basis, true))(acc_mesh.refined_faces());
+        (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Neighbor>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor"); \
+        (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Neighbor>(nd, rs))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor"); \
+        (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict")); \
+        (*kernel_factory<Restrict_refined>(nd, rs, basis, false, true))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict")); \
+        (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Local>(nd, rs, basis, s, 0))(acc_mesh.cartesian().elements(), sw_car, "local"); \
+        (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Local>(nd, rs, basis, s, 0))(acc_mesh.deformed ().elements(), sw_def, "local"); \
+        (*kernel_factory<Prolong_refined>(nd, rs, basis, true, true))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict")); \
         // apply flux boundary condition (flux = 0)
         #pragma omp parallel for
         for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-          double* in_f = bc_cons[i_con].inside_face() + nd*nq/rs;
-          double* gh_f = bc_cons[i_con].ghost_face() + nd*nq/rs;
+          double* in_f = bc_cons[i_con].inside_face() + 2*(nd + 2)*nq/rs;
+          double* gh_f = bc_cons[i_con].ghost_face()  + 2*(nd + 2)*nq/rs;
           for (int i_qpoint = 0; i_qpoint < nq/rs; ++i_qpoint) gh_f[i_qpoint] = -in_f[i_qpoint];
         }
         // perform second pass of LDG scheme
-        (*kernel_factory<Neighbor_avg_cartesian>(nd, rs      ))(acc_mesh.cartesian().face_connections());
-        (*kernel_factory<Neighbor_avg_deformed >(nd, rs, true))(acc_mesh.deformed ().face_connections());
-        (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-        (*kernel_factory<Local_av1_cartesian>(nd, rs, basis, s, false, true, 2))(acc_mesh.cartesian().elements());
-        (*kernel_factory<Local_av1_deformed >(nd, rs, basis, s, false, true, 2))(acc_mesh.deformed ().elements());
-        (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+        (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Neighbor_reconcile>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor"); \
+        (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Neighbor_reconcile>(nd, rs))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor"); \
+        (*kernel_factory<Restrict_refined>(nd, rs, basis, true, true))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict")); \
+        (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Reconcile_ldg_flux>(nd, rs, basis, s, 0))(acc_mesh.cartesian().elements(), sw_car, "reconcile LDG flux"); \
+        (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Reconcile_ldg_flux>(nd, rs, basis, s, 0))(acc_mesh.deformed ().elements(), sw_def, "reconcile LDG flux"); \
+        (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict")); \
         // update state
         #pragma omp parallel for
         for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
           double* state = elements[i_elem].stage(0);
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-            state[nd*nq + i_qpoint] += state[(nd + 1)*nq + i_qpoint];
+            state[i_qpoint] += state[nq + i_qpoint];
           }
         }
       }
@@ -576,11 +581,11 @@ void Solver::set_art_visc_smoothness(double advect_length)
       double* forcing = elements[i_elem].art_visc_forcing();
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
         // update residual
-        double d = forcing[(real_step + 1)*nq + i_qpoint] - state[nd*nq + i_qpoint];
+        double d = forcing[(real_step + 1)*nq + i_qpoint] - state[i_qpoint];
         diff += d*d/dt_diff/dt_diff;
         ++n_avg;
         // update forcing
-        forcing[(real_step + 1)*nq + i_qpoint] = state[nd*nq + i_qpoint];
+        forcing[(real_step + 1)*nq + i_qpoint] = state[i_qpoint];
       }
     }
     status.diff_res += diff/n_avg;

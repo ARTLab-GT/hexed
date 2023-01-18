@@ -36,6 +36,7 @@ class Solver
   void compute_viscous(double dt, int i_stage);
   void compute_fta(double dt, int i_stage);
   void compute_advection(double dt, int i_stage);
+  void compute_art_visc(double dt, int i_stage);
   void fta(double dt, int i_stage);
   std::unique_ptr<Kernel<Element&>> write_face;
 
