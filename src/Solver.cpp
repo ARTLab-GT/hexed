@@ -12,15 +12,8 @@
 #include <Prolong_refined.hpp>
 #include <Face_permutation.hpp>
 
-#include <Neighbor_avg_cartesian.hpp>
-#include <Neighbor_avg_deformed.hpp>
-
 #include <pde.hpp>
 #include <Spatial.hpp>
-#include <Local_av0_cartesian.hpp>
-#include <Local_av0_deformed.hpp>
-#include <Local_av1_cartesian.hpp>
-#include <Local_av1_deformed.hpp>
 
 namespace hexed
 {
