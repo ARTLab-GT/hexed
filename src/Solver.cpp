@@ -7,7 +7,6 @@
 // kernels
 #include <Mcs_cartesian.hpp>
 #include <Mcs_deformed.hpp>
-
 #include <Restrict_refined.hpp>
 #include <Prolong_refined.hpp>
 #include <Face_permutation.hpp>
@@ -48,6 +47,20 @@ void Solver::apply_flux_bcs()
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh.boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
+  }
+}
+
+void Solver::apply_avc_diff_flux_bcs()
+{
+  int nd = params.n_dim;
+  int rs = params.row_size;
+  int nq = params.n_qpoint();
+  auto& bc_cons {acc_mesh.boundary_connections()};
+  #pragma omp parallel for
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    double* in_f = bc_cons[i_con].inside_face() + 2*(nd + 2)*nq/rs;
+    double* gh_f = bc_cons[i_con].ghost_face()  + 2*(nd + 2)*nq/rs;
+    for (int i_qpoint = 0; i_qpoint < nq/rs; ++i_qpoint) gh_f[i_qpoint] = -in_f[i_qpoint];
   }
 }
 
@@ -533,30 +546,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
             gh_f[i_dof] = in_f[i_dof];
           }
         }
-        auto& sw_car = stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian");
-        auto& sw_def = stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed");
-        // perform first pass of LDG scheme
-        (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Neighbor>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor"); \
-        (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Neighbor>(nd, rs))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor"); \
-        (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict")); \
-        (*kernel_factory<Restrict_refined>(nd, rs, basis, false, true))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict")); \
-        (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Local>(nd, rs, basis, s, 0))(acc_mesh.cartesian().elements(), sw_car, "local"); \
-        (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Local>(nd, rs, basis, s, 0))(acc_mesh.deformed ().elements(), sw_def, "local"); \
-        (*kernel_factory<Prolong_refined>(nd, rs, basis, true, true))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict")); \
-        // apply flux boundary condition (flux = 0)
-        #pragma omp parallel for
-        for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-          double* in_f = bc_cons[i_con].inside_face() + 2*(nd + 2)*nq/rs;
-          double* gh_f = bc_cons[i_con].ghost_face()  + 2*(nd + 2)*nq/rs;
-          for (int i_qpoint = 0; i_qpoint < nq/rs; ++i_qpoint) gh_f[i_qpoint] = -in_f[i_qpoint];
-        }
-        // perform second pass of LDG scheme
-        (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Neighbor_reconcile>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor"); \
-        (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Neighbor_reconcile>(nd, rs))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor"); \
-        (*kernel_factory<Restrict_refined>(nd, rs, basis, true, true))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict")); \
-        (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Reconcile_ldg_flux>(nd, rs, basis, s, 0))(acc_mesh.cartesian().elements(), sw_car, "reconcile LDG flux"); \
-        (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Reconcile_ldg_flux>(nd, rs, basis, s, 0))(acc_mesh.deformed ().elements(), sw_def, "reconcile LDG flux"); \
-        (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict")); \
+        compute_avc_diff(s, 0);
         // update state
         #pragma omp parallel for
         for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {

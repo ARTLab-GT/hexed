@@ -32,11 +32,12 @@ class Solver
   void fix_admissibility(double stability_ratio);
   void apply_state_bcs();
   void apply_flux_bcs();
+  void apply_avc_diff_flux_bcs();
   void compute_inviscid(double dt, int i_stage);
   void compute_viscous(double dt, int i_stage);
   void compute_fta(double dt, int i_stage);
   void compute_advection(double dt, int i_stage);
-  void compute_art_visc(double dt, int i_stage);
+  void compute_avc_diff(double dt, int i_stage);
   void fta(double dt, int i_stage);
   std::unique_ptr<Kernel<Element&>> write_face;
 
