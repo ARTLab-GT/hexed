@@ -18,8 +18,7 @@ test_Face_permutation.cpp
 test_Hanging_vertex_matcher.cpp
 test_Iteration_status.cpp
 test_math.cpp
-test_Mcs_cartesian.cpp
-test_Mcs_deformed.cpp
+test_Max_dt.cpp
 test_pde.cpp
 test_Physical_basis.cpp
 test_Prolong_refined.cpp

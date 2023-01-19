@@ -589,7 +589,8 @@ void test_art_visc(Test_mesh& tm, std::string name)
   sol.initialize(Sinusoid());
   sol.set_art_visc_constant(300.);
   // update
-  sol.update(1e-3);
+  sol.update(1e-4);
+  sol.visualize_field_tecplot(hexed::Physical_update(), name);
   auto status = sol.iteration_status();
   // check that the computed update is approximately equal to the exact solution
   for (auto handle : sol.mesh().elem_handles()) {
@@ -612,7 +613,7 @@ void test_conservation(Test_mesh& tm, std::string name)
   sol.snap_faces();
   sol.calc_jacobian();
   sol.initialize(Random_perturbation());
-  sol.set_art_visc_constant(300.);
+  sol.set_art_visc_constant(30.);
   // check that the iteration status is right at the start
   auto status = sol.iteration_status();
   // update

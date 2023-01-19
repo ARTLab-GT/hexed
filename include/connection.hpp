@@ -77,7 +77,7 @@ class Face_connection
 {
   Eigen::VectorXd data;
   public:
-  Face_connection(Storage_params params) : data(2*params.n_dof()/params.row_size) {}
+  Face_connection(Storage_params params) : data(4*params.n_dof()/params.row_size) {}
   virtual Con_dir<element_t> direction() = 0;
   virtual double* state() {return data.data();}
 };
@@ -92,12 +92,12 @@ class Face_connection<Deformed_element>
   Face_connection<Deformed_element>(Storage_params params)
   : nrml_sz{params.n_dim*params.n_qpoint()/params.row_size},
     state_sz{params.n_dof()/params.row_size},
-    data(2*(nrml_sz + state_sz))
+    data(2*(nrml_sz + 2*state_sz))
   {}
   virtual Con_dir<Deformed_element> direction() = 0;
   virtual double* state() {return data.data();}
-  double* normal(int i_side) {return data.data() + 2*state_sz + i_side*nrml_sz;}
-  double* normal() {return data.data() + 2*state_sz;} // area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
+  double* normal(int i_side) {return data.data() + 4*state_sz + i_side*nrml_sz;}
+  double* normal() {return data.data() + 4*state_sz;} // area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
 };
 
 /*
@@ -225,7 +225,7 @@ class Refined_connection
     def_dir{Con_dir<Deformed_element>(dir)},
     rev{reverse_order},
     str{stretch_arg},
-    coarse_state_data{params.n_dof()/params.row_size},
+    coarse_state_data{3*params.n_dof()/params.row_size},
     matcher{to_elementstar(fine), def_dir.i_dim[!reverse_order], def_dir.face_sign[!reverse_order], str}
   {
     refined_face.stretch = coarse_stretch();

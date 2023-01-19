@@ -18,6 +18,8 @@ otter_vis.cpp
 Physical_basis.cpp
 Qpoint_func.cpp
 Solver.cpp
+Solver_convective.cpp
+Solver_diffusive.cpp
 Spacetime_func.cpp
 Stopwatch.cpp
 Stopwatch_tree.cpp

@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <cmath>
 
 namespace hexed
 {
@@ -54,7 +55,7 @@ class Iteration_status
   double time_step = 0.;
   int iteration = 0;
   int fix_admis_iters = 0;
-  double dt_rat;
+  double dt_rat = std::nan("");
   // return string containing the column labels separated by `sep`,
   // justified to align with numerical data in `report()`.
   std::string header();

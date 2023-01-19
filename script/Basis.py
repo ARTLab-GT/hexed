@@ -113,6 +113,17 @@ class Basis:
                 eigvals, eigvecs = np.linalg.eig(time_scheme(dt, mat))
                 return np.max(np.abs(eigvals)) - 1.
             return np.exp(fsolve(error, -np.log(self.row_size))[0])
+        if False:
+            def euler(dt, mat):
+                return ident + dt*mat
+            def rk(dt, step_weights, mat):
+                step_mat = ident
+                for weight in step_weights:
+                    step_mat = (1. - weight)*ident + weight*euler(dt, mat)@step_mat
+                return step_mat
+            def ssp_rk3(dt, mat):
+                return rk(dt, [1., 1./4., 2./3.], mat)
+            print(self.row_size, max_cfl(diffusion, ssp_rk3))
         def compute_coefs(mat):
             def objective(coefs):
                 p = polynomial(coefs)

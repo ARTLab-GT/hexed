@@ -8,6 +8,7 @@
 #include "Iteration_status.hpp"
 #include "Stopwatch_tree.hpp"
 #include "config.hpp"
+#include "kernel_factory.hpp"
 #if HEXED_USE_OTTER
 #include <otter/plot.hpp>
 #include <otter/colormap.hpp>
@@ -28,8 +29,17 @@ class Solver
   bool fix_admis;
   int av_rs;
   void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
-  void update_art_visc(double dt, bool use_av_coef);
   void fix_admissibility(double stability_ratio);
+  void apply_state_bcs();
+  void apply_flux_bcs();
+  void apply_avc_diff_flux_bcs();
+  void compute_inviscid(double dt, int i_stage);
+  void compute_viscous(double dt, int i_stage);
+  void compute_fta(double dt, int i_stage);
+  void compute_advection(double dt, int i_stage);
+  void compute_avc_diff(double dt, int i_stage);
+  void fta(double dt, int i_stage);
+  std::unique_ptr<Kernel<Element&>> write_face;
 
   public:
   // tweakable parameters for the numerical scheme
