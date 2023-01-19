@@ -37,8 +37,6 @@ class Spatial
 
     void operator()(const double* read, std::array<double*, 6> faces)
     {
-      //read += Pde::curr_start*custom_math::pow(row_size, n_dim);
-      //face += Pde::curr_start*custom_math::pow(row_size, n_dim - 1);
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
         for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
           auto row_r = Row_rw<Pde::n_var, row_size>::read_row(read, ind);
@@ -80,9 +78,6 @@ class Spatial
     const double curr;
     const double heat_rat;
 
-    // note: `.*_coef` are the coefficients for multistage time integration.
-    // The final result is
-    // `update_coef`*[residual] + `current_coef`*[current state] + `reference_coef`*[reference state]
     public:
     Local(const Basis& basis, double dt, bool which_stage, double heat_ratio=1.4) :
       derivative{basis},
