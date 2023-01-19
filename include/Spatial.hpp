@@ -499,7 +499,8 @@ class Spatial
           ref_nrml = elem.reference_level_normals();
           jac_det = elem.jacobian_determinant();
         }
-        double min_scale = std::numeric_limits<double>::max();
+        double min_scale_conv = std::numeric_limits<double>::max();
+        double min_scale_diff = std::numeric_limits<double>::max();
         double max_qpoint_speed = 0.;
         double max_qpoint_diff = 0.;
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
@@ -508,9 +509,10 @@ class Spatial
           for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
             qpoint_state(i_var) = state[i_var*n_qpoint + i_qpoint];
           }
-          max_qpoint_speed = std::max(max_qpoint_speed, Pde::char_speed(qpoint_state));
-          max_qpoint_diff = std::max(max_qpoint_diff, Pde::diffusivity(qpoint_state, art_visc[i_qpoint]));
-          double scale = 1/custom_math::pow(tss[i_qpoint], Pde::tss_pow);;
+          if constexpr (Pde::has_convection) max_qpoint_speed = std::max(max_qpoint_speed, Pde::char_speed(qpoint_state));
+          if constexpr (Pde::is_viscous) max_qpoint_diff = std::max(max_qpoint_diff, Pde::diffusivity(qpoint_state, art_visc[i_qpoint]));
+          double local_tss = custom_math::pow(tss[i_qpoint], Pde::tss_pow);
+          double local_size = elem.nominal_size();
           if constexpr (element_t::is_deformed) {
             double norm_sum = 0.;
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -521,13 +523,13 @@ class Spatial
               }
               norm_sum += std::sqrt(norm_sq);
             }
-            scale *= n_dim*jac_det[i_qpoint]/norm_sum;
+            local_size *= n_dim*jac_det[i_qpoint]/norm_sum;
           }
-          min_scale = std::min(min_scale, scale);
+          min_scale_conv = std::min(min_scale_conv, local_size/local_tss);
+          min_scale_diff = std::min(min_scale_diff, local_size*local_size/local_tss);
         }
         // compute reference speed
-        min_scale *= elem.nominal_size();
-        dt = std::min(dt, min_scale/n_dim/(max_qpoint_speed/max_cfl_c + max_qpoint_diff/max_cfl_d/min_scale));
+        dt = std::min(dt, 1./n_dim/(max_qpoint_speed/max_cfl_c/min_scale_conv + max_qpoint_diff/max_cfl_d/min_scale_diff));
       }
       return dt;
     }

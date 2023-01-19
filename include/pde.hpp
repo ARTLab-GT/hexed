@@ -130,7 +130,7 @@ class Navier_stokes
 
     static constexpr double diffusivity(Mat<n_var> state, double av_coef)
     {
-      return is_viscous ? av_coef : 0;
+      return av_coef;
     }
   };
 };
@@ -171,6 +171,11 @@ class Advection
     }
     return hll(wave_speed, face_flux, face_state);
   }
+
+  static constexpr double char_speed(Mat<n_var> state)
+  {
+    return state(Eigen::seqN(0, n_dim)).norm();
+  }
 };
 
 template <int n_dim>
@@ -192,6 +197,7 @@ class Smooth_art_visc
   {
     return -nrmls*grad;
   }
+  static constexpr double diffusivity(Mat<n_var> state, double av_coef) {return 1;}
 };
 
 template <int n_dim>
@@ -213,6 +219,7 @@ class Fix_therm_admis
   {
     return -nrmls*grad;
   }
+  static constexpr double diffusivity(Mat<n_var> state, double av_coef) {return 1;}
 };
 
 }

@@ -3,10 +3,9 @@
 #include <Tecplot_file.hpp>
 #include <Vis_data.hpp>
 #include <otter_vis.hpp>
+#include <thermo.hpp>
 
 // kernels
-#include <Mcs_cartesian.hpp>
-#include <Mcs_deformed.hpp>
 #include <Restrict_refined.hpp>
 #include <Prolong_refined.hpp>
 #include <Face_permutation.hpp>
@@ -359,9 +358,8 @@ void Solver::set_art_visc_smoothness(double advect_length)
   sw_adv.stopwatch.start();
   (*write_face)(elements);
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-  double mcs_adv = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Advection(), 1, 1))(acc_mesh.cartesian().elements(), sw_adv.children.at("cartesian"), "max char speed"),
-                            (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Advection(), 1, 1))(acc_mesh.deformed ().elements(), sw_adv.children.at("deformed" ), "max char speed"));
-  double dt_adv = av_advect_stab_rat/params.n_dim/(mcs_adv/basis.max_cfl_convective());
+  double dt_adv = av_advect_stab_rat*std::min((*kernel_factory<Spatial<Element         , pde::Advection>::Max_dt>(nd, rs, basis))(acc_mesh.cartesian().elements(), sw_adv.children.at("cartesian"), "max char speed"),
+                                              (*kernel_factory<Spatial<Deformed_element, pde::Advection>::Max_dt>(nd, rs, basis))(acc_mesh.deformed ().elements(), sw_adv.children.at("deformed" ), "max char speed"));
   // ensure that time step is small enough that the time derivative term will be stable
   {
     double max_rat = 0;
@@ -474,9 +472,8 @@ void Solver::set_art_visc_smoothness(double advect_length)
   // begin root-smear-square operation
   int n_real = 3; // number of real time steps (as apposed to pseudotime steps)
   // evaluate CFL condition
-  double mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Unit(), 2, 2))(acc_mesh.cartesian().elements()),
-                             (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Unit(), 2, 2))(acc_mesh.deformed ().elements()));
-  double dt_diff = av_diff_stab_rat/params.n_dim/(mcs_diff/basis.max_cfl_diffusive());
+  double dt_diff = av_diff_stab_rat*std::min((*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Max_dt>(nd, rs, basis))(acc_mesh.cartesian().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "max char speed"),
+                                             (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Max_dt>(nd, rs, basis))(acc_mesh.deformed ().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "max char speed"));
   double diff_time = av_diff_ratio*advect_length/n_real; // compute size of real time step (as opposed to pseudotime)
   // adjust for time derivative term if necessary
   {
@@ -654,15 +651,15 @@ void Solver::update(double stability_ratio)
   auto& elems = acc_mesh.elements();
 
   // compute time step
-  double max_speed;
+  double max_dt;
   if (use_art_visc) {
-    max_speed = std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
-                         (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
+    max_dt = std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
+                      (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
   } else {
-    max_speed = std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
-                         (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
+    max_dt = std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
+                      (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
   }
-  double dt = stability_ratio*max_speed;
+  double dt = stability_ratio*max_dt;
 
   // record reference state for Runge-Kutta scheme
   const int n_dof = params.n_dof();
@@ -757,9 +754,8 @@ void Solver::fix_admissibility(double stability_ratio)
     }
     if (admiss && refined_admiss) break;
     else {
-      double mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Unit(), 2, 2))(acc_mesh.cartesian().elements()),
-                                 (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Unit(), 2, 2))(acc_mesh.deformed ().elements()));
-      double dt = stability_ratio/params.n_dim/(mcs_diff/basis.max_cfl_diffusive());
+      double dt = stability_ratio*std::min((*kernel_factory<Spatial<Element         , pde::Fix_therm_admis>::Max_dt>(nd, rs, basis))(acc_mesh.cartesian().elements(), stopwatch.children.at("fix admis.").children.at("cartesian"), "max char speed"),
+                                           (*kernel_factory<Spatial<Deformed_element, pde::Fix_therm_admis>::Max_dt>(nd, rs, basis))(acc_mesh.deformed ().elements(), stopwatch.children.at("fix admis.").children.at("deformed" ), "max char speed"));
       double linear = dt;
       double quadratic = basis.cancellation_diffusive()/basis.max_cfl_diffusive()*dt*dt;
       std::array<double, 2> step;
