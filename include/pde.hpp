@@ -52,6 +52,7 @@ class Navier_stokes
     static constexpr int n_update = n_var;
     static constexpr double heat_rat = 1.4;
     static constexpr int tss_pow = 1;
+    static constexpr double dyn_visc = 1.81206e-5;
 
     static constexpr double pressure(Mat<n_var> state)
     {
@@ -113,7 +114,16 @@ class Navier_stokes
     // compute the viscous flux
     static constexpr Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef)
     {
-      return -av_coef*grad;
+      auto seq = Eigen::seqN(0, n_dim);
+      auto all = Eigen::all;
+      auto mmtm = state(seq);
+      double mass = state(n_dim);
+      Mat<n_dim> veloc = mmtm/mass;
+      Mat<n_dim, n_dim> veloc_grad = (grad(all, seq) - grad(all, n_dim)*veloc.transpose())/mass;
+      Mat<n_dim, n_dim> stress = dyn_visc*(veloc_grad + veloc_grad.transpose() - 2./3.*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity());
+      Mat<n_dim, n_update> flux = -av_coef*grad;
+      flux(all, seq) -= stress;
+      return flux;
     }
 
     // maximum characteristic speed for convection
