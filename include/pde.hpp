@@ -111,9 +111,9 @@ class Navier_stokes
     }
 
     // compute the viscous flux
-    static constexpr Mat<n_dim, n_update> flux_visc(Mat<n_dim, n_var> grad, Mat<n_dim, n_dim> nrmls, double av_coef)
+    static constexpr Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef)
     {
-      return -av_coef*nrmls*grad;
+      return -av_coef*grad;
     }
 
     // maximum characteristic speed for convection
@@ -194,9 +194,9 @@ class Smooth_art_visc
   static constexpr int tss_pow = 2;
 
   static constexpr Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) {return Mat<n_update>::Zero();}
-  static constexpr Mat<n_dim, n_update> flux_visc(Mat<n_dim, n_var> grad, Mat<n_dim, n_dim> nrmls, double av_coef)
+  static constexpr Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef)
   {
-    return -nrmls*grad;
+    return -grad;
   }
   static constexpr double diffusivity(Mat<n_var> state, double av_coef) {return 1;}
 };
@@ -218,9 +218,9 @@ class Fix_therm_admis
   static constexpr int tss_pow = 2;
 
   static constexpr Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) {return Mat<n_update>::Zero();}
-  static constexpr Mat<n_dim, n_update> flux_visc(Mat<n_dim, n_var> grad, Mat<n_dim, n_dim> nrmls, double av_coef)
+  static constexpr Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef)
   {
-    return -nrmls*grad;
+    return -grad;
   }
   static constexpr double diffusivity(Mat<n_var> state, double av_coef) {return 1;}
 };
