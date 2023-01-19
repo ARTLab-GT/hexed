@@ -646,7 +646,6 @@ void Solver::synch_extruded_res_bad()
 
 void Solver::update(double stability_ratio)
 {
-  const double heat_rat = 1.4;
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
   auto& sw_car {stopwatch.children.at("cartesian")};
   auto& sw_def {stopwatch.children.at("deformed" )};
@@ -655,14 +654,15 @@ void Solver::update(double stability_ratio)
   auto& elems = acc_mesh.elements();
 
   // compute time step
-  double mcs_conv = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Inviscid(heat_rat)))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
-                             (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Inviscid(heat_rat)))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
-  double mcs_diff = 0.;
+  double max_speed;
   if (use_art_visc) {
-    mcs_diff = std::max((*kernel_factory<Mcs_cartesian>(nd, rs, char_speed::Art_visc(), 2, 1))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
-                        (*kernel_factory<Mcs_deformed >(nd, rs, char_speed::Art_visc(), 2, 1))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
+    max_speed = std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
+                         (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
+  } else {
+    max_speed = std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
+                         (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
   }
-  double dt = stability_ratio/params.n_dim/(mcs_conv/basis.max_cfl_convective() + mcs_diff/basis.max_cfl_diffusive());
+  double dt = stability_ratio*max_speed;
 
   // record reference state for Runge-Kutta scheme
   const int n_dof = params.n_dof();
@@ -688,7 +688,6 @@ void Solver::update(double stability_ratio)
   status.time_step = dt;
   status.flow_time += dt;
   ++status.iteration;
-  status.dt_rat = (mcs_conv/basis.max_cfl_convective())/(mcs_diff/basis.max_cfl_diffusive());
   stopwatch.stopwatch.pause();
   stopwatch.work_units_completed += elems.size();
   sw_car.work_units_completed += acc_mesh.cartesian().elements().size();

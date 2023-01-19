@@ -407,7 +407,6 @@ class Spatial
             }
           }
         }
-        #pragma GCC diagnostic pop
       }
     }
   };
@@ -424,8 +423,6 @@ class Spatial
       #pragma omp parallel for
       for (int i_con = 0; i_con < connections.size(); ++i_con)
       {
-        #pragma GCC diagnostic push
-        #pragma GCC diagnostic ignored "-Wunused-but-set-variable" // otherwise `'face_nrml' set but not used` (not sure why)
         auto& con = connections[i_con];
         auto dir = con.direction();
         double face [2][(n_dim + 2)*n_fqpoint]; // copying face data to temporary stack storage improves efficiency
@@ -465,8 +462,74 @@ class Spatial
             f[offset + i_dof] = face[i_side][offset + i_dof];
           }
         }
-        #pragma GCC diagnostic pop
       }
+    }
+  };
+
+  template <int n_dim, int row_size>
+  class Max_dt : public Kernel<element_t&, double>
+  {
+    using Pde = Pde_templ<n_dim>;
+    double max_cfl_c;
+    double max_cfl_d;
+
+    public:
+    Max_dt(const Basis& basis) :
+      max_cfl_c{basis.max_cfl_convective()},
+      max_cfl_d{basis.max_cfl_diffusive()}
+    {}
+
+    virtual double operator()(Sequence<element_t&>& elements)
+    {
+      constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
+      double dt = std::numeric_limits<double>::max();
+      #pragma omp parallel for reduction(min:dt)
+      for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
+      {
+        element_t& elem {elements[i_elem]};
+        double* state = elem.stage(0);
+        double* art_visc = elem.art_visc_coef();
+        double* tss = elem.time_step_scale();
+        #pragma GCC diagnostic push
+        #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+        double* ref_nrml = nullptr;
+        double* jac_det = nullptr;
+        #pragma GCC diagnostic pop
+        if constexpr (element_t::is_deformed) {
+          ref_nrml = elem.reference_level_normals();
+          jac_det = elem.jacobian_determinant();
+        }
+        double min_scale = std::numeric_limits<double>::max();
+        double max_qpoint_speed = 0.;
+        double max_qpoint_diff = 0.;
+        for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
+        {
+          Mat<Pde::n_var> qpoint_state;
+          for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
+            qpoint_state(i_var) = state[i_var*n_qpoint + i_qpoint];
+          }
+          max_qpoint_speed = std::max(max_qpoint_speed, Pde::char_speed(qpoint_state));
+          max_qpoint_diff = std::max(max_qpoint_diff, Pde::diffusivity(qpoint_state, art_visc[i_qpoint]));
+          double scale = 1/custom_math::pow(tss[i_qpoint], Pde::tss_pow);;
+          if constexpr (element_t::is_deformed) {
+            double norm_sum = 0.;
+            for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+              double norm_sq = 0.;
+              for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+                double coef = ref_nrml[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
+                norm_sq += coef*coef;
+              }
+              norm_sum += std::sqrt(norm_sq);
+            }
+            scale *= n_dim*jac_det[i_qpoint]/norm_sum;
+          }
+          min_scale = std::min(min_scale, scale);
+        }
+        // compute reference speed
+        min_scale *= elem.nominal_size();
+        dt = std::min(dt, min_scale/n_dim/(max_qpoint_speed/max_cfl_c + max_qpoint_diff/max_cfl_d/min_scale));
+      }
+      return dt;
     }
   };
 };

@@ -119,6 +119,19 @@ class Navier_stokes
     {
       return -av_coef*nrmls*grad;
     }
+
+    static constexpr double char_speed(Mat<n_var> state)
+    {
+      const double sound_speed = std::sqrt(heat_rat*pressure(state)/state(n_dim));
+      auto mmtm = state(Eigen::seqN(0, n_dim));
+      const double veloc = std::sqrt(mmtm.dot(mmtm)/state(n_dim)/state(n_dim));
+      return sound_speed + veloc;
+    }
+
+    static constexpr double diffusivity(Mat<n_var> state, double av_coef)
+    {
+      return is_viscous ? av_coef : 0;
+    }
   };
 };
 
