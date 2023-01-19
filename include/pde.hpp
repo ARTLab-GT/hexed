@@ -72,7 +72,7 @@ class Navier_stokes
       }
       double scaled = f(n_dim)/state(n_dim);
       double pres = pressure(state);
-      HEXED_ASSERT_THERM_ADMIS
+      ASSERT_THERM_ADMIS
       f(n_var - 1) = (state(n_dim + 1) + pres)*scaled;
       for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
         f(j_dim) = state(j_dim)*scaled + pres*normal(j_dim);
@@ -96,7 +96,7 @@ class Navier_stokes
         }
         double scaled = f(n_dim)/state(n_dim);
         double pres = pressure(state);
-        HEXED_ASSERT_THERM_ADMIS
+        ASSERT_THERM_ADMIS
         f(n_var - 1) = (state(n_dim + 1) + pres)*scaled;
         for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
           f(j_dim) = state(j_dim)*scaled + pres*normal(j_dim);
