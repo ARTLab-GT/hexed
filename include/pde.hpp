@@ -5,17 +5,9 @@
 
 /*
  * This namespace contains classes representing the different PDEs Hexed can solve.
- * They are all possible arguments to the `Spatial` class.
- * Each PDE class must have:
- * - `static constexpr int n_var`: the number of state variables required to compute the flux
- *   (some of which may be conserved variables and some of which can be pasive data, e.g. advection velocity)
- * - `static constexpr int curr_start`: index of the variable representing the current state
- * - `static constexpr int ref_start`: index of the variable representing the reference state (for multistage time integration)
- * - `static constexpr int n_update`: the number of conserved variables to be updated
- * - a `flux` function which computes the flux of conserved
- *   variables given a state vector and a (non-unit) reference level normal vector
- * - a `flux_num` function which computes the shared numerical flux given the
- *   state for two neighboring elements and the shared face normal
+ * They are all possible arguments to the `Spatial` class template.
+ * They define the organization of the state data, fluxes, and speeds of information
+ * propagation for computing time steps.
  */
 namespace hexed::pde
 {
@@ -37,7 +29,8 @@ Mat<n_var> hll(Mat<2> speed, Mat<n_var, 2> flux, Mat<n_var, 2> state)
 template <bool artificial_visc = false>
 class Navier_stokes
 {
-  #define HEXED_ASSERT_THERM_ADMIS \
+  // check that the flow state is thermodynamically admissible
+  #define ASSERT_THERM_ADMIS \
     HEXED_ASSERT(state(n_dim) > 0, "nonpositive density"); \
     HEXED_ASSERT(state(n_dim + 1) >= 0, "negative energy"); \
     HEXED_ASSERT(pres >= 0, "negative pressure"); \
@@ -69,6 +62,7 @@ class Navier_stokes
       return (heat_rat - 1.)*((state(n_dim + 1)) - 0.5*mmtm_sq/(state(n_dim)));
     }
 
+    // compute the convective flux
     static constexpr Mat<n_update> flux(Mat<n_var> state, Mat<n_dim> normal)
     {
       Mat<n_var> f;
@@ -86,6 +80,7 @@ class Navier_stokes
       return f;
     }
 
+    // compute the numerical convective flux shared at the element faces
     static constexpr Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal)
     {
       Mat<n_var, 2> face_flux;
@@ -115,11 +110,13 @@ class Navier_stokes
       return hll(wave_speed, face_flux, face_state);
     }
 
+    // compute the viscous flux
     static constexpr Mat<n_dim, n_update> flux_visc(Mat<n_dim, n_var> grad, Mat<n_dim, n_dim> nrmls, double av_coef)
     {
       return -av_coef*nrmls*grad;
     }
 
+    // maximum characteristic speed for convection
     static constexpr double char_speed(Mat<n_var> state)
     {
       const double sound_speed = std::sqrt(heat_rat*pressure(state)/state(n_dim));
@@ -128,11 +125,13 @@ class Navier_stokes
       return sound_speed + veloc;
     }
 
+    // maximum effective diffusivity (for enforcing the CFL condition)
     static constexpr double diffusivity(Mat<n_var> state, double av_coef)
     {
       return av_coef;
     }
   };
+  #undef ASSERT_THERM_ADMIS
 };
 
 // represents the nonuniform linear advection equation
@@ -178,6 +177,8 @@ class Advection
   }
 };
 
+// represents the uniform linear diffusion equation
+// used in the smoothness-based artificial viscosity scheme
 template <int n_dim>
 class Smooth_art_visc
 {
@@ -200,6 +201,8 @@ class Smooth_art_visc
   static constexpr double diffusivity(Mat<n_var> state, double av_coef) {return 1;}
 };
 
+// represents the uniform linear diffusion equation
+// used for fixing thermodynamic admissibility
 template <int n_dim>
 class Fix_therm_admis
 {
