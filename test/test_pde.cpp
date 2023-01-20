@@ -80,6 +80,10 @@ TEST_CASE("Navier_stokes")
 
   SECTION("flux_viscous")
   {
+    // this isn't a particularly good test,
+    // since the test and the actual function share a fair amount of code in common.
+    // However, i can't think of a really effective way to test this,
+    // and at least the gradients start out in terms of different variables
     hexed::Mat<4> vrhot; // contains velocity, density, and temperature in order
     hexed::Mat<2, 4> vrhot_grad; // gradients of above
     vrhot << 10., 11., 1.2, 300.;

@@ -53,6 +53,7 @@ class Navier_stokes
     static constexpr double heat_rat = 1.4;
     static constexpr int tss_pow = 1;
     static constexpr double dyn_visc = 1.81206e-5;
+    static constexpr double therm_diff = dyn_visc*1.4/0.71;
 
     static constexpr double pressure(Mat<n_var> state)
     {
@@ -123,6 +124,8 @@ class Navier_stokes
       Mat<n_dim, n_dim> stress = dyn_visc*(veloc_grad + veloc_grad.transpose() - 2./3.*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity());
       Mat<n_dim, n_update> flux = -av_coef*grad;
       flux(all, seq) -= stress;
+      Mat<n_dim> int_ener_grad = -state(n_dim + 1)/mass/mass*grad(all, n_dim) + grad(all, n_dim + 1)/mass - veloc_grad*veloc;
+      flux(all, n_dim + 1) -= stress*veloc + therm_diff*int_ener_grad;
       return flux;
     }
 
