@@ -143,10 +143,27 @@ No_slip::No_slip(Thermal_type type, double value) : t{type}, v{value} {}
 
 void No_slip::apply_state(Boundary_face& bf)
 {
+  auto params = bf.storage_params();
+  double* gh_f = bf.ghost_face();
+  double* in_f = bf.inside_face();
+  int nfq = params.n_qpoint()/params.row_size;
+  for (int i_dof = 0; i_dof < params.n_dim*nfq; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
+  for (int i_dof = params.n_dim*nfq; i_dof < (params.n_dim + 1)*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
+  for (int i_dof = (params.n_dim + 1)*nfq; i_dof < (params.n_dim + 2)*nfq; ++i_dof) {
+    gh_f[i_dof] = (t == internal_energy) ? 2*v - in_f[i_dof] : in_f[i_dof];
+  }
 }
 
 void No_slip::apply_flux(Boundary_face& bf)
 {
+  auto params = bf.storage_params();
+  int nfq = params.n_qpoint()/params.row_size;
+  double* gh_f = bf.ghost_face() + params.n_var*nfq;
+  double* in_f = bf.inside_face() + params.n_var*nfq;
+  for (int i_dof = 0; i_dof < (params.n_dim + 1)*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
+  for (int i_dof = (params.n_dim + 1)*nfq; i_dof < (params.n_dim + 2)*nfq; ++i_dof) {
+    gh_f[i_dof] = (t == heat_flux) ? 2*v - in_f[i_dof] : in_f[i_dof];
+  }
 }
 
 void No_slip::apply_advection(Boundary_face& bf)
