@@ -139,6 +139,20 @@ void Nonpenetration::apply_advection(Boundary_face& bf)
   apply_state(bf);
 }
 
+No_slip::No_slip(Thermal_type type, double value) : t{type}, v{value} {}
+
+void No_slip::apply_state(Boundary_face& bf)
+{
+}
+
+void No_slip::apply_flux(Boundary_face& bf)
+{
+}
+
+void No_slip::apply_advection(Boundary_face& bf)
+{
+}
+
 void Copy::apply_state(Boundary_face& bf)
 {
   copy_state(bf);

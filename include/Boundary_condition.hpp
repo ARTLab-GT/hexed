@@ -95,6 +95,7 @@ class Function_bc : public Flow_bc
 
 /*
  * Copies the inside state and flips the sign of the surface-normal velocity.
+ * Good for inviscid walls and symmetry planes.
  */
 class Nonpenetration : public Flow_bc
 {
@@ -103,6 +104,27 @@ class Nonpenetration : public Flow_bc
   virtual void apply_state(Boundary_face&);
   virtual void apply_flux(Boundary_face&);
   virtual void apply_advection(Boundary_face&);
+};
+
+/*
+ * Flips the sign of the velocity.
+ * Depending on the `Thermal_type` provided, will reflect either the heat flux
+ * or the internal energy about `value` (so that averaging the inside and ghost states
+ * gives you the specified value).
+ * Good for viscous walls.
+ */
+class No_slip : public Flow_bc
+{
+  public:
+  enum Thermal_type {heat_flux, internal_energy};
+  // note: providing no arguments gives you an adiabatic wall
+  No_slip(Thermal_type type = heat_flux, double value = 0);
+  virtual void apply_state(Boundary_face&);
+  virtual void apply_flux(Boundary_face&);
+  virtual void apply_advection(Boundary_face&);
+  private:
+  Thermal_type t;
+  double v;
 };
 
 // mostly used for testing, but you can maybe get away with it for supersonic outlets.
