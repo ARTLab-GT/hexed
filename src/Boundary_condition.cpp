@@ -92,7 +92,7 @@ void Freestream::apply_flux(Boundary_face& bf)
   copy_state(bf);
 }
 
-void Nonpenetration::reflect_normal(double* gh_f, double* nrml, int nq, int nd)
+void reflect_normal(double* gh_f, double* nrml, int nq, int nd)
 {
   for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint)
   {
@@ -109,14 +109,18 @@ void Nonpenetration::reflect_normal(double* gh_f, double* nrml, int nq, int nd)
   }
 }
 
-void Nonpenetration::apply_state(Boundary_face& bf)
+void reflect_momentum(Boundary_face& bf)
 {
-  // fetch data
   auto params = bf.storage_params();
   double* gh_f = bf.ghost_face();
   double* in_f = bf.inside_face();
   for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = in_f[i_dof];
   reflect_normal(gh_f, bf.surface_normal(), params.n_qpoint()/params.row_size, params.n_dim);
+}
+
+void Nonpenetration::apply_state(Boundary_face& bf)
+{
+  reflect_momentum(bf);
 }
 
 void Nonpenetration::apply_flux(Boundary_face& bf)
@@ -136,7 +140,7 @@ void Nonpenetration::apply_flux(Boundary_face& bf)
 
 void Nonpenetration::apply_advection(Boundary_face& bf)
 {
-  apply_state(bf);
+  reflect_momentum(bf);
 }
 
 No_slip::No_slip(Thermal_type type, double value) : t{type}, v{value} {}
@@ -168,6 +172,7 @@ void No_slip::apply_flux(Boundary_face& bf)
 
 void No_slip::apply_advection(Boundary_face& bf)
 {
+  apply_state(bf);
 }
 
 void Copy::apply_state(Boundary_face& bf)

@@ -141,7 +141,7 @@ class Navier_stokes
     // maximum effective diffusivity (for enforcing the CFL condition)
     static constexpr double diffusivity(Mat<n_var> state, double av_coef)
     {
-      return av_coef;
+      return av_coef + std::max(dyn_visc/state(n_dim), therm_diff);
     }
   };
   #undef ASSERT_THERM_ADMIS

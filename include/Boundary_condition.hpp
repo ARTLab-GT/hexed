@@ -99,7 +99,6 @@ class Function_bc : public Flow_bc
  */
 class Nonpenetration : public Flow_bc
 {
-  void reflect_normal(double*, double*, int, int);
   public:
   virtual void apply_state(Boundary_face&);
   virtual void apply_flux(Boundary_face&);
