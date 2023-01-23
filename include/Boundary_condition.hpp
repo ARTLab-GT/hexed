@@ -115,7 +115,7 @@ class Nonpenetration : public Flow_bc
 class No_slip : public Flow_bc
 {
   public:
-  enum Thermal_type {heat_flux, internal_energy};
+  enum Thermal_type {heat_flux, internal_energy, emissivity};
   // note: providing no arguments gives you an adiabatic wall
   No_slip(Thermal_type type = heat_flux, double value = 0);
   virtual void apply_state(Boundary_face&);

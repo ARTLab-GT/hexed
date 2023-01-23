@@ -2,6 +2,7 @@
 #include <hexed/config.hpp>
 #include <hexed/Boundary_condition.hpp>
 #include <hexed/Spacetime_func.hpp>
+#include <hexed/constants.hpp>
 
 class Dummy : public hexed::Boundary_condition
 {
@@ -199,6 +200,21 @@ TEST_CASE("No_slip")
         REQUIRE(tbc.ghost_face()[(8 + i_var)*row_size + i_qpoint] == Approx(flux[i_var]));
       }
       REQUIRE((tbc.ghost_face()[11*row_size + i_qpoint] + tbc.inside_face()[11*row_size + i_qpoint])/2 == Approx(3.));
+    }
+  }
+  SECTION("specified emissivity")
+  {
+    for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+      for (int i_var = 0; i_var < 4; ++i_var) {
+        tbc.inside_face()[i_var*row_size + i_qpoint] = state[i_var];
+        tbc.inside_face()[(8 + i_var)*row_size + i_qpoint] = flux[i_var];
+      }
+    }
+    hexed::No_slip no_slip(hexed::No_slip::emissivity, .8);
+    double temp = 1e5/1.2/hexed::specific_gas_air;
+    no_slip.apply_flux(tbc);
+    for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+      REQUIRE((tbc.ghost_face()[11*row_size + i_qpoint] + tbc.inside_face()[11*row_size + i_qpoint])/2 == Approx(.8*hexed::stefan_boltzmann*std::pow(temp, 4)));
     }
   }
 }

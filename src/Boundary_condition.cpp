@@ -1,6 +1,7 @@
 #include <Boundary_condition.hpp>
 #include <math.hpp>
 #include <kernel_factory.hpp>
+#include <constants.hpp>
 
 namespace hexed
 {
@@ -166,8 +167,30 @@ void No_slip::apply_flux(Boundary_face& bf)
   double* in_f = bf.inside_face() + offset;
   for (int i_dof = 0; i_dof < params.n_dim*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
   for (int i_dof = params.n_dim*nfq; i_dof < (params.n_dim + 1)*nfq; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
-  for (int i_dof = (params.n_dim + 1)*nfq; i_dof < (params.n_dim + 2)*nfq; ++i_dof) {
-    gh_f[i_dof] = (t == heat_flux) ? 2*v - in_f[i_dof] : in_f[i_dof];
+  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+    int i_dof = i_qpoint + (params.n_dim + 1)*nfq;
+    double flux;
+    switch (t) {
+      case heat_flux:
+        flux = v;
+        break;
+      case emissivity:
+        {
+          // set heat flux equal to radiative heat loss by stefan-boltzmann law
+          double temp = in_f[i_dof - offset];
+          double mass = in_f[params.n_dim*nfq + i_qpoint - offset];
+          for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+            temp -= .5*custom_math::pow(in_f[i_dim*nfq + i_qpoint - offset], 2)/mass;
+          }
+          temp *= .4/mass/specific_gas_air;
+          flux = v*stefan_boltzmann*custom_math::pow(temp, 4);
+        }
+        break;
+      default:
+        flux = in_f[i_dof];
+        break;
+    }
+    gh_f[i_dof] = 2*flux - in_f[i_dof];
   }
 }
 
