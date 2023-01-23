@@ -162,11 +162,14 @@ void No_slip::apply_flux(Boundary_face& bf)
 {
   auto params = bf.storage_params();
   int nfq = params.n_qpoint()/params.row_size;
-  double* gh_f = bf.ghost_face() + params.n_var*nfq;
-  double* in_f = bf.inside_face() + params.n_var*nfq;
-  for (int i_dof = 0; i_dof < (params.n_dim + 1)*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
-  for (int i_dof = (params.n_dim + 1)*nfq; i_dof < (params.n_dim + 2)*nfq; ++i_dof) {
-    gh_f[i_dof] = (t == heat_flux) ? 2*v - in_f[i_dof] : in_f[i_dof];
+  for (int offset : {0, 2*params.n_dof()/params.row_size}) {
+    double* gh_f = bf.ghost_face() + offset;
+    double* in_f = bf.inside_face() + offset;
+    for (int i_dof = 0; i_dof < params.n_dim*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
+    for (int i_dof = params.n_dim*nfq; i_dof < (params.n_dim + 1)*nfq; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
+    for (int i_dof = (params.n_dim + 1)*nfq; i_dof < (params.n_dim + 2)*nfq; ++i_dof) {
+      gh_f[i_dof] = (t == heat_flux) ? 2*v - in_f[i_dof] : in_f[i_dof];
+    }
   }
 }
 
