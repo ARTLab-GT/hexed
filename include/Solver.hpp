@@ -28,6 +28,8 @@ class Solver
   bool use_art_visc;
   bool fix_admis;
   int av_rs;
+  std::unique_ptr<Kernel<Element&>> write_face;
+  bool visc;
   void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
   void fix_admissibility(double stability_ratio);
   void apply_state_bcs();
@@ -39,7 +41,7 @@ class Solver
   void compute_advection(double dt, int i_stage);
   void compute_avc_diff(double dt, int i_stage);
   void fta(double dt, int i_stage);
-  std::unique_ptr<Kernel<Element&>> write_face;
+  bool use_ldg();
 
   public:
   // tweakable parameters for the numerical scheme
@@ -52,7 +54,7 @@ class Solver
   int av_advect_iters = 1;
   int av_diff_iters = 1;
 
-  Solver(int n_dim, int row_size, double root_mesh_size);
+  Solver(int n_dim, int row_size, double root_mesh_size, bool viscous = false);
   virtual ~Solver() = default;
 
   /* ### SETUP ### */
