@@ -127,15 +127,14 @@ void Nonpenetration::apply_flux(Boundary_face& bf)
 {
   // fetch data
   auto params = bf.storage_params();
-  // FIXME: the first iteration here is deprecated
-  for (int offset : {0, 2*params.n_dof()/params.row_size}) {
-    double* gh_f = bf.ghost_face() + offset;
-    double* in_f = bf.inside_face() + offset;
-    // initialize to negative of inside flux
-    for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
-    // un-invert normal component of momentum
-    reflect_normal(gh_f, bf.surface_normal(), params.n_qpoint()/params.row_size, params.n_dim);
-  }
+  int nfq = params.n_qpoint()/params.row_size;
+  int offset = 2*params.n_var*nfq;
+  double* gh_f = bf.ghost_face() + offset;
+  double* in_f = bf.inside_face() + offset;
+  // initialize to negative of inside flux
+  for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
+  // un-invert normal component of momentum
+  reflect_normal(gh_f, bf.surface_normal(), nfq, params.n_dim);
 }
 
 void Nonpenetration::apply_advection(Boundary_face& bf)
@@ -162,14 +161,13 @@ void No_slip::apply_flux(Boundary_face& bf)
 {
   auto params = bf.storage_params();
   int nfq = params.n_qpoint()/params.row_size;
-  for (int offset : {0, 2*params.n_dof()/params.row_size}) {
-    double* gh_f = bf.ghost_face() + offset;
-    double* in_f = bf.inside_face() + offset;
-    for (int i_dof = 0; i_dof < params.n_dim*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
-    for (int i_dof = params.n_dim*nfq; i_dof < (params.n_dim + 1)*nfq; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
-    for (int i_dof = (params.n_dim + 1)*nfq; i_dof < (params.n_dim + 2)*nfq; ++i_dof) {
-      gh_f[i_dof] = (t == heat_flux) ? 2*v - in_f[i_dof] : in_f[i_dof];
-    }
+  int offset = 2*params.n_var*nfq;
+  double* gh_f = bf.ghost_face() + offset;
+  double* in_f = bf.inside_face() + offset;
+  for (int i_dof = 0; i_dof < params.n_dim*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
+  for (int i_dof = params.n_dim*nfq; i_dof < (params.n_dim + 1)*nfq; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
+  for (int i_dof = (params.n_dim + 1)*nfq; i_dof < (params.n_dim + 2)*nfq; ++i_dof) {
+    gh_f[i_dof] = (t == heat_flux) ? 2*v - in_f[i_dof] : in_f[i_dof];
   }
 }
 
@@ -202,12 +200,11 @@ void Outflow::apply_flux(Boundary_face& bf)
 {
   // set to negative of inside flux
   auto params = bf.storage_params();
-  // FIXME: the first iteration here is deprecated
-  for (int offset : {0, 2*params.n_dof()/params.row_size}) {
-    double* gh_f = bf.ghost_face() + offset;
-    double* in_f = bf.inside_face() + offset;
-    for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
-  }
+  int nfq = params.n_qpoint()/params.row_size;
+  int offset = 2*params.n_var*nfq;
+  double* gh_f = bf.ghost_face() + offset;
+  double* in_f = bf.inside_face() + offset;
+  for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
 }
 
 void Nominal_pos::snap_vertices(Boundary_connection& con)

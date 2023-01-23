@@ -110,7 +110,9 @@ TEST_CASE("Nonpenetration")
     double qpoint_nrml [] {-4., 3.};
     for (int i_dim = 0; i_dim < 2; ++i_dim) tbc.normal()[i_dim*row_size + i_qpoint] = qpoint_nrml[i_dim];
     double state [] {1., 1., 1.2, 1e5/0.4 + 0.5*1.2*2.};
-    for (int i_var = 0; i_var < 4; ++i_var) tbc.inside_face()[i_var*row_size + i_qpoint] = state[i_var];
+    for (int i = 0; i < 2; ++i) {
+      for (int i_var = 0; i_var < 4; ++i_var) tbc.inside_face()[(8*i + i_var)*row_size + i_qpoint] = state[i_var];
+    }
   }
   SECTION("apply_state")
   {
@@ -129,14 +131,14 @@ TEST_CASE("Nonpenetration")
     nonpen.apply_flux(tbc);
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       // require tangential momentum flux flipped
-      REQUIRE(  3*tbc.ghost_face()[0*row_size + i_qpoint]
-              + 4*tbc.ghost_face()[1*row_size + i_qpoint] == Approx(-7.));
+      REQUIRE(  3*tbc.ghost_face()[8*row_size + i_qpoint]
+              + 4*tbc.ghost_face()[9*row_size + i_qpoint] == Approx(-7.));
       // require normal momentum flux unchanged
-      REQUIRE( -4*tbc.ghost_face()[0*row_size + i_qpoint]
-              + 3*tbc.ghost_face()[1*row_size + i_qpoint] == Approx(-1.));
+      REQUIRE( -4*tbc.ghost_face()[8*row_size + i_qpoint]
+              + 3*tbc.ghost_face()[9*row_size + i_qpoint] == Approx(-1.));
       // require scalar flux flipped
-      REQUIRE(tbc.ghost_face()[2*row_size + i_qpoint] == Approx(-tbc.inside_face()[2*row_size + i_qpoint]));
-      REQUIRE(tbc.ghost_face()[3*row_size + i_qpoint] == Approx(-tbc.inside_face()[3*row_size + i_qpoint]));
+      REQUIRE(tbc.ghost_face()[10*row_size + i_qpoint] == Approx(-tbc.inside_face()[10*row_size + i_qpoint]));
+      REQUIRE(tbc.ghost_face()[11*row_size + i_qpoint] == Approx(-tbc.inside_face()[11*row_size + i_qpoint]));
     }
   }
 }
@@ -165,12 +167,13 @@ TEST_CASE("No_slip")
       REQUIRE((tbc.ghost_face()[3*row_size + i_qpoint] + tbc.inside_face()[3*row_size + i_qpoint])/2 == Approx(1e6));
     }
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-      for (int i_var = 0; i_var < 4; ++i_var) tbc.inside_face()[(4 + i_var)*row_size + i_qpoint] = flux[i_var];
+      for (int i_var = 0; i_var < 4; ++i_var) tbc.inside_face()[(8 + i_var)*row_size + i_qpoint] = flux[i_var];
     }
     no_slip.apply_flux(tbc);
+    flux[2] *= -1; // mass flux should always inverted
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_var = 0; i_var < 4; ++i_var) {
-        REQUIRE(tbc.ghost_face()[(4 + i_var)*row_size + i_qpoint] == Approx(flux[i_var]));
+        REQUIRE(tbc.ghost_face()[(8 + i_var)*row_size + i_qpoint] == Approx(flux[i_var]));
       }
     }
   }
@@ -187,14 +190,15 @@ TEST_CASE("No_slip")
       REQUIRE(tbc.ghost_face()[3*row_size + i_qpoint] == Approx(state[3]));
     }
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-      for (int i_var = 0; i_var < 4; ++i_var) tbc.inside_face()[(4 + i_var)*row_size + i_qpoint] = flux[i_var];
+      for (int i_var = 0; i_var < 4; ++i_var) tbc.inside_face()[(8 + i_var)*row_size + i_qpoint] = flux[i_var];
     }
     no_slip.apply_flux(tbc);
+    flux[2] *= -1; // mass flux should always inverted
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_var = 0; i_var < 3; ++i_var) {
-        REQUIRE(tbc.ghost_face()[(4 + i_var)*row_size + i_qpoint] == Approx(flux[i_var]));
+        REQUIRE(tbc.ghost_face()[(8 + i_var)*row_size + i_qpoint] == Approx(flux[i_var]));
       }
-      REQUIRE((tbc.ghost_face()[7*row_size + i_qpoint] + tbc.inside_face()[7*row_size + i_qpoint])/2 == Approx(3.));
+      REQUIRE((tbc.ghost_face()[11*row_size + i_qpoint] + tbc.inside_face()[11*row_size + i_qpoint])/2 == Approx(3.));
     }
   }
 }
