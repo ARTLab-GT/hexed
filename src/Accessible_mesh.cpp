@@ -282,10 +282,12 @@ void Accessible_mesh::extrude(bool collapse, double offset)
             na[i][face_sign] = node_adj[i] + (2*face.i_dim + (face_sign == face.face_sign))*nfq + i_qpoint;
           }
         }
-        *na[1][0] = (offset**na[0][0] + (1 - offset)**na[0][1])/offset;
-        *na[1][1] = *na[0][1]/offset;
-        *na[0][1] = (offset**na[0][0] + (1 - offset)**na[0][1])/(1 - offset);
-        *na[0][0] /= 1 - offset;
+        *na[1][1] = *na[0][1];
+        *na[0][1] = *na[1][0] = offset**na[0][0] + (1 - offset)**na[0][1];
+        for (int sign = 0; sign < 2; ++sign) {
+          *na[0][sign] /= 1 - offset;
+          *na[1][sign] /= offset;
+        }
       }
     }
   }
