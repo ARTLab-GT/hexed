@@ -4,6 +4,7 @@
 #include <string>
 #include "Boundary_condition.hpp"
 #include "connection.hpp"
+#include "Layer_sequence.hpp"
 
 namespace hexed
 {
@@ -87,6 +88,15 @@ class Mesh
    * Offsetting thus provides a rudimentary way of creating anisotropic wall layers.
    */
   virtual void extrude(bool collapse = false, double offset = 0) = 0;
+  void extrude(Layer_sequence layers)
+  {
+    double height = 1;
+    for (int i_layer = layers.n_layers() - 1; i_layer > 0; --i_layer) {
+      double new_height = height - layers.spacing(i_layer);
+      extrude(true, new_height/height);
+      height = new_height;
+    }
+  }
   // connects all yet-unconnected faces to a boundary condition specified by serial number
   virtual void connect_rest(int bc_sn) = 0;
 
