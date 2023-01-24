@@ -26,7 +26,7 @@ Mat<n_var> hll(Mat<2> speed, Mat<n_var, 2> flux, Mat<n_var, 2> state)
 
 // contains a PDE class representing the Naver-Stokes equations
 // with template options to specify the details of the equation set
-template <bool artificial_visc = false>
+template <bool visc = false>
 class Navier_stokes
 {
   // check that the flow state is thermodynamically admissible
@@ -42,8 +42,8 @@ class Navier_stokes
   class Pde
   {
     public:
-    Pde() = delete;
-    static constexpr bool is_viscous = artificial_visc;
+    const bool natural_visc;
+    static constexpr bool is_viscous = visc;
     static constexpr bool has_convection = true;
     static constexpr int n_var = n_dim + 2;
     static constexpr int curr_start = 0;
@@ -52,8 +52,16 @@ class Navier_stokes
     static constexpr int n_update = n_var;
     static constexpr double heat_rat = 1.4;
     static constexpr int tss_pow = 1;
+    const double dyn_visc = 1.81206e-5;
+    const double therm_diff = dyn_visc*1.4/0.71;
 
-    static constexpr double pressure(Mat<n_var> state)
+    Pde(bool natural_viscosity = 0) :
+      natural_visc{natural_viscosity},
+      dyn_visc{natural_visc*1.81206e-5},
+      therm_diff{1.4/0.71*dyn_visc}
+    {}
+
+    double pressure(Mat<n_var> state) const
     {
       double mmtm_sq = 0.;
       for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
@@ -63,7 +71,7 @@ class Navier_stokes
     }
 
     // compute the convective flux
-    static constexpr Mat<n_update> flux(Mat<n_var> state, Mat<n_dim> normal)
+    Mat<n_update> flux(Mat<n_var> state, Mat<n_dim> normal) const
     {
       Mat<n_var> f;
       f(n_dim) = 0.;
@@ -81,7 +89,7 @@ class Navier_stokes
     }
 
     // compute the numerical convective flux shared at the element faces
-    static constexpr Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal)
+    Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const
     {
       Mat<n_var, 2> face_flux;
       Mat<2> vol_flux;
@@ -111,13 +119,24 @@ class Navier_stokes
     }
 
     // compute the viscous flux
-    static constexpr Mat<n_dim, n_update> flux_visc(Mat<n_dim, n_var> grad, Mat<n_dim, n_dim> nrmls, double av_coef)
+    Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const
     {
-      return -av_coef*nrmls*grad;
+      auto seq = Eigen::seqN(0, n_dim);
+      auto all = Eigen::all;
+      auto mmtm = state(seq);
+      double mass = state(n_dim);
+      Mat<n_dim> veloc = mmtm/mass;
+      Mat<n_dim, n_dim> veloc_grad = (grad(all, seq) - grad(all, n_dim)*veloc.transpose())/mass;
+      Mat<n_dim, n_dim> stress = dyn_visc*(veloc_grad + veloc_grad.transpose() - 2./3.*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity());
+      Mat<n_dim, n_update> flux = -av_coef*grad;
+      flux(all, seq) -= stress;
+      Mat<n_dim> int_ener_grad = -state(n_dim + 1)/mass/mass*grad(all, n_dim) + grad(all, n_dim + 1)/mass - veloc_grad*veloc;
+      flux(all, n_dim + 1) -= stress*veloc + therm_diff*int_ener_grad;
+      return flux;
     }
 
     // maximum characteristic speed for convection
-    static constexpr double char_speed(Mat<n_var> state)
+    double char_speed(Mat<n_var> state) const
     {
       const double sound_speed = std::sqrt(heat_rat*pressure(state)/state(n_dim));
       auto mmtm = state(Eigen::seqN(0, n_dim));
@@ -126,9 +145,9 @@ class Navier_stokes
     }
 
     // maximum effective diffusivity (for enforcing the CFL condition)
-    static constexpr double diffusivity(Mat<n_var> state, double av_coef)
+    double diffusivity(Mat<n_var> state, double av_coef) const
     {
-      return av_coef;
+      return av_coef + std::max(dyn_visc/state(n_dim), therm_diff);
     }
   };
   #undef ASSERT_THERM_ADMIS
@@ -140,7 +159,6 @@ template <int n_dim>
 class Advection
 {
   public:
-  Advection() = delete;
   static constexpr bool is_viscous = false;
   static constexpr bool has_convection = true;
   static constexpr int n_var = n_dim + 1;
@@ -149,7 +167,7 @@ class Advection
   static constexpr int n_update = 1;
   static constexpr int tss_pow = 1;
 
-  static constexpr Mat<1> flux(Mat<n_var> state, Mat<n_dim> normal)
+  Mat<1> flux(Mat<n_var> state, Mat<n_dim> normal) const
   {
     double nrml_veloc = 0;
     for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
@@ -158,7 +176,7 @@ class Advection
     return Mat<1>::Constant(nrml_veloc*state(n_dim));
   }
 
-  static constexpr Mat<1> flux_num(Mat<n_var, 2> face_vars, Mat<n_dim> normal)
+  Mat<1> flux_num(Mat<n_var, 2> face_vars, Mat<n_dim> normal) const
   {
     Mat<1, 2> vol_flux = normal.transpose()*face_vars(Eigen::seqN(0, n_dim), Eigen::all);
     Mat<1, 2> face_state = face_vars(n_dim, Eigen::all);
@@ -171,7 +189,7 @@ class Advection
     return hll(wave_speed, face_flux, face_state);
   }
 
-  static constexpr double char_speed(Mat<n_var> state)
+  double char_speed(Mat<n_var> state) const
   {
     return state(Eigen::seqN(0, n_dim)).norm();
   }
@@ -183,7 +201,6 @@ template <int n_dim>
 class Smooth_art_visc
 {
   public:
-  Smooth_art_visc() = delete;
   static constexpr bool is_viscous = true;
   static constexpr bool has_convection = false;
   static constexpr int n_var = 1;
@@ -193,12 +210,12 @@ class Smooth_art_visc
   static constexpr int n_update = 1;
   static constexpr int tss_pow = 2;
 
-  static constexpr Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) {return Mat<n_update>::Zero();}
-  static constexpr Mat<n_dim, n_update> flux_visc(Mat<n_dim, n_var> grad, Mat<n_dim, n_dim> nrmls, double av_coef)
+  Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const {return Mat<n_update>::Zero();}
+  Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const
   {
-    return -nrmls*grad;
+    return -grad;
   }
-  static constexpr double diffusivity(Mat<n_var> state, double av_coef) {return 1;}
+  double diffusivity(Mat<n_var> state, double av_coef) const {return 1;}
 };
 
 // represents the uniform linear diffusion equation
@@ -207,7 +224,6 @@ template <int n_dim>
 class Fix_therm_admis
 {
   public:
-  Fix_therm_admis() = delete;
   static constexpr bool is_viscous = true;
   static constexpr bool has_convection = false;
   static constexpr int n_var = n_dim + 2;
@@ -217,12 +233,12 @@ class Fix_therm_admis
   static constexpr int n_update = n_var;
   static constexpr int tss_pow = 2;
 
-  static constexpr Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) {return Mat<n_update>::Zero();}
-  static constexpr Mat<n_dim, n_update> flux_visc(Mat<n_dim, n_var> grad, Mat<n_dim, n_dim> nrmls, double av_coef)
+  Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const {return Mat<n_update>::Zero();}
+  Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const
   {
-    return -nrmls*grad;
+    return -grad;
   }
-  static constexpr double diffusivity(Mat<n_var> state, double av_coef) {return 1;}
+  double diffusivity(Mat<n_var> state, double av_coef) const {return 1;}
 };
 
 }

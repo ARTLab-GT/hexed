@@ -63,7 +63,12 @@ void Solver::apply_avc_diff_flux_bcs()
   }
 }
 
-Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
+bool Solver::use_ldg()
+{
+  return visc || use_art_visc;
+}
+
+Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool viscous) :
   params{3, n_dim + 2, n_dim, row_size},
   acc_mesh{params, root_mesh_size},
   basis{row_size},
@@ -71,7 +76,8 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size) :
   use_art_visc{false},
   fix_admis{false},
   av_rs{basis.row_size},
-  write_face(kernel_factory<Spatial<Element, pde::Navier_stokes<false>::Pde>::Write_face>(params.n_dim, params.row_size, basis)) // note: for now, false and true are equivalent for `Write_face`
+  write_face(kernel_factory<Spatial<Element, pde::Navier_stokes<false>::Pde>::Write_face>(params.n_dim, params.row_size, basis)), // note: for now, false and true are equivalent for `Write_face`
+  visc{viscous}
 {
   // setup categories for performance reporting
   stopwatch.children.emplace("initialize reference", stopwatch.work_unit_name);
@@ -676,7 +682,7 @@ void Solver::update(double stability_ratio)
   // compute inviscid update
   for (int i = 0; i < 2; ++i) {
     apply_state_bcs();
-    if (use_art_visc) compute_viscous(dt, i);
+    if (use_ldg()) compute_viscous(dt, i);
     else compute_inviscid(dt, i);
     fix_admissibility(fix_admis_stab_rat*stability_ratio);
   }

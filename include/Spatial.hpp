@@ -69,6 +69,7 @@ class Spatial
   class Local : public Kernel<element_t&>
   {
     using Pde = Pde_templ<n_dim>;
+    const Pde eq;
     static constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
     Derivative<row_size> derivative;
     Mat<2, row_size> boundary;
@@ -79,10 +80,11 @@ class Spatial
     const double update_diff; // how much of the diffusive time derivative
     const double ref; // how much of the reference state to include
     const double curr; // how much of the current state to include
-    const double heat_rat; // ratio of specific heats
 
     public:
-    Local(const Basis& basis, double dt, bool which_stage, double heat_ratio=1.4) :
+    template <typename... pde_args>
+    Local(const Basis& basis, double dt, bool which_stage, pde_args... args) :
+      eq(args...),
       derivative{basis},
       boundary{basis.boundary()},
       write_face{basis},
@@ -90,8 +92,7 @@ class Spatial
       update_conv{stage ? dt*basis.cancellation_convective()/basis.max_cfl_convective() : dt},
       update_diff{stage ? dt*basis.cancellation_diffusive()/basis.max_cfl_diffusive() : dt},
       ref{stage ? update_conv/dt : 0},
-      curr{1 - ref},
-      heat_rat{heat_ratio}
+      curr{1 - ref}
     {
       HEXED_ASSERT(Pde::has_convection || !which_stage, "for pure diffusion use alternating time steps");
     }
@@ -173,12 +174,18 @@ class Spatial
           // compute viscous flux from gradient
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
           {
-            // fetch normals matrix and gradient
+            // fetch normals matrix, gradient, and state
+            Mat<Pde::n_var> qpoint_state;
             Mat<n_dim, Pde::n_var> qpoint_grad;
             Mat<n_dim, n_dim> qpoint_nrmls;
             qpoint_nrmls.setIdentity();
+            for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
+              qpoint_state(i_var) = state[i_var*n_qpoint + i_qpoint];
+              for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+                qpoint_grad(i_dim, i_var) = visc_storage[i_dim][i_var][i_qpoint];
+              }
+            }
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-              for (int i_var = 0; i_var < Pde::n_var; ++i_var) qpoint_grad(i_dim, i_var) = visc_storage[i_dim][i_var][i_qpoint];
               for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
                 if constexpr (element_t::is_deformed) {
                   qpoint_nrmls(i_dim, j_dim) = nrml[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
@@ -187,7 +194,7 @@ class Spatial
             }
             if constexpr (element_t::is_deformed) qpoint_grad /= elem_det[i_qpoint]; // divide by the determinant to get the actual gradient (see above)
             // compute flux and write to temporary storage
-            auto flux = Pde::flux_visc(qpoint_grad, qpoint_nrmls, av_coef[i_qpoint]);
+            Mat<n_dim, Pde::n_var> flux = qpoint_nrmls*eq.flux_visc(qpoint_state, qpoint_grad, av_coef[i_qpoint]);
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
               for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
                 visc_storage[i_dim][Pde::curr_start + i_var][i_qpoint] = flux(i_dim, i_var);
@@ -213,7 +220,7 @@ class Spatial
               }
               // compute flux
               for (int i_row = 0; i_row < row_size; ++i_row) {
-                flux(i_row, Eigen::all) = Pde::flux(row_r(i_row, Eigen::all), row_n(i_row, Eigen::all));
+                flux(i_row, Eigen::all) = eq.flux(row_r(i_row, Eigen::all), row_n(i_row, Eigen::all));
               }
               // fetch face data
               face_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
@@ -337,9 +344,12 @@ class Spatial
   class Neighbor : public Kernel<Face_connection<element_t>&>
   {
     using Pde = Pde_templ<n_dim>;
+    const Pde eq;
     static constexpr int n_fqpoint = custom_math::pow(row_size, n_dim - 1);
 
     public:
+    Neighbor() : eq{} {}
+
     virtual void operator()(Sequence<Face_connection<element_t>&>& connections)
     {
       #pragma omp parallel for
@@ -388,7 +398,7 @@ class Spatial
             }
           }
           // compute flux
-          auto flux = Pde::flux_num(state, nrml);
+          auto flux = eq.flux_num(state, nrml);
           // write flux to temporary storage
           for (int i_side = 0; i_side < 2; ++i_side) {
             for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
@@ -486,11 +496,13 @@ class Spatial
   class Max_dt : public Kernel<element_t&, double>
   {
     using Pde = Pde_templ<n_dim>;
+    const Pde eq;
     double max_cfl_c;
     double max_cfl_d;
 
     public:
     Max_dt(const Basis& basis) :
+      eq{},
       max_cfl_c{basis.max_cfl_convective()},
       max_cfl_d{basis.max_cfl_diffusive()}
     {}
@@ -530,8 +542,8 @@ class Spatial
             qpoint_state(i_var) = state[i_var*n_qpoint + i_qpoint];
           }
           // compute speeds
-          if constexpr (Pde::has_convection) max_qpoint_speed = std::max(max_qpoint_speed, Pde::char_speed(qpoint_state));
-          if constexpr (Pde::is_viscous) max_qpoint_diff = std::max(max_qpoint_diff, Pde::diffusivity(qpoint_state, art_visc[i_qpoint]));
+          if constexpr (Pde::has_convection) max_qpoint_speed = std::max(max_qpoint_speed, eq.char_speed(qpoint_state));
+          if constexpr (Pde::is_viscous) max_qpoint_diff = std::max(max_qpoint_diff, eq.diffusivity(qpoint_state, art_visc[i_qpoint]));
           // get time step scale (which for pure diffusion equations will generally be squared
           double local_tss = custom_math::pow(tss[i_qpoint], Pde::tss_pow);
           // compute spatial scales
