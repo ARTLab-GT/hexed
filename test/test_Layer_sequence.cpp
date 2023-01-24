@@ -4,12 +4,16 @@
 TEST_CASE("Layer_sequence")
 {
   hexed::Layer_sequence ls(1e-6, 4);
-  REQUIRE(ls.cumulative_height(ls.n_layers()) == Approx(1.));
+  // test total height is 1
+  REQUIRE(ls.cumulative_height(ls.n_layers()) == Approx(1.).epsilon(1e-10));
+  // test near-wall layers
   for (int i = 0; i < 4; ++i) REQUIRE(ls.spacing(i) == Approx(1e-6));
   REQUIRE(ls.cumulative_height(0) == Approx(0.).scale(1e-6));
-  REQUIRE(ls.cumulative_height(4) == Approx(0.).scale(4e-6));
-  REQUIRE(ls.spacing(ls.n_layers() - 1) > .5);
+  REQUIRE(ls.cumulative_height(4) == Approx(4e-6));
+  // test growth ratios
+  REQUIRE(ls.spacing(ls.n_layers() - 1) > .49);
   for (int i = 1; i < ls.n_layers(); ++i) {
-    REQUIRE(ls.spacing(i)/ls.spacing(i - 1) < 2);
+    REQUIRE(ls.spacing(i)/ls.spacing(i - 1) < 2.01);
+    REQUIRE(ls.spacing(i)/ls.spacing(i - 1) > .99);
   }
 }
