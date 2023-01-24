@@ -78,7 +78,7 @@ class Face_connection
   Eigen::VectorXd data;
   public:
   Face_connection(Storage_params params) : data(4*params.n_dof()/params.row_size) {}
-  virtual Con_dir<element_t> direction() const = 0;
+  virtual Con_dir<element_t> direction() = 0;
   virtual double* state() {return data.data();}
 };
 
@@ -94,7 +94,7 @@ class Face_connection<Deformed_element>
     state_sz{params.n_dof()/params.row_size},
     data(2*(nrml_sz + 2*state_sz))
   {}
-  virtual Con_dir<Deformed_element> direction() const = 0;
+  virtual Con_dir<Deformed_element> direction() = 0;
   virtual double* state() {return data.data();}
   double* normal(int i_side) {return data.data() + 4*state_sz + i_side*nrml_sz;}
   double* normal() {return data.data() + 4*state_sz;} // area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
@@ -135,7 +135,7 @@ class Element_face_connection : public Element_connection, public Face_connectio
     }
     connect_normal();
   }
-  virtual Con_dir<element_t> direction() const {return dir;}
+  virtual Con_dir<element_t> direction() {return dir;}
   virtual element_t& element(int i_side) {return *elems[i_side];}
 };
 
@@ -181,7 +181,7 @@ class Refined_connection
       int face_sz = r.params.n_dof()/r.params.row_size;
       f.faces[ref_con.dir.i_face(!ref_con.rev)] = Face_connection<element_t>::state() + (!ref_con.rev)*face_sz;
     }
-    virtual Con_dir<element_t> direction() const {return ref_con.direction();}
+    virtual Con_dir<element_t> direction() {return ref_con.direction();}
     virtual element_t& element(int i_side) {return (i_side != ref_con.rev) ? fine_elem : ref_con.c;}
   };
 
@@ -265,12 +265,12 @@ class Refined_connection
   Refined_connection(const Refined_connection&) = delete;
   Refined_connection& operator=(const Refined_connection&) = delete;
   virtual ~Refined_connection() = default;
-  Con_dir<element_t> direction() const {return dir;}
+  Con_dir<element_t> direction() {return dir;}
   // fetch an object represting a connection between the face of a fine element and one of the mortar faces
   Fine_connection& connection(int i_fine) {return fine_cons[i_fine];}
-  bool order_reversed() const {return rev;}
-  auto stretch() const {return str;}
-  int n_fine_elements() const {return n_fine;}
+  bool order_reversed() {return rev;}
+  auto stretch() {return str;}
+  int n_fine_elements() {return n_fine;}
   double* coarse_state() {return coarse_state_data.data();}
 };
 

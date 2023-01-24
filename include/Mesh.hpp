@@ -64,8 +64,6 @@ class Mesh
    * are used to identify which face of the element is participating in the boundary condition.
    */
   virtual void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n) = 0;
-  // delete all boundary connections involving a certain boundary condition
-  virtual void disconnect_boundary(int bc_sn) = 0;
   /*
    * Extrudes a layer of elements from unconnected faces:
    * 1. Extrudes one deformed element from every unconnected face of every deformed element.

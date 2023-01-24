@@ -154,9 +154,6 @@ TEST_CASE("Accessible_mesh")
         REQUIRE(std::max(uses[0], uses[1]) == 2);
         REQUIRE(std::min(uses[0], uses[1]) == 1);
       }
-      mesh.disconnect_boundary(freestream);
-      REQUIRE(mesh.boundary_connections().size() == 1);
-      REQUIRE(mesh.boundary_connections()[0].bound_cond_serial_n() == nonpen);
     }
     SECTION("deformed")
     {

@@ -15,11 +15,11 @@ class Boundary_face
 {
   public:
   virtual ~Boundary_face() = default;
-  virtual Storage_params storage_params() const = 0;
+  virtual Storage_params storage_params() = 0;
   virtual double* ghost_face() = 0;
   virtual double* inside_face() = 0;
-  virtual int i_dim() const = 0;
-  virtual bool inside_face_sign() const = 0;
+  virtual int i_dim() = 0;
+  virtual bool inside_face_sign() = 0;
   virtual double* surface_normal() = 0; // note: has to have a name that's different from `Face_connection`
   virtual double* surface_position() = 0;
   virtual double* state_cache() = 0; // can be used to record the state for state-dependent flux boundary conditions
@@ -216,7 +216,7 @@ class Boundary_connection : public Boundary_face, public Face_connection<Deforme
   public:
   inline Boundary_connection(Storage_params params) : Face_connection<Deformed_element>{params} {}
   virtual Element& element() = 0;
-  virtual int bound_cond_serial_n() const = 0;
+  virtual int bound_cond_serial_n() = 0;
 };
 
 /*
@@ -249,26 +249,16 @@ class Typed_bound_connection : public Boundary_connection
     connect_normal();
     elem.faces[direction().i_face(0)] = state();
   }
-  Typed_bound_connection(Typed_bound_connection&& other) = default;
-  Typed_bound_connection& operator=(Typed_bound_connection&& other)
-  {
-    *this = Typed_bound_connection(std::move(other));
-    return *this;
-  }
-  Typed_bound_connection(const Typed_bound_connection& other) = delete;
-  Typed_bound_connection& operator=(const Typed_bound_connection& other) = delete;
-  virtual ~Typed_bound_connection() = default;
-
-  virtual Storage_params storage_params() const {return params;}
+  virtual Storage_params storage_params() {return params;}
   virtual double* ghost_face() {return state() + params.n_dof()/params.row_size;}
   virtual double* inside_face() {return state();}
-  virtual int i_dim() const {return i_d;}
-  virtual bool inside_face_sign() const {return ifs;}
+  virtual int i_dim() {return i_d;}
+  virtual bool inside_face_sign() {return ifs;}
   virtual double* surface_normal() {return normal();}
   virtual double* surface_position() {return pos.data();}
   virtual double* state_cache() {return state_c.data();}
-  virtual Con_dir<Deformed_element> direction() const {return {{i_d, i_d}, {ifs, !ifs}};}
-  virtual int bound_cond_serial_n() const {return bc_sn;}
+  virtual Con_dir<Deformed_element> direction() {return {{i_d, i_d}, {ifs, !ifs}};}
+  virtual int bound_cond_serial_n() {return bc_sn;}
   element_t& element() {return elem;}
 };
 
