@@ -1,7 +1,7 @@
 #include <Accessible_mesh.hpp>
 #include <math.hpp>
-#include <erase_if.hpp>
 #include <Row_index.hpp>
+#include <erase_if.hpp>
 
 namespace hexed
 {
@@ -106,6 +106,13 @@ void Accessible_mesh::connect_boundary(int ref_level, bool is_deformed, int elem
   if (is_deformed) EMPLACE(def)
   else EMPLACE(car)
   #undef EMPLACE
+}
+
+void Accessible_mesh::disconnect_boundary(int bc_sn)
+{
+  auto is_doomed = [bc_sn](const Boundary_connection& con){return con.bound_cond_serial_n() == bc_sn;};
+  erase_if(car.bound_cons, is_doomed);
+  erase_if(def.bound_cons, is_doomed);
 }
 
 Mesh::Connection_validity Accessible_mesh::valid()
