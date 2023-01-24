@@ -12,6 +12,7 @@ Equidistant.cpp
 global_hacks.cpp
 Hanging_vertex_matcher.cpp
 Iteration_status.cpp
+Layer_sequence.cpp
 math.cpp
 Output_data.cpp
 otter_vis.cpp
