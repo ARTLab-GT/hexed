@@ -271,6 +271,23 @@ void Accessible_mesh::extrude(bool collapse, double offset)
         }
       }
     }
+    // readjust face node adjustments to account for offset
+    if (offset > 0) {
+      double* node_adj [] {face.elem.node_adjustments(), elem.node_adjustments()};
+      int nfq = params.n_qpoint()/params.row_size;
+      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+        double* na [2][2];
+        for (int i = 0; i < 2; ++i) {
+          for (int face_sign = 0; face_sign < 2; ++face_sign) {
+            na[i][face_sign] = node_adj[i] + (2*face.i_dim + (face_sign == face.face_sign))*nfq + i_qpoint;
+          }
+        }
+        *na[1][0] = (offset**na[0][0] + (1 - offset)**na[0][1])/offset;
+        *na[1][1] = *na[0][1]/offset;
+        *na[0][1] = (offset**na[0][0] + (1 - offset)**na[0][1])/(1 - offset);
+        *na[0][0] /= 1 - offset;
+      }
+    }
   }
 
   // perform offset
