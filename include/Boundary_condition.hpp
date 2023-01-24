@@ -22,6 +22,7 @@ class Boundary_face
   virtual bool inside_face_sign() = 0;
   virtual double* surface_normal() = 0; // note: has to have a name that's different from `Face_connection`
   virtual double* surface_position() = 0;
+  virtual double* state_cache() = 0; // can be used to record the state for state-dependent flux boundary conditions
 };
 class Boundary_connection;
 
@@ -111,6 +112,7 @@ class Nonpenetration : public Flow_bc
  * or the internal energy about `value` (so that averaging the inside and ghost states
  * gives you the specified value).
  * Good for viscous walls.
+ * Note: for `internal_energy`, technically reflects total energy about `value`*mass
  */
 class No_slip : public Flow_bc
 {
@@ -118,7 +120,7 @@ class No_slip : public Flow_bc
   enum Thermal_type {heat_flux, internal_energy, emissivity};
   // note: providing no arguments gives you an adiabatic wall
   No_slip(Thermal_type type = heat_flux, double value = 0);
-  virtual void apply_state(Boundary_face&);
+  virtual void apply_state(Boundary_face&); // note: `apply_state` must be called before `apply_flux` to prime `state_cache`
   virtual void apply_flux(Boundary_face&);
   virtual void apply_advection(Boundary_face&);
   private:
@@ -230,6 +232,7 @@ class Typed_bound_connection : public Boundary_connection
   bool ifs;
   int bc_sn;
   Eigen::VectorXd pos;
+  Eigen::VectorXd state_c;
   void connect_normal();
 
   public:
@@ -240,7 +243,8 @@ class Typed_bound_connection : public Boundary_connection
     i_d{i_dim_arg},
     ifs{inside_face_sign_arg},
     bc_sn{bc_serial_n},
-    pos(params.n_dim*params.n_qpoint()/params.row_size)
+    pos(params.n_dim*params.n_qpoint()/params.row_size),
+    state_c(params.n_var*params.n_qpoint()/params.row_size)
   {
     connect_normal();
     elem.faces[direction().i_face(0)] = state();
@@ -252,6 +256,7 @@ class Typed_bound_connection : public Boundary_connection
   virtual bool inside_face_sign() {return ifs;}
   virtual double* surface_normal() {return normal();}
   virtual double* surface_position() {return pos.data();}
+  virtual double* state_cache() {return state_c.data();}
   virtual Con_dir<Deformed_element> direction() {return {{i_d, i_d}, {ifs, !ifs}};}
   virtual int bound_cond_serial_n() {return bc_sn;}
   element_t& element() {return elem;}

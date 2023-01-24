@@ -150,11 +150,17 @@ void No_slip::apply_state(Boundary_face& bf)
   auto params = bf.storage_params();
   double* gh_f = bf.ghost_face();
   double* in_f = bf.inside_face();
+  double* sc = bf.state_cache();
   int nfq = params.n_qpoint()/params.row_size;
+  // set ghost state
   for (int i_dof = 0; i_dof < params.n_dim*nfq; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
   for (int i_dof = params.n_dim*nfq; i_dof < (params.n_dim + 1)*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
   for (int i_dof = (params.n_dim + 1)*nfq; i_dof < (params.n_dim + 2)*nfq; ++i_dof) {
-    gh_f[i_dof] = (t == internal_energy) ? 2*v - in_f[i_dof] : in_f[i_dof];
+    gh_f[i_dof] = (t == internal_energy) ? 2*v*in_f[i_dof - nfq] - in_f[i_dof] : in_f[i_dof];
+  }
+  // prime `state_cache` with average state for use in emissivity BC
+  for (int i_dof = 0; i_dof < params.n_var*nfq; ++i_dof) {
+    sc[i_dof] = (gh_f[i_dof] + in_f[i_dof])/2;
   }
 }
 
@@ -165,8 +171,11 @@ void No_slip::apply_flux(Boundary_face& bf)
   int offset = 2*params.n_var*nfq;
   double* gh_f = bf.ghost_face() + offset;
   double* in_f = bf.inside_face() + offset;
+  double* sc = bf.state_cache();
+  // set momentum and mass flux (pretty straightforward)
   for (int i_dof = 0; i_dof < params.n_dim*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
   for (int i_dof = params.n_dim*nfq; i_dof < (params.n_dim + 1)*nfq; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
+  // set energy flux depending on thermal boundary condition
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
     int i_dof = i_qpoint + (params.n_dim + 1)*nfq;
     double flux;
@@ -177,12 +186,7 @@ void No_slip::apply_flux(Boundary_face& bf)
       case emissivity:
         {
           // set heat flux equal to radiative heat loss by stefan-boltzmann law
-          double temp = in_f[i_dof - offset];
-          double mass = in_f[params.n_dim*nfq + i_qpoint - offset];
-          for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-            temp -= .5*custom_math::pow(in_f[i_dim*nfq + i_qpoint - offset], 2)/mass;
-          }
-          temp *= .4/mass/specific_gas_air;
+          double temp = sc[i_dof]*.4/sc[params.n_dim*nfq + i_qpoint]/specific_gas_air;
           flux = v*stefan_boltzmann*custom_math::pow(temp, 4);
         }
         break;
@@ -190,7 +194,8 @@ void No_slip::apply_flux(Boundary_face& bf)
         flux = in_f[i_dof];
         break;
     }
-    gh_f[i_dof] = 2*flux - in_f[i_dof];
+    int flux_sign = 2*bf.inside_face_sign() - 1;
+    gh_f[i_dof] = 2*flux*flux_sign - in_f[i_dof];
   }
 }
 
