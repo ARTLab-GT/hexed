@@ -74,8 +74,17 @@ class Mesh
    * When this is complete, the number of unconnected faces (of deformed elements) remains unchanged,
    * but the unconnected faces now belong to new, extruded elements which can be snapped to surface geometry
    * in a well-conditioned fashion.
+   * If `collapse == true` then the new elements will be collapsed in the extrusion direction,
+   * such that they have zero volume and exist purely on the extruded face.
+   * If the mesh has already been extruded once and `offset` is specified,
+   * the interior vertices of the extruded element will then be moved some distance toward the
+   * interior neighbor depending on the value of `offset`, where
+   * `offset == 0` yields no motion and `offset == 1` moves them exactly to the neighbor.
+   * If the mesh has not been extruded, the vertices shall be moved in an unspecified manner
+   * (but maintaining a valid mesh state).
+   * Offsetting thus provides a rudimentary way of creating anisotropic wall layers.
    */
-  virtual void extrude(bool collapse = false) = 0;
+  virtual void extrude(bool collapse = false, double offset = 0) = 0;
   // connects all yet-unconnected faces to a boundary condition specified by serial number
   virtual void connect_rest(int bc_sn) = 0;
 

@@ -1,6 +1,7 @@
 #include <Accessible_mesh.hpp>
 #include <math.hpp>
 #include <erase_if.hpp>
+#include <Row_index.hpp>
 
 namespace hexed
 {
@@ -170,7 +171,7 @@ bool aligned_different_dim(Con_dir<Deformed_element> dir, std::array<int, 2> ext
   return (dir.i_dim[0] == extrude_dim[1]) && (dir.i_dim[1] == extrude_dim[0]);
 }
 
-void Accessible_mesh::extrude(bool collapse)
+void Accessible_mesh::extrude(bool collapse, double offset)
 {
   const int nd = params.n_dim;
   const int n_faces = 2*nd;
@@ -264,6 +265,34 @@ void Accessible_mesh::extrude(bool collapse)
       }
     }
   }
+
+  // perform offset
+  if (offset > 0) {
+    // loop through all vertices on faces that used to be exposed
+    for (auto face : empty_faces) {
+      for (Row_index ind(nd, 2, face.i_dim); ind; ++ind) {
+        Vertex& vert = face.elem.vertex(ind.i_qpoint(face.face_sign)); // vertex that has to be moved
+        Vertex& off_vert = face.elem.vertex(ind.i_qpoint(!face.face_sign)); // vertex to move toward
+        // use an extra zero appended to the vertex record to mark vertices that have already been moved,
+        // so that neighboring elements don't move the same vertices repeatedly
+        if (vert.record.size()%4 == 0) {
+          vert.record.push_back(0);
+          // move vertex
+          for (int i_dim = 0; i_dim < nd; ++i_dim) {
+            vert.pos[i_dim] = (1 - offset)*vert.pos[i_dim] + offset*off_vert.pos[i_dim];
+          }
+        }
+      }
+    }
+    // delete the extra 0s we added to the vertex record so as not to interfere with the connection process below
+    for (auto face : empty_faces) {
+      for (Row_index ind(nd, 2, face.i_dim); ind; ++ind) {
+        Vertex& vert = face.elem.vertex(ind.i_qpoint(face.face_sign));
+        if (vert.record.size()%4 == 1) vert.record.pop_back();
+      }
+    }
+  }
+
   // plan connections to make (don't make them yet, because that could result in `eat`ing vertices which have not been visited,
   // and ultimately dereferencing null pointers)
   std::vector<Connection_plan> con_plans;

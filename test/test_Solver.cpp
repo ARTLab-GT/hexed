@@ -813,14 +813,18 @@ TEST_CASE("face extrusion")
       }
     }
     solver.mesh().extrude();
+    for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
+    solver.mesh().extrude(true, .7);
     auto valid = solver.mesh().valid();
     REQUIRE(valid.n_duplicate == 0);
     REQUIRE(valid.n_missing == 16);
     int bc_sn = solver.mesh().add_boundary_condition(new hexed::Copy(), new hexed::Null_mbc());
     solver.mesh().connect_rest(bc_sn);
     solver.calc_jacobian();
-    REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Approx(24./4.)); // check number of elements
-    for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
+    #if HEXED_USE_TECPLOT
+    solver.visualize_field_tecplot(hexed::Mass(), "extrude_2d");
+    #endif
+    REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Approx(40./4.)); // check number of elements and that jacobian is nonsingular
   }
   SECTION("3D")
   {
@@ -847,8 +851,8 @@ TEST_CASE("face extrusion")
     solver.mesh().connect_rest(bc_sn);
     solver.calc_jacobian();
     REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Approx(86.)); // check number of elements
-    for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
     #if HEXED_USE_TECPLOT
+    for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
     solver.visualize_field_tecplot(hexed::State_variables(), "extrude");
     #endif
   }
