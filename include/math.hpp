@@ -8,7 +8,8 @@
 namespace hexed
 {
 
-template <int rows, int cols = 1>
+const int dyn = Eigen::Dynamic;
+template <int rows = dyn, int cols = 1>
 using Mat = Eigen::Matrix<double, rows, cols>;
 
 namespace custom_math
