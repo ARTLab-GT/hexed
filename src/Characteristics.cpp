@@ -20,12 +20,15 @@ Characteristics::Characteristics(Mat<> state, Mat<> direction)
   veloc{state(Eigen::seqN(0, n_dim))/mass}
 {
   int n_dim = dir.size();
+  // compute more properties of the reference state
   double vsq = veloc.squaredNorm();
   double pres = .4*(state(n_dim + 1) - .5*mass*vsq);
   double sound_speed = std::sqrt(1.4*pres/mass);
+  // compute eigenvalues
   vals(2) = nrml(veloc);
   vals(0) = vals(2) - sound_speed;
   vals(1) = vals(2) + sound_speed;
+  // compute 1D eigenvectors
   double d_mass = 1;
   for (int sign = 0; sign < 2; ++sign) {
     double d_veloc = (2*sign - 1)*sound_speed/mass*d_mass;
@@ -41,19 +44,23 @@ Characteristics::Characteristics(Mat<> state, Mat<> direction)
 Mat<dyn, 3> Characteristics::decomp(Mat<> state)
 {
   Mat<> mmtm = state(Eigen::seqN(0, n_dim));
-  Mat<> mmtm_cor = tang(mmtm) - state(n_dim)*tang(veloc);
+  // component of tangential momentum perturbation which is not induced by mass perturbation
+  Mat<> mmtm_correction = tang(mmtm) - state(n_dim)*tang(veloc);
+  // compute state for 1D eigenvector problem
   Mat<3> state_1d;
   state_1d <<
     nrml(mmtm),
     state(n_dim),
-    state(n_dim + 1) - veloc.dot(mmtm_cor);
+    state(n_dim + 1) - veloc.dot(mmtm_correction);
+  // decompose 1D state into eigenvectors
   Mat<1, 3> eig_basis = vecs.colPivHouseholderQr().solve(state_1d).transpose();
   Mat<3, 3> eig_decomp = vecs.array().rowwise()*eig_basis.array();
+  // ND eigenvector decomposition
   Mat<dyn, 3> d(state.rows(), 3);
   d(Eigen::seqN(n_dim, 2), Eigen::all) = eig_decomp(Eigen::seqN(1, 2), Eigen::all);
-  d(Eigen::seqN(0, n_dim), Eigen::all) = dir*eig_decomp(0, Eigen::all) + tang(veloc)*eig_basis;
-  d(Eigen::seqN(0, n_dim), 2) += mmtm_cor;
-  d(n_dim + 1, 2) += veloc.dot(mmtm_cor);
+  d(Eigen::seqN(0, n_dim), Eigen::all) = dir*eig_decomp(0, Eigen::all) + tang(veloc)*eig_basis; // second term accounts for tangential momentum induced by mass perturbation
+  d(Eigen::seqN(0, n_dim), 2) += mmtm_correction;
+  d(n_dim + 1, 2) += veloc.dot(mmtm_correction); // correct energy to account for tangential momentum perturbation
   return d;
 }
 

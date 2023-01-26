@@ -4,6 +4,7 @@
 
 TEST_CASE("Characteristics")
 {
+  // arbitrary state to linearize about
   double mass = 1.225;
   hexed::Mat<3> veloc {10., 4., 12.};
   double pres = 101325;
@@ -12,13 +13,17 @@ TEST_CASE("Characteristics")
   state(3) = mass;
   state(4) = pres/.4 + .5*mass*veloc.squaredNorm();
   hexed::Mat<3> normal {1., 1., 1.};
+  // find eigenvalues
   hexed::Characteristics c(state, normal);
   auto eigvals = c.eigvals();
+  // decompose another arbitrary state
   hexed::Mat<> state1(5);
   state1 << 1., 2., 3., 1.3, 2e5;
   auto decomp = c.decomp(state1);
+  // check that decomposition sums to the input state
   REQUIRE((decomp.rowwise().sum() - state1).cwiseQuotient(state1).norm() == Approx(0).scale(1.));
-  double diff = 1e-6;
+  // check that the columns are indeed eigenvectors of linearized flux
+  double diff = 1e-6; // use a small perturbation so that flux is effectively linear
   hexed::pde::Navier_stokes<>::Pde<3> ns;
   for (int i = 0; i < 3; ++i) {
     hexed::Mat<> eigvec = decomp(Eigen::all, i);
