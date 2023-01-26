@@ -80,9 +80,15 @@ void Riemann_invariants::apply_state(Boundary_face& bf)
     for (int i_eig = 0; i_eig < 3; ++i_eig) {
       if (sign*eigvals(i_eig) > 0) decomp(Eigen::all, i_eig) = fs_decomp(Eigen::all, i_eig);
     }
+    Mat<> state = decomp.rowwise().sum();
+    // limit state to ensure thermodynamic admissibility
+    state(params.n_dim) = std::max(state(params.n_dim), inside(params.n_dim)/2);
+    double kin_ener = .5*state(Eigen::seqN(0, params.n_dim)).squaredNorm()/state(params.n_dim);
+    double inside_kin_ener = .5*inside(Eigen::seqN(0, params.n_dim)).squaredNorm()/inside(params.n_dim);
+    state(params.n_dim + 1) = kin_ener + std::max(state(params.n_dim + 1) - kin_ener, (inside(params.n_dim + 1) - inside_kin_ener)/2);
     // write to ghost state
     for (int i_var = 0; i_var < params.n_var; ++i_var) {
-      gh_f[i_var*nfq + i_qpoint] = decomp(i_var, Eigen::all).sum();
+      gh_f[i_var*nfq + i_qpoint] = state(i_var);
     }
   }
   // prime state cache with inside state

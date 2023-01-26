@@ -75,7 +75,7 @@ TEST_CASE("Riemann_invariants")
   hexed::Storage_params params {3, 5, 3, row_size};
   hexed::Element element {params};
   const int n_qpoint = row_size*row_size;
-  hexed::Mat<5> fs {10., 30., -20., 1.3, 1.2e5};
+  hexed::Mat<5> fs {10., 30., -20., 1.3, 4e5};
   hexed::Riemann_invariants ri {fs};
   hexed::Typed_bound_connection<hexed::Element> tbc {element, 1, false, 0};
   hexed::Mat<5> inside_state {1/1.2, -600/1.2, 1/1.2, 1.2, 101325/.4 + .5*1.2*360002};
