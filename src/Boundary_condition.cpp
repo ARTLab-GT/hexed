@@ -64,19 +64,23 @@ void Riemann_invariants::apply_state(Boundary_face& bf)
   double* in_f = bf.inside_face();
   double* gh_f = bf.ghost_face();
   double* nrml = bf.surface_normal();
-  int sign = 1 - 2*bf.inside_face_sign();
+  int sign = 1 - 2*bf.inside_face_sign(); // sign of velocity of incoming characteristics
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+    // fetch data
     Mat<> inside(params.n_var);
     for (int i_var = 0; i_var < params.n_var; ++i_var) inside(i_var) = in_f[i_var*nfq + i_qpoint];
     Mat<> n(params.n_dim);
     for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) n(i_dim) = nrml[i_dim*nfq + i_qpoint];
+    // compute characteristics
     Characteristics ch(inside, n);
     auto eigvals = ch.eigvals();
     auto decomp = ch.decomp(inside);
     auto fs_decomp = ch.decomp(fs);
+    // set incoming characteristcs to freestream values and outgoing characteristics to inside values
     for (int i_eig = 0; i_eig < 3; ++i_eig) {
       if (sign*eigvals(i_eig) > 0) decomp(Eigen::all, i_eig) = fs_decomp(Eigen::all, i_eig);
     }
+    // write to ghost state
     for (int i_var = 0; i_var < params.n_var; ++i_var) {
       gh_f[i_var*nfq + i_qpoint] = decomp(i_var, Eigen::all).sum();
     }
@@ -98,20 +102,24 @@ void Riemann_invariants::apply_flux(Boundary_face& bf)
   double* nrml = bf.surface_normal();
   int sign = 1 - 2*bf.inside_face_sign();
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-    Mat<> inside(params.n_var);
-    Mat<> cache(params.n_var);
+    // fetch data
+    Mat<> inside(params.n_var); // flux
+    Mat<> cache(params.n_var); // state
     for (int i_var = 0; i_var < params.n_var; ++i_var) {
       inside(i_var) = in_f[i_var*nfq + i_qpoint];
       cache(i_var) = sc[i_var*nfq + i_qpoint];
     }
     Mat<> n(params.n_dim);
     for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) n(i_dim) = nrml[i_dim*nfq + i_qpoint];
+    // compute characteristics
     Characteristics ch(cache, n);
     auto eigvals = ch.eigvals();
     auto decomp = ch.decomp(inside);
+    // set incoming characteristics to zero and outgoing characterists to inside values
     for (int i_eig = 0; i_eig < 3; ++i_eig) {
       if (sign*eigvals(i_eig) <= 0) decomp(Eigen::all, i_eig).setZero();
     }
+    // write to ghost flux
     for (int i_var = 0; i_var < params.n_var; ++i_var) {
       gh_f[i_var*nfq + i_qpoint] = decomp(i_var, Eigen::all).sum();
     }
