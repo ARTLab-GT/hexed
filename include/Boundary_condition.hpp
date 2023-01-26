@@ -68,8 +68,7 @@ class Boundary_condition
  * Sets the ghost state to the provided freestream state.
  * Technically this can result in an ill-posed problem if used
  * in anything other than a supersonic inlet,
- * but in numerical practice it often gets you the right answer anyway.
- * Should implement Riemann invariants as a more robust alternative.
+ * but in numerical practice it often gets you the right answer anyway, at least for inviscid problems.
  */
 class Freestream : public Flow_bc
 {
@@ -77,6 +76,20 @@ class Freestream : public Flow_bc
   public:
   // `freestream_state.size()` must equal the `n_var()` of the `Boundary_face` you apply_state it to
   Freestream(std::vector<double> freestream_state);
+  virtual void apply_state(Boundary_face&);
+  virtual void apply_flux(Boundary_face&);
+};
+
+/*
+ * A freestream boundary condition that sets only the ingoing characteristics.
+ * Works in almost any situation.
+ * Should generally be the default farfield boundary condition.
+ */
+class Riemann_invariants : public Flow_bc
+{
+  std::vector<double> fs;
+  public:
+  Riemann_invariants(std::vector<double> freestream_state);
   virtual void apply_state(Boundary_face&);
   virtual void apply_flux(Boundary_face&);
 };

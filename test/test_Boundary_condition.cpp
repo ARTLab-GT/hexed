@@ -69,6 +69,35 @@ TEST_CASE("Freestream")
   }
 }
 
+TEST_CASE("Riemann_invariants")
+{
+  const int row_size = hexed::config::max_row_size;
+  hexed::Storage_params params {3, 5, 3, row_size};
+  hexed::Element element {params};
+  const int n_qpoint = row_size*row_size;
+  std::vector<double> fs {10., 30., -20., 1.3, 1.2e5};
+  hexed::Riemann_invariants ri {fs};
+  hexed::Typed_bound_connection<hexed::Element> tbc {element, 1, false, 0};
+  hexed::Mat<5> inside_state {1, -100, 1, 1.2, 1.2e5};
+  SECTION("supersonic inflow")
+  {
+    // set the first point to supersonic outflow and the rest to supersonic inflow
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+      hexed::Mat<5> state = inside_state;
+      if (i_qpoint) state(1) *= -1;
+      for (int i_var = 0; i_var < 5; ++i_var) {
+        tbc.inside_face()[i_var*n_qpoint + i_qpoint] = (i_var);
+      }
+    }
+    ri.apply_state(tbc);
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+      for (int i_var = 0; i_var < 5; ++i_var) {
+        REQUIRE(tbc.ghost_face()[i_var*n_qpoint + i_qpoint] == Approx(i_qpoint ? fs[i_var] : inside_state(i_var)));
+      }
+    }
+  }
+}
+
 TEST_CASE("Function_bc")
 {
   const int row_size = hexed::config::max_row_size;

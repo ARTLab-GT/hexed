@@ -52,6 +52,26 @@ void Freestream::apply_state(Boundary_face& bf)
   }
 }
 
+Riemann_invariants::Riemann_invariants(std::vector<double> freestream_state)
+: fs{freestream_state}
+{}
+
+void Riemann_invariants::apply_state(Boundary_face& bf)
+{
+  auto params = bf.storage_params();
+  const int nq = params.n_qpoint()/params.row_size;
+  double* gf = bf.ghost_face();
+  for (int i_var = 0; i_var < params.n_var; ++i_var) {
+    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+      gf[i_var*nq + i_qpoint] = fs[i_var];
+    }
+  }
+}
+
+void Riemann_invariants::apply_flux(Boundary_face& bf)
+{
+}
+
 Function_bc::Function_bc(const Surface_func& func_arg) : func{func_arg} {}
 
 void Function_bc::apply_state(Boundary_face& bf)
