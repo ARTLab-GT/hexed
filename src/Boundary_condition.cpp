@@ -60,16 +60,16 @@ Riemann_invariants::Riemann_invariants(Mat<> freestream_state)
 void Riemann_invariants::apply_state(Boundary_face& bf)
 {
   auto params = bf.storage_params();
-  const int nq = params.n_qpoint()/params.row_size;
+  const int nfq = params.n_qpoint()/params.row_size;
   double* in_f = bf.inside_face();
   double* gh_f = bf.ghost_face();
   double* nrml = bf.surface_normal();
   int sign = 1 - 2*bf.inside_face_sign();
-  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
     Mat<> inside(params.n_var);
-    for (int i_var = 0; i_var < params.n_var; ++i_var) inside(i_var) = in_f[i_var*nq + i_qpoint];
+    for (int i_var = 0; i_var < params.n_var; ++i_var) inside(i_var) = in_f[i_var*nfq + i_qpoint];
     Mat<> n(params.n_dim);
-    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) n(i_dim) = nrml[i_dim*nq + i_qpoint];
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) n(i_dim) = nrml[i_dim*nfq + i_qpoint];
     Characteristics ch(inside, n);
     auto eigvals = ch.eigvals();
     auto decomp = ch.decomp(inside);
@@ -78,13 +78,44 @@ void Riemann_invariants::apply_state(Boundary_face& bf)
       if (sign*eigvals(i_eig) > 0) decomp(Eigen::all, i_eig) = fs_decomp(Eigen::all, i_eig);
     }
     for (int i_var = 0; i_var < params.n_var; ++i_var) {
-      gh_f[i_var*nq + i_qpoint] = decomp(i_var, Eigen::all).sum();
+      gh_f[i_var*nfq + i_qpoint] = decomp(i_var, Eigen::all).sum();
     }
+  }
+  // prime state cache with inside state
+  double* sc = bf.state_cache();
+  for (int i_dof = 0; i_dof < params.n_var*nfq; ++i_dof) {
+    sc[i_dof] = in_f[i_dof];
   }
 }
 
 void Riemann_invariants::apply_flux(Boundary_face& bf)
 {
+  auto params = bf.storage_params();
+  const int nfq = params.n_qpoint()/params.row_size;
+  double* sc = bf.state_cache();
+  double* in_f = bf.inside_face() + 2*params.n_var*nfq;
+  double* gh_f = bf.ghost_face() + 2*params.n_var*nfq;
+  double* nrml = bf.surface_normal();
+  int sign = 1 - 2*bf.inside_face_sign();
+  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+    Mat<> inside(params.n_var);
+    Mat<> cache(params.n_var);
+    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+      inside(i_var) = in_f[i_var*nfq + i_qpoint];
+      cache(i_var) = sc[i_var*nfq + i_qpoint];
+    }
+    Mat<> n(params.n_dim);
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) n(i_dim) = nrml[i_dim*nfq + i_qpoint];
+    Characteristics ch(cache, n);
+    auto eigvals = ch.eigvals();
+    auto decomp = ch.decomp(inside);
+    for (int i_eig = 0; i_eig < 3; ++i_eig) {
+      if (sign*eigvals(i_eig) <= 0) decomp(Eigen::all, i_eig).setZero();
+    }
+    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+      gh_f[i_var*nfq + i_qpoint] = decomp(i_var, Eigen::all).sum();
+    }
+  }
 }
 
 Function_bc::Function_bc(const Surface_func& func_arg) : func{func_arg} {}
