@@ -48,7 +48,7 @@ TEST_CASE("Freestream")
   hexed::Storage_params params {3, 5, 3, row_size};
   hexed::Element element {params};
   const int n_qpoint = row_size*row_size;
-  hexed::Freestream freestream {{10., 30., -20., 1.3, 1.2e5}};
+  hexed::Freestream freestream {hexed::Mat<5>{10., 30., -20., 1.3, 1.2e5}};
   hexed::Typed_bound_connection<hexed::Element> tbc {element, 1, false, 0};
   // set inside face to something arbitrary
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
@@ -75,10 +75,10 @@ TEST_CASE("Riemann_invariants")
   hexed::Storage_params params {3, 5, 3, row_size};
   hexed::Element element {params};
   const int n_qpoint = row_size*row_size;
-  std::vector<double> fs {10., 30., -20., 1.3, 1.2e5};
+  hexed::Mat<5> fs {10., 30., -20., 1.3, 1.2e5};
   hexed::Riemann_invariants ri {fs};
   hexed::Typed_bound_connection<hexed::Element> tbc {element, 1, false, 0};
-  hexed::Mat<5> inside_state {1, -100, 1, 1.2, 1.2e5};
+  hexed::Mat<5> inside_state {1/1.2, -600/1.2, 1/1.2, 1.2, 101325/.4 + .5*1.2*360002};
   SECTION("supersonic inflow")
   {
     // set the first point to supersonic outflow and the rest to supersonic inflow
@@ -86,13 +86,28 @@ TEST_CASE("Riemann_invariants")
       hexed::Mat<5> state = inside_state;
       if (i_qpoint) state(1) *= -1;
       for (int i_var = 0; i_var < 5; ++i_var) {
-        tbc.inside_face()[i_var*n_qpoint + i_qpoint] = (i_var);
+        tbc.inside_face()[i_var*n_qpoint + i_qpoint] = state(i_var);
       }
+      for (int i_dim = 0; i_dim < 3; ++i_dim) tbc.surface_normal()[i_dim*n_qpoint + i_qpoint] = (i_dim == 1);
     }
     ri.apply_state(tbc);
+    // test that the first point is the inside state and the rest are the freestream state
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
       for (int i_var = 0; i_var < 5; ++i_var) {
         REQUIRE(tbc.ghost_face()[i_var*n_qpoint + i_qpoint] == Approx(i_qpoint ? fs[i_var] : inside_state(i_var)));
+      }
+    }
+    // set an arbitrary viscous flux
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+      for (int i_var = 0; i_var < 5; ++i_var) {
+        tbc.inside_face()[(10 + i_var)*n_qpoint + i_qpoint] = 1.;
+      }
+    }
+    ri.apply_flux(tbc);
+    // test that the flux is left alone at the points where the state was set and set to zero where it was not
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+      for (int i_var = 0; i_var < 5; ++i_var) {
+        REQUIRE(tbc.ghost_face()[(10 + i_var)*n_qpoint + i_qpoint] == Approx(i_qpoint ? 1. : 0.).scale(1.));
       }
     }
   }

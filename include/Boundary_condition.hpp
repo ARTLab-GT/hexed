@@ -72,10 +72,10 @@ class Boundary_condition
  */
 class Freestream : public Flow_bc
 {
-  std::vector<double> fs;
+  Mat<> fs;
   public:
   // `freestream_state.size()` must equal the `n_var()` of the `Boundary_face` you apply_state it to
-  Freestream(std::vector<double> freestream_state);
+  Freestream(Mat<> freestream_state);
   virtual void apply_state(Boundary_face&);
   virtual void apply_flux(Boundary_face&);
 };
@@ -87,9 +87,9 @@ class Freestream : public Flow_bc
  */
 class Riemann_invariants : public Flow_bc
 {
-  std::vector<double> fs;
+  Mat<> fs;
   public:
-  Riemann_invariants(std::vector<double> freestream_state);
+  Riemann_invariants(Mat<> freestream_state);
   virtual void apply_state(Boundary_face&);
   virtual void apply_flux(Boundary_face&);
 };
