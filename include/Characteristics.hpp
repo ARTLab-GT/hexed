@@ -12,9 +12,10 @@ class Characteristics
   Mat<3, 3> vecs;
   Mat<> dir;
   const int n_dim;
-  Mat<> ref_tang_veloc;
   double mass;
-  Mat<> mmtm;
+  Mat<> veloc;
+  double nrml(Mat<> vec);
+  Mat<> tang(Mat<> vec);
   public:
   Characteristics(Mat<> state, Mat<> direction);
   inline Mat<3> eigvals() {return vals;}
