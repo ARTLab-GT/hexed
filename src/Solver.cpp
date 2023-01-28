@@ -657,6 +657,7 @@ void Solver::update(double stability_ratio)
   auto& elems = acc_mesh.elements();
 
   // compute time step
+  #if 0
   double max_dt;
   if (use_art_visc) {
     max_dt = std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
@@ -665,7 +666,11 @@ void Solver::update(double stability_ratio)
     max_dt = std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
                       (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
   }
+  printf("%e %e\n", max_dt, basis.max_cfl_convective()/340./2);
   double dt = stability_ratio*max_dt;
+  #else
+  double dt = stability_ratio;
+  #endif
 
   // record reference state for Runge-Kutta scheme
   const int n_dof = params.n_dof();

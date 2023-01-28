@@ -80,6 +80,8 @@ class Spatial
     const double update_diff; // how much of the diffusive time derivative
     const double ref; // how much of the reference state to include
     const double curr; // how much of the current state to include
+    double mcc;
+    double mcd;
 
     public:
     template <typename... pde_args>
@@ -92,7 +94,9 @@ class Spatial
       update_conv{stage ? dt*basis.cancellation_convective()/basis.max_cfl_convective() : dt},
       update_diff{stage ? dt*basis.cancellation_diffusive()/basis.max_cfl_diffusive() : dt},
       ref{stage ? update_conv/dt : 0},
-      curr{1 - ref}
+      curr{1 - ref},
+      mcc{basis.max_cfl_convective()},
+      mcd{basis.max_cfl_diffusive()}
     {
       HEXED_ASSERT(Pde::has_convection || !which_stage, "for pure diffusion use alternating time steps");
     }
@@ -119,7 +123,7 @@ class Spatial
         double* state = elem.stage(0);
         std::array<double*, 6> faces = elem.faces;
         for (double*& face : faces) face += Pde::curr_start*n_qpoint/row_size;
-        double* tss = elem.time_step_scale();
+        double* time_step_scale = elem.time_step_scale();
         double d_pos = elem.nominal_size();
         double time_rate [2][Pde::n_update][n_qpoint] {}; // first part contains convective time derivative, second part diffusive
         double* av_coef = elem.art_visc_coef();
@@ -242,6 +246,20 @@ class Spatial
           }
         }
 
+        for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+          Mat<Pde::n_var> s;
+          for (int i_var = 0; i_var < Pde::n_var; ++i_var) s(i_var) = state[i_var*n_qpoint + i_qpoint];
+          double scale = 0;
+          double tss = time_step_scale[i_qpoint];
+          if constexpr (Pde::has_convection) scale += eq.char_speed(s)/mcc/tss;
+          if constexpr (Pde::is_viscous) scale += eq.diffusivity(s, av_coef[i_qpoint])/mcd/tss/tss;
+          scale *= n_dim;
+          for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
+            if constexpr (Pde::has_convection) time_rate[0][i_var][i_qpoint] /= scale;
+            if constexpr (Pde::is_viscous)     time_rate[1][i_var][i_qpoint] /= scale;
+          }
+        }
+
         // write update to interior
         for (int i_var = 0; i_var < Pde::n_update; ++i_var)
         {
@@ -262,10 +280,10 @@ class Spatial
                 if (stage) u += (update_conv - update_diff)*visc_state[i_qpoint];
                 else visc_state[i_qpoint] = time_rate[1][i_var][i_qpoint]; // for stage 0, record the diffusive update to allow the aforementioned
               }
-              u *= custom_math::pow(tss[i_qpoint], Pde::tss_pow)/det/d_pos;
+              u /= det*d_pos;
               curr_state[i_qpoint] = u + curr*curr_state[i_qpoint] + ref*ref_state[i_qpoint];
             } else {
-              curr_state[i_qpoint] += update_diff*time_rate[1][i_var][i_qpoint]*custom_math::pow(tss[i_qpoint], Pde::tss_pow)/det/d_pos;
+              curr_state[i_qpoint] += update_diff*time_rate[1][i_var][i_qpoint]/det/d_pos;
             }
           }
         }
@@ -281,18 +299,25 @@ class Spatial
   class Reconcile_ldg_flux : public Kernel<element_t&>
   {
     using Pde = Pde_templ<n_dim>;
+    Pde eq;
     static constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
     Derivative<row_size> derivative;
     Write_face<n_dim, row_size> write_face;
     int stage;
     double update;
+    double mcc;
+    double mcd;
 
     public:
-    Reconcile_ldg_flux(const Basis& basis, double dt, int which_stage) :
+    template <typename... pde_args>
+    Reconcile_ldg_flux(const Basis& basis, double dt, int which_stage, pde_args... args) :
+      eq(args...),
       derivative{basis},
       write_face{basis},
       stage{which_stage},
-      update{stage ? dt*basis.cancellation_diffusive()/basis.max_cfl_diffusive() : dt}
+      update{stage ? dt*basis.cancellation_diffusive()/basis.max_cfl_diffusive() : dt},
+      mcc{basis.max_cfl_convective()},
+      mcd{basis.max_cfl_diffusive()}
     {
       HEXED_ASSERT(Pde::has_convection || !which_stage, "for pure diffusion use alternating time steps");
     }
@@ -306,7 +331,8 @@ class Spatial
         double* state = elem.stage(0);
         std::array<double*, 6> faces = elem.faces;
         for (double*& face : faces) face += (2*(n_dim + 2) + Pde::curr_start)*n_qpoint/row_size;
-        double* tss = elem.time_step_scale();
+        double* time_step_scale = elem.time_step_scale();
+        double* av_coef = elem.art_visc_coef();
         double d_pos = elem.nominal_size();
         double time_rate [Pde::n_update][n_qpoint] {};
         double* elem_det = nullptr;
@@ -320,6 +346,20 @@ class Spatial
             Row_rw<Pde::n_update, row_size>::write_row(-derivative.boundary_term(bound_f), time_rate[0], ind, 1.);
           }
         }
+
+        for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+          Mat<Pde::n_var> s;
+          for (int i_var = 0; i_var < Pde::n_var; ++i_var) s(i_var) = state[i_var*n_qpoint + i_qpoint];
+          double scale = 0;
+          double tss = time_step_scale[i_qpoint];
+          if constexpr (Pde::has_convection) scale += eq.char_speed(s)/mcc/tss;
+          if constexpr (Pde::is_viscous) scale += eq.diffusivity(s, av_coef[i_qpoint])/mcd/tss/tss;
+          scale *= n_dim;
+          for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
+            time_rate[i_var][i_qpoint] /= scale;
+          }
+        }
+
         // write update to interior
         for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
           double* curr_state = state + (Pde::curr_start + i_var)*n_qpoint;
@@ -327,7 +367,7 @@ class Spatial
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
             double det = 1;
             if constexpr (element_t::is_deformed) det = elem_det[i_qpoint];
-            curr_state[i_qpoint] += update*time_rate[i_var][i_qpoint]/d_pos*custom_math::pow(tss[i_qpoint], Pde::tss_pow)/det;
+            curr_state[i_qpoint] += update*time_rate[i_var][i_qpoint]/d_pos/det;
             if constexpr (Pde::has_convection) if (!stage) visc_state[i_qpoint] += time_rate[i_var][i_qpoint]; // add face flux correction to viscous update to be used in stage 1
           }
         }

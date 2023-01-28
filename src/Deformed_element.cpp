@@ -116,22 +116,23 @@ void Deformed_element::set_jacobian(const Basis& basis)
   }
   // set local TSS
   auto bound_mat = basis.boundary();
-  Eigen::MatrixXd vertex_jacobian (params.n_vertices(), n_dim*n_dim);
+  Eigen::MatrixXd vertex_nrml (params.n_vertices(), n_dim*n_dim);
   for (int i_jac = 0; i_jac < n_dim*n_dim; ++i_jac) {
     // extrapolate one entry of the Jacobian to the vertex
-    vertex_jacobian.col(i_jac) = custom_math::hypercube_matvec(bound_mat, jac.segment(i_jac*params.n_qpoint(), n_qpoint));
+    vertex_nrml.col(i_jac) = custom_math::hypercube_matvec(bound_mat, Eigen::Map<Eigen::VectorXd>(reference_level_normals() + i_jac*params.n_qpoint(), n_qpoint));
   }
+  Eigen::VectorXd vertex_det = custom_math::hypercube_matvec(bound_mat, Eigen::Map<Eigen::VectorXd>(jacobian_determinant(), n_qpoint));
   for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-    Eigen::MatrixXd vert_jac(n_dim, n_dim);
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-      vert_jac(i_dim, Eigen::all) = vertex_jacobian(i_vert, Eigen::seqN(i_dim*n_dim, n_dim));
-    }
-    Eigen::MatrixXd inv = vert_jac.inverse();
     double norm_sum = 0.;
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-      norm_sum += inv(Eigen::all, i_dim).norm();
+      double norm_sq = 0.;
+      for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+        double coef = vertex_nrml(i_vert, i_dim*n_dim + j_dim);
+        norm_sq += coef*coef;
+      }
+      norm_sum += std::sqrt(norm_sq);
     }
-    vertex_time_step_scale(i_vert) = n_dim/norm_sum/custom_math::pow(2, r_level);
+    vertex_time_step_scale(i_vert) = nominal_size()*n_dim*vertex_det(i_vert)/norm_sum; // for deformed elements this is a essentially a measure of the amount of stretching in each dimension
   }
 }
 
