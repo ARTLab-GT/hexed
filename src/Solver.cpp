@@ -68,6 +68,21 @@ bool Solver::use_ldg()
   return visc || use_art_visc;
 }
 
+double Solver::max_dt()
+{
+  const int nd = params.n_dim;
+  const int rs = params.row_size;
+  auto& sw_car {stopwatch.children.at("cartesian")};
+  auto& sw_def {stopwatch.children.at("deformed" )};
+  if (use_ldg()) {
+    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, is_local_time, visc))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
+                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, is_local_time, visc))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
+  } else {
+    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
+                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
+  }
+}
+
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool viscous) :
   params{3, n_dim + 2, n_dim, row_size},
   acc_mesh{params, root_mesh_size},
@@ -77,7 +92,8 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool viscous) :
   fix_admis{false},
   av_rs{basis.row_size},
   write_face(kernel_factory<Spatial<Element, pde::Navier_stokes<false>::Pde>::Write_face>(params.n_dim, params.row_size, basis)), // note: for now, false and true are equivalent for `Write_face`
-  visc{viscous}
+  visc{viscous},
+  is_local_time{false}
 {
   // setup categories for performance reporting
   stopwatch.children.emplace("initialize reference", stopwatch.work_unit_name);
@@ -96,7 +112,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool viscous) :
                      &stopwatch.children.at("set art visc").children.at("diffusion"), &stopwatch.children.at("fix admis.")}) {
       sw->children.emplace(type, stopwatch.work_unit_name);
       auto& children = sw->children.at(type).children;
-      children.emplace("max char speed", stopwatch.work_unit_name);
+      children.emplace("compute time step", stopwatch.work_unit_name);
       children.emplace("neighbor", "(connection*(time integration stage))");
       children.emplace("local", unit);
     }
@@ -256,6 +272,7 @@ void Solver::calc_jacobian()
 
 void Solver::set_local_tss()
 {
+  is_local_time = true;
   // set time step to be continuous at vertices
   share_vertex_data(&Element::vertex_time_step_scale, Vertex::vector_min);
   // construct a matrix for 1D linear interpolation
@@ -364,8 +381,9 @@ void Solver::set_art_visc_smoothness(double advect_length)
   sw_adv.stopwatch.start();
   (*write_face)(elements);
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-  double dt_adv = av_advect_stab_rat*std::min((*kernel_factory<Spatial<Element         , pde::Advection>::Max_dt>(nd, rs, basis))(acc_mesh.cartesian().elements(), sw_adv.children.at("cartesian"), "max char speed"),
-                                              (*kernel_factory<Spatial<Deformed_element, pde::Advection>::Max_dt>(nd, rs, basis))(acc_mesh.deformed ().elements(), sw_adv.children.at("deformed" ), "max char speed"));
+  (*kernel_factory<Spatial<Element         , pde::Advection>::Max_dt>(nd, rs, basis, true))(acc_mesh.cartesian().elements(), sw_adv.children.at("cartesian"), "max char speed");
+  (*kernel_factory<Spatial<Deformed_element, pde::Advection>::Max_dt>(nd, rs, basis, true))(acc_mesh.deformed ().elements(), sw_adv.children.at("deformed" ), "max char speed");
+  double dt_adv = av_advect_stab_rat;
   // ensure that time step is small enough that the time derivative term will be stable
   {
     double max_rat = 0;
@@ -478,8 +496,9 @@ void Solver::set_art_visc_smoothness(double advect_length)
   // begin root-smear-square operation
   int n_real = 3; // number of real time steps (as apposed to pseudotime steps)
   // evaluate CFL condition
-  double dt_diff = av_diff_stab_rat*std::min((*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Max_dt>(nd, rs, basis))(acc_mesh.cartesian().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "max char speed"),
-                                             (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Max_dt>(nd, rs, basis))(acc_mesh.deformed ().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "max char speed"));
+  (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true))(acc_mesh.cartesian().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "max char speed"),
+  (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true))(acc_mesh.deformed ().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "max char speed");
+  double dt_diff = av_diff_stab_rat;
   double diff_time = av_diff_ratio*advect_length/n_real; // compute size of real time step (as opposed to pseudotime)
   // adjust for time derivative term if necessary
   {
@@ -650,27 +669,10 @@ void Solver::synch_extruded_res_bad()
 void Solver::update(double stability_ratio)
 {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
-  auto& sw_car {stopwatch.children.at("cartesian")};
-  auto& sw_def {stopwatch.children.at("deformed" )};
-  const int nd = params.n_dim;
-  const int rs = params.row_size;
   auto& elems = acc_mesh.elements();
 
   // compute time step
-  #if 0
-  double max_dt;
-  if (use_art_visc) {
-    max_dt = std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
-                      (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
-  } else {
-    max_dt = std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
-                      (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
-  }
-  printf("%e %e\n", max_dt, basis.max_cfl_convective()/340./2);
-  double dt = stability_ratio*max_dt;
-  #else
-  double dt = stability_ratio;
-  #endif
+  double dt = stability_ratio*max_dt();
 
   // record reference state for Runge-Kutta scheme
   const int n_dof = params.n_dof();
@@ -698,8 +700,8 @@ void Solver::update(double stability_ratio)
   ++status.iteration;
   stopwatch.stopwatch.pause();
   stopwatch.work_units_completed += elems.size();
-  sw_car.work_units_completed += acc_mesh.cartesian().elements().size();
-  sw_def.work_units_completed += acc_mesh.deformed ().elements().size();
+  stopwatch.children.at("cartesian").work_units_completed += acc_mesh.cartesian().elements().size();
+  stopwatch.children.at("deformed" ).work_units_completed += acc_mesh.deformed ().elements().size();
 }
 
 Iteration_status Solver::iteration_status()
@@ -765,8 +767,9 @@ void Solver::fix_admissibility(double stability_ratio)
     }
     if (admiss && refined_admiss) break;
     else {
-      double dt = stability_ratio*std::min((*kernel_factory<Spatial<Element         , pde::Fix_therm_admis>::Max_dt>(nd, rs, basis))(acc_mesh.cartesian().elements(), stopwatch.children.at("fix admis.").children.at("cartesian"), "max char speed"),
-                                           (*kernel_factory<Spatial<Deformed_element, pde::Fix_therm_admis>::Max_dt>(nd, rs, basis))(acc_mesh.deformed ().elements(), stopwatch.children.at("fix admis.").children.at("deformed" ), "max char speed"));
+      (*kernel_factory<Spatial<Element         , pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true))(acc_mesh.cartesian().elements(), stopwatch.children.at("fix admis.").children.at("cartesian"), "max char speed");
+      (*kernel_factory<Spatial<Deformed_element, pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true))(acc_mesh.deformed ().elements(), stopwatch.children.at("fix admis.").children.at("deformed" ), "max char speed");
+      double dt = stability_ratio;
       double linear = dt;
       double quadratic = basis.cancellation_diffusive()/basis.max_cfl_diffusive()*dt*dt;
       std::array<double, 2> step;
@@ -776,6 +779,7 @@ void Solver::fix_admissibility(double stability_ratio)
         apply_state_bcs();
         compute_fta(s, 0);
       }
+      max_dt();
     }
   }
   status.fix_admis_iters += iter;

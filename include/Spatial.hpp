@@ -123,7 +123,7 @@ class Spatial
         double* state = elem.stage(0);
         std::array<double*, 6> faces = elem.faces;
         for (double*& face : faces) face += Pde::curr_start*n_qpoint/row_size;
-        double* time_step_scale = elem.time_step_scale();
+        double* tss = elem.time_step_scale();
         double d_pos = elem.nominal_size();
         double time_rate [2][Pde::n_update][n_qpoint] {}; // first part contains convective time derivative, second part diffusive
         double* av_coef = elem.art_visc_coef();
@@ -246,20 +246,6 @@ class Spatial
           }
         }
 
-        for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-          Mat<Pde::n_var> s;
-          for (int i_var = 0; i_var < Pde::n_var; ++i_var) s(i_var) = state[i_var*n_qpoint + i_qpoint];
-          double scale = 0;
-          double tss = time_step_scale[i_qpoint];
-          if constexpr (Pde::has_convection) scale += eq.char_speed(s)/mcc/tss;
-          if constexpr (Pde::is_viscous) scale += eq.diffusivity(s, av_coef[i_qpoint])/mcd/tss/tss;
-          scale *= n_dim;
-          for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
-            if constexpr (Pde::has_convection) time_rate[0][i_var][i_qpoint] /= scale;
-            if constexpr (Pde::is_viscous)     time_rate[1][i_var][i_qpoint] /= scale;
-          }
-        }
-
         // write update to interior
         for (int i_var = 0; i_var < Pde::n_update; ++i_var)
         {
@@ -280,10 +266,10 @@ class Spatial
                 if (stage) u += (update_conv - update_diff)*visc_state[i_qpoint];
                 else visc_state[i_qpoint] = time_rate[1][i_var][i_qpoint]; // for stage 0, record the diffusive update to allow the aforementioned
               }
-              u /= det*d_pos;
+              u *= tss[i_qpoint]/det/d_pos;
               curr_state[i_qpoint] = u + curr*curr_state[i_qpoint] + ref*ref_state[i_qpoint];
             } else {
-              curr_state[i_qpoint] += update_diff*time_rate[1][i_var][i_qpoint]/det/d_pos;
+              curr_state[i_qpoint] += update_diff*time_rate[1][i_var][i_qpoint]*tss[i_qpoint]/det/d_pos;
             }
           }
         }
@@ -299,7 +285,6 @@ class Spatial
   class Reconcile_ldg_flux : public Kernel<element_t&>
   {
     using Pde = Pde_templ<n_dim>;
-    Pde eq;
     static constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
     Derivative<row_size> derivative;
     Write_face<n_dim, row_size> write_face;
@@ -309,9 +294,7 @@ class Spatial
     double mcd;
 
     public:
-    template <typename... pde_args>
-    Reconcile_ldg_flux(const Basis& basis, double dt, int which_stage, pde_args... args) :
-      eq(args...),
+    Reconcile_ldg_flux(const Basis& basis, double dt, int which_stage) :
       derivative{basis},
       write_face{basis},
       stage{which_stage},
@@ -331,8 +314,7 @@ class Spatial
         double* state = elem.stage(0);
         std::array<double*, 6> faces = elem.faces;
         for (double*& face : faces) face += (2*(n_dim + 2) + Pde::curr_start)*n_qpoint/row_size;
-        double* time_step_scale = elem.time_step_scale();
-        double* av_coef = elem.art_visc_coef();
+        double* tss = elem.time_step_scale();
         double d_pos = elem.nominal_size();
         double time_rate [Pde::n_update][n_qpoint] {};
         double* elem_det = nullptr;
@@ -347,19 +329,6 @@ class Spatial
           }
         }
 
-        for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-          Mat<Pde::n_var> s;
-          for (int i_var = 0; i_var < Pde::n_var; ++i_var) s(i_var) = state[i_var*n_qpoint + i_qpoint];
-          double scale = 0;
-          double tss = time_step_scale[i_qpoint];
-          if constexpr (Pde::has_convection) scale += eq.char_speed(s)/mcc/tss;
-          if constexpr (Pde::is_viscous) scale += eq.diffusivity(s, av_coef[i_qpoint])/mcd/tss/tss;
-          scale *= n_dim;
-          for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
-            time_rate[i_var][i_qpoint] /= scale;
-          }
-        }
-
         // write update to interior
         for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
           double* curr_state = state + (Pde::curr_start + i_var)*n_qpoint;
@@ -367,7 +336,7 @@ class Spatial
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
             double det = 1;
             if constexpr (element_t::is_deformed) det = elem_det[i_qpoint];
-            curr_state[i_qpoint] += update*time_rate[i_var][i_qpoint]/d_pos/det;
+            curr_state[i_qpoint] += update*time_rate[i_var][i_qpoint]*tss[i_qpoint]/d_pos/det;
             if constexpr (Pde::has_convection) if (!stage) visc_state[i_qpoint] += time_rate[i_var][i_qpoint]; // add face flux correction to viscous update to be used in stage 1
           }
         }
@@ -539,13 +508,19 @@ class Spatial
     const Pde eq;
     double max_cfl_c;
     double max_cfl_d;
+    Mat<row_size> nodes;
+    bool is_local;
 
     public:
-    Max_dt(const Basis& basis) :
-      eq{},
+    template <typename... pde_args>
+    Max_dt(const Basis& basis, bool is_local_time_stepping, pde_args... args) :
+      eq{args...},
       max_cfl_c{basis.max_cfl_convective()},
-      max_cfl_d{basis.max_cfl_diffusive()}
-    {}
+      max_cfl_d{basis.max_cfl_diffusive()},
+      is_local{is_local_time_stepping}
+    {
+      for (int i_node = 0; i_node < row_size; ++i_node) nodes(i_node) = basis.node(i_node);
+    }
 
     virtual double operator()(Sequence<element_t&>& elements)
     {
@@ -559,21 +534,10 @@ class Spatial
         double* state = elem.stage(0);
         double* art_visc = elem.art_visc_coef();
         double* tss = elem.time_step_scale();
-        #pragma GCC diagnostic push
-        #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-        double* ref_nrml = nullptr;
-        double* jac_det = nullptr;
-        #pragma GCC diagnostic pop
-        if constexpr (element_t::is_deformed) {
-          ref_nrml = elem.reference_level_normals();
-          jac_det = elem.jacobian_determinant();
+        Mat<custom_math::pow(2, n_dim)> vertex_spacing;
+        for (unsigned i_vert = 0; i_vert < vertex_spacing.size(); ++i_vert) {
+          vertex_spacing(i_vert) = elem.vertex_time_step_scale(i_vert);
         }
-        // minimum spatial scales (determined by Jacobian) for convection and diffusion
-        double min_scale_conv = std::numeric_limits<double>::max(); // O(h)
-        double min_scale_diff = std::numeric_limits<double>::max(); // O(h^2)
-        // effective speeds of information propagation
-        double max_qpoint_speed = 0.; // maximum characteristic speed
-        double max_qpoint_diff = 0.; // maximum effective diffusivity
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
         {
           // fetch state variables
@@ -582,33 +546,21 @@ class Spatial
             qpoint_state(i_var) = state[i_var*n_qpoint + i_qpoint];
           }
           // compute speeds
-          if constexpr (Pde::has_convection) max_qpoint_speed = std::max(max_qpoint_speed, eq.char_speed(qpoint_state));
-          if constexpr (Pde::is_viscous) max_qpoint_diff = std::max(max_qpoint_diff, eq.diffusivity(qpoint_state, art_visc[i_qpoint]));
-          // get time step scale (which for pure diffusion equations will generally be squared
-          double local_tss = custom_math::pow(tss[i_qpoint], Pde::tss_pow);
-          // compute spatial scales
-          double local_size = elem.nominal_size();
-          if constexpr (element_t::is_deformed) {
-            double norm_sum = 0.;
-            for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-              double norm_sq = 0.;
-              for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-                double coef = ref_nrml[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
-                norm_sq += coef*coef;
-              }
-              norm_sum += std::sqrt(norm_sq);
-            }
-            local_size *= n_dim*jac_det[i_qpoint]/norm_sum; // for deformed elements this is a essentially a measure of the amount of stretching in each dimension
+          // get mesh spacing
+          Mat<n_dim> coords;
+          for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+            coords(i_dim) = nodes((i_qpoint/custom_math::pow(row_size, n_dim - 1 - i_dim))%row_size);
           }
-          // take minima
-          min_scale_conv = std::min(min_scale_conv, local_size/local_tss);
-          min_scale_diff = std::min(min_scale_diff, local_size*local_size/local_tss);
+          // compute time step
+          double spacing = custom_math::interp(vertex_spacing, coords);
+          double scale = 0;
+          if constexpr (Pde::has_convection) scale += eq.char_speed(qpoint_state)/max_cfl_c/spacing;
+          if constexpr (Pde::is_viscous) scale += eq.diffusivity(qpoint_state, art_visc[i_qpoint])/max_cfl_d/spacing/spacing;
+          if (is_local) tss[i_qpoint] = 1./n_dim/scale;
+          else dt = std::min(dt, 1./n_dim/scale);
         }
-        // combine convective and diffusive time steps in a way that is less than either,
-        // but asymptotes to the dominant one (if any)
-        dt = std::min(dt, 1./n_dim/(max_qpoint_speed/max_cfl_c/min_scale_conv + max_qpoint_diff/max_cfl_d/min_scale_diff));
       }
-      return dt;
+      return is_local ? 1. : dt;
     }
   };
 };

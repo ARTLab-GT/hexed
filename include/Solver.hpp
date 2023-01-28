@@ -30,6 +30,8 @@ class Solver
   int av_rs;
   std::unique_ptr<Kernel<Element&>> write_face;
   bool visc;
+  bool is_local_time;
+
   void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
   void fix_admissibility(double stability_ratio);
   void apply_state_bcs();
@@ -42,6 +44,7 @@ class Solver
   void compute_avc_diff(double dt, int i_stage);
   void fta(double dt, int i_stage);
   bool use_ldg();
+  double max_dt();
 
   public:
   // tweakable parameters for the numerical scheme
