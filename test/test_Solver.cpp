@@ -237,7 +237,7 @@ class Boundary_perturbation : public hexed::Mesh_bc
 TEST_CASE("Solver")
 {
   static_assert (hexed::config::max_row_size >= 3); // this test was written for row size 3
-  hexed::Solver sol {2, 3, 0.8};
+  hexed::Solver sol {2, 3, 0.8, true};
   int catchall_bc = sol.mesh().add_boundary_condition(new hexed::Copy(), new hexed::Null_mbc());
 
   SECTION("initialization and introspection")
@@ -296,14 +296,16 @@ TEST_CASE("Solver")
     sol.mesh().valid().assert_valid();
     sol.snap_vertices();
     sol.calc_jacobian();
-    sol.set_local_tss();
-    // in sn0, TSS is 2/(1. + 1./.1) == 2./11. for reasons that i'm too tired to explain rn
-    REQUIRE(sol.sample(0,  true, sn0, 4, hexed::Time_step_scale_func())[0] == Approx(2/11.));
+    sol.initialize(hexed::Constant_func({0., 0., 1.4, 1./.4})); // initialize with zero velocity and unit speed of sound
+    sol.update(); // sets the time step scale (among other things)
+    double cfl = hexed::Gauss_legendre(3).max_cfl_convective()/2.;
+    // in sn0, TSS is max_cfl*root_size/n_dim*determinant/normal_sum/sound_speed
+    REQUIRE(sol.sample(0,  true, sn0, 4, hexed::Time_step_scale_func())[0] == Approx(cfl*.8*2/11./1.));
     // in sn1, TSS varies bilinearly
-    REQUIRE(sol.sample(0, false, sn1, 4, hexed::Time_step_scale_func())[0] == Approx((2*2/11. + .5 + 1.)/4.));
+    REQUIRE(sol.sample(0, false, sn1, 4, hexed::Time_step_scale_func())[0] == Approx(cfl*.8*(2*2/11. + .5 + 1.)/4.));
     // TSS at hanging nodes should be set to match coarse element
-    REQUIRE(sol.sample(1, false, sn2, 4, hexed::Time_step_scale_func())[0] == Approx((3*.5 + (.5 + 2/11.)/2.)/4.));
-    REQUIRE(sol.sample(1, false, sn3, 4, hexed::Time_step_scale_func())[0] == Approx((2*.5 + (.5 + 2/11.)/2. + 2/11.)/4.));
+    REQUIRE(sol.sample(1, false, sn2, 4, hexed::Time_step_scale_func())[0] == Approx(cfl*.8*(3*.5 + (.5 + 2/11.)/2.)/4.));
+    REQUIRE(sol.sample(1, false, sn3, 4, hexed::Time_step_scale_func())[0] == Approx(cfl*.8*(2*.5 + (.5 + 2/11.)/2. + 2/11.)/4.));
   }
 
   SECTION("integrals")
@@ -424,8 +426,8 @@ class All_cartesian : public Test_mesh
   hexed::Solver sol;
   public:
 
-  All_cartesian()
-  : sol{3, hexed::config::max_row_size, 1.}
+  All_cartesian(bool local)
+  : sol{3, hexed::config::max_row_size, 1., local}
   {}
 
   virtual hexed::Solver& solver() {return sol;}
@@ -458,8 +460,8 @@ class All_deformed : public Test_mesh
   bool rot_dir;
 
   public:
-  All_deformed(bool rotation_direction)
-  : sol{2, hexed::config::max_row_size, 1.}, rot_dir{rotation_direction}
+  All_deformed(bool rotation_direction, bool local)
+  : sol{2, hexed::config::max_row_size, 1., local}, rot_dir{rotation_direction}
   {}
 
   virtual hexed::Solver& solver() {return sol;}
@@ -502,8 +504,8 @@ class Extrude_hanging : public Test_mesh
   int kd;
 
   public:
-  Extrude_hanging(int i_dim, int j_dim)
-  : sol{3, hexed::config::max_row_size, .8}, id{i_dim}, jd{j_dim}, kd{3 - i_dim - j_dim}
+  Extrude_hanging(int i_dim, int j_dim, bool local)
+  : sol{3, hexed::config::max_row_size, .8, local}, id{i_dim}, jd{j_dim}, kd{3 - i_dim - j_dim}
   {}
 
   virtual hexed::Solver& solver() {return sol;}
@@ -553,7 +555,6 @@ void test_marching(Test_mesh& tm, std::string name)
   auto& sol = tm.solver();
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
-  sol.set_local_tss();
   sol.initialize(Nonuniform_mass());
   // check that the iteration status is right at the start
   auto status = sol.iteration_status();
@@ -585,7 +586,6 @@ void test_art_visc(Test_mesh& tm, std::string name)
   const int n_dim = sol.storage_params().n_dim;
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
-  sol.set_local_tss();
   sol.initialize(Sinusoid());
   sol.set_art_visc_constant(300.);
   // update
@@ -632,7 +632,6 @@ void test_advection(Test_mesh& tm, std::string name)
   auto& sol = tm.solver();
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
-  sol.set_local_tss(); // this shouldn't affect the answer
   sol.initialize(Sinusoid_veloc());
   double width = 1e-2;
   sol.av_advect_shift = .4;
@@ -666,21 +665,21 @@ TEST_CASE("Solver time marching")
 {
   SECTION("all cartesian")
   {
-    All_cartesian ac;
+    All_cartesian ac(true);
     test_marching(ac, "car");
   }
   SECTION("all deformed")
   {
-    All_deformed ad0 (0);
+    All_deformed ad0 (0, true);
     test_marching(ad0, "def0");
-    All_deformed ad1 (1);
+    All_deformed ad1 (1, true);
     test_marching(ad1, "def1");
   }
   SECTION("extruded with deformed hanging nodes")
   {
     #define TEST_DIMENSIONS(i_dim, j_dim) \
       SECTION("dimensions " #i_dim " " #j_dim) { \
-          Extrude_hanging eh(i_dim, j_dim); \
+          Extrude_hanging eh(i_dim, j_dim, true); \
           test_marching(eh, "extrude_hanging"); \
       }
     #if NDEBUG
@@ -700,21 +699,21 @@ TEST_CASE("Solver artificial viscosity")
 {
   SECTION("all cartesian")
   {
-    All_cartesian ac;
+    All_cartesian ac(true);
     test_art_visc(ac, "car");
   }
   SECTION("all deformed")
   {
-    All_deformed ad0 (0);
+    All_deformed ad0 (0, true);
     test_art_visc(ad0, "def0");
-    All_deformed ad1 (1);
+    All_deformed ad1 (1, true);
     test_art_visc(ad1, "def1");
   }
   SECTION("extruded with deformed hanging nodes")
   {
     #define TEST_DIMENSIONS(i_dim, j_dim) \
       SECTION("dimensions " #i_dim " " #j_dim) { \
-          Extrude_hanging eh(i_dim, j_dim); \
+          Extrude_hanging eh(i_dim, j_dim, true); \
           test_art_visc(eh, "extrude_hanging"); \
       }
     #if NDEBUG
@@ -734,21 +733,21 @@ TEST_CASE("Solver conservation")
 {
   SECTION("all cartesian")
   {
-    All_cartesian ac;
+    All_cartesian ac(false);
     test_conservation(ac, "car");
   }
   SECTION("all deformed")
   {
-    All_deformed ad0 (0);
+    All_deformed ad0 (0, false);
     test_conservation(ad0, "def0");
-    All_deformed ad1 (1);
+    All_deformed ad1 (1, false);
     test_conservation(ad1, "def1");
   }
   SECTION("extruded with deformed hanging nodes")
   {
     #define TEST_CONSERVATION(i_dim, j_dim) \
       SECTION("dimensions " #i_dim " " #j_dim) { \
-          Extrude_hanging eh(i_dim, j_dim); \
+          Extrude_hanging eh(i_dim, j_dim, false); \
           test_conservation(eh, "extrude_hanging"); \
       } \
 
@@ -767,21 +766,21 @@ TEST_CASE("Solver advection")
 {
   SECTION("all cartesian")
   {
-    All_cartesian ac;
+    All_cartesian ac(true);
     test_advection(ac, "car");
   }
   SECTION("all deformed")
   {
-    All_deformed ad0 (0);
+    All_deformed ad0 (0, true);
     test_advection(ad0, "def0");
-    All_deformed ad1 (1);
+    All_deformed ad1 (1, true);
     test_advection(ad1, "def1");
   }
   SECTION("extruded with deformed hanging nodes")
   {
     #define TEST_DIMENSIONS(i_dim, j_dim) \
       SECTION("dimensions " #i_dim " " #j_dim) { \
-          Extrude_hanging eh(i_dim, j_dim); \
+          Extrude_hanging eh(i_dim, j_dim, true); \
           test_advection(eh, "extrude_hanging"); \
       }
     #if NDEBUG

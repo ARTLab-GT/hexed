@@ -78,12 +78,12 @@ double Solver::max_dt()
     return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, is_local_time, visc))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
                     (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, is_local_time, visc))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
   } else {
-    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
-                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
+    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time      ))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
+                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time      ))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
   }
 }
 
-Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool viscous) :
+Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping, bool viscous) :
   params{3, n_dim + 2, n_dim, row_size},
   acc_mesh{params, root_mesh_size},
   basis{row_size},
@@ -93,7 +93,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool viscous) :
   av_rs{basis.row_size},
   write_face(kernel_factory<Spatial<Element, pde::Navier_stokes<false>::Pde>::Write_face>(params.n_dim, params.row_size, basis)), // note: for now, false and true are equivalent for `Write_face`
   visc{viscous},
-  is_local_time{false}
+  is_local_time{local_time_stepping}
 {
   // setup categories for performance reporting
   stopwatch.children.emplace("initialize reference", stopwatch.work_unit_name);
@@ -268,31 +268,7 @@ void Solver::calc_jacobian()
       }
     }
   }
-}
-
-void Solver::set_local_tss()
-{
-  is_local_time = true;
-  // set time step to be continuous at vertices
   share_vertex_data(&Element::vertex_time_step_scale, Vertex::vector_min);
-  // construct a matrix for 1D linear interpolation
-  Eigen::MatrixXd lin_interp {basis.row_size, 2};
-  for (int i_qpoint = 0; i_qpoint < basis.row_size; ++i_qpoint) {
-    double node {basis.node(i_qpoint)};
-    lin_interp(i_qpoint, 0) = 1. - node;
-    lin_interp(i_qpoint, 1) = node;
-  }
-  // interpolate tss to quadrature points
-  auto& elements = acc_mesh.elements();
-  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    Element& elem = elements[i_elem];
-    Eigen::VectorXd vert_tss (params.n_vertices());
-    for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-      vert_tss(i_vert) = elem.vertex_time_step_scale(i_vert);
-    }
-    Eigen::Map<Eigen::VectorXd> qpoint_tss (elem.time_step_scale(), params.n_qpoint());
-    qpoint_tss = custom_math::hypercube_matvec(lin_interp, vert_tss);
-  }
 }
 
 void Solver::initialize(const Spacetime_func& func)

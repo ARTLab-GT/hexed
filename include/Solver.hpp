@@ -57,7 +57,7 @@ class Solver
   int av_advect_iters = 1;
   int av_diff_iters = 1;
 
-  Solver(int n_dim, int row_size, double root_mesh_size, bool viscous = false);
+  Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping = false, bool viscous = false);
   virtual ~Solver() = default;
 
   /* ### SETUP ### */
@@ -82,11 +82,6 @@ class Solver
    * Mesh topology must be valid (no duplicate or missing connections) before calling this function.
    */
   void calc_jacobian();
-  /*
-   * Set the local time step scale based on the current value of the Jacobian. If this is never
-   * performed, it will result in traditional global time stepping.
-   */
-  void set_local_tss();
   // set the flow state
   void initialize(const Spacetime_func&);
   void set_art_visc_off();
