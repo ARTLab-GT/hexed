@@ -3,7 +3,6 @@ target_sources(hexed PRIVATE
 Accessible_mesh.cpp
 Basis.cpp
 Boundary_condition.cpp
-Characteristics.cpp
 connection.cpp
 Deformed_element.cpp
 Domain_func.cpp

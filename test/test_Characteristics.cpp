@@ -1,5 +1,4 @@
 #include <catch2/catch.hpp>
-#include <hexed/Characteristics.hpp>
 #include <hexed/pde.hpp>
 
 TEST_CASE("Characteristics")
@@ -14,7 +13,7 @@ TEST_CASE("Characteristics")
   state(4) = pres/.4 + .5*mass*veloc.squaredNorm();
   hexed::Mat<3> normal {1., 1., 1.};
   // find eigenvalues
-  hexed::Characteristics c(state, normal);
+  hexed::pde::Navier_stokes<>::Pde<3>::Characteristics c(state, normal);
   auto eigvals = c.eigvals();
   // decompose another arbitrary state
   hexed::Mat<> state1(5);
