@@ -617,12 +617,11 @@ void test_conservation(Test_mesh& tm, std::string name)
   // check that the iteration status is right at the start
   auto status = sol.iteration_status();
   // update
-  sol.update(.01);
+  sol.update(.5);
   status = sol.iteration_status();
   auto state  = sol.integral_field(hexed::State_variables());
   auto update = sol.integral_field(hexed::Physical_update());
   for (int i_var : {sol.storage_params().n_var - 2, sol.storage_params().n_var - 1}) {
-    printf("%i\n", i_var);
     REQUIRE(update[i_var]/status.time_step == Approx(0.).scale(std::abs(state[i_var])));
   }
 }
@@ -735,21 +734,21 @@ TEST_CASE("Solver conservation")
 {
   SECTION("all cartesian")
   {
-    All_cartesian ac(false);
+    All_cartesian ac(true);
     test_conservation(ac, "car");
   }
   SECTION("all deformed")
   {
-    All_deformed ad0 (0, false);
+    All_deformed ad0 (0, true);
     test_conservation(ad0, "def0");
-    All_deformed ad1 (1, false);
+    All_deformed ad1 (1, true);
     test_conservation(ad1, "def1");
   }
   SECTION("extruded with deformed hanging nodes")
   {
     #define TEST_CONSERVATION(i_dim, j_dim) \
       SECTION("dimensions " #i_dim " " #j_dim) { \
-          Extrude_hanging eh(i_dim, j_dim, false); \
+          Extrude_hanging eh(i_dim, j_dim, true); \
           test_conservation(eh, "extrude_hanging"); \
       } \
 
