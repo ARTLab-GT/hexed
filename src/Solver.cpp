@@ -31,12 +31,15 @@ void Solver::share_vertex_data(Element::vertex_value_access access_func, Vertex:
 
 void Solver::apply_state_bcs()
 {
+  stopwatch.children.at("boundary conditions").stopwatch.start();
   auto& bc_cons {acc_mesh.boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
   }
+  stopwatch.children.at("boundary conditions").stopwatch.pause();
+  stopwatch.children.at("boundary conditions").work_units_completed += bc_cons.size();
 }
 
 void Solver::apply_flux_bcs()
@@ -120,6 +123,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
       sw->children.at(type).children.emplace("reconcile LDG flux", unit);
     }
   }
+  stopwatch.children.emplace("boundary conditions", "(boundary connection)*(time integration stage)");
   stopwatch.children.emplace("residual computation", "element*evaluation");
   // initialize advection state to 1
   auto& elements = acc_mesh.elements();
