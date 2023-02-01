@@ -16,6 +16,7 @@ class Characteristics
   // 1D eigensystem
   Mat<3> vals;
   Mat<3, 3> vecs;
+  Mat<3, 3> vecs_inv;
   Mat<> dir; // normalized flux direction
   const int n_dim;
   // some properties of the reference state

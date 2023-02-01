@@ -1,4 +1,5 @@
 #include <Characteristics.hpp>
+#include <global_hacks.hpp>
 
 namespace hexed
 {
@@ -39,10 +40,12 @@ Characteristics::Characteristics(Mat<> state, Mat<> direction)
       d_pres/.4 + .5*d_mass*vsq + mass*vals(2)*d_veloc;
   }
   vecs(Eigen::all, 2) << d_mass*vals(2), d_mass, .5*d_mass*vsq;
+  vecs_inv = vecs.inverse();
 }
 
 Mat<dyn, 3> Characteristics::decomp(Mat<> state)
 {
+  global_hacks::stopwatch.stopwatch.start();
   Mat<> mmtm = state(Eigen::seqN(0, n_dim));
   // component of tangential momentum perturbation which is not induced by mass perturbation
   Mat<> mmtm_correction = tang(mmtm) - state(n_dim)*tang(veloc);
@@ -53,7 +56,7 @@ Mat<dyn, 3> Characteristics::decomp(Mat<> state)
     state(n_dim),
     state(n_dim + 1) - veloc.dot(mmtm_correction);
   // decompose 1D state into eigenvectors
-  Mat<1, 3> eig_basis = vecs.colPivHouseholderQr().solve(state_1d).transpose();
+  Mat<1, 3> eig_basis = (vecs_inv*state_1d).transpose();
   Mat<3, 3> eig_decomp = vecs.array().rowwise()*eig_basis.array();
   // ND eigenvector decomposition
   Mat<dyn, 3> d(state.rows(), 3);
@@ -61,6 +64,7 @@ Mat<dyn, 3> Characteristics::decomp(Mat<> state)
   d(Eigen::seqN(0, n_dim), Eigen::all) = dir*eig_decomp(0, Eigen::all) + tang(veloc)*eig_basis; // second term accounts for tangential momentum induced by mass perturbation
   d(Eigen::seqN(0, n_dim), 2) += mmtm_correction;
   d(n_dim + 1, 2) += veloc.dot(mmtm_correction); // correct energy to account for tangential momentum perturbation
+  global_hacks::stopwatch.stopwatch.pause();
   return d;
 }
 

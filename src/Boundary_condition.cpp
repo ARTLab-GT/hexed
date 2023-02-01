@@ -66,11 +66,12 @@ void Riemann_invariants::apply_state(Boundary_face& bf)
   double* nrml = bf.surface_normal();
   int sign = 1 - 2*bf.inside_face_sign(); // sign of velocity of incoming characteristics
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+    #if 0
     // fetch data
     Mat<> inside(params.n_var);
     for (int i_var = 0; i_var < params.n_var; ++i_var) inside(i_var) = in_f[i_var*nfq + i_qpoint];
     Mat<> n(params.n_dim);
-    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) n(i_dim) = nrml[i_dim*nfq + i_qpoint];
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) n(i_dim) == nrml[i_dim*nfq + i_qpoint];
     // compute characteristics
     Characteristics ch(inside, n);
     auto eigvals = ch.eigvals();
@@ -90,6 +91,71 @@ void Riemann_invariants::apply_state(Boundary_face& bf)
     for (int i_var = 0; i_var < params.n_var; ++i_var) {
       gh_f[i_var*nfq + i_qpoint] = state(i_var);
     }
+    #else
+    // fetch data
+    Mat<4> inside(params.n_var);
+    for (int i_var = 0; i_var < params.n_var; ++i_var) inside(i_var) = in_f[i_var*nfq + i_qpoint];
+    Mat<2> n(params.n_dim);
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) n(i_dim) = nrml[i_dim*nfq + i_qpoint];
+  Mat<3> vals;
+  Mat<3, 3> vecs;
+  Mat<3, 3> vecs_inv;
+  Mat<2> dir{n}; // normalized flux direction
+  constexpr int n_dim{2};
+  // some properties of the reference inside
+  double mass{inside(n_dim)};
+  Mat<2> veloc{inside(Eigen::seqN(0, n_dim))/mass};
+{
+  // compute more properties of the reference inside
+  double vsq = veloc.squaredNorm();
+  double pres = .4*(inside(n_dim + 1) - .5*mass*vsq);
+  double sound_speed = std::sqrt(1.4*pres/mass);
+  // compute eigenvalues
+  vals(2) = dir.dot(veloc);
+  vals(0) = vals(2) - sound_speed;
+  vals(1) = vals(2) + sound_speed;
+  // compute 1D eigenvectors
+  double d_mass = 1;
+  for (int sign = 0; sign < 2; ++sign) {
+    double d_veloc = (2*sign - 1)*sound_speed/mass*d_mass;
+    double d_pres = 1.4*pres/mass*d_mass;
+    vecs(Eigen::all, sign) <<
+      d_mass*vals(2) + mass*d_veloc,
+      d_mass,
+      d_pres/.4 + .5*d_mass*vsq + mass*vals(2)*d_veloc;
+  }
+  vecs(Eigen::all, 2) << d_mass*vals(2), d_mass, .5*d_mass*vsq;
+  vecs_inv = vecs.inverse();
+}
+Mat<4, 3> d [2];
+Mat<4> states[2] {inside, fs};
+for (int i_side = 0; i_side < 2; ++i_side) {
+  Mat<2> mmtm = states[i_side](Eigen::seqN(0, n_dim));
+  // component of tangential momentum perturbation which is not induced by mass perturbation
+  Mat<2> mmtm_correction = (mmtm - dir.dot(mmtm)*dir) - states[i_side](n_dim)*(veloc - dir.dot(veloc)*dir);
+  // compute states[i_side] for 1D eigenvector problem
+  Mat<3> states_1d;
+  states_1d <<
+    dir.dot(mmtm),
+    states[i_side](n_dim),
+    states[i_side](n_dim + 1) - veloc.dot(mmtm_correction);
+  // decompose 1D states[i_side] into eigenvectors
+  Mat<1, 3> eig_basis = (vecs_inv*states_1d).transpose();
+  Mat<3, 3> eig_decomp = vecs.array().rowwise()*eig_basis.array();
+  // ND eigenvector decomposition
+  d[i_side](Eigen::seqN(n_dim, 2), Eigen::all) = eig_decomp(Eigen::seqN(1, 2), Eigen::all);
+  d[i_side](Eigen::seqN(0, n_dim), Eigen::all) = dir*eig_decomp(0, Eigen::all) + (veloc - dir.dot(veloc)*dir)*eig_basis; // second term accounts for tangential momentum induced by mass perturbation
+  d[i_side](Eigen::seqN(0, n_dim), 2) += mmtm_correction;
+  d[i_side](n_dim + 1, 2) += veloc.dot(mmtm_correction); // correct energy to account for tangential momentum perturbation
+}
+    for (int i_eig = 0; i_eig < 3; ++i_eig) {
+      if (sign*vals(i_eig) > 0) d[0](Eigen::all, i_eig) = d[1](Eigen::all, i_eig);
+    }
+    states[0] = d[0].rowwise().sum();
+    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+      gh_f[i_var*nfq + i_qpoint] = states[0](i_var);
+    }
+    #endif
   }
   // prime state cache with inside state
   double* sc = bf.state_cache();
