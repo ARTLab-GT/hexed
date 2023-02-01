@@ -644,7 +644,7 @@ void test_advection(Test_mesh& tm, std::string name)
   REQUIRE_THROWS(sol.set_art_visc_row_size(hexed::config::max_row_size + 1));
   sol.set_art_visc_row_size(2);
   sol.set_art_visc_smoothness(width);
-  #if 0
+  sol.visualize_field_tecplot(hexed::Art_visc_coef(), "foo");
   REQUIRE(sol.iteration_status().adv_res < 1e-6);
   REQUIRE(sol.iteration_status().diff_res < 1e-9);
   hexed::Gauss_legendre basis(2);
@@ -660,7 +660,6 @@ void test_advection(Test_mesh& tm, std::string name)
       REQUIRE(art_visc/(width*width*norm*sol.av_visc_mult) == Approx(std::abs(-.1*std::cos(pos[0]) - .2*std::sin(pos[1]))).margin(1e-3));
     }
   }
-  #endif
 }
 
 // test the solver on a sinusoid-derived initial condition which has a simple analytic solution

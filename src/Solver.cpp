@@ -361,16 +361,12 @@ void Solver::set_art_visc_smoothness(double advect_length)
   (*kernel_factory<Spatial<Deformed_element, pde::Advection>::Max_dt>(nd, rs, basis, true))(acc_mesh.deformed ().elements(), sw_adv.children.at("deformed" ), "compute time step");
   double dt_adv = av_advect_stab_rat;
   // ensure that time step is small enough that the time derivative term will be stable
-  {
-    double max_rat = 0;
-    #pragma omp parallel for reduction(max:max_rat)
-    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-      double* tss = elements[i_elem].time_step_scale();
-      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        max_rat = std::max(max_rat, dt_adv/advect_length*tss[i_qpoint]);
-      }
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    double* tss = elements[i_elem].time_step_scale();
+    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+      tss[i_qpoint] /= std::max(2*tss[i_qpoint]/advect_length, 1.);
     }
-    dt_adv /= std::max(max_rat/av_advect_stab_rat, 1.);
   }
 
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
@@ -477,16 +473,12 @@ void Solver::set_art_visc_smoothness(double advect_length)
   double dt_diff = av_diff_stab_rat;
   double diff_time = av_diff_ratio*advect_length/n_real; // compute size of real time step (as opposed to pseudotime)
   // adjust for time derivative term if necessary
-  {
-    double max_rat = 0;
-    #pragma omp parallel for reduction(max:max_rat)
-    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-      double* tss = elements[i_elem].time_step_scale();
-      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        max_rat = std::max(max_rat, dt_diff/diff_time*tss[i_qpoint]*tss[i_qpoint]);
-      }
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    double* tss = elements[i_elem].time_step_scale();
+    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+      tss[i_qpoint] /= std::max(tss[i_qpoint]/diff_time, 1.);
     }
-    dt_diff /= std::max(max_rat/av_diff_stab_rat, 1.);
   }
   // initialize residual to zero (will compute RMS over all real time steps)
   status.diff_res = 0;
@@ -532,7 +524,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
           double* forcing = elements[i_elem].art_visc_forcing();
           double* tss = elements[i_elem].time_step_scale();
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-            state[nq + i_qpoint] = s*(forcing[real_step*nq + i_qpoint] - state[i_qpoint])/diff_time*tss[i_qpoint]*tss[i_qpoint];
+            state[nq + i_qpoint] = s*(forcing[real_step*nq + i_qpoint] - state[i_qpoint])/diff_time*tss[i_qpoint];
           }
         }
         // apply value boundary condition (or lack thereof, in this case)
