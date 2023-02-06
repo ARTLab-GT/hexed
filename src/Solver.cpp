@@ -369,7 +369,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* tss = elements[i_elem].time_step_scale();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      tss[i_qpoint] /= std::max(200*tss[i_qpoint]/advect_length, 1.);
+      tss[i_qpoint] /= std::max(2*tss[i_qpoint]/advect_length/av_advect_max_forcing, 1.);
     }
   }
 
@@ -481,7 +481,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* tss = elements[i_elem].time_step_scale();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      tss[i_qpoint] /= std::max(tss[i_qpoint]/diff_time, 1.);
+      tss[i_qpoint] /= std::max(tss[i_qpoint]/diff_time/av_diff_max_forcing, 1.);
     }
   }
   // initialize residual to zero (will compute RMS over all real time steps)
