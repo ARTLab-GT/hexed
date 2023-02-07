@@ -583,7 +583,10 @@ void Solver::set_art_visc_smoothness(double advect_length)
         double veloc = rk_ref[i_dim*nq + i_qpoint]/mass;
         scale_sq += (1. - heat_rat)*veloc*veloc;
       }
-      av[i_qpoint] = av_visc_mult*advect_length*std::sqrt(std::max(0., forcing[n_real*nq + i_qpoint]*scale_sq)); // root-smear-square complete!
+      double root = std::sqrt(std::max(0., forcing[n_real*nq + i_qpoint]));
+      //root = std::pow(root, rs)/(std::pow(av_corner, rs - 1) + std::pow(root, rs - 1));
+      root = custom_math::pow(root, rs)/(custom_math::pow(av_corner, rs - 1) + custom_math::pow(root, rs - 1));
+      av[i_qpoint] = av_visc_mult*advect_length*root*std::sqrt(scale_sq); // root-smear-square complete!
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         int i = i_var*nq + i_qpoint;
