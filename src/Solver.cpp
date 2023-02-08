@@ -66,20 +66,6 @@ void Solver::apply_avc_diff_flux_bcs()
   }
 }
 
-void Solver::apply_fta_flux_bcs()
-{
-  int nd = params.n_dim;
-  int rs = params.row_size;
-  int nq = params.n_qpoint();
-  auto& bc_cons {acc_mesh.boundary_connections()};
-  #pragma omp parallel for
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    double* in_f = bc_cons[i_con].inside_face() + 2*(nd + 2)*nq/rs;
-    double* gh_f = bc_cons[i_con].ghost_face()  + 2*(nd + 2)*nq/rs;
-    for (int i_dof = 0; i_dof < nq*(nd + 2)/rs; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
-  }
-}
-
 bool Solver::use_ldg()
 {
   return visc || use_art_visc;
@@ -603,11 +589,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
       wall_dist = std::sqrt(wall_dist) - .1;
       double shielding = std::pow(wall_dist/advect_length, rs/2);
       shielding = shielding/(1 + shielding);
-      double f = std::sqrt(std::max(0., forcing[n_real*nq + i_qpoint]));
-      int p = 3;
-      double corner = .01;
-      f = corner*std::pow(custom_math::pow(f, p)/(custom_math::pow(corner, p) + custom_math::pow(f, p)), 1./p);
-      av[i_qpoint] = shielding*av_visc_mult*advect_length*f*std::sqrt(scale_sq); // root-smear-square complete!
+      av[i_qpoint] = shielding*av_visc_mult*advect_length*std::sqrt(std::max(0., forcing[n_real*nq + i_qpoint]*scale_sq)); // root-smear-square complete!
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         int i = i_var*nq + i_qpoint;
@@ -772,13 +754,7 @@ void Solver::fix_admissibility(double stability_ratio)
       step[1] = (linear + std::sqrt(linear*linear - 4*quadratic))/2.;
       step[0] = quadratic/step[1];
       for (double s : step) {
-        auto& bc_cons {acc_mesh.boundary_connections()};
-        #pragma omp parallel for
-        for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-          double* in_f = bc_cons[i_con].inside_face();
-          double* gh_f = bc_cons[i_con].ghost_face();
-          for (int i_dof = 0; i_dof < nq*(nd + 2)/rs; ++i_dof) gh_f[i_dof] = in_f[i_dof];
-        }
+        apply_state_bcs();
         compute_fta(s, 0);
       }
       max_dt();

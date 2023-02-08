@@ -37,7 +37,7 @@ void Solver::compute_viscous(double dt, int i_stage)
 #define PDE_ARGS
 void Solver::compute_fta(double dt, int i_stage)
 {
-  COMPUTE_DIFFUSION(pde::Fix_therm_admis, stopwatch.children.at("fix admis."), apply_fta_flux_bcs)
+  COMPUTE_DIFFUSION(pde::Fix_therm_admis, stopwatch.children.at("fix admis."), apply_flux_bcs)
 }
 
 void Solver::compute_avc_diff(double dt, int i_stage)
