@@ -66,6 +66,20 @@ void Solver::apply_avc_diff_flux_bcs()
   }
 }
 
+void Solver::apply_fta_flux_bcs()
+{
+  int nd = params.n_dim;
+  int rs = params.row_size;
+  int nq = params.n_qpoint();
+  auto& bc_cons {acc_mesh.boundary_connections()};
+  #pragma omp parallel for
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    double* in_f = bc_cons[i_con].inside_face() + 2*(nd + 2)*nq/rs;
+    double* gh_f = bc_cons[i_con].ghost_face()  + 2*(nd + 2)*nq/rs;
+    for (int i_dof = 0; i_dof < nq*(nd + 2)/rs; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
+  }
+}
+
 bool Solver::use_ldg()
 {
   return visc || use_art_visc;
@@ -748,7 +762,13 @@ void Solver::fix_admissibility(double stability_ratio)
       step[1] = (linear + std::sqrt(linear*linear - 4*quadratic))/2.;
       step[0] = quadratic/step[1];
       for (double s : step) {
-        apply_state_bcs();
+        auto& bc_cons {acc_mesh.boundary_connections()};
+        #pragma omp parallel for
+        for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+          double* in_f = bc_cons[i_con].inside_face();
+          double* gh_f = bc_cons[i_con].ghost_face();
+          for (int i_dof = 0; i_dof < nq*(nd + 2)/rs; ++i_dof) gh_f[i_dof] = in_f[i_dof];
+        }
         compute_fta(s, 0);
       }
       max_dt();
