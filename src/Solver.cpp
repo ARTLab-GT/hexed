@@ -929,11 +929,12 @@ void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample
   // convenience definitions
   const int nfq = params.n_qpoint()/params.row_size;
   const int nd = params.n_dim;
-  const int nv = params.n_var;
+  Surface_output so;
+  const int nv = so.n_var(nd);
   const int n_block {custom_math::pow(n_sample, nd - 1)};
   // setup
   std::vector<std::string> var_names;
-  for (int i_var = 0; i_var < nv; ++i_var) var_names.push_back(State_variables().variable_name(i_var));
+  for (int i_var = 0; i_var < nv; ++i_var) var_names.push_back(so.variable_name(i_var));
   Tecplot_file file {name, nd, var_names, status.flow_time};
   Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
   // write the state to the faces so that the BCs can access it
