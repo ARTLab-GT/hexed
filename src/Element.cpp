@@ -12,7 +12,7 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   r_level{ref_level},
   n_dof(params.n_dof()),
   n_vert(params.n_vertices()),
-  data_size{params.n_stage*n_dof + (6 + params.row_size)*params.n_qpoint()},
+  data_size{params.n_stage*n_dof + (7 + params.row_size)*params.n_qpoint()},
   data{Eigen::VectorXd::Zero(data_size)},
   vertex_tss{Eigen::VectorXd::Constant(params.n_vertices(), nom_sz)}
 {
@@ -89,6 +89,17 @@ std::vector<double> Element::face_position(const Basis& basis, int i_face, int i
   return pos;
 }
 
+void Element::set_wall_dist(const Basis& basis)
+{
+  for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
+    double wd = 0;
+    auto pos = position(basis, i_qpoint);
+    for (double p : pos) wd += p*p;
+    wd = std::sqrt(wd) - .1;
+    wall_dist()[i_qpoint] = wd;
+  }
+}
+
 void Element::set_jacobian(const Basis& basis)
 {
   int nfq = params.n_qpoint()/params.row_size;
@@ -101,6 +112,7 @@ void Element::set_jacobian(const Basis& basis)
       }
     }
   }
+  set_wall_dist(basis);
 }
 
 double* Element::stage(int i_stage)
@@ -126,6 +138,11 @@ double* Element::art_visc_forcing()
 double* Element::advection_state()
 {
   return art_visc_forcing() + 4*params.n_qpoint();
+}
+
+double* Element::wall_dist()
+{
+  return advection_state() + params.n_qpoint();
 }
 
 double Element::jacobian(int i_dim, int j_dim, int i_qpoint)

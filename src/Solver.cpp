@@ -352,17 +352,12 @@ void Solver::set_art_visc_smoothness(double advect_length)
     }
   }
   // set advection velocity
-  auto adv_l = [&](int i_elem, int i_qpoint) {
-    auto pos = elements[i_elem].position(basis, i_qpoint);
-    double wall_dist = 0;
-    for (double p : pos) wall_dist += p*p;
-    wall_dist = std::sqrt(wall_dist) - .1;
-    return advect_length*wall_dist/(advect_length + wall_dist);
-  };
+  auto adv_l = [&](double wall_dist) {return advect_length*wall_dist/(advect_length + wall_dist);};
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
     double* rk_ref = elements[i_elem].stage(1);
+    double* wall_dist = elements[i_elem].wall_dist();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       double scale = 2*heat_rat*rk_ref[(nd + 1)*nq + i_qpoint]*rk_ref[nd*nq + i_qpoint];
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
@@ -370,7 +365,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
         scale += (1. - heat_rat)*mmtm*mmtm;
       }
       scale = std::sqrt(scale);
-      double al = adv_l(i_elem, i_qpoint);
+      double al = adv_l(wall_dist[i_qpoint]);
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         state[i_dim*nq + i_qpoint] = rk_ref[i_dim*nq + i_qpoint]/scale*al;
       }
@@ -502,9 +497,9 @@ void Solver::set_art_visc_smoothness(double advect_length)
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* tss = elements[i_elem].time_step_scale();
+    double* wall_dist = elements[i_elem].wall_dist();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      tss[i_qpoint] /= std::max(tss[i_qpoint]/diff_time/av_diff_max_forcing, 1.);
-      tss[i_qpoint] *= adv_l(i_elem, i_qpoint);
+      tss[i_qpoint] /= std::max(tss[i_qpoint]/diff_time/av_diff_max_forcing/adv_l(wall_dist[i_qpoint]), 1.);
     }
   }
   // initialize residual to zero (will compute RMS over all real time steps)
@@ -550,8 +545,9 @@ void Solver::set_art_visc_smoothness(double advect_length)
           double* state = elements[i_elem].stage(0);
           double* forcing = elements[i_elem].art_visc_forcing();
           double* tss = elements[i_elem].time_step_scale();
+          double* wall_dist = elements[i_elem].wall_dist();
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-            state[nq + i_qpoint] = s*(forcing[real_step*nq + i_qpoint] - state[i_qpoint])/diff_time*tss[i_qpoint]/adv_l(i_elem, i_qpoint);
+            state[nq + i_qpoint] = s*(forcing[real_step*nq + i_qpoint] - state[i_qpoint])/diff_time*tss[i_qpoint]/adv_l(wall_dist[i_qpoint]);
           }
         }
         // apply value boundary condition (or lack thereof, in this case)
@@ -598,6 +594,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
     double* rk_ref = elements[i_elem].stage(1);
     double* av = elements[i_elem].art_visc_coef();
     double* forcing = elements[i_elem].art_visc_forcing();
+    double* wall_dist = elements[i_elem].wall_dist();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       // set artificial viscosity to square root of diffused scalar state times stagnation enthalpy (with user-defined multiplier)
       double mass = rk_ref[nd*nq + i_qpoint];
@@ -606,7 +603,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
         double veloc = rk_ref[i_dim*nq + i_qpoint]/mass;
         scale_sq += (1. - heat_rat)*veloc*veloc;
       }
-      double al = adv_l(i_elem, i_qpoint);
+      double al = adv_l(wall_dist[i_qpoint]);
       av[i_qpoint] = av_visc_mult*al*std::sqrt(std::max(0., forcing[n_real*nq + i_qpoint]*scale_sq)); // root-smear-square complete!
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
