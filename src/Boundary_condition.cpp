@@ -141,13 +141,13 @@ void Riemann_invariants::apply_flux(Boundary_face& bf)
     Mat<> state;
     switch (params.n_dim) {
       case 1:
-        state = apply_char<1>(cache, n, sign, Mat<>::Zero(params.n_dim), inside); // set outgoing characteristic flux to zero and leave incoming alone
+        state = apply_char<1>(cache, n, sign, Mat<>::Zero(params.n_var), inside); // set outgoing characteristic flux to zero and leave incoming alone
         break;
       case 2:
-        state = apply_char<2>(cache, n, sign, Mat<>::Zero(params.n_dim), inside);
+        state = apply_char<2>(cache, n, sign, Mat<>::Zero(params.n_var), inside);
         break;
       case 3:
-        state = apply_char<3>(cache, n, sign, Mat<>::Zero(params.n_dim), inside);
+        state = apply_char<3>(cache, n, sign, Mat<>::Zero(params.n_var), inside);
         break;
       default:
         throw std::runtime_error("invalid dimensionality");
