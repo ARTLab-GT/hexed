@@ -851,6 +851,7 @@ std::vector<double> Solver::integral_surface(const Boundary_func& integrand, int
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
           nrml_mag += custom_math::pow(nrml[i_dim*nfq + i_qpoint], 2);
         }
+        nrml_mag = std::sqrt(nrml_mag);
         auto qpoint_integrand = integrand(con, i_qpoint, status.flow_time);
         for (int i_var = 0; i_var < n_int; ++i_var) {
           integral[i_var] += qpoint_integrand[i_var]*weights(i_qpoint)*area*nrml_mag;

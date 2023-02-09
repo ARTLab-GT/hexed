@@ -13,10 +13,15 @@ std::vector<double> Surface_func::operator()(Boundary_face& bf, int i_fqpoint, d
   int nfq = params.n_qpoint()/params.row_size;
   std::vector<double> pos;
   std::vector<double> normal;
+  int nrml_sign = 1 - 2*bf.inside_face_sign();
+  double nrml_mag = 0;
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
     pos.push_back(bf.surface_position()[i_dim*nfq + i_fqpoint]);
-    normal.push_back(bf.surface_normal()[i_dim*nfq + i_fqpoint]);
+    normal.push_back(bf.surface_normal()[i_dim*nfq + i_fqpoint]*nrml_sign);
+    nrml_mag += normal.back()*normal.back();
   }
+  nrml_mag = std::sqrt(nrml_mag);
+  for (double& n : normal) n /= nrml_mag;
   std::vector<double> state;
   for (int i_var = 0; i_var < params.n_var; ++i_var) state.push_back(bf.inside_face()[i_var*nfq + i_fqpoint]);
   return operator()(pos, time, state, normal);
