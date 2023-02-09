@@ -2,15 +2,14 @@
 #define HEXED_SURFACE_FUNC_HPP_
 
 #include <vector>
-#include "Output_data.hpp"
+#include "Boundary_func.hpp"
 
 namespace hexed
 {
 
-class Domain_func;
-
-class Surface_func : virtual public Output_data
+class Surface_func : virtual public Boundary_func
 {
+  virtual std::vector<double> operator()(Boundary_face&, int i_fqpoint, double time) const;
   public:
   virtual ~Surface_func() = default;
   // `normal` is surface unit normal vector pointing out of the surface (into the domain)
