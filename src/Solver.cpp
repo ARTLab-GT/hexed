@@ -824,11 +824,10 @@ std::vector<double> Solver::integral_field(const Qpoint_func& integrand)
   return integral;
 }
 
-std::vector<double> Solver::integral_surface(const Surface_func& integrand, int bc_sn)
+std::vector<double> Solver::integral_surface(const Boundary_func& integrand, int bc_sn)
 {
   // setup
   const int nd = params.n_dim;
-  const int nv = params.n_var;
   const int n_int = integrand.n_var(nd);
   const int nq = params.n_qpoint();
   const int nfq = nq/basis.row_size;
@@ -846,30 +845,13 @@ std::vector<double> Solver::integral_surface(const Surface_func& integrand, int 
     double area = custom_math::pow(elem.nominal_size(), nd - 1);
     if (con.bound_cond_serial_n() == bc_sn)
     {
-      double* state = con.state();
       double* nrml = con.normal();
-      double* pos = con.surface_position();
-      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint)
-      {
-        // fetch state
-        std::vector<double> qpoint_state;
-        for (int i_var = 0; i_var < nv; ++i_var) {
-          qpoint_state.push_back(state[i_var*nfq + i_qpoint]);
-        }
-        // fetch position and normal vector
-        std::vector<double> qpoint_pos;
-        std::vector<double> normal;
+      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
         double nrml_mag = 0;
-        int nrml_sign = 2*con.direction().flip_normal(0) - 1;
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          qpoint_pos.push_back(pos[i_dim*nfq + i_qpoint]);
-          double comp = nrml_sign*nrml[i_dim*nfq + i_qpoint];
-          normal.push_back(comp);
-          nrml_mag += comp*comp;
+          nrml_mag += custom_math::pow(nrml[i_dim*nfq + i_qpoint], 2);
         }
-        nrml_mag = std::sqrt(nrml_mag);
-        for (int i_dim = 0; i_dim < nd; ++i_dim) normal[i_dim] /= nrml_mag;
-        auto qpoint_integrand = integrand(qpoint_pos, status.flow_time, qpoint_state, normal);
+        auto qpoint_integrand = integrand(con, i_qpoint, status.flow_time);
         for (int i_var = 0; i_var < n_int; ++i_var) {
           integral[i_var] += qpoint_integrand[i_var]*weights(i_qpoint)*area*nrml_mag;
         }

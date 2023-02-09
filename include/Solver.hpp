@@ -121,7 +121,7 @@ class Solver
   // compute an integral over the entire flow field at the current time
   std::vector<double> integral_field(const Qpoint_func& integrand);
   // compute an integral over all surfaces where a particular boundary condition has been enforced
-  std::vector<double> integral_surface(const Surface_func& integrand, int bc_sn);
+  std::vector<double> integral_surface(const Boundary_func& integrand, int bc_sn);
   // compute the min and max of variables over entire flow field. layout: {{var0_min, var0_max}, {var1_min, var1_max}, ...}
   // bounds are approximated by uniformly sampling a block `n_sample`-on-a-side in each element
   std::vector<std::array<double, 2>> bounds_field(const Qpoint_func&, int n_sample = 20);

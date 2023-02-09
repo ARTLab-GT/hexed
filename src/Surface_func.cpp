@@ -2,9 +2,25 @@
 
 #include <Surface_func.hpp>
 #include <Domain_func.hpp>
+#include <Boundary_condition.hpp>
 
 namespace hexed
 {
+
+std::vector<double> Surface_func::operator()(Boundary_face& bf, int i_fqpoint, double time) const
+{
+  auto params = bf.storage_params();
+  int nfq = params.n_qpoint()/params.row_size;
+  std::vector<double> pos;
+  std::vector<double> normal;
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+    pos.push_back(bf.surface_position()[i_dim*nfq + i_fqpoint]);
+    normal.push_back(bf.surface_normal()[i_dim*nfq + i_fqpoint]);
+  }
+  std::vector<double> state;
+  for (int i_var = 0; i_var < params.n_var; ++i_var) state.push_back(bf.inside_face()[i_var*nfq + i_fqpoint]);
+  return operator()(pos, time, state, normal);
+}
 
 Force_per_area::Force_per_area(double heat_rat) : hr{heat_rat} {}
 
