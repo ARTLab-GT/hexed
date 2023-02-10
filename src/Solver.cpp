@@ -989,7 +989,7 @@ void Solver::write_tecplot_script()
          "$!ReadDataSet  '\"STANDARDSYNTAX\" \"1.0\" \"FILELIST_DATAFILES\" \""
       << std::to_string(tecplot_file_names.size())
       << "\"";
-  for (std::string fname : tecplot_file_names) ofs << " " + fname;
+  for (std::string fname : tecplot_file_names) ofs << " \"" + fname + "\"";
   ofs << "'";
 }
 #endif
