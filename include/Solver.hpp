@@ -30,6 +30,8 @@ class Solver
   int av_rs;
   std::unique_ptr<Kernel<Element&>> write_face;
   bool visc;
+  std::vector<std::string> tecplot_file_names;
+
   void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
   void fix_admissibility(double stability_ratio);
   void apply_state_bcs();
@@ -131,6 +133,8 @@ class Solver
   // only does state variables because usually that's what you want
   // and I'm lazy
   void visualize_surface_tecplot(int bc_sn, std::string name, int n_sample = 20);
+  // write a tecplot script that loads all flowfield visualization files and then computes derived variables
+  void write_tecplot_script();
   #endif
   #if HEXED_USE_OTTER
   void visualize_edges_otter(otter::plot&, Eigen::Matrix<double, 1, Eigen::Dynamic> color = otter::colors::css4["white"], int n_sample = 21);

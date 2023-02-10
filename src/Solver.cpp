@@ -1,3 +1,4 @@
+#include <fstream>
 #include <config.hpp>
 #include <Solver.hpp>
 #include <Tecplot_file.hpp>
@@ -930,6 +931,7 @@ void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::s
       interior.write(interp_pos.data(), interp_out.data());
     }
   }
+  tecplot_file_names.push_back(name);
 }
 
 void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample)
@@ -978,6 +980,17 @@ void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample
       zone.write(interp_pos.data(), interp_state.data());
     }
   }
+}
+
+void Solver::write_tecplot_script()
+{
+  std::ofstream ofs("view_all.mcr", std::ofstream::out);
+  ofs << "#!MC 1410\n"
+         "$!ReadDataSet  '\"STANDARDSYNTAX\" \"1.0\" \"FILELIST_DATAFILES\" \""
+      << std::to_string(tecplot_file_names.size())
+      << "\"";
+  for (std::string fname : tecplot_file_names) ofs << " " + fname;
+  ofs << "'";
 }
 #endif
 
