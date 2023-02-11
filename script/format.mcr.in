@@ -1,34 +1,11 @@
 #!MC 1410
-$!AlterData 
-  Equation = '{density} = {state2}'
 
-$!AlterData 
-  Equation = '{velocity_magnitude} = 0'
-$!LOOP 2
-$!VARSET |dim| = (|loop| - 1)
-$!AlterData 
-  Equation = '{velocity|dim|} = {state|dim|}/{density}'
-$!AlterData 
-  Equation = '{velocity_magnitude} = {velocity_magnitude} + {velocity|dim|}**2'
-$!ENDLOOP
-$!AlterData 
-  Equation = '{velocity_magnitude} = {velocity_magnitude}**.5'
-
-$!AlterData 
-  Equation = '{pressure} = ({state3} - .5*{density}*{velocity_magnitude}**2)*.4'
-$!AlterData 
-  Equation = '{temperature} = {pressure}/({density}*287.0528)'
-$!AlterData 
-  Equation = '{sound_speed} = (1.4*{pressure}/{density})**.5'
-$!AlterData 
-  Equation = '{mach} = {velocity_magnitude}/{sound_speed}'
-$!AlterData 
-  Equation = '{stagnation_enthalpy} = 1.4*{state3}/{density} - .4*.5*{velocity_magnitude}**2'
-$!AlterData 
-  Equation = '{stagnation_pressure} = {pressure}*(1 + .2*{mach}**2)**(1.4/.4)'
+$!ExtendedCommand 
+  CommandProcessorID = 'CFDAnalyzer4'
+  Command = 'Calculate Function=\'MACHNUMBER\' Normalization=\'None\' ValueLocation=\'Nodal\' CalculateOnDemand=\'T\' UseMorePointsForFEGradientCalculations=\'F\''
 
 $!SetContourVar 
-  Var = 14
+  Var = |numvars|
   ContourGroup = 1
   LevelInitMode = ResetToNice
 $!LoadColorMap  "@CMAKE_BINARY_DIR@/colormaps/plasma.map"
