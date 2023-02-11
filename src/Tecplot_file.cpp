@@ -10,7 +10,7 @@ namespace hexed
 
 int Tecplot_file::n_instances {0};
 
-Tecplot_file::Tecplot_file(std::string file_name, int n_dim, std::vector<std::string> variable_names, double time, double heat_rat)
+Tecplot_file::Tecplot_file(std::string file_name, int n_dim, std::vector<std::string> variable_names, double time, double heat_rat, double gas_const)
 : n_dim{n_dim}, n_var{int(variable_names.size())}, time{time}, strand_id{1}, i_zone{0}
 {
   if (n_instances > 0) throw std::runtime_error("Attempt to create multiple `Tecplot_file`s at once, which is illegal.");
@@ -32,6 +32,7 @@ Tecplot_file::Tecplot_file(std::string file_name, int n_dim, std::vector<std::st
   TECAUXSTR142("Common.Incompressible", "False");
   TECAUXSTR142("Common.VectorVarsAreVelocity", "False");
   TECAUXSTR142("Common.Gamma", std::to_string(heat_rat).c_str());
+  TECAUXSTR142("Common.GasConstant", std::to_string(gas_const).c_str());
   std::vector<std::string> xyz {"X", "Y", "Z"};
   std::vector<std::string> uvw {"U", "V", "W"};
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {

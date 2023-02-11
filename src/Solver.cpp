@@ -892,7 +892,7 @@ std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func,
 }
 
 #if HEXED_USE_TECPLOT
-void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::string name, int n_sample)
+void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::string name, int n_sample, bool include_edges, bool include_qpoints, bool include_interior)
 {
   const int n_dim = params.n_dim;
   const int n_vis = output_variables.n_var(n_dim); // number of variables to visualize
@@ -909,8 +909,7 @@ void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::s
     Vis_data vis_out(elem, output_variables, basis, status.flow_time);
     // note: each visualization stage is enclosed in `{}` to ensure that only one `Tecplot_file::Zone` is alive at a time
     // visualize edges
-    if (n_dim > 1) // 1D elements don't really have edges
-    {
+    if (n_dim > 1 && include_edges) { // 1D elements don't really have edges
       Tecplot_file::Line_segments edges {file, n_dim*n_corners, n_sample, "edges"};
       auto edge_pos = vis_pos.edges(n_sample);
       auto edge_state = vis_out.edges(n_sample);
@@ -919,12 +918,12 @@ void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::s
       }
     }
 
-    { // visualize quadrature points
+    if (include_qpoints) { // visualize quadrature points
       Tecplot_file::Structured_block qpoints {file, basis.row_size, "element_qpoints"};
       qpoints.write(vis_pos.qpoints().data(), vis_out.qpoints().data());
     }
 
-    { // visualize interior (that is, quadrature point data interpolated to a fine mesh of sample points)
+    if (include_interior) { // visualize interior (that is, quadrature point data interpolated to a fine mesh of sample points)
       Tecplot_file::Structured_block interior {file, n_sample, "element_interior"};
       auto interp_pos = vis_pos.interior(n_sample);
       auto interp_out = vis_out.interior(n_sample);
