@@ -1,12 +1,19 @@
 #!MC 1410
 $!AlterData 
   Equation = '{density} = {state2}'
+
 $!AlterData 
-  Equation = '{velocity0} = {state0}/{density}'
+  Equation = '{velocity_magnitude} = 0'
+$!LOOP 2
+$!VARSET |dim| = (|loop| - 1)
 $!AlterData 
-  Equation = '{velocity1} = {state1}/{density}'
+  Equation = '{velocity|dim|} = {state|dim|}/{density}'
 $!AlterData 
-  Equation = '{velocity_magnitude} = ({velocity0}**2 + {velocity1}**2)**.5'
+  Equation = '{velocity_magnitude} = {velocity_magnitude} + {velocity|dim|}**2'
+$!ENDLOOP
+$!AlterData 
+  Equation = '{velocity_magnitude} = {velocity_magnitude}**.5'
+
 $!AlterData 
   Equation = '{pressure} = ({state3} - .5*{density}*{velocity_magnitude}**2)*.4'
 $!AlterData 
