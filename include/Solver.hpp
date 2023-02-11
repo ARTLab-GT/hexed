@@ -133,8 +133,6 @@ class Solver
   // only does state variables because usually that's what you want
   // and I'm lazy
   void visualize_surface_tecplot(int bc_sn, std::string name, int n_sample = 20);
-  // write a tecplot script that loads all flowfield visualization files and then computes derived variables
-  void write_tecplot_script();
   #endif
   #if HEXED_USE_OTTER
   void visualize_edges_otter(otter::plot&, Eigen::Matrix<double, 1, Eigen::Dynamic> color = otter::colors::css4["white"], int n_sample = 21);
