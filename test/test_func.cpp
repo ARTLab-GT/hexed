@@ -356,12 +356,12 @@ TEST_CASE("Qf_concat")
   hexed::Constant_func c({1., 2.});
   hexed::Qf_concat concat({&af, &c});
   // check that number of variables is sum of `af` and `c`
-  REQUIRE(concat.n_var(1) == 5);
+  REQUIRE(concat.n_var(1) == 3);
   REQUIRE(concat.n_var(3) == 5);
   // check that names of variables of `af` and `c` are retained
   REQUIRE(concat.variable_name(3, 0) == "arbitrary0");
   REQUIRE(concat.variable_name(3, 2) == "arbitrary2");
-  REQUIRE(concat.variable_name(3, 3) == "1.0");
+  REQUIRE(concat.variable_name(3, 3) == "constant0");
   // check that values are correct
   hexed::Gauss_lobatto basis {2};
   hexed::Storage_params params {2, 4, 2, 2};

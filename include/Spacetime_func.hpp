@@ -28,7 +28,7 @@ class Constant_func : public Spacetime_func
   public:
   Constant_func(std::vector<double> value_arg);
   virtual inline int n_var(int n_dim) const {return value.size();}
-  virtual inline std::string variable_name(int n_dim, int i_var) {return "constant" + std::to_string(i_var);}
+  virtual inline std::string variable_name(int n_dim, int i_var) const {return "constant" + std::to_string(i_var);}
   virtual std::vector<double> operator()(std::vector<double> pos, double time) const; // returns `value`
 };
 
