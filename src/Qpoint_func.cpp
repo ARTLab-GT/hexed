@@ -34,10 +34,10 @@ std::vector<double> Art_visc_coef::operator()(Element& element, const Basis&, in
   return {element.art_visc_coef()[i_qpoint]};
 }
 
-std::string Pow::variable_name(int i_var) const
+std::string Pow::variable_name(int n_dim, int i_var) const
 {
   char buffer [1000];
-  snprintf(buffer, 1000, "(%s)^%i", qf.variable_name(i_var).c_str(), exp);
+  snprintf(buffer, 1000, "(%s)^%i", qf.variable_name(n_dim, i_var).c_str(), exp);
   return buffer;
 }
 

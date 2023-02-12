@@ -32,7 +32,7 @@ class State_variables : public Domain_func
 {
   public:
   virtual inline int n_var(int n_dim) const {return n_dim + 2;}
-  virtual inline std::string variable_name(int i_var) const {return "state" + std::to_string(i_var);}
+  virtual inline std::string variable_name(int n_dim, int i_var) const {return "state" + std::to_string(i_var);}
   // returns `state`
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state) const;
@@ -61,7 +61,7 @@ class Error_func : public Domain_func
   Error_func(const Spacetime_func&);
   Error_func(Spacetime_func&&) = delete;
   virtual int n_var(int n_dim) const;
-  virtual std::string variable_name(int i_var) const;
+  virtual std::string variable_name(int n_dim, int i_var) const;
   // returns elementwise difference between `state` and `correct(point_pos, point_time)`, squared
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state) const;
@@ -73,7 +73,7 @@ class Stag_pres : public Domain_func
   public:
   Stag_pres(double heat_rat = 1.4);
   virtual inline int n_var(int n_dim) const {return 1;}
-  virtual inline std::string variable_name(int i_var) const {return "stagnation_pressure";}
+  virtual inline std::string variable_name(int n_dim, int i_var) const {return "stagnation_pressure";}
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state) const;
 };
@@ -84,7 +84,7 @@ class Pressure : public Domain_func
   public:
   Pressure(double heat_rat = 1.4);
   virtual inline int n_var(int n_dim) const {return 1;}
-  virtual inline std::string variable_name(int i_var) const {return "pressure";}
+  virtual inline std::string variable_name(int n_dim, int i_var) const {return "pressure";}
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state) const;
 };
@@ -93,7 +93,7 @@ class Velocity : public Domain_func
 {
   public:
   virtual inline int n_var(int n_dim) const {return n_dim;}
-  virtual std::string variable_name(int i_var) const;
+  virtual std::string variable_name(int n_dim, int i_var) const;
   virtual std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                          const std::vector<double> state) const;
 };
@@ -101,7 +101,7 @@ class Velocity : public Domain_func
 class Mass : public Domain_func
 {
   virtual inline int n_var(int n_dim) const {return 1;}
-  virtual inline std::string variable_name(int i_var) const {return "mass";}
+  virtual inline std::string variable_name(int n_dim, int i_var) const {return "mass";}
   virtual inline std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
                                                 const std::vector<double> state) const
   {

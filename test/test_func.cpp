@@ -14,7 +14,7 @@ class Arbitrary_func : public hexed::Spacetime_func
 {
   public:
   virtual int n_var(int n_dim) const {return n_dim;}
-  virtual std::string variable_name(int i_var) const {return "arbitrary" + std::to_string(i_var);}
+  virtual std::string variable_name(int n_dim, int i_var) const {return "arbitrary" + std::to_string(i_var);}
   virtual std::vector<double> operator()(std::vector<double> pos, double time) const
   {
     auto result = pos;
@@ -80,7 +80,7 @@ TEST_CASE("Error_func")
   hexed::Error_func ef(af);
   REQUIRE(ef.n_var(2) == 2);
   REQUIRE(ef.n_var(3) == 3);
-  REQUIRE(ef.variable_name(1) == "state1_errsq");
+  REQUIRE(ef.variable_name(2, 1) == "state1_errsq");
   for (unsigned i_test = 0; i_test < test_pos.size(); ++i_test) {
     auto error = ef(test_pos[i_test], test_time[i_test], test_state[i_test]);
     REQUIRE(error.size() == test_error[i_test].size());
@@ -343,7 +343,7 @@ TEST_CASE("Pow")
   Arbitrary_func func;
   hexed::Pow p(func, 3);
   REQUIRE(p.n_var(2) == 2);
-  REQUIRE(p.variable_name(1) == "(arbitrary1)^3");
+  REQUIRE(p.variable_name(2, 1) == "(arbitrary1)^3");
   auto result = p(elem, basis, 1, .1);
   REQUIRE(result.size() == 2);
   REQUIRE(result[0] == Approx(-.008));

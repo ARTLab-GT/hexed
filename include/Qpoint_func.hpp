@@ -26,7 +26,7 @@ class Jacobian_det_func : public Qpoint_func
 {
   public:
   virtual inline int n_var(int n_dim) const {return 1;}
-  virtual inline std::string variable_name(int i_var) const {return "jacobian_determinant";}
+  virtual inline std::string variable_name(int n_dim, int i_var) const {return "jacobian_determinant";}
   virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const;
 };
 
@@ -35,7 +35,7 @@ class Jac_inv_det_func : public Qpoint_func
 {
   public:
   virtual inline int n_var(int n_dim) const {return 1;}
-  virtual inline std::string variable_name(int i_var) const {return "jacobian_inverse_determinant";}
+  virtual inline std::string variable_name(int n_dim, int i_var) const {return "jacobian_inverse_determinant";}
   virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const;
 };
 
@@ -43,7 +43,7 @@ class Time_step_scale_func : public Qpoint_func
 {
   public:
   virtual inline int n_var(int n_dim) const {return 1;}
-  virtual inline std::string variable_name(int i_var) const {return "time_step_scale";}
+  virtual inline std::string variable_name(int n_dim, int i_var) const {return "time_step_scale";}
   virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const;
 };
 
@@ -52,7 +52,7 @@ class Physical_update : public Qpoint_func
 {
   public:
   virtual inline int n_var(int n_dim) const {return n_dim + 2;}
-  virtual inline std::string variable_name(int i_var) const {return "update" + std::to_string(i_var);}
+  virtual inline std::string variable_name(int n_dim, int i_var) const {return "update" + std::to_string(i_var);}
   virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const;
 };
 
@@ -60,7 +60,7 @@ class Art_visc_coef : public Qpoint_func
 {
   public:
   virtual inline int n_var(int n_dim) const {return 1;}
-  virtual inline std::string variable_name(int i_var) const {return "artificial_viscosity_coefficient";}
+  virtual inline std::string variable_name(int n_dim, int i_var) const {return "artificial_viscosity_coefficient";}
   virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const;
 };
 
@@ -73,7 +73,7 @@ class Component : public Qpoint_func
   inline Component(const Qpoint_func& base, int i_var) : qf{base}, iv{i_var} {}
   inline Component(Qpoint_func&& base, int i_var) = delete; // can't accept temporaries. would cause dangling reference
   virtual inline int n_var(int n_dim) const {return 1;}
-  virtual inline std::string variable_name(int i_var) const {return qf.variable_name(iv);}
+  virtual inline std::string variable_name(int n_dim, int i_var) const {return qf.variable_name(n_dim, iv);}
   virtual inline std::vector<double> operator()(Element& e, const Basis& b, int i_qpoint, double time) const
   {
     return {qf(e, b, i_qpoint, time)[iv]};
@@ -89,7 +89,7 @@ class Scaled : public Qpoint_func
   inline Scaled(const Qpoint_func& base, std::array<double, 2> bounds) : qf{base}, bnd{bounds} {}
   Scaled(Qpoint_func&& base, std::array<double, 2> bounds) = delete;
   virtual inline int n_var(int n_dim) const {return 1;}
-  virtual inline std::string variable_name(int i_var) const {return "scaled_" + qf.variable_name(0);}
+  virtual inline std::string variable_name(int n_dim, int i_var) const {return "scaled_" + qf.variable_name(n_dim, 0);}
   virtual inline std::vector<double> operator()(Element& e, const Basis& b, int i_qpoint, double time) const
   {
     double val = qf(e, b, i_qpoint, time)[0];
@@ -107,7 +107,7 @@ class Pow : public Qpoint_func
   inline Pow(const Qpoint_func& base, int exponent) : qf{base}, exp{exponent} {}
   Pow(Qpoint_func&&, int) = delete;
   virtual inline int n_var(int n_dim) const {return qf.n_var(n_dim);}
-  virtual std::string variable_name(int i_var) const;
+  virtual std::string variable_name(int n_dim, int i_var) const;
   virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const;
 };
 

@@ -899,7 +899,7 @@ void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::s
   const int n_corners {custom_math::pow(2, n_dim - 1)};
   Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
   std::vector<std::string> var_names;
-  for (int i_vis = 0; i_vis < n_vis; ++i_vis) var_names.push_back(output_variables.variable_name(i_vis));
+  for (int i_vis = 0; i_vis < n_vis; ++i_vis) var_names.push_back(output_variables.variable_name(n_dim, i_vis));
   Tecplot_file file {name, n_dim, var_names, status.flow_time};
 
   for (int i_elem = 0; i_elem < acc_mesh.elements().size(); ++i_elem)
@@ -943,7 +943,7 @@ void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample
   const int n_block {custom_math::pow(n_sample, nd - 1)};
   // setup
   std::vector<std::string> var_names;
-  for (int i_var = 0; i_var < nv; ++i_var) var_names.push_back(State_variables().variable_name(i_var));
+  for (int i_var = 0; i_var < nv; ++i_var) var_names.push_back(State_variables().variable_name(nd, i_var));
   Tecplot_file file {name, nd, var_names, status.flow_time};
   Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
   // write the state to the faces so that the BCs can access it
