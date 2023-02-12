@@ -21,7 +21,7 @@ You should immediately see a contour plot of Mach number.
 ## Postprocessing script
 The [post-processing scrip](https://github.gatech.edu/ARTLab/hexed/blob/master/script/hexed-wrapped-post-process.in)
 can be executed with the command `hexed-post-process`.
-Assuming you [properly installed](https://github.gatech.edu/ARTLab/hexed/blob/master/doc/install.md) Hexed,
+Assuming you [properly installed](install.md) Hexed,
 you should be able to use this command from any directory.
 
 ### Arguments
