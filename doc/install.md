@@ -2,7 +2,7 @@
 
 ## Quick start
 If look at these instructions and don't know what I'm talking about, skip to
-[Detailed instructions](https://github.gatech.edu/ARTLab/hexed/edit/alternative_postproc/doc/install.md#detailed-instructions).
+[Detailed instructions](install.md#detailed-instructions).
 1. Ensure that the following mandatory dependencies are installed (all Python packages must be available for Python3):
    - [Eigen](https://eigen.tuxfamily.org/)
    - [numpy](https://numpy.org/)
@@ -12,7 +12,7 @@ If look at these instructions and don't know what I'm talking about, skip to
    - [Tecplot](https://www.tecplot.com/)/[TecIO](https://www.tecplot.com/products/tecio-library/) (required for visualization)
    - [Catch2](https://github.com/catchorg/Catch2) (required for unit testing)
    - [pytecplot](https://www.tecplot.com/docs/pytecplot/) (required by the
-     [Python postprocessing script](https://github.gatech.edu/ARTLab/hexed/blob/alternative_postproc/doc/postprocessing.md#postprocessing-script)
+     [Python postprocessing script](postprocessing.md#postprocessing-script)
      -- you can probably do without if you want)
 3. Create and navigate to a build directory (git will ignore names that start with `build`).
 4. Use `ccmake` to configure build options.
@@ -31,7 +31,7 @@ If look at these instructions and don't know what I'm talking about, skip to
 
 ## Detailed instructions
 This section is provided in case you need more information than the
-[Quick start](https://github.gatech.edu/ARTLab/hexed/edit/alternative_postproc/doc/install.md#quick-start)
+[Quick start](install.md#quick-start)
 section includes. It assumes you have access to an ARTLAB
 machine and are familiar with basic directory and file management in Linux. If you have more than that, it is assumed that you can adapt these
 instructions according to your situation. If you have less than that, consider asking for help. If you have any trouble following these instructions,
