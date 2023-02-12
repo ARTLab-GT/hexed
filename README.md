@@ -1,7 +1,7 @@
 <img src="../assets/header.png" alt="header" height="400"/>
 Above: Temperature (K) contours on a Mach 10 starfish (inviscid, 2D, CPG).
 
-# hexed
+# Hexed
 Discontinuous Galerkin engine for CFD with automated, unstructured quad/hex meshing.
 
 **hex** *(noun)*
@@ -19,12 +19,14 @@ Anyone who has spent a substantial amount of time working with computational flu
 can attest that it is decidedly arcane and sometimes tends toward evil.
 As its name suggests, Hexed scarcely presumes to change that.
 What it *does* aim to provide is a faster, more automated solver, enabling you to practice your witchcraft on a previously unattainable scale.
-Specifically, Hexed is a C++ library which can solve the compressible Euler equations of aerodynamics on unstructured quad/hex meshes.
+Specifically, Hexed (or perhaps "Vexed", as a certain insightful friend suggested it might be more aptly named)
+is a C++ library which can solve the compressible Euler equations of aerodynamics on unstructured quad/hex meshes.
 It can handle Cartesian meshes with hanging-node refinement, and it also provides a mechanism to automatically generate a body-fitted mesh
 from a Cartesian starting point.
 The high-order discontinuous Galerkin (DG) scheme is designed to achieve whatever level of accuracy is required with a much coarser mesh,
 reducing (hopefully) the overall computational cost.
-Hexed is used as a backend by NASCART-GT to combine the speed and accuracy of the DG method with the automation and versatility of its
+Hexed is used as a backend by [NASCART-GT](https://github.gatech.edu/ARTLab/NASCART-GT)
+to combine the speed and accuracy of the DG method with the automation and versatility of its
 adaptive Cartesian mesh.
 However, it is meant to be encapsulated well enough that it could survive a complete refactor of NASCART-GT,
 or even be used with other frontends.
@@ -41,27 +43,8 @@ Hexed is not:
 * for arbitrary PDEs
 * for tri/tet grids
 
-## Dependencies
-The following are required to be installed before compiling Hexed:
-- GCC (of course)
-- CMake
-- Eigen
-- Python3
-- Numpy
-- Scipy
-- Sympy
-
-The following are techincally not necessary, but are required by certain optional features:
-- Catch2 (unit testing)
-- Tecplot (flow visualization, required in order to build with NASCART-GT)
-- Otter (flow visualization, not yet publicly available)
-
-See [installation instructions](doc/install.md)
-for guidance on obtaining these.
- 
 ## Features
 Currently implemented features:
-* Gauss-Lobatto and Gauss-Legendre nodal bases.
 * Unstructured, body-fitted quad/hex mesh.
 * Explicit time integration.
 * Visualization with Tecplot.
