@@ -401,7 +401,6 @@ void Solver::set_art_visc_smoothness(double advect_length)
       // loop through nodes of projection basis
       for (int i_proj = rs - rs/2; i_proj < rs; ++i_proj)
       {
-        State_variables sv;
         // find out which node we're advecting to
         int i_node = (sign > 0) ? i_proj : rs - 1 - i_proj; // if sign < 0 we are looping through the nodes backward
         // copy advection state to the scalar variables of stage 1
@@ -931,6 +930,15 @@ void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::s
     }
   }
   tecplot_file_names.push_back(name);
+}
+
+void Solver::visualize_field_tecplot(std::string name, int n_sample, bool edges, bool qpoints, bool interior)
+{
+  State_variables sv;
+  Art_visc_coef avc;
+  std::vector<const Qpoint_func*> funcs {&sv};
+  if (use_art_visc) funcs.push_back(&avc);
+  visualize_field_tecplot(Qf_concat(funcs), name, n_sample, edges, qpoints, interior);
 }
 
 void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample)

@@ -130,6 +130,10 @@ class Solver
   // write a visualization file describing the entire flow field (but not identifying surfaces)
   void visualize_field_tecplot(const Qpoint_func& output_variables, std::string name, int n_sample = 20,
                                bool edges = false, bool qpoints = false, bool interior = true);
+  // if a `Qpoint_func` is not specified, all the state variables
+  // and the artificial viscosity coefficient will be output
+  void visualize_field_tecplot(std::string name, int n_sample = 20,
+                               bool edges = false, bool qpoints = false, bool interior = true);
   // write a visualization file describing all surfaces where a particular boundary condition has been enforced.
   // only does state variables because usually that's what you want
   // and I'm lazy
