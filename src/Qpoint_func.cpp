@@ -48,4 +48,19 @@ std::vector<double> Pow::operator()(Element& e, const Basis& b, int i_qpoint, do
   return result;
 }
 
+int Qf_concat::n_var(int n_dim) const
+{
+  return 0;
+}
+
+std::string Qf_concat::variable_name(int n_dim, int i_var) const
+{
+  return "";
+}
+
+std::vector<double> Qf_concat::operator()(Element&, const Basis&, int i_qpoint, double time) const
+{
+  return {};
+}
+
 }
