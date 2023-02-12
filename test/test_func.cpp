@@ -14,7 +14,7 @@ class Arbitrary_func : public hexed::Spacetime_func
 {
   public:
   virtual int n_var(int n_dim) const {return n_dim;}
-  virtual std::string variable_name(int i_var) const {return "arbitrary" + std::to_string(i_var);}
+  virtual std::string variable_name(int n_dim, int i_var) const {return "arbitrary" + std::to_string(i_var);}
   virtual std::vector<double> operator()(std::vector<double> pos, double time) const
   {
     auto result = pos;
@@ -80,7 +80,7 @@ TEST_CASE("Error_func")
   hexed::Error_func ef(af);
   REQUIRE(ef.n_var(2) == 2);
   REQUIRE(ef.n_var(3) == 3);
-  REQUIRE(ef.variable_name(1) == "state1_errsq");
+  REQUIRE(ef.variable_name(2, 1) == "state1_errsq");
   for (unsigned i_test = 0; i_test < test_pos.size(); ++i_test) {
     auto error = ef(test_pos[i_test], test_time[i_test], test_state[i_test]);
     REQUIRE(error.size() == test_error[i_test].size());
@@ -343,9 +343,32 @@ TEST_CASE("Pow")
   Arbitrary_func func;
   hexed::Pow p(func, 3);
   REQUIRE(p.n_var(2) == 2);
-  REQUIRE(p.variable_name(1) == "(arbitrary1)^3");
+  REQUIRE(p.variable_name(2, 1) == "(arbitrary1)^3");
   auto result = p(elem, basis, 1, .1);
   REQUIRE(result.size() == 2);
   REQUIRE(result[0] == Approx(-.008));
   REQUIRE(result[1] == Approx(27));
+}
+
+TEST_CASE("Qf_concat")
+{
+  Arbitrary_func af;
+  hexed::Constant_func c({1., 2.});
+  hexed::Qf_concat concat({&af, &c});
+  // check that number of variables is sum of `af` and `c`
+  REQUIRE(concat.n_var(1) == 3);
+  REQUIRE(concat.n_var(3) == 5);
+  // check that names of variables of `af` and `c` are retained
+  REQUIRE(concat.variable_name(3, 0) == "arbitrary0");
+  REQUIRE(concat.variable_name(3, 2) == "arbitrary2");
+  REQUIRE(concat.variable_name(3, 3) == "constant0");
+  // check that values are correct
+  hexed::Gauss_lobatto basis {2};
+  hexed::Storage_params params {2, 4, 2, 2};
+  hexed::Deformed_element elem {params, {0, 1}};
+  auto result = concat(elem, basis, 1, 5.);
+  REQUIRE(result.size() == 4);
+  REQUIRE(result[1] == Approx(0.3*2. - 10.));
+  REQUIRE(result[2] == Approx(1.));
+  REQUIRE(result[3] == Approx(2.));
 }

@@ -10,7 +10,7 @@ namespace hexed
 
 int Tecplot_file::n_instances {0};
 
-Tecplot_file::Tecplot_file(std::string file_name, int n_dim, std::vector<std::string> variable_names, double time)
+Tecplot_file::Tecplot_file(std::string file_name, int n_dim, std::vector<std::string> variable_names, double time, double heat_rat, double gas_const)
 : n_dim{n_dim}, n_var{int(variable_names.size())}, time{time}, strand_id{1}, i_zone{0}
 {
   if (n_instances > 0) throw std::runtime_error("Attempt to create multiple `Tecplot_file`s at once, which is illegal.");
@@ -28,7 +28,20 @@ Tecplot_file::Tecplot_file(std::string file_name, int n_dim, std::vector<std::st
     var_name_list += " " + variable_names[i_var];
   }
   var_name_list.erase(0, 1); // erase leading space
-  TECINI142((char*)"flow solution", var_name_list.c_str(), file_name.c_str(), ".", &fileFormat, &FileType, &Debug, &VIsDouble); // opens a new Tecplot file
+  TECINI142("flow solution", var_name_list.c_str(), file_name.c_str(), ".", &fileFormat, &FileType, &Debug, &VIsDouble); // opens a new Tecplot file
+  TECAUXSTR142("Common.Incompressible", "False");
+  TECAUXSTR142("Common.VectorVarsAreVelocity", "False");
+  TECAUXSTR142("Common.Gamma", std::to_string(heat_rat).c_str());
+  TECAUXSTR142("Common.GasConstant", std::to_string(gas_const).c_str());
+  std::vector<std::string> xyz {"X", "Y", "Z"};
+  std::vector<std::string> uvw {"U", "V", "W"};
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+    TECAUXSTR142(("Common." + xyz[i_dim] + "Var").c_str(), std::to_string(i_dim + 1).c_str());
+    TECAUXSTR142(("Common." + uvw[i_dim] + "Var").c_str(), std::to_string(n_dim + i_dim + 1).c_str());
+  }
+  TECAUXSTR142("Common.CVar", std::to_string(2*n_dim + 1).c_str());
+  TECAUXSTR142("Common.DensityVar", std::to_string(2*n_dim + 1).c_str());
+  TECAUXSTR142("Common.StagnationEnergyVar", std::to_string(2*n_dim + 2).c_str());
 }
 
 Tecplot_file::~Tecplot_file()

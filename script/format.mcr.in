@@ -1,0 +1,26 @@
+#!MC 1410
+
+$!ExtendedCommand
+  CommandProcessorID = 'CFDAnalyzer4'
+  Command = 'Calculate Function=\'DENSITY\' Normalization=\'None\' ValueLocation=\'Nodal\' CalculateOnDemand=\'T\' UseMorePointsForFEGradientCalculations=\'F\''
+
+$!ExtendedCommand
+  CommandProcessorID = 'CFDAnalyzer4'
+  Command = 'Calculate Function=\'PRESSURE\' Normalization=\'None\' ValueLocation=\'Nodal\' CalculateOnDemand=\'T\' UseMorePointsForFEGradientCalculations=\'F\''
+
+$!ExtendedCommand
+  CommandProcessorID = 'CFDAnalyzer4'
+  Command = 'Calculate Function=\'TEMPERATURE\' Normalization=\'None\' ValueLocation=\'Nodal\' CalculateOnDemand=\'T\' UseMorePointsForFEGradientCalculations=\'F\''
+
+$!ExtendedCommand
+  CommandProcessorID = 'CFDAnalyzer4'
+  Command = 'Calculate Function=\'MACHNUMBER\' Normalization=\'None\' ValueLocation=\'Nodal\' CalculateOnDemand=\'T\' UseMorePointsForFEGradientCalculations=\'F\''
+
+$!SetContourVar
+  Var = |numvars|
+  ContourGroup = 1
+  LevelInitMode = ResetToNice
+$!LoadColorMap  "@CMAKE_BINARY_DIR@/colormaps/plasma.map"
+$!GlobalContour 1  ColorMapName = 'hexed_plasma'
+$!FieldLayers ShowContour = Yes
+$!RedrawAll
