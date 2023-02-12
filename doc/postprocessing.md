@@ -8,6 +8,7 @@ If you choose to open them normally, you will see the following:
 - The dataset will contain the variables [`state0`, `state1`, ...].
   These are the conserved variables in the order [momentum, density, total energy].
   For example, in 2D, `state0` is x-momentum, `state1` is y-momentum, `state2` is density, and `state3` is total energy.
+  Depending on whether you used artificial viscosity, the variable `artificial_viscosity_coefficient` may also be present.
 
 Use the "Edge" feature to view the element mesh.
 You are advised not to use the "Mesh" feature because it will show you the sample points, which you probably don't care about.
