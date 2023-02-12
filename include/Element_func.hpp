@@ -32,7 +32,7 @@ class Elem_average : public Element_func
   Elem_average(const Qpoint_func&);
   Elem_average(Qpoint_func&&) = delete; // can't accept temporaries because that could create a dangling reference
   virtual int n_var(int n_dim) const;
-  virtual inline std::string variable_name(int i_var) const {return "average_" + qf.variable_name(i_var);}
+  virtual inline std::string variable_name(int n_dim, int i_var) const {return "average_" + qf.variable_name(n_dim, i_var);}
   virtual std::vector<double> operator()(Element& elem, const Basis&, double time) const;
 };
 
@@ -44,7 +44,7 @@ class Elem_l2 : public Element_func
   Elem_l2(const Qpoint_func&);
   Elem_l2(Qpoint_func&&) = delete;
   virtual inline int n_var(int n_dim) const {return qf.n_var(n_dim);}
-  virtual inline std::string variable_name(int i_var) const {return "l2_" + qf.variable_name(i_var);}
+  virtual inline std::string variable_name(int n_dim, int i_var) const {return "l2_" + qf.variable_name(n_dim, i_var);}
   virtual std::vector<double> operator()(Element& elem, const Basis&, double time) const;
 };
 
@@ -56,7 +56,7 @@ class Elem_nonsmooth : public Element_func
   Elem_nonsmooth(const Qpoint_func&);
   Elem_nonsmooth(Qpoint_func&&) = delete;
   virtual inline int n_var(int n_dim) const {return qf.n_var(n_dim);}
-  virtual inline std::string variable_name(int i_var) const {return "nonsmoothness_" + qf.variable_name(i_var);}
+  virtual inline std::string variable_name(int n_dim, int i_var) const {return "nonsmoothness_" + qf.variable_name(n_dim, i_var);}
   virtual std::vector<double> operator()(Element& elem, const Basis&, double time) const;
 
 };

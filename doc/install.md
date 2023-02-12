@@ -1,30 +1,41 @@
 # Installation
 
-## Quick Start
-If look at these instructions and don't know what I'm talking about, skip to "Detailed instructions".
-* Ensure that all of the following are installed:
-  [Tecplot](https://www.tecplot.com/)/[TecIO](https://www.tecplot.com/products/tecio-library/),
-  [Eigen](https://eigen.tuxfamily.org/), [Catch2](https://github.com/catchorg/Catch2),
-  and the Python packages numpy, scipy, sympy, and pytecplot (for Python3).
-* Create and navigate to a build directory (git will ignore names that start with "build").
-* Use `ccmake` to configure build options.
-  This project has been configured to show you the available options and their defaults specifically with the `ccmake` interface for CMake.
-  * The default options should be appropriate for a release build.
-  * Note that `CMAKE_INSTALL_PREFIX` defaults to `~/.local` instead of `/usr/local`, so that it can be installed on the lab machines without root access.
-* Ensure that your system can find Tecplot/TecIO header and library files. You may need to edit `CPLUS_INCLUDE_PATH`, `LIBRARY_PATH`, and `LD_LIBRARY_PATH`.
-  Much to my disappointment, TecIO does not cooperate with CMake, so this must be setup manually.
-* `make -j install`
-* Hexed is now ready to use. To verify the success of the build, execute the following:
-  * `test/unit` to run the unit tests.
-  * This will execute the performance benchmarking script.
-  * `demo/demo2d`. This will run a very simple toy problem and output tecplot visualization files.
-    To create a prettier version of the visualization, execute `hexed-post-process ".*szplt"` and use Tecplot to view the file `all.lay`.
+## Quick start
+If look at these instructions and don't know what I'm talking about, skip to
+[Detailed instructions](install.md#detailed-instructions).
+1. Ensure that the following mandatory dependencies are installed (all Python packages must be available for Python3):
+   - [Eigen](https://eigen.tuxfamily.org/)
+   - [numpy](https://numpy.org/)
+   - [scipy](https://scipy.org/)
+   - [sympy](https://www.sympy.org/en/index.html)
+2. You are recommended to also install the following dependencies which are required for some optional features:
+   - [Tecplot](https://www.tecplot.com/)/[TecIO](https://www.tecplot.com/products/tecio-library/) (required for visualization)
+   - [Catch2](https://github.com/catchorg/Catch2) (required for unit testing)
+   - [pytecplot](https://www.tecplot.com/docs/pytecplot/) (required by the
+     [Python postprocessing script](postprocessing.md#postprocessing-script)
+     -- you can probably do without if you want)
+3. Create and navigate to a build directory (git will ignore names that start with `build`).
+4. Use `ccmake` to configure build options.
+   This project has been configured to show you the available options and their defaults specifically with the `ccmake` interface for CMake.
+   - The default options should be appropriate for a release build.
+   - Note that `CMAKE_INSTALL_PREFIX` defaults to `~/.local` instead of `/usr/local`,
+     so that it can be installed on the lab machines without root access.
+5. Ensure that your system can find Tecplot/TecIO header and library files.
+   You may need to edit `CPLUS_INCLUDE_PATH`, `LIBRARY_PATH`, and `LD_LIBRARY_PATH`.
+   Much to my disappointment, TecIO does not cooperate with CMake, so this must be setup manually.
+6. `make -j install`
+7. Hexed is now ready to use. To verify the success of the build, execute the following:
+   - `test/unit` to run the unit tests.
+   - `demo/demo2d`. This will run a very simple toy problem and output Tecplot visualization files.
+     Open these files in Tecplot and run the macro script `format.mcr` in the Hexed build directory to create a readable visualization.
 
 ## Detailed instructions
-This section is provided in case you need more information than the Quick Start section includes. It assumes you have access to an ARTLAB
+This section is provided in case you need more information than the
+[Quick start](install.md#quick-start)
+section includes. It assumes you have access to an ARTLAB
 machine and are familiar with basic directory and file management in Linux. If you have more than that, it is assumed that you can adapt these
 instructions according to your situation. If you have less than that, consider asking for help. If you have any trouble following these instructions,
-please let Micaiah know so that this documentation can be improved.
+please let [Micaiah](https://github.gatech.edu/mcsp3) know so that this documentation can be improved.
 
 ### 1. Configure environment
 When you compile and install programs that rely on other programs,
@@ -52,7 +63,7 @@ Plus, we need to edit a *whole bunch* of environment variables to accommodate Te
   Thus, do `mkdir codes`.
 
 ### 2. Install Python libraries
-CartDG uses Python scripts for some small tasks during the build process and output post-processing and requires
+Hexed uses Python scripts for some small tasks during the build process and output post-processing and requires
 a few 3rd-party libraries.
 * Install the numerical computing libraries numpy and scipy (althought you likely have them already):
   * `pip3 install numpy`
@@ -61,6 +72,8 @@ a few 3rd-party libraries.
   * `pip3 install sympy`
 * Install PyTecplot (Tecplot's Python API):
   * `pip3 install pytecplot`
+  * If this doesn't work, don't worry. You just won't be able to run the Python postprocessing script (see [`postprocessing.md`](postprocessing.md)),
+    which you don't strictly need to do.
 ### 3. Install Eigen
 * Download the Eigen [source code](http://eigen.tuxfamily.org/index.php?title=Main_Page#Download) (latest stable release).
 * Unpack the Eigen source in `~/codes`. `~/codes` should now contain a directory named something like `eigen-X.X.X`, depending on the
@@ -68,29 +81,33 @@ a few 3rd-party libraries.
 * `cd eigen-X.X.X` (replace "X"s with appropriate numbers).
 * `cp -r Eigen/ ~/.local/include/`
 ### 4. Install Hexed
-  * `cd ~/codes`
-  * `git clone git@github.gatech.edu:ARTLab/hexed.git`
-  * `cd hexed`
-  * `mkdir build_Release`
-  * `cd build_Release`
-  * `ccmake ../`
-    * This will open [ccmake](https://cmake.org/cmake/help/latest/manual/ccmake.1.html), which is a sort-of-GUI for [CMake](https://cmake.org/).
-      This allows you to choose some options for how to build Hexed.
-      You should see `EMPTY_CACHE` and no error messages.
-    * Press `c`. You should now see a list of options. The default options are fine for a release build, so you don't have to do anything.
-      * If you want to edit any of the options, use the arrow keys to move the cursor and Enter to edit the option under the cursor.
-    * Press `c` again.
-    * Press `g`. The GUI should exit (sometimes you have to hit `c` several times before it will let you exit with `g`).
-      If something goes wrong and you can't get `g` to work, you can abort with `q`.
-  * `make -j install`
+* If you haven't already,
+  [add an SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
+  to your GitHub account.
+* `cd ~/codes`
+* `git clone git@github.gatech.edu:ARTLab/hexed.git`
+* `cd hexed`
+* `mkdir build_Release`
+* `cd build_Release`
+* `ccmake ../`
+  * This will open [ccmake](https://cmake.org/cmake/help/latest/manual/ccmake.1.html), which is a sort-of-GUI for [CMake](https://cmake.org/).
+    This allows you to choose some options for how to build Hexed.
+    You should see `EMPTY_CACHE` and no error messages.
+  * Press `c`. You should now see a list of options. The default options are fine for a release build, so you don't have to do anything.
+    * If you want to edit any of the options, use the arrow keys to move the cursor and Enter to edit the option under the cursor.
+  * Press `c` again.
+  * Press `g`. The GUI should exit (sometimes you have to hit `c` several times before it will let you exit with `g`).
+    If something goes wrong and you can't get `g` to work, you can abort with `q`.
+* `make -j install`
 ### 5. Verify success
 *  You should still be in the build directory.
 * `demo/demo2d`
   * This runs a simple demonstration simulation. It should create a bunch of `.szplt` files.
-* `hexed-post-process "*.szplt"`
-  * This will post-process the `.szplt` files to create a file `all.lay`. Open this file with Tecplot, and you should see
-    a vortex travel out one side of the domain and in the other. If you try to open the `.szplt` files directly, you should see the same
-    thing but not as pretty, because the quadrature points are overlayed on top of the visualization points and auxiliary variables have not been computed.
+* Start Tecplot and open all the `.szplt` files.
+* Select "Play Macro/Script..." in the "Scripting" menu.
+* Select the file `format.mcr`.
+* You should now see a contour plot of Mach number for an isentropic vortex.
+  If you advance the time slider, you should see the vortex travel out one side of the domain and back in the other.
 * If you want, you can also run `demo/demo3d`.
 
 ## Development build
@@ -112,16 +129,16 @@ Now you need to update your Hexed build to include the unit tests, as follows:
 * `cd ~/codes/hexed/build_Release`
 * `ccmake ..`
 * Set the option `build_tests` to `ON`.
-  You can accomplish this by using the arrow keys to move the cursor down to the appropriate line and then hitting "Enter" to toggle between `OFF` and `ON`.
 * Hit `c` as many times as you need to and then `g`.
-* `make -j` (you only need `install` again if you've changed any of the code and want to propogate the new version to NASCART-GT).
+* `make -j` (you only need `install` the first time you compile or if you've changed any of the executable scripts).
 * The code is now compiled. you can run the unit tests with the command `test/unit` (executed from the build directory, still).
 * You should see "All tests passed".
 
 ### 3. Create debug build
 So far, we've only compiled Hexed in Release mode, which is designed to run as fast as possible at the expense of ease of debugging.
 That's what you want when you're running simulations, but if you're in the process of implementing and debugging new features,
-you would probably prefer to be able to use debugging tools like [GDB](https://www.sourceware.org/gdb/) and the [sanitizers](https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html).
+you would probably prefer to be able to use debugging tools like [GDB](https://www.sourceware.org/gdb/) and the
+[sanitizers](https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html).
 So, we will create an new build directory where we compile in Debug mode.
 * `cd ~/codes/hexed`
 * `mkdir build_Debug`

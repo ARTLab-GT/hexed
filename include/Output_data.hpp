@@ -17,7 +17,7 @@ class Output_data
   virtual ~Output_data() = default;
   // Number of output variables when called on an `n_dim`-dimensional object.
   virtual int n_var(int n_dim) const = 0;
-  virtual std::string variable_name(int i_var) const;
+  virtual std::string variable_name(int n_dim, int i_var) const;
 };
 
 }

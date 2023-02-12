@@ -1,16 +1,30 @@
-# Post-processing script
-Visualization tools like Tecplot were primarily designed for finite volume, finite difference, and low-order finite element solvers.
-Visualizing high-order DG solutions in a way that accurately represents the polynomial nature of the solution is a challenge.
-For example, do you want to see the quadrature points where the solution is actually being stored, or the (locally) continuous polynomial interpolation?
-The approach Hexed takes is to simply write everything you could possibly want into the Tecplot files
-and then provide a post-processing script which formats the plots in a more readable way.
+# Visualization
+Hexed can output Tecplot binary files (`.szplt`). These can be viewed in two ways.
+You can simply open them normally in Tecplot, or you can use the postprocessing script (see below) to generate a layout file.
+If you choose to open them normally, you will see the following:
+- The domain will be divided into a zone for every mesh element.
+- Each element/zone will contain a mesh of uniformly spaced sample points.
+  These sample points are chosen to provide a clear view of the solution polynomial and do not represent the actual degrees of freedom.
+- The dataset will contain the variables [`state0`, `state1`, ...].
+  These are the conserved variables in the order [momentum, density, total energy].
+  For example, in 2D, `state0` is x-momentum, `state1` is y-momentum, `state2` is density, and `state3` is total energy.
+  Depending on whether you used artificial viscosity, the variable `artificial_viscosity_coefficient` may also be present.
 
+Use the "Edge" feature to view the element mesh.
+You are advised not to use the "Mesh" feature because it will show you the sample points, which you probably don't care about.
+To visualize flow variables, use the "Calculate Variables..." function in the "Analyze" tab to compute quantities of practical interest (e.g. pressure, Mach number).
+Since doing that every time you open a file would be a pain, Hexed also provides a Tecplot script to compute some of the popular ones for you.
+To run it, select "Play Macro/Script..." in the "Scripting" tab, which should open a file browser.
+Navigate to the Hexed build directory and select `format.mcr`.
+You should immediately see a contour plot of Mach number.
+
+## Postprocessing script
 The [post-processing scrip](https://github.gatech.edu/ARTLab/hexed/blob/master/script/hexed-wrapped-post-process.in)
 can be executed with the command `hexed-post-process`.
-Assuming you [properly installed](https://github.gatech.edu/ARTLab/hexed/blob/master/doc/install.md) Hexed,
+Assuming you [properly installed](install.md) Hexed,
 you should be able to use this command from any directory.
 
-## Arguments
+### Arguments
 The script takes two arguments, both optional, in arbitrary order:
 - A [regular expression](https://docs.python.org/3/library/re.html#regular-expression-syntax) specifying the files to process.
   If you only want to process one file, you can just use the name of the file.
@@ -21,7 +35,8 @@ The script takes two arguments, both optional, in arbitrary order:
 - `colormap=` followed by the name of the colormap you want to for the contour plots.
   Default: `colormap=hexed_plasma`.
   Of course, you can change this once you open Tecplot -- the script only affects what the colormap will be by default.
-  Before setting the colormap, the script will import some of the [matplotlib colormaps](https://matplotlib.org/stable/gallery/color/colormap_reference.html)
+  Before setting the colormap, the script will import some of the
+  [matplotlib colormaps](https://matplotlib.org/stable/gallery/color/colormap_reference.html)
   (namely as many of the perceptually uniform sequential colormaps as are available).
   These can be specified as the name of the colormap in matplotlib prefixed with `hexed_`.
   The ones available on the ARTLab machines are
@@ -45,7 +60,7 @@ The script takes two arguments, both optional, in arbitrary order:
   
   tl;dr: use `colormap=hexed_[colormap name]` to use one of the matplotlib colormaps.
   
-## Output
+### Output
 The script outputs a Tecplot layout file `all.lay`.
 When you're ready to look at your data, simply open this file in Tecplot.
 When interpreting this data, note:
@@ -57,10 +72,8 @@ When interpreting this data, note:
 - "edge" shows you the edges of the elements.
   This is the easiest way to look at the mesh, but if you're used to looking at finite volume meshes,
   remember that each element contains **much** more information than a finite volume cell, so the meaning of this mesh is somewhat different.
-- "scatter" shows you the location of the quadrature points.
-  If you're trying to get a sense of the mesh resolution, this is probably the most meaningful thing to look at.
   
-## Examples
+### Examples
 - `hexed-post-process`
   - visualize all `.szplt` files in your working directory with the matplotlib colormap "plasma".
 - `hexed-post-process computational_surface_000052200.szplt`

@@ -34,10 +34,10 @@ std::vector<double> Art_visc_coef::operator()(Element& element, const Basis&, in
   return {element.art_visc_coef()[i_qpoint]};
 }
 
-std::string Pow::variable_name(int i_var) const
+std::string Pow::variable_name(int n_dim, int i_var) const
 {
   char buffer [1000];
-  snprintf(buffer, 1000, "(%s)^%i", qf.variable_name(i_var).c_str(), exp);
+  snprintf(buffer, 1000, "(%s)^%i", qf.variable_name(n_dim, i_var).c_str(), exp);
   return buffer;
 }
 
@@ -45,6 +45,33 @@ std::vector<double> Pow::operator()(Element& e, const Basis& b, int i_qpoint, do
 {
   std::vector<double> result = qf(e, b, i_qpoint, time);
   for (double& r : result) r = custom_math::pow(r, exp);
+  return result;
+}
+
+int Qf_concat::n_var(int n_dim) const
+{
+  int nv = 0;
+  for (auto f : funcs) nv += f->n_var(n_dim);
+  return nv;
+}
+
+std::string Qf_concat::variable_name(int n_dim, int i_var) const
+{
+  int i_func = 0;
+  while (i_var >= funcs[i_func]->n_var(n_dim)) {
+    i_var -= funcs[i_func]->n_var(n_dim);
+    ++i_func;
+  }
+  return funcs[i_func]->variable_name(n_dim, i_var);
+}
+
+std::vector<double> Qf_concat::operator()(Element& elem, const Basis& basis, int i_qpoint, double time) const
+{
+  std::vector<double> result;
+  for (auto func : funcs) {
+    auto r = (*func)(elem, basis, i_qpoint, time);
+    result.insert(result.end(), r.begin(), r.end());
+  }
   return result;
 }
 

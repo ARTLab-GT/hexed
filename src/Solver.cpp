@@ -1,3 +1,4 @@
+#include <fstream>
 #include <config.hpp>
 #include <Solver.hpp>
 #include <Tecplot_file.hpp>
@@ -400,7 +401,6 @@ void Solver::set_art_visc_smoothness(double advect_length)
       // loop through nodes of projection basis
       for (int i_proj = rs - rs/2; i_proj < rs; ++i_proj)
       {
-        State_variables sv;
         // find out which node we're advecting to
         int i_node = (sign > 0) ? i_proj : rs - 1 - i_proj; // if sign < 0 we are looping through the nodes backward
         // copy advection state to the scalar variables of stage 1
@@ -891,14 +891,14 @@ std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func,
 }
 
 #if HEXED_USE_TECPLOT
-void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::string name, int n_sample)
+void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::string name, int n_sample, bool include_edges, bool include_qpoints, bool include_interior)
 {
   const int n_dim = params.n_dim;
   const int n_vis = output_variables.n_var(n_dim); // number of variables to visualize
   const int n_corners {custom_math::pow(2, n_dim - 1)};
   Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
   std::vector<std::string> var_names;
-  for (int i_vis = 0; i_vis < n_vis; ++i_vis) var_names.push_back(output_variables.variable_name(i_vis));
+  for (int i_vis = 0; i_vis < n_vis; ++i_vis) var_names.push_back(output_variables.variable_name(n_dim, i_vis));
   Tecplot_file file {name, n_dim, var_names, status.flow_time};
 
   for (int i_elem = 0; i_elem < acc_mesh.elements().size(); ++i_elem)
@@ -908,8 +908,7 @@ void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::s
     Vis_data vis_out(elem, output_variables, basis, status.flow_time);
     // note: each visualization stage is enclosed in `{}` to ensure that only one `Tecplot_file::Zone` is alive at a time
     // visualize edges
-    if (n_dim > 1) // 1D elements don't really have edges
-    {
+    if (n_dim > 1 && include_edges) { // 1D elements don't really have edges
       Tecplot_file::Line_segments edges {file, n_dim*n_corners, n_sample, "edges"};
       auto edge_pos = vis_pos.edges(n_sample);
       auto edge_state = vis_out.edges(n_sample);
@@ -918,18 +917,28 @@ void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::s
       }
     }
 
-    { // visualize quadrature points
+    if (include_qpoints) { // visualize quadrature points
       Tecplot_file::Structured_block qpoints {file, basis.row_size, "element_qpoints"};
       qpoints.write(vis_pos.qpoints().data(), vis_out.qpoints().data());
     }
 
-    { // visualize interior (that is, quadrature point data interpolated to a fine mesh of sample points)
+    if (include_interior) { // visualize interior (that is, quadrature point data interpolated to a fine mesh of sample points)
       Tecplot_file::Structured_block interior {file, n_sample, "element_interior"};
       auto interp_pos = vis_pos.interior(n_sample);
       auto interp_out = vis_out.interior(n_sample);
       interior.write(interp_pos.data(), interp_out.data());
     }
   }
+  tecplot_file_names.push_back(name);
+}
+
+void Solver::visualize_field_tecplot(std::string name, int n_sample, bool edges, bool qpoints, bool interior)
+{
+  State_variables sv;
+  Art_visc_coef avc;
+  std::vector<const Qpoint_func*> funcs {&sv};
+  if (use_art_visc) funcs.push_back(&avc);
+  visualize_field_tecplot(Qf_concat(funcs), name, n_sample, edges, qpoints, interior);
 }
 
 void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample)
@@ -942,7 +951,7 @@ void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample
   const int n_block {custom_math::pow(n_sample, nd - 1)};
   // setup
   std::vector<std::string> var_names;
-  for (int i_var = 0; i_var < nv; ++i_var) var_names.push_back(State_variables().variable_name(i_var));
+  for (int i_var = 0; i_var < nv; ++i_var) var_names.push_back(State_variables().variable_name(nd, i_var));
   Tecplot_file file {name, nd, var_names, status.flow_time};
   Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
   // write the state to the faces so that the BCs can access it

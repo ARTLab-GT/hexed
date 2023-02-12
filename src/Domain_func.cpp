@@ -46,10 +46,10 @@ Error_func::Error_func(const Spacetime_func& correct_arg)
 : correct{correct_arg}
 {}
 
-std::string Error_func::variable_name(int i_var) const
+std::string Error_func::variable_name(int n_dim, int i_var) const
 {
   State_variables sv;
-  return sv.variable_name(i_var) + "_errsq";
+  return sv.variable_name(n_dim, i_var) + "_errsq";
 }
 
 int Error_func::n_var(int n_dim) const
@@ -97,7 +97,7 @@ std::vector<double> Pressure::operator()(const std::vector<double> point_pos, do
   double pres {(hr - 1.)*(state[state.size() - 1] - kin_ener)};
   return {pres};
 }
-std::string Velocity::variable_name(int i_var) const
+std::string Velocity::variable_name(int n_dim, int i_var) const
 {
   char buffer [100];
   snprintf(buffer, 100, "velocity%i", i_var);

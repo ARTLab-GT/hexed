@@ -75,6 +75,7 @@ set(colormap_files
     colormaps/viridis.map
 )
 configure_file(script/hexed-wrapped-post-process.in hexed-wrapped-post-process)
+configure_file(script/format.mcr.in format.mcr)
 
 # generate colormaps to use in tecplot
 add_custom_command(
