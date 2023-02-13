@@ -18,7 +18,7 @@ class Viscous_stress : public Boundary_func
 {
   public:
   virtual inline int n_var(int n_dim) const {return n_dim;}
-  virtual inline std::string variable_name(int n_dim, int i_var) const {return "visc_stress_" + std::to_string(i_var);}
+  virtual inline std::string variable_name(int n_dim, int i_var) const {return "visc_stress" + std::to_string(i_var);}
   virtual std::vector<double> operator()(Boundary_face&, int i_fqpoint, double time) const;
 };
 
