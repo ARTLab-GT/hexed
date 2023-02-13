@@ -232,7 +232,7 @@ TEST_CASE("Doublet")
   }
 }
 
-TEST_CASE("Force_per_area")
+TEST_CASE("Pressure_stress")
 {
   std::vector<double> pressure {1e5, 2e4, 3.2e4};
   std::vector<double> pos {}; // size of `pos` shouldn't matter
@@ -245,9 +245,9 @@ TEST_CASE("Force_per_area")
     {1.},
     {0., 0., 1.},
   };
-  hexed::Force_per_area fpa {1.2};
+  hexed::Pressure_stress fpa {1.2};
   // verify that when you back out the state,
-  // Force_per_area gives you pressure times unit normal
+  // `Pressure_stress` gives you pressure times unit normal
   for (unsigned i_normal = 0; i_normal < test_normal.size(); ++i_normal)
   {
     auto normal {test_normal[i_normal]};

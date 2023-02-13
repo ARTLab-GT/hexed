@@ -27,10 +27,10 @@ std::vector<double> Surface_func::operator()(Boundary_face& bf, int i_fqpoint, d
   return operator()(pos, time, state, normal);
 }
 
-Force_per_area::Force_per_area(double heat_rat) : hr{heat_rat} {}
+Pressure_stress::Pressure_stress(double heat_rat) : hr{heat_rat} {}
 
-std::vector<double> Force_per_area::operator()(std::vector<double> pos, double time,
-                                               std::vector<double> state, std::vector<double> normal) const
+std::vector<double> Pressure_stress::operator()(std::vector<double> pos, double time,
+                                                std::vector<double> state, std::vector<double> normal) const
 {
   double momentum_sq {0.};
   double normal_sq {0.};

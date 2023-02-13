@@ -13,6 +13,7 @@ class Boundary_func : virtual public Output_data
   virtual std::vector<double> operator()(Boundary_face&, int i_fqpoint, double time) const = 0;
 };
 
+// assumes that at least 1 iteration has been run in order to compute viscous fluxes
 class Viscous_stress : public Boundary_func
 {
   public:
@@ -21,6 +22,7 @@ class Viscous_stress : public Boundary_func
   virtual std::vector<double> operator()(Boundary_face&, int i_fqpoint, double time) const;
 };
 
+// assumes that at least 1 iteration has been run in order to compute viscous fluxes
 class Heat_flux : public Boundary_func
 {
   public:
