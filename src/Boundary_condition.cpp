@@ -279,6 +279,7 @@ void No_slip::apply_flux(Boundary_face& bf)
   double* gh_f = bf.ghost_face() + offset;
   double* in_f = bf.inside_face() + offset;
   double* sc = bf.state_cache();
+  double* nrml = bf.surface_normal();
   // set momentum and mass flux (pretty straightforward)
   for (int i_dof = 0; i_dof < params.n_dim*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
   for (int i_dof = params.n_dim*nfq; i_dof < (params.n_dim + 1)*nfq; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
@@ -286,15 +287,21 @@ void No_slip::apply_flux(Boundary_face& bf)
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
     int i_dof = i_qpoint + (params.n_dim + 1)*nfq;
     double flux;
+    double normal = 0;
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+      double n = nrml[i_dim*nfq + i_qpoint];
+      normal += n*n;
+    }
+    normal = std::sqrt(normal);
     switch (t) {
       case heat_flux:
-        flux = v;
+        flux = v*normal;
         break;
       case emissivity:
         {
           // set heat flux equal to radiative heat loss by stefan-boltzmann law
           double temp = sc[i_dof]*.4/sc[params.n_dim*nfq + i_qpoint]/specific_gas_air;
-          flux = v*stefan_boltzmann*custom_math::pow(temp, 4);
+          flux = v*stefan_boltzmann*custom_math::pow(temp, 4)*normal;
         }
         break;
       default:
