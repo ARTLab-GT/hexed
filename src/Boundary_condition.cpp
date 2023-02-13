@@ -304,6 +304,8 @@ void No_slip::apply_flux(Boundary_face& bf)
     int flux_sign = 2*bf.inside_face_sign() - 1;
     gh_f[i_dof] = 2*flux*flux_sign - in_f[i_dof];
   }
+  // write the inside flux to the state cache for use in surface visualization
+  for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) sc[i_dof] = in_f[i_dof];
 }
 
 void No_slip::apply_advection(Boundary_face& bf)

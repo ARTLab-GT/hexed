@@ -954,8 +954,6 @@ void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample
   for (int i_var = 0; i_var < nv; ++i_var) var_names.push_back(func.variable_name(nd, i_var));
   Tecplot_file file {name, nd, var_names, status.flow_time};
   Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
-  // write the state to the faces so that the BCs can access it
-  (*write_face)(acc_mesh.elements());
   // iterate through boundary connections and visualize a zone for each
   auto& bc_cons {acc_mesh.boundary_connections()};
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con)
