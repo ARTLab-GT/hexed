@@ -29,12 +29,7 @@ class Heat_flux : public Boundary_func
   virtual std::vector<double> operator()(Boundary_face&, int i_fqpoint, double time) const;
 };
 
-class Surface_output : public Boundary_func
-{
-  public:
-  virtual inline int n_var(int n_dim) const {return 2*n_dim + 3;}
-  virtual std::vector<double> operator()(Boundary_face&, int i_fqpoint, double time) const;
-};
+typedef Concat_func<Boundary_func, Boundary_face&, int, double> Bf_concat;
 
 }
 #endif

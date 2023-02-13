@@ -920,7 +920,6 @@ void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::s
       interior.write(interp_pos.data(), interp_out.data());
     }
   }
-  tecplot_file_names.push_back(name);
 }
 
 void Solver::visualize_field_tecplot(std::string name, int n_sample, bool edges, bool qpoints, bool interior)
@@ -938,12 +937,21 @@ void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample
   // convenience definitions
   const int nfq = params.n_qpoint()/params.row_size;
   const int nd = params.n_dim;
-  Surface_output so;
-  const int nv = so.n_var(nd);
+  State_variables sv;
+  Outward_normal on;
+  Viscous_stress vs;
+  Heat_flux hf;
+  std::vector<const Boundary_func*> funcs {&sv, &on};
+  if (visc) {
+    funcs.push_back(&vs);
+    funcs.push_back(&hf);
+  }
+  Bf_concat func(funcs);
+  const int nv = func.n_var(nd);
   const int n_block {custom_math::pow(n_sample, nd - 1)};
   // setup
   std::vector<std::string> var_names;
-  for (int i_var = 0; i_var < nv; ++i_var) var_names.push_back(so.variable_name(nd, i_var));
+  for (int i_var = 0; i_var < nv; ++i_var) var_names.push_back(func.variable_name(nd, i_var));
   Tecplot_file file {name, nd, var_names, status.flow_time};
   Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
   // write the state to the faces so that the BCs can access it
@@ -971,19 +979,19 @@ void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample
       // fetch the state
       Mat<dyn, dyn> qpoint_vars (nfq, nv);
       for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-        auto vars = so(con, i_qpoint, status.flow_time);
+        auto vars = func(con, i_qpoint, status.flow_time);
         for (int i_var = 0; i_var < nv; ++i_var) {
           qpoint_vars(i_qpoint, i_var) = vars[i_var];
         }
       }
       // interpolate to sample points
-      Mat<dyn, dyn> interp_state (n_block, nv);
+      Mat<dyn, dyn> interp_vars (n_block, nv);
       for (int i_var = 0; i_var < nv; ++i_var) {
-        interp_state.col(i_var) = custom_math::hypercube_matvec(interp, qpoint_state.col(i_var));
+        interp_vars.col(i_var) = custom_math::hypercube_matvec(interp, qpoint_vars.col(i_var));
       }
       // visualize zone
       Tecplot_file::Structured_block zone {file, n_sample, "face_interior", nd - 1};
-      zone.write(interp_pos.data(), interp_state.data());
+      zone.write(interp_pos.data(), interp_vars.data());
     }
   }
 }

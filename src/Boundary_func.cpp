@@ -36,17 +36,4 @@ std::vector<double> Heat_flux::operator()(Boundary_face& bf, int i_fqpoint, doub
   return {bf.inside_face()[(2*params.n_var + params.n_dim + 1)*nfq + i_fqpoint]*nrml_sign/nrml_mag};
 }
 
-std::vector<double> Surface_output::operator()(Boundary_face& bf, int i_fqpoint, double time) const
-{
-  std::vector<double> output;
-  State_variables sv;
-  Viscous_stress vs;
-  Heat_flux hf;
-  std::vector<Boundary_func*> funcs {&sv, &vs, &hf};
-  for (auto f : funcs) {
-    for (double v : (*f)(bf, i_fqpoint, time)) output.push_back(v);
-  }
-  return output;
-}
-
 }
