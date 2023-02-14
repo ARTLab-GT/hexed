@@ -8,14 +8,9 @@
 namespace hexed
 {
 
-int Tecplot_file::n_instances {0};
-
 Tecplot_file::Tecplot_file(std::string file_name, int n_dim, std::vector<std::string> variable_names, double time, double heat_rat, double gas_const)
 : n_dim{n_dim}, n_var{int(variable_names.size())}, time{time}, strand_id{1}, i_zone{0}, file_handle{nullptr}
 {
-  if (n_instances > 0) throw std::runtime_error("Attempt to create multiple `Tecplot_file`s at once, which is illegal.");
-  ++n_instances;
-
   std::string var_name_list = "";
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     var_name_list += " position" + std::to_string(i_dim);
@@ -55,25 +50,20 @@ Tecplot_file::~Tecplot_file()
   #if 0
   TECEND142(); // closes Tecplot file
   #endif
-  --n_instances;
 }
-
-int Tecplot_file::Zone::n_zone_instances {0};
 
 Tecplot_file::Zone::Zone(Tecplot_file& file, int n_nodes, std::string name_arg)
 : file{file}, name{name_arg + std::to_string(file.i_zone++)}, n_nodes{n_nodes}, n_total_vars{file.n_dim + file.n_var},
   var_types(n_total_vars, 2), // declare data type as double
   shared(n_total_vars, 0), // declare no variables shared
   location(n_total_vars, 1), // declare variable location as node-centered
-  passive(n_total_vars, 0) // declare no variables passive
-{
-  if (n_zone_instances > 0) throw std::runtime_error("Attempt to create multiple `Tecplot_file::Zone`s at once, which is illegal.");
-  ++n_zone_instances;
-}
+  passive(n_total_vars, 0), // declare no variables passive
+  strand_id{file.strand_id++}
+{}
 
 Tecplot_file::Zone::~Zone()
 {
-  --n_zone_instances;
+  tecZoneSetUnsteadyOptions(file.file_handle, tecio_zone_index, file.time, strand_id);
 }
 
 void Tecplot_file::Zone::write(const double* pos, const double* vars)
