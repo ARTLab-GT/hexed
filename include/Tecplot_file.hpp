@@ -22,7 +22,7 @@ class Tecplot_file
   double time;
   int strand_id; // This must not be 0, as 0 indicats a StaticZone (apparently)
   int i_zone;
-  static int n_instances;
+  void* file_handle;
 
   public:
   /*
@@ -32,11 +32,17 @@ class Tecplot_file
    */
   class Zone
   {
-    static int n_zone_instances;
     protected:
     Tecplot_file& file;
     std::string name;
     int n_nodes;
+    int tecio_zone_index; // TecIO's zone index, which is not the same as `i_zone` and may not be unique for all time
+    int n_total_vars;
+    std::vector<int> var_types;
+    std::vector<int> shared;
+    std::vector<int> location;
+    std::vector<int> passive;
+    int strand_id;
     public:
     Zone(Tecplot_file&, int n_nodes_arg, std::string name_arg);
     Zone(const Zone& other) = delete;
