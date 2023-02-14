@@ -92,7 +92,7 @@ TEST_CASE("Navier_stokes")
     auto state = vrhot; // conserved variables
     auto seq = Eigen::seqN(0, 2);
     state(seq) *= vrhot(2);
-    double cv = 287.058/.4;
+    double cv = 287.0528/.4;
     state(3) = vrhot(2)*cv*vrhot(3) + .5*state(seq).dot(vrhot(seq));
     // compute gradient of conserved variables
     hexed::Mat<2, 4> state_grad;
@@ -107,12 +107,12 @@ TEST_CASE("Navier_stokes")
     double visc = 1.81206e-5;
     double cond = visc*1.4*cv/.71;
     hexed::Mat<2, 4> correct = -.9*state_grad;
-    REQUIRE((hexed::pde::Navier_stokes<true>::Pde<2>(false).flux_visc(state, state_grad, .9) - correct).norm() < 1e-10);
+    REQUIRE((hexed::pde::Navier_stokes<true>::Pde<2>().flux_visc(state, state_grad, .9) - correct).norm() < 1e-10);
     auto veloc_grad = vrhot_grad(Eigen::all, seq);
     hexed::Mat<2, 2> stress = visc*(veloc_grad + veloc_grad.transpose() - 2./3.*veloc_grad.trace()*hexed::Mat<2, 2>::Identity());
     correct(Eigen::all, seq) -= stress;
     correct(Eigen::all, 3) -= stress*vrhot(seq) + cond*vrhot_grad(Eigen::all, 3);
-    REQUIRE((hexed::pde::Navier_stokes<true>::Pde<2>(true).flux_visc(state, state_grad, .9) - correct).norm() < 1e-10);
+    REQUIRE((hexed::pde::Navier_stokes<true>::Pde<2>(hexed::pde::air_const_dyn_visc(), hexed::pde::air_const_therm_cond()).flux_visc(state, state_grad, .9) - correct).norm() < 1e-10);
   }
 }
 

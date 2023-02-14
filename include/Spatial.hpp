@@ -357,7 +357,8 @@ class Spatial
     static constexpr int n_fqpoint = custom_math::pow(row_size, n_dim - 1);
 
     public:
-    Neighbor() : eq{} {}
+    template <typename... pde_args>
+    Neighbor(pde_args... args) : eq(args...) {}
 
     virtual void operator()(Sequence<Face_connection<element_t>&>& connections)
     {
@@ -513,7 +514,7 @@ class Spatial
 
     public:
     template <typename... pde_args>
-    Max_dt(const Basis& basis, bool is_local_time_stepping, pde_args... args) :
+    Max_dt(const Basis& basis, bool is_local_time_stepping, const pde_args&... args) :
       eq{args...},
       max_cfl_c{basis.max_cfl_convective()},
       max_cfl_d{basis.max_cfl_diffusive()},

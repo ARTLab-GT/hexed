@@ -1,6 +1,7 @@
 #ifndef HEXED_PDE_HPP_
 #define HEXED_PDE_HPP_
 
+#include <memory>
 #include "math.hpp"
 
 /*
@@ -24,6 +25,42 @@ Mat<n_var> hll(Mat<2> speed, Mat<n_var, 2> flux, Mat<n_var, 2> state)
          /(speed(1) - speed(0));
 }
 
+class Transport_model
+{
+  public:
+  virtual double operator()(double temperature) const = 0;
+  virtual ~Transport_model() = default;
+};
+
+class Const_transport : public Transport_model
+{
+  double v;
+  public:
+  inline Const_transport(double value) : v{value} {}
+  virtual inline double operator()(double temperature) const {return v;}
+};
+
+class Sutherland : public Transport_model
+{
+  double ref_val;
+  double ref_temp;
+  double offset;
+  public:
+  inline Sutherland(double reference_value, double reference_temperature, double temperature_offset)
+  : ref_val{reference_value}, ref_temp{reference_temperature}, offset{temperature_offset}
+  {}
+  virtual inline double operator()(double temperature) const
+  {
+    return ref_val*std::pow(temperature/ref_temp, 1.5)*(ref_temp + offset)/(temperature + offset);
+  }
+};
+
+std::shared_ptr<Transport_model> inviscid();
+std::shared_ptr<Transport_model> air_const_dyn_visc();
+std::shared_ptr<Transport_model> air_const_therm_cond();
+std::shared_ptr<Transport_model> air_sutherland_dyn_visc();
+std::shared_ptr<Transport_model> air_sutherland_therm_cond();
+
 // contains a PDE class representing the Naver-Stokes equations
 // with template options to specify the details of the equation set
 template <bool visc = false>
@@ -42,7 +79,6 @@ class Navier_stokes
   class Pde
   {
     public:
-    const bool natural_visc;
     static constexpr bool is_viscous = visc;
     static constexpr bool has_convection = true;
     static constexpr int n_var = n_dim + 2;
@@ -51,14 +87,14 @@ class Navier_stokes
     static constexpr int visc_start = 2*n_var;
     static constexpr int n_update = n_var;
     static constexpr double heat_rat = 1.4;
+    static constexpr double gas_const = 287.0528;
     static constexpr int tss_pow = 1;
-    const double dyn_visc = 1.81206e-5;
-    const double therm_diff = dyn_visc*1.4/0.71;
+    std::shared_ptr<Transport_model> dyn_visc;
+    std::shared_ptr<Transport_model> therm_cond;
 
-    Pde(bool natural_viscosity = 0) :
-      natural_visc{natural_viscosity},
-      dyn_visc{natural_visc*1.81206e-5},
-      therm_diff{1.4/0.71*dyn_visc}
+    Pde(std::shared_ptr<Transport_model> dyn_visc_model = inviscid(), std::shared_ptr<Transport_model> therm_cond_model = inviscid())
+    : dyn_visc{dyn_visc_model},
+      therm_cond{therm_cond_model}
     {}
 
     double pressure(Mat<n_var> state) const
@@ -127,11 +163,12 @@ class Navier_stokes
       double mass = state(n_dim);
       Mat<n_dim> veloc = mmtm/mass;
       Mat<n_dim, n_dim> veloc_grad = (grad(all, seq) - grad(all, n_dim)*veloc.transpose())/mass;
-      Mat<n_dim, n_dim> stress = dyn_visc*(veloc_grad + veloc_grad.transpose() - 2./3.*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity());
+      double temp = (state(n_dim + 1)/mass - .5*veloc.squaredNorm())*(heat_rat - 1)/gas_const;
+      Mat<n_dim, n_dim> stress = (*dyn_visc)(temp)*(veloc_grad + veloc_grad.transpose() - 2./3.*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity());
       Mat<n_dim, n_update> flux = -av_coef*grad;
       flux(all, seq) -= stress;
-      Mat<n_dim> int_ener_grad = -state(n_dim + 1)/mass/mass*grad(all, n_dim) + grad(all, n_dim + 1)/mass - veloc_grad*veloc;
-      flux(all, n_dim + 1) -= stress*veloc + therm_diff*int_ener_grad;
+      Mat<n_dim> temp_grad = -(state(n_dim + 1)/mass/mass*grad(all, n_dim) + grad(all, n_dim + 1)/mass - veloc_grad*veloc)/(gas_const/(heat_rat - 1));
+      flux(all, n_dim + 1) -= stress*veloc + (*therm_cond)(temp)*temp_grad;
       return flux;
     }
 
@@ -147,7 +184,10 @@ class Navier_stokes
     // maximum effective diffusivity (for enforcing the CFL condition)
     double diffusivity(Mat<n_var> state, double av_coef) const
     {
-      return av_coef + std::max(dyn_visc/state(n_dim), therm_diff);
+      double mass = state(n_dim);
+      Mat<n_dim> veloc = state(Eigen::seqN(0, n_dim))/mass;
+      double temp = (state(n_dim + 1)/mass - .5*veloc.squaredNorm())*(heat_rat - 1)/gas_const;
+      return av_coef + std::max((*dyn_visc)(temp)/mass, (*therm_cond)(temp)/(mass*gas_const/(heat_rat - 1)));
     }
 
     /*

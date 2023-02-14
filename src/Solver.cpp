@@ -83,7 +83,7 @@ void Solver::apply_fta_flux_bcs()
 
 bool Solver::use_ldg()
 {
-  return visc || use_art_visc;
+  return ((*dyn_visc)(273.15) > 0) || ((*therm_cond)(273.15) > 0) || use_art_visc;
 }
 
 double Solver::max_dt()
@@ -93,15 +93,15 @@ double Solver::max_dt()
   auto& sw_car {stopwatch.children.at("cartesian")};
   auto& sw_def {stopwatch.children.at("deformed" )};
   if (use_ldg()) {
-    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, is_local_time, visc))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
-                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, is_local_time, visc))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
+    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, is_local_time, dyn_visc, therm_cond))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
+                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, is_local_time, dyn_visc, therm_cond))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
   } else {
-    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time      ))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
-                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time      ))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
+    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time                      ))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
+                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time                      ))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
   }
 }
 
-Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping, bool viscous) :
+Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping, std::shared_ptr<pde::Transport_model> dyn_visc_model, std::shared_ptr<pde::Transport_model> therm_cond_model) :
   params{3, n_dim + 2, n_dim, row_size},
   acc_mesh{params, root_mesh_size},
   basis{row_size},
@@ -110,8 +110,9 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   fix_admis{false},
   av_rs{basis.row_size},
   write_face(kernel_factory<Spatial<Element, pde::Navier_stokes<false>::Pde>::Write_face>(params.n_dim, params.row_size, basis)), // note: for now, false and true are equivalent for `Write_face`
-  visc{viscous},
-  is_local_time{local_time_stepping}
+  is_local_time{local_time_stepping},
+  dyn_visc{dyn_visc_model},
+  therm_cond{therm_cond_model}
 {
   // setup categories for performance reporting
   stopwatch.children.emplace("initialize reference", stopwatch.work_unit_name);
@@ -942,10 +943,8 @@ void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample
   Viscous_stress vs;
   Heat_flux hf;
   std::vector<const Boundary_func*> funcs {&sv, &on};
-  if (visc) {
-    funcs.push_back(&vs);
-    funcs.push_back(&hf);
-  }
+  if ((*dyn_visc  )(273.15) > 0) funcs.push_back(&vs);
+  if ((*therm_cond)(273.15) > 0) funcs.push_back(&hf);
   Bf_concat func(funcs);
   const int nv = func.n_var(nd);
   const int n_block {custom_math::pow(n_sample, nd - 1)};

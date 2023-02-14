@@ -17,6 +17,7 @@ Layer_sequence.cpp
 math.cpp
 Output_data.cpp
 otter_vis.cpp
+pde.cpp
 Physical_basis.cpp
 Qpoint_func.cpp
 Solver.cpp
