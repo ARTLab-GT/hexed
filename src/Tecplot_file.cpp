@@ -20,6 +20,20 @@ Tecplot_file::Tecplot_file(std::string file_name, int n_dim, std::vector<std::st
   }
   var_name_list.erase(0, 1); // erase leading space
   tecFileWriterOpen(file_name.c_str(), "flow solution", var_name_list.c_str(), FILEFORMAT_SZL, FILETYPE_FULL, 0, nullptr, &file_handle);
+  tecDataSetAddAuxData(file_handle, "Common.Incompressible", "False");
+  tecDataSetAddAuxData(file_handle, "Common.Incompressible", "False");
+  tecDataSetAddAuxData(file_handle, "Common.VectorVarsAreVelocity", "False");
+  tecDataSetAddAuxData(file_handle, "Common.Gamma", std::to_string(heat_rat).c_str());
+  tecDataSetAddAuxData(file_handle, "Common.GasConstant", std::to_string(gas_const).c_str());
+  std::vector<std::string> xyz {"X", "Y", "Z"};
+  std::vector<std::string> uvw {"U", "V", "W"};
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+    tecDataSetAddAuxData(file_handle, ("Common." + xyz[i_dim] + "Var").c_str(), std::to_string(i_dim + 1).c_str());
+    tecDataSetAddAuxData(file_handle, ("Common." + uvw[i_dim] + "Var").c_str(), std::to_string(n_dim + i_dim + 1).c_str());
+  }
+  tecDataSetAddAuxData(file_handle, "Common.CVar", std::to_string(2*n_dim + 1).c_str());
+  tecDataSetAddAuxData(file_handle, "Common.DensityVar", std::to_string(2*n_dim + 1).c_str());
+  tecDataSetAddAuxData(file_handle, "Common.StagnationEnergyVar", std::to_string(2*n_dim + 2).c_str());
   #if 0
   INTEGER4 Debug = 0;
   INTEGER4 VIsDouble = 1;
