@@ -590,7 +590,9 @@ void test_art_visc(Test_mesh& tm, std::string name)
   sol.set_art_visc_constant(300.);
   // update
   sol.update(1e-4);
+  #if HEXED_USE_TECPLOT
   sol.visualize_field_tecplot(hexed::Physical_update(), name);
+  #endif
   auto status = sol.iteration_status();
   // check that the computed update is approximately equal to the exact solution
   for (auto handle : sol.mesh().elem_handles()) {
