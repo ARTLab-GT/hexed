@@ -2,6 +2,7 @@
 #define HEXED_PDE_HPP_
 
 #include "math.hpp"
+#include "constants.hpp"
 
 /*
  * This namespace contains classes representing the different PDEs Hexed can solve.
@@ -23,6 +24,36 @@ Mat<n_var> hll(Mat<2> speed, Mat<n_var, 2> flux, Mat<n_var, 2> state)
           + speed(0)*speed(1)*(state(Eigen::all, 1) - state(Eigen::all, 0)))
          /(speed(1) - speed(0));
 }
+
+class Transport_model
+{
+  double const_val;
+  double ref_val;
+  double ref_temp;
+  double temp_offset;
+  Transport_model(double cv, double rv, double rt, double to, bool iv)
+  : const_val{cv}, ref_val{rv}, ref_temp{rt}, temp_offset{to}, is_viscous{iv}
+  {}
+
+  public:
+  const bool is_viscous;
+  double coefficient(double temp) const
+  {
+    return const_val + ref_val*std::pow(temp/ref_temp, 1.5)*(ref_temp + temp_offset)/(temp + temp_offset);
+  }
+  static inline Transport_model inviscid() {return {0., 0., 0., 0., 0};}
+  static inline Transport_model constant(double value) {return {value, 0., 1., 0., 1};}
+  static inline Transport_model sutherland(double reference_temperature, double reference_value, double temperature_offset)
+  {
+    return {0., reference_value, reference_temperature, temperature_offset, 1};
+  }
+};
+
+const auto inviscid = Transport_model::constant(0.);
+const auto air_const_dyn_visc = Transport_model::constant(1.81206e-5);
+const auto air_const_therm_cond = Transport_model::constant(1.81206e-5*1.4/.71);
+const auto air_sutherland_dyn_visc = Transport_model::sutherland(1.716e-5, 273., 111.);
+const auto air_sutherland_therm_cond = Transport_model::sutherland(.0241, 273., 194.);
 
 // contains a PDE class representing the Naver-Stokes equations
 // with template options to specify the details of the equation set
@@ -52,13 +83,13 @@ class Navier_stokes
     static constexpr int n_update = n_var;
     static constexpr double heat_rat = 1.4;
     static constexpr int tss_pow = 1;
-    const double dyn_visc = 1.81206e-5;
-    const double therm_diff = dyn_visc*1.4/0.71;
+    Transport_model dyn_visc;
+    Transport_model therm_cond;
 
     Pde(bool natural_viscosity = 0) :
       natural_visc{natural_viscosity},
-      dyn_visc{natural_visc*1.81206e-5},
-      therm_diff{1.4/0.71*dyn_visc}
+      dyn_visc{natural_visc ? air_const_dyn_visc : inviscid},
+      therm_cond{natural_visc ? air_const_therm_cond : inviscid}
     {}
 
     double pressure(Mat<n_var> state) const
@@ -127,11 +158,12 @@ class Navier_stokes
       double mass = state(n_dim);
       Mat<n_dim> veloc = mmtm/mass;
       Mat<n_dim, n_dim> veloc_grad = (grad(all, seq) - grad(all, n_dim)*veloc.transpose())/mass;
-      Mat<n_dim, n_dim> stress = dyn_visc*(veloc_grad + veloc_grad.transpose() - 2./3.*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity());
+      double temp = (state(n_dim + 1)/mass - .5*veloc.squaredNorm())*(heat_rat - 1)/specific_gas_air;
+      Mat<n_dim, n_dim> stress = dyn_visc.coefficient(temp)*(veloc_grad + veloc_grad.transpose() - 2./3.*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity());
       Mat<n_dim, n_update> flux = -av_coef*grad;
       flux(all, seq) -= stress;
       Mat<n_dim> int_ener_grad = -state(n_dim + 1)/mass/mass*grad(all, n_dim) + grad(all, n_dim + 1)/mass - veloc_grad*veloc;
-      flux(all, n_dim + 1) -= stress*veloc + therm_diff*int_ener_grad;
+      flux(all, n_dim + 1) -= stress*veloc + therm_cond.coefficient(temp)*int_ener_grad;
       return flux;
     }
 
@@ -147,7 +179,10 @@ class Navier_stokes
     // maximum effective diffusivity (for enforcing the CFL condition)
     double diffusivity(Mat<n_var> state, double av_coef) const
     {
-      return av_coef + std::max(dyn_visc/state(n_dim), therm_diff);
+      double mass = state(n_dim);
+      auto veloc = state(Eigen::seqN(0, n_dim))/mass;
+      double temp = (state(n_dim)/mass - .5*veloc.squaredNorm())*(heat_rat - 1)/specific_gas_air;
+      return av_coef + std::max(dyn_visc.coefficient(temp)/state(n_dim), therm_cond.coefficient(temp));
     }
 
     /*
