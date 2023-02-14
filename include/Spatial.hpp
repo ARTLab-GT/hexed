@@ -357,7 +357,8 @@ class Spatial
     static constexpr int n_fqpoint = custom_math::pow(row_size, n_dim - 1);
 
     public:
-    Neighbor() : eq{} {}
+    template <typename... pde_args>
+    Neighbor(pde_args... args) : eq{args...} {}
 
     virtual void operator()(Sequence<Face_connection<element_t>&>& connections)
     {

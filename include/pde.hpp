@@ -51,7 +51,7 @@ class Transport_model
 
 const auto inviscid = Transport_model::constant(0.);
 const auto air_const_dyn_visc = Transport_model::constant(1.81206e-5);
-const auto air_const_therm_cond = Transport_model::constant(1.81206e-5*1.4/.71);
+const auto air_const_therm_cond = Transport_model::constant(1.81206e-5*1.4*specific_gas_air/.4/.71);
 const auto air_sutherland_dyn_visc = Transport_model::sutherland(1.716e-5, 273., 111.);
 const auto air_sutherland_therm_cond = Transport_model::sutherland(.0241, 273., 194.);
 
@@ -73,7 +73,6 @@ class Navier_stokes
   class Pde
   {
     public:
-    const bool natural_visc;
     static constexpr bool is_viscous = visc;
     static constexpr bool has_convection = true;
     static constexpr int n_var = n_dim + 2;
@@ -86,10 +85,8 @@ class Navier_stokes
     Transport_model dyn_visc;
     Transport_model therm_cond;
 
-    Pde(bool natural_viscosity = 0) :
-      natural_visc{natural_viscosity},
-      dyn_visc{natural_visc ? air_const_dyn_visc : inviscid},
-      therm_cond{natural_visc ? air_const_therm_cond : inviscid}
+    Pde(Transport_model dynamic_visc = inviscid, Transport_model thermal_cond = inviscid)
+    : dyn_visc{dynamic_visc}, therm_cond{thermal_cond}
     {}
 
     double pressure(Mat<n_var> state) const
@@ -163,7 +160,7 @@ class Navier_stokes
       Mat<n_dim, n_update> flux = -av_coef*grad;
       flux(all, seq) -= stress;
       Mat<n_dim> int_ener_grad = -state(n_dim + 1)/mass/mass*grad(all, n_dim) + grad(all, n_dim + 1)/mass - veloc_grad*veloc;
-      flux(all, n_dim + 1) -= stress*veloc + therm_cond.coefficient(temp)*int_ener_grad;
+      flux(all, n_dim + 1) -= stress*veloc + therm_cond.coefficient(temp)*int_ener_grad*(heat_rat - 1)/specific_gas_air;
       return flux;
     }
 
@@ -182,7 +179,7 @@ class Navier_stokes
       double mass = state(n_dim);
       auto veloc = state(Eigen::seqN(0, n_dim))/mass;
       double temp = (state(n_dim)/mass - .5*veloc.squaredNorm())*(heat_rat - 1)/specific_gas_air;
-      return av_coef + std::max(dyn_visc.coefficient(temp)/state(n_dim), therm_cond.coefficient(temp));
+      return av_coef + std::max(dyn_visc.coefficient(temp)/state(n_dim), therm_cond.coefficient(temp)*(heat_rat - 1)/specific_gas_air);
     }
 
     /*
