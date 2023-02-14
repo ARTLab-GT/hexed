@@ -25,25 +25,37 @@ Mat<n_var> hll(Mat<2> speed, Mat<n_var, 2> flux, Mat<n_var, 2> state)
          /(speed(1) - speed(0));
 }
 
+/*
+ * A model for molecular transport coefficients (e.g. viscosity and thermal conductivity)
+ * which supports either a constant coefficient or Sutherland's law.
+ */
 class Transport_model
 {
   double const_val;
   double ref_val;
   double ref_temp;
   double temp_offset;
+  // Constructor is private to preclude nonsensical parameter combinations.
+  // Use factory methods below to obtain object.
   Transport_model(double cv, double rv, double rt, double to, bool iv)
   : const_val{cv}, ref_val{rv}, ref_temp{rt}, temp_offset{to}, is_viscous{iv}
   {}
 
   public:
+  // if `true`, you can safely assume `coefficient` will always return 0 regardless of input
   const bool is_viscous;
+  // compute whatever transport coefficient this object is supposed to represent
   double coefficient(double temp) const
   {
     return const_val + ref_val*std::pow(temp/ref_temp, 1.5)*(ref_temp + temp_offset)/(temp + temp_offset);
   }
+  // create a `Transport_model` that always returns 0 (with `is_viscous` set to `false`)
   static inline Transport_model inviscid() {return {0., 0., 0., 0., 0};}
-  static inline Transport_model constant(double value) {return {value, 0., 1., 0., 1};}
-  static inline Transport_model sutherland(double reference_temperature, double reference_value, double temperature_offset)
+  // create a `Transport_model` that always returns the same constant value
+  static inline Transport_model constant(double value) {return {value, 0., 1., 1., 1};}
+  // create a `Transport_model` which depends on temperature according to Sutherland's law.
+  // It will return `reference_value` at `reference_temperature` and `temperature_offset` is the Sutherland constant "S"
+  static inline Transport_model sutherland(double reference_value, double reference_temperature, double temperature_offset)
   {
     return {0., reference_value, reference_temperature, temperature_offset, 1};
   }
@@ -178,8 +190,8 @@ class Navier_stokes
     {
       double mass = state(n_dim);
       auto veloc = state(Eigen::seqN(0, n_dim))/mass;
-      double temp = (state(n_dim)/mass - .5*veloc.squaredNorm())*(heat_rat - 1)/specific_gas_air;
-      return av_coef + std::max(dyn_visc.coefficient(temp)/state(n_dim), therm_cond.coefficient(temp)*(heat_rat - 1)/specific_gas_air);
+      double temp = (state(n_dim + 1)/mass - .5*veloc.squaredNorm())*(heat_rat - 1)/specific_gas_air;
+      return av_coef + std::max(dyn_visc.coefficient(temp)/mass, therm_cond.coefficient(temp)*(heat_rat - 1)/specific_gas_air/mass);
     }
 
     /*
