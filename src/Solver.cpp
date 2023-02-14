@@ -102,7 +102,7 @@ double Solver::max_dt()
 }
 
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
-               pde::Transport_model viscosity_model, pde::Transport_model thermal_conductivity_model) :
+               Transport_model viscosity_model, Transport_model thermal_conductivity_model) :
   params{3, n_dim + 2, n_dim, row_size},
   acc_mesh{params, root_mesh_size},
   basis{row_size},

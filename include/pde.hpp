@@ -3,6 +3,7 @@
 
 #include "math.hpp"
 #include "constants.hpp"
+#include "Transport_model.hpp"
 
 /*
  * This namespace contains classes representing the different PDEs Hexed can solve.
@@ -24,48 +25,6 @@ Mat<n_var> hll(Mat<2> speed, Mat<n_var, 2> flux, Mat<n_var, 2> state)
           + speed(0)*speed(1)*(state(Eigen::all, 1) - state(Eigen::all, 0)))
          /(speed(1) - speed(0));
 }
-
-/*
- * A model for molecular transport coefficients (e.g. viscosity and thermal conductivity)
- * which supports either a constant coefficient or Sutherland's law.
- */
-class Transport_model
-{
-  double const_val;
-  double ref_val;
-  double ref_temp;
-  double temp_offset;
-  // Constructor is private to preclude nonsensical parameter combinations.
-  // Use factory methods below to obtain object.
-  Transport_model(double cv, double rv, double rt, double to, bool iv)
-  : const_val{cv}, ref_val{rv}, ref_temp{rt}, temp_offset{to}, is_viscous{iv}
-  {}
-
-  public:
-  // if `true`, you can safely assume `coefficient` will always return 0 regardless of input
-  const bool is_viscous;
-  // compute whatever transport coefficient this object is supposed to represent
-  double coefficient(double temp) const
-  {
-    return const_val + ref_val*std::pow(temp/ref_temp, 1.5)*(ref_temp + temp_offset)/(temp + temp_offset);
-  }
-  // create a `Transport_model` that always returns 0 (with `is_viscous` set to `false`)
-  static inline Transport_model inviscid() {return {0., 0., 0., 0., 0};}
-  // create a `Transport_model` that always returns the same constant value
-  static inline Transport_model constant(double value) {return {value, 0., 1., 1., 1};}
-  // create a `Transport_model` which depends on temperature according to Sutherland's law.
-  // It will return `reference_value` at `reference_temperature` and `temperature_offset` is the Sutherland constant "S"
-  static inline Transport_model sutherland(double reference_value, double reference_temperature, double temperature_offset)
-  {
-    return {0., reference_value, reference_temperature, temperature_offset, 1};
-  }
-};
-
-const auto inviscid = Transport_model::constant(0.);
-const auto air_const_dyn_visc = Transport_model::constant(1.81206e-5);
-const auto air_const_therm_cond = Transport_model::constant(1.81206e-5*1.4*specific_gas_air/.4/.71);
-const auto air_sutherland_dyn_visc = Transport_model::sutherland(1.716e-5, 273., 111.);
-const auto air_sutherland_therm_cond = Transport_model::sutherland(.0241, 273., 194.);
 
 // contains a PDE class representing the Naver-Stokes equations
 // with template options to specify the details of the equation set
@@ -93,7 +52,6 @@ class Navier_stokes
     static constexpr int visc_start = 2*n_var;
     static constexpr int n_update = n_var;
     static constexpr double heat_rat = 1.4;
-    static constexpr int tss_pow = 1;
     Transport_model dyn_visc;
     Transport_model therm_cond;
 
@@ -167,12 +125,12 @@ class Navier_stokes
       double mass = state(n_dim);
       Mat<n_dim> veloc = mmtm/mass;
       Mat<n_dim, n_dim> veloc_grad = (grad(all, seq) - grad(all, n_dim)*veloc.transpose())/mass;
-      double temp = (state(n_dim + 1)/mass - .5*veloc.squaredNorm())*(heat_rat - 1)/specific_gas_air;
-      Mat<n_dim, n_dim> stress = dyn_visc.coefficient(temp)*(veloc_grad + veloc_grad.transpose() - 2./3.*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity());
+      double sqrt_temp = std::sqrt((state(n_dim + 1)/mass - .5*veloc.squaredNorm())*(heat_rat - 1)/specific_gas_air);
+      Mat<n_dim, n_dim> stress = dyn_visc.coefficient(sqrt_temp)*(veloc_grad + veloc_grad.transpose() - 2./3.*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity());
       Mat<n_dim, n_update> flux = -av_coef*grad;
       flux(all, seq) -= stress;
       Mat<n_dim> int_ener_grad = -state(n_dim + 1)/mass/mass*grad(all, n_dim) + grad(all, n_dim + 1)/mass - veloc_grad*veloc;
-      flux(all, n_dim + 1) -= stress*veloc + therm_cond.coefficient(temp)*int_ener_grad*(heat_rat - 1)/specific_gas_air;
+      flux(all, n_dim + 1) -= stress*veloc + therm_cond.coefficient(sqrt_temp)*int_ener_grad*(heat_rat - 1)/specific_gas_air;
       return flux;
     }
 
@@ -190,8 +148,8 @@ class Navier_stokes
     {
       double mass = state(n_dim);
       auto veloc = state(Eigen::seqN(0, n_dim))/mass;
-      double temp = (state(n_dim + 1)/mass - .5*veloc.squaredNorm())*(heat_rat - 1)/specific_gas_air;
-      return av_coef + std::max(dyn_visc.coefficient(temp)/mass, therm_cond.coefficient(temp)*(heat_rat - 1)/specific_gas_air/mass);
+      double sqrt_temp = std::sqrt((state(n_dim + 1)/mass - .5*veloc.squaredNorm())*(heat_rat - 1)/specific_gas_air);
+      return av_coef + std::max(dyn_visc.coefficient(sqrt_temp)/mass, therm_cond.coefficient(sqrt_temp)*(heat_rat - 1)/specific_gas_air/mass);
     }
 
     /*
@@ -286,7 +244,6 @@ class Advection
   static constexpr int curr_start = n_dim;
   static constexpr int ref_start = n_dim + 1;
   static constexpr int n_update = 1;
-  static constexpr int tss_pow = 1;
 
   Mat<1> flux(Mat<n_var> state, Mat<n_dim> normal) const
   {
@@ -329,7 +286,6 @@ class Smooth_art_visc
   static constexpr int ref_start = 1;
   static constexpr int visc_start = 2;
   static constexpr int n_update = 1;
-  static constexpr int tss_pow = 2;
 
   Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const {return Mat<n_update>::Zero();}
   Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const
@@ -352,7 +308,6 @@ class Fix_therm_admis
   static constexpr int ref_start = n_var;
   static constexpr int visc_start = 2*n_var;
   static constexpr int n_update = n_var;
-  static constexpr int tss_pow = 2;
 
   Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const {return Mat<n_update>::Zero();}
   Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const

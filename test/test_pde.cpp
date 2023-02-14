@@ -112,7 +112,7 @@ TEST_CASE("Navier_stokes")
     hexed::Mat<2, 2> stress = visc*(veloc_grad + veloc_grad.transpose() - 2./3.*veloc_grad.trace()*hexed::Mat<2, 2>::Identity());
     correct(Eigen::all, seq) -= stress;
     correct(Eigen::all, 3) -= stress*vrhot(seq) + cond*vrhot_grad(Eigen::all, 3);
-    REQUIRE((hexed::pde::Navier_stokes<true>::Pde<2>(hexed::pde::air_const_dyn_visc, hexed::pde::air_const_therm_cond).flux_visc(state, state_grad, .9) - correct).norm() < 1e-10);
+    REQUIRE((hexed::pde::Navier_stokes<true>::Pde<2>(hexed::air_const_dyn_visc, hexed::air_const_therm_cond).flux_visc(state, state_grad, .9) - correct).norm() < 1e-10);
   }
 }
 

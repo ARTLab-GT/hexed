@@ -9,7 +9,7 @@
 #include "Stopwatch_tree.hpp"
 #include "config.hpp"
 #include "kernel_factory.hpp"
-#include "pde.hpp"
+#include "Transport_model.hpp"
 #if HEXED_USE_OTTER
 #include <otter/plot.hpp>
 #include <otter/colormap.hpp>
@@ -31,8 +31,8 @@ class Solver
   int av_rs;
   std::unique_ptr<Kernel<Element&>> write_face;
   bool is_local_time;
-  pde::Transport_model visc;
-  pde::Transport_model therm_cond;
+  Transport_model visc;
+  Transport_model therm_cond;
 
   void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
   void fix_admissibility(double stability_ratio);
@@ -63,7 +63,7 @@ class Solver
   int av_diff_iters = 1;
 
   Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping = false,
-         pde::Transport_model viscosity_model = pde::inviscid, pde::Transport_model thermal_conductivity_model = pde::inviscid);
+         Transport_model viscosity_model = inviscid, Transport_model thermal_conductivity_model = inviscid);
   virtual ~Solver() = default;
 
   /* ### SETUP ### */
