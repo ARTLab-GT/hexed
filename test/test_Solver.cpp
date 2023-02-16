@@ -638,7 +638,9 @@ void test_advection(Test_mesh& tm, std::string name)
   sol.av_visc_mult = .9;
   sol.av_advect_iters = 1000;
   sol.av_diff_iters = 300;
+  // don't do noise reduction or much diffusion to avoid obscuring advection result
   sol.av_diff_ratio = 1e-6;
+  sol.av_noise_threshold = 0;
   REQUIRE_THROWS(sol.set_art_visc_row_size(1));
   REQUIRE_THROWS(sol.set_art_visc_row_size(hexed::config::max_row_size + 1));
   sol.set_art_visc_row_size(2);
@@ -895,6 +897,7 @@ TEST_CASE("artificial viscosity convergence")
   sol.av_diff_iters = 3000;
   sol.av_visc_mult = 1e6;
   sol.av_diff_ratio = 1e-6;
+  sol.av_noise_threshold = 0; // don't do noise reduction since that would interfere with convergence
   sol.set_art_visc_smoothness(adv_width);
   REQUIRE(sol.iteration_status().adv_res < 1e-12);
   REQUIRE(sol.iteration_status().diff_res < 1e-12);
