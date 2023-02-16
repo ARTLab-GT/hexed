@@ -355,7 +355,8 @@ void Solver::set_art_visc_smoothness(double advect_length)
     }
   }
   // set advection velocity
-  auto adv_l = [&](double wall_dist) {return advect_length*wall_dist/(advect_length + wall_dist);};
+  //auto adv_l = [&](double wall_dist) {return advect_length*wall_dist/(advect_length + wall_dist);};
+  auto adv_l = [&](double wall_dist) {return advect_length;};
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);

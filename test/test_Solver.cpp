@@ -636,7 +636,7 @@ void test_advection(Test_mesh& tm, std::string name)
   double width = 1e-2;
   sol.av_advect_shift = .4;
   sol.av_visc_mult = .9;
-  sol.av_advect_iters = 300;
+  sol.av_advect_iters = 1000;
   sol.av_diff_iters = 300;
   sol.av_diff_ratio = 1e-6;
   REQUIRE_THROWS(sol.set_art_visc_row_size(1));
