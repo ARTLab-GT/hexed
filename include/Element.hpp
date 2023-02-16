@@ -75,7 +75,6 @@ class Element
   double* time_step_scale(); // Layout: [i_qpoint]
   double* art_visc_coef(); // layout: [i_qpoint]
   double* art_visc_forcing(); // layout: [i_qpoint]
-  double* wall_dist(); // layout: [i_qpoint]
   // Pointer state data at faces. Must be populated by user
   virtual double* node_adjustments() {return nullptr;} // overriden by `Deformed_element`
 
