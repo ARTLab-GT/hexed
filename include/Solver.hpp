@@ -33,6 +33,7 @@ class Solver
   bool is_local_time;
   Transport_model visc;
   Transport_model therm_cond;
+  int last_fix_vis_iter = std::numeric_limits<int>::min();
 
   void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
   void fix_admissibility(double stability_ratio);

@@ -758,6 +758,16 @@ void Solver::fix_admissibility(double stability_ratio)
     }
     if (admiss && refined_admiss) break;
     else {
+      if (status.iteration >= last_fix_vis_iter + 1000) {
+        last_fix_vis_iter = status.iteration;
+        #if HEXED_USE_TECPLOT
+        visualize_field_tecplot("admissibility_diagnostic" + std::to_string(status.iteration));
+        #elif HEXED_USE_OTTER
+        otter::plot plt;
+        visualize_field_otter(plt, Pressure());
+        plt.show();
+        #endif
+      }
       (*kernel_factory<Spatial<Element         , pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true))(acc_mesh.cartesian().elements(), stopwatch.children.at("fix admis.").children.at("cartesian"), "compute time step");
       (*kernel_factory<Spatial<Deformed_element, pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true))(acc_mesh.deformed ().elements(), stopwatch.children.at("fix admis.").children.at("deformed" ), "compute time step");
       double dt = stability_ratio;
