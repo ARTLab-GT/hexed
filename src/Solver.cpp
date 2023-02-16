@@ -591,6 +591,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
   }
   status.diff_res = std::sqrt(status.diff_res/n_real); // finish computing RMS residual
   // clean up
+  double thresh_pow = std::pow(av_noise_threshold, av_noise_power);
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
@@ -607,10 +608,9 @@ void Solver::set_art_visc_smoothness(double advect_length)
         scale_sq += (1. - heat_rat)*veloc*veloc;
       }
       double al = adv_l(wall_dist[i_qpoint]);
-      av[i_qpoint] = av_visc_mult*al*std::sqrt(std::max(0., forcing[n_real*nq + i_qpoint]*scale_sq)); // root-smear-square complete!
-      double c = .2;
-      int p = 5;
-      av[i_qpoint] = std::pow(std::pow(av[i_qpoint], p) + std::pow(c, p), 1./p) - c;
+      double f = std::max(0., forcing[n_real*nq + i_qpoint]);
+      f = std::pow(std::pow(f, av_noise_power/2.) + thresh_pow, 1./av_noise_power) - av_noise_threshold; // divide power by 2 because already squared
+      av[i_qpoint] = av_visc_mult*al*f*std::sqrt(scale_sq); // root-smear-square complete!
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         int i = i_var*nq + i_qpoint;

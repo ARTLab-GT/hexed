@@ -59,6 +59,8 @@ class Solver
   double av_diff_stab_rat = .5;
   double av_advect_max_forcing = .03;
   double av_diff_max_forcing = .9;
+  double av_noise_threshold = 1.5e-4;
+  double av_noise_power = 5;
   int av_advect_iters = 1;
   int av_diff_iters = 1;
 
