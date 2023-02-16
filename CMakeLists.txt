@@ -25,6 +25,7 @@ if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif()
 
 option(build_tests "would you like to build the unit tests? (requires Catch2)" OFF)
+option(build_docs "build documentation? (requires doxygen)" OFF)
 option(sanitize "If ON, compile with sanitizer flags." OFF)
 option(threaded "If ON, allow multiple threads. Substantially reduces execution time." ON)
 option(use_otter "include capability to use otter for plotting" OFF)
@@ -76,6 +77,18 @@ set(colormap_files
 )
 configure_file(script/hexed-wrapped-post-process.in hexed-wrapped-post-process)
 configure_file(script/format.mcr.in format.mcr)
+if(build_docs)
+    configure_file(doc/config.in ${CMAKE_BINARY_DIR}/doc_config)
+    add_custom_command(
+        OUTPUT doxygen_output.txt
+        COMMAND doxygen doc_config > doxygen_output.txt
+        DEPENDS ${CMAKE_BINARY_DIR}/doc_config
+    )
+    add_custom_target(
+        documentation ALL
+        DEPENDS doxygen_output.txt
+    )
+endif()
 
 # generate colormaps to use in tecplot
 add_custom_command(
