@@ -1,5 +1,6 @@
 #include <Accessible_mesh.hpp>
 #include <math.hpp>
+#include <Row_index.hpp>
 #include <erase_if.hpp>
 
 namespace hexed
@@ -107,6 +108,13 @@ void Accessible_mesh::connect_boundary(int ref_level, bool is_deformed, int elem
   #undef EMPLACE
 }
 
+void Accessible_mesh::disconnect_boundary(int bc_sn)
+{
+  auto is_doomed = [bc_sn](Boundary_connection& con){return con.bound_cond_serial_n() == bc_sn;};
+  erase_if(car.bound_cons, is_doomed);
+  erase_if(def.bound_cons, is_doomed);
+}
+
 Mesh::Connection_validity Accessible_mesh::valid()
 {
   auto& elems = elements();
@@ -170,7 +178,7 @@ bool aligned_different_dim(Con_dir<Deformed_element> dir, std::array<int, 2> ext
   return (dir.i_dim[0] == extrude_dim[1]) && (dir.i_dim[1] == extrude_dim[0]);
 }
 
-void Accessible_mesh::extrude(bool collapse)
+void Accessible_mesh::extrude(bool collapse, double offset)
 {
   const int nd = params.n_dim;
   const int n_faces = 2*nd;
@@ -263,7 +271,54 @@ void Accessible_mesh::extrude(bool collapse)
         }
       }
     }
+    // readjust face node adjustments to account for offset
+    if (offset > 0) {
+      double* node_adj [] {face.elem.node_adjustments(), elem.node_adjustments()};
+      int nfq = params.n_qpoint()/params.row_size;
+      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+        double* na [2][2];
+        for (int i = 0; i < 2; ++i) {
+          for (int face_sign = 0; face_sign < 2; ++face_sign) {
+            na[i][face_sign] = node_adj[i] + (2*face.i_dim + (face_sign == face.face_sign))*nfq + i_qpoint;
+          }
+        }
+        *na[1][1] = *na[0][1];
+        *na[0][1] = *na[1][0] = offset**na[0][0] + (1 - offset)**na[0][1];
+        for (int sign = 0; sign < 2; ++sign) {
+          *na[0][sign] /= 1 - offset;
+          *na[1][sign] /= offset;
+        }
+      }
+    }
   }
+
+  // perform offset
+  if (offset > 0) {
+    // loop through all vertices on faces that used to be exposed
+    for (auto face : empty_faces) {
+      for (Row_index ind(nd, 2, face.i_dim); ind; ++ind) {
+        Vertex& vert = face.elem.vertex(ind.i_qpoint(face.face_sign)); // vertex that has to be moved
+        Vertex& off_vert = face.elem.vertex(ind.i_qpoint(!face.face_sign)); // vertex to move toward
+        // use an extra zero appended to the vertex record to mark vertices that have already been moved,
+        // so that neighboring elements don't move the same vertices repeatedly
+        if (vert.record.size()%4 == 0) {
+          vert.record.push_back(0);
+          // move vertex
+          for (int i_dim = 0; i_dim < nd; ++i_dim) {
+            vert.pos[i_dim] = (1 - offset)*vert.pos[i_dim] + offset*off_vert.pos[i_dim];
+          }
+        }
+      }
+    }
+    // delete the extra 0s we added to the vertex record so as not to interfere with the connection process below
+    for (auto face : empty_faces) {
+      for (Row_index ind(nd, 2, face.i_dim); ind; ++ind) {
+        Vertex& vert = face.elem.vertex(ind.i_qpoint(face.face_sign));
+        if (vert.record.size()%4 == 1) vert.record.pop_back();
+      }
+    }
+  }
+
   // plan connections to make (don't make them yet, because that could result in `eat`ing vertices which have not been visited,
   // and ultimately dereferencing null pointers)
   std::vector<Connection_plan> con_plans;

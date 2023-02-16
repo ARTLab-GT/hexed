@@ -24,6 +24,7 @@ class Deformed_element : public Element
   static constexpr bool is_deformed = true;
 
   Deformed_element(Storage_params, std::vector<int> pos = {}, double mesh_size = 1., int ref_level = 0);
+  virtual inline bool get_is_deformed() {return is_deformed;} // for determining whether a pointer is deformed
   virtual std::vector<double> position(const Basis&, int i_qpoint);
   // sets the Jacobian based on the current vertex locations and face node adjustments
   virtual void set_jacobian(const Basis& basis);

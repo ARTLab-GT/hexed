@@ -1,29 +1,12 @@
 #ifndef HEXED_BOUNDARY_CONDITION_HPP_
 #define HEXED_BOUNDARY_CONDITION_HPP_
 
-#include "connection.hpp"
+#include "Boundary_face.hpp"
 #include "Surface_func.hpp"
 
 namespace hexed
 {
 
-/*
- * Represents an element face where a boundary condition is to be applied without details
- * about the element or connection direction
- */
-class Boundary_face
-{
-  public:
-  virtual ~Boundary_face() = default;
-  virtual Storage_params storage_params() = 0;
-  virtual double* ghost_face() = 0;
-  virtual double* inside_face() = 0;
-  virtual int i_dim() = 0;
-  virtual bool inside_face_sign() = 0;
-  virtual double* surface_normal() = 0; // note: has to have a name that's different from `Face_connection`
-  virtual double* surface_position() = 0;
-  virtual double* state_cache() = 0; // can be used to record the state for state-dependent flux boundary conditions
-};
 class Boundary_connection;
 
 /*
@@ -68,15 +51,28 @@ class Boundary_condition
  * Sets the ghost state to the provided freestream state.
  * Technically this can result in an ill-posed problem if used
  * in anything other than a supersonic inlet,
- * but in numerical practice it often gets you the right answer anyway.
- * Should implement Riemann invariants as a more robust alternative.
+ * but in numerical practice it often gets you the right answer anyway, at least for inviscid problems.
  */
 class Freestream : public Flow_bc
 {
-  std::vector<double> fs;
+  Mat<> fs;
   public:
   // `freestream_state.size()` must equal the `n_var()` of the `Boundary_face` you apply_state it to
-  Freestream(std::vector<double> freestream_state);
+  Freestream(Mat<> freestream_state);
+  virtual void apply_state(Boundary_face&);
+  virtual void apply_flux(Boundary_face&);
+};
+
+/*
+ * A freestream boundary condition that sets only the ingoing characteristics.
+ * Works in almost any situation.
+ * Should generally be the default farfield boundary condition.
+ */
+class Riemann_invariants : public Flow_bc
+{
+  Mat<> fs;
+  public:
+  Riemann_invariants(Mat<> freestream_state);
   virtual void apply_state(Boundary_face&);
   virtual void apply_flux(Boundary_face&);
 };

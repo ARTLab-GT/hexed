@@ -9,6 +9,7 @@
 #include "Stopwatch_tree.hpp"
 #include "config.hpp"
 #include "kernel_factory.hpp"
+#include "Transport_model.hpp"
 #if HEXED_USE_OTTER
 #include <otter/plot.hpp>
 #include <otter/colormap.hpp>
@@ -29,14 +30,16 @@ class Solver
   bool fix_admis;
   int av_rs;
   std::unique_ptr<Kernel<Element&>> write_face;
-  bool visc;
-  std::vector<std::string> tecplot_file_names;
+  bool is_local_time;
+  Transport_model visc;
+  Transport_model therm_cond;
 
   void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
   void fix_admissibility(double stability_ratio);
   void apply_state_bcs();
   void apply_flux_bcs();
   void apply_avc_diff_flux_bcs();
+  void apply_fta_flux_bcs();
   void compute_inviscid(double dt, int i_stage);
   void compute_viscous(double dt, int i_stage);
   void compute_fta(double dt, int i_stage);
@@ -44,6 +47,7 @@ class Solver
   void compute_avc_diff(double dt, int i_stage);
   void fta(double dt, int i_stage);
   bool use_ldg();
+  double max_dt();
 
   public:
   // tweakable parameters for the numerical scheme
@@ -51,12 +55,17 @@ class Solver
   double av_advect_shift = .5;
   double av_diff_ratio = 5e-3;
   double av_visc_mult = 100.;
-  double av_advect_stab_rat = .9;
+  double av_advect_stab_rat = .7;
   double av_diff_stab_rat = .5;
+  double av_advect_max_forcing = .03;
+  double av_diff_max_forcing = .9;
+  double av_noise_threshold = 1.5e-4;
+  double av_noise_power = 5;
   int av_advect_iters = 1;
   int av_diff_iters = 1;
 
-  Solver(int n_dim, int row_size, double root_mesh_size, bool viscous = false);
+  Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping = false,
+         Transport_model viscosity_model = inviscid, Transport_model thermal_conductivity_model = inviscid);
   virtual ~Solver() = default;
 
   /* ### SETUP ### */
@@ -81,11 +90,6 @@ class Solver
    * Mesh topology must be valid (no duplicate or missing connections) before calling this function.
    */
   void calc_jacobian();
-  /*
-   * Set the local time step scale based on the current value of the Jacobian. If this is never
-   * performed, it will result in traditional global time stepping.
-   */
-  void set_local_tss();
   // set the flow state
   void initialize(const Spacetime_func&);
   void set_art_visc_off();
@@ -122,7 +126,7 @@ class Solver
   // compute an integral over the entire flow field at the current time
   std::vector<double> integral_field(const Qpoint_func& integrand);
   // compute an integral over all surfaces where a particular boundary condition has been enforced
-  std::vector<double> integral_surface(const Surface_func& integrand, int bc_sn);
+  std::vector<double> integral_surface(const Boundary_func& integrand, int bc_sn);
   // compute the min and max of variables over entire flow field. layout: {{var0_min, var0_max}, {var1_min, var1_max}, ...}
   // bounds are approximated by uniformly sampling a block `n_sample`-on-a-side in each element
   std::vector<std::array<double, 2>> bounds_field(const Qpoint_func&, int n_sample = 20);

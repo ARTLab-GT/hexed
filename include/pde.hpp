@@ -2,6 +2,8 @@
 #define HEXED_PDE_HPP_
 
 #include "math.hpp"
+#include "constants.hpp"
+#include "Transport_model.hpp"
 
 /*
  * This namespace contains classes representing the different PDEs Hexed can solve.
@@ -42,7 +44,6 @@ class Navier_stokes
   class Pde
   {
     public:
-    const bool natural_visc;
     static constexpr bool is_viscous = visc;
     static constexpr bool has_convection = true;
     static constexpr int n_var = n_dim + 2;
@@ -51,14 +52,11 @@ class Navier_stokes
     static constexpr int visc_start = 2*n_var;
     static constexpr int n_update = n_var;
     static constexpr double heat_rat = 1.4;
-    static constexpr int tss_pow = 1;
-    const double dyn_visc = 1.81206e-5;
-    const double therm_diff = dyn_visc*1.4/0.71;
+    Transport_model dyn_visc;
+    Transport_model therm_cond;
 
-    Pde(bool natural_viscosity = 0) :
-      natural_visc{natural_viscosity},
-      dyn_visc{natural_visc*1.81206e-5},
-      therm_diff{1.4/0.71*dyn_visc}
+    Pde(Transport_model dynamic_visc = inviscid, Transport_model thermal_cond = inviscid)
+    : dyn_visc{dynamic_visc}, therm_cond{thermal_cond}
     {}
 
     double pressure(Mat<n_var> state) const
@@ -127,11 +125,12 @@ class Navier_stokes
       double mass = state(n_dim);
       Mat<n_dim> veloc = mmtm/mass;
       Mat<n_dim, n_dim> veloc_grad = (grad(all, seq) - grad(all, n_dim)*veloc.transpose())/mass;
-      Mat<n_dim, n_dim> stress = dyn_visc*(veloc_grad + veloc_grad.transpose() - 2./3.*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity());
+      double sqrt_temp = std::sqrt((state(n_dim + 1)/mass - .5*veloc.squaredNorm())*(heat_rat - 1)/specific_gas_air);
+      Mat<n_dim, n_dim> stress = dyn_visc.coefficient(sqrt_temp)*(veloc_grad + veloc_grad.transpose() - 2./3.*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity());
       Mat<n_dim, n_update> flux = -av_coef*grad;
       flux(all, seq) -= stress;
       Mat<n_dim> int_ener_grad = -state(n_dim + 1)/mass/mass*grad(all, n_dim) + grad(all, n_dim + 1)/mass - veloc_grad*veloc;
-      flux(all, n_dim + 1) -= stress*veloc + therm_diff*int_ener_grad;
+      flux(all, n_dim + 1) -= stress*veloc + therm_cond.coefficient(sqrt_temp)*int_ener_grad*(heat_rat - 1)/specific_gas_air;
       return flux;
     }
 
@@ -147,8 +146,88 @@ class Navier_stokes
     // maximum effective diffusivity (for enforcing the CFL condition)
     double diffusivity(Mat<n_var> state, double av_coef) const
     {
-      return av_coef + std::max(dyn_visc/state(n_dim), therm_diff);
+      double mass = state(n_dim);
+      auto veloc = state(Eigen::seqN(0, n_dim))/mass;
+      double sqrt_temp = std::sqrt((state(n_dim + 1)/mass - .5*veloc.squaredNorm())*(heat_rat - 1)/specific_gas_air);
+      return av_coef + std::max(dyn_visc.coefficient(sqrt_temp)/mass, therm_cond.coefficient(sqrt_temp)*(heat_rat - 1)/specific_gas_air/mass);
     }
+
+    /*
+     * Decomposes state vectors into characteristics
+     * which are eigenvectors of the Jacobian of the inviscid flux function.
+     * This is useful for characteristic-based boundary conditions.
+     */
+    class Characteristics
+    {
+      Mat<3> vals;
+      Mat<3, 3> vecs;
+      Mat<3, 3> vecs_inv;
+      Mat<n_dim> dir; // normalized flux direction
+      // some properties of the reference state
+      double mass;
+      Mat<n_dim> veloc;
+      double nrml(Mat<n_dim> vec) {return dir.dot(vec);}
+      Mat<n_dim> tang(Mat<n_dim> vec) {return vec - dir*nrml(vec);}
+
+      public:
+      // construct with a direction in which to compute the flux
+      // and a reference state vector about which to compute the Jacobian
+      Characteristics(Mat<n_var> state, Mat<n_dim> direction)
+      : dir{direction/direction.norm()},
+        mass{state(n_dim)},
+        veloc{state(Eigen::seqN(0, n_dim))/mass}
+      {
+        // compute more properties of the reference state
+        double vsq = veloc.squaredNorm();
+        double pres = .4*(state(n_dim + 1) - .5*mass*vsq);
+        double sound_speed = std::sqrt(1.4*pres/mass);
+        // compute eigenvalues
+        vals(2) = nrml(veloc);
+        vals(0) = vals(2) - sound_speed;
+        vals(1) = vals(2) + sound_speed;
+        // compute 1D eigenvectors
+        double d_mass = 1;
+        for (int sign = 0; sign < 2; ++sign) {
+          double d_veloc = (2*sign - 1)*sound_speed/mass*d_mass;
+          double d_pres = 1.4*pres/mass*d_mass;
+          vecs(Eigen::all, sign) <<
+            d_mass*vals(2) + mass*d_veloc,
+            d_mass,
+            d_pres/.4 + .5*d_mass*vsq + mass*vals(2)*d_veloc;
+        }
+        vecs(Eigen::all, 2) << d_mass*vals(2), d_mass, .5*d_mass*vsq;
+        vecs_inv = vecs.inverse();
+      }
+      // get eigenvalues of Jacobian
+      inline Mat<3> eigvals() {return vals;}
+      /*
+       * Decompose a state vector into eigenspaces.
+       * Column `j` should be an eigenvector of the Jacobian with eigenvalue `eigvals()(j)`
+       * and the sum of the columns should be `state`.
+       */
+      Mat<n_var, 3> decomp(Mat<n_var> state)
+      {
+        Mat<n_dim> mmtm = state(Eigen::seqN(0, n_dim));
+        // component of tangential momentum perturbation which is not induced by mass perturbation
+        Mat<n_dim> mmtm_correction = tang(mmtm) - state(n_dim)*tang(veloc);
+        // compute state for 1D eigenvector problem
+        Mat<3> state_1d;
+        state_1d <<
+          nrml(mmtm),
+          state(n_dim),
+          state(n_dim + 1) - veloc.dot(mmtm_correction);
+        // decompose 1D state into eigenvectors
+        Mat<1, 3> eig_basis = (vecs_inv*state_1d).transpose();
+        Mat<3, 3> eig_decomp = vecs.array().rowwise()*eig_basis.array();
+        // ND eigenvector decomposition
+        Mat<n_var, 3> d(state.rows(), 3);
+        d(Eigen::seqN(n_dim, 2), Eigen::all) = eig_decomp(Eigen::seqN(1, 2), Eigen::all);
+        d(Eigen::seqN(0, n_dim), Eigen::all) = dir*eig_decomp(0, Eigen::all) + tang(veloc)*eig_basis; // second term accounts for tangential momentum induced by mass perturbation
+        d(Eigen::seqN(0, n_dim), 2) += mmtm_correction;
+        d(n_dim + 1, 2) += veloc.dot(mmtm_correction); // correct energy to account for tangential momentum perturbation
+        return d;
+      }
+    };
   };
   #undef ASSERT_THERM_ADMIS
 };
@@ -165,7 +244,6 @@ class Advection
   static constexpr int curr_start = n_dim;
   static constexpr int ref_start = n_dim + 1;
   static constexpr int n_update = 1;
-  static constexpr int tss_pow = 1;
 
   Mat<1> flux(Mat<n_var> state, Mat<n_dim> normal) const
   {
@@ -208,7 +286,6 @@ class Smooth_art_visc
   static constexpr int ref_start = 1;
   static constexpr int visc_start = 2;
   static constexpr int n_update = 1;
-  static constexpr int tss_pow = 2;
 
   Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const {return Mat<n_update>::Zero();}
   Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const
@@ -231,7 +308,6 @@ class Fix_therm_admis
   static constexpr int ref_start = n_var;
   static constexpr int visc_start = 2*n_var;
   static constexpr int n_update = n_var;
-  static constexpr int tss_pow = 2;
 
   Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const {return Mat<n_update>::Zero();}
   Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const

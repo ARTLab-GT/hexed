@@ -4,6 +4,7 @@
 #include <string>
 #include "Boundary_condition.hpp"
 #include "connection.hpp"
+#include "Layer_sequence.hpp"
 
 namespace hexed
 {
@@ -64,6 +65,8 @@ class Mesh
    * are used to identify which face of the element is participating in the boundary condition.
    */
   virtual void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n) = 0;
+  // delete all boundary connections involving a certain boundary condition
+  virtual void disconnect_boundary(int bc_sn) = 0;
   /*
    * Extrudes a layer of elements from unconnected faces:
    * 1. Extrudes one deformed element from every unconnected face of every deformed element.
@@ -74,8 +77,26 @@ class Mesh
    * When this is complete, the number of unconnected faces (of deformed elements) remains unchanged,
    * but the unconnected faces now belong to new, extruded elements which can be snapped to surface geometry
    * in a well-conditioned fashion.
+   * If `collapse == true` then the new elements will be collapsed in the extrusion direction,
+   * such that they have zero volume and exist purely on the extruded face.
+   * If the mesh has already been extruded once and `offset` is specified,
+   * the interior vertices of the extruded element will then be moved some distance toward the
+   * interior neighbor depending on the value of `offset`, where
+   * `offset == 0` yields no motion and `offset == 1` moves them exactly to the neighbor.
+   * If the mesh has not been extruded, the vertices shall be moved in an unspecified manner
+   * (but maintaining a valid mesh state).
+   * Offsetting thus provides a rudimentary way of creating anisotropic wall layers.
    */
-  virtual void extrude(bool collapse = false) = 0;
+  virtual void extrude(bool collapse = false, double offset = 0) = 0;
+  void extrude(Layer_sequence layers)
+  {
+    double height = 1;
+    for (int i_layer = layers.n_layers() - 1; i_layer > 0; --i_layer) {
+      double new_height = height - layers.spacing(i_layer);
+      extrude(true, new_height/height);
+      height = new_height;
+    }
+  }
   // connects all yet-unconnected faces to a boundary condition specified by serial number
   virtual void connect_rest(int bc_sn) = 0;
 

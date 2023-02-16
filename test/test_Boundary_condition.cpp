@@ -48,7 +48,7 @@ TEST_CASE("Freestream")
   hexed::Storage_params params {3, 5, 3, row_size};
   hexed::Element element {params};
   const int n_qpoint = row_size*row_size;
-  hexed::Freestream freestream {{10., 30., -20., 1.3, 1.2e5}};
+  hexed::Freestream freestream {hexed::Mat<5>{10., 30., -20., 1.3, 1.2e5}};
   hexed::Typed_bound_connection<hexed::Element> tbc {element, 1, false, 0};
   // set inside face to something arbitrary
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
@@ -66,6 +66,50 @@ TEST_CASE("Freestream")
     REQUIRE(tbc.ghost_face()[2*n_qpoint + i_qpoint] == Approx(-20.));
     REQUIRE(tbc.ghost_face()[3*n_qpoint + i_qpoint] == Approx(1.3));
     REQUIRE(tbc.ghost_face()[4*n_qpoint + i_qpoint] == Approx(1.2e5));
+  }
+}
+
+TEST_CASE("Riemann_invariants")
+{
+  const int row_size = hexed::config::max_row_size;
+  hexed::Storage_params params {3, 5, 3, row_size};
+  hexed::Element element {params};
+  const int n_qpoint = row_size*row_size;
+  hexed::Mat<5> fs {10., 30., -20., 1.3, 4e5};
+  hexed::Riemann_invariants ri {fs};
+  hexed::Typed_bound_connection<hexed::Element> tbc {element, 1, false, 0};
+  hexed::Mat<5> inside_state {1/1.2, -600/1.2, 1/1.2, 1.2, 101325/.4 + .5*1.2*360002};
+  SECTION("supersonic inflow")
+  {
+    // set the first point to supersonic outflow and the rest to supersonic inflow
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+      hexed::Mat<5> state = inside_state;
+      if (i_qpoint) state(1) *= -1;
+      for (int i_var = 0; i_var < 5; ++i_var) {
+        tbc.inside_face()[i_var*n_qpoint + i_qpoint] = state(i_var);
+      }
+      for (int i_dim = 0; i_dim < 3; ++i_dim) tbc.surface_normal()[i_dim*n_qpoint + i_qpoint] = (i_dim == 1);
+    }
+    ri.apply_state(tbc);
+    // test that the first point is the inside state and the rest are the freestream state
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+      for (int i_var = 0; i_var < 5; ++i_var) {
+        REQUIRE(tbc.ghost_face()[i_var*n_qpoint + i_qpoint] == Approx(i_qpoint ? fs[i_var] : inside_state(i_var)));
+      }
+    }
+    // set an arbitrary viscous flux
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+      for (int i_var = 0; i_var < 5; ++i_var) {
+        tbc.inside_face()[(10 + i_var)*n_qpoint + i_qpoint] = 1.;
+      }
+    }
+    ri.apply_flux(tbc);
+    // test that the flux is left alone at the points where the state was set and set to zero where it was not
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+      for (int i_var = 0; i_var < 5; ++i_var) {
+        REQUIRE(tbc.ghost_face()[(10 + i_var)*n_qpoint + i_qpoint] == Approx(i_qpoint ? 1. : 0.).scale(1.));
+      }
+    }
   }
 }
 
@@ -151,7 +195,7 @@ TEST_CASE("No_slip")
   hexed::Deformed_element element {params};
   hexed::Typed_bound_connection<hexed::Deformed_element> tbc {element, 0, true, 0};
   for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-    for (int i_dim = 0; i_dim < 2; ++i_dim) tbc.normal()[i_dim*row_size + i_qpoint] = 0;
+    for (int i_dim = 0; i_dim < 2; ++i_dim) tbc.normal()[i_dim*row_size + i_qpoint] = .7/std::sqrt(2.);
   }
   double state [] {1., 1., 1.2, 1e5/0.4 + 0.5*1.2*2.};
   double flux [] {10., -20., 1.3, 10.};
@@ -199,7 +243,7 @@ TEST_CASE("No_slip")
       for (int i_var = 0; i_var < 3; ++i_var) {
         REQUIRE(tbc.ghost_face()[(8 + i_var)*row_size + i_qpoint] == Approx(flux[i_var]));
       }
-      REQUIRE((tbc.ghost_face()[11*row_size + i_qpoint] + tbc.inside_face()[11*row_size + i_qpoint])/2 == Approx(3.));
+      REQUIRE((tbc.ghost_face()[11*row_size + i_qpoint] + tbc.inside_face()[11*row_size + i_qpoint])/2 == Approx(3.*.7));
     }
   }
   SECTION("specified emissivity")
@@ -221,7 +265,7 @@ TEST_CASE("No_slip")
     }
     no_slip.apply_flux(tbc);
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-      REQUIRE((tbc.ghost_face()[11*row_size + i_qpoint] + tbc.inside_face()[11*row_size + i_qpoint])/2 == Approx(.8*hexed::stefan_boltzmann*std::pow(temp, 4)));
+      REQUIRE((tbc.ghost_face()[11*row_size + i_qpoint] + tbc.inside_face()[11*row_size + i_qpoint])/2 == Approx(.8*hexed::stefan_boltzmann*std::pow(temp, 4)*.7));
     }
   }
 }

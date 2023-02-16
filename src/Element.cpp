@@ -14,7 +14,7 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   n_vert(params.n_vertices()),
   data_size{params.n_stage*n_dof + (6 + params.row_size)*params.n_qpoint()},
   data{Eigen::VectorXd::Zero(data_size)},
-  vertex_tss{Eigen::VectorXd::Constant(params.n_vertices(), 1./custom_math::pow(2, r_level))}
+  vertex_tss{Eigen::VectorXd::Constant(params.n_vertices(), nom_sz)}
 {
   face_record.fill(0);
   faces.fill(nullptr);

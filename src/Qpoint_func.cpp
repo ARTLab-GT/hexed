@@ -48,31 +48,4 @@ std::vector<double> Pow::operator()(Element& e, const Basis& b, int i_qpoint, do
   return result;
 }
 
-int Qf_concat::n_var(int n_dim) const
-{
-  int nv = 0;
-  for (auto f : funcs) nv += f->n_var(n_dim);
-  return nv;
-}
-
-std::string Qf_concat::variable_name(int n_dim, int i_var) const
-{
-  int i_func = 0;
-  while (i_var >= funcs[i_func]->n_var(n_dim)) {
-    i_var -= funcs[i_func]->n_var(n_dim);
-    ++i_func;
-  }
-  return funcs[i_func]->variable_name(n_dim, i_var);
-}
-
-std::vector<double> Qf_concat::operator()(Element& elem, const Basis& basis, int i_qpoint, double time) const
-{
-  std::vector<double> result;
-  for (auto func : funcs) {
-    auto r = (*func)(elem, basis, i_qpoint, time);
-    result.insert(result.end(), r.begin(), r.end());
-  }
-  return result;
-}
-
 }

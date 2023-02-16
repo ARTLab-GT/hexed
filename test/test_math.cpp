@@ -168,3 +168,10 @@ TEST_CASE("orthonormal")
     REQUIRE((hexed::custom_math::orthonormal(basis, 1) - orth).norm() == Approx(0.).scale(1.));
   }
 }
+
+TEST_CASE("interp")
+{
+  hexed::Mat<4> values {0., 1., .4, 1.4};
+  hexed::Mat<2> coords {.01, .02};
+  REQUIRE(hexed::custom_math::interp(values, coords) == Approx(.024));
+}

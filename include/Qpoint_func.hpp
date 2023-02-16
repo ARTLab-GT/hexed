@@ -111,16 +111,7 @@ class Pow : public Qpoint_func
   virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const;
 };
 
-// concatenates the output of a vector of `Qpoint_funcs`
-class Qf_concat : public Qpoint_func
-{
-  std::vector<const Qpoint_func*> funcs;
-  public:
-  inline Qf_concat(std::vector<const Qpoint_func*> qfs) : funcs{qfs} {}
-  virtual int n_var(int n_dim) const;
-  virtual std::string variable_name(int n_dim, int i_var) const;
-  virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const;
-};
+typedef Concat_func<Qpoint_func, Element&, const Basis&, int, double> Qf_concat;
 
 }
 #endif

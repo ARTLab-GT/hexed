@@ -12,8 +12,8 @@ namespace hexed
  * Thus this is much more efficient than repeatedly calling `vec.erase` if
  * multiple elements which are not in a contiguous range are to be erased.
  */
-template <typename T>
-void erase_if(std::vector<T>& vec, bool (*condition)(const T&))
+template <typename T, typename C>
+void erase_if(std::vector<T>& vec, C condition)
 {
   std::vector<T> erased;
   for (unsigned i_elem = 0; i_elem < vec.size(); ++i_elem) {

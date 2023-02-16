@@ -3,6 +3,7 @@ target_sources(hexed PRIVATE
 Accessible_mesh.cpp
 Basis.cpp
 Boundary_condition.cpp
+Boundary_func.cpp
 connection.cpp
 Deformed_element.cpp
 Domain_func.cpp
@@ -12,6 +13,7 @@ Equidistant.cpp
 global_hacks.cpp
 Hanging_vertex_matcher.cpp
 Iteration_status.cpp
+Layer_sequence.cpp
 math.cpp
 Output_data.cpp
 otter_vis.cpp

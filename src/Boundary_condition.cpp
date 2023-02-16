@@ -2,6 +2,7 @@
 #include <math.hpp>
 #include <kernel_factory.hpp>
 #include <constants.hpp>
+#include <pde.hpp>
 
 namespace hexed
 {
@@ -25,7 +26,7 @@ void Flow_bc::apply_advection(Boundary_face& bf)
   }
 }
 
-Freestream::Freestream(std::vector<double> freestream_state)
+Freestream::Freestream(Mat<> freestream_state)
 : fs{freestream_state}
 {}
 
@@ -47,7 +48,113 @@ void Freestream::apply_state(Boundary_face& bf)
   double* gf = bf.ghost_face();
   for (int i_var = 0; i_var < params.n_var; ++i_var) {
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      gf[i_var*nq + i_qpoint] = fs[i_var];
+      gf[i_var*nq + i_qpoint] = fs(i_var);
+    }
+  }
+}
+
+Riemann_invariants::Riemann_invariants(Mat<> freestream_state)
+: fs{freestream_state}
+{}
+
+template <int n_dim>
+Mat<> apply_char(Mat<> state, Mat<> normal, int sign, Mat<> inside, Mat<> outside)
+{
+  // compute characteristics
+  typename pde::Navier_stokes<>::Pde<n_dim>::Characteristics ch(state, normal);
+  auto eigvals = ch.eigvals();
+  auto decomp = ch.decomp(inside);
+  auto fs_decomp = ch.decomp(outside);
+  // set eigenvectors to inside or outside values depending on sign of eigenvalues
+  for (int i_eig = 0; i_eig < 3; ++i_eig) {
+    if (sign*eigvals(i_eig) > 0) decomp(Eigen::all, i_eig) = fs_decomp(Eigen::all, i_eig);
+  }
+  return decomp.rowwise().sum();
+}
+
+void Riemann_invariants::apply_state(Boundary_face& bf)
+{
+  auto params = bf.storage_params();
+  const int nfq = params.n_qpoint()/params.row_size;
+  double* in_f = bf.inside_face();
+  double* gh_f = bf.ghost_face();
+  double* nrml = bf.surface_normal();
+  int sign = 1 - 2*bf.inside_face_sign(); // sign of velocity of incoming characteristics
+  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+    Mat<> state;
+    // fetch data
+    Mat<> inside(params.n_var);
+    for (int i_var = 0; i_var < params.n_var; ++i_var) inside(i_var) = in_f[i_var*nfq + i_qpoint];
+    Mat<> n(params.n_dim);
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) n(i_dim) = nrml[i_dim*nfq + i_qpoint];
+    // compute characteristics
+    switch (params.n_dim) {
+      case 1:
+        state = apply_char<1>(inside, n, sign, inside, fs); // set incoming characteristics to zero and leave outgoing alone
+        break;
+      case 2:
+        state = apply_char<2>(inside, n, sign, inside, fs);
+        break;
+      case 3:
+        state = apply_char<3>(inside, n, sign, inside, fs);
+        break;
+      default:
+        throw std::runtime_error("invalid dimensionality");
+    }
+    // limit state to ensure thermodynamic admissibility
+    state(params.n_dim) = std::max(state(params.n_dim), inside(params.n_dim)/2);
+    double kin_ener = .5*state(Eigen::seqN(0, params.n_dim)).squaredNorm()/state(params.n_dim);
+    double inside_kin_ener = .5*inside(Eigen::seqN(0, params.n_dim)).squaredNorm()/inside(params.n_dim);
+    state(params.n_dim + 1) = kin_ener + std::max(state(params.n_dim + 1) - kin_ener, (inside(params.n_dim + 1) - inside_kin_ener)/2);
+    // write to ghost state
+    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+      gh_f[i_var*nfq + i_qpoint] = state(i_var);
+    }
+  }
+  // prime state cache with inside state
+  double* sc = bf.state_cache();
+  for (int i_dof = 0; i_dof < params.n_var*nfq; ++i_dof) {
+    sc[i_dof] = in_f[i_dof];
+  }
+}
+
+void Riemann_invariants::apply_flux(Boundary_face& bf)
+{
+  auto params = bf.storage_params();
+  const int nfq = params.n_qpoint()/params.row_size;
+  double* sc = bf.state_cache();
+  double* in_f = bf.inside_face() + 2*params.n_var*nfq;
+  double* gh_f = bf.ghost_face() + 2*params.n_var*nfq;
+  double* nrml = bf.surface_normal();
+  int sign = 1 - 2*bf.inside_face_sign();
+  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+    // fetch data
+    Mat<> inside(params.n_var); // flux
+    Mat<> cache(params.n_var); // state
+    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+      inside(i_var) = in_f[i_var*nfq + i_qpoint];
+      cache(i_var) = sc[i_var*nfq + i_qpoint];
+    }
+    Mat<> n(params.n_dim);
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) n(i_dim) = nrml[i_dim*nfq + i_qpoint];
+    // compute characteristics
+    Mat<> state;
+    switch (params.n_dim) {
+      case 1:
+        state = apply_char<1>(cache, n, sign, Mat<>::Zero(params.n_var), inside); // set outgoing characteristic flux to zero and leave incoming alone
+        break;
+      case 2:
+        state = apply_char<2>(cache, n, sign, Mat<>::Zero(params.n_var), inside);
+        break;
+      case 3:
+        state = apply_char<3>(cache, n, sign, Mat<>::Zero(params.n_var), inside);
+        break;
+      default:
+        throw std::runtime_error("invalid dimensionality");
+    }
+    // write to ghost flux
+    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+      gh_f[i_var*nfq + i_qpoint] = state(i_var);
     }
   }
 }
@@ -172,6 +279,7 @@ void No_slip::apply_flux(Boundary_face& bf)
   double* gh_f = bf.ghost_face() + offset;
   double* in_f = bf.inside_face() + offset;
   double* sc = bf.state_cache();
+  double* nrml = bf.surface_normal();
   // set momentum and mass flux (pretty straightforward)
   for (int i_dof = 0; i_dof < params.n_dim*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
   for (int i_dof = params.n_dim*nfq; i_dof < (params.n_dim + 1)*nfq; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
@@ -179,15 +287,21 @@ void No_slip::apply_flux(Boundary_face& bf)
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
     int i_dof = i_qpoint + (params.n_dim + 1)*nfq;
     double flux;
+    double normal = 0;
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+      double n = nrml[i_dim*nfq + i_qpoint];
+      normal += n*n;
+    }
+    normal = std::sqrt(normal);
     switch (t) {
       case heat_flux:
-        flux = v;
+        flux = v*normal;
         break;
       case emissivity:
         {
           // set heat flux equal to radiative heat loss by stefan-boltzmann law
           double temp = sc[i_dof]*.4/sc[params.n_dim*nfq + i_qpoint]/specific_gas_air;
-          flux = v*stefan_boltzmann*custom_math::pow(temp, 4);
+          flux = v*stefan_boltzmann*custom_math::pow(temp, 4)*normal;
         }
         break;
       default:
@@ -197,6 +311,8 @@ void No_slip::apply_flux(Boundary_face& bf)
     int flux_sign = 2*bf.inside_face_sign() - 1;
     gh_f[i_dof] = 2*flux*flux_sign - in_f[i_dof];
   }
+  // write the inside flux to the state cache for use in surface visualization
+  for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) sc[i_dof] = in_f[i_dof];
 }
 
 void No_slip::apply_advection(Boundary_face& bf)

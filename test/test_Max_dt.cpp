@@ -29,7 +29,7 @@ TEST_CASE("Max_dt")
                            int_ener0 + 0.5*mass*400, int_ener1}};
       for (int i_elem : {0, 1}) {
         for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
-          elements[i_elem]->time_step_scale()[i_qpoint] = 0.6;
+          elements[i_elem]->time_step_scale()[i_qpoint] = 0.6; // this shouldn't change the time step
         }
         elements[i_elem]->time_step_scale()[1] = 0.17;
         for (int i_dof = 0; i_dof < 6; ++i_dof) {
@@ -37,8 +37,8 @@ TEST_CASE("Max_dt")
         }
       }
       car_elem_view elem_view {elements};
-      double dt = (*hexed::kernel_factory<hexed::Spatial<hexed::Element, hexed::pde::Navier_stokes<false>::Pde>::Max_dt>(1, 2, basis))(elem_view);
-      REQUIRE(dt == Approx(basis.max_cfl_convective()/(420*0.6/1.027)));
+      double dt = (*hexed::kernel_factory<hexed::Spatial<hexed::Element, hexed::pde::Navier_stokes<false>::Pde>::Max_dt>(1, 2, basis, false))(elem_view);
+      REQUIRE(dt == Approx(basis.max_cfl_convective()/(420/1.027)));
     }
     SECTION("2D")
     {
@@ -54,8 +54,11 @@ TEST_CASE("Max_dt")
         read[3*4 + i_qpoint] = 101235/0.4 + 0.5*1.225*500;
       }
       car_elem_view elem_view {elements};
-      double dt = (*hexed::kernel_factory<hexed::Spatial<hexed::Element, hexed::pde::Navier_stokes<false>::Pde>::Max_dt>(2, 2, basis))(elem_view);
-      REQUIRE(dt == Approx(basis.max_cfl_convective()/360./2.).epsilon(0.01));
+      (*hexed::kernel_factory<hexed::Spatial<hexed::Element, hexed::pde::Navier_stokes<false>::Pde>::Max_dt>(2, 2, basis, true))(elem_view);
+      for (int i_qpoint = 0; i_qpoint < 4; ++i_qpoint)
+      {
+        REQUIRE(elements.back()->time_step_scale()[i_qpoint] == Approx(basis.max_cfl_convective()/360./2.).epsilon(0.01));
+      }
     }
   }
 
@@ -82,8 +85,12 @@ TEST_CASE("Max_dt")
     }
     // test that actual characteristic speed is measured correctly
     def_elem_view elem_view {elems};
-    double dt = (*hexed::kernel_factory<hexed::Spatial<hexed::Deformed_element, hexed::pde::Navier_stokes<false>::Pde>::Max_dt>(3, 4, basis))(elem_view);
-    REQUIRE(dt == Approx(basis.max_cfl_convective()/(1e3/0.3)/3.));
+    (*hexed::kernel_factory<hexed::Spatial<hexed::Deformed_element, hexed::pde::Navier_stokes<false>::Pde>::Max_dt>(3, 4, basis, true))(elem_view);
+    for (int i_elem = 0; i_elem < 3; ++i_elem) {
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        REQUIRE(elems[i_elem]->time_step_scale()[i_qpoint] == Approx(basis.max_cfl_convective()/((i_elem == 1 ? 1e3 : 1e2)/0.3)/3.));
+      }
+    }
     // scale 2 entries of jacobian
     for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
       auto& pos = elems[1]->vertex(i_vert).pos;
@@ -91,12 +98,8 @@ TEST_CASE("Max_dt")
       pos[1] *= .5;
     }
     elems[1]->set_jacobian(basis);
-    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-      elems[1]->time_step_scale()[i_qpoint] = 0.9;
-    }
-    elems[1]->time_step_scale()[2] = 0.95;
     // test that jacobian & time step scale are accounted for
-    dt = (*hexed::kernel_factory<hexed::Spatial<hexed::Deformed_element, hexed::pde::Navier_stokes<false>::Pde>::Max_dt>(3, 4, basis))(elem_view);
-    REQUIRE(dt == Approx(basis.max_cfl_convective()/(1e3*0.95*(1. + 2*2.)/3./0.3)/3.));
+    double dt = (*hexed::kernel_factory<hexed::Spatial<hexed::Deformed_element, hexed::pde::Navier_stokes<false>::Pde>::Max_dt>(3, 4, basis, false))(elem_view);
+    REQUIRE(dt == Approx(basis.max_cfl_convective()/(1e3*(1. + 2*2.)/3./0.3)/3.));
   }
 }

@@ -52,6 +52,7 @@ class Accessible_mesh : public Mesh
   Sequence<Element_connection&>& element_connections() {return elem_cons;}
   virtual int add_boundary_condition(Flow_bc*, Mesh_bc*);
   virtual void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n);
+  virtual void disconnect_boundary(int bc_sn);
   Vector_view<Boundary_condition&, Boundary_condition> boundary_conditions() {return bound_conds;}
   Boundary_condition& boundary_condition(int bc_sn) {return bound_conds[bc_sn];}
   Sequence<Boundary_connection&>& boundary_connections() {return bound_cons;}
@@ -60,7 +61,7 @@ class Accessible_mesh : public Mesh
   virtual Connection_validity valid();
   typedef Vector_view<Vertex&, Vertex::Non_transferable_ptr, &ptr_convert<Vertex&, Vertex::Non_transferable_ptr>> vertex_view;
   vertex_view vertices();
-  virtual void extrude(bool collapse = false); // note: test for this is in `test_Solver.cpp` so that the result can be visualized
+  virtual void extrude(bool collapse = false, double offset = 0); // note: test for this is in `test_Solver.cpp` so that the result can be visualized
   virtual void connect_rest(int bc_sn);
   virtual std::vector<elem_handle> elem_handles();
   inline Index<Element_connection&> extruded_connections() {return {deformed().element_connections(), extrude_cons};}

@@ -28,6 +28,7 @@ class Element
   double nom_sz;
   int r_level;
   std::vector<Vertex::Transferable_ptr> vertices;
+  void set_wall_dist(const Basis& basis);
 
   private:
   int n_dof;
@@ -51,6 +52,7 @@ class Element
    * The vertices will be spaced at intervals of the nominal size.
    */
   Element(Storage_params, std::vector<int> pos={}, double mesh_size=1., int ref_level = 0);
+  virtual inline bool get_is_deformed() {return is_deformed;} // for determining whether a pointer is deformed
   // Can't copy an Element. Doing so would have to either duplicate or break vertex connections,
   // both of which seem error prone.
   Element(const Element&) = delete;

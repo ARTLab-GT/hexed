@@ -115,7 +115,7 @@ TEST_CASE("Accessible_mesh")
 
   SECTION("boundary conditions")
   {
-    int freestream = mesh.add_boundary_condition(new hexed::Freestream({0, 0, 1., 1e5}), new hexed::Null_mbc);
+    int freestream = mesh.add_boundary_condition(new hexed::Freestream(hexed::Mat<4>{0, 0, 1., 1e5}), new hexed::Null_mbc);
     int nonpen = mesh.add_boundary_condition(new hexed::Nonpenetration, new hexed::Null_mbc);
     // check that connecting to an invalid serial number throws
     REQUIRE_THROWS(mesh.connect_boundary(0, 0, sn0, 1, 0, nonpen + freestream + 1));
@@ -154,6 +154,9 @@ TEST_CASE("Accessible_mesh")
         REQUIRE(std::max(uses[0], uses[1]) == 2);
         REQUIRE(std::min(uses[0], uses[1]) == 1);
       }
+      mesh.disconnect_boundary(freestream);
+      REQUIRE(mesh.boundary_connections().size() == 1);
+      REQUIRE(mesh.boundary_connections()[0].bound_cond_serial_n() == nonpen);
     }
     SECTION("deformed")
     {
@@ -266,7 +269,7 @@ TEST_CASE("Accessible_mesh")
       mesh1.connect_hanging(0, coarse[kind], {kinds[kind][2], kinds[kind][3]}, {{0, 0}, {0, 1}}, false, {fine_def, fine_def});
     }
     // add boundary conditions
-    int bcsn = mesh1.add_boundary_condition(new hexed::Freestream {{0., 0., 1., 1.}}, new hexed::Null_mbc);
+    int bcsn = mesh1.add_boundary_condition(new hexed::Freestream {hexed::Mat<4>{0., 0., 1., 1.}}, new hexed::Null_mbc);
     for (int i = 0; i < 2; ++i) {
       for (int kind = 0; kind < 2; ++kind) {
         mesh1.connect_boundary(1, kind, kinds[kind][i], 0, 0, bcsn); // left face

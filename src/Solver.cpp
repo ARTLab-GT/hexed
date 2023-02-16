@@ -32,12 +32,15 @@ void Solver::share_vertex_data(Element::vertex_value_access access_func, Vertex:
 
 void Solver::apply_state_bcs()
 {
+  stopwatch.children.at("boundary conditions").stopwatch.start();
   auto& bc_cons {acc_mesh.boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
   }
+  stopwatch.children.at("boundary conditions").stopwatch.pause();
+  stopwatch.children.at("boundary conditions").work_units_completed += bc_cons.size();
 }
 
 void Solver::apply_flux_bcs()
@@ -64,12 +67,42 @@ void Solver::apply_avc_diff_flux_bcs()
   }
 }
 
-bool Solver::use_ldg()
+void Solver::apply_fta_flux_bcs()
 {
-  return visc || use_art_visc;
+  int nd = params.n_dim;
+  int rs = params.row_size;
+  int nq = params.n_qpoint();
+  auto& bc_cons {acc_mesh.boundary_connections()};
+  #pragma omp parallel for
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    double* in_f = bc_cons[i_con].inside_face() + 2*(nd + 2)*nq/rs;
+    double* gh_f = bc_cons[i_con].ghost_face()  + 2*(nd + 2)*nq/rs;
+    for (int i_dof = 0; i_dof < nq*(nd + 2)/rs; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
+  }
 }
 
-Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool viscous) :
+bool Solver::use_ldg()
+{
+  return visc.is_viscous || therm_cond.is_viscous || use_art_visc;
+}
+
+double Solver::max_dt()
+{
+  const int nd = params.n_dim;
+  const int rs = params.row_size;
+  auto& sw_car {stopwatch.children.at("cartesian")};
+  auto& sw_def {stopwatch.children.at("deformed" )};
+  if (use_ldg()) {
+    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, is_local_time, visc, therm_cond))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
+                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, is_local_time, visc, therm_cond))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
+  } else {
+    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time                  ))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
+                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time                  ))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
+  }
+}
+
+Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
+               Transport_model viscosity_model, Transport_model thermal_conductivity_model) :
   params{3, n_dim + 2, n_dim, row_size},
   acc_mesh{params, root_mesh_size},
   basis{row_size},
@@ -78,7 +111,9 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool viscous) :
   fix_admis{false},
   av_rs{basis.row_size},
   write_face(kernel_factory<Spatial<Element, pde::Navier_stokes<false>::Pde>::Write_face>(params.n_dim, params.row_size, basis)), // note: for now, false and true are equivalent for `Write_face`
-  visc{viscous}
+  is_local_time{local_time_stepping},
+  visc{viscosity_model},
+  therm_cond{thermal_conductivity_model}
 {
   // setup categories for performance reporting
   stopwatch.children.emplace("initialize reference", stopwatch.work_unit_name);
@@ -97,7 +132,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool viscous) :
                      &stopwatch.children.at("set art visc").children.at("diffusion"), &stopwatch.children.at("fix admis.")}) {
       sw->children.emplace(type, stopwatch.work_unit_name);
       auto& children = sw->children.at(type).children;
-      children.emplace("max char speed", stopwatch.work_unit_name);
+      children.emplace("compute time step", stopwatch.work_unit_name);
       children.emplace("neighbor", "(connection*(time integration stage))");
       children.emplace("local", unit);
     }
@@ -105,6 +140,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool viscous) :
       sw->children.at(type).children.emplace("reconcile LDG flux", unit);
     }
   }
+  stopwatch.children.emplace("boundary conditions", "(boundary connection)*(time integration stage)");
   stopwatch.children.emplace("residual computation", "element*evaluation");
   // initialize advection state to 1
   auto& elements = acc_mesh.elements();
@@ -253,30 +289,7 @@ void Solver::calc_jacobian()
       }
     }
   }
-}
-
-void Solver::set_local_tss()
-{
-  // set time step to be continuous at vertices
   share_vertex_data(&Element::vertex_time_step_scale, Vertex::vector_min);
-  // construct a matrix for 1D linear interpolation
-  Eigen::MatrixXd lin_interp {basis.row_size, 2};
-  for (int i_qpoint = 0; i_qpoint < basis.row_size; ++i_qpoint) {
-    double node {basis.node(i_qpoint)};
-    lin_interp(i_qpoint, 0) = 1. - node;
-    lin_interp(i_qpoint, 1) = node;
-  }
-  // interpolate tss to quadrature points
-  auto& elements = acc_mesh.elements();
-  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    Element& elem = elements[i_elem];
-    Eigen::VectorXd vert_tss (params.n_vertices());
-    for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-      vert_tss(i_vert) = elem.vertex_time_step_scale(i_vert);
-    }
-    Eigen::Map<Eigen::VectorXd> qpoint_tss (elem.time_step_scale(), params.n_qpoint());
-    qpoint_tss = custom_math::hypercube_matvec(lin_interp, vert_tss);
-  }
 }
 
 void Solver::initialize(const Spacetime_func& func)
@@ -354,7 +367,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
       }
       scale = std::sqrt(scale);
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        state[i_dim*nq + i_qpoint] = rk_ref[i_dim*nq + i_qpoint]/scale;
+        state[i_dim*nq + i_qpoint] = rk_ref[i_dim*nq + i_qpoint]/scale*advect_length;
       }
     }
   }
@@ -365,19 +378,16 @@ void Solver::set_art_visc_smoothness(double advect_length)
   sw_adv.stopwatch.start();
   (*write_face)(elements);
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-  double dt_adv = av_advect_stab_rat*std::min((*kernel_factory<Spatial<Element         , pde::Advection>::Max_dt>(nd, rs, basis))(acc_mesh.cartesian().elements(), sw_adv.children.at("cartesian"), "max char speed"),
-                                              (*kernel_factory<Spatial<Deformed_element, pde::Advection>::Max_dt>(nd, rs, basis))(acc_mesh.deformed ().elements(), sw_adv.children.at("deformed" ), "max char speed"));
+  (*kernel_factory<Spatial<Element         , pde::Advection>::Max_dt>(nd, rs, basis, true))(acc_mesh.cartesian().elements(), sw_adv.children.at("cartesian"), "compute time step");
+  (*kernel_factory<Spatial<Deformed_element, pde::Advection>::Max_dt>(nd, rs, basis, true))(acc_mesh.deformed ().elements(), sw_adv.children.at("deformed" ), "compute time step");
+  double dt_adv = av_advect_stab_rat;
   // ensure that time step is small enough that the time derivative term will be stable
-  {
-    double max_rat = 0;
-    #pragma omp parallel for reduction(max:max_rat)
-    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-      double* tss = elements[i_elem].time_step_scale();
-      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        max_rat = std::max(max_rat, dt_adv/advect_length*tss[i_qpoint]);
-      }
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    double* tss = elements[i_elem].time_step_scale();
+    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+      tss[i_qpoint] /= std::max(2*tss[i_qpoint]/av_advect_max_forcing, 1.);
     }
-    dt_adv /= std::max(max_rat/av_advect_stab_rat, 1.);
   }
 
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
@@ -442,7 +452,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
             // compute update
             double d = state[nd*nq + i_qpoint] - state[(nd + 1)*nq + i_qpoint]
-                       + dt_adv*tss[i_qpoint]*(1. - adv[i_node*nq + i_qpoint])*2/advect_length;
+                       + dt_adv*tss[i_qpoint]*(1. - adv[i_node*nq + i_qpoint])*2;
             adv[i_node*nq + i_qpoint] += d; // add to advection state
             // add to residual
             diff += d*d/dt_scaled/dt_scaled;
@@ -478,20 +488,17 @@ void Solver::set_art_visc_smoothness(double advect_length)
   // begin root-smear-square operation
   int n_real = 3; // number of real time steps (as apposed to pseudotime steps)
   // evaluate CFL condition
-  double dt_diff = av_diff_stab_rat*std::min((*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Max_dt>(nd, rs, basis))(acc_mesh.cartesian().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "max char speed"),
-                                             (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Max_dt>(nd, rs, basis))(acc_mesh.deformed ().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "max char speed"));
-  double diff_time = av_diff_ratio*advect_length/n_real; // compute size of real time step (as opposed to pseudotime)
+  (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true))(acc_mesh.cartesian().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "compute time step"),
+  (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true))(acc_mesh.deformed ().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "compute time step");
+  double dt_diff = av_diff_stab_rat;
+  double diff_time = av_diff_ratio/n_real; // compute size of real time step (as opposed to pseudotime)
   // adjust for time derivative term if necessary
-  {
-    double max_rat = 0;
-    #pragma omp parallel for reduction(max:max_rat)
-    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-      double* tss = elements[i_elem].time_step_scale();
-      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        max_rat = std::max(max_rat, dt_diff/diff_time*tss[i_qpoint]*tss[i_qpoint]);
-      }
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    double* tss = elements[i_elem].time_step_scale();
+    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+      tss[i_qpoint] /= std::max(tss[i_qpoint]/diff_time/av_diff_max_forcing/advect_length, 1.);
     }
-    dt_diff /= std::max(max_rat/av_diff_stab_rat, 1.);
   }
   // initialize residual to zero (will compute RMS over all real time steps)
   status.diff_res = 0;
@@ -537,7 +544,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
           double* forcing = elements[i_elem].art_visc_forcing();
           double* tss = elements[i_elem].time_step_scale();
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-            state[nq + i_qpoint] = s*(forcing[real_step*nq + i_qpoint] - state[i_qpoint])/diff_time*tss[i_qpoint]*tss[i_qpoint];
+            state[nq + i_qpoint] = s*(forcing[real_step*nq + i_qpoint] - state[i_qpoint])/diff_time*tss[i_qpoint]/advect_length;
           }
         }
         // apply value boundary condition (or lack thereof, in this case)
@@ -578,6 +585,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
   }
   status.diff_res = std::sqrt(status.diff_res/n_real); // finish computing RMS residual
   // clean up
+  double thresh_pow = std::pow(av_noise_threshold, av_noise_power);
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
@@ -592,7 +600,9 @@ void Solver::set_art_visc_smoothness(double advect_length)
         double veloc = rk_ref[i_dim*nq + i_qpoint]/mass;
         scale_sq += (1. - heat_rat)*veloc*veloc;
       }
-      av[i_qpoint] = av_visc_mult*advect_length*std::sqrt(std::max(0., forcing[n_real*nq + i_qpoint]*scale_sq)); // root-smear-square complete!
+      double f = std::max(0., forcing[n_real*nq + i_qpoint]);
+      f = std::pow(std::pow(f, av_noise_power/2.) + thresh_pow, 1./av_noise_power) - av_noise_threshold; // divide power by 2 because already squared
+      av[i_qpoint] = av_visc_mult*advect_length*f*std::sqrt(scale_sq); // root-smear-square complete!
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         int i = i_var*nq + i_qpoint;
@@ -650,22 +660,10 @@ void Solver::synch_extruded_res_bad()
 void Solver::update(double stability_ratio)
 {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
-  auto& sw_car {stopwatch.children.at("cartesian")};
-  auto& sw_def {stopwatch.children.at("deformed" )};
-  const int nd = params.n_dim;
-  const int rs = params.row_size;
   auto& elems = acc_mesh.elements();
 
   // compute time step
-  double max_dt;
-  if (use_art_visc) {
-    max_dt = std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
-                      (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
-  } else {
-    max_dt = std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis))(acc_mesh.cartesian().elements(), sw_car, "max char speed"),
-                      (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis))(acc_mesh.deformed ().elements(), sw_def, "max char speed"));
-  }
-  double dt = stability_ratio*max_dt;
+  double dt = stability_ratio*max_dt();
 
   // record reference state for Runge-Kutta scheme
   const int n_dof = params.n_dof();
@@ -693,8 +691,8 @@ void Solver::update(double stability_ratio)
   ++status.iteration;
   stopwatch.stopwatch.pause();
   stopwatch.work_units_completed += elems.size();
-  sw_car.work_units_completed += acc_mesh.cartesian().elements().size();
-  sw_def.work_units_completed += acc_mesh.deformed ().elements().size();
+  stopwatch.children.at("cartesian").work_units_completed += acc_mesh.cartesian().elements().size();
+  stopwatch.children.at("deformed" ).work_units_completed += acc_mesh.deformed ().elements().size();
 }
 
 Iteration_status Solver::iteration_status()
@@ -760,17 +758,25 @@ void Solver::fix_admissibility(double stability_ratio)
     }
     if (admiss && refined_admiss) break;
     else {
-      double dt = stability_ratio*std::min((*kernel_factory<Spatial<Element         , pde::Fix_therm_admis>::Max_dt>(nd, rs, basis))(acc_mesh.cartesian().elements(), stopwatch.children.at("fix admis.").children.at("cartesian"), "max char speed"),
-                                           (*kernel_factory<Spatial<Deformed_element, pde::Fix_therm_admis>::Max_dt>(nd, rs, basis))(acc_mesh.deformed ().elements(), stopwatch.children.at("fix admis.").children.at("deformed" ), "max char speed"));
+      (*kernel_factory<Spatial<Element         , pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true))(acc_mesh.cartesian().elements(), stopwatch.children.at("fix admis.").children.at("cartesian"), "compute time step");
+      (*kernel_factory<Spatial<Deformed_element, pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true))(acc_mesh.deformed ().elements(), stopwatch.children.at("fix admis.").children.at("deformed" ), "compute time step");
+      double dt = stability_ratio;
       double linear = dt;
       double quadratic = basis.cancellation_diffusive()/basis.max_cfl_diffusive()*dt*dt;
       std::array<double, 2> step;
       step[1] = (linear + std::sqrt(linear*linear - 4*quadratic))/2.;
       step[0] = quadratic/step[1];
       for (double s : step) {
-        apply_state_bcs();
+        auto& bc_cons {acc_mesh.boundary_connections()};
+        #pragma omp parallel for
+        for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+          double* in_f = bc_cons[i_con].inside_face();
+          double* gh_f = bc_cons[i_con].ghost_face();
+          for (int i_dof = 0; i_dof < nq*(nd + 2)/rs; ++i_dof) gh_f[i_dof] = in_f[i_dof];
+        }
         compute_fta(s, 0);
       }
+      max_dt();
     }
   }
   status.fix_admis_iters += iter;
@@ -813,11 +819,10 @@ std::vector<double> Solver::integral_field(const Qpoint_func& integrand)
   return integral;
 }
 
-std::vector<double> Solver::integral_surface(const Surface_func& integrand, int bc_sn)
+std::vector<double> Solver::integral_surface(const Boundary_func& integrand, int bc_sn)
 {
   // setup
   const int nd = params.n_dim;
-  const int nv = params.n_var;
   const int n_int = integrand.n_var(nd);
   const int nq = params.n_qpoint();
   const int nfq = nq/basis.row_size;
@@ -835,30 +840,14 @@ std::vector<double> Solver::integral_surface(const Surface_func& integrand, int 
     double area = custom_math::pow(elem.nominal_size(), nd - 1);
     if (con.bound_cond_serial_n() == bc_sn)
     {
-      double* state = con.state();
       double* nrml = con.normal();
-      double* pos = con.surface_position();
-      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint)
-      {
-        // fetch state
-        std::vector<double> qpoint_state;
-        for (int i_var = 0; i_var < nv; ++i_var) {
-          qpoint_state.push_back(state[i_var*nfq + i_qpoint]);
-        }
-        // fetch position and normal vector
-        std::vector<double> qpoint_pos;
-        std::vector<double> normal;
+      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
         double nrml_mag = 0;
-        int nrml_sign = 2*con.direction().flip_normal(0) - 1;
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          qpoint_pos.push_back(pos[i_dim*nfq + i_qpoint]);
-          double comp = nrml_sign*nrml[i_dim*nfq + i_qpoint];
-          normal.push_back(comp);
-          nrml_mag += comp*comp;
+          nrml_mag += custom_math::pow(nrml[i_dim*nfq + i_qpoint], 2);
         }
         nrml_mag = std::sqrt(nrml_mag);
-        for (int i_dim = 0; i_dim < nd; ++i_dim) normal[i_dim] /= nrml_mag;
-        auto qpoint_integrand = integrand(qpoint_pos, status.flow_time, qpoint_state, normal);
+        auto qpoint_integrand = integrand(con, i_qpoint, status.flow_time);
         for (int i_var = 0; i_var < n_int; ++i_var) {
           integral[i_var] += qpoint_integrand[i_var]*weights(i_qpoint)*area*nrml_mag;
         }
@@ -929,7 +918,6 @@ void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::s
       interior.write(interp_pos.data(), interp_out.data());
     }
   }
-  tecplot_file_names.push_back(name);
 }
 
 void Solver::visualize_field_tecplot(std::string name, int n_sample, bool edges, bool qpoints, bool interior)
@@ -947,15 +935,21 @@ void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample
   // convenience definitions
   const int nfq = params.n_qpoint()/params.row_size;
   const int nd = params.n_dim;
-  const int nv = params.n_var;
+  State_variables sv;
+  Outward_normal on;
+  Viscous_stress vs;
+  Heat_flux hf;
+  std::vector<const Boundary_func*> funcs {&sv, &on};
+  if (visc.is_viscous) funcs.push_back(&vs);
+  if (therm_cond.is_viscous) funcs.push_back(&hf);
+  Bf_concat func(funcs);
+  const int nv = func.n_var(nd);
   const int n_block {custom_math::pow(n_sample, nd - 1)};
   // setup
   std::vector<std::string> var_names;
-  for (int i_var = 0; i_var < nv; ++i_var) var_names.push_back(State_variables().variable_name(nd, i_var));
+  for (int i_var = 0; i_var < nv; ++i_var) var_names.push_back(func.variable_name(nd, i_var));
   Tecplot_file file {name, nd, var_names, status.flow_time};
   Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
-  // write the state to the faces so that the BCs can access it
-  (*write_face)(acc_mesh.elements());
   // iterate through boundary connections and visualize a zone for each
   auto& bc_cons {acc_mesh.boundary_connections()};
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con)
@@ -966,25 +960,32 @@ void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample
       auto& elem = con.element();
       // fetch the position
       const int i_face = con.direction().i_face(0);
-      Eigen::MatrixXd qpoint_pos (nfq, nd);
+      Mat<dyn, dyn> qpoint_pos (nfq, nd);
       for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
         auto pos = elem.face_position(basis, i_face, i_qpoint);
         for (int i_dim = 0; i_dim < nd; ++i_dim) qpoint_pos(i_qpoint, i_dim) = pos[i_dim];
       }
       // interpolate from quadrature points to sample points
-      Eigen::MatrixXd interp_pos (n_block, nd);
+      Mat<dyn, dyn> interp_pos (n_block, nd);
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         interp_pos.col(i_dim) = custom_math::hypercube_matvec(interp, qpoint_pos.col(i_dim));
       }
-      // fetch/interpolate the state
-      Eigen::MatrixXd interp_state (n_block, nv);
+      // fetch the state
+      Mat<dyn, dyn> qpoint_vars (nfq, nv);
+      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+        auto vars = func(con, i_qpoint, status.flow_time);
+        for (int i_var = 0; i_var < nv; ++i_var) {
+          qpoint_vars(i_qpoint, i_var) = vars[i_var];
+        }
+      }
+      // interpolate to sample points
+      Mat<dyn, dyn> interp_vars (n_block, nv);
       for (int i_var = 0; i_var < nv; ++i_var) {
-        Eigen::Map<Eigen::VectorXd> qpoint_state (con.state() + i_var*nfq, nfq);
-        interp_state.col(i_var) = custom_math::hypercube_matvec(interp, qpoint_state);
+        interp_vars.col(i_var) = custom_math::hypercube_matvec(interp, qpoint_vars.col(i_var));
       }
       // visualize zone
       Tecplot_file::Structured_block zone {file, n_sample, "face_interior", nd - 1};
-      zone.write(interp_pos.data(), interp_state.data());
+      zone.write(interp_pos.data(), interp_vars.data());
     }
   }
 }

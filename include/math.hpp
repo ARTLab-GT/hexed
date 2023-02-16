@@ -8,7 +8,8 @@
 namespace hexed
 {
 
-template <int rows, int cols = 1>
+const int dyn = Eigen::Dynamic;
+template <int rows = dyn, int cols = 1>
 using Mat = Eigen::Matrix<double, rows, cols>;
 
 namespace custom_math
@@ -159,6 +160,19 @@ inline int stretched_ind(int n_dim, int ind, std::array<bool, 2> stretch)
     }
   }
   return stretched;
+}
+
+template <int n_dim>
+double interp(Mat<pow(2, n_dim)> values, Mat<n_dim> coords)
+{
+  int stride = pow(2, n_dim);
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+    stride /= 2;
+    for (int i = 0; i < stride; ++i) {
+      values(i) += coords(i_dim)*(values(i + stride) - values(i));
+    }
+  }
+  return values(0);
 }
 
 }

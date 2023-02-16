@@ -237,7 +237,7 @@ class Boundary_perturbation : public hexed::Mesh_bc
 TEST_CASE("Solver")
 {
   static_assert (hexed::config::max_row_size >= 3); // this test was written for row size 3
-  hexed::Solver sol {2, 3, 0.8};
+  hexed::Solver sol {2, 3, 0.8, true};
   int catchall_bc = sol.mesh().add_boundary_condition(new hexed::Copy(), new hexed::Null_mbc());
 
   SECTION("initialization and introspection")
@@ -296,14 +296,16 @@ TEST_CASE("Solver")
     sol.mesh().valid().assert_valid();
     sol.snap_vertices();
     sol.calc_jacobian();
-    sol.set_local_tss();
-    // in sn0, TSS is 2/(1. + 1./.1) == 2./11. for reasons that i'm too tired to explain rn
-    REQUIRE(sol.sample(0,  true, sn0, 4, hexed::Time_step_scale_func())[0] == Approx(2/11.));
+    sol.initialize(hexed::Constant_func({0., 0., 1.4, 1./.4})); // initialize with zero velocity and unit speed of sound
+    sol.update(); // sets the time step scale (among other things)
+    double cfl = hexed::Gauss_legendre(3).max_cfl_convective()/2.; // divide by 2 cause that's the number of dimensions
+    // in sn0, TSS is max_cfl*root_size*determinant/normal_sum/sound_speed
+    REQUIRE(sol.sample(0,  true, sn0, 4, hexed::Time_step_scale_func())[0] == Approx(cfl*.8*2/11./1.));
     // in sn1, TSS varies bilinearly
-    REQUIRE(sol.sample(0, false, sn1, 4, hexed::Time_step_scale_func())[0] == Approx((2*2/11. + .5 + 1.)/4.));
+    REQUIRE(sol.sample(0, false, sn1, 4, hexed::Time_step_scale_func())[0] == Approx(cfl*.8*(2*2/11. + .5 + 1.)/4.));
     // TSS at hanging nodes should be set to match coarse element
-    REQUIRE(sol.sample(1, false, sn2, 4, hexed::Time_step_scale_func())[0] == Approx((3*.5 + (.5 + 2/11.)/2.)/4.));
-    REQUIRE(sol.sample(1, false, sn3, 4, hexed::Time_step_scale_func())[0] == Approx((2*.5 + (.5 + 2/11.)/2. + 2/11.)/4.));
+    REQUIRE(sol.sample(1, false, sn2, 4, hexed::Time_step_scale_func())[0] == Approx(cfl*.8*(3*.5 + (.5 + 2/11.)/2.)/4.));
+    REQUIRE(sol.sample(1, false, sn3, 4, hexed::Time_step_scale_func())[0] == Approx(cfl*.8*(2*.5 + (.5 + 2/11.)/2. + 2/11.)/4.));
   }
 
   SECTION("integrals")
@@ -424,8 +426,8 @@ class All_cartesian : public Test_mesh
   hexed::Solver sol;
   public:
 
-  All_cartesian()
-  : sol{3, hexed::config::max_row_size, 1.}
+  All_cartesian(bool local)
+  : sol{3, hexed::config::max_row_size, 1., local}
   {}
 
   virtual hexed::Solver& solver() {return sol;}
@@ -458,8 +460,8 @@ class All_deformed : public Test_mesh
   bool rot_dir;
 
   public:
-  All_deformed(bool rotation_direction)
-  : sol{2, hexed::config::max_row_size, 1.}, rot_dir{rotation_direction}
+  All_deformed(bool rotation_direction, bool local)
+  : sol{2, hexed::config::max_row_size, 1., local}, rot_dir{rotation_direction}
   {}
 
   virtual hexed::Solver& solver() {return sol;}
@@ -502,8 +504,8 @@ class Extrude_hanging : public Test_mesh
   int kd;
 
   public:
-  Extrude_hanging(int i_dim, int j_dim)
-  : sol{3, hexed::config::max_row_size, .8}, id{i_dim}, jd{j_dim}, kd{3 - i_dim - j_dim}
+  Extrude_hanging(int i_dim, int j_dim, bool local)
+  : sol{3, hexed::config::max_row_size, .8, local}, id{i_dim}, jd{j_dim}, kd{3 - i_dim - j_dim}
   {}
 
   virtual hexed::Solver& solver() {return sol;}
@@ -553,7 +555,6 @@ void test_marching(Test_mesh& tm, std::string name)
   auto& sol = tm.solver();
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
-  sol.set_local_tss();
   sol.initialize(Nonuniform_mass());
   // check that the iteration status is right at the start
   auto status = sol.iteration_status();
@@ -585,7 +586,6 @@ void test_art_visc(Test_mesh& tm, std::string name)
   const int n_dim = sol.storage_params().n_dim;
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
-  sol.set_local_tss();
   sol.initialize(Sinusoid());
   sol.set_art_visc_constant(300.);
   // update
@@ -619,7 +619,7 @@ void test_conservation(Test_mesh& tm, std::string name)
   // check that the iteration status is right at the start
   auto status = sol.iteration_status();
   // update
-  sol.update();
+  sol.update(.5);
   status = sol.iteration_status();
   auto state  = sol.integral_field(hexed::State_variables());
   auto update = sol.integral_field(hexed::Physical_update());
@@ -634,18 +634,20 @@ void test_advection(Test_mesh& tm, std::string name)
   auto& sol = tm.solver();
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
-  sol.set_local_tss(); // this shouldn't affect the answer
   sol.initialize(Sinusoid_veloc());
   double width = 1e-2;
   sol.av_advect_shift = .4;
   sol.av_visc_mult = .9;
-  sol.av_advect_iters = 300;
+  sol.av_advect_iters = 1000;
   sol.av_diff_iters = 300;
+  // don't do noise reduction or much diffusion to avoid obscuring advection result
   sol.av_diff_ratio = 1e-6;
+  sol.av_noise_threshold = 0;
   REQUIRE_THROWS(sol.set_art_visc_row_size(1));
   REQUIRE_THROWS(sol.set_art_visc_row_size(hexed::config::max_row_size + 1));
   sol.set_art_visc_row_size(2);
   sol.set_art_visc_smoothness(width);
+  sol.visualize_field_tecplot(hexed::Art_visc_coef(), "foo");
   REQUIRE(sol.iteration_status().adv_res < 1e-6);
   REQUIRE(sol.iteration_status().diff_res < 1e-9);
   hexed::Gauss_legendre basis(2);
@@ -668,21 +670,21 @@ TEST_CASE("Solver time marching")
 {
   SECTION("all cartesian")
   {
-    All_cartesian ac;
+    All_cartesian ac(true);
     test_marching(ac, "car");
   }
   SECTION("all deformed")
   {
-    All_deformed ad0 (0);
+    All_deformed ad0 (0, true);
     test_marching(ad0, "def0");
-    All_deformed ad1 (1);
+    All_deformed ad1 (1, true);
     test_marching(ad1, "def1");
   }
   SECTION("extruded with deformed hanging nodes")
   {
     #define TEST_DIMENSIONS(i_dim, j_dim) \
       SECTION("dimensions " #i_dim " " #j_dim) { \
-          Extrude_hanging eh(i_dim, j_dim); \
+          Extrude_hanging eh(i_dim, j_dim, true); \
           test_marching(eh, "extrude_hanging"); \
       }
     #if NDEBUG
@@ -702,21 +704,21 @@ TEST_CASE("Solver artificial viscosity")
 {
   SECTION("all cartesian")
   {
-    All_cartesian ac;
+    All_cartesian ac(true);
     test_art_visc(ac, "car");
   }
   SECTION("all deformed")
   {
-    All_deformed ad0 (0);
+    All_deformed ad0 (0, true);
     test_art_visc(ad0, "def0");
-    All_deformed ad1 (1);
+    All_deformed ad1 (1, true);
     test_art_visc(ad1, "def1");
   }
   SECTION("extruded with deformed hanging nodes")
   {
     #define TEST_DIMENSIONS(i_dim, j_dim) \
       SECTION("dimensions " #i_dim " " #j_dim) { \
-          Extrude_hanging eh(i_dim, j_dim); \
+          Extrude_hanging eh(i_dim, j_dim, true); \
           test_art_visc(eh, "extrude_hanging"); \
       }
     #if NDEBUG
@@ -736,21 +738,21 @@ TEST_CASE("Solver conservation")
 {
   SECTION("all cartesian")
   {
-    All_cartesian ac;
+    All_cartesian ac(true);
     test_conservation(ac, "car");
   }
   SECTION("all deformed")
   {
-    All_deformed ad0 (0);
+    All_deformed ad0 (0, true);
     test_conservation(ad0, "def0");
-    All_deformed ad1 (1);
+    All_deformed ad1 (1, true);
     test_conservation(ad1, "def1");
   }
   SECTION("extruded with deformed hanging nodes")
   {
     #define TEST_CONSERVATION(i_dim, j_dim) \
       SECTION("dimensions " #i_dim " " #j_dim) { \
-          Extrude_hanging eh(i_dim, j_dim); \
+          Extrude_hanging eh(i_dim, j_dim, true); \
           test_conservation(eh, "extrude_hanging"); \
       } \
 
@@ -769,21 +771,21 @@ TEST_CASE("Solver advection")
 {
   SECTION("all cartesian")
   {
-    All_cartesian ac;
+    All_cartesian ac(true);
     test_advection(ac, "car");
   }
   SECTION("all deformed")
   {
-    All_deformed ad0 (0);
+    All_deformed ad0 (0, true);
     test_advection(ad0, "def0");
-    All_deformed ad1 (1);
+    All_deformed ad1 (1, true);
     test_advection(ad1, "def1");
   }
   SECTION("extruded with deformed hanging nodes")
   {
     #define TEST_DIMENSIONS(i_dim, j_dim) \
       SECTION("dimensions " #i_dim " " #j_dim) { \
-          Extrude_hanging eh(i_dim, j_dim); \
+          Extrude_hanging eh(i_dim, j_dim, true); \
           test_advection(eh, "extrude_hanging"); \
       }
     #if NDEBUG
@@ -814,15 +816,25 @@ TEST_CASE("face extrusion")
         }
       }
     }
+    int bc_sn = solver.mesh().add_boundary_condition(new hexed::Copy(), new Boundary_perturbation());
     solver.mesh().extrude();
+    for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
+    solver.mesh().connect_rest(bc_sn);
+    solver.snap_faces();
+    solver.calc_jacobian();
+    double area = solver.integral_field(hexed::Constant_func({1.}))[0];
+    solver.mesh().disconnect_boundary(bc_sn);
+    solver.mesh().extrude(true, .7);
     auto valid = solver.mesh().valid();
     REQUIRE(valid.n_duplicate == 0);
     REQUIRE(valid.n_missing == 16);
-    int bc_sn = solver.mesh().add_boundary_condition(new hexed::Copy(), new hexed::Null_mbc());
     solver.mesh().connect_rest(bc_sn);
     solver.calc_jacobian();
-    REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Approx(24./4.)); // check number of elements
-    for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
+    #if HEXED_USE_TECPLOT
+    solver.visualize_field_tecplot(hexed::Mass(), "extrude_2d");
+    #endif
+    REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Approx(40./4.)); // check number of elements and that jacobian is nonsingular
+    REQUIRE(solver.integral_field(hexed::Constant_func({1.}))[0] == Approx(area));
   }
   SECTION("3D")
   {
@@ -849,8 +861,8 @@ TEST_CASE("face extrusion")
     solver.mesh().connect_rest(bc_sn);
     solver.calc_jacobian();
     REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Approx(86.)); // check number of elements
-    for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
     #if HEXED_USE_TECPLOT
+    for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
     solver.visualize_field_tecplot(hexed::State_variables(), "extrude");
     #endif
   }
@@ -872,8 +884,8 @@ TEST_CASE("artificial viscosity convergence")
   }
   int nonpen = sol.mesh().add_boundary_condition(new hexed::Nonpenetration, new hexed::Null_mbc);
   int pen [2];
-  pen[0] = sol.mesh().add_boundary_condition(new hexed::Freestream({1.1, 0., 1., 1.5}), new hexed::Null_mbc);
-  pen[1] = sol.mesh().add_boundary_condition(new hexed::Freestream({0.9, 0., 1., 1.5}), new hexed::Null_mbc);
+  pen[0] = sol.mesh().add_boundary_condition(new hexed::Freestream(hexed::Mat<4>{1.1, 0., 1., 1.5}), new hexed::Null_mbc);
+  pen[1] = sol.mesh().add_boundary_condition(new hexed::Freestream(hexed::Mat<4>{0.9, 0., 1., 1.5}), new hexed::Null_mbc);
   for (int positive = 0; positive < 2; ++positive) {
     for (int i = 0; i < len0; ++i) sol.mesh().connect_boundary(0, 0, sn[i][positive*(len1 - 1)], 1, positive, nonpen);
     for (int j = 0; j < len1; ++j) sol.mesh().connect_boundary(0, 0, sn[positive*(len0 - 1)][j], 0, positive, pen[positive]);
@@ -887,6 +899,7 @@ TEST_CASE("artificial viscosity convergence")
   sol.av_diff_iters = 3000;
   sol.av_visc_mult = 1e6;
   sol.av_diff_ratio = 1e-6;
+  sol.av_noise_threshold = 0; // don't do noise reduction since that would interfere with convergence
   sol.set_art_visc_smoothness(adv_width);
   REQUIRE(sol.iteration_status().adv_res < 1e-12);
   REQUIRE(sol.iteration_status().diff_res < 1e-12);

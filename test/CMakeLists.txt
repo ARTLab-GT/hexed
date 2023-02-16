@@ -7,6 +7,7 @@ testing_utils.cpp
 test_Accessible_mesh.cpp
 test_Basis.cpp
 test_Boundary_condition.cpp
+test_Characteristics.cpp
 test_connection.cpp
 test_Deformed_element.cpp
 test_Derivative.cpp
@@ -17,6 +18,7 @@ test_func.cpp
 test_Face_permutation.cpp
 test_Hanging_vertex_matcher.cpp
 test_Iteration_status.cpp
+test_Layer_sequence.cpp
 test_math.cpp
 test_Max_dt.cpp
 test_pde.cpp
