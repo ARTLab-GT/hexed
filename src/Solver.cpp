@@ -608,6 +608,9 @@ void Solver::set_art_visc_smoothness(double advect_length)
       }
       double al = adv_l(wall_dist[i_qpoint]);
       av[i_qpoint] = av_visc_mult*al*std::sqrt(std::max(0., forcing[n_real*nq + i_qpoint]*scale_sq)); // root-smear-square complete!
+      double c = .2;
+      int p = 5;
+      av[i_qpoint] = std::pow(std::pow(av[i_qpoint], p) + std::pow(c, p), 1./p) - c;
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         int i = i_var*nq + i_qpoint;
