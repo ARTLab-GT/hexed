@@ -5,11 +5,11 @@ Above: Temperature (K) contours on a Mach 10 starfish (inviscid, 2D, CPG).
 Discontinuous Galerkin engine for CFD with automated, unstructured quad/hex meshing.
 
 **hex** *(noun)*
--# (technical) abbreviation for "hexahedron", a six-sided solid (e.g., a cube)
--# curse; jinx; evil magic spell
+1. (technical) abbreviation for "hexahedron", a six-sided solid (e.g., a cube)
+2. curse; jinx; evil magic spell
 
 **hex** *(verb)*
--# to cast a hex
+1. to cast a hex
 
 This document provides an overview of Hexed. More detailed documentation can be found in [`doc`](doc/). In particular, for
 installation instructions, see [`install.md`](doc/install.md).
