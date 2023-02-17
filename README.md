@@ -1,15 +1,15 @@
 <img src="../assets/header.png" alt="header" height="400"/>
 Above: Temperature (K) contours on a Mach 10 starfish (inviscid, 2D, CPG).
 
-# Hexed
+# hexed
 Discontinuous Galerkin engine for CFD with automated, unstructured quad/hex meshing.
 
 **hex** *(noun)*
-1. (technical) abbreviation for "hexahedron", a six-sided solid (e.g., a cube)
-2. curse; jinx; evil magic spell
+-# (technical) abbreviation for "hexahedron", a six-sided solid (e.g., a cube)
+-# curse; jinx; evil magic spell
 
 **hex** *(verb)*
-1. to cast a hex
+-# to cast a hex
 
 This document provides an overview of Hexed. More detailed documentation can be found in [`doc`](doc/). In particular, for
 installation instructions, see [`install.md`](doc/install.md).
@@ -20,7 +20,7 @@ can attest that it is decidedly arcane and sometimes tends toward evil.
 As its name suggests, Hexed scarcely presumes to change that.
 What it *does* aim to provide is a faster, more automated solver, enabling you to practice your witchcraft on a previously unattainable scale.
 Specifically, Hexed (or perhaps "Vexed", as a certain insightful friend suggested it might be more aptly named)
-is a C++ library which can solve the compressible Euler equations of aerodynamics on unstructured quad/hex meshes.
+is a C++ library which can solve the compressible Navier-Stokes equations of aerodynamics on unstructured quad/hex meshes.
 It can handle Cartesian meshes with hanging-node refinement, and it also provides a mechanism to automatically generate a body-fitted mesh
 from a Cartesian starting point.
 The high-order discontinuous Galerkin (DG) scheme is designed to achieve whatever level of accuracy is required with a much coarser mesh,
@@ -30,7 +30,7 @@ to combine the speed and accuracy of the DG method with the automation and versa
 adaptive Cartesian mesh.
 However, it is meant to be encapsulated well enough that it could survive a complete refactor of NASCART-GT,
 or even be used with other frontends.
-Hexed is still a work in progress and there are many more features to implement, but hopefully it can make your CFD, if not easier, at least less tedious.
+Hexed is still very much a work in progress, but hopefully it can make your CFD, if not easier, at least less tedious.
 
 To summarize, Hexed is:
 * fast
@@ -51,7 +51,7 @@ Currently implemented features:
 * Integration with NASCART-GT.
 * Hanging-node refinement.
 * Shock capturing with an original artificial viscosity scheme.
- 
-Planned or in-progress features (roughly in order of planned implementation):
 * Viscous flows with anisotropic refinement.
+
+Planned or in-progress features (roughly in order of planned implementation):
 * Grid adaption.
