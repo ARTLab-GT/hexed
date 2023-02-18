@@ -58,13 +58,13 @@ Currently implemented features:
 Planned or in-progress features (roughly in order of planned implementation):
 - Grid adaption.
 
-\page instructions Instructions
-\subpage installation
-\subpage visualization
-\subpage geom_fitting
-\subpage contributing
+\page Manual
+- \subpage installation
+- \subpage visualization
+- \subpage geom_fitting
+- \subpage contributing
 
 \page theory Theory
-\subpage conventions
+- \subpage conventions
 
 */
