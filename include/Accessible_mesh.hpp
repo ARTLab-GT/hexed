@@ -7,7 +7,7 @@
 namespace hexed
 {
 
-/*
+/*!
  * A mesh that supports access to the actual elements with the numerical data they contain. This level of
  * access is required by the numerical scheme but should be hidden from the library user, who should not be
  * concerned with numerical details.
@@ -39,9 +39,9 @@ class Accessible_mesh : public Mesh
   inline View_by_type<         Element>& cartesian() {return car;}
   inline View_by_type<Deformed_element>&  deformed() {return def;}
   virtual int add_element(int ref_level, bool is_deformed, std::vector<int> position);
-  // Access an element. If the parameters to not describe an existing element, throw an exception.
+  //! Access an element. If the parameters to not describe an existing element, throw an exception.
   Element& element(int ref_level, bool is_deformed, int serial_n);
-  // access all elements regardless of deformedness
+  //! access all elements regardless of deformedness
   Sequence<Element&>& elements() {return elems;}
   virtual void connect_cartesian(int ref_level, std::array<int, 2> serial_n, Con_dir<Element> dir,
                                  std::array<bool, 2> is_deformed = {false, false});
