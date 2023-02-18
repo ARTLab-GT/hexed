@@ -1,4 +1,4 @@
-/*
+/*! \file config.hpp
  * This file provides variables configured by CMake.
  * When header files are actually installed, it is overwritten by `config_build.hpp`.
  * This is to solve the following problem:
