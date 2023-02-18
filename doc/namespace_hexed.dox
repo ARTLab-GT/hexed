@@ -1,2 +1,1 @@
-/*! \namespace hexed
-*/
+//! \namespace hexed \brief Global namespace for all of hexed.
