@@ -1,4 +1,4 @@
-# Contributing
+/*! \page contributing Contributing guidelines
 
 When contributing to CartDG, please adhere to these guidelines. Some are standard (but important) practice
 in software development, while others are meant to standardize what is otherwise a matter of personal preference.
@@ -55,3 +55,5 @@ Please adhere to the following style conventions whenever possible.
   which are non-conforming features of GCC.
 * The default type for integers should be `int`. For example, don't use `unsigned` for loop indices and array sizes
   unless there is a specific reason to.
+
+*/

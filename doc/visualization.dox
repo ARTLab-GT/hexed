@@ -1,3 +1,5 @@
+/*! \page visualization
+
 # Visualization
 Hexed can output Tecplot binary files (`.szplt`). These can be viewed in two ways.
 You can simply open them normally in Tecplot, or you can use the postprocessing script (see below) to generate a layout file.
@@ -82,3 +84,5 @@ When interpreting this data, note:
   - visualize all files with names that start with `flowfield` using the matplotlib colormap "viridis".
 - `hexed-post-process colormap=Large__Rainbow`
   - visualize all `.szplt` files in your workign directory with the Tecplot builtin colormap "Large Rainbow".
+
+*/

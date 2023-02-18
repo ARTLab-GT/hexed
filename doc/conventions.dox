@@ -1,4 +1,5 @@
-# Notation
+/*! \page conventions Notation and conventions
+
 This document specifies notational conventions used in CartDG. If the meaning
 of a number or variable is unclear or ambiguous, look here for guidance. Also, please
 try to maintain these conventions when contributing to the code.
@@ -89,3 +90,5 @@ Some common abbreviations are defined as follows, in alphabetical order.
   `i_qpoint += row_size*row_size` will change only x.
 * Be careful of the fact that C++ storage order is row-major, whereas Eigen matrices
   are column-major by default.
+
+*/
