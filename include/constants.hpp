@@ -1,6 +1,11 @@
 #ifndef HEXED_CONSTANTS_HPP_
 #define HEXED_CONSTANTS_HPP_
 
+/*! \file constants.hpp
+ * Definition of physical constants as `const` global variables
+ * (in terms of [SI base units](https://en.wikipedia.org/wiki/SI_base_unit) when possible).
+ */
+
 #include "math.hpp"
 
 namespace hexed
