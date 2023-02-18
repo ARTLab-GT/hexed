@@ -1,3 +1,7 @@
+"""!
+\file Basis.py Computes numerical parameters for nodal bases.
+"""
+
 import sympy as sp
 import numpy as np
 from scipy.optimize import fsolve, minimize

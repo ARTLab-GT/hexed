@@ -11,8 +11,7 @@ If look at these instructions and don't know what I'm talking about, skip to \re
    - [Tecplot](https://www.tecplot.com/)/[TecIO](https://www.tecplot.com/products/tecio-library/) (required for visualization)
    - [Catch2](https://github.com/catchorg/Catch2) (required for unit testing)
    - [pytecplot](https://www.tecplot.com/docs/pytecplot/) (required by the
-     [Python postprocessing script](postprocessing.md#postprocessing-script)
-     -- you can probably do without if you want)
+     \ref postproc "Python postprocessing script" -- you can probably do without if you want)
 -# Create and navigate to a build directory (git will ignore names that start with `build`).
 -# Use `ccmake` to configure build options.
    This project has been configured to show you the available options and their defaults specifically with the `ccmake` interface for CMake.
@@ -75,7 +74,7 @@ a few 3rd-party libraries.
   - `pip3 install sympy`
 - Install PyTecplot (Tecplot's Python API):
   - `pip3 install pytecplot`
-  - If this doesn't work, don't worry. You just won't be able to run the Python postprocessing script (see [`postprocessing.md`](postprocessing.md)),
+  - If this doesn't work, don't worry. You just won't be able to run the \ref postproc "Python postprocessing script",
     which you don't strictly need to do.
 
 \subsection install_eigen Step 3: install Eigen
