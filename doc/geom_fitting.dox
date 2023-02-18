@@ -1,6 +1,5 @@
 /*! \page geom_fitting Geometry fitting
 
-# Geometry fitting
 Hexed provides a script,
 [`hexed-fit-geom`](https://github.gatech.edu/ARTLab/hexed/blob/master/script/hexed-fit-geom),
 for creating a smooth curve fit to a 2D geometry.
@@ -9,13 +8,13 @@ A new geometry file is created that contains the smooth fit sampled at an arbitr
 This is useful when a geometry file is available but the resolution and/or precision is insufficient.
 The script is designed to work well for airfoils, but may also work for other geometries.
 
-## Arguments
+\section geom_fit_args Arguments
 `hexed-fit-geom` accepts the following command line arguments in any order:
 The following argument is required:
-- **file name:** Name of the file containing the input data points to which a smooth curve will be fitted.
+- __file name:__ Name of the file containing the input data points to which a smooth curve will be fitted.
   The file may have a  `.geom` extension, in which case it must be in the [NASCART-GT](https://github.gatech.edu/ARTLab/NASCART-GT)
   geometry file format ([example](https://github.gatech.edu/ARTLab/NASCART-GT/blob/master/Examples/RAE2822_airfoil/RAE2822.geom)).
-  Alternatively, it may have a `.txt` or `.csv` extension in which it must contain two columns of data representing *x* and  *y* coordinates
+  Alternatively, it may have a `.txt` or `.csv` extension in which it must contain two columns of data representing \f$x\f$ and \f$y\f$ coordinates
   delimited by a single space or comma, respectively.
   This geometry should be smooth.
   In particular, for airfoils, the coordinates should start and end at the trailing edge, not the leading.
@@ -23,8 +22,9 @@ The following argument is required:
 The following arguments are optional:
 - `--uncluster-trailing`: If this argument is provided, the distribution of data points (not output sample points) in parametric space will be modified
   to avoid overfitting near the trailing edge.
-  Generally, for airfoils, geometry points should not be clustered near the trailing edge (although mesh points should).
-  If they are, this option can help mitigate the resulting ill-conditioning of the curve fit.
+  When defining an airfoil geometry, usually points should not be clustered near the trailing edge (although CFD mesh points should).
+  Unfortunately, many people who create airfoil geometries appear tempted to do just that,
+  and this option can help mitigate the resulting ill-conditioning of the curve fit.
   In any case, if you see the curve fit looking ugly near the trailing edge, consider trying this option.
 - `--optimize`: If provided, distribution of data points in parametric space will be optimized to minimize the residual of the curve fit.
   This is designed to fix nonsmooth distributions of geometry points which can disrupt the polynomial interpolation.
@@ -51,7 +51,7 @@ Depending on the `--quiet` argument, some diagnostic information may be printed 
 An output geometry file will also be generated.
 
 The first plot shows the curve fit in parametric space.
-That is, the resulting curve is defined by the coordinates (*x*(*t*), *y*(*t*)) where *t* is the abscissa of the plot and *x* and *y* are displayed on the ordinate.
+That is, the resulting curve is defined by the coordinates \f$(x(t), y(t))\f$ where \f$t\f$ is the abscissa of the plot and \f$x\f$ and \f$y\f$ are displayed on the ordinate.
 This is the space in which the least-squares fit is being computed.
 The distribution of sample points in parametric space can also be observed in this plot.
 If you can get past the abstractness of it, it is useful for troubleshooting the curve fit.
