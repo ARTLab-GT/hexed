@@ -301,7 +301,7 @@ void No_slip::apply_flux(Boundary_face& bf)
         {
           // set heat flux equal to radiative heat loss by stefan-boltzmann law
           double temp = sc[i_dof]*.4/sc[params.n_dim*nfq + i_qpoint]/specific_gas_air;
-          flux = v*stefan_boltzmann*custom_math::pow(temp, 4)*normal;
+          flux = v*stefan_boltzmann*math::pow(temp, 4)*normal;
         }
         break;
       default:
@@ -353,7 +353,7 @@ void Outflow::apply_flux(Boundary_face& bf)
 
 void Nominal_pos::snap_vertices(Boundary_connection& con)
 {
-  const int stride = custom_math::pow(2, con.storage_params().n_dim - 1 - con.i_dim());
+  const int stride = math::pow(2, con.storage_params().n_dim - 1 - con.i_dim());
   for (int i_vert = 0; i_vert < con.storage_params().n_vertices(); ++i_vert) {
     if ((i_vert/stride)%2 == con.inside_face_sign()) {
       double pos = (con.element().nominal_position()[con.i_dim()] + con.inside_face_sign())*con.element().nominal_size();
@@ -397,7 +397,7 @@ std::vector<double> Surface_set::line_intersections(std::array<double, 3> point0
 
 void Surface_mbc::snap_vertices(Boundary_connection& con)
 {
-  const int stride = custom_math::pow(2, con.storage_params().n_dim - 1 - con.i_dim());
+  const int stride = math::pow(2, con.storage_params().n_dim - 1 - con.i_dim());
   for (int i_vert = 0; i_vert < con.storage_params().n_vertices(); ++i_vert) {
     if ((i_vert/stride)%2 == con.inside_face_sign()) {
       auto& pos = con.element().vertex(i_vert).pos;

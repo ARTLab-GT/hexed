@@ -31,9 +31,9 @@ class Row_index
   // Object is initialized to point to the first row.
   constexpr Row_index(int nd, int rs, int id)
   : n_dim{nd}, row_size{rs}, i_dim{id},
-    n_qpoint{custom_math::pow(row_size, n_dim)},
+    n_qpoint{math::pow(row_size, n_dim)},
     n_fqpoint{n_qpoint/row_size},
-    stride{custom_math::pow(row_size, n_dim - 1 - i_dim)}
+    stride{math::pow(row_size, n_dim - 1 - i_dim)}
   {}
 
   // advances object to the next row

@@ -30,7 +30,7 @@ class Transport_model
   // compute whatever transport coefficient this object is supposed to represent
   double coefficient(double sqrt_temp) const // expects the square root of the temperature to be precomputed (so it can be reused for multiple transport coefficients)
   {
-    return const_val + ref_val*custom_math::pow(sqrt_temp/sqrt_ref_temp, 3)*(ref_temp + temp_offset)/(sqrt_temp*sqrt_temp + temp_offset);
+    return const_val + ref_val*math::pow(sqrt_temp/sqrt_ref_temp, 3)*(ref_temp + temp_offset)/(sqrt_temp*sqrt_temp + temp_offset);
   }
   // create a `Transport_model` that always returns 0 (with `is_viscous` set to `false`)
   static inline Transport_model inviscid() {return {0., 0., 0., 0., 0};}

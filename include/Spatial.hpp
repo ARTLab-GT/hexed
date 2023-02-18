@@ -70,7 +70,7 @@ class Spatial
   {
     using Pde = Pde_templ<n_dim>;
     const Pde eq;
-    static constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
+    static constexpr int n_qpoint = math::pow(row_size, n_dim);
     Derivative<row_size> derivative;
     Mat<2, row_size> boundary;
     Write_face<n_dim, row_size> write_face;
@@ -147,7 +147,7 @@ class Spatial
         if constexpr (Pde::is_viscous)
         {
           // compute gradient (times jacobian determinant, cause that's easier)
-          constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
+          constexpr int n_qpoint = math::pow(row_size, n_dim);
           std::array<double*, 6> visc_faces;
           for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.faces[i_face] + 2*(n_dim + 2)*n_qpoint/row_size;
           for (int i_dim = 0; i_dim < n_dim; ++i_dim)
@@ -285,7 +285,7 @@ class Spatial
   class Reconcile_ldg_flux : public Kernel<element_t&>
   {
     using Pde = Pde_templ<n_dim>;
-    static constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
+    static constexpr int n_qpoint = math::pow(row_size, n_dim);
     Derivative<row_size> derivative;
     Write_face<n_dim, row_size> write_face;
     int stage;
@@ -354,7 +354,7 @@ class Spatial
   {
     using Pde = Pde_templ<n_dim>;
     const Pde eq;
-    static constexpr int n_fqpoint = custom_math::pow(row_size, n_dim - 1);
+    static constexpr int n_fqpoint = math::pow(row_size, n_dim - 1);
 
     public:
     template <typename... pde_args>
@@ -451,7 +451,7 @@ class Spatial
   class Neighbor_reconcile : public Kernel<Face_connection<element_t>&>
   {
     using Pde = Pde_templ<n_dim>;
-    static constexpr int n_fqpoint = custom_math::pow(row_size, n_dim - 1);
+    static constexpr int n_fqpoint = math::pow(row_size, n_dim - 1);
 
     public:
     virtual void operator()(Sequence<Face_connection<element_t>&>& connections)
@@ -525,7 +525,7 @@ class Spatial
 
     virtual double operator()(Sequence<element_t&>& elements)
     {
-      constexpr int n_qpoint = custom_math::pow(row_size, n_dim);
+      constexpr int n_qpoint = math::pow(row_size, n_dim);
       // compute the maximum stable time step for all elements and take the minimum
       double dt = std::numeric_limits<double>::max();
       #pragma omp parallel for reduction(min:dt)
@@ -535,7 +535,7 @@ class Spatial
         double* state = elem.stage(0);
         double* art_visc = elem.art_visc_coef();
         double* tss = elem.time_step_scale();
-        Mat<custom_math::pow(2, n_dim)> vertex_spacing;
+        Mat<math::pow(2, n_dim)> vertex_spacing;
         for (unsigned i_vert = 0; i_vert < vertex_spacing.size(); ++i_vert) {
           vertex_spacing(i_vert) = elem.vertex_time_step_scale(i_vert);
         }
@@ -550,10 +550,10 @@ class Spatial
           // get mesh spacing
           Mat<n_dim> coords;
           for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-            coords(i_dim) = nodes((i_qpoint/custom_math::pow(row_size, n_dim - 1 - i_dim))%row_size);
+            coords(i_dim) = nodes((i_qpoint/math::pow(row_size, n_dim - 1 - i_dim))%row_size);
           }
           // compute time step
-          double spacing = custom_math::interp(vertex_spacing, coords);
+          double spacing = math::interp(vertex_spacing, coords);
           double scale = 0;
           if constexpr (Pde::has_convection) scale += eq.char_speed(qpoint_state)/max_cfl_c/spacing;
           if constexpr (Pde::is_viscous) scale += eq.diffusivity(qpoint_state, art_visc[i_qpoint])/max_cfl_d/spacing/spacing;

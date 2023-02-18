@@ -21,7 +21,7 @@ int Elem_average::n_var(int n_dim) const
 std::vector<double> avg(const Qpoint_func& qf, Element& elem, const Basis& basis, double time, int pow)
 {
   auto params = elem.storage_params();
-  auto weights = custom_math::pow_outer(basis.node_weights(), params.n_dim);
+  auto weights = math::pow_outer(basis.node_weights(), params.n_dim);
   int nv = qf.n_var(params.n_dim);
   std::vector<double> result(nv, 0.);
   double volume = 0.;
@@ -29,7 +29,7 @@ std::vector<double> avg(const Qpoint_func& qf, Element& elem, const Basis& basis
     auto qpoint = qf(elem, basis, i_qpoint, time);
     double w = weights[i_qpoint]*elem.jacobian_determinant(i_qpoint);
     for (int i_var = 0; i_var < nv; ++i_var) {
-      result[i_var] += custom_math::pow(qpoint[i_var], pow)*w;
+      result[i_var] += math::pow(qpoint[i_var], pow)*w;
     }
     volume += w;
   }
@@ -52,7 +52,7 @@ std::vector<double> Elem_l2::operator()(Element& elem, const Basis& basis, doubl
 std::vector<double> Elem_nonsmooth::operator()(Element& elem, const Basis& basis, double time) const
 {
   auto params = elem.storage_params();
-  auto weights = custom_math::pow_outer(basis.node_weights(), params.n_dim - 1);
+  auto weights = math::pow_outer(basis.node_weights(), params.n_dim - 1);
   const int nv = qf.n_var(params.n_dim);
   const int nq = params.n_qpoint();
   std::vector<double> result(nv, 0.);
@@ -68,7 +68,7 @@ std::vector<double> Elem_nonsmooth::operator()(Element& elem, const Basis& basis
     // compute RMS of the following for each dimension:
     for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
       // take the highest-order component in each dimension...
-      Eigen::VectorXd proj = custom_math::dimension_matvec(max_orth, vals(Eigen::all, i_var), i_dim);
+      Eigen::VectorXd proj = math::dimension_matvec(max_orth, vals(Eigen::all, i_var), i_dim);
       // ...and compute L2 norm of it in the other dimensions
       result[i_var] += proj.dot(proj.cwiseProduct(weights));
     }

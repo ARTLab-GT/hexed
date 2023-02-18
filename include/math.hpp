@@ -12,12 +12,13 @@ const int dyn = Eigen::Dynamic;
 template <int rows = dyn, int cols = 1>
 using Mat = Eigen::Matrix<double, rows, cols>;
 
-namespace custom_math
+//! Miscellaneous mathematical functions that aren't in `std::math`
+namespace math
 {
 
-/*
- * Raises an arbitrary arithmetic type to an integer power. Can return
- * `constexpr`, which `std::pow` is not allowed to do according to the standard
+/*!
+ * Raises an arbitrary arithmetic type to an integer (not necessarily positive) power.
+ * Can return `constexpr`, which `std::pow` is not allowed to do according to the standard
  * (although the GCC implementation can anyway).
  */
 template<typename number_t>
@@ -29,10 +30,11 @@ constexpr number_t pow(number_t base, int exponent)
   return result;
 }
 
-/*
- * Integer logarithm. If base < 2, returns -1 to indicate failure.
- * Otherwise, if arg < 1, returns 0. In the usual case where neither
- * of the above are true, returns $\ciel{\log_{base}(arg)}$.
+/*! \brief Integer logarithm.
+ *
+ * If `base` < 2, returns -1 to indicate failure.
+ * Otherwise, if `arg` < 1, returns 0. In the usual case where neither
+ * of the above are true, returns \f$\lceil\log_{\mathtt{base}}(\mathtt{arg})\rceil\f$.
  */
 constexpr int log(int base, int arg)
 {
@@ -42,6 +44,12 @@ constexpr int log(int base, int arg)
   return result;
 }
 
+/*! \brief Finds a root of a scalar function with [Broyden's method](https://en.wikipedia.org/wiki/Broyden%27s_method).
+ * \param func Should return a `double` when called on a `double` argument.
+ * \param init_guess Initial guess for the root.
+ * \param atol Absolute tolerance for the root (not the residual).
+ * \param init_diff How far away the second point used to initialize the derivative estimate should be.
+ */
 template <typename Func_type>
 double broyden(Func_type func, double init_guess, double atol=1e-10, double init_diff=1e-3)
 {
@@ -59,6 +67,13 @@ double broyden(Func_type func, double init_guess, double atol=1e-10, double init
   return guess;
 }
 
+/*! \brief Finds a root of a scalar function with the [bisection method](https://en.wikipedia.org/wiki/Bisection_method).
+ *
+ * This is slower than \ref broyden but very robust.
+ * \param func Should return a `double` when called on a `double` argument.
+ * \param bounds Lower and upper bounds for a root.
+ * \param atol Absolute tolerance for the root.
+ */
 template <typename Func_type>
 double bisection(Func_type func, std::array<double, 2> bounds, double atol=1e-10)
 {
@@ -81,8 +96,10 @@ double bisection(Func_type func, std::array<double, 2> bounds, double atol=1e-10
   return midpoint;
 }
 
-/* Multiply every dimension of a (flattened) N-dimensional array by a matrix.
- * Size of array along each dimension must be equal (i.e. the array is hypercube-shaped).
+/*! \brief Multiply every dimension of a (flattened) N-dimensional array by a matrix.
+ *
+ * Size of array along each dimension must be equal
+ * (i.e. the array is hypercube-shaped, or in my terminology, "hypercubic").
  * Matrix does not have to be square.
  * Dimensionality of the array is inferred automatically
  * by comparing the number of matrix columns to the array size.
@@ -90,25 +107,29 @@ double bisection(Func_type func, std::array<double, 2> bounds, double atol=1e-10
  */
 Eigen::VectorXd hypercube_matvec(const Eigen::MatrixXd&, const Eigen::VectorXd&);
 
-/*
- * Multiply a single dimension of a hypercubic ND array by a matrix (c.f. hypercube_matvec).
- * If matrix is not either square or a row vector, the resulting array will no longer be hypercubic.
+/*! \brief Multiply a single dimension of a hypercubic ND array by a matrix.
+ *
+ * C.f. \ref hypercube_matvec.
+ * If matrix is square, the shape of the output array will match the input.
+ * If matrix is a row vector, the output will still be hypercubic, but with one less dimension than the input.
+ * Otherwise, the resulting array will no longer be hypercubic.
  */
 Eigen::VectorXd dimension_matvec(const Eigen::MatrixXd&, const Eigen::VectorXd&, int i_dim);
 
-/*
- * Raises a vector to a power via ND outer products.
- * That is, takes an outer product with the vector {1} `n_dim` times along different dimensions
+/*! \brief Raises a vector to a power via ND outer products.
+ *
+ * That is, takes an outer product with the vector `{1}` `n_dim` times along different dimensions
  * to produce an `n_dim`-dimensional hypercubic array.
  */
 Eigen::VectorXd pow_outer(const Eigen::VectorXd&, int n_dim);
 
-/*
- * Orthonormalize a basis. Assumes `basis` is invertible. Returns a matrix with the
- * following properties:
+/*! \brief Orthonormalize a vector basis (with dimension \f$\le 3\f$).
+ *
+ * Assumes `basis` is invertible.
+ * Returns a matrix with the following properties:
  * - Unitary.
  * - Span of columns excluding the `i_dim`th is the same as for `basis`.
- * - Minimizes RMS difference between columns exclucing `i_dim`th of return matrix and `basis`
+ * - Minimizes RMS difference between columns excluding `i_dim`th of return matrix and `basis`
  *   (sensitive to order).
  * - Inner product of `i_dim`th columns of return matrix and `basis` is positive.
  */
@@ -148,20 +169,26 @@ Eigen::Matrix<double, n_dim, n_dim> orthonormal (Eigen::Matrix<double, n_dim, n_
 
 Eigen::MatrixXd orthonormal (Eigen::MatrixXd basis, int i_dim);
 
-// for indexing faces/vertices in refined faces with possible stretching
+//! for indexing faces/vertices in \ref Refined_face s with possible stretching
 inline int stretched_ind(int n_dim, int ind, std::array<bool, 2> stretch)
 {
   int stride = 1;
   int stretched = 0;
   for (int i_dim = n_dim - 2; i_dim >= 0; --i_dim) {
     if (!stretch[i_dim]) {
-      stretched += ((ind/custom_math::pow(2, n_dim - 2 - i_dim))%2)*stride;
+      stretched += ((ind/pow(2, n_dim - 2 - i_dim))%2)*stride;
       stride *= 2;
     }
   }
   return stretched;
 }
 
+/*! \brief \f$n\f$-linear interpolation of `values`.
+ *
+ * ND generalization of [bilinear interpolation](https://en.wikipedia.org/wiki/Bilinear_interpolation).
+ * \param values Values to interpolate. Assumed to be at corners of the unit hypercube.
+ * \param coords Coordinates to interpolate to.
+ */
 template <int n_dim>
 double interp(Mat<pow(2, n_dim)> values, Mat<n_dim> coords)
 {

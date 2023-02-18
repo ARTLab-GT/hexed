@@ -812,13 +812,13 @@ std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n
 std::vector<double> Solver::integral_field(const Qpoint_func& integrand)
 {
   // compute `n_dim`-dimensional quadrature weights from 1D weights
-  Eigen::VectorXd weights = custom_math::pow_outer(basis.node_weights(), params.n_dim);
+  Eigen::VectorXd weights = math::pow_outer(basis.node_weights(), params.n_dim);
   // now compute the integral with the above quadrature weights
   std::vector<double> integral (integrand.n_var(params.n_dim), 0.);
   auto& elements = acc_mesh.elements();
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     Element& element {elements[i_elem]};
-    double volume = custom_math::pow(element.nominal_size(), params.n_dim);
+    double volume = math::pow(element.nominal_size(), params.n_dim);
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
       auto qpoint_integrand {integrand(element, basis, i_qpoint, status.flow_time)};
       for (unsigned i_var = 0; i_var < qpoint_integrand.size(); ++i_var) {
@@ -837,7 +837,7 @@ std::vector<double> Solver::integral_surface(const Boundary_func& integrand, int
   const int nq = params.n_qpoint();
   const int nfq = nq/basis.row_size;
   Eigen::MatrixXd boundary = basis.boundary();
-  Eigen::VectorXd weights = custom_math::pow_outer(basis.node_weights(), params.n_dim - 1);
+  Eigen::VectorXd weights = math::pow_outer(basis.node_weights(), params.n_dim - 1);
   // write the state to the faces so that the BCs can access it
   (*write_face)(acc_mesh.elements());
   // compute the integral
@@ -847,14 +847,14 @@ std::vector<double> Solver::integral_surface(const Boundary_func& integrand, int
   {
     auto& con {bc_cons[i_con]};
     auto& elem = con.element();
-    double area = custom_math::pow(elem.nominal_size(), nd - 1);
+    double area = math::pow(elem.nominal_size(), nd - 1);
     if (con.bound_cond_serial_n() == bc_sn)
     {
       double* nrml = con.normal();
       for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
         double nrml_mag = 0;
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          nrml_mag += custom_math::pow(nrml[i_dim*nfq + i_qpoint], 2);
+          nrml_mag += math::pow(nrml[i_dim*nfq + i_qpoint], 2);
         }
         nrml_mag = std::sqrt(nrml_mag);
         auto qpoint_integrand = integrand(con, i_qpoint, status.flow_time);
@@ -874,7 +874,7 @@ std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func,
   for (int i_var = 0; i_var < n_var; ++i_var) {
     bounds[i_var] = {std::numeric_limits<double>::max(), -std::numeric_limits<double>::max()};
   }
-  const int n_block = custom_math::pow(n_sample, params.n_dim);
+  const int n_block = math::pow(n_sample, params.n_dim);
   auto& elems = acc_mesh.elements();
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem)
   {
@@ -894,7 +894,7 @@ void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::s
 {
   const int n_dim = params.n_dim;
   const int n_vis = output_variables.n_var(n_dim); // number of variables to visualize
-  const int n_corners {custom_math::pow(2, n_dim - 1)};
+  const int n_corners {math::pow(2, n_dim - 1)};
   Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
   std::vector<std::string> var_names;
   for (int i_vis = 0; i_vis < n_vis; ++i_vis) var_names.push_back(output_variables.variable_name(n_dim, i_vis));
@@ -954,7 +954,7 @@ void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample
   if (therm_cond.is_viscous) funcs.push_back(&hf);
   Bf_concat func(funcs);
   const int nv = func.n_var(nd);
-  const int n_block {custom_math::pow(n_sample, nd - 1)};
+  const int n_block {math::pow(n_sample, nd - 1)};
   // setup
   std::vector<std::string> var_names;
   for (int i_var = 0; i_var < nv; ++i_var) var_names.push_back(func.variable_name(nd, i_var));
@@ -978,7 +978,7 @@ void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample
       // interpolate from quadrature points to sample points
       Mat<dyn, dyn> interp_pos (n_block, nd);
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        interp_pos.col(i_dim) = custom_math::hypercube_matvec(interp, qpoint_pos.col(i_dim));
+        interp_pos.col(i_dim) = math::hypercube_matvec(interp, qpoint_pos.col(i_dim));
       }
       // fetch the state
       Mat<dyn, dyn> qpoint_vars (nfq, nv);
@@ -991,7 +991,7 @@ void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample
       // interpolate to sample points
       Mat<dyn, dyn> interp_vars (n_block, nv);
       for (int i_var = 0; i_var < nv; ++i_var) {
-        interp_vars.col(i_var) = custom_math::hypercube_matvec(interp, qpoint_vars.col(i_var));
+        interp_vars.col(i_var) = math::hypercube_matvec(interp, qpoint_vars.col(i_var));
       }
       // visualize zone
       Tecplot_file::Structured_block zone {file, n_sample, "face_interior", nd - 1};

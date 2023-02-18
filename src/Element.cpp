@@ -8,7 +8,7 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   params(params_arg),
   n_dim(params.n_dim),
   nom_pos(n_dim, 0),
-  nom_sz{mesh_size/custom_math::pow(2, ref_level)},
+  nom_sz{mesh_size/math::pow(2, ref_level)},
   r_level{ref_level},
   n_dof(params.n_dof()),
   n_vert(params.n_vertices()),
@@ -36,7 +36,7 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
     int stride [3];
     int i_row [3];
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-      stride[i_dim] = custom_math::pow(2, n_dim - i_dim - 1);
+      stride[i_dim] = math::pow(2, n_dim - i_dim - 1);
       i_row[i_dim] = (i_vert/stride[i_dim])%2;
       vertex_pos[i_dim] += i_row[i_dim]*nom_sz;
     }
@@ -57,7 +57,7 @@ std::vector<double> Element::position(const Basis& basis, int i_qpoint)
 {
   std::vector<double> pos;
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-    const int stride = custom_math::pow(params.row_size, params.n_dim - i_dim - 1);
+    const int stride = math::pow(params.row_size, params.n_dim - i_dim - 1);
     pos.push_back((basis.node((i_qpoint/stride)%params.row_size) + nom_pos[i_dim])*nom_sz);
   }
   return pos;
@@ -68,10 +68,10 @@ std::vector<double> Element::face_position(const Basis& basis, int i_face, int i
   const int i_dim = i_face/2;
   const int face_positive = i_face%2;
   // extract a row of quadrature points
-  const int stride = custom_math::pow(params.row_size, params.n_dim - 1 - i_dim);
+  const int stride = math::pow(params.row_size, params.n_dim - 1 - i_dim);
   int i_row_start = 0;
   for (int j_dim = params.n_dim - 1, face_stride = 1; j_dim >= 0; --j_dim) {
-    int interior_stride = custom_math::pow(params.row_size, params.n_dim - 1 - j_dim);
+    int interior_stride = math::pow(params.row_size, params.n_dim - 1 - j_dim);
     if (i_dim != j_dim) {
       i_row_start += ((i_face_qpoint/face_stride)%params.row_size)*interior_stride;
       face_stride *= params.row_size;

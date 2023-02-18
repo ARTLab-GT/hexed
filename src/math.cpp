@@ -1,6 +1,6 @@
 #include <math.hpp>
 
-namespace hexed::custom_math
+namespace hexed::math
 {
 
 Eigen::VectorXd hypercube_matvec(const Eigen::MatrixXd& mat, const Eigen::VectorXd& vec)
