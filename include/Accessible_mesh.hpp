@@ -34,36 +34,51 @@ class Accessible_mesh : public Mesh
   std::vector<int> extrude_cons;
 
   public:
-  Accessible_mesh(Storage_params, double root_size);
-  virtual inline double root_size() {return root_sz;}
+  /*!
+   * \param params parameters specifying what data is stored in each Element (row size, number of dimensions, etc.)
+   * \param root_size defines the \ref root_size of the mesh.
+   */
+  Accessible_mesh(Storage_params params, double root_size);
+  inline double root_size() override {return root_sz;}
+  //! \returns a View_by_type containing only the Cartesian elements in the mesh
   inline View_by_type<         Element>& cartesian() {return car;}
+  //! \returns a View_by_type containing only the deformed elements in the mesh
   inline View_by_type<Deformed_element>&  deformed() {return def;}
-  virtual int add_element(int ref_level, bool is_deformed, std::vector<int> position);
+  int add_element(int ref_level, bool is_deformed, std::vector<int> position) override;
   //! Access an element. If the parameters to not describe an existing element, throw an exception.
   Element& element(int ref_level, bool is_deformed, int serial_n);
-  //! access all elements regardless of deformedness
+  //! access all elements, both Cartesian and deformed
   Sequence<Element&>& elements() {return elems;}
-  virtual void connect_cartesian(int ref_level, std::array<int, 2> serial_n, Con_dir<Element> dir,
-                                 std::array<bool, 2> is_deformed = {false, false});
-  virtual void connect_deformed(int ref_level, std::array<int, 2> serial_n, Con_dir<Deformed_element> direction);
-  virtual void connect_hanging(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Deformed_element>,
+  void connect_cartesian(int ref_level, std::array<int, 2> serial_n, Con_dir<Element> dir,
+                         std::array<bool, 2> is_deformed = {false, false}) override;
+  void connect_deformed(int ref_level, std::array<int, 2> serial_n, Con_dir<Deformed_element> direction) override;
+  void connect_hanging(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Deformed_element>,
                                bool coarse_deformed = false, std::vector<bool> fine_deformed = {false, false, false, false},
-                               std::array<bool, 2> stretch = {false, false});
+                               std::array<bool, 2> stretch = {false, false}) override;
+  //! \returns a view of all connections between elements, including one connection for every fine element in hanging node connections.
   Sequence<Element_connection&>& element_connections() {return elem_cons;}
-  virtual int add_boundary_condition(Flow_bc*, Mesh_bc*);
-  virtual void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n);
-  virtual void disconnect_boundary(int bc_sn);
+  int add_boundary_condition(Flow_bc*, Mesh_bc*) override;
+  void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n) override;
+  void disconnect_boundary(int bc_sn) override;
+  //! \returns a view of all Bounday_condition objects owned by this mesh
   Vector_view<Boundary_condition&, Boundary_condition> boundary_conditions() {return bound_conds;}
+  //! get a boundary condition owned by this mesh by its serial number
   Boundary_condition& boundary_condition(int bc_sn) {return bound_conds[bc_sn];}
+  //! \returns a view of all connections between an element and a boundary condition
   Sequence<Boundary_connection&>& boundary_connections() {return bound_cons;}
+  //! \returns a view of all Refined_face objects owned by this mesh (there will be one for every hanging node connection)
   inline Sequence<Refined_face&>& refined_faces() {return ref_face_v;}
+  //! \returns a view of all Hanging_vertex_matcher objects owned by this mesh (there will be one for every hanging node connection)
   inline Sequence<Hanging_vertex_matcher&>& hanging_vertex_matchers() {return matcher_v;}
-  virtual Connection_validity valid();
+  Connection_validity valid() override;
+  //! convenience typedef for the Vector_view used to access Vertex objects
   typedef Vector_view<Vertex&, Vertex::Non_transferable_ptr, &ptr_convert<Vertex&, Vertex::Non_transferable_ptr>> vertex_view;
+  //! \returns a view of all Vertex objects used by elements in this mesh. Each vertex will appear exactly once, even if it is shared by multiple elements.
   vertex_view vertices();
-  virtual void extrude(bool collapse = false, double offset = 0); // note: test for this is in `test_Solver.cpp` so that the result can be visualized
-  virtual void connect_rest(int bc_sn);
-  virtual std::vector<elem_handle> elem_handles();
+  void extrude(bool collapse = false, double offset = 0) override; // note: test for this is in `test_Solver.cpp` so that the result can be visualized
+  void connect_rest(int bc_sn) override;
+  std::vector<elem_handle> elem_handles() override;
+  //! \returns a view of all Element_connection between extruded elements and the elemens they were extruded from
   inline Index<Element_connection&> extruded_connections() {return {deformed().element_connections(), extrude_cons};}
 };
 

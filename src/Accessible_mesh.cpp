@@ -147,7 +147,7 @@ Accessible_mesh::vertex_view Accessible_mesh::vertices()
   return vert_ptrs;
 }
 
-// helper objects for `extrude`
+//! \cond helper classes and functions for Accessible_mesh::extrude
 struct Empty_face
 {
   Deformed_element& elem;
@@ -177,6 +177,7 @@ bool aligned_different_dim(Con_dir<Deformed_element> dir, std::array<int, 2> ext
 {
   return (dir.i_dim[0] == extrude_dim[1]) && (dir.i_dim[1] == extrude_dim[0]);
 }
+//! \endcond
 
 void Accessible_mesh::extrude(bool collapse, double offset)
 {

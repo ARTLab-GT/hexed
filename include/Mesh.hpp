@@ -23,7 +23,7 @@ class Mesh
 {
   public:
   virtual ~Mesh() = default;
-  //! Nominal size of elements with refinement level 0.
+  //! \returns Nominal size (\f$\Delta h\f$) of elements with refinement level 0.
   virtual double root_size() = 0;
   /*!
    * Add an element at specified nominal position and serial number which uniquely identifies it
