@@ -37,7 +37,7 @@ __File formatting:__
 - Use blank lines sparingly.
 
 __Names__ (of variables, functions, namespaces, classes, macros, etc. Anything in the code):
-- Should contain words, abbreviations, and/or numbers separated by underscores (not camelCase, and not multiplewordsmashedtogether without separators).
+- Should contain words, abbreviations, and/or numbers separated by underscores (not camelCase, and not multiplewordswithoutspaces).
 - Names of classes should begin with a capital letter. Otherwise, all letters should be lowercase.
 - A name should be a description of the variable it refers to.
   It should not reference mathematical symbols or the sound of words. For example, resist the temptation
