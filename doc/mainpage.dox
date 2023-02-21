@@ -4,7 +4,7 @@ Welcome to Hexed, a Discontinuous Galerkin engine for CFD with automated, unstru
 You are reading the documentation.
 For source code, please visit [GitHub](https://github.gatech.edu/ARTLab/hexed).
 
-![header_image](\srcdir/doc/header.png)
+![header_image](header.png)
 
 __Above:__ Temperature (K) contours on a Mach 10 starfish (inviscid, 2D, CPG).
 
