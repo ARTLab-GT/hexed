@@ -129,7 +129,7 @@ Hexed uses Catch2 is for unit testing. Install Catch2 so that you can compile th
 - `cmake -Bbuild -H. -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=~/.local`
 - `cmake --build build/ --target install`
 
-\subsubsection_build_tests Step 2: build unit tests
+\subsubsection build_tests Step 2: build unit tests
 Now you need to update your Hexed build to include the unit tests, as follows:
 - `cd ~/codes/hexed/build_Release`
 - `ccmake ..`
