@@ -44,23 +44,22 @@ class Mesh_by_type : public View_by_type<element_t>
 
   public:
   /*! \name containers
-   * \private
    * where the actual data is kept
    */
-  //!@{
+  //!\{
   Complete_element_container<element_t> elems;
   std::vector<Element_face_connection<element_t>> cons;
   static constexpr int n_fine [3] {1, 2, 4};
   typedef Refined_connection<element_t> ref_con_t;
   std::array<std::vector<std::unique_ptr<ref_con_t>>, 3> ref_face_cons; // array sorts Refined faces into those with 1, 2, and 4 fine elements respectively
   std::vector<Typed_bound_connection<element_t>> bound_cons;
-  //!@}
+  //!\}
 
   /*! \name views
    * template spaghetti to get `Sequence`s of the data with the right type
    */
-  //!@{
-  typename Complete_element_container<element_t>::view_t elem_v;
+  //!\{
+  typename Complete_element_container<element_t>::view_t elem_v; //!< a view of the elements that does not allow addition or removal
 
   //! Sequence of some type of connection object which cycles through first the conformal connections and then the hanging-node connections.
   template <typename view_t>
@@ -108,7 +107,7 @@ class Mesh_by_type : public View_by_type<element_t>
   Vector_view<Boundary_connection&, Typed_bound_connection<element_t>> bound_con_v;
   Vector_view<Face_connection<Deformed_element>&, Typed_bound_connection<element_t>> bound_face_con_view;
   Concatenation<Face_connection<element_t>&> face_con_v;
-  //!@}
+  //!\}
 
   Mesh_by_type(Storage_params params, double root_spacing) :
     n_faces{2*params.n_dim},
