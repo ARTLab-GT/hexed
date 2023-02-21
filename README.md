@@ -11,10 +11,11 @@ Discontinuous Galerkin engine for CFD with automated, unstructured quad/hex mesh
 **hex** *(verb)*
 1. to cast a hex
 
-This document provides an overview of Hexed. More detailed documentation can be found in [`doc`](doc/). In particular, for
-installation instructions, see [`install.md`](doc/install.md).
+For source code reference documentation, installation instructions, and other information,
+please [download the documentation](https://github.gatech.edu/ARTLab/hexed/archive/refs/heads/documentation.zip).
+To view, unzip it and open the file `index.html`.
 
-## Overview
+## About
 Anyone who has spent a substantial amount of time working with computational fluid dynamics (CFD)
 can attest that it is decidedly arcane and sometimes tends toward evil.
 As its name suggests, Hexed scarcely presumes to change that.
