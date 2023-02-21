@@ -8,76 +8,89 @@
 namespace hexed
 {
 
-/*
- * Represents a function of position and time. Useful for specifying initial conditions
- * and analytic solutions.
+/*!
+ * Represents a function of position and time.
+ * Useful for specifying initial conditions and analytic flow solutions.
  */
 class Spacetime_func : public Domain_func
 {
-  // The following invokes `operator()(pos, time)`. Declared as private to avoid the
-  // technicalities of overloading inherited functions.
-  virtual std::vector<double> operator()(const std::vector<double> pos, double time,
-                                         const std::vector<double> state) const;
+  std::vector<double> operator()(const std::vector<double> pos, double time,
+                                 const std::vector<double> state) const override;
   public:
   virtual std::vector<double> operator()(std::vector<double> pos, double time) const = 0;
 };
 
+//! Always returns the same constant (vector) value.
 class Constant_func : public Spacetime_func
 {
   std::vector<double> value;
   public:
+  //! \param value_arg The constant value to be returned. Size can be whatever you want.
   Constant_func(std::vector<double> value_arg);
-  virtual inline int n_var(int n_dim) const {return value.size();}
-  virtual inline std::string variable_name(int n_dim, int i_var) const {return "constant" + std::to_string(i_var);}
-  virtual std::vector<double> operator()(std::vector<double> pos, double time) const; // returns `value`
+  inline int n_var(int n_dim) const override {return value.size();}
+  inline std::string variable_name(int n_dim, int i_var) const override {return "constant" + std::to_string(i_var);}
+  std::vector<double> operator()(std::vector<double> pos, double time) const override;
 };
 
+//! Returns the position vector.
 class Position_func : public Spacetime_func
 {
   public:
-  virtual inline int n_var(int n_dim) const {return n_dim;}
-  virtual inline std::string variable_name(int n_dim, int i_var) const {return "position" + std::to_string(i_var);}
-  virtual inline std::vector<double> operator()(std::vector<double> pos, double time) const {return pos;}
+  inline int n_var(int n_dim) const override {return n_dim;}
+  inline std::string variable_name(int n_dim, int i_var) const override {return "position" + std::to_string(i_var);}
+  inline std::vector<double> operator()(std::vector<double> pos, double time) const override {return pos;}
 };
 
-// returns an empty vector. This is useful if you just want to visualize the position
+//! Returns an empty vector. You can pass this to `Solver::visualize_field_tecplot` if you just want to visualize the position.
 class Empty_func : public Spacetime_func
 {
   public:
-  virtual inline int n_var(int n_dim) const {return 0;}
-  virtual inline std::vector<double> operator()(std::vector<double> pos, double time) const {return {};}
+  inline int n_var(int n_dim) const override {return 0;}
+  inline std::vector<double> operator()(std::vector<double> pos, double time) const override {return {};}
 };
 
+//! Returns a random output uniformly distributed in a user-specified range.
 class Random_func : public Spacetime_func
 {
   std::vector<double> m;
   std::vector<double> v;
   int gran;
   public:
+  /*!
+   * \param means The mean of each variable. The size of `means` determines the number of output variables.
+   * \param variations The size of the range for each variable. Must be the same size as `means`.
+   * \param granularity Results will be divisible by `1./granularity`.
+   * \details Output variable `i` will be in the range `[means[i] - variations[i]/2, means[i] + variations[i]/2]`.
+   */
   Random_func(std::vector<double> means, std::vector<double> variations, int granularity = 1e5);
-  virtual inline int n_var(int n_dim) const {return m.size();}
-  virtual std::vector<double> operator()(std::vector<double> pos, double time) const;
+  inline int n_var(int n_dim) const override {return m.size();}
+  std::vector<double> operator()(std::vector<double> pos, double time) const override;
 };
 
-class State_from_spacetime : public Spacetime_func
-{
-  public:
-  virtual inline int n_var(int n_dim) const {return n_dim + 2;}
-  virtual inline std::string variable_name(int n_dim, int i_var) const {return "state" + std::to_string(i_var);}
-};
-
-// linear combination of components of position
+//! Computes a single output variable which is a linear combination of components of position.
 class Linear : public Spacetime_func
 {
   Eigen::Matrix<double, 1, Eigen::Dynamic> coefs;
   public:
+  /*! \param arg Coefficients for components of position.
+   * \details If `arg.size() > n_dim`, only the first `n_dim` components of `arg` will be used.
+   * If `arg.size() < n_dim`, only the first `arg.size()` components of position will be used.
+   */
   inline Linear(Eigen::VectorXd arg) : coefs{arg.transpose()} {}
-  virtual inline int n_var(int n_dim) const {return 1;}
+  inline int n_var(int n_dim) const override {return 1;}
   // if size of `coefs` and `pos` don't match, truncate both to the minimum of the two sizes
-  virtual std::vector<double> operator()(std::vector<double> pos, double time) const;
+  std::vector<double> operator()(std::vector<double> pos, double time) const override;
 };
 
-/*
+//! A class of `Spacetime_func`s whose output is a state vector.
+class State_from_spacetime : public Spacetime_func
+{
+  public:
+  inline int n_var(int n_dim) const override {return n_dim + 2;}
+  inline std::string variable_name(int n_dim, int i_var) const override {return "state" + std::to_string(i_var);}
+};
+
+/*!
  * Isentropic vortex flow described by Gaussian function, a classic
  * CFD test problem. Flow field is an exact solution of the Euler equations
  * which consists of the vortex translating at the freestream velocity. Flowfield
@@ -89,22 +102,22 @@ class Isentropic_vortex : public State_from_spacetime
 
   public:
   double heat_rat = 1.4;
-  double argmax_radius = 0.05; // velocity reaches its maximum value at this radius
-  double max_nondim_veloc = 0.02; // max velocity perturbation normalized by freestream speed of sound
+  double argmax_radius = 0.05; //! velocity reaches its maximum value at this radius
+  double max_nondim_veloc = 0.02; //! max velocity perturbation normalized by freestream speed of sound
   double center0 = 0.;
   double center1 = 0.;
   Isentropic_vortex(std::vector<double> freestream_state);
-  virtual std::vector<double> operator()(std::vector<double> pos, double time) const;
+  std::vector<double> operator()(std::vector<double> pos, double time) const override;
 };
 
-/*
+/*!
  * Velocity field of this flow matches an irrotational, incompressible source/vortex doublet.
  * The circle of radius `radius` will be a streamline of this flow. Thermodynamic
  * variables are set such that entropy and stagnation enthalpy are constant.
  * flow is isentropic. Flow field is steady, and is an exact solution only in
  * incompressible flow.
  *
- * WARNING: Singularity at `location`! This class is applicable only to domains
+ * \attention Singularity at `location`! This class is applicable only to domains
  * which do not include this point.
  */
 class Doublet : public State_from_spacetime
@@ -118,43 +131,45 @@ class Doublet : public State_from_spacetime
   double radius {1.};
   double heat_rat {1.4};
   Doublet(std::vector<double> freestream_state);
-  virtual std::vector<double> operator()(std::vector<double> pos, double time) const;
+  std::vector<double> operator()(std::vector<double> pos, double time) const override;
 };
 
-// Initial consition for classic Sod problem:
-// G. A. Sod. A survey of several finite difference methods for systems of nonlinear hyperbolic conservation laws. JCP 27 (1978). http://dx.doi.org/10.1016/0021-9991(78)90023-2
-// Only initial condition -- not time dependent
+/*! \brief Initial consition for classic Sod problem.
+ * \details G. A. Sod. A survey of several finite difference methods for systems of nonlinear hyperbolic conservation laws. JCP 27 (1978). http://dx.doi.org/10.1016/0021-9991(78)90023-2
+ * \attention Only initial condition -- not time dependent!
+ */
 class Sod : public State_from_spacetime
 {
   public:
   double heat_rat = 1.4;
-  virtual std::vector<double> operator()(std::vector<double> pos, double time) const;
+  std::vector<double> operator()(std::vector<double> pos, double time) const override;
 };
 
-// multivariate Gaussian distribution in terms of spatial coordinates
-// normalized to evaluate to 1 at the zero vector
+//! multivariate Gaussian distribution in terms of spatial coordinates normalized to evaluate to 1 at the zero vector
 class Spatial_gaussian : public Spacetime_func
 {
   std::vector<double> dev;
   public:
-  // specify the standard deviation for each variable
-  // trailing variables can be left unspecified and default to the last specified component of std_dev
+  /*! \param std_dev the standard deviation for each variable.
+   * Trailing variables can be left unspecified and default to the last specified component of `std_dev`.
+   */
   Spatial_gaussian(std::vector<double> std_dev);
   inline int n_var(int n_dim) const {return 1;}
-  virtual std::vector<double> operator()(std::vector<double> pos, double time) const;
+  std::vector<double> operator()(std::vector<double> pos, double time) const override;
 };
 
-// steady-state solution to Laplacian diffusion in an anular domain (for verification testing)
-// velocity is uniformly zero, total energy is uniform, and mass is proportional to log of distance from origin
+/*! \brief Steady-state solution to Laplacian diffusion in an anular domain (for verification testing).
+ * \details Velocity is uniformly zero, total energy is uniform, and mass is proportional to log of distance from origin.
+ */
 class Annular_diffusion_test : public State_from_spacetime
 {
   double val_scale;
   double rad_scale;
   double ener;
   public:
-  // mass = value_scalar*std::log(radius/radius_scalar)
+  //! \verbatim mass = value_scalar*std::log(radius/radius_scalar) \endverbatim
   Annular_diffusion_test(double value_scalar, double radius_scalar, double energy);
-  virtual std::vector<double> operator()(std::vector<double> pos, double time) const;
+  std::vector<double> operator()(std::vector<double> pos, double time) const override;
 };
 
 }

@@ -27,6 +27,8 @@ namespace hexed
  *
  * This concept allows the same functions to be used in different applications
  * that invoke them with different arguments, but it makes the inheritance tree quite complicated.
+ * Forwarding `operator()` members are declared `private`
+ * to avoid the technicalities of overloading inherited members.
  */
 class Output_data
 {
