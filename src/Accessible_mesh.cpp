@@ -14,7 +14,7 @@ Element_container& Accessible_mesh::container(bool is_deformed)
 
 Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg) :
   params{params_arg},
-  n_vert{custom_math::pow(2, params.n_dim)},
+  n_vert{math::pow(2, params.n_dim)},
   root_sz{root_size_arg},
   car{params, root_sz},
   def{params, root_sz},
@@ -86,7 +86,7 @@ void Accessible_mesh::connect_hanging(int coarse_ref_level, int coarse_serial, s
     for (unsigned i_fine = 0; i_fine < fine_serial.size(); ++i_fine) {
       fine.push_back(&def.elems.at(coarse_ref_level + 1, fine_serial[i_fine]));
     }
-    def.ref_face_cons[custom_math::log(2, fine_serial.size())].emplace_back(new Refined_connection<Deformed_element> {coarse, fine, dir, false, stretch});
+    def.ref_face_cons[math::log(2, fine_serial.size())].emplace_back(new Refined_connection<Deformed_element> {coarse, fine, dir, false, stretch});
   }
 }
 
@@ -147,7 +147,7 @@ Accessible_mesh::vertex_view Accessible_mesh::vertices()
   return vert_ptrs;
 }
 
-// helper objects for `extrude`
+//! \cond helper classes and functions for Accessible_mesh::extrude
 struct Empty_face
 {
   Deformed_element& elem;
@@ -177,6 +177,7 @@ bool aligned_different_dim(Con_dir<Deformed_element> dir, std::array<int, 2> ext
 {
   return (dir.i_dim[0] == extrude_dim[1]) && (dir.i_dim[1] == extrude_dim[0]);
 }
+//! \endcond
 
 void Accessible_mesh::extrude(bool collapse, double offset)
 {
@@ -233,7 +234,7 @@ void Accessible_mesh::extrude(bool collapse, double offset)
     Con_dir<Deformed_element> dir {{face.i_dim, face.i_dim}, {!face.face_sign, bool(face.face_sign)}};
     auto& elem = def.elems.at(ref_level, sn);
     if (collapse) {
-      int stride = custom_math::pow(2, nd - 1 - face.i_dim);
+      int stride = math::pow(2, nd - 1 - face.i_dim);
       for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
         int i_collapse = i_vert + (face.face_sign - (i_vert/stride)%2)*stride;
         elem.vertex(i_vert).pos = face.elem.vertex(i_collapse).pos;
@@ -258,8 +259,8 @@ void Accessible_mesh::extrude(bool collapse, double offset)
         {
           // record data at vertex which is on the face to be connected, on the face which was extruded from,
           // and if applicable has the minimum index to satisfy the above consitions.
-          int i_vert =   face_sign*custom_math::pow(2, nd - 1 - j_dim)
-                       + (1 - face.face_sign)*custom_math::pow(2, nd - 1 - face.i_dim);
+          int i_vert =   face_sign*math::pow(2, nd - 1 - j_dim)
+                       + (1 - face.face_sign)*math::pow(2, nd - 1 - face.i_dim);
           auto& record = elem.vertex(i_vert).record;
           // which element it is
           record.push_back(ref_level);
@@ -381,9 +382,9 @@ void Accessible_mesh::extrude(bool collapse, double offset)
       if (nd == 3) { \
         auto& elem = def.elems.at(vert_rec[0], sn[0]); \
         int free_dim = 3 - face_dim - extr_dim; \
-        int iv = face_sign*custom_math::pow(2, nd - 1 - face_dim) \
-                 + (1 - extr_sign)*custom_math::pow(2, nd - 1 - extr_dim) \
-                 + custom_math::pow(2, nd - 1 - free_dim); \
+        int iv = face_sign*math::pow(2, nd - 1 - face_dim) \
+                 + (1 - extr_sign)*math::pow(2, nd - 1 - extr_dim) \
+                 + math::pow(2, nd - 1 - free_dim); \
         Vertex& fine_vert = elem.vertex(iv); \
         /* vertex should have exactly one record */ \
         sn[1] = fine_vert.record[1]; \

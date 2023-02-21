@@ -9,7 +9,7 @@
 namespace hexed
 {
 
-/*
+/*!
  * Provides access to all of the elements, connections, and other numerical data of a specific type
  * (i.e. Cartesian or deformed) without addition/removal. This is a suitable interface for the
  * numerical scheme to interact with.
@@ -19,6 +19,7 @@ class View_by_type
 {
   public:
   virtual ~View_by_type() = default;
+  //! \cond
   virtual Sequence<element_t&>& elements() = 0;
   virtual Sequence<Face_connection<element_t>&>& face_connections() = 0;
   virtual Sequence<Element_connection&>& element_connections() = 0;
@@ -26,11 +27,13 @@ class View_by_type
   virtual Sequence<Refined_connection<element_t>&>& refined_connections() = 0;
   virtual Sequence<Hanging_vertex_matcher&>& hanging_vertex_matchers() = 0;
   virtual Sequence<Boundary_connection&>& boundary_connections() = 0;
+  //! \endcond
 };
 
-/*
- * Stores numerical data of a particular type and provides free access. This is really a helper class
- * for `Accessible_mesh` which grew to the point that it deserved its own file.
+/*!
+ * Stores numerical data of a particular type and provides free access.
+ * This is really a helper class for `Accessible_mesh`
+ * which grew to the point that it deserved its own file.
  */
 template <typename element_t>
 class Mesh_by_type : public View_by_type<element_t>
@@ -40,16 +43,25 @@ class Mesh_by_type : public View_by_type<element_t>
   void connect_normal(int i_face);
 
   public:
-  // where the data is kept
+  /*! \name containers
+   * where the actual data is kept
+   */
+  //!\{
   Complete_element_container<element_t> elems;
   std::vector<Element_face_connection<element_t>> cons;
   static constexpr int n_fine [3] {1, 2, 4};
   typedef Refined_connection<element_t> ref_con_t;
   std::array<std::vector<std::unique_ptr<ref_con_t>>, 3> ref_face_cons; // array sorts Refined faces into those with 1, 2, and 4 fine elements respectively
   std::vector<Typed_bound_connection<element_t>> bound_cons;
+  //!\}
 
-  // template spaghetti to get `Vector_view`s of the data with the right type
-  typename Complete_element_container<element_t>::view_t elem_v;
+  /*! \name views
+   * template spaghetti to get `Sequence`s of the data with the right type
+   */
+  //!\{
+  typename Complete_element_container<element_t>::view_t elem_v; //!< a view of the elements that does not allow addition or removal
+
+  //! Sequence of some type of connection object which cycles through first the conformal connections and then the hanging-node connections.
   template <typename view_t>
   class Connection_view : public Sequence<view_t>
   {
@@ -95,9 +107,8 @@ class Mesh_by_type : public View_by_type<element_t>
   Vector_view<Boundary_connection&, Typed_bound_connection<element_t>> bound_con_v;
   Vector_view<Face_connection<Deformed_element>&, Typed_bound_connection<element_t>> bound_face_con_view;
   Concatenation<Face_connection<element_t>&> face_con_v;
+  //!\}
 
-  // `extra_con_v` let's us tack some extra connections on to the connection view if we want to.
-  // In particular, `Accessible_mesh` uses this to put all the boundary connections into the deformed connections
   Mesh_by_type(Storage_params params, double root_spacing) :
     n_faces{2*params.n_dim},
     par{params},
@@ -116,16 +127,16 @@ class Mesh_by_type : public View_by_type<element_t>
   {}
 
   // `View_by_type` interface implementation
-  virtual Sequence<element_t&>& elements() {return elem_v;}
-  virtual Sequence<Face_connection<element_t>&>& face_connections() {return face_con_v;}
-  virtual Sequence<Element_connection&>& element_connections() {return elem_con_v;}
-  virtual Sequence<Refined_face&>& refined_faces() {return ref_v;}
-  virtual Sequence<Refined_connection<element_t>&>& refined_connections() {return ref_con_v;}
-  virtual Sequence<Hanging_vertex_matcher&>& hanging_vertex_matchers() {return matcher_v;}
-  virtual Sequence<Boundary_connection&>& boundary_connections() {return bound_con_v;}
+  Sequence<element_t&>& elements() override {return elem_v;}
+  Sequence<Face_connection<element_t>&>& face_connections() override {return face_con_v;}
+  Sequence<Element_connection&>& element_connections() override {return elem_con_v;}
+  Sequence<Refined_face&>& refined_faces() override {return ref_v;}
+  Sequence<Refined_connection<element_t>&>& refined_connections() override {return ref_con_v;}
+  Sequence<Hanging_vertex_matcher&>& hanging_vertex_matchers() override {return matcher_v;}
+  Sequence<Boundary_connection&>& boundary_connections() override {return bound_con_v;}
 
-  // miscellaneous functions
-  void record_connections() // write the number of connections for each face to `Element::face_record`. Assumes initialized to 0
+  //! write the number of connections for each face to `Element::face_record`. Assumes initialized to 0
+  void record_connections()
   {
     // ordinary element connections
     for (unsigned i_con = 0; i_con < cons.size(); ++i_con) {
@@ -150,7 +161,7 @@ class Mesh_by_type : public View_by_type<element_t>
     }
   }
 
-  // helper function for `Accessible_mesh::connect_rest`
+  //! helper function for `Accessible_mesh::connect_rest`
   void connect_empty(int bc_sn)
   {
     auto& elem_seq = elements();

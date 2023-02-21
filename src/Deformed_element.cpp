@@ -30,15 +30,15 @@ std::vector<double> Deformed_element::position(const Basis& basis, int i_qpoint)
     // interpolate one reference direction at a time
     for (int j_dim = params.n_dim - 1; j_dim >= 0; --j_dim) {
       // vertex interpolation
-      const int stride = custom_math::pow(params.row_size, params.n_dim - j_dim - 1);
+      const int stride = math::pow(params.row_size, params.n_dim - j_dim - 1);
       double node = basis.node((i_qpoint/stride)%params.row_size);
       Eigen::Matrix<double, 1, 2> interp {1. - node, node};
-      vert_pos = custom_math::dimension_matvec(interp, vert_pos, j_dim); // dimensionality of vertex position array has been reduced by 1
+      vert_pos = math::dimension_matvec(interp, vert_pos, j_dim); // dimensionality of vertex position array has been reduced by 1
       // figure out which face quadrature point is in the same row as this quadrature point
       int i_face_qpoint = 0;
       for (int k_dim = 0, face_stride = params.n_qpoint()/params.row_size/params.row_size; k_dim < params.n_dim; ++k_dim) {
         if (k_dim != j_dim) {
-          i_face_qpoint += ((i_qpoint/custom_math::pow(params.row_size, params.n_dim - k_dim - 1))%params.row_size)*face_stride;
+          i_face_qpoint += ((i_qpoint/math::pow(params.row_size, params.n_dim - k_dim - 1))%params.row_size)*face_stride;
           face_stride /= params.row_size;
         }
       }
@@ -50,7 +50,7 @@ std::vector<double> Deformed_element::position(const Basis& basis, int i_qpoint)
         // if the reference direction of contraction is the same as that of adjustment, then compute the adjustments.
         // otherise performa a simple interpolation
         Eigen::Matrix<double, 1, 2> contract = (j_dim == k_dim) ? adjust.cwiseProduct(interp)*difference : interp;
-        adjustments[k_dim] = custom_math::dimension_matvec(contract, adjustments[k_dim], j_dim);
+        adjustments[k_dim] = math::dimension_matvec(contract, adjustments[k_dim], j_dim);
       }
     }
     pos[i_dim] = vert_pos[0];
@@ -70,7 +70,7 @@ void Deformed_element::set_jacobian(const Basis& basis)
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) pos(i_qpoint) = position(basis, i_qpoint)[i_dim];
     for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
       auto jac_entry {jac.segment((i_dim*n_dim + j_dim)*n_qpoint, n_qpoint)};
-      jac_entry = custom_math::dimension_matvec(diff_mat, pos, j_dim)/nom_sz;
+      jac_entry = math::dimension_matvec(diff_mat, pos, j_dim)/nom_sz;
     }
   }
   // compute interior normals
@@ -98,7 +98,7 @@ void Deformed_element::set_jacobian(const Basis& basis)
       double* face_data = faces[2*i_dim + sign];
       Eigen::MatrixXd face_jac(nfq, n_dim*n_dim);
       for (int i_jac = 0; i_jac < n_dim*n_dim; ++i_jac) {
-        face_jac(Eigen::all, i_jac) = custom_math::dimension_matvec(bound_mat, jac(Eigen::seqN(i_jac*n_qpoint, n_qpoint)), i_dim);
+        face_jac(Eigen::all, i_jac) = math::dimension_matvec(bound_mat, jac(Eigen::seqN(i_jac*n_qpoint, n_qpoint)), i_dim);
       }
       for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
         Eigen::MatrixXd qpoint_jac(n_dim, n_dim);
@@ -119,9 +119,9 @@ void Deformed_element::set_jacobian(const Basis& basis)
   Eigen::MatrixXd vertex_nrml (params.n_vertices(), n_dim*n_dim);
   for (int i_jac = 0; i_jac < n_dim*n_dim; ++i_jac) {
     // extrapolate one entry of the Jacobian to the vertex
-    vertex_nrml.col(i_jac) = custom_math::hypercube_matvec(bound_mat, Eigen::Map<Eigen::VectorXd>(reference_level_normals() + i_jac*params.n_qpoint(), n_qpoint));
+    vertex_nrml.col(i_jac) = math::hypercube_matvec(bound_mat, Eigen::Map<Eigen::VectorXd>(reference_level_normals() + i_jac*params.n_qpoint(), n_qpoint));
   }
-  Eigen::VectorXd vertex_det = custom_math::hypercube_matvec(bound_mat, Eigen::Map<Eigen::VectorXd>(jacobian_determinant(), n_qpoint));
+  Eigen::VectorXd vertex_det = math::hypercube_matvec(bound_mat, Eigen::Map<Eigen::VectorXd>(jacobian_determinant(), n_qpoint));
   for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
     double norm_sum = 0.;
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {

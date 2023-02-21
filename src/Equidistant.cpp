@@ -71,4 +71,40 @@ Eigen::VectorXd Equidistant::orthogonal(int degree) const
   return unused;
 }
 
+Eigen::MatrixXd Equidistant::prolong (int i_half) const
+{
+  throw std::runtime_error("Not implemented.");
+  return Eigen::MatrixXd::Zero(row_size, row_size);
+}
+
+Eigen::MatrixXd Equidistant::restrict (int i_half) const
+{
+  throw std::runtime_error("Not implemented.");
+  return Eigen::MatrixXd::Zero(row_size, row_size);
+}
+
+double Equidistant::max_cfl_convective() const
+{
+  throw std::runtime_error("Not implemented.");
+  return 0.;
+}
+
+double Equidistant::max_cfl_diffusive() const
+{
+  throw std::runtime_error("Not implemented.");
+  return 0.;
+}
+
+double Equidistant::cancellation_convective() const
+{
+  throw std::runtime_error("Not implemented.");
+  return 0.;
+}
+
+double Equidistant::cancellation_diffusive() const
+{
+  throw std::runtime_error("Not implemented.");
+  return 0.;
+}
+
 }

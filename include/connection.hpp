@@ -244,8 +244,8 @@ class Refined_connection
     auto vert_inds {vertex_inds(nd, con_dir)};
     // merge vertices
     for (int i_face = 0; i_face < params.n_vertices()/2; ++i_face) {
-      int inds [] {custom_math::stretched_ind(nd, i_face, str),
-                   custom_math::stretched_ind(nd, permutation_inds[i_face], str)};
+      int inds [] {math::stretched_ind(nd, i_face, str),
+                   math::stretched_ind(nd, permutation_inds[i_face], str)};
       auto& vert0 = coarse->vertex(vert_inds[rev][i_face]);
       auto& vert1 = fine[inds[!rev]]->vertex(vert_inds[!rev][i_face]);
       vert0.eat(vert1);

@@ -8,7 +8,7 @@ namespace hexed
 {
 
 Physical_basis::Physical_basis(int n_dim, int row_size, std::vector<double> qpoint_pos)
-: n_dim(n_dim), row_size(row_size), n_qpoint(custom_math::pow(row_size, n_dim)), pos(qpoint_pos),
+: n_dim(n_dim), row_size(row_size), n_qpoint(math::pow(row_size, n_dim)), pos(qpoint_pos),
   bound_box_center(n_dim), bound_box_size(n_dim), indices(n_dim)
 {
   if (n_dim > 3) throw std::runtime_error("Demand for `Physical_basis` with `n_dim > 3` which is not supported.");

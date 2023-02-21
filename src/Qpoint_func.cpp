@@ -44,7 +44,7 @@ std::string Pow::variable_name(int n_dim, int i_var) const
 std::vector<double> Pow::operator()(Element& e, const Basis& b, int i_qpoint, double time) const
 {
   std::vector<double> result = qf(e, b, i_qpoint, time);
-  for (double& r : result) r = custom_math::pow(r, exp);
+  for (double& r : result) r = math::pow(r, exp);
   return result;
 }
 

@@ -1,6 +1,13 @@
 #ifndef HEXED_CONFIG_HPP_
 #define HEXED_CONFIG_HPP_
 
+/*! \file hexed_config.hpp.in \brief Supplies CMake-configured options to C++ code.
+ *
+ * Note that anything wrapped in `@`s will be replaced
+ * by the CMake variable of the same name at build time.
+ */
+
+//! \brief Namespace for options configured by CMake. See \ref hexed_config.hpp.in.
 namespace hexed::config
 {
 

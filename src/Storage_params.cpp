@@ -6,7 +6,7 @@ namespace hexed
 
 int Storage_params::n_qpoint()
 {
-  return custom_math::pow(row_size, n_dim);
+  return math::pow(row_size, n_dim);
 }
 
 int Storage_params::n_dof()
@@ -21,7 +21,7 @@ int Storage_params::size()
 
 int Storage_params::n_vertices()
 {
-  return custom_math::pow(2, n_dim);
+  return math::pow(2, n_dim);
 }
 
 }

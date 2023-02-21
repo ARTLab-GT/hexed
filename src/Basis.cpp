@@ -22,40 +22,4 @@ Eigen::MatrixXd Basis::interpolate(const Eigen::VectorXd& sample) const
   return interp;
 }
 
-Eigen::MatrixXd Basis::prolong (int i_half) const
-{
-  throw std::runtime_error("Not implemented for base class.");
-  return Eigen::MatrixXd::Zero(row_size, row_size);
-}
-
-Eigen::MatrixXd Basis::restrict (int i_half) const
-{
-  throw std::runtime_error("Not implemented for base class.");
-  return Eigen::MatrixXd::Zero(row_size, row_size);
-}
-
-double Basis::max_cfl_convective() const
-{
-  throw std::runtime_error("Not implemented for base class.");
-  return 0.;
-}
-
-double Basis::max_cfl_diffusive() const
-{
-  throw std::runtime_error("Not implemented for base class.");
-  return 0.;
-}
-
-double Basis::cancellation_convective() const
-{
-  throw std::runtime_error("Not implemented for base class.");
-  return 0.;
-}
-
-double Basis::cancellation_diffusive() const
-{
-  throw std::runtime_error("Not implemented for base class.");
-  return 0.;
-}
-
 }

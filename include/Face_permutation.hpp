@@ -27,7 +27,7 @@ class Face_permutation_dynamic
 template<int n_dim, int row_size>
 class Face_permutation : public Face_permutation_dynamic
 {
-  static constexpr int n_qpoint = custom_math::pow(row_size, n_dim - 1);
+  static constexpr int n_qpoint = math::pow(row_size, n_dim - 1);
   static constexpr int n_var = n_dim + 2;
   Con_dir<Deformed_element> dir;
   double* tgt;

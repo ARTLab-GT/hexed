@@ -5,20 +5,20 @@
 #include <hexed/math.hpp>
 
 // yo, compile time tests! Here we test constexpr `pow` and `log`
-static_assert (hexed::custom_math::pow(2, 0) == 1);
-static_assert (hexed::custom_math::pow(2, 1) == 2);
-static_assert (hexed::custom_math::pow(2, -1) == 0);
-static_assert (hexed::custom_math::pow(3, 4) == 81);
-static_assert (hexed::custom_math::pow(1.5, 2) == 2.25);
-static_assert (hexed::custom_math::pow(2., -1) == 0.5);
-static_assert (hexed::custom_math::log(2, -1) == 0);
-static_assert (hexed::custom_math::log(2, 1) == 0);
-static_assert (hexed::custom_math::log(2, 2) == 1);
-static_assert (hexed::custom_math::log(2, 16) == 4);
-static_assert (hexed::custom_math::log(2, 15) == 4);
-static_assert (hexed::custom_math::log(3, 27) == 3);
-static_assert (hexed::custom_math::log(1, 27) == -1);
-static_assert (hexed::custom_math::log(-1, 27) == -1);
+static_assert (hexed::math::pow(2, 0) == 1);
+static_assert (hexed::math::pow(2, 1) == 2);
+static_assert (hexed::math::pow(2, -1) == 0);
+static_assert (hexed::math::pow(3, 4) == 81);
+static_assert (hexed::math::pow(1.5, 2) == 2.25);
+static_assert (hexed::math::pow(2., -1) == 0.5);
+static_assert (hexed::math::log(2, -1) == 0);
+static_assert (hexed::math::log(2, 1) == 0);
+static_assert (hexed::math::log(2, 2) == 1);
+static_assert (hexed::math::log(2, 16) == 4);
+static_assert (hexed::math::log(2, 15) == 4);
+static_assert (hexed::math::log(3, 27) == 3);
+static_assert (hexed::math::log(1, 27) == -1);
+static_assert (hexed::math::log(-1, 27) == -1);
 
 double lin_func(double x)
 {
@@ -31,25 +31,25 @@ double quad_func(double x)
 
 TEST_CASE("broyden root finder")
 {
-  REQUIRE(hexed::custom_math::broyden(lin_func, -1e7) == Approx(0.5));
-  REQUIRE(hexed::custom_math::broyden(quad_func, -0.8) == Approx(-.6));
-  REQUIRE(hexed::custom_math::broyden(quad_func, 2.3) == Approx(2.));
-  REQUIRE(hexed::custom_math::broyden([](double x){return std::exp(x) - 2.;}, 0.)
+  REQUIRE(hexed::math::broyden(lin_func, -1e7) == Approx(0.5));
+  REQUIRE(hexed::math::broyden(quad_func, -0.8) == Approx(-.6));
+  REQUIRE(hexed::math::broyden(quad_func, 2.3) == Approx(2.));
+  REQUIRE(hexed::math::broyden([](double x){return std::exp(x) - 2.;}, 0.)
           == Approx(std::log(2.)));
 }
 
 TEST_CASE("bisection root finder")
 {
-  REQUIRE(hexed::custom_math::bisection(lin_func , {  0,   2}) == Approx(0.5));
-  REQUIRE(hexed::custom_math::bisection(quad_func, { -1,   0}) == Approx(-.6));
-  REQUIRE(hexed::custom_math::bisection(quad_func, {0.1, 3.4}) == Approx(2.));
-  REQUIRE(hexed::custom_math::bisection([](double x){return std::exp(x) - 2.;}, {0, 1})
+  REQUIRE(hexed::math::bisection(lin_func , {  0,   2}) == Approx(0.5));
+  REQUIRE(hexed::math::bisection(quad_func, { -1,   0}) == Approx(-.6));
+  REQUIRE(hexed::math::bisection(quad_func, {0.1, 3.4}) == Approx(2.));
+  REQUIRE(hexed::math::bisection([](double x){return std::exp(x) - 2.;}, {0, 1})
           == Approx(std::log(2.)));
 }
 
 TEST_CASE("hypercube_matvec")
 {
-  auto hcmv {hexed::custom_math::hypercube_matvec};
+  auto hcmv {hexed::math::hypercube_matvec};
   #ifdef DEBUG
   SECTION("multiplying incompatible shapes throws")
   {
@@ -83,7 +83,7 @@ TEST_CASE("hypercube_matvec")
 
 TEST_CASE("dimension matvec")
 {
-  auto dmv {hexed::custom_math::dimension_matvec};
+  auto dmv {hexed::math::dimension_matvec};
   #ifdef DEBUG
   SECTION("multiplying incompatible shapes throws")
   {
@@ -113,9 +113,9 @@ TEST_CASE("orthonormal")
   SECTION("1D")
   {
     Eigen::Matrix<double, 1, 1> basis {-1.2};
-    REQUIRE(hexed::custom_math::orthonormal(basis, 0)(0, 0) == Approx(-1.));
+    REQUIRE(hexed::math::orthonormal(basis, 0)(0, 0) == Approx(-1.));
     basis(0, 0) = 0.1;
-    REQUIRE(hexed::custom_math::orthonormal(basis, 0)(0, 0) == Approx(1.));
+    REQUIRE(hexed::math::orthonormal(basis, 0)(0, 0) == Approx(1.));
   }
   SECTION("2D")
   {
@@ -126,11 +126,11 @@ TEST_CASE("orthonormal")
     Eigen::Matrix2d correct;
     correct << -1., 0.,
                 0., 1.;
-    REQUIRE((hexed::custom_math::orthonormal(basis, 1) - correct).norm() == Approx(0.).scale(1.));
+    REQUIRE((hexed::math::orthonormal(basis, 1) - correct).norm() == Approx(0.).scale(1.));
     REQUIRE((backup - basis).norm() == Approx(0.).scale(1.)); // make sure we don't modify `basis`
     correct << -0.8, 0.6,
                 0.6, 0.8;
-    REQUIRE((hexed::custom_math::orthonormal(basis, 0) - correct).norm() == Approx(0.).scale(1.));
+    REQUIRE((hexed::math::orthonormal(basis, 0) - correct).norm() == Approx(0.).scale(1.));
   }
   SECTION("3D")
   {
@@ -142,7 +142,7 @@ TEST_CASE("orthonormal")
     basis << std::cos(80*degree), std::cos(-20*degree), 0.1,
               std::sin(80*degree), std::sin(-20*degree), -100.,
                                0.,                   0.,  0.05;
-    Eigen::Matrix3d orth {hexed::custom_math::orthonormal(basis, 2)};
+    Eigen::Matrix3d orth {hexed::math::orthonormal(basis, 2)};
     correct << std::cos(75*degree), std::sin(75*degree), 0.;
     CHECK((orth.col(0) - correct).norm() == Approx(0.).scale(1.));
     correct << std::cos(-15*degree), std::sin(-15*degree), 0.;
@@ -158,14 +158,14 @@ TEST_CASE("orthonormal")
     basis.col(1) += 0.2*sum;
     basis.col(2) += 0.2*sum;
     basis.col(0) += Eigen::Vector3d {0.1, -.3, 0.3};
-    REQUIRE((hexed::custom_math::orthonormal(basis, 0) - orth).norm() == Approx(0.).scale(1.));
+    REQUIRE((hexed::math::orthonormal(basis, 0) - orth).norm() == Approx(0.).scale(1.));
 
     basis = orth;
     sum = orth.col(0) + orth.col(2);
     basis.col(0) += 3.*sum;
     basis.col(2) += 3.*sum;
     basis.col(1) *= 0.1;
-    REQUIRE((hexed::custom_math::orthonormal(basis, 1) - orth).norm() == Approx(0.).scale(1.));
+    REQUIRE((hexed::math::orthonormal(basis, 1) - orth).norm() == Approx(0.).scale(1.));
   }
 }
 
@@ -173,5 +173,5 @@ TEST_CASE("interp")
 {
   hexed::Mat<4> values {0., 1., .4, 1.4};
   hexed::Mat<2> coords {.01, .02};
-  REQUIRE(hexed::custom_math::interp(values, coords) == Approx(.024));
+  REQUIRE(hexed::math::interp(values, coords) == Approx(.024));
 }

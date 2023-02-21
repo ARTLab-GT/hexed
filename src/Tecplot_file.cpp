@@ -66,7 +66,7 @@ void Tecplot_file::Zone::write(const double* pos, const double* vars)
 }
 
 Tecplot_file::Structured_block::Structured_block(Tecplot_file& file, int row_size, std::string name_arg, int n_dim_arg)
-: Zone{file, custom_math::pow(row_size, n_dim_arg ? n_dim_arg : file.n_dim), name_arg}, n_dim{n_dim_arg ? n_dim_arg : file.n_dim}
+: Zone{file, math::pow(row_size, n_dim_arg ? n_dim_arg : file.n_dim), name_arg}, n_dim{n_dim_arg ? n_dim_arg : file.n_dim}
 {
   tecZoneCreateIJK(file.file_handle, name.c_str(),
                    row_size, (n_dim >= 2) ? row_size : 1, (n_dim >= 3) ? row_size : 1,

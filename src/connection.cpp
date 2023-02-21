@@ -5,7 +5,7 @@ namespace hexed
 
 std::vector<int> face_vertex_inds(int n_dim, Con_dir<Deformed_element> direction)
 {
-  int n_vert = custom_math::pow(2, n_dim - 1);
+  int n_vert = math::pow(2, n_dim - 1);
   std::vector<int> inds;
   for (int i_vert = 0; i_vert < n_vert; ++i_vert) inds.push_back(i_vert);
   // reorder as necessary
@@ -30,7 +30,7 @@ std::array<std::vector<int>, 2> vertex_inds(int n_dim, Con_dir<Deformed_element>
 {
   // get vertices involved
   std::array<std::vector<int>, 2> inds;
-  int n_vert = custom_math::pow(2, n_dim - 1);
+  int n_vert = math::pow(2, n_dim - 1);
   std::array<int, 2> strides;
   for (int i_side = 0; i_side < 2; ++i_side) {
     strides[i_side] = std::pow(2, n_dim - direction.i_dim[i_side] - 1);

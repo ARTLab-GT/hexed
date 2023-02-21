@@ -208,7 +208,7 @@ class Shrink_pos0 : public hexed::Mesh_bc
   public:
   virtual void snap_vertices(hexed::Boundary_connection& con)
   {
-    const int stride = hexed::custom_math::pow(2, con.storage_params().n_dim - 1 - con.i_dim());
+    const int stride = hexed::math::pow(2, con.storage_params().n_dim - 1 - con.i_dim());
     for (int i_vert = 0; i_vert < con.storage_params().n_vertices(); ++i_vert) {
       if ((i_vert/stride)%2 == con.inside_face_sign()) {
         con.element().vertex(i_vert).pos[0] = .1*.8;

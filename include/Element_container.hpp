@@ -11,27 +11,27 @@
 namespace hexed
 {
 
-/*
+/*!
  * An abstract class representing a collection of `Element`s which supports
  * basic construction and access facilities.
  */
 class Element_container
 {
   public:
-  /*
+  /*!
    * Construct an element, add it to the container, and return a permanent, arbitrary
    * serial number which is unique among elements of the same refinement level.
    */
   virtual int emplace(int ref_level, std::vector<int> position) = 0;
-  // access an element by refinement level and serial number
+  //! access an element by refinement level and serial number
   virtual Element& at(int ref_level, int serial_n) = 0;
-  // return the currently valid set of `ref_level`, `serial_n` combinations
+  //! return the currently valid set of `ref_level`, `serial_n` combinations
   virtual std::vector<std::array<int, 2>> elem_handles() = 0;
 };
 
-/*
- * An implementation of `Element_container` which holds elements of a definite type (namely,
- * `Element` or `Deformed_element`). Supports more advanced access methods.
+/*!
+ * An implementation of `Element_container` which holds elements of a definite type
+ * (namely, `Element` or `Deformed_element`). Supports more advanced access methods.
  */
 template <typename element_t>
 class Complete_element_container : public Element_container
@@ -45,11 +45,12 @@ class Complete_element_container : public Element_container
   std::map<std::array<int, 2>, element_t&> map;
 
   public:
+  //! construct with the same data as `Mesh::Mesh`
   Complete_element_container(Storage_params storage_params, double root_spacing)
   : params{storage_params}, spacing{root_spacing}, next_sn{0}
   {}
 
-  virtual int emplace(int ref_level, std::vector<int> position)
+  int emplace(int ref_level, std::vector<int> position) override
   {
     vec.emplace_back(new element_t {params, position, spacing, ref_level});
     std::array<int, 2> key = {ref_level, next_sn++};
@@ -57,20 +58,19 @@ class Complete_element_container : public Element_container
     return key[1];
   }
 
-  virtual element_t& at(int ref_level, int serial_n)
+  element_t& at(int ref_level, int serial_n) override
   {
     return map.at({ref_level, serial_n});
   }
 
-  // Provides a `Vector_view` which can be used to efficiently iterate through the elements,
-  // in no particular order.
-  typedef Vector_view<element_t&, ptr_t, &convert> view_t;
+  typedef Vector_view<element_t&, ptr_t, &convert> view_t; //!< convenience typedef
+  //! Provides a `Vector_view` which can be used to efficiently iterate through the elements, in no particular order.
   view_t elements()
   {
     return vec;
   }
 
-  virtual std::vector<std::array<int, 2>> elem_handles()
+  std::vector<std::array<int, 2>> elem_handles() override
   {
     std::vector<std::array<int, 2>> handles;
     for (auto pair : map) handles.push_back(pair.first);

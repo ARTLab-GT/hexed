@@ -16,9 +16,9 @@ void Hanging_vertex_matcher::match(Element::vertex_value_access access_func)
   int inds [4]; // for `n_dim <= 3` the required size will be <= 4
   Eigen::VectorXd values (n_vert);
   for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
-    int stride = custom_math::pow(2, n_dim - 1 - id);
+    int stride = math::pow(2, n_dim - 1 - id);
     inds[i_vert] = i_vert/stride*stride*2 + i_vert%stride + isp*stride;
-    values(i_vert) = std::invoke(access_func, elements[custom_math::stretched_ind(n_dim, i_vert, str)], inds[i_vert]);
+    values(i_vert) = std::invoke(access_func, elements[math::stretched_ind(n_dim, i_vert, str)], inds[i_vert]);
   }
   // compute interpolation
   Eigen::MatrixXd interp_mat {
@@ -27,7 +27,7 @@ void Hanging_vertex_matcher::match(Element::vertex_value_access access_func)
     {0. , 1. }
   };
   // 3[x3[x3]] array of values at corners and midpoints
-  Eigen::VectorXd interpolated = custom_math::hypercube_matvec(interp_mat, values);
+  Eigen::VectorXd interpolated = math::hypercube_matvec(interp_mat, values);
   // write to element vertices
   for (int i_elem = 0; i_elem < int(elements.size()); ++i_elem) {
     // loop over vertices of this element
