@@ -18,6 +18,7 @@ int Elem_average::n_var(int n_dim) const
   return qf.n_var(n_dim);
 }
 
+//! \private computes the average of some function raised to a power
 std::vector<double> avg(const Qpoint_func& qf, Element& elem, const Basis& basis, double time, int pow)
 {
   auto params = elem.storage_params();
