@@ -79,6 +79,7 @@ configure_file(script/hexed-wrapped-post-process.in hexed-wrapped-post-process)
 configure_file(script/format.mcr.in format.mcr)
 if(build_docs)
     configure_file(doc/config.in ${CMAKE_BINARY_DIR}/doc_config)
+    file(COPY doc/header.png DESTINATION doc/html)
     add_custom_command(
         OUTPUT doxygen_output.txt
         COMMAND doxygen doc_config > doxygen_output.txt
