@@ -213,9 +213,16 @@ double {name}::cancellation_diffusive() const
 }}
 """
 
+    placeholder_body = """
+{
+  throw std::runtime_error("Not implemented.");
+  return Eigen::MatrixXd::Zero(1, 1);
+}
+"""
+
+    text += f"Eigen::MatrixXd {name}::prolong(int i_half) const"
     if "legendre" in name:
         text += f"""
-Eigen::MatrixXd {name}::prolong(int i_half) const
 {{{conditional_block}
   Eigen::MatrixXd p (row_size, row_size);
   for (int i_entry = 0; i_entry < row_size*row_size; ++i_entry) {{
@@ -223,8 +230,13 @@ Eigen::MatrixXd {name}::prolong(int i_half) const
   }}
   return p;
 }}
+"""
+    else:
+        text += placeholder_body
 
-Eigen::MatrixXd {name}::restrict(int i_half) const
+    text += f"Eigen::MatrixXd {name}::restrict(int i_half) const"
+    if "legendre" in name:
+        text += f"""
 {{{conditional_block}
   Eigen::MatrixXd r (row_size, row_size);
   for (int i_entry = 0; i_entry < row_size*row_size; ++i_entry) {{
@@ -233,6 +245,8 @@ Eigen::MatrixXd {name}::restrict(int i_half) const
   return r;
 }}
 """
+    else:
+        text += placeholder_body
 
     text += f"""
 {name}::{name}(int row_size_arg) : Basis(row_size_arg) {{}}
