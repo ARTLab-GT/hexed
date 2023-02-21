@@ -11,6 +11,22 @@ namespace hexed
  * Represents some numerical data which is of interest to the end user. E.g. flow
  * state, surface stress, grid metrics, etc. Used for specifing what to write in
  * flow visualization files or things to compute integrals of.
+ *
+ * Derived classes represent functions of various inputs by implementing a member
+ * of the form `std::vector<double> operator()(...)`.
+ * Functions that can be called on multiple types of inputs are represented by
+ * derived classes that override their base class's `operator()` by forwarding it to
+ * their own overload of it with different arguments.
+ * For example, consider `Domain_func` and `Spacetime_func`.
+ * `Domain_func` represents a function of position, time, and state variables whereas
+ * `Spacetime_func` represents a function of position and time.
+ * A function of position and time is also (trivially) functions of state, position, and time.
+ * So, `Spacetime_func` derives from `Domain_func`, and
+ * `Spacetime_func::opertor()(std::vector<double>, double, std::vector<double>)` (inherited from `Domain_func`)
+ * calls `Spacetime_func::operator()(std::vector<double>, double)` (not inherited from any class).
+ *
+ * This concept allows the same functions to be used in different applications
+ * that invoke them with different arguments, but it makes the inheritance tree quite complicated.
  */
 class Output_data
 {
