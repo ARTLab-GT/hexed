@@ -1,31 +1,61 @@
-"""!
-\file Basis.py Computes numerical parameters for nodal bases.
-"""
-
 import sympy as sp
 import numpy as np
 from scipy.optimize import fsolve, minimize
 import warnings
 
 class Basis:
+    r"""!
+    Computes numerical parameters for nodal polynmial bases (such as hexed::Gauss_legendre and hexed::Gauss_lobatto)
+    that are based on [Gaussian quadrature rules](https://en.wikipedia.org/wiki/Gaussian_quadrature).
+    Used in `auto_generate.py`.
+    Calculations for most functions are performed in arbitrary-precision arithmetic with sympy
+    to minimize roundoff errors (which can sometimes be nonnegligible for high-order bases
+    if the calculations are performed with the same precision as the output).
+    """
+
     def __init__(self, nodes, weights, repr_digits=20, calc_digits=50):
+        r"""!
+        \param nodes Quadrature nodes. Should be in interval [0, 1]
+        \param weights Quadrature weights. Should sum to 1.
+        \param repr_digits number of digits returned in output
+        \param calc_digits number of digits used in calculations (recommended to be greater than `repr_digits`
+        \attention Standard convention for Gaussian quadratures
+        is that nodes are in [-1, 1] and weights sum to 2.
+        Be sure to perform any necessary conversions to ensure that nodes are in [0, 1] and weights sum to 1.
+        """
+        ## \private
         self.repr_digits = repr_digits
+        ## \private
         self.calc_digits = calc_digits
+        ## \private
         self.row_size = len(nodes)
         assert len(weights) == self.row_size
+        ## \private
         self.nodes = [sp.Float(node, self.calc_digits) for node in nodes]
+        ## \private
         self.weights = [sp.Float(weight, self.calc_digits) for weight in weights]
+        ## \private
         self.ortho = []
         for i in range(self.row_size):
             self.ortho.append(self.legendre(i))
 
     def node(self, i):
+        r"""! \brief returns the `i`th quadrature node
+        \note arbitrary precision
+        """
         return sp.Float(self.nodes[i], self.repr_digits)
 
     def weight(self, i):
+        r"""! \brief returns the `i`th quadrature weight
+        \note arbitrary precision
+        """
         return sp.Float(self.weights[i], self.repr_digits)
 
     def derivative(self, i_result, i_operand):
+        r"""! \brief geta an element of the differentiation matrix.
+        \details Computes the derivative of the `i_operand`th basis polynomial at the `i_result`th node
+        \note arbitrary precision
+        """
         if i_result == i_operand:
             dp = sp.Float(0, self.calc_digits)
             for n in range(self.row_size):
@@ -41,6 +71,12 @@ class Basis:
         return sp.Float(dp, self.repr_digits)
 
     def interpolate(self, i, position, calc=False):
+        r"""! \brief interpolates one of the basis polynomials to a specified point
+        \param i will interpolate the polynomial associated with the `i`th node
+        \param position position to interpolate to
+        \param calc if True, will return `self.calc_digits` digits. Otherwise, will return `self.repr_digits` digits.
+        \note arbitrary precision
+        """
         pos = sp.Float(position, self.calc_digits)
         nodes = self.nodes.copy()
         main_node = nodes.pop(i)
@@ -50,6 +86,13 @@ class Basis:
         return sp.Float(result, self.calc_digits if calc else self.repr_digits)
 
     def legendre(self, degree):
+        r"""! \brief compute a Legendre polynomial
+        \param degree degree of the polynomial to compute
+        \returns a list of the values of the Legendre polynomial at each node
+        \details Polynomial is has norm 1 with respect to the quadrature under consideration.
+        That is, the sum of the squares of the returned values multiplied by the quadrature weights is 1.
+        \note arbitrary precision
+        """
         x = sp.Symbol("x")
         poly = sp.legendre(degree, x)
         vals = []
@@ -64,18 +107,45 @@ class Basis:
         return vals
 
     def get_ortho(self, degree, i_node):
+        r"""! equivalent to `self.legendre(degree)[i_node]` """
         return sp.Float(self.ortho[degree][i_node], self.repr_digits)
 
     def prolong(self, i_result, i_operand, i_half, calc=False):
+        r"""! \brief gets an element of the prolongation matrix
+        \details Suppose you split the interval [0, 1] in half
+        and defined another Basis on each half with the same quadrature rule.
+        Then this function evaluates the `i_result`th basis polynomial at the `i_operand`th quadrature point
+        of the `i_half`th fine (half-interval) basis.
+        Parameter `calc` is forwarded to `interpolate`.
+        \note arbitrary precision
+        """
         position = (self.nodes[i_result] + i_half)/2
         return self.interpolate(i_operand, position, calc)
 
-    def restrict(self, i_result, i_operand, i_half): # only works for Legendre
-        # take inner product of `i_operand`th fine polynomial with `i_result`th and divide by norm squared
+    def restrict(self, i_result, i_operand, i_half):
+        r"""! \brief get an element of the restriction matrix
+        \details pseudo-inverse of prolongation matrix computed by `prolong`.
+        \f$L_2\f$ projection of `i_operand`th polynomial on the `i_half`th fine basis (see `prolong`)
+        with `i_result`th  polynomial of this basis, computed by the quadrature rule.
+        \attention Doesn't work for Gauss-Lobatto quadrature
+        \note arbitrary precision
+        """
         result = self.weights[i_operand]/2*self.prolong(i_operand, i_result, i_half, True)/self.weights[i_result]
         return sp.Float(result, self.repr_digits)
 
     def time_coefs(self, n_elem = 4):
+        r"""! \brief Compute coefficients for optimized 2-stage time integration scheme.
+        \param n_elem number of elements to use
+        \details Based on numerical eigenvalue calculations for the linear advection and diffusion equations
+        on a 1D mesh with periodic boundary conditions.
+        \returns a pair of pairs:
+        - `time_coefs()[0][0]` is the maximum stable CFL number for advection
+        - `time_coefs()[0][1]` is the cancellation coefficient for advection
+        - `time_coefs()[1][0]` is the maximum stable CFL number for diffusion
+        - `time_coefs()[1][1]` is the cancellation coefficient for diffusion
+        \note standard floating-point precision (whatever that is for Python -- I think double)
+        """
+        # sorry for the lack of comments... remind me to get back to this later
         global_weights = np.zeros(n_elem*self.row_size)
         local_grad = np.zeros((n_elem*self.row_size, n_elem*self.row_size))
         neighb_avrg = np.zeros((n_elem*self.row_size, n_elem*self.row_size))
@@ -103,6 +173,7 @@ class Basis:
         assert np.linalg.norm(global_weights@diffusion) < 1e-12
         class polynomial:
             def __init__(self, coefs):
+                ## \private
                 self.coefs = coefs
             def __call__(self, dt, mat):
                 step_mat = ident + dt*mat
