@@ -21,8 +21,8 @@ class Element_func : virtual public Qpoint_func
 class Resolution_badness : virtual public Element_func
 {
   public:
-  virtual inline int n_var(int n_dim) const {return 1;}
-  virtual std::vector<double> operator()(Element& elem, const Basis&, double time) const
+  inline int n_var(int n_dim) const override {return 1;}
+  std::vector<double> operator()(Element& elem, const Basis&, double time) const override
   {
     return {elem.resolution_badness};
   }
@@ -35,9 +35,9 @@ class Elem_average : public Element_func
   public:
   Elem_average(const Qpoint_func& func); //!< \param func function you want to compute the average of
   Elem_average(Qpoint_func&&) = delete; //!< can't accept temporaries because that could create a dangling reference
-  virtual int n_var(int n_dim) const;
-  virtual inline std::string variable_name(int n_dim, int i_var) const {return "average_" + qf.variable_name(n_dim, i_var);}
-  virtual std::vector<double> operator()(Element& elem, const Basis&, double time) const;
+  int n_var(int n_dim) const override;
+  inline std::string variable_name(int n_dim, int i_var) const override {return "average_" + qf.variable_name(n_dim, i_var);}
+  std::vector<double> operator()(Element& elem, const Basis&, double time) const override;
 };
 
 //! computes the \f$L_2\f$ norm of the provided `Qpoint_func` within the element by Gaussian quadrature
@@ -47,9 +47,9 @@ class Elem_l2 : public Element_func
   public:
   Elem_l2(const Qpoint_func&); //!< \param func function you want to compute the norm of
   Elem_l2(Qpoint_func&&) = delete;
-  virtual inline int n_var(int n_dim) const {return qf.n_var(n_dim);}
-  virtual inline std::string variable_name(int n_dim, int i_var) const {return "l2_" + qf.variable_name(n_dim, i_var);}
-  virtual std::vector<double> operator()(Element& elem, const Basis&, double time) const;
+  inline int n_var(int n_dim) const override {return qf.n_var(n_dim);}
+  inline std::string variable_name(int n_dim, int i_var) const override {return "l2_" + qf.variable_name(n_dim, i_var);}
+  std::vector<double> operator()(Element& elem, const Basis&, double time) const override;
 };
 
 /*! \brief compute the elementwise nonsmoothness indicator of the provided function
@@ -71,9 +71,9 @@ class Elem_nonsmooth : public Element_func
   public:
   Elem_nonsmooth(const Qpoint_func& func); //!< \param func the function you want to compute the nonsmoothness of (\f$u\f$ in the explanation above).
   Elem_nonsmooth(Qpoint_func&&) = delete;
-  virtual inline int n_var(int n_dim) const {return qf.n_var(n_dim);}
-  virtual inline std::string variable_name(int n_dim, int i_var) const {return "nonsmoothness_" + qf.variable_name(n_dim, i_var);}
-  virtual std::vector<double> operator()(Element& elem, const Basis&, double time) const;
+  inline int n_var(int n_dim) const override {return qf.n_var(n_dim);}
+  inline std::string variable_name(int n_dim, int i_var) const override {return "nonsmoothness_" + qf.variable_name(n_dim, i_var);}
+  std::vector<double> operator()(Element& elem, const Basis&, double time) const override;
 
 };
 
