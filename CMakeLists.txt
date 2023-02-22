@@ -83,7 +83,17 @@ if(build_docs)
     add_custom_command(
         OUTPUT doxygen_output.txt
         COMMAND doxygen doc_config > doxygen_output.txt
-        DEPENDS ${CMAKE_BINARY_DIR}/doc_config
+        DEPENDS
+            ${CMAKE_BINARY_DIR}/doc_config
+            hexed
+            doc/contributing.dox
+            doc/conventions.dox
+            doc/geom_fitting.dox
+            doc/header.png
+            doc/installation.dox
+            doc/mainpage.dox
+            doc/namespace_hexed.dox
+            doc/visualization.dox
     )
     add_custom_target(
         documentation ALL

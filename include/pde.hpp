@@ -5,7 +5,7 @@
 #include "constants.hpp"
 #include "Transport_model.hpp"
 
-/*
+/*!
  * This namespace contains classes representing the different PDEs Hexed can solve.
  * They are all possible arguments to the `Spatial` class template.
  * They define the organization of the state data, fluxes, and speeds of information
@@ -14,7 +14,7 @@
 namespace hexed::pde
 {
 
-// computes HLL (Harten-Lax-Van Leer) numerical flux based on wave speed estimate
+//! computes HLL (Harten-Lax-Van Leer) numerical flux based on wave speed estimate
 template <int n_var>
 Mat<n_var> hll(Mat<2> speed, Mat<n_var, 2> flux, Mat<n_var, 2> state)
 {
@@ -26,12 +26,14 @@ Mat<n_var> hll(Mat<2> speed, Mat<n_var, 2> flux, Mat<n_var, 2> state)
          /(speed(1) - speed(0));
 }
 
-// contains a PDE class representing the Naver-Stokes equations
-// with template options to specify the details of the equation set
+/*!
+ * contains a PDE class representing the Naver-Stokes equations
+ * with template options to specify the details of the equation set
+ */
 template <bool visc = false>
 class Navier_stokes
 {
-  // check that the flow state is thermodynamically admissible
+  //! check that the flow state is thermodynamically admissible
   #define ASSERT_THERM_ADMIS \
     HEXED_ASSERT(state(n_dim) > 0, "nonpositive density"); \
     HEXED_ASSERT(state(n_dim + 1) >= 0, "negative energy"); \
@@ -68,7 +70,7 @@ class Navier_stokes
       return (heat_rat - 1.)*((state(n_dim + 1)) - 0.5*mmtm_sq/(state(n_dim)));
     }
 
-    // compute the convective flux
+    //! compute the convective flux
     Mat<n_update> flux(Mat<n_var> state, Mat<n_dim> normal) const
     {
       Mat<n_var> f;
@@ -86,7 +88,7 @@ class Navier_stokes
       return f;
     }
 
-    // compute the numerical convective flux shared at the element faces
+    //! compute the numerical convective flux shared at the element faces
     Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const
     {
       Mat<n_var, 2> face_flux;
@@ -116,7 +118,7 @@ class Navier_stokes
       return hll(wave_speed, face_flux, face_state);
     }
 
-    // compute the viscous flux
+    //! compute the viscous flux
     Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const
     {
       auto seq = Eigen::seqN(0, n_dim);
@@ -134,7 +136,7 @@ class Navier_stokes
       return flux;
     }
 
-    // maximum characteristic speed for convection
+    //! maximum characteristic speed for convection
     double char_speed(Mat<n_var> state) const
     {
       const double sound_speed = std::sqrt(heat_rat*pressure(state)/state(n_dim));
@@ -143,7 +145,7 @@ class Navier_stokes
       return sound_speed + veloc;
     }
 
-    // maximum effective diffusivity (for enforcing the CFL condition)
+    //! maximum effective diffusivity (for enforcing the CFL condition)
     double diffusivity(Mat<n_var> state, double av_coef) const
     {
       double mass = state(n_dim);
@@ -152,7 +154,7 @@ class Navier_stokes
       return av_coef + std::max(dyn_visc.coefficient(sqrt_temp)/mass, therm_cond.coefficient(sqrt_temp)*(heat_rat - 1)/specific_gas_air/mass);
     }
 
-    /*
+    /*!
      * Decomposes state vectors into characteristics
      * which are eigenvectors of the Jacobian of the inviscid flux function.
      * This is useful for characteristic-based boundary conditions.
@@ -170,8 +172,10 @@ class Navier_stokes
       Mat<n_dim> tang(Mat<n_dim> vec) {return vec - dir*nrml(vec);}
 
       public:
-      // construct with a direction in which to compute the flux
-      // and a reference state vector about which to compute the Jacobian
+      /*!
+       * construct with a direction in which to compute the flux
+       * and a reference state vector about which to compute the Jacobian
+       */
       Characteristics(Mat<n_var> state, Mat<n_dim> direction)
       : dir{direction/direction.norm()},
         mass{state(n_dim)},
@@ -198,9 +202,9 @@ class Navier_stokes
         vecs(Eigen::all, 2) << d_mass*vals(2), d_mass, .5*d_mass*vsq;
         vecs_inv = vecs.inverse();
       }
-      // get eigenvalues of Jacobian
+      //! get eigenvalues of Jacobian
       inline Mat<3> eigvals() {return vals;}
-      /*
+      /*!
        * Decompose a state vector into eigenspaces.
        * Column `j` should be an eigenvector of the Jacobian with eigenvalue `eigvals()(j)`
        * and the sum of the columns should be `state`.
@@ -232,8 +236,10 @@ class Navier_stokes
   #undef ASSERT_THERM_ADMIS
 };
 
-// represents the nonuniform linear advection equation
-// used in the smoothness-based artificial viscosity scheme
+/*!
+ * represents the nonuniform linear advection equation
+ * used in the smoothness-based artificial viscosity scheme
+ */
 template <int n_dim>
 class Advection
 {
@@ -273,8 +279,10 @@ class Advection
   }
 };
 
-// represents the uniform linear diffusion equation
-// used in the smoothness-based artificial viscosity scheme
+/*!
+ * represents the uniform linear diffusion equation
+ * used in the smoothness-based artificial viscosity scheme
+ */
 template <int n_dim>
 class Smooth_art_visc
 {
@@ -295,8 +303,10 @@ class Smooth_art_visc
   double diffusivity(Mat<n_var> state, double av_coef) const {return 1;}
 };
 
-// represents the uniform linear diffusion equation
-// used for fixing thermodynamic admissibility
+/*!
+ * represents the uniform linear diffusion equation
+ * used for fixing thermodynamic admissibility
+ */
 template <int n_dim>
 class Fix_therm_admis
 {

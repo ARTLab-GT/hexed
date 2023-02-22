@@ -9,7 +9,7 @@ int main()
 {
   // Resolution parameters
   constexpr int row_size = 6;
-  constexpr int ref_level = 3;
+  constexpr int ref_level = 5;
   constexpr int n_side = hexed::math::pow(2, ref_level);
   int sn [n_side][n_side];
 
