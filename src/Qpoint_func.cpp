@@ -48,4 +48,9 @@ std::vector<double> Pow::operator()(Element& e, const Basis& b, int i_qpoint, do
   return result;
 }
 
+std::vector<double> Art_visc_forcing::operator()(Element& elem, const Basis&, int i_qpoint, double time) const
+{
+  return {elem.art_visc_forcing()[i_qpoint]};
+}
+
 }
