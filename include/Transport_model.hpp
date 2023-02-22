@@ -29,15 +29,15 @@ class Transport_model
   public:
   //! if `true`, you can safely assume `coefficient` will always return 0 regardless of input
   const bool is_viscous;
-  /*! compute whatever transport coefficient this object is supposed to represent
-   * expects the square root of the temperature to be precomputed (so it can be reused for multiple transport coefficients)
+  /*! Compute whatever transport coefficient this object is supposed to represent.
+   * Expects the square root of the temperature to be precomputed (so the caller can reuse it for multiple transport coefficients)
    */
   double coefficient(double sqrt_temp) const
   {
     return const_val + ref_val*math::pow(sqrt_temp/sqrt_ref_temp, 3)*(ref_temp + temp_offset)/(sqrt_temp*sqrt_temp + temp_offset);
   }
   //! create a `Transport_model` that always returns 0 (with `is_viscous` set to `false`)
-  static inline Transport_model inviscid() {return {0., 0., 0., 0., 0};}
+  static inline Transport_model inviscid() {return {0., 0., 1., 1., 0};}
   //! create a `Transport_model` that always returns the same constant value
   static inline Transport_model constant(double value) {return {value, 0., 1., 1., 1};}
   /*! create a `Transport_model` which depends on temperature
