@@ -133,7 +133,7 @@ class Art_visc_forcing : public Qpoint_func
 {
   public:
   inline int n_var(int n_dim) const override {return 1;}
-  std::string variable_name(int n_dim, int i_var) const override;
+  inline std::string variable_name(int n_dim, int i_var) const override {return "art_visc_forcing";};
   std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
 };
 
