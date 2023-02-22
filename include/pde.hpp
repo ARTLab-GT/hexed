@@ -250,6 +250,7 @@ class Advection
   static constexpr int curr_start = n_dim;
   static constexpr int ref_start = n_dim + 1;
   static constexpr int n_update = 1;
+  static constexpr double wave_speed_floor = .1;
 
   Mat<1> flux(Mat<n_var> state, Mat<n_dim> normal) const
   {
@@ -268,14 +269,14 @@ class Advection
     Mat<2> wave_speed;
     for (int i_side = 0; i_side < 2; ++i_side) {
       int sign = 2*i_side - 1;
-      wave_speed(i_side) = std::min(vol_flux(0) + sign*.01, vol_flux(1) + sign*.01);
+      wave_speed(i_side) = std::min(vol_flux(0) + sign*wave_speed_floor, vol_flux(1) + sign*wave_speed_floor);
     }
     return hll(wave_speed, face_flux, face_state);
   }
 
   double char_speed(Mat<n_var> state) const
   {
-    return state(Eigen::seqN(0, n_dim)).norm();
+    return state(Eigen::seqN(0, n_dim)).norm() + wave_speed_floor;
   }
 };
 

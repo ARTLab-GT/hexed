@@ -367,7 +367,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
       }
       scale = std::sqrt(scale);
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        state[i_dim*nq + i_qpoint] = rk_ref[i_dim*nq + i_qpoint]/scale*advect_length;
+        state[i_dim*nq + i_qpoint] = rk_ref[i_dim*nq + i_qpoint]/scale;
       }
     }
   }
@@ -386,7 +386,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* tss = elements[i_elem].time_step_scale();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      tss[i_qpoint] /= std::max(2*tss[i_qpoint]/av_advect_max_forcing, 1.);
+      tss[i_qpoint] /= std::max(2*tss[i_qpoint]/av_advect_max_forcing/advect_length, 1.);
     }
   }
 
@@ -452,7 +452,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
             // compute update
             double d = state[nd*nq + i_qpoint] - state[(nd + 1)*nq + i_qpoint]
-                       + dt_adv*tss[i_qpoint]*(1. - adv[i_node*nq + i_qpoint])*2;
+                       + dt_adv*tss[i_qpoint]*(1. - adv[i_node*nq + i_qpoint])*2/advect_length;
             adv[i_node*nq + i_qpoint] += d; // add to advection state
             // add to residual
             diff += d*d/dt_scaled/dt_scaled;
