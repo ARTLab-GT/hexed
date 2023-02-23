@@ -131,7 +131,10 @@ class Pow : public Qpoint_func
 //! Fetches first forcing variable in artificial viscosity computation
 class Art_visc_forcing : public Qpoint_func
 {
+  int i_force;
   public:
+  //! \param i_forcing which forcing term you want to see
+  inline Art_visc_forcing(int i_forcing) : i_force{i_forcing} {}
   inline int n_var(int n_dim) const override {return 1;}
   inline std::string variable_name(int n_dim, int i_var) const override {return "art_visc_forcing";};
   std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
