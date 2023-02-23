@@ -489,8 +489,8 @@ void Solver::set_art_visc_smoothness(double advect_length)
   // begin root-smear-square operation
   int n_real = 3; // number of real time steps (as apposed to pseudotime steps)
   // evaluate CFL condition
-  (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true))(acc_mesh.cartesian().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "compute time step"),
-  (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true))(acc_mesh.deformed ().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "compute time step");
+  (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, false))(acc_mesh.cartesian().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "compute time step");
+  (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, false))(acc_mesh.deformed ().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "compute time step");
   double dt_diff = av_diff_stab_rat;
   double diff_time = av_diff_ratio/n_real; // compute size of real time step (as opposed to pseudotime)
   // adjust for time derivative term if necessary
@@ -566,6 +566,8 @@ void Solver::set_art_visc_smoothness(double advect_length)
             state[i_qpoint] += state[nq + i_qpoint];
           }
         }
+        (*write_face)(elements);
+        (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
       }
     }
     // update forcing function and residual
@@ -582,7 +584,6 @@ void Solver::set_art_visc_smoothness(double advect_length)
         forcing[(real_step + 1)*nq + i_qpoint] = state[i_qpoint];
       }
     }
-    if (av_diff_iters > 300) printf("diffusion residual %e\n", diff/n_avg);
     status.diff_res += diff/n_avg;
   }
   status.diff_res = std::sqrt(status.diff_res/n_real); // finish computing RMS residual
