@@ -263,8 +263,14 @@ void No_slip::apply_state(Boundary_face& bf)
   for (int i_dof = 0; i_dof < params.n_dim*nfq; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
   for (int i_dof = params.n_dim*nfq; i_dof < (params.n_dim + 1)*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
   for (int i_dof = (params.n_dim + 1)*nfq; i_dof < (params.n_dim + 2)*nfq; ++i_dof) {
-    // make it so geometric mean of ghost energy and inside energy is target energy
-    gh_f[i_dof] = (t == internal_energy) ? math::pow(v*in_f[i_dof - nfq], 2)/in_f[i_dof] : in_f[i_dof];
+    // make it so geometric mean of ghost internal energy and inside internal energy is target energy
+    double kin_ener = 0;
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+      kin_ener += math::pow(in_f[i_dof + (i_dim - params.n_dim - 1)*nfq], 2);
+    }
+    kin_ener /= 2*in_f[i_dof - nfq];
+    double int_ener = in_f[i_dof] - kin_ener;
+    gh_f[i_dof] = (t == internal_energy) ? math::pow(v*in_f[i_dof - nfq], 2)/int_ener : in_f[i_dof];
   }
   // prime `state_cache` with average state for use in emissivity BC
   for (int i_dof = 0; i_dof < params.n_var*nfq; ++i_dof) {
