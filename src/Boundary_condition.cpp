@@ -271,6 +271,7 @@ void No_slip::apply_state(Boundary_face& bf)
     kin_ener /= 2*in_f[i_dof - nfq];
     double int_ener = in_f[i_dof] - kin_ener;
     gh_f[i_dof] = (t == internal_energy) ? math::pow(v*in_f[i_dof - nfq], 2)/int_ener : in_f[i_dof];
+    gh_f[i_dof] += kin_ener; // kinetic energy should be zero, but if it's not, add it back in for stability
   }
   // prime `state_cache` with average state for use in emissivity BC
   for (int i_dof = 0; i_dof < params.n_var*nfq; ++i_dof) {
@@ -300,6 +301,7 @@ void No_slip::apply_flux(Boundary_face& bf)
       normal += n*n;
     }
     normal = std::sqrt(normal);
+    int flux_sign = 2*bf.inside_face_sign() - 1;
     switch (t) {
       case heat_flux:
         flux = v*normal;
@@ -312,10 +314,9 @@ void No_slip::apply_flux(Boundary_face& bf)
         }
         break;
       default:
-        flux = in_f[i_dof];
+        flux = flux_sign*in_f[i_dof];
         break;
     }
-    int flux_sign = 2*bf.inside_face_sign() - 1;
     gh_f[i_dof] = 2*flux*flux_sign - in_f[i_dof];
   }
   // write the inside flux to the state cache for use in surface visualization
