@@ -139,6 +139,6 @@ TEST_CASE("Advection")
     state << -3., -2.,
              .21, .23;
     hexed::Mat<1> flux = hexed::pde::Advection<1>().flux_num(state, normal);
-    REQUIRE(flux(0) == Approx(-2.*.23*.6));
+    REQUIRE(flux(0) == Approx(.5*.6*(-2.*.23 - 3.*.21 + (.21 - .23))));
   }
 }

@@ -458,7 +458,6 @@ void Solver::set_art_visc_smoothness(double advect_length)
       sw_adv.children.at("setup").work_units_completed += elements.size();
       sw_adv.children.at("update").work_units_completed += elements.size();
     }
-    if ((iter + 1)%300 == 0) printf("advection residual %e\n", diff/n_avg);
   }
   stopwatch.children.at("set art visc").children.at("advection").stopwatch.pause();
   stopwatch.children.at("set art visc").children.at("advection").work_units_completed += elements.size();
