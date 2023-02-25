@@ -13,7 +13,9 @@ Discontinuous Galerkin engine for CFD with automated, unstructured quad/hex mesh
 
 For source code reference documentation, installation instructions, and other information,
 please [download the documentation](https://github.gatech.edu/ARTLab/hexed/archive/refs/heads/documentation.zip).
-To view, unzip it and open the file `index.html`.
+That link will give you a zip archive, from which you should open the file `index.html`.
+Be sure to extract the whole folder before you view it (don't just view it while it's still zipped),
+or else the images and other features won't work.
 
 ## About
 Anyone who has spent a substantial amount of time working with computational fluid dynamics (CFD)
