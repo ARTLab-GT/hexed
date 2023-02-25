@@ -24,45 +24,45 @@ class Qpoint_func : virtual public Output_data
 class Jacobian_det_func : public Qpoint_func
 {
   public:
-  virtual inline int n_var(int n_dim) const {return 1;}
-  virtual inline std::string variable_name(int n_dim, int i_var) const {return "jacobian_determinant";}
-  virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const;
+  inline int n_var(int n_dim) const override {return 1;}
+  inline std::string variable_name(int n_dim, int i_var) const override {return "jacobian_determinant";}
+  std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
 };
 
 //! Determinant of inverse of Jacobian
 class Jac_inv_det_func : public Qpoint_func
 {
   public:
-  virtual inline int n_var(int n_dim) const {return 1;}
-  virtual inline std::string variable_name(int n_dim, int i_var) const {return "jacobian_inverse_determinant";}
-  virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const;
+  inline int n_var(int n_dim) const override {return 1;}
+  inline std::string variable_name(int n_dim, int i_var) const override {return "jacobian_inverse_determinant";}
+  std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
 };
 
 //! Fetches the value of the `Element::time_step_scale` member.
 class Time_step_scale_func : public Qpoint_func
 {
   public:
-  virtual inline int n_var(int n_dim) const {return 1;}
-  virtual inline std::string variable_name(int n_dim, int i_var) const {return "time_step_scale";}
-  virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const;
+  inline int n_var(int n_dim) const override {return 1;}
+  inline std::string variable_name(int n_dim, int i_var) const override {return "time_step_scale";}
+  std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
 };
 
 //! returns the most recent update to the state divided by the local time step scale.
 class Physical_update : public Qpoint_func
 {
   public:
-  virtual inline int n_var(int n_dim) const {return n_dim + 2;}
-  virtual inline std::string variable_name(int n_dim, int i_var) const {return "update" + std::to_string(i_var);}
-  virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const;
+  inline int n_var(int n_dim) const override {return n_dim + 2;}
+  inline std::string variable_name(int n_dim, int i_var) const override {return "update" + std::to_string(i_var);}
+  std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
 };
 
 //! fetches the artificial viscosity coefficient
 class Art_visc_coef : public Qpoint_func
 {
   public:
-  virtual inline int n_var(int n_dim) const {return 1;}
-  virtual inline std::string variable_name(int n_dim, int i_var) const {return "artificial_viscosity_coefficient";}
-  virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const;
+  inline int n_var(int n_dim) const override {return 1;}
+  inline std::string variable_name(int n_dim, int i_var) const override {return "artificial_viscosity_coefficient";}
+  std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
 };
 
 //! returns a component of another `Qpoint_func`
@@ -77,9 +77,9 @@ class Component : public Qpoint_func
    */
   inline Component(const Qpoint_func& base, int i_var) : qf{base}, iv{i_var} {}
   inline Component(Qpoint_func&& base, int i_var) = delete; // can't accept temporaries. would cause dangling reference
-  virtual inline int n_var(int n_dim) const {return 1;}
-  virtual inline std::string variable_name(int n_dim, int i_var) const {return qf.variable_name(n_dim, iv);}
-  virtual inline std::vector<double> operator()(Element& e, const Basis& b, int i_qpoint, double time) const
+  inline int n_var(int n_dim) const override {return 1;}
+  inline std::string variable_name(int n_dim, int i_var) const override {return qf.variable_name(n_dim, iv);}
+  inline std::vector<double> operator()(Element& e, const Basis& b, int i_qpoint, double time) const override
   {
     return {qf(e, b, i_qpoint, time)[iv]};
   }
@@ -104,9 +104,9 @@ class Scaled : public Qpoint_func
    */
   inline Scaled(const Qpoint_func& base, std::array<double, 2> bounds) : qf{base}, bnd{bounds} {}
   Scaled(Qpoint_func&& base, std::array<double, 2> bounds) = delete;
-  virtual inline int n_var(int n_dim) const {return 1;}
-  virtual inline std::string variable_name(int n_dim, int i_var) const {return "scaled_" + qf.variable_name(n_dim, 0);}
-  virtual inline std::vector<double> operator()(Element& e, const Basis& b, int i_qpoint, double time) const
+  inline int n_var(int n_dim) const override {return 1;}
+  inline std::string variable_name(int n_dim, int i_var) const override {return "scaled_" + qf.variable_name(n_dim, 0);}
+  inline std::vector<double> operator()(Element& e, const Basis& b, int i_qpoint, double time) const override
   {
     double val = qf(e, b, i_qpoint, time)[0];
     val = (val - bnd[0])/(bnd[1] - bnd[0]);
@@ -123,9 +123,21 @@ class Pow : public Qpoint_func
   public:
   inline Pow(const Qpoint_func& base, int exponent) : qf{base}, exp{exponent} {}
   Pow(Qpoint_func&&, int) = delete;
-  virtual inline int n_var(int n_dim) const {return qf.n_var(n_dim);}
-  virtual std::string variable_name(int n_dim, int i_var) const;
-  virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const;
+  inline int n_var(int n_dim) const override {return qf.n_var(n_dim);}
+  std::string variable_name(int n_dim, int i_var) const override;
+  std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
+};
+
+//! Fetches first forcing variable in artificial viscosity computation
+class Art_visc_forcing : public Qpoint_func
+{
+  int i_force;
+  public:
+  //! \param i_forcing which forcing term you want to see
+  inline Art_visc_forcing(int i_forcing) : i_force{i_forcing} {}
+  inline int n_var(int n_dim) const override {return 1;}
+  inline std::string variable_name(int n_dim, int i_var) const override {return "art_visc_forcing";};
+  std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
 };
 
 //! Concatenates `Qpoint_func`s

@@ -367,7 +367,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
       }
       scale = std::sqrt(scale);
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        state[i_dim*nq + i_qpoint] = rk_ref[i_dim*nq + i_qpoint]/scale*advect_length;
+        state[i_dim*nq + i_qpoint] = rk_ref[i_dim*nq + i_qpoint]/scale;
       }
     }
   }
@@ -381,14 +381,6 @@ void Solver::set_art_visc_smoothness(double advect_length)
   (*kernel_factory<Spatial<Element         , pde::Advection>::Max_dt>(nd, rs, basis, true))(acc_mesh.cartesian().elements(), sw_adv.children.at("cartesian"), "compute time step");
   (*kernel_factory<Spatial<Deformed_element, pde::Advection>::Max_dt>(nd, rs, basis, true))(acc_mesh.deformed ().elements(), sw_adv.children.at("deformed" ), "compute time step");
   double dt_adv = av_advect_stab_rat;
-  // ensure that time step is small enough that the time derivative term will be stable
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    double* tss = elements[i_elem].time_step_scale();
-    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      tss[i_qpoint] /= std::max(2*tss[i_qpoint]/av_advect_max_forcing, 1.);
-    }
-  }
 
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
   double diff = 0; // for residual computation
@@ -451,10 +443,12 @@ void Solver::set_art_visc_smoothness(double advect_length)
           double* tss = elements[i_elem].time_step_scale();
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
             // compute update
-            double d = state[nd*nq + i_qpoint] - state[(nd + 1)*nq + i_qpoint]
-                       + dt_adv*tss[i_qpoint]*(1. - adv[i_node*nq + i_qpoint])*2;
-            adv[i_node*nq + i_qpoint] += d; // add to advection state
+            double pseudotime_scale = + dt_adv*tss[i_qpoint]*2/advect_length;
+            double old = adv[i_node*nq + i_qpoint]; // record for measuring residual
+            adv[i_node*nq + i_qpoint] += state[nd*nq + i_qpoint] - state[(nd + 1)*nq + i_qpoint] + pseudotime_scale*1.;
+            adv[i_node*nq + i_qpoint] /= 1. + pseudotime_scale;
             // add to residual
+            double d = adv[i_node*nq + i_qpoint] - old;
             diff += d*d/dt_scaled/dt_scaled;
             ++n_avg;
           }
@@ -488,18 +482,10 @@ void Solver::set_art_visc_smoothness(double advect_length)
   // begin root-smear-square operation
   int n_real = 3; // number of real time steps (as apposed to pseudotime steps)
   // evaluate CFL condition
-  (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true))(acc_mesh.cartesian().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "compute time step"),
+  (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true))(acc_mesh.cartesian().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "compute time step");
   (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true))(acc_mesh.deformed ().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "compute time step");
   double dt_diff = av_diff_stab_rat;
   double diff_time = av_diff_ratio/n_real; // compute size of real time step (as opposed to pseudotime)
-  // adjust for time derivative term if necessary
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    double* tss = elements[i_elem].time_step_scale();
-    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      tss[i_qpoint] /= std::max(tss[i_qpoint]/diff_time/av_diff_max_forcing/advect_length, 1.);
-    }
-  }
   // initialize residual to zero (will compute RMS over all real time steps)
   status.diff_res = 0;
   for (int real_step = 0; real_step < n_real; ++real_step)
@@ -537,16 +523,6 @@ void Solver::set_art_visc_smoothness(double advect_length)
       }
       for (double s : step)
       {
-        // compute (real) time derivative term
-        #pragma omp parallel for
-        for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-          double* state = elements[i_elem].stage(0);
-          double* forcing = elements[i_elem].art_visc_forcing();
-          double* tss = elements[i_elem].time_step_scale();
-          for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-            state[nq + i_qpoint] = s*(forcing[real_step*nq + i_qpoint] - state[i_qpoint])/diff_time*tss[i_qpoint]/advect_length;
-          }
-        }
         // apply value boundary condition (or lack thereof, in this case)
         #pragma omp parallel for
         for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
@@ -556,15 +532,23 @@ void Solver::set_art_visc_smoothness(double advect_length)
             gh_f[i_dof] = in_f[i_dof];
           }
         }
+        // update state with spatial term
         compute_avc_diff(s, 0);
-        // update state
+        // update state with real time forcing term
         #pragma omp parallel for
         for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
           double* state = elements[i_elem].stage(0);
+          double* forcing = elements[i_elem].art_visc_forcing();
+          double* tss = elements[i_elem].time_step_scale();
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-            state[i_qpoint] += state[nq + i_qpoint];
+            double pseudotime_scale = s/diff_time*tss[i_qpoint]/advect_length;
+            state[i_qpoint] += forcing[real_step*nq + i_qpoint]*pseudotime_scale;
+            state[i_qpoint] /= 1 + pseudotime_scale;
           }
         }
+        // update face state
+        (*write_face)(elements);
+        (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
       }
     }
     // update forcing function and residual
@@ -602,6 +586,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
       }
       double f = std::max(0., forcing[n_real*nq + i_qpoint]);
       f = std::pow(std::pow(f, av_noise_power/2.) + thresh_pow, 1./av_noise_power) - av_noise_threshold; // divide power by 2 because already squared
+      f = std::min(f, av_unscaled_max);
       av[i_qpoint] = av_visc_mult*advect_length*f*std::sqrt(scale_sq); // root-smear-square complete!
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
@@ -760,13 +745,6 @@ void Solver::fix_admissibility(double stability_ratio)
     else {
       if (status.iteration >= last_fix_vis_iter + 1000) {
         last_fix_vis_iter = status.iteration;
-        #if HEXED_USE_TECPLOT
-        visualize_field_tecplot("admissibility_diagnostic" + std::to_string(status.iteration));
-        #elif HEXED_USE_OTTER
-        otter::plot plt;
-        visualize_field_otter(plt, Pressure());
-        plt.show();
-        #endif
       }
       (*kernel_factory<Spatial<Element         , pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true))(acc_mesh.cartesian().elements(), stopwatch.children.at("fix admis.").children.at("cartesian"), "compute time step");
       (*kernel_factory<Spatial<Deformed_element, pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true))(acc_mesh.deformed ().elements(), stopwatch.children.at("fix admis.").children.at("deformed" ), "compute time step");

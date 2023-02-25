@@ -21,16 +21,16 @@ std::vector<double> Domain_func::operator()(std::vector<double> pos, double time
   return operator()(pos, time, state);
 }
 
-std::vector<double> State_variables::operator()(const std::vector<double> point_pos, double point_time,
-                                                const std::vector<double> state) const
+std::vector<double> State_variables::operator()(std::vector<double> point_pos, double point_time,
+                                                std::vector<double> state) const
 {
   return state;
 }
 
 Diff_sq::Diff_sq(const Domain_func& arg0, const Domain_func& arg1) : func0{arg0}, func1{arg1} {}
 
-std::vector<double> Diff_sq::operator()(const std::vector<double> point_pos, double point_time,
-                                        const std::vector<double> state) const
+std::vector<double> Diff_sq::operator()(std::vector<double> point_pos, double point_time,
+                                        std::vector<double> state) const
 {
   auto result0 = func0(point_pos, point_time, state);
   auto result1 = func1(point_pos, point_time, state);
@@ -57,8 +57,8 @@ int Error_func::n_var(int n_dim) const
   return correct.n_var(n_dim);
 }
 
-std::vector<double> Error_func::operator()(const std::vector<double> point_pos, double point_time,
-                                           const std::vector<double> state) const
+std::vector<double> Error_func::operator()(std::vector<double> point_pos, double point_time,
+                                           std::vector<double> state) const
 {
   State_variables sv;
   Diff_sq ds (correct, sv);
@@ -67,8 +67,8 @@ std::vector<double> Error_func::operator()(const std::vector<double> point_pos, 
 
 Stag_pres::Stag_pres(double heat_rat) : hr{heat_rat} {}
 
-std::vector<double> Stag_pres::operator()(const std::vector<double> point_pos, double point_time,
-                                          const std::vector<double> state) const
+std::vector<double> Stag_pres::operator()(std::vector<double> point_pos, double point_time,
+                                          std::vector<double> state) const
 {
   double mass {state[state.size() - 2]};
   double momentum_sq {0.};
@@ -85,8 +85,8 @@ std::vector<double> Stag_pres::operator()(const std::vector<double> point_pos, d
 
 Pressure::Pressure(double heat_rat) : hr{heat_rat} {}
 
-std::vector<double> Pressure::operator()(const std::vector<double> point_pos, double point_time,
-                                         const std::vector<double> state) const
+std::vector<double> Pressure::operator()(std::vector<double> point_pos, double point_time,
+                                         std::vector<double> state) const
 {
   double mass {state[state.size() - 2]};
   double momentum_sq {0.};
@@ -104,13 +104,23 @@ std::string Velocity::variable_name(int n_dim, int i_var) const
   return buffer;
 }
 
-std::vector<double> Velocity::operator()(const std::vector<double> point_pos, double point_time,
-                                         const std::vector<double> state) const
+std::vector<double> Velocity::operator()(std::vector<double> point_pos, double point_time,
+                                         std::vector<double> state) const
 {
   std::vector<double> veloc(3, 0.);
   const int n_dim = state.size() - 2;
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) veloc[i_dim] = state[i_dim]/state[n_dim];
   return veloc;
+}
+
+std::vector<double> Mach::operator()(std::vector<double> point_pos, double point_time,
+                                     std::vector<double> state) const
+{
+  double mmtm_sq = 0;
+  int nd = point_pos.size();
+  for (int i_dim = 0; i_dim < nd; ++i_dim) mmtm_sq += state[i_dim]*state[i_dim];
+  double pres = Pressure(hr)(point_pos, point_time, state)[0];
+  return {std::sqrt(mmtm_sq/(hr*pres*state[nd]))};
 }
 
 }

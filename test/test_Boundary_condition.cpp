@@ -193,7 +193,7 @@ TEST_CASE("No_slip")
   const int row_size = hexed::config::max_row_size;
   hexed::Storage_params params {3, 4, 2, row_size};
   hexed::Deformed_element element {params};
-  hexed::Typed_bound_connection<hexed::Deformed_element> tbc {element, 0, true, 0};
+  hexed::Typed_bound_connection<hexed::Deformed_element> tbc {element, 0, false, 0};
   for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
     for (int i_dim = 0; i_dim < 2; ++i_dim) tbc.normal()[i_dim*row_size + i_qpoint] = .7/std::sqrt(2.);
   }
@@ -209,7 +209,7 @@ TEST_CASE("No_slip")
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_dim = 0; i_dim < 2; ++i_dim) REQUIRE(tbc.ghost_face()[i_dim*row_size + i_qpoint] == Approx(-1.));
       REQUIRE(tbc.ghost_face()[2*row_size + i_qpoint] == Approx(1.2));
-      REQUIRE((tbc.ghost_face()[3*row_size + i_qpoint] + tbc.inside_face()[3*row_size + i_qpoint])/2 == Approx(1e6*1.2));
+      REQUIRE(std::sqrt(tbc.ghost_face()[3*row_size + i_qpoint]*tbc.inside_face()[3*row_size + i_qpoint]) == Approx(1e6*1.2));
     }
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_var = 0; i_var < 4; ++i_var) tbc.inside_face()[(8 + i_var)*row_size + i_qpoint] = flux[i_var];
@@ -243,7 +243,7 @@ TEST_CASE("No_slip")
       for (int i_var = 0; i_var < 3; ++i_var) {
         REQUIRE(tbc.ghost_face()[(8 + i_var)*row_size + i_qpoint] == Approx(flux[i_var]));
       }
-      REQUIRE((tbc.ghost_face()[11*row_size + i_qpoint] + tbc.inside_face()[11*row_size + i_qpoint])/2 == Approx(3.*.7));
+      REQUIRE((tbc.ghost_face()[11*row_size + i_qpoint] + tbc.inside_face()[11*row_size + i_qpoint])/2 == Approx(-3.*.7));
     }
   }
   SECTION("specified emissivity")
@@ -265,7 +265,7 @@ TEST_CASE("No_slip")
     }
     no_slip.apply_flux(tbc);
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-      REQUIRE((tbc.ghost_face()[11*row_size + i_qpoint] + tbc.inside_face()[11*row_size + i_qpoint])/2 == Approx(.8*hexed::stefan_boltzmann*std::pow(temp, 4)*.7));
+      REQUIRE((tbc.ghost_face()[11*row_size + i_qpoint] + tbc.inside_face()[11*row_size + i_qpoint])/2 == Approx(-.8*hexed::stefan_boltzmann*std::pow(temp, 4)*.7));
     }
   }
 }

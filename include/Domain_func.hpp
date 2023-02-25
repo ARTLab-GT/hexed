@@ -21,8 +21,8 @@ class Domain_func : public Qpoint_func, public Surface_func
                                  std::vector<double> state, std::vector<double> outward_normal) const override;
 
   public:
-  virtual std::vector<double> operator()(const std::vector<double> pos, double time,
-                                         const std::vector<double> state) const = 0;
+  virtual std::vector<double> operator()(std::vector<double> pos, double time,
+                                         std::vector<double> state) const = 0;
 };
 
 //! A function that simply gives you back the state variables. Useful for visualization and conservation checking.
@@ -32,8 +32,8 @@ class State_variables : public Domain_func
   inline int n_var(int n_dim) const override {return n_dim + 2;}
   inline std::string variable_name(int n_dim, int i_var) const override {return "state" + std::to_string(i_var);}
   //! \returns `state`
-  std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
-                                 const std::vector<double> state) const override;
+  std::vector<double> operator()(std::vector<double> point_pos, double point_time,
+                                 std::vector<double> state) const override;
 };
 
 //! computes the elementwise squared difference between the output of 2 `Domain_func`s
@@ -48,8 +48,8 @@ class Diff_sq : public Domain_func
   Diff_sq(const Domain_func& ,       Domain_func&&) = delete;
   Diff_sq(      Domain_func&&,       Domain_func&&) = delete;
   inline int n_var(int n_dim) const override {return func0.n_var(n_dim);}
-  std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
-                                 const std::vector<double> state) const override;
+  std::vector<double> operator()(std::vector<double> point_pos, double point_time,
+                                 std::vector<double> state) const override;
 };
 
 /*! Computes elementwise difference between `state` and `correct(point_pos, point_time)`, squared.
@@ -62,8 +62,8 @@ class Error_func : public Domain_func
   Error_func(Spacetime_func&&) = delete;
   int n_var(int n_dim) const override;
   std::string variable_name(int n_dim, int i_var) const override;
-  std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
-                                 const std::vector<double> state) const override;
+  std::vector<double> operator()(std::vector<double> point_pos, double point_time,
+                                 std::vector<double> state) const override;
 };
 
 //! Computes stagnation pressure.
@@ -74,8 +74,8 @@ class Stag_pres : public Domain_func
   Stag_pres(double heat_rat = 1.4);
   inline int n_var(int n_dim) const override {return 1;}
   inline std::string variable_name(int n_dim, int i_var) const override {return "stagnation_pressure";}
-  std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
-                                 const std::vector<double> state) const override;
+  std::vector<double> operator()(std::vector<double> point_pos, double point_time,
+                                 std::vector<double> state) const override;
 };
 
 //! Computes (static) pressure.
@@ -86,8 +86,8 @@ class Pressure : public Domain_func
   Pressure(double heat_rat = 1.4);
   inline int n_var(int n_dim) const override {return 1;}
   inline std::string variable_name(int n_dim, int i_var) const {return "pressure";}
-  std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
-                                 const std::vector<double> state) const override;
+  std::vector<double> operator()(std::vector<double> point_pos, double point_time,
+                                 std::vector<double> state) const override;
 };
 
 //! Computes velocity vector.
@@ -96,8 +96,8 @@ class Velocity : public Domain_func
   public:
   inline int n_var(int n_dim) const override {return n_dim;}
   std::string variable_name(int n_dim, int i_var) const override;
-  std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
-                                 const std::vector<double> state) const override;
+  std::vector<double> operator()(std::vector<double> point_pos, double point_time,
+                                 std::vector<double> state) const override;
 };
 
 //! Aka density.
@@ -105,11 +105,23 @@ class Mass : public Domain_func
 {
   inline int n_var(int n_dim) const override {return 1;}
   inline std::string variable_name(int n_dim, int i_var) const override {return "mass";}
-  inline std::vector<double> operator()(const std::vector<double> point_pos, double point_time,
-                                        const std::vector<double> state) const override
+  inline std::vector<double> operator()(std::vector<double> point_pos, double point_time,
+                                        std::vector<double> state) const override
   {
     return {state[point_pos.size()]};
   }
+};
+
+//! Computes Mach number
+class Mach : public Domain_func
+{
+  double hr;
+  public:
+  inline Mach(double heat_rat = 1.4) : hr{heat_rat} {}
+  inline int n_var(int n_dim) const override {return 1;}
+  inline std::string variable_name(int n_dim, int i_var) const override {return "mach";}
+  std::vector<double> operator()(std::vector<double> point_pos, double point_time,
+                                 std::vector<double> state) const override;
 };
 
 }
