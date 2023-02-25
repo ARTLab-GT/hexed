@@ -14,8 +14,8 @@ namespace hexed
  */
 class Spacetime_func : public Domain_func
 {
-  std::vector<double> operator()(const std::vector<double> pos, double time,
-                                 const std::vector<double> state) const override;
+  std::vector<double> operator()(std::vector<double> pos, double time,
+                                 std::vector<double> state) const override;
   public:
   virtual std::vector<double> operator()(std::vector<double> pos, double time) const = 0;
 };

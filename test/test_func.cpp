@@ -372,3 +372,11 @@ TEST_CASE("Qf_concat")
   REQUIRE(result[2] == Approx(1.));
   REQUIRE(result[3] == Approx(2.));
 }
+
+TEST_CASE("Mach")
+{
+  std::vector<double> state {3.*1.2, 4.*1.2, 1.2, 101325/.4 + .5*25*1.2};
+  auto m = hexed::Mach()(std::vector<double>{1., 2.}, 0., state);
+  REQUIRE(m.size() == 1);
+  REQUIRE(m[0] == Approx(5./std::sqrt(1.4*101325/1.2)));
+}
