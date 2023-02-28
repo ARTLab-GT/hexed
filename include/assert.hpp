@@ -5,6 +5,8 @@
 #include <omp.h>
 #include "config.hpp"
 
+//! \file assert.hpp utilities for custom assertions
+
 //! utilities for custom assertions
 namespace hexed::assert
 {

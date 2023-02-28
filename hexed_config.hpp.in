@@ -11,11 +11,14 @@
 namespace hexed::config
 {
 
-// for translating CMake options into c++ values
+//! \name untilities
+//!\{
 #define HEXED_ON true
 #define HEXED_OFF false
+//!\}
 
-// options configured by CMake
+//! \name CMake options
+//!\{
 constexpr int max_row_size = @MAX_BASIS_ROW_SIZE@;
 #define HEXED_THREADED HEXED_@threaded@
 #if HEXED_THREADED
@@ -23,6 +26,7 @@ constexpr int n_threads = @n_threads@;
 #endif
 #define HEXED_USE_OTTER HEXED_@use_otter@
 #define HEXED_USE_TECPLOT HEXED_@use_tecplot@
+//!\}
 
 }
 #endif
