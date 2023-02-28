@@ -5,9 +5,14 @@
 #include <omp.h>
 #include "config.hpp"
 
+//! \file assert.hpp utilities for custom assertions
+
+//! utilities for custom assertions
 namespace hexed::assert
 {
 
+//! throws a `std::runtime_error` with message `message`, wrapped in a `#pragma omp critical` if necessary.
+//! Used in \ref HEXED_ASSERT
 inline void throw_critical(const char* message)
 {
   #if HEXED_THREADED
@@ -26,10 +31,18 @@ inline void throw_critical(const char* message)
 
 }
 
+/*! \brief Assert something with a helpful error message.
+ * \details If `expression` is false, throws a `std::runtime_error` with a message
+ * that includes `message` plus some additional info for debugging.
+ * Works inside single-threaded regions as well as OpenMP parallel regions.
+ */
 #define HEXED_ASSERT(expression, message) \
   if (!(expression)) { \
     char buffer [1000]; \
-    snprintf(buffer, 1000, "%s (in %s)", (message), __PRETTY_FUNCTION__); \
+    snprintf(buffer, 1000, "%s\n" \
+                           "Exact cause: assertion `%s` failed in %s.\n" \
+                           "Assertion invoked at line %d of %s in function %s.", \
+             (message), #expression, __FUNCTION__, __LINE__, __FILE__, __PRETTY_FUNCTION__); \
     assert::throw_critical(buffer); \
   } \
 
