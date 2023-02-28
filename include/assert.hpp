@@ -12,6 +12,7 @@ namespace hexed::assert
 {
 
 //! throws a `std::runtime_error` with message `message`, wrapped in a `#pragma omp critical` if necessary.
+//! Used in \ref HEXED_ASSERT
 inline void throw_critical(const char* message)
 {
   #if HEXED_THREADED
