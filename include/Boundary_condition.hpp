@@ -9,7 +9,7 @@ namespace hexed
 
 class Boundary_connection;
 
-/*
+/*!
  * Abstract class representing an arbitrary flow boundary condition (as opposed to a mesh BC).
  * That is, something that computes a ghost state given an state on the boundary (inside state),
  * a face size, and a Jacobian.
@@ -17,19 +17,18 @@ class Boundary_connection;
 class Flow_bc
 {
   public:
-  // applies boundary condition to state variables (Dirichlet BCs)
-  // writes to the first `n_var()*size()` entries of `ghost_state()` (called on the provided `Boundary_face`.)
+  //! \brief applies boundary condition to state variables (Dirichlet BCs)
+  //! \details writes to the first `n_var()*size()` entries of `ghost_state()` (called on the provided `Boundary_face`.)
   virtual void apply_state(Boundary_face&) = 0;
-  // applies boundary condition to viscous fluxes (if applicable)
+  //! applies boundary condition to viscous fluxes (if applicable)
   virtual void apply_flux(Boundary_face&) = 0;
-  // applies boundary condition to linear advection equation used to compute nonsmoothness indicator
+  //! applies boundary condition to linear advection equation used to compute nonsmoothness indicator
   virtual void apply_advection(Boundary_face&);
   virtual ~Flow_bc() = default;
 };
 
-/*
- * Abstract class representing a mesh boundary condition.
- * That is, a rule for snapping vertices and face node adjustments to the boundary.
+/*! \brief Abstract class representing a mesh boundary condition.
+ * \details That is, a rule for snapping vertices and face node adjustments to the boundary.
  * This is the means for providing surface geometry to hexed.
  */
 class Mesh_bc
@@ -40,6 +39,8 @@ class Mesh_bc
   virtual ~Mesh_bc() = default;
 };
 
+//! a complete boundary condition,
+//! which needs a boundary condition for both the mesh smoothing and the flow solution
 class Boundary_condition
 {
   public:
@@ -47,9 +48,8 @@ class Boundary_condition
   std::unique_ptr<Mesh_bc> mesh_bc;
 };
 
-/*
- * Sets the ghost state to the provided freestream state.
- * Technically this can result in an ill-posed problem if used
+/*! \brief Sets the ghost state to the provided freestream state.
+ * \details Technically this can result in an ill-posed problem if used
  * in anything other than a supersonic inlet,
  * but in numerical practice it often gets you the right answer anyway, at least for inviscid problems.
  */
@@ -57,15 +57,14 @@ class Freestream : public Flow_bc
 {
   Mat<> fs;
   public:
-  // `freestream_state.size()` must equal the `n_var()` of the `Boundary_face` you apply_state it to
+  //! `freestream_state.size()` must equal the `n_var()` of the `Boundary_face` you apply_state it to
   Freestream(Mat<> freestream_state);
   virtual void apply_state(Boundary_face&);
   virtual void apply_flux(Boundary_face&);
 };
 
-/*
- * A freestream boundary condition that sets only the ingoing characteristics.
- * Works in almost any situation.
+/*! \brief A freestream boundary condition that sets only the ingoing characteristics.
+ * \details Works in almost any situation.
  * Should generally be the default farfield boundary condition.
  */
 class Riemann_invariants : public Flow_bc
@@ -77,7 +76,8 @@ class Riemann_invariants : public Flow_bc
   virtual void apply_flux(Boundary_face&);
 };
 
-/* Like `Freestream`, but sets state to the value of an arbitrary `Surface_func`
+/*!
+ * Like `Freestream`, but sets state to the value of an arbitrary `Surface_func`
  * instead of a constant.
  */
 class Function_bc : public Flow_bc
@@ -90,7 +90,7 @@ class Function_bc : public Flow_bc
   virtual void apply_flux(Boundary_face&);
 };
 
-/*
+/*!
  * Copies the inside state and flips the sign of the surface-normal velocity.
  * Good for inviscid walls and symmetry planes.
  */
@@ -102,19 +102,21 @@ class Nonpenetration : public Flow_bc
   virtual void apply_advection(Boundary_face&);
 };
 
-/*
- * Flips the sign of the velocity.
+/*! \brief No-slip wall boundary condition.
+ * \details Flips the sign of the velocity.
  * Depending on the `Thermal_type` provided, will reflect either the heat flux
- * or the internal energy about `value` (so that averaging the inside and ghost states
- * gives you the specified value).
- * Good for viscous walls.
- * Note: for `internal_energy`, technically reflects total energy about `value`*mass
+ * or the internal energy about a given value.
  */
 class No_slip : public Flow_bc
 {
   public:
   enum Thermal_type {heat_flux, internal_energy, emissivity};
-  // note: providing no arguments gives you an adiabatic wall
+  /*!
+   * \param value value used to set thermal boundary condition.
+   * \param type defines which variable `value` is specifying (and thus the type of the thermal boundary condition)
+   * \note providing no arguments gives you an adiabatic wall
+   * \note if `emissivity` is specified, that will create a radiative equilibrium boundary condition
+   */
   No_slip(Thermal_type type = heat_flux, double value = 0);
   virtual void apply_state(Boundary_face&); // note: `apply_state` must be called before `apply_flux` to prime `state_cache`
   virtual void apply_flux(Boundary_face&);
@@ -124,8 +126,10 @@ class No_slip : public Flow_bc
   double v;
 };
 
-// mostly used for testing, but you can maybe get away with it for supersonic outlets.
-// all members just copy the inside data
+/*!
+ * mostly used for testing, but you can maybe get away with it for supersonic outlets.
+ * all members just copy the inside data
+ */
 class Copy : public Flow_bc
 {
   public:
@@ -134,15 +138,16 @@ class Copy : public Flow_bc
   virtual void apply_advection(Boundary_face&);
 };
 
-// for supersonic outlets
+//! for supersonic outlets
 class Outflow : public Flow_bc
 {
   public:
-  // inverts flux (so that avg is zero)
+  //! inverts flux (so that avg is zero)
   virtual void apply_state(Boundary_face&);
   virtual void apply_flux(Boundary_face&);
 };
 
+//! provides snapping functions that do nothing
 class Null_mbc : public Mesh_bc
 {
   public:
@@ -150,8 +155,10 @@ class Null_mbc : public Mesh_bc
   virtual inline void snap_node_adj(Boundary_connection&, const Basis&) {}
 };
 
-// snaps to the nominal position along the `i_dim` of the boundary face.
-// You can think of this as snapping to a Cartesian plane.
+/*!
+ * snaps to the nominal position along the `i_dim` of the boundary face.
+ * You can think of this as snapping to a Cartesian plane.
+ */
 class Nominal_pos : public Mesh_bc
 {
   public:
@@ -159,17 +166,18 @@ class Nominal_pos : public Mesh_bc
   virtual inline void snap_node_adj(Boundary_connection&, const Basis&) {}
 };
 
-// implicitly represents a surface by supporting a set of geometric operations
+//! \brief implicitly represents a surface by supporting a set of geometric operations
+//! \details NASCART-GT provides a derived class representing a simplex geometry
 class Surface_geometry
 {
   public:
-  /*
+  /*!
    * Return a point on the surface.
    * Invoking this function on a point already on the surface should return the same point.
    * Implementation suggestion: return the nearest point on the surface.
    */
   virtual std::array<double, 3> project_point(std::array<double, 3> point) = 0;
-  /*
+  /*!
    * compute intersections between a line and the surface.
    * Line is represented parametrically as a linear inter/extrapolation between 2 points.
    * Each element of the return value represents the value of the parameter at an intersection between the line and the surface.
@@ -180,30 +188,31 @@ class Surface_geometry
   virtual ~Surface_geometry() = default;
 };
 
-// a `Surface_geometry` which represents the union of other `Surface_geometry`s
+//! a `Surface_geometry` which represents the union of other `Surface_geometry`s
 class Surface_set : public Surface_geometry
 {
   std::vector<std::unique_ptr<Surface_geometry>> geoms;
   public:
-  // acquires ownership of surface geometries
+  //! acquires ownership of surface geometries
   Surface_set(std::vector<Surface_geometry*>);
-  // finds projection from all member surface geometries and takes nearest
+  //! finds projection from all member surface geometries and takes nearest
   virtual std::array<double, 3> project_point(std::array<double, 3> point);
-  // returns union of line intersections of all member surface geometries
+  //! returns union of line intersections of all member surface geometries
   virtual std::vector<double> line_intersections(std::array<double, 3> point0, std::array<double, 3> point1);
 };
 
+//! \brief snaps to a `Surface_geometry`
 class Surface_mbc : public Mesh_bc
 {
   std::unique_ptr<Surface_geometry> sg;
   public:
-  // acquire ownership of `*surf_geom`, which faces/vertices will be snapped to
+  //! acquire ownership of `*surf_geom`, which faces/vertices will be snapped to
   inline Surface_mbc(Surface_geometry* surf_geom) : sg{surf_geom} {}
   virtual void snap_vertices(Boundary_connection&);
   virtual void snap_node_adj(Boundary_connection&, const Basis&);
 };
 
-/*
+/*!
  * A `Boundary_face` that also provides details about the connection for the neighbor flux
  * computation and requests for a particular `Boundary_condition` to be applied to it.
  */
@@ -215,7 +224,7 @@ class Boundary_connection : public Boundary_face, public Face_connection<Deforme
   virtual int bound_cond_serial_n() = 0;
 };
 
-/*
+/*!
  * Implementation of `Boundary_connection` which also can provide a reference to the element
  * involved (for Jacobian calculation among other purposes).
  */
