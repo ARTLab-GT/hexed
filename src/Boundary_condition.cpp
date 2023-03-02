@@ -159,6 +159,48 @@ void Riemann_invariants::apply_flux(Boundary_face& bf)
   }
 }
 
+void Pressure_outflow::apply_state(Boundary_face& bf)
+{
+  auto params = bf.storage_params();
+  const int nfq = params.n_qpoint()/params.row_size;
+  double* in_f = bf.inside_face();
+  double* gh_f = bf.ghost_face();
+  double* nrml = bf.surface_normal();
+  int sign = 2*bf.inside_face_sign() - 1;
+  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+    // fetch data
+    Mat<> inside(params.n_var); // flux
+    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+      inside(i_var) = in_f[i_var*nfq + i_qpoint];
+    }
+    Mat<> n(params.n_dim);
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) n(i_dim) = nrml[i_dim*nfq + i_qpoint];
+    Mat<> ghost = inside;
+    // if subsonic, set pressure to specified value
+    Mat<> mmtm = inside(Eigen::seqN(0, params.n_dim));
+    double nrml_veloc = mmtm.dot(n)/inside(params.n_dim)/n.norm();
+    double kin_ener = .5*mmtm.squaredNorm()/inside(params.n_dim);
+    double pres = .4*(inside(params.n_dim + 1) - kin_ener);
+    double sound_speed = std::sqrt(1.4*pres/inside(params.n_dim));
+    if (nrml_veloc*sign < sound_speed) ghost(params.n_dim + 1) = pres_spec/.4 + kin_ener;
+    // write to ghost flux
+    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+      gh_f[i_var*nfq + i_qpoint] = ghost(i_var);
+    }
+  }
+}
+
+void Pressure_outflow::apply_flux(Boundary_face& bf)
+{
+  // set to negative of inside flux
+  auto params = bf.storage_params();
+  int nfq = params.n_qpoint()/params.row_size;
+  int offset = 2*params.n_var*nfq;
+  double* gh_f = bf.ghost_face() + offset;
+  double* in_f = bf.inside_face() + offset;
+  for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
+}
+
 Function_bc::Function_bc(const Surface_func& func_arg) : func{func_arg} {}
 
 void Function_bc::apply_state(Boundary_face& bf)

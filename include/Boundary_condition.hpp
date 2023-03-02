@@ -76,6 +76,22 @@ class Riemann_invariants : public Flow_bc
   virtual void apply_flux(Boundary_face&);
 };
 
+/*! \brief sets pressure on outflow boundaries
+ *
+ * - For supersonic outflow, same as `Riemann_invariants`
+ * - For subsonic outflow, sets the pressure instead of the incoming characteristic.
+ *   This can sometimes be less destructive to wakes and boundary layers exiting the domain.
+ * - Not valid for inflow.
+ */
+class Pressure_outflow : public Flow_bc
+{
+  double pres_spec;
+  public:
+  inline Pressure_outflow(double pressure) : pres_spec{pressure} {}
+  virtual void apply_state(Boundary_face&);
+  virtual void apply_flux(Boundary_face&);
+};
+
 /*!
  * Like `Freestream`, but sets state to the value of an arbitrary `Surface_func`
  * instead of a constant.
