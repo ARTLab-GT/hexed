@@ -80,8 +80,10 @@ class Riemann_invariants : public Flow_bc
  *
  * - For supersonic outflow, same as `Riemann_invariants`
  * - For subsonic outflow, sets the pressure instead of the incoming characteristic.
- *   This can sometimes be less destructive to wakes and boundary layers exiting the domain.
  * - Not valid for inflow.
+ * In principle, this could be less destructive than Riemann invariants for some wakes or boundary layers.
+ * \attention Sets all the viscous fluxes to zero regarding of Mach number, which makes it technically ill-posed.
+ * Not sure if that matters in practice.
  */
 class Pressure_outflow : public Flow_bc
 {
