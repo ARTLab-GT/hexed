@@ -912,8 +912,14 @@ void Solver::visualize_field_tecplot(std::string name, int n_sample, bool edges,
 {
   State_variables sv;
   Art_visc_coef avc;
+  Advection_state as(av_rs);
+  Art_visc_forcing avf;
   std::vector<const Qpoint_func*> funcs {&sv};
-  if (use_art_visc) funcs.push_back(&avc);
+  if (use_art_visc) {
+    funcs.push_back(&avc);
+    funcs.push_back(&as);
+    funcs.push_back(&avf);
+  }
   visualize_field_tecplot(Qf_concat(funcs), name, n_sample, edges, qpoints, interior);
 }
 

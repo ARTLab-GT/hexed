@@ -1,5 +1,6 @@
 #include <Qpoint_func.hpp>
 #include <math.hpp>
+#include <utils.hpp>
 
 namespace hexed
 {
@@ -48,9 +49,26 @@ std::vector<double> Pow::operator()(Element& e, const Basis& b, int i_qpoint, do
   return result;
 }
 
+std::vector<double> Advection_state::operator()(Element& elem, const Basis&, int i_qpoint, double time) const
+{
+  int elem_rs = elem.storage_params().row_size;
+  if (elem_rs != rs) {
+    throw std::runtime_error(format_str(100, "`Advection_state` initialized with row size %d but called with row size %d", rs, elem_rs));
+  }
+  std::vector<double> as;
+  for (int i_as = 0; i_as < rs; ++i_as) {
+    as.push_back(elem.advection_state()[i_as*elem.storage_params().n_qpoint() + i_qpoint]);
+  }
+  return as;
+}
+
 std::vector<double> Art_visc_forcing::operator()(Element& elem, const Basis&, int i_qpoint, double time) const
 {
-  return {elem.art_visc_forcing()[i_force*elem.storage_params().n_qpoint() + i_qpoint]*1e8};
+  std::vector<double> forcing;
+  for (int i_forcing = 0; i_forcing < Element::n_forcing; ++i_forcing) {
+    forcing.push_back(elem.art_visc_forcing()[i_forcing*elem.storage_params().n_qpoint() + i_qpoint]);
+  }
+  return forcing;
 }
 
 }

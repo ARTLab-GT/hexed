@@ -128,15 +128,23 @@ class Pow : public Qpoint_func
   std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
 };
 
-//! Fetches first forcing variable in artificial viscosity computation
+//! Fetches the advection states used for computing the smoothness-based artfificial viscosity
+class Advection_state : public Qpoint_func
+{
+  int rs;
+  public:
+  Advection_state(int row_size) : rs{row_size} {} //!< `Advection_state::operator()` will only work when called on a `Element` with the specified row size.
+  inline int n_var(int n_dim) const override {return rs;}
+  inline std::string variable_name(int n_dim, int i_var) const override {return "advection_state" + std::to_string(i_var);};
+  std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
+};
+
+//! Fetches one of the forcing variables in artificial viscosity computation
 class Art_visc_forcing : public Qpoint_func
 {
-  int i_force;
   public:
-  //! \param i_forcing which forcing term you want to see
-  inline Art_visc_forcing(int i_forcing) : i_force{i_forcing} {}
-  inline int n_var(int n_dim) const override {return 1;}
-  inline std::string variable_name(int n_dim, int i_var) const override {return "art_visc_forcing";};
+  inline int n_var(int n_dim) const override {return Element::n_forcing;}
+  inline std::string variable_name(int n_dim, int i_var) const override {return "art_visc_forcing" + std::to_string(i_var);};
   std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
 };
 
