@@ -138,9 +138,11 @@ class No_slip : public Flow_bc
    * \note if `emissivity` is specified, that will create a radiative equilibrium boundary condition
    */
   No_slip(Thermal_type type = heat_flux, double value = 0);
-  virtual void apply_state(Boundary_face&); // note: `apply_state` must be called before `apply_flux` to prime `state_cache`
-  virtual void apply_flux(Boundary_face&);
-  virtual void apply_advection(Boundary_face&);
+  void apply_state(Boundary_face&) override; // note: `apply_state` must be called before `apply_flux` to prime `state_cache`
+  void apply_flux(Boundary_face&) override;
+  void apply_advection(Boundary_face&) override;
+  void apply_diffusion(Boundary_face&) override;
+  void flux_diffusion(Boundary_face&) override;
   private:
   Thermal_type t;
   double v;
