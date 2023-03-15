@@ -26,6 +26,38 @@ void Flow_bc::apply_advection(Boundary_face& bf)
   }
 }
 
+void Flow_bc::apply_diffusion(Boundary_face& bf)
+{
+  auto params = bf.storage_params();
+  const int nv = params.n_var;
+  const int nq = params.n_qpoint()/params.row_size;
+  double* in_f = bf.inside_face();
+  double* gh_f = bf.ghost_face();
+  // set state equal to inside
+  for (int i_var = 0; i_var < nv; ++i_var) {
+    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+      gh_f[i_var*nq + i_qpoint] = in_f[i_var*nq + i_qpoint];
+    }
+  }
+}
+
+void Flow_bc::flux_diffusion(Boundary_face& bf)
+{
+  auto params = bf.storage_params();
+  const int nv = params.n_var;
+  const int nd = params.n_dim;
+  const int rs = params.row_size;
+  const int nq = params.n_qpoint()/rs;
+  double* in_f = bf.inside_face() + 2*(nd + 2)*nq/rs;
+  double* gh_f = bf.ghost_face()  + 2*(nd + 2)*nq/rs;
+  // set average flux to 0
+  for (int i_var = 0; i_var < nv; ++i_var) {
+    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+      gh_f[i_var*nq + i_qpoint] = -in_f[i_var*nq + i_qpoint];
+    }
+  }
+}
+
 Freestream::Freestream(Mat<> freestream_state)
 : fs{freestream_state}
 {}

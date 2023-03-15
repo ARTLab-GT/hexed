@@ -53,17 +53,23 @@ void Solver::apply_flux_bcs()
   }
 }
 
-void Solver::apply_avc_diff_flux_bcs()
+void Solver::apply_avc_diff_bcs()
 {
-  int nd = params.n_dim;
-  int rs = params.row_size;
-  int nq = params.n_qpoint();
   auto& bc_cons {acc_mesh.boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    double* in_f = bc_cons[i_con].inside_face() + 2*(nd + 2)*nq/rs;
-    double* gh_f = bc_cons[i_con].ghost_face()  + 2*(nd + 2)*nq/rs;
-    for (int i_qpoint = 0; i_qpoint < nq/rs; ++i_qpoint) gh_f[i_qpoint] = -in_f[i_qpoint];
+    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+    acc_mesh.boundary_condition(bc_sn).flow_bc->apply_diffusion(bc_cons[i_con]);
+  }
+}
+
+void Solver::apply_avc_diff_flux_bcs()
+{
+  auto& bc_cons {acc_mesh.boundary_connections()};
+  #pragma omp parallel for
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+    acc_mesh.boundary_condition(bc_sn).flow_bc->flux_diffusion(bc_cons[i_con]);
   }
 }
 
@@ -523,15 +529,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
       }
       for (double s : step)
       {
-        // apply value boundary condition (or lack thereof, in this case)
-        #pragma omp parallel for
-        for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-          double* in_f = bc_cons[i_con].inside_face();
-          double* gh_f = bc_cons[i_con].ghost_face();
-          for (int i_dof = 0; i_dof < nq/rs; ++i_dof) {
-            gh_f[i_dof] = in_f[i_dof];
-          }
-        }
+        apply_avc_diff_bcs();
         // update state with spatial term
         compute_avc_diff(s, 0);
         // update state with real time forcing term
@@ -587,7 +585,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
       double f = std::max(0., forcing[n_real*nq + i_qpoint]);
       f = std::pow(std::pow(f, av_noise_power/2.) + thresh_pow, 1./av_noise_power) - av_noise_threshold; // divide power by 2 because already squared
       f = std::min(f, av_unscaled_max);
-      double lag = 1e-5;
+      double lag = 1.;
       av[i_qpoint] = (1 - lag)*av[i_qpoint] + lag*av_visc_mult*advect_length*f*std::sqrt(scale_sq); // root-smear-square complete!
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {

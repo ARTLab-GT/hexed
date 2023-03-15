@@ -24,6 +24,8 @@ class Flow_bc
   virtual void apply_flux(Boundary_face&) = 0;
   //! applies boundary condition to linear advection equation used to compute nonsmoothness indicator
   virtual void apply_advection(Boundary_face&);
+  virtual void apply_diffusion(Boundary_face&);
+  virtual void flux_diffusion(Boundary_face&);
   virtual ~Flow_bc() = default;
 };
 

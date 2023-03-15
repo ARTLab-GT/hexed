@@ -11,6 +11,8 @@ namespace hexed
 const int dyn = Eigen::Dynamic;
 template <int rows = dyn, int cols = 1>
 using Mat = Eigen::Matrix<double, rows, cols>;
+const auto all = Eigen::all;
+const auto last = Eigen::last;
 
 //! Miscellaneous mathematical functions that aren't in `std::math`
 namespace math

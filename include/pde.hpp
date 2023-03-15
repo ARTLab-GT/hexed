@@ -122,7 +122,6 @@ class Navier_stokes
     Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const
     {
       auto seq = Eigen::seqN(0, n_dim);
-      auto all = Eigen::all;
       auto mmtm = state(seq);
       double mass = state(n_dim);
       Mat<n_dim> veloc = mmtm/mass;
