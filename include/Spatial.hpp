@@ -129,6 +129,7 @@ class Spatial
         double d_pos = elem.nominal_size();
         double time_rate [2][Pde::n_update][n_qpoint] {}; // first part contains convective time derivative, second part diffusive
         double* av_coef = elem.art_visc_coef();
+        double* wall_vec = elem.wall_vector();
         // only need the next 2 for deformed elements
         double* nrml = nullptr; // reference level normals
         double* elem_det = nullptr; // jacobian determinant
@@ -200,11 +201,9 @@ class Spatial
             }
             if constexpr (element_t::is_deformed) qpoint_grad /= elem_det[i_qpoint]; // divide by the determinant to get the actual gradient (see above)
             // compute flux and write to temporary storage
-            auto pos = elem.position(b, i_qpoint);
-            Mat<n_dim> pos_vec;
-            for (int i_dim = 0; i_dim < n_dim; ++i_dim) pos_vec(i_dim) = pos[i_dim];
-            pos_vec *= (pos_vec.norm() - 1)/pos_vec.norm();
-            Mat<n_dim, Pde::n_var> flux = qpoint_nrmls*eq.flux_visc(qpoint_state, qpoint_grad, av_coef[i_qpoint], pos_vec);
+            Mat<n_dim> wv;
+            for (int i_dim = 0; i_dim < n_dim; ++i_dim) wv(i_dim) = wall_vec[i_dim*n_qpoint + i_qpoint];
+            Mat<n_dim, Pde::n_var> flux = qpoint_nrmls*eq.flux_visc(qpoint_state, qpoint_grad, av_coef[i_qpoint], wv);
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
               for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
                 visc_storage[i_dim][Pde::curr_start + i_var][i_qpoint] = flux(i_dim, i_var);

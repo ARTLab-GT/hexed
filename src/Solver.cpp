@@ -296,6 +296,17 @@ void Solver::calc_jacobian()
     }
   }
   share_vertex_data(&Element::vertex_time_step_scale, Vertex::vector_min);
+  const int nq = params.n_qpoint();
+  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    double* wv = elements[i_elem].wall_vector();
+    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+      auto pos = elements[i_elem].position(basis, i_qpoint);
+      double norm = 0;
+      for (double p : pos) norm += p*p;
+      norm = std::sqrt(norm);
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) wv[i_dim*nq + i_qpoint] = pos[i_dim]*(norm - 1)/norm;
+    }
+  }
 }
 
 void Solver::initialize(const Spacetime_func& func)
