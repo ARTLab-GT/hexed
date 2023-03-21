@@ -119,7 +119,7 @@ class Navier_stokes
     }
 
     //! compute the viscous flux
-    Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const
+    Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef, Mat<n_dim> wall_vec) const
     {
       auto seq = Eigen::seqN(0, n_dim);
       auto mmtm = state(seq);
@@ -128,7 +128,10 @@ class Navier_stokes
       Mat<n_dim, n_dim> veloc_grad = (grad(all, seq) - grad(all, n_dim)*veloc.transpose())/mass;
       double sqrt_temp = std::sqrt((state(n_dim + 1)/mass - .5*veloc.squaredNorm())*(heat_rat - 1)/specific_gas_air);
       Mat<n_dim, n_dim> stress = dyn_visc.coefficient(sqrt_temp)*(veloc_grad + veloc_grad.transpose() - 2./3.*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity());
-      Mat<n_dim, n_update> flux = -av_coef*grad;
+      double wvn = wall_vec.norm();
+      Mat<n_dim> wall_n = wall_vec/wvn;
+      Mat<n_dim, n_var> grad_n = wall_n*wall_n.transpose()*grad;
+      Mat<n_dim, n_update> flux = -av_coef*(wvn/(.05 + wvn)*grad_n + 1.*(grad - grad_n));
       flux(all, seq) -= stress;
       Mat<n_dim> int_ener_grad = -state(n_dim + 1)/mass/mass*grad(all, n_dim) + grad(all, n_dim + 1)/mass - veloc_grad*veloc;
       flux(all, n_dim + 1) -= stress*veloc + therm_cond.coefficient(sqrt_temp)*int_ener_grad*(heat_rat - 1)/specific_gas_air;
@@ -290,7 +293,7 @@ class Smooth_art_visc
   static constexpr int n_update = 1;
 
   Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const {return Mat<n_update>::Zero();}
-  Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const
+  Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef, Mat<n_dim> wall_vec) const
   {
     return -grad;
   }
@@ -314,7 +317,7 @@ class Fix_therm_admis
   static constexpr int n_update = n_var;
 
   Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const {return Mat<n_update>::Zero();}
-  Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const
+  Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef, Mat<n_dim> wall_vec) const
   {
     return -grad;
   }
