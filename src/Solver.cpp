@@ -344,7 +344,6 @@ void Solver::set_art_visc_smoothness(double advect_length)
   const int nd = params.n_dim;
   const int rs = params.row_size;
   auto& elements = acc_mesh.elements();
-  auto& bc_cons {acc_mesh.boundary_connections()};
 
   // store the current state in stage 1 (normally the time integration reference)
   // so we can use stage 0 for solving the advection equation
