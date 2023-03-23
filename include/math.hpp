@@ -46,6 +46,12 @@ constexpr int log(int base, int arg)
   return result;
 }
 
+//! returns `1` if `condition` is true, otherwise `false`
+constexpr int sign(bool condition)
+{
+  return 2*condition - 1;
+}
+
 /*! \brief Finds a root of a scalar function with [Broyden's method](https://en.wikipedia.org/wiki/Broyden%27s_method).
  * \param func Should return a `double` when called on a `double` argument.
  * \param init_guess Initial guess for the root.

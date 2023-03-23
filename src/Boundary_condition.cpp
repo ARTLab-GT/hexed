@@ -393,7 +393,23 @@ void No_slip::apply_flux(Boundary_face& bf)
 
 void No_slip::apply_advection(Boundary_face& bf)
 {
-  apply_state(bf);
+  Storage_params params = bf.storage_params();
+  double* in_f = bf.inside_face();
+  double* gh_f = bf.ghost_face();
+  double* nrml = bf.surface_normal();
+  int nfq = params.n_qpoint()/params.row_size;
+  int nd = params.n_dim;
+  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+    double nrml_veloc = 0;
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      nrml_veloc += nrml[i_dim*nfq + i_qpoint]*in_f[i_dim*nfq + i_qpoint];
+    }
+    int veloc_sign = math::sign(nrml_veloc > 0)*math::sign(bf.inside_face_sign());
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      gh_f[i_dim*nfq + i_qpoint] = veloc_sign*in_f[i_dim*nfq + i_qpoint];
+    }
+    gh_f[nd*nfq + i_qpoint] = in_f[nd*nfq + i_qpoint];
+  }
 }
 
 void Copy::apply_state(Boundary_face& bf)
