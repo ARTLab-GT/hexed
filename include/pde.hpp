@@ -128,7 +128,7 @@ class Navier_stokes
       Mat<n_dim, n_dim> veloc_grad = (grad(all, seq) - grad(all, n_dim)*veloc.transpose())/mass;
       double sqrt_temp = std::sqrt((state(n_dim + 1)/mass - .5*veloc.squaredNorm())*(heat_rat - 1)/specific_gas_air);
       Mat<n_dim, n_dim> stress = dyn_visc.coefficient(sqrt_temp)*(veloc_grad + veloc_grad.transpose() - 2./3.*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity());
-      #if 1
+      #if 0
       double wvn = wall_vec.norm();
       Mat<n_dim> wall_n = wall_vec/wvn;
       Mat<n_dim, n_var> grad_n = wall_n*wall_n.transpose()*grad;
