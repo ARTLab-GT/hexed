@@ -43,7 +43,7 @@ class Navier_stokes
   #define ASSERT_THERM_ADMIS \
     HEXED_ASSERT(state(n_dim) > 0, "nonpositive density"); \
     HEXED_ASSERT(state(n_dim + 1) >= 0, "negative energy"); \
-    HEXED_ASSERT(pres >= 0, "negative pressure"); \
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) HEXED_ASSERT(!std::isnan(state(n_dim)), "momentum is NaN"); \
 
   public:
   Navier_stokes() = delete;
@@ -103,7 +103,6 @@ class Navier_stokes
       for (int i_side = 0; i_side < 2; ++i_side) {
         auto state = face_state(Eigen::all, i_side);
         face_flux(Eigen::all, i_side) = flux(state, normal);
-        double pres = pressure(state);
         ASSERT_THERM_ADMIS
         wave_speed(i_side) = char_speed(state)*nrml_mag;
       }
@@ -119,7 +118,7 @@ class Navier_stokes
       double mass = state(n_dim);
       Mat<n_dim> veloc = mmtm/mass;
       Mat<n_dim, n_dim> veloc_grad = (grad(all, seq) - grad(all, n_dim)*veloc.transpose())/mass;
-      double sqrt_temp = std::sqrt((state(n_dim + 1)/mass - .5*veloc.squaredNorm())*(heat_rat - 1)/specific_gas_air);
+      double sqrt_temp = std::sqrt(std::max(state(n_dim + 1)/mass - .5*veloc.squaredNorm(), 0.)*(heat_rat - 1)/specific_gas_air);
       Mat<n_dim, n_dim> stress = dyn_visc.coefficient(sqrt_temp)*(veloc_grad + veloc_grad.transpose() - 2./3.*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity());
       Mat<n_dim, n_update> flux = -av_coef*grad;
       flux(all, seq) -= stress;
@@ -143,7 +142,7 @@ class Navier_stokes
     {
       double mass = state(n_dim);
       auto veloc = state(Eigen::seqN(0, n_dim))/mass;
-      double sqrt_temp = std::sqrt((state(n_dim + 1)/mass - .5*veloc.squaredNorm())*(heat_rat - 1)/specific_gas_air);
+      double sqrt_temp = std::sqrt(std::max(state(n_dim + 1)/mass - .5*veloc.squaredNorm(), 0.)*(heat_rat - 1)/specific_gas_air);
       return av_coef + std::max(dyn_visc.coefficient(sqrt_temp)/mass, therm_cond.coefficient(sqrt_temp)*(heat_rat - 1)/specific_gas_air/mass);
     }
 
@@ -177,7 +176,7 @@ class Navier_stokes
         // compute more properties of the reference state
         double vsq = veloc.squaredNorm();
         double pres = .4*(state(n_dim + 1) - .5*mass*vsq);
-        double sound_speed = std::sqrt(1.4*pres/mass);
+        double sound_speed = std::sqrt(1.4*std::max(pres, 0.)/mass);
         // compute eigenvalues
         vals(2) = nrml(veloc);
         vals(0) = vals(2) - sound_speed;
