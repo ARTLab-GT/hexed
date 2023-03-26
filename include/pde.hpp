@@ -18,12 +18,18 @@ namespace hexed::pde
 template <int n_var>
 Mat<n_var> hll(Mat<2> speed, Mat<n_var, 2> flux, Mat<n_var, 2> state)
 {
-  Mat<n_var> f;
   if (speed(0) >= 0) return flux(Eigen::all, 0);
   if (speed(1) <= 0) return flux(Eigen::all, 1);
   return (speed(1)*flux(Eigen::all, 0) - speed(0)*flux(Eigen::all, 1)
           + speed(0)*speed(1)*(state(Eigen::all, 1) - state(Eigen::all, 0)))
          /(speed(1) - speed(0));
+}
+
+//! computes local Lax-Friedrichs numerical flux based on wave speed estimate
+template <int n_var>
+Mat<n_var> llf(double speed, Mat<n_var, 2> flux, Mat<n_var, 2> state)
+{
+  return flux*Mat<2>{.5, .5} + speed*state*Mat<2>{.5, -.5};
 }
 
 /*!
@@ -92,30 +98,16 @@ class Navier_stokes
     Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const
     {
       Mat<n_var, 2> face_flux;
-      Mat<2> vol_flux;
-      Mat<2> sound_speed;
+      Mat<2> wave_speed;
       double nrml_mag = normal.norm();
       for (int i_side = 0; i_side < 2; ++i_side) {
-        auto f = face_flux(Eigen::all, i_side);
         auto state = face_state(Eigen::all, i_side);
-        f(n_dim) = 0.;
-        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-          f(n_dim) += state(j_dim)*normal(j_dim);
-        }
-        double scaled = f(n_dim)/state(n_dim);
+        face_flux(Eigen::all, i_side) = flux(state, normal);
         double pres = pressure(state);
         ASSERT_THERM_ADMIS
-        f(n_var - 1) = (state(n_dim + 1) + pres)*scaled;
-        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-          f(j_dim) = state(j_dim)*scaled + pres*normal(j_dim);
-        }
-        vol_flux(i_side) = scaled;
-        sound_speed(i_side) = std::sqrt(heat_rat*pres/state(n_dim))*nrml_mag;
+        wave_speed(i_side) = char_speed(state)*nrml_mag;
       }
-      Mat<2> wave_speed;
-      wave_speed(0) = std::min(vol_flux(0) - sound_speed(0), vol_flux(1) - sound_speed(1));
-      wave_speed(1) = std::max(vol_flux(0) + sound_speed(0), vol_flux(1) + sound_speed(1));
-      return hll(wave_speed, face_flux, face_state);
+      return llf(wave_speed.maxCoeff(), face_flux, face_state);
     }
 
     //! compute the viscous flux
@@ -136,12 +128,13 @@ class Navier_stokes
       return flux;
     }
 
-    //! maximum characteristic speed for convection
+    //! upper bound on characteristic speed for convection
     double char_speed(Mat<n_var> state) const
     {
-      const double sound_speed = std::sqrt(heat_rat*pressure(state)/state(n_dim));
+      double mass = state(n_dim);
       auto mmtm = state(Eigen::seqN(0, n_dim));
-      const double veloc = std::sqrt(mmtm.dot(mmtm)/state(n_dim)/state(n_dim));
+      const double sound_speed = std::sqrt(heat_rat*(heat_rat - 1)*state(n_dim + 1)/mass);
+      const double veloc = std::sqrt(mmtm.dot(mmtm))/mass;
       return sound_speed + veloc;
     }
 
