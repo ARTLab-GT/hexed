@@ -610,7 +610,8 @@ void Solver::set_art_visc_smoothness(double advect_length)
       }
       wvn = std::sqrt(wvn) - 1.;
       f = std::min(f, av_unscaled_max);
-      av[i_qpoint] = (wvn > .2) ? av_visc_mult*advect_length*f*std::sqrt(scale_sq) : 0; // root-smear-square complete!
+      f *= std::pow(wvn, 20)/(1e-20 + std::pow(wvn, 20);
+      av[i_qpoint] = av_visc_mult*advect_length*f*std::sqrt(scale_sq) : 0; // root-smear-square complete!
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         int i = i_var*nq + i_qpoint;
