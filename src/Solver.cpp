@@ -300,11 +300,7 @@ void Solver::calc_jacobian()
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* wv = elements[i_elem].wall_vector();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      auto pos = elements[i_elem].position(basis, i_qpoint);
-      double norm = 0;
-      for (double p : pos) norm += p*p;
-      norm = std::sqrt(norm);
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim) wv[i_dim*nq + i_qpoint] = pos[i_dim]*(norm - 1)/norm;
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) wv[i_dim*nq + i_qpoint] = 100.;
     }
   }
 }
@@ -356,6 +352,19 @@ void Solver::set_art_visc_smoothness(double advect_length)
   const int rs = params.row_size;
   auto& elements = acc_mesh.elements();
 
+  if (status.iteration == 100000) {
+    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+      double* wv = elements[i_elem].wall_vector();
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        auto pos = elements[i_elem].position(basis, i_qpoint);
+        double norm = 0;
+        for (double p : pos) norm += p*p;
+        norm = std::sqrt(norm);
+        for (int i_dim = 0; i_dim < nd; ++i_dim) wv[i_dim*nq + i_qpoint] = pos[i_dim]*(norm - 1)/norm;
+      }
+    }
+  }
+
   // store the current state in stage 1 (normally the time integration reference)
   // so we can use stage 0 for solving the advection equation
   stopwatch.children.at("set art visc").children.at("initialize").stopwatch.start();
@@ -377,17 +386,13 @@ void Solver::set_art_visc_smoothness(double advect_length)
     double* rk_ref = elements[i_elem].stage(1);
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       double scale = 2*heat_rat*rk_ref[(nd + 1)*nq + i_qpoint]*rk_ref[nd*nq + i_qpoint];
-      auto pos = elements[i_elem].position(basis, i_qpoint);
-      double wvn = 0;
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         double mmtm = rk_ref[i_dim*nq + i_qpoint];
         scale += (1. - heat_rat)*mmtm*mmtm;
-        wvn += pos[i_dim]*pos[i_dim];
       }
-      wvn = math::pow(std::sqrt(wvn) - 1., 5);
       scale = std::sqrt(scale);
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        state[i_dim*nq + i_qpoint] = rk_ref[i_dim*nq + i_qpoint]/scale;//*wvn/(math::pow(.4, 5) + wvn);
+        state[i_dim*nq + i_qpoint] = rk_ref[i_dim*nq + i_qpoint]/scale;
       }
     }
   }
@@ -596,22 +601,12 @@ void Solver::set_art_visc_smoothness(double advect_length)
         double veloc = rk_ref[i_dim*nq + i_qpoint]/mass;
         scale_sq += (1. - heat_rat)*veloc*veloc;
       }
-      double lag = 1;
-      double old = av[i_qpoint]/(av_visc_mult*advect_length*std::sqrt(scale_sq));
-      old = std::pow(std::pow(old + av_noise_threshold, av_noise_power) - thresh_pow, 1./av_noise_power);
       double f = std::max(0., forcing[n_real*nq + i_qpoint]);
+      //f = std::pow(std::pow(f, av_noise_power/2.) + thresh_pow, 1./av_noise_power) - av_noise_threshold; // divide power by 2 because already squared
       f = std::sqrt(f);
-      //f = (1 - lag)*old + lag*f;
-      //f = std::pow(std::pow(f, av_noise_power) + thresh_pow, 1./av_noise_power) - av_noise_threshold; // divide power by 2 because already squared
-      auto pos = elements[i_elem].position(basis, i_qpoint);
-      double wvn = 0;
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        wvn += pos[i_dim]*pos[i_dim];
-      }
-      wvn = std::sqrt(wvn) - 1.;
       f = std::min(f, av_unscaled_max);
-      f *= std::pow(wvn, 20)/(1e-20 + std::pow(wvn, 20);
-      av[i_qpoint] = av_visc_mult*advect_length*f*std::sqrt(scale_sq) : 0; // root-smear-square complete!
+      double lag = 1.;
+      av[i_qpoint] = (1 - lag)*av[i_qpoint] + lag*av_visc_mult*advect_length*f*std::sqrt(scale_sq); // root-smear-square complete!
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         int i = i_var*nq + i_qpoint;
