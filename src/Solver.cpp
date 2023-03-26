@@ -352,7 +352,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
   const int rs = params.row_size;
   auto& elements = acc_mesh.elements();
 
-  if (status.iteration == 100000) {
+  if (status.iteration == 200000) {
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
       double* wv = elements[i_elem].wall_vector();
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
@@ -604,7 +604,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
       double f = std::max(0., forcing[n_real*nq + i_qpoint]);
       //f = std::pow(std::pow(f, av_noise_power/2.) + thresh_pow, 1./av_noise_power) - av_noise_threshold; // divide power by 2 because already squared
       f = std::sqrt(f);
-      f = std::min(f, av_unscaled_max);
+      //f = std::min(f, av_unscaled_max);
       double lag = 1.;
       av[i_qpoint] = (1 - lag)*av[i_qpoint] + lag*av_visc_mult*advect_length*f*std::sqrt(scale_sq); // root-smear-square complete!
       // put the flow state back how we found it
