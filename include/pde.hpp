@@ -155,6 +155,7 @@ class Navier_stokes
     {
       Mat<3> vals;
       Mat<3, 3> vecs;
+      // using a QR factorization allows a least-squares solution to be found if matrix is singular (i.e. if pressure is 0)
       Eigen::HouseholderQR<Mat<3, 3>> fact;
       Mat<n_dim> dir; // normalized flux direction
       // some properties of the reference state
