@@ -21,12 +21,12 @@ TEST_CASE("Max_dt")
       std::vector<std::unique_ptr<hexed::Element>> elements;
       elements.emplace_back(new hexed::Element {params, {}, 1.027});
       elements.emplace_back(new hexed::Element {params, {}, 1.027});
-      double read [2][6] {{mass*50, mass*10,
+      double read [2][6] {{0, 0,
                            mass, mass,
-                           int_ener1 + 0.5*mass*250, int_ener0 + 0.5*mass*100},
-                          {mass*-20, 0,
+                           int_ener1, int_ener0},
+                          {0, 0,
                            mass, mass,
-                           int_ener0 + 0.5*mass*400, int_ener1}};
+                           int_ener0, int_ener1}};
       for (int i_elem : {0, 1}) {
         for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
           elements[i_elem]->time_step_scale()[i_qpoint] = 0.6; // this shouldn't change the time step
@@ -38,7 +38,7 @@ TEST_CASE("Max_dt")
       }
       car_elem_view elem_view {elements};
       double dt = (*hexed::kernel_factory<hexed::Spatial<hexed::Element, hexed::pde::Navier_stokes<false>::Pde>::Max_dt>(1, 2, basis, false))(elem_view);
-      REQUIRE(dt == Approx(basis.max_cfl_convective()/(420/1.027)));
+      REQUIRE(dt == Approx(basis.max_cfl_convective()/(400/1.027)));
     }
     SECTION("2D")
     {
