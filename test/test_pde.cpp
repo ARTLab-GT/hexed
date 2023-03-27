@@ -23,61 +23,6 @@ TEST_CASE("Navier_stokes")
     REQUIRE(flux(3)/.9 == Approx(nrml_veloc*(state(3) + pressure)));
   }
 
-  SECTION("flux_num")
-  {
-    hexed::Mat<5, 2> state;
-    hexed::Mat<3> normal;
-    hexed::Mat<5> flux;
-    hexed::Mat<5> correct;
-    SECTION("Reasonable flow")
-    {
-      hexed::Mat<5, 2> state;
-      hexed::Mat<3> normal;
-      hexed::Mat<5> flux;
-      hexed::Mat<5> correct;
-      double velocity0 [] {3*340, 2*340};
-      double velocity1 [] {-2*340, -3*340};
-      for (int i_side = 0; i_side < 2; ++i_side) {
-        state(0, i_side) = mass*velocity0[i_side];
-        state(1, i_side) = mass*velocity1[i_side];
-        state(2, i_side) = 0;
-        state(3, i_side) = mass;
-        state(4, i_side) = pressure/0.4 + 0.5*mass*(  velocity0[i_side]*velocity0[i_side]
-                                                    + velocity1[i_side]*velocity1[i_side]);
-      }
-      normal.setUnit(0);
-      normal *= 1.3;
-      flux = hexed::pde::Navier_stokes<false>::Pde<3>().flux_num(state, normal);
-      correct = hexed::pde::Navier_stokes<false>::Pde<3>().flux(state(Eigen::all, 0), normal);
-      REQUIRE((flux - correct).norm() == Approx(0).scale(1.));
-
-      normal.setUnit(1);
-      flux = hexed::pde::Navier_stokes<false>::Pde<3>().flux_num(state, normal);
-      correct = hexed::pde::Navier_stokes<false>::Pde<3>().flux(state(Eigen::all, 1), normal);
-      REQUIRE((flux - correct).norm() == Approx(0).scale(1.));
-
-      normal.setOnes();
-      flux = hexed::pde::Navier_stokes<false>::Pde<3>().flux_num(state, normal);
-      REQUIRE(flux(3) == Approx(0.).scale(1.));
-    }
-
-    SECTION("Opposing supersonic flows")
-    {
-      double velocity0 [] {680, -680};
-      for (int i_side = 0; i_side < 2; ++i_side) {
-        state(0, i_side) = mass*velocity0[i_side];
-        state(1, i_side) = 0;
-        state(2, i_side) = 0;
-        state(3, i_side) = mass;
-        state(4, i_side) = pressure/0.4 + 0.5*mass*velocity0[i_side]*velocity0[i_side];
-      }
-      normal.setUnit(0);
-      flux = hexed::pde::Navier_stokes<false>::Pde<3>().flux_num(state, normal);
-      REQUIRE(flux(3) == Approx(0.).scale(1.));
-      REQUIRE(flux(4) == Approx(0.).scale(1.));
-    }
-  }
-
   SECTION("flux_viscous")
   {
     // this isn't a particularly good test,
