@@ -18,12 +18,18 @@ namespace hexed::pde
 template <int n_var>
 Mat<n_var> hll(Mat<2> speed, Mat<n_var, 2> flux, Mat<n_var, 2> state)
 {
-  Mat<n_var> f;
   if (speed(0) >= 0) return flux(Eigen::all, 0);
   if (speed(1) <= 0) return flux(Eigen::all, 1);
   return (speed(1)*flux(Eigen::all, 0) - speed(0)*flux(Eigen::all, 1)
           + speed(0)*speed(1)*(state(Eigen::all, 1) - state(Eigen::all, 0)))
          /(speed(1) - speed(0));
+}
+
+//! computes local Lax-Friedrichs numerical flux based on wave speed estimate
+template <int n_var>
+Mat<n_var> llf(double speed, Mat<n_var, 2> flux, Mat<n_var, 2> state)
+{
+  return flux*Mat<2>{.5, .5} + speed*state*Mat<2>{.5, -.5};
 }
 
 /*!
@@ -37,7 +43,7 @@ class Navier_stokes
   #define ASSERT_THERM_ADMIS \
     HEXED_ASSERT(state(n_dim) > 0, "nonpositive density"); \
     HEXED_ASSERT(state(n_dim + 1) >= 0, "negative energy"); \
-    HEXED_ASSERT(pres >= 0, "negative pressure"); \
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) HEXED_ASSERT(!std::isnan(state(n_dim)), "momentum is NaN"); \
 
   public:
   Navier_stokes() = delete;
@@ -92,30 +98,15 @@ class Navier_stokes
     Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const
     {
       Mat<n_var, 2> face_flux;
-      Mat<2> vol_flux;
-      Mat<2> sound_speed;
+      Mat<2> wave_speed;
       double nrml_mag = normal.norm();
       for (int i_side = 0; i_side < 2; ++i_side) {
-        auto f = face_flux(Eigen::all, i_side);
         auto state = face_state(Eigen::all, i_side);
-        f(n_dim) = 0.;
-        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-          f(n_dim) += state(j_dim)*normal(j_dim);
-        }
-        double scaled = f(n_dim)/state(n_dim);
-        double pres = pressure(state);
+        face_flux(Eigen::all, i_side) = flux(state, normal);
         ASSERT_THERM_ADMIS
-        f(n_var - 1) = (state(n_dim + 1) + pres)*scaled;
-        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-          f(j_dim) = state(j_dim)*scaled + pres*normal(j_dim);
-        }
-        vol_flux(i_side) = scaled;
-        sound_speed(i_side) = std::sqrt(heat_rat*pres/state(n_dim))*nrml_mag;
+        wave_speed(i_side) = char_speed(state)*nrml_mag;
       }
-      Mat<2> wave_speed;
-      wave_speed(0) = std::min(vol_flux(0) - sound_speed(0), vol_flux(1) - sound_speed(1));
-      wave_speed(1) = std::max(vol_flux(0) + sound_speed(0), vol_flux(1) + sound_speed(1));
-      return hll(wave_speed, face_flux, face_state);
+      return llf(wave_speed.maxCoeff(), face_flux, face_state);
     }
 
     //! compute the viscous flux
@@ -126,7 +117,7 @@ class Navier_stokes
       double mass = state(n_dim);
       Mat<n_dim> veloc = mmtm/mass;
       Mat<n_dim, n_dim> veloc_grad = (grad(all, seq) - grad(all, n_dim)*veloc.transpose())/mass;
-      double sqrt_temp = std::sqrt((state(n_dim + 1)/mass - .5*veloc.squaredNorm())*(heat_rat - 1)/specific_gas_air);
+      double sqrt_temp = std::sqrt(std::max(state(n_dim + 1)/mass - .5*veloc.squaredNorm(), 0.)*(heat_rat - 1)/specific_gas_air);
       Mat<n_dim, n_dim> stress = dyn_visc.coefficient(sqrt_temp)*(veloc_grad + veloc_grad.transpose() - 2./3.*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity());
       #if 1
       double wvn = wall_vec.norm();
@@ -142,12 +133,13 @@ class Navier_stokes
       return flux;
     }
 
-    //! maximum characteristic speed for convection
+    //! upper bound on characteristic speed for convection
     double char_speed(Mat<n_var> state) const
     {
-      const double sound_speed = std::sqrt(heat_rat*pressure(state)/state(n_dim));
+      double mass = state(n_dim);
       auto mmtm = state(Eigen::seqN(0, n_dim));
-      const double veloc = std::sqrt(mmtm.dot(mmtm)/state(n_dim)/state(n_dim));
+      const double sound_speed = std::sqrt(heat_rat*(heat_rat - 1)*state(n_dim + 1)/mass);
+      const double veloc = std::sqrt(mmtm.dot(mmtm))/mass;
       return sound_speed + veloc;
     }
 
@@ -156,7 +148,7 @@ class Navier_stokes
     {
       double mass = state(n_dim);
       auto veloc = state(Eigen::seqN(0, n_dim))/mass;
-      double sqrt_temp = std::sqrt((state(n_dim + 1)/mass - .5*veloc.squaredNorm())*(heat_rat - 1)/specific_gas_air);
+      double sqrt_temp = std::sqrt(std::max(state(n_dim + 1)/mass - .5*veloc.squaredNorm(), 0.)*(heat_rat - 1)/specific_gas_air);
       return av_coef + std::max(dyn_visc.coefficient(sqrt_temp)/mass, therm_cond.coefficient(sqrt_temp)*(heat_rat - 1)/specific_gas_air/mass);
     }
 
@@ -169,7 +161,8 @@ class Navier_stokes
     {
       Mat<3> vals;
       Mat<3, 3> vecs;
-      Mat<3, 3> vecs_inv;
+      // using a QR factorization allows a least-squares solution to be found if matrix is singular (i.e. if pressure is 0)
+      Eigen::HouseholderQR<Mat<3, 3>> fact;
       Mat<n_dim> dir; // normalized flux direction
       // some properties of the reference state
       double mass;
@@ -190,7 +183,7 @@ class Navier_stokes
         // compute more properties of the reference state
         double vsq = veloc.squaredNorm();
         double pres = .4*(state(n_dim + 1) - .5*mass*vsq);
-        double sound_speed = std::sqrt(1.4*pres/mass);
+        double sound_speed = std::sqrt(1.4*std::max(pres, 0.)/mass);
         // compute eigenvalues
         vals(2) = nrml(veloc);
         vals(0) = vals(2) - sound_speed;
@@ -206,7 +199,7 @@ class Navier_stokes
             d_pres/.4 + .5*d_mass*vsq + mass*vals(2)*d_veloc;
         }
         vecs(Eigen::all, 2) << d_mass*vals(2), d_mass, .5*d_mass*vsq;
-        vecs_inv = vecs.inverse();
+        fact.compute(vecs);
       }
       //! get eigenvalues of Jacobian
       inline Mat<3> eigvals() {return vals;}
@@ -227,7 +220,7 @@ class Navier_stokes
           state(n_dim),
           state(n_dim + 1) - veloc.dot(mmtm_correction);
         // decompose 1D state into eigenvectors
-        Mat<1, 3> eig_basis = (vecs_inv*state_1d).transpose();
+        Mat<1, 3> eig_basis = fact.solve(state_1d).transpose();
         Mat<3, 3> eig_decomp = vecs.array().rowwise()*eig_basis.array();
         // ND eigenvector decomposition
         Mat<n_var, 3> d(state.rows(), 3);
