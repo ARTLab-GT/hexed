@@ -333,6 +333,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
 {
   stopwatch.stopwatch.start();
   stopwatch.children.at("set art visc").stopwatch.start();
+  use_art_visc = true;
   double heat_rat = 1.4;
   const int nq = params.n_qpoint();
   const int nd = params.n_dim;
