@@ -353,7 +353,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
   const int rs = params.row_size;
   auto& elements = acc_mesh.elements();
 
-  if (status.iteration == 200000) {
+  if (status.iteration == 300000) {
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
       double* wv = elements[i_elem].wall_vector();
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
@@ -386,12 +386,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
     double* state = elements[i_elem].stage(0);
     double* rk_ref = elements[i_elem].stage(1);
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      double scale = 2*heat_rat*rk_ref[(nd + 1)*nq + i_qpoint]*rk_ref[nd*nq + i_qpoint];
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        double mmtm = rk_ref[i_dim*nq + i_qpoint];
-        scale += (1. - heat_rat)*mmtm*mmtm;
-      }
-      scale = std::sqrt(scale);
+      double scale = std::sqrt(2*rk_ref[(nd + 1)*nq + i_qpoint]*rk_ref[nd*nq + i_qpoint]);
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         state[i_dim*nq + i_qpoint] = rk_ref[i_dim*nq + i_qpoint]/scale;
       }
@@ -597,15 +592,11 @@ void Solver::set_art_visc_smoothness(double advect_length)
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       // set artificial viscosity to square root of diffused scalar state times stagnation enthalpy (with user-defined multiplier)
       double mass = rk_ref[nd*nq + i_qpoint];
-      double scale_sq = 2*heat_rat*rk_ref[(nd + 1)*nq + i_qpoint]/mass;
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        double veloc = rk_ref[i_dim*nq + i_qpoint]/mass;
-        scale_sq += (1. - heat_rat)*veloc*veloc;
-      }
+      double scale_sq = 2*rk_ref[(nd + 1)*nq + i_qpoint]/mass;
       double f = std::max(0., forcing[n_real*nq + i_qpoint]);
       //f = std::pow(std::pow(f, av_noise_power/2.) + thresh_pow, 1./av_noise_power) - av_noise_threshold; // divide power by 2 because already squared
       f = std::sqrt(f);
-      //f = std::min(f, av_unscaled_max);
+      f = std::min(f, av_unscaled_max);
       double lag = 1.;
       av[i_qpoint] = (1 - lag)*av[i_qpoint] + lag*av_visc_mult*advect_length*f*std::sqrt(scale_sq); // root-smear-square complete!
       // put the flow state back how we found it
