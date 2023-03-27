@@ -12,7 +12,7 @@ bool admissible(const double* data, const int n_dim, const int n_qpoint, double 
     #define READ(i) data[(i)*n_qpoint + i_qpoint]
     HEXED_COMPUTE_SCALARS
     #undef READ
-    admiss = admiss && (mass > tol) && (ener >= tol);
+    admiss = admiss && (mass > tol) && (ener > tol);
     for (int i_var = 0; i_var < n_var; ++i_var) {
       HEXED_ASSERT(!std::isnan(data[i_var*n_qpoint + i_qpoint]), "state is NaN");
     }

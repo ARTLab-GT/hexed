@@ -155,7 +155,7 @@ class Navier_stokes
     {
       Mat<3> vals;
       Mat<3, 3> vecs;
-      Mat<3, 3> vecs_inv;
+      Eigen::HouseholderQR<Mat<3, 3>> fact;
       Mat<n_dim> dir; // normalized flux direction
       // some properties of the reference state
       double mass;
@@ -192,7 +192,7 @@ class Navier_stokes
             d_pres/.4 + .5*d_mass*vsq + mass*vals(2)*d_veloc;
         }
         vecs(Eigen::all, 2) << d_mass*vals(2), d_mass, .5*d_mass*vsq;
-        vecs_inv = vecs.inverse();
+        fact.compute(vecs);
       }
       //! get eigenvalues of Jacobian
       inline Mat<3> eigvals() {return vals;}
@@ -213,7 +213,7 @@ class Navier_stokes
           state(n_dim),
           state(n_dim + 1) - veloc.dot(mmtm_correction);
         // decompose 1D state into eigenvectors
-        Mat<1, 3> eig_basis = (vecs_inv*state_1d).transpose();
+        Mat<1, 3> eig_basis = fact.solve(state_1d).transpose();
         Mat<3, 3> eig_decomp = vecs.array().rowwise()*eig_basis.array();
         // ND eigenvector decomposition
         Mat<n_var, 3> d(state.rows(), 3);

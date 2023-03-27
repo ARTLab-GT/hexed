@@ -105,7 +105,7 @@ void Riemann_invariants::apply_state(Boundary_face& bf)
     state(params.n_dim) = std::max(state(params.n_dim), inside(params.n_dim)/2);
     double kin_ener = .5*state(Eigen::seqN(0, params.n_dim)).squaredNorm()/state(params.n_dim);
     double inside_kin_ener = .5*inside(Eigen::seqN(0, params.n_dim)).squaredNorm()/inside(params.n_dim);
-    state(params.n_dim + 1) = kin_ener + std::max(state(params.n_dim + 1) - kin_ener, (inside(params.n_dim + 1) - inside_kin_ener)/2);
+    state(params.n_dim + 1) = std::max(kin_ener + std::max(state(params.n_dim + 1) - kin_ener, (inside(params.n_dim + 1) - inside_kin_ener)/2), 0.);
     // write to ghost state
     for (int i_var = 0; i_var < params.n_var; ++i_var) {
       gh_f[i_var*nfq + i_qpoint] = state(i_var);
@@ -264,14 +264,7 @@ void No_slip::apply_state(Boundary_face& bf)
   for (int i_dof = params.n_dim*nfq; i_dof < (params.n_dim + 1)*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
   for (int i_dof = (params.n_dim + 1)*nfq; i_dof < (params.n_dim + 2)*nfq; ++i_dof) {
     // make it so geometric mean of ghost internal energy and inside internal energy is target energy
-    double kin_ener = 0;
-    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-      kin_ener += math::pow(in_f[i_dof + (i_dim - params.n_dim - 1)*nfq], 2);
-    }
-    kin_ener /= 2*in_f[i_dof - nfq];
-    double int_ener = in_f[i_dof] - kin_ener;
-    gh_f[i_dof] = (t == internal_energy) ? math::pow(v*in_f[i_dof - nfq], 2)/int_ener : in_f[i_dof];
-    gh_f[i_dof] += kin_ener; // kinetic energy should be zero, but if it's not, add it back in for stability
+    gh_f[i_dof] = (t == internal_energy) ? math::pow(v*in_f[i_dof - nfq], 2)/in_f[i_dof] : in_f[i_dof];
   }
   // prime `state_cache` with average state for use in emissivity BC
   for (int i_dof = 0; i_dof < params.n_var*nfq; ++i_dof) {
