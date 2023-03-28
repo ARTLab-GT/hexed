@@ -22,7 +22,7 @@ void Flow_bc::apply_advection(Boundary_face& bf)
   }
   // set advected scalar to initial value
   for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-    gh_f[nd*nq + i_qpoint] = 1.;
+    gh_f[nd*nq + i_qpoint] = 2. - in_f[nd*nq + i_qpoint];
   }
 }
 
@@ -206,7 +206,7 @@ void Pressure_outflow::apply_state(Boundary_face& bf)
     Mat<> mmtm = inside(Eigen::seqN(0, params.n_dim));
     double nrml_veloc = mmtm.dot(n)/inside(params.n_dim)/n.norm();
     double kin_ener = .5*mmtm.squaredNorm()/inside(params.n_dim);
-    double pres = .4*(inside(params.n_dim + 1) - kin_ener);
+    double pres = std::max(.4*(inside(params.n_dim + 1) - kin_ener), 0.);
     double sound_speed = std::sqrt(1.4*pres/inside(params.n_dim));
     if (nrml_veloc*sign < sound_speed) ghost(params.n_dim + 1) = pres_spec/.4 + kin_ener;
     // write to ghost flux
@@ -315,7 +315,28 @@ void Nonpenetration::apply_flux(Boundary_face& bf)
 
 void Nonpenetration::apply_advection(Boundary_face& bf)
 {
-  reflect_momentum(bf);
+  Storage_params params = bf.storage_params();
+  double* in_f = bf.inside_face();
+  double* gh_f = bf.ghost_face();
+  double* nrml = bf.surface_normal();
+  int nfq = params.n_qpoint()/params.row_size;
+  int nd = params.n_dim;
+  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+    Mat<> veloc(nd);
+    Mat<> n(nd);
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      n(i_dim) = nrml[i_dim*nfq + i_qpoint];
+      veloc(i_dim) = in_f[i_dim*nfq + i_qpoint];
+    }
+    double nrml_veloc = veloc.dot(n);
+    if ((nrml_veloc > 0) != bf.inside_face_sign()) {
+      veloc -= 2*nrml_veloc*n/n.squaredNorm();
+    }
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      gh_f[i_dim*nfq + i_qpoint] = veloc(i_dim);
+    }
+    gh_f[nd*nfq + i_qpoint] = in_f[nd*nfq + i_qpoint];
+  }
 }
 
 No_slip::No_slip(Thermal_type type, double value) : t{type}, v{value} {}
