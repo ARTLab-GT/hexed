@@ -598,7 +598,8 @@ void Solver::set_art_visc_smoothness(double advect_length)
       f = std::sqrt(f);
       //f = std::min(f, av_unscaled_max);
       double lag = 1.;
-      av[i_qpoint] = (1 - lag)*av[i_qpoint] + lag*av_visc_mult*advect_length*f*std::sqrt(scale_sq); // root-smear-square complete!
+      //av[i_qpoint] = (1 - lag)*av[i_qpoint] + lag*av_visc_mult*advect_length*f*std::sqrt(scale_sq); // root-smear-square complete!
+      av[i_qpoint] = (1 - lag)*av[i_qpoint] + lag*av_visc_mult*advect_length*f*std::sqrt(5000.); // root-smear-square complete!
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         int i = i_var*nq + i_qpoint;
