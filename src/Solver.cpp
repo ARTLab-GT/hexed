@@ -296,13 +296,6 @@ void Solver::calc_jacobian()
     }
   }
   share_vertex_data(&Element::vertex_time_step_scale, Vertex::vector_min);
-  const int nq = params.n_qpoint();
-  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    double* wv = elements[i_elem].wall_vector();
-    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim) wv[i_dim*nq + i_qpoint] = 100.;
-    }
-  }
 }
 
 void Solver::initialize(const Spacetime_func& func)
@@ -347,24 +340,10 @@ void Solver::set_art_visc_smoothness(double advect_length)
   stopwatch.stopwatch.start();
   stopwatch.children.at("set art visc").stopwatch.start();
   use_art_visc = true;
-  double heat_rat = 1.4;
   const int nq = params.n_qpoint();
   const int nd = params.n_dim;
   const int rs = params.row_size;
   auto& elements = acc_mesh.elements();
-
-  if (status.iteration == 300000) {
-    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-      double* wv = elements[i_elem].wall_vector();
-      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        auto pos = elements[i_elem].position(basis, i_qpoint);
-        double norm = 0;
-        for (double p : pos) norm += p*p;
-        norm = std::sqrt(norm);
-        for (int i_dim = 0; i_dim < nd; ++i_dim) wv[i_dim*nq + i_qpoint] = pos[i_dim]*(norm - 1)/norm;
-      }
-    }
-  }
 
   // store the current state in stage 1 (normally the time integration reference)
   // so we can use stage 0 for solving the advection equation
@@ -582,7 +561,6 @@ void Solver::set_art_visc_smoothness(double advect_length)
   }
   status.diff_res = std::sqrt(status.diff_res/n_real); // finish computing RMS residual
   // clean up
-  double thresh_pow = std::pow(av_noise_threshold, av_noise_power);
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
@@ -590,21 +568,9 @@ void Solver::set_art_visc_smoothness(double advect_length)
     double* av = elements[i_elem].art_visc_coef();
     double* forcing = elements[i_elem].art_visc_forcing();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      // set artificial viscosity to square root of diffused scalar state times stagnation enthalpy (with user-defined multiplier)
-      double mass = rk_ref[nd*nq + i_qpoint];
-      double scale_sq = 2*rk_ref[(nd + 1)*nq + i_qpoint]/mass;
+      // set artificial viscosity to square root of diffused scalar state times scaling factor
       double f = std::max(0., forcing[n_real*nq + i_qpoint]);
-      auto pos = elements[i_elem].position(basis, i_qpoint);
-      double wd = 0;
-      for (double p : pos) wd += p*p;
-      wd = std::sqrt(wd - 1.);
-      //f = std::pow(std::pow(f, av_noise_power/2.) + thresh_pow, 1./av_noise_power) - av_noise_threshold; // divide power by 2 because already squared
-      f = std::sqrt(f);
-      //f = std::min(f, av_unscaled_max);
-      double lag = 1.;
-      //av[i_qpoint] = (1 - lag)*av[i_qpoint] + lag*av_visc_mult*advect_length*f*std::sqrt(scale_sq); // root-smear-square complete!
-      av[i_qpoint] = (1 - lag)*av[i_qpoint] + lag*av_visc_mult*advect_length*f*std::sqrt(1e5); // root-smear-square complete!
-      //if (wd < .1) av[i_qpoint] = 0.;
+      av[i_qpoint] = av_visc_mult*advect_length*std::sqrt(f*1e5); // root-smear-square complete!
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         int i = i_var*nq + i_qpoint;

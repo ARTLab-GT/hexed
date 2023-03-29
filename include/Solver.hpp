@@ -79,9 +79,6 @@ class Solver
   double av_visc_mult = 100.; //!< final scaling parameter applied to artificial viscosity coefficient
   double av_advect_stab_rat = .2; //!< stability ratio for advection
   double av_diff_stab_rat = .5; //!< stability ratio for diffusion
-  double av_noise_threshold = 1.5e-4; //!< threshold below which a power law scaling is applied to artificial viscosity coefficient
-  double av_unscaled_max = 2e-3; //!< maximum aritificial viscosity before stagnation enthalpy scaling is applied
-  double av_noise_power = 5; //!< power applied to artificial viscosity below `av_noise_threshold`.
   int av_advect_iters = 2; //!< number of advection iterations to run each time `set_art_visc_smoothness` is called
   int av_diff_iters = 1; //!< number of diffusion iterations to run each time `set_art_visc_smoothness` is called
   //!\}
