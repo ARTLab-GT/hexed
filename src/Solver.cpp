@@ -571,6 +571,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
       // set artificial viscosity to square root of diffused scalar state times scaling factor
       double f = std::max(0., forcing[n_real*nq + i_qpoint]);
       av[i_qpoint] = av_visc_mult*advect_length*std::sqrt(f*1e5); // root-smear-square complete!
+      av[i_qpoint] = std::min(av[i_qpoint], 30.);
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         int i = i_var*nq + i_qpoint;
