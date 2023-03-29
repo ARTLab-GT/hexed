@@ -594,12 +594,17 @@ void Solver::set_art_visc_smoothness(double advect_length)
       double mass = rk_ref[nd*nq + i_qpoint];
       double scale_sq = 2*rk_ref[(nd + 1)*nq + i_qpoint]/mass;
       double f = std::max(0., forcing[n_real*nq + i_qpoint]);
+      auto pos = elements[i_elem].position(basis, i_qpoint);
+      double wd = 0;
+      for (double p : pos) wd += p*p;
+      wd = std::sqrt(wd - 1.);
       //f = std::pow(std::pow(f, av_noise_power/2.) + thresh_pow, 1./av_noise_power) - av_noise_threshold; // divide power by 2 because already squared
       f = std::sqrt(f);
       //f = std::min(f, av_unscaled_max);
       double lag = 1.;
       //av[i_qpoint] = (1 - lag)*av[i_qpoint] + lag*av_visc_mult*advect_length*f*std::sqrt(scale_sq); // root-smear-square complete!
-      av[i_qpoint] = (1 - lag)*av[i_qpoint] + lag*av_visc_mult*advect_length*f*std::sqrt(5000.); // root-smear-square complete!
+      av[i_qpoint] = (1 - lag)*av[i_qpoint] + lag*av_visc_mult*advect_length*f*std::sqrt(1e6); // root-smear-square complete!
+      //if (wd < .1) av[i_qpoint] = 0.;
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         int i = i_var*nq + i_qpoint;
