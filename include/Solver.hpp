@@ -76,7 +76,8 @@ class Solver
   //!\{
   double av_advect_shift = .5; //!< < .5 means that advection will be biased in backward direction. < .5 means forward.
   double av_diff_ratio = 5e-3; //!< ratio of diffusion time to advection width
-  double av_visc_mult = 100.; //!< final scaling parameter applied to artificial viscosity coefficient
+  double av_visc_mult = 300.; //!< final scaling parameter applied to artificial viscosity coefficient
+  double av_unscaled_max = 2e-3; //!< maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
   double av_advect_stab_rat = .2; //!< stability ratio for advection
   double av_diff_stab_rat = .5; //!< stability ratio for diffusion
   int av_advect_iters = 2; //!< number of advection iterations to run each time `set_art_visc_smoothness` is called
