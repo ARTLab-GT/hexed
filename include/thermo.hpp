@@ -11,17 +11,4 @@ bool admissible(const double* data, const int n_dim, const int n_qpoint, double 
 
 }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-variable"
-
-#define HEXED_COMPUTE_SCALARS \
-  double mmtm_sq = 0.; \
-  for (int j_dim = 0; j_dim < n_var - 2; ++j_dim) { \
-    mmtm_sq += (READ(j_dim))*(READ(j_dim)); \
-  } \
-  double mass = (READ(n_var - 2)); \
-  double ener = (READ(n_var - 1)); \
-
-#pragma GCC diagnostic pop
-
 #endif
