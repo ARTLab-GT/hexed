@@ -74,7 +74,6 @@ class Element
   double* time_step_scale(); //!< Layout: [i_qpoint]
   double* art_visc_coef(); //!< layout: [i_qpoint]
   double* art_visc_forcing(); //!< layout: [i_forcing][i_qpoint]
-  double* wall_vector(); //!< layout: [i_dim][i_qpoint]
   virtual double* node_adjustments() {return nullptr;} // overriden by `Deformed_element`
 
   /*!

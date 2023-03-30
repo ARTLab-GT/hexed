@@ -12,7 +12,7 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   r_level{ref_level},
   n_dof(params.n_dof()),
   n_vert(params.n_vertices()),
-  data_size{params.n_stage*n_dof + (2 + n_forcing + params.row_size + n_dim)*params.n_qpoint()},
+  data_size{params.n_stage*n_dof + (2 + n_forcing + params.row_size)*params.n_qpoint()},
   data{Eigen::VectorXd::Zero(data_size)},
   vertex_tss{Eigen::VectorXd::Constant(params.n_vertices(), nom_sz)}
 {
@@ -126,11 +126,6 @@ double* Element::art_visc_forcing()
 double* Element::advection_state()
 {
   return art_visc_forcing() + n_forcing*params.n_qpoint();
-}
-
-double* Element::wall_vector()
-{
-  return advection_state() + params.row_size*params.n_qpoint();
 }
 
 double Element::jacobian(int i_dim, int j_dim, int i_qpoint)
