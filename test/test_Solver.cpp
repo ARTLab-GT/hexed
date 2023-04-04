@@ -54,24 +54,27 @@ class Reciprocal_jacobian : public hexed::Qpoint_func
   }
 };
 
-class Sinusoid : public hexed::Spacetime_func
+class Sinusoid_veloc0 : public hexed::Spacetime_func
 {
   public:
   virtual int n_var(int n_dim) const {return n_dim + 2;}
   virtual std::vector<double> operator()(std::vector<double> pos, double time) const
   {
-    // zero velocity, constant pressure, and mass which is a product of cosines in each direction
+    // constant density and pressure, but sinusoidally-varying velocity with zero divergence
     const int n_dim = pos.size();
-    double exp_part = .1;
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) exp_part *= std::cos(pos[i_dim]);
+    double cos_arg = 0;
+    for (double p : pos) cos_arg += p;
+    double cos_part = std::cos(cos_arg);
     std::vector<double> state(n_var(n_dim), 0.);
-    state[n_dim] = 1. + exp_part;
-    state[n_dim + 1] = 1e5/0.4;
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) state[i_dim] = 1.2*cos_part;
+    state[0] *= 1 - n_dim;
+    state[n_dim] = 1.2;
+    state[n_dim + 1] = 1e5/0.4 + .5*1.2*(n_dim - 1 + (1 - n_dim)*(1 - n_dim))*cos_part*cos_part;
     return state;
   }
 };
 
-class Sinusoid_veloc : public hexed::Spacetime_func
+class Sinusoid_veloc1 : public hexed::Spacetime_func
 {
   public:
   virtual int n_var(int n_dim) const {return n_dim + 2;}
@@ -426,8 +429,8 @@ class All_cartesian : public Test_mesh
   hexed::Solver sol;
   public:
 
-  All_cartesian(bool local)
-  : sol{3, hexed::config::max_row_size, 1., local}
+  All_cartesian(bool local, hexed::Transport_model transport = hexed::inviscid)
+  : sol{3, hexed::config::max_row_size, 1., local, transport}
   {}
 
   virtual hexed::Solver& solver() {return sol;}
@@ -460,8 +463,8 @@ class All_deformed : public Test_mesh
   bool rot_dir;
 
   public:
-  All_deformed(bool rotation_direction, bool local)
-  : sol{2, hexed::config::max_row_size, 1., local}, rot_dir{rotation_direction}
+  All_deformed(bool rotation_direction, bool local, hexed::Transport_model transport = hexed::inviscid)
+  : sol{2, hexed::config::max_row_size, 1., local, transport}, rot_dir{rotation_direction}
   {}
 
   virtual hexed::Solver& solver() {return sol;}
@@ -504,8 +507,8 @@ class Extrude_hanging : public Test_mesh
   int kd;
 
   public:
-  Extrude_hanging(int i_dim, int j_dim, bool local)
-  : sol{3, hexed::config::max_row_size, .8, local}, id{i_dim}, jd{j_dim}, kd{3 - i_dim - j_dim}
+  Extrude_hanging(int i_dim, int j_dim, bool local, hexed::Transport_model transport = hexed::inviscid)
+  : sol{3, hexed::config::max_row_size, .8, local, transport}, id{i_dim}, jd{j_dim}, kd{3 - i_dim - j_dim}
   {}
 
   virtual hexed::Solver& solver() {return sol;}
@@ -578,7 +581,7 @@ void test_marching(Test_mesh& tm, std::string name)
   }
 }
 
-void test_art_visc(Test_mesh& tm, std::string name)
+void test_visc(Test_mesh& tm, std::string name)
 {
   // use `Copy` BCs. This is unstable for this case but it will still give the right answer as long as only one time step is executed
   tm.construct(new hexed::Copy, new hexed::Null_mbc);
@@ -586,8 +589,7 @@ void test_art_visc(Test_mesh& tm, std::string name)
   const int n_dim = sol.storage_params().n_dim;
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
-  sol.initialize(Sinusoid());
-  sol.set_art_visc_constant(300.);
+  sol.initialize(Sinusoid_veloc0());
   // update
   sol.update(1e-4);
   #if HEXED_USE_TECPLOT
@@ -600,8 +602,11 @@ void test_art_visc(Test_mesh& tm, std::string name)
       auto state  = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::State_variables());
       auto update = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Physical_update());
       auto tss    = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Time_step_scale_func());
-      double margin = hexed::config::max_row_size > 6 ? 1e-3 : 1.;
-      REQUIRE(update[n_dim]/status.time_step == Approx(-n_dim*300.*(state[n_dim] - update[n_dim]*tss[0] - 1.)).margin(margin));
+      for (int i_var = 0; i_var < n_dim; ++i_var) {
+        double margin = 1.2*(hexed::config::max_row_size > 6 ? 1e-3 : 1.);
+        // rate of change of momentum should be sinusoidal and rate of change of scalars should be 0
+        REQUIRE(update[i_var]/status.time_step == Approx(-n_dim*3.*(state[i_var] - update[i_var]*tss[0])/1.2).margin(margin));
+      }
     }
   }
 }
@@ -634,7 +639,7 @@ void test_advection(Test_mesh& tm, std::string name)
   auto& sol = tm.solver();
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
-  sol.initialize(Sinusoid_veloc());
+  sol.initialize(Sinusoid_veloc1());
   double width = 1e-2;
   sol.av_advect_shift = .4;
   sol.av_visc_mult = .9;
@@ -699,26 +704,26 @@ TEST_CASE("Solver time marching")
 }
 
 // test the solver on a sinusoid-derived initial condition which has a simple analytic solution
-TEST_CASE("Solver artificial viscosity")
+TEST_CASE("Solver viscosity")
 {
   SECTION("all cartesian")
   {
-    All_cartesian ac(true);
-    test_art_visc(ac, "car");
+    All_cartesian ac(true, hexed::Transport_model::constant(3.));
+    test_visc(ac, "car");
   }
   SECTION("all deformed")
   {
-    All_deformed ad0 (0, true);
-    test_art_visc(ad0, "def0");
-    All_deformed ad1 (1, true);
-    test_art_visc(ad1, "def1");
+    All_deformed ad0 (0, true, hexed::Transport_model::constant(3.));
+    test_visc(ad0, "def0");
+    All_deformed ad1 (1, true, hexed::Transport_model::constant(3.));
+    test_visc(ad1, "def1");
   }
   SECTION("extruded with deformed hanging nodes")
   {
     #define TEST_DIMENSIONS(i_dim, j_dim) \
       SECTION("dimensions " #i_dim " " #j_dim) { \
-          Extrude_hanging eh(i_dim, j_dim, true); \
-          test_art_visc(eh, "extrude_hanging"); \
+          Extrude_hanging eh(i_dim, j_dim, true, hexed::Transport_model::constant(3.)); \
+          test_visc(eh, "extrude_hanging"); \
       }
     #if NDEBUG
     TEST_DIMENSIONS(0, 1)
