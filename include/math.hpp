@@ -46,7 +46,7 @@ constexpr int log(int base, int arg)
   return result;
 }
 
-//! returns `1` if `condition` is true, otherwise `false`
+//! returns 1 if `condition` is true, otherwise -1
 constexpr int sign(bool condition)
 {
   return 2*condition - 1;
