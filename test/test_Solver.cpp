@@ -638,7 +638,6 @@ void test_advection(Test_mesh& tm, std::string name)
   sol.calc_jacobian();
   sol.initialize(Sinusoid_veloc1());
   double width = 1e-2;
-  sol.av_advect_shift = .4;
   sol.av_visc_mult = .9;
   sol.av_advect_iters = 1000;
   sol.av_diff_iters = 300;
@@ -654,7 +653,7 @@ void test_advection(Test_mesh& tm, std::string name)
   hexed::Gauss_legendre basis(2);
   double norm = 0.;
   for (int i_node = 0; i_node < 2; ++i_node) {
-    norm += (basis.node(i_node) - sol.av_advect_shift)*basis.orthogonal(1)(i_node)*basis.node_weights()(i_node);
+    norm += (basis.node(i_node) - .5)*basis.orthogonal(1)(i_node)*basis.node_weights()(i_node);
   }
   // check that the computed artificial viscosity is proportional to divergence of velocity
   for (auto handle : sol.mesh().elem_handles()) {
