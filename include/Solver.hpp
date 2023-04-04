@@ -74,7 +74,7 @@ class Solver
    * You are permitted to mess with these dynamically at runtime.
    */
   //!\{
-  double av_advect_shift = .5; //!< < .5 means that advection will be biased in backward direction. < .5 means forward.
+  double av_advect_shift = .5; //!< < .5 means that advection will be biased in backward direction. > .5 means forward.
   double av_diff_ratio = 5e-3; //!< ratio of diffusion time to advection width
   double av_visc_mult = 30.; //!< final scaling parameter applied to artificial viscosity coefficient
   double av_unscaled_max = 2e-3; //!< maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
