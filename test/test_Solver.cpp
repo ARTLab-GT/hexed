@@ -86,10 +86,7 @@ class Sinusoid_veloc1 : public hexed::Spacetime_func
     state[n_dim] = 2.3;
     state[0] =  state[n_dim]*.1*std::sin(pos[0]);
     state[1] = -state[n_dim]*.2*std::cos(pos[1]);
-    // set the energy so that 2*h_0 == 1.
-    double kin_ener = (state[0]*state[0] + state[1]*state[1])/(2.*state[n_dim]*state[n_dim]);
-    double enth = .5 - kin_ener;
-    state[n_dim + 1] = state[n_dim]*(enth/1.4 + kin_ener);
+    state[n_dim + 1] = 10.;
     return state;
   }
 };
@@ -645,7 +642,7 @@ void test_advection(Test_mesh& tm, std::string name)
   sol.av_visc_mult = .9;
   sol.av_advect_iters = 1000;
   sol.av_diff_iters = 300;
-  // don't do noise reduction or much diffusion to avoid obscuring advection result
+  // don't do much diffusion to avoid obscuring advection result
   sol.av_diff_ratio = 1e-6;
   REQUIRE_THROWS(sol.set_art_visc_row_size(1));
   REQUIRE_THROWS(sol.set_art_visc_row_size(hexed::config::max_row_size + 1));
