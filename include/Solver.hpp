@@ -50,6 +50,7 @@ class Solver
   void fix_admissibility(double stability_ratio);
   void apply_state_bcs();
   void apply_flux_bcs();
+  void apply_avc_diff_bcs();
   void apply_avc_diff_flux_bcs();
   void apply_fta_flux_bcs();
   void compute_inviscid(double dt, int i_stage);
@@ -73,14 +74,11 @@ class Solver
    * You are permitted to mess with these dynamically at runtime.
    */
   //!\{
-  double av_advect_shift = .5; //!< < .5 means that advection will be biased in backward direction. < .5 means forward.
   double av_diff_ratio = 5e-3; //!< ratio of diffusion time to advection width
-  double av_visc_mult = 100.; //!< final scaling parameter applied to artificial viscosity coefficient
+  double av_visc_mult = 30.; //!< final scaling parameter applied to artificial viscosity coefficient
+  double av_unscaled_max = 2e-3; //!< maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
   double av_advect_stab_rat = .2; //!< stability ratio for advection
   double av_diff_stab_rat = .5; //!< stability ratio for diffusion
-  double av_noise_threshold = 1.5e-4; //!< threshold below which a power law scaling is applied to artificial viscosity coefficient
-  double av_unscaled_max = 2e-3; //!< maximum aritificial viscosity before stagnation enthalpy scaling is applied
-  double av_noise_power = 5; //!< power applied to artificial viscosity below `av_noise_threshold`.
   int av_advect_iters = 2; //!< number of advection iterations to run each time `set_art_visc_smoothness` is called
   int av_diff_iters = 1; //!< number of diffusion iterations to run each time `set_art_visc_smoothness` is called
   //!\}

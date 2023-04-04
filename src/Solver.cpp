@@ -53,17 +53,23 @@ void Solver::apply_flux_bcs()
   }
 }
 
-void Solver::apply_avc_diff_flux_bcs()
+void Solver::apply_avc_diff_bcs()
 {
-  int nd = params.n_dim;
-  int rs = params.row_size;
-  int nq = params.n_qpoint();
   auto& bc_cons {acc_mesh.boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    double* in_f = bc_cons[i_con].inside_face() + 2*(nd + 2)*nq/rs;
-    double* gh_f = bc_cons[i_con].ghost_face()  + 2*(nd + 2)*nq/rs;
-    for (int i_qpoint = 0; i_qpoint < nq/rs; ++i_qpoint) gh_f[i_qpoint] = -in_f[i_qpoint];
+    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+    acc_mesh.boundary_condition(bc_sn).flow_bc->apply_diffusion(bc_cons[i_con]);
+  }
+}
+
+void Solver::apply_avc_diff_flux_bcs()
+{
+  auto& bc_cons {acc_mesh.boundary_connections()};
+  #pragma omp parallel for
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+    acc_mesh.boundary_condition(bc_sn).flow_bc->flux_diffusion(bc_cons[i_con]);
   }
 }
 
@@ -334,12 +340,10 @@ void Solver::set_art_visc_smoothness(double advect_length)
   stopwatch.stopwatch.start();
   stopwatch.children.at("set art visc").stopwatch.start();
   use_art_visc = true;
-  double heat_rat = 1.4;
   const int nq = params.n_qpoint();
   const int nd = params.n_dim;
   const int rs = params.row_size;
   auto& elements = acc_mesh.elements();
-  auto& bc_cons {acc_mesh.boundary_connections()};
 
   // store the current state in stage 1 (normally the time integration reference)
   // so we can use stage 0 for solving the advection equation
@@ -361,12 +365,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
     double* state = elements[i_elem].stage(0);
     double* rk_ref = elements[i_elem].stage(1);
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      double scale = 2*heat_rat*rk_ref[(nd + 1)*nq + i_qpoint]*rk_ref[nd*nq + i_qpoint];
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        double mmtm = rk_ref[i_dim*nq + i_qpoint];
-        scale += (1. - heat_rat)*mmtm*mmtm;
-      }
-      scale = std::sqrt(scale);
+      double scale = std::sqrt(2*rk_ref[(nd + 1)*nq + i_qpoint]*rk_ref[nd*nq + i_qpoint]);
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         state[i_dim*nq + i_qpoint] = rk_ref[i_dim*nq + i_qpoint]/scale;
       }
@@ -524,15 +523,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
       }
       for (double s : step)
       {
-        // apply value boundary condition (or lack thereof, in this case)
-        #pragma omp parallel for
-        for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-          double* in_f = bc_cons[i_con].inside_face();
-          double* gh_f = bc_cons[i_con].ghost_face();
-          for (int i_dof = 0; i_dof < nq/rs; ++i_dof) {
-            gh_f[i_dof] = in_f[i_dof];
-          }
-        }
+        apply_avc_diff_bcs();
         // update state with spatial term
         compute_avc_diff(s, 0);
         // update state with real time forcing term
@@ -570,7 +561,6 @@ void Solver::set_art_visc_smoothness(double advect_length)
   }
   status.diff_res = std::sqrt(status.diff_res/n_real); // finish computing RMS residual
   // clean up
-  double thresh_pow = std::pow(av_noise_threshold, av_noise_power);
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
@@ -578,17 +568,10 @@ void Solver::set_art_visc_smoothness(double advect_length)
     double* av = elements[i_elem].art_visc_coef();
     double* forcing = elements[i_elem].art_visc_forcing();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      // set artificial viscosity to square root of diffused scalar state times stagnation enthalpy (with user-defined multiplier)
-      double mass = rk_ref[nd*nq + i_qpoint];
-      double scale_sq = 2*heat_rat*rk_ref[(nd + 1)*nq + i_qpoint]/mass;
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        double veloc = rk_ref[i_dim*nq + i_qpoint]/mass;
-        scale_sq += (1. - heat_rat)*veloc*veloc;
-      }
-      double f = std::max(0., forcing[n_real*nq + i_qpoint]);
-      f = std::pow(std::pow(f, av_noise_power/2.) + thresh_pow, 1./av_noise_power) - av_noise_threshold; // divide power by 2 because already squared
-      f = std::min(f, av_unscaled_max);
-      av[i_qpoint] = av_visc_mult*advect_length*f*std::sqrt(scale_sq); // root-smear-square complete!
+      // set artificial viscosity to square root of diffused scalar state times scaling factor
+      double scale_sq = 2*rk_ref[(nd + 1)*nq + i_qpoint]/rk_ref[nd*nq + i_qpoint];
+      double f = std::min(av_unscaled_max, std::max(0., forcing[n_real*nq + i_qpoint]));
+      av[i_qpoint] = av_visc_mult*advect_length*std::sqrt(f*scale_sq); // root-smear-square complete!
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         int i = i_var*nq + i_qpoint;
@@ -913,8 +896,14 @@ void Solver::visualize_field_tecplot(std::string name, int n_sample, bool edges,
 {
   State_variables sv;
   Art_visc_coef avc;
+  Advection_state as(av_rs);
+  Art_visc_forcing avf;
   std::vector<const Qpoint_func*> funcs {&sv};
-  if (use_art_visc) funcs.push_back(&avc);
+  if (use_art_visc) {
+    funcs.push_back(&avc);
+    funcs.push_back(&as);
+    funcs.push_back(&avf);
+  }
   visualize_field_tecplot(Qf_concat(funcs), name, n_sample, edges, qpoints, interior);
 }
 

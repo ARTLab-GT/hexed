@@ -27,7 +27,7 @@ class Transport_model
   {}
 
   public:
-  //! if `true`, you can safely assume `coefficient` will always return 0 regardless of input
+  //! if `false`, you can safely assume `coefficient` will always return 0 regardless of input
   const bool is_viscous;
   /*! Compute whatever transport coefficient this object is supposed to represent.
    * Expects the square root of the temperature to be precomputed (so the caller can reuse it for multiple transport coefficients)

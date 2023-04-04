@@ -11,6 +11,8 @@ namespace hexed
 const int dyn = Eigen::Dynamic;
 template <int rows = dyn, int cols = 1>
 using Mat = Eigen::Matrix<double, rows, cols>;
+const auto all = Eigen::all;
+const auto last = Eigen::last;
 
 //! Miscellaneous mathematical functions that aren't in `std::math`
 namespace math
@@ -42,6 +44,12 @@ constexpr int log(int base, int arg)
   int result = 0;
   for (int compare = 1; compare < arg; compare *= base) ++result;
   return result;
+}
+
+//! returns 1 if `condition` is true, otherwise -1
+constexpr int sign(bool condition)
+{
+  return 2*condition - 1;
 }
 
 /*! \brief Finds a root of a scalar function with [Broyden's method](https://en.wikipedia.org/wiki/Broyden%27s_method).

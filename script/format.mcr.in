@@ -6,6 +6,10 @@ $!ExtendedCommand
 
 $!ExtendedCommand
   CommandProcessorID = 'CFDAnalyzer4'
+  Command = 'Calculate Function=\'VELOCITYMAG\' Normalization=\'None\' ValueLocation=\'Nodal\' CalculateOnDemand=\'T\' UseMorePointsForFEGradientCalculations=\'F\''
+
+$!ExtendedCommand
+  CommandProcessorID = 'CFDAnalyzer4'
   Command = 'Calculate Function=\'PRESSURE\' Normalization=\'None\' ValueLocation=\'Nodal\' CalculateOnDemand=\'T\' UseMorePointsForFEGradientCalculations=\'F\''
 
 $!ExtendedCommand

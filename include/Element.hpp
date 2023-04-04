@@ -39,10 +39,12 @@ class Element
   public:
   //! pointer to a function that can access some data associated with the vertices
   typedef double& (Element::*vertex_value_access)(int i_vertex);
-  std::array<int, 6> face_record; // for algorithms to book-keep information related to faces
-  std::array<double*, 6> faces; // layout: [2*i_dim + face_sign][i_var][i_qpoint]
+  std::array<int, 6> face_record; //!< for algorithms to book-keep information related to faces
+  //! Pointer to state data at faces. Must be populated by user
+  std::array<double*, 6> faces; //!< layout: [2*i_dim + face_sign][i_var][i_qpoint]
   double resolution_badness = 0;
   static constexpr bool is_deformed = false;
+  static constexpr int n_forcing = 4;
 
   /*!
    * The `Storage_params1 defines the amount of storage that must be allocated.
@@ -66,14 +68,12 @@ class Element
   inline int refinement_level() {return r_level;}
   inline std::vector<int> nominal_position() {return nom_pos;}
   //! Pointer to state data for `i_stage`th Runge-Kutta stage.
-  double* stage(int i_stage); //! Layout: [i_var][i_qpoint]
-  //! pointer to advection state data
-  double* advection_state();
+  double* stage(int i_stage); //!< Layout: [i_var][i_qpoint]
+  double* advection_state(); //!< Layout: [i_node][i_qpoint] \note `0 <= i_node < row_size`
   //! pointer to scaling factor for local time step.
-  double* time_step_scale(); //! Layout: [i_qpoint]
-  double* art_visc_coef(); //! layout: [i_qpoint]
-  double* art_visc_forcing(); //! layout: [i_qpoint]
-  //! Pointer state data at faces. Must be populated by user
+  double* time_step_scale(); //!< Layout: [i_qpoint]
+  double* art_visc_coef(); //!< layout: [i_qpoint]
+  double* art_visc_forcing(); //!< layout: [i_forcing][i_qpoint]
   virtual double* node_adjustments() {return nullptr;} // overriden by `Deformed_element`
 
   /*!
