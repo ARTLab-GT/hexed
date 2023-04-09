@@ -1,4 +1,4 @@
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <hexed/Row_index.hpp>
 
 TEST_CASE("Row_index")

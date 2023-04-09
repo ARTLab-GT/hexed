@@ -1,4 +1,4 @@
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <hexed/config.hpp>
 #include <hexed/Derivative.hpp>
 #include <hexed/Gauss_legendre.hpp>
@@ -33,7 +33,7 @@ TEST_CASE("Derivative")
   // test that the derivative is correct when the boundary values match the interior
   for (int i_var = 0; i_var < 2; ++i_var) {
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-      REQUIRE(result(i_qpoint, i_var) == Approx(0.2*basis.node(i_qpoint) - i_var).scale(1.));
+      REQUIRE(result(i_qpoint, i_var) == Catch::Approx(0.2*basis.node(i_qpoint) - i_var).scale(1.));
     }
   }
   // check that the integral of the derivative is the difference between the boundary values,
@@ -42,5 +42,5 @@ TEST_CASE("Derivative")
   for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
     integral += result(i_qpoint, 2)*basis.node_weights()(i_qpoint);
   }
-  REQUIRE(integral == Approx(0.5 - 0.2));
+  REQUIRE(integral == Catch::Approx(0.5 - 0.2));
 }

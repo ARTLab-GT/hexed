@@ -1,4 +1,4 @@
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 
 #include <hexed/config.hpp>
 #include <hexed/Equidistant.hpp>
@@ -15,7 +15,7 @@ void test_diff_mat(hexed::Basis& basis)
     {
       derivative += diff_mat(i_result, i_operand);
     }
-    REQUIRE( derivative == Approx(0).margin(1e-13) );
+    REQUIRE( derivative == Catch::Approx(0).margin(1e-13) );
   }
 
   std::vector<double> linear;
@@ -38,11 +38,11 @@ void test_diff_mat(hexed::Basis& basis)
     }
     if (basis.row_size > 1)
     {
-      REQUIRE( derivative_lin  == Approx(9.07) );
+      REQUIRE( derivative_lin  == Catch::Approx(9.07) );
     }
     if (basis.row_size > 2)
     {
-      REQUIRE( derivative_quad == Approx(-0.38 - 2*4.43*basis.node(i_result)) );
+      REQUIRE( derivative_quad == Catch::Approx(-0.38 - 2*4.43*basis.node(i_result)) );
     }
   }
 }
@@ -50,7 +50,7 @@ void test_diff_mat(hexed::Basis& basis)
 void test_quadrature(hexed::Basis& basis)
 {
   Eigen::VectorXd weights = basis.node_weights();
-  REQUIRE(weights.sum() == Approx(1.));
+  REQUIRE(weights.sum() == Catch::Approx(1.));
   double total = 0.;
   if (basis.row_size >= 3)
   {
@@ -58,7 +58,7 @@ void test_quadrature(hexed::Basis& basis)
     {
       total += weights(i)*(basis.node(i)*basis.node(i));
     }
-    REQUIRE(total == Approx(1./3.));
+    REQUIRE(total == Catch::Approx(1./3.));
   }
 }
 
@@ -73,8 +73,8 @@ void test_boundary(hexed::Basis& basis)
     node_vals[i_node] = 0.15*basis.node(i_node) + 0.37;
   }
   Eigen::VectorXd boundary_vals = boundary*node_vals;
-  REQUIRE(boundary_vals(0) == Approx(0.37));
-  REQUIRE(boundary_vals(1) == Approx(0.52));
+  REQUIRE(boundary_vals(0) == Catch::Approx(0.37));
+  REQUIRE(boundary_vals(1) == Catch::Approx(0.52));
 }
 
 void test_orthogonal(hexed::Basis& basis)
@@ -86,7 +86,7 @@ void test_orthogonal(hexed::Basis& basis)
     for (int j_orth = 0; j_orth < basis.row_size; ++j_orth)
     {
       auto orth = basis.orthogonal(j_orth);
-      REQUIRE(weighted_orth.dot(orth) == Approx(i_orth == j_orth ? 1. : 0.).margin(1e-10));
+      REQUIRE(weighted_orth.dot(orth) == Catch::Approx(i_orth == j_orth ? 1. : 0.).margin(1e-10));
     }
   }
 }
@@ -163,15 +163,15 @@ TEST_CASE("interpolation")
     Eigen::VectorXd sample {{0, 0.5, 0.7, 0.16, 1.2, 0., 0.}};
     Eigen::VectorXd interpolated = basis.interpolate(sample)*values;
     REQUIRE(interpolated[0] == 0.);
-    REQUIRE(interpolated[1] == Approx(0.125));
-    REQUIRE(interpolated[2] == Approx(.7*.7*.7));
-    REQUIRE(interpolated[4] == Approx(1.2*1.2*1.2));
+    REQUIRE(interpolated[1] == Catch::Approx(0.125));
+    REQUIRE(interpolated[2] == Catch::Approx(.7*.7*.7));
+    REQUIRE(interpolated[4] == Catch::Approx(1.2*1.2*1.2));
     REQUIRE(interpolated[6] == 0.);
   }
   SECTION("small sample")
   {
     Eigen::VectorXd sample {{0.2}};
     Eigen::VectorXd interpolated = basis.interpolate(sample)*values;
-    REQUIRE(interpolated[0] == Approx(.2*.2*.2));
+    REQUIRE(interpolated[0] == Catch::Approx(.2*.2*.2));
   }
 }

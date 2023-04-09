@@ -2,7 +2,6 @@ find_package(Catch2 REQUIRED)
 add_executable(unit)
 target_sources(unit PRIVATE
 # please maintain alphabetical order
-main.cpp
 testing_utils.cpp
 test_Accessible_mesh.cpp
 test_Basis.cpp
@@ -36,11 +35,10 @@ test_utils.cpp
 test_Vertex.cpp
 test_Vis_data.cpp
 )
-target_link_libraries(unit PRIVATE hexed Catch2::Catch2)
+target_link_libraries(unit PRIVATE hexed Catch2::Catch2WithMain)
 add_executable(interactive)
 target_sources(interactive PRIVATE
-main.cpp
 test_otter_vis.cpp
 test_Solver_vis.cpp
 )
-target_link_libraries(interactive PRIVATE hexed Catch2::Catch2)
+target_link_libraries(interactive PRIVATE hexed Catch2::Catch2WithMain)

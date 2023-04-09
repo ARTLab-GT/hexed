@@ -1,4 +1,4 @@
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <hexed/config.hpp>
 #include <hexed/Face_permutation.hpp>
 #include <hexed/Accessible_mesh.hpp>
@@ -38,7 +38,7 @@ void test_mesh(hexed::Accessible_mesh& mesh)
     auto fp = hexed::kernel_factory<hexed::Face_permutation>(params.n_dim, params.row_size, con.direction(), con.state() + n_fdof);
     fp->match_faces();
     for (int i_dof = 0; i_dof < n_fdof; ++i_dof) {
-      REQUIRE(con.state()[i_dof] == Approx(con.state()[n_fdof + i_dof]).scale(1.));
+      REQUIRE(con.state()[i_dof] == Catch::Approx(con.state()[n_fdof + i_dof]).scale(1.));
     }
     fp->restore();
   }
@@ -52,7 +52,7 @@ void test_mesh(hexed::Accessible_mesh& mesh)
           auto pos = elem.face_position(basis, i_face, i_qpoint);
           for (int i_var = 0; i_var < params.n_var; ++i_var) {
             REQUIRE(elem.faces[i_face][i_var*n_face_qpoint + i_qpoint]
-                    == Approx(pos[i_var%params.n_dim]).scale(1.));
+                    == Catch::Approx(pos[i_var%params.n_dim]).scale(1.));
           }
         }
       }

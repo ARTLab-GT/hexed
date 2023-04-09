@@ -1,4 +1,4 @@
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <hexed/Element_container.hpp>
 
 TEST_CASE("Specific_container<Deformed_element>")
@@ -18,9 +18,9 @@ TEST_CASE("Specific_container<Deformed_element>")
   REQUIRE(&ctn.at(3, sn2) != &ctn.at(2, sn1));
   // test that elements are constructed correctly
   hexed::Deformed_element& elem = ctn.at(2, sn0);
-  REQUIRE(elem.vertex(0).pos[1] == Approx(0.3*3./4.));
-  REQUIRE(elem.vertex(7).pos[1] == Approx(0.3*4./4.));
-  REQUIRE(ctn.at(3, sn2).vertex(0).pos[0] == Approx(0.3*2./8.));
+  REQUIRE(elem.vertex(0).pos[1] == Catch::Approx(0.3*3./4.));
+  REQUIRE(elem.vertex(7).pos[1] == Catch::Approx(0.3*4./4.));
+  REQUIRE(ctn.at(3, sn2).vertex(0).pos[0] == Catch::Approx(0.3*2./8.));
   // test that `ctn` purports to contain 4 `Deformed_element`s
   REQUIRE(ctn.elements().size() == 4);
   // test that each of the `Deformed_element` constructed above appears exactly once in the vector view

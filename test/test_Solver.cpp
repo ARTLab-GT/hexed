@@ -1,4 +1,4 @@
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <hexed/config.hpp>
 #include <hexed/Solver.hpp>
 
@@ -252,23 +252,23 @@ TEST_CASE("Solver")
     sol.initialize(Arbitrary_initializer());
     auto sample = sol.sample(0, false, sn0, 4, hexed::State_variables()); // sample the midpoint of the element because we know the exact position
     REQUIRE(sample.size() == 4);
-    REQUIRE(sample[0] == Approx(1.2*0.4));
-    REQUIRE(sample[1] == Approx(1.));
-    REQUIRE(sample[2] == Approx(2.));
-    REQUIRE(sample[3] == Approx(3.));
+    REQUIRE(sample[0] == Catch::Approx(1.2*0.4));
+    REQUIRE(sample[1] == Catch::Approx(1.));
+    REQUIRE(sample[2] == Catch::Approx(2.));
+    REQUIRE(sample[3] == Catch::Approx(3.));
     sample = sol.sample(2, true, sn1, 4, hexed::State_variables());
     REQUIRE(sample.size() == 4);
-    REQUIRE(sample[0] == Approx(-0.1*0.1));
+    REQUIRE(sample[0] == Catch::Approx(-0.1*0.1));
     // variable bounds calculation
     auto bounds = sol.bounds_field(hexed::State_variables());
     REQUIRE(bounds.size() == 4);
-    REQUIRE(bounds[0][0] == Approx(-.2*.2).scale(1.));
-    REQUIRE(bounds[0][1] == Approx(1.6*.8).scale(1.));
-    REQUIRE(bounds[2][0] == Approx(2.).scale(1.));
-    REQUIRE(bounds[2][1] == Approx(2.).scale(1.));
+    REQUIRE(bounds[0][0] == Catch::Approx(-.2*.2).scale(1.));
+    REQUIRE(bounds[0][1] == Catch::Approx(1.6*.8).scale(1.));
+    REQUIRE(bounds[2][0] == Catch::Approx(2.).scale(1.));
+    REQUIRE(bounds[2][1] == Catch::Approx(2.).scale(1.));
     // artificial viscosity setting
     sol.set_art_visc_constant(.28);
-    REQUIRE(sol.sample(0, false, sn0, 4, hexed::Art_visc_coef())[0] == Approx(.28));
+    REQUIRE(sol.sample(0, false, sn0, 4, hexed::Art_visc_coef())[0] == Catch::Approx(.28));
   }
 
   SECTION("vertex relaxation")
@@ -277,9 +277,9 @@ TEST_CASE("Solver")
     int sn1 = sol.mesh().add_element(0,  true, {1, 0, 0});
     sol.mesh().connect_cartesian(0, {sn0, sn1}, {0}, {false, true});
     sol.relax_vertices();
-    REQUIRE(sol.sample(0, false, sn0, 4, hexed::Position_func())[0] == Approx(0.8*0.5));
-    REQUIRE(sol.sample(0,  true, sn1, 4, hexed::Position_func())[0] == Approx(0.8*1.375));
-    REQUIRE(sol.sample(0,  true, sn1, 4, hexed::Position_func())[1] == Approx(0.8*0.5));
+    REQUIRE(sol.sample(0, false, sn0, 4, hexed::Position_func())[0] == Catch::Approx(0.8*0.5));
+    REQUIRE(sol.sample(0,  true, sn1, 4, hexed::Position_func())[0] == Catch::Approx(0.8*1.375));
+    REQUIRE(sol.sample(0,  true, sn1, 4, hexed::Position_func())[1] == Catch::Approx(0.8*0.5));
   }
 
   SECTION("local time step scale")
@@ -300,12 +300,12 @@ TEST_CASE("Solver")
     sol.update(); // sets the time step scale (among other things)
     double cfl = hexed::Gauss_legendre(3).max_cfl_convective()/2.; // divide by 2 cause that's the number of dimensions
     // in sn0, TSS is max_cfl*root_size*determinant/normal_sum/sound_speed
-    REQUIRE(sol.sample(0,  true, sn0, 4, hexed::Time_step_scale_func())[0] == Approx(cfl*.8*2/11./1.));
+    REQUIRE(sol.sample(0,  true, sn0, 4, hexed::Time_step_scale_func())[0] == Catch::Approx(cfl*.8*2/11./1.));
     // in sn1, TSS varies bilinearly
-    REQUIRE(sol.sample(0, false, sn1, 4, hexed::Time_step_scale_func())[0] == Approx(cfl*.8*(2*2/11. + .5 + 1.)/4.));
+    REQUIRE(sol.sample(0, false, sn1, 4, hexed::Time_step_scale_func())[0] == Catch::Approx(cfl*.8*(2*2/11. + .5 + 1.)/4.));
     // TSS at hanging nodes should be set to match coarse element
-    REQUIRE(sol.sample(1, false, sn2, 4, hexed::Time_step_scale_func())[0] == Approx(cfl*.8*(3*.5 + (.5 + 2/11.)/2.)/4.));
-    REQUIRE(sol.sample(1, false, sn3, 4, hexed::Time_step_scale_func())[0] == Approx(cfl*.8*(2*.5 + (.5 + 2/11.)/2. + 2/11.)/4.));
+    REQUIRE(sol.sample(1, false, sn2, 4, hexed::Time_step_scale_func())[0] == Catch::Approx(cfl*.8*(3*.5 + (.5 + 2/11.)/2.)/4.));
+    REQUIRE(sol.sample(1, false, sn3, 4, hexed::Time_step_scale_func())[0] == Catch::Approx(cfl*.8*(2*.5 + (.5 + 2/11.)/2. + 2/11.)/4.));
   }
 
   SECTION("integrals")
@@ -339,20 +339,20 @@ TEST_CASE("Solver")
       REQUIRE(integral.size() == 4);
       double area = 5.25*0.8*0.8;
       for (int i_var = 0; i_var < 4; ++i_var) {
-        REQUIRE(integral[i_var] == Approx(state[i_var]*area));
+        REQUIRE(integral[i_var] == Catch::Approx(state[i_var]*area));
       }
       area = 5.5*0.8;
       integral = sol.integral_surface(hexed::State_variables(), bc0);
       REQUIRE(integral.size() == 4);
       for (int i_var = 0; i_var < 4; ++i_var) {
-        REQUIRE(integral[i_var] == Approx(state[i_var]*area));
+        REQUIRE(integral[i_var] == Catch::Approx(state[i_var]*area));
       }
       integral = sol.integral_surface(Normal_1(), bc0);
       REQUIRE(integral.size() == 1);
-      REQUIRE(integral[0] == Approx(5*0.8));
+      REQUIRE(integral[0] == Catch::Approx(5*0.8));
       integral = sol.integral_surface(Normal_1(), bc1);
       REQUIRE(integral.size() == 1);
-      REQUIRE(integral[0] == Approx(-0.5*0.8));
+      REQUIRE(integral[0] == Catch::Approx(-0.5*0.8));
     }
     SECTION("complex function, simple mesh")
     {
@@ -365,10 +365,10 @@ TEST_CASE("Solver")
       sol.initialize(hexed::Constant_func({0.3, 0., 0., 0.}));
       auto integral = sol.integral_field(Arbitrary_integrand());
       REQUIRE(integral.size() == 4);
-      REQUIRE(integral[0] == Approx(std::pow(0.8, 3)/3*std::pow(0.8, 4)/4 - 0.8*0.8*0.3));
+      REQUIRE(integral[0] == Catch::Approx(std::pow(0.8, 3)/3*std::pow(0.8, 4)/4 - 0.8*0.8*0.3));
       integral = sol.integral_surface(Arbitrary_integrand(), bc0);
       REQUIRE(integral.size() == 4);
-      REQUIRE(integral[0] == Approx(0.8*0.8*std::pow(0.8, 4)/4 - 0.8*0.3));
+      REQUIRE(integral[0] == Catch::Approx(0.8*0.8*std::pow(0.8, 4)/4 - 0.8*0.3));
     }
   }
 
@@ -386,7 +386,7 @@ TEST_CASE("Solver")
       sol.mesh().valid().assert_valid();
       sol.calc_jacobian();
       // element should now be [(1 + 0.25)*0.8/2, (1 + 0.75)*0.8/2] x [(2 + 0.25)*0.8/2, 3*0.8/2]
-      REQUIRE(sol.integral_field(hexed::Constant_func({1.}))[0] == Approx(0.5*0.75*(0.8/2)*(0.8/2)));
+      REQUIRE(sol.integral_field(hexed::Constant_func({1.}))[0] == Catch::Approx(0.5*0.75*(0.8/2)*(0.8/2)));
     }
     SECTION("Surface_mbc")
     {
@@ -398,15 +398,15 @@ TEST_CASE("Solver")
       sol.mesh().valid().assert_valid();
       sol.calc_jacobian();
       // element should be a triangle
-      REQUIRE(sol.integral_field(hexed::Constant_func({1.}))[0] == Approx(0.5*(0.1*0.4*0.4)*0.4));
+      REQUIRE(sol.integral_field(hexed::Constant_func({1.}))[0] == Catch::Approx(0.5*(0.1*0.4*0.4)*0.4));
       sol.snap_faces();
       sol.calc_jacobian();
       // top element face should now be a parabola
-      REQUIRE(sol.integral_field(hexed::Constant_func({1.}))[0] == Approx(0.1*0.4*0.4*0.4/3.));
+      REQUIRE(sol.integral_field(hexed::Constant_func({1.}))[0] == Catch::Approx(0.1*0.4*0.4*0.4/3.));
       // make sure that snapping again doesn't change anything
       sol.snap_faces();
       sol.calc_jacobian();
-      REQUIRE(sol.integral_field(hexed::Constant_func({1.}))[0] == Approx(0.1*0.4*0.4*0.4/3.));
+      REQUIRE(sol.integral_field(hexed::Constant_func({1.}))[0] == Catch::Approx(0.1*0.4*0.4*0.4/3.));
     }
   }
 }
@@ -572,7 +572,7 @@ void test_marching(Test_mesh& tm, std::string name)
         auto state   = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::State_variables());
         auto update  = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Physical_update());
         auto correct = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, Nonuniform_residual());
-        REQUIRE(update[i_var]/status.time_step == Approx(correct[i_var]).margin(1e-3*std::abs(state[i_var])));
+        REQUIRE(update[i_var]/status.time_step == Catch::Approx(correct[i_var]).margin(1e-3*std::abs(state[i_var])));
       }
     }
   }
@@ -602,7 +602,7 @@ void test_visc(Test_mesh& tm, std::string name)
       for (int i_var = 0; i_var < n_dim; ++i_var) {
         double margin = 1.2*(hexed::config::max_row_size > 6 ? 1e-3 : 1.);
         // rate of change of momentum should be sinusoidal and rate of change of scalars should be 0
-        REQUIRE(update[i_var]/status.time_step == Approx(-n_dim*3.*(state[i_var] - update[i_var]*tss[0])/1.2).margin(margin));
+        REQUIRE(update[i_var]/status.time_step == Catch::Approx(-n_dim*3.*(state[i_var] - update[i_var]*tss[0])/1.2).margin(margin));
       }
     }
   }
@@ -626,7 +626,7 @@ void test_conservation(Test_mesh& tm, std::string name)
   auto state  = sol.integral_field(hexed::State_variables());
   auto update = sol.integral_field(hexed::Physical_update());
   for (int i_var : {sol.storage_params().n_var - 2, sol.storage_params().n_var - 1}) {
-    REQUIRE(update[i_var]/status.time_step == Approx(0.).scale(std::abs(state[i_var])));
+    REQUIRE(update[i_var]/status.time_step == Catch::Approx(0.).scale(std::abs(state[i_var])));
   }
 }
 
@@ -660,7 +660,7 @@ void test_advection(Test_mesh& tm, std::string name)
     for (int i_qpoint = 0; i_qpoint < sol.storage_params().n_qpoint(); ++i_qpoint) {
       double art_visc = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Art_visc_coef())[0];
       auto pos = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Position_func());
-      REQUIRE(art_visc/(width*width*norm*sol.av_visc_mult) == Approx(std::abs(-.1*std::cos(pos[0]) - .2*std::sin(pos[1]))).margin(1e-3));
+      REQUIRE(art_visc/(width*width*norm*sol.av_visc_mult) == Catch::Approx(std::abs(-.1*std::cos(pos[0]) - .2*std::sin(pos[1]))).margin(1e-3));
     }
   }
 }
@@ -833,8 +833,8 @@ TEST_CASE("face extrusion")
     #if HEXED_USE_TECPLOT
     solver.visualize_field_tecplot(hexed::Mass(), "extrude_2d");
     #endif
-    REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Approx(40./4.)); // check number of elements and that jacobian is nonsingular
-    REQUIRE(solver.integral_field(hexed::Constant_func({1.}))[0] == Approx(area));
+    REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Catch::Approx(40./4.)); // check number of elements and that jacobian is nonsingular
+    REQUIRE(solver.integral_field(hexed::Constant_func({1.}))[0] == Catch::Approx(area));
   }
   SECTION("3D")
   {
@@ -860,7 +860,7 @@ TEST_CASE("face extrusion")
     int bc_sn = solver.mesh().add_boundary_condition(new hexed::Copy(), new hexed::Null_mbc());
     solver.mesh().connect_rest(bc_sn);
     solver.calc_jacobian();
-    REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Approx(86.)); // check number of elements
+    REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Catch::Approx(86.)); // check number of elements
     #if HEXED_USE_TECPLOT
     for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
     solver.visualize_field_tecplot(hexed::State_variables(), "extrude");
@@ -929,9 +929,9 @@ TEST_CASE("resolution badness")
   hexed::Position_func pos;
   sol.set_resolution_badness(hexed::Elem_average(pos));
   // check that the resolution badness of the middle element is the x-coordinate of its centroid
-  REQUIRE(sol.sample(0, true, sn, hexed::Resolution_badness())[0] == Approx(.5));
+  REQUIRE(sol.sample(0, true, sn, hexed::Resolution_badness())[0] == Catch::Approx(.5));
   // resolution badness of the middle element will be set equal to the centroid of the (collapsed) element extruded 2 layers in the positive-x direction
   sol.synch_extruded_res_bad();
   double correct = ((2*2*2 - 1.5*1.5*1.5)/3. - .5*(2.*2. - 1.5*1.5)/2.)/((1.5*1.5 - 1.)/2.);
-  REQUIRE(sol.sample(0, true, sn, hexed::Resolution_badness())[0] == Approx(correct));
+  REQUIRE(sol.sample(0, true, sn, hexed::Resolution_badness())[0] == Catch::Approx(correct));
 }

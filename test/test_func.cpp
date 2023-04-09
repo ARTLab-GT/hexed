@@ -1,4 +1,4 @@
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 
 #include <hexed/config.hpp>
 #include <hexed/Element_func.hpp>
@@ -101,7 +101,7 @@ TEST_CASE("Inherited methods")
     hexed::Qpoint_func& af_ref {af};
     auto result = af_ref(elem, basis, 1, 5.);
     REQUIRE(result.size() == 2);
-    REQUIRE(result[1] == Approx(0.3*2. - 10.));
+    REQUIRE(result[1] == Catch::Approx(0.3*2. - 10.));
   }
   SECTION("Surface_func")
   {
@@ -179,7 +179,7 @@ TEST_CASE("Vortex")
       for (int i_var = 0; i_var < 4; ++i_var)
       {
         REQUIRE(rate[i_var] + flux_grad[0][i_var] + flux_grad[1][i_var]
-                == Approx(0.).margin(1.e-3*std::abs(freestream[i_var])));
+                == Catch::Approx(0.).margin(1.e-3*std::abs(freestream[i_var])));
       }
     }
   }
@@ -191,7 +191,7 @@ TEST_CASE("Vortex")
     auto state = vortex(std::vector<double> {0., vortex.argmax_radius}, 0.);
     double sound_speed = std::sqrt(vortex.heat_rat*(vortex.heat_rat - 1.)*freestream[3]);
     double tang_veloc = -state[0]/state[2];
-    REQUIRE(tang_veloc/sound_speed == Approx(vortex.max_nondim_veloc));
+    REQUIRE(tang_veloc/sound_speed == Catch::Approx(vortex.max_nondim_veloc));
   }
 }
 
@@ -218,17 +218,17 @@ TEST_CASE("Doublet")
     std::vector<double> state {doublet({doublet.radius*cos + 0.05, doublet.radius*sin + 0.03}, 0.2089)};
     double momentum_magnitude = std::sqrt(state[0]*state[0] + state[1]*state[1]);
     // require velocity is tangential to surface
-    REQUIRE(state[0]*cos + state[1]*sin == Approx(0.).scale(10.));
+    REQUIRE(state[0]*cos + state[1]*sin == Catch::Approx(0.).scale(10.));
     // require pressure approximately satisfies Bernoulli eq.
     double pres_coef = (0.3*(state[3] - 0.5*momentum_magnitude*momentum_magnitude/state[2])
                         - pres)/(0.5*mass*speed_sq);
-    REQUIRE(pres_coef == Approx(1 - 4*std::pow(std::sin(angle - angle_of_attack), 2)).epsilon(1e-2));
+    REQUIRE(pres_coef == Catch::Approx(1 - 4*std::pow(std::sin(angle - angle_of_attack), 2)).epsilon(1e-2));
     // require state at large radius is approximately freestream
     state = doublet({1e3*doublet.radius*cos + 0.05, 1e3*doublet.radius*sin + 0.03}, 0.2089);
-    REQUIRE(state[0] == Approx(mass*veloc[0]).epsilon(1e-3));
-    REQUIRE(state[1] == Approx(mass*veloc[1]).epsilon(1e-3));
-    REQUIRE(state[2] == Approx(mass         ).epsilon(1e-3));
-    REQUIRE(state[3] == Approx(ener         ).epsilon(1e-3));
+    REQUIRE(state[0] == Catch::Approx(mass*veloc[0]).epsilon(1e-3));
+    REQUIRE(state[1] == Catch::Approx(mass*veloc[1]).epsilon(1e-3));
+    REQUIRE(state[2] == Catch::Approx(mass         ).epsilon(1e-3));
+    REQUIRE(state[3] == Catch::Approx(ener         ).epsilon(1e-3));
   }
 }
 
@@ -264,7 +264,7 @@ TEST_CASE("Pressure_stress")
       auto computed {fpa(pos, time, state, normal)};
       REQUIRE(computed.size() == normal.size());
       for (unsigned i_dim = 0; i_dim < normal.size(); ++i_dim) {
-        REQUIRE(-computed[i_dim]/pres == Approx(unit_normal[i_normal][i_dim]).scale(1.));
+        REQUIRE(-computed[i_dim]/pres == Catch::Approx(unit_normal[i_normal][i_dim]).scale(1.));
       }
     }
   }
@@ -296,16 +296,16 @@ TEST_CASE("elementwise functions")
     hexed::Elem_average avg(func);
     auto result = avg(elem, basis, 7.);
     REQUIRE(result.size() == 2);
-    REQUIRE(result[0] == Approx(-2*.3/2. - 2*7.));
-    REQUIRE(result[1] == Approx(.3*.6/2. - 2*7.));
+    REQUIRE(result[0] == Catch::Approx(-2*.3/2. - 2*7.));
+    REQUIRE(result[1] == Catch::Approx(.3*.6/2. - 2*7.));
   }
   SECTION("L2 norm")
   {
     hexed::Elem_l2 l2(func);
     auto result = l2(elem, basis, 7.);
     REQUIRE(result.size() == 2);
-    REQUIRE(result[0] == Approx(std::sqrt(2.*2.*.3*.3/3. + 2*2.*.3/2.*2*7. + 14*14)));
-    REQUIRE(result[1] == Approx(std::sqrt(.3*.3*.6*.6/3. - 2*.3*.6/2.*2*7.+ 14*14)));
+    REQUIRE(result[0] == Catch::Approx(std::sqrt(2.*2.*.3*.3/3. + 2*2.*.3/2.*2*7. + 14*14)));
+    REQUIRE(result[1] == Catch::Approx(std::sqrt(.3*.3*.6*.6/3. - 2*.3*.6/2.*2*7.+ 14*14)));
   }
   SECTION("nonsmoothness")
   {
@@ -330,10 +330,10 @@ TEST_CASE("Spatial_gaussian")
   REQUIRE_THROWS(hexed::Spatial_gaussian({}));
   hexed::Spatial_gaussian gaus({.8, .5});
   REQUIRE(gaus({0., 0.}, 0.).size() == 1);
-  REQUIRE(gaus({0., 0.}, 1.7)[0] == Approx(1.));
-  REQUIRE(gaus({.8, 0., 0.}, 1.7)[0]/gaus({0., .5, 0.}, 1.)[0] == Approx(1.));
-  REQUIRE(gaus({.8, 0., 0.}, 1.7)[0]/gaus({0., 0., .5}, 1.)[0] == Approx(1.));
-  REQUIRE(gaus({0., .5, 0.}, 1.7)[0]/gaus({0., 1., 0.}, 1.)[0] == Approx(std::exp(1.5)));
+  REQUIRE(gaus({0., 0.}, 1.7)[0] == Catch::Approx(1.));
+  REQUIRE(gaus({.8, 0., 0.}, 1.7)[0]/gaus({0., .5, 0.}, 1.)[0] == Catch::Approx(1.));
+  REQUIRE(gaus({.8, 0., 0.}, 1.7)[0]/gaus({0., 0., .5}, 1.)[0] == Catch::Approx(1.));
+  REQUIRE(gaus({0., .5, 0.}, 1.7)[0]/gaus({0., 1., 0.}, 1.)[0] == Catch::Approx(std::exp(1.5)));
 }
 
 TEST_CASE("Pow")
@@ -346,8 +346,8 @@ TEST_CASE("Pow")
   REQUIRE(p.variable_name(2, 1) == "(arbitrary1)^3");
   auto result = p(elem, basis, 1, .1);
   REQUIRE(result.size() == 2);
-  REQUIRE(result[0] == Approx(-.008));
-  REQUIRE(result[1] == Approx(27));
+  REQUIRE(result[0] == Catch::Approx(-.008));
+  REQUIRE(result[1] == Catch::Approx(27));
 }
 
 TEST_CASE("Qf_concat")
@@ -368,9 +368,9 @@ TEST_CASE("Qf_concat")
   hexed::Deformed_element elem {params, {0, 1}};
   auto result = concat(elem, basis, 1, 5.);
   REQUIRE(result.size() == 4);
-  REQUIRE(result[1] == Approx(0.3*2. - 10.));
-  REQUIRE(result[2] == Approx(1.));
-  REQUIRE(result[3] == Approx(2.));
+  REQUIRE(result[1] == Catch::Approx(0.3*2. - 10.));
+  REQUIRE(result[2] == Catch::Approx(1.));
+  REQUIRE(result[3] == Catch::Approx(2.));
 }
 
 TEST_CASE("Mach")
@@ -378,5 +378,5 @@ TEST_CASE("Mach")
   std::vector<double> state {3.*1.2, 4.*1.2, 1.2, 101325/.4 + .5*25*1.2};
   auto m = hexed::Mach()(std::vector<double>{1., 2.}, 0., state);
   REQUIRE(m.size() == 1);
-  REQUIRE(m[0] == Approx(5./std::sqrt(1.4*101325/1.2)));
+  REQUIRE(m[0] == Catch::Approx(5./std::sqrt(1.4*101325/1.2)));
 }

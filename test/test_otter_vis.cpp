@@ -1,6 +1,6 @@
 #include <hexed/otter_vis.hpp>
 #if HEXED_USE_OTTER
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <hexed/Deformed_element.hpp>
 #include <hexed/Gauss_legendre.hpp>
 #include <hexed/Spacetime_func.hpp>

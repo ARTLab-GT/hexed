@@ -1,6 +1,6 @@
 #include <hexed/config.hpp>
 #if HEXED_USE_TECPLOT
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <hexed/Tecplot_file.hpp>
 
 TEST_CASE("Tecplot_file")
