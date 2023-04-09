@@ -2,6 +2,7 @@
 #define HEXED_STOPWATCH_TREE_HPP_
 
 #include <map>
+#include <string>
 #include "Stopwatch.hpp"
 
 namespace hexed
