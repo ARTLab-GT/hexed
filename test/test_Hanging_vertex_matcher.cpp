@@ -1,4 +1,4 @@
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <hexed/Hanging_vertex_matcher.hpp>
 
 TEST_CASE("Hanging_vertex_matcher")
@@ -18,10 +18,10 @@ TEST_CASE("Hanging_vertex_matcher")
     elements[1]->vertex_time_step_scale(2) = 0.3;
     elements[1]->vertex_time_step_scale(3) = 0.2;
     matcher.match(&hexed::Element::vertex_time_step_scale);
-    REQUIRE(elements[0]->vertex_time_step_scale(2) == Approx(0.1));
-    REQUIRE(elements[0]->vertex_time_step_scale(3) == Approx(0.15));
-    REQUIRE(elements[1]->vertex_time_step_scale(2) == Approx(0.15));
-    REQUIRE(elements[1]->vertex_time_step_scale(3) == Approx(0.2));
+    REQUIRE(elements[0]->vertex_time_step_scale(2) == Catch::Approx(0.1));
+    REQUIRE(elements[0]->vertex_time_step_scale(3) == Catch::Approx(0.15));
+    REQUIRE(elements[1]->vertex_time_step_scale(2) == Catch::Approx(0.15));
+    REQUIRE(elements[1]->vertex_time_step_scale(3) == Catch::Approx(0.2));
   }
   SECTION("3D")
   {
@@ -40,14 +40,14 @@ TEST_CASE("Hanging_vertex_matcher")
     elements[2]->vertex_time_step_scale(4) = 0.9;
     elements[3]->vertex_time_step_scale(5) = 0.5;
     matcher.match(&hexed::Element::vertex_time_step_scale);
-    REQUIRE(elements[0]->vertex_time_step_scale(0) == Approx(0.2));
-    REQUIRE(elements[0]->vertex_time_step_scale(1) == Approx((0.2 + 0.7)/2.));
-    REQUIRE(elements[0]->vertex_time_step_scale(4) == Approx((0.2 + 0.9)/2.));
-    REQUIRE(elements[0]->vertex_time_step_scale(5) == Approx((0.2 + 0.7 + 0.9 + 0.5)/4.));
-    REQUIRE(elements[1]->vertex_time_step_scale(1) == Approx(0.7));
-    REQUIRE(elements[2]->vertex_time_step_scale(5) == Approx((0.9 + 0.5)/2.));
-    REQUIRE(elements[3]->vertex_time_step_scale(0) == Approx((0.2 + 0.7 + 0.9 + 0.5)/4.));
-    REQUIRE(elements[3]->vertex_time_step_scale(1) == Approx((0.7 + 0.5)/2.));
+    REQUIRE(elements[0]->vertex_time_step_scale(0) == Catch::Approx(0.2));
+    REQUIRE(elements[0]->vertex_time_step_scale(1) == Catch::Approx((0.2 + 0.7)/2.));
+    REQUIRE(elements[0]->vertex_time_step_scale(4) == Catch::Approx((0.2 + 0.9)/2.));
+    REQUIRE(elements[0]->vertex_time_step_scale(5) == Catch::Approx((0.2 + 0.7 + 0.9 + 0.5)/4.));
+    REQUIRE(elements[1]->vertex_time_step_scale(1) == Catch::Approx(0.7));
+    REQUIRE(elements[2]->vertex_time_step_scale(5) == Catch::Approx((0.9 + 0.5)/2.));
+    REQUIRE(elements[3]->vertex_time_step_scale(0) == Catch::Approx((0.2 + 0.7 + 0.9 + 0.5)/4.));
+    REQUIRE(elements[3]->vertex_time_step_scale(1) == Catch::Approx((0.7 + 0.5)/2.));
   }
   SECTION("3D stretched")
   {
@@ -68,12 +68,12 @@ TEST_CASE("Hanging_vertex_matcher")
       elements[0]->vertex_time_step_scale(4) = 0.9;
       elements[1]->vertex_time_step_scale(5) = 0.5;
       matcher.match(&hexed::Element::vertex_time_step_scale);
-      REQUIRE(elements[0]->vertex_time_step_scale(0) == Approx(0.2));
-      REQUIRE(elements[0]->vertex_time_step_scale(1) == Approx((0.2 + 0.7)/2.));
-      REQUIRE(elements[0]->vertex_time_step_scale(4) == Approx(0.9));
-      REQUIRE(elements[0]->vertex_time_step_scale(5) == Approx((0.9 + 0.5)/2.));
-      REQUIRE(elements[1]->vertex_time_step_scale(1) == Approx(0.7));
-      REQUIRE(elements[1]->vertex_time_step_scale(0) == Approx((0.2 + 0.7)/2.));
+      REQUIRE(elements[0]->vertex_time_step_scale(0) == Catch::Approx(0.2));
+      REQUIRE(elements[0]->vertex_time_step_scale(1) == Catch::Approx((0.2 + 0.7)/2.));
+      REQUIRE(elements[0]->vertex_time_step_scale(4) == Catch::Approx(0.9));
+      REQUIRE(elements[0]->vertex_time_step_scale(5) == Catch::Approx((0.9 + 0.5)/2.));
+      REQUIRE(elements[1]->vertex_time_step_scale(1) == Catch::Approx(0.7));
+      REQUIRE(elements[1]->vertex_time_step_scale(0) == Catch::Approx((0.2 + 0.7)/2.));
     }
     SECTION("dimension 1")
     {
@@ -84,13 +84,13 @@ TEST_CASE("Hanging_vertex_matcher")
       elements[1]->vertex_time_step_scale(4) = 0.9;
       elements[1]->vertex_time_step_scale(5) = 0.5;
       matcher.match(&hexed::Element::vertex_time_step_scale);
-      REQUIRE(elements[0]->vertex_time_step_scale(0) == Approx(0.2));
-      REQUIRE(elements[0]->vertex_time_step_scale(1) == Approx(0.7));
-      REQUIRE(elements[0]->vertex_time_step_scale(4) == Approx((0.2 + 0.9)/2.));
-      REQUIRE(elements[0]->vertex_time_step_scale(5) == Approx((0.7 + 0.5)/2.));
-      REQUIRE(elements[1]->vertex_time_step_scale(1) == Approx((0.7 + 0.5)/2.));
-      REQUIRE(elements[1]->vertex_time_step_scale(5) == Approx(0.5));
-      REQUIRE(elements[1]->vertex_time_step_scale(0) == Approx((0.2 + 0.9)/2.));
+      REQUIRE(elements[0]->vertex_time_step_scale(0) == Catch::Approx(0.2));
+      REQUIRE(elements[0]->vertex_time_step_scale(1) == Catch::Approx(0.7));
+      REQUIRE(elements[0]->vertex_time_step_scale(4) == Catch::Approx((0.2 + 0.9)/2.));
+      REQUIRE(elements[0]->vertex_time_step_scale(5) == Catch::Approx((0.7 + 0.5)/2.));
+      REQUIRE(elements[1]->vertex_time_step_scale(1) == Catch::Approx((0.7 + 0.5)/2.));
+      REQUIRE(elements[1]->vertex_time_step_scale(5) == Catch::Approx(0.5));
+      REQUIRE(elements[1]->vertex_time_step_scale(0) == Catch::Approx((0.2 + 0.9)/2.));
     }
   }
 }

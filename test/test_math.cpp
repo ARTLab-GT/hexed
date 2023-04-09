@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <cmath>
 #include <hexed/math.hpp>
 
@@ -31,20 +31,20 @@ double quad_func(double x)
 
 TEST_CASE("broyden root finder")
 {
-  REQUIRE(hexed::math::broyden(lin_func, -1e7) == Approx(0.5));
-  REQUIRE(hexed::math::broyden(quad_func, -0.8) == Approx(-.6));
-  REQUIRE(hexed::math::broyden(quad_func, 2.3) == Approx(2.));
+  REQUIRE(hexed::math::broyden(lin_func, -1e7) == Catch::Approx(0.5));
+  REQUIRE(hexed::math::broyden(quad_func, -0.8) == Catch::Approx(-.6));
+  REQUIRE(hexed::math::broyden(quad_func, 2.3) == Catch::Approx(2.));
   REQUIRE(hexed::math::broyden([](double x){return std::exp(x) - 2.;}, 0.)
-          == Approx(std::log(2.)));
+          == Catch::Approx(std::log(2.)));
 }
 
 TEST_CASE("bisection root finder")
 {
-  REQUIRE(hexed::math::bisection(lin_func , {  0,   2}) == Approx(0.5));
-  REQUIRE(hexed::math::bisection(quad_func, { -1,   0}) == Approx(-.6));
-  REQUIRE(hexed::math::bisection(quad_func, {0.1, 3.4}) == Approx(2.));
+  REQUIRE(hexed::math::bisection(lin_func , {  0,   2}) == Catch::Approx(0.5));
+  REQUIRE(hexed::math::bisection(quad_func, { -1,   0}) == Catch::Approx(-.6));
+  REQUIRE(hexed::math::bisection(quad_func, {0.1, 3.4}) == Catch::Approx(2.));
   REQUIRE(hexed::math::bisection([](double x){return std::exp(x) - 2.;}, {0, 1})
-          == Approx(std::log(2.)));
+          == Catch::Approx(std::log(2.)));
 }
 
 TEST_CASE("hypercube_matvec")
@@ -113,9 +113,9 @@ TEST_CASE("orthonormal")
   SECTION("1D")
   {
     Eigen::Matrix<double, 1, 1> basis {-1.2};
-    REQUIRE(hexed::math::orthonormal(basis, 0)(0, 0) == Approx(-1.));
+    REQUIRE(hexed::math::orthonormal(basis, 0)(0, 0) == Catch::Approx(-1.));
     basis(0, 0) = 0.1;
-    REQUIRE(hexed::math::orthonormal(basis, 0)(0, 0) == Approx(1.));
+    REQUIRE(hexed::math::orthonormal(basis, 0)(0, 0) == Catch::Approx(1.));
   }
   SECTION("2D")
   {
@@ -126,11 +126,11 @@ TEST_CASE("orthonormal")
     Eigen::Matrix2d correct;
     correct << -1., 0.,
                 0., 1.;
-    REQUIRE((hexed::math::orthonormal(basis, 1) - correct).norm() == Approx(0.).scale(1.));
-    REQUIRE((backup - basis).norm() == Approx(0.).scale(1.)); // make sure we don't modify `basis`
+    REQUIRE((hexed::math::orthonormal(basis, 1) - correct).norm() == Catch::Approx(0.).scale(1.));
+    REQUIRE((backup - basis).norm() == Catch::Approx(0.).scale(1.)); // make sure we don't modify `basis`
     correct << -0.8, 0.6,
                 0.6, 0.8;
-    REQUIRE((hexed::math::orthonormal(basis, 0) - correct).norm() == Approx(0.).scale(1.));
+    REQUIRE((hexed::math::orthonormal(basis, 0) - correct).norm() == Catch::Approx(0.).scale(1.));
   }
   SECTION("3D")
   {
@@ -144,11 +144,11 @@ TEST_CASE("orthonormal")
                                0.,                   0.,  0.05;
     Eigen::Matrix3d orth {hexed::math::orthonormal(basis, 2)};
     correct << std::cos(75*degree), std::sin(75*degree), 0.;
-    CHECK((orth.col(0) - correct).norm() == Approx(0.).scale(1.));
+    CHECK((orth.col(0) - correct).norm() == Catch::Approx(0.).scale(1.));
     correct << std::cos(-15*degree), std::sin(-15*degree), 0.;
-    CHECK((orth.col(1) - correct).norm() == Approx(0.).scale(1.));
+    CHECK((orth.col(1) - correct).norm() == Catch::Approx(0.).scale(1.));
     correct << 0., 0., 1.;
-    CHECK((orth.col(2) - correct).norm() == Approx(0.).scale(1.));
+    CHECK((orth.col(2) - correct).norm() == Catch::Approx(0.).scale(1.));
 
     // test that if you mess with a unitary matrix in the right way, you get the original back
     Eigen::FullPivHouseholderQR<Eigen::Matrix3d> qr (Eigen::Matrix3d::Random());
@@ -158,14 +158,14 @@ TEST_CASE("orthonormal")
     basis.col(1) += 0.2*sum;
     basis.col(2) += 0.2*sum;
     basis.col(0) += Eigen::Vector3d {0.1, -.3, 0.3};
-    REQUIRE((hexed::math::orthonormal(basis, 0) - orth).norm() == Approx(0.).scale(1.));
+    REQUIRE((hexed::math::orthonormal(basis, 0) - orth).norm() == Catch::Approx(0.).scale(1.));
 
     basis = orth;
     sum = orth.col(0) + orth.col(2);
     basis.col(0) += 3.*sum;
     basis.col(2) += 3.*sum;
     basis.col(1) *= 0.1;
-    REQUIRE((hexed::math::orthonormal(basis, 1) - orth).norm() == Approx(0.).scale(1.));
+    REQUIRE((hexed::math::orthonormal(basis, 1) - orth).norm() == Catch::Approx(0.).scale(1.));
   }
 }
 
@@ -173,5 +173,5 @@ TEST_CASE("interp")
 {
   hexed::Mat<4> values {0., 1., .4, 1.4};
   hexed::Mat<2> coords {.01, .02};
-  REQUIRE(hexed::math::interp(values, coords) == Approx(.024));
+  REQUIRE(hexed::math::interp(values, coords) == Catch::Approx(.024));
 }

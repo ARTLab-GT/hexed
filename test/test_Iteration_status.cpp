@@ -1,4 +1,4 @@
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <hexed/Iteration_status.hpp>
 
 bool in(std::string str0, std::string str1)

@@ -1,4 +1,4 @@
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <hexed/Restrict_refined.hpp>
 #include <hexed/Gauss_legendre.hpp>
 
@@ -17,7 +17,7 @@ TEST_CASE("Restrict_refined")
         for (int j_node = 0; j_node < row_size; ++j_node) {
           double restricted {coarse[i_var][i_node][j_node]};
           double correct {std::exp(basis.node(i_node) + 0.5*basis.node(j_node)) + i_var};
-          REQUIRE(restricted == Approx(factor*correct).margin(1e-4));
+          REQUIRE(restricted == Catch::Approx(factor*correct).margin(1e-4));
         }
       }
     }

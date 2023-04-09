@@ -1,4 +1,4 @@
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <hexed/pde.hpp>
 
 TEST_CASE("Characteristics")
@@ -20,13 +20,13 @@ TEST_CASE("Characteristics")
   state1 << 1., 2., 3., 1.3, 2e5;
   auto decomp = c.decomp(state1);
   // check that decomposition sums to the input state
-  REQUIRE((decomp.rowwise().sum() - state1).cwiseQuotient(state1).norm() == Approx(0).scale(1.));
+  REQUIRE((decomp.rowwise().sum() - state1).cwiseQuotient(state1).norm() == Catch::Approx(0).scale(1.));
   // check that the columns are indeed eigenvectors of linearized flux
   double diff = 1e-6; // use a small perturbation so that flux is effectively linear
   hexed::pde::Navier_stokes<>::Pde<3> ns;
   for (int i = 0; i < 3; ++i) {
     hexed::Mat<> eigvec = decomp(Eigen::all, i);
     hexed::Mat<> perturb = (ns.flux(state + diff*eigvec, normal) - ns.flux(state, normal))/normal.norm();
-    REQUIRE((perturb.cwiseQuotient(diff*eigvals(i)*eigvec) - hexed::Mat<>::Ones(5)).norm() == Approx(0.).scale(1.));
+    REQUIRE((perturb.cwiseQuotient(diff*eigvals(i)*eigvec) - hexed::Mat<>::Ones(5)).norm() == Catch::Approx(0.).scale(1.));
   }
 }

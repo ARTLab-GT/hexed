@@ -1,4 +1,4 @@
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <hexed/pde.hpp>
 
 TEST_CASE("Navier_stokes")
@@ -15,12 +15,12 @@ TEST_CASE("Navier_stokes")
     hexed::Mat<2> veloc = nrml_veloc*normal + orth_veloc*orth;
     normal *= .9;
     hexed::Mat<4> state {mass*veloc(0), mass*veloc(1), mass, pressure/.4 + .5*veloc.squaredNorm()*mass};
-    REQUIRE(hexed::pde::Navier_stokes<false>::Pde<2>().pressure(state) == Approx(pressure));
+    REQUIRE(hexed::pde::Navier_stokes<false>::Pde<2>().pressure(state) == Catch::Approx(pressure));
     hexed::Mat<4> flux = hexed::pde::Navier_stokes<false>::Pde<2>().flux(state, normal);
-    REQUIRE(flux(0)    == Approx(.9*state(0)*nrml_veloc + pressure*normal(0)));
-    REQUIRE(flux(1)    == Approx(.9*state(1)*nrml_veloc + pressure*normal(1)));
-    REQUIRE(flux(2)/.9 == Approx(mass*nrml_veloc));
-    REQUIRE(flux(3)/.9 == Approx(nrml_veloc*(state(3) + pressure)));
+    REQUIRE(flux(0)    == Catch::Approx(.9*state(0)*nrml_veloc + pressure*normal(0)));
+    REQUIRE(flux(1)    == Catch::Approx(.9*state(1)*nrml_veloc + pressure*normal(1)));
+    REQUIRE(flux(2)/.9 == Catch::Approx(mass*nrml_veloc));
+    REQUIRE(flux(3)/.9 == Catch::Approx(nrml_veloc*(state(3) + pressure)));
   }
 
   SECTION("flux_viscous")
@@ -76,7 +76,7 @@ TEST_CASE("Advection")
     double scalar = 0.81;
     hexed::Mat<3> state {veloc(0), veloc(1), scalar};
     hexed::Mat<1> flux = hexed::pde::Advection<2>().flux(state, normal);
-    REQUIRE(flux(0) == Approx(.5*nrml_veloc*scalar));
+    REQUIRE(flux(0) == Catch::Approx(.5*nrml_veloc*scalar));
   }
 
   SECTION("flux_num")
@@ -86,6 +86,6 @@ TEST_CASE("Advection")
     state << -3., -2.,
              .21, .23;
     hexed::Mat<1> flux = hexed::pde::Advection<1>().flux_num(state, normal);
-    REQUIRE(flux(0) == Approx(.5*.6*(-2.*.23 - 3.*.21 + (.21 - .23))));
+    REQUIRE(flux(0) == Catch::Approx(.5*.6*(-2.*.23 - 3.*.21 + (.21 - .23))));
   }
 }

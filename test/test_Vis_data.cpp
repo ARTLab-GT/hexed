@@ -1,4 +1,4 @@
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <hexed/Vis_data.hpp>
 #include <hexed/Deformed_element.hpp>
 #include <hexed/Domain_func.hpp>
@@ -38,32 +38,32 @@ TEST_CASE("Vis_data")
     {
       auto edges = vis2.edges();
       REQUIRE(edges.size() == 21*2*4);
-      REQUIRE(edges( 0 + 21*2*0) == Approx(0.).scale(1.));
-      REQUIRE(edges( 1 + 21*2*2) == Approx(0.).scale(1.));
-      REQUIRE(edges(22 + 21*2*2) == Approx(.05).scale(1.));
-      REQUIRE(edges( 1 + 21*2*0) == Approx(.8*.05).scale(1.));
-      REQUIRE(edges(22 + 21*2*0) == Approx(.3*.05).scale(1.));
+      REQUIRE(edges( 0 + 21*2*0) == Catch::Approx(0.).scale(1.));
+      REQUIRE(edges( 1 + 21*2*2) == Catch::Approx(0.).scale(1.));
+      REQUIRE(edges(22 + 21*2*2) == Catch::Approx(.05).scale(1.));
+      REQUIRE(edges( 1 + 21*2*0) == Catch::Approx(.8*.05).scale(1.));
+      REQUIRE(edges(22 + 21*2*0) == Catch::Approx(.3*.05).scale(1.));
     }
     SECTION("3D")
     {
       auto edges = vis3.edges(6);
       REQUIRE(edges.size() == 6*3*12);
-      REQUIRE(edges( 0 + 6*3*0) == Approx(0.).scale(1.));
-      REQUIRE(edges( 1 + 6*3*0) == Approx(0.2).scale(1.));
-      REQUIRE(edges( 7 + 6*3*0) == Approx(0.).scale(1.));
-      REQUIRE(edges(13 + 6*3*0) == Approx(0.).scale(1.));
-      REQUIRE(edges( 1 + 6*3*1) == Approx(0.2).scale(1.));
-      REQUIRE(edges( 7 + 6*3*1) == Approx(0.).scale(1.));
-      REQUIRE(edges(13 + 6*3*1) == Approx(1.).scale(1.));
-      REQUIRE(edges( 1 + 6*3*4) == Approx(0.).scale(1.));
-      REQUIRE(edges( 7 + 6*3*4) == Approx(0.2).scale(1.));
-      REQUIRE(edges(13 + 6*3*4) == Approx(0.).scale(1.));
-      REQUIRE(edges( 2 + 6*3*6) == Approx(1.).scale(1.));
-      REQUIRE(edges( 8 + 6*3*6) == Approx(0.4).scale(1.));
-      REQUIRE(edges(14 + 6*3*6) == Approx(0.).scale(1.));
-      REQUIRE(edges( 5 + 6*3*11) == Approx(.9).scale(1.));
-      REQUIRE(edges(11 + 6*3*11) == Approx(.9).scale(1.));
-      REQUIRE(edges(17 + 6*3*11) == Approx(.9).scale(1.));
+      REQUIRE(edges( 0 + 6*3*0) == Catch::Approx(0.).scale(1.));
+      REQUIRE(edges( 1 + 6*3*0) == Catch::Approx(0.2).scale(1.));
+      REQUIRE(edges( 7 + 6*3*0) == Catch::Approx(0.).scale(1.));
+      REQUIRE(edges(13 + 6*3*0) == Catch::Approx(0.).scale(1.));
+      REQUIRE(edges( 1 + 6*3*1) == Catch::Approx(0.2).scale(1.));
+      REQUIRE(edges( 7 + 6*3*1) == Catch::Approx(0.).scale(1.));
+      REQUIRE(edges(13 + 6*3*1) == Catch::Approx(1.).scale(1.));
+      REQUIRE(edges( 1 + 6*3*4) == Catch::Approx(0.).scale(1.));
+      REQUIRE(edges( 7 + 6*3*4) == Catch::Approx(0.2).scale(1.));
+      REQUIRE(edges(13 + 6*3*4) == Catch::Approx(0.).scale(1.));
+      REQUIRE(edges( 2 + 6*3*6) == Catch::Approx(1.).scale(1.));
+      REQUIRE(edges( 8 + 6*3*6) == Catch::Approx(0.4).scale(1.));
+      REQUIRE(edges(14 + 6*3*6) == Catch::Approx(0.).scale(1.));
+      REQUIRE(edges( 5 + 6*3*11) == Catch::Approx(.9).scale(1.));
+      REQUIRE(edges(11 + 6*3*11) == Catch::Approx(.9).scale(1.));
+      REQUIRE(edges(17 + 6*3*11) == Catch::Approx(.9).scale(1.));
     }
     SECTION("constant")
     {
@@ -77,33 +77,33 @@ TEST_CASE("Vis_data")
     {
       auto interior = vis2.interior();
       REQUIRE(interior.size() == 21*21*2);
-      REQUIRE(interior(0) == Approx(0.).scale(1.));
-      REQUIRE(interior(         1) == Approx(0.).scale(1.));
-      REQUIRE(interior(21*21 +  1) == Approx(.05).scale(1.));
-      REQUIRE(interior(        21) == Approx(.05*.8).scale(1.));
-      REQUIRE(interior(21*21 + 21) == Approx(.05*.3).scale(1.));
-      REQUIRE(interior(21*21*1 - 1) == Approx(1.).scale(1.));
-      REQUIRE(interior(21*21*2 - 1) == Approx(1.).scale(1.));
+      REQUIRE(interior(0) == Catch::Approx(0.).scale(1.));
+      REQUIRE(interior(         1) == Catch::Approx(0.).scale(1.));
+      REQUIRE(interior(21*21 +  1) == Catch::Approx(.05).scale(1.));
+      REQUIRE(interior(        21) == Catch::Approx(.05*.8).scale(1.));
+      REQUIRE(interior(21*21 + 21) == Catch::Approx(.05*.3).scale(1.));
+      REQUIRE(interior(21*21*1 - 1) == Catch::Approx(1.).scale(1.));
+      REQUIRE(interior(21*21*2 - 1) == Catch::Approx(1.).scale(1.));
     }
     SECTION("3D")
     {
       auto interior = vis3.interior();
       REQUIRE(interior.size() == 21*21*21*3);
-      REQUIRE(interior(21*21*21*0) == Approx(0.).scale(1.));
-      REQUIRE(interior(21*21*21*1) == Approx(0.).scale(1.));
-      REQUIRE(interior(21*21*21*2) == Approx(0.).scale(1.));
-      REQUIRE(interior(21*21*21*1 - 1) == Approx(.9).scale(1.));
-      REQUIRE(interior(21*21*21*2 - 1) == Approx(.9).scale(1.));
-      REQUIRE(interior(21*21*21*3 - 1) == Approx(.9).scale(1.));
+      REQUIRE(interior(21*21*21*0) == Catch::Approx(0.).scale(1.));
+      REQUIRE(interior(21*21*21*1) == Catch::Approx(0.).scale(1.));
+      REQUIRE(interior(21*21*21*2) == Catch::Approx(0.).scale(1.));
+      REQUIRE(interior(21*21*21*1 - 1) == Catch::Approx(.9).scale(1.));
+      REQUIRE(interior(21*21*21*2 - 1) == Catch::Approx(.9).scale(1.));
+      REQUIRE(interior(21*21*21*3 - 1) == Catch::Approx(.9).scale(1.));
     }
     SECTION("constant")
     {
       auto interior = vis_const.interior();
       REQUIRE(interior.size() == 21*21*4);
-      REQUIRE(interior(21*21*0) == Approx(.3).scale(1.));
-      REQUIRE(interior(21*21*1) == Approx(.4).scale(1.));
-      REQUIRE(interior(21*21*2) == Approx(.5).scale(1.));
-      REQUIRE(interior(21*21*3) == Approx(.6).scale(1.));
+      REQUIRE(interior(21*21*0) == Catch::Approx(.3).scale(1.));
+      REQUIRE(interior(21*21*1) == Catch::Approx(.4).scale(1.));
+      REQUIRE(interior(21*21*2) == Catch::Approx(.5).scale(1.));
+      REQUIRE(interior(21*21*3) == Catch::Approx(.6).scale(1.));
     }
   }
 
@@ -111,10 +111,10 @@ TEST_CASE("Vis_data")
   {
     auto face = vis2.face(1, 0);
     REQUIRE(face.size() == 21*2);
-    REQUIRE(face(0*21 + 0) == Approx(0.).scale(1.));
-    REQUIRE(face(1*21 + 0) == Approx(0.).scale(1.));
-    REQUIRE(face(0*21 + 2) == Approx(2*.05*.8).scale(1.));
-    REQUIRE(face(1*21 + 2) == Approx(2*.05*.3).scale(1.));
+    REQUIRE(face(0*21 + 0) == Catch::Approx(0.).scale(1.));
+    REQUIRE(face(1*21 + 0) == Catch::Approx(0.).scale(1.));
+    REQUIRE(face(0*21 + 2) == Catch::Approx(2*.05*.8).scale(1.));
+    REQUIRE(face(1*21 + 2) == Catch::Approx(2*.05*.3).scale(1.));
   }
 
   SECTION("sample")
@@ -122,8 +122,8 @@ TEST_CASE("Vis_data")
     auto sample = vis3.sample(Eigen::Matrix<double, 3, 2>{{.5, 1.}, {.5, 0.}, {.5, 0.}});
     REQUIRE(sample.rows() == 3);
     REQUIRE(sample.cols() == 2);
-    REQUIRE((sample(Eigen::all, 0) - Eigen::VectorXd::Constant(3, .5 - .1/8.)).norm() == Approx(0.).scale(1.));
-    REQUIRE((sample(Eigen::all, 1) - Eigen::Vector3d{1., 0., 0.}).norm() == Approx(0.).scale(1.));
+    REQUIRE((sample(Eigen::all, 0) - Eigen::VectorXd::Constant(3, .5 - .1/8.)).norm() == Catch::Approx(0.).scale(1.));
+    REQUIRE((sample(Eigen::all, 1) - Eigen::Vector3d{1., 0., 0.}).norm() == Catch::Approx(0.).scale(1.));
   }
 
   SECTION("contour")
@@ -144,9 +144,9 @@ TEST_CASE("Vis_data")
       for (int i_vert = 0; i_vert < con.vert_ref_coords.rows(); ++i_vert) {
         std::vector<double> pos(3);
         for (int i_dim = 0; i_dim < 3; ++i_dim) pos[i_dim] = con.vert_ref_coords(i_vert, i_dim);
-        REQUIRE(func(pos, 0.)[0] == Approx(.04).margin(1e-6));
+        REQUIRE(func(pos, 0.)[0] == Catch::Approx(.04).margin(1e-6));
         Eigen::MatrixXd rad = con.vert_ref_coords(i_vert, Eigen::all) - Eigen::Matrix<double, 1, 3>{0, 1, 0};
-        REQUIRE((con.normals(i_vert, Eigen::all) - rad.normalized()).norm() == Approx(0.).scale(1.));
+        REQUIRE((con.normals(i_vert, Eigen::all) - rad.normalized()).norm() == Catch::Approx(0.).scale(1.));
       }
     }
     SECTION("center")
@@ -174,7 +174,7 @@ TEST_CASE("Vis_data")
       hexed::Vis_data vis(elem, hexed::Linear(Eigen::Vector2d{1., 0.}), basis);
       auto con = vis.compute_contour(.5, 3);
       for (int i_vert = 0; i_vert < con.vert_ref_coords.rows(); ++i_vert) {
-        REQUIRE((con.normals(i_vert, Eigen::all) - Eigen::Matrix<double, 1, 2>{1., 0.}).norm() == Approx(0.).scale(1.));
+        REQUIRE((con.normals(i_vert, Eigen::all) - Eigen::Matrix<double, 1, 2>{1., 0.}).norm() == Catch::Approx(0.).scale(1.));
       }
     }
   }

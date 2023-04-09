@@ -1,4 +1,4 @@
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <hexed/Prolong_refined.hpp>
 #include <hexed/Gauss_legendre.hpp>
 
@@ -33,7 +33,7 @@ TEST_CASE("Prolong_refined")
             for (int i_var = 0; i_var < 5; ++i_var) {
               double prolonged {fine[i_half*2 + j_half][i_var][i_node][j_node]};
               double correct {std::exp((basis.node(i_node) + i_half)/2. + 0.5*(basis.node(j_node) + j_half)/2.) + i_var};
-              REQUIRE(prolonged == Approx(correct).margin(1e-4));
+              REQUIRE(prolonged == Catch::Approx(correct).margin(1e-4));
             }
           }
         }
@@ -54,7 +54,7 @@ TEST_CASE("Prolong_refined")
           for (int i_var = 0; i_var < 5; ++i_var) {
             double prolonged {fine[j_half][i_var][i_node][j_node]};
             double correct {std::exp(basis.node(i_node) + 0.5*(basis.node(j_node) + j_half)/2.) + i_var};
-            REQUIRE(prolonged == Approx(correct).margin(1e-4));
+            REQUIRE(prolonged == Catch::Approx(correct).margin(1e-4));
           }
         }
       }
@@ -74,7 +74,7 @@ TEST_CASE("Prolong_refined")
           for (int i_var = 0; i_var < 5; ++i_var) {
             double prolonged {fine[i_half][i_var][i_node][j_node]};
             double correct {std::exp((basis.node(i_node) + i_half)/2. + 0.5*basis.node(j_node)) + i_var};
-            REQUIRE(prolonged == Approx(correct).margin(1e-4));
+            REQUIRE(prolonged == Catch::Approx(correct).margin(1e-4));
           }
         }
       }

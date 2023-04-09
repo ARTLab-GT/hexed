@@ -1,4 +1,4 @@
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <hexed/config.hpp>
 #include <hexed/Boundary_condition.hpp>
 #include <hexed/Spacetime_func.hpp>
@@ -61,11 +61,11 @@ TEST_CASE("Freestream")
   freestream.apply_state(tbc);
   // check that ghost face is equal to freestream
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-    REQUIRE(tbc.ghost_face()[0*n_qpoint + i_qpoint] == Approx(10.));
-    REQUIRE(tbc.ghost_face()[1*n_qpoint + i_qpoint] == Approx(30.));
-    REQUIRE(tbc.ghost_face()[2*n_qpoint + i_qpoint] == Approx(-20.));
-    REQUIRE(tbc.ghost_face()[3*n_qpoint + i_qpoint] == Approx(1.3));
-    REQUIRE(tbc.ghost_face()[4*n_qpoint + i_qpoint] == Approx(1.2e5));
+    REQUIRE(tbc.ghost_face()[0*n_qpoint + i_qpoint] == Catch::Approx(10.));
+    REQUIRE(tbc.ghost_face()[1*n_qpoint + i_qpoint] == Catch::Approx(30.));
+    REQUIRE(tbc.ghost_face()[2*n_qpoint + i_qpoint] == Catch::Approx(-20.));
+    REQUIRE(tbc.ghost_face()[3*n_qpoint + i_qpoint] == Catch::Approx(1.3));
+    REQUIRE(tbc.ghost_face()[4*n_qpoint + i_qpoint] == Catch::Approx(1.2e5));
   }
 }
 
@@ -94,7 +94,7 @@ TEST_CASE("Riemann_invariants")
     // test that the first point is the inside state and the rest are the freestream state
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
       for (int i_var = 0; i_var < 5; ++i_var) {
-        REQUIRE(tbc.ghost_face()[i_var*n_qpoint + i_qpoint] == Approx(i_qpoint ? fs[i_var] : inside_state(i_var)));
+        REQUIRE(tbc.ghost_face()[i_var*n_qpoint + i_qpoint] == Catch::Approx(i_qpoint ? fs[i_var] : inside_state(i_var)));
       }
     }
     // set an arbitrary viscous flux
@@ -107,7 +107,7 @@ TEST_CASE("Riemann_invariants")
     // test that the flux is left alone at the points where the state was set and set to zero where it was not
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
       for (int i_var = 0; i_var < 5; ++i_var) {
-        REQUIRE(tbc.ghost_face()[(10 + i_var)*n_qpoint + i_qpoint] == Approx(i_qpoint ? 1. : 0.).scale(1.));
+        REQUIRE(tbc.ghost_face()[(10 + i_var)*n_qpoint + i_qpoint] == Catch::Approx(i_qpoint ? 1. : 0.).scale(1.));
       }
     }
   }
@@ -137,11 +137,11 @@ TEST_CASE("Function_bc")
   tbc.surface_position()[1*n_qpoint + 4] =  1.6*std::exp(2.);
   bc.apply_state(tbc);
   // check that ghost face state is correct at the qpoints where position was set
-  REQUIRE(tbc.ghost_face()[0*n_qpoint + 0] == Approx(0.).scale(1.));
-  REQUIRE(tbc.ghost_face()[1*n_qpoint + 0] == Approx(0.).scale(1.));
-  REQUIRE(tbc.ghost_face()[2*n_qpoint + 0] == Approx(1.7));
-  REQUIRE(tbc.ghost_face()[3*n_qpoint + 0] == Approx(1e5));
-  REQUIRE(tbc.ghost_face()[2*n_qpoint + 4] == Approx(3.4));
+  REQUIRE(tbc.ghost_face()[0*n_qpoint + 0] == Catch::Approx(0.).scale(1.));
+  REQUIRE(tbc.ghost_face()[1*n_qpoint + 0] == Catch::Approx(0.).scale(1.));
+  REQUIRE(tbc.ghost_face()[2*n_qpoint + 0] == Catch::Approx(1.7));
+  REQUIRE(tbc.ghost_face()[3*n_qpoint + 0] == Catch::Approx(1e5));
+  REQUIRE(tbc.ghost_face()[2*n_qpoint + 4] == Catch::Approx(3.4));
 }
 
 TEST_CASE("Nonpenetration")
@@ -165,10 +165,10 @@ TEST_CASE("Nonpenetration")
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       // require tangential momentum unchanged
       REQUIRE(  3*tbc.ghost_face()[0*row_size + i_qpoint]
-              + 4*tbc.ghost_face()[1*row_size + i_qpoint] == Approx(7.));
+              + 4*tbc.ghost_face()[1*row_size + i_qpoint] == Catch::Approx(7.));
       // require normal momentum flipped
       REQUIRE( -4*tbc.ghost_face()[0*row_size + i_qpoint]
-              + 3*tbc.ghost_face()[1*row_size + i_qpoint] == Approx(1.));
+              + 3*tbc.ghost_face()[1*row_size + i_qpoint] == Catch::Approx(1.));
     }
   }
   SECTION("apply_flux")
@@ -177,13 +177,13 @@ TEST_CASE("Nonpenetration")
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       // require tangential momentum flux flipped
       REQUIRE(  3*tbc.ghost_face()[8*row_size + i_qpoint]
-              + 4*tbc.ghost_face()[9*row_size + i_qpoint] == Approx(-7.));
+              + 4*tbc.ghost_face()[9*row_size + i_qpoint] == Catch::Approx(-7.));
       // require normal momentum flux unchanged
       REQUIRE( -4*tbc.ghost_face()[8*row_size + i_qpoint]
-              + 3*tbc.ghost_face()[9*row_size + i_qpoint] == Approx(-1.));
+              + 3*tbc.ghost_face()[9*row_size + i_qpoint] == Catch::Approx(-1.));
       // require scalar flux flipped
-      REQUIRE(tbc.ghost_face()[10*row_size + i_qpoint] == Approx(-tbc.inside_face()[10*row_size + i_qpoint]));
-      REQUIRE(tbc.ghost_face()[11*row_size + i_qpoint] == Approx(-tbc.inside_face()[11*row_size + i_qpoint]));
+      REQUIRE(tbc.ghost_face()[10*row_size + i_qpoint] == Catch::Approx(-tbc.inside_face()[10*row_size + i_qpoint]));
+      REQUIRE(tbc.ghost_face()[11*row_size + i_qpoint] == Catch::Approx(-tbc.inside_face()[11*row_size + i_qpoint]));
     }
   }
 }
@@ -207,9 +207,9 @@ TEST_CASE("No_slip")
     hexed::No_slip no_slip(hexed::No_slip::internal_energy, 1e6);
     no_slip.apply_state(tbc);
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-      for (int i_dim = 0; i_dim < 2; ++i_dim) REQUIRE(tbc.ghost_face()[i_dim*row_size + i_qpoint] == Approx(-1.));
-      REQUIRE(tbc.ghost_face()[2*row_size + i_qpoint] == Approx(1.2));
-      REQUIRE(std::sqrt(tbc.ghost_face()[3*row_size + i_qpoint]*tbc.inside_face()[3*row_size + i_qpoint]) == Approx(1e6*1.2));
+      for (int i_dim = 0; i_dim < 2; ++i_dim) REQUIRE(tbc.ghost_face()[i_dim*row_size + i_qpoint] == Catch::Approx(-1.));
+      REQUIRE(tbc.ghost_face()[2*row_size + i_qpoint] == Catch::Approx(1.2));
+      REQUIRE(std::sqrt(tbc.ghost_face()[3*row_size + i_qpoint]*tbc.inside_face()[3*row_size + i_qpoint]) == Catch::Approx(1e6*1.2));
     }
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_var = 0; i_var < 4; ++i_var) tbc.inside_face()[(8 + i_var)*row_size + i_qpoint] = flux[i_var];
@@ -218,7 +218,7 @@ TEST_CASE("No_slip")
     flux[2] *= -1; // mass flux should always inverted
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_var = 0; i_var < 4; ++i_var) {
-        REQUIRE(tbc.ghost_face()[(8 + i_var)*row_size + i_qpoint] == Approx(flux[i_var]));
+        REQUIRE(tbc.ghost_face()[(8 + i_var)*row_size + i_qpoint] == Catch::Approx(flux[i_var]));
       }
     }
   }
@@ -230,9 +230,9 @@ TEST_CASE("No_slip")
     hexed::No_slip no_slip(hexed::No_slip::heat_flux, 3.);
     no_slip.apply_state(tbc);
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-      for (int i_dim = 0; i_dim < 2; ++i_dim) REQUIRE(tbc.ghost_face()[i_dim*row_size + i_qpoint] == Approx(-1.));
-      REQUIRE(tbc.ghost_face()[2*row_size + i_qpoint] == Approx(state[2]));
-      REQUIRE(tbc.ghost_face()[3*row_size + i_qpoint] == Approx(state[3]));
+      for (int i_dim = 0; i_dim < 2; ++i_dim) REQUIRE(tbc.ghost_face()[i_dim*row_size + i_qpoint] == Catch::Approx(-1.));
+      REQUIRE(tbc.ghost_face()[2*row_size + i_qpoint] == Catch::Approx(state[2]));
+      REQUIRE(tbc.ghost_face()[3*row_size + i_qpoint] == Catch::Approx(state[3]));
     }
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_var = 0; i_var < 4; ++i_var) tbc.inside_face()[(8 + i_var)*row_size + i_qpoint] = flux[i_var];
@@ -241,9 +241,9 @@ TEST_CASE("No_slip")
     flux[2] *= -1; // mass flux should always inverted
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_var = 0; i_var < 3; ++i_var) {
-        REQUIRE(tbc.ghost_face()[(8 + i_var)*row_size + i_qpoint] == Approx(flux[i_var]));
+        REQUIRE(tbc.ghost_face()[(8 + i_var)*row_size + i_qpoint] == Catch::Approx(flux[i_var]));
       }
-      REQUIRE((tbc.ghost_face()[11*row_size + i_qpoint] + tbc.inside_face()[11*row_size + i_qpoint])/2 == Approx(-3.*.7));
+      REQUIRE((tbc.ghost_face()[11*row_size + i_qpoint] + tbc.inside_face()[11*row_size + i_qpoint])/2 == Catch::Approx(-3.*.7));
     }
   }
   SECTION("specified emissivity")
@@ -265,7 +265,7 @@ TEST_CASE("No_slip")
     }
     no_slip.apply_flux(tbc);
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-      REQUIRE((tbc.ghost_face()[11*row_size + i_qpoint] + tbc.inside_face()[11*row_size + i_qpoint])/2 == Approx(-.8*hexed::stefan_boltzmann*std::pow(temp, 4)*.7));
+      REQUIRE((tbc.ghost_face()[11*row_size + i_qpoint] + tbc.inside_face()[11*row_size + i_qpoint])/2 == Catch::Approx(-.8*hexed::stefan_boltzmann*std::pow(temp, 4)*.7));
     }
   }
 }
@@ -289,10 +289,10 @@ TEST_CASE("Copy")
   copy.apply_state(tbc);
   // check that ghost face is equal to inside
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-    REQUIRE(tbc.ghost_face()[0*n_qpoint + i_qpoint] == Approx(20.));
-    REQUIRE(tbc.ghost_face()[1*n_qpoint + i_qpoint] == Approx(-10.));
-    REQUIRE(tbc.ghost_face()[2*n_qpoint + i_qpoint] == Approx(50.));
-    REQUIRE(tbc.ghost_face()[3*n_qpoint + i_qpoint] == Approx(0.9));
-    REQUIRE(tbc.ghost_face()[4*n_qpoint + i_qpoint] == Approx(1e4));
+    REQUIRE(tbc.ghost_face()[0*n_qpoint + i_qpoint] == Catch::Approx(20.));
+    REQUIRE(tbc.ghost_face()[1*n_qpoint + i_qpoint] == Catch::Approx(-10.));
+    REQUIRE(tbc.ghost_face()[2*n_qpoint + i_qpoint] == Catch::Approx(50.));
+    REQUIRE(tbc.ghost_face()[3*n_qpoint + i_qpoint] == Catch::Approx(0.9));
+    REQUIRE(tbc.ghost_face()[4*n_qpoint + i_qpoint] == Catch::Approx(1e4));
   }
 }
