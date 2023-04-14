@@ -151,6 +151,7 @@ class Solver
    * times the estimated maximum stable time step.
    */
   void update(double stability_ratio = 0.8);
+  bool is_admissible(); //!< check whether flowfield is admissible (e.g. density and energy are positive)
   void set_art_visc_smoothness(double advect_length); //!< updates the aritificial viscosity coefficient based on smoothness of the flow variables
   //! an object providing all available information about the status of the time marching iteration.
   Iteration_status iteration_status();

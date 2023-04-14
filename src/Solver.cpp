@@ -126,6 +126,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   std::string unit = "(element*(time integration stage))";
   stopwatch.children.emplace("prolong/restrict", unit);
   stopwatch.children.emplace("fix admis.", "(element*(fix admis. iter))");
+  stopwatch.children.emplace("check admis.", "(element*iteration)");
   stopwatch.children.emplace("set art visc", stopwatch.work_unit_name);
   stopwatch.children.at("set art visc").children.emplace("initialize", stopwatch.work_unit_name);
   stopwatch.children.at("set art visc").children.emplace("advection", stopwatch.work_unit_name);
@@ -682,12 +683,44 @@ Iteration_status Solver::iteration_status()
   return stat;
 }
 
+bool Solver::is_admissible()
+{
+  auto& sw = stopwatch.children.at("check admis.");
+  sw.stopwatch.start();
+  auto& elems = acc_mesh.elements();
+  const int nd = params.n_dim;
+  const int nq = params.n_qpoint();
+  const int rs = params.row_size;
+  bool admiss = 1;
+  #pragma omp parallel for reduction (&&:admiss)
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    admiss = admiss && hexed::thermo::admissible(elem.stage(0), nd, nq);
+    for (int i_face = 0; i_face < params.n_dim*2; ++i_face) {
+      admiss = admiss && hexed::thermo::admissible(elem.faces[i_face], nd, nq/rs);
+    }
+  }
+  auto& ref_faces = acc_mesh.refined_faces();
+  bool refined_admiss = 1;
+  #pragma omp parallel for reduction (&&:refined_admiss)
+  for (int i_face = 0; i_face < ref_faces.size(); ++i_face) {
+    auto& ref = ref_faces[i_face];
+    int n_fine = params.n_vertices()/2;
+    for (int i_dim = 0; i_dim < nd - 1; ++i_dim) n_fine /= 1 + ref.stretch[i_dim];
+    for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
+      refined_admiss = refined_admiss && hexed::thermo::admissible(ref.fine[i_fine], nd, nq/rs);
+    }
+  }
+  sw.work_units_completed += acc_mesh.elements().size();
+  sw.stopwatch.pause();
+  return admiss && refined_admiss;
+}
+
 void Solver::fix_admissibility(double stability_ratio)
 {
   if (!fix_admis) return;
   auto& sw_fix = stopwatch.children.at("fix admis.");
   sw_fix.stopwatch.start();
-  auto& elems = acc_mesh.elements();
   const int nd = params.n_dim;
   const int nq = params.n_qpoint();
   const int rs = params.row_size;
@@ -705,27 +738,7 @@ void Solver::fix_admissibility(double stability_ratio)
       snprintf(buffer, 200, "failed to fix thermodynamic admissability in %i iterations", iter);
       throw std::runtime_error(buffer);
     }
-    bool admiss = 1;
-    #pragma omp parallel for reduction (&&:admiss)
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      auto& elem = elems[i_elem];
-      admiss = admiss && hexed::thermo::admissible(elem.stage(0), nd, nq);
-      for (int i_face = 0; i_face < params.n_dim*2; ++i_face) {
-        admiss = admiss && hexed::thermo::admissible(elem.faces[i_face], nd, nq/rs);
-      }
-    }
-    auto& ref_faces = acc_mesh.refined_faces();
-    bool refined_admiss = 1;
-    #pragma omp parallel for reduction (&&:refined_admiss)
-    for (int i_face = 0; i_face < ref_faces.size(); ++i_face) {
-      auto& ref = ref_faces[i_face];
-      int n_fine = params.n_vertices()/2;
-      for (int i_dim = 0; i_dim < nd - 1; ++i_dim) n_fine /= 1 + ref.stretch[i_dim];
-      for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
-        refined_admiss = refined_admiss && hexed::thermo::admissible(ref.fine[i_fine], nd, nq/rs);
-      }
-    }
-    if (admiss && refined_admiss) break;
+    if (is_admissible()) break;
     else {
       if (status.iteration >= last_fix_vis_iter + 1000) {
         last_fix_vis_iter = status.iteration;
