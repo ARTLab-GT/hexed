@@ -6,7 +6,7 @@
 namespace hexed
 {
 
-/*
+/*!
  * A class for conveniently measuring execution time. Can be started
  * and stopped multiple times. Thows an exception if started twice without
  * stopping, or vice-versa. `time` returns the cumulative elapsed time

@@ -8,7 +8,7 @@
 namespace hexed
 {
 
-/*
+/*!
  * A tree structure of `Stopwatch` objects representing a
  * hierarchical breakdown of the time spent on nested tasks.
  */

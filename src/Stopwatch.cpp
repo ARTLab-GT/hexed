@@ -6,7 +6,7 @@ namespace hexed
 
 void Stopwatch::start()
 {
-  if (r) throw std::runtime_error("attempt to start an already running Stopwatch");
+  if (r) throw std::runtime_error("attempt to start an already running `hexed::Stopwatch`");
   r = true;
   time_started = std::chrono::high_resolution_clock::now();
 }
@@ -14,7 +14,7 @@ void Stopwatch::start()
 void Stopwatch::pause()
 {
   auto time_stopped = std::chrono::high_resolution_clock::now();
-  if (!r) throw std::runtime_error("attempt to pause Stopwatch which is not running");
+  if (!r) throw std::runtime_error("attempt to pause a `hexed::Stopwatch` which is not running");
   r = false;
   ++n;
   t += std::chrono::duration_cast<std::chrono::nanoseconds>(time_stopped - time_started).count()/1e9;
