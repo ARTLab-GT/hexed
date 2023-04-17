@@ -75,7 +75,7 @@ class Solver
    */
   //!\{
   double av_diff_ratio = 5e-3; //!< ratio of diffusion time to advection width
-  double av_visc_mult = 30.; //!< final scaling parameter applied to artificial viscosity coefficient
+  double av_visc_mult = 300.; //!< final scaling parameter applied to artificial viscosity coefficient
   double av_unscaled_max = 2e-3; //!< maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
   double av_advect_stab_rat = .2; //!< stability ratio for advection
   double av_diff_stab_rat = .5; //!< stability ratio for diffusion
@@ -152,7 +152,7 @@ class Solver
    */
   void update(double stability_ratio = 0.8);
   bool is_admissible(); //!< check whether flowfield is admissible (e.g. density and energy are positive)
-  void set_art_visc_smoothness(double advect_length); //!< updates the aritificial viscosity coefficient based on smoothness of the flow variables
+  void set_art_visc_smoothness(double advect_length, double reference_energy); //!< updates the aritificial viscosity coefficient based on smoothness of the flow variables
   //! an object providing all available information about the status of the time marching iteration.
   Iteration_status iteration_status();
   /*!
