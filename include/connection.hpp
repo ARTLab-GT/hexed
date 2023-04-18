@@ -9,7 +9,7 @@
 namespace hexed
 {
 
-/*
+/*!
  * Specification of which face is connected to which (that is, the direction) when
  * creating element connections. This is different for Cartesian and deformed elements,
  * so we specify them as templates to support generic programming.
@@ -23,22 +23,22 @@ class Con_dir<Deformed_element>
   std::array<int, 2> i_dim;
   std::array<bool, 2> face_sign;
   int i_face(int i_side) {return 2*i_dim[i_side] + face_sign[i_side];}
-  /*
+  /*!
    * Answers the question: Is it necessary to flip the normal of element `i_side` so that it
    * points from element 0 into element 1?
    */
   bool flip_normal(int i_side) {return face_sign[i_side] == i_side;}
-  /*
+  /*!
    * Answers the question: Is it neccesary to flip axis `face_index(0).i_dim` of element 1
    * to match the coordinate systems?
    */
   bool flip_tangential()
   {
-    // if you're swapping two axes, you have to flip one of them to make a valid rotation. If you're not
-    // flipping a normal (or flipping both of them) then you have to flip a tangential
+    //! if you're swapping two axes, you have to flip one of them to make a valid rotation. If you're not
+    //! flipping a normal (or flipping both of them) then you have to flip a tangential
     return (i_dim[0] != i_dim[1]) && (flip_normal(0) == flip_normal(1));
   }
-  /*
+  /*!
    * Answers the question: Is it necessary to transpose the rows/columns of the face
    * quadrature points of element 1 to match element 0? Only applicable to 3D, where some
    * face combinations can create a row vs column major mismatch. If 2D, always returns `false`.
@@ -58,9 +58,9 @@ class Con_dir<Element>
   operator Con_dir<Deformed_element>() const {return {{i_dim, i_dim}, {1, 0}};}
 };
 
-// The indices required to permute the vertices of face 1 of a connection to match face 0.
+//! The indices required to permute the vertices of face 1 of a connection to match face 0.
 std::vector<int> face_vertex_inds(int n_dim, Con_dir<Deformed_element> direction);
-/*
+/*!
  * The indices of the vertices which participate in a deformed connection, ordered
  * so that vertices which align in physical space correspond in the lists
  * and the vertices of face 0 are ordered in the same way as they would be if the face
@@ -68,7 +68,7 @@ std::vector<int> face_vertex_inds(int n_dim, Con_dir<Deformed_element> direction
  */
 std::array<std::vector<int>, 2> vertex_inds(int n_dim, Con_dir<Deformed_element> direction);
 
-/*
+/*!
  * Represents a connection between faces (which may belong to elements or something else like
  * boundary conditions or `Refined_face`s).
  */
@@ -100,7 +100,7 @@ class Face_connection<Deformed_element>
   double* normal() {return data.data() + 4*state_sz;} // area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
 };
 
-/*
+/*!
  * Specifies that two elements are connected without asserting anything about how the faces are
  * connected. For example, this might be a regular connection, or it could be a hanging node connection.
  */
@@ -110,7 +110,7 @@ class Element_connection
   virtual Element& element(int i_side) = 0;
 };
 
-/*
+/*!
  * Represents a connection between specific faces of two elements of the same refinement level.
  */
 template <typename element_t>
@@ -159,7 +159,7 @@ class Refined_face
   std::array<bool, 2> stretch;
 };
 
-/*
+/*!
  * Represents a connection between elements whose refinement levels differ by 1. This involves
  * a `Refined_face` object to facilitate interpolating/projecting between the coarse face and the
  * fine mortar faces, as well as connections between faces of the fine elements and the corresponding
@@ -169,7 +169,7 @@ template <typename element_t>
 class Refined_connection
 {
   public:
-  // connection subclass to which will represent the connections for the numerical flux calculation
+  //! connection subclass to which will represent the connections for the numerical flux calculation
   class Fine_connection : public Element_connection, public Face_connection<element_t>
   {
     Refined_connection& ref_con;
@@ -210,9 +210,9 @@ class Refined_connection
   void connect_normal();
 
   public:
-  Refined_face refined_face; // pretty please don't write to this!! this should be const and/or private, but i have bigger problems rn :( FIXME
+  Refined_face refined_face; //!< pretty please don't write to this!! this should be const and/or private, but i have bigger problems rn :( FIXME
   Hanging_vertex_matcher matcher;
-  /*
+  /*!
    * if `reverse_order` is true, the fine elements will come before coarse in the connection.
    * Otherwise, coarse will come first.
    * Assumes fine elements are in the natural row-major order that they would be listed in a context
@@ -261,12 +261,12 @@ class Refined_connection
     }
     connect_normal();
   }
-  // delete copy semantics which would mess up `Fine_connection`. Can implement later if we really need it.
+  //! delete copy semantics which would mess up `Fine_connection`. Can implement later if we really need it.
   Refined_connection(const Refined_connection&) = delete;
   Refined_connection& operator=(const Refined_connection&) = delete;
   virtual ~Refined_connection() = default;
   Con_dir<element_t> direction() {return dir;}
-  // fetch an object represting a connection between the face of a fine element and one of the mortar faces
+  //! fetch an object represting a connection between the face of a fine element and one of the mortar faces
   Fine_connection& connection(int i_fine) {return fine_cons[i_fine];}
   bool order_reversed() {return rev;}
   auto stretch() {return str;}
