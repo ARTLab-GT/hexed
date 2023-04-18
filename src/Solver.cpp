@@ -1,4 +1,6 @@
 #include <fstream>
+#include <iostream>
+
 #include <config.hpp>
 #include <Solver.hpp>
 #include <Tecplot_file.hpp>
@@ -627,13 +629,15 @@ void Solver::synch_extruded_res_bad()
   }
 }
 
-void Solver::update(double stability_ratio)
+void Solver::update(double dt, bool cfl_driven)
 {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
   auto& elems = acc_mesh.elements();
 
   // compute time step
-  double dt = stability_ratio*max_dt();
+  double max = max_dt();
+  if (cfl_driven) dt *= max;
+  else if (dt > max) std::cerr << "warning: time step exceeds CFL limit\n";
 
   // record reference state for Runge-Kutta scheme
   const int n_dof = params.n_dof();
@@ -652,7 +656,7 @@ void Solver::update(double stability_ratio)
     apply_state_bcs();
     if (use_ldg()) compute_viscous(dt, i);
     else compute_inviscid(dt, i);
-    fix_admissibility(fix_admis_stab_rat*stability_ratio);
+    fix_admissibility(fix_admis_stab_rat);
   }
 
   // update status for reporting
