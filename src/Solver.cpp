@@ -22,13 +22,16 @@ namespace hexed
 void Solver::share_vertex_data(Element::vertex_value_access access_func, Vertex::reduction reduce)
 {
   auto& elements = acc_mesh.elements();
+  #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     elements[i_elem].push_shareable_value(access_func);
   }
+  #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     elements[i_elem].fetch_shareable_value(access_func, reduce);
   }
   auto& matchers = acc_mesh.hanging_vertex_matchers();
+  #pragma omp parallel for
   for (int i_match = 0; i_match < matchers.size(); ++i_match) matchers[i_match].match(access_func);
 }
 
@@ -168,13 +171,16 @@ void Solver::relax_vertices(double factor)
 {
   // relax the vertices
   auto verts {acc_mesh.vertices()};
+  #pragma omp parallel for
   for (int i_vert = 0; i_vert < verts.size(); ++i_vert) verts[i_vert].calc_relax(factor);
+  #pragma omp parallel for
   for (int i_vert = 0; i_vert < verts.size(); ++i_vert) verts[i_vert].apply_relax();
 }
 
 void Solver::snap_vertices()
 {
   auto& bc_cons {acc_mesh.boundary_connections()};
+  #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh.boundary_condition(bc_sn).mesh_bc->snap_vertices(bc_cons[i_con]);
@@ -182,6 +188,7 @@ void Solver::snap_vertices()
   // vertex relaxation/snapping will cause hanging vertices to drift away from hanging vertex faces they are supposed to be coincident with
   // so now we put them back where they belong
   auto& matchers = acc_mesh.hanging_vertex_matchers();
+  #pragma omp parallel for
   for (int i_match = 0; i_match < matchers.size(); ++i_match) {
     matchers[i_match].match(&Element::vertex_position<0>);
     matchers[i_match].match(&Element::vertex_position<1>);
@@ -192,6 +199,7 @@ void Solver::snap_vertices()
 void Solver::snap_faces()
 {
   auto& bc_cons {acc_mesh.boundary_connections()};
+  #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh.boundary_condition(bc_sn).mesh_bc->snap_node_adj(bc_cons[i_con], basis);
@@ -208,6 +216,7 @@ void Solver::calc_jacobian()
 
   // compute element jacobians
   auto& elements = acc_mesh.elements();
+  #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     elements[i_elem].set_jacobian(basis);
   }
@@ -216,6 +225,7 @@ void Solver::calc_jacobian()
    * compute surface normals for deformed connections
    */
   auto& def_cons {acc_mesh.deformed().face_connections()};
+  #pragma omp parallel for
   for (int i_con = 0; i_con < def_cons.size(); ++i_con) {
     double* nrml = def_cons[i_con].normal();
     for (int i_data = 0; i_data < n_dim*nfq; ++i_data) nrml[i_data] = 0.;
@@ -223,6 +233,7 @@ void Solver::calc_jacobian()
   // for deformed refined faces, set normal to coarse face normal (for Cartesian, setting normal is not necessary)
   auto& ref_cons = acc_mesh.deformed().refined_connections();
   (*kernel_factory<Prolong_refined>(n_dim, rs, basis, true))(acc_mesh.refined_faces());
+  #pragma omp parallel for
   for (int i_ref = 0; i_ref < ref_cons.size(); ++i_ref) {
     auto& ref = ref_cons[i_ref];
     bool rev = ref.order_reversed();
@@ -242,12 +253,14 @@ void Solver::calc_jacobian()
   }
   // for BCs, copy normal to ghost face
   auto& bc_cons = acc_mesh.boundary_connections();
+  #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     double* in_f = bc_cons[i_con].inside_face();
     double* gh_f = bc_cons[i_con].ghost_face();
     for (int i_data = 0; i_data < n_dim*nfq; ++i_data) gh_f[i_data] = in_f[i_data];
   }
   // compute the shared face normal
+  #pragma omp parallel for
   for (int i_con = 0; i_con < def_cons.size(); ++i_con)
   {
     auto& con = def_cons[i_con];
@@ -274,6 +287,7 @@ void Solver::calc_jacobian()
     }
   }
   // write face normal for coarse hanging node faces
+  #pragma omp parallel for
   for (int i_ref = 0; i_ref < ref_cons.size(); ++i_ref) {
     auto& ref = ref_cons[i_ref];
     bool rev = ref.order_reversed();
@@ -287,6 +301,7 @@ void Solver::calc_jacobian()
     }
   }
   // set position at boundary faces
+  #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     Element& elem = bc_cons[i_con].element();
     double* surf_pos = bc_cons[i_con].surface_position();
@@ -308,6 +323,7 @@ void Solver::initialize(const Spacetime_func& func)
     throw std::runtime_error("initializer has wrong number of output variables");
   }
   auto& elements = acc_mesh.elements();
+  #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
       std::vector<double> pos_vec {};
@@ -330,6 +346,7 @@ void Solver::set_art_visc_constant(double value)
 {
   use_art_visc = true;
   auto& elements = acc_mesh.elements();
+  #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* av = elements[i_elem].art_visc_coef();
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
