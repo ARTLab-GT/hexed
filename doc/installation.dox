@@ -43,6 +43,11 @@ My solution is to install things in `~/.local` instead.
 However, this requires us to edit an environment variable so that the system knows what we're doing.
 Plus, we need to edit a *whole bunch* of environment variables to accommodate Tecplot being a little... *unique*.
 - To start with, type `cd` to make sure you're in your home directory.
+- your `~/.local` directory should contain subdirectories `bin`, `lib`, and `share`.
+  Create another subdirectory `include` if it doesn't already have one:
+  ~~~
+  mkdir .local/include
+  ~~~
 - You can change environment variables by editing the file `.bashrc`.
   First, it is recommended that you make a backup copy:
   ~~~
@@ -55,6 +60,7 @@ Plus, we need to edit a *whole bunch* of environment variables to accommodate Te
   export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:$TECPLOT_DIR/include/:~/.local/include/
   export LIBRARY_PATH=$LIBRARY_PATH:$TECPLOT_LIB_PATH
   export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$TECPLOT_LIB_PATH
+  export PATH=$PATH:~/.local/bin
   ~~~
   If you are not on an ARTLAB machine, ensure that you have Tecplot installed and change `TECIO_DIR` to match your Tecplot installation.
 - Close and reopen the terminal.
