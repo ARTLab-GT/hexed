@@ -673,6 +673,7 @@ void Solver::set_res_bad_surface_rep(int bc_sn)
       }
     }
   }
+  (*write_face)(elems);
   Mat<dyn, dyn> bound = basis.boundary();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < def_elems.size(); ++i_elem) {
@@ -681,20 +682,22 @@ void Solver::set_res_bad_surface_rep(int bc_sn)
       int i_dim = (elem.record - 2*nd)/2;
       int positive = elem.record%2;
       for (int i_face = 0; i_face < 2*nd; ++i_face) {
-        Eigen::Map<Mat<dyn, dyn>> face(elem.faces[i_face], nfq, nd);
-        int i_dim_extrap = (nd == 3) ? i_dim > 3 - i_dim - i_face/2 : 0;
-        for (int j_dim = 0; j_dim < nd; ++j_dim) {
-          Mat<> extrap = math::dimension_matvec(bound(positive, all), face(all, j_dim), i_dim_extrap);
-          face(all, j_dim) = extrap;
-        }
-        for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-          face(i_qpoint, all).normalize();
+        if (i_face/2 != i_dim) {
+          Eigen::Map<Mat<dyn, dyn>> face(elem.faces[i_face], nfq, nd);
+          int i_dim_extrap = (nd == 3) ? i_dim > 3 - i_dim - i_face/2 : 0;
+          for (int j_dim = 0; j_dim < nd; ++j_dim) {
+            Mat<dyn, dyn> b = Mat<>::Ones(params.row_size)*bound(positive, all);
+            Mat<> extrap = math::dimension_matvec(b, face(all, j_dim), i_dim_extrap);
+            face(all, j_dim) = extrap;
+          }
+          for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+            face(i_qpoint, all).normalize();
+          }
         }
       }
     }
   }
-  (*write_face)(elems);
-  Mat<> weights = math::pow_outer(basis.node_weights(), nd);
+  (*kernel_factory<Prolong_refined>(nd, params.row_size, basis))(acc_mesh.refined_faces());
   auto& def_cons = acc_mesh.deformed().face_connections();
   #pragma omp parallel for
   for (int i_con = 0; i_con < def_cons.size(); ++i_con) {
@@ -710,10 +713,24 @@ void Solver::set_res_bad_surface_rep(int bc_sn)
     }
     permute->restore();
   }
+  (*kernel_factory<Restrict_refined>(nd, params.row_size, basis, false))(acc_mesh.refined_faces());
+  Mat<> weights = math::pow_outer(basis.node_weights(), nd - 1);
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    double* state = elems[i_elem].stage(0);
-    double* ref = elems[i_elem].stage(1);
+    auto& elem = elems[i_elem];
+    if (elem.record/(2*nd) == 1) {
+      for (int i_face = 0; i_face < 2*nd; ++i_face) {
+        if (i_face/2 != (elem.record - 2*nd)/2) {
+          Eigen::Map<Mat<dyn, dyn>> face(elem.faces[i_face], nfq, nd);
+          #pragma omp critical
+          std::cout << face << "\n\n";
+          Mat<> norm = face.rowwise().norm();
+          elem.resolution_badness += std::sqrt(norm.dot(weights.asDiagonal()*norm));
+        }
+      }
+    }
+    double* state = elem.stage(0);
+    double* ref = elem.stage(1);
     for (int i_var = 0; i_var < nv; ++i_var) {
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
         state[i_var*nq + i_qpoint] = ref[i_var*nq + i_qpoint];

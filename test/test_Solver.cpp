@@ -876,6 +876,7 @@ TEST_CASE("normal continuity resolution badness")
   int bc_sn = sol.mesh().add_boundary_condition(new hexed::Copy(), new hexed::Null_mbc());
   sol.mesh().connect_rest(bc_sn);
   sol.mesh().valid().assert_valid();
+  sol.calc_jacobian();
   sol.set_res_bad_surface_rep(bc_sn);
   for (auto handle : sol.mesh().elem_handles()) {
     double res_bad = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, hexed::Resolution_badness())[0];
