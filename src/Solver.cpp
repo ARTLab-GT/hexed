@@ -634,6 +634,7 @@ void Solver::set_res_bad_surface_rep(int bc_sn)
   const int nv = params.n_var;
   const int nd = params.n_dim;
   const int nq = params.n_qpoint();
+  const int nfq = nq/params.row_size;
   auto& elems = acc_mesh.elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -667,15 +668,47 @@ void Solver::set_res_bad_surface_rep(int bc_sn)
       double* nrml = elem.reference_level_normals() + (elem.record - 2*nd)/2*nd*nq;
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-          state[i_dim*nq + i_qpoint] = nrml[i_dim*nq + i_qpoint];
+          state[i_dim*nq + i_qpoint] = nrml[i_dim*nq + i_qpoint]*math::sign(elem.record%2);
+        }
+      }
+    }
+  }
+  Mat<dyn, dyn> bound = basis.boundary();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < def_elems.size(); ++i_elem) {
+    auto& elem = def_elems[i_elem];
+    if (elem.record/(2*nd) == 1) {
+      int i_dim = (elem.record - 2*nd)/2;
+      int positive = elem.record%2;
+      for (int i_face = 0; i_face < 2*nd; ++i_face) {
+        Eigen::Map<Mat<dyn, dyn>> face(elem.faces[i_face], nfq, nd);
+        int i_dim_extrap = (nd == 3) ? i_dim > 3 - i_dim - i_face/2 : 0;
+        for (int j_dim = 0; j_dim < nd; ++j_dim) {
+          Mat<> extrap = math::dimension_matvec(bound(positive, all), face(all, j_dim), i_dim_extrap);
+          face(all, j_dim) = extrap;
+        }
+        for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+          face(i_qpoint, all).normalize();
         }
       }
     }
   }
   (*write_face)(elems);
+  Mat<> weights = math::pow_outer(basis.node_weights(), nd);
   auto& def_cons = acc_mesh.deformed().face_connections();
   #pragma omp parallel for
   for (int i_con = 0; i_con < def_cons.size(); ++i_con) {
+    auto& con = def_cons[i_con];
+    auto permute = kernel_factory<Face_permutation>(nd, params.row_size, con.direction(), con.state() + (nd + 2)*nfq);
+    permute->match_faces();
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+        double* f [2];
+        for (int i_side : {0, 1}) f[i_side] = con.state() + (i_side*(nd + 2) + i_dim)*nfq + i_qpoint;
+        *f[0] = *f[1] = *f[0] - *f[1];
+      }
+    }
+    permute->restore();
   }
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
