@@ -722,12 +722,11 @@ void Solver::set_res_bad_surface_rep(int bc_sn)
       for (int i_face = 0; i_face < 2*nd; ++i_face) {
         if (i_face/2 != (elem.record - 2*nd)/2) {
           Eigen::Map<Mat<dyn, dyn>> face(elem.faces[i_face], nfq, nd);
-          #pragma omp critical
-          std::cout << face << "\n\n";
           Mat<> norm = face.rowwise().norm();
           elem.resolution_badness += std::sqrt(norm.dot(weights.asDiagonal()*norm));
         }
       }
+      elem.resolution_badness /= 2*std::max(nd - 1, 1);
     }
     double* state = elem.stage(0);
     double* ref = elem.stage(1);

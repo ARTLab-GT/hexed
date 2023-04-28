@@ -870,8 +870,8 @@ TEST_CASE("face extrusion")
 
 TEST_CASE("normal continuity resolution badness")
 {
-  hexed::Solver sol({2, hexed::config::max_row_size, .2});
-  int elem_sn = sol.mesh().add_element(0, true, {0, 0});
+  hexed::Solver sol({3, hexed::config::max_row_size, .2});
+  int elem_sn = sol.mesh().add_element(0, true, {0, 0, 0});
   sol.mesh().extrude();
   int bc_sn = sol.mesh().add_boundary_condition(new hexed::Copy(), new hexed::Null_mbc());
   sol.mesh().connect_rest(bc_sn);
@@ -881,7 +881,7 @@ TEST_CASE("normal continuity resolution badness")
   for (auto handle : sol.mesh().elem_handles()) {
     double res_bad = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, hexed::Resolution_badness())[0];
     if (handle.serial_n == elem_sn) REQUIRE(res_bad == Catch::Approx(0).scale(1.));
-    else CHECK(res_bad == Catch::Approx(2*std::sqrt(2.)));
+    else CHECK(res_bad == Catch::Approx(std::sqrt(2.)));
   }
 }
 
