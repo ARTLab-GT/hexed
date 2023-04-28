@@ -133,13 +133,21 @@ class Solver
   void set_art_visc_constant(double); //!< turns on artificial viscosity and initializes coefficient to a uniform value
   void set_art_visc_row_size(int); //!< modify the polynomial order of smoothness-based artificial viscosity (must be <= row size of discretization (which is the default))
   void set_fix_admissibility(bool); //!< turns on/off the thermodynamic admissibility-preserving scheme (increases robustness at some computational overhead)
-  /*!
-   * set `Element::resolution_badness` for each element according to `func`.
-   * Resoltuion badness can be evaluated via `sample(ref_level, is_deformed, serial_n, Resolution_badness())`.
+  /*! \brief set `Element::resolution_badness` for each element according to `func`.
+   * \details Resoltuion badness can be evaluated via `sample(ref_level, is_deformed, serial_n, Resolution_badness())`.
    * This function does some additional work to enforce some conditions on the resolution badness of neighboring elements.
    * Thus, use this function rather than just `sample(ref_level, is_deformed, serial_n, func)` directly.
    */
   void set_resolution_badness(const Element_func& func);
+  /*! \brief Set resolution badness based on surface representation quality.
+   * \details For all deformed elements contacting the boundary specified by `bc_sn`, computes the
+   * unit surface normals at the faces and compares to neighboring elements.
+   * `Element::resolution_badness` is set to the total difference between unit normals with all neighbors,
+   * where in 3D the total on each edge is computed by Gaussian quadrature in reference space.
+   * \note Connections between deformed elements and Cartesian elements are ignored.
+   * Fully Cartesian connections trivially contribute zero to this metric of resolution badness.
+   */
+  void set_res_bad_surface_rep(int bc_sn);
   //! set resolution badness of each element to be at least the maximum badness of any elements extruded from it
   void synch_extruded_res_bad();
   //!\}

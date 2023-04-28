@@ -623,9 +623,71 @@ void Solver::set_fix_admissibility(bool value)
 void Solver::set_resolution_badness(const Element_func& func)
 {
   auto& elems = acc_mesh.elements();
+  #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].resolution_badness = func(elems[i_elem], basis, status.flow_time)[0];
   }
+}
+
+void Solver::set_res_bad_surface_rep(int bc_sn)
+{
+  const int nv = params.n_var;
+  const int nd = params.n_dim;
+  const int nq = params.n_qpoint();
+  auto& elems = acc_mesh.elements();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    elems[i_elem].resolution_badness = 0;
+    elems[i_elem].record = 0;
+    double* state = elems[i_elem].stage(0);
+    double* ref = elems[i_elem].stage(1);
+    for (int i_var = 0; i_var < nv; ++i_var) {
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        ref[i_var*nq + i_qpoint] = state[i_var*nq + i_qpoint];
+      }
+    }
+  }
+  auto& bc_cons {acc_mesh.boundary_connections()};
+  #pragma omp parallel for
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    auto& con = bc_cons[i_con];
+    if (con.bound_cond_serial_n() == bc_sn) {
+      // the `2*n_dim` identifies that this is a boundary element and the rest identifies which face is on the boundary
+      // assumes each element has at most face on *this* boundary (might have other faces on other boundaries)
+      con.element().record = 2*nd + 2*con.i_dim() + con.inside_face_sign();
+      acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
+    }
+  }
+  auto& def_elems = acc_mesh.deformed().elements();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < def_elems.size(); ++i_elem) {
+    auto& elem = def_elems[i_elem];
+    if (elem.record/(2*nd) == 1) {
+      double* state = elem.stage(0);
+      double* nrml = elem.reference_level_normals() + (elem.record - 2*nd)/2*nd*nq;
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+          state[i_dim*nq + i_qpoint] = nrml[i_dim*nq + i_qpoint];
+        }
+      }
+    }
+  }
+  (*write_face)(elems);
+  auto& def_cons = acc_mesh.deformed().face_connections();
+  #pragma omp parallel for
+  for (int i_con = 0; i_con < def_cons.size(); ++i_con) {
+  }
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    double* state = elems[i_elem].stage(0);
+    double* ref = elems[i_elem].stage(1);
+    for (int i_var = 0; i_var < nv; ++i_var) {
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        state[i_var*nq + i_qpoint] = ref[i_var*nq + i_qpoint];
+      }
+    }
+  }
+  (*write_face)(elems);
 }
 
 void Solver::synch_extruded_res_bad()
@@ -634,13 +696,16 @@ void Solver::synch_extruded_res_bad()
   bool changed = true;
   while(changed) {
     changed = false;
+    #pragma omp parallel for reduction(||:changed)
     for (int i_con = 0; i_con < cons.size(); ++i_con) {
-      double* bad [2];
+      double bad [2];
       for (int i_side = 0; i_side < 2; ++i_side) {
-        bad[i_side] = &cons[i_con].element(i_side).resolution_badness;
+        #pragma omp atomic read
+        bad[i_side] = cons[i_con].element(i_side).resolution_badness;
       }
-      if (*bad[0] > *bad[1] + 1e-14) {
-        *bad[1] = *bad[0];
+      if (bad[0] > bad[1] + 1e-14) {
+        #pragma omp atomic write
+        cons[i_con].element(1).resolution_badness = bad[0];
         changed = true;
       }
     }
