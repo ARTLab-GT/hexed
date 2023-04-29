@@ -45,6 +45,7 @@ class Element
   double resolution_badness = 0;
   static constexpr bool is_deformed = false;
   static constexpr int n_forcing = 4;
+  int record = 0; //!< for algorithms to book-keep general information
 
   /*!
    * The `Storage_params1 defines the amount of storage that must be allocated.

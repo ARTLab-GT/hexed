@@ -623,9 +623,141 @@ void Solver::set_fix_admissibility(bool value)
 void Solver::set_resolution_badness(const Element_func& func)
 {
   auto& elems = acc_mesh.elements();
+  #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].resolution_badness = func(elems[i_elem], basis, status.flow_time)[0];
   }
+}
+
+void Solver::set_res_bad_surface_rep(int bc_sn)
+{
+  const int nv = params.n_var;
+  const int nd = params.n_dim;
+  const int nq = params.n_qpoint();
+  const int nfq = nq/params.row_size;
+  // record flow state in reference stage
+  // so that state storage can be used for normal vectors
+  auto& elems = acc_mesh.elements();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    elems[i_elem].resolution_badness = 0;
+    elems[i_elem].record = 0;
+    double* state = elems[i_elem].stage(0);
+    double* ref = elems[i_elem].stage(1);
+    for (int i_var = 0; i_var < nv; ++i_var) {
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        ref[i_var*nq + i_qpoint] = state[i_var*nq + i_qpoint];
+      }
+    }
+  }
+  // identify boundary elements
+  auto& bc_cons {acc_mesh.boundary_connections()};
+  #pragma omp parallel for
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    auto& con = bc_cons[i_con];
+    if (con.bound_cond_serial_n() == bc_sn) {
+      // the `2*n_dim` identifies that this is a boundary element and the rest identifies which face is on the boundary
+      // assumes each element has at most face on *this* boundary (might have other faces on other boundaries)
+      con.element().record = 2*nd + 2*con.i_dim() + con.inside_face_sign();
+    }
+  }
+  // first write the (non-unit) normal vectors to the state storage
+  // and then extrapolate those to the face storage
+  auto& def_elems = acc_mesh.deformed().elements();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < def_elems.size(); ++i_elem) {
+    auto& elem = def_elems[i_elem];
+    if (elem.record/(2*nd) == 1) { // if this element is on the boundary...
+      // pick out the reference level normal vector which is pointing out of the flow domain
+      double* state = elem.stage(0);
+      double* nrml = elem.reference_level_normals() + (elem.record - 2*nd)/2*nd*nq;
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+          state[i_dim*nq + i_qpoint] = nrml[i_dim*nq + i_qpoint]*math::sign(elem.record%2);
+        }
+      }
+    }
+  }
+  // extrapolate to faces
+  (*write_face)(elems);
+  // for each face, compute unit surface normal from the reference level normal
+  Mat<dyn, dyn> bound = basis.boundary();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < def_elems.size(); ++i_elem) {
+    auto& elem = def_elems[i_elem];
+    if (elem.record/(2*nd) == 1) {
+      int i_dim = (elem.record - 2*nd)/2;
+      int positive = elem.record%2;
+      for (int i_face = 0; i_face < 2*nd; ++i_face) {
+        if (i_face/2 != i_dim) {
+          // extrapolate the reference level normal to the wall surface
+          // because only at the wall surface is the reference level normal the same as the wall normal
+          // and then write that back to the whole face
+          Eigen::Map<Mat<dyn, dyn>> face(elem.faces[i_face], nfq, nd);
+          int i_dim_extrap = (nd == 3) ? i_dim > 3 - i_dim - i_face/2 : 0;
+          for (int j_dim = 0; j_dim < nd; ++j_dim) {
+            Mat<dyn, dyn> b = Mat<>::Ones(params.row_size)*bound(positive, all);
+            Mat<> extrap = math::dimension_matvec(b, face(all, j_dim), i_dim_extrap);
+            face(all, j_dim) = extrap;
+          }
+          // normalize to get *unit* normals
+          for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+            face(i_qpoint, all).normalize();
+          }
+        }
+      }
+    }
+  }
+  (*kernel_factory<Prolong_refined>(nd, params.row_size, basis))(acc_mesh.refined_faces());
+  // compute difference between neighboring elements
+  auto& def_cons = acc_mesh.deformed().face_connections();
+  #pragma omp parallel for
+  for (int i_con = 0; i_con < def_cons.size(); ++i_con) {
+    auto& con = def_cons[i_con];
+    auto permute = kernel_factory<Face_permutation>(nd, params.row_size, con.direction(), con.state() + (nd + 2)*nfq);
+    permute->match_faces();
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+        double* f [2];
+        for (int i_side : {0, 1}) f[i_side] = con.state() + (i_side*(nd + 2) + i_dim)*nfq + i_qpoint;
+        *f[0] = *f[1] = *f[0] - *f[1];
+      }
+    }
+    permute->restore();
+  }
+  // set difference to zero for faces that are on other boundaries
+  #pragma omp parallel for
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    auto& con = bc_cons[i_con];
+    double* state = con.inside_face();
+    for (int i_dof = 0; i_dof < nv*nfq; ++i_dof) state[i_dof] = 0;
+  }
+  (*kernel_factory<Restrict_refined>(nd, params.row_size, basis, false))(acc_mesh.refined_faces());
+  // total up differences for each boundary element and write to resolution badness
+  // also restore the flow state to what it was at the start of this function
+  Mat<> weights = math::pow_outer(basis.node_weights(), nd - 1);
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    if (elem.record/(2*nd) == 1) {
+      for (int i_face = 0; i_face < 2*nd; ++i_face) {
+        if (i_face/2 != (elem.record - 2*nd)/2) {
+          Eigen::Map<Mat<dyn, dyn>> face(elem.faces[i_face], nfq, nd);
+          Mat<> norm = face.rowwise().norm();
+          elem.resolution_badness += std::sqrt(norm.dot(weights.asDiagonal()*norm));
+        }
+      }
+      elem.resolution_badness /= 2*std::max(nd - 1, 1);
+    }
+    double* state = elem.stage(0);
+    double* ref = elem.stage(1);
+    for (int i_var = 0; i_var < nv; ++i_var) {
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        state[i_var*nq + i_qpoint] = ref[i_var*nq + i_qpoint];
+      }
+    }
+  }
+  (*write_face)(elems);
 }
 
 void Solver::synch_extruded_res_bad()
@@ -634,13 +766,16 @@ void Solver::synch_extruded_res_bad()
   bool changed = true;
   while(changed) {
     changed = false;
+    #pragma omp parallel for reduction(||:changed)
     for (int i_con = 0; i_con < cons.size(); ++i_con) {
-      double* bad [2];
+      double bad [2];
       for (int i_side = 0; i_side < 2; ++i_side) {
-        bad[i_side] = &cons[i_con].element(i_side).resolution_badness;
+        #pragma omp atomic read
+        bad[i_side] = cons[i_con].element(i_side).resolution_badness;
       }
-      if (*bad[0] > *bad[1] + 1e-14) {
-        *bad[1] = *bad[0];
+      if (bad[0] > bad[1] + 1e-14) {
+        #pragma omp atomic write
+        cons[i_con].element(1).resolution_badness = bad[0];
         changed = true;
       }
     }
