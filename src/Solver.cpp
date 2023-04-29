@@ -656,7 +656,6 @@ void Solver::set_res_bad_surface_rep(int bc_sn)
       // the `2*n_dim` identifies that this is a boundary element and the rest identifies which face is on the boundary
       // assumes each element has at most face on *this* boundary (might have other faces on other boundaries)
       con.element().record = 2*nd + 2*con.i_dim() + con.inside_face_sign();
-      acc_mesh.boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
     }
   }
   auto& def_elems = acc_mesh.deformed().elements();
@@ -712,6 +711,12 @@ void Solver::set_res_bad_surface_rep(int bc_sn)
       }
     }
     permute->restore();
+  }
+  #pragma omp parallel for
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    auto& con = bc_cons[i_con];
+    double* state = con.inside_face();
+    for (int i_dof = 0; i_dof < nv*nfq; ++i_dof) state[i_dof] = 0;
   }
   (*kernel_factory<Restrict_refined>(nd, params.row_size, basis, false))(acc_mesh.refined_faces());
   Mat<> weights = math::pow_outer(basis.node_weights(), nd - 1);
