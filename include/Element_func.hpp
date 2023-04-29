@@ -97,5 +97,8 @@ class Equiangle_skewness : public Element_func
   std::vector<double> operator()(Element& elem, const Basis&, double time) const override;
 };
 
+//! Concatenates `Element_func`s
+typedef Concat_func<Element_func, Element&, const Basis&, double> Ef_concat;
+
 }
 #endif
