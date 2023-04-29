@@ -85,11 +85,11 @@ class Elem_nonsmooth : public Element_func
  * \f]
  * for all angles \f$ \theta \f$ between any pair of edges in the element that share a vertex.
  * Thus if all edges meet at perfect right angles, the equiangle skewness is 0,
- * whereas if there is a pair of adjacent edges that are parallel, the equiangle skewness is 1.
- * As I understand it, the definition above is equivalent to that used by Fluent &reg; and Pointwise &reg;
+ * whereas if there is a pair of adjacent edges that are parallel, it is 1.
+ * As I understand it, the definition above is equivalent to that used by Fluent&reg; and Pointwise&reg;
  * for quads and hexes.
  */
-class Equiangle : public Element_func
+class Equiangle_skewness : public Element_func
 {
   public:
   inline int n_var(int n_dim) const override {return 1;}

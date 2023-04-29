@@ -380,3 +380,20 @@ TEST_CASE("Mach")
   REQUIRE(m.size() == 1);
   REQUIRE(m[0] == Catch::Approx(5./std::sqrt(1.4*101325/1.2)));
 }
+
+TEST_CASE("Equiangle_skewness")
+{
+  hexed::Gauss_legendre basis(2);
+  hexed::Deformed_element elem({2, 4, 2, 2});
+  double faces[4][2*2*4];
+  for (int i_face = 0; i_face < 4; ++i_face) elem.faces[i_face] = faces[i_face];
+  hexed::Equiangle_skewness skew;
+  elem.set_jacobian(basis);
+  REQUIRE(skew(elem, basis, 0.)[0] == Catch::Approx(1.));
+  elem.vertex(1).pos = {1./std::sqrt(3.), 1., 0.};
+  elem.set_jacobian(basis);
+  REQUIRE(skew(elem, basis, 0.)[0] == Catch::Approx(1./3.));
+  elem.vertex(1).pos = {.5, .5, 0.};
+  elem.set_jacobian(basis);
+  REQUIRE(skew(elem, basis, 0.)[0] == Catch::Approx(0.).scale(1.));
+}

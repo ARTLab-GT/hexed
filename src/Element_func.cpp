@@ -78,4 +78,9 @@ std::vector<double> Elem_nonsmooth::operator()(Element& elem, const Basis& basis
   return result;
 }
 
+std::vector<double> Equiangle_skewness::operator()(Element& elem, const Basis&, double time) const
+{
+  return {0.};
+}
+
 };
