@@ -210,7 +210,8 @@ double interp(Mat<pow(2, n_dim)> values, Mat<n_dim> coords)
   return values(0);
 }
 
-//! finds the nearest point to `target` on the line segment defined by `endpoints`.
+//! Finds the nearest point to `target` on the line segment defined by `endpoints`.
+//! Works for 2D or 3D.
 template <typename vec_t>
 vec_t proj_to_segment(std::array<vec_t, 2> endpoints, vec_t target)
 {
