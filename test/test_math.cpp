@@ -175,3 +175,14 @@ TEST_CASE("interp")
   hexed::Mat<2> coords {.01, .02};
   REQUIRE(hexed::math::interp(values, coords) == Catch::Approx(.024));
 }
+
+TEST_CASE("proj_to_segment")
+{
+  std::array<Eigen::Vector2d, 2> endpoints{Eigen::Vector2d{1., 1.}, Eigen::Vector2d{2., 2.}};
+  auto proj = hexed::math::proj_to_segment(endpoints, Eigen::Vector2d{1., 0.});
+  REQUIRE((proj - endpoints[0]).norm() == Catch::Approx(0.).scale(1.));
+  proj = hexed::math::proj_to_segment(endpoints, Eigen::Vector2d{100., 0.});
+  REQUIRE((proj - endpoints[1]).norm() == Catch::Approx(0.).scale(1.));
+  proj = hexed::math::proj_to_segment(endpoints, Eigen::Vector2d{3., 0.});
+  REQUIRE((proj - Eigen::Vector2d{1.5, 1.5}).norm() == Catch::Approx(0.).scale(1.));
+}
