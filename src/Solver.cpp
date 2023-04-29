@@ -635,6 +635,8 @@ void Solver::set_res_bad_surface_rep(int bc_sn)
   const int nd = params.n_dim;
   const int nq = params.n_qpoint();
   const int nfq = nq/params.row_size;
+  // record flow state in reference stage
+  // so that state storage can be used for normal vectors
   auto& elems = acc_mesh.elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -648,6 +650,7 @@ void Solver::set_res_bad_surface_rep(int bc_sn)
       }
     }
   }
+  // identify boundary elements
   auto& bc_cons {acc_mesh.boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
@@ -658,11 +661,14 @@ void Solver::set_res_bad_surface_rep(int bc_sn)
       con.element().record = 2*nd + 2*con.i_dim() + con.inside_face_sign();
     }
   }
+  // first write the (non-unit) normal vectors to the state storage
+  // and then extrapolate those to the face storage
   auto& def_elems = acc_mesh.deformed().elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < def_elems.size(); ++i_elem) {
     auto& elem = def_elems[i_elem];
-    if (elem.record/(2*nd) == 1) {
+    if (elem.record/(2*nd) == 1) { // if this element is on the boundary...
+      // pick out the reference level normal vector which is pointing out of the flow domain
       double* state = elem.stage(0);
       double* nrml = elem.reference_level_normals() + (elem.record - 2*nd)/2*nd*nq;
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
@@ -672,7 +678,9 @@ void Solver::set_res_bad_surface_rep(int bc_sn)
       }
     }
   }
+  // extrapolate to faces
   (*write_face)(elems);
+  // for each face, compute unit surface normal from the reference level normal
   Mat<dyn, dyn> bound = basis.boundary();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < def_elems.size(); ++i_elem) {
@@ -682,6 +690,9 @@ void Solver::set_res_bad_surface_rep(int bc_sn)
       int positive = elem.record%2;
       for (int i_face = 0; i_face < 2*nd; ++i_face) {
         if (i_face/2 != i_dim) {
+          // extrapolate the reference level normal to the wall surface
+          // because only at the wall surface is the reference level normal the same as the wall normal
+          // and then write that back to the whole face
           Eigen::Map<Mat<dyn, dyn>> face(elem.faces[i_face], nfq, nd);
           int i_dim_extrap = (nd == 3) ? i_dim > 3 - i_dim - i_face/2 : 0;
           for (int j_dim = 0; j_dim < nd; ++j_dim) {
@@ -689,6 +700,7 @@ void Solver::set_res_bad_surface_rep(int bc_sn)
             Mat<> extrap = math::dimension_matvec(b, face(all, j_dim), i_dim_extrap);
             face(all, j_dim) = extrap;
           }
+          // normalize to get *unit* normals
           for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
             face(i_qpoint, all).normalize();
           }
@@ -697,6 +709,7 @@ void Solver::set_res_bad_surface_rep(int bc_sn)
     }
   }
   (*kernel_factory<Prolong_refined>(nd, params.row_size, basis))(acc_mesh.refined_faces());
+  // compute difference between neighboring elements
   auto& def_cons = acc_mesh.deformed().face_connections();
   #pragma omp parallel for
   for (int i_con = 0; i_con < def_cons.size(); ++i_con) {
@@ -712,6 +725,7 @@ void Solver::set_res_bad_surface_rep(int bc_sn)
     }
     permute->restore();
   }
+  // set difference to zero for faces that are on other boundaries
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     auto& con = bc_cons[i_con];
@@ -719,6 +733,8 @@ void Solver::set_res_bad_surface_rep(int bc_sn)
     for (int i_dof = 0; i_dof < nv*nfq; ++i_dof) state[i_dof] = 0;
   }
   (*kernel_factory<Restrict_refined>(nd, params.row_size, basis, false))(acc_mesh.refined_faces());
+  // total up differences for each boundary element and write to resolution badness
+  // also restore the flow state to what it was at the start of this function
   Mat<> weights = math::pow_outer(basis.node_weights(), nd - 1);
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
