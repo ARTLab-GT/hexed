@@ -1,5 +1,6 @@
 #include <Element_func.hpp>
 #include <math.hpp>
+#include <iostream>
 
 namespace hexed
 {
@@ -78,9 +79,45 @@ std::vector<double> Elem_nonsmooth::operator()(Element& elem, const Basis& basis
   return result;
 }
 
-std::vector<double> Equiangle_skewness::operator()(Element& elem, const Basis&, double time) const
+std::vector<double> Equiangle_skewness::operator()(Element& elem, const Basis& basis, double time) const
 {
-  return {0.};
+  const int nq = elem.storage_params().n_qpoint();
+  const int nd = elem.storage_params().n_dim;
+  const int nv = elem.storage_params().n_vertices();
+  // fetch Jacobian at quadrature points
+  Mat<dyn, dyn> qpoint_jac(nq, nd*nd);
+  for (int i_dim = 0; i_dim < nd; ++i_dim) {
+    for (int j_dim = 0; j_dim < nd; ++j_dim) {
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        qpoint_jac(i_qpoint, i_dim*nd + j_dim) = elem.jacobian(i_dim, j_dim, i_qpoint);
+      }
+    }
+  }
+  // extrapolate Jacobian to vertices
+  Mat<dyn, dyn> vertex_jac(nv, nd*nd);
+  for (int i_jac = 0; i_jac < nd*nd; ++i_jac) {
+    vertex_jac(all, i_jac) = math::hypercube_matvec(basis.boundary(), qpoint_jac(all, i_jac));
+  }
+  // evaluate skewness at vertices
+  double max = 0.;
+  for (int i_vert = 0; i_vert < nv; ++i_vert) {
+    // fetch vertex jacobian
+    Mat<dyn, dyn> jac(nd, nd);
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      for (int j_dim = 0; j_dim < nd; ++j_dim) {
+        jac(i_dim, j_dim) = vertex_jac(i_vert, i_dim*nd +j_dim);
+      }
+    }
+    // for every combination of dimensions...
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      for (int j_dim = i_dim + 1; j_dim < nd; ++j_dim) {
+        // evaluate equiangle criterion
+        double angle = std::acos(jac(all, i_dim).normalized().dot(jac(all, j_dim).normalized()));
+        max = std::max(max, std::abs(2*angle/M_PI - 1));
+      }
+    }
+  }
+  return {max};
 }
 
 };

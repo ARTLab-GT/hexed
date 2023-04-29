@@ -389,11 +389,11 @@ TEST_CASE("Equiangle_skewness")
   for (int i_face = 0; i_face < 4; ++i_face) elem.faces[i_face] = faces[i_face];
   hexed::Equiangle_skewness skew;
   elem.set_jacobian(basis);
-  REQUIRE(skew(elem, basis, 0.)[0] == Catch::Approx(1.));
+  REQUIRE(skew(elem, basis, 0.)[0] == Catch::Approx(0.).scale(1.));
   elem.vertex(1).pos = {1./std::sqrt(3.), 1., 0.};
   elem.set_jacobian(basis);
   REQUIRE(skew(elem, basis, 0.)[0] == Catch::Approx(1./3.));
   elem.vertex(1).pos = {.5, .5, 0.};
   elem.set_jacobian(basis);
-  REQUIRE(skew(elem, basis, 0.)[0] == Catch::Approx(0.).scale(1.));
+  REQUIRE(skew(elem, basis, 0.)[0] == Catch::Approx(1.));
 }

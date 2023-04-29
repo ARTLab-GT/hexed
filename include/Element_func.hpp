@@ -81,7 +81,7 @@ class Elem_nonsmooth : public Element_func
  * \details tldr 0 is the best and 1 is the worst.
  * Specifically, the equiangle skewness for an element is given by
  * \f[
- *   \max\left(\frac{|\theta - \pi/2|}{\pi/2}\right)
+ *   \max\left|\frac{2\theta}{\pi} - 1\right|
  * \f]
  * for all angles \f$ \theta \f$ between any pair of edges in the element that share a vertex.
  * Thus if all edges meet at perfect right angles, the equiangle skewness is 0,
