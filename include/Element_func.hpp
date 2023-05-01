@@ -77,5 +77,28 @@ class Elem_nonsmooth : public Element_func
 
 };
 
+/*! \brief Computes the equiangle skewness mesh quality metric.
+ * \details tldr 0 is the best and 1 is the worst.
+ * Specifically, the equiangle skewness for an element is given by
+ * \f[
+ *   \max\left|\frac{2\theta}{\pi} - 1\right|
+ * \f]
+ * for all angles \f$ \theta \f$ between any pair of edges in the element that share a vertex.
+ * Thus if all edges meet at perfect right angles, the equiangle skewness is 0,
+ * whereas if there is a pair of adjacent edges that are parallel, it is 1.
+ * As I understand it, the definition above is equivalent to that used by Fluent&reg; and Pointwise&reg;
+ * for quads and hexes.
+ */
+class Equiangle_skewness : public Element_func
+{
+  public:
+  inline int n_var(int n_dim) const override {return 1;}
+  inline std::string variable_name(int n_dim, int i_var) const override {return "equiangle_skewness";}
+  std::vector<double> operator()(Element& elem, const Basis&, double time) const override;
+};
+
+//! Concatenates `Element_func`s
+typedef Concat_func<Element_func, Element&, const Basis&, double> Ef_concat;
+
 }
 #endif
