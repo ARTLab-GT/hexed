@@ -51,7 +51,7 @@ class Vertex
   void calc_relax(double factor = .5); // compute a (but do not apply) new position resulting in a smoother grid.
   void apply_relax(); // update `pos` to the position computed by `calc_relax`.
   //! determine the shared shareable_value of all `Transferable_ptr`s to this by applying `reduction`. Thread safe.
-  double shared_value(reduction = vector_max);
+  double shared_value(reduction = vector_max); // cppcheck-suppress internalAstError
   static void connect(Vertex&, Vertex&); // specify that two vertices are connected by an edge
   static bool are_neighbors(Vertex&, Vertex&);
 

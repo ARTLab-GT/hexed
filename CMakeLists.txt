@@ -18,6 +18,7 @@ endif()
 set(CMAKE_CXX_FLAGS_DEBUG "-g -DDEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
 set(CMAKE_CXX_FLAGS "-Wall")
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # default installation directory is one that we have access to on lab machines
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
@@ -30,6 +31,7 @@ option(sanitize "If ON, compile with sanitizer flags." OFF)
 option(threaded "If ON, allow multiple threads. Substantially reduces execution time." ON)
 option(use_otter "include capability to use otter for plotting" OFF)
 option(use_tecplot "include capability to use tecplot for plotting" ON)
+option(use_cppcheck "use the cppcheck static analysis tool (requires cppcheck)" OFF)
 
 # determine whether to compile with sanitizers
 if (sanitize)
@@ -133,6 +135,12 @@ add_subdirectory(src)
 add_subdirectory(demo)
 if (build_tests)
     add_subdirectory(test)
+endif()
+
+# run cppcheck
+if (use_cppcheck)
+    add_custom_command(OUTPUT cppcheck_output.txt COMMAND cppcheck --project=compile_commands.json --inline-suppr > cppcheck_output.txt DEPENDS hexed)
+    add_custom_target(cppcheck ALL DEPENDS cppcheck_output.txt)
 endif()
 
 # install
