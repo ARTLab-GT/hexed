@@ -390,7 +390,10 @@ void Accessible_mesh::extrude(bool collapse, double offset)
         Vertex& fine_vert = elem.vertex(iv); \
         /* vertex should have exactly one record */ \
         sn[1] = fine_vert.record[1]; \
-        HEXED_ASSERT(fine_vert.record.size() == n_record, format_str(100, "fine vertex has %li != 1 records", fine_vert.record.size()/n_record).c_str()); \
+        HEXED_ASSERT(fine_vert.record.size() == n_record, \
+                     format_str(100, "fine vertex has %li != 1 records (position = [%e, %e, %e])", \
+                                fine_vert.record.size()/n_record, \
+                                fine_vert.pos[0], fine_vert.pos[1], fine_vert.pos[2]).c_str()); \
         stretch_dim = extr_dim > free_dim; \
         fine_vert.record.erase(fine_vert.record.begin(), fine_vert.record.begin() + n_record); \
       } \
