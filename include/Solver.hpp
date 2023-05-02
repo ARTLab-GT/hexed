@@ -195,7 +195,10 @@ class Solver
   void visualize_field_tecplot(std::string name, int n_sample = 20,
                                bool edges = false, bool qpoints = false, bool interior = true);
   /*! write a visualization file describing all surfaces where a particular boundary condition has been enforced.
-   * only does state variables because usually that's what you want and I'm lazy
+   */
+  void visualize_surface_tecplot(int bc_sn, const Boundary_func&, std::string name, int n_sample = 20);
+  /*! if a `Boundary_func` is not specified, all the state variables,
+   * the surface normal, the shear stress, and the heat flux will be output.
    */
   void visualize_surface_tecplot(int bc_sn, std::string name, int n_sample = 20);
   #endif
