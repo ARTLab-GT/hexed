@@ -2,6 +2,7 @@
 #include <math.hpp>
 #include <Row_index.hpp>
 #include <erase_if.hpp>
+#include <utils.hpp>
 
 namespace hexed
 {
@@ -388,6 +389,10 @@ void Accessible_mesh::extrude(bool collapse, double offset)
         Vertex& fine_vert = elem.vertex(iv); \
         /* vertex should have exactly one record */ \
         sn[1] = fine_vert.record[1]; \
+        HEXED_ASSERT(fine_vert.record.size() == n_record, \
+                     format_str(100, "fine vertex has %li != 1 records (position = [%e, %e, %e])", \
+                                fine_vert.record.size()/n_record, \
+                                fine_vert.pos[0], fine_vert.pos[1], fine_vert.pos[2]).c_str()); \
         stretch_dim = extr_dim > free_dim; \
         fine_vert.record.erase(fine_vert.record.begin(), fine_vert.record.begin() + n_record); \
       } \
@@ -419,12 +424,8 @@ void Accessible_mesh::extrude(bool collapse, double offset)
     auto verts = vertices(); // note: need to rebuild vertex vector because face connections above have `eat`en vertices
     VERTEX_LOOP(CONNECT_SAME_CONFORMING)
     for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
-      auto& vert = verts[i_vert];
-      if (!vert.record.empty()) {
-        char buffer [100];
-        snprintf(buffer, 100, "vertex detected with %lu unprocessed connection requests", vert.record.size()/n_record);
-        throw std::runtime_error(buffer);
-      }
+      HEXED_ASSERT(verts[i_vert].record.empty(), format_str(100, "vertex detected with %lu unprocessed connection requests",
+                                                            verts[i_vert].record.size()/n_record).c_str());
     }
   }
   for (auto con_plan : con_plans) {

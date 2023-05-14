@@ -130,6 +130,7 @@ class Element_face_connection : public Element_connection, public Face_connectio
       elements[i_side]->faces[dir.i_face(i_side)] = Face_connection<element_t>::state() + i_side*face_size;
     }
     auto inds = vertex_inds(elements[0]->storage_params().n_dim, dir);
+    // cppcheck-suppress syntaxError
     for (unsigned i_vert = 0; i_vert < inds[0].size(); ++i_vert) {
       elements[0]->vertex(inds[0][i_vert]).eat(elements[1]->vertex(inds[1][i_vert]));
     }

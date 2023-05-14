@@ -145,6 +145,7 @@ template <int n_dim>
 Eigen::Matrix<double, n_dim, n_dim> orthonormal (Eigen::Matrix<double, n_dim, n_dim> basis, int i_dim)
 {
   static_assert (n_dim <= 3, "Not implemented for n_dim > 3.");
+  static_assert (n_dim > 0, "dimensionality must be positive");
   if constexpr (n_dim == 1)
   {
     return basis/std::abs(basis(0, 0));
@@ -153,8 +154,7 @@ Eigen::Matrix<double, n_dim, n_dim> orthonormal (Eigen::Matrix<double, n_dim, n_
   {
     auto col_i = basis.col(i_dim);
     std::array<int, n_dim - 1> j_col;
-    for (int offset = 1; offset < n_dim; ++offset)
-    {
+    for (int offset = 1; offset < n_dim; ++offset) {
       j_col[offset - 1] = (offset + i_dim)%n_dim;
     }
     auto cols {basis(Eigen::all, j_col)}; // all the cols except for `i_dim`th

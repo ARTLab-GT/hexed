@@ -1032,9 +1032,10 @@ void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::s
   for (int i_vis = 0; i_vis < n_vis; ++i_vis) var_names.push_back(output_variables.variable_name(n_dim, i_vis));
   Tecplot_file file {name, n_dim, var_names, status.flow_time};
 
-  for (int i_elem = 0; i_elem < acc_mesh.elements().size(); ++i_elem)
+  auto& elems = acc_mesh.elements();
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem)
   {
-    Element& elem {acc_mesh.elements()[i_elem]};
+    Element& elem {elems[i_elem]};
     Vis_data vis_pos(elem, hexed::Position_func(), basis, status.flow_time);
     Vis_data vis_out(elem, output_variables, basis, status.flow_time);
     // note: each visualization stage is enclosed in `{}` to ensure that only one `Tecplot_file::Zone` is alive at a time
@@ -1077,20 +1078,12 @@ void Solver::visualize_field_tecplot(std::string name, int n_sample, bool edges,
   visualize_field_tecplot(Qf_concat(funcs), name, n_sample, edges, qpoints, interior);
 }
 
-void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample)
+void Solver::visualize_surface_tecplot(int bc_sn, const Boundary_func& func, std::string name, int n_sample)
 {
   if (params.n_dim == 1) throw std::runtime_error("cannot visualize surfaces in 1D");
   // convenience definitions
   const int nfq = params.n_qpoint()/params.row_size;
   const int nd = params.n_dim;
-  State_variables sv;
-  Outward_normal on;
-  Viscous_stress vs;
-  Heat_flux hf;
-  std::vector<const Boundary_func*> funcs {&sv, &on};
-  if (visc.is_viscous) funcs.push_back(&vs);
-  if (therm_cond.is_viscous) funcs.push_back(&hf);
-  Bf_concat func(funcs);
   const int nv = func.n_var(nd);
   const int n_block {math::pow(n_sample, nd - 1)};
   // setup
@@ -1136,6 +1129,18 @@ void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample
       zone.write(interp_pos.data(), interp_vars.data());
     }
   }
+}
+
+void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample)
+{
+  State_variables sv;
+  Outward_normal on;
+  Viscous_stress vs;
+  Heat_flux hf;
+  std::vector<const Boundary_func*> funcs {&sv, &on};
+  if (visc.is_viscous) funcs.push_back(&vs);
+  if (therm_cond.is_viscous) funcs.push_back(&hf);
+  visualize_surface_tecplot(bc_sn, Bf_concat(funcs), name, n_sample);
 }
 #endif
 
