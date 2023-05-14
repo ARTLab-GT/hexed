@@ -3,7 +3,6 @@
 #include <Row_index.hpp>
 #include <erase_if.hpp>
 #include <utils.hpp>
-#include <iostream> //FIXME
 
 namespace hexed
 {
