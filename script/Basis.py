@@ -133,7 +133,7 @@ class Basis:
         result = self.weights[i_operand]/2*self.prolong(i_operand, i_result, i_half, True)/self.weights[i_result]
         return sp.Float(result, self.repr_digits)
 
-    def time_coefs(self, n_elem = 4):
+    def time_coefs(self, n_elem = 8):
         r"""! \brief Compute coefficients for optimized 2-stage time integration scheme.
         \param n_elem number of elements to use
         \details Based on numerical eigenvalue calculations for the linear advection and diffusion equations
@@ -188,7 +188,7 @@ class Basis:
                 eigvals, eigvecs = np.linalg.eig(time_scheme(dt, mat))
                 return np.max(np.abs(eigvals)) - 1.
             return np.exp(fsolve(error, -np.log(self.row_size))[0])
-        if False:
+        if True:
             def euler(dt, mat):
                 return ident + dt*mat
             def rk(dt, step_weights, mat):
@@ -198,7 +198,6 @@ class Basis:
                 return step_mat
             def ssp_rk3(dt, mat):
                 return rk(dt, [1., 1./4., 2./3.], mat)
-            print(self.row_size, max_cfl(diffusion, ssp_rk3))
         def compute_coefs(mat):
             def objective(coefs):
                 p = polynomial(coefs)
@@ -209,4 +208,6 @@ class Basis:
                 cancel = opt.x[0]
                 cfl = -objective(opt.x)*.95
             return cfl, cancel
-        return compute_coefs(advection), compute_coefs(diffusion)
+        coefs = (compute_coefs(advection), compute_coefs(diffusion))
+        print(f"        {self.row_size - 1} & {coefs[0][0]:.4f} & {coefs[0][1]:.5f} & {coefs[1][0]:.4f} & {coefs[1][1]:.5f} & {max_cfl(advection, ssp_rk3):.5f} & {max_cfl(diffusion, ssp_rk3):.5f} \\\\")
+        return coefs
