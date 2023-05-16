@@ -147,7 +147,7 @@ class Navier_stokes
       double mass = state(n_dim);
       auto veloc = state(Eigen::seqN(0, n_dim))/mass;
       double sqrt_temp = std::sqrt(std::max(state(n_dim + 1)/mass - .5*veloc.squaredNorm(), 0.)*(heat_rat - 1)/specific_gas_air);
-      return std::max(av_coef + dyn_visc.coefficient(sqrt_temp), therm_cond.coefficient(sqrt_temp)*(heat_rat - 1)/specific_gas_air)/mass;
+      return std::max(av_coef + dyn_visc.coefficient(sqrt_temp)/mass, therm_cond.coefficient(sqrt_temp)*(heat_rat - 1)/specific_gas_air/mass);
     }
 
     /*!
