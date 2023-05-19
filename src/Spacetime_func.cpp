@@ -166,7 +166,6 @@ class Ringleb_calc
 {
   public:
   std::vector<double> pos;
-  std::vector<double> actual_pos;
   double heat_rat;
   double speed;
   double stream;
@@ -174,9 +173,7 @@ class Ringleb_calc
   double mass;
   std::vector<double> veloc;
   double pres;
-  Ringleb_calc(std::vector<double> position, double heat_ratio)
-  : pos{position}, actual_pos(2), heat_rat{heat_ratio}
-  {}
+  Ringleb_calc(std::vector<double> position, double heat_ratio) : pos{position}, heat_rat{heat_ratio} {}
   double error(std::vector<double> speed_stream)
   {
     speed = speed_stream[0];
@@ -184,11 +181,11 @@ class Ringleb_calc
     sound = std::sqrt(std::abs(1 - (heat_rat - 1)/2*speed*speed));
     mass = std::pow(sound, 2/(heat_rat - 1));
     double J = 1/sound + 1/(3*math::pow(sound, 3)) + 1/(5*math::pow(sound, 5)) - .5*std::log((1 + sound)/std::abs(1 - sound));
-    actual_pos[0] = .5/mass*(1/speed/speed - 2*stream*stream) + .5*J;
-    actual_pos[1] = stream/mass/speed*std::sqrt(std::abs(1 - speed*speed*stream*stream));
+    double err = math::pow(.5/mass*(1/speed/speed - 2*stream*stream) + .5*J - pos[0], 2)
+                 + math::pow(stream/mass/speed*std::sqrt(std::abs(1 - speed*speed*stream*stream)) - (pos[1]), 2);
     veloc = {std::copysign(speed*std::sqrt(std::abs(1 - speed*speed*stream*stream)), pos[1]), speed*speed*stream};
     pres = mass*sound*sound/heat_rat;
-    return math::pow(actual_pos[0] - pos[0], 2) + math::pow(actual_pos[1] - pos[1], 2);
+    return err;
   }
 };
 
@@ -200,32 +197,6 @@ double objective(const std::vector<double>& arg, std::vector<double>&, void* dat
 std::vector<double> Ringleb::operator()(std::vector<double> pos, double time) const
 {
   Ringleb_calc calc(pos, heat_rat);
-  double stream = 1.2;
-  double speed = .5;
-  auto err_speed = [&calc, &stream](double s){/*printf("  %e", s);*/ calc.error({s, stream}); return calc.actual_pos[1] - std::abs(calc.pos[1]);};
-  //auto err_stream = [&calc, &speed](double s){calc.error({speed, s} ); return calc.actual_pos[0] - calc.pos[0];};
-  printf("\n");
-  auto err_stream = [&](double s){
-    stream = s;
-    printf("status: ");
-    speed = math::bisection(err_speed, {.05, 10/(1 + std::abs(calc.pos[1])) + 2*stream}, 1e-5);
-    calc.error({speed, stream});
-    printf("%e %e %e %e\n", speed, stream, calc.actual_pos[0], calc.actual_pos[1]);
-    return calc.actual_pos[0] - calc.pos[0];
-  };
-  #if 0
-  for (int i = 0; i < 2; ++i) {
-    speed = math::bisection(err_speed, {.01, 30.}, 1e-5);
-    calc.error({speed, stream});
-    printf("%e %e\n", speed, stream);
-    stream = math::bisection(err_stream, {.1, 30.}, 1e-5);
-    calc.error({speed, stream});
-    printf("%e %e\n", speed, stream);
-  }
-  #endif
-  stream = math::bisection(err_stream, {.7, 2.2}, 1e-5);
-  calc.error({speed, stream});
-  #if 0
   #if 0
   nlopt::opt opt(nlopt::GN_DIRECT, 2);
   opt.set_lower_bounds(std::vector<double>{0., 0.});
@@ -244,7 +215,6 @@ std::vector<double> Ringleb::operator()(std::vector<double> pos, double time) co
   HEXED_ASSERT(err < 1e-3 && (result == nlopt::FTOL_REACHED || result == nlopt::XTOL_REACHED),
                format_str(300, "root finder failed with result %i and error %e for pos = {%e, %e}", result, err, pos[0], pos[1]),
                assert::Numerical_exception);
-  #endif
   #endif
   std::vector<double> state(pos.size() + 2, 0.);
   state[0] = calc.mass*calc.veloc[0];

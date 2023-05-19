@@ -398,7 +398,6 @@ TEST_CASE("Equiangle_skewness")
   REQUIRE(skew(elem, basis, 0.)[0] == Catch::Approx(1.));
 }
 
-#if HEXED_USE_NLOPT
 TEST_CASE("Ringleb")
 {
   hexed::Ringleb ringleb;
@@ -406,4 +405,3 @@ TEST_CASE("Ringleb")
   auto state = ringleb(pos, 0.);
   REQUIRE(std::sqrt(state[0]*state[0] + state[1]*state[1])/state[2] == Catch::Approx(.2));
 };
-#endif
