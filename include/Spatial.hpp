@@ -557,10 +557,10 @@ class Spatial
           double scale = 0;
           if constexpr (Pde::has_convection) scale += eq.char_speed(qpoint_state)/max_cfl_c/spacing;
           if constexpr (Pde::is_viscous) scale += eq.diffusivity(qpoint_state, art_visc[i_qpoint])/max_cfl_d/spacing/spacing;
-          if (is_local) tss[i_qpoint] = 1./n_dim/scale;
+          if (is_local) tss[i_qpoint] = 1./scale;
           else {
             tss[i_qpoint] = 1.;
-            dt = std::min(dt, 1./n_dim/scale);
+            dt = std::min(dt, 1./scale);
           }
         }
       }

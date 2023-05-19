@@ -132,7 +132,7 @@ void Deformed_element::set_jacobian(const Basis& basis)
       }
       norm_sum += std::sqrt(norm_sq);
     }
-    vertex_time_step_scale(i_vert) = nominal_size()*n_dim*vertex_det(i_vert)/norm_sum; // for deformed elements this is a essentially a measure of the amount of stretching in each dimension
+    vertex_time_step_scale(i_vert) = nominal_size()*vertex_det(i_vert)/norm_sum; // for deformed elements this is a essentially a measure of the amount of stretching in each dimension
   }
 }
 
