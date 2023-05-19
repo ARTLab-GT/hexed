@@ -1,5 +1,8 @@
 #include <cmath>
 #include <Spacetime_func.hpp>
+#if HEXED_USE_NLOPT
+#include <nlopt.hpp>
+#endif
 
 namespace hexed
 {
@@ -156,5 +159,47 @@ std::vector<double> Annular_diffusion_test::operator()(std::vector<double> pos, 
   state[pos.size()] = val_scale*std::log(std::sqrt(radius_sq)/rad_scale);
   return state;
 }
+
+#if HEXED_USE_NLOPT
+class Ringleb_calc
+{
+  public:
+  std::vector<double> pos;
+  double heat_rat;
+  double speed;
+  double stream;
+  double sound;
+  double mass;
+  Ringleb_calc(std::vector<double> position, double heat_ratio) : pos{position}, heat_rat{heat_ratio} {}
+  double error(std::vector<double> speed_stream)
+  {
+    speed = speed_stream[0];
+    stream = speed_stream[1];
+    sound = std::sqrt(std::abs(1 - (heat_rat - 1)/2*speed*speed));
+    mass = std::pow(sound, 2/(heat_rat - 1));
+    double J = 1/sound + 1/(3*math::pow(sound, 3)) + 1/(5*math::pow(sound, 5)) - .5*std::log((1 + sound)/std::abs(1 - sound));
+    double err = math::pow(.5/mass*(1/speed/speed - 2*stream*stream) + .5*J - pos[0], 2)
+                 + math::pow(stream/mass/speed*std::sqrt(std::abs(1 - speed*speed*stream*stream)) - pos[0], 2);
+    return err;
+  }
+};
+
+double objective(const std::vector<double>& arg, std::vector<double>&, void* data)
+{
+  return (*reinterpret_cast<Ringleb_calc*>(data)).error(arg);
+}
+
+std::vector<double> Ringleb::operator()(std::vector<double> pos, double time) const
+{
+  Ringleb_calc calc(pos, heat_rat);
+  nlopt::opt opt(nlopt::LN_SBPLX, 2);
+  opt.set_min_objective(&objective, &calc);
+  opt.set_ftol_abs(tol);
+  std::vector<double> speed_stream {0., 1.};
+  double err = 0;
+  auto result = opt.optimize(speed_stream, err);
+  return speed_stream;
+}
+#endif
 
 }
