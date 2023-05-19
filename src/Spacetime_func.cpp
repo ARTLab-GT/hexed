@@ -3,6 +3,7 @@
 #include <utils.hpp>
 #if HEXED_USE_NLOPT
 #include <nlopt.hpp>
+#include <iostream>
 #endif
 
 namespace hexed
@@ -181,14 +182,14 @@ class Ringleb_calc
   {
     speed = speed_stream[0];
     stream = speed_stream[1];
-    sound = std::sqrt(std::abs(1 - (heat_rat - 1)/2*speed*speed));
+    sound = std::sqrt((1 - (heat_rat - 1)/2*speed*speed));
     mass = std::pow(sound, 2/(heat_rat - 1));
-    double J = 1/sound + 1/(3*math::pow(sound, 3)) + 1/(5*math::pow(sound, 5)) - .5*std::log((1 + sound)/std::abs(1 - sound));
+    double J = 1/sound + 1/(3*math::pow(sound, 3)) + 1/(5*math::pow(sound, 5)) - .5*std::log((1 + sound)/(1 - sound));
     actual_pos[0] = .5/mass*(1/speed/speed - 2*stream*stream) + .5*J;
-    actual_pos[1] = stream/mass/speed*std::sqrt(std::abs(1 - speed*speed*stream*stream));
-    veloc = {std::copysign(speed*std::sqrt(std::abs(1 - speed*speed*stream*stream)), pos[1]), speed*speed*stream};
+    actual_pos[1] = stream/mass/speed*std::sqrt((1 - speed*speed*stream*stream));
+    veloc = {std::copysign(speed*std::sqrt((1 - speed*speed*stream*stream)), pos[1]), speed*speed*stream};
     pres = mass*sound*sound/heat_rat;
-    return math::pow(actual_pos[0] - pos[0], 2) + math::pow(actual_pos[1] - pos[1], 2);
+    return math::pow(actual_pos[0] - pos[0], 2) + math::pow(actual_pos[1] - std::abs(pos[1]), 2);
   }
 };
 
@@ -200,52 +201,45 @@ double objective(const std::vector<double>& arg, std::vector<double>&, void* dat
 std::vector<double> Ringleb::operator()(std::vector<double> pos, double time) const
 {
   Ringleb_calc calc(pos, heat_rat);
-  double stream = 1.2;
-  double speed = .5;
-  auto err_speed = [&calc, &stream](double s){/*printf("  %e", s);*/ calc.error({s, stream}); return calc.actual_pos[1] - std::abs(calc.pos[1]);};
-  //auto err_stream = [&calc, &speed](double s){calc.error({speed, s} ); return calc.actual_pos[0] - calc.pos[0];};
-  printf("\n");
-  auto err_stream = [&](double s){
-    stream = s;
-    printf("status: ");
-    speed = math::bisection(err_speed, {.05, 10/(1 + std::abs(calc.pos[1])) + 2*stream}, 1e-5);
-    calc.error({speed, stream});
-    printf("%e %e %e %e\n", speed, stream, calc.actual_pos[0], calc.actual_pos[1]);
-    return calc.actual_pos[0] - calc.pos[0];
-  };
-  #if 0
-  for (int i = 0; i < 2; ++i) {
-    speed = math::bisection(err_speed, {.01, 30.}, 1e-5);
-    calc.error({speed, stream});
-    printf("%e %e\n", speed, stream);
-    stream = math::bisection(err_stream, {.1, 30.}, 1e-5);
-    calc.error({speed, stream});
-    printf("%e %e\n", speed, stream);
+  const int poly_deg = 4;
+  const int poly_n = (poly_deg + 1)*(poly_deg + 2)/2;
+  Mat<dyn, dyn> poly_coefs(poly_n, 2);
+  poly_coefs <<
+     1.31972032e+00, -7.41497269e-02,
+    -6.31762062e-01,  4.93893040e-01,
+     5.22637880e-03, -2.44959325e-03,
+     1.43409381e-01, -9.53205176e-02,
+    -5.19304211e-03,  2.47006404e-03,
+     8.22562318e-03,  2.47245699e-01,
+    -1.40843150e-02,  7.68356590e-03,
+     1.25196569e-03, -6.07046984e-04,
+     3.89854472e-03,  3.74116413e-05,
+    -4.71530682e-04,  1.45899944e-04,
+     4.92101048e-04, -2.34587514e-04,
+    -8.70059516e-05,  4.20546846e-05,
+    -3.25664462e-04,  1.28058971e-02,
+     2.78038021e-04, -9.06043364e-05,
+    -1.14420559e-03, -2.01172903e-02;
+  Mat<> poly_vals(poly_n);
+  double coords [] {std::sqrt(pos[0]*pos[0] + pos[1]*pos[1]), std::atan2(pos[1], pos[0])};
+  for (int deg = 0; deg < poly_deg + 1; ++deg) {
+    for (int term = 0; term < deg + 1; ++term) {
+      poly_vals(deg*(deg + 1)/2 + term) = math::pow(coords[0], deg - term)*math::pow(coords[1], term);
+    }
   }
-  #endif
-  stream = math::bisection(err_stream, {.7, 2.2}, 1e-5);
-  calc.error({speed, stream});
-  #if 0
-  #if 0
-  nlopt::opt opt(nlopt::GN_DIRECT, 2);
-  opt.set_lower_bounds(std::vector<double>{0., 0.});
-  opt.set_upper_bounds(std::vector<double>{2., 4.});
-  opt.set_xtol_abs(1e-3);
-  opt.set_maxeval(10000);
-  #else
-  nlopt::opt opt(nlopt::LN_COBYLA, 2);
-  opt.set_xtol_abs(1e-8);
-  #endif
-  opt.set_min_objective(&objective, &calc);
-  std::vector<double> speed_stream {.8, 1.2};
-  double err = 0;
-  auto result = opt.optimize(speed_stream, err);
-  #if 0
-  HEXED_ASSERT(err < 1e-3 && (result == nlopt::FTOL_REACHED || result == nlopt::XTOL_REACHED),
-               format_str(300, "root finder failed with result %i and error %e for pos = {%e, %e}", result, err, pos[0], pos[1]),
-               assert::Numerical_exception);
-  #endif
-  #endif
+  Mat<> guess = poly_coefs.transpose()*poly_vals;
+
+  #pragma omp critical
+  {
+    nlopt::opt opt(nlopt::LN_SBPLX, 2);
+    opt.set_xtol_abs(1e-12);
+    opt.set_maxeval(1e5);
+    opt.set_min_objective(&objective, &calc);
+    std::vector<double> speed_stream {guess[0], guess[1]};
+    double err = 0;
+    auto result = opt.optimize(speed_stream, err);
+    if (!(err < 1e-3 && (result == nlopt::FTOL_REACHED || result == nlopt::XTOL_REACHED))) std::cerr << format_str(300, "WARNING: root finder failed with result %i and error %e for pos = {%e, %e} in hexed::Ringleb::operator()", result, err, pos[0], pos[1]) << std::endl;
+  }
   std::vector<double> state(pos.size() + 2, 0.);
   state[0] = calc.mass*calc.veloc[0];
   state[1] = calc.mass*calc.veloc[1];
