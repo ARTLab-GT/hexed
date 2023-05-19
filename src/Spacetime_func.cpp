@@ -1,5 +1,6 @@
 #include <cmath>
 #include <Spacetime_func.hpp>
+#include <utils.hpp>
 #if HEXED_USE_NLOPT
 #include <nlopt.hpp>
 #endif
@@ -170,6 +171,8 @@ class Ringleb_calc
   double stream;
   double sound;
   double mass;
+  std::vector<double> veloc;
+  double pres;
   Ringleb_calc(std::vector<double> position, double heat_ratio) : pos{position}, heat_rat{heat_ratio} {}
   double error(std::vector<double> speed_stream)
   {
@@ -179,8 +182,9 @@ class Ringleb_calc
     mass = std::pow(sound, 2/(heat_rat - 1));
     double J = 1/sound + 1/(3*math::pow(sound, 3)) + 1/(5*math::pow(sound, 5)) - .5*std::log((1 + sound)/std::abs(1 - sound));
     double err = math::pow(.5/mass*(1/speed/speed - 2*stream*stream) + .5*J - pos[0], 2)
-                 + math::pow(stream/mass/speed*std::sqrt(std::abs(1 - speed*speed*stream*stream)) - std::abs(pos[1]), 2);
-    printf("%e %e %e\n", speed, stream, err);
+                 + math::pow(stream/mass/speed*std::sqrt(std::abs(1 - speed*speed*stream*stream)) - (pos[1]), 2);
+    veloc = {std::copysign(speed*std::sqrt(std::abs(1 - speed*speed*stream*stream)), pos[1]), speed*speed*stream};
+    pres = mass*sound*sound/heat_rat;
     return err;
   }
 };
@@ -193,13 +197,31 @@ double objective(const std::vector<double>& arg, std::vector<double>&, void* dat
 std::vector<double> Ringleb::operator()(std::vector<double> pos, double time) const
 {
   Ringleb_calc calc(pos, heat_rat);
-  nlopt::opt opt(nlopt::LN_SBPLX, 2);
+  #if 0
+  nlopt::opt opt(nlopt::GN_DIRECT, 2);
+  opt.set_lower_bounds(std::vector<double>{0., 0.});
+  opt.set_upper_bounds(std::vector<double>{2., 4.});
+  opt.set_xtol_abs(1e-3);
+  opt.set_maxeval(10000);
+  #else
+  nlopt::opt opt(nlopt::LN_COBYLA, 2);
+  opt.set_xtol_abs(1e-8);
+  #endif
   opt.set_min_objective(&objective, &calc);
-  opt.set_ftol_abs(tol);
-  std::vector<double> speed_stream {.2, 0.99599197};
+  std::vector<double> speed_stream {.8, 1.2};
   double err = 0;
   auto result = opt.optimize(speed_stream, err);
-  return speed_stream;
+  #if 0
+  HEXED_ASSERT(err < 1e-3 && (result == nlopt::FTOL_REACHED || result == nlopt::XTOL_REACHED),
+               format_str(300, "root finder failed with result %i and error %e for pos = {%e, %e}", result, err, pos[0], pos[1]),
+               assert::Numerical_exception);
+  #endif
+  std::vector<double> state(pos.size() + 2, 0.);
+  state[0] = calc.mass*calc.veloc[0];
+  state[1] = calc.mass*calc.veloc[1];
+  state[pos.size()] = calc.mass;
+  state[pos.size() + 1] = calc.pres/(heat_rat - 1.) + .5*calc.mass*calc.speed*calc.speed;
+  return state;
 }
 #endif
 
