@@ -4,6 +4,7 @@
 #include <cmath>
 #include <Eigen/Dense>
 #include "assert.hpp"
+#include "utils.hpp"
 
 namespace hexed
 {
@@ -87,7 +88,7 @@ double bisection(Func_type func, std::array<double, 2> bounds, double atol=1e-10
 {
   double midpoint;
   std::array<double, 2> func_bounds {func(bounds[0]), func(bounds[1])};
-  HEXED_ASSERT(!(func_bounds[0]*func_bounds[1] > 0), "bounds must bracket a root");
+  HEXED_ASSERT(!(func_bounds[0]*func_bounds[1] > 0), format_str(300, "bounds do not bracket a root (f = {%e, %e})", func_bounds[0], func_bounds[1]));
   HEXED_ASSERT(!(std::isnan(func_bounds[0]) && std::isnan(func_bounds[1])),
                "`func` evaluates to NaN at bouth bounds");
   do {
