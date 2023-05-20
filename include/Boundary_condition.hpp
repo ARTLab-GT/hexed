@@ -111,6 +111,18 @@ class Function_bc : public Flow_bc
 };
 
 /*!
+ * Sets boundary state to whatever is in the `Boundary_face::state_cache`.
+ * Of course, that means you have to set the state cache first.
+ * @todo implement some automatic way to make sure that gets set.
+ */
+class Cache_bc : public Flow_bc
+{
+  public:
+  virtual void apply_state(Boundary_face&);
+  virtual void apply_flux(Boundary_face&);
+};
+
+/*!
  * Copies the inside state and flips the sign of the surface-normal velocity.
  * Good for inviscid walls and symmetry planes.
  */

@@ -129,6 +129,7 @@ class Solver
   void calc_jacobian();
   //! set the flow state
   void initialize(const Spacetime_func&);
+  void set_boundary_cache(const Surface_func&); //!< see `Cache_bc`
   void set_art_visc_off(); //!< turns off artificial viscosity
   void set_art_visc_constant(double); //!< turns on artificial viscosity and initializes coefficient to a uniform value
   void set_art_visc_row_size(int); //!< modify the polynomial order of smoothness-based artificial viscosity (must be <= row size of discretization (which is the default))

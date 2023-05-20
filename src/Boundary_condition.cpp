@@ -258,15 +258,21 @@ void Function_bc::apply_state(Boundary_face& bf)
   }
 }
 
-void Function_bc::apply_flux(Boundary_face& bf)
+void Cache_bc::apply_state(Boundary_face& bf)
 {
-  copy_state(bf);
+  double* in_f = bf.inside_face();
+  double* gh_f = bf.ghost_face();
+  double* sc = bf.state_cache();
+  int n_face_dof = bf.storage_params().n_dof()/bf.storage_params().row_size;
+  for (int i_dof = 0; i_dof < n_face_dof; ++i_dof) {
+    gh_f[i_dof] = sc[i_dof];
+    gh_f[i_dof + 2*n_face_dof] = in_f[i_dof + 2*n_face_dof];
+  }
 }
 
-void Freestream::apply_flux(Boundary_face& bf)
-{
-  copy_state(bf);
-}
+void Function_bc::apply_flux(Boundary_face& bf) {copy_state(bf);}
+void Freestream::apply_flux(Boundary_face& bf) {copy_state(bf);}
+void Cache_bc::apply_flux(Boundary_face& bf) {copy_state(bf);}
 
 void reflect_normal(double* gh_f, double* nrml, int nq, int nd)
 {
