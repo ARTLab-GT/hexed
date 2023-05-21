@@ -124,5 +124,15 @@ class Mach : public Domain_func
                                  std::vector<double> state) const override;
 };
 
+/*! \brief for computing error of Ringleb flow
+ * \details For a given state vector,
+ * computes what the physical position _should_ be for an exact solution to Ringleb flow.
+ * The difference between this and the actual position can be used as an error metric for a numerical solution to Ringleb flow.
+ * \see Ringleb
+ */
+class Ringleb_pos
+{
+};
+
 }
 #endif

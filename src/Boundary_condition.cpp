@@ -270,6 +270,35 @@ void Cache_bc::apply_state(Boundary_face& bf)
   }
 }
 
+void Cache_bc::init_cache(Boundary_face& bf)
+{
+  auto params = bf.storage_params();
+  const int nq = params.n_qpoint()/params.row_size;
+  const int nd = params.n_dim;
+  const int nv = params.n_var;
+  double* cache = bf.state_cache();
+  double* in_f = bf.inside_face();
+  double* nrml = bf.surface_normal();
+  double* pos = bf.surface_position();
+  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+    // fetch shared/inside face data
+    std::vector<double> n(nd);
+    std::vector<double> p(nd);
+    std::vector<double> s(nv);
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      n[i_dim] = nrml[i_dim*nq + i_qpoint];
+      p[i_dim] =  pos[i_dim*nq + i_qpoint];
+    }
+    for (int i_var = 0; i_var < nv; ++i_var) s[i_var] = in_f[i_var*nq + i_qpoint];
+    // apply function
+    auto state = (*func)(p, 0, s, n);
+    // write result to ghost face
+    for (int i_var = 0; i_var < nv; ++i_var) {
+      cache[i_var*nq + i_qpoint] = state[i_var];
+    }
+  }
+}
+
 void Function_bc::apply_flux(Boundary_face& bf) {copy_state(bf);}
 void Freestream::apply_flux(Boundary_face& bf) {copy_state(bf);}
 void Cache_bc::apply_flux(Boundary_face& bf) {copy_state(bf);}

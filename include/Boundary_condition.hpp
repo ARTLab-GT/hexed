@@ -26,6 +26,8 @@ class Flow_bc
   virtual void apply_advection(Boundary_face&);
   virtual void apply_diffusion(Boundary_face&);
   virtual void flux_diffusion(Boundary_face&);
+  //! initialize `Boundary_face::state_cache` at beginning of simulation (used by `Cache_bc`)
+  virtual inline void init_cache(Boundary_face&) {}
   virtual ~Flow_bc() = default;
 };
 
@@ -92,8 +94,8 @@ class Pressure_outflow : public Flow_bc
   double pres_spec;
   public:
   inline Pressure_outflow(double pressure) : pres_spec{pressure} {}
-  virtual void apply_state(Boundary_face&);
-  virtual void apply_flux(Boundary_face&);
+  void apply_state(Boundary_face&) override;
+  void apply_flux(Boundary_face&) override;
 };
 
 /*!
@@ -106,20 +108,24 @@ class Function_bc : public Flow_bc
   public:
   Function_bc(const Surface_func&);
   Function_bc(Surface_func&&) = delete;
-  virtual void apply_state(Boundary_face&);
-  virtual void apply_flux(Boundary_face&);
+  void apply_state(Boundary_face&) override;
+  void apply_flux(Boundary_face&) override;
 };
 
 /*!
- * Sets boundary state to whatever is in the `Boundary_face::state_cache`.
- * Of course, that means you have to set the state cache first.
- * @todo implement some automatic way to make sure that gets set.
+ * Like `Function_bc`, but instead of evaluating the `Surface_func` at every time integration stage,
+ * it evaluates it once when the flow is initialized and then stores it in the `Boundary_face::state_cache`.
+ * Of course, this means that any time-dependence will be ignored.
  */
 class Cache_bc : public Flow_bc
 {
+  std::unique_ptr<Surface_func> func;
   public:
-  virtual void apply_state(Boundary_face&);
-  virtual void apply_flux(Boundary_face&);
+  //! takes ownership of `f`
+  inline Cache_bc(Surface_func* f) : func{f} {}
+  void apply_state(Boundary_face&) override;
+  void apply_flux(Boundary_face&) override;
+  void init_cache(Boundary_face&) override;
 };
 
 /*!
@@ -129,9 +135,9 @@ class Cache_bc : public Flow_bc
 class Nonpenetration : public Flow_bc
 {
   public:
-  virtual void apply_state(Boundary_face&);
-  virtual void apply_flux(Boundary_face&);
-  virtual void apply_advection(Boundary_face&);
+  void apply_state(Boundary_face&) override;
+  void apply_flux(Boundary_face&) override;
+  void apply_advection(Boundary_face&) override;
 };
 
 /*! \brief No-slip wall boundary condition.

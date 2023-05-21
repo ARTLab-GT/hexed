@@ -335,32 +335,11 @@ void Solver::initialize(const Spacetime_func& func)
   }
   (*write_face)(elements);
   (*kernel_factory<Prolong_refined>(params.n_dim, params.row_size, basis))(acc_mesh.refined_faces());
-}
-
-void Solver::set_boundary_cache(const Surface_func& func)
-{
   auto& bc_cons {acc_mesh.boundary_connections()};
-  const int nfq = params.n_qpoint()/params.row_size;
-  const int nv = params.n_var;
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    auto& con = bc_cons[i_con];
-    double* state = con.inside_face();
-    double* normal = con.surface_normal();
-    double* pos = con.surface_position();
-    double* cache = con.state_cache();
-    for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-      std::vector<double> s(nv);
-      for (int i_var = 0; i_var < nv; ++i_var) s[i_var] = state[i_var*nfq + i_qpoint];
-      std::vector<double> p(params.n_dim);
-      std::vector<double> n(params.n_dim);
-      for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-        p[i_dim] = pos[i_dim*nfq + i_qpoint];
-        n[i_dim] = normal[i_dim*nfq + i_qpoint];
-      }
-      auto c = func(p, status.flow_time, s, n);
-      for (int i_var = 0; i_var < nv; ++i_var) cache[i_var*nfq + i_qpoint] = c[i_var];
-    }
+    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+    acc_mesh.boundary_condition(bc_sn).flow_bc->init_cache(bc_cons[i_con]);
   }
 }
 
