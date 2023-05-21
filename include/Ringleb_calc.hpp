@@ -22,16 +22,18 @@ class Ringleb_calc
   {}
   double error(std::vector<double> speed_stream)
   {
+    bool fixed = false;
+    auto fix = [&fixed](double x){if (x < 1e-30) {fixed = true; return 1e-30;} else return x;};
     speed = speed_stream[0];
     stream = speed_stream[1];
-    sound = std::sqrt((1 - (heat_rat - 1)/2*speed*speed));
+    sound = std::sqrt(fix(1 - (heat_rat - 1)/2*speed*speed));
     mass = std::pow(sound, 2/(heat_rat - 1));
-    double J = 1/sound + 1/(3*math::pow(sound, 3)) + 1/(5*math::pow(sound, 5)) - .5*std::log((1 + sound)/(1 - sound));
+    double J = 1/sound + 1/(3*math::pow(sound, 3)) + 1/(5*math::pow(sound, 5)) - .5*std::log((1 + sound)/fix(1 - sound));
     computed_pos[0] = .5/mass*(1/speed/speed - 2*stream*stream) + .5*J;
-    computed_pos[1] = stream/mass/speed*std::sqrt((1 - speed*speed*stream*stream));
-    veloc = {std::copysign(speed*std::sqrt((1 - speed*speed*stream*stream)), correct_pos[1]), speed*speed*stream};
+    computed_pos[1] = stream/mass/speed*std::sqrt(fix(1 - speed*speed*stream*stream));
+    veloc = {std::copysign(speed*std::sqrt(std::max(1 - speed*speed*stream*stream, 0.)), correct_pos[1]), speed*speed*stream};
     pres = mass*sound*sound/heat_rat;
-    return math::pow(computed_pos[0] - correct_pos[0], 2) + math::pow(computed_pos[1] - std::abs(correct_pos[1]), 2);
+    return math::pow(computed_pos[0] - correct_pos[0], 2) + math::pow(computed_pos[1] - std::abs(correct_pos[1]), 2) + 100*fixed;
   }
 };
 

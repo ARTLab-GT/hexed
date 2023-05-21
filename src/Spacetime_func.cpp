@@ -169,22 +169,78 @@ double objective(const std::vector<double>& arg, std::vector<double>&, void* dat
   return (*reinterpret_cast<Ringleb_calc*>(data)).error(arg);
 }
 
+#if 0
 Ringleb::Ringleb(double tolerance, double speed_guess, double stream_guess, double heat_ratio)
 : tol{tolerance}, guess{speed_guess, stream_guess}, heat_rat{heat_ratio}
 {}
+#endif
 
 std::vector<double> Ringleb::operator()(std::vector<double> pos, double time) const
 {
   Ringleb_calc calc(pos, heat_rat);
+  #pragma omp critical
+  {
   nlopt::opt opt(nlopt::LN_SBPLX, 2);
   opt.set_xtol_abs(tol);
   opt.set_maxeval(1e6);
   opt.set_min_objective(&objective, &calc);
-  std::vector<double> speed_stream = guess;
+  const int poly_deg = 5;
+  const int poly_n = (poly_deg + 1)*(poly_deg + 2)/2;
+  Mat<dyn, dyn> poly_coefs(poly_n, 2);
+  poly_coefs <<
+  #if 0
+     1.31972032e+00, -7.41497269e-02,
+    -6.31762062e-01,  4.93893040e-01,
+     5.22637880e-03, -2.44959325e-03,
+     1.43409381e-01, -9.53205176e-02,
+    -5.19304211e-03,  2.47006404e-03,
+     8.22562318e-03,  2.47245699e-01,
+    -1.40843150e-02,  7.68356590e-03,
+     1.25196569e-03, -6.07046984e-04,
+     3.89854472e-03,  3.74116413e-05,
+    -4.71530682e-04,  1.45899944e-04,
+     4.92101048e-04, -2.34587514e-04,
+    -8.70059516e-05,  4.20546846e-05,
+    -3.25664462e-04,  1.28058971e-02,
+     2.78038021e-04, -9.06043364e-05,
+    -1.14420559e-03, -2.01172903e-02;
+  #else
+     1.07065354e+00, 5.90123569e-01,
+    -3.79882550e-01, 6.97304463e-01,
+     1.00752424e-04,-1.25529269e-05,
+     8.34824934e-02,-7.17097172e-02,
+    -8.07289925e-05, 3.36065187e-06,
+    -3.10522689e-02,-9.74823455e-02,
+    -1.00092942e-02, 6.63501423e-03,
+     2.12271103e-05,-2.92878480e-07,
+     7.07197107e-03,-6.69855433e-02,
+     4.04368048e-06, 1.09898667e-05,
+     6.10305669e-04,-3.62150245e-04,
+    -2.24629112e-06, 4.04048492e-08,
+    -6.91807366e-04, 3.41313209e-03,
+    -1.01324640e-06,-3.26981600e-06,
+     1.39505931e-03, 3.35067973e-03,
+    -1.47971746e-05, 8.46207491e-06,
+     8.24251640e-08,-3.82726956e-09,
+     2.55768239e-05,-1.00950118e-04,
+     6.37708372e-08, 2.45846762e-07,
+    -1.17011868e-04, 6.61369064e-04,
+    -3.22312967e-08,-2.22427212e-07;
+  #endif
+  Mat<> poly_vals(poly_n);
+  double coords [] {std::sqrt(pos[0]*pos[0] + pos[1]*pos[1]), std::atan2(pos[1], -pos[0])};
+  for (int deg = 0; deg < poly_deg + 1; ++deg) {
+    for (int term = 0; term < deg + 1; ++term) {
+      poly_vals(deg*(deg + 1)/2 + term) = math::pow(coords[0], deg - term)*math::pow(coords[1], term);
+    }
+  }
+  Mat<> guess = poly_coefs.transpose()*poly_vals;
+  std::vector<double> speed_stream = {guess[0], guess[1]};
   double err = 0;
   auto result = opt.optimize(speed_stream, err);
   if (!(err < 1e-3 && (result == nlopt::FTOL_REACHED || result == nlopt::XTOL_REACHED))) std::cerr << format_str(300, "WARNING: root finder failed with result %i and error %e for pos = {%e, %e} in hexed::Ringleb::operator()", result, err, pos[0], pos[1]) << std::endl;
   calc.error(speed_stream);
+  }
   std::vector<double> state(pos.size() + 2, 0.);
   state[0] = calc.mass*calc.veloc[0];
   state[1] = calc.mass*calc.veloc[1];
