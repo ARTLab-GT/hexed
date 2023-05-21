@@ -335,6 +335,12 @@ void Solver::initialize(const Spacetime_func& func)
   }
   (*write_face)(elements);
   (*kernel_factory<Prolong_refined>(params.n_dim, params.row_size, basis))(acc_mesh.refined_faces());
+  auto& bc_cons {acc_mesh.boundary_connections()};
+  #pragma omp parallel for
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+    acc_mesh.boundary_condition(bc_sn).flow_bc->init_cache(bc_cons[i_con]);
+  }
 }
 
 void Solver::set_art_visc_off()

@@ -26,6 +26,7 @@ constexpr int n_threads = @n_threads@;
 #endif
 #define HEXED_USE_OTTER HEXED_@use_otter@
 #define HEXED_USE_TECPLOT HEXED_@use_tecplot@
+#define HEXED_USE_NLOPT HEXED_@use_nlopt@
 //!\}
 
 }

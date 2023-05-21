@@ -32,6 +32,7 @@ option(threaded "If ON, allow multiple threads. Substantially reduces execution 
 option(use_otter "include capability to use otter for plotting" OFF)
 option(use_tecplot "include capability to use tecplot for plotting" ON)
 option(use_cppcheck "use the cppcheck static analysis tool (requires cppcheck)" OFF)
+option(use_nlopt "enable features that require root finding with NLopt" OFF)
 
 # determine whether to compile with sanitizers
 if (sanitize)
@@ -124,6 +125,10 @@ if (use_otter)
 endif()
 if (use_tecplot)
     target_link_libraries(hexed PRIVATE tecio)
+endif()
+if (use_nlopt)
+    find_package(NLopt REQUIRED)
+    target_link_libraries(hexed PRIVATE nlopt)
 endif()
 
 # add include/source files

@@ -124,5 +124,22 @@ class Mach : public Domain_func
                                  std::vector<double> state) const override;
 };
 
+/*! \brief Squared error metric for computing \f$L^2\f$ error of Ringleb flow.
+ * \details Computes the squared difference between the given position vector
+ * and what the position vector _should_ be based on the state if the state were an exact solution.
+ * Computing the error in the state vector based on the position would be nicer,
+ * but that's actually kind of hard because it involves numerically finding roots of a somewhat ill-behaved function.
+ * \see Ringleb
+ */
+class Ringleb_errsq : public Domain_func
+{
+  double hr;
+  public:
+  inline Ringleb_errsq(double heat_rat = 1.4) : hr{heat_rat} {}
+  inline int n_var(int n_dim) const override {return 1;}
+  inline std::string variable_name(int n_dim, int i_var) const override {return "squared_error";}
+  std::vector<double> operator()(std::vector<double> point_pos, double point_time, std::vector<double> state) const override;
+};
+
 }
 #endif

@@ -172,5 +172,24 @@ class Annular_diffusion_test : public State_from_spacetime
   std::vector<double> operator()(std::vector<double> pos, double time) const override;
 };
 
+#if HEXED_USE_NLOPT
+/*! \brief Steady-state solution for Ringleb flow.
+ * \details [Ringleb flow](https://www.cfd-online.com/Wiki/Ringleb_flow)
+ * is a steady, sub/transonic, isentropic inviscid flow.
+ * Exact solution is available as a closed form for position
+ * in terms of velocity and stream function.
+ * This `Spacetime_func` gives you state as a function of position using a numerical root finder,
+ * so be sure to set the tolerance if you care where you stand on the accuracy/speed tradeoff.
+ */
+class Ringleb : public State_from_spacetime
+{
+  double tol;
+  double heat_rat;
+  public:
+  inline Ringleb(double root_tolerance = 1e-12, double heat_ratio = 1.4) : tol{root_tolerance}, heat_rat{heat_ratio} {}
+  std::vector<double> operator()(std::vector<double> pos, double time) const override;
+};
+#endif
+
 }
 #endif

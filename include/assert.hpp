@@ -56,7 +56,7 @@ void throw_critical(const char* message)
     snprintf(buffer, 1000, "%s\n" \
                            "Exact cause: assertion `%s` failed in `%s`.\n" \
                            "Assertion invoked at line %d of %s in function %s.", \
-             (message), #expression, __FUNCTION__, __LINE__, __FILE__, __PRETTY_FUNCTION__); \
+             std::string(message).c_str(), #expression, __FUNCTION__, __LINE__, __FILE__, __PRETTY_FUNCTION__); \
     assert::throw_critical<__VA_ARGS__>(buffer); \
   } \
 
