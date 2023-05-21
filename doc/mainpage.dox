@@ -2,7 +2,7 @@
 
 Welcome to Hexed, a Discontinuous Galerkin engine for CFD with automated, unstructured quad/hex meshing!
 You are reading the documentation.
-For source code, please visit [GitHub](https://github.gatech.edu/ARTLab/hexed).
+For source code, see the [GitHub repository](https://github.gatech.edu/ARTLab/hexed).
 
 ![header_image](header.png)
 
