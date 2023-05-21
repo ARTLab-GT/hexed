@@ -164,17 +164,9 @@ std::vector<double> Annular_diffusion_test::operator()(std::vector<double> pos, 
 }
 
 #if HEXED_USE_NLOPT
-struct Ringleb_data
+double objective(const std::vector<double>& arg, std::vector<double>&, void* data)
 {
-  std::vector<double> pos;
-  Ringleb_calc& calc;
-};
-
-double objective(const std::vector<double>& arg, std::vector<double>&, void* data_ptr)
-{
-  Ringleb_data& data = *reinterpret_cast<Ringleb_data*>(data_ptr);
-  data.calc.calculate(arg);
-  return math::pow(data.calc.pos[0] - data.pos[0], 2) + math::pow(data.calc.pos[1] - data.pos[1], 2);
+  return (*reinterpret_cast<Ringleb_calc*>(data)).error(arg);
 }
 
 Ringleb::Ringleb(double tolerance, double speed_guess, double stream_guess, double heat_ratio)
@@ -183,17 +175,16 @@ Ringleb::Ringleb(double tolerance, double speed_guess, double stream_guess, doub
 
 std::vector<double> Ringleb::operator()(std::vector<double> pos, double time) const
 {
-  Ringleb_calc calc(heat_rat);
-  Ringleb_data data {pos, calc};
+  Ringleb_calc calc(pos, heat_rat);
   nlopt::opt opt(nlopt::LN_SBPLX, 2);
   opt.set_xtol_abs(tol);
   opt.set_maxeval(1e6);
-  opt.set_min_objective(&objective, &data);
+  opt.set_min_objective(&objective, &calc);
   std::vector<double> speed_stream = guess;
   double err = 0;
   auto result = opt.optimize(speed_stream, err);
   if (!(err < 1e-3 && (result == nlopt::FTOL_REACHED || result == nlopt::XTOL_REACHED))) std::cerr << format_str(300, "WARNING: root finder failed with result %i and error %e for pos = {%e, %e} in hexed::Ringleb::operator()", result, err, pos[0], pos[1]) << std::endl;
-  calc.calculate(speed_stream);
+  calc.error(speed_stream);
   std::vector<double> state(pos.size() + 2, 0.);
   state[0] = calc.mass*calc.veloc[0];
   state[1] = calc.mass*calc.veloc[1];
