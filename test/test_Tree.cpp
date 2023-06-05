@@ -50,4 +50,11 @@ TEST_CASE("Tree")
   REQUIRE(tree2.find_leaf(1, Eigen::Vector2i{1, 1}, Eigen::Vector2i{1, 0}) == children[1]);
   REQUIRE(tree2.find_leaf(4, Eigen::Vector2i{9, 9}) == children[3]->children()[0]->children()[0]);
   REQUIRE(tree2.find_leaf(4, Eigen::Vector2i{9, 9}, Eigen::Vector2i{1, 1}) == children[3]->children()[0]->children()[0]);
+  REQUIRE(children[1]->find_neighbor(Eigen::Vector2i{0, 1}) == nullptr);
+  REQUIRE(children[1]->find_neighbor(Eigen::Vector2i{0, -1}) == children[0]);
+  REQUIRE(children[1]->find_neighbor(Eigen::Vector2i{1, -1}) == children[2]);
+  REQUIRE(children[1]->find_neighbor(Eigen::Vector2i{1, 0}) == children[3]->children()[0]->children()[0]);
+  REQUIRE(children[3]->children()[0]->children()[0]->find_neighbor(Eigen::Vector2i{-1, 0}) == children[1]);
+  REQUIRE(children[3]->children()[0]->children()[0]->find_neighbor(Eigen::Vector2i{0, 1}) == children[3]->children()[0]->children()[1]);
+  REQUIRE(children[3]->children()[1]->find_neighbor(Eigen::Vector2i{0, -1}) == children[3]->children()[0]->children()[1]);
 }
