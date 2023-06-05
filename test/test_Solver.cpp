@@ -220,6 +220,7 @@ class Shrink_pos0 : public hexed::Mesh_bc
 
 class Boundary_perturbation : public hexed::Mesh_bc
 {
+  double arbitrary [12] {.5, -.2, -.7, .6, .8, -.8, .1, .3, -.9, -.1, .4, .6};
   public:
   virtual void snap_vertices(hexed::Boundary_connection&) {}
   virtual void snap_node_adj(hexed::Boundary_connection& con, const hexed::Basis&)
@@ -229,7 +230,7 @@ class Boundary_perturbation : public hexed::Mesh_bc
     const int nfq = params.n_qpoint()/params.row_size;
     for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
       int n = 1000;
-      con.element().node_adjustments()[(2*con.i_dim() + con.inside_face_sign())*nfq + i_qpoint] += 0.1/n*(rand()%n);
+      con.element().node_adjustments()[(2*con.i_dim() + con.inside_face_sign())*nfq + i_qpoint] += 0.03*arbitrary[i_qpoint%12];
     }
   }
 };
