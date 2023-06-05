@@ -46,4 +46,9 @@ void Tree::refine()
 
 void Tree::unrefine() {children_storage.clear();}
 
+Tree* Tree::find_leaf(int ref_level, Eigen::VectorXi c, Eigen::VectorXi bias)
+{
+  return nullptr;
+}
+
 }

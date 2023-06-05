@@ -18,7 +18,6 @@ class Tree
 
   public:
   Tree(int n_dim, double root_size, Mat<> origin = Mat<>::Zero(3));
-  virtual ~Tree() = default;
 
   //! \name basic instance information
   //!\{

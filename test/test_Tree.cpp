@@ -4,6 +4,7 @@
 
 TEST_CASE("Tree")
 {
+  // root properties
   hexed::Tree tree2(2, 7., Eigen::Vector4d{.1, .3, -.2, .5});
   REQUIRE(tree2.n_dim == 2);
   require_sequence_equal(tree2.origin(), Eigen::Vector2d{.1, .3});
@@ -15,6 +16,7 @@ TEST_CASE("Tree")
   REQUIRE(tree3.nominal_size() == Catch::Approx(.8));
   require_sequence_equal(tree3.nominal_position(), Eigen::Vector3d::Zero());
 
+  // (un)refinement
   REQUIRE(tree2.parent() == nullptr);
   REQUIRE(tree2.children().empty());
   REQUIRE(tree2.is_root());
@@ -39,4 +41,13 @@ TEST_CASE("Tree")
   children[1]->unrefine();
   REQUIRE(children[1]->is_leaf());
   REQUIRE(children[1]->children().empty());
+
+  // traversal
+  children[3]->refine();
+  children[3]->children()[0]->refine();
+  REQUIRE(tree2.find_leaf(1, Eigen::Vector2i{3, 0}) == nullptr);
+  REQUIRE(tree2.find_leaf(1, Eigen::Vector2i{1, 1}) == children[3]->children()[0]->children()[0]);
+  REQUIRE(tree2.find_leaf(1, Eigen::Vector2i{1, 1}, Eigen::Vector2i{1, 0}) == children[1]);
+  REQUIRE(tree2.find_leaf(4, Eigen::Vector2i{17, 17}) == children[3]->children()[0]->children()[0]);
+  REQUIRE(tree2.find_leaf(4, Eigen::Vector2i{17, 17}, Eigen::Vector2i{1, 1}) == children[3]->children()[0]->children()[0]);
 }
