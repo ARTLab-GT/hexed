@@ -48,6 +48,6 @@ TEST_CASE("Tree")
   REQUIRE(tree2.find_leaf(1, Eigen::Vector2i{3, 0}) == nullptr);
   REQUIRE(tree2.find_leaf(1, Eigen::Vector2i{1, 1}) == children[3]->children()[0]->children()[0]);
   REQUIRE(tree2.find_leaf(1, Eigen::Vector2i{1, 1}, Eigen::Vector2i{1, 0}) == children[1]);
-  REQUIRE(tree2.find_leaf(4, Eigen::Vector2i{17, 17}) == children[3]->children()[0]->children()[0]);
-  REQUIRE(tree2.find_leaf(4, Eigen::Vector2i{17, 17}, Eigen::Vector2i{1, 1}) == children[3]->children()[0]->children()[0]);
+  REQUIRE(tree2.find_leaf(4, Eigen::Vector2i{9, 9}) == children[3]->children()[0]->children()[0]);
+  REQUIRE(tree2.find_leaf(4, Eigen::Vector2i{9, 9}, Eigen::Vector2i{1, 1}) == children[3]->children()[0]->children()[0]);
 }

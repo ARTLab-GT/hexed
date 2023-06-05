@@ -46,9 +46,21 @@ void Tree::refine()
 
 void Tree::unrefine() {children_storage.clear();}
 
-Tree* Tree::find_leaf(int ref_level, Eigen::VectorXi c, Eigen::VectorXi bias)
+Tree* Tree::find_leaf(int rl, Eigen::VectorXi c, Eigen::VectorXi bias)
 {
-  return nullptr;
+  HEXED_ASSERT(c.size() == n_dim, "`coords` has wrong number of elements");
+  HEXED_ASSERT(bias.size() >= n_dim, "`bias` has too few elements");
+  int max_level = std::max(ref_level, rl);
+  int cell_size = math::pow(2, max_level - ref_level);
+  Eigen::MatrixXi relative_coords = c*math::pow(2, max_level - rl) - bias(Eigen::seqN(0, n_dim)) - coords*cell_size;
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+    if ((relative_coords(i_dim) < 0) || (relative_coords(i_dim) >= cell_size)) return nullptr;
+  }
+  for (auto& child : children_storage) {
+    Tree* leaf = child->find_leaf(rl, c, bias);
+    if (leaf) return leaf;
+  }
+  return this;
 }
 
 }
