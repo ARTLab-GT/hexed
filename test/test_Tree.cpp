@@ -14,4 +14,29 @@ TEST_CASE("Tree")
   require_sequence_equal(tree3.coordinates(), Eigen::Vector3i::Zero());
   REQUIRE(tree3.nominal_size() == Catch::Approx(.8));
   require_sequence_equal(tree3.nominal_position(), Eigen::Vector3d::Zero());
+
+  REQUIRE(tree2.parent() == nullptr);
+  REQUIRE(tree2.children().empty());
+  REQUIRE(tree2.is_root());
+  REQUIRE(tree2.is_leaf());
+  tree2.refine();
+  REQUIRE(!tree2.is_leaf());
+  auto children = tree2.children();
+  REQUIRE(children.size() == 4);
+  REQUIRE(!children[0]->is_root());
+  REQUIRE(children[0]->is_leaf());
+  REQUIRE(children[0]->parent() == &tree2);
+  REQUIRE(children[0]->refinement_level() == 1);
+  REQUIRE(children[0]->nominal_size() == 3.5);
+  require_sequence_equal(children[0]->coordinates(), Eigen::Vector2i::Zero());
+  require_sequence_equal(children[1]->coordinates(), Eigen::Vector2i{0, 1});
+  require_sequence_equal(children[2]->coordinates(), Eigen::Vector2i{1, 0});
+  require_sequence_equal(children[2]->nominal_position(), Eigen::Vector2d{3.6, 0.3});
+  children[1]->refine();
+  REQUIRE(!children[1]->is_leaf());
+  REQUIRE(children[1]->children()[3]->refinement_level() == 2);
+  require_sequence_equal(children[1]->children()[3]->coordinates(), Eigen::Vector2i{1, 3});
+  children[1]->unrefine();
+  REQUIRE(children[1]->is_leaf());
+  REQUIRE(children[1]->children().empty());
 }

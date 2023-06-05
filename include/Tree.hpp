@@ -1,6 +1,7 @@
 #ifndef HEXED_TREE_HPP_
 #define HEXED_TREE_HPP_
 
+#include <memory>
 #include "math.hpp"
 
 namespace hexed
@@ -12,9 +13,12 @@ class Tree
   double root_sz;
   int ref_level;
   Eigen::VectorXi coords;
+  Tree* par;
+  std::vector<std::unique_ptr<Tree>> children_storage;
 
   public:
   Tree(int n_dim, double root_size, Mat<> origin = Mat<>::Zero(3));
+  virtual ~Tree() = default;
 
   //! \name basic instance information
   //!\{
@@ -30,8 +34,8 @@ class Tree
   //!\{
   Tree* parent();
   std::vector<Tree*> children();
-  inline bool is_root() const;
-  inline bool is_leaf() const;
+  bool is_root() const;
+  bool is_leaf() const;
   //!\}
 
   //! \name modifiers
