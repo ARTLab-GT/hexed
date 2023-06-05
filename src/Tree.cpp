@@ -50,31 +50,38 @@ Tree* Tree::find_leaf(int rl, Eigen::VectorXi c, Eigen::VectorXi bias)
 {
   HEXED_ASSERT(c.size() >= n_dim, "`coords` has too few elements");
   HEXED_ASSERT(bias.size() >= n_dim, "`bias` has too few elements");
+  // find the relative coordinates in this element's ref level or the specified ref level, whichever is higher
   c = c(Eigen::seqN(0, n_dim));
   int max_level = std::max(ref_level, rl);
   int cell_size = math::pow(2, max_level - ref_level);
   Eigen::MatrixXi relative_coords = c*math::pow(2, max_level - rl) - bias(Eigen::seqN(0, n_dim)) - coords*cell_size;
+  // first base case: if the coordinates are outside this element, return null
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     if ((relative_coords(i_dim) < 0) || (relative_coords(i_dim) >= cell_size)) return nullptr;
   }
+  // recursive case: if this element contains the point and has children, one of them should have the element we want
   for (auto& child : children_storage) {
     Tree* leaf = child->find_leaf(rl, c, bias);
     if (leaf) return leaf;
   }
+  // second base case: if the coordinates are in this element, but there are no children, then this is the element we want
   return this;
 }
 
 Tree* Tree::find_neighbor(Eigen::VectorXi direction)
 {
   HEXED_ASSERT(direction.size() >= n_dim, "`direction` has too few elements");
+  // find the root
   Tree* root = this;
   while (!root->is_root()) root = root->parent();
+  // compute the coordinates and bias which will identify the neighbor
   Eigen::VectorXi bias(n_dim);
   Eigen::VectorXi c(n_dim);
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     c(i_dim) = coords[i_dim] + (direction(i_dim) > 0);
     bias(i_dim) = (direction(i_dim) < 0);
   }
+  // use `find_leaf` on the root element to find the neighbor
   return root->find_leaf(ref_level, c, bias);
 }
 

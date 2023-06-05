@@ -9,18 +9,18 @@
 namespace hexed
 {
 
-const int dyn = Eigen::Dynamic;
+const int dyn = Eigen::Dynamic; //!< \brief convenience alias for `Eigen::dynamic`
 template <int rows = dyn, int cols = 1>
-using Mat = Eigen::Matrix<double, rows, cols>;
-const auto all = Eigen::all;
-const auto last = Eigen::last;
+using Mat = Eigen::Matrix<double, rows, cols>; //!< \brief convenience alias for `Eigen::Matrix<double, rows = dyn, cols = 1>`
+const auto all = Eigen::all; //!< \brief convenience alias for `Eigen::all`
+const auto last = Eigen::last; //!< \brief convenience alias for `Eigen::all`
 
 //! Miscellaneous mathematical functions that aren't in `std::math`
 namespace math
 {
 
-/*!
- * Raises an arbitrary arithmetic type to an integer (not necessarily positive) power.
+/*! \brief Raises an arbitrary arithmetic type to an integer (not necessarily positive) power.
+ * \details
  * Can return `constexpr`, which `std::pow` is not allowed to do according to the standard
  * (although the GCC implementation can anyway).
  */
@@ -34,8 +34,7 @@ constexpr number_t pow(number_t base, int exponent)
 }
 
 /*! \brief Integer logarithm.
- *
- * If `base` < 2, returns -1 to indicate failure.
+ * \details If `base` < 2, returns -1 to indicate failure.
  * Otherwise, if `arg` < 1, returns 0. In the usual case where neither
  * of the above are true, returns \f$\lceil\log_{\mathtt{base}}(\mathtt{arg})\rceil\f$.
  */
