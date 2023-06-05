@@ -28,6 +28,7 @@ Stopwatch_tree.cpp
 Storage_params.cpp
 Surface_func.cpp
 Tecplot_file.cpp
+Tree.cpp
 thermo.cpp
 Vertex.cpp
 Vis_data.cpp

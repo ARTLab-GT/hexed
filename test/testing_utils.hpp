@@ -12,3 +12,12 @@ inline void assert_equal(std::array<double, 3> computed, std::array<double, 3> c
     CHECK(computed[i_dim] == Catch::Approx(correct[i_dim]).margin(1e-14));
   }
 }
+
+template <typename T, typename U>
+void require_sequence_equal(T sequence0, U sequence1)
+{
+  REQUIRE(sequence0.size() == sequence1.size());
+  for (int i = 0; i < sequence0.size(); ++i) {
+    CHECK(sequence0[i] == Catch::Approx(sequence1[i]));
+  }
+}
