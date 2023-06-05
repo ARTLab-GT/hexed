@@ -46,7 +46,6 @@ class Tree
   //! \name traversing functions
   //!\{
   Tree* find_leaf(int ref_level, Eigen::VectorXi coords, Eigen::VectorXi bias = Eigen::VectorXi::Zero(3));
-  Tree* find_leaf(Mat<> position, Eigen::VectorXi bias = Eigen::VectorXi::Zero(3));
   Tree* find_neighbor(Eigen::MatrixXi direction);
   //!\}
 };
