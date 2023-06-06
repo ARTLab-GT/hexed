@@ -74,7 +74,8 @@ class Tree
 
   //! \name traversing functions
   //!\{
-  /*! \brief Finds a leaf which is a descendent of this cell and contains a specified set of coordinates.
+  /*! \brief Finds a leaf which contains a specified set of integer coordinates.
+   * \note Only considers this element and its descendents, not neighbors that share the same root.
    * \details Recursively searches this tree and its descendents for a leaf element which contains the point
    * determined by `coords` and `ref_level`.
    * If no element is found (i.e. if the specified coordinates are outside this cell) then `nullptr` is returned.
@@ -93,6 +94,16 @@ class Tree
    * `ref_level` must be nonnegative, but there are no restrictions on how it relates to the refinement levels of the cells to be searched.
    */
   Tree* find_leaf(int ref_level, Eigen::VectorXi coords, Eigen::VectorXi bias = Eigen::VectorXi::Zero(3));
+  /*! \brief Finds a leaf which contains a specified point in physical space.
+   * \note Only considers this element and its descendents, not neighbors that share the same root.
+   * \details Recursively searches this tree and its descendents for a leaf element that contains `nominal_position`.
+   * If no element is found (i.e. if the specified coordinates are outside this cell) then `nullptr` is returned.
+   * Elements are considered to contain points which are on their boundary.
+   * If multiple elements contain the specified point (i.e. it is on a boundary shared by multiple elements)
+   * then which one you get is unspecified.
+   * You are only guaranteed to get _an_ element that contains the point.
+   */
+  Tree* find_leaf(Mat<> nominal_position);
   /*! \brief Finds a leaf neighbor of this element in the specified direction.
    * \details Recursively searches the entire `Tree` (all decendents of this element's root) for the nearest element
    * which is a leaf and whose vertex 0 is in the direction specified by `direction` from this element's vertex 0.

@@ -68,6 +68,21 @@ Tree* Tree::find_leaf(int rl, Eigen::VectorXi c, Eigen::VectorXi bias)
   return this;
 }
 
+Tree* Tree::find_leaf(Mat<> nom_pos)
+{
+  HEXED_ASSERT(nom_pos.size() >= n_dim, "`nominal_position` has too few elements");
+  Mat<> np = nominal_position();
+  double ns = nominal_size();
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+    if ((nom_pos(i_dim) < np(i_dim)) || (nom_pos(i_dim) > np(i_dim) + ns)) return nullptr;
+  }
+  for (auto& child : children_storage) {
+    Tree* leaf = child->find_leaf(nom_pos);
+    if (leaf) return leaf;
+  }
+  return this;
+}
+
 Tree* Tree::find_neighbor(Eigen::VectorXi direction)
 {
   HEXED_ASSERT(direction.size() >= n_dim, "`direction` has too few elements");
