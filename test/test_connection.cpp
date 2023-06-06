@@ -206,9 +206,9 @@ TEST_CASE("Refined_connection<Deformed_element>")
     REQUIRE(&coarse.vertex(5) != &elem0.vertex(5));
     elem0.vertex_time_step_scale(1) = 0.;
     con.matcher.match(&hexed::Element::vertex_time_step_scale);
-    REQUIRE(elem1.vertex_time_step_scale(1) == Catch::Approx(0.5));
-    REQUIRE(elem2.vertex_time_step_scale(3) == Catch::Approx(0.75));
-    REQUIRE(elem2.vertex_time_step_scale(2) == Catch::Approx(1.));
+    REQUIRE(elem1.vertex_time_step_scale(1) == Catch::Approx(0.5/3));
+    REQUIRE(elem2.vertex_time_step_scale(3) == Catch::Approx(0.75/3));
+    REQUIRE(elem2.vertex_time_step_scale(2) == Catch::Approx(1./3));
     REQUIRE(coarse.faces[1] == con.coarse_state());
     for (int i_con = 0; i_con < 4; ++i_con) {
       auto& c = con.connection(i_con);
