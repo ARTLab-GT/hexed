@@ -13,11 +13,27 @@ inline void assert_equal(std::array<double, 3> computed, std::array<double, 3> c
   }
 }
 
+// elementwise equality between two sequences
 template <typename T, typename U>
 void require_sequence_equal(T sequence0, U sequence1)
 {
   REQUIRE(sequence0.size() == sequence1.size());
   for (int i = 0; i < sequence0.size(); ++i) {
     CHECK(sequence0[i] == Catch::Approx(sequence1[i]));
+  }
+}
+
+// requires that two sequences contain the same elements, not necessarily in the same order
+// elements in sequence1 must be unique
+template <typename T, typename U>
+void require_same_elements(T sequence0, U sequence1)
+{
+  REQUIRE(sequence0.size() == sequence1.size());
+  for (auto& element1 : sequence1) {
+    int count = 0;
+    for (auto& element0 : sequence0) {
+      count += element0 == element1;
+    }
+    CHECK(count == 1);
   }
 }

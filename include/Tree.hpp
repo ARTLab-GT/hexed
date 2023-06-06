@@ -32,6 +32,7 @@ class Tree
   Eigen::VectorXi coords;
   Tree* par;
   std::vector<std::unique_ptr<Tree>> children_storage;
+  void add_leaves(std::vector<Tree*>&);
 
   public:
   /*! Constructs the root element of a tree. All other elements will be descendents of this one.
