@@ -43,11 +43,8 @@ My solution is to install things in `~/.local` instead.
 However, this requires us to edit an environment variable so that the system knows what we're doing.
 Plus, we need to edit a *whole bunch* of environment variables to accommodate Tecplot being a little... *unique*.
 - To start with, type `cd` to make sure you're in your home directory.
-- your `~/.local` directory should contain subdirectories `bin`, `lib`, and `share`.
-  Create another subdirectory `include` if it doesn't already have one:
-  ~~~
-  mkdir .local/include
-  ~~~
+- your `~/.local` directory should contain subdirectories `bin`, `include`, `lib`, and `share`.
+  If these directories don't exist, create them.
 - You can change environment variables by editing the file `.bashrc`.
   First, it is recommended that you make a backup copy:
   ~~~
@@ -76,6 +73,8 @@ a few 3rd-party libraries.
 - Install the numerical computing libraries numpy and scipy (althought you likely have them already):
   - `pip3 install numpy`
   - `pip3 install scipy`
+- Install the plotting library matplotlib
+  - `pip3 install matplotlib`
 - Install the symbolic computation library sympy (used to generate quadrature rules):
   - `pip3 install sympy`
 - Install PyTecplot (Tecplot's Python API):
