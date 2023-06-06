@@ -23,6 +23,13 @@ namespace hexed
  * - Tree elements are never reallocated, so any pointer to a tree element remains valid when the tree is modified
  *   as long as that element is not deleted with `unrefine()`.
  *   Of course, `unrefine()` deletes tree elements so it can create dangling pointers.
+ *
+ * __Thread safety__
+ *
+ * Multiple calls to traversing functions may be made concurrently,
+ * and multiple elements may be modified concurrently.
+ * However, concurrent attempts to modify the same element (directly or indirectly)
+ * or modifying elements and calling a traversing function concurrently may result in data races.
  */
 class Tree
 {
