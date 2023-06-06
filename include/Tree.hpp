@@ -12,6 +12,17 @@ namespace hexed
  * Only knows about the nominal position and size of elements, not deformity or flow variables.
  * In other words, this structure represents the Cartesian elements before any deformation happens.
  * This structure also does not know about any extrusion (for now, anyway).
+ * A few general notes about the API:
+ * - Each `Tree` instance is referred to as an "element" of the tree.
+ *   It's `children()`, their `children()`, etc. are referred to as its "descendents".
+ *   It's `parent()`, their `parent()`s, etc. are referred to as its "ancestors".
+ * - Most of the recursive traversal functions look only down, not up.
+ *   That is, they search the element you invoke them on and all its descendents, but not its ancestors.
+ *   Thus if you want to search the whole tree, you should call the function on the root (which hopefully you would have done anyway).
+ *   The notable exception is `find_neighbor()`, which _does_ go all the way up to the root before starting the recursive search.
+ * - Tree elements are never reallocated, so any pointer to a tree element remains valid when the tree is modified
+ *   as long as that element is not deleted with `unrefine()`.
+ *   Of course, `unrefine()` deletes tree elements so it can create dangling pointers.
  */
 class Tree
 {
@@ -116,6 +127,14 @@ class Tree
    * If more than one element of `direction` is nonzero, then edge or vertex neighbors are returned.
    */
   Tree* find_neighbor(Eigen::VectorXi direction);
+  /*! \brief A vector of pointers to all leaf elements in the tree.
+   * \details Recursively traverses this tree and all its descendents
+   * to assemble a list of all leaves.
+   * Again, this function only looks down, not up, so if you call it on an element other than the root
+   * you will only get a subset of the whole tree.
+   * If you modify the tree, don't forget to call `leaves` again to get an updated list and avoid dangling pointers.
+   */
+  std::vector<Tree*> leaves();
   //!\}
 };
 
