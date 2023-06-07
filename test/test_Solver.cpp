@@ -229,7 +229,6 @@ class Boundary_perturbation : public hexed::Mesh_bc
     auto params {con.storage_params()};
     const int nfq = params.n_qpoint()/params.row_size;
     for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-      int n = 1000;
       con.element().node_adjustments()[(2*con.i_dim() + con.inside_face_sign())*nfq + i_qpoint] += 0.03*arbitrary[i_qpoint%12];
     }
   }
