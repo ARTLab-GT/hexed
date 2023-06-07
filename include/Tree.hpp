@@ -39,6 +39,7 @@ class Tree
   Eigen::VectorXi coords;
   Tree* par;
   std::vector<std::unique_ptr<Tree>> children_storage;
+  int status;
 
   public:
   /*! Constructs the root element of a tree. All other elements will be descendents of this one.
@@ -134,6 +135,31 @@ class Tree
    * If more than one element of `direction` is nonzero, then edge or vertex neighbors are returned.
    */
   Tree* find_neighbor(Eigen::VectorXi direction);
+  //!\}
+
+  /*! \name flood fill algorithm
+   * The flood fill algorithm sets an integer "status" attribute of a connected group of leaf elements.
+   * This is useful to distinguish inside, outside, and boundary elements in the mesh.
+   * A status value of `unprocessed` indicates an element that has not been processed by the flood fill.
+   * Identify the boundary elements by manually setting their status to any other value.
+   * Then, to identify a connected region bounded by the elements you have set,
+   * invoke `flood_fill()` on one of the elements in the region you want.
+   */
+  //!\{
+  static constexpr int unprocessed = -1;
+  int get_status(); //!< gets the flood fill status value (initialized to `unprocessed`).
+  void set_status(int); //!< sets the flood fill status value
+  /*! \brief Executes flood fill algorithm starting with this element.
+   * \details Sets this element's status to the specified value.
+   * It will then check the status of all face neighbors.
+   * For any neighbors with status `unprocessed`, it will continue the flood fill algorithm from those elements
+   * including setting their status and evaluating their neighbors.
+   * If the element you call this function on is not a leaf, it will instead start the flood fill
+   * on the leaf descendent of this cell with the smallest coordinates (e.g. for the root in 2D, it will start with the lower-left element).
+   * The parameter `status` must not be equal to `unprocessed`.
+   */
+  void flood_fill(int status);
+  void clear(); //!< sets the flood fill status of this and all child elements to `unprocessed`
   //!\}
 };
 
