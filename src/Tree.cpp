@@ -100,17 +100,4 @@ Tree* Tree::find_neighbor(Eigen::VectorXi direction)
   return root->find_leaf(ref_level, c, bias);
 }
 
-void Tree::add_leaves(std::vector<Tree*>& l)
-{
-  if (is_leaf()) l.push_back(this);
-  else for (auto& child : children_storage) child->add_leaves(l);
-}
-
-std::vector<Tree*> Tree::leaves()
-{
-  std::vector<Tree*> l;
-  add_leaves(l);
-  return l;
-}
-
 }

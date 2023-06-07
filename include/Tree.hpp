@@ -39,7 +39,6 @@ class Tree
   Eigen::VectorXi coords;
   Tree* par;
   std::vector<std::unique_ptr<Tree>> children_storage;
-  void add_leaves(std::vector<Tree*>&);
 
   public:
   /*! Constructs the root element of a tree. All other elements will be descendents of this one.
@@ -135,14 +134,6 @@ class Tree
    * If more than one element of `direction` is nonzero, then edge or vertex neighbors are returned.
    */
   Tree* find_neighbor(Eigen::VectorXi direction);
-  /*! \brief A vector of pointers to all leaf elements in the tree.
-   * \details Recursively traverses this tree and all its descendents
-   * to assemble a list of all leaves.
-   * Again, this function only looks down, not up, so if you call it on an element other than the root
-   * you will only get a subset of the whole tree.
-   * If you modify the tree, don't forget to call `leaves` again to get an updated list and avoid dangling pointers.
-   */
-  std::vector<Tree*> leaves();
   //!\}
 };
 

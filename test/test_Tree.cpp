@@ -58,13 +58,4 @@ TEST_CASE("Tree")
   REQUIRE(children[3]->children()[0]->children()[0]->find_neighbor(Eigen::Vector2i{-1, 0}) == children[1]);
   REQUIRE(children[3]->children()[0]->children()[0]->find_neighbor(Eigen::Vector2i{0, 1}) == children[3]->children()[0]->children()[1]);
   REQUIRE(children[3]->children()[1]->find_neighbor(Eigen::Vector2i{0, -1}) == children[3]->children()[0]->children()[1]);
-  std::vector<hexed::Tree*> correct_leaves(children.begin(), children.end() - 1);
-  {
-    auto ch = children[3]->children();
-    correct_leaves.insert(correct_leaves.end(), ch.begin() + 1, ch.end());
-  }{
-    auto ch = children[3]->children()[0]->children();
-    correct_leaves.insert(correct_leaves.end(), ch.begin(), ch.end());
-  }
-  require_same_elements(tree2.leaves(), correct_leaves);
 }
