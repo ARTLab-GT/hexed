@@ -135,6 +135,18 @@ class Tree
    * If more than one element of `direction` is nonzero, then edge or vertex neighbors are returned.
    */
   Tree* find_neighbor(Eigen::VectorXi direction);
+  /*! \brief Finds all leaf neighbors of this element in a specified direction.
+   * \details Finds all elements in the entire tree which border on this one in a given direction.
+   * If the neighbors have the same or lower refinement level, this vector will contain one element
+   * which is equal to `find_neighbor(direction)`.
+   * If the neighbors have a higher refinement level,
+   * it will find all of them instead of returning the one with the lowest coordinates.
+   * In particular, if exactly one element of `direction` is nonzero,
+   * you will get a vector of all the neighbors on a specific face.
+   * If no neighbors are found, the vector will be empty.
+   * Neighbors are returned in a depth-first, row-major order.
+   */
+  std::vector<Tree*> find_neighbors(Eigen::VectorXi direction);
   //!\}
 
   /*! \name flood fill algorithm
