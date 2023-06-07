@@ -15,10 +15,20 @@ inline void assert_equal(std::array<double, 3> computed, std::array<double, 3> c
 
 // elementwise equality between two sequences
 template <typename T, typename U>
-void require_sequence_equal(T sequence0, U sequence1)
+void require_sequence_equal(T sequence0, U sequence1 && )
 {
   REQUIRE(sequence0.size() == sequence1.size());
-  for (int i = 0; i < sequence0.size(); ++i) {
+  for (int i = 0; i < int(sequence0.size()); ++i) {
+    CHECK(sequence0[i] == sequence1[i]);
+  }
+}
+
+// elementwise equality between two sequences
+template <typename T, typename U>
+void require_sequence_approx(T sequence0, U sequence1)
+{
+  REQUIRE(sequence0.size() == sequence1.size());
+  for (int i = 0; i < int(sequence0.size()); ++i) {
     CHECK(sequence0[i] == Catch::Approx(sequence1[i]));
   }
 }

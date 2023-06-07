@@ -100,4 +100,9 @@ Tree* Tree::find_neighbor(Eigen::VectorXi direction)
   return root->find_leaf(ref_level, c, bias);
 }
 
+std::vector<Tree*> Tree::find_neighbors(Eigen::VectorXi direction)
+{
+  return {};
+}
+
 }
