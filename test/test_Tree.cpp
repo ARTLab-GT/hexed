@@ -7,14 +7,14 @@ TEST_CASE("Tree")
   // root properties
   hexed::Tree tree2(2, 7., Eigen::Vector4d{.1, .3, -.2, .5});
   REQUIRE(tree2.n_dim == 2);
-  require_sequence_approx(tree2.origin(), Eigen::Vector2d{.1, .3});
+  REQUIRE_THAT(tree2.origin(), Catch::Matchers::RangeEquals(Eigen::Vector2d{.1, .3}, hexed::math::Approx_equal()));
   hexed::Tree tree3(3, .8);
   REQUIRE(tree3.n_dim == 3);
-  require_sequence_approx(tree3.origin(), Eigen::Vector3d::Zero());
+  REQUIRE_THAT(tree3.origin(), Catch::Matchers::RangeEquals(Eigen::Vector3d::Zero(), hexed::math::Approx_equal(0., 1e-16)));
   REQUIRE(tree3.refinement_level() == 0);
-  require_sequence_approx(tree3.coordinates(), Eigen::Vector3i::Zero());
+  REQUIRE_THAT(tree3.coordinates(), Catch::Matchers::RangeEquals(Eigen::Vector3i::Zero()));
   REQUIRE(tree3.nominal_size() == Catch::Approx(.8));
-  require_sequence_approx(tree3.nominal_position(), Eigen::Vector3d::Zero());
+  REQUIRE_THAT(tree3.nominal_position(), Catch::Matchers::RangeEquals(Eigen::Vector3d::Zero(), hexed::math::Approx_equal(0., 1e-16)));
 
   // (un)refinement
   REQUIRE(tree2.parent() == nullptr);
@@ -30,14 +30,14 @@ TEST_CASE("Tree")
   REQUIRE(children[0]->parent() == &tree2);
   REQUIRE(children[0]->refinement_level() == 1);
   REQUIRE(children[0]->nominal_size() == 3.5);
-  require_sequence_equal(children[0]->coordinates(), Eigen::Vector2i::Zero());
-  require_sequence_equal(children[1]->coordinates(), Eigen::Vector2i{0, 1});
-  require_sequence_equal(children[2]->coordinates(), Eigen::Vector2i{1, 0});
-  require_sequence_approx(children[2]->nominal_position(), Eigen::Vector2d{3.6, 0.3});
+  REQUIRE_THAT(children[0]->coordinates(), Catch::Matchers::RangeEquals(Eigen::Vector2i::Zero()));
+  REQUIRE_THAT(children[1]->coordinates(), Catch::Matchers::RangeEquals(Eigen::Vector2i{0, 1}));
+  REQUIRE_THAT(children[2]->coordinates(), Catch::Matchers::RangeEquals(Eigen::Vector2i{1, 0}));
+  REQUIRE_THAT(children[2]->nominal_position(), Catch::Matchers::RangeEquals(Eigen::Vector2d{3.6, 0.3}, hexed::math::Approx_equal()));
   children[1]->refine();
   REQUIRE(!children[1]->is_leaf());
   REQUIRE(children[1]->children()[3]->refinement_level() == 2);
-  require_sequence_equal(children[1]->children()[3]->coordinates(), Eigen::Vector2i{1, 3});
+  REQUIRE_THAT(children[1]->children()[3]->coordinates(), Catch::Matchers::RangeEquals(Eigen::Vector2i{1, 3}));
   children[1]->unrefine();
   REQUIRE(children[1]->is_leaf());
   REQUIRE(children[1]->children().empty());
@@ -58,11 +58,12 @@ TEST_CASE("Tree")
   REQUIRE(children[3]->children()[0]->children()[0]->find_neighbor(Eigen::Vector2i{-1, 0}) == children[1]);
   REQUIRE(children[3]->children()[0]->children()[0]->find_neighbor(Eigen::Vector2i{0, 1}) == children[3]->children()[0]->children()[1]);
   REQUIRE(children[3]->children()[1]->find_neighbor(Eigen::Vector2i{0, -1}) == children[3]->children()[0]->children()[1]);
-  require_sequence_equal(children[3]->children()[1]->find_neighbors(Eigen::Vector2i{0, -1}), std::vector<hexed::Tree*>{children[3]->children()[0]->children()[1]});
+  REQUIRE_THAT(children[3]->children()[1]->find_neighbors(Eigen::Vector2i{0, -1}), Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{children[3]->children()[0]->children()[1]}));
   REQUIRE(children[0]->find_neighbors(Eigen::Vector2i{1, 0}).empty());
-  require_sequence_equal(children[0]->find_neighbors(Eigen::Vector2i{1, 1}), std::vector<hexed::Tree*>{children[3]->children()[0]->children()[0]});
-  require_sequence_equal(children[1]->find_neighbors(Eigen::Vector2i{1, 0}), std::vector<hexed::Tree*>{children[3]->children()[0]->children()[0],
-                                                                                                        children[3]->children()[0]->children()[1],
-                                                                                                        children[3]->children()[1],
-                                                                                                       });
+  REQUIRE_THAT(children[0]->find_neighbors(Eigen::Vector2i{1, 1}), Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{children[3]->children()[0]->children()[0]}));
+  REQUIRE_THAT(children[1]->find_neighbors(Eigen::Vector2i{1, 0}),
+               Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{children[3]->children()[0]->children()[0],
+                                                                      children[3]->children()[0]->children()[1],
+                                                                      children[3]->children()[1],
+                                                                     }));
 }

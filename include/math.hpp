@@ -221,6 +221,16 @@ vec_t proj_to_segment(std::array<vec_t, 2> endpoints, vec_t target)
   return endpoints[0] + proj*diff;
 }
 
+//! functor to compare whether values are approximately equal
+class Approx_equal
+{
+  double a;
+  double r;
+  public:
+  inline Approx_equal(double rtol = 1e-12, double atol = 0) : a{atol}, r{rtol} {}
+  inline bool operator()(double x, double y) const {return std::abs(x - y) < a + r*std::abs(x + y)/2;}
+};
+
 }
 }
 #endif
