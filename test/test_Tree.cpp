@@ -69,4 +69,15 @@ TEST_CASE("Tree")
                                                                      }));
   REQUIRE_THAT(children[3]->children()[1]->find_neighbors(Eigen::Vector2i{0, -1}),
                Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{children[3]->children()[0]->children()[1], children[3]->children()[0]->children()[3]}));
+
+  // flood fill
+  REQUIRE(children[0]->get_status() == hexed::Tree::unprocessed);
+  REQUIRE(children[3]->children()[0]->children()[1]->get_status() == hexed::Tree::unprocessed);
+  children[0]->set_status(2);
+  children[3]->children()[0]->children()[1]->set_status(-10);
+  REQUIRE(children[0]->get_status() == 2);
+  REQUIRE(children[3]->children()[0]->children()[1]->get_status() == -10);
+  tree2.clear_status();
+  REQUIRE(children[0]->get_status() == hexed::Tree::unprocessed);
+  REQUIRE(children[3]->children()[0]->children()[1]->get_status() == hexed::Tree::unprocessed);
 }

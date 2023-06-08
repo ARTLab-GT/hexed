@@ -18,6 +18,7 @@ void Tree::add_extremal_leves(std::vector<Tree*>& add_to, Eigen::VectorXi bias)
 Tree::Tree(int nd, double root_size, Mat<> origin)
 : root_sz{root_size}, ref_level{0}, coords{Eigen::VectorXi::Zero(nd)},
   par{nullptr}, children_storage(),
+  status{unprocessed},
   n_dim{nd}
 {
   HEXED_ASSERT(origin.size() >= n_dim, "`origin` is too small");
@@ -131,6 +132,22 @@ std::vector<Tree*> Tree::find_neighbors(Eigen::VectorXi direction)
     main_neighbor->add_extremal_leves(neighbs, bias);
   }
   return neighbs;
+}
+
+int Tree::get_status()
+{
+  return status;
+}
+
+void Tree::set_status(int new_status)
+{
+  status = new_status;
+}
+
+void Tree::clear_status()
+{
+  status = unprocessed;
+  for (auto& child : children_storage) child->clear_status();
 }
 
 }

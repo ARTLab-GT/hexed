@@ -175,9 +175,10 @@ class Tree
    * If the element you call this function on is not a leaf, it will instead start the flood fill
    * on the leaf descendent of this cell with the smallest coordinates (e.g. for the root in 2D, it will start with the lower-left element).
    * The parameter `status` must not be equal to `unprocessed`.
+   * If the start element has a status value which is not `unprocessed`, the algorithm does nothing.
    */
   void flood_fill(int status);
-  void clear(); //!< sets the flood fill status of this and all child elements to `unprocessed`
+  void clear_status(); //!< sets the flood fill status of this and all child elements to `unprocessed`
   //!\}
 };
 
