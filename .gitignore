@@ -1,4 +1,4 @@
-build*
+build*/
 script/__pycache__/
 .vscode
 *tags*
