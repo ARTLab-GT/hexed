@@ -1,4 +1,5 @@
 #include <Tree.hpp>
+#include <queue>
 
 namespace hexed
 {
@@ -146,6 +147,31 @@ void Tree::set_status(int new_status)
 
 void Tree::flood_fill(int new_status)
 {
+  HEXED_ASSERT(new_status != unprocessed, "`flood_fill` may not be used to set status to `unprocessed`");
+  if (!is_leaf()) children_storage[0]->flood_fill(new_status); // find a leaf element to start
+  std::queue<Tree*> to_process;
+  to_process.push(this);
+  while (!to_process.empty()) {
+    Tree* t = to_process.front();
+    to_process.pop();
+    // if the next element in the queue is already processed, do nothing.
+    // if it isn't, set its status and add all it's neighbors to the queue.
+    // this could result in some cells being in the queue multiple times,
+    // but that's not a problem.
+    if (t->status == unprocessed) {
+      t->status = new_status;
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        for (int sign : {-1, 1}) {
+          Eigen::VectorXi direct(n_dim);
+          direct.setZero();
+          direct(i_dim) = sign;
+          for (Tree* neighb : t->find_neighbors(direct)) {
+            to_process.push(neighb);
+          }
+        }
+      }
+    }
+  }
 }
 
 void Tree::clear_status()
