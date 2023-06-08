@@ -3,6 +3,18 @@
 namespace hexed
 {
 
+void Tree::add_extremal_leves(std::vector<Tree*>& add_to, Eigen::VectorXi bias)
+{
+  if (is_leaf()) add_to.push_back(this);
+  else for (auto& child : children_storage) {
+    bool add = true;
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      add = add && (bias(i_dim) == -1 || bias(i_dim) == child->coords(i_dim)%2);
+    }
+    if (add) child->add_extremal_leves(add_to, bias);
+  }
+}
+
 Tree::Tree(int nd, double root_size, Mat<> origin)
 : root_sz{root_size}, ref_level{0}, coords{Eigen::VectorXi::Zero(nd)},
   par{nullptr}, children_storage(),
@@ -25,6 +37,13 @@ std::vector<Tree*> Tree::children()
   std::vector<Tree*> c;
   for (auto& t : children_storage) c.push_back(t.get());
   return c;
+}
+
+Tree* Tree::root()
+{
+  Tree* r = this;
+  while (!r->is_root()) r = r->parent();
+  return r;
 }
 
 bool Tree::is_root() const {return !par;}
@@ -86,9 +105,6 @@ Tree* Tree::find_leaf(Mat<> nom_pos)
 Tree* Tree::find_neighbor(Eigen::VectorXi direction)
 {
   HEXED_ASSERT(direction.size() >= n_dim, "`direction` has too few elements");
-  // find the root
-  Tree* root = this;
-  while (!root->is_root()) root = root->parent();
   // compute the coordinates and bias which will identify the neighbor
   Eigen::VectorXi bias(n_dim);
   Eigen::VectorXi c(n_dim);
@@ -97,12 +113,24 @@ Tree* Tree::find_neighbor(Eigen::VectorXi direction)
     bias(i_dim) = (direction(i_dim) < 0);
   }
   // use `find_leaf` on the root element to find the neighbor
-  return root->find_leaf(ref_level, c, bias);
+  return root()->find_leaf(ref_level, c, bias);
 }
 
 std::vector<Tree*> Tree::find_neighbors(Eigen::VectorXi direction)
 {
-  return {};
+  HEXED_ASSERT(direction.size() >= n_dim, "`direction` has too few elements");
+  std::vector<Tree*> neighbs;
+  // start by finding some leaf neighbor
+  Tree* main_neighbor = find_neighbor(direction);
+  if (main_neighbor) {
+    // find a neighbor, not necessarily a leaf, with the same refinement level as this
+    while (main_neighbor->refinement_level() > refinement_level()) main_neighbor = main_neighbor->parent();
+    // find all the leaf descendents of that neighbor which are neighbors of this
+    Eigen::VectorXi bias(n_dim);
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) bias(i_dim) = direction(i_dim) == 0 ? -1 : direction(i_dim) < 0;
+    main_neighbor->add_extremal_leves(neighbs, bias);
+  }
+  return neighbs;
 }
 
 }

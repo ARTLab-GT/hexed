@@ -40,6 +40,11 @@ class Tree
   Tree* par;
   std::vector<std::unique_ptr<Tree>> children_storage;
   int status;
+  // finds leaves of this element and adds them to `add_to`.
+  // for each dimension, if the corresponding element of `bias` is 0, adds only the elements at the lower extreme of that dimension.
+  // if 1, adds only those at the upper extreme.
+  // if -1, adds all.
+  void add_extremal_leves(std::vector<Tree*>& add_to, Eigen::VectorXi bias);
 
   public:
   /*! Constructs the root element of a tree. All other elements will be descendents of this one.
@@ -81,6 +86,7 @@ class Tree
   Tree* parent(); //!< If this element is not the root, then this is a pointer to the element which was refined to obtain this element. If it is the root, then this is `nullptr`.
   //! If this cell has been refined, then this vector contains pointers to its children. If it has not, the vector is empty.
   std::vector<Tree*> children();
+  Tree* root(); //!< fetch the root element of this tree
   bool is_root() const; //!< gives the same result as `!parent()`
   bool is_leaf() const; //!< gives the same result as `children().empty()`
   //!\}
