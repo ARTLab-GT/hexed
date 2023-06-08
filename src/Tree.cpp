@@ -144,6 +144,10 @@ void Tree::set_status(int new_status)
   status = new_status;
 }
 
+void Tree::flood_fill(int new_status)
+{
+}
+
 void Tree::clear_status()
 {
   status = unprocessed;

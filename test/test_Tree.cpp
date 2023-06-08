@@ -80,4 +80,24 @@ TEST_CASE("Tree")
   tree2.clear_status();
   REQUIRE(children[0]->get_status() == hexed::Tree::unprocessed);
   REQUIRE(children[3]->children()[0]->children()[1]->get_status() == hexed::Tree::unprocessed);
+  children[2]->set_status(0);
+  children[3]->children()[0]->children()[0]->set_status(0);
+  children[3]->children()[0]->children()[3]->set_status(0);
+  children[3]->children()[1]->set_status(0);
+  tree2.flood_fill(1); // starts from children[0]
+  REQUIRE(children[0]->get_status() == 1);
+  REQUIRE(children[1]->get_status() == 1);
+  REQUIRE(children[3]->children()[0]->children()[1]->get_status() == 1);
+  REQUIRE(children[3]->children()[0]->children()[0]->get_status() == 0);
+  REQUIRE(children[3]->children()[0]->children()[2]->get_status() == hexed::Tree::unprocessed);
+  REQUIRE(children[3]->children()[3]->get_status() == hexed::Tree::unprocessed);
+  tree2.flood_fill(2); // does nothing
+  REQUIRE(children[0]->get_status() == 1);
+  children[3]->children()[3]->flood_fill(3);
+  REQUIRE(children[0]->get_status() == 1);
+  REQUIRE(children[3]->children()[0]->children()[1]->get_status() == 1);
+  REQUIRE(children[3]->children()[3]->get_status() == 3);
+  REQUIRE(children[3]->children()[2]->get_status() == 3);
+  REQUIRE(children[3]->children()[0]->children()[2]->get_status() == 3);
+  REQUIRE(children[3]->children()[1]->get_status() == 0);
 }
