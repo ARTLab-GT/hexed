@@ -68,6 +68,23 @@ class Mesh
   virtual void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n) = 0;
   //! delete all boundary connections involving a certain boundary condition
   virtual void disconnect_boundary(int bc_sn) = 0;
+  //! connects all yet-unconnected faces to a boundary condition specified by serial number
+  virtual void connect_rest(int bc_sn) = 0;
+  /*! \brief Initializes meshing with bin/quad/[octree](https://en.wikipedia.org/wiki/Octree) topology.
+   * \details Creates a tree initialized with one element with ref level 0 located at {0, 0, 0}.
+   * Technically, free-form elements can also be created in the same mesh,
+   * but they will not be connected to the tree.
+   * Only one tree can be created.
+   * \param serial_numbers list of serial numbers of BCs to apply to any elements
+   *   with exposed faces at the extremal boundaries of the tree.
+   *   It should contain `2*n_dim` entries, each of which should be a serial number
+   *   returned by `add_boundary_condition`.
+   *   E.g. `serial_numbers[0]` is the boundary condition to apply to the minimum \f$x_0\f$ face,
+   *   `serial_numbers[1]` is the BC for the maximum \f$x_0\f$ face,
+   *   `serial_numbers[2]` is for minimum \f$x_1\f$.
+   *   The same serial number may appear any number of times.
+   */
+  virtual void add_tree(std::vector<int> serial_numbers) = 0;
   /*!
    * Extrudes a layer of elements from unconnected faces:
    * 1. Extrudes one deformed element from every unconnected face of every deformed element.
@@ -89,7 +106,7 @@ class Mesh
    * Offsetting thus provides a rudimentary way of creating anisotropic wall layers.
    */
   virtual void extrude(bool collapse = false, double offset = 0) = 0;
-  void extrude(Layer_sequence layers)
+  inline void extrude(Layer_sequence layers)
   {
     double height = 1;
     for (int i_layer = layers.n_layers() - 1; i_layer > 0; --i_layer) {
@@ -98,8 +115,6 @@ class Mesh
       height = new_height;
     }
   }
-  //! connects all yet-unconnected faces to a boundary condition specified by serial number
-  virtual void connect_rest(int bc_sn) = 0;
 
   //! An object to provide information about whether the mesh connectivity is valid and if not, why.
   class Connection_validity

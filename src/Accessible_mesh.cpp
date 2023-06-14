@@ -459,4 +459,20 @@ std::vector<Mesh::elem_handle> Accessible_mesh::elem_handles()
   return handles;
 }
 
+void Accessible_mesh::add_tree(std::vector<int> serial_numbers)
+{
+  HEXED_ASSERT(int(serial_numbers.size()) == 2*params.n_dim, "`serial_numbers` has wrong number of elements");
+  HEXED_ASSERT(!tree, "each `Mesh` may only contain one tree");
+  tree.reset(new Tree(params.n_dim, root_sz));
+  int sn = add_element(0, false, std::vector<int>(params.n_dim, 0));
+  auto& elem = element(0, 0, sn);
+  elem.tree = tree.get();
+  tree->elem = &elem;
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+    for (int sign = 0; sign < 2; ++sign) {
+      connect_boundary(0, 0, sn, i_dim, sign, serial_numbers[2*i_dim + sign]);
+    }
+  }
+}
+
 }

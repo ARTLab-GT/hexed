@@ -3,6 +3,7 @@
 
 #include "Mesh.hpp"
 #include "Mesh_by_type.hpp"
+#include "Tree.hpp"
 
 namespace hexed
 {
@@ -32,6 +33,7 @@ class Accessible_mesh : public Mesh
   Concatenation<Hanging_vertex_matcher&> matcher_v;
   std::vector<Vertex::Non_transferable_ptr> vert_ptrs;
   std::vector<int> extrude_cons;
+  std::unique_ptr<Tree> tree; // could be null! don't forget to check
 
   public:
   /*!
@@ -60,6 +62,7 @@ class Accessible_mesh : public Mesh
   int add_boundary_condition(Flow_bc*, Mesh_bc*) override;
   void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n) override;
   void disconnect_boundary(int bc_sn) override;
+  void add_tree(std::vector<int> serial_numbers) override;
   //! \returns a view of all Bounday_condition objects owned by this mesh
   Vector_view<Boundary_condition&, Boundary_condition> boundary_conditions() {return bound_conds;}
   //! get a boundary condition owned by this mesh by its serial number

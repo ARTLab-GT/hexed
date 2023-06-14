@@ -355,3 +355,14 @@ TEST_CASE("extruded hanging node connection validity")
   REQUIRE(mesh.valid().n_duplicate == 0);
   REQUIRE(mesh.valid().n_missing == 2*(4 + 8) + 4);
 }
+
+TEST_CASE("Tree meshing")
+{
+  hexed::Accessible_mesh mesh({1, 5, 3, hexed::config::max_row_size}, .7);
+  mesh.add_boundary_condition(new hexed::Copy, new hexed::Null_mbc);
+  REQUIRE_THROWS(mesh.add_tree({0, 0, 0, 0}));
+  mesh.add_tree({0, 0, 0, 0, 0, 0});
+  REQUIRE_THROWS(mesh.add_tree({0, 0, 0, 0, 0, 0}));
+  REQUIRE(mesh.elements().size() == 1);
+  mesh.valid().assert_valid();
+}
