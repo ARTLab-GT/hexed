@@ -3,6 +3,7 @@
 
 #include <memory>
 #include "math.hpp"
+#include "Element.hpp"
 
 namespace hexed
 {
@@ -56,6 +57,7 @@ class Tree
    */
   Tree(int n_dim, double root_size, Mat<> origin = Mat<>::Zero(3));
   const int n_dim;
+  Element* elem = nullptr; //!< `Element` generated from this tree (to be managed by the user of this class)
 
   //! \name basic instance information
   //!\{

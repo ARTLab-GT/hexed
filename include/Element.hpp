@@ -13,6 +13,8 @@
 namespace hexed
 {
 
+class Tree;
+
 /*!
  * Stores data associated with one element. Container only --
  * does not have implementations of or information about the basis and algorithms.
@@ -46,6 +48,7 @@ class Element
   static constexpr bool is_deformed = false;
   static constexpr int n_forcing = 4;
   int record = 0; //!< for algorithms to book-keep general information
+  Tree* tree = nullptr; //!< `Tree` this element was created from
 
   /*!
    * The `Storage_params1 defines the amount of storage that must be allocated.
