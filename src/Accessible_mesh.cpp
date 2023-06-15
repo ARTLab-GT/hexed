@@ -486,7 +486,7 @@ void Accessible_mesh::add_tree(std::vector<int> serial_numbers)
 
 void Accessible_mesh::refine(std::function<bool(Element&)> predicate)
 {
-  {
+  { // decide which elements to delete
     auto& elems = elements();
     // parallelize this part since `predicate` could be expensive
     #pragma omp parallel for
@@ -496,10 +496,10 @@ void Accessible_mesh::refine(std::function<bool(Element&)> predicate)
   }
   int n_orig [2];
   for (bool is_deformed : {0, 1}) {
+    // add new elements
     auto& cont = container(is_deformed);
     auto& cont_elems = cont.element_view();
-    // count how many elements there are before adding, so we know where the new ones start
-    n_orig[is_deformed] = cont_elems.size();
+    n_orig[is_deformed] = cont_elems.size(); // count how many elements there are before adding, so we know where the new ones start
     for (int i_elem = 0; i_elem < n_orig[is_deformed]; ++i_elem) {
       auto& elem = cont_elems[i_elem];
       if (elem.record == 1 && elem.tree) {
@@ -509,6 +509,8 @@ void Accessible_mesh::refine(std::function<bool(Element&)> predicate)
         }
       }
     }
+    // delete old elements
+    cont.purge();
   }
 }
 

@@ -28,7 +28,8 @@ class Element_container
   virtual Sequence<Element&>& element_view() = 0;
   //! return the currently valid set of `ref_level`, `serial_n` combinations
   virtual std::vector<std::array<int, 2>> elem_handles() = 0;
-  virtual int purge(std::function<bool(Element&)> = [](Element& elem){return elem.record != 0;}) = 0; //!< deletes all elements where `predicate` evaluates to true
+  //!< deletes all elements where `predicate` evaluates to true and returns the number of elements deleted
+  virtual int purge(std::function<bool(Element&)> predicate = [](Element& elem){return elem.record != 0;}) = 0;
 };
 
 /*!
@@ -78,9 +79,20 @@ class Complete_element_container : public Element_container
 
   Sequence<Element&>& element_view() {return view;} //!< same as `elements()` except views elements as type `Element&`
 
-  int purge(std::function<bool(Element&)> = [](Element& elem){return elem.record != 0;}) override
+  int purge(std::function<bool(Element&)> predicate = [](Element& elem){return elem.record != 0;}) override
   {
-    return 0;
+    int old_size = vec.size();
+    std::vector<std::unique_ptr<element_t>> new_vec;
+    std::vector<int> new_sns;
+    for (int i_elem = 0; i_elem < old_size; ++i_elem) {
+      if (!predicate(*vec[i_elem])) {
+        new_vec.emplace_back(vec[i_elem].release());
+        new_sns.push_back(serial_ns[i_elem]);
+      }
+    }
+    vec = std::move(new_vec);
+    serial_ns = std::move(new_sns);
+    return old_size = vec.size();
   }
 
   std::vector<std::array<int, 2>> elem_handles() override
