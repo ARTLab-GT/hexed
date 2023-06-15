@@ -95,7 +95,7 @@ class Tree
 
   //! \name modifiers
   //!\{
-  void refine(); //!< Creates \f$2^{\verb|n_dim|}\f$ child elements with refinement level one greater than this element and cover the same volume.
+  void refine(); //!< Creates \f$2^{\verb|n_dim|}\f$ child elements with refinement level one greater than this element and cover the same volume. Must be leaf.
   void unrefine(); //!< Deletes all child elements (and descendents thereof). This element is now a leaf.
   //!\}
 

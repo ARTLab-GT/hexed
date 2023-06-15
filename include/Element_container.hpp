@@ -25,6 +25,7 @@ class Element_container
   virtual int emplace(int ref_level, std::vector<int> position) = 0;
   //! access an element by refinement level and serial number
   virtual Element& at(int ref_level, int serial_n) = 0;
+  virtual Sequence<Element&>& element_view() = 0;
   //! return the currently valid set of `ref_level`, `serial_n` combinations
   virtual std::vector<std::array<int, 2>> elem_handles() = 0;
 };
@@ -43,11 +44,12 @@ class Complete_element_container : public Element_container
   int next_sn;
   std::vector<ptr_t> vec;
   std::map<std::array<int, 2>, element_t&> map;
+  Vector_view<Element&, ptr_t, ptr_convert<Element&, ptr_t>> view;
 
   public:
   //! construct with the same data as `Mesh::Mesh`
   Complete_element_container(Storage_params storage_params, double root_spacing)
-  : params{storage_params}, spacing{root_spacing}, next_sn{0}
+  : params{storage_params}, spacing{root_spacing}, next_sn{0}, view{vec}
   {}
 
   int emplace(int ref_level, std::vector<int> position) override
@@ -64,11 +66,13 @@ class Complete_element_container : public Element_container
   }
 
   typedef Vector_view<element_t&, ptr_t, &convert> view_t; //!< convenience typedef
-  //! Provides a `Vector_view` which can be used to efficiently iterate through the elements, in no particular order.
+  //! Provides a `Vector_view` which can be used to efficiently iterate through the elements, in order of creation (oldest first)
   view_t elements()
   {
     return vec;
   }
+
+  Sequence<Element&>& element_view() {return view;} //!< same as `elements()` except views elements as type `Element&`
 
   std::vector<std::array<int, 2>> elem_handles() override
   {

@@ -18,7 +18,6 @@ class Accessible_mesh : public Mesh
   Storage_params params;
   int n_vert;
   double root_sz;
-  Element_container& container(bool is_deformed);
   Mesh_by_type<         Element> car;
   Mesh_by_type<Deformed_element> def;
   // create a `Vector_view` that can look at `def.elements()` as `Element&`s.
@@ -34,6 +33,9 @@ class Accessible_mesh : public Mesh
   std::vector<Vertex::Non_transferable_ptr> vert_ptrs;
   std::vector<int> extrude_cons;
   std::unique_ptr<Tree> tree; // could be null! don't forget to check
+
+  Element_container& container(bool is_deformed);
+  Element& add_elem(bool is_deformed, Tree&);
 
   public:
   /*!
@@ -63,6 +65,7 @@ class Accessible_mesh : public Mesh
   void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n) override;
   void disconnect_boundary(int bc_sn) override;
   void add_tree(std::vector<int> serial_numbers) override;
+  void refine(std::function<bool(Element&)> predicate) override;
   //! \returns a view of all Bounday_condition objects owned by this mesh
   Vector_view<Boundary_condition&, Boundary_condition> boundary_conditions() {return bound_conds;}
   //! get a boundary condition owned by this mesh by its serial number

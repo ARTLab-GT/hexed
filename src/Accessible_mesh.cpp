@@ -459,18 +459,55 @@ std::vector<Mesh::elem_handle> Accessible_mesh::elem_handles()
   return handles;
 }
 
+Element& Accessible_mesh::add_elem(bool is_deformed, Tree& t)
+{
+  auto np = t.coordinates();
+  int sn = add_element(t.refinement_level(), is_deformed, std::vector<int>(np.begin(), np.end()));
+  auto& elem = element(t.refinement_level(), is_deformed, sn);
+  elem.record = sn; // put the serial number in the record so it can be used for connections
+  elem.tree = &t;
+  t.elem = &elem;
+  return elem;
+}
+
 void Accessible_mesh::add_tree(std::vector<int> serial_numbers)
 {
   HEXED_ASSERT(int(serial_numbers.size()) == 2*params.n_dim, "`serial_numbers` has wrong number of elements");
   HEXED_ASSERT(!tree, "each `Mesh` may only contain one tree");
   tree.reset(new Tree(params.n_dim, root_sz));
-  int sn = add_element(0, false, std::vector<int>(params.n_dim, 0));
-  auto& elem = element(0, 0, sn);
-  elem.tree = tree.get();
-  tree->elem = &elem;
+  auto& elem = add_elem(false, *tree);
+  int sn = elem.record;
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
       connect_boundary(0, 0, sn, i_dim, sign, serial_numbers[2*i_dim + sign]);
+    }
+  }
+}
+
+void Accessible_mesh::refine(std::function<bool(Element&)> predicate)
+{
+  {
+    auto& elems = elements();
+    // parallelize this part since `predicate` could be expensive
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      elems[i_elem].record = predicate(elems[i_elem]);
+    }
+  }
+  int n_orig [2];
+  for (bool is_deformed : {0, 1}) {
+    auto& cont = container(is_deformed);
+    auto& cont_elems = cont.element_view();
+    // count how many elements there are before adding, so we know where the new ones start
+    n_orig[is_deformed] = cont_elems.size();
+    for (int i_elem = 0; i_elem < n_orig[is_deformed]; ++i_elem) {
+      auto& elem = cont_elems[i_elem];
+      if (elem.record == 1 && elem.tree) {
+        elem.tree->refine();
+        for (Tree* child : elem.tree->children()) {
+          add_elem(is_deformed, *child).record = 0;
+        }
+      }
     }
   }
 }

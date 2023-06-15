@@ -70,6 +70,7 @@ class Mesh
   virtual void disconnect_boundary(int bc_sn) = 0;
   //! connects all yet-unconnected faces to a boundary condition specified by serial number
   virtual void connect_rest(int bc_sn) = 0;
+
   /*! \brief Initializes meshing with bin/quad/[octree](https://en.wikipedia.org/wiki/Octree) topology.
    * \details Creates a tree initialized with one element with ref level 0 located at {0, 0, 0}.
    * Technically, free-form elements can also be created in the same mesh,
@@ -85,6 +86,19 @@ class Mesh
    *   The same serial number may appear any number of times.
    */
   virtual void add_tree(std::vector<int> serial_numbers) = 0;
+  /*! \brief Refines all elements where `predicate` returns `true`.
+   * \details Evaluates `predicate` on every element in the tree (if one exists).
+   * Whenever it returns `true`, that element is split in half in each dimension,
+   * resulting in \f$2^{n_dim}\f$ new elements.
+   * Connections are updated, and some additional elements may be refined
+   * to enforce conditions required by the solver.
+   * `predicate` must be thread-safe
+   * and must not depend on the order in which elements are processed.
+   * \todo update this documentation once it can handle wall geometry.
+   */
+  virtual void refine(std::function<bool(Element&)> predicate) = 0;
+  static inline bool always(Element&) {return true;}
+
   /*!
    * Extrudes a layer of elements from unconnected faces:
    * 1. Extrudes one deformed element from every unconnected face of every deformed element.

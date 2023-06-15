@@ -53,6 +53,7 @@ bool Tree::is_leaf() const {return children_storage.empty();}
 
 void Tree::refine()
 {
+  HEXED_ASSERT(is_leaf(), "can only refine leaf")
   for (int i_child = 0; i_child < math::pow(2, n_dim); ++i_child) {
     children_storage.emplace_back(new Tree(n_dim, root_sz, orig));
     Tree& child = *children_storage.back();

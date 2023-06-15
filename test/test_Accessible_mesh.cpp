@@ -365,4 +365,7 @@ TEST_CASE("Tree meshing")
   REQUIRE_THROWS(mesh.add_tree({0, 0, 0, 0, 0, 0}));
   REQUIRE(mesh.elements().size() == 1);
   mesh.valid().assert_valid();
+  mesh.refine(hexed::Mesh::always);
+  REQUIRE(mesh.elements().size() == 8);
+  mesh.valid().assert_valid();
 }
