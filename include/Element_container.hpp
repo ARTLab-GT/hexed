@@ -28,6 +28,7 @@ class Element_container
   virtual Sequence<Element&>& element_view() = 0;
   //! return the currently valid set of `ref_level`, `serial_n` combinations
   virtual std::vector<std::array<int, 2>> elem_handles() = 0;
+  virtual int purge(std::function<bool(Element&)> = [](Element& elem){return elem.record != 0;}) = 0; //!< deletes all elements where `predicate` evaluates to true
 };
 
 /*!
@@ -43,7 +44,7 @@ class Complete_element_container : public Element_container
   double spacing;
   int next_sn;
   std::vector<ptr_t> vec;
-  std::map<std::array<int, 2>, element_t&> map;
+  std::vector<int> serial_ns;
   Vector_view<Element&, ptr_t, ptr_convert<Element&, ptr_t>> view;
 
   public:
@@ -55,14 +56,17 @@ class Complete_element_container : public Element_container
   int emplace(int ref_level, std::vector<int> position) override
   {
     vec.emplace_back(new element_t {params, position, spacing, ref_level});
-    std::array<int, 2> key = {ref_level, next_sn++};
-    map.insert(std::pair<std::array<int, 2>, element_t&>(key, *vec.back()));
-    return key[1];
+    serial_ns.push_back(next_sn++);
+    return serial_ns.back();
   }
 
   element_t& at(int ref_level, int serial_n) override
   {
-    return map.at({ref_level, serial_n});
+    auto range = std::equal_range(serial_ns.begin(), serial_ns.end(), serial_n);
+    HEXED_ASSERT(range.second - range.first == 1, "could not find unique element with specified serial number");
+    element_t& elem = *vec[range.first - serial_ns.begin()];
+    HEXED_ASSERT(elem.refinement_level() == ref_level, "could not find element with specified refinement level");
+    return elem;
   }
 
   typedef Vector_view<element_t&, ptr_t, &convert> view_t; //!< convenience typedef
@@ -74,10 +78,17 @@ class Complete_element_container : public Element_container
 
   Sequence<Element&>& element_view() {return view;} //!< same as `elements()` except views elements as type `Element&`
 
+  int purge(std::function<bool(Element&)> = [](Element& elem){return elem.record != 0;}) override
+  {
+    return 0;
+  }
+
   std::vector<std::array<int, 2>> elem_handles() override
   {
     std::vector<std::array<int, 2>> handles;
-    for (auto pair : map) handles.push_back(pair.first);
+    for (unsigned i_elem = 0; i_elem < vec.size(); ++i_elem) {
+      handles.push_back({vec[i_elem]->refinement_level(), serial_ns[i_elem]});
+    }
     return handles;
   }
 };
