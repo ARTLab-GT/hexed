@@ -211,7 +211,7 @@ class Refined_connection
   void connect_normal();
 
   public:
-  Refined_face refined_face; //!< pretty please don't write to this!! this should be const and/or private, but i have bigger problems rn :( FIXME
+  Refined_face refined_face; //!< pretty please don't write to this!! \todo this should be const and/or private, but i have bigger problems rn
   Hanging_vertex_matcher matcher;
   /*!
    * if `reverse_order` is true, the fine elements will come before coarse in the connection.

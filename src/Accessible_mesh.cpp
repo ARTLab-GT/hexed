@@ -493,20 +493,51 @@ template<typename element_t> void Accessible_mesh::connect_new(int start_at)
   auto& m = mbt<element_t>();
   auto elems = m.elems.elements();
   int nd = params.n_dim;
+  auto connect_refined = [&](Element& elem, int i_dim, int sign, std::vector<Tree*> neighbors) {
+    HEXED_ASSERT(int(neighbors.size()) == math::pow(2, nd - 1), format_str(100, "bad number of neighbors %lu (thanks for nothing, ref level smoother)", neighbors.size()))
+    bool is_def = true;
+    for (Tree* neighbor : neighbors) {
+      HEXED_ASSERT(neighbor->elem, "hanging-node connection with nonexistant elements");
+      is_def = is_def && neighbor->elem->get_is_deformed();
+    }
+    if (is_def) {
+    } else {
+      std::vector<Element*> fine;
+      for (Tree* neighbor : neighbors) fine.push_back(neighbor->elem);
+      car.ref_face_cons[nd - 1].emplace_back(new Refined_connection<Element>(&elem, fine, {i_dim}, sign));
+    }
+  };
   for (int i_elem = start_at; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     if (elem.tree) {
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         for (int sign = 0; sign < 2; ++sign) {
-          Eigen::VectorXi direction = Eigen::VectorXi::Zero(nd);
-          direction(i_dim) = math::sign(sign);
-          auto neighbors = elem.tree->find_neighbors(direction);
-          if (neighbors.empty()) m.bound_cons.emplace_back(elem, i_dim, sign, tree_bcs[2*i_dim + sign]);
-          else if (neighbors.size() == 1 && sign) if (neighbors[0]->elem) {
-            auto& other = *neighbors[0]->elem;
-            if (other.refinement_level() == elem.refinement_level()) {
-              if (elem.get_is_deformed() && other.get_is_deformed()) ;
-              else car.cons.emplace_back(std::array<Element*, 2>{&elem, &other}, Con_dir<Element>{i_dim});
+          if (!elem.faces[2*i_dim + sign]) { // if this face hasn't been connected already
+            Eigen::VectorXi direction = Eigen::VectorXi::Zero(nd);
+            direction(i_dim) = math::sign(sign);
+            auto neighbors = elem.tree->find_neighbors(direction);
+            if (neighbors.empty()) m.bound_cons.emplace_back(elem, i_dim, sign, tree_bcs[2*i_dim + sign]);
+            else if (neighbors.size() == 1) {
+              if (neighbors[0]->elem) {
+                auto& other = *neighbors[0]->elem;
+                if (other.refinement_level() == elem.refinement_level()) {
+                  if (elem.get_is_deformed() && other.get_is_deformed()) ;
+                  else {
+                    std::array<Element*, 2> el_ar;
+                    el_ar[!sign] = &elem;
+                    el_ar[sign] = &other;
+                    car.cons.emplace_back(el_ar, Con_dir<Element>{i_dim});
+                  }
+                } else {
+                  bool is_min_corner = true;
+                  for (int j_dim = 0; j_dim < nd; ++j_dim) if (j_dim != i_dim) {
+                    is_min_corner = is_min_corner && elem.tree->coordinates()[j_dim]%2 == 0;
+                  }
+                  if (is_min_corner) connect_refined(other, i_dim, sign, other.tree->find_neighbors(-direction));
+                }
+              }
+            } else {
+              connect_refined(elem, i_dim, sign, neighbors);
             }
           }
         }

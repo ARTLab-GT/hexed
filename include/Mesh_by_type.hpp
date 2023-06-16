@@ -183,6 +183,7 @@ class Mesh_by_type : public View_by_type<element_t>
   void purge_connections(std::function<bool(Element&)> predicate = [](Element& elem){return elem.record != 0;})
   {
     erase_if(bound_cons, [predicate](Typed_bound_connection<element_t>& con){return predicate(con.element());});
+    erase_if(cons, [predicate](Element_face_connection<element_t>& con){return predicate(con.element(0)) || predicate(con.element(1));});
   }
 };
 
