@@ -360,6 +360,7 @@ TEST_CASE("Tree meshing")
 {
   hexed::Accessible_mesh mesh({1, 5, 3, hexed::config::max_row_size}, .7);
   mesh.add_boundary_condition(new hexed::Copy, new hexed::Null_mbc);
+  REQUIRE_THROWS(mesh.refine(hexed::Mesh::always));
   REQUIRE_THROWS(mesh.add_tree({0, 0, 0, 0}));
   mesh.add_tree({0, 0, 0, 0, 0, 0});
   REQUIRE_THROWS(mesh.add_tree({0, 0, 0, 0, 0, 0}));

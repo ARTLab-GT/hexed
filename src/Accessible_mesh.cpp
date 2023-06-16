@@ -486,6 +486,7 @@ void Accessible_mesh::add_tree(std::vector<int> serial_numbers)
 
 void Accessible_mesh::refine(std::function<bool(Element&)> predicate)
 {
+  HEXED_ASSERT(tree, "need a tree to refine");
   auto& elems = elements();
   // parallelize this part since `predicate` could be expensive
   #pragma omp parallel for // decide which elements to delete
