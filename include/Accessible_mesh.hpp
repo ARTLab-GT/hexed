@@ -33,9 +33,12 @@ class Accessible_mesh : public Mesh
   std::vector<Vertex::Non_transferable_ptr> vert_ptrs;
   std::vector<int> extrude_cons;
   std::unique_ptr<Tree> tree; // could be null! don't forget to check
+  std::vector<int> tree_bcs;
 
   Element_container& container(bool is_deformed);
   Element& add_elem(bool is_deformed, Tree&);
+  template<typename element_t> Mesh_by_type<element_t>& mbt(); // gets either `car` or `def`
+  template<typename element_t> void connect_new(int start_at); // connects new elements in `mbt<element_t>()`. helper function for `refine`
 
   public:
   /*!

@@ -13,6 +13,9 @@ Element_container& Accessible_mesh::container(bool is_deformed)
   return *containers[is_deformed];
 }
 
+template<> Mesh_by_type<         Element>& Accessible_mesh::mbt() {return car;}
+template<> Mesh_by_type<Deformed_element>& Accessible_mesh::mbt() {return def;}
+
 Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg) :
   params{params_arg},
   n_vert{math::pow(2, params.n_dim)},
@@ -475,6 +478,7 @@ void Accessible_mesh::add_tree(std::vector<int> serial_numbers)
   HEXED_ASSERT(int(serial_numbers.size()) == 2*params.n_dim, "`serial_numbers` has wrong number of elements");
   HEXED_ASSERT(!tree, "each `Mesh` may only contain one tree");
   tree.reset(new Tree(params.n_dim, root_sz));
+  tree_bcs = serial_numbers;
   auto& elem = add_elem(false, *tree);
   int sn = elem.record;
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
@@ -484,12 +488,32 @@ void Accessible_mesh::add_tree(std::vector<int> serial_numbers)
   }
 }
 
+template<typename element_t> void Accessible_mesh::connect_new(int start_at)
+{
+  auto& m = mbt<element_t>();
+  auto elems = m.elems.elements();
+  int nd = params.n_dim;
+  for (int i_elem = start_at; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    if (elem.tree) {
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        for (int sign = 0; sign < 2; ++sign) {
+          Eigen::VectorXi direction = Eigen::VectorXi::Zero(nd);
+          direction(i_dim) = math::sign(sign);
+          auto neighbors = elem.tree->find_neighbors(direction);
+          if (neighbors.empty()) m.bound_cons.emplace_back(elem, i_dim, sign, tree_bcs[2*i_dim + sign]);
+        }
+      }
+    }
+  }
+}
+
 void Accessible_mesh::refine(std::function<bool(Element&)> predicate)
 {
   HEXED_ASSERT(tree, "need a tree to refine");
   auto& elems = elements();
-  // parallelize this part since `predicate` could be expensive
-  #pragma omp parallel for // decide which elements to delete
+  // decide which elements to delete
+  #pragma omp parallel for // parallelize this part since `predicate` could be expensive
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].record = predicate(elems[i_elem]);
   }
@@ -508,14 +532,16 @@ void Accessible_mesh::refine(std::function<bool(Element&)> predicate)
         }
       }
     }
-    // delete old elements
   }
   // delete connections to old elements (has to happen before deleting elements or else use after free)
   car.purge_connections();
   def.purge_connections();
   // delete old elements
-  car.elems.purge();
-  def.elems.purge();
+  n_orig[0] -= car.elems.purge();
+  n_orig[1] -= def.elems.purge();
+  // connect new elements
+  connect_new<         Element>(n_orig[0]);
+  connect_new<Deformed_element>(n_orig[1]);
 }
 
 }

@@ -92,7 +92,7 @@ class Complete_element_container : public Element_container
     }
     vec = std::move(new_vec);
     serial_ns = std::move(new_sns);
-    return old_size = vec.size();
+    return old_size - vec.size();
   }
 
   std::vector<std::array<int, 2>> elem_handles() override
