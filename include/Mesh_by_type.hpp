@@ -178,6 +178,12 @@ class Mesh_by_type : public View_by_type<element_t>
       }
     }
   }
+
+  //! delete all connections (of all kinds) where `predicate` is true for at least one of the elements involved
+  void purge_connections(std::function<bool(Element&)> predicate = [](Element& elem){return elem.record != 0;})
+  {
+    erase_if(bound_cons, [predicate](Typed_bound_connection<element_t>& con){return predicate(con.element());});
+  }
 };
 
 template <typename element_t>
