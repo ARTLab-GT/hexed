@@ -502,6 +502,13 @@ template<typename element_t> void Accessible_mesh::connect_new(int start_at)
           direction(i_dim) = math::sign(sign);
           auto neighbors = elem.tree->find_neighbors(direction);
           if (neighbors.empty()) m.bound_cons.emplace_back(elem, i_dim, sign, tree_bcs[2*i_dim + sign]);
+          else if (neighbors.size() == 1 && sign) if (neighbors[0]->elem) {
+            auto& other = *neighbors[0]->elem;
+            if (other.refinement_level() == elem.refinement_level()) {
+              if (elem.get_is_deformed() && other.get_is_deformed()) ;
+              else car.cons.emplace_back(std::array<Element*, 2>{&elem, &other}, Con_dir<Element>{i_dim});
+            }
+          }
         }
       }
     }
