@@ -400,5 +400,18 @@ TEST_CASE("Tree meshing")
     mesh.refine(hexed::Mesh::never, predicate);
     REQUIRE(mesh.elements().size() == 6*64 + 2*8);
     mesh.valid().assert_valid();
+    SECTION("neighbors with different ref levels") {
+      hexed::Accessible_mesh mesh1({1, 5, 3, hexed::config::max_row_size}, .7);
+      mesh1.add_boundary_condition(new hexed::Copy, new hexed::Null_mbc);
+      mesh1.add_tree({0, 0, 0, 0, 0, 0});
+      mesh1.refine();
+      mesh1.refine();
+      mesh1.refine([](hexed::Element& elem){return elem.nominal_position()[0] < 2;});
+      REQUIRE(mesh1.elements().size() == 4*8 + 4*64);
+      mesh1.valid().assert_valid();
+      mesh1.refine(hexed::Mesh::never, hexed::Mesh::always);
+      REQUIRE(mesh1.elements().size() == 4*1 + 4*8);
+      mesh1.valid().assert_valid();
+    }
   }
 }

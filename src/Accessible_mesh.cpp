@@ -558,26 +558,6 @@ void Accessible_mesh::refine_by_record(bool is_deformed, int start, int end)
         for (Tree* child : elem.tree->children()) {
           add_elem(is_deformed, *child).record = 0;
         }
-      } else if (elem.record == -1) {
-        bool unref = false;
-        bool is_def = false; // whether the putative unrefined element will be deformed
-        Tree* parent;
-        if (!elem.tree->is_root()) {
-          unref = true;
-          parent = elem.tree->parent();
-          for (Tree* child : parent->children()) {
-            if (!child->elem) unref = false; // note this will happen if child is not a leaf
-            else {
-              unref = unref && child->elem->record == -1;
-              is_def = is_def || child->elem->get_is_deformed();
-            }
-          }
-        }
-        if (unref) {
-          for (Tree* child : parent->children()) child->elem->record = 2;
-          parent->unrefine();
-          add_elem(is_def, *parent).record = 0;
-        } else elem.record = 0;
       }
     }
   }
@@ -617,17 +597,14 @@ void Accessible_mesh::refine(std::function<bool(Element&)> ref_predicate, std::f
             for (int sign = 0; sign < 2; ++sign) {
               Eigen::VectorXi direction = Eigen::VectorXi::Zero(nd);
               direction(i_dim) = math::sign(sign);
-              auto neighbors = elem.tree->find_neighbors(direction);
-              if (neighbors.size() == 1) {
-                if (neighbors[0]->refinement_level() < elem.refinement_level() - 1) {
-                  if (neighbors[0]->elem) {
+              Tree* neighbor = elem.tree->find_neighbor(direction);
+              if (neighbor) {
+                if (neighbor->refinement_level() < elem.refinement_level() - 1) {
+                  if (neighbor->elem) {
                     changed = true;
-                    neighbors[0]->elem->record = 1;
+                    neighbor->elem->record = 1;
                   }
                 }
-              } else if (int(neighbors.size()) > math::pow(2, nd - 1)) {
-                changed = true;
-                elem.record = 1;
               }
             }
           }
@@ -636,6 +613,56 @@ void Accessible_mesh::refine(std::function<bool(Element&)> ref_predicate, std::f
     }
     for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, container(is_deformed).element_view().size());
   } while (changed);
+  do {
+    int nd = params.n_dim;
+    changed = false;
+    for (bool is_deformed : {0, 1}) {
+      auto& cont = container(is_deformed);
+      auto& cont_elems = cont.element_view();
+      for (int i_elem = 0; i_elem < n_orig[is_deformed]; ++i_elem) { // FIXME iteration won't quite work right
+        auto& elem = cont_elems[i_elem];
+        if (elem.record == -1 && elem.tree) {
+          bool is_min = true;
+          for (int i_dim = 0; i_dim < nd; ++i_dim) is_min = is_min && elem.nominal_position()[i_dim]%2 == 0;
+          if (is_min) {
+            bool unref = false;
+            bool is_def = false; // whether the putative unrefined element will be deformed
+            Tree* parent;
+            if (!elem.tree->is_root()) {
+              unref = true;
+              parent = elem.tree->parent();
+              for (Tree* child : parent->children()) {
+                if (!child->elem) unref = false; // note this will happen if child is not a leaf
+                else {
+                  unref = unref && child->elem->record == -1;
+                  is_def = is_def || child->elem->get_is_deformed();
+                }
+              }
+              if (unref) {
+                for (int i_dim = 0; i_dim < nd; ++i_dim) {
+                  for (int sign = 0; sign < 2; ++sign) {
+                    Eigen::VectorXi direction = Eigen::VectorXi::Zero(nd);
+                    direction(i_dim) = math::sign(sign);
+                    unref = unref && parent->find_neighbors(direction).size() <= std::size_t(math::pow(2, nd - 1));
+                  }
+                }
+              } else elem.record = 0;
+            }
+            if (unref) {
+              changed = true;
+              for (Tree* child : parent->children()) child->elem->record = 2;
+              parent->unrefine();
+              add_elem(is_def, *parent).record = 0;
+            }
+          }
+        }
+      }
+    }
+  } while (changed);
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    if (elems[i_elem].record == -1) elems[i_elem].record = 0;
+  }
   // delete connections to old elements (has to happen before deleting elements or else use after free)
   car.purge_connections();
   def.purge_connections();
