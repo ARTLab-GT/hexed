@@ -537,7 +537,7 @@ template<typename element_t> void Accessible_mesh::connect_new(int start_at)
                 }
               }
             } else {
-              connect_refined(elem, i_dim, sign, neighbors);
+              connect_refined(elem, i_dim, !sign, neighbors);
             }
           }
         }
@@ -551,11 +551,33 @@ void Accessible_mesh::refine_by_record(bool is_deformed, int start, int end)
   auto& elems = container(is_deformed).element_view();
   for (int i_elem = start; i_elem < end; ++i_elem) {
     auto& elem = elems[i_elem];
-    if (elem.record == 1 && elem.tree) {
-      elem.record = 2;
-      elem.tree->refine();
-      for (Tree* child : elem.tree->children()) {
-        add_elem(is_deformed, *child).record = 0;
+    if (elem.tree) {
+      if (elem.record == 1) {
+        elem.record = 2;
+        elem.tree->refine();
+        for (Tree* child : elem.tree->children()) {
+          add_elem(is_deformed, *child).record = 0;
+        }
+      } else if (elem.record == -1) {
+        bool unref = false;
+        bool is_def = false; // whether the putative unrefined element will be deformed
+        Tree* parent;
+        if (!elem.tree->is_root()) {
+          unref = true;
+          parent = elem.tree->parent();
+          for (Tree* child : parent->children()) {
+            if (!child->elem) unref = false; // note this will happen if child is not a leaf
+            else {
+              unref = unref && child->elem->record == -1;
+              is_def = is_def || child->elem->get_is_deformed();
+            }
+          }
+        }
+        if (unref) {
+          for (Tree* child : parent->children()) child->elem->record = 2;
+          parent->unrefine();
+          add_elem(is_def, *parent).record = 0;
+        } else elem.record = 0;
       }
     }
   }
@@ -568,15 +590,18 @@ void Accessible_mesh::refine(std::function<bool(Element&)> ref_predicate, std::f
   // decide which elements to (un)refine
   #pragma omp parallel for // parallelize this part since `predicate` could be expensive
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    // record legend: 0 => do nothing; 1 => refine; 2=> already (un)refined (i.e. dead)
-    elems[i_elem].record = ref_predicate(elems[i_elem]);
+    auto& elem = elems[i_elem];
+    bool ref = ref_predicate(elem);
+    bool unref = unref_predicate(elem);
+    // record legend: 0 => do nothing; 1 => refine; -1 => unrefine; 2=> already (un)refined (i.e. dead)
+    if (ref && !unref) elem.record = 1;
+    else if (unref && !ref) elem.record = -1;
+    else elem.record = 0;
   }
   int n_orig [2];
   // add new elements
-  for (bool is_deformed : {0, 1}) {
-    n_orig[is_deformed] = container(is_deformed).element_view().size(); // count how many elements there are before adding, so we know where the new ones start
-    refine_by_record(is_deformed, 0, n_orig[is_deformed]);
-  }
+  for (bool is_deformed : {0, 1}) n_orig[is_deformed] = container(is_deformed).element_view().size(); // count how many elements there are before adding, so we know where the new ones start
+  for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, n_orig[is_deformed]);
   // ref level smoothing: refine elements with neighbors of ref level more than one level greater than their own
   bool changed;
   do {
