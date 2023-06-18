@@ -90,18 +90,18 @@ class Mesh
   virtual void add_tree(std::vector<int> serial_numbers) = 0;
   static inline bool always(Element&) {return true;}
   static inline bool never(Element&) {return false;}
-  /*! \brief Performs tree refinement/unrefinement based on user-supplied criteria.
-   * \details Evaluates `ref_predicate` and `unref_predicate` on every element in the tree (if a tree exists).
-   * Whenever `ref_predicate` is `true` and `unref_predicate` is `false`, that element is refined.
-   * Whenever `unref_predicate` is `true` and `ref_predicate` is `false` for a complete group of sibling elements,
+  /*! \brief Updates tree mesh based on user-supplied (un)refinement criteria.
+   * \details Evaluates `refine_criterion` and `unrefine_criterion` on every element in the tree (if a tree exists).
+   * Whenever `refine_criterion` is `true` and `unrefine_criterion` is `false`, that element is refined.
+   * Whenever `unrefine_criterion` is `true` and `refine_criterion` is `false` for a complete group of sibling elements,
    * that group is unrefined.
    * In order to satisfy some criteria regarding the refinement level of neighbors,
    * some additional elements may be refined and some elements may not be unrefined.
-   * Both predicates must be thread-safe
+   * Both criteria must be thread-safe
    * and must not depend on the order in which elements are processed.
    * \todo update this documentation once it can handle wall geometry.
    */
-  virtual void refine(std::function<bool(Element&)> ref_predicate = always, std::function<bool(Element&)> unref_predicate = never) = 0;
+  virtual void update(std::function<bool(Element&)> refine_criterion = always, std::function<bool(Element&)> unrefine_criterion = never) = 0;
 
   /*!
    * Extrudes a layer of elements from unconnected faces:

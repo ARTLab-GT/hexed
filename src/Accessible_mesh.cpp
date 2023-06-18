@@ -563,7 +563,7 @@ void Accessible_mesh::refine_by_record(bool is_deformed, int start, int end)
   }
 }
 
-void Accessible_mesh::refine(std::function<bool(Element&)> ref_predicate, std::function<bool(Element&)> unref_predicate)
+void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std::function<bool(Element&)> unrefine_criterion)
 {
   HEXED_ASSERT(tree, "need a tree to refine");
   auto& elems = elements();
@@ -571,8 +571,8 @@ void Accessible_mesh::refine(std::function<bool(Element&)> ref_predicate, std::f
   #pragma omp parallel for // parallelize this part since `predicate` could be expensive
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
-    bool ref = ref_predicate(elem);
-    bool unref = unref_predicate(elem);
+    bool ref = refine_criterion(elem);
+    bool unref = unrefine_criterion(elem);
     // record legend: 0 => do nothing; 1 => refine; -1 => unrefine; 2=> already (un)refined (i.e. dead)
     if (ref && !unref) elem.record = 1;
     else if (unref && !ref) elem.record = -1;

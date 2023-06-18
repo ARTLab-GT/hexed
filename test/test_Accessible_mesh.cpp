@@ -360,7 +360,7 @@ TEST_CASE("Tree meshing")
 {
   hexed::Accessible_mesh mesh({1, 5, 3, hexed::config::max_row_size}, .7);
   mesh.add_boundary_condition(new hexed::Copy, new hexed::Null_mbc);
-  REQUIRE_THROWS(mesh.refine(hexed::Mesh::always));
+  REQUIRE_THROWS(mesh.update(hexed::Mesh::always));
   REQUIRE_THROWS(mesh.add_tree({0, 0, 0, 0}));
   mesh.add_tree({0, 0, 0, 0, 0, 0});
   REQUIRE_THROWS(mesh.add_tree({0, 0, 0, 0, 0, 0}));
@@ -368,23 +368,23 @@ TEST_CASE("Tree meshing")
   mesh.valid().assert_valid();
   SECTION("refinement")
   {
-    mesh.refine();
+    mesh.update();
     REQUIRE(mesh.elements().size() == 8);
     mesh.valid().assert_valid();
-    mesh.refine([](hexed::Element& elem){auto np = elem.nominal_position(); return np[0] == 0 && np[1] == 0 && np[2] == 0;});
+    mesh.update([](hexed::Element& elem){auto np = elem.nominal_position(); return np[0] == 0 && np[1] == 0 && np[2] == 0;});
     REQUIRE(mesh.elements().size() == 15);
     mesh.valid().assert_valid();
-    mesh.refine([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 2 && np[0] == 1 && np[1] == 1 && np[2] == 1;});
+    mesh.update([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 2 && np[0] == 1 && np[1] == 1 && np[2] == 1;});
     REQUIRE(mesh.elements().size() == 43);
     mesh.valid().assert_valid();
-    mesh.refine([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 1 && np[0] == 1 && np[1] == 1 && np[2] == 1;});
-    mesh.refine([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 2 && np[0] == 2 && np[1] == 2 && np[2] == 2;});
+    mesh.update([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 1 && np[0] == 1 && np[1] == 1 && np[2] == 1;});
+    mesh.update([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 2 && np[0] == 2 && np[1] == 2 && np[2] == 2;});
     mesh.valid().assert_valid();
     REQUIRE(mesh.elements().size() == 78);
   }
   SECTION("unrefinement")
   {
-    for (int i = 0; i < 3; ++i) mesh.refine();
+    for (int i = 0; i < 3; ++i) mesh.update();
     REQUIRE(mesh.elements().size() == 512);
     mesh.valid().assert_valid();
     auto predicate = [](hexed::Element& elem){
@@ -393,27 +393,27 @@ TEST_CASE("Tree meshing")
       return    (np[0] <  thresh && np[1] <  thresh && np[2] <  thresh)
              || (np[0] >= thresh && np[1] >= thresh && np[2] >= thresh);
     };
-    mesh.refine(hexed::Mesh::never, predicate);
+    mesh.update(hexed::Mesh::never, predicate);
     REQUIRE(mesh.elements().size() == 6*64 + 2*8);
     mesh.valid().assert_valid();
     // this should do nothing because of ref level smoothing
-    mesh.refine(hexed::Mesh::never, predicate);
+    mesh.update(hexed::Mesh::never, predicate);
     REQUIRE(mesh.elements().size() == 6*64 + 2*8);
     mesh.valid().assert_valid();
     // simultaneous refinement and unrefinement
-    mesh.refine([](hexed::Element& elem){return elem.refinement_level() == 2;}, [](hexed::Element& elem){return elem.refinement_level() == 3;});
+    mesh.update([](hexed::Element& elem){return elem.refinement_level() == 2;}, [](hexed::Element& elem){return elem.refinement_level() == 3;});
     REQUIRE(mesh.elements().size() == 6*8 + 2*64);
     mesh.valid().assert_valid();
     SECTION("neighbors with different ref levels") {
       hexed::Accessible_mesh mesh1({1, 5, 3, hexed::config::max_row_size}, .7);
       mesh1.add_boundary_condition(new hexed::Copy, new hexed::Null_mbc);
       mesh1.add_tree({0, 0, 0, 0, 0, 0});
-      mesh1.refine();
-      mesh1.refine();
-      mesh1.refine([](hexed::Element& elem){return elem.nominal_position()[0] < 2;});
+      mesh1.update();
+      mesh1.update();
+      mesh1.update([](hexed::Element& elem){return elem.nominal_position()[0] < 2;});
       REQUIRE(mesh1.elements().size() == 4*8 + 4*64);
       mesh1.valid().assert_valid();
-      mesh1.refine(hexed::Mesh::never, hexed::Mesh::always);
+      mesh1.update(hexed::Mesh::never, hexed::Mesh::always);
       REQUIRE(mesh1.elements().size() == 4*1 + 4*8);
       mesh1.valid().assert_valid();
     }
