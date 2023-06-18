@@ -97,6 +97,15 @@ class Equiangle_skewness : public Element_func
   std::vector<double> operator()(Element& elem, const Basis&, double time) const override;
 };
 
+//! Returns 1 if the element is deformed, otherwise 0
+class Is_deformed : public Element_func
+{
+  public:
+  inline int n_var(int n_dim) const override {return 1;}
+  inline std::string variable_name(int n_dim, int i_var) const override {return "is_deformed";}
+  inline std::vector<double> operator()(Element& elem, const Basis&, double time) const override {return {double(elem.get_is_deformed())};}
+};
+
 //! Concatenates `Element_func`s
 typedef Concat_func<Element_func, Element&, const Basis&, double> Ef_concat;
 
