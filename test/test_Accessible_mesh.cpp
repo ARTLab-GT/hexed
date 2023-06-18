@@ -400,6 +400,10 @@ TEST_CASE("Tree meshing")
     mesh.refine(hexed::Mesh::never, predicate);
     REQUIRE(mesh.elements().size() == 6*64 + 2*8);
     mesh.valid().assert_valid();
+    // simultaneous refinement and unrefinement
+    mesh.refine([](hexed::Element& elem){return elem.refinement_level() == 2;}, [](hexed::Element& elem){return elem.refinement_level() == 3;});
+    REQUIRE(mesh.elements().size() == 6*8 + 2*64);
+    mesh.valid().assert_valid();
     SECTION("neighbors with different ref levels") {
       hexed::Accessible_mesh mesh1({1, 5, 3, hexed::config::max_row_size}, .7);
       mesh1.add_boundary_condition(new hexed::Copy, new hexed::Null_mbc);
