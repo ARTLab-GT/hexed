@@ -184,6 +184,16 @@ class Mesh_by_type : public View_by_type<element_t>
   {
     erase_if(bound_cons, [predicate](Typed_bound_connection<element_t>& con){return predicate(con.element());});
     erase_if(cons, [predicate](Element_face_connection<element_t>& con){return predicate(con.element(0)) || predicate(con.element(1));});
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+      auto pred = [predicate](std::unique_ptr<Refined_connection<element_t>>& con){
+        bool result = predicate(con->coarse_element());
+        for (int i_fine = 0; i_fine < con->n_fine_elements(); ++i_fine) {
+          result = result || predicate(con->connection(i_fine).element(!con->order_reversed()));
+        }
+        return result;
+      };
+      erase_if(ref_face_cons[i_dim], pred);
+    }
   }
 };
 

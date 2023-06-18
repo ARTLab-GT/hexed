@@ -372,4 +372,6 @@ TEST_CASE("Tree meshing")
   mesh.refine([](hexed::Element& elem){auto np = elem.nominal_position(); return np[0] == 0 && np[1] == 0 && np[2] == 0;});
   REQUIRE(mesh.elements().size() == 15);
   mesh.valid().assert_valid();
+  mesh.refine([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 2 && np[0] == 1 && np[1] == 1 && np[2] == 1;});
+  mesh.valid().assert_valid();
 }

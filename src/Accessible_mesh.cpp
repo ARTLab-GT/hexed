@@ -546,31 +546,66 @@ template<typename element_t> void Accessible_mesh::connect_new(int start_at)
   }
 }
 
+void Accessible_mesh::refine_by_record(bool is_deformed, int start, int end)
+{
+  auto& elems = container(is_deformed).element_view();
+  for (int i_elem = start; i_elem < end; ++i_elem) {
+    auto& elem = elems[i_elem];
+    if (elem.record == 1 && elem.tree) {
+      elem.record = 2;
+      elem.tree->refine();
+      for (Tree* child : elem.tree->children()) {
+        add_elem(is_deformed, *child).record = 0;
+      }
+    }
+  }
+}
+
 void Accessible_mesh::refine(std::function<bool(Element&)> predicate)
 {
   HEXED_ASSERT(tree, "need a tree to refine");
   auto& elems = elements();
-  // decide which elements to delete
+  // decide which elements to (un)refine
   #pragma omp parallel for // parallelize this part since `predicate` could be expensive
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    // record legend: 0 => do nothing; 1 => refine; 2=> already (un)refined (i.e. dead)
     elems[i_elem].record = predicate(elems[i_elem]);
   }
   int n_orig [2];
   // add new elements
   for (bool is_deformed : {0, 1}) {
-    auto& cont = container(is_deformed);
-    auto& cont_elems = cont.element_view();
-    n_orig[is_deformed] = cont_elems.size(); // count how many elements there are before adding, so we know where the new ones start
-    for (int i_elem = 0; i_elem < n_orig[is_deformed]; ++i_elem) {
-      auto& elem = cont_elems[i_elem];
-      if (elem.record == 1 && elem.tree) {
-        elem.tree->refine();
-        for (Tree* child : elem.tree->children()) {
-          add_elem(is_deformed, *child).record = 0;
+    n_orig[is_deformed] = container(is_deformed).element_view().size(); // count how many elements there are before adding, so we know where the new ones start
+    refine_by_record(is_deformed, 0, n_orig[is_deformed]);
+  }
+  // ref level smoothing: refine elements with neighbors of ref level more than one level greater than their own
+  bool changed;
+  do {
+    int nd = params.n_dim;
+    changed = false;
+    for (bool is_deformed : {0, 1}) {
+      auto& cont = container(is_deformed);
+      auto& cont_elems = cont.element_view();
+      for (int i_elem = n_orig[is_deformed]; i_elem < cont_elems.size(); ++i_elem) { // only need to worry about new elements
+        auto& elem = cont_elems[i_elem];
+        for (int i_dim = 0; i_dim < nd; ++i_dim) {
+          for (int sign = 0; sign < 2; ++sign) {
+            Eigen::VectorXi direction = Eigen::VectorXi::Zero(nd);
+            direction(i_dim) = math::sign(sign);
+            auto neighbors = elem.tree->find_neighbors(direction);
+            if (neighbors.size() == 1) {
+              if (neighbors[0]->refinement_level() < elem.refinement_level() - 1) {
+                if (neighbors[0]->elem) {
+                  changed = true;
+                  neighbors[0]->elem->record = 1;
+                }
+              }
+            }
+          }
         }
       }
     }
-  }
+    for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, container(is_deformed).element_view().size());
+  } while (changed);
   // delete connections to old elements (has to happen before deleting elements or else use after free)
   car.purge_connections();
   def.purge_connections();

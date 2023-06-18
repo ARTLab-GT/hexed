@@ -273,6 +273,7 @@ class Refined_connection
   auto stretch() {return str;}
   int n_fine_elements() {return n_fine;}
   double* coarse_state() {return coarse_state_data.data();}
+  element_t& coarse_element() {return c;}
 };
 
 template <>

@@ -39,6 +39,7 @@ class Accessible_mesh : public Mesh
   Element& add_elem(bool is_deformed, Tree&);
   template<typename element_t> Mesh_by_type<element_t>& mbt(); // gets either `car` or `def`
   template<typename element_t> void connect_new(int start_at); // connects new elements in `mbt<element_t>()`. helper function for `refine`
+  void refine_by_record(bool is_deformed, int start, int end);
 
   public:
   /*!
