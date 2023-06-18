@@ -396,5 +396,9 @@ TEST_CASE("Tree meshing")
     mesh.refine(hexed::Mesh::never, predicate);
     REQUIRE(mesh.elements().size() == 6*64 + 2*8);
     mesh.valid().assert_valid();
+    // this should do nothing because of ref level smoothing
+    mesh.refine(hexed::Mesh::never, predicate);
+    REQUIRE(mesh.elements().size() == 6*64 + 2*8);
+    mesh.valid().assert_valid();
   }
 }

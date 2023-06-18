@@ -612,17 +612,22 @@ void Accessible_mesh::refine(std::function<bool(Element&)> ref_predicate, std::f
       auto& cont_elems = cont.element_view();
       for (int i_elem = n_orig[is_deformed]; i_elem < cont_elems.size(); ++i_elem) { // only need to worry about new elements
         auto& elem = cont_elems[i_elem];
-        for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          for (int sign = 0; sign < 2; ++sign) {
-            Eigen::VectorXi direction = Eigen::VectorXi::Zero(nd);
-            direction(i_dim) = math::sign(sign);
-            auto neighbors = elem.tree->find_neighbors(direction);
-            if (neighbors.size() == 1) {
-              if (neighbors[0]->refinement_level() < elem.refinement_level() - 1) {
-                if (neighbors[0]->elem) {
-                  changed = true;
-                  neighbors[0]->elem->record = 1;
+        if (elem.record == 0) {
+          for (int i_dim = 0; i_dim < nd; ++i_dim) {
+            for (int sign = 0; sign < 2; ++sign) {
+              Eigen::VectorXi direction = Eigen::VectorXi::Zero(nd);
+              direction(i_dim) = math::sign(sign);
+              auto neighbors = elem.tree->find_neighbors(direction);
+              if (neighbors.size() == 1) {
+                if (neighbors[0]->refinement_level() < elem.refinement_level() - 1) {
+                  if (neighbors[0]->elem) {
+                    changed = true;
+                    neighbors[0]->elem->record = 1;
+                  }
                 }
+              } else if (int(neighbors.size()) > math::pow(2, nd - 1)) {
+                changed = true;
+                elem.record = 1;
               }
             }
           }
