@@ -76,6 +76,8 @@ class Mesh
    * Technically, free-form elements can also be created in the same mesh,
    * but they will not be connected to the tree.
    * Only one tree can be created.
+   * Connections and boundary conditions are set automatically for tree elements,
+   * so tree meshes should always automatically be valid unless you explicitly invalidate it with `Mesh::disconnect_boundary`.
    * \param serial_numbers list of serial numbers of BCs to apply to any elements
    *   with exposed faces at the extremal boundaries of the tree.
    *   It should contain `2*n_dim` entries, each of which should be a serial number
@@ -86,18 +88,20 @@ class Mesh
    *   The same serial number may appear any number of times.
    */
   virtual void add_tree(std::vector<int> serial_numbers) = 0;
-  /*! \brief Refines all elements where `predicate` returns `true`.
-   * \details Evaluates `predicate` on every element in the tree (if one exists).
-   * Whenever it returns `true`, that element is split in half in each dimension,
-   * resulting in \f$2^{n_dim}\f$ new elements.
-   * Connections are updated, and some additional elements may be refined
-   * to enforce conditions required by the solver.
-   * `predicate` must be thread-safe
+  static inline bool always(Element&) {return true;}
+  static inline bool never(Element&) {return false;}
+  /*! \brief Performs tree refinement/unrefinement based on user-supplied criteria.
+   * \details Evaluates `ref_predicate` and `unref_predicate` on every element in the tree (if a tree exists).
+   * Whenever `ref_predicate` is `true` and `unref_predicate` is `false`, that element is refined.
+   * Whenever `unref_predicate` is `true` and `ref_predicate` is `false` for a complete group of sibling elements,
+   * that group is unrefined.
+   * In order to satisfy some criteria regarding the refinement level of neighbors,
+   * some additional elements may be refined and some elements may not be unrefined.
+   * Both predicates must be thread-safe
    * and must not depend on the order in which elements are processed.
    * \todo update this documentation once it can handle wall geometry.
    */
-  virtual void refine(std::function<bool(Element&)> predicate) = 0;
-  static inline bool always(Element&) {return true;}
+  virtual void refine(std::function<bool(Element&)> ref_predicate = always, std::function<bool(Element&)> unref_predicate = never) = 0;
 
   /*!
    * Extrudes a layer of elements from unconnected faces:

@@ -366,17 +366,35 @@ TEST_CASE("Tree meshing")
   REQUIRE_THROWS(mesh.add_tree({0, 0, 0, 0, 0, 0}));
   REQUIRE(mesh.elements().size() == 1);
   mesh.valid().assert_valid();
-  mesh.refine(hexed::Mesh::always);
-  REQUIRE(mesh.elements().size() == 8);
-  mesh.valid().assert_valid();
-  mesh.refine([](hexed::Element& elem){auto np = elem.nominal_position(); return np[0] == 0 && np[1] == 0 && np[2] == 0;});
-  REQUIRE(mesh.elements().size() == 15);
-  mesh.valid().assert_valid();
-  mesh.refine([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 2 && np[0] == 1 && np[1] == 1 && np[2] == 1;});
-  REQUIRE(mesh.elements().size() == 43);
-  mesh.valid().assert_valid();
-  mesh.refine([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 1 && np[0] == 1 && np[1] == 1 && np[2] == 1;});
-  mesh.refine([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 2 && np[0] == 2 && np[1] == 2 && np[2] == 2;});
-  mesh.valid().assert_valid();
-  REQUIRE(mesh.elements().size() == 78);
+  SECTION("refinement")
+  {
+    mesh.refine();
+    REQUIRE(mesh.elements().size() == 8);
+    mesh.valid().assert_valid();
+    mesh.refine([](hexed::Element& elem){auto np = elem.nominal_position(); return np[0] == 0 && np[1] == 0 && np[2] == 0;});
+    REQUIRE(mesh.elements().size() == 15);
+    mesh.valid().assert_valid();
+    mesh.refine([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 2 && np[0] == 1 && np[1] == 1 && np[2] == 1;});
+    REQUIRE(mesh.elements().size() == 43);
+    mesh.valid().assert_valid();
+    mesh.refine([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 1 && np[0] == 1 && np[1] == 1 && np[2] == 1;});
+    mesh.refine([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 2 && np[0] == 2 && np[1] == 2 && np[2] == 2;});
+    mesh.valid().assert_valid();
+    REQUIRE(mesh.elements().size() == 78);
+  }
+  SECTION("unrefinement")
+  {
+    for (int i = 0; i < 3; ++i) mesh.refine();
+    REQUIRE(mesh.elements().size() == 512);
+    mesh.valid().assert_valid();
+    auto predicate = [](hexed::Element& elem){
+      auto np = elem.nominal_position();
+      int thresh = elem.refinement_level()/2;
+      return    (np[0] <  thresh && np[1] <  thresh && np[2] <  thresh)
+             || (np[0] >= thresh && np[1] >= thresh && np[2] >= thresh);
+    };
+    mesh.refine(hexed::Mesh::never, predicate);
+    REQUIRE(mesh.elements().size() == 6*64 + 2*8);
+    mesh.valid().assert_valid();
+  }
 }
