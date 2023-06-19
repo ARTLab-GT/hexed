@@ -1,5 +1,6 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/Element_container.hpp>
+#include <hexed/Tree.hpp>
 
 TEST_CASE("Specific_container<Deformed_element>")
 {

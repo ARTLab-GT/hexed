@@ -710,6 +710,8 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   // connect new elements
   connect_new<         Element>(n_orig[0]);
   connect_new<Deformed_element>(n_orig[1]);
+  // placeholder
+  connect_rest(surf_bc_sn);
 }
 
 }
