@@ -692,7 +692,7 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
               bool all_exist = true;
               for (Tree* n : neighbors) {
                 bool exists = false;
-                if (n->elem) if (n->elem->record != 2) exists = true;
+                if (n->elem) if (n->elem->record == 0) exists = true;
                 any_exist = any_exist || exists;
                 all_exist = all_exist && exists;
               }
@@ -726,7 +726,7 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
               unref = true;
               parent = elem.tree->parent();
               for (Tree* child : parent->children()) {
-                if (!child->elem) unref = false; // note this will happen if child is not a leaf
+                if (!child->elem || !child->is_leaf()) unref = false;
                 else {
                   unref = unref && child->elem->record == -1;
                   is_def = is_def || child->elem->get_is_deformed();
@@ -744,7 +744,10 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
             }
             if (unref) {
               changed = true;
-              for (Tree* child : parent->children()) child->elem->record = 2;
+              for (Tree* child : parent->children()) {
+                child->elem->record = 2;
+                child->elem->tree = nullptr;
+              }
               parent->unrefine();
               add_elem(is_def, *parent).record = 0;
             }
