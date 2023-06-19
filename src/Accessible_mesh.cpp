@@ -558,8 +558,8 @@ template<typename element_t> void Accessible_mesh::connect_new(int start_at)
             direction(i_dim) = math::sign(sign);
             auto neighbors = elem.tree->find_neighbors(direction);
             if (neighbors.empty()) m.bound_cons.emplace_back(elem, i_dim, sign, tree_bcs[2*i_dim + sign]);
-            else if (neighbors.size() == 1) {
-              if (neighbors[0]->elem) {
+            else if (neighbors[0]->elem) {
+              if (neighbors.size() == 1) {
                 auto& other = *neighbors[0]->elem;
                 if (other.refinement_level() == elem.refinement_level()) {
                   if (elem.get_is_deformed() && other.get_is_deformed()) ;
@@ -576,9 +576,9 @@ template<typename element_t> void Accessible_mesh::connect_new(int start_at)
                   }
                   if (is_min_corner) connect_refined(other, i_dim, sign, other.tree->find_neighbors(-direction));
                 }
+              } else {
+                connect_refined(elem, i_dim, !sign, neighbors);
               }
-            } else {
-              connect_refined(elem, i_dim, !sign, neighbors);
             }
           }
         }
@@ -624,30 +624,81 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   // add new elements
   for (bool is_deformed : {0, 1}) n_orig[is_deformed] = container(is_deformed).element_view().size(); // count how many elements there are before adding, so we know where the new ones start
   for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, n_orig[is_deformed]);
-  // ref level smoothing: refine elements with neighbors of ref level more than one level greater than their own
+  // refine surface elements
+  for (bool is_deformed : {0, 1}) {
+    auto& cont = container(is_deformed);
+    auto& cont_elems = cont.element_view();
+    for (int i_elem = n_orig[is_deformed]; i_elem < cont_elems.size(); ++i_elem) { // only need to worry about new elements
+      auto& elem = cont_elems[i_elem];
+      for (int i_face = 0; i_face < 2*nd; ++i_face) {
+        Tree* neighbor = elem.tree->find_neighbor(math::direction(nd, i_face));
+        if (neighbor) {
+          if (!neighbor->elem) {
+            if (neighbor->refinement_level() < elem.refinement_level()) {
+              int min_rl = std::numeric_limits<int>::max();
+              for (int j_face = 0; j_face < 2*nd; ++j_face) {
+                Tree* n = elem.tree->find_neighbor(math::direction(nd, j_face));
+                if (n) if (n->elem) min_rl = std::min(min_rl, n->refinement_level());
+              }
+              if (neighbor->refinement_level() < min_rl) neighbor->refine();
+            }
+          }
+        }
+      }
+    }
+  }
   bool changed;
+  // incremental flood fill
   do {
     changed = false;
     for (bool is_deformed : {0, 1}) {
       auto& cont = container(is_deformed);
       auto& cont_elems = cont.element_view();
-      for (int i_elem = n_orig[is_deformed]; i_elem < cont_elems.size(); ++i_elem) { // only need to worry about new elements
-        auto& elem = cont_elems[i_elem];
-        if (elem.record == 0) {
+      int sz = cont_elems.size();
+      for (int i_elem = n_orig[is_deformed]; i_elem < sz; ++i_elem) {
+        auto& elem = elems[i_elem];
+        if (elem.tree && elem.record == 0) {
           for (int i_dim = 0; i_dim < nd; ++i_dim) {
             for (int sign = 0; sign < 2; ++sign) {
               Eigen::VectorXi direction = Eigen::VectorXi::Zero(nd);
               direction(i_dim) = math::sign(sign);
-              Tree* neighbor = elem.tree->find_neighbor(direction);
-              if (neighbor) {
-                if (neighbor->elem) {
-                  if (neighbor->refinement_level() < elem.refinement_level() - 1) {
-                    changed = true;
-                    neighbor->elem->record = 1;
-                  }
-                } else {
-                  if (neighbor->refinement_level() < elem.refinement_level()) neighbor->refine();
+              for (Tree* neighbor : elem.tree->find_neighbors(direction)) {
+                if (!neighbor->elem) if (!is_surface(neighbor)) {
+                  add_elem(is_deformed, *neighbor).record = 0;
                 }
+              }
+            }
+          }
+        }
+      }
+    }
+  } while (changed);
+  // ref level smoothing: refine elements to satisfy solver requirements on neighbors
+  do {
+    changed = false;
+    for (bool is_deformed : {0, 1}) {
+      auto& cont = container(is_deformed);
+      auto& cont_elems = cont.element_view();
+      for (int i_elem = 0; i_elem < cont_elems.size(); ++i_elem) {
+        auto& elem = cont_elems[i_elem];
+        if (elem.record != 2 && elem.tree) {
+          for (int i_face = 0; i_face < 2*nd; ++i_face) {
+            auto neighbors = elem.tree->find_neighbors(math::direction(nd, i_face));
+            if (neighbors.size() > std::size_t(math::pow(2, nd - 1))) {
+              changed = true;
+              elem.record = 1;
+            } else if (!neighbors.empty()) {
+              bool any_exist = false;
+              bool all_exist = true;
+              for (Tree* n : neighbors) {
+                bool exists = false;
+                if (n->elem) if (n->elem->record != 2) exists = true;
+                any_exist = any_exist || exists;
+                all_exist = all_exist && exists;
+              }
+              if (any_exist && !all_exist) {
+                changed = true;
+                elem.record = 1;
               }
             }
           }
@@ -656,6 +707,7 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
     }
     for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, container(is_deformed).element_view().size());
   } while (changed);
+  // unrefinement
   do {
     changed = false;
     for (bool is_deformed : {0, 1}) {
@@ -705,31 +757,6 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     if (elems[i_elem].record == -1) elems[i_elem].record = 0;
   }
-  // incremental flood fill
-  do {
-    changed = false;
-    for (bool is_deformed : {0, 1}) {
-      auto& cont = container(is_deformed);
-      auto& cont_elems = cont.element_view();
-      int sz = cont_elems.size();
-      for (int i_elem = n_orig[is_deformed]; i_elem < sz; ++i_elem) {
-        auto& elem = elems[i_elem];
-        if (elem.tree && elem.record == 0) {
-          for (int i_dim = 0; i_dim < nd; ++i_dim) {
-            for (int sign = 0; sign < 2; ++sign) {
-              Eigen::VectorXi direction = Eigen::VectorXi::Zero(nd);
-              direction(i_dim) = math::sign(sign);
-              for (Tree* neighbor : elem.tree->find_neighbors(direction)) {
-                if (!neighbor->elem) if (!is_surface(neighbor)) {
-                  add_elem(is_deformed, *neighbor).record = 0;
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  } while (changed);
   // delete connections to old elements (has to happen before deleting elements or else use after free)
   car.purge_connections();
   def.purge_connections();

@@ -52,6 +52,11 @@ constexpr int sign(bool condition)
   return 2*condition - 1;
 }
 
+//! the unit vector describing the direction from the center of an `n_dim`-dimensional Cartesian element to the face described by `i_dim` and `sign`
+Eigen::VectorXi direction(int n_dim, int i_dim, bool is_positive);
+//! the unit vector describing the direction from the center of an `n_dim`-dimensional Cartesian element to the `i_face`th face
+Eigen::VectorXi direction(int n_dim, int i_face);
+
 /*! \brief Finds a root of a scalar function with [Broyden's method](https://en.wikipedia.org/wiki/Broyden%27s_method).
  * \param func Should return a `double` when called on a `double` argument.
  * \param init_guess Initial guess for the root.
