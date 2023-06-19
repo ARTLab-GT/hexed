@@ -489,14 +489,14 @@ void Accessible_mesh::add_tree(std::vector<int> serial_numbers)
   }
 }
 
-bool Accessible_mesh::is_surface(Tree* tree)
+bool Accessible_mesh::is_surface(Tree* t)
 {
-  Mat<> center = tree->nominal_position() + tree->nominal_size()/2*Mat<>::Ones(params.n_dim);
+  Mat<> center = t->nominal_position() + t->nominal_size()/2*Mat<>::Ones(params.n_dim);
   double dist = std::numeric_limits<double>::max();
   for (auto& geom : surf_geoms) {
     dist = std::min(dist, (center - geom->nearest_point(center)).norm());
   }
-  return dist < std::sqrt(params.n_dim)/2*tree->nominal_size();
+  return dist < std::sqrt(params.n_dim)/2*t->nominal_size();
 }
 
 void Accessible_mesh::set_surfaces(std::vector<Surface_geom*> surfaces, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start)
@@ -604,6 +604,28 @@ void Accessible_mesh::refine_by_record(bool is_deformed, int start, int end)
   }
 }
 
+bool Accessible_mesh::needs_refine(Tree* t)
+{
+  for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
+    auto neighbors = t->find_neighbors(math::direction(params.n_dim, i_face));
+    // if the ref level difference is greater than 1, need to refine
+    if (neighbors.size() > std::size_t(math::pow(2, params.n_dim - 1))) return true;
+    else if (!neighbors.empty()) { // otherwise if there is a partially-exposed face, need to refine
+      bool any_exist = false;
+      bool all_exist = true;
+      for (Tree* n : neighbors) {
+        bool exists = false;
+        if (n->elem) if (n->elem->record == 0) exists = true;
+        any_exist = any_exist || exists;
+        all_exist = all_exist && exists;
+      }
+      if (any_exist && !all_exist) return true;
+    }
+  }
+  // otherwise, we're good
+  return false;
+}
+
 void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std::function<bool(Element&)> unrefine_criterion)
 {
   HEXED_ASSERT(tree, "need a tree to refine");
@@ -624,7 +646,7 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   // add new elements
   for (bool is_deformed : {0, 1}) n_orig[is_deformed] = container(is_deformed).element_view().size(); // count how many elements there are before adding, so we know where the new ones start
   for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, n_orig[is_deformed]);
-  // refine surface elements
+  // refine surface elements to be at least the minimum refinement level of all their inside neighbors
   for (bool is_deformed : {0, 1}) {
     auto& cont = container(is_deformed);
     auto& cont_elems = cont.element_view();
@@ -658,14 +680,10 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
       for (int i_elem = n_orig[is_deformed]; i_elem < sz; ++i_elem) {
         auto& elem = elems[i_elem];
         if (elem.tree && elem.record == 0) {
-          for (int i_dim = 0; i_dim < nd; ++i_dim) {
-            for (int sign = 0; sign < 2; ++sign) {
-              Eigen::VectorXi direction = Eigen::VectorXi::Zero(nd);
-              direction(i_dim) = math::sign(sign);
-              for (Tree* neighbor : elem.tree->find_neighbors(direction)) {
-                if (!neighbor->elem) if (!is_surface(neighbor)) {
-                  add_elem(is_deformed, *neighbor).record = 0;
-                }
+          for (int i_face = 0; i_face < 2*nd; ++i_face) {
+            for (Tree* neighbor : elem.tree->find_neighbors(math::direction(nd, i_face))) {
+              if (!neighbor->elem) if (!is_surface(neighbor)) {
+                add_elem(is_deformed, *neighbor).record = 0;
               }
             }
           }
@@ -676,32 +694,13 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   // ref level smoothing: refine elements to satisfy solver requirements on neighbors
   do {
     changed = false;
-    for (bool is_deformed : {0, 1}) {
-      auto& cont = container(is_deformed);
-      auto& cont_elems = cont.element_view();
-      for (int i_elem = 0; i_elem < cont_elems.size(); ++i_elem) {
-        auto& elem = cont_elems[i_elem];
-        if (elem.record != 2 && elem.tree) {
-          for (int i_face = 0; i_face < 2*nd; ++i_face) {
-            auto neighbors = elem.tree->find_neighbors(math::direction(nd, i_face));
-            if (neighbors.size() > std::size_t(math::pow(2, nd - 1))) {
-              changed = true;
-              elem.record = 1;
-            } else if (!neighbors.empty()) {
-              bool any_exist = false;
-              bool all_exist = true;
-              for (Tree* n : neighbors) {
-                bool exists = false;
-                if (n->elem) if (n->elem->record == 0) exists = true;
-                any_exist = any_exist || exists;
-                all_exist = all_exist && exists;
-              }
-              if (any_exist && !all_exist) {
-                changed = true;
-                elem.record = 1;
-              }
-            }
-          }
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      if (elem.record != 2 && elem.tree) {
+        if (needs_refine(elem.tree)) {
+          changed = true;
+          elem.record = 1;
         }
       }
     }
@@ -732,15 +731,8 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
                   is_def = is_def || child->elem->get_is_deformed();
                 }
               }
-              if (unref) {
-                for (int i_dim = 0; i_dim < nd; ++i_dim) {
-                  for (int sign = 0; sign < 2; ++sign) {
-                    Eigen::VectorXi direction = Eigen::VectorXi::Zero(nd);
-                    direction(i_dim) = math::sign(sign);
-                    unref = unref && parent->find_neighbors(direction).size() <= std::size_t(math::pow(2, nd - 1));
-                  }
-                }
-              } else elem.record = 0;
+              if (unref) unref = unref && !needs_refine(parent);
+              else elem.record = 0;
             }
             if (unref) {
               changed = true;
