@@ -34,7 +34,8 @@ class Surface_geom
 /*! \brief Represents hypersphere in any dimensionality.
  * \details Can behave as an interval, cylinder, sphere, or higher-dimensional equivalent
  * depending on the number of entries in the point vectors supplied as arguments.
- * However, all points supplied must have the same dimensionality.
+ * However, all points supplied must have the same dimensionality,
+ * or else behavior is undefined.
  */
 class Hypersphere : public Surface_geom
 {
@@ -42,7 +43,7 @@ class Hypersphere : public Surface_geom
   double r;
   public:
   Hypersphere(Mat<> center, double radius);
-  Mat<> nearest_point(Mat<> point) override;
+  Mat<> nearest_point(Mat<> point) override; //!< \note `point` must not be `center`
   std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
 };
 
