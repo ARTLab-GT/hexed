@@ -952,3 +952,16 @@ TEST_CASE("resolution badness")
   double correct = ((2*2*2 - 1.5*1.5*1.5)/3. - .5*(2.*2. - 1.5*1.5)/2.)/((1.5*1.5 - 1.)/2.);
   REQUIRE(sol.sample(0, true, sn, hexed::Resolution_badness())[0] == Catch::Approx(correct));
 }
+
+TEST_CASE("cylinder tree mesh")
+{
+  static_assert(hexed::config::max_row_size >= 6);
+  constexpr int row_size = 6;
+  hexed::Solver solver (2, row_size, 1.);
+  solver.mesh().add_boundary_condition(new hexed::Freestream(Eigen::Vector4d{0., 0., 1., 1e5}), new hexed::Nominal_pos());
+  solver.mesh().add_tree({0, 0, 0, 0});
+  for (int i = 0; i < 3; ++i) solver.mesh().update();
+  solver.calc_jacobian();
+  solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
+  solver.visualize_field_tecplot(hexed::Is_deformed(), "cylinder");
+}

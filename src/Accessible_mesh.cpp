@@ -488,6 +488,10 @@ void Accessible_mesh::add_tree(std::vector<int> serial_numbers)
   }
 }
 
+void Accessible_mesh::set_surfaces(std::vector<Surface_geometry*> surfaces, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start)
+{
+}
+
 template<typename element_t> void Accessible_mesh::connect_new(int start_at)
 {
   auto& m = mbt<element_t>();
