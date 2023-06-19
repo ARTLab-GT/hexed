@@ -650,18 +650,22 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   for (bool is_deformed : {0, 1}) {
     auto& cont = container(is_deformed);
     auto& cont_elems = cont.element_view();
-    for (int i_elem = n_orig[is_deformed]; i_elem < cont_elems.size(); ++i_elem) { // only need to worry about new elements
+    for (int i_elem = 0; i_elem < cont_elems.size(); ++i_elem) { // only need to worry about new elements
       auto& elem = cont_elems[i_elem];
       for (int i_face = 0; i_face < 2*nd; ++i_face) {
         Tree* neighbor = elem.tree->find_neighbor(math::direction(nd, i_face));
         if (neighbor) {
           if (!neighbor->elem) {
             if (neighbor->refinement_level() < elem.refinement_level()) {
+              #if 1
               int min_rl = std::numeric_limits<int>::max();
               for (int j_face = 0; j_face < 2*nd; ++j_face) {
                 Tree* n = elem.tree->find_neighbor(math::direction(nd, j_face));
                 if (n) if (n->elem) min_rl = std::min(min_rl, n->refinement_level());
               }
+              #else
+              int min_rl = elem.refinement_level();
+              #endif
               if (neighbor->refinement_level() < min_rl) neighbor->refine();
             }
           }
@@ -677,12 +681,13 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
       auto& cont = container(is_deformed);
       auto& cont_elems = cont.element_view();
       int sz = cont_elems.size();
-      for (int i_elem = n_orig[is_deformed]; i_elem < sz; ++i_elem) {
+      for (int i_elem = 0; i_elem < sz; ++i_elem) {
         auto& elem = elems[i_elem];
         if (elem.tree && elem.record == 0) {
           for (int i_face = 0; i_face < 2*nd; ++i_face) {
             for (Tree* neighbor : elem.tree->find_neighbors(math::direction(nd, i_face))) {
               if (!neighbor->elem) if (!is_surface(neighbor)) {
+                changed = true;
                 add_elem(is_deformed, *neighbor).record = 0;
               }
             }
