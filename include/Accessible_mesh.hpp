@@ -26,7 +26,7 @@ class Accessible_mesh : public Mesh
   Concatenation<Element_connection&> elem_cons;
   std::vector<Boundary_condition> bound_conds;
   std::vector<std::unique_ptr<Surface_geom>> surf_geoms;
-  std::vector<std::unique_ptr<Flow_bc>> surf_bcs; // BCs for the geometry surfaces only
+  int surf_bc_sn;
   Concatenation<Face_connection<Deformed_element>&> bound_face_cons;
   Concatenation<Boundary_connection&> bound_cons;
   Concatenation<Face_connection<Deformed_element>&> def_face_cons;
@@ -72,7 +72,7 @@ class Accessible_mesh : public Mesh
   void disconnect_boundary(int bc_sn) override;
 
   void add_tree(std::vector<int> serial_numbers) override;
-  void set_surfaces(std::vector<std::pair<Surface_geom*, Flow_bc*>> surfaces, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) override;
+  void set_surfaces(std::vector<Surface_geom*> surfaces, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) override;
   void update(std::function<bool(Element&)> refine_criterion = always, std::function<bool(Element&)> unrefine_criterion = never) override;
 
   //! \returns a view of all Bounday_condition objects owned by this mesh

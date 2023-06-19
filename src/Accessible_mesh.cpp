@@ -440,6 +440,7 @@ void Accessible_mesh::connect_rest(int bc_sn)
 {
   auto& elem_seq = elements();
   // locate unconnected faces
+  #pragma omp parallel for
   for (int i_elem = 0; i_elem < elem_seq.size(); ++i_elem) {
     for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
       elem_seq[i_elem].face_record[i_face] = 0;
@@ -488,12 +489,41 @@ void Accessible_mesh::add_tree(std::vector<int> serial_numbers)
   }
 }
 
-void Accessible_mesh::set_surfaces(std::vector<std::pair<Surface_geom*, Flow_bc*>> surfaces, Eigen::VectorXd flood_fill_start)
+void Accessible_mesh::set_surfaces(std::vector<Surface_geom*> surfaces, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start)
 {
-  for (auto s : surfaces) {
-    surf_geoms.emplace_back(s.first);
-    surf_bcs.emplace_back(s.second);
+  // take ownership of the surface geometries (do this first to avoid memory leak)
+  for (auto s : surfaces) surf_geoms.emplace_back(s);
+  surf_bc_sn = add_boundary_condition(surface_bc, new Null_mbc());
+  if (!tree || surfaces.empty()) return;
+  // identify surface elements
+  auto& elems = elements();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    if (elem.tree) {
+      Mat<> center = elem.tree->nominal_position() + elem.tree->nominal_size()/2*Mat<>::Ones(params.n_dim);
+      double dist = std::numeric_limits<double>::max();
+      for (auto& geom : surf_geoms) {
+        dist = std::min(dist, (center - geom->nearest_point(center)).norm());
+      }
+      if (dist < std::sqrt(params.n_dim)/2*elem.tree->nominal_size()) elem.tree->set_status(0);
+    }
   }
+  // pefrorm flood fill
+  Tree* start = tree->find_leaf(flood_fill_start);
+  if (!start) start = tree.get();
+  start->flood_fill(1);
+  // delete stuff
+  auto predicate = [](Element& elem){
+    if (elem.tree) return elem.tree->get_status() != 1;
+    return false;
+  };
+  car.purge_connections(predicate);
+  def.purge_connections(predicate);
+  car.elems.purge(predicate);
+  def.elems.purge(predicate);
+  // make new boundary connections (placeholder)
+  connect_rest(surf_bc_sn);
 }
 
 template<typename element_t> void Accessible_mesh::connect_new(int start_at)
