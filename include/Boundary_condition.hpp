@@ -204,7 +204,8 @@ class Nominal_pos : public Mesh_bc
 };
 
 //! \brief implicitly represents a surface by supporting a set of geometric operations
-//! \details NASCART-GT provides a derived class representing a simplex geometry
+//! \details NASCART-GT provides a derived class representing a simplex geometry.
+//! \deprecated Prefer `Surface_geom` instead.
 class Surface_geometry
 {
   public:
