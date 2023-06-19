@@ -21,6 +21,7 @@ namespace hexed
 class Surface_geom
 {
   public:
+  virtual ~Surface_geom() = default;
   //! computes the point on the surface which is nearest to `point`
   virtual Mat<> nearest_point(Mat<> point) = 0;
   /*! \brief Computes the set of intersection points between a line and the surface.

@@ -488,8 +488,12 @@ void Accessible_mesh::add_tree(std::vector<int> serial_numbers)
   }
 }
 
-void Accessible_mesh::set_surfaces(std::vector<Surface_geometry*> surfaces, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start)
+void Accessible_mesh::set_surfaces(std::vector<std::pair<Surface_geom*, Flow_bc*>> surfaces, Eigen::VectorXd flood_fill_start)
 {
+  for (auto s : surfaces) {
+    surf_geoms.emplace_back(s.first);
+    surf_bcs.emplace_back(s.second);
+  }
 }
 
 template<typename element_t> void Accessible_mesh::connect_new(int start_at)

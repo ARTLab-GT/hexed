@@ -5,6 +5,7 @@
 #include "Boundary_condition.hpp"
 #include "connection.hpp"
 #include "Layer_sequence.hpp"
+#include "Surface_geom.hpp"
 
 namespace hexed
 {
@@ -125,9 +126,9 @@ class Mesh
    */
   virtual void add_tree(std::vector<int> serial_numbers) = 0;
   /*! \brief Defines the set of surface geometries to be meshed as boundaries.
-   * \details Acquires ownership of the objects pointed to by `surfaces` and of `surface_bc`.
-   * The geometric surfaces represented by `surfaces` are now boundaries of the domain
-   * and their boundary condition is `surface_bc`.
+   * \details Acquires ownership of the objects pointed to by the contents of `surfaces`.
+   * The geometric surfaces represented by the `Surface_geom`s in `surfaces` are now boundaries of the domain
+   * and their boundary conditions are the corresponding `Flow_bc`s.
    * The flood fill algorithm is then executed starting at `flood_fill_start`
    * to determine which elements are in the domain
    * and extrusion is executed to create a suitably body-fitted mesh.
@@ -137,7 +138,7 @@ class Mesh
    * So, `Mesh::update` should be calling a few times before `Mesh::set_surfaces`.
    * Any surfaces defined by previous invokations of `set_surfaces` are forgotten.
    */
-  virtual void set_surfaces(std::vector<Surface_geometry*> surfaces, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) = 0;
+  virtual void set_surfaces(std::vector<std::pair<Surface_geom*, Flow_bc*>> surfaces, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) = 0;
   static inline bool always(Element&) {return true;}
   static inline bool never(Element&) {return false;}
   /*! \brief Updates tree mesh based on user-supplied (un)refinement criteria.
