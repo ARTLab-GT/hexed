@@ -958,12 +958,13 @@ TEST_CASE("cylinder tree mesh")
   static_assert(hexed::config::max_row_size >= 6);
   constexpr int row_size = 6;
   hexed::Solver solver (2, row_size, 1.);
-  int bc_sn = solver.mesh().add_boundary_condition(new hexed::Freestream(Eigen::Vector4d{0., 0., 1., 1e5}), new hexed::Nominal_pos());
-  solver.mesh().add_tree({0, 0, 0, 0});
+  int sn0 = solver.mesh().add_boundary_condition(new hexed::Freestream(Eigen::Vector4d{0., 0., 1., 1e5}), new hexed::Nominal_pos());
+  int sn1 = solver.mesh().add_boundary_condition(new hexed::Freestream(Eigen::Vector4d{0., 0., 1., 1e5}), new hexed::Nominal_pos());
+  solver.mesh().add_tree({sn0, sn0, sn0, sn0});
   for (int i = 0; i < 3; ++i) solver.mesh().update();
   solver.mesh().set_surfaces({new hexed::Hypersphere(Eigen::VectorXd::Zero(2), .5)}, new hexed::Nonpenetration, Eigen::Vector2d{.8, .8});
   for (int i = 0; i < 6; ++i) {
-    // this criterion will refine all elements with a vertex that is within .2 of the midpoint of the arc
+    // this criterion will refine all elements with a vertex that is within .1 of the midpoint of the arc
     auto criterion = [](hexed::Element& elem){
       bool ref = false;
       for (int i_vert = 0; i_vert < 4; ++i_vert) {
@@ -978,11 +979,19 @@ TEST_CASE("cylinder tree mesh")
       return ref;
     };
     solver.mesh().update(criterion);
-    solver.visualize_field_tecplot(hexed::Is_deformed(), hexed::format_str(100, "cylinder%i", i)); // this should be after `calc_jacobian`, but i'm being hacky
   }
-  solver.mesh().connect_rest(bc_sn);
+  solver.mesh().connect_rest(sn1);
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
-  solver.visualize_field_tecplot(hexed::Is_deformed(), "cylinder");
+  solver.visualize_field_tecplot(hexed::Is_deformed(), "cylinder_refined");
+  CHECK_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-12));
+  solver.mesh().disconnect_boundary(sn1);
+  for (int i = 0; i < 3; ++i) {
+    solver.mesh().update(hexed::Mesh::never, [](hexed::Element& elem){return elem.refinement_level() > 3;});
+  }
+  solver.mesh().connect_rest(sn1);
+  solver.calc_jacobian();
+  solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
+  solver.visualize_field_tecplot(hexed::Is_deformed(), "cylinder_unrefined");
   REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-12));
 }
