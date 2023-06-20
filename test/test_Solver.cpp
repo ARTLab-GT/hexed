@@ -986,7 +986,7 @@ TEST_CASE("cylinder tree mesh")
   solver.visualize_field_tecplot(hexed::Is_deformed(), "cylinder_refined");
   CHECK_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-12));
   solver.mesh().disconnect_boundary(sn1);
-  for (int i = 0; i < 3; ++i) {
+  for (int i = 0; i < 6; ++i) {
     solver.mesh().update(hexed::Mesh::never, [](hexed::Element& elem){return elem.refinement_level() > 3;});
   }
   solver.mesh().connect_rest(sn1);

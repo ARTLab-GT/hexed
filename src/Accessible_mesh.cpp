@@ -608,18 +608,19 @@ bool Accessible_mesh::needs_refine(Tree* t)
 {
   for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
     auto neighbors = t->find_neighbors(math::direction(params.n_dim, i_face));
-    // if the ref level difference is greater than 1, need to refine
-    if (neighbors.size() > std::size_t(math::pow(2, params.n_dim - 1))) return true;
-    else if (!neighbors.empty()) { // otherwise if there is a partially-exposed face, need to refine
+    if (!neighbors.empty()) {
       bool any_exist = false;
       bool all_exist = true;
       for (Tree* n : neighbors) {
         bool exists = false;
-        if (n->elem) if (n->elem->record != 2) exists = true;
+        if (n->elem) if (n->elem->record != 2) {
+          if (n->refinement_level() > t->refinement_level() + 1) return true; // if ref level difference is greater than 1, need to refine
+          exists = true;
+        }
         any_exist = any_exist || exists;
         all_exist = all_exist && exists;
       }
-      if (any_exist && !all_exist) return true;
+      if (t->elem && any_exist && !all_exist) return true; // if there is a partially-exposed face, need to refine
     }
   }
   // otherwise, we're good
@@ -646,7 +647,7 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   // add new elements
   for (bool is_deformed : {0, 1}) n_orig[is_deformed] = container(is_deformed).element_view().size(); // count how many elements there are before adding, so we know where the new ones start
   for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, n_orig[is_deformed]);
-  // refine surface elements to be at least the minimum refinement level of all their inside neighbors
+  // synchronize refinement level of surface elements with their non-surface neighbors in preparation for incremental flood fill
   for (bool is_deformed : {0, 1}) {
     auto& cont = container(is_deformed);
     auto& cont_elems = cont.element_view();
@@ -656,14 +657,22 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
         Tree* neighbor = elem.tree->find_neighbor(math::direction(nd, i_face));
         if (neighbor) {
           if (!neighbor->elem) {
-            if (neighbor->refinement_level() < elem.refinement_level() - 1) neighbor->refine();
-            else if (neighbor->refinement_level() < elem.refinement_level()) {
+            auto min_neighbor_rl = [&](Tree* t) {
               int min_rl = std::numeric_limits<int>::max();
               for (int j_face = 0; j_face < 2*nd; ++j_face) {
-                Tree* n = neighbor->find_neighbor(math::direction(nd, j_face));
+                Tree* n = t->find_neighbor(math::direction(nd, j_face));
                 if (n) if (n->elem) min_rl = std::min(min_rl, n->refinement_level());
               }
-              if (neighbor->refinement_level() < min_rl) neighbor->refine();
+              return min_rl;
+            };
+            if (neighbor->refinement_level() > elem.refinement_level()) {
+              Tree* p = neighbor->parent();
+              bool can_unref = true;
+              for (Tree* child : p->children()) can_unref = can_unref && !child->elem;
+              if (can_unref && !needs_refine(p)) p->unrefine();
+            } else if (neighbor->refinement_level() < elem.refinement_level() - 1) neighbor->refine();
+            else if (neighbor->refinement_level() < elem.refinement_level()) {
+              if (neighbor->refinement_level() < min_neighbor_rl(neighbor)) neighbor->refine();
             }
           }
         }
@@ -717,34 +726,32 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
       for (int i_elem = 0; i_elem < n_orig[is_deformed]; ++i_elem) { // FIXME iteration won't quite work right
         auto& elem = cont_elems[i_elem];
         if (elem.record == -1 && elem.tree) {
-          bool is_min = true;
-          for (int i_dim = 0; i_dim < nd; ++i_dim) is_min = is_min && elem.nominal_position()[i_dim]%2 == 0;
-          if (is_min) {
-            bool unref = false;
-            bool is_def = false; // whether the putative unrefined element will be deformed
-            Tree* parent;
-            if (!elem.tree->is_root()) {
-              unref = true;
-              parent = elem.tree->parent();
-              for (Tree* child : parent->children()) {
-                if (!child->is_leaf()) unref = false;
-                else if (child->elem) {
-                  unref = unref && child->elem->record == -1;
-                  is_def = is_def || child->elem->get_is_deformed();
-                }
+          bool unref = false;
+          bool is_def = false; // whether the putative unrefined element will be deformed
+          Tree* parent;
+          if (!elem.tree->is_root()) {
+            unref = true;
+            parent = elem.tree->parent();
+            for (Tree* child : parent->children()) {
+              if (!child->is_leaf()) unref = false;
+              else if (child->elem) if (child->elem->record != 2) {
+                unref = unref && child->elem->record == -1;
+                is_def = is_def || child->elem->get_is_deformed();
               }
-              if (unref) unref = unref && !needs_refine(parent);
-              else elem.record = 0;
             }
-            if (unref) {
-              changed = true;
-              for (Tree* child : parent->children()) {
+            if (unref) unref = unref && !needs_refine(parent);
+            else elem.record = 0;
+          }
+          if (unref) {
+            changed = true;
+            for (Tree* child : parent->children()) {
+              if (child->elem) {
                 child->elem->record = 2;
                 child->elem->tree = nullptr;
               }
-              parent->unrefine();
-              add_elem(is_def, *parent).record = 0;
             }
+            parent->unrefine();
+            add_elem(is_def, *parent).record = 0;
           }
         }
       }
