@@ -627,6 +627,13 @@ bool Accessible_mesh::needs_refine(Tree* t)
   return false;
 }
 
+bool has_existent_children(Tree* t)
+{
+  bool has = t->elem;
+  for (Tree* child : t->children()) has = has || has_existent_children(child);
+  return has;
+}
+
 void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std::function<bool(Element&)> unrefine_criterion)
 {
   HEXED_ASSERT(tree, "need a tree to refine");
@@ -720,7 +727,7 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
     for (bool is_deformed : {0, 1}) {
       auto& cont = container(is_deformed);
       auto& cont_elems = cont.element_view();
-      for (int i_elem = 0; i_elem < n_orig[is_deformed]; ++i_elem) { // FIXME iteration won't quite work right
+      for (int i_elem = 0; i_elem < n_orig[is_deformed]; ++i_elem) {
         auto& elem = cont_elems[i_elem];
         if (elem.record == -1 && elem.tree) {
           bool unref = false;
@@ -730,7 +737,7 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
             unref = true;
             parent = elem.tree->parent();
             for (Tree* child : parent->children()) {
-              if (!child->is_leaf()) unref = false;
+              if (!child->is_leaf() && has_existent_children(child)) unref = false;
               else if (child->elem) if (child->elem->record != 2) {
                 unref = unref && child->elem->record == -1;
                 is_def = is_def || child->elem->get_is_deformed();
@@ -754,9 +761,21 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
       }
     }
   } while (changed);
+  // set the record straight for any elements denied refinement
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     if (elems[i_elem].record == -1) elems[i_elem].record = 0;
+  }
+  // un-flood-fill any new surface elements
+  for (bool is_deformed : {0, 1}) {
+    auto& cont = container(is_deformed);
+    auto& cont_elems = cont.element_view();
+    int sz = cont_elems.size();
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < sz; ++i_elem) {
+      auto& elem = elems[i_elem];
+      if (elem.tree && elem.record != 2) if (is_surface(elem.tree)) elem.record = 2;
+    }
   }
   // delete connections to old elements (has to happen before deleting elements or else use after free)
   car.purge_connections();
