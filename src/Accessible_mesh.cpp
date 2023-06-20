@@ -658,16 +658,12 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
           if (!neighbor->elem) {
             if (neighbor->refinement_level() < elem.refinement_level() - 1) neighbor->refine();
             else if (neighbor->refinement_level() < elem.refinement_level()) {
-              #if 1
               int min_rl = std::numeric_limits<int>::max();
               for (int j_face = 0; j_face < 2*nd; ++j_face) {
                 Tree* n = neighbor->find_neighbor(math::direction(nd, j_face));
-                if (n) if (n->elem) {printf("  %i %i %i %i %i\n", j_face, n->refinement_level(), n->elem->record, n->coordinates()(0), n->coordinates()(1)); min_rl = std::min(min_rl, n->refinement_level()); }
+                if (n) if (n->elem) min_rl = std::min(min_rl, n->refinement_level());
               }
-              #else
-              int min_rl = elem.refinement_level();
-              #endif
-              if (neighbor->refinement_level() < min_rl) {printf("%i %i %i\n", neighbor->refinement_level(), neighbor->coordinates()(0), neighbor->coordinates()(1)); neighbor->refine();}
+              if (neighbor->refinement_level() < min_rl) neighbor->refine();
             }
           }
         }
