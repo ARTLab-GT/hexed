@@ -958,7 +958,7 @@ TEST_CASE("cylinder tree mesh")
   static_assert(hexed::config::max_row_size >= 6);
   constexpr int row_size = 6;
   hexed::Solver solver (2, row_size, 1.);
-  solver.mesh().add_boundary_condition(new hexed::Freestream(Eigen::Vector4d{0., 0., 1., 1e5}), new hexed::Nominal_pos());
+  int bc_sn = solver.mesh().add_boundary_condition(new hexed::Freestream(Eigen::Vector4d{0., 0., 1., 1e5}), new hexed::Nominal_pos());
   solver.mesh().add_tree({0, 0, 0, 0});
   for (int i = 0; i < 3; ++i) solver.mesh().update();
   solver.mesh().set_surfaces({new hexed::Hypersphere(Eigen::VectorXd::Zero(2), .5)}, new hexed::Nonpenetration, Eigen::Vector2d{.8, .8});
@@ -980,6 +980,7 @@ TEST_CASE("cylinder tree mesh")
     solver.mesh().update(criterion);
     solver.visualize_field_tecplot(hexed::Is_deformed(), hexed::format_str(100, "cylinder%i", i)); // this should be after `calc_jacobian`, but i'm being hacky
   }
+  solver.mesh().connect_rest(bc_sn);
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
   solver.visualize_field_tecplot(hexed::Is_deformed(), "cylinder");
