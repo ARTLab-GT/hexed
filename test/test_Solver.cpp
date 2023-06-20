@@ -978,7 +978,7 @@ TEST_CASE("cylinder tree mesh")
       return ref;
     };
     solver.mesh().update(criterion);
-    solver.visualize_field_tecplot(hexed::Is_deformed(), "cylinder1"); // this should be after `calc_jacobian`, but i'm being hacky
+    solver.visualize_field_tecplot(hexed::Is_deformed(), hexed::format_str(100, "cylinder%i", i)); // this should be after `calc_jacobian`, but i'm being hacky
   }
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
