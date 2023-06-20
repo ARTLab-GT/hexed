@@ -657,14 +657,6 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
         Tree* neighbor = elem.tree->find_neighbor(math::direction(nd, i_face));
         if (neighbor) {
           if (!neighbor->elem) {
-            auto min_neighbor_rl = [&](Tree* t) {
-              int min_rl = std::numeric_limits<int>::max();
-              for (int j_face = 0; j_face < 2*nd; ++j_face) {
-                Tree* n = t->find_neighbor(math::direction(nd, j_face));
-                if (n) if (n->elem) min_rl = std::min(min_rl, n->refinement_level());
-              }
-              return min_rl;
-            };
             if (neighbor->refinement_level() > elem.refinement_level()) {
               Tree* p = neighbor->parent();
               bool can_unref = true;
@@ -672,7 +664,12 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
               if (can_unref && !needs_refine(p)) p->unrefine();
             } else if (neighbor->refinement_level() < elem.refinement_level() - 1) neighbor->refine();
             else if (neighbor->refinement_level() < elem.refinement_level()) {
-              if (neighbor->refinement_level() < min_neighbor_rl(neighbor)) neighbor->refine();
+              int min_rl = std::numeric_limits<int>::max();
+              for (int j_face = 0; j_face < 2*nd; ++j_face) {
+                Tree* n = neighbor->find_neighbor(math::direction(nd, j_face));
+                if (n) if (n->elem) min_rl = std::min(min_rl, n->refinement_level());
+              }
+              if (neighbor->refinement_level() < min_rl) neighbor->refine();
             }
           }
         }
