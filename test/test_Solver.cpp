@@ -963,6 +963,12 @@ TEST_CASE("cylinder tree mesh")
   solver.mesh().add_tree({sn0, sn0, sn0, sn0});
   for (int i = 0; i < 3; ++i) solver.mesh().update();
   solver.mesh().set_surfaces({new hexed::Hypersphere(Eigen::VectorXd::Zero(2), .5)}, new hexed::Nonpenetration, Eigen::Vector2d{.8, .8});
+  solver.mesh().connect_rest(sn1);
+  solver.calc_jacobian();
+  solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
+  solver.visualize_field_tecplot(hexed::Is_deformed(), "cylinder_initial");
+  CHECK_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-12));
+  solver.mesh().disconnect_boundary(sn1);
   for (int i = 0; i < 6; ++i) {
     // this criterion will refine all elements with a vertex that is within .1 of the midpoint of the arc
     auto criterion = [](hexed::Element& elem){

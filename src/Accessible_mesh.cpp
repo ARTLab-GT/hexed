@@ -517,16 +517,14 @@ void Accessible_mesh::set_surfaces(std::vector<Surface_geom*> surfaces, Flow_bc*
   if (!start) start = tree.get();
   start->flood_fill(1);
   // delete stuff
-  auto predicate = [](Element& elem){
-    if (elem.tree) return elem.tree->get_status() != 1;
-    return false;
-  };
-  car.purge_connections(predicate);
-  def.purge_connections(predicate);
-  car.elems.purge(predicate);
-  def.elems.purge(predicate);
-  // make new boundary connections (placeholder)
-  connect_rest(surf_bc_sn);
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    elem.record = 0;
+    if (elem.tree) if (elem.tree->get_status() != 1) elem.record = 2;
+  }
+  deform();
+  purge();
 }
 
 template<typename element_t> void Accessible_mesh::connect_new(int start_at)
@@ -634,6 +632,56 @@ bool has_existent_children(Tree* t)
   return has;
 }
 
+void Accessible_mesh::deform()
+{
+  int nd = params.n_dim;
+  auto& elems = elements();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    if (elem.record != 2 && elem.get_is_deformed() && elem.tree) elem.record = 3;
+  }
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    if (elem.record != 2 && elem.tree) {
+      std::vector<Tree*> neighbors [6];
+      bool boundary = false;
+      for (int i_face = 0; i_face < 2*nd; ++i_face) {
+        neighbors[i_face] = elem.tree->find_neighbors(math::direction(nd, i_face));
+        if (!neighbors[i_face].empty()) {
+          if (neighbors[i_face][0]->elem) boundary = boundary || neighbors[i_face][0]->elem->record == 2;
+          else boundary = true;
+        }
+      }
+      if (boundary) elem.record = 3*!elem.get_is_deformed();
+    }
+  }
+  for (bool is_deformed : {0, 1}) {
+    auto& cont = container(is_deformed);
+    auto& cont_elems = cont.element_view();
+    int sz = cont_elems.size();
+    for (int i_elem = 0; i_elem < sz; ++i_elem) {
+      auto& elem = cont_elems[i_elem];
+      if (elem.record == 3) {
+        add_elem(!is_deformed, *elem.tree).record = 0;
+        elem.record = 2;
+        elem.tree = nullptr;
+      }
+    }
+  }
+}
+
+void Accessible_mesh::purge()
+{
+  // delete connections to old elements (has to happen before deleting elements or else use after free)
+  car.purge_connections();
+  def.purge_connections();
+  // delete old elements
+  car.elems.purge();
+  def.elems.purge();
+}
+
 void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std::function<bool(Element&)> unrefine_criterion)
 {
   HEXED_ASSERT(tree, "need a tree to refine");
@@ -645,7 +693,12 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
     auto& elem = elems[i_elem];
     bool ref = refine_criterion(elem);
     bool unref = unrefine_criterion(elem);
-    // record legend: 0 => do nothing; 1 => refine; -1 => unrefine; 2=> already (un)refined (i.e. dead)
+    // record legend:
+    // 0 => do nothing
+    // 1 => refine
+    // -1 => unrefine
+    // 2 => already (un)refined (i.e. dead)
+    // 3 => toggle deformity
     if (ref && !unref) elem.record = 1;
     else if (unref && !ref) elem.record = -1;
     else elem.record = 0;
@@ -655,29 +708,25 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   for (bool is_deformed : {0, 1}) n_orig[is_deformed] = container(is_deformed).element_view().size(); // count how many elements there are before adding, so we know where the new ones start
   for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, n_orig[is_deformed]);
   // synchronize refinement level of surface elements with their non-surface neighbors in preparation for incremental flood fill
-  for (bool is_deformed : {0, 1}) {
-    auto& cont = container(is_deformed);
-    auto& cont_elems = cont.element_view();
-    for (int i_elem = 0; i_elem < cont_elems.size(); ++i_elem) { // only need to worry about new elements
-      auto& elem = cont_elems[i_elem];
-      for (int i_face = 0; i_face < 2*nd; ++i_face) {
-        Tree* neighbor = elem.tree->find_neighbor(math::direction(nd, i_face));
-        if (neighbor) {
-          if (!neighbor->elem) {
-            if (neighbor->refinement_level() > elem.refinement_level()) {
-              Tree* p = neighbor->parent();
-              bool can_unref = true;
-              for (Tree* child : p->children()) can_unref = can_unref && !child->elem;
-              if (can_unref && !needs_refine(p)) p->unrefine();
-            } else if (neighbor->refinement_level() < elem.refinement_level() - 1) neighbor->refine();
-            else if (neighbor->refinement_level() < elem.refinement_level()) {
-              int min_rl = std::numeric_limits<int>::max();
-              for (int j_face = 0; j_face < 2*nd; ++j_face) {
-                Tree* n = neighbor->find_neighbor(math::direction(nd, j_face));
-                if (n) if (n->elem) min_rl = std::min(min_rl, n->refinement_level());
-              }
-              if (neighbor->refinement_level() < min_rl) neighbor->refine();
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) { // only need to worry about new elements
+    auto& elem = elems[i_elem];
+    for (int i_face = 0; i_face < 2*nd; ++i_face) {
+      Tree* neighbor = elem.tree->find_neighbor(math::direction(nd, i_face));
+      if (neighbor) {
+        if (!neighbor->elem) {
+          if (neighbor->refinement_level() > elem.refinement_level()) {
+            Tree* p = neighbor->parent();
+            bool can_unref = true;
+            for (Tree* child : p->children()) can_unref = can_unref && !child->elem;
+            if (can_unref && !needs_refine(p)) p->unrefine();
+          } else if (neighbor->refinement_level() < elem.refinement_level() - 1) neighbor->refine();
+          else if (neighbor->refinement_level() < elem.refinement_level()) {
+            int min_rl = std::numeric_limits<int>::max();
+            for (int j_face = 0; j_face < 2*nd; ++j_face) {
+              Tree* n = neighbor->find_neighbor(math::direction(nd, j_face));
+              if (n) if (n->elem) min_rl = std::min(min_rl, n->refinement_level());
             }
+            if (neighbor->refinement_level() < min_rl) neighbor->refine();
           }
         }
       }
@@ -692,7 +741,7 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
       auto& cont_elems = cont.element_view();
       int sz = cont_elems.size();
       for (int i_elem = 0; i_elem < sz; ++i_elem) {
-        auto& elem = elems[i_elem];
+        auto& elem = cont_elems[i_elem];
         if (elem.tree && elem.record == 0) {
           for (int i_face = 0; i_face < 2*nd; ++i_face) {
             for (Tree* neighbor : elem.tree->find_neighbors(math::direction(nd, i_face))) {
@@ -767,22 +816,22 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
     if (elems[i_elem].record == -1) elems[i_elem].record = 0;
   }
   // un-flood-fill any new surface elements
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    if (elem.tree && elem.record != 2) if (is_surface(elem.tree)) elem.record = 2;
+  }
   for (bool is_deformed : {0, 1}) {
     auto& cont = container(is_deformed);
     auto& cont_elems = cont.element_view();
-    int sz = cont_elems.size();
-    #pragma omp parallel for
-    for (int i_elem = 0; i_elem < sz; ++i_elem) {
-      auto& elem = elems[i_elem];
-      if (elem.tree && elem.record != 2) if (is_surface(elem.tree)) elem.record = 2;
+    int deleted = 0;
+    #pragma omp parallel for reduction(+:deleted)
+    for (int i_elem = 0; i_elem < n_orig[is_deformed]; ++i_elem) {
+      deleted += cont_elems[i_elem].record == 2;
     }
+    n_orig[is_deformed] -= deleted;
   }
-  // delete connections to old elements (has to happen before deleting elements or else use after free)
-  car.purge_connections();
-  def.purge_connections();
-  // delete old elements
-  n_orig[0] -= car.elems.purge();
-  n_orig[1] -= def.elems.purge();
+  purge();
   // connect new elements
   connect_new<         Element>(n_orig[0]);
   connect_new<Deformed_element>(n_orig[1]);
