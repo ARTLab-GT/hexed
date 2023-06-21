@@ -632,6 +632,11 @@ bool has_existent_children(Tree* t)
   return has;
 }
 
+bool is_def(Element& elem)
+{
+  return (elem.get_is_deformed() && elem.record == 0) || (!elem.get_is_deformed() && elem.record == 3);
+}
+
 void Accessible_mesh::deform()
 {
   int nd = params.n_dim;
@@ -646,17 +651,69 @@ void Accessible_mesh::deform()
     auto& elem = elems[i_elem];
     if (elem.record != 2 && elem.tree) {
       std::vector<Tree*> neighbors [6];
+      bool surface [6] {};
       bool boundary = false;
       for (int i_face = 0; i_face < 2*nd; ++i_face) {
         neighbors[i_face] = elem.tree->find_neighbors(math::direction(nd, i_face));
         if (!neighbors[i_face].empty()) {
-          if (neighbors[i_face][0]->elem) boundary = boundary || neighbors[i_face][0]->elem->record == 2;
-          else boundary = true;
+          if (neighbors[i_face][0]->elem) surface[i_face] = neighbors[i_face][0]->elem->record == 2;
+          else surface[i_face] = true;
+        }
+        boundary = boundary || surface[i_face];
+      }
+      if (boundary) {
+        #pragma omp atomic write
+        elem.record = 3*!elem.get_is_deformed();
+        for (int i_face = 0; i_face < 2*nd; ++i_face) {
+          bool toggle = false;
+          for (int j_face = 0; j_face < 2*nd; ++j_face) {
+            if (j_face/2 != i_face/2 && surface[j_face]) toggle = true;
+          }
+          if (toggle) {
+            for (Tree* n : neighbors[i_face]) if (n->elem) if (n->elem->record != 2) {
+              #pragma omp atomic write
+              n->elem->record = 3*!n->elem->get_is_deformed();
+            }
+          }
         }
       }
-      if (boundary) elem.record = 3*!elem.get_is_deformed();
     }
   }
+  bool changed;
+  do {
+    changed = false;
+    #pragma omp parallel for reduction(||:changed)
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      if (elem.tree && is_def(elem)) {
+        for (int i_face = 0; i_face < 2*nd; ++i_face) {
+          auto neighbors = elem.tree->find_neighbors(math::direction(nd, i_face));
+          bool any_deformed = false;
+          bool all_deformed = true;
+          for (Tree* neighbor : neighbors) {
+            if (neighbor->elem) {
+              any_deformed = any_deformed || is_def(*neighbor->elem);
+              all_deformed = all_deformed && is_def(*neighbor->elem);
+            }
+          }
+          if (any_deformed && !all_deformed) {
+            for (Tree* neighbor : neighbors) {
+              if (neighbor->elem) {
+                changed = true;
+                if (neighbor->elem->get_is_deformed()) {
+                  #pragma omp atomic write
+                  neighbor->elem->record = 0;
+                } else {
+                  #pragma omp atomic write
+                  neighbor->elem->record = 3;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } while (changed);
   for (bool is_deformed : {0, 1}) {
     auto& cont = container(is_deformed);
     auto& cont_elems = cont.element_view();
@@ -821,6 +878,7 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
     auto& elem = elems[i_elem];
     if (elem.tree && elem.record != 2) if (is_surface(elem.tree)) elem.record = 2;
   }
+  deform();
   for (bool is_deformed : {0, 1}) {
     auto& cont = container(is_deformed);
     auto& cont_elems = cont.element_view();
