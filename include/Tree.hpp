@@ -4,6 +4,7 @@
 #include <memory>
 #include "math.hpp"
 #include "Element.hpp"
+#include "Deformed_element.hpp"
 
 namespace hexed
 {
@@ -58,6 +59,7 @@ class Tree
   Tree(int n_dim, double root_size, Mat<> origin = Mat<>::Zero(3));
   const int n_dim;
   Element* elem = nullptr; //!< `Element` generated from this tree (to be managed by the user of this class)
+  Deformed_element* def_elem = nullptr; //!< if `elem` points to a deformed element, this can also be set to allow it to be accessed as deformed
 
   //! \name basic instance information
   //!\{

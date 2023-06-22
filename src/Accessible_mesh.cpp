@@ -471,6 +471,9 @@ Element& Accessible_mesh::add_elem(bool is_deformed, Tree& t)
   elem.record = sn; // put the serial number in the record so it can be used for connections
   elem.tree = &t;
   t.elem = &elem;
+  if (is_deformed) {
+    t.def_elem = &def.elems.at(t.refinement_level(), sn);
+  }
   return elem;
 }
 
@@ -525,6 +528,8 @@ void Accessible_mesh::set_surfaces(std::vector<Surface_geom*> surfaces, Flow_bc*
   }
   deform();
   purge();
+  connect_new<         Element>(0);
+  connect_new<Deformed_element>(0);
 }
 
 template<typename element_t> void Accessible_mesh::connect_new(int start_at)
@@ -560,8 +565,10 @@ template<typename element_t> void Accessible_mesh::connect_new(int start_at)
               if (neighbors.size() == 1) {
                 auto& other = *neighbors[0]->elem;
                 if (other.refinement_level() == elem.refinement_level()) {
-                  if (elem.get_is_deformed() && other.get_is_deformed()) ;
-                  else {
+                  if (elem.get_is_deformed() && other.get_is_deformed()) {
+                    std::array<Deformed_element*, 2> el_ar {elem.tree->def_elem, neighbors[0]->def_elem};
+                    def.cons.emplace_back(el_ar, Con_dir<Deformed_element>{{i_dim, i_dim}, {bool(sign), !sign}});
+                  } else {
                     std::array<Element*, 2> el_ar;
                     el_ar[!sign] = &elem;
                     el_ar[sign] = &other;
