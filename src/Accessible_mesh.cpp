@@ -539,12 +539,15 @@ template<typename element_t> void Accessible_mesh::connect_new(int start_at)
   int nd = params.n_dim;
   auto connect_refined = [&](Element& elem, int i_dim, int sign, std::vector<Tree*> neighbors) {
     HEXED_ASSERT(int(neighbors.size()) == math::pow(2, nd - 1), format_str(100, "bad number of neighbors %lu (thanks for nothing, ref level smoother)", neighbors.size()))
-    bool is_def = true;
+    bool is_def = elem.get_is_deformed();
     for (Tree* neighbor : neighbors) {
       HEXED_ASSERT(neighbor->elem, "hanging-node connection with nonexistant elements");
       is_def = is_def && neighbor->elem->get_is_deformed();
     }
     if (is_def) {
+      std::vector<Deformed_element*> fine;
+      for (Tree* neighbor : neighbors) fine.push_back(neighbor->def_elem);
+      def.ref_face_cons[nd - 1].emplace_back(new Refined_connection<Deformed_element>(elem.tree->def_elem, fine, Con_dir<Deformed_element>{{i_dim, i_dim}, {!sign, bool(sign)}}));
     } else {
       std::vector<Element*> fine;
       for (Tree* neighbor : neighbors) fine.push_back(neighbor->elem);

@@ -115,6 +115,7 @@ class Solver
   //! moves all vertices to the mean of the current position and the mean of the neighbors' positions
   void relax_vertices(double factor = .5);
   /*! \brief apply `Mesh_bc`s
+   * This is where hanging vertices are snapped to their coarse faces.
    * \note if some elements participate in multiple BCs, then snapping may not satisfy all exactly.
    *       However, if performed multiple times, it should converge;
    */
