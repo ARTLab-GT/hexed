@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 #include "Deformed_element.hpp"
 #include "Hanging_vertex_matcher.hpp"
+#include "Boundary_face.hpp"
 #include "math.hpp"
 
 namespace hexed
@@ -289,6 +290,71 @@ inline void Refined_connection<Deformed_element>::connect_normal()
     auto n = fine_cons[i_fine].normal(!rev);
     fine_cons[i_fine].element(!rev).face_normal(2*dir.i_dim[!rev] + dir.face_sign[!rev]) = n;
   }
+}
+
+/*!
+ * A `Boundary_face` that also provides details about the connection for the neighbor flux
+ * computation and requests for a particular `Boundary_condition` to be applied to it.
+ */
+class Boundary_connection : public Boundary_face, public Face_connection<Deformed_element>
+{
+  public:
+  inline Boundary_connection(Storage_params params) : Face_connection<Deformed_element>{params} {}
+  virtual Element& element() = 0;
+  virtual int bound_cond_serial_n() = 0;
+};
+
+/*!
+ * Implementation of `Boundary_connection` which also can provide a reference to the element
+ * involved (for Jacobian calculation among other purposes).
+ */
+template <typename element_t>
+class Typed_bound_connection : public Boundary_connection
+{
+  element_t& elem;
+  Storage_params params;
+  int i_d;
+  bool ifs;
+  int bc_sn;
+  Eigen::VectorXd pos;
+  Eigen::VectorXd state_c;
+  void connect_normal();
+
+  public:
+  Typed_bound_connection(element_t& elem_arg, int i_dim_arg, bool inside_face_sign_arg, int bc_serial_n)
+  : Boundary_connection{elem_arg.storage_params()},
+    elem{elem_arg},
+    params{elem.storage_params()},
+    i_d{i_dim_arg},
+    ifs{inside_face_sign_arg},
+    bc_sn{bc_serial_n},
+    pos(params.n_dim*params.n_qpoint()/params.row_size),
+    state_c(params.n_var*params.n_qpoint()/params.row_size)
+  {
+    connect_normal();
+    elem.faces[direction().i_face(0)] = state();
+  }
+  virtual Storage_params storage_params() {return params;}
+  virtual double* ghost_face() {return state() + params.n_dof()/params.row_size;}
+  virtual double* inside_face() {return state();}
+  virtual int i_dim() {return i_d;}
+  virtual bool inside_face_sign() {return ifs;}
+  virtual double* surface_normal() {return normal();}
+  virtual double* surface_position() {return pos.data();}
+  virtual double* state_cache() {return state_c.data();}
+  virtual Con_dir<Deformed_element> direction() {return {{i_d, i_d}, {ifs, !ifs}};}
+  virtual int bound_cond_serial_n() {return bc_sn;}
+  element_t& element() {return elem;}
+};
+
+template <>
+inline void Typed_bound_connection<Element>::connect_normal()
+{}
+
+template <>
+inline void Typed_bound_connection<Deformed_element>::connect_normal()
+{
+  elem.face_normal(2*i_d + ifs) = normal(0);
 }
 
 }
