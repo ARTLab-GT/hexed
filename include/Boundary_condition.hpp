@@ -3,6 +3,7 @@
 
 #include "connection.hpp"
 #include "Surface_func.hpp"
+#include "Surface_geom.hpp"
 
 namespace hexed
 {
@@ -238,12 +239,24 @@ class Surface_set : public Surface_geometry
 };
 
 //! \brief snaps to a `Surface_geometry`
+//! \deprecated Use `Geom_mbc` instead.
 class Surface_mbc : public Mesh_bc
 {
   std::unique_ptr<Surface_geometry> sg;
   public:
   //! acquire ownership of `*surf_geom`, which faces/vertices will be snapped to
   inline Surface_mbc(Surface_geometry* surf_geom) : sg{surf_geom} {}
+  virtual void snap_vertices(Boundary_connection&);
+  virtual void snap_node_adj(Boundary_connection&, const Basis&);
+};
+
+//! \brief snaps to a `Surface_geom`
+class Geom_mbc : public Mesh_bc
+{
+  std::unique_ptr<Surface_geom> geom;
+  public:
+  //! acquire ownership of `*surf_geom`, which faces/vertices will be snapped to
+  inline Geom_mbc(Surface_geom* surf_geom) : geom{surf_geom} {}
   virtual void snap_vertices(Boundary_connection&);
   virtual void snap_node_adj(Boundary_connection&, const Basis&);
 };

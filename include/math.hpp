@@ -236,6 +236,23 @@ class Approx_equal
   inline bool operator()(double x, double y) const {return std::abs(x - y) < a + r*std::abs(x + y)/2;}
 };
 
+//! Constructs an `Eigen::VectorXd` from iterators `begin()` and `end()` to arithmetic types.
+template <typename T>
+Mat<> to_mat(T begin, T end)
+{
+  Mat<> vec(end - begin);
+  int i = 0;
+  for (auto it = begin; it < end; ++it) vec(i++) = *it;
+  return vec;
+}
+
+//! Constructs an `Eigen::VectorXd` from any object supporting `begin()` and `end()` members.
+template <typename T>
+Mat<> to_mat(const T& range)
+{
+  return to_mat(range.begin(), range.end());
+}
+
 }
 }
 #endif

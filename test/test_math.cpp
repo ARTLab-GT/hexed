@@ -186,3 +186,9 @@ TEST_CASE("proj_to_segment")
   proj = hexed::math::proj_to_segment(endpoints, Eigen::Vector2d{3., 0.});
   REQUIRE((proj - Eigen::Vector2d{1.5, 1.5}).norm() == Catch::Approx(0.).scale(1.));
 }
+
+TEST_CASE("to_mat")
+{
+  std::vector<double> vec {.1, -.3, .2};
+  REQUIRE_THAT(hexed::math::to_mat(vec), Catch::Matchers::RangeEquals(vec, hexed::math::Approx_equal()));
+}

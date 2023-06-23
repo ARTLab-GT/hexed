@@ -29,7 +29,8 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
   bound_cons{car.boundary_connections(), def.boundary_connections()},
   def_face_cons{def.elem_face_con_v, bound_face_cons},
   ref_face_v{car.refined_faces(), def.refined_faces()},
-  matcher_v{car.hanging_vertex_matchers(), def.hanging_vertex_matchers()}
+  matcher_v{car.hanging_vertex_matchers(), def.hanging_vertex_matchers()},
+  surf_geom{nullptr}
 {
   def.face_con_v = def_face_cons;
 }
@@ -510,8 +511,8 @@ bool Accessible_mesh::is_surface(Tree* t)
 void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start)
 {
   // take ownership of the surface geometries (do this first to avoid memory leak)
-  surf_geom.reset(geometry);
-  surf_bc_sn = add_boundary_condition(surface_bc, new Null_mbc());
+  surf_bc_sn = add_boundary_condition(surface_bc, new Geom_mbc(geometry));
+  surf_geom = geometry;
   if (!tree) return;
   // identify surface elements
   auto& elems = elements();

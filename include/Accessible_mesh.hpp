@@ -25,14 +25,14 @@ class Accessible_mesh : public Mesh
   Concatenation<Element&> elems;
   Concatenation<Element_connection&> elem_cons;
   std::vector<Boundary_condition> bound_conds;
-  std::unique_ptr<Surface_geom> surf_geom;
-  int surf_bc_sn;
   Concatenation<Face_connection<Deformed_element>&> bound_face_cons;
   Concatenation<Boundary_connection&> bound_cons;
   Concatenation<Face_connection<Deformed_element>&> def_face_cons;
   Concatenation<Refined_face&> ref_face_v;
   Concatenation<Hanging_vertex_matcher&> matcher_v;
   std::vector<Vertex::Non_transferable_ptr> vert_ptrs;
+  int surf_bc_sn;
+  Surface_geom* surf_geom; // note: this pointer does not own its data (the corresponding `Mesh_bc` does) so don't `delete` it.
   std::vector<int> extrude_cons;
   std::unique_ptr<Tree> tree; // could be null! don't forget to check
   std::vector<int> tree_bcs;
