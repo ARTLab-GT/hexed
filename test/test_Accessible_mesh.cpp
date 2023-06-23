@@ -359,11 +359,22 @@ TEST_CASE("extruded hanging node connection validity")
 TEST_CASE("Tree meshing")
 {
   hexed::Accessible_mesh mesh({1, 5, 3, hexed::config::max_row_size}, .7);
-  mesh.add_boundary_condition(new hexed::Copy, new hexed::Null_mbc);
   REQUIRE_THROWS(mesh.update(hexed::Mesh::always));
-  REQUIRE_THROWS(mesh.add_tree({0, 0, 0, 0}));
-  mesh.add_tree({0, 0, 0, 0, 0, 0});
-  REQUIRE_THROWS(mesh.add_tree({0, 0, 0, 0, 0, 0}));
+  SECTION("wrong number of BCs") {
+    std::vector<hexed::Flow_bc*> bcs;
+    for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Copy);
+    REQUIRE_THROWS(mesh.add_tree(bcs));
+  }
+  {
+    std::vector<hexed::Flow_bc*> bcs;
+    for (int i = 0; i < 6; ++i) bcs.push_back(new hexed::Copy);
+    mesh.add_tree(bcs);
+  }
+  SECTION("multiple `add_tree` calls") {
+    std::vector<hexed::Flow_bc*> bcs;
+    for (int i = 0; i < 6; ++i) bcs.push_back(new hexed::Copy);
+    REQUIRE_THROWS(mesh.add_tree(bcs));
+  }
   REQUIRE(mesh.elements().size() == 1);
   mesh.valid().assert_valid();
   SECTION("refinement")

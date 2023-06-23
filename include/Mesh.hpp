@@ -115,20 +115,19 @@ class Mesh
    * Only one tree can be created.
    * Connections and boundary conditions are set automatically for tree elements,
    * so tree meshes should always automatically be valid unless you explicitly invalidate it with `Mesh::disconnect_boundary`.
-   * \param serial_numbers list of serial numbers of BCs to apply to any elements
+   * \param extremal_bcs Boundary conditions to apply to elements
    *   with exposed faces at the extremal boundaries of the tree.
-   *   It should contain `2*n_dim` entries, each of which should be a serial number
-   *   returned by `add_boundary_condition`.
-   *   E.g. `serial_numbers[0]` is the boundary condition to apply to the minimum \f$x_0\f$ face,
-   *   `serial_numbers[1]` is the BC for the maximum \f$x_0\f$ face,
-   *   `serial_numbers[2]` is for minimum \f$x_1\f$.
-   *   The same serial number may appear any number of times.
+   *   Takes ownership of objects that the vector entries point to.
+   *   It must contain exactly `2*n_dim` entries.
+   *   E.g. `extremal_bcs[0]` is the boundary condition to apply to the minimum \f$x_0\f$ face,
+   *   `extremal_bcs[1]` is the BC for the maximum \f$x_0\f$ face,
+   *   `extremal_bcs[2]` is for minimum \f$x_1\f$.
    */
-  virtual void add_tree(std::vector<int> serial_numbers) = 0;
-  /*! \brief Defines the set of surface geometries to be meshed as boundaries.
-   * \details Acquires ownership of the objects pointed to `surfaces` and `surface_bc`.
-   * The geometric surfaces represented by the `Surface_geom`s in `surfaces` are now boundaries of the domain
-   * and their boundary conditions is `surface_bc`.
+  virtual void add_tree(std::vector<Flow_bc*> extremal_bcs) = 0;
+  /*! \brief Defines the surface geometry to be meshed as a boundary.
+   * \details Acquires ownership of the objects pointed to `geometry` and `surface_bc`.
+   * The geometric surface represented by `geometry` is now a boundary of the domain
+   * and its boundary condition is `surface_bc`.
    * The flood fill algorithm is then executed starting at `flood_fill_start`
    * to determine which elements are in the domain
    * and extrusion is executed to create a suitably body-fitted mesh.
@@ -136,9 +135,9 @@ class Mesh
    * If the mesh is excessively coarse, there may be no elements in the domain
    * as they are all too close to the surfaces.
    * So, `Mesh::update` should be calling a few times before `Mesh::set_surfaces`.
-   * Any surfaces defined by previous invokations of `set_surfaces` are forgotten.
+   * Any surfaces defined by previous invokations of `set_surface` are forgotten.
    */
-  virtual void set_surfaces(std::vector<Surface_geom*> surfaces, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) = 0;
+  virtual void set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) = 0;
   static inline bool always(Element&) {return true;}
   static inline bool never(Element&) {return false;}
   /*! \brief Updates tree mesh based on user-supplied (un)refinement criteria.

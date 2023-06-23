@@ -5,6 +5,7 @@
 #include "Element.hpp"
 #include "Deformed_element.hpp"
 #include "Element_container.hpp"
+#include "Tree.hpp"
 
 namespace hexed
 {
@@ -180,9 +181,17 @@ class Mesh_by_type : public View_by_type<element_t>
   }
 
   //! delete all connections (of all kinds) where `predicate` is true for at least one of the elements involved
+  //! or connections for boundary faces that have since been covered up
   void purge_connections(std::function<bool(Element&)> predicate = [](Element& elem){return elem.record != 0;})
   {
-    erase_if(bound_cons, [predicate](Typed_bound_connection<element_t>& con){return predicate(con.element());});
+    auto bound_predicate = [&](Typed_bound_connection<element_t>& con){
+      if (con.element().tree) {
+        Tree* neighbor = con.element().tree->find_neighbor(math::direction(par.n_dim, con.i_dim(), con.inside_face_sign()));
+        if (neighbor) if (neighbor->elem) return true; // remember that either all neighbors exist or none
+      }
+      return predicate(con.element());
+    };
+    erase_if(bound_cons, bound_predicate);
     erase_if(cons, [predicate](Element_face_connection<element_t>& con){return predicate(con.element(0)) || predicate(con.element(1));});
     for (int i_dim = 0; i_dim < 3; ++i_dim) {
       auto pred = [predicate](std::unique_ptr<Refined_connection<element_t>>& con){

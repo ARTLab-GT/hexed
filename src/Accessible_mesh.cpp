@@ -448,6 +448,7 @@ void Accessible_mesh::connect_rest(int bc_sn)
   }
   car.record_connections();
   def.record_connections();
+  // make connections
   car.connect_empty(bc_sn);
   def.connect_empty(bc_sn);
 }
@@ -477,37 +478,41 @@ Element& Accessible_mesh::add_elem(bool is_deformed, Tree& t)
   return elem;
 }
 
-void Accessible_mesh::add_tree(std::vector<int> serial_numbers)
+void Accessible_mesh::add_tree(std::vector<Flow_bc*> extremal_bcs)
 {
-  HEXED_ASSERT(int(serial_numbers.size()) == 2*params.n_dim, "`serial_numbers` has wrong number of elements");
+  // take ownership of bcs (do this first to avoid memory leak)
+  std::vector<int> new_tree_bcs;
+  //! \todo this could, in theory, be a resource leak because these are never erased if an exception is thrown...
+  for (Flow_bc* fbc : extremal_bcs) new_tree_bcs.push_back(add_boundary_condition(fbc, new Nominal_pos));
+  // make assertions
+  HEXED_ASSERT(int(extremal_bcs.size()) == 2*params.n_dim, "`extremal_bcs` has wrong number of elements");
   HEXED_ASSERT(!tree, "each `Mesh` may only contain one tree");
+  // add the tree
+  tree_bcs = new_tree_bcs;
   tree.reset(new Tree(params.n_dim, root_sz));
-  tree_bcs = serial_numbers;
   auto& elem = add_elem(false, *tree);
   int sn = elem.record;
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
-      connect_boundary(0, 0, sn, i_dim, sign, serial_numbers[2*i_dim + sign]);
+      connect_boundary(0, 0, sn, i_dim, sign, tree_bcs[2*i_dim + sign]);
     }
   }
 }
 
 bool Accessible_mesh::is_surface(Tree* t)
 {
+  if (!surf_geom) return false;
   Mat<> center = t->nominal_position() + t->nominal_size()/2*Mat<>::Ones(params.n_dim);
-  double dist = std::numeric_limits<double>::max();
-  for (auto& geom : surf_geoms) {
-    dist = std::min(dist, (center - geom->nearest_point(center)).norm());
-  }
+  double dist = (center - surf_geom->nearest_point(center)).norm();
   return dist < std::sqrt(params.n_dim)/2*t->nominal_size();
 }
 
-void Accessible_mesh::set_surfaces(std::vector<Surface_geom*> surfaces, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start)
+void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start)
 {
   // take ownership of the surface geometries (do this first to avoid memory leak)
-  for (auto s : surfaces) surf_geoms.emplace_back(s);
+  surf_geom.reset(geometry);
   surf_bc_sn = add_boundary_condition(surface_bc, new Null_mbc());
-  if (!tree || surfaces.empty()) return;
+  if (!tree) return;
   // identify surface elements
   auto& elems = elements();
   #pragma omp parallel for
@@ -530,6 +535,7 @@ void Accessible_mesh::set_surfaces(std::vector<Surface_geom*> surfaces, Flow_bc*
   purge();
   connect_new<         Element>(0);
   connect_new<Deformed_element>(0);
+  connect_rest(surf_bc_sn);
 }
 
 template<typename element_t> void Accessible_mesh::connect_new(int start_at)
@@ -747,6 +753,7 @@ void Accessible_mesh::purge()
   // delete old elements
   car.elems.purge();
   def.elems.purge();
+  erase_if(vert_ptrs, &Vertex::Non_transferable_ptr::is_null);
 }
 
 void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std::function<bool(Element&)> unrefine_criterion)
@@ -903,6 +910,7 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   // connect new elements
   connect_new<         Element>(n_orig[0]);
   connect_new<Deformed_element>(n_orig[1]);
+  connect_rest(surf_bc_sn);
 }
 
 }
