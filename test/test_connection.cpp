@@ -135,18 +135,25 @@ TEST_CASE("Element_face_connection<Element>")
   hexed::Storage_params params {3, 5, 3, 6};
   hexed::Element elem0 (params);
   hexed::Element elem1 (params);
-  hexed::Element_face_connection<hexed::Element> con ({&elem0, &elem1}, hexed::Con_dir<hexed::Element>{1});
-  REQUIRE(elem0.faces[3] == con.state());
-  REQUIRE(elem1.faces[2] == con.state() + params.n_dof()/params.row_size);
-  REQUIRE(con.direction().i_dim == 1);
-  REQUIRE(&con.element(0) == &elem0);
-  REQUIRE(&con.element(1) == &elem1);
-  REQUIRE(con.state()        == elem0.faces[3]);
-  REQUIRE(con.state() + 5*36 == elem1.faces[2]);
-  REQUIRE(&elem0.vertex(2) == &elem1.vertex(0));
-  REQUIRE(&elem0.vertex(7) == &elem1.vertex(5));
-  // make sure it didn't just combine all the vertices or something stupid like that
-  REQUIRE(&elem0.vertex(0) != &elem1.vertex(2));
+  REQUIRE(elem0.faces[3] == nullptr);
+  REQUIRE(elem1.faces[2] == nullptr);
+  {
+    hexed::Element_face_connection<hexed::Element> con ({&elem0, &elem1}, hexed::Con_dir<hexed::Element>{1});
+    REQUIRE(elem0.faces[3] == con.state());
+    REQUIRE(elem1.faces[2] == con.state() + params.n_dof()/params.row_size);
+    REQUIRE(con.direction().i_dim == 1);
+    REQUIRE(&con.element(0) == &elem0);
+    REQUIRE(&con.element(1) == &elem1);
+    REQUIRE(con.state()        == elem0.faces[3]);
+    REQUIRE(con.state() + 5*36 == elem1.faces[2]);
+    REQUIRE(&elem0.vertex(2) == &elem1.vertex(0));
+    REQUIRE(&elem0.vertex(7) == &elem1.vertex(5));
+    // make sure it didn't just combine all the vertices or something stupid like that
+    REQUIRE(&elem0.vertex(0) != &elem1.vertex(2));
+  }
+  // check that faces get reset to nullptr after the connection is deleted
+  REQUIRE(elem0.faces[3] == nullptr);
+  REQUIRE(elem1.faces[2] == nullptr);
 }
 
 TEST_CASE("Element_face_connection<Deformed_element>")

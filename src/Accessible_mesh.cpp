@@ -186,6 +186,7 @@ bool aligned_different_dim(Con_dir<Deformed_element> dir, std::array<int, 2> ext
 
 void Accessible_mesh::extrude(bool collapse, double offset)
 {
+  erase_if(vert_ptrs, &Vertex::Non_transferable_ptr::is_null);
   const int nd = params.n_dim;
   const int n_faces = 2*nd;
   // initialize number of connections of each face to 0
@@ -766,17 +767,19 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   #pragma omp parallel for // parallelize this part since `predicate` could be expensive
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
-    bool ref = refine_criterion(elem);
-    bool unref = unrefine_criterion(elem);
-    // record legend:
-    // 0 => do nothing
-    // 1 => refine
-    // -1 => unrefine
-    // 2 => already (un)refined (i.e. dead)
-    // 3 => toggle deformity
-    if (ref && !unref) elem.record = 1;
-    else if (unref && !ref) elem.record = -1;
-    else elem.record = 0;
+    elem.record = 0;
+    if (elem.tree) {
+      bool ref = refine_criterion(elem);
+      bool unref = unrefine_criterion(elem);
+      // record legend:
+      // 0 => do nothing
+      // 1 => refine
+      // -1 => unrefine
+      // 2 => already (un)refined (i.e. dead)
+      // 3 => toggle deformity
+      if (ref && !unref) elem.record = 1;
+      else if (unref && !ref) elem.record = -1;
+    }
   }
   int n_orig [2];
   // add new elements
@@ -785,23 +788,25 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   // synchronize refinement level of surface elements with their non-surface neighbors in preparation for incremental flood fill
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) { // only need to worry about new elements
     auto& elem = elems[i_elem];
-    for (int i_face = 0; i_face < 2*nd; ++i_face) {
-      Tree* neighbor = elem.tree->find_neighbor(math::direction(nd, i_face));
-      if (neighbor) {
-        if (!neighbor->elem) {
-          if (neighbor->refinement_level() > elem.refinement_level()) {
-            Tree* p = neighbor->parent();
-            bool can_unref = true;
-            for (Tree* child : p->children()) can_unref = can_unref && !child->elem;
-            if (can_unref && !needs_refine(p)) p->unrefine();
-          } else if (neighbor->refinement_level() < elem.refinement_level() - 1) neighbor->refine();
-          else if (neighbor->refinement_level() < elem.refinement_level()) {
-            int min_rl = std::numeric_limits<int>::max();
-            for (int j_face = 0; j_face < 2*nd; ++j_face) {
-              Tree* n = neighbor->find_neighbor(math::direction(nd, j_face));
-              if (n) if (n->elem) min_rl = std::min(min_rl, n->refinement_level());
+    if (elem.tree) {
+      for (int i_face = 0; i_face < 2*nd; ++i_face) {
+        Tree* neighbor = elem.tree->find_neighbor(math::direction(nd, i_face));
+        if (neighbor) {
+          if (!neighbor->elem) {
+            if (neighbor->refinement_level() > elem.refinement_level()) {
+              Tree* p = neighbor->parent();
+              bool can_unref = true;
+              for (Tree* child : p->children()) can_unref = can_unref && !child->elem;
+              if (can_unref && !needs_refine(p)) p->unrefine();
+            } else if (neighbor->refinement_level() < elem.refinement_level() - 1) neighbor->refine();
+            else if (neighbor->refinement_level() < elem.refinement_level()) {
+              int min_rl = std::numeric_limits<int>::max();
+              for (int j_face = 0; j_face < 2*nd; ++j_face) {
+                Tree* n = neighbor->find_neighbor(math::direction(nd, j_face));
+                if (n) if (n->elem) min_rl = std::min(min_rl, n->refinement_level());
+              }
+              if (neighbor->refinement_level() < min_rl) neighbor->refine();
             }
-            if (neighbor->refinement_level() < min_rl) neighbor->refine();
           }
         }
       }
@@ -909,8 +914,10 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   }
   purge();
   // connect new elements
-  connect_new<         Element>(n_orig[0]);
-  connect_new<Deformed_element>(n_orig[1]);
+  //connect_new<         Element>(n_orig[0]);
+  //connect_new<Deformed_element>(n_orig[1]);
+  connect_new<         Element>(0);
+  connect_new<Deformed_element>(0);
   connect_rest(surf_bc_sn);
 }
 

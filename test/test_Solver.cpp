@@ -963,8 +963,13 @@ TEST_CASE("cylinder tree mesh")
   solver.mesh().add_tree(bcs);
   for (int i = 0; i < 3; ++i) solver.mesh().update();
   solver.mesh().set_surface(new hexed::Hypersphere(Eigen::VectorXd::Zero(2), .5), new hexed::Nonpenetration, Eigen::Vector2d{.8, .8});
-  for (int i = 0; i < 2; ++i) solver.relax_vertices();
-  solver.snap_vertices();
+  solver.mesh().disconnect_boundary(4);
+  solver.mesh().extrude();
+  solver.mesh().connect_rest(4);
+  for (int i = 0; i < 2; ++i) {
+    solver.relax_vertices();
+    solver.snap_vertices();
+  }
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
   solver.visualize_field_tecplot(hexed::Is_deformed(), "cylinder_initial");
@@ -985,6 +990,10 @@ TEST_CASE("cylinder tree mesh")
       return ref;
     };
     solver.mesh().update(criterion);
+    for (int i = 0; i < 2; ++i) solver.relax_vertices();
+    solver.calc_jacobian();
+    solver.visualize_field_tecplot(hexed::Is_deformed(), hexed::format_str(100, "cylinder%i", i));
+    throw std::runtime_error("foo");
     solver.mesh().valid().assert_valid();
   }
   for (int i = 0; i < 2; ++i) solver.relax_vertices();

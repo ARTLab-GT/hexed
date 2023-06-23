@@ -79,6 +79,7 @@ class Face_connection
   Eigen::VectorXd data;
   public:
   Face_connection(Storage_params params) : data(4*params.n_dof()/params.row_size) {}
+  virtual ~Face_connection() = default;
   virtual Con_dir<element_t> direction() = 0;
   virtual double* state() {return data.data();}
 };
@@ -95,10 +96,11 @@ class Face_connection<Deformed_element>
     state_sz{params.n_dof()/params.row_size},
     data(2*(nrml_sz + 2*state_sz))
   {}
+  virtual ~Face_connection() = default;
   virtual Con_dir<Deformed_element> direction() = 0;
   virtual double* state() {return data.data();}
   double* normal(int i_side) {return data.data() + 4*state_sz + i_side*nrml_sz;}
-  double* normal() {return data.data() + 4*state_sz;} // area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
+  double* normal() {return data.data() + 4*state_sz;} //!< area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
 };
 
 /*!
@@ -109,6 +111,7 @@ class Element_connection
 {
   public:
   virtual Element& element(int i_side) = 0;
+  virtual ~Element_connection() = default;
 };
 
 /*!
@@ -136,6 +139,12 @@ class Element_face_connection : public Element_connection, public Face_connectio
       elements[0]->vertex(inds[0][i_vert]).eat(elements[1]->vertex(inds[1][i_vert]));
     }
     connect_normal();
+  }
+  virtual ~Element_face_connection()
+  {
+    for (int i_side : {0, 1}) {
+      elems[i_side]->faces[dir.i_face(i_side)] = nullptr;
+    }
   }
   virtual Con_dir<element_t> direction() {return dir;}
   virtual element_t& element(int i_side) {return *elems[i_side];}
@@ -193,7 +202,7 @@ class Refined_connection
   Con_dir<element_t> dir;
   Con_dir<Deformed_element> def_dir;
   bool rev;
-  std::vector<Fine_connection> fine_cons;
+  std::vector<std::unique_ptr<Fine_connection>> fine_cons;
   std::array<bool, 2> str;
   int n_fine;
   Eigen::VectorXd coarse_normal;
@@ -258,8 +267,8 @@ class Refined_connection
       // if there is any stretching happening, rather than use `permutation_inds`
       // it is merely necessary to figure out whether we need to swap the fine elements
       if (any_str) inds[1] = i_face != (def_dir.flip_tangential() && !str[2*def_dir.i_dim[rev] > 3 - def_dir.i_dim[!rev]]);
-      fine_cons.emplace_back(*this, *fine[inds[!rev]]);
-      refined_face.fine[inds[rev]] = fine_cons.back().state() + rev*params.n_dof()/params.row_size;
+      fine_cons.emplace_back(new Fine_connection(*this, *fine[inds[!rev]]));
+      refined_face.fine[inds[rev]] = fine_cons.back()->state() + rev*params.n_dof()/params.row_size;
     }
     connect_normal();
   }
@@ -269,7 +278,7 @@ class Refined_connection
   virtual ~Refined_connection() = default;
   Con_dir<element_t> direction() {return dir;}
   //! fetch an object represting a connection between the face of a fine element and one of the mortar faces
-  Fine_connection& connection(int i_fine) {return fine_cons[i_fine];}
+  Fine_connection& connection(int i_fine) {return *fine_cons[i_fine];}
   bool order_reversed() {return rev;}
   auto stretch() {return str;}
   int n_fine_elements() {return n_fine;}
@@ -287,8 +296,8 @@ inline void Refined_connection<Deformed_element>::connect_normal()
   coarse_normal.resize(params.n_dim*params.n_qpoint()/params.row_size);
   c.face_normal(2*dir.i_dim[rev] + dir.face_sign[rev]) = coarse_normal.data();
   for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
-    auto n = fine_cons[i_fine].normal(!rev);
-    fine_cons[i_fine].element(!rev).face_normal(2*dir.i_dim[!rev] + dir.face_sign[!rev]) = n;
+    auto n = fine_cons[i_fine]->normal(!rev);
+    fine_cons[i_fine]->element(!rev).face_normal(2*dir.i_dim[!rev] + dir.face_sign[!rev]) = n;
   }
 }
 
