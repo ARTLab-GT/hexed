@@ -196,30 +196,36 @@ TEST_CASE("Refined_connection<Deformed_element>")
   elem_ptrs.push_back(&elem3);
   SECTION("not reversed")
   {
-    hexed::Refined_connection<hexed::Deformed_element> con {&coarse, elem_ptrs, hexed::Con_dir<hexed::Deformed_element>{{0, 2}, {1, 1}}};
-    REQUIRE(con.refined_face.coarse == coarse.faces[2*0 + 1]);
-    REQUIRE(con.direction().i_dim[1] == 2);
-    REQUIRE(con.direction().face_sign[1] == 1);
-    auto& fine_con = con.connection(1);
-    REQUIRE(fine_con.direction().i_dim[0] == 0);
-    REQUIRE(fine_con.direction().i_dim[1] == 2);
-    REQUIRE(&fine_con.element(0) == &coarse);
-    REQUIRE(&fine_con.element(1) == &elem2); // note transposed
-    REQUIRE(fine_con.state() == con.refined_face.fine[1]);
-    REQUIRE(&coarse.vertex(4) == &elem0.vertex(1));
-    REQUIRE(&coarse.vertex(5) == &elem2.vertex(5));
-    REQUIRE(&coarse.vertex(6) == &elem1.vertex(3));
-    REQUIRE(&coarse.vertex(7) == &elem3.vertex(7));
-    REQUIRE(&coarse.vertex(5) != &elem0.vertex(5));
-    elem0.vertex_time_step_scale(1) = 0.;
-    con.matcher.match(&hexed::Element::vertex_time_step_scale);
-    REQUIRE(elem1.vertex_time_step_scale(1) == Catch::Approx(0.5/3));
-    REQUIRE(elem2.vertex_time_step_scale(3) == Catch::Approx(0.75/3));
-    REQUIRE(elem2.vertex_time_step_scale(2) == Catch::Approx(1./3));
-    REQUIRE(coarse.faces[1] == con.coarse_state());
-    for (int i_con = 0; i_con < 4; ++i_con) {
-      auto& c = con.connection(i_con);
-      REQUIRE(c.element(1).faces[5] == c.state() + params.n_dof()/params.row_size);
+    {
+      hexed::Refined_connection<hexed::Deformed_element> con {&coarse, elem_ptrs, hexed::Con_dir<hexed::Deformed_element>{{0, 2}, {1, 1}}};
+      REQUIRE(con.refined_face.coarse == coarse.faces[2*0 + 1]);
+      REQUIRE(con.direction().i_dim[1] == 2);
+      REQUIRE(con.direction().face_sign[1] == 1);
+      auto& fine_con = con.connection(1);
+      REQUIRE(fine_con.direction().i_dim[0] == 0);
+      REQUIRE(fine_con.direction().i_dim[1] == 2);
+      REQUIRE(&fine_con.element(0) == &coarse);
+      REQUIRE(&fine_con.element(1) == &elem2); // note transposed
+      REQUIRE(fine_con.state() == con.refined_face.fine[1]);
+      REQUIRE(&coarse.vertex(4) == &elem0.vertex(1));
+      REQUIRE(&coarse.vertex(5) == &elem2.vertex(5));
+      REQUIRE(&coarse.vertex(6) == &elem1.vertex(3));
+      REQUIRE(&coarse.vertex(7) == &elem3.vertex(7));
+      REQUIRE(&coarse.vertex(5) != &elem0.vertex(5));
+      elem0.vertex_time_step_scale(1) = 0.;
+      con.matcher.match(&hexed::Element::vertex_time_step_scale);
+      REQUIRE(elem1.vertex_time_step_scale(1) == Catch::Approx(0.5/3));
+      REQUIRE(elem2.vertex_time_step_scale(3) == Catch::Approx(0.75/3));
+      REQUIRE(elem2.vertex_time_step_scale(2) == Catch::Approx(1./3));
+      REQUIRE(coarse.faces[1] == con.coarse_state());
+      for (int i_con = 0; i_con < 4; ++i_con) {
+        auto& c = con.connection(i_con);
+        REQUIRE(c.element(1).faces[5] == c.state() + params.n_dof()/params.row_size);
+      }
+    }
+    REQUIRE(coarse.faces[1] == nullptr);
+    for (auto ptr : elem_ptrs) {
+      REQUIRE(ptr->faces[5] == nullptr);
     }
   }
   SECTION("reversed")

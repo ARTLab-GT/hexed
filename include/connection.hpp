@@ -192,6 +192,10 @@ class Refined_connection
       int face_sz = r.params.n_dof()/r.params.row_size;
       f.faces[ref_con.dir.i_face(!ref_con.rev)] = Face_connection<element_t>::state() + (!ref_con.rev)*face_sz;
     }
+    virtual ~Fine_connection()
+    {
+      fine_elem.faces[ref_con.dir.i_face(!ref_con.rev)] = nullptr;
+    }
     virtual Con_dir<element_t> direction() {return ref_con.direction();}
     virtual element_t& element(int i_side) {return (i_side != ref_con.rev) ? fine_elem : ref_con.c;}
   };
@@ -275,7 +279,7 @@ class Refined_connection
   //! delete copy semantics which would mess up `Fine_connection`. Can implement later if we really need it.
   Refined_connection(const Refined_connection&) = delete;
   Refined_connection& operator=(const Refined_connection&) = delete;
-  virtual ~Refined_connection() = default;
+  virtual ~Refined_connection() {c.faces[dir.i_face(rev)] = nullptr;}
   Con_dir<element_t> direction() {return dir;}
   //! fetch an object represting a connection between the face of a fine element and one of the mortar faces
   Fine_connection& connection(int i_fine) {return *fine_cons[i_fine];}
@@ -343,6 +347,7 @@ class Typed_bound_connection : public Boundary_connection
     connect_normal();
     elem.faces[direction().i_face(0)] = state();
   }
+  virtual ~Typed_bound_connection() {elem.faces[direction().i_face(0)] = nullptr;}
   virtual Storage_params storage_params() {return params;}
   virtual double* ghost_face() {return state() + params.n_dof()/params.row_size;}
   virtual double* inside_face() {return state();}
