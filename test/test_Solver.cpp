@@ -826,7 +826,7 @@ TEST_CASE("face extrusion")
     solver.mesh().disconnect_boundary(bc_sn);
     solver.mesh().extrude(true, .7);
     auto valid = solver.mesh().valid();
-    REQUIRE(valid.n_duplicate == 0);
+    REQUIRE(valid.n_redundant == 0);
     REQUIRE(valid.n_missing == 16);
     solver.mesh().connect_rest(bc_sn);
     solver.calc_jacobian();
@@ -855,7 +855,7 @@ TEST_CASE("face extrusion")
     }
     solver.mesh().extrude();
     auto valid = solver.mesh().valid();
-    REQUIRE(valid.n_duplicate == 0);
+    REQUIRE(valid.n_redundant == 0);
     REQUIRE(valid.n_missing == 60);
     int bc_sn = solver.mesh().add_boundary_condition(new hexed::Copy(), new hexed::Null_mbc());
     solver.mesh().connect_rest(bc_sn);

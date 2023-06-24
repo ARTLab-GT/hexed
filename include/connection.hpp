@@ -79,7 +79,6 @@ class Face_connection
   Eigen::VectorXd data;
   public:
   Face_connection(Storage_params params) : data(4*params.n_dof()/params.row_size) {}
-  virtual ~Face_connection() = default;
   virtual Con_dir<element_t> direction() = 0;
   virtual double* state() {return data.data();}
 };
@@ -96,7 +95,6 @@ class Face_connection<Deformed_element>
     state_sz{params.n_dof()/params.row_size},
     data(2*(nrml_sz + 2*state_sz))
   {}
-  virtual ~Face_connection() = default;
   virtual Con_dir<Deformed_element> direction() = 0;
   virtual double* state() {return data.data();}
   double* normal(int i_side) {return data.data() + 4*state_sz + i_side*nrml_sz;}
@@ -111,7 +109,6 @@ class Element_connection
 {
   public:
   virtual Element& element(int i_side) = 0;
-  virtual ~Element_connection() = default;
 };
 
 /*!
@@ -140,6 +137,8 @@ class Element_face_connection : public Element_connection, public Face_connectio
     }
     connect_normal();
   }
+  Element_face_connection(const Element_face_connection&) = delete; //!< copy semantics are deleted since only one connection object can connect the same elements
+  Element_face_connection& operator=(const Element_face_connection&) = delete;
   virtual ~Element_face_connection()
   {
     for (int i_side : {0, 1}) {
@@ -347,6 +346,8 @@ class Typed_bound_connection : public Boundary_connection
     connect_normal();
     elem.faces[direction().i_face(0)] = state();
   }
+  Typed_bound_connection(const Typed_bound_connection&) = delete; //!< can only have one `Typed_bound_connection` per face, so delete copy semantics
+  Typed_bound_connection& operator=(const Typed_bound_connection&) = delete;
   virtual ~Typed_bound_connection() {elem.faces[direction().i_face(0)] = nullptr;}
   virtual Storage_params storage_params() {return params;}
   virtual double* ghost_face() {return state() + params.n_dof()/params.row_size;}

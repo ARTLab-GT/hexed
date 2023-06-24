@@ -245,7 +245,7 @@ TEST_CASE("Accessible_mesh")
     }
     {
       auto con_val = mesh1.valid();
-      REQUIRE(con_val.n_duplicate == 0);
+      REQUIRE(con_val.n_redundant == 0);
       REQUIRE(con_val.n_missing == 4*(4+4+2)); // every face has a missing connection
       REQUIRE(!con_val);
       REQUIRE_THROWS(con_val.assert_valid());
@@ -281,18 +281,18 @@ TEST_CASE("Accessible_mesh")
     // everything should be fine now
     {
       auto con_val = mesh1.valid();
-      REQUIRE(con_val.n_duplicate == 0);
+      REQUIRE(con_val.n_redundant == 0);
       REQUIRE(con_val.n_missing == 0); // every face has a missing connection
       REQUIRE(bool(con_val));
       con_val.assert_valid();
     }
-    // check that it can detect duplicate connections
+    // check that it can detect redundant connections
     mesh1.connect_cartesian(0, {coarse[0], coarse[1]}, {1});
     mesh1.connect_cartesian(0, {coarse[0], coarse[1]}, {1});
     {
       auto con_val = mesh1.valid();
       REQUIRE(con_val.n_missing == 0);
-      REQUIRE(con_val.n_duplicate == 4);
+      REQUIRE(con_val.n_redundant == 4);
       REQUIRE(!con_val);
       REQUIRE_THROWS(con_val.assert_valid());
     }
@@ -352,7 +352,7 @@ TEST_CASE("extruded hanging node connection validity")
     mesh.connect_hanging(0, coarse, fine, {{i_dim, i_dim}, {0, 1}}, true, std::vector<bool>(false, 4));
   }
   mesh.extrude();
-  REQUIRE(mesh.valid().n_duplicate == 0);
+  REQUIRE(mesh.valid().n_redundant == 0);
   REQUIRE(mesh.valid().n_missing == 2*(4 + 8) + 4);
 }
 
@@ -418,7 +418,9 @@ TEST_CASE("Tree meshing")
     SECTION("neighbors with different ref levels") {
       hexed::Accessible_mesh mesh1({1, 5, 3, hexed::config::max_row_size}, .7);
       mesh1.add_boundary_condition(new hexed::Copy, new hexed::Null_mbc);
-      mesh1.add_tree({0, 0, 0, 0, 0, 0});
+      std::vector<hexed::Flow_bc*> bcs;
+      for (int i = 0; i < 6; ++i) bcs.push_back(new hexed::Copy);
+      mesh1.add_tree(bcs);
       mesh1.update();
       mesh1.update();
       mesh1.update([](hexed::Element& elem){return elem.nominal_position()[0] < 2;});

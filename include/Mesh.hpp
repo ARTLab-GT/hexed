@@ -158,15 +158,15 @@ class Mesh
   class Connection_validity
   {
     public:
-    const int n_duplicate; //!< number of faces with duplicate connections
+    const int n_redundant; //!< number of redundant connections, counting each participating face as one
     const int n_missing; //!< number of missing connections
     //! returns true if connectivity is valid
-    inline operator bool() {return (n_duplicate == 0) && (n_missing == 0);}
+    inline operator bool() {return (n_redundant == 0) && (n_missing == 0);}
     //! if connectivity is invalid, throw an exception with a helpful message
     inline void assert_valid()
     {
       if (!*this) {
-        auto message = "Invalid mesh with " + std::to_string(n_duplicate) + " duplicate connections and "
+        auto message = "Invalid mesh with " + std::to_string(n_redundant) + " redundant connections and "
                        + std::to_string(n_missing) + " missing connections.";
         throw std::runtime_error(message);
       }

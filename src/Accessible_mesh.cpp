@@ -35,6 +35,13 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
   def.face_con_v = def_face_cons;
 }
 
+Accessible_mesh::~Accessible_mesh()
+{
+  // delete connections before anything else so that deleting elements doesn't create dangling references
+  car.purge_connections(always);
+  def.purge_connections(always);
+}
+
 int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<int> position)
 {
   int sn = container(is_deformed).emplace(ref_level, position);
@@ -52,7 +59,7 @@ void Accessible_mesh::connect_cartesian(int ref_level, std::array<int, 2> serial
 {
   std::array<Element*, 2> el_ar;
   for (int i_side : {0, 1}) el_ar[i_side] = &element(ref_level, is_deformed[i_side], serial_n[i_side]);
-  car.cons.emplace_back(el_ar, direction);
+  car.cons.emplace_back(new Element_face_connection<Element>(el_ar, direction));
 }
 
 void Accessible_mesh::connect_deformed(int ref_level, std::array<int, 2> serial_n, Con_dir<Deformed_element> direction)
@@ -64,7 +71,7 @@ void Accessible_mesh::connect_deformed(int ref_level, std::array<int, 2> serial_
   for (int i_side : {0, 1}) {
     el_ar[i_side] = &def.elems.at(ref_level, serial_n[i_side]);
   }
-  def.cons.emplace_back(el_ar, direction);
+  def.cons.emplace_back(new Element_face_connection<Deformed_element>(el_ar, direction));
 }
 
 void Accessible_mesh::connect_hanging(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Deformed_element> dir,
@@ -105,19 +112,17 @@ int Accessible_mesh::add_boundary_condition(Flow_bc* flow_bc, Mesh_bc* mesh_bc)
 void Accessible_mesh::connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n)
 {
   if (bc_serial_n >= int(bound_conds.size())) throw std::runtime_error("demand for non-existent `Boundary_condition`");
-  #define EMPLACE(mbt) { \
-    mbt.bound_cons.emplace_back(mbt.elems.at(ref_level, element_serial_n), i_dim, face_sign, bc_serial_n); \
+  if (is_deformed) {
+    def.bound_cons.emplace_back(new Typed_bound_connection<Deformed_element>(def.elems.at(ref_level, element_serial_n), i_dim, face_sign, bc_serial_n));
+  } else {
+    car.bound_cons.emplace_back(new Typed_bound_connection<Element>(car.elems.at(ref_level, element_serial_n), i_dim, face_sign, bc_serial_n));
   }
-  if (is_deformed) EMPLACE(def)
-  else EMPLACE(car)
-  #undef EMPLACE
 }
 
 void Accessible_mesh::disconnect_boundary(int bc_sn)
 {
-  auto is_doomed = [bc_sn](Boundary_connection& con){return con.bound_cond_serial_n() == bc_sn;};
-  erase_if(car.bound_cons, is_doomed);
-  erase_if(def.bound_cons, is_doomed);
+  erase_if(car.bound_cons, [bc_sn](std::unique_ptr<Typed_bound_connection<         Element>>& con){return con->bound_cond_serial_n() == bc_sn;});
+  erase_if(def.bound_cons, [bc_sn](std::unique_ptr<Typed_bound_connection<Deformed_element>>& con){return con->bound_cond_serial_n() == bc_sn;});
 }
 
 Mesh::Connection_validity Accessible_mesh::valid()
@@ -135,15 +140,15 @@ Mesh::Connection_validity Accessible_mesh::valid()
   def.record_connections();
   // count up the number of faces with problems
   int n_missing = 0;
-  int n_duplicates = 0;
+  int n_redundant = 0;
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     for (int i_face = 0; i_face < n_faces; ++i_face) {
       int rec = elems[i_elem].face_record[i_face];
       if (rec == 0) ++n_missing;
-      if (rec > 1) n_duplicates += rec - 1;
+      if (rec > 1) n_redundant += rec - 1;
     }
   }
-  return {n_duplicates, n_missing};
+  return {n_redundant, n_missing};
 }
 
 Accessible_mesh::vertex_view Accessible_mesh::vertices()
@@ -248,7 +253,7 @@ void Accessible_mesh::extrude(bool collapse, double offset)
     }
     std::array<Deformed_element*, 2> el_arr {&elem, &face.elem};
     extrude_cons.push_back(def.cons.size());
-    def.cons.emplace_back(el_arr, dir);
+    def.cons.emplace_back(new Element_face_connection<Deformed_element>(el_arr, dir));
     // record the faces that still need to be connected at a vertex which is guaranteed to be shared with prospective neighbors
     for (int j_dim = face.i_dim + 1; j_dim%nd != face.i_dim; ++j_dim)
     {
@@ -259,7 +264,7 @@ void Accessible_mesh::extrude(bool collapse, double offset)
         if (face_rec >= 2)
         {
           // if parent element has boundary connections on other faces
-          def.bound_cons.emplace_back(elem, j_dim, face_sign, face_rec - 2);
+          def.bound_cons.emplace_back(new Typed_bound_connection<Deformed_element>(elem, j_dim, face_sign, face_rec - 2));
         }
         else
         {
@@ -571,19 +576,19 @@ template<typename element_t> void Accessible_mesh::connect_new(int start_at)
             Eigen::VectorXi direction = Eigen::VectorXi::Zero(nd);
             direction(i_dim) = math::sign(sign);
             auto neighbors = elem.tree->find_neighbors(direction);
-            if (neighbors.empty()) m.bound_cons.emplace_back(elem, i_dim, sign, tree_bcs[2*i_dim + sign]);
+            if (neighbors.empty()) m.bound_cons.emplace_back(new Typed_bound_connection<element_t>(elem, i_dim, sign, tree_bcs[2*i_dim + sign]));
             else if (neighbors[0]->elem) {
               if (neighbors.size() == 1) {
                 auto& other = *neighbors[0]->elem;
                 if (other.refinement_level() == elem.refinement_level()) {
                   if (elem.get_is_deformed() && other.get_is_deformed()) {
                     std::array<Deformed_element*, 2> el_ar {elem.tree->def_elem, neighbors[0]->def_elem};
-                    def.cons.emplace_back(el_ar, Con_dir<Deformed_element>{{i_dim, i_dim}, {bool(sign), !sign}});
+                    def.cons.emplace_back(new Element_face_connection<Deformed_element>(el_ar, Con_dir<Deformed_element>{{i_dim, i_dim}, {bool(sign), !sign}}));
                   } else {
                     std::array<Element*, 2> el_ar;
                     el_ar[!sign] = &elem;
                     el_ar[sign] = &other;
-                    car.cons.emplace_back(el_ar, Con_dir<Element>{i_dim});
+                    car.cons.emplace_back(new Element_face_connection<Element>(el_ar, Con_dir<Element>{i_dim}));
                   }
                 } else {
                   bool is_min_corner = true;
