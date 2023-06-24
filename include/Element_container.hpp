@@ -105,6 +105,15 @@ class Complete_element_container : public Element_container
     }
     return handles;
   }
+
+  //! writes each element's serial number to it's `record` \todo elements really just need to know their serial number
+  void write_sns()
+  {
+    #pragma omp parallel for
+    for (unsigned i_elem = 0; i_elem < vec.size(); ++i_elem) {
+      vec[i_elem]->record = serial_ns[i_elem];
+    }
+  }
 };
 
 }

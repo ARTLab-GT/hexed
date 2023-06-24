@@ -33,7 +33,7 @@ class Accessible_mesh : public Mesh
   std::vector<Vertex::Non_transferable_ptr> vert_ptrs;
   int surf_bc_sn;
   Surface_geom* surf_geom; // note: this pointer does not own its data (the corresponding `Mesh_bc` does) so don't `delete` it.
-  std::vector<int> extrude_cons;
+  std::vector<Element_face_connection<Deformed_element>*> extrude_cons;
   std::unique_ptr<Tree> tree; // could be null! don't forget to check
   std::vector<int> tree_bcs;
 
@@ -99,7 +99,8 @@ class Accessible_mesh : public Mesh
   void connect_rest(int bc_sn) override;
   std::vector<elem_handle> elem_handles() override;
   //! \returns a view of all Element_connection between extruded elements and the elemens they were extruded from
-  inline Index<Element_connection&> extruded_connections() {return {deformed().element_connections(), extrude_cons};}
+  inline Vector_view<Element_connection&, Element_face_connection<Deformed_element>*,
+                     ptr_convert<Element_connection&, Element_face_connection<Deformed_element>*>> extruded_connections() {return {extrude_cons};}
 };
 
 }

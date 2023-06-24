@@ -990,10 +990,12 @@ TEST_CASE("cylinder tree mesh")
       return ref;
     };
     solver.mesh().update(criterion);
-    for (int i = 0; i < 2; ++i) solver.relax_vertices();
+    for (int i = 0; i < 2; ++i) {
+      solver.relax_vertices();
+      solver.snap_vertices();
+    }
     solver.calc_jacobian();
     solver.visualize_field_tecplot(hexed::Is_deformed(), hexed::format_str(100, "cylinder%i", i));
-    throw std::runtime_error("foo");
     solver.mesh().valid().assert_valid();
   }
   for (int i = 0; i < 2; ++i) solver.relax_vertices();

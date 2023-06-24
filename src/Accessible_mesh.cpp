@@ -189,6 +189,22 @@ bool aligned_different_dim(Con_dir<Deformed_element> dir, std::array<int, 2> ext
 }
 //! \endcond
 
+void request_connection(Element& elem, int n_dim, int i_dim, bool i_sign, int j_dim, bool j_sign)
+{
+  // record data at vertex which is on the face to be connected, on the face which was extruded from,
+  // and if applicable has the minimum index to satisfy the above consitions.
+  int i_vert =   j_sign*math::pow(2, n_dim - 1 - j_dim)
+               + (1 - i_sign)*math::pow(2, n_dim - 1 - i_dim);
+  auto& record = elem.vertex(i_vert).record;
+  // which element it is
+  record.push_back(elem.refinement_level());
+  record.push_back(elem.record); // `elem.record` = serial number
+  // which face needs to be connected
+  record.push_back(2*j_dim + j_sign);
+  // extrusion direction for deciding which face connections are valid
+  record.push_back(2*i_dim + i_sign);
+}
+
 void Accessible_mesh::extrude(bool collapse, double offset)
 {
   erase_if(vert_ptrs, &Vertex::Non_transferable_ptr::is_null);
@@ -220,6 +236,25 @@ void Accessible_mesh::extrude(bool collapse, double offset)
     // no face has more than one connection (I really hope!) so use numbers greater than one to indentify boundary conditions
     con.element().face_record[2*con.i_dim() + con.inside_face_sign()] = 2 + con.bound_cond_serial_n();
   }
+
+  // request connections with existing extruded elements
+  if (tree) {
+    def.elems.write_sns();
+    for (auto con : extrude_cons) {
+      if (con->element(1).tree) {
+        auto dir = con->direction();
+        for (int j_dim = dir.i_dim[1] + 1; j_dim%nd != dir.i_dim[1]; ++j_dim) {
+          j_dim = j_dim%nd;
+          for (int face_sign = 0; face_sign < 2; ++face_sign) {
+            if (con->element(0).face_record[2*j_dim + face_sign] == 0) {
+              request_connection(con->element(0), nd, dir.i_dim[1], dir.face_sign[1], j_dim, face_sign);
+            }
+          }
+        }
+      }
+    }
+  }
+
   // decide which faces to extrude from
   std::vector<Empty_face> empty_faces;
   auto& elems = def.elements();
@@ -246,6 +281,7 @@ void Accessible_mesh::extrude(bool collapse, double offset)
     int sn = add_element(ref_level, true, nom_pos);
     Con_dir<Deformed_element> dir {{face.i_dim, face.i_dim}, {!face.face_sign, bool(face.face_sign)}};
     auto& elem = def.elems.at(ref_level, sn);
+    elem.record = sn;
     if (collapse) {
       int stride = math::pow(2, nd - 1 - face.i_dim);
       for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
@@ -254,35 +290,17 @@ void Accessible_mesh::extrude(bool collapse, double offset)
       }
     }
     std::array<Deformed_element*, 2> el_arr {&elem, &face.elem};
-    extrude_cons.push_back(def.cons.size());
     def.cons.emplace_back(new Element_face_connection<Deformed_element>(el_arr, dir));
+    extrude_cons.push_back(def.cons.back().get());
     // record the faces that still need to be connected at a vertex which is guaranteed to be shared with prospective neighbors
-    for (int j_dim = face.i_dim + 1; j_dim%nd != face.i_dim; ++j_dim)
-    {
+    for (int j_dim = face.i_dim + 1; j_dim%nd != face.i_dim; ++j_dim) {
       j_dim = j_dim%nd;
-      for (int face_sign = 0; face_sign < 2; ++face_sign)
-      {
+      for (int face_sign = 0; face_sign < 2; ++face_sign) {
         int face_rec = face.elem.face_record[2*j_dim + face_sign];
-        if (face_rec >= 2)
-        {
+        if (face_rec >= 2) {
           // if parent element has boundary connections on other faces
           def.bound_cons.emplace_back(new Typed_bound_connection<Deformed_element>(elem, j_dim, face_sign, face_rec - 2));
-        }
-        else
-        {
-          // record data at vertex which is on the face to be connected, on the face which was extruded from,
-          // and if applicable has the minimum index to satisfy the above consitions.
-          int i_vert =   face_sign*math::pow(2, nd - 1 - j_dim)
-                       + (1 - face.face_sign)*math::pow(2, nd - 1 - face.i_dim);
-          auto& record = elem.vertex(i_vert).record;
-          // which element it is
-          record.push_back(ref_level);
-          record.push_back(sn);
-          // which face needs to be connected
-          record.push_back(2*j_dim + face_sign);
-          // extrusion direction for deciding which face connections are valid
-          record.push_back(2*face.i_dim + face.face_sign);
-        }
+        } else request_connection(elem, nd, face.i_dim, face.face_sign, j_dim, face_sign);
       }
     }
     // readjust face node adjustments to account for offset
@@ -759,7 +777,7 @@ void Accessible_mesh::deform()
 void Accessible_mesh::purge()
 {
   // delete obsolete elements of `extrude_cons`
-  erase_if(extrude_cons, [&](int i_con){auto& con = *def.cons[i_con]; return con.element(0).record == 2 || con.element(1).record == 2;});
+  erase_if(extrude_cons, [](Element_face_connection<Deformed_element>* con){return con->element(0).record == 2 || con->element(1).record == 2;});
   // delete connections to old elements (has to happen before deleting elements or else use after free)
   car.purge_connections();
   def.purge_connections();
@@ -915,18 +933,17 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   deform();
   // delete extruded elements
   #pragma omp parallel for
-  for (int ind : extrude_cons) {
-    auto& con = *def.cons[ind];
+  for (auto con : extrude_cons) {
     int i_extrude = -1;
-    for (int i_side = 0; i_side < 2; ++i_side) if (con.element(i_side).tree) i_extrude = !i_side;
+    for (int i_side = 0; i_side < 2; ++i_side) if (con->element(i_side).tree) i_extrude = !i_side;
     if (i_extrude != -1) {
       bool del = false;
-      if (con.element(!i_extrude).record == 2) del = true;
+      if (con->element(!i_extrude).record == 2) del = true;
       else {
-        Tree* neighbor = con.element(!i_extrude).tree->find_neighbor(math::direction(nd, con.direction().i_face(!i_extrude)));
+        Tree* neighbor = con->element(!i_extrude).tree->find_neighbor(math::direction(nd, con->direction().i_face(!i_extrude)));
         if (neighbor) if (neighbor->elem) del = true;
       }
-      if (del) con.element(i_extrude).record = 2;
+      if (del) con->element(i_extrude).record = 2;
     }
   }
   for (bool is_deformed : {0, 1}) {
