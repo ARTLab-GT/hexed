@@ -649,23 +649,47 @@ void Accessible_mesh::refine_by_record(bool is_deformed, int start, int end)
   }
 }
 
+/* returns:
+ * - do any neighbors exist?
+ * - do all neighbors exist?
+ * - are any of the neighbors more than 1 ref level higher than `t`?
+ */
+std::array<int, 3> eval_neigbors(Tree* t, Eigen::VectorXi direction)
+{
+  std::array<int, 3> result {false, false, false};
+  auto neighbors = t->find_neighbors(direction);
+  if (!neighbors.empty()) {
+    result[1] = true;
+    for (Tree* n : neighbors) {
+      bool exists = false;
+      if (n->elem) if (n->elem->record != 2) {
+        if (n->refinement_level() > t->refinement_level() + 1) result[2] = true; // if ref level difference is greater than 1, need to refine
+        exists = true;
+      }
+      result[0] = result[0] || exists;
+      result[1] = result[1] && exists;
+    }
+  }
+  return result;
+}
+
 bool Accessible_mesh::needs_refine(Tree* t)
 {
   for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
-    auto neighbors = t->find_neighbors(math::direction(params.n_dim, i_face));
-    if (!neighbors.empty()) {
-      bool any_exist = false;
-      bool all_exist = true;
-      for (Tree* n : neighbors) {
-        bool exists = false;
-        if (n->elem) if (n->elem->record != 2) {
-          if (n->refinement_level() > t->refinement_level() + 1) return true; // if ref level difference is greater than 1, need to refine
-          exists = true;
+    auto eval = eval_neigbors(t, math::direction(params.n_dim, i_face));
+    if (eval[2]) return true;
+    if (t->elem) {
+      if (eval[0] && !eval[1]) return true; // if there is a partially-exposed face, need to refine
+      else if (!eval[1]) {
+        for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) if (j_dim != i_face/2) {
+          for (int face_sign = 0; face_sign < 2; ++face_sign) {
+            auto dir = math::direction(params.n_dim, i_face);
+            dir(j_dim) = math::sign(face_sign);
+            auto eval1 = eval_neigbors(t, dir);
+            if (eval1[2] || (eval1[0] && !eval1[1])) return true;
+          }
         }
-        any_exist = any_exist || exists;
-        all_exist = all_exist && exists;
       }
-      if (t->elem && any_exist && !all_exist) return true; // if there is a partially-exposed face, need to refine
     }
   }
   // otherwise, we're good
