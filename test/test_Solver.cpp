@@ -995,6 +995,7 @@ TEST_CASE("cylinder tree mesh")
       solver.snap_vertices();
     }
     solver.calc_jacobian();
+    printf("refinement %i\n", i);
     solver.visualize_field_tecplot(hexed::Is_deformed(), hexed::format_str(100, "cylinder%i", i));
     solver.mesh().valid().assert_valid();
   }
