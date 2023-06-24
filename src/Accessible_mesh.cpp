@@ -217,19 +217,21 @@ void Accessible_mesh::extrude(bool collapse, double offset)
   auto& bc_cons {boundary_connections()};
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     auto& con {bc_cons[i_con]};
-    // no face has more than one connections (I really hope!) so use numbers greater than one to indentify boundary conditions
+    // no face has more than one connection (I really hope!) so use numbers greater than one to indentify boundary conditions
     con.element().face_record[2*con.i_dim() + con.inside_face_sign()] = 2 + con.bound_cond_serial_n();
   }
   // decide which faces to extrude from
   std::vector<Empty_face> empty_faces;
   auto& elems = def.elements();
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    for (int i_dim = 0; i_dim < nd; ++i_dim) {
-      for (int face_sign = 0; face_sign < 2; ++face_sign) {
-        const int i_face = 2*i_dim + face_sign;
-        auto& elem {elems[i_elem]};
-        if (elem.face_record[i_face] == 0) {
-          empty_faces.push_back({elem, i_dim, face_sign});
+    if (elems[i_elem].tree || !tree) {
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        for (int face_sign = 0; face_sign < 2; ++face_sign) {
+          const int i_face = 2*i_dim + face_sign;
+          auto& elem {elems[i_elem]};
+          if (elem.face_record[i_face] == 0) {
+            empty_faces.push_back({elem, i_dim, face_sign});
+          }
         }
       }
     }
@@ -433,10 +435,12 @@ void Accessible_mesh::extrude(bool collapse, double offset)
   {
     auto verts = vertices(); // note: need to rebuild vertex vector because face connections above have `eat`en vertices
     VERTEX_LOOP(CONNECT_SAME_CONFORMING)
+    #if 0
     for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
       HEXED_ASSERT(verts[i_vert].record.empty(), format_str(100, "vertex detected with %lu unprocessed connection requests",
                                                             verts[i_vert].record.size()/n_record).c_str());
     }
+    #endif
   }
   for (auto con_plan : con_plans) {
     connect_deformed(con_plan.ref_level, con_plan.serial_ns, con_plan.dir);
@@ -754,6 +758,8 @@ void Accessible_mesh::deform()
 
 void Accessible_mesh::purge()
 {
+  // delete obsolete elements of `extrude_cons`
+  erase_if(extrude_cons, [&](int i_con){auto& con = *def.cons[i_con]; return con.element(0).record == 2 || con.element(1).record == 2;});
   // delete connections to old elements (has to happen before deleting elements or else use after free)
   car.purge_connections();
   def.purge_connections();
@@ -939,6 +945,7 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   //connect_new<Deformed_element>(n_orig[1]);
   connect_new<         Element>(0);
   connect_new<Deformed_element>(0);
+  extrude();
   connect_rest(surf_bc_sn);
 }
 

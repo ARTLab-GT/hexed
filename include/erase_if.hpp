@@ -6,9 +6,8 @@
 namespace hexed
 {
 
-/*
- * Erase every element `x` in a vector where `condition(x)` evaluates to `true`.
- * Complexity is O(`vec.size()`) regardless of number of elements to be deleted.
+/*! \brief Erase every element `x` in a vector where `condition(x)` evaluates to `true`.
+ * \details Complexity is O(`vec.size()`) regardless of number of elements to be deleted.
  * Thus this is much more efficient than repeatedly calling `vec.erase` if
  * multiple elements which are not in a contiguous range are to be erased.
  */
