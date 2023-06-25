@@ -567,11 +567,14 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   connect_rest(surf_bc_sn);
 }
 
-template<typename element_t> void Accessible_mesh::connect_new(int start_at)
+// forms connections for new tree elements of type `element_t` starting with the `starting_at`th one
+template<typename element_t>
+void Accessible_mesh::connect_new(int start_at)
 {
   auto& m = mbt<element_t>();
   auto elems = m.elems.elements();
   int nd = params.n_dim;
+  // helper function for connecting refined elements
   auto connect_refined = [&](Element& elem, int i_dim, int sign, std::vector<Tree*> neighbors) {
     HEXED_ASSERT(int(neighbors.size()) == math::pow(2, nd - 1), format_str(100, "bad number of neighbors %lu (thanks for nothing, ref level smoother)", neighbors.size()))
     bool is_def = elem.get_is_deformed();
@@ -598,10 +601,13 @@ template<typename element_t> void Accessible_mesh::connect_new(int start_at)
             Eigen::VectorXi direction = Eigen::VectorXi::Zero(nd);
             direction(i_dim) = math::sign(sign);
             auto neighbors = elem.tree->find_neighbors(direction);
+            // if this element is at the boundary of the tree (as opposed to a surface geometry boundary) set an extremal boundary condition
             if (neighbors.empty()) m.bound_cons.emplace_back(new Typed_bound_connection<element_t>(elem, i_dim, sign, tree_bcs[2*i_dim + sign]));
+            // otherwise, if the element has not only a tree neighbor but also an element neighbor...
             else if (neighbors[0]->elem) {
               if (neighbors.size() == 1) {
                 auto& other = *neighbors[0]->elem;
+                // if ref levels are the same, make a conformal connection
                 if (other.refinement_level() == elem.refinement_level()) {
                   if (elem.get_is_deformed() && other.get_is_deformed()) {
                     std::array<Deformed_element*, 2> el_ar {elem.tree->def_elem, neighbors[0]->def_elem};
@@ -613,6 +619,8 @@ template<typename element_t> void Accessible_mesh::connect_new(int start_at)
                     car.cons.emplace_back(new Element_face_connection<Element>(el_ar, Con_dir<Element>{i_dim}));
                   }
                 } else {
+                  // if neighbor is coarser, form a hanging node connection
+                  // but only if this is the fine element with the lowest coordinates, to prevent redundant connections from all the fine elements
                   bool is_min_corner = true;
                   for (int j_dim = 0; j_dim < nd; ++j_dim) if (j_dim != i_dim) {
                     is_min_corner = is_min_corner && elem.tree->coordinates()[j_dim]%2 == 0;
@@ -620,6 +628,7 @@ template<typename element_t> void Accessible_mesh::connect_new(int start_at)
                   if (is_min_corner) connect_refined(other, i_dim, sign, other.tree->find_neighbors(-direction));
                 }
               } else {
+                // if neighbors are finer, form a hanging node connection
                 connect_refined(elem, i_dim, !sign, neighbors);
               }
             }
@@ -630,6 +639,7 @@ template<typename element_t> void Accessible_mesh::connect_new(int start_at)
   }
 }
 
+// performs the actual refinement for all elements where the record has been set to 1
 void Accessible_mesh::refine_by_record(bool is_deformed, int start, int end)
 {
   auto& elems = container(is_deformed).element_view();
@@ -671,19 +681,22 @@ std::array<int, 3> eval_neigbors(Tree* t, Eigen::VectorXi direction)
   return result;
 }
 
+// does this tree element need to be refined to satisfy ref level smoothness
 bool Accessible_mesh::needs_refine(Tree* t)
 {
   for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
     auto eval = eval_neigbors(t, math::direction(params.n_dim, i_face));
-    if (eval[2]) return true;
+    if (eval[2]) return true; // if there is a face neighbor with ref level more than 1 greater, need to refine
     if (t->elem) {
       if (eval[0] && !eval[1]) return true; // if there is a partially-exposed face, need to refine
+      // if this face is exposed, also check the diagonal neighbors since they could be extrusion neighbors
       else if (!eval[1]) {
         for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) if (j_dim != i_face/2) {
           for (int face_sign = 0; face_sign < 2; ++face_sign) {
             auto dir = math::direction(params.n_dim, i_face);
             dir(j_dim) = math::sign(face_sign);
             auto eval1 = eval_neigbors(t, dir);
+            // again, ref level difference > 1 or partially exposed -> refine
             if (eval1[2] || (eval1[0] && !eval1[1])) return true;
           }
         }
@@ -701,6 +714,7 @@ bool has_existent_children(Tree* t)
   return has;
 }
 
+// whether an element is currently set to be deformed at the end of the `update` sweep
 bool is_def(Element& elem)
 {
   return (elem.get_is_deformed() && elem.record == 0) || (!elem.get_is_deformed() && elem.record == 3);
@@ -710,15 +724,18 @@ void Accessible_mesh::deform()
 {
   int nd = params.n_dim;
   auto& elems = elements();
+  // start with all elements as cartesian
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     if (elem.record != 2 && elem.get_is_deformed() && elem.tree) elem.record = 3;
   }
+  // deform all boundary elements and certain of their face neighbors
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     if (elem.record != 2 && elem.tree) {
+      // figure out if this element has a face on the boundary
       std::vector<Tree*> neighbors [6];
       bool surface [6] {};
       bool boundary = false;
@@ -730,15 +747,16 @@ void Accessible_mesh::deform()
         }
         boundary = boundary || surface[i_face];
       }
+      // if it does, deform it and all face neighbors which are not opposite the boundary face
       if (boundary) {
         #pragma omp atomic write
         elem.record = 3*!elem.get_is_deformed();
         for (int i_face = 0; i_face < 2*nd; ++i_face) {
-          bool toggle = false;
+          bool def_face = false;
           for (int j_face = 0; j_face < 2*nd; ++j_face) {
-            if (j_face/2 != i_face/2 && surface[j_face]) toggle = true;
+            if (j_face/2 != i_face/2 && surface[j_face]) def_face = true;
           }
-          if (toggle) {
+          if (def_face) {
             for (Tree* n : neighbors[i_face]) if (n->elem) if (n->elem->record != 2) {
               #pragma omp atomic write
               n->elem->record = 3*!n->elem->get_is_deformed();
@@ -748,6 +766,7 @@ void Accessible_mesh::deform()
       }
     }
   }
+  // if any refined faces have some elements cartesian and some deformed, make them all deformed
   bool changed;
   do {
     changed = false;
@@ -769,13 +788,8 @@ void Accessible_mesh::deform()
             for (Tree* neighbor : neighbors) {
               if (neighbor->elem) {
                 changed = true;
-                if (neighbor->elem->get_is_deformed()) {
-                  #pragma omp atomic write
-                  neighbor->elem->record = 0;
-                } else {
-                  #pragma omp atomic write
-                  neighbor->elem->record = 3;
-                }
+                #pragma omp atomic write
+                neighbor->elem->record = 3*!neighbor->elem->get_is_deformed();
               }
             }
           }
@@ -783,6 +797,7 @@ void Accessible_mesh::deform()
       }
     }
   } while (changed);
+  // add new elements
   for (bool is_deformed : {0, 1}) {
     auto& cont = container(is_deformed);
     auto& cont_elems = cont.element_view();
@@ -808,11 +823,19 @@ void Accessible_mesh::purge()
   // delete old elements
   car.elems.purge();
   def.elems.purge();
+  // delete dangling vertex pointers
   erase_if(vert_ptrs, &Vertex::Non_transferable_ptr::is_null);
 }
 
 void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std::function<bool(Element&)> unrefine_criterion)
 {
+  /* `Element::record` is used to identify which elements are going to be modified.
+   * 0 => do nothing
+   * 1 => refine
+   * -1 => unrefine
+   * 2 => delete
+   * 3 => toggle deformity
+   */
   HEXED_ASSERT(tree, "need a tree to refine");
   int nd = params.n_dim;
   auto& elems = elements();
@@ -824,18 +847,12 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
     if (elem.tree) {
       bool ref = refine_criterion(elem);
       bool unref = unrefine_criterion(elem);
-      // record legend:
-      // 0 => do nothing
-      // 1 => refine
-      // -1 => unrefine
-      // 2 => already (un)refined (i.e. dead)
-      // 3 => toggle deformity
       if (ref && !unref) elem.record = 1;
       else if (unref && !ref) elem.record = -1;
     }
   }
   int n_orig [2];
-  // add new elements
+  // refine elements
   for (bool is_deformed : {0, 1}) n_orig[is_deformed] = container(is_deformed).element_view().size(); // count how many elements there are before adding, so we know where the new ones start
   for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, n_orig[is_deformed]);
   // synchronize refinement level of surface elements with their non-surface neighbors in preparation for incremental flood fill
@@ -892,17 +909,17 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   do {
     changed = false;
     for (bool is_deformed : {0, 1}) {
-      auto& cont = container(is_deformed);
-      auto& cont_elems = cont.element_view();
+      auto& cont_elems = container(is_deformed).element_view();
       for (int i_elem = 0; i_elem < n_orig[is_deformed]; ++i_elem) {
         auto& elem = cont_elems[i_elem];
         if (elem.record == -1 && elem.tree) {
           bool unref = false;
           bool is_def = false; // whether the putative unrefined element will be deformed
           Tree* parent;
-          if (!elem.tree->is_root()) {
+          if (!elem.tree->is_root()) { // can't unrefine the root
             unref = true;
             parent = elem.tree->parent();
+            // only unrefine if all the existing siblings agree and have the same ref level
             for (Tree* child : parent->children()) {
               if (!child->is_leaf() && has_existent_children(child)) unref = false;
               else if (child->elem) if (child->elem->record != 2) {
@@ -910,9 +927,10 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
                 is_def = is_def || child->elem->get_is_deformed();
               }
             }
-            if (unref) unref = unref && !needs_refine(parent);
-            else elem.record = 0;
+            if (unref) unref = unref && !needs_refine(parent); // don't unrefine if it would violate ref level smoothness
+            else elem.record = 0; // if we didn't unrefine because of one of the siblings, set the record to 0 to avoid redundant checks in future sweeps
           }
+          // perform unrefinement
           if (unref) {
             changed = true;
             for (Tree* child : parent->children()) {
@@ -934,10 +952,13 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
     if (elems[i_elem].record == -1) elems[i_elem].record = 0;
   }
   // un-flood-fill any new surface elements
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto& elem = elems[i_elem];
-    if (elem.tree && elem.record != 2) if (is_surface(elem.tree)) elem.record = 2;
+  for (bool is_deformed : {0, 1}) {
+    auto& cont_elems = container(is_deformed).element_view();
+    #pragma omp parallel for
+    for (int i_elem = n_orig[is_deformed]; i_elem < cont_elems.size(); ++i_elem) {
+      auto& elem = cont_elems[i_elem];
+      if (elem.tree && elem.record != 2) if (is_surface(elem.tree)) elem.record = 2;
+    }
   }
   // ref level smoothing: refine elements to satisfy solver requirements on neighbors
   do {
