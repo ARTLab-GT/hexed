@@ -960,17 +960,13 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   // delete extruded elements
   #pragma omp parallel for
   for (auto con : extrude_cons) {
-    int i_extrude = -1;
-    for (int i_side = 0; i_side < 2; ++i_side) if (con->element(i_side).tree) i_extrude = !i_side;
-    if (i_extrude != -1) {
-      bool del = false;
-      if (con->element(!i_extrude).record == 2) del = true;
-      else {
-        Tree* neighbor = con->element(!i_extrude).tree->find_neighbor(math::direction(nd, con->direction().i_face(!i_extrude)));
-        if (neighbor) if (neighbor->elem) del = true;
-      }
-      if (del) con->element(i_extrude).record = 2;
+    bool del = false;
+    if (con->element(1).record == 2) del = true;
+    else if (con->element(1).tree) {
+      Tree* neighbor = con->element(1).tree->find_neighbor(math::direction(nd, con->direction().i_face(1)));
+      if (neighbor) if (neighbor->elem) if (neighbor->elem->record != 2) del = true;
     }
+    if (del) con->element(0).record = 2;
   }
   for (bool is_deformed : {0, 1}) {
     auto& cont = container(is_deformed);
