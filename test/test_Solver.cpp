@@ -1007,6 +1007,14 @@ TEST_CASE("cylinder tree mesh")
   CHECK_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-12));
   for (int i = 0; i < 6; ++i) {
     solver.mesh().update(hexed::Mesh::never, [](hexed::Element& elem){return elem.refinement_level() > 3;});
+    for (int i = 0; i < 2; ++i) {
+      solver.relax_vertices();
+      solver.snap_vertices();
+    }
+    solver.calc_jacobian();
+    printf("unrefinement %i\n", i);
+    solver.visualize_field_tecplot(hexed::Is_deformed(), hexed::format_str(100, "cylinder_unref%i", i));
+    solver.mesh().valid().assert_valid();
   }
   for (int i = 0; i < 2; ++i) solver.relax_vertices();
   solver.snap_vertices();

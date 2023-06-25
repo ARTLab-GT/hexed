@@ -575,7 +575,6 @@ template<typename element_t> void Accessible_mesh::connect_new(int start_at)
   auto connect_refined = [&](Element& elem, int i_dim, int sign, std::vector<Tree*> neighbors) {
     HEXED_ASSERT(int(neighbors.size()) == math::pow(2, nd - 1), format_str(100, "bad number of neighbors %lu (thanks for nothing, ref level smoother)", neighbors.size()))
     bool is_def = elem.get_is_deformed();
-    //if (is_def && elem.refinement_level() == 3 && elem.tree->coordinates()(0) == 2 && elem.tree->coordinates()(1) == 4) printf("i_dim %i\n", i_dim);
     for (Tree* neighbor : neighbors) {
       HEXED_ASSERT(neighbor->elem, "hanging-node connection with nonexistant elements");
       is_def = is_def && neighbor->elem->get_is_deformed();
@@ -585,7 +584,6 @@ template<typename element_t> void Accessible_mesh::connect_new(int start_at)
       for (Tree* neighbor : neighbors) fine.push_back(neighbor->def_elem);
       def.ref_face_cons[nd - 1].emplace_back(new Refined_connection<Deformed_element>(elem.tree->def_elem, fine, Con_dir<Deformed_element>{{i_dim, i_dim}, {!sign, bool(sign)}}));
     } else {
-      if (elem.get_is_deformed() && elem.refinement_level() == 3 && elem.tree->coordinates()(0) == 2 && elem.tree->coordinates()(1) == 4) printf("i_dim %i\n", i_dim);
       std::vector<Element*> fine;
       for (Tree* neighbor : neighbors) fine.push_back(neighbor->elem);
       car.ref_face_cons[nd - 1].emplace_back(new Refined_connection<Element>(&elem, fine, {i_dim}, sign));
@@ -890,21 +888,6 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
       }
     }
   } while (changed);
-  // ref level smoothing: refine elements to satisfy solver requirements on neighbors
-  do {
-    changed = false;
-    #pragma omp parallel for
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      auto& elem = elems[i_elem];
-      if (elem.record != 2 && elem.tree) {
-        if (needs_refine(elem.tree)) {
-          changed = true;
-          elem.record = 1;
-        }
-      }
-    }
-    for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, container(is_deformed).element_view().size());
-  } while (changed);
   // unrefinement
   do {
     changed = false;
@@ -956,6 +939,21 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
     auto& elem = elems[i_elem];
     if (elem.tree && elem.record != 2) if (is_surface(elem.tree)) elem.record = 2;
   }
+  // ref level smoothing: refine elements to satisfy solver requirements on neighbors
+  do {
+    changed = false;
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      if (elem.record != 2 && elem.tree) {
+        if (needs_refine(elem.tree)) {
+          changed = true;
+          elem.record = 1;
+        }
+      }
+    }
+    for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, container(is_deformed).element_view().size());
+  } while (changed);
   deform();
   // delete extruded elements
   #pragma omp parallel for
