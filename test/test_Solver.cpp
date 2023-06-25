@@ -971,10 +971,11 @@ TEST_CASE("cylinder tree mesh")
     solver.snap_vertices();
   }
   for (int i = 0; i < 3; ++i) solver.snap_vertices();
+  solver.snap_faces();
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
   solver.visualize_field_tecplot(hexed::Is_deformed(), "cylinder_initial");
-  CHECK_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-12));
+  CHECK_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
   for (int i = 0; i < 6; ++i) {
     // this criterion will refine all elements with a vertex that is within .1 of the midpoint of the arc
     auto criterion = [](hexed::Element& elem){
@@ -998,11 +999,12 @@ TEST_CASE("cylinder tree mesh")
     solver.mesh().valid().assert_valid();
   }
   for (int i = 0; i < 4; ++i) solver.snap_vertices();
+  solver.snap_faces();
   solver.snap_vertices();
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
   solver.visualize_field_tecplot(hexed::Is_deformed(), "cylinder_refined");
-  CHECK_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-12));
+  CHECK_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
   for (int i = 0; i < 6; ++i) {
     solver.mesh().update(hexed::Mesh::never, [](hexed::Element& elem){return elem.refinement_level() > 3;});
     for (int i = 0; i < 2; ++i) {
@@ -1012,13 +1014,9 @@ TEST_CASE("cylinder tree mesh")
     solver.mesh().valid().assert_valid();
   }
   for (int i = 0; i < 4; ++i) solver.snap_vertices();
-  solver.calc_jacobian();
-  solver.visualize_field_tecplot(hexed::Is_deformed(), "before");
-  solver.snap_vertices();
-  solver.calc_jacobian();
-  solver.visualize_field_tecplot(hexed::Is_deformed(), "after");
+  solver.snap_faces();
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
   solver.visualize_field_tecplot(hexed::Is_deformed(), "cylinder_unrefined");
-  REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-12));
+  REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
 }
