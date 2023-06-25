@@ -564,6 +564,7 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   purge();
   connect_new<         Element>(0);
   connect_new<Deformed_element>(0);
+  extrude();
   connect_rest(surf_bc_sn);
 }
 

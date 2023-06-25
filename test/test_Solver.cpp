@@ -963,9 +963,7 @@ TEST_CASE("cylinder tree mesh")
   solver.mesh().add_tree(bcs);
   for (int i = 0; i < 3; ++i) solver.mesh().update();
   solver.mesh().set_surface(new hexed::Hypersphere(Eigen::VectorXd::Zero(2), .5), new hexed::Nonpenetration, Eigen::Vector2d{.8, .8});
-  solver.mesh().disconnect_boundary(4);
   solver.mesh().extrude();
-  solver.mesh().connect_rest(4);
   for (int i = 0; i < 3; ++i) {
     solver.relax_vertices();
     solver.snap_vertices();
