@@ -966,10 +966,11 @@ TEST_CASE("cylinder tree mesh")
   solver.mesh().disconnect_boundary(4);
   solver.mesh().extrude();
   solver.mesh().connect_rest(4);
-  for (int i = 0; i < 2; ++i) {
+  for (int i = 0; i < 3; ++i) {
     solver.relax_vertices();
     solver.snap_vertices();
   }
+  for (int i = 0; i < 3; ++i) solver.snap_vertices();
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
   solver.visualize_field_tecplot(hexed::Is_deformed(), "cylinder_initial");
@@ -994,12 +995,9 @@ TEST_CASE("cylinder tree mesh")
       solver.relax_vertices();
       solver.snap_vertices();
     }
-    solver.calc_jacobian();
-    printf("refinement %i\n", i);
-    solver.visualize_field_tecplot(hexed::Is_deformed(), hexed::format_str(100, "cylinder%i", i));
     solver.mesh().valid().assert_valid();
   }
-  for (int i = 0; i < 2; ++i) solver.relax_vertices();
+  for (int i = 0; i < 4; ++i) solver.snap_vertices();
   solver.snap_vertices();
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
@@ -1011,13 +1009,14 @@ TEST_CASE("cylinder tree mesh")
       solver.relax_vertices();
       solver.snap_vertices();
     }
-    solver.calc_jacobian();
-    printf("unrefinement %i\n", i);
-    solver.visualize_field_tecplot(hexed::Is_deformed(), hexed::format_str(100, "cylinder_unref%i", i));
     solver.mesh().valid().assert_valid();
   }
-  for (int i = 0; i < 2; ++i) solver.relax_vertices();
+  for (int i = 0; i < 4; ++i) solver.snap_vertices();
+  solver.calc_jacobian();
+  solver.visualize_field_tecplot(hexed::Is_deformed(), "before");
   solver.snap_vertices();
+  solver.calc_jacobian();
+  solver.visualize_field_tecplot(hexed::Is_deformed(), "after");
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
   solver.visualize_field_tecplot(hexed::Is_deformed(), "cylinder_unrefined");

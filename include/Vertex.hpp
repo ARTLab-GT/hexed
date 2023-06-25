@@ -26,10 +26,11 @@ class Vertex
   static constexpr reduction vector_min = &Eigen::VectorXd::minCoeff;
   std::array<double, 3> pos {0, 0, 0};
   bool mobile = false;
-  std::vector<int> record; // for algorithms to keep notes as they please
+  std::vector<int> record; //!< for algorithms to keep notes as they please
+  omp_lock_t lock; //!< for any algorithms that involve data races on vertices. initialized/destroyed in constructor/destructor
 
   ~Vertex();
-  // if we have a reason to copy/move vertices, we can implement these
+  //! if we have a reason to copy/move vertices, we can implement these
   Vertex(const Vertex&) = delete;
   Vertex(Vertex&&) = delete;
   Vertex& operator=(const Vertex&) = delete;

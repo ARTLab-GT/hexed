@@ -5,7 +5,9 @@ namespace hexed
 
 Vertex::Vertex (std::array<double, 3> pos)
 : pos{pos}, m{1}
-{}
+{
+  omp_init_lock(&lock);
+}
 
 Vertex::~Vertex()
 {
@@ -16,6 +18,7 @@ Vertex::~Vertex()
   for (Vertex* neighbor : neighbors) {
     neighbor->neighbors.erase(this);
   }
+  omp_destroy_lock(&lock);
 }
 
 void Vertex::eat(Vertex& other)

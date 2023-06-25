@@ -37,6 +37,7 @@ class Flow_bc
 class Mesh_bc
 {
   public:
+  //! \note must set the `Vertex::lock` on all vertices it accesses
   virtual void snap_vertices(Boundary_connection&) = 0;
   virtual void snap_node_adj(Boundary_connection&, const Basis&) = 0;
   virtual ~Mesh_bc() = default;
