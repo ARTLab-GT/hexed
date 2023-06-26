@@ -564,7 +564,7 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   purge();
   connect_new<         Element>(0);
   connect_new<Deformed_element>(0);
-  //extrude(true);
+  extrude(true);
   connect_rest(surf_bc_sn);
 }
 
@@ -1029,6 +1029,7 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   } while (changed);
   deform();
   // delete extruded elements
+  #if 0
   #pragma omp parallel for
   for (auto con : extrude_cons) {
     bool del = false;
@@ -1038,6 +1039,10 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
       if (neighbor) if (neighbor->elem) if (neighbor->elem->record != 2) del = true;
     }
     if (del) con->element(0).record = 2;
+  }
+  #endif
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    if (!elems[i_elem].tree) elems[i_elem].record = 2;
   }
   // count up how many of the original elements are left
   for (bool is_deformed : {0, 1}) {
@@ -1052,9 +1057,26 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   }
   purge();
   // connect new elements
+  //connect_new<         Element>(n_orig[0]);
+  //connect_new<Deformed_element>(n_orig[1]);
   connect_new<         Element>(n_orig[0]);
   connect_new<Deformed_element>(n_orig[1]);
-  //extrude(true);
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    if (elems[i_elem].tree) {
+      for (int i_face = 0; i_face < 2*nd; ++i_face) {
+        if (!elems[i_elem].faces[i_face]) {
+          for (Tree* n : elems[i_elem].tree->find_neighbors(math::direction(nd, i_face))) {
+            int j_face = i_face/2 + !(i_face%2);
+            if (n->elem) if (!n->elem->faces[j_face])
+              printf("%p %i %i, %i %i %i; %p %i %i, %i %i %i\n",
+                elems[i_elem].tree, elems[i_elem].refinement_level(), elems[i_elem].get_is_deformed(), elems[i_elem].tree->coordinates()(0),  elems[i_elem].tree->coordinates()(1),  elems[i_elem].tree->coordinates()(2),
+                n, n->refinement_level(), n->elem->get_is_deformed(), n->coordinates()(0), n->coordinates()(1), n->coordinates()(2));
+          }
+        }
+      }
+    }
+  }
+  extrude(true);
   connect_rest(surf_bc_sn);
 }
 

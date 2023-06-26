@@ -7,9 +7,8 @@
 namespace hexed
 {
 
-/*!
- * Represents some numerical data which is of interest to the end user. E.g. flow
- * state, surface stress, grid metrics, etc. Used for specifing what to write in
+/*! \brief Represents some numerical data which is of interest to the end user.
+ * \details E.g. flow state, surface stress, grid metrics, etc. Used for specifing what to write in
  * flow visualization files or things to compute integrals of.
  *
  * Derived classes represent functions of various inputs by implementing a member

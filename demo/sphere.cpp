@@ -8,15 +8,14 @@ int main()
   solver.mesh().add_tree(bcs);
   for (int i = 0; i < 3; ++i) solver.mesh().update();
   solver.mesh().set_surface(new hexed::Hypersphere(Eigen::VectorXd::Zero(3), .5), new hexed::Nonpenetration, Eigen::Vector3d{.8, .8, .8});
-  #if 0
   for (int i = 0; i < 3; ++i) {
     solver.relax_vertices();
     solver.snap_vertices();
   }
   solver.snap_faces();
-  #endif
   solver.visualize_field_tecplot(hexed::Is_deformed(), "sphere_initial", 4);
   for (int i = 0; i < 6; ++i) {
+    printf("%i\n", i);
     // this criterion will refine all elements with a vertex that is within .1 of the center of the sphere section
     auto criterion = [](hexed::Element& elem){
       bool ref = false;
@@ -32,22 +31,20 @@ int main()
       return ref;
     };
     solver.mesh().update(criterion);
-    #if 0
     for (int i = 0; i < 2; ++i) {
       solver.relax_vertices();
       solver.snap_vertices();
     }
-    #endif
     solver.calc_jacobian();
-    solver.visualize_field_tecplot(hexed::Is_deformed(), hexed::format_str(100, "sphere%i", i), 4);
+    hexed::Is_deformed is_def;
+    hexed::Has_tree has_tr;
+    solver.visualize_field_tecplot(hexed::Ef_concat({&is_def, &has_tr}), hexed::format_str(100, "sphere%i", i), 4);
     solver.mesh().valid().assert_valid();
   }
-  #if 0
   for (int i = 0; i < 3; ++i) {
     solver.relax_vertices();
     solver.snap_vertices();
   }
-  #endif
   solver.snap_faces();
   solver.visualize_field_tecplot(hexed::Is_deformed(), "sphere_refined", 4);
 }
