@@ -827,6 +827,12 @@ void Accessible_mesh::purge()
   erase_if(vert_ptrs, &Vertex::Non_transferable_ptr::is_null);
 }
 
+bool exists(Tree* tree)
+{
+  if (tree->elem) if (tree->elem->record != 2) return true;
+  return false;
+}
+
 void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std::function<bool(Element&)> unrefine_criterion)
 {
   /* `Element::record` is used to identify which elements are going to be modified.
@@ -976,28 +982,41 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
     for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, container(is_deformed).element_view().size());
   } while (changed);
   do {
-    // \todo this whole loop is terrible
     changed = false;
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
       if (elem.tree && elem.record != 2) {
-        for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
-          auto eval = eval_neigbors(elem.tree, math::direction(params.n_dim, i_face));
-          if (eval[0] && !eval[1]) {
-            for (Tree* n : elem.tree->find_neighbors(math::direction(params.n_dim, i_face))) {
-              if (n->elem) n->elem->record = 2;
+        for (int i_face = 0; i_face < 2*nd; ++i_face) {
+          auto neighbors = elem.tree->find_neighbors(math::direction(nd, i_face));
+          bool all_exist = true;
+          bool any_exist = false;
+          for (Tree* n : neighbors) {
+            all_exist = all_exist && exists(n);
+            any_exist = any_exist || exists(n);
+          }
+          if (neighbors.size() > 1) {
+            if (any_exist && !all_exist) {
+              changed = true;
+              for (Tree* n : neighbors) {
+                if (n->elem) n->elem->record = 2;
+              }
             }
           }
-          // if this face is exposed, also check the diagonal neighbors since they could be extrusion neighbors
-          if (!eval[1]) {
-            for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) if (j_dim != i_face/2) {
-              for (int face_sign = 0; face_sign < 2; ++face_sign) {
-                auto dir = math::direction(params.n_dim, i_face);
-                dir(j_dim) = math::sign(face_sign);
-                auto eval1 = eval_neigbors(elem.tree, dir);
-                // again, ref level difference > 1 or partially exposed -> refine
-                if (eval1[0] && !eval1[2]) {
-                  for (Tree* n : elem.tree->find_neighbors(dir)) {
+          if (!all_exist) {
+            for (int j_dim = 0; j_dim < nd; ++j_dim) if (j_dim != i_face/2) {
+              for (int sign = 0; sign < 2; ++sign) {
+                auto dir = math::direction(nd, i_face);
+                dir(j_dim) = math::sign(sign);
+                auto diag_neighbs = elem.tree->find_neighbors(dir);
+                bool all_e = true;
+                bool any_e = false;
+                for (Tree* n : diag_neighbs) {
+                  all_e = all_e && exists(n);
+                  any_e = any_e || exists(n);
+                }
+                if (any_e && !all_e) {
+                  changed = true;
+                  for (Tree* n : diag_neighbs) {
                     if (n->elem) n->elem->record = 2;
                   }
                 }
