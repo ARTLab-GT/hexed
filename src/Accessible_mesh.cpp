@@ -689,16 +689,15 @@ bool Accessible_mesh::needs_refine(Tree* t)
     auto eval = eval_neigbors(t, math::direction(params.n_dim, i_face));
     if (eval[2]) return true; // if there is a face neighbor with ref level more than 1 greater, need to refine
     if (t->elem) {
-      if (eval[0] && !eval[1]) return true; // if there is a partially-exposed face, need to refine
       // if this face is exposed, also check the diagonal neighbors since they could be extrusion neighbors
-      else if (!eval[1]) {
+      if (!eval[1]) {
         for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) if (j_dim != i_face/2) {
           for (int face_sign = 0; face_sign < 2; ++face_sign) {
             auto dir = math::direction(params.n_dim, i_face);
             dir(j_dim) = math::sign(face_sign);
             auto eval1 = eval_neigbors(t, dir);
             // again, ref level difference > 1 or partially exposed -> refine
-            if (eval1[2] || (eval1[0] && !eval1[1])) return true;
+            if (eval1[2]) return true;
           }
         }
       }
@@ -975,6 +974,39 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
       }
     }
     for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, container(is_deformed).element_view().size());
+  } while (changed);
+  do {
+    // \todo this whole loop is terrible
+    changed = false;
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      if (elem.tree && elem.record != 2) {
+        for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
+          auto eval = eval_neigbors(elem.tree, math::direction(params.n_dim, i_face));
+          if (eval[0] && !eval[1]) {
+            for (Tree* n : elem.tree->find_neighbors(math::direction(params.n_dim, i_face))) {
+              if (n->elem) n->elem->record = 2;
+            }
+          }
+          // if this face is exposed, also check the diagonal neighbors since they could be extrusion neighbors
+          if (!eval[1]) {
+            for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) if (j_dim != i_face/2) {
+              for (int face_sign = 0; face_sign < 2; ++face_sign) {
+                auto dir = math::direction(params.n_dim, i_face);
+                dir(j_dim) = math::sign(face_sign);
+                auto eval1 = eval_neigbors(elem.tree, dir);
+                // again, ref level difference > 1 or partially exposed -> refine
+                if (eval1[0] && !eval1[2]) {
+                  for (Tree* n : elem.tree->find_neighbors(dir)) {
+                    if (n->elem) n->elem->record = 2;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   } while (changed);
   deform();
   // delete extruded elements
