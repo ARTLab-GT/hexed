@@ -564,7 +564,7 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   purge();
   connect_new<         Element>(0);
   connect_new<Deformed_element>(0);
-  extrude();
+  //extrude(true);
   connect_rest(surf_bc_sn);
 }
 
@@ -856,56 +856,7 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   // refine elements
   for (bool is_deformed : {0, 1}) n_orig[is_deformed] = container(is_deformed).element_view().size(); // count how many elements there are before adding, so we know where the new ones start
   for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, n_orig[is_deformed]);
-  // synchronize refinement level of surface elements with their non-surface neighbors in preparation for incremental flood fill
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) { // only need to worry about new elements
-    auto& elem = elems[i_elem];
-    if (elem.tree) {
-      for (int i_face = 0; i_face < 2*nd; ++i_face) {
-        Tree* neighbor = elem.tree->find_neighbor(math::direction(nd, i_face));
-        if (neighbor) {
-          if (!neighbor->elem) {
-            if (neighbor->refinement_level() > elem.refinement_level()) {
-              Tree* p = neighbor->parent();
-              bool can_unref = true;
-              for (Tree* child : p->children()) can_unref = can_unref && !child->elem;
-              if (can_unref && !needs_refine(p)) p->unrefine();
-            } else if (neighbor->refinement_level() < elem.refinement_level() - 1) neighbor->refine();
-            else if (neighbor->refinement_level() < elem.refinement_level()) {
-              int min_rl = std::numeric_limits<int>::max();
-              for (int j_face = 0; j_face < 2*nd; ++j_face) {
-                Tree* n = neighbor->find_neighbor(math::direction(nd, j_face));
-                if (n) if (n->elem) min_rl = std::min(min_rl, n->refinement_level());
-              }
-              if (neighbor->refinement_level() < min_rl) neighbor->refine();
-            }
-          }
-        }
-      }
-    }
-  }
   bool changed;
-  // incremental flood fill
-  do {
-    changed = false;
-    for (bool is_deformed : {0, 1}) {
-      auto& cont = container(is_deformed);
-      auto& cont_elems = cont.element_view();
-      int sz = cont_elems.size();
-      for (int i_elem = 0; i_elem < sz; ++i_elem) {
-        auto& elem = cont_elems[i_elem];
-        if (elem.tree && elem.record == 0) {
-          for (int i_face = 0; i_face < 2*nd; ++i_face) {
-            for (Tree* neighbor : elem.tree->find_neighbors(math::direction(nd, i_face))) {
-              if (!neighbor->elem) if (!is_surface(neighbor)) {
-                changed = true;
-                add_elem(is_deformed, *neighbor).record = 0;
-              }
-            }
-          }
-        }
-      }
-    }
-  } while (changed);
   // unrefinement
   do {
     changed = false;
@@ -961,6 +912,55 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
       if (elem.tree && elem.record != 2) if (is_surface(elem.tree)) elem.record = 2;
     }
   }
+  // synchronize refinement level of surface elements with their non-surface neighbors in preparation for incremental flood fill
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    if (elem.tree) {
+      for (int i_face = 0; i_face < 2*nd; ++i_face) {
+        Tree* neighbor = elem.tree->find_neighbor(math::direction(nd, i_face));
+        if (neighbor) {
+          if (!neighbor->elem) {
+            if (neighbor->refinement_level() > elem.refinement_level()) {
+              Tree* p = neighbor->parent();
+              bool can_unref = true;
+              for (Tree* child : p->children()) can_unref = can_unref && !child->elem;
+              if (can_unref && !needs_refine(p)) p->unrefine();
+            } else if (neighbor->refinement_level() < elem.refinement_level() - 1) neighbor->refine();
+            else if (neighbor->refinement_level() < elem.refinement_level()) {
+              int min_rl = std::numeric_limits<int>::max();
+              for (int j_face = 0; j_face < 2*nd; ++j_face) {
+                Tree* n = neighbor->find_neighbor(math::direction(nd, j_face));
+                if (n) if (n->elem) min_rl = std::min(min_rl, n->refinement_level());
+              }
+              if (neighbor->refinement_level() < min_rl) neighbor->refine();
+            }
+          }
+        }
+      }
+    }
+  }
+  // incremental flood fill
+  do {
+    changed = false;
+    for (bool is_deformed : {0, 1}) {
+      auto& cont = container(is_deformed);
+      auto& cont_elems = cont.element_view();
+      int sz = cont_elems.size();
+      for (int i_elem = 0; i_elem < sz; ++i_elem) {
+        auto& elem = cont_elems[i_elem];
+        if (elem.tree && elem.record == 0) {
+          for (int i_face = 0; i_face < 2*nd; ++i_face) {
+            for (Tree* neighbor : elem.tree->find_neighbors(math::direction(nd, i_face))) {
+              if (!neighbor->elem) if (!is_surface(neighbor)) {
+                changed = true;
+                add_elem(is_deformed, *neighbor).record = 0;
+              }
+            }
+          }
+        }
+      }
+    }
+  } while (changed);
   // ref level smoothing: refine elements to satisfy solver requirements on neighbors
   do {
     changed = false;
@@ -988,6 +988,7 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
     }
     if (del) con->element(0).record = 2;
   }
+  // count up how many of the original elements are left
   for (bool is_deformed : {0, 1}) {
     auto& cont = container(is_deformed);
     auto& cont_elems = cont.element_view();
@@ -1002,7 +1003,7 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   // connect new elements
   connect_new<         Element>(n_orig[0]);
   connect_new<Deformed_element>(n_orig[1]);
-  extrude();
+  //extrude(true);
   connect_rest(surf_bc_sn);
 }
 
