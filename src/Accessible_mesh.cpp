@@ -658,46 +658,30 @@ void Accessible_mesh::refine_by_record(bool is_deformed, int start, int end)
   }
 }
 
-/* returns:
- * - do any neighbors exist?
- * - do all neighbors exist?
- * - are any of the neighbors more than 1 ref level higher than `t`?
- */
-std::array<int, 3> eval_neigbors(Tree* t, Eigen::VectorXi direction)
+bool exists(Tree* tree)
 {
-  std::array<int, 3> result {false, false, false};
-  auto neighbors = t->find_neighbors(direction);
-  if (!neighbors.empty()) {
-    result[1] = true;
-    for (Tree* n : neighbors) {
-      bool exists = false;
-      if (n->elem) if (n->elem->record != 2) {
-        if (n->refinement_level() > t->refinement_level() + 1) result[2] = true; // if ref level difference is greater than 1, need to refine
-        exists = true;
-      }
-      result[0] = result[0] || exists;
-      result[1] = result[1] && exists;
-    }
-  }
-  return result;
+  if (tree->elem) if (tree->elem->record != 2) return true;
+  return false;
 }
 
 // does this tree element need to be refined to satisfy ref level smoothness
 bool Accessible_mesh::needs_refine(Tree* t)
 {
   for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
-    auto eval = eval_neigbors(t, math::direction(params.n_dim, i_face));
-    if (eval[2]) return true; // if there is a face neighbor with ref level more than 1 greater, need to refine
+    auto neighbors = t->find_neighbors(math::direction(params.n_dim, i_face));
+    int rl = t->refinement_level();
+    auto too_fine = [rl](Tree* ptr){return ptr->refinement_level() > rl + 1;};
+    if (std::any_of(neighbors.begin(), neighbors.end(), too_fine)) return true; // if there is a face neighbor with ref level more than 1 greater, need to refine
     if (t->elem) {
       // if this face is exposed, also check the diagonal neighbors since they could be extrusion neighbors
-      if (!eval[1]) {
+      if (!std::all_of(neighbors.begin(), neighbors.end(), &exists)) {
         for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) if (j_dim != i_face/2) {
           for (int face_sign = 0; face_sign < 2; ++face_sign) {
             auto dir = math::direction(params.n_dim, i_face);
             dir(j_dim) = math::sign(face_sign);
-            auto eval1 = eval_neigbors(t, dir);
+            auto diag_neighbs = t->find_neighbors(dir);
             // again, ref level difference > 1 or partially exposed -> refine
-            if (eval1[2]) return true;
+            if (std::any_of(diag_neighbs.begin(), diag_neighbs.end(), too_fine)) return true;
           }
         }
       }
@@ -825,12 +809,6 @@ void Accessible_mesh::purge()
   def.elems.purge();
   // delete dangling vertex pointers
   erase_if(vert_ptrs, &Vertex::Non_transferable_ptr::is_null);
-}
-
-bool exists(Tree* tree)
-{
-  if (tree->elem) if (tree->elem->record != 2) return true;
-  return false;
 }
 
 void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std::function<bool(Element&)> unrefine_criterion)
@@ -981,40 +959,33 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
     }
     for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, container(is_deformed).element_view().size());
   } while (changed);
+  // if any hanging-node face or edge is partially covered by fine elements, delete the fine elements
   do {
     changed = false;
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
       if (elem.tree && elem.record != 2) {
         for (int i_face = 0; i_face < 2*nd; ++i_face) {
+          // check face neighbors
           auto neighbors = elem.tree->find_neighbors(math::direction(nd, i_face));
-          bool all_exist = true;
-          bool any_exist = false;
-          for (Tree* n : neighbors) {
-            all_exist = all_exist && exists(n);
-            any_exist = any_exist || exists(n);
-          }
+          bool all_exist = std::all_of(neighbors.begin(), neighbors.end(), exists);
           if (neighbors.size() > 1) {
-            if (any_exist && !all_exist) {
+            if (std::any_of(neighbors.begin(), neighbors.end(), exists) && !all_exist) {
               changed = true;
               for (Tree* n : neighbors) {
                 if (n->elem) n->elem->record = 2;
               }
             }
           }
-          if (!all_exist) {
+          // if that was a boundary face, also check edge neighbors, because in 3D that can result in some really weird extrusion situations
+          if (nd == 3 && !all_exist) {
             for (int j_dim = 0; j_dim < nd; ++j_dim) if (j_dim != i_face/2) {
               for (int sign = 0; sign < 2; ++sign) {
                 auto dir = math::direction(nd, i_face);
                 dir(j_dim) = math::sign(sign);
                 auto diag_neighbs = elem.tree->find_neighbors(dir);
-                bool all_e = true;
-                bool any_e = false;
-                for (Tree* n : diag_neighbs) {
-                  all_e = all_e && exists(n);
-                  any_e = any_e || exists(n);
-                }
-                if (any_e && !all_e) {
+                if (  !std::all_of(diag_neighbs.begin(), diag_neighbs.end(), exists)
+                    && std::any_of(diag_neighbs.begin(), diag_neighbs.end(), exists)) {
                   changed = true;
                   for (Tree* n : diag_neighbs) {
                     if (n->elem) n->elem->record = 2;
@@ -1029,7 +1000,6 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   } while (changed);
   deform();
   // delete extruded elements
-  #if 0
   #pragma omp parallel for
   for (auto con : extrude_cons) {
     bool del = false;
@@ -1039,21 +1009,6 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
       if (neighbor) if (neighbor->elem) if (neighbor->elem->record != 2) del = true;
     }
     if (del) con->element(0).record = 2;
-  }
-  #endif
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    if (!elems[i_elem].tree) elems[i_elem].record = 2;
-  }
-  // count up how many of the original elements are left
-  for (bool is_deformed : {0, 1}) {
-    auto& cont = container(is_deformed);
-    auto& cont_elems = cont.element_view();
-    int deleted = 0;
-    #pragma omp parallel for reduction(+:deleted)
-    for (int i_elem = 0; i_elem < n_orig[is_deformed]; ++i_elem) {
-      deleted += cont_elems[i_elem].record == 2;
-    }
-    n_orig[is_deformed] -= deleted;
   }
   purge();
   // connect new elements
