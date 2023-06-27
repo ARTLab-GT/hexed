@@ -52,11 +52,12 @@ Plus, we need to edit a *whole bunch* of environment variables to accommodate Te
   ~~~
   - Now edit `.bashrc` and add the following lines at the end:
   ~~~
-  TECPLOT_DIR=/opt/local/tecplot/360ex
+  TECPLOT_DIR=/opt/tecplot/360ex_2020r2
   TECPLOT_LIB_PATH=$TECPLOT_DIR/bin/
   export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:$TECPLOT_DIR/include/:~/.local/include/
-  export LIBRARY_PATH=$LIBRARY_PATH:$TECPLOT_LIB_PATH
-  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$TECPLOT_LIB_PATH
+  export LIBRARY_PATH=$LIBRARY_PATH:$TECPLOT_LIB_PATH:~/.local/lib
+  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$TECPLOT_LIB_PATH:~/.local/lib
+  export PYTHONPATH=$PYTHONPATH:~/.local/lib
   export PATH=$PATH:~/.local/bin
   ~~~
   If you are not on an ARTLAB machine, ensure that you have Tecplot installed and change `TECIO_DIR` to match your Tecplot installation.
