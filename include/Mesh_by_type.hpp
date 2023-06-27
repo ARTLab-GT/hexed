@@ -5,6 +5,7 @@
 #include "Element.hpp"
 #include "Deformed_element.hpp"
 #include "Element_container.hpp"
+#include "Tree.hpp"
 
 namespace hexed
 {
@@ -48,11 +49,11 @@ class Mesh_by_type : public View_by_type<element_t>
    */
   //!\{
   Complete_element_container<element_t> elems;
-  std::vector<Element_face_connection<element_t>> cons;
+  std::vector<std::unique_ptr<Element_face_connection<element_t>>> cons;
   static constexpr int n_fine [3] {1, 2, 4};
   typedef Refined_connection<element_t> ref_con_t;
   std::array<std::vector<std::unique_ptr<ref_con_t>>, 3> ref_face_cons; // array sorts Refined faces into those with 1, 2, and 4 fine elements respectively
-  std::vector<Typed_bound_connection<element_t>> bound_cons;
+  std::vector<std::unique_ptr<Typed_bound_connection<element_t>>> bound_cons;
   //!\}
 
   /*! \name views
@@ -77,7 +78,7 @@ class Mesh_by_type : public View_by_type<element_t>
     virtual view_t operator[](int index)
     {
       int i_start = index - parent.cons.size();
-      if (i_start < 0) return parent.cons[index];
+      if (i_start < 0) return *parent.cons[index];
       for (int i = 0; i < 3; ++i) {
         int n_total = n_fine[i]*parent.ref_face_cons[i].size();
         if (i_start < n_total) {
@@ -104,8 +105,8 @@ class Mesh_by_type : public View_by_type<element_t>
   // now that view can be used to view the `Refined_connection`s as other types
   Vector_view<Refined_face&, ref_con_t&, &ref_face, Concatenation> ref_v;
   Vector_view<Hanging_vertex_matcher&, ref_con_t&, &matcher, Concatenation> matcher_v;
-  Vector_view<Boundary_connection&, Typed_bound_connection<element_t>> bound_con_v;
-  Vector_view<Face_connection<Deformed_element>&, Typed_bound_connection<element_t>> bound_face_con_view;
+  Vector_view<Boundary_connection&, std::unique_ptr<Typed_bound_connection<element_t>>, ptr_convert<Boundary_connection&, std::unique_ptr<Typed_bound_connection<element_t>>>> bound_con_v;
+  Vector_view<Face_connection<Deformed_element>&, std::unique_ptr<Typed_bound_connection<element_t>>, ptr_convert<Face_connection<Deformed_element>&, std::unique_ptr<Typed_bound_connection<element_t>>>> bound_face_con_view;
   Concatenation<Face_connection<element_t>&> face_con_v;
   //!\}
 
@@ -141,12 +142,12 @@ class Mesh_by_type : public View_by_type<element_t>
     // ordinary element connections
     for (unsigned i_con = 0; i_con < cons.size(); ++i_con) {
       for (int i_side = 0; i_side < 2; ++i_side) {
-        ++cons[i_con].element(i_side).face_record[cons[i_con].direction().i_face(i_side)];
+        ++cons[i_con]->element(i_side).face_record[cons[i_con]->direction().i_face(i_side)];
       }
     }
     // boundary connections
     for (unsigned i_con = 0; i_con < bound_cons.size(); ++i_con) {
-      ++bound_cons[i_con].element().face_record[bound_cons[i_con].direction().i_face(0)];
+      ++bound_cons[i_con]->element().face_record[bound_cons[i_con]->direction().i_face(0)];
     }
     // hanging node connections
     for (int i_n_fine = 0; i_n_fine < 3; ++i_n_fine) {
@@ -171,11 +172,36 @@ class Mesh_by_type : public View_by_type<element_t>
       for (int i_dim = 0; i_dim < par.n_dim; ++i_dim) {
         for (int face_sign = 0; face_sign < 2; ++face_sign) {
           if (elem.face_record[2*i_dim + face_sign] == 0) {
-            bound_cons.emplace_back(elem, i_dim, face_sign, bc_sn);
+            bound_cons.emplace_back(new Typed_bound_connection<element_t>(elem, i_dim, face_sign, bc_sn));
             connect_normal(2*i_dim + face_sign);
           }
         }
       }
+    }
+  }
+
+  //! delete all connections (of all kinds) where `predicate` is true for at least one of the elements involved
+  //! or connections for boundary faces that have since been covered up
+  void purge_connections(std::function<bool(Element&)> predicate = [](Element& elem){return elem.record != 0;})
+  {
+    auto bound_predicate = [&](std::unique_ptr<Typed_bound_connection<element_t>>& con){
+      if (con->element().tree) {
+        Tree* neighbor = con->element().tree->find_neighbor(math::direction(par.n_dim, con->i_dim(), con->inside_face_sign()));
+        if (neighbor) if (neighbor->elem) return true; // remember that either all neighbors exist or none
+      }
+      return predicate(con->element());
+    };
+    erase_if(bound_cons, bound_predicate);
+    erase_if(cons, [predicate](std::unique_ptr<Element_face_connection<element_t>>& con){return predicate(con->element(0)) || predicate(con->element(1));});
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+      auto pred = [predicate](std::unique_ptr<Refined_connection<element_t>>& con){
+        bool result = predicate(con->coarse_element());
+        for (int i_fine = 0; i_fine < con->n_fine_elements(); ++i_fine) {
+          result = result || predicate(con->connection(i_fine).element(!con->order_reversed()));
+        }
+        return result;
+      };
+      erase_if(ref_face_cons[i_dim], pred);
     }
   }
 };
@@ -191,7 +217,7 @@ template <> inline void Mesh_by_type<Element>::connect_normal(int i_face) {}
 template <>
 inline void Mesh_by_type<Deformed_element>::connect_normal(int i_face)
 {
-  auto& con = bound_cons.back();
+  auto& con = *bound_cons.back();
   con.element().face_normal(i_face) = con.normal(0);
 }
 

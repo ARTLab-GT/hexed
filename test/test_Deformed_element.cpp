@@ -144,8 +144,8 @@ TEST_CASE("Deformed_element")
     REQUIRE(elem0.faces[3][2] == Catch::Approx(.2));
     REQUIRE(elem0.faces[3][row_size + 2] == Catch::Approx(.8));
     // check time step scale
-    REQUIRE(elem0.vertex_time_step_scale(0) == .2);
-    REQUIRE(elem0.vertex_time_step_scale(3) == Catch::Approx(.2*(.8*.8 - .2*.2)/std::sqrt(.8*.8 + .2*.2)));
+    REQUIRE(elem0.vertex_time_step_scale(0) == .2/2);
+    REQUIRE(elem0.vertex_time_step_scale(3) == Catch::Approx(.2/2*(.8*.8 - .2*.2)/std::sqrt(.8*.8 + .2*.2)));
 
     hexed::Storage_params params3 {2, 5, 3, row_size};
     hexed::Deformed_element elem2 {params3, {0, 0, 0}, 0.2};

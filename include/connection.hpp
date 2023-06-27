@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 #include "Deformed_element.hpp"
 #include "Hanging_vertex_matcher.hpp"
+#include "Boundary_face.hpp"
 #include "math.hpp"
 
 namespace hexed
@@ -97,7 +98,7 @@ class Face_connection<Deformed_element>
   virtual Con_dir<Deformed_element> direction() = 0;
   virtual double* state() {return data.data();}
   double* normal(int i_side) {return data.data() + 4*state_sz + i_side*nrml_sz;}
-  double* normal() {return data.data() + 4*state_sz;} // area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
+  double* normal() {return data.data() + 4*state_sz;} //!< area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
 };
 
 /*!
@@ -135,6 +136,14 @@ class Element_face_connection : public Element_connection, public Face_connectio
       elements[0]->vertex(inds[0][i_vert]).eat(elements[1]->vertex(inds[1][i_vert]));
     }
     connect_normal();
+  }
+  Element_face_connection(const Element_face_connection&) = delete; //!< copy semantics are deleted since only one connection object can connect the same elements
+  Element_face_connection& operator=(const Element_face_connection&) = delete;
+  virtual ~Element_face_connection()
+  {
+    for (int i_side : {0, 1}) {
+      elems[i_side]->faces[dir.i_face(i_side)] = nullptr;
+    }
   }
   virtual Con_dir<element_t> direction() {return dir;}
   virtual element_t& element(int i_side) {return *elems[i_side];}
@@ -182,6 +191,10 @@ class Refined_connection
       int face_sz = r.params.n_dof()/r.params.row_size;
       f.faces[ref_con.dir.i_face(!ref_con.rev)] = Face_connection<element_t>::state() + (!ref_con.rev)*face_sz;
     }
+    virtual ~Fine_connection()
+    {
+      fine_elem.faces[ref_con.dir.i_face(!ref_con.rev)] = nullptr;
+    }
     virtual Con_dir<element_t> direction() {return ref_con.direction();}
     virtual element_t& element(int i_side) {return (i_side != ref_con.rev) ? fine_elem : ref_con.c;}
   };
@@ -192,7 +205,7 @@ class Refined_connection
   Con_dir<element_t> dir;
   Con_dir<Deformed_element> def_dir;
   bool rev;
-  std::vector<Fine_connection> fine_cons;
+  std::vector<std::unique_ptr<Fine_connection>> fine_cons;
   std::array<bool, 2> str;
   int n_fine;
   Eigen::VectorXd coarse_normal;
@@ -211,7 +224,7 @@ class Refined_connection
   void connect_normal();
 
   public:
-  Refined_face refined_face; //!< pretty please don't write to this!! this should be const and/or private, but i have bigger problems rn :( FIXME
+  Refined_face refined_face; //!< pretty please don't write to this!! \todo this should be const and/or private, but i have bigger problems rn
   Hanging_vertex_matcher matcher;
   /*!
    * if `reverse_order` is true, the fine elements will come before coarse in the connection.
@@ -257,22 +270,23 @@ class Refined_connection
       // if there is any stretching happening, rather than use `permutation_inds`
       // it is merely necessary to figure out whether we need to swap the fine elements
       if (any_str) inds[1] = i_face != (def_dir.flip_tangential() && !str[2*def_dir.i_dim[rev] > 3 - def_dir.i_dim[!rev]]);
-      fine_cons.emplace_back(*this, *fine[inds[!rev]]);
-      refined_face.fine[inds[rev]] = fine_cons.back().state() + rev*params.n_dof()/params.row_size;
+      fine_cons.emplace_back(new Fine_connection(*this, *fine[inds[!rev]]));
+      refined_face.fine[inds[rev]] = fine_cons.back()->state() + rev*params.n_dof()/params.row_size;
     }
     connect_normal();
   }
   //! delete copy semantics which would mess up `Fine_connection`. Can implement later if we really need it.
   Refined_connection(const Refined_connection&) = delete;
   Refined_connection& operator=(const Refined_connection&) = delete;
-  virtual ~Refined_connection() = default;
+  virtual ~Refined_connection() {c.faces[dir.i_face(rev)] = nullptr;}
   Con_dir<element_t> direction() {return dir;}
   //! fetch an object represting a connection between the face of a fine element and one of the mortar faces
-  Fine_connection& connection(int i_fine) {return fine_cons[i_fine];}
+  Fine_connection& connection(int i_fine) {return *fine_cons[i_fine];}
   bool order_reversed() {return rev;}
   auto stretch() {return str;}
   int n_fine_elements() {return n_fine;}
   double* coarse_state() {return coarse_state_data.data();}
+  element_t& coarse_element() {return c;}
 };
 
 template <>
@@ -285,9 +299,77 @@ inline void Refined_connection<Deformed_element>::connect_normal()
   coarse_normal.resize(params.n_dim*params.n_qpoint()/params.row_size);
   c.face_normal(2*dir.i_dim[rev] + dir.face_sign[rev]) = coarse_normal.data();
   for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
-    auto n = fine_cons[i_fine].normal(!rev);
-    fine_cons[i_fine].element(!rev).face_normal(2*dir.i_dim[!rev] + dir.face_sign[!rev]) = n;
+    auto n = fine_cons[i_fine]->normal(!rev);
+    fine_cons[i_fine]->element(!rev).face_normal(2*dir.i_dim[!rev] + dir.face_sign[!rev]) = n;
   }
+}
+
+/*!
+ * A `Boundary_face` that also provides details about the connection for the neighbor flux
+ * computation and requests for a particular `Boundary_condition` to be applied to it.
+ */
+class Boundary_connection : public Boundary_face, public Face_connection<Deformed_element>
+{
+  public:
+  inline Boundary_connection(Storage_params params) : Face_connection<Deformed_element>{params} {}
+  virtual Element& element() = 0;
+  virtual int bound_cond_serial_n() = 0;
+};
+
+/*!
+ * Implementation of `Boundary_connection` which also can provide a reference to the element
+ * involved (for Jacobian calculation among other purposes).
+ */
+template <typename element_t>
+class Typed_bound_connection : public Boundary_connection
+{
+  element_t& elem;
+  Storage_params params;
+  int i_d;
+  bool ifs;
+  int bc_sn;
+  Eigen::VectorXd pos;
+  Eigen::VectorXd state_c;
+  void connect_normal();
+
+  public:
+  Typed_bound_connection(element_t& elem_arg, int i_dim_arg, bool inside_face_sign_arg, int bc_serial_n)
+  : Boundary_connection{elem_arg.storage_params()},
+    elem{elem_arg},
+    params{elem.storage_params()},
+    i_d{i_dim_arg},
+    ifs{inside_face_sign_arg},
+    bc_sn{bc_serial_n},
+    pos(params.n_dim*params.n_qpoint()/params.row_size),
+    state_c(params.n_var*params.n_qpoint()/params.row_size)
+  {
+    connect_normal();
+    elem.faces[direction().i_face(0)] = state();
+  }
+  Typed_bound_connection(const Typed_bound_connection&) = delete; //!< can only have one `Typed_bound_connection` per face, so delete copy semantics
+  Typed_bound_connection& operator=(const Typed_bound_connection&) = delete;
+  virtual ~Typed_bound_connection() {elem.faces[direction().i_face(0)] = nullptr;}
+  virtual Storage_params storage_params() {return params;}
+  virtual double* ghost_face() {return state() + params.n_dof()/params.row_size;}
+  virtual double* inside_face() {return state();}
+  virtual int i_dim() {return i_d;}
+  virtual bool inside_face_sign() {return ifs;}
+  virtual double* surface_normal() {return normal();}
+  virtual double* surface_position() {return pos.data();}
+  virtual double* state_cache() {return state_c.data();}
+  virtual Con_dir<Deformed_element> direction() {return {{i_d, i_d}, {ifs, !ifs}};}
+  virtual int bound_cond_serial_n() {return bc_sn;}
+  element_t& element() {return elem;}
+};
+
+template <>
+inline void Typed_bound_connection<Element>::connect_normal()
+{}
+
+template <>
+inline void Typed_bound_connection<Deformed_element>::connect_normal()
+{
+  elem.face_normal(2*i_d + ifs) = normal(0);
 }
 
 }

@@ -3,6 +3,7 @@
 
 #include "Mesh.hpp"
 #include "Mesh_by_type.hpp"
+#include "Tree.hpp"
 
 namespace hexed
 {
@@ -17,7 +18,6 @@ class Accessible_mesh : public Mesh
   Storage_params params;
   int n_vert;
   double root_sz;
-  Element_container& container(bool is_deformed);
   Mesh_by_type<         Element> car;
   Mesh_by_type<Deformed_element> def;
   // create a `Vector_view` that can look at `def.elements()` as `Element&`s.
@@ -31,7 +31,21 @@ class Accessible_mesh : public Mesh
   Concatenation<Refined_face&> ref_face_v;
   Concatenation<Hanging_vertex_matcher&> matcher_v;
   std::vector<Vertex::Non_transferable_ptr> vert_ptrs;
-  std::vector<int> extrude_cons;
+  int surf_bc_sn;
+  Surface_geom* surf_geom; // note: this pointer does not own its data (the corresponding `Mesh_bc` does) so don't `delete` it.
+  std::vector<Element_face_connection<Deformed_element>*> extrude_cons;
+  std::unique_ptr<Tree> tree; // could be null! don't forget to check
+  std::vector<int> tree_bcs;
+
+  Element_container& container(bool is_deformed);
+  Element& add_elem(bool is_deformed, Tree&);
+  bool is_surface(Tree*);
+  template<typename element_t> Mesh_by_type<element_t>& mbt(); // gets either `car` or `def`
+  template<typename element_t> void connect_new(int start_at); // connects new elements in `mbt<element_t>()`. helper function for `refine`
+  void refine_by_record(bool is_deformed, int start, int end);
+  bool needs_refine(Tree*);
+  void deform();
+  void purge();
 
   public:
   /*!
@@ -39,6 +53,7 @@ class Accessible_mesh : public Mesh
    * \param root_size defines the \ref root_size of the mesh.
    */
   Accessible_mesh(Storage_params params, double root_size);
+  virtual ~Accessible_mesh();
   inline double root_size() override {return root_sz;}
   //! \returns a View_by_type containing only the Cartesian elements in the mesh
   inline View_by_type<         Element>& cartesian() {return car;}
@@ -60,6 +75,11 @@ class Accessible_mesh : public Mesh
   int add_boundary_condition(Flow_bc*, Mesh_bc*) override;
   void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n) override;
   void disconnect_boundary(int bc_sn) override;
+
+  void add_tree(std::vector<Flow_bc*> extremal_bcs) override;
+  void set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) override;
+  void update(std::function<bool(Element&)> refine_criterion = always, std::function<bool(Element&)> unrefine_criterion = never) override;
+
   //! \returns a view of all Bounday_condition objects owned by this mesh
   Vector_view<Boundary_condition&, Boundary_condition> boundary_conditions() {return bound_conds;}
   //! get a boundary condition owned by this mesh by its serial number
@@ -79,7 +99,8 @@ class Accessible_mesh : public Mesh
   void connect_rest(int bc_sn) override;
   std::vector<elem_handle> elem_handles() override;
   //! \returns a view of all Element_connection between extruded elements and the elemens they were extruded from
-  inline Index<Element_connection&> extruded_connections() {return {deformed().element_connections(), extrude_cons};}
+  inline Vector_view<Element_connection&, Element_face_connection<Deformed_element>*,
+                     ptr_convert<Element_connection&, Element_face_connection<Deformed_element>*>> extruded_connections() {return {extrude_cons};}
 };
 
 }

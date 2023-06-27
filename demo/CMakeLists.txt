@@ -1,4 +1,6 @@
 add_executable(demo2d demo2d.cpp)
 add_executable(demo3d demo3d.cpp)
+add_executable(sphere sphere.cpp)
 target_link_libraries(demo2d PRIVATE hexed)
 target_link_libraries(demo3d PRIVATE hexed)
+target_link_libraries(sphere PRIVATE hexed)

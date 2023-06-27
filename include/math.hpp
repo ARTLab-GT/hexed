@@ -9,18 +9,18 @@
 namespace hexed
 {
 
-const int dyn = Eigen::Dynamic;
+const int dyn = Eigen::Dynamic; //!< \brief convenience alias for `Eigen::dynamic`
 template <int rows = dyn, int cols = 1>
-using Mat = Eigen::Matrix<double, rows, cols>;
-const auto all = Eigen::all;
-const auto last = Eigen::last;
+using Mat = Eigen::Matrix<double, rows, cols>; //!< \brief convenience alias for `Eigen::Matrix<double, rows = dyn, cols = 1>`
+const auto all = Eigen::all; //!< \brief convenience alias for `Eigen::all`
+const auto last = Eigen::last; //!< \brief convenience alias for `Eigen::all`
 
 //! Miscellaneous mathematical functions that aren't in `std::math`
 namespace math
 {
 
-/*!
- * Raises an arbitrary arithmetic type to an integer (not necessarily positive) power.
+/*! \brief Raises an arbitrary arithmetic type to an integer (not necessarily positive) power.
+ * \details
  * Can return `constexpr`, which `std::pow` is not allowed to do according to the standard
  * (although the GCC implementation can anyway).
  */
@@ -34,8 +34,7 @@ constexpr number_t pow(number_t base, int exponent)
 }
 
 /*! \brief Integer logarithm.
- *
- * If `base` < 2, returns -1 to indicate failure.
+ * \details If `base` < 2, returns -1 to indicate failure.
  * Otherwise, if `arg` < 1, returns 0. In the usual case where neither
  * of the above are true, returns \f$\lceil\log_{\mathtt{base}}(\mathtt{arg})\rceil\f$.
  */
@@ -52,6 +51,11 @@ constexpr int sign(bool condition)
 {
   return 2*condition - 1;
 }
+
+//! the unit vector describing the direction from the center of an `n_dim`-dimensional Cartesian element to the face described by `i_dim` and `sign`
+Eigen::VectorXi direction(int n_dim, int i_dim, bool is_positive);
+//! the unit vector describing the direction from the center of an `n_dim`-dimensional Cartesian element to the `i_face`th face
+Eigen::VectorXi direction(int n_dim, int i_face);
 
 /*! \brief Finds a root of a scalar function with [Broyden's method](https://en.wikipedia.org/wiki/Broyden%27s_method).
  * \param func Should return a `double` when called on a `double` argument.
@@ -220,6 +224,33 @@ vec_t proj_to_segment(std::array<vec_t, 2> endpoints, vec_t target)
   double proj = diff.dot(target - endpoints[0])/diff.squaredNorm();
   proj = std::min(1., std::max(0., proj));
   return endpoints[0] + proj*diff;
+}
+
+//! functor to compare whether values are approximately equal
+class Approx_equal
+{
+  double a;
+  double r;
+  public:
+  inline Approx_equal(double rtol = 1e-12, double atol = 0) : a{atol}, r{rtol} {}
+  inline bool operator()(double x, double y) const {return std::abs(x - y) < a + r*std::abs(x + y)/2;}
+};
+
+//! Constructs an `Eigen::VectorXd` from iterators `begin()` and `end()` to arithmetic types.
+template <typename T>
+Mat<> to_mat(T begin, T end)
+{
+  Mat<> vec(end - begin);
+  int i = 0;
+  for (auto it = begin; it < end; ++it) vec(i++) = *it;
+  return vec;
+}
+
+//! Constructs an `Eigen::VectorXd` from any object supporting `begin()` and `end()` members.
+template <typename T>
+Mat<> to_mat(const T& range)
+{
+  return to_mat(range.begin(), range.end());
 }
 
 }

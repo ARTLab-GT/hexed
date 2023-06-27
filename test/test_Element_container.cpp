@@ -1,5 +1,6 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/Element_container.hpp>
+#include <hexed/Tree.hpp>
 
 TEST_CASE("Specific_container<Deformed_element>")
 {
@@ -33,4 +34,18 @@ TEST_CASE("Specific_container<Deformed_element>")
     }
     REQUIRE(count == 1);
   }
+  // delete some elements
+  ctn.at(2, sn0).record = 2;
+  ctn.at(3, sn2).record = -1;
+  int n = ctn.purge();
+  // check that the right ones were deleted
+  REQUIRE(n == 2);
+  REQUIRE(ctn.elements().size() == 2);
+  REQUIRE(ctn.at(2, sn3).nominal_position()[1] == 1);
+  REQUIRE_THROWS(ctn.at(2, sn2));
+  // check that you can still construct elements properly afterward
+  int sn = ctn.emplace(2, {2, 1});
+  REQUIRE(sn != sn3);
+  REQUIRE(sn != sn2);
+  REQUIRE(sn != sn1);
 }

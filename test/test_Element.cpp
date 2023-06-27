@@ -44,9 +44,9 @@ TEST_CASE("Element")
   REQUIRE(element.art_visc_forcing()[4*params.n_qpoint() - 1] == 0.);
   REQUIRE(element.advection_state()[0] == 0.);
   REQUIRE(element.advection_state()[6*params.n_qpoint() - 1] == 0.);
-  // test that vertex time step scale is initialized to 1
+  // test that vertex time step scale is initialized to the nominal cell size divided by the number of dimensions
   for (int i_vert = 0; i_vert < 8; ++i_vert) {
-    REQUIRE(element.vertex_time_step_scale(i_vert) == 1.);
+    REQUIRE(element.vertex_time_step_scale(i_vert) == 1./3.);
   }
   for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint)
   {

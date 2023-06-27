@@ -5,6 +5,7 @@
 #include "Boundary_condition.hpp"
 #include "connection.hpp"
 #include "Layer_sequence.hpp"
+#include "Surface_geom.hpp"
 
 namespace hexed
 {
@@ -25,6 +26,9 @@ class Mesh
   virtual ~Mesh() = default;
   //! \returns Nominal size (\f$\Delta h\f$) of elements with refinement level 0.
   virtual double root_size() = 0;
+
+  //! \name Manual mesh creation
+  //! \{
   /*!
    * Add an element at specified nominal position and serial number which uniquely identifies it
    * among elements of this mesh with the same refinement level and deformedness.
@@ -68,6 +72,8 @@ class Mesh
   virtual void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n) = 0;
   //! delete all boundary connections involving a certain boundary condition
   virtual void disconnect_boundary(int bc_sn) = 0;
+  //! connects all yet-unconnected faces to a boundary condition specified by serial number
+  virtual void connect_rest(int bc_sn) = 0;
   /*!
    * Extrudes a layer of elements from unconnected faces:
    * 1. Extrudes one deformed element from every unconnected face of every deformed element.
@@ -89,7 +95,7 @@ class Mesh
    * Offsetting thus provides a rudimentary way of creating anisotropic wall layers.
    */
   virtual void extrude(bool collapse = false, double offset = 0) = 0;
-  void extrude(Layer_sequence layers)
+  inline void extrude(Layer_sequence layers)
   {
     double height = 1;
     for (int i_layer = layers.n_layers() - 1; i_layer > 0; --i_layer) {
@@ -98,22 +104,69 @@ class Mesh
       height = new_height;
     }
   }
-  //! connects all yet-unconnected faces to a boundary condition specified by serial number
-  virtual void connect_rest(int bc_sn) = 0;
+  //! \}
+
+  //! \name Automated tree meshing
+  //! \{
+  /*! \brief Initializes meshing with bin/quad/[octree](https://en.wikipedia.org/wiki/Octree) topology.
+   * \details Creates a tree initialized with one element with ref level 0 located at {0, 0, 0}.
+   * Technically, free-form elements can also be created in the same mesh,
+   * but they will not be connected to the tree.
+   * Only one tree can be created.
+   * Connections and boundary conditions are set automatically for tree elements,
+   * so tree meshes should always automatically be valid unless you explicitly invalidate it with `Mesh::disconnect_boundary`.
+   * \param extremal_bcs Boundary conditions to apply to elements
+   *   with exposed faces at the extremal boundaries of the tree.
+   *   Takes ownership of objects that the vector entries point to.
+   *   It must contain exactly `2*n_dim` entries.
+   *   E.g. `extremal_bcs[0]` is the boundary condition to apply to the minimum \f$x_0\f$ face,
+   *   `extremal_bcs[1]` is the BC for the maximum \f$x_0\f$ face,
+   *   `extremal_bcs[2]` is for minimum \f$x_1\f$.
+   */
+  virtual void add_tree(std::vector<Flow_bc*> extremal_bcs) = 0;
+  /*! \brief Defines the surface geometry to be meshed as a boundary.
+   * \details Acquires ownership of the objects pointed to `geometry` and `surface_bc`.
+   * The geometric surface represented by `geometry` is now a boundary of the domain
+   * and its boundary condition is `surface_bc`.
+   * The flood fill algorithm is then executed starting at `flood_fill_start`
+   * to determine which elements are in the domain
+   * and extrusion is executed to create a suitably body-fitted mesh.
+   * `flood_fill_start` must have at least `n_dim` entries and extra entries are ignored.
+   * If the mesh is excessively coarse, there may be no elements in the domain
+   * as they are all too close to the surfaces.
+   * So, `Mesh::update` should be calling a few times before `Mesh::set_surfaces`.
+   * Any surfaces defined by previous invokations of `set_surface` are forgotten.
+   */
+  virtual void set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) = 0;
+  static inline bool always(Element&) {return true;}
+  static inline bool never(Element&) {return false;}
+  /*! \brief Updates tree mesh based on user-supplied (un)refinement criteria.
+   * \details Evaluates `refine_criterion` and `unrefine_criterion` on every element in the tree (if a tree exists).
+   * Whenever `refine_criterion` is `true` and `unrefine_criterion` is `false`, that element is refined.
+   * Whenever `unrefine_criterion` is `true` and `refine_criterion` is `false` for a complete group of sibling elements,
+   * that group is unrefined.
+   * In order to satisfy some criteria regarding the refinement level of neighbors,
+   * some additional elements may be refined and some elements may not be unrefined.
+   * Both criteria must be thread-safe
+   * and must not depend on the order in which elements are processed.
+   * The flood fill and extrusion are also updated.
+   */
+  virtual void update(std::function<bool(Element&)> refine_criterion = always, std::function<bool(Element&)> unrefine_criterion = never) = 0;
+  //! \}
 
   //! An object to provide information about whether the mesh connectivity is valid and if not, why.
   class Connection_validity
   {
     public:
-    const int n_duplicate; //!< number of faces with duplicate connections
+    const int n_redundant; //!< number of redundant connections, counting each participating face as one
     const int n_missing; //!< number of missing connections
     //! returns true if connectivity is valid
-    inline operator bool() {return (n_duplicate == 0) && (n_missing == 0);}
+    inline operator bool() {return (n_redundant == 0) && (n_missing == 0);}
     //! if connectivity is invalid, throw an exception with a helpful message
     inline void assert_valid()
     {
       if (!*this) {
-        auto message = "Invalid mesh with " + std::to_string(n_duplicate) + " duplicate connections and "
+        auto message = "Invalid mesh with " + std::to_string(n_redundant) + " redundant connections and "
                        + std::to_string(n_missing) + " missing connections.";
         throw std::runtime_error(message);
       }

@@ -1,13 +1,12 @@
 #ifndef HEXED_BOUNDARY_CONDITION_HPP_
 #define HEXED_BOUNDARY_CONDITION_HPP_
 
-#include "Boundary_face.hpp"
+#include "connection.hpp"
 #include "Surface_func.hpp"
+#include "Surface_geom.hpp"
 
 namespace hexed
 {
-
-class Boundary_connection;
 
 /*!
  * Abstract class representing an arbitrary flow boundary condition (as opposed to a mesh BC).
@@ -38,6 +37,7 @@ class Flow_bc
 class Mesh_bc
 {
   public:
+  //! \note must set the `Vertex::lock` on all vertices it accesses
   virtual void snap_vertices(Boundary_connection&) = 0;
   virtual void snap_node_adj(Boundary_connection&, const Basis&) = 0;
   virtual ~Mesh_bc() = default;
@@ -204,7 +204,8 @@ class Nominal_pos : public Mesh_bc
 };
 
 //! \brief implicitly represents a surface by supporting a set of geometric operations
-//! \details NASCART-GT provides a derived class representing a simplex geometry
+//! \details NASCART-GT provides a derived class representing a simplex geometry.
+//! \deprecated Prefer `Surface_geom` instead.
 class Surface_geometry
 {
   public:
@@ -239,6 +240,7 @@ class Surface_set : public Surface_geometry
 };
 
 //! \brief snaps to a `Surface_geometry`
+//! \deprecated Use `Geom_mbc` instead.
 class Surface_mbc : public Mesh_bc
 {
   std::unique_ptr<Surface_geometry> sg;
@@ -249,70 +251,16 @@ class Surface_mbc : public Mesh_bc
   virtual void snap_node_adj(Boundary_connection&, const Basis&);
 };
 
-/*!
- * A `Boundary_face` that also provides details about the connection for the neighbor flux
- * computation and requests for a particular `Boundary_condition` to be applied to it.
- */
-class Boundary_connection : public Boundary_face, public Face_connection<Deformed_element>
+//! \brief snaps to a `Surface_geom`
+class Geom_mbc : public Mesh_bc
 {
+  std::unique_ptr<Surface_geom> geom;
   public:
-  inline Boundary_connection(Storage_params params) : Face_connection<Deformed_element>{params} {}
-  virtual Element& element() = 0;
-  virtual int bound_cond_serial_n() = 0;
+  //! acquire ownership of `*surf_geom`, which faces/vertices will be snapped to
+  inline Geom_mbc(Surface_geom* surf_geom) : geom{surf_geom} {}
+  virtual void snap_vertices(Boundary_connection&);
+  virtual void snap_node_adj(Boundary_connection&, const Basis&);
 };
-
-/*!
- * Implementation of `Boundary_connection` which also can provide a reference to the element
- * involved (for Jacobian calculation among other purposes).
- */
-template <typename element_t>
-class Typed_bound_connection : public Boundary_connection
-{
-  element_t& elem;
-  Storage_params params;
-  int i_d;
-  bool ifs;
-  int bc_sn;
-  Eigen::VectorXd pos;
-  Eigen::VectorXd state_c;
-  void connect_normal();
-
-  public:
-  Typed_bound_connection(element_t& elem_arg, int i_dim_arg, bool inside_face_sign_arg, int bc_serial_n)
-  : Boundary_connection{elem_arg.storage_params()},
-    elem{elem_arg},
-    params{elem.storage_params()},
-    i_d{i_dim_arg},
-    ifs{inside_face_sign_arg},
-    bc_sn{bc_serial_n},
-    pos(params.n_dim*params.n_qpoint()/params.row_size),
-    state_c(params.n_var*params.n_qpoint()/params.row_size)
-  {
-    connect_normal();
-    elem.faces[direction().i_face(0)] = state();
-  }
-  virtual Storage_params storage_params() {return params;}
-  virtual double* ghost_face() {return state() + params.n_dof()/params.row_size;}
-  virtual double* inside_face() {return state();}
-  virtual int i_dim() {return i_d;}
-  virtual bool inside_face_sign() {return ifs;}
-  virtual double* surface_normal() {return normal();}
-  virtual double* surface_position() {return pos.data();}
-  virtual double* state_cache() {return state_c.data();}
-  virtual Con_dir<Deformed_element> direction() {return {{i_d, i_d}, {ifs, !ifs}};}
-  virtual int bound_cond_serial_n() {return bc_sn;}
-  element_t& element() {return elem;}
-};
-
-template <>
-inline void Typed_bound_connection<Element>::connect_normal()
-{}
-
-template <>
-inline void Typed_bound_connection<Deformed_element>::connect_normal()
-{
-  elem.face_normal(2*i_d + ifs) = normal(0);
-}
 
 }
 #endif

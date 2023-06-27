@@ -245,7 +245,7 @@ TEST_CASE("Accessible_mesh")
     }
     {
       auto con_val = mesh1.valid();
-      REQUIRE(con_val.n_duplicate == 0);
+      REQUIRE(con_val.n_redundant == 0);
       REQUIRE(con_val.n_missing == 4*(4+4+2)); // every face has a missing connection
       REQUIRE(!con_val);
       REQUIRE_THROWS(con_val.assert_valid());
@@ -281,18 +281,18 @@ TEST_CASE("Accessible_mesh")
     // everything should be fine now
     {
       auto con_val = mesh1.valid();
-      REQUIRE(con_val.n_duplicate == 0);
+      REQUIRE(con_val.n_redundant == 0);
       REQUIRE(con_val.n_missing == 0); // every face has a missing connection
       REQUIRE(bool(con_val));
       con_val.assert_valid();
     }
-    // check that it can detect duplicate connections
+    // check that it can detect redundant connections
     mesh1.connect_cartesian(0, {coarse[0], coarse[1]}, {1});
     mesh1.connect_cartesian(0, {coarse[0], coarse[1]}, {1});
     {
       auto con_val = mesh1.valid();
       REQUIRE(con_val.n_missing == 0);
-      REQUIRE(con_val.n_duplicate == 4);
+      REQUIRE(con_val.n_redundant == 4);
       REQUIRE(!con_val);
       REQUIRE_THROWS(con_val.assert_valid());
     }
@@ -352,6 +352,83 @@ TEST_CASE("extruded hanging node connection validity")
     mesh.connect_hanging(0, coarse, fine, {{i_dim, i_dim}, {0, 1}}, true, std::vector<bool>(false, 4));
   }
   mesh.extrude();
-  REQUIRE(mesh.valid().n_duplicate == 0);
+  REQUIRE(mesh.valid().n_redundant == 0);
   REQUIRE(mesh.valid().n_missing == 2*(4 + 8) + 4);
+}
+
+TEST_CASE("Tree meshing")
+{
+  hexed::Accessible_mesh mesh({1, 5, 3, hexed::config::max_row_size}, .7);
+  REQUIRE_THROWS(mesh.update(hexed::Mesh::always));
+  SECTION("wrong number of BCs") {
+    std::vector<hexed::Flow_bc*> bcs;
+    for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Copy);
+    REQUIRE_THROWS(mesh.add_tree(bcs));
+  }
+  {
+    std::vector<hexed::Flow_bc*> bcs;
+    for (int i = 0; i < 6; ++i) bcs.push_back(new hexed::Copy);
+    mesh.add_tree(bcs);
+  }
+  SECTION("multiple `add_tree` calls") {
+    std::vector<hexed::Flow_bc*> bcs;
+    for (int i = 0; i < 6; ++i) bcs.push_back(new hexed::Copy);
+    REQUIRE_THROWS(mesh.add_tree(bcs));
+  }
+  REQUIRE(mesh.elements().size() == 1);
+  mesh.valid().assert_valid();
+  SECTION("refinement")
+  {
+    mesh.update();
+    REQUIRE(mesh.elements().size() == 8);
+    mesh.valid().assert_valid();
+    mesh.update([](hexed::Element& elem){auto np = elem.nominal_position(); return np[0] == 0 && np[1] == 0 && np[2] == 0;});
+    REQUIRE(mesh.elements().size() == 15);
+    mesh.valid().assert_valid();
+    mesh.update([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 2 && np[0] == 1 && np[1] == 1 && np[2] == 1;});
+    REQUIRE(mesh.elements().size() == 43);
+    mesh.valid().assert_valid();
+    mesh.update([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 1 && np[0] == 1 && np[1] == 1 && np[2] == 1;});
+    mesh.update([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 2 && np[0] == 2 && np[1] == 2 && np[2] == 2;});
+    mesh.valid().assert_valid();
+    REQUIRE(mesh.elements().size() == 78);
+  }
+  SECTION("unrefinement")
+  {
+    for (int i = 0; i < 3; ++i) mesh.update();
+    REQUIRE(mesh.elements().size() == 512);
+    mesh.valid().assert_valid();
+    auto predicate = [](hexed::Element& elem){
+      auto np = elem.nominal_position();
+      int thresh = hexed::math::pow(2, elem.refinement_level())/2;
+      return    (np[0] <  thresh && np[1] <  thresh && np[2] <  thresh)
+             || (np[0] >= thresh && np[1] >= thresh && np[2] >= thresh);
+    };
+    mesh.update(hexed::Mesh::never, predicate);
+    REQUIRE(mesh.elements().size() == 6*64 + 2*8);
+    mesh.valid().assert_valid();
+    // this should do nothing because of ref level smoothing
+    mesh.update(hexed::Mesh::never, predicate);
+    REQUIRE(mesh.elements().size() == 6*64 + 2*8);
+    mesh.valid().assert_valid();
+    // simultaneous refinement and unrefinement
+    mesh.update([](hexed::Element& elem){return elem.refinement_level() == 2;}, [](hexed::Element& elem){return elem.refinement_level() == 3;});
+    REQUIRE(mesh.elements().size() == 6*8 + 2*64);
+    mesh.valid().assert_valid();
+    SECTION("neighbors with different ref levels") {
+      hexed::Accessible_mesh mesh1({1, 5, 3, hexed::config::max_row_size}, .7);
+      mesh1.add_boundary_condition(new hexed::Copy, new hexed::Null_mbc);
+      std::vector<hexed::Flow_bc*> bcs;
+      for (int i = 0; i < 6; ++i) bcs.push_back(new hexed::Copy);
+      mesh1.add_tree(bcs);
+      mesh1.update();
+      mesh1.update();
+      mesh1.update([](hexed::Element& elem){return elem.nominal_position()[0] < 2;});
+      REQUIRE(mesh1.elements().size() == 4*8 + 4*64);
+      mesh1.valid().assert_valid();
+      mesh1.update(hexed::Mesh::never, hexed::Mesh::always);
+      REQUIRE(mesh1.elements().size() == 4*1 + 4*8);
+      mesh1.valid().assert_valid();
+    }
+  }
 }

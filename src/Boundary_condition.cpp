@@ -477,7 +477,10 @@ void Nominal_pos::snap_vertices(Boundary_connection& con)
   for (int i_vert = 0; i_vert < con.storage_params().n_vertices(); ++i_vert) {
     if ((i_vert/stride)%2 == con.inside_face_sign()) {
       double pos = (con.element().nominal_position()[con.i_dim()] + con.inside_face_sign())*con.element().nominal_size();
-      con.element().vertex(i_vert).pos[con.i_dim()] = pos;
+      Vertex& vert = con.element().vertex(i_vert);
+      omp_set_lock(&vert.lock);
+      vert.pos[con.i_dim()] = pos;
+      omp_unset_lock(&vert.lock);
     }
   }
 }
@@ -520,8 +523,11 @@ void Surface_mbc::snap_vertices(Boundary_connection& con)
   const int stride = math::pow(2, con.storage_params().n_dim - 1 - con.i_dim());
   for (int i_vert = 0; i_vert < con.storage_params().n_vertices(); ++i_vert) {
     if ((i_vert/stride)%2 == con.inside_face_sign()) {
-      auto& pos = con.element().vertex(i_vert).pos;
+      Vertex& vert = con.element().vertex(i_vert);
+      omp_set_lock(&vert.lock);
+      auto& pos = vert.pos;
       pos = sg->project_point(pos);
+      omp_unset_lock(&vert.lock);
     }
   }
 }
@@ -541,6 +547,49 @@ void Surface_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
     }
     // compute intersections
     auto sects = sg->line_intersections(face_pos[0], face_pos[1]);
+    // set the node adjustment to match the nearest intersection, if any of them are reasonably close
+    double best_adj = 0.;
+    double distance = 1.;
+    for (double sect : sects) {
+      double adj = sect - con.inside_face_sign();
+      if (std::abs(adj) < distance) {
+        best_adj = adj;
+        distance = std::abs(adj);
+      }
+    }
+    con.element().node_adjustments()[(2*con.i_dim() + con.inside_face_sign())*nfq + i_qpoint] += best_adj;
+  }
+}
+
+void Geom_mbc::snap_vertices(Boundary_connection& con)
+{
+  const int nd = con.storage_params().n_dim;
+  const int stride = math::pow(2, nd - 1 - con.i_dim());
+  for (int i_vert = 0; i_vert < con.storage_params().n_vertices(); ++i_vert) {
+    if ((i_vert/stride)%2 == con.inside_face_sign()) {
+      Vertex& vert = con.element().vertex(i_vert);
+      omp_set_lock(&vert.lock);
+      auto& pos = vert.pos;
+      auto nearest = geom->nearest_point(math::to_mat(pos.begin(), pos.begin() + nd));
+      for (int i_dim = 0; i_dim < nd; ++i_dim) pos[i_dim] = nearest(i_dim);
+      omp_unset_lock(&vert.lock);
+    }
+  }
+}
+
+void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
+{
+  if (!con.element().node_adjustments()) return; // Cartesian elements don't have `node_adjustments()`, so in this case just exit
+  auto params {con.storage_params()};
+  const int nfq = params.n_qpoint()/params.row_size;
+  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+    // get position on this and opposite face
+    Mat<> face_pos [2];
+    for (int face_sign = 0; face_sign < 2; ++face_sign) {
+      face_pos[face_sign] = math::to_mat(con.element().face_position(basis, 2*con.i_dim() + face_sign, i_qpoint));
+    }
+    // compute intersections
+    auto sects = geom->intersections(face_pos[0], face_pos[1]);
     // set the node adjustment to match the nearest intersection, if any of them are reasonably close
     double best_adj = 0.;
     double distance = 1.;

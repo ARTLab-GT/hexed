@@ -3,6 +3,19 @@
 namespace hexed::math
 {
 
+Eigen::VectorXi direction(int n_dim, int i_dim, bool is_positive)
+{
+  Eigen::VectorXi dir(n_dim);
+  dir.setZero();
+  dir(i_dim) = sign(is_positive);
+  return dir;
+}
+
+Eigen::VectorXi direction(int n_dim, int i_face)
+{
+  return direction(n_dim, i_face/2, i_face%2);
+}
+
 Eigen::VectorXd hypercube_matvec(const Eigen::MatrixXd& mat, const Eigen::VectorXd& vec)
 {
   #if DEBUG
