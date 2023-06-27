@@ -5,7 +5,6 @@
 #include <vector>
 #include <memory>
 #include <set>
-#include <unordered_set>
 #include <Eigen/Dense>
 #include "Lock.hpp"
 
@@ -26,7 +25,6 @@ class Vertex
   static constexpr reduction vector_max = &Eigen::VectorXd::maxCoeff;
   static constexpr reduction vector_min = &Eigen::VectorXd::minCoeff;
   std::array<double, 3> pos {0, 0, 0};
-  bool mobile = false;
   std::vector<int> record; //!< for algorithms to keep notes as they please
   Lock lock; //!< for any algorithms that could involve data races on vertices
 
@@ -36,19 +34,23 @@ class Vertex
   Vertex(Vertex&&) = delete;
   Vertex& operator=(const Vertex&) = delete;
   Vertex& operator=(Vertex&&) = delete;
+  //! when combining vertices, the amount each moves will be inversely proportional to this value
   int mass();
+  //! whether relaxation will cause this vertex to move
+  bool is_mobile();
   /*! \brief Specify that another vertex represents the same grid point as `*this`.
    * \details `*this` will acquire `other`'s resources:
    * - All `Transferable_ptr`s pointing to `other` will be changed to point to `this`.
    * - All `Non_transferable_ptr`s pointing to `other` will be `nullify`d.
    * - The mass of `other` will be added to that of `*this`.
    * - The `pos`s will be averaged, weighted by `mass`.
-   * - The vertex will be mobile if both vertices were mobile.
    * The fact that "eat" seemed like the obvious word to describe this might be a
    * sign that I've been reading too much SnK...
    */
   void eat(Vertex& other);
-  void calc_relax(double factor = .5); //!< compute a (but do not apply) new position resulting in a smoother grid.
+  //! compute (but do not apply) a new position resulting in a smoother grid.
+  void calc_relax(double factor = .5);
+  //! If all the `Transferable_ptr`s to this vertex have `mobile = true`, apply the relaxation computed by `calc_relax`.
   void apply_relax(); //!< update `pos` to the position computed by `calc_relax`.
   //! determine the shared shareable_value of all `Transferable_ptr`s to this by applying `reduction`. Thread safe.
   double shared_value(reduction = vector_max); //!< cppcheck-suppress internalAstError
@@ -58,8 +60,8 @@ class Vertex
   private:
   int m;
   std::array<double, 3> relax {0, 0, 0};
-  std::unordered_set<Transferable_ptr*> trbl_ptrs;
-  std::unordered_set<Non_transferable_ptr*> nont_ptrs;
+  std::set<Transferable_ptr*> trbl_ptrs;
+  std::set<Non_transferable_ptr*> nont_ptrs;
   std::set<Vertex*> neighbors; // use set because have to iterate through
   Vertex(std::array<double, 3> pos);
 };
@@ -68,6 +70,8 @@ class Vertex
  * \details This is used by
  * `Deformed_element` to track its vertices, which are initially separate and then
  * eat those of neighboring elements as the grid connectivity is established.
+ * All `Transferable_ptr`s to a vertex collectively own it
+ * -- it will be destroyed with the last of its `Transferable_ptr`s.
  */
 class Vertex::Transferable_ptr
 {
@@ -76,12 +80,14 @@ class Vertex::Transferable_ptr
   public:
   //! use this member to store a value that should be synchronized among all elements sharing this vertex
   double shareable_value;
+  //! whether this `Transferable_ptr` wants its vertex to be mobile
+  const bool mobile;
 
   //! Create a vertex and construct a `Transferable_ptr` to it.
-  Transferable_ptr(std::array<double, 3> pos);
+  Transferable_ptr(std::array<double, 3> pos, bool mobile = false);
   //! copy semantics creates another pointer to the same vertex
   Transferable_ptr(const Transferable_ptr&);
-  ~Transferable_ptr();
+  ~Transferable_ptr(); //!< reduces mass of vertex by 1
   Transferable_ptr& operator=(const Transferable_ptr&);
 
   Vertex* operator->();

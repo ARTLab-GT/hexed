@@ -4,16 +4,16 @@
 
 TEST_CASE("Vertex")
 {
-  hexed::Vertex::Transferable_ptr ptr0 {{1.1, -3.5, 0.05}};
+  hexed::Vertex::Transferable_ptr ptr0 {{1.1, -3.5, 0.05}, true};
   hexed::Vertex* orig_addr = &*ptr0;
-  hexed::Vertex::Transferable_ptr ptr1 {{1., 1., 1.}};
-  REQUIRE(ptr1->mobile == false);
+  hexed::Vertex::Transferable_ptr ptr1 {{1., 1., 1.}, false};
+  REQUIRE(ptr1->is_mobile() == false);
 
   REQUIRE(ptr0->mass() == 1);
   REQUIRE(ptr0->pos[0] == 1.1);
   REQUIRE((*ptr0).pos[1] == -3.5);
   REQUIRE(ptr0->pos[2] == 0.05);
-  ptr0->mobile = true;
+  REQUIRE(ptr0->is_mobile() == true);
   (*ptr0).pos[1] = 2.;
   REQUIRE(ptr0->pos[1] == 2.);
   REQUIRE(ptr0.shareable_value == 0.);
@@ -29,7 +29,7 @@ TEST_CASE("Vertex")
     ptr0->eat(*ptr1);
     ptr0->eat(*ptr0); // autocannibalism does nothing
     REQUIRE(ptr0->mass() == 2);
-    REQUIRE(ptr0->mobile == false);
+    REQUIRE(ptr0->is_mobile() == false);
     REQUIRE(ptr0->pos[0] == 1.05);
     REQUIRE(ptr0->pos[1] == 1.5);
     REQUIRE(ptr1->pos[2] == 0.525);
@@ -41,16 +41,16 @@ TEST_CASE("Vertex")
     std::vector<double> correct {1, -7, 4, 0, 9};
     REQUIRE(std::equal(ptr0->record.begin(), ptr0->record.end(), correct.begin()));
 
-    hexed::Vertex::Transferable_ptr ptr2 {{1., 0., 0.}};
-    hexed::Vertex::Transferable_ptr ptr3 {{1., 0., 0.}};
-    hexed::Vertex::Transferable_ptr ptr4 {{1., 0., 0.}};
+    hexed::Vertex::Transferable_ptr ptr2 {{1., 0., 0.}, true};
+    hexed::Vertex::Transferable_ptr ptr3 {{1., 0., 0.}, true};
+    hexed::Vertex::Transferable_ptr ptr4 {{1., 0., 0.}, true};
     ptr2->eat(*ptr3);
     ptr3->eat(*ptr4);
-    ptr1->mobile = ptr3->mobile = true;
+    REQUIRE(ptr2->is_mobile() == true);
     ptr1->eat(*ptr3);
     REQUIRE(ptr1->mass() == 5.);
     REQUIRE(ptr0->pos[0] == 1.4);
-    REQUIRE(ptr2->mobile);
+    REQUIRE(ptr2->is_mobile() == false);
   }
 
   SECTION("Pointer validity")
@@ -111,9 +111,9 @@ TEST_CASE("Vertex")
 
   SECTION("connection and position relaxation")
   {
-    hexed::Vertex::Transferable_ptr vert0 {{0., 0., 0.}};
-    hexed::Vertex::Transferable_ptr vert1 {{2., 0., 0.}};
-    hexed::Vertex::Transferable_ptr vert2 {{0., 2., 0.}};
+    hexed::Vertex::Transferable_ptr vert0 {{0., 0., 0.}, true};
+    hexed::Vertex::Transferable_ptr vert1 {{2., 0., 0.}, true};
+    hexed::Vertex::Transferable_ptr vert2 {{0., 2., 0.}, true};
     hexed::Vertex::connect(*vert0, *vert1);
     hexed::Vertex::connect(*vert2, *vert0);
     // check neighbors are correct
@@ -122,47 +122,56 @@ TEST_CASE("Vertex")
     REQUIRE(!hexed::Vertex::are_neighbors(*vert1, *vert2));
     REQUIRE(!hexed::Vertex::are_neighbors(*vert2, *vert1));
 
-    SECTION("calling once")
-    {
-      vert0->calc_relax();
-      REQUIRE(vert0->pos == std::array<double, 3>{0., 0., 0.});
-      vert0->apply_relax();
-      REQUIRE(vert0->pos == std::array<double, 3>{0., 0., 0.});
-      vert0->mobile = true;
-      vert0->calc_relax();
-      vert0->apply_relax();
-      REQUIRE(vert1->pos == std::array<double, 3>{2., 0., 0.});
-      REQUIRE(vert0->pos == std::array<double, 3>{.5, .5, 0.});
-    }
-    vert0->mobile = true;
-
-    SECTION("calling multiple times")
-    {
-      vert0->calc_relax();
-      vert0->calc_relax();
-      vert0->apply_relax();
-      vert0->apply_relax();
-      REQUIRE(vert1->pos == std::array<double, 3>{2., 0., 0.});
-      REQUIRE(vert0->pos == std::array<double, 3>{.5, .5, 0.});
-    }
-
     SECTION("eating and deleting")
     {
-      hexed::Vertex::Transferable_ptr* temp = new hexed::Vertex::Transferable_ptr {{-1., -1., -1.}};
-      hexed::Vertex::connect(*vert0, **temp);
-      delete temp;
-      hexed::Vertex::Transferable_ptr* vert3 = new hexed::Vertex::Transferable_ptr {{0., 0., 2.}};
-      hexed::Vertex::Transferable_ptr vert4 {{-1., -1., 0.}};
-      hexed::Vertex::connect(**vert3, *vert4);
-      hexed::Vertex::connect(**vert3, *vert1);
-      vert0->eat(**vert3);
-      REQUIRE(vert0->mass() == 2);
-      vert0->mobile = true;
+      {
+        hexed::Vertex::Transferable_ptr temp {{-1., -1., -1.}, false};
+        hexed::Vertex::connect(*vert0, *temp);
+      }
+      {
+        hexed::Vertex::Transferable_ptr temp {{0., 0., 0.}, false};
+        vert0->eat(*temp);
+        REQUIRE(vert0->is_mobile() == false);
+      }
+      REQUIRE(vert0->is_mobile() == true);
+      {
+        hexed::Vertex::Transferable_ptr vert3 {{0., 0., 2.}, true};
+        hexed::Vertex::Transferable_ptr vert4 {{-1., -1., 0.}, true};
+        hexed::Vertex::connect(*vert3, *vert4);
+        hexed::Vertex::connect(*vert3, *vert1);
+        vert0->eat(*vert3);
+        REQUIRE(vert0->mass() == 2);
+        vert0->calc_relax();
+        vert0->apply_relax();
+        REQUIRE(vert0->pos == std::array<double, 3>{1./6., 1./6., .5});
+      }
+      REQUIRE(vert0->mass() == 1);
+    }
+
+    SECTION("calling relax once")
+    {
+      { // should only work while mobile
+        hexed::Vertex::Transferable_ptr immobile {{0., 0., 0.}, false};
+        vert0->eat(*immobile);
+        vert0->calc_relax();
+        REQUIRE(vert0->pos == std::array<double, 3>{0., 0., 0.});
+        vert0->apply_relax();
+        REQUIRE(vert0->pos == std::array<double, 3>{0., 0., 0.});
+      }
       vert0->calc_relax();
       vert0->apply_relax();
-      REQUIRE(vert0->pos == std::array<double, 3>{1./6., 1./6., .5});
-      delete vert3;
-      REQUIRE(vert0->mass() == 1);
+      REQUIRE(vert1->pos == std::array<double, 3>{2., 0., 0.});
+      REQUIRE(vert0->pos == std::array<double, 3>{.5, .5, 0.});
+    }
+
+    SECTION("calling relax multiple times")
+    {
+      vert0->calc_relax();
+      vert0->calc_relax();
+      vert0->apply_relax();
+      vert0->apply_relax();
+      REQUIRE(vert1->pos == std::array<double, 3>{2., 0., 0.});
+      REQUIRE(vert0->pos == std::array<double, 3>{.5, .5, 0.});
     }
 
     SECTION("self-connection does nothing")

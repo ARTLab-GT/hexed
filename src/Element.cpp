@@ -4,7 +4,7 @@
 namespace hexed
 {
 
-Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level) :
+Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level, bool mobile_vertices) :
   params(params_arg),
   n_dim(params.n_dim),
   nom_pos(n_dim, 0),
@@ -40,13 +40,17 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
       i_row[i_dim] = (i_vert/stride[i_dim])%2;
       vertex_pos[i_dim] += i_row[i_dim]*nom_sz;
     }
-    vertices.emplace_back(vertex_pos);
+    vertices.emplace_back(vertex_pos, mobile_vertices);
     // establish vertex connections (that is, edges).
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
       if (i_row[i_dim]) Vertex::connect(*vertices.back(), *vertices[i_vert - stride[i_dim]]);
     }
   }
 }
+
+Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level)
+: Element(params_arg, pos, mesh_size, ref_level, false)
+{}
 
 Storage_params Element::storage_params()
 {

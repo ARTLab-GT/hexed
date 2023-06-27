@@ -30,7 +30,7 @@ TEST_CASE("Deformed_element")
   element.node_adjustments()[4*2*2 - 1] = 0.04;
   REQUIRE(element.node_adjustments()[0] == 2.7);
   REQUIRE(element.node_adjustments()[4*2*2 - 1] == 0.04);
-  REQUIRE(element.vertex(1).mobile);
+  REQUIRE(element.vertex(1).is_mobile());
 
   hexed::Storage_params params3d {1, 1, 3, 2};
   hexed::Deformed_element element3d {params3d};

@@ -28,7 +28,6 @@ void Vertex::eat(Vertex& other)
     }
     m += other.m; // combine mass
     other.m = 0;
-    mobile = mobile && other.mobile; // determine mobility
     // steal neighbors
     for (Vertex* neighbor : other.neighbors) {
       connect(*this, *neighbor);
@@ -50,6 +49,11 @@ int Vertex::mass()
   return m;
 }
 
+bool Vertex::is_mobile()
+{
+  return std::all_of(trbl_ptrs.begin(), trbl_ptrs.end(), [](Transferable_ptr* ptr){return ptr->mobile;});
+}
+
 void Vertex::calc_relax(double factor)
 {
   for (int i_dim = 0; i_dim < 3; ++i_dim) relax[i_dim] = 0.;
@@ -66,23 +70,19 @@ void Vertex::calc_relax(double factor)
 
 void Vertex::apply_relax()
 {
-  if (mobile)
-  {
-    for (int i_dim = 0; i_dim < 3; ++i_dim)
-    {
+  if (is_mobile()) {
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
       pos[i_dim] += relax[i_dim];
     }
   }
-  for (int i_dim = 0; i_dim < 3; ++i_dim)
-  {
+  for (int i_dim = 0; i_dim < 3; ++i_dim) {
     relax[i_dim] = 0;
   }
 }
 
 void Vertex::connect(Vertex& vert0, Vertex& vert1)
 {
-  if (&vert0 != &vert1)
-  {
+  if (&vert0 != &vert1) {
     vert0.neighbors.insert(&vert1);
     vert1.neighbors.insert(&vert0);
   }
@@ -103,14 +103,14 @@ double Vertex::shared_value(Vertex::reduction reduce)
   return std::invoke(reduce, shareables);
 }
 
-Vertex::Transferable_ptr::Transferable_ptr(std::array<double, 3> pos)
-: ptr {new Vertex {pos}}, shareable_value {0.}
+Vertex::Transferable_ptr::Transferable_ptr(std::array<double, 3> pos, bool mbl)
+: ptr {new Vertex {pos}}, shareable_value {0.}, mobile{mbl}
 {
   ptr->trbl_ptrs.insert(this);
 }
 
 Vertex::Transferable_ptr::Transferable_ptr(const Vertex::Transferable_ptr& other)
-: ptr{other.ptr}
+: ptr{other.ptr}, mobile{other.mobile}
 {
   ptr->trbl_ptrs.insert(this);
 }
@@ -191,8 +191,7 @@ Vertex::Non_transferable_ptr::operator bool() const
 
 void Vertex::Non_transferable_ptr::nullify()
 {
-  if (ptr)
-  {
+  if (ptr) {
     ptr->nont_ptrs.erase(this);
     ptr = nullptr;
   }

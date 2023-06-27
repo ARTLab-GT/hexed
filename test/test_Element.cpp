@@ -56,7 +56,7 @@ TEST_CASE("Element")
     REQUIRE(element.jacobian(2, 2, i_qpoint) == 1.);
     REQUIRE(element.jacobian_determinant(i_qpoint) == 1.);
   }
-  REQUIRE(!element.vertex(2).mobile);
+  REQUIRE(!element.vertex(2).is_mobile());
 
   SECTION("vertex arrangement")
   {
