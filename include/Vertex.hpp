@@ -7,6 +7,7 @@
 #include <set>
 #include <unordered_set>
 #include <Eigen/Dense>
+#include "Lock.hpp"
 
 namespace hexed
 {
@@ -27,7 +28,7 @@ class Vertex
   std::array<double, 3> pos {0, 0, 0};
   bool mobile = false;
   std::vector<int> record; //!< for algorithms to keep notes as they please
-  omp_lock_t lock; //!< for any algorithms that involve data races on vertices. initialized/destroyed in constructor/destructor
+  Lock lock; //!< for any algorithms that could involve data races on vertices
 
   ~Vertex();
   //! if we have a reason to copy/move vertices, we can implement these
