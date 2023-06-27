@@ -18,6 +18,11 @@ TEST_CASE("Vertex")
   REQUIRE(ptr0->pos[1] == 2.);
   REQUIRE(ptr0.shareable_value == 0.);
   REQUIRE(ptr1.shareable_value == 0.);
+  {
+    hexed::Vertex::Transferable_ptr temp(ptr0);
+    REQUIRE(ptr0->mass() == 2);
+  }
+  REQUIRE(ptr0->mass() == 1);
 
   SECTION("eat")
   {

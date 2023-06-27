@@ -34,7 +34,7 @@ class Vertex
   Vertex(Vertex&&) = delete;
   Vertex& operator=(const Vertex&) = delete;
   Vertex& operator=(Vertex&&) = delete;
-  //! when combining vertices, the amount each moves will be inversely proportional to this value
+  //! the number of `Transferable_ptr`s pointing to this vertex
   int mass();
   //! whether relaxation will cause this vertex to move
   bool is_mobile();
@@ -58,7 +58,6 @@ class Vertex
   static bool are_neighbors(Vertex&, Vertex&);
 
   private:
-  int m;
   std::array<double, 3> relax {0, 0, 0};
   std::set<Transferable_ptr*> trbl_ptrs;
   std::set<Non_transferable_ptr*> nont_ptrs;
@@ -87,7 +86,7 @@ class Vertex::Transferable_ptr
   Transferable_ptr(std::array<double, 3> pos, bool mobile = false);
   //! copy semantics creates another pointer to the same vertex
   Transferable_ptr(const Transferable_ptr&);
-  ~Transferable_ptr(); //!< reduces mass of vertex by 1
+  ~Transferable_ptr();
   Transferable_ptr& operator=(const Transferable_ptr&);
 
   Vertex* operator->();

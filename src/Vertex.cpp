@@ -4,7 +4,7 @@ namespace hexed
 {
 
 Vertex::Vertex (std::array<double, 3> pos)
-: pos{pos}, m{1}
+: pos{pos}
 {}
 
 Vertex::~Vertex()
@@ -22,12 +22,12 @@ void Vertex::eat(Vertex& other)
 {
   if (this != &other)
   {
+    double m = mass();
+    double om = other.mass();
     // average position
     for (int i_dim = 0; i_dim < 3; ++i_dim) {
-      pos[i_dim] = (m*pos[i_dim] + other.m*other.pos[i_dim])/(m + other.m);
+      pos[i_dim] = (m*pos[i_dim] + om*other.pos[i_dim])/(m + om);
     }
-    m += other.m; // combine mass
-    other.m = 0;
     // steal neighbors
     for (Vertex* neighbor : other.neighbors) {
       connect(*this, *neighbor);
@@ -46,7 +46,7 @@ void Vertex::eat(Vertex& other)
 
 int Vertex::mass()
 {
-  return m;
+  return trbl_ptrs.size();
 }
 
 bool Vertex::is_mobile()
@@ -117,7 +117,6 @@ Vertex::Transferable_ptr::Transferable_ptr(const Vertex::Transferable_ptr& other
 
 Vertex::Transferable_ptr::~Transferable_ptr()
 {
-  --ptr->m;
   ptr->trbl_ptrs.erase(this);
 }
 
