@@ -117,6 +117,7 @@ Vertex::Transferable_ptr::Transferable_ptr(const Vertex::Transferable_ptr& other
 
 Vertex::Transferable_ptr::~Transferable_ptr()
 {
+  --ptr->m;
   ptr->trbl_ptrs.erase(this);
 }
 

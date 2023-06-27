@@ -151,15 +151,18 @@ TEST_CASE("Vertex")
       hexed::Vertex::Transferable_ptr* temp = new hexed::Vertex::Transferable_ptr {{-1., -1., -1.}};
       hexed::Vertex::connect(*vert0, **temp);
       delete temp;
-      hexed::Vertex::Transferable_ptr vert3 {{0., 0., 2.}};
+      hexed::Vertex::Transferable_ptr* vert3 = new hexed::Vertex::Transferable_ptr {{0., 0., 2.}};
       hexed::Vertex::Transferable_ptr vert4 {{-1., -1., 0.}};
-      hexed::Vertex::connect(*vert3, *vert4);
-      hexed::Vertex::connect(*vert3, *vert1);
-      vert0->eat(*vert3);
+      hexed::Vertex::connect(**vert3, *vert4);
+      hexed::Vertex::connect(**vert3, *vert1);
+      vert0->eat(**vert3);
+      REQUIRE(vert0->mass() == 2);
       vert0->mobile = true;
       vert0->calc_relax();
       vert0->apply_relax();
       REQUIRE(vert0->pos == std::array<double, 3>{1./6., 1./6., .5});
+      delete vert3;
+      REQUIRE(vert0->mass() == 1);
     }
 
     SECTION("self-connection does nothing")
