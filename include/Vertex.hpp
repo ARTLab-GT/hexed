@@ -45,6 +45,7 @@ class Vertex
    * - All `Non_transferable_ptr`s pointing to `other` will be `nullify`d.
    * - The mass of `other` will be added to that of `*this`.
    * - The `pos`s will be averaged, weighted by `mass`.
+   *
    * The fact that "eat" seemed like the obvious word to describe this might be a
    * sign that I've been reading too much SnK...
    */

@@ -11,12 +11,22 @@ namespace hexed
  * It contains an OpenMP lock variable.
  * To acquire (aka set) the lock, construct an `Acquire` object from it.
  * When the `Acquire` object is destroyed, the lock will be released (unset).
+ * Use like this:
+ * ~~~
+ * Lock l;
+ * #pragma omp parallel for
+ * for (int i = 0; i < N; ++i) {
+ *   Acquire a(l); // acquires lock
+ *   // only one thread at a time can execute any statements here
+ * } // lock is released because `a` is destroyed
+ * ~~~
  */
 class Lock
 {
   omp_lock_t l;
   public:
-  class Acquire //!< acquires the lock when constructed and releases when destroyed
+  //! acquires the lock when constructed and releases when destroyed
+  class Acquire
   {
     Lock& lock;
     public:
