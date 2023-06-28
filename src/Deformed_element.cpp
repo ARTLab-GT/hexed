@@ -5,14 +5,12 @@ namespace hexed
 {
 
 Deformed_element::Deformed_element(Storage_params params, std::vector<int> pos, double mesh_size, int ref_level) :
-  Element{params, pos, mesh_size, ref_level},
+  Element{params, pos, mesh_size, ref_level, true},
   n_qpoint{params.n_qpoint()},
   jac_dat{(n_dim*n_dim + 1)*n_qpoint},
   node_adj{Eigen::VectorXd::Zero(n_qpoint/params.row_size*n_dim*2)},
   f_nrml{}
-{
-  for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) vertex(i_vert).mobile = true;
-}
+{}
 
 std::vector<double> Deformed_element::position(const Basis& basis, int i_qpoint)
 {

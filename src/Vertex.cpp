@@ -3,11 +3,9 @@
 namespace hexed
 {
 
-Vertex::Vertex (std::array<double, 3> pos)
-: pos{pos}, m{1}
-{
-  omp_init_lock(&lock);
-}
+Vertex::Vertex (Mat<3> pos)
+: pos{pos}
+{}
 
 Vertex::~Vertex()
 {
@@ -18,7 +16,6 @@ Vertex::~Vertex()
   for (Vertex* neighbor : neighbors) {
     neighbor->neighbors.erase(this);
   }
-  omp_destroy_lock(&lock);
 }
 
 void Vertex::eat(Vertex& other)
@@ -26,12 +23,9 @@ void Vertex::eat(Vertex& other)
   if (this != &other)
   {
     // average position
-    for (int i_dim = 0; i_dim < 3; ++i_dim) {
-      pos[i_dim] = (m*pos[i_dim] + other.m*other.pos[i_dim])/(m + other.m);
-    }
-    m += other.m; // combine mass
-    other.m = 0;
-    mobile = mobile && other.mobile; // determine mobility
+    double m = mass();
+    double om = other.mass();
+    pos = (m*pos + om*other.pos)/(m + om);
     // steal neighbors
     for (Vertex* neighbor : other.neighbors) {
       connect(*this, *neighbor);
@@ -50,42 +44,30 @@ void Vertex::eat(Vertex& other)
 
 int Vertex::mass()
 {
-  return m;
+  return trbl_ptrs.size();
+}
+
+bool Vertex::is_mobile()
+{
+  return std::all_of(trbl_ptrs.begin(), trbl_ptrs.end(), [](Transferable_ptr* ptr){return ptr->mobile;});
 }
 
 void Vertex::calc_relax(double factor)
 {
-  for (int i_dim = 0; i_dim < 3; ++i_dim) relax[i_dim] = 0.;
-  for (Vertex* neighbor : neighbors) {
-    for (int i_dim = 0; i_dim < 3; ++i_dim) {
-      relax[i_dim] += neighbor->pos[i_dim];
-    }
-  }
-  int size = neighbors.size();
-  for (int i_dim = 0; i_dim < 3; ++i_dim) {
-    relax[i_dim] = factor*(relax[i_dim]/size - pos[i_dim]);
-  }
+  relax.setZero();
+  for (Vertex* neighbor : neighbors) relax += neighbor->pos;
+  relax = factor*(relax/neighbors.size() - pos);
 }
 
 void Vertex::apply_relax()
 {
-  if (mobile)
-  {
-    for (int i_dim = 0; i_dim < 3; ++i_dim)
-    {
-      pos[i_dim] += relax[i_dim];
-    }
-  }
-  for (int i_dim = 0; i_dim < 3; ++i_dim)
-  {
-    relax[i_dim] = 0;
-  }
+  if (is_mobile()) pos += relax;
+  relax.setZero();
 }
 
 void Vertex::connect(Vertex& vert0, Vertex& vert1)
 {
-  if (&vert0 != &vert1)
-  {
+  if (&vert0 != &vert1) {
     vert0.neighbors.insert(&vert1);
     vert1.neighbors.insert(&vert0);
   }
@@ -106,14 +88,14 @@ double Vertex::shared_value(Vertex::reduction reduce)
   return std::invoke(reduce, shareables);
 }
 
-Vertex::Transferable_ptr::Transferable_ptr(std::array<double, 3> pos)
-: ptr {new Vertex {pos}}, shareable_value {0.}
+Vertex::Transferable_ptr::Transferable_ptr(Mat<3> pos, bool mbl)
+: ptr {new Vertex {pos}}, shareable_value {0.}, mobile{mbl}
 {
   ptr->trbl_ptrs.insert(this);
 }
 
 Vertex::Transferable_ptr::Transferable_ptr(const Vertex::Transferable_ptr& other)
-: ptr{other.ptr}
+: ptr{other.ptr}, mobile{other.mobile}
 {
   ptr->trbl_ptrs.insert(this);
 }
@@ -193,8 +175,7 @@ Vertex::Non_transferable_ptr::operator bool() const
 
 void Vertex::Non_transferable_ptr::nullify()
 {
-  if (ptr)
-  {
+  if (ptr) {
     ptr->nont_ptrs.erase(this);
     ptr = nullptr;
   }

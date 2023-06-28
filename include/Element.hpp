@@ -30,6 +30,8 @@ class Element
   double nom_sz;
   int r_level;
   std::vector<Vertex::Transferable_ptr> vertices;
+  // constructor that allows the vertices to be created as mobile, for the  benefit of `Deformed_element`
+  Element(Storage_params, std::vector<int> pos, double mesh_size, int ref_level, bool mobile_vertices);
 
   private:
   int n_dof;
@@ -56,8 +58,8 @@ class Element
    * The nominal size is defined to be `mesh_size`/(2^`ref_level`).
    * The vertices will be spaced at intervals of the nominal size.
    */
-  Element(Storage_params, std::vector<int> pos={}, double mesh_size=1., int ref_level = 0);
-  virtual inline bool get_is_deformed() {return is_deformed;} // for determining whether a pointer is deformed
+  Element(Storage_params, std::vector<int> pos = {}, double mesh_size = 1., int ref_level = 0);
+  virtual inline bool get_is_deformed() {return is_deformed;} //!< for determining whether a pointer is deformed
   //! Can't copy an Element. Doing so would have to either duplicate or break vertex connections, both of which seem error prone.
   Element(const Element&) = delete;
   Element& operator=(const Element&) = delete;
@@ -78,7 +80,7 @@ class Element
   double* time_step_scale(); //!< Layout: [i_qpoint]
   double* art_visc_coef(); //!< layout: [i_qpoint]
   double* art_visc_forcing(); //!< layout: [i_forcing][i_qpoint]
-  virtual double* node_adjustments() {return nullptr;} // overriden by `Deformed_element`
+  virtual double* node_adjustments() {return nullptr;} //!< overriden by `Deformed_element`
 
   /*!
    * Compute the Jacobian matrix. I.e., derivative of `i_dim`th

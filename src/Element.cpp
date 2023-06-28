@@ -4,7 +4,7 @@
 namespace hexed
 {
 
-Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level) :
+Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level, bool mobile_vertices) :
   params(params_arg),
   n_dim(params.n_dim),
   nom_pos(n_dim, 0),
@@ -21,18 +21,18 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   // initialize local time step scaling to 1.
   for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) time_step_scale()[i_qpoint] = 1.;
   // set position of vertex 0
-  std::array<double, 3> first_pos;
+  Mat<3> first_pos;
+  first_pos.setZero();
   int n_pos_set = std::min<int>(pos.size(), n_dim);
   for (int i_dim = 0; i_dim < n_pos_set; ++i_dim) {
     nom_pos[i_dim] = pos[i_dim];
     first_pos[i_dim] = pos[i_dim]*nom_sz;
   }
-  for (int i_dim = n_pos_set; i_dim < 3; ++i_dim) first_pos[i_dim] = 0.;
   // construct vertices
   for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert)
   {
     // compute position of vertex
-    auto vertex_pos = first_pos;
+    Mat<3> vertex_pos = first_pos;
     int stride [3];
     int i_row [3];
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -40,13 +40,17 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
       i_row[i_dim] = (i_vert/stride[i_dim])%2;
       vertex_pos[i_dim] += i_row[i_dim]*nom_sz;
     }
-    vertices.emplace_back(vertex_pos);
+    vertices.emplace_back(vertex_pos, mobile_vertices);
     // establish vertex connections (that is, edges).
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
       if (i_row[i_dim]) Vertex::connect(*vertices.back(), *vertices[i_vert - stride[i_dim]]);
     }
   }
 }
+
+Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level)
+: Element(params_arg, pos, mesh_size, ref_level, false)
+{}
 
 Storage_params Element::storage_params()
 {

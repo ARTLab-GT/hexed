@@ -47,11 +47,11 @@ Plus, we need to edit a *whole bunch* of environment variables to accommodate Te
   If these directories don't exist, create them.
 - You can change environment variables by editing the file `.bashrc`.
   First, it is recommended that you make a backup copy:
-  ~~~
+  ~~~{.sh}
   cp .bashrc .bashrc_backup
   ~~~
   - Now edit `.bashrc` and add the following lines at the end:
-  ~~~
+  ~~~{.sh}
   TECPLOT_DIR=/opt/tecplot/360ex_2020r2
   TECPLOT_LIB_PATH=$TECPLOT_DIR/bin/
   export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:$TECPLOT_DIR/include/:~/.local/include/
@@ -64,7 +64,7 @@ Plus, we need to edit a *whole bunch* of environment variables to accommodate Te
 - Close and reopen the terminal.
 - You also need somewhere to put all the code I'm about to make you download, as opposed to dumping it in your home directory.
   Thus, do
-  ~~~
+  ~~~{.sh}
   mkdir codes
   ~~~
 
