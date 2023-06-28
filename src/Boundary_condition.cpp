@@ -525,7 +525,9 @@ void Surface_mbc::snap_vertices(Boundary_connection& con)
       Vertex& vert = con.element().vertex(i_vert);
       Lock::Acquire lock(vert.lock);
       auto& pos = vert.pos;
-      pos = sg->project_point(pos);
+      std::array<double, 3> pos_arr {pos[0], pos[1], pos[2]};
+      pos_arr = sg->project_point(pos_arr);
+      pos = math::to_mat(pos_arr);
     }
   }
 }
@@ -567,9 +569,7 @@ void Geom_mbc::snap_vertices(Boundary_connection& con)
     if ((i_vert/stride)%2 == con.inside_face_sign()) {
       Vertex& vert = con.element().vertex(i_vert);
       Lock::Acquire lock(vert.lock);
-      auto& pos = vert.pos;
-      auto nearest = geom->nearest_point(math::to_mat(pos.begin(), pos.begin() + nd));
-      for (int i_dim = 0; i_dim < nd; ++i_dim) pos[i_dim] = nearest(i_dim);
+      vert.pos = geom->nearest_point(vert.pos);
     }
   }
 }

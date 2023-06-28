@@ -64,11 +64,11 @@ TEST_CASE("Element")
     hexed::Storage_params params3d {3, 5, 3, 4};
     hexed::Element elem3d {params3d, {1, 2, -1}, 0.8, 2};
     REQUIRE(elem3d.nominal_size() == Catch::Approx(0.2));
-    assert_equal(elem3d.vertex(0).pos, {0.2, 0.4, -0.2});
-    assert_equal(elem3d.vertex(1).pos, {0.2, 0.4,  0. });
-    assert_equal(elem3d.vertex(2).pos, {0.2, 0.6, -0.2});
-    assert_equal(elem3d.vertex(5).pos, {0.4, 0.4,  0. });
-    assert_equal(elem3d.vertex(7).pos, {0.4, 0.6,  0. });
+    REQUIRE_THAT(elem3d.vertex(0).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{0.2, 0.4, -0.2}, hexed::math::Approx_equal(0, 1e-12)));
+    REQUIRE_THAT(elem3d.vertex(1).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{0.2, 0.4,  0. }, hexed::math::Approx_equal(0, 1e-12)));
+    REQUIRE_THAT(elem3d.vertex(2).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{0.2, 0.6, -0.2}, hexed::math::Approx_equal(0, 1e-12)));
+    REQUIRE_THAT(elem3d.vertex(5).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{0.4, 0.4,  0. }, hexed::math::Approx_equal(0, 1e-12)));
+    REQUIRE_THAT(elem3d.vertex(7).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{0.4, 0.6,  0. }, hexed::math::Approx_equal(0, 1e-12)));
     REQUIRE( hexed::Vertex::are_neighbors(elem3d.vertex(0), elem3d.vertex(1)));
     REQUIRE( hexed::Vertex::are_neighbors(elem3d.vertex(0), elem3d.vertex(2)));
     REQUIRE(!hexed::Vertex::are_neighbors(elem3d.vertex(0), elem3d.vertex(3)));

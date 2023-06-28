@@ -148,7 +148,7 @@ TEST_CASE("Vertex")
         REQUIRE(vert0->mass() == 2);
         vert0->calc_relax();
         vert0->apply_relax();
-        REQUIRE(vert0->pos == std::array<double, 3>{1./6., 1./6., .5});
+        REQUIRE_THAT(vert0->pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{1./6., 1./6., .5}, hexed::math::Approx_equal(0, 1e-12)));
       }
       REQUIRE(vert0->mass() == 1);
     }
@@ -159,14 +159,14 @@ TEST_CASE("Vertex")
         hexed::Vertex::Transferable_ptr immobile {{0., 0., 0.}, false};
         vert0->eat(*immobile);
         vert0->calc_relax();
-        REQUIRE(vert0->pos == std::array<double, 3>{0., 0., 0.});
+        REQUIRE_THAT(vert0->pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 0., 0.}, hexed::math::Approx_equal(0, 1e-12)));
         vert0->apply_relax();
-        REQUIRE(vert0->pos == std::array<double, 3>{0., 0., 0.});
+        REQUIRE_THAT(vert0->pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 0., 0.}, hexed::math::Approx_equal(0, 1e-12)));
       }
       vert0->calc_relax();
       vert0->apply_relax();
-      REQUIRE(vert1->pos == std::array<double, 3>{2., 0., 0.});
-      REQUIRE(vert0->pos == std::array<double, 3>{.5, .5, 0.});
+      REQUIRE_THAT(vert1->pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{2., 0., 0.}, hexed::math::Approx_equal(0, 1e-12)));
+      REQUIRE_THAT(vert0->pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{.5, .5, 0.}, hexed::math::Approx_equal(0, 1e-12)));
     }
 
     SECTION("calling relax multiple times")
@@ -175,8 +175,8 @@ TEST_CASE("Vertex")
       vert0->calc_relax();
       vert0->apply_relax();
       vert0->apply_relax();
-      REQUIRE(vert1->pos == std::array<double, 3>{2., 0., 0.});
-      REQUIRE(vert0->pos == std::array<double, 3>{.5, .5, 0.});
+      REQUIRE_THAT(vert1->pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{2., 0., 0.}, hexed::math::Approx_equal(0, 1e-12)));
+      REQUIRE_THAT(vert0->pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{.5, .5, 0.}, hexed::math::Approx_equal(0, 1e-12)));
     }
 
     SECTION("self-connection does nothing")
@@ -184,7 +184,7 @@ TEST_CASE("Vertex")
       hexed::Vertex::connect(*vert0, *vert0);
       vert0->calc_relax();
       vert0->apply_relax();
-      REQUIRE(vert0->pos == std::array<double, 3>{.5, .5, 0.});
+      REQUIRE_THAT(vert0->pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{.5, .5, 0.}, hexed::math::Approx_equal(0, 1e-12)));
     }
   }
 

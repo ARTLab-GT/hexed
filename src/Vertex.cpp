@@ -3,7 +3,7 @@
 namespace hexed
 {
 
-Vertex::Vertex (std::array<double, 3> pos)
+Vertex::Vertex (Mat<3> pos)
 : pos{pos}
 {}
 
@@ -22,12 +22,10 @@ void Vertex::eat(Vertex& other)
 {
   if (this != &other)
   {
+    // average position
     double m = mass();
     double om = other.mass();
-    // average position
-    for (int i_dim = 0; i_dim < 3; ++i_dim) {
-      pos[i_dim] = (m*pos[i_dim] + om*other.pos[i_dim])/(m + om);
-    }
+    pos = (m*pos + om*other.pos)/(m + om);
     // steal neighbors
     for (Vertex* neighbor : other.neighbors) {
       connect(*this, *neighbor);
@@ -56,28 +54,15 @@ bool Vertex::is_mobile()
 
 void Vertex::calc_relax(double factor)
 {
-  for (int i_dim = 0; i_dim < 3; ++i_dim) relax[i_dim] = 0.;
-  for (Vertex* neighbor : neighbors) {
-    for (int i_dim = 0; i_dim < 3; ++i_dim) {
-      relax[i_dim] += neighbor->pos[i_dim];
-    }
-  }
-  int size = neighbors.size();
-  for (int i_dim = 0; i_dim < 3; ++i_dim) {
-    relax[i_dim] = factor*(relax[i_dim]/size - pos[i_dim]);
-  }
+  relax.setZero();
+  for (Vertex* neighbor : neighbors) relax += neighbor->pos;
+  relax = factor*(relax/neighbors.size() - pos);
 }
 
 void Vertex::apply_relax()
 {
-  if (is_mobile()) {
-    for (int i_dim = 0; i_dim < 3; ++i_dim) {
-      pos[i_dim] += relax[i_dim];
-    }
-  }
-  for (int i_dim = 0; i_dim < 3; ++i_dim) {
-    relax[i_dim] = 0;
-  }
+  if (is_mobile()) pos += relax;
+  relax.setZero();
 }
 
 void Vertex::connect(Vertex& vert0, Vertex& vert1)
@@ -103,7 +88,7 @@ double Vertex::shared_value(Vertex::reduction reduce)
   return std::invoke(reduce, shareables);
 }
 
-Vertex::Transferable_ptr::Transferable_ptr(std::array<double, 3> pos, bool mbl)
+Vertex::Transferable_ptr::Transferable_ptr(Mat<3> pos, bool mbl)
 : ptr {new Vertex {pos}}, shareable_value {0.}, mobile{mbl}
 {
   ptr->trbl_ptrs.insert(this);

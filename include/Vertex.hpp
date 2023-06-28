@@ -7,6 +7,7 @@
 #include <set>
 #include <Eigen/Dense>
 #include "Lock.hpp"
+#include "math.hpp"
 
 namespace hexed
 {
@@ -24,7 +25,7 @@ class Vertex
   typedef double (Eigen::VectorXd::*reduction)() const;
   static constexpr reduction vector_max = &Eigen::VectorXd::maxCoeff;
   static constexpr reduction vector_min = &Eigen::VectorXd::minCoeff;
-  std::array<double, 3> pos {0, 0, 0};
+  Mat<3> pos {0, 0, 0};
   std::vector<int> record; //!< for algorithms to keep notes as they please
   Lock lock; //!< for any algorithms that could involve data races on vertices
 
@@ -58,11 +59,11 @@ class Vertex
   static bool are_neighbors(Vertex&, Vertex&);
 
   private:
-  std::array<double, 3> relax {0, 0, 0};
+  Mat<3> relax {0, 0, 0};
   std::set<Transferable_ptr*> trbl_ptrs;
   std::set<Non_transferable_ptr*> nont_ptrs;
   std::set<Vertex*> neighbors; // use set because have to iterate through
-  Vertex(std::array<double, 3> pos);
+  Vertex(Mat<3> pos);
 };
 
 /*! \brief A pointer class which can be transferred by `Vertex::eat`.
@@ -83,7 +84,7 @@ class Vertex::Transferable_ptr
   const bool mobile;
 
   //! Create a vertex and construct a `Transferable_ptr` to it.
-  Transferable_ptr(std::array<double, 3> pos, bool mobile = false);
+  Transferable_ptr(Mat<3> pos, bool mobile = false);
   //! copy semantics creates another pointer to the same vertex
   Transferable_ptr(const Transferable_ptr&);
   ~Transferable_ptr();

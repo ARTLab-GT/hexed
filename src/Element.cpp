@@ -21,18 +21,18 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   // initialize local time step scaling to 1.
   for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) time_step_scale()[i_qpoint] = 1.;
   // set position of vertex 0
-  std::array<double, 3> first_pos;
+  Mat<3> first_pos;
+  first_pos.setZero();
   int n_pos_set = std::min<int>(pos.size(), n_dim);
   for (int i_dim = 0; i_dim < n_pos_set; ++i_dim) {
     nom_pos[i_dim] = pos[i_dim];
     first_pos[i_dim] = pos[i_dim]*nom_sz;
   }
-  for (int i_dim = n_pos_set; i_dim < 3; ++i_dim) first_pos[i_dim] = 0.;
   // construct vertices
   for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert)
   {
     // compute position of vertex
-    auto vertex_pos = first_pos;
+    Mat<3> vertex_pos = first_pos;
     int stride [3];
     int i_row [3];
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
