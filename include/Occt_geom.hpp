@@ -22,31 +22,38 @@ namespace hexed
  */
 class Occt_geom : public Surface_geom
 {
+  // whether the message settings for OCCT have been set to prevent it polluting `std::cout`
+  static bool message_set; // defaults to false
+  // set OCCT messages to do nothing, if that hasn't already been done
+  // this should be called at the start of any function that does any file IO
+  static void set_message();
   public:
   //! \see `read_cad()`
   Occt_geom(TopoDS_Shape&&);
   Mat<> nearest_point(Mat<> point) override;
   //! \note May return duplicate points if intersection is on the boundary of multiple faces.
   std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
-};
 
-/*! \brief Reads a CAD file and returns a geometry object.
- * \details Returned object can be used to construct an `Occt_geom`.
- * Supply an OCCT CAD reader type as the template argument.
- * Each reader can read exactly one file type,
- * so be sure the type of the file matches the reader you pick.
- * Currently supported readers are:
- * - `IGESControl_Reader` : IGES files
- */
-template <typename reader_t>
-TopoDS_Shape read_cad(std::string file_name)
-{
-  reader_t reader;
-  auto result = reader.ReadFile(file_name.c_str());
-  HEXED_ASSERT(result == IFSelect_RetDone, "failed to read geometry file");
-  reader.TransferRoots();
-  return reader.OneShape();
-}
+  /*! \brief Reads a CAD file and constructs an `Occt_geom` from it.
+   * \details Supply an OCCT CAD reader type as the template argument.
+   * Each reader can read exactly one file type,
+   * so be sure the type of the file matches the reader you pick.
+   * Currently supported readers are:
+   * - `IGESControl_Reader` : IGES files
+   *
+   * Not thread safe.
+   */
+  template <typename reader_t>
+  static Occt_geom read(std::string file_name)
+  {
+    set_message();
+    reader_t reader;
+    auto result = reader.ReadFile(file_name.c_str());
+    HEXED_ASSERT(result == IFSelect_RetDone, "failed to read geometry file");
+    reader.TransferRoots();
+    return Occt_geom(reader.OneShape());
+  }
+};
 
 }
 #endif

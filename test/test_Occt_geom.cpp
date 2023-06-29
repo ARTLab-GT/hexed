@@ -3,6 +3,6 @@
 
 TEST_CASE("Occt_geom")
 {
-  REQUIRE_THROWS(hexed::read_cad<IGESControl_Reader>("nonexistent.igs"));
-  hexed::Occt_geom geom(hexed::read_cad<IGESControl_Reader>("ellipsoid.igs"));
+  REQUIRE_THROWS(hexed::Occt_geom::read<IGESControl_Reader>("nonexistent.igs"));
+  auto geom = hexed::Occt_geom::read<IGESControl_Reader>("ellipsoid.igs");
 }
