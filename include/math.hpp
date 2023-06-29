@@ -13,7 +13,7 @@ const int dyn = Eigen::Dynamic; //!< \brief convenience alias for `Eigen::dynami
 template <int rows = dyn, int cols = 1>
 using Mat = Eigen::Matrix<double, rows, cols>; //!< \brief convenience alias for `Eigen::Matrix<double, rows = dyn, cols = 1>`
 const auto all = Eigen::all; //!< \brief convenience alias for `Eigen::all`
-const auto last = Eigen::last; //!< \brief convenience alias for `Eigen::all`
+const auto last = Eigen::last; //!< \brief convenience alias for `Eigen::last`
 
 //! Miscellaneous mathematical functions that aren't in `std::math`
 namespace math
