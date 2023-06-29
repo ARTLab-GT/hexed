@@ -33,6 +33,7 @@ option(use_otter "include capability to use otter for plotting" OFF)
 option(use_tecplot "include capability to use tecplot for plotting" ON)
 option(use_cppcheck "use the cppcheck static analysis tool (requires cppcheck)" OFF)
 option(use_nlopt "enable features that require root finding with NLopt" OFF)
+option(use_occt "enable CAD geometry processing with OpenCASCADE Technology" ON)
 
 # determine whether to compile with sanitizers
 if (sanitize)
@@ -129,6 +130,10 @@ endif()
 if (use_nlopt)
     find_package(NLopt REQUIRED)
     target_link_libraries(hexed PRIVATE nlopt)
+endif()
+if (use_occt)
+    find_package(OpenCASCADE REQUIRED)
+    target_link_libraries(hexed PUBLIC TKBRep TKOpenGl TKV3d TKIGES)
 endif()
 
 # add include/source files
