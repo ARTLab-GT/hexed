@@ -20,6 +20,7 @@ test_Iteration_status.cpp
 test_Layer_sequence.cpp
 test_math.cpp
 test_Max_dt.cpp
+test_Occt_geom.cpp
 test_pde.cpp
 test_Physical_basis.cpp
 test_Prolong_refined.cpp
