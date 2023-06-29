@@ -27,12 +27,14 @@ class Occt_geom : public Surface_geom
   // set OCCT messages to do nothing, if that hasn't already been done
   // this should be called at the start of any function that does any file IO
   static void set_message();
+  TopoDS_Shape topo_shape;
   public:
-  //! \see `read_cad()`
+  //! \see `read()`
   Occt_geom(TopoDS_Shape&&);
   Mat<> nearest_point(Mat<> point) override;
   //! \note May return duplicate points if intersection is on the boundary of multiple faces.
   std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
+  inline TopoDS_Shape shape() {return topo_shape;} //!< fetches the underlying OCCT geometry representation
 
   /*! \brief Reads a CAD file and constructs an `Occt_geom` from it.
    * \details Supply an OCCT CAD reader type as the template argument.
