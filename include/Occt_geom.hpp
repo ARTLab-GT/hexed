@@ -51,7 +51,7 @@ class Occt_geom : public Surface_geom
    * `Image_AlienPixMap::Save` in OCCT.
    * \param resolution Width/height of image in pixels (it's always square).
    */
-  void write_image(std::string file_name, std::vector<Mat<3>> rotations = {}, int resolution = 1000);
+  void write_image(std::string file_name, Mat<3> eye_pos = {0, 0, 1}, Mat<3> look_at_pos = {0, 0, 0}, int resolution = 1000);
 
   /*! \brief Reads a CAD file and constructs an `Occt_geom` from it.
    * \details Supply an OCCT CAD reader type as the template argument.

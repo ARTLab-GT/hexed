@@ -95,7 +95,7 @@ std::vector<double> Occt_geom::intersections(Mat<> point0, Mat<> point1)
   return sects;
 }
 
-void Occt_geom::write_image(std::string file_name, std::vector<Mat<3>> rotations, int resolution)
+void Occt_geom::write_image(std::string file_name, Mat<3> eye_pos, Mat<3> look_at_pos, int resolution)
 {
   Handle(Aspect_DisplayConnection) displayConnection = new Aspect_DisplayConnection();
   Handle(OpenGl_GraphicDriver) graphicDriver = new OpenGl_GraphicDriver(displayConnection);
@@ -113,10 +113,11 @@ void Occt_geom::write_image(std::string file_name, std::vector<Mat<3>> rotations
   Handle(AIS_Shape) presentation = new AIS_Shape(topo_shape);
   context->Display(presentation, Standard_False);
   context->SetDisplayMode(presentation, AIS_Shaded, Standard_False);
-  view->SetProj(V3d_Zneg);
-  for (Mat<3> rot : rotations) {
-    view->Rotate(rot(0), rot(1), rot(2), 0, 0, 0, 0);
-  }
+  view->SetFront();
+  eye_pos *= 1e3;
+  look_at_pos *= 1e3;
+  view->SetEye(eye_pos(0), eye_pos(1), eye_pos(2));
+  view->SetAt(look_at_pos(0), look_at_pos(1), look_at_pos(2));
   view->FitAll(.2);
   view->Redraw();
   view->Dump(file_name.c_str());
