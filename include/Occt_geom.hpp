@@ -29,7 +29,13 @@ class Occt_geom : public Surface_geom
   static void set_message();
   TopoDS_Shape topo_shape;
   public:
-  //! \see `read()`
+  /*! \brief Construct directly from an OCCT shape object.
+   * \details Coordinates are interpreted dimensionally.
+   * OCCT works exclusively in mm and hexed works exclusively in m,
+   * so the numerical value of the input shape's dimensions will be scaled by 1/1000.
+   * That said, if you're using `read` to import a geometry from a file,
+   * all the unit conversions happen automatically so you don't have to worry about it.
+   */
   Occt_geom(TopoDS_Shape&&);
   Mat<> nearest_point(Mat<> point) override;
   //! \note May return duplicate points if intersection is on the boundary of multiple faces.
@@ -43,6 +49,7 @@ class Occt_geom : public Surface_geom
    * Currently supported readers are:
    * - `IGESControl_Reader` : IGES files
    *
+   * Coordinates are interpreted dimensionally and automatically converted to m.
    * Not thread safe.
    */
   template <typename reader_t>
