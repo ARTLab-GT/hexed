@@ -11,6 +11,13 @@
 // messages
 #include <Message.hxx>
 #include <Message_PrinterToReport.hxx>
+// rendering
+#include <AIS_InteractiveContext.hxx>
+#include <AIS_Shape.hxx>
+#include <Aspect_DisplayConnection.hxx>
+#include <OpenGl_GraphicDriver.hxx>
+#include <V3d_View.hxx>
+#include <Xw_Window.hxx>
 
 namespace hexed
 {
@@ -86,6 +93,33 @@ std::vector<double> Occt_geom::intersections(Mat<> point0, Mat<> point1)
     it.Next();
   }
   return sects;
+}
+
+void Occt_geom::write_image(std::string file_name, std::vector<Mat<3>> rotations, int resolution)
+{
+  Handle(Aspect_DisplayConnection) displayConnection = new Aspect_DisplayConnection();
+  Handle(OpenGl_GraphicDriver) graphicDriver = new OpenGl_GraphicDriver(displayConnection);
+  Handle(V3d_Viewer) viewer = new V3d_Viewer(graphicDriver);
+  viewer->SetDefaultLights();
+  viewer->SetLightOn();
+  Handle(AIS_InteractiveContext) context = new AIS_InteractiveContext(viewer);
+  Handle(V3d_View) view = viewer->CreateView();
+  Handle(Xw_Window) win = new Xw_Window(graphicDriver->GetDisplayConnection(), "", 0, 0, resolution, resolution);
+  win->SetVirtual(true);
+  view->SetWindow(win);
+  view->SetBackgroundColor(Quantity_Color(Quantity_NOC_BLACK));
+  view->MustBeResized();
+  view->AutoZFit();
+  Handle(AIS_Shape) presentation = new AIS_Shape(topo_shape);
+  context->Display(presentation, Standard_False);
+  context->SetDisplayMode(presentation, AIS_Shaded, Standard_False);
+  view->SetProj(V3d_Zneg);
+  for (Mat<3> rot : rotations) {
+    view->Rotate(rot(0), rot(1), rot(2), 0, 0, 0, 0);
+  }
+  view->FitAll(.2);
+  view->Redraw();
+  view->Dump(file_name.c_str());
 }
 
 }

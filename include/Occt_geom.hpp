@@ -41,6 +41,17 @@ class Occt_geom : public Surface_geom
   //! \note May return duplicate points if intersection is on the boundary of multiple faces.
   std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
   inline TopoDS_Shape shape() {return topo_shape;} //!< fetches the underlying OCCT geometry representation
+  /*! \brief Renders an image of the geometry and writes it to an image file.
+   * \details For verifying/debuggin CAD translations.
+   * \param file_name should include a file type extension which determines
+   * the format of the image file.
+   * I know that `.png` is supported, but I'm not sure what else,
+   * and to be totally honest I don't really care.
+   * If you're overcome by curiousity, feel free to go poke your nose around
+   * `Image_AlienPixMap::Save` in OCCT.
+   * \param resolution Width/height of image in pixels (it's always square).
+   */
+  void write_image(std::string file_name, std::vector<Mat<3>> rotations = {}, int resolution = 1000);
 
   /*! \brief Reads a CAD file and constructs an `Occt_geom` from it.
    * \details Supply an OCCT CAD reader type as the template argument.
