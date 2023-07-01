@@ -6,6 +6,7 @@
 
 #include <TopoDS.hxx>
 #include <IGESControl_Reader.hxx>
+#include <STEPControl_Reader.hxx>
 #include "Surface_geom.hpp"
 
 namespace hexed

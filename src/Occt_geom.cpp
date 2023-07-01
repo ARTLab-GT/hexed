@@ -39,6 +39,14 @@ Occt_geom::Occt_geom(TopoDS_Shape&& s)
 : topo_shape{s}
 {}
 
+// recursively iterates through a shape and all its sub-shapes and invokes `callback`
+// on any shape of the specified type
+void iterate(const TopoDS_Shape& shape, TopAbs_ShapeEnum shape_type, std::function<void(const TopoDS_Shape&)> callback)
+{
+  if (shape.ShapeType() == shape_type) callback(shape);
+  for (TopoDS_Iterator it(shape); it.More(); it.Next()) iterate(it.Value(), shape_type, callback);
+}
+
 Mat<> Occt_geom::nearest_point(Mat<> point)
 {
   // convert point to OCCT format
@@ -50,24 +58,20 @@ Mat<> Occt_geom::nearest_point(Mat<> point)
   double dist = std::numeric_limits<double>::max();
   // iterate through the surfaces in `topo_shape`
   // and find which one has the nearest point
-  TopoDS_Iterator it(topo_shape);
-  while (it.More()) {
-    if (it.Value().ShapeType() == TopAbs_FACE) {
-      // find the nearest point on this surface
-      TopoDS_Face face = TopoDS::Face(it.Value());
-      Handle(Geom_Surface) surface = BRep_Tool::Surface(face);
-      GeomAPI_ProjectPointOnSurf proj(occt_point, surface);
-      gp_Pnt occt_candidate = proj.NearestPoint();
-      Mat<3> candidate{occt_candidate.X(), occt_candidate.Y(), occt_candidate.Z()};
-      // if this point is closer than the nearest point so far, make it the new nearest point
-      double d = (candidate - scaled).norm();
-      if (d < dist) {
-        dist = d;
-        nearest = candidate;
-      }
+  iterate(topo_shape, TopAbs_FACE, [&](const TopoDS_Shape& s){
+    // find the nearest point on this surface
+    TopoDS_Face face = TopoDS::Face(s);
+    Handle(Geom_Surface) surface = BRep_Tool::Surface(face);
+    GeomAPI_ProjectPointOnSurf proj(occt_point, surface);
+    gp_Pnt occt_candidate = proj.NearestPoint();
+    Mat<3> candidate{occt_candidate.X(), occt_candidate.Y(), occt_candidate.Z()};
+    // if this point is closer than the nearest point so far, make it the new nearest point
+    double d = (candidate - scaled).norm();
+    if (d < dist) {
+      dist = d;
+      nearest = candidate;
     }
-    it.Next();
-  }
+  });
   return nearest/1000;
 }
 
@@ -85,23 +89,19 @@ std::vector<double> Occt_geom::intersections(Mat<> point0, Mat<> point1)
   Handle(Geom_Curve) curve = line;
   // iterate through the surfaces in topo_shape and compute the indersections with each
   std::vector<double> sects;
-  TopoDS_Iterator it(topo_shape);
-  while (it.More()) {
-    if (it.Value().ShapeType() == TopAbs_FACE) {
-      // compute intersections
-      TopoDS_Face face = TopoDS::Face(it.Value());
-      Handle(Geom_Surface) surface = BRep_Tool::Surface(face);
-      GeomAPI_IntCS inter(curve, surface);
-      // translate to our parametric format
-      int n = inter.NbPoints();
-      for (int i = 0; i < n; ++i) {
-        double params [3];
-        inter.Parameters(i+1, params[0], params[1], params[2]);
-        sects.push_back(params[2]/dist);
-      }
+  iterate(topo_shape, TopAbs_FACE, [&](const TopoDS_Shape& s){
+    // compute intersections
+    TopoDS_Face face = TopoDS::Face(s);
+    Handle(Geom_Surface) surface = BRep_Tool::Surface(face);
+    GeomAPI_IntCS inter(curve, surface);
+    // translate to our parametric format
+    int n = inter.NbPoints();
+    for (int i = 0; i < n; ++i) {
+      double params [3];
+      inter.Parameters(i+1, params[0], params[1], params[2]);
+      sects.push_back(params[2]/dist);
     }
-    it.Next();
-  }
+  });
   return sects;
 }
 

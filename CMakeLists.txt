@@ -64,6 +64,7 @@ configure_file(hexed-config.cmake.in hexed-config.cmake)
 configure_file(hexed_config.hpp.in include/auto/hexed_config.hpp)
 file(CREATE_LINK ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/include/hexed SYMBOLIC)
 file(COPY_FILE ${CMAKE_SOURCE_DIR}/test/ellipsoid.igs ${CMAKE_BINARY_DIR}/ellipsoid.igs)
+file(COPY_FILE ${CMAKE_SOURCE_DIR}/test/ellipsoid.stp ${CMAKE_BINARY_DIR}/ellipsoid.stp)
 add_custom_command(
     OUTPUT Gauss_lobatto.cpp Gauss_legendre.cpp
     COMMAND python3 ${CMAKE_SOURCE_DIR}/script/auto_generate.py ${CMAKE_BINARY_DIR} ${MAX_BASIS_ROW_SIZE}
@@ -134,7 +135,7 @@ if (use_nlopt)
 endif()
 if (use_occt)
     find_package(OpenCASCADE REQUIRED)
-    target_link_libraries(hexed PUBLIC TKBRep TKOpenGl TKV3d TKIGES)
+    target_link_libraries(hexed PUBLIC TKBRep TKOpenGl TKV3d TKIGES TKSTEP)
 endif()
 
 # add include/source files
