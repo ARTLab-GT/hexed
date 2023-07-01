@@ -41,19 +41,25 @@ Occt_geom::Occt_geom(TopoDS_Shape&& s)
 
 Mat<> Occt_geom::nearest_point(Mat<> point)
 {
+  // convert point to OCCT format
   HEXED_ASSERT(point.size() == 3, "`point` must be 3D");
   Mat<3> scaled = point*1000;
   gp_Pnt occt_point(scaled(0), scaled(1), scaled(2));
+  // initialize nearest point and distance
   Mat<3> nearest = scaled;
   double dist = std::numeric_limits<double>::max();
+  // iterate through the surfaces in `topo_shape`
+  // and find which one has the nearest point
   TopoDS_Iterator it(topo_shape);
   while (it.More()) {
     if (it.Value().ShapeType() == TopAbs_FACE) {
+      // find the nearest point on this surface
       TopoDS_Face face = TopoDS::Face(it.Value());
       Handle(Geom_Surface) surface = BRep_Tool::Surface(face);
       GeomAPI_ProjectPointOnSurf proj(occt_point, surface);
       gp_Pnt occt_candidate = proj.NearestPoint();
       Mat<3> candidate{occt_candidate.X(), occt_candidate.Y(), occt_candidate.Z()};
+      // if this point is closer than the nearest point so far, make it the new nearest point
       double d = (candidate - scaled).norm();
       if (d < dist) {
         dist = d;
@@ -67,6 +73,7 @@ Mat<> Occt_geom::nearest_point(Mat<> point)
 
 std::vector<double> Occt_geom::intersections(Mat<> point0, Mat<> point1)
 {
+  // compute the line through the given points
   HEXED_ASSERT(point0.size() == 3, "`point0` must be 3D");
   HEXED_ASSERT(point1.size() == 3, "`point1` must be 3D");
   Mat<3> scaled0 = 1000*point0;
@@ -76,13 +83,16 @@ std::vector<double> Occt_geom::intersections(Mat<> point0, Mat<> point1)
   gp_Pnt pnt1(scaled1(0), scaled1(1), scaled1(2));
   Handle(Geom_Line) line = GC_MakeLine(pnt0, pnt1);
   Handle(Geom_Curve) curve = line;
+  // iterate through the surfaces in topo_shape and compute the indersections with each
   std::vector<double> sects;
   TopoDS_Iterator it(topo_shape);
   while (it.More()) {
     if (it.Value().ShapeType() == TopAbs_FACE) {
+      // compute intersections
       TopoDS_Face face = TopoDS::Face(it.Value());
       Handle(Geom_Surface) surface = BRep_Tool::Surface(face);
       GeomAPI_IntCS inter(curve, surface);
+      // translate to our parametric format
       int n = inter.NbPoints();
       for (int i = 0; i < n; ++i) {
         double params [3];
