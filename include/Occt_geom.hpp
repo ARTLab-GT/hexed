@@ -5,19 +5,16 @@
 #if HEXED_USE_OCCT
 
 #include <TopoDS.hxx>
-#include <IGESControl_Reader.hxx>
-#include <STEPControl_Reader.hxx>
 #include "Surface_geom.hpp"
 
 namespace hexed
 {
 
-/*! \brief Interface for geometry defined by
+/*! \brief Interface for CAD geometry defined by
  * [Open CASCADE Technology](https://dev.opencascade.org/doc/overview/html/index.html) (OCCT).
- * \details Allows you to mesh a geometry defined by OCCT
- * by implementing the `Surface_geom` functionality on top of the OCCT API.
+ * \details Represents a CAD object defined with the OCCT interface as a `Surface_geom`.
  * The main application for this is reading geometry from CAD files,
- * but this could also be used to pipe in CAD directly from another OCCT program.
+ * but this could also be used to pipe in CAD directly from another program that uses OCCT.
  * \warning For now, only supports 3D, so all input points must be 3D.
  * \todo implement 2D.
  */
@@ -28,6 +25,8 @@ class Occt_geom : public Surface_geom
   // set OCCT messages to do nothing, if that hasn't already been done
   // this should be called at the start of any function that does any file IO
   static void set_message();
+  // reads a file of a specific type
+  template<typename reader_t> static Occt_geom execute_reader(std::string file_name);
   TopoDS_Shape topo_shape;
   public:
   /*! \brief Construct directly from an OCCT shape object.
@@ -58,25 +57,15 @@ class Occt_geom : public Surface_geom
   void write_image(std::string file_name, Mat<3> eye_pos = {0, 0, 1}, Mat<3> look_at_pos = {0, 0, 0}, int resolution = 1000);
 
   /*! \brief Reads a CAD file and constructs an `Occt_geom` from it.
-   * \details Supply an OCCT CAD reader type as the template argument.
-   * Each reader can read exactly one file type,
-   * so be sure the type of the file matches the reader you pick.
-   * Currently supported readers are:
-   * - `IGESControl_Reader` : IGES files
-   *
-   * Coordinates are interpreted dimensionally and automatically converted to m.
+   * \details Coordinates are interpreted dimensionally and automatically converted to m.
    * Not thread safe.
+   * File format is inferred from the file extension.
+   * File extension is case insensitive.
+   * Supported formats and extensions are:
+   * - IGES: `.igs`, `.iges`
+   * - STEP: `.stp`, `.step`
    */
-  template <typename reader_t>
-  static Occt_geom read(std::string file_name)
-  {
-    set_message();
-    reader_t reader;
-    auto result = reader.ReadFile(file_name.c_str());
-    HEXED_ASSERT(result == IFSelect_RetDone, "failed to read geometry file");
-    reader.TransferRoots();
-    return Occt_geom(reader.OneShape());
-  }
+  static Occt_geom read(std::string file_name);
 };
 
 }

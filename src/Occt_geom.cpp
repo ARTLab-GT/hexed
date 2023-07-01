@@ -18,6 +18,9 @@
 #include <OpenGl_GraphicDriver.hxx>
 #include <V3d_View.hxx>
 #include <Xw_Window.hxx>
+// file import
+#include <IGESControl_Reader.hxx>
+#include <STEPControl_Reader.hxx>
 
 namespace hexed
 {
@@ -140,6 +143,29 @@ void Occt_geom::write_image(std::string file_name, Mat<3> eye_pos, Mat<3> look_a
   // render/save
   view->Redraw();
   view->Dump(file_name.c_str());
+}
+
+template <typename reader_t>
+Occt_geom Occt_geom::execute_reader(std::string file_name)
+{
+  set_message();
+  reader_t reader;
+  auto result = reader.ReadFile(file_name.c_str());
+  HEXED_ASSERT(result == IFSelect_RetDone, "failed to read geometry file");
+  reader.TransferRoots();
+  return Occt_geom(reader.OneShape());
+}
+
+Occt_geom Occt_geom::read(std::string file_name)
+{
+  unsigned extension_start = file_name.find_last_of(".");
+  HEXED_ASSERT(extension_start != std::string::npos, "`file_name` has no extension");
+  std::string case_sensitive = file_name.substr(extension_start + 1, std::string::npos);
+  std::string ext = case_sensitive;
+  for (char& c : ext) c = tolower(c);
+  if      (ext == "igs" || ext == "iges") return execute_reader<IGESControl_Reader>(file_name);
+  else if (ext == "stp" || ext == "step") return execute_reader<STEPControl_Reader>(file_name);
+  throw std::runtime_error(format_str(1000, "`hexed::Occt_geom::read` failed to recognize file exteinsion `.%s`.", case_sensitive.c_str()));
 }
 
 }
