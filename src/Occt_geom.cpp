@@ -97,6 +97,7 @@ std::vector<double> Occt_geom::intersections(Mat<> point0, Mat<> point1)
 
 void Occt_geom::write_image(std::string file_name, Mat<3> eye_pos, Mat<3> look_at_pos, int resolution)
 {
+  // general setup
   Handle(Aspect_DisplayConnection) displayConnection = new Aspect_DisplayConnection();
   Handle(OpenGl_GraphicDriver) graphicDriver = new OpenGl_GraphicDriver(displayConnection);
   Handle(V3d_Viewer) viewer = new V3d_Viewer(graphicDriver);
@@ -110,15 +111,23 @@ void Occt_geom::write_image(std::string file_name, Mat<3> eye_pos, Mat<3> look_a
   view->SetBackgroundColor(Quantity_Color(Quantity_NOC_BLACK));
   view->MustBeResized();
   view->AutoZFit();
-  Handle(AIS_Shape) presentation = new AIS_Shape(topo_shape);
-  context->Display(presentation, Standard_False);
-  context->SetDisplayMode(presentation, AIS_Shaded, Standard_False);
+  // add shapes
+  Handle(AIS_Shape) shaded = new AIS_Shape(topo_shape);
+  context->Display(shaded, false);
+  context->SetDisplayMode(shaded, AIS_Shaded, false);
+  Handle(AIS_Shape) wireframe = new AIS_Shape(topo_shape);
+  context->Display(wireframe, false);
+  context->SetDisplayMode(wireframe, AIS_WireFrame, false);
   view->SetFront();
+  // set view orientation
   eye_pos *= 1e3;
   look_at_pos *= 1e3;
   view->SetEye(eye_pos(0), eye_pos(1), eye_pos(2));
   view->SetAt(look_at_pos(0), look_at_pos(1), look_at_pos(2));
   view->FitAll(.2);
+  // add coordinate axes
+  view->TriedronDisplay(Aspect_TOTP_LEFT_LOWER, Quantity_NOC_WHITE, .1);
+  // render/save
   view->Redraw();
   view->Dump(file_name.c_str());
 }

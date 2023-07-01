@@ -15,5 +15,5 @@ TEST_CASE("Occt_geom")
   auto intersections = geom.intersections(hexed::Mat<3>::Unit(2), 3*hexed::Mat<3>::Unit(2));
   REQUIRE_THAT(intersections, Catch::Matchers::UnorderedRangeEquals(std::vector<double>{-.4375, -.5625}, hexed::math::Approx_equal(0, 1e-12)));
   #endif
-  geom.write_image("test.png", {0., 1., 0.});
+  geom.write_image("test.png");
 }

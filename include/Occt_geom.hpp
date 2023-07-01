@@ -43,12 +43,15 @@ class Occt_geom : public Surface_geom
   inline TopoDS_Shape shape() {return topo_shape;} //!< fetches the underlying OCCT geometry representation
   /*! \brief Renders an image of the geometry and writes it to an image file.
    * \details For verifying/debuggin CAD translations.
+   * The default `eye_pos` and `look_at_pos` create a top view in 3D.
    * \param file_name should include a file type extension which determines
    * the format of the image file.
    * I know that `.png` is supported, but I'm not sure what else,
    * and to be totally honest I don't really care.
    * If you're overcome by curiousity, feel free to go poke your nose around
    * `Image_AlienPixMap::Save` in OCCT.
+   * \param eye_pos Position of the "eye" (aka camera).
+   * \param look_at_pos Eye will be pointed directly at this point.
    * \param resolution Width/height of image in pixels (it's always square).
    */
   void write_image(std::string file_name, Mat<3> eye_pos = {0, 0, 1}, Mat<3> look_at_pos = {0, 0, 0}, int resolution = 1000);
