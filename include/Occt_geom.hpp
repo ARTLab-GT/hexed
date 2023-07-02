@@ -5,6 +5,7 @@
 #if HEXED_USE_OCCT
 
 #include <TopoDS.hxx>
+#include <Geom_Surface.hxx>
 #include "Surface_geom.hpp"
 
 namespace hexed
@@ -26,24 +27,32 @@ class Occt_geom : public Surface_geom
   // this should be called at the start of any function that does any file IO
   static void set_message();
   // reads a file of a specific type
-  template<typename reader_t> static Occt_geom execute_reader(std::string file_name);
-  TopoDS_Shape topo_shape;
+  template<typename reader_t> static TopoDS_Shape execute_reader(std::string file_name);
+  const int nd;
+  std::vector<Handle(Geom_Surface)> surfaces;
   public:
   /*! \brief Construct directly from an OCCT shape object.
-   * \details Coordinates are interpreted dimensionally.
+   * \details The shape is interpreted to have dimensionality specified by `n_dim`,
+   * which may be either 2 or 3.
+   * If 3D, only faces are considered.
+   * If 2D, only edges are considered, and all are projected onto the \f$ x_2 = 0 \f$ plane
+   * (i.e. xy-plane).
+   * Coordinates are interpreted dimensionally.
    * OCCT works exclusively in mm and hexed works exclusively in m,
    * so the numerical value of the input shape's dimensions will be scaled by 1/1000.
    * That said, if you're using `read` to import a geometry from a file,
    * all the unit conversions happen automatically so you don't have to worry about it.
    */
-  Occt_geom(TopoDS_Shape&&);
+  Occt_geom(const TopoDS_Shape&, int n_dim);
+
   Mat<> nearest_point(Mat<> point) override;
   //! \note May return duplicate points if intersection is on the boundary of multiple faces.
   std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
-  inline TopoDS_Shape shape() {return topo_shape;} //!< fetches the underlying OCCT geometry representation
+
   /*! \brief Renders an image of the geometry and writes it to an image file.
-   * \details For verifying/debuggin CAD translations.
+   * \details Useful for verifying/debuggin CAD translations.
    * The default `eye_pos` and `look_at_pos` create a top view in 3D.
+   * \param shape Geometry to visualize.
    * \param file_name should include a file type extension which determines
    * the format of the image file.
    * I know that `.png` is supported, but I'm not sure what else,
@@ -54,7 +63,7 @@ class Occt_geom : public Surface_geom
    * \param look_at_pos Eye will be pointed directly at this point.
    * \param resolution Width/height of image in pixels (it's always square).
    */
-  void write_image(std::string file_name, Mat<3> eye_pos = {0, 0, 1}, Mat<3> look_at_pos = {0, 0, 0}, int resolution = 1000);
+  static void write_image(const TopoDS_Shape& shape, std::string file_name, Mat<3> eye_pos = {0, 0, 1}, Mat<3> look_at_pos = {0, 0, 0}, int resolution = 1000);
 
   /*! \brief Reads a CAD file and constructs an `Occt_geom` from it.
    * \details Coordinates are interpreted dimensionally and automatically converted to m.
@@ -65,7 +74,7 @@ class Occt_geom : public Surface_geom
    * - IGES: `.igs`, `.iges`
    * - STEP: `.stp`, `.step`
    */
-  static Occt_geom read(std::string file_name);
+  static TopoDS_Shape read(std::string file_name);
 };
 
 }

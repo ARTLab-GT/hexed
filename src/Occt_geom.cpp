@@ -38,10 +38,6 @@ void Occt_geom::set_message()
   }
 }
 
-Occt_geom::Occt_geom(TopoDS_Shape&& s)
-: topo_shape{s}
-{}
-
 // recursively iterates through a shape and all its sub-shapes and invokes `callback`
 // on any shape of the specified type
 void iterate(const TopoDS_Shape& shape, TopAbs_ShapeEnum shape_type, std::function<void(const TopoDS_Shape&)> callback)
@@ -50,65 +46,77 @@ void iterate(const TopoDS_Shape& shape, TopAbs_ShapeEnum shape_type, std::functi
   for (TopoDS_Iterator it(shape); it.More(); it.Next()) iterate(it.Value(), shape_type, callback);
 }
 
+Occt_geom::Occt_geom(const TopoDS_Shape& shape, int n_dim)
+: nd{n_dim}
+{
+  // collect all surfaces
+  if (nd == 3) {
+    iterate(shape, TopAbs_FACE, [&](const TopoDS_Shape& s){
+      TopoDS_Face face = TopoDS::Face(s);
+      surfaces.push_back(BRep_Tool::Surface(face));
+    });
+  }
+}
+
 Mat<> Occt_geom::nearest_point(Mat<> point)
 {
-  // convert point to OCCT format
-  HEXED_ASSERT(point.size() == 3, "`point` must be 3D");
-  Mat<3> scaled = point*1000;
-  gp_Pnt occt_point(scaled(0), scaled(1), scaled(2));
+  HEXED_ASSERT(point.size() == nd, format_str(100, "`point` must be %iD", nd));
+  Mat<> scaled = point*1000; // convert to mm
   // initialize nearest point and distance
-  Mat<3> nearest = scaled;
+  Mat<> nearest = scaled;
   double dist = std::numeric_limits<double>::max();
-  // iterate through the surfaces in `topo_shape`
-  // and find which one has the nearest point
-  iterate(topo_shape, TopAbs_FACE, [&](const TopoDS_Shape& s){
-    // find the nearest point on this surface
-    TopoDS_Face face = TopoDS::Face(s);
-    Handle(Geom_Surface) surface = BRep_Tool::Surface(face);
-    GeomAPI_ProjectPointOnSurf proj(occt_point, surface);
-    gp_Pnt occt_candidate = proj.NearestPoint();
-    Mat<3> candidate{occt_candidate.X(), occt_candidate.Y(), occt_candidate.Z()};
-    // if this point is closer than the nearest point so far, make it the new nearest point
-    double d = (candidate - scaled).norm();
-    if (d < dist) {
-      dist = d;
-      nearest = candidate;
+  if (nd == 3) {
+    gp_Pnt occt_point(scaled(0), scaled(1), scaled(2));
+    // iterate through the surfaces
+    // and find which one has the nearest point
+    for (auto& surface : surfaces) {
+      // find the nearest point on this surface
+      GeomAPI_ProjectPointOnSurf proj(occt_point, surface);
+      gp_Pnt occt_candidate = proj.NearestPoint();
+      Mat<3> candidate{occt_candidate.X(), occt_candidate.Y(), occt_candidate.Z()};
+      // if this point is closer than the nearest point so far, make it the new nearest point
+      double d = (candidate - scaled).norm();
+      if (d < dist) {
+        dist = d;
+        nearest = candidate;
+      }
     }
-  });
+  }
   return nearest/1000;
 }
 
 std::vector<double> Occt_geom::intersections(Mat<> point0, Mat<> point1)
 {
-  // compute the line through the given points
-  HEXED_ASSERT(point0.size() == 3, "`point0` must be 3D");
-  HEXED_ASSERT(point1.size() == 3, "`point1` must be 3D");
-  Mat<3> scaled0 = 1000*point0;
-  Mat<3> scaled1 = 1000*point1;
+  HEXED_ASSERT(point0.size() == nd, format_str(100, "`point0` must be %iD", nd));
+  HEXED_ASSERT(point1.size() == nd, format_str(100, "`point1` must be %iD", nd));
+  // convert to mm
+  Mat<> scaled0 = 1000*point0;
+  Mat<> scaled1 = 1000*point1;
   double dist = (scaled1 - scaled0).norm();
-  gp_Pnt pnt0(scaled0(0), scaled0(1), scaled0(2));
-  gp_Pnt pnt1(scaled1(0), scaled1(1), scaled1(2));
-  Handle(Geom_Line) line = GC_MakeLine(pnt0, pnt1);
-  Handle(Geom_Curve) curve = line;
-  // iterate through the surfaces in topo_shape and compute the indersections with each
   std::vector<double> sects;
-  iterate(topo_shape, TopAbs_FACE, [&](const TopoDS_Shape& s){
-    // compute intersections
-    TopoDS_Face face = TopoDS::Face(s);
-    Handle(Geom_Surface) surface = BRep_Tool::Surface(face);
-    GeomAPI_IntCS inter(curve, surface);
-    // translate to our parametric format
-    int n = inter.NbPoints();
-    for (int i = 0; i < n; ++i) {
-      double params [3];
-      inter.Parameters(i+1, params[0], params[1], params[2]);
-      sects.push_back(params[2]/dist);
+  if (nd == 3) {
+    // compute the line through the given points
+    gp_Pnt pnt0(scaled0(0), scaled0(1), scaled0(2));
+    gp_Pnt pnt1(scaled1(0), scaled1(1), scaled1(2));
+    Handle(Geom_Line) line = GC_MakeLine(pnt0, pnt1);
+    Handle(Geom_Curve) curve = line;
+    // iterate through the surfaces and compute the indersections with each
+    for (auto& surface : surfaces) {
+      // compute intersections
+      GeomAPI_IntCS inter(curve, surface);
+      // translate to our parametric format
+      int n = inter.NbPoints();
+      for (int i = 0; i < n; ++i) {
+        double params [3];
+        inter.Parameters(i+1, params[0], params[1], params[2]);
+        sects.push_back(params[2]/dist);
+      }
     }
-  });
+  }
   return sects;
 }
 
-void Occt_geom::write_image(std::string file_name, Mat<3> eye_pos, Mat<3> look_at_pos, int resolution)
+void Occt_geom::write_image(const TopoDS_Shape& shape, std::string file_name, Mat<3> eye_pos, Mat<3> look_at_pos, int resolution)
 {
   // general setup
   Handle(Aspect_DisplayConnection) displayConnection = new Aspect_DisplayConnection();
@@ -125,10 +133,10 @@ void Occt_geom::write_image(std::string file_name, Mat<3> eye_pos, Mat<3> look_a
   view->MustBeResized();
   view->AutoZFit();
   // add shapes
-  Handle(AIS_Shape) shaded = new AIS_Shape(topo_shape);
+  Handle(AIS_Shape) shaded = new AIS_Shape(shape);
   context->Display(shaded, false);
   context->SetDisplayMode(shaded, AIS_Shaded, false);
-  Handle(AIS_Shape) wireframe = new AIS_Shape(topo_shape);
+  Handle(AIS_Shape) wireframe = new AIS_Shape(shape);
   context->Display(wireframe, false);
   context->SetDisplayMode(wireframe, AIS_WireFrame, false);
   view->SetFront();
@@ -146,17 +154,17 @@ void Occt_geom::write_image(std::string file_name, Mat<3> eye_pos, Mat<3> look_a
 }
 
 template <typename reader_t>
-Occt_geom Occt_geom::execute_reader(std::string file_name)
+TopoDS_Shape Occt_geom::execute_reader(std::string file_name)
 {
   set_message();
   reader_t reader;
   auto result = reader.ReadFile(file_name.c_str());
   HEXED_ASSERT(result == IFSelect_RetDone, "failed to read geometry file");
   reader.TransferRoots();
-  return Occt_geom(reader.OneShape());
+  return reader.OneShape();
 }
 
-Occt_geom Occt_geom::read(std::string file_name)
+TopoDS_Shape Occt_geom::read(std::string file_name)
 {
   unsigned extension_start = file_name.find_last_of(".");
   HEXED_ASSERT(extension_start != std::string::npos, "`file_name` has no extension");
