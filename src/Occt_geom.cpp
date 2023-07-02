@@ -8,9 +8,11 @@
 #include <TopoDS_Edge.hxx>
 #include <GeomAPI_ProjectPointOnSurf.hxx>
 #include <Geom2dAPI_ProjectPointOnCurve.hxx>
+#include <Geom2dAPI_InterCurveCurve.hxx>
 #include <GeomAPI_IntCS.hxx>
 #include <GC_MakeLine.hxx>
 #include <GC_MakePlane.hxx>
+#include <GCE2d_MakeLine.hxx>
 // messages
 #include <Message.hxx>
 #include <Message_PrinterToReport.hxx>
@@ -131,8 +133,23 @@ std::vector<double> Occt_geom::intersections(Mat<> point0, Mat<> point1)
       int n = inter.NbPoints();
       for (int i = 0; i < n; ++i) {
         double params [3];
-        inter.Parameters(i+1, params[0], params[1], params[2]);
+        inter.Parameters(i + 1, params[0], params[1], params[2]);
         sects.push_back(params[2]/dist);
+      }
+    }
+  } else {
+    gp_Pnt2d pnt0(scaled0(0), scaled0(1));
+    gp_Pnt2d pnt1(scaled1(0), scaled1(1));
+    Handle(Geom2d_Line) line = GCE2d_MakeLine(pnt0, pnt1);
+    for (auto& curve : curves) {
+      Geom2dAPI_InterCurveCurve inter(line, curve);
+      int n = inter.NbPoints();
+      for (int i = 0; i < n; ++i) {
+        gp_Pnt2d occt_point = inter.Point(i + 1);
+        Mat<2> point{occt_point.X(), occt_point.Y()};
+        Mat<2> lhs = scaled1 - scaled0;
+        Mat<2> rhs = point - scaled0;
+        sects.push_back(lhs.dot(rhs)/lhs.squaredNorm());
       }
     }
   }
