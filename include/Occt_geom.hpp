@@ -6,6 +6,7 @@
 
 #include <TopoDS.hxx>
 #include <Geom_Surface.hxx>
+#include <Geom2d_Curve.hxx>
 #include "Surface_geom.hpp"
 
 namespace hexed
@@ -30,6 +31,7 @@ class Occt_geom : public Surface_geom
   template<typename reader_t> static TopoDS_Shape execute_reader(std::string file_name);
   const int nd;
   std::vector<Handle(Geom_Surface)> surfaces;
+  std::vector<Handle(Geom2d_Curve)> curves;
   public:
   /*! \brief Construct directly from an OCCT shape object.
    * \details The shape is interpreted to have dimensionality specified by `n_dim`,

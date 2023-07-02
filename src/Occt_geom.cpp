@@ -5,9 +5,12 @@
 #include <TopoDS_Iterator.hxx>
 #include <BRep_Tool.hxx>
 #include <TopoDS_Face.hxx>
+#include <TopoDS_Edge.hxx>
 #include <GeomAPI_ProjectPointOnSurf.hxx>
+#include <Geom2dAPI_ProjectPointOnCurve.hxx>
 #include <GeomAPI_IntCS.hxx>
 #include <GC_MakeLine.hxx>
+#include <GC_MakePlane.hxx>
 // messages
 #include <Message.hxx>
 #include <Message_PrinterToReport.hxx>
@@ -55,7 +58,15 @@ Occt_geom::Occt_geom(const TopoDS_Shape& shape, int n_dim)
       TopoDS_Face face = TopoDS::Face(s);
       surfaces.push_back(BRep_Tool::Surface(face));
     });
-  }
+  } else if (nd == 2) {
+    Handle(Geom_Plane) plane = GC_MakePlane(0., 0., 1., 0.); // x_2 = 0 plane
+    TopLoc_Location location;
+    double unused [2] {}; // used by `CurveOnPlane` to return values we don't care about
+    iterate(shape, TopAbs_EDGE, [&](const TopoDS_Shape& s){
+      TopoDS_Edge edge = TopoDS::Edge(s);
+      curves.push_back(BRep_Tool::CurveOnPlane(edge, plane, location, unused[0], unused[1]));
+    });
+  } else throw std::runtime_error("`hexed::Occt_gom` must be either 2D or 3D.");
 }
 
 Mat<> Occt_geom::nearest_point(Mat<> point)
@@ -75,6 +86,18 @@ Mat<> Occt_geom::nearest_point(Mat<> point)
       gp_Pnt occt_candidate = proj.NearestPoint();
       Mat<3> candidate{occt_candidate.X(), occt_candidate.Y(), occt_candidate.Z()};
       // if this point is closer than the nearest point so far, make it the new nearest point
+      double d = (candidate - scaled).norm();
+      if (d < dist) {
+        dist = d;
+        nearest = candidate;
+      }
+    }
+  } else {
+    gp_Pnt2d occt_point(scaled(0), scaled(1));
+    for (auto& curve : curves) {
+      Geom2dAPI_ProjectPointOnCurve proj(occt_point, curve);
+      gp_Pnt2d occt_candidate = proj.NearestPoint();
+      Mat<2> candidate{occt_candidate.X(), occt_candidate.Y()};
       double d = (candidate - scaled).norm();
       if (d < dist) {
         dist = d;
