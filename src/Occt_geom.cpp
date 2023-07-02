@@ -54,19 +54,20 @@ void iterate(const TopoDS_Shape& shape, TopAbs_ShapeEnum shape_type, std::functi
 Occt_geom::Occt_geom(const TopoDS_Shape& shape, int n_dim)
 : nd{n_dim}
 {
-  // collect all surfaces
-  if (nd == 3) {
-    iterate(shape, TopAbs_FACE, [&](const TopoDS_Shape& s){
-      TopoDS_Face face = TopoDS::Face(s);
-      surfaces.push_back(BRep_Tool::Surface(face));
-    });
-  } else if (nd == 2) {
+  if (nd == 2) {
+    // collect all curves
     Handle(Geom_Plane) plane = GC_MakePlane(0., 0., 1., 0.); // x_2 = 0 plane
     TopLoc_Location location;
     double unused [2] {}; // used by `CurveOnPlane` to return values we don't care about
     iterate(shape, TopAbs_EDGE, [&](const TopoDS_Shape& s){
       TopoDS_Edge edge = TopoDS::Edge(s);
       curves.push_back(BRep_Tool::CurveOnPlane(edge, plane, location, unused[0], unused[1]));
+    });
+  } else if (nd == 3) {
+    // collect all surfaces
+    iterate(shape, TopAbs_FACE, [&](const TopoDS_Shape& s){
+      TopoDS_Face face = TopoDS::Face(s);
+      surfaces.push_back(BRep_Tool::Surface(face));
     });
   } else throw std::runtime_error("`hexed::Occt_gom` must be either 2D or 3D.");
 }
@@ -78,7 +79,22 @@ Mat<> Occt_geom::nearest_point(Mat<> point)
   // initialize nearest point and distance
   Mat<> nearest = scaled;
   double dist = std::numeric_limits<double>::max();
-  if (nd == 3) {
+  if (nd == 2) {
+    gp_Pnt2d occt_point(scaled(0), scaled(1));
+    // iterate through curves and find which ones has the nearest point
+    for (auto& curve : curves) {
+      // find nearest point
+      Geom2dAPI_ProjectPointOnCurve proj(occt_point, curve);
+      gp_Pnt2d occt_candidate = proj.NearestPoint();
+      Mat<2> candidate{occt_candidate.X(), occt_candidate.Y()};
+      // if this point is closer than the nearest point so far, make it the new nearest point
+      double d = (candidate - scaled).norm();
+      if (d < dist) {
+        dist = d;
+        nearest = candidate;
+      }
+    }
+  } else {
     gp_Pnt occt_point(scaled(0), scaled(1), scaled(2));
     // iterate through the surfaces
     // and find which one has the nearest point
@@ -88,18 +104,6 @@ Mat<> Occt_geom::nearest_point(Mat<> point)
       gp_Pnt occt_candidate = proj.NearestPoint();
       Mat<3> candidate{occt_candidate.X(), occt_candidate.Y(), occt_candidate.Z()};
       // if this point is closer than the nearest point so far, make it the new nearest point
-      double d = (candidate - scaled).norm();
-      if (d < dist) {
-        dist = d;
-        nearest = candidate;
-      }
-    }
-  } else {
-    gp_Pnt2d occt_point(scaled(0), scaled(1));
-    for (auto& curve : curves) {
-      Geom2dAPI_ProjectPointOnCurve proj(occt_point, curve);
-      gp_Pnt2d occt_candidate = proj.NearestPoint();
-      Mat<2> candidate{occt_candidate.X(), occt_candidate.Y()};
       double d = (candidate - scaled).norm();
       if (d < dist) {
         dist = d;
@@ -119,13 +123,34 @@ std::vector<double> Occt_geom::intersections(Mat<> point0, Mat<> point1)
   Mat<> scaled1 = 1000*point1;
   double dist = (scaled1 - scaled0).norm();
   std::vector<double> sects;
-  if (nd == 3) {
+  if (nd == 2) {
+    // compute the line through the given points
+    gp_Pnt2d pnt0(scaled0(0), scaled0(1));
+    gp_Pnt2d pnt1(scaled1(0), scaled1(1));
+    Handle(Geom2d_Line) line = GCE2d_MakeLine(pnt0, pnt1);
+    // iterate through curves and compute the indersections with each
+    for (auto& curve : curves) {
+      // find intersections
+      Geom2dAPI_InterCurveCurve inter(line, curve);
+      int n = inter.NbPoints();
+      for (int i = 0; i < n; ++i) {
+        // 2d intersector doesn't seem to have a `Parameters` member,
+        // so we have to compute the parametric representation ourselves
+        // as the least squares solution to `t*(scaled1 - scaled0) = point - scaled0`
+        gp_Pnt2d occt_point = inter.Point(i + 1);
+        Mat<2> point{occt_point.X(), occt_point.Y()};
+        Mat<2> lhs = scaled1 - scaled0;
+        Mat<2> rhs = point - scaled0;
+        sects.push_back(lhs.dot(rhs)/lhs.squaredNorm());
+      }
+    }
+  } else {
     // compute the line through the given points
     gp_Pnt pnt0(scaled0(0), scaled0(1), scaled0(2));
     gp_Pnt pnt1(scaled1(0), scaled1(1), scaled1(2));
     Handle(Geom_Line) line = GC_MakeLine(pnt0, pnt1);
     Handle(Geom_Curve) curve = line;
-    // iterate through the surfaces and compute the indersections with each
+    // iterate through surfaces and compute the indersections with each
     for (auto& surface : surfaces) {
       // compute intersections
       GeomAPI_IntCS inter(curve, surface);
@@ -135,21 +160,6 @@ std::vector<double> Occt_geom::intersections(Mat<> point0, Mat<> point1)
         double params [3];
         inter.Parameters(i + 1, params[0], params[1], params[2]);
         sects.push_back(params[2]/dist);
-      }
-    }
-  } else {
-    gp_Pnt2d pnt0(scaled0(0), scaled0(1));
-    gp_Pnt2d pnt1(scaled1(0), scaled1(1));
-    Handle(Geom2d_Line) line = GCE2d_MakeLine(pnt0, pnt1);
-    for (auto& curve : curves) {
-      Geom2dAPI_InterCurveCurve inter(line, curve);
-      int n = inter.NbPoints();
-      for (int i = 0; i < n; ++i) {
-        gp_Pnt2d occt_point = inter.Point(i + 1);
-        Mat<2> point{occt_point.X(), occt_point.Y()};
-        Mat<2> lhs = scaled1 - scaled0;
-        Mat<2> rhs = point - scaled0;
-        sects.push_back(lhs.dot(rhs)/lhs.squaredNorm());
       }
     }
   }

@@ -17,8 +17,6 @@ namespace hexed
  * \details Represents a CAD object defined with the OCCT interface as a `Surface_geom`.
  * The main application for this is reading geometry from CAD files,
  * but this could also be used to pipe in CAD directly from another program that uses OCCT.
- * \warning For now, only supports 3D, so all input points must be 3D.
- * \todo implement 2D.
  */
 class Occt_geom : public Surface_geom
 {
@@ -36,6 +34,7 @@ class Occt_geom : public Surface_geom
   /*! \brief Construct directly from an OCCT shape object.
    * \details The shape is interpreted to have dimensionality specified by `n_dim`,
    * which may be either 2 or 3.
+   * All input points must have `n_dim` elements, as will all output points.
    * If 3D, only faces are considered.
    * If 2D, only edges are considered, and all are projected onto the \f$ x_2 = 0 \f$ plane
    * (i.e. xy-plane).
