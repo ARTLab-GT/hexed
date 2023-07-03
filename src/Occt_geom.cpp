@@ -76,42 +76,25 @@ Mat<> Occt_geom::nearest_point(Mat<> point)
 {
   HEXED_ASSERT(point.size() == nd, format_str(100, "`point` must be %iD", nd));
   Mat<> scaled = point*1000; // convert to mm
-  // initialize nearest point and distance
-  Mat<> nearest = scaled;
-  double dist = std::numeric_limits<double>::max();
+  math::Nearest_point<> nearest(scaled);
   if (nd == 2) {
     gp_Pnt2d occt_point(scaled(0), scaled(1));
     // iterate through curves and find which ones has the nearest point
     for (auto& curve : curves) {
-      // find nearest point
       Geom2dAPI_ProjectPointOnCurve proj(occt_point, curve);
       gp_Pnt2d occt_candidate = proj.NearestPoint();
-      Mat<2> candidate{occt_candidate.X(), occt_candidate.Y()};
-      // if this point is closer than the nearest point so far, make it the new nearest point
-      double d = (candidate - scaled).norm();
-      if (d < dist) {
-        dist = d;
-        nearest = candidate;
-      }
+      nearest.merge(Mat<2>{occt_candidate.X(), occt_candidate.Y()});
     }
   } else {
     gp_Pnt occt_point(scaled(0), scaled(1), scaled(2));
-    // iterate through the surfaces
-    // and find which one has the nearest point
+    // iterate through the surfaces and find which one has the nearest point
     for (auto& surface : surfaces) {
-      // find the nearest point on this surface
       GeomAPI_ProjectPointOnSurf proj(occt_point, surface);
       gp_Pnt occt_candidate = proj.NearestPoint();
-      Mat<3> candidate{occt_candidate.X(), occt_candidate.Y(), occt_candidate.Z()};
-      // if this point is closer than the nearest point so far, make it the new nearest point
-      double d = (candidate - scaled).norm();
-      if (d < dist) {
-        dist = d;
-        nearest = candidate;
-      }
+      nearest.merge(Mat<3>{occt_candidate.X(), occt_candidate.Y(), occt_candidate.Z()});
     }
   }
-  return nearest/1000;
+  return nearest.point()/1000;
 }
 
 std::vector<double> Occt_geom::intersections(Mat<> point0, Mat<> point1)

@@ -253,6 +253,34 @@ Mat<> to_mat(const T& range)
   return to_mat(range.begin(), range.end());
 }
 
+/*! \brief Helper class for finding the nearest point to a given reference point.
+ * \details Implementations of `Surface_geom::nearest_point`
+ * often involve searching a set of candidate points
+ * to find the one that is nearest to the input point.
+ * This class abstracts the logic of comparing the distances and updating the current nearest point
+ * to make those implementations more concise.
+ */
+template <int n_dim = dyn>
+class Nearest_point
+{
+  Mat<n_dim> r;
+  Mat<n_dim> p;
+  double dist_sq;
+  public:
+  //! Initializes the candidate point to an arbitrary value and the distance to the maximum `double` value
+  //! \param ref Sets `reference()`
+  Nearest_point(Mat<n_dim> ref) : r{ref}, p{ref}, dist_sq{std::numeric_limits<double>::max()} {}
+  //! Creates a `Nearest_point` with a specified candidate point and computes the correct distance
+  Nearest_point(Mat<n_dim> ref, Mat<n_dim> pnt) : r{ref}, p{pnt}, dist_sq{(pnt - ref).squaredNorm()} {}
+  Mat<n_dim> reference() {return r;} //!< reference point that you want to find the nearest point to
+  Mat<n_dim> point() {return p;} //!< current best estimate for nearest point
+  double dist_squared() {return dist_sq;} //!< squared distance between `reference()` and `point()`
+  //! sets `*this` to the nearest of `*this` and `other`
+  void merge(Nearest_point other) {if (other.dist_sq < this->dist_sq) *this = other;}
+  //! updates `*this` to point to `new_pnt` if `new_pnt` is closer
+  void merge(Mat<n_dim> new_pnt) {merge(Nearest_point(r, new_pnt));}
+};
+
 }
 }
 #endif

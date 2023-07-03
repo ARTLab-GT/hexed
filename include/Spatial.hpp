@@ -14,18 +14,18 @@
 namespace hexed
 {
 
-// class to contain all the kernels in a scope
-// parameterized by the type of element (deformed/cartesian) and the PDE
+//! class to contain all the kernels in a scope
+//! parameterized by the type of element (deformed/cartesian) and the PDE
 template <typename element_t, template<int> typename Pde_templ>
 class Spatial
 {
   public:
-  // this class has no non-static data members, so there is no reason to construct it
+  //! this class has no non-static data members, so there is no reason to construct it
   Spatial() = delete;
   Spatial(const Spatial&) = delete;
   Spatial(Spatial&&) = delete;
 
-  // extrapolates the values in the interior of an element to the faces
+  //! extrapolates the values in the interior of an element to the faces
   template <int n_dim, int row_size>
   class Write_face : public Kernel<element_t&>
   {
@@ -35,7 +35,7 @@ class Spatial
     public:
     Write_face(const Basis& basis) : boundary{basis.boundary()} {}
 
-    // apply to a single element
+    //! apply to a single element
     void operator()(const double* read, std::array<double*, 6> faces)
     {
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -47,7 +47,7 @@ class Spatial
       }
     }
 
-    // apply to a sequence of elements
+    //! apply to a sequence of elements
     virtual void operator()(Sequence<element_t&>& elements)
     {
       #pragma omp parallel for
@@ -60,11 +60,11 @@ class Spatial
     }
   };
 
-  // performs the update to the element state after the shared numerical flux
-  // has been computed.
-  // In other words, performs the part of the algorithm that only uses local data
-  // (or in other words does not directly depend on neighboring elements).
-  // Note that face data is updated to reflect the updated interior state.
+  /*! \brief Performs the update to the element state after the shared numerical flux has been computed.
+   * \details In other words, performs the part of the algorithm that only uses local data
+   * (or in other words does not directly depend on neighboring elements).
+   * Note that face data is updated to reflect the updated interior state.
+   */
   template <int n_dim, int row_size>
   class Local : public Kernel<element_t&>
   {
@@ -280,7 +280,7 @@ class Spatial
     }
   };
 
-  // account for the difference between the real and numerical viscous fluxes to enforce conservation
+  //! account for the difference between the real and numerical viscous fluxes to enforce conservation
   template <int n_dim, int row_size>
   class Reconcile_ldg_flux : public Kernel<element_t&>
   {
@@ -346,9 +346,10 @@ class Spatial
     }
   };
 
-  // Computes the shared numerical flux at the element interfaces.
-  // Requires that the state has been written to the face storage
-  // and replaces the state of both faces with the computed flux.
+  /*! \brief Computes the shared numerical flux at the element interfaces.
+   * \details Requires that the state has been written to the face storage
+   * and replaces the state of both faces with the computed flux.
+   */
   template <int n_dim, int row_size>
   class Neighbor : public Kernel<Face_connection<element_t>&>
   {
@@ -445,8 +446,8 @@ class Spatial
     }
   };
 
-  // compute the difference between the numerical (average) viscous flux and
-  // the viscous flux on each face in preparation for reconciling the different face fluxes
+  //! compute the difference between the numerical (average) viscous flux and
+  //! the viscous flux on each face in preparation for reconciling the different face fluxes
   template <int n_dim, int row_size>
   class Neighbor_reconcile : public Kernel<Face_connection<element_t>&>
   {
@@ -501,7 +502,7 @@ class Spatial
     }
   };
 
-  // compute the maximum stable time step
+  //! compute the maximum stable time step
   template <int n_dim, int row_size>
   class Max_dt : public Kernel<element_t&, double>
   {
