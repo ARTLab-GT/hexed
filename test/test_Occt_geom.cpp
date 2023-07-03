@@ -2,6 +2,8 @@
 #include <hexed/Occt_geom.hpp>
 #include <hexed/constants.hpp>
 
+#if HEXED_USE_OCCT
+
 void test(std::string file_extension)
 {
   REQUIRE_THROWS(hexed::Occt_geom::read("nonexistent." + file_extension));
@@ -34,3 +36,5 @@ TEST_CASE("Occt_geom")
     REQUIRE_THAT(intersections, Catch::Matchers::UnorderedRangeEquals(std::vector<double>{-.4375, -.5625}, hexed::math::Approx_equal(0, 1e-12)));
   }
 }
+
+#endif

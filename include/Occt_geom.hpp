@@ -17,6 +17,11 @@ namespace hexed
  * \details Represents a CAD object defined with the OCCT interface as a `Surface_geom`.
  * The main application for this is reading geometry from CAD files,
  * but this could also be used to pipe in CAD directly from another program that uses OCCT.
+ * \warning This class has memory leaks! I am tempted to blame that on the OCCT developers,
+ * who seem to be a little old-fasioned about their memory management,
+ * but maybe I'm just using it wrong.
+ * Why is CAD software always a mess?
+ * Maybe engineering is just always a mess...
  */
 class Occt_geom : public Surface_geom
 {
@@ -74,6 +79,8 @@ class Occt_geom : public Surface_geom
    * Supported formats and extensions are:
    * - IGES: `.igs`, `.iges`
    * - STEP: `.stp`, `.step`
+   * \warning I've gotten a memory leak of over **40 MB** when calling this on a nonexistent file path
+   * (accoring to LeakSanitizer anyway), so check your paths in advance!
    */
   static TopoDS_Shape read(std::string file_name);
 };

@@ -3,6 +3,7 @@
 
 void demo(std::string file_extension)
 {
+  #if HEXED_USE_OCCT
   hexed::Solver solver(3, 3, .5);
   std::vector<hexed::Flow_bc*> bcs;
   for (int i = 0; i < 6; ++i) bcs.push_back(new hexed::Freestream(Eigen::Matrix<double, 5, 1>{0., 0., 0., 1., 1e5}));
@@ -16,6 +17,7 @@ void demo(std::string file_extension)
   }
   solver.snap_faces();
   solver.visualize_field_tecplot(hexed::Is_deformed(), "ellipsoid_" + file_extension, 4);
+  #endif
 }
 
 int main()
