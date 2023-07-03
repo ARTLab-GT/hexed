@@ -27,6 +27,7 @@ test_Prolong_refined.cpp
 test_Restrict_refined.cpp
 test_Row_index.cpp
 test_Row_rw.cpp
+test_Simplex_geom.cpp
 test_Solver.cpp
 test_Stopwatch.cpp
 test_Stopwatch_tree.cpp
