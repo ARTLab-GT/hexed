@@ -11,6 +11,7 @@ TEST_CASE("Simplex_geom")
     elems[1] << 2, 2,
                 0, 1;
     hexed::Simplex_geom<2> geom(elems);
+    // nearest point
     hexed::Mat<> nearest;
     nearest = geom.nearest_point(hexed::Mat<2>{.5, 2.});
     REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<2>{.5, 1.}, hexed::math::Approx_equal(0, 1e-12)));
@@ -18,6 +19,14 @@ TEST_CASE("Simplex_geom")
     REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<2>{2., .5}, hexed::math::Approx_equal(0, 1e-12)));
     nearest = geom.nearest_point(hexed::Mat<2>{3, 3});
     REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<2>{2., 1.}, hexed::math::Approx_equal(0, 1e-12)));
+    // intersections
+    std::vector<double> inters;
+    inters = geom.intersections(hexed::Mat<2>{1., 1.5}, hexed::Mat<2>{2.5, 0.});
+    REQUIRE_THAT(inters, Catch::Matchers::UnorderedRangeEquals(std::vector<double>{1./3., 2./3.}, hexed::math::Approx_equal(0, 1e-12)));
+    inters = geom.intersections(hexed::Mat<2>{2., 1.5}, hexed::Mat<2>{3.5, 0.});
+    REQUIRE(inters.empty());
+    inters = geom.intersections(hexed::Mat<2>{1., .5}, hexed::Mat<2>{0., .5});
+    REQUIRE_THAT(inters, Catch::Matchers::UnorderedRangeEquals(std::vector<double>{-1.}, hexed::math::Approx_equal(0, 1e-12)));
   }
   SECTION("dynamic 3d")
   {
@@ -45,5 +54,13 @@ TEST_CASE("Simplex_geom")
     REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 0., 1.}, hexed::math::Approx_equal(0, 1e-12)));
     nearest = geom.nearest_point(hexed::Mat<3>{1., -.1, -.1});
     REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<3>{1., 0., 0.}, hexed::math::Approx_equal(0, 1e-12)));
+    // intersections
+    std::vector<double> inters;
+    inters = geom.intersections(hexed::Mat<3>{.9, .1, 1.}, hexed::Mat<3>{.9, .1, .5});
+    REQUIRE_THAT(inters, Catch::Matchers::UnorderedRangeEquals(std::vector<double>{1.8}, hexed::math::Approx_equal(0, 1e-12)));
+    inters = geom.intersections(hexed::Mat<3>{1.1, -.1, 1.}, hexed::Mat<3>{1.1, -.1, .5});
+    REQUIRE(inters.empty());
+    inters = geom.intersections(hexed::Mat<3>{.4, .6, 1.}, hexed::Mat<3>{.4, .6, .5});
+    REQUIRE(inters.empty());
   }
 }
