@@ -23,7 +23,17 @@ class Simplex_geom : public Surface_geom
 
   std::vector<double> intersections(Mat<> point0, Mat<> point1) override
   {
-    return {};
+    std::vector<double> inters;
+    Mat<n_dim> diff = point1 - point0;
+    for (Mat<n_dim, n_dim> elem : elems) {
+      Mat<n_dim, n_dim> lhs;
+      lhs(all, 0) = -diff;
+      for (int col = 1; col < n_dim; ++col) lhs(all, col) = elem(all, col) - elem(all, 0);
+      Mat<n_dim> soln = lhs.householderQr().solve(point0 - elem(all, 0));
+      Eigen::Array<double, n_dim - 1, 1> arr = soln(Eigen::seqN(1, n_dim - 1)).array();
+      if ((arr >= 0.).all() && arr.sum() <= 1.) inters.push_back(soln(0));
+    }
+    return inters;
   }
 };
 
