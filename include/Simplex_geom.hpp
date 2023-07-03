@@ -3,33 +3,49 @@
 
 #include "Surface_geom.hpp"
 
-// At time of writing, this file is not `#include`d in any `.cpp` files,
-// so the following command is necessary to make Doxygen parse it.
-//! \file Simplex_geom.hpp
-
 namespace hexed
 {
 
+/* \brief Represents discrete geometry composed of [simplices](en.wikipedia.org/wiki/Simplex).
+ * \details This can be used as an interface for geometry derived from an STL file in 3D
+ * or a list of node coordinates in 2D.
+ * Each simplex is represented as an `n_dim` by `n_dim` matrix where each column is the coordinates of one vertex.
+ * The order of the vertices is arbitrary, and there are no requirements on inter-simplex continuity.
+ * Since the `Surface_geom` interface is so minimal, the geometry is simply viewed as a collection of unrelated simplices,
+ * so we do not care about orientation or watertightness.
+ * The you are free to modify the simplex list at will, since there are no requirements on it.
+ * All input points must have exactly `n_dim` entries.
+ */
 template <int n_dim>
 class Simplex_geom : public Surface_geom
 {
-  std::vector<Mat<n_dim, n_dim>> elems;
-
   public:
-  Simplex_geom(const std::vector<Mat<n_dim, n_dim>>&  elements) : elems{elements} {}
-  Simplex_geom(      std::vector<Mat<n_dim, n_dim>>&& elements) : elems{elements} {}
+  std::vector<Mat<n_dim, n_dim>> simplices;
+  Simplex_geom(const std::vector<Mat<n_dim, n_dim>>&  sims) : simplices{sims} {}
+  Simplex_geom(      std::vector<Mat<n_dim, n_dim>>&& sims) : simplices{sims} {}
 
+  /*! \details Iterates through all simplices and finds the nearest point on each,
+   * whether that point lies in the interior or on the edge or a vertex.
+   * Returns the global nearest of all those points.
+   */
   Mat<> nearest_point(Mat<> point) override;
 
+  /*! \details Evaluates intersections with each individual element and assembles a global list.
+   * Intersections with the boundary of a simplex are always considered valid intersections,
+   * so if the line passes exactly through the shared boundary of multiple simplices
+   * then duplicate intersections may be obtained.
+   */
   std::vector<double> intersections(Mat<> point0, Mat<> point1) override
   {
     std::vector<double> inters;
     Mat<n_dim> diff = point1 - point0;
-    for (Mat<n_dim, n_dim> elem : elems) {
+    for (Mat<n_dim, n_dim> sim : simplices) {
+      // compute intersection between line and plane of simplex
       Mat<n_dim, n_dim> lhs;
       lhs(all, 0) = -diff;
-      for (int col = 1; col < n_dim; ++col) lhs(all, col) = elem(all, col) - elem(all, 0);
-      Mat<n_dim> soln = lhs.householderQr().solve(point0 - elem(all, 0));
+      for (int col = 1; col < n_dim; ++col) lhs(all, col) = sim(all, col) - sim(all, 0);
+      Mat<n_dim> soln = lhs.householderQr().solve(point0 - sim(all, 0));
+      // if intersection is inside simplex, add it to the list
       Eigen::Array<double, n_dim - 1, 1> arr = soln(Eigen::seqN(1, n_dim - 1)).array();
       if ((arr >= 0.).all() && arr.sum() <= 1.) inters.push_back(soln(0));
     }
@@ -41,8 +57,8 @@ template<>
 Mat<> Simplex_geom<2>::nearest_point(Mat<> point)
 {
   math::Nearest_point<2> nearest(point);
-  for (Mat<2, 2> elem : elems) {
-    nearest.merge(math::proj_to_segment({elem(all, 0), elem(all, 1)}, point));
+  for (Mat<2, 2> sim : simplices) {
+    nearest.merge(math::proj_to_segment({sim(all, 0), sim(all, 1)}, point));
   }
   return nearest.point();
 }
@@ -51,19 +67,19 @@ template <>
 Mat<> Simplex_geom<3>::nearest_point(Mat<> point)
 {
   math::Nearest_point<3> nearest(point);
-  for (Mat<3, 3> elem : elems) {
+  for (Mat<3, 3> sim : simplices) {
     // try projecting the point to the plane of the triangle
     Mat<3, 2> lhs;
-    lhs(all, 0) = elem(all, 1) - elem(all, 0);
-    lhs(all, 1) = elem(all, 2) - elem(all, 0);
-    Mat<2> lstsq = lhs.householderQr().solve(point - elem(all, 0));
+    lhs(all, 0) = sim(all, 1) - sim(all, 0);
+    lhs(all, 1) = sim(all, 2) - sim(all, 0);
+    Mat<2> lstsq = lhs.householderQr().solve(point - sim(all, 0));
     if (lstsq(0) >= 0 && lstsq(1) >= 0 && lstsq.sum() <= 1) {
       // if the projected point is inside the triangle, evaluate it as the potential nearest point
-      nearest.merge(elem(all, 0) + lhs*lstsq);
+      nearest.merge(sim(all, 0) + lhs*lstsq);
     } else {
       // if the projected point is outside the triangle, fall back to finding the nearest point on all the edges of the triangle
       for (int i_edge = 0; i_edge < 3; ++i_edge) {
-        nearest.merge(math::proj_to_segment({elem(all, i_edge), elem(all, (i_edge + 1)%3)}, point));
+        nearest.merge(math::proj_to_segment({sim(all, i_edge), sim(all, (i_edge + 1)%3)}, point));
       }
     }
   }

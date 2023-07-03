@@ -10,7 +10,7 @@ TEST_CASE("Simplex_geom")
                 1, 1;
     elems[1] << 2, 2,
                 0, 1;
-    hexed::Simplex_geom<2> geom(elems);
+    hexed::Simplex_geom<2> geom{elems};
     // nearest point
     hexed::Mat<> nearest;
     nearest = geom.nearest_point(hexed::Mat<2>{.5, 2.});
@@ -25,6 +25,7 @@ TEST_CASE("Simplex_geom")
     REQUIRE_THAT(inters, Catch::Matchers::UnorderedRangeEquals(std::vector<double>{1./3., 2./3.}, hexed::math::Approx_equal(0, 1e-12)));
     inters = geom.intersections(hexed::Mat<2>{2., 1.5}, hexed::Mat<2>{3.5, 0.});
     REQUIRE(inters.empty());
+    // intersection involving a singular projection problem
     inters = geom.intersections(hexed::Mat<2>{1., .5}, hexed::Mat<2>{0., .5});
     REQUIRE_THAT(inters, Catch::Matchers::UnorderedRangeEquals(std::vector<double>{-1.}, hexed::math::Approx_equal(0, 1e-12)));
   }
@@ -35,7 +36,7 @@ TEST_CASE("Simplex_geom")
     elems[0] << 1, 1, 0,
                 0, 1, 0,
                 0, 0, 1;
-    hexed::Simplex_geom<3> geom(elems);
+    hexed::Simplex_geom<3> geom{elems};
     hexed::Mat<> nearest;
     // nearest on face
     nearest = geom.nearest_point(hexed::Mat<3>{1., .1, 1.});
