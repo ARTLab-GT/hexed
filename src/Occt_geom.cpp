@@ -26,6 +26,7 @@
 // file import
 #include <IGESControl_Reader.hxx>
 #include <STEPControl_Reader.hxx>
+#include <RWStl.hxx>
 
 namespace hexed
 {
@@ -38,7 +39,7 @@ void Occt_geom::set_message()
     message_set = true;
     auto& printers = Message::DefaultMessenger()->ChangePrinters();
     printers.Clear();
-    Handle(Message_PrinterToReport) printer;
+    opencascade::handle<Message_PrinterToReport> printer;
     printers.Append(printer);
   }
 }
@@ -56,7 +57,7 @@ Occt_geom::Occt_geom(const TopoDS_Shape& shape, int n_dim)
 {
   if (nd == 2) {
     // collect all curves
-    Handle(Geom_Plane) plane = GC_MakePlane(0., 0., 1., 0.); // x_2 = 0 plane
+    opencascade::handle<Geom_Plane> plane = GC_MakePlane(0., 0., 1., 0.); // x_2 = 0 plane
     TopLoc_Location location;
     double unused [2] {}; // used by `CurveOnPlane` to return values we don't care about
     iterate(shape, TopAbs_EDGE, [&](const TopoDS_Shape& s){
@@ -110,7 +111,7 @@ std::vector<double> Occt_geom::intersections(Mat<> point0, Mat<> point1)
     // compute the line through the given points
     gp_Pnt2d pnt0(scaled0(0), scaled0(1));
     gp_Pnt2d pnt1(scaled1(0), scaled1(1));
-    Handle(Geom2d_Line) line = GCE2d_MakeLine(pnt0, pnt1);
+    opencascade::handle<Geom2d_Line> line = GCE2d_MakeLine(pnt0, pnt1);
     // iterate through curves and compute the indersections with each
     for (auto& curve : curves) {
       // find intersections
@@ -131,8 +132,8 @@ std::vector<double> Occt_geom::intersections(Mat<> point0, Mat<> point1)
     // compute the line through the given points
     gp_Pnt pnt0(scaled0(0), scaled0(1), scaled0(2));
     gp_Pnt pnt1(scaled1(0), scaled1(1), scaled1(2));
-    Handle(Geom_Line) line = GC_MakeLine(pnt0, pnt1);
-    Handle(Geom_Curve) curve = line;
+    opencascade::handle<Geom_Line> line = GC_MakeLine(pnt0, pnt1);
+    opencascade::handle<Geom_Curve> curve = line;
     // iterate through surfaces and compute the indersections with each
     for (auto& surface : surfaces) {
       // compute intersections
@@ -152,24 +153,24 @@ std::vector<double> Occt_geom::intersections(Mat<> point0, Mat<> point1)
 void Occt_geom::write_image(const TopoDS_Shape& shape, std::string file_name, Mat<3> eye_pos, Mat<3> look_at_pos, int resolution)
 {
   // general setup
-  Handle(Aspect_DisplayConnection) displayConnection = new Aspect_DisplayConnection();
-  Handle(OpenGl_GraphicDriver) graphicDriver = new OpenGl_GraphicDriver(displayConnection);
-  Handle(V3d_Viewer) viewer = new V3d_Viewer(graphicDriver);
+  opencascade::handle<Aspect_DisplayConnection> displayConnection = new Aspect_DisplayConnection();
+  opencascade::handle<OpenGl_GraphicDriver> graphicDriver = new OpenGl_GraphicDriver(displayConnection);
+  opencascade::handle<V3d_Viewer> viewer = new V3d_Viewer(graphicDriver);
   viewer->SetDefaultLights();
   viewer->SetLightOn();
-  Handle(AIS_InteractiveContext) context = new AIS_InteractiveContext(viewer);
-  Handle(V3d_View) view = viewer->CreateView();
-  Handle(Xw_Window) win = new Xw_Window(graphicDriver->GetDisplayConnection(), "", 0, 0, resolution, resolution);
+  opencascade::handle<AIS_InteractiveContext> context = new AIS_InteractiveContext(viewer);
+  opencascade::handle<V3d_View> view = viewer->CreateView();
+  opencascade::handle<Xw_Window> win = new Xw_Window(graphicDriver->GetDisplayConnection(), "", 0, 0, resolution, resolution);
   win->SetVirtual(true);
   view->SetWindow(win);
   view->SetBackgroundColor(Quantity_Color(Quantity_NOC_BLACK));
   view->MustBeResized();
   view->AutoZFit();
   // add shapes
-  Handle(AIS_Shape) shaded = new AIS_Shape(shape);
+  opencascade::handle<AIS_Shape> shaded = new AIS_Shape(shape);
   context->Display(shaded, false);
   context->SetDisplayMode(shaded, AIS_Shaded, false);
-  Handle(AIS_Shape) wireframe = new AIS_Shape(shape);
+  opencascade::handle<AIS_Shape> wireframe = new AIS_Shape(shape);
   context->Display(wireframe, false);
   context->SetDisplayMode(wireframe, AIS_WireFrame, false);
   view->SetFront();
@@ -207,6 +208,34 @@ TopoDS_Shape Occt_geom::read(std::string file_name)
   if      (ext == "igs" || ext == "iges") return execute_reader<IGESControl_Reader>(file_name);
   else if (ext == "stp" || ext == "step") return execute_reader<STEPControl_Reader>(file_name);
   throw std::runtime_error(format_str(1000, "`hexed::Occt_geom::read` failed to recognize file exteinsion `.%s`.", case_sensitive.c_str()));
+}
+
+std::vector<Mat<3, 3>> triangles(opencascade::handle<Poly_Triangulation> poly)
+{
+  HEXED_ASSERT(!poly.IsNull(), "handle is null");
+  std::vector<Mat<3, 3>> sims;
+  for (int i_tri = 0; i_tri < poly->NbTriangles(); ++i_tri) {
+    auto& triangle = poly->Triangle(i_tri + 1);
+    Mat<3, 3> sim;
+    for (int i_vert = 0; i_vert < 3; ++i_vert) {
+      gp_Pnt point = poly->Node(triangle.Value(i_vert + 1));
+      sim(all, i_vert) << point.X(), point.Y(), point.Z();
+    }
+    sims.push_back(sim*1e-3);
+  }
+  return sims;
+}
+
+opencascade::handle<Poly_Triangulation> Occt_geom::read_stl(std::string file_name, double scale)
+{
+  set_message();
+  opencascade::handle<Poly_Triangulation> poly = RWStl::ReadFile(file_name.c_str());
+  HEXED_ASSERT(!poly.IsNull(), "`hexed::read_stl` failed (sorry, that's all i know)");
+  // convert coordinates to mm
+  for (int i_node = 0; i_node < poly->NbNodes(); ++i_node) {
+    poly->SetNode(i_node + 1, poly->Node(i_node + 1).XYZ()*scale*1e3);
+  }
+  return poly;
 }
 
 }

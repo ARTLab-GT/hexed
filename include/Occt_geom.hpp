@@ -8,6 +8,7 @@
 #include <Geom_Surface.hxx>
 #include <Geom2d_Curve.hxx>
 #include <Poly_Triangulation.hxx>
+#include "constants.hpp"
 #include "Surface_geom.hpp"
 
 namespace hexed
@@ -34,8 +35,8 @@ class Occt_geom : public Surface_geom
   // reads a file of a specific type
   template<typename reader_t> static TopoDS_Shape execute_reader(std::string file_name);
   const int nd;
-  std::vector<Handle(Geom_Surface)> surfaces;
-  std::vector<Handle(Geom2d_Curve)> curves;
+  std::vector<opencascade::handle<Geom_Surface>> surfaces;
+  std::vector<opencascade::handle<Geom2d_Curve>> curves;
   public:
   /*! \brief Construct directly from an OCCT shape object.
    * \details The shape is interpreted to have dimensionality specified by `n_dim`,
@@ -84,17 +85,22 @@ class Occt_geom : public Surface_geom
    * (accoring to LeakSanitizer anyway), so check your paths in advance!
    */
   static TopoDS_Shape read(std::string file_name);
+
+  /*! \brief Reads an STL file and returns a triangulation object.
+   * \details File can be in ASCII or binary format.
+   * STL files contain no unit information, so it will be assumed to be in meters by default.
+   * It will then be converted to mm for consistency with other OCCT objects.
+   * If the STL was written with a different unit in mind, you can supply that unit definition from `constants.hpp` as the `scale` argument
+   * and it will be effectively converted from that unit.
+   * In general, the geometry coordinates will be multiplied by `scale`.
+   * Result can be piped to `triangles(const Poly_Triangulation&)` to ultimately construct a `Simplex_geom<3>`.
+   */
+  static opencascade::handle<Poly_Triangulation> read_stl(std::string file_name, double scale = meter);
 };
 
 //! \brief Creates an array of simplices that can be used to construct a `Simplex_geom<3>`.
-//! \details A `Poly_Triangulation` can be obtained from `read_stl(std::string file_name)`.
-std::vector<Mat<3, 3>> simplices(const Poly_Triangulation&);
-
-/*! \brief Reads an STL file.
- * \details File can be in ASCII or binary format.
- * Result can be piped to `simplices(const Poly_Triangulation&)` to ultimately construct a `Simplex_geom<3>`.
- */
-Poly_Triangulation read_stl(std::string file_name);
+//! \details A `Poly_Triangulation` can be obtained from `Occt_geom::read_stl`.
+std::vector<Mat<3, 3>> triangles(opencascade::handle<Poly_Triangulation>);
 
 }
 #endif

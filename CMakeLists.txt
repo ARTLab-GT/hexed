@@ -137,7 +137,7 @@ if (use_nlopt)
 endif()
 if (use_occt)
     find_package(OpenCASCADE REQUIRED)
-    target_link_libraries(hexed PUBLIC TKBRep TKOpenGl TKV3d TKIGES TKSTEP)
+    target_link_libraries(hexed PUBLIC TKBRep TKOpenGl TKV3d TKIGES TKSTEP TKSTL)
 endif()
 
 # add include/source files

@@ -8,7 +8,15 @@ Also, please try to maintain these conventions when contributing to the code.
 \section units Units and physical quantities
 - Unless otherwise specified, all dimensional numbers are in the applicable SI units
   (i.e., derived from m, kg, s, K).
+  If you need to convert a quantity to or from other units,
 - Unless otherwise specified, all angles are radian.
+- If you need to perform any unit conversions or reference physical constants,
+  please use the values defined in `constants.hpp`,
+  which whenever possible are based on formal exact definitions
+  (as opposed to approximations to some number of digits).
+  In practice, of course, this isn't that important,
+  but some obsessive part of my brain wants to know that all unit conversions are perfectly consistent
+  up to machine precision.
 - If an extensive thermodynamic quantity (e.g., mass, volume, energy, as opposed to an
   intensive quantity like temperature or pressure) is specified without a reference quantity, it
   means per unit volume. For example, "energy" specified without other context will be

@@ -15,8 +15,8 @@ namespace hexed
  * so we do not care about orientation or watertightness.
  * The you are free to modify the simplex list at will, since there are no requirements on it.
  * All input points must have exactly `n_dim` entries.
- * \see `simplices(const Mat<dyn, dyn>& points)`
- * \see `simplices(const Poly_Triangulation&)`
+ * \see `segments`
+ * \see `triangles`
  */
 template <int n_dim>
 class Simplex_geom : public Surface_geom
@@ -66,7 +66,7 @@ template<> Mat<> Simplex_geom<3>::nearest_point(Mat<> point);
  * but you don't need to include each interior point twice.
  * The result can be used to construct a `Simplex_geom<2>`.
  */
-std::vector<Mat<2, 2>> simplices(const Mat<dyn, dyn>& points);
+std::vector<Mat<2, 2>> segments(const Mat<dyn, dyn>& points);
 
 }
 #endif
