@@ -6,7 +6,7 @@
 namespace hexed
 {
 
-/* \brief Represents discrete geometry composed of [simplices](en.wikipedia.org/wiki/Simplex).
+/*! \brief Represents discrete geometry composed of [simplices](https://en.wikipedia.org/wiki/Simplex).
  * \details This can be used as an interface for geometry derived from an STL file in 3D
  * or a list of node coordinates in 2D.
  * Each simplex is represented as an `n_dim` by `n_dim` matrix where each column is the coordinates of one vertex.
@@ -15,6 +15,8 @@ namespace hexed
  * so we do not care about orientation or watertightness.
  * The you are free to modify the simplex list at will, since there are no requirements on it.
  * All input points must have exactly `n_dim` entries.
+ * \see `simplices(const Mat<dyn, dyn>& points)`
+ * \see `simplices(const Poly_Triangulation&)`
  */
 template <int n_dim>
 class Simplex_geom : public Surface_geom
@@ -53,38 +55,18 @@ class Simplex_geom : public Surface_geom
   }
 };
 
-template<>
-Mat<> Simplex_geom<2>::nearest_point(Mat<> point)
-{
-  math::Nearest_point<2> nearest(point);
-  for (Mat<2, 2> sim : simplices) {
-    nearest.merge(math::proj_to_segment({sim(all, 0), sim(all, 1)}, point));
-  }
-  return nearest.point();
-}
+template<> Mat<> Simplex_geom<2>::nearest_point(Mat<> point);
+template<> Mat<> Simplex_geom<3>::nearest_point(Mat<> point);
 
-template <>
-Mat<> Simplex_geom<3>::nearest_point(Mat<> point)
-{
-  math::Nearest_point<3> nearest(point);
-  for (Mat<3, 3> sim : simplices) {
-    // try projecting the point to the plane of the triangle
-    Mat<3, 2> lhs;
-    lhs(all, 0) = sim(all, 1) - sim(all, 0);
-    lhs(all, 1) = sim(all, 2) - sim(all, 0);
-    Mat<2> lstsq = lhs.householderQr().solve(point - sim(all, 0));
-    if (lstsq(0) >= 0 && lstsq(1) >= 0 && lstsq.sum() <= 1) {
-      // if the projected point is inside the triangle, evaluate it as the potential nearest point
-      nearest.merge(sim(all, 0) + lhs*lstsq);
-    } else {
-      // if the projected point is outside the triangle, fall back to finding the nearest point on all the edges of the triangle
-      for (int i_edge = 0; i_edge < 3; ++i_edge) {
-        nearest.merge(math::proj_to_segment({sim(all, i_edge), sim(all, (i_edge + 1)%3)}, point));
-      }
-    }
-  }
-  return nearest.point();
-}
+/*! \brief Creates simplices from an ordered array of points representing a polygonal curve.
+ * \details `points` must have exactly 2 rows.
+ * Each column of `points` is the coordinates of one point.
+ * The curve may or may not be closed.
+ * Each point represents a unique vertex -- duplicate points are allowed,
+ * but you don't need to include each interior point twice.
+ * The result can be used to construct a `Simplex_geom<2>`.
+ */
+std::vector<Mat<2, 2>> simplices(const Mat<dyn, dyn>& points);
 
 }
 #endif

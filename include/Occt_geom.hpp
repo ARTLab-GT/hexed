@@ -7,6 +7,7 @@
 #include <TopoDS.hxx>
 #include <Geom_Surface.hxx>
 #include <Geom2d_Curve.hxx>
+#include <Poly_Triangulation.hxx>
 #include "Surface_geom.hpp"
 
 namespace hexed
@@ -84,6 +85,16 @@ class Occt_geom : public Surface_geom
    */
   static TopoDS_Shape read(std::string file_name);
 };
+
+//! \brief Creates an array of simplices that can be used to construct a `Simplex_geom<3>`.
+//! \details A `Poly_Triangulation` can be obtained from `read_stl(std::string file_name)`.
+std::vector<Mat<3, 3>> simplices(const Poly_Triangulation&);
+
+/*! \brief Reads an STL file.
+ * \details File can be in ASCII or binary format.
+ * Result can be piped to `simplices(const Poly_Triangulation&)` to ultimately construct a `Simplex_geom<3>`.
+ */
+Poly_Triangulation read_stl(std::string file_name);
 
 }
 #endif
