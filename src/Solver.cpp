@@ -179,12 +179,17 @@ void Solver::relax_vertices(double factor)
 
 void Solver::snap_vertices()
 {
+  Stopwatch_tree vert_sw("projection");
+  vert_sw.stopwatch.start();
   auto& bc_cons {acc_mesh.boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh.boundary_condition(bc_sn).mesh_bc->snap_vertices(bc_cons[i_con]);
   }
+  vert_sw.work_units_completed += bc_cons.size()*params.n_vertices()/2;
+  vert_sw.stopwatch.pause();
+  printf("%s\n", vert_sw.report().c_str());
   // if any immobile vertices have strayed from their nominal position (probably by `eat`ing)
   // snap them back where they belong
   auto& elems = acc_mesh.cartesian().elements();
@@ -214,12 +219,17 @@ void Solver::snap_vertices()
 
 void Solver::snap_faces()
 {
+  Stopwatch_tree vert_sw("intersection");
+  vert_sw.stopwatch.start();
   auto& bc_cons {acc_mesh.boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh.boundary_condition(bc_sn).mesh_bc->snap_node_adj(bc_cons[i_con], basis);
   }
+  vert_sw.stopwatch.pause();
+  vert_sw.work_units_completed += bc_cons.size()*params.n_qpoint()/params.row_size;
+  printf("%s\n", vert_sw.report().c_str());
 }
 
 void Solver::calc_jacobian()
