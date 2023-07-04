@@ -175,7 +175,7 @@ class Solver
   //! functions that compute some form of output data
   //!\{
   std::vector<double> sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func&); //!< evaluate arbitrary functions at arbitrary locations
-  std::vector<double> sample(int ref_level, bool is_deformed, int serial_n, const Element_func&);
+  std::vector<double> sample(int ref_level, bool is_deformed, int serial_n, const Element_func&); //!< \overload
   //! obtain performance data
   inline const Stopwatch_tree& stopwatch_tree() {return stopwatch;}
   //! compute an integral over the entire flow field at the current time
