@@ -960,9 +960,9 @@ TEST_CASE("cylinder tree mesh")
   hexed::Solver solver (2, row_size, 1.);
   std::vector<hexed::Flow_bc*> bcs;
   for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Freestream(Eigen::Vector4d{0., 0., 1., 1e5}));
-  solver.mesh().add_tree(bcs);
+  solver.mesh().add_tree(bcs, Eigen::Vector2d{1e3, 1e3}); // set a very large origin just to make sure it doesn't matter
   for (int i = 0; i < 3; ++i) solver.mesh().update();
-  solver.mesh().set_surface(new hexed::Hypersphere(Eigen::VectorXd::Zero(2), .5), new hexed::Nonpenetration, Eigen::Vector2d{.8, .8});
+  solver.mesh().set_surface(new hexed::Hypersphere(Eigen::Vector2d{1e3, 1e3}, .5), new hexed::Nonpenetration, Eigen::Vector2d{.8, .8});
   solver.mesh().extrude();
   for (int i = 0; i < 3; ++i) {
     solver.relax_vertices();

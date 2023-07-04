@@ -507,7 +507,7 @@ Element& Accessible_mesh::add_elem(bool is_deformed, Tree& t)
   return elem;
 }
 
-void Accessible_mesh::add_tree(std::vector<Flow_bc*> extremal_bcs)
+void Accessible_mesh::add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin)
 {
   // take ownership of bcs (do this first to avoid memory leak)
   std::vector<int> new_tree_bcs;

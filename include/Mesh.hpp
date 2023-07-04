@@ -110,7 +110,8 @@ class Mesh
   //! \name Automated tree meshing
   //! \{
   /*! \brief Initializes meshing with bin/quad/[octree](https://en.wikipedia.org/wiki/Octree) topology.
-   * \details Creates a tree initialized with one element with ref level 0 located at {0, 0, 0}.
+   * \details Creates a tree initialized with one element with ref level 0 located at `origin`
+   * (`origin` is the location of its minimal corner).
    * Technically, free-form elements can also be created in the same mesh,
    * but they will not be connected to the tree.
    * Only one tree can be created.
@@ -124,7 +125,7 @@ class Mesh
    *   `extremal_bcs[1]` is the BC for the maximum \f$x_0\f$ face,
    *   `extremal_bcs[2]` is for minimum \f$x_1\f$.
    */
-  virtual void add_tree(std::vector<Flow_bc*> extremal_bcs) = 0;
+  virtual void add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3)) = 0;
   /*! \brief Defines the surface geometry to be meshed as a boundary.
    * \details Acquires ownership of the objects pointed to `geometry` and `surface_bc`.
    * The geometric surface represented by `geometry` is now a boundary of the domain
