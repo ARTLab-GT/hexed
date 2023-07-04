@@ -476,7 +476,9 @@ void Nominal_pos::snap_vertices(Boundary_connection& con)
   const int stride = math::pow(2, con.storage_params().n_dim - 1 - con.i_dim());
   for (int i_vert = 0; i_vert < con.storage_params().n_vertices(); ++i_vert) {
     if ((i_vert/stride)%2 == con.inside_face_sign()) {
-      double pos = (con.element().nominal_position()[con.i_dim()] + con.inside_face_sign())*con.element().nominal_size();
+      double pos = (con.element().nominal_position()[con.i_dim()]
+                    + con.inside_face_sign())*con.element().nominal_size()
+                   + con.element().origin(con.i_dim());
       Vertex& vert = con.element().vertex(i_vert);
       Lock::Acquire lock(vert.lock);
       vert.pos[con.i_dim()] = pos;
@@ -569,7 +571,8 @@ void Geom_mbc::snap_vertices(Boundary_connection& con)
     if ((i_vert/stride)%2 == con.inside_face_sign()) {
       Vertex& vert = con.element().vertex(i_vert);
       Lock::Acquire lock(vert.lock);
-      vert.pos = geom->nearest_point(vert.pos);
+      auto seq = Eigen::seqN(0, nd);
+      vert.pos(seq) = geom->nearest_point(vert.pos(seq));
     }
   }
 }

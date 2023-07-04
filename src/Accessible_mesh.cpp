@@ -42,12 +42,17 @@ Accessible_mesh::~Accessible_mesh()
   def.purge_connections(always);
 }
 
-int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<int> position)
+int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin)
 {
-  int sn = container(is_deformed).emplace(ref_level, position);
+  int sn = container(is_deformed).emplace(ref_level, position, origin);
   Element& elem = element(ref_level, is_deformed, sn);
   for (int i_vert = 0; i_vert < n_vert; ++i_vert) vert_ptrs.emplace_back(elem.vertex(i_vert));
   return sn;
+}
+
+int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<int> position)
+{
+  return add_element(ref_level, is_deformed, position, Mat<>::Zero(params.n_dim));
 }
 
 Element& Accessible_mesh::element(int ref_level, bool is_deformed, int serial_n)
@@ -278,7 +283,7 @@ void Accessible_mesh::extrude(bool collapse, double offset)
     auto nom_pos = face.elem.nominal_position();
     nom_pos[face.i_dim] += 2*face.face_sign - 1;
     const int ref_level = face.elem.refinement_level();
-    int sn = add_element(ref_level, true, nom_pos);
+    int sn = add_element(ref_level, true, nom_pos, face.elem.origin);
     Con_dir<Deformed_element> dir {{face.i_dim, face.i_dim}, {!face.face_sign, bool(face.face_sign)}};
     auto& elem = def.elems.at(ref_level, sn);
     elem.record = sn;
@@ -496,7 +501,7 @@ std::vector<Mesh::elem_handle> Accessible_mesh::elem_handles()
 Element& Accessible_mesh::add_elem(bool is_deformed, Tree& t)
 {
   auto np = t.coordinates();
-  int sn = add_element(t.refinement_level(), is_deformed, std::vector<int>(np.begin(), np.end()));
+  int sn = add_element(t.refinement_level(), is_deformed, std::vector<int>(np.begin(), np.end()), t.origin());
   auto& elem = element(t.refinement_level(), is_deformed, sn);
   elem.record = sn; // put the serial number in the record so it can be used for connections
   elem.tree = &t;
@@ -518,7 +523,7 @@ void Accessible_mesh::add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin)
   HEXED_ASSERT(!tree, "each `Mesh` may only contain one tree");
   // add the tree
   tree_bcs = new_tree_bcs;
-  tree.reset(new Tree(params.n_dim, root_sz));
+  tree.reset(new Tree(params.n_dim, root_sz, origin));
   auto& elem = add_elem(false, *tree);
   int sn = elem.record;
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {

@@ -2,6 +2,7 @@
 #define HEXED_LOCK_HPP_
 
 #include <omp.h>
+#include "config.hpp"
 
 namespace hexed
 {
@@ -11,6 +12,7 @@ namespace hexed
  * It contains an OpenMP lock variable.
  * To acquire (aka set) the lock, construct an `Acquire` object from it.
  * When the `Acquire` object is destroyed, the lock will be released (unset).
+ * If Hexed is not compiled with OpenMP, this class does nothing.
  * Use like this:
  * ~~~
  * Lock l;
@@ -23,7 +25,9 @@ namespace hexed
  */
 class Lock
 {
+  #if HEXED_THREADED
   omp_lock_t l;
+  #endif
   public:
   //! acquires the lock when constructed and releases when destroyed
   class Acquire

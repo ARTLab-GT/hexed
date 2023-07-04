@@ -38,6 +38,7 @@ class Accessible_mesh : public Mesh
   std::vector<int> tree_bcs;
 
   Element_container& container(bool is_deformed);
+  int add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin);
   Element& add_elem(bool is_deformed, Tree&);
   bool is_surface(Tree*);
   template<typename element_t> Mesh_by_type<element_t>& mbt(); // gets either `car` or `def`

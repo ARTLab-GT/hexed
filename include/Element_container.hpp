@@ -22,7 +22,7 @@ class Element_container
    * Construct an element, add it to the container, and return a permanent, arbitrary
    * serial number which is unique among elements of the same refinement level.
    */
-  virtual int emplace(int ref_level, std::vector<int> position) = 0;
+  virtual int emplace(int ref_level, std::vector<int> position, Mat<> origin) = 0;
   //! access an element by refinement level and serial number
   virtual Element& at(int ref_level, int serial_n) = 0;
   virtual Sequence<Element&>& element_view() = 0;
@@ -54,9 +54,9 @@ class Complete_element_container : public Element_container
   : params{storage_params}, spacing{root_spacing}, next_sn{0}, view{vec}
   {}
 
-  int emplace(int ref_level, std::vector<int> position) override
+  int emplace(int ref_level, std::vector<int> position, Mat<> origin) override
   {
-    vec.emplace_back(new element_t {params, position, spacing, ref_level});
+    vec.emplace_back(new element_t {params, position, spacing, ref_level, origin});
     serial_ns.push_back(next_sn++);
     return serial_ns.back();
   }

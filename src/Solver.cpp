@@ -193,12 +193,14 @@ void Solver::snap_vertices()
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+      Lock::Acquire a(elem.vertex(i_vert).lock);
       auto& pos = elem.vertex(i_vert).pos;
       double nom_sz = elem.nominal_size();
       auto nom_pos = elem.nominal_position();
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         pos[i_dim] = nom_sz*(nom_pos[i_dim] + (i_vert/math::pow(2, nd - 1 - i_dim))%2);
       }
+      pos(Eigen::seqN(0, nd)) += elem.origin;
     }
   }
   // vertex relaxation/snapping will cause hanging vertices to drift away from hanging vertex faces they are supposed to be coincident with
@@ -217,6 +219,7 @@ void Solver::snap_faces()
   auto& bc_cons {acc_mesh.boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    Lock::Acquire acq(bc_cons[i_con].element().lock);
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh.boundary_condition(bc_sn).mesh_bc->snap_node_adj(bc_cons[i_con], basis);
   }

@@ -9,6 +9,7 @@
 #include "Storage_params.hpp"
 #include "Vertex.hpp"
 #include "Basis.hpp"
+#include "Lock.hpp"
 
 namespace hexed
 {
@@ -52,6 +53,7 @@ class Element
   int record = 0; //!< for algorithms to book-keep general information
   Tree* tree = nullptr; //!< `Tree` this element was created from
   const Mat<> origin;
+  Lock lock; //!< for any tasks where multiple threads might access an element simultaneously
 
   /*!
    * The `Storage_params` defines the amount of storage that must be allocated.
