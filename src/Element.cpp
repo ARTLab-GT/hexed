@@ -4,7 +4,7 @@
 namespace hexed
 {
 
-Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level, bool mobile_vertices) :
+Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level, Mat<> origin_arg, bool mobile_vertices) :
   params(params_arg),
   n_dim(params.n_dim),
   nom_pos(n_dim, 0),
@@ -14,7 +14,8 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   n_vert(params.n_vertices()),
   data_size{params.n_stage*n_dof + (2 + n_forcing + params.row_size)*params.n_qpoint()},
   data{Eigen::VectorXd::Zero(data_size)},
-  vertex_tss{Eigen::VectorXd::Constant(params.n_vertices(), nom_sz/n_dim)}
+  vertex_tss{Eigen::VectorXd::Constant(params.n_vertices(), nom_sz/n_dim)},
+  origin{origin_arg(Eigen::seqN(0, params.n_dim))}
 {
   face_record.fill(0);
   faces.fill(nullptr);
@@ -28,6 +29,7 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
     nom_pos[i_dim] = pos[i_dim];
     first_pos[i_dim] = pos[i_dim]*nom_sz;
   }
+  first_pos(Eigen::seqN(0, n_dim)) += origin;
   // construct vertices
   for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert)
   {
@@ -48,8 +50,8 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   }
 }
 
-Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level)
-: Element(params_arg, pos, mesh_size, ref_level, false)
+Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level, Mat<> origin_arg)
+: Element(params_arg, pos, mesh_size, ref_level, origin_arg, false)
 {}
 
 Storage_params Element::storage_params()
@@ -62,7 +64,7 @@ std::vector<double> Element::position(const Basis& basis, int i_qpoint)
   std::vector<double> pos;
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
     const int stride = math::pow(params.row_size, params.n_dim - i_dim - 1);
-    pos.push_back((basis.node((i_qpoint/stride)%params.row_size) + nom_pos[i_dim])*nom_sz);
+    pos.push_back((basis.node((i_qpoint/stride)%params.row_size) + nom_pos[i_dim])*nom_sz + origin(i_dim));
   }
   return pos;
 }

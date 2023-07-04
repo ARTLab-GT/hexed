@@ -62,21 +62,21 @@ TEST_CASE("Deformed_element")
     static_assert (row_size <= hexed::config::max_row_size);
     hexed::Equidistant basis {row_size};
     hexed::Storage_params params2 {2, 4, 2, row_size};
-    hexed::Deformed_element elem {params2};
-    elem.vertex(3).pos[0] = 0.6;
+    hexed::Deformed_element elem {params2, {0, 0}, 1., 0, hexed::Mat<2>{.03, .02}};
+    elem.vertex(3).pos[0] = 0.63;
     elem.node_adjustments()[2*3 + 1] =  0.2;
     elem.node_adjustments()[3*3 + 1] = -0.1;
-    REQUIRE(elem.position(basis, 0)[0] == Catch::Approx(0.0));
-    REQUIRE(elem.position(basis, 7)[0] == Catch::Approx(0.8));
-    REQUIRE(elem.position(basis, 8)[0] == Catch::Approx(0.6));
-    REQUIRE(elem.position(basis, 7)[1] == Catch::Approx(0.5));
+    REQUIRE(elem.position(basis, 0)[0] == Catch::Approx(0.03));
+    REQUIRE(elem.position(basis, 7)[0] == Catch::Approx(0.83));
+    REQUIRE(elem.position(basis, 8)[0] == Catch::Approx(0.63));
+    REQUIRE(elem.position(basis, 7)[1] == Catch::Approx(0.52));
 
-    REQUIRE(elem.position(basis, 3)[0] == Catch::Approx(0.5 - 0.2*0.2));
-    REQUIRE(elem.position(basis, 4)[0] == Catch::Approx(0.4 - 0.2*(0.2 - 0.1)/2));
-    REQUIRE(elem.position(basis, 5)[0] == Catch::Approx(0.3 + 0.2*0.1));
-    REQUIRE(elem.position(basis, 3)[1] == Catch::Approx(0.0 + 0.2));
-    REQUIRE(elem.position(basis, 4)[1] == Catch::Approx(0.5 + (0.2 - 0.1)/2));
-    REQUIRE(elem.position(basis, 5)[1] == Catch::Approx(1.0 - 0.1));
+    REQUIRE(elem.position(basis, 3)[0] == Catch::Approx(0.53 - 0.2*0.2));
+    REQUIRE(elem.position(basis, 4)[0] == Catch::Approx(0.43 - 0.2*(0.2 - 0.1)/2));
+    REQUIRE(elem.position(basis, 5)[0] == Catch::Approx(0.33 + 0.2*0.1));
+    REQUIRE(elem.position(basis, 3)[1] == Catch::Approx(0.02 + 0.2));
+    REQUIRE(elem.position(basis, 4)[1] == Catch::Approx(0.52 + (0.2 - 0.1)/2));
+    REQUIRE(elem.position(basis, 5)[1] == Catch::Approx(1.02 - 0.1));
     // check that the face quadrature points are the same as the interior quadrature points
     // that happen to lie on the faces (true for equidistant and Lobatto bases but not Legendre)
     REQUIRE(elem.face_position(basis, 0, 2)[1] == elem.position(basis, 2)[1]);

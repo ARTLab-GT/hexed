@@ -31,7 +31,7 @@ class Element
   int r_level;
   std::vector<Vertex::Transferable_ptr> vertices;
   // constructor that allows the vertices to be created as mobile, for the  benefit of `Deformed_element`
-  Element(Storage_params, std::vector<int> pos, double mesh_size, int ref_level, bool mobile_vertices);
+  Element(Storage_params, std::vector<int> pos, double mesh_size, int ref_level, Mat<> origin_arg, bool mobile_vertices);
 
   private:
   int n_dof;
@@ -51,14 +51,16 @@ class Element
   static constexpr int n_forcing = 4;
   int record = 0; //!< for algorithms to book-keep general information
   Tree* tree = nullptr; //!< `Tree` this element was created from
+  const Mat<> origin;
 
   /*!
-   * The `Storage_params1 defines the amount of storage that must be allocated.
-   * `pos` specifies the position of vertex 0 in intervals of the nominal size.
+   * The `Storage_params` defines the amount of storage that must be allocated.
+   * `pos` specifies the position of vertex 0 relative to `origin_arg` in intervals of the nominal size.
    * The nominal size is defined to be `mesh_size`/(2^`ref_level`).
    * The vertices will be spaced at intervals of the nominal size.
+   * Only the first `n_dim` elements of `origin_arg` are considered.
    */
-  Element(Storage_params, std::vector<int> pos = {}, double mesh_size = 1., int ref_level = 0);
+  Element(Storage_params, std::vector<int> pos = {}, double mesh_size = 1., int ref_level = 0, Mat<> origin_arg = Mat<>::Zero(3));
   virtual inline bool get_is_deformed() {return is_deformed;} //!< for determining whether a pointer is deformed
   //! Can't copy an Element. Doing so would have to either duplicate or break vertex connections, both of which seem error prone.
   Element(const Element&) = delete;
