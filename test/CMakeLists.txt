@@ -20,12 +20,14 @@ test_Iteration_status.cpp
 test_Layer_sequence.cpp
 test_math.cpp
 test_Max_dt.cpp
+test_Occt_geom.cpp
 test_pde.cpp
 test_Physical_basis.cpp
 test_Prolong_refined.cpp
 test_Restrict_refined.cpp
 test_Row_index.cpp
 test_Row_rw.cpp
+test_Simplex_geom.cpp
 test_Solver.cpp
 test_Stopwatch.cpp
 test_Stopwatch_tree.cpp

@@ -33,6 +33,7 @@ option(use_otter "include capability to use otter for plotting" OFF)
 option(use_tecplot "include capability to use tecplot for plotting" ON)
 option(use_cppcheck "use the cppcheck static analysis tool (requires cppcheck)" OFF)
 option(use_nlopt "enable features that require root finding with NLopt" OFF)
+option(use_occt "enable CAD geometry processing with OpenCASCADE Technology" OFF)
 
 # determine whether to compile with sanitizers
 if (sanitize)
@@ -62,6 +63,10 @@ endif()
 configure_file(hexed-config.cmake.in hexed-config.cmake)
 configure_file(hexed_config.hpp.in include/auto/hexed_config.hpp)
 file(CREATE_LINK ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/include/hexed SYMBOLIC)
+file(COPY_FILE ${CMAKE_SOURCE_DIR}/test/ellipsoid.igs ${CMAKE_BINARY_DIR}/ellipsoid.igs)
+file(COPY_FILE ${CMAKE_SOURCE_DIR}/test/ellipsoid.stp ${CMAKE_BINARY_DIR}/ellipsoid.stp)
+file(COPY_FILE ${CMAKE_SOURCE_DIR}/test/ellipse.IGS ${CMAKE_BINARY_DIR}/ellipse.IGS)
+file(COPY_FILE ${CMAKE_SOURCE_DIR}/test/ellipse.STEP ${CMAKE_BINARY_DIR}/ellipse.STEP)
 add_custom_command(
     OUTPUT Gauss_lobatto.cpp Gauss_legendre.cpp
     COMMAND python3 ${CMAKE_SOURCE_DIR}/script/auto_generate.py ${CMAKE_BINARY_DIR} ${MAX_BASIS_ROW_SIZE}
@@ -129,6 +134,10 @@ endif()
 if (use_nlopt)
     find_package(NLopt REQUIRED)
     target_link_libraries(hexed PRIVATE nlopt)
+endif()
+if (use_occt)
+    find_package(OpenCASCADE REQUIRED)
+    target_link_libraries(hexed PUBLIC TKBRep TKOpenGl TKV3d TKIGES TKSTEP TKSTL)
 endif()
 
 # add include/source files

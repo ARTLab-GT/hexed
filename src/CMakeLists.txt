@@ -16,10 +16,12 @@ Iteration_status.cpp
 Layer_sequence.cpp
 Lock.cpp
 math.cpp
+Occt_geom.cpp
 Output_data.cpp
 otter_vis.cpp
 Physical_basis.cpp
 Qpoint_func.cpp
+Simplex_geom.cpp
 Solver.cpp
 Solver_convective.cpp
 Solver_diffusive.cpp

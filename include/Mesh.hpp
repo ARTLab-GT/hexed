@@ -95,6 +95,7 @@ class Mesh
    * Offsetting thus provides a rudimentary way of creating anisotropic wall layers.
    */
   virtual void extrude(bool collapse = false, double offset = 0) = 0;
+  //! \overload
   inline void extrude(Layer_sequence layers)
   {
     double height = 1;
