@@ -959,10 +959,9 @@ TEST_CASE("cylinder tree mesh")
   constexpr int row_size = 6;
   hexed::Solver solver (2, row_size, 1.);
   std::vector<hexed::Flow_bc*> bcs;
-  //hexed::Mat<2> origin{1e3, 1e3};
   hexed::Mat<2> origin{2., 2.};
   for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Freestream(Eigen::Vector4d{0., 0., 1., 1e5}));
-  solver.mesh().add_tree(bcs, origin); // set a very large origin just to make sure it doesn't matter
+  solver.mesh().add_tree(bcs, origin);
   for (int i = 0; i < 3; ++i) solver.mesh().update();
   solver.mesh().set_surface(new hexed::Hypersphere(origin, .5), new hexed::Nonpenetration, origin + Eigen::Vector2d{.8, .8});
   for (int i = 0; i < 3; ++i) {
@@ -977,12 +976,12 @@ TEST_CASE("cylinder tree mesh")
   CHECK_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
   for (int i = 0; i < 6; ++i) {
     // this criterion will refine all elements with a vertex that is within .1 of the midpoint of the arc
-    auto criterion = [](hexed::Element& elem){
+    auto criterion = [origin](hexed::Element& elem){
       bool ref = false;
       for (int i_vert = 0; i_vert < 4; ++i_vert) {
         double dist = 0;
         for (int i_dim = 0; i_dim < 2; ++i_dim) {
-          dist += hexed::math::pow(elem.vertex(i_vert).pos[i_dim] - .5/std::sqrt(2), 2);
+          dist += hexed::math::pow(elem.vertex(i_vert).pos[i_dim] - origin(i_dim) - .5/std::sqrt(2), 2);
         }
         double r = .1;
         ref = ref || dist < r*r;
