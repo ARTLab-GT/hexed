@@ -7,10 +7,10 @@
 namespace hexed
 {
 
-//! A class of functions that can be evaluated at a point on a surface, without reference to a `Boundary_face` object.
+//! A class of functions that can be evaluated at a point on a surface, without reference to a `Boundary_connection` object.
 class Surface_func : virtual public Boundary_func
 {
-  virtual std::vector<double> operator()(Boundary_face&, int i_fqpoint, double time) const;
+  virtual std::vector<double> operator()(Boundary_connection&, int i_fqpoint, double time) const;
   public:
   virtual ~Surface_func() = default;
   //! `normal` is surface unit normal vector pointing out of the surface (into the domain).

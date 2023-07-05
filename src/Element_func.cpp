@@ -1,6 +1,5 @@
 #include <Element_func.hpp>
 #include <math.hpp>
-#include <iostream>
 
 namespace hexed
 {
@@ -8,6 +7,16 @@ namespace hexed
 std::vector<double> Element_func::operator()(Element& elem, const Basis& basis, int, double time) const
 {
   return operator()(elem, basis, time);
+}
+
+std::vector<double> Element_info::operator()(Element& elem, const Basis&, double time) const
+{
+  return operator()(elem);
+}
+
+std::vector<double> Element_info::operator()(Boundary_connection& con, int i_fqpoint, double time) const
+{
+  return operator()(con.element());
 }
 
 Elem_average::Elem_average    (const Qpoint_func& func) : qf{func} {}

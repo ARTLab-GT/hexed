@@ -7,23 +7,23 @@
 namespace hexed
 {
 
-std::vector<double> Surface_func::operator()(Boundary_face& bf, int i_fqpoint, double time) const
+std::vector<double> Surface_func::operator()(Boundary_connection& con, int i_fqpoint, double time) const
 {
-  auto params = bf.storage_params();
+  auto params = con.storage_params();
   int nfq = params.n_qpoint()/params.row_size;
   std::vector<double> pos;
   std::vector<double> normal;
-  int nrml_sign = 1 - 2*bf.inside_face_sign();
+  int nrml_sign = 1 - 2*con.inside_face_sign();
   double nrml_mag = 0;
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-    pos.push_back(bf.surface_position()[i_dim*nfq + i_fqpoint]);
-    normal.push_back(bf.surface_normal()[i_dim*nfq + i_fqpoint]*nrml_sign);
+    pos.push_back(con.surface_position()[i_dim*nfq + i_fqpoint]);
+    normal.push_back(con.surface_normal()[i_dim*nfq + i_fqpoint]*nrml_sign);
     nrml_mag += normal.back()*normal.back();
   }
   nrml_mag = std::sqrt(nrml_mag);
   for (double& n : normal) n /= nrml_mag;
   std::vector<double> state;
-  for (int i_var = 0; i_var < params.n_var; ++i_var) state.push_back(bf.inside_face()[i_var*nfq + i_fqpoint]);
+  for (int i_var = 0; i_var < params.n_var; ++i_var) state.push_back(con.inside_face()[i_var*nfq + i_fqpoint]);
   return operator()(pos, time, state, normal);
 }
 
@@ -39,7 +39,7 @@ std::vector<double> Pressure_stress::operator()(std::vector<double> pos, double 
     normal_sq += normal[i_dim]*normal[i_dim];
   }
   double normal_mag {std::sqrt(normal_sq)};
-  double pres {(hr - 1.)*(state[state.size() - 1] - 0.5*momentum_sq/state[state.size() - 2])}; // FIXME: use correct heat_rat
+  double pres {(hr - 1.)*(state[state.size() - 1] - 0.5*momentum_sq/state[state.size() - 2])}; //! \todo use correct heat_rat
   std::vector<double> fpa;
   for (unsigned i_dim = 0; i_dim < normal.size(); ++i_dim) {
     fpa.push_back(-normal[i_dim]*pres/normal_mag);

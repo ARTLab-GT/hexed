@@ -25,9 +25,11 @@ int main()
     solver.snap_vertices();
   }
   solver.calc_jacobian();
-  for (int i = 0; i < 6; ++i) {
+  for (int i = 0; i < 8; ++i) {
     printf("starting ref cycle %i\n", i);
+    solver.calc_jacobian();
     solver.set_res_bad_surface_rep(6);
+    solver.visualize_surface_tecplot(6, hexed::Resolution_badness(), hexed::format_str(100, "wing_store%i", i), 2);
     solver.mesh().update(ref, unref);
     for (int i = 0; i < 2; ++i) {
       solver.relax_vertices();
@@ -35,7 +37,9 @@ int main()
     }
   }
   //solver.snap_faces();
-  solver.visualize_surface_tecplot(6, "wing_store", 4);
+  solver.calc_jacobian();
+  solver.set_res_bad_surface_rep(6);
+  solver.visualize_surface_tecplot(6, hexed::Resolution_badness(), "wing_store", 2);
   #endif
   return 0;
 }
