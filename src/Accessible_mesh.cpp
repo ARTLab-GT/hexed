@@ -833,12 +833,18 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     elem.record = 0;
-    if (elem.tree) {
-      bool ref = refine_criterion(elem);
-      bool unref = unrefine_criterion(elem);
-      if (ref && !unref) elem.record = 1;
-      else if (unref && !ref) elem.record = -1;
-    }
+    bool ref = refine_criterion(elem);
+    bool unref = unrefine_criterion(elem);
+    if (ref && !unref) elem.record = 1;
+    else if (unref && !ref) elem.record = -1;
+  }
+  // pass refinement requests of extruded elements to their extrusion parents
+  #pragma omp parallel for
+  for (auto con : extrude_cons) {
+    auto& inside = con->element(1);
+    Lock::Acquire a(inside.lock);
+    if (inside.record == 0) inside.record = con->element(0).record;
+    else inside.record = std::max(inside.record, con->element(0).record);
   }
   int n_orig [2];
   // refine elements

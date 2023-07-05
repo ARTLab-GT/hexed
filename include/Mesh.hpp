@@ -110,8 +110,7 @@ class Mesh
   //! \name Automated tree meshing
   //! \{
   /*! \brief Initializes meshing with bin/quad/[octree](https://en.wikipedia.org/wiki/Octree) topology.
-   * \details Creates a tree initialized with one element with ref level 0 located at `origin`
-   * (`origin` is the location of its minimal corner).
+   * \details Creates a tree initialized with one element with ref level 0.
    * Technically, free-form elements can also be created in the same mesh,
    * but they will not be connected to the tree.
    * Only one tree can be created.
@@ -124,6 +123,7 @@ class Mesh
    *   E.g. `extremal_bcs[0]` is the boundary condition to apply to the minimum \f$x_0\f$ face,
    *   `extremal_bcs[1]` is the BC for the maximum \f$x_0\f$ face,
    *   `extremal_bcs[2]` is for minimum \f$x_1\f$.
+   * \param origin The minimal corner of the tree root will be located at `origin`.
    */
   virtual void add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3)) = 0;
   /*! \brief Defines the surface geometry to be meshed as a boundary.
@@ -140,8 +140,9 @@ class Mesh
    * Any surfaces defined by previous invokations of `set_surface` are forgotten.
    */
   virtual void set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) = 0;
-  static inline bool always(Element&) {return true;}
-  static inline bool never(Element&) {return false;}
+  static inline bool always(Element&) {return true;} //!< returns `true`
+  static inline bool never(Element&) {return false;} //!< returns `false`
+  static inline bool if_extruded(Element& elem) {return !elem.tree;} //!< returns true if the element is extruded **in a tree mesh**
   /*! \brief Updates tree mesh based on user-supplied (un)refinement criteria.
    * \details Evaluates `refine_criterion` and `unrefine_criterion` on every element in the tree (if a tree exists).
    * Whenever `refine_criterion` is `true` and `unrefine_criterion` is `false`, that element is refined.

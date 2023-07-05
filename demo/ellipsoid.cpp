@@ -1,6 +1,5 @@
 #include <hexed/Solver.hpp>
 #include <hexed/Occt_geom.hpp>
-#include <hexed/Simplex_geom.hpp>
 
 void demo(std::string file_extension)
 {

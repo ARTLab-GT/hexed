@@ -266,19 +266,33 @@ class Nearest_point
   Mat<n_dim> r;
   Mat<n_dim> p;
   double dist_sq;
+  bool empty;
   public:
-  //! Initializes the candidate point to an arbitrary value and the distance to the maximum `double` value
-  //! \param ref Sets `reference()`
-  Nearest_point(Mat<n_dim> ref) : r{ref}, p{ref}, dist_sq{std::numeric_limits<double>::max()} {}
-  //! Creates a `Nearest_point` with a specified candidate point and computes the correct distance
-  Nearest_point(Mat<n_dim> ref, Mat<n_dim> pnt) : r{ref}, p{pnt}, dist_sq{(pnt - ref).squaredNorm()} {}
+  /*! Initializes the distance to the maximum `double` value.
+   * This point is considered "empty" and `point()` won't work
+   * until `merge()`ed with a non-empty `Nearest_point`.
+   * \param ref Sets `reference()`
+   */
+  Nearest_point(Mat<n_dim> ref) : r{ref}, p{ref}, dist_sq{std::numeric_limits<double>::max()}, empty{true} {}
+  //! \brief Creates a `Nearest_point` with a specified candidate point and computes the correct distance.
+  //! \details This point is non-empty and has a well-defined `point()`.
+  Nearest_point(Mat<n_dim> ref, Mat<n_dim> pnt) : r{ref}, p{pnt}, dist_sq{(pnt - ref).squaredNorm()}, empty{false} {}
   Mat<n_dim> reference() {return r;} //!< reference point that you want to find the nearest point to
-  Mat<n_dim> point() {return p;} //!< current best estimate for nearest point
   double dist_squared() {return dist_sq;} //!< squared distance between `reference()` and `point()`
+  bool is_empty() {return empty;} //!< if `true`, `point()` won't work
+
   //! sets `*this` to the nearest of `*this` and `other`
   void merge(Nearest_point other) {if (other.dist_sq < this->dist_sq) *this = other;}
   //! updates `*this` to point to `new_pnt` if `new_pnt` is closer
   void merge(Mat<n_dim> new_pnt) {merge(Nearest_point(r, new_pnt));}
+
+  //! \brief Current best estimate for nearest point.
+  //! \details Throws an exception if `is_empty()`.
+  Mat<n_dim> point()
+  {
+    HEXED_ASSERT(!empty, "no candidates have been merged");
+    return p;
+  }
 };
 
 }

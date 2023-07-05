@@ -91,8 +91,10 @@ Mat<> Occt_geom::nearest_point(Mat<> point)
     // iterate through the surfaces and find which one has the nearest point
     for (auto& surface : surfaces) {
       GeomAPI_ProjectPointOnSurf proj(occt_point, surface);
-      gp_Pnt occt_candidate = proj.NearestPoint();
-      nearest.merge(Mat<3>{occt_candidate.X(), occt_candidate.Y(), occt_candidate.Z()});
+      if (proj.IsDone()) {
+        gp_Pnt occt_candidate = proj.NearestPoint();
+        nearest.merge(Mat<3>{occt_candidate.X(), occt_candidate.Y(), occt_candidate.Z()});
+      }
     }
   }
   return nearest.point()/1000;
