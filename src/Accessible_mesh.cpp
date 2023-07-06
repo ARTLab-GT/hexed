@@ -696,8 +696,9 @@ bool Accessible_mesh::needs_refine(Tree* t)
     if (t->elem) {
       // also check the diagonal neighbors since they could be extrusion neighbors
       for (int j_face = 0; j_face < 2*(i_face/2); ++j_face) {
-        dir(j_face/2) = math::sign(j_face%2);
-        neighbors = t->find_neighbors(dir);
+        auto d = dir;
+        d(j_face/2) = math::sign(j_face%2);
+        neighbors = t->find_neighbors(d);
         // again, ref level difference > 1 or partially exposed -> refine
         if (std::any_of(neighbors.begin(), neighbors.end(), too_fine)) return true;
       }
@@ -763,8 +764,9 @@ void Accessible_mesh::delete_bad_extrusions()
                   }
                 }
                 for (int k_face = 0; k_face < 2*(j_face/2); ++k_face) if (exposed[k_face]) {
-                  dir(k_face/2) = math::sign(k_face%2);
-                  auto neighbs = elem.tree->find_neighbors(dir);
+                  auto d = dir;
+                  d(k_face/2) = math::sign(k_face%2);
+                  auto neighbs = elem.tree->find_neighbors(d);
                   for (Tree* n : neighbs) if (exists(n)) {
                     if (n->refinement_level() >= elem.refinement_level()) {
                       changed = true;
@@ -790,7 +792,6 @@ void Accessible_mesh::delete_bad_extrusions()
     }
   } while (changed);
 }
-
 
 void Accessible_mesh::deform()
 {
