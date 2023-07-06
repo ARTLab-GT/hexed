@@ -90,7 +90,41 @@ a few 3rd-party libraries.
 - `cd eigen-X.X.X` (replace "X"s with appropriate numbers).
 - `cp -r Eigen/ ~/.local/include/`
 
-\subsection install_hexed Step 4: compile and install Hexed
+\subsection install_occt Step 4: install OpenCASCADE Technology
+OpenCASCADE Technology is an open source CAD Engine which Hexed uses to read and manipulate geometry from standard CAD file formats.
+You have to build it from the source with CMake, similar to what you will do with Hexed below.
+- `cd ~/codes`
+- Before you even install OCCT, you first have to install the so-called "Fast Light Toolkit" (FLKT).
+  - Visit the [webpage](https://www.fltk.org/) and download the lastest release.
+  - `tar -xzf ~/Downloads/fltk-1.3.8-source.tar.gz` (replace the version number with whatever version you downloaded).
+  - `cd cd fltk-1.3.8/`
+  - `mkdir build`
+  - `cd build`
+  - `ccmake ..`
+  - `c`/`e`
+  - Change `CMAKE_INSTALL_PREFIX` to `~/.local`
+  - `c`/`e`/`g`
+- Obtain the source code by one of the following approaches:
+  - Visit the [download page](https://dev.opencascade.org/release) and download the latest release.
+    Before you can download the source, you will be prompted to make an account.
+  - If you're an ARTLab member, just ask Micaiah for a copy.
+- `tar -xzf ~/Downloads/opencascade-7.7.0.tgz`
+- `cd opencascade-7.7.0`
+- `mkir build`
+- `cd build`
+- `ccmake ..`
+  - This will open the [CMake curses interface](https://cmake.org/cmake/help/latest/manual/ccmake.1.html)
+    which lets you configure options for how you want to build OCCT.
+  - Hit `c` to configure.
+  - You will now see a list of options.
+    - Use the arrow keys to move the cursor down to `INSTALL_DIR`.
+      Hit Enter to edit it and change it to `~/.local`.
+    - Move the cursor to `USE_FREETYPE` and hit Enter to toggle it to `OFF`.
+      Set `USE_TK` and `USE_XLIB` to `OFF` as well.
+      If you are building on a personal machine, you could alternatively just install those packages instead of disabling them,
+      but installing software on the ARTLab machines is a annoying.
+
+\subsection install_hexed Step 5: compile and install Hexed
 - If you haven't already,
   [add an SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
   to your GitHub account.
@@ -110,7 +144,7 @@ a few 3rd-party libraries.
     If something goes wrong and you can't get `g` to work, you can abort with `q`.
 - `make -j install`
 
-\subsection verify Step 5: verify success
+\subsection verify Step 6: verify success
 -  You should still be in the build directory.
 - `demo/demo2d`
   - This runs a simple demonstration simulation. It should create a bunch of `.szplt` files.
