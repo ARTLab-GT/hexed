@@ -12,7 +12,7 @@ int main()
     solver.relax_vertices();
     solver.snap_vertices();
   }
-  solver.snap_faces();
+  //solver.snap_faces();
   solver.visualize_field_tecplot(hexed::Is_deformed(), "sphere_initial", 4);
   for (int i = 0; i < 8; ++i) {
     // this criterion will refine all elements with a vertex that is within .1 of the center of the sphere section
@@ -40,7 +40,7 @@ int main()
     solver.relax_vertices();
     solver.snap_vertices();
   }
-  solver.snap_faces();
+  //solver.snap_faces();
   solver.visualize_field_tecplot(hexed::Is_deformed(), "sphere_refined", 4);
   for (int i = 0; i < 8; ++i) {
     solver.mesh().update(hexed::Mesh::never, [](hexed::Element& elem){return elem.refinement_level() > 3;});

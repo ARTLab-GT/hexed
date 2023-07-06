@@ -473,12 +473,10 @@ void Accessible_mesh::extrude(bool collapse, double offset)
   {
     auto verts = vertices(); // note: need to rebuild vertex vector because face connections above have `eat`en vertices
     VERTEX_LOOP(CONNECT_SAME_CONFORMING)
-    #if 1
     for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
       HEXED_ASSERT(verts[i_vert].record.empty(), format_str(100, "vertex detected with %lu unprocessed connection requests",
                                                             verts[i_vert].record.size()/n_record).c_str());
     }
-    #endif
   }
   for (auto con_plan : con_plans) {
     connect_deformed(con_plan.ref_level, con_plan.serial_ns, con_plan.dir);
@@ -689,22 +687,19 @@ bool exists(Tree* tree)
 bool Accessible_mesh::needs_refine(Tree* t)
 {
   for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
-    auto neighbors = t->find_neighbors(math::direction(params.n_dim, i_face));
+    // if there is a face neighbor with ref level more than 1 greater, need to refine
+    auto dir = math::direction(params.n_dim, i_face);
+    auto neighbors = t->find_neighbors(dir);
     int rl = t->refinement_level();
     auto too_fine = [rl](Tree* ptr){return ptr->refinement_level() > rl + 1;};
-    if (std::any_of(neighbors.begin(), neighbors.end(), too_fine)) return true; // if there is a face neighbor with ref level more than 1 greater, need to refine
+    if (std::any_of(neighbors.begin(), neighbors.end(), too_fine)) return true;
     if (t->elem) {
-      // if this face is exposed, also check the diagonal neighbors since they could be extrusion neighbors
-      if (!std::all_of(neighbors.begin(), neighbors.end(), &exists)) {
-        for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) if (j_dim != i_face/2) {
-          for (int face_sign = 0; face_sign < 2; ++face_sign) {
-            auto dir = math::direction(params.n_dim, i_face);
-            dir(j_dim) = math::sign(face_sign);
-            auto diag_neighbs = t->find_neighbors(dir);
-            // again, ref level difference > 1 or partially exposed -> refine
-            if (std::any_of(diag_neighbs.begin(), diag_neighbs.end(), too_fine)) return true;
-          }
-        }
+      // also check the diagonal neighbors since they could be extrusion neighbors
+      for (int j_face = 0; j_face < 2*(i_face/2); ++j_face) {
+        dir(j_face/2) = math::sign(j_face%2);
+        neighbors = t->find_neighbors(dir);
+        // again, ref level difference > 1 or partially exposed -> refine
+        if (std::any_of(neighbors.begin(), neighbors.end(), too_fine)) return true;
       }
     }
   }
