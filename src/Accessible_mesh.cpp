@@ -745,14 +745,14 @@ void Accessible_mesh::delete_bad_extrusions()
               }
             }
           }
-          if (exposed[i_face]) {
-            // for all faces that share an edge with `i_face` (but only the ones with lower index to avoid redundancy)
-            for (int j_face = 0; j_face < 2*(i_face/2); ++j_face) {
+          // for all faces that share an edge with `i_face` (but only the ones with lower index to avoid redundancy)
+          for (int j_face = 0; j_face < 2*(i_face/2); ++j_face) {
+            if (exposed[i_face] || exposed[j_face]) {
               auto dir = math::direction(nd, i_face);
               dir(j_face/2) = math::sign(j_face%2);
               auto diag_neighbs = elem.tree->find_neighbors(dir);
               // if there are elements that are connected diagonally but have no mutual face neighbors, delete at least one of them
-              if (exposed[j_face]) {
+              if (exposed[i_face] && exposed[j_face]) {
                 for (Tree* n : diag_neighbs) if (exists(n)) {
                   // To make results repeatable, if the elements have different refinement levels, delete the finer one(s).
                   // If they have the same refinement level, delete both
