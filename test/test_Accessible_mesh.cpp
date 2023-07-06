@@ -1,6 +1,7 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/config.hpp>
 #include <hexed/Accessible_mesh.hpp>
+#include <hexed/Simplex_geom.hpp>
 
 TEST_CASE("Accessible_mesh")
 {
@@ -430,5 +431,26 @@ TEST_CASE("Tree meshing")
       REQUIRE(mesh1.elements().size() == 4*1 + 4*8);
       mesh1.valid().assert_valid();
     }
+  }
+  SECTION("no diagonally-connected elements")
+  {
+    mesh.update();
+    mesh.update();
+    std::vector<hexed::Mat<3, 3>> triangles(2);
+    triangles[0] << .7/8, .7/8, .7/8,
+                    .7/8, .7/8, .7/8,
+                      0.,   0.,   .7;
+    triangles[1] << 2.1/8, 2.1/8, 2.1/8,
+                    2.1/8, 2.1/8, 2.1/8,
+                       0.,    0.,    .7;
+    mesh.set_surface(new hexed::Simplex_geom<3>(triangles), new hexed::Copy(), hexed::Mat<3>{.6, .6, .6});
+    // count number of non-extruded elements
+    int count = 0;
+    auto& elems = mesh.elements();
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      if (elems[i_elem].tree) ++count;
+    }
+    // number should indicate that the diagonally-connected elements have been deleted
+    REQUIRE(count == 48);
   }
 }

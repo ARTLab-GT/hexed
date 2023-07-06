@@ -3,6 +3,7 @@
 #include <Row_index.hpp>
 #include <erase_if.hpp>
 #include <utils.hpp>
+#include <global_hacks.hpp>
 
 namespace hexed
 {
@@ -259,6 +260,12 @@ void Accessible_mesh::extrude(bool collapse, double offset)
       }
     }
   }
+  {
+    auto verts = vertices();
+    for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
+      HEXED_ASSERT(verts[i_vert].record.size()%4 == 0, "vertex has wrong number of records");
+    }
+  }
 
   // decide which faces to extrude from
   std::vector<Empty_face> empty_faces;
@@ -328,6 +335,12 @@ void Accessible_mesh::extrude(bool collapse, double offset)
       }
     }
   }
+  {
+    auto verts = vertices();
+    for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
+      HEXED_ASSERT(verts[i_vert].record.size()%4 == 0, "vertex has wrong number of records");
+    }
+  }
 
   // perform offset
   if (offset > 0) {
@@ -355,6 +368,12 @@ void Accessible_mesh::extrude(bool collapse, double offset)
       }
     }
   }
+  {
+    auto verts = vertices();
+    for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
+      HEXED_ASSERT(verts[i_vert].record.size()%4 == 0, "vertex has wrong number of records");
+    }
+  }
 
   // plan connections to make (don't make them yet, because that could result in `eat`ing vertices which have not been visited,
   // and ultimately dereferencing null pointers)
@@ -363,18 +382,14 @@ void Accessible_mesh::extrude(bool collapse, double offset)
 
   #define VERTEX_LOOP(code) \
     /* connections without hanging nodes */ \
-    for (int i_vert = 0; i_vert < verts.size(); ++i_vert) \
-    { \
+    for (int i_vert = 0; i_vert < verts.size(); ++i_vert) { \
       auto& vert {verts[i_vert]}; \
       /* first make connections where dimension matches and then make connections among differing dimensions. */ \
       /* This order prevents incorrect connections where both same-dimension and different-dimension candidates are available. */ \
-      for (bool (*aligned)(Con_dir<Deformed_element>, std::array<int, 2>) : {&aligned_same_dim, &aligned_different_dim}) \
-      { \
+      for (bool (*aligned)(Con_dir<Deformed_element>, std::array<int, 2>) : {&aligned_same_dim, &aligned_different_dim}) { \
         /* iterate through every possible pair of records created by an extruded elements above */ \
-        for (int i_record = 0; i_record < int(vert.record.size()); i_record += n_record) \
-        { \
-          for (int j_record = i_record + n_record; j_record < int(vert.record.size()); j_record += n_record) \
-          { \
+        for (int i_record = 0; i_record < int(vert.record.size()); i_record += n_record) { \
+          for (int j_record = i_record + n_record; j_record < int(vert.record.size()); j_record += n_record) { \
             int ref_level = vert.record[i_record]; \
             Con_dir<Deformed_element> dir {{     vert.record[i_record + 2]/2 ,      vert.record[j_record + 2]/2}, \
                                            {bool(vert.record[i_record + 2]%2), bool(vert.record[j_record + 2]%2)}}; \
@@ -423,11 +438,11 @@ void Accessible_mesh::extrude(bool collapse, double offset)
                  + math::pow(2, nd - 1 - free_dim); \
         Vertex& fine_vert = elem.vertex(iv); \
         /* vertex should have exactly one record */ \
-        sn[1] = fine_vert.record[1]; \
         HEXED_ASSERT(fine_vert.record.size() == n_record, \
-                     format_str(100, "fine vertex has %li != 1 records (position = [%e, %e, %e])", \
-                                fine_vert.record.size()/n_record, \
+                     format_str(1000, "`fine_vert.record.size() == %li != n_record == %li` (position = [%e, %e, %e])", \
+                                fine_vert.record.size(), n_record, \
                                 fine_vert.pos[0], fine_vert.pos[1], fine_vert.pos[2]).c_str()); \
+        sn[1] = fine_vert.record[1]; \
         stretch_dim = extr_dim > free_dim; \
         fine_vert.record.erase(fine_vert.record.begin(), fine_vert.record.begin() + n_record); \
       } \
@@ -565,6 +580,7 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
     elem.record = 0;
     if (elem.tree) if (elem.tree->get_status() != 1) elem.record = 2;
   }
+  delete_bad_extrusions();
   deform();
   purge();
   connect_new<         Element>(0);
@@ -665,7 +681,7 @@ void Accessible_mesh::refine_by_record(bool is_deformed, int start, int end)
 
 bool exists(Tree* tree)
 {
-  if (tree->elem) if (tree->elem->record != 2) return true;
+  if (tree) if (tree->elem) if (tree->elem->record != 2) return true;
   return false;
 }
 
@@ -708,6 +724,78 @@ bool is_def(Element& elem)
 {
   return (elem.get_is_deformed() && elem.record == 0) || (!elem.get_is_deformed() && elem.record == 3);
 }
+
+// delete elements that would create pathological extrusion topology
+void Accessible_mesh::delete_bad_extrusions()
+{
+  int nd = params.n_dim;
+  auto& elems = elements();
+  bool changed;
+  do {
+    changed = false;
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      if (elem.tree && elem.record != 2) {
+        bool exposed [6];
+        for (int i_face = 0; i_face < 2*nd; ++i_face) {
+          // if any hanging-node face is partially covered by fine elements, delete the fine elements
+          auto neighbors = elem.tree->find_neighbors(math::direction(nd, i_face));
+          bool all_exist = std::all_of(neighbors.begin(), neighbors.end(), exists);
+          exposed[i_face] = !all_exist;
+          if (neighbors.size() > 1) {
+            if (std::any_of(neighbors.begin(), neighbors.end(), exists) && !all_exist) {
+              changed = true;
+              for (Tree* n : neighbors) {
+                if (n->elem) n->elem->record = 2;
+              }
+            }
+          }
+          if (exposed[i_face]) {
+            // for all faces that share an edge with `i_face` (but only the ones with lower index to avoid redundancy)
+            for (int j_face = 0; j_face < 2*(i_face/2); ++j_face) {
+              auto dir = math::direction(nd, i_face);
+              dir(j_face/2) = math::sign(j_face%2);
+              auto diag_neighbs = elem.tree->find_neighbors(dir);
+              // if there are elements that are connected diagonally but have no mutual face neighbors, delete at least one of them
+              if (exposed[j_face]) {
+                for (Tree* n : diag_neighbs) if (exists(n)) {
+                  // To make results repeatable, if the elements have different refinement levels, delete the finer one(s).
+                  // If they have the same refinement level, delete both
+                  if (n->refinement_level() >= elem.refinement_level()) {
+                    changed = true;
+                    n->elem->record = 2;
+                    if (n->refinement_level() == elem.refinement_level()) elem.record = 2;
+                  }
+                }
+                for (int k_face = 0; k_face < 2*(j_face/2); ++k_face) if (exposed[k_face]) {
+                  dir(k_face/2) = math::sign(k_face%2);
+                  auto neighbs = elem.tree->find_neighbors(dir);
+                  for (Tree* n : neighbs) if (exists(n)) {
+                    if (n->refinement_level() >= elem.refinement_level()) {
+                      changed = true;
+                      n->elem->record = 2;
+                      if (n->refinement_level() == elem.refinement_level()) elem.record = 2;
+                    }
+                  }
+                }
+              } else if (nd == 3) {
+                // if the edge is partially covered with fine elements, delete them
+                if (  !std::all_of(diag_neighbs.begin(), diag_neighbs.end(), exists)
+                    && std::any_of(diag_neighbs.begin(), diag_neighbs.end(), exists)) {
+                  changed = true;
+                  for (Tree* n : diag_neighbs) {
+                    if (n->elem) n->elem->record = 2;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } while (changed);
+}
+
 
 void Accessible_mesh::deform()
 {
@@ -970,45 +1058,7 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
     }
     for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, container(is_deformed).element_view().size());
   } while (changed);
-  // if any hanging-node face or edge is partially covered by fine elements, delete the fine elements
-  do {
-    changed = false;
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      auto& elem = elems[i_elem];
-      if (elem.tree && elem.record != 2) {
-        for (int i_face = 0; i_face < 2*nd; ++i_face) {
-          // check face neighbors
-          auto neighbors = elem.tree->find_neighbors(math::direction(nd, i_face));
-          bool all_exist = std::all_of(neighbors.begin(), neighbors.end(), exists);
-          if (neighbors.size() > 1) {
-            if (std::any_of(neighbors.begin(), neighbors.end(), exists) && !all_exist) {
-              changed = true;
-              for (Tree* n : neighbors) {
-                if (n->elem) n->elem->record = 2;
-              }
-            }
-          }
-          // if that was a boundary face, also check edge neighbors, because in 3D that can result in some really weird extrusion situations
-          if (nd == 3 && !all_exist) {
-            for (int j_dim = 0; j_dim < nd; ++j_dim) if (j_dim != i_face/2) {
-              for (int sign = 0; sign < 2; ++sign) {
-                auto dir = math::direction(nd, i_face);
-                dir(j_dim) = math::sign(sign);
-                auto diag_neighbs = elem.tree->find_neighbors(dir);
-                if (  !std::all_of(diag_neighbs.begin(), diag_neighbs.end(), exists)
-                    && std::any_of(diag_neighbs.begin(), diag_neighbs.end(), exists)) {
-                  changed = true;
-                  for (Tree* n : diag_neighbs) {
-                    if (n->elem) n->elem->record = 2;
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  } while (changed);
+  delete_bad_extrusions();
   deform();
   // delete extruded elements
   #pragma omp parallel for
@@ -1025,7 +1075,7 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   // connect new elements
   connect_new<         Element>(0);
   connect_new<Deformed_element>(0);
-  extrude(true);
+  if (!global_hacks::debug_message.count("don't extrude")) extrude(true);
   connect_rest(surf_bc_sn);
 }
 

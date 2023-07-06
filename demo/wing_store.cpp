@@ -1,11 +1,12 @@
 #include <hexed/Solver.hpp>
 #include <hexed/Occt_geom.hpp>
 #include <hexed/Simplex_geom.hpp>
+#include <hexed/global_hacks.hpp>
 #include <iostream>
 
 const double tol = 1e-1;
 const int row_size = 2;
-const int max_ref_level = 6;
+const int max_ref_level = 8;
 
 bool ref(hexed::Element& elem) {return elem.resolution_badness > tol && elem.refinement_level() < max_ref_level;}
 bool unref(hexed::Element& elem) {return elem.resolution_badness < tol*hexed::math::pow(2, row_size) || elem.refinement_level() > max_ref_level;}
@@ -25,16 +26,19 @@ int main()
     solver.snap_vertices();
   }
   solver.calc_jacobian();
-  for (int i = 0; i < 8; ++i) {
+  for (int i = 0; i < 12; ++i) {
     printf("starting ref cycle %i\n", i);
     solver.calc_jacobian();
     solver.set_res_bad_surface_rep(6);
     solver.visualize_surface_tecplot(6, hexed::Resolution_badness(), hexed::format_str(100, "wing_store%i", i), 2);
+    //if (i < 3) hexed::global_hacks::debug_message["don't extrude"] = 1;
     solver.mesh().update(ref, unref);
+    //if (i < 3) {
     for (int i = 0; i < 2; ++i) {
       solver.relax_vertices();
       solver.snap_vertices();
     }
+    //}
   }
   //solver.snap_faces();
   solver.calc_jacobian();

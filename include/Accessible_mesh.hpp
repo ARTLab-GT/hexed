@@ -45,6 +45,7 @@ class Accessible_mesh : public Mesh
   template<typename element_t> void connect_new(int start_at); // connects new elements in `mbt<element_t>()`. helper function for `refine`
   void refine_by_record(bool is_deformed, int start, int end);
   bool needs_refine(Tree*);
+  void delete_bad_extrusions();
   void deform();
   void purge();
 
