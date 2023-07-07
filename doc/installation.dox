@@ -28,11 +28,14 @@ If look at these instructions and don't know what I'm talking about, skip to \re
      Open these files in Tecplot and run the macro script `format.mcr` in the Hexed build directory to create a readable visualization.
 
 \section detailed Detailed instructions
-This section is provided in case you need more information than the \ref quick section includes.
-It assumes you have access to an ARTLAB
-machine and are familiar with basic directory and file management in Linux. If you have more than that, it is assumed that you can adapt these
-instructions according to your situation. If you have less than that, consider asking for help. If you have any trouble following these instructions,
-please let [Micaiah](https://github.gatech.edu/mcsp3) know so that this documentation can be improved.
+These are some very basic, step-by-step instructions, since Hexed is meant for aerospace engineers, who often aren't programmers.
+These instructions will work on an ARTLab machine.
+If you're working on a different machine, hopefully they will provide some useful troubleshooting hints,
+but you probably won't be able to just blindly follow the instructions.
+The instructions assume you are familiar with basic directory and file management in Linux.
+If you are not, consider asking for help.
+If you have any trouble following these instructions,
+please let \ref me know so that this documentation can be improved.
 
 \subsection configure Step 1: configure environment
 When you compile and install programs that rely on other programs,
@@ -92,37 +95,20 @@ a few 3rd-party libraries.
 
 \subsection install_occt Step 4: install OpenCASCADE Technology
 OpenCASCADE Technology is an open source CAD Engine which Hexed uses to read and manipulate geometry from standard CAD file formats.
-You have to build it from the source with CMake, similar to what you will do with Hexed below.
-- `cd ~/codes`
-- Before you even install OCCT, you first have to install the so-called "Fast Light Toolkit" (FLKT).
-  - Visit the [webpage](https://www.fltk.org/) and download the lastest release.
-  - `tar -xzf ~/Downloads/fltk-1.3.8-source.tar.gz` (replace the version number with whatever version you downloaded).
-  - `cd cd fltk-1.3.8/`
-  - `mkdir build`
-  - `cd build`
-  - `ccmake ..`
-  - `c`/`e`
-  - Change `CMAKE_INSTALL_PREFIX` to `~/.local`
-  - `c`/`e`/`g`
 - Obtain the source code by one of the following approaches:
   - Visit the [download page](https://dev.opencascade.org/release) and download the latest release.
     Before you can download the source, you will be prompted to make an account.
-  - If you're an ARTLab member, just ask Micaiah for a copy.
+  - If you're an ARTLab member, just ask \ref me for a copy.
+- `cd ~/codes`
 - `tar -xzf ~/Downloads/opencascade-7.7.0.tgz`
 - `cd opencascade-7.7.0`
 - `mkir build`
 - `cd build`
-- `ccmake ..`
-  - This will open the [CMake curses interface](https://cmake.org/cmake/help/latest/manual/ccmake.1.html)
-    which lets you configure options for how you want to build OCCT.
-  - Hit `c` to configure.
-  - You will now see a list of options.
-    - Use the arrow keys to move the cursor down to `INSTALL_DIR`.
-      Hit Enter to edit it and change it to `~/.local`.
-    - Move the cursor to `USE_FREETYPE` and hit Enter to toggle it to `OFF`.
-      Set `USE_TK` and `USE_XLIB` to `OFF` as well.
-      If you are building on a personal machine, you could alternatively just install those packages instead of disabling them,
-      but installing software on the ARTLab machines is a annoying.
+- `cmake -D INSTALL_DIR=~/.local -D BUILD_MODULE_Draw=OFF ..`
+  - This will disable the "Draw" module, which creates a basic example CAD program with OCCT.
+    We don't need that for our purposes, and I've had trouble compiling it on the ARTLab machines,
+    but if you want to enable it and can get it to compile, it certainly won't cause any problems.
+- `make install` (may take a while)
 
 \subsection install_hexed Step 5: compile and install Hexed
 - If you haven't already,
@@ -133,15 +119,7 @@ You have to build it from the source with CMake, similar to what you will do wit
 - `cd hexed`
 - `mkdir build_Release`
 - `cd build_Release`
-- `ccmake ../`
-  - This will open [ccmake](https://cmake.org/cmake/help/latest/manual/ccmake.1.html), which is a sort-of-GUI for [CMake](https://cmake.org/).
-    This allows you to choose some options for how to build Hexed.
-    You should see `EMPTY_CACHE` and no error messages.
-  - Press `c`. You should now see a list of options. The default options are fine for a release build, so you don't have to do anything.
-    * If you want to edit any of the options, use the arrow keys to move the cursor and Enter to edit the option under the cursor.
-  - Press `c` again.
-  - Press `g`. The GUI should exit (sometimes you have to hit `c` several times before it will let you exit with `g`).
-    If something goes wrong and you can't get `g` to work, you can abort with `q`.
+- `cmake ../` (if you want to edit build options, you can instead use `ccmake` as described \ref ccmake "below").
 - `make -j install`
 
 \subsection verify Step 6: verify success
@@ -173,10 +151,21 @@ Hexed uses Catch2 is for unit testing. Install Catch2 so that you can compile th
 Now you need to update your Hexed build to include the unit tests, as follows:
 - `cd ~/codes/hexed/build_Release`
 - `ccmake ..`
-- Set the option `build_tests` to `ON`.
-- Hit `c` as many times as you need to and then `g`.
+  - This will open the [CMake curses interface](https://cmake.org/cmake/help/latest/manual/ccmake.1.html),
+    which is a sort-of-GUI for [CMake](https://cmake.org/).
+    This allows you to choose some options for how to build Hexed.
+    Personally, I always use `ccmake` when I'm building a CMake project,
+    since it lets me see what options are available and modify any that seem relevant.
+  - You should see `EMPTY_CACHE` and no error messages.
+- Press `c`. You should now see a list of options. The default options are fine for a pure user,
+  but if you want to do any development there are a few you should change.
+  To edit options, use the arrow keys to move the cursor and Enter to edit the option under the cursor.
+  - Set the option `build_tests` to `ON`.
+- Press `c` again.
+- Press `g` to generate. The GUI should exit (sometimes you have to hit `c` several times before it will let you exit with `g`).
+  - If something goes wrong and you can't get `g` to work, you can abort with `q`.
 - `make -j` (you only need `install` the first time you compile or if you've changed any of the executable scripts).
-- The code is now compiled. you can run the unit tests with the command `test/unit` (executed from the build directory, still).
+- The code is now compiled. You can run the unit tests with the command `test/unit` (executed from the build directory, still).
 - You should see "All tests passed".
 
 \subsubsection Step 3: build in debug mode
@@ -187,7 +176,7 @@ you would probably prefer to be able to use debugging tools like [GDB](https://w
 So, we will create an new build directory where we compile in Debug mode.
 - `cd ~/codes/hexed`
 - `mkdir build_Debug`
-- `ccmake ..`.
+- `ccmake ..`. \anchor ccmake
   - this time, set `CMAKE_BUILD_TYPE` to `Debug` ("Enter" toggles between `Release` and `Debug`),
     `build_tests` to `ON`, and `sanitize` to `ON`.
   - `c` as many times as you need and then `g`.

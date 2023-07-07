@@ -58,6 +58,12 @@ Currently implemented features:
 Planned or in-progress features (roughly in order of planned implementation):
 - Grid adaption.
 
+\subsection Maintainer
+\anchor me
+This code is developed and maintained by me, Micaiah Smith-Pierce.
+I am a PhD student of Professor Stephen Ruffin at the Aerothermodynamics Research and Technology Laboratory (ARTLab) at Georgia Tech.
+If you have any questions or feedback, you can reach me at micaiah@gatech.edu or on [Github](https://github.gatech.edu/mcsp3).
+
 \page Manual
 - \subpage installation
 - \subpage visualization
