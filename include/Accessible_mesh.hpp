@@ -103,6 +103,7 @@ class Accessible_mesh : public Mesh
   //! \returns a view of all Element_connection between extruded elements and the elemens they were extruded from
   inline Vector_view<Element_connection&, Element_face_connection<Deformed_element>*,
                      ptr_convert<Element_connection&, Element_face_connection<Deformed_element>*>> extruded_connections() {return {extrude_cons};}
+  void reset_vertices() override;
 };
 
 }

@@ -1075,4 +1075,36 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   connect_rest(surf_bc_sn);
 }
 
+void Accessible_mesh::reset_vertices()
+{
+  int nv = params.n_vertices();
+  for (int i_elem = 0; i_elem < elements().size(); ++i_elem) {
+    auto& elem = elements()[i_elem];
+    if (elem.tree) {
+      for (int i_vert = 0; i_vert < nv; ++i_vert) {
+        auto& vert = elem.vertex(i_vert);
+        Lock::Acquire a(vert.lock);
+        vert.pos = elem.tree->nominal_position();
+        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+          vert.pos(i_dim) += elem.tree->nominal_size()*((i_vert/math::pow(2, params.n_dim - 1 - i_dim))%2);
+        }
+      }
+    }
+  }
+  for (unsigned i_con = 0; i_con < extrude_cons.size(); ++i_con) {
+    auto con = extrude_cons[i_con];
+    auto& elem = con->element(0);
+    auto dir = con->direction();
+    int stride = math::pow(2, params.n_dim - 1 - dir.i_dim[0]);
+    for (int i_vert = 0; i_vert < nv; ++i_vert) {
+      auto& vert = elem.vertex(i_vert);
+      Lock::Acquire a(vert.lock);
+      int face_sign = (i_vert/stride)%2;
+      if (face_sign == dir.face_sign[1]) {
+        vert.pos = elem.vertex(i_vert + stride*(dir.face_sign[0] - face_sign)).pos;
+      }
+    }
+  }
+}
+
 }
