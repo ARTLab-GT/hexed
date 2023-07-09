@@ -1167,6 +1167,10 @@ void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample
   if (therm_cond.is_viscous) funcs.push_back(&hf);
   visualize_surface_tecplot(bc_sn, Bf_concat(funcs), name, n_sample);
 }
+
+void vis_cart_surf_tecplot(int bc_sn, std::string name)
+{
+}
 #endif
 
 #if HEXED_USE_OTTER

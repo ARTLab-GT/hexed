@@ -4,9 +4,9 @@
 namespace hexed
 {
 
-/*
- * An interface for general sequence-type containers which supports access but
- * intentionally doesn't support insertion or removal of elements.
+/*! \brief An interface for general sequence-type containers which supports access to elements
+ * but intentionally doesn't support insertion or removal of elements.
+ * \details This is useful for classes providing limited public access to otherwise private variables.
  */
 template<typename T>
 class Sequence
@@ -28,14 +28,11 @@ ref_t ptr_convert(ptr_t& ptr)
   return *ptr;
 }
 
-/*
- * Provides convenient but limited access to a `std::vector`. Supports read/write access
- * to the elements and evaluation of the size, but does not allow insertion or removal of
- * elements. This is useful for classes providing limited public access to private variables.
- * `Vector_view` also allows the vector elements to be viewed as a different type than they
- * are stored as with a user-supplied conversion function (again, useful if you don't to provide
- * access to only some aspects of the underlying data). Note: if write acces is desired,
- * `reference_t` should be a reference type.
+/*! \brief Provides a view of an existing container (e.g., `std::vector`) as a `Sequence`.
+ * \details `Vector_view` also allows the vector elements to be viewed as a different type than they
+ * are stored as with a user-supplied conversion function
+ * (again, useful if you don't to provide access to only some aspects of the underlying data).
+ * \note if write acces is desired, `reference_t` should be a reference type.
  */
 template<typename reference_t, typename storage_t = reference_t,
          reference_t (*convert)(storage_t&) = &trivial_convert<reference_t, storage_t>,
@@ -60,10 +57,9 @@ class Vector_view : public Sequence<reference_t>
   }
 };
 
-/*
- * A `Sequence` formed by concatenating two `Sequence`s. For better or for worse,
- * no copies are made -- it requres references to existing sequences. More then 2
- * sequences can be concatenated by nesting `Concatenation`s.
+/*! \brief A `Sequence` formed by concatenating two `Sequence`s.
+ * \details For better or for worse, no copies are made -- it requres references to existing sequences.
+ * More then 2 sequences can be concatenated by nesting `Concatenation`s.
  */
 template <typename T>
 class Concatenation : public Sequence<T>
@@ -88,6 +84,7 @@ class Concatenation : public Sequence<T>
   }
 };
 
+//! \brief Provides a view of some elements of a `Sequence` identified by a sequence of indices.
 template <typename T, typename seq_t = std::vector<int>>
 class Index : public Sequence<T>
 {

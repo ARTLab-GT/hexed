@@ -202,6 +202,8 @@ class Solver
    * the surface normal, the shear stress, and the heat flux will be output.
    */
   void visualize_surface_tecplot(int bc_sn, std::string name, int n_sample = 20);
+  //! visualize the Cartesian surface which theoretically exists after element deletion but before any vertex snapping
+  void vis_cart_surf_tecplot(int bc_sn, std::string name);
   #endif
   #if HEXED_USE_OTTER
   void visualize_edges_otter(otter::plot&, Eigen::Matrix<double, 1, Eigen::Dynamic> color = otter::colors::css4["white"], int n_sample = 21);
