@@ -90,7 +90,7 @@ class Face_connection<Deformed_element>
   int state_sz;
   Eigen::VectorXd data;
   public:
-  Face_connection<Deformed_element>(Storage_params params)
+  Face_connection(Storage_params params)
   : nrml_sz{params.n_dim*params.n_qpoint()/params.row_size},
     state_sz{params.n_dof()/params.row_size},
     data(2*(nrml_sz + 2*state_sz))
