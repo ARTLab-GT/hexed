@@ -50,34 +50,39 @@ void Accessible_mesh::id_boundary_verts()
 
 void Accessible_mesh::snap_vertices()
 {
-  for (int bc_sn : tree_bcs) {
+  for (int i_bc = 0; i_bc < 2*params.n_dim; ++i_bc) {
+    int bc_sn = tree_bcs[i_bc];
     #pragma omp parallel for
     for (auto& vert : boundary_verts[bc_sn]) {
-      int i_dim = (bc_sn - tree_bcs[0])/2;
-      int sign = (bc_sn - tree_bcs[0])%2;
+      int i_dim = i_bc/2;
+      int sign = i_bc%2;
       vert->pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
     }
   }
   if (surf_geom) {
     #pragma omp parallel for
     for (auto& vert : boundary_verts[surf_bc_sn]) {
-      auto pos = vert->pos(Eigen::seqN(0, params.n_dim));
       // find a neighbor which is not on this boundary
-      Mat<> neighbor_pos;
+      Mat<> neighbor_pos = Mat<>::Zero(params.n_dim);
       for (auto& neighb : vert->get_neighbors()) {
         // there should be exactly one neighbor that satisfies this
         if (!std::any_of(neighb.record.begin(), neighb.record.end(), [this](int r){return r == surf_bc_sn;})) {
           neighbor_pos = neighb.pos(Eigen::seqN(0, params.n_dim)); // doesn't create a race condition since `neighb` cannot also be on the surface
         }
       }
+      vert->temp_vector = neighbor_pos;
+    }
+    #pragma omp parallel for
+    for (auto& vert : boundary_verts[surf_bc_sn]) {
+      auto pos = vert->pos(Eigen::seqN(0, params.n_dim));
       // compute intersections between the surface and the line connecting the neighbor and this vertex
-      auto sections = surf_geom->intersections(neighbor_pos, pos);
+      auto sections = surf_geom->intersections(vert->temp_vector, pos);
       // if there is an intersection we like, snap to it
       double param = std::numeric_limits<double>::max();
       for (double sect : sections) {
         if (sect > 0 && sect < param) {
           param = sect;
-          pos = neighbor_pos + sect*(pos - neighbor_pos);
+          pos = vert->temp_vector + sect*(pos - vert->temp_vector);
         }
       }
     }
