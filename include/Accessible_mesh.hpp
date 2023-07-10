@@ -50,6 +50,9 @@ class Accessible_mesh : public Mesh
   void delete_bad_extrusions();
   void deform();
   void purge();
+  // identify which vertices are on which boundaries and write it to `Vertex::record`
+  // must be called directly befor `snap_vertices`
+  void id_boundary_verts();
   void snap_vertices();
 
   public:

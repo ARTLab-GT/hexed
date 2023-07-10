@@ -17,11 +17,9 @@ Element_container& Accessible_mesh::container(bool is_deformed)
 template<> Mesh_by_type<         Element>& Accessible_mesh::mbt() {return car;}
 template<> Mesh_by_type<Deformed_element>& Accessible_mesh::mbt() {return def;}
 
-void Accessible_mesh::snap_vertices()
+void Accessible_mesh::id_boundary_verts()
 {
-  HEXED_ASSERT(tree, "this method is for tree meshing only");
   auto verts = vertices();
-  // figure out which vertices are on which boundaries
   #pragma omp parallel for
   for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
     verts[i_vert].record.clear();
@@ -31,7 +29,27 @@ void Accessible_mesh::snap_vertices()
     for (auto& vert : boundary_verts[bc_sn]) {
       vert->record.push_back(bc_sn);
     }
+    auto& cons = def.boundary_connections();
+    for (int i_con = 0; i_con < cons.size(); ++i_con) {
+      auto& con = cons[i_con];
+      if (con.bound_cond_serial_n() == int(bc_sn)) {
+        for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+          if ((i_vert/math::pow(2, params.n_dim - 1 - con.i_dim()))%2 == con.inside_face_sign()) {
+            auto& vert = con.element().vertex(i_vert);
+            Lock::Acquire a(vert.lock);
+            if (!std::count(vert.record.begin(), vert.record.end(), bc_sn)) {
+              vert.record.push_back(bc_sn);
+              boundary_verts[bc_sn].emplace_back(vert);
+            }
+          }
+        }
+      }
+    }
   }
+}
+
+void Accessible_mesh::snap_vertices()
+{
   if (surf_geom) {
     #pragma omp parallel for
     for (auto& vert : boundary_verts[surf_bc_sn]) {
@@ -544,32 +562,6 @@ void Accessible_mesh::connect_rest(int bc_sn)
   // make connections
   car.connect_empty(bc_sn);
   def.connect_empty(bc_sn);
-  // fix `boundary_verts`
-  auto verts = vertices();
-  #pragma omp parallel for
-  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
-    verts[i_vert].record.resize(1);
-    verts[i_vert].record[0] = 0;
-  }
-  if (surf_geom) {
-    #pragma omp parallel for
-    for (auto& vert : boundary_verts[bc_sn]) vert->record[0] = 1;
-    auto& cons = def.boundary_connections();
-    for (int i_con = 0; i_con < cons.size(); ++i_con) {
-      auto& con = cons[i_con];
-      if (con.bound_cond_serial_n() == bc_sn) {
-        for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-          if ((i_vert/math::pow(2, params.n_dim - 1 - con.i_dim()))%2 == con.inside_face_sign()) {
-            auto& vert = con.element().vertex(i_vert);
-            if (!vert.record[0]) {
-              vert.record[0] = 1;
-              boundary_verts[bc_sn].emplace_back(vert);
-            }
-          }
-        }
-      }
-    }
-  }
 }
 
 std::vector<Mesh::elem_handle> Accessible_mesh::elem_handles()
@@ -657,6 +649,7 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   connect_new<Deformed_element>(0);
   extrude(true);
   connect_rest(surf_bc_sn);
+  id_boundary_verts();
   snap_vertices();
 }
 
@@ -1151,6 +1144,33 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
 
 void Accessible_mesh::relax(double factor)
 {
+  id_boundary_verts();
+  auto verts = vertices();
+  // calculate average neighbor position
+  #pragma omp parallel for
+  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
+    auto& vert = verts[i_vert];
+    int n_neighb = 0;
+    vert.temp_vector.setZero();
+    for (auto& neighb : vert.get_neighbors()) {
+      // for elements that are on surfaces, only include neighbors that are on the same surfaces
+      bool compatible = true;
+      for (int r : vert.record) compatible = compatible && std::count(neighb.record.begin(), neighb.record.end(), r);
+      if (compatible) {
+        vert.temp_vector += neighb.pos;
+        ++n_neighb;
+      }
+    }
+    if (n_neighb) vert.temp_vector /= n_neighb;
+    else vert.temp_vector = vert.pos;
+  }
+  // update position
+  #pragma omp parallel for
+  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
+    auto& vert = verts[i_vert];
+    if (vert.is_mobile()) vert.pos = factor*vert.temp_vector + (1 - factor)*vert.pos;
+  }
+  snap_vertices();
 }
 
 void Accessible_mesh::reset_verts()
