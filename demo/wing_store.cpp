@@ -21,11 +21,7 @@ int main()
   for (int i = 0; i < 3; ++i) solver.mesh().update();
   //solver.mesh().set_surface(new hexed::Occt_geom(hexed::Occt_geom::read("wing_store.IGS"), 3), new hexed::Nonpenetration, hexed::Mat<3>{-0.09, 0.01, 0.});
   solver.mesh().set_surface(new hexed::Simplex_geom(hexed::triangles(hexed::Occt_geom::read_stl("wing_store.STL"))), new hexed::Nonpenetration, hexed::Mat<3>{-0.09, 0.01, 0.});
-  for (int i = 0; i < 2; ++i) {
-    solver.relax_vertices();
-    solver.snap_vertices();
-  }
-  solver.snap_faces();
+  for (int i = 0; i < 2; ++i) solver.mesh().relax();
   solver.calc_jacobian();
   solver.set_res_bad_surface_rep(6);
   for (int i = 0; i < 20; ++i) {
@@ -33,22 +29,14 @@ int main()
     //if (i < 3) hexed::global_hacks::debug_message["don't extrude"] = 1;
     solver.mesh().update(ref, unref);
     //if (i < 3) {
-    for (int i = 0; i < 4; ++i) {
-      solver.relax_vertices();
-      solver.snap_vertices();
-    }
-    solver.snap_faces();
+    for (int i = 0; i < 4; ++i) solver.mesh().relax();
     solver.calc_jacobian();
     solver.set_res_bad_surface_rep(6);
     solver.vis_cart_surf_tecplot(6, hexed::format_str(100, "cart%i", i));
     solver.visualize_surface_tecplot(6, hexed::Resolution_badness(), hexed::format_str(100, "proj%i", i), 4);
     //}
   }
-  for (int i = 0; i < 4; ++i) {
-    solver.relax_vertices();
-    solver.snap_vertices();
-  }
-  solver.snap_faces();
+  for (int i = 0; i < 4; ++i) solver.mesh().relax();
   solver.calc_jacobian();
   solver.set_res_bad_surface_rep(6);
   solver.visualize_surface_tecplot(6, hexed::Resolution_badness(), "wing_store");
