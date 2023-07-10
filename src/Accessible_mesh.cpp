@@ -20,11 +20,40 @@ template<> Mesh_by_type<Deformed_element>& Accessible_mesh::mbt() {return def;}
 void Accessible_mesh::snap_vertices()
 {
   HEXED_ASSERT(tree, "this method is for tree meshing only");
+  auto verts = vertices();
+  // figure out which vertices are on which boundaries
+  #pragma omp parallel for
+  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
+    verts[i_vert].record.clear();
+  }
+  for (unsigned bc_sn = 0; bc_sn < boundary_verts.size(); ++bc_sn) {
+    #pragma omp parallel for
+    for (auto& vert : boundary_verts[bc_sn]) {
+      vert->record.push_back(bc_sn);
+    }
+  }
   if (surf_geom) {
     #pragma omp parallel for
     for (auto& vert : boundary_verts[surf_bc_sn]) {
       auto pos = vert->pos(Eigen::seqN(0, params.n_dim));
-      pos = surf_geom->nearest_point(pos);
+      // find a neighbor which is not on this boundary
+      Mat<> neighbor_pos;
+      for (auto& neighb : vert->get_neighbors()) {
+        // there should be exactly one neighbor that satisfies this
+        if (!std::any_of(neighb.record.begin(), neighb.record.end(), [this](int r){return r == surf_bc_sn;})) {
+          neighbor_pos = neighb.pos(Eigen::seqN(0, params.n_dim)); // doesn't create a race condition since `neighb` cannot also be on the surface
+        }
+      }
+      // compute intersections between the surface and the line connecting the neighbor and this vertex
+      auto sections = surf_geom->intersections(neighbor_pos, pos);
+      // if there is an intersection we like, snap to it
+      double param = std::numeric_limits<double>::max();
+      for (double sect : sections) {
+        if (sect > 0 && sect < param) {
+          param = sect;
+          pos = neighbor_pos + sect*(pos - neighbor_pos);
+        }
+      }
     }
   }
 }
@@ -314,7 +343,8 @@ void Accessible_mesh::extrude(bool collapse, double offset)
       int stride = math::pow(2, nd - 1 - face.i_dim);
       for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
         int i_collapse = i_vert + (face.face_sign - (i_vert/stride)%2)*stride;
-        elem.vertex(i_vert).pos = face.elem.vertex(i_collapse).pos;
+        double interp = 1e-3;
+        elem.vertex(i_vert).pos = interp*elem.vertex(i_vert).pos + (1 - interp)*face.elem.vertex(i_collapse).pos;
       }
     }
     std::array<Deformed_element*, 2> el_arr {&elem, &face.elem};
