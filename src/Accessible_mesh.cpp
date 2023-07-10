@@ -50,6 +50,14 @@ void Accessible_mesh::id_boundary_verts()
 
 void Accessible_mesh::snap_vertices()
 {
+  for (int bc_sn : tree_bcs) {
+    #pragma omp parallel for
+    for (auto& vert : boundary_verts[bc_sn]) {
+      int i_dim = (bc_sn - tree_bcs[0])/2;
+      int sign = (bc_sn - tree_bcs[0])%2;
+      vert->pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
+    }
+  }
   if (surf_geom) {
     #pragma omp parallel for
     for (auto& vert : boundary_verts[surf_bc_sn]) {
@@ -73,6 +81,15 @@ void Accessible_mesh::snap_vertices()
         }
       }
     }
+  }
+  // vertex relaxation/snapping will cause hanging vertices to drift away from hanging vertex faces they are supposed to be coincident with
+  // so now we put them back where they belong
+  auto& matchers = hanging_vertex_matchers();
+  #pragma omp parallel for
+  for (int i_match = 0; i_match < matchers.size(); ++i_match) {
+    matchers[i_match].match(&Element::vertex_position<0>);
+    matchers[i_match].match(&Element::vertex_position<1>);
+    matchers[i_match].match(&Element::vertex_position<2>);
   }
 }
 
@@ -1140,6 +1157,24 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   connect_new<Deformed_element>(0);
   if (!global_hacks::debug_message.count("don't extrude")) extrude(true);
   connect_rest(surf_bc_sn);
+  // if any immobile vertices have strayed from their nominal position (probably by `eat`ing)
+  // snap them back where they belong
+  auto& car_elems = cartesian().elements();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < car_elems.size(); ++i_elem) {
+    auto& elem = car_elems[i_elem];
+    for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+      Lock::Acquire a(elem.vertex(i_vert).lock);
+      auto& pos = elem.vertex(i_vert).pos;
+      double nom_sz = elem.nominal_size();
+      auto nom_pos = elem.nominal_position();
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        pos[i_dim] = nom_sz*(nom_pos[i_dim] + (i_vert/math::pow(2, nd - 1 - i_dim))%2);
+      }
+      pos(Eigen::seqN(0, nd)) += elem.origin;
+    }
+  }
+  snap_vertices();
 }
 
 void Accessible_mesh::relax(double factor)
@@ -1152,16 +1187,30 @@ void Accessible_mesh::relax(double factor)
     auto& vert = verts[i_vert];
     int n_neighb = 0;
     vert.temp_vector.setZero();
-    for (auto& neighb : vert.get_neighbors()) {
-      // for elements that are on surfaces, only include neighbors that are on the same surfaces
-      bool compatible = true;
-      for (int r : vert.record) compatible = compatible && std::count(neighb.record.begin(), neighb.record.end(), r);
-      if (compatible) {
+    auto neighbs = vert.get_neighbors();
+    for (auto& neighb : neighbs) {
+      if (neighb.record.size() >= vert.record.size()) {
         vert.temp_vector += neighb.pos;
         ++n_neighb;
       }
     }
-    if (n_neighb) vert.temp_vector /= n_neighb;
+    if (n_neighb) {
+      if (n_neighb < int(neighbs.size())) {
+        for (auto& n0 : neighbs) {
+          if (n0.record.size() < vert.record.size()) {
+            Mat<3> vec = Mat<3>::Zero();
+            for (auto& n1 : neighbs) {
+              if (n1.record.size() >= vert.record.size()) {
+                Mat<3> u = (n1.pos - vert.pos).normalized();
+                vec += (n0.pos - vert.pos).dot(u)*u;
+              }
+            }
+            vert.temp_vector += vec/n_neighb + vert.pos;
+          }
+        }
+      }
+      vert.temp_vector /= neighbs.size();
+    }
     else vert.temp_vector = vert.pos;
   }
   // update position

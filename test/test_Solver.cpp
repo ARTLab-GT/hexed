@@ -985,29 +985,18 @@ TEST_CASE("cylinder tree mesh")
       return ref;
     };
     solver.mesh().update(criterion);
-    for (int i = 0; i < 2; ++i) {
-      solver.relax_vertices();
-      solver.snap_vertices();
-    }
+    for (int i = 0; i < 4; ++i) solver.mesh().relax();
     solver.mesh().valid().assert_valid();
   }
-  for (int i = 0; i < 4; ++i) solver.snap_vertices();
-  solver.snap_faces();
-  solver.snap_vertices();
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
   solver.visualize_field_tecplot(hexed::Is_deformed(), "cylinder_refined");
   REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
   for (int i = 0; i < 6; ++i) {
     solver.mesh().update(hexed::Mesh::never, [](hexed::Element& elem){return elem.refinement_level() > 3;});
-    for (int i = 0; i < 2; ++i) {
-      solver.relax_vertices();
-      solver.snap_vertices();
-    }
+    for (int i = 0; i < 4; ++i) solver.mesh().relax();
     solver.mesh().valid().assert_valid();
   }
-  for (int i = 0; i < 4; ++i) solver.snap_vertices();
-  solver.snap_faces();
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
   solver.visualize_field_tecplot(hexed::Is_deformed(), "cylinder_unrefined");
