@@ -155,8 +155,13 @@ class Mesh
    * The flood fill and extrusion are also updated.
    */
   virtual void update(std::function<bool(Element&)> refine_criterion = always, std::function<bool(Element&)> unrefine_criterion = never) = 0;
+  //! \brief Relax the vertices to improve mesh quality.
+  //! \param factor A larger number yields more change in the mesh. 0 => no update, 1 => "full" update, > 1 allowed but suspect
+  virtual void relax(double factor = 0.5) = 0;
   //! \}
 
+  //! \name observers
+  //!\{
   //! An object to provide information about whether the mesh connectivity is valid and if not, why.
   class Connection_validity
   {
@@ -175,9 +180,8 @@ class Mesh
       }
     }
   };
-  /*!
-   * returns a `Connection_validity` object describing whether the mesh connectivity is valid.
-   * Suggested uses:
+  /*! \brief Returns a `Connection_validity` object describing whether the mesh connectivity is valid.
+   * \details Suggested uses:
    * - `if (mesh.valid()) {\\...do something that requires a valid mesh}`
    * - `mesh.valid().assert_valid();`
    */
@@ -186,7 +190,21 @@ class Mesh
   struct elem_handle {int ref_level; bool is_deformed; int serial_n;};
   //! get handles for all elements currently in the mesh, in no particular order (mostly for testing/debugging)
   virtual std::vector<elem_handle> elem_handles() = 0;
-  virtual void reset_vertices() = 0;
+  //! Temporarily resets the vertices of a mesh to their nominal positions for debugging
+  class Reset_vertices
+  {
+    Mesh& m;
+    public:
+    //! resets to nominal position
+    inline Reset_vertices(Mesh& mesh) : m{mesh} {m.reset_verts();}
+    //! restores vertices to where they were before this object was constructed
+    inline ~Reset_vertices() {m.restore_verts();}
+  };
+  //!\}
+
+  protected:
+  virtual void reset_verts() = 0;
+  virtual void restore_verts() = 0;
 };
 
 }

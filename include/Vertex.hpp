@@ -5,6 +5,7 @@
 #include <vector>
 #include <memory>
 #include <set>
+#include <ranges>
 #include <Eigen/Dense>
 #include "Lock.hpp"
 #include "math.hpp"
@@ -25,7 +26,8 @@ class Vertex
   typedef double (Eigen::VectorXd::*reduction)() const;
   static constexpr reduction vector_max = &Eigen::VectorXd::maxCoeff;
   static constexpr reduction vector_min = &Eigen::VectorXd::minCoeff;
-  Mat<3> pos {0, 0, 0};
+  Mat<3> pos {0, 0, 0}; //!< position of the vertex in space
+  Mat<3> temp_vector; //!< for an algorithm to keep some temporary vector data if it desires
   std::vector<int> record; //!< for algorithms to keep notes as they please
   Lock lock; //!< for any algorithms that could involve data races on vertices
 
@@ -51,13 +53,15 @@ class Vertex
    */
   void eat(Vertex& other);
   //! compute (but do not apply) a new position resulting in a smoother grid.
-  void calc_relax(double factor = .5);
+  void calc_relax(double factor = .5); //!< \deprecated use `Mesh::relax`
   //! If all the `Transferable_ptr`s to this vertex have `mobile = true`, apply the relaxation computed by `calc_relax`.
   void apply_relax(); //!< update `pos` to the position computed by `calc_relax`.
   //! determine the shared shareable_value of all `Transferable_ptr`s to this by applying `reduction`. Thread safe.
   double shared_value(reduction = vector_max); //!< cppcheck-suppress internalAstError
   static void connect(Vertex&, Vertex&); //!< specify that two vertices are connected by an edge
   static bool are_neighbors(Vertex&, Vertex&);
+  //! get neighbors as a `std::range` of `const Vertex&`
+  auto get_neighbors() const {return std::views::transform(neighbors, [](const Vertex* v)->const Vertex& {return *v;});}
 
   private:
   Mat<3> relax {0, 0, 0};

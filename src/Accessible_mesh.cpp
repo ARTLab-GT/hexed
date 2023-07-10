@@ -17,6 +17,18 @@ Element_container& Accessible_mesh::container(bool is_deformed)
 template<> Mesh_by_type<         Element>& Accessible_mesh::mbt() {return car;}
 template<> Mesh_by_type<Deformed_element>& Accessible_mesh::mbt() {return def;}
 
+void Accessible_mesh::snap_vertices()
+{
+  HEXED_ASSERT(tree, "this method is for tree meshing only");
+  if (surf_geom) {
+    #pragma omp parallel for
+    for (auto& vert : boundary_verts[surf_bc_sn]) {
+      auto pos = vert->pos(Eigen::seqN(0, params.n_dim));
+      pos = surf_geom->nearest_point(pos);
+    }
+  }
+}
+
 Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg) :
   params{params_arg},
   n_vert{math::pow(2, params.n_dim)},
@@ -31,7 +43,8 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
   def_face_cons{def.elem_face_con_v, bound_face_cons},
   ref_face_v{car.refined_faces(), def.refined_faces()},
   matcher_v{car.hanging_vertex_matchers(), def.hanging_vertex_matchers()},
-  surf_geom{nullptr}
+  surf_geom{nullptr},
+  verts_are_reset{false}
 {
   def.face_con_v = def_face_cons;
 }
@@ -110,6 +123,7 @@ void Accessible_mesh::connect_hanging(int coarse_ref_level, int coarse_serial, s
 
 int Accessible_mesh::add_boundary_condition(Flow_bc* flow_bc, Mesh_bc* mesh_bc)
 {
+  boundary_verts.emplace_back();
   bound_conds.push_back({std::unique_ptr<Flow_bc>{flow_bc}, std::unique_ptr<Mesh_bc>{mesh_bc}});
   // no reason to delete boundary conditions, so the serial number can just be the index
   return bound_conds.size() - 1;
@@ -117,7 +131,8 @@ int Accessible_mesh::add_boundary_condition(Flow_bc* flow_bc, Mesh_bc* mesh_bc)
 
 void Accessible_mesh::connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n)
 {
-  if (bc_serial_n >= int(bound_conds.size())) throw std::runtime_error("demand for non-existent `Boundary_condition`");
+  // create boundary condition
+  HEXED_ASSERT(bc_serial_n < int(bound_conds.size()), "demand for non-existent `Boundary_condition`");
   if (is_deformed) {
     def.bound_cons.emplace_back(new Typed_bound_connection<Deformed_element>(def.elems.at(ref_level, element_serial_n), i_dim, face_sign, bc_serial_n));
   } else {
@@ -159,6 +174,7 @@ Mesh::Connection_validity Accessible_mesh::valid()
 
 Accessible_mesh::vertex_view Accessible_mesh::vertices()
 {
+  HEXED_ASSERT(!verts_are_reset, "looks like you have a `Mesh::Reset_vertices` you forgot to destroy");
   erase_if(vert_ptrs, &Vertex::Non_transferable_ptr::is_null);
   return vert_ptrs;
 }
@@ -498,6 +514,32 @@ void Accessible_mesh::connect_rest(int bc_sn)
   // make connections
   car.connect_empty(bc_sn);
   def.connect_empty(bc_sn);
+  // fix `boundary_verts`
+  auto verts = vertices();
+  #pragma omp parallel for
+  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
+    verts[i_vert].record.resize(1);
+    verts[i_vert].record[0] = 0;
+  }
+  if (surf_geom) {
+    #pragma omp parallel for
+    for (auto& vert : boundary_verts[bc_sn]) vert->record[0] = 1;
+    auto& cons = def.boundary_connections();
+    for (int i_con = 0; i_con < cons.size(); ++i_con) {
+      auto& con = cons[i_con];
+      if (con.bound_cond_serial_n() == bc_sn) {
+        for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+          if ((i_vert/math::pow(2, params.n_dim - 1 - con.i_dim()))%2 == con.inside_face_sign()) {
+            auto& vert = con.element().vertex(i_vert);
+            if (!vert.record[0]) {
+              vert.record[0] = 1;
+              boundary_verts[bc_sn].emplace_back(vert);
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 std::vector<Mesh::elem_handle> Accessible_mesh::elem_handles()
@@ -585,6 +627,7 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   connect_new<Deformed_element>(0);
   extrude(true);
   connect_rest(surf_bc_sn);
+  snap_vertices();
 }
 
 // forms connections for new tree elements of type `element_t` starting with the `starting_at`th one
@@ -898,6 +941,7 @@ void Accessible_mesh::purge()
   def.elems.purge();
   // delete dangling vertex pointers
   erase_if(vert_ptrs, &Vertex::Non_transferable_ptr::is_null);
+  for (auto& b_verts : boundary_verts) erase_if(b_verts, &Vertex::Non_transferable_ptr::is_null);
 }
 
 void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std::function<bool(Element&)> unrefine_criterion)
@@ -1075,9 +1119,20 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   connect_rest(surf_bc_sn);
 }
 
-void Accessible_mesh::reset_vertices()
+void Accessible_mesh::relax(double factor)
 {
+}
+
+void Accessible_mesh::reset_verts()
+{
+  verts_are_reset = true;
   int nv = params.n_vertices();
+  auto verts = vertices();
+  #pragma omp parallel for
+  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
+    verts[i_vert].temp_vector = verts[i_vert].pos;
+  }
+  #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements().size(); ++i_elem) {
     auto& elem = elements()[i_elem];
     if (elem.tree) {
@@ -1091,6 +1146,7 @@ void Accessible_mesh::reset_vertices()
       }
     }
   }
+  #pragma omp parallel for
   for (unsigned i_con = 0; i_con < extrude_cons.size(); ++i_con) {
     auto con = extrude_cons[i_con];
     auto& elem = con->element(0);
@@ -1104,6 +1160,16 @@ void Accessible_mesh::reset_vertices()
         vert.pos = elem.vertex(i_vert + stride*(dir.face_sign[0] - face_sign)).pos;
       }
     }
+  }
+}
+
+void Accessible_mesh::restore_verts()
+{
+  verts_are_reset = false;
+  auto verts = vertices();
+  #pragma omp parallel for
+  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
+    verts[i_vert].pos = verts[i_vert].temp_vector;
   }
 }
 

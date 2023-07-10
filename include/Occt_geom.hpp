@@ -100,6 +100,7 @@ class Occt_geom : public Surface_geom
 
 //! \brief Creates an array of simplices that can be used to construct a `Simplex_geom<3>`.
 //! \details A `Poly_Triangulation` can be obtained from `Occt_geom::read_stl`.
+//! \relatesalso Simplex_geom
 std::vector<Mat<3, 3>> triangles(opencascade::handle<Poly_Triangulation>);
 
 }

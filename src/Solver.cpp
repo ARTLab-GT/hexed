@@ -1171,18 +1171,8 @@ void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample
 
 void Solver::vis_cart_surf_tecplot(int bc_sn, std::string name)
 {
-  auto verts = acc_mesh.vertices();
-  Mat<dyn, dyn> pos(3, verts.size());
-  #pragma omp parallel for
-  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
-    pos(all, i_vert) = verts[i_vert].pos;
-  }
-  acc_mesh.reset_vertices();
+  Mesh::Reset_vertices reset(acc_mesh);
   visualize_surface_tecplot(bc_sn, hexed::Resolution_badness(), name, 2);
-  #pragma omp parallel for
-  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
-    verts[i_vert].pos = pos(all, i_vert);
-  }
 }
 #endif
 
