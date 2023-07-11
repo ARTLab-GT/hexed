@@ -203,7 +203,7 @@ class Solver
    */
   void visualize_surface_tecplot(int bc_sn, std::string name, int n_sample = 20);
   //! visualize the Cartesian surface which theoretically exists after element deletion but before any vertex snapping
-  void vis_cart_surf_tecplot(int bc_sn, std::string name);
+  void vis_cart_surf_tecplot(int bc_sn, std::string name, const Boundary_func& func = Resolution_badness());
   #endif
   #if HEXED_USE_OTTER
   void visualize_edges_otter(otter::plot&, Eigen::Matrix<double, 1, Eigen::Dynamic> color = otter::colors::css4["white"], int n_sample = 21);

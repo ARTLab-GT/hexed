@@ -1140,7 +1140,7 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   // connect new elements
   connect_new<         Element>(0);
   connect_new<Deformed_element>(0);
-  if (!global_hacks::debug_message.count("don't extrude")) extrude(true);
+  extrude(true);
   connect_rest(surf_bc_sn);
   // if any immobile vertices have strayed from their nominal position (probably by `eat`ing)
   // snap them back where they belong

@@ -50,7 +50,7 @@ void throw_critical(const char* message)
  * Exception type must be constructible from a string.
  * Defaults to `std::runtime_error`.
  */
-#define HEXED_ASSERT(expression, message, ...) \
+#define HEXED_ASSERT(expression, message, ...) { \
   if (!(expression)) { \
     char buffer [1000]; \
     snprintf(buffer, 1000, "%s\n" \
@@ -59,5 +59,6 @@ void throw_critical(const char* message)
              std::string(message).c_str(), #expression, __FUNCTION__, __LINE__, __FILE__, __PRETTY_FUNCTION__); \
     assert::throw_critical<__VA_ARGS__>(buffer); \
   } \
+}
 
 #endif

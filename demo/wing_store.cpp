@@ -24,7 +24,7 @@ int main()
   for (int i = 0; i < 2; ++i) solver.mesh().relax();
   solver.calc_jacobian();
   solver.set_res_bad_surface_rep(6);
-  for (int i = 0; i < 20; ++i) {
+  for (int i = 0; i < 8; ++i) {
     printf("starting ref cycle %i\n", i);
     //if (i < 3) hexed::global_hacks::debug_message["don't extrude"] = 1;
     solver.mesh().update(ref, hexed::Mesh::never);
@@ -32,9 +32,9 @@ int main()
     for (int i = 0; i < 4; ++i) solver.mesh().relax();
     solver.calc_jacobian();
     solver.set_res_bad_surface_rep(6);
-    if (i%2) {
-      solver.vis_cart_surf_tecplot(6, hexed::format_str(100, "cart%i", i));
-      solver.visualize_surface_tecplot(6, hexed::Resolution_badness(), hexed::format_str(100, "proj%i", i), 4);
+    if (true) {
+      solver.vis_cart_surf_tecplot(6, hexed::format_str(100, "cart%i", i), hexed::Has_tree());
+      //solver.visualize_surface_tecplot(6, hexed::Resolution_badness(), hexed::format_str(100, "proj%i", i), 4);
     }
     //}
   }

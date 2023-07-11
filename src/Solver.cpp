@@ -1170,10 +1170,10 @@ void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample
   visualize_surface_tecplot(bc_sn, Bf_concat(funcs), name, n_sample);
 }
 
-void Solver::vis_cart_surf_tecplot(int bc_sn, std::string name)
+void Solver::vis_cart_surf_tecplot(int bc_sn, std::string name, const Boundary_func& func)
 {
   Mesh::Reset_vertices reset(acc_mesh);
-  visualize_surface_tecplot(bc_sn, hexed::Resolution_badness(), name, 2);
+  visualize_surface_tecplot(bc_sn, func, name, 2);
 }
 #endif
 
