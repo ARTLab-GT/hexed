@@ -61,36 +61,10 @@ void Accessible_mesh::snap_vertices()
     }
   }
   if (surf_geom) {
-    auto seq = Eigen::seqN(0, params.n_dim);
     #pragma omp parallel for
     for (auto& vert : boundary_verts[surf_bc_sn]) {
-      // find a neighbor which is not on this boundary
-      Mat<> neighbor_pos = Mat<>::Zero(params.n_dim);
-      for (auto& neighb : vert->get_neighbors()) {
-        // there should be exactly one neighbor that satisfies this
-        if (!std::any_of(neighb.record.begin(), neighb.record.end(), [this](int r){return r == surf_bc_sn;})) {
-          neighbor_pos = neighb.pos(seq); // doesn't create a race condition since `neighb` cannot also be on the surface
-        }
-      }
-      vert->temp_vector(seq) = neighbor_pos;
-    }
-    #pragma omp parallel for
-    for (auto& vert : boundary_verts[surf_bc_sn]) {
-      auto pos = vert->pos(seq);
+      auto pos = vert->pos(Eigen::seqN(0, params.n_dim));
       pos = surf_geom->nearest_point(pos);
-      #if 0
-      auto neighbor_pos = vert->temp_vector(seq);
-      // compute intersections between the surface and the line connecting the neighbor and this vertex
-      auto sections = surf_geom->intersections(neighbor_pos, pos);
-      // if there is an intersection we like, snap to it
-      double param = std::numeric_limits<double>::max();
-      for (double sect : sections) {
-        if (sect > 0 && sect < param) {
-          param = sect;
-          pos = neighbor_pos + sect*(pos - neighbor_pos);
-        }
-      }
-      #endif
     }
   }
   // vertex relaxation/snapping will cause hanging vertices to drift away from hanging vertex faces they are supposed to be coincident with
@@ -1197,33 +1171,10 @@ void Accessible_mesh::relax(double factor)
   #pragma omp parallel for
   for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
     auto& vert = verts[i_vert];
-    int n_neighb = 0;
     vert.temp_vector.setZero();
     auto neighbs = vert.get_neighbors();
-    for (auto& neighb : neighbs) {
-      if (neighb.record.size() >= vert.record.size()) {
-        vert.temp_vector += neighb.pos;
-        ++n_neighb;
-      }
-    }
-    if (n_neighb) {
-      if (n_neighb < int(neighbs.size())) {
-        for (auto& n0 : neighbs) {
-          if (n0.record.size() < vert.record.size()) {
-            Mat<3> vec = Mat<3>::Zero();
-            for (auto& n1 : neighbs) {
-              if (n1.record.size() >= vert.record.size()) {
-                Mat<3> u = (n1.pos - vert.pos).normalized();
-                vec += (n0.pos - vert.pos).dot(u)*u;
-              }
-            }
-            vert.temp_vector += vec/n_neighb + vert.pos;
-          }
-        }
-      }
-      vert.temp_vector /= neighbs.size();
-    }
-    else vert.temp_vector = vert.pos;
+    for (auto& neighb : neighbs) vert.temp_vector += neighb.pos;
+    vert.temp_vector /= neighbs.size();
   }
   // update position
   #pragma omp parallel for
