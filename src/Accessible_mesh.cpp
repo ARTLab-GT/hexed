@@ -77,6 +77,8 @@ void Accessible_mesh::snap_vertices()
     #pragma omp parallel for
     for (auto& vert : boundary_verts[surf_bc_sn]) {
       auto pos = vert->pos(seq);
+      pos = surf_geom->nearest_point(pos);
+      #if 0
       auto neighbor_pos = vert->temp_vector(seq);
       // compute intersections between the surface and the line connecting the neighbor and this vertex
       auto sections = surf_geom->intersections(neighbor_pos, pos);
@@ -88,6 +90,7 @@ void Accessible_mesh::snap_vertices()
           pos = neighbor_pos + sect*(pos - neighbor_pos);
         }
       }
+      #endif
     }
   }
   // vertex relaxation/snapping will cause hanging vertices to drift away from hanging vertex faces they are supposed to be coincident with
@@ -1233,7 +1236,6 @@ void Accessible_mesh::relax(double factor)
 
 void Accessible_mesh::reset_verts()
 {
-  verts_are_reset = true;
   int nv = params.n_vertices();
   auto verts = vertices();
   #pragma omp parallel for
@@ -1269,6 +1271,7 @@ void Accessible_mesh::reset_verts()
       }
     }
   }
+  verts_are_reset = true;
 }
 
 void Accessible_mesh::restore_verts()

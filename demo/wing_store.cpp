@@ -27,13 +27,15 @@ int main()
   for (int i = 0; i < 20; ++i) {
     printf("starting ref cycle %i\n", i);
     //if (i < 3) hexed::global_hacks::debug_message["don't extrude"] = 1;
-    solver.mesh().update(ref, unref);
+    solver.mesh().update(ref, hexed::Mesh::never);
     //if (i < 3) {
     for (int i = 0; i < 4; ++i) solver.mesh().relax();
     solver.calc_jacobian();
     solver.set_res_bad_surface_rep(6);
-    solver.vis_cart_surf_tecplot(6, hexed::format_str(100, "cart%i", i));
-    solver.visualize_surface_tecplot(6, hexed::Resolution_badness(), hexed::format_str(100, "proj%i", i), 4);
+    if (i%2) {
+      solver.vis_cart_surf_tecplot(6, hexed::format_str(100, "cart%i", i));
+      solver.visualize_surface_tecplot(6, hexed::Resolution_badness(), hexed::format_str(100, "proj%i", i), 4);
+    }
     //}
   }
   for (int i = 0; i < 4; ++i) solver.mesh().relax();
