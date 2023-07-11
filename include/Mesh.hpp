@@ -157,7 +157,7 @@ class Mesh
   virtual void update(std::function<bool(Element&)> refine_criterion = always, std::function<bool(Element&)> unrefine_criterion = never) = 0;
   //! \brief Relax the vertices to improve mesh quality.
   //! \param factor A larger number yields more change in the mesh. 0 => no update, 1 => "full" update, > 1 allowed but suspect
-  virtual void relax(double factor = 0.5) = 0;
+  virtual void relax(double factor = 0.9) = 0;
   //! \}
 
   //! \name observers
