@@ -814,16 +814,6 @@ void Accessible_mesh::delete_bad_extrusions()
               }
             }
           }
-          // delete elements with faces that face away from the geometry
-          if (surf_geom && exposed[i_face]) {
-            Mat<> face_center = elem.tree->center() + math::sign(i_face%2)*elem.tree->nominal_size()/2*Mat<>::Unit(nd, i_face/2);
-            Mat<> nearest = surf_geom->nearest_point(face_center);
-            double tol = .2;
-            if ((nearest - face_center).normalized()(i_face/2)*math::sign(i_face%2) < -tol) {
-              changed = true;
-              elem.record = 2;
-            }
-          }
           // for all faces that share an edge with `i_face` (but only the ones with lower index to avoid redundancy)
           for (int j_face = 0; j_face < 2*(i_face/2); ++j_face) {
             if (exposed[i_face] || exposed[j_face]) {
@@ -864,6 +854,33 @@ void Accessible_mesh::delete_bad_extrusions()
                 }
               }
             }
+          }
+        }
+        // delete elements with exposed faces, edges, or vertices that face away from the surface geometry
+        if (surf_geom) {
+          bool bad = false;
+          auto eval = [&](Mat<> direction) {
+            Mat<> center = elem.tree->center() + elem.tree->nominal_size()/2*direction;
+            Mat<> nearest = surf_geom->nearest_point(center);
+            double tol = .1;
+            bad = bad || (nearest - center).normalized().dot(direction.normalized()) < -tol;
+          };
+          for (int i_face = 0; i_face < 2*nd; ++i_face) if (exposed[i_face]) {
+            Mat<> direction = math::direction(nd, i_face).cast<double>();
+            eval(direction);
+            for (int j_face = 0; j_face < 2*(i_face/2); ++j_face) if (exposed[j_face]) {
+              auto dir = direction;
+              dir(j_face/2) = math::sign(j_face%2);
+              eval(direction);
+              for (int k_face = 0; k_face < 2*(j_face/2); ++k_face) if (exposed[k_face]) {
+                dir(k_face/2) = math::sign(k_face%2);
+                eval(direction);
+              }
+            }
+          }
+          if (bad) {
+            changed = true;
+            elem.record = 2;
           }
         }
       }
