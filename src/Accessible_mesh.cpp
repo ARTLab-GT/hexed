@@ -814,6 +814,16 @@ void Accessible_mesh::delete_bad_extrusions()
               }
             }
           }
+          // delete elements with faces that face away from the geometry
+          if (surf_geom && exposed[i_face]) {
+            Mat<> face_center = elem.tree->center() + math::sign(i_face%2)*elem.tree->nominal_size()/2*Mat<>::Unit(nd, i_face/2);
+            Mat<> nearest = surf_geom->nearest_point(face_center);
+            double tol = .2;
+            if ((nearest - face_center).normalized()(i_face/2)*math::sign(i_face%2) < -tol) {
+              changed = true;
+              elem.record = 2;
+            }
+          }
           // for all faces that share an edge with `i_face` (but only the ones with lower index to avoid redundancy)
           for (int j_face = 0; j_face < 2*(i_face/2); ++j_face) {
             if (exposed[i_face] || exposed[j_face]) {

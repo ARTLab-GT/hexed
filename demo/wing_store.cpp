@@ -34,7 +34,7 @@ int main()
     solver.set_res_bad_surface_rep(6);
     if (true) {
       solver.vis_cart_surf_tecplot(6, hexed::format_str(100, "cart%i", i), hexed::Has_tree());
-      //solver.visualize_surface_tecplot(6, hexed::Resolution_badness(), hexed::format_str(100, "proj%i", i), 4);
+      solver.visualize_surface_tecplot(6, hexed::Resolution_badness(), hexed::format_str(100, "proj%i", i), 4);
     }
     //}
   }

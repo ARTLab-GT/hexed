@@ -83,6 +83,7 @@ class Tree
    * origin + {0, 0}, origin + {0, .5}, origin + {.5, 0}, origin + {.5, .5}.
    */
   Mat<> nominal_position() const;
+  Mat<> center() const; //!< return the center of this tree element
   //!\}
 
   //! \name parent/child status
