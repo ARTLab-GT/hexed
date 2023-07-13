@@ -7,7 +7,8 @@ ext_modules = [
         ["hexed.pyx"],
         language="c++",
         libraries=["hexed"],
-        include_dirs=["@CMAKE_SOURCE_DIR@/include"]
+        include_dirs=["@CMAKE_SOURCE_DIR@/include", "@CMAKE_BINARY_DIR@/include/auto"],
+        extra_compile_args=["-Wno-unknown-pragmas", "-std=c++20"]
     )
 ]
 

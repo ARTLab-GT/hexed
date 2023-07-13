@@ -178,10 +178,11 @@ add_custom_command(
         hexed
 )
 add_custom_target(python_api ALL DEPENDS python_api_proxy)
-file(GLOB PYTHON_MODULE ${CMAKE_BINARY_DIR}/hexed.cpython*.so)
+file(GLOB PYTHON_MODULE CONFIGURE_DEPENDS ${CMAKE_BINARY_DIR}/hexed.cpython*.so)
 
 # install
 install(PROGRAMS script/hexed-post-process ${CMAKE_BINARY_DIR}/hexed-wrapped-post-process script/hexed-fit-geom TYPE BIN)
+install(TARGETS hexed LIBRARY)
 install(FILES ${PYTHON_MODULE} DESTINATION ${PYTHON_INSTALL_PREFIX})
 export(TARGETS hexed FILE hexed-targets.cmake)
 install(FILES ${CMAKE_BINARY_DIR}/hexed-config.cmake DESTINATION lib/cmake/hexed)
