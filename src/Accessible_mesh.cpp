@@ -747,7 +747,12 @@ void Accessible_mesh::refine_by_record(bool is_deformed, int start, int end)
 
 bool exists(Tree* tree)
 {
-  if (tree) if (tree->elem) if (tree->elem->record != 2) return true;
+  if (tree) if (tree->elem) {
+    int record;
+    #pragma omp atomic read
+    record = tree->elem->record;
+    if (record != 2) return true;
+  }
   return false;
 }
 
@@ -797,9 +802,13 @@ void Accessible_mesh::delete_bad_extrusions()
   bool changed;
   do {
     changed = false;
+    #pragma omp parallel for reduction(||:changed)
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
-      if (elem.tree && elem.record != 2) {
+      int record;
+      #pragma omp atomic read
+      record = elem.record;
+      if (elem.tree && record != 2) {
         bool exposed [6];
         for (int i_face = 0; i_face < 2*nd; ++i_face) {
           // if any hanging-node face is partially covered by fine elements, delete the fine elements
@@ -809,8 +818,9 @@ void Accessible_mesh::delete_bad_extrusions()
           if (neighbors.size() > 1) {
             if (std::any_of(neighbors.begin(), neighbors.end(), exists) && !all_exist) {
               changed = true;
-              for (Tree* n : neighbors) {
-                if (n->elem) n->elem->record = 2;
+              for (Tree* n : neighbors) if (n->elem) {
+                #pragma omp atomic write
+                n->elem->record = 2;
               }
             }
           }
@@ -827,8 +837,12 @@ void Accessible_mesh::delete_bad_extrusions()
                   // If they have the same refinement level, delete both
                   if (n->refinement_level() >= elem.refinement_level()) {
                     changed = true;
+                    #pragma omp atomic write
                     n->elem->record = 2;
-                    if (n->refinement_level() == elem.refinement_level()) elem.record = 2;
+                    if (n->refinement_level() == elem.refinement_level()) {
+                      #pragma omp atomic write
+                      elem.record = 2;
+                    }
                   }
                 }
                 for (int k_face = 0; k_face < 2*(j_face/2); ++k_face) if (exposed[k_face]) {
@@ -838,8 +852,12 @@ void Accessible_mesh::delete_bad_extrusions()
                   for (Tree* n : neighbs) if (exists(n)) {
                     if (n->refinement_level() >= elem.refinement_level()) {
                       changed = true;
+                      #pragma omp atomic write
                       n->elem->record = 2;
-                      if (n->refinement_level() == elem.refinement_level()) elem.record = 2;
+                      if (n->refinement_level() == elem.refinement_level()) {
+                        #pragma omp atomic write
+                        elem.record = 2;
+                      }
                     }
                   }
                 }
@@ -849,7 +867,10 @@ void Accessible_mesh::delete_bad_extrusions()
                     && std::any_of(diag_neighbs.begin(), diag_neighbs.end(), exists)) {
                   changed = true;
                   for (Tree* n : diag_neighbs) {
-                    if (n->elem) n->elem->record = 2;
+                    if (n->elem) {
+                      #pragma omp atomic write
+                      n->elem->record = 2;
+                    }
                   }
                 }
               }
@@ -880,6 +901,7 @@ void Accessible_mesh::delete_bad_extrusions()
           }
           if (bad) {
             changed = true;
+            #pragma omp atomic write
             elem.record = 2;
           }
         }
@@ -998,6 +1020,8 @@ void Accessible_mesh::purge()
 
 void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std::function<bool(Element&)> unrefine_criterion)
 {
+  Stopwatch sw;
+  sw.start();
   /* `Element::record` is used to identify which elements are going to be modified.
    * 0 => do nothing
    * 1 => refine
@@ -1151,6 +1175,7 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
     for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, container(is_deformed).element_view().size());
   } while (changed);
   delete_bad_extrusions();
+  sw.pause();
   deform();
   // delete extruded elements
   #pragma omp parallel for
@@ -1188,6 +1213,7 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   }
   id_boundary_verts();
   snap_vertices();
+  global_hacks::numbers[2] += sw.time();
 }
 
 void Accessible_mesh::relax(double factor)

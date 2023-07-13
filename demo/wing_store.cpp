@@ -13,8 +13,7 @@ bool unref(hexed::Element& elem) {return elem.resolution_badness < tol*hexed::ma
 
 int main()
 {
-  hexed::global_hacks::numbers.push_back(0.);
-  hexed::global_hacks::numbers.push_back(0.);
+  for (int i = 0; i < 3; ++i) hexed::global_hacks::numbers.push_back(0.);
   #if HEXED_USE_OCCT
   hexed::Solver solver(3, row_size, .6);
   std::vector<hexed::Flow_bc*> bcs;
@@ -26,7 +25,7 @@ int main()
   for (int i = 0; i < 2; ++i) solver.mesh().relax();
   solver.calc_jacobian();
   solver.set_res_bad_surface_rep(6);
-  for (int i = 0; i < 3; ++i) {
+  for (int i = 0; i < 8; ++i) {
     printf("starting ref cycle %i\n", i);
     //if (i < 3) hexed::global_hacks::debug_message["don't extrude"] = 1;
     solver.mesh().update(ref, hexed::Mesh::never);
@@ -43,8 +42,8 @@ int main()
   for (int i = 0; i < 4; ++i) solver.mesh().relax();
   solver.calc_jacobian();
   solver.set_res_bad_surface_rep(6);
-  //solver.visualize_surface_tecplot(6, hexed::Resolution_badness(), "wing_store");
+  solver.visualize_surface_tecplot(6, hexed::Resolution_badness(), "wing_store");
   #endif
-  printf("projections:   %e\nintersections: %e\n", hexed::global_hacks::numbers[0], hexed::global_hacks::numbers[1]);
+  printf("projections:   %e\nintersections: %e\nupdate: %e", hexed::global_hacks::numbers[0], hexed::global_hacks::numbers[1], hexed::global_hacks::numbers[2]);
   return 0;
 }
