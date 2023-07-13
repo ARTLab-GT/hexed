@@ -51,20 +51,29 @@ void Accessible_mesh::id_boundary_verts()
 
 void Accessible_mesh::snap_vertices()
 {
-  for (int i_bc = 0; i_bc < 2*params.n_dim; ++i_bc) {
-    int bc_sn = tree_bcs[i_bc];
-    #pragma omp parallel for
-    for (auto& vert : boundary_verts[bc_sn]) {
-      int i_dim = i_bc/2;
-      int sign = i_bc%2;
-      vert->pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
+  if (tree) {
+    for (int i_bc = 0; i_bc < 2*params.n_dim; ++i_bc) {
+      int bc_sn = tree_bcs[i_bc];
+      #pragma omp parallel for
+      for (auto& vert : boundary_verts[bc_sn]) {
+        int i_dim = i_bc/2;
+        int sign = i_bc%2;
+        vert->pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
+      }
     }
-  }
-  if (surf_geom) {
+    if (surf_geom) {
+      #pragma omp parallel for
+      for (auto& vert : boundary_verts[surf_bc_sn]) {
+        auto pos = vert->pos(Eigen::seqN(0, params.n_dim));
+        pos = surf_geom->nearest_point(pos);
+      }
+    }
+  } else {
+    auto& bc_cons {boundary_connections()};
     #pragma omp parallel for
-    for (auto& vert : boundary_verts[surf_bc_sn]) {
-      auto pos = vert->pos(Eigen::seqN(0, params.n_dim));
-      pos = surf_geom->nearest_point(pos);
+    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+      int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+      boundary_condition(bc_sn).mesh_bc->snap_vertices(bc_cons[i_con]);
     }
   }
   // vertex relaxation/snapping will cause hanging vertices to drift away from hanging vertex faces they are supposed to be coincident with

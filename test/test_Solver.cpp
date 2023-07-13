@@ -380,9 +380,7 @@ TEST_CASE("Solver")
       int bc_sn = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Nominal_pos);
       sol.mesh().connect_boundary(1, true, el_sn, 1, 1, bc_sn);
       sol.mesh().connect_rest(catchall_bc);
-      sol.relax_vertices();
-      sol.snap_vertices();
-      sol.snap_faces();
+      sol.mesh().relax(.5);
       sol.mesh().valid().assert_valid();
       sol.calc_jacobian();
       // element should now be [(1 + 0.25)*0.8/2, (1 + 0.75)*0.8/2] x [(2 + 0.25)*0.8/2, 3*0.8/2]
@@ -394,17 +392,11 @@ TEST_CASE("Solver")
       int bc_sn = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Surface_mbc{new Parabola});
       sol.mesh().connect_boundary(1, true, el_sn, 1, 1, bc_sn);
       sol.mesh().connect_rest(catchall_bc);
-      sol.snap_vertices();
       sol.mesh().valid().assert_valid();
-      sol.calc_jacobian();
-      // element should be a triangle
-      REQUIRE(sol.integral_field(hexed::Constant_func({1.}))[0] == Catch::Approx(0.5*(0.1*0.4*0.4)*0.4));
-      sol.snap_faces();
       sol.calc_jacobian();
       // top element face should now be a parabola
       REQUIRE(sol.integral_field(hexed::Constant_func({1.}))[0] == Catch::Approx(0.1*0.4*0.4*0.4/3.));
       // make sure that snapping again doesn't change anything
-      sol.snap_faces();
       sol.calc_jacobian();
       REQUIRE(sol.integral_field(hexed::Constant_func({1.}))[0] == Catch::Approx(0.1*0.4*0.4*0.4/3.));
     }
