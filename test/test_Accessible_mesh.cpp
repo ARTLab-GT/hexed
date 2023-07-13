@@ -386,8 +386,9 @@ TEST_CASE("Tree meshing")
     mesh.update([](hexed::Element& elem){auto np = elem.nominal_position(); return np[0] == 0 && np[1] == 0 && np[2] == 0;});
     REQUIRE(mesh.elements().size() == 15);
     mesh.valid().assert_valid();
+    // refining this element should refine 3 face neighbors and 3 edge neighbors
     mesh.update([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 2 && np[0] == 1 && np[1] == 1 && np[2] == 1;});
-    REQUIRE(mesh.elements().size() == 43);
+    REQUIRE(mesh.elements().size() == 64);
     mesh.valid().assert_valid();
     mesh.update([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 1 && np[0] == 1 && np[1] == 1 && np[2] == 1;});
     mesh.update([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 2 && np[0] == 2 && np[1] == 2 && np[2] == 2;});

@@ -13,7 +13,6 @@ bool unref(hexed::Element& elem) {return elem.resolution_badness < tol*hexed::ma
 
 int main()
 {
-  for (int i = 0; i < 3; ++i) hexed::global_hacks::numbers.push_back(0.);
   #if HEXED_USE_OCCT
   hexed::Solver solver(3, row_size, .6);
   std::vector<hexed::Flow_bc*> bcs;
