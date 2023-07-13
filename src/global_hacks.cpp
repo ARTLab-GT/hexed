@@ -2,6 +2,9 @@
 
 namespace hexed::global_hacks
 {
+
 std::map<std::string, int> debug_message;
 Stopwatch_tree stopwatch("task");
+std::vector<double> numbers;
+
 }

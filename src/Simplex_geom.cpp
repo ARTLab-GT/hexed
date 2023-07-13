@@ -16,6 +16,8 @@ Mat<> Simplex_geom<2>::nearest_point(Mat<> point)
 template <>
 Mat<> Simplex_geom<3>::nearest_point(Mat<> point)
 {
+  Stopwatch sw;
+  sw.start();
   math::Nearest_point<3> nearest(point);
   for (Mat<3, 3> sim : simplices) {
     // try projecting the point to the plane of the triangle
@@ -33,6 +35,9 @@ Mat<> Simplex_geom<3>::nearest_point(Mat<> point)
       }
     }
   }
+  sw.pause();
+  #pragma omp atomic update
+  global_hacks::numbers[0] += sw.time();
   return nearest.point();
 }
 

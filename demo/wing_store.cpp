@@ -13,6 +13,8 @@ bool unref(hexed::Element& elem) {return elem.resolution_badness < tol*hexed::ma
 
 int main()
 {
+  hexed::global_hacks::numbers.push_back(0.);
+  hexed::global_hacks::numbers.push_back(0.);
   #if HEXED_USE_OCCT
   hexed::Solver solver(3, row_size, .6);
   std::vector<hexed::Flow_bc*> bcs;
@@ -43,5 +45,6 @@ int main()
   solver.set_res_bad_surface_rep(6);
   //solver.visualize_surface_tecplot(6, hexed::Resolution_badness(), "wing_store");
   #endif
+  printf("projections:   %e\nintersections: %e\n", hexed::global_hacks::numbers[0], hexed::global_hacks::numbers[1]);
   return 0;
 }

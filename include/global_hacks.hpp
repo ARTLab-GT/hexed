@@ -2,6 +2,7 @@
 // I'm sorry sir, but it's time for you to leave.
 
 #include <map>
+#include <vector>
 #include "Stopwatch_tree.hpp"
 
 namespace hexed::global_hacks
@@ -9,5 +10,6 @@ namespace hexed::global_hacks
 
 extern std::map<std::string, int> debug_message;
 extern Stopwatch_tree stopwatch;
+extern std::vector<double> numbers;
 
 }
