@@ -28,6 +28,7 @@ endif()
 option(build_tests "would you like to build the unit tests? (requires Catch2)" OFF)
 option(build_docs "build documentation? (requires doxygen)" OFF)
 option(sanitize "If ON, compile with sanitizer flags." OFF)
+option(profile "if ON, compile with gprof profiling flags (in which case `threaded` should be OFF)")
 option(threaded "If ON, allow multiple threads. Substantially reduces execution time." ON)
 option(use_otter "include capability to use otter for plotting" OFF)
 option(use_tecplot "include capability to use tecplot for plotting" ON)
@@ -51,6 +52,10 @@ if(threaded)
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
     set(n_threads, 1)
+endif()
+
+if (profile)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
 endif()
 
 # determine row_size of polynomial basis
