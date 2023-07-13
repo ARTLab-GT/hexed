@@ -24,6 +24,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX "~/.local" CACHE PATH "where to install hexed" FORCE)
 endif()
+if (NOT DEFINED PYTHON_INSTALL_PREFIX)
+    set(PYTHON_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX}/lib CACHE PATH "where to install Python module" FORCE)
+endif()
 
 option(build_tests "would you like to build the unit tests? (requires Catch2)" OFF)
 option(build_docs "build documentation? (requires doxygen)" OFF)
@@ -162,7 +165,23 @@ if (use_cppcheck)
     add_custom_target(cppcheck ALL DEPENDS cppcheck_output.txt)
 endif()
 
+# build python API
+configure_file(cython/setup.py.in setup.py)
+add_custom_command(
+    OUTPUT python_api_proxy
+    COMMAND ln -sf ${CMAKE_SOURCE_DIR}/cython/* ${CMAKE_BINARY_DIR}
+    COMMAND python3 setup.py build_ext --inplace > cython_build_output.txt
+    COMMAND ln -sf hexed.cpython*.so python_api_proxy
+    DEPENDS
+        setup.py
+        ${CMAKE_SOURCE_DIR}/cython/hexed.pyx
+        hexed
+)
+add_custom_target(python_api ALL DEPENDS python_api_proxy)
+file(GLOB PYTHON_MODULE ${CMAKE_BINARY_DIR}/hexed.cpython*.so)
+
 # install
 install(PROGRAMS script/hexed-post-process ${CMAKE_BINARY_DIR}/hexed-wrapped-post-process script/hexed-fit-geom TYPE BIN)
+install(FILES ${PYTHON_MODULE} DESTINATION ${PYTHON_INSTALL_PREFIX})
 export(TARGETS hexed FILE hexed-targets.cmake)
 install(FILES ${CMAKE_BINARY_DIR}/hexed-config.cmake DESTINATION lib/cmake/hexed)

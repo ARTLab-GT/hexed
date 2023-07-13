@@ -1,0 +1,14 @@
+from setuptools import setup, Extension
+from Cython.Build import cythonize
+
+ext_modules = [
+    Extension(
+        "hexed",
+        ["hexed.pyx"],
+        language="c++",
+        libraries=["hexed"],
+        include_dirs=["@CMAKE_SOURCE_DIR@/include"]
+    )
+]
+
+setup(name="hexed", ext_modules=cythonize(ext_modules, language_level="3"))
