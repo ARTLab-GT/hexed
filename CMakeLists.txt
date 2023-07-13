@@ -175,6 +175,7 @@ add_custom_command(
     DEPENDS
         setup.py
         ${CMAKE_SOURCE_DIR}/cython/hexed.pyx
+        ${CMAKE_SOURCE_DIR}/cython/hexed_cpp.pxd
         hexed
 )
 add_custom_target(python_api ALL DEPENDS python_api_proxy)
