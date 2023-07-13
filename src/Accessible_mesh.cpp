@@ -1089,22 +1089,22 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   // synchronize refinement level of surface elements with their non-surface neighbors in preparation for incremental flood fill
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
-    if (elem.tree) {
+    if (exists(elem.tree)) {
       for (int i_face = 0; i_face < 2*nd; ++i_face) {
         Tree* neighbor = elem.tree->find_neighbor(math::direction(nd, i_face));
         if (neighbor) {
-          if (!neighbor->elem) {
+          if (!exists(neighbor)) {
             if (neighbor->refinement_level() > elem.refinement_level()) {
               Tree* p = neighbor->parent();
               bool can_unref = true;
-              for (Tree* child : p->children()) can_unref = can_unref && !child->elem;
+              for (Tree* child : p->children()) can_unref = can_unref && !exists(child);
               if (can_unref && !needs_refine(p)) p->unrefine();
             } else if (neighbor->refinement_level() < elem.refinement_level() - 1) neighbor->refine();
             else if (neighbor->refinement_level() < elem.refinement_level()) {
               int min_rl = std::numeric_limits<int>::max();
               for (int j_face = 0; j_face < 2*nd; ++j_face) {
                 Tree* n = neighbor->find_neighbor(math::direction(nd, j_face));
-                if (n) if (n->elem) min_rl = std::min(min_rl, n->refinement_level());
+                if (exists(n)) min_rl = std::min(min_rl, n->refinement_level());
               }
               if (neighbor->refinement_level() < min_rl) neighbor->refine();
             }
@@ -1122,10 +1122,10 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
       int sz = cont_elems.size();
       for (int i_elem = 0; i_elem < sz; ++i_elem) {
         auto& elem = cont_elems[i_elem];
-        if (elem.tree && elem.record == 0) {
+        if (exists(elem.tree)) {
           for (int i_face = 0; i_face < 2*nd; ++i_face) {
             for (Tree* neighbor : elem.tree->find_neighbors(math::direction(nd, i_face))) {
-              if (!neighbor->elem) if (!is_surface(neighbor)) {
+              if (!exists(neighbor)) if (!is_surface(neighbor)) {
                 changed = true;
                 add_elem(is_deformed, *neighbor).record = 0;
               }
