@@ -16,13 +16,15 @@ Mat<> Simplex_geom<2>::nearest_point(Mat<> point)
 template <>
 Mat<> Simplex_geom<3>::nearest_point(Mat<> point)
 {
+  Stopwatch sw;
+  sw.start();
   math::Nearest_point<3> nearest(point);
   for (Mat<3, 3> sim : simplices) {
     // try projecting the point to the plane of the triangle
     Mat<3, 2> lhs;
     lhs(all, 0) = sim(all, 1) - sim(all, 0);
     lhs(all, 1) = sim(all, 2) - sim(all, 0);
-    Mat<2> lstsq = lhs.householderQr().solve(point - sim(all, 0));
+    Mat<2> lstsq = (lhs.transpose()*lhs).inverse()*(lhs.transpose()*(point - sim(all, 0)));
     if (lstsq(0) >= 0 && lstsq(1) >= 0 && lstsq.sum() <= 1) {
       // if the projected point is inside the triangle, evaluate it as the potential nearest point
       nearest.merge(sim(all, 0) + lhs*lstsq);
@@ -33,6 +35,9 @@ Mat<> Simplex_geom<3>::nearest_point(Mat<> point)
       }
     }
   }
+  sw.pause();
+  #pragma omp atomic update
+  global_hacks::numbers[0] += sw.time();
   return nearest.point();
 }
 

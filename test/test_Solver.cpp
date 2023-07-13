@@ -380,9 +380,7 @@ TEST_CASE("Solver")
       int bc_sn = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Nominal_pos);
       sol.mesh().connect_boundary(1, true, el_sn, 1, 1, bc_sn);
       sol.mesh().connect_rest(catchall_bc);
-      sol.relax_vertices();
-      sol.snap_vertices();
-      sol.snap_faces();
+      sol.mesh().relax(.5);
       sol.mesh().valid().assert_valid();
       sol.calc_jacobian();
       // element should now be [(1 + 0.25)*0.8/2, (1 + 0.75)*0.8/2] x [(2 + 0.25)*0.8/2, 3*0.8/2]
@@ -394,17 +392,11 @@ TEST_CASE("Solver")
       int bc_sn = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Surface_mbc{new Parabola});
       sol.mesh().connect_boundary(1, true, el_sn, 1, 1, bc_sn);
       sol.mesh().connect_rest(catchall_bc);
-      sol.snap_vertices();
       sol.mesh().valid().assert_valid();
-      sol.calc_jacobian();
-      // element should be a triangle
-      REQUIRE(sol.integral_field(hexed::Constant_func({1.}))[0] == Catch::Approx(0.5*(0.1*0.4*0.4)*0.4));
-      sol.snap_faces();
       sol.calc_jacobian();
       // top element face should now be a parabola
       REQUIRE(sol.integral_field(hexed::Constant_func({1.}))[0] == Catch::Approx(0.1*0.4*0.4*0.4/3.));
       // make sure that snapping again doesn't change anything
-      sol.snap_faces();
       sol.calc_jacobian();
       REQUIRE(sol.integral_field(hexed::Constant_func({1.}))[0] == Catch::Approx(0.1*0.4*0.4*0.4/3.));
     }
@@ -959,29 +951,24 @@ TEST_CASE("cylinder tree mesh")
   constexpr int row_size = 6;
   hexed::Solver solver (2, row_size, 1.);
   std::vector<hexed::Flow_bc*> bcs;
+  hexed::Mat<2> origin{2., 2.};
   for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Freestream(Eigen::Vector4d{0., 0., 1., 1e5}));
-  solver.mesh().add_tree(bcs);
+  solver.mesh().add_tree(bcs, origin);
   for (int i = 0; i < 3; ++i) solver.mesh().update();
-  solver.mesh().set_surface(new hexed::Hypersphere(Eigen::VectorXd::Zero(2), .5), new hexed::Nonpenetration, Eigen::Vector2d{.8, .8});
-  solver.mesh().extrude();
-  for (int i = 0; i < 3; ++i) {
-    solver.relax_vertices();
-    solver.snap_vertices();
-  }
-  for (int i = 0; i < 3; ++i) solver.snap_vertices();
-  solver.snap_faces();
+  solver.mesh().set_surface(new hexed::Hypersphere(origin, .5), new hexed::Nonpenetration, origin + Eigen::Vector2d{.8, .8});
+  for (int i = 0; i < 3; ++i) solver.mesh().relax();
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
   solver.visualize_field_tecplot(hexed::Is_deformed(), "cylinder_initial");
-  CHECK_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
+  REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
   for (int i = 0; i < 6; ++i) {
     // this criterion will refine all elements with a vertex that is within .1 of the midpoint of the arc
-    auto criterion = [](hexed::Element& elem){
+    auto criterion = [origin](hexed::Element& elem){
       bool ref = false;
       for (int i_vert = 0; i_vert < 4; ++i_vert) {
         double dist = 0;
         for (int i_dim = 0; i_dim < 2; ++i_dim) {
-          dist += hexed::math::pow(elem.vertex(i_vert).pos[i_dim] - .5/std::sqrt(2), 2);
+          dist += hexed::math::pow(elem.vertex(i_vert).pos[i_dim] - origin(i_dim) - .5/std::sqrt(2), 2);
         }
         double r = .1;
         ref = ref || dist < r*r;
@@ -990,29 +977,18 @@ TEST_CASE("cylinder tree mesh")
       return ref;
     };
     solver.mesh().update(criterion);
-    for (int i = 0; i < 2; ++i) {
-      solver.relax_vertices();
-      solver.snap_vertices();
-    }
+    for (int i = 0; i < 4; ++i) solver.mesh().relax();
     solver.mesh().valid().assert_valid();
   }
-  for (int i = 0; i < 4; ++i) solver.snap_vertices();
-  solver.snap_faces();
-  solver.snap_vertices();
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
   solver.visualize_field_tecplot(hexed::Is_deformed(), "cylinder_refined");
-  CHECK_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
+  REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
   for (int i = 0; i < 6; ++i) {
     solver.mesh().update(hexed::Mesh::never, [](hexed::Element& elem){return elem.refinement_level() > 3;});
-    for (int i = 0; i < 2; ++i) {
-      solver.relax_vertices();
-      solver.snap_vertices();
-    }
+    for (int i = 0; i < 6; ++i) solver.mesh().relax();
     solver.mesh().valid().assert_valid();
   }
-  for (int i = 0; i < 4; ++i) solver.snap_vertices();
-  solver.snap_faces();
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
   solver.visualize_field_tecplot(hexed::Is_deformed(), "cylinder_unrefined");

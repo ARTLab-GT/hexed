@@ -31,6 +31,7 @@ int Tree::refinement_level() const {return ref_level;}
 Eigen::VectorXi Tree::coordinates() const {return coords;}
 double Tree::nominal_size() const {return root_sz/math::pow(2, ref_level);}
 Mat<> Tree::nominal_position() const {return nominal_size()*coords.cast<double>() + orig;}
+Mat<> Tree::center() const {return nominal_position() + Mat<>::Constant(n_dim, .5*nominal_size());}
 
 Tree* Tree::parent() {return par;}
 

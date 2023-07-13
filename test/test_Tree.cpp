@@ -8,6 +8,7 @@ TEST_CASE("Tree")
   hexed::Tree tree2(2, 7., Eigen::Vector4d{.1, .3, -.2, .5});
   REQUIRE(tree2.n_dim == 2);
   REQUIRE_THAT(tree2.origin(), Catch::Matchers::RangeEquals(Eigen::Vector2d{.1, .3}, hexed::math::Approx_equal()));
+  REQUIRE_THAT(tree2.center(), Catch::Matchers::RangeEquals(Eigen::Vector2d{3.6, 3.8}, hexed::math::Approx_equal()));
   hexed::Tree tree3(3, .8);
   REQUIRE(tree3.n_dim == 3);
   REQUIRE_THAT(tree3.origin(), Catch::Matchers::RangeEquals(Eigen::Vector3d::Zero(), hexed::math::Approx_equal(0., 1e-16)));

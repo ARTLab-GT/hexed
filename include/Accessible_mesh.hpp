@@ -36,16 +36,24 @@ class Accessible_mesh : public Mesh
   std::vector<Element_face_connection<Deformed_element>*> extrude_cons;
   std::unique_ptr<Tree> tree; // could be null! don't forget to check
   std::vector<int> tree_bcs;
+  bool verts_are_reset;
+  std::vector<std::vector<Vertex::Non_transferable_ptr>> boundary_verts; // a vector of the vertices that are on each boundary
 
   Element_container& container(bool is_deformed);
+  int add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin);
   Element& add_elem(bool is_deformed, Tree&);
   bool is_surface(Tree*);
   template<typename element_t> Mesh_by_type<element_t>& mbt(); // gets either `car` or `def`
   template<typename element_t> void connect_new(int start_at); // connects new elements in `mbt<element_t>()`. helper function for `refine`
   void refine_by_record(bool is_deformed, int start, int end);
   bool needs_refine(Tree*);
+  void delete_bad_extrusions();
   void deform();
   void purge();
+  // identify which vertices are on which boundaries and write it to `Vertex::record`
+  // must be called directly befor `snap_vertices`
+  void id_boundary_verts();
+  void snap_vertices();
 
   public:
   /*!
@@ -76,9 +84,10 @@ class Accessible_mesh : public Mesh
   void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n) override;
   void disconnect_boundary(int bc_sn) override;
 
-  void add_tree(std::vector<Flow_bc*> extremal_bcs) override;
+  void add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3)) override;
   void set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) override;
   void update(std::function<bool(Element&)> refine_criterion = always, std::function<bool(Element&)> unrefine_criterion = never) override;
+  void relax(double factor = 0.9) override;
 
   //! \returns a view of all Bounday_condition objects owned by this mesh
   Vector_view<Boundary_condition&, Boundary_condition> boundary_conditions() {return bound_conds;}
@@ -101,6 +110,10 @@ class Accessible_mesh : public Mesh
   //! \returns a view of all Element_connection between extruded elements and the elemens they were extruded from
   inline Vector_view<Element_connection&, Element_face_connection<Deformed_element>*,
                      ptr_convert<Element_connection&, Element_face_connection<Deformed_element>*>> extruded_connections() {return {extrude_cons};}
+
+  protected:
+  void reset_verts() override;
+  void restore_verts() override;
 };
 
 }

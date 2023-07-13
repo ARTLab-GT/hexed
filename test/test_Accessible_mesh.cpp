@@ -1,6 +1,7 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/config.hpp>
 #include <hexed/Accessible_mesh.hpp>
+#include <hexed/Simplex_geom.hpp>
 
 TEST_CASE("Accessible_mesh")
 {
@@ -385,8 +386,9 @@ TEST_CASE("Tree meshing")
     mesh.update([](hexed::Element& elem){auto np = elem.nominal_position(); return np[0] == 0 && np[1] == 0 && np[2] == 0;});
     REQUIRE(mesh.elements().size() == 15);
     mesh.valid().assert_valid();
+    // refining this element should refine 3 face neighbors and 3 edge neighbors
     mesh.update([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 2 && np[0] == 1 && np[1] == 1 && np[2] == 1;});
-    REQUIRE(mesh.elements().size() == 43);
+    REQUIRE(mesh.elements().size() == 64);
     mesh.valid().assert_valid();
     mesh.update([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 1 && np[0] == 1 && np[1] == 1 && np[2] == 1;});
     mesh.update([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 2 && np[0] == 2 && np[1] == 2 && np[2] == 2;});
@@ -430,5 +432,26 @@ TEST_CASE("Tree meshing")
       REQUIRE(mesh1.elements().size() == 4*1 + 4*8);
       mesh1.valid().assert_valid();
     }
+  }
+  SECTION("no diagonally-connected elements")
+  {
+    mesh.update();
+    mesh.update();
+    std::vector<hexed::Mat<3, 3>> triangles(2);
+    triangles[0] << .7/8, .7/8, .7/8,
+                    .7/8, .7/8, .7/8,
+                      0.,   0.,   .7;
+    triangles[1] << 2.1/8, 2.1/8, 2.1/8,
+                    2.1/8, 2.1/8, 2.1/8,
+                       0.,    0.,    .7;
+    mesh.set_surface(new hexed::Simplex_geom<3>(triangles), new hexed::Copy(), hexed::Mat<3>{.6, .6, .6});
+    // count number of non-extruded elements
+    int count = 0;
+    auto& elems = mesh.elements();
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      if (elems[i_elem].tree) ++count;
+    }
+    // number should indicate that the diagonally-connected elements have been deleted
+    REQUIRE(count == 48);
   }
 }

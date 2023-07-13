@@ -113,13 +113,13 @@ class Solver
   inline Mesh& mesh() {return acc_mesh;}
   inline Storage_params storage_params() {return params;}
   //! moves all vertices to the mean of the current position and the mean of the neighbors' positions
-  void relax_vertices(double factor = .5);
+  void relax_vertices(double factor = .5); //!< \deprecated use `Mesh::relax`
   /*! \brief apply `Mesh_bc`s
    * This is where hanging vertices are snapped to their coarse faces.
    * \note if some elements participate in multiple BCs, then snapping may not satisfy all exactly.
    *       However, if performed multiple times, it should converge;
    */
-  void snap_vertices();
+  void snap_vertices(); //!< \deprecated tree meshing does this automatically
   //! warps the boundary elements such that the element faces coincide with the boundary at their quadrature points.
   void snap_faces();
   /*!
@@ -202,6 +202,8 @@ class Solver
    * the surface normal, the shear stress, and the heat flux will be output.
    */
   void visualize_surface_tecplot(int bc_sn, std::string name, int n_sample = 20);
+  //! visualize the Cartesian surface which theoretically exists after element deletion but before any vertex snapping
+  void vis_cart_surf_tecplot(int bc_sn, std::string name, const Boundary_func& func = Resolution_badness());
   #endif
   #if HEXED_USE_OTTER
   void visualize_edges_otter(otter::plot&, Eigen::Matrix<double, 1, Eigen::Dynamic> color = otter::colors::css4["white"], int n_sample = 21);

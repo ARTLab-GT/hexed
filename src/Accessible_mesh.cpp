@@ -3,6 +3,7 @@
 #include <Row_index.hpp>
 #include <erase_if.hpp>
 #include <utils.hpp>
+#include <global_hacks.hpp>
 
 namespace hexed
 {
@@ -15,6 +16,76 @@ Element_container& Accessible_mesh::container(bool is_deformed)
 
 template<> Mesh_by_type<         Element>& Accessible_mesh::mbt() {return car;}
 template<> Mesh_by_type<Deformed_element>& Accessible_mesh::mbt() {return def;}
+
+void Accessible_mesh::id_boundary_verts()
+{
+  auto verts = vertices();
+  #pragma omp parallel for
+  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
+    verts[i_vert].record.clear();
+  }
+  for (auto& b_verts : boundary_verts) erase_if(b_verts, &Vertex::Non_transferable_ptr::is_null);
+  for (unsigned bc_sn = 0; bc_sn < boundary_verts.size(); ++bc_sn) {
+    #pragma omp parallel for
+    for (auto& vert : boundary_verts[bc_sn]) {
+      vert->record.push_back(bc_sn);
+    }
+    auto& cons = def.boundary_connections();
+    for (int i_con = 0; i_con < cons.size(); ++i_con) {
+      auto& con = cons[i_con];
+      if (con.bound_cond_serial_n() == int(bc_sn)) {
+        for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+          if ((i_vert/math::pow(2, params.n_dim - 1 - con.i_dim()))%2 == con.inside_face_sign()) {
+            auto& vert = con.element().vertex(i_vert);
+            Lock::Acquire a(vert.lock);
+            if (!std::count(vert.record.begin(), vert.record.end(), bc_sn)) {
+              vert.record.push_back(bc_sn);
+              boundary_verts[bc_sn].emplace_back(vert);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+void Accessible_mesh::snap_vertices()
+{
+  if (tree) {
+    for (int i_bc = 0; i_bc < 2*params.n_dim; ++i_bc) {
+      int bc_sn = tree_bcs[i_bc];
+      #pragma omp parallel for
+      for (auto& vert : boundary_verts[bc_sn]) {
+        int i_dim = i_bc/2;
+        int sign = i_bc%2;
+        vert->pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
+      }
+    }
+    if (surf_geom) {
+      #pragma omp parallel for
+      for (auto& vert : boundary_verts[surf_bc_sn]) {
+        auto pos = vert->pos(Eigen::seqN(0, params.n_dim));
+        pos = surf_geom->nearest_point(pos);
+      }
+    }
+  } else {
+    auto& bc_cons {boundary_connections()};
+    #pragma omp parallel for
+    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+      int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+      boundary_condition(bc_sn).mesh_bc->snap_vertices(bc_cons[i_con]);
+    }
+  }
+  // vertex relaxation/snapping will cause hanging vertices to drift away from hanging vertex faces they are supposed to be coincident with
+  // so now we put them back where they belong
+  auto& matchers = hanging_vertex_matchers();
+  #pragma omp parallel for
+  for (int i_match = 0; i_match < matchers.size(); ++i_match) {
+    matchers[i_match].match(&Element::vertex_position<0>);
+    matchers[i_match].match(&Element::vertex_position<1>);
+    matchers[i_match].match(&Element::vertex_position<2>);
+  }
+}
 
 Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg) :
   params{params_arg},
@@ -30,7 +101,8 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
   def_face_cons{def.elem_face_con_v, bound_face_cons},
   ref_face_v{car.refined_faces(), def.refined_faces()},
   matcher_v{car.hanging_vertex_matchers(), def.hanging_vertex_matchers()},
-  surf_geom{nullptr}
+  surf_geom{nullptr},
+  verts_are_reset{false}
 {
   def.face_con_v = def_face_cons;
 }
@@ -42,12 +114,17 @@ Accessible_mesh::~Accessible_mesh()
   def.purge_connections(always);
 }
 
-int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<int> position)
+int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin)
 {
-  int sn = container(is_deformed).emplace(ref_level, position);
+  int sn = container(is_deformed).emplace(ref_level, position, origin);
   Element& elem = element(ref_level, is_deformed, sn);
   for (int i_vert = 0; i_vert < n_vert; ++i_vert) vert_ptrs.emplace_back(elem.vertex(i_vert));
   return sn;
+}
+
+int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<int> position)
+{
+  return add_element(ref_level, is_deformed, position, Mat<>::Zero(params.n_dim));
 }
 
 Element& Accessible_mesh::element(int ref_level, bool is_deformed, int serial_n)
@@ -104,6 +181,7 @@ void Accessible_mesh::connect_hanging(int coarse_ref_level, int coarse_serial, s
 
 int Accessible_mesh::add_boundary_condition(Flow_bc* flow_bc, Mesh_bc* mesh_bc)
 {
+  boundary_verts.emplace_back();
   bound_conds.push_back({std::unique_ptr<Flow_bc>{flow_bc}, std::unique_ptr<Mesh_bc>{mesh_bc}});
   // no reason to delete boundary conditions, so the serial number can just be the index
   return bound_conds.size() - 1;
@@ -111,7 +189,8 @@ int Accessible_mesh::add_boundary_condition(Flow_bc* flow_bc, Mesh_bc* mesh_bc)
 
 void Accessible_mesh::connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n)
 {
-  if (bc_serial_n >= int(bound_conds.size())) throw std::runtime_error("demand for non-existent `Boundary_condition`");
+  // create boundary condition
+  HEXED_ASSERT(bc_serial_n < int(bound_conds.size()), "demand for non-existent `Boundary_condition`");
   if (is_deformed) {
     def.bound_cons.emplace_back(new Typed_bound_connection<Deformed_element>(def.elems.at(ref_level, element_serial_n), i_dim, face_sign, bc_serial_n));
   } else {
@@ -153,6 +232,7 @@ Mesh::Connection_validity Accessible_mesh::valid()
 
 Accessible_mesh::vertex_view Accessible_mesh::vertices()
 {
+  HEXED_ASSERT(!verts_are_reset, "looks like you have a `Mesh::Reset_vertices` you forgot to destroy");
   erase_if(vert_ptrs, &Vertex::Non_transferable_ptr::is_null);
   return vert_ptrs;
 }
@@ -254,6 +334,12 @@ void Accessible_mesh::extrude(bool collapse, double offset)
       }
     }
   }
+  {
+    auto verts = vertices();
+    for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
+      HEXED_ASSERT(verts[i_vert].record.size()%4 == 0, "vertex has wrong number of records");
+    }
+  }
 
   // decide which faces to extrude from
   std::vector<Empty_face> empty_faces;
@@ -278,7 +364,7 @@ void Accessible_mesh::extrude(bool collapse, double offset)
     auto nom_pos = face.elem.nominal_position();
     nom_pos[face.i_dim] += 2*face.face_sign - 1;
     const int ref_level = face.elem.refinement_level();
-    int sn = add_element(ref_level, true, nom_pos);
+    int sn = add_element(ref_level, true, nom_pos, face.elem.origin);
     Con_dir<Deformed_element> dir {{face.i_dim, face.i_dim}, {!face.face_sign, bool(face.face_sign)}};
     auto& elem = def.elems.at(ref_level, sn);
     elem.record = sn;
@@ -286,7 +372,8 @@ void Accessible_mesh::extrude(bool collapse, double offset)
       int stride = math::pow(2, nd - 1 - face.i_dim);
       for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
         int i_collapse = i_vert + (face.face_sign - (i_vert/stride)%2)*stride;
-        elem.vertex(i_vert).pos = face.elem.vertex(i_collapse).pos;
+        double interp = 1e-3;
+        elem.vertex(i_vert).pos = interp*elem.vertex(i_vert).pos + (1 - interp)*face.elem.vertex(i_collapse).pos;
       }
     }
     std::array<Deformed_element*, 2> el_arr {&elem, &face.elem};
@@ -323,6 +410,12 @@ void Accessible_mesh::extrude(bool collapse, double offset)
       }
     }
   }
+  {
+    auto verts = vertices();
+    for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
+      HEXED_ASSERT(verts[i_vert].record.size()%4 == 0, "vertex has wrong number of records");
+    }
+  }
 
   // perform offset
   if (offset > 0) {
@@ -350,6 +443,12 @@ void Accessible_mesh::extrude(bool collapse, double offset)
       }
     }
   }
+  {
+    auto verts = vertices();
+    for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
+      HEXED_ASSERT(verts[i_vert].record.size()%4 == 0, "vertex has wrong number of records");
+    }
+  }
 
   // plan connections to make (don't make them yet, because that could result in `eat`ing vertices which have not been visited,
   // and ultimately dereferencing null pointers)
@@ -358,18 +457,14 @@ void Accessible_mesh::extrude(bool collapse, double offset)
 
   #define VERTEX_LOOP(code) \
     /* connections without hanging nodes */ \
-    for (int i_vert = 0; i_vert < verts.size(); ++i_vert) \
-    { \
+    for (int i_vert = 0; i_vert < verts.size(); ++i_vert) { \
       auto& vert {verts[i_vert]}; \
       /* first make connections where dimension matches and then make connections among differing dimensions. */ \
       /* This order prevents incorrect connections where both same-dimension and different-dimension candidates are available. */ \
-      for (bool (*aligned)(Con_dir<Deformed_element>, std::array<int, 2>) : {&aligned_same_dim, &aligned_different_dim}) \
-      { \
+      for (bool (*aligned)(Con_dir<Deformed_element>, std::array<int, 2>) : {&aligned_same_dim, &aligned_different_dim}) { \
         /* iterate through every possible pair of records created by an extruded elements above */ \
-        for (int i_record = 0; i_record < int(vert.record.size()); i_record += n_record) \
-        { \
-          for (int j_record = i_record + n_record; j_record < int(vert.record.size()); j_record += n_record) \
-          { \
+        for (int i_record = 0; i_record < int(vert.record.size()); i_record += n_record) { \
+          for (int j_record = i_record + n_record; j_record < int(vert.record.size()); j_record += n_record) { \
             int ref_level = vert.record[i_record]; \
             Con_dir<Deformed_element> dir {{     vert.record[i_record + 2]/2 ,      vert.record[j_record + 2]/2}, \
                                            {bool(vert.record[i_record + 2]%2), bool(vert.record[j_record + 2]%2)}}; \
@@ -418,11 +513,11 @@ void Accessible_mesh::extrude(bool collapse, double offset)
                  + math::pow(2, nd - 1 - free_dim); \
         Vertex& fine_vert = elem.vertex(iv); \
         /* vertex should have exactly one record */ \
-        sn[1] = fine_vert.record[1]; \
         HEXED_ASSERT(fine_vert.record.size() == n_record, \
-                     format_str(100, "fine vertex has %li != 1 records (position = [%e, %e, %e])", \
-                                fine_vert.record.size()/n_record, \
+                     format_str(1000, "`fine_vert.record.size() == %li != n_record == %li` (position = [%e, %e, %e])", \
+                                fine_vert.record.size(), n_record, \
                                 fine_vert.pos[0], fine_vert.pos[1], fine_vert.pos[2]).c_str()); \
+        sn[1] = fine_vert.record[1]; \
         stretch_dim = extr_dim > free_dim; \
         fine_vert.record.erase(fine_vert.record.begin(), fine_vert.record.begin() + n_record); \
       } \
@@ -453,12 +548,10 @@ void Accessible_mesh::extrude(bool collapse, double offset)
   {
     auto verts = vertices(); // note: need to rebuild vertex vector because face connections above have `eat`en vertices
     VERTEX_LOOP(CONNECT_SAME_CONFORMING)
-    #if 1
     for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
       HEXED_ASSERT(verts[i_vert].record.empty(), format_str(100, "vertex detected with %lu unprocessed connection requests",
                                                             verts[i_vert].record.size()/n_record).c_str());
     }
-    #endif
   }
   for (auto con_plan : con_plans) {
     connect_deformed(con_plan.ref_level, con_plan.serial_ns, con_plan.dir);
@@ -496,7 +589,7 @@ std::vector<Mesh::elem_handle> Accessible_mesh::elem_handles()
 Element& Accessible_mesh::add_elem(bool is_deformed, Tree& t)
 {
   auto np = t.coordinates();
-  int sn = add_element(t.refinement_level(), is_deformed, std::vector<int>(np.begin(), np.end()));
+  int sn = add_element(t.refinement_level(), is_deformed, std::vector<int>(np.begin(), np.end()), t.origin());
   auto& elem = element(t.refinement_level(), is_deformed, sn);
   elem.record = sn; // put the serial number in the record so it can be used for connections
   elem.tree = &t;
@@ -507,7 +600,7 @@ Element& Accessible_mesh::add_elem(bool is_deformed, Tree& t)
   return elem;
 }
 
-void Accessible_mesh::add_tree(std::vector<Flow_bc*> extremal_bcs)
+void Accessible_mesh::add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin)
 {
   // take ownership of bcs (do this first to avoid memory leak)
   std::vector<int> new_tree_bcs;
@@ -518,7 +611,7 @@ void Accessible_mesh::add_tree(std::vector<Flow_bc*> extremal_bcs)
   HEXED_ASSERT(!tree, "each `Mesh` may only contain one tree");
   // add the tree
   tree_bcs = new_tree_bcs;
-  tree.reset(new Tree(params.n_dim, root_sz));
+  tree.reset(new Tree(params.n_dim, root_sz, origin));
   auto& elem = add_elem(false, *tree);
   int sn = elem.record;
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
@@ -560,12 +653,15 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
     elem.record = 0;
     if (elem.tree) if (elem.tree->get_status() != 1) elem.record = 2;
   }
+  delete_bad_extrusions();
   deform();
   purge();
   connect_new<         Element>(0);
   connect_new<Deformed_element>(0);
   extrude(true);
   connect_rest(surf_bc_sn);
+  id_boundary_verts();
+  snap_vertices();
 }
 
 // forms connections for new tree elements of type `element_t` starting with the `starting_at`th one
@@ -660,7 +756,12 @@ void Accessible_mesh::refine_by_record(bool is_deformed, int start, int end)
 
 bool exists(Tree* tree)
 {
-  if (tree->elem) if (tree->elem->record != 2) return true;
+  if (tree) if (tree->elem) {
+    int record;
+    #pragma omp atomic read
+    record = tree->elem->record;
+    if (record != 2) return true;
+  }
   return false;
 }
 
@@ -668,22 +769,20 @@ bool exists(Tree* tree)
 bool Accessible_mesh::needs_refine(Tree* t)
 {
   for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
-    auto neighbors = t->find_neighbors(math::direction(params.n_dim, i_face));
+    // if there is a face neighbor with ref level more than 1 greater, need to refine
+    auto dir = math::direction(params.n_dim, i_face);
+    auto neighbors = t->find_neighbors(dir);
     int rl = t->refinement_level();
     auto too_fine = [rl](Tree* ptr){return ptr->refinement_level() > rl + 1;};
-    if (std::any_of(neighbors.begin(), neighbors.end(), too_fine)) return true; // if there is a face neighbor with ref level more than 1 greater, need to refine
+    if (std::any_of(neighbors.begin(), neighbors.end(), too_fine)) return true;
     if (t->elem) {
-      // if this face is exposed, also check the diagonal neighbors since they could be extrusion neighbors
-      if (!std::all_of(neighbors.begin(), neighbors.end(), &exists)) {
-        for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) if (j_dim != i_face/2) {
-          for (int face_sign = 0; face_sign < 2; ++face_sign) {
-            auto dir = math::direction(params.n_dim, i_face);
-            dir(j_dim) = math::sign(face_sign);
-            auto diag_neighbs = t->find_neighbors(dir);
-            // again, ref level difference > 1 or partially exposed -> refine
-            if (std::any_of(diag_neighbs.begin(), diag_neighbs.end(), too_fine)) return true;
-          }
-        }
+      // also check the diagonal neighbors since they could be extrusion neighbors
+      for (int j_face = 0; j_face < 2*(i_face/2); ++j_face) {
+        auto d = dir;
+        d(j_face/2) = math::sign(j_face%2);
+        neighbors = t->find_neighbors(d);
+        // again, ref level difference > 1 or partially exposed -> refine
+        if (std::any_of(neighbors.begin(), neighbors.end(), too_fine)) return true;
       }
     }
   }
@@ -702,6 +801,122 @@ bool has_existent_children(Tree* t)
 bool is_def(Element& elem)
 {
   return (elem.get_is_deformed() && elem.record == 0) || (!elem.get_is_deformed() && elem.record == 3);
+}
+
+// delete elements that would create pathological extrusion topology
+void Accessible_mesh::delete_bad_extrusions()
+{
+  int nd = params.n_dim;
+  auto& elems = elements();
+  bool changed;
+  do {
+    changed = false;
+    #pragma omp parallel for reduction(||:changed)
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      int record;
+      #pragma omp atomic read
+      record = elem.record;
+      if (elem.tree && record != 2) {
+        bool exposed [6];
+        for (int i_face = 0; i_face < 2*nd; ++i_face) {
+          // if any hanging-node face is partially covered by fine elements, delete the fine elements
+          auto neighbors = elem.tree->find_neighbors(math::direction(nd, i_face));
+          bool all_exist = std::all_of(neighbors.begin(), neighbors.end(), exists);
+          exposed[i_face] = !all_exist;
+          if (neighbors.size() > 1) {
+            if (std::any_of(neighbors.begin(), neighbors.end(), exists) && !all_exist) {
+              changed = true;
+              for (Tree* n : neighbors) if (n->elem) {
+                #pragma omp atomic write
+                n->elem->record = 2;
+              }
+            }
+          }
+          // for all faces that share an edge with `i_face` (but only the ones with lower index to avoid redundancy)
+          for (int j_face = 0; j_face < 2*(i_face/2); ++j_face) {
+            if (exposed[i_face] || exposed[j_face]) {
+              auto dir = math::direction(nd, i_face);
+              dir(j_face/2) = math::sign(j_face%2);
+              auto diag_neighbs = elem.tree->find_neighbors(dir);
+              // if there are elements that are connected diagonally but have no mutual face neighbors, delete at least one of them
+              if (exposed[i_face] && exposed[j_face]) {
+                for (Tree* n : diag_neighbs) if (exists(n)) {
+                  // To make results repeatable, if the elements have different refinement levels, delete the finer one(s).
+                  // If they have the same refinement level, delete both
+                  if (n->refinement_level() >= elem.refinement_level()) {
+                    changed = true;
+                    #pragma omp atomic write
+                    n->elem->record = 2;
+                    if (n->refinement_level() == elem.refinement_level()) {
+                      #pragma omp atomic write
+                      elem.record = 2;
+                    }
+                  }
+                }
+                for (int k_face = 0; k_face < 2*(j_face/2); ++k_face) if (exposed[k_face]) {
+                  auto d = dir;
+                  d(k_face/2) = math::sign(k_face%2);
+                  auto neighbs = elem.tree->find_neighbors(d);
+                  for (Tree* n : neighbs) if (exists(n)) {
+                    if (n->refinement_level() >= elem.refinement_level()) {
+                      changed = true;
+                      #pragma omp atomic write
+                      n->elem->record = 2;
+                      if (n->refinement_level() == elem.refinement_level()) {
+                        #pragma omp atomic write
+                        elem.record = 2;
+                      }
+                    }
+                  }
+                }
+              } else if (nd == 3) {
+                // if the edge is partially covered with fine elements, delete them
+                if (  !std::all_of(diag_neighbs.begin(), diag_neighbs.end(), exists)
+                    && std::any_of(diag_neighbs.begin(), diag_neighbs.end(), exists)) {
+                  changed = true;
+                  for (Tree* n : diag_neighbs) {
+                    if (n->elem) {
+                      #pragma omp atomic write
+                      n->elem->record = 2;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        // delete elements with exposed faces, edges, or vertices that face away from the surface geometry
+        if (surf_geom) {
+          bool bad = false;
+          auto eval = [&](Mat<> direction) {
+            Mat<> center = elem.tree->center() + elem.tree->nominal_size()/2*direction;
+            Mat<> nearest = surf_geom->nearest_point(center);
+            double tol = .3;
+            bad = bad || (nearest - center).normalized().dot(direction.normalized()) < -tol;
+          };
+          for (int i_face = 0; i_face < 2*nd; ++i_face) if (exposed[i_face]) {
+            Mat<> direction = math::direction(nd, i_face).cast<double>();
+            eval(direction);
+            for (int j_face = 0; j_face < 2*(i_face/2); ++j_face) if (exposed[j_face]) {
+              Mat<> dir = direction;
+              dir(j_face/2) = math::sign(j_face%2);
+              eval(dir);
+              for (int k_face = 0; k_face < 2*(j_face/2); ++k_face) if (exposed[k_face]) {
+                dir(k_face/2) = math::sign(k_face%2);
+                eval(dir);
+              }
+            }
+          }
+          if (bad) {
+            changed = true;
+            #pragma omp atomic write
+            elem.record = 2;
+          }
+        }
+      }
+    }
+  } while (changed);
 }
 
 void Accessible_mesh::deform()
@@ -809,10 +1024,13 @@ void Accessible_mesh::purge()
   def.elems.purge();
   // delete dangling vertex pointers
   erase_if(vert_ptrs, &Vertex::Non_transferable_ptr::is_null);
+  for (auto& b_verts : boundary_verts) erase_if(b_verts, &Vertex::Non_transferable_ptr::is_null);
 }
 
 void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std::function<bool(Element&)> unrefine_criterion)
 {
+  Stopwatch sw;
+  sw.start();
   /* `Element::record` is used to identify which elements are going to be modified.
    * 0 => do nothing
    * 1 => refine
@@ -828,12 +1046,18 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     elem.record = 0;
-    if (elem.tree) {
-      bool ref = refine_criterion(elem);
-      bool unref = unrefine_criterion(elem);
-      if (ref && !unref) elem.record = 1;
-      else if (unref && !ref) elem.record = -1;
-    }
+    bool ref = refine_criterion(elem);
+    bool unref = unrefine_criterion(elem);
+    if (ref && !unref) elem.record = 1;
+    else if (unref && !ref) elem.record = -1;
+  }
+  // pass refinement requests of extruded elements to their extrusion parents
+  #pragma omp parallel for
+  for (auto con : extrude_cons) {
+    auto& inside = con->element(1);
+    Lock::Acquire a(inside.lock);
+    if (inside.record == 0) inside.record = con->element(0).record;
+    else inside.record = std::max(inside.record, con->element(0).record);
   }
   int n_orig [2];
   // refine elements
@@ -898,22 +1122,22 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   // synchronize refinement level of surface elements with their non-surface neighbors in preparation for incremental flood fill
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
-    if (elem.tree) {
+    if (exists(elem.tree)) {
       for (int i_face = 0; i_face < 2*nd; ++i_face) {
         Tree* neighbor = elem.tree->find_neighbor(math::direction(nd, i_face));
         if (neighbor) {
-          if (!neighbor->elem) {
+          if (!exists(neighbor)) {
             if (neighbor->refinement_level() > elem.refinement_level()) {
               Tree* p = neighbor->parent();
               bool can_unref = true;
-              for (Tree* child : p->children()) can_unref = can_unref && !child->elem;
+              for (Tree* child : p->children()) can_unref = can_unref && !exists(child);
               if (can_unref && !needs_refine(p)) p->unrefine();
             } else if (neighbor->refinement_level() < elem.refinement_level() - 1) neighbor->refine();
             else if (neighbor->refinement_level() < elem.refinement_level()) {
               int min_rl = std::numeric_limits<int>::max();
               for (int j_face = 0; j_face < 2*nd; ++j_face) {
                 Tree* n = neighbor->find_neighbor(math::direction(nd, j_face));
-                if (n) if (n->elem) min_rl = std::min(min_rl, n->refinement_level());
+                if (exists(n)) min_rl = std::min(min_rl, n->refinement_level());
               }
               if (neighbor->refinement_level() < min_rl) neighbor->refine();
             }
@@ -931,10 +1155,10 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
       int sz = cont_elems.size();
       for (int i_elem = 0; i_elem < sz; ++i_elem) {
         auto& elem = cont_elems[i_elem];
-        if (elem.tree && elem.record == 0) {
+        if (exists(elem.tree)) {
           for (int i_face = 0; i_face < 2*nd; ++i_face) {
             for (Tree* neighbor : elem.tree->find_neighbors(math::direction(nd, i_face))) {
-              if (!neighbor->elem) if (!is_surface(neighbor)) {
+              if (!exists(neighbor)) if (!is_surface(neighbor)) {
                 changed = true;
                 add_elem(is_deformed, *neighbor).record = 0;
               }
@@ -959,45 +1183,8 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
     }
     for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, container(is_deformed).element_view().size());
   } while (changed);
-  // if any hanging-node face or edge is partially covered by fine elements, delete the fine elements
-  do {
-    changed = false;
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      auto& elem = elems[i_elem];
-      if (elem.tree && elem.record != 2) {
-        for (int i_face = 0; i_face < 2*nd; ++i_face) {
-          // check face neighbors
-          auto neighbors = elem.tree->find_neighbors(math::direction(nd, i_face));
-          bool all_exist = std::all_of(neighbors.begin(), neighbors.end(), exists);
-          if (neighbors.size() > 1) {
-            if (std::any_of(neighbors.begin(), neighbors.end(), exists) && !all_exist) {
-              changed = true;
-              for (Tree* n : neighbors) {
-                if (n->elem) n->elem->record = 2;
-              }
-            }
-          }
-          // if that was a boundary face, also check edge neighbors, because in 3D that can result in some really weird extrusion situations
-          if (nd == 3 && !all_exist) {
-            for (int j_dim = 0; j_dim < nd; ++j_dim) if (j_dim != i_face/2) {
-              for (int sign = 0; sign < 2; ++sign) {
-                auto dir = math::direction(nd, i_face);
-                dir(j_dim) = math::sign(sign);
-                auto diag_neighbs = elem.tree->find_neighbors(dir);
-                if (  !std::all_of(diag_neighbs.begin(), diag_neighbs.end(), exists)
-                    && std::any_of(diag_neighbs.begin(), diag_neighbs.end(), exists)) {
-                  changed = true;
-                  for (Tree* n : diag_neighbs) {
-                    if (n->elem) n->elem->record = 2;
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  } while (changed);
+  delete_bad_extrusions();
+  sw.pause();
   deform();
   // delete extruded elements
   #pragma omp parallel for
@@ -1016,6 +1203,98 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   connect_new<Deformed_element>(0);
   extrude(true);
   connect_rest(surf_bc_sn);
+  // if any immobile vertices have strayed from their nominal position (probably by `eat`ing)
+  // snap them back where they belong
+  auto& car_elems = cartesian().elements();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < car_elems.size(); ++i_elem) {
+    auto& elem = car_elems[i_elem];
+    for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+      Lock::Acquire a(elem.vertex(i_vert).lock);
+      auto& pos = elem.vertex(i_vert).pos;
+      double nom_sz = elem.nominal_size();
+      auto nom_pos = elem.nominal_position();
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        pos[i_dim] = nom_sz*(nom_pos[i_dim] + (i_vert/math::pow(2, nd - 1 - i_dim))%2);
+      }
+      pos(Eigen::seqN(0, nd)) += elem.origin;
+    }
+  }
+  id_boundary_verts();
+  snap_vertices();
+  global_hacks::numbers[2] += sw.time();
+}
+
+void Accessible_mesh::relax(double factor)
+{
+  id_boundary_verts();
+  auto verts = vertices();
+  // calculate average neighbor position
+  #pragma omp parallel for
+  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
+    auto& vert = verts[i_vert];
+    vert.temp_vector.setZero();
+    auto neighbs = vert.get_neighbors();
+    for (auto& neighb : neighbs) vert.temp_vector += neighb.pos;
+    vert.temp_vector /= neighbs.size();
+  }
+  // update position
+  #pragma omp parallel for
+  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
+    auto& vert = verts[i_vert];
+    if (vert.is_mobile()) vert.pos = factor*vert.temp_vector + (1 - factor)*vert.pos;
+  }
+  snap_vertices();
+}
+
+void Accessible_mesh::reset_verts()
+{
+  int nv = params.n_vertices();
+  auto verts = vertices();
+  #pragma omp parallel for
+  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
+    verts[i_vert].temp_vector = verts[i_vert].pos;
+  }
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elements().size(); ++i_elem) {
+    auto& elem = elements()[i_elem];
+    if (elem.tree) {
+      for (int i_vert = 0; i_vert < nv; ++i_vert) {
+        auto& vert = elem.vertex(i_vert);
+        Lock::Acquire a(vert.lock);
+        vert.pos = elem.tree->nominal_position();
+        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+          vert.pos(i_dim) += elem.tree->nominal_size()*((i_vert/math::pow(2, params.n_dim - 1 - i_dim))%2);
+        }
+      }
+    }
+  }
+  #pragma omp parallel for
+  for (unsigned i_con = 0; i_con < extrude_cons.size(); ++i_con) {
+    auto con = extrude_cons[i_con];
+    auto& elem = con->element(0);
+    auto dir = con->direction();
+    int stride = math::pow(2, params.n_dim - 1 - dir.i_dim[0]);
+    for (int i_vert = 0; i_vert < nv; ++i_vert) {
+      auto& vert = elem.vertex(i_vert);
+      Lock::Acquire a(vert.lock);
+      int face_sign = (i_vert/stride)%2;
+      if (face_sign == dir.face_sign[1]) {
+        vert.pos = elem.vertex(i_vert + stride*(dir.face_sign[0] - face_sign)).pos;
+      }
+    }
+  }
+  verts_are_reset = true;
+}
+
+void Accessible_mesh::restore_verts()
+{
+  verts_are_reset = false;
+  auto verts = vertices();
+  #pragma omp parallel for
+  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
+    verts[i_vert].pos = verts[i_vert].temp_vector;
+  }
 }
 
 }

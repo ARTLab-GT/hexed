@@ -110,7 +110,7 @@ class Mesh
   //! \name Automated tree meshing
   //! \{
   /*! \brief Initializes meshing with bin/quad/[octree](https://en.wikipedia.org/wiki/Octree) topology.
-   * \details Creates a tree initialized with one element with ref level 0 located at {0, 0, 0}.
+   * \details Creates a tree initialized with one element with ref level 0.
    * Technically, free-form elements can also be created in the same mesh,
    * but they will not be connected to the tree.
    * Only one tree can be created.
@@ -123,8 +123,9 @@ class Mesh
    *   E.g. `extremal_bcs[0]` is the boundary condition to apply to the minimum \f$x_0\f$ face,
    *   `extremal_bcs[1]` is the BC for the maximum \f$x_0\f$ face,
    *   `extremal_bcs[2]` is for minimum \f$x_1\f$.
+   * \param origin The minimal corner of the tree root will be located at `origin`.
    */
-  virtual void add_tree(std::vector<Flow_bc*> extremal_bcs) = 0;
+  virtual void add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3)) = 0;
   /*! \brief Defines the surface geometry to be meshed as a boundary.
    * \details Acquires ownership of the objects pointed to `geometry` and `surface_bc`.
    * The geometric surface represented by `geometry` is now a boundary of the domain
@@ -139,8 +140,9 @@ class Mesh
    * Any surfaces defined by previous invokations of `set_surface` are forgotten.
    */
   virtual void set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) = 0;
-  static inline bool always(Element&) {return true;}
-  static inline bool never(Element&) {return false;}
+  static inline bool always(Element&) {return true;} //!< returns `true`
+  static inline bool never(Element&) {return false;} //!< returns `false`
+  static inline bool if_extruded(Element& elem) {return !elem.tree;} //!< returns true if the element is extruded **in a tree mesh**
   /*! \brief Updates tree mesh based on user-supplied (un)refinement criteria.
    * \details Evaluates `refine_criterion` and `unrefine_criterion` on every element in the tree (if a tree exists).
    * Whenever `refine_criterion` is `true` and `unrefine_criterion` is `false`, that element is refined.
@@ -153,8 +155,13 @@ class Mesh
    * The flood fill and extrusion are also updated.
    */
   virtual void update(std::function<bool(Element&)> refine_criterion = always, std::function<bool(Element&)> unrefine_criterion = never) = 0;
+  //! \brief Relax the vertices to improve mesh quality.
+  //! \param factor A larger number yields more change in the mesh. 0 => no update, 1 => "full" update, > 1 allowed but suspect
+  virtual void relax(double factor = 0.9) = 0;
   //! \}
 
+  //! \name observers
+  //!\{
   //! An object to provide information about whether the mesh connectivity is valid and if not, why.
   class Connection_validity
   {
@@ -173,9 +180,8 @@ class Mesh
       }
     }
   };
-  /*!
-   * returns a `Connection_validity` object describing whether the mesh connectivity is valid.
-   * Suggested uses:
+  /*! \brief Returns a `Connection_validity` object describing whether the mesh connectivity is valid.
+   * \details Suggested uses:
    * - `if (mesh.valid()) {\\...do something that requires a valid mesh}`
    * - `mesh.valid().assert_valid();`
    */
@@ -184,6 +190,21 @@ class Mesh
   struct elem_handle {int ref_level; bool is_deformed; int serial_n;};
   //! get handles for all elements currently in the mesh, in no particular order (mostly for testing/debugging)
   virtual std::vector<elem_handle> elem_handles() = 0;
+  //! Temporarily resets the vertices of a mesh to their nominal positions for debugging
+  class Reset_vertices
+  {
+    Mesh& m;
+    public:
+    //! resets to nominal position
+    inline Reset_vertices(Mesh& mesh) : m{mesh} {m.reset_verts();}
+    //! restores vertices to where they were before this object was constructed
+    inline ~Reset_vertices() {m.restore_verts();}
+  };
+  //!\}
+
+  protected:
+  virtual void reset_verts() = 0;
+  virtual void restore_verts() = 0;
 };
 
 }

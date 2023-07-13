@@ -2,6 +2,7 @@
 #define HEXED_SIMPLEX_GEOM_HPP_
 
 #include "Surface_geom.hpp"
+#include "global_hacks.hpp"
 
 namespace hexed
 {
@@ -15,8 +16,6 @@ namespace hexed
  * so we do not care about orientation or watertightness.
  * The you are free to modify the simplex list at will, since there are no requirements on it.
  * All input points must have exactly `n_dim` entries.
- * \see `segments`
- * \see `triangles`
  */
 template <int n_dim>
 class Simplex_geom : public Surface_geom
@@ -39,6 +38,8 @@ class Simplex_geom : public Surface_geom
    */
   std::vector<double> intersections(Mat<> point0, Mat<> point1) override
   {
+    Stopwatch sw;
+    sw.start();
     std::vector<double> inters;
     Mat<n_dim> diff = point1 - point0;
     for (Mat<n_dim, n_dim> sim : simplices) {
@@ -46,11 +47,14 @@ class Simplex_geom : public Surface_geom
       Mat<n_dim, n_dim> lhs;
       lhs(all, 0) = -diff;
       for (int col = 1; col < n_dim; ++col) lhs(all, col) = sim(all, col) - sim(all, 0);
-      Mat<n_dim> soln = lhs.householderQr().solve(point0 - sim(all, 0));
+      Mat<n_dim> soln = lhs.lu().solve(point0 - sim(all, 0));
       // if intersection is inside simplex, add it to the list
       Eigen::Array<double, n_dim - 1, 1> arr = soln(Eigen::seqN(1, n_dim - 1)).array();
       if ((arr >= 0.).all() && arr.sum() <= 1.) inters.push_back(soln(0));
     }
+    sw.pause();
+    #pragma omp atomic update
+    global_hacks::numbers[1] += sw.time();
     return inters;
   }
 };
@@ -65,6 +69,7 @@ template<> Mat<> Simplex_geom<3>::nearest_point(Mat<> point);
  * Each point represents a unique vertex -- duplicate points are allowed,
  * but you don't need to include each interior point twice.
  * The result can be used to construct a `Simplex_geom<2>`.
+ * \relates Simplex_geom
  */
 std::vector<Mat<2, 2>> segments(const Mat<dyn, dyn>& points);
 
