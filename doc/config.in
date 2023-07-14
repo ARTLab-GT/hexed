@@ -11,5 +11,5 @@ GENERATE_LATEX = NO
 GENERATE_TAGFILE = hexed.tag
 PREDEFINED = HEXED_USE_NLOPT=1 HEXED_USE_OTTER=1 HEXED_USE_TECPLOT=1 HEXED_THREADED=1 HEXED_USE_OCCT=1
 VERBATIM_HEADERS = NO
-TAGFILES = @CMAKE_SOURCE_DIR@/doc/OCCT.tag=https://dev.opencascade.org/doc/refman/html \
+TAGFILES = @CMAKE_SOURCE_DIR@/doc/occt_short.tag=https://dev.opencascade.org/doc/refman/html \
            @CMAKE_SOURCE_DIR@/doc/Eigen.doxytags=https://eigen.tuxfamily.org/dox
