@@ -33616,6 +33616,34 @@
     <class kind="class">Eigen::VectorwiseOp</class>
     <class kind="class">Eigen::WithFormat</class>
     <member kind="typedef">
+      <type>Matrix&lt; double, Dynamic, Dynamic &gt;</type>
+      <name>MatrixXd</name>
+      <anchorfile>group__matrixtypedefs.html</anchorfile>
+      <anchor>ga99b41a69f0bf64eadb63a97f357ab412</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="typedef">
+      <type>Matrix&lt; int, Dynamic, Dynamic &gt;</type>
+      <name>MatrixXi</name>
+      <anchorfile>group__matrixtypedefs.html</anchorfile>
+      <anchor>gaceba5f63d4040c79c44109590d4fa606</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="typedef">
+      <type>Matrix&lt; double, Dynamic, Dynamic &gt;</type>
+      <name>VectorXd</name>
+      <anchorfile>group__matrixtypedefs.html</anchorfile>
+      <anchor>ga8554c6170729f01c7572574837ecf618</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="typedef">
+      <type>Matrix&lt; int, Dynamic, Dynamic &gt;</type>
+      <name>VectorXi</name>
+      <anchorfile>group__matrixtypedefs.html</anchorfile>
+      <anchor>gaf20e523ca57ee8ef0a945cd4703d2bfd</anchor>
+      <arglist></arglist>
+    </member>
+    <member kind="typedef">
       <type>DiagonalMatrix&lt; double, 2 &gt;</type>
       <name>AlignedScaling2d</name>
       <anchorfile>namespaceEigen.html</anchorfile>
