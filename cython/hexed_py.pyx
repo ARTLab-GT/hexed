@@ -29,14 +29,17 @@ cdef cpp.MatrixXd matrix(arr):
     return mat
 
 cdef class Mesh:
+    r"""! \brief Python interface for `hexed::Mesh` """
     cdef cpp.Mesh* mesh
     def add_tree(self, origin = np.zeros(3)):
+        r"""! \see `hexed::Mesh::add_tree` """
         cdef cpp.vector[cpp.Flow_bc*] bcs
         for i_bc in range(4):
             bcs.push_back(new cpp.Nonpenetration())
         self.mesh[0].add_tree(bcs, matrix(origin))
 
 cdef class Iteration_status:
+    r"""! \brief Python interface for `hexed::Iteration_status` """
     cdef cpp.Iteration_status status
     def header(self):
         return self.status.header().decode()
@@ -44,19 +47,28 @@ cdef class Iteration_status:
         return self.status.report().decode()
 
 cdef class Solver:
+    r"""! \brief Python interface for `hexed::Solver` """
     cdef cpp.Solver* _solver
     def __cinit__(self, int n_dim, int row_size, double root_mesh_size, bint local_time_stepping = False):
         self._solver = new cpp.Solver(n_dim, row_size, root_mesh_size, local_time_stepping, cpp.inviscid, cpp.inviscid)
     def __dealloc__(self):
         del self._solver
     def mesh(self):
+        r"""! \brief Obtains a mutable `Mesh` object that you can interact with to generate the mesh """
         m = Mesh()
         m.mesh = &self._solver[0].mesh()
         return m
     def iteration_status(self):
+        r"""! \brief fetches the `Iteration_status` describing the state of the simulation """
         status = Iteration_status()
         status.status = self._solver[0].iteration_status()
         return status
-    def visualize(self, file_name, int n_sample = 20):
+    def visualize_field(self, file_name, int n_sample = 20):
+        r"""! \brief Visualizes the field data.
+        \details Data is written in Tecplot subzone data format (`.szplt`).
+        \param file_name name of file to write the data to, without file type extension
+        \param n_sample each element will be a `n_sample`[*`n_sample`[*`n_sample]]
+                        array of uniformly spaced sample points
+        """
         self._solver[0].calc_jacobian()
         self._solver[0].visualize_field_tecplot(bytes(file_name, "ascii"), n_sample, False, False, True)

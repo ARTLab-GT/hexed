@@ -121,6 +121,7 @@ if(build_docs)
             ${CMAKE_BINARY_DIR}/doc_config
             hexed
             python_api_proxy
+            script/doxygen_filter_pyx
             doc/contributing.dox
             doc/conventions.dox
             doc/geom_fitting.dox

@@ -5,7 +5,19 @@ import re
 
 with open(sys.argv[1], "r") as input_file:
     text = input_file.read()
-text = re.sub("cdef class", "class", text)
-text = re.sub("cdef (\w*)\(", r"def \1(", text)
-text = re.sub("cdef .*", r"", text)
-print(text)
+lines = text.split("\n");
+parse = True
+for line in lines:
+    quote_split = line.split('"""')
+    for i_quote in range(len(quote_split)):
+        if i_quote > 0:
+            parse = not parse
+        if parse:
+            parts = quote_split[i_quote].split("#")
+            code = parts[0]
+            code = re.sub(r"cdef (\w*)\(", r"def \1(", code) # change `cdef` functions to normal code
+            code = re.sub(r"cdef ", "", code) # get rid of other `cdef`s
+            code = re.sub(r"(?:cpp.)?\w+\*?(?<!def)(?<!class) (\w+)", r"\1", code) # get rid of type declarations
+            parts[0] = code
+            quote_split[i_quote] = "#".join(parts)
+    print('"""'.join(quote_split))
