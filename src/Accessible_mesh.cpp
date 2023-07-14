@@ -372,8 +372,7 @@ void Accessible_mesh::extrude(bool collapse, double offset)
       int stride = math::pow(2, nd - 1 - face.i_dim);
       for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
         int i_collapse = i_vert + (face.face_sign - (i_vert/stride)%2)*stride;
-        double interp = 1e-3;
-        elem.vertex(i_vert).pos = interp*elem.vertex(i_vert).pos + (1 - interp)*face.elem.vertex(i_collapse).pos;
+        elem.vertex(i_vert).pos = face.elem.vertex(i_collapse).pos;
       }
     }
     std::array<Deformed_element*, 2> el_arr {&elem, &face.elem};

@@ -812,7 +812,6 @@ TEST_CASE("face extrusion")
     solver.mesh().extrude();
     for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
     solver.mesh().connect_rest(bc_sn);
-    solver.snap_faces();
     solver.calc_jacobian();
     double area = solver.integral_field(hexed::Constant_func({1.}))[0];
     solver.mesh().disconnect_boundary(bc_sn);
