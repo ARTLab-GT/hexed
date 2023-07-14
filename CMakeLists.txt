@@ -93,6 +93,24 @@ set(colormap_files
 )
 configure_file(script/hexed-wrapped-post-process.in hexed-wrapped-post-process)
 configure_file(script/format.mcr.in format.mcr)
+
+# build python API
+configure_file(cython/setup.py.in setup.py)
+add_custom_command(
+    OUTPUT python_api_proxy
+    COMMAND ln -sf ${CMAKE_SOURCE_DIR}/cython/* ${CMAKE_BINARY_DIR}
+    COMMAND python3 setup.py build_ext --inplace > cython_build_output.txt
+    COMMAND ln -sf hexed.cpython*.so python_api_proxy
+    DEPENDS
+        setup.py
+        ${CMAKE_SOURCE_DIR}/cython/hexed_py.pyx
+        ${CMAKE_SOURCE_DIR}/cython/hexed_cpp.pxd
+        hexed
+)
+add_custom_target(python_api ALL DEPENDS python_api_proxy)
+file(GLOB PYTHON_MODULE CONFIGURE_DEPENDS ${CMAKE_BINARY_DIR}/hexed.cpython*.so)
+
+# build documentation
 if(build_docs)
     configure_file(doc/config.in ${CMAKE_BINARY_DIR}/doc_config)
     file(COPY doc/header.png DESTINATION doc/html)
@@ -102,6 +120,7 @@ if(build_docs)
         DEPENDS
             ${CMAKE_BINARY_DIR}/doc_config
             hexed
+            python_api
             doc/contributing.dox
             doc/conventions.dox
             doc/geom_fitting.dox
@@ -164,22 +183,6 @@ if (use_cppcheck)
     add_custom_command(OUTPUT cppcheck_output.txt COMMAND cppcheck --project=compile_commands.json --inline-suppr > cppcheck_output.txt DEPENDS hexed)
     add_custom_target(cppcheck ALL DEPENDS cppcheck_output.txt)
 endif()
-
-# build python API
-configure_file(cython/setup.py.in setup.py)
-add_custom_command(
-    OUTPUT python_api_proxy
-    COMMAND ln -sf ${CMAKE_SOURCE_DIR}/cython/* ${CMAKE_BINARY_DIR}
-    COMMAND python3 setup.py build_ext --inplace > cython_build_output.txt
-    COMMAND ln -sf hexed.cpython*.so python_api_proxy
-    DEPENDS
-        setup.py
-        ${CMAKE_SOURCE_DIR}/cython/hexed.pyx
-        ${CMAKE_SOURCE_DIR}/cython/hexed_cpp.pxd
-        hexed
-)
-add_custom_target(python_api ALL DEPENDS python_api_proxy)
-file(GLOB PYTHON_MODULE CONFIGURE_DEPENDS ${CMAKE_BINARY_DIR}/hexed.cpython*.so)
 
 # install
 install(PROGRAMS script/hexed-post-process ${CMAKE_BINARY_DIR}/hexed-wrapped-post-process script/hexed-fit-geom TYPE BIN)

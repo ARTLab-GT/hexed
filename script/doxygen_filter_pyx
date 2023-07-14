@@ -1,0 +1,11 @@
+#!/usr/bin/python3
+
+import sys
+import re
+
+with open(sys.argv[1], "r") as input_file:
+    text = input_file.read()
+text = re.sub("cdef class", "class", text)
+text = re.sub("cdef (\w*)\(", r"def \1(", text)
+text = re.sub("cdef .*", r"", text)
+print(text)

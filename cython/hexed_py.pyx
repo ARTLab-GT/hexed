@@ -1,11 +1,10 @@
 import numpy as np
 cimport hexed_cpp as cpp
 
-"""@package docstring
-Documentation for this module.
-"""
+## \namespace hexed_py
+# \brief foo
 
-def matrix_shape(arr):
+cdef matrix_shape(arr):
     """! @brief gets the shape of a matrix """
     shape = list(arr.shape[::-1]) # size that matrix will have. reverse due to col vs row major discrepancy
     assert(len(shape) <= 2, "cannot convert a >2D array shape to a 2D matrix shape")
@@ -40,19 +39,19 @@ cdef class Iteration_status:
         return self.status.report().decode()
 
 cdef class Solver:
-    cdef cpp.Solver* sol
+    cdef cpp.Solver* _solver
     def __cinit__(self, int n_dim, int row_size, double root_mesh_size, bint local_time_stepping = False):
-        self.sol = new cpp.Solver(n_dim, row_size, root_mesh_size, local_time_stepping, cpp.inviscid, cpp.inviscid)
+        self._solver = new cpp.Solver(n_dim, row_size, root_mesh_size, local_time_stepping, cpp.inviscid, cpp.inviscid)
     def __dealloc__(self):
-        del self.sol
+        del self._solver
     def mesh(self):
         m = Mesh()
         m.mesh = &self.sol[0].mesh()
         return m
     def iteration_status(self):
         status = Iteration_status()
-        status.status = self.sol[0].iteration_status()
+        status.status = self._solver[0].iteration_status()
         return status
     def visualize(self, file_name, int n_sample = 20):
-        self.sol[0].calc_jacobian()
-        self.sol[0].visualize_field_tecplot(bytes(file_name, "ascii"), n_sample, False, False, True)
+        self._solver[0].calc_jacobian()
+        self._solver[0].visualize_field_tecplot(bytes(file_name, "ascii"), n_sample, False, False, True)
