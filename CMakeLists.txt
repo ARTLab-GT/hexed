@@ -120,7 +120,7 @@ if(build_docs)
         DEPENDS
             ${CMAKE_BINARY_DIR}/doc_config
             hexed
-            python_api
+            python_api_proxy
             doc/contributing.dox
             doc/conventions.dox
             doc/geom_fitting.dox

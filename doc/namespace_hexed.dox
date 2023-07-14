@@ -1,1 +1,2 @@
-//! \namespace hexed \brief Global namespace for all of hexed.
+//! \namespace hexed \brief Global namespace for all of the C++ API of Hexed.
+//! \namespace Eigen \brief Linear algebra library. Used by Hexed but not included with the source.

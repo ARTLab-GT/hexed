@@ -1,7 +1,11 @@
+## \file colormaps.py
+# write matplotlib [perceptually uniform](https://matplotlib.org/stable/tutorials/colors/colormaps.html#sequential)
+# colormaps in a format that can be imported by tecplot
+
+## \cond
+
 from matplotlib.pyplot import get_cmap
 import os
-
-# write matplotlib perceptually uniform colormaps in a format that can be imported by tecplot
 
 names = ["magma", "inferno", "plasma", "viridis", "cividis", "twilight", "turbo"]
 n_point = 50 # this seems to be roughly the maximum that tecplot can handle
@@ -41,3 +45,5 @@ $!CreateColorMap
             output_file.write(text)
     except:
         pass
+
+## \endcond

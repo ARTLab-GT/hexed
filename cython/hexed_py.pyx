@@ -2,10 +2,15 @@ import numpy as np
 cimport hexed_cpp as cpp
 
 ## \namespace hexed_py
-# \brief foo
+# \brief Internal namespace for the Python API.
+# \details In the Doxygen documentation,
+# everything in the Python API will appear in the namespace `hexed_py` because it is defined in the file `cython/hexed_py.pyx`.
+# However, when you actually use it, it lives in the module `hexed` (import it with `import hexed`).
+# This distinction prevents naming ambiguities in the documentation,
+# since both the C++ namespace and the Python module are called `hexed`.
 
-cdef matrix_shape(arr):
-    """! @brief gets the shape of a matrix """
+def matrix_shape(arr):
+    r"""! \brief Finds the shape a matrix must have to match the storage order of a <= 2D array """
     shape = list(arr.shape[::-1]) # size that matrix will have. reverse due to col vs row major discrepancy
     assert(len(shape) <= 2, "cannot convert a >2D array shape to a 2D matrix shape")
     # matrix must be 2D, so if array dimensionality is <2, set trailing dimensions to 1
@@ -46,7 +51,7 @@ cdef class Solver:
         del self._solver
     def mesh(self):
         m = Mesh()
-        m.mesh = &self.sol[0].mesh()
+        m.mesh = &self._solver[0].mesh()
         return m
     def iteration_status(self):
         status = Iteration_status()

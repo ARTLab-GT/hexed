@@ -1,3 +1,5 @@
+## \cond
+
 import numpy as np
 
 def flux(state):
@@ -28,3 +30,5 @@ print(d_state)
 print(d_flux)
 print(d_flux/d_state)
 print(veloc + sound_speed)
+
+## \endcond
