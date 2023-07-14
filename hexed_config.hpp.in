@@ -19,10 +19,10 @@ namespace hexed::config
 
 //! \name CMake options
 //!\{
-constexpr int max_row_size = @MAX_BASIS_ROW_SIZE@;
+constexpr int max_row_size = @MAX_BASIS_ROW_SIZE@; //!< maximum row size that a `Basis` is allowed to have
 #define HEXED_THREADED HEXED_@threaded@
 #if HEXED_THREADED
-constexpr int n_threads = @n_threads@;
+constexpr int n_threads = @n_threads@; //!< number of threads with which to execute parallel regions
 #endif
 #define HEXED_USE_OTTER HEXED_@use_otter@
 #define HEXED_USE_TECPLOT HEXED_@use_tecplot@

@@ -1,7 +1,12 @@
 import numpy as np
 cimport hexed_cpp as cpp
 
+"""@package docstring
+Documentation for this module.
+"""
+
 def matrix_shape(arr):
+    """! @brief gets the shape of a matrix """
     shape = list(arr.shape[::-1]) # size that matrix will have. reverse due to col vs row major discrepancy
     assert(len(shape) <= 2, "cannot convert a >2D array shape to a 2D matrix shape")
     # matrix must be 2D, so if array dimensionality is <2, set trailing dimensions to 1
