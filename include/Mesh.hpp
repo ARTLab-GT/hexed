@@ -162,6 +162,7 @@ class Mesh
 
   //! \name observers
   //!\{
+  virtual int n_elements() = 0; //!< \brief number of elements currently in the mesh
   //! An object to provide information about whether the mesh connectivity is valid and if not, why.
   class Connection_validity
   {

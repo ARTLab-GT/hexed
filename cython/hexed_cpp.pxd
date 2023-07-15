@@ -1,6 +1,7 @@
 from libcpp cimport bool
 from libcpp.string cimport string
 from libcpp.vector cimport vector
+from libcpp.memory cimport unique_ptr
 
 cdef extern from "Eigen/Dense" namespace "Eigen":
     cdef cppclass MatrixXd:
@@ -11,6 +12,20 @@ cdef extern from "Eigen/Dense" namespace "Eigen":
         int cols()
         double* data()
         void resize(int rows, int cols)
+        double& operator()(int row, int col)
+    cdef cppclass Matrix2d:
+        int size()
+        int rows()
+        int cols()
+        double* data()
+        double& operator()(int row, int col)
+    cdef cppclass MatrixXi:
+        MatrixXi(int rows, int cols)
+        int size()
+        int rows()
+        int cols()
+        int* data()
+        int& operator()(int row, int col)
 
 cdef extern from "config.hpp" namespace "hexed::config":
     cdef int max_row_size
@@ -21,10 +36,21 @@ cdef extern from "Boundary_condition.hpp" namespace "hexed":
     cdef cppclass Nonpenetration(Flow_bc):
         pass
 
+cdef extern from "Surface_geom.hpp" namespace "hexed":
+    cdef cppclass Surface_geom:
+        pass
+cdef extern from "Simplex_geom.hpp" namespace "hexed":
+    cdef cppclass Simplex_geom2(Surface_geom):
+        Simplex_geom2(vector[Matrix2d]&&) except+
+    cdef cppclass Simplex_geom3(Surface_geom):
+        Simplex_geom3(vector[MatrixXd]&&) except+
+    vector[Matrix2d] segments(const MatrixXd& points) except+
+
 cdef extern from "Mesh.hpp" namespace "hexed":
     cdef cppclass Mesh:
         void add_tree(vector[Flow_bc*] extremal_bcs, MatrixXd origin) except+
         void update() except+
+        void set_surface(Surface_geom*, Flow_bc*, MatrixXd) except+
 
 cdef extern from "Iteration_status.hpp" namespace "hexed":
     cdef cppclass Iteration_status:

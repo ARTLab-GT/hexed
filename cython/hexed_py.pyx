@@ -11,6 +11,13 @@ cimport hexed_cpp as cpp
 # This distinction prevents naming ambiguities in the documentation,
 # since both the C++ namespace and the Python module are called `hexed`.
 
+def to_np_arr(arr_like):
+    r"""! converts `arr_like` to a numpy float array and throw a `User_error` on failure """
+    try:
+        return np.array(arr_like).astype(np.float64)
+    except Exception as e:
+        raise User_error("Could not convert to numpy float array") from e
+
 def matrix_shape(arr):
     r"""! \brief Finds the shape a matrix must have to match the storage order of a <= 2D array """
     shape = list(arr.shape[::-1]) # size that matrix will have. reverse due to col vs row major discrepancy
@@ -74,7 +81,7 @@ cdef class Solver:
         if self._is_init:
             del self._solver
 
-    def generate_mesh(self, min_corner, max_corner, init_resolution = 3):
+    def generate_mesh(self, min_corner, max_corner, init_resolution = 3, geometries = [], flood_fill_start = None):
         r"""! \brief Generates a tree mesh for the simulation.
         \details Mesh domain will be an axis-aligned box, optionally with pieces cut out of it by some user-specified geometry(s).
         Geometries need not be watertight.
@@ -89,21 +96,24 @@ cdef class Solver:
         - As an `int`, which is interpreted as a lower bound on the refinement level
         - As a `float`, which is interpreted as an upper bound on the element side length
 
-        \param min_corner (float-array-like) minimum corner of the mesh bounding box. Must have size `n_dim`
-        \param max_corner (float-array-like) maximum corner of the mesh bounding box. Must have size `n_dim`
+        \param min_corner (float-array-like) minimum corner of the mesh bounding box. Must have size `n_dim`.
+        \param max_corner (float-array-like) maximum corner of the mesh bounding box. Must have size `n_dim`.
         \param init_resolution (int or float) mesh will be refined to this resolution before geometry is inserted,
                                which usually also ends up being the farfield resolution.
                                If this is so coarse that inserting the geometry causes all elements to be deleted,
                                this will result in an exception.
                                The default value is usually acceptable for external aerodynamics applications.
+        \param geometries (iterable) List of surface geometries to mesh, in one of the following formats:
+                          - `n*2` numpy array representing the nodes of a polygonal curve (2D only)
+        \param flood_fill_start (float-array-like or `None`) Seed point for flood fill algorithm.
+                                That is, if any geometry in `geometries` divides the domain into disjoint regions, the region containing this point will be meshed.
+                                Must have size `n_dim`.
+                                If `None`, defaults to just inside `min_corner` (specifically `min_corner + 1e-6*(max_corner - min_corner)`)
         """
         if self._is_init:
             raise User_error("this `Solver` already has a mesh")
-        try:
-            min_corner = np.array(min_corner).astype(np.float64).flatten()
-            max_corner = np.array(max_corner).astype(np.float64).flatten()
-        except:
-            raise User_error("could not convert `min_corner` and `max_corner` to float arrays")
+        min_corner = to_np_arr(min_corner)
+        max_corner = to_np_arr(max_corner)
         if not min_corner.size == self._n_dim: raise User_error(f"`min_corner` must have size {self._n_dim}")
         if not max_corner.size == self._n_dim: raise User_error(f"`max_corner` must have size {self._n_dim}")
         if not np.all(np.array(min_corner) < np.array(max_corner)): raise User_error(f"`min_corner` must be strictly less than `max_corner`")
@@ -123,6 +133,20 @@ cdef class Solver:
         ref_level = max(ref_level, 0)
         for i_ref in range(ref_level):
             self._solver[0].mesh().update()
+        cdef cpp.vector[cpp.unique_ptr[cpp.Surface_geom]] cpp_geoms
+        for geom in geometries:
+            if isinstance(geom, np.ndarray):
+                if len(geom.shape) != 2: raise User_error("geometry array must be 2D")
+                if (geom.shape[1] == 2):
+                    cpp_geoms.push_back(cpp.unique_ptr[cpp.Surface_geom](new cpp.Simplex_geom2(cpp.segments(matrix(geom)))))
+                else:
+                    raise User_error("geometry array must have 2 columns")
+            else:
+                raise User_error(f"could not interpret following geometry specification as one of the supported formats:\n{geom}")
+        if cpp_geoms.size() > 0:
+            if flood_fill_start is None:
+                flood_fill_start = min_corner + 1e-6*(max_corner - min_corner)
+            self._solver[0].mesh().set_surface(cpp_geoms[0].release(), new cpp.Nonpenetration(), matrix(to_np_arr(flood_fill_start)))
 
     def iteration_status(self):
         r"""! \brief fetches the `Iteration_status` describing the state of the simulation """
