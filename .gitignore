@@ -3,3 +3,4 @@ script/__pycache__/
 .vscode
 *tags*
 !*doxytags
+hexed_out

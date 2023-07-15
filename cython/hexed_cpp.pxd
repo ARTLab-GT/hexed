@@ -24,6 +24,7 @@ cdef extern from "Boundary_condition.hpp" namespace "hexed":
 cdef extern from "Mesh.hpp" namespace "hexed":
     cdef cppclass Mesh:
         void add_tree(vector[Flow_bc*] extremal_bcs, MatrixXd origin) except+
+        void update() except+
 
 cdef extern from "Iteration_status.hpp" namespace "hexed":
     cdef cppclass Iteration_status:
