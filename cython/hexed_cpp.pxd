@@ -12,6 +12,9 @@ cdef extern from "Eigen/Dense" namespace "Eigen":
         double* data()
         void resize(int rows, int cols)
 
+cdef extern from "config.hpp" namespace "hexed::config":
+    cdef int max_row_size
+
 cdef extern from "Boundary_condition.hpp" namespace "hexed":
     cdef cppclass Flow_bc:
         pass

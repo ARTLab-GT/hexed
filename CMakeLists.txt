@@ -109,6 +109,7 @@ add_custom_command(
 )
 add_custom_target(python_api ALL DEPENDS python_api_proxy)
 file(GLOB PYTHON_MODULE CONFIGURE_DEPENDS ${CMAKE_BINARY_DIR}/hexed.cpython*.so)
+file(GLOB DOC_FILES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/doc/*.dox)
 
 # build documentation
 if(build_docs)
@@ -122,14 +123,8 @@ if(build_docs)
             hexed
             python_api_proxy
             script/doxygen_filter_pyx
-            doc/contributing.dox
-            doc/conventions.dox
-            doc/geom_fitting.dox
             doc/header.png
-            doc/installation.dox
-            doc/mainpage.dox
-            doc/namespace_hexed.dox
-            doc/visualization.dox
+            ${DOC_FILES}
     )
     add_custom_target(
         documentation ALL

@@ -30,13 +30,14 @@ A pull request will not be merged until it meets the following requirements:
 \section contrib_style Code style
 Please adhere to the following style conventions whenever possible.
 
-__File formatting:__
+\subsection file_formatting File formatting
 - File names must not contain whitespace or other characters that have meaning in shell commands.
 - Source files must not contain the tab character. C++ code should be indented with 2 spaces
   and Python code should be indented with 4 spaces.
 - Use blank lines sparingly.
 
-__Names__ (of variables, functions, namespaces, classes, macros, etc. Anything in the code):
+\subsection Names
+(of variables, functions, namespaces, classes, macros, etc. Anything in the code)
 - Should contain words, abbreviations, and/or numbers separated by underscores (not camelCase, and not multiplewordswithoutspaces).
 - Names of classes should begin with a capital letter. Otherwise, all letters should be lowercase.
 - A name should be a description of the variable it refers to.
@@ -51,7 +52,28 @@ __Names__ (of variables, functions, namespaces, classes, macros, etc. Anything i
   - `str2num` to mean "string to number". Just call it `str_to_num`. Distinguishing between "2" and "to" is worth 3 extra characters.
   - I have seen names longer than this sentence. Save some for the comments.
 
-__Miscellaneous__
+\subsection Exceptions
+If the code encounters a fatal problem, it should throw an exception
+(using the constructs of whatever language it is currently in) with a helpful error message.
+The message should identify _what_ exactly was found to be wrong
+so that someone capable of understanding the problem has a clue _where_ to start trying to figure out _why_.
+In the interest of performance, some functions in the C++ API may produce segmentation faults, memory leaks, or undefined behavior
+upon incorrect usage.
+However, such incorrect usage should be caught and avoided by the Python API or any other frontend.
+If an end user makes a mistake and obtains a segfault instead of an exception, I consider that a bug.
+Some common things I would like to avoid in this code are:
+- Don't just say something vague like "there was a problem" or give a numeric error code
+  that the user then has to look up to get any information.
+  Error messages should be as specific as possible.
+  I'm thinking of the error messages in a certain operating system whose name ironically suggests transparency.
+- Don't presume to guess why the problem occurred or give verbose suggestions about how to fix it.
+  Exceptions generally occur because you failed to understand the situation,
+  so your _a priori_ insight is probably a waste of space at best and actively misleading at worst.
+  Just say what the exact, concrete problem was.
+
+\see \ref error_types
+
+\subsection Miscellaneous
 - Avoid `using namespace`. The code is clearer when namespaces are referenced explicitly.
 - _Everything_ in the library must be wrapped in the namespace \ref hexed to avoid creating naming conflicts in NASCART-GT (and other users of the library).
   - Macros, which do not respect namespaces, should be prefixed with `HEXED_`.

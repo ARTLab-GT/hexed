@@ -13,6 +13,7 @@ namespace hexed::assert
 
 //! represents a fatal problem in the numerics of the code (such as nonphysical values)
 //! as opposed to, for example, an out-of-bounds error or user error
+//! \see \ref numerical_errors
 class Numerical_exception : public std::exception
 {
   std::string msg;
