@@ -84,7 +84,7 @@ cdef class Solver:
     def generate_mesh(self,
                       min_corner, max_corner, init_resolution = 3,
                       geometries = [], flood_fill_start = None, n_smooth = 10,
-                      refine_sweeps = 0, surf_rep_tol = 1e-3, surf_resolution = 0, max_resolution = 1000,
+                      refine_sweeps = 0, surf_rep_tol = 1000., surf_resolution = 0, max_resolution = 1000,
                      ):
         r"""! \brief Generates a tree mesh for the simulation.
         \details Mesh domain will be an axis-aligned box, optionally with pieces cut out of it by some user-specified geometry(s).
