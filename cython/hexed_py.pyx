@@ -167,7 +167,7 @@ cdef class Solver:
 
 def naca(desig, n_points = 1000, closure = "warp"):
     r"""! \brief Constructs a NACA 4-digit airfoil geometry.
-    \details Returns an n by 2 array of numpy array representing the coordinates of the airfoil at discrete points.
+    \details Returns an n by 2 numpy array representing the coordinates of the airfoil at discrete points.
     This array can then be passed to `Solver.generate_mesh` as a geometry.
     Points are clustered near the leading edge but not the trailing (see implementation for details).
     This function is the recommended way to generate NACA airfoil geometry for Hexed simulations,
