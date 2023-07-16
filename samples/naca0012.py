@@ -1,7 +1,7 @@
 import hexed
 import numpy as np
+import matplotlib.pyplot as plt
 
 solver = hexed.Solver(2, 6)
-angle = np.linspace(0, 2*np.pi, 100)
-solver.generate_mesh([-10, -10], [10, 10], geometries = [np.array([np.cos(angle), np.sin(angle)]).transpose()])
+solver.generate_mesh([-10, -10], [10, 10], geometries = [hexed.naca("0012")])
 solver.visualize_field("mesh")
