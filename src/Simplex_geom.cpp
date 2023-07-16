@@ -44,7 +44,7 @@ Mat<> Simplex_geom<3>::nearest_point(Mat<> point)
 std::vector<Mat<2, 2>> segments(const Mat<dyn, dyn>& points)
 {
   std::vector<Mat<2, 2>> sims;
-  for (unsigned i = 0; i < points.size() - 1; ++i) {
+  for (unsigned i = 0; i < points.cols() - 1; ++i) {
     Mat<2, 2> sim;
     sim(all, 0) = points(all, i);
     sim(all, 1) = points(all, i + 1);
