@@ -81,7 +81,11 @@ cdef class Solver:
         if self._is_init:
             del self._solver
 
-    def generate_mesh(self, min_corner, max_corner, init_resolution = 3, geometries = [], flood_fill_start = None):
+    def generate_mesh(self,
+                      min_corner, max_corner, init_resolution = 3,
+                      geometries = [], flood_fill_start = None, n_smooth = 10,
+                      refine_sweeps = 0, surf_rep_tol = 1e-3, surf_resolution = 0, max_resolution = 1000,
+                     ):
         r"""! \brief Generates a tree mesh for the simulation.
         \details Mesh domain will be an axis-aligned box, optionally with pieces cut out of it by some user-specified geometry(s).
         Geometries need not be watertight.
@@ -109,6 +113,14 @@ cdef class Solver:
                                 That is, if any geometry in `geometries` divides the domain into disjoint regions, the region containing this point will be meshed.
                                 Must have size `n_dim`.
                                 If `None`, defaults to just inside `min_corner` (specifically `min_corner + 1e-6*(max_corner - min_corner)`)
+        \param n_smooth (int) number of mesh smoothing iterations (meaning vertex movement, not refinement level smoothing)
+                        to run after each refinement sweep (after the geometry is inserted).
+        \param refine_sweeps Number of geometry-based refinement sweeps to run after geometry is inserted (_after_ `init_resolution` has already been achieved).
+        \param surf_rep_tol Tolerance of surface representation (has to do with the discontinuity of surface normals between elements).
+                            Smaller number means finer mesh.
+                            To make this number completely irrelevant, specify something like 1000.
+        \param surf_resolution Requirement on the resolution of elements at the geometry surface (usually leave as 0).
+        \param max_resolution Elements will not be be refined past this resolution. The default value is fine enough that it effectively imposes no limit.
         """
         if self._is_init:
             raise User_error("this `Solver` already has a mesh")
@@ -124,14 +136,16 @@ cdef class Solver:
         for i_bc in range(2*self._n_dim):
             bcs.push_back(new cpp.Nonpenetration())
         self._solver[0].mesh().add_tree(bcs, matrix(min_corner))
-        if isinstance(init_resolution, int):
-            ref_level = init_resolution
-        elif isinstance(init_resolution, float):
-            ref_level = math.ceil(np.log(root_sz/init_resolution)/np.log(2))
-        else:
-            raise User_error("could not interpret `init_resolution` as `int` or `float`")
-        ref_level = max(ref_level, 0)
-        for i_ref in range(ref_level):
+        def ref_level(resolution):
+            if isinstance(resolution, int):
+                rl = resolution
+            elif isinstance(resolution, float):
+                rl = math.ceil(np.log(root_sz/resolution)/np.log(2))
+            else:
+                raise User_error(f"could not interpret resolution {resolution} as `int` or `float`")
+            rl = max(rl, 0)
+            return rl
+        for i_ref in range(ref_level(init_resolution)):
             self._solver[0].mesh().update()
         cdef cpp.vector[cpp.unique_ptr[cpp.Surface_geom]] cpp_geoms
         for geom in geometries:
@@ -147,6 +161,15 @@ cdef class Solver:
             if flood_fill_start is None:
                 flood_fill_start = min_corner + 1e-6*(max_corner - min_corner)
             self._solver[0].mesh().set_surface(cpp_geoms[0].release(), new cpp.Nonpenetration(), matrix(to_np_arr(flood_fill_start)))
+        for i_smooth in range(n_smooth):
+            self._solver[0].mesh().relax()
+        for i_ref in range(refine_sweeps):
+            self._solver[0].calc_jacobian()
+            self._solver[0].set_res_bad_surface_rep(self._solver[0].mesh().surface_bc_sn())
+            self._solver[0].mesh().update(cpp.Mesh.General_ref_criterion(surf_rep_tol, ref_level(surf_resolution), ref_level(max_resolution)))
+        for i_smooth in range(n_smooth):
+            self._solver[0].mesh().relax()
+        self._solver[0].calc_jacobian()
 
     def iteration_status(self):
         r"""! \brief fetches the `Iteration_status` describing the state of the simulation """
@@ -162,7 +185,6 @@ cdef class Solver:
         \param n_sample each element will be a `n_sample`[*`n_sample`[*`n_sample]]
                         array of uniformly spaced sample points
         """
-        self._solver[0].calc_jacobian()
         self._solver[0].visualize_field_tecplot(bytes(f"{self._output_dir}/{file_name}", "ascii"), n_sample, False, False, True)
 
 def naca(desig, n_points = 1000, closure = "warp"):

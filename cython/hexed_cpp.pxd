@@ -45,12 +45,31 @@ cdef extern from "Simplex_geom.hpp" namespace "hexed":
     cdef cppclass Simplex_geom3(Surface_geom):
         Simplex_geom3(vector[MatrixXd]&&) except+
     vector[Matrix2d] segments(const MatrixXd& points) except+
+cdef extern from "Element.hpp" namespace "hexed":
+    cdef cppclass Element:
+        double resolution_badness
 
+ctypedef bool(*ref_criterion)(Element&)
+
+cdef extern from "Mesh.hpp" namespace "hexed::Mesh":
+    cdef cppclass General_ref_criterion:
+        General_ref_criterion(double, int, int)
 cdef extern from "Mesh.hpp" namespace "hexed":
     cdef cppclass Mesh:
         void add_tree(vector[Flow_bc*] extremal_bcs, MatrixXd origin) except+
         void update() except+
+        void update(General_ref_criterion) except+
         void set_surface(Surface_geom*, Flow_bc*, MatrixXd) except+
+        void relax() except+
+        int surface_bc_sn()
+        @staticmethod
+        bool always(Element&)
+        @staticmethod
+        bool never(Element&)
+        @staticmethod
+        bool if_extruded(Element&)
+        @staticmethod
+        ref_criterion Res_bad_tol(double tol)
 
 cdef extern from "Iteration_status.hpp" namespace "hexed":
     cdef cppclass Iteration_status:
@@ -78,5 +97,6 @@ cdef extern from "Solver.hpp" namespace "hexed":
         Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping, Transport_model viscosity_model, Transport_model thermal_conductivity_model) except+
         Iteration_status iteration_status() except+
         Mesh& mesh() except+
+        void set_res_bad_surface_rep(int bc_sn) except+
         void calc_jacobian() except+
         void visualize_field_tecplot(string name, int n_sample, bool edges, bool qpoints, bool interior) except+

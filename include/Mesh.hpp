@@ -143,6 +143,21 @@ class Mesh
   static inline bool always(Element&) {return true;} //!< returns `true`
   static inline bool never(Element&) {return false;} //!< returns `false`
   static inline bool if_extruded(Element& elem) {return !elem.tree;} //!< returns true if the element is extruded **in a tree mesh**
+  //! \brief A pretty general-purpose criterion for refinement based on `Element::resolution_badness`.
+  //! \details Refines if (res_badness > `res_bad_tol` or is a surface element with ref level < `min_surface_level`) and ref level < `max_level`.
+  class General_ref_criterion
+  {
+    public:
+    double res_bad_tol;
+    int min_surface_level;
+    int max_level;
+    bool operator()(Element& elem)
+    {
+      bool ref = (elem.resolution_badness > res_bad_tol || (!elem.tree && elem.refinement_level() < min_surface_level))
+             && elem.refinement_level() < max_level;
+      return ref;
+    }
+  };
   /*! \brief Updates tree mesh based on user-supplied (un)refinement criteria.
    * \details Evaluates `refine_criterion` and `unrefine_criterion` on every element in the tree (if a tree exists).
    * Whenever `refine_criterion` is `true` and `unrefine_criterion` is `false`, that element is refined.
@@ -158,6 +173,7 @@ class Mesh
   //! \brief Relax the vertices to improve mesh quality.
   //! \param factor A larger number yields more change in the mesh. 0 => no update, 1 => "full" update, > 1 allowed but suspect
   virtual void relax(double factor = 0.9) = 0;
+  virtual int surface_bc_sn() = 0; //!< what is the serial number of the geometry surface BC?
   //! \}
 
   //! \name observers
