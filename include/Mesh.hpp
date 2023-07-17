@@ -2,8 +2,10 @@
 #define HEXED_MESH_HPP_
 
 #include <string>
-#include "Boundary_condition.hpp"
+#if !HEXED_PUBLIC
 #include "connection.hpp"
+#endif
+#include "Boundary_condition.hpp"
 #include "Layer_sequence.hpp"
 #include "Surface_geom.hpp"
 
@@ -27,6 +29,7 @@ class Mesh
   //! \returns Nominal size (\f$\Delta h\f$) of elements with refinement level 0.
   virtual double root_size() = 0;
 
+  #if !HEXED_PUBLIC
   //! \name Manual mesh creation
   //! \{
   /*!
@@ -106,6 +109,7 @@ class Mesh
     }
   }
   //! \}
+  #endif
 
   //! \name Automated tree meshing
   //! \{

@@ -39,10 +39,12 @@ test_utils.cpp
 test_Vertex.cpp
 test_Vis_data.cpp
 )
-target_link_libraries(unit PRIVATE hexed Catch2::Catch2WithMain)
 add_executable(interactive)
 target_sources(interactive PRIVATE
 test_otter_vis.cpp
 test_Solver_vis.cpp
 )
+target_link_libraries(unit PRIVATE hexed Catch2::Catch2WithMain)
 target_link_libraries(interactive PRIVATE hexed Catch2::Catch2WithMain)
+target_compile_definitions(unit PRIVATE HEXED_PUBLIC=false)
+target_compile_definitions(interactive PRIVATE HEXED_PUBLIC=false)

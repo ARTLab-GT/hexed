@@ -167,6 +167,10 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   }
 }
 
+Mesh& Solver::mesh() {return acc_mesh;}
+Storage_params Solver::storage_params() {return params;}
+const Stopwatch_tree& Solver::stopwatch_tree() {return stopwatch;}
+
 void Solver::relax_vertices(double factor)
 {
   // relax the vertices

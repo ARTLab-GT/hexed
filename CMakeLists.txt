@@ -145,6 +145,7 @@ add_custom_target(
 
 # define main target, which is a library
 add_library(hexed SHARED)
+target_compile_definitions(hexed PRIVATE HEXED_PUBLIC=0)
 
 # add external libraries
 if (use_otter)

@@ -1,14 +1,17 @@
 #ifndef HEXED_SOLVER_HPP_
 #define HEXED_SOLVER_HPP_
 
+#include "config.hpp"
+#if !HEXED_PUBLIC
 #include "Accessible_mesh.hpp"
+#include "kernel_factory.hpp"
+#endif
+#include "Mesh.hpp"
 #include "Gauss_legendre.hpp"
 #include "Spacetime_func.hpp"
 #include "Element_func.hpp"
 #include "Iteration_status.hpp"
 #include "Stopwatch_tree.hpp"
-#include "config.hpp"
-#include "kernel_factory.hpp"
 #include "Transport_model.hpp"
 #if HEXED_USE_OTTER
 #include <otter/plot.hpp>
@@ -32,6 +35,7 @@ namespace hexed
  */
 class Solver
 {
+  #if !HEXED_PUBLIC
   Storage_params params;
   Accessible_mesh acc_mesh;
   Gauss_legendre basis;
@@ -61,6 +65,7 @@ class Solver
   void fta(double dt, int i_stage);
   bool use_ldg();
   double max_dt();
+  #endif
 
   public:
   /*! \name scheme parameters
@@ -110,8 +115,8 @@ class Solver
    * The functions below must be used to complete the setup
    * before any flow calculation can begin.
    */
-  inline Mesh& mesh() {return acc_mesh;}
-  inline Storage_params storage_params() {return params;}
+  Mesh& mesh();
+  Storage_params storage_params();
   //! moves all vertices to the mean of the current position and the mean of the neighbors' positions
   void relax_vertices(double factor = .5); //!< \deprecated use `Mesh::relax`
   /*! \brief apply `Mesh_bc`s
@@ -177,7 +182,7 @@ class Solver
   std::vector<double> sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func&); //!< evaluate arbitrary functions at arbitrary locations
   std::vector<double> sample(int ref_level, bool is_deformed, int serial_n, const Element_func&); //!< \overload
   //! obtain performance data
-  inline const Stopwatch_tree& stopwatch_tree() {return stopwatch;}
+  const Stopwatch_tree& stopwatch_tree();
   //! compute an integral over the entire flow field at the current time
   std::vector<double> integral_field(const Qpoint_func& integrand);
   //! compute an integral over all surfaces where a particular boundary condition has been enforced
