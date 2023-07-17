@@ -35,6 +35,7 @@ namespace hexed
  */
 class Solver
 {
+  #ifndef FOO
   #if !HEXED_PUBLIC
   Storage_params params;
   Accessible_mesh acc_mesh;
@@ -65,6 +66,7 @@ class Solver
   void fta(double dt, int i_stage);
   bool use_ldg();
   double max_dt();
+  #endif
   #endif
 
   public:

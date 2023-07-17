@@ -8,11 +8,14 @@ const double tol = 3e-2;
 const int row_size = 3;
 const int max_ref_level = 8;
 
+#if 0
 bool ref(hexed::Element& elem) {return elem.resolution_badness > tol && elem.refinement_level() < max_ref_level;}
 bool unref(hexed::Element& elem) {return elem.resolution_badness < tol*hexed::math::pow(2, row_size) || elem.refinement_level() > max_ref_level;}
+#endif
 
 int main()
 {
+  #if 0
   #if HEXED_USE_OCCT
   hexed::Solver solver(3, row_size, .6);
   std::vector<hexed::Flow_bc*> bcs;
@@ -44,5 +47,6 @@ int main()
   solver.visualize_surface_tecplot(6, hexed::Resolution_badness(), "wing_store");
   #endif
   printf("projections:   %e\nintersections: %e\nupdate: %e", hexed::global_hacks::numbers[0], hexed::global_hacks::numbers[1], hexed::global_hacks::numbers[2]);
+  #endif
   return 0;
 }

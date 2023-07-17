@@ -6,6 +6,7 @@
 #include "Deformed_element.hpp"
 #include "Element_container.hpp"
 #include "Tree.hpp"
+#include "utils.hpp"
 
 namespace hexed
 {

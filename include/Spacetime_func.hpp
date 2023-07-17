@@ -4,6 +4,7 @@
 #include <vector>
 #include <array>
 #include "Domain_func.hpp"
+#include "config.hpp"
 
 namespace hexed
 {

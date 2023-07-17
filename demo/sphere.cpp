@@ -11,6 +11,7 @@ int main()
   for (int i = 0; i < 3; ++i) solver.mesh().relax();
   solver.calc_jacobian();
   solver.visualize_field_tecplot(hexed::Is_deformed(), "sphere_initial", 4);
+  #if 0
   for (int i = 0; i < 8; ++i) {
     // this criterion will refine all elements with a vertex that is within .1 of the center of the sphere section
     auto criterion = [](hexed::Element& elem){
@@ -31,12 +32,15 @@ int main()
     solver.mesh().valid().assert_valid();
   }
   for (int i = 0; i < 3; ++i) solver.mesh().relax();
+  #endif
   solver.calc_jacobian();
   solver.visualize_field_tecplot(hexed::Is_deformed(), "sphere_refined", 4);
+  #if 0
   for (int i = 0; i < 8; ++i) {
     solver.mesh().update(hexed::criteria::never, [](hexed::Element& elem){return elem.refinement_level() > 3;});
   }
   for (int i = 0; i < 3; ++i) solver.mesh().relax();
   solver.calc_jacobian();
   solver.visualize_field_tecplot(hexed::Is_deformed(), "sphere_unrefined", 4);
+  #endif
 }
