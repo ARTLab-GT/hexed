@@ -78,13 +78,6 @@ bool Vertex::are_neighbors(Vertex& vert0, Vertex& vert1)
   return vert0.neighbors.count(&vert1);
 }
 
-std::vector<Vertex*> Vertex::get_neighbors() const
-{
-  std::vector<Vertex*> ns;
-  for (Vertex* n : neighbors) ns.push_back(n);
-  return ns;
-}
-
 double Vertex::shared_value(Vertex::reduction reduce)
 {
   Eigen::VectorXd shareables (trbl_ptrs.size());

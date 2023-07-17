@@ -1234,7 +1234,7 @@ void Accessible_mesh::relax(double factor)
     auto& vert = verts[i_vert];
     vert.temp_vector.setZero();
     auto neighbs = vert.get_neighbors();
-    for (auto& neighb : neighbs) vert.temp_vector += neighb->pos;
+    for (auto& neighb : neighbs) vert.temp_vector += neighb.pos;
     vert.temp_vector /= neighbs.size();
   }
   // update position

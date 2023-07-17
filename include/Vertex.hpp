@@ -60,7 +60,8 @@ class Vertex
   double shared_value(reduction = vector_max); //!< cppcheck-suppress internalAstError
   static void connect(Vertex&, Vertex&); //!< specify that two vertices are connected by an edge
   static bool are_neighbors(Vertex&, Vertex&);
-  std::vector<Vertex*> get_neighbors() const;
+  //! get neighbors as a `std::range` of `const Vertex&`
+  auto get_neighbors() const {return std::views::transform(neighbors, [](const Vertex* v)->const Vertex& {return *v;});}
 
   private:
   Mat<3> relax {0, 0, 0};
