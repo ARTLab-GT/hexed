@@ -70,6 +70,7 @@ endif()
 # configure files
 configure_file(hexed-config.cmake.in hexed-config.cmake)
 configure_file(hexed_config.hpp.in include/auto/hexed_config.hpp)
+configure_file(hexed_py_config.py.in hexed_py_config.py)
 file(CREATE_LINK ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/include/hexed SYMBOLIC)
 file(COPY_FILE ${CMAKE_SOURCE_DIR}/test/ellipsoid.igs ${CMAKE_BINARY_DIR}/ellipsoid.igs)
 file(COPY_FILE ${CMAKE_SOURCE_DIR}/test/ellipsoid.stp ${CMAKE_BINARY_DIR}/ellipsoid.stp)
@@ -94,25 +95,8 @@ set(colormap_files
 configure_file(script/hexed-wrapped-post-process.in hexed-wrapped-post-process)
 configure_file(script/format.mcr.in format.mcr)
 
-# build python API
-configure_file(cython/setup.py.in setup.py)
-add_custom_command(
-    OUTPUT python_api_proxy
-    COMMAND ln -sf ${CMAKE_SOURCE_DIR}/cython/* ${CMAKE_BINARY_DIR}
-    #COMMAND python3 setup.py build_ext --inplace > cython_build_output.txt
-    #COMMAND ln -sf hexed.cpython*.so python_api_proxy
-    COMMAND touch python_api_proxy
-    DEPENDS
-        setup.py
-        ${CMAKE_SOURCE_DIR}/cython/hexed_py.pyx
-        ${CMAKE_SOURCE_DIR}/cython/hexed_cpp.pxd
-        hexed
-)
-add_custom_target(python_api ALL DEPENDS python_api_proxy)
-file(GLOB PYTHON_MODULE CONFIGURE_DEPENDS ${CMAKE_BINARY_DIR}/hexed.cpython*.so)
-file(GLOB DOC_FILES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/doc/*.dox)
-
 # build documentation
+file(GLOB DOC_FILES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/doc/*.dox)
 if(build_docs)
     configure_file(doc/config.in ${CMAKE_BINARY_DIR}/doc_config)
     file(COPY doc/header.png DESTINATION doc/html)
@@ -122,7 +106,6 @@ if(build_docs)
         DEPENDS
             ${CMAKE_BINARY_DIR}/doc_config
             hexed
-            python_api_proxy
             script/doxygen_filter_pyx
             doc/header.png
             ${DOC_FILES}
@@ -146,7 +129,6 @@ add_custom_target(
 
 # define main target, which is a library
 add_library(hexed SHARED)
-target_compile_definitions(hexed PRIVATE HEXED_PUBLIC=false)
 
 # add external libraries
 if (use_otter)
@@ -184,7 +166,6 @@ endif()
 
 # install
 install(PROGRAMS script/hexed-post-process ${CMAKE_BINARY_DIR}/hexed-wrapped-post-process script/hexed-fit-geom TYPE BIN)
-install(TARGETS hexed LIBRARY)
-install(FILES ${PYTHON_MODULE} DESTINATION ${PYTHON_INSTALL_PREFIX})
 export(TARGETS hexed FILE hexed-targets.cmake)
 install(FILES ${CMAKE_BINARY_DIR}/hexed-config.cmake DESTINATION lib/cmake/hexed)
+install(FILES python/hexed_python.py ${CMAKE_BINARY_DIR}/hexed_py_config.py DESTINATION ${PYTHON_INSTALL_PREFIX})

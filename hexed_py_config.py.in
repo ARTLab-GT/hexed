@@ -1,0 +1,2 @@
+include_paths = ["@CMAKE_BINARY_DIR@/include", "@CMAKE_BINARY_DIR@/include/auto"]
+libraries = ["@CMAKE_BINARY_DIR@/libhexed"]
