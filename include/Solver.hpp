@@ -2,6 +2,7 @@
 #define HEXED_SOLVER_HPP_
 
 #include "Solver_interface.hpp"
+#include "Mesh.hpp"
 #include "Accessible_mesh.hpp"
 #include "kernel_factory.hpp"
 #if HEXED_USE_OTTER

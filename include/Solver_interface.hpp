@@ -2,7 +2,7 @@
 #define HEXED_SOLVER_INTERFACE_HPP_
 
 #include "config.hpp"
-#include "Mesh.hpp"
+#include "Mesh_interface.hpp"
 #include "Gauss_legendre.hpp"
 #include "Spacetime_func.hpp"
 #include "Element_func.hpp"
@@ -48,7 +48,7 @@ class Solver_interface
    * The functions below must be used to complete the setup
    * before any flow calculation can begin.
    */
-  virtual Mesh& mesh() = 0;
+  virtual Mesh_interface& mesh() = 0;
   virtual Storage_params storage_params() = 0;
   //! moves all vertices to the mean of the current position and the mean of the neighbors' positions
   virtual void relax_vertices(double factor = .5) = 0; //!< \deprecated use `Mesh::relax`
