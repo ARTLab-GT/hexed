@@ -27,7 +27,7 @@ int main()
   for (int i = 0; i < 8; ++i) {
     printf("starting ref cycle %i\n", i);
     //if (i < 3) hexed::global_hacks::debug_message["don't extrude"] = 1;
-    solver.mesh().update(ref, hexed::Mesh::never);
+    solver.mesh().update(ref);
     //if (i < 3) {
     for (int i = 0; i < 4; ++i) solver.mesh().relax();
     solver.calc_jacobian();

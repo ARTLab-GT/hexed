@@ -99,8 +99,9 @@ configure_file(cython/setup.py.in setup.py)
 add_custom_command(
     OUTPUT python_api_proxy
     COMMAND ln -sf ${CMAKE_SOURCE_DIR}/cython/* ${CMAKE_BINARY_DIR}
-    COMMAND python3 setup.py build_ext --inplace > cython_build_output.txt
-    COMMAND ln -sf hexed.cpython*.so python_api_proxy
+    #COMMAND python3 setup.py build_ext --inplace > cython_build_output.txt
+    #COMMAND ln -sf hexed.cpython*.so python_api_proxy
+    COMMAND touch python_api_proxy
     DEPENDS
         setup.py
         ${CMAKE_SOURCE_DIR}/cython/hexed_py.pyx
@@ -170,7 +171,7 @@ target_include_directories(hexed PUBLIC ${CMAKE_BINARY_DIR}/include/auto)
 target_include_directories(hexed PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(hexed INTERFACE ${CMAKE_BINARY_DIR}/include)
 add_subdirectory(src)
-add_subdirectory(demo)
+#add_subdirectory(demo)
 if (build_tests)
     add_subdirectory(test)
 endif()

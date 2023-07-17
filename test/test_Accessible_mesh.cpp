@@ -360,7 +360,7 @@ TEST_CASE("extruded hanging node connection validity")
 TEST_CASE("Tree meshing")
 {
   hexed::Accessible_mesh mesh({1, 5, 3, hexed::config::max_row_size}, .7);
-  REQUIRE_THROWS(mesh.update(hexed::Mesh::always));
+  REQUIRE_THROWS(mesh.update(hexed::criteria::always));
   SECTION("wrong number of BCs") {
     std::vector<hexed::Flow_bc*> bcs;
     for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Copy);
@@ -406,11 +406,11 @@ TEST_CASE("Tree meshing")
       return    (np[0] <  thresh && np[1] <  thresh && np[2] <  thresh)
              || (np[0] >= thresh && np[1] >= thresh && np[2] >= thresh);
     };
-    mesh.update(hexed::Mesh::never, predicate);
+    mesh.update(hexed::criteria::never, predicate);
     REQUIRE(mesh.elements().size() == 6*64 + 2*8);
     mesh.valid().assert_valid();
     // this should do nothing because of ref level smoothing
-    mesh.update(hexed::Mesh::never, predicate);
+    mesh.update(hexed::criteria::never, predicate);
     REQUIRE(mesh.elements().size() == 6*64 + 2*8);
     mesh.valid().assert_valid();
     // simultaneous refinement and unrefinement
@@ -428,7 +428,7 @@ TEST_CASE("Tree meshing")
       mesh1.update([](hexed::Element& elem){return elem.nominal_position()[0] < 2;});
       REQUIRE(mesh1.elements().size() == 4*8 + 4*64);
       mesh1.valid().assert_valid();
-      mesh1.update(hexed::Mesh::never, hexed::Mesh::always);
+      mesh1.update(hexed::criteria::never, hexed::criteria::always);
       REQUIRE(mesh1.elements().size() == 4*1 + 4*8);
       mesh1.valid().assert_valid();
     }

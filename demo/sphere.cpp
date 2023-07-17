@@ -34,7 +34,7 @@ int main()
   solver.calc_jacobian();
   solver.visualize_field_tecplot(hexed::Is_deformed(), "sphere_refined", 4);
   for (int i = 0; i < 8; ++i) {
-    solver.mesh().update(hexed::Mesh::never, [](hexed::Element& elem){return elem.refinement_level() > 3;});
+    solver.mesh().update(hexed::criteria::never, [](hexed::Element& elem){return elem.refinement_level() > 3;});
   }
   for (int i = 0; i < 3; ++i) solver.mesh().relax();
   solver.calc_jacobian();

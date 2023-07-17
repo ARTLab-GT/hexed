@@ -1,5 +1,6 @@
 #include <Boundary_func.hpp>
 #include <Domain_func.hpp>
+#include <connection.hpp>
 
 namespace hexed
 {

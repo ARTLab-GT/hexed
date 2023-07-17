@@ -32,7 +32,7 @@ class Resolution_badness : virtual public Element_info
 {
   public:
   inline int n_var(int n_dim) const override {return 1;}
-  std::vector<double> operator()(Element& elem) const override {return {elem.resolution_badness};}
+  std::vector<double> operator()(Element& elem) const override;
 };
 
 //! computes the average of the provided `Qpoint_func` within the element by Gaussian quadrature
@@ -110,7 +110,7 @@ class Is_deformed : public Element_info
   public:
   inline int n_var(int n_dim) const override {return 1;}
   inline std::string variable_name(int n_dim, int i_var) const override {return "is_deformed";}
-  inline std::vector<double> operator()(Element& elem) const override {return {double(elem.get_is_deformed())};}
+  std::vector<double> operator()(Element& elem) const override;
 };
 
 //! Returns 1 if the element has a `Tree` pointer, else 0
@@ -119,7 +119,7 @@ class Has_tree : public Element_info
   public:
   inline int n_var(int n_dim) const override {return 1;}
   inline std::string variable_name(int n_dim, int i_var) const override {return "has_tree";}
-  inline std::vector<double> operator()(Element& elem) const override {return {double(bool(elem.tree))};}
+  std::vector<double> operator()(Element& elem) const override;
 };
 
 //! Concatenates `Element_func`s

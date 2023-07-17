@@ -1,4 +1,5 @@
 #include <Boundary_condition.hpp>
+#include <connection.hpp>
 #include <math.hpp>
 #include <kernel_factory.hpp>
 #include <constants.hpp>

@@ -2,10 +2,11 @@
 #define HEXED_BOUNDARY_FUNC_HPP_
 
 #include "Output_data.hpp"
-#include "connection.hpp"
 
 namespace hexed
 {
+
+class Boundary_connection;
 
 //! A funtion that can be evaluated at any quadrature point which is on a boundary
 class Boundary_func : virtual public Output_data

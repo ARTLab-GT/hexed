@@ -1,16 +1,17 @@
 #ifndef HEXED_BOUNDARY_CONDITION_HPP_
 #define HEXED_BOUNDARY_CONDITION_HPP_
 
-#include "connection.hpp"
 #include "Surface_func.hpp"
 #include "Surface_geom.hpp"
+#include "Boundary_face.hpp"
 
 namespace hexed
 {
 
-/*!
- * Abstract class representing an arbitrary flow boundary condition (as opposed to a mesh BC).
- * That is, something that computes a ghost state given an state on the boundary (inside state),
+class Boundary_connection;
+
+/*! \brief Abstract class representing an arbitrary flow boundary condition (as opposed to a mesh BC).
+ * \details That is, something that computes a ghost state given an state on the boundary (inside state),
  * a face size, and a Jacobian.
  */
 class Flow_bc

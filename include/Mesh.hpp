@@ -5,6 +5,7 @@
 #if !HEXED_PUBLIC
 #include "connection.hpp"
 #endif
+#include "criteria.hpp"
 #include "Boundary_condition.hpp"
 #include "Layer_sequence.hpp"
 #include "Surface_geom.hpp"
@@ -12,7 +13,7 @@
 namespace hexed
 {
 
-/*!
+/*! \details
  * Represents a collection of interconnected elements. This class is an interface which supports
  * only manipulation of the mesh itself, not access to the elements it contains. One common theme
  * in this interface is the use of "serial numbers" to identify objects owned by the `Mesh` object.
@@ -144,24 +145,6 @@ class Mesh
    * Any surfaces defined by previous invokations of `set_surface` are forgotten.
    */
   virtual void set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) = 0;
-  static inline bool always(Element&) {return true;} //!< returns `true`
-  static inline bool never(Element&) {return false;} //!< returns `false`
-  static inline bool if_extruded(Element& elem) {return !elem.tree;} //!< returns true if the element is extruded **in a tree mesh**
-  //! \brief A pretty general-purpose criterion for refinement based on `Element::resolution_badness`.
-  //! \details Refines if (res_badness > `res_bad_tol` or is a surface element with ref level < `min_surface_level`) and ref level < `max_level`.
-  class General_ref_criterion
-  {
-    public:
-    double res_bad_tol;
-    int min_surface_level;
-    int max_level;
-    bool operator()(Element& elem)
-    {
-      bool ref = (elem.resolution_badness > res_bad_tol || (!elem.tree && elem.refinement_level() < min_surface_level))
-             && elem.refinement_level() < max_level;
-      return ref;
-    }
-  };
   /*! \brief Updates tree mesh based on user-supplied (un)refinement criteria.
    * \details Evaluates `refine_criterion` and `unrefine_criterion` on every element in the tree (if a tree exists).
    * Whenever `refine_criterion` is `true` and `unrefine_criterion` is `false`, that element is refined.
@@ -173,7 +156,7 @@ class Mesh
    * and must not depend on the order in which elements are processed.
    * The flood fill and extrusion are also updated.
    */
-  virtual void update(std::function<bool(Element&)> refine_criterion = always, std::function<bool(Element&)> unrefine_criterion = never) = 0;
+  virtual void update(std::function<bool(Element&)> refine_criterion = criteria::always, std::function<bool(Element&)> unrefine_criterion = criteria::never) = 0;
   //! \brief Relax the vertices to improve mesh quality.
   //! \param factor A larger number yields more change in the mesh. 0 => no update, 1 => "full" update, > 1 allowed but suspect
   virtual void relax(double factor = 0.9) = 0;

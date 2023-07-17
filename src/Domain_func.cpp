@@ -1,6 +1,7 @@
 #include <cmath>
 #include <Domain_func.hpp>
 #include <Spacetime_func.hpp>
+#include <Element.hpp>
 
 namespace hexed
 {

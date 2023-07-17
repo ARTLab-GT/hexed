@@ -110,8 +110,8 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
 Accessible_mesh::~Accessible_mesh()
 {
   // delete connections before anything else so that deleting elements doesn't create dangling references
-  car.purge_connections(always);
-  def.purge_connections(always);
+  car.purge_connections(criteria::always);
+  def.purge_connections(criteria::always);
 }
 
 int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin)

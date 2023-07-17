@@ -1,5 +1,6 @@
 #include <Element_func.hpp>
 #include <math.hpp>
+#include <connection.hpp>
 
 namespace hexed
 {
@@ -18,6 +19,8 @@ std::vector<double> Element_info::operator()(Boundary_connection& con, int i_fqp
 {
   return operator()(con.element());
 }
+
+std::vector<double> Resolution_badness::operator()(Element& elem) const {return {elem.resolution_badness};}
 
 Elem_average::Elem_average    (const Qpoint_func& func) : qf{func} {}
 Elem_l2::Elem_l2              (const Qpoint_func& func) : qf{func} {}
@@ -128,5 +131,8 @@ std::vector<double> Equiangle_skewness::operator()(Element& elem, const Basis& b
   }
   return {max};
 }
+
+std::vector<double> Is_deformed::operator()(Element& elem) const {return {double(elem.get_is_deformed())};}
+std::vector<double> Has_tree::operator()(Element& elem) const {return {double(bool(elem.tree))};}
 
 };

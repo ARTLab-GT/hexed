@@ -3,11 +3,12 @@
 
 #include <vector>
 #include "Output_data.hpp"
-#include "Element.hpp"
 #include "Basis.hpp"
 
 namespace hexed
 {
+
+class Element;
 
 /*! \brief Represents a function which can be evaluated at quadrature points.
  * \details Can depend on flow state, position, time, or on mathematical parameters like element Jabobian,
@@ -143,7 +144,7 @@ class Advection_state : public Qpoint_func
 class Art_visc_forcing : public Qpoint_func
 {
   public:
-  inline int n_var(int n_dim) const override {return Element::n_forcing;}
+  int n_var(int n_dim) const override;
   inline std::string variable_name(int n_dim, int i_var) const override {return "art_visc_forcing" + std::to_string(i_var);};
   std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
 };
