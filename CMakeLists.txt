@@ -71,6 +71,8 @@ endif()
 configure_file(hexed-config.cmake.in hexed-config.cmake)
 configure_file(hexed_config.hpp.in include/auto/hexed_config.hpp)
 configure_file(hexed_py_config.py.in hexed_py_config.py)
+configure_file(python/hexed_python.py hexed.py)
+file(GLOB PYTHON_FILES CONFIGURE_DEPENDS ${CMAKE_BINARY_DIR}/*.py)
 file(CREATE_LINK ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/include/hexed SYMBOLIC)
 file(COPY_FILE ${CMAKE_SOURCE_DIR}/test/ellipsoid.igs ${CMAKE_BINARY_DIR}/ellipsoid.igs)
 file(COPY_FILE ${CMAKE_SOURCE_DIR}/test/ellipsoid.stp ${CMAKE_BINARY_DIR}/ellipsoid.stp)
@@ -106,6 +108,7 @@ if(build_docs)
         DEPENDS
             ${CMAKE_BINARY_DIR}/doc_config
             hexed
+            python/hexed_python.py
             script/doxygen_filter_pyx
             doc/header.png
             ${DOC_FILES}
@@ -168,4 +171,4 @@ endif()
 install(PROGRAMS script/hexed-post-process ${CMAKE_BINARY_DIR}/hexed-wrapped-post-process script/hexed-fit-geom TYPE BIN)
 export(TARGETS hexed FILE hexed-targets.cmake)
 install(FILES ${CMAKE_BINARY_DIR}/hexed-config.cmake DESTINATION lib/cmake/hexed)
-install(FILES python/hexed_python.py ${CMAKE_BINARY_DIR}/hexed_py_config.py DESTINATION ${PYTHON_INSTALL_PREFIX})
+install(FILES ${PYTHON_FILES} DESTINATION ${PYTHON_INSTALL_PREFIX})
