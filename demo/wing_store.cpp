@@ -1,4 +1,4 @@
-#include <hexed/Solver.hpp>
+#include <hexed/Solver_interface.hpp>
 #include <hexed/Occt_geom.hpp>
 #include <hexed/Simplex_geom.hpp>
 #include <hexed/global_hacks.hpp>

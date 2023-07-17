@@ -167,6 +167,12 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   }
 }
 
+std::unique_ptr<Solver_interface> make_solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
+                                              Transport_model viscosity_model, Transport_model thermal_conductivity_model)
+{
+  return std::unique_ptr<Solver_interface>(new Solver(n_dim, row_size, root_mesh_size, local_time_stepping, viscosity_model, thermal_conductivity_model));
+}
+
 Mesh& Solver::mesh() {return acc_mesh;}
 Storage_params Solver::storage_params() {return params;}
 const Stopwatch_tree& Solver::stopwatch_tree() {return stopwatch;}
