@@ -818,15 +818,13 @@ void Solver::synch_extruded_res_bad()
   }
 }
 
-void Solver::update(double dt, bool cfl_driven)
+void Solver::update(double safety_factor, double time_step)
 {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
   auto& elems = acc_mesh.elements();
 
   // compute time step
-  double max = max_dt();
-  if (cfl_driven) dt *= max;
-  else if (dt > max) std::cerr << "warning: time step exceeds CFL limit\n";
+  double dt = std::min(safety_factor*max_dt(), time_step);
 
   // record reference state for Runge-Kutta scheme
   const int n_dof = params.n_dof();

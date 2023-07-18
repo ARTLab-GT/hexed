@@ -94,10 +94,13 @@ class Solver_interface
   //! \name time marching
   //!\{
   /*!
-   * March the simulation forward by a time step equal to `stability_ratio`
-   * times the estimated maximum stable time step.
+   * March the simulation forward by a time step equal to `time_step` or
+   * `safety_factor` times the estimated maximum stable time step, whichever is smaller.
+   * \note For local time stepping, `time_step` is equivalent to the CFL number.
+   * Also, `safety_factor` is __not__ the same as the CFL number
+   * (it is scaled by the max allowable CFL for the chosen DG scheme which is often O(1e-2)).
    */
-  virtual void update(double dt = 0.8, bool cfl_driven = true) = 0;
+  virtual void update(double safety_factor = 0.7, double time_step = std::numeric_limits<double>::max()) = 0;
   virtual bool is_admissible() = 0; //!< check whether flowfield is admissible (e.g. density and energy are positive)
   virtual void set_art_visc_smoothness(double advect_length) = 0; //!< updates the aritificial viscosity coefficient based on smoothness of the flow variables
   //! an object providing all available information about the status of the time marching iteration.
