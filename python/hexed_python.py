@@ -134,17 +134,18 @@ def create_solver(
                     Must satisfy `2 <= row_size <= hexed::config::max_row_size`
     \param min_corner (array-like) minimum corner of the mesh bounding box. Must have size `n_dim`.
     \param max_corner (array-like) maximum corner of the mesh bounding box. Must have size `n_dim`.
-    \param freestream Specify a freestream state which your initial and boudnary conditions can (but do not have to) reference.
+    \param freestream (array-like or None) Specify a freestream state which your initial and boudnary conditions can (but do not have to) reference.
                       If `freestream` is not specified, then `init_cond` and `extremal_bcs` must be specified.
     \param init_cond Specifies the state variables at time 0 in the \ref state_vector "momentum-density-energy order". Can be:
                      - an instance of `hexed::Spacetime_func`
                      - an array-like, which will be used to construct a `hexed::Constant_func`
                      - None, in which case it defaults to `hexed::Constant_func(freestream)`
-    \param extremal_bcs (n_dim x 2 array-like of objects) Specify boundary conditions at the extremes of the domain in order [[xmin, xmax], [ymin, ymax], ...]
+    \param extremal_bcs Specify boundary conditions at the extremes of the domain.
+                        Can be a single boundary condition for all extremal boundaries or a `list` in the order [xmin, xmax, ymin, ymax, ...].
                         Each individual BC can be
                         - an instance of `hexed::Flow_bc`
                         - a class deriving from `hexed::Flow_bc` which will be constructed from `freestream`
-                        - an array-like of floats, which will be used to construct a `hexed::Riemann_invariants`
+                        - a numpy array (has to be an instance of `np.ndarray`) which will be used to construct a `hexed::Riemann_invariants`
                         - None, in which case it defaults to `hexed::Riemann_invariants(freestream)`
     \param geometries (iterable) List of surface geometries to mesh, in one of the following formats:
                       - `n*2` numpy array representing the nodes of a polygonal curve (2D only)
@@ -174,7 +175,27 @@ def create_solver(
     if not np.all(np.array(min_corner) < np.array(max_corner)): raise User_error(f"`min_corner` must be strictly less than `max_corner`")
     root_sz = np.max(max_corner - min_corner)
     solver = cpp.make_solver(n_dim, row_size, root_sz)
-    solver.mesh().add_tree([cpp.new_copy(cpp.Nonpenetration()) for i in range(2*n_dim)], to_matrix(min_corner))
+    def to_bc(bc):
+        print(bc)
+        if bc is None:
+            return cpp.Riemann_invariants(to_matrix(freestream))
+        if isinstance(bc, np.ndarray):
+            return cpp.Riemann_invariants(to_matrix(bc))
+        if isinstance(bc, cpp.Flow_bc):
+            return bc
+        elif isinstance(bc, list):
+            return None
+        elif hasattr(bc, "__init__"):
+            if not issubclass(bc, cpp.Flow_bc): raise User_error("any class passed to `extremal_bcs` must be subclass of `cpp.Flow_bc`")
+            return bc(to_matrix(freestream))
+        else:
+            raise User_error(f"boundary condition specification {bc} not understood")
+    convert = to_bc(extremal_bcs)
+    if convert is None:
+        extremal_bcs = [to_bc(bc) for bc in extremal_bcs]
+    else:
+        extremal_bcs = [convert for i in range(2*n_dim)]
+    solver.mesh().add_tree([cpp.new_copy(bc) for bc in extremal_bcs], to_matrix(min_corner))
     crit = ref_criterion(init_resolution)
     for i_refine in range(init_max_iters):
         if not solver.mesh().update(crit):
@@ -203,6 +224,8 @@ def create_solver(
         for i_smooth in range(n_smooth):
             solver.mesh().relax()
     solver.calc_jacobian()
+    if init_cond is None:
+        init_cond = freestream
     if not isinstance(init_cond, cpp.Spacetime_func):
         init_cond = to_arr(init_cond, size = n_dim + 2, exception = User_error(f"could not interpret `init_cond` as `Spacetime_func` or array of size {n_dim + 2}"))
         init_cond = cpp.Constant_func(init_cond.flatten())
