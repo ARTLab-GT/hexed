@@ -243,3 +243,102 @@ def naca(desig, n_points = 1000, closure = "warp"):
     elif closure and closure.lower() != "none":
         raise User_error("unrecognized value of `closure` parameter")
     return coords
+
+## \cond
+# altitude vs temperature
+_standard_atm_temp = np.array([
+[    0., 288.15],
+[11000., 216.65],
+[20000., 216.65],
+[32000., 228.65],
+[47000., 270.65],
+[51000., 270.65],
+[71000., 214.65],
+[80000., 196.65],
+])
+## \endcond
+
+def standard_atm(alt_geom, temp_offset = 0.):
+    r"""! \brief computes the [ICAO Standard atmosphere](http://www.aviationchief.com/uploads/9/2/0/9/92098238/icao_doc_7488_-_manual_of_icao_standard_atmosphere_-_3rd_edition_-_1994.pdf)
+    \details Valid from 0 to 80km.
+    \param alt_geom Geometric altitude (as opposed to geopotential altitude)
+    \param temp_offset Temperature will be incremented by `temp_offset` relative to the standard atmosphere without changing the pressure.
+    \returns pair (density, pressure)
+    \todo is this temperature offset behavior correct?
+    \see \ref units
+    """
+    # convert geometric altitude to geopotential altitude
+    alt_geopot = cpp.earth_radius*alt_geom/(cpp.earth_radius + alt_geom)
+    pres = cpp.atmosphere
+    n_rows = (_standard_atm_temp[:, 0] <= alt_geopot + 1e-12).sum() # small epsilon added to prevent errors at ~0 altitude
+    if n_rows > _standard_atm_temp.shape[0]: raise User_error("altitude is above model limit")
+    elif n_rows == 0: raise User_error("altitude is below model limit")
+    for i_row in range(n_rows):
+        base_temp = _standard_atm_temp[i_row, 1]
+        lapse = (_standard_atm_temp[i_row + 1, 1] - base_temp)/(_standard_atm_temp[i_row + 1, 0] - _standard_atm_temp[i_row, 0])
+        if i_row == n_rows - 1:
+            h = alt_geopot
+        else:
+            h = _standard_atm_temp[i_row + 1, 0]
+        h_diff = h - _standard_atm_temp[i_row, 0]
+        temp = base_temp + lapse*h_diff
+        if abs(lapse) < 1e-10:
+            pres *= np.exp(-cpp.std_grav*h_diff/cpp.specific_gas_air/base_temp)
+        else:
+            pres *= (temp/base_temp)**(-cpp.std_grav/lapse/cpp.specific_gas_air)
+    temp += temp_offset
+    dens = pres/cpp.specific_gas_air/temp
+    return dens, pres
+
+def rot_mat(angle):
+    r"""! \brief compute a 2D rotation matrix """
+    return np.array([[np.cos(angle), -np.sin(angle)], [np.sin(angle), np.cos(angle)]])
+
+def flow_state(density = None, pressure = None, temperature = None, altitude = None,
+               mach = None, speed = None,
+               direction = None, velocity = None, attack = None, sideslip = None):
+    r"""! \brief Computes the \ref state_vector based on parameters of practical engineering relevance.
+    \details Specify some combination of the keyword arguments that fully defines the state.
+    The dimensionality is inferred from how you specify the direction:
+    - If you specify (angle of) `attack` but not `sideslip`, you get a 2D state.
+      If you specify both, you get 3D.
+    - If you specify a `direction` or `velocity`, the number of components determines the dimensionality.
+    If the state is underdetermined you will get an exception.
+    If overdetermined, it will choose which constraints to satisfy.
+    Assumes the flow is CPG air with heat ratio \f$ \gamma = 1.4 \f$.
+
+    \attention Because all quantities are in SI base units, the angles are radian!
+    To specify angles in degrees, you can do it like:
+    ```
+    attack = 10*hexed.cpp.degree
+    ```
+    \see \ref units
+    \see `constants.hpp`
+    """
+    heat_ratio = 1.4
+    if altitude is not None:
+        density, pressure = standard_atm(altitude)
+    try:
+        # find the density and pressure
+        # note that the arithmetic operations will throw exceptions if any of their arguments are None
+        if density is None:
+            density = pressure/cpp.specific_gas_air/temperature
+        elif pressure is None:
+            pressure = density*cpp.specific_gas_air*temperature
+        int_ener = pressure/(heat_ratio - 1.)
+        # find flow direction, if applicable
+        if attack is not None:
+            if sideslip is None:
+                direction = rot_mat(attack)@np.array([1, 0])
+            else:
+                direction = np.array([1, 0, 0])
+                direction[1:] = rot_mat(-attack) @ direction[1:]
+                direction[:-1] = -rot_mat(sideslip) @ direction[:-1]
+        # find the velocity
+        if velocity is None:
+            if mach is not None:
+                speed = mach*(heat_ratio*pressure/density)**.5
+            velocity = speed*direction
+    except Exception as e:
+        raise User_error("underdetermined flow state specification") from e
+    return np.concatenate([density*velocity, [density, pressure/(heat_ratio - 1.) + .5*density*velocity@velocity]])
