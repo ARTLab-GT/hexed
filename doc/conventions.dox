@@ -25,16 +25,18 @@ Also, please try to maintain these conventions when contributing to the code.
     all the conserved variables (momentum, mass, energy) are consistently extensive.
 - Stagnation quantities shall be referred to as such.
   The word "total" shall not be used to indicate stagnation quantities.
-- The flow state vector (often simply referred to as `state`) consists of the
-  conserved variables.
-  It has components [momentum, mass, total energy]. E.g., in 3D that is
-  [momentum0 (\f$x\f$-direction), momentum1 (\f$y\f$-direction), momentum2 (\f$z\f$-direction), mass, total energy].
-  "Total energy" means thermodynamic internal energy + kinetic energy.
-  - This is different from most codes, which use the order (mass, momentum, energy).
-    The order for Hexed was chosen because it groups the vector and scalar quantities together
-    and because the \f$i\f$th component of the state vector
-    is equal to the \f$i\f$th component of momentum.
-    The latter makes the code for certain formulae cleaner.
+
+\subsection state_vector State vector
+The flow state vector (often simply referred to as `state`) consists of the
+conserved variables.
+It has components [momentum, mass, total energy]. E.g., in 3D that is
+[momentum0 (\f$x\f$-direction), momentum1 (\f$y\f$-direction), momentum2 (\f$z\f$-direction), mass, total energy].
+"Total energy" means thermodynamic internal energy + kinetic energy.
+This is different from most codes, which use the order (mass, momentum, energy).
+The order for Hexed was chosen because it groups the vector and scalar quantities together
+and because the \f$i\f$th component of the state vector
+is equal to the \f$i\f$th component of momentum.
+The latter makes the code for certain formulae cleaner.
 
 \section Terminology
 Hexed uses some terms that are non-standard, or at least not completely universal.

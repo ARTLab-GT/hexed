@@ -41,7 +41,7 @@ class User_error(Exception):
     """
     pass
 
-def to_arr(arr_like, shape = None, size = None, exception = User_error):
+def to_arr(arr_like, shape = None, size = None, exception = User_error("Could not convert to numpy float array")):
     r"""! converts `arr_like` to a numpy float array, potentially with a specific size and/or
     shape and throws a specific exception on failure """
     try:
@@ -50,7 +50,7 @@ def to_arr(arr_like, shape = None, size = None, exception = User_error):
         if size is not None: assert arr.size == size
         return arr
     except Exception as e:
-        raise exception("Could not convert to numpy float array") from e
+        raise exception from e
 
 def to_matrix(arr_like):
     r"""! Converts `arr_like` to an `Eigen::MatrixXd`. Array is transposed to maintain storage order. """
@@ -114,6 +114,7 @@ def ref_criterion(requirement):
 def create_solver(
         n_dim, row_size,
         min_corner, max_corner,
+        init_cond,
         geometries = [], flood_fill_start = None, n_smooth = 10,
         init_resolution = 3, init_max_iters = 1000,
         final_resolution = False, final_max_iters = 1000,
@@ -131,11 +132,13 @@ def create_solver(
     \param n_dim (int) Number of dimenstions must be .
     \param row_size (int) Size of each row of quadrature points (total will be `row_size**n_dim` per element)
                     Must satisfy `2 <= row_size <= hexed::config::max_row_size`
-    \param min_corner (float-array-like) minimum corner of the mesh bounding box. Must have size `n_dim`.
-    \param max_corner (float-array-like) maximum corner of the mesh bounding box. Must have size `n_dim`.
+    \param min_corner (array-like) minimum corner of the mesh bounding box. Must have size `n_dim`.
+    \param max_corner (array-like) maximum corner of the mesh bounding box. Must have size `n_dim`.
+    \param init_cond (hexed::Spacetime_func or array-like) Specifies the state variables at time 0
+                     in the \ref state_vector "momentum-density-energy order". If an array is passed it will be converted to a `hexed::Constant_func`.
     \param geometries (iterable) List of surface geometries to mesh, in one of the following formats:
                       - `n*2` numpy array representing the nodes of a polygonal curve (2D only)
-    \param flood_fill_start (float-array-like or `None`) Seed point for flood fill algorithm.
+    \param flood_fill_start (array-like or `None`) Seed point for flood fill algorithm.
                             That is, if any geometry in `geometries` divides the domain into disjoint regions, the region containing this point will be meshed.
                             Must have size `n_dim`.
                             If `None`, defaults to just inside `min_corner` (specifically `min_corner + 1e-6*(max_corner - min_corner)`)
@@ -190,6 +193,10 @@ def create_solver(
         for i_smooth in range(n_smooth):
             solver.mesh().relax()
     solver.calc_jacobian()
+    if not isinstance(init_cond, cpp.Spacetime_func):
+        init_cond = to_arr(init_cond, size = n_dim + 2, exception = User_error(f"could not interpret `init_cond` as `Spacetime_func` or array of size {n_dim + 2}"))
+        init_cond = cpp.Constant_func(init_cond.flatten())
+    solver.initialize(init_cond);
     return solver
 
 def naca(desig, n_points = 1000, closure = "warp"):
