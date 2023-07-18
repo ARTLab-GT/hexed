@@ -176,7 +176,6 @@ def create_solver(
     root_sz = np.max(max_corner - min_corner)
     solver = cpp.make_solver(n_dim, row_size, root_sz)
     def to_bc(bc):
-        print(bc)
         if bc is None:
             return cpp.Riemann_invariants(to_matrix(freestream))
         if isinstance(bc, np.ndarray):
@@ -231,6 +230,35 @@ def create_solver(
         init_cond = cpp.Constant_func(init_cond.flatten())
     solver.initialize(init_cond);
     return solver
+
+def add_method(cls):
+    r"""! \brief returns a decorator which adds a method to `cls` _post hoc_
+    \details e.g.
+    ```
+    class Foo:
+        i = 0
+    @add_method(Foo)
+    def bar(self):
+        self.i += 1
+    f = Foo()
+    f.bar()
+    assert f.i == 1
+    ```
+    """
+    return lambda method: setattr(cls, method.__name__, method)
+
+@add_method(cpp.Solver_interface)
+def run(self):
+    r"""! \brief Runs the simulation.
+    \details more on this later
+    \memberof hexed::Solver_interface
+    \note \ref hexed_python "Python" only.
+    """
+    print(self.iteration_status().header())
+    for i in range(10):
+        for j in range(100):
+            self.update()
+        print(self.iteration_status().report())
 
 def naca(desig, n_points = 1000, closure = "warp"):
     r"""! \brief Constructs a NACA 4-digit airfoil geometry.
