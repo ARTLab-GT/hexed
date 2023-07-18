@@ -114,7 +114,7 @@ def ref_criterion(requirement):
 def create_solver(
         n_dim, row_size,
         min_corner, max_corner,
-        init_cond,
+        freestream = None, init_cond = None, extremal_bcs = None,
         geometries = [], flood_fill_start = None, n_smooth = 10,
         init_resolution = 3, init_max_iters = 1000,
         final_resolution = False, final_max_iters = 1000,
@@ -134,8 +134,18 @@ def create_solver(
                     Must satisfy `2 <= row_size <= hexed::config::max_row_size`
     \param min_corner (array-like) minimum corner of the mesh bounding box. Must have size `n_dim`.
     \param max_corner (array-like) maximum corner of the mesh bounding box. Must have size `n_dim`.
-    \param init_cond (hexed::Spacetime_func or array-like) Specifies the state variables at time 0
-                     in the \ref state_vector "momentum-density-energy order". If an array is passed it will be converted to a `hexed::Constant_func`.
+    \param freestream Specify a freestream state which your initial and boudnary conditions can (but do not have to) reference.
+                      If `freestream` is not specified, then `init_cond` and `extremal_bcs` must be specified.
+    \param init_cond Specifies the state variables at time 0 in the \ref state_vector "momentum-density-energy order". Can be:
+                     - an instance of `hexed::Spacetime_func`
+                     - an array-like, which will be used to construct a `hexed::Constant_func`
+                     - None, in which case it defaults to `hexed::Constant_func(freestream)`
+    \param extremal_bcs (n_dim x 2 array-like of objects) Specify boundary conditions at the extremes of the domain in order [[xmin, xmax], [ymin, ymax], ...]
+                        Each individual BC can be
+                        - an instance of `hexed::Flow_bc`
+                        - a class deriving from `hexed::Flow_bc` which will be constructed from `freestream`
+                        - an array-like of floats, which will be used to construct a `hexed::Riemann_invariants`
+                        - None, in which case it defaults to `hexed::Riemann_invariants(freestream)`
     \param geometries (iterable) List of surface geometries to mesh, in one of the following formats:
                       - `n*2` numpy array representing the nodes of a polygonal curve (2D only)
     \param flood_fill_start (array-like or `None`) Seed point for flood fill algorithm.
