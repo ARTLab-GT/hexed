@@ -47,7 +47,7 @@ class Element
   std::array<int, 6> face_record; //!< for algorithms to book-keep information related to faces
   //! Pointer to state data at faces. Must be populated by user
   std::array<double*, 6> faces; //!< layout: [2*i_dim + face_sign][i_var][i_qpoint]
-  double resolution_badness = 0;
+  double resolution_badness = 0; //!< refinement algorithms should set this value to some metric representing how badly this element needs to be refined
   static constexpr bool is_deformed = false;
   static constexpr int n_forcing = 4;
   int record = 0; //!< for algorithms to book-keep general information

@@ -1026,7 +1026,7 @@ void Accessible_mesh::purge()
   for (auto& b_verts : boundary_verts) erase_if(b_verts, &Vertex::Non_transferable_ptr::is_null);
 }
 
-void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std::function<bool(Element&)> unrefine_criterion)
+bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std::function<bool(Element&)> unrefine_criterion)
 {
   Stopwatch sw;
   sw.start();
@@ -1196,7 +1196,9 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
     }
     if (del) con->element(0).record = 2;
   }
+  int n_before = elems.size();
   purge();
+  int n_after = elems.size();
   // connect new elements
   connect_new<         Element>(0);
   connect_new<Deformed_element>(0);
@@ -1222,6 +1224,7 @@ void Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   id_boundary_verts();
   snap_vertices();
   global_hacks::numbers[2] += sw.time();
+  return n_before > n_after; // any change to the element structure (including adding elements!) will cause `purge` to reduce the size of `elems`
 }
 
 void Accessible_mesh::relax(double factor)
