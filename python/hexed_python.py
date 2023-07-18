@@ -65,14 +65,32 @@ def to_matrix(arr_like):
     view[:] = arr.flatten()
     return mat
 
+class _Criterion:
+    instances = 0
+
+def criterion(code):
+    if code is None:
+        return cpp.criteria.never
+    name = f"criterion{_Criterion.instances}"
+    _Criterion.instances += 1
+    cppyy.cppdef(f"""namespace hexed::criteria {{
+    auto {name} = hexed::criteria::criterion(
+        [](bool is_extruded, int ref_level, Eigen::Vector3d center, double res_bad) {{
+            return bool({code});
+    }});
+    }}""")
+    return getattr(cpp.criteria, name)
+
 def create_solver(
         n_dim, row_size,
         min_corner, max_corner, init_resolution = 3,
         geometries = [], flood_fill_start = None, n_smooth = 10,
-        refine_sweeps = 0, surf_rep_tol = 1000., surf_resolution = 0, max_resolution = 1000,
+        refine_sweeps = 0, final_resolution = None,
     ):
-    r"""! \brief Creates a `hexed::Solver_interface` object with a tree mesh.
-    \details Mesh domain will be an axis-aligned box, optionally with pieces cut out of it by some user-specified geometry(s).
+    r"""! \brief Creates a `hexed::Solver_interface` object with a premade tree mesh.
+    \details This is the recommended way for end users to construct a Solver object.
+    You can still interact with the `mesh()` method to further adjust the mesh, but you shouldn't need to.
+    Mesh domain will be an axis-aligned box, optionally with pieces cut out of it by some user-specified geometry(s).
     Geometries need not be watertight.
     If any combination of the geometries creates a closed manifold with no gaps substantially larger than an element
     (in the fully refined mesh), then either the inside or the outside will be meshed, but not both
@@ -80,17 +98,26 @@ def create_solver(
     For now, all sides of the box must have the same length.
 
     __Specifying resolution__
+    \anchor resolution
 
-    Mesh resolution requirements may be specified as one of two ways:
-    - As an `int`, which is interpreted as a lower bound on the refinement level
-    - As a `float`, which is interpreted as an upper bound on the element side length
+    A coarse/fine bound on the mesh resolution may be specified in one of the following ways:
+    - `None`: imposes no requirement on resolution.
+    - `int`: imposes a lower/upper bound on the refinement level
+    - `float`: imposes as an upper/lower bound on the element side length
+    - `str`: A C++ expression which evaluates to `true` in a given element if the element needs to be refined and `false` otherwise.
+      This expression will be evaluated in an environment containing the following variables:
+      - `bool is_extruded` Whether the element is extruded, which basically means whether it is on the geometry surface.
+      - `int ref_level` Current refinement level of the element.
+      - `Eigen::Vector3d center` A vector object representing position of the center of the element (technically, the average position of its vertices).
+        This vector has size 3 (trailing dimensions set to 0), supports basic arithmetic operators, and has `.dot(other)` and `.norm()` methods.
+      - `double res_bad` The `hexed::Element::resolution_badness` parameter.
 
     \param n_dim (int) Number of dimenstions must be .
     \param row_size (int) Size of each row of quadrature points (total will be `row_size**n_dim` per element)
                     Must satisfy `2 <= row_size <= hexed::config::max_row_size`
     \param min_corner (float-array-like) minimum corner of the mesh bounding box. Must have size `n_dim`.
     \param max_corner (float-array-like) maximum corner of the mesh bounding box. Must have size `n_dim`.
-    \param init_resolution (int or float) mesh will be refined to this resolution before geometry is inserted,
+    \param init_resolution Coarse bound on \ref resolution before geometry is inserted.
                            which usually also ends up being the farfield resolution.
                            If this is so coarse that inserting the geometry causes all elements to be deleted,
                            this will result in an exception.
@@ -104,11 +131,7 @@ def create_solver(
     \param n_smooth (int) number of mesh smoothing iterations (meaning vertex movement, not refinement level smoothing)
                     to run after each refinement sweep (after the geometry is inserted).
     \param refine_sweeps Number of geometry-based refinement sweeps to run after geometry is inserted (_after_ `init_resolution` has already been achieved).
-    \param surf_rep_tol Tolerance of surface representation (has to do with the discontinuity of surface normals between elements).
-                        Smaller number means finer mesh.
-                        To make this number completely irrelevant, specify something like 1000.
-    \param surf_resolution Requirement on the resolution of elements at the geometry surface (usually leave as 0).
-    \param max_resolution Elements will not be be refined past this resolution. The default value is fine enough that it effectively imposes no limit.
+    \param final_resolution Coarse bound on \ref resolution after geometry is inserted.
     """
     if not 1 <= int(n_dim) <= 3: raise User_error("invalid `n_dim`")
     if not 2 <= int(row_size) <= cpp.config.max_row_size: raise User_error(f"invalid `row_size` (max is {cpp.config.max_row_size})")
@@ -127,13 +150,11 @@ def create_solver(
             raise User_error(f"could not interpret resolution {resolution} as `int` or `float`")
         rl = max(rl, 0)
         return rl
-    #cpp_geoms = std.vector[std.unique_ptr[cpp.Surface_geom]]
     cpp_geoms = []
     for geom in geometries:
         if isinstance(geom, np.ndarray):
             if len(geom.shape) != 2: raise User_error("geometry array must be 2D")
             if (geom.shape[1] == 2):
-                print("foo")
                 cpp_geoms.append(cpp.Simplex_geom2(cpp.segments(to_matrix(geom))))
             else:
                 raise User_error("geometry array must have 2 columns")
@@ -147,6 +168,10 @@ def create_solver(
         solver.mesh().set_surface(cpp.new_copy(cpp_geoms[0]), cpp.new_copy(cpp.Nonpenetration()), to_matrix(flood_fill_start))
     for i_smooth in range(n_smooth):
         solver.mesh().relax()
+    for i_sweep in range(refine_sweeps):
+        solver.mesh().update(criterion(final_resolution))
+        for i_smooth in range(n_smooth):
+            solver.mesh().relax()
     solver.calc_jacobian()
     return solver
 
