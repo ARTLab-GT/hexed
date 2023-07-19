@@ -175,6 +175,9 @@ def create_solver(
     if not np.all(np.array(min_corner) < np.array(max_corner)): raise User_error(f"`min_corner` must be strictly less than `max_corner`")
     root_sz = np.max(max_corner - min_corner)
     solver = cpp.make_solver(n_dim, row_size, root_sz)
+    solver.working_dir = "hexed_out"
+    solver.print_freq = 100
+    solver.vis_freq = 1000
     def to_bc(bc):
         if bc is None:
             return cpp.Riemann_invariants(to_matrix(freestream))
@@ -231,13 +234,13 @@ def create_solver(
     solver.initialize(init_cond);
     return solver
 
-def add_method(cls):
+def def_method(cls):
     r"""! \brief returns a decorator which adds a method to `cls` _post hoc_
     \details e.g.
     ```
     class Foo:
         i = 0
-    @add_method(Foo)
+    @def_method(Foo)
     def bar(self):
         self.i += 1
     f = Foo()
@@ -247,18 +250,110 @@ def add_method(cls):
     """
     return lambda method: setattr(cls, method.__name__, method)
 
-@add_method(cpp.Solver_interface)
-def run(self):
-    r"""! \brief Runs the simulation.
-    \details more on this later
+def def_property(cls):
+    r"""! like `def_method` but with `@property` decorator """
+    return lambda method: setattr(cls, method.__name__, property(method))
+
+## \name python only
+# \brief The following members are available via the \ref hexed_python "Python API".
+## \{
+
+@def_method(cpp.Solver_interface)
+def method(self, fun):
+    r"""! \brief a decorator that defines/overrides a method of this object
+    \details E.g.
+    ```
+    solver = create_solver(...)
+    @solver.method
+    def callback(self):
+        print("callback called")
+    solver.callback()
+    ```
     \memberof hexed::Solver_interface
-    \note \ref hexed_python "Python" only.
     """
+    return def_method(self.__class__)(fun)
+
+@def_property(cpp.Solver_interface)
+def iteration(self):
+    r"""! \brief fetches the iteration count \memberof hexed::Solver_interface """
+    return self.iteration_status().iteration
+
+@def_method(cpp.Solver_interface)
+def setup(self):
+    r"""! \brief prints `iteration_status().header()` \memberof hexed::Solver_interface """
     print(self.iteration_status().header())
-    for i in range(10):
-        for j in range(100):
-            self.update()
+
+@def_method(cpp.Solver_interface)
+def step(self):
+    r"""! \brief updates solver by one time step \memberof hexed::Solver_interface """
+    self.update()
+
+@def_method(cpp.Solver_interface)
+def report(self):
+    r"""! \brief prints `iteration_status().report()` \memberof hexed::Solver_interface """
+    if (self.iteration%self.print_freq == 0):
         print(self.iteration_status().report())
+
+@def_method(cpp.Solver_interface)
+def visualize(self):
+    r"""! \brief visualize the field data \memberof hexed::Solver_interface """
+    if (self.iteration%self.vis_freq == 0):
+        self.visualize_field_tecplot(f"{self.working_dir}/iter_{self.iteration}")
+
+@def_method(cpp.Solver_interface)
+def callback(self):
+    r"""! \brief does nothing \memberof hexed::Solver_interface """
+    pass
+
+@def_method(cpp.Solver_interface)
+def done(self):
+    r"""! \brief Override this method to define the end condition of the simulation.
+    \details
+    At each iteration, the simulation will terminate if this method returns `True`.
+    Default implementation throws exception.
+    Example implementations:
+    - Terminate after 10000 iterations: \code return self.iteration == 10000 \endcode
+    - Terminate when flow time exceeds 0.2 seconds: \code return self.iteration_status().flow_time >= 0.2 \endcode
+    - Never terminate (until you intervene at runtime): \code return False \endcode
+    - Terminate when absolute density residual drops below \f$ 10^3 kg/m^3 \f$
+      or after wall clock time exceeds 10 minutes, whichever comes first:
+      \code
+      stat = self.iteration_status()
+      return stat.mass_resid < 1e3 or stat.wall_time() > 600
+      \endcode
+    \memberof hexed::Solver_interface
+    """
+    raise User_error("no stop condition")
+
+@def_method(cpp.Solver_interface)
+def cleanup(self):
+    r"""! \brief does nothing \memberof hexed::Solver_interface """
+    pass
+
+@def_method(cpp.Solver_interface)
+def run(self):
+    r"""! \brief Runs iterations.
+    \memberof hexed::Solver_interface
+    \details Standard procedure in python should be to create a solver object with `hexed_python.create_solver`,
+    override methods and attributes as necessary, and then call `run()`.
+    The implementation of this function is:
+    \snippet python/hexed_python.py run implementation
+    Any of the above methods can be overriden (e.g. with `hexed_python.def_method` or `Solver_interface.method`)
+    to modify the behavior from the default.
+    In fact, you __must__ override `done()` to set your desired stop condition.
+    """
+    ## [run implementation]
+    self.setup()
+    while True:
+        self.step()
+        self.report()
+        self.visualize()
+        self.callback()
+        if self.done():
+            break
+    self.cleanup()
+    ## [run implementation]
+## \}
 
 def naca(desig, n_points = 1000, closure = "warp"):
     r"""! \brief Constructs a NACA 4-digit airfoil geometry.

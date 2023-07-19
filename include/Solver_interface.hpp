@@ -103,7 +103,10 @@ class Solver_interface
   virtual void update(double safety_factor = 0.7, double time_step = std::numeric_limits<double>::max()) = 0;
   virtual bool is_admissible() = 0; //!< check whether flowfield is admissible (e.g. density and energy are positive)
   virtual void set_art_visc_smoothness(double advect_length) = 0; //!< updates the aritificial viscosity coefficient based on smoothness of the flow variables
-  //! an object providing all available information about the status of the time marching iteration.
+  /*! \brief an object providing all available information about the status of the time marching iteration.
+   * \details The `Iteration_status::start_time` member will refer to when the `Solver` object was created
+   * (specifically at the start of the `Solver::Solver` body).
+   */
   virtual Iteration_status iteration_status() = 0;
   /*!
    * reset any variables in `iteration_status()` that count something since the last call to `reset_counters()`

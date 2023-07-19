@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <cmath>
+#include <chrono>
 
 namespace hexed
 {
@@ -16,6 +17,8 @@ namespace hexed
  */
 class Iteration_status
 {
+  std::chrono::time_point<std::chrono::system_clock> start;
+
   protected:
   int width();
   template<typename T>
@@ -38,7 +41,7 @@ class Iteration_status
   std::string double_format = ".8e";
   //! label of each column to print
   std::vector<std::string> labels {"iteration", "momtm resid", "mass resid", "energy resid", "av adv resid", "av diff resid",
-                                   "flow time", "time step", "fix adm iters", "diff dt rat"};
+                                   "flow time", "time step", "fix adm iters"};
   virtual std::string value_string(); //!< return a string containing the data for each column followed by `sep`
   //!\}
 
@@ -55,12 +58,14 @@ class Iteration_status
   double time_step = 0.;
   int iteration = 0;
   int fix_admis_iters = 0;
-  double dt_rat = std::nan("");
   //!\}
   //! return string containing the column labels separated by `sep`,
   //! justified to align with numerical data in `report()`.
   std::string header();
   std::string report(); //!< return string containing numerical data separated by `sep`
+  void set_time(); //!< sets `start_time()` to now
+  double start_time(); //!< Unix epoch time that `set_time` was called
+  double wall_time(); //!< wall clock time since `start_time()`
 };
 
 }

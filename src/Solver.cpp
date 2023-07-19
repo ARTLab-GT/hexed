@@ -126,6 +126,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   visc{viscosity_model},
   therm_cond{thermal_conductivity_model}
 {
+  status.set_time();
   // setup categories for performance reporting
   stopwatch.children.emplace("initialize reference", stopwatch.work_unit_name);
   std::string unit = "(element*(time integration stage))";
