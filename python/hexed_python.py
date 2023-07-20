@@ -119,6 +119,7 @@ def create_solver(
         geometries = [], flood_fill_start = None, n_smooth = 10,
         init_resolution = 3, init_max_iters = 1000,
         final_resolution = False, final_max_iters = 1000,
+        local_time_stepping = True,
     ):
     r"""! \brief Creates a `hexed::Solver_interface` object with a premade tree mesh.
     \details This is the recommended way for end users to construct a Solver object.
@@ -169,6 +170,7 @@ def create_solver(
                             Before each refinement iteration, the `hexed::Element::resolution_badness` will be set to a value
                             which reflects the quality of the surface representation (large number means surface is poorly resolved).
     \param final_max_iters (int) Maximum number of refinement iterations to execute after geometry is inserted.
+    \param local_time_stepping Whether to use LTS.
     """
     if not 1 <= int(n_dim) <= 3: raise User_error("invalid `n_dim`")
     if not 2 <= int(row_size) <= cpp.config.max_row_size: raise User_error(f"invalid `row_size` (max is {cpp.config.max_row_size})")
@@ -176,12 +178,13 @@ def create_solver(
     max_corner = to_arr(max_corner, size = n_dim).flatten()
     if not np.all(np.array(min_corner) < np.array(max_corner)): raise User_error(f"`min_corner` must be strictly less than `max_corner`")
     root_sz = np.max(max_corner - min_corner)
-    solver = cpp.make_solver(n_dim, row_size, root_sz)
+    solver = cpp.make_solver(n_dim, row_size, root_sz, local_time_stepping)
     ## [instance attrs]
     solver.working_dir = "hexed_out"
     solver.print_freq = 1
     solver.vis_freq = 1000
     solver.n_step = 100
+    solver.safety_factor = 0.7
     ## [instance attrs]
     def to_bc(bc):
         if bc is None:
@@ -223,14 +226,16 @@ def create_solver(
         solver.mesh().set_surface(cpp.new_copy(cpp_geoms[0]), cpp.new_copy(cpp.Nonpenetration()), to_matrix(flood_fill_start))
     for i_smooth in range(n_smooth):
         solver.mesh().relax()
+    solver.calc_jacobian()
     if solver.mesh().n_elements() == 0: raise User_error("geometry addition deleted all elements")
     crit = ref_criterion(final_resolution)
     for i_refine in range(final_max_iters):
+        solver.set_res_bad_surface_rep(solver.mesh().surface_bc_sn())
         if not solver.mesh().update(crit):
             break
         for i_smooth in range(n_smooth):
             solver.mesh().relax()
-    solver.calc_jacobian()
+        solver.calc_jacobian()
     if init_cond is None:
         init_cond = freestream
     if not isinstance(init_cond, cpp.Spacetime_func):
@@ -293,7 +298,7 @@ def setup(self):
 @def_method(cpp.Solver_interface)
 def step(self):
     r"""! \brief updates solver by one `n_step` steps \memberof hexed::Solver_interface """
-    self.update_n(self.n_step)
+    self.update_n(self.n_step, self.safety_factor)
 
 @def_method(cpp.Solver_interface)
 def report(self):

@@ -26,8 +26,10 @@ animation = ani.FuncAnimation(fig, update, init_func = init, cache_frame_data = 
 """
 
 solver = hexed.create_solver(2, 6, [-10, -10], [10, 10], freestream = hexed.flow_state(altitude = 0, mach = 0.2, attack = 3*hexed.cpp.degree),
-                             geometries = [hexed.naca("0012", int(1e4))], final_resolution = "is_extruded && ref_level < 9")
+                             geometries = [hexed.naca("0012", int(1e4))],
+                             final_resolution = "res_bad > 3e-3 && ref_level < 12")
 solver.visualize()
+solver.safety_factor = .01
 solver.n_step = 4000
 solver.vis_freq = None
 
