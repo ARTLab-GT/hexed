@@ -1,6 +1,7 @@
 import cppyy
 import numpy as np
 import math
+import matplotlib.pyplot as plt
 from hexed_py_config import *
 
 ## \namespace hexed_python
@@ -543,20 +544,27 @@ def flow_state(density = None, pressure = None, temperature = None, altitude = N
 class Convergence_monitor:
     def __init__(self, rtol = 0, atol = 0, plot = True):
         self.values = []
-        self.rtol = rtol, self.atol = atol
+        self.iters = []
+        self.rtol = rtol
+        self.atol = atol
         self.min = None
         self.max = None
+        if plot:
+            self.figure = plt.figure()
 
-    def push(self, value):
+    def push(self, it, value):
         self.values.append(value)
-        if self.min is None:
+        self.iters.append(it)
+        if len(self.values) == 1:
             self.min = value
-        else:
-            self.min = min(self.min, value)
-        if self.max is None:
             self.max = value
         else:
+            self.min = min(self.min, value)
             self.max = max(self.max, value)
+            plt.figure(self.figure)
+            plt.plot(self.iters, self.values)
+            #self.figure.canvas.draw_idle()
+            #self.figure.canvas.start_event_loop(1)
 
     def pop(self, n = 1):
         self.values = self.values[n:]
