@@ -101,6 +101,8 @@ class Solver_interface
    * (it is scaled by the max allowable CFL for the chosen DG scheme which is often O(1e-2)).
    */
   virtual void update(double safety_factor = 0.7, double time_step = std::numeric_limits<double>::max()) = 0;
+  //! runs `update` `n` times, in case you're calling it through a slow interface _cough_ python _cough_
+  virtual void update_n(int n, double safety_factor = 0.7, double time_step = std::numeric_limits<double>::max()) = 0;
   virtual bool is_admissible() = 0; //!< check whether flowfield is admissible (e.g. density and energy are positive)
   virtual void set_art_visc_smoothness(double advect_length) = 0; //!< updates the aritificial viscosity coefficient based on smoothness of the flow variables
   /*! \brief an object providing all available information about the status of the time marching iteration.

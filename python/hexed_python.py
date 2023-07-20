@@ -176,8 +176,9 @@ def create_solver(
     root_sz = np.max(max_corner - min_corner)
     solver = cpp.make_solver(n_dim, row_size, root_sz)
     solver.working_dir = "hexed_out"
-    solver.print_freq = 100
+    solver.print_freq = 1
     solver.vis_freq = 1000
+    solver.n_step = 100
     def to_bc(bc):
         if bc is None:
             return cpp.Riemann_invariants(to_matrix(freestream))
@@ -287,19 +288,19 @@ def setup(self):
 
 @def_method(cpp.Solver_interface)
 def step(self):
-    r"""! \brief updates solver by one time step \memberof hexed::Solver_interface """
-    self.update()
+    r"""! \brief updates solver by one `n_step` steps \memberof hexed::Solver_interface """
+    self.update_n(self.n_step)
 
 @def_method(cpp.Solver_interface)
 def report(self):
     r"""! \brief prints `iteration_status().report()` \memberof hexed::Solver_interface """
-    if (self.iteration%self.print_freq == 0):
+    if (self.print_freq is not None and self.iteration%self.print_freq == 0):
         print(self.iteration_status().report())
 
 @def_method(cpp.Solver_interface)
 def visualize(self):
     r"""! \brief visualize the field data \memberof hexed::Solver_interface """
-    if (self.iteration%self.vis_freq == 0):
+    if (self.vis_freq is not None and self.iteration%self.vis_freq == 0):
         self.visualize_field_tecplot(f"{self.working_dir}/iter_{self.iteration}")
 
 @def_method(cpp.Solver_interface)

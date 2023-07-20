@@ -857,6 +857,11 @@ void Solver::update(double safety_factor, double time_step)
   stopwatch.children.at("deformed" ).work_units_completed += acc_mesh.deformed ().elements().size();
 }
 
+void Solver::update_n(int n, double safety_factor, double time_step)
+{
+  for (int i = 0; i < n; ++i) update(safety_factor, time_step);
+}
+
 Iteration_status Solver::iteration_status()
 {
   Iteration_status stat = status;
