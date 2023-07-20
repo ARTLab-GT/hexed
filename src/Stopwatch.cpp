@@ -8,12 +8,12 @@ void Stopwatch::start()
 {
   HEXED_ASSERT(!r, "attempt to start an already running `Stopwatch`");
   r = true;
-  time_started = std::chrono::high_resolution_clock::now();
+  time_started = std::chrono::steady_clock::now();
 }
 
 void Stopwatch::pause()
 {
-  auto time_stopped = std::chrono::high_resolution_clock::now();
+  auto time_stopped = std::chrono::steady_clock::now();
   HEXED_ASSERT(r, "attempt to pause a `Stopwatch` which is not running");
   r = false;
   ++n;

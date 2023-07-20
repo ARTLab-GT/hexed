@@ -15,7 +15,7 @@ class Stopwatch
   int n = 0;
   double t = 0.;
   bool r = false;
-  std::chrono::high_resolution_clock::time_point time_started;
+  std::chrono::steady_clock::time_point time_started;
 
   public:
   //! RAII-style operation of a stopwatch
