@@ -345,8 +345,7 @@ void Accessible_mesh::extrude(bool collapse, double offset)
   std::vector<Empty_face> empty_faces;
   auto& elems = def.elements();
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    //if (elems[i_elem].tree || !tree) {
-    if (true) {
+    if (elems[i_elem].tree || !tree) {
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         for (int face_sign = 0; face_sign < 2; ++face_sign) {
           const int i_face = 2*i_dim + face_sign;
@@ -625,15 +624,8 @@ bool Accessible_mesh::is_surface(Tree* t)
 {
   if (!surf_geom) return false;
   Mat<> center = t->nominal_position() + t->nominal_size()/2*Mat<>::Ones(params.n_dim);
-  for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-    Eigen::VectorXi dir(params.n_dim);
-    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-      dir(i_dim) = math::sign((i_vert/math::pow(2, params.n_dim - 1 - i_dim))%2);
-    }
-    Mat<> point = center + 0.7*t->nominal_size()*dir.cast<double>();
-    if ((point - surf_geom->nearest_point(point)).norm() < (point - center).norm()) return true;
-  }
-  return false;
+  double dist = (center - surf_geom->nearest_point(center)).norm();
+  return dist < std::sqrt(params.n_dim)/2*t->nominal_size();
 }
 
 void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start)
@@ -665,7 +657,6 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   purge();
   connect_new<         Element>(0);
   connect_new<Deformed_element>(0);
-  extrude(true);
   extrude(true);
   connect_rest(surf_bc_sn);
   id_boundary_verts();
@@ -1060,14 +1051,12 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
     else if (unref && !ref) elem.record = -1;
   }
   // pass refinement requests of extruded elements to their extrusion parents
-  for (int i = 0; i < 2; ++i) { // do this twice since 2 extrusion cycles
-    #pragma omp parallel for
-    for (auto con : extrude_cons) {
-      auto& inside = con->element(1);
-      Lock::Acquire a(inside.lock);
-      if (inside.record == 0) inside.record = con->element(0).record;
-      else inside.record = std::max(inside.record, con->element(0).record);
-    }
+  #pragma omp parallel for
+  for (auto con : extrude_cons) {
+    auto& inside = con->element(1);
+    Lock::Acquire a(inside.lock);
+    if (inside.record == 0) inside.record = con->element(0).record;
+    else inside.record = std::max(inside.record, con->element(0).record);
   }
   int n_orig [2];
   // refine elements
@@ -1197,18 +1186,15 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   sw.pause();
   deform();
   // delete extruded elements
-  for (int i = 0; i < 2; ++i) { // do this twice since 2 extrusion cycles
-    #pragma omp parallel for
-    for (auto con : extrude_cons) {
-      //bool del = false;
-      bool del = true;
-      if (con->element(1).record == 2) del = true;
-      else if (con->element(1).tree) {
-        Tree* neighbor = con->element(1).tree->find_neighbor(math::direction(nd, con->direction().i_face(1)));
-        if (neighbor) if (neighbor->elem) if (neighbor->elem->record != 2) del = true;
-      }
-      if (del) con->element(0).record = 2;
+  #pragma omp parallel for
+  for (auto con : extrude_cons) {
+    bool del = false;
+    if (con->element(1).record == 2) del = true;
+    else if (con->element(1).tree) {
+      Tree* neighbor = con->element(1).tree->find_neighbor(math::direction(nd, con->direction().i_face(1)));
+      if (neighbor) if (neighbor->elem) if (neighbor->elem->record != 2) del = true;
     }
+    if (del) con->element(0).record = 2;
   }
   int n_before = elems.size();
   purge();
@@ -1216,7 +1202,6 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   // connect new elements
   connect_new<         Element>(0);
   connect_new<Deformed_element>(0);
-  extrude(true);
   extrude(true);
   connect_rest(surf_bc_sn);
   // if any immobile vertices have strayed from their nominal position (probably by `eat`ing)
