@@ -128,6 +128,7 @@ def create_solver(
     (in the fully refined mesh), then either the inside or the outside will be meshed, but not both
     (or possibly neither if there are nested closed geometries.
     For now, all sides of the box must have the same length.
+    The solver object is also provided with the following instance attributes: \snippet python/hexed_python.py instance attrs
 
     \param n_dim (int) Number of dimenstions must be .
     \param row_size (int) Size of each row of quadrature points (total will be `row_size**n_dim` per element)
@@ -175,10 +176,12 @@ def create_solver(
     if not np.all(np.array(min_corner) < np.array(max_corner)): raise User_error(f"`min_corner` must be strictly less than `max_corner`")
     root_sz = np.max(max_corner - min_corner)
     solver = cpp.make_solver(n_dim, row_size, root_sz)
+    ## [instance attrs]
     solver.working_dir = "hexed_out"
     solver.print_freq = 1
     solver.vis_freq = 1000
     solver.n_step = 100
+    ## [instance attrs]
     def to_bc(bc):
         if bc is None:
             return cpp.Riemann_invariants(to_matrix(freestream))
@@ -536,3 +539,26 @@ def flow_state(density = None, pressure = None, temperature = None, altitude = N
     except Exception as e:
         raise User_error("underdetermined flow state specification") from e
     return np.concatenate([density*velocity, [density, pressure/(heat_ratio - 1.) + .5*density*velocity@velocity]])
+
+class Convergence_monitor:
+    def __init__(self, rtol = 0, atol = 0, plot = True):
+        self.values = []
+        self.rtol = rtol, self.atol = atol
+        self.min = None
+        self.max = None
+
+    def push(self, value):
+        self.values.append(value)
+        if self.min is None:
+            self.min = value
+        else:
+            self.min = min(self.min, value)
+        if self.max is None:
+            self.max = value
+        else:
+            self.max = max(self.max, value)
+
+    def pop(self, n = 1):
+        self.values = self.values[n:]
+        self.min = min(values)
+        self.max = max(values)
