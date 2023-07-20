@@ -32,6 +32,7 @@ T& printed(T& t)
 }
 
 template <typename T> T* new_copy(const T& t) {return new T(t);} //!< useful for cppyy which doesn't like to relinquish ownership
+template <typename T> T* new_move(T&& t) {return new T(t);} //!< useful for cppyy which doesn't like to relinquish ownership
 
 }
 #endif

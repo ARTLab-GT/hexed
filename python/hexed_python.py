@@ -150,8 +150,17 @@ def create_solver(
                         - a class deriving from `hexed::Flow_bc` which will be constructed from `freestream`
                         - a numpy array (has to be an instance of `np.ndarray`) which will be used to construct a `hexed::Riemann_invariants`
                         - None, in which case it defaults to `hexed::Riemann_invariants(freestream)`
-    \param geometries (iterable) List of surface geometries to mesh, in one of the following formats:
-                      - `n*2` numpy array representing the nodes of a polygonal curve (2D only)
+    \param geometries (list or tuple) List of surface geometries to mesh, in one of the following formats:
+                      - An instance of `hexed::Surface_geom`.
+                      - `n*2` numpy array representing the nodes of a polygonal curve. 2D only.
+                      - A string containing a file name in one of the following formats (inferred from file extension which is not case sensitive):
+                      - `.igs`, `.iges`: IGES CAD file
+                      - `.stp`, `.step`: STEP CAD file
+                      - `.stl`: Stereolithography discrete triangle representation (ASCII or binary). 3D only.
+                      - `.csv, .txt`: Text delimited by some combintion of commas, spaces, and/or tabs
+                         (delimiter is the [regex](https://docs.python.org/3/library/re.html) `[, \t]+`).
+                         Must contain two columns representing nodes of a 2D polygonal curve.
+                         Any additional columns beyond the first two will be ignored. 2D only.
     \param flood_fill_start (array-like or `None`) Seed point for flood fill algorithm.
                             That is, if any geometry in `geometries` divides the domain into disjoint regions, the region containing this point will be meshed.
                             Must have size `n_dim`.
@@ -223,15 +232,20 @@ def create_solver(
         else:
             raise User_error(f"could not interpret {type(geom)} as one of the supported geometry formats")
     if cpp_geoms:
+        if len(cpp_geoms) == 1:
+            geom = cpp_geoms[0]
+        else:
+            geom = cpp.Compound_geom([cpp.new_copy(geom) for geom in cpp_geoms])
         if flood_fill_start is None:
             flood_fill_start = min_corner + 1e-6*(max_corner - min_corner)
-        solver.mesh().set_surface(cpp.new_copy(cpp_geoms[0]), cpp.new_copy(cpp.Nonpenetration()), to_matrix(flood_fill_start))
+        solver.mesh().set_surface(cpp.new_move(geom), cpp.new_copy(cpp.Nonpenetration()), to_matrix(flood_fill_start))
     for i_smooth in range(n_smooth):
         solver.mesh().relax()
     solver.calc_jacobian()
     if solver.mesh().n_elements() == 0: raise User_error("geometry addition deleted all elements")
     crit = ref_criterion(final_resolution)
     for i_refine in range(final_max_iters):
+        print(f"refinement iteration {i_refine}")
         inv_jac = cpp.Jac_inv_det_func()
         solver.set_resolution_badness(cpp.Elem_nonsmooth(inv_jac))
         if not solver.mesh().update(crit):
