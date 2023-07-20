@@ -383,18 +383,19 @@ def run(self):
     to modify the behavior from the default.
     In fact, you __must__ override `done()` to set your desired stop condition.
     """
-    ## [run implementation]
     self.setup()
-    while True:
-        self.step()
-        self.report()
-        self.visualize()
-        self.callback()
-        self.exec_runtime()
-        if self.done():
-            break
+    def iters():
+        ## [run implementation]
+        while not self.done():
+            self.step()
+            self.report()
+            self.visualize()
+            self.callback()
+            self.exec_runtime()
+            ## [run implementation]
+            yield self.iteration
+    for i in iters(): pass
     self.cleanup()
-    ## [run implementation]
 ## \}
 
 def naca(desig, n_points = 1000, closure = "warp"):
