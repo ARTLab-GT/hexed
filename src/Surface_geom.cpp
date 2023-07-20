@@ -3,6 +3,27 @@
 namespace hexed
 {
 
+Compound_geom::Compound_geom(std::vector<Surface_geom*> geoms)
+: components(geoms.begin(), geoms.end())
+{}
+
+Mat<> Compound_geom::nearest_point(Mat<> point)
+{
+  math::Nearest_point nearest(point);
+  for (auto& comp : components) nearest.merge(comp->nearest_point(point));
+  return nearest.point();
+}
+
+std::vector<double> Compound_geom::intersections(Mat<> point0, Mat<> point1)
+{
+  std::vector<double> inters;
+  for (auto& comp : components) {
+    auto comp_inters = comp->intersections(point0, point1);
+    inters.insert(inters.end(), comp_inters.begin(), comp_inters.end());
+  }
+  return inters;
+}
+
 Hypersphere::Hypersphere(Mat<> center, double radius)
 : c{center}, r{radius}
 {}

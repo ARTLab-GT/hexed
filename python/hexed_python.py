@@ -212,7 +212,9 @@ def create_solver(
             break
     cpp_geoms = []
     for geom in geometries:
-        if isinstance(geom, np.ndarray):
+        if isinstance(geom, cpp.Surface_geom):
+                cpp_geoms.append(geom)
+        elif isinstance(geom, np.ndarray):
             if len(geom.shape) != 2: raise User_error("geometry array must be 2D")
             if (geom.shape[1] == 2):
                 cpp_geoms.append(cpp.Simplex_geom2(cpp.segments(to_matrix(geom))))
