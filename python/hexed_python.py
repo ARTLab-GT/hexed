@@ -230,7 +230,8 @@ def create_solver(
     if solver.mesh().n_elements() == 0: raise User_error("geometry addition deleted all elements")
     crit = ref_criterion(final_resolution)
     for i_refine in range(final_max_iters):
-        solver.set_res_bad_surface_rep(solver.mesh().surface_bc_sn())
+        inv_jac = cpp.Jac_inv_det_func()
+        solver.set_resolution_badness(cpp.Elem_nonsmooth(inv_jac))
         if not solver.mesh().update(crit):
             break
         for i_smooth in range(n_smooth):
