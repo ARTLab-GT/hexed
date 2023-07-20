@@ -281,6 +281,8 @@ def iteration(self):
 @def_method(cpp.Solver_interface)
 def setup(self):
     r"""! \brief prints `iteration_status().header()` \memberof hexed::Solver_interface """
+    with open(f"{self.working_dir}/runtime_cmd.py", "w") as commands:
+        commands.write("")
     print(self.iteration_status().header())
 
 @def_method(cpp.Solver_interface)
@@ -304,6 +306,28 @@ def visualize(self):
 def callback(self):
     r"""! \brief does nothing \memberof hexed::Solver_interface """
     pass
+
+@def_method(cpp.Solver_interface)
+def terminate(self):
+    @self.method
+    def done(self):
+        return True
+
+@def_method(cpp.Solver_interface)
+def exec_runtime(self):
+    try:
+        with open(f"{self.working_dir}/runtime_cmd.py", "r") as commands:
+            exec(commands.read())
+    except SyntaxError as e:
+        print(f"""warning: error while processing `runtime_cmd.py`:
+  {e}
+    {e.text[:-1]}
+    {' '*(e.offset - 1)}^
+SyntaxError: ignoring command and continuing""")
+    except FileNotFoundError:
+        print(f"warning: file `{self.working_dir}/runtime_cmd.py` not found")
+    with open(f"{self.working_dir}/runtime_cmd.py", "w") as commands:
+        commands.write("")
 
 @def_method(cpp.Solver_interface)
 def done(self):
@@ -349,6 +373,7 @@ def run(self):
         self.report()
         self.visualize()
         self.callback()
+        self.exec_runtime()
         if self.done():
             break
     self.cleanup()
