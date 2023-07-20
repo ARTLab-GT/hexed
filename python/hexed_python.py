@@ -309,12 +309,24 @@ def callback(self):
 
 @def_method(cpp.Solver_interface)
 def terminate(self):
+    r"""! Instructs the solver to terminate at the end of the iteration by overriding `done()`. \memberof hexed::Solver_interface """
     @self.method
     def done(self):
         return True
 
 @def_method(cpp.Solver_interface)
 def exec_runtime(self):
+    r"""! \brief Executes runtime commands from a file.
+    \details Looks for a file `runtime_cmd.py` in the solver's working directory (which defaults to `./hexed_out`)
+    and executes any code therein.
+    This can be useful for writing flow visualization or other data outside of the normal schedule
+    or changing the termination condition.
+    The code is executed in the scope of this method body, so you can access the `Solver_interface` object as `self`.
+    \warning Exceptions raised in your code will kill the simulation!
+    `SyntaxError` and `FileNotFoundError`, however, are handled.
+    Double-check your commands for mistakes!
+    \memberof hexed::Solver_interface
+    """
     try:
         with open(f"{self.working_dir}/runtime_cmd.py", "r") as commands:
             exec(commands.read())
