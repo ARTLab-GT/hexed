@@ -2,6 +2,7 @@ import cppyy
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+import pandas as pd
 from hexed_py_config import *
 
 ## \namespace hexed_python
@@ -226,9 +227,17 @@ def create_solver(
         elif isinstance(geom, np.ndarray):
             if len(geom.shape) != 2: raise User_error("geometry array must be 2D")
             if (geom.shape[1] == 2):
-                cpp_geoms.append(cpp.Simplex_geom2(cpp.segments(to_matrix(geom))))
+                cpp_geoms.append(cpp.Simplex_geom[2](cpp.segments(to_matrix(geom))))
             else:
                 raise User_error("geometry array must have 2 columns")
+        elif isinstance(geom, str):
+            ext = geom.split(".")[-1].lower()
+            if ext in ["csv", "txt"]:
+                try:
+                    data = pd.read_csv(geom, sep = r"[, \t]+", header = None, engine = "python").iloc[:, [0, 1]].to_numpy()
+                except Exception as e:
+                    raise User_error(f"failed to parse text file `{geom}`") from e
+                cpp_geoms.append(cpp.Simplex_geom[2](cpp.segments(to_matrix(data))))
         else:
             raise User_error(f"could not interpret {type(geom)} as one of the supported geometry formats")
     if cpp_geoms:
@@ -560,6 +569,8 @@ def flow_state(density = None, pressure = None, temperature = None, altitude = N
             if mach is not None:
                 speed = mach*(heat_ratio*pressure/density)**.5
             velocity = speed*direction
+        else:
+            velocity = np.array(velocity).astype(np.float64)
     except Exception as e:
         raise User_error("underdetermined flow state specification") from e
     return np.concatenate([density*velocity, [density, pressure/(heat_ratio - 1.) + .5*density*velocity@velocity]])
