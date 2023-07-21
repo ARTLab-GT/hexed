@@ -118,7 +118,7 @@ def create_solver(
         n_dim, row_size,
         min_corner, max_corner,
         freestream = None, init_cond = None, extremal_bcs = None,
-        geometries = [], flood_fill_start = None, n_smooth = 10,
+        geom = None, flood_fill_start = None, n_smooth = 10,
         init_resolution = 3, init_max_iters = 1000,
         final_resolution = False, final_max_iters = 1000,
         local_time_stepping = True,
@@ -221,36 +221,12 @@ def create_solver(
     for i_refine in range(init_max_iters):
         if not solver.mesh().update(crit):
             break
-    cpp_geoms = []
-    for geom in geometries:
-        if isinstance(geom, cpp.Surface_geom):
-                cpp_geoms.append(geom)
-        elif isinstance(geom, np.ndarray):
-            if len(geom.shape) != 2: raise User_error("geometry array must be 2D")
-            if (geom.shape[1] == 2):
-                cpp_geoms.append(cpp.Simplex_geom[2](cpp.segments(to_matrix(geom))))
-            else:
-                raise User_error("geometry array must have 2 columns")
-        elif isinstance(geom, str):
-            ext = geom.split(".")[-1].lower()
-            if ext in ["csv", "txt"]:
-                try:
-                    data = pd.read_csv(geom, sep = r"[, \t]+", header = None, engine = "python").iloc[:, [0, 1]].to_numpy()
-                except Exception as e:
-                    raise User_error(f"failed to parse text file `{geom}`") from e
-                cpp_geoms.append(cpp.Simplex_geom[2](cpp.segments(to_matrix(data))))
-            elif ext in ["igs", "iges", "stp", "step"]:
-                shape = cpp.Occt_geom.read(geom)
-                cpp_geoms.append(cpp.Occt_geom(shape, n_dim))
-            else:
-                raise User_error(f"file extension `.{ext}` not supported")
-        else:
-            raise User_error(f"could not interpret {type(geom)} as one of the supported geometry formats")
-    if cpp_geoms:
-        if len(cpp_geoms) == 1:
-            geom = cpp_geoms[0]
-        else:
-            geom = cpp.Compound_geom([cpp.new_copy(geom) for geom in cpp_geoms])
+    if geom is not None:
+        if isinstance(geom, list) or isinstance(geom, tuple):
+            for g in geom:
+                if not isinstance(g, cpp.Surface_geom): raise User_error("geometries must be instances of `hexed::Surface_geom`")
+            geom = cpp.Compound_geom([cpp.new_copy(g) for g in geom])
+        if not isinstance(geom, cpp.Surface_geom): raise User_error("geometry must be an instance of `hexed::Surface_geom`")
         if flood_fill_start is None:
             flood_fill_start = min_corner + 1e-6*(max_corner - min_corner)
         solver.mesh().set_surface(cpp.new_move(geom), cpp.new_copy(cpp.Nonpenetration()), to_matrix(flood_fill_start))
@@ -434,6 +410,37 @@ def run(self):
     for i in iters(): pass
     self.cleanup()
 ## \}
+
+
+def make_geom(geom, n_dim = None, n_div = 1000):
+    if isinstance(geom, cpp.Surface_geom):
+        return geom
+    elif isinstance(geom, np.ndarray):
+        if len(geom.shape) != 2: raise User_error("geometry array must be 2D")
+        if (geom.shape[1] == 2):
+            return cpp.Simplex_geom[2](cpp.segments(to_matrix(geom)))
+        else:
+            raise User_error("geometry array must have 2 columns")
+    elif isinstance(geom, str):
+        ext = geom.split(".")[-1].lower()
+        if ext in ["csv", "txt"]:
+            try:
+                data = pd.read_csv(geom, sep = r"[, \t]+", header = None, engine = "python").iloc[:, [0, 1]].to_numpy()
+            except Exception as e:
+                raise User_error(f"failed to parse text file `{geom}`") from e
+            return cpp.Simplex_geom[2](cpp.segments(to_matrix(data)))
+        elif ext in ["igs", "iges", "stp", "step"]:
+            shape = cpp.Occt_geom.read(geom)
+            if n_dim == 2:
+                return cpp.Simplex_geom[2](cpp.segments(shape, n_div))
+            elif n_dim == 3:
+                return cpp.Occt_geom(shape, n_dim)
+            else:
+                raise User_error("must specify `n_dim` as either 2 or 3")
+        else:
+            raise User_error(f"file extension `.{ext}` not supported")
+    else:
+        raise User_error(f"could not interpret {type(geom)} as one of the supported geometry formats")
 
 def naca(desig, n_points = 1000, closure = "warp"):
     r"""! \brief Constructs a NACA 4-digit airfoil geometry.
