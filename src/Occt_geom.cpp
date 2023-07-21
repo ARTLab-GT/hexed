@@ -83,8 +83,10 @@ Mat<> Occt_geom::nearest_point(Mat<> point)
     // iterate through curves and find which ones has the nearest point
     for (auto& curve : curves) {
       Geom2dAPI_ProjectPointOnCurve proj(occt_point, curve);
-      gp_Pnt2d occt_candidate = proj.NearestPoint();
-      nearest.merge(Mat<2>{occt_candidate.X(), occt_candidate.Y()});
+      if(proj.NbPoints()) {
+        gp_Pnt2d occt_candidate = proj.NearestPoint();
+        nearest.merge(Mat<2>{occt_candidate.X(), occt_candidate.Y()});
+      }
     }
   } else {
     gp_Pnt occt_point(scaled(0), scaled(1), scaled(2));
