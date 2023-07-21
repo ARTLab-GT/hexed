@@ -139,6 +139,7 @@ def create_solver(
                     Must satisfy `2 <= row_size <= hexed::config::max_row_size`
     \param min_corner (array-like) minimum corner of the mesh bounding box. Must have size `n_dim`.
     \param max_corner (array-like) maximum corner of the mesh bounding box. Must have size `n_dim`.
+                      At time of writing, only square/cubic domains are supported -- if your domain is not square, `max_corner` will be adjusted to make it so.
     \param freestream (array-like or None) Specify a freestream state which your initial and boudnary conditions can (but do not have to) reference.
                       If `freestream` is not specified, then `init_cond` and `extremal_bcs` must be specified.
     \param init_cond Specifies the state variables at time 0 in the \ref state_vector "momentum-density-energy order". Can be:
@@ -152,17 +153,7 @@ def create_solver(
                         - a class deriving from `hexed::Flow_bc` which will be constructed from `freestream`
                         - a numpy array (has to be an instance of `np.ndarray`) which will be used to construct a `hexed::Riemann_invariants`
                         - None, in which case it defaults to `hexed::Riemann_invariants(freestream)`
-    \param geometries (list or tuple) List of surface geometries to mesh, in one of the following formats:
-                      - An instance of `hexed::Surface_geom`.
-                      - `n*2` numpy array representing the nodes of a polygonal curve. 2D only.
-                      - A string containing a file name in one of the following formats (inferred from file extension which is not case sensitive):
-                      - `.igs`, `.iges`: IGES CAD file
-                      - `.stp`, `.step`: STEP CAD file
-                      - `.stl`: Stereolithography discrete triangle representation (ASCII or binary). 3D only.
-                      - `.csv, .txt`: Text delimited by some combintion of commas, spaces, and/or tabs
-                         (delimiter is the [regex](https://docs.python.org/3/library/re.html) `[, \t]+`).
-                         Must contain two columns representing nodes of a 2D polygonal curve.
-                         Any additional columns beyond the first two will be ignored. 2D only.
+    \param geom (`hexed::Surface_geom` or list/tuple thereof) Geometry(s) to mesh. See `make_geom()` for a convenient way to construct `Surface_geom` objects.
     \param flood_fill_start (array-like or `None`) Seed point for flood fill algorithm.
                             That is, if any geometry in `geometries` divides the domain into disjoint regions, the region containing this point will be meshed.
                             Must have size `n_dim`.
@@ -413,6 +404,26 @@ def run(self):
 
 
 def make_geom(geom, n_dim = None, n_div = 1000):
+    r"""! \brief Convert a geometry representation from various input formats to a `hexed::Surface_geom` object.
+    \param geom (list or tuple) List of surface geometries to mesh, in one of the following formats:
+                - An instance of `hexed::Surface_geom`.
+                - `n*2` numpy array representing the nodes of a polygonal curve. 2D only.
+                - A string containing a file name in one of the following formats (inferred from file extension which is not case sensitive):
+                  - CAD formats: Require `n_dim` to be specified, since CAD can be 2D or 3D. If 2D, `n_div` must also be specified.
+                    The geometry will be discretized into polygonal curves, with `n_div` segments per curve.
+                    - `.igs`, `.iges`: [IGES format](https://en.wikipedia.org/wiki/IGES#File_format)
+                    - `.stp`, `.step`: [STEP format](https://en.wikipedia.org/wiki/ISO_10303-21)
+                  - `.stl`: Stereolithography discrete triangle representation (ASCII or binary). 3D only.
+                  - `.csv, .txt`: Text delimited by some combintion of commas, spaces, and/or tabs
+                     (delimiter is the [regex](https://docs.python.org/3/library/re.html) `[, \t]+`).
+                     Must contain two columns representing nodes of a 2D polygonal curve.
+                     Any additional columns beyond the first two will be ignored. 2D only.
+    \param n_dim (int or None) If provided, specifies the number of dimensions to interpret the geometry as.
+                 If 2, considers only curves and projects them to the \f$ x_2 = 0 \f$ (aka xy) plane.
+                 If 3, considers only surfaces.
+                 See above for which formats require this argument -- for most, the dimensionality is inferred automatically.
+    \param n_div Number of subdivisions for discretizing 2D CAD inputs.
+    """
     if isinstance(geom, cpp.Surface_geom):
         return geom
     elif isinstance(geom, np.ndarray):
