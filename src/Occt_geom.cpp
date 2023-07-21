@@ -52,18 +52,22 @@ void iterate(const TopoDS_Shape& shape, TopAbs_ShapeEnum shape_type, std::functi
   for (TopoDS_Iterator it(shape); it.More(); it.Next()) iterate(it.Value(), shape_type, callback);
 }
 
+void collect_curves(std::vector<opencascade::handle<Geom2d_Curve>>& curves, const TopoDS_Shape& shape)
+{
+  opencascade::handle<Geom_Plane> plane = GC_MakePlane(0., 0., 1., 0.); // x_2 = 0 plane
+  TopLoc_Location location;
+  double unused [2] {}; // used by `CurveOnPlane` to return values we don't care about
+  iterate(shape, TopAbs_EDGE, [&](const TopoDS_Shape& s){
+    TopoDS_Edge edge = TopoDS::Edge(s);
+    curves.push_back(BRep_Tool::CurveOnPlane(edge, plane, location, unused[0], unused[1]));
+  });
+}
+
 Occt_geom::Occt_geom(const TopoDS_Shape& shape, int n_dim)
 : nd{n_dim}
 {
   if (nd == 2) {
-    // collect all curves
-    opencascade::handle<Geom_Plane> plane = GC_MakePlane(0., 0., 1., 0.); // x_2 = 0 plane
-    TopLoc_Location location;
-    double unused [2] {}; // used by `CurveOnPlane` to return values we don't care about
-    iterate(shape, TopAbs_EDGE, [&](const TopoDS_Shape& s){
-      TopoDS_Edge edge = TopoDS::Edge(s);
-      curves.push_back(BRep_Tool::CurveOnPlane(edge, plane, location, unused[0], unused[1]));
-    });
+    collect_curves(curves, shape);
   } else if (nd == 3) {
     // collect all surfaces
     iterate(shape, TopAbs_FACE, [&](const TopoDS_Shape& s){
@@ -240,6 +244,29 @@ opencascade::handle<Poly_Triangulation> Occt_geom::read_stl(std::string file_nam
     poly->SetNode(i_node + 1, poly->Node(i_node + 1).XYZ()*scale*1e3);
   }
   return poly;
+}
+
+std::vector<Mat<2, 2>> segments(const TopoDS_Shape& shape, int n_segments)
+{
+  std::vector<Mat<2, 2>> segs;
+  std::vector<opencascade::handle<Geom2d_Curve>> curves;
+  collect_curves(curves, shape);
+  for (auto& curve : curves) {
+    Mat<2> vec;
+    gp_Pnt2d pnt = curve->Value(curve->FirstParameter());
+    vec << pnt.X(), pnt.Y();
+    for (int i_seg = 0; i_seg < n_segments; ++i_seg) {
+      Mat<2, 2> seg;
+      seg(all, 0) = vec;
+      double interp = (i_seg + 1.)/n_segments;
+      pnt = curve->Value((1 - interp)*curve->FirstParameter() + interp*curve->LastParameter());
+      vec << pnt.X(), pnt.Y();
+      seg(all, 1) = vec;
+      seg *= 1e-3; // convert to m
+      segs.push_back(seg);
+    }
+  }
+  return segs;
 }
 
 }

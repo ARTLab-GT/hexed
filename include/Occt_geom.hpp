@@ -98,10 +98,15 @@ class Occt_geom : public Surface_geom
   static opencascade::handle<Poly_Triangulation> read_stl(std::string file_name, double scale = meter);
 };
 
-//! \brief Creates an array of simplices that can be used to construct a `Simplex_geom<3>`.
-//! \details A `Poly_Triangulation` can be obtained from `Occt_geom::read_stl`.
-//! \relatesalso Simplex_geom
+/*! \brief Creates an array of simplices that can be used to construct a `Simplex_geom<3>`.
+ * \details A `Poly_Triangulation` can be obtained from `Occt_geom::read_stl`.
+ * \relates Simplex_geom
+ */
 std::vector<Mat<3, 3>> triangles(opencascade::handle<Poly_Triangulation>);
+
+//! \brief Discretizes the curves in a TopoDS_Shape into segments of a polygonal line.
+//! \relates Simplex_geom
+std::vector<Mat<2, 2>> segments(const TopoDS_Shape&, int n_segments);
 
 }
 #endif
