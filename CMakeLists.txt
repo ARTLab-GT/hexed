@@ -70,8 +70,6 @@ endif()
 # configure files
 configure_file(hexed-config.cmake.in hexed-config.cmake)
 configure_file(hexed_config.hpp.in include/auto/hexed_config.hpp)
-configure_file(hexed_py_config.py.in hexed_py_config.py)
-configure_file(python/hexed_python.py hexed.py)
 file(GLOB PYTHON_FILES CONFIGURE_DEPENDS ${CMAKE_BINARY_DIR}/*.py)
 file(CREATE_LINK ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/include/hexed SYMBOLIC)
 file(COPY_FILE ${CMAKE_SOURCE_DIR}/test/ellipsoid.igs ${CMAKE_BINARY_DIR}/ellipsoid.igs)
@@ -160,6 +158,15 @@ add_subdirectory(demo)
 if (build_tests)
     add_subdirectory(test)
 endif()
+
+# configure python files
+get_target_property(CPPYY_INCLUDE hexed INCLUDE_DIRECTORIES)
+if (use_occt)
+    get_target_property(OCCT_INCLUDE_DIRECTORIES TKBRep INTERFACE_INCLUDE_DIRECTORIES)
+    set(CPPYY_INCLUDE ${CPPYY_INCLUDE};${OCCT_INCLUDE_DIRECTORIES})
+endif()
+configure_file(hexed_py_config.py.in hexed_py_config.py)
+configure_file(python/hexed_python.py hexed.py)
 
 # run cppcheck
 if (use_cppcheck)

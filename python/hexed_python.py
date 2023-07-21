@@ -29,9 +29,10 @@ for path in include_paths:
     cppyy.add_include_path(path)
 for lib in libraries:
     cppyy.load_library(lib)
-cppyy.include("hexed/math.hpp")
-cppyy.include("hexed/Solver_interface.hpp")
-cppyy.include("hexed/Simplex_geom.hpp")
+cppyy.include("math.hpp")
+cppyy.include("Solver_interface.hpp")
+cppyy.include("Simplex_geom.hpp")
+cppyy.include("Occt_geom.hpp")
 ## \cond
 cpp = cppyy.gbl.hexed
 std = cppyy.gbl.std
@@ -238,6 +239,11 @@ def create_solver(
                 except Exception as e:
                     raise User_error(f"failed to parse text file `{geom}`") from e
                 cpp_geoms.append(cpp.Simplex_geom[2](cpp.segments(to_matrix(data))))
+            elif ext in ["igs", "iges", "stp", "step"]:
+                shape = cpp.Occt_geom.read(geom)
+                cpp_geoms.append(cpp.Occt_geom(shape, n_dim))
+            else:
+                raise User_error(f"file extension `.{ext}` not supported")
         else:
             raise User_error(f"could not interpret {type(geom)} as one of the supported geometry formats")
     if cpp_geoms:
