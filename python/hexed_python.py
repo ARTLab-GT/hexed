@@ -235,7 +235,7 @@ def create_solver(
             inv_jac = cpp.Jac_inv_det_func()
             solver.set_resolution_badness(cpp.Elem_nonsmooth(inv_jac))
         elif resolution_metric == "continuity":
-            solver.set_res_bad_surf_rep()
+            solver.set_res_bad_surface_rep(solver.mesh().surface_bc_sn())
         else:
             raise User_error(f"unrecognized value {resolution_metric} for parameter resolution_metric")
         if not solver.mesh().update(crit):
