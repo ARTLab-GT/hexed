@@ -38,4 +38,7 @@ TEST_CASE("Stopwatch")
   hexed::Stopwatch sum = watch + watch1;
   REQUIRE(sum.time() == Catch::Approx(.4).epsilon(.1));
   REQUIRE(sum.n_calls() == 2);
+  watch += sum;
+  REQUIRE(watch.time() == Catch::Approx(.6).epsilon(.1));
+  REQUIRE(watch.n_calls() == 3);
 }

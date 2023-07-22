@@ -21,7 +21,7 @@ class Stopwatch_tree
   std::map<std::string, Stopwatch_tree> children;
   int work_units_completed = 0;
   std::string work_unit_name;
-  Stopwatch_tree(std::string work_unit_name_arg);
+  Stopwatch_tree(std::string work_unit_name_arg, std::map<std::string, Stopwatch_tree> init_children = {});
   //! returns a string with a human-readable summary of the timing data
   std::string report() const;
 };

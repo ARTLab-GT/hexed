@@ -6,18 +6,31 @@ namespace hexed
 template<>
 Mat<> Simplex_geom<2>::nearest_point(Mat<> point)
 {
+  #if HEXED_OBSESSIVE_TIMING
+  Stopwatch sw;
+  sw.start();
+  #endif
   math::Nearest_point<2> nearest(point);
   for (Mat<2, 2> sim : simplices) {
     nearest.merge(math::proj_to_segment({sim(all, 0), sim(all, 1)}, point));
   }
+  #if HEXED_OBSESSIVE_TIMING
+  sw.pause();
+  stopwatch.stopwatch += sw;
+  stopwatch.children.at("nearest_point").stopwatch += sw;
+  #pragma omp atomic update
+  ++stopwatch.children.at("nearest_point").work_units_completed;
+  #endif
   return nearest.point();
 }
 
 template <>
 Mat<> Simplex_geom<3>::nearest_point(Mat<> point)
 {
+  #if HEXED_OBSESSIVE_TIMING
   Stopwatch sw;
   sw.start();
+  #endif
   math::Nearest_point<3> nearest(point);
   for (Mat<3, 3> sim : simplices) {
     // try projecting the point to the plane of the triangle
@@ -35,9 +48,13 @@ Mat<> Simplex_geom<3>::nearest_point(Mat<> point)
       }
     }
   }
+  #if HEXED_OBSESSIVE_TIMING
   sw.pause();
+  stopwatch.stopwatch += sw;
+  stopwatch.children.at("nearest_point").stopwatch += sw;
   #pragma omp atomic update
-  global_hacks::numbers[0] += sw.time();
+  ++stopwatch.children.at("nearest_point").work_units_completed;
+  #endif
   return nearest.point();
 }
 

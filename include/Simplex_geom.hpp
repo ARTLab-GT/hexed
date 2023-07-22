@@ -2,7 +2,7 @@
 #define HEXED_SIMPLEX_GEOM_HPP_
 
 #include "Surface_geom.hpp"
-#include "global_hacks.hpp"
+#include "Stopwatch_tree.hpp"
 
 namespace hexed
 {
@@ -20,6 +20,9 @@ namespace hexed
 template <int n_dim>
 class Simplex_geom : public Surface_geom
 {
+  #if HEXED_OBSESSIVE_TIMING
+  static Stopwatch_tree stopwatch; // for benchmarking projection and intersection calculation
+  #endif
   public:
   std::vector<Mat<n_dim, n_dim>> simplices;
   Simplex_geom(const std::vector<Mat<n_dim, n_dim>>&  sims) : simplices{sims} {}
@@ -38,8 +41,10 @@ class Simplex_geom : public Surface_geom
    */
   std::vector<double> intersections(Mat<> point0, Mat<> point1) override
   {
+    #if HEXED_OBSESSIVE_TIMING
     Stopwatch sw;
     sw.start();
+    #endif
     std::vector<double> inters;
     Mat<n_dim> diff = point1 - point0;
     for (Mat<n_dim, n_dim> sim : simplices) {
@@ -52,12 +57,31 @@ class Simplex_geom : public Surface_geom
       Eigen::Array<double, n_dim - 1, 1> arr = soln(Eigen::seqN(1, n_dim - 1)).array();
       if ((arr >= 0.).all() && arr.sum() <= 1.) inters.push_back(soln(0));
     }
+    #if HEXED_OBSESSIVE_TIMING
     sw.pause();
+    stopwatch.stopwatch += sw;
+    stopwatch.children.at("intersections").stopwatch += sw;
     #pragma omp atomic update
-    global_hacks::numbers[1] += sw.time();
+    ++stopwatch.children.at("intersections").work_units_completed;
+    #endif
     return inters;
   }
+
+  //! if compiled with `HEXED_OBSESSIVE_TIMING ON`, return a performance report. Otherwise, empty string.
+  static std::string performance_report()
+  {
+    #if HEXED_OBSESSIVE_TIMING
+    return stopwatch.report();
+    #else
+    return "";
+    #endif
+  }
 };
+
+#if HEXED_OBSESSIVE_TIMING
+template <int n_dim>
+Stopwatch_tree Simplex_geom<n_dim>::stopwatch("", {{"nearest_point", Stopwatch_tree("projection")}, {"intersections", Stopwatch_tree("intersection")}}); // for benchmarking projection and intersection calculation
+#endif
 
 template<> Mat<> Simplex_geom<2>::nearest_point(Mat<> point);
 template<> Mat<> Simplex_geom<3>::nearest_point(Mat<> point);

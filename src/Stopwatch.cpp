@@ -52,7 +52,11 @@ Stopwatch Stopwatch::operator+(Stopwatch other) const
 
 Stopwatch& Stopwatch::operator+=(Stopwatch other)
 {
-  *this = *this + other;
+  HEXED_ASSERT(!running() && !other.running(), "can't add `Stopwatch`s while running");
+  #pragma omp atomic update
+  t += other.t;
+  #pragma omp atomic update
+  n += other.n;
   return *this;
 }
 

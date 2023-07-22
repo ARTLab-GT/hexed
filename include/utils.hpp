@@ -2,6 +2,7 @@
 #define HEXED_UTILS_HPP_
 
 #include <iostream>
+#include <vector>
 
 namespace hexed
 {
