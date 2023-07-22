@@ -14,4 +14,3 @@ VERBATIM_HEADERS = NO
 TAGFILES = @CMAKE_SOURCE_DIR@/doc/occt_short.tag=https://dev.opencascade.org/doc/refman/html \
            @CMAKE_SOURCE_DIR@/doc/Eigen.doxytags=https://eigen.tuxfamily.org/dox
 EXAMPLE_PATH = @CMAKE_SOURCE_DIR@
-HTML_EXTRA_STYLESHEET = @CMAKE_SOURCE_DIR@/doc/style.css

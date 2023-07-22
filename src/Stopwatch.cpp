@@ -41,4 +41,19 @@ double Stopwatch::time() const
   return t;
 }
 
+Stopwatch Stopwatch::operator+(Stopwatch other) const
+{
+  HEXED_ASSERT(!running() && !other.running(), "can't add `Stopwatch`s while running");
+  Stopwatch sw;
+  sw.t = t + other.t;
+  sw.n = n + other.n;
+  return sw;
+}
+
+Stopwatch& Stopwatch::operator+=(Stopwatch other)
+{
+  *this = *this + other;
+  return *this;
+}
+
 };

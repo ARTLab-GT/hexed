@@ -37,6 +37,8 @@ class Stopwatch
   bool running() const; //!< `false` if the stopwatch has been `stop`ped since the last time it was `start`ed
   int n_calls() const; //!< number of times the stopwatch has been `stop`ped.
   double time() const; //!< total elapsed time between `start()`s and `stop()`s since the last `reset()`
+  Stopwatch operator+(Stopwatch other) const; //! adds `time` and `n_calls`, throws if either is running
+  Stopwatch& operator+=(Stopwatch other);
 };
 
 }

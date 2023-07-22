@@ -28,6 +28,7 @@ constexpr int n_threads = @n_threads@; //!< number of threads with which to exec
 #define HEXED_USE_TECPLOT HEXED_@use_tecplot@
 #define HEXED_USE_NLOPT HEXED_@use_nlopt@
 #define HEXED_USE_OCCT HEXED_@use_occt@
+#define HEXED_OBSESSIVE_TIMING HEXED_@obsessive_timing@
 //!\}
 
 }

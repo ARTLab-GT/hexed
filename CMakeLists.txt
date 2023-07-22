@@ -38,6 +38,7 @@ option(use_tecplot "include capability to use tecplot for plotting" ON)
 option(use_cppcheck "use the cppcheck static analysis tool (requires cppcheck)" OFF)
 option(use_nlopt "enable features that require root finding with NLopt" OFF)
 option(use_occt "enable CAD geometry processing with OpenCASCADE Technology" ON)
+option(obsessive_timing "turn on additional timing measurements, potentially to the point of slowing down the code" OFF)
 
 # determine whether to compile with sanitizers
 if (sanitize)
