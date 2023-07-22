@@ -59,9 +59,6 @@ class Simplex_geom : public Surface_geom
   }
 };
 
-typedef Simplex_geom<2> Simplex_geom2; //!< typedef for cython bindings
-typedef Simplex_geom<3> Simplex_geom3; //!< typedef for cython bindings
-
 template<> Mat<> Simplex_geom<2>::nearest_point(Mat<> point);
 template<> Mat<> Simplex_geom<3>::nearest_point(Mat<> point);
 

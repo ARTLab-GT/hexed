@@ -3,6 +3,7 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 import pandas as pd
+import os
 from hexed_py_config import *
 
 ## \namespace hexed_python
@@ -120,7 +121,7 @@ def create_solver(
         freestream = None, init_cond = None, extremal_bcs = None,
         geom = None, flood_fill_start = None, n_smooth = 10,
         init_resolution = 3, init_max_iters = 1000,
-        final_resolution = False, final_max_iters = 1000,
+        final_resolution = False, final_max_iters = 1000, resolution_metric = "smoothness",
         local_time_stepping = True,
     ):
     r"""! \brief Creates a `hexed::Solver_interface` object with a premade tree mesh.
@@ -172,6 +173,8 @@ def create_solver(
                             Before each refinement iteration, the `hexed::Element::resolution_badness` will be set to a value
                             which reflects the quality of the surface representation (large number means surface is poorly resolved).
     \param final_max_iters (int) Maximum number of refinement iterations to execute after geometry is inserted.
+    \param resolution_metric (string) "smoothness" to evaluate resolution badness based on high-order components of element Jacobian (better for high-order)
+                             or "continuity" to evaluate it based on inter-element continuity of the surface normal (better for low-order).
     \param local_time_stepping Whether to use LTS.
     """
     if not 1 <= int(n_dim) <= 3: raise User_error("invalid `n_dim`")
@@ -228,8 +231,13 @@ def create_solver(
     crit = ref_criterion(final_resolution)
     for i_refine in range(final_max_iters):
         print(f"refinement iteration {i_refine}")
-        inv_jac = cpp.Jac_inv_det_func()
-        solver.set_resolution_badness(cpp.Elem_nonsmooth(inv_jac))
+        if resolution_metric == "smoothness":
+            inv_jac = cpp.Jac_inv_det_func()
+            solver.set_resolution_badness(cpp.Elem_nonsmooth(inv_jac))
+        elif resolution_metric == "continuity":
+            solver.set_res_bad_surf_rep()
+        else:
+            raise User_error(f"unrecognized value {resolution_metric} for parameter resolution_metric")
         if not solver.mesh().update(crit):
             break
         for i_smooth in range(n_smooth):
@@ -415,9 +423,9 @@ def make_geom(geom, n_dim = None, n_div = 1000):
                     - `.stp`, `.step`: [STEP format](https://en.wikipedia.org/wiki/ISO_10303-21)
                   - `.stl`: Stereolithography discrete triangle representation (ASCII or binary). 3D only.
                   - `.csv, .txt`: Text delimited by some combintion of commas, spaces, and/or tabs
-                     (delimiter is the [regex](https://docs.python.org/3/library/re.html) `[, \t]+`).
-                     Must contain two columns representing nodes of a 2D polygonal curve.
-                     Any additional columns beyond the first two will be ignored. 2D only.
+                    (delimiter is the [regex](https://docs.python.org/3/library/re.html) `[, \t]+`).
+                    Must contain two columns representing nodes of a 2D polygonal curve.
+                    Any additional columns beyond the first two will be ignored. 2D only.
     \param n_dim (int or None) If provided, specifies the number of dimensions to interpret the geometry as.
                  If 2, considers only curves and projects them to the \f$ x_2 = 0 \f$ (aka xy) plane.
                  If 3, considers only surfaces.
@@ -433,6 +441,7 @@ def make_geom(geom, n_dim = None, n_div = 1000):
         else:
             raise User_error("geometry array must have 2 columns")
     elif isinstance(geom, str):
+        if not os.path.isfile(geom): raise User_error(f"file {geom} not found")
         ext = geom.split(".")[-1].lower()
         if ext in ["csv", "txt"]:
             try:
@@ -448,6 +457,8 @@ def make_geom(geom, n_dim = None, n_div = 1000):
                 return cpp.Occt_geom(shape, n_dim)
             else:
                 raise User_error("must specify `n_dim` as either 2 or 3")
+        elif ext == "stl":
+            return cpp.Simplex_geom[3](cpp.triangles(cpp.Occt_geom.read_stl(geom)))
         else:
             raise User_error(f"file extension `.{ext}` not supported")
     else:

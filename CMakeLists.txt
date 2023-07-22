@@ -107,7 +107,7 @@ if(build_docs)
             ${CMAKE_BINARY_DIR}/doc_config
             hexed
             python/hexed_python.py
-            script/doxygen_filter_pyx
+            doc/style.css
             doc/header.png
             ${DOC_FILES}
     )
