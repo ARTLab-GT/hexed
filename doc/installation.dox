@@ -6,12 +6,15 @@ If look at these instructions and don't know what I'm talking about, skip to \re
    - [Eigen](https://eigen.tuxfamily.org/)
    - [numpy](https://numpy.org/)
    - [scipy](https://scipy.org/)
+   - [matplotlib](https://matplotlib.org/)
    - [sympy](https://www.sympy.org/en/index.html)
+   - [cppyy](https://cppyy.readthedocs.io/en/latest/)
 -# You are recommended to also install the following dependencies which are required for some optional features:
    - [Tecplot](https://www.tecplot.com/)/[TecIO](https://www.tecplot.com/products/tecio-library/) (required for visualization)
    - [Catch2](https://github.com/catchorg/Catch2) (required for unit testing)
    - [pytecplot](https://www.tecplot.com/docs/pytecplot/) (required by the
      \ref postproc "Python postprocessing script" -- you can probably do without if you want)
+   - [OpenCASCADE Technology](https://dev.opencascade.org/doc/overview/html/index.html)
 -# Create and navigate to a build directory (git will ignore names that start with `build`).
 -# Use `ccmake` to configure build options.
    This project has been configured to show you the available options and their defaults specifically with the `ccmake` interface for CMake.
@@ -28,7 +31,7 @@ If look at these instructions and don't know what I'm talking about, skip to \re
      Open these files in Tecplot and run the macro script `format.mcr` in the Hexed build directory to create a readable visualization.
 
 \section detailed Detailed instructions
-These are some very basic, step-by-step instructions, since Hexed is meant for aerospace engineers, who often aren't programmers.
+Since Hexed is meant for aerospace engineers, who often aren't programmers, this section provides a detailed tutorial on how to build the source.
 These instructions will work on an ARTLab machine.
 If you're working on a different machine, hopefully they will provide some useful troubleshooting hints,
 but you probably won't be able to just blindly follow the instructions.
@@ -41,7 +44,7 @@ please let \ref me know so that this documentation can be improved.
 When you compile and install programs that rely on other programs,
 your system uses so-called *environment variables* to remember where all the different programs are kept.
 It is common to install programs you compile in `/usr/local`.
-However, this requires superuser privileges, which we do not have on the lab machines (I know, I know).
+However, this requires superuser privileges, which we do not have on the lab machines.
 My solution is to install things in `~/.local` instead.
 However, this requires us to edit an environment variable so that the system knows what we're doing.
 Plus, we need to edit a *whole bunch* of environment variables to accommodate Tecplot being a little... *unique*.
@@ -81,6 +84,8 @@ a few 3rd-party libraries.
   - `pip3 install matplotlib`
 - Install the symbolic computation library sympy (used to generate quadrature rules):
   - `pip3 install sympy`
+- Install cppyy for Python bindings to C++ code:
+  - `pip3 install cppyy`
 - Install PyTecplot (Tecplot's Python API):
   - `pip3 install pytecplot`
   - If this doesn't work, don't worry. You just won't be able to run the \ref postproc "Python postprocessing script",
@@ -168,7 +173,7 @@ Now you need to update your Hexed build to include the unit tests, as follows:
 - The code is now compiled. You can run the unit tests with the command `test/unit` (executed from the build directory, still).
 - You should see "All tests passed".
 
-\subsubsection Step 3: build in debug mode
+\subsubsection build_debug Step 3: build in debug mode
 So far, we've only compiled Hexed in Release mode, which is designed to run as fast as possible at the expense of ease of debugging.
 That's what you want when you're running simulations, but if you're in the process of implementing and debugging new features,
 you would probably prefer to be able to use debugging tools like [GDB](https://www.sourceware.org/gdb/) and the
