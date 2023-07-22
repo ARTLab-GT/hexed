@@ -1,3 +1,5 @@
+## \cond
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.special import legendre, hermite, chebyt, jacobi
@@ -77,3 +79,5 @@ for n in range(1, 10):
     for ax in axs.flatten():
         ax.grid(True)
     plt.show()
+
+## \endcond

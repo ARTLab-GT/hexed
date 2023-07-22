@@ -2,6 +2,7 @@
 #include <hexed/Occt_geom.hpp>
 #include <hexed/Simplex_geom.hpp>
 #include <hexed/global_hacks.hpp>
+#include <hexed/Element.hpp>
 #include <iostream>
 
 const double tol = 3e-2;
@@ -26,9 +27,7 @@ int main()
   solver.set_res_bad_surface_rep(6);
   for (int i = 0; i < 8; ++i) {
     printf("starting ref cycle %i\n", i);
-    //if (i < 3) hexed::global_hacks::debug_message["don't extrude"] = 1;
-    solver.mesh().update(ref, hexed::Mesh::never);
-    //if (i < 3) {
+    solver.mesh().update(ref);
     for (int i = 0; i < 4; ++i) solver.mesh().relax();
     solver.calc_jacobian();
     solver.set_res_bad_surface_rep(6);
@@ -36,7 +35,6 @@ int main()
       solver.vis_cart_surf_tecplot(6, hexed::format_str(100, "cart%i", i), hexed::Has_tree());
       solver.visualize_surface_tecplot(6, hexed::Resolution_badness(), hexed::format_str(100, "proj%i", i), 4);
     }
-    //}
   }
   for (int i = 0; i < 4; ++i) solver.mesh().relax();
   solver.calc_jacobian();

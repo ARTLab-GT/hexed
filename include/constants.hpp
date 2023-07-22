@@ -30,6 +30,7 @@ const double avogadro = 6.02214076e23; //!< \brief \f$ mol \f$
 //! \name empirical values
 //!\{
 const double mol_mass_air = 28.9647e-3; //!< \brief \f$ \mu_{air} \f$ (from engineering toolbox)
+const double earth_radius = 6356766; //!< \f$ \f$
 //!\}
 
 #define P(base, exp) math::pow((base), (exp))

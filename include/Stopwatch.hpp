@@ -15,7 +15,7 @@ class Stopwatch
   int n = 0;
   double t = 0.;
   bool r = false;
-  std::chrono::high_resolution_clock::time_point time_started;
+  std::chrono::steady_clock::time_point time_started;
 
   public:
   //! RAII-style operation of a stopwatch
@@ -37,6 +37,8 @@ class Stopwatch
   bool running() const; //!< `false` if the stopwatch has been `stop`ped since the last time it was `start`ed
   int n_calls() const; //!< number of times the stopwatch has been `stop`ped.
   double time() const; //!< total elapsed time between `start()`s and `stop()`s since the last `reset()`
+  Stopwatch operator+(Stopwatch other) const; //! adds `time` and `n_calls`, throws if either is running
+  Stopwatch& operator+=(Stopwatch other);
 };
 
 }

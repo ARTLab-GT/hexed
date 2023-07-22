@@ -8,12 +8,12 @@ void Stopwatch::start()
 {
   HEXED_ASSERT(!r, "attempt to start an already running `Stopwatch`");
   r = true;
-  time_started = std::chrono::high_resolution_clock::now();
+  time_started = std::chrono::steady_clock::now();
 }
 
 void Stopwatch::pause()
 {
-  auto time_stopped = std::chrono::high_resolution_clock::now();
+  auto time_stopped = std::chrono::steady_clock::now();
   HEXED_ASSERT(r, "attempt to pause a `Stopwatch` which is not running");
   r = false;
   ++n;
@@ -39,6 +39,25 @@ int Stopwatch::n_calls() const
 double Stopwatch::time() const
 {
   return t;
+}
+
+Stopwatch Stopwatch::operator+(Stopwatch other) const
+{
+  HEXED_ASSERT(!running() && !other.running(), "can't add `Stopwatch`s while running");
+  Stopwatch sw;
+  sw.t = t + other.t;
+  sw.n = n + other.n;
+  return sw;
+}
+
+Stopwatch& Stopwatch::operator+=(Stopwatch other)
+{
+  HEXED_ASSERT(!running() && !other.running(), "can't add `Stopwatch`s while running");
+  #pragma omp atomic update
+  t += other.t;
+  #pragma omp atomic update
+  n += other.n;
+  return *this;
 }
 
 };

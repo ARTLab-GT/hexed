@@ -22,7 +22,6 @@ std::string Iteration_status::value_string()
   r += format(double_format, flow_time);
   r += format(double_format, time_step);
   r += format("i", fix_admis_iters);
-  r += format(double_format, dt_rat);
   return r;
 }
 
@@ -41,6 +40,21 @@ std::string Iteration_status::report()
   auto r = value_string();
   for (unsigned i = 0; i < sep.size(); ++i) r.pop_back();
   return r;
+}
+
+void Iteration_status::set_time()
+{
+  start = std::chrono::system_clock::now();
+}
+
+double Iteration_status::start_time()
+{
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(start.time_since_epoch()).count()*1e-9;
+}
+
+double Iteration_status::wall_time()
+{
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - start).count()*1e-9;
 }
 
 }

@@ -3,6 +3,7 @@
 #include <hexed/Boundary_condition.hpp>
 #include <hexed/Spacetime_func.hpp>
 #include <hexed/constants.hpp>
+#include <hexed/connection.hpp>
 
 class Dummy : public hexed::Boundary_condition
 {

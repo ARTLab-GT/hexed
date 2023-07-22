@@ -3,6 +3,8 @@ import numpy as np
 from scipy.optimize import fsolve, minimize
 import warnings
 
+## \namespace Basis \brief module for `Basis.Basis`
+
 class Basis:
     r"""!
     Computes numerical parameters for nodal polynmial bases (such as hexed::Gauss_legendre and hexed::Gauss_lobatto)

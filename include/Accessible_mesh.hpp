@@ -86,8 +86,9 @@ class Accessible_mesh : public Mesh
 
   void add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3)) override;
   void set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) override;
-  void update(std::function<bool(Element&)> refine_criterion = always, std::function<bool(Element&)> unrefine_criterion = never) override;
+  bool update(std::function<bool(Element&)> refine_criterion = criteria::always, std::function<bool(Element&)> unrefine_criterion = criteria::never) override;
   void relax(double factor = 0.9) override;
+  inline int surface_bc_sn() override {return surf_bc_sn;}
 
   //! \returns a view of all Bounday_condition objects owned by this mesh
   Vector_view<Boundary_condition&, Boundary_condition> boundary_conditions() {return bound_conds;}
@@ -99,6 +100,7 @@ class Accessible_mesh : public Mesh
   inline Sequence<Refined_face&>& refined_faces() {return ref_face_v;}
   //! \returns a view of all Hanging_vertex_matcher objects owned by this mesh (there will be one for every hanging node connection)
   inline Sequence<Hanging_vertex_matcher&>& hanging_vertex_matchers() {return matcher_v;}
+  inline int n_elements() override {return elements().size();}
   Connection_validity valid() override;
   //! convenience typedef for the Vector_view used to access Vertex objects
   typedef Vector_view<Vertex&, Vertex::Non_transferable_ptr, &ptr_convert<Vertex&, Vertex::Non_transferable_ptr>> vertex_view;

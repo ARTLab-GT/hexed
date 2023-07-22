@@ -1,10 +1,11 @@
-#include <hexed/Solver.hpp>
+#include <hexed/Solver_interface.hpp>
 #include <hexed/Occt_geom.hpp>
 
 void demo(std::string file_extension)
 {
   #if HEXED_USE_OCCT
-  hexed::Solver solver(3, 3, .5);
+  auto ptr = hexed::make_solver(3, 3, .5);
+  auto& solver = *ptr;
   std::vector<hexed::Flow_bc*> bcs;
   for (int i = 0; i < 6; ++i) bcs.push_back(new hexed::Freestream(Eigen::Matrix<double, 5, 1>{0., 0., 0., 1., 1e5}));
   solver.mesh().add_tree(bcs);

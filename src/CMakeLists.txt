@@ -5,6 +5,7 @@ Basis.cpp
 Boundary_condition.cpp
 Boundary_func.cpp
 connection.cpp
+criteria.cpp
 Deformed_element.cpp
 Domain_func.cpp
 Element.cpp

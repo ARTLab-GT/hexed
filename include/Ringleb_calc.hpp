@@ -1,6 +1,8 @@
 #ifndef HEXED_RINGLEB_CALC_HPP_
 #define HEXED_RINGLEB_CALC_HPP_
 
+#include "math.hpp"
+
 namespace hexed
 {
 

@@ -24,6 +24,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX "~/.local" CACHE PATH "where to install hexed" FORCE)
 endif()
+if (NOT DEFINED PYTHON_INSTALL_PREFIX)
+    set(PYTHON_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX}/lib CACHE PATH "where to install Python module" FORCE)
+endif()
 
 option(build_tests "would you like to build the unit tests? (requires Catch2)" OFF)
 option(build_docs "build documentation? (requires doxygen)" OFF)
@@ -35,6 +38,7 @@ option(use_tecplot "include capability to use tecplot for plotting" ON)
 option(use_cppcheck "use the cppcheck static analysis tool (requires cppcheck)" OFF)
 option(use_nlopt "enable features that require root finding with NLopt" OFF)
 option(use_occt "enable CAD geometry processing with OpenCASCADE Technology" ON)
+option(obsessive_timing "turn on additional timing measurements, potentially to the point of slowing down the code" OFF)
 
 # determine whether to compile with sanitizers
 if (sanitize)
@@ -67,6 +71,7 @@ endif()
 # configure files
 configure_file(hexed-config.cmake.in hexed-config.cmake)
 configure_file(hexed_config.hpp.in include/auto/hexed_config.hpp)
+file(GLOB PYTHON_FILES CONFIGURE_DEPENDS ${CMAKE_BINARY_DIR}/*.py)
 file(CREATE_LINK ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/include/hexed SYMBOLIC)
 file(COPY_FILE ${CMAKE_SOURCE_DIR}/test/ellipsoid.igs ${CMAKE_BINARY_DIR}/ellipsoid.igs)
 file(COPY_FILE ${CMAKE_SOURCE_DIR}/test/ellipsoid.stp ${CMAKE_BINARY_DIR}/ellipsoid.stp)
@@ -90,6 +95,9 @@ set(colormap_files
 )
 configure_file(script/hexed-wrapped-post-process.in hexed-wrapped-post-process)
 configure_file(script/format.mcr.in format.mcr)
+
+# build documentation
+file(GLOB DOC_FILES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/doc/*.dox)
 if(build_docs)
     configure_file(doc/config.in ${CMAKE_BINARY_DIR}/doc_config)
     file(COPY doc/header.png DESTINATION doc/html)
@@ -99,14 +107,9 @@ if(build_docs)
         DEPENDS
             ${CMAKE_BINARY_DIR}/doc_config
             hexed
-            doc/contributing.dox
-            doc/conventions.dox
-            doc/geom_fitting.dox
+            python/hexed_python.py
             doc/header.png
-            doc/installation.dox
-            doc/mainpage.dox
-            doc/namespace_hexed.dox
-            doc/visualization.dox
+            ${DOC_FILES}
     )
     add_custom_target(
         documentation ALL
@@ -156,6 +159,15 @@ if (build_tests)
     add_subdirectory(test)
 endif()
 
+# configure python files
+get_target_property(CPPYY_INCLUDE hexed INCLUDE_DIRECTORIES)
+if (use_occt)
+    get_target_property(OCCT_INCLUDE_DIRECTORIES TKBRep INTERFACE_INCLUDE_DIRECTORIES)
+    set(CPPYY_INCLUDE ${CPPYY_INCLUDE};${OCCT_INCLUDE_DIRECTORIES})
+endif()
+configure_file(hexed_py_config.py.in hexed_py_config.py)
+configure_file(python/hexed_python.py hexed.py)
+
 # run cppcheck
 if (use_cppcheck)
     add_custom_command(OUTPUT cppcheck_output.txt COMMAND cppcheck --project=compile_commands.json --inline-suppr > cppcheck_output.txt DEPENDS hexed)
@@ -166,3 +178,4 @@ endif()
 install(PROGRAMS script/hexed-post-process ${CMAKE_BINARY_DIR}/hexed-wrapped-post-process script/hexed-fit-geom TYPE BIN)
 export(TARGETS hexed FILE hexed-targets.cmake)
 install(FILES ${CMAKE_BINARY_DIR}/hexed-config.cmake DESTINATION lib/cmake/hexed)
+install(FILES ${PYTHON_FILES} DESTINATION ${PYTHON_INSTALL_PREFIX})

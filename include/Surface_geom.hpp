@@ -1,6 +1,7 @@
 #ifndef HEXED_SURFACE_GEOM
 #define HEXED_SURFACE_GEOM
 
+#include <memory>
 #include "math.hpp"
 
 namespace hexed
@@ -30,6 +31,20 @@ class Surface_geom
    * Returns the (potentially empty) set of \f$ t \f$ values where the line intersects the surface.
    */
   virtual std::vector<double> intersections(Mat<> point0, Mat<> point1) = 0;
+};
+
+/*! \brief Combines multiple `Surface_geom`s into one.
+ * \details The nearest point to the compound geometry
+ * is the nearest of the nearest points on the component geometries
+ * and the intersection set is the union of the intersection sets of the components.
+ */
+class Compound_geom : public Surface_geom
+{
+  std::vector<std::unique_ptr<Surface_geom>> components;
+  public:
+  Compound_geom(std::vector<Surface_geom*>); //!< acquires ownership
+  Mat<> nearest_point(Mat<> point) override;
+  std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
 };
 
 /*! \brief Represents hypersphere in any dimensionality.

@@ -1,8 +1,9 @@
-#include <hexed/Solver.hpp>
+#include <hexed/Solver_interface.hpp>
 
 int main()
 {
-  hexed::Solver solver(3, 3, 1.);
+  auto ptr = hexed::make_solver(3, 3, 1.);
+  auto& solver = *ptr;
   std::vector<hexed::Flow_bc*> bcs;
   for (int i = 0; i < 6; ++i) bcs.push_back(new hexed::Freestream(Eigen::Matrix<double, 5, 1>{0., 0., 0., 1., 1e5}));
   solver.mesh().add_tree(bcs);
@@ -11,6 +12,7 @@ int main()
   for (int i = 0; i < 3; ++i) solver.mesh().relax();
   solver.calc_jacobian();
   solver.visualize_field_tecplot(hexed::Is_deformed(), "sphere_initial", 4);
+  #if 0
   for (int i = 0; i < 8; ++i) {
     // this criterion will refine all elements with a vertex that is within .1 of the center of the sphere section
     auto criterion = [](hexed::Element& elem){
@@ -31,12 +33,15 @@ int main()
     solver.mesh().valid().assert_valid();
   }
   for (int i = 0; i < 3; ++i) solver.mesh().relax();
+  #endif
   solver.calc_jacobian();
   solver.visualize_field_tecplot(hexed::Is_deformed(), "sphere_refined", 4);
+  #if 0
   for (int i = 0; i < 8; ++i) {
-    solver.mesh().update(hexed::Mesh::never, [](hexed::Element& elem){return elem.refinement_level() > 3;});
+    solver.mesh().update(hexed::criteria::never, [](hexed::Element& elem){return elem.refinement_level() > 3;});
   }
   for (int i = 0; i < 3; ++i) solver.mesh().relax();
   solver.calc_jacobian();
   solver.visualize_field_tecplot(hexed::Is_deformed(), "sphere_unrefined", 4);
+  #endif
 }

@@ -1,6 +1,7 @@
 #include <Qpoint_func.hpp>
 #include <math.hpp>
 #include <utils.hpp>
+#include <Element.hpp>
 
 namespace hexed
 {
@@ -61,6 +62,8 @@ std::vector<double> Advection_state::operator()(Element& elem, const Basis&, int
   }
   return as;
 }
+
+int Art_visc_forcing::n_var(int n_dim) const {return Element::n_forcing;}
 
 std::vector<double> Art_visc_forcing::operator()(Element& elem, const Basis&, int i_qpoint, double time) const
 {

@@ -126,6 +126,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   visc{viscosity_model},
   therm_cond{thermal_conductivity_model}
 {
+  status.set_time();
   // setup categories for performance reporting
   stopwatch.children.emplace("initialize reference", stopwatch.work_unit_name);
   std::string unit = "(element*(time integration stage))";
@@ -166,6 +167,16 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
     }
   }
 }
+
+std::unique_ptr<Solver_interface> make_solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
+                                              Transport_model viscosity_model, Transport_model thermal_conductivity_model)
+{
+  return std::unique_ptr<Solver_interface>(new Solver(n_dim, row_size, root_mesh_size, local_time_stepping, viscosity_model, thermal_conductivity_model));
+}
+
+Mesh& Solver::mesh() {return acc_mesh;}
+Storage_params Solver::storage_params() {return params;}
+const Stopwatch_tree& Solver::stopwatch_tree() {return stopwatch;}
 
 void Solver::relax_vertices(double factor)
 {
@@ -808,15 +819,13 @@ void Solver::synch_extruded_res_bad()
   }
 }
 
-void Solver::update(double dt, bool cfl_driven)
+void Solver::update(double safety_factor, double time_step)
 {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
   auto& elems = acc_mesh.elements();
 
   // compute time step
-  double max = max_dt();
-  if (cfl_driven) dt *= max;
-  else if (dt > max) std::cerr << "warning: time step exceeds CFL limit\n";
+  double dt = std::min(safety_factor*max_dt(), time_step);
 
   // record reference state for Runge-Kutta scheme
   const int n_dof = params.n_dof();
@@ -846,6 +855,11 @@ void Solver::update(double dt, bool cfl_driven)
   stopwatch.work_units_completed += elems.size();
   stopwatch.children.at("cartesian").work_units_completed += acc_mesh.cartesian().elements().size();
   stopwatch.children.at("deformed" ).work_units_completed += acc_mesh.deformed ().elements().size();
+}
+
+void Solver::update_n(int n, double safety_factor, double time_step)
+{
+  for (int i = 0; i < n; ++i) update(safety_factor, time_step);
 }
 
 Iteration_status Solver::iteration_status()

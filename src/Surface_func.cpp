@@ -3,6 +3,7 @@
 #include <Surface_func.hpp>
 #include <Domain_func.hpp>
 #include <Boundary_condition.hpp>
+#include <connection.hpp>
 
 namespace hexed
 {

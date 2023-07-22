@@ -6,18 +6,31 @@ namespace hexed
 template<>
 Mat<> Simplex_geom<2>::nearest_point(Mat<> point)
 {
+  #if HEXED_OBSESSIVE_TIMING
+  Stopwatch sw;
+  sw.start();
+  #endif
   math::Nearest_point<2> nearest(point);
   for (Mat<2, 2> sim : simplices) {
     nearest.merge(math::proj_to_segment({sim(all, 0), sim(all, 1)}, point));
   }
+  #if HEXED_OBSESSIVE_TIMING
+  sw.pause();
+  stopwatch.stopwatch += sw;
+  stopwatch.children.at("nearest_point").stopwatch += sw;
+  #pragma omp atomic update
+  ++stopwatch.children.at("nearest_point").work_units_completed;
+  #endif
   return nearest.point();
 }
 
 template <>
 Mat<> Simplex_geom<3>::nearest_point(Mat<> point)
 {
+  #if HEXED_OBSESSIVE_TIMING
   Stopwatch sw;
   sw.start();
+  #endif
   math::Nearest_point<3> nearest(point);
   for (Mat<3, 3> sim : simplices) {
     // try projecting the point to the plane of the triangle
@@ -35,16 +48,20 @@ Mat<> Simplex_geom<3>::nearest_point(Mat<> point)
       }
     }
   }
+  #if HEXED_OBSESSIVE_TIMING
   sw.pause();
+  stopwatch.stopwatch += sw;
+  stopwatch.children.at("nearest_point").stopwatch += sw;
   #pragma omp atomic update
-  global_hacks::numbers[0] += sw.time();
+  ++stopwatch.children.at("nearest_point").work_units_completed;
+  #endif
   return nearest.point();
 }
 
-std::vector<Mat<2, 2>> simplices(const Mat<dyn, dyn>& points)
+std::vector<Mat<2, 2>> segments(const Mat<dyn, dyn>& points)
 {
   std::vector<Mat<2, 2>> sims;
-  for (unsigned i = 0; i < points.size() - 1; ++i) {
+  for (unsigned i = 0; i < points.cols() - 1; ++i) {
     Mat<2, 2> sim;
     sim(all, 0) = points(all, i);
     sim(all, 1) = points(all, i + 1);
