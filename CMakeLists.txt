@@ -109,6 +109,7 @@ if(build_docs)
             hexed
             python/hexed_python.py
             doc/header.png
+            doc/style.css
             ${DOC_FILES}
     )
     add_custom_target(
