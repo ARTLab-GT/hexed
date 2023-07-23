@@ -1,0 +1,36 @@
+/* Extra style sheet for Hexed doxygen documentation.
+ * Tweaks a few things to make it look a little more precise and modern
+ * and get rid of some of the annoying visual effects that probably looked cool back in like 2005.
+ */
+
+body, table, div, p, dl, .title, table.directory {
+  font-family: "Noto Sans", Roboto, sans-serif;
+}
+
+#projectname
+{
+  font-family: "Noto Sans", Roboto, sans-serif;
+}
+
+code, div.fragment {
+  font-family: "Ubuntu Mono", monospace;
+  color: black;
+  background-color: #E0E0E0;
+  border-radius: .2em;
+  padding-left: .2em;
+  padding-right: .2em;
+  border-width: 0px;
+}
+
+div.fragment {
+  padding: .4em;
+}
+
+.memdoc, .memproto, .memtitle {
+  box-shadow: none;
+  background-image: none;
+}
+
+.paramname {
+  color: DarkRed;
+}
