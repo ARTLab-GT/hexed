@@ -52,6 +52,8 @@ class Occt_geom : public Surface_geom
    * all the unit conversions happen automatically so you don't have to worry about it.
    */
   Occt_geom(const TopoDS_Shape&, int n_dim);
+  //! discretizes the curves/surfaces and writes them to a Tecplot file `[file_name].szplt`
+  void visualize(std::string file_name);
 
   Mat<> nearest_point(Mat<> point) override;
   //! \note May return duplicate points if intersection is on the boundary of multiple faces.

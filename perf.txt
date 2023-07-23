@@ -61,3 +61,15 @@ Geometry processing performance: Total:
     intersections: 20762 intersections completed in 4.79136 s at 0.000230776 s / intersection.
     nearest_point: 70334 projections completed in 105.718 s at 0.00150309 s / projection.
 
+refinement iteration 0
+refinement iteration 1
+refinement iteration 2
+refinement iteration 3
+refinement iteration 4
+refinement iteration 5
+refinement iteration 6
+refinement iteration 7
+Geometry processing performance: Total:
+    intersections: 29313 intersections completed in 6.38491 s at 0.000217818 s / intersection.
+    nearest_point: 122211 projections completed in 155.186 s at 0.00126982 s / projection.
+

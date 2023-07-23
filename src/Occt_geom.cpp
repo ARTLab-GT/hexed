@@ -27,6 +27,10 @@
 #include <IGESControl_Reader.hxx>
 #include <STEPControl_Reader.hxx>
 #include <RWStl.hxx>
+#if HEXED_USE_TECPLOT
+#include <Tecplot_file.hpp>
+#endif
+#include <iostream>
 
 namespace hexed
 {
@@ -75,6 +79,50 @@ Occt_geom::Occt_geom(const TopoDS_Shape& shape, int n_dim)
       surfaces.push_back(BRep_Tool::Surface(face));
     });
   } else throw std::runtime_error("`hexed::Occt_gom` must be either 2D or 3D.");
+}
+
+void Occt_geom::visualize(std::string file_name)
+{
+  int n_div = 20;
+  Tecplot_file file(file_name, nd, {}, 0.);
+  if (nd == 3) {
+    for (unsigned i_surf = 0; i_surf < surfaces.size(); ++i_surf) {
+      auto& surf = surfaces[i_surf];
+      double param_bounds [2][2];
+      surf->Bounds(param_bounds[0][0], param_bounds[0][1], param_bounds[1][0], param_bounds[1][1]);
+      Mat<dyn, dyn> data(math::pow(n_div + 1, 2), 3);
+      int node_coords [2];
+      for (node_coords[0] = 0; node_coords[0] <= n_div; ++node_coords[0]) {
+        for (node_coords[1] = 0; node_coords[1] <= n_div; ++node_coords[1]) {
+          double params [2];
+          for (int i_dim = 0; i_dim < 2; ++i_dim) {
+            double interp = double(node_coords[i_dim])/n_div;
+            params[i_dim] = (1 - interp)*param_bounds[i_dim][0] + interp*param_bounds[i_dim][1];
+          }
+          auto pnt = surf->Value(params[0], params[1]);
+          data(node_coords[0]*(n_div + 1) + node_coords[1], all) << pnt.X(), pnt.Y(), pnt.Z();
+        }
+      }
+      data *= 1e-3; // convert to meters
+      Tecplot_file::Structured_block zone(file, n_div + 1, format_str(100, "surface%u", i_surf), 2);
+      zone.write(data.data(), nullptr);
+    }
+  } else {
+    for (unsigned i_curve = 0; i_curve < curves.size(); ++i_curve) {
+      auto& curve = curves[i_curve];
+      double param_bounds [2] {curve->FirstParameter(), curve->LastParameter()};
+      Mat<dyn, dyn> data(n_div + 1, 2);
+      for (int i_node = 0; i_node <= n_div; ++i_node) {
+        double interp = double(i_node)/n_div;
+        double param = (1 - interp)*param_bounds[0] + interp*param_bounds[1];
+        auto pnt = curve->Value(param);
+        data(i_node, all) << pnt.X(), pnt.Y();
+      }
+      data *= 1e-3; // convert to meters
+      Tecplot_file::Structured_block zone(file, n_div + 1, format_str(100, "curve%u", i_curve), 1);
+      zone.write(data.data(), nullptr);
+    }
+  }
 }
 
 Mat<> Occt_geom::nearest_point(Mat<> point)

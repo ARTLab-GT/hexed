@@ -1258,6 +1258,15 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   return n_before > n_after; // any change to the element structure (including adding elements!) will cause `purge` to reduce the size of `elems`
 }
 
+void Accessible_mesh::set_all_smooth()
+{
+  auto& elems = elements();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    elems[i_elem].set_needs_smooth(true);
+  }
+}
+
 void Accessible_mesh::relax(double factor)
 {
   id_boundary_verts();

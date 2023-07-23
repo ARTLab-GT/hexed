@@ -4,13 +4,14 @@
 #include <string>
 #include <vector>
 #include "config.hpp"
+#include "constants.hpp"
 
 #if HEXED_USE_TECPLOT
 namespace hexed
 {
 
-/*
- * This class provides an object-oriented wrapper to TecIO because the standard API is verbose
+/*! \brief Wrapper for Tecplot API.
+ * \details This class provides an object-oriented wrapper to TecIO because the standard API is verbose
  * and generally nauseating. Because the wrapped API involves calling several global functions
  * in a specific sequence, at most one `Tecplot_file` and one `Tecplot_file::Zone`
  * are allowed to exist at any given time.
@@ -25,7 +26,7 @@ class Tecplot_file
   void* file_handle;
 
   public:
-  /*
+  /*!
    * Manages a "zone", which essentially means the smallest block of data that can be written
    * to Tecplot at one time. Create derived classes to write data for some object of physical
    * or mathematical significance.
@@ -36,7 +37,7 @@ class Tecplot_file
     Tecplot_file& file;
     std::string name;
     int n_nodes;
-    int tecio_zone_index; // TecIO's zone index, which is not the same as `i_zone` and may not be unique for all time
+    int tecio_zone_index; //!< TecIO's zone index, which is not the same as `i_zone` and may not be unique for all time
     int n_total_vars;
     std::vector<int> var_types;
     std::vector<int> shared;
@@ -48,11 +49,15 @@ class Tecplot_file
     Zone(const Zone& other) = delete;
     Zone& operator=(const Zone& other) = delete;
     virtual ~Zone();
+    /*!
+     * \param pos pointer to position data in order [i_dim][i_node]
+     * \param vars pointer to state (i.e. non-position) data in order [i_var][i_node].
+     *             If there are zero state variables,
+     *             this pointer will never be dereferenced and therefore is allowed to be `nullptr`.
+     */
     virtual void write(const double* pos, const double* vars);
   };
-  /*
-   * Represents a single block of structured data. Call `write` exactly once before destructing.
-   */
+  //! Represents a single block of structured data. Call `write()` exactly once before destructing.
   class Structured_block : public Zone
   {
     int n_dim;
@@ -60,9 +65,9 @@ class Tecplot_file
     public:
     Structured_block(Tecplot_file&, int row_size, std::string name_arg="block", int n_dim_arg=0);
   };
-  /*
-   * Represents an arbitrary number of line segments. Each segment shall contain `row_size`
-   * nodes. Call `write` once for each line segment.
+  /*! \brief  Represents an arbitrary number of line segments.
+   * \details Each segment shall contain `row_size` nodes.
+   * Call `write()` once for each line segment.
    */
   class Line_segments : public Zone
   {
@@ -77,10 +82,10 @@ class Tecplot_file
     virtual ~Line_segments();
   };
 
-  // `n_var` means number of state (i.e., not position) variables.
-  Tecplot_file(std::string file_name, int n_dim, std::vector<std::string> variable_names, double time, double heat_rat = 1.4, double gas_const = 287.0528);
-  Tecplot_file(const Tecplot_file&) = delete; // at the moment, can't be more than one Tecplot_file at a time
-  Tecplot_file& operator=(const Tecplot_file&) = delete;
+  //! \note `n_var` means number of state (i.e., not position) variables.
+  Tecplot_file(std::string file_name, int n_dim, std::vector<std::string> variable_names, double time, double heat_rat = 1.4, double gas_const = specific_gas_air);
+  Tecplot_file(const Tecplot_file&) = delete; //!< copying is nonsense since there can't be more than one Tecplot_file at a time
+  Tecplot_file& operator=(const Tecplot_file&) = delete; //!< see above
   ~Tecplot_file();
 };
 
