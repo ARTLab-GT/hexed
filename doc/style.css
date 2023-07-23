@@ -6,6 +6,11 @@ code {
   padding-right: .2em;
 }
 
-code, td.paramname {
+code {
   font-family: "Ubuntu Mono", monospace;
+}
+
+td.paramname, td.memItemLeft, td.memItemRight, table.memname {
+  font-family: "Ubuntu Mono", monospace;
+  font-weight: bold;
 }
