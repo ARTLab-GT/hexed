@@ -8,13 +8,26 @@ body, table, div, p, dl, .title, table.directory {
 }
 
 code {
-  background-color: LightGrey;
+  font-family: "Ubuntu Mono", monospace;
   color: black;
+  background-color: LightGrey;
   border-radius: .2em;
   padding-left: .2em;
   padding-right: .2em;
 }
 
 code {
-  font-family: "Ubuntu Mono", monospace;
+}
+
+.memdoc, .memproto {
+  box-shadow: none;
+  background-image: none;
+}
+
+.memproto {
+  text-shadow: none;
+}
+
+.memtitle {
+  background-image: none;
 }
