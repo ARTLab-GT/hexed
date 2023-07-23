@@ -1,3 +1,12 @@
+body, table, div, p, dl, .title, table.directory {
+  font-family: "Noto Sans", Roboto, sans-serif;
+}
+
+#projectname
+{
+  font-family: "Noto Sans", Roboto, sans-serif;
+}
+
 code {
   background-color: LightGrey;
   color: black;
@@ -8,9 +17,4 @@ code {
 
 code {
   font-family: "Ubuntu Mono", monospace;
-}
-
-td.paramname, td.memItemLeft, td.memItemRight, table.memname {
-  font-family: "Ubuntu Mono", monospace;
-  font-weight: bold;
 }
