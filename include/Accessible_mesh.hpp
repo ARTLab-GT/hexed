@@ -8,8 +8,8 @@
 namespace hexed
 {
 
-/*!
- * A mesh that supports access to the actual elements with the numerical data they contain. This level of
+/*! \brief A mesh that supports access to the actual elements with the numerical data they contain.
+ * \details This level of
  * access is required by the numerical scheme but should be hidden from the library user, who should not be
  * concerned with numerical details.
  */
@@ -38,6 +38,7 @@ class Accessible_mesh : public Mesh
   std::vector<int> tree_bcs;
   bool verts_are_reset;
   std::vector<std::vector<Vertex::Non_transferable_ptr>> boundary_verts; // a vector of the vertices that are on each boundary
+  std::vector<Vertex::Non_transferable_ptr> smooth_verts; // a vector of the vertices that need to be smoothed in this sweep
 
   Element_container& container(bool is_deformed);
   int add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin);
@@ -52,6 +53,7 @@ class Accessible_mesh : public Mesh
   void delete_bad_extrusions();
   void deform();
   void purge();
+  void id_smooth_verts();
   // identify which vertices are on which boundaries and write it to `Vertex::record`
   // must be called directly befor `snap_vertices`
   void id_boundary_verts();
@@ -78,8 +80,8 @@ class Accessible_mesh : public Mesh
                          std::array<bool, 2> is_deformed = {false, false}) override;
   void connect_deformed(int ref_level, std::array<int, 2> serial_n, Con_dir<Deformed_element> direction) override;
   void connect_hanging(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Deformed_element>,
-                               bool coarse_deformed = false, std::vector<bool> fine_deformed = {false, false, false, false},
-                               std::array<bool, 2> stretch = {false, false}) override;
+                       bool coarse_deformed = false, std::vector<bool> fine_deformed = {false, false, false, false},
+                       std::array<bool, 2> stretch = {false, false}) override;
   //! \returns a view of all connections between elements, including one connection for every fine element in hanging node connections.
   Sequence<Element_connection&>& element_connections() {return elem_cons;}
   int add_boundary_condition(Flow_bc*, Mesh_bc*) override;
