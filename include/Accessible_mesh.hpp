@@ -42,9 +42,11 @@ class Accessible_mesh : public Mesh
   Element_container& container(bool is_deformed);
   int add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin);
   Element& add_elem(bool is_deformed, Tree&);
+  bool intersects_surface(Tree*);
   bool is_surface(Tree*);
   template<typename element_t> Mesh_by_type<element_t>& mbt(); // gets either `car` or `def`
   template<typename element_t> void connect_new(int start_at); // connects new elements in `mbt<element_t>()`. helper function for `refine`
+  void refine_set_status(Tree*); // refines a tree and sets the flood fill status for any children that intersect the surface
   void refine_by_record(bool is_deformed, int start, int end);
   bool needs_refine(Tree*);
   void delete_bad_extrusions();

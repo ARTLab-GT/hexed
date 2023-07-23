@@ -620,12 +620,17 @@ void Accessible_mesh::add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin)
   }
 }
 
-bool Accessible_mesh::is_surface(Tree* t)
+bool Accessible_mesh::intersects_surface(Tree* t)
 {
   if (!surf_geom) return false;
   Mat<> center = t->nominal_position() + t->nominal_size()/2*Mat<>::Ones(params.n_dim);
   double dist = (center - surf_geom->nearest_point(center)).norm();
   return dist < std::sqrt(params.n_dim)/2*t->nominal_size();
+}
+
+bool Accessible_mesh::is_surface(Tree* t)
+{
+  return t->get_status() == 0;
 }
 
 void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start)
@@ -639,7 +644,7 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
-    if (elem.tree) if (is_surface(elem.tree)) elem.tree->set_status(0);
+    if (elem.tree) if (intersects_surface(elem.tree)) elem.tree->set_status(0);
   }
   // pefrorm flood fill
   Tree* start = tree->find_leaf(flood_fill_start);
@@ -735,6 +740,14 @@ void Accessible_mesh::connect_new(int start_at)
   }
 }
 
+void Accessible_mesh::refine_set_status(Tree* t)
+{
+  t->refine();
+  for (Tree* child : t->children()) {
+    child->set_status(intersects_surface(child) - 1);
+  }
+}
+
 // performs the actual refinement for all elements where the record has been set to 1
 void Accessible_mesh::refine_by_record(bool is_deformed, int start, int end)
 {
@@ -744,7 +757,7 @@ void Accessible_mesh::refine_by_record(bool is_deformed, int start, int end)
     if (elem.tree) {
       if (elem.record == 1) {
         elem.record = 2;
-        elem.tree->refine();
+        refine_set_status(elem.tree);
         for (Tree* child : elem.tree->children()) {
           add_elem(is_deformed, *child).record = 0;
         }
@@ -1131,14 +1144,14 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
               bool can_unref = true;
               for (Tree* child : p->children()) can_unref = can_unref && !exists(child);
               if (can_unref && !needs_refine(p)) p->unrefine();
-            } else if (neighbor->refinement_level() < elem.refinement_level() - 1) neighbor->refine();
+            } else if (neighbor->refinement_level() < elem.refinement_level() - 1) refine_set_status(neighbor);
             else if (neighbor->refinement_level() < elem.refinement_level()) {
               int min_rl = std::numeric_limits<int>::max();
               for (int j_face = 0; j_face < 2*nd; ++j_face) {
                 Tree* n = neighbor->find_neighbor(math::direction(nd, j_face));
                 if (exists(n)) min_rl = std::min(min_rl, n->refinement_level());
               }
-              if (neighbor->refinement_level() < min_rl) neighbor->refine();
+              if (neighbor->refinement_level() < min_rl) refine_set_status(neighbor);
             }
           }
         }
@@ -1160,6 +1173,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
               if (!exists(neighbor)) if (!is_surface(neighbor)) {
                 changed = true;
                 add_elem(is_deformed, *neighbor).record = 0;
+                neighbor->set_status(1);
               }
             }
           }
