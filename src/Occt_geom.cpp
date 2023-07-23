@@ -84,13 +84,14 @@ Occt_geom::Occt_geom(const TopoDS_Shape& shape, int n_dim)
 void Occt_geom::visualize(std::string file_name)
 {
   int n_div = 20;
-  Tecplot_file file(file_name, nd, {}, 0.);
   if (nd == 3) {
+    Tecplot_file file(file_name, 3, {"real"}, 0.);
     for (unsigned i_surf = 0; i_surf < surfaces.size(); ++i_surf) {
       auto& surf = surfaces[i_surf];
       double param_bounds [2][2];
       surf->Bounds(param_bounds[0][0], param_bounds[0][1], param_bounds[1][0], param_bounds[1][1]);
       Mat<dyn, dyn> data(math::pow(n_div + 1, 2), 3);
+      Mat<dyn> real(math::pow(n_div + 1, 2));
       int node_coords [2];
       for (node_coords[0] = 0; node_coords[0] <= n_div; ++node_coords[0]) {
         for (node_coords[1] = 0; node_coords[1] <= n_div; ++node_coords[1]) {
@@ -100,14 +101,17 @@ void Occt_geom::visualize(std::string file_name)
             params[i_dim] = (1 - interp)*param_bounds[i_dim][0] + interp*param_bounds[i_dim][1];
           }
           auto pnt = surf->Value(params[0], params[1]);
-          data(node_coords[0]*(n_div + 1) + node_coords[1], all) << pnt.X(), pnt.Y(), pnt.Z();
+          int i_node = node_coords[0]*(n_div + 1) + node_coords[1];
+          data(i_node, all) << pnt.X(), pnt.Y(), pnt.Z();
+          real(i_node) = 1;
         }
       }
       data *= 1e-3; // convert to meters
       Tecplot_file::Structured_block zone(file, n_div + 1, format_str(100, "surface%u", i_surf), 2);
-      zone.write(data.data(), nullptr);
+      zone.write(data.data(), real.data());
     }
   } else {
+    Tecplot_file file(file_name, 2, {}, 0.);
     for (unsigned i_curve = 0; i_curve < curves.size(); ++i_curve) {
       auto& curve = curves[i_curve];
       double param_bounds [2] {curve->FirstParameter(), curve->LastParameter()};
