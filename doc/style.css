@@ -3,13 +3,11 @@
  * and get rid of some of the annoying visual effects that probably looked cool back in like 2005.
  */
 
-body, table, div, p, dl, .title, table.directory {
-  font-family: "Noto Sans", Roboto, sans-serif;
-}
-
-#projectname
-{
-  font-family: "Noto Sans", Roboto, sans-serif;
+body, table, div, p, dl, #nav-tree .label, .title,
+.sm-dox a, .sm-dox a:hover, .sm-dox a:focus, #projectname,
+.SelectItem, #MSearchField, .navpath li.navelem a,
+.navpath li.navelem a:hover, p.reference, p.definition {
+    font-family: "Noto Sans", Roboto, sans-serif;
 }
 
 code, div.fragment {
