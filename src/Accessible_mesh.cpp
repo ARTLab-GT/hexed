@@ -1274,6 +1274,8 @@ void Accessible_mesh::set_all_smooth()
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].set_needs_smooth(true);
   }
+  id_smooth_verts();
+  id_boundary_verts();
 }
 
 void Accessible_mesh::relax(double factor)

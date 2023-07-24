@@ -232,11 +232,7 @@ void Solver::snap_faces()
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     Lock::Acquire acq(bc_cons[i_con].element().lock);
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    bool needs_snap = false;
-    for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-      needs_snap = needs_snap || bc_cons[i_con].element().vertex(i_vert).needs_smooth();
-    }
-    if (needs_snap) acc_mesh.boundary_condition(bc_sn).mesh_bc->snap_node_adj(bc_cons[i_con], basis);
+    acc_mesh.boundary_condition(bc_sn).mesh_bc->snap_node_adj(bc_cons[i_con], basis);
   }
 }
 
