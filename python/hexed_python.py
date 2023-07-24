@@ -471,7 +471,7 @@ def naca(desig, n_points = 1000, closure = "warp"):
     Points are clustered near the leading edge but not the trailing (see implementation for details).
     This function is the recommended way to generate NACA airfoil geometry for Hexed simulations,
     as importing airfoils from coordinate files requires some \ref geom_fitting "special care".
-    \param desig String representing the airfoil designation (e.g., "0012" for the NACA0012).
+    \param desig String representing the airfoil designation (e.g., `"0012"` for the NACA0012).
                  In general, we cannot accept this parameter as an `int` because of possible leading zeros.
     \param n_points Number of points on the airfoil surface. Don't be stingy, since DG is finnicky with discrete geometry representations --
                     1000 is actually on the lower end of what I normally use.

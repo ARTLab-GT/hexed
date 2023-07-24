@@ -3,17 +3,58 @@
  * and get rid of some of the annoying visual effects that probably looked cool back in like 2005.
  */
 
+html {
+  --base-color: white;
+  --text-color: black;
+  --highlight-color: #e0e0e0;
+  --param-color: DarkGoldenRod;
+  --anti-base-color: #303030;
+  --anti-text-color: #f0f0f0;
+  --anti-highlight-color: #606060;
+}
+
+div.summary, div.headertitle {
+  background-color: var(--anti-base-color);
+  color: var(--anti-text-color);
+  border-width: 0px;
+}
+
 body, table, div, p, dl, #nav-tree .label, .title,
 .sm-dox a, .sm-dox a:hover, .sm-dox a:focus, #projectname,
 .SelectItem, #MSearchField, .navpath li.navelem a,
 .navpath li.navelem a:hover, p.reference, p.definition {
-    font-family: "Noto Sans", Roboto, sans-serif;
+  font-family: "Noto Sans", Roboto, sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6, h2.groupheader {
+  color: var(--text-color);
+  border-color: var(--text-color);
+}
+
+div.summary, div.headertitle {
+  background-color: var(--anti-base-color);
+  color: var(--anti-text-color);
+  border-width: 0px;
+}
+
+.title {
+  font-weight: normal;
+}
+
+.mlabels {
+  box-shadow: none;
+  background-image: none;
+}
+
+.mdescLeft, .mdescRight, .memItemLeft, .memItemRight,
+.memTemplItemLeft, .memTemplItemRight, .memTemplParams {
+  background-color: var(--base-color);
 }
 
 code, div.fragment {
   font-family: "Ubuntu Mono", monospace;
-  color: black;
-  background-color: #E0E0E0;
+  color: var(--text-color);
+  background-color: var(--highlight-color);
   border-radius: .2em;
   padding-left: .2em;
   padding-right: .2em;
@@ -29,6 +70,30 @@ div.fragment {
   background-image: none;
 }
 
+.memproto, .memtitle {
+  color: var(--anti-text-color);
+  text-shadow: none;
+  background-color: var(--anti-base-color);
+  border-color: var(--anti-base-color);
+  border-width: 2px;
+}
+
+.memdoc {
+  border-color: var(--anti-base-color);
+  border-width: 2px;
+}
+
 .paramname {
-  color: DarkRed;
+  color: var(--param-color);
+}
+
+h1.glow, h2.glow, h3.glow, h4.glow, h5.glow, h6.glow {
+  text-shadow: 0 0 15px gold;
+}
+
+#nav-tree .selected {
+  background-image: none;
+  background-color: var(--anti-highlight-color);
+  color: var(--anti-text-color);
+  text-shadow: none;
 }
