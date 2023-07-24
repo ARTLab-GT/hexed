@@ -30,7 +30,7 @@ class Surface_geom
    * \param distance_guess If you have some reason to suspect the nearest point is within a certain distance
    * of the input point, you can pass it to this parameter as a hint to possibly improve performance.
    */
-  virtual math::Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge);
+  virtual math::Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) = 0;
   /*! \brief Computes the set of intersection points between a line and the surface.
    * \details The line is defined parametrically to be the set of points
    * \f$ [\text{point0}] + t [\text{point1}] \f$ for all \f$ t \in \mathbb{R} \f$.
@@ -49,7 +49,7 @@ class Compound_geom : public Surface_geom
   std::vector<std::unique_ptr<Surface_geom>> components;
   public:
   Compound_geom(std::vector<Surface_geom*>); //!< acquires ownership
-  math::Nearest_point<dyn> bounded_nearest(Mat<> point, double max_distance) override;
+  math::Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
   std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
 };
 
@@ -65,7 +65,7 @@ class Hypersphere : public Surface_geom
   double r;
   public:
   Hypersphere(Mat<> center, double radius);
-  math::Nearest_point<dyn> bounded_nearest(Mat<> point, double max_distance) override; //!< \note `point` must not be `center`
+  math::Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
   std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
 };
 

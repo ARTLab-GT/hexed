@@ -55,7 +55,7 @@ class Occt_geom : public Surface_geom
   //! discretizes the curves/surfaces and writes them to a Tecplot file `[file_name].szplt`
   void visualize(std::string file_name);
 
-  Mat<> nearest_point(Mat<> point) override;
+  math::Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
   //! \note May return duplicate points if intersection is on the boundary of multiple faces.
   std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
 

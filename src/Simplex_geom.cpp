@@ -4,7 +4,7 @@ namespace hexed
 {
 
 template<>
-Mat<> Simplex_geom<2>::nearest_point(Mat<> point)
+math::Nearest_point<dyn> Simplex_geom<2>::nearest_point(Mat<> point, double max_distance, double distance_guess)
 {
   #if HEXED_OBSESSIVE_TIMING
   Stopwatch sw;
@@ -21,11 +21,11 @@ Mat<> Simplex_geom<2>::nearest_point(Mat<> point)
   #pragma omp atomic update
   ++stopwatch.children.at("nearest_point").work_units_completed;
   #endif
-  return nearest.point();
+  return nearest;
 }
 
 template <>
-Mat<> Simplex_geom<3>::nearest_point(Mat<> point)
+math::Nearest_point<dyn> Simplex_geom<3>::nearest_point(Mat<> point, double max_distance, double distance_guess)
 {
   #if HEXED_OBSESSIVE_TIMING
   Stopwatch sw;
@@ -55,7 +55,7 @@ Mat<> Simplex_geom<3>::nearest_point(Mat<> point)
   #pragma omp atomic update
   ++stopwatch.children.at("nearest_point").work_units_completed;
   #endif
-  return nearest.point();
+  return nearest;
 }
 
 std::vector<Mat<2, 2>> segments(const Mat<dyn, dyn>& points)

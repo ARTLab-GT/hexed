@@ -14,7 +14,7 @@ template <int rows = dyn, int cols = 1>
 using Mat = Eigen::Matrix<double, rows, cols>; //!< \brief convenience alias for `Eigen::Matrix<double, rows = dyn, cols = 1>`
 const auto all = Eigen::all; //!< \brief convenience alias for `Eigen::all`
 const auto last = Eigen::last; //!< \brief convenience alias for `Eigen::last`
-//! \brief convenience alias for `std::numeric_limits<double>::max()` since it's long and frequently used
+//! \brief convenience alias for `%std::numeric_limits<double>::max()` since it's long and frequently used
 constexpr double huge = std::numeric_limits<double>::max();
 
 //! Miscellaneous mathematical functions that aren't in `std::math`
@@ -279,9 +279,15 @@ class Nearest_point
   //! \brief Creates a `Nearest_point` with a specified candidate point and computes the correct distance.
   //! \details This point is non-empty and has a well-defined `point()`.
   Nearest_point(Mat<n_dim> ref, Mat<n_dim> pnt) : r{ref}, p{pnt}, dist_sq{(pnt - ref).squaredNorm()}, empty{false} {}
-  Mat<n_dim> reference() {return r;} //!< reference point that you want to find the nearest point to
-  double dist_squared() {return dist_sq;} //!< squared distance between `reference()` and `point()`
-  bool is_empty() {return empty;} //!< if `true`, `point()` won't work
+  //! \brief simple copy constructor that just converts the matrices
+  template <int m_dim> Nearest_point(const Nearest_point<m_dim>& other)
+  {
+    if (other.is_empty()) *this = Nearest_point(other.reference());
+    else *this = Nearest_point(other.reference(), other.point());
+  }
+  Mat<n_dim> reference() const {return r;} //!< reference point that you want to find the nearest point to
+  double dist_squared() const {return dist_sq;} //!< squared distance between `reference()` and `point()`
+  bool is_empty() const {return empty;} //!< if `true`, `point()` won't work
 
   //! sets `*this` to the nearest of `*this` and `other`
   void merge(Nearest_point other) {if (other.dist_sq < this->dist_sq) *this = other;}
@@ -290,7 +296,7 @@ class Nearest_point
 
   //! \brief Current best estimate for nearest point.
   //! \details Throws an exception if `is_empty()`.
-  Mat<n_dim> point()
+  Mat<n_dim> point() const
   {
     HEXED_ASSERT(!empty, "no candidates have been merged");
     return p;
