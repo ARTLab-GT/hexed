@@ -23,6 +23,8 @@ class Simplex_geom : public Surface_geom
   #if HEXED_OBSESSIVE_TIMING
   static Stopwatch_tree stopwatch; // for benchmarking projection and intersection calculation
   #endif
+  void merge(Nearest_point<n_dim>& nearest, Mat<n_dim, n_dim> sim, Mat<n_dim> point); // helper for `nearest_point`
+
   public:
   std::vector<Mat<n_dim, n_dim>> simplices;
   Simplex_geom(const std::vector<Mat<n_dim, n_dim>>&  sims) : simplices{sims} {}
@@ -31,8 +33,34 @@ class Simplex_geom : public Surface_geom
   /*! \details Iterates through all simplices and finds the nearest point on each,
    * whether that point lies in the interior or on the edge or a vertex.
    * Returns the global nearest of all those points.
+   * `distance_guess` is taken into account, and it is generally preferable to overestimate rather than underestimate.
    */
-  Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
+  Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override
+  {
+    HEXED_ASSERT(distance_guess > 0, "`distance_guess` must be positive");
+    #if HEXED_OBSESSIVE_TIMING
+    Stopwatch sw;
+    sw.start();
+    #endif
+    // try to find a point within `distance_guess`
+    double limit = std::min(max_distance, distance_guess);
+    Nearest_point<n_dim> nearest(point, limit);
+    for (Mat<n_dim, n_dim> sim : simplices) {
+      auto bball = math::bounding_ball(sim);
+      if ((bball.center - point).norm() - std::sqrt(bball.radius_sq) <= limit) { // only bother if at least the bounding ball is close enough
+        merge(nearest, sim, point);
+      }
+    }
+    #if HEXED_OBSESSIVE_TIMING
+    sw.pause();
+    stopwatch.stopwatch += sw;
+    stopwatch.children.at("nearest_point").stopwatch += sw;
+    #pragma omp atomic update
+    ++stopwatch.children.at("nearest_point").work_units_completed;
+    #endif
+    // if the we failed, recursively double `distance_guess` until we hit `max_distance`
+    return (nearest.empty() && distance_guess < max_distance) ? nearest_point(point, max_distance, 2*distance_guess) : Nearest_point<dyn>(nearest);
+  }
 
   /*! \details Evaluates intersections with each individual element and assembles a global list.
    * Intersections with the boundary of a simplex are always considered valid intersections,
@@ -85,8 +113,8 @@ template <int n_dim>
 Stopwatch_tree Simplex_geom<n_dim>::stopwatch("", {{"nearest_point", Stopwatch_tree("projection")}, {"intersections", Stopwatch_tree("intersection")}}); // for benchmarking projection and intersection calculation
 #endif
 
-template<> Nearest_point<dyn> Simplex_geom<2>::nearest_point(Mat<> point, double max_distance, double distance_guess);
-template<> Nearest_point<dyn> Simplex_geom<3>::nearest_point(Mat<> point, double max_distance, double distance_guess);
+template<> void Simplex_geom<2>::merge(Nearest_point<2>& nearest, Mat<2, 2> sim, Mat<2> point);
+template<> void Simplex_geom<3>::merge(Nearest_point<3>& nearest, Mat<3, 3> sim, Mat<3> point);
 
 /*! \brief Creates simplices from an ordered array of points representing a polygonal curve.
  * \details `points` must have exactly 2 rows.

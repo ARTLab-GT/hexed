@@ -69,7 +69,11 @@ void Accessible_mesh::snap_vertices()
       #pragma omp parallel for
       for (auto& vert : boundary_verts[surf_bc_sn]) {
         auto pos = vert->pos(Eigen::seqN(0, params.n_dim));
-        pos = surf_geom->nearest_point(pos).point();
+        double dist_guess = 0;
+        for (const Vertex& neighb : vert->get_neighbors()) {
+          dist_guess = std::max(dist_guess, (neighb.pos - vert->pos).norm());
+        }
+        pos = surf_geom->nearest_point(pos, huge, dist_guess).point();
       }
     }
   } else {
@@ -635,8 +639,7 @@ bool Accessible_mesh::intersects_surface(Tree* t)
 {
   if (!surf_geom) return false;
   Mat<> center = t->nominal_position() + t->nominal_size()/2*Mat<>::Ones(params.n_dim);
-  double dist = (center - surf_geom->nearest_point(center).point()).norm();
-  return dist < std::sqrt(params.n_dim)/2*t->nominal_size();
+  return !surf_geom->nearest_point(center, std::sqrt(params.n_dim)/2*t->nominal_size()).empty();
 }
 
 bool Accessible_mesh::is_surface(Tree* t)
