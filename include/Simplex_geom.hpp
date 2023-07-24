@@ -48,14 +48,16 @@ class Simplex_geom : public Surface_geom
     std::vector<double> inters;
     Mat<n_dim> diff = point1 - point0;
     for (Mat<n_dim, n_dim> sim : simplices) {
-      // compute intersection between line and plane of simplex
-      Mat<n_dim, n_dim> lhs;
-      lhs(all, 0) = -diff;
-      for (int col = 1; col < n_dim; ++col) lhs(all, col) = sim(all, col) - sim(all, 0);
-      Mat<n_dim> soln = lhs.lu().solve(point0 - sim(all, 0));
-      // if intersection is inside simplex, add it to the list
-      Eigen::Array<double, n_dim - 1, 1> arr = soln(Eigen::seqN(1, n_dim - 1)).array();
-      if ((arr >= 0.).all() && arr.sum() <= 1.) inters.push_back(soln(0));
+      if (math::intersects<n_dim>(math::bounding_ball(sim), point0, point1)) { // if the line doesn't even intersect the bounding ball, don't bother
+        // compute intersection between line and plane of simplex
+        Mat<n_dim, n_dim> lhs;
+        lhs(all, 0) = -diff;
+        for (int col = 1; col < n_dim; ++col) lhs(all, col) = sim(all, col) - sim(all, 0);
+        Mat<n_dim> soln = lhs.lu().solve(point0 - sim(all, 0));
+        // if intersection is inside simplex, add it to the list
+        Eigen::Array<double, n_dim - 1, 1> arr = soln(Eigen::seqN(1, n_dim - 1)).array();
+        if ((arr >= 0.).all() && arr.sum() <= 1.) inters.push_back(soln(0));
+      }
     }
     #if HEXED_OBSESSIVE_TIMING
     sw.pause();
