@@ -32,7 +32,7 @@ class Simplex_geom : public Surface_geom
    * whether that point lies in the interior or on the edge or a vertex.
    * Returns the global nearest of all those points.
    */
-  math::Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
+  Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
 
   /*! \details Evaluates intersections with each individual element and assembles a global list.
    * Intersections with the boundary of a simplex are always considered valid intersections,
@@ -85,8 +85,8 @@ template <int n_dim>
 Stopwatch_tree Simplex_geom<n_dim>::stopwatch("", {{"nearest_point", Stopwatch_tree("projection")}, {"intersections", Stopwatch_tree("intersection")}}); // for benchmarking projection and intersection calculation
 #endif
 
-template<> math::Nearest_point<dyn> Simplex_geom<2>::nearest_point(Mat<> point, double max_distance, double distance_guess);
-template<> math::Nearest_point<dyn> Simplex_geom<3>::nearest_point(Mat<> point, double max_distance, double distance_guess);
+template<> Nearest_point<dyn> Simplex_geom<2>::nearest_point(Mat<> point, double max_distance, double distance_guess);
+template<> Nearest_point<dyn> Simplex_geom<3>::nearest_point(Mat<> point, double max_distance, double distance_guess);
 
 /*! \brief Creates simplices from an ordered array of points representing a polygonal curve.
  * \details `points` must have exactly 2 rows.

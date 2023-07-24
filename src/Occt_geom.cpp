@@ -129,10 +129,10 @@ void Occt_geom::visualize(std::string file_name)
   }
 }
 
-math::Nearest_point<dyn> Occt_geom::nearest_point(Mat<> point, double max_distance, double distance_guess)
+Nearest_point<dyn> Occt_geom::nearest_point(Mat<> point, double max_distance, double distance_guess)
 {
   HEXED_ASSERT(point.size() == nd, format_str(100, "`point` must be %iD", nd));
-  math::Nearest_point<> nearest(point);
+  Nearest_point<> nearest(point, max_distance);
   point *= 1e3; // convert to mm
   if (nd == 2) {
     gp_Pnt2d occt_point(point(0), point(1));

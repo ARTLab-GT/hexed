@@ -7,10 +7,10 @@ Compound_geom::Compound_geom(std::vector<Surface_geom*> geoms)
 : components(geoms.begin(), geoms.end())
 {}
 
-math::Nearest_point<dyn> Compound_geom::nearest_point(Mat<> point, double max_distance, double distance_guess)
+Nearest_point<dyn> Compound_geom::nearest_point(Mat<> point, double max_distance, double distance_guess)
 {
-  math::Nearest_point nearest(point);
-  for (auto& comp : components) nearest.merge(comp->nearest_point(point));
+  Nearest_point nearest(point, max_distance);
+  for (auto& comp : components) nearest.merge(comp->nearest_point(point, max_distance, distance_guess));
   return nearest;
 }
 
@@ -28,9 +28,11 @@ Hypersphere::Hypersphere(Mat<> center, double radius)
 : c{center}, r{radius}
 {}
 
-math::Nearest_point<dyn> Hypersphere::nearest_point(Mat<> point, double max_distance, double distance_guess)
+Nearest_point<dyn> Hypersphere::nearest_point(Mat<> point, double max_distance, double distance_guess)
 {
-  return math::Nearest_point<dyn>(point, c + r*(point - c).normalized());
+  Nearest_point<dyn> nearest(point, max_distance);
+  nearest.merge(c + r*(point - c).normalized());
+  return nearest;
 }
 
 std::vector<double> Hypersphere::intersections(Mat<> point0, Mat<> point1)

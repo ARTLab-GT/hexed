@@ -11,6 +11,7 @@ void test(std::string file_extension)
   hexed::Occt_geom geom(hexed::Occt_geom::read("ellipsoid." + file_extension), 3);
   auto nearest = geom.nearest_point(-hexed::Mat<3>::Unit(0)).point();
   REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<3>{-.25, 0., 0.}, hexed::math::Approx_equal(0, 1e-12)));
+  REQUIRE(geom.nearest_point(-hexed::Mat<3>::Unit(0), 0.1).empty());
   nearest = geom.nearest_point(hexed::Mat<3>::Unit(2)).point();
   REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 0., .125}, hexed::math::Approx_equal(0, 1e-12)));
   auto intersections = geom.intersections(hexed::Mat<3>::Unit(2), 3*hexed::Mat<3>::Unit(2));
@@ -34,6 +35,7 @@ TEST_CASE("Occt_geom")
     for (auto& geom : geoms) {
       auto nearest = geom->nearest_point(-hexed::Mat<2>::Unit(0)).point();
       REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<2>{-.25, 0.}, hexed::math::Approx_equal(0, 1e-12)));
+      REQUIRE(geom->nearest_point(-hexed::Mat<2>::Unit(0), 0.1).empty());
       nearest = geom->nearest_point(hexed::Mat<2>::Unit(1)).point();
       REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<2>{0., .125}, hexed::math::Approx_equal(0, 1e-12)));
       auto intersections = geom->intersections(hexed::Mat<2>::Unit(1), 3*hexed::Mat<2>::Unit(1));

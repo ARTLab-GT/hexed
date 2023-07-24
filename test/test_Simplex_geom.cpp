@@ -15,6 +15,7 @@ TEST_CASE("Simplex_geom")
     hexed::Mat<> nearest;
     nearest = geom.nearest_point(hexed::Mat<2>{.5, 2.}).point();
     REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<2>{.5, 1.}, hexed::math::Approx_equal(0, 1e-12)));
+    REQUIRE(geom.nearest_point(hexed::Mat<2>{.5, 2.}, 0.1).empty());
     nearest = geom.nearest_point(hexed::Mat<2>{3, .5}).point();
     REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<2>{2., .5}, hexed::math::Approx_equal(0, 1e-12)));
     nearest = geom.nearest_point(hexed::Mat<2>{3, 3}).point();
@@ -41,6 +42,7 @@ TEST_CASE("Simplex_geom")
     // nearest on face
     nearest = geom.nearest_point(hexed::Mat<3>{1., .1, 1.}).point();
     REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<3>{.5, .1, .5}, hexed::math::Approx_equal(0, 1e-12)));
+    REQUIRE(geom.nearest_point(hexed::Mat<3>{1., .1, 1.}, 0.1).empty());
     // nearest on edges
     nearest = geom.nearest_point(hexed::Mat<3>{2., .1, 0.}).point();
     REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<3>{1., .1, 0.}, hexed::math::Approx_equal(0, 1e-12)));

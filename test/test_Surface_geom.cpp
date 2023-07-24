@@ -11,6 +11,7 @@ TEST_CASE("Compound_geom")
                Catch::Matchers::RangeEquals(Eigen::Vector3d{-1., 0., 0.}, hexed::math::Approx_equal(0., 1e-12)));
   REQUIRE_THAT(geom.nearest_point(Eigen::Vector3d{3., 0., 0.}).point(),
                Catch::Matchers::RangeEquals(Eigen::Vector3d{2., 0., 0.}, hexed::math::Approx_equal(0., 1e-12)));
+  REQUIRE(geom.nearest_point(Eigen::Vector3d{3., 0., 0.}, 0.1).empty());
   REQUIRE_THAT(geom.intersections(Eigen::Vector3d::Zero(), Eigen::Vector3d::Unit(0)),
                Catch::Matchers::UnorderedRangeEquals(std::vector<double>{-1., 0., 1., 2.}, hexed::math::Approx_equal(0., 1e-12)));
 }
@@ -20,6 +21,7 @@ TEST_CASE("Hypersphere")
   hexed::Hypersphere hype(Eigen::Vector2d{.1, .2}, .5);
   REQUIRE_THAT(hype.nearest_point(Eigen::Vector2d{-.5, -.6}).point(),
                Catch::Matchers::RangeEquals(Eigen::Vector2d{-.2, -.2}, hexed::math::Approx_equal(0., 1e-12)));
+  REQUIRE(hype.nearest_point(Eigen::Vector2d{-.5, -.6}, 0.1).empty());
   // intersections: {.4, .6}, {.5, .5}. diff: {.1, -.1}
   REQUIRE_THAT(hype.intersections(Eigen::Vector2d{.6, .4}, Eigen::Vector2d{.7, .3}),
                Catch::Matchers::UnorderedRangeEquals(std::vector<double>{-1., -2.}, hexed::math::Approx_equal(0., 1e-12)));
