@@ -100,6 +100,7 @@ file(GLOB DOC_FILES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/doc/*.dox)
 if(build_docs)
     configure_file(doc/config.in ${CMAKE_BINARY_DIR}/doc_config)
     file(COPY doc/header.png DESTINATION doc/html)
+    file(COPY doc/header_background.png DESTINATION doc/html)
     add_custom_command(
         OUTPUT doxygen_output.txt
         COMMAND doxygen doc_config > doxygen_output.txt

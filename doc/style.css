@@ -13,6 +13,14 @@ html {
   --anti-highlight-color: #606060;
 }
 
+#titlearea {
+  background-color: var(--anti-base-color);
+  background-image: url('header_background.png');
+  background-size: cover;
+  border-width: 8px;
+  border-color: var(--anti-base-color);
+}
+
 div.summary, div.headertitle {
   background-color: var(--anti-base-color);
   color: var(--anti-text-color);
