@@ -23,20 +23,14 @@ class Surface_geom
 {
   public:
   virtual ~Surface_geom() = default;
-  /*! \brief Computes the point on the surface which is nearest to `point`.
+  /*! \brief Computes the point on the surface which is nearest to `point` within `max_distance`.
+   * \details If no point is found, returns an empty `Nearest_point`.
+   * \param point The point you want to find the nearest point to.
+   * \param max_distance Only consider points within `max_distance` of `point`.
    * \param distance_guess If you have some reason to suspect the nearest point is within a certain distance
-   * of the input point, you can pass it to this parameter as a hint to improve performance.
-   * \see `bounded_nearest`
+   * of the input point, you can pass it to this parameter as a hint to possibly improve performance.
    */
-  virtual Mat<> nearest_point(Mat<> point, double distance_guess = std::numeric_limits<double>::max());
-  /*! \brief Computes the nearest point, if any, within a certain radius.
-   * \details If there is a point on the geometry within `max_distance` of `point`,
-   * you will get it as a `math::Nearest_point` object.
-   * If there is no such point, you will get an empty `math::Nearest_point`.
-   * \note `Surface_geom::nearest_point` calls this function with `distance_guess = max_distance`
-   * and iteratively doubles the radius until it gets a non-empty result.
-   */
-  virtual math::Nearest_point<dyn> bounded_nearest(Mat<> point, double max_distance) = 0;
+  virtual math::Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge);
   /*! \brief Computes the set of intersection points between a line and the surface.
    * \details The line is defined parametrically to be the set of points
    * \f$ [\text{point0}] + t [\text{point1}] \f$ for all \f$ t \in \mathbb{R} \f$.
