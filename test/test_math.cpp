@@ -192,3 +192,46 @@ TEST_CASE("to_mat")
   std::vector<double> vec {.1, -.3, .2};
   REQUIRE_THAT(hexed::math::to_mat(vec), Catch::Matchers::RangeEquals(vec, hexed::math::Approx_equal()));
 }
+
+TEST_CASE("bounding_ball")
+{
+  SECTION("2*2") {
+    Eigen::MatrixXd points(2, 2);
+    points <<
+      1., 2.,
+      3., 3.;
+    auto bball = hexed::math::bounding_ball<2, 2>(points);
+    REQUIRE_THAT(bball.center, Catch::Matchers::RangeEquals(Eigen::Vector2d{1.5, 3.}, hexed::math::Approx_equal()));
+    REQUIRE(bball.radius_sq == Catch::Approx(0.25));
+  }
+  SECTION("3*2") {
+    Eigen::MatrixXd points(3, 2);
+    points <<
+      0., 1.,
+      0., 1.,
+      0., 1.;
+    auto bball = hexed::math::bounding_ball<3, 2>(points);
+    REQUIRE_THAT(bball.center, Catch::Matchers::RangeEquals(Eigen::Vector3d{.5, .5, .5}, hexed::math::Approx_equal()));
+    REQUIRE(bball.radius_sq == Catch::Approx(3./4));
+  }
+  SECTION("3*4") {
+    Eigen::MatrixXd points(3, 4);
+    points <<
+      0., 0., 1., 3.,
+      0., 1., 0., 3.,
+      0., 0., 0., 4.;
+    auto bball = hexed::math::bounding_ball<3, 4>(points);
+    REQUIRE_THAT(bball.center, Catch::Matchers::RangeEquals(Eigen::Vector3d{1., 1., 1.}, hexed::math::Approx_equal()));
+    REQUIRE(bball.radius_sq == Catch::Approx(17.));
+  }
+}
+
+TEST_CASE("intersects")
+{
+  hexed::math::Ball<2> b{{1., 1.}, .5};
+  Eigen::Vector2d point0{2., 0.};
+  Eigen::Vector2d point1{2., -1.};
+  REQUIRE(!hexed::math::intersects(b, point0, point1));
+  point1[0] = 3.;
+  REQUIRE(hexed::math::intersects(b, point0, point1));
+}

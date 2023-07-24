@@ -295,6 +295,37 @@ class Nearest_point
   }
 };
 
+//! \brief minimal representation of an `n_dim`-dimensional ball
+template <int n_dim = dyn>
+struct Ball
+{
+  Mat<n_dim> center;
+  double radius_sq; //!< square of the radius, since normally that's what you actually need
+};
+
+/*! \brief computes a bounding ball of the convex hull of a set of points
+ * \details Returns the smallest bounding ball _centered at the center of mass of the points_.
+ * This bounding ball is non-optimal but quick to compute.
+ * Note that a simplex is the convex hull of its vertices.
+ */
+template <int n_dim, int n_point>
+Ball<n_dim> bounding_ball(Mat<n_dim, n_point> points)
+{
+  Ball<n_dim> b;
+  b.center = points.rowwise().mean();
+  b.radius_sq = (points.colwise() - b.center).colwise().squaredNorm().maxCoeff();
+  return b;
+}
+
+//! \brief returns true if the ball `b` intersects the line through `endpoint0` and `endpoint1`
+template <int n_dim>
+bool intersects(Ball<n_dim> b, Mat<n_dim> endpoint0, Mat<n_dim> endpoint1)
+{
+  Mat<n_dim> diff = endpoint1 - endpoint0;
+  Mat<n_dim> center = b.center - endpoint0;
+  return (center - center.dot(diff)/diff.squaredNorm()*diff).squaredNorm() <= b.radius_sq;
+}
+
 }
 }
 #endif
