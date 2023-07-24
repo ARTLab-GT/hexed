@@ -50,13 +50,13 @@ class Accessible_mesh : public Mesh
   void refine_set_status(Tree*); // refines a tree and sets the flood fill status for any children that intersect the surface
   void refine_by_record(bool is_deformed, int start, int end);
   bool needs_refine(Tree*);
+  void purge();
   void delete_bad_extrusions();
   void deform();
-  void purge();
   void id_smooth_verts();
+  void id_boundary_verts();
   // identify which vertices are on which boundaries and write it to `Vertex::record`
   // must be called directly befor `snap_vertices`
-  void id_boundary_verts();
   void snap_vertices();
 
   public:
@@ -87,6 +87,7 @@ class Accessible_mesh : public Mesh
   int add_boundary_condition(Flow_bc*, Mesh_bc*) override;
   void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n) override;
   void disconnect_boundary(int bc_sn) override;
+  void cleanup() override;
 
   void add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3)) override;
   void set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) override;

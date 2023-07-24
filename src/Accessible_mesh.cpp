@@ -208,6 +208,13 @@ void Accessible_mesh::disconnect_boundary(int bc_sn)
   erase_if(def.bound_cons, [bc_sn](std::unique_ptr<Typed_bound_connection<Deformed_element>>& con){return con->bound_cond_serial_n() == bc_sn;});
 }
 
+void Accessible_mesh::cleanup()
+{
+  purge();
+  id_smooth_verts();
+  id_boundary_verts();
+}
+
 Mesh::Connection_validity Accessible_mesh::valid()
 {
   auto& elems = elements();
@@ -1031,14 +1038,16 @@ void Accessible_mesh::deform()
 
 void Accessible_mesh::purge()
 {
-  // delete obsolete elements of `extrude_cons`
-  erase_if(extrude_cons, [](Element_face_connection<Deformed_element>* con){return con->element(0).record == 2 || con->element(1).record == 2;});
-  // delete connections to old elements (has to happen before deleting elements or else use after free)
-  car.purge_connections();
-  def.purge_connections();
-  // delete old elements
-  car.elems.purge();
-  def.elems.purge();
+  if (tree) {
+    // delete obsolete elements of `extrude_cons`
+    erase_if(extrude_cons, [](Element_face_connection<Deformed_element>* con){return con->element(0).record == 2 || con->element(1).record == 2;});
+    // delete connections to old elements (has to happen before deleting elements or else use after free)
+    car.purge_connections();
+    def.purge_connections();
+    // delete old elements
+    car.elems.purge();
+    def.elems.purge();
+  }
   // delete dangling vertex pointers
   erase_if(vert_ptrs, &Vertex::Non_transferable_ptr::is_null);
   for (auto& b_verts : boundary_verts) erase_if(b_verts, &Vertex::Non_transferable_ptr::is_null);

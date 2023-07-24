@@ -21,6 +21,7 @@ class Mesh : public Mesh_interface
 {
   public:
   //! \name Manual mesh creation
+  //! \attention You __must__ call `cleanup()` in between calling any of these functions and doing anything else (like relaxing vertices).
   //! \{
   /*!
    * Add an element at specified nominal position and serial number which uniquely identifies it
@@ -98,6 +99,8 @@ class Mesh : public Mesh_interface
       height = new_height;
     }
   }
+  //! \brief Does some work that has to happen after you manually add elements and/or connections.
+  virtual void cleanup() = 0;
   //! \}
 };
 

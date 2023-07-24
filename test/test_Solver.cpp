@@ -245,10 +245,12 @@ TEST_CASE("Solver")
     sol.mesh().add_element(0, false, {0, 0, 0});
     int sn0 = sol.mesh().add_element(0, false, {1, 0, 0});
     int sn1 = sol.mesh().add_element(2, true, {-1, 0, 0});
+    sol.mesh().cleanup();
     // initialization/sampling
     REQUIRE_THROWS(sol.initialize(Bad_initializer())); // if number of variables of func is wrong, should throw
     REQUIRE_THROWS(sol.initialize(Arbitrary_initializer())); // mesh must be valid before you can initialize
     sol.mesh().connect_rest(catchall_bc);
+    sol.mesh().cleanup();
     sol.initialize(Arbitrary_initializer());
     auto sample = sol.sample(0, false, sn0, 4, hexed::State_variables()); // sample the midpoint of the element because we know the exact position
     REQUIRE(sample.size() == 4);
@@ -276,6 +278,7 @@ TEST_CASE("Solver")
     int sn0 = sol.mesh().add_element(0, false, {0, 0, 0});
     int sn1 = sol.mesh().add_element(0,  true, {1, 0, 0});
     sol.mesh().connect_cartesian(0, {sn0, sn1}, {0}, {false, true});
+    sol.mesh().cleanup();
     sol.relax_vertices();
     REQUIRE(sol.sample(0, false, sn0, 4, hexed::Position_func())[0] == Catch::Approx(0.8*0.5));
     REQUIRE(sol.sample(0,  true, sn1, 4, hexed::Position_func())[0] == Catch::Approx(0.8*1.375));
@@ -293,6 +296,7 @@ TEST_CASE("Solver")
     int bc = sol.mesh().add_boundary_condition(new hexed::Copy, new Shrink_pos0);
     sol.mesh().connect_boundary(0, true, sn0, 0, 1, bc);
     sol.mesh().connect_rest(catchall_bc);
+    sol.mesh().cleanup();
     sol.mesh().valid().assert_valid();
     sol.snap_vertices();
     sol.calc_jacobian();
@@ -331,6 +335,7 @@ TEST_CASE("Solver")
       sol.mesh().connect_boundary(1, false, car2, 1, 1, bc1);
       sol.mesh().connect_rest(bc2);
       // finish setup
+      sol.mesh().cleanup();
       sol.calc_jacobian();
       std::vector<double> state {0.3, -10., 0.7, 32.};
       sol.initialize(hexed::Constant_func(state));
@@ -361,6 +366,7 @@ TEST_CASE("Solver")
       int bc1 = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Null_mbc);
       sol.mesh().connect_boundary(0, false, sn, 0, 1, bc0);
       sol.mesh().connect_rest(bc1);
+      sol.mesh().cleanup();
       sol.calc_jacobian();
       sol.initialize(hexed::Constant_func({0.3, 0., 0., 0.}));
       auto integral = sol.integral_field(Arbitrary_integrand());
@@ -380,6 +386,7 @@ TEST_CASE("Solver")
       int bc_sn = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Nominal_pos);
       sol.mesh().connect_boundary(1, true, el_sn, 1, 1, bc_sn);
       sol.mesh().connect_rest(catchall_bc);
+      sol.mesh().cleanup();
       sol.mesh().relax(.5);
       sol.mesh().valid().assert_valid();
       sol.calc_jacobian();
@@ -392,6 +399,7 @@ TEST_CASE("Solver")
       int bc_sn = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Surface_mbc{new Parabola});
       sol.mesh().connect_boundary(1, true, el_sn, 1, 1, bc_sn);
       sol.mesh().connect_rest(catchall_bc);
+      sol.mesh().cleanup();
       sol.mesh().valid().assert_valid();
       sol.calc_jacobian();
       // top element face should now be a parabola
@@ -441,6 +449,7 @@ class All_cartesian : public Test_mesh
         sol.mesh().connect_boundary(0, false, sn, i_dim, inds[i_dim], bc_sn);
       }
     }
+    sol.mesh().cleanup();
   }
 };
 
@@ -484,6 +493,7 @@ class All_deformed : public Test_mesh
         if (inds[i_dim] != 1) sol.mesh().connect_boundary(0, true, sn, i_dim, (inds[i_dim] > 0), bc_sn);
       }
     }
+    sol.mesh().cleanup();
   }
 };
 
@@ -535,6 +545,7 @@ class Extrude_hanging : public Test_mesh
     sol.mesh().connect_hanging(0, coarse, fine, {{id, id}, {1, 0}}, true, {true, true, true, true});
     sol.mesh().extrude();
     sol.mesh().connect_rest(bc_sn);
+    sol.mesh().cleanup();
     for (int i = 0; i < 2; ++i) sol.relax_vertices();
     sol.snap_vertices();
   }
@@ -810,12 +821,14 @@ TEST_CASE("face extrusion")
     }
     int bc_sn = solver.mesh().add_boundary_condition(new hexed::Copy(), new Boundary_perturbation());
     solver.mesh().extrude();
+    solver.mesh().cleanup();
     for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
     solver.mesh().connect_rest(bc_sn);
     solver.calc_jacobian();
     double area = solver.integral_field(hexed::Constant_func({1.}))[0];
     solver.mesh().disconnect_boundary(bc_sn);
     solver.mesh().extrude(true, .7);
+    solver.mesh().cleanup();
     auto valid = solver.mesh().valid();
     REQUIRE(valid.n_redundant == 0);
     REQUIRE(valid.n_missing == 16);
@@ -845,11 +858,13 @@ TEST_CASE("face extrusion")
       }
     }
     solver.mesh().extrude();
+    solver.mesh().cleanup();
     auto valid = solver.mesh().valid();
     REQUIRE(valid.n_redundant == 0);
     REQUIRE(valid.n_missing == 60);
     int bc_sn = solver.mesh().add_boundary_condition(new hexed::Copy(), new hexed::Null_mbc());
     solver.mesh().connect_rest(bc_sn);
+    solver.mesh().cleanup();
     solver.calc_jacobian();
     REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Catch::Approx(86.)); // check number of elements
     #if HEXED_USE_TECPLOT
@@ -866,6 +881,7 @@ TEST_CASE("normal continuity resolution badness")
   sol.mesh().extrude();
   int bc_sn = sol.mesh().add_boundary_condition(new hexed::Copy(), new hexed::Null_mbc());
   sol.mesh().connect_rest(bc_sn);
+  sol.mesh().cleanup();
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
   sol.set_res_bad_surface_rep(bc_sn);
@@ -898,6 +914,7 @@ TEST_CASE("artificial viscosity convergence")
     for (int i = 0; i < len0; ++i) sol.mesh().connect_boundary(0, 0, sn[i][positive*(len1 - 1)], 1, positive, nonpen);
     for (int j = 0; j < len1; ++j) sol.mesh().connect_boundary(0, 0, sn[positive*(len0 - 1)][j], 0, positive, pen[positive]);
   }
+  sol.mesh().cleanup();
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
   double flow_width = .02;
@@ -933,6 +950,7 @@ TEST_CASE("resolution badness")
   sol.mesh().extrude();
   int bc_sn = sol.mesh().add_boundary_condition(new hexed::Copy(), new hexed::Null_mbc());
   sol.mesh().connect_rest(bc_sn);
+  sol.mesh().cleanup();
   sol.calc_jacobian();
   hexed::Position_func pos;
   sol.set_resolution_badness(hexed::Elem_average(pos));
