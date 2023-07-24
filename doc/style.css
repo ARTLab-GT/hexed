@@ -6,32 +6,37 @@
 html {
   --base-color: white;
   --text-color: black;
-  --highlight-color: #e0e0e0;
-  --param-color: DarkGoldenRod;
+  --highlight-color: #e8e8e8;
+  --decor-color: DarkGoldenRod;
   --anti-base-color: #303030;
   --anti-text-color: #f0f0f0;
   --anti-highlight-color: #606060;
+  --line-weight: 2px;
 }
 
 #titlearea {
   background-color: var(--anti-base-color);
   background-image: url('header_background.png');
   background-size: cover;
-  border-width: 8px;
+  border-width: 10px;
   border-color: var(--anti-base-color);
 }
 
 div.summary, div.headertitle {
-  background-color: var(--anti-base-color);
-  color: var(--anti-text-color);
-  border-width: 0px;
+  background-color: var(--highlight-color);
+}
+
+div.headertitle {
+  border-color: var(--anti-base-color);
+  border-bottom-style: solid;
+  border-bottom-width: var(--line-weight);
 }
 
 body, table, div, p, dl, #nav-tree .label, .title,
 .sm-dox a, .sm-dox a:hover, .sm-dox a:focus, #projectname,
 .SelectItem, #MSearchField, .navpath li.navelem a,
 .navpath li.navelem a:hover, p.reference, p.definition {
-  font-family: "Noto Sans", Roboto, sans-serif;
+  font-family: "Noto Sans CJK JP", "Noto Sans", "Ubuntu", sans-serif;
 }
 
 h1, h2, h3, h4, h5, h6, h2.groupheader {
@@ -39,14 +44,9 @@ h1, h2, h3, h4, h5, h6, h2.groupheader {
   border-color: var(--text-color);
 }
 
-div.summary, div.headertitle {
-  background-color: var(--anti-base-color);
-  color: var(--anti-text-color);
-  border-width: 0px;
-}
-
 .title {
   font-weight: normal;
+  font-size: 200%;
 }
 
 .mlabels {
@@ -76,27 +76,31 @@ div.fragment {
 .memdoc, .memproto, .memtitle {
   box-shadow: none;
   background-image: none;
+  border-width: var(--line-weight);
+  border-color: var(--anti-base-color);
 }
 
 .memproto, .memtitle {
-  color: var(--anti-text-color);
   text-shadow: none;
-  background-color: var(--anti-base-color);
-  border-color: var(--anti-base-color);
-  border-width: 2px;
+  color: var(--text-color);
+  background-color: var(--highlight-color);
 }
 
-.memdoc {
-  border-color: var(--anti-base-color);
-  border-width: 2px;
+.memtitle {
+  margin-bottom: calc(0px - var(--line-weight));
+}
+
+.memproto {
+  border-style: solid;
 }
 
 .paramname {
-  color: var(--param-color);
+  color: var(--decor-color);
+  font-weight: 550;
 }
 
 h1.glow, h2.glow, h3.glow, h4.glow, h5.glow, h6.glow {
-  text-shadow: 0 0 15px gold;
+  text-shadow: 0 0 15px var(--decor-color);
 }
 
 #nav-tree .selected {
