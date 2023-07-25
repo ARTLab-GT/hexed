@@ -1,4 +1,5 @@
 #include <Simplex_geom.hpp>
+#include <Tecplot_file.hpp>
 
 namespace hexed
 {
@@ -26,6 +27,20 @@ void Simplex_geom<3>::merge(Nearest_point<3>& nearest, Mat<3, 3> sim, Mat<3> poi
       nearest.merge(math::proj_to_segment({sim(all, i_edge), sim(all, (i_edge + 1)%3)}, point));
     }
   }
+}
+
+template<> void Simplex_geom<3>::visualize(std::string fname)
+{
+  #if HEXED_USE_TECPLOT
+  Tecplot_file tec_file(fname, 3, {}, 0.);
+  Tecplot_file::Triangles zone(tec_file, simplices.size());
+  for (Mat<3, 3> sim : simplices) {
+    Mat<3, 3> trans = sim.transpose();
+    zone.write(trans.data(), nullptr);
+  }
+  #else
+  HEXED_ASSERT(false, "needs tecplot");
+  #endif
 }
 
 std::vector<Mat<2, 2>> segments(const Mat<dyn, dyn>& points)

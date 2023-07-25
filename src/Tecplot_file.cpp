@@ -79,21 +79,17 @@ Tecplot_file::Line_segments::Line_segments(Tecplot_file& file, int n_segs, int r
   pos_storage.resize(file.n_dim*n_nodes);
   var_storage.resize(file.n_var*n_nodes);
 
-  int zone_type = 1; // FELINESEG
-  tecZoneCreateFE(file.file_handle, name.c_str(), zone_type, n_nodes, n_segs,
+  tecZoneCreateFE(file.file_handle, name.c_str(), us_line_seg, n_nodes, n_segs,
                   var_types.data(), shared.data(), location.data(), passive.data(), 0, 0, 0, &tecio_zone_index);
 }
 
 void Tecplot_file::Line_segments::write(const double* pos, const double* vars)
 {
-  for (int i_node = 0; i_node < row_size; ++i_node)
-  {
-    for (int i_dim = 0; i_dim < file.n_dim; ++i_dim)
-    {
+  for (int i_node = 0; i_node < row_size; ++i_node) {
+    for (int i_dim = 0; i_dim < file.n_dim; ++i_dim) {
       pos_storage[(n_segs*i_dim + i_seg)*row_size + i_node] = pos[i_dim*row_size + i_node];
     }
-    for (int i_var = 0; i_var < file.n_var; ++i_var)
-    {
+    for (int i_var = 0; i_var < file.n_var; ++i_var) {
       var_storage[(n_segs*i_var + i_seg)*row_size + i_node] = vars[i_var*row_size + i_node];
     }
   }
@@ -104,14 +100,26 @@ Tecplot_file::Line_segments::~Line_segments()
 {
   Zone::write(pos_storage.data(), var_storage.data());
   std::vector<int> inds;
-  for (int i_seg = 0; i_seg < n_segs; ++i_seg)
-  {
-    for (int i_elem = 0; i_elem < row_size - 1; ++i_elem)
-    {
+  for (int i_seg = 0; i_seg < n_segs; ++i_seg) {
+    for (int i_elem = 0; i_elem < row_size - 1; ++i_elem) {
       inds.push_back(row_size*i_seg + i_elem);
       inds.push_back(row_size*i_seg + i_elem + 1);
     }
   }
+  tecZoneNodeMapWrite32(file.file_handle, tecio_zone_index, 0, 0, inds.size(), inds.data());
+}
+
+Tecplot_file::Triangles::Triangles(Tecplot_file& file, int n_triangles, std::string name_arg)
+: Zone{file, 3, name_arg}, n_tri{n_triangles}
+{
+  tecZoneCreateFE(file.file_handle, name.c_str(), us_triangle, 3*n_triangles, n_triangles,
+                  var_types.data(), shared.data(), location.data(), passive.data(), 0, 0, 0, &tecio_zone_index);
+}
+
+Tecplot_file::Triangles::~Triangles()
+{
+  std::vector<int> inds;
+  for (int i = 0; i < 3*n_tri; ++i) inds.push_back(i);
   tecZoneNodeMapWrite32(file.file_handle, tecio_zone_index, 0, 0, inds.size(), inds.data());
 }
 

@@ -29,6 +29,7 @@ class Simplex_geom : public Surface_geom
   std::vector<Mat<n_dim, n_dim>> simplices;
   Simplex_geom(const std::vector<Mat<n_dim, n_dim>>&  sims) : simplices{sims} {}
   Simplex_geom(      std::vector<Mat<n_dim, n_dim>>&& sims) : simplices{sims} {}
+  void visualize(std::string file_name); //!< writes geometry to a Tecplot file with the specified name + file extension
 
   /*! \details Iterates through all simplices and finds the nearest point on each,
    * whether that point lies in the interior or on the edge or a vertex.
@@ -115,6 +116,7 @@ Stopwatch_tree Simplex_geom<n_dim>::stopwatch("", {{"nearest_point", Stopwatch_t
 
 template<> void Simplex_geom<2>::merge(Nearest_point<2>& nearest, Mat<2, 2> sim, Mat<2> point);
 template<> void Simplex_geom<3>::merge(Nearest_point<3>& nearest, Mat<3, 3> sim, Mat<3> point);
+template<> void Simplex_geom<3>::visualize(std::string);
 
 /*! \brief Creates simplices from an ordered array of points representing a polygonal curve.
  * \details `points` must have exactly 2 rows.

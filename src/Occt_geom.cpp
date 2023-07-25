@@ -83,6 +83,7 @@ Occt_geom::Occt_geom(const TopoDS_Shape& shape, int n_dim)
 
 void Occt_geom::visualize(std::string file_name)
 {
+  #if HEXED_USE_TECPLOT
   int n_div = 20;
   if (nd == 3) {
     Tecplot_file file(file_name, 3, {"real"}, 0.);
@@ -127,6 +128,9 @@ void Occt_geom::visualize(std::string file_name)
       zone.write(data.data(), nullptr);
     }
   }
+  #else
+  HEXED_ASSERT(false, "needs tecplot");
+  #endif
 }
 
 Nearest_point<dyn> Occt_geom::nearest_point(Mat<> point, double max_distance, double distance_guess)

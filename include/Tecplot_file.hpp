@@ -11,10 +11,12 @@ namespace hexed
 {
 
 /*! \brief Wrapper for Tecplot API.
- * \details This class provides an object-oriented wrapper to TecIO because the standard API is verbose
+ * \details This class provides an object-oriented wrapper to [TecIO](https://www.tecplot.com/products/tecio-library/)
+ * because the standard API is verbose
  * and generally nauseating. Because the wrapped API involves calling several global functions
  * in a specific sequence, at most one `Tecplot_file` and one `Tecplot_file::Zone`
  * are allowed to exist at any given time.
+ * \see [Tecplot Data Format Guide](https://tecplot.azureedge.net/products/360/current/360_data_format_guide.pdf)
  */
 class Tecplot_file
 {
@@ -26,17 +28,24 @@ class Tecplot_file
   void* file_handle;
 
   public:
-  /*!
-   * Manages a "zone", which essentially means the smallest block of data that can be written
-   * to Tecplot at one time. Create derived classes to write data for some object of physical
-   * or mathematical significance.
+  enum zone_type {
+    structured,  //!< aka ORDERED
+    us_line_seg, //!< aka FELINESEG
+    us_triangle, //!< aka FETRIANGLE
+    us_quad,     //!< aka FEQUADRILATERAL
+    us_tet,      //!< aka FETETRAHEDRON
+    us_hex,      //!< aka FEBRICK
+  };
+
+  /*! Manages a "zone", which essentially means a named chunk of data.
+   * Create derived classes to write data for some object of physical  or mathematical significance.
    */
   class Zone
   {
     protected:
     Tecplot_file& file;
     std::string name;
-    int n_nodes;
+    int n_nodes; //!< number of data points to write in each `write()` invokation
     int tecio_zone_index; //!< TecIO's zone index, which is not the same as `i_zone` and may not be unique for all time
     int n_total_vars;
     std::vector<int> var_types;
@@ -57,15 +66,17 @@ class Tecplot_file
      */
     virtual void write(const double* pos, const double* vars);
   };
+
   //! Represents a single block of structured data. Call `write()` exactly once before destructing.
   class Structured_block : public Zone
   {
     int n_dim;
     int row_size;
     public:
-    Structured_block(Tecplot_file&, int row_size, std::string name_arg="block", int n_dim_arg=0);
+    Structured_block(Tecplot_file&, int row_size, std::string name_arg = "block", int n_dim_arg=0);
   };
-  /*! \brief  Represents an arbitrary number of line segments.
+
+  /*! \brief Represents an arbitrary number of line segments.
    * \details Each segment shall contain `row_size` nodes.
    * Call `write()` once for each line segment.
    */
@@ -77,9 +88,24 @@ class Tecplot_file
     std::vector<double> pos_storage;
     std::vector<double> var_storage;
     public:
-    Line_segments(Tecplot_file&, int n_segs, int row_size, std::string name_arg="line_segments");
+    Line_segments(Tecplot_file&, int n_segs, int row_size, std::string name_arg = "line_segments");
     virtual void write(const double* pos, const double* vars);
     virtual ~Line_segments();
+  };
+
+  /*! \brief Represents a collection of triangles in 3D.
+   * \details These triangles are, in principle, unrelated.
+   * If they actually form a triangular mesh, no effort is made to exploit that fact.
+   * Call `write()` once for each triangle with the data for each of that triangle's nodes.
+   * Whether the order of the nodes within each element matters is between you and Tecplot
+   * -- I just write them in the order you give them.
+   */
+  class Triangles : public Zone
+  {
+    int n_tri;
+    public:
+    Triangles(Tecplot_file&, int n_triangles, std::string name_arg = "triangles");
+    ~Triangles();
   };
 
   //! \note `n_var` means number of state (i.e., not position) variables.
