@@ -98,6 +98,11 @@ table.fieldtable {
   border-color: var(--antibase-color);
 }
 
+.memberdecls td.glow, .fieldtable tr.glow {
+  background-color: var(--decor-color);
+  box-shadow: 0 0 10px var(--decor-color);
+}
+
 .memproto, .memtitle {
   text-shadow: none;
   color: var(--text-color);
@@ -121,7 +126,7 @@ h1.glow, h2.glow, h3.glow, h4.glow, h5.glow, h6.glow {
   text-shadow: 0 0 15px var(--decor-color);
 }
 
-#nav-tree {
+#nav-tree, .ui-resizable-e {
   background-color: var(--base-color);
   background-image: none;
 }
@@ -137,8 +142,6 @@ h1.glow, h2.glow, h3.glow, h4.glow, h5.glow, h6.glow {
 }
 
 .ui-resizable-e {
-  background-image: none;
-  background-color: var(--base-color);
   border-right-style: solid;
   border-color: var(--anti-base-color);
   border-width: var(--line-weight);
@@ -151,6 +154,7 @@ h1.glow, h2.glow, h3.glow, h4.glow, h5.glow, h6.glow {
   border: none;
   text-shadow: none;
 }
+
 .navpath li.navelem a, .navpath li.footer {
   text-shadow: none;
   color: var(--anti-link-color);
