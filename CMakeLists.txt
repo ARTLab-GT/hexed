@@ -1,8 +1,15 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.16)
 
-project(hexed VERSION 0.0
+project(hexed VERSION 0.0.0
         DESCRIPTION "Discontinuous Galerkin engine for CFD with automated, unstructured quad/hex meshing."
         LANGUAGES CXX)
+# get info about current build for documentation purposes
+string(TIMESTAMP DATE "%Y-%m-%d") # get the current date for reference purposes
+execute_process(
+    COMMAND git log -1 --format=%H
+    OUTPUT_VARIABLE COMMIT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
 
 # specify the C++ standard
 set(CMAKE_CXX_STANDARD 20)
@@ -95,29 +102,6 @@ set(colormap_files
 configure_file(script/hexed-wrapped-post-process.in hexed-wrapped-post-process)
 configure_file(script/format.mcr.in format.mcr)
 
-# build documentation
-file(GLOB DOC_FILES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/doc/*.dox)
-if(build_docs)
-    configure_file(doc/config.in ${CMAKE_BINARY_DIR}/doc_config)
-    file(COPY doc/header.png DESTINATION doc/html)
-    file(COPY doc/header_background.png DESTINATION doc/html)
-    add_custom_command(
-        OUTPUT doxygen_output.txt
-        COMMAND doxygen doc_config > doxygen_output.txt
-        DEPENDS
-            ${CMAKE_BINARY_DIR}/doc_config
-            hexed
-            python/hexed_python.py
-            doc/header.png
-            doc/style.css
-            ${DOC_FILES}
-    )
-    add_custom_target(
-        documentation ALL
-        DEPENDS doxygen_output.txt
-    )
-endif()
-
 # generate colormaps to use in tecplot
 add_custom_command(
     OUTPUT ${colormap_files}
@@ -159,15 +143,10 @@ add_subdirectory(demo)
 if (build_tests)
     add_subdirectory(test)
 endif()
-
-# configure python files
-get_target_property(CPPYY_INCLUDE hexed INCLUDE_DIRECTORIES)
-if (use_occt)
-    get_target_property(OCCT_INCLUDE_DIRECTORIES TKBRep INTERFACE_INCLUDE_DIRECTORIES)
-    set(CPPYY_INCLUDE ${CPPYY_INCLUDE};${OCCT_INCLUDE_DIRECTORIES})
+if(build_docs)
+    add_subdirectory(doc)
 endif()
-configure_file(hexed_py_config.py.in hexed_py_config.py)
-configure_file(python/hexed_python.py hexed.py)
+add_subdirectory(python)
 
 # run cppcheck
 if (use_cppcheck)

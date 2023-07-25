@@ -65,6 +65,8 @@ I am a PhD student of Professor Stephen Ruffin at the Aerothermodynamics Researc
 of the Daniel Guggenheim School of Aerospace Engineering at Georgia Tech.
 If you have any questions or feedback, you can reach me at micaiah@gatech.edu or on [Github](https://github.gatech.edu/mcsp3).
 
+_Generated on \today for Hexed \proj_version._
+
 \page Manual
 - \subpage installation
 - \subpage visualization

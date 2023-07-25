@@ -1,5 +1,5 @@
 PROJECT_NAME = hexed
-OUTPUT_DIRECTORY = doc
+PROJECT_NUMBER = @CMAKE_PROJECT_VERSION@
 INPUT = @CMAKE_SOURCE_DIR@/include @CMAKE_SOURCE_DIR@/src @CMAKE_SOURCE_DIR@/python @CMAKE_SOURCE_DIR@/doc @CMAKE_SOURCE_DIR@/script @CMAKE_SOURCE_DIR@/hexed_config.hpp.in
 GENERATE_TREEVIEW = YES
 DISABLE_INDEX = YES
@@ -15,3 +15,4 @@ TAGFILES = @CMAKE_SOURCE_DIR@/doc/occt_short.tag=https://dev.opencascade.org/doc
            @CMAKE_SOURCE_DIR@/doc/Eigen.doxytags=https://eigen.tuxfamily.org/dox
 EXAMPLE_PATH = @CMAKE_SOURCE_DIR@
 HTML_EXTRA_STYLESHEET = @CMAKE_SOURCE_DIR@/doc/style.css
+ALIASES += today="@DATE@" proj_version=" version @CMAKE_PROJECT_VERSION@, commit `@COMMIT@`"
