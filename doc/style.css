@@ -1,8 +1,13 @@
 /* Extra style sheet for Hexed doxygen documentation.
- * Tweaks a few things to make it look a little more precise and modern
- * and get rid of some of the annoying visual effects that probably looked cool back in like 2005.
+ * Default Doxygen style looks kind of like it was trying hard to look cool in 2005,
+ * which I suppose it probably was.
+ * This sheet mostly tweaks the colors and fonts to make it look a little more precise and modern.
+ * Note: I tried doxygen-awesome-css, but while it looks modern, it honestly looks a little immature.
+ * This is computational engineering -- it should look diginified.
  */
 
+
+/* try to parameterize with these variables as much as possible */
 html {
   --base-color: white;
   --text-color: black;
@@ -16,6 +21,7 @@ html {
   --line-weight: 2px;
 }
 
+/* project title bar at the very top */
 #titlearea {
   background-color: var(--anti-base-color);
   background-image: url('header_background.png');
@@ -24,6 +30,7 @@ html {
   border-color: var(--anti-base-color);
 }
 
+/* page title bar */
 div.summary, div.headertitle {
   background-color: var(--highlight-color);
 }
@@ -34,6 +41,12 @@ div.headertitle {
   border-bottom-width: var(--line-weight);
 }
 
+.title {
+  font-weight: normal;
+  font-size: 200%;
+}
+
+/* change the main font to one that can distinguish betwee I and l. */
 body, table, div, p, dl, #nav-tree .label, .title,
 .sm-dox a, .sm-dox a:hover, .sm-dox a:focus, #projectname,
 .SelectItem, #MSearchField, .navpath li.navelem a,
@@ -41,26 +54,7 @@ body, table, div, p, dl, #nav-tree .label, .title,
   font-family: "Noto Sans CJK JP", "Noto Sans", "Ubuntu", sans-serif;
 }
 
-h1, h2, h3, h4, h5, h6, h2.groupheader {
-  color: var(--text-color);
-  border-color: var(--text-color);
-}
-
-.title {
-  font-weight: normal;
-  font-size: 200%;
-}
-
-.mlabels {
-  box-shadow: none;
-  background-image: none;
-}
-
-.mdescLeft, .mdescRight, .memItemLeft, .memItemRight,
-.memTemplItemLeft, .memTemplItemRight, .memTemplParams {
-  background-color: var(--base-color);
-}
-
+/* format code blocks */
 code, div.fragment {
   font-family: "Ubuntu Mono", monospace;
   color: var(--text-color);
@@ -75,32 +69,29 @@ div.fragment {
   padding: .4em;
 }
 
+/* format subheaders */
+h1, h2, h3, h4, h5, h6, h2.groupheader {
+  color: var(--text-color);
+  border-color: var(--text-color);
+}
+
+/* format member declarations */
+.mlabels {
+  box-shadow: none;
+  background-image: none;
+}
+
+.mdescLeft, .mdescRight, .memItemLeft, .memItemRight,
+.memTemplItemLeft, .memTemplItemRight, .memTemplParams {
+  background-color: var(--base-color);
+}
+
+/* format member detailed documentation */
 .memdoc, .memproto, .memtitle {
   box-shadow: none;
   background-image: none;
   border-width: var(--line-weight);
   border-color: var(--anti-base-color);
-}
-
-.fieldtable th {
-  background-image: none;
-  background-color: var(--highlight-color);
-  text-shadow: none;
-  color: var(--text-color);
-}
-
-.fieldtable td.fielddoc, .fieldtable td.fieldname, .fieldtable th {
-  border-color: var(--antibase-color);
-}
-
-table.fieldtable {
-  box-shadow: none;
-  border-color: var(--antibase-color);
-}
-
-.memberdecls td.glow, .fieldtable tr.glow {
-  background-color: var(--decor-color);
-  box-shadow: 0 0 10px var(--decor-color);
 }
 
 .memproto, .memtitle {
@@ -122,10 +113,34 @@ table.fieldtable {
   font-weight: 550;
 }
 
+/* format general tables */
+.fieldtable th {
+  background-image: none;
+  background-color: var(--highlight-color);
+  text-shadow: none;
+  color: var(--text-color);
+}
+
+.fieldtable td.fielddoc, .fieldtable td.fieldname, .fieldtable th {
+  border-color: var(--antibase-color);
+}
+
+table.fieldtable {
+  box-shadow: none;
+  border-color: var(--antibase-color);
+}
+
+/* format glow effects */
+.memberdecls td.glow, .fieldtable tr.glow {
+  background-color: var(--decor-color);
+  box-shadow: 0 0 10px var(--decor-color);
+}
+
 h1.glow, h2.glow, h3.glow, h4.glow, h5.glow, h6.glow {
   text-shadow: 0 0 15px var(--decor-color);
 }
 
+/* format navigation sidebar */
 #nav-tree, .ui-resizable-e {
   background-color: var(--base-color);
   background-image: none;
@@ -148,6 +163,7 @@ h1.glow, h2.glow, h3.glow, h4.glow, h5.glow, h6.glow {
   width: 4px;
 }
 
+/* format footer at the very bottom */
 .navpath ul {
   background-image: none;
   background-color: var(--anti-base-color);
