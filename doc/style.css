@@ -6,11 +6,13 @@
 html {
   --base-color: white;
   --text-color: black;
+  --link-color: #3D578C;
   --highlight-color: #e8e8e8;
   --decor-color: DarkGoldenRod;
   --anti-base-color: #303030;
   --anti-text-color: #f0f0f0;
   --anti-highlight-color: #606060;
+  --anti-link-color: #8da7dc;
   --line-weight: 2px;
 }
 
@@ -80,6 +82,22 @@ div.fragment {
   border-color: var(--anti-base-color);
 }
 
+.fieldtable th {
+  background-image: none;
+  background-color: var(--highlight-color);
+  text-shadow: none;
+  color: var(--text-color);
+}
+
+.fieldtable td.fielddoc, .fieldtable td.fieldname, .fieldtable th {
+  border-color: var(--antibase-color);
+}
+
+table.fieldtable {
+  box-shadow: none;
+  border-color: var(--antibase-color);
+}
+
 .memproto, .memtitle {
   text-shadow: none;
   color: var(--text-color);
@@ -103,9 +121,38 @@ h1.glow, h2.glow, h3.glow, h4.glow, h5.glow, h6.glow {
   text-shadow: 0 0 15px var(--decor-color);
 }
 
+#nav-tree {
+  background-color: var(--base-color);
+  background-image: none;
+}
+
 #nav-tree .selected {
   background-image: none;
-  background-color: var(--anti-highlight-color);
-  color: var(--anti-text-color);
+  background-color: var(--highlight-color);
   text-shadow: none;
+}
+
+#nav-tree .selected a {
+  color: var(--link-color);
+}
+
+.ui-resizable-e {
+  background-image: none;
+  background-color: var(--base-color);
+  border-right-style: solid;
+  border-color: var(--anti-base-color);
+  border-width: var(--line-weight);
+  width: 4px;
+}
+
+.navpath ul {
+  background-image: none;
+  background-color: var(--anti-base-color);
+  border: none;
+  text-shadow: none;
+}
+.navpath li.navelem a, .navpath li.footer {
+  text-shadow: none;
+  color: var(--anti-link-color);
+  font-weight: normal;
 }
