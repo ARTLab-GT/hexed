@@ -105,6 +105,18 @@ class Occt_geom : public Surface_geom
  * \relates Simplex_geom
  */
 std::vector<Mat<3, 3>> triangles(opencascade::handle<Poly_Triangulation>);
+/*! \brief Obtains a triangulation of a CAD geometry.
+ * \details This is now the preferred way to interact with CAD geometry -- `Occt_geom` instances are unreliable.
+ * Size of the mesh is determined by `angle` and `deflection`, where in both cases a smaller value results in a finer mesh.
+ * Usually, it is preferable to use only `angle`, since `deflection` doesn't do as well at refining high-curvature regions.
+ * \param shape CAD object to triangulate
+ * \param angle Max angle allowed between neighboring triangles (note that as always, angles are radian).
+ * \param deflection Max distance allowed between points on the triangulation and the true surface.
+ *        Note that this is a dimensional parameter and appropriate values will depend on the length scale of your simulation,
+ *        which is why the only reasonable default is an irrelevantly large parameter.
+ * \relates Simplex_geom
+ */
+std::vector<Mat<3, 3>> triangles(TopoDS_Shape shape, double angle = 10*degree, double deflection = huge);
 
 //! \brief Discretizes the curves in a TopoDS_Shape into segments of a polygonal line.
 //! \relates Simplex_geom

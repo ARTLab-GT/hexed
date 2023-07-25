@@ -4,6 +4,7 @@
 // geometry
 #include <TopoDS_Iterator.hxx>
 #include <BRep_Tool.hxx>
+#include <BRepTools.hxx>
 #include <TopoDS_Face.hxx>
 #include <TopoDS_Edge.hxx>
 #include <GeomAPI_ProjectPointOnSurf.hxx>
@@ -27,6 +28,9 @@
 #include <IGESControl_Reader.hxx>
 #include <STEPControl_Reader.hxx>
 #include <RWStl.hxx>
+// triangulations
+#include <IMeshTools_Parameters.hxx>
+#include <BRepMesh_IncrementalMesh.hxx>
 #if HEXED_USE_TECPLOT
 #include <Tecplot_file.hpp>
 #endif
@@ -288,6 +292,33 @@ std::vector<Mat<3, 3>> triangles(opencascade::handle<Poly_Triangulation> poly)
     sims.push_back(sim*1e-3);
   }
   return sims;
+}
+
+std::vector<Mat<3, 3>> triangles(TopoDS_Shape shape, double angle, double deflection)
+{
+  // setup parameters
+  IMeshTools_Parameters params;
+  params.Deflection               = deflection*1e3;
+  params.DeflectionInterior       = deflection*1e3;
+  params.Angle                    = angle;
+  params.AngleInterior            = angle;
+  params.Relative                 = false;
+  params.InParallel               = true;
+  params.MinSize                  = Precision::Confusion();
+  params.InternalVerticesMode     = false;
+  params.ControlSurfaceDeflection = true;
+  // generate mesh
+  BRepTools::Clean(shape); // get rid of any existing triangulations
+  BRepMesh_IncrementalMesh mesher(shape, params);
+  // fetch triangles
+  std::vector<Mat<3, 3>> tris;
+  iterate(shape, TopAbs_FACE, [&](const TopoDS_Shape& s){
+    TopoDS_Face face = TopoDS::Face(s);
+    TopLoc_Location location;
+    auto face_tris = triangles(BRep_Tool::Triangulation(face, location));
+    tris.insert(tris.end(), face_tris.begin(), face_tris.end());
+  });
+  return tris;
 }
 
 opencascade::handle<Poly_Triangulation> Occt_geom::read_stl(std::string file_name, double scale)
