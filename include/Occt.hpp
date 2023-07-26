@@ -21,6 +21,10 @@ namespace hexed
  * without needing to understand the complexities of what they really mean in OCCT thinking.
  * The main application for this is reading geometry from CAD files,
  * but this could also be used to pipe in CAD directly from another program that uses OCCT.
+ * For usage purposes, this class is just a namespace.
+ * Don't actually instantiate it.
+ * (In fact, you shouldn't be able to, since the constructor is deleted).
+ * It is a class and not a namespace because it has private static data members to facilitate startup tasks for interacting with OCCT.
  *
  * \section occt_units Units
  * All length/position values are interpreted dimensionally.
@@ -44,7 +48,6 @@ class Occt
   static void set_message();
   // reads a file of a specific type
   template<typename reader_t> static TopoDS_Shape execute_reader(std::string file_name);
-  Occt() = default; //!< Don't instantiate this class
 
   public:
   /*! \brief A `Surface_geom` that interacts with a CAD object directly.
@@ -89,6 +92,8 @@ class Occt
      */
     void visualize(std::string file_name);
   };
+
+  Occt() = delete; //!< Don't instantiate this class. Use its static members.
 
   /*! \brief Renders an image of the geometry and writes it to an image file.
    * \details Useful for verifying/debuggin CAD translations.
