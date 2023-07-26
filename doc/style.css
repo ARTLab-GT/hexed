@@ -51,7 +51,7 @@ body, table, div, p, dl, #nav-tree .label, .title,
 .sm-dox a, .sm-dox a:hover, .sm-dox a:focus, #projectname,
 .SelectItem, #MSearchField, .navpath li.navelem a,
 .navpath li.navelem a:hover, p.reference, p.definition {
-  font-family: "Noto Sans CJK JP", "Noto Sans", "Ubuntu", sans-serif;
+  font-family: "Noto Sans", "Noto Sans CJK JP", "Ubuntu", sans-serif;
 }
 
 /* format code blocks */
