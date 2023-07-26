@@ -1,5 +1,5 @@
 #include <catch2/catch_all.hpp>
-#include <hexed/Occt_geom.hpp>
+#include <hexed/Occt.hpp>
 #include <hexed/constants.hpp>
 #include <hexed/Simplex_geom.hpp>
 
@@ -7,8 +7,8 @@
 
 void test(std::string file_extension)
 {
-  REQUIRE_THROWS(hexed::Occt_geom::read("nonexistent." + file_extension));
-  hexed::Occt_geom geom(hexed::Occt_geom::read("ellipsoid." + file_extension), 3);
+  REQUIRE_THROWS(hexed::Occt::read("nonexistent." + file_extension));
+  hexed::Occt::Geom geom(hexed::Occt::read("ellipsoid." + file_extension), 3);
   auto nearest = geom.nearest_point(-hexed::Mat<3>::Unit(0)).point();
   REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<3>{-.25, 0., 0.}, hexed::math::Approx_equal(0, 1e-12)));
   REQUIRE(geom.nearest_point(-hexed::Mat<3>::Unit(0), 0.1).empty());
@@ -18,7 +18,7 @@ void test(std::string file_extension)
   REQUIRE_THAT(intersections, Catch::Matchers::UnorderedRangeEquals(std::vector<double>{-.4375, -.5625}, hexed::math::Approx_equal(0, 1e-12)));
 }
 
-TEST_CASE("Occt_geom")
+TEST_CASE("Occt::Geom")
 {
   SECTION("3D")
   {
@@ -27,11 +27,11 @@ TEST_CASE("Occt_geom")
   }
   SECTION("2D")
   {
-    auto shape = hexed::Occt_geom::read("ellipse.STEP");
-    hexed::Occt_geom::write_image(shape, "test.png");
+    auto shape = hexed::Occt::read("ellipse.STEP");
+    hexed::Occt::write_image(shape, "test.png");
     std::vector<std::unique_ptr<hexed::Surface_geom>> geoms;
-    geoms.emplace_back(new hexed::Occt_geom(shape, 2));
-    geoms.emplace_back(new hexed::Simplex_geom(hexed::segments(shape, 1000)));
+    geoms.emplace_back(new hexed::Occt::Geom(shape, 2));
+    geoms.emplace_back(new hexed::Simplex_geom(hexed::Occt::segments(shape, 1000)));
     for (auto& geom : geoms) {
       auto nearest = geom->nearest_point(-hexed::Mat<2>::Unit(0)).point();
       REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<2>{-.25, 0.}, hexed::math::Approx_equal(0, 1e-12)));

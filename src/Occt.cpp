@@ -1,4 +1,4 @@
-#include <Occt_geom.hpp>
+#include <Occt.hpp>
 #if HEXED_USE_OCCT
 
 // geometry
@@ -39,9 +39,9 @@
 namespace hexed
 {
 
-bool Occt_geom::message_set = false;
+bool Occt::message_set = false;
 
-void Occt_geom::set_message()
+void Occt::set_message()
 {
   if (!message_set) {
     message_set = true;
@@ -71,7 +71,7 @@ void collect_curves(std::vector<opencascade::handle<Geom2d_Curve>>& curves, cons
   });
 }
 
-Occt_geom::Occt_geom(const TopoDS_Shape& shape, int n_dim)
+Occt::Geom::Geom(const TopoDS_Shape& shape, int n_dim)
 : nd{n_dim}
 {
   if (nd == 2) {
@@ -85,7 +85,7 @@ Occt_geom::Occt_geom(const TopoDS_Shape& shape, int n_dim)
   } else throw std::runtime_error("`hexed::Occt_gom` must be either 2D or 3D.");
 }
 
-void Occt_geom::visualize(std::string file_name)
+void Occt::Geom::visualize(std::string file_name)
 {
   #if HEXED_USE_TECPLOT
   int n_div = 20;
@@ -137,7 +137,7 @@ void Occt_geom::visualize(std::string file_name)
   #endif
 }
 
-Nearest_point<dyn> Occt_geom::nearest_point(Mat<> point, double max_distance, double distance_guess)
+Nearest_point<dyn> Occt::Geom::nearest_point(Mat<> point, double max_distance, double distance_guess)
 {
   HEXED_ASSERT(point.size() == nd, format_str(100, "`point` must be %iD", nd));
   Nearest_point<> nearest(point, max_distance);
@@ -166,7 +166,7 @@ Nearest_point<dyn> Occt_geom::nearest_point(Mat<> point, double max_distance, do
   return nearest;
 }
 
-std::vector<double> Occt_geom::intersections(Mat<> point0, Mat<> point1)
+std::vector<double> Occt::Geom::intersections(Mat<> point0, Mat<> point1)
 {
   HEXED_ASSERT(point0.size() == nd, format_str(100, "`point0` must be %iD", nd));
   HEXED_ASSERT(point1.size() == nd, format_str(100, "`point1` must be %iD", nd));
@@ -218,7 +218,7 @@ std::vector<double> Occt_geom::intersections(Mat<> point0, Mat<> point1)
   return sects;
 }
 
-void Occt_geom::write_image(const TopoDS_Shape& shape, std::string file_name, Mat<3> eye_pos, Mat<3> look_at_pos, int resolution)
+void Occt::write_image(const TopoDS_Shape& shape, std::string file_name, Mat<3> eye_pos, Mat<3> look_at_pos, int resolution)
 {
   // general setup
   opencascade::handle<Aspect_DisplayConnection> displayConnection = new Aspect_DisplayConnection();
@@ -256,7 +256,7 @@ void Occt_geom::write_image(const TopoDS_Shape& shape, std::string file_name, Ma
 }
 
 template <typename reader_t>
-TopoDS_Shape Occt_geom::execute_reader(std::string file_name)
+TopoDS_Shape Occt::execute_reader(std::string file_name)
 {
   set_message();
   reader_t reader;
@@ -266,7 +266,7 @@ TopoDS_Shape Occt_geom::execute_reader(std::string file_name)
   return reader.OneShape();
 }
 
-TopoDS_Shape Occt_geom::read(std::string file_name)
+TopoDS_Shape Occt::read(std::string file_name)
 {
   unsigned extension_start = file_name.find_last_of(".");
   HEXED_ASSERT(extension_start != std::string::npos, "`file_name` has no extension");
@@ -275,10 +275,10 @@ TopoDS_Shape Occt_geom::read(std::string file_name)
   for (char& c : ext) c = tolower(c);
   if      (ext == "igs" || ext == "iges") return execute_reader<IGESControl_Reader>(file_name);
   else if (ext == "stp" || ext == "step") return execute_reader<STEPControl_Reader>(file_name);
-  throw std::runtime_error(format_str(1000, "`hexed::Occt_geom::read` failed to recognize file exteinsion `.%s`.", case_sensitive.c_str()));
+  throw std::runtime_error(format_str(1000, "`hexed::Occt::read` failed to recognize file exteinsion `.%s`.", case_sensitive.c_str()));
 }
 
-std::vector<Mat<3, 3>> triangles(opencascade::handle<Poly_Triangulation> poly)
+std::vector<Mat<3, 3>> Occt::triangles(opencascade::handle<Poly_Triangulation> poly)
 {
   HEXED_ASSERT(!poly.IsNull(), "handle is null");
   std::vector<Mat<3, 3>> sims;
@@ -294,7 +294,7 @@ std::vector<Mat<3, 3>> triangles(opencascade::handle<Poly_Triangulation> poly)
   return sims;
 }
 
-std::vector<Mat<3, 3>> triangles(TopoDS_Shape shape, double angle, double deflection)
+std::vector<Mat<3, 3>> Occt::triangles(TopoDS_Shape shape, double angle, double deflection)
 {
   // setup parameters
   IMeshTools_Parameters params;
@@ -321,7 +321,7 @@ std::vector<Mat<3, 3>> triangles(TopoDS_Shape shape, double angle, double deflec
   return tris;
 }
 
-opencascade::handle<Poly_Triangulation> Occt_geom::read_stl(std::string file_name, double scale)
+opencascade::handle<Poly_Triangulation> Occt::read_stl(std::string file_name, double scale)
 {
   set_message();
   opencascade::handle<Poly_Triangulation> poly = RWStl::ReadFile(file_name.c_str());
@@ -333,7 +333,7 @@ opencascade::handle<Poly_Triangulation> Occt_geom::read_stl(std::string file_nam
   return poly;
 }
 
-std::vector<Mat<2, 2>> segments(const TopoDS_Shape& shape, int n_segments)
+std::vector<Mat<2, 2>> Occt::segments(const TopoDS_Shape& shape, int n_segments)
 {
   std::vector<Mat<2, 2>> segs;
   std::vector<opencascade::handle<Geom2d_Curve>> curves;

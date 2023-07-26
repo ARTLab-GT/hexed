@@ -17,7 +17,7 @@ Iteration_status.cpp
 Layer_sequence.cpp
 Lock.cpp
 math.cpp
-Occt_geom.cpp
+Occt.cpp
 Output_data.cpp
 otter_vis.cpp
 Physical_basis.cpp

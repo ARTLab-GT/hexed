@@ -75,6 +75,10 @@ h1, h2, h3, h4, h5, h6, h2.groupheader {
   border-color: var(--text-color);
 }
 
+#doc-content h1 {
+  font-size: 130%;
+}
+
 /* format member declarations */
 .mlabels {
   box-shadow: none;

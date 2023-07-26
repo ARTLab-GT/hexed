@@ -33,7 +33,7 @@ for lib in libraries:
 cppyy.include("math.hpp")
 cppyy.include("Solver_interface.hpp")
 cppyy.include("Simplex_geom.hpp")
-cppyy.include("Occt_geom.hpp")
+cppyy.include("Occt.hpp")
 ## \cond
 cpp = cppyy.gbl.hexed
 std = cppyy.gbl.std
@@ -411,7 +411,7 @@ def run(self):
 ## \}
 
 
-def make_geom(geom, n_dim = None, n_div = 1000):
+def make_geom(geom, n_dim = None, n_div = 1000, max_angle = 10*cpp.degree, max_deflection = cpp.huge):
     r"""! \brief Convert a geometry representation from various input formats to a `hexed::Surface_geom` object.
     \param geom (list or tuple) List of surface geometries to mesh, in one of the following formats:
                 - An instance of `hexed::Surface_geom`.
@@ -419,6 +419,8 @@ def make_geom(geom, n_dim = None, n_div = 1000):
                 - A string containing a file name in one of the following formats (inferred from file extension which is not case sensitive):
                   - CAD formats: Require `n_dim` to be specified, since CAD can be 2D or 3D. If 2D, `n_div` must also be specified.
                     The geometry will be discretized into polygonal curves, with `n_div` segments per curve.
+                    If 3D, the geometry will be discretized into a triangular mesh, where `max_angle` and `max_deflection`
+                    can be used to provide inputs to `hexed::Occt::triangles(TopoDS_Shape, double, double)`.
                     - `.igs`, `.iges`: [IGES format](https://en.wikipedia.org/wiki/IGES#File_format)
                     - `.stp`, `.step`: [STEP format](https://en.wikipedia.org/wiki/ISO_10303-21)
                   - `.stl`: Stereolithography discrete triangle representation (ASCII or binary). 3D only.
@@ -431,6 +433,8 @@ def make_geom(geom, n_dim = None, n_div = 1000):
                  If 3, considers only surfaces.
                  See above for which formats require this argument -- for most, the dimensionality is inferred automatically.
     \param n_div Number of subdivisions for discretizing 2D CAD inputs.
+    \param max_angle see `hexed::Occt::triangles`
+    \param max_deflection see `hexed::Occt::triangles`
     """
     if isinstance(geom, cpp.Surface_geom):
         return geom
@@ -450,15 +454,15 @@ def make_geom(geom, n_dim = None, n_div = 1000):
                 raise User_error(f"failed to parse text file `{geom}`") from e
             return cpp.Simplex_geom[2](cpp.segments(to_matrix(data)))
         elif ext in ["igs", "iges", "stp", "step"]:
-            shape = cpp.Occt_geom.read(geom)
+            shape = cpp.Occt.read(geom)
             if n_dim == 2:
-                return cpp.Simplex_geom[2](cpp.segments(shape, n_div))
+                return cpp.Simplex_geom[2](cpp.Occt.segments(shape, n_div))
             elif n_dim == 3:
-                return cpp.Occt_geom(shape, n_dim)
+                return cpp.Simplex_geom[3](cpp.Occt.triangles(shape, max_angle, max_deflection));
             else:
                 raise User_error("must specify `n_dim` as either 2 or 3")
         elif ext == "stl":
-            return cpp.Simplex_geom[3](cpp.triangles(cpp.Occt_geom.read_stl(geom)))
+            return cpp.Simplex_geom[3](cpp.Occt.triangles(cpp.Occt.read_stl(geom)))
         else:
             raise User_error(f"file extension `.{ext}` not supported")
     else:
