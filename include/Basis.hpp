@@ -14,18 +14,18 @@ namespace hexed
 class Basis
 {
   public:
-  const int row_size; //!< degree of the basis polynomials + 1 (see \ref Terminology).
+  const int row_size; //!< \brief \ref row_size "row size"
 
   //! \param row_size_arg specifies member `row_size`.
   Basis(int row_size_arg);
   virtual ~Basis();
-  //! the `i`th interpolation node (i.e. quadrature point). Should be in interval [0, 1].
+  //! \brief the `i`th interpolation node (i.e. quadrature point). Should be in interval [0, 1].
   virtual double node(int i) const = 0;
-  //! `node_weights()(i)` is the quadrature weight associated with `node(i)` Integrates in domain [0, 1].
+  //! \brief `node_weights()(i)` is the quadrature weight associated with `node(i)` Integrates in domain [0, 1].
   virtual Eigen::VectorXd node_weights() const = 0;
-  //! Differentiation matrix. `diff_mat()(i, j)` is the derivative of interpolating polynomial `j` evaluated at `node(i)`.
+  //! \brief Differentiation matrix. `diff_mat()(i, j)` is the derivative of interpolating polynomial `j` evaluated at `node(i)`.
   virtual Eigen::MatrixXd diff_mat() const = 0;
-  //! `boundary()(i, j)` is the `j`th basis polynomial evaluated at `i` for `i` in {0, 1}.
+  //! \brief `boundary()(i, j)` is the `j`th basis polynomial evaluated at `i` for `i` in {0, 1}.
   virtual Eigen::MatrixXd boundary() const = 0;
   /*! \brief `orthogonal(degree)(i)` is the `degree`th-degree [Legendre polynomial](https://en.wikipedia.org/wiki/Legendre_polynomials) evaluated at `node(i)`.
    * \details Polynomial is scaled so that its norm is 1 with respect to the quadrature rule of the basis.
@@ -46,13 +46,13 @@ class Basis
    * refined space into the space of this basis.
    */
   virtual Eigen::MatrixXd restrict(int i_half) const = 0;
-  //! Maximum stable CFL number for convection equations.
+  //! \brief Maximum stable CFL number for convection equations.
   virtual double max_cfl_convective() const = 0;
-  //! Maximum stable CFL number for diffusion equations.
+  //! \brief Maximum stable CFL number for diffusion equations.
   virtual double max_cfl_diffusive() const = 0;
-  //! Cancellation coefficient for custom 2-stage time integration stage in convection equations.
+  //! \brief Cancellation coefficient for custom 2-stage time integration stage in convection equations.
   virtual double cancellation_convective() const = 0;
-  //! Cancellation coefficient for custom 2-stage time integration stage in diffusion equations.
+  //! \brief Cancellation coefficient for custom 2-stage time integration stage in diffusion equations.
   virtual double cancellation_diffusive() const = 0;
 };
 
