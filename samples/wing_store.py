@@ -4,5 +4,6 @@ solver = hexed.create_solver(3, 3, [-.1, 0., -.3], [.5, .6, .3], freestream = he
                              geom = hexed.make_geom("samples/wing_store.IGS", n_dim = 3),
                              final_resolution = "res_bad > .1 && ref_level < 8", final_max_iters = 8, resolution_metric = "continuity",
                              n_smooth = 10)
+print(f"n elements: {solver.mesh().n_elements()}")
 solver.visualize_surface_tecplot(solver.mesh().surface_bc_sn(), "hexed_out/mesh", 3)
 print("Geometry processing performance: " + hexed.cpp.Simplex_geom[3].performance_report())
