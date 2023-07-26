@@ -46,7 +46,7 @@ class User_error(Exception):
     pass
 
 def to_arr(arr_like, shape = None, size = None, exception = User_error("Could not convert to numpy float array")):
-    r"""! converts `arr_like` to a numpy float array, potentially with a specific size and/or
+    r"""! \brief converts `arr_like` to a numpy float array, potentially with a specific size and/or
     shape and throws a specific exception on failure """
     try:
         arr = np.array(arr_like).astype(np.float64)
@@ -57,7 +57,7 @@ def to_arr(arr_like, shape = None, size = None, exception = User_error("Could no
         raise exception from e
 
 def to_matrix(arr_like):
-    r"""! Converts `arr_like` to an `Eigen::MatrixXd`. Array is transposed to maintain storage order. """
+    r"""! \brief Converts `arr_like` to an `Eigen::MatrixXd`. Array is transposed to maintain storage order. """
     arr = np.array(arr_like).astype(np.float64)
     if len(arr.shape) > 2:
         raise Exception("array has too many dimensions to be converted to a matrix")
@@ -616,6 +616,7 @@ def flow_state(density = None, pressure = None, temperature = None, altitude = N
     return np.concatenate([density*velocity, [density, pressure/(heat_ratio - 1.) + .5*density*velocity@velocity]])
 
 class Convergence_monitor:
+    r"""! \brief WIP """
     def __init__(self, rtol = 0, atol = 0, plot = True):
         self.values = []
         self.iters = []

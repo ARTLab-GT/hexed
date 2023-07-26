@@ -5,7 +5,6 @@
 
 /*! \brief Mathematical and physical constants.
  * \details Definition of mathematical and physical constants, including unit conversions, as `const` global variables.
- * If you're in Python, you can import with `from hexed.cpp.constants import *`.
  * \note
  * - Whenever I say here something is "exact", I really mean it is exact up to the
  *   [inherent limitations](https://docs.python.org/3/tutorial/floatingpoint.html) of floating-point representations.
