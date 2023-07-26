@@ -13,6 +13,20 @@
 namespace hexed
 {
 
+/*! \brief The main class that basically runs everything.
+ * \details If you want to run a simulation with hexed through the C++ API, your workflow should be roughly the following:
+ * -# construct a `Solver` object
+ * -# interact with the `mesh()` object to build the mesh topology and/or snap vertices
+ * -# call `calc_jacobian()` to initialize internal parameters based on the mesh
+ * -# call `initialize()` to initialize the flow state
+ * -# call `update()` repeatedly to progress the simulation
+ * -# call the some of the functions in output section to get the data you want from the simulation
+ *
+ * If you're using the \ref hexed_python "Python API", simply:
+ * -# Call `create_solver()` to create an instance.
+ * -# Override `done()` and any other methods you want to customize.
+ * -# Call `run()`.
+ */
 class Solver_interface
 {
   public:
@@ -153,6 +167,9 @@ class Solver_interface
   #endif
 };
 
+//! \brief Creates a `Solver` object and returns it as a pointer to `Solver_interface`
+//! \details Useful for the implementation of `hexed_python.create_solver`.
+//! \relates Solver_interface
 std::unique_ptr<Solver_interface> make_solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping = false,
                                               Transport_model viscosity_model = inviscid, Transport_model thermal_conductivity_model = inviscid);
 

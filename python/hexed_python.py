@@ -176,6 +176,7 @@ def create_solver(
     \param resolution_metric (string) "smoothness" to evaluate resolution badness based on high-order components of element Jacobian (better for high-order)
                              or "continuity" to evaluate it based on inter-element continuity of the surface normal (better for low-order).
     \param local_time_stepping Whether to use LTS.
+    \relatesalso hexed::Solver_interface
     """
     if not 1 <= int(n_dim) <= 3: raise User_error("invalid `n_dim`")
     if not 2 <= int(row_size) <= cpp.config.max_row_size: raise User_error(f"invalid `row_size` (max is {cpp.config.max_row_size})")
