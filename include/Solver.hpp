@@ -14,17 +14,7 @@
 namespace hexed
 {
 
-/*! \brief The main class that basically runs everything.
- * \details If you want to run a simulation with hexed, your workflow should be roughly the following:
- * -# construct a `Solver` object
- * -# interact with the `mesh()` object to build the mesh topology
- * -# call `snap_vertices()` and then `relax_vertices()` repeatedly until you have an acceptable body-fitted mesh.
- * -# call `snap_faces()` to get a good high-order surface fit
- * -# call `calc_jacobian()` to initialize internal parameters based on the mesh
- * -# call `initialize()` to initialize the flow state
- * -# call `update()` repeatedly to progress the simulation
- * -# call the some of the functions in output section to get the data you want from the simulation
- */
+//! \brief Concrete implementation of `Solver_interface`.
 class Solver : public Solver_interface
 {
   Storage_params params;
