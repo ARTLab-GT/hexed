@@ -41,6 +41,7 @@ class Vertex
   int mass();
   //! whether relaxation will cause this vertex to move
   bool is_mobile();
+  bool needs_smooth(); //!< any of `Transferable_ptr::needs_smooth`
   /*! \brief Specify that another vertex represents the same grid point as `*this`.
    * \details `*this` will acquire `other`'s resources:
    * - All `Transferable_ptr`s pointing to `other` will be changed to point to `this`.
@@ -87,6 +88,9 @@ class Vertex::Transferable_ptr
   double shareable_value;
   //! whether this `Transferable_ptr` wants its vertex to be mobile
   const bool mobile;
+  //! \brief whether this element needs this vertex to be smoothed
+  //! \details (`Accessible_mesh::update` will set this to `false` for elements that have already been sufficiently smoothed)
+  bool needs_smooth = true;
 
   //! Create a vertex and construct a `Transferable_ptr` to it.
   Transferable_ptr(Mat<3> pos, bool mobile = false);

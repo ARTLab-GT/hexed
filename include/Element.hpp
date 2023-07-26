@@ -86,8 +86,8 @@ class Element
   double* art_visc_forcing(); //!< layout: [i_forcing][i_qpoint]
   virtual double* node_adjustments() {return nullptr;} //!< overriden by `Deformed_element`
 
-  /*!
-   * Compute the Jacobian matrix. I.e., derivative of `i_dim`th
+  /*! \brief Compute the Jacobian matrix.
+   * \details I.e., derivative of `i_dim`th
    * physical coordinate wrt `j_dim`th reference coordinate. Trivial for this
    * class, may be non-trivial for derived (see `Deformed_element`).
    * For convenience, not performance.
@@ -103,6 +103,7 @@ class Element
   void fetch_shareable_value(vertex_value_access access_func, Vertex::reduction = Vertex::vector_max); // set `this`'s copy of shareable value to the shared values at the vertices
   //! Time step scale at the vertices. TSS in the interior is set by interpolating this.
   double& vertex_time_step_scale(int i_vertex);
+  void set_needs_smooth(bool); //!< sets the `Vertex::Transferable_ptr::needs_smooth` of the vertices
 };
 
 }

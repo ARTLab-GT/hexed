@@ -13,11 +13,12 @@ TEST_CASE("Simplex_geom")
     hexed::Simplex_geom<2> geom{elems};
     // nearest point
     hexed::Mat<> nearest;
-    nearest = geom.nearest_point(hexed::Mat<2>{.5, 2.});
+    nearest = geom.nearest_point(hexed::Mat<2>{.5, 2.}).point();
     REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<2>{.5, 1.}, hexed::math::Approx_equal(0, 1e-12)));
-    nearest = geom.nearest_point(hexed::Mat<2>{3, .5});
+    REQUIRE(geom.nearest_point(hexed::Mat<2>{.5, 2.}, 0.1).empty());
+    nearest = geom.nearest_point(hexed::Mat<2>{3, .5}).point();
     REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<2>{2., .5}, hexed::math::Approx_equal(0, 1e-12)));
-    nearest = geom.nearest_point(hexed::Mat<2>{3, 3});
+    nearest = geom.nearest_point(hexed::Mat<2>{3, 3}).point();
     REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<2>{2., 1.}, hexed::math::Approx_equal(0, 1e-12)));
     // intersections
     std::vector<double> inters;
@@ -39,21 +40,22 @@ TEST_CASE("Simplex_geom")
     hexed::Simplex_geom<3> geom{elems};
     hexed::Mat<> nearest;
     // nearest on face
-    nearest = geom.nearest_point(hexed::Mat<3>{1., .1, 1.});
+    nearest = geom.nearest_point(hexed::Mat<3>{1., .1, 1.}).point();
     REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<3>{.5, .1, .5}, hexed::math::Approx_equal(0, 1e-12)));
+    REQUIRE(geom.nearest_point(hexed::Mat<3>{1., .1, 1.}, 0.1).empty());
     // nearest on edges
-    nearest = geom.nearest_point(hexed::Mat<3>{2., .1, 0.});
+    nearest = geom.nearest_point(hexed::Mat<3>{2., .1, 0.}).point();
     REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<3>{1., .1, 0.}, hexed::math::Approx_equal(0, 1e-12)));
-    nearest = geom.nearest_point(hexed::Mat<3>{0., 1.5, 1.});
+    nearest = geom.nearest_point(hexed::Mat<3>{0., 1.5, 1.}).point();
     REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<3>{.5, .5, .5}, hexed::math::Approx_equal(0, 1e-12)));
-    nearest = geom.nearest_point(hexed::Mat<3>{.5, -.1, .5});
+    nearest = geom.nearest_point(hexed::Mat<3>{.5, -.1, .5}).point();
     REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<3>{.5, 0., .5}, hexed::math::Approx_equal(0, 1e-12)));
     // nearest at vertices
-    nearest = geom.nearest_point(hexed::Mat<3>{1.1, 2., 0.1});
+    nearest = geom.nearest_point(hexed::Mat<3>{1.1, 2., 0.1}).point();
     REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<3>{1., 1., 0.}, hexed::math::Approx_equal(0, 1e-12)));
-    nearest = geom.nearest_point(hexed::Mat<3>{-.1, -.1, 1.1});
+    nearest = geom.nearest_point(hexed::Mat<3>{-.1, -.1, 1.1}).point();
     REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 0., 1.}, hexed::math::Approx_equal(0, 1e-12)));
-    nearest = geom.nearest_point(hexed::Mat<3>{1., -.1, -.1});
+    nearest = geom.nearest_point(hexed::Mat<3>{1., -.1, -.1}).point();
     REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<3>{1., 0., 0.}, hexed::math::Approx_equal(0, 1e-12)));
     // intersections
     std::vector<double> inters;

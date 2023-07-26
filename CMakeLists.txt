@@ -1,8 +1,15 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.16)
 
-project(hexed VERSION 0.0
+project(hexed VERSION 0.0.0
         DESCRIPTION "Discontinuous Galerkin engine for CFD with automated, unstructured quad/hex meshing."
         LANGUAGES CXX)
+# get info about current build for documentation purposes
+string(TIMESTAMP DATE "%Y-%m-%d") # get the current date for reference purposes
+execute_process(
+    COMMAND git log -1 --format=%H
+    OUTPUT_VARIABLE COMMIT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
 
 # specify the C++ standard
 set(CMAKE_CXX_STANDARD 20)
@@ -71,7 +78,6 @@ endif()
 # configure files
 configure_file(hexed-config.cmake.in hexed-config.cmake)
 configure_file(hexed_config.hpp.in include/auto/hexed_config.hpp)
-file(GLOB PYTHON_FILES CONFIGURE_DEPENDS ${CMAKE_BINARY_DIR}/*.py)
 file(CREATE_LINK ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/include/hexed SYMBOLIC)
 file(COPY_FILE ${CMAKE_SOURCE_DIR}/test/ellipsoid.igs ${CMAKE_BINARY_DIR}/ellipsoid.igs)
 file(COPY_FILE ${CMAKE_SOURCE_DIR}/test/ellipsoid.stp ${CMAKE_BINARY_DIR}/ellipsoid.stp)
@@ -95,28 +101,6 @@ set(colormap_files
 )
 configure_file(script/hexed-wrapped-post-process.in hexed-wrapped-post-process)
 configure_file(script/format.mcr.in format.mcr)
-
-# build documentation
-file(GLOB DOC_FILES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/doc/*.dox)
-if(build_docs)
-    configure_file(doc/config.in ${CMAKE_BINARY_DIR}/doc_config)
-    file(COPY doc/header.png DESTINATION doc/html)
-    add_custom_command(
-        OUTPUT doxygen_output.txt
-        COMMAND doxygen doc_config > doxygen_output.txt
-        DEPENDS
-            ${CMAKE_BINARY_DIR}/doc_config
-            hexed
-            python/hexed_python.py
-            doc/header.png
-            doc/style.css
-            ${DOC_FILES}
-    )
-    add_custom_target(
-        documentation ALL
-        DEPENDS doxygen_output.txt
-    )
-endif()
 
 # generate colormaps to use in tecplot
 add_custom_command(
@@ -159,15 +143,10 @@ add_subdirectory(demo)
 if (build_tests)
     add_subdirectory(test)
 endif()
-
-# configure python files
-get_target_property(CPPYY_INCLUDE hexed INCLUDE_DIRECTORIES)
-if (use_occt)
-    get_target_property(OCCT_INCLUDE_DIRECTORIES TKBRep INTERFACE_INCLUDE_DIRECTORIES)
-    set(CPPYY_INCLUDE ${CPPYY_INCLUDE};${OCCT_INCLUDE_DIRECTORIES})
+if(build_docs)
+    add_subdirectory(doc)
 endif()
-configure_file(hexed_py_config.py.in hexed_py_config.py)
-configure_file(python/hexed_python.py hexed.py)
+add_subdirectory(python)
 
 # run cppcheck
 if (use_cppcheck)
@@ -179,4 +158,4 @@ endif()
 install(PROGRAMS script/hexed-post-process ${CMAKE_BINARY_DIR}/hexed-wrapped-post-process script/hexed-fit-geom TYPE BIN)
 export(TARGETS hexed FILE hexed-targets.cmake)
 install(FILES ${CMAKE_BINARY_DIR}/hexed-config.cmake DESTINATION lib/cmake/hexed)
-install(FILES ${PYTHON_FILES} DESTINATION ${PYTHON_INSTALL_PREFIX})
+install(FILES ${CMAKE_BINARY_DIR}/python/hexed_py_config.py ${CMAKE_BINARY_DIR}/python/hexed.py DESTINATION ${PYTHON_INSTALL_PREFIX})

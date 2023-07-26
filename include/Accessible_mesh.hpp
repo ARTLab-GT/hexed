@@ -8,8 +8,8 @@
 namespace hexed
 {
 
-/*!
- * A mesh that supports access to the actual elements with the numerical data they contain. This level of
+/*! \brief A mesh that supports access to the actual elements with the numerical data they contain.
+ * \details This level of
  * access is required by the numerical scheme but should be hidden from the library user, who should not be
  * concerned with numerical details.
  */
@@ -38,21 +38,25 @@ class Accessible_mesh : public Mesh
   std::vector<int> tree_bcs;
   bool verts_are_reset;
   std::vector<std::vector<Vertex::Non_transferable_ptr>> boundary_verts; // a vector of the vertices that are on each boundary
+  std::vector<Vertex::Non_transferable_ptr> smooth_verts; // a vector of the vertices that need to be smoothed in this sweep
 
   Element_container& container(bool is_deformed);
   int add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin);
   Element& add_elem(bool is_deformed, Tree&);
+  bool intersects_surface(Tree*);
   bool is_surface(Tree*);
   template<typename element_t> Mesh_by_type<element_t>& mbt(); // gets either `car` or `def`
   template<typename element_t> void connect_new(int start_at); // connects new elements in `mbt<element_t>()`. helper function for `refine`
+  void refine_set_status(Tree*); // refines a tree and sets the flood fill status for any children that intersect the surface
   void refine_by_record(bool is_deformed, int start, int end);
   bool needs_refine(Tree*);
+  void purge();
   void delete_bad_extrusions();
   void deform();
-  void purge();
+  void id_smooth_verts();
+  void id_boundary_verts();
   // identify which vertices are on which boundaries and write it to `Vertex::record`
   // must be called directly befor `snap_vertices`
-  void id_boundary_verts();
   void snap_vertices();
 
   public:
@@ -76,17 +80,19 @@ class Accessible_mesh : public Mesh
                          std::array<bool, 2> is_deformed = {false, false}) override;
   void connect_deformed(int ref_level, std::array<int, 2> serial_n, Con_dir<Deformed_element> direction) override;
   void connect_hanging(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Deformed_element>,
-                               bool coarse_deformed = false, std::vector<bool> fine_deformed = {false, false, false, false},
-                               std::array<bool, 2> stretch = {false, false}) override;
+                       bool coarse_deformed = false, std::vector<bool> fine_deformed = {false, false, false, false},
+                       std::array<bool, 2> stretch = {false, false}) override;
   //! \returns a view of all connections between elements, including one connection for every fine element in hanging node connections.
   Sequence<Element_connection&>& element_connections() {return elem_cons;}
   int add_boundary_condition(Flow_bc*, Mesh_bc*) override;
   void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n) override;
   void disconnect_boundary(int bc_sn) override;
+  void cleanup() override;
 
   void add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3)) override;
   void set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) override;
   bool update(std::function<bool(Element&)> refine_criterion = criteria::always, std::function<bool(Element&)> unrefine_criterion = criteria::never) override;
+  void set_all_smooth() override;
   void relax(double factor = 0.9) override;
   inline int surface_bc_sn() override {return surf_bc_sn;}
 

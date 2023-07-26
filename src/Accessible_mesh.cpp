@@ -24,7 +24,11 @@ void Accessible_mesh::id_boundary_verts()
   for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
     verts[i_vert].record.clear();
   }
-  for (auto& b_verts : boundary_verts) erase_if(b_verts, &Vertex::Non_transferable_ptr::is_null);
+  for (auto& b_verts : boundary_verts) {
+    erase_if(b_verts, [](Vertex::Non_transferable_ptr& ptr) {
+      if (!ptr) return true;
+      return !ptr->needs_smooth();});
+  }
   for (unsigned bc_sn = 0; bc_sn < boundary_verts.size(); ++bc_sn) {
     #pragma omp parallel for
     for (auto& vert : boundary_verts[bc_sn]) {
@@ -40,7 +44,7 @@ void Accessible_mesh::id_boundary_verts()
             Lock::Acquire a(vert.lock);
             if (!std::count(vert.record.begin(), vert.record.end(), bc_sn)) {
               vert.record.push_back(bc_sn);
-              boundary_verts[bc_sn].emplace_back(vert);
+              if (vert.needs_smooth()) boundary_verts[bc_sn].emplace_back(vert);
             }
           }
         }
@@ -65,7 +69,11 @@ void Accessible_mesh::snap_vertices()
       #pragma omp parallel for
       for (auto& vert : boundary_verts[surf_bc_sn]) {
         auto pos = vert->pos(Eigen::seqN(0, params.n_dim));
-        pos = surf_geom->nearest_point(pos);
+        double dist_guess = 0;
+        for (const Vertex& neighb : vert->get_neighbors()) {
+          dist_guess = std::max(dist_guess, (neighb.pos - vert->pos).norm());
+        }
+        pos = surf_geom->nearest_point(pos, huge, dist_guess).point();
       }
     }
   } else {
@@ -202,6 +210,13 @@ void Accessible_mesh::disconnect_boundary(int bc_sn)
 {
   erase_if(car.bound_cons, [bc_sn](std::unique_ptr<Typed_bound_connection<         Element>>& con){return con->bound_cond_serial_n() == bc_sn;});
   erase_if(def.bound_cons, [bc_sn](std::unique_ptr<Typed_bound_connection<Deformed_element>>& con){return con->bound_cond_serial_n() == bc_sn;});
+}
+
+void Accessible_mesh::cleanup()
+{
+  purge();
+  id_smooth_verts();
+  id_boundary_verts();
 }
 
 Mesh::Connection_validity Accessible_mesh::valid()
@@ -620,12 +635,16 @@ void Accessible_mesh::add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin)
   }
 }
 
-bool Accessible_mesh::is_surface(Tree* t)
+bool Accessible_mesh::intersects_surface(Tree* t)
 {
   if (!surf_geom) return false;
   Mat<> center = t->nominal_position() + t->nominal_size()/2*Mat<>::Ones(params.n_dim);
-  double dist = (center - surf_geom->nearest_point(center)).norm();
-  return dist < std::sqrt(params.n_dim)/2*t->nominal_size();
+  return !surf_geom->nearest_point(center, std::sqrt(params.n_dim)/2*t->nominal_size()).empty();
+}
+
+bool Accessible_mesh::is_surface(Tree* t)
+{
+  return t->get_status() == 0;
 }
 
 void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start)
@@ -639,7 +658,7 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
-    if (elem.tree) if (is_surface(elem.tree)) elem.tree->set_status(0);
+    if (elem.tree) if (intersects_surface(elem.tree)) elem.tree->set_status(0);
   }
   // pefrorm flood fill
   Tree* start = tree->find_leaf(flood_fill_start);
@@ -661,6 +680,7 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   connect_rest(surf_bc_sn);
   id_boundary_verts();
   snap_vertices();
+  id_smooth_verts();
 }
 
 // forms connections for new tree elements of type `element_t` starting with the `starting_at`th one
@@ -735,6 +755,14 @@ void Accessible_mesh::connect_new(int start_at)
   }
 }
 
+void Accessible_mesh::refine_set_status(Tree* t)
+{
+  t->refine();
+  for (Tree* child : t->children()) {
+    child->set_status(intersects_surface(child) - 1);
+  }
+}
+
 // performs the actual refinement for all elements where the record has been set to 1
 void Accessible_mesh::refine_by_record(bool is_deformed, int start, int end)
 {
@@ -744,7 +772,7 @@ void Accessible_mesh::refine_by_record(bool is_deformed, int start, int end)
     if (elem.tree) {
       if (elem.record == 1) {
         elem.record = 2;
-        elem.tree->refine();
+        refine_set_status(elem.tree);
         for (Tree* child : elem.tree->children()) {
           add_elem(is_deformed, *child).record = 0;
         }
@@ -890,7 +918,7 @@ void Accessible_mesh::delete_bad_extrusions()
           bool bad = false;
           auto eval = [&](Mat<> direction) {
             Mat<> center = elem.tree->center() + elem.tree->nominal_size()/2*direction;
-            Mat<> nearest = surf_geom->nearest_point(center);
+            Mat<> nearest = surf_geom->nearest_point(center).point();
             double tol = .3;
             bad = bad || (nearest - center).normalized().dot(direction.normalized()) < -tol;
           };
@@ -1013,17 +1041,29 @@ void Accessible_mesh::deform()
 
 void Accessible_mesh::purge()
 {
-  // delete obsolete elements of `extrude_cons`
-  erase_if(extrude_cons, [](Element_face_connection<Deformed_element>* con){return con->element(0).record == 2 || con->element(1).record == 2;});
-  // delete connections to old elements (has to happen before deleting elements or else use after free)
-  car.purge_connections();
-  def.purge_connections();
-  // delete old elements
-  car.elems.purge();
-  def.elems.purge();
+  if (tree) {
+    // delete obsolete elements of `extrude_cons`
+    erase_if(extrude_cons, [](Element_face_connection<Deformed_element>* con){return con->element(0).record == 2 || con->element(1).record == 2;});
+    // delete connections to old elements (has to happen before deleting elements or else use after free)
+    car.purge_connections();
+    def.purge_connections();
+    // delete old elements
+    car.elems.purge();
+    def.elems.purge();
+  }
   // delete dangling vertex pointers
   erase_if(vert_ptrs, &Vertex::Non_transferable_ptr::is_null);
   for (auto& b_verts : boundary_verts) erase_if(b_verts, &Vertex::Non_transferable_ptr::is_null);
+}
+
+void Accessible_mesh::id_smooth_verts()
+{
+  smooth_verts.clear();
+  auto verts = vertices();
+  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
+    auto& vert = verts[i_vert];
+    if (vert.is_mobile() && vert.needs_smooth()) smooth_verts.emplace_back(vert);
+  }
 }
 
 bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std::function<bool(Element&)> unrefine_criterion)
@@ -1049,6 +1089,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
     bool unref = unrefine_criterion(elem);
     if (ref && !unref) elem.record = 1;
     else if (unref && !ref) elem.record = -1;
+    elem.set_needs_smooth(false);
   }
   // pass refinement requests of extruded elements to their extrusion parents
   #pragma omp parallel for
@@ -1118,36 +1159,45 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
       if (elem.tree && elem.record != 2) if (is_surface(elem.tree)) elem.record = 2;
     }
   }
-  // synchronize refinement level of surface elements with their non-surface neighbors in preparation for incremental flood fill
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto& elem = elems[i_elem];
-    if (exists(elem.tree)) {
-      for (int i_face = 0; i_face < 2*nd; ++i_face) {
-        Tree* neighbor = elem.tree->find_neighbor(math::direction(nd, i_face));
-        if (neighbor) {
-          if (!exists(neighbor)) {
-            if (neighbor->refinement_level() > elem.refinement_level()) {
-              Tree* p = neighbor->parent();
-              bool can_unref = true;
-              for (Tree* child : p->children()) can_unref = can_unref && !exists(child);
-              if (can_unref && !needs_refine(p)) p->unrefine();
-            } else if (neighbor->refinement_level() < elem.refinement_level() - 1) neighbor->refine();
-            else if (neighbor->refinement_level() < elem.refinement_level()) {
-              int min_rl = std::numeric_limits<int>::max();
-              for (int j_face = 0; j_face < 2*nd; ++j_face) {
-                Tree* n = neighbor->find_neighbor(math::direction(nd, j_face));
-                if (exists(n)) min_rl = std::min(min_rl, n->refinement_level());
+  // incremental flood fill
+  do {
+    changed = false;
+    // synchronize refinement level of surface elements with their non-surface neighbors
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      if (exists(elem.tree)) {
+        for (int i_face = 0; i_face < 2*nd; ++i_face) {
+          Tree* neighbor = elem.tree->find_neighbor(math::direction(nd, i_face));
+          if (neighbor) {
+            if (!exists(neighbor)) {
+              if (neighbor->refinement_level() > elem.refinement_level()) {
+                Tree* p = neighbor->parent();
+                bool can_unref = true;
+                for (Tree* child : p->children()) can_unref = can_unref && !exists(child);
+                if (can_unref && !needs_refine(p)) {
+                  changed = true;
+                  p->unrefine();
+                }
+              } else if (neighbor->refinement_level() < elem.refinement_level() - 1) {
+                changed = true;
+                refine_set_status(neighbor);
+              } else if (neighbor->refinement_level() < elem.refinement_level()) {
+                int min_rl = std::numeric_limits<int>::max();
+                for (int j_face = 0; j_face < 2*nd; ++j_face) {
+                  Tree* n = neighbor->find_neighbor(math::direction(nd, j_face));
+                  if (exists(n)) min_rl = std::min(min_rl, n->refinement_level());
+                }
+                if (neighbor->refinement_level() < min_rl) {
+                  changed = true;
+                  refine_set_status(neighbor);
+                }
               }
-              if (neighbor->refinement_level() < min_rl) neighbor->refine();
             }
           }
         }
       }
     }
-  }
-  // incremental flood fill
-  do {
-    changed = false;
+    // add new elements
     for (bool is_deformed : {0, 1}) {
       auto& cont = container(is_deformed);
       auto& cont_elems = cont.element_view();
@@ -1160,6 +1210,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
               if (!exists(neighbor)) if (!is_surface(neighbor)) {
                 changed = true;
                 add_elem(is_deformed, *neighbor).record = 0;
+                neighbor->set_status(1);
               }
             }
           }
@@ -1224,27 +1275,36 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   id_boundary_verts();
   snap_vertices();
   global_hacks::numbers[2] += sw.time();
+  id_smooth_verts();
   return n_before > n_after; // any change to the element structure (including adding elements!) will cause `purge` to reduce the size of `elems`
+}
+
+void Accessible_mesh::set_all_smooth()
+{
+  auto& elems = elements();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    elems[i_elem].set_needs_smooth(true);
+  }
+  id_smooth_verts();
+  id_boundary_verts();
 }
 
 void Accessible_mesh::relax(double factor)
 {
   id_boundary_verts();
-  auto verts = vertices();
   // calculate average neighbor position
   #pragma omp parallel for
-  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
-    auto& vert = verts[i_vert];
-    vert.temp_vector.setZero();
-    auto neighbs = vert.get_neighbors();
-    for (auto& neighb : neighbs) vert.temp_vector += neighb.pos;
-    vert.temp_vector /= neighbs.size();
+  for (auto& vert : smooth_verts) {
+    vert->temp_vector.setZero();
+    auto neighbs = vert->get_neighbors();
+    for (auto& neighb : neighbs) vert->temp_vector += neighb.pos;
+    vert->temp_vector /= neighbs.size();
   }
   // update position
   #pragma omp parallel for
-  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
-    auto& vert = verts[i_vert];
-    if (vert.is_mobile()) vert.pos = factor*vert.temp_vector + (1 - factor)*vert.pos;
+  for (auto& vert : smooth_verts) {
+    if (vert->is_mobile()) vert->pos = factor*vert->temp_vector + (1 - factor)*vert->pos;
   }
   snap_vertices();
 }

@@ -1,0 +1,99 @@
+refinement iteration 0
+refinement iteration 1
+refinement iteration 2
+Geometry processing performance: Total:
+    intersections: 20834 intersections completed in 4.59134 s at 0.000220377 s / intersection.
+    nearest_point: 47695 projections completed in 67.5284 s at 0.00141584 s / projection.
+
+refinement iteration 0
+refinement iteration 1
+refinement iteration 2
+Geometry processing performance: Total:
+    intersections: 20792 intersections completed in 4.70638 s at 0.000226356 s / intersection.
+    nearest_point: 45053 projections completed in 59.2919 s at 0.00131605 s / projection.
+
+refinement iteration 0
+refinement iteration 1
+refinement iteration 2
+Geometry processing performance: Total:
+    intersections: 20841 intersections completed in 4.5895 s at 0.000220215 s / intersection.
+    nearest_point: 45138 projections completed in 59.6694 s at 0.00132193 s / projection.
+
+refinement iteration 0
+refinement iteration 1
+refinement iteration 2
+Geometry processing performance: Total:
+    intersections: 20786 intersections completed in 4.64669 s at 0.000223549 s / intersection.
+    nearest_point: 45059 projections completed in 60.3808 s at 0.00134004 s / projection.
+
+refinement iteration 0
+refinement iteration 1
+refinement iteration 2
+Geometry processing performance: Total:
+    intersections: 20636 intersections completed in 4.65873 s at 0.000225757 s / intersection.
+    nearest_point: 57393 projections completed in 79.6674 s at 0.0013881 s / projection.
+
+refinement iteration 0
+refinement iteration 1
+refinement iteration 2
+Geometry processing performance: Total:
+    intersections: 20596 intersections completed in 4.79455 s at 0.000232791 s / intersection.
+    nearest_point: 69920 projections completed in 100.947 s at 0.00144375 s / projection.
+
+refinement iteration 0
+refinement iteration 1
+refinement iteration 2
+Geometry processing performance: Total:
+    intersections: 20694 intersections completed in 4.78543 s at 0.000231247 s / intersection.
+    nearest_point: 70202 projections completed in 105.507 s at 0.00150291 s / projection.
+
+refinement iteration 0
+refinement iteration 1
+refinement iteration 2
+Geometry processing performance: Total:
+    intersections: 20773 intersections completed in 4.83261 s at 0.000232639 s / intersection.
+    nearest_point: 70334 projections completed in 101.466 s at 0.00144263 s / projection.
+
+refinement iteration 0
+refinement iteration 1
+refinement iteration 2
+Geometry processing performance: Total:
+    intersections: 20762 intersections completed in 4.79136 s at 0.000230776 s / intersection.
+    nearest_point: 70334 projections completed in 105.718 s at 0.00150309 s / projection.
+
+refinement iteration 0
+refinement iteration 1
+refinement iteration 2
+refinement iteration 3
+refinement iteration 4
+refinement iteration 5
+refinement iteration 6
+refinement iteration 7
+Geometry processing performance: Total:
+    intersections: 29313 intersections completed in 6.38491 s at 0.000217818 s / intersection.
+    nearest_point: 122211 projections completed in 155.186 s at 0.00126982 s / projection.
+
+refinement iteration 0
+refinement iteration 1
+refinement iteration 2
+refinement iteration 3
+refinement iteration 4
+refinement iteration 5
+refinement iteration 6
+refinement iteration 7
+Geometry processing performance: Total:
+    intersections: 29302 intersections completed in 6.98798 s at 0.000238481 s / intersection.
+    nearest_point: 120006 projections completed in 163.025 s at 0.00135847 s / projection.
+
+refinement iteration 0
+refinement iteration 1
+refinement iteration 2
+refinement iteration 3
+refinement iteration 4
+refinement iteration 5
+refinement iteration 6
+refinement iteration 7
+Geometry processing performance: Total:
+    intersections: 29275 intersections completed in 1.6303 s at 5.56891e-05 s / intersection.
+    nearest_point: 117696 projections completed in 165.785 s at 0.00140859 s / projection.
+

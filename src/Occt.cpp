@@ -1,9 +1,10 @@
-#include <Occt_geom.hpp>
+#include <Occt.hpp>
 #if HEXED_USE_OCCT
 
 // geometry
 #include <TopoDS_Iterator.hxx>
 #include <BRep_Tool.hxx>
+#include <BRepTools.hxx>
 #include <TopoDS_Face.hxx>
 #include <TopoDS_Edge.hxx>
 #include <GeomAPI_ProjectPointOnSurf.hxx>
@@ -27,13 +28,20 @@
 #include <IGESControl_Reader.hxx>
 #include <STEPControl_Reader.hxx>
 #include <RWStl.hxx>
+// triangulations
+#include <IMeshTools_Parameters.hxx>
+#include <BRepMesh_IncrementalMesh.hxx>
+#if HEXED_USE_TECPLOT
+#include <Tecplot_file.hpp>
+#endif
+#include <iostream>
 
 namespace hexed
 {
 
-bool Occt_geom::message_set = false;
+bool Occt::message_set = false;
 
-void Occt_geom::set_message()
+void Occt::set_message()
 {
   if (!message_set) {
     message_set = true;
@@ -63,7 +71,7 @@ void collect_curves(std::vector<opencascade::handle<Geom2d_Curve>>& curves, cons
   });
 }
 
-Occt_geom::Occt_geom(const TopoDS_Shape& shape, int n_dim)
+Occt::Geom::Geom(const TopoDS_Shape& shape, int n_dim)
 : nd{n_dim}
 {
   if (nd == 2) {
@@ -77,36 +85,88 @@ Occt_geom::Occt_geom(const TopoDS_Shape& shape, int n_dim)
   } else throw std::runtime_error("`hexed::Occt_gom` must be either 2D or 3D.");
 }
 
-Mat<> Occt_geom::nearest_point(Mat<> point)
+void Occt::Geom::visualize(std::string file_name)
+{
+  #if HEXED_USE_TECPLOT
+  int n_div = 20;
+  if (nd == 3) {
+    Tecplot_file file(file_name, 3, {"real"}, 0.);
+    for (unsigned i_surf = 0; i_surf < surfaces.size(); ++i_surf) {
+      auto& surf = surfaces[i_surf];
+      double param_bounds [2][2];
+      surf->Bounds(param_bounds[0][0], param_bounds[0][1], param_bounds[1][0], param_bounds[1][1]);
+      Mat<dyn, dyn> data(math::pow(n_div + 1, 2), 3);
+      Mat<dyn> real(math::pow(n_div + 1, 2));
+      int node_coords [2];
+      for (node_coords[0] = 0; node_coords[0] <= n_div; ++node_coords[0]) {
+        for (node_coords[1] = 0; node_coords[1] <= n_div; ++node_coords[1]) {
+          double params [2];
+          for (int i_dim = 0; i_dim < 2; ++i_dim) {
+            double interp = double(node_coords[i_dim])/n_div;
+            params[i_dim] = (1 - interp)*param_bounds[i_dim][0] + interp*param_bounds[i_dim][1];
+          }
+          auto pnt = surf->Value(params[0], params[1]);
+          int i_node = node_coords[0]*(n_div + 1) + node_coords[1];
+          data(i_node, all) << pnt.X(), pnt.Y(), pnt.Z();
+          real(i_node) = 1;
+        }
+      }
+      data *= 1e-3; // convert to meters
+      Tecplot_file::Structured_block zone(file, n_div + 1, format_str(100, "surface%u", i_surf), 2);
+      zone.write(data.data(), real.data());
+    }
+  } else {
+    Tecplot_file file(file_name, 2, {}, 0.);
+    for (unsigned i_curve = 0; i_curve < curves.size(); ++i_curve) {
+      auto& curve = curves[i_curve];
+      double param_bounds [2] {curve->FirstParameter(), curve->LastParameter()};
+      Mat<dyn, dyn> data(n_div + 1, 2);
+      for (int i_node = 0; i_node <= n_div; ++i_node) {
+        double interp = double(i_node)/n_div;
+        double param = (1 - interp)*param_bounds[0] + interp*param_bounds[1];
+        auto pnt = curve->Value(param);
+        data(i_node, all) << pnt.X(), pnt.Y();
+      }
+      data *= 1e-3; // convert to meters
+      Tecplot_file::Structured_block zone(file, n_div + 1, format_str(100, "curve%u", i_curve), 1);
+      zone.write(data.data(), nullptr);
+    }
+  }
+  #else
+  HEXED_ASSERT(false, "needs tecplot");
+  #endif
+}
+
+Nearest_point<dyn> Occt::Geom::nearest_point(Mat<> point, double max_distance, double distance_guess)
 {
   HEXED_ASSERT(point.size() == nd, format_str(100, "`point` must be %iD", nd));
-  Mat<> scaled = point*1000; // convert to mm
-  math::Nearest_point<> nearest(scaled);
+  Nearest_point<> nearest(point, max_distance);
+  point *= 1e3; // convert to mm
   if (nd == 2) {
-    gp_Pnt2d occt_point(scaled(0), scaled(1));
+    gp_Pnt2d occt_point(point(0), point(1));
     // iterate through curves and find which ones has the nearest point
     for (auto& curve : curves) {
       Geom2dAPI_ProjectPointOnCurve proj(occt_point, curve);
       if(proj.NbPoints()) {
         gp_Pnt2d occt_candidate = proj.NearestPoint();
-        nearest.merge(Mat<2>{occt_candidate.X(), occt_candidate.Y()});
+        nearest.merge(Mat<2>{occt_candidate.X(), occt_candidate.Y()}*1e-3);
       }
     }
   } else {
-    gp_Pnt occt_point(scaled(0), scaled(1), scaled(2));
+    gp_Pnt occt_point(point(0), point(1), point(2));
     // iterate through the surfaces and find which one has the nearest point
     for (auto& surface : surfaces) {
       GeomAPI_ProjectPointOnSurf proj(occt_point, surface);
       if (proj.IsDone()) {
         gp_Pnt occt_candidate = proj.NearestPoint();
-        nearest.merge(Mat<3>{occt_candidate.X(), occt_candidate.Y(), occt_candidate.Z()});
+        nearest.merge(Mat<3>{occt_candidate.X(), occt_candidate.Y(), occt_candidate.Z()}*1e-3);
       }
     }
   }
-  return nearest.point()/1000;
+  return nearest;
 }
 
-std::vector<double> Occt_geom::intersections(Mat<> point0, Mat<> point1)
+std::vector<double> Occt::Geom::intersections(Mat<> point0, Mat<> point1)
 {
   HEXED_ASSERT(point0.size() == nd, format_str(100, "`point0` must be %iD", nd));
   HEXED_ASSERT(point1.size() == nd, format_str(100, "`point1` must be %iD", nd));
@@ -158,7 +218,7 @@ std::vector<double> Occt_geom::intersections(Mat<> point0, Mat<> point1)
   return sects;
 }
 
-void Occt_geom::write_image(const TopoDS_Shape& shape, std::string file_name, Mat<3> eye_pos, Mat<3> look_at_pos, int resolution)
+void Occt::write_image(const TopoDS_Shape& shape, std::string file_name, Mat<3> eye_pos, Mat<3> look_at_pos, int resolution)
 {
   // general setup
   opencascade::handle<Aspect_DisplayConnection> displayConnection = new Aspect_DisplayConnection();
@@ -196,7 +256,7 @@ void Occt_geom::write_image(const TopoDS_Shape& shape, std::string file_name, Ma
 }
 
 template <typename reader_t>
-TopoDS_Shape Occt_geom::execute_reader(std::string file_name)
+TopoDS_Shape Occt::execute_reader(std::string file_name)
 {
   set_message();
   reader_t reader;
@@ -206,7 +266,7 @@ TopoDS_Shape Occt_geom::execute_reader(std::string file_name)
   return reader.OneShape();
 }
 
-TopoDS_Shape Occt_geom::read(std::string file_name)
+TopoDS_Shape Occt::read(std::string file_name)
 {
   unsigned extension_start = file_name.find_last_of(".");
   HEXED_ASSERT(extension_start != std::string::npos, "`file_name` has no extension");
@@ -215,10 +275,10 @@ TopoDS_Shape Occt_geom::read(std::string file_name)
   for (char& c : ext) c = tolower(c);
   if      (ext == "igs" || ext == "iges") return execute_reader<IGESControl_Reader>(file_name);
   else if (ext == "stp" || ext == "step") return execute_reader<STEPControl_Reader>(file_name);
-  throw std::runtime_error(format_str(1000, "`hexed::Occt_geom::read` failed to recognize file exteinsion `.%s`.", case_sensitive.c_str()));
+  throw std::runtime_error(format_str(1000, "`hexed::Occt::read` failed to recognize file exteinsion `.%s`.", case_sensitive.c_str()));
 }
 
-std::vector<Mat<3, 3>> triangles(opencascade::handle<Poly_Triangulation> poly)
+std::vector<Mat<3, 3>> Occt::triangles(opencascade::handle<Poly_Triangulation> poly)
 {
   HEXED_ASSERT(!poly.IsNull(), "handle is null");
   std::vector<Mat<3, 3>> sims;
@@ -234,7 +294,34 @@ std::vector<Mat<3, 3>> triangles(opencascade::handle<Poly_Triangulation> poly)
   return sims;
 }
 
-opencascade::handle<Poly_Triangulation> Occt_geom::read_stl(std::string file_name, double scale)
+std::vector<Mat<3, 3>> Occt::triangles(TopoDS_Shape shape, double angle, double deflection)
+{
+  // setup parameters
+  IMeshTools_Parameters params;
+  params.Deflection               = deflection*1e3;
+  params.DeflectionInterior       = deflection*1e3;
+  params.Angle                    = angle;
+  params.AngleInterior            = angle;
+  params.Relative                 = false;
+  params.InParallel               = true;
+  params.MinSize                  = Precision::Confusion();
+  params.InternalVerticesMode     = false;
+  params.ControlSurfaceDeflection = true;
+  // generate mesh
+  BRepTools::Clean(shape); // get rid of any existing triangulations
+  BRepMesh_IncrementalMesh mesher(shape, params);
+  // fetch triangles
+  std::vector<Mat<3, 3>> tris;
+  iterate(shape, TopAbs_FACE, [&](const TopoDS_Shape& s){
+    TopoDS_Face face = TopoDS::Face(s);
+    TopLoc_Location location;
+    auto face_tris = triangles(BRep_Tool::Triangulation(face, location));
+    tris.insert(tris.end(), face_tris.begin(), face_tris.end());
+  });
+  return tris;
+}
+
+opencascade::handle<Poly_Triangulation> Occt::read_stl(std::string file_name, double scale)
 {
   set_message();
   opencascade::handle<Poly_Triangulation> poly = RWStl::ReadFile(file_name.c_str());
@@ -246,7 +333,7 @@ opencascade::handle<Poly_Triangulation> Occt_geom::read_stl(std::string file_nam
   return poly;
 }
 
-std::vector<Mat<2, 2>> segments(const TopoDS_Shape& shape, int n_segments)
+std::vector<Mat<2, 2>> Occt::segments(const TopoDS_Shape& shape, int n_segments)
 {
   std::vector<Mat<2, 2>> segs;
   std::vector<opencascade::handle<Geom2d_Curve>> curves;

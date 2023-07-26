@@ -52,6 +52,11 @@ bool Vertex::is_mobile()
   return std::all_of(trbl_ptrs.begin(), trbl_ptrs.end(), [](Transferable_ptr* ptr){return ptr->mobile;});
 }
 
+bool Vertex::needs_smooth()
+{
+  return std::any_of(trbl_ptrs.begin(), trbl_ptrs.end(), [](Transferable_ptr* ptr){return ptr->needs_smooth;});
+}
+
 void Vertex::calc_relax(double factor)
 {
   relax.setZero();

@@ -158,5 +158,11 @@ double& Element::vertex_time_step_scale(int i_vertex)
   return vertex_tss[i_vertex];
 }
 
+void Element::set_needs_smooth(bool value)
+{
+  for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {
+    vertices[i_vert].needs_smooth = value;
+  }
+}
 
 }

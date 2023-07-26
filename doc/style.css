@@ -1,21 +1,64 @@
 /* Extra style sheet for Hexed doxygen documentation.
- * Tweaks a few things to make it look a little more precise and modern
- * and get rid of some of the annoying visual effects that probably looked cool back in like 2005.
+ * Default Doxygen style looks kind of like it was trying hard to look cool in 2005,
+ * which I suppose it probably was.
+ * This sheet mostly tweaks the colors and fonts to make it look a little more precise and modern.
+ * Note: I tried doxygen-awesome-css, but while it looks modern, it honestly looks a little immature.
+ * This is computational engineering -- it should look diginified.
  */
 
-body, table, div, p, dl, .title, table.directory {
-  font-family: "Noto Sans", Roboto, sans-serif;
+
+/* try to parameterize with these variables as much as possible */
+html {
+  --base-color: white;
+  --text-color: black;
+  --link-color: #3D578C;
+  --highlight-color: #e8e8e8;
+  --decor-color: DarkGoldenRod;
+  --anti-base-color: #303030;
+  --anti-text-color: #f0f0f0;
+  --anti-highlight-color: #606060;
+  --anti-link-color: #8da7dc;
+  --line-weight: 2px;
 }
 
-#projectname
-{
-  font-family: "Noto Sans", Roboto, sans-serif;
+/* project title bar at the very top */
+#titlearea {
+  background-color: var(--anti-base-color);
+  background-image: url('header_background.png');
+  background-size: cover;
+  border-width: 10px;
+  border-color: var(--anti-base-color);
 }
 
+/* page title bar */
+div.summary, div.headertitle {
+  background-color: var(--highlight-color);
+}
+
+div.headertitle {
+  border-color: var(--anti-base-color);
+  border-bottom-style: solid;
+  border-bottom-width: var(--line-weight);
+}
+
+.title {
+  font-weight: normal;
+  font-size: 200%;
+}
+
+/* change the main font to one that can distinguish betwee I and l. */
+body, table, div, p, dl, #nav-tree .label, .title,
+.sm-dox a, .sm-dox a:hover, .sm-dox a:focus, #projectname,
+.SelectItem, #MSearchField, .navpath li.navelem a,
+.navpath li.navelem a:hover, p.reference, p.definition {
+  font-family: "Noto Sans CJK JP", "Noto Sans", "Ubuntu", sans-serif;
+}
+
+/* format code blocks */
 code, div.fragment {
   font-family: "Ubuntu Mono", monospace;
-  color: black;
-  background-color: #E0E0E0;
+  color: var(--text-color);
+  background-color: var(--highlight-color);
   border-radius: .2em;
   padding-left: .2em;
   padding-right: .2em;
@@ -26,11 +69,114 @@ div.fragment {
   padding: .4em;
 }
 
-.memdoc, .memproto, .memtitle {
+/* format subheaders */
+h1, h2, h3, h4, h5, h6, h2.groupheader {
+  color: var(--text-color);
+  border-color: var(--text-color);
+}
+
+#doc-content h1 {
+  font-size: 130%;
+}
+
+/* format member declarations */
+.mlabels {
   box-shadow: none;
   background-image: none;
 }
 
+.mdescLeft, .mdescRight, .memItemLeft, .memItemRight,
+.memTemplItemLeft, .memTemplItemRight, .memTemplParams {
+  background-color: var(--base-color);
+}
+
+/* format member detailed documentation */
+.memdoc, .memproto, .memtitle {
+  box-shadow: none;
+  background-image: none;
+  border-width: var(--line-weight);
+  border-color: var(--anti-base-color);
+}
+
+.memproto, .memtitle {
+  text-shadow: none;
+  color: var(--text-color);
+  background-color: var(--highlight-color);
+}
+
+.memtitle {
+  margin-bottom: calc(0px - var(--line-weight));
+}
+
+.memproto {
+  border-style: solid;
+}
+
 .paramname {
-  color: DarkRed;
+  color: var(--decor-color);
+  font-weight: 550;
+}
+
+/* format general tables */
+.fieldtable th {
+  background-image: none;
+  background-color: var(--highlight-color);
+  text-shadow: none;
+  color: var(--text-color);
+}
+
+.fieldtable td.fielddoc, .fieldtable td.fieldname, .fieldtable th {
+  border-color: var(--antibase-color);
+}
+
+table.fieldtable {
+  box-shadow: none;
+  border-color: var(--antibase-color);
+}
+
+/* format glow effects */
+.memberdecls td.glow, .fieldtable tr.glow {
+  background-color: var(--decor-color);
+  box-shadow: 0 0 10px var(--decor-color);
+}
+
+h1.glow, h2.glow, h3.glow, h4.glow, h5.glow, h6.glow {
+  text-shadow: 0 0 15px var(--decor-color);
+}
+
+/* format navigation sidebar */
+#nav-tree, .ui-resizable-e {
+  background-color: var(--base-color);
+  background-image: none;
+}
+
+#nav-tree .selected {
+  background-image: none;
+  background-color: var(--highlight-color);
+  text-shadow: none;
+}
+
+#nav-tree .selected a {
+  color: var(--link-color);
+}
+
+.ui-resizable-e {
+  border-right-style: solid;
+  border-color: var(--anti-base-color);
+  border-width: var(--line-weight);
+  width: 4px;
+}
+
+/* format footer at the very bottom */
+.navpath ul {
+  background-image: none;
+  background-color: var(--anti-base-color);
+  border: none;
+  text-shadow: none;
+}
+
+.navpath li.navelem a, .navpath li.footer {
+  text-shadow: none;
+  color: var(--anti-link-color);
+  font-weight: normal;
 }

@@ -573,7 +573,7 @@ void Geom_mbc::snap_vertices(Boundary_connection& con)
       Vertex& vert = con.element().vertex(i_vert);
       Lock::Acquire lock(vert.lock);
       auto seq = Eigen::seqN(0, nd);
-      vert.pos(seq) = geom->nearest_point(vert.pos(seq));
+      vert.pos(seq) = geom->nearest_point(vert.pos(seq)).point();
     }
   }
 }

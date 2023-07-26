@@ -41,7 +41,7 @@ class Solver_interface
   //! \name setup
   //!\{
   /*! \brief fetch the `Mesh`.
-   * An object the user can use to build the mesh.
+   * \details An object the user can use to build the mesh.
    * Note that whenever elements are added, the flow state, and Jacobian are uninitialized,
    * the time step scale is uniformly 1,
    * and the mesh quality may be poor.
@@ -53,7 +53,7 @@ class Solver_interface
   //! moves all vertices to the mean of the current position and the mean of the neighbors' positions
   virtual void relax_vertices(double factor = .5) = 0; //!< \deprecated use `Mesh::relax`
   /*! \brief apply `Mesh_bc`s
-   * This is where hanging vertices are snapped to their coarse faces.
+   * \details This is where hanging vertices are snapped to their coarse faces.
    * \note if some elements participate in multiple BCs, then snapping may not satisfy all exactly.
    *       However, if performed multiple times, it should converge = 0;
    */

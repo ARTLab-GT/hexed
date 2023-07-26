@@ -14,6 +14,8 @@ template <int rows = dyn, int cols = 1>
 using Mat = Eigen::Matrix<double, rows, cols>; //!< \brief convenience alias for `Eigen::Matrix<double, rows = dyn, cols = 1>`
 const auto all = Eigen::all; //!< \brief convenience alias for `Eigen::all`
 const auto last = Eigen::last; //!< \brief convenience alias for `Eigen::last`
+//! \brief convenience alias for largest double value
+constexpr double huge = std::numeric_limits<double>::max();
 
 //! Miscellaneous mathematical functions that aren't in `std::math`
 namespace math
@@ -253,47 +255,36 @@ Mat<> to_mat(const T& range)
   return to_mat(range.begin(), range.end());
 }
 
-/*! \brief Helper class for finding the nearest point to a given reference point.
- * \details Implementations of `Surface_geom::nearest_point`
- * often involve searching a set of candidate points
- * to find the one that is nearest to the input point.
- * This class abstracts the logic of comparing the distances and updating the current nearest point
- * to make those implementations more concise.
- */
+//! \brief minimal representation of an `n_dim`-dimensional ball
 template <int n_dim = dyn>
-class Nearest_point
+struct Ball
 {
-  Mat<n_dim> r;
-  Mat<n_dim> p;
-  double dist_sq;
-  bool empty;
-  public:
-  /*! Initializes the distance to the maximum `double` value.
-   * This point is considered "empty" and `point()` won't work
-   * until `merge()`ed with a non-empty `Nearest_point`.
-   * \param ref Sets `reference()`
-   */
-  Nearest_point(Mat<n_dim> ref) : r{ref}, p{ref}, dist_sq{std::numeric_limits<double>::max()}, empty{true} {}
-  //! \brief Creates a `Nearest_point` with a specified candidate point and computes the correct distance.
-  //! \details This point is non-empty and has a well-defined `point()`.
-  Nearest_point(Mat<n_dim> ref, Mat<n_dim> pnt) : r{ref}, p{pnt}, dist_sq{(pnt - ref).squaredNorm()}, empty{false} {}
-  Mat<n_dim> reference() {return r;} //!< reference point that you want to find the nearest point to
-  double dist_squared() {return dist_sq;} //!< squared distance between `reference()` and `point()`
-  bool is_empty() {return empty;} //!< if `true`, `point()` won't work
-
-  //! sets `*this` to the nearest of `*this` and `other`
-  void merge(Nearest_point other) {if (other.dist_sq < this->dist_sq) *this = other;}
-  //! updates `*this` to point to `new_pnt` if `new_pnt` is closer
-  void merge(Mat<n_dim> new_pnt) {merge(Nearest_point(r, new_pnt));}
-
-  //! \brief Current best estimate for nearest point.
-  //! \details Throws an exception if `is_empty()`.
-  Mat<n_dim> point()
-  {
-    HEXED_ASSERT(!empty, "no candidates have been merged");
-    return p;
-  }
+  Mat<n_dim> center;
+  double radius_sq; //!< square of the radius, since normally that's what you actually need
 };
+
+/*! \brief computes a bounding ball of the convex hull of a set of points
+ * \details Returns the smallest bounding ball _centered at the center of mass of the points_.
+ * This bounding ball is non-optimal but quick to compute.
+ * Note that a simplex is the convex hull of its vertices.
+ */
+template <int n_dim, int n_point>
+Ball<n_dim> bounding_ball(Mat<n_dim, n_point> points)
+{
+  Ball<n_dim> b;
+  b.center = points.rowwise().mean();
+  b.radius_sq = (points.colwise() - b.center).colwise().squaredNorm().maxCoeff();
+  return b;
+}
+
+//! \brief returns true if the ball `b` intersects the line through `endpoint0` and `endpoint1`
+template <int n_dim>
+bool intersects(Ball<n_dim> b, Mat<n_dim> endpoint0, Mat<n_dim> endpoint1)
+{
+  Mat<n_dim> diff = endpoint1 - endpoint0;
+  Mat<n_dim> center = b.center - endpoint0;
+  return (center - center.dot(diff)/diff.squaredNorm()*diff).squaredNorm() <= b.radius_sq;
+}
 
 }
 }
