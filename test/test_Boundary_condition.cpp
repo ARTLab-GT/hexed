@@ -257,7 +257,7 @@ TEST_CASE("No_slip")
       }
     }
     hexed::No_slip no_slip(hexed::No_slip::emissivity, .8);
-    double temp = 1e5/1.2/hexed::specific_gas_air;
+    double temp = 1e5/1.2/hexed::constants::specific_gas_air;
     no_slip.apply_state(tbc);
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_var = 0; i_var < 4; ++i_var) {
@@ -266,7 +266,7 @@ TEST_CASE("No_slip")
     }
     no_slip.apply_flux(tbc);
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-      REQUIRE((tbc.ghost_face()[11*row_size + i_qpoint] + tbc.inside_face()[11*row_size + i_qpoint])/2 == Catch::Approx(-.8*hexed::stefan_boltzmann*std::pow(temp, 4)*.7));
+      REQUIRE((tbc.ghost_face()[11*row_size + i_qpoint] + tbc.inside_face()[11*row_size + i_qpoint])/2 == Catch::Approx(-.8*hexed::constants::stefan_boltzmann*std::pow(temp, 4)*.7));
     }
   }
 }

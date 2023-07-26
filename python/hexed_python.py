@@ -412,7 +412,7 @@ def run(self):
 ## \}
 
 
-def make_geom(geom, n_dim = None, n_div = 1000, max_angle = 10*cpp.degree, max_deflection = cpp.huge):
+def make_geom(geom, n_dim = None, n_div = 1000, max_angle = 10*cpp.constants.degree, max_deflection = cpp.huge):
     r"""! \brief Convert a geometry representation from various input formats to a `hexed::Surface_geom` object.
     \param geom (list or tuple) List of surface geometries to mesh, in one of the following formats:
                 - An instance of `hexed::Surface_geom`.
@@ -538,8 +538,8 @@ def standard_atm(alt_geom, temp_offset = 0.):
     \see \ref units
     """
     # convert geometric altitude to geopotential altitude
-    alt_geopot = cpp.earth_radius*alt_geom/(cpp.earth_radius + alt_geom)
-    pres = cpp.atmosphere
+    alt_geopot = cpp.constants.earth_radius*alt_geom/(cpp.constants.earth_radius + alt_geom)
+    pres = cpp.constants.atmosphere
     n_rows = (_standard_atm_temp[:, 0] <= alt_geopot + 1e-12).sum() # small epsilon added to prevent errors at ~0 altitude
     if n_rows > _standard_atm_temp.shape[0]: raise User_error("altitude is above model limit")
     elif n_rows == 0: raise User_error("altitude is below model limit")
@@ -553,11 +553,11 @@ def standard_atm(alt_geom, temp_offset = 0.):
         h_diff = h - _standard_atm_temp[i_row, 0]
         temp = base_temp + lapse*h_diff
         if abs(lapse) < 1e-10:
-            pres *= np.exp(-cpp.std_grav*h_diff/cpp.specific_gas_air/base_temp)
+            pres *= np.exp(-cpp.std_grav*h_diff/cpp.constants.specific_gas_air/base_temp)
         else:
-            pres *= (temp/base_temp)**(-cpp.std_grav/lapse/cpp.specific_gas_air)
+            pres *= (temp/base_temp)**(-cpp.constants.std_grav/lapse/cpp.constants.specific_gas_air)
     temp += temp_offset
-    dens = pres/cpp.specific_gas_air/temp
+    dens = pres/cpp.constants.specific_gas_air/temp
     return dens, pres
 
 def rot_mat(angle):
@@ -580,10 +580,10 @@ def flow_state(density = None, pressure = None, temperature = None, altitude = N
     \attention Because all quantities are in SI base units, the angles are radian!
     To specify angles in degrees, you can do it like:
     ```
-    attack = 10*hexed.cpp.degree
+    attack = 10*hexed.cpp.constants.degree
     ```
     \see \ref units
-    \see `constants.hpp`
+    \see `hexed::constants`
     """
     heat_ratio = 1.4
     if altitude is not None:
@@ -592,9 +592,9 @@ def flow_state(density = None, pressure = None, temperature = None, altitude = N
         # find the density and pressure
         # note that the arithmetic operations will throw exceptions if any of their arguments are None
         if density is None:
-            density = pressure/cpp.specific_gas_air/temperature
+            density = pressure/cpp.constants.specific_gas_air/temperature
         elif pressure is None:
-            pressure = density*cpp.specific_gas_air*temperature
+            pressure = density*cpp.constants.specific_gas_air*temperature
         int_ener = pressure/(heat_ratio - 1.)
         # find flow direction, if applicable
         if attack is not None:

@@ -13,9 +13,9 @@ namespace hexed
  * Thus, if `decay_rate == 1` then the data will never be altered,
  * whereas if `decay_rate == 0` then all the modes except the 0th-degree will be annhilated.
  * `data` is assumed to point to the values of a scalar polynomial at the `n_dim`-dimensional
- * quadrature points associated with the provided basis.
+ * quadrature points associated with the provided basis and thus must have size `math::pow(basis.row_size, n_dim)`.
  */
-void filter_limit(int n_dim, int row_size, double* data, const Basis&, double decay_rate);
+void filter_limit(int n_dim, double* data, const Basis& basis, double decay_rate);
 
 }
 #endif

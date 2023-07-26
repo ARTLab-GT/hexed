@@ -10,7 +10,7 @@ Also, please try to maintain these conventions when contributing to the code.
   (i.e., derived from m, kg, s, K).
 - Unless otherwise specified, all angles are radian.
 - If you need to perform any unit conversions or reference physical constants,
-  please use the values defined in `constants.hpp`,
+  please use the values defined in `hexed::constants`,
   which whenever possible are based on formal exact definitions
   (as opposed to approximations to some number of digits).
   In practice, of course, this isn't that important,
