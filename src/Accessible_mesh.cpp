@@ -800,7 +800,7 @@ bool Accessible_mesh::needs_refine(Tree* t)
     auto dir = math::direction(params.n_dim, i_face);
     auto neighbors = t->find_neighbors(dir);
     int rl = t->refinement_level();
-    auto too_fine = [rl](Tree* ptr){return ptr->refinement_level() > rl + 1;};
+    auto too_fine = [rl](Tree* ptr){return exists(ptr) && ptr->refinement_level() > rl + 1;};
     if (std::any_of(neighbors.begin(), neighbors.end(), too_fine)) return true;
     if (t->elem) {
       // also check the diagonal neighbors since they could be extrusion neighbors
