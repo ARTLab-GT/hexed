@@ -89,6 +89,7 @@ def ref_criterion(requirement):
         (technically, the average position of its vertices).
         This vector has size 3 (trailing dimensions set to 0), supports basic arithmetic operators, and has `.dot(other)` and `.norm()` methods.
       - __double res_bad:__ The `hexed::Element::resolution_badness` parameter.
+
       You also have access to all the usual C++ featurs including standard library math functions (e.g. `std::exp`, `std::log`)
       and the logical operators `&&` and `||`.
       Under the hood, your expression will be the body of an anonymous function
@@ -119,9 +120,10 @@ def create_solver(
         n_dim, row_size,
         min_corner, max_corner,
         freestream = None, init_cond = None, extremal_bcs = None,
-        geom = None, flood_fill_start = None, n_smooth = 10,
+        geom = None, flood_fill_start = None, n_smooth = 10, n_smooth_global = 0,
         init_resolution = 3, init_max_iters = 1000,
         final_resolution = False, final_max_iters = 1000, resolution_metric = "smoothness",
+        final_unref_criterion = cpp.criteria.logical_not(cpp.criteria.if_extruded),
         local_time_stepping = True,
     ):
     r"""! \brief Creates a `hexed::Solver_interface` object with a premade tree mesh.
@@ -161,6 +163,9 @@ def create_solver(
                             If `None`, defaults to just inside `min_corner` (specifically `min_corner + 1e-6*(max_corner - min_corner)`)
     \param n_smooth (int) number of mesh smoothing iterations (meaning vertex movement, not refinement level smoothing)
                     to run after each refinement sweep (after the geometry is inserted).
+                    These smoothing iterations are incremental, meaning only the elements that are new since the last refinement sweep
+                    (and their neighbors) are modified.
+    \param n_smooth_global (int) number of global smoothing iterations (including all elements) to run after each refinement sweep.
     \param init_resolution Argument to `ref_criterion()` to control the resolution before the geometry is inserted,
                            which usually also ends up being the farfield resolution.
                            The mesh will be iteratively refined until no more elements want to refine or `init_max_iters` is reached.
@@ -175,6 +180,11 @@ def create_solver(
     \param final_max_iters (int) Maximum number of refinement iterations to execute after geometry is inserted.
     \param resolution_metric (string) "smoothness" to evaluate resolution badness based on high-order components of element Jacobian (better for high-order)
                              or "continuity" to evaluate it based on inter-element continuity of the surface normal (better for low-order).
+    \param final_unref_criterion (\ref hexed::criteria "criterion" [i.e. `std::function<bool(Element&)>`],
+                                 string [passed to `ref_criterion()`], or `bool`)
+                                 Return `True` for elements that should be unrefined in refinement sweeps after geometry is added.
+                                 Default value will unrefine any non-surface elements that are allowed, which is good for geometry-based refinement.
+                                 If you're trying to implement some kind of refinement source, you should probably set this to `False`.
     \param local_time_stepping Whether to use LTS.
     \relatesalso hexed::Solver_interface
     """
@@ -227,9 +237,14 @@ def create_solver(
         solver.mesh().set_surface(cpp.new_move(geom), cpp.new_copy(cpp.Nonpenetration()), to_matrix(flood_fill_start))
     for i_smooth in range(n_smooth):
         solver.mesh().relax()
+    if n_smooth_global > 0: solver.mesh().set_all_smooth()
+    for i_smooth in range(n_smooth_global):
+        solver.mesh().relax()
     solver.calc_jacobian()
     if solver.mesh().n_elements() == 0: raise User_error("geometry addition deleted all elements")
     crit = ref_criterion(final_resolution)
+    if isinstance(final_unref_criterion, bool) or isinstance(final_unref_criterion, str):
+        final_unref_criterion = ref_criterion(final_unref_criterion)
     for i_refine in range(final_max_iters):
         print(f"refinement iteration {i_refine}")
         if resolution_metric == "smoothness":
@@ -239,7 +254,8 @@ def create_solver(
             solver.set_res_bad_surface_rep(solver.mesh().surface_bc_sn())
         else:
             raise User_error(f"unrecognized value {resolution_metric} for parameter resolution_metric")
-        if not solver.mesh().update(crit):
+        solver.mesh().set_unref_locks(cpp.criteria.if_extruded);
+        if not solver.mesh().update(crit, final_unref_criterion):
             break
         for i_smooth in range(n_smooth):
             solver.mesh().relax()

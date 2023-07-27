@@ -20,4 +20,9 @@ std::function<bool(Element&)> criterion(std::function<bool(bool is_extruded, int
   };
 }
 
+std::function<bool(Element&)> logical_not(std::function<bool(Element&)> func)
+{
+  return [func](Element& elem) {return !func(elem);};
+}
+
 }
