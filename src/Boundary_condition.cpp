@@ -427,8 +427,8 @@ void No_slip::apply_flux(Boundary_face& bf)
       case emissivity:
         {
           // set heat flux equal to radiative heat loss by stefan-boltzmann law
-          double temp = sc[i_dof]*.4/sc[params.n_dim*nfq + i_qpoint]/specific_gas_air;
-          flux = v*stefan_boltzmann*math::pow(temp, 4)*normal;
+          double temp = sc[i_dof]*.4/sc[params.n_dim*nfq + i_qpoint]/constants::specific_gas_air;
+          flux = v*constants::stefan_boltzmann*math::pow(temp, 4)*normal;
         }
         break;
       default:

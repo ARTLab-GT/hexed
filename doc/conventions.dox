@@ -10,7 +10,7 @@ Also, please try to maintain these conventions when contributing to the code.
   (i.e., derived from m, kg, s, K).
 - Unless otherwise specified, all angles are radian.
 - If you need to perform any unit conversions or reference physical constants,
-  please use the values defined in `constants.hpp`,
+  please use the values defined in `hexed::constants`,
   which whenever possible are based on formal exact definitions
   (as opposed to approximations to some number of digits).
   In practice, of course, this isn't that important,
@@ -51,8 +51,8 @@ The latter makes the code for certain formulae cleaner.
 Hexed uses some terms that are non-standard, or at least not completely universal.
 They are defined as follows:
 - \anchor kernel __kernel__: A performance-critical function performs some of the core numerical operations.
-- \anchor row_size The __row size__ of a polynomial basis is its degree + 1 (i.e., the number of rows of quadrature
-  points in each dimension, which equals the number of coefficients in the 1D case).
+- \anchor row_size The __row size__ of a polynomial basis is its degree + 1.
+  I.e. the number of rows of quadrature points in each dimension, which equals the number of coefficients in the 1D case.
   It is usually more convenient to talk about the row size than the degree,
   as it is more directly related to the actual code implementation.
   The row size is not to be confused with the number of quadrature points, which depends on

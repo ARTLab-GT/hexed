@@ -135,7 +135,7 @@ class Occt
    * In general, the geometry coordinates will be multiplied by `scale`.
    * Result can be piped to `triangles()` to ultimately construct a `Simplex_geom<3>`.
    */
-  static opencascade::handle<Poly_Triangulation> read_stl(std::string file_name, double scale = meter);
+  static opencascade::handle<Poly_Triangulation> read_stl(std::string file_name, double scale = constants::meter);
 
   /*! \brief Creates an array of simplices that can be used to construct a `Simplex_geom<3>`.
    * \details A `Poly_Triangulation` can be obtained from, e.g. `read_stl()`.
@@ -152,7 +152,7 @@ class Occt
    *        Note that this is a dimensional parameter and appropriate values will depend on the length scale of your simulation,
    *        which is why the only reasonable default is an irrelevantly large parameter.
    */
-  static std::vector<Mat<3, 3>> triangles(TopoDS_Shape shape, double angle = 10*degree, double deflection = huge);
+  static std::vector<Mat<3, 3>> triangles(TopoDS_Shape shape, double angle = 10*constants::degree, double deflection = huge);
 
   //! \brief Discretizes the curves in a `TopoDS_Shape` into segments of a polygonal line.
   //! \details A `TopoDS_Shape` can be obtained from `read()`, and the results can be used to construct a `Simplex_geom<2>`.
