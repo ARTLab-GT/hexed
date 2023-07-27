@@ -683,6 +683,15 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   id_smooth_verts();
 }
 
+void Accessible_mesh::set_unref_locks(std::function<bool(Element&)> lock_if)
+{
+  auto& elems = elements();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    elems[i_elem].unrefinement_locked = lock_if(elems[i_elem]);
+  }
+}
+
 // forms connections for new tree elements of type `element_t` starting with the `starting_at`th one
 template<typename element_t>
 void Accessible_mesh::connect_new(int start_at)
@@ -800,7 +809,7 @@ bool Accessible_mesh::needs_refine(Tree* t)
     auto dir = math::direction(params.n_dim, i_face);
     auto neighbors = t->find_neighbors(dir);
     int rl = t->refinement_level();
-    auto too_fine = [rl](Tree* ptr){return ptr->refinement_level() > rl + 1;};
+    auto too_fine = [rl](Tree* ptr){return exists(ptr) && ptr->refinement_level() > rl + 1;};
     if (std::any_of(neighbors.begin(), neighbors.end(), too_fine)) return true;
     if (t->elem) {
       // also check the diagonal neighbors since they could be extrusion neighbors
@@ -1098,6 +1107,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
     Lock::Acquire a(inside.lock);
     if (inside.record == 0) inside.record = con->element(0).record;
     else inside.record = std::max(inside.record, con->element(0).record);
+    inside.unrefinement_locked = inside.unrefinement_locked || con->element(0).unrefinement_locked;
   }
   int n_orig [2];
   // refine elements
@@ -1116,7 +1126,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
           bool is_def = false; // whether the putative unrefined element will be deformed
           Tree* parent;
           if (!elem.tree->is_root()) { // can't unrefine the root
-            unref = true;
+            unref = !elem.unrefinement_locked;
             parent = elem.tree->parent();
             // only unrefine if all the existing siblings agree and have the same ref level
             for (Tree* child : parent->children()) {

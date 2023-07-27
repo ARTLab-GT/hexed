@@ -49,11 +49,15 @@ class Mesh_interface
    * Any surfaces defined by previous invokations of `set_surface` are forgotten.
    */
   virtual void set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) = 0;
+  //!< sets the `Element::unrefinement_locked` member of all elements
+  virtual void set_unref_locks(std::function<bool(Element&)> lock_if = criteria::never) = 0;
   /*! \brief Updates tree mesh based on user-supplied (un)refinement criteria.
    * \details Evaluates `refine_criterion` and `unrefine_criterion` on every element in the tree (if a tree exists).
    * Whenever `refine_criterion` is `true` and `unrefine_criterion` is `false`, that element is refined.
    * Whenever `unrefine_criterion` is `true` and `refine_criterion` is `false` for a complete group of sibling elements,
    * that group is unrefined.
+   * Since extruded elements cannot be directly refined or unrefined,
+   * their extrusion parents inherit their (un)refinement flags and any unrefinement locks.
    * In order to satisfy some criteria regarding the refinement level of neighbors,
    * some additional elements may be refined and some elements may not be unrefined.
    * Both criteria must be thread-safe
