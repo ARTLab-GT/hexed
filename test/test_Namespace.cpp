@@ -32,4 +32,5 @@ TEST_CASE("Namespace")
   space.create("call_counter", new hexed::Namespace::Read_only<int>([&_counter]()->int{return _counter++;}));
   REQUIRE(space.lookup<int>("call_counter").value() == 0);
   REQUIRE(space.lookup<int>("call_counter").value() == 1);
+  space.assign<int>("person", 7); // can't assign an int to a string
 }

@@ -45,10 +45,9 @@ class Namespace
   std::map<std::string, std::unique_ptr<Variable<double>>> _doubles;
   std::map<std::string, std::unique_ptr<Variable<std::string>>> _strings;
   template<typename T> std::map<std::string, std::unique_ptr<Variable<T>>>& _get_map();
-  template<typename T, typename U> static constexpr U convert(T);
 
   public:
-  template<typename T, typename U> static constexpr bool convertible();
+  template<typename T> static std::string type_name();
   bool exists(std::string name);
   static inline bool is_name_character(char c) {return std::isalpha(c) || std::isdigit(c) || c == '_';}
   template<typename T> void create(std::string name, Variable<T>* value);
@@ -60,15 +59,9 @@ template<> std::map<std::string, std::unique_ptr<Namespace::Variable<int>>>&    
 template<> std::map<std::string, std::unique_ptr<Namespace::Variable<double>>>&      Namespace::_get_map() {return _doubles;}
 template<> std::map<std::string, std::unique_ptr<Namespace::Variable<std::string>>>& Namespace::_get_map() {return _strings;}
 
-template<typename T, typename U>
-constexpr U Namespace::convert(T val)
-{
-  if constexpr (convertible<T, U>()) return val;
-  else throw std::runtime_error("invalid type conversion");
-}
-
-template<typename T, typename U> constexpr bool Namespace::convertible() {return std::is_same<T, U>::value;}
-template<> constexpr bool Namespace::convertible<int, double>() {return true;}
+template<> std::string Namespace::type_name<int>() {return "int";}
+template<> std::string Namespace::type_name<double>() {return "double";}
+template<> std::string Namespace::type_name<std::string>() {return "string";}
 
 bool Namespace::exists(std::string name)
 {
@@ -78,8 +71,9 @@ bool Namespace::exists(std::string name)
 template<typename T>
 void Namespace::create(std::string name, Namespace::Variable<T>* value)
 {
-  HEXED_ASSERT(!exists(name), format_str(100, "variable `%s` already exists", name))
-  _get_map<T>().emplace(name, value);
+  std::unique_ptr<Variable<T>> ptr(value);
+  HEXED_ASSERT(!exists(name), format_str(100, "attempt to re-create existing variable `%s` as type `%s`", name.c_str(), type_name<T>().c_str()))
+  _get_map<T>().emplace(name, ptr.release());
 }
 
 template<typename T>
@@ -88,12 +82,13 @@ void Namespace::assign(std::string name, T value)
   HEXED_ASSERT(name.size() > 0 && !std::isdigit(name[0]) && std::all_of(name.begin(), name.end(), is_name_character),
                format_str(1000, "invalid variable name `%s`", name.c_str()));
   for (char c : name) HEXED_ASSERT(is_name_character(c), format_str(1000, "invalid variable name `%s`", name.c_str()));
-  if      (lookup<        int>(name)) _get_map<        int>().at(name)->set(convert<T,         int>(value));
-  else if (lookup<     double>(name)) _get_map<     double>().at(name)->set(convert<T,      double>(value));
-  else if (lookup<std::string>(name)) _get_map<std::string>().at(name)->set(convert<T, std::string>(value));
-  else {
-    create(name, new Value<T>(value));
+  if (lookup<T>(name)) return _get_map<T>().at(name)->set(value);
+  if (lookup<double>(name)) {
+    if constexpr (std::is_same<T, int>::value) {
+      return _get_map<double>().at(name)->set(value);
+    }
   }
+  create(name, new Value<T>(value));
 }
 
 template<typename T>
