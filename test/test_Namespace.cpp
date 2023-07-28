@@ -9,8 +9,9 @@ TEST_CASE("Namespace")
   space.assign<double>("number1", 0.6);
   space.assign<std::string>("person", "Montgomery Knight");
   REQUIRE_THROWS(space.assign<int>("invalid name", 0));
+  REQUIRE_THROWS(space.assign<int>("0invalid_name", 0));
   // check variable lookup mechanics
-  REQUIRE(space.lookup<std::string>("person").value() == "Montomery Knight");
+  REQUIRE(space.lookup<std::string>("person").value() == "Montgomery Knight");
   REQUIRE(!space.lookup<std::string>("unperson")); // "unperson" not assigned
   REQUIRE(!space.lookup<std::string>("number0")); // "number0" is not a string
   REQUIRE(space.lookup<double>("number1").value() == Catch::Approx(0.6));
