@@ -1,5 +1,5 @@
-#ifndef HEXED_COMMAND_PARSER_HPP_
-#define HEXED_COMMAND_PARSER_HPP_
+#ifndef HEXED_NAMESPACE_HPP_
+#define HEXED_NAMESPACE_HPP_
 
 namespace hexed
 {
@@ -11,7 +11,7 @@ class Namespace
   class Variable
   {
     public:
-    virtual void set(T&) = 0;
+    virtual void set(T) = 0;
     virtual T get() = 0;
   };
 
@@ -21,16 +21,6 @@ class Namespace
     T _val;
     public:
     Value(T v) : _val(v) {}
-    void set(T v) override {_val = v;}
-    T get() override {return _val;}
-  };
-
-  template <typename T>
-  class Reference : public Variable<T>
-  {
-    T& _val;
-    public:
-    Reference(T& v) : _val(v) {}
     void set(T v) override {_val = v;}
     T get() override {return _val;}
   };
@@ -46,17 +36,46 @@ class Namespace
   };
 
   private:
-  std::map<std::string, std::unique_ptr<std::Variable<int>>> ints;
-  std::map<std::string, std::unique_ptr<std::Variable<double>>> doubles;
-  std::map<std::string, std::unique_ptr<std::Variable<std::string>>> strings;
-  template<typename T> std::map<std::string, std::unique_ptr<std::Variable<T>>>& get_map();
+  std::map<std::string, std::unique_ptr<Variable<int>>> ints;
+  std::map<std::string, std::unique_ptr<Variable<double>>> doubles;
+  std::map<std::string, std::unique_ptr<Variable<std::string>>> strings;
+  template<typename T> std::map<std::string, std::unique_ptr<Variable<T>>>& get_map();
 
   public:
+  template<typename T> void create(std::string name, Variable<T>* value);
   template<typename T> void assign(std::string name, T value);
   template<typename T> std::optional<T> lookup(std::string name);
-  template<> void assign<int>(std::string name, int value);
-  template<> std::optional<double> lookup<double>(std::string name);
 };
+
+template<> std::map<std::string, std::unique_ptr<Namespace::Variable<int>>>&         Namespace::get_map() {return ints;}
+template<> std::map<std::string, std::unique_ptr<Namespace::Variable<double>>>&      Namespace::get_map() {return doubles;}
+template<> std::map<std::string, std::unique_ptr<Namespace::Variable<std::string>>>& Namespace::get_map() {return strings;}
+
+template<typename T>
+void Namespace::create(std::string name, Namespace::Variable<T>* value)
+{
+}
+
+template<typename T>
+void Namespace::assign(std::string name, T value)
+{
+}
+
+template<typename T>
+std::optional<T> Namespace::lookup(std::string name)
+{
+  return {};
+}
+
+template<> void Namespace::assign<int>(std::string name, int value)
+{
+}
+
+template<>
+std::optional<double> Namespace::lookup<double>(std::string name)
+{
+  return {};
+}
 
 }
 #endif
