@@ -21,4 +21,6 @@ TEST_CASE("Command_parser")
   REQUIRE(parser.variables->lookup<int>("boundary0layer").value() == 7);
   parser.exec("boundary0layer = -shock_wave");
   REQUIRE(parser.variables->lookup<int>("boundary0layer").value() == -7);
+  parser.exec("interaction = 0.1*boundary0layer");
+  REQUIRE(parser.variables->lookup<double>("interaction").value() == Catch::Approx(-.7));
 }

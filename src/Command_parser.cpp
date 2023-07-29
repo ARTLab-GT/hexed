@@ -49,6 +49,7 @@ Command_parser::Dynamic_value Command_parser::eval()
     val.s = variables->lookup<std::string>(n);
   } else if (commands[place] == '-') {
     ++place;
+    skip_spaces();
     Dynamic_value operand = eval();
     if      (operand.i) *operand.i *= -1;
     else if (operand.d) *operand.d *= -1;
@@ -57,10 +58,38 @@ Command_parser::Dynamic_value Command_parser::eval()
   } else {
     HEXED_ASSERT(false, format_str(100, "failed to parse value starting with `%c`", commands[place]));
   }
+  skip_spaces();
+  std::string possible_op;
+  possible_op.push_back(commands[place]);
+  if (bin_ops.count(possible_op)) {
+    ++place;
+    val = bin_ops.at(possible_op)(val, eval());
+  }
   return val;
 }
 
-Command_parser::Command_parser() : variables{std::make_shared<Namespace>()} {}
+template <typename T> T mul(T op0, T op1) {return op0*op1;}
+
+template<double (*dop)(double, double), int (*iop)(int, int)>
+Command_parser::Dynamic_value numeric_op(Command_parser::Dynamic_value o0, Command_parser::Dynamic_value o1)
+{
+  Command_parser::Dynamic_value v;
+  if (o0.d) {
+    if (o1.d) v.d = dop(*o0.d, *o1.d);
+    else if (o1.i) v.d = dop(*o0.d, *o1.i);
+  } else if (o0.i) {
+    if (o1.d) v.d = dop(*o0.i, *o1.d);
+    else if (o1.i) v.i = iop(*o0.i, *o1.i);
+  } else HEXED_ASSERT(false, "numeric binary operator does not accept strings");
+  return v;
+}
+
+Command_parser::Command_parser() :
+  bin_ops {
+    {"*", numeric_op<mul<double>, mul<int>>},
+  },
+  variables{std::make_shared<Namespace>()}
+{}
 
 void Command_parser::exec(std::string comms)
 {

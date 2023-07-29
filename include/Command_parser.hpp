@@ -9,12 +9,14 @@ namespace hexed
 
 class Command_parser
 {
+  public:
   struct Dynamic_value {
     std::optional<int> i;
     std::optional<double> d;
     std::optional<std::string> s;
   };
 
+  private:
   bool more();
   void skip_spaces();
   std::string read_name();
@@ -22,6 +24,7 @@ class Command_parser
 
   int place;
   std::string commands;
+  std::map<std::string, std::function<Dynamic_value(Dynamic_value, Dynamic_value)>> bin_ops;
 
   public:
   std::shared_ptr<Namespace> variables;
