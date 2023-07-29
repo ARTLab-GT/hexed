@@ -7,6 +7,7 @@ test_Accessible_mesh.cpp
 test_Basis.cpp
 test_Boundary_condition.cpp
 test_Characteristics.cpp
+test_Command_parser.cpp
 test_connection.cpp
 test_Deformed_element.cpp
 test_Derivative.cpp

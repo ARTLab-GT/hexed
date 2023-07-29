@@ -8,8 +8,6 @@ TEST_CASE("Namespace")
   space.assign<int>("number0", 4);
   space.assign<double>("number1", 0.6);
   space.assign<std::string>("person", "Montgomery Knight");
-  REQUIRE_THROWS(space.assign<int>("invalid name", 0));
-  REQUIRE_THROWS(space.assign<int>("0invalid_name", 0));
   // check variable lookup mechanics
   REQUIRE(space.lookup<std::string>("person").value() == "Montgomery Knight");
   REQUIRE(!space.lookup<std::string>("unperson")); // "unperson" not assigned
@@ -32,5 +30,4 @@ TEST_CASE("Namespace")
   space.create("call_counter", new hexed::Namespace::Read_only<int>([&_counter]()->int{return _counter++;}));
   REQUIRE(space.lookup<int>("call_counter").value() == 0);
   REQUIRE(space.lookup<int>("call_counter").value() == 1);
-  space.assign<int>("person", 7); // can't assign an int to a string
 }

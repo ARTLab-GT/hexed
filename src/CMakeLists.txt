@@ -4,6 +4,7 @@ Accessible_mesh.cpp
 Basis.cpp
 Boundary_condition.cpp
 Boundary_func.cpp
+Command_parser.cpp
 connection.cpp
 criteria.cpp
 Deformed_element.cpp

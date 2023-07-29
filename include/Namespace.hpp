@@ -2,6 +2,9 @@
 #define HEXED_NAMESPACE_HPP_
 
 #include <type_traits>
+#include <map>
+#include <memory>
+#include <optional>
 #include "utils.hpp"
 #include "assert.hpp"
 
@@ -49,21 +52,20 @@ class Namespace
   public:
   template<typename T> static std::string type_name();
   bool exists(std::string name);
-  static inline bool is_name_character(char c) {return std::isalpha(c) || std::isdigit(c) || c == '_';}
   template<typename T> void create(std::string name, Variable<T>* value);
   template<typename T> void assign(std::string name, T value);
   template<typename T> std::optional<T> lookup(std::string name);
 };
 
-template<> std::map<std::string, std::unique_ptr<Namespace::Variable<int>>>&         Namespace::_get_map() {return _ints;}
-template<> std::map<std::string, std::unique_ptr<Namespace::Variable<double>>>&      Namespace::_get_map() {return _doubles;}
-template<> std::map<std::string, std::unique_ptr<Namespace::Variable<std::string>>>& Namespace::_get_map() {return _strings;}
+template<> inline std::map<std::string, std::unique_ptr<Namespace::Variable<int>>>&         Namespace::_get_map() {return _ints;}
+template<> inline std::map<std::string, std::unique_ptr<Namespace::Variable<double>>>&      Namespace::_get_map() {return _doubles;}
+template<> inline std::map<std::string, std::unique_ptr<Namespace::Variable<std::string>>>& Namespace::_get_map() {return _strings;}
 
-template<> std::string Namespace::type_name<int>() {return "int";}
-template<> std::string Namespace::type_name<double>() {return "double";}
-template<> std::string Namespace::type_name<std::string>() {return "string";}
+template<> std::string inline Namespace::type_name<int>() {return "int";}
+template<> std::string inline Namespace::type_name<double>() {return "double";}
+template<> std::string inline Namespace::type_name<std::string>() {return "string";}
 
-bool Namespace::exists(std::string name)
+inline bool Namespace::exists(std::string name)
 {
   return _ints.count(name) || _doubles.count(name) || _strings.count(name);
 }
@@ -79,9 +81,6 @@ void Namespace::create(std::string name, Namespace::Variable<T>* value)
 template<typename T>
 void Namespace::assign(std::string name, T value)
 {
-  HEXED_ASSERT(name.size() > 0 && !std::isdigit(name[0]) && std::all_of(name.begin(), name.end(), is_name_character),
-               format_str(1000, "invalid variable name `%s`", name.c_str()));
-  for (char c : name) HEXED_ASSERT(is_name_character(c), format_str(1000, "invalid variable name `%s`", name.c_str()));
   if (lookup<T>(name)) return _get_map<T>().at(name)->set(value);
   if (lookup<double>(name)) {
     if constexpr (std::is_same<T, int>::value) {
