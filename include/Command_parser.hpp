@@ -18,7 +18,7 @@ class Command_parser
   bool _more();
   void _skip_spaces();
   std::string _read_name();
-  _Dynamic_value _eval();
+  _Dynamic_value _eval(int precedence);
 
   template <typename T> static T _mul(T op0, T op1) {return op0*op1;}
   template <typename T> static T _div(T op0, T op1) {return op0/op1;}
@@ -29,7 +29,7 @@ class Command_parser
   static Command_parser::_Dynamic_value _numeric_op(Command_parser::_Dynamic_value, Command_parser::_Dynamic_value);
 
   struct _Binary_op {
-    double precedence;
+    int precedence;
     std::function<_Dynamic_value(_Dynamic_value, _Dynamic_value)> func;
   };
 

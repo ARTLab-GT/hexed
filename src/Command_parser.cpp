@@ -1,3 +1,4 @@
+#include <limits>
 #include <Command_parser.hpp>
 
 namespace hexed
@@ -15,7 +16,7 @@ std::string Command_parser::_read_name()
   return name;
 }
 
-Command_parser::_Dynamic_value Command_parser::_eval()
+Command_parser::_Dynamic_value Command_parser::_eval(int precedence)
 {
   _skip_spaces();
   _Dynamic_value val;
@@ -51,17 +52,20 @@ Command_parser::_Dynamic_value Command_parser::_eval()
   } else if (_commands[_place] == '-') {
     ++_place;
     _skip_spaces();
-    _Dynamic_value operand = _eval();
-    if      (operand.i) *operand.i *= -1;
-    else if (operand.d) *operand.d *= -1;
+    val = _eval(0);
+    if      (val.i) *val.i *= -1;
+    else if (val.d) *val.d *= -1;
     else HEXED_ASSERT(false, "unary `-` cannot be applied to type `string`.");
-    return operand;
   } else {
     HEXED_ASSERT(false, format_str(100, "failed to parse value starting with `%c`", _commands[_place]));
   }
   _skip_spaces();
-  if (_bin_ops.count(_commands[_place])) {
-    val = _bin_ops.at(_commands[_place++]).func(val, _eval());
+  while (_bin_ops.count(_commands[_place])) {
+    auto& op = _bin_ops.at(_commands[_place]);
+    if (op.precedence <= precedence) {
+      ++_place;
+      val = op.func(val, _eval(op.precedence));
+    } else break;
   }
   return val;
 }
@@ -82,10 +86,10 @@ Command_parser::_Dynamic_value Command_parser::_numeric_op(Command_parser::_Dyna
 
 Command_parser::Command_parser() :
   _bin_ops {
-    {'*', {1., _numeric_op<_mul<double>, _mul<int>>}}, // note: 0 is for unary ops
-    {'/', {2., _numeric_op<_div<double>, _div<int>>}},
-    {'+', {3., _numeric_op<_add<double>, _add<int>>}},
-    {'-', {4., _numeric_op<_sub<double>, _sub<int>>}},
+    {'*', {1, _numeric_op<_mul<double>, _mul<int>>}}, // note: 0 is for unary ops
+    {'/', {2, _numeric_op<_div<double>, _div<int>>}},
+    {'+', {3, _numeric_op<_add<double>, _add<int>>}},
+    {'-', {4, _numeric_op<_sub<double>, _sub<int>>}},
   },
   variables{std::make_shared<Namespace>()}
 {}
@@ -104,7 +108,7 @@ void Command_parser::exec(std::string comms)
       HEXED_ASSERT(_commands[_place++] == '=', "expected assignment operator `=` after variable name");
       _skip_spaces();
       HEXED_ASSERT(_more(), "unexpected end of line in assignment statement");
-      auto val = _eval();
+      auto val = _eval(std::numeric_limits<int>::max());
       if (val.i) variables->assign(name, *val.i);
       if (val.d) variables->assign(name, *val.d);
       if (val.s) variables->assign(name, *val.s);
