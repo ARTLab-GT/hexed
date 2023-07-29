@@ -3,77 +3,73 @@
 namespace hexed
 {
 
-bool Command_parser::more() {return int(commands.size()) > place;}
-void Command_parser::skip_spaces() {while (commands[place] == ' ') ++place;} // note: commands[commands.size()] exists and is a null character so this is safe
+bool Command_parser::_more() {return int(_commands.size()) > _place;}
+void Command_parser::_skip_spaces() {while (_commands[_place] == ' ') ++_place;} // note: _commands[_commands.size()] exists and is a null character so this is safe
 
-std::string Command_parser::read_name()
+std::string Command_parser::_read_name()
 {
   std::string name = "";
-  while (std::isalpha(commands[place]) || std::isdigit(commands[place])  || commands[place] == '_') {
-    name.push_back(commands[place++]);
+  while (std::isalpha(_commands[_place]) || std::isdigit(_commands[_place])  || _commands[_place] == '_') {
+    name.push_back(_commands[_place++]);
   }
   return name;
 }
 
-Command_parser::Dynamic_value Command_parser::eval()
+Command_parser::_Dynamic_value Command_parser::_eval()
 {
-  Dynamic_value val;
-  if (std::isdigit(commands[place]) || commands[place] == '.') {
+  _skip_spaces();
+  _Dynamic_value val;
+  if (std::isdigit(_commands[_place]) || _commands[_place] == '.') {
     std::string value;
     bool is_int = true;
-    while (std::isdigit(commands[place]) || commands[place] == '.' || std::tolower(commands[place]) == 'e'
-           || ((commands[place] == '-' || commands[place] == '+') && std::tolower(commands[place - 1]) == 'e')) {
-      is_int = is_int && std::isdigit(commands[place]);
-      value.push_back(commands[place++]);
+    while (std::isdigit(_commands[_place]) || _commands[_place] == '.' || std::tolower(_commands[_place]) == 'e'
+           || ((_commands[_place] == '-' || _commands[_place] == '+') && std::tolower(_commands[_place - 1]) == 'e')) {
+      is_int = is_int && std::isdigit(_commands[_place]);
+      value.push_back(_commands[_place++]);
     }
     if (is_int) val.i = std::stoi(value.c_str());
     else        val.d = std::stod(value.c_str());
-  } else if (commands[place] == '"') {
-    ++place;
+  } else if (_commands[_place] == '"') {
+    ++_place;
     std::string value;
     do {
-      HEXED_ASSERT(more(), "command input ended while parsing string literal");
-      if (commands[place] == '"') {
-        if (commands[place + 1] == '"') ++place; // multiple quote escape
+      HEXED_ASSERT(_more(), "command input ended while parsing string literal");
+      if (_commands[_place] == '"') {
+        if (_commands[_place + 1] == '"') ++_place; // multiple quote escape
         else break;
       }
-      value.push_back(commands[place++]);
+      value.push_back(_commands[_place++]);
     } while (true);
-    ++place;
+    ++_place;
     val.s = value;
-  } else if (std::isalpha(commands[place]) || commands[place] == '_') {
-    std::string n = read_name();
+  } else if (std::isalpha(_commands[_place]) || _commands[_place] == '_') {
+    std::string n = _read_name();
     HEXED_ASSERT(variables->exists(n), format_str(1000, "undefined variable `%s`", n));
     val.i = variables->lookup<int>(n);
     if (!val.i) val.d = variables->lookup<double>(n);
     val.s = variables->lookup<std::string>(n);
-  } else if (commands[place] == '-') {
-    ++place;
-    skip_spaces();
-    Dynamic_value operand = eval();
+  } else if (_commands[_place] == '-') {
+    ++_place;
+    _skip_spaces();
+    _Dynamic_value operand = _eval();
     if      (operand.i) *operand.i *= -1;
     else if (operand.d) *operand.d *= -1;
     else HEXED_ASSERT(false, "unary `-` cannot be applied to type `string`.");
     return operand;
   } else {
-    HEXED_ASSERT(false, format_str(100, "failed to parse value starting with `%c`", commands[place]));
+    HEXED_ASSERT(false, format_str(100, "failed to parse value starting with `%c`", _commands[_place]));
   }
-  skip_spaces();
-  std::string possible_op;
-  possible_op.push_back(commands[place]);
-  if (bin_ops.count(possible_op)) {
-    ++place;
-    val = bin_ops.at(possible_op)(val, eval());
+  _skip_spaces();
+  if (_bin_ops.count(_commands[_place])) {
+    val = _bin_ops.at(_commands[_place++]).func(val, _eval());
   }
   return val;
 }
 
-template <typename T> T mul(T op0, T op1) {return op0*op1;}
-
 template<double (*dop)(double, double), int (*iop)(int, int)>
-Command_parser::Dynamic_value numeric_op(Command_parser::Dynamic_value o0, Command_parser::Dynamic_value o1)
+Command_parser::_Dynamic_value Command_parser::_numeric_op(Command_parser::_Dynamic_value o0, Command_parser::_Dynamic_value o1)
 {
-  Command_parser::Dynamic_value v;
+  Command_parser::_Dynamic_value v;
   if (o0.d) {
     if (o1.d) v.d = dop(*o0.d, *o1.d);
     else if (o1.i) v.d = dop(*o0.d, *o1.i);
@@ -85,32 +81,35 @@ Command_parser::Dynamic_value numeric_op(Command_parser::Dynamic_value o0, Comma
 }
 
 Command_parser::Command_parser() :
-  bin_ops {
-    {"*", numeric_op<mul<double>, mul<int>>},
+  _bin_ops {
+    {'*', {1., _numeric_op<_mul<double>, _mul<int>>}}, // note: 0 is for unary ops
+    {'/', {2., _numeric_op<_div<double>, _div<int>>}},
+    {'+', {3., _numeric_op<_add<double>, _add<int>>}},
+    {'-', {4., _numeric_op<_sub<double>, _sub<int>>}},
   },
   variables{std::make_shared<Namespace>()}
 {}
 
 void Command_parser::exec(std::string comms)
 {
-  commands = comms;
-  place = 0;
-  while (more()) {
-    skip_spaces();
-    if (commands[place] == '\n') ++place;
+  _commands = comms;
+  _place = 0;
+  while (_more()) {
+    _skip_spaces();
+    if (_commands[_place] == '\n') ++_place;
     else {
-      HEXED_ASSERT(std::isalpha(commands[place]) || commands[place] == '_', "statement does not begin with valid variable/builtin name");
-      std::string name = read_name();
-      skip_spaces();
-      HEXED_ASSERT(commands[place++] == '=', "expected assignment operator `=` after variable name");
-      skip_spaces();
-      HEXED_ASSERT(more(), "unexpected end of line in assignment statement");
-      auto val = eval();
+      HEXED_ASSERT(std::isalpha(_commands[_place]) || _commands[_place] == '_', "statement does not begin with valid variable/builtin name");
+      std::string name = _read_name();
+      _skip_spaces();
+      HEXED_ASSERT(_commands[_place++] == '=', "expected assignment operator `=` after variable name");
+      _skip_spaces();
+      HEXED_ASSERT(_more(), "unexpected end of line in assignment statement");
+      auto val = _eval();
       if (val.i) variables->assign(name, *val.i);
       if (val.d) variables->assign(name, *val.d);
       if (val.s) variables->assign(name, *val.s);
-      skip_spaces();
-      HEXED_ASSERT(!more() || commands[place] == '\n', "expected end of line after assignment statement");
+      _skip_spaces();
+      HEXED_ASSERT(!_more() || _commands[_place] == '\n', "expected end of line after assignment statement");
     }
   }
 }
