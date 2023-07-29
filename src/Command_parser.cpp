@@ -19,6 +19,10 @@ std::string Command_parser::_read_name()
 Command_parser::_Dynamic_value Command_parser::_eval(int precedence)
 {
   _skip_spaces();
+  if (_commands[_place] == '(') {
+    ++_place;
+    return _eval(std::numeric_limits<int>::max());
+  }
   _Dynamic_value val;
   if (std::isdigit(_commands[_place]) || _commands[_place] == '.') {
     std::string value;
@@ -67,6 +71,7 @@ Command_parser::_Dynamic_value Command_parser::_eval(int precedence)
       val = op.func(val, _eval(op.precedence));
     } else break;
   }
+  if (_commands[_place] == ')') ++_place;
   return val;
 }
 
@@ -87,9 +92,9 @@ Command_parser::_Dynamic_value Command_parser::_numeric_op(Command_parser::_Dyna
 Command_parser::Command_parser() :
   _bin_ops {
     {'*', {1, _numeric_op<_mul<double>, _mul<int>>}}, // note: 0 is for unary ops
-    {'/', {2, _numeric_op<_div<double>, _div<int>>}},
-    {'+', {3, _numeric_op<_add<double>, _add<int>>}},
-    {'-', {4, _numeric_op<_sub<double>, _sub<int>>}},
+    {'/', {1, _numeric_op<_div<double>, _div<int>>}},
+    {'+', {2, _numeric_op<_add<double>, _add<int>>}},
+    {'-', {2, _numeric_op<_sub<double>, _sub<int>>}},
   },
   variables{std::make_shared<Namespace>()}
 {}

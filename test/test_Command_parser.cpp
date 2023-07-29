@@ -29,4 +29,8 @@ TEST_CASE("Command_parser")
   REQUIRE(parser.variables->lookup<int>("result").value() == 2);
   parser.exec("result = 2*3 + 1*2 - -3*-3*3");
   REQUIRE(parser.variables->lookup<int>("result").value() == -19);
+  parser.exec("result = (1 + 2)*2");
+  REQUIRE(parser.variables->lookup<int>("result").value() == 6);
+  parser.exec("result = 6/3*2");
+  REQUIRE(parser.variables->lookup<int>("result").value() == 4);
 }
