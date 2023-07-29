@@ -21,7 +21,8 @@ Command_parser::Dynamic_value Command_parser::eval()
   if (std::isdigit(commands[place]) || commands[place] == '.') {
     std::string value;
     bool is_int = true;
-    while (std::isdigit(commands[place]) || commands[place] == '.' || std::tolower(commands[place]) == 'e') {
+    while (std::isdigit(commands[place]) || commands[place] == '.' || std::tolower(commands[place]) == 'e'
+           || ((commands[place] == '-' || commands[place] == '+') && std::tolower(commands[place - 1]) == 'e')) {
       is_int = is_int && std::isdigit(commands[place]);
       value.push_back(commands[place++]);
     }
@@ -46,6 +47,13 @@ Command_parser::Dynamic_value Command_parser::eval()
     val.i = variables->lookup<int>(n);
     if (!val.i) val.d = variables->lookup<double>(n);
     val.s = variables->lookup<std::string>(n);
+  } else if (commands[place] == '-') {
+    ++place;
+    Dynamic_value operand = eval();
+    if      (operand.i) *operand.i *= -1;
+    else if (operand.d) *operand.d *= -1;
+    else HEXED_ASSERT(false, "unary `-` cannot be applied to type `string`.");
+    return operand;
   } else {
     HEXED_ASSERT(false, format_str(100, "failed to parse value starting with `%c`", commands[place]));
   }
