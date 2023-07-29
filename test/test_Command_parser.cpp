@@ -17,4 +17,6 @@ TEST_CASE("Command_parser")
   parser.exec("ludwig = \"prandtl\"\ntitle = \"consider\nPlebas\"\"!\"\"\"");
   REQUIRE(parser.variables->lookup<std::string>("ludwig").value() == "prandtl");
   REQUIRE(parser.variables->lookup<std::string>("title").value() == "consider\nPlebas\"!\"");
+  parser.exec("boundary0layer = shock_wave");
+  REQUIRE(parser.variables->lookup<int>("boundary0layer").value() == 7);
 }

@@ -81,8 +81,8 @@ void Namespace::create(std::string name, Namespace::Variable<T>* value)
 template<typename T>
 void Namespace::assign(std::string name, T value)
 {
-  if (lookup<T>(name)) return _get_map<T>().at(name)->set(value);
-  if (lookup<double>(name)) {
+  if (_get_map<T>().count(name)) return _get_map<T>().at(name)->set(value);
+  if (_get_map<double>().count(name)) {
     if constexpr (std::is_same<T, int>::value) {
       return _get_map<double>().at(name)->set(value);
     }
