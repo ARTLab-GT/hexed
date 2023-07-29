@@ -31,6 +31,19 @@ void Command_parser::exec(std::string commands)
         }
         if (is_int) variables->assign(name, std::stoi(value.c_str()));
         else        variables->assign(name, std::stod(value.c_str()));
+      } else if (commands[place] == '"') {
+        ++place;
+        std::string value;
+        do {
+          HEXED_ASSERT(more(), "command input ended while parsing string literal");
+          if (commands[place] == '"') {
+            if (commands[place + 1] == '"') ++place; // multiple quote escape
+            else break;
+          }
+          value.push_back(commands[place++]);
+        } while (true);
+        ++place;
+        variables->assign(name, value);
       } else {
         HEXED_ASSERT(false, format_str(100, "failed to parse value starting with `%c`", commands[place]));
       }

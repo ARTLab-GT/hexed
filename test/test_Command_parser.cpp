@@ -14,4 +14,7 @@ TEST_CASE("Command_parser")
   REQUIRE(parser.variables->lookup<double>("interaction").value() == Catch::Approx(.2));
   parser.exec("interaction = 1e3");
   REQUIRE(parser.variables->lookup<double>("interaction").value() == Catch::Approx(1e3));
+  parser.exec("ludwig = \"prandtl\"\ntitle = \"consider\nPlebas\"\"!\"\"\"");
+  REQUIRE(parser.variables->lookup<std::string>("ludwig").value() == "prandtl");
+  REQUIRE(parser.variables->lookup<std::string>("title").value() == "consider\nPlebas\"!\"");
 }
