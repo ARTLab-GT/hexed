@@ -66,7 +66,7 @@ Command_parser::_Dynamic_value Command_parser::_eval(int precedence)
   _skip_spaces();
   while (_bin_ops.count(_commands[_place])) {
     auto& op = _bin_ops.at(_commands[_place]);
-    if (op.precedence <= precedence) {
+    if (op.precedence < precedence) {
       ++_place;
       val = op.func(val, _eval(op.precedence));
     } else break;
