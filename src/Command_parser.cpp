@@ -5,14 +5,21 @@
 namespace hexed
 {
 
-bool Command_parser::_more() {return int(_commands.size()) > _place;}
-void Command_parser::_skip_spaces() {while (_commands[_place] == ' ') ++_place;} // note: _commands[_commands.size()] exists and is a null character so this is safe
+bool Command_parser::_more() {return _text.size() > 1;}
+char Command_parser::_pop()
+{
+  char c = _text.front();
+  _text.pop_front();
+  return c;
+}
+
+void Command_parser::_skip_spaces() {while (_text.front() == ' ') _pop();} // note: list ends with null character so this will never pop a non-existant element
 
 std::string Command_parser::_read_name()
 {
   std::string name = "";
-  while (std::isalpha(_commands[_place]) || std::isdigit(_commands[_place])  || _commands[_place] == '_') {
-    name.push_back(_commands[_place++]);
+  while (std::isalpha(_text.front()) || std::isdigit(_text.front())  || _text.front() == '_') {
+    name.push_back(_pop());
   }
   return name;
 }
@@ -20,35 +27,35 @@ std::string Command_parser::_read_name()
 Command_parser::_Dynamic_value Command_parser::_eval(int precedence)
 {
   _skip_spaces();
-  if (_commands[_place] == '(') {
-    ++_place;
+  if (_text.front() == '(') {
+    _pop();
     return _eval(std::numeric_limits<int>::max());
   }
   _Dynamic_value val;
-  if (std::isdigit(_commands[_place]) || _commands[_place] == '.') {
+  if (std::isdigit(_text.front()) || _text.front() == '.') {
     std::string value;
     bool is_int = true;
-    while (std::isdigit(_commands[_place]) || _commands[_place] == '.' || std::tolower(_commands[_place]) == 'e'
-           || ((_commands[_place] == '-' || _commands[_place] == '+') && std::tolower(_commands[_place - 1]) == 'e')) {
-      is_int = is_int && std::isdigit(_commands[_place]);
-      value.push_back(_commands[_place++]);
+    while (std::isdigit(_text.front()) || _text.front() == '.' || std::tolower(_text.front()) == 'e'
+           || ((_text.front() == '-' || _text.front() == '+') && std::tolower(value.back()) == 'e')) {
+      is_int = is_int && std::isdigit(_text.front());
+      value.push_back(_pop());
     }
     if (is_int) val.i = std::stoi(value.c_str());
     else        val.d = std::stod(value.c_str());
-  } else if (_commands[_place] == '"') {
-    ++_place;
+  } else if (_text.front() == '"') {
+    _pop();
     std::string value;
     do {
       HEXED_ASSERT(_more(), "command input ended while parsing string literal");
-      if (_commands[_place] == '"') {
-        if (_commands[_place + 1] == '"') ++_place; // multiple quote escape
+      if (_text.front() == '"') {
+        if (*(++_text.begin()) == '"') _pop(); // multiple quote escape FIXME can get rid of this iterator
         else break;
       }
-      value.push_back(_commands[_place++]);
+      value.push_back(_pop());
     } while (true);
-    ++_place;
+    _pop();
     val.s = value;
-  } else if (std::isalpha(_commands[_place]) || _commands[_place] == '_') {
+  } else if (std::isalpha(_text.front()) || _text.front() == '_') {
     std::string n = _read_name();
     if (_un_ops.count(n)) {
       val = _un_ops.at(n)(_eval(0));
@@ -58,20 +65,20 @@ Command_parser::_Dynamic_value Command_parser::_eval(int precedence)
       if (!val.i) val.d = variables->lookup<double>(n);
       val.s = variables->lookup<std::string>(n);
     }
-  } else if (_un_ops.count(std::string(1, _commands[_place]))) {
-    val = _un_ops.at(std::string(1, _commands[_place++]))(_eval(0));
+  } else if (_un_ops.count(std::string(1, _text.front()))) {
+    val = _un_ops.at(std::string(1, _pop()))(_eval(0));
   } else {
-    HEXED_ASSERT(false, format_str(100, "failed to parse value starting with `%c`", _commands[_place]));
+    HEXED_ASSERT(false, format_str(100, "failed to parse value starting with `%c`", _text.front()));
   }
   _skip_spaces();
-  while (_bin_ops.count(_commands[_place])) {
-    auto& op = _bin_ops.at(_commands[_place]);
+  while (_bin_ops.count(_text.front())) {
+    auto& op = _bin_ops.at(_text.front());
     if (op.precedence < precedence) {
-      ++_place;
+      _pop();
       val = op.func(val, _eval(op.precedence));
     } else break;
   }
-  if (_commands[_place] == ')') ++_place;
+  if (_text.front() == ')') _pop();
   return val;
 }
 
@@ -124,16 +131,16 @@ Command_parser::Command_parser() :
 
 void Command_parser::exec(std::string comms)
 {
-  _commands = comms;
-  _place = 0;
+  _text.assign(comms.begin(), comms.end());
+  _text.push_back('\0');
   while (_more()) {
     _skip_spaces();
-    if (_commands[_place] == '\n') ++_place;
+    if (_text.front() == '\n') _text.pop_front();
     else {
-      HEXED_ASSERT(std::isalpha(_commands[_place]) || _commands[_place] == '_', "statement does not begin with valid variable/builtin name");
+      HEXED_ASSERT(std::isalpha(_text.front()) || _text.front() == '_', "statement does not begin with valid variable/builtin name");
       std::string name = _read_name();
       _skip_spaces();
-      HEXED_ASSERT(_commands[_place++] == '=', "expected assignment operator `=` after variable name");
+      HEXED_ASSERT(_pop() == '=', "expected assignment operator `=` after variable name");
       _skip_spaces();
       HEXED_ASSERT(_more(), "unexpected end of line in assignment statement");
       auto val = _eval(std::numeric_limits<int>::max());
@@ -141,9 +148,10 @@ void Command_parser::exec(std::string comms)
       if (val.d) variables->assign(name, *val.d);
       if (val.s) variables->assign(name, *val.s);
       _skip_spaces();
-      HEXED_ASSERT(!_more() || _commands[_place] == '\n', "expected end of line after assignment statement");
+      HEXED_ASSERT(!_more() || _text.front() == '\n', "expected end of line after assignment statement");
     }
   }
+  _text.clear();
 }
 
 }

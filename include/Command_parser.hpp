@@ -2,6 +2,7 @@
 #define HEXED_COMMAND_PARSER_HPP_
 
 #include <functional>
+#include <list>
 #include "Namespace.hpp"
 
 namespace hexed
@@ -16,6 +17,7 @@ class Command_parser
   };
 
   bool _more();
+  char _pop();
   void _skip_spaces();
   std::string _read_name();
   _Dynamic_value _eval(int precedence);
@@ -33,8 +35,7 @@ class Command_parser
     std::function<_Dynamic_value(_Dynamic_value, _Dynamic_value)> func;
   };
 
-  int _place;
-  std::string _commands;
+  std::list<char> _text;
   std::map<std::string, std::function<_Dynamic_value(_Dynamic_value)>> _un_ops;
   std::map<char, _Binary_op> _bin_ops;
 
