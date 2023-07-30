@@ -64,5 +64,6 @@ TEST_CASE("Interpreter")
     REQUIRE(test.variables->lookup<std::string>("result0").value() == "yes");
     REQUIRE(test.variables->lookup<std::string>("result1").value() == "yesyes");
     REQUIRE(test.variables->lookup<int>("triangle").value() == 10);
+    REQUIRE(test.variables->lookup<int>("cube").value() == 125);
   }
 }

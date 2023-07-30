@@ -1,9 +1,8 @@
 # so you can create a newline character without a linebreak in your code
 newline = "
 "
-# since these can get very long to type several levels down into nested string literals
+# since this can get very long to type several levels down into nested string literals
 empty_string = ""
-quote = """"
 
 # boolean aliases
 true = 1
@@ -17,15 +16,18 @@ cond = "
 "
 
 # implements a basic while loop
+hexed_loop_depth = 0
 loop = "
-    hexed_loop_while = while
-    hexed_loop_do = do
-    hexed_loop_wrapper = ""
-        if = hexed_loop_while
-        then = hexed_loop_do
-        else = """" hexed_loop_wrapper = empty_string """"
+    hexed_loop_depth = hexed_loop_depth + 1
+    $(""hexed_loop_while""   + string(hexed_loop_depth)) = while
+    $(""hexed_loop_do""      + string(hexed_loop_depth)) = do
+    $(""hexed_loop_wrapper"" + string(hexed_loop_depth)) = ""
+        if = hexed_loop_while"" + string(hexed_loop_depth) + ""
+        then = hexed_loop_do""  + string(hexed_loop_depth) + ""
+        else = """" hexed_loop_wrapper"" + string(hexed_loop_depth) + "" = empty_string """"
         $cond
-        $hexed_loop_wrapper
+        $hexed_loop_wrapper"" + string(hexed_loop_depth) + ""
     ""
-    $hexed_loop_wrapper
+    $$(""hexed_loop_wrapper"" + string(hexed_loop_depth))
+    hexed_loop_depth = hexed_loop_depth - 1
 "
