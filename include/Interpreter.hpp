@@ -1,5 +1,5 @@
-#ifndef HEXED_COMMAND_PARSER_HPP_
-#define HEXED_COMMAND_PARSER_HPP_
+#ifndef HEXED_INTERPRETER_HPP_
+#define HEXED_INTERPRETER_HPP_
 
 #include <functional>
 #include <list>
@@ -8,7 +8,7 @@
 namespace hexed
 {
 
-class Command_parser
+class Interpreter
 {
   struct _Dynamic_value {
     std::optional<int> i;
@@ -29,7 +29,7 @@ class Command_parser
   template <typename T> static T _sub(T op0, T op1) {return op0 - op1;}
 
   template<double (*)(double, double), int (*)(int, int)>
-  static Command_parser::_Dynamic_value _numeric_op(Command_parser::_Dynamic_value, Command_parser::_Dynamic_value);
+  static Interpreter::_Dynamic_value _numeric_op(Interpreter::_Dynamic_value, Interpreter::_Dynamic_value);
 
   struct _Binary_op {
     int precedence;
@@ -43,7 +43,7 @@ class Command_parser
   public:
   std::shared_ptr<Namespace> variables;
   std::map<std::string, std::function<void(std::string)>> statements;
-  Command_parser();
+  Interpreter();
   //! not at all thread-safe
   void exec(std::string commands);
 };

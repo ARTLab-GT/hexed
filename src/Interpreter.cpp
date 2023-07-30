@@ -1,21 +1,21 @@
 #include <limits>
 #include <cmath>
-#include <Command_parser.hpp>
+#include <Interpreter.hpp>
 
 namespace hexed
 {
 
-bool Command_parser::_more() {return _text.size() > 1;}
-char Command_parser::_pop()
+bool Interpreter::_more() {return _text.size() > 1;}
+char Interpreter::_pop()
 {
   char c = _text.front();
   _text.pop_front();
   return c;
 }
 
-void Command_parser::_skip_spaces() {while (_text.front() == ' ') _pop();} // note: list ends with null character so this will never pop a non-existant element
+void Interpreter::_skip_spaces() {while (_text.front() == ' ') _pop();} // note: list ends with null character so this will never pop a non-existant element
 
-std::string Command_parser::_read_name()
+std::string Interpreter::_read_name()
 {
   std::string name = "";
   while (std::isalpha(_text.front()) || std::isdigit(_text.front())  || _text.front() == '_') {
@@ -24,7 +24,7 @@ std::string Command_parser::_read_name()
   return name;
 }
 
-void Command_parser::_substitute()
+void Interpreter::_substitute()
 {
   _pop();
   _Dynamic_value val = _eval(0);
@@ -32,7 +32,7 @@ void Command_parser::_substitute()
   _text.insert(_text.begin(), val.s->begin(), val.s->end());
 }
 
-Command_parser::_Dynamic_value Command_parser::_eval(int precedence)
+Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
 {
   _skip_spaces();
   // process open parenthesis
@@ -100,9 +100,9 @@ Command_parser::_Dynamic_value Command_parser::_eval(int precedence)
 }
 
 template<double (*dop)(double, double), int (*iop)(int, int)>
-Command_parser::_Dynamic_value Command_parser::_numeric_op(Command_parser::_Dynamic_value o0, Command_parser::_Dynamic_value o1)
+Interpreter::_Dynamic_value Interpreter::_numeric_op(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1)
 {
-  Command_parser::_Dynamic_value v;
+  Interpreter::_Dynamic_value v;
   if (o0.d) {
     if (o1.d) v.d = dop(*o0.d, *o1.d);
     else if (o1.i) v.d = dop(*o0.d, *o1.i);
@@ -113,7 +113,7 @@ Command_parser::_Dynamic_value Command_parser::_numeric_op(Command_parser::_Dyna
   return v;
 }
 
-Command_parser::Command_parser() :
+Interpreter::Interpreter() :
   _un_ops {
     {"-", [](_Dynamic_value val) {
       if      (val.i) *val.i *= -1;
@@ -146,7 +146,7 @@ Command_parser::Command_parser() :
   variables{std::make_shared<Namespace>()}
 {}
 
-void Command_parser::exec(std::string comms)
+void Interpreter::exec(std::string comms)
 {
   _text.assign(comms.begin(), comms.end());
   _text.push_back('\0');

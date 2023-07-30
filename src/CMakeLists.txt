@@ -4,7 +4,6 @@ Accessible_mesh.cpp
 Basis.cpp
 Boundary_condition.cpp
 Boundary_func.cpp
-Command_parser.cpp
 connection.cpp
 criteria.cpp
 Deformed_element.cpp
@@ -15,6 +14,7 @@ Equidistant.cpp
 filter_limit.cpp
 global_hacks.cpp
 Hanging_vertex_matcher.cpp
+Interpreter.cpp
 Iteration_status.cpp
 Layer_sequence.cpp
 Lock.cpp
