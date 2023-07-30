@@ -120,6 +120,8 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
   return val;
 }
 
+template <> int Interpreter::_pow<int>(int op0, int op1) {return math::pow(op0, op1);}
+
 template<double (*dop)(double, double), int (*iop)(int, int)>
 Interpreter::_Dynamic_value Interpreter::_arithmetic_op(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1)
 {
@@ -181,7 +183,7 @@ Interpreter::_Dynamic_value Interpreter::_print_str(Interpreter::_Dynamic_value 
   return result;
 }
 
-Interpreter::Interpreter() :
+Interpreter::Interpreter(std::vector<std::string> preload) :
   _un_ops {
     {"-", [](_Dynamic_value val) {
       if      (val.i) *val.i *= -1;
@@ -251,6 +253,10 @@ Interpreter::Interpreter() :
     std::getline(std::cin, input);
     return input;
   }));
+  // load standard library
+  for (auto file : preload) {
+    exec(format_str(1000, "$read \"%s\"", file.c_str()));
+  }
 }
 
 void Interpreter::exec(std::string comms)

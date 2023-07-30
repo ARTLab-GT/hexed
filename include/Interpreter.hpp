@@ -61,12 +61,10 @@ class Interpreter
   public:
   std::shared_ptr<Namespace> variables;
   std::map<std::string, std::function<void(std::string)>> statements;
-  Interpreter();
+  Interpreter(std::vector<std::string> preload = {std::string(config::root_dir) + "/include/std.hil"});
   //! not at all thread-safe
   void exec(std::string commands);
 };
-
-template <> int Interpreter::_pow<int>(int op0, int op1) {return math::pow(op0, op1);}
 
 }
 #endif

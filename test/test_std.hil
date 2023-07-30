@@ -1,5 +1,3 @@
-$read "../include/std.hil"
-
 if = "true"
 then = "result0 = ""yes"""
 else = "result0 = ""no"""
