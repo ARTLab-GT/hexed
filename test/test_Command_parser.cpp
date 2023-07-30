@@ -41,4 +41,10 @@ TEST_CASE("Command_parser")
   REQUIRE(parser.variables->lookup<double>("root").value() == Catch::Approx(3.));
   parser.exec("root = sqrt 4.");
   REQUIRE(parser.variables->lookup<double>("root").value() == Catch::Approx(2.));
+  parser.exec("code = \"2 + 7\"");
+  parser.exec("result = $code");
+  REQUIRE(parser.variables->lookup<int>("result").value() == 9);
+  parser.exec("code = \"result = result + 1\"");
+  parser.exec("$code");
+  REQUIRE(parser.variables->lookup<int>("result").value() == 10);
 }

@@ -24,6 +24,14 @@ std::string Command_parser::_read_name()
   return name;
 }
 
+void Command_parser::_substitute()
+{
+  _pop();
+  _Dynamic_value val = _eval(0);
+  HEXED_ASSERT(val.s, "only a string can be substituted as code");
+  _text.insert(_text.begin(), val.s->begin(), val.s->end());
+}
+
 Command_parser::_Dynamic_value Command_parser::_eval(int precedence)
 {
   _skip_spaces();
@@ -32,6 +40,7 @@ Command_parser::_Dynamic_value Command_parser::_eval(int precedence)
     _pop();
     return _eval(std::numeric_limits<int>::max());
   }
+  if (_text.front() == '$') _substitute();
   // parse expression tokens by kind
   _Dynamic_value val;
   // numeric literals
@@ -144,6 +153,7 @@ void Command_parser::exec(std::string comms)
   while (_more()) {
     _skip_spaces();
     if (_text.front() == '\n') _text.pop_front();
+    else if (_text.front() == '$') _substitute();
     else {
       HEXED_ASSERT(std::isalpha(_text.front()) || _text.front() == '_', "statement does not begin with valid variable/builtin name");
       std::string name = _read_name();

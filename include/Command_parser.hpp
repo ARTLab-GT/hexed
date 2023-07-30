@@ -20,6 +20,7 @@ class Command_parser
   char _pop();
   void _skip_spaces();
   std::string _read_name();
+  void _substitute();
   _Dynamic_value _eval(int precedence);
 
   template <typename T> static T _mul(T op0, T op1) {return op0*op1;}
