@@ -177,7 +177,7 @@ Interpreter::_Dynamic_value Interpreter::_general_eq(Interpreter::_Dynamic_value
 Interpreter::_Dynamic_value Interpreter::_print_str(Interpreter::_Dynamic_value val)
 {
   HEXED_ASSERT(val.s, "unary operator `print_str` only accepts strings");
-  if (val.s) std::cout << *val.s;
+  if (val.s) std::cout << *val.s << std::flush;
   _Dynamic_value result;
   result.i.emplace(0);
   return result;

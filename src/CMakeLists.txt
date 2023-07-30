@@ -41,3 +41,6 @@ thermo.cpp
 Vertex.cpp
 Vis_data.cpp
 )
+
+add_executable(hexed_exec hexed_exec.cpp)
+target_link_libraries(hexed_exec PRIVATE hexed)
