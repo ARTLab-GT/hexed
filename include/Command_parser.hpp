@@ -35,6 +35,7 @@ class Command_parser
 
   int _place;
   std::string _commands;
+  std::map<std::string, std::function<_Dynamic_value(_Dynamic_value)>> _un_ops;
   std::map<char, _Binary_op> _bin_ops;
 
   public:

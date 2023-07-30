@@ -33,4 +33,12 @@ TEST_CASE("Command_parser")
   REQUIRE(parser.variables->lookup<int>("result").value() == 6);
   parser.exec("result = 6/3*2");
   REQUIRE(parser.variables->lookup<int>("result").value() == 4);
+  parser.exec("result = !0");
+  REQUIRE(parser.variables->lookup<int>("result").value() == 1);
+  parser.exec("result = !2");
+  REQUIRE(parser.variables->lookup<int>("result").value() == 0);
+  parser.exec("root = sqrt 9");
+  REQUIRE(parser.variables->lookup<double>("root").value() == Catch::Approx(3.));
+  parser.exec("root = sqrt 4.");
+  REQUIRE(parser.variables->lookup<double>("root").value() == Catch::Approx(2.));
 }

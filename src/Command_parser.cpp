@@ -1,4 +1,5 @@
 #include <limits>
+#include <cmath>
 #include <Command_parser.hpp>
 
 namespace hexed
@@ -49,17 +50,16 @@ Command_parser::_Dynamic_value Command_parser::_eval(int precedence)
     val.s = value;
   } else if (std::isalpha(_commands[_place]) || _commands[_place] == '_') {
     std::string n = _read_name();
-    HEXED_ASSERT(variables->exists(n), format_str(1000, "undefined variable `%s`", n));
-    val.i = variables->lookup<int>(n);
-    if (!val.i) val.d = variables->lookup<double>(n);
-    val.s = variables->lookup<std::string>(n);
-  } else if (_commands[_place] == '-') {
-    ++_place;
-    _skip_spaces();
-    val = _eval(0);
-    if      (val.i) *val.i *= -1;
-    else if (val.d) *val.d *= -1;
-    else HEXED_ASSERT(false, "unary `-` cannot be applied to type `string`.");
+    if (_un_ops.count(n)) {
+      val = _un_ops.at(n)(_eval(0));
+    } else {
+      HEXED_ASSERT(variables->exists(n), format_str(1000, "undefined variable `%s`", n.c_str()));
+      val.i = variables->lookup<int>(n);
+      if (!val.i) val.d = variables->lookup<double>(n);
+      val.s = variables->lookup<std::string>(n);
+    }
+  } else if (_un_ops.count(std::string(1, _commands[_place]))) {
+    val = _un_ops.at(std::string(1, _commands[_place++]))(_eval(0));
   } else {
     HEXED_ASSERT(false, format_str(100, "failed to parse value starting with `%c`", _commands[_place]));
   }
@@ -90,6 +90,29 @@ Command_parser::_Dynamic_value Command_parser::_numeric_op(Command_parser::_Dyna
 }
 
 Command_parser::Command_parser() :
+  _un_ops {
+    {"-", [](_Dynamic_value val) {
+      if      (val.i) *val.i *= -1;
+      else if (val.d) *val.d *= -1;
+      else HEXED_ASSERT(false, "unary operator `-` cannot be applied to type `string`.");
+      return val;
+    }},
+    {"!", [](_Dynamic_value val) {
+      HEXED_ASSERT(val.i, "unary operator `!` requires integer argument");
+      *val.i = !*val.i;
+      return val;
+    }},
+    {"sqrt", [](_Dynamic_value val) {
+      double operand;
+      if (val.i) operand = *val.i;
+      else if (val.d) operand = *val.d;
+      else HEXED_ASSERT(false, "unary operator `sqrt` requires numeric argument");
+      _Dynamic_value new_val;
+      val.i.reset();
+      val.d.emplace(std::sqrt(operand));
+      return val;
+    }},
+  },
   _bin_ops {
     {'*', {1, _numeric_op<_mul<double>, _mul<int>>}}, // note: 0 is for unary ops
     {'/', {1, _numeric_op<_div<double>, _div<int>>}},
