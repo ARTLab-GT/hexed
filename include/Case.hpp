@@ -9,8 +9,9 @@ namespace hexed
 
 class Case
 {
-  //Solver solver;
-  Interpreter inter;
+  std::unique_ptr<Solver> _solver_ptr;
+  Solver& _solver();
+  Interpreter _inter;
   public:
   Case(std::string input_file);
 };

@@ -1,1 +1,21 @@
 row_size = 6
+
+mesh_corner00 = 0.
+mesh_corner10 = 0.
+mesh_corner20 = 0.
+mesh_corner01 = 1.
+mesh_corner11 = 1.
+mesh_corner21 = 1.
+
+init_ref_level = 3
+working_dir = "hexed_out/"
+vis_file_name = working_dir + "init"
+vis_init = true;
+
+init = "
+    =create_solver;
+    if = ""vis_init""
+    then = ""=visualize""
+    else = """"
+    $cond
+"
