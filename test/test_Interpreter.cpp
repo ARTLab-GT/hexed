@@ -55,7 +55,9 @@ TEST_CASE("Interpreter")
 
   SECTION("standard library")
   {
-    inter.exec("$(read \"../test/test_std.hil\")");
-    REQUIRE(inter.variables->lookup<int>("sum").value() == 2);
+    hexed::Interpreter test;
+    test.exec("$(read \"../test/test_std.hil\")");
+    REQUIRE(test.variables->lookup<std::string>("result0").value() == "yes");
+    REQUIRE(test.variables->lookup<std::string>("result1").value() == "yesyes");
   }
 }

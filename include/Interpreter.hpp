@@ -19,6 +19,7 @@ class Interpreter
   bool _more();
   char _pop();
   void _skip_spaces();
+  std::string _debug_info();
   std::string _read_name();
   void _substitute();
   _Dynamic_value _eval(int precedence);

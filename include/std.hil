@@ -1,3 +1,11 @@
 newline = "
 "
-sum = 1 + 1
+
+true = 1
+false = 0
+
+cond = "
+hexed_cond0 = else
+hexed_cond1 = then
+$(""$hexed_cond"" + string(if))
+"

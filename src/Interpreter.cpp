@@ -26,11 +26,16 @@ std::string Interpreter::_read_name()
   return name;
 }
 
+std::string Interpreter::_debug_info()
+{
+  return "\nremaining_code:\n" + std::string(_text.begin(), _text.end());
+}
+
 void Interpreter::_substitute()
 {
   _pop();
   _Dynamic_value val = _eval(0);
-  HEXED_ASSERT(val.s, "only a string can be substituted as code");
+  HEXED_ASSERT(val.s, "only a string can be substituted as code" + _debug_info());
   _text.insert(_text.begin(), val.s->begin(), val.s->end());
 }
 
@@ -61,7 +66,7 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
     _pop();
     std::string value;
     do {
-      HEXED_ASSERT(_more(), "command input ended while parsing string literal");
+      HEXED_ASSERT(_more(), "command input ended while parsing string literal" + _debug_info());
       if (_text.front() == '"') {
         _pop();
         if (_text.front() != '"') break; // note multiple quote escape concept
@@ -75,7 +80,7 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
     if (_un_ops.count(n)) { // unary operators
       val = _un_ops.at(n)(_eval(0));
     } else { // variable names
-      HEXED_ASSERT(variables->exists(n), format_str(1000, "undefined variable `%s`", n.c_str()));
+      HEXED_ASSERT(variables->exists(n), format_str(1000, "undefined variable `%s`", n.c_str()) + _debug_info());
       val.i = variables->lookup<int>(n);
       if (!val.i) val.d = variables->lookup<double>(n);
       val.s = variables->lookup<std::string>(n);
@@ -85,7 +90,7 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
     val = _un_ops.at(std::string(1, _pop()))(_eval(0));
   // if we couldn't recognize the token, throw
   } else {
-    HEXED_ASSERT(false, format_str(100, "failed to parse value starting with `%c`", _text.front()));
+    HEXED_ASSERT(false, format_str(100, "failed to parse value starting with `%c`", _text.front()) + _debug_info());
   }
   _skip_spaces();
   // process binary operators of which this token was the first argument
@@ -177,6 +182,13 @@ Interpreter::Interpreter() :
       std::cout << std::endl;
       return result;
     }},
+    {"string", [](_Dynamic_value val) {
+      _Dynamic_value str;
+      if (val.i) str.s.emplace(std::to_string(*val.i));
+      else if (val.d) str.s.emplace(std::to_string(*val.d));
+      else str.s = val.s;
+      return str;
+    }},
   },
   _bin_ops {
     {'/', {1, _numeric_op<_div<double>, _div<int>>}}, // note: 0 is for unary ops
@@ -205,18 +217,18 @@ void Interpreter::exec(std::string comms)
       _pop();
       _eval(std::numeric_limits<int>::max());
     } else {
-      HEXED_ASSERT(std::isalpha(_text.front()) || _text.front() == '_', "statement does not begin with valid variable/builtin name");
+      HEXED_ASSERT(std::isalpha(_text.front()) || _text.front() == '_', "statement does not begin with valid variable/builtin name" + _debug_info());
       std::string name = _read_name();
       _skip_spaces();
-      HEXED_ASSERT(_pop() == '=', "expected assignment operator `=` after variable name");
+      HEXED_ASSERT(_pop() == '=', format_str(1000, "expected assignment operator `=` after variable name `%s`", name.c_str()) + _debug_info());
       _skip_spaces();
-      HEXED_ASSERT(_more(), "unexpected end of line in assignment statement");
+      HEXED_ASSERT(_more(), "unexpected end of line in assignment statement" + _debug_info());
       auto val = _eval(std::numeric_limits<int>::max());
       if (val.i) variables->assign(name, *val.i);
       if (val.d) variables->assign(name, *val.d);
       if (val.s) variables->assign(name, *val.s);
       _skip_spaces();
-      HEXED_ASSERT(!_more() || _text.front() == '\n', "expected end of line after assignment statement");
+      HEXED_ASSERT(!_more() || _text.front() == '\n', "expected end of line after assignment statement" + _debug_info());
     }
   }
   _text.clear();
