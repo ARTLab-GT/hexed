@@ -246,7 +246,7 @@ Interpreter::Interpreter() :
   },
   variables{std::make_shared<Namespace>()}
 {
-  variables->create("ask", new Namespace::Read_only<std::string>([]() {
+  variables->create("ask", new Namespace::Heisenberg<std::string>([]() {
     std::string input;
     std::getline(std::cin, input);
     return input;

@@ -27,7 +27,7 @@ TEST_CASE("Namespace")
   REQUIRE(!space.lookup<int>("number1")); // ...but it's still a double
   // read-only variables
   int _counter = 0;
-  space.create("call_counter", new hexed::Namespace::Read_only<int>([&_counter]()->int{return _counter++;}));
+  space.create("call_counter", new hexed::Namespace::Heisenberg<int>([&_counter]()->int{return _counter++;}));
   REQUIRE(space.lookup<int>("call_counter").value() == 0);
   REQUIRE(space.lookup<int>("call_counter").value() == 1);
 }

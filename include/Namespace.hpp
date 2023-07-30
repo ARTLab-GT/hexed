@@ -34,12 +34,12 @@ class Namespace
   };
 
   template <typename T>
-  class Read_only : public Variable<T>
+  class Heisenberg : public Variable<T>
   {
     std::function<T()> fetcher;
     public:
-    Read_only(std::function<T()>f ) : fetcher{f} {}
-    void set(T v) override {throw std::runtime_error("attempty to modify read-only value.");}
+    Heisenberg(std::function<T()>f ) : fetcher{f} {}
+    void set(T v) override {throw std::runtime_error("attempt to write to `Heisenberg` variable.");}
     T get() override {return fetcher();}
   };
 
@@ -95,8 +95,9 @@ std::optional<T> Namespace::lookup(std::string name)
 {
   if (_get_map<T>().count(name)) return {_get_map<T>().at(name)->get()};
   if constexpr (std::is_same<T, double>::value) {
-    auto l = lookup<int>(name);
-    if (l) return {*l};
+    if (_get_map<int>().count(name)) {
+      return {*lookup<int>(name)};
+    }
   }
   return {};
 }
