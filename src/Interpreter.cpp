@@ -209,6 +209,7 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
     {"read", [](_Dynamic_value val) {
       HEXED_ASSERT(val.s, "operand of `read` must be `string`");
       std::ifstream file(*val.s);
+      HEXED_ASSERT(file.good(), format_str(1000, "failed to open file `%s`", (*val.s).c_str()));
       _Dynamic_value str;
       str.s = "";
       char c;

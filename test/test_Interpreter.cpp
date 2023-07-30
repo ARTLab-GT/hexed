@@ -74,6 +74,7 @@ TEST_CASE("Interpreter")
   REQUIRE(inter.variables->lookup<int>("result").value() == 0);
   inter.exec("result = \"prandtl\" == \"prandtl\"");
   REQUIRE(inter.variables->lookup<int>("result").value() == 1);
+  REQUIRE_THROWS(inter.exec("$read \"non_existant.hil\""));
 
   SECTION("standard library")
   {
