@@ -116,6 +116,18 @@ Interpreter::_Dynamic_value Interpreter::_numeric_op(Interpreter::_Dynamic_value
   return v;
 }
 
+Interpreter::_Dynamic_value Interpreter::_general_add(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1)
+{
+  if (o0.s && o1.s) {
+    _Dynamic_value val;
+    val.s.emplace(*o0.s + *o1.s);
+    return val;
+  } else {
+    HEXED_ASSERT(!o0.s && !o1.s, "operands to `+` must be either both numeric or both `string`");
+    return _numeric_op<_add<double>, _add<int>>(o0, o1);
+  }
+}
+
 Interpreter::_Dynamic_value Interpreter::_print(Interpreter::_Dynamic_value val)
 {
   if (val.i) std::cout << *val.i;
@@ -167,10 +179,10 @@ Interpreter::Interpreter() :
     }},
   },
   _bin_ops {
-    {'*', {1, _numeric_op<_mul<double>, _mul<int>>}}, // note: 0 is for unary ops
-    {'/', {1, _numeric_op<_div<double>, _div<int>>}},
-    {'+', {2, _numeric_op<_add<double>, _add<int>>}},
+    {'/', {1, _numeric_op<_div<double>, _div<int>>}}, // note: 0 is for unary ops
+    {'*', {1, _numeric_op<_mul<double>, _mul<int>>}},
     {'-', {2, _numeric_op<_sub<double>, _sub<int>>}},
+    {'+', {2, _general_add}},
   },
   variables{std::make_shared<Namespace>()}
 {
@@ -187,9 +199,12 @@ void Interpreter::exec(std::string comms)
   _text.push_back('\0');
   while (_more()) {
     _skip_spaces();
-    if (_text.front() == '\n') _text.pop_front();
+    if (_text.front() == '\n') _pop();
     else if (_text.front() == '$') _substitute();
-    else {
+    else if (_text.front() == '=') {
+      _pop();
+      _eval(std::numeric_limits<int>::max());
+    } else {
       HEXED_ASSERT(std::isalpha(_text.front()) || _text.front() == '_', "statement does not begin with valid variable/builtin name");
       std::string name = _read_name();
       _skip_spaces();

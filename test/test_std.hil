@@ -1,0 +1,2 @@
+$read "../include/std.hil"
+=println"hello world!"

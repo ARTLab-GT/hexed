@@ -29,8 +29,9 @@ class Interpreter
   template <typename T> static T _sub(T op0, T op1) {return op0 - op1;}
 
   template<double (*)(double, double), int (*)(int, int)>
-  static _Dynamic_value _numeric_op(Interpreter::_Dynamic_value, Interpreter::_Dynamic_value);
+  static _Dynamic_value _numeric_op(_Dynamic_value, _Dynamic_value);
   static _Dynamic_value _print(_Dynamic_value);
+  static _Dynamic_value _general_add(_Dynamic_value, _Dynamic_value);
 
   struct _Binary_op {
     int precedence;

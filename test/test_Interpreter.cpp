@@ -27,6 +27,8 @@ TEST_CASE("Interpreter")
   REQUIRE(inter.variables->lookup<int>("result").value() == -42);
   inter.exec("result = 1 + 1");
   REQUIRE(inter.variables->lookup<int>("result").value() == 2);
+  inter.exec("ludwig = ludwig + \"-glauert\"");
+  REQUIRE(inter.variables->lookup<std::string>("ludwig").value() == "prandtl-glauert");
   inter.exec("result = 2*3 + 1*2 - -3*-3*3");
   REQUIRE(inter.variables->lookup<int>("result").value() == -19);
   inter.exec("result = (1 + 2)*2");
@@ -49,7 +51,11 @@ TEST_CASE("Interpreter")
   REQUIRE(inter.variables->lookup<int>("result").value() == 10);
   inter.exec("result = 1 + $\"$\"\"1 + 1\"\"\"");
   REQUIRE(inter.variables->lookup<int>("result").value() == 3);
+  inter.exec("= 1 + 1");
 
-  inter.exec("$(read \"../include/std.hil\")");
-  REQUIRE(inter.variables->lookup<int>("sum").value() == 2);
+  SECTION("standard library")
+  {
+    inter.exec("$(read \"../test/test_std.hil\")");
+    REQUIRE(inter.variables->lookup<int>("sum").value() == 2);
+  }
 }
