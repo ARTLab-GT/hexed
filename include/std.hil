@@ -9,6 +9,9 @@ true = 1
 false = 0
 
 # implements a conditional construct
+if = "" # reserve these names so a user can't accidentally assign a different type to them
+then = ""
+else = ""
 cond = "
     hexed_cond0 = else
     hexed_cond1 = then
@@ -17,6 +20,8 @@ cond = "
 
 # implements a basic while loop
 hexed_loop_depth = 0
+while = ""
+do = ""
 loop = "
     hexed_loop_depth = hexed_loop_depth + 1
     $(""hexed_loop_while""   + string(hexed_loop_depth)) = while

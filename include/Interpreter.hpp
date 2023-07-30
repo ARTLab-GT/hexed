@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <list>
+#include "math.hpp"
 #include "Namespace.hpp"
 
 namespace hexed
@@ -24,12 +25,19 @@ class Interpreter
   void _substitute();
   _Dynamic_value _eval(int precedence);
 
+  template <typename T> static T _pow(T op0, T op1) {return std::pow(op0, op1);}
   template <typename T> static T _mul(T op0, T op1) {return op0*op1;}
   template <typename T> static T _div(T op0, T op1) {return op0/op1;}
   template <typename T> static T _add(T op0, T op1) {return op0 + op1;}
   template <typename T> static T _sub(T op0, T op1) {return op0 - op1;}
   template <typename T> static bool _gt(T op0, T op1) {return op0 > op1;}
   template <typename T> static bool _lt(T op0, T op1) {return op0 < op1;}
+  template <typename T> static bool _eq(T op0, T op1) {return op0 == op1;}
+  template <typename T> static bool _ne(T op0, T op1) {return op0 != op1;}
+  template <typename T> static bool _ge(T op0, T op1) {return op0 >= op1;}
+  template <typename T> static bool _le(T op0, T op1) {return op0 <= op1;}
+  template <typename T> static bool _and(T op0, T op1) {return op0 && op1;}
+  template <typename T> static bool _or(T op0, T op1) {return op0 || op1;}
 
   template<double (*)(double, double), int (*)(int, int)>
   static _Dynamic_value _arithmetic_op(_Dynamic_value, _Dynamic_value);
@@ -39,6 +47,7 @@ class Interpreter
 
   static _Dynamic_value _print(_Dynamic_value);
   static _Dynamic_value _general_add(_Dynamic_value, _Dynamic_value);
+  static _Dynamic_value _general_eq(_Dynamic_value, _Dynamic_value);
 
   struct _Binary_op {
     int precedence;
@@ -47,7 +56,7 @@ class Interpreter
 
   std::list<char> _text;
   std::map<std::string, std::function<_Dynamic_value(_Dynamic_value)>> _un_ops;
-  std::map<char, _Binary_op> _bin_ops;
+  std::map<std::string, _Binary_op> _bin_ops;
 
   public:
   std::shared_ptr<Namespace> variables;
@@ -56,6 +65,8 @@ class Interpreter
   //! not at all thread-safe
   void exec(std::string commands);
 };
+
+template <> int Interpreter::_pow<int>(int op0, int op1) {return math::pow(op0, op1);}
 
 }
 #endif

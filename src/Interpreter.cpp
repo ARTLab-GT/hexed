@@ -99,10 +99,19 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
   }
   _skip_spaces();
   // process binary operators of which this token was the first argument
-  while (_bin_ops.count(_text.front())) {
-    auto& op = _bin_ops.at(_text.front());
+  while (true) {
+    std::string op_name = "";
+    for (auto& pair : _bin_ops) {
+      if (_text.size() > pair.first.size()) {
+        if (std::equal(pair.first.begin(), pair.first.end(), _text.begin())) {
+          if (pair.first.size() > op_name.size()) op_name = pair.first;
+        }
+      }
+    }
+    if (op_name.empty()) break;
+    auto& op = _bin_ops.at(op_name);
     if (op.precedence < precedence) {
-      _pop();
+      for (unsigned i = 0; i < op_name.size(); ++i) _pop();
       val = op.func(val, _eval(op.precedence));
     } else break;
   }
@@ -148,6 +157,18 @@ Interpreter::_Dynamic_value Interpreter::_general_add(Interpreter::_Dynamic_valu
   } else {
     HEXED_ASSERT(!o0.s && !o1.s, "operands to `+` must be either both numeric or both `string`");
     return _arithmetic_op<_add<double>, _add<int>>(o0, o1);
+  }
+}
+
+Interpreter::_Dynamic_value Interpreter::_general_eq(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1)
+{
+  if (o0.s && o1.s) {
+    _Dynamic_value val;
+    val.i.emplace(*o0.s == *o1.s);
+    return val;
+  } else {
+    HEXED_ASSERT(!o0.s && !o1.s, "operands to `==` must be either both numeric or both `string`");
+    return _comparison_op<_eq<double>, _eq<int>>(o0, o1);
   }
 }
 
@@ -209,12 +230,19 @@ Interpreter::Interpreter() :
     }},
   },
   _bin_ops {
-    {'/', {1, _arithmetic_op<_div<double>, _div<int>>}}, // note: 0 is for unary ops
-    {'*', {1, _arithmetic_op<_mul<double>, _mul<int>>}},
-    {'-', {2, _arithmetic_op<_sub<double>, _sub<int>>}},
-    {'+', {2, _general_add}},
-    {'<', {3, _comparison_op<_lt<double>, _lt<int>>}},
-    {'>', {3, _comparison_op<_gt<double>, _gt<int>>}},
+    {"^" , {1, _arithmetic_op<_pow<double>, _pow<int>>}}, // note: 0 is for unary ops
+    {"/" , {2, _arithmetic_op<_div<double>, _div<int>>}},
+    {"*" , {2, _arithmetic_op<_mul<double>, _mul<int>>}},
+    {"-" , {3, _arithmetic_op<_sub<double>, _sub<int>>}},
+    {"+" , {3, _general_add}},
+    {"==", {4, _general_eq}},
+    {"!=", {4, _comparison_op<_ne<double>, _ne<int>>}},
+    {">=", {4, _comparison_op<_ge<double>, _ge<int>>}},
+    {"<=", {4, _comparison_op<_le<double>, _le<int>>}},
+    {"<" , {4, _comparison_op<_lt<double>, _lt<int>>}},
+    {">" , {4, _comparison_op<_gt<double>, _gt<int>>}},
+    {"&" , {5, _comparison_op<_and<double>, _and<int>>}},
+    {"|" , {5, _comparison_op<_or<double>, _or<int>>}},
   },
   variables{std::make_shared<Namespace>()}
 {

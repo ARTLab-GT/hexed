@@ -56,6 +56,24 @@ TEST_CASE("Interpreter")
   REQUIRE(inter.variables->lookup<int>("result").value() == 36);
   inter.exec("result = -7.1 < 5");
   REQUIRE(inter.variables->lookup<int>("result").value() == 1);
+  inter.exec("result = 3 == 5");
+  REQUIRE(inter.variables->lookup<int>("result").value() == 0);
+  inter.exec("result = 3 == 2 + 1");
+  REQUIRE(inter.variables->lookup<int>("result").value() == 1);
+  inter.exec("result = 3 >= 5");
+  REQUIRE(inter.variables->lookup<int>("result").value() == 0);
+  inter.exec("result = 1 & 0");
+  REQUIRE(inter.variables->lookup<int>("result").value() == 0);
+  inter.exec("result = 1 | 0");
+  REQUIRE(inter.variables->lookup<int>("result").value() == 1);
+  inter.exec("result = 2^5");
+  REQUIRE(inter.variables->lookup<int>("result").value() == 32);
+  inter.exec("real = 1e-4^0.25");
+  REQUIRE(inter.variables->lookup<double>("real").value() == Catch::Approx(0.1));
+  inter.exec("result = \"prandtl\" == \"Prandtl\"");
+  REQUIRE(inter.variables->lookup<int>("result").value() == 0);
+  inter.exec("result = \"prandtl\" == \"prandtl\"");
+  REQUIRE(inter.variables->lookup<int>("result").value() == 1);
 
   SECTION("standard library")
   {
