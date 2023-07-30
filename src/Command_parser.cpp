@@ -27,11 +27,14 @@ std::string Command_parser::_read_name()
 Command_parser::_Dynamic_value Command_parser::_eval(int precedence)
 {
   _skip_spaces();
+  // process open parenthesis
   if (_text.front() == '(') {
     _pop();
     return _eval(std::numeric_limits<int>::max());
   }
+  // parse expression tokens by kind
   _Dynamic_value val;
+  // numeric literals
   if (std::isdigit(_text.front()) || _text.front() == '.') {
     std::string value;
     bool is_int = true;
@@ -42,35 +45,39 @@ Command_parser::_Dynamic_value Command_parser::_eval(int precedence)
     }
     if (is_int) val.i = std::stoi(value.c_str());
     else        val.d = std::stod(value.c_str());
+  // string literals
   } else if (_text.front() == '"') {
     _pop();
     std::string value;
     do {
       HEXED_ASSERT(_more(), "command input ended while parsing string literal");
       if (_text.front() == '"') {
-        if (*(++_text.begin()) == '"') _pop(); // multiple quote escape FIXME can get rid of this iterator
-        else break;
+        _pop();
+        if (_text.front() != '"') break; // note multiple quote escape concept
       }
       value.push_back(_pop());
     } while (true);
-    _pop();
     val.s = value;
+  // multi-char identifiers
   } else if (std::isalpha(_text.front()) || _text.front() == '_') {
     std::string n = _read_name();
-    if (_un_ops.count(n)) {
+    if (_un_ops.count(n)) { // unary operators
       val = _un_ops.at(n)(_eval(0));
-    } else {
+    } else { // variable names
       HEXED_ASSERT(variables->exists(n), format_str(1000, "undefined variable `%s`", n.c_str()));
       val.i = variables->lookup<int>(n);
       if (!val.i) val.d = variables->lookup<double>(n);
       val.s = variables->lookup<std::string>(n);
     }
+  // single-char unary operators
   } else if (_un_ops.count(std::string(1, _text.front()))) {
     val = _un_ops.at(std::string(1, _pop()))(_eval(0));
+  // if we couldn't recognize the token, throw
   } else {
     HEXED_ASSERT(false, format_str(100, "failed to parse value starting with `%c`", _text.front()));
   }
   _skip_spaces();
+  // process binary operators of which this token was the first argument
   while (_bin_ops.count(_text.front())) {
     auto& op = _bin_ops.at(_text.front());
     if (op.precedence < precedence) {
@@ -78,6 +85,7 @@ Command_parser::_Dynamic_value Command_parser::_eval(int precedence)
       val = op.func(val, _eval(op.precedence));
     } else break;
   }
+  // process close parenthesis
   if (_text.front() == ')') _pop();
   return val;
 }
