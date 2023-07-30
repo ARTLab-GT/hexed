@@ -42,7 +42,7 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
     _pop();
     return _eval(std::numeric_limits<int>::max());
   }
-  if (_text.front() == '$') _substitute();
+  while (_text.front() == '$') _substitute();
   // parse expression tokens by kind
   _Dynamic_value val;
   // numeric literals
@@ -104,6 +104,7 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
 template<double (*dop)(double, double), int (*iop)(int, int)>
 Interpreter::_Dynamic_value Interpreter::_numeric_op(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1)
 {
+  HEXED_ASSERT(!o0.s && !o1.s, "numeric binary operator does not accept strings");
   Interpreter::_Dynamic_value v;
   if (o0.d) {
     if (o1.d) v.d = dop(*o0.d, *o1.d);
@@ -111,7 +112,7 @@ Interpreter::_Dynamic_value Interpreter::_numeric_op(Interpreter::_Dynamic_value
   } else if (o0.i) {
     if (o1.d) v.d = dop(*o0.i, *o1.d);
     else if (o1.i) v.i = iop(*o0.i, *o1.i);
-  } else HEXED_ASSERT(false, "numeric binary operator does not accept strings");
+  }
   return v;
 }
 
@@ -172,7 +173,13 @@ Interpreter::Interpreter() :
     {'-', {2, _numeric_op<_sub<double>, _sub<int>>}},
   },
   variables{std::make_shared<Namespace>()}
-{}
+{
+  variables->create("ask", new Namespace::Read_only<std::string>([]() {
+    std::string input;
+    std::getline(std::cin, input);
+    return input;
+  }));
+}
 
 void Interpreter::exec(std::string comms)
 {

@@ -47,6 +47,8 @@ TEST_CASE("Interpreter")
   inter.exec("code = \"result = result + 1\"");
   inter.exec("$code");
   REQUIRE(inter.variables->lookup<int>("result").value() == 10);
+  inter.exec("result = 1 + $\"$\"\"1 + 1\"\"\"");
+  REQUIRE(inter.variables->lookup<int>("result").value() == 3);
 
   inter.exec("$(read \"../include/std.hil\")");
   REQUIRE(inter.variables->lookup<int>("sum").value() == 2);
