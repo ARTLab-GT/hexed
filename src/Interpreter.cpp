@@ -1,5 +1,7 @@
 #include <limits>
 #include <cmath>
+#include <iostream>
+#include <fstream>
 #include <Interpreter.hpp>
 
 namespace hexed
@@ -113,6 +115,16 @@ Interpreter::_Dynamic_value Interpreter::_numeric_op(Interpreter::_Dynamic_value
   return v;
 }
 
+Interpreter::_Dynamic_value Interpreter::_print(Interpreter::_Dynamic_value val)
+{
+  if (val.i) std::cout << *val.i;
+  if (val.d) std::cout << *val.d;
+  if (val.s) std::cout << '"' << *val.s << '"';
+  _Dynamic_value result;
+  result.i.emplace(0);
+  return result;
+}
+
 Interpreter::Interpreter() :
   _un_ops {
     {"-", [](_Dynamic_value val) {
@@ -135,6 +147,22 @@ Interpreter::Interpreter() :
       val.i.reset();
       val.d.emplace(std::sqrt(operand));
       return val;
+    }},
+    {"read", [](_Dynamic_value val) {
+      HEXED_ASSERT(val.s, "operand of `read` must be `string`");
+      std::ifstream file(*val.s);
+      _Dynamic_value str;
+      str.s = "";
+      char c;
+      while (file.get(c)) str.s->push_back(c);
+      file.close();
+      return str;
+    }},
+    {"print", _print},
+    {"println", [](_Dynamic_value val) {
+      auto result = _print(val);
+      std::cout << std::endl;
+      return result;
     }},
   },
   _bin_ops {
