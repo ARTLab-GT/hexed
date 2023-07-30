@@ -28,9 +28,15 @@ class Interpreter
   template <typename T> static T _div(T op0, T op1) {return op0/op1;}
   template <typename T> static T _add(T op0, T op1) {return op0 + op1;}
   template <typename T> static T _sub(T op0, T op1) {return op0 - op1;}
+  template <typename T> static bool _gt(T op0, T op1) {return op0 > op1;}
+  template <typename T> static bool _lt(T op0, T op1) {return op0 < op1;}
 
   template<double (*)(double, double), int (*)(int, int)>
-  static _Dynamic_value _numeric_op(_Dynamic_value, _Dynamic_value);
+  static _Dynamic_value _arithmetic_op(_Dynamic_value, _Dynamic_value);
+
+  template<bool (*)(double, double), bool (*)(int, int)>
+  static _Dynamic_value _comparison_op(_Dynamic_value, _Dynamic_value);
+
   static _Dynamic_value _print(_Dynamic_value);
   static _Dynamic_value _general_add(_Dynamic_value, _Dynamic_value);
 

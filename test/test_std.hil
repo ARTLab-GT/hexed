@@ -1,11 +1,18 @@
 $read "../include/std.hil"
 
-if = true
+if = "true"
 then = "result0 = ""yes"""
 else = "result0 = ""no"""
 $cond
 
-if = 1 - 1
+if = "1 - 1"
 then = "result1 = ""maybe"""
 else = "result1 = result0 + result0"
 $cond
+
+# calculate a triangle number
+triangle = 0
+i = 0
+while = "i < 4"
+do = "i = i + 1; triangle = triangle + i"
+$loop

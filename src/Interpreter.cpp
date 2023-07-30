@@ -112,16 +112,29 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
 }
 
 template<double (*dop)(double, double), int (*iop)(int, int)>
-Interpreter::_Dynamic_value Interpreter::_numeric_op(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1)
+Interpreter::_Dynamic_value Interpreter::_arithmetic_op(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1)
 {
   HEXED_ASSERT(!o0.s && !o1.s, "numeric binary operator does not accept strings");
   Interpreter::_Dynamic_value v;
-  if (o0.d) {
-    if (o1.d) v.d = dop(*o0.d, *o1.d);
-    else if (o1.i) v.d = dop(*o0.d, *o1.i);
-  } else if (o0.i) {
-    if (o1.d) v.d = dop(*o0.i, *o1.d);
-    else if (o1.i) v.i = iop(*o0.i, *o1.i);
+  if (o0.i && o1.i) v.i = iop(*o0.i, *o1.i);
+  else {
+    double op0 = o0.i ? *o0.i : *o0.d;
+    double op1 = o1.i ? *o1.i : *o1.d;
+    v.d = dop(op0, op1);
+  }
+  return v;
+}
+
+template<bool (*dop)(double, double), bool (*iop)(int, int)>
+Interpreter::_Dynamic_value Interpreter::_comparison_op(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1)
+{
+  HEXED_ASSERT(!o0.s && !o1.s, "numeric binary operator does not accept strings");
+  Interpreter::_Dynamic_value v;
+  if (o0.i && o1.i) v.i = iop(*o0.i, *o1.i);
+  else {
+    double op0 = o0.i ? *o0.i : *o0.d;
+    double op1 = o1.i ? *o1.i : *o1.d;
+    v.i = dop(op0, op1);
   }
   return v;
 }
@@ -134,7 +147,7 @@ Interpreter::_Dynamic_value Interpreter::_general_add(Interpreter::_Dynamic_valu
     return val;
   } else {
     HEXED_ASSERT(!o0.s && !o1.s, "operands to `+` must be either both numeric or both `string`");
-    return _numeric_op<_add<double>, _add<int>>(o0, o1);
+    return _arithmetic_op<_add<double>, _add<int>>(o0, o1);
   }
 }
 
@@ -196,10 +209,12 @@ Interpreter::Interpreter() :
     }},
   },
   _bin_ops {
-    {'/', {1, _numeric_op<_div<double>, _div<int>>}}, // note: 0 is for unary ops
-    {'*', {1, _numeric_op<_mul<double>, _mul<int>>}},
-    {'-', {2, _numeric_op<_sub<double>, _sub<int>>}},
+    {'/', {1, _arithmetic_op<_div<double>, _div<int>>}}, // note: 0 is for unary ops
+    {'*', {1, _arithmetic_op<_mul<double>, _mul<int>>}},
+    {'-', {2, _arithmetic_op<_sub<double>, _sub<int>>}},
     {'+', {2, _general_add}},
+    {'<', {3, _comparison_op<_lt<double>, _lt<int>>}},
+    {'>', {3, _comparison_op<_gt<double>, _gt<int>>}},
   },
   variables{std::make_shared<Namespace>()}
 {

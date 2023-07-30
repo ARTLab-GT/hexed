@@ -54,6 +54,8 @@ TEST_CASE("Interpreter")
   inter.exec("= 1 + 1  ");
   inter.exec("result = 6; result = result*result");
   REQUIRE(inter.variables->lookup<int>("result").value() == 36);
+  inter.exec("result = -7.1 < 5");
+  REQUIRE(inter.variables->lookup<int>("result").value() == 1);
 
   SECTION("standard library")
   {
@@ -61,5 +63,6 @@ TEST_CASE("Interpreter")
     test.exec("$(read \"../test/test_std.hil\")");
     REQUIRE(test.variables->lookup<std::string>("result0").value() == "yes");
     REQUIRE(test.variables->lookup<std::string>("result1").value() == "yesyes");
+    REQUIRE(test.variables->lookup<int>("triangle").value() == 10);
   }
 }

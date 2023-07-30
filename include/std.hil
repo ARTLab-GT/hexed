@@ -1,6 +1,9 @@
 # so you can create a newline character without a linebreak in your code
 newline = "
 "
+# since these can get very long to type several levels down into nested string literals
+empty_string = ""
+quote = """"
 
 # boolean aliases
 true = 1
@@ -8,7 +11,21 @@ false = 0
 
 # implements a conditional construct
 cond = "
-hexed_cond0 = else
-hexed_cond1 = then
-$(""$hexed_cond"" + string(if))
+    hexed_cond0 = else
+    hexed_cond1 = then
+    $(""$hexed_cond"" + string($if))
+"
+
+# implements a basic while loop
+loop = "
+    hexed_loop_while = while
+    hexed_loop_do = do
+    hexed_loop_wrapper = ""
+        if = hexed_loop_while
+        then = hexed_loop_do
+        else = """" hexed_loop_wrapper = empty_string """"
+        $cond
+        $hexed_loop_wrapper
+    ""
+    $hexed_loop_wrapper
 "
