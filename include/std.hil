@@ -38,10 +38,10 @@ loop = "
 "
 
 # implements a Read-Evaluate-Print Loop
-hexed_exit_repl = false
-exit = "hexed_exit_repl = true"
+hexed_quit_repl = false
+quit = "hexed_quit_repl = true"
 repl = "
-while = ""!hexed_exit_repl""
+while = ""!hexed_quit_repl""
 do = ""
     =print_str """"repl$ """"
     $ask

@@ -249,10 +249,15 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
   },
   variables{std::make_shared<Namespace>()}
 {
+  // create some Heisenberg variables
   variables->create("ask", new Namespace::Heisenberg<std::string>([]() {
     std::string input;
     std::getline(std::cin, input);
     return input;
+  }));
+  variables->create("exit", new Namespace::Heisenberg<int>([this]() {
+    _text.clear();
+    return 0;
   }));
   // load standard library
   for (auto file : preload) {

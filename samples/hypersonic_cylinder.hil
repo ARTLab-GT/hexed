@@ -1,2 +1,1 @@
-=print_str ("hello world!" + newline)
-=println row_size
+$repl

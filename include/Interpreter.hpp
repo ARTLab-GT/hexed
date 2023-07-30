@@ -15,7 +15,7 @@ class Interpreter
     std::optional<int> i;
     std::optional<double> d;
     std::optional<std::string> s;
-  };
+  } zero{{0}, {}, {}};
 
   bool _more();
   char _pop();
