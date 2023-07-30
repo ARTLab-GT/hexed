@@ -1,9 +1,12 @@
+# so you can create a newline character without a linebreak in your code
 newline = "
 "
 
+# boolean aliases
 true = 1
 false = 0
 
+# implements a conditional construct
 cond = "
 hexed_cond0 = else
 hexed_cond1 = then

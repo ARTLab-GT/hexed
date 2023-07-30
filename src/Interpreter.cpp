@@ -15,7 +15,12 @@ char Interpreter::_pop()
   return c;
 }
 
-void Interpreter::_skip_spaces() {while (_text.front() == ' ') _pop();} // note: list ends with null character so this will never pop a non-existant element
+void Interpreter::_skip_spaces() {
+  while (_text.front() == ' ') _pop(); // note: list ends with null character so this will never pop a non-existant element
+  if (_text.front() == '#') {
+    while (_more() && _text.front() != '\n' && _text.front() != ';') _pop();
+  }
+}
 
 std::string Interpreter::_read_name()
 {
@@ -211,7 +216,7 @@ void Interpreter::exec(std::string comms)
   _text.push_back('\0');
   while (_more()) {
     _skip_spaces();
-    if (_text.front() == '\n') _pop();
+    if (_text.front() == '\n' || _text.front() == ';') _pop();
     else if (_text.front() == '$') _substitute();
     else if (_text.front() == '=') {
       _pop();
@@ -228,7 +233,8 @@ void Interpreter::exec(std::string comms)
       if (val.d) variables->assign(name, *val.d);
       if (val.s) variables->assign(name, *val.s);
       _skip_spaces();
-      HEXED_ASSERT(!_more() || _text.front() == '\n', "expected end of line after assignment statement" + _debug_info());
+      HEXED_ASSERT(!_more() || _text.front() == '\n' || _text.front() == ';',
+                   "expected end of line after assignment statement" + _debug_info());
     }
   }
   _text.clear();

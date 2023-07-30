@@ -6,7 +6,7 @@
 TEST_CASE("Interpreter")
 {
   hexed::Interpreter inter;
-  inter.exec("shock_wave = 7\n  boundary0layer=14 \n\ninteraction = 1.2");
+  inter.exec("shock_wave = 7# this is a comment\n  boundary0layer=14 \n\n# another comment;interaction = 1.2");
   REQUIRE(inter.variables->lookup<int>("shock_wave").value() == 7);
   REQUIRE(inter.variables->lookup<int>("boundary0layer").value() == 14);
   REQUIRE(inter.variables->lookup<double>("interaction").value() == Catch::Approx(1.2));
@@ -51,7 +51,9 @@ TEST_CASE("Interpreter")
   REQUIRE(inter.variables->lookup<int>("result").value() == 10);
   inter.exec("result = 1 + $\"$\"\"1 + 1\"\"\"");
   REQUIRE(inter.variables->lookup<int>("result").value() == 3);
-  inter.exec("= 1 + 1");
+  inter.exec("= 1 + 1  ");
+  inter.exec("result = 6; result = result*result");
+  REQUIRE(inter.variables->lookup<int>("result").value() == 36);
 
   SECTION("standard library")
   {
