@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <Case.hpp>
 
 namespace hexed
@@ -23,7 +24,11 @@ Case::Case(std::string input_file)
     return 0;
   }));
   _inter.variables->create<int>("visualize", new Namespace::Heisenberg<int>([this]() {
-    _solver().visualize_field_tecplot(_inter.variables->lookup<std::string>("vis_file_name").value());
+    std::filesystem::path file_name(_inter.variables->lookup<std::string>("vis_file_name").value());
+    if (!std::filesystem::exists(file_name.parent_path())) {
+      std::filesystem::create_directory(file_name.parent_path());
+    }
+    _solver().visualize_field_tecplot(file_name.string());
     return 0;
   }));
   // load HIL code for the Case _interface
