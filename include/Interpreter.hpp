@@ -45,7 +45,7 @@ class Interpreter
   template<bool (*)(double, double), bool (*)(int, int)>
   static _Dynamic_value _comparison_op(_Dynamic_value, _Dynamic_value);
 
-  static _Dynamic_value _print(_Dynamic_value);
+  static _Dynamic_value _print_str(_Dynamic_value);
   static _Dynamic_value _general_add(_Dynamic_value, _Dynamic_value);
   static _Dynamic_value _general_eq(_Dynamic_value, _Dynamic_value);
 

@@ -172,11 +172,10 @@ Interpreter::_Dynamic_value Interpreter::_general_eq(Interpreter::_Dynamic_value
   }
 }
 
-Interpreter::_Dynamic_value Interpreter::_print(Interpreter::_Dynamic_value val)
+Interpreter::_Dynamic_value Interpreter::_print_str(Interpreter::_Dynamic_value val)
 {
-  if (val.i) std::cout << *val.i;
-  if (val.d) std::cout << *val.d;
-  if (val.s) std::cout << '"' << *val.s << '"';
+  HEXED_ASSERT(val.s, "unary operator `print_str` only accepts strings");
+  if (val.s) std::cout << *val.s;
   _Dynamic_value result;
   result.i.emplace(0);
   return result;
@@ -215,17 +214,18 @@ Interpreter::Interpreter() :
       file.close();
       return str;
     }},
-    {"print", _print},
-    {"println", [](_Dynamic_value val) {
-      auto result = _print(val);
-      std::cout << std::endl;
-      return result;
+    {"print_str", _print_str},
+    {"print", [this](_Dynamic_value val){return _print_str(_un_ops["string"](val));}},
+    {"println", [this](_Dynamic_value val) {
+      auto s = _un_ops["string"](val);
+      *s.s += "\n";
+      return _print_str(s);
     }},
     {"string", [](_Dynamic_value val) {
       _Dynamic_value str;
       if (val.i) str.s.emplace(std::to_string(*val.i));
       else if (val.d) str.s.emplace(std::to_string(*val.d));
-      else str.s = val.s;
+      else str.s.emplace("\"" + *val.s + "\"");
       return str;
     }},
   },
