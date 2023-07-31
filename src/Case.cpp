@@ -129,6 +129,17 @@ Case::Case(std::string input_file)
     return 0;
   }));
 
+  _inter.variables->create<int>("update", new Namespace::Heisenberg<int>([this]() {
+    _solver().update(_vard("max_safety").value(), _vard("max_time_step").value());
+    return 0;
+  }));
+  _inter.variables->create<std::string>("header", new Namespace::Heisenberg<std::string>([this]() {
+    return _solver().iteration_status().header();
+  }));
+  _inter.variables->create<std::string>("report", new Namespace::Heisenberg<std::string>([this]() {
+    return _solver().iteration_status().report();
+  }));
+
   // load HIL code for the Case _interface
   _inter.exec(format_str(1000, "$read \"%s/include/Case.hil\"", config::root_dir));
   // execute input file

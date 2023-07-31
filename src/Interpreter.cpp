@@ -124,6 +124,14 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
 
 template <> int Interpreter::_pow<int>(int op0, int op1) {return math::pow(op0, op1);}
 
+Interpreter::_Dynamic_value Interpreter::_mod(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1)
+{
+  HEXED_ASSERT(o0.i && o1.i, "binary operator `%` only accepts integers");
+  _Dynamic_value v;
+  v.i = *o0.i%*o1.i;
+  return v;
+}
+
 template<double (*dop)(double, double), int (*iop)(int, int)>
 Interpreter::_Dynamic_value Interpreter::_arithmetic_op(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1)
 {
@@ -230,12 +238,13 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
       _Dynamic_value str;
       if (val.i) str.s.emplace(std::to_string(*val.i));
       else if (val.d) str.s.emplace(std::to_string(*val.d));
-      else str.s.emplace("\"" + *val.s + "\"");
+      else str.s = val.s;
       return str;
     }},
   },
   _bin_ops {
     {"^" , {1, _arithmetic_op<_pow<double>, _pow<int>>}}, // note: 0 is for unary ops
+    {"%" , {2, _mod}},
     {"/" , {2, _arithmetic_op<_div<double>, _div<int>>}},
     {"*" , {2, _arithmetic_op<_mul<double>, _mul<int>>}},
     {"-" , {3, _arithmetic_op<_sub<double>, _sub<int>>}},
@@ -261,6 +270,12 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
     _text.clear();
     return 0;
   }));
+  variables->create("throw", new Namespace::Heisenberg<int>([this]() {
+    throw std::runtime_error("`throw` statement");
+    return 0;
+  }));
+  // builtin values
+  variables->assign<double>("huge", huge);
   // load standard library
   for (auto file : preload) {
     exec(format_str(1000, "$read \"%s\"", file.c_str()));

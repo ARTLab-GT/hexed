@@ -39,6 +39,7 @@ class Interpreter
   template <typename T> static bool _and(T op0, T op1) {return op0 && op1;}
   template <typename T> static bool _or(T op0, T op1) {return op0 || op1;}
 
+  static _Dynamic_value _mod(_Dynamic_value, _Dynamic_value);
   template<double (*)(double, double), int (*)(int, int)>
   static _Dynamic_value _arithmetic_op(_Dynamic_value, _Dynamic_value);
 

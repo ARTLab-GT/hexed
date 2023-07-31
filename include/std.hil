@@ -15,10 +15,11 @@ else = ""
 cond = "
     hexed_cond0 = else
     hexed_cond1 = then
-    $(""$hexed_cond"" + string(($if) != 0))
+    hexed_cond = ""$hexed_cond"" + string(($if) != 0)
     if = """" # reset these so that defaults can be used again
     then = """"
     else = """"
+    $hexed_cond
 "
 
 # implements a basic while loop

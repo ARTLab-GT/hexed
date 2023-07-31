@@ -27,6 +27,8 @@ TEST_CASE("Interpreter")
   REQUIRE(inter.variables->lookup<int>("result").value() == -42);
   inter.exec("result = 1 + 1");
   REQUIRE(inter.variables->lookup<int>("result").value() == 2);
+  inter.exec("result = 12%7");
+  REQUIRE(inter.variables->lookup<int>("result").value() == 5);
   inter.exec("ludwig = ludwig + \"-glauert\"");
   REQUIRE(inter.variables->lookup<std::string>("ludwig").value() == "prandtl-glauert");
   inter.exec("result = 2*3 + 1*2 - -3*-3*3");
@@ -85,6 +87,6 @@ TEST_CASE("Interpreter")
     REQUIRE(test.variables->lookup<std::string>("result0").value() == "yes");
     REQUIRE(test.variables->lookup<std::string>("result1").value() == "yesyes");
     REQUIRE(test.variables->lookup<int>("triangle").value() == 10);
-    REQUIRE(test.variables->lookup<int>("cube").value() == 125);
+    REQUIRE(test.variables->lookup<int>("cube").value() == 27);
   }
 }
