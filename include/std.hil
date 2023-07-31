@@ -1,56 +1,53 @@
 # so you can create a newline character without a linebreak in your code
-newline = "
-"
-# since this can get very long to type several levels down into nested string literals
-empty_string = ""
-
+newline = {
+}
 # boolean aliases
 true = 1
 false = 0
 
 # implements a conditional construct
-if = "" # reserve these names so a user can't accidentally assign a different type to them
-then = ""
-else = ""
-cond = "
+if = {} # reserve these names so a user can't accidentally assign a different type to them
+then = {}
+else = {}
+cond = {
     hexed_cond0 = else
     hexed_cond1 = then
-    hexed_cond = ""$hexed_cond"" + string(($if) != 0)
-    if = """" # reset these so that defaults can be used again
-    then = """"
-    else = """"
+    hexed_cond = {$hexed_cond} + string(($if) != 0)
+    if = {} # reset these so that defaults can be used again
+    then = {}
+    else = {}
     $hexed_cond
-"
+}
 
 # implements a basic while loop
 hexed_loop_depth = 0
-while = ""
-do = ""
-loop = "
+while = {}
+do = {}
+loop = {
     hexed_loop_depth = hexed_loop_depth + 1
-    $(""hexed_loop_while""   + string(hexed_loop_depth)) = while
-    $(""hexed_loop_do""      + string(hexed_loop_depth)) = do
-    $(""hexed_loop_wrapper"" + string(hexed_loop_depth)) = ""
-        if = hexed_loop_while"" + string(hexed_loop_depth) + ""
-        then = hexed_loop_do""  + string(hexed_loop_depth) + ""
-        else = """" hexed_loop_wrapper"" + string(hexed_loop_depth) + "" = empty_string """"
+    $({hexed_loop_while}   + string(hexed_loop_depth)) = while
+    $({hexed_loop_do}      + string(hexed_loop_depth)) = do
+    $({hexed_loop_wrapper} + string(hexed_loop_depth)) = {
+        if = hexed_loop_while}+ string(hexed_loop_depth) +{
+        then = hexed_loop_do}+ string(hexed_loop_depth) +{
+        else = {hexed_loop_wrapper}+ string(hexed_loop_depth) +{ = {}}
         $cond
-        $hexed_loop_wrapper"" + string(hexed_loop_depth) + ""
-    ""
-    $$(""hexed_loop_wrapper"" + string(hexed_loop_depth))
+        $hexed_loop_wrapper}+ string(hexed_loop_depth) +{
+    }
+    $$({hexed_loop_wrapper} + string(hexed_loop_depth))
     hexed_loop_depth = hexed_loop_depth - 1
-    while = """"
-    do = """"
-"
+    while = {}
+    do = {}
+}
 
 # implements a Read-Evaluate-Print Loop
 hexed_quit_repl = false
-quit = "hexed_quit_repl = true"
-repl = "
-while = ""!hexed_quit_repl""
-do = ""
-    =print_str """"repl$ """"
-    $ask
-""
-$loop
-"
+quit = {hexed_quit_repl = true}
+repl = {
+    while = {!hexed_quit_repl}
+    do = {
+        =print_str {repl$ }
+        $ask
+    }
+    $loop
+}

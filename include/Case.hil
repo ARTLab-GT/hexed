@@ -1,73 +1,73 @@
 # array variables
 i_dim = 0
-while = "i_dim < 3"
-do = "
-    mesh_code = ""
+while = {i_dim < 3}
+do = {
+    mesh_code = {
         mesh_index = string(i_dim) + string(sign)
-        $(""""mesh_corner"""" + mesh_index) = 0. + sign
-        $(""""extremal_bc"""" + mesh_index) = """"characteristic""""
-    ""
+        $({mesh_corner} + mesh_index) = 0. + sign
+        $({extremal_bc} + mesh_index) = {characteristic}
+    }
     sign = 0; $mesh_code
     sign = 1; $mesh_code
     i_dim = i_dim + 1
-"
+}
 $loop
 
 # basic parameters
 row_size = 6
 init_ref_level = 3
-init_condition = "freestream"
+init_condition = {freestream}
 attack = 0.
 sideslip = 0.
-working_dir = "hexed_out/"
-vis_file_name = working_dir + "default"
+working_dir = {hexed_out/}
+vis_file_name = working_dir + {default}
 vis_freq = 10000
 print_freq = 100
 max_safety = 0.7
 max_time_step = huge
 
 # overrideable macros
-vis_init = "vis_file_name = working_dir + ""init""; =visualize"
-vis_final = "vis_file_name = working_dir + ""final""; =visualize"
-print_init = "=println header"
-print_final = "=println ""simulation complete"""
-done = "println ""Error: you forgot to a set stop condition"" & throw"
-vis_iter = "
-    if = ""iteration%vis_freq == 0""
-    then = ""
-        vis_file_name = working_dir + """"iter"""" + string iteration
-        =print """"visualizing...""""
+vis_init = {vis_file_name = working_dir + {init}; =visualize}
+vis_final = {vis_file_name = working_dir + {final}; =visualize}
+print_init = {=println header}
+print_final = {=println {simulation complete}}
+done = {println {Error: you forgot to a set stop condition} & throw}
+vis_iter = {
+    if = {iteration%vis_freq == 0}
+    then = {
+        vis_file_name = working_dir + {iter} + string iteration
+        =print {visualizing...}
         =visualize
-        =println """"done""""
-    ""
+        =println {done}
+    }
     $cond
-"
-print_iter = "
-    if = ""iteration%print_freq == 0""
-    then = ""=println report""
+}
+print_iter = {
+    if = {iteration%print_freq == 0}
+    then = {=println report}
     $cond
-"
+}
 
-init = "
+init = {
     =create_solver
     =init_refinement
     =init_state
     $vis_init
-"
+}
 
-run = "
+run = {
     $print_init
     while = done
-    do = ""
+    do = {
         iteration = iteration + 1
         =update
         $print_iter
         $vis_iter
-    ""
+    }
     $loop
     $print_final
     $vis_final
-"
+}
 
 # initialization
 iteration = 0

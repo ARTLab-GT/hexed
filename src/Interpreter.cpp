@@ -83,18 +83,6 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
       if (depth && !backslash) value.push_back(c);
     }
     val.s = value;
-  } else if (_text.front() == '"') {
-    _pop();
-    std::string value;
-    do {
-      HEXED_ASSERT(_more(), "command input ended while parsing string literal");
-      if (_text.front() == '"') {
-        _pop();
-        if (_text.front() != '"') break; // note multiple quote escape concept
-      }
-      value.push_back(_pop());
-    } while (true);
-    val.s = value;
   // multi-char identifiers
   } else if (std::isalpha(_text.front()) || _text.front() == '_') {
     std::string n = _read_name();
@@ -292,7 +280,7 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
   variables->assign<double>("huge", huge);
   // load standard library
   for (auto file : preload) {
-    exec(format_str(1000, "$read \"%s\"", file.c_str()));
+    exec(format_str(1000, "$read {%s}", file.c_str()));
   }
 }
 
