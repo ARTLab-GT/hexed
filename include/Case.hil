@@ -28,6 +28,5 @@ init = "
     =init_state
     if = ""vis_init""
     then = ""=visualize""
-    else = """"
     $cond
 "

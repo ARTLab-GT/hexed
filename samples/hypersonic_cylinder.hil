@@ -1,8 +1,0 @@
-n_dim = 2
-density = 1.225
-pressure = 101325.
-speed = 100
-attack = 3.14/4
-
-$init
-=println mach

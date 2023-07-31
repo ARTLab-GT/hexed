@@ -16,6 +16,9 @@ cond = "
     hexed_cond0 = else
     hexed_cond1 = then
     $(""$hexed_cond"" + string(($if) != 0))
+    if = """" # reset these so that defaults can be used again
+    then = """"
+    else = """"
 "
 
 # implements a basic while loop
@@ -35,6 +38,8 @@ loop = "
     ""
     $$(""hexed_loop_wrapper"" + string(hexed_loop_depth))
     hexed_loop_depth = hexed_loop_depth - 1
+    while = """"
+    do = """"
 "
 
 # implements a Read-Evaluate-Print Loop
