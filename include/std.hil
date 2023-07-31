@@ -1,0 +1,53 @@
+# so you can create a newline character without a linebreak in your code
+newline = {
+}
+# boolean aliases
+true = 1
+false = 0
+
+# conditional construct
+if = {} # reserve these names so a user can't accidentally assign a different type to them
+then = {}
+else = {}
+cond = {
+    hexed_cond0 = else
+    hexed_cond1 = then
+    hexed_cond = {$hexed_cond} + (($if) != 0)
+    if = {} # reset these so that defaults can be used again
+    then = {}
+    else = {}
+    $hexed_cond
+}
+
+# while loop
+hexed_loop_depth = 0
+while = {}
+do = {}
+loop = {
+    hexed_loop_depth = hexed_loop_depth + 1
+    $({hexed_loop_while}   + hexed_loop_depth) = while
+    $({hexed_loop_do}      + hexed_loop_depth) = do
+    $({hexed_loop_wrapper} + hexed_loop_depth) = {
+        if = hexed_loop_while}+ hexed_loop_depth +{
+        then = hexed_loop_do}+ hexed_loop_depth +{
+        else = {hexed_loop_wrapper}+ hexed_loop_depth +{ = {}}
+        $cond
+        $hexed_loop_wrapper}+ hexed_loop_depth +{
+    }
+    $$({hexed_loop_wrapper} + hexed_loop_depth)
+    hexed_loop_depth = hexed_loop_depth - 1
+    while = {}
+    do = {}
+}
+
+# basic Read-Evaluate-Print Loop
+hexed_quit_repl = false
+quit = {hexed_quit_repl = true}
+repl = {
+    while = {!hexed_quit_repl}
+    do = {
+        =print {repl$ }
+        $ask
+    }
+    $loop
+}

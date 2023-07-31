@@ -4,6 +4,7 @@ Accessible_mesh.cpp
 Basis.cpp
 Boundary_condition.cpp
 Boundary_func.cpp
+Case.cpp
 connection.cpp
 criteria.cpp
 Deformed_element.cpp
@@ -14,6 +15,7 @@ Equidistant.cpp
 filter_limit.cpp
 global_hacks.cpp
 Hanging_vertex_matcher.cpp
+Interpreter.cpp
 Iteration_status.cpp
 Layer_sequence.cpp
 Lock.cpp
@@ -39,3 +41,6 @@ thermo.cpp
 Vertex.cpp
 Vis_data.cpp
 )
+
+add_executable(hexed_exec hexed_exec.cpp)
+target_link_libraries(hexed_exec PRIVATE hexed)

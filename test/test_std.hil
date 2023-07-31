@@ -1,0 +1,40 @@
+if = {true}
+then = {result0 = {yes}}
+else = {result0 = {no}}
+$cond
+
+if = {1 - 1}
+then = {result1 = {maybe}}
+else = {result1 = result0 + result0}
+$cond
+
+# calculate a triangle number
+triangle = 0
+i = 0
+while = {i < 4}
+do = {i = i + 1; triangle = triangle + i}
+$loop
+
+# (inefficiently) calculate 3^3
+cube = 0
+i = 0
+while = {i < 5}
+do = {
+    i = i + 1
+    j = 0
+    while = {j < 5}
+    do = {
+        j = j + 1
+        k = 0
+        while = {k < 5}
+        do = {
+            k = k + 1
+            if = {i%2 & j%2 & k%2}
+            then = {cube = cube + 1}
+            $cond
+        }
+        $loop
+    }
+    $loop
+}
+$loop
