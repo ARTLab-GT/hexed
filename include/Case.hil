@@ -1,19 +1,31 @@
 row_size = 6
 
-mesh_corner00 = 0.
-mesh_corner10 = 0.
-mesh_corner20 = 0.
-mesh_corner01 = 1.
-mesh_corner11 = 1.
-mesh_corner21 = 1.
+i_dim = 0
+while = "i_dim < 3"
+do = "
+    mesh_code = ""
+        mesh_index = string(i_dim) + string(sign)
+        $(""""mesh_corner"""" + mesh_index) = 0. + sign
+        $(""""extremal_bc"""" + mesh_index) = """"characteristic""""
+    ""
+    sign = 0; $mesh_code
+    sign = 1; $mesh_code
+    i_dim = i_dim + 1
+"
+$loop
 
 init_ref_level = 3
+init_condition = "freestream"
+attack = 0.
+sideslip = 0.
 working_dir = "hexed_out/"
 vis_file_name = working_dir + "init"
 vis_init = true;
 
 init = "
-    =create_solver;
+    =create_solver
+    =init_refinement
+    =init_state
     if = ""vis_init""
     then = ""=visualize""
     else = """"
