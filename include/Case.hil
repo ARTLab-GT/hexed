@@ -3,7 +3,7 @@ i_dim = 0
 while = {i_dim < 3}
 do = {
     mesh_code = {
-        mesh_index = string(i_dim) + string(sign)
+        mesh_index = {} + i_dim + sign
         $({mesh_corner} + mesh_index) = 0. + sign
         $({extremal_bc} + mesh_index) = {characteristic}
     }
@@ -35,7 +35,7 @@ done = {println {Error: you forgot to a set stop condition} & throw}
 vis_iter = {
     if = {iteration%vis_freq == 0}
     then = {
-        vis_file_name = working_dir + {iter} + string iteration
+        vis_file_name = working_dir + {iter} + iteration
         =print {visualizing...}
         =visualize
         =println {done}

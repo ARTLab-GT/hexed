@@ -164,14 +164,19 @@ Interpreter::_Dynamic_value Interpreter::_comparison_op(Interpreter::_Dynamic_va
 
 Interpreter::_Dynamic_value Interpreter::_general_add(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1)
 {
-  if (o0.s && o1.s) {
-    _Dynamic_value val;
-    val.s.emplace(*o0.s + *o1.s);
-    return val;
+  if (!o0.s && !o1.s) return _arithmetic_op<_add<double>, _add<int>>(o0, o1);
+  _Dynamic_value val;
+  if (o0.s) {
+    val.s.emplace(*o0.s);
+    if (o1.i) *val.s += std::to_string(*o1.i);
+    if (o1.d) *val.s += std::to_string(*o1.d);
+    if (o1.s) *val.s += *o1.s;
   } else {
-    HEXED_ASSERT(!o0.s && !o1.s, "operands to `+` must be either both numeric or both `string`");
-    return _arithmetic_op<_add<double>, _add<int>>(o0, o1);
+    val.s.emplace(*o1.s);
+    if (o0.i) *val.s = std::to_string(*o0.i) + *val.s;
+    if (o0.d) *val.s = std::to_string(*o0.d) + *val.s;
   }
+  return val;
 }
 
 Interpreter::_Dynamic_value Interpreter::_general_eq(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1)
@@ -184,15 +189,6 @@ Interpreter::_Dynamic_value Interpreter::_general_eq(Interpreter::_Dynamic_value
     HEXED_ASSERT(!o0.s && !o1.s, "operands to `==` must be either both numeric or both `string`");
     return _comparison_op<_eq<double>, _eq<int>>(o0, o1);
   }
-}
-
-Interpreter::_Dynamic_value Interpreter::_print_str(Interpreter::_Dynamic_value val)
-{
-  HEXED_ASSERT(val.s, "unary operator `print_str` only accepts strings");
-  if (val.s) std::cout << *val.s << std::flush;
-  _Dynamic_value result;
-  result.i.emplace(0);
-  return result;
 }
 
 Interpreter::Interpreter(std::vector<std::string> preload) :
@@ -229,20 +225,12 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
       file.close();
       return str;
     }},
-    {"print_str", _print_str},
-    {"print", [this](_Dynamic_value val){return _print_str(_un_ops["string"](val));}},
-    {"println", [this](_Dynamic_value val) {
-      auto s = _un_ops["string"](val);
-      *s.s += "\n";
-      return _print_str(s);
+    {"print", [this](_Dynamic_value val) {
+      auto s = _general_add({{}, {}, {""}}, val);
+      std::cout << s.s.value() << std::flush;
+      return _Dynamic_value{{0}, {}, {}};
     }},
-    {"string", [](_Dynamic_value val) {
-      _Dynamic_value str;
-      if (val.i) str.s.emplace(std::to_string(*val.i));
-      else if (val.d) str.s.emplace(std::to_string(*val.d));
-      else str.s = val.s;
-      return str;
-    }},
+    {"println", [this](_Dynamic_value val){return _un_ops["print"](_general_add(val, {{}, {}, {"\n"}}));}},
   },
   _bin_ops {
     {"^" , {1, _arithmetic_op<_pow<double>, _pow<int>>}}, // note: 0 is for unary ops
