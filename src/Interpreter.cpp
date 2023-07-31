@@ -69,6 +69,20 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
     if (is_int) val.i = std::stoi(value.c_str());
     else        val.d = std::stod(value.c_str());
   // string literals
+  } else if (_text.front() == '{') {
+    _pop();
+    std::string value;
+    bool backslash = false;
+    for (int depth = 1; depth;) {
+      HEXED_ASSERT(_more(), "command input ended while parsing string literal");
+      char c = _pop();
+      if (c == '{') ++depth;
+      if (c == '}' && !backslash) --depth;
+      if (c == '\\') backslash = !backslash;
+      else backslash = false;
+      if (depth && !backslash) value.push_back(c);
+    }
+    val.s = value;
   } else if (_text.front() == '"') {
     _pop();
     std::string value;
