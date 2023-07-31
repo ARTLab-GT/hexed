@@ -30,11 +30,12 @@ max_time_step = huge
 vis_init = "vis_file_name = working_dir + ""init""; =visualize"
 vis_final = "vis_file_name = working_dir + ""final""; =visualize"
 print_init = "=println header"
-print_final = ""
+print_final = "=println ""simulation complete"""
 done = "println ""Error: you forgot to a set stop condition"" & throw"
 vis_iter = "
     if = ""iteration%vis_freq == 0""
     then = ""
+        vis_file_name = working_dir + """"iter"""" + string iteration
         =print """"visualizing...""""
         =visualize
         =println """"done""""
@@ -44,7 +45,7 @@ vis_iter = "
 print_iter = "
     if = ""iteration%print_freq == 0""
     then = ""=println report""
-    =println report
+    $cond
 "
 
 init = "

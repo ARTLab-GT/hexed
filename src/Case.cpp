@@ -89,7 +89,7 @@ Case::Case(std::string input_file)
         std::string index = format_str(50, "%i%i", i_dim, sign);
         mesh_corners(i_dim, sign) = _inter.variables->lookup<double>("mesh_corner" + index).value();
         std::string bc_name = _inter.variables->lookup<std::string>("extremal_bc" + index).value();
-        if (bc_name == "characteristic") bcs.push_back(new Riemann_invariants(freestream));
+        if (bc_name == "characteristic") bcs.push_back(new Freestream(freestream));
         else if (bc_name == "nonpenetration") bcs.push_back(new Nonpenetration);
         else HEXED_ASSERT(false, format_str(1000, "unrecognized boundary condition type `%s`", bc_name));
       }
@@ -103,6 +103,7 @@ Case::Case(std::string input_file)
 
   _inter.variables->create<int>("init_refinement", new Namespace::Heisenberg<int>([this]() {
     for (int i = 0; i < _inter.variables->lookup<int>("init_ref_level"); ++i) _solver().mesh().update();
+    _solver().calc_jacobian();
     return 0;
   }));
 

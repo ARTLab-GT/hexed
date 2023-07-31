@@ -9,9 +9,10 @@ mesh_corner20 = -1.
 mesh_corner01 =  1.
 mesh_corner11 =  1.
 mesh_corner21 =  1.
-done = "iteration < 10"
-print_freq = 2
-vis_freq = 2
+max_safety = 0.1
+done = "iteration < 1e4"
+print_freq = 100
+vis_freq = 1000
 
 $init
 $run
