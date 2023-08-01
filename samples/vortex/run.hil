@@ -12,9 +12,6 @@ mesh_corner11 =  1.
 mesh_corner21 =  1.
 max_safety = 0.1
 done = {iteration < 1e4}
-vis_init = {}
-vis_final = {}
-vis_iter = {}
 print_freq = 100
 vis_freq = 1000
 
