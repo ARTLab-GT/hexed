@@ -41,6 +41,24 @@ loop = {
     do = {}
 }
 
+={ string slicing/splitting }
+split_i = 0
+split_str = {}
+split_at = {split_i == 0}
+split_first = {}
+split_rest = {}
+split = {
+    split_first = {}
+    split_i = 0
+    while = {!$split_at}
+    do = {split_first = split_first + split_str#split_i; split_i = split_i + 1}
+    $loop
+    split_rest = {}
+    while = {split_i < #split_str}
+    do = {split_rest = split_rest + split_str#split_i; split_i = split_i + 1}
+    $loop
+}
+
 ={ basic Read-Evaluate-Print Loop }
 hexed_quit_repl = false
 quit = {hexed_quit_repl = true}
@@ -48,7 +66,20 @@ repl = {
     while = {!hexed_quit_repl}
     do = {
         =print {#+^$ }
-        $ask
+        hexed_repl_cmd = ask
+        if = {#hexed_repl_cmd}
+        then = {
+            if = {hexed_repl_cmd#0 == {=}}
+            then = {
+                split_str = hexed_repl_cmd
+                split_at = {split_i == 1}
+                $split
+                hexed_repl_cmd = {=println(}+ split_rest +{);}
+            }
+            $cond
+        }
+        $cond
+        $hexed_repl_cmd
     }
     $loop
 }

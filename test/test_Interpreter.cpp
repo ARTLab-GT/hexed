@@ -81,6 +81,10 @@ TEST_CASE("Interpreter")
   REQUIRE_THROWS(inter.exec("$read {non_existant.hil}"));
   inter.exec("result = 0; =exit; result = 1");
   REQUIRE(inter.variables->lookup<int>("result").value() == 0);
+  inter.exec("size = #{prandtl}");
+  REQUIRE(inter.variables->lookup<int>("size").value() == 7);
+  inter.exec("char = {prandtl}#1");
+  REQUIRE(inter.variables->lookup<std::string>("char").value() == "r");
 
   SECTION("standard library")
   {

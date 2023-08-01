@@ -201,6 +201,10 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
       *val.i = !*val.i;
       return val;
     }},
+    {"#", [](_Dynamic_value val) {
+      HEXED_ASSERT(val.s, "unary operator `#` requires string argument");
+      return _Dynamic_value{{val.s.value().size()}, {}, {}};
+    }},
     {"sqrt", [](_Dynamic_value val) {
       double operand;
       if (val.i) operand = *val.i;
@@ -231,6 +235,10 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
   },
   _bin_ops {
     {"^" , {1, _arithmetic_op<_pow<double>, _pow<int>>}}, // note: 0 is for unary ops
+    {"#" , {1, [this](_Dynamic_value str, _Dynamic_value i) {
+      HEXED_ASSERT(str.s && i.i, "firt operand of binary `#` must be `string` and second must be `int`");
+      return _Dynamic_value{{}, {}, {std::string(1, (*str.s)[*i.i])}};
+    }}},
     {"%" , {2, _mod}},
     {"/" , {2, _arithmetic_op<_div<double>, _div<int>>}},
     {"*" , {2, _arithmetic_op<_mul<double>, _mul<int>>}},
