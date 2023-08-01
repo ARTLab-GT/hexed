@@ -18,7 +18,7 @@ __hex__  (_verb_)
 1. to cast a hex
 
 Anyone who has spent a substantial amount of time working with computational fluid dynamics (CFD)
-can attest that it is decidedly arcane and sometimes tends toward evil.
+can attest that it is decidedly arcane and sometimes tends toward evil (in the [programming sense](https://isocpp.org/wiki/faq/big-picture#defn-evil) of the word).
 As its name suggests, Hexed scarcely presumes to change that.
 What it *does* aim to provide is a more accurate and automated solver, enabling you to practice your witchcraft on a previously unattainable scale.
 Specifically, it addresses the following problems with conventional CFD:
@@ -34,7 +34,7 @@ Specifically, it addresses the following problems with conventional CFD:
   For this reason, many engineers distrust CFD.
 
 Hexed (or perhaps "Vexed", as a certain insightful friend suggested it might be more aptly named)
-all-hex meshing algorithm with a high-order DG solver.
+is an all-hex meshing algorithm with a high-order DG solver.
 The meshing algorithm has a straightforward geometric interpretation, making it robust to challenging geometries (e.g. small gaps or non-watertight surfaces),
 and you can rest assured that whatever output you get results from simple math
 and not you, or some sophisticated AI-adjacent algorithm, doing something quirky.
