@@ -1,4 +1,4 @@
-# array variables
+={ array variables }
 i_dim = 0
 while = {i_dim < 3}
 do = {
@@ -13,7 +13,7 @@ do = {
 }
 $loop
 
-# basic parameters
+={ basic parameters }
 row_size = 6
 init_ref_level = 3
 init_condition = {freestream}
@@ -26,7 +26,7 @@ print_freq = 100
 max_safety = 0.7
 max_time_step = huge
 
-# overrideable macros
+={ overrideable macros }
 vis_init = {vis_file_name = working_dir + {init}; =visualize}
 vis_final = {vis_file_name = working_dir + {final}; =visualize}
 print_init = {=println header}
@@ -69,5 +69,5 @@ run = {
     $vis_final
 }
 
-# initialization
+={ initialization }
 iteration = 0

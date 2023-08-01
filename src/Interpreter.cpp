@@ -17,9 +17,6 @@ char Interpreter::_pop()
 
 void Interpreter::_skip_spaces() {
   while (_text.front() == ' ') _pop(); // note: list ends with null character so this will never pop a non-existant element
-  if (_text.front() == '#') {
-    while (_more() && _text.front() != '\n' && _text.front() != ';') _pop();
-  }
 }
 
 std::string Interpreter::_read_name()
