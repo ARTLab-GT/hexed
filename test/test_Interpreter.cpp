@@ -85,6 +85,12 @@ TEST_CASE("Interpreter")
   REQUIRE(inter.variables->lookup<int>("size").value() == 7);
   inter.exec("char = {prandtl}#1");
   REQUIRE(inter.variables->lookup<std::string>("char").value() == "r");
+  // test that `exec` calls are properly mutex'd
+  #pragma omp parallel for
+  for (int i = 0; i < 10; ++i) inter.exec("result = " + std::to_string(i));
+  int result = inter.variables->lookup<int>("result").value();
+  REQUIRE(result >= 0);
+  REQUIRE(result < 10);
 
   SECTION("standard library")
   {
@@ -94,6 +100,5 @@ TEST_CASE("Interpreter")
     REQUIRE(test.variables->lookup<std::string>("result1").value() == "yesyes");
     REQUIRE(test.variables->lookup<int>("triangle").value() == 10);
     REQUIRE(test.variables->lookup<int>("cube").value() == 27);
-    test.exec("$repl");
   }
 }

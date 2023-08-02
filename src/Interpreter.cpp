@@ -279,6 +279,7 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
 
 void Interpreter::exec(std::string comms)
 {
+  Lock::Acquire a(_lock);
   _text.assign(comms.begin(), comms.end());
   _text.push_back('\0');
   while (_more()) {

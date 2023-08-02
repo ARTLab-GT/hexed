@@ -5,6 +5,7 @@
 #include <list>
 #include "math.hpp"
 #include "Namespace.hpp"
+#include "Lock.hpp"
 
 namespace hexed
 {
@@ -58,12 +59,13 @@ class Interpreter
   std::list<char> _text;
   std::map<std::string, std::function<_Dynamic_value(_Dynamic_value)>> _un_ops;
   std::map<std::string, _Binary_op> _bin_ops;
+  Lock _lock;
 
   public:
   std::shared_ptr<Namespace> variables;
   std::map<std::string, std::function<void(std::string)>> statements;
   Interpreter(std::vector<std::string> preload = {std::string(config::root_dir) + "/include/std.hil"});
-  //! not at all thread-safe
+  //! safe to call in threads, but it's mutex-locked so it won't actually execute concurrently (for that, use `child()`)
   void exec(std::string commands);
 };
 
