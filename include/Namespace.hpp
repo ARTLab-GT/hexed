@@ -5,6 +5,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <vector>
 #include "utils.hpp"
 #include "assert.hpp"
 
@@ -56,8 +57,10 @@ class Namespace
   template<typename T> std::map<std::string, std::unique_ptr<Variable<T>>>& _get_map();
 
   public:
+  std::vector<std::shared_ptr<Namespace>> supers;
   template<typename T> static std::string type_name();
   bool exists(std::string name);
+  bool exists_recursive(std::string name);
   template<typename T> void create(std::string name, Variable<T>* value);
   template<typename T> void assign(std::string name, T value);
   template<typename T> std::optional<T> lookup(std::string name);
@@ -74,6 +77,13 @@ template<> std::string inline Namespace::type_name<std::string>() {return "strin
 inline bool Namespace::exists(std::string name)
 {
   return _ints.count(name) || _doubles.count(name) || _strings.count(name);
+}
+
+inline bool Namespace::exists_recursive(std::string name)
+{
+  if (exists(name)) return true;
+  auto predicate = [name](std::shared_ptr<Namespace>& space) {return space->exists(name);};
+  return std::all_of(supers.begin(), supers.end(), predicate);
 }
 
 template<typename T>
@@ -108,6 +118,11 @@ std::optional<T> Namespace::lookup(std::string name)
   if constexpr (std::is_same<T, double>::value) {
     if (_get_map<int>().count(name)) {
       return {*lookup<int>(name)};
+    }
+  }
+  if (!exists(name)) {
+    for (auto& space : supers) {
+      if (space->exists_recursive(name)) return space->lookup<T>(name);
     }
   }
   return {};
