@@ -67,6 +67,13 @@ class Interpreter
   Interpreter(std::vector<std::string> preload = {std::string(config::root_dir) + "/include/std.hil"});
   //! safe to call in threads, but it's mutex-locked so it won't actually execute concurrently (for that, use `child()`)
   void exec(std::string commands);
+  /*! \brief Makes a sub-interpreter whose namespace is a subspace of `this`'s.
+   * \details Thread safe.
+   * Does not preload any files (but will naturally have access to whatever `this` preloaded).
+   * I was tempted to call this `int_sub`...
+   * but that wasn't _quite_ funny enough to be worth compromising readability.
+   */
+  Interpreter make_sub();
 };
 
 }

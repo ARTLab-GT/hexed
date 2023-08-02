@@ -86,7 +86,7 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
     if (_un_ops.count(n)) { // unary operators
       val = _un_ops.at(n)(_eval(0));
     } else { // variable names
-      HEXED_ASSERT(variables->exists(n), format_str(1000, "undefined variable `%s`", n.c_str()));
+      HEXED_ASSERT(variables->exists_recursive(n), format_str(1000, "undefined variable `%s`", n.c_str()));
       val.i = variables->lookup<int>(n);
       if (!val.i) val.d = variables->lookup<double>(n);
       val.s = variables->lookup<std::string>(n);
@@ -310,6 +310,14 @@ void Interpreter::exec(std::string comms)
     }
   }
   _text.clear();
+}
+
+Interpreter Interpreter::make_sub()
+{
+  Interpreter inter(std::vector<std::string>{});
+  Lock::Acquire a(_lock);
+  inter.variables->supers.push_back(variables);
+  return inter;
 }
 
 }

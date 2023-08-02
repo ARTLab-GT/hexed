@@ -1,7 +1,5 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/Interpreter.hpp>
-#include <iostream>
-
 
 TEST_CASE("Interpreter")
 {
