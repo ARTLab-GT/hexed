@@ -44,3 +44,5 @@ Vis_data.cpp
 
 add_executable(hexed_exec hexed_exec.cpp)
 target_link_libraries(hexed_exec PRIVATE hexed)
+add_executable(hil hil.cpp)
+target_link_libraries(hil PRIVATE hexed)

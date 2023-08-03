@@ -7,6 +7,8 @@
 namespace hexed
 {
 
+const std::string Interpreter::std_file = std::string(config::root_dir) + "/include/std.hil";
+
 bool Interpreter::_more() {return _text.size() > 1;}
 char Interpreter::_pop()
 {
