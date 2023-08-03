@@ -46,57 +46,58 @@ void Interpreter::_substitute()
 Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
 {
   _skip_spaces();
+  _Dynamic_value val;
+  while (_text.front() == '$') _substitute();
   // process open parenthesis
   if (_text.front() == '(') {
     _pop();
-    return _eval(std::numeric_limits<int>::max());
-  }
-  while (_text.front() == '$') _substitute();
-  // parse expression tokens by kind
-  _Dynamic_value val;
-  // numeric literals
-  if (std::isdigit(_text.front()) || _text.front() == '.') {
-    std::string value;
-    bool is_int = true;
-    while (std::isdigit(_text.front()) || _text.front() == '.' || std::tolower(_text.front()) == 'e'
-           || ((_text.front() == '-' || _text.front() == '+') && std::tolower(value.back()) == 'e')) {
-      is_int = is_int && std::isdigit(_text.front());
-      value.push_back(_pop());
-    }
-    if (is_int) val.i = std::stoi(value.c_str());
-    else        val.d = std::stod(value.c_str());
-  // string literals
-  } else if (_text.front() == '{') {
-    _pop();
-    std::string value;
-    bool backslash = false;
-    for (int depth = 1; depth;) {
-      HEXED_ASSERT(_more(), "command input ended while parsing string literal");
-      char c = _pop();
-      if (c == '{') ++depth;
-      if (c == '}' && !backslash) --depth;
-      if (c == '\\') backslash = !backslash;
-      else backslash = false;
-      if (depth && !backslash) value.push_back(c);
-    }
-    val.s = value;
-  // multi-char identifiers
-  } else if (std::isalpha(_text.front()) || _text.front() == '_') {
-    std::string n = _read_name();
-    if (_un_ops.count(n)) { // unary operators
-      val = _un_ops.at(n)(_eval(0));
-    } else { // variable names
-      HEXED_ASSERT(variables->exists_recursive(n), format_str(1000, "undefined variable `%s`", n.c_str()));
-      val.i = variables->lookup<int>(n);
-      if (!val.i) val.d = variables->lookup<double>(n);
-      val.s = variables->lookup<std::string>(n);
-    }
-  // single-char unary operators
-  } else if (_un_ops.count(std::string(1, _text.front()))) {
-    val = _un_ops.at(std::string(1, _pop()))(_eval(0));
-  // if we couldn't recognize the token, throw
+    val = _eval(std::numeric_limits<int>::max());
   } else {
-    HEXED_ASSERT(false, format_str(100, "failed to parse value starting with `%c`", _text.front()));
+    // parse expression tokens by kind
+    // numeric literals
+    if (std::isdigit(_text.front()) || _text.front() == '.') {
+      std::string value;
+      bool is_int = true;
+      while (std::isdigit(_text.front()) || _text.front() == '.' || std::tolower(_text.front()) == 'e'
+             || ((_text.front() == '-' || _text.front() == '+') && std::tolower(value.back()) == 'e')) {
+        is_int = is_int && std::isdigit(_text.front());
+        value.push_back(_pop());
+      }
+      if (is_int) val.i = std::stoi(value.c_str());
+      else        val.d = std::stod(value.c_str());
+    // string literals
+    } else if (_text.front() == '{') {
+      _pop();
+      std::string value;
+      bool backslash = false;
+      for (int depth = 1; depth;) {
+        HEXED_ASSERT(_more(), "command input ended while parsing string literal");
+        char c = _pop();
+        if (c == '{') ++depth;
+        if (c == '}' && !backslash) --depth;
+        if (c == '\\') backslash = !backslash;
+        else backslash = false;
+        if (depth && !backslash) value.push_back(c);
+      }
+      val.s = value;
+    // multi-char identifiers
+    } else if (std::isalpha(_text.front()) || _text.front() == '_') {
+      std::string n = _read_name();
+      if (_un_ops.count(n)) { // unary operators
+        val = _un_ops.at(n)(_eval(0));
+      } else { // variable names
+        HEXED_ASSERT(variables->exists_recursive(n), format_str(1000, "undefined variable `%s`", n.c_str()));
+        val.i = variables->lookup<int>(n);
+        if (!val.i) val.d = variables->lookup<double>(n);
+        val.s = variables->lookup<std::string>(n);
+      }
+    // single-char unary operators
+    } else if (_un_ops.count(std::string(1, _text.front()))) {
+      val = _un_ops.at(std::string(1, _pop()))(_eval(0));
+    // if we couldn't recognize the token, throw
+    } else {
+      HEXED_ASSERT(false, format_str(100, "failed to parse value starting with `%c`", _text.front()));
+    }
   }
   _skip_spaces();
   // process binary operators of which this token was the first argument
@@ -114,10 +115,11 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
     if (op.precedence < precedence) {
       for (unsigned i = 0; i < op_name.size(); ++i) _pop();
       val = op.func(val, _eval(op.precedence));
+      _skip_spaces();
     } else break;
   }
   // process close parenthesis
-  if (_text.front() == ')') _pop();
+  if (precedence == std::numeric_limits<int>::max() && _text.front() == ')') _pop();
   return val;
 }
 

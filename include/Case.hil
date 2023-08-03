@@ -4,7 +4,7 @@ while = {i_dim < 3}
 do = {
     mesh_code = {
         mesh_index = {} + i_dim + sign
-        $({mesh_corner} + mesh_index) = 0. + sign
+        $({mesh_bound} + mesh_index) = 0. + sign
         $({extremal_bc} + mesh_index) = {characteristic}
     }
     sign = 0; $mesh_code
@@ -17,6 +17,8 @@ $loop
 row_size = 6
 init_ref_level = 3
 init_condition = {freestream}
+viscosity_model = {inviscid}
+surface_bc = {auto}
 attack = 0.
 sideslip = 0.
 working_dir = {hexed_out/}
@@ -49,8 +51,17 @@ print_iter = {
 }
 
 init = {
+    if = {surface_bc == {auto}}
+    then = {
+        if = {viscosity_model == {inviscid}}
+        then = {surface_bc = {nonpenetration}}
+        else = {surface_bc = {no_slip}}
+        $cond
+    }
+    $cond
     =create_solver
     =init_refinement
+    =add_geom
     =init_state
     $vis_init
 }
@@ -82,7 +93,7 @@ naca = {
     camber_max = $(desig#0)*1e-2
     camber_loc = $(desig#1)*0.1
     thickness = $(desig#0 + desig#1)*1e-2
-    geom = {
+    equations = {
         x_0 = param^2
         x_1 = (2*(param >= 0) - 1)*5*thickness*(.2969*param - .1260*param^2 - .3516*param^4 + .2843*param^6 - .1015*param^8)
         x_1 = x_1 + (x_0 <  camber_loc)*camber_max/camber_loc^2*(2*camber_loc*param^2 - param^4)

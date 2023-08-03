@@ -33,8 +33,8 @@ TEST_CASE("Interpreter")
   REQUIRE(inter.variables->lookup<std::string>("code").value() == "-1.000000name3");
   inter.exec("result = 2*3 + 1*2 - -3*-3*3");
   REQUIRE(inter.variables->lookup<int>("result").value() == -19);
-  inter.exec("result = (1 + 2)*2");
-  REQUIRE(inter.variables->lookup<int>("result").value() == 6);
+  inter.exec("result = (1 + 2*2)*2");
+  REQUIRE(inter.variables->lookup<int>("result").value() == 10);
   inter.exec("result = 6/3*2");
   REQUIRE(inter.variables->lookup<int>("result").value() == 4);
   inter.exec("result = !0");

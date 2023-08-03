@@ -1,0 +1,16 @@
+n_dim = 2
+mesh_bound00 = -10.
+mesh_bound10 = -10.
+mesh_bound01 =  10.
+mesh_bound11 =  10.
+density = 1.225
+pressure = 101325.
+mach = 0.3
+done = {iteration < 1e4}
+desig = {0012}
+$naca
+geom_0_type = {parametric}
+geom_0_n = 1000
+geom_0_definition = geometry
+
+$init
