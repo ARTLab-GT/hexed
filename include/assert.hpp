@@ -11,15 +11,21 @@
 namespace hexed::assert
 {
 
-//! represents a fatal problem in the numerics of the code (such as nonphysical values)
-//! as opposed to, for example, an out-of-bounds error or user error
-//! \see \ref numerical_errors
-class Numerical_exception : public std::exception
+class Exception : public std::exception
 {
   std::string msg;
   public:
-  inline Numerical_exception(std::string message) : msg{message} {}
+  inline Exception(std::string message) : msg{message} {}
   inline const char* what() const noexcept override {return msg.c_str();}
+};
+
+//! represents a fatal problem in the numerics of the code (such as nonphysical values)
+//! as opposed to, for example, an out-of-bounds error or user error
+//! \see \ref numerical_errors
+class Numerical_exception : public Exception
+{
+  public:
+  Numerical_exception(std::string message) : Exception(message) {}
 };
 
 //! throws a `std::runtime_error` with message `message`, wrapped in a `#pragma omp critical` if necessary.

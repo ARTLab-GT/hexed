@@ -82,8 +82,11 @@ inline bool Namespace::exists(std::string name)
 inline bool Namespace::exists_recursive(std::string name)
 {
   if (exists(name)) return true;
-  auto predicate = [name](std::shared_ptr<Namespace>& space) {return space->exists(name);};
-  return std::all_of(supers.begin(), supers.end(), predicate);
+  if (!supers.empty()) {
+    auto predicate = [name](std::shared_ptr<Namespace>& space) {return space->exists(name);};
+    return std::all_of(supers.begin(), supers.end(), predicate);
+  }
+  return false;
 }
 
 template<typename T>

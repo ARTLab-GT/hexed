@@ -65,6 +65,7 @@ quit = {hexed_quit_repl = true}
 repl = {
     while = {!hexed_quit_repl}
     do = {
+        except = {=println exception;}
         =print {#+^$ }
         hexed_repl_cmd = ask
         if = {#hexed_repl_cmd}
@@ -82,4 +83,5 @@ repl = {
         $hexed_repl_cmd
     }
     $loop
+    except = {}
 }

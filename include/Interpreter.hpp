@@ -24,6 +24,8 @@ class Interpreter
   std::string _debug_info();
   std::string _read_name();
   void _substitute();
+  void _raise();
+  void _assert(bool predicate, std::string message);
   _Dynamic_value _eval(int precedence);
 
   template <typename T> static T _pow(T op0, T op1) {return std::pow(op0, op1);}
@@ -75,6 +77,12 @@ class Interpreter
    * but that wasn't _quite_ funny enough to be worth compromising readability.
    */
   Interpreter make_sub();
+
+  class Parsing_error : public assert::Exception
+  {
+    public:
+    Parsing_error(std::string message) : Exception(message) {}
+  };
 };
 
 }

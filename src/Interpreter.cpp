@@ -41,7 +41,7 @@ void Interpreter::_substitute()
 {
   _pop();
   _Dynamic_value val = _eval(0);
-  HEXED_ASSERT(val.s, "only a string can be substituted as code");
+  HEXED_ASSERT(val.s.has_value(), "only a string can be substituted as code", Parsing_error);
   _text.insert(_text.begin(), val.s->begin(), val.s->end());
 }
 
@@ -73,7 +73,7 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
       std::string value;
       bool backslash = false;
       for (int depth = 1; depth;) {
-        HEXED_ASSERT(_more(), "command input ended while parsing string literal");
+        HEXED_ASSERT(_more(), "command input ended while parsing string literal", Parsing_error);
         char c = _pop();
         if (c == '{') ++depth;
         if (c == '}' && !backslash) --depth;
@@ -88,7 +88,7 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
       if (_un_ops.count(n)) { // unary operators
         val = _un_ops.at(n)(_eval(0));
       } else { // variable names
-        HEXED_ASSERT(variables->exists_recursive(n), format_str(1000, "undefined variable `%s`", n.c_str()));
+        HEXED_ASSERT(variables->exists_recursive(n), format_str(1000, "undefined variable `%s`", n.c_str()), Parsing_error);
         val.i = variables->lookup<int>(n);
         if (!val.i) val.d = variables->lookup<double>(n);
         val.s = variables->lookup<std::string>(n);
@@ -96,10 +96,7 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
     // single-char unary operators
     } else if (_un_ops.count(std::string(1, _text.front()))) {
       val = _un_ops.at(std::string(1, _pop()))(_eval(0));
-    // if we couldn't recognize the token, throw
-    } else {
-      HEXED_ASSERT(false, format_str(100, "failed to parse value starting with `%c`", _text.front()));
-    }
+    } else HEXED_ASSERT(false, format_str(100, "failed to parse value starting with `%c`", _text.front()), Parsing_error);
   }
   _skip_spaces();
   // process binary operators of which this token was the first argument
@@ -129,7 +126,7 @@ template <> int Interpreter::_pow<int>(int op0, int op1) {return math::pow(op0, 
 
 Interpreter::_Dynamic_value Interpreter::_mod(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1)
 {
-  HEXED_ASSERT(o0.i && o1.i, "binary operator `%` only accepts integers");
+  HEXED_ASSERT(o0.i && o1.i, "binary operator `%` only accepts integers", Parsing_error);
   _Dynamic_value v;
   v.i = *o0.i%*o1.i;
   return v;
@@ -138,7 +135,7 @@ Interpreter::_Dynamic_value Interpreter::_mod(Interpreter::_Dynamic_value o0, In
 template<double (*dop)(double, double), int (*iop)(int, int)>
 Interpreter::_Dynamic_value Interpreter::_arithmetic_op(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1)
 {
-  HEXED_ASSERT(!o0.s && !o1.s, "numeric binary operator does not accept strings");
+  HEXED_ASSERT(!o0.s && !o1.s, "numeric binary operator does not accept strings", Parsing_error);
   Interpreter::_Dynamic_value v;
   if (o0.i && o1.i) v.i = iop(*o0.i, *o1.i);
   else {
@@ -152,7 +149,7 @@ Interpreter::_Dynamic_value Interpreter::_arithmetic_op(Interpreter::_Dynamic_va
 template<bool (*dop)(double, double), bool (*iop)(int, int)>
 Interpreter::_Dynamic_value Interpreter::_comparison_op(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1)
 {
-  HEXED_ASSERT(!o0.s && !o1.s, "numeric binary operator does not accept strings");
+  HEXED_ASSERT(!o0.s && !o1.s, "numeric binary operator does not accept strings", Parsing_error);
   Interpreter::_Dynamic_value v;
   if (o0.i && o1.i) v.i = iop(*o0.i, *o1.i);
   else {
@@ -187,42 +184,42 @@ Interpreter::_Dynamic_value Interpreter::_general_eq(Interpreter::_Dynamic_value
     val.i.emplace(*o0.s == *o1.s);
     return val;
   } else {
-    HEXED_ASSERT(!o0.s && !o1.s, "operands to `==` must be either both numeric or both `string`");
+    HEXED_ASSERT(!o0.s && !o1.s, "operands to `==` must be either both numeric or both `string`", Parsing_error);
     return _comparison_op<_eq<double>, _eq<int>>(o0, o1);
   }
 }
 
 Interpreter::Interpreter(std::vector<std::string> preload) :
   _un_ops {
-    {"-", [](_Dynamic_value val) {
+    {"-", [this](_Dynamic_value val) {
       if      (val.i) *val.i *= -1;
       else if (val.d) *val.d *= -1;
-      else HEXED_ASSERT(false, "unary operator `-` cannot be applied to type `string`.");
+      else HEXED_ASSERT(false, "unary operator `-` cannot be applied to type `string`.", Parsing_error);
       return val;
     }},
-    {"!", [](_Dynamic_value val) {
-      HEXED_ASSERT(val.i, "unary operator `!` requires integer argument");
+    {"!", [this](_Dynamic_value val) {
+      HEXED_ASSERT(val.i.has_value(), "unary operator `!` requires integer argument", Parsing_error);
       *val.i = !*val.i;
       return val;
     }},
-    {"#", [](_Dynamic_value val) {
-      HEXED_ASSERT(val.s, "unary operator `#` requires string argument");
+    {"#", [this](_Dynamic_value val) {
+      HEXED_ASSERT(val.s.has_value(), "unary operator `#` requires string argument", Parsing_error);
       return _Dynamic_value{{val.s.value().size()}, {}, {}};
     }},
-    {"sqrt", [](_Dynamic_value val) {
+    {"sqrt", [this](_Dynamic_value val) {
       double operand;
       if (val.i) operand = *val.i;
       else if (val.d) operand = *val.d;
-      else HEXED_ASSERT(false, "unary operator `sqrt` requires numeric argument");
+      else HEXED_ASSERT(false, "unary operator `sqrt` requires numeric argument", Parsing_error);
       _Dynamic_value new_val;
       val.i.reset();
       val.d.emplace(std::sqrt(operand));
       return val;
     }},
-    {"read", [](_Dynamic_value val) {
-      HEXED_ASSERT(val.s, "operand of `read` must be `string`");
+    {"read", [this](_Dynamic_value val) {
+      HEXED_ASSERT(val.s.has_value(), "operand of `read` must be `string`", Parsing_error);
       std::ifstream file(*val.s);
-      HEXED_ASSERT(file.good(), format_str(1000, "failed to open file `%s`", (*val.s).c_str()));
+      HEXED_ASSERT(file.good(), format_str(1000, "failed to open file `%s`", (*val.s).c_str()), Parsing_error);
       _Dynamic_value str;
       str.s = "";
       char c;
@@ -240,7 +237,7 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
   _bin_ops {
     {"^" , {1, _arithmetic_op<_pow<double>, _pow<int>>}}, // note: 0 is for unary ops
     {"#" , {1, [this](_Dynamic_value str, _Dynamic_value i) {
-      HEXED_ASSERT(str.s && i.i, "firt operand of binary `#` must be `string` and second must be `int`");
+      HEXED_ASSERT(str.s && i.i, "firt operand of binary `#` must be `string` and second must be `int`", Parsing_error);
       return _Dynamic_value{{}, {}, {std::string(1, (*str.s)[*i.i])}};
     }}},
     {"%" , {2, _mod}},
@@ -270,9 +267,12 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
     return 0;
   }));
   variables->create("throw", new Namespace::Heisenberg<int>([this]() {
-    throw std::runtime_error("`throw` statement");
+    throw std::runtime_error("Exception thrown from HIL by evaluating `throw`.");
     return 0;
   }));
+  // initialize exception handling variables
+  variables->assign<std::string>("exception", "");
+  variables->assign<std::string>("except", "");
   // builtin values
   variables->assign<double>("huge", huge);
   // load standard library
@@ -295,22 +295,29 @@ void Interpreter::exec(std::string comms)
         _pop();
         _eval(std::numeric_limits<int>::max());
       } else {
-        HEXED_ASSERT(std::isalpha(_text.front()) || _text.front() == '_', "statement does not begin with valid variable/builtin name");
+        HEXED_ASSERT(std::isalpha(_text.front()) || _text.front() == '_', "statement does not begin with valid variable/builtin name", Parsing_error);
         std::string name = _read_name();
         _skip_spaces();
-        HEXED_ASSERT(_pop() == '=', format_str(1000, "expected assignment operator `=` after variable name `%s`", name.c_str()));
+        HEXED_ASSERT(_pop() == '=', format_str(1000, "expected assignment operator `=` after variable name `%s`", name.c_str()), Parsing_error);
         _skip_spaces();
-        HEXED_ASSERT(_more(), "unexpected end of line in assignment statement");
+        HEXED_ASSERT(_more(), "unexpected end of line in assignment statement", Parsing_error);
         auto val = _eval(std::numeric_limits<int>::max());
         if (val.i) variables->assign(name, *val.i);
         if (val.d) variables->assign(name, *val.d);
         if (val.s) variables->assign(name, *val.s);
         _skip_spaces();
         HEXED_ASSERT(!_more() || _text.front() == '\n' || _text.front() == ';',
-                     "expected end of line after assignment statement");
+                     "expected end of line after assignment statement", Parsing_error);
       }
-    } catch (const std::exception& e) {
-      throw std::runtime_error("Hexed Input Language error (in `hexed::Interpreter`):\n\n" + std::string(e.what()) + "\n\n" + _debug_info());
+    } catch (const Parsing_error& e) {
+      std::string except = variables->lookup<std::string>("except").value();
+      std::string message = "Hexed Input Language error (in `hexed::Interpreter`): " + std::string(e.what()) + "\n" + _debug_info();
+      if (!except.empty()) {
+        variables->assign<std::string>("exception", message);
+        while (_more() && (_text.front() != '\n' && _text.front() != ';')) _pop();
+        except = except + "; exception = {}; except = {};";
+        _text.insert(_text.begin(), except.begin(), except.end());
+      } else throw std::runtime_error(message);
     }
   }
   _text.clear();
