@@ -309,9 +309,10 @@ void Interpreter::exec(std::string comms)
         HEXED_ASSERT(!_more() || _text.front() == '\n' || _text.front() == ';',
                      "expected end of line after assignment statement", Parsing_error);
       }
+      _skip_spaces();
     } catch (const Parsing_error& e) {
       std::string except = variables->lookup<std::string>("except").value();
-      std::string message = "Hexed Input Language error (in `hexed::Interpreter`): " + std::string(e.what()) + "\n" + _debug_info();
+      std::string message = "Hexed Interface Language error (in `hexed::Interpreter`): " + std::string(e.what()) + "\n" + _debug_info();
       if (!except.empty()) {
         variables->assign<std::string>("exception", message);
         while (_more() && (_text.front() != '\n' && _text.front() != ';')) _pop();
@@ -326,7 +327,7 @@ void Interpreter::exec(std::string comms)
 Interpreter Interpreter::make_sub()
 {
   Interpreter inter(std::vector<std::string>{});
-  Lock::Acquire a(_lock);
+  #pragma omp critical
   inter.variables->supers.push_back(variables);
   return inter;
 }

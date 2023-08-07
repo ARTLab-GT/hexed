@@ -1,5 +1,6 @@
 ={ array variables }
 i_dim = 0
+mesh_bound_eps = 1e-6
 while = {i_dim < 3}
 do = {
     mesh_code = {
@@ -9,6 +10,7 @@ do = {
     }
     sign = 0; $mesh_code
     sign = 1; $mesh_code
+    $({flood_fill_start} + i_dim) = huge
     i_dim = i_dim + 1
 }
 $loop
@@ -59,6 +61,17 @@ init = {
         $cond
     }
     $cond
+    if = {flood_fill_start0 == huge}
+    then = {
+        i_dim = 0
+        while = {i_dim < n_dim}
+        do = {
+            $({flood_fill_start} + i_dim) = (1 - mesh_bound_eps)*$({mesh_bound} + i_dim + 0) + mesh_bound_eps*$({mesh_bound} + i_dim + 1)
+            i_dim = i_dim + 1
+        }
+        $loop
+    }
+    $cond
     =create_solver
     =init_refinement
     =add_geom
@@ -85,18 +98,25 @@ iteration = 0
 
 ={ utilities }
 desig = {0012}
-geometry = {}
+equations = {}
 camber_max = 0.
 camber_loc = 0.
 thickness = 0.
 naca = {
+    if = {#desig != 4}
+    then = {=; NACA designation must be 4 digits}
+    $cond
     camber_max = $(desig#0)*1e-2
-    camber_loc = $(desig#1)*0.1
-    thickness = $(desig#0 + desig#1)*1e-2
+    if = {$(desig#1)}
+    then = {camber_loc = $(desig#1)*0.1}
+    else = {camber_loc = .1}
+    $cond
+    thickness = $(desig#2 + desig#3)*1e-2
     equations = {
+        param = 2*param - 1
         x_0 = param^2
         x_1 = (2*(param >= 0) - 1)*5*thickness*(.2969*param - .1260*param^2 - .3516*param^4 + .2843*param^6 - .1015*param^8)
-        x_1 = x_1 + (x_0 <  camber_loc)*camber_max/camber_loc^2*(2*camber_loc*param^2 - param^4)
-        x_1 = x_1 + (x_0 >= camber_loc)*camber_max/(1 - camber_loc)^2*(1 - 2*camber_loc + 2*camber_loc*param^2 - param^4)
+        ={ x_1 = x_1 + (x_0 <  camber_loc)*camber_max/camber_loc^2*(2*camber_loc*param^2 - param^4) }
+        ={ x_1 = x_1 + (x_0 >= camber_loc)*camber_max/(1 - camber_loc)^2*(1 - 2*camber_loc + 2*camber_loc*param^2 - param^4) }
     }
 }

@@ -7,10 +7,12 @@ density = 1.225
 pressure = 101325.
 mach = 0.3
 done = {iteration < 1e4}
+
+={ geometry }
 desig = {0012}
 $naca
 geom_0_type = {parametric}
 geom_0_n = 1000
-geom_0_definition = geometry
+geom_0_definition = equations
 
 $init
