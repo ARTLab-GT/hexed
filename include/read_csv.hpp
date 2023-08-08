@@ -13,6 +13,7 @@ namespace hexed
  * preceded and/or followed by zero or more spaces and/or tabs, and nothing else.
  * Thus trailing commas are not allowed, as this would be construed as an empty column.
  * File extension does not matter.
+ * Blank lines are not allowed.
  */
 Eigen::Matrix<double, dyn, dyn, Eigen::RowMajor> read_csv(std::string file_name);
 
