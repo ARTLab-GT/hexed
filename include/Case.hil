@@ -22,6 +22,7 @@ local_time = true
 init_condition = {freestream}
 viscosity_model = {inviscid}
 surface_bc = {auto}
+temperature_offset = 0.
 attack = 0.
 sideslip = 0.
 working_dir = {hexed_out/}

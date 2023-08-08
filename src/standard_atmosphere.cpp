@@ -24,7 +24,7 @@ std::array<double, 2> standard_atmosphere(double alt_geom, double temp_offset)
 std::array<double, 2> standard_atmosphere_geopot(double alt_geopot, double temp_offset)
 {
   double pres = constants::atmosphere;
-  double temp;
+  double temp = 0;
   const double epsilon = 1e-10;
   HEXED_ASSERT(alt_geopot > alt_temp[0][0] - epsilon, "altitude is below model limit");
   HEXED_ASSERT(alt_geopot < alt_temp.back()[0] + epsilon, "altitude is above model limit");

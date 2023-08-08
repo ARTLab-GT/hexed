@@ -2,6 +2,7 @@
 #include <Case.hpp>
 #include <Simplex_geom.hpp>
 #include <read_csv.hpp>
+#include <standard_atmosphere.hpp>
 
 namespace hexed
 {
@@ -56,6 +57,12 @@ Case::Case(std::string input_file)
     double heat_rat = 1.4;
     if (_vard("freestream0")) freestream = _get_vector("freestream", *n_dim + 2);
     else {
+      if (_vard("altitude")) {
+        HEXED_ASSERT(!_vard("temperature"), "cannot specify both altitude and temperature (consider `temperature_offset`)");
+        auto dens_pres = standard_atmosphere(_vard("altitude").value(), _vard("temperature_offset").value());
+        _inter.variables->assign<double>("density", dens_pres[0]);
+        _inter.variables->assign<double>("pressure", dens_pres[1]);
+      }
       HEXED_ASSERT(_vard("density").has_value() + _vard("pressure").has_value() + _vard("temperature").has_value() == 2,
                    "exactly two of density, pressure, and temperature must be specified");
       if (_vard("density")) {
