@@ -1,18 +1,14 @@
 n_dim = 2
-mesh_bound00 = -10.
-mesh_bound10 = -10.
-mesh_bound01 =  10.
-mesh_bound11 =  10.
+mesh_extreme00 = -10.
+mesh_extreme10 = -10.
+mesh_extreme01 =  10.
+mesh_extreme11 =  10.
 density = 1.225
 pressure = 101325.
 mach = 0.3
 done = {iteration < 1e4}
-
-={ geometry }
-desig = {0012}
-$naca
-geom_0_type = {parametric}
-geom_0_n = 1000
-geom_0_definition = equations
+={ create geometry}
+=shell {python3 make_geom.py}
+geom0 = {geom.csv}
 
 $init

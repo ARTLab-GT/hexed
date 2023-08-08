@@ -2,6 +2,7 @@
 #include <cmath>
 #include <iostream>
 #include <fstream>
+#include <cstdlib>
 #include <Interpreter.hpp>
 
 namespace hexed
@@ -233,6 +234,11 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
       return _Dynamic_value{{0}, {}, {}};
     }},
     {"println", [this](_Dynamic_value val){return _un_ops["print"](_general_add(val, {{}, {}, {"\n"}}));}},
+    {"shell", [](_Dynamic_value val) {
+      HEXED_ASSERT(val.s.has_value(), "operand of `shell` must be `string`", Parsing_error);
+      std::cout << std::flush; // apparently this is necessary sometimes?
+      return _Dynamic_value{{std::system(val.s->c_str())}, {}, {}};
+    }},
   },
   _bin_ops {
     {"^" , {1, _arithmetic_op<_pow<double>, _pow<int>>}}, // note: 0 is for unary ops

@@ -159,4 +159,4 @@ install(PROGRAMS script/hexed-post-process ${CMAKE_BINARY_DIR}/hexed-wrapped-pos
 install(TARGETS hexed hexed_exec hil)
 export(TARGETS hexed FILE hexed-targets.cmake)
 install(FILES ${CMAKE_BINARY_DIR}/hexed-config.cmake DESTINATION lib/cmake/hexed)
-install(FILES ${CMAKE_BINARY_DIR}/python/hexed_py_config.py ${CMAKE_BINARY_DIR}/python/hexed.py DESTINATION ${PYTHON_INSTALL_PREFIX})
+install(FILES ${CMAKE_SOURCE_DIR}/python/hexed_utils.py DESTINATION ${PYTHON_INSTALL_PREFIX})

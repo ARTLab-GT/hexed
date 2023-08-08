@@ -1,11 +1,11 @@
 ={ array variables }
 i_dim = 0
-mesh_bound_eps = 1e-6
+mesh_extreme_eps = 1e-6
 while = {i_dim < 3}
 do = {
     mesh_code = {
         mesh_index = {} + i_dim + sign
-        $({mesh_bound} + mesh_index) = 0. + sign
+        $({mesh_extreme} + mesh_index) = 0. + sign
         $({extremal_bc} + mesh_index) = {characteristic}
     }
     sign = 0; $mesh_code
@@ -66,7 +66,7 @@ init = {
         i_dim = 0
         while = {i_dim < n_dim}
         do = {
-            $({flood_fill_start} + i_dim) = (1 - mesh_bound_eps)*$({mesh_bound} + i_dim + 0) + mesh_bound_eps*$({mesh_bound} + i_dim + 1)
+            $({flood_fill_start} + i_dim) = (1 - mesh_extreme_eps)*$({mesh_extreme} + i_dim + 0) + mesh_extreme_eps*$({mesh_extreme} + i_dim + 1)
             i_dim = i_dim + 1
         }
         $loop

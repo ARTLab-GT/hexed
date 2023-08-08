@@ -83,22 +83,22 @@ Case::Case(std::string input_file)
       _set_vector("freestream", freestream);
     }
     // create solver
-    Mat<dyn, dyn> mesh_bounds(*n_dim, 2);
+    Mat<dyn, dyn> mesh_extremes(*n_dim, 2);
     std::vector<Flow_bc*> bcs;
     for (int i_dim = 0; i_dim < *n_dim; ++i_dim) {
       for (int sign = 0; sign < 2; ++sign) {
         std::string index = format_str(50, "%i%i", i_dim, sign);
-        mesh_bounds(i_dim, sign) = _inter.variables->lookup<double>("mesh_bound" + index).value();
+        mesh_extremes(i_dim, sign) = _inter.variables->lookup<double>("mesh_extreme" + index).value();
         std::string bc_name = _inter.variables->lookup<std::string>("extremal_bc" + index).value();
         if (bc_name == "characteristic") bcs.push_back(new Freestream(freestream));
         else if (bc_name == "nonpenetration") bcs.push_back(new Nonpenetration);
         else HEXED_ASSERT(false, format_str(1000, "unrecognized boundary condition type `%s`", bc_name));
       }
     }
-    HEXED_ASSERT((mesh_bounds(all, 1) - mesh_bounds(all, 0)).minCoeff() > 0, "all mesh dimensions must be positive!");
-    double root_sz = (mesh_bounds(all, 1) - mesh_bounds(all, 0)).maxCoeff();
+    HEXED_ASSERT((mesh_extremes(all, 1) - mesh_extremes(all, 0)).minCoeff() > 0, "all mesh dimensions must be positive!");
+    double root_sz = (mesh_extremes(all, 1) - mesh_extremes(all, 0)).maxCoeff();
     _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz));
-    _solver().mesh().add_tree(bcs, mesh_bounds(all, 0));
+    _solver().mesh().add_tree(bcs, mesh_extremes(all, 0));
     return 0;
   }));
 
