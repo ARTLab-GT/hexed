@@ -1,5 +1,8 @@
 import numpy as np
 
+## \namespace hexed_utils
+# \brief A Python module with random useful tools.
+
 def naca(desig, n_points = 1000, closure = "warp"):
     r"""! \brief Constructs a NACA 4-digit airfoil geometry.
     \details Returns an n by 2 numpy array representing the coordinates of the airfoil at discrete points.
