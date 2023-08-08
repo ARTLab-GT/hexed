@@ -128,6 +128,7 @@ template<> void Simplex_geom<3>::visualize(std::string);
  * Each point represents a unique vertex -- duplicate points are allowed,
  * but you don't need to include each interior point twice.
  * The result can be used to construct a `Simplex_geom<2>`.
+ * \see `read_csv()`
  * \relates Simplex_geom
  */
 std::vector<Mat<2, 2>> segments(const Mat<dyn, dyn>& points);
