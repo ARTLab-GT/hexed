@@ -45,7 +45,7 @@ class Namespace
     {
       try {return fetcher();}
       catch (const std::exception& e) {
-        throw std::runtime_error("Heisenberg variable evaluation failed because:\n" + std::string(e.what()));
+        throw std::runtime_error("Heisenberg variable evaluation failed because:\n      " + std::string(e.what()));
       }
     }
   };
@@ -115,7 +115,7 @@ std::optional<T> Namespace::lookup(std::string name)
   if (_get_map<T>().count(name)) {
     try {return {_get_map<T>().at(name)->get()};}
     catch (const std::exception& e) {
-      throw std::runtime_error(format_str(1000, "error while evaluating variable `%s`:\n%s", name.c_str(), e.what()));
+      throw std::runtime_error(format_str(1000, "error while evaluating variable `%s`:\n    %s", name.c_str(), e.what()));
     }
   }
   if constexpr (std::is_same<T, double>::value) {

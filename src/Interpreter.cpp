@@ -318,7 +318,7 @@ void Interpreter::exec(std::string comms)
       _skip_spaces();
     } catch (const Parsing_error& e) {
       std::string except = variables->lookup<std::string>("except").value();
-      std::string message = "Hexed Interface Language error (in `hexed::Interpreter`): " + std::string(e.what()) + "\n" + _debug_info();
+      std::string message = "Hexed Interface Language error (in `hexed::Interpreter`):\n    " + std::string(e.what()) + "\n" + _debug_info();
       if (!except.empty()) {
         variables->assign<std::string>("exception", message);
         while (_more() && (_text.front() != '\n' && _text.front() != ';')) _pop();
