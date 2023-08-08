@@ -6,8 +6,8 @@ mesh_extreme11 =  10.
 density = 1.225
 pressure = 101325.
 mach = 0.3
+surface_refine = {return = resolution_badness > 3e-3 & ref_level < 10}
 done = {iteration < 1e4}
-={ create geometry}
 =shell {python3 make_geom.py}
 geom0 = {geom.csv}
 

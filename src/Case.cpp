@@ -136,6 +136,41 @@ Case::Case(std::string input_file)
     return 0;
   }));
 
+  _inter.variables->create<int>("refine", new Namespace::Heisenberg<int>([this]() {
+    std::vector<std::string> crit_code;
+    crit_code.push_back(_vars("surface_refine").value());
+    crit_code.push_back(_vars("surface_unrefine").value());
+    std::vector<std::function<bool(Element&)>> crits;
+    for (std::string code : crit_code) {
+      crits.emplace_back([this, code](Element& elem) {
+        auto sub = _inter.make_sub();
+        sub.variables->assign("is_extruded", int(!elem.tree));
+        sub.variables->assign("ref_level", elem.refinement_level());
+        sub.variables->assign("nom_sz", elem.nominal_size());
+        sub.variables->assign("resolution_badness", elem.resolution_badness);
+        auto params = elem.storage_params();
+        Eigen::Vector3d center;
+        center.setZero();
+        for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+          center += elem.vertex(i_vert).pos;
+        }
+        center /= params.n_vertices();
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+          sub.variables->assign("center" + std::to_string(i_dim), center(i_dim));
+        }
+        sub.exec(code);
+        return sub.variables->lookup<int>("return").value();
+      });
+    }
+    Jac_inv_det_func jidf;
+    _solver().set_resolution_badness(Elem_nonsmooth(jidf));
+    _solver().mesh().set_unref_locks(criteria::if_extruded);
+    bool changed = _solver().mesh().update(crits[0], crits[1]);
+    for (int i_smooth = 0; i_smooth < _vari("n_smooth"); ++i_smooth) _solver().mesh().relax();
+    _solver().calc_jacobian();
+    return changed;
+  }));
+
   _inter.variables->create<int>("init_state", new Namespace::Heisenberg<int>([this]() {
     std::string init_cond = _vars("init_condition").value();
     auto freestream = _get_vector("freestream", _vari("n_dim").value() + 2);
