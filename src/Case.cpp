@@ -1,6 +1,7 @@
 #include <filesystem>
 #include <Case.hpp>
 #include <Simplex_geom.hpp>
+#include <read_csv.hpp>
 
 namespace hexed
 {
@@ -112,32 +113,26 @@ Case::Case(std::string input_file)
     int nd = _vari("n_dim").value();
     std::vector<Surface_geom*> geoms;
     for (int i_geom = 0;; ++i_geom) {
-      std::string prefix = "geom_" + std::to_string(i_geom);
-      auto geom_type = _vars(prefix + "_type");
-      if (!geom_type) break;
-      if (geom_type.value() == "file") {
-        HEXED_ASSERT(false, "geometry from file names is not yet supported");
-      } else if (geom_type.value() == "parametric") {
-        HEXED_ASSERT(nd == 2,
-          "Parametric geometry is currently only supported for `n_dim == 2`. "
-          "If you would like this for other dimensionality, lmk.");
-        auto def = _vars(prefix + "_definition");
-        auto n = _vari(prefix + "_n");
-        HEXED_ASSERT(def && n, format_str(200, "specifying geometry %i requires `geom_%i_n` and `geom_%i_definition` to be specified", i_geom, i_geom, i_geom));
-        Mat<dyn, dyn> points (nd, *n + 1);
-        for (int i_point = 0; i_point <= *n; ++i_point) {
-          auto sub = _inter.make_sub();
-          sub.exec(format_str(1000, "param = (0. + %i)/%i; $equations", i_point, *n));
-          for (int i_dim = 0; i_dim < nd; ++i_dim) {
-            auto val = sub.variables->lookup<double>("x_" + std::to_string(i_dim));
-            HEXED_ASSERT(val, "parametric geometry equations failed to set all coordinates");
-            points(i_dim, i_point) = val.value();
-          }
-        }
-        geoms.push_back(new Simplex_geom<2>(segments(points)));
-      } else HEXED_ASSERT(false, format_str(1000, "geometry type `%s` not recognized", geom_type.value()));
+      auto geom = _vars("geom" + std::to_string(i_geom));
+      if (!geom) break;
+      unsigned dot = geom->rfind('.');
+      HEXED_ASSERT(dot < geom->size(), "file name must contain extension to infer format");
+      std::string case_sensitive(geom->begin() + dot + 1, geom->end());
+      std::string ext = case_sensitive;
+      for (char& c : ext) c = tolower(c);
+      if (ext == "csv") {
+        HEXED_ASSERT(nd == 2, "3D geometry in CSV format is not supported");
+        auto data = read_csv(*geom);
+        HEXED_ASSERT(data.cols() >= nd, "CSV geometry file must have at least n_dim columns");
+        geoms.emplace_back(new Simplex_geom<2>(segments(data.transpose())));
+      } else {
+        HEXED_ASSERT(false, format_str(1000, "file extension `%s` not recognized", case_sensitive.c_str()));
+      }
     }
-    if (!geoms.empty()) _solver().mesh().set_surface(new Compound_geom(geoms), new Nonpenetration, _get_vector("flood_fill_start", nd));
+    if (!geoms.empty()) {
+      _solver().mesh().set_surface(new Compound_geom(geoms), new Nonpenetration, _get_vector("flood_fill_start", nd));
+      _solver().calc_jacobian();
+    }
     return 0;
   }));
 
