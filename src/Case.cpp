@@ -38,6 +38,7 @@ Flow_bc* Case::_make_bc(std::string name)
   if (name == "characteristic") return new Freestream(freestream);
   else if (name == "nonpenetration") return new Nonpenetration;
   else HEXED_ASSERT(false, format_str(1000, "unrecognized boundary condition type `%s`", name));
+  return nullptr; // will never happen. just to shut up GCC warning
 }
 
 Case::Case(std::string input_file)

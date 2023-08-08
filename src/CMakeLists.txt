@@ -36,6 +36,7 @@ Stopwatch_tree.cpp
 Storage_params.cpp
 Surface_func.cpp
 Surface_geom.cpp
+standard_atmosphere.cpp
 Tecplot_file.cpp
 Tree.cpp
 thermo.cpp

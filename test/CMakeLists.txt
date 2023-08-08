@@ -37,6 +37,7 @@ test_Stopwatch.cpp
 test_Stopwatch_tree.cpp
 test_Storage_params.cpp
 test_Surface_geom.cpp
+test_standard_atmosphere.cpp
 test_Tecplot_file.cpp
 test_Tree.cpp
 test_utils.cpp
