@@ -17,6 +17,7 @@ class Case
   Mat<> _get_vector(std::string name, int size);
   void _set_vector(std::string name, Mat<>);
   std::optional<std::string> _vars(std::string name);
+  Flow_bc* _make_bc(std::string name);
   public:
   Case(std::string input_file);
 };

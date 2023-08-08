@@ -32,6 +32,14 @@ void Case::_set_vector(std::string name, Mat<> vec)
   }
 }
 
+Flow_bc* Case::_make_bc(std::string name)
+{
+  Mat<> freestream = _get_vector("freestream", _vari("n_dim").value() + 2);
+  if (name == "characteristic") return new Freestream(freestream);
+  else if (name == "nonpenetration") return new Nonpenetration;
+  else HEXED_ASSERT(false, format_str(1000, "unrecognized boundary condition type `%s`", name));
+}
+
 Case::Case(std::string input_file)
 {
   // create custom Heisenberg variables
@@ -89,22 +97,19 @@ Case::Case(std::string input_file)
     for (int i_dim = 0; i_dim < *n_dim; ++i_dim) {
       for (int sign = 0; sign < 2; ++sign) {
         std::string index = format_str(50, "%i%i", i_dim, sign);
-        mesh_extremes(i_dim, sign) = _inter.variables->lookup<double>("mesh_extreme" + index).value();
-        std::string bc_name = _inter.variables->lookup<std::string>("extremal_bc" + index).value();
-        if (bc_name == "characteristic") bcs.push_back(new Freestream(freestream));
-        else if (bc_name == "nonpenetration") bcs.push_back(new Nonpenetration);
-        else HEXED_ASSERT(false, format_str(1000, "unrecognized boundary condition type `%s`", bc_name));
+        mesh_extremes(i_dim, sign) = _vard("mesh_extreme" + index).value();
+        bcs.push_back(_make_bc(_vars("extremal_bc" + index).value()));
       }
     }
     HEXED_ASSERT((mesh_extremes(all, 1) - mesh_extremes(all, 0)).minCoeff() > 0, "all mesh dimensions must be positive!");
     double root_sz = (mesh_extremes(all, 1) - mesh_extremes(all, 0)).maxCoeff();
-    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz));
+    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, _vari("local_time").value()));
     _solver().mesh().add_tree(bcs, mesh_extremes(all, 0));
     return 0;
   }));
 
   _inter.variables->create<int>("init_refinement", new Namespace::Heisenberg<int>([this]() {
-    for (int i = 0; i < _inter.variables->lookup<int>("init_ref_level"); ++i) _solver().mesh().update();
+    for (int i = 0; i < _vari("init_ref_level"); ++i) _solver().mesh().update();
     _solver().calc_jacobian();
     return 0;
   }));
@@ -130,7 +135,7 @@ Case::Case(std::string input_file)
       }
     }
     if (!geoms.empty()) {
-      _solver().mesh().set_surface(new Compound_geom(geoms), new Nonpenetration, _get_vector("flood_fill_start", nd));
+      _solver().mesh().set_surface(new Compound_geom(geoms), _make_bc(_vars("surface_bc").value()), _get_vector("flood_fill_start", nd));
       _solver().calc_jacobian();
     }
     return 0;
@@ -203,6 +208,9 @@ Case::Case(std::string input_file)
   }));
   _inter.variables->create<std::string>("report", new Namespace::Heisenberg<std::string>([this]() {
     return _solver().iteration_status().report();
+  }));
+  _inter.variables->create<std::string>("performance_report", new Namespace::Heisenberg<std::string>([this]() {
+    return _solver().stopwatch_tree().report();
   }));
 
   // load HIL code for the Case _interface

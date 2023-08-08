@@ -18,6 +18,7 @@ $loop
 ={ basic parameters }
 row_size = 6
 init_ref_level = 3
+local_time = true
 init_condition = {freestream}
 viscosity_model = {inviscid}
 surface_bc = {auto}
@@ -38,7 +39,12 @@ n_smooth = 20
 vis_init = {vis_file_name = working_dir + {init}; =visualize}
 vis_final = {vis_file_name = working_dir + {final}; =visualize}
 print_init = {=println header}
-print_final = {=println {simulation complete}}
+print_final = {
+    =println {simulation complete}
+    =println {}
+    =println {performance summary:}
+    =println performance_report
+}
 done = {println {Error: you forgot to a set stop condition} & throw}
 vis_iter = {
     if = {iteration%vis_freq == 0}
