@@ -38,14 +38,14 @@ const double lum_eff_540e12 = 683; //!< \brief \f$ K_cd \f$
 
 //! \name empirical values
 //!\{
-const double mol_mass_air = 28.9647e-3; //!< \brief \f$ \mu_{air} \f$ (from engineering toolbox)
+const double specific_gas_air = 287.05287; //!< \brief \f$ R_{air} \f$  defined to match [ICAO Standard Atmosphere](http://www.aviationchief.com/uploads/9/2/0/9/92098238/icao_doc_7488_-_manual_of_icao_standard_atmosphere_-_3rd_edition_-_1994.pdf)
 const double earth_radius = 6356766; //!< \brief \f$ \f$
 //!\}
 
 //! \name derived quantities
 //!\{
 const double universal_gas = boltzmann*avogadro; //!< \brief \f$ R_u \f$
-const double specific_gas_air = universal_gas/mol_mass_air; //!< \brief \f$ R_{air} \f$
+const double mol_mass_air = universal_gas/specific_gas_air; //!< \brief \f$ \mu_{air} \f$
 const double stefan_boltzmann = 2*math::pow(pi, 5)*math::pow(boltzmann, 4)/(15*math::pow(light_speed, 2)*math::pow(plank, 3)); //!< \brief \f$ \sigma \f$
 //!\}
 
