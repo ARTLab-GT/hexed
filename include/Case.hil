@@ -38,6 +38,8 @@ n_smooth = 30
 geom_n_segments = 1000
 vis_surface = true
 vis_field = true
+max_angle = 10*degree
+max_deflection = huge
 
 ={ overrideable macros }
 vis_init = {vis_file_suffix = {_init}; =visualize}
