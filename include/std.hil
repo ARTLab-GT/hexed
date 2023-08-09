@@ -1,25 +1,26 @@
-# so you can create a newline character without a linebreak in your code
+={ since these can be inconvenient to insert in a string literal }
 newline = {
 }
-# boolean aliases
+closebr = {\}}
+={ boolean aliases }
 true = 1
 false = 0
 
-# conditional construct
-if = {} # reserve these names so a user can't accidentally assign a different type to them
+={ conditional construct }
+if = {} ;={ reserve these names so a user can't accidentally assign a different type to them }
 then = {}
 else = {}
 cond = {
     hexed_cond0 = else
     hexed_cond1 = then
     hexed_cond = {$hexed_cond} + (($if) != 0)
-    if = {} # reset these so that defaults can be used again
+    if = {} ;={ reset these so that defaults can be used again }
     then = {}
     else = {}
     $hexed_cond
 }
 
-# while loop
+={ while loop }
 hexed_loop_depth = 0
 while = {}
 do = {}
@@ -40,14 +41,47 @@ loop = {
     do = {}
 }
 
-# basic Read-Evaluate-Print Loop
+={ string slicing/splitting }
+split_i = 0
+split_str = {}
+split_at = {split_i == 0}
+split_first = {}
+split_rest = {}
+split = {
+    split_first = {}
+    split_i = 0
+    while = {!$split_at}
+    do = {split_first = split_first + split_str#split_i; split_i = split_i + 1}
+    $loop
+    split_rest = {}
+    while = {split_i < #split_str}
+    do = {split_rest = split_rest + split_str#split_i; split_i = split_i + 1}
+    $loop
+}
+
+={ basic Read-Evaluate-Print Loop }
 hexed_quit_repl = false
 quit = {hexed_quit_repl = true}
 repl = {
     while = {!hexed_quit_repl}
     do = {
-        =print {repl$ }
-        $ask
+        except = {=println exception;}
+        =print {#+^$ }
+        hexed_repl_cmd = ask
+        if = {#hexed_repl_cmd}
+        then = {
+            if = {hexed_repl_cmd#0 == {=}}
+            then = {
+                split_str = hexed_repl_cmd
+                split_at = {split_i == 1}
+                $split
+                hexed_repl_cmd = {=println(}+ split_rest; ={ note this parenthesis isn't closed and apparently doesn't need to be }
+            }
+            $cond
+        }
+        $cond
+        $hexed_repl_cmd
     }
     $loop
+    except = {}
 }

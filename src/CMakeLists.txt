@@ -25,6 +25,7 @@ Output_data.cpp
 otter_vis.cpp
 Physical_basis.cpp
 Qpoint_func.cpp
+read_csv.cpp
 Simplex_geom.cpp
 Solver.cpp
 Solver_convective.cpp
@@ -35,6 +36,7 @@ Stopwatch_tree.cpp
 Storage_params.cpp
 Surface_func.cpp
 Surface_geom.cpp
+standard_atmosphere.cpp
 Tecplot_file.cpp
 Tree.cpp
 thermo.cpp
@@ -44,3 +46,5 @@ Vis_data.cpp
 
 add_executable(hexed_exec hexed_exec.cpp)
 target_link_libraries(hexed_exec PRIVATE hexed)
+add_executable(hil hil.cpp)
+target_link_libraries(hil PRIVATE hexed)

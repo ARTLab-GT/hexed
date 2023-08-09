@@ -21,11 +21,6 @@ namespace hexed
  * -# call `initialize()` to initialize the flow state
  * -# call `update()` repeatedly to progress the simulation
  * -# call the some of the functions in output section to get the data you want from the simulation
- *
- * If you're using the \ref hexed_python "Python API", simply:
- * -# Call `create_solver()` to create an instance.
- * -# Override `done()` and any other methods you want to customize.
- * -# Call `run()`.
  */
 class Solver_interface
 {
@@ -115,8 +110,6 @@ class Solver_interface
    * (it is scaled by the max allowable CFL for the chosen DG scheme which is often O(1e-2)).
    */
   virtual void update(double safety_factor = 0.7, double time_step = std::numeric_limits<double>::max()) = 0;
-  //! runs `update` `n` times, in case you're calling it through a slow interface _cough_ python _cough_
-  virtual void update_n(int n, double safety_factor = 0.7, double time_step = std::numeric_limits<double>::max()) = 0;
   virtual bool is_admissible() = 0; //!< check whether flowfield is admissible (e.g. density and energy are positive)
   virtual void set_art_visc_smoothness(double advect_length) = 0; //!< updates the aritificial viscosity coefficient based on smoothness of the flow variables
   /*! \brief an object providing all available information about the status of the time marching iteration.
@@ -168,7 +161,6 @@ class Solver_interface
 };
 
 //! \brief Creates a `Solver` object and returns it as a pointer to `Solver_interface`
-//! \details Useful for the implementation of `hexed_python.create_solver`.
 //! \relates Solver_interface
 std::unique_ptr<Solver_interface> make_solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping = false,
                                               Transport_model viscosity_model = inviscid, Transport_model thermal_conductivity_model = inviscid);

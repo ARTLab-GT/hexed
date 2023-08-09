@@ -1,5 +1,9 @@
 #include <filesystem>
 #include <Case.hpp>
+#include <Simplex_geom.hpp>
+#include <read_csv.hpp>
+#include <standard_atmosphere.hpp>
+#include <Occt.hpp>
 
 namespace hexed
 {
@@ -30,6 +34,15 @@ void Case::_set_vector(std::string name, Mat<> vec)
   }
 }
 
+Flow_bc* Case::_make_bc(std::string name)
+{
+  Mat<> freestream = _get_vector("freestream", _vari("n_dim").value() + 2);
+  if (name == "characteristic") return new Freestream(freestream);
+  else if (name == "nonpenetration") return new Nonpenetration;
+  else HEXED_ASSERT(false, format_str(1000, "unrecognized boundary condition type `%s`", name));
+  return nullptr; // will never happen. just to shut up GCC warning
+}
+
 Case::Case(std::string input_file)
 {
   // create custom Heisenberg variables
@@ -45,6 +58,12 @@ Case::Case(std::string input_file)
     double heat_rat = 1.4;
     if (_vard("freestream0")) freestream = _get_vector("freestream", *n_dim + 2);
     else {
+      if (_vard("altitude")) {
+        HEXED_ASSERT(!_vard("temperature"), "cannot specify both altitude and temperature (consider `temperature_offset`)");
+        auto dens_pres = standard_atmosphere(_vard("altitude").value(), _vard("temperature_offset").value());
+        _inter.variables->assign<double>("density", dens_pres[0]);
+        _inter.variables->assign<double>("pressure", dens_pres[1]);
+      }
       HEXED_ASSERT(_vard("density").has_value() + _vard("pressure").has_value() + _vard("temperature").has_value() == 2,
                    "exactly two of density, pressure, and temperature must be specified");
       if (_vard("density")) {
@@ -82,29 +101,101 @@ Case::Case(std::string input_file)
       _set_vector("freestream", freestream);
     }
     // create solver
-    Mat<dyn, dyn> mesh_corners(*n_dim, 2);
+    Mat<dyn, dyn> mesh_extremes(*n_dim, 2);
     std::vector<Flow_bc*> bcs;
     for (int i_dim = 0; i_dim < *n_dim; ++i_dim) {
       for (int sign = 0; sign < 2; ++sign) {
         std::string index = format_str(50, "%i%i", i_dim, sign);
-        mesh_corners(i_dim, sign) = _inter.variables->lookup<double>("mesh_corner" + index).value();
-        std::string bc_name = _inter.variables->lookup<std::string>("extremal_bc" + index).value();
-        if (bc_name == "characteristic") bcs.push_back(new Freestream(freestream));
-        else if (bc_name == "nonpenetration") bcs.push_back(new Nonpenetration);
-        else HEXED_ASSERT(false, format_str(1000, "unrecognized boundary condition type `%s`", bc_name));
+        mesh_extremes(i_dim, sign) = _vard("mesh_extreme" + index).value();
+        bcs.push_back(_make_bc(_vars("extremal_bc" + index).value()));
       }
     }
-    HEXED_ASSERT((mesh_corners(all, 1) - mesh_corners(all, 0)).minCoeff() > 0, "all mesh dimensions must be positive!");
-    double root_sz = (mesh_corners(all, 1) - mesh_corners(all, 0)).maxCoeff();
-    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz));
-    _solver().mesh().add_tree(bcs, mesh_corners(all, 0));
+    HEXED_ASSERT((mesh_extremes(all, 1) - mesh_extremes(all, 0)).minCoeff() > 0, "all mesh dimensions must be positive!");
+    double root_sz = (mesh_extremes(all, 1) - mesh_extremes(all, 0)).maxCoeff();
+    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, _vari("local_time").value()));
+    _solver().mesh().add_tree(bcs, mesh_extremes(all, 0));
     return 0;
   }));
 
   _inter.variables->create<int>("init_refinement", new Namespace::Heisenberg<int>([this]() {
-    for (int i = 0; i < _inter.variables->lookup<int>("init_ref_level"); ++i) _solver().mesh().update();
+    for (int i = 0; i < _vari("init_ref_level"); ++i) _solver().mesh().update();
     _solver().calc_jacobian();
     return 0;
+  }));
+
+  _inter.variables->create<int>("add_geom", new Namespace::Heisenberg<int>([this]() {
+    int nd = _vari("n_dim").value();
+    std::vector<Surface_geom*> geoms;
+    for (int i_geom = 0;; ++i_geom) {
+      auto geom = _vars("geom" + std::to_string(i_geom));
+      if (!geom) break;
+      unsigned dot = geom->rfind('.');
+      HEXED_ASSERT(dot < geom->size(), "file name must contain extension to infer format");
+      HEXED_ASSERT(std::filesystem::exists(geom.value()), format_str(1000, "geometry file `%s` not found", geom->c_str()));
+      std::string case_sensitive(geom->begin() + dot + 1, geom->end());
+      std::string ext = case_sensitive;
+      for (char& c : ext) c = tolower(c);
+      if (ext == "csv") {
+        HEXED_ASSERT(nd == 2, "3D geometry in CSV format is not supported");
+        auto data = read_csv(*geom);
+        HEXED_ASSERT(data.cols() >= nd, "CSV geometry file must have at least n_dim columns");
+        geoms.emplace_back(new Simplex_geom<2>(segments(data.transpose())));
+      } else if (ext == "igs" || ext == "iges" || ext == "stp" || ext == "step") {
+        auto shape = Occt::read(*geom);
+        if (nd == 2) {
+          geoms.emplace_back(new Simplex_geom<2>(Occt::segments(shape, _vari("geom_n_segments").value())));
+        } else if (nd == 3) {
+          auto ptr = new Simplex_geom<3>(Occt::triangles(shape, _vard("max_angle").value(), _vard("max_deflection").value()));
+          ptr->visualize(format_str(1000, "%sgeom%i_triangulation", _vars("working_dir").value().c_str(), i_geom));
+          geoms.emplace_back(ptr);
+        }
+      } else if (ext == "stl") {
+        HEXED_ASSERT(nd == 3, "STL format is only supported for 3D");
+        geoms.emplace_back(new Simplex_geom<3>(Occt::triangles(Occt::read_stl(geom.value()))));
+      } else {
+        HEXED_ASSERT(false, format_str(1000, "file extension `%s` not recognized", case_sensitive.c_str()));
+      }
+    }
+    if (!geoms.empty()) {
+      _solver().mesh().set_surface(new Compound_geom(geoms), _make_bc(_vars("surface_bc").value()), _get_vector("flood_fill_start", nd));
+      _solver().calc_jacobian();
+    }
+    return 0;
+  }));
+
+  _inter.variables->create<int>("refine", new Namespace::Heisenberg<int>([this]() {
+    std::vector<std::string> crit_code;
+    crit_code.push_back(_vars("surface_refine").value());
+    crit_code.push_back(_vars("surface_unrefine").value());
+    std::vector<std::function<bool(Element&)>> crits;
+    for (std::string code : crit_code) {
+      crits.emplace_back([this, code](Element& elem) {
+        auto sub = _inter.make_sub();
+        sub.variables->assign("is_extruded", int(!elem.tree));
+        sub.variables->assign("ref_level", elem.refinement_level());
+        sub.variables->assign("nom_sz", elem.nominal_size());
+        sub.variables->assign("resolution_badness", elem.resolution_badness);
+        auto params = elem.storage_params();
+        Eigen::Vector3d center;
+        center.setZero();
+        for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+          center += elem.vertex(i_vert).pos;
+        }
+        center /= params.n_vertices();
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+          sub.variables->assign("center" + std::to_string(i_dim), center(i_dim));
+        }
+        sub.exec(code);
+        return sub.variables->lookup<int>("return").value();
+      });
+    }
+    Jac_inv_det_func jidf;
+    _solver().set_resolution_badness(Elem_nonsmooth(jidf));
+    _solver().mesh().set_unref_locks(criteria::if_extruded);
+    bool changed = _solver().mesh().update(crits[0], crits[1]);
+    for (int i_smooth = 0; i_smooth < _vari("n_smooth"); ++i_smooth) _solver().mesh().relax(0.7);
+    _solver().calc_jacobian();
+    return changed;
   }));
 
   _inter.variables->create<int>("init_state", new Namespace::Heisenberg<int>([this]() {
@@ -122,11 +213,14 @@ Case::Case(std::string input_file)
   }));
 
   _inter.variables->create<int>("visualize", new Namespace::Heisenberg<int>([this]() {
-    std::filesystem::path file_name(_inter.variables->lookup<std::string>("vis_file_name").value());
-    if (!std::filesystem::exists(file_name.parent_path())) {
-      std::filesystem::create_directory(file_name.parent_path());
+    std::string wd = _vars("working_dir").value();
+    std::string suffix = _vars("vis_file_suffix").value();
+    if (_vari("vis_field").value()) {
+      _solver().visualize_field_tecplot(wd + "field" + suffix);
     }
-    _solver().visualize_field_tecplot(file_name.string());
+    if (_vari("vis_surface").value()) {
+      _solver().visualize_surface_tecplot(_solver().mesh().surface_bc_sn(), wd + "surface" + suffix);
+    }
     return 0;
   }));
 
@@ -134,11 +228,17 @@ Case::Case(std::string input_file)
     _solver().update(_vard("max_safety").value(), _vard("max_time_step").value());
     return 0;
   }));
+  _inter.variables->create<int>("n_elements", new Namespace::Heisenberg<int>([this]() {
+    return _solver().mesh().n_elements();
+  }));
   _inter.variables->create<std::string>("header", new Namespace::Heisenberg<std::string>([this]() {
     return _solver().iteration_status().header();
   }));
   _inter.variables->create<std::string>("report", new Namespace::Heisenberg<std::string>([this]() {
     return _solver().iteration_status().report();
+  }));
+  _inter.variables->create<std::string>("performance_report", new Namespace::Heisenberg<std::string>([this]() {
+    return _solver().stopwatch_tree().report();
   }));
 
   // load HIL code for the Case _interface

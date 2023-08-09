@@ -1,2 +1,0 @@
-include_paths = "@CPPYY_INCLUDE@".split(";")
-libraries = ["@CMAKE_BINARY_DIR@/libhexed"]

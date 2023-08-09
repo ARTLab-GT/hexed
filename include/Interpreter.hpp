@@ -5,6 +5,7 @@
 #include <list>
 #include "math.hpp"
 #include "Namespace.hpp"
+#include "Lock.hpp"
 
 namespace hexed
 {
@@ -23,6 +24,8 @@ class Interpreter
   std::string _debug_info();
   std::string _read_name();
   void _substitute();
+  void _raise();
+  void _assert(bool predicate, std::string message);
   _Dynamic_value _eval(int precedence);
 
   template <typename T> static T _pow(T op0, T op1) {return std::pow(op0, op1);}
@@ -58,13 +61,29 @@ class Interpreter
   std::list<char> _text;
   std::map<std::string, std::function<_Dynamic_value(_Dynamic_value)>> _un_ops;
   std::map<std::string, _Binary_op> _bin_ops;
+  Lock _lock;
 
   public:
+  static const std::string std_file;
+  static const std::string const_file;
   std::shared_ptr<Namespace> variables;
   std::map<std::string, std::function<void(std::string)>> statements;
-  Interpreter(std::vector<std::string> preload = {std::string(config::root_dir) + "/include/std.hil"});
-  //! not at all thread-safe
+  Interpreter(std::vector<std::string> preload = {std_file, const_file});
+  //! safe to call in threads, but it's mutex-locked so it won't actually execute concurrently (for that, use `child()`)
   void exec(std::string commands);
+  /*! \brief Makes a sub-interpreter whose namespace is a subspace of `this`'s.
+   * \details Thread safe.
+   * Does not preload any files (but will naturally have access to whatever `this` preloaded).
+   * I was tempted to call this `int_sub`...
+   * but that wasn't _quite_ funny enough to be worth compromising readability.
+   */
+  Interpreter make_sub();
+
+  class Parsing_error : public assert::Exception
+  {
+    public:
+    Parsing_error(std::string message) : Exception(message) {}
+  };
 };
 
 }

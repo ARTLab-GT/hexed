@@ -1,0 +1,14 @@
+n_dim = 2
+mesh_extreme00 = -10.
+mesh_extreme10 = -10.
+mesh_extreme01 =  10.
+mesh_extreme11 =  10.
+altitude = 0.
+mach = 0.3
+=shell {python3 make_geom.py}
+geom0 = {geom.csv}
+surface_refine = {return = resolution_badness > 3e-3 & ref_level < 10}
+done = {iteration >= 1e5}
+
+$init
+$run

@@ -1,12 +1,10 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/Interpreter.hpp>
-#include <iostream>
-
 
 TEST_CASE("Interpreter")
 {
   hexed::Interpreter inter;
-  inter.exec("shock_wave = 7# this is a comment\n  boundary0layer=14 \n\n# another comment;interaction = 1.2");
+  inter.exec("shock_wave = 7\n  boundary0layer=14;interaction = 1.2");
   REQUIRE(inter.variables->lookup<int>("shock_wave").value() == 7);
   REQUIRE(inter.variables->lookup<int>("boundary0layer").value() == 14);
   REQUIRE(inter.variables->lookup<double>("interaction").value() == Catch::Approx(1.2));
@@ -35,8 +33,8 @@ TEST_CASE("Interpreter")
   REQUIRE(inter.variables->lookup<std::string>("code").value() == "-1.000000name3");
   inter.exec("result = 2*3 + 1*2 - -3*-3*3");
   REQUIRE(inter.variables->lookup<int>("result").value() == -19);
-  inter.exec("result = (1 + 2)*2");
-  REQUIRE(inter.variables->lookup<int>("result").value() == 6);
+  inter.exec("result = (1 + 2*2)*2");
+  REQUIRE(inter.variables->lookup<int>("result").value() == 10);
   inter.exec("result = 6/3*2");
   REQUIRE(inter.variables->lookup<int>("result").value() == 4);
   inter.exec("result = !0");
@@ -81,6 +79,19 @@ TEST_CASE("Interpreter")
   REQUIRE_THROWS(inter.exec("$read {non_existant.hil}"));
   inter.exec("result = 0; =exit; result = 1");
   REQUIRE(inter.variables->lookup<int>("result").value() == 0);
+  inter.exec("size = #{prandtl}");
+  REQUIRE(inter.variables->lookup<int>("size").value() == 7);
+  inter.exec("char = {prandtl}#1");
+  REQUIRE(inter.variables->lookup<std::string>("char").value() == "r");
+  // test that `exec` calls are properly mutex'd
+  #pragma omp parallel for
+  for (int i = 0; i < 10; ++i) inter.exec("result = " + std::to_string(i));
+  int result = inter.variables->lookup<int>("result").value();
+  REQUIRE(result >= 0);
+  REQUIRE(result < 10);
+  inter.exec("except = {result = 21}");
+  inter.exec("result = nonexistant");
+  REQUIRE(inter.variables->lookup<int>("result") == 21);
 
   SECTION("standard library")
   {

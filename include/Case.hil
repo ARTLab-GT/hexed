@@ -1,41 +1,61 @@
-# array variables
+={ array variables }
 i_dim = 0
+mesh_extreme_eps = 1e-6
 while = {i_dim < 3}
 do = {
     mesh_code = {
         mesh_index = {} + i_dim + sign
-        $({mesh_corner} + mesh_index) = 0. + sign
+        $({mesh_extreme} + mesh_index) = 0. + sign
         $({extremal_bc} + mesh_index) = {characteristic}
     }
     sign = 0; $mesh_code
     sign = 1; $mesh_code
+    $({flood_fill_start} + i_dim) = huge
     i_dim = i_dim + 1
 }
 $loop
 
-# basic parameters
+={ basic parameters }
 row_size = 6
 init_ref_level = 3
+local_time = true
 init_condition = {freestream}
+viscosity_model = {inviscid}
+surface_bc = {auto}
+temperature_offset = 0.
 attack = 0.
 sideslip = 0.
 working_dir = {hexed_out/}
-vis_file_name = working_dir + {default}
+vis_file_suffix = {}
 vis_freq = 10000
 print_freq = 100
 max_safety = 0.7
 max_time_step = huge
+surface_refine = {return = false}
+surface_unrefine = {return = ref_level > init_ref_level & !is_extruded}
+surface_max_iters = 100
+n_smooth = 30
+geom_n_segments = 1000
+vis_surface = true
+vis_field = true
+max_angle = 10*degree
+max_deflection = huge
 
-# overrideable macros
-vis_init = {vis_file_name = working_dir + {init}; =visualize}
-vis_final = {vis_file_name = working_dir + {final}; =visualize}
+={ overrideable macros }
+vis_init = {vis_file_suffix = {_init}; =visualize}
+vis_final = {vis_file_suffix = {_final}; =visualize}
 print_init = {=println header}
-print_final = {=println {simulation complete}}
+print_final = {
+    =println {simulation complete}
+    =println {}
+    =println {performance summary:}
+    =println performance_report
+}
 done = {println {Error: you forgot to a set stop condition} & throw}
 vis_iter = {
     if = {iteration%vis_freq == 0}
     then = {
-        vis_file_name = working_dir + {iter} + iteration
+        vis_file_suffix = {_iter} + iteration
         =print {visualizing...}
         =visualize
         =println {done}
@@ -49,25 +69,65 @@ print_iter = {
 }
 
 init = {
+    if = {working_dir#(#working_dir - 1) != {/}}
+    then = {working_dir = working_dir + {/}}
+    $cond
+    =shell({if [ ! -d } + working_dir + { ]; then mkdir } + working_dir + {; fi})
+    if = {surface_bc == {auto}}
+    then = {
+        if = {viscosity_model == {inviscid}}
+        then = {surface_bc = {nonpenetration}}
+        else = {surface_bc = {no_slip}}
+        $cond
+    }
+    $cond
+    if = {flood_fill_start0 == huge}
+    then = {
+        i_dim = 0
+        while = {i_dim < n_dim}
+        do = {
+            $({flood_fill_start} + i_dim) = (1 - mesh_extreme_eps)*$({mesh_extreme} + i_dim + 0) + mesh_extreme_eps*$({mesh_extreme} + i_dim + 1)
+            i_dim = i_dim + 1
+        }
+        $loop
+    }
+    $cond
     =create_solver
     =init_refinement
+    =add_geom
+    i_refinement = 0
+    keep_refining = false
+    while = {!keep_refining & i_refinement < surface_max_iters}
+    do = {
+        =print({geometry-based refinement sweep } + i_refinement + {... })
+        keep_refining = keep_refining & refine
+        i_refinement = i_refinement + 1
+        =println {done}
+    }
+    $loop
     =init_state
+    =println({initialization complete with } + n_elements + { elements})
+    =println {}
     $vis_init
 }
 
 run = {
     $print_init
-    while = done
+    =shell({echo > } + working_dir + {runtime_cmd.hil})
+    while = {!($done)}
     do = {
         iteration = iteration + 1
         =update
         $print_iter
         $vis_iter
+        except = {=println exception}
+        $(read(working_dir + {runtime_cmd.hil}))
+        =shell({echo > } + working_dir + {runtime_cmd.hil})
     }
     $loop
     $print_final
     $vis_final
 }
 
-# initialization
+={ initialization }
 iteration = 0
