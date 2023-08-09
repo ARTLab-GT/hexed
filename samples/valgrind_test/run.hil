@@ -3,17 +3,16 @@ altitude = 0.
 speed = 100.
 init_ref_level = 1
 init_condition = {freestream}
-mesh_extreme00 = -1.
-mesh_extreme10 = -1.
-mesh_extreme01 =  1.
-mesh_extreme11 =  1.
 done = {iteration > 0}
-surface_max_iters = 0
 print_freq = 1
 vis_init = {}
 vis_iter = {}
 vis_final = {}
 vis_surface = false
+geom0 = {geom.csv}
+surface_refine = {return = is_extruded}
+surface_max_iters = 1
+n_smooth = 1
 
 $init
 $run
