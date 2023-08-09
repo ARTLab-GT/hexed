@@ -106,7 +106,7 @@ init = {
 run = {
     $print_init
     =shell({echo > } + working_dir + {runtime_cmd.hil})
-    while = done
+    while = {!($done)}
     do = {
         iteration = iteration + 1
         =update

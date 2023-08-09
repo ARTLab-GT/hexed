@@ -1,14 +1,13 @@
 n_dim = 2
-density = 1.225
-pressure = 101325.
-speed = 100
+altitude = 0.
+speed = 100.
 init_ref_level = 1
 init_condition = {vortex}
-mesh_bound00 = -1.
-mesh_bound10 = -1.
-mesh_bound01 =  1.
-mesh_bound11 =  1.
-done = {iteration < 1e4}
+mesh_extreme00 = -1.
+mesh_extreme10 = -1.
+mesh_extreme01 =  1.
+mesh_extreme11 =  1.
+done = {iteration >= 1e4}
 print_freq = 100
 vis_freq = 1000
 
