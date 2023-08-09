@@ -8,7 +8,8 @@
 namespace hexed
 {
 
-const std::string Interpreter::std_file = std::string(config::root_dir) + "/include/std.hil";
+const std::string Interpreter::std_file = std::string(config::root_dir) + "include/std.hil";
+const std::string Interpreter::const_file = std::string(config::build_dir) + "constants.hil";
 
 bool Interpreter::_more() {return _text.size() > 1;}
 char Interpreter::_pop()
@@ -66,8 +67,12 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
         is_int = is_int && std::isdigit(_text.front());
         value.push_back(_pop());
       }
-      if (is_int) val.i = std::stoi(value.c_str());
-      else        val.d = std::stod(value.c_str());
+      try {
+        if (is_int) val.i = std::stoi(value.c_str());
+        else        val.d = std::stod(value.c_str());
+      } catch (...) {
+        HEXED_ASSERT(false, format_str(1000, "failed to parse numeric literal `%s`", value.c_str()), Parsing_error);
+      }
     // string literals
     } else if (_text.front() == '{') {
       _pop();

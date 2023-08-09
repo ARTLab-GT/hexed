@@ -142,8 +142,12 @@ Case::Case(std::string input_file)
         geoms.emplace_back(new Simplex_geom<2>(segments(data.transpose())));
       } else if (ext == "igs" || ext == "iges" || ext == "stp" || ext == "step") {
         auto shape = Occt::read(*geom);
-        if      (nd == 2) geoms.emplace_back(new Simplex_geom<2>(Occt::segments(shape, _vari("geom_n_segments").value())));
-        else if (nd == 3) HEXED_ASSERT(false, "3D CAD geometry is not yet implemented");
+        if (nd == 2) {
+          geoms.emplace_back(new Simplex_geom<2>(Occt::segments(shape, _vari("geom_n_segments").value())));
+        } else if (nd == 3) {
+          HEXED_ASSERT(false, "3D CAD geometry is not yet implemented");
+          //geoms.emplace_back(new Simplex_geom<3>(Occt::triangles
+        }
       } else if (ext == "stl") {
         HEXED_ASSERT(nd == 3, "STL format is only supported for 3D");
         geoms.emplace_back(new Simplex_geom<3>(Occt::triangles(Occt::read_stl(geom.value()))));

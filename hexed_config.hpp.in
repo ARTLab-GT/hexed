@@ -19,7 +19,8 @@ namespace hexed::config
 
 //! \name CMake options
 //!\{
-constexpr char root_dir [] = "@CMAKE_SOURCE_DIR@";
+constexpr char root_dir [] = "@CMAKE_SOURCE_DIR@/";
+constexpr char build_dir [] = "@CMAKE_BINARY_DIR@/";
 constexpr int max_row_size = @MAX_BASIS_ROW_SIZE@; //!< \brief maximum \ref row_size "row size" that a `Basis` is allowed to have
 #define HEXED_THREADED HEXED_@threaded@
 #if HEXED_THREADED

@@ -65,9 +65,10 @@ class Interpreter
 
   public:
   static const std::string std_file;
+  static const std::string const_file;
   std::shared_ptr<Namespace> variables;
   std::map<std::string, std::function<void(std::string)>> statements;
-  Interpreter(std::vector<std::string> preload = {std_file});
+  Interpreter(std::vector<std::string> preload = {std_file, const_file});
   //! safe to call in threads, but it's mutex-locked so it won't actually execute concurrently (for that, use `child()`)
   void exec(std::string commands);
   /*! \brief Makes a sub-interpreter whose namespace is a subspace of `this`'s.

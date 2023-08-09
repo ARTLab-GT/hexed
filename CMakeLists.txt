@@ -154,6 +154,13 @@ if (use_cppcheck)
     add_custom_target(cppcheck ALL DEPENDS cppcheck_output.txt)
 endif()
 
+add_custom_command(
+    OUTPUT constants.hil
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/script/translate.py ${CMAKE_SOURCE_DIR}/include/constants.hpp
+    DEPENDS         ${CMAKE_SOURCE_DIR}/script/translate.py ${CMAKE_SOURCE_DIR}/include/constants.hpp
+)
+add_custom_target(constants ALL DEPENDS constants.hil)
+
 # install
 install(PROGRAMS script/hexed-post-process ${CMAKE_BINARY_DIR}/hexed-wrapped-post-process script/hexed-fit-geom TYPE BIN)
 install(TARGETS hexed hexed_exec hil)
