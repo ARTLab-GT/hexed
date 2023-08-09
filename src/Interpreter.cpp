@@ -252,7 +252,9 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
     {"-" , {3, _arithmetic_op<_sub<double>, _sub<int>>}},
     {"+" , {3, _general_add}},
     {"==", {4, _general_eq}},
-    {"!=", {4, _comparison_op<_ne<double>, _ne<int>>}},
+    {"!=", {4, [](_Dynamic_value op0, _Dynamic_value op1){
+        return _Dynamic_value{{!_general_eq(op0, op1).i.value()}, {}, {}};
+    }}},
     {">=", {4, _comparison_op<_ge<double>, _ge<int>>}},
     {"<=", {4, _comparison_op<_le<double>, _le<int>>}},
     {"<" , {4, _comparison_op<_lt<double>, _lt<int>>}},

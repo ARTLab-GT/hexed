@@ -131,6 +131,7 @@ Case::Case(std::string input_file)
       if (!geom) break;
       unsigned dot = geom->rfind('.');
       HEXED_ASSERT(dot < geom->size(), "file name must contain extension to infer format");
+      HEXED_ASSERT(std::filesystem::exists(geom.value()), format_str(1000, "geometry file `%s` not found", geom->c_str()));
       std::string case_sensitive(geom->begin() + dot + 1, geom->end());
       std::string ext = case_sensitive;
       for (char& c : ext) c = tolower(c);
@@ -143,6 +144,9 @@ Case::Case(std::string input_file)
         auto shape = Occt::read(*geom);
         if      (nd == 2) geoms.emplace_back(new Simplex_geom<2>(Occt::segments(shape, _vari("geom_n_segments").value())));
         else if (nd == 3) HEXED_ASSERT(false, "3D CAD geometry is not yet implemented");
+      } else if (ext == "stl") {
+        HEXED_ASSERT(nd == 3, "STL format is only supported for 3D");
+        geoms.emplace_back(new Simplex_geom<3>(Occt::triangles(Occt::read_stl(geom.value()))));
       } else {
         HEXED_ASSERT(false, format_str(1000, "file extension `%s` not recognized", case_sensitive.c_str()));
       }
@@ -204,11 +208,14 @@ Case::Case(std::string input_file)
   }));
 
   _inter.variables->create<int>("visualize", new Namespace::Heisenberg<int>([this]() {
-    std::filesystem::path file_name(_inter.variables->lookup<std::string>("vis_file_name").value());
-    if (!std::filesystem::exists(file_name.parent_path())) {
-      std::filesystem::create_directory(file_name.parent_path());
+    std::string wd = _vars("working_dir").value();
+    std::string suffix = _vars("vis_file_suffix").value();
+    if (_vari("vis_field").value()) {
+      _solver().visualize_field_tecplot(wd + "field" + suffix);
     }
-    _solver().visualize_field_tecplot(file_name.string());
+    if (_vari("vis_surface").value()) {
+      _solver().visualize_surface_tecplot(_solver().mesh().surface_bc_sn(), wd + "surface" + suffix);
+    }
     return 0;
   }));
 

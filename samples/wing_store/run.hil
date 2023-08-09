@@ -1,0 +1,16 @@
+n_dim = 3
+row_size = 5
+mesh_extreme00 = -.1
+mesh_extreme01 = .5
+mesh_extreme10 = 0.
+mesh_extreme11 = .6
+mesh_extreme20 = -.3
+mesh_extreme21 = .3
+altitude = 0.
+speed = 0.
+geom0 = {wing_store.STL}
+surface_refine = {return = resolution_badness > 1e-2 & ref_level < 8}
+surface_max_iters = 8
+n_smooth = 20
+vis_field = false
+$init

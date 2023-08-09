@@ -26,7 +26,7 @@ temperature_offset = 0.
 attack = 0.
 sideslip = 0.
 working_dir = {hexed_out/}
-vis_file_name = working_dir + {default}
+vis_file_suffix = {}
 vis_freq = 10000
 print_freq = 100
 max_safety = 0.7
@@ -36,10 +36,12 @@ surface_unrefine = {return = ref_level > init_ref_level & !is_extruded}
 surface_max_iters = 100
 n_smooth = 30
 geom_n_segments = 1000
+vis_surface = true
+vis_field = true
 
 ={ overrideable macros }
-vis_init = {vis_file_name = working_dir + {init}; =visualize}
-vis_final = {vis_file_name = working_dir + {final}; =visualize}
+vis_init = {vis_file_suffix = {_init}; =visualize}
+vis_final = {vis_file_suffix = {_final}; =visualize}
 print_init = {=println header}
 print_final = {
     =println {simulation complete}
@@ -51,7 +53,7 @@ done = {println {Error: you forgot to a set stop condition} & throw}
 vis_iter = {
     if = {iteration%vis_freq == 0}
     then = {
-        vis_file_name = working_dir + {iter} + iteration
+        vis_file_suffix = {_iter} + iteration
         =print {visualizing...}
         =visualize
         =println {done}
@@ -65,6 +67,10 @@ print_iter = {
 }
 
 init = {
+    if = {working_dir#(#working_dir - 1) != {/}}
+    then = {working_dir = working_dir + {/}}
+    $cond
+    =shell({if [ ! -d } + working_dir + { ]; then mkdir } + working_dir + {; fi})
     if = {surface_bc == {auto}}
     then = {
         if = {viscosity_model == {inviscid}}
