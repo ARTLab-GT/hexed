@@ -145,7 +145,9 @@ Case::Case(std::string input_file)
         if (nd == 2) {
           geoms.emplace_back(new Simplex_geom<2>(Occt::segments(shape, _vari("geom_n_segments").value())));
         } else if (nd == 3) {
-          geoms.emplace_back(new Simplex_geom<3>(Occt::triangles(shape, _vard("max_angle").value(), _vard("max_deflection").value())));
+          auto ptr = new Simplex_geom<3>(Occt::triangles(shape, _vard("max_angle").value(), _vard("max_deflection").value()));
+          ptr->visualize(format_str(1000, "%sgeom%i_triangulation", _vars("working_dir").value().c_str(), i_geom));
+          geoms.emplace_back(ptr);
         }
       } else if (ext == "stl") {
         HEXED_ASSERT(nd == 3, "STL format is only supported for 3D");

@@ -29,6 +29,7 @@ void Simplex_geom<3>::merge(Nearest_point<3>& nearest, Mat<3, 3> sim, Mat<3> poi
   }
 }
 
+//! \cond
 template<> void Simplex_geom<3>::visualize(std::string fname)
 {
   #if HEXED_USE_TECPLOT
@@ -42,6 +43,7 @@ template<> void Simplex_geom<3>::visualize(std::string fname)
   HEXED_ASSERT(false, "needs tecplot");
   #endif
 }
+//! \endcond
 
 std::vector<Mat<2, 2>> segments(const Mat<dyn, dyn>& points)
 {

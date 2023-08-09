@@ -119,7 +119,9 @@ Stopwatch_tree Simplex_geom<n_dim>::stopwatch("", {{"nearest_point", Stopwatch_t
 
 template<> void Simplex_geom<2>::merge(Nearest_point<2>& nearest, Mat<2, 2> sim, Mat<2> point);
 template<> void Simplex_geom<3>::merge(Nearest_point<3>& nearest, Mat<3, 3> sim, Mat<3> point);
+//! \cond
 template<> void Simplex_geom<3>::visualize(std::string);
+//! \endcond
 
 /*! \brief Creates simplices from an ordered array of points representing a polygonal curve.
  * \details `points` must have exactly 2 rows.
