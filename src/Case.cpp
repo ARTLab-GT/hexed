@@ -3,6 +3,7 @@
 #include <Simplex_geom.hpp>
 #include <read_csv.hpp>
 #include <standard_atmosphere.hpp>
+#include <Occt.hpp>
 
 namespace hexed
 {
@@ -138,6 +139,10 @@ Case::Case(std::string input_file)
         auto data = read_csv(*geom);
         HEXED_ASSERT(data.cols() >= nd, "CSV geometry file must have at least n_dim columns");
         geoms.emplace_back(new Simplex_geom<2>(segments(data.transpose())));
+      } else if (ext == "igs" || ext == "iges" || ext == "stp" || ext == "step") {
+        auto shape = Occt::read(*geom);
+        if      (nd == 2) geoms.emplace_back(new Simplex_geom<2>(Occt::segments(shape, _vari("geom_n_segments").value())));
+        else if (nd == 3) HEXED_ASSERT(false, "3D CAD geometry is not yet implemented");
       } else {
         HEXED_ASSERT(false, format_str(1000, "file extension `%s` not recognized", case_sensitive.c_str()));
       }
@@ -179,7 +184,7 @@ Case::Case(std::string input_file)
     _solver().set_resolution_badness(Elem_nonsmooth(jidf));
     _solver().mesh().set_unref_locks(criteria::if_extruded);
     bool changed = _solver().mesh().update(crits[0], crits[1]);
-    for (int i_smooth = 0; i_smooth < _vari("n_smooth"); ++i_smooth) _solver().mesh().relax();
+    for (int i_smooth = 0; i_smooth < _vari("n_smooth"); ++i_smooth) _solver().mesh().relax(0.7);
     _solver().calc_jacobian();
     return changed;
   }));

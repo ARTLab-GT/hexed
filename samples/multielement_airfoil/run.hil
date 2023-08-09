@@ -1,0 +1,11 @@
+n_dim = 2
+mesh_extreme00 = -10.
+mesh_extreme10 = -10.
+mesh_extreme01 =  10.
+mesh_extreme11 =  10.
+altitude = 0.
+speed = 0.
+geom0 = {crmhl-2dcut.igs}
+surface_refine = {return = resolution_badness > 3e-3 & ref_level < 13}
+surface_max_iters = 20
+$init
