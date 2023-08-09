@@ -79,7 +79,6 @@ class Solver : public Solver_interface
   void set_res_bad_surface_rep(int bc_sn) override;
   void synch_extruded_res_bad() override;
   void update(double safety_factor = 0.7, double time_step = std::numeric_limits<double>::max()) override;
-  void update_n(int n, double safety_factor = 0.7, double time_step = std::numeric_limits<double>::max()) override;
   bool is_admissible() override;
   void set_art_visc_smoothness(double advect_length) override;
   Iteration_status iteration_status() override;

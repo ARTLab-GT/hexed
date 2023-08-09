@@ -146,7 +146,6 @@ endif()
 if(build_docs)
     add_subdirectory(doc)
 endif()
-add_subdirectory(python)
 
 # run cppcheck
 if (use_cppcheck)
