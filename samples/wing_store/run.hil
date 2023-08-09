@@ -8,7 +8,7 @@ mesh_extreme20 = -.3
 mesh_extreme21 = .3
 altitude = 0.
 speed = 0.
-geom0 = {wing_store.STEP}
+geom0 = {wing_store.IGS}
 surface_refine = {return = resolution_badness > 1e-2 & ref_level < 8}
 surface_max_iters = 8
 n_smooth = 20
