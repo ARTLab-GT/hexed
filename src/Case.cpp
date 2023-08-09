@@ -216,6 +216,9 @@ Case::Case(std::string input_file)
     _solver().update(_vard("max_safety").value(), _vard("max_time_step").value());
     return 0;
   }));
+  _inter.variables->create<int>("n_elements", new Namespace::Heisenberg<int>([this]() {
+    return _solver().mesh().n_elements();
+  }));
   _inter.variables->create<std::string>("header", new Namespace::Heisenberg<std::string>([this]() {
     return _solver().iteration_status().header();
   }));

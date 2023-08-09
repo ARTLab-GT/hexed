@@ -98,17 +98,23 @@ init = {
     }
     $loop
     =init_state
+    =println({initialization complete with } + n_elements + { elements})
+    =println {}
     $vis_init
 }
 
 run = {
     $print_init
+    =shell({echo > } + working_dir + {runtime_cmd.hil})
     while = done
     do = {
         iteration = iteration + 1
         =update
         $print_iter
         $vis_iter
+        except = {=println exception}
+        $(read(working_dir + {runtime_cmd.hil}))
+        =shell({echo > } + working_dir + {runtime_cmd.hil})
     }
     $loop
     $print_final
