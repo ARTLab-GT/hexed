@@ -140,6 +140,7 @@ Case::Case(std::string input_file)
         auto data = read_csv(*geom);
         HEXED_ASSERT(data.cols() >= nd, "CSV geometry file must have at least n_dim columns");
         geoms.emplace_back(new Simplex_geom<2>(segments(data.transpose())));
+      #if HEXED_USE_OCCT
       } else if (ext == "igs" || ext == "iges" || ext == "stp" || ext == "step") {
         auto shape = Occt::read(*geom);
         if (nd == 2) {
@@ -152,6 +153,7 @@ Case::Case(std::string input_file)
       } else if (ext == "stl") {
         HEXED_ASSERT(nd == 3, "STL format is only supported for 3D");
         geoms.emplace_back(new Simplex_geom<3>(Occt::triangles(Occt::read_stl(geom.value()))));
+      #endif
       } else {
         HEXED_ASSERT(false, format_str(1000, "file extension `%s` not recognized", case_sensitive.c_str()));
       }
