@@ -36,6 +36,7 @@ surface_refine = {return = false}
 surface_unrefine = {return = ref_level > init_ref_level & !is_extruded}
 surface_max_iters = 100
 n_smooth = 30
+wall_spacing = -1. ;={ set to positive value }
 geom_n_segments = 1000
 vis_surface = true
 vis_field = true
@@ -106,6 +107,9 @@ init = {
         =println {done}
     }
     $loop
+    if = {wall_spacing > 0}
+    then = {=make_layers}
+    $cond
     =init_state
     =println({initialization complete with } + n_elements + { elements})
     =println {}

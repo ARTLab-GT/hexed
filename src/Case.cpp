@@ -224,6 +224,14 @@ Case::Case(std::string input_file)
     return changed;
   }));
 
+  _inter.variables->create<int>("make_layers", new Namespace::Heisenberg<int>([this]() {
+    _solver().mesh().disconnect_boundary(_solver().mesh().surface_bc_sn());
+    _solver().mesh().extrude(Layer_sequence(_vard("wall_spacing").value(), 1));
+    _solver().mesh().connect_rest(_solver().mesh().surface_bc_sn());
+    _solver().calc_jacobian();
+    return 0;
+  }));
+
   _inter.variables->create<int>("init_state", new Namespace::Heisenberg<int>([this]() {
     std::string init_cond = _vars("init_condition").value();
     auto freestream = _get_vector("freestream", _vari("n_dim").value() + 2);

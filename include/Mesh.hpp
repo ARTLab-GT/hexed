@@ -94,15 +94,19 @@ class Mesh
    * If the mesh has not been extruded, the vertices shall be moved in an unspecified manner
    * (but maintaining a valid mesh state).
    * Offsetting thus provides a rudimentary way of creating anisotropic wall layers.
+   * If `force == false` (default) then in a tree mesh, only tree elements will be extruded from
+   * (which is necessary because some of the extruded elements from the previous refinement sweep may have non-surface-facing
+   * exposed faces).
+   * If `force == true` then all exposed faces will be extruded from.
    */
-  virtual void extrude(bool collapse = false, double offset = 0) = 0;
+  virtual void extrude(bool collapse = false, double offset = 0, bool force = false) = 0;
   //! \overload
   inline void extrude(Layer_sequence layers)
   {
     double height = 1;
     for (int i_layer = layers.n_layers() - 1; i_layer > 0; --i_layer) {
       double new_height = height - layers.spacing(i_layer);
-      extrude(true, new_height/height);
+      extrude(true, new_height/height, true);
       height = new_height;
     }
   }
