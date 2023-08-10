@@ -39,7 +39,8 @@ void Case::_set_vector(std::string name, Mat<> vec)
 Flow_bc* Case::_make_bc(std::string name)
 {
   Mat<> freestream = _get_vector("freestream", _vari("n_dim").value() + 2);
-  if (name == "characteristic") return new Freestream(freestream);
+  if (name == "characteristic") return new Riemann_invariants(freestream);
+  else if (name == "freestream") return new Freestream(freestream);
   else if (name == "nonpenetration") return new Nonpenetration;
   else if (name == "no_slip") {
     auto sub = _inter.make_sub();
@@ -262,7 +263,12 @@ Case::Case(std::string input_file)
     std::string wd = _vars("working_dir").value();
     std::string suffix = _vars("vis_file_suffix").value();
     if (_vari("vis_field").value()) {
-      _solver().visualize_field_tecplot(wd + "field" + suffix);
+      State_variables sv;
+      Art_visc_coef avc;
+      std::vector<const Qpoint_func*> to_vis;
+      to_vis.push_back(&sv);
+      if (_vard("art_visc_constant").value() > 0 || _vard("art_visc_width").value() > 0) to_vis.push_back(&avc);
+      _solver().visualize_field_tecplot(Qf_concat(to_vis), wd + "field" + suffix);
     }
     if (_vari("vis_surface").value() && _has_geom) {
       _solver().visualize_surface_tecplot(_solver().mesh().surface_bc_sn(), wd + "surface" + suffix);
