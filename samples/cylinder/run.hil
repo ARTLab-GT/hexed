@@ -7,7 +7,7 @@ mesh_extreme11 =  10.
 geom0 = {geom.csv}
 pressure = 120.96
 temperature = 75.61
-mach = 0.1
+mach = 0.
 transport_model = {best}
 surface_refine = {return = is_extruded & nom_sz > 0.4}
 surface_max_iters = 20
