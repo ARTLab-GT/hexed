@@ -29,8 +29,8 @@ TEST_CASE("Interpreter")
   REQUIRE(inter.variables->lookup<int>("result").value() == 5);
   inter.exec("ludwig = ludwig + {-glauert}");
   REQUIRE(inter.variables->lookup<std::string>("ludwig").value() == "prandtl-glauert");
-  inter.exec("code = -1.0 + {name} + 3");
-  REQUIRE(inter.variables->lookup<std::string>("code").value() == "-1.000000name3");
+  inter.exec("code = -1.1 + {name} + 3");
+  REQUIRE(inter.variables->lookup<std::string>("code").value() == "-1.1name3");
   inter.exec("result = 2*3 + 1*2 - -3*-3*3");
   REQUIRE(inter.variables->lookup<int>("result").value() == -19);
   inter.exec("result = (1 + 2*2)*2");

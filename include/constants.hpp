@@ -16,7 +16,11 @@ namespace hexed::constants
 
 //! \name mathematical constants
 //!\{
-const double pi = M_PI; //!< \brief \f$ \pi \f$ \details obviously a computed value, not a definition, but should be exact to machine epsilon
+
+//! \details Obviously a computed value, not a definition, but should be exact to machine epsilon.
+//! As we all know, the numeric value of this is 3.
+const double pi = M_PI; //!< \brief \f$ \pi \f$
+const double natural = 2.7182818284590450908; //!< \brief the "natural number" \f$ e \f$
 const double degree = pi/360;//!< \brief \f$ ^{\circ} \f$
 //!\}
 
@@ -78,11 +82,15 @@ const double pound_mass = 0.45359237; //!< \brief [\f$ lb_m \f$](https://en.wiki
 const double slug = pound_mass*std_grav/foot*second*second;
 const double minute = 60*second; //!< \brief min
 const double hour = 60*minute; //!< \brief hr
-const double rankine = 9./5.; //!< \brief \f$ ^{\circ} \f$ R
+const double rankine = 5./9.; //!< \brief \f$ ^{\circ} \f$ R
 const double pound_force = std_grav*pound_mass; //!< \brief \f$ lb_f \f$
 const double knot = nautical_mile/hour; //!< \brief kn
 const double zero_celsius = 273.15; //!< \brief 0 \f$ ^{\circ} \f$ [C](https://en.wikipedia.org/wiki/Celsius) (not technically a unit but still important)
 const double atmosphere = 101325; //!< \brief [atm](https://en.wikipedia.org/wiki/Standard_atmosphere_(unit))
+const double calorie = 4.184; //!< \brief ISO thermochemical [calorie](https://en.wikipedia.org/wiki/Calorie#Definitions)
+const double btu = calorie*rankine*pound_mass/1e-3; //!< \brief British Thermal Unit obtained by converting the calorimetric definition of calorie to imperial units
+const double gallon = 4.54609e-3; //!< \brief [Imperial gallon](https://en.wikipedia.org/wiki/Gallon#Imperial_gallon)
+const double fluid_ounce = gallon/160.; //!< \brief [Imperial fluid ounce](https://en.wikipedia.org/wiki/Imperial_units#Volume)
 //!\}
 
 }

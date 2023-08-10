@@ -1,7 +1,7 @@
 n_dim = 2
 altitude = 0.
 speed = 100.
-init_ref_level = 1
+init_ref_level = 3
 init_condition = {vortex}
 mesh_extreme00 = -1.
 mesh_extreme10 = -1.

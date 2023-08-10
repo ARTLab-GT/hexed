@@ -159,6 +159,7 @@ Case::Case(std::string input_file)
       }
     }
     if (!geoms.empty()) {
+      _has_geom = true;
       _solver().mesh().set_surface(new Compound_geom(geoms), _make_bc(_vars("surface_bc").value()), _get_vector("flood_fill_start", nd));
       _solver().calc_jacobian();
     }
@@ -220,7 +221,7 @@ Case::Case(std::string input_file)
     if (_vari("vis_field").value()) {
       _solver().visualize_field_tecplot(wd + "field" + suffix);
     }
-    if (_vari("vis_surface").value()) {
+    if (_vari("vis_surface").value() && _has_geom) {
       _solver().visualize_surface_tecplot(_solver().mesh().surface_bc_sn(), wd + "surface" + suffix);
     }
     return 0;
