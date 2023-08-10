@@ -137,6 +137,7 @@ Case::Case(std::string input_file)
     }
     _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, _vari("local_time").value(), *visc_model, *therm_model));
     _solver().mesh().add_tree(bcs, mesh_extremes(all, 0));
+    _solver().set_fix_admissibility(_vari("fix_therm_admis").value());
     return 0;
   }));
 
@@ -184,6 +185,7 @@ Case::Case(std::string input_file)
     if (!geoms.empty()) {
       _has_geom = true;
       _solver().mesh().set_surface(new Compound_geom(geoms), _make_bc(_vars("surface_bc").value()), _get_vector("flood_fill_start", nd));
+      for (int i_smooth = 0; i_smooth < _vari("n_smooth"); ++i_smooth) _solver().mesh().relax(0.7);
       _solver().calc_jacobian();
     }
     return 0;
@@ -259,6 +261,11 @@ Case::Case(std::string input_file)
   }));
 
   _inter.variables->create<int>("update", new Namespace::Heisenberg<int>([this]() {
+    if (_vard("art_visc_width").value() > 0) {
+      _solver().set_art_visc_smoothness(_vard("art_visc_width").value());
+    } else if (_vard("art_visc_constant").value() > 0) {
+      _solver().set_art_visc_smoothness(_vard("art_visc_constant").value());
+    }
     _solver().update(_vard("max_safety").value(), _vard("max_time_step").value());
     return 0;
   }));
@@ -269,7 +276,9 @@ Case::Case(std::string input_file)
     return _solver().iteration_status().header();
   }));
   _inter.variables->create<std::string>("report", new Namespace::Heisenberg<std::string>([this]() {
-    return _solver().iteration_status().report();
+    std::string rpt = _solver().iteration_status().report();
+    _solver().reset_counters();
+    return rpt;
   }));
   _inter.variables->create<std::string>("performance_report", new Namespace::Heisenberg<std::string>([this]() {
     return _solver().stopwatch_tree().report();

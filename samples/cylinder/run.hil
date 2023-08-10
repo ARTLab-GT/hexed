@@ -1,19 +1,27 @@
 n_dim = 2
-mesh_extreme00 = -10.
-mesh_extreme01 =  10.
-mesh_extreme10 = -10.
-mesh_extreme11 =  10.
+mesh_extreme00 = -2.
+mesh_extreme01 =  0.
+mesh_extreme10 =  0.
+mesh_extreme11 =  2.
+init_ref_level = 4
+extremal_bc10 = {nonpenetration}
 =shell {python3 gen_geom.py}
 geom0 = {geom.csv}
 pressure = 120.96
 temperature = 75.61
-mach = 0.
-transport_model = {best}
+mach = 5.
+art_visc_width = 1.5*2.^-init_ref_level
+fix_therm_admis = true
 surface_refine = {return = is_extruded & nom_sz > 0.4}
 surface_max_iters = 20
-wall_spacing = 0.1
-done = {iteration >= 1e5}
-max_safety = 0.1
+vis_freq = 1000
+done = {iteration >= 2e4}
+max_safety = 1e-6
+iterate = iterate + {
+    if = {iteration < 1e4}
+    then = {max_safety = 0.7*iteration*1e-4}
+    $cond
+}
 
 $init
 $run
