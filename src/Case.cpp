@@ -8,6 +8,8 @@
 namespace hexed
 {
 
+const double heat_rat = 1.4;
+
 Solver& Case::_solver()
 {
   HEXED_ASSERT(_solver_ptr, "`Solver` object does not exist");
@@ -47,6 +49,15 @@ Flow_bc* Case::_make_bc(std::string name)
     if (sub.variables->exists("heat_flux")) { // note not recursive
       therm_t = No_slip::heat_flux;
       value = sub.variables->lookup<double>("heat_flux");
+    } else if (sub.variables->exists("internal_energy")) { // note not recursive
+      therm_t = No_slip::internal_energy;
+      value = sub.variables->lookup<double>("internal_energy");
+    } else if (sub.variables->exists("temperature")) { // note not recursive
+      therm_t = No_slip::internal_energy;
+      value = sub.variables->lookup<double>("temperature");
+      HEXED_ASSERT(value, "thermal BC specification not understood");
+      printf("temp: %e\n", value.value());
+      *value *= constants::specific_gas_air/(heat_rat - 1.);
     }
     HEXED_ASSERT(value, "thermal BC specification not understood");
     return new No_slip(therm_t, value.value());
@@ -67,7 +78,6 @@ Case::Case(std::string input_file)
                  format_str(300, "`row_size` must be between 2 and %i", config::max_row_size));
     // compute freestream
     Mat<> freestream(*n_dim + 2);
-    double heat_rat = 1.4;
     if (_vard("freestream0")) freestream = _get_vector("freestream", *n_dim + 2);
     else {
       if (_vard("altitude")) {

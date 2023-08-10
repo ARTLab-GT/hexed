@@ -12,14 +12,17 @@ temperature = 75.61
 mach = 5.
 art_visc_width = 1.5*2.^-init_ref_level
 fix_therm_admis = true
+transport_model = {best}
+thermal_bc = {temperature = 98.89}
+wall_spacing = 0.05
 surface_refine = {return = is_extruded & nom_sz > 0.4}
 surface_max_iters = 20
-vis_freq = 1000
-done = {iteration >= 2e4}
+vis_freq = 10000
+done = {iteration >= 2e5}
 max_safety = 1e-6
 iterate = iterate + {
     if = {iteration < 1e4}
-    then = {max_safety = 0.7*iteration*1e-4}
+    then = {max_safety = 0.2*iteration*1e-4}
     $cond
 }
 
