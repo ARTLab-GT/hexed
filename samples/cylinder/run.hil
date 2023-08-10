@@ -1,12 +1,12 @@
 n_dim = 2
 mesh_extreme00 = -10.
 mesh_extreme01 =  10.
-mesh_extreme10 =   0.
+mesh_extreme10 = -10.
 mesh_extreme11 =  10.
-extremal_bc10 = {nonpenetration}
 =shell {python3 gen_geom.py}
 geom0 = {geom.csv}
-altitude = 0.
+pressure = 120.96
+temperature = 75.61
 mach = 0.3
 surface_refine = {return = is_extruded & nom_sz > 0.4}
 surface_max_iters = 20

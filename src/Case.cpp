@@ -70,7 +70,7 @@ Case::Case(std::string input_file)
         freestream(*n_dim) = *_vard("density");
         if (_vard("pressure")) _inter.variables->assign<double>("temperature", *_vard("pressure")/(constants::specific_gas_air**_vard("density")));
         else _inter.variables->assign<double>("pressure", *_vard("density")*constants::specific_gas_air**_vard("temperature"));
-      } else _inter.variables->assign<double>("density", *_vard("pressure")/constants::specific_gas_air**_vard("temperature"));
+      } else _inter.variables->assign<double>("density", *_vard("pressure")/(constants::specific_gas_air**_vard("temperature")));
       HEXED_ASSERT(_vard("velocity0").has_value() + _vard("speed").has_value() + _vard("mach").has_value() == 1,
                    "exactly one of velosity, speed, and Mach number must be specified");
       Mat<> veloc;
@@ -112,7 +112,18 @@ Case::Case(std::string input_file)
     }
     HEXED_ASSERT((mesh_extremes(all, 1) - mesh_extremes(all, 0)).minCoeff() > 0, "all mesh dimensions must be positive!");
     double root_sz = (mesh_extremes(all, 1) - mesh_extremes(all, 0)).maxCoeff();
-    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, _vari("local_time").value()));
+    std::unique_ptr<Transport_model> visc_model; // make these pointers since assignment operator is deleted
+    std::unique_ptr<Transport_model> therm_model;
+    if (_vars("transport_model").value() == "inviscid") {
+      visc_model.reset(new Transport_model(inviscid));
+      therm_model.reset(new Transport_model(inviscid));
+    } else if (_vars("transport_model").value() == "best") {
+      visc_model.reset(new Transport_model(air_sutherland_dyn_visc));
+      therm_model.reset(new Transport_model(air_sutherland_therm_cond));
+    } else {
+      HEXED_ASSERT(false, "unrecognized transport model specification");
+    }
+    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, _vari("local_time").value(), *visc_model, *therm_model));
     _solver().mesh().add_tree(bcs, mesh_extremes(all, 0));
     return 0;
   }));

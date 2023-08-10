@@ -20,7 +20,7 @@ row_size = 6
 init_ref_level = 3
 local_time = true
 init_condition = {freestream}
-viscosity_model = {inviscid}
+transport_model = {inviscid}
 surface_bc = {auto}
 temperature_offset = 0.
 attack = 0.
@@ -75,7 +75,7 @@ init = {
     =shell({if [ ! -d } + working_dir + { ]; then mkdir } + working_dir + {; fi})
     if = {surface_bc == {auto}}
     then = {
-        if = {viscosity_model == {inviscid}}
+        if = {transport_model == {inviscid}}
         then = {surface_bc = {nonpenetration}}
         else = {surface_bc = {no_slip}}
         $cond
