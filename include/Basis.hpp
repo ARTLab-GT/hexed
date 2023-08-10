@@ -21,6 +21,7 @@ class Basis
   virtual ~Basis();
   //! \brief the `i`th interpolation node (i.e. quadrature point). Should be in interval [0, 1].
   virtual double node(int i) const = 0;
+  Eigen::VectorXd nodes() const; //!< \brief Get vector of nodes
   //! \brief `node_weights()(i)` is the quadrature weight associated with `node(i)` Integrates in domain [0, 1].
   virtual Eigen::VectorXd node_weights() const = 0;
   //! \brief Differentiation matrix. `diff_mat()(i, j)` is the derivative of interpolating polynomial `j` evaluated at `node(i)`.
@@ -32,7 +33,7 @@ class Basis
    */
   virtual Eigen::VectorXd orthogonal(int degree) const = 0;
   /*! \brief Interpolate to arbitrary points.
-   * \details Not for high performance applications. `interpolate(sample)(i, j)` is the `j`th basis polynomial evaluated at `sample(i)`
+   * \details Current implementation is not very performance-optimized. `interpolate(sample)(i, j)` is the `j`th basis polynomial evaluated at `sample(i)`
    */
   Eigen::MatrixXd interpolate(const Eigen::VectorXd& sample) const;
   /*! \brief Matrix to prolong into polynomial space of one higher refinement level.

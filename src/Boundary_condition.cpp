@@ -4,6 +4,7 @@
 #include <kernel_factory.hpp>
 #include <constants.hpp>
 #include <pde.hpp>
+#include <Gauss_lobatto.hpp>
 
 namespace hexed
 {
@@ -580,17 +581,30 @@ void Geom_mbc::snap_vertices(Boundary_connection& con)
 
 void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
 {
+  Gauss_lobatto lob(basis.row_size);
+  Mat<dyn, dyn> to_lob = basis.interpolate(lob.nodes());
+  Mat<dyn, dyn> from_lob = lob.interpolate(basis.nodes());
   if (!con.element().node_adjustments()) return; // Cartesian elements don't have `node_adjustments()`, so in this case just exit
   auto params {con.storage_params()};
   const int nfq = params.n_qpoint()/params.row_size;
+  const int nd = params.n_dim;
+  Mat<dyn, dyn> face_pos [2] {{nfq, nd}, {nfq, nd}};
+  // get position on this and opposite face
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-    // get position on this and opposite face
-    Mat<> face_pos [2];
     for (int face_sign = 0; face_sign < 2; ++face_sign) {
-      face_pos[face_sign] = math::to_mat(con.element().face_position(basis, 2*con.i_dim() + face_sign, i_qpoint));
+      face_pos[face_sign](i_qpoint, all) = math::to_mat(con.element().face_position(basis, 2*con.i_dim() + face_sign, i_qpoint));
     }
+  }
+  for (int face_sign = 0; face_sign < 2; ++face_sign) {
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      Mat<> col = face_pos[face_sign](all, i_dim);
+      face_pos[face_sign](all, i_dim) = math::hypercube_matvec(to_lob, col);
+    }
+  }
+  Mat<> face_adj(nfq);
+  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
     // compute intersections
-    auto sects = geom->intersections(face_pos[0], face_pos[1]);
+    auto sects = geom->intersections(face_pos[0](i_qpoint, all), face_pos[1](i_qpoint, all));
     // set the node adjustment to match the nearest intersection, if any of them are reasonably close
     double best_adj = 0.;
     double distance = 1.;
@@ -601,8 +615,10 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
         distance = std::abs(adj);
       }
     }
-    con.element().node_adjustments()[(2*con.i_dim() + con.inside_face_sign())*nfq + i_qpoint] += best_adj;
+    face_adj(i_qpoint) = best_adj;
   }
+  Eigen::Map<Mat<>>(con.element().node_adjustments() + (2*con.i_dim() + con.inside_face_sign())*nfq, nfq)
+    += math::hypercube_matvec(from_lob, face_adj);
 }
 
 }
