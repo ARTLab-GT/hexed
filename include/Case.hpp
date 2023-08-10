@@ -18,6 +18,7 @@ class Case
   void _set_vector(std::string name, Mat<>);
   std::optional<std::string> _vars(std::string name);
   Flow_bc* _make_bc(std::string name);
+  bool _has_geom = false;
   public:
   Case(std::string input_file);
 };
