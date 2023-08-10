@@ -24,6 +24,14 @@ iterate = iterate + {
     if = {iteration < 1e4}
     then = {max_safety = 0.2*iteration*1e-4}
     $cond
+    ={
+    if = {iteration == 49000}
+    then = {max_safety = 1e-8}
+    $cond
+    if = {iteration == 80000}
+    then = {max_safety = 0.2}
+    $cond
+    }
 }
 
 $init

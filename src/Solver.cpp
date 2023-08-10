@@ -487,6 +487,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
         sw_adv.children.at("deformed" ).work_units_completed += acc_mesh.deformed ().elements().size();
         // update advection state and residual
         sw_adv.children.at("update").stopwatch.start();
+        const double max_res = 1e-2;
         #pragma omp parallel for reduction(+:diff, n_avg)
         for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
           double* state = elements[i_elem].stage(0);
@@ -496,7 +497,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
             // compute update
             double pseudotime_scale = + dt_adv*tss[i_qpoint]*2/advect_length;
             double old = adv[i_node*nq + i_qpoint]; // record for measuring residual
-            adv[i_node*nq + i_qpoint] += state[nd*nq + i_qpoint] - state[(nd + 1)*nq + i_qpoint] + pseudotime_scale*1.;
+            adv[i_node*nq + i_qpoint] += max_res*std::tanh((state[nd*nq + i_qpoint] - state[(nd + 1)*nq + i_qpoint])/max_res) + pseudotime_scale*1.;
             adv[i_node*nq + i_qpoint] /= 1. + pseudotime_scale;
             // add to residual
             double d = adv[i_node*nq + i_qpoint] - old;
