@@ -168,12 +168,6 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   }
 }
 
-std::unique_ptr<Solver_interface> make_solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
-                                              Transport_model viscosity_model, Transport_model thermal_conductivity_model)
-{
-  return std::unique_ptr<Solver_interface>(new Solver(n_dim, row_size, root_mesh_size, local_time_stepping, viscosity_model, thermal_conductivity_model));
-}
-
 Mesh& Solver::mesh() {return acc_mesh;}
 Storage_params Solver::storage_params() {return params;}
 const Stopwatch_tree& Solver::stopwatch_tree() {return stopwatch;}
@@ -1183,111 +1177,6 @@ void Solver::vis_cart_surf_tecplot(int bc_sn, std::string name, const Boundary_f
 {
   Mesh::Reset_vertices reset(acc_mesh);
   visualize_surface_tecplot(bc_sn, func, name, 2);
-}
-#endif
-
-#if HEXED_USE_OTTER
-void Solver::visualize_edges_otter(otter::plot& plt, Eigen::Matrix<double, 1, Eigen::Dynamic> color, int n_sample)
-{
-  auto& elements = acc_mesh.elements();
-  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    otter_vis::add_edges(plt, elements[i_elem], basis, color, n_sample);
-  }
-}
-
-void Solver::visualize_surface_otter(otter::plot& plt, int bc_sn, const otter::colormap& cmap, const Qpoint_func& color_by, std::array<double, 2> bounds, bool transparent, int n_sample, double tol)
-{
-  if (color_by.n_var(params.n_dim) != 1) throw std::runtime_error("`color_by` must be scalar");
-  // substitute bounds if necessary
-  if (std::isnan(bounds[0]) || std::isnan(bounds[1])) {
-    bounds = bounds_field(color_by)[0];
-    bounds[1] += tol;
-  }
-  // iterate through boundary connections and visualize an `otter::surface` for each
-  auto& bc_cons {acc_mesh.boundary_connections()};
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con)
-  {
-    auto& con {bc_cons[i_con]};
-    if (con.bound_cond_serial_n() == bc_sn)
-    {
-      // fetch face data
-      Vis_data vis_pos(con.element(), Position_func(), basis, status.flow_time);
-      Vis_data vis_var(con.element(),   color_by, basis, status.flow_time);
-      // interpolate to boundary face
-      auto dir = con.direction();
-      Eigen::MatrixXd face_pos = vis_pos.face(dir.i_dim[0], dir.face_sign[0], n_sample);
-      Eigen::VectorXd face_var = vis_var.face(dir.i_dim[0], dir.face_sign[0], n_sample);
-      // transform so that bounds[0] is the bottom of the color map and bounds[1] is the top
-      face_var = (face_var - Eigen::VectorXd::Constant(face_var.size(), bounds[0]))/(bounds[1] - bounds[0]);
-      // add to plot
-      if (params.n_dim == 2) {
-        face_pos.resize(n_sample, params.n_dim);
-        otter::curve curve(face_pos, cmap(face_var));
-        plt.add(curve);
-      } else if (params.n_dim == 3) {
-        face_pos.resize(n_sample*n_sample, params.n_dim);
-        Eigen::MatrixXd color = Eigen::MatrixXd::Constant(face_var.size(), 4, transparent ? .2 : 1.);
-        Eigen::MatrixXd mapped = cmap(face_var);
-        color(Eigen::all, Eigen::seqN(0, mapped.cols())) = mapped;
-        otter::surface surf(n_sample, face_pos, color);
-        if (transparent) surf.transparency = otter::surface::transparent_add;
-        plt.add(surf);
-      }
-    }
-  }
-}
-
-void Solver::visualize_field_otter(otter::plot& plt,
-                                   const Qpoint_func& contour,
-                                   int n_contour,
-                                   std::array<double, 2> contour_bounds,
-                                   const Qpoint_func& color_by,
-                                   std::array<double, 2> color_bounds,
-                                   const otter::colormap& cmap_contour,
-                                   const otter::colormap& cmap_field,
-                                   bool transparent, bool show_color,
-                                   int n_div, double tol)
-{
-  if (contour.n_var(params.n_dim) != 1) throw std::runtime_error("`contour` must be scalar");
-  if (color_by.n_var(params.n_dim) != 1) throw std::runtime_error("`color_by` must be scalar");
-  // substitute bounds if necessary
-  auto bf = bounds_field(contour)[0];
-  if (std::isnan(contour_bounds[0]) || std::isnan(contour_bounds[1])) {
-    contour_bounds = bf;
-    contour_bounds[1] += tol;
-  }
-  if (std::isnan(color_bounds[0]) || std::isnan(color_bounds[1])) {
-    color_bounds = bounds_field(color_by)[0];
-    color_bounds[1] += tol;
-  }
-  auto& elements = acc_mesh.elements();
-  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    auto& elem = elements[i_elem];
-    for (int i_contour = 0; i_contour < n_contour; ++i_contour) {
-      double contour_val = (i_contour + 1)/(n_contour + 1.);
-      contour_val = contour_val*(contour_bounds[1] - contour_bounds[0]) + contour_bounds[0];
-      contour_val = (contour_val - bf[0])/(bf[1] - bf[0]);
-      // add contour line/surface
-      otter_vis::add_contour(plt, elem, basis, Scaled(contour, bf), contour_val, n_div,
-                             color_by, color_bounds, cmap_contour, transparent, status.flow_time, tol);
-      // for 2d, color the flow field as well
-    }
-    if ((params.n_dim == 2) && show_color) {
-      const int n_sample = 2*n_div + 1;
-      Vis_data vis_pos(elem, Position_func(), basis, status.flow_time);
-      Vis_data vis_var(elem,         contour, basis, status.flow_time);
-      Eigen::MatrixXd pos_3d(n_sample*n_sample, 3);
-      Eigen::MatrixXd pos = vis_pos.interior(n_sample);
-      Eigen::MatrixXd var = vis_var.interior(n_sample);
-      pos_3d(Eigen::all, Eigen::seqN(0, 2)) = pos;
-      // set z componento to slightly negative so that lines show up on top
-      pos_3d(Eigen::all, 2).array() = -1e-4*elem.nominal_size();
-      // adjust color-by variable so that bound interval maps to [0, 1]
-      var = (var - Eigen::VectorXd::Constant(var.size(), contour_bounds[0]))/(contour_bounds[1] - contour_bounds[0]);
-      // throw it up there
-      plt.add(otter::surface(n_sample, pos_3d, cmap_field(var)));
-    }
-  }
 }
 #endif
 

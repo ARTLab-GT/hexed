@@ -40,7 +40,6 @@ option(build_docs "build documentation? (requires doxygen)" OFF)
 option(sanitize "If ON, compile with sanitizer flags." OFF)
 option(profile "if ON, compile with gprof profiling flags (in which case `threaded` should be OFF)")
 option(threaded "If ON, allow multiple threads. Substantially reduces execution time." ON)
-option(use_otter "include capability to use otter for plotting" OFF)
 option(use_tecplot "include capability to use tecplot for plotting" ON)
 option(use_cppcheck "use the cppcheck static analysis tool (requires cppcheck)" OFF)
 option(use_nlopt "enable features that require root finding with NLopt" OFF)
@@ -117,10 +116,6 @@ add_custom_target(
 add_library(hexed SHARED)
 
 # add external libraries
-if (use_otter)
-    find_package(otter REQUIRED)
-    target_link_libraries(hexed PUBLIC otter)
-endif()
 if (use_tecplot)
     target_link_libraries(hexed PRIVATE tecio)
 endif()
