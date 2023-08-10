@@ -39,7 +39,19 @@ Flow_bc* Case::_make_bc(std::string name)
   Mat<> freestream = _get_vector("freestream", _vari("n_dim").value() + 2);
   if (name == "characteristic") return new Freestream(freestream);
   else if (name == "nonpenetration") return new Nonpenetration;
-  else HEXED_ASSERT(false, format_str(1000, "unrecognized boundary condition type `%s`", name));
+  else if (name == "no_slip") {
+    auto sub = _inter.make_sub();
+    sub.exec("$thermal_bc");
+    No_slip::Thermal_type therm_t;
+    std::optional<double> value;
+    if (sub.variables->exists("heat_flux")) { // note not recursive
+      therm_t = No_slip::heat_flux;
+      value = sub.variables->lookup<double>("heat_flux");
+    }
+    HEXED_ASSERT(value, "thermal BC specification not understood");
+    return new No_slip(therm_t, value.value());
+  }
+  else HEXED_ASSERT(false, format_str(1000, "unrecognized boundary condition type `%s`", name.c_str()));
   return nullptr; // will never happen. just to shut up GCC warning
 }
 
