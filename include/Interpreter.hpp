@@ -50,8 +50,8 @@ class Interpreter
   static _Dynamic_value _comparison_op(_Dynamic_value, _Dynamic_value);
 
   static _Dynamic_value _print_str(_Dynamic_value);
-  static _Dynamic_value _general_add(_Dynamic_value, _Dynamic_value);
   static _Dynamic_value _general_eq(_Dynamic_value, _Dynamic_value);
+  _Dynamic_value _general_add(_Dynamic_value, _Dynamic_value);
 
   struct _Binary_op {
     int precedence;

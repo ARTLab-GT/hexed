@@ -166,23 +166,6 @@ Interpreter::_Dynamic_value Interpreter::_comparison_op(Interpreter::_Dynamic_va
   return v;
 }
 
-Interpreter::_Dynamic_value Interpreter::_general_add(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1)
-{
-  if (!o0.s && !o1.s) return _arithmetic_op<_add<double>, _add<int>>(o0, o1);
-  _Dynamic_value val;
-  if (o0.s) {
-    val.s.emplace(*o0.s);
-    if (o1.i) *val.s += std::to_string(*o1.i);
-    if (o1.d) *val.s += std::to_string(*o1.d);
-    if (o1.s) *val.s += *o1.s;
-  } else {
-    val.s.emplace(*o1.s);
-    if (o0.i) *val.s = std::to_string(*o0.i) + *val.s;
-    if (o0.d) *val.s = std::to_string(*o0.d) + *val.s;
-  }
-  return val;
-}
-
 Interpreter::_Dynamic_value Interpreter::_general_eq(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1)
 {
   if (o0.s && o1.s) {
@@ -193,6 +176,24 @@ Interpreter::_Dynamic_value Interpreter::_general_eq(Interpreter::_Dynamic_value
     HEXED_ASSERT(!o0.s && !o1.s, "operands to `==` must be either both numeric or both `string`", Parsing_error);
     return _comparison_op<_eq<double>, _eq<int>>(o0, o1);
   }
+}
+
+Interpreter::_Dynamic_value Interpreter::_general_add(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1)
+{
+  if (!o0.s && !o1.s) return _arithmetic_op<_add<double>, _add<int>>(o0, o1);
+  _Dynamic_value val;
+  std::string fd = variables->lookup<std::string>("format_double").value();
+  if (o0.s) {
+    val.s.emplace(*o0.s);
+    if (o1.i) *val.s += std::to_string(*o1.i);
+    if (o1.d) *val.s += format_str(300, fd, *o1.d);
+    if (o1.s) *val.s += *o1.s;
+  } else {
+    val.s.emplace(*o1.s);
+    if (o0.i) *val.s = std::to_string(*o0.i) + *val.s;
+    if (o0.d) *val.s = format_str(300, fd, *o0.d) + *val.s;
+  }
+  return val;
 }
 
 Interpreter::Interpreter(std::vector<std::string> preload) :
@@ -255,7 +256,7 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
     {"/" , {2, _arithmetic_op<_div<double>, _div<int>>}},
     {"*" , {2, _arithmetic_op<_mul<double>, _mul<int>>}},
     {"-" , {3, _arithmetic_op<_sub<double>, _sub<int>>}},
-    {"+" , {3, _general_add}},
+    {"+" , {3, [this](_Dynamic_value o0, _Dynamic_value o1){return _general_add(o0, o1);}}},
     {"==", {4, _general_eq}},
     {"!=", {4, [](_Dynamic_value op0, _Dynamic_value op1){
         return _Dynamic_value{{!_general_eq(op0, op1).i.value()}, {}, {}};
@@ -283,11 +284,13 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
     throw std::runtime_error("Exception thrown from HIL by evaluating `throw`.");
     return 0;
   }));
+  // builtin values
+  variables->assign<double>("huge", huge);
   // initialize exception handling variables
   variables->assign<std::string>("exception", "");
   variables->assign<std::string>("except", "");
-  // builtin values
-  variables->assign<double>("huge", huge);
+  // string conversion format
+  variables->assign<std::string>("format_double", "%g");
   // load standard library
   for (auto file : preload) {
     exec(format_str(1000, "$read {%s}", file.c_str()));
