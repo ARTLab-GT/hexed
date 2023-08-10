@@ -7,7 +7,7 @@ extremal_bc10 = {nonpenetration}
 =shell {python3 gen_geom.py}
 geom0 = {geom.csv}
 altitude = 0.
-mach = 0.
+mach = 0.3
 surface_refine = {return = is_extruded & nom_sz > 0.4}
 surface_max_iters = 20
 done = {iteration >= 1e5}
