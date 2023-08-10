@@ -238,15 +238,21 @@ class Spatial
                   fluxc(i_row, Eigen::seqN(i_dim*Pde::n_update, Pde::n_update)) = eq.flux(row_r(i_row, Eigen::all), Mat<1, n_dim>::Unit(i_dim));
                 }
               }
-              //fluxc = diff_mat*fluxc;
+              Mat<2, Pde::n_update*n_dim> bound_fluxc = boundary*fluxc;
+              Mat<2, n_dim> bound_n = boundary*row_n;
+              Mat<row_size, n_dim*Pde::n_update> diff_c = diff_mat*fluxc;
+              Mat<row_size, n_dim> diff_n = diff_mat*row_n;
+              Mat<2, Pde::n_update> bound_flux;
+              bound_flux.setZero();
               flux.setZero();
               for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
                 for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-                  flux(all, i_var) += fluxc(all, i_dim*Pde::n_update + i_var).cwiseProduct(row_n(all, i_dim));
+                  flux(all, i_var) += diff_c(all, i_dim*Pde::n_update + i_var).cwiseProduct( row_n(all, i_dim));
+                  flux(all, i_var) +=  fluxc(all, i_dim*Pde::n_update + i_var).cwiseProduct(diff_n(all, i_dim));
+                  bound_flux(all, i_var) += bound_fluxc(all, i_dim*Pde::n_update + i_var).cwiseProduct(bound_n(all, i_dim));
                 }
               }
-              Mat<2, Pde::n_update> bound_flux = boundary*flux;
-              flux = diff_mat*flux;
+              //flux = diff_mat*flux;
               // fetch face data
               face_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
               // differentiate and write to temporary storage
