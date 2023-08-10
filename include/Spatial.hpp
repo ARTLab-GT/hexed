@@ -72,7 +72,12 @@ class Spatial
     const Pde eq;
     static constexpr int n_qpoint = math::pow(row_size, n_dim);
     Derivative<row_size> derivative;
-    Mat<2, row_size> boundary;
+    //Mat<2, row_size> boundary;
+    const Mat<row_size, row_size> diff_mat;
+    const Mat<2, row_size> boundary;
+    const Mat<2, 2> sign {{-1, 0}, {0, 1}};
+    const Mat<row_size, 1> inv_weights;
+    const Mat<row_size, 2> lift;
     Write_face<n_dim, row_size> write_face;
     const int stage;
     // weights for different parameters when assembling the updated state
@@ -88,7 +93,10 @@ class Spatial
     Local(const Basis& basis, double dt, bool which_stage, pde_args... args) :
       eq(args...),
       derivative{basis},
+      diff_mat{basis.diff_mat()},
       boundary{basis.boundary()},
+      inv_weights {Eigen::Array<double, row_size, 1>::Constant(1.)/basis.node_weights().array()},
+      lift {inv_weights.asDiagonal()*basis.boundary().transpose()*sign},
       write_face{basis},
       stage{which_stage},
       update_conv{stage ? dt*basis.cancellation_convective()/basis.max_cfl_convective() : dt},
@@ -223,13 +231,27 @@ class Spatial
                 row_n = Row_rw<n_dim, row_size>::read_row(nrml + i_dim*n_dim*n_qpoint, ind);
               }
               // compute flux
+              Mat<row_size, Pde::n_update*n_dim> fluxc;
               for (int i_row = 0; i_row < row_size; ++i_row) {
-                flux(i_row, Eigen::all) = eq.flux(row_r(i_row, Eigen::all), row_n(i_row, Eigen::all));
+                for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+                  //row_n(i_row, Eigen::all)
+                  fluxc(i_row, Eigen::seqN(i_dim*Pde::n_update, Pde::n_update)) = eq.flux(row_r(i_row, Eigen::all), Mat<1, n_dim>::Unit(i_dim));
+                }
               }
+              //fluxc = diff_mat*fluxc;
+              flux.setZero();
+              for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
+                for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+                  flux(all, i_var) += fluxc(all, i_dim*Pde::n_update + i_var).cwiseProduct(row_n(all, i_dim));
+                }
+              }
+              Mat<2, Pde::n_update> bound_flux = boundary*flux;
+              flux = diff_mat*flux;
               // fetch face data
               face_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
               // differentiate and write to temporary storage
-              Row_rw<Pde::n_update, row_size>::write_row(-derivative(flux, face_f), time_rate[0][0], ind, 1.);
+              //Row_rw<Pde::n_update, row_size>::write_row(-derivative(flux, face_f), time_rate[0][0], ind, 1.);
+              Row_rw<Pde::n_update, row_size>::write_row(-flux - lift*(face_f - bound_flux), time_rate[0][0], ind, 1.);
             }
             // compute viscous update
             if constexpr (Pde::is_viscous) {
