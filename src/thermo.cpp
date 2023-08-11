@@ -11,7 +11,7 @@ bool admissible(const double* data, const int n_dim, const int n_qpoint, double 
     admiss = admiss && (data[n_dim*n_qpoint + i_qpoint] > 0.)
                     && (data[(n_dim + 1)*n_qpoint + i_qpoint] > 0.);
     for (int i_var = 0; i_var < n_var; ++i_var) {
-      HEXED_ASSERT(!std::isnan(data[i_var*n_qpoint + i_qpoint]), "state is NaN");
+      HEXED_ASSERT(std::isfinite(data[i_var*n_qpoint + i_qpoint]), "state is not finite");
     }
   }
   return admiss;

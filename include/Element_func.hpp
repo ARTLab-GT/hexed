@@ -122,6 +122,15 @@ class Has_tree : public Element_info
   std::vector<double> operator()(Element& elem) const override;
 };
 
+//! Returns `Element::record`
+class Record : public Element_info
+{
+  public:
+  inline int n_var(int n_dim) const override {return 1;}
+  inline std::string variable_name(int n_dim, int i_var) const override {return "record";}
+  std::vector<double> operator()(Element& elem) const override;
+};
+
 //! Concatenates `Element_func`s
 typedef Concat_func<Element_func, Element&, const Basis&, double> Ef_concat;
 //! Concatenates `Element_info`s

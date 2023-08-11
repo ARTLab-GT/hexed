@@ -879,13 +879,20 @@ bool Solver::is_admissible()
   const int nq = params.n_qpoint();
   const int rs = params.row_size;
   bool admiss = 1;
+  #pragma omp parallel
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    elems[i_elem].record = 0;
+  }
   #pragma omp parallel for reduction (&&:admiss)
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
-    admiss = admiss && hexed::thermo::admissible(elem.stage(0), nd, nq);
+    bool elem_admis = true;
+    elem_admis = elem_admis && hexed::thermo::admissible(elem.stage(0), nd, nq);
     for (int i_face = 0; i_face < params.n_dim*2; ++i_face) {
-      admiss = admiss && hexed::thermo::admissible(elem.faces[i_face], nd, nq/rs);
+      elem_admis = elem_admis && hexed::thermo::admissible(elem.faces[i_face], nd, nq/rs);
     }
+    if (!elem_admis) elem.record = 1;
+    admiss = admiss && elem_admis;
   }
   auto& ref_faces = acc_mesh.refined_faces();
   bool refined_admiss = 1;
@@ -913,17 +920,13 @@ void Solver::fix_admissibility(double stability_ratio)
   const int rs = params.row_size;
   int iter;
   for (iter = 0;; ++iter) {
-    if (iter > 99999) {
-      #if HEXED_USE_OTTER
-      otter::plot plt;
-      visualize_field_otter(plt, Pressure(), 1, {0, 0}, Pressure(), {0, 0}, otter::const_colormap(Eigen::Vector4d{1., 0., 0., .1}), otter::plasma, false, false);
-      visualize_field_otter(plt, Pressure(), 0);
-      visualize_edges_otter(plt);
-      plt.show();
-      #endif
-      char buffer [200];
-      snprintf(buffer, 200, "failed to fix thermodynamic admissability in %i iterations", iter);
-      throw std::runtime_error(buffer);
+    HEXED_ASSERT(iter < 1e5, format_str(200, "failed to fix thermodynamic admissability in %i iterations", iter));
+    if (iter == 100) {
+      printf("> 100\n");
+      State_variables sv;
+      Record rec;
+      std::vector<const Qpoint_func*> to_vis {&sv, &rec};
+      visualize_field_tecplot(Qf_concat(to_vis), "inadmis" + std::to_string(status.iteration));
     }
     if (is_admissible()) break;
     else {
