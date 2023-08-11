@@ -57,7 +57,6 @@ Flow_bc* Case::_make_bc(std::string name)
       therm_t = No_slip::internal_energy;
       value = sub.variables->lookup<double>("temperature");
       HEXED_ASSERT(value, "thermal BC specification not understood");
-      printf("temp: %e\n", value.value());
       *value *= constants::specific_gas_air/(heat_rat - 1.);
     }
     HEXED_ASSERT(value, "thermal BC specification not understood");
