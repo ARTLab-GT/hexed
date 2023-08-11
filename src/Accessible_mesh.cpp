@@ -300,7 +300,7 @@ void request_connection(Element& elem, int n_dim, int i_dim, bool i_sign, int j_
   record.push_back(2*i_dim + i_sign);
 }
 
-void Accessible_mesh::extrude(bool collapse, double offset)
+void Accessible_mesh::extrude(bool collapse, double offset, bool force)
 {
   erase_if(vert_ptrs, &Vertex::Non_transferable_ptr::is_null);
   const int nd = params.n_dim;
@@ -360,7 +360,7 @@ void Accessible_mesh::extrude(bool collapse, double offset)
   std::vector<Empty_face> empty_faces;
   auto& elems = def.elements();
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    if (elems[i_elem].tree || !tree) {
+    if (elems[i_elem].tree || (!tree || force)) {
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         for (int face_sign = 0; face_sign < 2; ++face_sign) {
           const int i_face = 2*i_dim + face_sign;

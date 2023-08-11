@@ -624,7 +624,7 @@ void test_conservation(Test_mesh& tm, std::string name)
   // check that the iteration status is right at the start
   auto status = sol.iteration_status();
   // update
-  sol.update(.5);
+  sol.update(.01);
   status = sol.iteration_status();
   auto state  = sol.integral_field(hexed::State_variables());
   auto update = sol.integral_field(hexed::Physical_update());

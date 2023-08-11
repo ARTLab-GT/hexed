@@ -8,6 +8,8 @@
 namespace hexed
 {
 
+const double heat_rat = 1.4;
+
 Solver& Case::_solver()
 {
   HEXED_ASSERT(_solver_ptr, "`Solver` object does not exist");
@@ -37,9 +39,31 @@ void Case::_set_vector(std::string name, Mat<> vec)
 Flow_bc* Case::_make_bc(std::string name)
 {
   Mat<> freestream = _get_vector("freestream", _vari("n_dim").value() + 2);
-  if (name == "characteristic") return new Freestream(freestream);
+  if (name == "characteristic") return new Riemann_invariants(freestream);
+  else if (name == "freestream") return new Freestream(freestream);
   else if (name == "nonpenetration") return new Nonpenetration;
-  else HEXED_ASSERT(false, format_str(1000, "unrecognized boundary condition type `%s`", name));
+  else if (name == "no_slip") {
+    auto sub = _inter.make_sub();
+    sub.exec("$thermal_bc");
+    No_slip::Thermal_type therm_t;
+    std::optional<double> value;
+    if (sub.variables->exists("heat_flux")) { // note not recursive
+      therm_t = No_slip::heat_flux;
+      value = sub.variables->lookup<double>("heat_flux");
+    } else if (sub.variables->exists("internal_energy")) { // note not recursive
+      therm_t = No_slip::internal_energy;
+      value = sub.variables->lookup<double>("internal_energy");
+    } else if (sub.variables->exists("temperature")) { // note not recursive
+      therm_t = No_slip::internal_energy;
+      value = sub.variables->lookup<double>("temperature");
+      HEXED_ASSERT(value, "thermal BC specification not understood");
+      printf("temp: %e\n", value.value());
+      *value *= constants::specific_gas_air/(heat_rat - 1.);
+    }
+    HEXED_ASSERT(value, "thermal BC specification not understood");
+    return new No_slip(therm_t, value.value());
+  }
+  else HEXED_ASSERT(false, format_str(1000, "unrecognized boundary condition type `%s`", name.c_str()));
   return nullptr; // will never happen. just to shut up GCC warning
 }
 
@@ -55,7 +79,6 @@ Case::Case(std::string input_file)
                  format_str(300, "`row_size` must be between 2 and %i", config::max_row_size));
     // compute freestream
     Mat<> freestream(*n_dim + 2);
-    double heat_rat = 1.4;
     if (_vard("freestream0")) freestream = _get_vector("freestream", *n_dim + 2);
     else {
       if (_vard("altitude")) {
@@ -70,7 +93,7 @@ Case::Case(std::string input_file)
         freestream(*n_dim) = *_vard("density");
         if (_vard("pressure")) _inter.variables->assign<double>("temperature", *_vard("pressure")/(constants::specific_gas_air**_vard("density")));
         else _inter.variables->assign<double>("pressure", *_vard("density")*constants::specific_gas_air**_vard("temperature"));
-      } else _inter.variables->assign<double>("density", *_vard("pressure")/constants::specific_gas_air**_vard("temperature"));
+      } else _inter.variables->assign<double>("density", *_vard("pressure")/(constants::specific_gas_air**_vard("temperature")));
       HEXED_ASSERT(_vard("velocity0").has_value() + _vard("speed").has_value() + _vard("mach").has_value() == 1,
                    "exactly one of velosity, speed, and Mach number must be specified");
       Mat<> veloc;
@@ -112,8 +135,20 @@ Case::Case(std::string input_file)
     }
     HEXED_ASSERT((mesh_extremes(all, 1) - mesh_extremes(all, 0)).minCoeff() > 0, "all mesh dimensions must be positive!");
     double root_sz = (mesh_extremes(all, 1) - mesh_extremes(all, 0)).maxCoeff();
-    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, _vari("local_time").value()));
+    std::unique_ptr<Transport_model> visc_model; // make these pointers since assignment operator is deleted
+    std::unique_ptr<Transport_model> therm_model;
+    if (_vars("transport_model").value() == "inviscid") {
+      visc_model.reset(new Transport_model(inviscid));
+      therm_model.reset(new Transport_model(inviscid));
+    } else if (_vars("transport_model").value() == "best") {
+      visc_model.reset(new Transport_model(air_sutherland_dyn_visc));
+      therm_model.reset(new Transport_model(air_sutherland_therm_cond));
+    } else {
+      HEXED_ASSERT(false, "unrecognized transport model specification");
+    }
+    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, _vari("local_time").value(), *visc_model, *therm_model));
     _solver().mesh().add_tree(bcs, mesh_extremes(all, 0));
+    _solver().set_fix_admissibility(_vari("fix_therm_admis").value());
     return 0;
   }));
 
@@ -161,6 +196,7 @@ Case::Case(std::string input_file)
     if (!geoms.empty()) {
       _has_geom = true;
       _solver().mesh().set_surface(new Compound_geom(geoms), _make_bc(_vars("surface_bc").value()), _get_vector("flood_fill_start", nd));
+      for (int i_smooth = 0; i_smooth < _vari("n_smooth"); ++i_smooth) _solver().mesh().relax(0.7);
       _solver().calc_jacobian();
     }
     return 0;
@@ -201,6 +237,14 @@ Case::Case(std::string input_file)
     return changed;
   }));
 
+  _inter.variables->create<int>("make_layers", new Namespace::Heisenberg<int>([this]() {
+    _solver().mesh().disconnect_boundary(_solver().mesh().surface_bc_sn());
+    _solver().mesh().extrude(Layer_sequence(_vard("wall_spacing").value(), 1));
+    _solver().mesh().connect_rest(_solver().mesh().surface_bc_sn());
+    _solver().calc_jacobian();
+    return 0;
+  }));
+
   _inter.variables->create<int>("init_state", new Namespace::Heisenberg<int>([this]() {
     std::string init_cond = _vars("init_condition").value();
     auto freestream = _get_vector("freestream", _vari("n_dim").value() + 2);
@@ -219,7 +263,12 @@ Case::Case(std::string input_file)
     std::string wd = _vars("working_dir").value();
     std::string suffix = _vars("vis_file_suffix").value();
     if (_vari("vis_field").value()) {
-      _solver().visualize_field_tecplot(wd + "field" + suffix);
+      State_variables sv;
+      Art_visc_coef avc;
+      std::vector<const Qpoint_func*> to_vis;
+      to_vis.push_back(&sv);
+      if (_vard("art_visc_constant").value() > 0 || _vard("art_visc_width").value() > 0) to_vis.push_back(&avc);
+      _solver().visualize_field_tecplot(Qf_concat(to_vis), wd + "field" + suffix);
     }
     if (_vari("vis_surface").value() && _has_geom) {
       _solver().visualize_surface_tecplot(_solver().mesh().surface_bc_sn(), wd + "surface" + suffix);
@@ -228,6 +277,11 @@ Case::Case(std::string input_file)
   }));
 
   _inter.variables->create<int>("update", new Namespace::Heisenberg<int>([this]() {
+    if (_vard("art_visc_width").value() > 0) {
+      _solver().set_art_visc_smoothness(_vard("art_visc_width").value());
+    } else if (_vard("art_visc_constant").value() > 0) {
+      _solver().set_art_visc_smoothness(_vard("art_visc_constant").value());
+    }
     _solver().update(_vard("max_safety").value(), _vard("max_time_step").value());
     return 0;
   }));
@@ -238,7 +292,9 @@ Case::Case(std::string input_file)
     return _solver().iteration_status().header();
   }));
   _inter.variables->create<std::string>("report", new Namespace::Heisenberg<std::string>([this]() {
-    return _solver().iteration_status().report();
+    std::string rpt = _solver().iteration_status().report();
+    _solver().reset_counters();
+    return rpt;
   }));
   _inter.variables->create<std::string>("performance_report", new Namespace::Heisenberg<std::string>([this]() {
     return _solver().stopwatch_tree().report();

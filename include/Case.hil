@@ -20,11 +20,15 @@ row_size = 6
 init_ref_level = 3
 local_time = true
 init_condition = {freestream}
-viscosity_model = {inviscid}
+transport_model = {inviscid}
+thermal_bc = {heat_flux = 0}
 surface_bc = {auto}
 temperature_offset = 0.
 attack = 0.
 sideslip = 0.
+art_visc_constant = -1.
+art_visc_width = -1.
+fix_therm_admis = false
 working_dir = {hexed_out/}
 vis_file_suffix = {}
 vis_freq = 10000
@@ -35,6 +39,7 @@ surface_refine = {return = false}
 surface_unrefine = {return = ref_level > init_ref_level & !is_extruded}
 surface_max_iters = 100
 n_smooth = 30
+wall_spacing = -1. ;={ set to positive value }
 geom_n_segments = 1000
 vis_surface = true
 vis_field = true
@@ -67,6 +72,14 @@ print_iter = {
     then = {=println report}
     $cond
 }
+iterate = {
+    =update
+    $print_iter
+    $vis_iter
+    except = {=println exception}
+    $(read(working_dir + {runtime_cmd.hil}))
+    =shell({echo > } + working_dir + {runtime_cmd.hil})
+}
 
 init = {
     if = {working_dir#(#working_dir - 1) != {/}}
@@ -75,7 +88,7 @@ init = {
     =shell({if [ ! -d } + working_dir + { ]; then mkdir } + working_dir + {; fi})
     if = {surface_bc == {auto}}
     then = {
-        if = {viscosity_model == {inviscid}}
+        if = {transport_model == {inviscid}}
         then = {surface_bc = {nonpenetration}}
         else = {surface_bc = {no_slip}}
         $cond
@@ -105,6 +118,9 @@ init = {
         =println {done}
     }
     $loop
+    if = {wall_spacing > 0}
+    then = {=make_layers}
+    $cond
     =init_state
     =println({initialization complete with } + n_elements + { elements})
     =println {}
@@ -117,12 +133,7 @@ run = {
     while = {!($done)}
     do = {
         iteration = iteration + 1
-        =update
-        $print_iter
-        $vis_iter
-        except = {=println exception}
-        $(read(working_dir + {runtime_cmd.hil}))
-        =shell({echo > } + working_dir + {runtime_cmd.hil})
+        $iterate
     }
     $loop
     $print_final
