@@ -77,7 +77,7 @@ class Solver
    * Feel free to tweak these at runtime to influence the behavior of the solver
    */
   //!\{
-  double fix_admis_stab_rat = .7; //!< staility ratio for fixing thermodynamic admissibility.
+  double fix_admis_stab_rat = .1; //!< staility ratio for fixing thermodynamic admissibility.
   //!\}
   /*! \name artificial viscosity parameters
    * Tweakable parameters specifically affecting smoothness-based artificial viscosity calculation.

@@ -246,6 +246,26 @@ class Spatial
           }
         }
 
+        if constexpr (Pde::has_convection && Pde::n_update == 4) {
+          double limits [] = {9e6, 9e6, 8e3, 4e9};
+          for (int i_var = 0; i_var < 4; ++i_var) {
+            double norm = 0;
+            for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+              norm += math::pow(time_rate[0][i_var][i_qpoint], 2);
+            }
+            norm = std::sqrt(norm)/n_qpoint;
+            if (std::isnan(norm)) {
+              for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+                time_rate[0][i_var][i_qpoint] = 0.;
+              }
+            } else if (norm > limits[i_var]) {
+              for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+                time_rate[0][i_var][i_qpoint] /= limits[i_var]/norm;
+              }
+            }
+          }
+        }
+
         // write update to interior
         for (int i_var = 0; i_var < Pde::n_update; ++i_var)
         {
