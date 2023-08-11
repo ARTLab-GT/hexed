@@ -15,8 +15,7 @@ fix_therm_admis = true
 transport_model = {best}
 thermal_bc = {temperature = 98.89}
 wall_spacing = 0.02
-surface_refine = {return = is_extruded & nom_sz > 0.4}
-surface_max_iters = 20
+surface_max_iters = 0
 vis_freq = 10000
 print_freq = 200
 done = {iteration >= 2e5}
