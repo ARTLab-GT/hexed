@@ -21,20 +21,8 @@ print_freq = 200
 done = {iteration >= 2e5}
 max_safety = 1e-6
 iterate = iterate + {
-    if = {iteration < 1e4}
+    if = {iteration <= 1e4}
     then = {max_safety = 0.4*iteration*1e-4}
-    $cond
-    if = {iteration == 10^5}
-    then = {
-        print_freq = 20
-        vis_freq = 200
-    }
-    $cond
-    if = {iteration == 108000}
-    then = {
-        print_freq = 1
-        vis_freq = 10
-    }
     $cond
 }
 
