@@ -3,7 +3,7 @@
 namespace hexed::thermo
 {
 
-bool admissible(const double* data, const int n_dim, const int n_qpoint, double& min_mass, double& max_mass, double heat_rat)
+bool admissible(const double* data, const int n_dim, const int n_qpoint, double heat_rat)
 {
   const int n_var = n_dim + 2;
   bool admiss = true;
@@ -13,8 +13,6 @@ bool admissible(const double* data, const int n_dim, const int n_qpoint, double&
     for (int i_var = 0; i_var < n_var; ++i_var) {
       HEXED_ASSERT(std::isfinite(data[i_var*n_qpoint + i_qpoint]), "state is not finite");
     }
-    min_mass = std::min(min_mass, data[n_dim*n_qpoint + i_qpoint]);
-    max_mass = std::max(max_mass, data[n_dim*n_qpoint + i_qpoint]);
   }
   return admiss;
 }
