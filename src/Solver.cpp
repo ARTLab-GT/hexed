@@ -887,10 +887,13 @@ bool Solver::is_admissible()
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     bool elem_admis = true;
-    elem_admis = elem_admis && hexed::thermo::admissible(elem.stage(0), nd, nq);
+    double min_mass = huge;
+    double max_mass = 0;
+    elem_admis = elem_admis && hexed::thermo::admissible(elem.stage(0), nd, nq, min_mass, max_mass);
     for (int i_face = 0; i_face < params.n_dim*2; ++i_face) {
-      elem_admis = elem_admis && hexed::thermo::admissible(elem.faces[i_face], nd, nq/rs);
+      elem_admis = elem_admis && hexed::thermo::admissible(elem.faces[i_face], nd, nq/rs, min_mass, max_mass);
     }
+    elem_admis = elem_admis && min_mass > 0 && max_mass/min_mass < 1e2;
     if (!elem_admis) elem.record = 1;
     admiss = admiss && elem_admis;
   }
@@ -900,9 +903,11 @@ bool Solver::is_admissible()
   for (int i_face = 0; i_face < ref_faces.size(); ++i_face) {
     auto& ref = ref_faces[i_face];
     int n_fine = params.n_vertices()/2;
+    double min_mass = huge;
+    double max_mass = 0;
     for (int i_dim = 0; i_dim < nd - 1; ++i_dim) n_fine /= 1 + ref.stretch[i_dim];
     for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
-      refined_admiss = refined_admiss && hexed::thermo::admissible(ref.fine[i_fine], nd, nq/rs);
+      refined_admiss = refined_admiss && hexed::thermo::admissible(ref.fine[i_fine], nd, nq/rs, min_mass, max_mass);
     }
   }
   sw.work_units_completed += acc_mesh.elements().size();
@@ -921,6 +926,12 @@ void Solver::fix_admissibility(double stability_ratio)
   int iter;
   for (iter = 0;; ++iter) {
     HEXED_ASSERT(iter < 1e5, format_str(200, "failed to fix thermodynamic admissability in %i iterations", iter));
+    if (iter == 0 && status.iteration == 13288) {
+      State_variables sv;
+      Record rec;
+      std::vector<const Qpoint_func*> to_vis {&sv, &rec};
+      visualize_field_tecplot(Qf_concat(to_vis), "diagnostic" + std::to_string(status.iteration));
+    }
     if (iter == 100) {
       printf("> 100\n");
       State_variables sv;
