@@ -921,13 +921,6 @@ void Solver::fix_admissibility(double stability_ratio)
   int iter;
   for (iter = 0;; ++iter) {
     HEXED_ASSERT(iter < 1e5, format_str(200, "failed to fix thermodynamic admissability in %i iterations", iter));
-    if (status.iteration == 11615 && iter == 0) {
-      printf("> 100\n");
-      State_variables sv;
-      Record rec;
-      std::vector<const Qpoint_func*> to_vis {&sv, &rec};
-      visualize_field_tecplot(Qf_concat(to_vis), "diagnostic" + std::to_string(status.iteration));
-    }
     if (iter == 100) {
       printf("> 100\n");
       State_variables sv;
@@ -937,7 +930,6 @@ void Solver::fix_admissibility(double stability_ratio)
     }
     if (is_admissible()) break;
     else {
-      std::cout << "foo" << std::endl;
       if (status.iteration >= last_fix_vis_iter + 1000) {
         last_fix_vis_iter = status.iteration;
       }
@@ -960,7 +952,6 @@ void Solver::fix_admissibility(double stability_ratio)
         compute_fta(s, 0);
       }
       max_dt();
-      std::cout << "bar" << std::endl;
     }
   }
   status.fix_admis_iters += iter;

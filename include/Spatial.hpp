@@ -10,7 +10,6 @@
 #include "Row_rw.hpp"
 #include "connection.hpp"
 #include "Face_permutation.hpp"
-#include "global_hacks.hpp"
 
 namespace hexed
 {
@@ -43,7 +42,6 @@ class Spatial
         for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
           auto row_r = Row_rw<Pde::n_var, row_size>::read_row(read, ind);
           Mat<2, Pde::n_var> bound = boundary*row_r;
-          if (Pde::n_var == 4) HEXED_ASSERT(bound(0, 2) > 0 && bound(1, 2) > 0, "Write_face");
           Row_rw<Pde::n_var, row_size>::write_bound(bound, faces, ind);
         }
       }
@@ -381,7 +379,6 @@ class Spatial
           double* f = con.state() + i_side*n_fqpoint*(n_dim + 2);
           for (int i_dof = 0; i_dof < Pde::n_var*n_fqpoint; ++i_dof) {
             face[i_side][i_dof] = f[i_dof];
-            if (Pde::n_var == 4 && i_dof/n_fqpoint == 2) HEXED_ASSERT(f[i_dof] > 0, "in neighbor");
           }
         }
         Mat<n_dim> nrml; // will be used in loop to contain reference level normal
@@ -410,10 +407,6 @@ class Spatial
             for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
               state(i_var, i_side) = face[i_side][i_var*n_fqpoint + i_qpoint];
             }
-          }
-          if constexpr (!element_t::is_deformed) {
-            global_hacks::debug_message["i_dim"] = dir.i_dim;
-            global_hacks::debug_message["type"] = con.type;
           }
           // compute flux
           auto flux = eq.flux_num(state, nrml);

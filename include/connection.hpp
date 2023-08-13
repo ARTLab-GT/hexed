@@ -78,7 +78,6 @@ class Face_connection
 {
   Eigen::VectorXd data;
   public:
-  int type = 0;
   Face_connection(Storage_params params) : data(4*params.n_dof()/params.row_size) {}
   virtual Con_dir<element_t> direction() = 0;
   virtual double* state() {return data.data();}
@@ -91,7 +90,6 @@ class Face_connection<Deformed_element>
   int state_sz;
   Eigen::VectorXd data;
   public:
-  int type = 0;
   Face_connection(Storage_params params)
   : nrml_sz{params.n_dim*params.n_qpoint()/params.row_size},
     state_sz{params.n_dof()/params.row_size},
@@ -347,7 +345,6 @@ class Typed_bound_connection : public Boundary_connection
   {
     connect_normal();
     elem.faces[direction().i_face(0)] = state();
-    type = 1;
   }
   Typed_bound_connection(const Typed_bound_connection&) = delete; //!< can only have one `Typed_bound_connection` per face, so delete copy semantics
   Typed_bound_connection& operator=(const Typed_bound_connection&) = delete;

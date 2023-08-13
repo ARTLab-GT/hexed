@@ -97,14 +97,11 @@ Mat<> apply_char(Mat<> state, Mat<> normal, int sign, Mat<> inside, Mat<> outsid
   for (int i_eig = 0; i_eig < 3; ++i_eig) {
     if (sign*eigvals(i_eig) > 0) decomp(Eigen::all, i_eig) = fs_decomp(Eigen::all, i_eig);
   }
-  if (global_hacks::debug_message["count"] == 6813) std::cout << ch.eigvals() << "\n" << ch.decomp(inside) << "\n" << ch.decomp(outside) << "\n\n" << std::flush;
   return decomp.rowwise().sum();
 }
 
 void Riemann_invariants::apply_state(Boundary_face& bf)
 {
-  if (global_hacks::debug_message.count("count") == 0) global_hacks::debug_message["count"] = 0;
-  ++global_hacks::debug_message["count"];
   auto params = bf.storage_params();
   const int nfq = params.n_qpoint()/params.row_size;
   double* in_f = bf.inside_face();
@@ -147,8 +144,6 @@ void Riemann_invariants::apply_state(Boundary_face& bf)
   for (int i_dof = 0; i_dof < params.n_var*nfq; ++i_dof) {
     sc[i_dof] = in_f[i_dof];
   }
-  for (int i_dof = params.n_dim*params.n_qpoint()/params.row_size; i_dof < (params.n_dim + 1)*params.n_qpoint()/params.row_size; ++i_dof) HEXED_ASSERT(in_f[i_dof] > 0, "in_f" + std::to_string(global_hacks::debug_message["count"]));
-  for (int i_dof = params.n_dim*params.n_qpoint()/params.row_size; i_dof < (params.n_dim + 1)*params.n_qpoint()/params.row_size; ++i_dof) HEXED_ASSERT(gh_f[i_dof] > 0, "gh_f" + std::to_string(global_hacks::debug_message["count"]));
 }
 
 void Riemann_invariants::apply_flux(Boundary_face& bf)
@@ -334,7 +329,6 @@ void reflect_momentum(Boundary_face& bf)
   double* in_f = bf.inside_face();
   for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = in_f[i_dof];
   reflect_normal(gh_f, bf.surface_normal(), params.n_qpoint()/params.row_size, params.n_dim);
-  for (int i_dof = params.n_dim*params.n_qpoint()/params.row_size; i_dof < (params.n_dim + 1)*params.n_qpoint()/params.row_size; ++i_dof) HEXED_ASSERT(gh_f[i_dof] > 0 && in_f[i_dof] > 0, "bc");
 }
 
 void Nonpenetration::apply_state(Boundary_face& bf)
