@@ -926,12 +926,16 @@ void Solver::fix_admissibility(double stability_ratio)
       State_variables sv;
       Record rec;
       std::vector<const Qpoint_func*> to_vis {&sv, &rec};
-      visualize_field_tecplot(Qf_concat(to_vis), "inadmis" + std::to_string(status.iteration));
+      visualize_field_tecplot(Qf_concat(to_vis), "severe_indamis" + std::to_string(status.iteration));
     }
     if (is_admissible()) break;
     else {
-      if (status.iteration >= last_fix_vis_iter + 1000) {
+      if (status.iteration >= last_fix_vis_iter + 1000 && iter == 0) {
         last_fix_vis_iter = status.iteration;
+        State_variables sv;
+        Record rec;
+        std::vector<const Qpoint_func*> to_vis {&sv, &rec};
+        visualize_field_tecplot(Qf_concat(to_vis), "inadmis" + std::to_string(status.iteration));
       }
       (*kernel_factory<Spatial<Element         , pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true))(acc_mesh.cartesian().elements(), stopwatch.children.at("fix admis.").children.at("cartesian"), "compute time step");
       (*kernel_factory<Spatial<Deformed_element, pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true))(acc_mesh.deformed ().elements(), stopwatch.children.at("fix admis.").children.at("deformed" ), "compute time step");
