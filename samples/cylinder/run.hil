@@ -17,12 +17,12 @@ thermal_bc = {temperature = 98.89}
 wall_spacing = 0.02
 surface_max_iters = 0
 vis_freq = 10000
-print_freq = 200
-done = {iteration >= 2e5}
+print_freq = 500
+done = {iteration >= 1e6}
 max_safety = 1e-6
 iterate = iterate + {
     if = {iteration <= 1e4}
-    then = {max_safety = 0.4*iteration*1e-4}
+    then = {max_safety = 0.2*iteration*1e-4}
     $cond
 }
 
