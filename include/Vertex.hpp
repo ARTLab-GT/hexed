@@ -91,6 +91,7 @@ class Vertex::Transferable_ptr
   //! \brief whether this element needs this vertex to be smoothed
   //! \details (`Accessible_mesh::update` will set this to `false` for elements that have already been sufficiently smoothed)
   bool needs_smooth = true;
+  double fix_admis_coef = 0;
 
   //! Create a vertex and construct a `Transferable_ptr` to it.
   Transferable_ptr(Mat<3> pos, bool mobile = false);

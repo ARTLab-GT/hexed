@@ -84,6 +84,7 @@ class Element
   //! pointer to scaling factor for local time step.
   double* time_step_scale(); //!< Layout: [i_qpoint]
   double* art_visc_coef(); //!< layout: [i_qpoint]
+  double* fix_admis_coef(); //!< layout: [i_qpoint]
   double* art_visc_forcing(); //!< layout: [i_forcing][i_qpoint]
   virtual double* node_adjustments() {return nullptr;} //!< overriden by `Deformed_element`
 
@@ -104,6 +105,7 @@ class Element
   void fetch_shareable_value(vertex_value_access access_func, Vertex::reduction = Vertex::vector_max); // set `this`'s copy of shareable value to the shared values at the vertices
   //! Time step scale at the vertices. TSS in the interior is set by interpolating this.
   double& vertex_time_step_scale(int i_vertex);
+  double& vertex_fix_admis_coef(int i_vertex);
   void set_needs_smooth(bool); //!< sets the `Vertex::Transferable_ptr::needs_smooth` of the vertices
 };
 

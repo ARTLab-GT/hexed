@@ -36,6 +36,11 @@ std::vector<double> Art_visc_coef::operator()(Element& element, const Basis&, in
   return {element.art_visc_coef()[i_qpoint]};
 }
 
+std::vector<double> Fix_admis_coef::operator()(Element& element, const Basis&, int i_qpoint, double time) const
+{
+  return {element.fix_admis_coef()[i_qpoint]};
+}
+
 std::string Pow::variable_name(int n_dim, int i_var) const
 {
   char buffer [1000];

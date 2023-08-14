@@ -879,7 +879,7 @@ bool Solver::is_admissible()
   const int nq = params.n_qpoint();
   const int rs = params.row_size;
   bool admiss = 1;
-  #pragma omp parallel
+  #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].record = 0;
   }
@@ -918,6 +918,7 @@ void Solver::fix_admissibility(double stability_ratio)
   const int nd = params.n_dim;
   const int nq = params.n_qpoint();
   const int rs = params.row_size;
+  const int nv = params.n_vertices();
   int iter;
   for (iter = 0;; ++iter) {
     HEXED_ASSERT(iter < 1e5, format_str(200, "failed to fix thermodynamic admissability in %i iterations", iter));
@@ -930,12 +931,53 @@ void Solver::fix_admissibility(double stability_ratio)
     }
     if (is_admissible()) break;
     else {
+      auto& elems = acc_mesh.elements();
+      #pragma omp parallel for
+      for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+        auto& elem = elems[i_elem];
+        for (int i_vert = 0; i_vert < nv; ++i_vert) {
+          elem.vertex_fix_admis_coef(i_vert) = elem.record;
+        }
+      }
+      share_vertex_data(&Element::vertex_fix_admis_coef, Vertex::vector_max);
+      #pragma omp parallel for
+      for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+        auto& elem = elems[i_elem];
+        double max_fac = 0;
+        for (int i_vert = 0; i_vert < nv; ++i_vert) {
+          max_fac = std::max(max_fac, elem.vertex_fix_admis_coef(i_vert));
+        }
+        for (int i_vert = 0; i_vert < nv; ++i_vert) {
+          elem.vertex_fix_admis_coef(i_vert) = max_fac;
+        }
+      }
+      share_vertex_data(&Element::vertex_fix_admis_coef, Vertex::vector_max);
+      Mat<dyn, dyn> interp(rs, 2);
+      interp(all, 0) = Mat<>::Ones(rs) - basis.nodes();
+      interp(all, 1) = basis.nodes();
+      #pragma omp parallel for
+      for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+        auto& elem = elems[i_elem];
+        Mat<> vert_fac(nv);
+        for (int i_vert = 0; i_vert < nv; ++i_vert) {
+          vert_fac(i_vert) = elem.vertex_fix_admis_coef(i_vert);
+        }
+        Eigen::Map<Mat<>>(elem.fix_admis_coef(), nq) = math::hypercube_matvec(interp, vert_fac);
+      }
       if (status.iteration >= last_fix_vis_iter + 1000 && iter == 0) {
         last_fix_vis_iter = status.iteration;
         State_variables sv;
         Record rec;
-        std::vector<const Qpoint_func*> to_vis {&sv, &rec};
+        Fix_admis_coef fac;
+        std::vector<const Qpoint_func*> to_vis {&sv, &rec, &fac};
         visualize_field_tecplot(Qf_concat(to_vis), "inadmis" + std::to_string(status.iteration));
+      }
+      #pragma omp parallel for
+      for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+        auto& elem = elems[i_elem];
+        for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+          std::swap(elem.fix_admis_coef()[i_qpoint], elem.art_visc_coef()[i_qpoint]);
+        }
       }
       (*kernel_factory<Spatial<Element         , pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true))(acc_mesh.cartesian().elements(), stopwatch.children.at("fix admis.").children.at("cartesian"), "compute time step");
       (*kernel_factory<Spatial<Deformed_element, pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true))(acc_mesh.deformed ().elements(), stopwatch.children.at("fix admis.").children.at("deformed" ), "compute time step");
@@ -956,6 +998,13 @@ void Solver::fix_admissibility(double stability_ratio)
         compute_fta(s, 0);
       }
       max_dt();
+      #pragma omp parallel for
+      for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+        auto& elem = elems[i_elem];
+        for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+          std::swap(elem.fix_admis_coef()[i_qpoint], elem.art_visc_coef()[i_qpoint]);
+        }
+      }
     }
   }
   status.fix_admis_iters += iter;

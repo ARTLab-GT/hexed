@@ -315,7 +315,7 @@ class Fix_therm_admis
   Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const {return Mat<n_update>::Zero();}
   Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const
   {
-    return -grad;
+    return -grad*av_coef;
   }
   double diffusivity(Mat<n_var> state, double av_coef) const {return 1;}
 };
