@@ -25,6 +25,10 @@ TEST_CASE("Namespace")
   space->assign<int>("number1", 7); // can assign an int to a double...
   REQUIRE(space->lookup<double>("number1").value() == Catch::Approx(7.0));
   REQUIRE(!space->lookup<int>("number1")); // ...but it's still a double
+  space->assign_default<int>("number0", 6); // `assign_default` won't modify an existing value
+  REQUIRE(space->lookup<int>("number0").value() == 4);
+  space->assign_default<int>("number2", 6); // ...but it can create a new value
+  REQUIRE(space->lookup<int>("number2").value() == 6);
   // read-only variables
   int _counter = 0;
   space->create("call_counter", new hexed::Namespace::Heisenberg<int>([&_counter]()->int{return _counter++;}));

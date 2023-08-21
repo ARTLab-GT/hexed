@@ -63,6 +63,7 @@ class Namespace
   bool exists_recursive(std::string name);
   template<typename T> void create(std::string name, Variable<T>* value);
   template<typename T> void assign(std::string name, T value);
+  template<typename T> void assign_default(std::string name, T value);
   template<typename T> std::optional<T> lookup(std::string name);
 };
 
@@ -107,6 +108,12 @@ void Namespace::assign(std::string name, T value)
     }
   }
   create(name, new Value<T>(value));
+}
+
+template<typename T>
+void Namespace::assign_default(std::string name, T value)
+{
+  if (!exists_recursive(name)) assign(name, value);
 }
 
 template<typename T>
