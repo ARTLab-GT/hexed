@@ -267,10 +267,12 @@ class Spatial
                 else visc_state[i_qpoint] = time_rate[1][i_var][i_qpoint]; // for stage 0, record the diffusive update to allow the aforementioned
               }
               u *= tss[i_qpoint]/det/d_pos;
+              #if 0
               if constexpr (Pde::n_update == 4) {
                 double limits [] {5e-2, 5e-2, 5e-5, 2e1};
                 if (std::abs(u) > limits[i_var]) u *= limits[i_var]/std::abs(u);
               }
+              #endif
               curr_state[i_qpoint] = u + curr*curr_state[i_qpoint] + ref*ref_state[i_qpoint];
             } else {
               curr_state[i_qpoint] += update_diff*time_rate[1][i_var][i_qpoint]*tss[i_qpoint]/det/d_pos;
