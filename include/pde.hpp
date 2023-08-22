@@ -160,7 +160,7 @@ class Navier_stokes
       Mat<3> vals;
       Mat<3, 3> vecs;
       // using a QR factorization allows a least-squares solution to be found if matrix is singular (i.e. if pressure is 0)
-      Eigen::HouseholderQR<Mat<3, 3>> fact;
+      Eigen::ColPivHouseholderQR<Mat<3, 3>> fact;
       Mat<n_dim> dir; // normalized flux direction
       // some properties of the reference state
       double mass;
@@ -198,6 +198,7 @@ class Navier_stokes
         }
         vecs(Eigen::all, 2) << d_mass*vals(2), d_mass, .5*d_mass*vsq;
         fact.compute(vecs);
+        HEXED_ASSERT(fact.info() == Eigen::Success, "QR factorization failed");
       }
       //! get eigenvalues of Jacobian
       inline Mat<3> eigvals() {return vals;}
@@ -216,7 +217,7 @@ class Navier_stokes
         state_1d <<
           nrml(mmtm),
           state(n_dim),
-          state(n_dim + 1) - veloc.dot(mmtm_correction);
+          state(n_dim + 1) - veloc.dot(mmtm_correction); //! \todo shouldn't this have a `0.5*`?
         // decompose 1D state into eigenvectors
         Mat<1, 3> eig_basis = fact.solve(state_1d).transpose();
         Mat<3, 3> eig_decomp = vecs.array().rowwise()*eig_basis.array();

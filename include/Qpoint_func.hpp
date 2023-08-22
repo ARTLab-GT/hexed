@@ -66,6 +66,15 @@ class Art_visc_coef : public Qpoint_func
   std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
 };
 
+//! fetches the `Element::fix_admis_coef`
+class Fix_admis_coef : public Qpoint_func
+{
+  public:
+  inline int n_var(int n_dim) const override {return 1;}
+  inline std::string variable_name(int n_dim, int i_var) const override {return "fix_admis_coef";}
+  std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
+};
+
 //! returns a component of another `Qpoint_func`
 class Component : public Qpoint_func
 {

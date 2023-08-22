@@ -134,5 +134,6 @@ std::vector<double> Equiangle_skewness::operator()(Element& elem, const Basis& b
 
 std::vector<double> Is_deformed::operator()(Element& elem) const {return {double(elem.get_is_deformed())};}
 std::vector<double> Has_tree::operator()(Element& elem) const {return {double(bool(elem.tree))};}
+std::vector<double> Record::operator()(Element& elem) const {return {double(bool(elem.record))};}
 
 };

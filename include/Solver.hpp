@@ -11,6 +11,7 @@
 #include "Mesh.hpp"
 #include "Accessible_mesh.hpp"
 #include "kernel_factory.hpp"
+#include "Namespace.hpp"
 
 namespace hexed
 {
@@ -39,6 +40,7 @@ class Solver
   Transport_model visc;
   Transport_model therm_cond;
   int last_fix_vis_iter = std::numeric_limits<int>::min();
+  std::shared_ptr<Namespace> _namespace;
 
   void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
   void fix_admissibility(double stability_ratio);
@@ -64,6 +66,9 @@ class Solver
    * \param local_time_stepping whether to use local or global time stepping
    * \param viscosity_model determines whether the flow has viscosity (natural, not artificial) and if so, how it depends on temperature
    * \param thermal_conductivity_model determines whether the flow has thermal conductivity and if so, how it depends on temperature
+   * \param space `Namespace` containing any user-defined parameters affecting the behavior of the solver.
+   *        If no namespace is provided, a new blank namespace is creqated.
+   *        Any optional parameters which are not found in the namespace shall be created with their default values.
    * \details If `viscosity_model` and `thermal_conductivity_model` are both `inviscid` _and_ you don't turn on artificial viscosity,
    * you will be solving the pure inviscid flow equations.
    * Otherwise, you will be solving the viscous flow equations using the LDG scheme,
@@ -71,30 +76,12 @@ class Solver
    * (artificial viscosity, natural viscosity, thermal conductivity) set to zero.
    */
   Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping = false,
-         Transport_model viscosity_model = inviscid, Transport_model thermal_conductivity_model = inviscid);
-
-  /*! \name scheme parameters
-   * Feel free to tweak these at runtime to influence the behavior of the solver
-   */
-  //!\{
-  double fix_admis_stab_rat = .7; //!< staility ratio for fixing thermodynamic admissibility.
-  //!\}
-  /*! \name artificial viscosity parameters
-   * Tweakable parameters specifically affecting smoothness-based artificial viscosity calculation.
-   * You are permitted to mess with these dynamically at runtime.
-   */
-  //!\{
-  double av_diff_ratio = 5e-3; //!< ratio of diffusion time to advection width
-  double av_visc_mult = 30.; //!< final scaling parameter applied to artificial viscosity coefficient
-  double av_unscaled_max = 2e-3; //!< maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
-  double av_advect_stab_rat = .2; //!< stability ratio for advection
-  double av_diff_stab_rat = .5; //!< stability ratio for diffusion
-  int av_advect_iters = 2; //!< number of advection iterations to run each time `set_art_visc_smoothness` is called
-  int av_diff_iters = 1; //!< number of diffusion iterations to run each time `set_art_visc_smoothness` is called
-  //!\}
+         Transport_model viscosity_model = inviscid, Transport_model thermal_conductivity_model = inviscid,
+         std::shared_ptr<Namespace> space = std::make_shared<Namespace>());
 
   //! \name setup
   //!\{
+  Namespace& nspace(); //! \brief Reference to the namespace which can be used to edit user-defined parameters
   /*! \brief fetch the `Mesh`.
    * \details An object the user can use to build the mesh.
    * Note that whenever elements are added, the flow state, and Jacobian are uninitialized,

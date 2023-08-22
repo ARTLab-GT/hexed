@@ -5,8 +5,9 @@ mesh_extreme01 =  10.
 mesh_extreme11 =  10.
 altitude = 0.
 mach = 0.3
+attack = 4*degree
 =shell {python3 make_geom.py}
-geom0 = {geom.csv}
+geom0 = {auto.csv}
 surface_refine = {return = resolution_badness > 3e-3 & ref_level < 10}
 done = {iteration >= 1e5}
 

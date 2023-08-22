@@ -641,11 +641,12 @@ void test_advection(Test_mesh& tm, std::string name)
   sol.calc_jacobian();
   sol.initialize(Sinusoid_veloc1());
   double width = 1e-2;
-  sol.av_visc_mult = .9;
-  sol.av_advect_iters = 1000;
-  sol.av_diff_iters = 300;
+  sol.nspace().assign("av_visc_mult", .9);
+  sol.nspace().assign("av_advect_iters", 1000);
+  sol.nspace().assign("av_diff_iters", 300);
+  sol.nspace().assign("av_advect_max_res", 1e8); // set this to an irrelevantly large value
   // don't do much diffusion to avoid obscuring advection result
-  sol.av_diff_ratio = 1e-6;
+  sol.nspace().assign("av_diff_ratio", 1e-6);
   REQUIRE_THROWS(sol.set_art_visc_row_size(1));
   REQUIRE_THROWS(sol.set_art_visc_row_size(hexed::config::max_row_size + 1));
   sol.set_art_visc_row_size(2);
@@ -663,7 +664,7 @@ void test_advection(Test_mesh& tm, std::string name)
     for (int i_qpoint = 0; i_qpoint < sol.storage_params().n_qpoint(); ++i_qpoint) {
       double art_visc = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Art_visc_coef())[0];
       auto pos = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Position_func());
-      REQUIRE(art_visc/(width*width*norm*sol.av_visc_mult) == Catch::Approx(std::abs(-.1*std::cos(pos[0]) - .2*std::sin(pos[1]))).margin(1e-3));
+      REQUIRE(art_visc/(width*width*norm*sol.nspace().lookup<double>("av_visc_mult").value()) == Catch::Approx(std::abs(-.1*std::cos(pos[0]) - .2*std::sin(pos[1]))).margin(1e-3));
     }
   }
 }
@@ -920,10 +921,10 @@ TEST_CASE("artificial viscosity convergence")
   double flow_width = .02;
   double adv_width = .01;
   sol.initialize(Tanh(flow_width));
-  sol.av_advect_iters = 6000;
-  sol.av_diff_iters = 3000;
-  sol.av_visc_mult = 1e6;
-  sol.av_diff_ratio = 1e-6;
+  sol.nspace().assign("av_advect_iters", 6000);
+  sol.nspace().assign("av_diff_iters", 3000);
+  sol.nspace().assign("av_visc_mult", 1e6);
+  sol.nspace().assign("av_diff_ratio", 1e-6);
   sol.set_art_visc_smoothness(adv_width);
   REQUIRE(sol.iteration_status().adv_res < 1e-12);
   REQUIRE(sol.iteration_status().diff_res < 1e-12);
