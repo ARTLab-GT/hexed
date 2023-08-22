@@ -8,7 +8,6 @@ If look at these instructions and don't know what I'm talking about, skip to \re
    - [scipy](https://scipy.org/)
    - [matplotlib](https://matplotlib.org/)
    - [sympy](https://www.sympy.org/en/index.html)
-   - [cppyy](https://cppyy.readthedocs.io/en/latest/)
 -# You are recommended to also install the following dependencies which are required for some optional features:
    - [Tecplot](https://www.tecplot.com/)/[TecIO](https://www.tecplot.com/products/tecio-library/) (required for visualization)
    - [Catch2](https://github.com/catchorg/Catch2) (required for unit testing)
@@ -84,8 +83,6 @@ a few 3rd-party libraries.
   - `pip3 install matplotlib`
 - Install the symbolic computation library sympy (used to generate quadrature rules):
   - `pip3 install sympy`
-- Install cppyy for Python bindings to C++ code:
-  - `pip3 install cppyy`
 - Install PyTecplot (Tecplot's Python API):
   - `pip3 install pytecplot`
   - If this doesn't work, don't worry. You just won't be able to run the \ref postproc "Python postprocessing script",
@@ -109,7 +106,7 @@ OpenCASCADE Technology is an open source CAD Engine which Hexed uses to read and
 - `cd opencascade-7.7.0`
 - `mkir build`
 - `cd build`
-- `cmake -D INSTALL_DIR=~/.local -D BUILD_MODULE_Draw=OFF ..`
+- `cmake -D INSTALL_DIR=~/.local -D BUILD_MODULE_Draw=OFF -D USE_FREETYPE=OFF ..`
   - This will disable the "Draw" module, which creates a basic example CAD program with OCCT.
     We don't need that for our purposes, and I've had trouble compiling it on the ARTLab machines,
     but if you want to enable it and can get it to compile, it certainly won't cause any problems.
@@ -144,8 +141,8 @@ However, if you're going to be doing any development of Hexed, I recommend you p
 
 \subsubsection install_catch2 Step 1: install Catch2
 Hexed uses Catch2 is for unit testing. Install Catch2 so that you can compile the unit tests.
-- Visit the Catch2 [Releases](https://github.com/catchorg/Catch2/releases) page and download the source code
-  for the latest one (do not clone the `devel` branch from the github repo, as that is not a stable release).
+- Visit the Catch2 [Releases](https://github.com/catchorg/Catch2/releases) page and download the latest one (select "source code (tar.gz)").
+  Do not clone the `devel` branch from the github repo, as that is not a stable release.
 - Extract (e.g., unzip) the source code and place it in `~/codes`. `~/codes` should now contain a directory named something like `Catch2-2.XX.X`,
   except instead of "X"s there will be a version number.
 - `cd ~/codes/Catch2-2.XX.X` (replace the "X"s to match whatever the actual directory name is).
