@@ -267,7 +267,13 @@ Case::Case(std::string input_file)
       std::vector<const Qpoint_func*> to_vis;
       to_vis.push_back(&sv);
       if (_vard("art_visc_constant").value() > 0 || _vard("art_visc_width").value() > 0) to_vis.push_back(&avc);
-      _solver().visualize_field_tecplot(Qf_concat(to_vis), wd + "field" + suffix);
+      std::string file_name = wd + "field" + suffix;
+      #if HEXED_USE_TECPLOT
+      if (_vari("vis_tecplot").value()) _solver().visualize_field_tecplot(Qf_concat(to_vis), file_name);
+      #endif
+      #if HEXED_USE_XDMF
+      if (_vari("vis_xdmf").value()) _solver().visualize_field_xdmf(Qf_concat(to_vis), file_name);
+      #endif
     }
     if (_vari("vis_surface").value() && _has_geom) {
       _solver().visualize_surface_tecplot(_solver().mesh().surface_bc_sn(), wd + "surface" + suffix);

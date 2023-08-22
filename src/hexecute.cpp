@@ -2,6 +2,7 @@
 
 int main(int argc, char* argv[])
 {
-  if (argc != 2) throw std::runtime_error("`hexed_exec` takes exactly one argument, namely the path to the input file");
-  hexed::Case c(argv[1]);
+  if (argc == 1) hexed::Case c;
+  else if (argc == 2) hexed::Case c(argv[1]);
+  else throw std::runtime_error("`hexecute` accepts exactly 0 or 1 arguments");
 }
