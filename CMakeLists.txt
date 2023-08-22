@@ -130,7 +130,9 @@ if (use_occt)
 endif()
 if (use_xdmf)
     find_package(Xdmf REQUIRED)
+    find_package(libxml2 REQUIRED)
     target_link_libraries(hexed PRIVATE Xdmf)
+    target_include_directories(hexed PRIVATE ${LIBXML2_INCLUDE_DIRS})
 endif()
 
 # add include/source files

@@ -5,7 +5,8 @@
 #include <Solver.hpp>
 #include <Tecplot_file.hpp>
 #include <Vis_data.hpp>
-#include <otter_vis.hpp>
+#include <XdmfDomain.hpp>
+#include <XdmfWriter.hpp>
 #include <thermo.hpp>
 
 // kernels
@@ -1124,7 +1125,10 @@ std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func,
 #if HEXED_USE_XDMF
 void Solver::visualize_field_xdmf(const Qpoint_func& output_variables, std::string name, int n_sample,
                                   bool edges, bool qpoints, bool interior)
-{ HEXED_ASSERT(false, "not implemented"); }
+{
+  boost::shared_ptr<XdmfDomain> domain = XdmfDomain::New();
+  domain->accept(XdmfWriter::New(name + ".xdmf"));
+}
 void Solver::visualize_field_xdmf(std::string name, int n_sample,
                                   bool edges, bool qpoints, bool interior)
 { HEXED_ASSERT(false, "not implemented"); }
