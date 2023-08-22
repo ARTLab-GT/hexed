@@ -95,7 +95,48 @@ a few 3rd-party libraries.
 - `cd eigen-X.X.X` (replace "X"s with appropriate numbers).
 - `cp -r Eigen/ ~/.local/include/`
 
-\subsection install_occt Step 4: install OpenCASCADE Technology
+\subsection install_hdf5 Step 4: install HDF5
+\ref install_xdmf "XDMF" uses the [Hierarchical Data Format, version 5](https://www.hdfgroup.org/solutions/hdf5/) to store data.
+The following steps can be used to install the HDF5 I/O library.
+- Download the [source code](https://www.hdfgroup.org/downloads/hdf5/source-code/) (latest release) and unpack it in `~/codes`.
+  - Ignore the installation instructions that come with it -- they are rather cursed.
+- `cd hdf5-X.XX.X`
+- `mkdir build`
+- `cd build`
+- `cmake -D CMAKE_INSTALL_PREFIX=~/.local`
+- `make -j install`
+
+\subsection install_boost Step 5: install Boost headers
+\ref install_xdmf "XDMF" uses header files from [Boost](https://www.boost.org/).
+To install these:
+- Go to https://www.boost.org/ and download the latest release.
+- Unpack it in `~/codes`.
+- Copy the header files: `cp -r boost_X_XX_X/boost ~/.local/include`
+  - __or__ symlink them: `ln -s $(pwd)/boost_X_XX_X/boost ~/.local/include`
+
+\subsection install_xml Step 6: install libxml2
+\ref install_xdmf "XDMF" uses [XML](https://github.com/GNOME/libxml2).
+To install:
+- Go to [Release page](https://download.gnome.org/sources/libxml2/) and download latest.
+- Unpack  in `~/codes`
+- `cd libxml2-X.X.X`
+- `./configure --prefix=$(echo ~)/.local --with-python=no`
+- `make install`
+
+\subsection install_xdmf Step 6: install XDMF
+Hexed uses the [Extensible Data Model and Format](https://www.xdmf.org/index.php/Main_Page) to store visualization data.
+Use the following steps to install the XDMF library:
+- Clone the git repo: `git clone https://gitlab.kitware.com/xdmf/xdmf.git`
+- `cd xdmf`
+- `mkdir build`
+- `cd build`
+- `export XDMF_INSTALL_DIR=~/.local`
+- `cmake .. -DCMAKE_INSTALL_PREFIX=${XDMF_INSTALL_DIR} -DBUILD_SHARED_LIBS=1`
+- `make install`
+  - if you get the compiler error `conflicting declaration ‘typedef int hid_t’`, try:
+    - `vi ../core/XdmfHDF5Controller.hpp`. Add `include <stdint.h>` after line 29 and on line 37 replace `typedef int hid_t` with `typedef int64_t hid_t`.
+
+\subsection install_occt Step 7: install OpenCASCADE Technology
 OpenCASCADE Technology is an open source CAD Engine which Hexed uses to read and manipulate geometry from standard CAD file formats.
 - Obtain the source code by one of the following approaches:
   - Visit the [download page](https://dev.opencascade.org/release) and download the latest release.
@@ -112,7 +153,7 @@ OpenCASCADE Technology is an open source CAD Engine which Hexed uses to read and
     but if you want to enable it and can get it to compile, it certainly won't cause any problems.
 - `make install` (may take a while)
 
-\subsection install_hexed Step 5: compile and install Hexed
+\subsection install_hexed Step 8: compile and install Hexed
 - If you haven't already,
   [add an SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
   to your GitHub account.
@@ -124,7 +165,7 @@ OpenCASCADE Technology is an open source CAD Engine which Hexed uses to read and
 - `cmake ../` (if you want to edit build options, you can instead use `ccmake` as described \ref ccmake "below").
 - `make -j install`
 
-\subsection verify Step 6: verify success
+\subsection verify Step 9: verify success
 -  You should still be in the build directory.
 - `demo/demo2d`
   - This runs a simple demonstration simulation. It should create a bunch of `.szplt` files.
