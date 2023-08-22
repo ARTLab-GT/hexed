@@ -26,6 +26,7 @@ constexpr int max_row_size = @MAX_BASIS_ROW_SIZE@; //!< \brief maximum \ref row_
 #if HEXED_THREADED
 constexpr int n_threads = @n_threads@; //!< \brief number of threads with which to execute parallel regions
 #endif
+#define HEXED_USE_XDMF HEXED_@use_xdmf@
 #define HEXED_USE_TECPLOT HEXED_@use_tecplot@
 #define HEXED_USE_NLOPT HEXED_@use_nlopt@
 #define HEXED_USE_OCCT HEXED_@use_occt@

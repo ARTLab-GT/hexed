@@ -1121,6 +1121,21 @@ std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func,
   return bounds;
 }
 
+#if HEXED_USE_XDMF
+void Solver::visualize_field_xdmf(const Qpoint_func& output_variables, std::string name, int n_sample,
+                                  bool edges, bool qpoints, bool interior)
+{ HEXED_ASSERT(false, "not implemented"); }
+void Solver::visualize_field_xdmf(std::string name, int n_sample,
+                                  bool edges, bool qpoints, bool interior)
+{ HEXED_ASSERT(false, "not implemented"); }
+void Solver::visualize_surface_xdmf(int bc_sn, const Boundary_func&, std::string name, int n_sample)
+{ HEXED_ASSERT(false, "not implemented"); }
+void Solver::visualize_surface_xdmf(int bc_sn, std::string name, int n_sample)
+{ HEXED_ASSERT(false, "not implemented"); }
+void Solver::vis_cart_surf_xdmf(int bc_sn, std::string name, const Boundary_func& func)
+{ HEXED_ASSERT(false, "not implemented"); }
+#endif
+
 #if HEXED_USE_TECPLOT
 void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::string name, int n_sample, bool include_edges, bool include_qpoints, bool include_interior)
 {
