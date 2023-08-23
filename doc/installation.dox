@@ -131,7 +131,7 @@ Use the following steps to install the XDMF library:
 - `mkdir build`
 - `cd build`
 - `export XDMF_INSTALL_DIR=~/.local`
-- `cmake .. -DCMAKE_INSTALL_PREFIX=${XDMF_INSTALL_DIR} -DBUILD_SHARED_LIBS=1`
+- `cmake .. -DCMAKE_INSTALL_PREFIX=${XDMF_INSTALL_DIR} -DBUILD_SHARED_LIBS=1 -Wno-dev`
 - `make install`
   - if you get the compiler error `conflicting declaration ‘typedef int hid_t’`, try:
     - `vi ../core/XdmfHDF5Controller.hpp`. Add `include <stdint.h>` after line 29 and on line 37 replace `typedef int hid_t` with `typedef int64_t hid_t`.
