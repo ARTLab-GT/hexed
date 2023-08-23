@@ -1126,7 +1126,30 @@ std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func,
 void Solver::visualize_field_xdmf(const Qpoint_func& output_variables, std::string name, int n_sample,
                                   bool edges, bool qpoints, bool interior)
 {
-  boost::shared_ptr<XdmfDomain> domain = XdmfDomain::New();
+  HEXED_ASSERT(params.n_dim > 1, "XDMF field visualization is only supported for 2D and 3D");
+  auto domain = XdmfDomain::New();
+  auto grid = XdmfUnstructuredGrid::New();
+  auto topo = XdmfTopology::New();
+  if (params.n_dim == 2) topo->setType(XdmfTopologyType::Quadrilateral());
+  if (params.n_dim == 3) topo->setType(XdmfTopologyType::Hexahedron());
+  topo->pushBack(0);
+  topo->pushBack(1);
+  topo->pushBack(2);
+  topo->pushBack(3);
+  grid->setTopology(topo);
+  auto geom = XdmfGeometry::New();
+  if (params.n_dim == 2) geom->setType(XdmfGeometryType::XY());
+  if (params.n_dim == 3) geom->setType(XdmfGeometryType::XYZ());
+  geom->pushBack(0.);
+  geom->pushBack(0.);
+  geom->pushBack(1.);
+  geom->pushBack(0.);
+  geom->pushBack(1.);
+  geom->pushBack(1.);
+  geom->pushBack(0.);
+  geom->pushBack(1.);
+  grid->setGeometry(geom);
+  domain->insert(grid);
   domain->accept(XdmfWriter::New(name + ".xdmf"));
 }
 void Solver::visualize_field_xdmf(std::string name, int n_sample,
