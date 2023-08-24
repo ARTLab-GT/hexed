@@ -19,6 +19,7 @@ class Struct_expr
    *   regardless of the environment in which it was executed.
    *   Specifically, it must satisfy the following requirements
    *   - It consists only of assignment statements where the LHS is non-empty and does not contain the macro-substitution character `$`.
+   *   - Multiline string literals are forbidden (assign them to a global variable or use `newline` from the standard library).
    *   - The RHS of the assignment statements may contain `$`, but any resulting substitutions must not add statements or exit the interpreter.
    *   - Each RHS must evaluate to an `int` or `double`.
    */
