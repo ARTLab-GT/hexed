@@ -4,6 +4,7 @@
 #include <vector>
 #include "Output_data.hpp"
 #include "Basis.hpp"
+#include "Interpreter.hpp"
 
 namespace hexed
 {

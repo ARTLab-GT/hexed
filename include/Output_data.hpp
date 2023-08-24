@@ -83,6 +83,5 @@ class Concat_func : public parent
   }
 };
 
-
 }
 #endif
