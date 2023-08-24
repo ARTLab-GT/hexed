@@ -5,8 +5,8 @@
 #include <Solver.hpp>
 #include <Tecplot_file.hpp>
 #include <Vis_data.hpp>
-#include <otter_vis.hpp>
 #include <thermo.hpp>
+#include <Xdmf_wrapper.hpp>
 
 // kernels
 #include <Restrict_refined.hpp>
@@ -1121,6 +1121,78 @@ std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func,
   return bounds;
 }
 
+#if HEXED_USE_XDMF
+void Solver::visualize_field_xdmf(const Qpoint_func& output_variables, std::string name, int n_sample)
+{
+  Xdmf_wrapper xdmf(params.n_dim, params.n_dim, n_sample, name, output_variables, status.flow_time);
+  Position_func pos_func;
+  auto& elems = acc_mesh.elements();
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    Vis_data pos_dat(elems[i_elem], pos_func, basis, status.flow_time);
+    Vis_data out_dat(elems[i_elem], output_variables, basis, status.flow_time);
+    Mat<> pos = pos_dat.interior(n_sample);
+    Mat<> out = out_dat.interior(n_sample);
+    xdmf.write_block(pos.data(), out.data());
+  }
+}
+
+void Solver::visualize_surface_xdmf(int bc_sn, const Boundary_func& func, std::string name, int n_sample)
+{
+  HEXED_ASSERT(params.n_dim > 1, "cannot visualize surfaces in 1D");
+  Xdmf_wrapper xdmf(params.n_dim, params.n_dim - 1, n_sample, name, func, status.flow_time);
+  // convenience definitions
+  const int nfq = params.n_qpoint()/params.row_size;
+  const int nd = params.n_dim;
+  const int nv = func.n_var(nd);
+  const int n_block {math::pow(n_sample, nd - 1)};
+  // setup
+  Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
+  // iterate through boundary connections and visualize a zone for each
+  auto& bc_cons {acc_mesh.boundary_connections()};
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con)
+  {
+    auto& con {bc_cons[i_con]};
+    if (con.bound_cond_serial_n() == bc_sn)
+    {
+      auto& elem = con.element();
+      // fetch the position
+      const int i_face = con.direction().i_face(0);
+      Mat<dyn, dyn> qpoint_pos (nfq, nd);
+      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+        auto pos = elem.face_position(basis, i_face, i_qpoint);
+        for (int i_dim = 0; i_dim < nd; ++i_dim) qpoint_pos(i_qpoint, i_dim) = pos[i_dim];
+      }
+      // interpolate from quadrature points to sample points
+      Mat<dyn, dyn> interp_pos (n_block, nd);
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        interp_pos.col(i_dim) = math::hypercube_matvec(interp, qpoint_pos.col(i_dim));
+      }
+      // fetch the state
+      Mat<dyn, dyn> qpoint_vars (nfq, nv);
+      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+        auto vars = func(con, i_qpoint, status.flow_time);
+        for (int i_var = 0; i_var < nv; ++i_var) {
+          qpoint_vars(i_qpoint, i_var) = vars[i_var];
+        }
+      }
+      // interpolate to sample points
+      Mat<dyn, dyn> interp_vars (n_block, nv);
+      for (int i_var = 0; i_var < nv; ++i_var) {
+        interp_vars.col(i_var) = math::hypercube_matvec(interp, qpoint_vars.col(i_var));
+      }
+      // visualize
+      xdmf.write_block(interp_pos.data(), interp_vars.data());
+    }
+  }
+}
+
+void Solver::vis_cart_surf_xdmf(int bc_sn, std::string name, const Boundary_func& func)
+{
+  Mesh::Reset_vertices reset(acc_mesh);
+  visualize_surface_tecplot(bc_sn, func, name, 2);
+}
+#endif
+
 #if HEXED_USE_TECPLOT
 void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::string name, int n_sample, bool include_edges, bool include_qpoints, bool include_interior)
 {
@@ -1229,7 +1301,6 @@ void Solver::visualize_surface_tecplot(int bc_sn, const Boundary_func& func, std
       zone.write(interp_pos.data(), interp_vars.data());
     }
   }
-  status.flow_time += 1; // FIXME
 }
 
 void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample)

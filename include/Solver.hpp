@@ -172,15 +172,26 @@ class Solver
    * bounds are approximated by uniformly sampling a block `n_sample`-on-a-side in each element
    */
   virtual std::vector<std::array<double, 2>> bounds_field(const Qpoint_func&, int n_sample = 20);
+
+  #if HEXED_USE_XDMF
+  //! write a visualization file describing the entire flow field (but not identifying surfaces)
+  virtual void visualize_field_xdmf(const Qpoint_func& output_variables, std::string name, int n_sample = 20);
+  /*! write a visualization file describing all surfaces where a particular boundary condition has been enforced.
+   */
+  virtual void visualize_surface_xdmf(int bc_sn, const Boundary_func&, std::string name, int n_sample = 20);
+  //! visualize the Cartesian surface which theoretically exists after element deletion but before any vertex snapping
+  virtual void vis_cart_surf_xdmf(int bc_sn, std::string name, const Boundary_func& func = Resolution_badness());
+  #endif
+
   #if HEXED_USE_TECPLOT
   //! write a visualization file describing the entire flow field (but not identifying surfaces)
   virtual void visualize_field_tecplot(const Qpoint_func& output_variables, std::string name, int n_sample = 20,
-                               bool edges = false, bool qpoints = false, bool interior = true);
+                                       bool edges = false, bool qpoints = false, bool interior = true);
   /*! if a `Qpoint_func` is not specified, all the state variables
    * and the artificial viscosity coefficient will be output
    */
   virtual void visualize_field_tecplot(std::string name, int n_sample = 20,
-                               bool edges = false, bool qpoints = false, bool interior = true);
+                                       bool edges = false, bool qpoints = false, bool interior = true);
   /*! write a visualization file describing all surfaces where a particular boundary condition has been enforced.
    */
   virtual void visualize_surface_tecplot(int bc_sn, const Boundary_func&, std::string name, int n_sample = 20);

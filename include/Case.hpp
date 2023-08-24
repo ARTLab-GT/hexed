@@ -20,7 +20,7 @@ class Case
   Flow_bc* _make_bc(std::string name);
   bool _has_geom = false;
   public:
-  Case(std::string input_file);
+  Case(std::string input_file = format_str(1000, "%s/include/interactive.hil", config::root_dir));
 };
 
 }

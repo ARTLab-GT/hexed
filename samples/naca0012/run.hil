@@ -9,7 +9,7 @@ attack = 4*degree
 =shell {python3 make_geom.py}
 geom0 = {auto.csv}
 surface_refine = {return = resolution_badness > 3e-3 & ref_level < 10}
-done = {iteration >= 1e5}
+done = {iteration >= 5e4}
 
 $init
 $run

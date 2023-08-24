@@ -42,6 +42,7 @@ Tree.cpp
 thermo.cpp
 Vertex.cpp
 Vis_data.cpp
+Xdmf_wrapper.cpp
 )
 
 add_executable(hexecute hexecute.cpp)
