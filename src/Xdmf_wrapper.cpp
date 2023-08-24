@@ -33,14 +33,22 @@ Xdmf_wrapper::Xdmf_wrapper(int n_dim_geom, int n_dim_topo, int row_size, std::st
     _node_inds << 0, 1;
   } else if (_n_dim_topo == 2) {
     _topo->setType(XdmfTopologyType::Quadrilateral());
-    _node_inds <<
+    _node_inds << // XDMF uses an arbitrary node ordering, not a simple row-major order :(
       0, 0,
       1, 0,
       1, 1,
       0, 1;
   } else if (_n_dim_topo == 3) {
     _topo->setType(XdmfTopologyType::Hexahedron());
-    HEXED_ASSERT(false, "3D XDMF visualization is not yet implemented");
+    _node_inds <<
+      0, 0, 0,
+      1, 0, 0,
+      1, 1, 0,
+      0, 1, 0,
+      0, 0, 1,
+      1, 0, 1,
+      1, 1, 1,
+      0, 1, 1;
   } else HEXED_ASSERT(false, "invalid topological dimensionality");
   if      (_n_dim_geom == 2) _geom->setType(XdmfGeometryType::XY());
   else if (_n_dim_geom == 3) _geom->setType(XdmfGeometryType::XYZ());
