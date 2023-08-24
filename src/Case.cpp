@@ -263,9 +263,12 @@ Case::Case(std::string input_file)
     std::string suffix = _vars("vis_file_suffix").value();
     if (_vari("vis_field").value()) {
       State_variables sv;
+      Velocity veloc;
+      Mass mass;
+      Pressure pres;
+      Mach mach;
       Art_visc_coef avc;
-      std::vector<const Qpoint_func*> to_vis;
-      to_vis.push_back(&sv);
+      std::vector<const Qpoint_func*> to_vis{&sv, &veloc, &mass, &pres, &mach};
       if (_vard("art_visc_constant").value() > 0 || _vard("art_visc_width").value() > 0) to_vis.push_back(&avc);
       std::string file_name = wd + "field" + suffix;
       #if HEXED_USE_TECPLOT
