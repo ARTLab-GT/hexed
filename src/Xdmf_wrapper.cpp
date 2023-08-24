@@ -28,7 +28,10 @@ Xdmf_wrapper::Xdmf_wrapper(int n_dim_geom, int n_dim_topo, int row_size, std::st
     _attrs.back()->setCenter(XdmfAttributeCenter::Node());
     _attrs.back()->setType(XdmfAttributeType::Scalar());
   }
-  if (_n_dim_topo == 2) {
+  if (_n_dim_topo == 1) {
+    _topo->setType(XdmfTopologyType::Polyline(2)); // a polyline with 2 nodes is equivalent to a line segment
+    _node_inds << 0, 1;
+  } else if (_n_dim_topo == 2) {
     _topo->setType(XdmfTopologyType::Quadrilateral());
     _node_inds <<
       0, 0,
@@ -52,7 +55,7 @@ void Xdmf_wrapper::write_block(double* pos, double* vars)
       for (int i_dim = 0; i_dim < _n_dim_topo; ++i_dim) {
         int row = (i_elem/Row_index(_n_dim_topo, _row_size - 1, i_dim).stride)%(_row_size - 1)
                   + _node_inds(i_vert, i_dim);
-        i_node += row*Row_index(_n_dim_geom, _row_size, i_dim).stride;
+        i_node += row*Row_index(_n_dim_topo, _row_size, i_dim).stride;
       }
       _topo->pushBack(i_node);
     }

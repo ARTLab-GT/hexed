@@ -261,12 +261,13 @@ Case::Case(std::string input_file)
   _inter.variables->create<int>("visualize", new Namespace::Heisenberg<int>([this]() {
     std::string wd = _vars("working_dir").value();
     std::string suffix = _vars("vis_file_suffix").value();
+    State_variables sv;
+    Velocity veloc;
+    Mass mass;
+    Pressure pres;
+    Mach mach;
+    Art_visc_coef avc;
     if (_vari("vis_field").value()) {
-      State_variables sv;
-      Velocity veloc;
-      Mass mass;
-      Pressure pres;
-      Mach mach;
       Art_visc_coef avc;
       std::vector<const Qpoint_func*> to_vis{&sv, &veloc, &mass, &pres, &mach};
       if (_vard("art_visc_constant").value() > 0 || _vard("art_visc_width").value() > 0) to_vis.push_back(&avc);
@@ -279,7 +280,22 @@ Case::Case(std::string input_file)
       #endif
     }
     if (_vari("vis_surface").value() && _has_geom) {
-      _solver().visualize_surface_tecplot(_solver().mesh().surface_bc_sn(), wd + "surface" + suffix);
+      Outward_normal on;
+      Viscous_stress vs;
+      Heat_flux hf;
+      std::vector<const Boundary_func*> to_vis {&sv, &veloc, &mass, &pres, &mach, &on};
+      if (_vars("transport_model").value() == "inviscid") {
+        to_vis.push_back(&vs);
+        to_vis.push_back(&hf);
+      }
+      std::string file_name = wd + "surface" + suffix;
+      int bc_sn = _solver().mesh().surface_bc_sn();
+      #if HEXED_USE_TECPLOT
+      if (_vari("vis_tecplot").value()) _solver().visualize_surface_tecplot(bc_sn, Bf_concat(to_vis), file_name);
+      #endif
+      #if HEXED_USE_XDMF
+      if (_vari("vis_xdmf").value()) _solver().visualize_surface_xdmf(bc_sn, Bf_concat(to_vis), file_name);
+      #endif
     }
     return 0;
   }));
