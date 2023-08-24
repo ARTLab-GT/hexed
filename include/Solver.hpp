@@ -175,20 +175,10 @@ class Solver
 
   #if HEXED_USE_XDMF
   //! write a visualization file describing the entire flow field (but not identifying surfaces)
-  virtual void visualize_field_xdmf(const Qpoint_func& output_variables, std::string name, int n_sample = 20,
-                                    bool edges = false, bool qpoints = false, bool interior = true);
-  /*! if a `Qpoint_func` is not specified, all the state variables
-   * and the artificial viscosity coefficient will be output
-   */
-  virtual void visualize_field_xdmf(std::string name, int n_sample = 20,
-                                    bool edges = false, bool qpoints = false, bool interior = true);
+  virtual void visualize_field_xdmf(const Qpoint_func& output_variables, std::string name, int n_sample = 20);
   /*! write a visualization file describing all surfaces where a particular boundary condition has been enforced.
    */
   virtual void visualize_surface_xdmf(int bc_sn, const Boundary_func&, std::string name, int n_sample = 20);
-  /*! if a `Boundary_func` is not specified, all the state variables,
-   * the surface normal, the shear stress, and the heat flux will be output.
-   */
-  virtual void visualize_surface_xdmf(int bc_sn, std::string name, int n_sample = 20);
   //! visualize the Cartesian surface which theoretically exists after element deletion but before any vertex snapping
   virtual void vis_cart_surf_xdmf(int bc_sn, std::string name, const Boundary_func& func = Resolution_badness());
   #endif

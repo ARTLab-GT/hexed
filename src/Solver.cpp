@@ -5,10 +5,8 @@
 #include <Solver.hpp>
 #include <Tecplot_file.hpp>
 #include <Vis_data.hpp>
-#include <XdmfDomain.hpp>
-#include <XdmfHDF5Writer.hpp>
-#include <XdmfWriter.hpp>
 #include <thermo.hpp>
+#include <Xdmf_wrapper.hpp>
 
 // kernels
 #include <Restrict_refined.hpp>
@@ -1124,86 +1122,28 @@ std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func,
 }
 
 #if HEXED_USE_XDMF
-void Solver::visualize_field_xdmf(const Qpoint_func& output_variables, std::string name, int n_sample,
-                                  bool edges, bool qpoints, bool interior)
+void Solver::visualize_field_xdmf(const Qpoint_func& output_variables, std::string name, int n_sample)
 {
-  HEXED_ASSERT(params.n_dim > 1, "XDMF field visualization is only supported for 2D and 3D");
-  auto domain = XdmfDomain::New();
-  auto grid = XdmfUnstructuredGrid::New();
-  auto hdf5_writer = XdmfHDF5Writer::New(name + ".h5");
-  auto topo = XdmfTopology::New();
-  auto geom = XdmfGeometry::New();
-  std::vector<boost::shared_ptr<XdmfAttribute>> attrs;
-  for (int i_var = 0; i_var < output_variables.n_var(params.n_dim); ++i_var) {
-    attrs.push_back(XdmfAttribute::New());
-    attrs.back()->setName(output_variables.variable_name(params.n_dim, i_var));
-    attrs.back()->setCenter(XdmfAttributeCenter::Node());
-    attrs.back()->setType(XdmfAttributeType::Scalar());
-  }
-  if (params.n_dim == 2) {
-    topo->setType(XdmfTopologyType::Quadrilateral());
-    geom->setType(XdmfGeometryType::XY());
-  } else {
-    topo->setType(XdmfTopologyType::Hexahedron());
-    geom->setType(XdmfGeometryType::XYZ());
-  }
+  Xdmf_wrapper xdmf(params.n_dim, params.n_dim, n_sample, name, output_variables, status.flow_time);
   Position_func pos_func;
-  int n_total_samples = math::pow(n_sample, params.n_dim);
-  std::vector<Eigen::MatrixXi> node_inds {{4, 2}, {8, 3}};
-  node_inds[0] <<
-    0, 0,
-    1, 0,
-    1, 1,
-    0, 1;
   auto& elems = acc_mesh.elements();
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    for (int i_xdmf_elem = 0; i_xdmf_elem < math::pow(n_sample - 1, params.n_dim); ++i_xdmf_elem) {
-      for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-        int i_node = i_elem*n_total_samples;
-        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-          int row = (i_xdmf_elem/Row_index(params.n_dim, n_sample - 1, i_dim).stride)%(n_sample - 1)
-                    + node_inds[params.n_dim - 2](i_vert, i_dim);
-          i_node += row*Row_index(params.n_dim, n_sample, i_dim).stride;
-        }
-        topo->pushBack(i_node);
-      }
-    }
     Vis_data pos_dat(elems[i_elem], pos_func, basis, status.flow_time);
     Vis_data out_dat(elems[i_elem], output_variables, basis, status.flow_time);
     Mat<> pos = pos_dat.interior(n_sample);
-    for (int i_sample = 0; i_sample < n_total_samples; ++i_sample) {
-      for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-        geom->pushBack(pos(i_dim*n_total_samples + i_sample));
-      }
-    }
     Mat<> out = out_dat.interior(n_sample);
-    for (int i_var = 0; i_var < output_variables.n_var(params.n_dim); ++i_var) {
-      for (int i_sample = 0; i_sample < n_total_samples; ++i_sample) {
-        attrs[i_var]->pushBack(out(i_var*n_total_samples + i_sample));
-      }
-    }
+    xdmf.write_block(pos.data(), out.data());
   }
-  topo->accept(hdf5_writer);
-  geom->accept(hdf5_writer);
-  grid->setTopology(topo);
-  grid->setGeometry(geom);
-  for (auto& attr : attrs) {
-    attr->accept(hdf5_writer);
-    grid->insert(attr);
-  }
-  grid->setTime(XdmfTime::New(status.flow_time));
-  domain->insert(grid);
-  domain->accept(XdmfWriter::New(name + ".xmf"));
 }
-void Solver::visualize_field_xdmf(std::string name, int n_sample,
-                                  bool edges, bool qpoints, bool interior)
-{ HEXED_ASSERT(false, "not implemented"); }
+
 void Solver::visualize_surface_xdmf(int bc_sn, const Boundary_func&, std::string name, int n_sample)
 { HEXED_ASSERT(false, "not implemented"); }
-void Solver::visualize_surface_xdmf(int bc_sn, std::string name, int n_sample)
-{ HEXED_ASSERT(false, "not implemented"); }
+
 void Solver::vis_cart_surf_xdmf(int bc_sn, std::string name, const Boundary_func& func)
-{ HEXED_ASSERT(false, "not implemented"); }
+{
+  Mesh::Reset_vertices reset(acc_mesh);
+  visualize_surface_tecplot(bc_sn, func, name, 2);
+}
 #endif
 
 #if HEXED_USE_TECPLOT
