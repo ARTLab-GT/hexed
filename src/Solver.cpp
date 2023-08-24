@@ -6,6 +6,7 @@
 #include <Tecplot_file.hpp>
 #include <Vis_data.hpp>
 #include <XdmfDomain.hpp>
+#include <XdmfHDF5Writer.hpp>
 #include <XdmfWriter.hpp>
 #include <thermo.hpp>
 
@@ -1129,6 +1130,7 @@ void Solver::visualize_field_xdmf(const Qpoint_func& output_variables, std::stri
   HEXED_ASSERT(params.n_dim > 1, "XDMF field visualization is only supported for 2D and 3D");
   auto domain = XdmfDomain::New();
   auto grid = XdmfUnstructuredGrid::New();
+  auto hdf5_writer = XdmfHDF5Writer::New(name + ".h5");
   auto topo = XdmfTopology::New();
   if (params.n_dim == 2) topo->setType(XdmfTopologyType::Quadrilateral());
   if (params.n_dim == 3) topo->setType(XdmfTopologyType::Hexahedron());
@@ -1136,6 +1138,7 @@ void Solver::visualize_field_xdmf(const Qpoint_func& output_variables, std::stri
   topo->pushBack(1);
   topo->pushBack(2);
   topo->pushBack(3);
+  topo->accept(hdf5_writer);
   grid->setTopology(topo);
   auto geom = XdmfGeometry::New();
   if (params.n_dim == 2) geom->setType(XdmfGeometryType::XY());
@@ -1148,7 +1151,19 @@ void Solver::visualize_field_xdmf(const Qpoint_func& output_variables, std::stri
   geom->pushBack(1.);
   geom->pushBack(0.);
   geom->pushBack(1.);
+  geom->accept(hdf5_writer);
   grid->setGeometry(geom);
+  auto attr = XdmfAttribute::New();
+  attr->setName("foo");
+  attr->setCenter(XdmfAttributeCenter::Node());
+  attr->setType(XdmfAttributeType::Scalar());
+  attr->pushBack(0.);
+  attr->pushBack(1.);
+  attr->pushBack(2.);
+  attr->pushBack(3.);
+  attr->accept(hdf5_writer);
+  grid->insert(attr);
+  grid->setTime(XdmfTime::New(1));
   domain->insert(grid);
   domain->accept(XdmfWriter::New(name + ".xdmf"));
 }
