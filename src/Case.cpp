@@ -203,8 +203,8 @@ Case::Case(std::string input_file)
 
   _inter.variables->create<int>("refine", new Namespace::Heisenberg<int>([this]() {
     std::vector<std::string> crit_code;
-    crit_code.push_back(_vars("surface_refine").value());
-    crit_code.push_back(_vars("surface_unrefine").value());
+    crit_code.push_back("return = " + _vars("surface_refine").value());
+    crit_code.push_back("return = " + _vars("surface_unrefine").value());
     std::vector<std::function<bool(Element&)>> crits;
     for (std::string code : crit_code) {
       crits.emplace_back([this, code](Element& elem) {

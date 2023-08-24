@@ -35,8 +35,8 @@ vis_freq = 10000
 print_freq = 100
 max_safety = 0.7
 max_time_step = huge
-surface_refine = {return = false}
-surface_unrefine = {return = ref_level > init_ref_level & !is_extruded}
+surface_refine = {false}
+surface_unrefine = {ref_level > init_ref_level & !is_extruded}
 surface_max_iters = 100
 n_smooth = 30
 wall_spacing = -1. ;={ set to positive value }
