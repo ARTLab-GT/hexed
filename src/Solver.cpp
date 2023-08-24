@@ -1132,40 +1132,68 @@ void Solver::visualize_field_xdmf(const Qpoint_func& output_variables, std::stri
   auto grid = XdmfUnstructuredGrid::New();
   auto hdf5_writer = XdmfHDF5Writer::New(name + ".h5");
   auto topo = XdmfTopology::New();
-  if (params.n_dim == 2) topo->setType(XdmfTopologyType::Quadrilateral());
-  if (params.n_dim == 3) topo->setType(XdmfTopologyType::Hexahedron());
-  topo->pushBack(0);
-  topo->pushBack(1);
-  topo->pushBack(2);
-  topo->pushBack(3);
-  topo->accept(hdf5_writer);
-  grid->setTopology(topo);
   auto geom = XdmfGeometry::New();
-  if (params.n_dim == 2) geom->setType(XdmfGeometryType::XY());
-  if (params.n_dim == 3) geom->setType(XdmfGeometryType::XYZ());
-  geom->pushBack(0.);
-  geom->pushBack(0.);
-  geom->pushBack(1.);
-  geom->pushBack(0.);
-  geom->pushBack(1.);
-  geom->pushBack(1.);
-  geom->pushBack(0.);
-  geom->pushBack(1.);
+  std::vector<boost::shared_ptr<XdmfAttribute>> attrs;
+  for (int i_var = 0; i_var < output_variables.n_var(params.n_dim); ++i_var) {
+    attrs.push_back(XdmfAttribute::New());
+    attrs.back()->setName(output_variables.variable_name(params.n_dim, i_var));
+    attrs.back()->setCenter(XdmfAttributeCenter::Node());
+    attrs.back()->setType(XdmfAttributeType::Scalar());
+  }
+  if (params.n_dim == 2) {
+    topo->setType(XdmfTopologyType::Quadrilateral());
+    geom->setType(XdmfGeometryType::XY());
+  } else {
+    topo->setType(XdmfTopologyType::Hexahedron());
+    geom->setType(XdmfGeometryType::XYZ());
+  }
+  Position_func pos_func;
+  int n_total_samples = math::pow(n_sample, params.n_dim);
+  std::vector<Eigen::MatrixXi> node_inds {{4, 2}, {8, 3}};
+  node_inds[0] <<
+    0, 0,
+    1, 0,
+    1, 1,
+    0, 1;
+  auto& elems = acc_mesh.elements();
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    for (int i_xdmf_elem = 0; i_xdmf_elem < math::pow(n_sample - 1, params.n_dim); ++i_xdmf_elem) {
+      for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+        int i_node = i_elem*n_total_samples;
+        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+          int row = (i_xdmf_elem/Row_index(params.n_dim, n_sample - 1, i_dim).stride)%(n_sample - 1)
+                    + node_inds[params.n_dim - 2](i_vert, i_dim);
+          i_node += row*Row_index(params.n_dim, n_sample, i_dim).stride;
+        }
+        topo->pushBack(i_node);
+      }
+    }
+    Vis_data pos_dat(elems[i_elem], pos_func, basis, status.flow_time);
+    Vis_data out_dat(elems[i_elem], output_variables, basis, status.flow_time);
+    Mat<> pos = pos_dat.interior(n_sample);
+    for (int i_sample = 0; i_sample < n_total_samples; ++i_sample) {
+      for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+        geom->pushBack(pos(i_dim*n_total_samples + i_sample));
+      }
+    }
+    Mat<> out = out_dat.interior(n_sample);
+    for (int i_var = 0; i_var < output_variables.n_var(params.n_dim); ++i_var) {
+      for (int i_sample = 0; i_sample < n_total_samples; ++i_sample) {
+        attrs[i_var]->pushBack(out(i_var*n_total_samples + i_sample));
+      }
+    }
+  }
+  topo->accept(hdf5_writer);
   geom->accept(hdf5_writer);
+  grid->setTopology(topo);
   grid->setGeometry(geom);
-  auto attr = XdmfAttribute::New();
-  attr->setName("foo");
-  attr->setCenter(XdmfAttributeCenter::Node());
-  attr->setType(XdmfAttributeType::Scalar());
-  attr->pushBack(0.);
-  attr->pushBack(1.);
-  attr->pushBack(2.);
-  attr->pushBack(3.);
-  attr->accept(hdf5_writer);
-  grid->insert(attr);
-  grid->setTime(XdmfTime::New(1));
+  for (auto& attr : attrs) {
+    attr->accept(hdf5_writer);
+    grid->insert(attr);
+  }
+  grid->setTime(XdmfTime::New(status.flow_time));
   domain->insert(grid);
-  domain->accept(XdmfWriter::New(name + ".xdmf"));
+  domain->accept(XdmfWriter::New(name + ".xmf"));
 }
 void Solver::visualize_field_xdmf(std::string name, int n_sample,
                                   bool edges, bool qpoints, bool interior)
