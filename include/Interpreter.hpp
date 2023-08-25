@@ -21,6 +21,7 @@ class Interpreter
   bool _more();
   char _pop();
   void _skip_spaces();
+  bool _char_is(int index, char value);
   std::string _debug_info();
   std::string _read_name();
   void _substitute();

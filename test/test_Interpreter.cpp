@@ -92,6 +92,12 @@ TEST_CASE("Interpreter")
   inter.exec("except = {result = 21}");
   inter.exec("result = nonexistant");
   REQUIRE(inter.variables->lookup<int>("result") == 21);
+  // test evaluation of assignments
+  inter.exec("a = b = 2");
+  REQUIRE(inter.variables->lookup<int>("a") == 2);
+  //inter.exec("a = (b = 2) + 2");
+  REQUIRE(inter.variables->lookup<int>("a") == 4);
+  //inter.exec("a"); // expressions don't have to contain assignments
 
   SECTION("standard library")
   {

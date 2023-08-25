@@ -23,6 +23,15 @@ void Interpreter::_skip_spaces() {
   while (_text.front() == ' ') _pop(); // note: list ends with null character so this will never pop a non-existant element
 }
 
+bool Interpreter::_char_is(int index, char value)
+{
+  auto iter = _text.begin();
+  for (int i = 0; i < index; ++i) {
+    if (iter == _text.end()) return false;
+  }
+  return *iter == value;
+}
+
 std::string Interpreter::_read_name()
 {
   std::string name = "";
@@ -94,10 +103,21 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
       if (_un_ops.count(n)) { // unary operators
         val = _un_ops.at(n)(_eval(0));
       } else { // variable names
-        HEXED_ASSERT(variables->exists_recursive(n), format_str(1000, "undefined variable `%s`", n.c_str()), Parsing_error);
-        val.i = variables->lookup<int>(n);
-        if (!val.i) val.d = variables->lookup<double>(n);
-        val.s = variables->lookup<std::string>(n);
+        _skip_spaces();
+        if (_text.front() == '=' && !_char_is(1, '=')) {
+          // variable assignment
+          _pop();
+          val = _eval(std::numeric_limits<int>::max());
+          if (val.i) variables->assign(n, *val.i);
+          if (val.d) variables->assign(n, *val.d);
+          if (val.s) variables->assign(n, *val.s);
+        } else {
+          // variable lookup
+          HEXED_ASSERT(variables->exists_recursive(n), format_str(1000, "undefined variable `%s`", n.c_str()), Parsing_error);
+          val.i = variables->lookup<int>(n);
+          if (!val.i) val.d = variables->lookup<double>(n);
+          val.s = variables->lookup<std::string>(n);
+        }
       }
     // single-char unary operators
     } else if (_un_ops.count(std::string(1, _text.front()))) {
