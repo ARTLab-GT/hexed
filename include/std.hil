@@ -30,9 +30,9 @@ loop = {
     $({hexed_loop_while}   + hexed_loop_depth) = while
     $({hexed_loop_do}      + hexed_loop_depth) = do
     $({hexed_loop_wrapper} + hexed_loop_depth) = {
-        hexed_case1 = hexed_loop_do}+ hexed_loop_depth +{
-        hexed_case0 = {hexed_loop_wrapper}+ hexed_loop_depth +{ = {}}
-        $$({hexed_case} + (($hexed_loop_while}+ hexed_loop_depth +{) != 0))
+        hexed_loop_case1 = hexed_loop_do}+ hexed_loop_depth +{
+        hexed_loop_case0 = {hexed_loop_wrapper}+ hexed_loop_depth +{ = {}}
+        $$({hexed_loop_case} + (($hexed_loop_while}+ hexed_loop_depth +{) != 0))
         $hexed_loop_wrapper}+ hexed_loop_depth +{
     }
     $$({hexed_loop_wrapper} + hexed_loop_depth)
@@ -69,9 +69,10 @@ repl = {
         print {#+^$ }
         hexed_repl_cmd = ask
         {basically reimplement the conditional to avoid overwriting `if`/`then`/`else`}
-        hexed_case1 = {$({println(} + hexed_repl_cmd + {)})}
-        hexed_case0 = {}
-        $$({hexed_case} + (#hexed_repl_cmd != 0))
+        hexed_result = {} + ($hexed_repl_cmd)
+        hexed_repl_case0 = {println hexed_result}
+        hexed_repl_case1 = {}
+        $$({hexed_repl_case} + (hexed_result == {}))
     }
     $loop
     except = {}

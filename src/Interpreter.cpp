@@ -263,7 +263,7 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
     {"print", [this](_Dynamic_value val) {
       auto s = _general_add({{}, {}, {""}}, val);
       std::cout << s.s.value() << std::flush;
-      return _Dynamic_value{{0}, {}, {}};
+      return _Dynamic_value{{}, {}, {""}};
     }},
     {"println", [this](_Dynamic_value val){return _un_ops["print"](_general_add(val, {{}, {}, {"\n"}}));}},
     {"shell", [](_Dynamic_value val) {
@@ -302,13 +302,13 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
     std::getline(std::cin, input);
     return input;
   }));
-  variables->create("exit", new Namespace::Heisenberg<int>([this]() {
+  variables->create("exit", new Namespace::Heisenberg<std::string>([this]() {
     _text.clear();
-    return 0;
+    return "";
   }));
-  variables->create("throw", new Namespace::Heisenberg<int>([this]() {
+  variables->create("throw", new Namespace::Heisenberg<std::string>([this]() {
     throw std::runtime_error("Exception thrown from HIL by evaluating `throw`.");
-    return 0;
+    return "";
   }));
   // builtin values
   variables->assign<double>("huge", huge);
