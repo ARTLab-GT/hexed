@@ -28,6 +28,7 @@ bool Interpreter::_char_is(int index, char value)
   auto iter = _text.begin();
   for (int i = 0; i < index; ++i) {
     if (iter == _text.end()) return false;
+    ++iter;
   }
   return *iter == value;
 }
@@ -325,27 +326,9 @@ void Interpreter::exec(std::string comms)
   while (_more()) {
     try {
       _skip_spaces();
-      if (_text.front() == '\n' || _text.front() == ';') _pop();
-      else if (_text.front() == '$') _substitute();
-      else if (_text.front() == '=') {
-        _pop();
-        _eval(std::numeric_limits<int>::max());
-      } else {
-        HEXED_ASSERT(std::isalpha(_text.front()) || _text.front() == '_', "statement does not begin with valid variable/builtin name", Parsing_error);
-        std::string name = _read_name();
-        _skip_spaces();
-        HEXED_ASSERT(_pop() == '=', format_str(1000, "expected assignment operator `=` after variable name `%s`", name.c_str()), Parsing_error);
-        _skip_spaces();
-        HEXED_ASSERT(_more(), "unexpected end of line in assignment statement", Parsing_error);
-        auto val = _eval(std::numeric_limits<int>::max());
-        if (val.i) variables->assign(name, *val.i);
-        if (val.d) variables->assign(name, *val.d);
-        if (val.s) variables->assign(name, *val.s);
-        _skip_spaces();
-        HEXED_ASSERT(!_more() || _text.front() == '\n' || _text.front() == ';',
-                     "expected end of line after assignment statement", Parsing_error);
-      }
-      _skip_spaces();
+      if (_text.front() == '$') _substitute();
+      else if (_text.front() == '\n' || _text.front() == ';') _pop();
+      else _eval(std::numeric_limits<int>::max());
     } catch (const Parsing_error& e) {
       std::string except = variables->lookup<std::string>("except").value();
       std::string message = "Hexed Interface Language error (in `hexed::Interpreter`):\n    " + std::string(e.what()) + "\n" + _debug_info();

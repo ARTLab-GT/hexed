@@ -1,26 +1,27 @@
-={ since these can be inconvenient to insert in a string literal }
+{since these can be inconvenient to insert in a string literal}
 newline = {
 }
 closebr = {\}}
-={ boolean aliases }
+
+{boolean aliases}
 true = 1
 false = 0
 
-={ conditional construct }
-if = {} ;={ reserve these names so a user can't accidentally assign a different type to them }
+{conditional construct}
+if = {}; {reserve these names so a user can't accidentally assign a different type to them}
 then = {}
 else = {}
 cond = {
     hexed_cond0 = else
     hexed_cond1 = then
     hexed_cond = {$hexed_cond} + (($if) != 0)
-    if = {} ;={ reset these so that defaults can be used again }
+    if = {}; {reset these so that defaults can be used again}
     then = {}
     else = {}
     $hexed_cond
 }
 
-={ while loop }
+{while loop}
 hexed_loop_depth = 0
 while = {}
 do = {}
@@ -41,7 +42,7 @@ loop = {
     do = {}
 }
 
-={ string slicing/splitting }
+{string slicing/splitting}
 split_i = 0
 split_str = {}
 split_at = {split_i == 0}
@@ -59,14 +60,14 @@ split = {
     $loop
 }
 
-={ basic Read-Evaluate-Print Loop }
+{basic Read-Evaluate-Print Loop}
 hexed_quit_repl = false
 quit = {hexed_quit_repl = true}
 repl = {
     while = {!hexed_quit_repl}
     do = {
         except = {=println exception;}
-        =print {#+^$ }
+        print {#+^$ }
         hexed_repl_cmd = ask
         if = {#hexed_repl_cmd}
         then = {
@@ -75,7 +76,7 @@ repl = {
                 split_str = hexed_repl_cmd
                 split_at = {split_i == 1}
                 $split
-                hexed_repl_cmd = {=println(}+ split_rest; ={ note this parenthesis isn't closed and apparently doesn't need to be }
+                hexed_repl_cmd = {println(}+ split_rest; {note this parenthesis isn't closed and apparently doesn't need to be}
             }
             $cond
         }

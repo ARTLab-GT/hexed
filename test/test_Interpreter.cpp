@@ -4,6 +4,7 @@
 TEST_CASE("Interpreter")
 {
   hexed::Interpreter inter;
+  inter.exec("\n");
   inter.exec("shock_wave = 7\n  boundary0layer=14;interaction = 1.2");
   REQUIRE(inter.variables->lookup<int>("shock_wave").value() == 7);
   REQUIRE(inter.variables->lookup<int>("boundary0layer").value() == 14);
@@ -53,7 +54,6 @@ TEST_CASE("Interpreter")
   REQUIRE(inter.variables->lookup<int>("result").value() == 10);
   inter.exec("result = 1 + ${${1 + 1}}");
   REQUIRE(inter.variables->lookup<int>("result").value() == 3);
-  inter.exec("= 1 + 1  ");
   inter.exec("result = 6; result = result*result");
   REQUIRE(inter.variables->lookup<int>("result").value() == 36);
   inter.exec("result = -7.1 < 5");
@@ -77,7 +77,7 @@ TEST_CASE("Interpreter")
   inter.exec("result = {prandtl} == {prandtl}");
   REQUIRE(inter.variables->lookup<int>("result").value() == 1);
   REQUIRE_THROWS(inter.exec("$read {non_existant.hil}"));
-  inter.exec("result = 0; =exit; result = 1");
+  inter.exec("result = 0; exit; result = 1");
   REQUIRE(inter.variables->lookup<int>("result").value() == 0);
   inter.exec("size = #{prandtl}");
   REQUIRE(inter.variables->lookup<int>("size").value() == 7);
@@ -95,9 +95,9 @@ TEST_CASE("Interpreter")
   // test evaluation of assignments
   inter.exec("a = b = 2");
   REQUIRE(inter.variables->lookup<int>("a") == 2);
-  //inter.exec("a = (b = 2) + 2");
+  inter.exec("a = (b = 2) + 2");
   REQUIRE(inter.variables->lookup<int>("a") == 4);
-  //inter.exec("a"); // expressions don't have to contain assignments
+  inter.exec("a"); // expressions don't have to contain assignments
 
   SECTION("standard library")
   {
