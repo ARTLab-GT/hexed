@@ -59,17 +59,23 @@ void Interpreter::_substitute()
 
 Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
 {
-  _skip_spaces();
   _Dynamic_value val;
-  while (_text.front() == '$') _substitute();
-  // process open parenthesis
-  if (_text.front() == '(') {
-    _pop();
-    val = _eval(std::numeric_limits<int>::max());
-  } else {
+  while (_more())
+  {
+    _skip_spaces();
+    if (_text.front() == '$') {
+      _substitute();
+      continue;
+    } else if (_text.front() == '\n' || _text.front() == ';') _pop();
+    else if (_text.front() == '(') {
+      _pop();
+      val = _eval(std::numeric_limits<int>::max());
+    } else if (precedence == std::numeric_limits<int>::max() && _text.front() == ')') {
+      _pop();
+      break;
     // parse expression tokens by kind
     // numeric literals
-    if (std::isdigit(_text.front()) || _text.front() == '.') {
+    } else if (std::isdigit(_text.front()) || _text.front() == '.') {
       std::string value;
       bool is_int = true;
       while (std::isdigit(_text.front()) || _text.front() == '.' || std::tolower(_text.front()) == 'e'
@@ -108,7 +114,7 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
         if (_text.front() == '=' && !_char_is(1, '=')) {
           // variable assignment
           _pop();
-          val = _eval(std::numeric_limits<int>::max());
+          val = _eval(std::numeric_limits<int>::max() - 2);
           if (val.i) variables->assign(n, *val.i);
           if (val.d) variables->assign(n, *val.d);
           if (val.s) variables->assign(n, *val.s);
@@ -124,32 +130,31 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
     } else if (_un_ops.count(std::string(1, _text.front()))) {
       val = _un_ops.at(std::string(1, _pop()))(_eval(0));
     } else HEXED_ASSERT(false, format_str(100, "failed to parse value starting with `%c`", _text.front()), Parsing_error);
-  }
-  _skip_spaces();
-  // process binary operators of which this token was the first argument
-  while (true) {
-    std::string op_name = "";
-    for (auto& pair : _bin_ops) {
-      if (_text.size() > pair.first.size()) {
-        if (std::equal(pair.first.begin(), pair.first.end(), _text.begin())) {
-          if (pair.first.size() > op_name.size()) op_name = pair.first;
+    _skip_spaces();
+    // process binary operators of which this token was the first argument
+    while (true) {
+      std::string op_name = "";
+      for (auto& pair : _bin_ops) {
+        if (_text.size() > pair.first.size()) {
+          if (std::equal(pair.first.begin(), pair.first.end(), _text.begin())) {
+            if (pair.first.size() > op_name.size()) op_name = pair.first;
+          }
         }
       }
+      if (op_name.empty()) break;
+      auto& op = _bin_ops.at(op_name);
+      if (op.precedence < precedence) {
+        for (unsigned i = 0; i < op_name.size(); ++i) _pop();
+        val = op.func(val, _eval(op.precedence));
+        _skip_spaces();
+      } else break;
     }
-    if (op_name.empty()) break;
-    auto& op = _bin_ops.at(op_name);
-    if (op.precedence < precedence) {
-      for (unsigned i = 0; i < op_name.size(); ++i) _pop();
-      val = op.func(val, _eval(op.precedence));
-      _skip_spaces();
-    } else break;
+    if (precedence < std::numeric_limits<int>::max() - 1) break;
   }
-  // process close parenthesis
-  if (precedence == std::numeric_limits<int>::max() && _text.front() == ')') _pop();
   return val;
 }
 
-template <> int Interpreter::_pow<int>(int op0, int op1) {return math::pow(op0, op1);}
+template<> int Interpreter::_pow<int>(int op0, int op1) {return math::pow(op0, op1);}
 
 Interpreter::_Dynamic_value Interpreter::_mod(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1)
 {
@@ -323,22 +328,18 @@ void Interpreter::exec(std::string comms)
   Lock::Acquire a(_lock);
   _text.assign(comms.begin(), comms.end());
   _text.push_back('\0');
-  while (_more()) {
-    try {
-      _skip_spaces();
-      if (_text.front() == '$') _substitute();
-      else if (_text.front() == '\n' || _text.front() == ';') _pop();
-      else _eval(std::numeric_limits<int>::max());
-    } catch (const Parsing_error& e) {
-      std::string except = variables->lookup<std::string>("except").value();
-      std::string message = "Hexed Interface Language error (in `hexed::Interpreter`):\n    " + std::string(e.what()) + "\n" + _debug_info();
-      if (!except.empty()) {
-        variables->assign<std::string>("exception", message);
-        while (_more() && (_text.front() != '\n' && _text.front() != ';')) _pop();
-        except = except + "; exception = {}; except = {};";
-        _text.insert(_text.begin(), except.begin(), except.end());
-      } else throw std::runtime_error(message);
-    }
+  try {
+    _eval(std::numeric_limits<int>::max() - 1);
+  } catch (const Parsing_error& e) {
+    std::string except = variables->lookup<std::string>("except").value();
+    std::string message = "Hexed Interface Language error (in `hexed::Interpreter`):\n    " + std::string(e.what()) + "\n" + _debug_info();
+    if (!except.empty()) {
+      variables->assign<std::string>("exception", message);
+      while (_more() && (_text.front() != '\n' && _text.front() != ';')) _pop();
+      except = except + "; exception = {}; except = {};";
+      _text.insert(_text.begin(), except.begin(), except.end());
+      _eval(std::numeric_limits<int>::max() - 1);
+    } else throw std::runtime_error(message);
   }
   _text.clear();
 }

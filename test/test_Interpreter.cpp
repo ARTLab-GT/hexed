@@ -3,7 +3,7 @@
 
 TEST_CASE("Interpreter")
 {
-  hexed::Interpreter inter;
+  hexed::Interpreter inter(std::vector<std::string>{});
   inter.exec("\n");
   inter.exec("shock_wave = 7\n  boundary0layer=14;interaction = 1.2");
   REQUIRE(inter.variables->lookup<int>("shock_wave").value() == 7);
@@ -97,6 +97,8 @@ TEST_CASE("Interpreter")
   REQUIRE(inter.variables->lookup<int>("a") == 2);
   inter.exec("a = (b = 2) + 2");
   REQUIRE(inter.variables->lookup<int>("a") == 4);
+  inter.exec("a = (b = 3; c = 5)");
+  REQUIRE(inter.variables->lookup<int>("a") == 5);
   inter.exec("a"); // expressions don't have to contain assignments
 
   SECTION("standard library")
