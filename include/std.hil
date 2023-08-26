@@ -30,10 +30,9 @@ loop = {
     $({hexed_loop_while}   + hexed_loop_depth) = while
     $({hexed_loop_do}      + hexed_loop_depth) = do
     $({hexed_loop_wrapper} + hexed_loop_depth) = {
-        if = hexed_loop_while}+ hexed_loop_depth +{
-        then = hexed_loop_do}+ hexed_loop_depth +{
-        else = {hexed_loop_wrapper}+ hexed_loop_depth +{ = {}}
-        $cond
+        hexed_case1 = hexed_loop_do}+ hexed_loop_depth +{
+        hexed_case0 = {hexed_loop_wrapper}+ hexed_loop_depth +{ = {}}
+        $$({hexed_case} + (($hexed_loop_while}+ hexed_loop_depth +{) != 0))
         $hexed_loop_wrapper}+ hexed_loop_depth +{
     }
     $$({hexed_loop_wrapper} + hexed_loop_depth)
@@ -62,26 +61,17 @@ split = {
 
 {basic Read-Evaluate-Print Loop}
 hexed_quit_repl = false
-quit = {hexed_quit_repl = true}
+quit = {hexed_quit_repl = true; {}}
 repl = {
     while = {!hexed_quit_repl}
     do = {
-        except = {=println exception;}
+        except = {println exception;}
         print {#+^$ }
         hexed_repl_cmd = ask
-        if = {#hexed_repl_cmd}
-        then = {
-            if = {hexed_repl_cmd#0 == {=}}
-            then = {
-                split_str = hexed_repl_cmd
-                split_at = {split_i == 1}
-                $split
-                hexed_repl_cmd = {println(}+ split_rest; {note this parenthesis isn't closed and apparently doesn't need to be}
-            }
-            $cond
-        }
-        $cond
-        $hexed_repl_cmd
+        {basically reimplement the conditional to avoid overwriting `if`/`then`/`else`}
+        hexed_case1 = {$({println(} + hexed_repl_cmd + {)})}
+        hexed_case0 = {}
+        $$({hexed_case} + (#hexed_repl_cmd != 0))
     }
     $loop
     except = {}

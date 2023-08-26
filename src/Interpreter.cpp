@@ -335,6 +335,7 @@ void Interpreter::exec(std::string comms)
     std::string message = "Hexed Interface Language error (in `hexed::Interpreter`):\n    " + std::string(e.what()) + "\n" + _debug_info();
     if (!except.empty()) {
       variables->assign<std::string>("exception", message);
+      _skip_spaces();
       while (_more() && (_text.front() != '\n' && _text.front() != ';')) _pop();
       except = except + "; exception = {}; except = {};";
       _text.insert(_text.begin(), except.begin(), except.end());
