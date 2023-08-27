@@ -16,7 +16,11 @@ class Interpreter
     std::optional<int> i;
     std::optional<double> d;
     std::optional<std::string> s;
-  } zero{{0}, {}, {}};
+    _Dynamic_value() {}
+    _Dynamic_value(int         arg) : i{arg} {}
+    _Dynamic_value(double      arg) : d{arg} {}
+    _Dynamic_value(std::string arg) : s{arg} {}
+  };
 
   bool _more();
   char _pop();

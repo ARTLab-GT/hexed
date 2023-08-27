@@ -100,6 +100,7 @@ TEST_CASE("Interpreter")
   inter.exec("a = (b = 3; c = 5)");
   REQUIRE(inter.variables->lookup<int>("a") == 5);
   inter.exec("a"); // expressions don't have to contain assignments
+  inter.exec("x = (0; {})");
 
   SECTION("standard library")
   {

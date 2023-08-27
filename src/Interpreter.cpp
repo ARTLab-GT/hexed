@@ -63,19 +63,20 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
   while (_more())
   {
     _skip_spaces();
+    // parse expression tokens by kind
     if (_text.front() == '$') {
       _substitute();
       continue;
-    } else if (_text.front() == '\n' || _text.front() == ';') _pop();
-    else if (_text.front() == '(') {
+    } else if (_text.front() == '\n' || _text.front() == ';') {
+      _pop();
+    } else if (_text.front() == '(') {
       _pop();
       val = _eval(std::numeric_limits<int>::max());
     } else if (precedence == std::numeric_limits<int>::max() && _text.front() == ')') {
       _pop();
       break;
-    // parse expression tokens by kind
-    // numeric literals
     } else if (std::isdigit(_text.front()) || _text.front() == '.') {
+      // numeric literals
       std::string value;
       bool is_int = true;
       while (std::isdigit(_text.front()) || _text.front() == '.' || std::tolower(_text.front()) == 'e'
@@ -84,13 +85,13 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
         value.push_back(_pop());
       }
       try {
-        if (is_int) val.i = std::stoi(value.c_str());
-        else        val.d = std::stod(value.c_str());
+        if (is_int) val = std::stoi(value.c_str());
+        else        val = std::stod(value.c_str());
       } catch (...) {
         HEXED_ASSERT(false, format_str(1000, "failed to parse numeric literal `%s`", value.c_str()), Parsing_error);
       }
-    // string literals
     } else if (_text.front() == '{') {
+      // string literals
       _pop();
       std::string value;
       bool backslash = false;
@@ -103,9 +104,9 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
         else backslash = false;
         if (depth && !backslash) value.push_back(c);
       }
-      val.s = value;
-    // multi-char identifiers
+      val = value;
     } else if (std::isalpha(_text.front()) || _text.front() == '_') {
+      // alphabetic names
       std::string n = _read_name();
       if (_un_ops.count(n)) { // unary operators
         val = _un_ops.at(n)(_eval(0));
@@ -121,13 +122,14 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
         } else {
           // variable lookup
           HEXED_ASSERT(variables->exists_recursive(n), format_str(1000, "undefined variable `%s`", n.c_str()), Parsing_error);
+          val = _Dynamic_value();
           val.i = variables->lookup<int>(n);
           if (!val.i) val.d = variables->lookup<double>(n);
           val.s = variables->lookup<std::string>(n);
         }
       }
-    // single-char unary operators
     } else if (_un_ops.count(std::string(1, _text.front()))) {
+      // non-alphabetic unary operators
       val = _un_ops.at(std::string(1, _pop()))(_eval(0));
     } else HEXED_ASSERT(false, format_str(100, "failed to parse value starting with `%c`", _text.front()), Parsing_error);
     _skip_spaces();
@@ -237,7 +239,7 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
     }},
     {"#", [this](_Dynamic_value val) {
       HEXED_ASSERT(val.s.has_value(), "unary operator `#` requires string argument", Parsing_error);
-      return _Dynamic_value{{val.s.value().size()}, {}, {}};
+      return _Dynamic_value(int(val.s.value().size()));
     }},
     {"sqrt", [this](_Dynamic_value val) {
       double operand;
@@ -261,22 +263,22 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
       return str;
     }},
     {"print", [this](_Dynamic_value val) {
-      auto s = _general_add({{}, {}, {""}}, val);
+      auto s = _general_add({""}, val);
       std::cout << s.s.value() << std::flush;
-      return _Dynamic_value{{}, {}, {""}};
+      return _Dynamic_value("");
     }},
-    {"println", [this](_Dynamic_value val){return _un_ops["print"](_general_add(val, {{}, {}, {"\n"}}));}},
+    {"println", [this](_Dynamic_value val){return _un_ops["print"](_general_add(val, {"\n"}));}},
     {"shell", [](_Dynamic_value val) {
       HEXED_ASSERT(val.s.has_value(), "operand of `shell` must be `string`", Parsing_error);
       std::cout << std::flush; // apparently this is necessary sometimes?
-      return _Dynamic_value{{std::system(val.s->c_str())}, {}, {}};
+      return _Dynamic_value(std::system(val.s->c_str()));
     }},
   },
   _bin_ops {
     {"^" , {1, _arithmetic_op<_pow<double>, _pow<int>>}}, // note: 0 is for unary ops
     {"#" , {1, [this](_Dynamic_value str, _Dynamic_value i) {
       HEXED_ASSERT(str.s && i.i, "firt operand of binary `#` must be `string` and second must be `int`", Parsing_error);
-      return _Dynamic_value{{}, {}, {std::string(1, (*str.s)[*i.i])}};
+      return _Dynamic_value(std::string(1, (*str.s)[*i.i]));
     }}},
     {"%" , {2, _mod}},
     {"/" , {2, _arithmetic_op<_div<double>, _div<int>>}},
@@ -285,7 +287,7 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
     {"+" , {3, [this](_Dynamic_value o0, _Dynamic_value o1){return _general_add(o0, o1);}}},
     {"==", {4, _general_eq}},
     {"!=", {4, [](_Dynamic_value op0, _Dynamic_value op1){
-        return _Dynamic_value{{!_general_eq(op0, op1).i.value()}, {}, {}};
+        return !_general_eq(op0, op1).i.value();
     }}},
     {">=", {4, _comparison_op<_ge<double>, _ge<int>>}},
     {"<=", {4, _comparison_op<_le<double>, _le<int>>}},
