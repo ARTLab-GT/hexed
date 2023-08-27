@@ -1,4 +1,4 @@
-={ array variables }
+{array variables}
 i_dim = 0
 mesh_extreme_eps = 1e-6
 while = {i_dim < 3}
@@ -15,7 +15,7 @@ do = {
 }
 $loop
 
-={ basic parameters }
+{basic parameters}
 row_size = 6
 init_ref_level = 3
 local_time = true
@@ -39,7 +39,7 @@ surface_refine = {false}
 surface_unrefine = {ref_level > init_ref_level & !is_extruded}
 surface_max_iters = 100
 n_smooth = 30
-wall_spacing = -1. ;={ set to positive value }
+wall_spacing = -1.; {set to positive value}
 geom_n_segments = 1000
 vis_surface = true
 vis_field = true
@@ -48,46 +48,46 @@ vis_xdmf = true
 max_angle = 10*degree
 max_deflection = huge
 
-={ overrideable macros }
-vis_init = {vis_file_suffix = {_init}; =visualize}
-vis_final = {vis_file_suffix = {_final}; =visualize}
-print_init = {=println header}
+{overrideable macros}
+vis_init = {vis_file_suffix = {_init}; visualize}
+vis_final = {vis_file_suffix = {_final}; visualize}
+print_init = {println header}
 print_final = {
-    =println {simulation complete}
-    =println {}
-    =println {performance summary:}
-    =println performance_report
+    println {simulation complete}
+    println {}
+    println {performance summary:}
+    println performance_report
 }
 done = {println {Error: you forgot to a set stop condition} & throw}
 vis_iter = {
     if = {iteration%vis_freq == 0}
     then = {
         vis_file_suffix = {_iter} + iteration
-        =print {visualizing...}
-        =visualize
-        =println {done}
+        print {visualizing...}
+        visualize
+        println {done}
     }
     $cond
 }
 print_iter = {
     if = {iteration%print_freq == 0}
-    then = {=println report}
+    then = {println report}
     $cond
 }
 iterate = {
-    =update
+    update
     $print_iter
     $vis_iter
-    except = {=println exception}
+    except = {println exception}
     $(read(working_dir + {runtime_cmd.hil}))
-    =shell({echo > } + working_dir + {runtime_cmd.hil})
+    shell({echo > } + working_dir + {runtime_cmd.hil})
 }
 
 init = {
     if = {working_dir#(#working_dir - 1) != {/}}
     then = {working_dir = working_dir + {/}}
     $cond
-    =shell({if [ ! -d } + working_dir + { ]; then mkdir } + working_dir + {; fi})
+    shell({if [ ! -d } + working_dir + { ]; then mkdir } + working_dir + {; fi})
     if = {surface_bc == {auto}}
     then = {
         if = {transport_model == {inviscid}}
@@ -107,31 +107,31 @@ init = {
         $loop
     }
     $cond
-    =create_solver
-    =init_refinement
-    =add_geom
+    create_solver
+    init_refinement
+    add_geom
     i_refinement = 0
     keep_refining = false
     while = {!keep_refining & i_refinement < surface_max_iters}
     do = {
-        =print({geometry-based refinement sweep } + i_refinement + {... })
+        print({geometry-based refinement sweep } + i_refinement + {... })
         keep_refining = keep_refining & refine
         i_refinement = i_refinement + 1
-        =println {done}
+        println {done}
     }
     $loop
     if = {wall_spacing > 0}
-    then = {=make_layers}
+    then = {make_layers}
     $cond
-    =init_state
-    =println({initialization complete with } + n_elements + { elements})
-    =println {}
+    init_state
+    println({initialization complete with } + n_elements + { elements})
+    println {}
     $vis_init
 }
 
 run = {
     $print_init
-    =shell({echo > } + working_dir + {runtime_cmd.hil})
+    shell({echo > } + working_dir + {runtime_cmd.hil})
     while = {!($done)}
     do = {
         iteration = iteration + 1
@@ -142,5 +142,5 @@ run = {
     $vis_final
 }
 
-={ initialization }
+{initialization}
 iteration = 0
