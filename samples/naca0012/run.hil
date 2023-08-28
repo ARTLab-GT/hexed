@@ -7,7 +7,6 @@ altitude = 0.
 mach = 0.3
 attack = 4*degree
 shell {python3 make_geom.py}
-vis_tecplot = true
 geom0 = {auto.csv}
 surface_refine = {res_bad > 3e-3 & ref_level < 10}
 done = {iteration >= 5e4}

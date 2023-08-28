@@ -16,9 +16,16 @@ do = {
 $loop
 
 {utilities}
-momentum = {momentum0 = momentum0; momentum1 = momentum1; momentum2 = momentum2;}
-mass = {mass = mass;}
-energy = {energy = energy;}
+heat_rat = 1.4
+momentum_expr = {momentum0 = momentum0; momentum1 = momentum1; momentum2 = momentum2;}
+mass_expr = {mass = mass;}
+energy_expr = {energy = energy;}
+velocity_expr = {velocity0 = momentum0/mass; velocity1 = momentum1/mass; velocity2 = momentum2/mass;}
+speed_expr = {speed = sqrt(velocity0^2 + velocity1^2 + velocity2^2);}
+pressure_expr = {pressure = (heat_rat - 1)*(energy - 0.5*mass*speed^2);}
+temperature_expr = {temperature = pressure/(mass*specific_gas_air);}
+mach_expr = {mach = speed/sqrt(heat_rat*pressure/mass);}
+art_visc_expr = {art_visc = art_visc;}
 
 {basic parameters}
 row_size = 6
@@ -50,7 +57,7 @@ vis_surface = true
 vis_field = true
 vis_tecplot = false
 vis_xdmf = true
-vis_vars = momentum + mass + energy
+vis_vars = momentum_expr + mass_expr + energy_expr + velocity_expr + speed_expr + pressure_expr + temperature_expr + mach_expr + art_visc_expr
 max_angle = 10*degree
 max_deflection = huge
 
