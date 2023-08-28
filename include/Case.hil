@@ -26,7 +26,8 @@ pressure_expr = {pressure = (heat_rat - 1)*(energy - 0.5*density*speed^2);}
 temperature_expr = {temperature = pressure/(density*specific_gas_air);}
 mach_expr = {mach = speed/sqrt(heat_rat*pressure/density);}
 art_visc_expr = {art_visc = art_visc;}
-stress_expr = {stress0 = stress0; stress1 = stress1; stress2 = stress2;}
+visc_stress_expr = {visc_stress0 = visc_stress0; visc_stress1 = visc_stress1; visc_stress2 = visc_stress2;}
+stress_expr = {stress0 = pressure*normal0 + visc_stress0; stress1 = pressure*normal1 + visc_stress1; stress2 = pressure*normal2 + visc_stress2;}
 heat_flux_expr = {heat_flux = heat_flux;}
 iteration_expr = {iteration = iteration;}
 residual_expr = {normalized_residual = (residual_momentum/init_residual_momentum + residual_density/init_residual_density + residual_energy/init_residual_energy)/3;}
@@ -36,6 +37,20 @@ flow_time_expr = {flow_time = flow_time;}
 time_step_expr = {time_step = time_step;}
 fix_iters_expr = {fix_iters = fix_iters;}
 state_vars = momentum_expr + density_expr + energy_expr + velocity_expr + speed_expr + pressure_expr + temperature_expr + mach_expr
+compute_force = {
+    integrand_surface = stress_expr
+    integrate_surface
+    force0 = integral_surface_stress0
+    force1 = integral_surface_stress1
+    force2 = integral_surface_stress2
+    drag = force0*direction0 + force1*direction1 + force2*direction2
+    if = {n_dim == 2}
+    then = {lift = force1*direction0 - force0*direction1}
+    else = {println {force computation not yet implemented for `n_dim != 2`}; throw}
+    $cond
+    drag_coef = drag/(0.5*density*speed^2)
+    lift_coef = lift/(0.5*density*speed^2)
+}
 
 {basic parameters}
 row_size = 6
@@ -68,8 +83,10 @@ vis_field = true
 vis_tecplot = false
 vis_xdmf = true
 vis_field_vars = state_vars + art_visc_expr
-vis_surface_vars = state_vars + stress_expr + heat_flux_expr
+vis_surface_vars = state_vars + visc_stress_expr + heat_flux_expr
 print_vars = iteration_expr + residual_expr + av_advection_residual_expr + av_diffusion_residual_expr + flow_time_expr + time_step_expr + fix_iters_expr
+integrand_field = {}
+integrand_surface = {}
 max_angle = 10*degree
 max_deflection = huge
 

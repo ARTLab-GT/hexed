@@ -70,11 +70,11 @@ void surface(Namespace& space, Boundary_connection& con, int i_fqpoint)
     state.push_back(con.inside_face()[i_var*nfq + i_fqpoint]);
   }
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-    space.assign("stress" + std::to_string(i_dim), flux[i_dim]);
+    space.assign("visc_stress" + std::to_string(i_dim), flux[i_dim]);
     space.assign("momentum" + std::to_string(i_dim), state[i_dim]);
   }
   for (int i_dim = params.n_dim; i_dim < 3; ++i_dim) {
-    space.assign("stress" + std::to_string(i_dim), 0.);
+    space.assign("visc_stress" + std::to_string(i_dim), 0.);
     space.assign("momentum" + std::to_string(i_dim), 0.);
   }
   space.assign("mass", state[params.n_dim]);

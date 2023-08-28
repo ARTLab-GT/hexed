@@ -17,8 +17,8 @@ class Struct_expr
    *   regardless of the environment in which it was executed.
    *   Specifically, it must satisfy the following requirements
    *   - It consists only of assignment statements where the LHS is non-empty and does not contain the macro-substitution character `$`.
-   *   - The RHS may not contain other statements on the RHS.
-   *   - The RHS of the assignment statements may contain `$`, but any resulting substitutions must not add statements or exit the interpreter.
+   *   - The RHS must not contain line breaks or semicolons (except the one that terminates the statement, of course).
+   *   - The RHS of the assignment statements may contain `$`, but any resulting substitutions must not line breaks/semicolons or exit the interpreter.
    *   - Each RHS must evaluate to an `int` or `double`.
    */
   Struct_expr(std::string code);

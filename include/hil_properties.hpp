@@ -39,7 +39,7 @@ void state(Namespace&, Element&, int i_qpoint);
  * - `momentum0`, `momentum1`, `momentum2` : momentum per volume
  * - `mass`: mass per volume (aka density)
  * - `energy`: total energy per volume
- * - `stress0`, `stress1`, `stress2` : viscous stress at surface
+ * - `visc_stress0`, `visc_stress1`, `visc_stress2` : viscous stress at surface
  * - `mass_flux`: diffusive mass flux through surface
  * - `heat_flux`: surface heat flux
  */

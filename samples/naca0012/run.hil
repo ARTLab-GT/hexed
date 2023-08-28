@@ -12,4 +12,9 @@ surface_refine = {res_bad > 3e-3 & ref_level < 10}
 done = {normalized_residual < 1e-7}
 
 $init
+print {density integral: }
+integrand_field = {density = density}
+$integrate_field
+println integral_field_density
+println (400*1.225)
 $run

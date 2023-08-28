@@ -349,6 +349,18 @@ Case::Case(std::string input_file)
     return _solver().stopwatch_tree().report();
   }));
 
+  _inter.variables->create<std::string>("integrate_field", new Namespace::Heisenberg<std::string>([this]() {
+    Struct_expr integrand(_vars("integrand_field").value());
+    auto integral = _solver().integral_field(Qpoint_expr(integrand, _inter));
+    for (unsigned i_var = 0; i_var < integrand.names.size(); ++i_var) {
+      _inter.variables->assign("integral_field_" + integrand.names[i_var], integral[i_var]);
+    }
+    return "";
+  }));
+  _inter.variables->create<std::string>("integrate_surface", new Namespace::Heisenberg<std::string>([this]() {
+    return "";
+  }));
+
   // load HIL code for the Case _interface
   _inter.exec(format_str(1000, "$read {%s/include/Case.hil}", config::root_dir));
   // execute input file
