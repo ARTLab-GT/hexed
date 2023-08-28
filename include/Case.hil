@@ -29,7 +29,7 @@ art_visc_expr = {art_visc = art_visc;}
 stress_expr = {stress0 = stress0; stress1 = stress1; stress2 = stress2;}
 heat_flux_expr = {heat_flux = heat_flux;}
 iteration_expr = {iteration = iteration;}
-residual_expr = {residual_momentum = residual_momentum; residual_density = residual_density; residual_energy = residual_energy;}
+residual_expr = {normalized_residual = residual_momentum/init_residual_momentum + residual_density/init_residual_density + residual_energy/init_residual_energy;}
 av_advection_residual_expr = {av_advection_residual = av_advection_residual;}
 av_diffusion_residual_expr = {av_diffusion_residual = av_diffusion_residual;}
 flow_time_expr = {flow_time = flow_time;}
@@ -101,6 +101,15 @@ print_iter = {
 }
 iterate = {
     update
+    {compute initial residual for normalization}
+    if = {iteration == 1}
+    then = {
+        compute_residuals
+        init_residual_momentum = residual_momentum
+        init_residual_density = residual_density
+        init_residual_energy = residual_energy
+    }
+    $cond
     $print_iter
     $vis_iter
     except = {println exception}

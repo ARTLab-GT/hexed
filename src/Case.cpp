@@ -291,7 +291,7 @@ Case::Case(std::string input_file)
     return header;
   }));
 
-  _inter.variables->create<std::string>("report", new Namespace::Heisenberg<std::string>([this]() {
+  _inter.variables->create<std::string>("compute_residuals", new Namespace::Heisenberg<std::string>([this]() {
     int nd = _solver().storage_params().n_dim;
     Physical_update update;
     auto res = _solver().integral_field(Pow(update, 2));
@@ -303,6 +303,11 @@ Case::Case(std::string input_file)
     _inter.variables->assign("residual_momentum", res_mmtm);
     _inter.variables->assign("residual_density", res[nd]);
     _inter.variables->assign("residual_energy", res[nd + 1]);
+    return "";
+  }));
+
+  _inter.variables->create<std::string>("report", new Namespace::Heisenberg<std::string>([this]() {
+    _inter.variables->lookup<std::string>("compute_residuals");
     std::string report = "";
     Struct_expr vars(_vars("print_vars").value());
     auto sub = _inter.make_sub();
@@ -316,14 +321,14 @@ Case::Case(std::string input_file)
     return report;
   }));
 
-  _inter.variables->create<int>("update", new Namespace::Heisenberg<int>([this]() {
+  _inter.variables->create<std::string>("update", new Namespace::Heisenberg<std::string>([this]() {
     if (_vard("art_visc_width").value() > 0) {
       _solver().set_art_visc_smoothness(_vard("art_visc_width").value());
     } else if (_vard("art_visc_constant").value() > 0) {
       _solver().set_art_visc_smoothness(_vard("art_visc_constant").value());
     }
     _solver().update(_vard("max_safety").value(), _vard("max_time_step").value());
-    return 0;
+    return "";
   }));
   _inter.variables->create<int>("n_elements", new Namespace::Heisenberg<int>([this]() {
     return _solver().mesh().n_elements();
