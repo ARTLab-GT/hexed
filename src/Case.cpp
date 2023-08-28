@@ -312,9 +312,21 @@ Case::Case(std::string input_file)
     Struct_expr vars(_vars("print_vars").value());
     auto sub = _inter.make_sub();
     for (unsigned i_var = 0; i_var < vars.names.size(); ++i_var) {
-      int width = vars.names[i_var].size();
+      int width = std::max<int>(14, vars.names[i_var].size());
       sub.exec(vars.names[i_var] + " = " + vars.exprs[i_var]);
-      report += format_str(1000, "%*.8e, ", sub.variables->lookup<double>(vars.names[i_var]).value(), width);
+      std::optional<int> vali;
+      std::optional<double> vald;
+      std::optional<std::string> vals;
+      if ((vali = sub.variables->lookup<int>(vars.names[i_var]))) {
+        report += format_str(1000, "%*i, ", width, vali.value());
+        _inter.variables->assign(vars.names[i_var], vali.value());
+      } else if ((vald = sub.variables->lookup<double>(vars.names[i_var]))) {
+        report += format_str(1000, "%*.8e, ", width, vald.value());
+        _inter.variables->assign(vars.names[i_var], vald.value());
+      } else if ((vals = sub.variables->lookup<std::string>(vars.names[i_var]))) {
+        report += format_str(1000, "%*s, ", width, vals.value());
+        _inter.variables->assign(vars.names[i_var], vals.value());
+      }
     }
     report.erase(report.end() - 2, report.end());
     _solver().reset_counters();
