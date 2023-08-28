@@ -3,6 +3,7 @@
 
 #include "Namespace.hpp"
 #include "Element.hpp"
+#include "connection.hpp"
 
 //! \brief functions that assign properties of objects to HIL variables
 namespace hexed::hil_properties
@@ -18,18 +19,31 @@ namespace hexed::hil_properties
  */
 void element(Namespace&, Element& elem);
 
-/*! Assigns the following variables `pos0`, `pos1`, `pos2`
+/*! Assigns the variables `pos0`, `pos1`, `pos2`
  * to the position of the `i_qpoint`th quadrature point.
  * Trailing dimensions are set to 0.
  */
 void position(Namespace&, Element&, const Basis&, int i_qpoint);
 
 /*! Assigns the follwing variables:
- * - `state0`, `state1`, ... : conserved state variables
+ * - `momentum0`, `momentum1`, `momentum2` : momentum per volume
+ * - `mass`: mass per volume (aka density)
+ * - `energy`: total energy per volume
  * - `tss`: time step scale
  * - `art_visc`: artificial viscosity coefficient
  */
 void state(Namespace&, Element&, int i_qpoint);
+
+/*! Assigns the follwing variables:
+ * - `pos0`, `pos`, `pos2`: position
+ * - `momentum0`, `momentum1`, `momentum2` : momentum per volume
+ * - `mass`: mass per volume (aka density)
+ * - `energy`: total energy per volume
+ * - `stress0`, `stress1`, `stress2` : viscous stress at surface
+ * - `mass_flux`: diffusive mass flux through surface
+ * - `heat_flux`: surface heat flux
+ */
+void surface(Namespace&, Boundary_connection&, int i_fqpoint);
 
 }
 #endif

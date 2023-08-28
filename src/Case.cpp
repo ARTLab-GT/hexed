@@ -256,7 +256,7 @@ Case::Case(std::string input_file)
     Mach mach;
     Art_visc_coef avc;
     if (_vari("vis_field").value()) {
-      Struct_expr vis_vars(_vars("vis_vars").value());
+      Struct_expr vis_vars(_vars("vis_field_vars").value());
       Qpoint_expr func(vis_vars, _inter);
       std::string file_name = wd + "field" + suffix;
       #if HEXED_USE_TECPLOT
@@ -267,21 +267,15 @@ Case::Case(std::string input_file)
       #endif
     }
     if (_vari("vis_surface").value() && _has_geom) {
-      Outward_normal on;
-      Viscous_stress vs;
-      Heat_flux hf;
-      std::vector<const Boundary_func*> to_vis {&sv, &veloc, &mass, &pres, &mach, &on};
-      if (_vars("transport_model").value() == "inviscid") {
-        to_vis.push_back(&vs);
-        to_vis.push_back(&hf);
-      }
+      Struct_expr vis_vars(_vars("vis_surface_vars").value());
+      Boundary_expr func(vis_vars, _inter);
       std::string file_name = wd + "surface" + suffix;
       int bc_sn = _solver().mesh().surface_bc_sn();
       #if HEXED_USE_TECPLOT
-      if (_vari("vis_tecplot").value()) _solver().visualize_surface_tecplot(bc_sn, Bf_concat(to_vis), file_name);
+      if (_vari("vis_tecplot").value()) _solver().visualize_surface_tecplot(bc_sn, func, file_name);
       #endif
       #if HEXED_USE_XDMF
-      if (_vari("vis_xdmf").value()) _solver().visualize_surface_xdmf(bc_sn, Bf_concat(to_vis), file_name);
+      if (_vari("vis_xdmf").value()) _solver().visualize_surface_xdmf(bc_sn, func, file_name);
       #endif
     }
     return 0;
