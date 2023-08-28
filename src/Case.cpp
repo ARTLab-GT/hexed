@@ -97,9 +97,12 @@ Case::Case(std::string input_file)
       HEXED_ASSERT(_vard("velocity0").has_value() + _vard("speed").has_value() + _vard("mach").has_value() == 1,
                    "exactly one of velosity, speed, and Mach number must be specified");
       Mat<> veloc;
-      if (_vard("velocity0")) veloc = _get_vector("velocity", *n_dim);
-      else {
-        Mat<> direction;
+      Mat<> full_direction = Mat<>::Zero(3);
+      auto direction = full_direction(Eigen::seqN(0, *n_dim));
+      if (_vard("velocity0")) {
+        veloc = _get_vector("velocity", *n_dim);
+        direction = veloc.normalized();
+      } else {
         if (_vard("direction0")) direction = _get_vector("direction", *n_dim).normalized();
         else {
           direction.setUnit(*n_dim, 0);
@@ -110,7 +113,6 @@ Case::Case(std::string input_file)
             direction = Eigen::AngleAxis<double>(-_vard("attack"  ).value(), Eigen::Vector3d::Unit(1))*direction;
             direction = Eigen::AngleAxis<double>( _vard("sideslip").value(), Eigen::Vector3d::Unit(2))*direction;
           }
-          _set_vector("direction", direction);
           _inter.variables->assign<double>("sound", std::sqrt(heat_rat*constants::specific_gas_air**_vard("temperature")));
           if (_vard("speed")) _inter.variables->assign<double>("mach", *_vard("speed")/ *_vard("sound"));
           else _inter.variables->assign<double>("speed", *_vard("mach")**_vard("sound"));
@@ -118,6 +120,7 @@ Case::Case(std::string input_file)
         veloc = *_vard("speed")*direction;
         _set_vector("velocity", veloc);
       }
+      _set_vector("direction", full_direction);
       freestream(Eigen::seqN(0, *n_dim)) = *_vard("density")*veloc;
       freestream(*n_dim) = *_vard("density");
       freestream(*n_dim + 1) = *_vard("pressure")/(heat_rat - 1) + .5**_vard("density")*veloc.squaredNorm();
@@ -358,6 +361,11 @@ Case::Case(std::string input_file)
     return "";
   }));
   _inter.variables->create<std::string>("integrate_surface", new Namespace::Heisenberg<std::string>([this]() {
+    Struct_expr integrand(_vars("integrand_surface").value());
+    auto integral = _solver().integral_surface(Boundary_expr(integrand, _inter), _solver().mesh().surface_bc_sn());
+    for (unsigned i_var = 0; i_var < integrand.names.size(); ++i_var) {
+      _inter.variables->assign("integral_surface_" + integrand.names[i_var], integral[i_var]);
+    }
     return "";
   }));
 

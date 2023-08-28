@@ -10,11 +10,12 @@ shell {python3 make_geom.py}
 geom0 = {auto.csv}
 surface_refine = {res_bad > 3e-3 & ref_level < 10}
 done = {normalized_residual < 1e-7}
+vis_surface_vars = vis_surface_vars + {normal1 = normal1;}
 
 $init
-print {density integral: }
-integrand_field = {density = density}
-$integrate_field
-println integral_field_density
-println (400*1.225)
 $run
+$compute_force
+println({lift: } + lift + { N})
+println({drag: } + drag + { N})
+println({lift coefficient: } + lift_coef)
+println({drag coefficient: } + drag_coef)

@@ -50,30 +50,32 @@ void state(Namespace& space, Element& elem, int i_qpoint)
 
 void surface(Namespace& space, Boundary_connection& con, int i_fqpoint)
 {
+  bool viscous = space.lookup<std::string>("transport_model").value() != "inviscid";
   auto params = con.storage_params();
   int nfq = params.n_qpoint()/params.row_size;
   // fetch surface normal
   int nrml_sign = 1 - 2*con.inside_face_sign();
-  double nrml_mag = 0;
+  Mat<> nrml(params.n_dim);
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-    double n = con.surface_normal()[i_dim*nfq + i_fqpoint];
-    nrml_mag += n*n;
+    nrml(i_dim) = con.surface_normal()[i_dim*nfq + i_fqpoint];
   }
-  nrml_mag = std::sqrt(nrml_mag);
+  double nrml_mag = nrml.norm();
   std::vector<double> flux;
   std::vector<double> state;
   for (int i_var = 0; i_var < params.n_var; ++i_var) {
     // fetch momentum flux in reference space
     double ref_stress = -con.state_cache()[i_var*nfq + i_fqpoint];
     // compute stress
-    flux.push_back((nrml_mag > 1e-3) ? ref_stress*nrml_sign/nrml_mag : 0.);
+    flux.push_back((nrml_mag > 1e-3 && viscous) ? ref_stress*nrml_sign/nrml_mag : 0.);
     state.push_back(con.inside_face()[i_var*nfq + i_fqpoint]);
   }
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+    space.assign("normal" + std::to_string(i_dim), nrml(i_dim)*nrml_sign/nrml_mag);
     space.assign("visc_stress" + std::to_string(i_dim), flux[i_dim]);
     space.assign("momentum" + std::to_string(i_dim), state[i_dim]);
   }
   for (int i_dim = params.n_dim; i_dim < 3; ++i_dim) {
+    space.assign("normal" + std::to_string(i_dim), 0.);
     space.assign("visc_stress" + std::to_string(i_dim), 0.);
     space.assign("momentum" + std::to_string(i_dim), 0.);
   }

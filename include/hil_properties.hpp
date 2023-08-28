@@ -36,6 +36,7 @@ void state(Namespace&, Element&, int i_qpoint);
 
 /*! Assigns the follwing variables:
  * - `pos0`, `pos`, `pos2`: position
+ * - `normal0`, `normal1`, `normal2`: unit surface normal (out of surface, into domain)
  * - `momentum0`, `momentum1`, `momentum2` : momentum per volume
  * - `mass`: mass per volume (aka density)
  * - `energy`: total energy per volume
