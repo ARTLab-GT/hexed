@@ -42,7 +42,7 @@ void state(Namespace& space, Element& elem, int i_qpoint)
   for (int i_dim = params.n_dim; i_dim < 3; ++i_dim) {
     space.assign("momentum" + std::to_string(i_dim), 0.);
   }
-  space.assign("mass", elem.stage(0)[params.n_dim*nq + i_qpoint]);
+  space.assign("density", elem.stage(0)[params.n_dim*nq + i_qpoint]);
   space.assign("energy", elem.stage(0)[(params.n_dim + 1)*nq + i_qpoint]);
   space.assign("art_visc", elem.art_visc_coef()[i_qpoint]);
   space.assign("tss", elem.time_step_scale()[i_qpoint]);

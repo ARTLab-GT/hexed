@@ -146,7 +146,7 @@ Case::Case(std::string input_file)
     } else {
       HEXED_ASSERT(false, "unrecognized transport model specification");
     }
-    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, _vari("local_time").value(), *visc_model, *therm_model));
+    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, _vari("local_time").value(), *visc_model, *therm_model, _inter.variables));
     _solver().mesh().add_tree(bcs, mesh_extremes(all, 0));
     _solver().set_fix_admissibility(_vari("fix_therm_admis").value());
     return 0;
@@ -281,6 +281,41 @@ Case::Case(std::string input_file)
     return 0;
   }));
 
+  _inter.variables->create<std::string>("header", new Namespace::Heisenberg<std::string>([this]() {
+    std::string header = "";
+    Struct_expr vars(_vars("print_vars").value());
+    for (std::string name : vars.names) {
+      header += format_str(1000, "%14s, ", name.c_str());
+    }
+    header.erase(header.end() - 2, header.end());
+    return header;
+  }));
+
+  _inter.variables->create<std::string>("report", new Namespace::Heisenberg<std::string>([this]() {
+    int nd = _solver().storage_params().n_dim;
+    Physical_update update;
+    auto res = _solver().integral_field(Pow(update, 2));
+    for (double& r : res) r /= math::pow(_inter.variables->lookup<double>("time_step").value(), 2);
+    double res_mmtm = 0;
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      res_mmtm += res[i_dim];
+    }
+    _inter.variables->assign("residual_momentum", res_mmtm);
+    _inter.variables->assign("residual_density", res[nd]);
+    _inter.variables->assign("residual_energy", res[nd + 1]);
+    std::string report = "";
+    Struct_expr vars(_vars("print_vars").value());
+    auto sub = _inter.make_sub();
+    for (unsigned i_var = 0; i_var < vars.names.size(); ++i_var) {
+      int width = vars.names[i_var].size();
+      sub.exec(vars.names[i_var] + " = " + vars.exprs[i_var]);
+      report += format_str(1000, "%*.8e, ", sub.variables->lookup<double>(vars.names[i_var]).value(), width);
+    }
+    report.erase(report.end() - 2, report.end());
+    _solver().reset_counters();
+    return report;
+  }));
+
   _inter.variables->create<int>("update", new Namespace::Heisenberg<int>([this]() {
     if (_vard("art_visc_width").value() > 0) {
       _solver().set_art_visc_smoothness(_vard("art_visc_width").value());
@@ -292,14 +327,6 @@ Case::Case(std::string input_file)
   }));
   _inter.variables->create<int>("n_elements", new Namespace::Heisenberg<int>([this]() {
     return _solver().mesh().n_elements();
-  }));
-  _inter.variables->create<std::string>("header", new Namespace::Heisenberg<std::string>([this]() {
-    return _solver().iteration_status().header();
-  }));
-  _inter.variables->create<std::string>("report", new Namespace::Heisenberg<std::string>([this]() {
-    std::string rpt = _solver().iteration_status().report();
-    _solver().reset_counters();
-    return rpt;
   }));
   _inter.variables->create<std::string>("performance_report", new Namespace::Heisenberg<std::string>([this]() {
     return _solver().stopwatch_tree().report();
