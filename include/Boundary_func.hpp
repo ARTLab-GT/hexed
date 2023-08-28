@@ -2,6 +2,7 @@
 #define HEXED_BOUNDARY_FUNC_HPP_
 
 #include "Output_data.hpp"
+#include "Struct_expr.hpp"
 
 namespace hexed
 {
@@ -18,6 +19,22 @@ class Boundary_func : virtual public Output_data
    * \param time Flow time.
    */
   virtual std::vector<double> operator()(Boundary_connection& face, int i_fqpoint, double time) const = 0;
+};
+
+/*! \brief Evaluates a \ref struct_expr "structured expression"
+ * \details Expression is evaluated in an environment that includes
+ * the variables defined in `hil_properties::surface` as well as `time`.
+ */
+class Boundary_expr : public Boundary_func
+{
+  Struct_expr _expr;
+  const Interpreter& _inter;
+  public:
+  Boundary_expr(Struct_expr, const Interpreter&);
+  Boundary_expr(Struct_expr, Interpreter&&) = delete;
+  inline int n_var(int n_dim) const override {return _expr.names.size();}
+  inline std::string variable_name(int n_dim, int i_var) const override {return _expr.names[i_var];}
+  std::vector<double> operator()(Boundary_connection&, int i_fqpoint, double time) const override;
 };
 
 /*! \brief Computes viscous stress at surface.

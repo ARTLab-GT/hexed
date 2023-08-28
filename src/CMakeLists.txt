@@ -15,6 +15,7 @@ Equidistant.cpp
 filter_limit.cpp
 global_hacks.cpp
 Hanging_vertex_matcher.cpp
+hil_properties.cpp
 Interpreter.cpp
 Iteration_status.cpp
 Layer_sequence.cpp
@@ -34,6 +35,7 @@ Spacetime_func.cpp
 Stopwatch.cpp
 Stopwatch_tree.cpp
 Storage_params.cpp
+Struct_expr.cpp
 Surface_func.cpp
 Surface_geom.cpp
 standard_atmosphere.cpp

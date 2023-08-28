@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <vector>
+#include <functional>
 #include "utils.hpp"
 #include "assert.hpp"
 

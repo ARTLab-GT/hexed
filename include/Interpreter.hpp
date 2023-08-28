@@ -16,11 +16,16 @@ class Interpreter
     std::optional<int> i;
     std::optional<double> d;
     std::optional<std::string> s;
-  } zero{{0}, {}, {}};
+    _Dynamic_value() {}
+    _Dynamic_value(int         arg) : i{arg} {}
+    _Dynamic_value(double      arg) : d{arg} {}
+    _Dynamic_value(std::string arg) : s{arg} {}
+  };
 
   bool _more();
   char _pop();
   void _skip_spaces();
+  bool _char_is(int index, char value);
   std::string _debug_info();
   std::string _read_name();
   void _substitute();
@@ -77,7 +82,7 @@ class Interpreter
    * I was tempted to call this `int_sub`...
    * but that wasn't _quite_ funny enough to be worth compromising readability.
    */
-  Interpreter make_sub();
+  Interpreter make_sub() const;
 
   class Parsing_error : public assert::Exception
   {

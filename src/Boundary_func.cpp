@@ -1,9 +1,20 @@
 #include <Boundary_func.hpp>
 #include <Domain_func.hpp>
 #include <connection.hpp>
+#include <hil_properties.hpp>
 
 namespace hexed
 {
+
+Boundary_expr::Boundary_expr(Struct_expr expr, const Interpreter& inter) : _expr{expr}, _inter{inter} {}
+
+std::vector<double> Boundary_expr::operator()(Boundary_connection& con, int i_fqpoint, double time) const
+{
+  auto sub = _inter.make_sub();
+  hil_properties::surface(*sub.variables, con, i_fqpoint);
+  sub.variables->assign("time", time);
+  return _expr.eval(sub);
+}
 
 std::vector<double> Viscous_stress::operator()(Boundary_connection& con, int i_fqpoint, double time) const
 {

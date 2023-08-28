@@ -136,6 +136,11 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default<double>("av_diff_stab_rat", .5); // stability ratio for diffusion
   _namespace->assign_default<int   >("av_advect_iters", 2); // number of advection iterations to run each time `set_art_visc_smoothness` is called
   _namespace->assign_default<int   >("av_diff_iters", 1); // number of diffusion iterations to run each time `set_art_visc_smoothness` is called
+  _namespace->assign("fix_iters", 0);
+  _namespace->assign("iteration", 0);
+  _namespace->assign("flow_time", 0.);
+  _namespace->assign("av_advection_residual", 0.);
+  _namespace->assign("av_diffusion_residual", 0.);
   status.set_time();
   // setup categories for performance reporting
   stopwatch.children.emplace("initialize reference", stopwatch.work_unit_name);
@@ -527,6 +532,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
   stopwatch.children.at("set art visc").children.at("advection").work_units_completed += elements.size();
   // update iteration status for printing to screen
   status.adv_res = std::sqrt(diff/n_avg);
+  _namespace->assign("av_advection_residual", std::sqrt(diff/n_avg));
   // compute projection onto Legendre polynomial
   Eigen::VectorXd weights = basis.node_weights();
   Eigen::VectorXd orth = basis.orthogonal(av_rs - 1);
@@ -624,6 +630,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
     status.diff_res += diff/n_avg;
   }
   status.diff_res = std::sqrt(status.diff_res/n_real); // finish computing RMS residual
+  _namespace->assign("av_diffusion_residual", std::sqrt(status.diff_res/n_real));
   // clean up
   double mult = _namespace->lookup<double>("av_visc_mult").value()*advect_length;
   double us_max = _namespace->lookup<double>("av_unscaled_max").value();
@@ -857,6 +864,9 @@ void Solver::update(double safety_factor, double time_step)
   }
 
   // update status for reporting
+  _namespace->assign<double>("time_step", dt);
+  _namespace->assign<double>("flow_time", _namespace->lookup<double>("flow_time").value() + dt);
+  _namespace->assign<int>("iteration", _namespace->lookup<int>("iteration").value() + 1);
   status.time_step = dt;
   status.flow_time += dt;
   ++status.iteration;
@@ -1022,6 +1032,7 @@ void Solver::fix_admissibility(double stability_ratio)
     }
   }
   status.fix_admis_iters += iter;
+  _namespace->assign("fix_iters", _namespace->lookup<int>("fix_iters").value() + iter);
   sw_fix.work_units_completed += acc_mesh.elements().size()*iter;
   sw_fix.stopwatch.pause();
 }
@@ -1029,6 +1040,7 @@ void Solver::fix_admissibility(double stability_ratio)
 void Solver::reset_counters()
 {
   status.fix_admis_iters = 0;
+  _namespace->assign("fix_iters", 0);
 }
 
 std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func& func)

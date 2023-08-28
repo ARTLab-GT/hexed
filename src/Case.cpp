@@ -4,6 +4,7 @@
 #include <read_csv.hpp>
 #include <standard_atmosphere.hpp>
 #include <Occt.hpp>
+#include <hil_properties.hpp>
 
 namespace hexed
 {
@@ -96,9 +97,12 @@ Case::Case(std::string input_file)
       HEXED_ASSERT(_vard("velocity0").has_value() + _vard("speed").has_value() + _vard("mach").has_value() == 1,
                    "exactly one of velosity, speed, and Mach number must be specified");
       Mat<> veloc;
-      if (_vard("velocity0")) veloc = _get_vector("velocity", *n_dim);
-      else {
-        Mat<> direction;
+      Mat<> full_direction = Mat<>::Zero(3);
+      auto direction = full_direction(Eigen::seqN(0, *n_dim));
+      if (_vard("velocity0")) {
+        veloc = _get_vector("velocity", *n_dim);
+        direction = veloc.normalized();
+      } else {
         if (_vard("direction0")) direction = _get_vector("direction", *n_dim).normalized();
         else {
           direction.setUnit(*n_dim, 0);
@@ -109,7 +113,6 @@ Case::Case(std::string input_file)
             direction = Eigen::AngleAxis<double>(-_vard("attack"  ).value(), Eigen::Vector3d::Unit(1))*direction;
             direction = Eigen::AngleAxis<double>( _vard("sideslip").value(), Eigen::Vector3d::Unit(2))*direction;
           }
-          _set_vector("direction", direction);
           _inter.variables->assign<double>("sound", std::sqrt(heat_rat*constants::specific_gas_air**_vard("temperature")));
           if (_vard("speed")) _inter.variables->assign<double>("mach", *_vard("speed")/ *_vard("sound"));
           else _inter.variables->assign<double>("speed", *_vard("mach")**_vard("sound"));
@@ -117,6 +120,7 @@ Case::Case(std::string input_file)
         veloc = *_vard("speed")*direction;
         _set_vector("velocity", veloc);
       }
+      _set_vector("direction", full_direction);
       freestream(Eigen::seqN(0, *n_dim)) = *_vard("density")*veloc;
       freestream(*n_dim) = *_vard("density");
       freestream(*n_dim + 1) = *_vard("pressure")/(heat_rat - 1) + .5**_vard("density")*veloc.squaredNorm();
@@ -145,7 +149,7 @@ Case::Case(std::string input_file)
     } else {
       HEXED_ASSERT(false, "unrecognized transport model specification");
     }
-    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, _vari("local_time").value(), *visc_model, *therm_model));
+    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, _vari("local_time").value(), *visc_model, *therm_model, _inter.variables));
     _solver().mesh().add_tree(bcs, mesh_extremes(all, 0));
     _solver().set_fix_admissibility(_vari("fix_therm_admis").value());
     return 0;
@@ -203,26 +207,13 @@ Case::Case(std::string input_file)
 
   _inter.variables->create<int>("refine", new Namespace::Heisenberg<int>([this]() {
     std::vector<std::string> crit_code;
-    crit_code.push_back(_vars("surface_refine").value());
-    crit_code.push_back(_vars("surface_unrefine").value());
+    crit_code.push_back("return = " + _vars("surface_refine").value());
+    crit_code.push_back("return = " + _vars("surface_unrefine").value());
     std::vector<std::function<bool(Element&)>> crits;
     for (std::string code : crit_code) {
       crits.emplace_back([this, code](Element& elem) {
         auto sub = _inter.make_sub();
-        sub.variables->assign("is_extruded", int(!elem.tree));
-        sub.variables->assign("ref_level", elem.refinement_level());
-        sub.variables->assign("nom_sz", elem.nominal_size());
-        sub.variables->assign("resolution_badness", elem.resolution_badness);
-        auto params = elem.storage_params();
-        Eigen::Vector3d center;
-        center.setZero();
-        for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-          center += elem.vertex(i_vert).pos;
-        }
-        center /= params.n_vertices();
-        for (int i_dim = 0; i_dim < 3; ++i_dim) {
-          sub.variables->assign("center" + std::to_string(i_dim), center(i_dim));
-        }
+        hil_properties::element(*sub.variables, elem);
         sub.exec(code);
         return sub.variables->lookup<int>("return").value();
       });
@@ -268,60 +259,114 @@ Case::Case(std::string input_file)
     Mach mach;
     Art_visc_coef avc;
     if (_vari("vis_field").value()) {
-      Art_visc_coef avc;
-      std::vector<const Qpoint_func*> to_vis{&sv, &veloc, &mass, &pres, &mach};
-      if (_vard("art_visc_constant").value() > 0 || _vard("art_visc_width").value() > 0) to_vis.push_back(&avc);
+      Struct_expr vis_vars(_vars("vis_field_vars").value());
+      Qpoint_expr func(vis_vars, _inter);
       std::string file_name = wd + "field" + suffix;
       #if HEXED_USE_TECPLOT
-      if (_vari("vis_tecplot").value()) _solver().visualize_field_tecplot(Qf_concat(to_vis), file_name);
+      if (_vari("vis_tecplot").value()) _solver().visualize_field_tecplot(func, file_name);
       #endif
       #if HEXED_USE_XDMF
-      if (_vari("vis_xdmf").value()) _solver().visualize_field_xdmf(Qf_concat(to_vis), file_name);
+      if (_vari("vis_xdmf").value()) _solver().visualize_field_xdmf(func, file_name);
       #endif
     }
     if (_vari("vis_surface").value() && _has_geom) {
-      Outward_normal on;
-      Viscous_stress vs;
-      Heat_flux hf;
-      std::vector<const Boundary_func*> to_vis {&sv, &veloc, &mass, &pres, &mach, &on};
-      if (_vars("transport_model").value() == "inviscid") {
-        to_vis.push_back(&vs);
-        to_vis.push_back(&hf);
-      }
+      Struct_expr vis_vars(_vars("vis_surface_vars").value());
+      Boundary_expr func(vis_vars, _inter);
       std::string file_name = wd + "surface" + suffix;
       int bc_sn = _solver().mesh().surface_bc_sn();
       #if HEXED_USE_TECPLOT
-      if (_vari("vis_tecplot").value()) _solver().visualize_surface_tecplot(bc_sn, Bf_concat(to_vis), file_name);
+      if (_vari("vis_tecplot").value()) _solver().visualize_surface_tecplot(bc_sn, func, file_name);
       #endif
       #if HEXED_USE_XDMF
-      if (_vari("vis_xdmf").value()) _solver().visualize_surface_xdmf(bc_sn, Bf_concat(to_vis), file_name);
+      if (_vari("vis_xdmf").value()) _solver().visualize_surface_xdmf(bc_sn, func, file_name);
       #endif
     }
     return 0;
   }));
 
-  _inter.variables->create<int>("update", new Namespace::Heisenberg<int>([this]() {
+  _inter.variables->create<std::string>("header", new Namespace::Heisenberg<std::string>([this]() {
+    std::string header = "";
+    Struct_expr vars(_vars("print_vars").value());
+    for (std::string name : vars.names) {
+      header += format_str(1000, "%14s, ", name.c_str());
+    }
+    header.erase(header.end() - 2, header.end());
+    return header;
+  }));
+
+  _inter.variables->create<std::string>("compute_residuals", new Namespace::Heisenberg<std::string>([this]() {
+    int nd = _solver().storage_params().n_dim;
+    Physical_update update;
+    auto res = _solver().integral_field(Pow(update, 2));
+    for (double& r : res) r /= math::pow(_inter.variables->lookup<double>("time_step").value(), 2);
+    double res_mmtm = 0;
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      res_mmtm += res[i_dim];
+    }
+    _inter.variables->assign("residual_momentum", res_mmtm);
+    _inter.variables->assign("residual_density", res[nd]);
+    _inter.variables->assign("residual_energy", res[nd + 1]);
+    return "";
+  }));
+
+  _inter.variables->create<std::string>("report", new Namespace::Heisenberg<std::string>([this]() {
+    _inter.variables->lookup<std::string>("compute_residuals");
+    std::string report = "";
+    Struct_expr vars(_vars("print_vars").value());
+    auto sub = _inter.make_sub();
+    for (unsigned i_var = 0; i_var < vars.names.size(); ++i_var) {
+      int width = std::max<int>(14, vars.names[i_var].size());
+      sub.exec(vars.names[i_var] + " = " + vars.exprs[i_var]);
+      std::optional<int> vali;
+      std::optional<double> vald;
+      std::optional<std::string> vals;
+      if ((vali = sub.variables->lookup<int>(vars.names[i_var]))) {
+        report += format_str(1000, "%*i, ", width, vali.value());
+        _inter.variables->assign(vars.names[i_var], vali.value());
+      } else if ((vald = sub.variables->lookup<double>(vars.names[i_var]))) {
+        report += format_str(1000, "%*.8e, ", width, vald.value());
+        _inter.variables->assign(vars.names[i_var], vald.value());
+      } else if ((vals = sub.variables->lookup<std::string>(vars.names[i_var]))) {
+        report += format_str(1000, "%*s, ", width, vals.value());
+        _inter.variables->assign(vars.names[i_var], vals.value());
+      }
+    }
+    report.erase(report.end() - 2, report.end());
+    _solver().reset_counters();
+    return report;
+  }));
+
+  _inter.variables->create<std::string>("update", new Namespace::Heisenberg<std::string>([this]() {
     if (_vard("art_visc_width").value() > 0) {
       _solver().set_art_visc_smoothness(_vard("art_visc_width").value());
     } else if (_vard("art_visc_constant").value() > 0) {
       _solver().set_art_visc_smoothness(_vard("art_visc_constant").value());
     }
     _solver().update(_vard("max_safety").value(), _vard("max_time_step").value());
-    return 0;
+    return "";
   }));
   _inter.variables->create<int>("n_elements", new Namespace::Heisenberg<int>([this]() {
     return _solver().mesh().n_elements();
   }));
-  _inter.variables->create<std::string>("header", new Namespace::Heisenberg<std::string>([this]() {
-    return _solver().iteration_status().header();
-  }));
-  _inter.variables->create<std::string>("report", new Namespace::Heisenberg<std::string>([this]() {
-    std::string rpt = _solver().iteration_status().report();
-    _solver().reset_counters();
-    return rpt;
-  }));
   _inter.variables->create<std::string>("performance_report", new Namespace::Heisenberg<std::string>([this]() {
     return _solver().stopwatch_tree().report();
+  }));
+
+  _inter.variables->create<std::string>("integrate_field", new Namespace::Heisenberg<std::string>([this]() {
+    Struct_expr integrand(_vars("integrand_field").value());
+    auto integral = _solver().integral_field(Qpoint_expr(integrand, _inter));
+    for (unsigned i_var = 0; i_var < integrand.names.size(); ++i_var) {
+      _inter.variables->assign("integral_field_" + integrand.names[i_var], integral[i_var]);
+    }
+    return "";
+  }));
+  _inter.variables->create<std::string>("integrate_surface", new Namespace::Heisenberg<std::string>([this]() {
+    Struct_expr integrand(_vars("integrand_surface").value());
+    auto integral = _solver().integral_surface(Boundary_expr(integrand, _inter), _solver().mesh().surface_bc_sn());
+    for (unsigned i_var = 0; i_var < integrand.names.size(); ++i_var) {
+      _inter.variables->assign("integral_surface_" + integrand.names[i_var], integral[i_var]);
+    }
+    return "";
   }));
 
   // load HIL code for the Case _interface
