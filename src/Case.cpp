@@ -4,6 +4,7 @@
 #include <read_csv.hpp>
 #include <standard_atmosphere.hpp>
 #include <Occt.hpp>
+#include <hil_properties.hpp>
 
 namespace hexed
 {
@@ -209,20 +210,7 @@ Case::Case(std::string input_file)
     for (std::string code : crit_code) {
       crits.emplace_back([this, code](Element& elem) {
         auto sub = _inter.make_sub();
-        sub.variables->assign("is_extruded", int(!elem.tree));
-        sub.variables->assign("ref_level", elem.refinement_level());
-        sub.variables->assign("nom_sz", elem.nominal_size());
-        sub.variables->assign("resolution_badness", elem.resolution_badness);
-        auto params = elem.storage_params();
-        Eigen::Vector3d center;
-        center.setZero();
-        for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-          center += elem.vertex(i_vert).pos;
-        }
-        center /= params.n_vertices();
-        for (int i_dim = 0; i_dim < 3; ++i_dim) {
-          sub.variables->assign("center" + std::to_string(i_dim), center(i_dim));
-        }
+        hil_properties::element(*sub.variables, elem);
         sub.exec(code);
         return sub.variables->lookup<int>("return").value();
       });
@@ -268,15 +256,14 @@ Case::Case(std::string input_file)
     Mach mach;
     Art_visc_coef avc;
     if (_vari("vis_field").value()) {
-      Art_visc_coef avc;
-      std::vector<const Qpoint_func*> to_vis{&sv, &veloc, &mass, &pres, &mach};
-      if (_vard("art_visc_constant").value() > 0 || _vard("art_visc_width").value() > 0) to_vis.push_back(&avc);
+      Struct_expr vis_vars(_vars("vis_vars").value());
+      Qpoint_expr func(vis_vars, _inter);
       std::string file_name = wd + "field" + suffix;
       #if HEXED_USE_TECPLOT
-      if (_vari("vis_tecplot").value()) _solver().visualize_field_tecplot(Qf_concat(to_vis), file_name);
+      if (_vari("vis_tecplot").value()) _solver().visualize_field_tecplot(func, file_name);
       #endif
       #if HEXED_USE_XDMF
-      if (_vari("vis_xdmf").value()) _solver().visualize_field_xdmf(Qf_concat(to_vis), file_name);
+      if (_vari("vis_xdmf").value()) _solver().visualize_field_xdmf(func, file_name);
       #endif
     }
     if (_vari("vis_surface").value() && _has_geom) {

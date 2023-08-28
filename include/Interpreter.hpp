@@ -82,7 +82,7 @@ class Interpreter
    * I was tempted to call this `int_sub`...
    * but that wasn't _quite_ funny enough to be worth compromising readability.
    */
-  Interpreter make_sub();
+  Interpreter make_sub() const;
 
   class Parsing_error : public assert::Exception
   {

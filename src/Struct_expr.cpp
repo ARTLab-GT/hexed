@@ -22,21 +22,20 @@ std::vector<std::string> get_side(std::string code, bool right = false)
   return sides;
 }
 
-Struct_expr::Struct_expr(Interpreter& inter, std::string code)
-: _inter{inter}, names{get_side(code, 0)}, exprs{get_side(code, 1)}
+Struct_expr::Struct_expr(std::string code)
+: names{get_side(code, 0)}, exprs{get_side(code, 1)}
 {
   for (std::string name : names) {
     HEXED_ASSERT(std::find(name.begin(), name.end(), '$') == name.end(), "`$` is forbidden in a LHS of a structured expression");
   }
 }
 
-std::vector<double> Struct_expr::eval()
+std::vector<double> Struct_expr::eval(Interpreter& inter) const
 {
-  auto sub = _inter.make_sub();
   std::vector<double> vals(names.size());
   for (unsigned i_statement = 0; i_statement < names.size(); ++i_statement) {
-    sub.exec(names[i_statement] + "=" + exprs[i_statement]);
-    auto val = sub.variables->lookup<double>(names[i_statement]);
+    inter.exec(names[i_statement] + "=" + exprs[i_statement]);
+    auto val = inter.variables->lookup<double>(names[i_statement]);
     HEXED_ASSERT(val, "structured expression failed to assign variable `" + names[i_statement] + "`");
     vals[i_statement] = val.value();
   }

@@ -15,6 +15,11 @@ do = {
 }
 $loop
 
+{utilities}
+momentum = {momentum0 = momentum0; momentum1 = momentum1; momentum2 = momentum2;}
+mass = {mass = mass;}
+energy = {energy = energy;}
+
 {basic parameters}
 row_size = 6
 init_ref_level = 3
@@ -45,6 +50,7 @@ vis_surface = true
 vis_field = true
 vis_tecplot = false
 vis_xdmf = true
+vis_vars = momentum + mass + energy
 max_angle = 10*degree
 max_deflection = huge
 

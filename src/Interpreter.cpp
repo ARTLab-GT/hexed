@@ -347,7 +347,7 @@ void Interpreter::exec(std::string comms)
   _text.clear();
 }
 
-Interpreter Interpreter::make_sub()
+Interpreter Interpreter::make_sub() const
 {
   Interpreter inter(std::vector<std::string>{});
   #pragma omp critical

@@ -15,6 +15,7 @@ Equidistant.cpp
 filter_limit.cpp
 global_hacks.cpp
 Hanging_vertex_matcher.cpp
+hil_properties.cpp
 Interpreter.cpp
 Iteration_status.cpp
 Layer_sequence.cpp

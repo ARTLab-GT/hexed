@@ -2,9 +2,22 @@
 #include <math.hpp>
 #include <utils.hpp>
 #include <Element.hpp>
+#include <hil_properties.hpp>
 
 namespace hexed
 {
+
+Qpoint_expr::Qpoint_expr(Struct_expr expr, const Interpreter& inter) : _expr{expr}, _inter{inter} {}
+
+std::vector<double> Qpoint_expr::operator()(Element& elem, const Basis& basis, int i_qpoint, double time) const
+{
+  auto sub = _inter.make_sub();
+  hil_properties::element(*sub.variables, elem);
+  hil_properties::position(*sub.variables, elem, basis, i_qpoint);
+  hil_properties::state(*sub.variables, elem, i_qpoint);
+  sub.variables->assign("time", time);
+  return _expr.eval(sub);
+}
 
 std::vector<double> Jacobian_det_func::operator()(Element& element, const Basis&, int i_qpoint, double time) const
 {
