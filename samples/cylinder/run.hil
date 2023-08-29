@@ -10,19 +10,21 @@ geom0 = {auto.csv}
 pressure = 120.96
 temperature = 75.61
 mach = 5.
+working_dir = {hexed_out_isothermal}
 art_visc_width = 1.5*2.^-init_ref_level
 fix_therm_admis = true
 transport_model = {best}
 thermal_bc = {temperature = 98.89}
-wall_spacing = 0.01
+{thermal_bc = {heat_flux = 0.}}
+wall_spacing = 0.001
 surface_max_iters = 0
 vis_freq = 20000
 print_freq = 500
 done = {false}
 max_safety = 1e-6
 iterate = iterate + {
-    if = {iteration <= 1e4}
-    then = {max_safety = 0.3*iteration*1e-4}
+    if = {iteration <= 1e5}
+    then = {max_safety = 0.3*iteration*1e-5}
     $cond
 }
 
