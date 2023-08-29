@@ -5,11 +5,12 @@ mesh_extreme10 =  0.
 mesh_extreme11 =  2.
 init_ref_level = 4
 extremal_bc10 = {nonpenetration}
-=shell {python3 make_geom.py}
+shell {python3 make_geom.py}
 geom0 = {auto.csv}
 pressure = 120.96
 temperature = 75.61
 mach = 5.
+art_visc_width = 1.5*2.^-init_ref_level
 fix_therm_admis = true
 surface_max_iters = 0
 print_freq = 200

@@ -5,7 +5,7 @@ mesh_extreme10 =  0.
 mesh_extreme11 =  2.
 init_ref_level = 4
 extremal_bc10 = {nonpenetration}
-=shell {python3 make_geom.py}
+shell {python3 make_geom.py}
 geom0 = {auto.csv}
 pressure = 120.96
 temperature = 75.61
@@ -22,7 +22,7 @@ done = {false}
 max_safety = 1e-6
 iterate = iterate + {
     if = {iteration <= 1e4}
-    then = {max_safety = 0.1*iteration*1e-4}
+    then = {max_safety = 0.3*iteration*1e-4}
     $cond
 }
 
