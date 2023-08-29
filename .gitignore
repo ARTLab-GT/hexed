@@ -5,3 +5,4 @@ script/__pycache__/
 !*doxytags
 hexed_out*
 auto.csv
+*.szplt
