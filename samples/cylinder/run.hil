@@ -1,23 +1,25 @@
 n_dim = 2
-mesh_extreme00 = -2.
+mesh_extreme00 = -4.
 mesh_extreme01 =  0.
-mesh_extreme10 =  0.
+mesh_extreme10 = -2.
 mesh_extreme11 =  2.
-init_ref_level = 4
+init_ref_level = 3
 extremal_bc10 = {nonpenetration}
 shell {python3 make_geom.py}
 geom0 = {auto.csv}
 pressure = 120.96
 temperature = 75.61
 mach = 5.
-working_dir = {hexed_out_isothermal3}
+working_dir = {hexed_out_isothermal4}
 art_visc_width = 1.5*2.^-init_ref_level
 fix_therm_admis = true
 transport_model = {best}
 thermal_bc = {temperature = 98.89}
 {thermal_bc = {heat_flux = 0.}}
 wall_spacing = 0.001
-surface_max_iters = 0
+surface_refine = {center0 > -1.8}
+surface_unrefine = {false}
+surface_max_iters = 2
 vis_freq = 20000
 print_freq = 500
 done = {false}
