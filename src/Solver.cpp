@@ -550,7 +550,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
   } // Cauchy-Kovalevskaya-style derivative estimate complete!
 
   // begin root-smear-square operation
-  int n_real = 3; // number of real time steps (as apposed to pseudotime steps)
+  int n_real = Element::n_forcing - 1; // number of real time steps (as apposed to pseudotime steps)
   // evaluate CFL condition
   (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true))(acc_mesh.cartesian().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "compute time step");
   (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true))(acc_mesh.deformed ().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "compute time step");

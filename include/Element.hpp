@@ -16,11 +16,10 @@ namespace hexed
 
 class Tree;
 
-/*!
- * Stores data associated with one element. Container only --
- * does not have implementations of or information about the basis and algorithms.
- * This class represents a Cartesian (i.e., regular) element. See also derived class
- * `Deformed_element`.
+/*! \brief Stores data associated with one mesh element.
+ * \details Container only -- does not have implementations of or information about the basis and algorithms.
+ * This class represents a Cartesian (i.e., regular) element.
+ * See also derived class `Deformed_element`.
  */
 class Element
 {
@@ -48,12 +47,12 @@ class Element
   //! Pointer to state data at faces. Must be populated by user
   std::array<double*, 6> faces; //!< layout: [2*i_dim + face_sign][i_var][i_qpoint]
   double resolution_badness = 0; //!< refinement algorithms should set this value to some metric representing how badly this element needs to be refined
-  static constexpr bool is_deformed = false;
-  static constexpr int n_forcing = 4;
+  static constexpr bool is_deformed = false; //!< is this `Element` subclass deformed?
+  static constexpr int n_forcing = 8; //!< number of artificial viscosity forcing variables
   int record = 0; //!< for algorithms to book-keep general information
   Tree* tree = nullptr; //!< `Tree` this element was created from
   bool unrefinement_locked = false; //!< if this is set to `true`, `Mesh_interface::update()` won't unrefine it
-  const Mat<> origin;
+  const Mat<> origin; //!< origin which integer coordinates are relative to
   Lock lock; //!< for any tasks where multiple threads might access an element simultaneously
 
   /*!
