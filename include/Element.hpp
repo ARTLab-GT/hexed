@@ -48,7 +48,7 @@ class Element
   std::array<double*, 6> faces; //!< layout: [2*i_dim + face_sign][i_var][i_qpoint]
   double resolution_badness = 0; //!< refinement algorithms should set this value to some metric representing how badly this element needs to be refined
   static constexpr bool is_deformed = false; //!< is this `Element` subclass deformed?
-  static constexpr int n_forcing = 8; //!< number of artificial viscosity forcing variables
+  static constexpr int n_forcing = 4; //!< number of artificial viscosity forcing variables
   int record = 0; //!< for algorithms to book-keep general information
   Tree* tree = nullptr; //!< `Tree` this element was created from
   bool unrefinement_locked = false; //!< if this is set to `true`, `Mesh_interface::update()` won't unrefine it
