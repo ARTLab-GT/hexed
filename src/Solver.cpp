@@ -540,12 +540,13 @@ void Solver::set_art_visc_smoothness(double advect_length)
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* forcing = elements[i_elem].art_visc_forcing();
     double* adv = elements[i_elem].advection_state();
+    double* rk_ref = elements[i_elem].stage(1);
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       double proj = 0;
       for (int i_proj = 0; i_proj < rs; ++i_proj) {
         proj += adv[i_proj*nq + i_qpoint]*weights(i_proj)*orth(i_proj);
       }
-      forcing[i_qpoint] = proj*proj;
+      forcing[i_qpoint] = proj*proj*2*rk_ref[(nd + 1)*nq + i_qpoint]/rk_ref[nd*nq + i_qpoint];
     }
   } // Cauchy-Kovalevskaya-style derivative estimate complete!
 
@@ -641,11 +642,10 @@ void Solver::set_art_visc_smoothness(double advect_length)
     double* av = elements[i_elem].art_visc_coef();
     double* forcing = elements[i_elem].art_visc_forcing();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      // set artificial viscosity to square root of diffused scalar state times scaling factor
-      double scale_sq = 2*rk_ref[(nd + 1)*nq + i_qpoint]/rk_ref[nd*nq + i_qpoint];
+      // set artificial viscosity to square root of diffused scalar state
       double f = std::max(0., forcing[n_real*nq + i_qpoint]);
-      f = us_max*f/(us_max + f);
-      av[i_qpoint] = mult*std::sqrt(f*scale_sq); // root-smear-square complete!
+      //f = us_max*f/(us_max + f);
+      av[i_qpoint] = mult*std::sqrt(f); // root-smear-square complete!
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         int i = i_var*nq + i_qpoint;
