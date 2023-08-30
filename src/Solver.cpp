@@ -130,7 +130,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default<double>("fix_admis_stab_rat", .7); // staility ratio for fixing thermodynamic admissibility.
   _namespace->assign_default<double>("av_diff_ratio", 5e-3); // ratio of diffusion time to advection width
   _namespace->assign_default<double>("av_visc_mult", 30.); // final scaling parameter applied to artificial viscosity coefficient
-  _namespace->assign_default<double>("av_unscaled_max", 2e-3); // maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
+  _namespace->assign_default<double>("av_unscaled_max", 2e-4); // maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
   _namespace->assign_default<double>("av_advect_stab_rat", .2); // stability ratio for advection
   _namespace->assign_default<double>("av_advect_max_res", 1e-3); // residual limit for advection equation
   _namespace->assign_default<double>("av_diff_stab_rat", .5); // stability ratio for diffusion
@@ -634,7 +634,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
   _namespace->assign("av_diffusion_residual", std::sqrt(status.diff_res/n_real));
   // clean up
   double mult = _namespace->lookup<double>("av_visc_mult").value()*advect_length;
-  double us_max = _namespace->lookup<double>("av_unscaled_max").value();
+  double us_max = _namespace->lookup<double>("av_unscaled_max").value()*2*_namespace->lookup<double>("freestream" + std::to_string(nd + 1)).value()/_namespace->lookup<double>("freestream" + std::to_string(nd)).value();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
@@ -644,7 +644,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       // set artificial viscosity to square root of diffused scalar state
       double f = std::max(0., forcing[n_real*nq + i_qpoint]);
-      //f = us_max*f/(us_max + f);
+      f = us_max*f/(us_max + f);
       av[i_qpoint] = mult*std::sqrt(f); // root-smear-square complete!
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
