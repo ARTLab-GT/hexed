@@ -634,7 +634,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
   _namespace->assign("av_diffusion_residual", std::sqrt(status.diff_res/n_real));
   // clean up
   double mult = _namespace->lookup<double>("av_visc_mult").value()*advect_length;
-  double us_max = _namespace->lookup<double>("av_unscaled_max").value()*2*_namespace->lookup<double>("freestream" + std::to_string(nd + 1)).value()/_namespace->lookup<double>("freestream" + std::to_string(nd)).value();
+  double us_max = std::sqrt(_namespace->lookup<double>("av_unscaled_max").value()*2*_namespace->lookup<double>("freestream" + std::to_string(nd + 1)).value()/_namespace->lookup<double>("freestream" + std::to_string(nd)).value());
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
@@ -645,7 +645,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
       // set artificial viscosity to square root of diffused scalar state
       double f = std::max(0., forcing[n_real*nq + i_qpoint]);
       f = us_max*f/(us_max + f);
-      av[i_qpoint] = mult*std::sqrt(f); // root-smear-square complete!
+      av[i_qpoint] = mult*f; // root-smear-square complete!
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         int i = i_var*nq + i_qpoint;
