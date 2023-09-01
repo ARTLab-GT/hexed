@@ -1,17 +1,31 @@
+{
+Subsonic NACA 0012 Example Problem: Input file in Hexed Interface Language format.
+This file specifies the geometry, freestream conditions, and other user-defined input parameters.
+Note: strings are enclosed in `{}`, and strings which are not assigned to anything are used as comments.
+}
+
+{domain and mesh parameters}
 n_dim = 2
 mesh_extreme00 = -10.
 mesh_extreme10 = -10.
 mesh_extreme01 =  10.
 mesh_extreme11 =  10.
+surface_max_iters = 10
+surface_refine = {res_bad > 3e-3 & ref_level < 20}
+
+{generate geometry with external script}
+shell {python3 make_geom.py}
+geom0 = {auto.csv}
+
+{freestream conditions}
 altitude = 0.
 mach = 0.3
 attack = 4*degree
-shell {python3 make_geom.py}
-geom0 = {auto.csv}
-surface_refine = {res_bad > 3e-3 & ref_level < 10}
-done = {normalized_residual < 1e-7}
-vis_surface_vars = vis_surface_vars + {normal1 = normal1;}
 
+{termination condition}
+done = {normalized_residual < 1e-7}
+
+{run simulation}
 $init
 $run
 $compute_force
