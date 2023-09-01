@@ -14,13 +14,14 @@ geom0 = {auto.csv}
 pressure = 120.96
 temperature = 75.61
 mach = 5.
-working_dir = {hexed_out_isothermal9}
+working_dir = {hexed_out_isothermal10}
 art_visc_width = 4*2.^-init_ref_level
 fix_therm_admis = true
 transport_model = {best}
 thermal_bc = {temperature = 98.89}
 {thermal_bc = {heat_flux = 0.}}
-wall_spacing = 0.02
+wall_spacing = 0.01
+wall_layers = 1
 surface_max_iters = 1
 vis_freq = 20000
 print_freq = 500

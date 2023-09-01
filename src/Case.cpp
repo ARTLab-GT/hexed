@@ -229,7 +229,7 @@ Case::Case(std::string input_file)
 
   _inter.variables->create<int>("make_layers", new Namespace::Heisenberg<int>([this]() {
     _solver().mesh().disconnect_boundary(_solver().mesh().surface_bc_sn());
-    _solver().mesh().extrude(Layer_sequence(_vard("wall_spacing").value(), 1));
+    _solver().mesh().extrude(Layer_sequence(_vard("wall_spacing").value(), _vari("wall_layers").value()));
     _solver().mesh().connect_rest(_solver().mesh().surface_bc_sn());
     _solver().calc_jacobian();
     return 0;
