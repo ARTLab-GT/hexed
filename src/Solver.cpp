@@ -128,9 +128,9 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace{space}
 {
   _namespace->assign_default<double>("fix_admis_stab_rat", .7); // staility ratio for fixing thermodynamic admissibility.
-  _namespace->assign_default<double>("av_diff_ratio", 5e-3); // ratio of diffusion time to advection width
+  _namespace->assign_default<double>("av_diff_ratio", 1e-1); // ratio of diffusion time to advection width
   _namespace->assign_default<double>("av_visc_mult", 30.); // final scaling parameter applied to artificial viscosity coefficient
-  _namespace->assign_default<double>("av_unscaled_max", 2e-3); // maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
+  _namespace->assign_default<double>("av_unscaled_max", 2e-4); // maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
   _namespace->assign_default<double>("av_advect_stab_rat", .2); // stability ratio for advection
   _namespace->assign_default<double>("av_advect_max_res", 1e-3); // residual limit for advection equation
   _namespace->assign_default<double>("av_diff_stab_rat", .5); // stability ratio for diffusion
@@ -535,27 +535,28 @@ void Solver::set_art_visc_smoothness(double advect_length)
   _namespace->assign("av_advection_residual", std::sqrt(diff/n_avg));
   // compute projection onto Legendre polynomial
   Eigen::VectorXd weights = basis.node_weights();
-  Eigen::VectorXd orth = basis.orthogonal(av_rs - 1);
+  Eigen::VectorXd orth = basis.orthogonal(rs - rs/2);
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* forcing = elements[i_elem].art_visc_forcing();
     double* adv = elements[i_elem].advection_state();
+    double* rk_ref = elements[i_elem].stage(1);
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       double proj = 0;
       for (int i_proj = 0; i_proj < rs; ++i_proj) {
         proj += adv[i_proj*nq + i_qpoint]*weights(i_proj)*orth(i_proj);
       }
-      forcing[i_qpoint] = proj*proj;
+      forcing[i_qpoint] = proj*proj*2*rk_ref[(nd + 1)*nq + i_qpoint]/rk_ref[nd*nq + i_qpoint];
     }
   } // Cauchy-Kovalevskaya-style derivative estimate complete!
 
   // begin root-smear-square operation
-  int n_real = 3; // number of real time steps (as apposed to pseudotime steps)
+  int n_real = Element::n_forcing - 1; // number of real time steps (as apposed to pseudotime steps)
   // evaluate CFL condition
   (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true))(acc_mesh.cartesian().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "compute time step");
   (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true))(acc_mesh.deformed ().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "compute time step");
   double dt_diff = _namespace->lookup<double>("av_diff_stab_rat").value();
-  double diff_time = _namespace->lookup<double>("av_diff_ratio").value()/n_real; // compute size of real time step (as opposed to pseudotime)
+  double diff_time = _namespace->lookup<double>("av_diff_ratio").value()*advect_length*advect_length/n_real; // compute size of real time step (as opposed to pseudotime)
   // initialize residual to zero (will compute RMS over all real time steps)
   status.diff_res = 0;
   for (int real_step = 0; real_step < n_real; ++real_step)
@@ -603,7 +604,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
           double* forcing = elements[i_elem].art_visc_forcing();
           double* tss = elements[i_elem].time_step_scale();
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-            double pseudotime_scale = s/diff_time*tss[i_qpoint]/advect_length;
+            double pseudotime_scale = s/diff_time*tss[i_qpoint];
             state[i_qpoint] += forcing[real_step*nq + i_qpoint]*pseudotime_scale;
             state[i_qpoint] /= 1 + pseudotime_scale;
           }
@@ -633,7 +634,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
   _namespace->assign("av_diffusion_residual", std::sqrt(status.diff_res/n_real));
   // clean up
   double mult = _namespace->lookup<double>("av_visc_mult").value()*advect_length;
-  double us_max = _namespace->lookup<double>("av_unscaled_max").value();
+  double us_max = std::sqrt(_namespace->lookup<double>("av_unscaled_max").value()*2*_namespace->lookup<double>("freestream" + std::to_string(nd + 1)).value()/_namespace->lookup<double>("freestream" + std::to_string(nd)).value());
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
@@ -641,11 +642,10 @@ void Solver::set_art_visc_smoothness(double advect_length)
     double* av = elements[i_elem].art_visc_coef();
     double* forcing = elements[i_elem].art_visc_forcing();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      // set artificial viscosity to square root of diffused scalar state times scaling factor
-      double scale_sq = 2*rk_ref[(nd + 1)*nq + i_qpoint]/rk_ref[nd*nq + i_qpoint];
+      // set artificial viscosity to square root of diffused scalar state
       double f = std::max(0., forcing[n_real*nq + i_qpoint]);
       f = us_max*f/(us_max + f);
-      av[i_qpoint] = mult*std::sqrt(f*scale_sq); // root-smear-square complete!
+      av[i_qpoint] = mult*f; // root-smear-square complete!
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         int i = i_var*nq + i_qpoint;

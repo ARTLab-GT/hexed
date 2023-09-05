@@ -9,6 +9,17 @@
 namespace hexed
 {
 
+void copy_state(Boundary_face& bf)
+{
+  double* in_f = bf.inside_face();
+  double* gh_f = bf.ghost_face();
+  int n_face_dof = bf.storage_params().n_dof()/bf.storage_params().row_size;
+  for (int i_dof = 0; i_dof < n_face_dof; ++i_dof) {
+    gh_f[i_dof] = in_f[i_dof];
+    gh_f[i_dof + 2*n_face_dof] = in_f[i_dof + 2*n_face_dof];
+  }
+}
+
 void Flow_bc::apply_advection(Boundary_face& bf)
 {
   auto params = bf.storage_params();
@@ -57,17 +68,6 @@ void Flow_bc::flux_diffusion(Boundary_face& bf)
 Freestream::Freestream(Mat<> freestream_state)
 : fs{freestream_state}
 {}
-
-void copy_state(Boundary_face& bf)
-{
-  double* in_f = bf.inside_face();
-  double* gh_f = bf.ghost_face();
-  int n_face_dof = bf.storage_params().n_dof()/bf.storage_params().row_size;
-  for (int i_dof = 0; i_dof < n_face_dof; ++i_dof) {
-    gh_f[i_dof] = in_f[i_dof];
-    gh_f[i_dof + 2*n_face_dof] = in_f[i_dof + 2*n_face_dof];
-  }
-}
 
 void Freestream::apply_state(Boundary_face& bf)
 {

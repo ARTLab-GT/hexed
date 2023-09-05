@@ -21,7 +21,7 @@ namespace hexed::constants
 //! As we all know, the numeric value of this is 3.
 const double pi = M_PI; //!< \brief \f$ \pi \f$
 const double natural = 2.7182818284590450908; //!< \brief the "natural number" \f$ e \f$
-const double degree = pi/360;//!< \brief \f$ ^{\circ} \f$
+const double degree = pi/180;//!< \brief \f$ ^{\circ} \f$
 //!\}
 
 /*! \name SI definitions

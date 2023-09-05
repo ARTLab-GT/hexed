@@ -229,7 +229,7 @@ Case::Case(std::string input_file)
 
   _inter.variables->create<int>("make_layers", new Namespace::Heisenberg<int>([this]() {
     _solver().mesh().disconnect_boundary(_solver().mesh().surface_bc_sn());
-    _solver().mesh().extrude(Layer_sequence(_vard("wall_spacing").value(), 1));
+    _solver().mesh().extrude(Layer_sequence(_vard("wall_spacing").value(), _vari("wall_layers").value()));
     _solver().mesh().connect_rest(_solver().mesh().surface_bc_sn());
     _solver().calc_jacobian();
     return 0;
@@ -251,7 +251,7 @@ Case::Case(std::string input_file)
 
   _inter.variables->create<int>("visualize", new Namespace::Heisenberg<int>([this]() {
     std::string wd = _vars("working_dir").value();
-    std::string suffix = _vars("vis_file_suffix").value();
+    std::string suffix = format_str(100, "_iter%.*i", _vari("iter_width").value(), _vari("iteration").value());
     State_variables sv;
     Velocity veloc;
     Mass mass;
@@ -267,6 +267,7 @@ Case::Case(std::string input_file)
       #endif
       #if HEXED_USE_XDMF
       if (_vari("vis_xdmf").value()) _solver().visualize_field_xdmf(func, file_name);
+      if (_vari("vis_xdmf").value()) _solver().visualize_field_xdmf(Art_visc_forcing(), wd + "avf" + suffix);
       #endif
     }
     if (_vari("vis_surface").value() && _has_geom) {
