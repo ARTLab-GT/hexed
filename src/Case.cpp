@@ -251,7 +251,7 @@ Case::Case(std::string input_file)
 
   _inter.variables->create<int>("visualize", new Namespace::Heisenberg<int>([this]() {
     std::string wd = _vars("working_dir").value();
-    std::string suffix = _vars("vis_file_suffix").value();
+    std::string suffix = format_str(100, "_iter%.*i", _vari("iter_width").value(), _vari("iteration").value());
     State_variables sv;
     Velocity veloc;
     Mass mass;
@@ -267,7 +267,7 @@ Case::Case(std::string input_file)
       #endif
       #if HEXED_USE_XDMF
       if (_vari("vis_xdmf").value()) _solver().visualize_field_xdmf(func, file_name);
-      if (_vari("vis_xdmf").value()) _solver().visualize_field_xdmf(Art_visc_forcing(), wd + "avf" + std::to_string(_vari("iteration").value()));
+      if (_vari("vis_xdmf").value()) _solver().visualize_field_xdmf(Art_visc_forcing(), wd + "avf" + suffix);
       #endif
     }
     if (_vari("vis_surface").value() && _has_geom) {
