@@ -535,7 +535,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
   _namespace->assign("av_advection_residual", std::sqrt(diff/n_avg));
   // compute projection onto Legendre polynomial
   Eigen::VectorXd weights = basis.node_weights();
-  Eigen::VectorXd orth = basis.orthogonal(3);
+  Eigen::VectorXd orth = basis.orthogonal(rs - rs/2);
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* forcing = elements[i_elem].art_visc_forcing();
