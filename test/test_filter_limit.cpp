@@ -17,16 +17,19 @@ TEST_CASE("filter_limit")
   }
   auto norm = [&]() {return data.dot(hexed::math::pow_outer(basis.node_weights(), 2).cwiseProduct(data));};
   double before = norm();
-  hexed::filter_limit(2, data.data(), basis, 0.7);
-  CHECK(norm()/before > 1);
+  double decay_rate = 0.2;
+  hexed::filter_limit(2, data.data(), basis, decay_rate);
+  // check that the function has not been modified much
+  CHECK(norm()/before > 0.9);
   srand(406);
   // set to a very not-smooth function
   for (int i = 0; i < row_size; ++i) {
     for (int j = 0; j < row_size; ++j) {
-      data(i*row_size + j) = 1e-3*(rand()%1000);
+      data(i*row_size + j) = 2e-3*(rand()%1000) - 1;
     }
   }
   before = norm();
-  hexed::filter_limit(2, data.data(), basis, 0.7);
-  CHECK(norm()/before < 0);
+  hexed::filter_limit(2, data.data(), basis, decay_rate);
+  // check that the function has been modified significantly
+  CHECK(norm()/before < 0.1);
 }

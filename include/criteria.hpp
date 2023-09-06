@@ -15,6 +15,7 @@ bool if_extruded(Element& elem); //!< returns true if the element is extruded **
 
 //! \brief Gets a refinement criterion from a general function that operates on some attributes of an `Element` but not the `Element` itself.
 std::function<bool(Element&)> criterion(std::function<bool(bool is_extruded, int ref_level, double nom_sz, Eigen::Vector3d center, double res_bad)>);
+std::function<bool(Element&)> logical_not(std::function<bool(Element&)>); //!< inverts an existing function
 
 }
 #endif

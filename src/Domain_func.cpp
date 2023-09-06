@@ -108,8 +108,8 @@ std::string Velocity::variable_name(int n_dim, int i_var) const
 std::vector<double> Velocity::operator()(std::vector<double> point_pos, double point_time,
                                          std::vector<double> state) const
 {
-  std::vector<double> veloc(3, 0.);
   const int n_dim = state.size() - 2;
+  std::vector<double> veloc(n_dim, 0.);
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) veloc[i_dim] = state[i_dim]/state[n_dim];
   return veloc;
 }

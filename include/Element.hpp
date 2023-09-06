@@ -16,11 +16,10 @@ namespace hexed
 
 class Tree;
 
-/*!
- * Stores data associated with one element. Container only --
- * does not have implementations of or information about the basis and algorithms.
- * This class represents a Cartesian (i.e., regular) element. See also derived class
- * `Deformed_element`.
+/*! \brief Stores data associated with one mesh element.
+ * \details Container only -- does not have implementations of or information about the basis and algorithms.
+ * This class represents a Cartesian (i.e., regular) element.
+ * See also derived class `Deformed_element`.
  */
 class Element
 {
@@ -48,11 +47,12 @@ class Element
   //! Pointer to state data at faces. Must be populated by user
   std::array<double*, 6> faces; //!< layout: [2*i_dim + face_sign][i_var][i_qpoint]
   double resolution_badness = 0; //!< refinement algorithms should set this value to some metric representing how badly this element needs to be refined
-  static constexpr bool is_deformed = false;
-  static constexpr int n_forcing = 4;
+  static constexpr bool is_deformed = false; //!< is this `Element` subclass deformed?
+  static constexpr int n_forcing = 4; //!< number of artificial viscosity forcing variables
   int record = 0; //!< for algorithms to book-keep general information
   Tree* tree = nullptr; //!< `Tree` this element was created from
-  const Mat<> origin;
+  bool unrefinement_locked = false; //!< if this is set to `true`, `Mesh_interface::update()` won't unrefine it
+  const Mat<> origin; //!< origin which integer coordinates are relative to
   Lock lock; //!< for any tasks where multiple threads might access an element simultaneously
 
   /*!
@@ -83,6 +83,7 @@ class Element
   //! pointer to scaling factor for local time step.
   double* time_step_scale(); //!< Layout: [i_qpoint]
   double* art_visc_coef(); //!< layout: [i_qpoint]
+  double* fix_admis_coef(); //!< layout: [i_qpoint]
   double* art_visc_forcing(); //!< layout: [i_forcing][i_qpoint]
   virtual double* node_adjustments() {return nullptr;} //!< overriden by `Deformed_element`
 
@@ -103,6 +104,7 @@ class Element
   void fetch_shareable_value(vertex_value_access access_func, Vertex::reduction = Vertex::vector_max); // set `this`'s copy of shareable value to the shared values at the vertices
   //! Time step scale at the vertices. TSS in the interior is set by interpolating this.
   double& vertex_time_step_scale(int i_vertex);
+  double& vertex_fix_admis_coef(int i_vertex);
   void set_needs_smooth(bool); //!< sets the `Vertex::Transferable_ptr::needs_smooth` of the vertices
 };
 

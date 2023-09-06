@@ -19,12 +19,14 @@ namespace hexed::config
 
 //! \name CMake options
 //!\{
+constexpr char root_dir [] = "@CMAKE_SOURCE_DIR@/";
+constexpr char build_dir [] = "@CMAKE_BINARY_DIR@/";
 constexpr int max_row_size = @MAX_BASIS_ROW_SIZE@; //!< \brief maximum \ref row_size "row size" that a `Basis` is allowed to have
 #define HEXED_THREADED HEXED_@threaded@
 #if HEXED_THREADED
 constexpr int n_threads = @n_threads@; //!< \brief number of threads with which to execute parallel regions
 #endif
-#define HEXED_USE_OTTER HEXED_@use_otter@
+#define HEXED_USE_XDMF HEXED_@use_xdmf@
 #define HEXED_USE_TECPLOT HEXED_@use_tecplot@
 #define HEXED_USE_NLOPT HEXED_@use_nlopt@
 #define HEXED_USE_OCCT HEXED_@use_occt@

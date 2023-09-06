@@ -4,6 +4,7 @@
 #include <vector>
 #include "Output_data.hpp"
 #include "Basis.hpp"
+#include "Struct_expr.hpp"
 
 namespace hexed
 {
@@ -19,6 +20,23 @@ class Qpoint_func : virtual public Output_data
 {
   public:
   virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const = 0;
+};
+
+/*! \brief Evaluates a \ref struct_expr "structured expression"
+ * \details Expression is evaluated in an environment that includes
+ * the variables defined in `hil_properties::element`, `hil_properties::position`, and `hil_properties::state`
+ * as well as `time`.
+ */
+class Qpoint_expr : public Qpoint_func
+{
+  Struct_expr _expr;
+  const Interpreter& _inter;
+  public:
+  Qpoint_expr(Struct_expr, const Interpreter&);
+  Qpoint_expr(Struct_expr, Interpreter&&) = delete;
+  inline int n_var(int n_dim) const override {return _expr.names.size();}
+  inline std::string variable_name(int n_dim, int i_var) const override {return _expr.names[i_var];}
+  std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
 };
 
 //! Returns a vector with one element: the Jacobian determinant at the quadrature point.
@@ -63,6 +81,15 @@ class Art_visc_coef : public Qpoint_func
   public:
   inline int n_var(int n_dim) const override {return 1;}
   inline std::string variable_name(int n_dim, int i_var) const override {return "artificial_viscosity_coefficient";}
+  std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
+};
+
+//! fetches the `Element::fix_admis_coef`
+class Fix_admis_coef : public Qpoint_func
+{
+  public:
+  inline int n_var(int n_dim) const override {return 1;}
+  inline std::string variable_name(int n_dim, int i_var) const override {return "fix_admis_coef";}
   std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
 };
 
@@ -144,7 +171,7 @@ class Advection_state : public Qpoint_func
 class Art_visc_forcing : public Qpoint_func
 {
   public:
-  int n_var(int n_dim) const override;
+  int n_var(int n_dim) const override; //!< \returns `Element::n_forcing`
   inline std::string variable_name(int n_dim, int i_var) const override {return "art_visc_forcing" + std::to_string(i_var);};
   std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
 };

@@ -4,6 +4,7 @@ Accessible_mesh.cpp
 Basis.cpp
 Boundary_condition.cpp
 Boundary_func.cpp
+Case.cpp
 connection.cpp
 criteria.cpp
 Deformed_element.cpp
@@ -14,6 +15,8 @@ Equidistant.cpp
 filter_limit.cpp
 global_hacks.cpp
 Hanging_vertex_matcher.cpp
+hil_properties.cpp
+Interpreter.cpp
 Iteration_status.cpp
 Layer_sequence.cpp
 Lock.cpp
@@ -23,6 +26,7 @@ Output_data.cpp
 otter_vis.cpp
 Physical_basis.cpp
 Qpoint_func.cpp
+read_csv.cpp
 Simplex_geom.cpp
 Solver.cpp
 Solver_convective.cpp
@@ -31,11 +35,19 @@ Spacetime_func.cpp
 Stopwatch.cpp
 Stopwatch_tree.cpp
 Storage_params.cpp
+Struct_expr.cpp
 Surface_func.cpp
 Surface_geom.cpp
+standard_atmosphere.cpp
 Tecplot_file.cpp
 Tree.cpp
 thermo.cpp
 Vertex.cpp
 Vis_data.cpp
+Xdmf_wrapper.cpp
 )
+
+add_executable(hexecute hexecute.cpp)
+target_link_libraries(hexecute PRIVATE hexed)
+add_executable(hil hil.cpp)
+target_link_libraries(hil PRIVATE hexed)

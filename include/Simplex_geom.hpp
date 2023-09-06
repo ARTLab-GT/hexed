@@ -28,6 +28,7 @@ class Simplex_geom : public Surface_geom
   void merge(Nearest_point<n_dim>& nearest, Mat<n_dim, n_dim> sim, Mat<n_dim> point); // helper for `nearest_point`
 
   public:
+  double gap_tol = 1e-2; //!< extend triangles by this amount, relative to their original size, to fill gaps
   std::vector<Mat<n_dim, n_dim>> simplices;
   Simplex_geom(const std::vector<Mat<n_dim, n_dim>>&  sims) : simplices{sims} {}
   Simplex_geom(      std::vector<Mat<n_dim, n_dim>>&& sims) : simplices{sims} {}
@@ -87,7 +88,7 @@ class Simplex_geom : public Surface_geom
         Mat<n_dim> soln = lhs.lu().solve(point0 - sim(all, 0));
         // if intersection is inside simplex, add it to the list
         Eigen::Array<double, n_dim - 1, 1> arr = soln(Eigen::seqN(1, n_dim - 1)).array();
-        if ((arr >= 0.).all() && arr.sum() <= 1.) inters.push_back(soln(0));
+        if ((arr >= -gap_tol).all() && arr.sum() <= 1 + gap_tol) inters.push_back(soln(0));
       }
     }
     #if HEXED_OBSESSIVE_TIMING
@@ -118,7 +119,9 @@ Stopwatch_tree Simplex_geom<n_dim>::stopwatch("", {{"nearest_point", Stopwatch_t
 
 template<> void Simplex_geom<2>::merge(Nearest_point<2>& nearest, Mat<2, 2> sim, Mat<2> point);
 template<> void Simplex_geom<3>::merge(Nearest_point<3>& nearest, Mat<3, 3> sim, Mat<3> point);
+//! \cond
 template<> void Simplex_geom<3>::visualize(std::string);
+//! \endcond
 
 /*! \brief Creates simplices from an ordered array of points representing a polygonal curve.
  * \details `points` must have exactly 2 rows.
@@ -127,6 +130,7 @@ template<> void Simplex_geom<3>::visualize(std::string);
  * Each point represents a unique vertex -- duplicate points are allowed,
  * but you don't need to include each interior point twice.
  * The result can be used to construct a `Simplex_geom<2>`.
+ * \see `read_csv()`
  * \relates Simplex_geom
  */
 std::vector<Mat<2, 2>> segments(const Mat<dyn, dyn>& points);

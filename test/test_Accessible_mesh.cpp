@@ -406,6 +406,12 @@ TEST_CASE("Tree meshing")
       return    (np[0] <  thresh && np[1] <  thresh && np[2] <  thresh)
              || (np[0] >= thresh && np[1] >= thresh && np[2] >= thresh);
     };
+    mesh.set_unref_locks(hexed::criteria::always);
+    // this should do nothing because we just locked unrefinement for all the elements
+    mesh.update(hexed::criteria::never, predicate);
+    REQUIRE(mesh.elements().size() == 512);
+    mesh.set_unref_locks(); // no longer locked
+    // now unrefinement should work
     mesh.update(hexed::criteria::never, predicate);
     REQUIRE(mesh.elements().size() == 6*64 + 2*8);
     mesh.valid().assert_valid();

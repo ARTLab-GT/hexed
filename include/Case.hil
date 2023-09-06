@@ -1,0 +1,192 @@
+{array variables}
+i_dim = 0
+mesh_extreme_eps = 1e-6
+while = {i_dim < 3}
+do = {
+    mesh_code = {
+        mesh_index = {} + i_dim + sign
+        $({mesh_extreme} + mesh_index) = 0. + sign
+        $({extremal_bc} + mesh_index) = {characteristic}
+    }
+    sign = 0; $mesh_code
+    sign = 1; $mesh_code
+    $({flood_fill_start} + i_dim) = huge
+    i_dim = i_dim + 1
+}
+$loop
+
+{utilities}
+heat_rat = 1.4
+momentum_expr = {momentum0 = momentum0; momentum1 = momentum1; momentum2 = momentum2;}
+density_expr = {density = density;}
+energy_expr = {energy = energy;}
+velocity_expr = {velocity0 = momentum0/density; velocity1 = momentum1/density; velocity2 = momentum2/density;}
+speed_expr = {speed = sqrt(velocity0^2 + velocity1^2 + velocity2^2);}
+pressure_expr = {pressure = (heat_rat - 1)*(energy - 0.5*density*speed^2);}
+temperature_expr = {temperature = pressure/(density*specific_gas_air);}
+mach_expr = {mach = speed/sqrt(heat_rat*pressure/density);}
+art_visc_expr = {art_visc = art_visc;}
+visc_stress_expr = {visc_stress0 = visc_stress0; visc_stress1 = visc_stress1; visc_stress2 = visc_stress2;}
+stress_expr = {stress0 = -pressure*normal0 + visc_stress0; stress1 = -pressure*normal1 + visc_stress1; stress2 = -pressure*normal2 + visc_stress2;}
+heat_flux_expr = {heat_flux = heat_flux;}
+iteration_expr = {iteration = iteration;}
+residual_expr = {normalized_residual = (residual_momentum/init_residual_momentum + residual_density/init_residual_density + residual_energy/init_residual_energy)/3;}
+av_advection_residual_expr = {av_advection_residual = av_advection_residual;}
+av_diffusion_residual_expr = {av_diffusion_residual = av_diffusion_residual;}
+flow_time_expr = {flow_time = flow_time;}
+time_step_expr = {time_step = time_step;}
+fix_iters_expr = {fix_iters = fix_iters;}
+state_vars = momentum_expr + density_expr + energy_expr + velocity_expr + speed_expr + pressure_expr + temperature_expr + mach_expr
+compute_force = {
+    integrand_surface = velocity_expr + speed_expr + pressure_expr + stress_expr
+    integrate_surface
+    force0 = integral_surface_stress0
+    force1 = integral_surface_stress1
+    force2 = integral_surface_stress2
+    drag = force0*direction0 + force1*direction1 + force2*direction2
+    if = {n_dim == 2}
+    then = {lift = force1*direction0 - force0*direction1}
+    else = {println {force computation not yet implemented for `n_dim != 2`}; throw}
+    $cond
+    drag_coef = drag/(0.5*density*speed^2)
+    lift_coef = lift/(0.5*density*speed^2)
+}
+
+{basic parameters}
+row_size = 6
+init_ref_level = 3
+local_time = true
+init_condition = {freestream}
+transport_model = {inviscid}
+thermal_bc = {heat_flux = 0}
+surface_bc = {auto}
+temperature_offset = 0.
+attack = 0.
+sideslip = 0.
+art_visc_constant = -1.
+art_visc_width = -1.
+fix_therm_admis = false
+working_dir = {hexed_out/}
+vis_freq = 10000
+iter_width = 10
+print_freq = 100
+max_safety = 0.7
+max_time_step = huge
+surface_refine = {false}
+surface_unrefine = {ref_level > init_ref_level & !is_extruded}
+surface_max_iters = 100
+n_smooth = 30
+wall_spacing = -1.; {set to positive value}
+wall_layers = 1
+geom_n_segments = 1000
+vis_surface = true
+vis_field = true
+vis_tecplot = false
+vis_xdmf = true
+vis_field_vars = state_vars + art_visc_expr
+vis_surface_vars = state_vars + visc_stress_expr + heat_flux_expr
+print_vars = iteration_expr + residual_expr + av_advection_residual_expr + av_diffusion_residual_expr + flow_time_expr + time_step_expr + fix_iters_expr
+integrand_field = {}
+integrand_surface = {}
+max_angle = 10*degree
+max_deflection = huge
+
+{overrideable macros}
+vis_init = {visualize}
+vis_final = {visualize}
+print_init = {println header}
+print_final = {
+    println {simulation complete}
+    println {}
+    println {performance summary:}
+    println performance_report
+}
+done = {println {Error: you forgot to a set stop condition} & throw}
+vis_iter = {
+    if = {iteration%vis_freq == 0}
+    then = {
+        print {visualizing...}
+        visualize
+        println {done}
+    }
+    $cond
+}
+print_iter = {
+    if = {iteration%print_freq == 0}
+    then = {println report}
+    $cond
+}
+iterate = {
+    update
+    {compute initial residual for normalization}
+    if = {iteration == 1}
+    then = {
+        compute_residuals
+        init_residual_momentum = residual_momentum
+        init_residual_density = residual_density
+        init_residual_energy = residual_energy
+    }
+    $cond
+    $print_iter
+    $vis_iter
+    except = {println exception}
+    $(read(working_dir + {runtime_cmd.hil}))
+    shell({echo > } + working_dir + {runtime_cmd.hil})
+}
+
+init = {
+    if = {working_dir#(#working_dir - 1) != {/}}
+    then = {working_dir = working_dir + {/}}
+    $cond
+    shell({if [ ! -d } + working_dir + { ]; then mkdir } + working_dir + {; fi})
+    if = {surface_bc == {auto}}
+    then = {
+        if = {transport_model == {inviscid}}
+        then = {surface_bc = {nonpenetration}}
+        else = {surface_bc = {no_slip}}
+        $cond
+    }
+    $cond
+    if = {flood_fill_start0 == huge}
+    then = {
+        i_dim = 0
+        while = {i_dim < n_dim}
+        do = {
+            $({flood_fill_start} + i_dim) = (1 - mesh_extreme_eps)*$({mesh_extreme} + i_dim + 0) + mesh_extreme_eps*$({mesh_extreme} + i_dim + 1)
+            i_dim = i_dim + 1
+        }
+        $loop
+    }
+    $cond
+    create_solver
+    init_refinement
+    add_geom
+    i_refinement = 0
+    keep_refining = false
+    while = {!keep_refining & i_refinement < surface_max_iters}
+    do = {
+        print({geometry-based refinement sweep } + i_refinement + {... })
+        keep_refining = keep_refining & refine
+        i_refinement = i_refinement + 1
+        println {done}
+    }
+    $loop
+    if = {wall_spacing > 0}
+    then = {make_layers}
+    $cond
+    init_state
+    normalized_residual = 1.
+    println({initialization complete with } + n_elements + { elements})
+    println {}
+    $vis_init
+}
+
+run = {
+    $print_init
+    shell({echo > } + working_dir + {runtime_cmd.hil})
+    while = {!($done)}
+    do = {$iterate}
+    $loop
+    $print_final
+    $vis_final
+}

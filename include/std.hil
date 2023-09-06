@@ -1,0 +1,79 @@
+{since these can be inconvenient to insert in a string literal}
+newline = {
+}
+closebr = {\}}
+
+{boolean aliases}
+true = 1
+false = 0
+
+{conditional construct}
+if = {}; {reserve these names so a user can't accidentally assign a different type to them}
+then = {}
+else = {}
+cond = {
+    hexed_cond0 = else
+    hexed_cond1 = then
+    hexed_cond = {$hexed_cond} + (($if) != 0)
+    if = {}; {reset these so that defaults can be used again}
+    then = {}
+    else = {}
+    $hexed_cond
+}
+
+{while loop}
+hexed_loop_depth = 0
+while = {}
+do = {}
+loop = {
+    hexed_loop_depth = hexed_loop_depth + 1
+    $({hexed_loop_while}   + hexed_loop_depth) = while
+    $({hexed_loop_do}      + hexed_loop_depth) = do
+    $({hexed_loop_wrapper} + hexed_loop_depth) = {
+        hexed_loop_case1 = hexed_loop_do}+ hexed_loop_depth +{
+        hexed_loop_case0 = {hexed_loop_wrapper}+ hexed_loop_depth +{ = {}}
+        $$({hexed_loop_case} + (($hexed_loop_while}+ hexed_loop_depth +{) != 0))
+        $hexed_loop_wrapper}+ hexed_loop_depth +{
+    }
+    $$({hexed_loop_wrapper} + hexed_loop_depth)
+    hexed_loop_depth = hexed_loop_depth - 1
+    while = {}
+    do = {}
+}
+
+{string slicing/splitting}
+split_i = 0
+split_str = {}
+split_at = {split_i == 0}
+split_first = {}
+split_rest = {}
+split = {
+    split_first = {}
+    split_i = 0
+    while = {!$split_at}
+    do = {split_first = split_first + split_str#split_i; split_i = split_i + 1}
+    $loop
+    split_rest = {}
+    while = {split_i < #split_str}
+    do = {split_rest = split_rest + split_str#split_i; split_i = split_i + 1}
+    $loop
+}
+
+{basic Read-Evaluate-Print Loop}
+hexed_quit_repl = false
+quit = {hexed_quit_repl = true; {}}
+repl = {
+    while = {!hexed_quit_repl}
+    do = {
+        except = {println exception;}
+        print {#+^$ }
+        hexed_repl_cmd = ask
+        {basically reimplement the conditional to avoid overwriting `if`/`then`/`else`}
+        hexed_result = {} + ($hexed_repl_cmd)
+        hexed_repl_case0 = {println hexed_result}
+        hexed_repl_case1 = {}
+        $$({hexed_repl_case} + (hexed_result == {}))
+    }
+    $loop
+    except = {}
+}

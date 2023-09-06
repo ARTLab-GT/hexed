@@ -91,6 +91,7 @@ class Accessible_mesh : public Mesh
 
   void add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3)) override;
   void set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) override;
+  void set_unref_locks(std::function<bool(Element&)> lock_if = criteria::never) override;
   bool update(std::function<bool(Element&)> refine_criterion = criteria::always, std::function<bool(Element&)> unrefine_criterion = criteria::never) override;
   void set_all_smooth() override;
   void relax(double factor = 0.9) override;
@@ -112,7 +113,7 @@ class Accessible_mesh : public Mesh
   typedef Vector_view<Vertex&, Vertex::Non_transferable_ptr, &ptr_convert<Vertex&, Vertex::Non_transferable_ptr>> vertex_view;
   //! \returns a view of all Vertex objects used by elements in this mesh. Each vertex will appear exactly once, even if it is shared by multiple elements.
   vertex_view vertices();
-  void extrude(bool collapse = false, double offset = 0) override; // note: test for this is in `test_Solver.cpp` so that the result can be visualized
+  void extrude(bool collapse = false, double offset = 0, bool force = false) override; // note: test for this is in `test_Solver.cpp` so that the result can be visualized
   void connect_rest(int bc_sn) override;
   std::vector<elem_handle> elem_handles() override;
   //! \returns a view of all Element_connection between extruded elements and the elemens they were extruded from

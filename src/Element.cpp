@@ -12,7 +12,7 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   r_level{ref_level},
   n_dof(params.n_dof()),
   n_vert(params.n_vertices()),
-  data_size{params.n_stage*n_dof + (2 + n_forcing + params.row_size)*params.n_qpoint()},
+  data_size{params.n_stage*n_dof + (3 + n_forcing + params.row_size)*params.n_qpoint()},
   data{Eigen::VectorXd::Zero(data_size)},
   vertex_tss{Eigen::VectorXd::Constant(params.n_vertices(), nom_sz/n_dim)},
   origin{origin_arg(Eigen::seqN(0, params.n_dim))}
@@ -124,9 +124,14 @@ double* Element::art_visc_coef()
   return time_step_scale() + params.n_qpoint();
 }
 
-double* Element::art_visc_forcing()
+double* Element::fix_admis_coef()
 {
   return art_visc_coef() + params.n_qpoint();
+}
+
+double* Element::art_visc_forcing()
+{
+  return fix_admis_coef() + params.n_qpoint();
 }
 
 double* Element::advection_state()
@@ -156,6 +161,11 @@ void Element::fetch_shareable_value(vertex_value_access access_func, Vertex::red
 double& Element::vertex_time_step_scale(int i_vertex)
 {
   return vertex_tss[i_vertex];
+}
+
+double& Element::vertex_fix_admis_coef(int i_vertex)
+{
+  return vertices[i_vertex].fix_admis_coef;
 }
 
 void Element::set_needs_smooth(bool value)

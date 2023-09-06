@@ -40,8 +40,8 @@ option(build_docs "build documentation? (requires doxygen)" OFF)
 option(sanitize "If ON, compile with sanitizer flags." OFF)
 option(profile "if ON, compile with gprof profiling flags (in which case `threaded` should be OFF)")
 option(threaded "If ON, allow multiple threads. Substantially reduces execution time." ON)
-option(use_otter "include capability to use otter for plotting" OFF)
-option(use_tecplot "include capability to use tecplot for plotting" ON)
+option(use_tecplot "include capability to use visualize in Tecplot's native format" OFF)
+option(use_xdmf "include capability to use visualize in XDMF format" ON)
 option(use_cppcheck "use the cppcheck static analysis tool (requires cppcheck)" OFF)
 option(use_nlopt "enable features that require root finding with NLopt" OFF)
 option(use_occt "enable CAD geometry processing with OpenCASCADE Technology" ON)
@@ -117,10 +117,6 @@ add_custom_target(
 add_library(hexed SHARED)
 
 # add external libraries
-if (use_otter)
-    find_package(otter REQUIRED)
-    target_link_libraries(hexed PUBLIC otter)
-endif()
 if (use_tecplot)
     target_link_libraries(hexed PRIVATE tecio)
 endif()
@@ -132,6 +128,12 @@ if (use_occt)
     find_package(OpenCASCADE REQUIRED)
     target_link_libraries(hexed PUBLIC TKBRep TKOpenGl TKV3d TKIGES TKSTEP TKSTL)
 endif()
+if (use_xdmf)
+    find_package(Xdmf REQUIRED)
+    find_package(libxml2 REQUIRED)
+    target_link_libraries(hexed PRIVATE Xdmf)
+    target_include_directories(hexed PRIVATE ${LIBXML2_INCLUDE_DIRS})
+endif()
 
 # add include/source files
 target_sources(hexed PRIVATE ${CMAKE_BINARY_DIR}/Gauss_lobatto.cpp ${CMAKE_BINARY_DIR}/Gauss_legendre.cpp)
@@ -139,14 +141,12 @@ target_include_directories(hexed PUBLIC ${CMAKE_BINARY_DIR}/include/auto)
 target_include_directories(hexed PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(hexed INTERFACE ${CMAKE_BINARY_DIR}/include)
 add_subdirectory(src)
-add_subdirectory(demo)
 if (build_tests)
     add_subdirectory(test)
 endif()
 if(build_docs)
     add_subdirectory(doc)
 endif()
-add_subdirectory(python)
 
 # run cppcheck
 if (use_cppcheck)
@@ -154,8 +154,16 @@ if (use_cppcheck)
     add_custom_target(cppcheck ALL DEPENDS cppcheck_output.txt)
 endif()
 
+add_custom_command(
+    OUTPUT constants.hil
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/script/translate.py ${CMAKE_SOURCE_DIR}/include/constants.hpp
+    DEPENDS         ${CMAKE_SOURCE_DIR}/script/translate.py ${CMAKE_SOURCE_DIR}/include/constants.hpp
+)
+add_custom_target(constants ALL DEPENDS constants.hil)
+
 # install
 install(PROGRAMS script/hexed-post-process ${CMAKE_BINARY_DIR}/hexed-wrapped-post-process script/hexed-fit-geom TYPE BIN)
+install(TARGETS hexed hexecute hil)
 export(TARGETS hexed FILE hexed-targets.cmake)
 install(FILES ${CMAKE_BINARY_DIR}/hexed-config.cmake DESTINATION lib/cmake/hexed)
-install(FILES ${CMAKE_BINARY_DIR}/python/hexed_py_config.py ${CMAKE_BINARY_DIR}/python/hexed.py DESTINATION ${PYTHON_INSTALL_PREFIX})
+install(FILES ${CMAKE_SOURCE_DIR}/python/hexed_utils.py DESTINATION ${PYTHON_INSTALL_PREFIX})

@@ -1,0 +1,18 @@
+n_dim = 2
+altitude = 0.
+speed = 100.
+init_ref_level = 1
+init_condition = {freestream}
+done = {iteration > 0}
+print_freq = 1
+vis_init = {}
+vis_iter = {}
+vis_final = {}
+vis_surface = false
+geom0 = {geom.csv}
+surface_refine = {return = is_extruded}
+surface_max_iters = 1
+n_smooth = 1
+
+$init
+$run

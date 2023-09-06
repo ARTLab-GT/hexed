@@ -8,7 +8,7 @@ add_custom_command(
     DEPENDS
         doc_config
         hexed
-        ${CMAKE_SOURCE_DIR}/python/hexed_python.py
+        ${CMAKE_SOURCE_DIR}/python/hexed_utils.py
         header.png
         style.css
         ${DOC_FILES}

@@ -39,7 +39,14 @@ TEST_CASE("Occt::Geom")
       nearest = geom->nearest_point(hexed::Mat<2>::Unit(1)).point();
       REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<2>{0., .125}, hexed::math::Approx_equal(0, 1e-12)));
       auto intersections = geom->intersections(hexed::Mat<2>::Unit(1), 3*hexed::Mat<2>::Unit(1));
-      REQUIRE_THAT(intersections, Catch::Matchers::UnorderedRangeEquals(std::vector<double>{-.4375, -.5625}, hexed::math::Approx_equal(0, 1e-12)));
+      std::vector<double> correct{-.4375, -.5625};
+      // check that `intersections` and `correct` contain the same elements, although duplicates are allowed
+      for (double inter : intersections) {
+        REQUIRE_THAT(correct, Catch::Matchers::Contains(inter, hexed::math::Approx_equal(0, 1e-12)));
+      }
+      for (double inter : correct) {
+        REQUIRE_THAT(intersections, Catch::Matchers::Contains(inter, hexed::math::Approx_equal(0, 1e-12)));
+      }
     }
   }
 }

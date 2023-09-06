@@ -1,0 +1,27 @@
+n_dim = 2
+mesh_extreme00 = -2.
+mesh_extreme01 =  0.
+mesh_extreme10 =  0.
+mesh_extreme11 =  2.
+init_ref_level = 4
+extremal_bc10 = {nonpenetration}
+shell {python3 make_geom.py}
+geom0 = {auto.csv}
+pressure = 120.96
+temperature = 75.61
+mach = 5.
+working_dir = {hexed_out_inviscid5}
+art_visc_width = 4*2.^-init_ref_level
+fix_therm_admis = true
+surface_max_iters = 0
+print_freq = 200
+done = {iteration >= 2e5}
+max_safety = 1e-6
+iterate = iterate + {
+    if = {iteration <= 1e4}
+    then = {max_safety = 0.8*iteration*1e-4}
+    $cond
+}
+
+$init
+$run
