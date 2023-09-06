@@ -169,7 +169,6 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
     }
   }
   stopwatch.children.emplace("boundary conditions", "(boundary connection)*(time integration stage)");
-  stopwatch.children.emplace("residual computation", "element*evaluation");
   // initialize advection state to 1
   auto& elements = acc_mesh.elements();
   const int nq = params.n_qpoint();

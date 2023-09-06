@@ -24,7 +24,7 @@ html {
 /* project title bar at the very top */
 #titlearea {
   background-color: var(--anti-base-color);
-  background-image: url('header_background.png');
+  background-image: url('../header_background.png');
   background-size: cover;
   border-width: 10px;
   border-color: var(--anti-base-color);
