@@ -56,18 +56,24 @@ class Benchmark:
     @property
     def elapsed_time(self): return self._get_attr("elapsed execution time", lambda s: float(s.split(" ")[0]))
 
-benchmarks = [Benchmark(t) for t in text.split("execution context:\n") if "output:" in t]
-commit_times = [datetime.fromtimestamp(mark.commit_time, tz = timezone.utc) for mark in benchmarks]
-def fmt():
+benchmarks = {}
+for t in text.split("execution context:\n"):
+    if "output:" in t:
+        mark = Benchmark(t)
+        if mark.system not in benchmarks.keys():
+            benchmarks[mark.system] = []
+        benchmarks[mark.system].append(mark)
+def plot(function, ylabel):
+    for system in benchmarks.keys():
+        commit_times = [datetime.fromtimestamp(mark.commit_time, tz = timezone.utc) for mark in benchmarks[system]]
+        values = [function(mark) for mark in benchmarks[system]]
+        plt.scatter(commit_times, values, label = system)
+    plt.ylabel(ylabel)
     plt.xlabel("commit date/time (UTC)")
     plt.xticks(rotation = 45)
     plt.gcf().set_size_inches(8, 8)
-plt.scatter(commit_times, [mark.elapsed_time for mark in benchmarks])
-plt.ylabel("total execution time (s)")
-fmt()
-plt.show()
-plt.scatter(commit_times, [mark.timing.time/mark.timing.n_units for mark in benchmarks])
-plt.ylabel("kernel performance (s/iteration/element)")
-fmt()
-plt.show()
-benchmarks[-1].timing.plot()
+    plt.legend()
+    plt.show()
+plot(lambda mark: mark.elapsed_time, "total execution time (s)")
+plot(lambda mark: mark.timing.time/mark.timing.n_units, "kernel performance (s/iteration/element)")
+benchmarks["ae-artl-408091"][-1].timing.plot()
