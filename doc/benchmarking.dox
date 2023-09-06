@@ -1,5 +1,6 @@
 /*! \page benchmarking Performance Benchmarking
-This page provides visualizations of some of the data in `benchmark.txt`.
+This page provides visualizations of some of the data in `benchmark.txt`,
+which consists of performance benchmark for the NACA 0012 example case.
 To add another data point, simply navigate to the build directory and run `python3 benchmark.py`.
 This will append to `benchmark.txt` which is tracked by git.
 Commit the changes if you want your benchmark to be permanently recorded; discard otherwise.
