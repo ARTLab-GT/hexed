@@ -33,7 +33,7 @@ class Timing_data:
         if show:
             plt.show()
         else:
-            plt.savefig(self.name + ".pdf")
+            plt.savefig(self.name + ".svg")
             plt.close()
         for data in components:
             if data.children:
@@ -83,6 +83,6 @@ def plot(function, ylabel, save_name):
     else:
         plt.savefig(save_name)
         plt.close()
-plot(lambda mark: mark.elapsed_time, "total execution time (s)", "total.pdf")
-plot(lambda mark: mark.timing.time/mark.timing.n_units, "kernel performance (s/iteration/element)", "kernel.pdf")
+plot(lambda mark: mark.elapsed_time, "total execution time (s)", "total_time.svg")
+plot(lambda mark: mark.timing.time/mark.timing.n_units, "kernel performance (s/iteration/element)", "kernel_time.svg")
 benchmarks["ae-artl-408091"][-1].timing.plot()
