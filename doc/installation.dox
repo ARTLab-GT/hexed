@@ -8,6 +8,7 @@ If look at these instructions and don't know what I'm talking about, skip to \re
    - [scipy](https://scipy.org/)
    - [matplotlib](https://matplotlib.org/)
    - [sympy](https://www.sympy.org/en/index.html)
+   - [GitPython](https://gitpython.readthedocs.io/en/stable/)
 -# You are recommended to also install the following dependencies which are required for some optional features:
    - [Tecplot](https://www.tecplot.com/)/[TecIO](https://www.tecplot.com/products/tecio-library/) (required for visualization)
    - [Catch2](https://github.com/catchorg/Catch2) (required for unit testing)
@@ -87,6 +88,8 @@ a few 3rd-party libraries.
   - `pip3 install pytecplot`
   - If this doesn't work, don't worry. You just won't be able to run the \ref postproc "Python postprocessing script",
     which you don't strictly need to do.
+- Install GitPython (used by benchmarking script):
+  - `pip3 install GitPython`
 
 \subsection install_eigen Step 3: install Eigen
 - Download the Eigen [source code](http://eigen.tuxfamily.org/index.php?title=Main_Page#Download) (latest stable release).

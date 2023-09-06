@@ -1,0 +1,14 @@
+import time
+start_time = time.time()
+import os
+import git
+
+root_dir = "@CMAKE_SOURCE_DIR@"
+repo = git.Repo(root_dir)
+text = f"""
+system: {os.uname().nodename}
+approx execution start time: {start_time}
+commit hash: {repo.head.commit}
+commit time: {repo.head.commit.committed_date}
+"""
+print(text)
