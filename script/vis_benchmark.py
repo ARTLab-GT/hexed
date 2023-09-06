@@ -1,6 +1,7 @@
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+from datetime import datetime, timezone
 
 assert len(sys.argv) == 2, "`vis_benchmark.py` accepts exactly one argument (name of benchmark file)"
 file_name = sys.argv[1]
@@ -56,4 +57,17 @@ class Benchmark:
     def elapsed_time(self): return self._get_attr("elapsed execution time", lambda s: float(s.split(" ")[0]))
 
 benchmarks = [Benchmark(t) for t in text.split("execution context:\n") if "output:" in t]
+commit_times = [datetime.fromtimestamp(mark.commit_time, tz = timezone.utc) for mark in benchmarks]
+def fmt():
+    plt.xlabel("commit date/time (UTC)")
+    plt.xticks(rotation = 45)
+    plt.gcf().set_size_inches(8, 8)
+plt.scatter(commit_times, [mark.elapsed_time for mark in benchmarks])
+plt.ylabel("total execution time (s)")
+fmt()
+plt.show()
+plt.scatter(commit_times, [mark.timing.time/mark.timing.n_units for mark in benchmarks])
+plt.ylabel("kernel performance (s/iteration/element)")
+fmt()
+plt.show()
 benchmarks[-1].timing.plot()
