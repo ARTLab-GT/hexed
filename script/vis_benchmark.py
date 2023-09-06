@@ -3,10 +3,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime, timezone
 
-assert len(sys.argv) == 2, "`vis_benchmark.py` accepts exactly one argument (name of benchmark file)"
+assert len(sys.argv) >= 2, "`vis_benchmark.py` has one mandatory argument (name of benchmark file)"
 file_name = sys.argv[1]
-with open(file_name, "r") as in_file:
-    text = in_file.read()
+show = True
+if len(sys.argv) > 2: show = sys.argv[2] == "True"
+with open(file_name, "r") as in_file: text = in_file.read()
 
 class Timing_data:
     def __init__(self, lines):
@@ -29,7 +30,11 @@ class Timing_data:
         plt.pie(times, normalize = False, labels = [data.name for data in components], autopct = "%.1f%%")
         plt.title(f"{self.name}:\n{self.n_units} {self.unit}s in {self.time:.3g} s\nat {self.time/self.n_units:.3g} per {self.unit}")
         plt.gcf().set_size_inches(8, 8)
-        plt.show()
+        if show:
+            plt.show()
+        else:
+            plt.savefig(self.name + ".pdf")
+            plt.close()
         for data in components:
             if data.children:
                 data.plot()
@@ -63,17 +68,21 @@ for t in text.split("execution context:\n"):
         if mark.system not in benchmarks.keys():
             benchmarks[mark.system] = []
         benchmarks[mark.system].append(mark)
-def plot(function, ylabel):
+def plot(function, ylabel, save_name):
     for system in benchmarks.keys():
         commit_times = [datetime.fromtimestamp(mark.commit_time, tz = timezone.utc) for mark in benchmarks[system]]
         values = [function(mark) for mark in benchmarks[system]]
         plt.scatter(commit_times, values, label = system)
     plt.ylabel(ylabel)
     plt.xlabel("commit date/time (UTC)")
-    plt.xticks(rotation = 45)
+    plt.xticks(rotation = 45, ha = "right")
     plt.gcf().set_size_inches(8, 8)
     plt.legend()
-    plt.show()
-plot(lambda mark: mark.elapsed_time, "total execution time (s)")
-plot(lambda mark: mark.timing.time/mark.timing.n_units, "kernel performance (s/iteration/element)")
+    if show:
+        plt.show()
+    else:
+        plt.savefig(save_name)
+        plt.close()
+plot(lambda mark: mark.elapsed_time, "total execution time (s)", "total.pdf")
+plot(lambda mark: mark.timing.time/mark.timing.n_units, "kernel performance (s/iteration/element)", "kernel.pdf")
 benchmarks["ae-artl-408091"][-1].timing.plot()
