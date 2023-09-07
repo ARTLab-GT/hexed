@@ -223,6 +223,7 @@ class Basis:
                     step_mat += dt*coef*mat_pow
                 return step_mat
         def max_cfl(mat, time_scheme):
+            "numerically estimates the maximum CFL number of a scheme"
             def error(log_dt):
                 dt = np.exp(log_dt)
                 eigvals, eigvecs = np.linalg.eig(time_scheme(dt, mat))
@@ -238,21 +239,11 @@ class Basis:
                 return step_mat
             def ssp_rk3(dt, mat):
                 return rk(dt, [1., 1./4., 2./3.], mat)
-        def compute_coefs1(mat):
-            safety = 0.9
-            cfl = -2*safety/np.linalg.eig(mat)[0].real.min()
-            return cfl, .5/safety*cfl
-        def compute_coefs(mat):
-            def objective(coefs):
-                p = polynomial(coefs)
-                return -max_cfl(mat, p)
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                opt = minimize(objective, [1e-5], method="Nelder-Mead", tol=1e-10)
-                cancel = opt.x[0]
-                cfl = -objective(opt.x)*.95
-            return cfl, cancel
-        coefs = (compute_coefs1(advection), compute_coefs(diffusion))
+        safety = 0.9
+        cfl_adv = -2*safety/np.linalg.eig(advection)[0].real.min()
+        min_eig = np.linalg.eig(diffusion)[0].real.min()
+        cfl_diff = -8*safety/min_eig
+        coefs = ((cfl_adv, .5/safety*cfl_adv), (cfl_diff, -1/min_eig))
         print(f"        {self.row_size - 1} & {coefs[0][0]:.4f} & {coefs[0][1]:.5f} & {coefs[1][0]:.4f} & {coefs[1][1]:.5f} & {max_cfl(advection, ssp_rk3):.5f} & {max_cfl(diffusion, ssp_rk3):.5f} \\\\")
         return coefs
 
