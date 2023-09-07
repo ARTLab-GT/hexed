@@ -2,6 +2,7 @@ import sympy as sp
 import numpy as np
 from scipy.optimize import fsolve, minimize
 import warnings
+import matplotlib.pyplot as plt
 
 ## \namespace Basis \brief module for `Basis.Basis`
 
@@ -244,6 +245,13 @@ class Basis:
         min_eig = np.linalg.eig(diffusion)[0].real.min()
         cfl_diff = -8*safety/min_eig
         coefs = ((cfl_adv, .5/safety*cfl_adv), (cfl_diff, -1/min_eig))
+        eigvals, eigvecs = np.linalg.eig(ident + coefs[0][0]*(ident + coefs[0][1]*advection)@advection)
+        plt.scatter(eigvals.real, eigvals.imag)
+        angle = np.linspace(-np.pi, np.pi, 1000)
+        plt.plot(np.cos(angle), np.sin(angle), color="k")
+        plt.axis("equal")
+        plt.grid(True)
+        plt.show()
         print(f"        {self.row_size - 1} & {coefs[0][0]:.4f} & {coefs[0][1]:.5f} & {coefs[1][0]:.4f} & {coefs[1][1]:.5f} & {max_cfl(advection, ssp_rk3):.5f} & {max_cfl(diffusion, ssp_rk3):.5f} \\\\")
         return coefs
 
