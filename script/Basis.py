@@ -186,21 +186,25 @@ class Basis:
         filtered = advection + 0
         for i_elem in range(n_elem):
             filtered[i_elem*self.row_size:(i_elem+1)*self.row_size, :] = filt@filtered[i_elem*self.row_size:(i_elem+1)*self.row_size, :]
-        step = .04*advection
-        safety = 1.2
+        safety = 0.8
+        max_cfl = np.real(-2*safety/np.linalg.eig(advection)[0].min())
+        print(max_cfl)
+        step = max_cfl*advection
         eigvals, eigvecs = np.linalg.eig(ident + step)
         plt.scatter(np.real(eigvals), np.imag(eigvals), marker="+")
-        eigvals, eigvecs = np.linalg.eig(ident + step + safety*.5*step@step)
+        eigvals, eigvecs = np.linalg.eig(ident + step + .5/safety*step@step)
         plt.scatter(np.real(eigvals), np.imag(eigvals), marker="+")
-        step = .5*filtered
+        max_cfl = np.real(-2*safety/np.linalg.eig(filtered)[0].min())
+        print(max_cfl)
+        step = max_cfl*filtered
         eigvals, eigvecs = np.linalg.eig(ident + step)
         plt.scatter(np.real(eigvals), np.imag(eigvals), marker="+")
-        eigvals, eigvecs = np.linalg.eig(ident + step + safety*.5*step@step)
+        eigvals, eigvecs = np.linalg.eig(ident + step + .5/safety*step@step)
         plt.scatter(np.real(eigvals), np.imag(eigvals), marker="+")
         angle = np.linspace(-np.pi, np.pi, 1000)
         plt.plot(np.cos(angle), np.sin(angle), color="k")
         angle = np.linspace(-1, 1, 1000)
-        plt.plot(1 - safety*0.5*angle**2, angle, color="k", linestyle="dashed")
+        plt.plot(1 - 0.5/safety*angle**2, angle, color="k", linestyle="dashed")
         plt.axis("equal")
         plt.grid(True)
         plt.show()
