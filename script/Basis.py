@@ -183,6 +183,7 @@ class Basis:
         ident = np.identity(n_elem*self.row_size)
         assert np.linalg.norm(global_weights@advection) < 1e-12
         assert np.linalg.norm(global_weights@diffusion) < 1e-12
+        """
         filtered = advection + 0
         for i_elem in range(n_elem):
             filtered[i_elem*self.row_size:(i_elem+1)*self.row_size, :] = filt@filtered[i_elem*self.row_size:(i_elem+1)*self.row_size, :]
@@ -209,6 +210,7 @@ class Basis:
         plt.grid(True)
         plt.show()
         assert False
+        """
         class polynomial:
             def __init__(self, coefs):
                 ## \private
@@ -236,6 +238,10 @@ class Basis:
                 return step_mat
             def ssp_rk3(dt, mat):
                 return rk(dt, [1., 1./4., 2./3.], mat)
+        def compute_coefs1(mat):
+            safety = 0.9
+            cfl = -2*safety/np.linalg.eig(mat)[0].real.min()
+            return cfl, .5/safety*cfl
         def compute_coefs(mat):
             def objective(coefs):
                 p = polynomial(coefs)
@@ -246,10 +252,11 @@ class Basis:
                 cancel = opt.x[0]
                 cfl = -objective(opt.x)*.95
             return cfl, cancel
-        coefs = (compute_coefs(advection), compute_coefs(diffusion))
+        coefs = (compute_coefs1(advection), compute_coefs(diffusion))
         print(f"        {self.row_size - 1} & {coefs[0][0]:.4f} & {coefs[0][1]:.5f} & {coefs[1][0]:.4f} & {coefs[1][1]:.5f} & {max_cfl(advection, ssp_rk3):.5f} & {max_cfl(diffusion, ssp_rk3):.5f} \\\\")
         return coefs
 
+"""
 from sympy.integrals.quadrature import gauss_legendre
 import matplotlib.pyplot as plt
 nodes, weights = gauss_legendre(6, 50)
@@ -257,3 +264,4 @@ nodes = [(node + 1)/2 for node in nodes]
 weights = [weight/2 for weight in weights]
 basis = Basis(nodes, weights, calc_digits=50)
 basis.time_coefs()
+"""
