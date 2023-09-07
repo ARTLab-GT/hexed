@@ -4,9 +4,7 @@ Welcome to Hexed, a Discontinuous Galerkin CFD solver with automated, unstructur
 You are reading the documentation.
 For source code, see the [GitHub repository](https://github.gatech.edu/ARTLab/hexed).
 
-![header_image](header.png)
-
-__Above:__ Temperature (K) contours on a Mach 10 starfish (inviscid, 2D, CPG).
+\image html header.png "Temperature (K) contours on a Mach 10 starfish (inviscid, 2D, CPG)."
 
 \section About
 
@@ -67,5 +65,6 @@ _Generated on \today for Hexed \proj_version._
 
 \page theory Theory
 - \subpage conventions
+- \subpage benchmarking
 
 */

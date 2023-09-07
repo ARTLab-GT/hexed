@@ -22,7 +22,9 @@ altitude = 0.
 mach = 0.3
 attack = 4*degree
 
-{termination condition}
+{iteration parameters}
+print_freq = 1000
+vis_freq = 30000
 done = {normalized_residual < 1e-7}
 
 {run simulation}
