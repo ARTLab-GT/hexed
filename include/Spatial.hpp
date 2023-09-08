@@ -252,13 +252,7 @@ class Spatial
         for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
           for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
             Mat<row_size, Pde::n_update> row_r = Row_rw<Pde::n_update, row_size>::read_row(time_rate[0][0], ind);
-            Mat<row_size> row_det;
-            if constexpr (element_t::is_deformed) {
-              row_det = Row_rw<1, row_size>::read_row(elem_det, ind);
-              row_r.array().colwise() *= row_det.array();
-            }
             row_r = filter*row_r;
-            if constexpr (element_t::is_deformed) row_r.array().colwise() /= row_det.array();
             Row_rw<Pde::n_update, row_size>::write_row(row_r, time_rate[0][0], ind, 0.);
           }
         }
