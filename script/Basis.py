@@ -41,6 +41,18 @@ class Basis:
         self.ortho = []
         for i in range(self.row_size):
             self.ortho.append(self.legendre(i))
+        bounds = np.zeros((self.row_size, 2))
+        for i_side in range(2):
+            for i_node in range(self.row_size):
+                bounds[i_node, i_side] = self.interpolate(i_node, i_side)/self.weights[i_node]
+        #bounds -= np.array(self.weights).astype(np.float64)@bounds
+        def inner(vec0, vec1):
+            return vec0@(np.array(self.weights).astype(np.float64)*vec1)
+        self.space = np.zeros((self.row_size, 2))
+        for i_side in range(2): bounds[:, i_side] /= np.sqrt(inner(bounds[:, i_side], bounds[:, i_side]))
+        for i_side in range(2):
+            self.space[:, i_side] = bounds[:, 0] + (1 - 2*i_side)*bounds[:, 1]
+            self.space[:, i_side] /= np.sqrt(inner(self.space[:, i_side], self.space[:, i_side]))
 
     def node(self, i):
         r"""! \brief returns the `i`th quadrature node
@@ -136,6 +148,14 @@ class Basis:
         result = self.weights[i_operand]/2*self.prolong(i_operand, i_result, i_half, True)/self.weights[i_result]
         return sp.Float(result, self.repr_digits)
 
+    def filter_bound(self, i_result, i_operand):
+        dot = sp.Float(0, self.calc_digits)
+        dot += int(i_result == i_operand)
+        if self.row_size > 2:
+            for i_side in range(2):
+                dot += (0.1 - 1.)*self.space[i_result, i_side]*self.space[i_operand, i_side]*self.weights[i_operand]
+        return sp.Float(dot, self.repr_digits)
+
     def filter(self, i_result, i_operand):
         dot = sp.Float(0, self.calc_digits)
         for i_inner in range(self.row_size):
@@ -177,13 +197,18 @@ class Basis:
                             neighb_jump[row, col] += 0.5*(1 - 2*(j_side == i_side))*boundary
         advection = -local_grad + -neighb_avrg + neighb_jump
         diffusion = (local_grad + neighb_avrg)@(local_grad + neighb_avrg)
-        filt = np.array([[np.float64(self.filter(i_result, i_operand)) for i_operand in range(self.row_size)] for i_result in range(self.row_size)])
+        filt_mode = np.array([[np.float64(self.filter(i_result, i_operand)) for i_operand in range(self.row_size)] for i_result in range(self.row_size)])
+        filt_bound = np.array([[np.float64(self.filter_bound(i_result, i_operand)) for i_operand in range(self.row_size)] for i_result in range(self.row_size)])
+        filt = filt_mode @ filt_bound
+        #filt = filt_mode
         ident = np.identity(n_elem*self.row_size)
         assert np.linalg.norm(global_weights@advection) < 1e-12
         assert np.linalg.norm(global_weights@diffusion) < 1e-12
-        filtered = advection + 0
+        filtered_adv = advection + 0
+        filtered_diff = diffusion + 0
         for i_elem in range(n_elem):
-            filtered[i_elem*self.row_size:(i_elem+1)*self.row_size, :] = filt@filtered[i_elem*self.row_size:(i_elem+1)*self.row_size, :]
+            filtered_adv [i_elem*self.row_size:(i_elem+1)*self.row_size, :] = filt@filtered_adv [i_elem*self.row_size:(i_elem+1)*self.row_size, :]
+            filtered_diff[i_elem*self.row_size:(i_elem+1)*self.row_size, :] = filt@filtered_diff[i_elem*self.row_size:(i_elem+1)*self.row_size, :]
         class polynomial:
             def __init__(self, coefs):
                 ## \private
@@ -213,16 +238,33 @@ class Basis:
             def ssp_rk3(dt, mat):
                 return rk(dt, [1., 1./4., 2./3.], mat)
         safety = 0.8
-        advection = filtered
-        cfl_adv = -2*safety/np.linalg.eig(advection)[0].real.min()
-        min_eig = np.linalg.eig(diffusion)[0].real.min()
+        cfl_adv = -2*safety/np.linalg.eig(filtered_adv)[0].real.min()
+        min_eig = np.linalg.eig(filtered_diff)[0].real.min()
         cfl_diff = -8*safety/min_eig
         coefs = ((cfl_adv, .5/safety*cfl_adv), (cfl_diff, -1/min_eig))
-        eigvals, eigvecs = np.linalg.eig(ident + coefs[0][0]*(ident + coefs[0][1]*advection)@advection)
+        eigvals, eigvecs = np.linalg.eig(filtered_diff)
+        fig, axs = plt.subplots(2)
+        for i in range(len(eigvals)):
+            vec = eigvecs[:, i]*eigvals[i]
+            """
+            scalar = vec[0] + vec[1]
+            vec *= np.abs(scalar)/scalar
+            """
+            axs[0].plot(global_nodes, vec.real)
+            axs[1].plot(global_nodes, vec.imag)
+        """
+        eigvals, eigvecs = np.linalg.eig(diffusion)
+        plt.scatter(eigvals.real, eigvals.imag)
+        eigvals, eigvecs = np.linalg.eig(filtered_diff)
+        plt.scatter(eigvals.real, eigvals.imag, marker = "+")
+        """
+        """
+        eigvals, eigvecs = np.linalg.eig(ident + coefs[1][0]*(ident + coefs[1][1]*diffusion)@diffusion)
         plt.scatter(eigvals.real, eigvals.imag)
         angle = np.linspace(-np.pi, np.pi, 1000)
         plt.plot(np.cos(angle), np.sin(angle), color="k")
-        plt.axis("equal")
+        """
+        #plt.axis("equal")
         plt.grid(True)
         plt.show()
         print(f"        {self.row_size - 1} & {coefs[0][0]:.4f} & {coefs[0][1]:.5f} & {coefs[1][0]:.4f} & {coefs[1][1]:.5f} & {max_cfl(advection, ssp_rk3):.5f} & {max_cfl(diffusion, ssp_rk3):.5f} \\\\")
