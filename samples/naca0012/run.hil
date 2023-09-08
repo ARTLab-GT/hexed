@@ -24,8 +24,9 @@ attack = 4*degree
 
 {iteration parameters}
 print_freq = 1000
-vis_freq = 30000
+vis_freq = 2000
 done = {normalized_residual < 1e-7}
+max_safety = 1e-3
 
 {run simulation}
 $init

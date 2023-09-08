@@ -74,6 +74,7 @@ class Spatial
     Derivative<row_size> derivative;
     Mat<2, row_size> boundary;
     Write_face<n_dim, row_size> write_face;
+    Mat<row_size, row_size> filter;
     const int stage;
     // weights for different parameters when assembling the updated state
     const double update_conv; // how much of the convective time derivative to include
@@ -90,6 +91,7 @@ class Spatial
       derivative{basis},
       boundary{basis.boundary()},
       write_face{basis},
+      filter{basis.filter()},
       stage{which_stage},
       update_conv{stage ? dt*basis.cancellation_convective()/basis.max_cfl_convective() : dt},
       update_diff{stage ? dt*basis.cancellation_diffusive()/basis.max_cfl_diffusive() : dt},
@@ -243,6 +245,21 @@ class Spatial
               }
               Row_rw<Pde::n_update, row_size>::write_row(-derivative(flux), time_rate[1][0], ind, 1.);
             }
+          }
+        }
+
+        // apply mode filtering
+        for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+          for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
+            Mat<row_size, Pde::n_update> row_r = Row_rw<Pde::n_update, row_size>::read_row(time_rate[0][0], ind);
+            Mat<row_size> row_det;
+            if constexpr (element_t::is_deformed) {
+              row_det = Row_rw<1, row_size>::read_row(elem_det, ind);
+              row_r.array().colwise() *= row_det.array();
+            }
+            row_r = filter*row_r;
+            if constexpr (element_t::is_deformed) row_r.array().colwise() /= row_det.array();
+            Row_rw<Pde::n_update, row_size>::write_row(row_r, time_rate[0][0], ind, 0.);
           }
         }
 
