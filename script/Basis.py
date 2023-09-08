@@ -109,9 +109,9 @@ class Basis:
             vals[i_node] /= norm
         return vals
 
-    def get_ortho(self, degree, i_node):
+    def get_ortho(self, degree, i_node, calc = False):
         r"""! equivalent to `self.legendre(degree)[i_node]` """
-        return sp.Float(self.ortho[degree][i_node], self.repr_digits)
+        return sp.Float(self.ortho[degree][i_node], self.calc_digits if calc else self.repr_digits)
 
     def prolong(self, i_result, i_operand, i_half, calc=False):
         r"""! \brief gets an element of the prolongation matrix
@@ -135,6 +135,12 @@ class Basis:
         """
         result = self.weights[i_operand]/2*self.prolong(i_operand, i_result, i_half, True)/self.weights[i_result]
         return sp.Float(result, self.repr_digits)
+
+    def filter(self, i_result, i_operand):
+        dot = sp.Float(0, self.calc_digits)
+        for i_inner in range(self.row_size):
+            dot += self.get_ortho(i_inner, i_result, True)*0.5**i_inner*self.get_ortho(i_inner, i_operand, True)*self.weights[i_operand]
+        return sp.Float(dot, self.repr_digits)
 
     def time_coefs(self, n_elem = 16):
         r"""! \brief Compute coefficients for optimized 2-stage time integration scheme.
@@ -171,47 +177,13 @@ class Basis:
                             neighb_jump[row, col] += 0.5*(1 - 2*(j_side == i_side))*boundary
         advection = -local_grad + -neighb_avrg + neighb_jump
         diffusion = (local_grad + neighb_avrg)@(local_grad + neighb_avrg)
-        proj = np.zeros((self.row_size, self.row_size))
-        interp = np.zeros((self.row_size, self.row_size))
-        for row in range(self.row_size):
-            for col in range(self.row_size):
-                proj[row, col] = self.get_ortho(row, col)*self.weights[col]
-                interp[row, col] = self.get_ortho(col, row)
-        assert np.linalg.norm(interp@proj - np.identity(self.row_size)) < 1e-12
-        scale = .5**np.arange(self.row_size)
-        interp *= scale
-        filt = interp@proj
+        filt = np.array([[np.float64(self.filter(i_result, i_operand)) for i_operand in range(self.row_size)] for i_result in range(self.row_size)])
         ident = np.identity(n_elem*self.row_size)
         assert np.linalg.norm(global_weights@advection) < 1e-12
         assert np.linalg.norm(global_weights@diffusion) < 1e-12
-        """
         filtered = advection + 0
         for i_elem in range(n_elem):
             filtered[i_elem*self.row_size:(i_elem+1)*self.row_size, :] = filt@filtered[i_elem*self.row_size:(i_elem+1)*self.row_size, :]
-        safety = 0.8
-        max_cfl = np.real(-2*safety/np.linalg.eig(advection)[0].min())
-        print(max_cfl)
-        step = max_cfl*advection
-        eigvals, eigvecs = np.linalg.eig(ident + step)
-        plt.scatter(np.real(eigvals), np.imag(eigvals), marker="+")
-        eigvals, eigvecs = np.linalg.eig(ident + step + .5/safety*step@step)
-        plt.scatter(np.real(eigvals), np.imag(eigvals), marker="+")
-        max_cfl = np.real(-2*safety/np.linalg.eig(filtered)[0].min())
-        print(max_cfl)
-        step = max_cfl*filtered
-        eigvals, eigvecs = np.linalg.eig(ident + step)
-        plt.scatter(np.real(eigvals), np.imag(eigvals), marker="+")
-        eigvals, eigvecs = np.linalg.eig(ident + step + .5/safety*step@step)
-        plt.scatter(np.real(eigvals), np.imag(eigvals), marker="+")
-        angle = np.linspace(-np.pi, np.pi, 1000)
-        plt.plot(np.cos(angle), np.sin(angle), color="k")
-        angle = np.linspace(-1, 1, 1000)
-        plt.plot(1 - 0.5/safety*angle**2, angle, color="k", linestyle="dashed")
-        plt.axis("equal")
-        plt.grid(True)
-        plt.show()
-        assert False
-        """
         class polynomial:
             def __init__(self, coefs):
                 ## \private
@@ -240,7 +212,8 @@ class Basis:
                 return step_mat
             def ssp_rk3(dt, mat):
                 return rk(dt, [1., 1./4., 2./3.], mat)
-        safety = 0.9
+        safety = 0.8
+        advection = filtered
         cfl_adv = -2*safety/np.linalg.eig(advection)[0].real.min()
         min_eig = np.linalg.eig(diffusion)[0].real.min()
         cfl_diff = -8*safety/min_eig
@@ -254,13 +227,3 @@ class Basis:
         plt.show()
         print(f"        {self.row_size - 1} & {coefs[0][0]:.4f} & {coefs[0][1]:.5f} & {coefs[1][0]:.4f} & {coefs[1][1]:.5f} & {max_cfl(advection, ssp_rk3):.5f} & {max_cfl(diffusion, ssp_rk3):.5f} \\\\")
         return coefs
-
-"""
-from sympy.integrals.quadrature import gauss_legendre
-import matplotlib.pyplot as plt
-nodes, weights = gauss_legendre(6, 50)
-nodes = [(node + 1)/2 for node in nodes]
-weights = [weight/2 for weight in weights]
-basis = Basis(nodes, weights, calc_digits=50)
-basis.time_coefs()
-"""
