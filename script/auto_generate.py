@@ -69,7 +69,7 @@ for basis_params in [("Gauss_legendre", gauss_legendre), ("Gauss_lobatto", gauss
         nodes = [(node + 1)/2 for node in nodes]
         weights = [weight/2 for weight in weights]
         basis = Basis(nodes, weights, calc_digits=calc_digits)
-        member_names = ["node", "weight", "diff_mat", "boundary", "orthogonal", "time_coefs"]
+        member_names = ["node", "weight", "diff_mat", "boundary", "orthogonal", "filter", "time_coefs"]
 
         text += f"""
 const double node{row_size} [{row_size}] {{
@@ -116,6 +116,15 @@ const double orthogonal{row_size} [{row_size**2}] {{
         for pair in basis.time_coefs():
             for coef in pair:
                 text += str(coef) + ", "
+        text += "};\n"
+
+        text += f"""
+const double filter{row_size} [{row_size**2}] {{
+"""
+        for i_operand in range(row_size):
+            for i_result in range(row_size):
+                text += f"{basis.filter(i_result, i_operand)}, "
+            text += "\n"
         text += "};\n"
 
         if "legendre" in name:
@@ -203,6 +212,16 @@ Eigen::VectorXd {name}::orthogonal(int degree) const
     orth(i_node) = {name}_lookup::orthogonals[row_size - {min_row_size}][degree*row_size + i_node];
   }}
   return orth;
+}}
+
+Eigen::MatrixXd {name}::filter() const
+{{{conditional_block}
+  Eigen::MatrixXd f (row_size, row_size);
+  for (int i_entry = 0; i_entry < row_size*row_size; ++i_entry)
+  {{
+    f(i_entry) = {name}_lookup::filters[row_size - {min_row_size}][i_entry];
+  }}
+  return f;
 }}
 
 double {name}::max_cfl_convective() const

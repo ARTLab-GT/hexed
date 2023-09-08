@@ -213,7 +213,7 @@ class Basis:
             def ssp_rk3(dt, mat):
                 return rk(dt, [1., 1./4., 2./3.], mat)
         safety = 0.8
-        advection = filtered
+        #advection = filtered
         cfl_adv = -2*safety/np.linalg.eig(advection)[0].real.min()
         min_eig = np.linalg.eig(diffusion)[0].real.min()
         cfl_diff = -8*safety/min_eig

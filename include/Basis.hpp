@@ -32,6 +32,8 @@ class Basis
    * \details Polynomial is scaled so that its norm is 1 with respect to the quadrature rule of the basis.
    */
   virtual Eigen::VectorXd orthogonal(int degree) const = 0;
+  //! \brief Matrix that applies a low-pass filter to the Legendre modes of a polynomial
+  virtual Eigen::MatrixXd filter() const = 0;
   /*! \brief Interpolate to arbitrary points.
    * \details Current implementation is not very performance-optimized. `interpolate(sample)(i, j)` is the `j`th basis polynomial evaluated at `sample(i)`
    */

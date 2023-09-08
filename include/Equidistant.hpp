@@ -22,6 +22,7 @@ class Equidistant : public Basis
   Eigen::VectorXd node_weights() const override; //!< placeholder (throws an exception)
   Eigen::MatrixXd boundary() const override;
   Eigen::VectorXd orthogonal(int degree) const override; //!< placeholder (throws an exception)
+  Eigen::MatrixXd filter() const override; //!< placeholder (throws an exception)
   Eigen::MatrixXd prolong(int i_half) const override; //!< placeholder (throws an exception)
   Eigen::MatrixXd restrict(int i_half) const override; //!< placeholder (throws an exception)
   double max_cfl_convective() const override; //!< placeholder (throws an exception)

@@ -71,6 +71,12 @@ Eigen::VectorXd Equidistant::orthogonal(int degree) const
   return unused;
 }
 
+Eigen::MatrixXd Equidistant::filter() const
+{
+  throw std::runtime_error("Not implemented.");
+  return Eigen::MatrixXd(0, 0);
+}
+
 Eigen::MatrixXd Equidistant::prolong (int i_half) const
 {
   throw std::runtime_error("Not implemented.");
