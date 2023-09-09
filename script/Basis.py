@@ -3,6 +3,7 @@ import numpy as np
 from scipy.optimize import fsolve, minimize
 import warnings
 import matplotlib.pyplot as plt
+from sympy.integrals.quadrature import gauss_legendre, gauss_lobatto
 
 ## \namespace Basis \brief module for `Basis.Basis`
 
@@ -163,6 +164,10 @@ class Basis:
         return sp.Float(dot, self.repr_digits)
 
     def time_coefs(self, n_elem = 16):
+        nodes, weights = gauss_lobatto(self.row_size, self.calc_digits)
+        nodes = [(node + 1)/2 for node in nodes]
+        weights = [weight/2 for weight in weights]
+        lobatto = Basis(nodes, weights, self.repr_digits, self.calc_digits)
         r"""! \brief Compute coefficients for optimized 2-stage time integration scheme.
         \param n_elem number of elements to use
         \details Based on numerical eigenvalue calculations for the linear advection and diffusion equations
@@ -179,6 +184,7 @@ class Basis:
         local_grad = np.zeros((n_elem*self.row_size, n_elem*self.row_size))
         neighb_avrg = np.zeros((n_elem*self.row_size, n_elem*self.row_size))
         neighb_jump = np.zeros((n_elem*self.row_size, n_elem*self.row_size))
+        discon = np.zeros((n_elem*self.row_size, n_elem*self.row_size))
         global_nodes = global_weights*0
         for i_elem in range(n_elem):
             for i_row in range(self.row_size):
@@ -195,17 +201,19 @@ class Basis:
                             boundary = self.interpolate(i_col, 1-j_side)*self.interpolate(i_row, 1-i_side)/self.weights[i_row]
                             neighb_avrg[row, col] += 0.5*(2*j_side - 1)*boundary
                             neighb_jump[row, col] += 0.5*(1 - 2*(j_side == i_side))*boundary
+                            discon[row, col] += (.5 - (i_side == j_side))*self.interpolate(i_col, 1-j_side)*lobatto.interpolate((1 - i_side)*(self.row_size - 1), self.nodes[i_row])
+        ident = np.identity(n_elem*self.row_size)
         advection = -local_grad + -neighb_avrg + neighb_jump
         diffusion = (local_grad + neighb_avrg)@(local_grad + neighb_avrg)
         filt_mode = np.array([[np.float64(self.filter(i_result, i_operand)) for i_operand in range(self.row_size)] for i_result in range(self.row_size)])
         filt_bound = np.array([[np.float64(self.filter_bound(i_result, i_operand)) for i_operand in range(self.row_size)] for i_result in range(self.row_size)])
-        filt = filt_mode @ filt_bound
-        #filt = filt_mode
-        ident = np.identity(n_elem*self.row_size)
+        #filt = filt_mode @ filt_bound
+        filt = filt_mode
         assert np.linalg.norm(global_weights@advection) < 1e-12
         assert np.linalg.norm(global_weights@diffusion) < 1e-12
         filtered_adv = advection + 0
         filtered_diff = diffusion + 0
+        filtered_diff += (1 - 0.1)*discon@filtered_diff
         for i_elem in range(n_elem):
             filtered_adv [i_elem*self.row_size:(i_elem+1)*self.row_size, :] = filt@filtered_adv [i_elem*self.row_size:(i_elem+1)*self.row_size, :]
             filtered_diff[i_elem*self.row_size:(i_elem+1)*self.row_size, :] = filt@filtered_diff[i_elem*self.row_size:(i_elem+1)*self.row_size, :]
