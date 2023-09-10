@@ -13,23 +13,6 @@ def chebyshev(degree, x, mul = lambda y, z: y*z, unit = 1):
     else:
         return 2*mul(x, chebyshev(degree - 1, x, mul, unit)) - chebyshev(degree - 2, x, mul, unit)
 
-x = np.linspace(-1, 1, 1000)
-plt.plot(x, chebyshev(7, x))
-plt.plot(x, x**7)
-plt.grid(True)
-plt.show()
-
-z = np.outer(np.linspace(0, 1, 100), np.exp(1j*np.linspace(-np.pi, np.pi, 100)))
-plt.scatter(z.real, z.imag, marker=".")
-z = chebyshev(3, 1 + (z - 1)/9)
-plt.scatter(z.real, z.imag, marker=".")
-angle = np.linspace(-np.pi, np.pi, 1000)
-plt.plot(np.cos(angle), np.sin(angle), color="k")
-plt.grid(True)
-plt.axis("equal")
-plt.show()
-exit()
-
 class Basis:
     r"""!
     Computes numerical parameters for nodal polynmial bases (such as hexed::Gauss_legendre and hexed::Gauss_lobatto)
@@ -172,14 +155,6 @@ class Basis:
         result = self.weights[i_operand]/2*self.prolong(i_operand, i_result, i_half, True)/self.weights[i_result]
         return sp.Float(result, self.repr_digits)
 
-    def filter_bound(self, i_result, i_operand):
-        dot = sp.Float(0, self.calc_digits)
-        dot += int(i_result == i_operand)
-        if self.row_size > 2:
-            for i_side in range(2):
-                dot += (0.1 - 1.)*self.space[i_result, i_side]*self.space[i_operand, i_side]*self.weights[i_operand]
-        return sp.Float(dot, self.repr_digits)
-
     def filter(self, i_result, i_operand):
         dot = sp.Float(0, self.calc_digits)
         for i_inner in range(self.row_size):
@@ -187,10 +162,6 @@ class Basis:
         return sp.Float(dot, self.repr_digits)
 
     def time_coefs(self, n_elem = 16):
-        nodes, weights = gauss_lobatto(self.row_size, self.calc_digits)
-        nodes = [(node + 1)/2 for node in nodes]
-        weights = [weight/2 for weight in weights]
-        lobatto = Basis(nodes, weights, self.repr_digits, self.calc_digits)
         r"""! \brief Compute coefficients for optimized 2-stage time integration scheme.
         \param n_elem number of elements to use
         \details Based on numerical eigenvalue calculations for the linear advection and diffusion equations
@@ -203,6 +174,10 @@ class Basis:
         \note standard floating-point precision (whatever that is for Python -- I think double)
         """
         # sorry for the lack of comments... remind me to get back to this later
+        nodes, weights = gauss_lobatto(self.row_size, self.calc_digits)
+        nodes = [(node + 1)/2 for node in nodes]
+        weights = [weight/2 for weight in weights]
+        lobatto = Basis(nodes, weights, self.repr_digits, self.calc_digits)
         global_weights = np.zeros(n_elem*self.row_size)
         local_grad = np.zeros((n_elem*self.row_size, n_elem*self.row_size))
         neighb_avrg = np.zeros((n_elem*self.row_size, n_elem*self.row_size))
@@ -228,15 +203,11 @@ class Basis:
         ident = np.identity(n_elem*self.row_size)
         advection = -local_grad + -neighb_avrg + neighb_jump
         diffusion = (local_grad + neighb_avrg)@(local_grad + neighb_avrg)
-        filt_mode = np.array([[np.float64(self.filter(i_result, i_operand)) for i_operand in range(self.row_size)] for i_result in range(self.row_size)])
-        filt_bound = np.array([[np.float64(self.filter_bound(i_result, i_operand)) for i_operand in range(self.row_size)] for i_result in range(self.row_size)])
-        #filt = filt_mode @ filt_bound
-        filt = filt_mode
+        filt = np.array([[np.float64(self.filter(i_result, i_operand)) for i_operand in range(self.row_size)] for i_result in range(self.row_size)])
         assert np.linalg.norm(global_weights@advection) < 1e-12
         assert np.linalg.norm(global_weights@diffusion) < 1e-12
-        filt_discon = ident + (1 - 0.5)*discon
-        filtered_diff = filt_discon@diffusion
-        filtered_adv = filt_discon@advection
+        filtered_diff = diffusion
+        filtered_adv = advection
         for i_elem in range(n_elem):
             filtered_adv [i_elem*self.row_size:(i_elem+1)*self.row_size, :] = filt@filtered_adv [i_elem*self.row_size:(i_elem+1)*self.row_size, :]
             filtered_diff[i_elem*self.row_size:(i_elem+1)*self.row_size, :] = filt@filtered_diff[i_elem*self.row_size:(i_elem+1)*self.row_size, :]
@@ -284,16 +255,10 @@ class Basis:
         axs[1].grid(True)
         plt.show()
         """
-        eigvals, eigvecs = np.linalg.eig(advection)
-        plt.scatter(eigvals.real, eigvals.imag)
-        eigvals, eigvecs = np.linalg.eig(filtered_adv)
-        plt.scatter(eigvals.real, eigvals.imag, marker = "+")
-        """
         eigvals, eigvecs = np.linalg.eig(ident + coefs[0][0]*(ident + coefs[0][1]*filtered_adv)@filtered_adv)
         plt.scatter(eigvals.real, eigvals.imag)
         angle = np.linspace(-np.pi, np.pi, 1000)
         plt.plot(np.cos(angle), np.sin(angle), color="k")
-        """
         plt.axis("equal")
         plt.grid(True)
         plt.show()
