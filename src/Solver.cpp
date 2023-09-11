@@ -878,7 +878,6 @@ void Solver::update(double safety_factor, double time_step)
 Iteration_status Solver::iteration_status()
 {
   Iteration_status stat = status;
-  stopwatch.children.at("residual computation").stopwatch.start();
   Physical_update update;
   auto res = integral_field(Pow(update, 2));
   for (double& r : res) r /= stat.time_step*stat.time_step;
@@ -888,8 +887,6 @@ Iteration_status Solver::iteration_status()
   stat.mmtm_res = std::sqrt(stat.mmtm_res);
   stat.mass_res = std::sqrt(res[params.n_dim]);
   stat.ener_res = std::sqrt(res[params.n_dim + 1]);
-  stopwatch.children.at("residual computation").stopwatch.pause();
-  stopwatch.children.at("residual computation").work_units_completed += acc_mesh.elements().size();
   return stat;
 }
 
