@@ -926,7 +926,7 @@ TEST_CASE("artificial viscosity convergence")
   double flow_width = .02;
   double adv_width = .01;
   sol.initialize(Tanh(flow_width));
-  sol.nspace().assign("av_advect_iters", 6000);
+  sol.nspace().assign("av_advect_iters", 8000);
   sol.nspace().assign("av_diff_iters", 3000);
   sol.nspace().assign("av_visc_mult", 1e6);
   sol.nspace().assign("av_diff_ratio", 1e-6);
