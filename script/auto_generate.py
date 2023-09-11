@@ -58,7 +58,7 @@ from sympy.integrals.quadrature import gauss_legendre, gauss_lobatto
 calc_digits = 50
 min_row_size = 2
 
-for basis_params in [("Gauss_legendre", gauss_legendre), ("Gauss_lobatto", gauss_lobatto)]:
+for basis_params in [("Gauss_legendre", gauss_legendre, 0.8), ("Gauss_lobatto", gauss_lobatto, 0.5)]:
     name = basis_params[0]
     include = f"""
 #include <{name}.hpp>"""
@@ -113,7 +113,7 @@ const double orthogonal{row_size} [{row_size**2}] {{
         text += "};\n"
 
         text  += f"\nconst double time_coefs{row_size} [8] {{"
-        for pair in basis.time_coefs():
+        for pair in basis.time_coefs(basis_params[2]):
             for coef in pair:
                 text += f"{coef:.20f}, "
         text += "};\n"

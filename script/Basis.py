@@ -155,12 +155,13 @@ class Basis:
             dot += self.get_ortho(i_inner, i_result, True)*0.5**i_inner*self.get_ortho(i_inner, i_operand, True)*self.weights[i_operand]
         return sp.Float(dot, self.repr_digits)
 
-    def time_coefs(self, n_elem = 16):
+    def time_coefs(self, safety, n_elem = 16):
         r"""! \brief Compute coefficients for optimized 2-stage time integration scheme.
         \param n_elem number of elements to use
+        \param safety safety factor to apply to certain eigenvalue calculations (not the same as the CFL safety factor)
         \details Based on numerical eigenvalue calculations for the linear advection and diffusion equations
         on a 1D mesh with periodic boundary conditions.
-        \returns a pair of pairs:
+        \returns an array with 2 columns:
         - `time_coefs()[0][0]` is the maximum stable CFL number for advection
         - `time_coefs()[0][1]` is the cancellation coefficient for advection
         - `time_coefs()[1][0]` is the maximum stable CFL number for diffusion
@@ -233,11 +234,13 @@ class Basis:
                 return step_mat
             def ssp_rk3(dt, mat):
                 return rk(dt, [1., 1./4., 2./3.], mat)
-        safety = 0.8
         coefs = np.zeros((4, 2))
         for use_filter in range(2):
-            coefs[2*use_filter][0] = -2*safety/np.linalg.eig([advection, filtered_adv][use_filter])[0].real.min()
+            adv_mat = [advection, filtered_adv][use_filter]
+            coefs[2*use_filter][0] = -2*safety/np.linalg.eig(adv_mat)[0].real.min()
             coefs[2*use_filter][1] = .5/safety*coefs[2*use_filter][0]
+            max_amp = np.abs(np.linalg.eig(ident + coefs[2*use_filter][0]*(ident + coefs[2*use_filter][1]*adv_mat)@adv_mat)[0]).max()
+            assert max_amp <= 1 + 1e-12, f"maximum amplification is {max_amp:.5e} > 1"
             min_eig = np.linalg.eig([diffusion, filtered_diff][use_filter])[0].real.min()
             coefs[2*use_filter + 1][0] = -8*safety/min_eig
             coefs[2*use_filter + 1][1] = -1/min_eig
