@@ -556,6 +556,7 @@ void test_marching(Test_mesh& tm, std::string name)
   // use `Copy` BCs. This is unstable for this case but it will still give the right answer as long as only one time step is executed
   tm.construct(new hexed::Copy, new hexed::Null_mbc);
   auto& sol = tm.solver();
+  sol.nspace().assign("use_filter", 0);
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
   sol.initialize(Nonuniform_mass());

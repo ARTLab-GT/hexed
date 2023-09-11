@@ -104,11 +104,11 @@ double Solver::max_dt()
   auto& sw_car {stopwatch.children.at("cartesian")};
   auto& sw_def {stopwatch.children.at("deformed" )};
   if (use_ldg()) {
-    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, is_local_time, visc, therm_cond))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
-                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, is_local_time, visc, therm_cond))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
+    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, is_local_time, _namespace->lookup<int>("use_filter").value(), visc, therm_cond))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
+                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, is_local_time, _namespace->lookup<int>("use_filter").value(), visc, therm_cond))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
   } else {
-    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time                  ))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
-                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time                  ))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
+    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time, _namespace->lookup<int>("use_filter").value()                  ))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
+                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time, _namespace->lookup<int>("use_filter").value()                  ))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
   }
 }
 
@@ -136,6 +136,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default<double>("av_diff_stab_rat", .5); // stability ratio for diffusion
   _namespace->assign_default<int   >("av_advect_iters", 2); // number of advection iterations to run each time `set_art_visc_smoothness` is called
   _namespace->assign_default<int   >("av_diff_iters", 1); // number of diffusion iterations to run each time `set_art_visc_smoothness` is called
+  _namespace->assign_default<int   >("use_filter", is_local_time && !use_ldg()); // whether to use modal filter acceleration
   _namespace->assign("fix_iters", 0);
   _namespace->assign("iteration", 0);
   _namespace->assign("flow_time", 0.);
@@ -445,8 +446,8 @@ void Solver::set_art_visc_smoothness(double advect_length)
   sw_adv.stopwatch.start();
   (*write_face)(elements);
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-  (*kernel_factory<Spatial<Element         , pde::Advection>::Max_dt>(nd, rs, basis, true))(acc_mesh.cartesian().elements(), sw_adv.children.at("cartesian"), "compute time step");
-  (*kernel_factory<Spatial<Deformed_element, pde::Advection>::Max_dt>(nd, rs, basis, true))(acc_mesh.deformed ().elements(), sw_adv.children.at("deformed" ), "compute time step");
+  (*kernel_factory<Spatial<Element         , pde::Advection>::Max_dt>(nd, rs, basis, true, _namespace->lookup<int>("use_filter").value()))(acc_mesh.cartesian().elements(), sw_adv.children.at("cartesian"), "compute time step");
+  (*kernel_factory<Spatial<Deformed_element, pde::Advection>::Max_dt>(nd, rs, basis, true, _namespace->lookup<int>("use_filter").value()))(acc_mesh.deformed ().elements(), sw_adv.children.at("deformed" ), "compute time step");
   double dt_adv = _namespace->lookup<double>("av_advect_stab_rat").value();
 
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
@@ -552,8 +553,8 @@ void Solver::set_art_visc_smoothness(double advect_length)
   // begin root-smear-square operation
   int n_real = Element::n_forcing - 1; // number of real time steps (as apposed to pseudotime steps)
   // evaluate CFL condition
-  (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true))(acc_mesh.cartesian().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "compute time step");
-  (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true))(acc_mesh.deformed ().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "compute time step");
+  (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true, _namespace->lookup<int>("use_filter").value()))(acc_mesh.cartesian().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "compute time step");
+  (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true, _namespace->lookup<int>("use_filter").value()))(acc_mesh.deformed ().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "compute time step");
   double dt_diff = _namespace->lookup<double>("av_diff_stab_rat").value();
   double diff_time = _namespace->lookup<double>("av_diff_ratio").value()*advect_length*advect_length/n_real; // compute size of real time step (as opposed to pseudotime)
   // initialize residual to zero (will compute RMS over all real time steps)
@@ -999,8 +1000,8 @@ void Solver::fix_admissibility(double stability_ratio)
           std::swap(elem.fix_admis_coef()[i_qpoint], elem.art_visc_coef()[i_qpoint]);
         }
       }
-      (*kernel_factory<Spatial<Element         , pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true))(acc_mesh.cartesian().elements(), stopwatch.children.at("fix admis.").children.at("cartesian"), "compute time step");
-      (*kernel_factory<Spatial<Deformed_element, pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true))(acc_mesh.deformed ().elements(), stopwatch.children.at("fix admis.").children.at("deformed" ), "compute time step");
+      (*kernel_factory<Spatial<Element         , pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true, _namespace->lookup<int>("use_filter").value()))(acc_mesh.cartesian().elements(), stopwatch.children.at("fix admis.").children.at("cartesian"), "compute time step");
+      (*kernel_factory<Spatial<Deformed_element, pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true, _namespace->lookup<int>("use_filter").value()))(acc_mesh.deformed ().elements(), stopwatch.children.at("fix admis.").children.at("deformed" ), "compute time step");
       double dt = stability_ratio;
       double linear = dt;
       double quadratic = basis.time_coefs(Basis::diffusion, 1, false)/basis.time_coefs(Basis::diffusion, 0, false)*dt*dt;

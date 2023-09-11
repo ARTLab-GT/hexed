@@ -524,15 +524,15 @@ class Spatial
     double max_cfl_c;
     double max_cfl_d;
     Mat<row_size> nodes;
-    bool is_local;
+    bool _is_local;
 
     public:
     template <typename... pde_args>
-    Max_dt(const Basis& basis, bool is_local_time_stepping, pde_args... args) :
+    Max_dt(const Basis& basis, bool is_local, bool use_filter, pde_args... args) :
       eq{args...},
-      max_cfl_c{basis.time_coefs(Basis::convection, 1, is_local_time_stepping && !Pde::is_viscous)},
-      max_cfl_d{basis.time_coefs(Basis::diffusion , 1, is_local_time_stepping && !Pde::is_viscous)},
-      is_local{is_local_time_stepping}
+      max_cfl_c{basis.time_coefs(Basis::convection, 0, use_filter && !Pde::is_viscous)},
+      max_cfl_d{basis.time_coefs(Basis::diffusion , 0, use_filter && !Pde::is_viscous)},
+      _is_local{is_local}
     {
       for (int i_node = 0; i_node < row_size; ++i_node) nodes(i_node) = basis.node(i_node);
     }
@@ -571,14 +571,14 @@ class Spatial
           double scale = 0;
           if constexpr (Pde::has_convection) scale += eq.char_speed(qpoint_state)/max_cfl_c/spacing;
           if constexpr (Pde::is_viscous) scale += eq.diffusivity(qpoint_state, art_visc[i_qpoint])/max_cfl_d/spacing/spacing;
-          if (is_local) tss[i_qpoint] = 1./scale;
+          if (_is_local) tss[i_qpoint] = 1./scale;
           else {
             tss[i_qpoint] = 1.;
             dt = std::min(dt, 1./scale);
           }
         }
       }
-      return is_local ? 1. : dt;
+      return _is_local ? 1. : dt;
     }
   };
 };
