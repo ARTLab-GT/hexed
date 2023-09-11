@@ -6,15 +6,12 @@ This will append to `benchmark.txt` which is tracked by git.
 Commit the changes if you want your benchmark to be permanently recorded; discard otherwise.
 
 \section overall Overall performance
-The following figures illustrate the evolution of Hexed's performance over time, accross different systems.
+The following figure illustrates the evolution of Hexed's performance over time, accross different systems.
 Different series in the scatter plots indicate different machines on which the benchmarks were run.
-\image html total_time.svg
-\image html kernel_time.svg
+\image html summary.svg
 
 \section breakdown Kernel performance breakdown
-The following figures offer a more detailed breakdown of the latest benchmark on the machine ae-artl-408091.
+The following figure offers a more detailed breakdown of the latest benchmark on the machine ae-artl-408091.
 When the components don't add up to 100%, that indicates there are some subtasks whose execution time is not measured.
-\image html kernel.svg
-\image html cartesian.svg
-\image html deformed.svg
+\image html breakdown.svg
 */
