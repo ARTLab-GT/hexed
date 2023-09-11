@@ -573,7 +573,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
     // set up multistage scheme
     double linear = dt_diff;
-    double quadratic = basis.cancellation_diffusive()/basis.max_cfl_diffusive()*dt_diff*dt_diff;
+    double quadratic = basis.time_coefs(Basis::diffusion, 1, false)/basis.time_coefs(Basis::diffusion, 0, false)*dt_diff*dt_diff;
     std::array<double, 2> step;
     step[1] = (linear + std::sqrt(linear*linear - 4*quadratic))/2.;
     step[0] = quadratic/step[1];
@@ -1003,7 +1003,7 @@ void Solver::fix_admissibility(double stability_ratio)
       (*kernel_factory<Spatial<Deformed_element, pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true))(acc_mesh.deformed ().elements(), stopwatch.children.at("fix admis.").children.at("deformed" ), "compute time step");
       double dt = stability_ratio;
       double linear = dt;
-      double quadratic = basis.cancellation_diffusive()/basis.max_cfl_diffusive()*dt*dt;
+      double quadratic = basis.time_coefs(Basis::diffusion, 1, false)/basis.time_coefs(Basis::diffusion, 0, false)*dt*dt;
       std::array<double, 2> step;
       step[1] = (linear + std::sqrt(linear*linear - 4*quadratic))/2.;
       step[0] = quadratic/step[1];

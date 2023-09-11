@@ -49,14 +49,9 @@ class Basis
    * refined space into the space of this basis.
    */
   virtual Eigen::MatrixXd restrict(int i_half) const = 0;
-  //! \brief Maximum stable CFL number for convection equations.
-  virtual double max_cfl_convective() const = 0;
-  //! \brief Maximum stable CFL number for diffusion equations.
-  virtual double max_cfl_diffusive() const = 0;
-  //! \brief Cancellation coefficient for custom 2-stage time integration stage in convection equations.
-  virtual double cancellation_convective() const = 0;
-  //! \brief Cancellation coefficient for custom 2-stage time integration stage in diffusion equations.
-  virtual double cancellation_diffusive() const = 0;
+  enum physics_type {convection, diffusion}; //!< Enumeration for distinguishing convection/diffusion terms
+  //! \brief coefficients for multistage time integration scheme
+  virtual double time_coefs(physics_type t, int stage, bool use_filter) const = 0;
 };
 
 }

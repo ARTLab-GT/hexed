@@ -25,10 +25,7 @@ class Equidistant : public Basis
   Eigen::MatrixXd filter() const override; //!< placeholder (throws an exception)
   Eigen::MatrixXd prolong(int i_half) const override; //!< placeholder (throws an exception)
   Eigen::MatrixXd restrict(int i_half) const override; //!< placeholder (throws an exception)
-  double max_cfl_convective() const override; //!< placeholder (throws an exception)
-  double max_cfl_diffusive() const override; //!< placeholder (throws an exception)
-  double cancellation_convective() const override; //!< placeholder (throws an exception)
-  double cancellation_diffusive() const override; //!< placeholder (throws an exception)
+  double time_coefs(physics_type t, int stage, bool use_filter) const override; //!< placeholder (throws an exception)
 };
 
 }

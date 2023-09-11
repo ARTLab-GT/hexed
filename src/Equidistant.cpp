@@ -89,25 +89,7 @@ Eigen::MatrixXd Equidistant::restrict (int i_half) const
   return Eigen::MatrixXd::Zero(row_size, row_size);
 }
 
-double Equidistant::max_cfl_convective() const
-{
-  throw std::runtime_error("Not implemented.");
-  return 0.;
-}
-
-double Equidistant::max_cfl_diffusive() const
-{
-  throw std::runtime_error("Not implemented.");
-  return 0.;
-}
-
-double Equidistant::cancellation_convective() const
-{
-  throw std::runtime_error("Not implemented.");
-  return 0.;
-}
-
-double Equidistant::cancellation_diffusive() const
+double Equidistant::time_coefs(Basis::physics_type t, int stage, bool use_filter) const
 {
   throw std::runtime_error("Not implemented.");
   return 0.;

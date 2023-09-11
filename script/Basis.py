@@ -7,12 +7,6 @@ from sympy.integrals.quadrature import gauss_legendre, gauss_lobatto
 
 ## \namespace Basis \brief module for `Basis.Basis`
 
-def chebyshev(degree, x, mul = lambda y, z: y*z, unit = 1):
-    if degree == 0: return unit
-    elif degree == 1: return x
-    else:
-        return 2*mul(x, chebyshev(degree - 1, x, mul, unit)) - chebyshev(degree - 2, x, mul, unit)
-
 class Basis:
     r"""!
     Computes numerical parameters for nodal polynmial bases (such as hexed::Gauss_legendre and hexed::Gauss_lobatto)
@@ -206,8 +200,8 @@ class Basis:
         filt = np.array([[np.float64(self.filter(i_result, i_operand)) for i_operand in range(self.row_size)] for i_result in range(self.row_size)])
         assert np.linalg.norm(global_weights@advection) < 1e-12
         assert np.linalg.norm(global_weights@diffusion) < 1e-12
-        filtered_diff = diffusion
-        filtered_adv = advection
+        filtered_adv = advection + 0
+        filtered_diff = diffusion + 0
         for i_elem in range(n_elem):
             filtered_adv [i_elem*self.row_size:(i_elem+1)*self.row_size, :] = filt@filtered_adv [i_elem*self.row_size:(i_elem+1)*self.row_size, :]
             filtered_diff[i_elem*self.row_size:(i_elem+1)*self.row_size, :] = filt@filtered_diff[i_elem*self.row_size:(i_elem+1)*self.row_size, :]
@@ -240,27 +234,17 @@ class Basis:
             def ssp_rk3(dt, mat):
                 return rk(dt, [1., 1./4., 2./3.], mat)
         safety = 0.8
-        cfl_adv = -2*safety/np.linalg.eig(filtered_adv)[0].real.min()
-        min_eig = np.linalg.eig(filtered_diff)[0].real.min()
-        cfl_diff = -8*safety/min_eig
-        coefs = ((cfl_adv, .5/safety*cfl_adv), (cfl_diff, -1/min_eig))
-        """
-        eigvals, eigvecs = np.linalg.eig(filtered_diff)
-        fig, axs = plt.subplots(2)
-        for i in range(len(eigvals)):
-            vec = eigvecs[:, i]*eigvals[i]
-            axs[0].plot(global_nodes, vec.real)
-            axs[1].plot(global_nodes, vec.imag)
-        axs[0].grid(True)
-        axs[1].grid(True)
-        plt.show()
-        """
-        eigvals, eigvecs = np.linalg.eig(ident + coefs[0][0]*(ident + coefs[0][1]*filtered_adv)@filtered_adv)
-        plt.scatter(eigvals.real, eigvals.imag)
-        angle = np.linspace(-np.pi, np.pi, 1000)
-        plt.plot(np.cos(angle), np.sin(angle), color="k")
-        plt.axis("equal")
-        plt.grid(True)
-        plt.show()
-        print(f"        {self.row_size - 1} & {coefs[0][0]:.4f} & {coefs[0][1]:.5f} & {coefs[1][0]:.4f} & {coefs[1][1]:.5f} & {max_cfl(advection, ssp_rk3):.5f} & {max_cfl(diffusion, ssp_rk3):.5f} \\\\")
+        coefs = np.zeros((4, 2))
+        for use_filter in range(2):
+            coefs[2*use_filter][0] = -2*safety/np.linalg.eig([advection, filtered_adv][use_filter])[0].real.min()
+            coefs[2*use_filter][1] = .5/safety*coefs[2*use_filter][0]
+            min_eig = np.linalg.eig([diffusion, filtered_diff][use_filter])[0].real.min()
+            coefs[2*use_filter + 1][0] = -8*safety/min_eig
+            coefs[2*use_filter + 1][1] = -1/min_eig
+        table = f"        {self.row_size - 1}"
+        for row in range(coefs.shape[0]):
+            for col in range(coefs.shape[1]):
+                table += f" & {coefs[row][col]:.4f}"
+        table += f" & {max_cfl(advection, ssp_rk3):.5f} & {max_cfl(diffusion, ssp_rk3):.5f} \\\\"
+        print(table)
         return coefs

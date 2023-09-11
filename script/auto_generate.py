@@ -112,10 +112,10 @@ const double orthogonal{row_size} [{row_size**2}] {{
             text += "\n"
         text += "};\n"
 
-        text  += f"\nconst double time_coefs{row_size} [4] {{"
+        text  += f"\nconst double time_coefs{row_size} [8] {{"
         for pair in basis.time_coefs():
             for coef in pair:
-                text += str(coef) + ", "
+                text += f"{coef:.20f}, "
         text += "};\n"
 
         text += f"""
@@ -224,24 +224,9 @@ Eigen::MatrixXd {name}::filter() const
   return f;
 }}
 
-double {name}::max_cfl_convective() const
-{{{conditional_block}
-  return {name}_lookup::time_coefss[row_size - {min_row_size}][0];
-}}
-
-double {name}::cancellation_convective() const
-{{{conditional_block}
-  return {name}_lookup::time_coefss[row_size - {min_row_size}][1];
-}}
-
-double {name}::max_cfl_diffusive() const
-{{{conditional_block}
-  return {name}_lookup::time_coefss[row_size - {min_row_size}][2];
-}}
-
-double {name}::cancellation_diffusive() const
-{{{conditional_block}
-  return {name}_lookup::time_coefss[row_size - {min_row_size}][3];
+double {name}::time_coefs(physics_type t, int stage, bool use_filter) const
+{{
+  return {name}_lookup::time_coefss[row_size - {min_row_size}][4*use_filter + 2*t + stage];
 }}
 """
 

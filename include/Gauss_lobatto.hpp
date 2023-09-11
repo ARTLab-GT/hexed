@@ -24,10 +24,7 @@ class Gauss_lobatto : public Basis
   Eigen::MatrixXd filter() const override;
   Eigen::MatrixXd prolong(int i_half) const override;
   Eigen::MatrixXd restrict(int i_half) const override;
-  double max_cfl_convective() const override;
-  double max_cfl_diffusive() const override;
-  double cancellation_convective() const override;
-  double cancellation_diffusive() const override;
+  double time_coefs(physics_type t, int stage, bool use_filter) const override;
 };
 
 }

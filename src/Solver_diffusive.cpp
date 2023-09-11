@@ -16,8 +16,8 @@ namespace hexed
   (*kernel_factory<Spatial<Deformed_element, Pde_templ>::Neighbor>(nd, rs PDE_ARGS))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor"); \
   (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict")); \
   (*kernel_factory<Restrict_refined>(nd, rs, basis, false, true))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict")); \
-  (*kernel_factory<Spatial<Element         , Pde_templ>::Local>(nd, rs, basis, dt, i_stage PDE_ARGS))(acc_mesh.cartesian().elements(), sw_car, "local"); \
-  (*kernel_factory<Spatial<Deformed_element, Pde_templ>::Local>(nd, rs, basis, dt, i_stage PDE_ARGS))(acc_mesh.deformed ().elements(), sw_def, "local"); \
+  (*kernel_factory<Spatial<Element         , Pde_templ>::Local>(nd, rs, basis, dt, i_stage, false PDE_ARGS))(acc_mesh.cartesian().elements(), sw_car, "local"); \
+  (*kernel_factory<Spatial<Deformed_element, Pde_templ>::Local>(nd, rs, basis, dt, i_stage, false PDE_ARGS))(acc_mesh.deformed ().elements(), sw_def, "local"); \
   (*kernel_factory<Prolong_refined>(nd, rs, basis, true, true))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict")); \
   bc_fun(); \
   (*kernel_factory<Spatial<Element         , Pde_templ>::Neighbor_reconcile>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor"); \
