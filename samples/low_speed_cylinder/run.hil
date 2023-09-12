@@ -3,7 +3,7 @@ mesh_extreme00 = -10.
 mesh_extreme10 = -10.
 mesh_extreme01 =  10.
 mesh_extreme11 =  10.
-surface_max_iters = 10
+surface_max_iters = 5
 surface_refine = {nom_sz > 0.2 & center0 > -1.5 & center0 < 4 & center1 > -1.5 & center1 < 1.5}
 surface_unrefine = {false}
 shell {python3 make_geom.py}
@@ -18,11 +18,11 @@ density = target_reynolds*1.8e-5/speed
 
 print_freq = 500
 local_time = false
-done = {false}
+done = {flow_time >= 0.3}
 max_safety = 1e-6
 iterate = iterate + {
     if = {iteration <= 1e5}
-    then = {max_safety = 0.2*iteration*1e-5}
+    then = {max_safety = 0.7*iteration*1e-5}
     $cond
 }
 
