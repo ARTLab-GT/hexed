@@ -58,7 +58,7 @@ from sympy.integrals.quadrature import gauss_legendre, gauss_lobatto
 calc_digits = 50
 min_row_size = 2
 
-for basis_params in [("Gauss_legendre", gauss_legendre, 0.8), ("Gauss_lobatto", gauss_lobatto, 0.5)]:
+for basis_params in [("Gauss_legendre", gauss_legendre, 0.9), ("Gauss_lobatto", gauss_lobatto, 0.7)]:
     name = basis_params[0]
     include = f"""
 #include <{name}.hpp>"""

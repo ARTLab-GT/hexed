@@ -237,8 +237,8 @@ class Basis:
         coefs = np.zeros((4, 2))
         for use_filter in range(2):
             adv_mat = [advection, filtered_adv][use_filter]
-            coefs[2*use_filter][0] = -2*safety/np.linalg.eig(adv_mat)[0].real.min()
-            coefs[2*use_filter][1] = .5/safety*coefs[2*use_filter][0]
+            coefs[2*use_filter][0] = -2*safety**(1 + use_filter)/np.linalg.eig(adv_mat)[0].real.min()
+            coefs[2*use_filter][1] = .5/safety**(1 + use_filter)*coefs[2*use_filter][0]
             max_amp = np.abs(np.linalg.eig(ident + coefs[2*use_filter][0]*(ident + coefs[2*use_filter][1]*adv_mat)@adv_mat)[0]).max()
             assert max_amp <= 1 + 1e-12, f"maximum amplification is {max_amp:.5e} > 1"
             min_eig = np.linalg.eig([diffusion, filtered_diff][use_filter])[0].real.min()

@@ -136,7 +136,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default<double>("av_diff_stab_rat", .5); // stability ratio for diffusion
   _namespace->assign_default<int   >("av_advect_iters", 2); // number of advection iterations to run each time `set_art_visc_smoothness` is called
   _namespace->assign_default<int   >("av_diff_iters", 1); // number of diffusion iterations to run each time `set_art_visc_smoothness` is called
-  _namespace->assign_default<int   >("use_filter", is_local_time && !use_ldg()); // whether to use modal filter acceleration
+  _namespace->assign_default<int   >("use_filter", false); // whether to use modal filter acceleration
   _namespace->assign("fix_iters", 0);
   _namespace->assign("iteration", 0);
   _namespace->assign("flow_time", 0.);

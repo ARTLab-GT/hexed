@@ -29,8 +29,4 @@ done = {normalized_residual < 1e-7}
 {run simulation}
 $init
 $run
-$compute_force
-println({lift: } + lift + { N})
-println({drag: } + drag + { N})
-println({lift coefficient: } + lift_coef)
-println({drag coefficient: } + drag_coef)
+$print_force

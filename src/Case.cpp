@@ -258,16 +258,16 @@ Case::Case(std::string input_file)
     Pressure pres;
     Mach mach;
     Art_visc_coef avc;
+    int n_sample = _vari("vis_n_sample").value();
     if (_vari("vis_field").value()) {
       Struct_expr vis_vars(_vars("vis_field_vars").value());
       Qpoint_expr func(vis_vars, _inter);
       std::string file_name = wd + "field" + suffix;
       #if HEXED_USE_TECPLOT
-      if (_vari("vis_tecplot").value()) _solver().visualize_field_tecplot(func, file_name);
+      if (_vari("vis_tecplot").value()) _solver().visualize_field_tecplot(func, file_name, n_sample);
       #endif
       #if HEXED_USE_XDMF
-      if (_vari("vis_xdmf").value()) _solver().visualize_field_xdmf(func, file_name);
-      if (_vari("vis_xdmf").value()) _solver().visualize_field_xdmf(Art_visc_forcing(), wd + "avf" + suffix);
+      if (_vari("vis_xdmf").value()) _solver().visualize_field_xdmf(func, file_name, n_sample);
       #endif
     }
     if (_vari("vis_surface").value() && _has_geom) {
@@ -276,10 +276,10 @@ Case::Case(std::string input_file)
       std::string file_name = wd + "surface" + suffix;
       int bc_sn = _solver().mesh().surface_bc_sn();
       #if HEXED_USE_TECPLOT
-      if (_vari("vis_tecplot").value()) _solver().visualize_surface_tecplot(bc_sn, func, file_name);
+      if (_vari("vis_tecplot").value()) _solver().visualize_surface_tecplot(bc_sn, func, file_name, n_sample);
       #endif
       #if HEXED_USE_XDMF
-      if (_vari("vis_xdmf").value()) _solver().visualize_surface_xdmf(bc_sn, func, file_name);
+      if (_vari("vis_xdmf").value()) _solver().visualize_surface_xdmf(bc_sn, func, file_name, n_sample);
       #endif
     }
     return 0;
