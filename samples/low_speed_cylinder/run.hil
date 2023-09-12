@@ -18,7 +18,7 @@ density = target_reynolds*1.8e-5/speed
 
 print_freq = 500
 local_time = false
-done = {flow_time >= 0.3}
+done = {flow_time >= 2.}
 max_safety = 1e-6
 iterate = iterate + {
     if = {iteration <= 1e5}
