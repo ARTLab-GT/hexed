@@ -1,0 +1,28 @@
+n_dim = 2
+mesh_extreme00 = -10.
+mesh_extreme10 = -10.
+mesh_extreme01 =  10.
+mesh_extreme11 =  10.
+surface_max_iters = 10
+surface_refine = {nom_sz > 0.2 & center0 > -1.5 & center0 < 4 & center1 > -1.5 & center1 < 1.5}
+surface_unrefine = {false}
+shell {python3 make_geom.py}
+geom0 = {auto.csv}
+wall_spacing = 0.2
+transport_model = {best}
+
+{freestream definition. Note that not all of the variables below are parameters considered by the solver. Some are simply user-defined variables.}
+temperature = 20 + zero_celsius
+speed = 50.
+target_reynolds = 25
+density = target_reynolds*1.8e-5/speed
+
+print_freq = 500
+local_time = false
+done = {false}
+
+vis_n_sample = 2
+$init
+vis_n_sample = 10
+$run
+$print_force
