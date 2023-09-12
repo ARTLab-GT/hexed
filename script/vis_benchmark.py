@@ -42,12 +42,6 @@ class Timing_data:
         for data in components:
             if data.children:
                 axs = data.plot(axs)
-        if fig is not None:
-            if show:
-                plt.show()
-            else:
-                plt.savefig("breakdown.svg")
-                plt.close()
         return axs
 
 class Benchmark:
@@ -61,6 +55,8 @@ class Benchmark:
     def _get_attr(self, name, transform = lambda x: x):
         return transform(self.context.split(name + ": ")[1].split("\n")[0])
 
+    @property
+    def case(self): return self._get_attr("case")
     @property
     def system(self): return self._get_attr("system")
     @property
@@ -76,9 +72,11 @@ benchmarks = {}
 for t in text.split("execution context:\n"):
     if "output:" in t:
         mark = Benchmark(t)
-        if mark.system not in benchmarks.keys():
-            benchmarks[mark.system] = []
-        benchmarks[mark.system].append(mark)
+        context = f"{mark.case}: {mark.system}"
+        if context not in benchmarks.keys():
+            benchmarks[context] = []
+        benchmarks[context].append(mark)
+
 def plot(function, ylabel):
     for system in benchmarks.keys():
         commit_times = [datetime.fromtimestamp(mark.commit_time, tz = timezone.utc) for mark in benchmarks[system]]
@@ -88,6 +86,7 @@ def plot(function, ylabel):
     plt.xlabel("commit date/time (UTC)")
     plt.xticks(rotation = 30, ha = "right")
     plt.grid(True)
+
 fig, axs = plt.subplots(1, 2)
 plt.sca(axs[0])
 plot(lambda mark: mark.elapsed_time, "total execution time (s)")
@@ -100,4 +99,10 @@ if show:
 else:
     plt.savefig("summary.svg")
     plt.close()
-benchmarks["ae-artl-408091"][-1].timing.plot()
+for case in ["naca0012", "flat_plate"]:
+    benchmarks[case + ": ae-artl-408091"][-1].timing.plot()
+    if show:
+        plt.show()
+    else:
+        plt.savefig(case + ".svg")
+        plt.close()

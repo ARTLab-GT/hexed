@@ -5,19 +5,22 @@ import subprocess
 
 root_dir = "@CMAKE_SOURCE_DIR@"
 repo = git.Repo(root_dir)
-os.chdir(root_dir + "/samples/naca0012/")
-start_time = time.time()
-output = subprocess.run(["hexecute", "run.hil"], capture_output = True).stdout.decode("utf-8")
-end_time = time.time()
-text = f"""
-execution context:
-system: {os.uname().nodename}
-approx execution start time: {start_time}
-commit hash: {repo.head.commit}
-commit time: {repo.head.commit.committed_date}
-elapsed execution time: {end_time - start_time} s
+for case in ["naca0012", "flat_plate"]:
+    print(f"benchmarking case `{case}`")
+    os.chdir(f"{root_dir}/samples/{case}/")
+    start_time = time.time()
+    output = subprocess.run(["hexecute", "run.hil"], capture_output = True).stdout.decode("utf-8")
+    end_time = time.time()
+    text = f"""
+    execution context:
+    case: {case}
+    system: {os.uname().nodename}
+    approx execution start time: {start_time}
+    commit hash: {repo.head.commit}
+    commit time: {repo.head.commit.committed_date}
+    elapsed execution time: {end_time - start_time} s
 
-output:{output.split("simulation complete")[1]}
-"""
-with open(root_dir + "/benchmark.txt", "a") as out_file:
-    out_file.write(text)
+    output:{output.split("simulation complete")[1]}
+    """
+    with open(root_dir + "/benchmark.txt", "a") as out_file:
+        out_file.write(text)
