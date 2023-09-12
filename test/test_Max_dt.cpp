@@ -38,7 +38,7 @@ TEST_CASE("Max_dt")
       }
       car_elem_view elem_view {elements};
       double dt = (*hexed::kernel_factory<hexed::Spatial<hexed::Element, hexed::pde::Navier_stokes<false>::Pde>::Max_dt>(1, 2, basis, false, false))(elem_view);
-      REQUIRE(dt == Catch::Approx(basis.time_coefs(hexed::Basis::convection, 0, false)/(400/1.027)));
+      REQUIRE(dt == Catch::Approx(basis.max_cfl()/(400/1.027)));
     }
     SECTION("2D")
     {
@@ -57,7 +57,7 @@ TEST_CASE("Max_dt")
       (*hexed::kernel_factory<hexed::Spatial<hexed::Element, hexed::pde::Navier_stokes<false>::Pde>::Max_dt>(2, 2, basis, true, true))(elem_view);
       for (int i_qpoint = 0; i_qpoint < 4; ++i_qpoint)
       {
-        REQUIRE(elements.back()->time_step_scale()[i_qpoint] == Catch::Approx(basis.time_coefs(hexed::Basis::convection, 0, true)/360./2.).epsilon(0.01));
+        REQUIRE(elements.back()->time_step_scale()[i_qpoint] == Catch::Approx(basis.max_cfl()/360./2.).epsilon(0.01));
       }
     }
   }
@@ -88,7 +88,7 @@ TEST_CASE("Max_dt")
     (*hexed::kernel_factory<hexed::Spatial<hexed::Deformed_element, hexed::pde::Navier_stokes<false>::Pde>::Max_dt>(3, 4, basis, true, true))(elem_view);
     for (int i_elem = 0; i_elem < 3; ++i_elem) {
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-        REQUIRE(elems[i_elem]->time_step_scale()[i_qpoint] == Catch::Approx(basis.time_coefs(hexed::Basis::convection, 0, true)/((i_elem == 1 ? 1e3 : 1e2)/0.3)/3.));
+        REQUIRE(elems[i_elem]->time_step_scale()[i_qpoint] == Catch::Approx(basis.max_cfl()/((i_elem == 1 ? 1e3 : 1e2)/0.3)/3.));
       }
     }
     // scale 2 entries of jacobian
@@ -100,6 +100,6 @@ TEST_CASE("Max_dt")
     elems[1]->set_jacobian(basis);
     // test that jacobian & time step scale are accounted for
     double dt = (*hexed::kernel_factory<hexed::Spatial<hexed::Deformed_element, hexed::pde::Navier_stokes<false>::Pde>::Max_dt>(3, 4, basis, false, false))(elem_view);
-    REQUIRE(dt == Catch::Approx(basis.time_coefs(hexed::Basis::convection, 0, false)/(1e3*(1. + 2*2.)/3./0.3)/3.));
+    REQUIRE(dt == Catch::Approx(basis.max_cfl()/(1e3*(1. + 2*2.)/3./0.3)/3.));
   }
 }

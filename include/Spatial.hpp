@@ -78,8 +78,6 @@ class Spatial
     const int _stage;
     const bool _use_filter;
     // weights for different parameters when assembling the updated state
-    double mcc;
-    double mcd;
     const double update_conv; // how much of the convective time derivative to include
     const double update_diff; // how much of the diffusive time derivative
     const double ref; // how much of the reference state to include
@@ -95,10 +93,8 @@ class Spatial
       filter{basis.filter()},
       _stage{stage},
       _use_filter{use_filter},
-      mcc{basis.time_coefs(Basis::convection, 1, use_filter)},
-      mcd{basis.time_coefs(Basis::diffusion , 1, use_filter)},
-      update_conv{stage ? dt*mcc/basis.time_coefs(Basis::convection, 0, use_filter) : dt},
-      update_diff{stage ? dt*mcd/basis.time_coefs(Basis::diffusion , 0, use_filter) : dt},
+      update_conv{stage ? dt*basis.step_ratio() : dt},
+      update_diff{stage ? dt/8/0.9 : dt},
       ref{_stage ? update_conv/dt : 0},
       curr{1 - ref}
     {
@@ -304,7 +300,6 @@ class Spatial
     Derivative<row_size> derivative;
     Write_face<n_dim, row_size> write_face;
     int stage;
-    double mcd;
     double update;
 
     public:
@@ -312,8 +307,7 @@ class Spatial
       derivative{basis},
       write_face{basis},
       stage{which_stage},
-      mcd{basis.time_coefs(Basis::diffusion , 1, false)},
-      update{stage ? dt*mcd/basis.time_coefs(Basis::diffusion , 0, false) : dt}
+      update{stage ? dt/8/0.9 : dt}
     {
       HEXED_ASSERT(Pde::has_convection || !which_stage, "for pure diffusion use alternating time steps");
     }
@@ -530,8 +524,8 @@ class Spatial
     template <typename... pde_args>
     Max_dt(const Basis& basis, bool is_local, bool use_filter, pde_args... args) :
       eq{args...},
-      max_cfl_c{basis.time_coefs(Basis::convection, 0, use_filter && !Pde::is_viscous)},
-      max_cfl_d{basis.time_coefs(Basis::diffusion , 0, use_filter && !Pde::is_viscous)},
+      max_cfl_c{basis.max_cfl()},
+      max_cfl_d{-8*0.9/basis.min_eig_diffusion()},
       _is_local{is_local}
     {
       for (int i_node = 0; i_node < row_size; ++i_node) nodes(i_node) = basis.node(i_node);

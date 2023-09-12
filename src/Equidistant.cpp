@@ -1,7 +1,20 @@
 #include <Equidistant.hpp>
+#include <assert.hpp>
 
 namespace hexed
 {
+
+double Equidistant::min_eig_convection() const
+{
+  HEXED_ASSERT(false, "Not implemented");
+  return 0;
+}
+
+double Equidistant::quadratic_safety() const
+{
+  HEXED_ASSERT(false, "Not implemented");
+  return 0;
+}
 
 Equidistant::Equidistant(int row_size_arg) : Basis(row_size_arg) {}
 
@@ -66,33 +79,32 @@ Eigen::MatrixXd Equidistant::boundary() const
 
 Eigen::VectorXd Equidistant::orthogonal(int degree) const
 {
-  throw std::runtime_error("Not implemented.");
-  Eigen::VectorXd unused (0);
-  return unused;
+  HEXED_ASSERT(false, "Not implemented");
+  return {};
 }
 
 Eigen::MatrixXd Equidistant::filter() const
 {
-  throw std::runtime_error("Not implemented.");
-  return Eigen::MatrixXd(0, 0);
+  HEXED_ASSERT(false, "Not implemented");
+  return {};
 }
 
 Eigen::MatrixXd Equidistant::prolong (int i_half) const
 {
-  throw std::runtime_error("Not implemented.");
-  return Eigen::MatrixXd::Zero(row_size, row_size);
+  HEXED_ASSERT(false, "Not implemented");
+  return {};
 }
 
 Eigen::MatrixXd Equidistant::restrict (int i_half) const
 {
-  throw std::runtime_error("Not implemented.");
-  return Eigen::MatrixXd::Zero(row_size, row_size);
+  HEXED_ASSERT(false, "Not implemented");
+  return {};
 }
 
-double Equidistant::time_coefs(Basis::physics_type t, int stage, bool use_filter) const
+double Equidistant::min_eig_diffusion() const
 {
-  throw std::runtime_error("Not implemented.");
-  return 0.;
+  HEXED_ASSERT(false, "Not implemented");
+  return 0;
 }
 
 }

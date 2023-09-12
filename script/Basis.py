@@ -155,17 +155,11 @@ class Basis:
             dot += self.get_ortho(i_inner, i_result, True)*0.5**i_inner*self.get_ortho(i_inner, i_operand, True)*self.weights[i_operand]
         return sp.Float(dot, self.repr_digits)
 
-    def time_coefs(self, safety, n_elem = 16):
-        r"""! \brief Compute coefficients for optimized 2-stage time integration scheme.
-        \param n_elem number of elements to use
-        \param safety safety factor to apply to certain eigenvalue calculations (not the same as the CFL safety factor)
-        \details Based on numerical eigenvalue calculations for the linear advection and diffusion equations
-        on a 1D mesh with periodic boundary conditions.
-        \returns an array with 2 columns:
-        - `time_coefs()[0][0]` is the maximum stable CFL number for advection
-        - `time_coefs()[0][1]` is the cancellation coefficient for advection
-        - `time_coefs()[1][0]` is the maximum stable CFL number for diffusion
-        - `time_coefs()[1][1]` is the cancellation coefficient for diffusion
+    def eigenvals(self, n_elem = 16):
+        r"""! \brief Computes eigenvalues for use in time step calculation.
+        \details Returns a list of two values which are the minimum real parts of the convection and diffusion operators, respectively.
+        Eigenvalues are evaluated on a 1D, uniformly spaced, periodic mesh with `n_elem` elements for the linear advection/diffusion equations.
+        These eigenvalues are nondimensionalized, so they apply to unit mesh spacing, wave speed, and diffusivity.
         \note standard floating-point precision (whatever that is for Python -- I think double)
         """
         # sorry for the lack of comments... remind me to get back to this later
@@ -198,73 +192,6 @@ class Basis:
         ident = np.identity(n_elem*self.row_size)
         advection = -local_grad + -neighb_avrg + neighb_jump
         diffusion = (local_grad + neighb_avrg)@(local_grad + neighb_avrg)
-        filt = np.array([[np.float64(self.filter(i_result, i_operand)) for i_operand in range(self.row_size)] for i_result in range(self.row_size)])
         assert np.linalg.norm(global_weights@advection) < 1e-12
         assert np.linalg.norm(global_weights@diffusion) < 1e-12
-        filtered_adv = advection + 0
-        filtered_diff = diffusion + 0
-        for i_elem in range(n_elem):
-            filtered_adv [i_elem*self.row_size:(i_elem+1)*self.row_size, :] = filt@filtered_adv [i_elem*self.row_size:(i_elem+1)*self.row_size, :]
-            filtered_diff[i_elem*self.row_size:(i_elem+1)*self.row_size, :] = filt@filtered_diff[i_elem*self.row_size:(i_elem+1)*self.row_size, :]
-        if self.nodes[0] > 1e-7:
-            min_eig = np.linalg.eigvals(diffusion).real.min()
-            update_mat = ident + diffusion*2/abs(min_eig)
-            multistage = ident
-            n_stage = 10
-            total = 0
-            for i_stage in range(n_stage):
-                root = np.cos((n_stage - i_stage - 0.5)*np.pi/n_stage)
-                scale = 1/(1 - root)
-                total += scale
-                multistage = (ident + diffusion*2/abs(min_eig)*scale)@multistage
-            print(scale*2/abs(min_eig), total/n_stage*2/abs(min_eig), 2/abs(min_eig))
-            eigvals = np.linalg.eigvals(multistage)
-            plt.scatter(eigvals.real, eigvals.imag, marker=".")
-            plt.axis("equal")
-            plt.grid(True)
-            plt.show()
-        class polynomial:
-            def __init__(self, coefs):
-                ## \private
-                self.coefs = coefs
-            def __call__(self, dt, mat):
-                step_mat = ident + dt*mat
-                mat_pow = mat + 0
-                for coef in self.coefs:
-                    mat_pow = mat @ mat_pow
-                    step_mat += dt*coef*mat_pow
-                return step_mat
-        def max_cfl(mat, time_scheme):
-            "numerically estimates the maximum CFL number of a scheme"
-            def error(log_dt):
-                dt = np.exp(log_dt)
-                eigvals, eigvecs = np.linalg.eig(time_scheme(dt, mat))
-                return np.max(np.abs(eigvals)) - 1.
-            return np.exp(fsolve(error, -np.log(self.row_size))[0])
-        if True:
-            def euler(dt, mat):
-                return ident + dt*mat
-            def rk(dt, step_weights, mat):
-                step_mat = ident
-                for weight in step_weights:
-                    step_mat = (1. - weight)*ident + weight*euler(dt, mat)@step_mat
-                return step_mat
-            def ssp_rk3(dt, mat):
-                return rk(dt, [1., 1./4., 2./3.], mat)
-        coefs = np.zeros((4, 2))
-        for use_filter in range(2):
-            adv_mat = [advection, filtered_adv][use_filter]
-            coefs[2*use_filter][0] = -2*safety**(1 + use_filter)/np.linalg.eig(adv_mat)[0].real.min()
-            coefs[2*use_filter][1] = .5/safety**(1 + use_filter)*coefs[2*use_filter][0]
-            max_amp = np.abs(np.linalg.eig(ident + coefs[2*use_filter][0]*(ident + coefs[2*use_filter][1]*adv_mat)@adv_mat)[0]).max()
-            assert max_amp <= 1 + 1e-12, f"maximum amplification is {max_amp:.5e} > 1"
-            min_eig = np.linalg.eig([diffusion, filtered_diff][use_filter])[0].real.min()
-            coefs[2*use_filter + 1][0] = -8*safety/min_eig
-            coefs[2*use_filter + 1][1] = -1/min_eig
-        table = f"        {self.row_size - 1}"
-        for row in range(coefs.shape[0]):
-            for col in range(coefs.shape[1]):
-                table += f" & {coefs[row][col]:.4f}"
-        table += f" & {max_cfl(advection, ssp_rk3):.5f} & {max_cfl(diffusion, ssp_rk3):.5f} \\\\"
-        print(table)
-        return coefs
+        return [np.linalg.eigvals(mat).real.min() for mat in [advection, diffusion]]

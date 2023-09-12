@@ -58,7 +58,7 @@ from sympy.integrals.quadrature import gauss_legendre, gauss_lobatto
 calc_digits = 50
 min_row_size = 2
 
-for basis_params in [("Gauss_legendre", gauss_legendre, 0.9), ("Gauss_lobatto", gauss_lobatto, 0.7)]:
+for basis_params in [("Gauss_legendre", gauss_legendre), ("Gauss_lobatto", gauss_lobatto)]:
     name = basis_params[0]
     include = f"""
 #include <{name}.hpp>"""
@@ -69,7 +69,7 @@ for basis_params in [("Gauss_legendre", gauss_legendre, 0.9), ("Gauss_lobatto", 
         nodes = [(node + 1)/2 for node in nodes]
         weights = [weight/2 for weight in weights]
         basis = Basis(nodes, weights, calc_digits=calc_digits)
-        member_names = ["node", "weight", "diff_mat", "boundary", "orthogonal", "filter", "time_coefs"]
+        member_names = ["node", "weight", "diff_mat", "boundary", "orthogonal", "filter", "eigenvals"]
 
         text += f"""
 const double node{row_size} [{row_size}] {{
@@ -112,10 +112,9 @@ const double orthogonal{row_size} [{row_size**2}] {{
             text += "\n"
         text += "};\n"
 
-        text  += f"\nconst double time_coefs{row_size} [8] {{"
-        for pair in basis.time_coefs(basis_params[2]):
-            for coef in pair:
-                text += f"{coef:.20f}, "
+        text  += f"\nconst double eigenvals{row_size} [2] {{"
+        for coef in basis.eigenvals():
+            text += f"{coef:.20f}, "
         text += "};\n"
 
         text += f"""
@@ -224,9 +223,14 @@ Eigen::MatrixXd {name}::filter() const
   return f;
 }}
 
-double {name}::time_coefs(physics_type t, int stage, bool use_filter) const
+double {name}::min_eig_convection() const
 {{
-  return {name}_lookup::time_coefss[row_size - {min_row_size}][4*use_filter + 2*t + stage];
+  return {name}_lookup::eigenvalss[row_size - {min_row_size}][0];
+}}
+
+double {name}::min_eig_diffusion() const
+{{
+  return {name}_lookup::eigenvalss[row_size - {min_row_size}][1];
 }}
 """
 

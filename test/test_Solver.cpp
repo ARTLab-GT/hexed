@@ -302,7 +302,7 @@ TEST_CASE("Solver")
     sol.calc_jacobian();
     sol.initialize(hexed::Constant_func({0., 0., 1.4, 1./.4})); // initialize with zero velocity and unit speed of sound
     sol.update(); // sets the time step scale (among other things)
-    double cfl = hexed::Gauss_legendre(3).time_coefs(hexed::Basis::convection, 0, true)/2.; // divide by 2 cause that's the number of dimensions
+    double cfl = hexed::Gauss_legendre(3).max_cfl()/2.; // divide by 2 cause that's the number of dimensions
     // in sn0, TSS is max_cfl*root_size*determinant/normal_sum/sound_speed
     REQUIRE(sol.sample(0,  true, sn0, 4, hexed::Time_step_scale_func())[0] == Catch::Approx(cfl*.8*2/11./1.));
     // in sn1, TSS varies bilinearly
@@ -926,7 +926,7 @@ TEST_CASE("artificial viscosity convergence")
   double flow_width = .02;
   double adv_width = .01;
   sol.initialize(Tanh(flow_width));
-  sol.nspace().assign("av_advect_iters", 8000);
+  sol.nspace().assign("av_advect_iters", 6000);
   sol.nspace().assign("av_diff_iters", 3000);
   sol.nspace().assign("av_visc_mult", 1e6);
   sol.nspace().assign("av_diff_ratio", 1e-6);

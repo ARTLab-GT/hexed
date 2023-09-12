@@ -13,6 +13,11 @@ namespace hexed
  */
 class Basis
 {
+  protected:
+  //! \brief nondimensional minimum real part of eigenvals of 1D convection operator
+  virtual double min_eig_convection() const = 0;
+  virtual double quadratic_safety() const = 0;
+
   public:
   const int row_size; //!< \brief \ref row_size "row size"
 
@@ -49,9 +54,12 @@ class Basis
    * refined space into the space of this basis.
    */
   virtual Eigen::MatrixXd restrict(int i_half) const = 0;
-  enum physics_type {convection, diffusion}; //!< Enumeration for distinguishing convection/diffusion terms
-  //! \brief coefficients for multistage time integration scheme
-  virtual double time_coefs(physics_type t, int stage, bool use_filter) const = 0;
+  //! \brief maximum stable CFL number for 1D convection
+  double max_cfl() const;
+  //! \brief ratio of time step for convection stage 2 to stage 1
+  double step_ratio() const;
+  //! \brief nondimensional minimum eigenvalue of 1D diffusion operator
+  virtual double min_eig_diffusion() const = 0;
 };
 
 }
