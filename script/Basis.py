@@ -206,6 +206,23 @@ class Basis:
         for i_elem in range(n_elem):
             filtered_adv [i_elem*self.row_size:(i_elem+1)*self.row_size, :] = filt@filtered_adv [i_elem*self.row_size:(i_elem+1)*self.row_size, :]
             filtered_diff[i_elem*self.row_size:(i_elem+1)*self.row_size, :] = filt@filtered_diff[i_elem*self.row_size:(i_elem+1)*self.row_size, :]
+        if self.nodes[0] > 1e-7:
+            min_eig = np.linalg.eigvals(diffusion).real.min()
+            update_mat = ident + diffusion*2/abs(min_eig)
+            multistage = ident
+            n_stage = 10
+            total = 0
+            for i_stage in range(n_stage):
+                root = np.cos((n_stage - i_stage - 0.5)*np.pi/n_stage)
+                scale = 1/(1 - root)
+                total += scale
+                multistage = (ident + diffusion*2/abs(min_eig)*scale)@multistage
+            print(scale*2/abs(min_eig), total/n_stage*2/abs(min_eig), 2/abs(min_eig))
+            eigvals = np.linalg.eigvals(multistage)
+            plt.scatter(eigvals.real, eigvals.imag, marker=".")
+            plt.axis("equal")
+            plt.grid(True)
+            plt.show()
         class polynomial:
             def __init__(self, coefs):
                 ## \private
