@@ -8,7 +8,6 @@ surface_refine = {nom_sz > 0.2 & center0 > -1.5 & center0 < 4 & center1 > -1.5 &
 surface_unrefine = {false}
 shell {python3 make_geom.py}
 geom0 = {auto.csv}
-wall_spacing = 0.2
 transport_model = {best}
 
 {freestream definition. Note that not all of the variables below are parameters considered by the solver. Some are simply user-defined variables.}
@@ -20,6 +19,12 @@ density = target_reynolds*1.8e-5/speed
 print_freq = 500
 local_time = false
 done = {false}
+max_safety = 1e-6
+iterate = iterate + {
+    if = {iteration <= 1e5}
+    then = {max_safety = 0.2*iteration*1e-5}
+    $cond
+}
 
 vis_n_sample = 2
 $init

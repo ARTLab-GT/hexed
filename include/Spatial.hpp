@@ -94,7 +94,7 @@ class Spatial
       _stage{stage},
       _use_filter{use_filter},
       update_conv{stage ? dt*basis.step_ratio() : dt},
-      update_diff{stage ? dt : 0},
+      update_diff{stage ? 0. : dt},
       ref{_stage ? update_conv/dt : 0},
       curr{1 - ref}
     {
