@@ -340,8 +340,6 @@ Case::Case(std::string input_file)
   _inter.variables->create<std::string>("update", new Namespace::Heisenberg<std::string>([this]() {
     bool avw = _vard("art_visc_width").value() > 0;
     bool avc = _vard("art_visc_constant").value() > 0;
-    double ms = _vard("max_safety").value();
-    double mts = _vard("max_time_step").value();
     int iter = _vari("iteration").value();
     int print_freq = _vari("print_freq").value();
     int n = iter ? print_freq - iter%print_freq : 1;
@@ -351,7 +349,7 @@ Case::Case(std::string input_file)
       } else if (avc) {
         _solver().set_art_visc_smoothness(_vard("art_visc_constant").value());
       }
-      _solver().update(ms, mts);
+      _solver().update();
     }
     return "";
   }));

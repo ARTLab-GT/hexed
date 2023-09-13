@@ -304,12 +304,12 @@ TEST_CASE("Solver")
     sol.update(); // sets the time step scale (among other things)
     double cfl = hexed::Gauss_legendre(3).max_cfl()/2.; // divide by 2 cause that's the number of dimensions
     // in sn0, TSS is max_cfl*root_size*determinant/normal_sum/sound_speed
-    REQUIRE(sol.sample(0,  true, sn0, 4, hexed::Time_step_scale_func())[0] == Catch::Approx(cfl*.8*2/11./1.));
+    REQUIRE(sol.sample(0,  true, sn0, 4, hexed::Time_step_scale_func())[0] == Catch::Approx(0.7*cfl*.8*2/11./1.));
     // in sn1, TSS varies bilinearly
-    REQUIRE(sol.sample(0, false, sn1, 4, hexed::Time_step_scale_func())[0] == Catch::Approx(cfl*.8*(2*2/11. + .5 + 1.)/4.));
+    REQUIRE(sol.sample(0, false, sn1, 4, hexed::Time_step_scale_func())[0] == Catch::Approx(0.7*cfl*.8*(2*2/11. + .5 + 1.)/4.));
     // TSS at hanging nodes should be set to match coarse element
-    REQUIRE(sol.sample(1, false, sn2, 4, hexed::Time_step_scale_func())[0] == Catch::Approx(cfl*.8*(3*.5 + (.5 + 2/11.)/2.)/4.));
-    REQUIRE(sol.sample(1, false, sn3, 4, hexed::Time_step_scale_func())[0] == Catch::Approx(cfl*.8*(2*.5 + (.5 + 2/11.)/2. + 2/11.)/4.));
+    REQUIRE(sol.sample(1, false, sn2, 4, hexed::Time_step_scale_func())[0] == Catch::Approx(0.7*cfl*.8*(3*.5 + (.5 + 2/11.)/2.)/4.));
+    REQUIRE(sol.sample(1, false, sn3, 4, hexed::Time_step_scale_func())[0] == Catch::Approx(0.7*cfl*.8*(2*.5 + (.5 + 2/11.)/2. + 2/11.)/4.));
   }
 
   SECTION("integrals")
@@ -565,7 +565,8 @@ void test_marching(Test_mesh& tm, std::string name)
   REQUIRE(status.flow_time == 0.);
   REQUIRE(status.iteration == 0);
   // update
-  sol.update(1e-3);
+  sol.nspace().assign("max_safety", 1e-3);
+  sol.update();
   status = sol.iteration_status();
   REQUIRE(status.flow_time > 0.);
   REQUIRE(status.iteration == 1);
@@ -592,7 +593,8 @@ void test_visc(Test_mesh& tm, std::string name)
   sol.calc_jacobian();
   sol.initialize(Sinusoid_veloc0());
   // update
-  sol.update(1e-4);
+  sol.nspace().assign("max_safety", 1e-4);
+  sol.update();
   #if HEXED_USE_TECPLOT
   sol.visualize_field_tecplot(hexed::Physical_update(), name);
   #endif
@@ -625,7 +627,8 @@ void test_conservation(Test_mesh& tm, std::string name)
   // check that the iteration status is right at the start
   auto status = sol.iteration_status();
   // update
-  sol.update(.01);
+  sol.nspace().assign("max_safety", .01);
+  sol.update();
   status = sol.iteration_status();
   auto state  = sol.integral_field(hexed::State_variables());
   auto update = sol.integral_field(hexed::Physical_update());

@@ -524,10 +524,10 @@ class Spatial
 
     public:
     template <typename... pde_args>
-    Max_dt(const Basis& basis, bool is_local, bool use_filter, pde_args... args) :
+    Max_dt(const Basis& basis, bool is_local, bool use_filter, double safety_conv, double safety_diff, pde_args... args) :
       eq{args...},
-      max_cfl_c{basis.max_cfl()},
-      max_cfl_d{-2/basis.min_eig_diffusion()},
+      max_cfl_c{basis.max_cfl()*safety_conv},
+      max_cfl_d{-2/basis.min_eig_diffusion()*safety_diff},
       _is_local{is_local}
     {
       for (int i_node = 0; i_node < row_size; ++i_node) nodes(i_node) = basis.node(i_node);
