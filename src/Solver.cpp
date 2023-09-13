@@ -55,7 +55,7 @@ void Solver::apply_flux_bcs()
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     // write inside flux to flux cache for surface visualization/integrals
     int n_dof = params.n_dof()/params.row_size;
-    Eigen::Map<Mat<>>(bc_cons[i_con].flux_cache(), n_dof) = Eigen::Map<Mat<>>(bc_cons[i_con].inside_face(), n_dof);
+    Eigen::Map<Mat<>>(bc_cons[i_con].flux_cache(), n_dof) = Eigen::Map<Mat<>>(bc_cons[i_con].inside_face() + 2*n_dof, n_dof);
     // apply boundary conditions
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh.boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
