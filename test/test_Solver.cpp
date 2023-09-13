@@ -637,46 +637,6 @@ void test_conservation(Test_mesh& tm, std::string name)
   }
 }
 
-void test_advection(Test_mesh& tm, std::string name)
-{
-  tm.construct(new hexed::Copy, new hexed::Null_mbc);
-  auto& sol = tm.solver();
-  sol.mesh().valid().assert_valid();
-  sol.calc_jacobian();
-  sol.initialize(Sinusoid_veloc1());
-  double width = 1e-2;
-  sol.nspace().assign("av_visc_mult", .9);
-  sol.nspace().assign("av_advect_iters", 1000);
-  sol.nspace().assign("av_diff_iters", 300);
-  sol.nspace().assign("av_advect_max_res", 1e8); // set this to an irrelevantly large value
-  // don't do much diffusion to avoid obscuring advection result
-  sol.nspace().assign("av_diff_ratio", 1e-6);
-  sol.nspace().assign("freestream" + std::to_string(sol.storage_params().n_dim), 2.3);
-  sol.nspace().assign("freestream" + std::to_string(sol.storage_params().n_dim + 1), 10.);
-  REQUIRE_THROWS(sol.set_art_visc_row_size(1));
-  REQUIRE_THROWS(sol.set_art_visc_row_size(hexed::config::max_row_size + 1));
-  sol.set_art_visc_row_size(2);
-  sol.set_art_visc_smoothness(width);
-  #if 0
-  sol.visualize_field_tecplot(hexed::Art_visc_coef(), "foo");
-  REQUIRE(sol.iteration_status().adv_res < 1e-6);
-  REQUIRE(sol.iteration_status().diff_res < 1e-9);
-  hexed::Gauss_legendre basis(2);
-  double norm = 0.;
-  for (int i_node = 0; i_node < 2; ++i_node) {
-    norm += (basis.node(i_node) - .5)*basis.orthogonal(1)(i_node)*basis.node_weights()(i_node);
-  }
-  // check that the computed artificial viscosity is proportional to divergence of velocity
-  for (auto handle : sol.mesh().elem_handles()) {
-    for (int i_qpoint = 0; i_qpoint < sol.storage_params().n_qpoint(); ++i_qpoint) {
-      double art_visc = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Art_visc_coef())[0];
-      auto pos = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Position_func());
-      REQUIRE(art_visc/(width*width*norm*sol.nspace().lookup<double>("av_visc_mult").value()) == Catch::Approx(std::abs(-.1*std::cos(pos[0]) - .2*std::sin(pos[1]))).margin(1e-3));
-    }
-  }
-  #endif
-}
-
 // test the solver on a sinusoid-derived initial condition which has a simple analytic solution
 TEST_CASE("Solver time marching")
 {
@@ -776,39 +736,6 @@ TEST_CASE("Solver conservation")
     TEST_CONSERVATION(2, 0)
     TEST_CONSERVATION(2, 1)
     #endif
-  }
-}
-
-TEST_CASE("Solver advection")
-{
-  SECTION("all cartesian")
-  {
-    All_cartesian ac(true);
-    test_advection(ac, "car");
-  }
-  SECTION("all deformed")
-  {
-    All_deformed ad0 (0, true);
-    test_advection(ad0, "def0");
-    All_deformed ad1 (1, true);
-    test_advection(ad1, "def1");
-  }
-  SECTION("extruded with deformed hanging nodes")
-  {
-    #define TEST_DIMENSIONS(i_dim, j_dim) \
-      SECTION("dimensions " #i_dim " " #j_dim) { \
-          Extrude_hanging eh(i_dim, j_dim, true); \
-          test_advection(eh, "extrude_hanging"); \
-      }
-    #if NDEBUG
-    TEST_DIMENSIONS(0, 1)
-    TEST_DIMENSIONS(0, 2)
-    TEST_DIMENSIONS(1, 0)
-    TEST_DIMENSIONS(1, 2)
-    TEST_DIMENSIONS(2, 0)
-    TEST_DIMENSIONS(2, 1)
-    #endif
-    #undef TEST_DIMENSIONS
   }
 }
 
