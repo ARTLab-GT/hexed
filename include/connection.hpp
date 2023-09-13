@@ -338,7 +338,7 @@ inline void Refined_connection<Deformed_element>::disconnect_normal()
 }
 
 /*!
- * A `Boundary_face` that also provides details about the connection for the neighbor flux
+ * \brief A `Boundary_face` that also provides details about the connection for the neighbor flux
  * computation and requests for a particular `Boundary_condition` to be applied to it.
  */
 class Boundary_connection : public Boundary_face, public Face_connection<Deformed_element>
@@ -361,8 +361,9 @@ class Typed_bound_connection : public Boundary_connection
   int i_d;
   bool ifs;
   int bc_sn;
-  Eigen::VectorXd pos;
-  Eigen::VectorXd state_c;
+  int state_size;
+  Mat<> pos;
+  Mat<> cache;
   void connect_normal();
   void disconnect_normal();
 
@@ -374,8 +375,9 @@ class Typed_bound_connection : public Boundary_connection
     i_d{i_dim_arg},
     ifs{inside_face_sign_arg},
     bc_sn{bc_serial_n},
+    state_size{params.n_var*params.n_qpoint()/params.row_size},
     pos(params.n_dim*params.n_qpoint()/params.row_size),
-    state_c(params.n_var*params.n_qpoint()/params.row_size)
+    cache{Mat<>::Zero(2*state_size)}
   {
     connect_normal();
     elem.faces[direction().i_face(0)] = state();
@@ -394,7 +396,8 @@ class Typed_bound_connection : public Boundary_connection
   virtual bool inside_face_sign() {return ifs;}
   virtual double* surface_normal() {return normal();}
   virtual double* surface_position() {return pos.data();}
-  virtual double* state_cache() {return state_c.data();}
+  virtual double* state_cache() {return cache.data();}
+  virtual double* flux_cache() {return cache.data() + state_size;}
   virtual Con_dir<Deformed_element> direction() {return {{i_d, i_d}, {ifs, !ifs}};}
   virtual int bound_cond_serial_n() {return bc_sn;}
   element_t& element() {return elem;}

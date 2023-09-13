@@ -31,7 +31,7 @@ std::vector<double> Viscous_stress::operator()(Boundary_connection& con, int i_f
   std::vector<double> stress;
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
     // fetch momentum flux in reference space
-    double ref_stress = -con.state_cache()[i_dim*nfq + i_fqpoint];
+    double ref_stress = -con.flux_cache()[i_dim*nfq + i_fqpoint];
     // compute stress
     stress.push_back((nrml_mag > 1e-3) ? ref_stress*nrml_sign/nrml_mag : 0.);
   }
@@ -51,7 +51,7 @@ std::vector<double> Heat_flux::operator()(Boundary_connection& con, int i_fqpoin
   }
   nrml_mag = std::sqrt(nrml_mag);
   // fetch flux in reference space
-  double ref_flux = con.ghost_face()[(params.n_dim + 1)*nfq + i_fqpoint];
+  double ref_flux = con.flux_cache()[(params.n_dim + 1)*nfq + i_fqpoint];
   // compute flux in physical space
   return {(nrml_mag > 1e-3) ? ref_flux*nrml_sign/nrml_mag : 0.};
 }

@@ -64,9 +64,9 @@ void surface(Namespace& space, Boundary_connection& con, int i_fqpoint)
   std::vector<double> state;
   for (int i_var = 0; i_var < params.n_var; ++i_var) {
     // fetch momentum flux in reference space
-    double ref_stress = -con.state_cache()[i_var*nfq + i_fqpoint];
+    double ref_flux = -con.flux_cache()[i_var*nfq + i_fqpoint];
     // compute stress
-    flux.push_back((nrml_mag > 1e-3 && viscous) ? ref_stress*nrml_sign/nrml_mag : 0.);
+    flux.push_back((nrml_mag > 1e-3 && viscous) ? ref_flux*nrml_sign/nrml_mag : 0.);
     state.push_back(con.inside_face()[i_var*nfq + i_fqpoint]);
   }
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
