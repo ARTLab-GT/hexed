@@ -1224,11 +1224,13 @@ void Solver::vis_lts_constraints(std::string name, int n_sample)
   auto& elems = acc_mesh.elements();
   int nf = params.n_dof();
   int nq = params.n_qpoint();
+  double n_cheby = _namespace->lookup<double>("n_chebyshev_stages").value();
+  double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1);
   // write local time steps for convection and diffusion to the mass and energy of the reference state.
   // Reference state is used for storage because `Element::time_step_scale` only has space for one scalar
   for (int i_term = 0; i_term < 2; ++i_term) {
     double safeties [] {1., huge};
-    max_dt(safeties[i_term], safeties[!i_term]);
+    max_dt(safeties[i_term]/max_cheby, safeties[!i_term]);
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       Eigen::Map<Mat<>>(elems[i_elem].stage(1) + (params.n_dim + i_term)*nq, nq) = Eigen::Map<Mat<>>(elems[i_elem].time_step_scale(), nq);
