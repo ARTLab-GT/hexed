@@ -14,12 +14,13 @@ temperature = zero_celsius
 speed = 60 ;{approx mach 0.2}
 direction0 = 0.8
 direction1 = 0.6
-target_thickness = 0.01
+target_thickness = 1.
 target_reynolds = (5/target_thickness)^2
 density = target_reynolds*1.8e-5/speed
 
 print_freq = 500
 done = {normalized_residual < 1e-8}
+vis_lts_constraints = true
 
 $init
 $run

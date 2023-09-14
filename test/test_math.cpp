@@ -235,3 +235,15 @@ TEST_CASE("intersects")
   point1[0] = 3.;
   REQUIRE(hexed::math::intersects(b, point0, point1));
 }
+
+TEST_CASE("chebyshev_step")
+{
+  Eigen::ArrayXd arg = Eigen::ArrayXd::LinSpaced(100, -2., 0.);
+  Eigen::ArrayXd result = Eigen::ArrayXd::Ones(100);
+  int n_step = 7;
+  for (int i_step = 0; i_step < n_step; ++i_step) {
+    result *= 1 + hexed::math::chebyshev_step(n_step, i_step)*arg;
+  }
+  REQUIRE(result.maxCoeff() == Catch::Approx(1.));
+  REQUIRE(result.minCoeff() == Catch::Approx(-1.));
+}
