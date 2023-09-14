@@ -141,6 +141,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default<double>("av_advect_stab_rat", .2); // stability ratio for advection
   _namespace->assign_default<double>("av_advect_max_res", 1e-3); // residual limit for advection equation
   _namespace->assign_default<double>("av_diff_stab_rat", .5); // stability ratio for diffusion
+  _namespace->assign_default<int   >("n_chebyshev_stages", 1);
   _namespace->assign_default<int   >("av_advect_iters", 2); // number of advection iterations to run each time `set_art_visc_smoothness` is called
   _namespace->assign_default<int   >("av_diff_iters", 1); // number of diffusion iterations to run each time `set_art_visc_smoothness` is called
   _namespace->assign_default<int   >("use_filter", false); // whether to use modal filter acceleration
@@ -851,39 +852,45 @@ void Solver::update()
 
   // compute time step
   double safety = _namespace->lookup<double>("max_safety").value();
-  double dt = std::min(max_dt(safety, safety), _namespace->lookup<double>("max_time_step").value());
+  double n_cheby = _namespace->lookup<double>("n_chebyshev_stages").value();
+  double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1);
+  double nominal_dt = std::min(max_dt(safety/max_cheby, safety), _namespace->lookup<double>("max_time_step").value());
 
-  // record reference state for Runge-Kutta scheme
   const int n_dof = params.n_dof();
-  auto& irk = stopwatch.children.at("initialize reference");
-  irk.stopwatch.start();
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    double* state = elems[i_elem].stage(0);
-    for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] = state[i_dof];
-  }
-  irk.stopwatch.pause();
-  irk.work_units_completed += elems.size();
+  for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
+    double dt = nominal_dt*math::chebyshev_step(n_cheby, i_cheby);
+    // record reference state for Runge-Kutta scheme
+    auto& irk = stopwatch.children.at("initialize reference");
+    irk.stopwatch.start();
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      double* state = elems[i_elem].stage(0);
+      for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] = state[i_dof];
+    }
+    irk.stopwatch.pause();
+    irk.work_units_completed += elems.size();
 
-  // compute inviscid update
-  for (int i = 0; i < 2; ++i) {
-    apply_state_bcs();
-    if (use_ldg()) compute_viscous(dt, i);
-    else compute_inviscid(dt, i);
-    fix_admissibility(_namespace->lookup<double>("fix_admis_stab_rat").value());
+    // compute inviscid update
+    for (int i = 0; i < 2; ++i) {
+      apply_state_bcs();
+      if (use_ldg()) compute_viscous(dt, i);
+      else compute_inviscid(dt, i);
+      fix_admissibility(_namespace->lookup<double>("fix_admis_stab_rat").value());
+    }
+
+    // update status for reporting
+    _namespace->assign<double>("time_step", dt);
+    _namespace->assign<double>("flow_time", _namespace->lookup<double>("flow_time").value() + dt);
+    status.time_step = dt;
+    status.flow_time += dt;
   }
 
-  // update status for reporting
-  _namespace->assign<double>("time_step", dt);
-  _namespace->assign<double>("flow_time", _namespace->lookup<double>("flow_time").value() + dt);
   _namespace->assign<int>("iteration", _namespace->lookup<int>("iteration").value() + 1);
-  status.time_step = dt;
-  status.flow_time += dt;
   ++status.iteration;
-  stopwatch.stopwatch.pause();
   stopwatch.work_units_completed += elems.size();
   stopwatch.children.at("cartesian").work_units_completed += acc_mesh.cartesian().elements().size();
   stopwatch.children.at("deformed" ).work_units_completed += acc_mesh.deformed ().elements().size();
+  stopwatch.stopwatch.pause();
 }
 
 Iteration_status Solver::iteration_status()
