@@ -88,7 +88,6 @@ vis_surface = true
 vis_field = true
 vis_tecplot = false
 vis_xdmf = true
-vis_art_visc = false
 vis_lts_constraints = false
 vis_field_vars = state_vars + art_visc_expr
 vis_surface_vars = state_vars + visc_stress_expr + heat_flux_expr

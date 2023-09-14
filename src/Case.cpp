@@ -263,7 +263,6 @@ Case::Case(std::string input_file)
       #if HEXED_USE_XDMF
       if (_vari("vis_xdmf").value()) {
         _solver().visualize_field_xdmf(func, file_name, n_sample);
-        if (_vari("vis_art_visc").value()) _solver().visualize_field_xdmf(Art_visc_coef(), wd + "art_visc" + suffix, n_sample);
         if (_vari("vis_lts_constraints").value()) _solver().vis_lts_constraints(wd + "lts" + suffix, n_sample);
       }
       #endif
