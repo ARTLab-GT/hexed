@@ -101,19 +101,19 @@ bool Solver::use_ldg()
   return visc.is_viscous || therm_cond.is_viscous || use_art_visc;
 }
 
-double Solver::max_dt()
+double Solver::max_dt(double msc, double msd)
 {
-  double safety = _namespace->lookup<double>("max_safety").value();
   const int nd = params.n_dim;
   const int rs = params.row_size;
   auto& sw_car {stopwatch.children.at("cartesian")};
   auto& sw_def {stopwatch.children.at("deformed" )};
+  double use_filt = _namespace->lookup<int>("use_filter").value();
   if (use_ldg()) {
-    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, is_local_time, _namespace->lookup<int>("use_filter").value(), safety, safety, visc, therm_cond))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
-                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, is_local_time, _namespace->lookup<int>("use_filter").value(), safety, safety, visc, therm_cond))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
+    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, is_local_time, use_filt, msc, msd, visc, therm_cond))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
+                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, is_local_time, use_filt, msc, msd, visc, therm_cond))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
   } else {
-    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time, _namespace->lookup<int>("use_filter").value(), safety, safety                  ))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
-                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time, _namespace->lookup<int>("use_filter").value(), safety, safety                  ))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
+    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time, use_filt, msc, msd                  ))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
+                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time, use_filt, msc, msd                  ))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
   }
 }
 
@@ -850,7 +850,8 @@ void Solver::update()
   auto& elems = acc_mesh.elements();
 
   // compute time step
-  double dt = std::min(max_dt(), _namespace->lookup<double>("max_time_step").value());
+  double safety = _namespace->lookup<double>("max_safety").value();
+  double dt = std::min(max_dt(safety, safety), _namespace->lookup<double>("max_time_step").value());
 
   // record reference state for Runge-Kutta scheme
   const int n_dof = params.n_dof();
@@ -1027,7 +1028,8 @@ void Solver::fix_admissibility(double stability_ratio)
         }
         compute_fta(s, 0);
       }
-      max_dt();
+      double safety = _namespace->lookup<double>("max_safety").value();
+      max_dt(safety, safety);
       #pragma omp parallel for
       for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
         auto& elem = elems[i_elem];
@@ -1208,6 +1210,36 @@ void Solver::vis_cart_surf_xdmf(int bc_sn, std::string name, const Boundary_func
 {
   Mesh::Reset_vertices reset(acc_mesh);
   visualize_surface_tecplot(bc_sn, func, name, 2);
+}
+
+void Solver::vis_lts_constraints(std::string name, int n_sample)
+{
+  auto& elems = acc_mesh.elements();
+  int nf = params.n_dof();
+  int nq = params.n_qpoint();
+  // write current state to reference state
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    Eigen::Map<Mat<>>(elems[i_elem].stage(1), nf) = Eigen::Map<Mat<>>(elems[i_elem].stage(0), nf);
+  }
+  // write local time steps for convection and diffusion to the mass and energy of the current state
+  for (int i_term = 0; i_term < 2; ++i_term) {
+    double safeties [] {1., huge};
+    max_dt(safeties[i_term], safeties[!i_term]);
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      Eigen::Map<Mat<>>(elems[i_elem].stage(0) + (params.n_dim + i_term)*nq, nq) = Eigen::Map<Mat<>>(elems[i_elem].time_step_scale(), nq);
+    }
+  }
+  // visualize
+  Interpreter inter(std::vector<std::string>{});
+  Struct_expr expr("lts_convective = density; lts_diffusive = energy; lts_ratio = lts_diffusive/lts_convective;");
+  visualize_field_xdmf(Qpoint_expr(expr, inter), name, n_sample);
+  // restore the current state from the reference state
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    Eigen::Map<Mat<>>(elems[i_elem].stage(0), nf) = Eigen::Map<Mat<>>(elems[i_elem].stage(1), nf);
+  }
 }
 #endif
 
