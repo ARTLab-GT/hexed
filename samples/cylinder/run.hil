@@ -7,7 +7,6 @@ init_ref_level = 5
 extremal_bc10 = {nonpenetration}
 shell {python3 make_geom.py}
 geom0 = {auto.csv}
-working_dir = {hexed_out_isothermal13}
 pressure = 120.96
 temperature = 75.61
 mach = 5.
@@ -15,6 +14,7 @@ art_visc_width = 4*2.^-init_ref_level
 
 {
 {isothermal wall}
+working_dir = {hexed_out_isothermal13}
 thermal_bc = {temperature = 98.89}
 wall_spacing = 0.005
 wall_layers = 2
@@ -23,6 +23,7 @@ wall_layers = 2
 {adiabatic wall}
 thermal_bc = {heat_flux = 0.}
 wall_spacing = .02
+working_dir = {hexed_out_adiabatic5}
 
 fix_therm_admis = true
 transport_model = {best}
@@ -38,6 +39,9 @@ ramp_end = 1e5
 iterate = iterate + {
     if = {iteration <= ramp_end}
     then = {max_safety = 0.3*iteration/ramp_end}
+    $cond
+    if = {iteration == 60107}
+    then = {visualize}
     $cond
 }
 
