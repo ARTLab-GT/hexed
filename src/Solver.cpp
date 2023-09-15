@@ -960,13 +960,15 @@ void Solver::fix_admissibility(double stability_ratio)
   int iter;
   for (iter = 0;; ++iter) {
     HEXED_ASSERT(iter < 1e5, format_str(200, "failed to fix thermodynamic admissability in %i iterations", iter));
+    #if HEXED_USE_XDMF
     if (iter == 100) {
       printf("> 100\n");
       State_variables sv;
       Record rec;
       std::vector<const Qpoint_func*> to_vis {&sv, &rec};
-      visualize_field_tecplot(Qf_concat(to_vis), "severe_indamis" + std::to_string(status.iteration));
+      visualize_field_xdmf(Qf_concat(to_vis), "severe_indamis" + std::to_string(status.iteration));
     }
+    #endif
     if (is_admissible()) break;
     else {
       auto& elems = acc_mesh.elements();
@@ -1002,14 +1004,16 @@ void Solver::fix_admissibility(double stability_ratio)
         }
         Eigen::Map<Mat<>>(elem.fix_admis_coef(), nq) = math::hypercube_matvec(interp, vert_fac);
       }
+      #if HEXED_USE_XDMF
       if (status.iteration >= last_fix_vis_iter + 1000 && iter == 0) {
         last_fix_vis_iter = status.iteration;
         State_variables sv;
         Record rec;
         Fix_admis_coef fac;
         std::vector<const Qpoint_func*> to_vis {&sv, &rec, &fac};
-        visualize_field_tecplot(Qf_concat(to_vis), "inadmis" + std::to_string(status.iteration));
+        visualize_field_xdmf(Qf_concat(to_vis), "inadmis" + std::to_string(status.iteration));
       }
+      #endif
       #pragma omp parallel for
       for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
         auto& elem = elems[i_elem];
@@ -1036,7 +1040,9 @@ void Solver::fix_admissibility(double stability_ratio)
         compute_fta(s, 0);
       }
       double safety = _namespace->lookup<double>("max_safety").value();
-      max_dt(safety, safety);
+      double n_cheby = _namespace->lookup<double>("n_chebyshev_stages").value();
+      double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1);
+      max_dt(safety/max_cheby, safety);
       #pragma omp parallel for
       for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
         auto& elem = elems[i_elem];
