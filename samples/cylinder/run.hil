@@ -7,7 +7,7 @@ init_ref_level = 5
 extremal_bc10 = {nonpenetration}
 shell {python3 make_geom.py}
 geom0 = {auto.csv}
-working_dir = {hexed_out_isothermal12}
+working_dir = {hexed_out_isothermal13}
 pressure = 120.96
 temperature = 75.61
 mach = 5.
@@ -31,6 +31,7 @@ vis_freq = 10000
 vis_lts_constraints = true
 print_freq = 500
 done = {false}
+n_chebyshev_stages = 6
 max_safety = 1e-6
 iterate = iterate + {
     if = {iteration <= 2e5}
