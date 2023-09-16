@@ -33,15 +33,11 @@ vis_lts_constraints = true
 print_freq = 500
 done = {false}
 n_chebyshev_stages = 4
-fix_admis_stab_rat = 0.3
 max_safety = 1e-8
 ramp_end = 1e5
 iterate = iterate + {
     if = {iteration <= ramp_end}
     then = {max_safety = 0.3*iteration/ramp_end}
-    $cond
-    if = {iteration == 60107}
-    then = {visualize}
     $cond
 }
 

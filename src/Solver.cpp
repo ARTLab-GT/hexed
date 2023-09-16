@@ -1024,6 +1024,7 @@ void Solver::fix_admissibility(double stability_ratio)
       double dt = stability_ratio;
       (*kernel_factory<Spatial<Element         , pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true, _namespace->lookup<int>("use_filter").value(), dt, dt))(acc_mesh.cartesian().elements(), stopwatch.children.at("fix admis.").children.at("cartesian"), "compute time step");
       (*kernel_factory<Spatial<Deformed_element, pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true, _namespace->lookup<int>("use_filter").value(), dt, dt))(acc_mesh.deformed ().elements(), stopwatch.children.at("fix admis.").children.at("deformed" ), "compute time step");
+      dt = 1.;
       double linear = dt;
       double quadratic = dt*dt/8/0.9;
       std::array<double, 2> step;
