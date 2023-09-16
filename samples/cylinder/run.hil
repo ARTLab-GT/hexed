@@ -5,6 +5,7 @@ mesh_extreme10 =  0.
 mesh_extreme11 =  2.
 init_ref_level = 5
 extremal_bc10 = {nonpenetration}
+extremal_bc01 = {pressure_outflow}
 shell {python3 make_geom.py}
 geom0 = {auto.csv}
 pressure = 120.96
