@@ -37,7 +37,7 @@ max_safety = 1e-8
 ramp_end = 1e5
 iterate = iterate + {
     if = {iteration <= ramp_end}
-    then = {max_safety = 0.3*iteration/ramp_end}
+    then = {max_safety = 0.7*iteration/ramp_end}
     $cond
 }
 
