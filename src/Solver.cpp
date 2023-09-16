@@ -150,6 +150,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign("flow_time", 0.);
   _namespace->assign("av_advection_residual", 0.);
   _namespace->assign("av_diffusion_residual", 0.);
+  _namespace->assign("wall_time", 0.);
   status.set_time();
   // setup categories for performance reporting
   stopwatch.children.emplace("initialize reference", stopwatch.work_unit_name);
@@ -885,7 +886,8 @@ void Solver::update()
     status.flow_time += dt;
   }
 
-  _namespace->assign<int>("iteration", _namespace->lookup<int>("iteration").value() + 1);
+  _namespace->assign("iteration", _namespace->lookup<int>("iteration").value() + 1);
+  _namespace->assign("wall_time", status.wall_time());
   ++status.iteration;
   stopwatch.work_units_completed += elems.size();
   stopwatch.children.at("cartesian").work_units_completed += acc_mesh.cartesian().elements().size();
