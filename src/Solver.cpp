@@ -138,9 +138,9 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default<double>("av_diff_ratio", 1e-1); // ratio of diffusion time to advection width
   _namespace->assign_default<double>("av_visc_mult", 30.); // final scaling parameter applied to artificial viscosity coefficient
   _namespace->assign_default<double>("av_unscaled_max", 2e-4); // maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
-  _namespace->assign_default<double>("av_advect_stab_rat", .2); // stability ratio for advection
+  _namespace->assign_default<double>("av_advect_stab_rat", .7); // stability ratio for advection
   _namespace->assign_default<double>("av_advect_max_res", 1e-3); // residual limit for advection equation
-  _namespace->assign_default<double>("av_diff_stab_rat", .5); // stability ratio for diffusion
+  _namespace->assign_default<double>("av_diff_stab_rat", .7); // stability ratio for diffusion
   _namespace->assign_default<int   >("n_chebyshev_stages", 1);
   _namespace->assign_default<int   >("av_advect_iters", 2); // number of advection iterations to run each time `set_art_visc_smoothness` is called
   _namespace->assign_default<int   >("av_diff_iters", 1); // number of diffusion iterations to run each time `set_art_visc_smoothness` is called
