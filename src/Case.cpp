@@ -125,6 +125,8 @@ Case::Case(std::string input_file)
       freestream(Eigen::seqN(0, *n_dim)) = *_vard("density")*veloc;
       freestream(*n_dim) = *_vard("density");
       freestream(*n_dim + 1) = *_vard("pressure")/(heat_rat - 1) + .5**_vard("density")*veloc.squaredNorm();
+      freestream.conservativeResize(5);
+      freestream(Eigen::seqN(*n_dim + 2, 5 - (*n_dim + 2))).setZero();
       _set_vector("freestream", freestream);
     }
     // create solver
@@ -237,16 +239,7 @@ Case::Case(std::string input_file)
   }));
 
   _inter.variables->create<int>("init_state", new Namespace::Heisenberg<int>([this]() {
-    std::string init_cond = _vars("init_condition").value();
-    auto freestream = _get_vector("freestream", _vari("n_dim").value() + 2);
-    if (init_cond == "freestream") {
-      _solver().initialize(Constant_func({freestream.begin(), freestream.end()}));
-    } else if (init_cond == "vortex") {
-      Isentropic_vortex vortex({freestream.begin(), freestream.end()});
-      vortex.max_nondim_veloc = 0.3;
-      vortex.argmax_radius = 0.1;
-      _solver().initialize(vortex);
-    } else HEXED_ASSERT(false, format_str(1000, "unrecognized initial condition type `%s`", init_cond.c_str()));
+    _solver().initialize(Spacetime_expr(Struct_expr(_vars("init_cond").value()), _inter));
     return 0;
   }));
 

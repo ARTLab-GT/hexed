@@ -21,6 +21,22 @@ class Spacetime_func : public Domain_func
   virtual std::vector<double> operator()(std::vector<double> pos, double time) const = 0;
 };
 
+/*! \brief Evaluates a \ref struct_expr "structured expression"
+ * \details Expression is evaluated in an environment that includes
+ * `pos0`, `pos1`, `pos2`, and `time`.
+ */
+class Spacetime_expr : public Spacetime_func
+{
+  Struct_expr _expr;
+  const Interpreter& _inter;
+  public:
+  Spacetime_expr(Struct_expr, const Interpreter&);
+  Spacetime_expr(Struct_expr, Interpreter&&) = delete;
+  inline int n_var(int n_dim) const override {return _expr.names.size();}
+  inline std::string variable_name(int n_dim, int i_var) const override {return _expr.names[i_var];}
+  std::vector<double> operator()(std::vector<double> pos, double time) const override;
+};
+
 //! Always returns the same constant (vector) value.
 class Constant_func : public Spacetime_func
 {

@@ -16,6 +16,17 @@ std::vector<double> Spacetime_func::operator()(const std::vector<double> pos, do
   return operator()(pos, time);
 }
 
+Spacetime_expr::Spacetime_expr(Struct_expr expr, const Interpreter& inter) : _expr{expr}, _inter{inter} {}
+
+std::vector<double> Spacetime_expr::operator()(std::vector<double> pos, double time) const
+{
+  auto sub = _inter.make_sub();
+  for (unsigned i_dim = 0; i_dim < pos.size(); ++i_dim) sub.variables->assign("pos" + std::to_string(i_dim), pos[i_dim]);
+  for (unsigned i_dim = pos.size(); i_dim < 3; ++i_dim) sub.variables->assign("pos" + std::to_string(i_dim), 0.);
+  sub.variables->assign("time", time);
+  return _expr.eval(sub);
+}
+
 Constant_func::Constant_func(std::vector<double> value_arg) : value(value_arg) {}
 std::vector<double> Constant_func::operator()(std::vector<double> pos, double time) const
 {

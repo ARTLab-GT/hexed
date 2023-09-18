@@ -1,20 +1,3 @@
-{array variables}
-i_dim = 0
-mesh_extreme_eps = 1e-6
-while = {i_dim < 3}
-do = {
-    mesh_code = {
-        mesh_index = {} + i_dim + sign
-        $({mesh_extreme} + mesh_index) = 0. + sign
-        $({extremal_bc} + mesh_index) = {characteristic}
-    }
-    sign = 0; $mesh_code
-    sign = 1; $mesh_code
-    $({flood_fill_start} + i_dim) = huge
-    i_dim = i_dim + 1
-}
-$loop
-
 {utilities}
 heat_rat = 1.4
 momentum_expr = {momentum0 = momentum0; momentum1 = momentum1; momentum2 = momentum2;}
@@ -59,11 +42,10 @@ print_force = {
     println({drag coefficient: } + drag_coef)
 }
 
-{basic parameters}
+{scalar parameters}
 row_size = 6
 init_ref_level = 3
 local_time = true
-init_condition = {freestream}
 transport_model = {inviscid}
 thermal_bc = {heat_flux = 0}
 surface_bc = {auto}
@@ -97,6 +79,31 @@ integrand_field = {}
 integrand_surface = {}
 max_angle = 10*degree
 max_deflection = huge
+mesh_extreme_eps = 1e-6
+
+{array parameters}
+i_dim = 0
+while = {i_dim < 3}
+do = {
+    mesh_code = {
+        mesh_index = {} + i_dim + sign
+        $({mesh_extreme} + mesh_index) = 0. + sign
+        $({extremal_bc} + mesh_index) = {characteristic}
+    }
+    sign = 0; $mesh_code
+    sign = 1; $mesh_code
+    $({flood_fill_start} + i_dim) = huge
+    i_dim = i_dim + 1
+}
+$loop
+init_cond = {}
+i_var = 0
+while = {i_var < 5}
+do = {
+    init_cond = init_cond + {state} + i_var + { = freestream} + i_var + newline
+    i_var = i_var + 1
+}
+$loop
 
 {overrideable macros}
 vis_init = {visualize}
