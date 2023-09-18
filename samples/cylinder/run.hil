@@ -24,7 +24,20 @@ wall_layers = 2
 {adiabatic wall}
 thermal_bc = {heat_flux = 0.}
 wall_spacing = .02
-working_dir = {hexed_out_adiabatic5}
+working_dir = {hexed_out_adiabatic6}
+wall_dist = {((pos0^2 + pos1^2)^.5 - 1.)}
+ener = specific_gas_air/(heat_rat - 1)*temperature
+enth = heat_rat*ener
+stag_enth = enth*(1 + (heat_rat - 1)/2*mach^2)
+init_veloc = {(freestream0/freestream2*(1 - natural^(-$wall_dist/0.2)))}
+init_scalar = {((stag_enth - 0.5*$init_veloc^2)/enth)}
+init_density = {(density*$init_scalar^(1/(heat_rat - 1)))}
+init_cond = {
+    state0 = $init_density*$init_veloc
+    state1 = 0.
+    state2 = $init_density
+    state3 = density*ener*$init_scalar^(heat_rat/(heat_rat - 1)) + 0.5*state0^2/state2
+}
 
 fix_therm_admis = true
 transport_model = {best}
@@ -32,6 +45,7 @@ surface_max_iters = 1
 vis_freq = 10000
 vis_lts_constraints = true
 done = {wall_time >= 2*hour}
+{
 max_safety = 1e-2
 iterate = iterate + {
     if = {iteration >= 20000}
@@ -40,6 +54,7 @@ iterate = iterate + {
         n_chebyshev_stages = 6
     }
     $cond
+}
 }
 
 vis_n_sample = 2
