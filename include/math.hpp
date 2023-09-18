@@ -286,6 +286,10 @@ bool intersects(Ball<n_dim> b, Mat<n_dim> endpoint0, Mat<n_dim> endpoint1)
   return (center - center.dot(diff)/diff.squaredNorm()*diff).squaredNorm() <= b.radius_sq;
 }
 
+//! \brief return the scaling factor for
+//! [Chebyshev polynomial](https://mathworld.wolfram.com/ChebyshevPolynomialoftheFirstKind.html) multistge time stepping
+double chebyshev_step(int n_steps, int i_step);
+
 }
 }
 #endif

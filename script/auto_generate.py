@@ -69,7 +69,7 @@ for basis_params in [("Gauss_legendre", gauss_legendre), ("Gauss_lobatto", gauss
         nodes = [(node + 1)/2 for node in nodes]
         weights = [weight/2 for weight in weights]
         basis = Basis(nodes, weights, calc_digits=calc_digits)
-        member_names = ["node", "weight", "diff_mat", "boundary", "orthogonal", "time_coefs"]
+        member_names = ["node", "weight", "diff_mat", "boundary", "orthogonal", "filter", "eigenvals"]
 
         text += f"""
 const double node{row_size} [{row_size}] {{
@@ -112,10 +112,18 @@ const double orthogonal{row_size} [{row_size**2}] {{
             text += "\n"
         text += "};\n"
 
-        text  += f"\nconst double time_coefs{row_size} [4] {{"
-        for pair in basis.time_coefs():
-            for coef in pair:
-                text += str(coef) + ", "
+        text  += f"\nconst double eigenvals{row_size} [2] {{"
+        for coef in basis.eigenvals():
+            text += f"{coef:.20f}, "
+        text += "};\n"
+
+        text += f"""
+const double filter{row_size} [{row_size**2}] {{
+"""
+        for i_operand in range(row_size):
+            for i_result in range(row_size):
+                text += f"{basis.filter(i_result, i_operand)}, "
+            text += "\n"
         text += "};\n"
 
         if "legendre" in name:
@@ -205,24 +213,24 @@ Eigen::VectorXd {name}::orthogonal(int degree) const
   return orth;
 }}
 
-double {name}::max_cfl_convective() const
+Eigen::MatrixXd {name}::filter() const
 {{{conditional_block}
-  return {name}_lookup::time_coefss[row_size - {min_row_size}][0];
+  Eigen::MatrixXd f (row_size, row_size);
+  for (int i_entry = 0; i_entry < row_size*row_size; ++i_entry)
+  {{
+    f(i_entry) = {name}_lookup::filters[row_size - {min_row_size}][i_entry];
+  }}
+  return f;
 }}
 
-double {name}::cancellation_convective() const
-{{{conditional_block}
-  return {name}_lookup::time_coefss[row_size - {min_row_size}][1];
+double {name}::min_eig_convection() const
+{{
+  return {name}_lookup::eigenvalss[row_size - {min_row_size}][0];
 }}
 
-double {name}::max_cfl_diffusive() const
-{{{conditional_block}
-  return {name}_lookup::time_coefss[row_size - {min_row_size}][2];
-}}
-
-double {name}::cancellation_diffusive() const
-{{{conditional_block}
-  return {name}_lookup::time_coefss[row_size - {min_row_size}][3];
+double {name}::min_eig_diffusion() const
+{{
+  return {name}_lookup::eigenvalss[row_size - {min_row_size}][1];
 }}
 """
 

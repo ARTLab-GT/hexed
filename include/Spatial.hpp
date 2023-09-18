@@ -74,31 +74,31 @@ class Spatial
     Derivative<row_size> derivative;
     Mat<2, row_size> boundary;
     Write_face<n_dim, row_size> write_face;
-    const int stage;
+    Mat<row_size, row_size> filter;
+    const int _stage;
+    const bool _use_filter;
     // weights for different parameters when assembling the updated state
     const double update_conv; // how much of the convective time derivative to include
     const double update_diff; // how much of the diffusive time derivative
     const double ref; // how much of the reference state to include
     const double curr; // how much of the current state to include
-    double mcc;
-    double mcd;
 
     public:
     template <typename... pde_args>
-    Local(const Basis& basis, double dt, bool which_stage, pde_args... args) :
+    Local(const Basis& basis, double dt, bool stage, bool use_filter, pde_args... args) :
       eq(args...),
       derivative{basis},
       boundary{basis.boundary()},
       write_face{basis},
-      stage{which_stage},
-      update_conv{stage ? dt*basis.cancellation_convective()/basis.max_cfl_convective() : dt},
-      update_diff{stage ? dt*basis.cancellation_diffusive()/basis.max_cfl_diffusive() : dt},
-      ref{stage ? update_conv/dt : 0},
-      curr{1 - ref},
-      mcc{basis.max_cfl_convective()},
-      mcd{basis.max_cfl_diffusive()}
+      filter{basis.filter()},
+      _stage{stage},
+      _use_filter{use_filter},
+      update_conv{stage ? dt*basis.step_ratio() : dt},
+      update_diff{stage ? 0. : dt},
+      ref{_stage ? update_conv/dt : 0},
+      curr{1 - ref}
     {
-      HEXED_ASSERT(Pde::has_convection || !which_stage, "for pure diffusion use alternating time steps");
+      HEXED_ASSERT(Pde::has_convection || !stage, "for pure diffusion use alternating time steps");
     }
 
     virtual void operator()(Sequence<element_t&>& elements)
@@ -144,7 +144,7 @@ class Spatial
           }
         }
 
-        if constexpr (Pde::is_viscous)
+        if constexpr (Pde::is_viscous) if (!_stage)
         {
           // compute gradient (times jacobian determinant, cause that's easier)
           constexpr int n_qpoint = math::pow(row_size, n_dim);
@@ -232,7 +232,7 @@ class Spatial
               Row_rw<Pde::n_update, row_size>::write_row(-derivative(flux, face_f), time_rate[0][0], ind, 1.);
             }
             // compute viscous update
-            if constexpr (Pde::is_viscous) {
+            if constexpr (Pde::is_viscous) if (!_stage) {
               flux = Row_rw<Pde::n_update, row_size>::read_row(visc_storage[i_dim][Pde::curr_start], ind);
               face_f = boundary*flux;
               // write viscous flux to faces to enable calculation of the numerical flux
@@ -242,6 +242,17 @@ class Spatial
                 }
               }
               Row_rw<Pde::n_update, row_size>::write_row(-derivative(flux), time_rate[1][0], ind, 1.);
+            }
+          }
+        }
+
+        // apply mode filtering
+        if constexpr (!Pde::is_viscous) if (_use_filter) {
+          for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+            for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
+              Mat<row_size, Pde::n_update> row_r = Row_rw<Pde::n_update, row_size>::read_row(time_rate[0][0], ind);
+              row_r = filter*row_r;
+              Row_rw<Pde::n_update, row_size>::write_row(row_r, time_rate[0][0], ind, 0.);
             }
           }
         }
@@ -259,12 +270,14 @@ class Spatial
             if constexpr (Pde::has_convection) {
               double u = update_conv*time_rate[0][i_var][i_qpoint];
               if constexpr (Pde::is_viscous) {
-                u += update_diff*time_rate[1][i_var][i_qpoint];
-                // for stage 1, the updates for convection and diffusion are different,
+                // for stage 1, we update convection but not diffusion,
                 // so we have to mix in some of the diffisive update from stage 0
                 // to achieve proper cancellation
-                if (stage) u += (update_conv - update_diff)*visc_state[i_qpoint];
-                else visc_state[i_qpoint] = time_rate[1][i_var][i_qpoint]; // for stage 0, record the diffusive update to allow the aforementioned
+                if (_stage) u += (update_conv - update_diff)*visc_state[i_qpoint];
+                else {
+                  u += update_diff*time_rate[1][i_var][i_qpoint];
+                  visc_state[i_qpoint] = time_rate[1][i_var][i_qpoint]; // for stage 0, record the diffusive update to allow the aforementioned
+                }
               }
               u *= tss[i_qpoint]/det/d_pos;
               curr_state[i_qpoint] = u + curr*curr_state[i_qpoint] + ref*ref_state[i_qpoint];
@@ -275,7 +288,7 @@ class Spatial
         }
         // write updated state to face storage.
         // For viscous, don't bother since we still have to add the numerical flux term
-        if constexpr (!Pde::is_viscous) write_face(state, elem.faces);
+        if (!Pde::is_viscous || _stage) write_face(state, elem.faces);
       }
     }
   };
@@ -290,17 +303,13 @@ class Spatial
     Write_face<n_dim, row_size> write_face;
     int stage;
     double update;
-    double mcc;
-    double mcd;
 
     public:
     Reconcile_ldg_flux(const Basis& basis, double dt, int which_stage) :
       derivative{basis},
       write_face{basis},
       stage{which_stage},
-      update{stage ? dt*basis.cancellation_diffusive()/basis.max_cfl_diffusive() : dt},
-      mcc{basis.max_cfl_convective()},
-      mcd{basis.max_cfl_diffusive()}
+      update{dt}
     {
       HEXED_ASSERT(Pde::has_convection || !which_stage, "for pure diffusion use alternating time steps");
     }
@@ -511,15 +520,15 @@ class Spatial
     double max_cfl_c;
     double max_cfl_d;
     Mat<row_size> nodes;
-    bool is_local;
+    bool _is_local;
 
     public:
     template <typename... pde_args>
-    Max_dt(const Basis& basis, bool is_local_time_stepping, pde_args... args) :
+    Max_dt(const Basis& basis, bool is_local, bool use_filter, double safety_conv, double safety_diff, pde_args... args) :
       eq{args...},
-      max_cfl_c{basis.max_cfl_convective()},
-      max_cfl_d{basis.max_cfl_diffusive()},
-      is_local{is_local_time_stepping}
+      max_cfl_c{basis.max_cfl()*safety_conv},
+      max_cfl_d{-2/basis.min_eig_diffusion()*safety_diff},
+      _is_local{is_local}
     {
       for (int i_node = 0; i_node < row_size; ++i_node) nodes(i_node) = basis.node(i_node);
     }
@@ -558,14 +567,14 @@ class Spatial
           double scale = 0;
           if constexpr (Pde::has_convection) scale += eq.char_speed(qpoint_state)/max_cfl_c/spacing;
           if constexpr (Pde::is_viscous) scale += eq.diffusivity(qpoint_state, art_visc[i_qpoint])/max_cfl_d/spacing/spacing;
-          if (is_local) tss[i_qpoint] = 1./scale;
+          if (_is_local) tss[i_qpoint] = 1./scale;
           else {
             tss[i_qpoint] = 1.;
             dt = std::min(dt, 1./scale);
           }
         }
       }
-      return is_local ? 1. : dt;
+      return _is_local ? 1. : dt;
     }
   };
 };

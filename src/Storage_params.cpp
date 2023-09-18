@@ -4,22 +4,22 @@
 namespace hexed
 {
 
-int Storage_params::n_qpoint()
+int Storage_params::n_qpoint() const
 {
   return math::pow(row_size, n_dim);
 }
 
-int Storage_params::n_dof()
+int Storage_params::n_dof() const
 {
   return n_qpoint()*n_var;
 }
 
-int Storage_params::size()
+int Storage_params::size() const
 {
   return n_dof()*n_stage;
 }
 
-int Storage_params::n_vertices()
+int Storage_params::n_vertices() const
 {
   return math::pow(2, n_dim);
 }

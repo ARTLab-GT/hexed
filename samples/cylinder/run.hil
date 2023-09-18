@@ -5,6 +5,7 @@ mesh_extreme10 =  0.
 mesh_extreme11 =  2.
 init_ref_level = 5
 extremal_bc10 = {nonpenetration}
+extremal_bc01 = {pressure_outflow}
 shell {python3 make_geom.py}
 geom0 = {auto.csv}
 pressure = 120.96
@@ -14,6 +15,7 @@ art_visc_width = 4*2.^-init_ref_level
 
 {
 {isothermal wall}
+working_dir = {hexed_out_isothermal13}
 thermal_bc = {temperature = 98.89}
 wall_spacing = 0.005
 wall_layers = 2
@@ -22,19 +24,25 @@ wall_layers = 2
 {adiabatic wall}
 thermal_bc = {heat_flux = 0.}
 wall_spacing = .02
+working_dir = {hexed_out_adiabatic5}
 
 fix_therm_admis = true
 transport_model = {best}
 surface_max_iters = 1
 vis_freq = 10000
-print_freq = 500
-done = {false}
-max_safety = 1e-6
+vis_lts_constraints = true
+done = {wall_time >= 2*hour}
+max_safety = 1e-2
 iterate = iterate + {
-    if = {iteration <= 1e5}
-    then = {max_safety = 0.3*iteration*1e-5}
+    if = {iteration >= 20000}
+    then = {
+        max_safety = 0.7
+        n_chebyshev_stages = 6
+    }
     $cond
 }
 
+vis_n_sample = 2
 $init
+vis_n_sample = 10
 $run

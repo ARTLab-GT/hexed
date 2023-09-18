@@ -24,20 +24,25 @@ class Timing_data:
         while lines and len(lines[0]) - len(lines[0].lstrip(" ")) > self.n_spaces:
             self.children.append(Timing_data(lines))
 
-    def plot(self):
+    @property
+    def n_axes(self):
+        return 1 + sum([c.n_axes for c in self.children if c.n_units and c.children])
+
+    def plot(self, axs = None):
+        fig = None
+        if axs is None:
+            fig, axs = plt.subplots(1, self.n_axes)
+            fig.set_size_inches(18, 6)
+        plt.sca(axs[0])
+        axs = axs[1:]
         components = [data for data in self.children if data.n_units]
         times = np.array([data.time for data in components])/self.time
         plt.pie(times, normalize = False, labels = [data.name for data in components], autopct = "%.1f%%")
         plt.title(f"{self.name}:\n{self.n_units} {self.unit}s in {self.time:.3g} s\nat {self.time/self.n_units:.3g} per {self.unit}")
-        plt.gcf().set_size_inches(8, 8)
-        if show:
-            plt.show()
-        else:
-            plt.savefig(self.name + ".svg")
-            plt.close()
         for data in components:
             if data.children:
-                data.plot()
+                axs = data.plot(axs)
+        return axs
 
 class Benchmark:
     def __init__(self, t):
@@ -50,6 +55,8 @@ class Benchmark:
     def _get_attr(self, name, transform = lambda x: x):
         return transform(self.context.split(name + ": ")[1].split("\n")[0])
 
+    @property
+    def case(self): return self._get_attr("case")
     @property
     def system(self): return self._get_attr("system")
     @property
@@ -65,24 +72,37 @@ benchmarks = {}
 for t in text.split("execution context:\n"):
     if "output:" in t:
         mark = Benchmark(t)
-        if mark.system not in benchmarks.keys():
-            benchmarks[mark.system] = []
-        benchmarks[mark.system].append(mark)
-def plot(function, ylabel, save_name):
+        context = f"{mark.case}: {mark.system}"
+        if context not in benchmarks.keys():
+            benchmarks[context] = []
+        benchmarks[context].append(mark)
+
+def plot(function, ylabel):
     for system in benchmarks.keys():
         commit_times = [datetime.fromtimestamp(mark.commit_time, tz = timezone.utc) for mark in benchmarks[system]]
         values = [function(mark) for mark in benchmarks[system]]
         plt.scatter(commit_times, values, label = system)
     plt.ylabel(ylabel)
     plt.xlabel("commit date/time (UTC)")
-    plt.xticks(rotation = 45, ha = "right")
-    plt.gcf().set_size_inches(8, 8)
-    plt.legend()
+    plt.xticks(rotation = 30, ha = "right")
+    plt.grid(True)
+
+fig, axs = plt.subplots(1, 2)
+plt.sca(axs[0])
+plot(lambda mark: mark.elapsed_time, "total execution time (s)")
+plt.sca(axs[1])
+plot(lambda mark: mark.timing.time/mark.timing.n_units, "kernel performance (s/iteration/element)")
+plt.gcf().set_size_inches(16, 8)
+plt.legend()
+if show:
+    plt.show()
+else:
+    plt.savefig("summary.svg")
+    plt.close()
+for case in ["naca0012", "flat_plate"]:
+    benchmarks[case + ": ae-artl-408091"][-1].timing.plot()
     if show:
         plt.show()
     else:
-        plt.savefig(save_name)
+        plt.savefig(case + ".svg")
         plt.close()
-plot(lambda mark: mark.elapsed_time, "total execution time (s)", "total_time.svg")
-plot(lambda mark: mark.timing.time/mark.timing.n_units, "kernel performance (s/iteration/element)", "kernel_time.svg")
-benchmarks["ae-artl-408091"][-1].timing.plot()

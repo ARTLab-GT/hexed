@@ -14,6 +14,9 @@ namespace hexed
  */
 class Equidistant : public Basis
 {
+  protected:
+  double min_eig_convection() const override; //!< placeholder (throws an exception)
+  double quadratic_safety() const override; //!< placeholder (throws an exception)
   public:
   //! constructor
   Equidistant(int row_size_arg);
@@ -22,12 +25,10 @@ class Equidistant : public Basis
   Eigen::VectorXd node_weights() const override; //!< placeholder (throws an exception)
   Eigen::MatrixXd boundary() const override;
   Eigen::VectorXd orthogonal(int degree) const override; //!< placeholder (throws an exception)
+  Eigen::MatrixXd filter() const override; //!< placeholder (throws an exception)
   Eigen::MatrixXd prolong(int i_half) const override; //!< placeholder (throws an exception)
   Eigen::MatrixXd restrict(int i_half) const override; //!< placeholder (throws an exception)
-  double max_cfl_convective() const override; //!< placeholder (throws an exception)
-  double max_cfl_diffusive() const override; //!< placeholder (throws an exception)
-  double cancellation_convective() const override; //!< placeholder (throws an exception)
-  double cancellation_diffusive() const override; //!< placeholder (throws an exception)
+  double min_eig_diffusion() const override; //!< placeholder (throws an exception)
 };
 
 }

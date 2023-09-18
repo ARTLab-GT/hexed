@@ -3,6 +3,16 @@
 namespace hexed
 {
 
+double Basis::max_cfl() const
+{
+  return -2*quadratic_safety()/min_eig_convection();
+}
+
+double Basis::step_ratio() const
+{
+  return .5/quadratic_safety();
+}
+
 Basis::Basis(int row_size_arg) : row_size(row_size_arg) {}
 Basis::~Basis() {}
 

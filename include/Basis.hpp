@@ -13,6 +13,11 @@ namespace hexed
  */
 class Basis
 {
+  protected:
+  //! \brief nondimensional minimum real part of eigenvals of 1D convection operator
+  virtual double min_eig_convection() const = 0;
+  virtual double quadratic_safety() const = 0;
+
   public:
   const int row_size; //!< \brief \ref row_size "row size"
 
@@ -32,6 +37,8 @@ class Basis
    * \details Polynomial is scaled so that its norm is 1 with respect to the quadrature rule of the basis.
    */
   virtual Eigen::VectorXd orthogonal(int degree) const = 0;
+  //! \brief Matrix that applies a low-pass filter to the Legendre modes of a polynomial
+  virtual Eigen::MatrixXd filter() const = 0;
   /*! \brief Interpolate to arbitrary points.
    * \details Current implementation is not very performance-optimized. `interpolate(sample)(i, j)` is the `j`th basis polynomial evaluated at `sample(i)`
    */
@@ -47,14 +54,12 @@ class Basis
    * refined space into the space of this basis.
    */
   virtual Eigen::MatrixXd restrict(int i_half) const = 0;
-  //! \brief Maximum stable CFL number for convection equations.
-  virtual double max_cfl_convective() const = 0;
-  //! \brief Maximum stable CFL number for diffusion equations.
-  virtual double max_cfl_diffusive() const = 0;
-  //! \brief Cancellation coefficient for custom 2-stage time integration stage in convection equations.
-  virtual double cancellation_convective() const = 0;
-  //! \brief Cancellation coefficient for custom 2-stage time integration stage in diffusion equations.
-  virtual double cancellation_diffusive() const = 0;
+  //! \brief maximum stable CFL number for 1D convection
+  double max_cfl() const;
+  //! \brief ratio of time step for convection stage 2 to stage 1
+  double step_ratio() const;
+  //! \brief nondimensional minimum eigenvalue of 1D diffusion operator
+  virtual double min_eig_diffusion() const = 0;
 };
 
 }

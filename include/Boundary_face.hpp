@@ -24,7 +24,8 @@ class Boundary_face
   virtual bool inside_face_sign() = 0;
   virtual double* surface_normal() = 0; //!< \note has to have a name that's different from `Face_connection`
   virtual double* surface_position() = 0;
-  virtual double* state_cache() = 0; //!< can be used to record the state for state-dependent flux boundary conditions
+  virtual double* state_cache() = 0; //!< \brief can be used to record the state for state-dependent flux boundary conditions
+  virtual double* flux_cache() = 0; //!< \brief is used to record the flux for surface visualization/integrals
 };
 
 }

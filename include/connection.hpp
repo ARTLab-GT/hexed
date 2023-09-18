@@ -120,6 +120,7 @@ class Element_face_connection : public Element_connection, public Face_connectio
   Con_dir<element_t> dir;
   std::array<element_t*, 2> elems;
   void connect_normal();
+  void disconnect_normal();
 
   public:
   Element_face_connection(std::array<element_t*, 2> elements, Con_dir<element_t> con_dir)
@@ -144,6 +145,7 @@ class Element_face_connection : public Element_connection, public Face_connectio
     for (int i_side : {0, 1}) {
       elems[i_side]->faces[dir.i_face(i_side)] = nullptr;
     }
+    disconnect_normal();
   }
   virtual Con_dir<element_t> direction() {return dir;}
   virtual element_t& element(int i_side) {return *elems[i_side];}
@@ -158,6 +160,18 @@ inline void Element_face_connection<Deformed_element>::connect_normal()
 {
   for (int i_side = 0; i_side < 2; ++i_side) {
     elems[i_side]->face_normal(dir.i_face(i_side)) = normal(i_side);
+  }
+}
+
+template <>
+inline void Element_face_connection<Element>::disconnect_normal()
+{}
+
+template <>
+inline void Element_face_connection<Deformed_element>::disconnect_normal()
+{
+  for (int i_side = 0; i_side < 2; ++i_side) {
+    elems[i_side]->face_normal(dir.i_face(i_side)) = nullptr;
   }
 }
 
@@ -222,6 +236,7 @@ class Refined_connection
     return {str[trans], str[!trans]};
   }
   void connect_normal();
+  void disconnect_normal();
 
   public:
   Refined_face refined_face; //!< pretty please don't write to this!! \todo this should be const and/or private, but i have bigger problems rn
@@ -278,7 +293,11 @@ class Refined_connection
   //! delete copy semantics which would mess up `Fine_connection`. Can implement later if we really need it.
   Refined_connection(const Refined_connection&) = delete;
   Refined_connection& operator=(const Refined_connection&) = delete;
-  virtual ~Refined_connection() {c.faces[dir.i_face(rev)] = nullptr;}
+  virtual ~Refined_connection()
+  {
+    c.faces[dir.i_face(rev)] = nullptr;
+    disconnect_normal();
+  }
   Con_dir<element_t> direction() {return dir;}
   //! fetch an object represting a connection between the face of a fine element and one of the mortar faces
   Fine_connection& connection(int i_fine) {return *fine_cons[i_fine];}
@@ -304,8 +323,22 @@ inline void Refined_connection<Deformed_element>::connect_normal()
   }
 }
 
+template <>
+inline void Refined_connection<Element>::disconnect_normal()
+{}
+
+template <>
+inline void Refined_connection<Deformed_element>::disconnect_normal()
+{
+  coarse_normal.resize(params.n_dim*params.n_qpoint()/params.row_size);
+  c.face_normal(2*dir.i_dim[rev] + dir.face_sign[rev]) = nullptr;
+  for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
+    fine_cons[i_fine]->element(!rev).face_normal(2*dir.i_dim[!rev] + dir.face_sign[!rev]) = nullptr;
+  }
+}
+
 /*!
- * A `Boundary_face` that also provides details about the connection for the neighbor flux
+ * \brief A `Boundary_face` that also provides details about the connection for the neighbor flux
  * computation and requests for a particular `Boundary_condition` to be applied to it.
  */
 class Boundary_connection : public Boundary_face, public Face_connection<Deformed_element>
@@ -328,9 +361,11 @@ class Typed_bound_connection : public Boundary_connection
   int i_d;
   bool ifs;
   int bc_sn;
-  Eigen::VectorXd pos;
-  Eigen::VectorXd state_c;
+  int state_size;
+  Mat<> pos;
+  Mat<> cache;
   void connect_normal();
+  void disconnect_normal();
 
   public:
   Typed_bound_connection(element_t& elem_arg, int i_dim_arg, bool inside_face_sign_arg, int bc_serial_n)
@@ -340,15 +375,20 @@ class Typed_bound_connection : public Boundary_connection
     i_d{i_dim_arg},
     ifs{inside_face_sign_arg},
     bc_sn{bc_serial_n},
+    state_size{params.n_var*params.n_qpoint()/params.row_size},
     pos(params.n_dim*params.n_qpoint()/params.row_size),
-    state_c(params.n_var*params.n_qpoint()/params.row_size)
+    cache{Mat<>::Zero(2*state_size)}
   {
     connect_normal();
     elem.faces[direction().i_face(0)] = state();
   }
   Typed_bound_connection(const Typed_bound_connection&) = delete; //!< can only have one `Typed_bound_connection` per face, so delete copy semantics
   Typed_bound_connection& operator=(const Typed_bound_connection&) = delete;
-  virtual ~Typed_bound_connection() {elem.faces[direction().i_face(0)] = nullptr;}
+  virtual ~Typed_bound_connection()
+  {
+    elem.faces[direction().i_face(0)] = nullptr;
+    disconnect_normal();
+  }
   virtual Storage_params storage_params() {return params;}
   virtual double* ghost_face() {return state() + params.n_dof()/params.row_size;}
   virtual double* inside_face() {return state();}
@@ -356,7 +396,8 @@ class Typed_bound_connection : public Boundary_connection
   virtual bool inside_face_sign() {return ifs;}
   virtual double* surface_normal() {return normal();}
   virtual double* surface_position() {return pos.data();}
-  virtual double* state_cache() {return state_c.data();}
+  virtual double* state_cache() {return cache.data();}
+  virtual double* flux_cache() {return cache.data() + state_size;}
   virtual Con_dir<Deformed_element> direction() {return {{i_d, i_d}, {ifs, !ifs}};}
   virtual int bound_cond_serial_n() {return bc_sn;}
   element_t& element() {return elem;}
@@ -370,6 +411,16 @@ template <>
 inline void Typed_bound_connection<Deformed_element>::connect_normal()
 {
   elem.face_normal(2*i_d + ifs) = normal(0);
+}
+
+template <>
+inline void Typed_bound_connection<Element>::disconnect_normal()
+{}
+
+template <>
+inline void Typed_bound_connection<Deformed_element>::disconnect_normal()
+{
+  elem.face_normal(2*i_d + ifs) = nullptr;
 }
 
 }

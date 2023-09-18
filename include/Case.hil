@@ -51,6 +51,13 @@ compute_force = {
     drag_coef = drag/(0.5*density*speed^2)
     lift_coef = lift/(0.5*density*speed^2)
 }
+print_force = {
+    $compute_force
+    println({lift: } + lift + { N})
+    println({drag: } + drag + { N})
+    println({lift coefficient: } + lift_coef)
+    println({drag coefficient: } + drag_coef)
+}
 
 {basic parameters}
 row_size = 6
@@ -70,8 +77,6 @@ working_dir = {hexed_out/}
 vis_freq = 10000
 iter_width = 10
 print_freq = 100
-max_safety = 0.7
-max_time_step = huge
 surface_refine = {false}
 surface_unrefine = {ref_level > init_ref_level & !is_extruded}
 surface_max_iters = 100
@@ -83,9 +88,11 @@ vis_surface = true
 vis_field = true
 vis_tecplot = false
 vis_xdmf = true
+vis_lts_constraints = false
 vis_field_vars = state_vars + art_visc_expr
 vis_surface_vars = state_vars + visc_stress_expr + heat_flux_expr
-print_vars = iteration_expr + residual_expr + av_advection_residual_expr + av_diffusion_residual_expr + flow_time_expr + time_step_expr + fix_iters_expr
+vis_n_sample = 10
+print_vars = iteration_expr + residual_expr + av_advection_residual_expr + av_diffusion_residual_expr + flow_time_expr + time_step_expr
 integrand_field = {}
 integrand_surface = {}
 max_angle = 10*degree

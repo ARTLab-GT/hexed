@@ -42,6 +42,7 @@ Flow_bc* Case::_make_bc(std::string name)
   Mat<> freestream = _get_vector("freestream", _vari("n_dim").value() + 2);
   if (name == "characteristic") return new Riemann_invariants(freestream);
   else if (name == "freestream") return new Freestream(freestream);
+  else if (name == "pressure_outflow") return new Pressure_outflow(_vard("pressure").value());
   else if (name == "nonpenetration") return new Nonpenetration;
   else if (name == "no_slip") {
     auto sub = _inter.make_sub();
@@ -252,22 +253,19 @@ Case::Case(std::string input_file)
   _inter.variables->create<int>("visualize", new Namespace::Heisenberg<int>([this]() {
     std::string wd = _vars("working_dir").value();
     std::string suffix = format_str(100, "_iter%.*i", _vari("iter_width").value(), _vari("iteration").value());
-    State_variables sv;
-    Velocity veloc;
-    Mass mass;
-    Pressure pres;
-    Mach mach;
-    Art_visc_coef avc;
+    int n_sample = _vari("vis_n_sample").value();
     if (_vari("vis_field").value()) {
       Struct_expr vis_vars(_vars("vis_field_vars").value());
       Qpoint_expr func(vis_vars, _inter);
       std::string file_name = wd + "field" + suffix;
       #if HEXED_USE_TECPLOT
-      if (_vari("vis_tecplot").value()) _solver().visualize_field_tecplot(func, file_name);
+      if (_vari("vis_tecplot").value()) _solver().visualize_field_tecplot(func, file_name, n_sample);
       #endif
       #if HEXED_USE_XDMF
-      if (_vari("vis_xdmf").value()) _solver().visualize_field_xdmf(func, file_name);
-      if (_vari("vis_xdmf").value()) _solver().visualize_field_xdmf(Art_visc_forcing(), wd + "avf" + suffix);
+      if (_vari("vis_xdmf").value()) {
+        _solver().visualize_field_xdmf(func, file_name, n_sample);
+        if (_vari("vis_lts_constraints").value()) _solver().vis_lts_constraints(wd + "lts" + suffix, n_sample);
+      }
       #endif
     }
     if (_vari("vis_surface").value() && _has_geom) {
@@ -276,10 +274,10 @@ Case::Case(std::string input_file)
       std::string file_name = wd + "surface" + suffix;
       int bc_sn = _solver().mesh().surface_bc_sn();
       #if HEXED_USE_TECPLOT
-      if (_vari("vis_tecplot").value()) _solver().visualize_surface_tecplot(bc_sn, func, file_name);
+      if (_vari("vis_tecplot").value()) _solver().visualize_surface_tecplot(bc_sn, func, file_name, n_sample);
       #endif
       #if HEXED_USE_XDMF
-      if (_vari("vis_xdmf").value()) _solver().visualize_surface_xdmf(bc_sn, func, file_name);
+      if (_vari("vis_xdmf").value()) _solver().visualize_surface_xdmf(bc_sn, func, file_name, n_sample);
       #endif
     }
     return 0;
@@ -340,8 +338,6 @@ Case::Case(std::string input_file)
   _inter.variables->create<std::string>("update", new Namespace::Heisenberg<std::string>([this]() {
     bool avw = _vard("art_visc_width").value() > 0;
     bool avc = _vard("art_visc_constant").value() > 0;
-    double ms = _vard("max_safety").value();
-    double mts = _vard("max_time_step").value();
     int iter = _vari("iteration").value();
     int print_freq = _vari("print_freq").value();
     int n = iter ? print_freq - iter%print_freq : 1;
@@ -351,7 +347,7 @@ Case::Case(std::string input_file)
       } else if (avc) {
         _solver().set_art_visc_smoothness(_vard("art_visc_constant").value());
       }
-      _solver().update(ms, mts);
+      _solver().update();
     }
     return "";
   }));

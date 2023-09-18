@@ -2,6 +2,8 @@ import sympy as sp
 import numpy as np
 from scipy.optimize import fsolve, minimize
 import warnings
+import matplotlib.pyplot as plt
+from sympy.integrals.quadrature import gauss_legendre, gauss_lobatto
 
 ## \namespace Basis \brief module for `Basis.Basis`
 
@@ -40,6 +42,18 @@ class Basis:
         self.ortho = []
         for i in range(self.row_size):
             self.ortho.append(self.legendre(i))
+        bounds = np.zeros((self.row_size, 2))
+        for i_side in range(2):
+            for i_node in range(self.row_size):
+                bounds[i_node, i_side] = self.interpolate(i_node, i_side)/self.weights[i_node]
+        #bounds -= np.array(self.weights).astype(np.float64)@bounds
+        def inner(vec0, vec1):
+            return vec0@(np.array(self.weights).astype(np.float64)*vec1)
+        self.space = np.zeros((self.row_size, 2))
+        for i_side in range(2): bounds[:, i_side] /= np.sqrt(inner(bounds[:, i_side], bounds[:, i_side]))
+        for i_side in range(2):
+            self.space[:, i_side] = bounds[:, 0] + (1 - 2*i_side)*bounds[:, 1]
+            self.space[:, i_side] /= np.sqrt(inner(self.space[:, i_side], self.space[:, i_side]))
 
     def node(self, i):
         r"""! \brief returns the `i`th quadrature node
@@ -108,9 +122,9 @@ class Basis:
             vals[i_node] /= norm
         return vals
 
-    def get_ortho(self, degree, i_node):
+    def get_ortho(self, degree, i_node, calc = False):
         r"""! equivalent to `self.legendre(degree)[i_node]` """
-        return sp.Float(self.ortho[degree][i_node], self.repr_digits)
+        return sp.Float(self.ortho[degree][i_node], self.calc_digits if calc else self.repr_digits)
 
     def prolong(self, i_result, i_operand, i_half, calc=False):
         r"""! \brief gets an element of the prolongation matrix
@@ -135,23 +149,29 @@ class Basis:
         result = self.weights[i_operand]/2*self.prolong(i_operand, i_result, i_half, True)/self.weights[i_result]
         return sp.Float(result, self.repr_digits)
 
-    def time_coefs(self, n_elem = 8):
-        r"""! \brief Compute coefficients for optimized 2-stage time integration scheme.
-        \param n_elem number of elements to use
-        \details Based on numerical eigenvalue calculations for the linear advection and diffusion equations
-        on a 1D mesh with periodic boundary conditions.
-        \returns a pair of pairs:
-        - `time_coefs()[0][0]` is the maximum stable CFL number for advection
-        - `time_coefs()[0][1]` is the cancellation coefficient for advection
-        - `time_coefs()[1][0]` is the maximum stable CFL number for diffusion
-        - `time_coefs()[1][1]` is the cancellation coefficient for diffusion
+    def filter(self, i_result, i_operand):
+        dot = sp.Float(0, self.calc_digits)
+        for i_inner in range(self.row_size):
+            dot += self.get_ortho(i_inner, i_result, True)*0.5**i_inner*self.get_ortho(i_inner, i_operand, True)*self.weights[i_operand]
+        return sp.Float(dot, self.repr_digits)
+
+    def eigenvals(self, n_elem = 16):
+        r"""! \brief Computes eigenvalues for use in time step calculation.
+        \details Returns a list of two values which are the minimum real parts of the convection and diffusion operators, respectively.
+        Eigenvalues are evaluated on a 1D, uniformly spaced, periodic mesh with `n_elem` elements for the linear advection/diffusion equations.
+        These eigenvalues are nondimensionalized, so they apply to unit mesh spacing, wave speed, and diffusivity.
         \note standard floating-point precision (whatever that is for Python -- I think double)
         """
         # sorry for the lack of comments... remind me to get back to this later
+        nodes, weights = gauss_lobatto(self.row_size, self.calc_digits)
+        nodes = [(node + 1)/2 for node in nodes]
+        weights = [weight/2 for weight in weights]
+        lobatto = Basis(nodes, weights, self.repr_digits, self.calc_digits)
         global_weights = np.zeros(n_elem*self.row_size)
         local_grad = np.zeros((n_elem*self.row_size, n_elem*self.row_size))
         neighb_avrg = np.zeros((n_elem*self.row_size, n_elem*self.row_size))
         neighb_jump = np.zeros((n_elem*self.row_size, n_elem*self.row_size))
+        discon = np.zeros((n_elem*self.row_size, n_elem*self.row_size))
         global_nodes = global_weights*0
         for i_elem in range(n_elem):
             for i_row in range(self.row_size):
@@ -168,48 +188,10 @@ class Basis:
                             boundary = self.interpolate(i_col, 1-j_side)*self.interpolate(i_row, 1-i_side)/self.weights[i_row]
                             neighb_avrg[row, col] += 0.5*(2*j_side - 1)*boundary
                             neighb_jump[row, col] += 0.5*(1 - 2*(j_side == i_side))*boundary
+                            discon[row, col] += (.5 - (i_side == j_side))*self.interpolate(i_col, 1-j_side)*lobatto.interpolate((1 - i_side)*(self.row_size - 1), self.nodes[i_row])
+        ident = np.identity(n_elem*self.row_size)
         advection = -local_grad + -neighb_avrg + neighb_jump
         diffusion = (local_grad + neighb_avrg)@(local_grad + neighb_avrg)
-        ident = np.identity(n_elem*self.row_size)
         assert np.linalg.norm(global_weights@advection) < 1e-12
         assert np.linalg.norm(global_weights@diffusion) < 1e-12
-        class polynomial:
-            def __init__(self, coefs):
-                ## \private
-                self.coefs = coefs
-            def __call__(self, dt, mat):
-                step_mat = ident + dt*mat
-                mat_pow = mat + 0
-                for coef in self.coefs:
-                    mat_pow = mat @ mat_pow
-                    step_mat += dt*coef*mat_pow
-                return step_mat
-        def max_cfl(mat, time_scheme):
-            def error(log_dt):
-                dt = np.exp(log_dt)
-                eigvals, eigvecs = np.linalg.eig(time_scheme(dt, mat))
-                return np.max(np.abs(eigvals)) - 1.
-            return np.exp(fsolve(error, -np.log(self.row_size))[0])
-        if True:
-            def euler(dt, mat):
-                return ident + dt*mat
-            def rk(dt, step_weights, mat):
-                step_mat = ident
-                for weight in step_weights:
-                    step_mat = (1. - weight)*ident + weight*euler(dt, mat)@step_mat
-                return step_mat
-            def ssp_rk3(dt, mat):
-                return rk(dt, [1., 1./4., 2./3.], mat)
-        def compute_coefs(mat):
-            def objective(coefs):
-                p = polynomial(coefs)
-                return -max_cfl(mat, p)
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                opt = minimize(objective, [1e-5], method="Nelder-Mead", tol=1e-10)
-                cancel = opt.x[0]
-                cfl = -objective(opt.x)*.95
-            return cfl, cancel
-        coefs = (compute_coefs(advection), compute_coefs(diffusion))
-        print(f"        {self.row_size - 1} & {coefs[0][0]:.4f} & {coefs[0][1]:.5f} & {coefs[1][0]:.4f} & {coefs[1][1]:.5f} & {max_cfl(advection, ssp_rk3):.5f} & {max_cfl(diffusion, ssp_rk3):.5f} \\\\")
-        return coefs
+        return [np.linalg.eigvals(mat).real.min() for mat in [advection, diffusion]]

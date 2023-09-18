@@ -100,4 +100,9 @@ Eigen::MatrixXd orthonormal (Eigen::MatrixXd basis, int i_dim)
   }
 }
 
+double chebyshev_step(int n_steps, int i_step)
+{
+  return 1/(1 - std::cos((n_steps - i_step - 0.5)*M_PI/n_steps));
+}
+
 }

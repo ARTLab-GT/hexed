@@ -13,6 +13,9 @@ namespace hexed
  */
 class Gauss_lobatto : public Basis
 {
+  protected:
+  double min_eig_convection() const override;
+  inline double quadratic_safety() const override {return 0.7;}
   public:
   //! see `hexed::Basis::Basis`.
   Gauss_lobatto (int row_size_arg);
@@ -21,12 +24,10 @@ class Gauss_lobatto : public Basis
   Eigen::MatrixXd diff_mat() const override;
   Eigen::MatrixXd boundary() const override;
   Eigen::VectorXd orthogonal(int degree) const override;
+  Eigen::MatrixXd filter() const override;
   Eigen::MatrixXd prolong(int i_half) const override;
   Eigen::MatrixXd restrict(int i_half) const override;
-  double max_cfl_convective() const override;
-  double max_cfl_diffusive() const override;
-  double cancellation_convective() const override;
-  double cancellation_diffusive() const override;
+  double min_eig_diffusion() const override;
 };
 
 }

@@ -53,6 +53,10 @@ void Solver::apply_flux_bcs()
   auto& bc_cons {acc_mesh.boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    // write inside flux to flux cache for surface visualization/integrals
+    int n_dof = params.n_dof()/params.row_size;
+    Eigen::Map<Mat<>>(bc_cons[i_con].flux_cache(), n_dof) = Eigen::Map<Mat<>>(bc_cons[i_con].inside_face() + 2*n_dof, n_dof);
+    // apply boundary conditions
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh.boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
   }
@@ -97,18 +101,19 @@ bool Solver::use_ldg()
   return visc.is_viscous || therm_cond.is_viscous || use_art_visc;
 }
 
-double Solver::max_dt()
+double Solver::max_dt(double msc, double msd)
 {
   const int nd = params.n_dim;
   const int rs = params.row_size;
   auto& sw_car {stopwatch.children.at("cartesian")};
   auto& sw_def {stopwatch.children.at("deformed" )};
+  double use_filt = _namespace->lookup<int>("use_filter").value();
   if (use_ldg()) {
-    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, is_local_time, visc, therm_cond))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
-                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, is_local_time, visc, therm_cond))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
+    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, is_local_time, use_filt, msc, msd, visc, therm_cond))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
+                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, is_local_time, use_filt, msc, msd, visc, therm_cond))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
   } else {
-    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time                  ))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
-                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time                  ))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
+    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time, use_filt, msc, msd                  ))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
+                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time, use_filt, msc, msd                  ))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
   }
 }
 
@@ -120,27 +125,32 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   stopwatch{"(element*iteration)"},
   use_art_visc{false},
   fix_admis{false},
-  av_rs{basis.row_size},
+  av_rs{row_size - row_size/2},
   write_face(kernel_factory<Spatial<Element, pde::Navier_stokes<false>::Pde>::Write_face>(params.n_dim, params.row_size, basis)), // note: for now, false and true are equivalent for `Write_face`
   is_local_time{local_time_stepping},
   visc{viscosity_model},
   therm_cond{thermal_conductivity_model},
   _namespace{space}
 {
+  _namespace->assign_default<double>("max_safety", .7); // maximum allowed safety factor for time stepping
+  _namespace->assign_default<double>("max_time_step", huge); // maximum allowed time step
   _namespace->assign_default<double>("fix_admis_stab_rat", .7); // staility ratio for fixing thermodynamic admissibility.
   _namespace->assign_default<double>("av_diff_ratio", 1e-1); // ratio of diffusion time to advection width
   _namespace->assign_default<double>("av_visc_mult", 30.); // final scaling parameter applied to artificial viscosity coefficient
   _namespace->assign_default<double>("av_unscaled_max", 2e-4); // maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
-  _namespace->assign_default<double>("av_advect_stab_rat", .2); // stability ratio for advection
+  _namespace->assign_default<double>("av_advect_stab_rat", .7); // stability ratio for advection
   _namespace->assign_default<double>("av_advect_max_res", 1e-3); // residual limit for advection equation
-  _namespace->assign_default<double>("av_diff_stab_rat", .5); // stability ratio for diffusion
+  _namespace->assign_default<double>("av_diff_stab_rat", .7); // stability ratio for diffusion
+  _namespace->assign_default<int   >("n_chebyshev_stages", 1);
   _namespace->assign_default<int   >("av_advect_iters", 2); // number of advection iterations to run each time `set_art_visc_smoothness` is called
   _namespace->assign_default<int   >("av_diff_iters", 1); // number of diffusion iterations to run each time `set_art_visc_smoothness` is called
+  _namespace->assign_default<int   >("use_filter", false); // whether to use modal filter acceleration
   _namespace->assign("fix_iters", 0);
   _namespace->assign("iteration", 0);
   _namespace->assign("flow_time", 0.);
   _namespace->assign("av_advection_residual", 0.);
   _namespace->assign("av_diffusion_residual", 0.);
+  _namespace->assign("wall_time", 0.);
   status.set_time();
   // setup categories for performance reporting
   stopwatch.children.emplace("initialize reference", stopwatch.work_unit_name);
@@ -445,9 +455,10 @@ void Solver::set_art_visc_smoothness(double advect_length)
   sw_adv.stopwatch.start();
   (*write_face)(elements);
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-  (*kernel_factory<Spatial<Element         , pde::Advection>::Max_dt>(nd, rs, basis, true))(acc_mesh.cartesian().elements(), sw_adv.children.at("cartesian"), "compute time step");
-  (*kernel_factory<Spatial<Deformed_element, pde::Advection>::Max_dt>(nd, rs, basis, true))(acc_mesh.deformed ().elements(), sw_adv.children.at("deformed" ), "compute time step");
-  double dt_adv = _namespace->lookup<double>("av_advect_stab_rat").value();
+  double adv_safety = _namespace->lookup<double>("av_advect_stab_rat").value();
+  (*kernel_factory<Spatial<Element         , pde::Advection>::Max_dt>(nd, rs, basis, true, _namespace->lookup<int>("use_filter").value(), adv_safety, 1.))(acc_mesh.cartesian().elements(), sw_adv.children.at("cartesian"), "compute time step");
+  (*kernel_factory<Spatial<Deformed_element, pde::Advection>::Max_dt>(nd, rs, basis, true, _namespace->lookup<int>("use_filter").value(), adv_safety, 1.))(acc_mesh.deformed ().elements(), sw_adv.children.at("deformed" ), "compute time step");
+  double dt_adv = 1.;
 
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
   double diff = 0; // for residual computation
@@ -534,7 +545,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
   _namespace->assign("av_advection_residual", std::sqrt(diff/n_avg));
   // compute projection onto Legendre polynomial
   Eigen::VectorXd weights = basis.node_weights();
-  Eigen::VectorXd orth = basis.orthogonal(rs - rs/2);
+  Eigen::VectorXd orth = basis.orthogonal(av_rs);
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* forcing = elements[i_elem].art_visc_forcing();
@@ -552,9 +563,10 @@ void Solver::set_art_visc_smoothness(double advect_length)
   // begin root-smear-square operation
   int n_real = Element::n_forcing - 1; // number of real time steps (as apposed to pseudotime steps)
   // evaluate CFL condition
-  (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true))(acc_mesh.cartesian().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "compute time step");
-  (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true))(acc_mesh.deformed ().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "compute time step");
-  double dt_diff = _namespace->lookup<double>("av_diff_stab_rat").value();
+  double diff_safety = _namespace->lookup<double>("av_diff_stab_rat").value();
+  (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true, _namespace->lookup<int>("use_filter").value(), 1., diff_safety))(acc_mesh.cartesian().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "compute time step");
+  (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true, _namespace->lookup<int>("use_filter").value(), 1., diff_safety))(acc_mesh.deformed ().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "compute time step");
+  double dt_diff = 1.;
   double diff_time = _namespace->lookup<double>("av_diff_ratio").value()*advect_length*advect_length/n_real; // compute size of real time step (as opposed to pseudotime)
   // initialize residual to zero (will compute RMS over all real time steps)
   status.diff_res = 0;
@@ -573,7 +585,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
     // set up multistage scheme
     double linear = dt_diff;
-    double quadratic = basis.cancellation_diffusive()/basis.max_cfl_diffusive()*dt_diff*dt_diff;
+    double quadratic = dt_diff*dt_diff/8/0.9;
     std::array<double, 2> step;
     step[1] = (linear + std::sqrt(linear*linear - 4*quadratic))/2.;
     step[0] = quadratic/step[1];
@@ -834,51 +846,58 @@ void Solver::synch_extruded_res_bad()
   }
 }
 
-void Solver::update(double safety_factor, double time_step)
+void Solver::update()
 {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
   auto& elems = acc_mesh.elements();
 
   // compute time step
-  double dt = std::min(safety_factor*max_dt(), time_step);
+  double safety = _namespace->lookup<double>("max_safety").value();
+  double n_cheby = _namespace->lookup<double>("n_chebyshev_stages").value();
+  double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1);
+  double nominal_dt = std::min(max_dt(safety/max_cheby, safety), _namespace->lookup<double>("max_time_step").value());
 
-  // record reference state for Runge-Kutta scheme
   const int n_dof = params.n_dof();
-  auto& irk = stopwatch.children.at("initialize reference");
-  irk.stopwatch.start();
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    double* state = elems[i_elem].stage(0);
-    for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] = state[i_dof];
-  }
-  irk.stopwatch.pause();
-  irk.work_units_completed += elems.size();
+  for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
+    double dt = nominal_dt*math::chebyshev_step(n_cheby, i_cheby);
+    // record reference state for Runge-Kutta scheme
+    auto& irk = stopwatch.children.at("initialize reference");
+    irk.stopwatch.start();
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      double* state = elems[i_elem].stage(0);
+      for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] = state[i_dof];
+    }
+    irk.stopwatch.pause();
+    irk.work_units_completed += elems.size();
 
-  // compute inviscid update
-  for (int i = 0; i < 2; ++i) {
-    apply_state_bcs();
-    if (use_ldg()) compute_viscous(dt, i);
-    else compute_inviscid(dt, i);
-    fix_admissibility(_namespace->lookup<double>("fix_admis_stab_rat").value());
+    // compute inviscid update
+    for (int i = 0; i < 2; ++i) {
+      apply_state_bcs();
+      if (use_ldg()) compute_viscous(dt, i);
+      else compute_inviscid(dt, i);
+      fix_admissibility(_namespace->lookup<double>("fix_admis_stab_rat").value());
+    }
+
+    // update status for reporting
+    _namespace->assign<double>("time_step", dt);
+    _namespace->assign<double>("flow_time", _namespace->lookup<double>("flow_time").value() + dt);
+    status.time_step = dt;
+    status.flow_time += dt;
   }
 
-  // update status for reporting
-  _namespace->assign<double>("time_step", dt);
-  _namespace->assign<double>("flow_time", _namespace->lookup<double>("flow_time").value() + dt);
-  _namespace->assign<int>("iteration", _namespace->lookup<int>("iteration").value() + 1);
-  status.time_step = dt;
-  status.flow_time += dt;
+  _namespace->assign("iteration", _namespace->lookup<int>("iteration").value() + 1);
+  _namespace->assign("wall_time", status.wall_time());
   ++status.iteration;
-  stopwatch.stopwatch.pause();
   stopwatch.work_units_completed += elems.size();
   stopwatch.children.at("cartesian").work_units_completed += acc_mesh.cartesian().elements().size();
   stopwatch.children.at("deformed" ).work_units_completed += acc_mesh.deformed ().elements().size();
+  stopwatch.stopwatch.pause();
 }
 
 Iteration_status Solver::iteration_status()
 {
   Iteration_status stat = status;
-  stopwatch.children.at("residual computation").stopwatch.start();
   Physical_update update;
   auto res = integral_field(Pow(update, 2));
   for (double& r : res) r /= stat.time_step*stat.time_step;
@@ -888,8 +907,6 @@ Iteration_status Solver::iteration_status()
   stat.mmtm_res = std::sqrt(stat.mmtm_res);
   stat.mass_res = std::sqrt(res[params.n_dim]);
   stat.ener_res = std::sqrt(res[params.n_dim + 1]);
-  stopwatch.children.at("residual computation").stopwatch.pause();
-  stopwatch.children.at("residual computation").work_units_completed += acc_mesh.elements().size();
   return stat;
 }
 
@@ -943,93 +960,116 @@ void Solver::fix_admissibility(double stability_ratio)
   const int rs = params.row_size;
   const int nv = params.n_vertices();
   int iter;
-  for (iter = 0;; ++iter) {
+  int n_iters = std::numeric_limits<int>::max();
+  for (iter = 0; iter < n_iters; ++iter) {
     HEXED_ASSERT(iter < 1e5, format_str(200, "failed to fix thermodynamic admissability in %i iterations", iter));
+    #if HEXED_USE_XDMF
     if (iter == 100) {
-      printf("> 100\n");
       State_variables sv;
       Record rec;
       std::vector<const Qpoint_func*> to_vis {&sv, &rec};
-      visualize_field_tecplot(Qf_concat(to_vis), "severe_indamis" + std::to_string(status.iteration));
+      visualize_field_xdmf(Qf_concat(to_vis), "severe_indamis" + std::to_string(status.iteration));
     }
-    if (is_admissible()) break;
-    else {
-      auto& elems = acc_mesh.elements();
+    #endif
+    if (is_admissible()) {
+      if (iter) n_iters = std::min(n_iters, 2*iter);
+      else {
+        ++iter;
+        break;
+      }
+    } else {
+      n_iters = std::numeric_limits<int>::max();
+    }
+    if (iter == 0) {
+      printf("Thermodynamically inadmissible state detected (solver iteration %i). Attempting to fix...\n",
+             _namespace->lookup<int>("iteration").value());
+    }
+    auto bounds = bounds_field(State_variables(), 2*rs);
+    printf("    iteration %i: mass in [%e, %e]; energy in [%e, %e]\n", iter, bounds[nd][0], bounds[nd][1], bounds[nd + 1][0], bounds[nd + 1][1]);
+    std::cout << std::flush;
+    auto& elems = acc_mesh.elements();
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      for (int i_vert = 0; i_vert < nv; ++i_vert) {
+        elem.vertex_fix_admis_coef(i_vert) = elem.record;
+      }
+    }
+    share_vertex_data(&Element::vertex_fix_admis_coef, Vertex::vector_max);
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      double max_fac = 0;
+      for (int i_vert = 0; i_vert < nv; ++i_vert) {
+        max_fac = std::max(max_fac, elem.vertex_fix_admis_coef(i_vert));
+      }
+      for (int i_vert = 0; i_vert < nv; ++i_vert) {
+        elem.vertex_fix_admis_coef(i_vert) = max_fac;
+      }
+    }
+    share_vertex_data(&Element::vertex_fix_admis_coef, Vertex::vector_max);
+    Mat<dyn, dyn> interp(rs, 2);
+    interp(all, 0) = Mat<>::Ones(rs) - basis.nodes();
+    interp(all, 1) = basis.nodes();
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      Mat<> vert_fac(nv);
+      for (int i_vert = 0; i_vert < nv; ++i_vert) {
+        vert_fac(i_vert) = elem.vertex_fix_admis_coef(i_vert);
+      }
+      Eigen::Map<Mat<>>(elem.fix_admis_coef(), nq) = math::hypercube_matvec(interp, vert_fac);
+    }
+    #if HEXED_USE_XDMF
+    if (status.iteration >= last_fix_vis_iter + 1000 && iter == 0) {
+      last_fix_vis_iter = status.iteration;
+      State_variables sv;
+      Record rec;
+      Fix_admis_coef fac;
+      std::vector<const Qpoint_func*> to_vis {&sv, &rec, &fac};
+      visualize_field_xdmf(Qf_concat(to_vis), "inadmis" + std::to_string(status.iteration));
+    }
+    #endif
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        std::swap(elem.fix_admis_coef()[i_qpoint], elem.art_visc_coef()[i_qpoint]);
+      }
+    }
+    double dt = stability_ratio;
+    (*kernel_factory<Spatial<Element         , pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true, _namespace->lookup<int>("use_filter").value(), dt, dt))(acc_mesh.cartesian().elements(), stopwatch.children.at("fix admis.").children.at("cartesian"), "compute time step");
+    (*kernel_factory<Spatial<Deformed_element, pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true, _namespace->lookup<int>("use_filter").value(), dt, dt))(acc_mesh.deformed ().elements(), stopwatch.children.at("fix admis.").children.at("deformed" ), "compute time step");
+    dt = 1.;
+    double linear = dt;
+    double quadratic = dt*dt/8/0.9;
+    std::array<double, 2> step;
+    step[1] = (linear + std::sqrt(linear*linear - 4*quadratic))/2.;
+    step[0] = quadratic/step[1];
+    for (double s : step) {
+      auto& bc_cons {acc_mesh.boundary_connections()};
       #pragma omp parallel for
-      for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-        auto& elem = elems[i_elem];
-        for (int i_vert = 0; i_vert < nv; ++i_vert) {
-          elem.vertex_fix_admis_coef(i_vert) = elem.record;
-        }
+      for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+        double* in_f = bc_cons[i_con].inside_face();
+        double* gh_f = bc_cons[i_con].ghost_face();
+        for (int i_dof = 0; i_dof < nq*(nd + 2)/rs; ++i_dof) gh_f[i_dof] = in_f[i_dof];
       }
-      share_vertex_data(&Element::vertex_fix_admis_coef, Vertex::vector_max);
-      #pragma omp parallel for
-      for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-        auto& elem = elems[i_elem];
-        double max_fac = 0;
-        for (int i_vert = 0; i_vert < nv; ++i_vert) {
-          max_fac = std::max(max_fac, elem.vertex_fix_admis_coef(i_vert));
-        }
-        for (int i_vert = 0; i_vert < nv; ++i_vert) {
-          elem.vertex_fix_admis_coef(i_vert) = max_fac;
-        }
-      }
-      share_vertex_data(&Element::vertex_fix_admis_coef, Vertex::vector_max);
-      Mat<dyn, dyn> interp(rs, 2);
-      interp(all, 0) = Mat<>::Ones(rs) - basis.nodes();
-      interp(all, 1) = basis.nodes();
-      #pragma omp parallel for
-      for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-        auto& elem = elems[i_elem];
-        Mat<> vert_fac(nv);
-        for (int i_vert = 0; i_vert < nv; ++i_vert) {
-          vert_fac(i_vert) = elem.vertex_fix_admis_coef(i_vert);
-        }
-        Eigen::Map<Mat<>>(elem.fix_admis_coef(), nq) = math::hypercube_matvec(interp, vert_fac);
-      }
-      if (status.iteration >= last_fix_vis_iter + 1000 && iter == 0) {
-        last_fix_vis_iter = status.iteration;
-        State_variables sv;
-        Record rec;
-        Fix_admis_coef fac;
-        std::vector<const Qpoint_func*> to_vis {&sv, &rec, &fac};
-        visualize_field_tecplot(Qf_concat(to_vis), "inadmis" + std::to_string(status.iteration));
-      }
-      #pragma omp parallel for
-      for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-        auto& elem = elems[i_elem];
-        for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-          std::swap(elem.fix_admis_coef()[i_qpoint], elem.art_visc_coef()[i_qpoint]);
-        }
-      }
-      (*kernel_factory<Spatial<Element         , pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true))(acc_mesh.cartesian().elements(), stopwatch.children.at("fix admis.").children.at("cartesian"), "compute time step");
-      (*kernel_factory<Spatial<Deformed_element, pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true))(acc_mesh.deformed ().elements(), stopwatch.children.at("fix admis.").children.at("deformed" ), "compute time step");
-      double dt = stability_ratio;
-      double linear = dt;
-      double quadratic = basis.cancellation_diffusive()/basis.max_cfl_diffusive()*dt*dt;
-      std::array<double, 2> step;
-      step[1] = (linear + std::sqrt(linear*linear - 4*quadratic))/2.;
-      step[0] = quadratic/step[1];
-      for (double s : step) {
-        auto& bc_cons {acc_mesh.boundary_connections()};
-        #pragma omp parallel for
-        for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-          double* in_f = bc_cons[i_con].inside_face();
-          double* gh_f = bc_cons[i_con].ghost_face();
-          for (int i_dof = 0; i_dof < nq*(nd + 2)/rs; ++i_dof) gh_f[i_dof] = in_f[i_dof];
-        }
-        compute_fta(s, 0);
-      }
-      max_dt();
-      #pragma omp parallel for
-      for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-        auto& elem = elems[i_elem];
-        for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-          std::swap(elem.fix_admis_coef()[i_qpoint], elem.art_visc_coef()[i_qpoint]);
-        }
+      compute_fta(s, 0);
+    }
+    double safety = _namespace->lookup<double>("max_safety").value();
+    double n_cheby = _namespace->lookup<double>("n_chebyshev_stages").value();
+    double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1);
+    max_dt(safety/max_cheby, safety);
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        std::swap(elem.fix_admis_coef()[i_qpoint], elem.art_visc_coef()[i_qpoint]);
       }
     }
   }
+  --iter;
+  if (iter) printf("done\n");
   status.fix_admis_iters += iter;
   _namespace->assign("fix_iters", _namespace->lookup<int>("fix_iters").value() + iter);
   sw_fix.work_units_completed += acc_mesh.elements().size()*iter;
@@ -1201,6 +1241,43 @@ void Solver::vis_cart_surf_xdmf(int bc_sn, std::string name, const Boundary_func
 {
   Mesh::Reset_vertices reset(acc_mesh);
   visualize_surface_tecplot(bc_sn, func, name, 2);
+}
+
+void Solver::vis_lts_constraints(std::string name, int n_sample)
+{
+  auto& elems = acc_mesh.elements();
+  int nf = params.n_dof();
+  int nq = params.n_qpoint();
+  double n_cheby = _namespace->lookup<double>("n_chebyshev_stages").value();
+  double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1);
+  // write local time steps for convection and diffusion to the mass and energy of the reference state.
+  // Reference state is used for storage because `Element::time_step_scale` only has space for one scalar
+  for (int i_term = 0; i_term < 2; ++i_term) {
+    double safeties [] {1., huge};
+    max_dt(safeties[i_term]/max_cheby, safeties[!i_term]);
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      Eigen::Map<Mat<>>(elems[i_elem].stage(1) + (params.n_dim + i_term)*nq, nq) = Eigen::Map<Mat<>>(elems[i_elem].time_step_scale(), nq);
+    }
+  }
+  // swap current state and reference state
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    Eigen::Map<Mat<>> stage0(elems[i_elem].stage(0), nf);
+    Eigen::Map<Mat<>> stage1(elems[i_elem].stage(1), nf);
+    Mat<> ref_state = stage1;
+    stage1 = stage0;
+    stage0 = ref_state;
+  }
+  // visualize. Note that visualizing straight from the reference state would require implementing another `Qpoint_func` which would be ugly
+  Interpreter inter(std::vector<std::string>{});
+  Struct_expr expr("lts_convective = density; lts_diffusive = energy; lts_ratio = lts_diffusive/lts_convective;");
+  visualize_field_xdmf(Qpoint_expr(expr, inter), name, n_sample);
+  // restore the current state from the reference state
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    Eigen::Map<Mat<>>(elems[i_elem].stage(0), nf) = Eigen::Map<Mat<>>(elems[i_elem].stage(1), nf);
+  }
 }
 #endif
 

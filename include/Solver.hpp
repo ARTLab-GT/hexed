@@ -56,7 +56,7 @@ class Solver
   void compute_avc_diff(double dt, int i_stage);
   void fta(double dt, int i_stage);
   bool use_ldg();
-  double max_dt();
+  double max_dt(double max_safety_conv, double max_safety_diff);
 
   public:
   /*!
@@ -137,12 +137,11 @@ class Solver
   //!\{
   /*!
    * March the simulation forward by a time step equal to `time_step` or
-   * `safety_factor` times the estimated maximum stable time step, whichever is smaller.
-   * \note For local time stepping, `time_step` is equivalent to the CFL number.
-   * Also, `safety_factor` is __not__ the same as the CFL number
+   * `max_safety` times the estimated maximum stable time step, whichever is smaller.
+   * Also, the safety factor is __not__ the same as the CFL number
    * (it is scaled by the max allowable CFL for the chosen DG scheme which is often O(1e-2)).
    */
-  virtual void update(double safety_factor = 0.7, double time_step = std::numeric_limits<double>::max());
+  virtual void update();
   virtual bool is_admissible(); //!< check whether flowfield is admissible (e.g. density and energy are positive)
   virtual void set_art_visc_smoothness(double advect_length); //!< updates the aritificial viscosity coefficient based on smoothness of the flow variables
   /*! \brief an object providing all available information about the status of the time marching iteration.
@@ -174,34 +173,37 @@ class Solver
   virtual std::vector<std::array<double, 2>> bounds_field(const Qpoint_func&, int n_sample = 20);
 
   #if HEXED_USE_XDMF
-  //! write a visualization file describing the entire flow field (but not identifying surfaces)
-  virtual void visualize_field_xdmf(const Qpoint_func& output_variables, std::string name, int n_sample = 20);
-  /*! write a visualization file describing all surfaces where a particular boundary condition has been enforced.
-   */
-  virtual void visualize_surface_xdmf(int bc_sn, const Boundary_func&, std::string name, int n_sample = 20);
-  //! visualize the Cartesian surface which theoretically exists after element deletion but before any vertex snapping
-  virtual void vis_cart_surf_xdmf(int bc_sn, std::string name, const Boundary_func& func = Resolution_badness());
+  //! \brief write a visualization file describing the entire flow field (but not identifying surfaces)
+  void visualize_field_xdmf(const Qpoint_func& output_variables, std::string name, int n_sample = 20);
+  //! \brief write a visualization file describing all surfaces where a particular boundary condition has been enforced.
+  void visualize_surface_xdmf(int bc_sn, const Boundary_func&, std::string name, int n_sample = 20);
+  //! \brief visualize the Cartesian surface which theoretically exists after element deletion but before any vertex snapping
+  void vis_cart_surf_xdmf(int bc_sn, std::string name, const Boundary_func& func = Resolution_badness());
+  //! \brief visualize the local time step constraints imposed by convection and diffusion, respectively
+  //! \warning This function overwrites the reference state, which will invalidate any residual evaluation until `update` is called again.
+  void vis_lts_constraints(std::string name, int n_sample = 20);
   #endif
 
   #if HEXED_USE_TECPLOT
-  //! write a visualization file describing the entire flow field (but not identifying surfaces)
-  virtual void visualize_field_tecplot(const Qpoint_func& output_variables, std::string name, int n_sample = 20,
+  //! \brief write a visualization file describing the entire flow field (but not identifying surfaces)
+  void visualize_field_tecplot(const Qpoint_func& output_variables, std::string name, int n_sample = 20,
                                        bool edges = false, bool qpoints = false, bool interior = true);
   /*! if a `Qpoint_func` is not specified, all the state variables
    * and the artificial viscosity coefficient will be output
    */
-  virtual void visualize_field_tecplot(std::string name, int n_sample = 20,
+  void visualize_field_tecplot(std::string name, int n_sample = 20,
                                        bool edges = false, bool qpoints = false, bool interior = true);
-  /*! write a visualization file describing all surfaces where a particular boundary condition has been enforced.
+  /*! \brief write a visualization file describing all surfaces where a particular boundary condition has been enforced.
    */
-  virtual void visualize_surface_tecplot(int bc_sn, const Boundary_func&, std::string name, int n_sample = 20);
+  void visualize_surface_tecplot(int bc_sn, const Boundary_func&, std::string name, int n_sample = 20);
   /*! if a `Boundary_func` is not specified, all the state variables,
    * the surface normal, the shear stress, and the heat flux will be output.
    */
-  virtual void visualize_surface_tecplot(int bc_sn, std::string name, int n_sample = 20);
-  //! visualize the Cartesian surface which theoretically exists after element deletion but before any vertex snapping
-  virtual void vis_cart_surf_tecplot(int bc_sn, std::string name, const Boundary_func& func = Resolution_badness());
+  void visualize_surface_tecplot(int bc_sn, std::string name, int n_sample = 20);
+  //! \brief visualize the Cartesian surface which theoretically exists after element deletion but before any vertex snapping
+  void vis_cart_surf_tecplot(int bc_sn, std::string name, const Boundary_func& func = Resolution_badness());
   #endif
+  //!\}
 };
 
 }
