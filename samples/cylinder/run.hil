@@ -31,13 +31,13 @@ transport_model = {best}
 surface_max_iters = 1
 vis_freq = 10000
 vis_lts_constraints = true
-done = {wall_time >= 3*hour}
+done = {wall_time >= 2*hour}
 max_safety = 1e-2
 iterate = iterate + {
     if = {iteration >= 20000}
     then = {
         max_safety = 0.7
-        n_chebyshev_stages = 5
+        n_chebyshev_stages = 6
     }
     $cond
 }
