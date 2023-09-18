@@ -33,10 +33,10 @@ init_veloc = {(freestream0/freestream2*(1 - natural^(-$wall_dist/0.2)))}
 init_scalar = {((stag_enth - 0.5*$init_veloc^2)/enth)}
 init_density = {(density*$init_scalar^(1/(heat_rat - 1)))}
 init_cond = {
-    state0 = $init_density*$init_veloc
+    state0 = density*$init_veloc
     state1 = 0.
-    state2 = $init_density
-    state3 = density*ener*$init_scalar^(heat_rat/(heat_rat - 1)) + 0.5*state0^2/state2
+    state2 = density
+    state3 = density*ener + 0.5*state0^2/state2
 }
 
 fix_therm_admis = true
