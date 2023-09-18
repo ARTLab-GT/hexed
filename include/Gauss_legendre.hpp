@@ -15,7 +15,7 @@ class Gauss_legendre : public Basis
 {
   protected:
   double min_eig_convection() const override;
-  inline double quadratic_safety() const override {return 0.9;}
+  inline double quadratic_safety() const override {return 0.8;}
   public:
   //! see `hexed::Basis::Basis`.
   Gauss_legendre (int row_size_arg);

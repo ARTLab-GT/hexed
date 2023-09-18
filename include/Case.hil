@@ -41,6 +41,22 @@ print_force = {
     println({lift coefficient: } + lift_coef)
     println({drag coefficient: } + drag_coef)
 }
+freestream_spec_int_ener = {(freestream3/freestream2 - 0.5*(freestream0^2 + freestream1^2)/freestream2^2)}
+freestream_sound_speed = {((heat_rat*(heat_rat - 1)*$freestream_spec_int_ener)^0.5)}
+vortex_nondim_veloc = 0.3
+vortex_argmax_radius = 0.1
+vortex_gaussian = {(natural^((1. - ((pos0 - freestream0/freestream2*time)^2 + (pos1 - freestream1/freestream2*time)^2)/vortex_argmax_radius^2)/2.))}
+vortex_scalar = {(1 - (heat_rat - 1.)/2*$vortex_gaussian^2)}
+vortex_momentum0 = {((freestream0/freestream2 - pos1/vortex_argmax_radius*$vortex_gaussian*$freestream_sound_speed)*$vortex_mass)}
+vortex_momentum1 = {((freestream1/freestream2 + pos0/vortex_argmax_radius*$vortex_gaussian*$freestream_sound_speed)*$vortex_mass)}
+vortex_mass = {(freestream2*$vortex_scalar^(1./(heat_rat - 1.)))}
+vortex_energy = {($freestream_spec_int_ener*$vortex_scalar*$vortex_mass + 0.5*($vortex_momentum0^2 + $vortex_momentum1^2)/$vortex_mass)}
+vortex = {
+    state0 = $vortex_momentum0
+    state1 = $vortex_momentum1
+    state2 = $vortex_mass
+    state3 = $vortex_energy
+}
 
 {scalar parameters}
 row_size = 6
