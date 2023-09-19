@@ -142,7 +142,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default<double>("av_advect_max_res", 1e-3); // residual limit for advection equation
   _namespace->assign_default<double>("av_diff_stab_rat", .7); // stability ratio for diffusion
   _namespace->assign_default<int   >("n_chebyshev_stages", 1);
-  _namespace->assign_default<int   >("av_advect_iters", 2); // number of advection iterations to run each time `set_art_visc_smoothness` is called
+  _namespace->assign_default<int   >("av_advect_iters", 1); // number of advection iterations to run each time `set_art_visc_smoothness` is called
   _namespace->assign_default<int   >("av_diff_iters", 1); // number of diffusion iterations to run each time `set_art_visc_smoothness` is called
   _namespace->assign_default<int   >("use_filter", false); // whether to use modal filter acceleration
   _namespace->assign("fix_iters", 0);
@@ -855,10 +855,10 @@ void Solver::update()
   double safety = _namespace->lookup<double>("max_safety").value();
   double n_cheby = _namespace->lookup<double>("n_chebyshev_stages").value();
   double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1);
-  double nominal_dt = std::min(max_dt(safety/max_cheby, safety), _namespace->lookup<double>("max_time_step").value());
 
   const int n_dof = params.n_dof();
   for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
+    double nominal_dt = std::min(max_dt(safety/max_cheby, safety), _namespace->lookup<double>("max_time_step").value());
     double dt = nominal_dt*math::chebyshev_step(n_cheby, i_cheby);
     // record reference state for Runge-Kutta scheme
     auto& irk = stopwatch.children.at("initialize reference");
@@ -871,13 +871,16 @@ void Solver::update()
     irk.stopwatch.pause();
     irk.work_units_completed += elems.size();
 
+    bool fixed = false;
     // compute inviscid update
     for (int i = 0; i < 2; ++i) {
       apply_state_bcs();
       if (use_ldg()) compute_viscous(dt, i);
       else compute_inviscid(dt, i);
-      fix_admissibility(_namespace->lookup<double>("fix_admis_stab_rat").value());
+      // note that function call must come first to ensure it is evaluated despite short-circuiting
+      fixed = fix_admissibility(_namespace->lookup<double>("fix_admis_stab_rat").value()) || fixed;
     }
+    if (fixed) break;
 
     // update status for reporting
     _namespace->assign<double>("time_step", dt);
@@ -950,9 +953,9 @@ bool Solver::is_admissible()
   return admiss && refined_admiss;
 }
 
-void Solver::fix_admissibility(double stability_ratio)
+bool Solver::fix_admissibility(double stability_ratio)
 {
-  if (!fix_admis) return;
+  if (!fix_admis) return false;
   auto& sw_fix = stopwatch.children.at("fix admis.");
   sw_fix.stopwatch.start();
   const int nd = params.n_dim;
@@ -1074,6 +1077,7 @@ void Solver::fix_admissibility(double stability_ratio)
   _namespace->assign("fix_iters", _namespace->lookup<int>("fix_iters").value() + iter);
   sw_fix.work_units_completed += acc_mesh.elements().size()*iter;
   sw_fix.stopwatch.pause();
+  return iter;
 }
 
 void Solver::reset_counters()

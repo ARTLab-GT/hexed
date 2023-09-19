@@ -43,7 +43,7 @@ class Solver
   std::shared_ptr<Namespace> _namespace;
 
   void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
-  void fix_admissibility(double stability_ratio);
+  bool fix_admissibility(double stability_ratio);
   void apply_state_bcs();
   void apply_flux_bcs();
   void apply_avc_diff_bcs();
