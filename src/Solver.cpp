@@ -564,9 +564,9 @@ void Solver::set_art_visc_smoothness(double advect_length)
   int n_real = Element::n_forcing - 1; // number of real time steps (as apposed to pseudotime steps)
   // evaluate CFL condition
   double diff_safety = _namespace->lookup<double>("av_diff_stab_rat").value();
+  double n_cheby = _namespace->lookup<double>("n_chebyshev_stages").value();
   (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true, _namespace->lookup<int>("use_filter").value(), 1., diff_safety))(acc_mesh.cartesian().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "compute time step");
   (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true, _namespace->lookup<int>("use_filter").value(), 1., diff_safety))(acc_mesh.deformed ().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "compute time step");
-  double dt_diff = 1.;
   double diff_time = _namespace->lookup<double>("av_diff_ratio").value()*advect_length*advect_length/n_real; // compute size of real time step (as opposed to pseudotime)
   // initialize residual to zero (will compute RMS over all real time steps)
   status.diff_res = 0;
@@ -583,12 +583,6 @@ void Solver::set_art_visc_smoothness(double advect_length)
     }
     (*write_face)(elements);
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-    // set up multistage scheme
-    double linear = dt_diff;
-    double quadratic = dt_diff*dt_diff/8/0.9;
-    std::array<double, 2> step;
-    step[1] = (linear + std::sqrt(linear*linear - 4*quadratic))/2.;
-    step[0] = quadratic/step[1];
     diff = 0;
     n_avg = 0;
     // perform pseudotime iteration
@@ -603,8 +597,8 @@ void Solver::set_art_visc_smoothness(double advect_length)
           forcing[(real_step + 1)*nq + i_qpoint] = state[i_qpoint];
         }
       }
-      for (double s : step)
-      {
+      for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
+        double s = math::chebyshev_step(n_cheby, i_cheby);
         apply_avc_diff_bcs();
         // update state with spatial term
         compute_avc_diff(s, 0);
@@ -633,7 +627,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
         // update residual
         double d = forcing[(real_step + 1)*nq + i_qpoint] - state[i_qpoint];
-        diff += d*d/dt_diff/dt_diff;
+        diff += d*d;
         ++n_avg;
         // update forcing
         forcing[(real_step + 1)*nq + i_qpoint] = state[i_qpoint];

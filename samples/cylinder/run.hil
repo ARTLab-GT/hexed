@@ -37,10 +37,10 @@ iterate = iterate + {
     if = {iteration == 20000}
     then = {
         println performance_report
-        max_safety = 0.7
+        max_safety = 0.3
         av_advect_iters = 1
-        av_diff_iters = 6
-        n_chebyshev_stages = 3
+        av_diff_iters = 1
+        n_chebyshev_stages = 6
     }
     $cond
 }
