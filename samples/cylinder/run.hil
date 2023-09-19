@@ -36,20 +36,33 @@ max_safety = 1e-2
 n = 10
 n_cheby_av = n
 flow_iters = n
+bl_av_freq = 2000
 iterate = iterate + {
-    if = {iteration == 3000}
+    if = {iteration%bl_av_freq == 0}
     then = {
-        println {switching to diffusion-optimized}
-        max_safety = 0.3
-        flow_iters = 1
-        n_cheby_flow = n
-    }
-    $cond
-    if = {iteration == 40000}
-    then = {
-        println {switching to convection-optimized}
-        flow_iters = n
-        n_cheby_flow = 1
+        integrand_field = {
+            bl_av = is_extruded*art_visc*($({freestream} + n_dim)/2/$({freestream} + (n_dim + 1)))^0.5
+            bl_volume = is_extruded
+        }
+        integrate_field
+        bl_av = integral_field_bl_av/integral_field_bl_volume
+        println({average boundary layer artificial viscosity: } + bl_av)
+        if = {flow_iters > 1 & bl_av > 0.04}
+        then = {
+            println {Boundary layer artificial viscosity has developed. Switching to diffusion-optimized time stepping.}
+            max_safety = 0.3
+            flow_iters = 1
+            n_cheby_flow = n
+        }
+        $cond
+        if = {flow_iters == 1 & bl_av < 0.005}
+        then = {
+            println {Boundary layer artificial viscosity has vanished. Switching to convection-optimized time stepping.}
+            max_safety = 0.7
+            flow_iters = n
+            n_cheby_flow = 1
+        }
+        $cond
     }
     $cond
 }
