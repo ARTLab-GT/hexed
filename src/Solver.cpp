@@ -141,9 +141,11 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default<double>("av_advect_stab_rat", .7); // stability ratio for advection
   _namespace->assign_default<double>("av_advect_max_res", 1e-3); // residual limit for advection equation
   _namespace->assign_default<double>("av_diff_stab_rat", .7); // stability ratio for diffusion
-  _namespace->assign_default<int   >("n_chebyshev_stages", 1);
+  _namespace->assign_default<int   >("n_cheby_flow", 1);
+  _namespace->assign_default<int   >("n_cheby_av", 1);
   _namespace->assign_default<int   >("av_advect_iters", 1); // number of advection iterations to run each time `set_art_visc_smoothness` is called
   _namespace->assign_default<int   >("av_diff_iters", 1); // number of diffusion iterations to run each time `set_art_visc_smoothness` is called
+  _namespace->assign_default<int   >("flow_iters", 1);
   _namespace->assign_default<int   >("use_filter", false); // whether to use modal filter acceleration
   _namespace->assign("fix_iters", 0);
   _namespace->assign("iteration", 0);
@@ -564,7 +566,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
   int n_real = Element::n_forcing - 1; // number of real time steps (as apposed to pseudotime steps)
   // evaluate CFL condition
   double diff_safety = _namespace->lookup<double>("av_diff_stab_rat").value();
-  double n_cheby = _namespace->lookup<double>("n_chebyshev_stages").value();
+  double n_cheby = _namespace->lookup<double>("n_cheby_av").value();
   (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true, _namespace->lookup<int>("use_filter").value(), 1., diff_safety))(acc_mesh.cartesian().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "compute time step");
   (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true, _namespace->lookup<int>("use_filter").value(), 1., diff_safety))(acc_mesh.deformed ().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "compute time step");
   double diff_time = _namespace->lookup<double>("av_diff_ratio").value()*advect_length*advect_length/n_real; // compute size of real time step (as opposed to pseudotime)
@@ -845,42 +847,46 @@ void Solver::update()
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
   auto& elems = acc_mesh.elements();
 
-  // compute time step
-  double safety = _namespace->lookup<double>("max_safety").value();
-  double n_cheby = _namespace->lookup<double>("n_chebyshev_stages").value();
-  double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1);
+  for (int i_flow = 0; i_flow < _namespace->lookup<int>("flow_iters").value(); ++i_flow)
+  {
+    // compute time step
+    double safety = _namespace->lookup<double>("max_safety").value();
+    double n_cheby = _namespace->lookup<double>("n_cheby_flow").value();
+    double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1);
+    // run chebyshev iterations
+    const int n_dof = params.n_dof();
+    for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
+    {
+      double nominal_dt = std::min(max_dt(safety/max_cheby, safety), _namespace->lookup<double>("max_time_step").value());
+      double dt = nominal_dt*math::chebyshev_step(n_cheby, i_cheby);
+      // record reference state for Runge-Kutta scheme
+      auto& irk = stopwatch.children.at("initialize reference");
+      irk.stopwatch.start();
+      #pragma omp parallel for
+      for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+        double* state = elems[i_elem].stage(0);
+        for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] = state[i_dof];
+      }
+      irk.stopwatch.pause();
+      irk.work_units_completed += elems.size();
 
-  const int n_dof = params.n_dof();
-  for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
-    double nominal_dt = std::min(max_dt(safety/max_cheby, safety), _namespace->lookup<double>("max_time_step").value());
-    double dt = nominal_dt*math::chebyshev_step(n_cheby, i_cheby);
-    // record reference state for Runge-Kutta scheme
-    auto& irk = stopwatch.children.at("initialize reference");
-    irk.stopwatch.start();
-    #pragma omp parallel for
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      double* state = elems[i_elem].stage(0);
-      for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] = state[i_dof];
+      bool fixed = false;
+      // compute inviscid update
+      for (int i = 0; i < 2; ++i) {
+        apply_state_bcs();
+        if (use_ldg()) compute_viscous(dt, i);
+        else compute_inviscid(dt, i);
+        // note that function call must come first to ensure it is evaluated despite short-circuiting
+        fixed = fix_admissibility(_namespace->lookup<double>("fix_admis_stab_rat").value()) || fixed;
+      }
+      if (fixed) break;
+
+      // update status for reporting
+      _namespace->assign<double>("time_step", dt);
+      _namespace->assign<double>("flow_time", _namespace->lookup<double>("flow_time").value() + dt);
+      status.time_step = dt;
+      status.flow_time += dt;
     }
-    irk.stopwatch.pause();
-    irk.work_units_completed += elems.size();
-
-    bool fixed = false;
-    // compute inviscid update
-    for (int i = 0; i < 2; ++i) {
-      apply_state_bcs();
-      if (use_ldg()) compute_viscous(dt, i);
-      else compute_inviscid(dt, i);
-      // note that function call must come first to ensure it is evaluated despite short-circuiting
-      fixed = fix_admissibility(_namespace->lookup<double>("fix_admis_stab_rat").value()) || fixed;
-    }
-    if (fixed) break;
-
-    // update status for reporting
-    _namespace->assign<double>("time_step", dt);
-    _namespace->assign<double>("flow_time", _namespace->lookup<double>("flow_time").value() + dt);
-    status.time_step = dt;
-    status.flow_time += dt;
   }
 
   _namespace->assign("iteration", _namespace->lookup<int>("iteration").value() + 1);
@@ -1054,7 +1060,7 @@ bool Solver::fix_admissibility(double stability_ratio)
       compute_fta(s, 0);
     }
     double safety = _namespace->lookup<double>("max_safety").value();
-    double n_cheby = _namespace->lookup<double>("n_chebyshev_stages").value();
+    double n_cheby = _namespace->lookup<double>("n_cheby_flow").value();
     double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1);
     max_dt(safety/max_cheby, safety);
     #pragma omp parallel for
@@ -1246,7 +1252,7 @@ void Solver::vis_lts_constraints(std::string name, int n_sample)
   auto& elems = acc_mesh.elements();
   int nf = params.n_dof();
   int nq = params.n_qpoint();
-  double n_cheby = _namespace->lookup<double>("n_chebyshev_stages").value();
+  double n_cheby = _namespace->lookup<double>("n_cheby_flow").value();
   double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1);
   // write local time steps for convection and diffusion to the mass and energy of the reference state.
   // Reference state is used for storage because `Element::time_step_scale` only has space for one scalar
