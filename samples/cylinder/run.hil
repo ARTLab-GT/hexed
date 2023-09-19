@@ -24,7 +24,7 @@ wall_layers = 2
 {adiabatic wall}
 thermal_bc = {heat_flux = 0.}
 wall_spacing = .02
-working_dir = {hexed_out_adiabatic9}
+working_dir = {hexed_out_adiabatic10}
 
 fix_therm_admis = true
 transport_model = {best}
@@ -33,14 +33,16 @@ vis_freq = 2000
 vis_lts_constraints = true
 done = {wall_time >= 1*hour}
 max_safety = 1e-2
+n_chebyshev_stages = 2
+av_diff_iters = 1
 iterate = iterate + {
-    if = {iteration == 20000}
+    if = {iteration == 10000}
     then = {
         println performance_report
         max_safety = 0.3
         av_advect_iters = 1
         av_diff_iters = 1
-        {n_chebyshev_stages = 6}
+        n_chebyshev_stages = 10
     }
     $cond
 }
