@@ -79,7 +79,7 @@ void surface(Namespace& space, Boundary_connection& con, int i_fqpoint)
     space.assign("visc_stress" + std::to_string(i_dim), 0.);
     space.assign("momentum" + std::to_string(i_dim), 0.);
   }
-  space.assign("mass", state[params.n_dim]);
+  space.assign("density", state[params.n_dim]);
   space.assign("energy", state[params.n_dim + 1]);
   space.assign("mass_flux", flux[params.n_dim]);
   space.assign("heat_flux", flux[params.n_dim + 1]);
