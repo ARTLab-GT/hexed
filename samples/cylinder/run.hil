@@ -13,25 +13,25 @@ temperature = 75.61
 mach = 5.
 art_visc_width = 4*2.^-init_ref_level
 
-{
 {isothermal wall}
 working_dir = {hexed_out_isothermal13}
 thermal_bc = {temperature = 98.89}
-wall_spacing = 0.005
-wall_layers = 2
-}
+wall_spacing = 0.01
 
+{
 {adiabatic wall}
 thermal_bc = {heat_flux = 0.}
-wall_spacing = .02
-working_dir = {hexed_out_adiabatic11}
+wall_spacing = .04
+working_dir = {hexed_out_adiabatic14}
+av_diff_stab_rat = 0.7
+}
 
 fix_therm_admis = true
 transport_model = {best}
 surface_max_iters = 1
 vis_freq = 2000
 vis_lts_constraints = true
-done = {wall_time >= 32*minute}
+done = {false}
 max_safety = 1e-2
 n = 10
 n_cheby_av = n
