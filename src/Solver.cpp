@@ -108,12 +108,13 @@ double Solver::max_dt(double msc, double msd)
   auto& sw_car {stopwatch.children.at("cartesian")};
   auto& sw_def {stopwatch.children.at("deformed" )};
   double use_filt = _namespace->lookup<int>("use_filter").value();
+  bool local_time = _namespace->lookup<int>("local_time").value();
   if (use_ldg()) {
-    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, is_local_time, use_filt, msc, msd, visc, therm_cond))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
-                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, is_local_time, use_filt, msc, msd, visc, therm_cond))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
+    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd, visc, therm_cond))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
+                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd, visc, therm_cond))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
   } else {
-    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time, use_filt, msc, msd                  ))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
-                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, is_local_time, use_filt, msc, msd                  ))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
+    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd                  ))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
+                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd                  ))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
   }
 }
 
@@ -127,7 +128,6 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   fix_admis{false},
   av_rs{row_size - row_size/2},
   write_face(kernel_factory<Spatial<Element, pde::Navier_stokes<false>::Pde>::Write_face>(params.n_dim, params.row_size, basis)), // note: for now, false and true are equivalent for `Write_face`
-  is_local_time{local_time_stepping},
   visc{viscosity_model},
   therm_cond{thermal_conductivity_model},
   _namespace{space}
@@ -147,6 +147,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default<int   >("av_diff_iters", 1); // number of diffusion iterations to run each time `set_art_visc_smoothness` is called
   _namespace->assign_default<int   >("flow_iters", 1);
   _namespace->assign_default<int   >("use_filter", false); // whether to use modal filter acceleration
+  _namespace->assign_default<int   >("local_time", local_time_stepping);
   _namespace->assign("fix_iters", 0);
   _namespace->assign("iteration", 0);
   _namespace->assign("flow_time", 0.);

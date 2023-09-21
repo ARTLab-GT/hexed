@@ -61,7 +61,6 @@ vortex = {
 {scalar parameters}
 row_size = 6
 init_ref_level = 3
-local_time = true
 transport_model = {inviscid}
 thermal_bc = {heat_flux = 0}
 surface_bc = {auto}

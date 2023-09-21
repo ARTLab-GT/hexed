@@ -155,7 +155,7 @@ Case::Case(std::string input_file)
     } else {
       HEXED_ASSERT(false, "unrecognized transport model specification");
     }
-    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, _vari("local_time").value(), *visc_model, *therm_model, _inter.variables));
+    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, true, *visc_model, *therm_model, _inter.variables));
     _solver().mesh().add_tree(bcs, mesh_extremes(all, 0));
     _solver().set_fix_admissibility(_vari("fix_therm_admis").value());
     return 0;
