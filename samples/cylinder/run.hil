@@ -14,9 +14,10 @@ mach = 5.
 art_visc_width = 4*2.^-init_ref_level
 
 {isothermal wall}
-working_dir = {hexed_out_isothermal13}
-thermal_bc = {temperature = 98.89}
-wall_spacing = 0.01
+working_dir = {hexed_out_isothermal14}
+{thermal_bc = {temperature = 98.89}}
+thermal_bc = {temperature = 400}
+wall_spacing = 0.02
 
 {
 {adiabatic wall}
