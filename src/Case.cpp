@@ -60,6 +60,9 @@ Flow_bc* Case::_make_bc(std::string name)
       value = sub.variables->lookup<double>("temperature");
       HEXED_ASSERT(value, "thermal BC specification not understood");
       *value *= constants::specific_gas_air/(heat_rat - 1.);
+    } else if (sub.variables->exists("emissivity")) {
+      therm_t = No_slip::emissivity;
+      value = sub.variables->lookup<double>("emissivity");
     }
     HEXED_ASSERT(value, "thermal BC specification not understood");
     return new No_slip(therm_t, value.value());
