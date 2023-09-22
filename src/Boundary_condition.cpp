@@ -390,8 +390,7 @@ void No_slip::apply_state(Boundary_face& bf)
   for (int i_dof = params.n_dim*nfq; i_dof < (params.n_dim + 1)*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
   for (int i_dof = (params.n_dim + 1)*nfq; i_dof < (params.n_dim + 2)*nfq; ++i_dof) {
     // make it so geometric mean of ghost internal energy and inside internal energy is target energy
-    //gh_f[i_dof] = (t == internal_energy) ? math::pow(v*in_f[i_dof - nfq], 2)/in_f[i_dof] : in_f[i_dof];
-    gh_f[i_dof] = std::max(10*v*in_f[i_dof - nfq] - 9*in_f[i_dof], 0.);
+    gh_f[i_dof] = (t == internal_energy) ? math::pow(v*in_f[i_dof - nfq], 2)/in_f[i_dof] : in_f[i_dof];
   }
   // prime `state_cache` with average state for use in emissivity BC
   for (int i_dof = 0; i_dof < params.n_var*nfq; ++i_dof) {
