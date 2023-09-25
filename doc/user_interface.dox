@@ -1,0 +1,46 @@
+/*! \page user_interface User Interface
+Hexed is designed to be used in two ways.
+You can use the C++ library \ref hexed to integrate it directly into your own code.
+However, for the likely case that you don't want to program in C++, Hexed also supports a command line interface.
+To distinguish it from the library, the command to _execute Hexed_ is `hexecute`.
+Without any arguments, `hexecute` will begin an interactive session where you can enter commands in the \ref hil.
+Alternatively, you can provide a single argument which is the name of a file containing \ref hil commands.
+It will then execute these commands as though you had entered them in an interactive session.
+
+\section hil Hexed Interface Language
+__The Hexed Interface Language (HIL) is a simple scripting language designed for interfacing with Hexed.__
+Creating a whole scripting language just to interface with a CFD solver may seem excessive,
+but in fact it addresses some of my greatest frustrations with computational analysis.
+Most CFD solvers behave roughly like a washing machine: you adjust a few numbers, hit "go", and hope it gives you what you want.
+Usually it does, but occasionally it starts spiraling out of control and you have to manually intervene.
+This design is generally adequate to solve easy problems, but more challenging cases often call for more granular control.
+For example, suppose you have a hypersonic case where the only way you manage to avoid a crash is by starting with a CFL number of 0.001,
+exponentially increasing it by factors of 2 every 1000 time steps until it reaches 10,
+switching from local to global time stepping when the residual drops below \f$ 10^-5 \f$,
+and terminating the simulation when the residual drops below $10^-8$ or when the CPU time exceeds 3 days, whichever comes first.
+Suppose also you want to visualize the flowfield every 100 time steps in the beginning of the simulation to understand the initial transients,
+but only every 10000 iterations near the end to save disk space,
+and you want to update your restart file every 1000 iterations but save a _separate_ restart file when you switch to global time stepping
+so that you don't lose your progress if the global time parameters turn out to be flawed.
+Because there is an infinite variety of convoluted pathways a simulation might take,
+many solvers implement a multitude of ridiculously specific input parameters and/or require you to manually babysit a simulation
+and tweak parameters on the fly.
+What we need to recognize is that the real purpose of a CFD solver is to do things that you can't do --
+in particular, reading geometry/mesh files, running iterations, and writing visualization files.
+To address general use cases, the solver should expose these functions directly
+and give you full control over the high-level iteration process.
+Of course, there should be builtin defaults to let you run basic cases without any significant programming,
+but you should be able to modify the iteration logic without dealing with the solver's source code.
+
+Initially, I thought the best way to achieve this ideal would be to implement bindings to Hexed in an existing scripting language (namely Python).
+However, this turned out to have several problems:
+- It required much more boilerplate code than I would have liked.
+- It made it much harder to debug memory errors, since binding systems tend to introduce memeory leaks and interfere with memory checking tools.
+- It doesn't provide an easy way to implement user-defined callback functions (e.g. mesh refinement criteria, integral error metrics)
+  that execute in parallel and at C++ speed.
+
+Technically, most CFD solvers _already_ implement a custom scripting language, since input parameters are provided via a text file with custom syntax.
+Hexed simply makes its input language Turing-complete with the ability to parse operators (`=`, `+`, `*`, `&`, etc.)
+and basic control flow.
+The goal of the HIL is to be as simple as possible (both to implement and to learn) while providing all the functionality that you strictly need.
+*/

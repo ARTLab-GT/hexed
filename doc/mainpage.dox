@@ -56,8 +56,9 @@ If you have any questions or feedback, you can reach me at micaiah@gatech.edu or
 
 _Generated on \today for Hexed \proj_version._
 
-\page Manual
+\page manual User's Manual
 - \subpage installation
+- \subpage user_interface
 - \subpage visualization
 - \subpage geom_fitting
 - \subpage error_types
