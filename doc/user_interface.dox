@@ -2,7 +2,7 @@
 Hexed is designed to be used in two ways.
 You can use the C++ library \ref hexed to integrate it directly into your own code.
 However, for the likely case that you don't want to program in C++, Hexed also supports a command line interface.
-To distinguish it from the library, the command to _execute Hexed_ is `hexecute`.
+To distinguish it from the library, the command to _execute Hexed_ is `hexecute` (apologies for my terrible sense of humor).
 Without any arguments, `hexecute` will begin an interactive session where you can enter commands in the \ref hil.
 Alternatively, you can provide a single argument which is the name of a file containing \ref hil commands.
 It will then execute these commands as though you had entered them in an interactive session.
@@ -55,7 +55,7 @@ The integers 0 and 1 are used to represent logical true and false.
 
 You can create one of these values with a _literal_ (as opposed to an _expression_ or a variable evaluation).
 Integer and float literals are the same as in any language.
-Strings are enclosed in `{}` instead of quotes `""` or `''`
+Strings are enclosed in `{}` instead of quotes
 to avoid exponential pileup of escape sequences in nested \ref Macros.
 Matched pars of `{}` in strings are included literally.
 To include an unmatched `{` or `}` in a string, you can escape it with a `\`.
@@ -63,8 +63,8 @@ To include an actual `\`, you must escape it with a second `\`.
 Strings can include newlines.
 
 Examples:
-- `5`, `010`, and `-1000` are integer literals.
-- `1.0`, `-4.`, `.01`, `5e-4` are float literals.
+- `5` and `012` are integer literals.
+- `1.0`, `4.`, `0.25`, `.01`, and `5e-4` are float literals.
 - `{some chars}` is a string containing the characters `some chars`.
 -
 ~~~{.html}
@@ -89,7 +89,7 @@ and operators with the same precedence number are evaluated left-to-right.
 Syntactic category | Precedence | Operator name | Operand types            | Behavior
 -------------------|------------|---------------|--------------------------|---------
 unary              | 0          | `-`           | integer, float         | inverts sign
-^                  | ^          | `!`           | integer                | logical _not_ (zero values map to `0`, nonzero to `1`)
+^                  | ^          | `!`           | integer                | logical _not_ (`1`, if operand is zero, else `0`)
 ^                  | ^          | `#`           | string                 | evaluates size of string
 ^                  | ^          | `sqrt`        | integer, float         | square root (as float)
 ^                  | ^          | `read`        | string                 | operand is a file path; returns the file contents as a string
