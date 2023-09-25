@@ -16,8 +16,8 @@ Usually it does, but occasionally it starts spiraling out of control and you hav
 This design is generally adequate to solve easy problems, but more challenging cases often call for more granular control.
 For example, suppose you have a hypersonic case where the only way you manage to avoid a crash is by starting with a CFL number of 0.001,
 exponentially increasing it by factors of 2 every 1000 time steps until it reaches 10,
-switching from local to global time stepping when the residual drops below \f$ 10^-5 \f$,
-and terminating the simulation when the residual drops below $10^-8$ or when the CPU time exceeds 3 days, whichever comes first.
+switching from local to global time stepping when the residual drops below \f$ 10^{-5} \f$,
+and terminating the simulation when the residual drops below $10^{-8}$ or when the CPU time exceeds 3 days, whichever comes first.
 Suppose also you want to visualize the flowfield every 100 time steps in the beginning of the simulation to understand the initial transients,
 but only every 10000 iterations near the end to save disk space,
 and you want to update your restart file every 1000 iterations but save a _separate_ restart file when you switch to global time stepping
@@ -43,4 +43,82 @@ Technically, most CFD solvers _already_ implement a custom scripting language, s
 Hexed simply makes its input language Turing-complete with the ability to parse operators (`=`, `+`, `*`, `&`, etc.)
 and basic control flow.
 The goal of the HIL is to be as simple as possible (both to implement and to learn) while providing all the functionality that you strictly need.
+
+\subsection literals Types and Literals
+Values in HIL have one of 3 types:
+- Integer (32-bit signed)
+- [Float](https://en.wikipedia.org/wiki/Floating-point_arithmetic) (64-bit)
+- String
+
+Note that there is not boolean type.
+The integers 0 and 1 are used to represent logical true and false.
+
+You can create one of these values with a _literal_ (as opposed to an _expression_ or a variable evaluation).
+Integer and float literals are the same as in any language.
+Strings are enclosed in `{}` instead of quotes `""` or `''`
+to avoid exponential pileup of escape sequences in nested \ref Macros.
+Matched pars of `{}` in strings are included literally.
+To include an unmatched `{` or `}` in a string, you can escape it with a `\`.
+To include an actual `\`, you must escape it with a second `\`.
+Strings can include newlines.
+
+Examples:
+- `5`, `010`, and `-1000` are integer literals.
+- `1.0`, `-4.`, `.01`, `5e-4` are float literals.
+- `{some chars}` is a string containing the characters `some chars`.
+-
+~~~{.html}
+{{string} \\ with \} special
+chars}
+~~~
+is a string containing the characters
+~~~{.html}
+{string} \ with } special
+chars
+~~~
+
+\subsection operators Operators and Expressions
+HIL supports a variety of _operators_, which in this context means
+things that take in input values (operands) and produce an output.
+Some of these operators are implemented as functions in other languages, but HIL has no concept of a function.
+So-called unary operators are placed directly before their operand and binary operators are placed between their operands.
+The operators are listed below with their precedence.
+Operators with a lower precedence number are evaluated before those with a higher precedence number,
+and operators with the same precedence number are evaluated left-to-right.
+
+Syntactic category | Precedence | Operator name | Operand types            | Behavior
+-------------------|------------|---------------|--------------------------|---------
+unary              | 0          | `-`           | integer, float         | inverts sign
+^                  | ^          | `!`           | integer                | logical _not_ (zero values map to `0`, nonzero to `1`)
+^                  | ^          | `#`           | string                 | evaluates size of string
+^                  | ^          | `sqrt`        | integer, float         | square root (as float)
+^                  | ^          | `read`        | string                 | operand is a file path; returns the file contents as a string
+^                  | ^          | `print`       | any                    | prints to stdout (without adding a newline)
+^                  | ^          | `println`     | any                    | prints to stdout and then prints a newline (like the Python `print` function)
+^                  | ^          | `shell`       | string                 | executes the operand in the system shell and returns the return code (integer)
+binary             | 1          | `^`           | integer, float         | raises left operand to power of right operand
+^                  | ^          | `#`           | string-integer         | returns the _i_ th character of the left operand as a string where _i_ is the right operand
+^                  | 2          | `%`           | integer                | modulo
+^                  | ^          | `/`           | integer, float         | division
+^                  | ^          | `*`           | integer, float         | multiplication
+^                  | 3          | `-`           | integer, float         | subtraction
+^                  | ^          | `+`           | integer, float, string | For numeric-numeric, addition. For strings, concatenation. If only one argument is a string, the other is converted to a string representation.
+^                  | 4          | `==`          | any                    | Evaluates to integer `1` if operands are equal, otherwise `0`. Operands must both be strings or neither.
+^                  | ^          | `!=`          | any                    | Evaluates to integer `1` if operands are inequal, otherwise `0` (including if both operands are NaN). Operands must both be strings or neither.
+^                  | ^          | `>=`          | integer, float         | `1` if left operand is greater than or equal to right, else `0`
+^                  | ^          | `<=`          | integer, float         | `1` if left operand is less than or equal to right, else `0`
+^                  | ^          | `>`           | integer, float         | `1` if left operand is greater than right, else `0`
+^                  | ^          | `<`           | integer, float         | `1` if left operand is less than right, else `0`
+^                  | 5          | `&`           | integer, float         | logical _and_ (`0` if either operand is `0`, else `1`)
+^                  | ^          | \|            | integer, float         | logical _or_ (`0` if both operands are `0`, else `1`)
+
+__Notes:__
+- If an operator can be interpreted as unary or binary, it is interpreted as binary.
+- If a binary operator accepts both integer and float operands, then the result will be an integer if both operands are integers and a float otherwise.
+- The left operand of binary `#` must be a string and the right must be an integer.
+
+The result of applying an operator (and any nested operators) is called an _expression_.
+`()` can be used to override the precedence order and evaluate the enclosed expression(s) first.
+
+\subsection Macros
 */
