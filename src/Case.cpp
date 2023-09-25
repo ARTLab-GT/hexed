@@ -151,7 +151,7 @@ Case::Case(std::string input_file)
       therm_model.reset(new Transport_model(inviscid));
     } else if (_vars("transport_model").value() == "best") {
       visc_model.reset(new Transport_model(Transport_model::constant(air_sutherland_dyn_visc.coefficient(98.89))));
-      therm_model.reset(new Transport_model(Transport_model::constant(air_sutherland_therm_cond.coefficient(400.))));
+      therm_model.reset(new Transport_model(Transport_model::constant(air_sutherland_therm_cond.coefficient(98.89))));
     } else {
       HEXED_ASSERT(false, "unrecognized transport model specification");
     }

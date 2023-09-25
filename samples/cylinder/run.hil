@@ -14,7 +14,7 @@ mach = 5.
 art_visc_width = 2*2.^-init_ref_level
 
 {isothermal wall}
-working_dir = {hexed_out_isothermal21}
+working_dir = {hexed_out_isothermal22}
 thermal_bc = {temperature = 98.89}
 {thermal_bc = {temperature = 400}}
 wall_spacing = 0.02
