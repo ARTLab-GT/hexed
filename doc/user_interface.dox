@@ -77,48 +77,67 @@ is a string containing the characters
 chars
 ~~~
 
-\subsection operators Operators and Expressions
+\subsection Operators
 HIL supports a variety of _operators_, which in this context means
-things that take in input values (operands) and produce an output.
+things that take in input values (operands), which can be literals or variable references, and produce an output.
 Some of these operators are implemented as functions in other languages, but HIL has no concept of a function.
 So-called unary operators are placed directly before their operand and binary operators are placed between their operands.
 The operators are listed below with their precedence.
-Operators with a lower precedence number are evaluated before those with a higher precedence number,
-and operators with the same precedence number are evaluated left-to-right.
+Operators with a lower precedence level are evaluated before those with a higher precedence number,
+and operators with the same precedence level are evaluated left-to-right.
+`()` can be used to override the precedence order and evaluate the enclosed expression(s) first.
 
-Syntactic category | Precedence | Operator name | Operand types            | Behavior
--------------------|------------|---------------|--------------------------|---------
-unary              | 0          | `-`           | integer, float         | inverts sign
-^                  | ^          | `!`           | integer                | logical _not_ (`1`, if operand is zero, else `0`)
-^                  | ^          | `#`           | string                 | evaluates size of string
-^                  | ^          | `sqrt`        | integer, float         | square root (as float)
-^                  | ^          | `read`        | string                 | operand is a file path; returns the file contents as a string
-^                  | ^          | `print`       | any                    | prints to stdout (without adding a newline)
-^                  | ^          | `println`     | any                    | prints to stdout and then prints a newline (like the Python `print` function)
-^                  | ^          | `shell`       | string                 | executes the operand in the system shell and returns the return code (integer)
-binary             | 1          | `^`           | integer, float         | raises left operand to power of right operand
-^                  | ^          | `#`           | string-integer         | returns the _i_ th character of the left operand as a string where _i_ is the right operand
-^                  | 2          | `%`           | integer                | modulo
-^                  | ^          | `/`           | integer, float         | division
-^                  | ^          | `*`           | integer, float         | multiplication
-^                  | 3          | `-`           | integer, float         | subtraction
-^                  | ^          | `+`           | integer, float, string | For numeric-numeric, addition. For strings, concatenation. If only one argument is a string, the other is converted to a string representation.
-^                  | 4          | `==`          | any                    | Evaluates to integer `1` if operands are equal, otherwise `0`. Operands must both be strings or neither.
-^                  | ^          | `!=`          | any                    | Evaluates to integer `1` if operands are inequal, otherwise `0` (including if both operands are NaN). Operands must both be strings or neither.
-^                  | ^          | `>=`          | integer, float         | `1` if left operand is greater than or equal to right, else `0`
-^                  | ^          | `<=`          | integer, float         | `1` if left operand is less than or equal to right, else `0`
-^                  | ^          | `>`           | integer, float         | `1` if left operand is greater than right, else `0`
-^                  | ^          | `<`           | integer, float         | `1` if left operand is less than right, else `0`
-^                  | 5          | `&`           | integer, float         | logical _and_ (`0` if either operand is `0`, else `1`)
-^                  | ^          | \|            | integer, float         | logical _or_ (`0` if both operands are `0`, else `1`)
+Syntactic category | Precedence level | Operator name | Operand types            | Behavior
+-------------------|------------------|---------------|--------------------------|---------
+unary              | 0                | `-`           | integer, float         | inverts sign
+^                  | ^                | `!`           | integer                | logical _not_ (`1`, if operand is zero, else `0`)
+^                  | ^                | `#`           | string                 | evaluates size of string
+^                  | ^                | `sqrt`        | integer, float         | square root (as float)
+^                  | ^                | `read`        | string                 | operand is a file path; returns the file contents as a string
+^                  | ^                | `print`       | any                    | prints to stdout (without adding a newline) and evaluates to the empty string
+^                  | ^                | `println`     | any                    | prints to stdout and then prints a newline (like the Python `print` function) and evaluates to the empty string
+^                  | ^                | `shell`       | string                 | executes the operand in the system shell and returns the return code (integer)
+binary             | 1                | `^`           | integer, float         | raises left operand to power of right operand
+^                  | ^                | `#`           | string-integer         | returns the _i_ th character of the left operand as a string where _i_ is the right operand
+^                  | 2                | `%`           | integer                | modulo
+^                  | ^                | `/`           | integer, float         | division
+^                  | ^                | `*`           | integer, float         | multiplication
+^                  | 3                | `-`           | integer, float         | subtraction
+^                  | ^                | `+`           | integer, float, string | For numeric-numeric, addition. For strings, concatenation. If only one argument is a string, the other is converted to a string representation.
+^                  | 4                | `==`          | any                    | Evaluates to integer `1` if operands are equal, otherwise `0`. Operands must both be strings or neither.
+^                  | ^                | `!=`          | any                    | Evaluates to integer `1` if operands are inequal, otherwise `0` (including if both operands are NaN). Operands must both be strings or neither.
+^                  | ^                | `>=`          | integer, float         | `1` if left operand is greater than or equal to right, else `0`
+^                  | ^                | `<=`          | integer, float         | `1` if left operand is less than or equal to right, else `0`
+^                  | ^                | `>`           | integer, float         | `1` if left operand is greater than right, else `0`
+^                  | ^                | `<`           | integer, float         | `1` if left operand is less than right, else `0`
+^                  | 5                | `&`           | integer, float         | logical _and_ (`0` if either operand is `0`, else `1`)
+^                  | ^                | \|            | integer, float         | logical _or_ (`0` if both operands are `0`, else `1`)
+^                  | 6                | `=`           | any                    | \ref variables "Assigns" the value of the left operand to the right operand, which must be a variable name. Evaluates to the value of the right operand.
 
 __Notes:__
 - If an operator can be interpreted as unary or binary, it is interpreted as binary.
 - If a binary operator accepts both integer and float operands, then the result will be an integer if both operands are integers and a float otherwise.
 - The left operand of binary `#` must be a string and the right must be an integer.
+- An operator expression which is not nested inside another expression is called a _statement_.
+- A statement is terminated by either a newline or a `;` (as long as this terminating character is not inside a string literal).
 
-The result of applying an operator (and any nested operators) is called an _expression_.
-`()` can be used to override the precedence order and evaluate the enclosed expression(s) first.
+\subsection variables Variables and Assignment
+The `=` operator can be used to assign a value to a variable.
+Variable names may contain letters (case-sensitive), digits, and underscores, but cannot start with a digit.
+Variables are created and their type determened when they are assigned a value; variables need not be declared.
+Once a variable is created, its value can be referenced in subsequent expressions and its type cannot be changed.
+Attempting to assign a value to a variable of a different type will produce an exception,
+with the exception that an integer may be assigned to a float (it will be automatically converted and the variable will continue to be a float).
+However, HIL is technically dynamically typed since the type that a variable can depend on the path a program takes at runtime.
+
+Technically, an assignment statement is an expression which evaluates to the value of the right-hand-side.
+Also, a sequence of statements (assignment or otherwise) evaluates to the value of the last one.
+So, for example,
+~~~
+x = (println {hello world!}; y = z = 0; 15)
+~~~
+prints `hello world!`, then assigns 0 to both `y` and `z`, then assigns 15 to `x`.
+However, these technicalities are unlikely to be relevant to using Hexed.
 
 \subsection Macros
 */
