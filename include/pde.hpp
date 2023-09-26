@@ -108,7 +108,10 @@ class Navier_stokes
         ASSERT_THERM_ADMIS
         wave_speed(i_side) = char_speed(state)*nrml_mag;
       }
-      return llf(wave_speed.maxCoeff(), face_flux, face_state);
+      Mat<> diff = wave_speed.maxCoeff()*face_state*Mat<2>{.5, -.5};
+      diff(Eigen::seqN(0, n_update - 1)) /= 1.5;
+      //Mat<> f = llf(wave_speed.maxCoeff(), face_flux, face_state);
+      return face_flux*Mat<2>{.5, .5} + diff;
     }
 
     //! compute the viscous flux
@@ -138,7 +141,7 @@ class Navier_stokes
       auto mmtm = state(Eigen::seqN(0, n_dim));
       const double sound_speed = std::sqrt(heat_rat*(heat_rat - 1)*state(n_dim + 1)/mass);
       const double veloc = std::sqrt(mmtm.dot(mmtm))/mass;
-      return sound_speed + veloc;
+      return (sound_speed + veloc)*1.5;
     }
 
     //! maximum effective diffusivity (for enforcing the CFL condition)
