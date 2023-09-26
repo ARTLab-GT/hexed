@@ -62,7 +62,7 @@ vortex = {
 row_size = 6
 init_ref_level = 3
 transport_model = {inviscid}
-thermal_bc = {heat_flux = 0}
+thermal_bc = {heat_flux = 0.}
 surface_bc = {auto}
 temperature_offset = 0.
 attack = 0.
