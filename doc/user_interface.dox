@@ -17,7 +17,7 @@ This design is generally adequate to solve easy problems, but more challenging c
 For example, suppose you have a hypersonic case where the only way you manage to avoid a crash is by starting with a CFL number of 0.001,
 exponentially increasing it by factors of 2 every 1000 time steps until it reaches 10,
 switching from local to global time stepping when the residual drops below \f$ 10^{-5} \f$,
-and terminating the simulation when the residual drops below $10^{-8}$ or when the CPU time exceeds 3 days, whichever comes first.
+and terminating the simulation when the residual drops below \f$ 10^{-8} \f$ or when the CPU time exceeds 3 days, whichever comes first.
 Suppose also you want to visualize the flowfield every 100 time steps in the beginning of the simulation to understand the initial transients,
 but only every 10000 iterations near the end to save disk space,
 and you want to update your restart file every 1000 iterations but save a _separate_ restart file when you switch to global time stepping
@@ -190,7 +190,7 @@ So if you want Boltzmann's constant, which in C++ would be `hexed::constants::bo
 
 \subsubsection huge
 __type:__ float \n
-Maximum representable float value (equal to `std::numeric_limits<double>::max()`).
+Maximum representable float value (equal to `std::numeric_limits<double>::%max`).
 
 \subsubsection newline
 __type:__ string \n
@@ -210,13 +210,14 @@ Alias for the integer 0, for more readable logical operations
 
 \subsubsection repl
 __type:__ string \n
-Macro which starts a Read-Evaluate-Print Loop.
+Macro which starts a Read-Evaluate-Print Loop (a.k.a. an interactive session).
 Statements executed in the REPL will have read/srite access to the namespace of the program.
 
 \subsubsection quit
 __type:__ string \n
 Macro which, when invoked from the REPL, quits the REPL.
 The program which invoked \ref repl will continue executing.
+This is different from \ref exit because it terminates only the REPL, not the interpreter itself.
 
 \subsubsection ask
 __type:__ Heisenberg string \n
@@ -226,6 +227,9 @@ Evaluates to a string containing those characters.
 \subsubsection exit
 __type:__ Heisenberg string \n
 Terminates the HIL interpreter and evaluates to an empty string.
+This is different from \ref quit in that it can be invoked from anywhere (not just the REPL)
+and even if it is invoked from the REPL, statements after the \ref repl invokation will not be executed
+(because it terminates the whole interpreter).
 
 \subsubsection throw
 __type:__ Heisenberg string \n
@@ -233,5 +237,14 @@ Throws an exception in the C++ implementation of HIL.
 Potentially useful if the C++ code contains subsequent statements after the invokation of the HIL interpreter which you don't want to execute.
 
 \subsection parameters Input/Output Parameters
+This section lists variables that directly interact with the Hexed solver.
+Some of them are preset to default values with the intent that you should override them,
+some are __not__ defined and __must__ be defined by you,
+and some are defined by the solver in order to provide information to you.
+The first two cases are both called _input parameters_.
+In the list below, if an input parameter is defined by the solver, its default value shall be listed.
+The last case is called an _output parameter_.
+Output parameters might be Heisenberg variables or writable variables,
+but you should not write to them even if you are technically able to.
 
 */
