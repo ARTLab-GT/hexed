@@ -58,7 +58,8 @@ _Generated on \today for Hexed \proj_version._
 
 \page manual User's Manual
 - \subpage installation
-- \subpage user_interface
+- \subpage hil
+- \subpage parameters
 - \subpage visualization
 - \subpage geom_fitting
 - \subpage error_types
