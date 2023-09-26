@@ -77,6 +77,9 @@ is a string containing the characters
 chars
 ~~~
 
+\warning
+If you have never programmed in a low-level language before, beware of [integer overflow](https://en.wikipedia.org/wiki/Integer_overflow).
+
 \subsection Operators
 HIL supports a variety of _operators_, which in this context means
 things that take in input values (operands), which can be literals or variable references, and produce an output.
@@ -87,8 +90,8 @@ Operators with a lower precedence level are evaluated before those with a higher
 and operators with the same precedence level are evaluated left-to-right.
 `()` can be used to override the precedence order and evaluate the enclosed expression(s) first.
 
-Syntactic category | Precedence level | Operator name | Operand types            | Behavior
--------------------|------------------|---------------|--------------------------|---------
+Syntactic category | Precedence level | Operator name | Operand types          | Behavior
+-------------------|------------------|---------------|------------------------|---------
 unary              | 0                | `-`           | integer, float         | inverts sign
 ^                  | ^                | `!`           | integer                | logical _not_ (`1`, if operand is zero, else `0`)
 ^                  | ^                | `#`           | string                 | evaluates size of string
@@ -97,6 +100,7 @@ unary              | 0                | `-`           | integer, float         |
 ^                  | ^                | `print`       | any                    | prints to stdout (without adding a newline) and evaluates to the empty string
 ^                  | ^                | `println`     | any                    | prints to stdout and then prints a newline (like the Python `print` function) and evaluates to the empty string
 ^                  | ^                | `shell`       | string                 | executes the operand in the system shell and returns the return code (integer)
+^                  | ^                | `$`           | string                 | \ref Macros "macro substitution"
 binary             | 1                | `^`           | integer, float         | raises left operand to power of right operand
 ^                  | ^                | `#`           | string-integer         | returns the _i_ th character of the left operand as a string where _i_ is the right operand
 ^                  | 2                | `%`           | integer                | modulo
@@ -130,6 +134,14 @@ Attempting to assign a value to a variable of a different type will produce an e
 with the exception that an integer may be assigned to a float (it will be automatically converted and the variable will continue to be a float).
 However, HIL is technically dynamically typed since the type that a variable can depend on the path a program takes at runtime.
 
+HIL comes with some builtin variables which are already defined at the start of your program,
+and special variables whose value influences the behavior of the solver (i.e. input parameters).
+There are also some variables, which I call _Heisenberg variables_ that produce side effects when you evaluate them.
+You can't assign to these variables, and exactly what happens when you evaluate them is specially defined for each one.
+They are called "Heisenberg" because the fact that observing their value changes the state of the program
+is reminiscent of the collapse of the wave function in quantum mechanics.
+See \ref special_vars for a list of such variablels.
+
 Technically, an assignment statement is an expression which evaluates to the value of the right-hand-side.
 Also, a sequence of statements (assignment or otherwise) evaluates to the value of the last one.
 So, for example,
@@ -140,4 +152,31 @@ prints `hello world!`, then assigns 0 to both `y` and `z`, then assigns 15 to `x
 However, these technicalities are unlikely to be relevant to using Hexed.
 
 \subsection Macros
+In HIL, transfer of control flow (e.g. conditionals, iteration, subroutines, recursion) is accomplished by a macro substitution mechanic.
+HIL is an interpreted language, meaning that the text of the program is executed as it is parsed.
+If the character `$` is encountered while parsing (not inside a string literal),
+it must be immediately follwed by a string value (literal, variable, or expression).
+This string is then prepended to the remaining text of the program.
+For example, suppose you have set `my_string = {1 + 1}` at some point in the program.
+Then `x = $my_string` is equivalent to `x = 1 + 1`.
+This can be done recursively.
+For example, `macro = {println {hexed}; $macro}; $macro` will print `hexed` repeatedly until you kill the process.
+Believe it or not, macro substitution can be used to emulate pretty much all of the control flow mechanics that most languages explicitly implement,
+if you're willing to write a little extra boilerplate code.
+For example, the HIL code
+~~~{.html}
+case0 = {println {case 0}}
+case1 = {println {case 1}}
+$$({case} + (predicate != 0))
+~~~
+is essentially equivalent to the Python code
+~~~{.py}
+if predicate:
+    print("case 0")
+else:
+    print("case 1")
+~~~
+
+\subsection special_vars Special Variables
+
 */
