@@ -66,6 +66,7 @@ _Generated on \today for Hexed \proj_version._
 
 \page theory Theory
 - \subpage conventions
+- \subpage boundary_conditions
 - \subpage benchmarking
 
 */

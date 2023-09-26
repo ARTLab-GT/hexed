@@ -140,7 +140,7 @@ There are also some variables, which I call _Heisenberg variables_ that produce 
 You can't assign to these variables, and exactly what happens when you evaluate them is specially defined for each one.
 They are called "Heisenberg" because the fact that observing their value changes the state of the program
 is reminiscent of the collapse of the wave function in quantum mechanics.
-See \ref builtins and \ref parameters for a list of such variablels.
+See \ref builtins and \ref outputs for a list of such variablels.
 
 Technically, an assignment statement is an expression which evaluates to the value of the right-hand-side.
 Also, a sequence of statements (assignment or otherwise) evaluates to the value of the last one.
@@ -181,7 +181,7 @@ else:
 The HIL includes a number of variables, both ordinary and Heisenberg, which are automatically defined at the start of your program.
 This section lists the builtin variables that are simply useful for scripting
 but not directly related to the input and output functions of the CFD solver itself.
-See the \ref parameters "next section" for a list of variables that directly interact with the solver.
+See \ref inputs and \ref outputs for definitions of variables that directly interact with the solver.
 
 <hr>
 \subsubsection Constants
@@ -249,27 +249,19 @@ Potentially useful if the C++ code contains subsequent statements after the invo
 
 <hr>
 
-\subsection parameters Input/Output Parameters
-This section lists variables that directly interact with the Hexed solver.
+\section inputs Input Parameters
+This section lists variables that directly affect the behavior of the solver.
 Some of them are preset to default values with the intent that you should override them,
-some are __not__ defined and __must__ be defined by you,
-and some are defined by the solver in order to provide information to you.
-The first two cases are both called _input parameters_.
-In the list below, if an input parameter is defined by the solver, its default value shall be listed.
-The last case is called an _output parameter_.
-Output parameters might be Heisenberg variables or writable variables,
-but you should not write to them even if you are technically able to.
+and some are __not__ defined and __must__ be defined by you.
 
 <hr>
 \subsubsection n_dim
-__input__ \n
 __type:__ integer \n
 Number of dimensions.
 Must be at least 1 and at most 3.
 
 <hr>
 \subsubsection row_size
-__input__ \n
 __type:__ integer \n
 __default:__ 6 \n
 \ref basis_row_size "Row size" of polynomial basis.
@@ -277,7 +269,6 @@ Must be at lead 2 and at most `hexed::config::max_row_size`.
 
 <hr>
 \subsubsection init_ref_level
-__input__ \n
 __type:__ integer \n
 __default:__ 3 \n
 Number of levels to refine the mesh before surface geometry is introduced.
@@ -285,7 +276,6 @@ May be any nonnegative integer, up to time and memory constraints.
 
 <hr>
 \subsubsection transport_model
-__input__ \n
 __type:__ string \n
 __default:__ `{inviscid}` \n
 Specifies model to use for molecular transport coefficients (viscosity and thermal conductivity).
@@ -295,7 +285,6 @@ Accepted values:
 
 <hr>
 \subsubsection thermal_bc
-__input__ \n
 __type:__ string \n
 __default:__ `{heat_flux = 0.}` \n
 Only applicable when \ref surface_bc = `{no_slip}`.
@@ -310,7 +299,6 @@ Accepted values:
 
 <hr>
 \subsubsection surface_bc
-__input__ \n
 __type:__ string \n
 __default:__ `{auto}` \n
 Specifies surface boundary condition.
@@ -319,36 +307,211 @@ If `{auto}`, surface boundary condition will be determined automatically dependi
 Otherwise, the name of a supported \ref boundary_conditions "Boundary condition type".
 
 <hr>
-temperature_offset = 0.
-attack = 0.
-sideslip = 0.
-art_visc_constant = -1.
-art_visc_width = -1.
-fix_therm_admis = false
-working_dir = {hexed_out/}
-vis_freq = 10000
-iter_width = 10
-print_freq = 100
-surface_refine = {false}
-surface_unrefine = {ref_level > init_ref_level & !is_extruded}
-surface_max_iters = 100
-n_smooth = 30
-wall_spacing = -1.; {set to positive value}
-wall_layers = 1
-geom_n_segments = 1000
-vis_surface = true
-vis_field = true
-vis_tecplot = false
-vis_xdmf = true
-vis_lts_constraints = false
-vis_field_vars = state_vars + art_visc_expr
-vis_surface_vars = state_vars + visc_stress_expr + heat_flux_expr
-vis_n_sample = 10
-print_vars = iteration_expr + residual_expr + av_advection_residual_expr + av_diffusion_residual_expr + flow_time_expr + time_step_expr
-integrand_field = {}
-integrand_surface = {}
-max_angle = 10*degree
-max_deflection = huge
-mesh_extreme_eps = 1e-6
+\subsubsection temperature_offset
+__type:__ float \n
+__default:__ `0.` \n
+Applicable when altitude is specified.
+Sets the temperature offset passed to `hexed::standard_atmosphere`.
+
+<hr>
+\subsubsection attack
+__type:__ float \n
+__default:__ `0.` \n
+Angle of attack (radian, as specified in \ref units).
+
+<hr>
+\subsubsection sideslip
+__type:__ float \n
+__default:__ `0.` \n
+Sideslip angle (radian, as specified in \ref units).
+
+<hr>
+\subsubsection art_visc_constant
+__type:__ float \n
+__default:__ `-1.` \n
+If set to a positive number, turns on aritificial viscosity and sets the artificial viscosity coefficient to be uniformly equal to `art_visc_constant`.
+
+<hr>
+\subsubsection art_visc_width
+__type:__ float \n
+__default:__ `-1.` \n
+If set to a positive number, turns on aritificial viscosity with a smoothness-based coefficient
+and sets the smoothness width to `art_visc_width`.
+
+<hr>
+\subsubsection fix_therm_admis
+__type:__ integer \n
+__default:__ \ref false \n
+If \ref true, check thermodynamic admissibility (positive density, nonnegative energy, non-NaN state) after every time integration stage
+and if problems are found, run as many Laplacian smearing iterations as neccessary to restore admissibility.
+Results in a major robustness improvement for hypersonic cases and comes at a modest performance cost.
+
+<hr>
+\subsubsection working_dir
+__type:__ string \n
+__default:__ `{hexed_out/}` \n
+Directory in which to write output files.
+Path can be relative or absolute.
+If the directory does not exist, it will be created.
+Any modifications to this variable must take place before the solver is initialized.
+
+<hr>
+\subsubsection vis_freq
+__type:__ integer \n
+__default:__ 10000 \n
+Visualization files will be written every `vis_freq` iterations.
+
+<hr>
+\subsubsection iter_width
+__type:__ integer \n
+__default:__ 10 \n
+Visualization file names will contain iteration numbers with leading zeros added such that there are at least `iter_width` digits.
+
+<hr>
+\subsubsection print_freq
+__type:__ integer \n
+__default:__ 100 \n
+Solver status will be printed to stdout every `print_freq` iterations.
+
+<hr>
+\subsubsection surface_refine
+__type:__ string \n
+__default:__ `{false}` \n
+Refinement criterion for surface-geometry-based refinement sweeps.
+Should be an expression that can be evaluated for each mesh element
+in an environment that includes the variables assigned by `hexed::hil_properties::element()`.
+If this expression evaluates to \ref true, the element will be refined.
+Otherwise it will not.
+
+<hr>
+\subsubsection surface_unrefine
+__type:__ string \n
+__default:__ `{ref_level > init_ref_level & !is_extruded}` \n
+Unrefinement criterion for surface-geometry-based refinement sweeps.
+Behaves the same as \ref surface_refine except that if this expression evaluates to \ref true, the element will be unrefined
+(subject to refinement level constraints).
+
+<hr>
+\subsubsection surface_max_iters
+__type:__ integer \n
+__default:__ 100 \n
+Maximum number of surface-geometry-based refinement sweeps to run if refinement convergence is not achieved.
+
+<hr>
+\subsubsection n_smooth
+__type:__ integer \n
+__default:__ 30 \n
+Number of mesh smoothing iterations to run after every surface-geometry-based refinement sweep.
+
+<hr>
+\subsubsection wall_spacing
+__type:__ float \n
+__default:__ -1. \n
+If set to a positive number, anisotropic wall layers will be generated.
+The ratio of the height of the first layer to the total height of the layers (which may be nonuniform) will be `wall_spacing`.
+
+<hr>
+\subsubsection wall_layers
+__type:__ integer \n
+__default:__ 1 \n
+If anisotropic layers are generated, the first `wall_layers` layers will have thickness determined by `wall_spacing`,
+and the remaining layers will exponentially increase in thickness to keep the aniso-iso transition as smooth as possible.
+
+<hr>
+\subsubsection geom_n_segments
+__type:__ integer \n
+__default:__ 1000 \n
+Number of subdivisions to use when discretizing 2D CAD geometry with `hexed::Occt::segments`.
+
+<hr>
+\subsubsection vis_surface
+__type:__ integer \n
+__default:__ \ref true \n
+Whether to visualize surface data when \ref visualize is invoked.
+
+<hr>
+\subsubsection vis_field
+__type:__ integer \n
+__default:__ \ref true \n
+Whether to visualize field data when \ref visualize is invoked.
+
+<hr>
+\subsubsection vis_tecplot
+__type:__ integer \n
+__default:__ \ref true \n
+If \ref true, write visualization files in Tecplot format (requires compilation with `use_tecplot` `ON`).
+
+<hr>
+\subsubsection vis_xdmf
+__type:__ integer \n
+__default:__ \ref true \n
+If \ref true, write visualization files in XDMF format (requires compilation with `use_xdmf` `ON`).
+
+<hr>
+\subsubsection vis_lts_constraints
+__type:__ integer \n
+__default:__ \ref false \n
+If \ref true, visualize the local time step constraints due to convection and diffusion, respectively.
+
+<hr>
+\subsubsection vis_field_vars
+__type:__ string \n
+__default:__ `state_vars + art_visc_expr` \n
+\ref struct_expr "Structured expression" specifying which field variables to visualize.
+
+<hr>
+\subsubsection vis_surface_vars
+__type:__ string \n
+__default:__ `state_vars + visc_stress_expr + heat_flux_expr` \n
+\ref struct_expr "Structured expression" specifying which surface variables to visualize.
+
+<hr>
+\subsubsection vis_n_sample
+__type:__ integer \n
+__default:__ 10 \n
+Each element will be visualized at sample points distributed in a uniformly-spaced structured block with `vis_n_sample` points on each edge.
+If you want, you can think of this as the visualization \ref basis_row_size "row size".
+
+<hr>
+\subsubsection print_vars
+__type:__ string \n
+__default:__ `iteration_expr + residual_expr + av_advection_residual_expr + av_diffusion_residual_expr + flow_time_expr + time_step_expr` \n
+\ref struct_expr "Structured expression" specifying what quantities to print when the solver status is printed.
+
+<hr>
+\subsubsection integrand_field
+__type:__ string \n
+__default:__ `{}` \n
+\ref struct_expr "Structured expression" specifying what quantities integrate when field integrals are computed.
+
+<hr>
+\subsubsection integrand_surface
+__type:__ string \n
+__default:__ `{}` \n
+\ref struct_expr "Structured expression" specifying what quantities integrate when surface integrals are computed.
+
+<hr>
+\subsubsection max_angle
+__type:__ float \n
+__default:__ `10*degree`
+Maximum allowable angle between adjacent panels when discretizing 3D CAD geometry with `hexed::Occt::triangles`.
+
+<hr>
+\subsubsection max_deflection
+__type:__ float \n
+__default:__ \ref huge \n
+Maximum allowable linear deflection of surface panels when discretizing 3D CAD geometry with `hexed::Occt::triangles` (dimensional).
+
+<hr>
+\subsubsection mesh_extreme_eps
+__type:__ float \n
+__default:__ `1e-6` \n
+Comparison tolerance to use when deterimining whether points are inside or outside mesh extremes.
+Relative to domain size.
+
+\section outputs Output Parameters
+The following variables are defined and/or updated by the solver in order to provide information to you.
+Some are Heisenberg variables and some are writable,
+but you should not write to them even if you are technically able to.
 
 */
