@@ -140,7 +140,7 @@ There are also some variables, which I call _Heisenberg variables_ that produce 
 You can't assign to these variables, and exactly what happens when you evaluate them is specially defined for each one.
 They are called "Heisenberg" because the fact that observing their value changes the state of the program
 is reminiscent of the collapse of the wave function in quantum mechanics.
-See \ref special_vars for a list of such variablels.
+See \ref builtins and \ref parameters for a list of such variablels.
 
 Technically, an assignment statement is an expression which evaluates to the value of the right-hand-side.
 Also, a sequence of statements (assignment or otherwise) evaluates to the value of the last one.
@@ -160,7 +160,7 @@ This string is then prepended to the remaining text of the program.
 For example, suppose you have set `my_string = {1 + 1}` at some point in the program.
 Then `x = $my_string` is equivalent to `x = 1 + 1`.
 This can be done recursively.
-For example, `macro = {println {hexed}; $macro}; $macro` will print `hexed` repeatedly until you kill the process.
+For example, `macro = {println {infinite loop!}; $macro}; $macro` will print "infinite loop!" repeatedly until you kill the process.
 Believe it or not, macro substitution can be used to emulate pretty much all of the control flow mechanics that most languages explicitly implement,
 if you're willing to write a little extra boilerplate code.
 For example, the HIL code
@@ -177,6 +177,61 @@ else:
     print("case 1")
 ~~~
 
-\subsection special_vars Special Variables
+\subsection builtins Builtin Variables
+The HIL includes a number of variables, both ordinary and Heisenberg, which are automatically defined at the start of your program.
+This section lists the builtin variables that are simply useful for scripting
+but not directly related to the input and output functions of the CFD solver itself.
+See the \ref parameters "next section" for a list of variables that directly interact with the solver.
+
+\subsubsection Constants
+All of the quantities in the `hexed::constants` namespace are included as float variables.
+The names are the same as in the C++ library, without the namespace.
+So if you want Boltzmann's constant, which in C++ would be `hexed::constants::boltzmann`, you just have to write `boltzmann`.
+
+\subsubsection huge
+__type:__ float \n
+Maximum representable float value (equal to `std::numeric_limits<double>::max()`).
+
+\subsubsection newline
+__type:__ string \n
+A string containing a single newline character, so you can write strings containing newlines on a single line.
+
+\subsubsection closebr
+__type:__ string \n
+A string containg a single `}`, so you can write strings containing an unmatched `}` without explicitly escaping it.
+
+\subsubsection true
+__type:__ integer \n
+Alias for the integer 1, for more readable logical operations.
+
+\subsubsection false
+__type:__ integer \n
+Alias for the integer 0, for more readable logical operations
+
+\subsubsection repl
+__type:__ string \n
+Macro which starts a Read-Evaluate-Print Loop.
+Statements executed in the REPL will have read/srite access to the namespace of the program.
+
+\subsubsection quit
+__type:__ string \n
+Macro which, when invoked from the REPL, quits the REPL.
+The program which invoked \ref repl will continue executing.
+
+\subsubsection ask
+__type:__ Heisenberg string \n
+Queries stdin (command line input) and gets characters until a newline is received.
+Evaluates to a string containing those characters.
+
+\subsubsection exit
+__type:__ Heisenberg string \n
+Terminates the HIL interpreter and evaluates to an empty string.
+
+\subsubsection throw
+__type:__ Heisenberg string \n
+Throws an exception in the C++ implementation of HIL.
+Potentially useful if the C++ code contains subsequent statements after the invokation of the HIL interpreter which you don't want to execute.
+
+\subsection parameters Input/Output Parameters
 
 */
