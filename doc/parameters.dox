@@ -403,7 +403,7 @@ Begins the simulation uninitialized and is only assigned when \ref compute_resid
 
 <hr>
 \subsubsection update
-__type:__ Heisenberg string
+__type:__ Heisenberg string \n
 Executes \ref print_freq solver iterations and returns an empty string.
 Each "solver iteration" consists of:
 -# Calling `hexed::Solver::set_art_visc_constant`, if applicable.
@@ -418,7 +418,7 @@ The number of elements currently in the mesh.
 <hr>
 \subsubsection performance_report
 __type:__ Heisenberg string \n
-Human-readable summary of kernel performance data so far.
+Human-readable summary of kernel performance metrics for all iterations that have been run in the current simulation.
 
 <hr>
 \subsubsection integrate_field
