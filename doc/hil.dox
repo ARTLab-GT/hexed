@@ -7,6 +7,9 @@ To distinguish it from the library, the command to _execute Hexed_ is `hexecute`
 Without any arguments, `hexecute` will begin an interactive session where you can enter commands in a language called the Hexed Interface Language (HIL).
 Alternatively, you can provide a single argument which is the name of a file containing HIL commands.
 It will then execute these commands as though you had entered them in an interactive session.
+For examples of proper Hexed usage, see the example cases in the `samples` directory.
+To run any of the cases, navigate to the corresponding subdirectory and type `hexecute run.hil`.
+Some of them may take a while.
 
 __The Hexed Interface Language is a simple scripting language designed for interfacing with Hexed.__
 Creating a whole scripting language just to interface with a CFD solver may seem excessive,
@@ -161,21 +164,10 @@ For example, suppose you have set `my_string = {1 + 1}` at some point in the pro
 Then `x = $my_string` is equivalent to `x = 1 + 1`.
 This can be done recursively.
 For example, `macro = {println {infinite loop!}; $macro}; $macro` will print "infinite loop!" repeatedly until you kill the process.
-Believe it or not, macro substitution can be used to emulate pretty much all of the control flow mechanics that most languages explicitly implement,
+The ability for a program to manipulate its own text is an extremely versatile tool
+which can be used to emulate pretty much all of the control flow mechanics that most languages explicitly implement,
 if you're willing to write a little extra boilerplate code.
-For example, the HIL code
-~~~{.html}
-case0 = {println {case 0}}
-case1 = {println {case 1}}
-$$({case} + (predicate != 0))
-~~~
-is essentially equivalent to the Python code
-~~~{.py}
-if predicate:
-    print("case 0")
-else:
-    print("case 1")
-~~~
+See \ref Idioms below for examples.
 
 \section builtins Builtin Variables
 The HIL includes a number of variables, both ordinary and Heisenberg, which are automatically defined at the start of your program.
@@ -250,5 +242,78 @@ Throws an exception in the C++ implementation of HIL.
 Potentially useful if the C++ code contains subsequent statements after the invokation of the HIL interpreter which you don't want to execute.
 
 <hr>
+
+\section Idioms
+HIL is missing some features that nearly every programming language has
+because there are workarounds and I am reluctant to implement (and require you to understand) anything that we can get away without.
+However, since these workarounds may not be obvious, this section gives some examples so that you know them when you see them or need them.
+
+\subsection Comments
+To include text addressed at a human reader which does not affect the behavior of the program,
+create a string literal and don't assign it to anything.
+Comments can be placed on the same line as a statement if you terminate the statement with a `;`.
+For example:
+~~~{.unparsed}
+{this comment is on its own line
+and can take up multiple lines if you like}
+i = 0; {this is an inline comment}
+~~~
+
+\subsection Conditionals
+Conditional jumps (like `if` and `switch` statements) can be accomplished with macro substitution and integer-string conversion.
+For example, you can emulate the behavior of a basic if-else statement like this:
+~~~{.unparsed}
+case0 = {println {predicate is false}}
+case1 = {println {predicate is true}}
+$$({case} + (predicate != 0))
+~~~
+Note the two `$` operators in the last statement: the first converts the string containing the variable name to the value of the variable,
+which is a string containing code,
+and the second executes the code in the string.
+For example, if `predicate` is `false`, then the first `$` converts `{case0}` to `case0`, which evaluates to `{println {predicate is false}}`.
+The second `$` converts `{println {predicate is false}}` to `println {predicate is false}` which is then executed as code.
+The above conditional is essentially equivalent to the following Python code:
+~~~{.py}
+if predicate:
+    print("predicate is false")
+else:
+    print("predicate is true")
+~~~
+
+\subsection Iteration
+Iteration (like `while` and `for` loops) can be accomplished with recursive macros.
+If you're concerned about memory overhead, remember that macro substitution does not create a new scope;
+it literally inserts the text of the macro at the start of the remaining program text
+(and the text of statements that have already been processed is deleted).
+Thus tail recursion is inherently optimized.
+If your recursive macro contains trailing characters, these will add up over many iterations,
+but the program text happens to be allocated on the heap, so stack overflow in particular will not be an issue.
+With that in mind, here is an example of a basic for-loop equivalent:
+~~~{.unparsed}
+i = 0
+iterate = {
+    case0 = {}
+    case1 = {
+        println({loop iteration } + i)
+        i = i + 1
+        $iterate}
+    $$({case} + (i < 10))}
+$iterate
+~~~
+Note that there are no trailing newlines at the end of the macro strings,
+which would pile up and consume memory if there were many iterations.
+The above loop would print:
+~~~{.unparsed}
+loop iteration 0
+loop iteration 1
+loop iteration 2
+loop iteration 3
+loop iteration 4
+loop iteration 5
+loop iteration 6
+loop iteration 7
+loop iteration 8
+loop iteration 9
+~~~
 
 */

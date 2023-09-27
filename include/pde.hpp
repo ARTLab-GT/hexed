@@ -109,7 +109,7 @@ class Navier_stokes
         wave_speed(i_side) = char_speed(state)*nrml_mag;
       }
       Mat<> diff = wave_speed.maxCoeff()*face_state*Mat<2>{.5, -.5};
-      diff(Eigen::seqN(0, n_update - 1)) /= 1.5;
+      //diff(Eigen::seqN(0, n_update - 1)) /= 1.5;
       //Mat<> f = llf(wave_speed.maxCoeff(), face_flux, face_state);
       return face_flux*Mat<2>{.5, .5} + diff;
     }
