@@ -14,7 +14,7 @@ mach = 5.
 art_visc_width = 2*2.^-init_ref_level
 
 {isothermal wall}
-working_dir = {hexed_out_isothermal1}
+working_dir = {hexed_out_isothermal26}
 thermal_bc = {temperature = 98.89}
 {thermal_bc = {temperature = 400}}
 wall_spacing = 0.02
@@ -39,7 +39,7 @@ transport_model = {sutherland}
 surface_max_iters = 1
 vis_freq = 1000
 vis_lts_constraints = true
-done = {iteration >= 10^5}
+done = {iteration >= 20^5}
 max_safety = 1e-2
 n = 10
 n_cheby_av = n

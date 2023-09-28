@@ -134,13 +134,13 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
 {
   _namespace->assign_default<double>("max_safety", .7); // maximum allowed safety factor for time stepping
   _namespace->assign_default<double>("max_time_step", huge); // maximum allowed time step
-  _namespace->assign_default<double>("fix_admis_stab_rat", .7); // staility ratio for fixing thermodynamic admissibility.
+  _namespace->assign_default<double>("fix_admis_max_safety", .7); // staility ratio for fixing thermodynamic admissibility.
   _namespace->assign_default<double>("av_diff_ratio", 1e-1); // ratio of diffusion time to advection width
   _namespace->assign_default<double>("av_visc_mult", 30.); // final scaling parameter applied to artificial viscosity coefficient
   _namespace->assign_default<double>("av_unscaled_max", 2e-4); // maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
-  _namespace->assign_default<double>("av_advect_stab_rat", .7); // stability ratio for advection
+  _namespace->assign_default<double>("av_advect_max_safety", .7); // stability ratio for advection
   _namespace->assign_default<double>("av_advect_max_res", 1e-3); // residual limit for advection equation
-  _namespace->assign_default<double>("av_diff_stab_rat", .7); // stability ratio for diffusion
+  _namespace->assign_default<double>("av_diff_max_safety", .7); // stability ratio for diffusion
   _namespace->assign_default<int   >("n_cheby_flow", 1);
   _namespace->assign_default<int   >("n_cheby_av", 1);
   _namespace->assign_default<int   >("av_advect_iters", 1); // number of advection iterations to run each time `set_art_visc_smoothness` is called
@@ -458,7 +458,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
   sw_adv.stopwatch.start();
   (*write_face)(elements);
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-  double adv_safety = _namespace->lookup<double>("av_advect_stab_rat").value();
+  double adv_safety = _namespace->lookup<double>("av_advect_max_safety").value();
   (*kernel_factory<Spatial<Element         , pde::Advection>::Max_dt>(nd, rs, basis, true, _namespace->lookup<int>("use_filter").value(), adv_safety, 1.))(acc_mesh.cartesian().elements(), sw_adv.children.at("cartesian"), "compute time step");
   (*kernel_factory<Spatial<Deformed_element, pde::Advection>::Max_dt>(nd, rs, basis, true, _namespace->lookup<int>("use_filter").value(), adv_safety, 1.))(acc_mesh.deformed ().elements(), sw_adv.children.at("deformed" ), "compute time step");
   double dt_adv = 1.;
@@ -566,7 +566,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
   // begin root-smear-square operation
   int n_real = Element::n_forcing - 1; // number of real time steps (as apposed to pseudotime steps)
   // evaluate CFL condition
-  double diff_safety = _namespace->lookup<double>("av_diff_stab_rat").value();
+  double diff_safety = _namespace->lookup<double>("av_diff_max_safety").value();
   double n_cheby = _namespace->lookup<double>("n_cheby_av").value();
   (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true, _namespace->lookup<int>("use_filter").value(), 1., diff_safety))(acc_mesh.cartesian().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "compute time step");
   (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true, _namespace->lookup<int>("use_filter").value(), 1., diff_safety))(acc_mesh.deformed ().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "compute time step");
@@ -878,7 +878,7 @@ void Solver::update()
         if (use_ldg()) compute_viscous(dt, i);
         else compute_inviscid(dt, i);
         // note that function call must come first to ensure it is evaluated despite short-circuiting
-        fixed = fix_admissibility(_namespace->lookup<double>("fix_admis_stab_rat").value()) || fixed;
+        fixed = fix_admissibility(_namespace->lookup<double>("fix_admis_max_safety").value()) || fixed;
       }
       if (fixed) break;
 
