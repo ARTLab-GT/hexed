@@ -296,6 +296,143 @@ __default:__
 It shall be evaluated in an environment that includes the variables `pos0`, `pos1`, `pos2`, and `time`.
 
 <hr>
+\subsubsection max_safety
+__type:__ float \n
+__default:__ 0.7 \n
+Maximum allowable safety factor on the [CFL condition](https://en.wikipedia.org/wiki/Courant%E2%80%93Friedrichs%E2%80%93Lewy_condition)
+for time step determination.
+The time step will be either this number times the estimated maximum stable time step or \ref max_time_step, whichever is smaller.
+This parameter is applicable to both local and global time stepping.
+If the actual safety factor (accounting for \ref max_time_step constraints) is greater than 1 the scheme will almost certainly be unstable.
+Thus even if you intend for your time integration not to be CFL-driven, it is strongly recommended that you keep this parameter less than 1
+and simply make your \ref max_time_step small enough to be the active constraint.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection max_time_step
+__type:__ float \n
+__default:__ \ref huge \n
+Maximum allowable time step.
+The time step will be either this number or \ref max_safety times the estimated maximum stable time step, whichever is smaller.
+This parameter is only meaningful for global time stepping.
+If you intend for your time stepping to be CFL driven, simply keep this number large enough not to be the active constraint.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection fix_admis_max_safety
+__type:__ float\n
+__default:__ 0.7 \n
+Maximum safety factor for Laplacian smearing iterations when fixing thermodynamic admissibility.
+\note Not defined until \ref create_solver is evaluated.
+\see \ref fix_therm_admis
+
+<hr>
+\subsubsection av_diff_ratio
+__type:__ float\n
+__default:__ 0.1 \n
+Determines amount of to smear artificial viscosity coefficient for smoothness-based artificial viscosity.
+A larger number means that the artificial viscosity field will be smoother but also spread further from the shocks.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection av_visc_mult
+__type:__ float\n
+__default:__ 30. \n
+Final linear scaling parameter on smoothness-based artificial viscosity coefficient.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection av_unscaled_max
+__type:__ float\n
+__default:__ 2e-4 \n
+Maximum amount of artificial viscosity allowed before dimensional scaling.
+If this value is too small, artificial viscosity will not be sufficient to fully capture shocks.
+If it is too large, excessively small time steps may be encountered during the initial transient phase of the simulation.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection av_advect_max_res
+__type:__ float\n
+__default:__ 1e-3 \n
+Limit on the residual in the advection equation for smoothness-based artificial viscosity determination
+to improve robustness when weak instabilities are encountered.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection av_advect_max_safety
+__type:__ float\n
+__default:__ 0.7 \n
+Maximum safety factor on pseudotime step in advection equation for smoothness-based artificial viscosity.
+Analogous to \ref max_safety.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection av_diff_max_safety
+__type:__ float\n
+__default:__ 0.7 \n
+Maximum safety factor on pseudotime step in diffusion equation for smoothness-based artificial viscosity.
+Analogous to \ref max_safety.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection n_cheby_flow
+__type:__ integer \n
+__default:__ 1 \n
+Number of Chebyshev acceleration stages to use for physical flow.
+Increasing this number will help the flow converge faster when/where it is diffusion-dominated but slow it down when/where it is convection-dominated.
+Also, it seems to be difficult to maintain stability if this number is greater than roughly 10.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection n_cheby_av
+__type:__ integer \n
+__default:__ 0.7 \n
+Number of Chebyshev acceleration stages to use for diffusion equation for smoothness-based artificial viscosity.
+Increasing this number will help the artificial viscosity coefficient converge faster
+but cause a larger fraction of the time to be spent in the aritificial viscosity calculation.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection av_advect_iters
+__type:__ integer \n
+__default:__ 1 \n
+Number of pseudotime iterations to run in artificial viscosity advection equation per nominal iteration
+(i.e. per `hexed::Solver::set_art_visc_smoothness` call).
+Increasing this number will help the artificial viscosity coefficient converge faster
+but cause a larger fraction of the CPU time to be spent in the aritificial viscosity calculation.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection av_diff_iters
+__type:__ integer \n
+__default:__ 1 \n
+Number of pseudotime iterations to run in artificial viscosity diffusion equation per nominal iteration
+(i.e. per `hexed::Solver::set_art_visc_smoothness` call).
+Increasing this number will help the artificial viscosity coefficient converge faster
+but cause a larger fraction of the CPU time to be spent in the aritificial viscosity calculation.
+\note This was useful before Chebyshev acceleration was discovered.
+Increasing \ref n_cheby_av instead will usually be more productive, up to the limit where stability falls apart.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection flow_iters
+__type:__ integer \n
+__default:__ 1 \n
+Number of physical flow iterations to run per nominal iteration
+(i.e. per `hexed::Solver::update` call).
+Increasing this number can help balance the amount of CPU time spent in the physical flow relative to the artificial viscosity iteration
+if `n_cheby_av` is larger than `n_cheby_flow`.
+The disadvantage is it can cause the \ref iteration count to be misleading.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection local_time
+__type:__ integer \n
+__default:__ \ref true \n
+If \ref true, use local time stepping, otherwase use global.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
 
 \section outputs Output Parameters
 The following variables are defined and/or updated by the solver in order to provide information to you and/or perform actions.
@@ -310,19 +447,48 @@ where the standard workflows are inadequate.
 \subsection output_list List of Output Parameters
 
 <hr>
+\subsubsection iteration
+__type:__ integer \n
+Number of iterations executed since solver was created.
+Equal to \ref print_freq times the number of \ref update evaluations.
+
+<hr>
+\subsubsection wall_time
+__type:__ float \n
+Wall clock time (seconds) elapsed since solver was created.
+Not to be confused with \ref flow_time -- if the distinction isn't clear, here is an example:
+if you start a simulation and then take a 5-minute break to make coffee,
+if your simulation is still running upon your return the wall time will be 5*60s = 300s.
+
+<hr>
+\subsubsection flow_time
+__type:__ float \n
+Amount of time (seconds) elapsed in the physical flow since the simulation started.
+Only meaningful for global time stepping.
+Not to be confused with \ref wall_time -- if the distinction isn't clear, here is an example:
+if you have a shock propagating at 100 m/s and run your simulation with global time stepping
+until the flow time reaches 0.01 s, then the shock will have propaged a distance of 1 m.
+
+<hr>
+\subsubsection time_step
+__type:__ float \n
+Time step taken in the most recent iteration.
+Only meaningful for global time stepping.
+
+<hr>
 \subsubsection create_solver
-__type:__ Heisenberg int \n
+__type:__ Heisenberg integer \n
 Creates a `hexed::Solver` object and returns 0.
 Mesh contains a single element and the flow is uninitialized.
 
 <hr>
 \subsubsection init_refinement
-__type:__ Heisenberg int \n
+__type:__ Heisenberg integer \n
 Performs initial refinment (not based on geometry surface) and returns 0.
 
 <hr>
 \subsubsection add_geom
-__type:__ Heisenberg int \n
+__type:__ Heisenberg integer \n
 Inserts geometry into mesh and returns 0.
 You can define 0 or more string variables named `geom0`, `geom1`, `geom2`, ... containing paths to geometry definition files.
 Paths can be absolute or relative to execution directory (not \ref working_dir).
@@ -347,24 +513,24 @@ The following extension/format combinations are supported:
 
 <hr>
 \subsubsection refine
-__type:__ Heisenberg int \n
+__type:__ Heisenberg integer \n
 Performs one surface-geometry-based refinement sweep and returns 0.
 Elements are refined or unrefined based on \ref surface_refine and \ref surface_unrefine.
 
 <hr>
 \subsubsection make_layers
-__type:__ Heisenberg int \n
+__type:__ Heisenberg integer \n
 Creates anisotropic wall layers and returns 0.
 Size and number of layers are determined by \ref wall_spacing and \ref wall_layers.
 
 <hr>
 \subsubsection init_state
-__type:__ Heisenberg int \n
+__type:__ Heisenberg integer \n
 Initializes the solver state to \ref init_cond and returns 0.
 
 <hr>
 \subsubsection visualize
-__type:__ Heisenberg int \n
+__type:__ Heisenberg integer \n
 Writes visualization files and returns 0.
 
 <hr>
@@ -379,27 +545,39 @@ Evaluates \ref compute_residuals and then returns the values of the \ref print_v
 
 <hr>
 \subsubsection compute_residuals
-__type:__ Heisenberg string
+__type:__ Heisenberg string \n
 Evaluates the residuals and assigns them to float variables \ref residual_momentum, \ref residual_density, \ref residual_energy.
 Returns the empty string.
 
 <hr>
 \subsubsection residual_momentum
-__type:__ float
+__type:__ float \n
 Magnitude of the dimensional residual of the vector momentum equation.
 Begins the simulation uninitialized and is only assigned when \ref compute_residuals is evaluated.
 
 <hr>
 \subsubsection residual_density
-__type:__ float
+__type:__ float \n
 Dimensional residual of the continuity equation.
 Begins the simulation uninitialized and is only assigned when \ref compute_residuals is evaluated.
 
 <hr>
 \subsubsection residual_energy
-__type:__ float
+__type:__ float \n
 Dimensional residual of the energy equation.
 Begins the simulation uninitialized and is only assigned when \ref compute_residuals is evaluated.
+
+<hr>
+\subsubsection av_advection_residual
+__type:__ float \n
+Residual of artificial viscosity advection equation.
+Begins the simulation uninitialized and is only assigned when \ref update is evaluated with smoothness-based artificial viscosity.
+
+<hr>
+\subsubsection av_diffusion_residual
+__type:__ float \n
+Residual of artificial viscosity diffusion equation.
+Begins the simulation uninitialized and is only assigned when \ref update is evaluated with smoothness-based artificial viscosity.
 
 <hr>
 \subsubsection update
