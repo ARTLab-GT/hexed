@@ -5,7 +5,9 @@ This section lists variables that directly affect the behavior of the solver.
 Some of them are preset to default values with the intent that you should override them,
 and some are __not__ defined and __must__ be defined by you.
 
-\subsection parameter_list List of Input Parameters
+\subsection important_imputs Important Input Parameters
+Setting these parameters appropriately is critical to get the right answer,
+and you should generally think about them every time you run a simulation.
 
 <hr>
 \subsubsection n_dim
@@ -14,18 +16,34 @@ Number of dimensions.
 Must be at least 1 and at most 3.
 
 <hr>
-\subsubsection row_size
+\subsubsection local_time
 __type:__ integer \n
-__default:__ 6 \n
-\ref basis_row_size "Row size" of polynomial basis.
-Must be at lead 2 and at most `hexed::config::max_row_size`.
+__default:__ \ref true \n
+If \ref true, use local time stepping, otherwase use global.
+\note Not defined until \ref create_solver is evaluated.
 
 <hr>
-\subsubsection init_ref_level
-__type:__ integer \n
-__default:__ 3 \n
-Number of levels to refine the mesh in \ref init_refinement before surface geometry is introduced.
-May be any nonnegative integer, up to time and memory constraints.
+\subsubsection max_safety
+__type:__ float \n
+__default:__ 0.7 \n
+Maximum allowable safety factor on the [CFL condition](https://en.wikipedia.org/wiki/Courant%E2%80%93Friedrichs%E2%80%93Lewy_condition)
+for time step determination.
+The time step will be either this number times the estimated maximum stable time step or \ref max_time_step, whichever is smaller.
+This parameter is applicable to both local and global time stepping.
+If the actual safety factor (accounting for \ref max_time_step constraints) is greater than 1 the scheme will almost certainly be unstable.
+Thus even if you intend for your time integration not to be CFL-driven, it is strongly recommended that you keep this parameter less than 1
+and simply make your \ref max_time_step small enough to be the active constraint.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection max_time_step
+__type:__ float \n
+__default:__ \ref huge \n
+Maximum allowable time step.
+The time step will be either this number or \ref max_safety times the estimated maximum stable time step, whichever is smaller.
+This parameter is only meaningful for global time stepping.
+If you intend for your time stepping to be CFL driven, simply keep this number large enough not to be the active constraint.
+\note Not defined until \ref create_solver is evaluated.
 
 <hr>
 \subsubsection transport_model
@@ -51,6 +69,109 @@ Accepted values:
 - `{emissivity = x}`: Radiative equilibrium BC where the surface emissivity is prescribed to be `x`.
 
 <hr>
+\subsubsection row_size
+__type:__ integer \n
+__default:__ 6 \n
+\ref basis_row_size "Row size" of polynomial basis.
+Must be at lead 2 and at most `hexed::config::max_row_size`.
+
+<hr>
+\subsubsection attack
+__type:__ float \n
+__default:__ `0.` \n
+Angle of attack (radian, as specified in \ref units).
+
+<hr>
+\subsubsection sideslip
+__type:__ float \n
+__default:__ `0.` \n
+Sideslip angle (radian, as specified in \ref units).
+
+<hr>
+\subsubsection art_visc_width
+__type:__ float \n
+__default:__ `-1.` \n
+If set to a positive number, turns on aritificial viscosity with a smoothness-based coefficient
+and sets the smoothness width to `art_visc_width`.
+
+<hr>
+\subsubsection surface_refine
+__type:__ string \n
+__default:__ `{false}` \n
+Refinement criterion for surface-geometry-based refinement sweeps.
+Should be an expression that can be evaluated for each mesh element
+in an environment that includes the variables assigned by `hexed::hil_properties::element()`.
+If this expression evaluates to \ref true, the element will be refined.
+Otherwise it will not.
+
+<hr>
+\subsubsection wall_spacing
+__type:__ float \n
+__default:__ -1. \n
+If set to a positive number, anisotropic wall layers will be generated.
+The ratio of the height of the first layer to the total height of the layers (which may be nonuniform) will be `wall_spacing`.
+
+<hr>
+\subsubsection mesh_extreme mesh_extreme00, mesh_extreme01, mesh_extreme10, mesh_extreme11, mesh_extreme20, mesh_extreme21
+__type:__ float \n
+__default:__ 0, 1, 0, 1, 0, 1 \n
+Mesh extremes.
+That is, all elements will have coordinates \f$ x_0, x_1, x_2 \f$ such that `mesh_extreme00` \f$ \le x_0 \le \f$ `mesh_extreme01`, etc.
+If each mesh dimension is an integer multiple of the initial element size, then the above inequalities are equalities.
+Of course, only the first \ref n_dim dimensions are considered.
+
+<hr>
+\subsubsection n_cheby_flow
+__type:__ integer \n
+__default:__ 1 \n
+Number of Chebyshev acceleration stages to use for physical flow.
+Increasing this number will help the flow converge faster when/where it is diffusion-dominated but slow it down when/where it is convection-dominated.
+Also, it seems to be difficult to maintain stability if this number is greater than roughly 10.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection n_cheby_av
+__type:__ integer \n
+__default:__ 0.7 \n
+Number of Chebyshev acceleration stages to use for diffusion equation for smoothness-based artificial viscosity.
+Increasing this number will help the artificial viscosity coefficient converge faster
+but cause a larger fraction of the time to be spent in the aritificial viscosity calculation.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection av_advect_iters
+__type:__ integer \n
+__default:__ 1 \n
+Number of pseudotime iterations to run in artificial viscosity advection equation per nominal iteration
+(i.e. per `hexed::Solver::set_art_visc_smoothness` call).
+Increasing this number will help the artificial viscosity coefficient converge faster
+but cause a larger fraction of the CPU time to be spent in the aritificial viscosity calculation.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection flow_iters
+__type:__ integer \n
+__default:__ 1 \n
+Number of physical flow iterations to run per nominal iteration
+(i.e. per `hexed::Solver::update` call).
+Increasing this number can help balance the amount of CPU time spent in the physical flow relative to the artificial viscosity iteration
+if `n_cheby_av` is larger than `n_cheby_flow`.
+The disadvantage is it can cause the \ref iteration count to be misleading.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+
+\subsection useful_inputs Useful Input Parameters
+You will probably want to adjust these parameters for some simulations, but you can often leave them alone.
+
+<hr>
+\subsubsection init_ref_level
+__type:__ integer \n
+__default:__ 3 \n
+Number of levels to refine the mesh in \ref init_refinement before surface geometry is introduced.
+May be any nonnegative integer, up to time and memory constraints.
+
+<hr>
 \subsubsection surface_bc
 __type:__ string \n
 __default:__ `{auto}` \n
@@ -67,29 +188,10 @@ Applicable when altitude is specified.
 Sets the temperature offset passed to `hexed::standard_atmosphere`.
 
 <hr>
-\subsubsection attack
-__type:__ float \n
-__default:__ `0.` \n
-Angle of attack (radian, as specified in \ref units).
-
-<hr>
-\subsubsection sideslip
-__type:__ float \n
-__default:__ `0.` \n
-Sideslip angle (radian, as specified in \ref units).
-
-<hr>
 \subsubsection art_visc_constant
 __type:__ float \n
 __default:__ `-1.` \n
 If set to a positive number, turns on aritificial viscosity and sets the artificial viscosity coefficient to be uniformly equal to `art_visc_constant`.
-
-<hr>
-\subsubsection art_visc_width
-__type:__ float \n
-__default:__ `-1.` \n
-If set to a positive number, turns on aritificial viscosity with a smoothness-based coefficient
-and sets the smoothness width to `art_visc_width`.
 
 <hr>
 \subsubsection fix_therm_admis
@@ -115,26 +217,10 @@ __default:__ 10000 \n
 Visualization files will be written every `vis_freq` iterations.
 
 <hr>
-\subsubsection iter_width
-__type:__ integer \n
-__default:__ 10 \n
-Visualization file names will contain iteration numbers with leading zeros added such that there are at least `iter_width` digits.
-
-<hr>
 \subsubsection print_freq
 __type:__ integer \n
 __default:__ 100 \n
 Solver status will be printed to stdout every `print_freq` iterations.
-
-<hr>
-\subsubsection surface_refine
-__type:__ string \n
-__default:__ `{false}` \n
-Refinement criterion for surface-geometry-based refinement sweeps.
-Should be an expression that can be evaluated for each mesh element
-in an environment that includes the variables assigned by `hexed::hil_properties::element()`.
-If this expression evaluates to \ref true, the element will be refined.
-Otherwise it will not.
 
 <hr>
 \subsubsection surface_unrefine
@@ -155,13 +241,6 @@ Maximum number of surface-geometry-based refinement sweeps to run if refinement 
 __type:__ integer \n
 __default:__ 30 \n
 Number of mesh smoothing iterations to run after every surface-geometry-based refinement sweep.
-
-<hr>
-\subsubsection wall_spacing
-__type:__ float \n
-__default:__ -1. \n
-If set to a positive number, anisotropic wall layers will be generated.
-The ratio of the height of the first layer to the total height of the layers (which may be nonuniform) will be `wall_spacing`.
 
 <hr>
 \subsubsection wall_layers
@@ -199,12 +278,6 @@ If \ref true, write visualization files in Tecplot format (requires compilation 
 __type:__ integer \n
 __default:__ \ref true \n
 If \ref true, write visualization files in XDMF format (requires compilation with `use_xdmf` `ON`).
-
-<hr>
-\subsubsection vis_lts_constraints
-__type:__ integer \n
-__default:__ \ref false \n
-If \ref true, visualize the local time step constraints due to convection and diffusion, respectively.
 
 <hr>
 \subsubsection vis_field_vars
@@ -256,22 +329,6 @@ __default:__ \ref huge \n
 Maximum allowable linear deflection of surface panels when discretizing 3D CAD geometry with `hexed::Occt::triangles` (dimensional).
 
 <hr>
-\subsubsection mesh_extreme_eps
-__type:__ float \n
-__default:__ `1e-6` \n
-Comparison tolerance to use when deterimining whether points are inside or outside mesh extremes.
-Relative to domain size.
-
-<hr>
-\subsubsection mesh_extreme mesh_extreme00, mesh_extreme01, mesh_extreme10, mesh_extreme11, mesh_extreme20, mesh_extreme21
-__type:__ float \n
-__default:__ 0, 1, 0, 1, 0, 1 \n
-Mesh extremes.
-That is, all elements will have coordinates \f$ x_0, x_1, x_2 \f$ such that `mesh_extreme00` \f$ \le x_0 \le \f$ `mesh_extreme01`, etc.
-If each mesh dimension is an integer multiple of the initial element size, then the above inequalities are equalities.
-Of course, only the first \ref n_dim dimensions are considered.
-
-<hr>
 \subsubsection flood_fill_start flood_fill_start0, flood_fill_start1, flood_fill_start2
 __type:__ float \n
 __default:__ \ref huge, huge, huge \n
@@ -296,35 +353,54 @@ __default:__
 It shall be evaluated in an environment that includes the variables `pos0`, `pos1`, `pos2`, and `time`.
 
 <hr>
-\subsubsection max_safety
-__type:__ float \n
-__default:__ 0.7 \n
-Maximum allowable safety factor on the [CFL condition](https://en.wikipedia.org/wiki/Courant%E2%80%93Friedrichs%E2%80%93Lewy_condition)
-for time step determination.
-The time step will be either this number times the estimated maximum stable time step or \ref max_time_step, whichever is smaller.
-This parameter is applicable to both local and global time stepping.
-If the actual safety factor (accounting for \ref max_time_step constraints) is greater than 1 the scheme will almost certainly be unstable.
-Thus even if you intend for your time integration not to be CFL-driven, it is strongly recommended that you keep this parameter less than 1
-and simply make your \ref max_time_step small enough to be the active constraint.
-\note Not defined until \ref create_solver is evaluated.
-
-<hr>
-\subsubsection max_time_step
-__type:__ float \n
-__default:__ \ref huge \n
-Maximum allowable time step.
-The time step will be either this number or \ref max_safety times the estimated maximum stable time step, whichever is smaller.
-This parameter is only meaningful for global time stepping.
-If you intend for your time stepping to be CFL driven, simply keep this number large enough not to be the active constraint.
-\note Not defined until \ref create_solver is evaluated.
-
-<hr>
 \subsubsection fix_admis_max_safety
 __type:__ float\n
 __default:__ 0.7 \n
 Maximum safety factor for Laplacian smearing iterations when fixing thermodynamic admissibility.
 \note Not defined until \ref create_solver is evaluated.
 \see \ref fix_therm_admis
+
+<hr>
+\subsubsection av_advect_max_safety
+__type:__ float\n
+__default:__ 0.7 \n
+Maximum safety factor on pseudotime step in advection equation for smoothness-based artificial viscosity.
+Analogous to \ref max_safety.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection av_diff_max_safety
+__type:__ float\n
+__default:__ 0.7 \n
+Maximum safety factor on pseudotime step in diffusion equation for smoothness-based artificial viscosity.
+Analogous to \ref max_safety.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+
+\subsection esoteric_inputs Esoteric Input Parameters
+You will probably never need to worry about these parameters.
+They are tunable in principle, but in practice the same values tend to work for pretty much every problem.
+In some cases, even I don't fully understand why the accepted defaults work.
+
+<hr>
+\subsubsection mesh_extreme_eps
+__type:__ float \n
+__default:__ `1e-6` \n
+Comparison tolerance to use when deterimining whether points are inside or outside mesh extremes.
+Relative to domain size.
+
+<hr>
+\subsubsection av_diff_iters
+__type:__ integer \n
+__default:__ 1 \n
+Number of pseudotime iterations to run in artificial viscosity diffusion equation per nominal iteration
+(i.e. per `hexed::Solver::set_art_visc_smoothness` call).
+Increasing this number will help the artificial viscosity coefficient converge faster
+but cause a larger fraction of the CPU time to be spent in the aritificial viscosity calculation.
+\note This was useful before Chebyshev acceleration was discovered.
+Increasing \ref n_cheby_av instead will usually be more productive, up to the limit where stability falls apart.
+\note Not defined until \ref create_solver is evaluated.
 
 <hr>
 \subsubsection av_diff_ratio
@@ -359,78 +435,16 @@ to improve robustness when weak instabilities are encountered.
 \note Not defined until \ref create_solver is evaluated.
 
 <hr>
-\subsubsection av_advect_max_safety
-__type:__ float\n
-__default:__ 0.7 \n
-Maximum safety factor on pseudotime step in advection equation for smoothness-based artificial viscosity.
-Analogous to \ref max_safety.
-\note Not defined until \ref create_solver is evaluated.
-
-<hr>
-\subsubsection av_diff_max_safety
-__type:__ float\n
-__default:__ 0.7 \n
-Maximum safety factor on pseudotime step in diffusion equation for smoothness-based artificial viscosity.
-Analogous to \ref max_safety.
-\note Not defined until \ref create_solver is evaluated.
-
-<hr>
-\subsubsection n_cheby_flow
+\subsubsection vis_lts_constraints
 __type:__ integer \n
-__default:__ 1 \n
-Number of Chebyshev acceleration stages to use for physical flow.
-Increasing this number will help the flow converge faster when/where it is diffusion-dominated but slow it down when/where it is convection-dominated.
-Also, it seems to be difficult to maintain stability if this number is greater than roughly 10.
-\note Not defined until \ref create_solver is evaluated.
+__default:__ \ref false \n
+If \ref true, visualize the local time step constraints due to convection and diffusion, respectively.
 
 <hr>
-\subsubsection n_cheby_av
+\subsubsection iter_width
 __type:__ integer \n
-__default:__ 0.7 \n
-Number of Chebyshev acceleration stages to use for diffusion equation for smoothness-based artificial viscosity.
-Increasing this number will help the artificial viscosity coefficient converge faster
-but cause a larger fraction of the time to be spent in the aritificial viscosity calculation.
-\note Not defined until \ref create_solver is evaluated.
-
-<hr>
-\subsubsection av_advect_iters
-__type:__ integer \n
-__default:__ 1 \n
-Number of pseudotime iterations to run in artificial viscosity advection equation per nominal iteration
-(i.e. per `hexed::Solver::set_art_visc_smoothness` call).
-Increasing this number will help the artificial viscosity coefficient converge faster
-but cause a larger fraction of the CPU time to be spent in the aritificial viscosity calculation.
-\note Not defined until \ref create_solver is evaluated.
-
-<hr>
-\subsubsection av_diff_iters
-__type:__ integer \n
-__default:__ 1 \n
-Number of pseudotime iterations to run in artificial viscosity diffusion equation per nominal iteration
-(i.e. per `hexed::Solver::set_art_visc_smoothness` call).
-Increasing this number will help the artificial viscosity coefficient converge faster
-but cause a larger fraction of the CPU time to be spent in the aritificial viscosity calculation.
-\note This was useful before Chebyshev acceleration was discovered.
-Increasing \ref n_cheby_av instead will usually be more productive, up to the limit where stability falls apart.
-\note Not defined until \ref create_solver is evaluated.
-
-<hr>
-\subsubsection flow_iters
-__type:__ integer \n
-__default:__ 1 \n
-Number of physical flow iterations to run per nominal iteration
-(i.e. per `hexed::Solver::update` call).
-Increasing this number can help balance the amount of CPU time spent in the physical flow relative to the artificial viscosity iteration
-if `n_cheby_av` is larger than `n_cheby_flow`.
-The disadvantage is it can cause the \ref iteration count to be misleading.
-\note Not defined until \ref create_solver is evaluated.
-
-<hr>
-\subsubsection local_time
-__type:__ integer \n
-__default:__ \ref true \n
-If \ref true, use local time stepping, otherwase use global.
-\note Not defined until \ref create_solver is evaluated.
+__default:__ 10 \n
+Visualization file names will contain iteration numbers with leading zeros added such that there are at least `iter_width` digits.
 
 <hr>
 
