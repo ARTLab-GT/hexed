@@ -174,14 +174,20 @@ The HIL includes a number of variables, both ordinary and Heisenberg, which are 
 This section lists the builtin variables that are simply useful for scripting
 but not directly related to the input and output functions of the CFD solver itself.
 See \ref inputs and \ref outputs for definitions of variables that directly interact with the solver.
+In addition to the below variables, there are also some internal variables used in the implementation of some of the builtin macros.
+The names of these variables always start with `hexed_` to avoid naming conflicts.
+
+\attention
+You are advised not to create, write to, or depend on the value of any variables whose names begin with `hexed_`
+-- such variables are private to the implementation by convention.
 
 \subsection builtin_list List of Builtin Variables
 
 <hr>
-\subsubsection Constants
+\subsubsection hil_constants Physical/mathematical constants
 All of the quantities in the `hexed::constants` namespace are included as float variables.
 The names are the same as in the C++ library, without the namespace.
-So if you want Boltzmann's constant, which in C++ would be `hexed::constants::boltzmann`, you just have to write `boltzmann`.
+So if you want Boltzmann's constant, for instance, which in C++ would be `hexed::constants::boltzmann`, you just have to write `boltzmann`.
 
 <hr>
 \subsubsection huge
@@ -207,6 +213,12 @@ Alias for the integer 1, for more readable logical operations.
 \subsubsection false
 __type:__ integer \n
 Alias for the integer 0, for more readable logical operations
+
+<hr>
+\subsection loop
+__type:__ string \n
+Macro which makes iteration more convenient, especially if you need nested loops.
+\see \ref Iteration
 
 <hr>
 \subsubsection repl
@@ -315,5 +327,23 @@ loop iteration 7
 loop iteration 8
 loop iteration 9
 ~~~
+
+However, the above method of iteration has two inconveniences.
+It is a little more verbose than I would prefer,
+and if you need nested loops you will need to explicitly give the macro variables different names to avoid conflicts.
+So, the preferred method is to use the builtin macro \ref loop, which streamlines the process and can be nested
+(internally, it counts the number of nested levels and incorporates this into its variable names).
+To use it, define your termination condition in a variable named `while` and the loop body in a variable named `do`.
+Using \ref loop, the above example would look like:
+~~~{.unparsed}
+i = 0
+while = {i < 10}
+do = {
+    println({loop iteration } + i)
+    i = i + 1
+}
+$loop
+~~~
+Note that this is a while loop, not a for loop, so you still have to manually define and increment your index variable.
 
 */

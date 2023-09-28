@@ -27,10 +27,9 @@ compute_force = {
     force1 = integral_surface_stress1
     force2 = integral_surface_stress2
     drag = force0*direction0 + force1*direction1 + force2*direction2
-    if = {n_dim == 2}
-    then = {lift = force1*direction0 - force0*direction1}
-    else = {println {force computation not yet implemented for `n_dim != 2`}; throw}
-    $cond
+    case0 = {println {force computation not yet implemented for `n_dim != 2`}; throw}
+    case1 = {lift = force1*direction0 - force0*direction1}
+    $$({case} + (n_dim == 2))
     drag_coef = drag/(0.5*density*speed^2)
     lift_coef = lift/(0.5*density*speed^2)
 }
@@ -132,30 +131,26 @@ print_final = {
 }
 done = {println {Error: you forgot to a set stop condition} & throw}
 vis_iter = {
-    if = {iteration%vis_freq == 0}
-    then = {
+    case0 = {}
+    case1 = {
         print {visualizing...}
         visualize
         println {done}
     }
-    $cond
+    $$({case} + (iteration%vis_freq == 0))
 }
-print_iter = {
-    if = {iteration%print_freq == 0}
-    then = {println report}
-    $cond
-}
+print_iter = {println report}
 iterate = {
     update
     {compute initial residual for normalization}
-    if = {iteration == 1}
-    then = {
+    case0 = {}
+    case1 = {
         compute_residuals
         init_residual_momentum = residual_momentum
         init_residual_density = residual_density
         init_residual_energy = residual_energy
     }
-    $cond
+    $$({case} + (iteration == 1))
     $print_iter
     $vis_iter
     except = {println exception}
@@ -164,20 +159,18 @@ iterate = {
 }
 
 init = {
-    if = {working_dir#(#working_dir - 1) != {/}}
-    then = {working_dir = working_dir + {/}}
-    $cond
+    case0 = {}
+    case1 = {working_dir = working_dir + {/}}
+    $$({case} + (working_dir#(#working_dir - 1) != {/}))
     shell({if [ ! -d } + working_dir + { ]; then mkdir } + working_dir + {; fi})
-    if = {surface_bc == {auto}}
-    then = {
-        if = {transport_model == {inviscid}}
-        then = {surface_bc = {nonpenetration}}
-        else = {surface_bc = {no_slip}}
-        $cond
+    case1 = {
+        case1 = {surface_bc = {nonpenetration}}
+        case0 = {surface_bc = {no_slip}}
+        $$({case} + (transport_model == {inviscid}))
     }
-    $cond
-    if = {flood_fill_start0 == huge}
-    then = {
+    $$({case} + (surface_bc == {auto}))
+    case0 = {}
+    case1 = {
         i_dim = 0
         while = {i_dim < n_dim}
         do = {
@@ -186,7 +179,7 @@ init = {
         }
         $loop
     }
-    $cond
+    $$({case} + (flood_fill_start0 == huge))
     create_solver
     init_refinement
     add_geom
@@ -200,9 +193,9 @@ init = {
         println {done}
     }
     $loop
-    if = {wall_spacing > 0}
-    then = {make_layers}
-    $cond
+    case0 = {}
+    case1 = {make_layers}
+    $$({case} + (wall_spacing > 0))
     init_state
     normalized_residual = 1.
     println({initialization complete with } + n_elements + { elements})
