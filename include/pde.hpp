@@ -108,10 +108,7 @@ class Navier_stokes
         ASSERT_THERM_ADMIS
         wave_speed(i_side) = char_speed(state)*nrml_mag;
       }
-      Mat<> diff = wave_speed.maxCoeff()*face_state*Mat<2>{.5, -.5};
-      //diff(Eigen::seqN(0, n_update - 1)) /= 1.5;
-      //Mat<> f = llf(wave_speed.maxCoeff(), face_flux, face_state);
-      return face_flux*Mat<2>{.5, .5} + diff;
+      return llf(wave_speed.maxCoeff(), face_flux, face_state);
     }
 
     //! compute the viscous flux
@@ -137,10 +134,10 @@ class Navier_stokes
     //! upper bound on characteristic speed for convection
     double char_speed(Mat<n_var> state) const
     {
-      const double safety = 1.5;
+      const double safety = 1;
       double mass = state(n_dim);
       double speed = state(Eigen::seqN(0, n_dim)).norm()/mass;
-      const double sound_speed = std::sqrt(heat_rat*(heat_rat - 1)*(safety*safety*state(n_dim + 1)/mass - 0.5*speed*speed));
+      const double sound_speed = std::sqrt(heat_rat*(heat_rat - 1)*std::max(0., safety*safety*state(n_dim + 1)/mass - 0.5*speed*speed));
       return sound_speed + speed;
     }
 
