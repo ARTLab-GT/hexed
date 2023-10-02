@@ -37,6 +37,7 @@ fix_therm_admis = true
 transport_model = {sutherland}
 surface_max_iters = 1
 vis_freq = 10000
+vis_field_vars = vis_field_vars + residual_expr
 vis_lts_constraints = true
 done = {iteration >= 20^5}
 max_safety = 3e-3

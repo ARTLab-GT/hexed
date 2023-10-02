@@ -3,6 +3,10 @@ heat_rat = 1.4
 momentum_expr = {momentum0 = momentum0; momentum1 = momentum1; momentum2 = momentum2;}
 density_expr = {density = density;}
 energy_expr = {energy = energy;}
+residual_momentum_expr = {residual_momentum0 = (momentum0 - prev_momentum0)/tss; residual_momentum1 = (momentum1 - prev_momentum1)/tss; residual_momentum2 = (momentum2 - prev_momentum2)/tss;}
+residual_density_expr = {residual_density = (density - prev_density)/tss;}
+residual_energy_expr = {residual_energy = (energy - prev_energy)/tss;}
+residual_expr = residual_momentum_expr + residual_density_expr + residual_energy_expr
 velocity_expr = {velocity0 = momentum0/density; velocity1 = momentum1/density; velocity2 = momentum2/density;}
 speed_expr = {speed = sqrt(velocity0^2 + velocity1^2 + velocity2^2);}
 pressure_expr = {pressure = (heat_rat - 1)*(energy - 0.5*density*speed^2);}
@@ -13,7 +17,7 @@ visc_stress_expr = {visc_stress0 = visc_stress0; visc_stress1 = visc_stress1; vi
 stress_expr = {stress0 = -pressure*normal0 + visc_stress0; stress1 = -pressure*normal1 + visc_stress1; stress2 = -pressure*normal2 + visc_stress2;}
 heat_flux_expr = {heat_flux = heat_flux;}
 iteration_expr = {iteration = iteration;}
-residual_expr = {normalized_residual = (residual_momentum/init_residual_momentum + residual_density/init_residual_density + residual_energy/init_residual_energy)/3;}
+normalized_residual_expr = {normalized_residual = (residual_momentum/init_residual_momentum + residual_density/init_residual_density + residual_energy/init_residual_energy)/3;}
 av_advection_residual_expr = {av_advection_residual = av_advection_residual;}
 av_diffusion_residual_expr = {av_diffusion_residual = av_diffusion_residual;}
 flow_time_expr = {flow_time = flow_time;}
@@ -88,7 +92,7 @@ vis_lts_constraints = false
 vis_field_vars = state_vars + art_visc_expr
 vis_surface_vars = state_vars + visc_stress_expr + heat_flux_expr
 vis_n_sample = 10
-print_vars = iteration_expr + residual_expr + av_advection_residual_expr + av_diffusion_residual_expr + flow_time_expr + time_step_expr
+print_vars = iteration_expr + normalized_residual_expr + av_advection_residual_expr + av_diffusion_residual_expr + flow_time_expr + time_step_expr
 integrand_field = {}
 integrand_surface = {}
 max_angle = 10*degree
