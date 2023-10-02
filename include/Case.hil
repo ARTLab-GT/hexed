@@ -125,6 +125,7 @@ vis_final = {visualize}
 print_init = {println header}
 print_final = {
     println {simulation complete}
+    println({wall clock time = } + wall_time + {s = } + wall_time/minute + {min = } + wall_time/hour + {hr})
     println {}
     println {performance summary:}
     println performance_report
