@@ -98,7 +98,7 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
       for (int depth = 1; depth;) {
         HEXED_ASSERT(_more(), "command input ended while parsing string literal", Parsing_error);
         char c = _pop();
-        if (c == '{') ++depth;
+        if (c == '{' && !backslash) ++depth;
         if (c == '}' && !backslash) --depth;
         if (c == '\\') backslash = !backslash;
         else backslash = false;
@@ -241,16 +241,7 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
       HEXED_ASSERT(val.s.has_value(), "unary operator `#` requires string argument", Parsing_error);
       return _Dynamic_value(int(val.s.value().size()));
     }},
-    {"sqrt", [this](_Dynamic_value val) {
-      double operand;
-      if (val.i) operand = *val.i;
-      else if (val.d) operand = *val.d;
-      else HEXED_ASSERT(false, "unary operator `sqrt` requires numeric argument", Parsing_error);
-      _Dynamic_value new_val;
-      val.i.reset();
-      val.d.emplace(std::sqrt(operand));
-      return val;
-    }},
+    {"sqrt", _numeric_unary<std::sqrt, "sqrt">},
     {"read", [this](_Dynamic_value val) {
       HEXED_ASSERT(val.s.has_value(), "operand of `read` must be `string`", Parsing_error);
       std::ifstream file(*val.s);

@@ -15,6 +15,8 @@ TEST_CASE("Interpreter")
   REQUIRE(inter.variables->lookup<double>("interaction").value() == Catch::Approx(1e-3));
   inter.exec("ludwig = {prandtl}\ntitle = {consider\n{Phlebas}!\\}\\\\}");
   REQUIRE(inter.variables->lookup<std::string>("ludwig").value() == "prandtl");
+  inter.exec("str = {\\{}");
+  REQUIRE(inter.variables->lookup<std::string>("str").value() == "{");
   REQUIRE(inter.variables->lookup<std::string>("title").value() == "consider\n{Phlebas}!}\\");
   inter.exec("boundary0layer = shock_wave");
   REQUIRE(inter.variables->lookup<int>("boundary0layer").value() == 7);

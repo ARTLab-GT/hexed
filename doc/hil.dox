@@ -48,6 +48,11 @@ Values in HIL have one of 3 types:
 
 Note that there is no dedicated boolean type.
 The integers 0 and 1 are used to represent logical true and false.
+If a value is used in an expression where a value of a different type is required,
+it is automatically converted if possible.
+Integers can be automatically converted to floats and both numeric types can be automatically converted to strings
+(the resulting string will be a human-readable representation of the number).
+If neither of the above conversions are possible, an exception is thrown.
 
 You can create one of these values with a literal.
 Integer and float literals are the same as in any language.
@@ -91,10 +96,21 @@ Syntactic category | Precedence level | Operator name | Operand types  | Behavio
 unary              | 0                | `-`           | integer, float | inverts sign
 ^                  | ^                | `!`           | integer        | logical _not_ (`1`, if operand is zero, else `0`)
 ^                  | ^                | `#`           | string         | evaluates size of string
-^                  | ^                | `sqrt`        | integer, float | square root (as float)
+^                  | ^                | `sqrt`        | float          | square root
+^                  | ^                | `exp`         | float          | exponential
+^                  | ^                | `sin`         | float          | sine
+^                  | ^                | `cos`         | float          | cosine
+^                  | ^                | `tan`         | float          | tangent
+^                  | ^                | `asin`        | float          | inverse sine
+^                  | ^                | `acos`        | float          | inverse cosine
+^                  | ^                | `atan`        | float          | inverse tangent
+^                  | ^                | `log`         | float          | natural logarithm
+^                  | ^                | `floor`       | float          | [floor function](https://mathworld.wolfram.com/FloorFunction.html)
+^                  | ^                | `ceil`        | float          | [ceiling function](https://mathworld.wolfram.com/CeilingFunction.html)
+^                  | ^                | `round`       | float          | rounds to nearest integer
 ^                  | ^                | `read`        | string         | operand is a file path; returns the file contents as a string
-^                  | ^                | `print`       | any            | prints to stdout (without adding a newline) and evaluates to the empty string
-^                  | ^                | `println`     | any            | prints to stdout and then prints a newline (like the Python `print` function) and evaluates to the empty string
+^                  | ^                | `print`       | string         | prints to stdout (without adding a newline) and evaluates to the empty string
+^                  | ^                | `println`     | string         | prints to stdout and then prints a newline (like the Python `print` function) and evaluates to the empty string
 ^                  | ^                | `shell`       | string         | executes the operand in the system shell and returns the return code (integer)
 ^                  | ^                | `$`           | string         | \ref Macros "macro substitution"
 binary             | 1                | `^`           | integer, float | raises left operand to power of right operand
@@ -103,9 +119,9 @@ binary             | 1                | `^`           | integer, float | raises 
 ^                  | ^                | `/`           | integer, float | division
 ^                  | ^                | `*`           | integer, float | multiplication
 ^                  | 3                | `-`           | integer, float | subtraction
-^                  | ^                | `+`           | any            | For numeric-numeric, addition. For strings, concatenation. If only one argument is a string, the other is converted to a string representation.
-^                  | 4                | `==`          | any            | Evaluates to integer `1` if operands are equal, otherwise `0`. Operands must both be strings or neither.
-^                  | ^                | `!=`          | any            | Evaluates to integer `1` if operands are inequal, otherwise `0` (including if both operands are NaN). Operands must both be strings or neither.
+^                  | ^                | `+`           | any            | For numeric-numeric, addition. For strings, concatenation.
+^                  | 4                | `==`          | any            | Evaluates to integer `1` if operands are equal, otherwise `0`.
+^                  | ^                | `!=`          | any            | Evaluates to integer `1` if operands are inequal, otherwise `0` (including if both operands are NaN).
 ^                  | ^                | `>=`          | integer, float | `1` if left operand is greater than or equal to right, else `0`
 ^                  | ^                | `<=`          | integer, float | `1` if left operand is less than or equal to right, else `0`
 ^                  | ^                | `>`           | integer, float | `1` if left operand is greater than right, else `0`
@@ -116,8 +132,9 @@ binary             | 1                | `^`           | integer, float | raises 
 
 __Notes:__
 - If an operator can be interpreted as unary or binary, it is interpreted as binary.
-- If a binary operator accepts both integer and float operands, then the result will be an integer if both operands are integers and a float otherwise.
+- All operators except binary `#` require the types of their operands to be the same.
 - The left operand of binary `#` must be a string and the right must be an integer.
+- Unless otherwise specified, the return type of each operator is the same as its operands.
 - An operator expression which is not nested inside another expression is called a _statement_.
 - A statement is terminated by either a newline or a `;` (as long as this terminating character is not inside a string literal).
 
@@ -342,8 +359,8 @@ Note that this is a while loop, not a for loop, so you still have to manually de
 \subsection Functions
 HIL does not have a concept of a function as it exists in ordinary languages.
 However, you can accomplish basically the same things with macros, as long as you're okay with making the arguments and return value(s) global variables.
-For example, here is a "function" to compute an integer logarithm \f$ \lceil \log_{\mathtt{log\_base}} \mathtt{log\_arg} \rceil \f$
-(basically a port of `hexed::math::log`).
+For example, here is a "function" to compute an integer logarithm \f$ \lceil \log_{\mathtt{log\_base}} \mathtt{log\_arg} \rceil \f$.
+It's basically a port of `hexed::math::log`. Of course, you could also implement it as `ceil(log log_arg / log log_base)`, but where's the fun in that?
 ~~~{.unparsed}
 int_log = {
     log_return = 0
