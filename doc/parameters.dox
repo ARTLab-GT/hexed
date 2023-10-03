@@ -448,46 +448,17 @@ Visualization file names will contain iteration numbers with leading zeros added
 
 <hr>
 
-\section outputs Output Parameters
-The following variables are defined and/or updated by the solver in order to provide information to you and/or perform actions.
-Some are Heisenberg variables and some are writable,
-but you should not write to them even if you are technically able to.
+\section commands Command Variables & Macros
+The following variables are used to execute actions.
+Some are Heisenberg variables which, when evaluated, cause the solver to perform certain tasks,
+while others are simply HIL macros.
 Most of the time you shouldn't need to know about most of these variables.
 There are builtin macros to deal with them for you.
 See example cases for standard best practices.
 This documentation exists to help you understand the implementation of the builtin macros and to help you in special cases
 where the standard workflows are inadequate.
 
-\subsection output_list List of Output Parameters
-
-<hr>
-\subsubsection iteration
-__type:__ integer \n
-Number of iterations executed since solver was created.
-Equal to \ref print_freq times the number of \ref update evaluations.
-
-<hr>
-\subsubsection wall_time
-__type:__ float \n
-Wall clock time (seconds) elapsed since solver was created.
-Not to be confused with \ref flow_time -- if the distinction isn't clear, here is an example:
-if you start a simulation and then take a 5-minute break to make coffee,
-if your simulation is still running upon your return the wall time will be 5*60s = 300s.
-
-<hr>
-\subsubsection flow_time
-__type:__ float \n
-Amount of time (seconds) elapsed in the physical flow since the simulation started.
-Only meaningful for global time stepping.
-Not to be confused with \ref wall_time -- if the distinction isn't clear, here is an example:
-if you have a shock propagating at 100 m/s and run your simulation with global time stepping
-until the flow time reaches 0.01 s, then the shock will have propaged a distance of 1 m.
-
-<hr>
-\subsubsection time_step
-__type:__ float \n
-Time step taken in the most recent iteration.
-Only meaningful for global time stepping.
+\subsection command_list List of Command Variables
 
 <hr>
 \subsubsection create_solver
@@ -548,6 +519,75 @@ __type:__ Heisenberg integer \n
 Writes visualization files and returns 0.
 
 <hr>
+\subsubsection compute_residuals
+__type:__ Heisenberg string \n
+Evaluates the residuals and assigns them to float variables \ref residual_momentum, \ref residual_density, \ref residual_energy.
+Returns the empty string.
+
+<hr>
+\subsubsection update
+__type:__ Heisenberg string \n
+Executes \ref print_freq solver iterations and returns an empty string.
+Each "solver iteration" consists of:
+-# Calling `hexed::Solver::set_art_visc_constant`, if applicable.
+-# Calling `hexed::Solver::set_art_visc_smoothness`, if applicable.
+-# Calling `hexed::Solver::update`.
+
+<hr>
+\subsubsection integrate_field
+__type:__ Heisenberg string \n
+Computes integrals of the variables in \ref integrand_field over the domain by the native quadrature rule of the numerical scheme.
+The integrals of the variables are assigned to float variables names `integral_field_var` where `var` is the name of the variable.
+Returns an empty string.
+
+<hr>
+\subsubsection integrate_surface
+__type:__ Heisenberg string \n
+Computes integrals of the variables in \ref integrand_surface over the geometry surface by the native quadrature rule of the numerical scheme.
+The integrals of the variables are assigned to float variables names `integral_surface_var` where `var` is the name of the variable.
+Returns an empty string.
+
+<hr>
+
+\section outputs Output Parameters
+The following variables are defined and/or updated by the solver in order to provide information to you.
+Some are Heisenberg variables whereas others are writable,
+but you should not write to them even if you are technically able to.
+Not all of these variables are defined at the start of the simulation.
+See individual documentation for details.
+
+\subsection output_list List of Output Parameters
+
+<hr>
+\subsubsection iteration
+__type:__ integer \n
+Number of iterations executed since solver was created.
+Equal to \ref print_freq times the number of \ref update evaluations.
+
+<hr>
+\subsubsection wall_time
+__type:__ float \n
+Wall clock time (seconds) elapsed since solver was created.
+Not to be confused with \ref flow_time -- if the distinction isn't clear, here is an example:
+if you start a simulation and then take a 5-minute break to make coffee,
+if your simulation is still running upon your return the wall time will be 5*60s = 300s.
+
+<hr>
+\subsubsection flow_time
+__type:__ float \n
+Amount of time (seconds) elapsed in the physical flow since the simulation started.
+Only meaningful for global time stepping.
+Not to be confused with \ref wall_time -- if the distinction isn't clear, here is an example:
+if you have a shock propagating at 100 m/s and run your simulation with global time stepping
+until the flow time reaches 0.01 s, then the shock will have propaged a distance of 1 m.
+
+<hr>
+\subsubsection time_step
+__type:__ float \n
+Time step taken in the most recent iteration.
+Only meaningful for global time stepping.
+
+<hr>
 \subsubsection header
 __type:__ Heisenberg string \n
 The names of the \ref print_vars variables as a comma-delimited list.
@@ -556,12 +596,6 @@ The names of the \ref print_vars variables as a comma-delimited list.
 \subsubsection report
 __type:__ Heisenberg string \n
 Evaluates \ref compute_residuals and then returns the values of the \ref print_vars variables as a comma-delimited list.
-
-<hr>
-\subsubsection compute_residuals
-__type:__ Heisenberg string \n
-Evaluates the residuals and assigns them to float variables \ref residual_momentum, \ref residual_density, \ref residual_energy.
-Returns the empty string.
 
 <hr>
 \subsubsection residual_momentum
@@ -594,15 +628,6 @@ Residual of artificial viscosity diffusion equation.
 Begins the simulation uninitialized and is only assigned when \ref update is evaluated with smoothness-based artificial viscosity.
 
 <hr>
-\subsubsection update
-__type:__ Heisenberg string \n
-Executes \ref print_freq solver iterations and returns an empty string.
-Each "solver iteration" consists of:
--# Calling `hexed::Solver::set_art_visc_constant`, if applicable.
--# Calling `hexed::Solver::set_art_visc_smoothness`, if applicable.
--# Calling `hexed::Solver::update`.
-
-<hr>
 \subsubsection n_elements
 __type:__ Heisenberg integer \n
 The number of elements currently in the mesh.
@@ -611,20 +636,6 @@ The number of elements currently in the mesh.
 \subsubsection performance_report
 __type:__ Heisenberg string \n
 Human-readable summary of kernel performance metrics for all iterations that have been run in the current simulation.
-
-<hr>
-\subsubsection integrate_field
-__type:__ Heisenberg string \n
-Computes integrals of the variables in \ref integrand_field over the domain by the native quadrature rule of the numerical scheme.
-The integrals of the variables are assigned to float variables names `integral_field_var` where `var` is the name of the variable.
-Returns an empty string.
-
-<hr>
-\subsubsection integrate_surface
-__type:__ Heisenberg string \n
-Computes integrals of the variables in \ref integrand_surface over the geometry surface by the native quadrature rule of the numerical scheme.
-The integrals of the variables are assigned to float variables names `integral_surface_var` where `var` is the name of the variable.
-Returns an empty string.
 
 <hr>
 
