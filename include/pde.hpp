@@ -134,10 +134,9 @@ class Navier_stokes
     //! upper bound on characteristic speed for convection
     double char_speed(Mat<n_var> state) const
     {
-      const double safety = 1;
       double mass = state(n_dim);
-      double speed = state(Eigen::seqN(0, n_dim)).norm()/mass;
-      const double sound_speed = std::sqrt(heat_rat*(heat_rat - 1)*std::max(0., safety*safety*state(n_dim + 1)/mass - 0.5*speed*speed));
+      const double sound_speed = std::sqrt(heat_rat*(heat_rat - 1)*state(n_dim + 1)/mass);
+      const double speed = state(Eigen::seqN(0, n_dim)).norm()/mass;
       return sound_speed + speed;
     }
 
