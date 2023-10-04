@@ -16,7 +16,7 @@ art_visc_width = 2*2.^-init_ref_level
 {isothermal wall}
 working_dir = {hexed_out_isothermal}
 thermal_bc = {temperature = 98.89}
-init_layer_splits = 1
+init_layer_splits = 2
 
 {
 {adiabatic wall}
@@ -39,6 +39,7 @@ vis_field_vars = vis_field_vars + residual_expr
 vis_lts_constraints = true
 done = {iteration >= 20^5}
 max_safety = 3e-3
+av_diff_max_safety = 0.3
 n = 10
 n_cheby_av = n
 flow_iters = n
