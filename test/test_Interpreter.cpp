@@ -107,9 +107,7 @@ TEST_CASE("Interpreter")
   SECTION("standard library")
   {
     hexed::Interpreter test;
-    test.exec("$(read {../test/test_std.hil})");
-    REQUIRE(test.variables->lookup<std::string>("result0").value() == "yes");
-    REQUIRE(test.variables->lookup<std::string>("result1").value() == "yesyes");
+    test.exec("$(read {../test/test_builtin.hil})");
     REQUIRE(test.variables->lookup<int>("triangle").value() == 10);
     REQUIRE(test.variables->lookup<int>("cube").value() == 27);
   }

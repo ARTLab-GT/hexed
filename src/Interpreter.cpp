@@ -8,7 +8,7 @@
 namespace hexed
 {
 
-const std::string Interpreter::std_file = std::string(config::root_dir) + "include/std.hil";
+const std::string Interpreter::builtin_file = std::string(config::root_dir) + "include/builtin.hil";
 const std::string Interpreter::const_file = std::string(config::build_dir) + "constants.hil";
 
 bool Interpreter::_more() {return _text.size() > 1;}
@@ -329,7 +329,7 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
     return "";
   }));
   // builtin values
-  variables->assign<double>("huge", huge);
+  variables->assign("huge", huge);
   // initialize exception handling variables
   variables->assign<std::string>("exception", "");
   variables->assign<std::string>("except", "");

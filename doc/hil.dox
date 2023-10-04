@@ -210,9 +210,9 @@ __type:__ string \n
 A string containing a single newline character, so you can write strings containing newlines on a single line.
 
 <hr>
-\subsubsection closebr
-__type:__ string \n
-A string containg a single `}`, so you can write strings containing an unmatched `}` without explicitly escaping it.
+\subsubsection false
+__type:__ integer \n
+Alias for the integer 0, for more readable logical operations
 
 <hr>
 \subsubsection true
@@ -220,12 +220,7 @@ __type:__ integer \n
 Alias for the integer 1, for more readable logical operations.
 
 <hr>
-\subsubsection false
-__type:__ integer \n
-Alias for the integer 0, for more readable logical operations
-
-<hr>
-\subsection loop
+\subsubsection loop
 __type:__ string \n
 Macro which makes iteration more convenient, especially if you need nested loops.
 \see \ref Iteration
