@@ -91,44 +91,45 @@ Operators with a lower precedence level are evaluated before those with a higher
 and operators with the same precedence level are evaluated left-to-right.
 `()` can be used to override the precedence order and evaluate the enclosed expression(s) first.
 
-Syntactic category | Precedence level | Operator name | Operand types  | Behavior
--------------------|------------------|---------------|----------------|---------
-unary              | 0                | `-`           | integer, float | inverts sign
-^                  | ^                | `!`           | integer        | logical _not_ (`1`, if operand is zero, else `0`)
-^                  | ^                | `#`           | string         | evaluates size of string
-^                  | ^                | `sqrt`        | float          | square root
-^                  | ^                | `exp`         | float          | exponential
-^                  | ^                | `log`         | float          | natural logarithm
-^                  | ^                | `sin`         | float          | sine
-^                  | ^                | `cos`         | float          | cosine
-^                  | ^                | `tan`         | float          | tangent
-^                  | ^                | `asin`        | float          | inverse sine
-^                  | ^                | `acos`        | float          | inverse cosine
-^                  | ^                | `atan`        | float          | inverse tangent
-^                  | ^                | `floor`       | float          | [floor function](https://mathworld.wolfram.com/FloorFunction.html)
-^                  | ^                | `ceil`        | float          | [ceiling function](https://mathworld.wolfram.com/CeilingFunction.html)
-^                  | ^                | `round`       | float          | rounds to nearest integer
-^                  | ^                | `read`        | string         | operand is a file path; returns the file contents as a string
-^                  | ^                | `print`       | string         | prints to stdout (without adding a newline) and evaluates to the empty string
-^                  | ^                | `println`     | string         | prints to stdout and then prints a newline (like the Python `print` function) and evaluates to the empty string
-^                  | ^                | `shell`       | string         | executes the operand in the system shell and returns the return code (integer)
-^                  | ^                | `$`           | string         | \ref Macros "macro substitution"
-binary             | 1                | `^`           | integer, float | raises left operand to power of right operand
-^                  | ^                | `#`           | string-integer | returns the _i_ th character of the left operand as a string where _i_ is the right operand
-^                  | 2                | `%`           | integer        | modulo
-^                  | ^                | `/`           | integer, float | division
-^                  | ^                | `*`           | integer, float | multiplication
-^                  | 3                | `-`           | integer, float | subtraction
-^                  | ^                | `+`           | any            | For numeric-numeric, addition. For strings, concatenation.
-^                  | 4                | `==`          | any            | Evaluates to integer `1` if operands are equal, otherwise `0`.
-^                  | ^                | `!=`          | any            | Evaluates to integer `1` if operands are inequal, otherwise `0` (including if both operands are NaN).
-^                  | ^                | `>=`          | integer, float | `1` if left operand is greater than or equal to right, else `0`
-^                  | ^                | `<=`          | integer, float | `1` if left operand is less than or equal to right, else `0`
-^                  | ^                | `>`           | integer, float | `1` if left operand is greater than right, else `0`
-^                  | ^                | `<`           | integer, float | `1` if left operand is less than right, else `0`
-^                  | 5                | `&`           | integer, float | logical _and_ (`0` if either operand is `0`, else `1`)
-^                  | ^                | \|            | integer, float | logical _or_ (`0` if both operands are `0`, else `1`)
-^                  | 6                | `=`           | any            | \ref variables "Assigns" the value of the left operand to the right operand, which must be a variable name. Evaluates to the value of the right operand.
+Syntax | Precedence level | Operator name | Operand types  | Behavior
+-------|------------------|---------------|----------------|---------
+unary  | 0                | `-`           | integer, float | inverts sign
+^      | ^                | `!`           | integer        | logical _not_ (`1`, if operand is zero, else `0`)
+^      | ^                | `#`           | string         | evaluates size of string
+^      | ^                | `sqrt`        | float          | square root
+^      | ^                | `exp`         | float          | exponential
+^      | ^                | `log`         | float          | natural logarithm
+^      | ^                | `sin`         | float          | sine
+^      | ^                | `cos`         | float          | cosine
+^      | ^                | `tan`         | float          | tangent
+^      | ^                | `asin`        | float          | inverse sine
+^      | ^                | `acos`        | float          | inverse cosine
+^      | ^                | `atan`        | float          | inverse tangent
+^      | ^                | `floor`       | float          | [floor function](https://mathworld.wolfram.com/FloorFunction.html)
+^      | ^                | `ceil`        | float          | [ceiling function](https://mathworld.wolfram.com/CeilingFunction.html)
+^      | ^                | `round`       | float          | rounds to nearest integer
+^      | ^                | `abs`         | integer, float | absolute value
+^      | ^                | `read`        | string         | operand is a file path; returns the file contents as a string
+^      | ^                | `print`       | string         | prints to stdout (without adding a newline) and evaluates to the empty string
+^      | ^                | `println`     | string         | prints to stdout and then prints a newline (like the Python `print` function) and evaluates to the empty string
+^      | ^                | `shell`       | string         | executes the operand in the system shell and returns the return code (integer)
+^      | ^                | `$`           | string         | \ref Macros "macro substitution"
+binary | 1                | `^`           | integer, float | raises left operand to power of right operand
+^      | ^                | `#`           | string-integer | returns the _i_ th character of the left operand as a string where _i_ is the right operand
+^      | 2                | `%`           | integer        | modulo
+^      | ^                | `/`           | integer, float | division
+^      | ^                | `*`           | integer, float | multiplication
+^      | 3                | `-`           | integer, float | subtraction
+^      | ^                | `+`           | any            | For numeric-numeric, addition. For strings, concatenation.
+^      | 4                | `==`          | any            | Evaluates to integer `1` if operands are equal, otherwise `0`.
+^      | ^                | `!=`          | any            | Evaluates to integer `1` if operands are inequal, otherwise `0` (including if both operands are NaN).
+^      | ^                | `>=`          | integer, float | `1` if left operand is greater than or equal to right, else `0`
+^      | ^                | `<=`          | integer, float | `1` if left operand is less than or equal to right, else `0`
+^      | ^                | `>`           | integer, float | `1` if left operand is greater than right, else `0`
+^      | ^                | `<`           | integer, float | `1` if left operand is less than right, else `0`
+^      | 5                | `&`           | integer, float | logical _and_ (`0` if either operand is `0`, else `1`)
+^      | ^                | \|            | integer, float | logical _or_ (`0` if both operands are `0`, else `1`)
+^      | 6                | `=`           | any            | \ref variables "Assigns" the value of the left operand to the right operand, which must be a variable name. Evaluates to the value of the right operand.
 
 __Notes:__
 - If an operator can be interpreted as unary or binary, it is interpreted as binary.

@@ -230,7 +230,7 @@ std::function<Interpreter::_Dynamic_value(Interpreter::_Dynamic_value)> Interpre
     double operand;
     if (val.i) operand = *val.i;
     else if (val.d) operand = *val.d;
-    else HEXED_ASSERT(false, "unary operator" + name + "requires numeric argument", Parsing_error);
+    else HEXED_ASSERT(false, "unary operator `" + name + "` requires numeric argument", Parsing_error);
     _Dynamic_value new_val;
     val.i.reset();
     val.d.emplace(f(operand));
@@ -267,6 +267,12 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
     {"round", [this](_Dynamic_value val){return _Dynamic_value((int)std::lround(_numeric_unary(&std::round, "round")(val).d.value()));}},
     {"floor", [this](_Dynamic_value val){return _un_ops["round"](_numeric_unary(&std::floor, "floor")(val));}},
     {"ceil" , [this](_Dynamic_value val){return _un_ops["round"](_numeric_unary(&std::ceil , "ceil" )(val));}},
+    {"abs", [](_Dynamic_value val) {
+      if      (val.i) *val.i = std::abs(*val.i);
+      else if (val.d) *val.d = std::abs(*val.d);
+      else HEXED_ASSERT(false, "unary operator `abs` requires numeric argument")
+      return val;
+    }},
     {"read", [this](_Dynamic_value val) {
       HEXED_ASSERT(val.s.has_value(), "operand of `read` must be `string`", Parsing_error);
       std::ifstream file(*val.s);
