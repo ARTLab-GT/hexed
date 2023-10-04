@@ -233,9 +233,15 @@ Case::Case(std::string input_file)
     return changed;
   }));
 
-  _inter.variables->create<int>("make_layers", new Namespace::Heisenberg<int>([this]() {
+  _inter.variables->create<int>("split_layers", new Namespace::Heisenberg<int>([this]() {
     _solver().mesh().disconnect_boundary(_solver().mesh().surface_bc_sn());
-    _solver().mesh().extrude(Layer_sequence(_vard("wall_spacing").value(), _vari("wall_layers").value()));
+    auto sub = _inter.make_sub();
+    std::vector<double> split_points = Struct_expr(_vars("layer_split_points").value()).eval(sub);
+    double prev_split = 1.;
+    for (double split : split_points) {
+      _solver().mesh().extrude(true, split/prev_split, true);
+      prev_split = split;
+    }
     _solver().mesh().connect_rest(_solver().mesh().surface_bc_sn());
     _solver().calc_jacobian();
     return 0;

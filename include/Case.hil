@@ -81,8 +81,6 @@ surface_refine = {false}
 surface_unrefine = {ref_level > init_ref_level & !is_extruded}
 surface_max_iters = 100
 n_smooth = 30
-wall_spacing = -1.; {set to positive value}
-wall_layers = 1
 geom_n_segments = 1000
 vis_surface = true
 vis_field = true
@@ -98,6 +96,8 @@ integrand_surface = {}
 max_angle = 10*degree
 max_deflection = huge
 mesh_extreme_eps = 1e-6
+layer_split_points = {split0 = 1./3.;}
+init_layer_splits = 0
 
 {array parameters}
 i_dim = 0
@@ -198,9 +198,10 @@ init = {
         println {done}
     }
     $loop
-    case0 = {}
-    case1 = {make_layers}
-    $$({case} + (wall_spacing > 0))
+    i_split = 0
+    while = {i_split < init_layer_splits}
+    do = {split_layers; i_split = i_split + 1}
+    $loop
     init_state
     normalized_residual = 1.
     println({initialization complete with } + n_elements + { elements})
