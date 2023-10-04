@@ -97,12 +97,12 @@ plt.legend()
 if show:
     plt.show()
 else:
-    plt.savefig("summary.svg")
+    plt.savefig("html/summary.svg")
     plt.close()
 for case in ["naca0012", "flat_plate"]:
     benchmarks[case + ": ae-artl-408091"][-1].timing.plot()
     if show:
         plt.show()
     else:
-        plt.savefig(case + ".svg")
+        plt.savefig(f"html/{case}.svg")
         plt.close()
