@@ -761,6 +761,8 @@ TEST_CASE("face extrusion")
     for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
     solver.mesh().connect_rest(bc_sn);
     solver.calc_jacobian();
+    hexed::Interpreter inter;
+    solver.initialize(hexed::Spacetime_expr(hexed::Struct_expr("state0 = 0; state1 = 0; state2 = 1 + pos0; state3 = 1;"), inter));
     double area = solver.integral_field(hexed::Constant_func({1.}))[0];
     solver.mesh().disconnect_boundary(bc_sn);
     solver.mesh().extrude(true, .7);
@@ -774,7 +776,9 @@ TEST_CASE("face extrusion")
     solver.visualize_field_tecplot(hexed::Mass(), "extrude_2d");
     #endif
     REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Catch::Approx(40./4.)); // check number of elements and that jacobian is nonsingular
-    REQUIRE(solver.integral_field(hexed::Constant_func({1.}))[0] == Catch::Approx(area));
+    REQUIRE(solver.integral_field(hexed::Constant_func({1.}))[0] == Catch::Approx(area)); // check that area has not changed since first extrusion
+    // check that state variables have been interpolated correctly during second extrusion
+    REQUIRE(solver.integral_field(hexed::Qpoint_expr(hexed::Struct_expr("errsq = (density - (1 + pos0))^2"), inter))[0] == Catch::Approx(0.).scale(1.));
   }
   SECTION("3D")
   {
