@@ -1,0 +1,384 @@
+/*! \page hil Hexed Interface Language
+
+__The Hexed Interface Language (HIL) is a simple scripting language designed for interfacing with Hexed.__
+The Hexed project has two interpreters for it.
+There is the basic executable `hil`, which supports all the basic features described on this page,
+and there is the full program \ref hexecute which also supports the \ref parameters that control the solver engine.
+Both interpreters can be run with no arguments, in which case they will start an interactive session,
+or with a single argument which is the path to a file containing HIL code.
+For examples of effective HIL scripting, see the `samples` directory.
+To run any of the cases, navigate to the corresponding subdirectory and type `hexecute run.hil`.
+Execution time may vary from a few seconds to multiple hours for different cases.
+
+Creating a whole scripting language just to interface with a CFD solver may seem excessive,
+but in fact it addresses some of my greatest frustrations with computational analysis.
+Most CFD solvers behave roughly like a washing machine: you adjust a few numbers, hit "go", and hope it gives you what you want.
+Usually it does, but, also like a washing machine, occasionally it starts spiraling out of control and requires manual intervention.
+This design is generally adequate to solve easy problems, but more challenging cases often call for more granular control,
+such as various types of CFL ramping, complex termination conditions, local/global time step switching, etc.
+Because there is an infinite variety of convoluted pathways a simulation might need to take,
+many solvers implement a multitude of ridiculously specific input parameters and/or require you to manually babysit a simulation
+and tweak parameters as it runs.
+We need to recognize that the real purpose of a CFD solver is to do things that you can't do --
+in particular, running iterations and standard file IO tasks.
+You are perfectly capable of deciding when and how many times to do these things,
+and in fact probably have opinions about it that differ from mine.
+To address general use cases, the solver should expose the fundamental capabilities directly
+and give you full control over the high-level iteration process.
+Of course, there should be builtin defaults to let you run basic cases without any significant programming,
+but you should be able to modify it arbitrarily without dealing with the solver's source code.
+
+Initially, I thought the best way to achieve this ideal would be to implement bindings to \ref hexed in an existing scripting language (namely Python).
+However, this turned out to have several problems:
+- It required much more boilerplate code than I would have liked.
+- It made it much harder to debug memory errors, since binding systems tend to confuse memory checking tools.
+- It doesn't provide an easy way to implement user-defined callback functions (e.g. mesh refinement criteria, integral error metrics)
+  that execute in parallel and at C++ speed.
+
+Technically, most CFD solvers _already_ implement a custom scripting language, since input parameters are provided via a text file with custom syntax.
+Hexed simply adds support for operator expressions (`=`, `+`, `*`, `&`, etc.) and basic control flow
+to enable you to construct cases with arbitrarily complex logic.
+The goal of the HIL is to be as simple as possible (both to implement and to learn) while providing all the functionality that you strictly need.
+
+\section literals Types and Literals
+Values in HIL have one of 3 types:
+- Integer (32-bit signed)
+- [Float](https://en.wikipedia.org/wiki/Floating-point_arithmetic) (64-bit)
+- String
+
+Note that there is no dedicated boolean type.
+The integers 0 and 1 are used to represent logical true and false.
+If a value is used in an expression where a value of a different type is required,
+it is automatically converted if possible.
+Integers can be automatically converted to floats and both numeric types can be automatically converted to strings
+(the resulting string will be a human-readable representation of the number).
+If neither of the above conversions are possible, an exception is thrown.
+
+You can create one of these values with a literal.
+Integer and float literals are the same as in any language.
+Strings are enclosed in `{}` instead of quotes
+to avoid exponential pileup of escape sequences in nested \ref Macros.
+Matched pars of `{}` in strings are included literally.
+To include an unmatched `{` or `}` in a string, you can escape it with a `\`.
+To include a literal `\`, you must escape it with a second `\`.
+Strings can include newlines.
+
+Examples:
+- `5` and `012` are integer literals.
+- `1.0`, `4.`, `0.25`, `.01`, and `5e-4` are float literals.
+- `{some chars}` is a string containing the characters `some chars`.
+-
+~~~{.html}
+{{string} \\ with \} special
+chars}
+~~~
+is a string containing the characters
+~~~{.html}
+{string} \ with } special
+chars
+~~~
+
+\warning
+If you have never programmed in a low-level language before, beware of [integer overflow](https://en.wikipedia.org/wiki/Integer_overflow).
+
+\section Operators
+HIL supports a variety of _operators_, which in this context means
+things that take in input values (operands), which can be literals or variable references, and produce an output.
+Some of these operators are implemented as functions in other languages, but HIL has no concept of a function.
+So-called unary operators are placed directly before their operand and binary operators are placed between their operands.
+The operators are listed below with their precedence.
+Operators with a lower precedence level are evaluated before those with a higher precedence number,
+and operators with the same precedence level are evaluated left-to-right.
+`()` can be used to override the precedence order and evaluate the enclosed expression(s) first.
+
+Syntax | Precedence level | Operator name | Operand types  | Behavior
+-------|------------------|---------------|----------------|---------
+unary  | 0                | `-`           | integer, float | inverts sign
+^      | ^                | `!`           | integer        | logical _not_ (`1`, if operand is zero, else `0`)
+^      | ^                | `#`           | string         | evaluates size of string
+^      | ^                | `sqrt`        | float          | square root
+^      | ^                | `exp`         | float          | exponential
+^      | ^                | `log`         | float          | natural logarithm
+^      | ^                | `sin`         | float          | sine
+^      | ^                | `cos`         | float          | cosine
+^      | ^                | `tan`         | float          | tangent
+^      | ^                | `asin`        | float          | inverse sine
+^      | ^                | `acos`        | float          | inverse cosine
+^      | ^                | `atan`        | float          | inverse tangent
+^      | ^                | `floor`       | float          | [floor function](https://mathworld.wolfram.com/FloorFunction.html)
+^      | ^                | `ceil`        | float          | [ceiling function](https://mathworld.wolfram.com/CeilingFunction.html)
+^      | ^                | `round`       | float          | rounds to nearest integer
+^      | ^                | `abs`         | integer, float | absolute value
+^      | ^                | `read`        | string         | operand is a file path; returns the file contents as a string
+^      | ^                | `print`       | string         | prints to stdout (without adding a newline) and evaluates to the empty string
+^      | ^                | `println`     | string         | prints to stdout and then prints a newline (like the Python `print` function) and evaluates to the empty string
+^      | ^                | `shell`       | string         | executes the operand in the system shell and returns the return code (integer)
+^      | ^                | `$`           | string         | \ref Macros "macro substitution"
+binary | 1                | `^`           | integer, float | raises left operand to power of right operand
+^      | ^                | `#`           | string-integer | returns the _i_ th character of the left operand as a string where _i_ is the right operand
+^      | 2                | `%`           | integer        | modulo
+^      | ^                | `/`           | integer, float | division
+^      | ^                | `*`           | integer, float | multiplication
+^      | 3                | `-`           | integer, float | subtraction
+^      | ^                | `+`           | any            | For numeric-numeric, addition. For strings, concatenation.
+^      | 4                | `==`          | any            | Evaluates to integer `1` if operands are equal, otherwise `0`.
+^      | ^                | `!=`          | any            | Evaluates to integer `1` if operands are inequal, otherwise `0` (including if both operands are NaN).
+^      | ^                | `>=`          | integer, float | `1` if left operand is greater than or equal to right, else `0`
+^      | ^                | `<=`          | integer, float | `1` if left operand is less than or equal to right, else `0`
+^      | ^                | `>`           | integer, float | `1` if left operand is greater than right, else `0`
+^      | ^                | `<`           | integer, float | `1` if left operand is less than right, else `0`
+^      | 5                | `&`           | integer, float | logical _and_ (`0` if either operand is `0`, else `1`)
+^      | ^                | \|            | integer, float | logical _or_ (`0` if both operands are `0`, else `1`)
+^      | 6                | `=`           | any            | \ref variables "Assigns" the value of the left operand to the right operand, which must be a variable name. Evaluates to the value of the right operand.
+
+__Notes:__
+- If an operator can be interpreted as unary or binary, it is interpreted as binary.
+- All operators except binary `#` require the types of their operands to be the same.
+- The left operand of binary `#` must be a string and the right must be an integer.
+- Unless otherwise specified, the return type of each operator is the same as its operands.
+- An operator expression which is not nested inside another expression is called a _statement_.
+- A statement is terminated by either a newline or a `;` (as long as this terminating character is not inside a string literal).
+
+\section variables Variables and Assignment
+The `=` operator can be used to assign a value to a variable.
+Variable names may contain letters (case-sensitive), digits, and underscores, but cannot start with a digit.
+Variables are created and their type determened when they are assigned a value; variables need not be declared.
+Once a variable is created, its value can be referenced in subsequent expressions and its type cannot be changed.
+Attempting to assign a value to a variable of a different type will produce an exception,
+with the exception that an integer may be assigned to a float (it will be automatically converted and the variable will continue to be a float).
+However, HIL is technically dynamically typed since the type that a variable can depend on the path a program takes at runtime.
+
+HIL comes with some builtin variables which are already defined at the start of your program,
+and special variables whose value influences the behavior of the solver (i.e. input parameters).
+There are also some variables, which I call _Heisenberg variables_ that produce side effects when you evaluate them.
+You can't assign to these variables, and exactly what happens when you evaluate them is specially defined for each one.
+They are called "Heisenberg" because the fact that observing their value changes the state of the program
+is reminiscent of the collapse of the wave function in quantum mechanics.
+See \ref builtins and \ref parameters for a list of such variablels.
+
+Technically, an assignment statement is an expression which evaluates to the value of the right-hand-side.
+Also, a sequence of statements (assignment or otherwise) evaluates to the value of the last one.
+So, for example,
+~~~
+x = (println {hello world!}; y = z = 0; 15)
+~~~
+prints `hello world!`, then assigns 0 to both `y` and `z`, then assigns 15 to `x`.
+However, these technicalities are unlikely to be relevant to using Hexed.
+
+\section Macros
+In HIL, transfer of control flow (e.g. conditionals, iteration, subroutines, recursion) is accomplished by a macro substitution mechanic.
+HIL is an interpreted language, meaning that the text of the program is executed as it is parsed.
+If the character `$` is encountered while parsing (not inside a string literal),
+it must be immediately follwed by a string value (literal, variable, or expression).
+This string is then prepended to the remaining text of the program.
+For example, suppose you have set `my_string = {1 + 1}` at some point in the program.
+Then `x = $my_string` is equivalent to `x = 1 + 1`.
+This can be done recursively.
+For example, `macro = {println {infinite loop!}; $macro}; $macro` will print "infinite loop!" repeatedly until you kill the process.
+The ability for a program to manipulate its own text is an extremely versatile tool
+which can be used to emulate pretty much all of the control flow mechanics that most languages explicitly implement,
+if you're willing to think a little harder about it.
+See \ref Idioms below for examples.
+
+\section builtins Builtin Variables
+The HIL includes a number of variables, both ordinary and Heisenberg, which are automatically defined at the start of your program.
+This section lists the builtin variables that are simply useful for scripting
+but not directly related to the input and output functions of the CFD solver itself.
+See \ref parameters for definitions of variables that directly interact with the solver.
+In addition to the below variables, there are also some internal variables used in the implementation of some of the builtin macros.
+The names of these variables always start with `hexed_` to avoid naming conflicts.
+
+\attention
+You are advised not to create, write to, or depend on the value of any variables whose names begin with `hexed_`
+-- such variables are private to the implementation by convention.
+
+\subsection builtin_list List of Builtin Variables
+
+<hr>
+\subsubsection hil_constants Physical/mathematical constants
+All of the quantities in the `hexed::constants` namespace are included as float variables.
+The names are the same as in the C++ library, without the namespace.
+So if you want Boltzmann's constant, for instance, which in C++ would be `hexed::constants::boltzmann`, you just have to write `boltzmann`.
+
+<hr>
+\subsubsection huge
+__type:__ float \n
+Maximum representable float value (equal to `std::numeric_limits<double>::%max`).
+
+<hr>
+\subsubsection newline
+__type:__ string \n
+A string containing a single newline character, so you can write strings containing newlines on a single line.
+
+<hr>
+\subsubsection false
+__type:__ integer \n
+Alias for the integer 0, for more readable logical operations
+
+<hr>
+\subsubsection true
+__type:__ integer \n
+Alias for the integer 1, for more readable logical operations.
+
+<hr>
+\subsubsection loop
+__type:__ string \n
+Macro which makes iteration more convenient, especially if you need nested loops.
+\see \ref Iteration
+
+<hr>
+\subsubsection repl
+__type:__ string \n
+Macro which starts a Read-Evaluate-Print Loop (a.k.a. an interactive session).
+Statements executed in the REPL will have read/write access to the namespace of the program.
+
+<hr>
+\subsubsection quit
+__type:__ string \n
+Macro which, when invoked from the REPL, quits the REPL.
+The program which invoked \ref repl will continue executing.
+This is different from \ref exit because it terminates only the REPL, not the interpreter itself.
+
+<hr>
+\subsubsection ask
+__type:__ Heisenberg string \n
+Queries stdin (command line input) and gets characters until a newline is received.
+Evaluates to a string containing those characters.
+
+<hr>
+\subsubsection exit
+__type:__ Heisenberg string \n
+Terminates the HIL interpreter and evaluates to an empty string.
+This is different from \ref quit in that it can be invoked from anywhere (not just the REPL)
+and even if it is invoked from the REPL, statements after the \ref repl invokation will not be executed
+(because it terminates the whole interpreter).
+
+<hr>
+\subsubsection throw
+__type:__ Heisenberg string \n
+Throws an exception in the C++ implementation of HIL.
+Potentially useful if the C++ code contains subsequent statements after the invokation of the HIL interpreter which you don't want to execute.
+
+<hr>
+
+\section Idioms
+HIL is missing some features that nearly every programming language has
+because there are workarounds and I am reluctant to implement (and require you to understand) anything that we can get away without.
+However, since these workarounds may not be obvious, this section gives some examples so that you know them when you see them or need them.
+
+\subsection Comments
+To include text addressed at a human reader which does not affect the behavior of the program,
+create a string literal and don't assign it to anything.
+Comments can be placed on the same line as a statement if you terminate the statement with a `;`.
+For example:
+~~~{.unparsed}
+{this comment is on its own line
+and can take up multiple lines if you like}
+i = 0; {this is an inline comment}
+~~~
+
+\subsection Conditionals
+Conditional jumps (like `if` and `switch` statements) can be accomplished with macro substitution and integer-string conversion.
+For example, you can emulate the behavior of a basic if-else statement like this:
+~~~{.unparsed}
+case0 = {println {predicate is false}}
+case1 = {println {predicate is true}}
+$$({case} + (predicate != 0))
+~~~
+Note the two `$` operators in the last statement: the first converts the string containing the variable name to the value of the variable,
+which is a string containing code,
+and the second executes the code in the string.
+For example, if `predicate` is `false`, then the first `$` converts `{case0}` to `case0`, which evaluates to `{println {predicate is false}}`.
+The second `$` converts `{println {predicate is false}}` to `println {predicate is false}` which is then executed as code.
+The above conditional is essentially equivalent to the following Python code:
+~~~{.py}
+if predicate:
+    print("predicate is false")
+else:
+    print("predicate is true")
+~~~
+
+\subsection Iteration
+Iteration (like `while` and `for` loops) can be accomplished with recursive macros.
+If you're concerned about memory overhead, remember that macro substitution does not create a new scope;
+it literally inserts the text of the macro at the start of the remaining program text
+(and the text of statements that have already been processed is deleted).
+Thus tail recursion is inherently optimized.
+If your recursive macro contains trailing characters, these will add up over many iterations,
+but the program text happens to be allocated on the heap, so stack overflow in particular will not be an issue.
+With that in mind, here is an example of a basic for-loop equivalent:
+~~~{.unparsed}
+i = 0
+iterate = {
+    case0 = {}
+    case1 = {
+        println({loop iteration } + i)
+        i = i + 1
+        $iterate}
+    $$({case} + (i < 10))}
+$iterate
+~~~
+Note that there are no trailing newlines at the end of the macro strings,
+which would pile up and consume memory if there were many iterations.
+The above loop would print:
+~~~{.unparsed}
+loop iteration 0
+loop iteration 1
+loop iteration 2
+loop iteration 3
+loop iteration 4
+loop iteration 5
+loop iteration 6
+loop iteration 7
+loop iteration 8
+loop iteration 9
+~~~
+
+However, the above method of iteration has two inconveniences.
+It is a little more verbose than I would prefer,
+and if you need nested loops you will need to explicitly give the macro variables different names to avoid conflicts.
+So, the preferred method is to use the builtin macro \ref loop, which streamlines the process and can be nested
+(internally, it counts the number of nested levels and incorporates this into its variable names).
+To use it, define your termination condition in a variable named `while` and the loop body in a variable named `do`.
+Using \ref loop, the above example would look like:
+~~~{.unparsed}
+i = 0
+while = {i < 10}
+do = {
+    println({loop iteration } + i)
+    i = i + 1
+}
+$loop
+~~~
+Note that this is a while loop, not a for loop, so you still have to manually define and increment your index variable.
+
+\subsection Functions
+HIL does not have a concept of a function as it exists in ordinary languages.
+However, you can accomplish basically the same things with macros, as long as you're okay with making the arguments and return value(s) global variables.
+For example, here is a "function" to compute an integer logarithm \f$ \lceil \log_{\mathtt{log\_base}} \mathtt{log\_arg} \rceil \f$.
+It's basically a port of `hexed::math::log`. Of course, you could also implement it as `ceil(log log_arg / log log_base)`, but where's the fun in that?
+~~~{.unparsed}
+int_log = {
+    log_return = 0
+    compare = 1
+    while = {compare < log_arg}
+    do = {
+        log_return = log_return + 1
+        compare = compare*log_base
+    }
+    $loop
+}
+~~~
+You would call it like this:
+~~~{.unparsed}
+log_base = 10
+log_arg = 10^5
+$int_log
+println log_return
+~~~
+The above code would print `5`.
+Admittedly, this is an extremely clunky excuse for a function,
+especially since it you have to avoid naming conflicts between the parameters of different functions.
+However, the number of HIL use cases that are complex enough to require functions should be exceedingly small.
+
+*/

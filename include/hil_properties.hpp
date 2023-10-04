@@ -10,6 +10,7 @@ namespace hexed::hil_properties
 {
 
 /*! Assigns the follwing variables:
+ * - `is_extruded`: 1 if element is extruded, else 0
  * - `n_dim`: number of dimensions
  * - `is_def = elem.get_is_deformed()`
  * - `ref_level = elem.refinement_level()`

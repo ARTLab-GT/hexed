@@ -19,7 +19,7 @@ class Basis
   virtual double quadratic_safety() const = 0;
 
   public:
-  const int row_size; //!< \brief \ref row_size "row size"
+  const int row_size; //!< \brief \ref basis_row_size "row size"
 
   //! \param row_size_arg specifies member `row_size`.
   Basis(int row_size_arg);

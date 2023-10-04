@@ -36,14 +36,13 @@ class Solver
   bool fix_admis;
   int av_rs;
   std::unique_ptr<Kernel<Element&>> write_face;
-  bool is_local_time;
   Transport_model visc;
   Transport_model therm_cond;
   int last_fix_vis_iter = std::numeric_limits<int>::min();
   std::shared_ptr<Namespace> _namespace;
 
   void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
-  void fix_admissibility(double stability_ratio);
+  bool fix_admissibility(double stability_ratio);
   void apply_state_bcs();
   void apply_flux_bcs();
   void apply_avc_diff_bcs();

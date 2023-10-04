@@ -135,10 +135,9 @@ class Navier_stokes
     double char_speed(Mat<n_var> state) const
     {
       double mass = state(n_dim);
-      auto mmtm = state(Eigen::seqN(0, n_dim));
       const double sound_speed = std::sqrt(heat_rat*(heat_rat - 1)*state(n_dim + 1)/mass);
-      const double veloc = std::sqrt(mmtm.dot(mmtm))/mass;
-      return sound_speed + veloc;
+      const double speed = state(Eigen::seqN(0, n_dim)).norm()/mass;
+      return sound_speed + speed;
     }
 
     //! maximum effective diffusivity (for enforcing the CFL condition)

@@ -15,6 +15,8 @@ TEST_CASE("Interpreter")
   REQUIRE(inter.variables->lookup<double>("interaction").value() == Catch::Approx(1e-3));
   inter.exec("ludwig = {prandtl}\ntitle = {consider\n{Phlebas}!\\}\\\\}");
   REQUIRE(inter.variables->lookup<std::string>("ludwig").value() == "prandtl");
+  inter.exec("str = {\\{}");
+  REQUIRE(inter.variables->lookup<std::string>("str").value() == "{");
   REQUIRE(inter.variables->lookup<std::string>("title").value() == "consider\n{Phlebas}!}\\");
   inter.exec("boundary0layer = shock_wave");
   REQUIRE(inter.variables->lookup<int>("boundary0layer").value() == 7);
@@ -105,9 +107,7 @@ TEST_CASE("Interpreter")
   SECTION("standard library")
   {
     hexed::Interpreter test;
-    test.exec("$(read {../test/test_std.hil})");
-    REQUIRE(test.variables->lookup<std::string>("result0").value() == "yes");
-    REQUIRE(test.variables->lookup<std::string>("result1").value() == "yesyes");
+    test.exec("$(read {../test/test_builtin.hil})");
     REQUIRE(test.variables->lookup<int>("triangle").value() == 10);
     REQUIRE(test.variables->lookup<int>("cube").value() == 27);
   }

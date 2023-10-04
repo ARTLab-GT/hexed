@@ -45,8 +45,6 @@ It uses Cartesian meshes with hanging-node refinement, modified to include body-
 In the relatively near future, I hope to include adaptive mesh refinement, moving geometry, and RANS turbulence modeling.
 It may not be the most robust or user-friendly, but I hope it makes your projects, if not easier, at least less tedious.
 
-Double, `double`, toil and trouble; CPU burn and contours bubble...
-
 \subsection Contact
 \anchor me
 This code is developed and maintained by me, Micaiah Smith-Pierce.
@@ -56,15 +54,30 @@ If you have any questions or feedback, you can reach me at micaiah@gatech.edu or
 
 _Generated on \today for Hexed \proj_version._
 
-\page Manual
+\page guide User/Developer Guide
+This pages below provide high-level information about Hexed, including instructions for how to use it and explanations of the concepts behind it.
+The rest of the pages (<a href="namespaces.html">Namespaces</a>, <a href="classes.html">Classes</a>, etc)
+serve as reference material on the API once you already know what you're doing.
+
 - \subpage installation
+- \subpage hil
+- \subpage parameters
+- \subpage boundary_conditions
+- \subpage error_types
+- \subpage conventions
 - \subpage visualization
 - \subpage geom_fitting
-- \subpage error_types
 - \subpage contributing
-
-\page theory Theory
-- \subpage conventions
 - \subpage benchmarking
+
+\anchor hexecute
+Technically, Hexed is really two things.
+It is a C++ library, and it is an executable program.
+If you want to extend the functionality of Hexed or use it as a backend and develop your own UI,
+you should link with the C++ library `libhexed.so`
+(use CMake to import the package `hexed`, and you will have access to everything in the namespace \ref hexed).
+However, for most use cases, the executable should be sufficient.
+To distinguish it from the library and namespace, the command to _execute hexed_ is `hexecute` (sorry for my terrible sense of humor).
+It supports a text-based interface in the \ref hil.
 
 */

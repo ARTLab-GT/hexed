@@ -8,7 +8,7 @@
 namespace hexed
 {
 
-const std::string Interpreter::std_file = std::string(config::root_dir) + "include/std.hil";
+const std::string Interpreter::builtin_file = std::string(config::root_dir) + "include/builtin.hil";
 const std::string Interpreter::const_file = std::string(config::build_dir) + "constants.hil";
 
 bool Interpreter::_more() {return _text.size() > 1;}
@@ -98,7 +98,7 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
       for (int depth = 1; depth;) {
         HEXED_ASSERT(_more(), "command input ended while parsing string literal", Parsing_error);
         char c = _pop();
-        if (c == '{') ++depth;
+        if (c == '{' && !backslash) ++depth;
         if (c == '}' && !backslash) --depth;
         if (c == '\\') backslash = !backslash;
         else backslash = false;
@@ -224,6 +224,20 @@ Interpreter::_Dynamic_value Interpreter::_general_add(Interpreter::_Dynamic_valu
   return val;
 }
 
+std::function<Interpreter::_Dynamic_value(Interpreter::_Dynamic_value)> Interpreter::_numeric_unary(double (*f)(double), std::string name)
+{
+  return [f, name](_Dynamic_value val) {
+    double operand;
+    if (val.i) operand = *val.i;
+    else if (val.d) operand = *val.d;
+    else HEXED_ASSERT(false, "unary operator `" + name + "` requires numeric argument", Parsing_error);
+    _Dynamic_value new_val;
+    val.i.reset();
+    val.d.emplace(f(operand));
+    return val;
+  };
+}
+
 Interpreter::Interpreter(std::vector<std::string> preload) :
   _un_ops {
     {"-", [this](_Dynamic_value val) {
@@ -241,14 +255,22 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
       HEXED_ASSERT(val.s.has_value(), "unary operator `#` requires string argument", Parsing_error);
       return _Dynamic_value(int(val.s.value().size()));
     }},
-    {"sqrt", [this](_Dynamic_value val) {
-      double operand;
-      if (val.i) operand = *val.i;
-      else if (val.d) operand = *val.d;
-      else HEXED_ASSERT(false, "unary operator `sqrt` requires numeric argument", Parsing_error);
-      _Dynamic_value new_val;
-      val.i.reset();
-      val.d.emplace(std::sqrt(operand));
+    {"sqrt", _numeric_unary(&std::sqrt, "sqrt")},
+    {"exp", _numeric_unary(&std::exp, "exp")},
+    {"log", _numeric_unary(&std::log, "log")},
+    {"sin", _numeric_unary(&std::sin, "sin")},
+    {"cos", _numeric_unary(&std::cos, "cos")},
+    {"tan", _numeric_unary(&std::tan, "tan")},
+    {"asin", _numeric_unary(&std::asin, "asin")},
+    {"acos", _numeric_unary(&std::acos, "acos")},
+    {"atan", _numeric_unary(&std::atan, "atan")},
+    {"round", [this](_Dynamic_value val){return _Dynamic_value((int)std::lround(_numeric_unary(&std::round, "round")(val).d.value()));}},
+    {"floor", [this](_Dynamic_value val){return _un_ops["round"](_numeric_unary(&std::floor, "floor")(val));}},
+    {"ceil" , [this](_Dynamic_value val){return _un_ops["round"](_numeric_unary(&std::ceil , "ceil" )(val));}},
+    {"abs", [](_Dynamic_value val) {
+      if      (val.i) *val.i = std::abs(*val.i);
+      else if (val.d) *val.d = std::abs(*val.d);
+      else HEXED_ASSERT(false, "unary operator `abs` requires numeric argument")
       return val;
     }},
     {"read", [this](_Dynamic_value val) {
@@ -313,7 +335,7 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
     return "";
   }));
   // builtin values
-  variables->assign<double>("huge", huge);
+  variables->assign("huge", huge);
   // initialize exception handling variables
   variables->assign<std::string>("exception", "");
   variables->assign<std::string>("except", "");

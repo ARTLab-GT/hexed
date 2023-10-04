@@ -1,13 +1,3 @@
-if = {true}
-then = {result0 = {yes}}
-else = {result0 = {no}}
-$cond
-
-if = {1 - 1}
-then = {result1 = {maybe}}
-else = {result1 = result0 + result0}
-$cond
-
 {calculate a triangle number}
 triangle = 0
 i = 0
@@ -29,9 +19,9 @@ do = {
         while = {k < 5}
         do = {
             k = k + 1
-            if = {i%2 & j%2 & k%2}
-            then = {cube = cube + 1}
-            $cond
+            case0 = {}
+            case1 = {cube = cube + 1}
+            $$({case} + (i%2 & j%2 & k%2))
         }
         $loop
     }

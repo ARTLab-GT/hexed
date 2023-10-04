@@ -60,6 +60,9 @@ Flow_bc* Case::_make_bc(std::string name)
       value = sub.variables->lookup<double>("temperature");
       HEXED_ASSERT(value, "thermal BC specification not understood");
       *value *= constants::specific_gas_air/(heat_rat - 1.);
+    } else if (sub.variables->exists("emissivity")) {
+      therm_t = No_slip::emissivity;
+      value = sub.variables->lookup<double>("emissivity");
     }
     HEXED_ASSERT(value, "thermal BC specification not understood");
     return new No_slip(therm_t, value.value());
@@ -125,6 +128,8 @@ Case::Case(std::string input_file)
       freestream(Eigen::seqN(0, *n_dim)) = *_vard("density")*veloc;
       freestream(*n_dim) = *_vard("density");
       freestream(*n_dim + 1) = *_vard("pressure")/(heat_rat - 1) + .5**_vard("density")*veloc.squaredNorm();
+      freestream.conservativeResize(5);
+      freestream(Eigen::seqN(*n_dim + 2, 5 - (*n_dim + 2))).setZero();
       _set_vector("freestream", freestream);
     }
     // create solver
@@ -144,13 +149,13 @@ Case::Case(std::string input_file)
     if (_vars("transport_model").value() == "inviscid") {
       visc_model.reset(new Transport_model(inviscid));
       therm_model.reset(new Transport_model(inviscid));
-    } else if (_vars("transport_model").value() == "best") {
+    } else if (_vars("transport_model").value() == "sutherland") {
       visc_model.reset(new Transport_model(air_sutherland_dyn_visc));
       therm_model.reset(new Transport_model(air_sutherland_therm_cond));
     } else {
       HEXED_ASSERT(false, "unrecognized transport model specification");
     }
-    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, _vari("local_time").value(), *visc_model, *therm_model, _inter.variables));
+    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, true, *visc_model, *therm_model, _inter.variables));
     _solver().mesh().add_tree(bcs, mesh_extremes(all, 0));
     _solver().set_fix_admissibility(_vari("fix_therm_admis").value());
     return 0;
@@ -237,16 +242,7 @@ Case::Case(std::string input_file)
   }));
 
   _inter.variables->create<int>("init_state", new Namespace::Heisenberg<int>([this]() {
-    std::string init_cond = _vars("init_condition").value();
-    auto freestream = _get_vector("freestream", _vari("n_dim").value() + 2);
-    if (init_cond == "freestream") {
-      _solver().initialize(Constant_func({freestream.begin(), freestream.end()}));
-    } else if (init_cond == "vortex") {
-      Isentropic_vortex vortex({freestream.begin(), freestream.end()});
-      vortex.max_nondim_veloc = 0.3;
-      vortex.argmax_radius = 0.1;
-      _solver().initialize(vortex);
-    } else HEXED_ASSERT(false, format_str(1000, "unrecognized initial condition type `%s`", init_cond.c_str()));
+    _solver().initialize(Spacetime_expr(Struct_expr(_vars("init_cond").value()), _inter));
     return 0;
   }));
 

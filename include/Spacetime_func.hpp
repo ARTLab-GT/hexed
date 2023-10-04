@@ -21,6 +21,22 @@ class Spacetime_func : public Domain_func
   virtual std::vector<double> operator()(std::vector<double> pos, double time) const = 0;
 };
 
+/*! \brief Evaluates a \ref struct_expr "structured expression"
+ * \details Expression is evaluated in an environment that includes
+ * `pos0`, `pos1`, `pos2`, and `time`.
+ */
+class Spacetime_expr : public Spacetime_func
+{
+  Struct_expr _expr;
+  const Interpreter& _inter;
+  public:
+  Spacetime_expr(Struct_expr, const Interpreter&);
+  Spacetime_expr(Struct_expr, Interpreter&&) = delete;
+  inline int n_var(int n_dim) const override {return _expr.names.size();}
+  inline std::string variable_name(int n_dim, int i_var) const override {return _expr.names[i_var];}
+  std::vector<double> operator()(std::vector<double> pos, double time) const override;
+};
+
 //! Always returns the same constant (vector) value.
 class Constant_func : public Spacetime_func
 {
@@ -89,26 +105,6 @@ class State_from_spacetime : public Spacetime_func
   public:
   inline int n_var(int n_dim) const override {return n_dim + 2;}
   inline std::string variable_name(int n_dim, int i_var) const override {return "state" + std::to_string(i_var);}
-};
-
-/*!
- * Isentropic vortex flow described by Gaussian function, a classic
- * CFD test problem. Flow field is an exact solution of the Euler equations
- * which consists of the vortex translating at the freestream velocity. Flowfield
- * is well defined at all position and all time.
- */
-class Isentropic_vortex : public State_from_spacetime
-{
-  std::vector<double> freestream;
-
-  public:
-  double heat_rat = 1.4;
-  double argmax_radius = 0.05; //! velocity reaches its maximum value at this radius
-  double max_nondim_veloc = 0.02; //! max velocity perturbation normalized by freestream speed of sound
-  double center0 = 0.;
-  double center1 = 0.;
-  Isentropic_vortex(std::vector<double> freestream_state);
-  std::vector<double> operator()(std::vector<double> pos, double time) const override;
 };
 
 /*!

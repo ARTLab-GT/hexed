@@ -1,0 +1,642 @@
+/*! \page parameters Solver Parameters
+
+\section inputs Input Parameters
+This section lists variables that directly affect the behavior of the solver.
+Some of them are preset to default values with the intent that you should override them,
+and some are __not__ defined and __must__ be defined by you.
+
+\subsection important_imputs Important Input Parameters
+Setting these parameters appropriately is critical to get the right answer,
+and you should generally think about them every time you run a simulation.
+
+<hr>
+\subsubsection n_dim
+__type:__ integer \n
+Number of dimensions.
+Must be at least 1 and at most 3.
+
+<hr>
+\subsubsection local_time
+__type:__ integer \n
+__default:__ \ref true \n
+If \ref true, use local time stepping, otherwase use global.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection max_safety
+__type:__ float \n
+__default:__ 0.7 \n
+Maximum allowable safety factor on the [CFL condition](https://en.wikipedia.org/wiki/Courant%E2%80%93Friedrichs%E2%80%93Lewy_condition)
+for time step determination.
+The time step will be either this number times the estimated maximum stable time step or \ref max_time_step, whichever is smaller.
+This parameter is applicable to both local and global time stepping.
+If the actual safety factor (accounting for \ref max_time_step constraints) is greater than 1 the scheme will almost certainly be unstable.
+Thus even if you intend for your time integration not to be CFL-driven, it is strongly recommended that you keep this parameter less than 1
+and simply make your \ref max_time_step small enough to be the active constraint.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection max_time_step
+__type:__ float \n
+__default:__ \ref huge \n
+Maximum allowable time step.
+The time step will be either this number or \ref max_safety times the estimated maximum stable time step, whichever is smaller.
+This parameter is only meaningful for global time stepping.
+If you intend for your time stepping to be CFL driven, simply keep this number large enough not to be the active constraint.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection transport_model
+__type:__ string \n
+__default:__ `{inviscid}` \n
+Specifies model to use for molecular transport coefficients (viscosity and thermal conductivity).
+Accepted values:
+- `{inviscid}`
+- `{sutherland}`: Uses sutherland's law for air (non-constant Prandtl number)
+
+<hr>
+\subsubsection thermal_bc
+__type:__ string \n
+__default:__ `{heat_flux = 0.}` \n
+Only applicable when \ref surface_bc = `{no_slip}`.
+Specifies thermal boundary condition.
+Default gives an adiabatic wall.
+Accepted values:
+- `{heat_flux = x}`: Prescribes the wall heat flux (out of the domain, into the wall) to be `x`.
+- `{temperature = x}`: Prescribes the temperature at the wall to be `x`.
+- `{internal_energy = x}`: Prescribes the internal energy at the wall to be `x`.
+  For now, since you're stuck in the CPG world, this is equivalent to `{temperature = x*(heat_rat - 1)/specific_gas_air}`.
+- `{emissivity = x}`: Radiative equilibrium BC where the surface emissivity is prescribed to be `x`.
+
+<hr>
+\subsubsection row_size
+__type:__ integer \n
+__default:__ 6 \n
+\ref basis_row_size "Row size" of polynomial basis.
+Must be at lead 2 and at most `hexed::config::max_row_size`.
+
+<hr>
+\subsubsection attack
+__type:__ float \n
+__default:__ `0.` \n
+Angle of attack (radian, as specified in \ref units).
+
+<hr>
+\subsubsection sideslip
+__type:__ float \n
+__default:__ `0.` \n
+Sideslip angle (radian, as specified in \ref units).
+
+<hr>
+\subsubsection art_visc_width
+__type:__ float \n
+__default:__ `-1.` \n
+If set to a positive number, turns on aritificial viscosity with a smoothness-based coefficient
+and sets the smoothness width to `art_visc_width`.
+
+<hr>
+\subsubsection surface_refine
+__type:__ string \n
+__default:__ `{false}` \n
+Refinement criterion for surface-geometry-based refinement sweeps.
+Should be an expression that can be evaluated for each mesh element
+in an environment that includes the variables assigned by `hexed::hil_properties::element()`.
+If this expression evaluates to \ref true, the element will be refined.
+Otherwise it will not.
+
+<hr>
+\subsubsection wall_spacing
+__type:__ float \n
+__default:__ -1. \n
+If set to a positive number, anisotropic wall layers will be generated.
+The ratio of the height of the first layer to the total height of the layers (which may be nonuniform) will be `wall_spacing`.
+
+<hr>
+\subsubsection mesh_extreme mesh_extreme00, mesh_extreme01, mesh_extreme10, mesh_extreme11, mesh_extreme20, mesh_extreme21
+__type:__ float \n
+__default:__ 0, 1, 0, 1, 0, 1 \n
+Mesh extremes.
+That is, all elements will have coordinates \f$ x_0, x_1, x_2 \f$ such that `mesh_extreme00` \f$ \le x_0 \le \f$ `mesh_extreme01`, etc.
+If each mesh dimension is an integer multiple of the initial element size, then the above inequalities are equalities.
+Of course, only the first \ref n_dim dimensions are considered.
+
+<hr>
+\subsubsection n_cheby_flow
+__type:__ integer \n
+__default:__ 1 \n
+Number of Chebyshev acceleration stages to use for physical flow.
+Increasing this number will help the flow converge faster when/where it is diffusion-dominated but slow it down when/where it is convection-dominated.
+Also, it seems to be difficult to maintain stability if this number is greater than roughly 10.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection n_cheby_av
+__type:__ integer \n
+__default:__ 0.7 \n
+Number of Chebyshev acceleration stages to use for diffusion equation for smoothness-based artificial viscosity.
+Increasing this number will help the artificial viscosity coefficient converge faster
+but cause a larger fraction of the time to be spent in the aritificial viscosity calculation.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection av_advect_iters
+__type:__ integer \n
+__default:__ 1 \n
+Number of pseudotime iterations to run in artificial viscosity advection equation per nominal iteration
+(i.e. per `hexed::Solver::set_art_visc_smoothness` call).
+Increasing this number will help the artificial viscosity coefficient converge faster
+but cause a larger fraction of the CPU time to be spent in the aritificial viscosity calculation.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection flow_iters
+__type:__ integer \n
+__default:__ 1 \n
+Number of physical flow iterations to run per nominal iteration
+(i.e. per `hexed::Solver::update` call).
+Increasing this number can help balance the amount of CPU time spent in the physical flow relative to the artificial viscosity iteration
+if `n_cheby_av` is larger than `n_cheby_flow`.
+The disadvantage is it can cause the \ref iteration count to be misleading.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+
+\subsection useful_inputs Useful Input Parameters
+You will probably want to adjust these parameters for some simulations, but you can often leave them alone.
+
+<hr>
+\subsubsection init_ref_level
+__type:__ integer \n
+__default:__ 3 \n
+Number of levels to refine the mesh in \ref init_refinement before surface geometry is introduced.
+May be any nonnegative integer, up to time and memory constraints.
+
+<hr>
+\subsubsection surface_bc
+__type:__ string \n
+__default:__ `{auto}` \n
+Specifies surface boundary condition.
+If `{auto}`, surface boundary condition will be determined automatically depending on the value of \ref transport_model.
+`{inviscid}` &rarr; `{nonpenetration}` and `{sutherland}` &rarr; `{no_slip}`.
+Otherwise, the name of a supported \ref boundary_conditions "Boundary condition type".
+
+<hr>
+\subsubsection temperature_offset
+__type:__ float \n
+__default:__ `0.` \n
+Applicable when altitude is specified.
+Sets the temperature offset passed to `hexed::standard_atmosphere`.
+
+<hr>
+\subsubsection art_visc_constant
+__type:__ float \n
+__default:__ `-1.` \n
+If set to a positive number, turns on aritificial viscosity and sets the artificial viscosity coefficient to be uniformly equal to `art_visc_constant`.
+
+<hr>
+\subsubsection fix_therm_admis
+__type:__ integer \n
+__default:__ \ref false \n
+If \ref true, check thermodynamic admissibility (positive density, nonnegative energy, non-NaN state) after every time integration stage
+and if problems are found, run as many Laplacian smearing iterations as neccessary to restore admissibility.
+Results in a major robustness improvement for hypersonic cases and comes at a modest performance cost.
+
+<hr>
+\subsubsection working_dir
+__type:__ string \n
+__default:__ `{hexed_out/}` \n
+Directory in which to write output files.
+Path can be relative or absolute.
+If the directory does not exist, it will be created.
+Any modifications to this variable must take place before the solver is initialized.
+
+<hr>
+\subsubsection vis_freq
+__type:__ integer \n
+__default:__ 10000 \n
+Visualization files will be written every `vis_freq` iterations.
+
+<hr>
+\subsubsection print_freq
+__type:__ integer \n
+__default:__ 100 \n
+Solver status will be printed to stdout every `print_freq` iterations.
+
+<hr>
+\subsubsection surface_unrefine
+__type:__ string \n
+__default:__ `{ref_level > init_ref_level & !is_extruded}` \n
+Unrefinement criterion for surface-geometry-based refinement sweeps.
+Behaves the same as \ref surface_refine except that if this expression evaluates to \ref true, the element will be unrefined
+(subject to refinement level constraints).
+
+<hr>
+\subsubsection surface_max_iters
+__type:__ integer \n
+__default:__ 100 \n
+Maximum number of surface-geometry-based refinement sweeps to run if refinement convergence is not achieved.
+
+<hr>
+\subsubsection n_smooth
+__type:__ integer \n
+__default:__ 30 \n
+Number of mesh smoothing iterations to run after every surface-geometry-based refinement sweep.
+
+<hr>
+\subsubsection wall_layers
+__type:__ integer \n
+__default:__ 1 \n
+If anisotropic layers are generated, the first `wall_layers` layers will have thickness determined by `wall_spacing`,
+and the remaining layers will exponentially increase in thickness to keep the aniso-iso transition as smooth as possible.
+
+<hr>
+\subsubsection geom_n_segments
+__type:__ integer \n
+__default:__ 1000 \n
+Number of subdivisions to use when discretizing 2D CAD geometry with `hexed::Occt::segments`.
+
+<hr>
+\subsubsection vis_surface
+__type:__ integer \n
+__default:__ \ref true \n
+Whether to visualize surface data when \ref visualize is invoked.
+
+<hr>
+\subsubsection vis_field
+__type:__ integer \n
+__default:__ \ref true \n
+Whether to visualize field data when \ref visualize is invoked.
+
+<hr>
+\subsubsection vis_tecplot
+__type:__ integer \n
+__default:__ \ref true \n
+If \ref true, write visualization files in Tecplot format (requires compilation with `use_tecplot` `ON`).
+
+<hr>
+\subsubsection vis_xdmf
+__type:__ integer \n
+__default:__ \ref true \n
+If \ref true, write visualization files in XDMF format (requires compilation with `use_xdmf` `ON`).
+
+<hr>
+\subsubsection vis_field_vars
+__type:__ string \n
+__default:__ `state_vars + art_visc_expr` \n
+\ref struct_expr "Structured expression" specifying which field variables to visualize.
+
+<hr>
+\subsubsection vis_surface_vars
+__type:__ string \n
+__default:__ `state_vars + visc_stress_expr + heat_flux_expr` \n
+\ref struct_expr "Structured expression" specifying which surface variables to visualize.
+
+<hr>
+\subsubsection vis_n_sample
+__type:__ integer \n
+__default:__ 10 \n
+Each element will be visualized at sample points distributed in a uniformly-spaced structured block with `vis_n_sample` points on each edge.
+If you want, you can think of this as the visualization \ref basis_row_size "row size".
+
+<hr>
+\subsubsection print_vars
+__type:__ string \n
+__default:__ `iteration_expr + residual_expr + av_advection_residual_expr + av_diffusion_residual_expr + flow_time_expr + time_step_expr` \n
+\ref struct_expr "Structured expression" specifying what quantities to print when the solver status is printed.
+
+<hr>
+\subsubsection integrand_field
+__type:__ string \n
+__default:__ `{}` \n
+\ref struct_expr "Structured expression" specifying what quantities integrate when field integrals are computed.
+
+<hr>
+\subsubsection integrand_surface
+__type:__ string \n
+__default:__ `{}` \n
+\ref struct_expr "Structured expression" specifying what quantities integrate when surface integrals are computed.
+
+<hr>
+\subsubsection max_angle
+__type:__ float \n
+__default:__ `10*degree`
+Maximum allowable angle between adjacent panels when discretizing 3D CAD geometry with `hexed::Occt::triangles`.
+
+<hr>
+\subsubsection max_deflection
+__type:__ float \n
+__default:__ \ref huge \n
+Maximum allowable linear deflection of surface panels when discretizing 3D CAD geometry with `hexed::Occt::triangles` (dimensional).
+
+<hr>
+\subsubsection flood_fill_start flood_fill_start0, flood_fill_start1, flood_fill_start2
+__type:__ float \n
+__default:__ \ref huge, huge, huge \n
+Location to start the flood fill algorithm when \ref add_geom is evaluated.
+If any of the coordinates are not within the \ref mesh_extreme "mesh extremes" (which is the case by default),
+the flood fill start location will effectively default to the minimum corner of the domain
+(`mesh_extreme00`, `mesh_extreme10`, `mesh_extreme20`).
+
+<hr>
+\subsubsection init_cond
+__type:__ string \n
+__default:__
+~~~{.unformatted}
+{state0 = freestream0
+ state1 = freestream1
+ state2 = freestream2
+ state3 = freestream3
+ state4 = freestream4
+}
+~~~
+\ref struct_expr "Structured expression" which sets the state variables `state0`, `state1`, ... to the desired initial condition.
+It shall be evaluated in an environment that includes the variables `pos0`, `pos1`, `pos2`, and `time`.
+
+<hr>
+\subsubsection fix_admis_max_safety
+__type:__ float\n
+__default:__ 0.7 \n
+Maximum safety factor for Laplacian smearing iterations when fixing thermodynamic admissibility.
+\note Not defined until \ref create_solver is evaluated.
+\see \ref fix_therm_admis
+
+<hr>
+\subsubsection av_advect_max_safety
+__type:__ float\n
+__default:__ 0.7 \n
+Maximum safety factor on pseudotime step in advection equation for smoothness-based artificial viscosity.
+Analogous to \ref max_safety.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection av_diff_max_safety
+__type:__ float\n
+__default:__ 0.7 \n
+Maximum safety factor on pseudotime step in diffusion equation for smoothness-based artificial viscosity.
+Analogous to \ref max_safety.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+
+\subsection esoteric_inputs Esoteric Input Parameters
+You will probably never need to worry about these parameters.
+They are tunable in principle, but in practice the same values tend to work for pretty much every problem.
+In some cases, even I don't fully understand why the accepted defaults work.
+
+<hr>
+\subsubsection mesh_extreme_eps
+__type:__ float \n
+__default:__ `1e-6` \n
+Comparison tolerance to use when deterimining whether points are inside or outside mesh extremes.
+Relative to domain size.
+
+<hr>
+\subsubsection av_diff_iters
+__type:__ integer \n
+__default:__ 1 \n
+Number of pseudotime iterations to run in artificial viscosity diffusion equation per nominal iteration
+(i.e. per `hexed::Solver::set_art_visc_smoothness` call).
+Increasing this number will help the artificial viscosity coefficient converge faster
+but cause a larger fraction of the CPU time to be spent in the aritificial viscosity calculation.
+\note This was useful before Chebyshev acceleration was discovered.
+Increasing \ref n_cheby_av instead will usually be more productive, up to the limit where stability falls apart.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection av_diff_ratio
+__type:__ float\n
+__default:__ 0.1 \n
+Determines amount of to smear artificial viscosity coefficient for smoothness-based artificial viscosity.
+A larger number means that the artificial viscosity field will be smoother but also spread further from the shocks.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection av_visc_mult
+__type:__ float\n
+__default:__ 30. \n
+Final linear scaling parameter on smoothness-based artificial viscosity coefficient.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection av_unscaled_max
+__type:__ float\n
+__default:__ 2e-4 \n
+Maximum amount of artificial viscosity allowed before dimensional scaling.
+If this value is too small, artificial viscosity will not be sufficient to fully capture shocks.
+If it is too large, excessively small time steps may be encountered during the initial transient phase of the simulation.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection av_advect_max_res
+__type:__ float\n
+__default:__ 1e-3 \n
+Limit on the residual in the advection equation for smoothness-based artificial viscosity determination
+to improve robustness when weak instabilities are encountered.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection vis_lts_constraints
+__type:__ integer \n
+__default:__ \ref false \n
+If \ref true, visualize the local time step constraints due to convection and diffusion, respectively.
+
+<hr>
+\subsubsection iter_width
+__type:__ integer \n
+__default:__ 10 \n
+Visualization file names will contain iteration numbers with leading zeros added such that there are at least `iter_width` digits.
+
+<hr>
+
+\section commands Command Variables & Macros
+The following variables are used to execute actions.
+Some are Heisenberg variables which, when evaluated, cause the solver to perform certain tasks,
+while others are simply HIL macros.
+Most of the time you shouldn't need to know about most of these variables.
+There are builtin macros to deal with them for you.
+See example cases for standard best practices.
+This documentation exists to help you understand the implementation of the builtin macros and to help you in special cases
+where the standard workflows are inadequate.
+
+\subsection command_list List of Command Variables
+
+<hr>
+\subsubsection create_solver
+__type:__ Heisenberg integer \n
+Creates a `hexed::Solver` object and returns 0.
+Mesh contains a single element and the flow is uninitialized.
+
+<hr>
+\subsubsection init_refinement
+__type:__ Heisenberg integer \n
+Performs initial refinment (not based on geometry surface) and returns 0.
+
+<hr>
+\subsubsection add_geom
+__type:__ Heisenberg integer \n
+Inserts geometry into mesh and returns 0.
+You can define 0 or more string variables named `geom0`, `geom1`, `geom2`, ... containing paths to geometry definition files.
+Paths can be absolute or relative to execution directory (not \ref working_dir).
+Geometry variable numbers must start at 0 and be consecutive.
+E.g., if you define `geom0 = leading.txt`, `geom1 = main.txt`, `geom3 = trailing.txt`, then `geom3` will be ignored.
+If these geometries split the domain into disjoint regions,
+then the region containing the \ref flood_fill_start "flood fill start" shall be meshed.
+Geometry file format is inferred from the file extension, which is case-insensitive.
+The following extension/format combinations are supported:
+- `.csv`: Comma Separated Value format (2D only).
+  A comma-delimited table with at least 2 columns, which are interpreted as \f$ x_0 \f$ and \f$ x_1 \f$ coordinates of the nodes of a polygonal curve,
+  in \ref units "standard units".
+  Curve is treated as open -- if you are trying to model a closed shape, simply make the first point (approximately) equal to the last.
+- `.igs`, `.iges`: [IGES](https://en.wikipedia.org/wiki/IGES) CAD format (2D or 3D).
+  For 2D simulations, the model edges will be extracted and projected onto the \f$ (x_0, x_1) \f$ plane.
+  For 3D simulations, the model surfaces will be used.
+  Units are read from the file and converted.
+- `.stp`, `.step`: [STEP](https://en.wikipedia.org/wiki/ISO_10303-21) CAD format. As above.
+- `.stl`: [STL](https://en.wikipedia.org/wiki/STL_(file_format)) 3D geometry format (3D only).
+  ASCII or binary formats accepted.
+  Units are assumed to be \ref units "standard".
+
+<hr>
+\subsubsection refine
+__type:__ Heisenberg integer \n
+Performs one surface-geometry-based refinement sweep and returns 0.
+Elements are refined or unrefined based on \ref surface_refine and \ref surface_unrefine.
+
+<hr>
+\subsubsection make_layers
+__type:__ Heisenberg integer \n
+Creates anisotropic wall layers and returns 0.
+Size and number of layers are determined by \ref wall_spacing and \ref wall_layers.
+
+<hr>
+\subsubsection init_state
+__type:__ Heisenberg integer \n
+Initializes the solver state to \ref init_cond and returns 0.
+
+<hr>
+\subsubsection visualize
+__type:__ Heisenberg integer \n
+Writes visualization files and returns 0.
+
+<hr>
+\subsubsection compute_residuals
+__type:__ Heisenberg string \n
+Evaluates the residuals and assigns them to float variables \ref residual_momentum, \ref residual_density, \ref residual_energy.
+Returns the empty string.
+
+<hr>
+\subsubsection update
+__type:__ Heisenberg string \n
+Executes \ref print_freq solver iterations and returns an empty string.
+Each "solver iteration" consists of:
+-# Calling `hexed::Solver::set_art_visc_constant`, if applicable.
+-# Calling `hexed::Solver::set_art_visc_smoothness`, if applicable.
+-# Calling `hexed::Solver::update`.
+
+<hr>
+\subsubsection integrate_field
+__type:__ Heisenberg string \n
+Computes integrals of the variables in \ref integrand_field over the domain by the native quadrature rule of the numerical scheme.
+The integrals of the variables are assigned to float variables names `integral_field_var` where `var` is the name of the variable.
+Returns an empty string.
+
+<hr>
+\subsubsection integrate_surface
+__type:__ Heisenberg string \n
+Computes integrals of the variables in \ref integrand_surface over the geometry surface by the native quadrature rule of the numerical scheme.
+The integrals of the variables are assigned to float variables names `integral_surface_var` where `var` is the name of the variable.
+Returns an empty string.
+
+<hr>
+
+\section outputs Output Parameters
+The following variables are defined and/or updated by the solver in order to provide information to you.
+Some are Heisenberg variables whereas others are writable,
+but you should not write to them even if you are technically able to.
+Not all of these variables are defined at the start of the simulation.
+See individual documentation for details.
+
+\subsection output_list List of Output Parameters
+
+<hr>
+\subsubsection iteration
+__type:__ integer \n
+Number of iterations executed since solver was created.
+Equal to \ref print_freq times the number of \ref update evaluations.
+
+<hr>
+\subsubsection wall_time
+__type:__ float \n
+Wall clock time (seconds) elapsed since solver was created.
+Not to be confused with \ref flow_time -- if the distinction isn't clear, here is an example:
+if you start a simulation and then take a 5-minute break to make coffee,
+if your simulation is still running upon your return the wall time will be 5*60s = 300s.
+
+<hr>
+\subsubsection flow_time
+__type:__ float \n
+Amount of time (seconds) elapsed in the physical flow since the simulation started.
+Only meaningful for global time stepping.
+Not to be confused with \ref wall_time -- if the distinction isn't clear, here is an example:
+if you have a shock propagating at 100 m/s and run your simulation with global time stepping
+until the flow time reaches 0.01 s, then the shock will have propaged a distance of 1 m.
+
+<hr>
+\subsubsection time_step
+__type:__ float \n
+Time step taken in the most recent iteration.
+Only meaningful for global time stepping.
+
+<hr>
+\subsubsection header
+__type:__ Heisenberg string \n
+The names of the \ref print_vars variables as a comma-delimited list.
+
+<hr>
+\subsubsection report
+__type:__ Heisenberg string \n
+Evaluates \ref compute_residuals and then returns the values of the \ref print_vars variables as a comma-delimited list.
+
+<hr>
+\subsubsection residual_momentum
+__type:__ float \n
+Magnitude of the dimensional residual of the vector momentum equation.
+Begins the simulation uninitialized and is only assigned when \ref compute_residuals is evaluated.
+
+<hr>
+\subsubsection residual_density
+__type:__ float \n
+Dimensional residual of the continuity equation.
+Begins the simulation uninitialized and is only assigned when \ref compute_residuals is evaluated.
+
+<hr>
+\subsubsection residual_energy
+__type:__ float \n
+Dimensional residual of the energy equation.
+Begins the simulation uninitialized and is only assigned when \ref compute_residuals is evaluated.
+
+<hr>
+\subsubsection av_advection_residual
+__type:__ float \n
+Residual of artificial viscosity advection equation.
+Begins the simulation uninitialized and is only assigned when \ref update is evaluated with smoothness-based artificial viscosity.
+
+<hr>
+\subsubsection av_diffusion_residual
+__type:__ float \n
+Residual of artificial viscosity diffusion equation.
+Begins the simulation uninitialized and is only assigned when \ref update is evaluated with smoothness-based artificial viscosity.
+
+<hr>
+\subsubsection n_elements
+__type:__ Heisenberg integer \n
+The number of elements currently in the mesh.
+
+<hr>
+\subsubsection performance_report
+__type:__ Heisenberg string \n
+Human-readable summary of kernel performance metrics for all iterations that have been run in the current simulation.
+
+<hr>
+
+*/

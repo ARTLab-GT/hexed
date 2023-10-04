@@ -1,25 +1,12 @@
-{array variables}
-i_dim = 0
-mesh_extreme_eps = 1e-6
-while = {i_dim < 3}
-do = {
-    mesh_code = {
-        mesh_index = {} + i_dim + sign
-        $({mesh_extreme} + mesh_index) = 0. + sign
-        $({extremal_bc} + mesh_index) = {characteristic}
-    }
-    sign = 0; $mesh_code
-    sign = 1; $mesh_code
-    $({flood_fill_start} + i_dim) = huge
-    i_dim = i_dim + 1
-}
-$loop
-
 {utilities}
 heat_rat = 1.4
 momentum_expr = {momentum0 = momentum0; momentum1 = momentum1; momentum2 = momentum2;}
 density_expr = {density = density;}
 energy_expr = {energy = energy;}
+residual_momentum_expr = {residual_momentum0 = (momentum0 - prev_momentum0)/tss; residual_momentum1 = (momentum1 - prev_momentum1)/tss; residual_momentum2 = (momentum2 - prev_momentum2)/tss;}
+residual_density_expr = {residual_density = (density - prev_density)/tss;}
+residual_energy_expr = {residual_energy = (energy - prev_energy)/tss;}
+residual_expr = residual_momentum_expr + residual_density_expr + residual_energy_expr
 velocity_expr = {velocity0 = momentum0/density; velocity1 = momentum1/density; velocity2 = momentum2/density;}
 speed_expr = {speed = sqrt(velocity0^2 + velocity1^2 + velocity2^2);}
 pressure_expr = {pressure = (heat_rat - 1)*(energy - 0.5*density*speed^2);}
@@ -30,7 +17,7 @@ visc_stress_expr = {visc_stress0 = visc_stress0; visc_stress1 = visc_stress1; vi
 stress_expr = {stress0 = -pressure*normal0 + visc_stress0; stress1 = -pressure*normal1 + visc_stress1; stress2 = -pressure*normal2 + visc_stress2;}
 heat_flux_expr = {heat_flux = heat_flux;}
 iteration_expr = {iteration = iteration;}
-residual_expr = {normalized_residual = (residual_momentum/init_residual_momentum + residual_density/init_residual_density + residual_energy/init_residual_energy)/3;}
+normalized_residual_expr = {normalized_residual = (residual_momentum/init_residual_momentum + residual_density/init_residual_density + residual_energy/init_residual_energy)/3;}
 av_advection_residual_expr = {av_advection_residual = av_advection_residual;}
 av_diffusion_residual_expr = {av_diffusion_residual = av_diffusion_residual;}
 flow_time_expr = {flow_time = flow_time;}
@@ -44,10 +31,9 @@ compute_force = {
     force1 = integral_surface_stress1
     force2 = integral_surface_stress2
     drag = force0*direction0 + force1*direction1 + force2*direction2
-    if = {n_dim == 2}
-    then = {lift = force1*direction0 - force0*direction1}
-    else = {println {force computation not yet implemented for `n_dim != 2`}; throw}
-    $cond
+    case0 = {println {force computation not yet implemented for `n_dim != 2`}; throw}
+    case1 = {lift = force1*direction0 - force0*direction1}
+    $$({case} + (n_dim == 2))
     drag_coef = drag/(0.5*density*speed^2)
     lift_coef = lift/(0.5*density*speed^2)
 }
@@ -58,14 +44,28 @@ print_force = {
     println({lift coefficient: } + lift_coef)
     println({drag coefficient: } + drag_coef)
 }
+freestream_spec_int_ener = {(freestream3/freestream2 - 0.5*(freestream0^2 + freestream1^2)/freestream2^2)}
+freestream_sound_speed = {((heat_rat*(heat_rat - 1)*$freestream_spec_int_ener)^0.5)}
+vortex_nondim_veloc = 0.3
+vortex_argmax_radius = 0.1
+vortex_gaussian = {(vortex_nondim_veloc*natural^((1. - ((pos0 - freestream0/freestream2*time)^2 + (pos1 - freestream1/freestream2*time)^2)/vortex_argmax_radius^2)/2.))}
+vortex_scalar = {(1 - (heat_rat - 1.)/2*$vortex_gaussian^2)}
+vortex_momentum0 = {((freestream0/freestream2 - pos1/vortex_argmax_radius*$vortex_gaussian*$freestream_sound_speed)*$vortex_mass)}
+vortex_momentum1 = {((freestream1/freestream2 + pos0/vortex_argmax_radius*$vortex_gaussian*$freestream_sound_speed)*$vortex_mass)}
+vortex_mass = {(freestream2*$vortex_scalar^(1./(heat_rat - 1.)))}
+vortex_energy = {($freestream_spec_int_ener*$vortex_scalar*$vortex_mass + 0.5*($vortex_momentum0^2 + $vortex_momentum1^2)/$vortex_mass)}
+vortex = {
+    state0 = $vortex_momentum0
+    state1 = $vortex_momentum1
+    state2 = $vortex_mass
+    state3 = $vortex_energy
+}
 
-{basic parameters}
+{scalar parameters}
 row_size = 6
 init_ref_level = 3
-local_time = true
-init_condition = {freestream}
 transport_model = {inviscid}
-thermal_bc = {heat_flux = 0}
+thermal_bc = {heat_flux = 0.}
 surface_bc = {auto}
 temperature_offset = 0.
 attack = 0.
@@ -92,11 +92,36 @@ vis_lts_constraints = false
 vis_field_vars = state_vars + art_visc_expr
 vis_surface_vars = state_vars + visc_stress_expr + heat_flux_expr
 vis_n_sample = 10
-print_vars = iteration_expr + residual_expr + av_advection_residual_expr + av_diffusion_residual_expr + flow_time_expr + time_step_expr
+print_vars = iteration_expr + normalized_residual_expr + av_advection_residual_expr + av_diffusion_residual_expr + flow_time_expr + time_step_expr
 integrand_field = {}
 integrand_surface = {}
 max_angle = 10*degree
 max_deflection = huge
+mesh_extreme_eps = 1e-6
+
+{array parameters}
+i_dim = 0
+while = {i_dim < 3}
+do = {
+    mesh_code = {
+        mesh_index = {} + i_dim + sign
+        $({mesh_extreme} + mesh_index) = 0. + sign
+        $({extremal_bc} + mesh_index) = {characteristic}
+    }
+    sign = 0; $mesh_code
+    sign = 1; $mesh_code
+    $({flood_fill_start} + i_dim) = huge
+    i_dim = i_dim + 1
+}
+$loop
+init_cond = {}
+i_var = 0
+while = {i_var < 5}
+do = {
+    init_cond = init_cond + {state} + i_var + { = freestream} + i_var + newline
+    i_var = i_var + 1
+}
+$loop
 
 {overrideable macros}
 vis_init = {visualize}
@@ -104,36 +129,33 @@ vis_final = {visualize}
 print_init = {println header}
 print_final = {
     println {simulation complete}
+    println({wall clock time = } + wall_time + {s = } + wall_time/minute + {min = } + wall_time/hour + {hr})
     println {}
     println {performance summary:}
     println performance_report
 }
 done = {println {Error: you forgot to a set stop condition} & throw}
 vis_iter = {
-    if = {iteration%vis_freq == 0}
-    then = {
+    case0 = {}
+    case1 = {
         print {visualizing...}
         visualize
         println {done}
     }
-    $cond
+    $$({case} + (iteration%vis_freq == 0))
 }
-print_iter = {
-    if = {iteration%print_freq == 0}
-    then = {println report}
-    $cond
-}
+print_iter = {println report}
 iterate = {
     update
     {compute initial residual for normalization}
-    if = {iteration == 1}
-    then = {
+    case0 = {}
+    case1 = {
         compute_residuals
         init_residual_momentum = residual_momentum
         init_residual_density = residual_density
         init_residual_energy = residual_energy
     }
-    $cond
+    $$({case} + (iteration == 1))
     $print_iter
     $vis_iter
     except = {println exception}
@@ -142,20 +164,18 @@ iterate = {
 }
 
 init = {
-    if = {working_dir#(#working_dir - 1) != {/}}
-    then = {working_dir = working_dir + {/}}
-    $cond
+    case0 = {}
+    case1 = {working_dir = working_dir + {/}}
+    $$({case} + (working_dir#(#working_dir - 1) != {/}))
     shell({if [ ! -d } + working_dir + { ]; then mkdir } + working_dir + {; fi})
-    if = {surface_bc == {auto}}
-    then = {
-        if = {transport_model == {inviscid}}
-        then = {surface_bc = {nonpenetration}}
-        else = {surface_bc = {no_slip}}
-        $cond
+    case1 = {
+        case1 = {surface_bc = {nonpenetration}}
+        case0 = {surface_bc = {no_slip}}
+        $$({case} + (transport_model == {inviscid}))
     }
-    $cond
-    if = {flood_fill_start0 == huge}
-    then = {
+    $$({case} + (surface_bc == {auto}))
+    case0 = {}
+    case1 = {
         i_dim = 0
         while = {i_dim < n_dim}
         do = {
@@ -164,7 +184,7 @@ init = {
         }
         $loop
     }
-    $cond
+    $$({case} + (flood_fill_start0 == huge))
     create_solver
     init_refinement
     add_geom
@@ -178,9 +198,9 @@ init = {
         println {done}
     }
     $loop
-    if = {wall_spacing > 0}
-    then = {make_layers}
-    $cond
+    case0 = {}
+    case1 = {make_layers}
+    $$({case} + (wall_spacing > 0))
     init_state
     normalized_residual = 1.
     println({initialization complete with } + n_elements + { elements})
