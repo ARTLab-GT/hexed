@@ -6,9 +6,8 @@
 namespace hexed
 {
 
-/*
- * "row read/write".
- * Can read/write to/from a row of quadrature points in an element
+/*! \brief "row read/write"
+ * \details Can read/write to/from a row of quadrature points in an element
  * and/or the associated face quadrature points.
  * This class has only static members, so it is basically just a templated namespace.
  * Note that the dimensionality of the element data is determined
@@ -22,12 +21,12 @@ class Row_rw
   typedef Mat<row_size, n_var> Row;
   typedef Mat<2, n_var> Bound;
 
-  // since this class is used as a templated namespace, its constructors are deleted
+  //! \brief since this class is used as a templated namespace, its constructors are deleted
   Row_rw() = delete;
-  Row_rw(const Row_rw&) = delete;
-  Row_rw(Row_rw&&) = delete;
+  Row_rw(const Row_rw&) = delete; //!< \overload
+  Row_rw(Row_rw&&) = delete; //!< \overload
 
-  // reads from a row of quadrature points
+  //! \brief reads from a row of quadrature points
   static Row read_row(const double* data, Row_index ind)
   {
     Row r;
@@ -39,8 +38,7 @@ class Row_rw
     return r;
   }
 
-  // multiples a row of values by `coef` and then adds the values in `w` to it
-  // (basically a row-wise axpy)
+  //! \brief multiples a row of values by `coef` and then adds the values in `w` to it (basically a row-wise axpy)
   static void write_row(Row w, double* data, Row_index ind, double coef)
   {
     for (int i_var = 0; i_var < n_var; ++i_var) {
@@ -51,7 +49,7 @@ class Row_rw
     }
   }
 
-  // reads from the face values associated with a given row
+  //! \brief reads from the face values associated with a given row
   static Bound read_bound(const std::array<double*, 6> faces, Row_index ind)
   {
     Bound b;
@@ -63,7 +61,7 @@ class Row_rw
     return b;
   }
 
-  // writes the values in `b` to the face data associated with the specified row
+  //! \brief writes the values in `b` to the face data associated with the specified row
   static void write_bound(Bound b, std::array<double*, 6> faces, Row_index ind)
   {
     for (int i_var = 0; i_var < n_var; ++i_var) {
