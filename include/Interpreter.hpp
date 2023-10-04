@@ -62,19 +62,7 @@ class Interpreter
     int precedence;
     std::function<_Dynamic_value(_Dynamic_value, _Dynamic_value)> func;
   };
-
-  template <double (*f)(double), const char* name>
-  static _Dynamic_value _numeric_unary(_Dynamic_value val)
-  {
-    double operand;
-    if (val.i) operand = *val.i;
-    else if (val.d) operand = *val.d;
-    else HEXED_ASSERT(false, "unary operator" + std::string(name) + "requires numeric argument", Parsing_error);
-    _Dynamic_value new_val;
-    val.i.reset();
-    val.d.emplace(f(operand));
-    return val;
-  }
+  static std::function<_Dynamic_value(_Dynamic_value)> _numeric_unary(double (*f)(double), std::string name);
 
   std::list<char> _text;
   std::map<std::string, std::function<_Dynamic_value(_Dynamic_value)>> _un_ops;

@@ -19,7 +19,7 @@ such as various types of CFL ramping, complex termination conditions, local/glob
 Because there is an infinite variety of convoluted pathways a simulation might need to take,
 many solvers implement a multitude of ridiculously specific input parameters and/or require you to manually babysit a simulation
 and tweak parameters as it runs.
-What we need to recognize is that the real purpose of a CFD solver is to do things that you can't do (short of writing your own solver) --
+We need to recognize that the real purpose of a CFD solver is to do things that you can't do --
 in particular, running iterations and standard file IO tasks.
 You are perfectly capable of deciding when and how many times to do these things,
 and in fact probably have opinions about it that differ from mine.
@@ -98,13 +98,13 @@ unary              | 0                | `-`           | integer, float | inverts
 ^                  | ^                | `#`           | string         | evaluates size of string
 ^                  | ^                | `sqrt`        | float          | square root
 ^                  | ^                | `exp`         | float          | exponential
+^                  | ^                | `log`         | float          | natural logarithm
 ^                  | ^                | `sin`         | float          | sine
 ^                  | ^                | `cos`         | float          | cosine
 ^                  | ^                | `tan`         | float          | tangent
 ^                  | ^                | `asin`        | float          | inverse sine
 ^                  | ^                | `acos`        | float          | inverse cosine
 ^                  | ^                | `atan`        | float          | inverse tangent
-^                  | ^                | `log`         | float          | natural logarithm
 ^                  | ^                | `floor`       | float          | [floor function](https://mathworld.wolfram.com/FloorFunction.html)
 ^                  | ^                | `ceil`        | float          | [ceiling function](https://mathworld.wolfram.com/CeilingFunction.html)
 ^                  | ^                | `round`       | float          | rounds to nearest integer

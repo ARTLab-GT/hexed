@@ -224,6 +224,20 @@ Interpreter::_Dynamic_value Interpreter::_general_add(Interpreter::_Dynamic_valu
   return val;
 }
 
+std::function<Interpreter::_Dynamic_value(Interpreter::_Dynamic_value)> Interpreter::_numeric_unary(double (*f)(double), std::string name)
+{
+  return [f, name](_Dynamic_value val) {
+    double operand;
+    if (val.i) operand = *val.i;
+    else if (val.d) operand = *val.d;
+    else HEXED_ASSERT(false, "unary operator" + name + "requires numeric argument", Parsing_error);
+    _Dynamic_value new_val;
+    val.i.reset();
+    val.d.emplace(f(operand));
+    return val;
+  };
+}
+
 Interpreter::Interpreter(std::vector<std::string> preload) :
   _un_ops {
     {"-", [this](_Dynamic_value val) {
@@ -241,7 +255,18 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
       HEXED_ASSERT(val.s.has_value(), "unary operator `#` requires string argument", Parsing_error);
       return _Dynamic_value(int(val.s.value().size()));
     }},
-    {"sqrt", _numeric_unary<std::sqrt, "sqrt">},
+    {"sqrt", _numeric_unary(&std::sqrt, "sqrt")},
+    {"exp", _numeric_unary(&std::exp, "exp")},
+    {"log", _numeric_unary(&std::log, "log")},
+    {"sin", _numeric_unary(&std::sin, "sin")},
+    {"cos", _numeric_unary(&std::cos, "cos")},
+    {"tan", _numeric_unary(&std::tan, "tan")},
+    {"asin", _numeric_unary(&std::asin, "asin")},
+    {"acos", _numeric_unary(&std::acos, "acos")},
+    {"atan", _numeric_unary(&std::atan, "atan")},
+    {"round", [this](_Dynamic_value val){return _Dynamic_value((int)std::lround(_numeric_unary(&std::round, "round")(val).d.value()));}},
+    {"floor", [this](_Dynamic_value val){return _un_ops["round"](_numeric_unary(&std::floor, "floor")(val));}},
+    {"ceil" , [this](_Dynamic_value val){return _un_ops["round"](_numeric_unary(&std::ceil , "ceil" )(val));}},
     {"read", [this](_Dynamic_value val) {
       HEXED_ASSERT(val.s.has_value(), "operand of `read` must be `string`", Parsing_error);
       std::ifstream file(*val.s);
