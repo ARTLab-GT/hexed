@@ -14,14 +14,13 @@ mach = 5.
 art_visc_width = 2*2.^-init_ref_level
 
 {isothermal wall}
-working_dir = {hexed_out_isothermal30}
+working_dir = {hexed_out_dynamic2}
 thermal_bc = {temperature = 98.89}
-wall_spacing = 0.001
+init_layer_splits = 2
 
 {
 {adiabatic wall}
 thermal_bc = {heat_flux = 0.}
-wall_spacing = .04
 working_dir = {hexed_out_adiabatic14}
 av_diff_stab_rat = 0.7
 }
@@ -29,7 +28,6 @@ av_diff_stab_rat = 0.7
 {
 {prescribed heat flux}
 thermal_bc = {emissivity = 10}
-wall_spacing = 0.01
 working_dir = {hexed_out_flux2}
 }
 
@@ -41,28 +39,37 @@ vis_field_vars = vis_field_vars + residual_expr
 vis_lts_constraints = true
 done = {iteration >= 20^5}
 max_safety = 3e-3
+av_diff_max_safety = 0.3
 n = 10
 n_cheby_av = n
 flow_iters = n
 bl_av_freq = 2000
 av_advect_iters = 2
 iterate = iterate + {
-    if = {iteration >= 1000}
-    then = {
-        if = {flow_iters == 1}
-        then = {
-            max_safety = 0.7
-            flow_iters = n
-            n_cheby_flow = 1
-        }
-        else = {
-            max_safety = 0.7
+    case0 = {}
+    case1 = {max_safety = 0.7; println({max_safety: } + max_safety)}
+    $$({case} + (iteration == 1000))
+    case1 = {av_diff_max_safety = 0.7; println({av_diff_max_safety: } + av_diff_max_safety)}
+    $$({case} + (iteration == 50000))
+    case1 = {
+        case0 = {
             flow_iters = 1
             n_cheby_flow = n
         }
-        $cond
+        case1 = {
+            flow_iters = n
+            n_cheby_flow = 1
+        }
+        $$({case} + (flow_iters == 1))
     }
-    $cond
+    $$({case} + (iteration >= 1000))
+    case0 = {}
+    case1 = {
+        print {splitting layers...}
+        split_layers
+        println({done. number of elements: } + n_elements)
+    }
+    $$({case} + (iteration == 3*10^4 | iteration == 5*10^4 | iteration == 7*10^4 | iteration == 9*10^4))
 }
 
 vis_n_sample = 2

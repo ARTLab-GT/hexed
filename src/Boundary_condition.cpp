@@ -20,6 +20,7 @@ void copy_state(Boundary_face& bf)
   }
 }
 
+//!< \todo need an override for `No_slip`
 void Flow_bc::apply_advection(Boundary_face& bf)
 {
   auto params = bf.storage_params();
@@ -197,7 +198,7 @@ void Pressure_outflow::apply_state(Boundary_face& bf)
   int sign = 2*bf.inside_face_sign() - 1;
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
     // fetch data
-    Mat<> inside(params.n_var); // flux
+    Mat<> inside(params.n_var);
     for (int i_var = 0; i_var < params.n_var; ++i_var) {
       inside(i_var) = in_f[i_var*nfq + i_qpoint];
     }
@@ -218,6 +219,7 @@ void Pressure_outflow::apply_state(Boundary_face& bf)
   }
 }
 
+//! \todo make this formally well-posed
 void Pressure_outflow::apply_flux(Boundary_face& bf)
 {
   // set to negative of inside flux
@@ -367,7 +369,7 @@ void Nonpenetration::apply_advection(Boundary_face& bf)
     }
     double nrml_veloc = veloc.dot(n);
     if ((nrml_veloc > 0) != bf.inside_face_sign()) {
-      veloc -= 2*nrml_veloc*n/n.squaredNorm();
+      veloc -= 2*nrml_veloc*n/n.squaredNorm(); //!< \todo is this the asymmetry problem?
     }
     for (int i_dim = 0; i_dim < nd; ++i_dim) {
       gh_f[i_dim*nfq + i_qpoint] = veloc(i_dim);

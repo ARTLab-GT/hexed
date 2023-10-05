@@ -3,7 +3,7 @@
 #include <Row_index.hpp>
 #include <erase_if.hpp>
 #include <utils.hpp>
-#include <global_hacks.hpp>
+#include <Gauss_legendre.hpp>
 
 namespace hexed
 {
@@ -404,8 +404,8 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force)
         } else request_connection(elem, nd, face.i_dim, face.face_sign, j_dim, face_sign);
       }
     }
-    // readjust face node adjustments to account for offset
     if (offset > 0) {
+      // readjust face node adjustments to account for offset
       double* node_adj [] {face.elem.node_adjustments(), elem.node_adjustments()};
       int nfq = params.n_qpoint()/params.row_size;
       for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
@@ -420,6 +420,18 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force)
         for (int sign = 0; sign < 2; ++sign) {
           *na[0][sign] /= 1 - offset;
           *na[1][sign] /= offset;
+        }
+      }
+      double* state [] {face.elem.stage(0), elem.stage(0)};
+      // interpolate data from original element to new ones
+      for (int i_elem : {1, 0}) { // iterate in reverse order since new states for both elements depend on element 0
+        Gauss_legendre basis(params.row_size); //! \todo apparently the mesh needs to know about the basis after all...
+        double width = 1 - i_elem + math::sign(i_elem)*offset;
+        Mat<dyn, dyn> interp = basis.interpolate(basis.nodes()*width + Mat<>::Constant(params.row_size, (i_elem == face.face_sign)*(1 - width)));
+        for (Row_index index(nd, params.row_size, face.i_dim); index; ++index) {
+          Eigen::Map<Mat<dyn, dyn>, 0, Eigen::Stride<dyn, dyn>> row_read (state[0     ] + index.i_qpoint(0), params.row_size, 2*params.n_var + 3 + Element::n_forcing + params.row_size, Eigen::Stride<dyn, dyn>(params.n_qpoint(), index.stride));
+          Eigen::Map<Mat<dyn, dyn>, 0, Eigen::Stride<dyn, dyn>> row_write(state[i_elem] + index.i_qpoint(0), params.row_size, 2*params.n_var + 3 + Element::n_forcing + params.row_size, Eigen::Stride<dyn, dyn>(params.n_qpoint(), index.stride));
+          row_write = interp*row_read;
         }
       }
     }
@@ -1077,8 +1089,6 @@ void Accessible_mesh::id_smooth_verts()
 
 bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std::function<bool(Element&)> unrefine_criterion)
 {
-  Stopwatch sw;
-  sw.start();
   /* `Element::record` is used to identify which elements are going to be modified.
    * 0 => do nothing
    * 1 => refine
@@ -1244,7 +1254,6 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
     for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, container(is_deformed).element_view().size());
   } while (changed);
   delete_bad_extrusions();
-  sw.pause();
   deform();
   // delete extruded elements
   #pragma omp parallel for
@@ -1284,7 +1293,6 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   }
   id_boundary_verts();
   snap_vertices();
-  global_hacks::numbers[2] += sw.time();
   id_smooth_verts();
   return n_before > n_after; // any change to the element structure (including adding elements!) will cause `purge` to reduce the size of `elems`
 }

@@ -1,5 +1,59 @@
 /*! \page boundary_conditions Boundary Conditions
 
-More on this soon!
+Any of the following boundary conditions can be applied to any boundary,
+regardless of whether it is one of the mesh extremes or a geometry surface.
+The desired boundary conditions can be selected with the solver parameters \ref surface_bc and \ref extremal_bc.
+
+\section Freestream
+`{freestream}` \n
+Sets the boundary state equal to the freestream state.
+For viscous flows, none of the transport fluxes are modified.
+Mathematically, this is well-posed only for supersonic inflow.
+Numerically, you can usually get away with it as long as the boundary is far away from any wall boundaries or interesting flow features.
+However, if you try to apply it to an outflow boundary in a viscous flow,
+you may introduce spurious noise as the boundary layer or wake is artificially accelerated to the freestream speed.
+
+\section Characteristic
+`{characteristic}` \n
+The most generally applicable farfield boundary condition.
+Sometimes referred to as "Riemann Invariants" boundary condition.
+In a nutshell, it sets the state as close to the freestream state as possible without overdefining the boundary condition.
+It decomposes both the flow state and the freestream into the characteristics of the locally linearized Euler equations,
+and then recombines into a single state vector using the outgoing characteristics from the flow state
+and the incoming characteristics from the freestream.
+For viscous flows, the transport fluxes of the outgoing characterstics are set to zero and those of the incoming characteristics are unmodified.
+This BC is well-posed regardless of the flow direction and Mach number.
+Thus it can be used for farfield boundaries that aren't actually very far away and outflow boundaries that ingest a wake or boundary layer.
+The drawback is that it is not very robust and will sometimes cause a crash in hypersonic flows.
+A more robust alternative is \ref pressure_outflow.
+
+\section pressure_outflow Pressure Outflow
+`{pressure_outflow}` \n
+An outflow boundary condition that balances robustness and generality.
+For supersonic outflow, the flow state is simply left alone.
+For subsonic outflow, the pressure is set equal to the freestream pressure.
+For inflow, this boundary condition is invalid (it is not numerically stable, let alone well-posed).
+For viscous flows, all of the transport fluxes are set to zero.
+This technically makes it ill-posed (specifically, overdefined) for subsonic outflow,
+and is an artifiact of pure laziness, since you can usually get away with it.
+In the future, I intend to set the appropriate number of transport fluxes to make this boundary condition well-posed.
+
+\section Nonpenetration
+`{nonpenetration}` \n
+A slip wall boundary condition.
+The normal component of the momentum is set to zero, and otherwise the state is unmodified.
+All transport fluxes except that of normal momentum are set to zero.
+This boundary condition should be used for walls in inviscid flows and for symmetry planes in any flows.
+
+\section no_slip No Slip
+`{no_slip}` \n
+A no-slip wall boundary condition.
+The entire momentum vector is set to zero, and the density is unmodified.
+The transport flux of the momentum is unmodified, and that of the density is set to zero (although it should be zero to begin with).
+Depending on the value of \ref thermal_bc, either the energy or the transport flux of energy will be prescribed, and the other will be unmodified.
+This boundary condition is only valid for wall boundaries in viscous flows.
+Some users may be tempted to use this for walls in inviscid flows because they can get away with it in a finite volume solver, but this is not acceptable.
+Due to the Local Lax-Friedrichs interface flux and the dispersive nature of numerical errors in high-order DG schemes,
+attempting to use this in an inviscid flow will result in severe spurious oscillations.
 
 */
