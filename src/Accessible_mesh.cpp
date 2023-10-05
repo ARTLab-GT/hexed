@@ -423,14 +423,14 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force)
         }
       }
       double* state [] {face.elem.stage(0), elem.stage(0)};
-      // interpolate state from original element to new ones
+      // interpolate data from original element to new ones
       for (int i_elem : {1, 0}) { // iterate in reverse order since new states for both elements depend on element 0
         Gauss_legendre basis(params.row_size); //! \todo apparently the mesh needs to know about the basis after all...
         double width = 1 - i_elem + math::sign(i_elem)*offset;
         Mat<dyn, dyn> interp = basis.interpolate(basis.nodes()*width + Mat<>::Constant(params.row_size, (i_elem == face.face_sign)*(1 - width)));
         for (Row_index index(nd, params.row_size, face.i_dim); index; ++index) {
-          Eigen::Map<Mat<dyn, dyn>, 0, Eigen::Stride<dyn, dyn>> row_read (state[0     ] + index.i_qpoint(0), params.row_size, params.n_var, Eigen::Stride<dyn, dyn>(params.n_qpoint(), index.stride));
-          Eigen::Map<Mat<dyn, dyn>, 0, Eigen::Stride<dyn, dyn>> row_write(state[i_elem] + index.i_qpoint(0), params.row_size, params.n_var, Eigen::Stride<dyn, dyn>(params.n_qpoint(), index.stride));
+          Eigen::Map<Mat<dyn, dyn>, 0, Eigen::Stride<dyn, dyn>> row_read (state[0     ] + index.i_qpoint(0), params.row_size, 2*params.n_var + 3 + Element::n_forcing + params.row_size, Eigen::Stride<dyn, dyn>(params.n_qpoint(), index.stride));
+          Eigen::Map<Mat<dyn, dyn>, 0, Eigen::Stride<dyn, dyn>> row_write(state[i_elem] + index.i_qpoint(0), params.row_size, 2*params.n_var + 3 + Element::n_forcing + params.row_size, Eigen::Stride<dyn, dyn>(params.n_qpoint(), index.stride));
           row_write = interp*row_read;
         }
       }

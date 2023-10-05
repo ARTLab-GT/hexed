@@ -66,7 +66,9 @@ Accepted values:
 - `{temperature = x}`: Prescribes the temperature at the wall to be `x`.
 - `{internal_energy = x}`: Prescribes the internal energy at the wall to be `x`.
   For now, since you're stuck in the CPG world, this is equivalent to `{temperature = x*(heat_rat - 1)/specific_gas_air}`.
-- `{emissivity = x}`: Radiative equilibrium BC where the surface emissivity is prescribed to be `x`.
+- `{emissivity = x}`: Radiative equilibrium BC where the heat flux is prescribed according to the
+  [Stefan-Boltzmann Law](https://en.wikipedia.org/wiki/Stefan%E2%80%93Boltzmann_law)
+  with the surface emissivity \f$ \sigma \f$ set to `x`.
 
 <hr>
 \subsubsection row_size
@@ -119,6 +121,11 @@ Mesh extremes.
 That is, all elements will have coordinates \f$ x_0, x_1, x_2 \f$ such that `mesh_extreme00` \f$ \le x_0 \le \f$ `mesh_extreme01`, etc.
 If each mesh dimension is an integer multiple of the initial element size, then the above inequalities are equalities.
 Of course, only the first \ref n_dim dimensions are considered.
+
+\subsubsection extremal_bc extremal_bc00, extremal_bc01, extremal_bc10, extremal_bc11, extremal_bc20, extremal_bc21
+__type:__ string \n
+__default:__ `{characteristic}` \n
+Boundary conditions for extremal boundaries (defined by \ref mesh_extreme).
 
 <hr>
 \subsubsection n_cheby_flow

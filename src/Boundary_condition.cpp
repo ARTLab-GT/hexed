@@ -198,7 +198,7 @@ void Pressure_outflow::apply_state(Boundary_face& bf)
   int sign = 2*bf.inside_face_sign() - 1;
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
     // fetch data
-    Mat<> inside(params.n_var); // flux
+    Mat<> inside(params.n_var);
     for (int i_var = 0; i_var < params.n_var; ++i_var) {
       inside(i_var) = in_f[i_var*nfq + i_qpoint];
     }
@@ -219,6 +219,7 @@ void Pressure_outflow::apply_state(Boundary_face& bf)
   }
 }
 
+//! \todo make this formally well-posed
 void Pressure_outflow::apply_flux(Boundary_face& bf)
 {
   // set to negative of inside flux
