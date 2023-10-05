@@ -14,7 +14,7 @@ mach = 5.
 art_visc_width = 2*2.^-init_ref_level
 
 {isothermal wall}
-working_dir = {hexed_out_dynamic}
+working_dir = {hexed_out_dynamic1}
 thermal_bc = {temperature = 98.89}
 init_layer_splits = 2
 
@@ -47,14 +47,14 @@ bl_av_freq = 2000
 av_advect_iters = 2
 iterate = iterate + {
     case0 = {}
+    case1 = {max_safety = 0.7; println({max_safety: } + max_safety)}
+    $$({case} + (iteration == 1000))
     case1 = {
         case0 = {
-            max_safety = 0.7
             flow_iters = 1
             n_cheby_flow = n
         }
         case1 = {
-            max_safety = 0.7
             flow_iters = n
             n_cheby_flow = 1
         }
@@ -65,13 +65,15 @@ iterate = iterate + {
     case1 = {
         print {splitting layers...}
         i_split = 0
-        while = {i_split < 4}
+        while = {i_split < 2}
         do = {split_layers; i_split = i_split + 1}
         $loop
         println({done. number of elements: } + n_elements)
         av_diff_max_safety = 0.7
     }
-    $$({case} + (iteration == 6*10^4))
+    $$({case} + (iteration == 3*10^4 | iteration == 8*10^4))
+    case1 = {max_safety = 0.3; println({max_safety: } + max_safety)}
+    $$({case} + (iteration == 8*10^4))
 }
 
 vis_n_sample = 2
