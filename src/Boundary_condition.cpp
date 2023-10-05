@@ -367,10 +367,7 @@ void Nonpenetration::apply_advection(Boundary_face& bf)
       n(i_dim) = nrml[i_dim*nfq + i_qpoint];
       veloc(i_dim) = in_f[i_dim*nfq + i_qpoint];
     }
-    double nrml_veloc = veloc.dot(n);
-    if ((nrml_veloc > 0) != bf.inside_face_sign()) {
-      veloc -= 2*nrml_veloc*n/n.squaredNorm(); //!< \todo is this the asymmetry problem?
-    }
+    veloc -= 2*veloc.dot(n)*n/n.squaredNorm();
     for (int i_dim = 0; i_dim < nd; ++i_dim) {
       gh_f[i_dim*nfq + i_qpoint] = veloc(i_dim);
     }
