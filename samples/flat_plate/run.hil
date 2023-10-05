@@ -6,7 +6,7 @@ mesh_extreme11 =  10.
 surface_max_iters = 10
 surface_refine = {nom_sz > 0.05 & (center0^2 + center1^2)^.5 < nom_sz} ;{focus isotropic refinement on the leading edge (located at {0, 0})}
 geom0 = {geom.csv}
-wall_spacing = 0.03
+init_layer_splits = 3
 transport_model = {sutherland}
 
 {freestream definition. Note that not all of the variables below are parameters considered by the solver. Some are simply user-defined variables.}
