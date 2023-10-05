@@ -82,6 +82,8 @@ def plot(function, ylabel):
         commit_times = [datetime.fromtimestamp(mark.commit_time, tz = timezone.utc) for mark in benchmarks[system]]
         values = [function(mark) for mark in benchmarks[system]]
         plt.scatter(commit_times, values, label = system)
+        n = len(commit_times)
+        plt.plot([commit_times[(i + 1)//2] for i in range(2*n - 1)], [values[i//2] for i in range(2*n - 1)])
     plt.ylabel(ylabel)
     plt.xlabel("commit date/time (UTC)")
     plt.xticks(rotation = 30, ha = "right")
