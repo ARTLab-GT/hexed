@@ -119,7 +119,8 @@ double Solver::max_dt(double msc, double msd)
 }
 
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
-               Transport_model viscosity_model, Transport_model thermal_conductivity_model, std::shared_ptr<Namespace> space) :
+               Transport_model viscosity_model, Transport_model thermal_conductivity_model,
+               std::shared_ptr<Namespace> space, std::shared_ptr<Printer> printer) :
   params{3, n_dim + 2, n_dim, row_size},
   acc_mesh{params, root_mesh_size},
   basis{row_size},
@@ -130,7 +131,8 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   write_face(kernel_factory<Spatial<Element, pde::Navier_stokes<false>::Pde>::Write_face>(params.n_dim, params.row_size, basis)), // note: for now, false and true are equivalent for `Write_face`
   visc{viscosity_model},
   therm_cond{thermal_conductivity_model},
-  _namespace{space}
+  _namespace{space},
+  _printer{printer}
 {
   _namespace->assign_default("max_safety", .7); // maximum allowed safety factor for time stepping
   _namespace->assign_default("max_time_step", huge); // maximum allowed time step
@@ -987,12 +989,11 @@ bool Solver::fix_admissibility(double stability_ratio)
       n_iters = std::numeric_limits<int>::max();
     }
     if (iter == 0) {
-      printf("Thermodynamically inadmissible state detected (solver iteration %i). Attempting to fix...\n",
-             _namespace->lookup<int>("iteration").value());
+      _printer->print(format_str(200, "Thermodynamically inadmissible state detected (solver iteration %i). Attempting to fix...\n",
+                                 _namespace->lookup<int>("iteration").value()));
     }
     auto bounds = bounds_field(State_variables(), 2*rs);
-    printf("    iteration %i: mass in [%e, %e]; energy in [%e, %e]\n", iter, bounds[nd][0], bounds[nd][1], bounds[nd + 1][0], bounds[nd + 1][1]);
-    std::cout << std::flush;
+    _printer->print(format_str(200, "    iteration %i: mass in [%e, %e]; energy in [%e, %e]\n", iter, bounds[nd][0], bounds[nd][1], bounds[nd + 1][0], bounds[nd + 1][1]));
     auto& elems = acc_mesh.elements();
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -1075,7 +1076,7 @@ bool Solver::fix_admissibility(double stability_ratio)
     }
   }
   --iter;
-  if (iter) printf("done\n");
+  if (iter) _printer->print("done\n");
   status.fix_admis_iters += iter;
   _namespace->assign("fix_iters", _namespace->lookup<int>("fix_iters").value() + iter);
   sw_fix.work_units_completed += acc_mesh.elements().size()*iter;
