@@ -15,6 +15,7 @@ surface_max_iters = 1
 done = {iteration >= 2*10^5}
 vis_freq = 10000
 
+{settings for different variants of this case}
 isothermal = {
     working_dir = {hexed_out_isothermal_coarse}
     thermal_bc = {temperature = 98.89}
@@ -30,7 +31,6 @@ isothermal = {
         $$({case} + (iteration == 2*10^4 | iteration == 3*10^4))
     }
 }
-
 radiative_equilibrium = {
     thermal_bc = {emissivity = 1.}
     working_dir = {hexed_out_rad_eq}
@@ -38,7 +38,6 @@ radiative_equilibrium = {
     av_diff_max_safety = 0.3
     $set_aerothermo
 }
-
 inviscid = {
     working_dir = {hexed_out_inviscid}
     vis_freq = 1000
