@@ -55,15 +55,11 @@ void Flow_bc::apply_diffusion(Boundary_face& bf)
 void Flow_bc::flux_diffusion(Boundary_face& bf)
 {
   auto params = bf.storage_params();
-  const int nd = params.n_dim;
-  const int rs = params.row_size;
-  const int nq = params.n_qpoint()/rs;
-  double* in_f = bf.inside_face() + 2*(nd + 2)*nq/rs;
-  double* gh_f = bf.ghost_face()  + 2*(nd + 2)*nq/rs;
-  // set average flux to 0
-  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-    gh_f[i_qpoint] = -in_f[i_qpoint];
-  }
+  int nfq = params.n_qpoint()/params.row_size;
+  int offset = 2*params.n_var*nfq;
+  double* gh_f = bf.ghost_face() + offset;
+  double* in_f = bf.inside_face() + offset;
+  for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
 }
 
 Freestream::Freestream(Mat<> freestream_state)
