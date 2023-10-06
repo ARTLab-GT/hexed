@@ -1,20 +1,23 @@
 n_dim = 2
-mesh_extreme00 = -2.
-mesh_extreme01 =  0.
+mesh_extreme00 = -10.
+mesh_extreme01 =  10.
 mesh_extreme10 =  0.
-mesh_extreme11 =  2.
-init_ref_level = 5
+mesh_extreme11 =  20.
+init_ref_level = 3
 extremal_bc10 = {nonpenetration}
 extremal_bc01 = {pressure_outflow}
 shell {python3 make_geom.py}
 geom0 = {auto.csv}
 pressure = 120.96
 temperature = 75.61
-mach = 5.
+mach = .2
+{
 art_visc_width = 2*2.^-init_ref_level
 transport_model = {sutherland}
 fix_therm_admis = true
-surface_max_iters = 1
+}
+surface_max_iters = 10
+surface_refine = {nom_sz > 0.1 & is_extruded}
 done = {false}
 max_safety = 3e-3
 n = 10
@@ -70,7 +73,7 @@ radiative_equilibrium = {
 }
 
 inviscid = {
-    working_dir = {hexed_out_inviscid}
+    working_dir = {hexed_out_subsonic}
     transport_model = {inviscid}
     vis_freq = 1000
     av_diff_max_safety = 0.3
