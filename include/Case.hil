@@ -87,10 +87,10 @@ set_aerothermo = { {further modify settings to be good for aerothermodynamics (a
         case1 = {
             case0 = {
                 flow_iters = 1
-                n_cheby_flow = supersonic_sub_iters
+                n_cheby_flow = shock_sub_iters
             }
             case1 = {
-                flow_iters = supersonic_sub_iters
+                flow_iters = shock_sub_iters
                 n_cheby_flow = 1
             }
             $$({case} + (flow_iters == 1))
