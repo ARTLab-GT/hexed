@@ -20,7 +20,6 @@ void copy_state(Boundary_face& bf)
   }
 }
 
-//!< \todo need an override for `No_slip`
 void Flow_bc::apply_advection(Boundary_face& bf)
 {
   auto params = bf.storage_params();
@@ -432,6 +431,25 @@ void No_slip::apply_flux(Boundary_face& bf)
         break;
     }
     gh_f[i_dof] = 2*flux*flux_sign - in_f[i_dof];
+  }
+}
+
+void No_slip::apply_advection(Boundary_face& bf)
+{
+  auto params = bf.storage_params();
+  const int nd = params.n_dim;
+  const int nq = params.n_qpoint()/params.row_size;
+  double* in_f = bf.inside_face();
+  double* gh_f = bf.ghost_face();
+  // set velocity to 0
+  for (int i_dim = 0; i_dim < nd; ++i_dim) {
+    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+      gh_f[i_dim*nq + i_qpoint] = -in_f[i_dim*nq + i_qpoint];
+    }
+  }
+  // don't change advected scalar
+  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+    gh_f[nd*nq + i_qpoint] = in_f[nd*nq + i_qpoint];
   }
 }
 

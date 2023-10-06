@@ -41,15 +41,6 @@ set_viscous = {
             $$({case} + (flow_iters == 1))
         }
         $$({case} + (iteration >= 1000))
-        case0 = {}
-        case1 = {
-            print {splitting layers...}
-            split_layers
-            println({done. number of elements: } + n_elements)
-        }
-        $$({case} + (iteration == 3*10^4 | iteration == 5*10^4 | iteration == 7*10^4 | iteration == 9*10^4))
-        case1 = {av_diff_max_safety = 0.7; println({av_diff_max_safety: } + av_diff_max_safety)}
-        $$({case} + (iteration == 50000))
     }
 }
 
@@ -57,13 +48,21 @@ isothermal = {
     working_dir = {hexed_out_isothermal}
     thermal_bc = {temperature = 98.89}
     init_layer_splits = 2
-    av_diff_max_safety = 0.3
     $set_viscous
+    iterate = iterate + {
+        case0 = {}
+        case1 = {
+            print {splitting layers...}
+            split_layers
+            println({done. number of elements: } + n_elements)
+        }
+        $$({case} + (iteration == 2*10^4 | iteration == 3*10^4 | iteration == 4*10^4 | iteration == 5*10^4))
+    }
 }
 
 radiative_equilibrium = {
     thermal_bc = {emissivity = 1.}
-    working_dir = {hexed_out_rad_eq}
+    working_dir = {hexed_out_rad_eq1}
     init_layer_splits = 3
     av_diff_max_safety = 0.3
     $set_viscous
@@ -77,7 +76,7 @@ inviscid = {
     max_safety = 0.7
 }
 
-$inviscid
+$isothermal
 
 vis_n_sample = 2
 $init
