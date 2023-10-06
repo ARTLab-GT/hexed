@@ -1,2 +1,3 @@
-=println {Hexed interactive session: enter Hexed Interface Language (HIL) code at the prompt (`$quit` to quit).}
+input_file = {}
+println {Hexed interactive session: enter Hexed Interface Language (HIL) code at the prompt (`$quit` to quit).}
 $repl

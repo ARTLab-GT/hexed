@@ -73,8 +73,9 @@ Flow_bc* Case::_make_bc(std::string name)
 
 Case::Case(std::string input_file)
 {
+  _inter.variables->assign("input_file", input_file);
   // create custom Heisenberg variables
-  _inter.variables->create<int>("create_solver", new Namespace::Heisenberg<int>([this]() {
+  _inter.variables->create("create_solver", new Namespace::Heisenberg<int>([this]() {
     auto n_dim = _inter.variables->lookup<int>("n_dim");
     HEXED_ASSERT(n_dim && n_dim.value() > 0 && n_dim.value() <= 3,
                  "`n_dim` must be defined as an integer in [1, 3]");
@@ -99,7 +100,7 @@ Case::Case(std::string input_file)
         else _inter.variables->assign<double>("pressure", *_vard("density")*constants::specific_gas_air**_vard("temperature"));
       } else _inter.variables->assign<double>("density", *_vard("pressure")/(constants::specific_gas_air**_vard("temperature")));
       HEXED_ASSERT(_vard("velocity0").has_value() + _vard("speed").has_value() + _vard("mach").has_value() == 1,
-                   "exactly one of velosity, speed, and Mach number must be specified");
+                   "exactly one of velocity, speed, and Mach number must be specified");
       Mat<> veloc;
       Mat<> full_direction = Mat<>::Zero(3);
       auto direction = full_direction(Eigen::seqN(0, *n_dim));

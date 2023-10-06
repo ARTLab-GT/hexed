@@ -206,6 +206,8 @@ init = {
     case1 = {working_dir = working_dir + {/}}
     $$({case} + (working_dir#(#working_dir - 1) != {/}))
     shell({if [ ! -d } + working_dir + { ]; then mkdir } + working_dir + {; fi})
+    case1 = {shell({cp } + input_file + { } + working_dir)}
+    $$({case} + (#input_file != 0))
     case1 = {
         case1 = {surface_bc = {nonpenetration}}
         case0 = {surface_bc = {no_slip}}
