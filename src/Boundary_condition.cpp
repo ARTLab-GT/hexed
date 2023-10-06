@@ -20,7 +20,6 @@ void copy_state(Boundary_face& bf)
   }
 }
 
-//!< \todo need an override for `No_slip`
 void Flow_bc::apply_advection(Boundary_face& bf)
 {
   auto params = bf.storage_params();
@@ -55,15 +54,11 @@ void Flow_bc::apply_diffusion(Boundary_face& bf)
 void Flow_bc::flux_diffusion(Boundary_face& bf)
 {
   auto params = bf.storage_params();
-  const int nd = params.n_dim;
-  const int rs = params.row_size;
-  const int nq = params.n_qpoint()/rs;
-  double* in_f = bf.inside_face() + 2*(nd + 2)*nq/rs;
-  double* gh_f = bf.ghost_face()  + 2*(nd + 2)*nq/rs;
-  // set average flux to 0
-  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-    gh_f[i_qpoint] = -in_f[i_qpoint];
-  }
+  int nfq = params.n_qpoint()/params.row_size;
+  int offset = 2*params.n_var*nfq;
+  double* gh_f = bf.ghost_face() + offset;
+  double* in_f = bf.inside_face() + offset;
+  for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
 }
 
 Freestream::Freestream(Mat<> freestream_state)
@@ -367,10 +362,7 @@ void Nonpenetration::apply_advection(Boundary_face& bf)
       n(i_dim) = nrml[i_dim*nfq + i_qpoint];
       veloc(i_dim) = in_f[i_dim*nfq + i_qpoint];
     }
-    double nrml_veloc = veloc.dot(n);
-    if ((nrml_veloc > 0) != bf.inside_face_sign()) {
-      veloc -= 2*nrml_veloc*n/n.squaredNorm(); //!< \todo is this the asymmetry problem?
-    }
+    veloc -= 2*veloc.dot(n)*n/n.squaredNorm();
     for (int i_dim = 0; i_dim < nd; ++i_dim) {
       gh_f[i_dim*nfq + i_qpoint] = veloc(i_dim);
     }
@@ -439,6 +431,25 @@ void No_slip::apply_flux(Boundary_face& bf)
         break;
     }
     gh_f[i_dof] = 2*flux*flux_sign - in_f[i_dof];
+  }
+}
+
+void No_slip::apply_advection(Boundary_face& bf)
+{
+  auto params = bf.storage_params();
+  const int nd = params.n_dim;
+  const int nq = params.n_qpoint()/params.row_size;
+  double* in_f = bf.inside_face();
+  double* gh_f = bf.ghost_face();
+  // set velocity to 0
+  for (int i_dim = 0; i_dim < nd; ++i_dim) {
+    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+      gh_f[i_dim*nq + i_qpoint] = -in_f[i_dim*nq + i_qpoint];
+    }
+  }
+  // don't change advected scalar
+  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+    gh_f[nd*nq + i_qpoint] = in_f[nd*nq + i_qpoint];
   }
 }
 
