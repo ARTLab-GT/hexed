@@ -76,6 +76,10 @@ Case::Case(std::string input_file)
   _inter.variables->assign("input_file", input_file);
   // create custom Heisenberg variables
   _inter.variables->create("create_solver", new Namespace::Heisenberg<int>([this]() {
+    _output_file.reset(new std::ofstream(_vars("working_dir").value() + "output.txt"));
+    auto printer = std::make_shared<Stream_printer>();
+    printer->streams.emplace_back(_output_file.get());
+    _inter.printer = printer;
     auto n_dim = _inter.variables->lookup<int>("n_dim");
     HEXED_ASSERT(n_dim && n_dim.value() > 0 && n_dim.value() <= 3,
                  "`n_dim` must be defined as an integer in [1, 3]");
