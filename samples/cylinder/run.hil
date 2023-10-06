@@ -74,7 +74,7 @@ inviscid = {
     transport_model = {inviscid}
     vis_freq = 1000
     av_diff_max_safety = 0.3
-    max_safety = 0.3
+    max_safety = 0.7
 }
 
 $inviscid
