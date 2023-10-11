@@ -4,8 +4,8 @@
 namespace hexed
 {
 
-Deformed_element::Deformed_element(Storage_params params, std::vector<int> pos, double mesh_size, int ref_level, Mat<> origin_arg) :
-  Element{params, pos, mesh_size, ref_level, origin_arg, true},
+Deformed_element::Deformed_element(Storage_params params, std::vector<int> pos, double mesh_size, int ref_level, Mat<> origin_arg, bool axisym) :
+  Element{params, pos, mesh_size, ref_level, origin_arg, axisym, true},
   n_qpoint{params.n_qpoint()},
   jac_dat{(n_dim*n_dim + 1)*n_qpoint},
   node_adj{Eigen::VectorXd::Zero(n_qpoint/params.row_size*n_dim*2)},
@@ -131,6 +131,12 @@ void Deformed_element::set_jacobian(const Basis& basis)
       norm_sum += std::sqrt(norm_sq);
     }
     vertex_time_step_scale(i_vert) = nominal_size()*vertex_det(i_vert)/norm_sum; // for deformed elements this is a essentially a measure of the amount of stretching in each dimension
+  }
+  if (axisymmetric) {
+    // set axisymmetric radius
+    for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
+      radius()[i_qpoint] = position(basis, i_qpoint)[1];
+    }
   }
 }
 

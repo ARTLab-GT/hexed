@@ -135,7 +135,7 @@ TEST_CASE("Element")
     REQUIRE(elem3.face_position(basis, 4, 7)[2] == Catch::Approx(0.003));
   }
 
-  SECTION("writing jacobian to faces")
+  SECTION("set_jacobian")
   {
     hexed::Equidistant basis(6);
     double faces[6][5*36];
@@ -148,5 +148,13 @@ TEST_CASE("Element")
     REQUIRE(element.faces[2][0] == Catch::Approx(0.));
     REQUIRE(element.faces[2][1*36] == Catch::Approx(1.));
     REQUIRE(element.faces[2][2*36] == Catch::Approx(0.));
+
+    // test axisymmetric radius
+    hexed::Storage_params params {2, 4, 2, 6};
+    hexed::Element elem {params, {1, 2}, 0.31, 0, hexed::Mat<2>{.001, .002}, true};
+    for (int i_face = 0; i_face < 4; ++i_face) elem.faces[i_face] = faces[i_face];
+    REQUIRE(elem.axisymmetric == true);
+    elem.set_jacobian(basis);
+    REQUIRE(elem.radius()[params.n_qpoint() - 1] == elem.position(basis, params.n_qpoint() - 1)[1]);
   }
 }
