@@ -73,8 +73,24 @@ Flow_bc* Case::_make_bc(std::string name)
 
 Case::Case(std::string input_file)
 {
+  _inter.variables->assign("input_file", input_file);
+  _inter.variables->assign("version_major", config::version_major);
+  _inter.variables->assign("version_minor", config::version_minor);
+  _inter.variables->assign("version_patch", config::version_patch);
+  _inter.variables->assign<std::string>("commit", config::commit);
   // create custom Heisenberg variables
-  _inter.variables->create<int>("create_solver", new Namespace::Heisenberg<int>([this]() {
+  _inter.variables->create("create_solver", new Namespace::Heisenberg<int>([this]() {
+    // basic IO setup
+    _output_file.reset(new std::ofstream(_vars("working_dir").value() + "output.txt"));
+    auto printer = std::make_shared<Stream_printer>();
+    printer->streams.emplace_back(_output_file.get());
+    _inter.printer = printer;
+    char utc [100];
+    std::time_t time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    std::strftime(utc, 100, "%Y-%m-%d %H:%M:%S", std::gmtime(&time));
+    printer->print(format_str(1000, "Commencing simulation with Hexed version %i.%i.%i (commit %s) at %s UTC (%i Unix Time).\n",
+                              config::version_major, config::version_minor, config::version_patch, config::commit, utc, time));
+    // setup actual solver
     auto n_dim = _inter.variables->lookup<int>("n_dim");
     HEXED_ASSERT(n_dim && n_dim.value() > 0 && n_dim.value() <= 3,
                  "`n_dim` must be defined as an integer in [1, 3]");
@@ -99,7 +115,7 @@ Case::Case(std::string input_file)
         else _inter.variables->assign<double>("pressure", *_vard("density")*constants::specific_gas_air**_vard("temperature"));
       } else _inter.variables->assign<double>("density", *_vard("pressure")/(constants::specific_gas_air**_vard("temperature")));
       HEXED_ASSERT(_vard("velocity0").has_value() + _vard("speed").has_value() + _vard("mach").has_value() == 1,
-                   "exactly one of velosity, speed, and Mach number must be specified");
+                   "exactly one of velocity, speed, and Mach number must be specified");
       Mat<> veloc;
       Mat<> full_direction = Mat<>::Zero(3);
       auto direction = full_direction(Eigen::seqN(0, *n_dim));
@@ -155,7 +171,7 @@ Case::Case(std::string input_file)
     } else {
       HEXED_ASSERT(false, "unrecognized transport model specification");
     }
-    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, true, *visc_model, *therm_model, _inter.variables));
+    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, true, *visc_model, *therm_model, _inter.variables, printer));
     _solver().mesh().add_tree(bcs, mesh_extremes(all, 0));
     _solver().set_fix_admissibility(_vari("fix_therm_admis").value());
     return 0;

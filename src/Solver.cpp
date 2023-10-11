@@ -119,7 +119,8 @@ double Solver::max_dt(double msc, double msd)
 }
 
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
-               Transport_model viscosity_model, Transport_model thermal_conductivity_model, std::shared_ptr<Namespace> space) :
+               Transport_model viscosity_model, Transport_model thermal_conductivity_model,
+               std::shared_ptr<Namespace> space, std::shared_ptr<Printer> printer) :
   params{3, n_dim + 2, n_dim, row_size},
   acc_mesh{params, root_mesh_size},
   basis{row_size},
@@ -130,24 +131,26 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   write_face(kernel_factory<Spatial<Element, pde::Navier_stokes<false>::Pde>::Write_face>(params.n_dim, params.row_size, basis)), // note: for now, false and true are equivalent for `Write_face`
   visc{viscosity_model},
   therm_cond{thermal_conductivity_model},
-  _namespace{space}
+  _namespace{space},
+  _printer{printer}
 {
-  _namespace->assign_default<double>("max_safety", .7); // maximum allowed safety factor for time stepping
-  _namespace->assign_default<double>("max_time_step", huge); // maximum allowed time step
-  _namespace->assign_default<double>("fix_admis_max_safety", .7); // staility ratio for fixing thermodynamic admissibility.
-  _namespace->assign_default<double>("av_diff_ratio", 1e-1); // ratio of diffusion time to advection width
-  _namespace->assign_default<double>("av_visc_mult", 30.); // final scaling parameter applied to artificial viscosity coefficient
-  _namespace->assign_default<double>("av_unscaled_max", 2e-4); // maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
-  _namespace->assign_default<double>("av_advect_max_safety", .7); // stability ratio for advection
-  _namespace->assign_default<double>("av_advect_max_res", 1e-3); // residual limit for advection equation
-  _namespace->assign_default<double>("av_diff_max_safety", .7); // stability ratio for diffusion
-  _namespace->assign_default<int   >("n_cheby_flow", 1);
-  _namespace->assign_default<int   >("n_cheby_av", 1);
-  _namespace->assign_default<int   >("av_advect_iters", 1); // number of advection iterations to run each time `set_art_visc_smoothness` is called
-  _namespace->assign_default<int   >("av_diff_iters", 1); // number of diffusion iterations to run each time `set_art_visc_smoothness` is called
-  _namespace->assign_default<int   >("flow_iters", 1);
-  _namespace->assign_default<int   >("use_filter", false); // whether to use modal filter acceleration
-  _namespace->assign_default<int   >("local_time", local_time_stepping);
+  _namespace->assign_default("max_safety", .7); // maximum allowed safety factor for time stepping
+  _namespace->assign_default("max_time_step", huge); // maximum allowed time step
+  _namespace->assign_default("fix_admis_max_safety", .7); // staility ratio for fixing thermodynamic admissibility.
+  _namespace->assign_default("av_diff_ratio", 1e-1); // ratio of diffusion time to advection width
+  _namespace->assign_default("av_visc_mult", 30.); // final scaling parameter applied to artificial viscosity coefficient
+  _namespace->assign_default("av_unscaled_max", 2e-4); // maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
+  _namespace->assign_default("av_advect_max_safety", .7); // stability ratio for advection
+  _namespace->assign_default("av_advect_max_res", 1e-3); // residual limit for advection equation
+  _namespace->assign_default("av_diff_max_safety", .7); // stability ratio for diffusion
+  _namespace->assign_default("n_cheby_flow", 1);
+  _namespace->assign_default("n_cheby_av", 1);
+  _namespace->assign_default("av_advect_iters", 1); // number of advection iterations to run each time `set_art_visc_smoothness` is called
+  _namespace->assign_default("av_diff_iters", 1); // number of diffusion iterations to run each time `set_art_visc_smoothness` is called
+  _namespace->assign_default("flow_iters", 1);
+  _namespace->assign_default("use_filter", 0); // whether to use modal filter acceleration
+  _namespace->assign_default<int>("local_time", local_time_stepping);
+  _namespace->assign_default<std::string>("working_dir", ".");
   _namespace->assign("fix_iters", 0);
   _namespace->assign("iteration", 0);
   _namespace->assign("flow_time", 0.);
@@ -959,6 +962,7 @@ bool Solver::fix_admissibility(double stability_ratio)
   if (!fix_admis) return false;
   auto& sw_fix = stopwatch.children.at("fix admis.");
   sw_fix.stopwatch.start();
+  std::string wd = _namespace->lookup<std::string>("working_dir").value();
   const int nd = params.n_dim;
   const int nq = params.n_qpoint();
   const int rs = params.row_size;
@@ -972,7 +976,7 @@ bool Solver::fix_admissibility(double stability_ratio)
       State_variables sv;
       Record rec;
       std::vector<const Qpoint_func*> to_vis {&sv, &rec};
-      visualize_field_xdmf(Qf_concat(to_vis), "severe_indamis" + std::to_string(status.iteration));
+      visualize_field_xdmf(Qf_concat(to_vis), wd + "severe_indamis" + std::to_string(status.iteration));
     }
     #endif
     if (is_admissible()) {
@@ -985,12 +989,11 @@ bool Solver::fix_admissibility(double stability_ratio)
       n_iters = std::numeric_limits<int>::max();
     }
     if (iter == 0) {
-      printf("Thermodynamically inadmissible state detected (solver iteration %i). Attempting to fix...\n",
-             _namespace->lookup<int>("iteration").value());
+      _printer->print(format_str(200, "Thermodynamically inadmissible state detected (solver iteration %i). Attempting to fix...\n",
+                                 _namespace->lookup<int>("iteration").value()));
     }
     auto bounds = bounds_field(State_variables(), 2*rs);
-    printf("    iteration %i: mass in [%e, %e]; energy in [%e, %e]\n", iter, bounds[nd][0], bounds[nd][1], bounds[nd + 1][0], bounds[nd + 1][1]);
-    std::cout << std::flush;
+    _printer->print(format_str(200, "    iteration %i: mass in [%e, %e]; energy in [%e, %e]\n", iter, bounds[nd][0], bounds[nd][1], bounds[nd + 1][0], bounds[nd + 1][1]));
     auto& elems = acc_mesh.elements();
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -1031,7 +1034,7 @@ bool Solver::fix_admissibility(double stability_ratio)
       Record rec;
       Fix_admis_coef fac;
       std::vector<const Qpoint_func*> to_vis {&sv, &rec, &fac};
-      visualize_field_xdmf(Qf_concat(to_vis), "inadmis" + std::to_string(status.iteration));
+      visualize_field_xdmf(Qf_concat(to_vis), wd + "inadmis" + std::to_string(status.iteration));
     }
     #endif
     #pragma omp parallel for
@@ -1073,7 +1076,7 @@ bool Solver::fix_admissibility(double stability_ratio)
     }
   }
   --iter;
-  if (iter) printf("done\n");
+  if (iter) _printer->print("done\n");
   status.fix_admis_iters += iter;
   _namespace->assign("fix_iters", _namespace->lookup<int>("fix_iters").value() + iter);
   sw_fix.work_units_completed += acc_mesh.elements().size()*iter;

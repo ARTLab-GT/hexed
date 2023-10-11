@@ -1,6 +1,7 @@
 #ifndef HEXED_CASE_HPP_
 #define HEXED_CASE_HPP_
 
+#include <fstream>
 #include "Solver.hpp"
 #include "Interpreter.hpp"
 
@@ -19,6 +20,7 @@ class Case
   std::optional<std::string> _vars(std::string name);
   Flow_bc* _make_bc(std::string name);
   bool _has_geom = false;
+  std::unique_ptr<std::ofstream> _output_file; // anything printed to cout will also be printed here
   public:
   Case(std::string input_file = format_str(1000, "%s/include/interactive.hil", config::root_dir));
 };
