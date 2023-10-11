@@ -107,13 +107,6 @@ If this expression evaluates to \ref true, the element will be refined.
 Otherwise it will not.
 
 <hr>
-\subsubsection wall_spacing
-__type:__ float \n
-__default:__ -1. \n
-If set to a positive number, anisotropic wall layers will be generated.
-The ratio of the height of the first layer to the total height of the layers (which may be nonuniform) will be `wall_spacing`.
-
-<hr>
 \subsubsection mesh_extreme mesh_extreme00, mesh_extreme01, mesh_extreme10, mesh_extreme11, mesh_extreme20, mesh_extreme21
 __type:__ float \n
 __default:__ 0, 1, 0, 1, 0, 1 \n
@@ -165,6 +158,17 @@ Increasing this number can help balance the amount of CPU time spent in the phys
 if `n_cheby_av` is larger than `n_cheby_flow`.
 The disadvantage is it can cause the \ref iteration count to be misleading.
 \note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection init_layer_splits
+__type:__ integer \n
+__default:__ 0 \n
+Number of times to call \ref split_layers during initial mesh generation (immediately after surface-based refinement but before state initialization).
+If you don't edit \ref layer_split_points, then the wall spacing will be \f$ 3^{-\mathtt{\text{init_layer_splits}}} \f$ times the local isotropic mesh spacing.
+The default value of 0 is appropriate for inviscid simulations, but for high Reynolds-number viscous simulations it should be greater than zero.
+There currently is not a well-established best practice for how large it needs to be,
+but having the boundary layer be one or two wall layers thick often works well for subsonic simulations,
+and significantly more layers are often required for hypersonic simulations with a cold wall.
 
 <hr>
 
@@ -248,13 +252,6 @@ Maximum number of surface-geometry-based refinement sweeps to run if refinement 
 __type:__ integer \n
 __default:__ 30 \n
 Number of mesh smoothing iterations to run after every surface-geometry-based refinement sweep.
-
-<hr>
-\subsubsection wall_layers
-__type:__ integer \n
-__default:__ 1 \n
-If anisotropic layers are generated, the first `wall_layers` layers will have thickness determined by `wall_spacing`,
-and the remaining layers will exponentially increase in thickness to keep the aniso-iso transition as smooth as possible.
 
 <hr>
 \subsubsection geom_n_segments
@@ -384,6 +381,14 @@ Analogous to \ref max_safety.
 \note Not defined until \ref create_solver is evaluated.
 
 <hr>
+\subsubsection layer_split_points
+__type:__ string \n
+__default:__ `{split0 = 1./3.;}` \n
+\ref struct_expr "Structured expression" defining the aspect ratio of anisotropic wall layers created by \ref split_layers.
+The values of the variables in the expression determine the split points in order from closest to the wall to farthest.
+The names of the variables are irrelevant.
+
+<hr>
 
 \subsection esoteric_inputs Esoteric Input Parameters
 You will probably never need to worry about these parameters.
@@ -510,12 +515,6 @@ Performs one surface-geometry-based refinement sweep and returns 0.
 Elements are refined or unrefined based on \ref surface_refine and \ref surface_unrefine.
 
 <hr>
-\subsubsection make_layers
-__type:__ Heisenberg integer \n
-Creates anisotropic wall layers and returns 0.
-Size and number of layers are determined by \ref wall_spacing and \ref wall_layers.
-
-<hr>
 \subsubsection init_state
 __type:__ Heisenberg integer \n
 Initializes the solver state to \ref init_cond and returns 0.
@@ -553,6 +552,17 @@ __type:__ Heisenberg string \n
 Computes integrals of the variables in \ref integrand_surface over the geometry surface by the native quadrature rule of the numerical scheme.
 The integrals of the variables are assigned to float variables names `integral_surface_var` where `var` is the name of the variable.
 Returns an empty string.
+
+<hr>
+\subsubsection split_layers
+__type:__ Heisenberg integer \n
+Creates anisotropic wall layers by splitting the last wall layer (the layer of extruded elements closest to the geometry surface) into thinner layers.
+The layer will be split at user-specified set of points controlled by \ref layer_split_points.
+For each split point, the layer will be cut by the level surface where the wall-normal reference coordinate equals that value.
+Thus split points should be strictly increasing and in the interval (0, 1).
+For example, to split the last wall layer into 4 approximately equal parts, you could set `layer_split_points = {split0 = 0.25; split1 = 0.5; split2 = 0.75}` and then evaluate `split_layers`.
+The state of the original layer will be interpolated into the new layers, so layer splitting can be performed dynamically as a simulation is running.
+Evaluates to 0.
 
 <hr>
 
