@@ -1248,7 +1248,7 @@ void Solver::visualize_surface_xdmf(int bc_sn, const Boundary_func& func, std::s
 void Solver::vis_cart_surf_xdmf(int bc_sn, std::string name, const Boundary_func& func)
 {
   Mesh::Reset_vertices reset(acc_mesh);
-  visualize_surface_tecplot(bc_sn, func, name, 2);
+  visualize_surface_xdmf(bc_sn, func, name, 2);
 }
 
 void Solver::vis_lts_constraints(std::string name, int n_sample)
