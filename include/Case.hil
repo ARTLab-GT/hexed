@@ -1,5 +1,6 @@
 {utilities}
 version = version_major + {.} + version_minor + {.} + version_patch
+license = {This software (Hexed) is currently not available under any license. Posession or usage outside of the Georgia Tech Research Corporation (including ARTLab) is not authorized.}
 heat_rat = 1.4
 momentum_expr = {momentum0 = momentum0; momentum1 = momentum1; momentum2 = momentum2;}
 density_expr = {density = density;}
