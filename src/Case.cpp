@@ -74,12 +74,23 @@ Flow_bc* Case::_make_bc(std::string name)
 Case::Case(std::string input_file)
 {
   _inter.variables->assign("input_file", input_file);
+  _inter.variables->assign("version_major", config::version_major);
+  _inter.variables->assign("version_minor", config::version_minor);
+  _inter.variables->assign("version_patch", config::version_patch);
+  _inter.variables->assign<std::string>("commit", config::commit);
   // create custom Heisenberg variables
   _inter.variables->create("create_solver", new Namespace::Heisenberg<int>([this]() {
+    // basic IO setup
     _output_file.reset(new std::ofstream(_vars("working_dir").value() + "output.txt"));
     auto printer = std::make_shared<Stream_printer>();
     printer->streams.emplace_back(_output_file.get());
     _inter.printer = printer;
+    char utc [100];
+    std::time_t time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    std::strftime(utc, 100, "%Y-%m-%d %H:%M:%S", std::gmtime(&time));
+    printer->print(format_str(1000, "Commencing simulation with Hexed version %i.%i.%i (commit %s) at %s UTC (%i Unix Time).\n",
+                              config::version_major, config::version_minor, config::version_patch, config::commit, utc, time));
+    // setup actual solver
     auto n_dim = _inter.variables->lookup<int>("n_dim");
     HEXED_ASSERT(n_dim && n_dim.value() > 0 && n_dim.value() <= 3,
                  "`n_dim` must be defined as an integer in [1, 3]");

@@ -7,7 +7,7 @@
  * by the CMake variable of the same name at build time.
  */
 
-//! \brief Namespace for options configured by CMake. See \ref hexed_config.hpp.in.
+//! \brief %Namespace for options configured by CMake. See \ref hexed_config.hpp.in.
 namespace hexed::config
 {
 
@@ -19,8 +19,14 @@ namespace hexed::config
 
 //! \name CMake options
 //!\{
-constexpr char root_dir [] = "@CMAKE_SOURCE_DIR@/";
-constexpr char build_dir [] = "@CMAKE_BINARY_DIR@/";
+constexpr char root_dir [] = "@CMAKE_SOURCE_DIR@/"; //!< \brief root directory of the Hexed source code when it was built
+constexpr char build_dir [] = "@CMAKE_BINARY_DIR@/"; //!< \brief directory in which Hexed was built
+constexpr int version_major = @CMAKE_PROJECT_VERSION_MAJOR@; //!< \brief this is Hexed version \ref version_major .\ref version_minor .\ref version_patch
+constexpr int version_minor = @CMAKE_PROJECT_VERSION_MINOR@; //!< \brief this is Hexed version \ref version_major .\ref version_minor .\ref version_patch
+constexpr int version_patch = @CMAKE_PROJECT_VERSION_PATCH@; //!< \brief this is Hexed version \ref version_major .\ref version_minor .\ref version_patch
+//! \brief commit hash of the source this code was compiled from
+//! \note hex digits stored as a c-string since there isn't a standard integer type large enough to hold it as an integer
+constexpr char commit [] = "@COMMIT@";
 constexpr int max_row_size = @MAX_BASIS_ROW_SIZE@; //!< \brief maximum \ref basis_row_size "row size" that a `Basis` is allowed to have
 #define HEXED_THREADED HEXED_@threaded@
 #if HEXED_THREADED

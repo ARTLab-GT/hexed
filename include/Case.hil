@@ -1,4 +1,5 @@
 {utilities}
+version = version_major + {.} + version_minor + {.} + version_patch
 heat_rat = 1.4
 momentum_expr = {momentum0 = momentum0; momentum1 = momentum1; momentum2 = momentum2;}
 density_expr = {density = density;}
