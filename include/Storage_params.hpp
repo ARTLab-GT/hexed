@@ -12,6 +12,7 @@ class Storage_params
   int n_var; //!< \brief number of independent variables
   int n_dim; //!< \brief number of dimensions
   int row_size; //!< \brief \ref basis_row_size "row size" of basis
+  bool axisymmetric = false; //!< \brief whether the simulation is axisymmetric
 
   int n_qpoint() const; //!< \brief number of quadrature points per element
   int n_dof() const; //!< \brief total number of degrees of freedom per element

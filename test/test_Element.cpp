@@ -150,10 +150,10 @@ TEST_CASE("Element")
     REQUIRE(element.faces[2][2*36] == Catch::Approx(0.));
 
     // test axisymmetric radius
-    hexed::Storage_params params {2, 4, 2, 6};
-    hexed::Element elem {params, {1, 2}, 0.31, 0, hexed::Mat<2>{.001, .002}, true};
+    hexed::Storage_params params {2, 4, 2, 6, true};
+    hexed::Element elem {params, {1, 2}, 0.31, 0, hexed::Mat<2>{.001, .002}};
     for (int i_face = 0; i_face < 4; ++i_face) elem.faces[i_face] = faces[i_face];
-    REQUIRE(elem.axisymmetric == true);
+    REQUIRE(elem.storage_params().axisymmetric == true);
     elem.set_jacobian(basis);
     REQUIRE(elem.radius()[params.n_qpoint() - 1] == elem.position(basis, params.n_qpoint() - 1)[1]);
   }

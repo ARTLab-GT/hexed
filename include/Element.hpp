@@ -31,7 +31,7 @@ class Element
   int r_level;
   std::vector<Vertex::Transferable_ptr> vertices;
   // constructor that allows the vertices to be created as mobile, for the  benefit of `Deformed_element`
-  Element(Storage_params, std::vector<int> pos, double mesh_size, int ref_level, Mat<> origin_arg, bool axisym, bool mobile_vertices);
+  Element(Storage_params, std::vector<int> pos, double mesh_size, int ref_level, Mat<> origin_arg, bool mobile_vertices);
 
   private:
   int n_dof;
@@ -41,7 +41,6 @@ class Element
   Eigen::VectorXd vertex_tss;
 
   public:
-  const bool axisymmetric; //!< \brief whether this element includes storage for the radius for axisymmetric simulations
   //! pointer to a function that can access some data associated with the vertices
   typedef double& (Element::*vertex_value_access)(int i_vertex);
   std::array<int, 6> face_record; //!< for algorithms to book-keep information related to faces
@@ -62,10 +61,8 @@ class Element
    * The nominal size is defined to be `mesh_size`/(2^`ref_level`).
    * The vertices will be spaced at intervals of the nominal size.
    * Only the first `n_dim` elements of `origin_arg` are considered.
-   * `axisym` determines `Element::axisymmetric`.
-   * If `true`, `Storage_params::n_dim` must be 2.
    */
-  Element(Storage_params, std::vector<int> pos = {}, double mesh_size = 1., int ref_level = 0, Mat<> origin_arg = Mat<>::Zero(3), bool axisym = false);
+  Element(Storage_params, std::vector<int> pos = {}, double mesh_size = 1., int ref_level = 0, Mat<> origin_arg = Mat<>::Zero(3));
   virtual inline bool get_is_deformed() {return is_deformed;} //!< for determining whether a pointer is deformed
   //! Can't copy an Element. Doing so would have to either duplicate or break vertex connections, both of which seem error prone.
   Element(const Element&) = delete;
@@ -89,7 +86,7 @@ class Element
   double* fix_admis_coef(); //!< layout: [i_qpoint]
   double* art_visc_forcing(); //!< layout: [i_forcing][i_qpoint]
   /*! \brief radius in axisymmetric simulations
-   * \warning only a valid pointer if `Element::axisymmetric` is `true`
+   * \warning only a valid pointer if `Storage_params::axisymmetric` is `true`
    * \details layout: [i_qpoint]
    */
   double* radius();

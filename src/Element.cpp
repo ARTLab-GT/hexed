@@ -4,7 +4,7 @@
 namespace hexed
 {
 
-Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level, Mat<> origin_arg, bool axisym, bool mobile_vertices) :
+Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level, Mat<> origin_arg, bool mobile_vertices) :
   params(params_arg),
   n_dim(params.n_dim),
   nom_pos(n_dim, 0),
@@ -12,13 +12,12 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   r_level{ref_level},
   n_dof(params.n_dof()),
   n_vert(params.n_vertices()),
-  data_size{params.n_stage*n_dof + (3 + axisym + n_forcing + params.row_size)*params.n_qpoint()},
+  data_size{params.n_stage*n_dof + (3 + params.axisymmetric + n_forcing + params.row_size)*params.n_qpoint()},
   data{Eigen::VectorXd::Zero(data_size)},
   vertex_tss{Eigen::VectorXd::Constant(params.n_vertices(), nom_sz/n_dim)},
-  axisymmetric{axisym},
   origin{origin_arg(Eigen::seqN(0, params.n_dim))}
 {
-  HEXED_ASSERT(!axisymmetric || n_dim == 2, "axisymmetric elements are only valid in 2D");
+  HEXED_ASSERT(!params.axisymmetric || n_dim == 2, "axisymmetric elements are only valid in 2D");
   face_record.fill(0);
   faces.fill(nullptr);
   // initialize local time step scaling to 1.
@@ -52,8 +51,8 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   }
 }
 
-Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level, Mat<> origin_arg, bool axisym)
-: Element(params_arg, pos, mesh_size, ref_level, origin_arg, axisym, false)
+Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level, Mat<> origin_arg)
+: Element(params_arg, pos, mesh_size, ref_level, origin_arg, false)
 {}
 
 Storage_params Element::storage_params()
@@ -110,7 +109,7 @@ void Element::set_jacobian(const Basis& basis)
       }
     }
   }
-  if (axisymmetric) {
+  if (params.axisymmetric) {
     // set axisymmetric radius
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
       radius()[i_qpoint] = position(basis, i_qpoint)[1];
