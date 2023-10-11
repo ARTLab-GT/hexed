@@ -566,6 +566,44 @@ See individual documentation for details.
 \subsection output_list List of Output Parameters
 
 <hr>
+\subsubsection input_file
+__type:__ string \n
+If \ref hexecute was invoked from an input file, `input_file` will be the path to the input file (relative or absolute as provided by user).
+If this is an interactive session, it will be an empty string.
+
+<hr>
+\subsubsection version
+__type:__ string \n
+Version of Hexed you are running in `{major.minor.patch}` format.
+
+<hr>
+\subsubsection version_major
+__type:__ int \n
+Major (first) component of \ref version.
+
+<hr>
+\subsubsection version_minor
+__type:__ int \n
+Minor (second) component of \ref version.
+
+<hr>
+\subsubsection version_patch
+__type:__ int \n
+Patch (third) component of \ref version.
+
+<hr>
+\subsubsection commit
+__type:__ string \n
+Commit hash of the source code your Hexed binary was compiled from.
+If you're running a release version, this should be redundant with \ref version,
+but if you're running a development version, it tells you how far ahead of the latest release you are.
+
+<hr>
+\subsubsection license
+__type:__ string \n
+Information about the copyright of this software and the license, if any, under which it was provided to you.
+
+<hr>
 \subsubsection iteration
 __type:__ integer \n
 Number of iterations executed since solver was created.
