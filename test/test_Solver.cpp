@@ -427,7 +427,7 @@ class All_cartesian : public Test_mesh
   public:
 
   All_cartesian(bool local, hexed::Transport_model transport = hexed::inviscid)
-  : sol{3, hexed::config::max_row_size, 1., local, transport}
+  : sol{3, hexed::config::max_row_size, 1., local, false, transport}
   {}
 
   virtual hexed::Solver& solver() {return sol;}
@@ -462,7 +462,7 @@ class All_deformed : public Test_mesh
 
   public:
   All_deformed(bool rotation_direction, bool local, hexed::Transport_model transport = hexed::inviscid)
-  : sol{2, hexed::config::max_row_size, 1., local, transport}, rot_dir{rotation_direction}
+  : sol{2, hexed::config::max_row_size, 1., local, false, transport}, rot_dir{rotation_direction}
   {}
 
   virtual hexed::Solver& solver() {return sol;}
@@ -507,7 +507,7 @@ class Extrude_hanging : public Test_mesh
 
   public:
   Extrude_hanging(int i_dim, int j_dim, bool local, hexed::Transport_model transport = hexed::inviscid)
-  : sol{3, hexed::config::max_row_size, .8, local, transport}, id{i_dim}, jd{j_dim}, kd{3 - i_dim - j_dim}
+  : sol{3, hexed::config::max_row_size, .8, local, false, transport}, id{i_dim}, jd{j_dim}, kd{3 - i_dim - j_dim}
   {}
 
   virtual hexed::Solver& solver() {return sol;}

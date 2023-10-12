@@ -12,12 +12,11 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   r_level{ref_level},
   n_dof(params.n_dof()),
   n_vert(params.n_vertices()),
-  data_size{params.n_stage*n_dof + (3 + params.axisymmetric + n_forcing + params.row_size)*params.n_qpoint()},
+  data_size{params.n_dof_numeric()},
   data{Eigen::VectorXd::Zero(data_size)},
   vertex_tss{Eigen::VectorXd::Constant(params.n_vertices(), nom_sz/n_dim)},
   origin{origin_arg(Eigen::seqN(0, params.n_dim))}
 {
-  HEXED_ASSERT(!params.axisymmetric || n_dim == 2, "axisymmetric elements are only valid in 2D");
   face_record.fill(0);
   faces.fill(nullptr);
   // initialize local time step scaling to 1.
@@ -112,7 +111,7 @@ void Element::set_jacobian(const Basis& basis)
   if (params.axisymmetric) {
     // set axisymmetric radius
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
-      radius()[i_qpoint] = position(basis, i_qpoint)[1];
+      radius()[i_qpoint] = position(basis, i_qpoint)[n_dim - 1];
     }
   }
 }
@@ -144,12 +143,12 @@ double* Element::art_visc_forcing()
 
 double* Element::advection_state()
 {
-  return art_visc_forcing() + n_forcing*params.n_qpoint();
+  return art_visc_forcing() + params.n_forcing*params.n_qpoint();
 }
 
 double* Element::radius()
 {
-  return advection_state() + params.row_size;
+  return advection_state() + params.row_size*params.n_qpoint();
 }
 
 double Element::jacobian(int i_dim, int j_dim, int i_qpoint)

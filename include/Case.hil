@@ -103,6 +103,7 @@ set_aerothermo = { {further modify settings to be good for aerothermodynamics (a
 
 {scalar parameters}
 row_size = 6
+axisymmetric = false
 init_ref_level = 3
 transport_model = {inviscid}
 thermal_bc = {heat_flux = 0.}

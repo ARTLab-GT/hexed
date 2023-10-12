@@ -135,7 +135,7 @@ void Deformed_element::set_jacobian(const Basis& basis)
   if (params.axisymmetric) {
     // set axisymmetric radius
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
-      radius()[i_qpoint] = position(basis, i_qpoint)[1];
+      radius()[i_qpoint] = position(basis, i_qpoint)[n_dim - 1];
     }
   }
 }

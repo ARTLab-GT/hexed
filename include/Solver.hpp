@@ -65,6 +65,7 @@ class Solver
    * \param row_size row size of the basis (see \ref Terminology)
    * \param root_mesh_size sets the value of `Mesh::root_mesh_size()`
    * \param local_time_stepping whether to use local or global time stepping
+   * \param axisymmetric whether the simulation is axisymmetric
    * \param viscosity_model determines whether the flow has viscosity (natural, not artificial) and if so, how it depends on temperature
    * \param thermal_conductivity_model determines whether the flow has thermal conductivity and if so, how it depends on temperature
    * \param space `Namespace` containing any user-defined parameters affecting the behavior of the solver.
@@ -77,7 +78,7 @@ class Solver
    * potentially with some of the diffusion coefficients
    * (artificial viscosity, natural viscosity, thermal conductivity) set to zero.
    */
-  Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping = false,
+  Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping = false, bool axisymmetric = false,
          Transport_model viscosity_model = inviscid, Transport_model thermal_conductivity_model = inviscid,
          std::shared_ptr<Namespace> space = std::make_shared<Namespace>(), std::shared_ptr<Printer> printer = std::make_shared<Stream_printer>());
 

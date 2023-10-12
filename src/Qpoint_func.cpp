@@ -81,12 +81,12 @@ std::vector<double> Advection_state::operator()(Element& elem, const Basis&, int
   return as;
 }
 
-int Art_visc_forcing::n_var(int n_dim) const {return Element::n_forcing;}
+int Art_visc_forcing::n_var(int n_dim) const {return 4;}
 
 std::vector<double> Art_visc_forcing::operator()(Element& elem, const Basis&, int i_qpoint, double time) const
 {
   std::vector<double> forcing;
-  for (int i_forcing = 0; i_forcing < Element::n_forcing; ++i_forcing) {
+  for (int i_forcing = 0; i_forcing < elem.storage_params().n_forcing; ++i_forcing) {
     forcing.push_back(elem.art_visc_forcing()[i_forcing*elem.storage_params().n_qpoint() + i_qpoint]);
   }
   return forcing;

@@ -118,10 +118,10 @@ double Solver::max_dt(double msc, double msd)
   }
 }
 
-Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
+Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping, bool axisymmetric,
                Transport_model viscosity_model, Transport_model thermal_conductivity_model,
                std::shared_ptr<Namespace> space, std::shared_ptr<Printer> printer) :
-  params{3, n_dim + 2, n_dim, row_size},
+  params{3, n_dim + 2, n_dim, row_size, axisymmetric},
   acc_mesh{params, root_mesh_size},
   basis{row_size},
   stopwatch{"(element*iteration)"},
@@ -567,7 +567,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
   } // Cauchy-Kovalevskaya-style derivative estimate complete!
 
   // begin root-smear-square operation
-  int n_real = Element::n_forcing - 1; // number of real time steps (as apposed to pseudotime steps)
+  int n_real = params.n_forcing - 1; // number of real time steps (as apposed to pseudotime steps)
   // evaluate CFL condition
   double diff_safety = _namespace->lookup<double>("av_diff_max_safety").value();
   double n_cheby = _namespace->lookup<double>("n_cheby_av").value();
