@@ -150,6 +150,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("flow_iters", 1);
   _namespace->assign_default("use_filter", 0); // whether to use modal filter acceleration
   _namespace->assign_default<int>("local_time", local_time_stepping);
+  _namespace->assign_default<int>("axisymmetric", axisymmetric);
   _namespace->assign_default<std::string>("working_dir", ".");
   _namespace->assign("fix_iters", 0);
   _namespace->assign("iteration", 0);

@@ -16,7 +16,7 @@ namespace hexed
 
 //! class to contain all the kernels in a scope
 //! parameterized by the type of element (deformed/cartesian) and the PDE
-template <typename element_t, template<int> typename Pde_templ>
+template <typename element_t, template<int> typename Pde_templ, bool axisym = false>
 class Spatial
 {
   public:
@@ -198,7 +198,9 @@ class Spatial
             }
             if constexpr (element_t::is_deformed) qpoint_grad /= elem_det[i_qpoint]; // divide by the determinant to get the actual gradient (see above)
             // compute flux and write to temporary storage
-            Mat<n_dim, Pde::n_var> flux = qpoint_nrmls*eq.flux_visc(qpoint_state, qpoint_grad, av_coef[i_qpoint]);
+            Mat<n_dim + axisym, Pde::n_var> fv = eq.template flux_visc<axisym>(qpoint_state, qpoint_grad, av_coef[i_qpoint]);
+            Mat<n_dim, Pde::n_var> flux = qpoint_nrmls*fv(Eigen::seqN(0, n_dim), all);
+            if constexpr (axisym) for (int i_var = 0; i_var < Pde::n_update; ++i_var) time_rate[1][i_var][i_qpoint] += fv(n_dim, i_var)/n_dim;
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
               for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
                 visc_storage[i_dim][Pde::curr_start + i_var][i_qpoint] = flux(i_dim, i_var);
@@ -224,7 +226,9 @@ class Spatial
               }
               // compute flux
               for (int i_row = 0; i_row < row_size; ++i_row) {
-                flux(i_row, Eigen::all) = eq.flux(row_r(i_row, Eigen::all), row_n(i_row, Eigen::all));
+                Mat<Pde::n_update, 1 + axisym> f = eq.template flux<axisym>(row_r(i_row, Eigen::all), row_n(i_row, Eigen::all));
+                flux(i_row, Eigen::all) = f(all, 0);
+                if constexpr (axisym) for (int i_var = 0; i_var < Pde::n_update; ++i_var) time_rate[0][i_var][ind.i_qpoint(i_row)] += f(i_var, 1)/n_dim;
               }
               // fetch face data
               face_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
