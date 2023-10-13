@@ -127,6 +127,7 @@ class Spatial
         double d_pos = elem.nominal_size();
         double time_rate [2][Pde::n_update][n_qpoint] {}; // first part contains convective time derivative, second part diffusive
         double* av_coef = elem.art_visc_coef();
+        double* radius = elem.radius();
         // only need the next 2 for deformed elements
         double* nrml = nullptr; // reference level normals
         double* elem_det = nullptr; // jacobian determinant
@@ -216,6 +217,8 @@ class Spatial
           {
             Mat<row_size, Pde::n_update> flux;
             Mat<2, Pde::n_update> face_f;
+            Mat<row_size> row_radius; // only for axisymmetric
+            if constexpr (axisym) row_radius = Row_rw<1, row_size>::read_row(radius, ind);
             // compute convective update
             if constexpr (Pde::has_convection) {
               // fetch row data
@@ -228,10 +231,19 @@ class Spatial
               for (int i_row = 0; i_row < row_size; ++i_row) {
                 Mat<Pde::n_update, 1 + axisym> f = eq.template flux<axisym>(row_r(i_row, Eigen::all), row_n(i_row, Eigen::all));
                 flux(i_row, Eigen::all) = f(all, 0);
-                if constexpr (axisym) for (int i_var = 0; i_var < Pde::n_update; ++i_var) time_rate[0][i_var][ind.i_qpoint(i_row)] += f(i_var, 1)/n_dim;
+                if constexpr (axisym) {
+                  int i_qpoint = ind.i_qpoint(i_row);
+                  double scale = d_pos;
+                  if constexpr (element_t::is_deformed) scale *= elem_det[i_qpoint];
+                  for (int i_var = 0; i_var < Pde::n_update; ++i_var) time_rate[0][i_var][i_qpoint] += f(i_var, 1)/n_dim*scale;
+                }
               }
               // fetch face data
               face_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
+              if constexpr (axisym) {
+                flux = row_radius.asDiagonal()*flux;
+                face_f = (boundary*row_radius).asDiagonal()*face_f;
+              }
               // differentiate and write to temporary storage
               Row_rw<Pde::n_update, row_size>::write_row(-derivative(flux, face_f), time_rate[0][0], ind, 1.);
             }
@@ -273,6 +285,7 @@ class Spatial
             if constexpr (element_t::is_deformed) det = elem_det[i_qpoint];
             if constexpr (Pde::has_convection) {
               double u = update_conv*time_rate[0][i_var][i_qpoint];
+              if constexpr (axisym) u /= radius[i_qpoint];
               if constexpr (Pde::is_viscous) {
                 // for stage 1, we update convection but not diffusion,
                 // so we have to mix in some of the diffisive update from stage 0

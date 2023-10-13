@@ -14,7 +14,10 @@ mach = 0.2
 axisymmetric = true
 
 done = {normalized_residual < 1e-7}
-working_dir = {hexed_out_axisymmetric}
+working_dir = {hexed_out}
+vis_freq = 1000
+fix_therm_admis = true;
+max_safety = 0.1
 
 vis_n_sample = 2
 $init
