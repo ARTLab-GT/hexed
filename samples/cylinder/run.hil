@@ -22,9 +22,8 @@ reynolds = 1.28e6
 freestream_visc = 1.713e-5*(temperature/273)^1.5*(273 + 111)/(temperature + 111)
 freestream_cond =   0.0241*(temperature/273)^1.5*(273 + 194)/(temperature + 194)
 diam = 2.
-speed = mach*(1.4*specific_gas_air*temperature)^.5
-density = reynolds*freestream_visc/speed/diam
-wall_temp = 0.8*temperature
+density = reynolds*freestream_visc/(mach*(1.4*specific_gas_air*temperature)^.5*diam)
+wall_temp = 0.8*stag_temp
 thermal_bc = {temperature = } + wall_temp
 println({stagnation temperature: } + stag_temp)
 println({wall temperature: } + wall_temp)
