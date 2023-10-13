@@ -109,12 +109,17 @@ double Solver::max_dt(double msc, double msd)
   auto& sw_def {stopwatch.children.at("deformed" )};
   double use_filt = _namespace->lookup<int>("use_filter").value();
   bool local_time = _namespace->lookup<int>("local_time").value();
+  #define MAX_DT(is_visc, axi, ...) { \
+    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<is_visc>::Pde, axi>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd, __VA_ARGS__))(acc_mesh.cartesian().elements(), sw_car, "compute time step"), \
+                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<is_visc>::Pde, axi>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd, __VA_ARGS__))(acc_mesh.deformed ().elements(), sw_def, "compute time step")); \
+  }
+  bool axi = _namespace->lookup<int>("axisymmetric").value();
   if (use_ldg()) {
-    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd, visc, therm_cond))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
-                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd, visc, therm_cond))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
+    if (axi) MAX_DT(true , true , visc, therm_cond)
+    else     MAX_DT(true , false, visc, therm_cond)
   } else {
-    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd                  ))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
-                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd                  ))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
+    if (axi) MAX_DT(false, true , visc, therm_cond)
+    else     MAX_DT(false, false, visc, therm_cond)
   }
 }
 

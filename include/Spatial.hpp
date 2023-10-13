@@ -562,6 +562,7 @@ class Spatial
         double* state = elem.stage(0);
         double* art_visc = elem.art_visc_coef();
         double* tss = elem.time_step_scale();
+        double* radius = elem.radius();
         Mat<math::pow(2, n_dim)> vertex_spacing;
         for (unsigned i_vert = 0; i_vert < vertex_spacing.size(); ++i_vert) {
           vertex_spacing(i_vert) = elem.vertex_time_step_scale(i_vert);
@@ -581,6 +582,7 @@ class Spatial
           }
           // compute time step
           double spacing = math::interp(vertex_spacing, coords);
+          if constexpr (axisym) spacing = std::min(spacing, radius[i_qpoint]);
           double scale = 0;
           if constexpr (Pde::has_convection) scale += eq.char_speed(qpoint_state)/max_cfl_c/spacing;
           if constexpr (Pde::is_viscous) scale += eq.diffusivity(qpoint_state, art_visc[i_qpoint])/max_cfl_d/spacing/spacing;
