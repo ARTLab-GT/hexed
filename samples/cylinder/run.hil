@@ -1,3 +1,6 @@
+{simulation of the hypersonic cylinder case of Beckwith & Gallagher: https://apps.dtic.mil/sti/citations/ADA377149}
+
+{mesh setup}
 n_dim = 2
 mesh_extreme00 = -2.
 mesh_extreme01 =  0.
@@ -8,45 +11,40 @@ extremal_bc10 = {nonpenetration}
 extremal_bc01 = {pressure_outflow}
 shell {python3 make_geom.py}
 geom0 = {auto.csv}
-pressure = 120.96
-temperature = 75.61
-mach = 5.
-surface_max_iters = 1
+surface_max_iters = 0
+init_layer_splits = 2
+
+{freestream/wall definition}
+mach = 4.15
+stag_temp = 250*rankine + zero_celsius
+temperature = stag_temp/(1 + 0.2*mach^2)
+reynolds = 1.28e6
+freestream_visc = 1.713e-5*(temperature/273)^1.5*(273 + 111)/(temperature + 111)
+freestream_cond =   0.0241*(temperature/273)^1.5*(273 + 194)/(temperature + 194)
+diam = 2.
+speed = mach*(1.4*specific_gas_air*temperature)^.5
+density = reynolds*freestream_visc/speed/diam
+wall_temp = 0.8*temperature
+thermal_bc = {temperature = } + wall_temp
+println({stagnation temperature: } + stag_temp)
+println({wall temperature: } + wall_temp)
+println({freestream thermal conductivity: } + freestream_cond)
+
+{iteration parameters}
+$set_shock
 done = {iteration >= 2*10^5}
 vis_freq = 10000
-
-{settings for different variants of this case}
-isothermal = {
-    working_dir = {hexed_out_isothermal}
-    thermal_bc = {temperature = 98.89}
-    init_layer_splits = 2
-    $set_aerothermo
-    iterate = iterate + {
-        case0 = {}
-        case1 = {
-            print {splitting layers...}
-            split_layers
-            println({done. number of elements: } + n_elements)
-        }
-        $$({case} + (iteration == 2*10^4 | iteration == 3*10^4 | iteration == 4*10^4 | iteration == 5*10^4))
+working_dir = {hexed_out}
+$set_aerothermo
+iterate = iterate + {
+    case0 = {}
+    case1 = {
+        print {splitting layers...}
+        split_layers
+        println({done. number of elements: } + n_elements)
     }
+    $$({case} + (iteration == 2*10^4 | iteration == 3*10^4 | iteration == 4*10^4 | iteration == 5*10^4))
 }
-radiative_equilibrium = {
-    thermal_bc = {emissivity = 1.}
-    working_dir = {hexed_out_rad_eq}
-    init_layer_splits = 3
-    av_diff_max_safety = 0.3
-    $set_aerothermo
-}
-inviscid = {
-    working_dir = {hexed_out_inviscid}
-    vis_freq = 1000
-    av_diff_max_safety = 0.3
-    max_safety = 0.7
-}
-
-$set_shock
-$isothermal
 
 vis_n_sample = 2
 $init
