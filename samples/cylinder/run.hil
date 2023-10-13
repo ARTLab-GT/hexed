@@ -24,7 +24,8 @@ freestream_cond =   0.0241*(temperature/273)^1.5*(273 + 194)/(temperature + 194)
 diam = 2.
 density = reynolds*freestream_visc/(mach*(1.4*specific_gas_air*temperature)^.5*diam)
 wall_temp = 0.8*stag_temp
-thermal_bc = {temperature = } + wall_temp
+{thermal_bc = {temperature = } + wall_temp}
+thermal_bc = {heat_flux = 0.}
 println({stagnation temperature: } + stag_temp)
 println({wall temperature: } + wall_temp)
 println({freestream thermal conductivity: } + freestream_cond)
@@ -33,7 +34,7 @@ println({freestream thermal conductivity: } + freestream_cond)
 $set_shock
 done = {iteration >= 5*10^4}
 vis_freq = 10000
-working_dir = {hexed_out}
+working_dir = {hexed_out_adiabatic}
 $set_aerothermo
 iterate = iterate + {
     case0 = {}
@@ -42,7 +43,8 @@ iterate = iterate + {
         split_layers
         println({done. number of elements: } + n_elements)
     }
-    $$({case} + (iteration == 2*10^4 | iteration == 3*10^4 | iteration == 4*10^4))
+    {$$({case} + (iteration == 2*10^4 | iteration == 3*10^4 | iteration == 4*10^4))}
+    $$({case} + (iteration == 2*10^4 | iteration == 3*10^4))
 }
 
 vis_n_sample = 2
