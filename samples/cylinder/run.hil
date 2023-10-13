@@ -31,7 +31,7 @@ println({freestream thermal conductivity: } + freestream_cond)
 
 {iteration parameters}
 $set_shock
-done = {iteration >= 2*10^5}
+done = {iteration >= 5*10^4}
 vis_freq = 10000
 working_dir = {hexed_out}
 $set_aerothermo
@@ -42,7 +42,7 @@ iterate = iterate + {
         split_layers
         println({done. number of elements: } + n_elements)
     }
-    $$({case} + (iteration == 2*10^4 | iteration == 3*10^4 | iteration == 4*10^4 | iteration == 5*10^4))
+    $$({case} + (iteration == 2*10^4 | iteration == 3*10^4 | iteration == 4*10^4))
 }
 
 vis_n_sample = 2
