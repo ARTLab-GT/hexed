@@ -16,17 +16,17 @@ mach = 5.
 max_angle = 0.5*degree
 done = {iteration >= 2*10^5}
 vis_freq = 10000
-surface_max_iters = 2
-surface_refine = {(center0^2 + center1^2 + center2^2)^.5 < 1.5}
+surface_max_iters = 3
+surface_refine = {(center0^2 + center1^2 + center2^2)^.5 < 1.4}
 surface_unrefine = {false}
 
 {settings for different variants of this case}
 isothermal = {
-    working_dir = {hexed_out3}
+    working_dir = {hexed_out4}
     thermal_bc = {temperature = 98.89}
-    init_layer_splits = 3
+    init_layer_splits = 2
     $set_aerothermo
-    art_visc_width = art_visc_width/4
+    art_visc_width = art_visc_width/8
     iterate = iterate + {
         case0 = {}
         case1 = {
