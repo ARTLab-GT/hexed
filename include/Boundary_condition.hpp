@@ -141,6 +141,42 @@ class Nonpenetration : public Flow_bc
   void apply_advection(Boundary_face&) override;
 };
 
+class Thermal_bc
+{
+  public:
+  virtual ~Thermal_bc() = default;
+  virtual double ghost_energy(Mat<> state) = 0;
+  virtual double ghost_heat_flux(Mat<> state, double heat_flux) = 0;
+};
+
+class Prescribed_energy : public Thermal_bc
+{
+  public:
+  double energy_per_mass;
+  inline Prescribed_energy(double e) : energy_per_mass{e} {}
+  inline double ghost_energy(Mat<> state) override {return energy_per_mass*state(state.size() - 2);}
+  inline double ghost_heat_flux(Mat<>, double heat_flux) override {return heat_flux;}
+};
+
+class Prescribed_heat_flux : public Thermal_bc
+{
+  public:
+  double heat_flux;
+  Prescribed_heat_flux(double h = 0.) : heat_flux{h} {}
+  inline double ghost_energy(Mat<> state) override {return state(last);}
+  inline double ghost_heat_flux(Mat<>, double) override {return heat_flux;}
+};
+
+class Thermal_equilibrium : public Thermal_bc
+{
+  public:
+  double emissivity = 0.;
+  double conduction = 0.;
+  double temperature = 0.;
+  inline double ghost_energy(Mat<> state) override {return state(last);}
+  double ghost_heat_flux(Mat<> state, double) override;
+};
+
 /*! \brief No-slip wall boundary condition.
  * \details Flips the sign of the velocity.
  * Depending on the `Thermal_type` provided, will reflect either the heat flux
@@ -148,21 +184,13 @@ class Nonpenetration : public Flow_bc
  */
 class No_slip : public Flow_bc
 {
+  double _coercion;
+  std::shared_ptr<Thermal_bc> _thermal;
   public:
-  enum Thermal_type {heat_flux, internal_energy, emissivity};
-  /*!
-   * \param value value used to set thermal boundary condition.
-   * \param type defines which variable `value` is specifying (and thus the type of the thermal boundary condition)
-   * \note providing no arguments gives you an adiabatic wall
-   * \note if `emissivity` is specified, that will create a radiative equilibrium boundary condition
-   */
-  No_slip(Thermal_type type = heat_flux, double value = 0);
+  No_slip(std::shared_ptr<Thermal_bc> = std::make_shared<Prescribed_heat_flux>(), double heat_flux_coercion = 2.);
   void apply_advection(Boundary_face&) override;
   void apply_state(Boundary_face&) override; // note: `apply_state` must be called before `apply_flux` to prime `state_cache`
   void apply_flux(Boundary_face&) override;
-  private:
-  Thermal_type t;
-  double v;
 };
 
 /*!
