@@ -24,11 +24,6 @@ run_temperature = {
     diam = 2.
     density = reynolds*freestream_visc/(mach*(1.4*specific_gas_air*temperature)^.5*diam)
     coolant_temp = (coolant_farenheit - 32)*rankine + zero_celsius
-    println({stagnation temperature: } + stag_temp)
-    println({coolant temperature: } + coolant_temp)
-    println({freestream thermal conductivity: } + freestream_cond)
-    println({freestream dynamic viscosity: } + freestream_visc)
-    println({freestream prandtl number: } + freestream_visc*(1.4*specific_gas_air/0.4)/freestream_cond)
 
     {iteration parameters}
     $set_shock
@@ -51,16 +46,11 @@ run_temperature = {
     heat_flux_coercion = 0.2
     vis_n_sample = 2
     $init
-    vis_n_sample = 10
-    $run
-    println {}
-
-    println {running adiabatic case}
-    init_layer_splits = 1
-    thermal_bc = {heat_flux = 0.}
-    working_dir = {hexed_out_adiabatic1}
-    vis_n_sample = 2
-    $init
+    println({stagnation temperature: } + stag_temp)
+    println({coolant temperature: } + coolant_temp)
+    println({freestream thermal conductivity: } + freestream_cond)
+    println({freestream dynamic viscosity: } + freestream_visc)
+    println({freestream prandtl number: } + freestream_visc*(1.4*specific_gas_air/0.4)/freestream_cond)
     vis_n_sample = 10
     $run
     println {}
@@ -72,4 +62,5 @@ $run_temperature
 
 working_dir = {hexed_out_temperature1}
 coolant_farenheit = 150.
+aerothermo_initial_safety = aerothermo_initial_safety/10
 $run_temperature
