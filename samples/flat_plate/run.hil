@@ -8,11 +8,10 @@ surface_refine = {nom_sz > 0.05 & (center0^2 + center1^2)^.5 < nom_sz} ;{focus i
 geom0 = {geom.csv}
 init_layer_splits = 3
 transport_model = {sutherland}
-thermal_bc = {temperature = zero_celsius}
 
 {freestream definition. Note that not all of the variables below are parameters considered by the solver. Some are simply user-defined variables.}
 temperature = zero_celsius
-speed = 60
+speed = 60 ;{approx mach 0.2}
 direction0 = 0.8
 direction1 = 0.6
 target_thickness = .01
