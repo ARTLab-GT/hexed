@@ -7,6 +7,8 @@ __hex__ (_noun_)
 __hex__  (_verb_)
 1. to cast a hex
 
+[full documentation page](https://github.gatech.edu/pages/ARTLab/hexed/)
+
 Hexed is a Discontinuous Galerkin CFD solver with automated, unstructured quad/hex meshing.
 It is designed to address the following problems with conventional CFD:
 - Meshing usually takes a lot of the user's time.
