@@ -66,9 +66,20 @@ Accepted values:
 - `{temperature = x}`: Prescribes the temperature at the wall to be `x`.
 - `{internal_energy = x}`: Prescribes the internal energy at the wall to be `x`.
   For now, since you're stuck in the CPG world, this is equivalent to `{temperature = x*(heat_rat - 1)/specific_gas_air}`.
-- `{emissivity = x}`: Radiative equilibrium BC where the heat flux is prescribed according to the
-  [Stefan-Boltzmann Law](https://en.wikipedia.org/wiki/Stefan%E2%80%93Boltzmann_law)
-  with the surface emissivity \f$ \sigma \f$ set to `x`.
+- `{emissivity = x; conductivity = y; temperature = z}`: \anchor thermal_equilibrium_bc
+  Specifies that the wall is in thermal equalibrium according to a simple 1D heat equation.
+  Specifically, sets the heat flux equal to the sum of the radiative cooling flux and the thermal conduction through the wall.
+  The radiative cooling flux is determined by the [Stefan-Boltzmann Law](https://en.wikipedia.org/wiki/Stefan%E2%80%93Boltzmann_law)
+  law with the emissivity \f$ \sigma \f$ given by `emissivity`.
+  The conductive flux is determined by assuming that the wall has a small but finite thickness and the temperature on the non-air side is known.
+  Specifically, it is equal to \f$ kL(T_w - T_p) \f$ where \f$ k \f$ is the thermal conductivity of the wall material,
+  \f$ L \f$ is the wall thickness, \f$ T_w \f$ is the current wall temperature, and \f$ T_p \f$ is the prescribed temperature.
+  The product \f$ kL \f$ is equal to `conduction`
+  and the prescribed temperature \f$ T_p \f$ is `temperature`.
+  You don't have to specify all 3 parameters.
+  You may specify `emissivity` __and/or__ you may specify the other parameters,
+  but if you specify either `conduction` or `temperature` you must specify both.
+  If your wall is highly conductive, you might need to reduce \ref heat_flux_coercion to maintain stability.
 
 <hr>
 \subsubsection row_size
@@ -463,6 +474,14 @@ If \ref true, visualize the local time step constraints due to convection and di
 __type:__ integer \n
 __default:__ 10 \n
 Visualization file names will contain iteration numbers with leading zeros added such that there are at least `iter_width` digits.
+
+<hr>
+\subsubsection heat_flux_coercion
+__type:__ float \n
+__default:__ 2. \n
+When weakly applying heat flux boundary conditions, this determines how strongly the heat flux is coerced to match the prescribed value.
+If this number is too large, the simulation might be unstable, but if it too small the boundary condition might not be fully satisfied.
+The default value is adequate for almost all cases, but there are rare situations in which it might need to be reduced.
 
 <hr>
 
