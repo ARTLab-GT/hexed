@@ -132,12 +132,6 @@ void Deformed_element::set_jacobian(const Basis& basis)
     }
     vertex_time_step_scale(i_vert) = nominal_size()*vertex_det(i_vert)/norm_sum; // for deformed elements this is a essentially a measure of the amount of stretching in each dimension
   }
-  if (params.axisymmetric) {
-    // set axisymmetric radius
-    for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
-      radius()[i_qpoint] = position(basis, i_qpoint)[n_dim - 1];
-    }
-  }
 }
 
 double* Deformed_element::reference_level_normals()

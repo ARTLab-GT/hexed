@@ -108,12 +108,6 @@ void Element::set_jacobian(const Basis& basis)
       }
     }
   }
-  if (params.axisymmetric) {
-    // set axisymmetric radius
-    for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
-      radius()[i_qpoint] = position(basis, i_qpoint)[n_dim - 1];
-    }
-  }
 }
 
 double* Element::stage(int i_stage)
@@ -144,11 +138,6 @@ double* Element::art_visc_forcing()
 double* Element::advection_state()
 {
   return art_visc_forcing() + params.n_forcing*params.n_qpoint();
-}
-
-double* Element::radius()
-{
-  return advection_state() + params.row_size*params.n_qpoint();
 }
 
 double Element::jacobian(int i_dim, int j_dim, int i_qpoint)

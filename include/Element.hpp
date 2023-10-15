@@ -84,11 +84,6 @@ class Element
   double* art_visc_coef(); //!< layout: [i_qpoint]
   double* fix_admis_coef(); //!< layout: [i_qpoint]
   double* art_visc_forcing(); //!< layout: [i_forcing][i_qpoint]
-  /*! \brief radius in axisymmetric simulations
-   * \warning only a valid pointer if `Storage_params::axisymmetric` is `true`
-   * \details layout: [i_qpoint]
-   */
-  double* radius();
   virtual double* node_adjustments() {return nullptr;} //!< overriden by `Deformed_element`
 
   /*! \brief Compute the Jacobian matrix.

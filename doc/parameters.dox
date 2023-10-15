@@ -187,12 +187,6 @@ and significantly more layers are often required for hypersonic simulations with
 You will probably want to adjust these parameters for some simulations, but you can often leave them alone.
 
 <hr>
-\subsubsection axisymmetric
-__type:__ integer \n
-__default:__ false \n
-If `true` (and `n_dim == 2`), the simulation will be axisymmetric with axis \f$ x_1 = 0 \f$.
-
-<hr>
 \subsubsection init_ref_level
 __type:__ integer \n
 __default:__ 3 \n

@@ -5,16 +5,15 @@
 #include "constants.hpp"
 #include "Transport_model.hpp"
 
-/*!
- * This namespace contains classes representing the different PDEs Hexed can solve.
- * They are all possible arguments to the `Spatial` class template.
+/*! \brief This namespace contains classes representing the different PDEs Hexed can solve.
+ * \details They are all possible arguments to the `Spatial` class template.
  * They define the organization of the state data, fluxes, and speeds of information
  * propagation for computing time steps.
  */
 namespace hexed::pde
 {
 
-//! computes HLL (Harten-Lax-Van Leer) numerical flux based on wave speed estimate
+//! \brief computes HLL (Harten-Lax-Van Leer) numerical flux based on wave speed estimate
 template <int n_var>
 Mat<n_var> hll(Mat<2> speed, Mat<n_var, 2> flux, Mat<n_var, 2> state)
 {
@@ -25,7 +24,7 @@ Mat<n_var> hll(Mat<2> speed, Mat<n_var, 2> flux, Mat<n_var, 2> state)
          /(speed(1) - speed(0));
 }
 
-//! computes local Lax-Friedrichs numerical flux based on wave speed estimate
+//! \brief computes local Lax-Friedrichs numerical flux based on wave speed estimate
 template <int n_var>
 Mat<n_var> llf(double speed, Mat<n_var, 2> flux, Mat<n_var, 2> state)
 {
@@ -78,25 +77,20 @@ class Navier_stokes
       return (heat_rat - 1.)*((state(n_dim + 1)) - 0.5*mmtm_sq/(state(n_dim)));
     }
 
-    //! \brief compute the convective flux and if applicable, the axisymmetric source terms
-    template <bool axisym = false>
-    Mat<n_update, (1 + axisym)> flux(Mat<n_var> state, Mat<n_dim> normal) const
+    //! \brief compute the convective flux
+    Mat<n_update> flux(Mat<n_var> state, Mat<n_dim> normal) const
     {
-      Mat<n_update, 1 + axisym> f;
-      f(n_dim, 0) = 0.;
+      Mat<n_var> f;
+      f(n_dim) = 0.;
       for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-        f(n_dim, 0) += state(j_dim)*normal(j_dim);
+        f(n_dim) += state(j_dim)*normal(j_dim);
       }
-      double scaled = f(n_dim, 0)/state(n_dim);
+      double scaled = f(n_dim)/state(n_dim);
       double pres = pressure(state);
       ASSERT_THERM_ADMIS
       f(n_var - 1) = (state(n_dim + 1) + pres)*scaled;
       for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
         f(j_dim) = state(j_dim)*scaled + pres*normal(j_dim);
-      }
-      if constexpr (axisym) {
-        f(all, 1).setZero();
-        f(n_dim - 1, 1) = pres;
       }
       return f;
     }
@@ -116,9 +110,8 @@ class Navier_stokes
       return llf(wave_speed.maxCoeff(), face_flux, face_state);
     }
 
-    //! \brief compute the viscous flux and if applicable, the axisymmetric source terms
-    template <bool axisym = false>
-    Mat<n_dim + axisym, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const
+    //! \brief compute the viscous flux
+    Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const
     {
       auto seq = Eigen::seqN(0, n_dim);
       auto mmtm = state(seq);
@@ -127,21 +120,17 @@ class Navier_stokes
       Mat<n_dim, n_dim> veloc_grad = (grad(all, seq) - grad(all, n_dim)*veloc.transpose())/mass;
       double sqrt_temp = std::sqrt(std::max(state(n_dim + 1)/mass - .5*veloc.squaredNorm(), 0.)*(heat_rat - 1)/constants::specific_gas_air);
       double nat_visc = dyn_visc.coefficient(sqrt_temp);
-      double bulk_stress = (av_coef*mass - 2./3.*nat_visc)*veloc_grad.trace();
-      Mat<n_dim, n_dim> stress = nat_visc*(veloc_grad + veloc_grad.transpose()) + bulk_stress*Mat<n_dim, n_dim>::Identity();
-      Mat<n_dim + axisym, n_update> flux;
+      Mat<n_dim, n_dim> stress = nat_visc*(veloc_grad + veloc_grad.transpose())
+                                 + (av_coef*mass - 2./3.*nat_visc)*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
+      Mat<n_dim, n_update> flux;
       flux(all, seq) = -stress;
       flux(all, n_dim).setZero();
       Mat<n_dim> int_ener_grad = -state(n_dim + 1)/mass/mass*grad(all, n_dim) + grad(all, n_dim + 1)/mass - veloc_grad*veloc;
       flux(all, n_dim + 1) = -stress*veloc - therm_cond.coefficient(sqrt_temp)*int_ener_grad*(heat_rat - 1)/constants::specific_gas_air;
-      if constexpr (axisym) {
-        flux(n_dim, all).setZero();
-        flux(n_dim, n_dim - 1) = bulk_stress;
-      }
       return flux;
     }
 
-    //! upper bound on characteristic speed for convection
+    //! \brief upper bound on characteristic speed for convection
     double char_speed(Mat<n_var> state) const
     {
       double mass = state(n_dim);
@@ -150,7 +139,7 @@ class Navier_stokes
       return sound_speed + speed;
     }
 
-    //! maximum effective diffusivity (for enforcing the CFL condition)
+    //! \brief maximum effective diffusivity (for enforcing the CFL condition)
     double diffusivity(Mat<n_var> state, double av_coef) const
     {
       double mass = state(n_dim);
@@ -209,10 +198,9 @@ class Navier_stokes
         fact.compute(vecs);
         HEXED_ASSERT(fact.info() == Eigen::Success, "QR factorization failed");
       }
-      //! get eigenvalues of Jacobian
+      //! \brief get eigenvalues of Jacobian
       inline Mat<3> eigvals() {return vals;}
-      /*!
-       * Decompose a state vector into eigenspaces.
+      /*! \brief Decompose a state vector into eigenspaces.
        * Column `j` should be an eigenvector of the Jacobian with eigenvalue `eigvals()(j)`
        * and the sum of the columns should be `state`.
        */
@@ -258,17 +246,13 @@ class Advection
   static constexpr int ref_start = n_dim + 1;
   static constexpr int n_update = 1;
 
-  template <bool axisym = false>
-  Mat<1, 1 + axisym> flux(Mat<n_var> state, Mat<n_dim> normal) const
+  Mat<1> flux(Mat<n_var> state, Mat<n_dim> normal) const
   {
     double nrml_veloc = 0;
     for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
       nrml_veloc += state(j_dim)*normal(j_dim);
     }
-    Mat<1, 1 + axisym> f;
-    f(0, 0) = nrml_veloc*state(n_dim);
-    if constexpr (axisym) f(0, 1) = 0;
-    return f;
+    return Mat<1>::Constant(nrml_veloc*state(n_dim));
   }
 
   Mat<1> flux_num(Mat<n_var, 2> face_vars, Mat<n_dim> normal) const
@@ -302,13 +286,9 @@ class Smooth_art_visc
   static constexpr int n_update = 1;
 
   Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const {return Mat<n_update>::Zero();}
-  template <bool axisym = false>
-  Mat<n_dim + axisym, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const
+  Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const
   {
-    Mat<n_dim + axisym, n_update> f;
-    f.setZero();
-    f(Eigen::seqN(0, n_dim), all) = -grad;
-    return f;
+    return -grad;
   }
   double diffusivity(Mat<n_var> state, double av_coef) const {return 1;}
 };
@@ -330,13 +310,9 @@ class Fix_therm_admis
   static constexpr int n_update = n_var;
 
   Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const {return Mat<n_update>::Zero();}
-  template <bool axisym = false>
-  Mat<n_dim + axisym, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const
+  Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const
   {
-    Mat<n_dim + axisym, n_update> f;
-    f.setZero();
-    f(Eigen::seqN(0, n_dim), all) = -grad;
-    return f;
+    return -grad;
   }
   double diffusivity(Mat<n_var> state, double av_coef) const {return 1;}
 };

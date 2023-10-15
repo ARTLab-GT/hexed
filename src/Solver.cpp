@@ -109,24 +109,19 @@ double Solver::max_dt(double msc, double msd)
   auto& sw_def {stopwatch.children.at("deformed" )};
   double use_filt = _namespace->lookup<int>("use_filter").value();
   bool local_time = _namespace->lookup<int>("local_time").value();
-  #define MAX_DT(is_visc, axi, ...) { \
-    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<is_visc>::Pde, axi>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd, __VA_ARGS__))(acc_mesh.cartesian().elements(), sw_car, "compute time step"), \
-                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<is_visc>::Pde, axi>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd, __VA_ARGS__))(acc_mesh.deformed ().elements(), sw_def, "compute time step")); \
+  #define MAX_DT(is_visc, ...) { \
+    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<is_visc>::Pde>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd, __VA_ARGS__))(acc_mesh.cartesian().elements(), sw_car, "compute time step"), \
+                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<is_visc>::Pde>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd, __VA_ARGS__))(acc_mesh.deformed ().elements(), sw_def, "compute time step")); \
   }
-  bool axi = _namespace->lookup<int>("axisymmetric").value();
-  if (use_ldg()) {
-    if (axi) MAX_DT(true , true , visc, therm_cond)
-    else     MAX_DT(true , false, visc, therm_cond)
-  } else {
-    if (axi) MAX_DT(false, true , visc, therm_cond)
-    else     MAX_DT(false, false, visc, therm_cond)
-  }
+  if (use_ldg()) MAX_DT(true , visc, therm_cond)
+  else           MAX_DT(false, visc, therm_cond)
+  #undef MAX_DT
 }
 
-Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping, bool axisymmetric,
+Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
                Transport_model viscosity_model, Transport_model thermal_conductivity_model,
                std::shared_ptr<Namespace> space, std::shared_ptr<Printer> printer) :
-  params{3, n_dim + 2, n_dim, row_size, axisymmetric},
+  params{3, n_dim + 2, n_dim, row_size},
   acc_mesh{params, root_mesh_size},
   basis{row_size},
   stopwatch{"(element*iteration)"},
@@ -155,7 +150,6 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("flow_iters", 1);
   _namespace->assign_default("use_filter", 0); // whether to use modal filter acceleration
   _namespace->assign_default<int>("local_time", local_time_stepping);
-  _namespace->assign_default<int>("axisymmetric", axisymmetric);
   _namespace->assign_default<std::string>("working_dir", ".");
   _namespace->assign("fix_iters", 0);
   _namespace->assign("iteration", 0);
