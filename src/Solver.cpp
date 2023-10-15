@@ -109,13 +109,13 @@ double Solver::max_dt(double msc, double msd)
   auto& sw_def {stopwatch.children.at("deformed" )};
   double use_filt = _namespace->lookup<int>("use_filter").value();
   bool local_time = _namespace->lookup<int>("local_time").value();
-  if (use_ldg()) {
-    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd, visc, therm_cond))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
-                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<true >::Pde>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd, visc, therm_cond))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
-  } else {
-    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd                  ))(acc_mesh.cartesian().elements(), sw_car, "compute time step"),
-                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<false>::Pde>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd                  ))(acc_mesh.deformed ().elements(), sw_def, "compute time step"));
+  #define MAX_DT(is_visc, ...) { \
+    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<is_visc>::Pde>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd, __VA_ARGS__))(acc_mesh.cartesian().elements(), sw_car, "compute time step"), \
+                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<is_visc>::Pde>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd, __VA_ARGS__))(acc_mesh.deformed ().elements(), sw_def, "compute time step")); \
   }
+  if (use_ldg()) MAX_DT(true , visc, therm_cond)
+  else           MAX_DT(false, visc, therm_cond)
+  #undef MAX_DT
 }
 
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
@@ -567,7 +567,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
   } // Cauchy-Kovalevskaya-style derivative estimate complete!
 
   // begin root-smear-square operation
-  int n_real = Element::n_forcing - 1; // number of real time steps (as apposed to pseudotime steps)
+  int n_real = params.n_forcing - 1; // number of real time steps (as apposed to pseudotime steps)
   // evaluate CFL condition
   double diff_safety = _namespace->lookup<double>("av_diff_max_safety").value();
   double n_cheby = _namespace->lookup<double>("n_cheby_av").value();
@@ -1248,7 +1248,7 @@ void Solver::visualize_surface_xdmf(int bc_sn, const Boundary_func& func, std::s
 void Solver::vis_cart_surf_xdmf(int bc_sn, std::string name, const Boundary_func& func)
 {
   Mesh::Reset_vertices reset(acc_mesh);
-  visualize_surface_tecplot(bc_sn, func, name, 2);
+  visualize_surface_xdmf(bc_sn, func, name, 2);
 }
 
 void Solver::vis_lts_constraints(std::string name, int n_sample)

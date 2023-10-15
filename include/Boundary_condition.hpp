@@ -82,7 +82,7 @@ class Riemann_invariants : public Flow_bc
 };
 
 /*! \brief sets pressure on outflow boundaries
- *
+ * \details
  * - For supersonic outflow, same as `Riemann_invariants`
  * - For subsonic outflow, sets the pressure instead of the incoming characteristic.
  * - Not valid for inflow.
@@ -99,10 +99,7 @@ class Pressure_outflow : public Flow_bc
   void apply_flux(Boundary_face&) override;
 };
 
-/*!
- * Like `Freestream`, but sets state to the value of an arbitrary `Surface_func`
- * instead of a constant.
- */
+//! \brief Like `Freestream`, but sets state to the value of an arbitrary `Surface_func` instead of a constant.
 class Function_bc : public Flow_bc
 {
   const Surface_func& func;
@@ -129,16 +126,63 @@ class Cache_bc : public Flow_bc
   void init_cache(Boundary_face&) override;
 };
 
-/*!
- * Copies the inside state and flips the sign of the surface-normal velocity.
- * Good for inviscid walls and symmetry planes.
- */
+//! \brief Copies the inside state and flips the sign of the surface-normal velocity.
+//! \details Good for inviscid walls and symmetry planes.
 class Nonpenetration : public Flow_bc
 {
   public:
   void apply_state(Boundary_face&) override;
   void apply_flux(Boundary_face&) override;
   void apply_advection(Boundary_face&) override;
+};
+
+//! \brief specifies the thermal component of a `No_slip` wall boundary condition
+class Thermal_bc
+{
+  public:
+  virtual ~Thermal_bc() = default;
+  //! \brief prescribes the total energy at the wall as a function of the current state
+  //! \note might give you back the current energy if this is a Neumann BC
+  virtual double ghost_energy(Mat<> state) = 0;
+  //! \brief prescribes the wall heat flux as a function of the state and current heat flux
+  //! \note might give you back the current heat flux if this is a Dirichlet BC
+  virtual double ghost_heat_flux(Mat<> state, double heat_flux) = 0;
+};
+
+//! \brief prescribes the specific energy but doesn't touch the heat flux
+//! \details can be used as an isothermal BC
+class Prescribed_energy : public Thermal_bc
+{
+  public:
+  double energy_per_mass;
+  inline Prescribed_energy(double e) : energy_per_mass{e} {}
+  inline double ghost_energy(Mat<> state) override {return energy_per_mass*state(state.size() - 2);}
+  inline double ghost_heat_flux(Mat<>, double heat_flux) override {return heat_flux;}
+};
+
+//! \brief prescribes the heat flux but doesn't touch the energy
+//! \details setting the heat flux to 0 gives you an adiabatic BC
+class Prescribed_heat_flux : public Thermal_bc
+{
+  public:
+  double heat_flux;
+  Prescribed_heat_flux(double h = 0.) : heat_flux{h} {}
+  inline double ghost_energy(Mat<> state) override {return state(last);}
+  inline double ghost_heat_flux(Mat<>, double) override {return heat_flux;}
+};
+
+/*! \brief stipulates that the wall is in thermal equilibrium based on a 1D heat equation
+ * \details The default values of all zeros gives you an adiabatic wall.
+ * \see \ref thermal_equilibrium_bc "thermal equilibrium BC"
+ */
+class Thermal_equilibrium : public Thermal_bc
+{
+  public:
+  double emissivity = 0.;
+  double conduction = 0.;
+  double temperature = 0.;
+  inline double ghost_energy(Mat<> state) override {return state(last);}
+  double ghost_heat_flux(Mat<> state, double) override;
 };
 
 /*! \brief No-slip wall boundary condition.
@@ -148,21 +192,13 @@ class Nonpenetration : public Flow_bc
  */
 class No_slip : public Flow_bc
 {
+  double _coercion;
+  std::shared_ptr<Thermal_bc> _thermal;
   public:
-  enum Thermal_type {heat_flux, internal_energy, emissivity};
-  /*!
-   * \param value value used to set thermal boundary condition.
-   * \param type defines which variable `value` is specifying (and thus the type of the thermal boundary condition)
-   * \note providing no arguments gives you an adiabatic wall
-   * \note if `emissivity` is specified, that will create a radiative equilibrium boundary condition
-   */
-  No_slip(Thermal_type type = heat_flux, double value = 0);
+  No_slip(std::shared_ptr<Thermal_bc> = std::make_shared<Prescribed_heat_flux>(), double heat_flux_coercion = 2.);
   void apply_advection(Boundary_face&) override;
   void apply_state(Boundary_face&) override; // note: `apply_state` must be called before `apply_flux` to prime `state_cache`
   void apply_flux(Boundary_face&) override;
-  private:
-  Thermal_type t;
-  double v;
 };
 
 /*!

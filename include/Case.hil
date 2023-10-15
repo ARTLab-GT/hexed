@@ -138,6 +138,7 @@ max_deflection = huge
 mesh_extreme_eps = 1e-6
 layer_split_points = {split0 = 1./3.;}
 init_layer_splits = 0
+heat_flux_coercion = 2.
 
 {array parameters}
 i_dim = 0

@@ -48,7 +48,6 @@ class Element
   std::array<double*, 6> faces; //!< layout: [2*i_dim + face_sign][i_var][i_qpoint]
   double resolution_badness = 0; //!< refinement algorithms should set this value to some metric representing how badly this element needs to be refined
   static constexpr bool is_deformed = false; //!< is this `Element` subclass deformed?
-  static constexpr int n_forcing = 4; //!< number of artificial viscosity forcing variables
   int record = 0; //!< for algorithms to book-keep general information
   Tree* tree = nullptr; //!< `Tree` this element was created from
   bool unrefinement_locked = false; //!< if this is set to `true`, `Mesh_interface::update()` won't unrefine it
@@ -77,11 +76,11 @@ class Element
   inline double nominal_size() {return nom_sz;}
   inline int refinement_level() {return r_level;}
   inline std::vector<int> nominal_position() {return nom_pos;}
-  //! Pointer to state data for `i_stage`th Runge-Kutta stage.
-  double* stage(int i_stage); //!< Layout: [i_var][i_qpoint]
-  double* advection_state(); //!< Layout: [i_node][i_qpoint] \note `0 <= i_node < row_size`
+  //! pointer to state data for `i_stage`th Runge-Kutta stage.
+  double* stage(int i_stage); //!< layout: [i_var][i_qpoint]
+  double* advection_state(); //!< layout: [i_node][i_qpoint] \note `0 <= i_node < row_size`
   //! pointer to scaling factor for local time step.
-  double* time_step_scale(); //!< Layout: [i_qpoint]
+  double* time_step_scale(); //!< layout: [i_qpoint]
   double* art_visc_coef(); //!< layout: [i_qpoint]
   double* fix_admis_coef(); //!< layout: [i_qpoint]
   double* art_visc_forcing(); //!< layout: [i_forcing][i_qpoint]

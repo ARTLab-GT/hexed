@@ -12,7 +12,7 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   r_level{ref_level},
   n_dof(params.n_dof()),
   n_vert(params.n_vertices()),
-  data_size{params.n_stage*n_dof + (3 + n_forcing + params.row_size)*params.n_qpoint()},
+  data_size{params.n_dof_numeric()},
   data{Eigen::VectorXd::Zero(data_size)},
   vertex_tss{Eigen::VectorXd::Constant(params.n_vertices(), nom_sz/n_dim)},
   origin{origin_arg(Eigen::seqN(0, params.n_dim))}
@@ -97,6 +97,7 @@ std::vector<double> Element::face_position(const Basis& basis, int i_face, int i
 
 void Element::set_jacobian(const Basis& basis)
 {
+  // set face jacobian
   int nfq = params.n_qpoint()/params.row_size;
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
@@ -136,7 +137,7 @@ double* Element::art_visc_forcing()
 
 double* Element::advection_state()
 {
-  return art_visc_forcing() + n_forcing*params.n_qpoint();
+  return art_visc_forcing() + params.n_forcing*params.n_qpoint();
 }
 
 double Element::jacobian(int i_dim, int j_dim, int i_qpoint)

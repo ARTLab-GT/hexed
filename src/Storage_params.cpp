@@ -24,4 +24,14 @@ int Storage_params::n_vertices() const
   return math::pow(2, n_dim);
 }
 
+int Storage_params::n_var_numeric() const
+{
+  return n_stage*n_var + 3 + n_forcing + row_size;
+}
+
+int Storage_params::n_dof_numeric() const
+{
+  return n_var_numeric()*n_qpoint();
+}
+
 }

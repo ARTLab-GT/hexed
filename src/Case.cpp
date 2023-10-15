@@ -47,25 +47,26 @@ Flow_bc* Case::_make_bc(std::string name)
   else if (name == "no_slip") {
     auto sub = _inter.make_sub();
     sub.exec("$thermal_bc");
-    No_slip::Thermal_type therm_t;
-    std::optional<double> value;
+    std::shared_ptr<Thermal_bc> thermal;
     if (sub.variables->exists("heat_flux")) { // note not recursive
-      therm_t = No_slip::heat_flux;
-      value = sub.variables->lookup<double>("heat_flux");
+      thermal = std::make_shared<Prescribed_heat_flux>(sub.variables->lookup<double>("heat_flux").value());
+    } else if (sub.variables->exists("emissivity") || sub.variables->exists("conduction")) {
+      auto equilibrium = std::make_shared<Thermal_equilibrium>();
+      HEXED_ASSERT(sub.variables->exists("conduction") == sub.variables->exists("temperature"), "must specify both surface conduction and temperature or neigher");
+      if (sub.variables->exists("emissivity")) equilibrium->emissivity = sub.variables->lookup<double>("emissivity").value();
+      if (sub.variables->exists("conduction")) {
+        equilibrium->conduction = sub.variables->lookup<double>("conduction").value();
+        equilibrium->temperature = sub.variables->lookup<double>("temperature").value();
+      }
+      thermal = equilibrium;
     } else if (sub.variables->exists("internal_energy")) { // note not recursive
-      therm_t = No_slip::internal_energy;
-      value = sub.variables->lookup<double>("internal_energy");
+      thermal = std::make_shared<Prescribed_energy>(sub.variables->lookup<double>("internal_energy").value());
     } else if (sub.variables->exists("temperature")) { // note not recursive
-      therm_t = No_slip::internal_energy;
-      value = sub.variables->lookup<double>("temperature");
-      HEXED_ASSERT(value, "thermal BC specification not understood");
-      *value *= constants::specific_gas_air/(heat_rat - 1.);
-    } else if (sub.variables->exists("emissivity")) {
-      therm_t = No_slip::emissivity;
-      value = sub.variables->lookup<double>("emissivity");
+      double energy = sub.variables->lookup<double>("temperature").value()*constants::specific_gas_air/(heat_rat - 1.);
+      thermal = std::make_shared<Prescribed_energy>(energy);
     }
-    HEXED_ASSERT(value, "thermal BC specification not understood");
-    return new No_slip(therm_t, value.value());
+    HEXED_ASSERT(thermal, "thermal BC specification not understood");
+    return new No_slip(thermal, _vard("heat_flux_coercion").value());
   }
   else HEXED_ASSERT(false, format_str(1000, "unrecognized boundary condition type `%s`", name.c_str()));
   return nullptr; // will never happen. just to shut up GCC warning

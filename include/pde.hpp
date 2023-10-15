@@ -5,16 +5,15 @@
 #include "constants.hpp"
 #include "Transport_model.hpp"
 
-/*!
- * This namespace contains classes representing the different PDEs Hexed can solve.
- * They are all possible arguments to the `Spatial` class template.
+/*! \brief This namespace contains classes representing the different PDEs Hexed can solve.
+ * \details They are all possible arguments to the `Spatial` class template.
  * They define the organization of the state data, fluxes, and speeds of information
  * propagation for computing time steps.
  */
 namespace hexed::pde
 {
 
-//! computes HLL (Harten-Lax-Van Leer) numerical flux based on wave speed estimate
+//! \brief computes HLL (Harten-Lax-Van Leer) numerical flux based on wave speed estimate
 template <int n_var>
 Mat<n_var> hll(Mat<2> speed, Mat<n_var, 2> flux, Mat<n_var, 2> state)
 {
@@ -25,7 +24,7 @@ Mat<n_var> hll(Mat<2> speed, Mat<n_var, 2> flux, Mat<n_var, 2> state)
          /(speed(1) - speed(0));
 }
 
-//! computes local Lax-Friedrichs numerical flux based on wave speed estimate
+//! \brief computes local Lax-Friedrichs numerical flux based on wave speed estimate
 template <int n_var>
 Mat<n_var> llf(double speed, Mat<n_var, 2> flux, Mat<n_var, 2> state)
 {
@@ -78,7 +77,7 @@ class Navier_stokes
       return (heat_rat - 1.)*((state(n_dim + 1)) - 0.5*mmtm_sq/(state(n_dim)));
     }
 
-    //! compute the convective flux
+    //! \brief compute the convective flux
     Mat<n_update> flux(Mat<n_var> state, Mat<n_dim> normal) const
     {
       Mat<n_var> f;
@@ -96,7 +95,7 @@ class Navier_stokes
       return f;
     }
 
-    //! compute the numerical convective flux shared at the element faces
+    //! \brief compute the numerical convective flux shared at the element faces
     Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const
     {
       Mat<n_var, 2> face_flux;
@@ -111,7 +110,7 @@ class Navier_stokes
       return llf(wave_speed.maxCoeff(), face_flux, face_state);
     }
 
-    //! compute the viscous flux
+    //! \brief compute the viscous flux
     Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const
     {
       auto seq = Eigen::seqN(0, n_dim);
@@ -131,7 +130,7 @@ class Navier_stokes
       return flux;
     }
 
-    //! upper bound on characteristic speed for convection
+    //! \brief upper bound on characteristic speed for convection
     double char_speed(Mat<n_var> state) const
     {
       double mass = state(n_dim);
@@ -140,7 +139,7 @@ class Navier_stokes
       return sound_speed + speed;
     }
 
-    //! maximum effective diffusivity (for enforcing the CFL condition)
+    //! \brief maximum effective diffusivity (for enforcing the CFL condition)
     double diffusivity(Mat<n_var> state, double av_coef) const
     {
       double mass = state(n_dim);
@@ -199,10 +198,9 @@ class Navier_stokes
         fact.compute(vecs);
         HEXED_ASSERT(fact.info() == Eigen::Success, "QR factorization failed");
       }
-      //! get eigenvalues of Jacobian
+      //! \brief get eigenvalues of Jacobian
       inline Mat<3> eigvals() {return vals;}
-      /*!
-       * Decompose a state vector into eigenspaces.
+      /*! \brief Decompose a state vector into eigenspaces.
        * Column `j` should be an eigenvector of the Jacobian with eigenvalue `eigvals()(j)`
        * and the sum of the columns should be `state`.
        */

@@ -370,7 +370,15 @@ void Nonpenetration::apply_advection(Boundary_face& bf)
   }
 }
 
-No_slip::No_slip(Thermal_type type, double value) : t{type}, v{value} {}
+No_slip::No_slip(std::shared_ptr<Thermal_bc> thermal, double coercion) : _coercion{coercion}, _thermal{thermal} {}
+
+double Thermal_equilibrium::ghost_heat_flux(Mat<> state, double)
+{
+  double temp = state(last)*.4/state(state.size() - 2)/constants::specific_gas_air;
+  double radiative_flux = emissivity*constants::stefan_boltzmann*math::pow(temp, 4);
+  double conductive_flux = conduction*(temp - temperature);
+  return radiative_flux + conductive_flux;
+}
 
 void No_slip::apply_state(Boundary_face& bf)
 {
@@ -382,9 +390,10 @@ void No_slip::apply_state(Boundary_face& bf)
   // set ghost state
   for (int i_dof = 0; i_dof < params.n_dim*nfq; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
   for (int i_dof = params.n_dim*nfq; i_dof < (params.n_dim + 1)*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
-  for (int i_dof = (params.n_dim + 1)*nfq; i_dof < (params.n_dim + 2)*nfq; ++i_dof) {
-    // make it so geometric mean of ghost internal energy and inside internal energy is target energy
-    gh_f[i_dof] = (t == internal_energy) ? math::pow(v*in_f[i_dof - nfq], 2)/in_f[i_dof] : in_f[i_dof];
+  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+    Mat<> state(params.n_var);
+    for (int i_var = 0; i_var < params.n_var; ++i_var) state(i_var) = in_f[i_var*nfq + i_qpoint];
+    gh_f[(params.n_dim + 1)*nfq + i_qpoint] = math::pow(_thermal->ghost_energy(state), 2)/state(last);
   }
   // prime `state_cache` with average state for use in emissivity BC
   for (int i_dof = 0; i_dof < params.n_var*nfq; ++i_dof) {
@@ -407,7 +416,6 @@ void No_slip::apply_flux(Boundary_face& bf)
   // set energy flux depending on thermal boundary condition
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
     int i_dof = i_qpoint + (params.n_dim + 1)*nfq;
-    double flux;
     double normal = 0;
     for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
       double n = nrml[i_dim*nfq + i_qpoint];
@@ -415,22 +423,9 @@ void No_slip::apply_flux(Boundary_face& bf)
     }
     normal = std::sqrt(normal);
     int flux_sign = 2*bf.inside_face_sign() - 1;
-    switch (t) {
-      case heat_flux:
-        flux = v*normal;
-        break;
-      case emissivity:
-        {
-          // set heat flux equal to radiative heat loss by stefan-boltzmann law
-          double temp = sc[i_dof]*.4/sc[params.n_dim*nfq + i_qpoint]/constants::specific_gas_air;
-          flux = v*constants::stefan_boltzmann*math::pow(temp, 4)*normal;
-        }
-        break;
-      default:
-        flux = flux_sign*in_f[i_dof];
-        break;
-    }
-    gh_f[i_dof] = 2*flux*flux_sign - in_f[i_dof];
+    Mat<> state(params.n_var);
+    for (int i_var = 0; i_var < params.n_var; ++i_var) state(i_var) = sc[i_var*nfq + i_qpoint];
+    gh_f[i_dof] = _coercion*(normal*flux_sign*_thermal->ghost_heat_flux(state, in_f[i_dof]*flux_sign/normal) - in_f[i_dof]) + in_f[i_dof];
   }
 }
 

@@ -135,7 +135,7 @@ TEST_CASE("Element")
     REQUIRE(elem3.face_position(basis, 4, 7)[2] == Catch::Approx(0.003));
   }
 
-  SECTION("writing jacobian to faces")
+  SECTION("set_jacobian")
   {
     hexed::Equidistant basis(6);
     double faces[6][5*36];

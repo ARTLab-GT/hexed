@@ -429,8 +429,8 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force)
         double width = 1 - i_elem + math::sign(i_elem)*offset;
         Mat<dyn, dyn> interp = basis.interpolate(basis.nodes()*width + Mat<>::Constant(params.row_size, (i_elem == face.face_sign)*(1 - width)));
         for (Row_index index(nd, params.row_size, face.i_dim); index; ++index) {
-          Eigen::Map<Mat<dyn, dyn>, 0, Eigen::Stride<dyn, dyn>> row_read (state[0     ] + index.i_qpoint(0), params.row_size, 2*params.n_var + 3 + Element::n_forcing + params.row_size, Eigen::Stride<dyn, dyn>(params.n_qpoint(), index.stride));
-          Eigen::Map<Mat<dyn, dyn>, 0, Eigen::Stride<dyn, dyn>> row_write(state[i_elem] + index.i_qpoint(0), params.row_size, 2*params.n_var + 3 + Element::n_forcing + params.row_size, Eigen::Stride<dyn, dyn>(params.n_qpoint(), index.stride));
+          Eigen::Map<Mat<dyn, dyn>, 0, Eigen::Stride<dyn, dyn>> row_read (state[0     ] + index.i_qpoint(0), params.row_size, params.n_var_numeric(), Eigen::Stride<dyn, dyn>(params.n_qpoint(), index.stride));
+          Eigen::Map<Mat<dyn, dyn>, 0, Eigen::Stride<dyn, dyn>> row_write(state[i_elem] + index.i_qpoint(0), params.row_size, params.n_var_numeric(), Eigen::Stride<dyn, dyn>(params.n_qpoint(), index.stride));
           row_write = interp*row_read;
         }
       }

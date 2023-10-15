@@ -1,0 +1,60 @@
+n_dim = 3
+mesh_extreme00 = -2.
+mesh_extreme01 =  0.
+mesh_extreme10 =  0.
+mesh_extreme11 =  2.
+mesh_extreme20 =  0.
+mesh_extreme21 =  2.
+init_ref_level = 2
+extremal_bc20 = {nonpenetration}
+extremal_bc10 = {nonpenetration}
+extremal_bc01 = {pressure_outflow}
+geom0 = {sphere.STEP}
+pressure = 120.96
+temperature = 75.61
+mach = 5.
+max_angle = 0.5*degree
+done = {iteration >= 2*10^5}
+vis_freq = 10000
+surface_max_iters = 3
+surface_refine = {(center0^2 + center1^2 + center2^2)^.5 < 1.4}
+surface_unrefine = {false}
+
+{settings for different variants of this case}
+isothermal = {
+    working_dir = {hexed_out4}
+    thermal_bc = {temperature = 98.89}
+    init_layer_splits = 2
+    $set_aerothermo
+    art_visc_width = art_visc_width/8
+    iterate = iterate + {
+        case0 = {}
+        case1 = {
+            print {splitting layers...}
+            split_layers
+            println({done. number of elements: } + n_elements)
+        }
+        $$({case} + (iteration == 1*10^4 | iteration == 2*10^4 | iteration == 3*10^4 | iteration == 4*10^4))
+    }
+}
+radiative_equilibrium = {
+    thermal_bc = {emissivity = 1.}
+    working_dir = {hexed_out_rad_eq}
+    init_layer_splits = 3
+    av_diff_max_safety = 0.3
+    $set_aerothermo
+}
+inviscid = {
+    working_dir = {hexed_out_inviscid}
+    vis_freq = 1000
+    av_diff_max_safety = 0.3
+    max_safety = 0.7
+}
+
+$set_shock
+$isothermal
+
+vis_n_sample = 2
+$init
+vis_n_sample = 10
+$run
