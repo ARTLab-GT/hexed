@@ -247,12 +247,12 @@ class Spatial
         }
 
         // apply mode filtering
-        if constexpr (!Pde::is_viscous) if (_use_filter) {
+        if (_use_filter) {
           for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
             for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
-              Mat<row_size, Pde::n_update> row_r = Row_rw<Pde::n_update, row_size>::read_row(time_rate[0][0], ind);
+              Mat<row_size, 2*Pde::n_update> row_r = Row_rw<2*Pde::n_update, row_size>::read_row(time_rate[0][0], ind);
               row_r = filter*row_r;
-              Row_rw<Pde::n_update, row_size>::write_row(row_r, time_rate[0][0], ind, 0.);
+              Row_rw<2*Pde::n_update, row_size>::write_row(row_r, time_rate[0][0], ind, 0.);
             }
           }
         }
@@ -301,15 +301,19 @@ class Spatial
     static constexpr int n_qpoint = math::pow(row_size, n_dim);
     Derivative<row_size> derivative;
     Write_face<n_dim, row_size> write_face;
+    Mat<row_size, row_size> filter;
     int stage;
     double update;
+    bool _use_filter;
 
     public:
-    Reconcile_ldg_flux(const Basis& basis, double dt, int which_stage) :
+    Reconcile_ldg_flux(const Basis& basis, double dt, int which_stage, bool use_filter) :
       derivative{basis},
       write_face{basis},
+      filter{basis.filter()},
       stage{which_stage},
-      update{dt}
+      update{dt},
+      _use_filter{use_filter}
     {
       HEXED_ASSERT(Pde::has_convection || !which_stage, "for pure diffusion use alternating time steps");
     }
@@ -335,6 +339,17 @@ class Spatial
           for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
             auto bound_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
             Row_rw<Pde::n_update, row_size>::write_row(-derivative.boundary_term(bound_f), time_rate[0], ind, 1.);
+          }
+        }
+
+        // apply modal filtering
+        if (_use_filter) {
+          for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+            for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
+              Mat<row_size, Pde::n_update> row_r = Row_rw<Pde::n_update, row_size>::read_row(time_rate[0], ind);
+              row_r = filter*row_r;
+              Row_rw<Pde::n_update, row_size>::write_row(row_r, time_rate[0], ind, 0.);
+            }
           }
         }
 
@@ -526,7 +541,7 @@ class Spatial
     template <typename... pde_args>
     Max_dt(const Basis& basis, bool is_local, bool use_filter, double safety_conv, double safety_diff, pde_args... args) :
       eq{args...},
-      max_cfl_c{basis.max_cfl()*safety_conv},
+      max_cfl_c{basis.max_cfl()*safety_conv*(1 + 9*use_filter)},
       max_cfl_d{-2/basis.min_eig_diffusion()*safety_diff},
       _is_local{is_local}
     {
