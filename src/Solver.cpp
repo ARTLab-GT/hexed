@@ -121,7 +121,7 @@ double Solver::max_dt(double msc, double msd)
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
                Transport_model viscosity_model, Transport_model thermal_conductivity_model,
                std::shared_ptr<Namespace> space, std::shared_ptr<Printer> printer) :
-  params{3, n_dim + 2, n_dim, row_size},
+  params{4, n_dim + 2, n_dim, row_size},
   acc_mesh{params, root_mesh_size},
   basis{row_size},
   stopwatch{"(element*iteration)"},
@@ -386,7 +386,7 @@ void Solver::initialize(const Spacetime_func& func)
       std::vector<double> pos_vec {};
       auto state = func(elements[i_elem].position(basis, i_qpoint), status.flow_time);
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
-        elements[i_elem].stage(0)[i_var*params.n_qpoint() + i_qpoint] = state[i_var];
+        for (int i_stage : {0, 3}) elements[i_elem].stage(i_stage)[i_var*params.n_qpoint() + i_qpoint] = state[i_var];
       }
     }
   }
@@ -850,6 +850,7 @@ void Solver::update()
 {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
   auto& elems = acc_mesh.elements();
+  const int n_dof = params.n_dof();
 
   for (int i_flow = 0; i_flow < _namespace->lookup<int>("flow_iters").value(); ++i_flow)
   {
@@ -858,7 +859,6 @@ void Solver::update()
     double n_cheby = _namespace->lookup<double>("n_cheby_flow").value();
     double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1);
     // run chebyshev iterations
-    const int n_dof = params.n_dof();
     for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
     {
       double nominal_dt = std::min(max_dt(safety/max_cheby, safety), _namespace->lookup<double>("max_time_step").value());
@@ -890,6 +890,19 @@ void Solver::update()
       _namespace->assign<double>("flow_time", _namespace->lookup<double>("flow_time").value() + dt);
       status.time_step = dt;
       status.flow_time += dt;
+    }
+  }
+
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    double* state = elems[i_elem].stage(0);
+    double* lag = elems[i_elem].stage(3);
+    for (int i_dof = 0; i_dof < n_dof; ++i_dof) {
+      double s = state[i_dof];
+      double mix_state = 0.02;
+      double mix_lag = 0.01;
+      state[i_dof] = (1 - mix_state)*state[i_dof] + mix_state*lag[i_dof];
+      lag[i_dof] = (1 - mix_lag)*lag[i_dof] + mix_lag*s;
     }
   }
 
