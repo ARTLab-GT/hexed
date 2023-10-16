@@ -651,7 +651,7 @@ bool Accessible_mesh::intersects_surface(Tree* t)
 {
   if (!surf_geom) return false;
   Mat<> center = t->nominal_position() + t->nominal_size()/2*Mat<>::Ones(params.n_dim);
-  return !surf_geom->nearest_point(center, std::sqrt(params.n_dim)/2*t->nominal_size()).empty();
+  return !surf_geom->nearest_point(center, 1.6*std::sqrt(double(params.n_dim))/2*t->nominal_size()).empty();
 }
 
 bool Accessible_mesh::is_surface(Tree* t)
