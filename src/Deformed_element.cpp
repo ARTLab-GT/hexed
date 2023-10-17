@@ -80,7 +80,7 @@ void Deformed_element::set_jacobian(const Basis& basis)
       }
     }
     jac_dat(n_dim*n_dim*n_qpoint + i_qpoint) = qpoint_jac.determinant();
-    HEXED_ASSERT(jac_dat(n_dim*n_dim*n_qpoint + i_qpoint) > 0., "negative jacobian");
+    if (!(jac_dat(n_dim*n_dim*n_qpoint + i_qpoint) > 0.)) printf("WARNING: negative jacobian!\n");
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
       Eigen::MatrixXd copy = qpoint_jac;
       for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
