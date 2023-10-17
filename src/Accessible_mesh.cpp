@@ -56,15 +56,6 @@ void Accessible_mesh::id_boundary_verts()
 void Accessible_mesh::snap_vertices()
 {
   if (tree) {
-    for (int i_bc = 0; i_bc < 2*params.n_dim; ++i_bc) {
-      int bc_sn = tree_bcs[i_bc];
-      #pragma omp parallel for
-      for (auto& vert : boundary_verts[bc_sn]) {
-        int i_dim = i_bc/2;
-        int sign = i_bc%2;
-        vert->pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
-      }
-    }
     if (surf_geom) {
       #pragma omp parallel for
       for (auto& vert : boundary_verts[surf_bc_sn]) {
@@ -74,6 +65,15 @@ void Accessible_mesh::snap_vertices()
           dist_guess = std::max(dist_guess, (neighb.pos - vert->pos).norm());
         }
         pos = surf_geom->nearest_point(pos, huge, dist_guess).point();
+      }
+    }
+    for (int i_bc = 0; i_bc < 2*params.n_dim; ++i_bc) {
+      int bc_sn = tree_bcs[i_bc];
+      #pragma omp parallel for
+      for (auto& vert : boundary_verts[bc_sn]) {
+        int i_dim = i_bc/2;
+        int sign = i_bc%2;
+        vert->pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
       }
     }
   } else {

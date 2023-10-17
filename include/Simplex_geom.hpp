@@ -28,7 +28,7 @@ class Simplex_geom : public Surface_geom
   void merge(Nearest_point<n_dim>& nearest, Mat<n_dim, n_dim> sim, Mat<n_dim> point); // helper for `nearest_point`
 
   public:
-  double gap_tol = 1e-2; //!< extend triangles by this amount, relative to their original size, to fill gaps
+  double gap_tol = 1e-6; //!< extend triangles by this amount, relative to their original size, to fill gaps
   std::vector<Mat<n_dim, n_dim>> simplices;
   Simplex_geom(const std::vector<Mat<n_dim, n_dim>>&  sims) : simplices{sims} {}
   Simplex_geom(      std::vector<Mat<n_dim, n_dim>>&& sims) : simplices{sims} {}
