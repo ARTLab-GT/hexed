@@ -19,13 +19,12 @@ geom0 = {auto.csv}
 
 {freestream conditions}
 altitude = 0.
-mach = 0.1
+mach = 0.3
 attack = 4*degree
 
 {iteration parameters}
 print_freq = 200
-done = {normalized_residual < 1e-20}
-use_filter = true
+done = {normalized_residual < 1e-7}
 
 {run simulation}
 $init
