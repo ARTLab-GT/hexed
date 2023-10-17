@@ -33,18 +33,28 @@ compute_force = {
     force1 = integral_surface_stress1
     force2 = integral_surface_stress2
     drag = force0*direction0 + force1*direction1 + force2*direction2
-    case0 = {println {force computation not yet implemented for `n_dim != 2`}; throw}
-    case1 = {lift = force1*direction0 - force0*direction1}
-    $$({case} + (n_dim == 2))
+    lift = 0
+    side_force = 0
+    case1 = {}
+    case2 = {lift = force1*direction0 - force0*direction1}
+    case3 = {
+        horiz_norm = (direction0^2 + direction1^2)^.5
+        lift = force2*horiz_norm - (force0*direction0 + force1*direction1)/horiz_norm*direction2
+        side_force = (force1*direction0 - force0*direction1)/horiz_norm
+    }
+    $$({case} + n_dim)
     drag_coef = drag/(0.5*density*speed^2)
     lift_coef = lift/(0.5*density*speed^2)
+    side_force_coef_coef = lift/(0.5*density*speed^2)
 }
 print_force = {
     $compute_force
-    println({lift: } + lift + { N})
     println({drag: } + drag + { N})
-    println({lift coefficient: } + lift_coef)
+    println({lift: } + lift + { N})
+    println({side force: } + side_force + { N})
     println({drag coefficient: } + drag_coef)
+    println({lift coefficient: } + lift_coef)
+    println({side force coefficient: } + side_force_coef)
 }
 freestream_spec_int_ener = {(freestream3/freestream2 - 0.5*(freestream0^2 + freestream1^2)/freestream2^2)}
 freestream_sound_speed = {((heat_rat*(heat_rat - 1)*$freestream_spec_int_ener)^0.5)}
