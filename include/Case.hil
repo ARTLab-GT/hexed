@@ -33,8 +33,8 @@ compute_force = {
     force1 = integral_surface_stress1
     force2 = integral_surface_stress2
     drag = force0*direction0 + force1*direction1 + force2*direction2
-    lift = 0
-    side_force = 0
+    lift = 0.
+    side_force = 0.
     case1 = {}
     case2 = {lift = force1*direction0 - force0*direction1}
     case3 = {
@@ -45,7 +45,7 @@ compute_force = {
     $$({case} + n_dim)
     drag_coef = drag/(0.5*density*speed^2)
     lift_coef = lift/(0.5*density*speed^2)
-    side_force_coef_coef = lift/(0.5*density*speed^2)
+    side_force_coef = side_force/(0.5*density*speed^2)
 }
 print_force = {
     $compute_force
