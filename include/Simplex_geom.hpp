@@ -85,10 +85,13 @@ class Simplex_geom : public Surface_geom
         Mat<n_dim, n_dim> lhs;
         lhs(all, 0) = -diff;
         for (int col = 1; col < n_dim; ++col) lhs(all, col) = sim(all, col) - sim(all, 0);
-        Mat<n_dim> soln = lhs.lu().solve(point0 - sim(all, 0));
-        // if intersection is inside simplex, add it to the list
-        Eigen::Array<double, n_dim - 1, 1> arr = soln(Eigen::seqN(1, n_dim - 1)).array();
-        if ((arr >= -gap_tol).all() && arr.sum() <= 1 + gap_tol) inters.push_back(soln(0));
+        auto fact = lhs.lu();
+        if (fact.rcond() > 1e-7) {
+          Mat<n_dim> soln = fact.solve(point0 - sim(all, 0));
+          // if intersection is inside simplex, add it to the list
+          Eigen::Array<double, n_dim - 1, 1> arr = soln(Eigen::seqN(1, n_dim - 1)).array();
+          if ((arr >= -gap_tol).all() && arr.sum() <= 1 + gap_tol) inters.push_back(soln(0));
+        }
       }
     }
     #if HEXED_OBSESSIVE_TIMING
