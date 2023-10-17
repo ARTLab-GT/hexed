@@ -899,7 +899,7 @@ void Solver::update()
     double* lag = elems[i_elem].stage(3);
     for (int i_dof = 0; i_dof < n_dof; ++i_dof) {
       double s = state[i_dof];
-      double mix_state = 0.01;
+      double mix_state = 0.02;
       double mix_lag = 0.01;
       state[i_dof] = (1 - mix_state)*state[i_dof] + mix_state*lag[i_dof];
       lag[i_dof] = (1 - mix_lag)*lag[i_dof] + mix_lag*s;

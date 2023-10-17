@@ -26,8 +26,6 @@ attack = 4*degree
 print_freq = 200
 done = {normalized_residual < 1e-20}
 use_filter = true
-foo = false
-iterate = iterate + {foo = !foo; max_safety = 0.1 + 0.6*foo}
 
 {run simulation}
 $init
