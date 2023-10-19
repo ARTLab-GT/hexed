@@ -333,7 +333,7 @@ Case::Case(std::string input_file)
     Struct_expr vars(_vars("print_vars").value());
     auto sub = _inter.make_sub();
     for (unsigned i_var = 0; i_var < vars.names.size(); ++i_var) {
-      int width = std::max<int>(14, vars.names[i_var].size());
+      int width = std::max<int>(15, vars.names[i_var].size());
       sub.exec(vars.names[i_var] + " = " + vars.exprs[i_var]);
       std::optional<int> vali;
       std::optional<double> vald;
