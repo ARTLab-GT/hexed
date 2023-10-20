@@ -1,5 +1,6 @@
 {
 Subsonic NACA 0012 Example Problem: Input file in Hexed Interface Language format.
+To run this file, use the command `hexecute run.hil` in this directory.
 This file specifies the geometry, freestream conditions, and other user-defined input parameters.
 Note: strings are enclosed in `{}`, and strings which are not assigned to anything are used as comments.
 }

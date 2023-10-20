@@ -1,0 +1,30 @@
+n_dim = 3
+mesh_extreme00 = -20.
+mesh_extreme01 =  20.
+mesh_extreme10 =   0.
+mesh_extreme11 =  20.
+mesh_extreme20 = -20.
+mesh_extreme21 =  20.
+extremal_bc10 = {nonpenetration}
+surface_max_iters = 1
+init_ref_level = 2
+geom0 = {onera_m6.stp}
+max_deflection = 0.0001
+surface_refine = {res_bad > 3e-3 & ref_level < 20}
+
+{freestream conditions}
+altitude = 0.
+mach = 0.7
+attack = 1*degree
+
+{iteration parameters}
+print_freq = 1
+vis_freq = 10
+fix_therm_admis = true
+max_safety = 0.001
+done = {normalized_residual < 1e-7}
+
+vis_n_sample = 6
+$init
+$run
+$print_force

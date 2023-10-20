@@ -16,22 +16,23 @@ namespace hexed
   (*kernel_factory<Spatial<Deformed_element, Pde_templ>::Neighbor>(nd, rs PDE_ARGS))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor"); \
   (*kernel_factory<Restrict_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict")); \
   (*kernel_factory<Restrict_refined>(nd, rs, basis, false, true))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict")); \
-  (*kernel_factory<Spatial<Element         , Pde_templ>::Local>(nd, rs, basis, dt, i_stage, false PDE_ARGS))(acc_mesh.cartesian().elements(), sw_car, "local"); \
-  (*kernel_factory<Spatial<Deformed_element, Pde_templ>::Local>(nd, rs, basis, dt, i_stage, false PDE_ARGS))(acc_mesh.deformed ().elements(), sw_def, "local"); \
+  (*kernel_factory<Spatial<Element         , Pde_templ>::Local>(nd, rs, basis, dt, i_stage, allow_filter && _namespace->lookup<int>("use_filter").value() PDE_ARGS))(acc_mesh.cartesian().elements(), sw_car, "local"); \
+  (*kernel_factory<Spatial<Deformed_element, Pde_templ>::Local>(nd, rs, basis, dt, i_stage, allow_filter && _namespace->lookup<int>("use_filter").value() PDE_ARGS))(acc_mesh.deformed ().elements(), sw_def, "local"); \
   if (!i_stage) { \
     (*kernel_factory<Prolong_refined>(nd, rs, basis, true, true))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict")); \
     bc_fun(); \
     (*kernel_factory<Spatial<Element         , Pde_templ>::Neighbor_reconcile>(nd, rs))(acc_mesh.cartesian().face_connections(), sw_car, "neighbor"); \
     (*kernel_factory<Spatial<Deformed_element, Pde_templ>::Neighbor_reconcile>(nd, rs))(acc_mesh.deformed ().face_connections(), sw_def, "neighbor"); \
     (*kernel_factory<Restrict_refined>(nd, rs, basis, true, true))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict")); \
-    (*kernel_factory<Spatial<Element         , Pde_templ>::Reconcile_ldg_flux>(nd, rs, basis, dt, i_stage))(acc_mesh.cartesian().elements(), sw_car, "reconcile LDG flux"); \
-    (*kernel_factory<Spatial<Deformed_element, Pde_templ>::Reconcile_ldg_flux>(nd, rs, basis, dt, i_stage))(acc_mesh.deformed ().elements(), sw_def, "reconcile LDG flux"); \
+    (*kernel_factory<Spatial<Element         , Pde_templ>::Reconcile_ldg_flux>(nd, rs, basis, dt, i_stage, allow_filter && _namespace->lookup<int>("use_filter").value()))(acc_mesh.cartesian().elements(), sw_car, "reconcile LDG flux"); \
+    (*kernel_factory<Spatial<Deformed_element, Pde_templ>::Reconcile_ldg_flux>(nd, rs, basis, dt, i_stage, allow_filter && _namespace->lookup<int>("use_filter").value()))(acc_mesh.deformed ().elements(), sw_def, "reconcile LDG flux"); \
   } \
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict")); \
 
 #define PDE_ARGS , visc, therm_cond
 void Solver::compute_viscous(double dt, int i_stage)
 {
+  bool allow_filter = true;
   COMPUTE_DIFFUSION(pde::Navier_stokes<true>::Pde, stopwatch, apply_flux_bcs)
 }
 #undef PDE_ARGS
@@ -39,11 +40,13 @@ void Solver::compute_viscous(double dt, int i_stage)
 #define PDE_ARGS
 void Solver::compute_fta(double dt, int i_stage)
 {
+  bool allow_filter = false;
   COMPUTE_DIFFUSION(pde::Fix_therm_admis, stopwatch.children.at("fix admis."), apply_fta_flux_bcs)
 }
 
 void Solver::compute_avc_diff(double dt, int i_stage)
 {
+  bool allow_filter = false;
   COMPUTE_DIFFUSION(pde::Smooth_art_visc, stopwatch.children.at("set art visc").children.at("diffusion"), apply_avc_diff_flux_bcs)
 }
 #undef PDE_ARGS
