@@ -19,6 +19,7 @@ hil_properties.cpp
 Interpreter.cpp
 Iteration_status.cpp
 Layer_sequence.cpp
+Linear_equation.cpp
 Lock.cpp
 math.cpp
 Occt.cpp
