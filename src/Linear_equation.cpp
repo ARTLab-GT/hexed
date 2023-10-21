@@ -12,7 +12,7 @@ Dense_equation::Dense_equation(Mat<dyn, dyn> matrix, Mat<> rhs, int nv, Mat<> gu
                "size of input matrices and vectors must match");
   HEXED_ASSERT(nv >= 2, "must at least provide storage for initial guess and residual");
   _vecs(all, 0) = guess;
-  _vecs(all, 1) = rhs - matrix*guess;
+  _vecs(all, 1) = rhs;
 }
 
 Dense_equation::Dense_equation(Mat<dyn, dyn> matrix, Mat<> rhs, int nv)
