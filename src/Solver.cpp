@@ -906,8 +906,15 @@ void Solver::update()
 void Solver::update_implicit()
 {
   Linearized lin(*this);
-  iterative::gmres(lin, 7, 1);
+  if (_namespace->lookup<int>("iteration").value() < 10000) {
+    iterative::gmres(lin, 7, 1);
+  } else {
+    iterative::bicgstab(lin, 100);
+  }
   lin.add(-Linearized::storage_start, 1., -Linearized::storage_start + 3, 1., 0.);
+  (*write_face)(acc_mesh.elements());
+  (*kernel_factory<Prolong_refined>(params.n_dim, params.row_size, basis))(acc_mesh.refined_faces());
+  fix_admissibility(.7);
 }
 
 Iteration_status Solver::iteration_status()
