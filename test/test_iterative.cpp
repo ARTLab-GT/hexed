@@ -21,4 +21,16 @@ TEST_CASE("iterative solvers")
       REQUIRE((equation.vec(0) - soln).norm() == Catch::Approx(0.).margin(1e-6));
     }
   }
+  SECTION("bicgstab")
+  {
+    SECTION("exact") {
+      hexed::iterative::bicgstab(equation, n);
+      REQUIRE((equation.vec(0) - soln).norm() == Catch::Approx(0.).scale(1.));
+    }
+    SECTION("approx") {
+      hexed::iterative::bicgstab(equation, n/2);
+      // will probably need to increase the tolerance but i'm curious by how much
+      REQUIRE((equation.vec(0) - soln).norm() == Catch::Approx(0.).margin(1e-6));
+    }
+  }
 }
