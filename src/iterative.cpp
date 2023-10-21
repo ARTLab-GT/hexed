@@ -5,11 +5,12 @@ namespace hexed::iterative
 
 void gmres(Linear_equation& equation, int n_restart, int n_iters)
 {
+  const int krylov_start = 3;
+  HEXED_ASSERT(equation.n_vecs() >= krylov_start + n_restart, "`Linear_equation` object has insufficient storage for the GMRES algorithm");
   for (int restart = 0; restart < n_iters; ++restart) {
     equation.matvec(2, 0);
     equation.add(2, -1., 2, 1., 1);
     double res_norm = equation.norm(2);
-    const int krylov_start = 3;
     equation.scale(krylov_start, 2, 1./res_norm);
     Mat<dyn, dyn> hessenberg = Mat<dyn, dyn>::Zero(n_restart + 1, n_restart);
     for (int iter = 0; iter < n_restart; ++iter) {

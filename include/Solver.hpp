@@ -13,6 +13,7 @@
 #include "kernel_factory.hpp"
 #include "Namespace.hpp"
 #include "Printer.hpp"
+#include "Linear_equation.hpp"
 
 namespace hexed
 {
@@ -58,6 +59,22 @@ class Solver
   void fta(double dt, int i_stage);
   bool use_ldg();
   double max_dt(double max_safety_conv, double max_safety_diff);
+
+  class Linearized : public Linear_equation
+  {
+    Solver& _solver;
+    Mat<> _ref_state;
+    Mat<> _weights;
+    public:
+    static const int n_vecs_const = 10;
+    double finite_diff = 1e-3;
+    Linearized(Solver&);
+    int n_vecs() override;
+    void scale(int output, int input, double scalar) override;
+    void add(int output, double coef0, int vec0, double coef1, int vec1) override;
+    double inner(int input0, int input1) override;
+    void matvec(int output, int input) override;
+  };
 
   public:
   /*!

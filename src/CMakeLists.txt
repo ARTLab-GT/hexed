@@ -20,6 +20,7 @@ Interpreter.cpp
 iterative.cpp
 Iteration_status.cpp
 Layer_sequence.cpp
+Linearized.cpp
 Linear_equation.cpp
 Lock.cpp
 math.cpp
