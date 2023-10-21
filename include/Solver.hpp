@@ -162,6 +162,7 @@ class Solver
    * (it is scaled by the max allowable CFL for the chosen DG scheme which is often O(1e-2)).
    */
   virtual void update();
+  virtual void update_implicit();
   virtual bool is_admissible(); //!< check whether flowfield is admissible (e.g. density and energy are positive)
   virtual void set_art_visc_smoothness(double advect_length); //!< updates the aritificial viscosity coefficient based on smoothness of the flow variables
   /*! \brief an object providing all available information about the status of the time marching iteration.

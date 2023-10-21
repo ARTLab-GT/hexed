@@ -7,6 +7,7 @@
 #include <Vis_data.hpp>
 #include <thermo.hpp>
 #include <Xdmf_wrapper.hpp>
+#include <iterative.hpp>
 
 // kernels
 #include <Restrict_refined.hpp>
@@ -121,7 +122,7 @@ double Solver::max_dt(double msc, double msd)
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
                Transport_model viscosity_model, Transport_model thermal_conductivity_model,
                std::shared_ptr<Namespace> space, std::shared_ptr<Printer> printer) :
-  params{3, n_dim + 2, n_dim, row_size},
+  params{Linearized::storage_start + Linearized::n_storage, n_dim + 2, n_dim, row_size},
   acc_mesh{params, root_mesh_size},
   basis{row_size},
   stopwatch{"(element*iteration)"},
@@ -900,6 +901,13 @@ void Solver::update()
   stopwatch.children.at("cartesian").work_units_completed += acc_mesh.cartesian().elements().size();
   stopwatch.children.at("deformed" ).work_units_completed += acc_mesh.deformed ().elements().size();
   stopwatch.stopwatch.pause();
+}
+
+void Solver::update_implicit()
+{
+  Linearized lin(*this);
+  iterative::gmres(lin, 1, 1);
+  lin.add(-Linearized::storage_start, 1., -Linearized::storage_start + 3, 1., 0.);
 }
 
 Iteration_status Solver::iteration_status()

@@ -19,6 +19,10 @@ Solver::Linearized::Linearized(Solver& s)
   for (int i_var = _solver.params.n_dim; i_var < _solver.params.n_var; ++i_var) {
     _ref_state(i_var) = _solver._namespace->lookup<double>("freestream" + std::to_string(i_var)).value();
   }
+  scale(-storage_start + 3, -storage_start, 1.);
+  scale(0, -storage_start, 0.);
+  scale(1, -storage_start, 0.);
+  matvec(1, 0);
 }
 
 int Solver::Linearized::n_vecs() {return n_storage;}
@@ -75,7 +79,9 @@ void Solver::Linearized::matvec(int output, int input)
   (*_solver.write_face)(_solver.acc_mesh.elements());
   (*prolong)(_solver.acc_mesh.refined_faces());
   _solver.update();
-  add(output, 1/finite_diff, -storage_start, -1/finite_diff, -storage_start + 3);
+  add(output, 1., -storage_start, -1., -storage_start + 1);
+  add(output, 1., output, -1., 1);
+  scale(output, output, 1./finite_diff);
   scale(-storage_start, -storage_start + 3, 1.);
   (*_solver.write_face)(_solver.acc_mesh.elements());
   (*prolong)(_solver.acc_mesh.refined_faces());

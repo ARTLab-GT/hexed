@@ -355,6 +355,7 @@ Case::Case(std::string input_file)
   }));
 
   _inter.variables->create<std::string>("update", new Namespace::Heisenberg<std::string>([this]() {
+    #if 0
     bool avw = _vard("art_visc_width").value() > 0;
     bool avc = _vard("art_visc_constant").value() > 0;
     int iter = _vari("iteration").value();
@@ -368,6 +369,8 @@ Case::Case(std::string input_file)
       }
       _solver().update();
     }
+    #endif
+    _solver().update_implicit();
     return "";
   }));
   _inter.variables->create<int>("n_elements", new Namespace::Heisenberg<int>([this]() {
