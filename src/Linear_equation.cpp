@@ -3,6 +3,8 @@
 namespace hexed
 {
 
+double Linear_equation::norm(int input) {return std::sqrt(inner(input, input));}
+
 Dense_equation::Dense_equation(Mat<dyn, dyn> matrix, Mat<> rhs, int nv, Mat<> guess)
 : _mat{matrix}, _vecs{Mat<dyn, dyn>::Zero(matrix.cols(), nv)}
 {

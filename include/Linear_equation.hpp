@@ -13,6 +13,7 @@ class Linear_equation
   virtual void scale(int output, int input, double scalar) = 0;
   virtual void add(int output, double coef0, int vec0, double coef1, int vec1) = 0;
   virtual double inner(int input0, int input1) = 0;
+  double norm(int input);
   virtual void matvec(int output, int input) = 0;
 };
 

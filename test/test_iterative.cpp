@@ -13,7 +13,7 @@ TEST_CASE("iterative solvers")
   {
     SECTION("exact") {
       hexed::iterative::gmres(equation, n, 1);
-      REQUIRE((equation.vec(0) - soln).norm() == Catch::Approx(0.));
+      REQUIRE((equation.vec(0) - soln).norm() == Catch::Approx(0.).scale(1.));
     }
     SECTION("approx") {
       hexed::iterative::gmres(equation, n/2, 2);
