@@ -906,7 +906,7 @@ void Solver::update()
 void Solver::update_implicit()
 {
   Linearized lin(*this);
-  iterative::gmres(lin, 1, 1);
+  iterative::gmres(lin, 7, 1);
   lin.add(-Linearized::storage_start, 1., -Linearized::storage_start + 3, 1., 0.);
 }
 

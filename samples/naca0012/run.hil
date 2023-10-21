@@ -11,10 +11,7 @@ mesh_extreme00 = -10.
 mesh_extreme10 = -10.
 mesh_extreme01 =  10.
 mesh_extreme11 =  10.
-{
 surface_max_iters = 10
-}
-surface_max_iters = 3
 surface_refine = {res_bad > 3e-3 & ref_level < 20}
 
 {generate geometry with external script}
@@ -27,8 +24,9 @@ mach = 0.3
 attack = 4*degree
 
 {iteration parameters}
-print_freq = 1
-done = {iteration > 1}
+print_freq = 10
+vis_freq = 1000
+done = {normalized_residual < 1e-8}
 
 {run simulation}
 $init

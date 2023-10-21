@@ -5,10 +5,9 @@ namespace hexed
 {
 
 Solver::Linearized::Linearized(Solver& s)
-: _solver{s}
+: _solver{s}, _ref_state(_solver.params.n_var), _weights(_solver.params.n_qpoint())
 {
-  Mat<> _weights = math::pow_outer(_solver.basis.node_weights(), _solver.params.n_dim);
-  Mat<> _ref_state(_solver.params.n_var);
+  _weights = math::pow_outer(_solver.basis.node_weights(), _solver.params.n_dim);
   double mmtm = 0.;
   for (int i_dim = 0; i_dim < _solver.params.n_dim; ++i_dim) {
     double component = _solver._namespace->lookup<double>("freestream" + std::to_string(_solver.params.n_dim)).value();
