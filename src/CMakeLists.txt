@@ -17,6 +17,7 @@ global_hacks.cpp
 Hanging_vertex_matcher.cpp
 hil_properties.cpp
 Interpreter.cpp
+iterative.cpp
 Iteration_status.cpp
 Layer_sequence.cpp
 Linear_equation.cpp
