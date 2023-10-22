@@ -478,6 +478,14 @@ If this number is too large, the simulation might be unstable, but if it too sma
 The default value is adequate for almost all cases, but there are rare situations in which it might need to be reduced.
 
 <hr>
+\subsubsection buffer_dist
+__type:__ float \n
+__default:__ `0.8*sqrt(n_dim)` \n
+During the surface element deletion step of mesh generation, elements will be deleted iff their center is within `buffer_dist*nom_sz` of the geometry surface.
+As long as `buffer_dist >= .5*sqrt(n_dim)`, this guarantees that none of the remaining elements will intersect the surface,
+but as the default suggests, a somewhat larger value can help to ensure viable mesh quality.
+
+<hr>
 
 \section commands Command Variables & Macros
 The following variables are used to execute actions.

@@ -115,7 +115,8 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
   ref_face_v{car.refined_faces(), def.refined_faces()},
   matcher_v{car.hanging_vertex_matchers(), def.hanging_vertex_matchers()},
   surf_geom{nullptr},
-  verts_are_reset{false}
+  verts_are_reset{false},
+  buffer_dist{std::sqrt(params.n_dim)/2}
 {
   def.face_con_v = def_face_cons;
 }
@@ -656,7 +657,7 @@ bool Accessible_mesh::intersects_surface(Tree* t)
 {
   if (!surf_geom) return false;
   Mat<> center = t->nominal_position() + t->nominal_size()/2*Mat<>::Ones(params.n_dim);
-  return !surf_geom->nearest_point(center, 1.6*std::sqrt(double(params.n_dim))/2*t->nominal_size()).empty();
+  return !surf_geom->nearest_point(center, buffer_dist*t->nominal_size()).empty();
 }
 
 bool Accessible_mesh::is_surface(Tree* t)

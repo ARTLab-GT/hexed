@@ -145,6 +145,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("av_advect_max_safety", .7); // stability ratio for advection
   _namespace->assign_default("av_advect_max_res", 1e-3); // residual limit for advection equation
   _namespace->assign_default("av_diff_max_safety", .7); // stability ratio for diffusion
+  _namespace->assign_default("buffer_dist", .8*std::sqrt(params.n_dim));
   _namespace->assign_default("n_cheby_flow", 1);
   _namespace->assign_default("n_cheby_av", 1);
   _namespace->assign_default("av_advect_iters", 1); // number of advection iterations to run each time `set_art_visc_smoothness` is called
