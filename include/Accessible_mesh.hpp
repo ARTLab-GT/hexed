@@ -60,6 +60,9 @@ class Accessible_mesh : public Mesh
   void snap_vertices();
 
   public:
+  //! \brief how far must the center of an element be from the geometry relative to the nominal size
+  //! \details Defaults to \f$ \frac{\sqrt{n_d}}{2} \f$. You can modify it, but it cannot be less than this.
+  double buffer_dist;
   /*!
    * \param params parameters specifying what data is stored in each Element (row size, number of dimensions, etc.)
    * \param root_size defines the \ref root_size of the mesh.

@@ -229,7 +229,7 @@ class Boundary_perturbation : public hexed::Mesh_bc
     auto params {con.storage_params()};
     const int nfq = params.n_qpoint()/params.row_size;
     for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-      con.element().node_adjustments()[(2*con.i_dim() + con.inside_face_sign())*nfq + i_qpoint] += 0.03*arbitrary[i_qpoint%12];
+      con.element().node_adjustments()[(2*con.i_dim() + con.inside_face_sign())*nfq + i_qpoint] += 0.02*arbitrary[i_qpoint%12];
     }
   }
 };
@@ -595,9 +595,6 @@ void test_visc(Test_mesh& tm, std::string name)
   // update
   sol.nspace().assign("max_safety", 1e-4);
   sol.update();
-  #if HEXED_USE_TECPLOT
-  sol.visualize_field_tecplot(hexed::Physical_update(), name);
-  #endif
   auto status = sol.iteration_status();
   // check that the computed update is approximately equal to the exact solution
   for (auto handle : sol.mesh().elem_handles()) {
@@ -629,6 +626,9 @@ void test_conservation(Test_mesh& tm, std::string name)
   // update
   sol.nspace().assign("max_safety", .01);
   sol.update();
+  #if HEXED_USE_XDMF
+  sol.visualize_field_xdmf(hexed::Physical_update(), name);
+  #endif
   status = sol.iteration_status();
   auto state  = sol.integral_field(hexed::State_variables());
   auto update = sol.integral_field(hexed::Physical_update());

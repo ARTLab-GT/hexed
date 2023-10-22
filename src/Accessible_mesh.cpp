@@ -56,6 +56,19 @@ void Accessible_mesh::id_boundary_verts()
 void Accessible_mesh::snap_vertices()
 {
   if (tree) {
+    auto snap_extremes = [this]() {
+      for (int i_bc = 0; i_bc < 2*params.n_dim; ++i_bc) {
+        int bc_sn = tree_bcs[i_bc];
+        #pragma omp parallel for
+        for (auto& vert : boundary_verts[bc_sn]) {
+          int i_dim = i_bc/2;
+          int sign = i_bc%2;
+          vert->pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
+        }
+      }
+    };
+    // snap extremes before and after snapping to surface to ensure exact extreme snapping and accurate surface snapping
+    snap_extremes();
     if (surf_geom) {
       #pragma omp parallel for
       for (auto& vert : boundary_verts[surf_bc_sn]) {
@@ -67,15 +80,7 @@ void Accessible_mesh::snap_vertices()
         pos = surf_geom->nearest_point(pos, huge, dist_guess).point();
       }
     }
-    for (int i_bc = 0; i_bc < 2*params.n_dim; ++i_bc) {
-      int bc_sn = tree_bcs[i_bc];
-      #pragma omp parallel for
-      for (auto& vert : boundary_verts[bc_sn]) {
-        int i_dim = i_bc/2;
-        int sign = i_bc%2;
-        vert->pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
-      }
-    }
+    snap_extremes();
   } else {
     auto& bc_cons {boundary_connections()};
     #pragma omp parallel for
@@ -110,7 +115,8 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
   ref_face_v{car.refined_faces(), def.refined_faces()},
   matcher_v{car.hanging_vertex_matchers(), def.hanging_vertex_matchers()},
   surf_geom{nullptr},
-  verts_are_reset{false}
+  verts_are_reset{false},
+  buffer_dist{std::sqrt(params.n_dim)/2}
 {
   def.face_con_v = def_face_cons;
 }
@@ -651,7 +657,7 @@ bool Accessible_mesh::intersects_surface(Tree* t)
 {
   if (!surf_geom) return false;
   Mat<> center = t->nominal_position() + t->nominal_size()/2*Mat<>::Ones(params.n_dim);
-  return !surf_geom->nearest_point(center, 1.6*std::sqrt(double(params.n_dim))/2*t->nominal_size()).empty();
+  return !surf_geom->nearest_point(center, buffer_dist*t->nominal_size()).empty();
 }
 
 bool Accessible_mesh::is_surface(Tree* t)
