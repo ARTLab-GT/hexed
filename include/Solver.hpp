@@ -43,6 +43,7 @@ class Solver
   int last_fix_vis_iter = std::numeric_limits<int>::min();
   std::shared_ptr<Namespace> _namespace;
   std::shared_ptr<Printer> _printer;
+  bool _implicit;
 
   void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
   bool fix_admissibility(double stability_ratio);
@@ -97,6 +98,7 @@ class Solver
    *        If no namespace is provided, a new blank namespace is creqated.
    *        Any optional parameters which are not found in the namespace shall be created with their default values.
    * \param printer what to do with any information the solver wants to print for the user to see
+   * \param implicit if `true`, allocate storage for solving with an implicit method (experimental feature -- not ready for production use)
    * \details If `viscosity_model` and `thermal_conductivity_model` are both `inviscid` _and_ you don't turn on artificial viscosity,
    * you will be solving the pure inviscid flow equations.
    * Otherwise, you will be solving the viscous flow equations using the LDG scheme,
@@ -105,7 +107,8 @@ class Solver
    */
   Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping = false,
          Transport_model viscosity_model = inviscid, Transport_model thermal_conductivity_model = inviscid,
-         std::shared_ptr<Namespace> space = std::make_shared<Namespace>(), std::shared_ptr<Printer> printer = std::make_shared<Stream_printer>());
+         std::shared_ptr<Namespace> space = std::make_shared<Namespace>(), std::shared_ptr<Printer> printer = std::make_shared<Stream_printer>(),
+         bool implicit = false);
 
   //! \name setup
   //!\{

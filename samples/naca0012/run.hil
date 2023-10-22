@@ -24,10 +24,8 @@ mach = 0.3
 attack = 4*degree
 
 {iteration parameters}
-fix_therm_admis = true
-print_freq = 10
-vis_freq = 100
-done = {false}
+print_freq = 200
+done = {normalized_residual < 1e-7}
 
 {run simulation}
 $init
