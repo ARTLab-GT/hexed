@@ -67,7 +67,7 @@ class Solver
     Mat<> _weights;
     public:
     static const int storage_start = 4;
-    static const int n_storage = 10;
+    static const int n_storage = 30;
     double finite_diff = 1e-3;
     Linearized(Solver&);
     int n_vecs() override;
