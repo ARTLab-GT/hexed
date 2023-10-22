@@ -60,20 +60,28 @@ class Solver
   bool use_ldg();
   double max_dt(double max_safety_conv, double max_safety_diff);
 
+  //! \brief linearizes the steady state equations by finite difference
   class Linearized : public Linear_equation
   {
     Solver& _solver;
     Mat<> _ref_state;
     Mat<> _weights;
     public:
+    //! \brief the first `storage_start` vectors are reserved for internal use
+    //! \details (0, 1, and 2 are the working data for the Spatial kernel and 3 is the linearization point)
     static const int storage_start = 4;
-    static const int n_storage = 30;
-    double finite_diff = 1e-3;
-    Linearized(Solver&);
+    static const int n_storage = 30; //!< \brief number of vectors available for algorithms to work with
+    double finite_diff = 1e-3; //!< \brief \f$ x \f$ vectors will be scaled by this amount to improve linearity
+    Linearized(Solver&); //!< \brief sets linearization point to current working state
     int n_vecs() override;
     void scale(int output, int input, double scalar) override;
     void add(int output, double coef0, int vec0, double coef1, int vec1) override;
     double inner(int input0, int input1) override;
+    /*! \brief applies linearized operator
+     * \details defined as \f$ A x = \frac{1}{\epsilon}(\nabla F(u) - \nabla F(u + \epsilon x)) \f$
+     * where \f$ u \f$ is the linearization point (the state to linearize about), \f$ \epsilon \f$ is given by `Linearized::finite_diff`,
+     * and \f$ \nabla F \f$ is of course the residual of the nonlinear steady-state equations.
+     */
     void matvec(int output, int input) override;
   };
 
