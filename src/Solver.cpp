@@ -7,6 +7,7 @@
 #include <Vis_data.hpp>
 #include <thermo.hpp>
 #include <Xdmf_wrapper.hpp>
+#include <iterative.hpp>
 
 // kernels
 #include <Restrict_refined.hpp>
@@ -120,8 +121,8 @@ double Solver::max_dt(double msc, double msd)
 
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
                Transport_model viscosity_model, Transport_model thermal_conductivity_model,
-               std::shared_ptr<Namespace> space, std::shared_ptr<Printer> printer) :
-  params{3, n_dim + 2, n_dim, row_size},
+               std::shared_ptr<Namespace> space, std::shared_ptr<Printer> printer, bool implicit) :
+  params{implicit ? Linearized::storage_start + Linearized::n_storage : 3, n_dim + 2, n_dim, row_size},
   acc_mesh{params, root_mesh_size},
   basis{row_size},
   stopwatch{"(element*iteration)"},
@@ -132,7 +133,8 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   visc{viscosity_model},
   therm_cond{thermal_conductivity_model},
   _namespace{space},
-  _printer{printer}
+  _printer{printer},
+  _implicit{implicit}
 {
   _namespace->assign_default("max_safety", .7); // maximum allowed safety factor for time stepping
   _namespace->assign_default("max_time_step", huge); // maximum allowed time step
@@ -900,6 +902,17 @@ void Solver::update()
   stopwatch.children.at("cartesian").work_units_completed += acc_mesh.cartesian().elements().size();
   stopwatch.children.at("deformed" ).work_units_completed += acc_mesh.deformed ().elements().size();
   stopwatch.stopwatch.pause();
+}
+
+void Solver::update_implicit()
+{
+  HEXED_ASSERT(_implicit, "`update_implicit` called on a Solver that was not constructed in implicit mode");
+  Linearized lin(*this);
+  iterative::gmres(lin, 27, 1);
+  lin.add(-Linearized::storage_start, 1., -Linearized::storage_start + 3, 1., 0.);
+  (*write_face)(acc_mesh.elements());
+  (*kernel_factory<Prolong_refined>(params.n_dim, params.row_size, basis))(acc_mesh.refined_faces());
+  fix_admissibility(.7);
 }
 
 Iteration_status Solver::iteration_status()

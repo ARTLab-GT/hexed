@@ -13,6 +13,7 @@
 #include "kernel_factory.hpp"
 #include "Namespace.hpp"
 #include "Printer.hpp"
+#include "Linear_equation.hpp"
 
 namespace hexed
 {
@@ -42,6 +43,7 @@ class Solver
   int last_fix_vis_iter = std::numeric_limits<int>::min();
   std::shared_ptr<Namespace> _namespace;
   std::shared_ptr<Printer> _printer;
+  bool _implicit;
 
   void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
   bool fix_admissibility(double stability_ratio);
@@ -59,6 +61,31 @@ class Solver
   bool use_ldg();
   double max_dt(double max_safety_conv, double max_safety_diff);
 
+  //! \brief linearizes the steady state equations by finite difference
+  class Linearized : public Linear_equation
+  {
+    Solver& _solver;
+    Mat<> _ref_state;
+    Mat<> _weights;
+    public:
+    //! \brief the first `storage_start` vectors are reserved for internal use
+    //! \details (0, 1, and 2 are the working data for the Spatial kernel and 3 is the linearization point)
+    static const int storage_start = 4;
+    static const int n_storage = 30; //!< \brief number of vectors available for algorithms to work with
+    double finite_diff = 1e-3; //!< \brief \f$ x \f$ vectors will be scaled by this amount to improve linearity
+    Linearized(Solver&); //!< \brief sets linearization point to current working state
+    int n_vecs() override;
+    void scale(int output, int input, double scalar) override;
+    void add(int output, double coef0, int vec0, double coef1, int vec1) override;
+    double inner(int input0, int input1) override;
+    /*! \brief applies linearized operator
+     * \details defined as \f$ A x = \frac{1}{\epsilon}(\nabla F(u) - \nabla F(u + \epsilon x)) \f$
+     * where \f$ u \f$ is the linearization point (the state to linearize about), \f$ \epsilon \f$ is given by `Linearized::finite_diff`,
+     * and \f$ \nabla F \f$ is of course the residual of the nonlinear steady-state equations.
+     */
+    void matvec(int output, int input) override;
+  };
+
   public:
   /*!
    * \param n_dim number of dimensions
@@ -71,6 +98,7 @@ class Solver
    *        If no namespace is provided, a new blank namespace is creqated.
    *        Any optional parameters which are not found in the namespace shall be created with their default values.
    * \param printer what to do with any information the solver wants to print for the user to see
+   * \param implicit if `true`, allocate storage for solving with an implicit method (experimental feature -- not ready for production use)
    * \details If `viscosity_model` and `thermal_conductivity_model` are both `inviscid` _and_ you don't turn on artificial viscosity,
    * you will be solving the pure inviscid flow equations.
    * Otherwise, you will be solving the viscous flow equations using the LDG scheme,
@@ -79,7 +107,8 @@ class Solver
    */
   Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping = false,
          Transport_model viscosity_model = inviscid, Transport_model thermal_conductivity_model = inviscid,
-         std::shared_ptr<Namespace> space = std::make_shared<Namespace>(), std::shared_ptr<Printer> printer = std::make_shared<Stream_printer>());
+         std::shared_ptr<Namespace> space = std::make_shared<Namespace>(), std::shared_ptr<Printer> printer = std::make_shared<Stream_printer>(),
+         bool implicit = false);
 
   //! \name setup
   //!\{
@@ -144,6 +173,7 @@ class Solver
    * (it is scaled by the max allowable CFL for the chosen DG scheme which is often O(1e-2)).
    */
   virtual void update();
+  virtual void update_implicit();
   virtual bool is_admissible(); //!< check whether flowfield is admissible (e.g. density and energy are positive)
   virtual void set_art_visc_smoothness(double advect_length); //!< updates the aritificial viscosity coefficient based on smoothness of the flow variables
   /*! \brief an object providing all available information about the status of the time marching iteration.

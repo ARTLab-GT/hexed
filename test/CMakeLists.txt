@@ -19,6 +19,7 @@ test_filter_limit.cpp
 test_Hanging_vertex_matcher.cpp
 test_Interpreter.cpp
 test_Iteration_status.cpp
+test_iterative.cpp
 test_Layer_sequence.cpp
 test_math.cpp
 test_Max_dt.cpp
