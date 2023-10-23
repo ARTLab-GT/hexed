@@ -10,28 +10,21 @@ If look at these instructions and don't know what I'm talking about, skip to \re
    - [sympy](https://www.sympy.org/en/index.html)
    - [GitPython](https://gitpython.readthedocs.io/en/stable/)
 -# You are recommended to also install the following dependencies which are required for some optional features:
-   - [Tecplot](https://www.tecplot.com/)/[TecIO](https://www.tecplot.com/products/tecio-library/) (required for visualization)
-   - [Catch2](https://github.com/catchorg/Catch2) (required for unit testing)
-   - [pytecplot](https://www.tecplot.com/docs/pytecplot/) (required by the
-     \ref postproc "Python postprocessing script" -- you can probably do without if you want)
-   - [OpenCASCADE Technology](https://dev.opencascade.org/doc/overview/html/index.html)
+   - One of the following visualization systems:
+     - [ParaView](https://www.paraview.org/) and [XDMF](https://www.xdmf.org/index.php/Main_Page)
+     - [Tecplot](https://www.tecplot.com/) and [TecIO](https://www.tecplot.com/products/tecio-library/)
+   - [OpenCASCADE Technology](https://dev.opencascade.org/doc/overview/html/index.html): required for CAD geometry import
+   - [Catch2](https://github.com/catchorg/Catch2): required for unit testing
 -# Create and navigate to a build directory (git will ignore names that start with `build`).
 -# Use `ccmake` to configure build options.
    This project has been configured to show you the available options and their defaults specifically with the `ccmake` interface for CMake.
-   - The default options should be appropriate for a release build.
-   - Note that `CMAKE_INSTALL_PREFIX` defaults to `~/.local` instead of `/usr/local`,
-     so that it can be installed on the lab machines without root access.
--# Ensure that your system can find Tecplot/TecIO header and library files.
-   You may need to edit `CPLUS_INCLUDE_PATH`, `LIBRARY_PATH`, and `LD_LIBRARY_PATH`.
-   Much to my disappointment, TecIO does not cooperate with CMake, so this must be setup manually.
 -# `make -j install`
 -# Hexed is now ready to use. To verify the success of the build, execute the following:
    - `test/unit` to run the unit tests.
-   - `demo/demo2d`. This will run a very simple toy problem and output Tecplot visualization files.
-     Open these files in Tecplot and run the macro script `format.mcr` in the Hexed build directory to create a readable visualization.
 
 \section detailed Detailed instructions
 Since Hexed is meant for aerospace engineers, who often aren't programmers, this section provides a detailed tutorial on how to build the source.
+If you don't want to use XDMF/Paraview for visualization, you can skip steps 4 through 7.
 These instructions will work on an ARTLab machine.
 If you're working on a different machine, hopefully they will provide some useful troubleshooting hints,
 but you probably won't be able to just blindly follow the instructions.
@@ -40,39 +33,42 @@ If you are not, consider asking for help.
 If you have any trouble following these instructions,
 please let \ref me know so that this documentation can be improved.
 
-\subsection configure Step 1: configure environment
-When you compile and install programs that rely on other programs,
-your system uses so-called *environment variables* to remember where all the different programs are kept.
-It is common to install programs you compile in `/usr/local`.
-However, this requires superuser privileges, which we do not have on the lab machines.
-My solution is to install things in `~/.local` instead.
-However, this requires us to edit an environment variable so that the system knows what we're doing.
-Plus, we need to edit a *whole bunch* of environment variables to accommodate Tecplot being a little... *unique*.
-- To start with, type `cd` to make sure you're in your home directory.
-- your `~/.local` directory should contain subdirectories `bin`, `include`, `lib`, and `share`.
-  If these directories don't exist, create them.
-- You can change environment variables by editing the file `.bashrc`.
+\subsection configure Step 1: Set up installation directory
+In a Linux system, by convention programs are typically installed in `/usr/local`,
+so when you try to execute them, the system knows where to find them.
+However, this requires you to have superuser privileges, which, on the ARTLab machines for example, we do not.
+So, you need an alternative place to install things and that the system knows about.
+If you already have an installation directory that works for you, or you don't mind installing things in `/usr/local`, you can skipt this step.
+Otherwise, you can do the following to set up an installation directory called `~/local`
+Feel free to change the name/location if you like.
+- To start with, create the directories `~/local`, `~/local/bin`, `~/local/include`, `~/local/lib`, and `~/local/share`.
+- To tell your system to look for executable programs here,
+  you need to set some environment variables by editing the file `.bashrc`.
   First, it is recommended that you make a backup copy:
   ~~~{.sh}
   cp .bashrc .bashrc_backup
   ~~~
   - Now edit `.bashrc` and add the following lines at the end:
   ~~~{.sh}
+  export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:~/local/include/
+  export LIBRARY_PATH=$LIBRARY_PATH:~/local/lib
+  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/local/lib
+  export PYTHONPATH=$PYTHONPATH:~/local/lib
+  export PATH=$PATH:~/local/bin
+  ~~~
+  - If you want to use Tecplot for visualization, you should also add the following lines to your `.bashrc`:
+  ~~~{.sh}
   TECPLOT_DIR=/opt/tecplot/360ex_2020r2
   TECPLOT_LIB_PATH=$TECPLOT_DIR/bin/
-  export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:$TECPLOT_DIR/include/:~/.local/include/
-  export LIBRARY_PATH=$LIBRARY_PATH:$TECPLOT_LIB_PATH:~/.local/lib
-  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$TECPLOT_LIB_PATH:~/.local/lib
-  export PYTHONPATH=$PYTHONPATH:~/.local/lib
-  export PATH=$PATH:~/.local/bin
+  export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:$TECPLOT_DIR/include/
+  export LIBRARY_PATH=$LIBRARY_PATH:$TECPLOT_LIB_PATH
+  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$TECPLOT_LIB_PATH
   ~~~
-  If you are not on an ARTLAB machine, ensure that you have Tecplot installed and change `TECIO_DIR` to match your Tecplot installation.
+  If you are not on an ARTLAB machine, rather than use Tecplot it is probably easier to just install ParaView.
 - Close and reopen the terminal.
-- You also need somewhere to put all the code I'm about to make you download, as opposed to dumping it in your home directory.
-  Thus, do
-  ~~~{.sh}
-  mkdir codes
-  ~~~
+
+You also need somewhere to put all the code I'm about to make you download, as opposed to dumping it in your home directory.
+Personally, I recommend making a directory called `~/codes`, but of course you are free to use any directory you like.
 
 \subsection install_python Step 2: install Python libraries
 Hexed uses Python scripts for some small tasks during the build process and output post-processing and requires
@@ -80,23 +76,15 @@ a few 3rd-party libraries.
 - Install the numerical computing libraries numpy and scipy (althought you likely have them already):
   - `pip3 install numpy`
   - `pip3 install scipy`
-- Install the plotting library matplotlib
-  - `pip3 install matplotlib`
 - Install the symbolic computation library sympy (used to generate quadrature rules):
   - `pip3 install sympy`
-- Install PyTecplot (Tecplot's Python API):
-  - `pip3 install pytecplot`
-  - If this doesn't work, don't worry. You just won't be able to run the \ref postproc "Python postprocessing script",
-    which you don't strictly need to do.
-- Install GitPython (used by benchmarking script):
-  - `pip3 install GitPython`
 
 \subsection install_eigen Step 3: install Eigen
 - Download the Eigen [source code](http://eigen.tuxfamily.org/index.php?title=Main_Page#Download) (latest stable release).
 - Unpack the Eigen source in `~/codes`. `~/codes` should now contain a directory named something like `eigen-X.X.X`, depending on the
   current version number.
 - `cd eigen-X.X.X` (replace "X"s with appropriate numbers).
-- `cp -r Eigen/ ~/.local/include/`
+- `cp -r Eigen/ ~/local/include/`
 
 \subsection install_hdf5 Step 4: install HDF5
 \ref install_xdmf "XDMF" uses the [Hierarchical Data Format, version 5](https://www.hdfgroup.org/solutions/hdf5/) to store data.
@@ -106,7 +94,7 @@ The following steps can be used to install the HDF5 I/O library.
 - `cd hdf5-X.XX.X`
 - `mkdir build`
 - `cd build`
-- `cmake -D CMAKE_INSTALL_PREFIX=~/.local`
+- `cmake -D CMAKE_INSTALL_PREFIX=~/local`
 - `make -j install`
 
 \subsection install_boost Step 5: install Boost headers
@@ -114,8 +102,8 @@ The following steps can be used to install the HDF5 I/O library.
 To install these:
 - Go to https://www.boost.org/ and download the latest release.
 - Unpack it in `~/codes`.
-- Copy the header files: `cp -r boost_X_XX_X/boost ~/.local/include`
-  - __or__ symlink them: `ln -s $(pwd)/boost_X_XX_X/boost ~/.local/include`
+- Copy the header files: `cp -r boost_X_XX_X/boost ~/local/include`
+  - __or__ symlink them: `ln -s $(pwd)/boost_X_XX_X/boost ~/local/include`
 
 \subsection install_xml Step 6: install libxml2
 \ref install_xdmf "XDMF" uses [XML](https://github.com/GNOME/libxml2).
@@ -123,23 +111,23 @@ To install:
 - Go to [Release page](https://download.gnome.org/sources/libxml2/) and download latest.
 - Unpack  in `~/codes`
 - `cd libxml2-X.X.X`
-- `./configure --prefix=$(echo ~)/.local --with-python=no`
+- `./configure --prefix=$(echo ~)/local --with-python=no`
 - `make install`
 
-\subsection install_xdmf Step 6: install XDMF
+\subsection install_xdmf Step 7: install XDMF
 Hexed uses the [Extensible Data Model and Format](https://www.xdmf.org/index.php/Main_Page) to store visualization data.
 Use the following steps to install the XDMF library:
 - Clone the git repo: `git clone https://gitlab.kitware.com/xdmf/xdmf.git`
 - `cd xdmf`
 - `mkdir build`
 - `cd build`
-- `export XDMF_INSTALL_DIR=~/.local`
+- `export XDMF_INSTALL_DIR=~/local`
 - `cmake .. -DCMAKE_INSTALL_PREFIX=${XDMF_INSTALL_DIR} -DBUILD_SHARED_LIBS=1 -Wno-dev`
 - `make install`
   - if you get the compiler error `conflicting declaration ‘typedef int hid_t’`, try:
     - `vi ../core/XdmfHDF5Controller.hpp`. Add `include <stdint.h>` after line 29 and on line 37 replace `typedef int hid_t` with `typedef int64_t hid_t`.
 
-\subsection install_occt Step 7: install OpenCASCADE Technology
+\subsection install_occt Step 8: install OpenCASCADE Technology
 OpenCASCADE Technology is an open source CAD Engine which Hexed uses to read and manipulate geometry from standard CAD file formats.
 - Obtain the source code by one of the following approaches:
   - Visit the [download page](https://dev.opencascade.org/release) and download the latest release.
@@ -150,13 +138,13 @@ OpenCASCADE Technology is an open source CAD Engine which Hexed uses to read and
 - `cd opencascade-7.7.0`
 - `mkir build`
 - `cd build`
-- `cmake -D INSTALL_DIR=~/.local -D BUILD_MODULE_Draw=OFF -D USE_FREETYPE=OFF ..`
+- `cmake -D INSTALL_DIR=~/local -D BUILD_MODULE_Draw=OFF -D USE_FREETYPE=OFF ..`
   - This will disable the "Draw" module, which creates a basic example CAD program with OCCT.
     We don't need that for our purposes, and I've had trouble compiling it on the ARTLab machines,
     but if you want to enable it and can get it to compile, it certainly won't cause any problems.
 - `make install` (may take a while)
 
-\subsection install_hexed Step 8: compile and install Hexed
+\subsection install_hexed Step 9: compile and install Hexed
 - If you haven't already,
   [add an SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
   to your GitHub account.
@@ -165,56 +153,68 @@ OpenCASCADE Technology is an open source CAD Engine which Hexed uses to read and
 - `cd hexed`
 - `mkdir build_Release`
 - `cd build_Release`
-- `cmake ../` (if you want to edit build options, you can instead use `ccmake` as described \ref ccmake "below").
+- `ccmake ../`
+  This will open the [CMake curses interface](https://cmake.org/cmake/help/latest/manual/ccmake.1.html),
+  which is a sort-of-GUI for [CMake](https://cmake.org/).
+  This allows you to choose some options for how to build Hexed.
+  Personally, I always use `ccmake` when I'm building a CMake project,
+  since it lets me see what options are available and modify any that seem relevant.
+- Press `c`.
+  - You might see some nonsense warnings about "Argument not separated from the preceding token by whitespace".
+    This is not a real problem, just some sloppiness we inherited from the XDMF developers.
+    You should be able to just exit the warning screen by pressing `e`.
+- You should now see a list of options.
+  To edit options, use the arrow keys to move the cursor and Enter to edit the option under the cursor.
+  - Change `CMAKE_INSTALL_PREFIX` to `~/local` (or wherever you want to install binaries).
+  - Change `PYTHON_INSTALL_PREFIX` to `~/local/lib` (or wherever you want Python modules to be installed).
+  - If you want to use Tecplot, change `use_tecplot` to `ON`.
+  - If you __don't__ want to use XDMF, change `use_xdmf` to `OFF`.
+  - Otherwise, the default options should be fine.
+- Press `c` again.
+- Press `g` to generate. The GUI should exit (sometimes you have to hit `c` several times before it will let you exit with `g`).
+  - If something goes wrong and you can't get `g` to work, you can abort with `q`.
 - `make -j install`
 
-\subsection verify Step 9: verify success
+\subsection verify Step 10: verify success
+Hexed should now be ready to use.
+To verify that it actually works, try running one of the sample cases:
 -  You should still be in the build directory.
-- `demo/demo2d`
-  - This runs a simple demonstration simulation. It should create a bunch of `.szplt` files.
-- Start Tecplot and open all the `.szplt` files.
-- Select "Play Macro/Script..." in the "Scripting" menu.
-- Select the file `format.mcr`.
-- You should now see a contour plot of Mach number for an isentropic vortex.
-  If you advance the time slider, you should see the vortex travel out one side of the domain and back in the other.
-- If you want, you can also run `demo/demo3d`.
+- `cd ../samples/naca0012/`
+- `hexecute run.hil`
+- You should see it print out a convergence history and then a performance summary.
+  It should create a few `.xmf` files which you can open in ParaView to see the flowfield.
+  The entire simulation should take a bit less than a minute.
 
 \subsection dev_build Development build
 The above instructions are sufficient if you just want to run simulations.
 However, if you're going to be doing any development of Hexed, I recommend you perform the following additional steps.
 
-\subsubsection install_catch2 Step 1: install Catch2
+\subsubsection additional_python Step 1: Install additional python packages
+- Install the plotting library matplotlib
+  - `pip3 install matplotlib`
+- Install GitPython (used by benchmarking script):
+  - `pip3 install GitPython`
+
+\subsubsection install_catch2 Step 2: install Catch2
 Hexed uses Catch2 is for unit testing. Install Catch2 so that you can compile the unit tests.
 - Visit the Catch2 [Releases](https://github.com/catchorg/Catch2/releases) page and download the latest one (select "source code (tar.gz)").
   Do not clone the `devel` branch from the github repo, as that is not a stable release.
 - Extract (e.g., unzip) the source code and place it in `~/codes`. `~/codes` should now contain a directory named something like `Catch2-2.XX.X`,
   except instead of "X"s there will be a version number.
 - `cd ~/codes/Catch2-2.XX.X` (replace the "X"s to match whatever the actual directory name is).
-- `cmake -Bbuild -H. -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=~/.local`
+- `cmake -Bbuild -H. -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=~/local`
 - `cmake --build build/ --target install`
 
-\subsubsection build_tests Step 2: build unit tests
+\subsubsection build_tests Step 3: build unit tests
 Now you need to update your Hexed build to include the unit tests, as follows:
 - `cd ~/codes/hexed/build_Release`
 - `ccmake ..`
-  - This will open the [CMake curses interface](https://cmake.org/cmake/help/latest/manual/ccmake.1.html),
-    which is a sort-of-GUI for [CMake](https://cmake.org/).
-    This allows you to choose some options for how to build Hexed.
-    Personally, I always use `ccmake` when I'm building a CMake project,
-    since it lets me see what options are available and modify any that seem relevant.
-  - You should see `EMPTY_CACHE` and no error messages.
-- Press `c`. You should now see a list of options. The default options are fine for a pure user,
-  but if you want to do any development there are a few you should change.
-  To edit options, use the arrow keys to move the cursor and Enter to edit the option under the cursor.
   - Set the option `build_tests` to `ON`.
-- Press `c` again.
-- Press `g` to generate. The GUI should exit (sometimes you have to hit `c` several times before it will let you exit with `g`).
-  - If something goes wrong and you can't get `g` to work, you can abort with `q`.
-- `make -j` (you only need `install` the first time you compile or if you've changed any of the executable scripts).
+- `make -j install`
 - The code is now compiled. You can run the unit tests with the command `test/unit` (executed from the build directory, still).
 - You should see "All tests passed".
 
-\subsubsection build_debug Step 3: build in debug mode
+\subsubsection build_debug Step 4: build in debug mode
 So far, we've only compiled Hexed in Release mode, which is designed to run as fast as possible at the expense of ease of debugging.
 That's what you want when you're running simulations, but if you're in the process of implementing and debugging new features,
 you would probably prefer to be able to use debugging tools like [GDB](https://www.sourceware.org/gdb/) and the
@@ -226,7 +226,7 @@ So, we will create an new build directory where we compile in Debug mode.
   - this time, set `CMAKE_BUILD_TYPE` to `Debug` ("Enter" toggles between `Release` and `Debug`),
     `build_tests` to `ON`, and `sanitize` to `ON`.
   - `c` as many times as you need and then `g`.
-- `make -j` (**don't** add `install`, since you still want to be running simulations with your nice and fast Release mode).
+- `make -j` (__don't__ add `install`, since you still want to be running simulations with your nice and fast Release mode).
 - `test/unit`. Again, you should see "All tests passed".
    However, now if you were to, for example, write to an array out of bounds, you will get an error message with the line number of the problem
    instead of just a segfault.
