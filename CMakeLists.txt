@@ -27,10 +27,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
 set(CMAKE_CXX_FLAGS "-Wall")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# default installation directory is one that we have access to on lab machines
-if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    set(CMAKE_INSTALL_PREFIX "~/.local" CACHE PATH "where to install hexed" FORCE)
-endif()
 if (NOT DEFINED PYTHON_INSTALL_PREFIX)
     set(PYTHON_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX}/lib CACHE PATH "where to install Python module" FORCE)
 endif()
