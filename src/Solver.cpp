@@ -140,7 +140,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("max_time_step", huge); // maximum allowed time step
   _namespace->assign_default("fix_admis_max_safety", .7); // staility ratio for fixing thermodynamic admissibility.
   _namespace->assign_default("av_diff_ratio", .03); // ratio of diffusion time to advection width
-  _namespace->assign_default("av_visc_mult", 1e3); // final scaling parameter applied to artificial viscosity coefficient
+  _namespace->assign_default("av_visc_mult", 2e3); // final scaling parameter applied to artificial viscosity coefficient
   _namespace->assign_default("av_unscaled_max", 2e-2); // maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
   _namespace->assign_default("av_advect_max_safety", .7); // stability ratio for advection
   _namespace->assign_default("av_advect_max_res", 1e-3); // residual limit for advection equation
