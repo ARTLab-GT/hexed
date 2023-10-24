@@ -75,7 +75,7 @@ vortex = {
 
 shock_sub_iters = 10; {number of sub-iterations to run in each nominal iteration to get efficient Chebyshev-accelerated diffusion}
 set_shock = { {modify settings to good defaults for simulations with shock capturing}
-    art_visc_width = 2*2.^-init_ref_level
+    art_visc_width = (mesh_extreme01 - mesh_extreme00)*2.^-init_ref_level
     fix_therm_admis = true
     n_cheby_av = shock_sub_iters
     flow_iters = shock_sub_iters
