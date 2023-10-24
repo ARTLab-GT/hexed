@@ -139,7 +139,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("max_safety", .7); // maximum allowed safety factor for time stepping
   _namespace->assign_default("max_time_step", huge); // maximum allowed time step
   _namespace->assign_default("fix_admis_max_safety", .7); // staility ratio for fixing thermodynamic admissibility.
-  _namespace->assign_default("av_diff_ratio", 1.); // ratio of diffusion time to advection width
+  _namespace->assign_default("av_diff_ratio", .03); // ratio of diffusion time to advection width
   _namespace->assign_default("av_visc_mult", 1e3); // final scaling parameter applied to artificial viscosity coefficient
   _namespace->assign_default("av_unscaled_max", 2e-2); // maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
   _namespace->assign_default("av_advect_max_safety", .7); // stability ratio for advection
@@ -576,7 +576,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
   double n_cheby = _namespace->lookup<double>("n_cheby_av").value();
   (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true, false, 1., diff_safety))(acc_mesh.cartesian().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "compute time step");
   (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true, false, 1., diff_safety))(acc_mesh.deformed ().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "compute time step");
-  double diff_time = _namespace->lookup<double>("av_diff_ratio").value()*advect_length*advect_length/n_real; // compute size of real time step (as opposed to pseudotime)
+  double diff_time = _namespace->lookup<double>("av_diff_ratio").value()*advect_length/n_real; // compute size of real time step (as opposed to pseudotime)
   // initialize residual to zero (will compute RMS over all real time steps)
   status.diff_res = 0;
   for (int real_step = 0; real_step < n_real; ++real_step)
@@ -619,7 +619,9 @@ void Solver::set_art_visc_smoothness(double advect_length)
           double* tss = elements[i_elem].time_step_scale();
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
             double pseudotime_scale = s/diff_time*tss[i_qpoint];
-            state[i_qpoint] += forcing[real_step*nq + i_qpoint]*pseudotime_scale;
+            double f = forcing[real_step*nq + i_qpoint];
+            f = (real_step == 1) ? std::sqrt(std::max(0., f)) : f; // at time step 1 switch from square root domain to linear domain
+            state[i_qpoint] += f*pseudotime_scale;
             state[i_qpoint] /= 1 + pseudotime_scale;
           }
         }
@@ -656,8 +658,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
     double* av = elements[i_elem].art_visc_coef();
     double* forcing = elements[i_elem].art_visc_forcing();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      // set artificial viscosity to square root of diffused scalar state
-      double f = mult*std::sqrt(std::max(0., forcing[n_real*nq + i_qpoint])); // root-smear-square complete!
+      double f = mult*forcing[n_real*nq + i_qpoint];
       av[i_qpoint] = us_max*f/(us_max + f);
       // put the flow state back how we found it
       for (int i_var = 0; i_var < params.n_var; ++i_var) {

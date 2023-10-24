@@ -8,9 +8,10 @@ geom0 = {geom.csv}
 altitude = 0
 mach = 2.
 $set_shock
+art_visc_width = art_visc_width/2.
 vis_freq = 1000
 done = {normalized_residual < 1e-8}
-working_dir = {hexed_out1}
+working_dir = {hexed_out2}
 max_safety = 1e-3
 iterate = iterate + {
     case0 = {}
@@ -20,6 +21,5 @@ iterate = iterate + {
 use_filter = true
 vis_n_sample = 2
 $init
-println(5.6*(2*freestream2/freestream3)^.5)
 vis_n_sample = 10
 $run
