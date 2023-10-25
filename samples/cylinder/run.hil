@@ -27,6 +27,8 @@ run_temperature = {
 
     {iteration parameters}
     $set_shock
+    av_unscaled_max = .1
+    av_visc_mult = 1e4
     done = {iteration >= 6*10^4}
     vis_freq = 10000
     $set_aerothermo
@@ -56,11 +58,11 @@ run_temperature = {
     println {}
 }
 
-working_dir = {hexed_out_temperature0}
+working_dir = {hexed_out_temperature0_test}
 coolant_farenheit = 60.
 $run_temperature
 
-working_dir = {hexed_out_temperature1}
+working_dir = {hexed_out_temperature1_test}
 coolant_farenheit = 150.
 aerothermo_initial_safety = aerothermo_initial_safety/10
 $run_temperature
