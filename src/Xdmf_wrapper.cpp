@@ -1,11 +1,11 @@
+#include <Row_index.hpp>
+#include <math.hpp>
+#if HEXED_USE_XDMF
 #include <XdmfDomain.hpp>
 #include <XdmfHDF5Writer.hpp>
 #include <XdmfWriter.hpp>
 #include <Xdmf_wrapper.hpp>
-#include <Row_index.hpp>
-#include <math.hpp>
 
-#if HEXED_USE_XDMF
 namespace hexed
 {
 
