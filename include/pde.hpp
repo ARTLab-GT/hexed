@@ -317,5 +317,33 @@ class Fix_therm_admis
   double diffusivity(Mat<n_var> state, double av_coef) const {return 1;}
 };
 
+template <int n_dim>
+class Interface_dissipation
+{
+  public:
+  static constexpr bool is_viscous = false;
+  static constexpr bool has_convection = true;
+  static constexpr int n_var = 1;
+  static constexpr int curr_start = 0;
+  static constexpr int ref_start = 1;
+  static constexpr int n_update = 1;
+
+  Mat<1> flux(Mat<n_var> state, Mat<n_dim> normal) const
+  {
+    return Mat<1>::Zero();
+  }
+
+  Mat<1> flux_num(Mat<n_var, 2> face_vars, Mat<n_dim> normal) const
+  {
+    Mat<1, 2> face_state = face_vars(0, Eigen::all);
+    return face_state*Mat<2>{.5, -.5}*normal.norm();
+  }
+
+  double char_speed(Mat<n_var> state) const
+  {
+    return 1.;
+  }
+};
+
 }
 #endif
