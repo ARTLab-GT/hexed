@@ -56,7 +56,6 @@ class Solver
   void compute_viscous(double dt, int i_stage);
   void compute_fta(double dt, int i_stage);
   void compute_advection(double dt, int i_stage);
-  void compute_dissipation(double dt, int i_stage);
   void compute_avc_diff(double dt, int i_stage);
   void fta(double dt, int i_stage);
   bool use_ldg();

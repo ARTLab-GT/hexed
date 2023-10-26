@@ -31,11 +31,5 @@ void Solver::compute_advection(double dt, int i_stage)
   COMPUTE_CONVECTION(pde::Advection, stopwatch.children.at("set art visc").children.at("advection"))
 }
 
-void Solver::compute_dissipation(double dt, int i_stage)
-{
-  bool allow_filter = false;
-  COMPUTE_CONVECTION(pde::Interface_dissipation, stopwatch.children.at("set art visc").children.at("advection"))
-}
-
 #undef COMPUTE_CONVECTION
 }

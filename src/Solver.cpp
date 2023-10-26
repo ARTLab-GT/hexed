@@ -567,42 +567,6 @@ void Solver::set_art_visc_smoothness(double advect_length)
     }
   } // Cauchy-Kovalevskaya-style derivative estimate complete!
 
-  (*kernel_factory<Spatial<Element         , pde::Interface_dissipation>::Max_dt>(nd, rs, basis, true, false, .7, 1.))(acc_mesh.cartesian().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "compute time step");
-  (*kernel_factory<Spatial<Deformed_element, pde::Interface_dissipation>::Max_dt>(nd, rs, basis, true, false, .7, 1.))(acc_mesh.deformed ().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "compute time step");
-  for (int real_step = 0; real_step < 1; ++real_step)
-  {
-    #pragma omp parallel for
-    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-      double* state = elements[i_elem].stage(0);
-      double* forcing = elements[i_elem].art_visc_forcing();
-      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        state[i_qpoint] = state[nq + i_qpoint] = forcing[real_step*nq + i_qpoint];
-      }
-    }
-    (*write_face)(elements);
-    (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-    for (int i_diss = 0; i_diss < 10; ++i_diss) {
-      sw_adv.children.at("BCs").stopwatch.start();
-      auto& bc_cons {acc_mesh.boundary_connections()};
-      #pragma omp parallel for
-      for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-        int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-        acc_mesh.boundary_condition(bc_sn).flow_bc->apply_diffusion(bc_cons[i_con]);
-      }
-      sw_adv.children.at("BCs").stopwatch.pause();
-      sw_adv.children.at("BCs").work_units_completed += acc_mesh.elements().size();
-      compute_dissipation(1., 0);
-    }
-    #pragma omp parallel for
-    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-      double* state = elements[i_elem].stage(0);
-      double* forcing = elements[i_elem].art_visc_forcing();
-      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        forcing[real_step*nq + i_qpoint] = state[i_qpoint];
-      }
-    }
-  }
-
   // begin root-smear-square operation
   int n_real = params.n_forcing - 1; // number of real time steps (as apposed to pseudotime steps)
   // evaluate CFL condition
