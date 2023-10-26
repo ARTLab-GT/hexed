@@ -28,10 +28,7 @@ run_temperature = {
     {iteration parameters}
     $set_shock
     done = {iteration >= 6*10^4}
-    art_visc_width = art_visc_width*2;
-    vis_freq = 1000
-    {
-    aerothermo_final_safety = 0.1;
+    vis_freq = 10000
     $set_aerothermo
     iterate = iterate + {
         case0 = {}
@@ -42,11 +39,9 @@ run_temperature = {
         }
         $$({case} + (iteration == 2*10^4 | iteration == 3*10^4 | iteration == 4*10^4))
     }
-    }
-    max_safety = 0.1
 
     println {running isothermal case}
-    {init_layer_splits = 2}
+    init_layer_splits = 2
     thermal_bc = {conduction = 24.9/(0.115*inch); temperature = } + coolant_temp
     heat_flux_coercion = 0.2
     vis_n_sample = 2
