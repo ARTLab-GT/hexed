@@ -72,6 +72,29 @@ Flow_bc* Case::_make_bc(std::string name)
   return nullptr; // will never happen. just to shut up GCC warning
 }
 
+class Test_func : public Qpoint_func
+{
+  public:
+  int n_var(int n_dim) const override {return 1;}
+  std::string variable_name(int n_dim, int i_var) const override {return "tf" + std::to_string(i_var);}
+  std::vector<double> operator()(Element& elem, const Basis& basis, int i_qpoint, double time) const override
+  {
+    double* adv = elem.advection_state();
+    int rs = elem.storage_params().row_size;
+    int nq = elem.storage_params().n_qpoint();
+    Mat<> weights = basis.node_weights();
+    Mat<> orth = basis.orthogonal(rs - 2);
+    Mat<> sample(rs);
+    for (int i_sample = 0; i_sample < rs; ++i_sample) sample(i_sample) = adv[i_sample*nq + i_qpoint];
+    double total = 0.;
+    for (int i_avg = 0; i_avg < rs; ++i_avg) {
+      Mat<dyn, dyn> interp = basis.interpolate(.5*basis.nodes() + Mat<>::Constant(rs, .5*basis.node(i_avg)));
+      total += math::pow(orth.dot(weights.asDiagonal()*interp*sample), 2)*weights(i_avg);
+    }
+    return {std::sqrt(total)};
+  }
+};
+
 Case::Case(std::string input_file)
 {
   _inter.variables->assign("input_file", input_file);
@@ -285,7 +308,8 @@ Case::Case(std::string input_file)
         _solver().visualize_field_xdmf(func, file_name, n_sample);
         Art_visc_forcing avf;
         Advection_state as(_solver().storage_params().row_size);
-        _solver().visualize_field_xdmf(Qf_concat({&avf, &as}), wd + "av" + suffix, n_sample);
+        Test_func tf;
+        _solver().visualize_field_xdmf(Qf_concat({&avf, &as, &tf}), wd + "av" + suffix, n_sample);
         if (_vari("vis_lts_constraints").value()) _solver().vis_lts_constraints(wd + "lts" + suffix, n_sample);
       }
       #endif
