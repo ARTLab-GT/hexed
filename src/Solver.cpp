@@ -141,9 +141,8 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("fix_admis_max_safety", .7); // staility ratio for fixing thermodynamic admissibility.
   _namespace->assign_default("av_diff_ratio", .03); // ratio of diffusion time to advection width
   _namespace->assign_default("av_visc_mult", 2e3); // final scaling parameter applied to artificial viscosity coefficient
-  _namespace->assign_default("av_unscaled_max", 2e-2); // maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
+  _namespace->assign_default("av_unscaled_max", .1); // maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
   _namespace->assign_default("av_advect_max_safety", .7); // stability ratio for advection
-  _namespace->assign_default("av_advect_max_res", 1e-3); // residual limit for advection equation
   _namespace->assign_default("av_diff_max_safety", .7); // stability ratio for diffusion
   _namespace->assign_default("buffer_dist", .8*std::sqrt(params.n_dim));
   _namespace->assign_default("n_cheby_flow", 1);
@@ -523,7 +522,6 @@ void Solver::set_art_visc_smoothness(double advect_length)
         sw_adv.children.at("deformed" ).work_units_completed += acc_mesh.deformed ().elements().size();
         // update advection state and residual
         sw_adv.children.at("update").stopwatch.start();
-        auto max_res = _namespace->lookup<double>("av_advect_max_res").value();
         #pragma omp parallel for reduction(+:diff, n_avg)
         for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
           double* state = elements[i_elem].stage(0);
@@ -533,7 +531,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
             // compute update
             double pseudotime_scale = + dt_adv*tss[i_qpoint]*2/advect_length;
             double old = adv[i_node*nq + i_qpoint]; // record for measuring residual
-            adv[i_node*nq + i_qpoint] += max_res*std::tanh((state[nd*nq + i_qpoint] - state[(nd + 1)*nq + i_qpoint])/max_res) + pseudotime_scale*1.;
+            adv[i_node*nq + i_qpoint] += state[nd*nq + i_qpoint] - state[(nd + 1)*nq + i_qpoint] + pseudotime_scale*1.;
             adv[i_node*nq + i_qpoint] /= 1. + pseudotime_scale;
             // add to residual
             double d = adv[i_node*nq + i_qpoint] - old;
@@ -620,7 +618,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
             double pseudotime_scale = s/diff_time*tss[i_qpoint];
             double f = forcing[real_step*nq + i_qpoint];
-            f = (real_step == 1) ? std::sqrt(std::max(0., f)) : f; // at time step 1 switch from square root domain to linear domain
+            f = (real_step == 1) ? std::sqrt(f) : f; // at time step 1 switch from square root domain to linear domain
             state[i_qpoint] += f*pseudotime_scale;
             state[i_qpoint] /= 1 + pseudotime_scale;
           }
@@ -641,7 +639,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
         diff += d*d;
         ++n_avg;
         // update forcing
-        forcing[(real_step + 1)*nq + i_qpoint] = state[i_qpoint];
+        forcing[(real_step + 1)*nq + i_qpoint] = std::max(0., state[i_qpoint]);
       }
     }
     status.diff_res += diff/n_avg;

@@ -27,8 +27,6 @@ run_temperature = {
 
     {iteration parameters}
     $set_shock
-    av_unscaled_max = .1
-    av_visc_mult = 1e4
     done = {iteration >= 6*10^4}
     vis_freq = 10000
     $set_aerothermo
