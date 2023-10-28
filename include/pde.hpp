@@ -260,12 +260,13 @@ class Advection
     Mat<1, 2> vol_flux = normal.transpose()*face_vars(Eigen::seqN(0, n_dim), Eigen::all);
     Mat<1, 2> face_state = face_vars(n_dim, Eigen::all);
     Mat<1, 2> face_flux = face_state.cwiseProduct(vol_flux);
-    return face_flux*Mat<2>{.5, .5} + face_state*Mat<2>{.5, -.5}*normal.norm();
+    double speed = std::max(char_speed(face_vars(all, 0)), char_speed(face_vars(all, 1)));
+    return face_flux*Mat<2>{.5, .5} + face_state*Mat<2>{.5, -.5}*normal.norm()*speed;
   }
 
   double char_speed(Mat<n_var> state) const
   {
-    return 1.;
+    return std::max(1., state(Eigen::seqN(0, n_dim)).norm());
   }
 };
 

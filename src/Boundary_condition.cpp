@@ -35,7 +35,7 @@ void Flow_bc::apply_advection(Boundary_face& bf)
   }
   // set advected scalar to initial value
   for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-    gh_f[nd*nq + i_qpoint] = 2. - in_f[nd*nq + i_qpoint];
+    gh_f[nd*nq + i_qpoint] = 2.*0.00498308 - in_f[nd*nq + i_qpoint];
   }
 }
 

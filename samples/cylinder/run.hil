@@ -27,6 +27,7 @@ run_temperature = {
 
     {iteration parameters}
     $set_shock
+    art_visc_width = art_visc_width/2.
     done = {iteration >= 6*10^4}
     vis_freq = 10000
     $set_aerothermo
@@ -60,7 +61,7 @@ working_dir = {hexed_out_temperature0_test}
 coolant_farenheit = 60.
 $run_temperature
 
-working_dir = {hexed_out_temperature1_test}
+working_dir = {hexed_out_temperature1_test1}
 coolant_farenheit = 150.
 aerothermo_initial_safety = aerothermo_initial_safety/10
 $run_temperature
