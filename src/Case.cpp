@@ -288,6 +288,7 @@ Case::Case(std::string input_file)
         _solver().visualize_field_xdmf(Qf_concat({&avf, &as}), wd + "av" + suffix, n_sample);
         if (_vari("vis_lts_constraints").value()) _solver().vis_lts_constraints(wd + "lts" + suffix, n_sample);
       }
+      std::filesystem::copy_file(file_name + ".xmf", wd + "field_latest.xmf", std::filesystem::copy_options::overwrite_existing);
       #endif
     }
     if (_vari("vis_surface").value() && _has_geom) {
