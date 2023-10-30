@@ -56,11 +56,11 @@ run_temperature = {
     println {}
 }
 
-working_dir = {hexed_out_temperature0_test4}
+working_dir = {hexed_out_temperature0}
 coolant_farenheit = 60.
 $run_temperature
 
-working_dir = {hexed_out_temperature1_test}
+working_dir = {hexed_out_temperature1}
 coolant_farenheit = 150.
 aerothermo_initial_safety = aerothermo_initial_safety/10
 $run_temperature
