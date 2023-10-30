@@ -445,14 +445,15 @@ void Solver::set_art_visc_smoothness(double advect_length)
     }
   }
   // set advection velocity
+  double scale = _namespace->lookup<double>("speed").value();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
     double* rk_ref = elements[i_elem].stage(1);
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      double scale = std::sqrt(2*rk_ref[(nd + 1)*nq + i_qpoint]*rk_ref[nd*nq + i_qpoint]);
+      //double scale = std::sqrt(2*rk_ref[(nd + 1)*nq + i_qpoint]*rk_ref[nd*nq + i_qpoint]);
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        state[i_dim*nq + i_qpoint] = rk_ref[i_dim*nq + i_qpoint]/scale;
+        state[i_dim*nq + i_qpoint] = rk_ref[i_dim*nq + i_qpoint]/rk_ref[nd*nq + i_qpoint]/scale;
       }
     }
   }
