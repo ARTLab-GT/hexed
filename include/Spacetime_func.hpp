@@ -9,9 +9,9 @@
 namespace hexed
 {
 
-/*!
- * Represents a function of position and time.
- * Useful for specifying initial conditions and analytic flow solutions.
+/*! \brief Represents a function of position and time.
+ *
+ * \details Useful for specifying initial conditions and analytic flow solutions.
  */
 class Spacetime_func : public Domain_func
 {
@@ -37,7 +37,7 @@ class Spacetime_expr : public Spacetime_func
   std::vector<double> operator()(std::vector<double> pos, double time) const override;
 };
 
-//! Always returns the same constant (vector) value.
+//! \brief Always returns the same constant (vector) value.
 class Constant_func : public Spacetime_func
 {
   std::vector<double> value;
@@ -49,7 +49,7 @@ class Constant_func : public Spacetime_func
   std::vector<double> operator()(std::vector<double> pos, double time) const override;
 };
 
-//! Returns the position vector.
+//! \brief Returns the position vector.
 class Position_func : public Spacetime_func
 {
   public:

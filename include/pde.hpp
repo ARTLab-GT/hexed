@@ -121,7 +121,7 @@ class Navier_stokes
       double sqrt_temp = std::sqrt(std::max(state(n_dim + 1)/mass - .5*veloc.squaredNorm(), 0.)*(heat_rat - 1)/constants::specific_gas_air);
       double nat_visc = dyn_visc.coefficient(sqrt_temp);
       Mat<n_dim, n_dim> stress = nat_visc*(veloc_grad + veloc_grad.transpose())
-                                 + (av_coef*mass - 2./3.*nat_visc)*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
+                                 + (std::abs(av_coef)*mass - 2./3.*nat_visc)*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
       Mat<n_dim, n_update> flux;
       flux(all, seq) = -stress;
       flux(all, n_dim).setZero();
@@ -145,7 +145,7 @@ class Navier_stokes
       double mass = state(n_dim);
       auto veloc = state(Eigen::seqN(0, n_dim))/mass;
       double sqrt_temp = std::sqrt(std::max(state(n_dim + 1)/mass - .5*veloc.squaredNorm(), 0.)*(heat_rat - 1)/constants::specific_gas_air);
-      return std::max(av_coef + dyn_visc.coefficient(sqrt_temp)/mass, therm_cond.coefficient(sqrt_temp)*(heat_rat - 1)/constants::specific_gas_air/mass);
+      return std::max(std::abs(av_coef) + dyn_visc.coefficient(sqrt_temp)/mass, therm_cond.coefficient(sqrt_temp)*(heat_rat - 1)/constants::specific_gas_air/mass);
     }
 
     /*!
@@ -260,12 +260,13 @@ class Advection
     Mat<1, 2> vol_flux = normal.transpose()*face_vars(Eigen::seqN(0, n_dim), Eigen::all);
     Mat<1, 2> face_state = face_vars(n_dim, Eigen::all);
     Mat<1, 2> face_flux = face_state.cwiseProduct(vol_flux);
-    return face_flux*Mat<2>{.5, .5} + face_state*Mat<2>{.5, -.5}*normal.norm();
+    double speed = std::max(char_speed(face_vars(all, 0)), char_speed(face_vars(all, 1)));
+    return face_flux*Mat<2>{.5, .5} + face_state*Mat<2>{.5, -.5}*normal.norm()*speed;
   }
 
   double char_speed(Mat<n_var> state) const
   {
-    return 1.;
+    return std::max(1., state(Eigen::seqN(0, n_dim)).norm());
   }
 };
 

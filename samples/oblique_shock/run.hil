@@ -7,15 +7,11 @@ extremal_bc10 = {nonpenetration}
 geom0 = {geom.csv}
 altitude = 0
 mach = 2.
-art_visc_width = 2*2.^-init_ref_level
+$set_shock
 vis_freq = 1000
 done = {normalized_residual < 1e-8}
+working_dir = {hexed_out1}
 use_filter = true
-max_safety = 0.2
-n = 10
-n_cheby_av = n
-flow_iters = n
-av_advect_iters = 2
 vis_n_sample = 2
 $init
 vis_n_sample = 10
