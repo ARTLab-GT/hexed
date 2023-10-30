@@ -56,7 +56,7 @@ run_temperature = {
     println {}
 }
 
-working_dir = {hexed_out_temperature0_test}
+working_dir = {hexed_out_temperature0_test4}
 coolant_farenheit = 60.
 $run_temperature
 
