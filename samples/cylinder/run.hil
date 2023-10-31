@@ -60,10 +60,10 @@ iterate = iterate + {
     $$({case} + (iteration == 3*10^4 | iteration == 5*10^4))
 }
 
-working_dir = {hexed_out_temperature0_test}
+working_dir = {hexed_out_temperature0}
 coolant_farenheit = 60.
 $run_temperature
 
-working_dir = {hexed_out_temperature1_test}
+working_dir = {hexed_out_temperature1}
 coolant_farenheit = 150.
 $run_temperature
