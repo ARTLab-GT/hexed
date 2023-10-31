@@ -857,30 +857,33 @@ TEST_CASE("artificial viscosity convergence")
   sol.mesh().cleanup();
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
-  double flow_width = .02;
-  double adv_width = .01;
+  double flow_width = 0.04;
+  double adv_width = 0.01;
   sol.initialize(Tanh(flow_width));
   sol.nspace().assign("av_advect_iters", 6000);
   sol.nspace().assign("av_diff_iters", 3000);
-  sol.nspace().assign("av_visc_mult", 1e6);
   sol.nspace().assign("av_diff_ratio", 1e-6);
-  sol.nspace().assign("freestream" + std::to_string(2), 2.3);
-  sol.nspace().assign("freestream" + std::to_string(3), 10.);
+  sol.nspace().assign("speed", 1.);
+  sol.nspace().assign("av_unscaled_max", 1000.);
+  sol.nspace().assign("freestream" + std::to_string(2), 1.);
+  sol.nspace().assign("freestream" + std::to_string(3), 1.5);
   sol.set_art_visc_smoothness(adv_width);
+  sol.visualize_field_xdmf(hexed::Art_visc_coef(), "art_visc0");
   REQUIRE(sol.iteration_status().adv_res < 1e-12);
   REQUIRE(sol.iteration_status().diff_res < 1e-12);
   double init_max = sol.bounds_field(hexed::Art_visc_coef())[0][1];
   // check that doubling the advection length multiplies the viscosity by 2^(max_row_size - 1)
   sol.set_art_visc_smoothness(adv_width*2);
+  sol.visualize_field_xdmf(hexed::Art_visc_coef(), "art_visc1");
   REQUIRE(sol.iteration_status().adv_res < 1e-12);
   REQUIRE(sol.iteration_status().diff_res < 1e-12);
-  CHECK(std::log(sol.bounds_field(hexed::Art_visc_coef())[0][1]/init_max)/std::log(2) > 6.);
-  // check that doubling the length scale of the flow divides the viscosity by ~2^(max_row_size - 1)
-  sol.initialize(Tanh(2*flow_width));
+  CHECK(std::log(sol.bounds_field(hexed::Art_visc_coef())[0][1]/init_max)/std::log(2) > hexed::config::max_row_size - 2.);
+  // check that doubling the length scale of the flow divides the viscosity by ~2^(max_row_size - 2)
+  sol.initialize(Tanh(flow_width/2));
   sol.set_art_visc_smoothness(adv_width);
   REQUIRE(sol.iteration_status().adv_res < 1e-12);
   REQUIRE(sol.iteration_status().diff_res < 1e-12);
-  CHECK(std::log(init_max/sol.bounds_field(hexed::Art_visc_coef())[0][1])/std::log(2) > 6.);
+  CHECK(std::log(sol.bounds_field(hexed::Art_visc_coef())[0][1]/init_max)/std::log(2) > hexed::config::max_row_size - 3.);
   #endif
 }
 

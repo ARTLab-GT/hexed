@@ -128,7 +128,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   stopwatch{"(element*iteration)"},
   use_art_visc{false},
   fix_admis{false},
-  av_rs{row_size - 1},
+  av_rs{row_size},
   write_face(kernel_factory<Spatial<Element, pde::Navier_stokes<false>::Pde>::Write_face>(params.n_dim, params.row_size, basis)), // note: for now, false and true are equivalent for `Write_face`
   visc{viscosity_model},
   therm_cond{thermal_conductivity_model},
