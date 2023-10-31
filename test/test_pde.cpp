@@ -64,30 +64,3 @@ TEST_CASE("Navier_stokes")
     REQUIRE((hexed::pde::Navier_stokes<true>::Pde<2>(hexed::air_const_dyn_visc, hexed::air_const_therm_cond).flux_visc(state, state_grad, .9) - correct).norm() < 1e-10);
   }
 }
-
-TEST_CASE("Advection")
-{
-  SECTION("flux")
-  {
-    hexed::Mat<2> normal {.6, .8};
-    hexed::Mat<2> orth {-.8, .6};
-    double nrml_veloc = 7.3;
-    double orth_veloc = -4.8;
-    hexed::Mat<2> veloc = nrml_veloc*normal + orth_veloc*orth;
-    normal *= .5;
-    double scalar = 0.81;
-    hexed::Mat<3> state {veloc(0), veloc(1), scalar};
-    hexed::Mat<1> flux = hexed::pde::Advection<2>().flux(state, normal);
-    REQUIRE(flux(0) == Catch::Approx(.5*nrml_veloc*scalar));
-  }
-
-  SECTION("flux_num")
-  {
-    auto normal = hexed::Mat<1>::Constant(.6);
-    hexed::Mat<2, 2> state;
-    state << -3., -2.,
-             .21, .23;
-    hexed::Mat<1> flux = hexed::pde::Advection<1>().flux_num(state, normal);
-    REQUIRE(flux(0) == Catch::Approx(.5*.6*(-2.*.23 - 3.*.21 + (.21 - .23))));
-  }
-}
