@@ -79,6 +79,7 @@ Case::Case(std::string input_file)
   _inter.variables->assign("version_minor", config::version_minor);
   _inter.variables->assign("version_patch", config::version_patch);
   _inter.variables->assign<std::string>("commit", config::commit);
+
   // create custom Heisenberg variables
   _inter.variables->create("create_solver", new Namespace::Heisenberg<int>([this]() {
     // basic IO setup

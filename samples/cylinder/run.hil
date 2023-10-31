@@ -1,55 +1,55 @@
 {simulation of the hypersonic cylinder case of Beckwith & Gallagher: https://apps.dtic.mil/sti/citations/ADA377149}
 
-{mesh setup}
-n_dim = 2
-mesh_extreme00 = -2.
-mesh_extreme01 =  0.
-mesh_extreme10 =  0.
-mesh_extreme11 =  2.
-init_ref_level = 5
-extremal_bc10 = {nonpenetration}
-extremal_bc01 = {pressure_outflow}
 shell {python3 make_geom.py}
-geom0 = {auto.csv}
-surface_max_iters = 0
-
-{freestream/wall definition}
-mach = 4.15
-stag_temp = (250 - 32)*rankine + zero_celsius
-temperature = stag_temp/(1 + 0.2*mach^2)
-reynolds = 1.28e6
-freestream_visc = 1.713e-5*(temperature/273)^1.5*(273 + 111)/(temperature + 111)
-freestream_cond =   0.0241*(temperature/273)^1.5*(273 + 194)/(temperature + 194)
-diam = 2.
-density = reynolds*freestream_visc/(mach*(1.4*specific_gas_air*temperature)^.5*diam)
-println({stagnation temperature: } + stag_temp)
-println({freestream thermal conductivity: } + freestream_cond)
-println({freestream dynamic viscosity: } + freestream_visc)
-println({freestream prandtl number: } + freestream_visc*(1.4*specific_gas_air/0.4)/freestream_cond)
-
-{iteration parameters}
-$set_shock
-done = {iteration >= 12*10^4}
-vis_freq = 10000
-$set_aerothermo
-iterate = iterate + {
-    case0 = {}
-    case1 = {
-        print {splitting layers...}
-        split_layers
-        println({done. number of elements: } + n_elements)
-    }
-    $$({case} + (iteration == 3*10^4 | iteration == 5*10^4))
-}
 
 run_temperature = {
-    println {running isothermal case}
+    {mesh setup}
+    n_dim = 2
+    mesh_extreme00 = -2.
+    mesh_extreme01 =  0.
+    mesh_extreme10 =  0.
+    mesh_extreme11 =  2.
+    init_ref_level = 5
+    extremal_bc10 = {nonpenetration}
+    extremal_bc01 = {pressure_outflow}
+    geom0 = {auto.csv}
+    surface_max_iters = 0
+
+    {freestream/wall definition}
+    mach = 4.15
+    stag_temp = (250 - 32)*rankine + zero_celsius
+    temperature = stag_temp/(1 + 0.2*mach^2)
+    reynolds = 1.28e6
+    freestream_visc = 1.713e-5*(temperature/273)^1.5*(273 + 111)/(temperature + 111)
+    freestream_cond =   0.0241*(temperature/273)^1.5*(273 + 194)/(temperature + 194)
+    diam = 2.
+    density = reynolds*freestream_visc/(mach*(1.4*specific_gas_air*temperature)^.5*diam)
+    println({stagnation temperature: } + stag_temp)
+    println({freestream thermal conductivity: } + freestream_cond)
+    println({freestream dynamic viscosity: } + freestream_visc)
+    println({freestream prandtl number: } + freestream_visc*(1.4*specific_gas_air/0.4)/freestream_cond)
+
+    {iteration parameters}
+    $set_shock
+    done = {iteration >= 10^5}
+    vis_freq = 10000
+    $set_aerothermo
+    iterate = iterate + {
+        case0 = {}
+        case1 = {
+            print {splitting layers...}
+            split_layers
+            println({done. number of elements: } + n_elements)
+        }
+        $$({case} + (iteration == 3*10^4 | iteration == 5*10^4))
+    }
+
     max_safety = aerothermo_initial_safety
     n_cheby_flow = 1
     n_flow_iters = shock_sub_iters
     init_layer_splits = 2
     conduction_steel = 24.9/(0.115*inch)
-    conduction_coolant = 0.123/(0.25*inch)
+    conduction_coolant = 3.66*0.123/(.885*inch)
     coolant_temp = (coolant_farenheit - 32)*rankine + zero_celsius
     thermal_bc = {conduction = conduction_steel*conduction_coolant/(conduction_steel + conduction_coolant); temperature = } + coolant_temp
     vis_n_sample = 2
@@ -57,15 +57,12 @@ run_temperature = {
     println({coolant temperature: } + coolant_temp)
     vis_n_sample = 10
     $run
-    println {}
 }
 
-{
-working_dir = {hexed_out_temperature0}
+working_dir = {hexed_out_temperature0_test}
 coolant_farenheit = 60.
 $run_temperature
-}
 
-working_dir = {hexed_out_temperature1}
+working_dir = {hexed_out_temperature1_test}
 coolant_farenheit = 150.
 $run_temperature
