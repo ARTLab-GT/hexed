@@ -34,15 +34,6 @@ run_temperature = {
     done = {iteration >= 10^5}
     vis_freq = 10000
     $set_aerothermo
-    iterate = iterate + {
-        case0 = {}
-        case1 = {
-            print {splitting layers...}
-            split_layers
-            println({done. number of elements: } + n_elements)
-        }
-        $$({case} + (iteration == 3*10^4 | iteration == 5*10^4))
-    }
 
     max_safety = aerothermo_initial_safety
     n_cheby_flow = 1
@@ -57,6 +48,16 @@ run_temperature = {
     println({coolant temperature: } + coolant_temp)
     vis_n_sample = 10
     $run
+}
+
+iterate = iterate + {
+    case0 = {}
+    case1 = {
+        print {splitting layers...}
+        split_layers
+        println({done. number of elements: } + n_elements)
+    }
+    $$({case} + (iteration == 3*10^4 | iteration == 5*10^4))
 }
 
 working_dir = {hexed_out_temperature0_test}
