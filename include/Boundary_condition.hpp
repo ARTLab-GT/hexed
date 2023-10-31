@@ -179,7 +179,7 @@ class Thermal_equilibrium : public Thermal_bc
 {
   public:
   double emissivity = 0.;
-  double conduction = 0.;
+  double heat_transfer_coef = 0.;
   double temperature = 0.;
   inline double ghost_energy(Mat<> state) override {return state(last);}
   double ghost_heat_flux(Mat<> state, double) override;

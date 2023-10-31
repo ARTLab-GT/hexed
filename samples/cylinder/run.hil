@@ -23,7 +23,7 @@ run_temperature = {
     freestream_visc = 1.713e-5*(freestream_temperature/273)^1.5*(273 + 111)/(freestream_temperature + 111)
     freestream_cond =   0.0241*(freestream_temperature/273)^1.5*(273 + 194)/(freestream_temperature + 194)
     diam = 2.
-    density = reynolds*freestream_visc/(freestream_mach*(1.4*specific_gas_air*freestream_temperature)^.5*diam)
+    freestream_density = reynolds*freestream_visc/(freestream_mach*(1.4*specific_gas_air*freestream_temperature)^.5*diam)
     println({stagnation temperature: } + stag_temp)
     println({freestream thermal conductivity: } + freestream_cond)
     println({freestream dynamic viscosity: } + freestream_visc)
@@ -48,10 +48,10 @@ run_temperature = {
     n_cheby_flow = 1
     n_flow_iters = shock_sub_iters
     init_layer_splits = 2
-    conduction_steel = 24.9/(0.115*inch)
-    conduction_coolant = 3.66*0.123/(.885*inch)
+    heat_transfer_coef_steel = 24.9/(0.115*inch)
+    heat_transfer_coef_coolant = 3.66*0.123/(.885*inch)
     coolant_temp = (coolant_farenheit - 32)*rankine + zero_celsius
-    thermal_bc = {conduction = conduction_steel*conduction_coolant/(conduction_steel + conduction_coolant); temperature = } + coolant_temp
+    thermal_bc = {heat_transfer_coef = heat_transfer_coef_steel*heat_transfer_coef_coolant/(heat_transfer_coef_steel + heat_transfer_coef_coolant); temperature = } + coolant_temp
     vis_n_sample = 2
     $init
     println({coolant temperature: } + coolant_temp)

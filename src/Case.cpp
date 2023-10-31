@@ -50,12 +50,12 @@ Flow_bc* Case::_make_bc(std::string name)
     std::shared_ptr<Thermal_bc> thermal;
     if (sub.variables->exists("heat_flux")) { // note not recursive
       thermal = std::make_shared<Prescribed_heat_flux>(sub.variables->lookup<double>("heat_flux").value());
-    } else if (sub.variables->exists("emissivity") || sub.variables->exists("conduction")) {
+    } else if (sub.variables->exists("emissivity") || sub.variables->exists("heat_transfer_coef")) {
       auto equilibrium = std::make_shared<Thermal_equilibrium>();
-      HEXED_ASSERT(sub.variables->exists("conduction") == sub.variables->exists("temperature"), "must specify both surface conduction and temperature or neigher");
+      HEXED_ASSERT(sub.variables->exists("heat_transfer_coef") == sub.variables->exists("temperature"), "must specify both surface heat_transfer_coef and temperature or neither");
       if (sub.variables->exists("emissivity")) equilibrium->emissivity = sub.variables->lookup<double>("emissivity").value();
-      if (sub.variables->exists("conduction")) {
-        equilibrium->conduction = sub.variables->lookup<double>("conduction").value();
+      if (sub.variables->exists("heat_transfer_coef")) {
+        equilibrium->heat_transfer_coef = sub.variables->lookup<double>("heat_transfer_coef").value();
         equilibrium->temperature = sub.variables->lookup<double>("temperature").value();
       }
       thermal = equilibrium;
