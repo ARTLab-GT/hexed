@@ -20,7 +20,7 @@ geom0 = {auto.csv}
 
 {freestream conditions}
 altitude = 0.
-mach = 0.3
+freestream_mach = 0.3
 attack = 4*degree
 
 {iteration parameters}

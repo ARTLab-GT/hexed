@@ -1,6 +1,6 @@
 n_dim = 2
 altitude = 0.
-speed = 100.
+freestream_speed = 100.
 init_ref_level = 4
 init_cond = vortex
 mesh_extreme00 = -1.

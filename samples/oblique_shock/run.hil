@@ -6,7 +6,7 @@ surface_max_iters = 1
 extremal_bc10 = {nonpenetration}
 geom0 = {geom.csv}
 altitude = 0
-mach = 2.
+freestream_mach = 2.
 $set_shock
 vis_freq = 1000
 done = {normalized_residual < 1e-8}
