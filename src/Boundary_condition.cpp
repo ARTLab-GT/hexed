@@ -376,7 +376,7 @@ double Thermal_equilibrium::ghost_heat_flux(Mat<> state, double)
 {
   double temp = state(last)*.4/state(state.size() - 2)/constants::specific_gas_air;
   double radiative_flux = emissivity*constants::stefan_boltzmann*math::pow(temp, 4);
-  double conductive_flux = conduction*(temp - temperature);
+  double conductive_flux = heat_transfer_coef*(temp - temperature);
   return radiative_flux + conductive_flux;
 }
 

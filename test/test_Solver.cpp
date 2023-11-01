@@ -863,7 +863,7 @@ TEST_CASE("artificial viscosity convergence")
   sol.nspace().assign("av_advect_iters", 6000);
   sol.nspace().assign("av_diff_iters", 3000);
   sol.nspace().assign("av_diff_ratio", 1e-6);
-  sol.nspace().assign("speed", 1.);
+  sol.nspace().assign("freestream_speed", 1.);
   sol.nspace().assign("av_unscaled_max", 1000.);
   sol.nspace().assign("freestream" + std::to_string(2), 1.);
   sol.nspace().assign("freestream" + std::to_string(3), 1.5);

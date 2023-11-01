@@ -445,7 +445,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
     }
   }
   // set advection velocity
-  double scale = _namespace->lookup<double>("speed").value();
+  double scale = _namespace->lookup<double>("freestream_speed").value();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);

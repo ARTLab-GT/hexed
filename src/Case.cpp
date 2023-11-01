@@ -42,7 +42,7 @@ Flow_bc* Case::_make_bc(std::string name)
   Mat<> freestream = _get_vector("freestream", _vari("n_dim").value() + 2);
   if (name == "characteristic") return new Riemann_invariants(freestream);
   else if (name == "freestream") return new Freestream(freestream);
-  else if (name == "pressure_outflow") return new Pressure_outflow(_vard("pressure").value());
+  else if (name == "pressure_outflow") return new Pressure_outflow(_vard("freestream_pressure").value());
   else if (name == "nonpenetration") return new Nonpenetration;
   else if (name == "no_slip") {
     auto sub = _inter.make_sub();
@@ -50,12 +50,12 @@ Flow_bc* Case::_make_bc(std::string name)
     std::shared_ptr<Thermal_bc> thermal;
     if (sub.variables->exists("heat_flux")) { // note not recursive
       thermal = std::make_shared<Prescribed_heat_flux>(sub.variables->lookup<double>("heat_flux").value());
-    } else if (sub.variables->exists("emissivity") || sub.variables->exists("conduction")) {
+    } else if (sub.variables->exists("emissivity") || sub.variables->exists("heat_transfer_coef")) {
       auto equilibrium = std::make_shared<Thermal_equilibrium>();
-      HEXED_ASSERT(sub.variables->exists("conduction") == sub.variables->exists("temperature"), "must specify both surface conduction and temperature or neigher");
+      HEXED_ASSERT(sub.variables->exists("heat_transfer_coef") == sub.variables->exists("temperature"), "must specify both surface heat_transfer_coef and temperature or neither");
       if (sub.variables->exists("emissivity")) equilibrium->emissivity = sub.variables->lookup<double>("emissivity").value();
-      if (sub.variables->exists("conduction")) {
-        equilibrium->conduction = sub.variables->lookup<double>("conduction").value();
+      if (sub.variables->exists("heat_transfer_coef")) {
+        equilibrium->heat_transfer_coef = sub.variables->lookup<double>("heat_transfer_coef").value();
         equilibrium->temperature = sub.variables->lookup<double>("temperature").value();
       }
       thermal = equilibrium;
@@ -104,28 +104,31 @@ Case::Case(std::string input_file)
     if (_vard("freestream0")) freestream = _get_vector("freestream", *n_dim + 2);
     else {
       if (_vard("altitude")) {
-        HEXED_ASSERT(!_vard("temperature"), "cannot specify both altitude and temperature (consider `temperature_offset`)");
+        HEXED_ASSERT(!_vard("freestream_temperature"), "cannot specify both altitude and temperature (consider `temperature_offset`)");
         auto dens_pres = standard_atmosphere(_vard("altitude").value(), _vard("temperature_offset").value());
-        _inter.variables->assign<double>("density", dens_pres[0]);
-        _inter.variables->assign<double>("pressure", dens_pres[1]);
+        _inter.variables->assign<double>("freestream_density", dens_pres[0]);
+        _inter.variables->assign<double>("freestream_pressure", dens_pres[1]);
       }
-      HEXED_ASSERT(_vard("density").has_value() + _vard("pressure").has_value() + _vard("temperature").has_value() == 2,
-                   "exactly two of density, pressure, and temperature must be specified");
-      if (_vard("density")) {
-        freestream(*n_dim) = *_vard("density");
-        if (_vard("pressure")) _inter.variables->assign<double>("temperature", *_vard("pressure")/(constants::specific_gas_air**_vard("density")));
-        else _inter.variables->assign<double>("pressure", *_vard("density")*constants::specific_gas_air**_vard("temperature"));
-      } else _inter.variables->assign<double>("density", *_vard("pressure")/(constants::specific_gas_air**_vard("temperature")));
-      HEXED_ASSERT(_vard("velocity0").has_value() + _vard("speed").has_value() + _vard("mach").has_value() == 1,
+      HEXED_ASSERT(_vard("freestream_density").has_value() + _vard("freestream_pressure").has_value() + _vard("freestream_temperature").has_value() == 2,
+                   "exactly two of freestream density, pressure, and temperature must be specified");
+      if (_vard("freestream_density")) {
+        freestream(*n_dim) = *_vard("freestream_density");
+        if (_vard("freestream_pressure")) _inter.variables->assign<double>("freestream_temperature", *_vard("freestream_pressure")/(constants::specific_gas_air**_vard("freestream_density")));
+        else _inter.variables->assign<double>("freestream_pressure", *_vard("freestream_density")*constants::specific_gas_air**_vard("freestream_temperature"));
+      } else _inter.variables->assign<double>("freestream_density", *_vard("freestream_pressure")/(constants::specific_gas_air**_vard("freestream_temperature")));
+      HEXED_ASSERT(_vard("freestream_velocity0").has_value() + _vard("freestream_speed").has_value() + _vard("freestream_mach").has_value() == 1,
                    "exactly one of velocity, speed, and Mach number must be specified");
       Mat<> veloc;
       Mat<> full_direction = Mat<>::Zero(3);
       auto direction = full_direction(Eigen::seqN(0, *n_dim));
-      if (_vard("velocity0")) {
-        veloc = _get_vector("velocity", *n_dim);
+      if (_vard("freestream_velocity0")) {
+        veloc = _get_vector("freestream_velocity", *n_dim);
         direction = veloc.normalized();
       } else {
-        if (_vard("direction0")) direction = _get_vector("direction", *n_dim).normalized();
+        _inter.variables->assign<double>("freestream_sound_speed", std::sqrt(heat_rat*constants::specific_gas_air**_vard("freestream_temperature")));
+        if (_vard("freestream_speed")) _inter.variables->assign<double>("freestream_mach", *_vard("freestream_speed")/ *_vard("freestream_sound_speed"));
+        else _inter.variables->assign<double>("freestream_speed", *_vard("freestream_mach")**_vard("freestream_sound_speed"));
+        if (_vard("freestream_direction0")) direction = _get_vector("freestream_direction", *n_dim).normalized();
         else {
           direction.setUnit(*n_dim, 0);
           if (*n_dim == 2) {
@@ -135,17 +138,14 @@ Case::Case(std::string input_file)
             direction = Eigen::AngleAxis<double>(-_vard("attack"  ).value(), Eigen::Vector3d::Unit(1))*direction;
             direction = Eigen::AngleAxis<double>( _vard("sideslip").value(), Eigen::Vector3d::Unit(2))*direction;
           }
-          _inter.variables->assign<double>("sound", std::sqrt(heat_rat*constants::specific_gas_air**_vard("temperature")));
-          if (_vard("speed")) _inter.variables->assign<double>("mach", *_vard("speed")/ *_vard("sound"));
-          else _inter.variables->assign<double>("speed", *_vard("mach")**_vard("sound"));
         }
-        veloc = *_vard("speed")*direction;
-        _set_vector("velocity", veloc);
+        veloc = *_vard("freestream_speed")*direction;
+        _set_vector("freestream_velocity", veloc);
       }
-      _set_vector("direction", full_direction);
-      freestream(Eigen::seqN(0, *n_dim)) = *_vard("density")*veloc;
-      freestream(*n_dim) = *_vard("density");
-      freestream(*n_dim + 1) = *_vard("pressure")/(heat_rat - 1) + .5**_vard("density")*veloc.squaredNorm();
+      _set_vector("freestream_direction", full_direction);
+      freestream(Eigen::seqN(0, *n_dim)) = *_vard("freestream_density")*veloc;
+      freestream(*n_dim) = *_vard("freestream_density");
+      freestream(*n_dim + 1) = *_vard("freestream_pressure")/(heat_rat - 1) + .5**_vard("freestream_density")*veloc.squaredNorm();
       freestream.conservativeResize(5);
       freestream(Eigen::seqN(*n_dim + 2, 5 - (*n_dim + 2))).setZero();
       _set_vector("freestream", freestream);

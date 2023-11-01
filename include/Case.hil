@@ -25,6 +25,8 @@ av_diffusion_residual_expr = {av_diffusion_residual = av_diffusion_residual;}
 flow_time_expr = {flow_time = flow_time;}
 time_step_expr = {time_step = time_step;}
 fix_iters_expr = {fix_iters = fix_iters;}
+skin_friction_coef_expr = {skin_friction_coef = (visc_stress0^2 + visc_stress1^2 + visc_stress2^2)^.5/(.5*freestream_density*freestream_speed^2);}
+pressure_coef_expr = {pressure_coef = (pressure - freestream_pressure)/(.5*freestream_density*freestream_speed^2);}
 state_vars = momentum_expr + density_expr + energy_expr + velocity_expr + speed_expr + pressure_expr + temperature_expr + mach_expr
 compute_force = {
     integrand_surface = velocity_expr + speed_expr + pressure_expr + stress_expr
@@ -32,20 +34,20 @@ compute_force = {
     force0 = integral_surface_stress0
     force1 = integral_surface_stress1
     force2 = integral_surface_stress2
-    drag = force0*direction0 + force1*direction1 + force2*direction2
+    drag = force0*freestream_direction0 + force1*freestream_direction1 + force2*freestream_direction2
     lift = 0.
     side_force = 0.
     case1 = {}
-    case2 = {lift = force1*direction0 - force0*direction1}
+    case2 = {lift = force1*freestream_direction0 - force0*freestream_direction1}
     case3 = {
-        horiz_norm = (direction0^2 + direction1^2)^.5
-        lift = force2*horiz_norm - (force0*direction0 + force1*direction1)/horiz_norm*direction2
-        side_force = (force1*direction0 - force0*direction1)/horiz_norm
+        horiz_norm = (freestream_direction0^2 + freestream_direction1^2)^.5
+        lift = force2*horiz_norm - (force0*freestream_direction0 + force1*freestream_direction1)/horiz_norm*freestream_direction2
+        side_force = (force1*freestream_direction0 - force0*freestream_direction1)/horiz_norm
     }
     $$({case} + n_dim)
-    drag_coef = drag/(0.5*density*speed^2)
-    lift_coef = lift/(0.5*density*speed^2)
-    side_force_coef = side_force/(0.5*density*speed^2)
+    drag_coef = drag/(0.5*freestream_density*freestream_speed^2)
+    lift_coef = lift/(0.5*freestream_density*freestream_speed^2)
+    side_force_coef = side_force/(0.5*freestream_density*freestream_speed^2)
 }
 print_force = {
     $compute_force
@@ -57,13 +59,13 @@ print_force = {
     println({side force coefficient: } + side_force_coef)
 }
 freestream_spec_int_ener = {(freestream3/freestream2 - 0.5*(freestream0^2 + freestream1^2)/freestream2^2)}
-freestream_sound_speed = {((heat_rat*(heat_rat - 1)*$freestream_spec_int_ener)^0.5)}
+freestream_sound_speed_expr = {((heat_rat*(heat_rat - 1)*$freestream_spec_int_ener)^0.5)}
 vortex_nondim_veloc = 0.3
 vortex_argmax_radius = 0.1
-vortex_gaussian = {(vortex_nondim_veloc*natural^((1. - ((pos0 - freestream0/freestream2*time)^2 + (pos1 - freestream1/freestream2*time)^2)/vortex_argmax_radius^2)/2.))}
+vortex_gaussian = {(vortex_nondim_veloc*exp((1. - ((pos0 - freestream0/freestream2*time)^2 + (pos1 - freestream1/freestream2*time)^2)/vortex_argmax_radius^2)/2.))}
 vortex_scalar = {(1 - (heat_rat - 1.)/2*$vortex_gaussian^2)}
-vortex_momentum0 = {((freestream0/freestream2 - pos1/vortex_argmax_radius*$vortex_gaussian*$freestream_sound_speed)*$vortex_mass)}
-vortex_momentum1 = {((freestream1/freestream2 + pos0/vortex_argmax_radius*$vortex_gaussian*$freestream_sound_speed)*$vortex_mass)}
+vortex_momentum0 = {((freestream0/freestream2 - pos1/vortex_argmax_radius*$vortex_gaussian*$freestream_sound_speed_expr)*$vortex_mass)}
+vortex_momentum1 = {((freestream1/freestream2 + pos0/vortex_argmax_radius*$vortex_gaussian*$freestream_sound_speed_expr)*$vortex_mass)}
 vortex_mass = {(freestream2*$vortex_scalar^(1./(heat_rat - 1.)))}
 vortex_energy = {($freestream_spec_int_ener*$vortex_scalar*$vortex_mass + 0.5*($vortex_momentum0^2 + $vortex_momentum1^2)/$vortex_mass)}
 vortex = {
@@ -105,7 +107,7 @@ set_aerothermo = { {further modify settings to be good for aerothermodynamics (a
                 flow_iters = shock_sub_iters
                 n_cheby_flow = 1
             }
-            $$({case} + (flow_iters == 1))
+            $$({case} + ((iteration/print_freq)%2 == 0))
         }
         $$({case} + (iteration >= aerothermo_initial_iters))
     }
@@ -138,7 +140,7 @@ vis_tecplot = false
 vis_xdmf = true
 vis_lts_constraints = false
 vis_field_vars = state_vars + art_visc_expr
-vis_surface_vars = state_vars + visc_stress_expr + heat_flux_expr
+vis_surface_vars = state_vars + visc_stress_expr + heat_flux_expr + pressure_coef_expr + skin_friction_coef_expr
 vis_n_sample = 10
 print_vars = iteration_expr + normalized_residual_expr + av_advection_residual_expr + av_diffusion_residual_expr + flow_time_expr + time_step_expr
 integrand_field = {}
