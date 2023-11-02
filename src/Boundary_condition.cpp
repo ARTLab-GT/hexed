@@ -5,6 +5,7 @@
 #include <constants.hpp>
 #include <pde.hpp>
 #include <Gauss_lobatto.hpp>
+#include <Row_index.hpp>
 
 namespace hexed
 {
@@ -609,7 +610,7 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
     }
   }
   Mat<> face_adj(nlq);
-  int not_found = 0;
+  std::vector<int> not_found;
   for (int i_qpoint = 0; i_qpoint < nlq; ++i_qpoint) {
     // compute intersections
     auto sects = geom->intersections(lob_pos[0](i_qpoint, all), lob_pos[1](i_qpoint, all));
@@ -626,11 +627,33 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
       }
     }
     face_adj(i_qpoint) = best_adj;
-    not_found += !found;
+    if (!found) not_found.push_back(i_qpoint);
   }
-  if (not_found) {
-    #pragma omp critical
-    printf("\n%i nodes not found", not_found);
+  if (!not_found.empty()) {
+    {
+      #pragma omp critical
+      printf("\n%lu nodes not found", not_found.size());
+    }
+    Mat<dyn, dyn> lhs = Mat<dyn, dyn>::Zero((nd - 1)*nlq, not_found.size());
+    Mat<dyn, dyn> diff_mat = lob.diff_mat();
+    for (unsigned i_not_found = 0; i_not_found < not_found.size(); ++i_not_found) {
+      int i_qpoint = not_found[i_not_found];
+      for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
+        Row_index ind(nd - 1, lob.row_size, i_dim);
+        int i_node = ind.i_node(i_qpoint);
+        for (int j_node = 0; j_node < lob.row_size; ++j_node) {
+          lhs(i_dim*nlq + i_qpoint + (j_node - i_node)*ind.stride, i_not_found) = diff_mat(j_node, i_node);
+        }
+      }
+    }
+    Mat<> rhs((nd - 1)*nlq);
+    for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
+      rhs(Eigen::seqN(i_dim*nlq, nlq)) = -math::dimension_matvec(diff_mat, face_adj, i_dim);
+    }
+    Mat<> soln = lhs.fullPivHouseholderQr().solve(rhs);
+    for (int i_not_found = 0; i_not_found < soln.size(); ++i_not_found) {
+      face_adj(not_found[i_not_found]) = soln(i_not_found);
+    }
   }
   Eigen::Map<Mat<>>(con.element().node_adjustments() + (2*con.i_dim() + con.inside_face_sign())*nfq, nfq)
     += math::hypercube_matvec(from_lob, face_adj);
