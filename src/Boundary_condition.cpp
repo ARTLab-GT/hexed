@@ -609,20 +609,28 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
     }
   }
   Mat<> face_adj(nlq);
+  int not_found = 0;
   for (int i_qpoint = 0; i_qpoint < nlq; ++i_qpoint) {
     // compute intersections
     auto sects = geom->intersections(lob_pos[0](i_qpoint, all), lob_pos[1](i_qpoint, all));
     // set the node adjustment to match the nearest intersection, if any of them are reasonably close
     double best_adj = 0.;
     double distance = 1.;
+    bool found = false;
     for (double sect : sects) {
       double adj = sect - con.inside_face_sign();
       if (std::abs(adj) < distance) {
         best_adj = adj;
         distance = std::abs(adj);
+        found = true;
       }
     }
     face_adj(i_qpoint) = best_adj;
+    not_found += !found;
+  }
+  if (not_found) {
+    #pragma omp critical
+    printf("\n%i nodes not found", not_found);
   }
   Eigen::Map<Mat<>>(con.element().node_adjustments() + (2*con.i_dim() + con.inside_face_sign())*nfq, nfq)
     += math::hypercube_matvec(from_lob, face_adj);
