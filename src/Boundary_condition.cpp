@@ -611,6 +611,19 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
   Mat<> face_adj(nlq);
   for (int i_qpoint = 0; i_qpoint < nlq; ++i_qpoint) {
     // compute intersections
+    Mat<> diff = (lob_pos[1](i_qpoint, all) - lob_pos[0](i_qpoint, all)).transpose();
+    double retract = .2;
+    Mat<> start = lob_pos[con.inside_face_sign()](i_qpoint, all).transpose();
+    Mat<> project = (1 - retract)*start + retract*lob_pos[!con.inside_face_sign()](i_qpoint, all).transpose();
+    face_adj(i_qpoint) = 0.;
+    for (int i = 0; i < 2; ++i) {
+      auto projected = geom->nearest_point(project, huge, diff.norm());
+      if (!projected.empty()) {
+        face_adj(i_qpoint) = (projected.point() - start).dot(diff)/diff.squaredNorm();
+        project = start + face_adj(i_qpoint)*diff;
+      }
+    }
+    #if 0
     auto sects = geom->intersections(lob_pos[0](i_qpoint, all), lob_pos[1](i_qpoint, all));
     // set the node adjustment to match the nearest intersection, if any of them are reasonably close
     double best_adj = 0.;
@@ -623,6 +636,7 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
       }
     }
     face_adj(i_qpoint) = best_adj;
+    #endif
   }
   Eigen::Map<Mat<>>(con.element().node_adjustments() + (2*con.i_dim() + con.inside_face_sign())*nfq, nfq)
     += math::hypercube_matvec(from_lob, face_adj);
