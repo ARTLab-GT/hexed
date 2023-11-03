@@ -634,13 +634,18 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
     face_adj(i_qpoint) = best_adj;
   }
   adjustments += math::hypercube_matvec(from_lob, face_adj);
-  con.element().snapping_error = 0;
   double ns = 0.;
   for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
     Mat<> proj = math::dimension_matvec(nonsmooth, face_adj, i_dim);
     ns += proj.dot(reduced_weights.asDiagonal()*proj);
   }
-  if (ns > 1e-2*face_adj.dot(weights.asDiagonal()*face_adj)) {
+  double err = 0;
+  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+    Mat<> pos = math::to_mat(con.element().face_position(basis, 2*con.i_dim() + con.inside_face_sign(), i_qpoint));
+    auto projected = geom->nearest_point(pos, huge, con.element().nominal_size());
+    if (!projected.empty()) err = std::max(err, (projected.point() - pos).norm());
+  }
+  if (err > 1e-3*con.element().nominal_size() || ns > 1e-2*face_adj.dot(weights.asDiagonal()*face_adj)) {
     adjustments = Mat<>::Zero(nfq);
     for (int iter = 0; iter < 6; ++iter) {
       Mat<dyn, dyn> face_pos [2] {{nfq, nd}, {nfq, nd}};
@@ -656,30 +661,30 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
           lob_pos[face_sign](all, i_dim) = math::hypercube_matvec(to_lob, face_pos[face_sign](all, i_dim));
         }
       }
-      double err = 0;
       for (int i_qpoint = 0; i_qpoint < nlq; ++i_qpoint) {
         Mat<> diff = (lob_pos[1](i_qpoint, all) - lob_pos[0](i_qpoint, all)).transpose();
         double retract = .2*!iter;
         Mat<> start = lob_pos[con.inside_face_sign()](i_qpoint, all).transpose();
         Mat<> project = (1 - retract)*start + retract*lob_pos[!con.inside_face_sign()](i_qpoint, all).transpose();
         auto projected = geom->nearest_point(project, huge, diff.norm());
-        if (!projected.empty()) {
-          err = std::max(err, (projected.point() - start).norm());
-          face_adj(i_qpoint) = (projected.point() - start).dot(diff)/diff.squaredNorm();
-        }
+        if (!projected.empty()) face_adj(i_qpoint) = (projected.point() - start).dot(diff)/diff.squaredNorm();
       }
       double ns = 0.;
       for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
         Mat<> proj = math::dimension_matvec(nonsmooth, face_adj, i_dim);
         ns += proj.dot(reduced_weights.asDiagonal()*proj);
       }
-      con.element().snapping_error = err;
-      if (ns > .1*face_adj.dot(weights.asDiagonal()*face_adj)) break;
-      else {
-        adjustments += math::hypercube_matvec(from_lob, face_adj);
-      }
+      if (iter && ns > 3e-2*face_adj.dot(weights.asDiagonal()*face_adj)) break;
+      else adjustments += math::hypercube_matvec(from_lob, face_adj);
+    }
+    err = 0;
+    for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+      Mat<> pos = math::to_mat(con.element().face_position(basis, 2*con.i_dim() + con.inside_face_sign(), i_qpoint));
+      auto projected = geom->nearest_point(pos, huge, con.element().nominal_size());
+      if (!projected.empty()) err = std::max(err, (projected.point() - pos).norm());
     }
   }
+  con.element().snapping_error = err;
   bool positive_after = true;
   for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
     positive_after = positive_after && (con.element().jacobian_determinant(i_qpoint) > 0);
