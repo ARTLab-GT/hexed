@@ -51,6 +51,7 @@ class Element
   int record = 0; //!< for algorithms to book-keep general information
   Tree* tree = nullptr; //!< `Tree` this element was created from
   bool unrefinement_locked = false; //!< if this is set to `true`, `Mesh_interface::update()` won't unrefine it
+  double snapping_error = 0.; //!< error in face snapping (will only be nonzero for deformed elements;
   const Mat<> origin; //!< origin which integer coordinates are relative to
   Lock lock; //!< for any tasks where multiple threads might access an element simultaneously
 
