@@ -91,7 +91,7 @@ Case::Case(std::string input_file)
     std::time_t time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     std::strftime(utc, 100, "%Y-%m-%d %H:%M:%S", std::gmtime(&time));
     printer->print(format_str(1000, "Commencing simulation with Hexed version %i.%i.%i (commit %s) at %s UTC (%i Unix Time).\n",
-                              config::version_major, config::version_minor, config::version_patch, config::commit, utc, time));
+                              config::version_major, config::version_minor, config::version_patch, config::commit.c_str(), utc, time));
     // setup actual solver
     auto n_dim = _inter.variables->lookup<int>("n_dim");
     HEXED_ASSERT(n_dim && n_dim.value() > 0 && n_dim.value() <= 3,
@@ -266,6 +266,11 @@ Case::Case(std::string input_file)
   }));
 
   _inter.variables->create<int>("init_state", new Namespace::Heisenberg<int>([this]() {
+    #if HEXED_OBSESSIVE_TIMING
+    int nd = _inter.variables->lookup<int>("n_dim").value();
+    if (nd == 2) _inter.printer->print(Simplex_geom<2>::performance_report());
+    if (nd == 3) _inter.printer->print(Simplex_geom<3>::performance_report());
+    #endif
     _solver().initialize(Spacetime_expr(Struct_expr(_vars("init_cond").value()), _inter));
     return 0;
   }));
