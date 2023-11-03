@@ -69,7 +69,13 @@ class Simplex_geom : public Surface_geom
   void recursive_nearest(Nearest_point<n_dim>& nearest, Tree& tree, Mat<n_dim> point, double limit)
   {
     if ((point - tree.center()).norm() - tree.nominal_size()*std::sqrt(n_dim)/2 > limit) return;
-    for (int i_simplex : tree.misc_data) merge(nearest, _simplices[i_simplex], point);
+    for (int i_simplex : tree.misc_data) {
+      auto sim = _simplices[i_simplex];
+      auto bball = math::bounding_ball(sim);
+      if ((bball.center - point).norm() - std::sqrt(bball.radius_sq) <= limit) { // only bother if at least the bounding ball is close enough
+        merge(nearest, sim, point);
+      }
+    }
     for (Tree* child : tree.children()) recursive_nearest(nearest, *child, point, limit);
   }
 
@@ -87,7 +93,6 @@ class Simplex_geom : public Surface_geom
   {
     for (unsigned i_ind = 0; i_ind < sims.size(); ++i_ind) _tree.misc_data.push_back(i_ind);
     sort_simplices(_tree);
-    printf("%lu\n", _tree.misc_data.size());
   }
 
   void visualize(std::string file_name); //!< writes geometry to a Tecplot file with the specified name + file extension
