@@ -673,10 +673,10 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
         Mat<> proj = math::dimension_matvec(nonsmooth, face_adj, i_dim);
         ns += proj.dot(reduced_weights.asDiagonal()*proj);
       }
+      con.element().snapping_error = err;
       if (ns > .1*face_adj.dot(weights.asDiagonal()*face_adj)) break;
       else {
         adjustments += math::hypercube_matvec(from_lob, face_adj);
-        con.element().snapping_error = err;
       }
     }
   }

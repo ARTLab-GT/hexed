@@ -63,7 +63,7 @@ class Simplex_geom : public Surface_geom
       if (!in_child[i_ind]) remaining.push_back(tree.misc_data[i_ind]);
     }
     tree.misc_data = std::move(remaining);
-    for (Tree* child : tree.children()) if (!child->misc_data.empty()) sort_simplices(*child);
+    for (Tree* child : tree.children()) if (child->misc_data.size() > 100) sort_simplices(*child);
   }
 
   void recursive_nearest(Nearest_point<n_dim>& nearest, Tree& tree, Mat<n_dim> point, double limit)
