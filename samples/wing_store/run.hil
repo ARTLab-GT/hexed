@@ -10,9 +10,9 @@ altitude = 0.
 freestream_speed = 0.
 max_deflection = 1e-4
 geom0 = {wing_store.IGS}
-surface_refine = {snapping_error > 1e-2*nom_sz & ref_level < 8}
+surface_refine = {(res_bad > 3e-2 | snapping_error > 1e-2*nom_sz) & ref_level < 10}
 surface_max_iters = 8
 n_smooth = 20
 vis_field = false
-working_dir = {hexed_out8}
+working_dir = {hexed_out9}
 $init

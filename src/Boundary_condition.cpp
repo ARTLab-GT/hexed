@@ -593,7 +593,7 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
   if (!con.element().node_adjustments()) return; // Cartesian elements don't have `node_adjustments()`, so in this case just exit
   auto params {con.storage_params()};
   const int nd = params.n_dim;
-  const int nlq = math::pow(lob.row_size, nd - 1);
+  int nlq = math::pow(lob.row_size, nd - 1);
   const int nfq = params.n_qpoint()/params.row_size;
   Eigen::Map<Mat<>> adjustments(con.element().node_adjustments() + (2*con.i_dim() + con.inside_face_sign())*nfq, nfq);
   adjustments = Mat<>::Zero(nfq);
@@ -645,7 +645,12 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
     auto projected = geom->nearest_point(pos, huge, con.element().nominal_size());
     if (!projected.empty()) err = std::max(err, (projected.point() - pos).norm());
   }
-  if (err > 1e-3*con.element().nominal_size() || ns > 1e-2*face_adj.dot(weights.asDiagonal()*face_adj)) {
+  if (err > 3e-2*con.element().nominal_size() || ns > 3e-2*face_adj.dot(weights.asDiagonal()*face_adj)) {
+    Gauss_lobatto lob1(3);
+    int nlq = math::pow(lob1.row_size, nd - 1);
+    Mat<dyn, dyn> to_lob1 = basis.interpolate(lob1.nodes());
+    Mat<dyn, dyn> from_lob1 = lob1.interpolate(basis.nodes());
+    face_adj = Mat<>::Zero(nlq);
     adjustments = Mat<>::Zero(nfq);
     for (int iter = 0; iter < 6; ++iter) {
       Mat<dyn, dyn> face_pos [2] {{nfq, nd}, {nfq, nd}};
@@ -658,7 +663,7 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
       Mat<dyn, dyn> lob_pos [2] {{nlq, nd}, {nlq, nd}};
       for (int face_sign = 0; face_sign < 2; ++face_sign) {
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          lob_pos[face_sign](all, i_dim) = math::hypercube_matvec(to_lob, face_pos[face_sign](all, i_dim));
+          lob_pos[face_sign](all, i_dim) = math::hypercube_matvec(to_lob1, face_pos[face_sign](all, i_dim));
         }
       }
       for (int i_qpoint = 0; i_qpoint < nlq; ++i_qpoint) {
@@ -669,13 +674,7 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
         auto projected = geom->nearest_point(project, huge, diff.norm());
         if (!projected.empty()) face_adj(i_qpoint) = (projected.point() - start).dot(diff)/diff.squaredNorm();
       }
-      double ns = 0.;
-      for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
-        Mat<> proj = math::dimension_matvec(nonsmooth, face_adj, i_dim);
-        ns += proj.dot(reduced_weights.asDiagonal()*proj);
-      }
-      if (iter && ns > 3e-2*face_adj.dot(weights.asDiagonal()*face_adj)) break;
-      else adjustments += math::hypercube_matvec(from_lob, face_adj);
+      adjustments += math::hypercube_matvec(from_lob1, face_adj);
     }
     err = 0;
     for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
