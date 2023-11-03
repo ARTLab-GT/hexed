@@ -603,9 +603,6 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
     positive_before = positive_before && (con.element().jacobian_determinant(i_qpoint) > 0);
   }
   Mat<> face_adj = Mat<>::Zero(nlq);
-  Mat<dyn, dyn> nonsmooth = basis.orthogonal(lob.row_size - 1).transpose()*basis.node_weights().asDiagonal()*from_lob;
-  Mat<> weights = math::pow_outer(lob.node_weights(), nd - 1);
-  Mat<> reduced_weights = math::pow_outer(lob.node_weights(), std::max(0, nd - 2));
   Mat<dyn, dyn> face_pos [2] {{nfq, nd}, {nfq, nd}};
   // get position on this and opposite face
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
@@ -634,54 +631,11 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
     face_adj(i_qpoint) = best_adj;
   }
   adjustments += math::hypercube_matvec(from_lob, face_adj);
-  double ns = 0.;
-  for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
-    Mat<> proj = math::dimension_matvec(nonsmooth, face_adj, i_dim);
-    ns += proj.dot(reduced_weights.asDiagonal()*proj);
-  }
   double err = 0;
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
     Mat<> pos = math::to_mat(con.element().face_position(basis, 2*con.i_dim() + con.inside_face_sign(), i_qpoint));
     auto projected = geom->nearest_point(pos, huge, con.element().nominal_size());
     if (!projected.empty()) err = std::max(err, (projected.point() - pos).norm());
-  }
-  if (err > 3e-2*con.element().nominal_size() || ns > 3e-2*face_adj.dot(weights.asDiagonal()*face_adj)) {
-    Gauss_lobatto lob1(3);
-    int nlq = math::pow(lob1.row_size, nd - 1);
-    Mat<dyn, dyn> to_lob1 = basis.interpolate(lob1.nodes());
-    Mat<dyn, dyn> from_lob1 = lob1.interpolate(basis.nodes());
-    face_adj = Mat<>::Zero(nlq);
-    adjustments = Mat<>::Zero(nfq);
-    for (int iter = 0; iter < 6; ++iter) {
-      Mat<dyn, dyn> face_pos [2] {{nfq, nd}, {nfq, nd}};
-      // get position on this and opposite face
-      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-        for (int face_sign = 0; face_sign < 2; ++face_sign) {
-          face_pos[face_sign](i_qpoint, all) = math::to_mat(con.element().face_position(basis, 2*con.i_dim() + face_sign, i_qpoint));
-        }
-      }
-      Mat<dyn, dyn> lob_pos [2] {{nlq, nd}, {nlq, nd}};
-      for (int face_sign = 0; face_sign < 2; ++face_sign) {
-        for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          lob_pos[face_sign](all, i_dim) = math::hypercube_matvec(to_lob1, face_pos[face_sign](all, i_dim));
-        }
-      }
-      for (int i_qpoint = 0; i_qpoint < nlq; ++i_qpoint) {
-        Mat<> diff = (lob_pos[1](i_qpoint, all) - lob_pos[0](i_qpoint, all)).transpose();
-        double retract = .2*!iter;
-        Mat<> start = lob_pos[con.inside_face_sign()](i_qpoint, all).transpose();
-        Mat<> project = (1 - retract)*start + retract*lob_pos[!con.inside_face_sign()](i_qpoint, all).transpose();
-        auto projected = geom->nearest_point(project, huge, diff.norm());
-        if (!projected.empty()) face_adj(i_qpoint) = (projected.point() - start).dot(diff)/diff.squaredNorm();
-      }
-      adjustments += math::hypercube_matvec(from_lob1, face_adj);
-    }
-    err = 0;
-    for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-      Mat<> pos = math::to_mat(con.element().face_position(basis, 2*con.i_dim() + con.inside_face_sign(), i_qpoint));
-      auto projected = geom->nearest_point(pos, huge, con.element().nominal_size());
-      if (!projected.empty()) err = std::max(err, (projected.point() - pos).norm());
-    }
   }
   con.element().snapping_error = err;
   bool positive_after = true;
