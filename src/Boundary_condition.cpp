@@ -602,24 +602,24 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
   for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
     positive_before = positive_before && (con.element().jacobian_determinant(i_qpoint) > 0);
   }
-  Mat<dyn, dyn> face_pos [2] {{nfq, nd}, {nfq, nd}};
-  // get position on this and opposite face
-  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-    for (int face_sign = 0; face_sign < 2; ++face_sign) {
-      face_pos[face_sign](i_qpoint, all) = math::to_mat(con.element().face_position(basis, 2*con.i_dim() + face_sign, i_qpoint));
-    }
-  }
-  Mat<dyn, dyn> lob_pos [2] {{nlq, nd}, {nlq, nd}};
-  for (int face_sign = 0; face_sign < 2; ++face_sign) {
-    for (int i_dim = 0; i_dim < nd; ++i_dim) {
-      lob_pos[face_sign](all, i_dim) = math::hypercube_matvec(to_lob, face_pos[face_sign](all, i_dim));
-    }
-  }
   Mat<> face_adj = Mat<>::Zero(nlq);
   Mat<dyn, dyn> nonsmooth = basis.orthogonal(lob.row_size - 1).transpose()*basis.node_weights().asDiagonal()*from_lob;
   Mat<> weights = math::pow_outer(lob.node_weights(), nd - 1);
   Mat<> reduced_weights = math::pow_outer(lob.node_weights(), std::max(0, nd - 2));
   for (int iter = 0; iter < 6; ++iter) {
+    Mat<dyn, dyn> face_pos [2] {{nfq, nd}, {nfq, nd}};
+    // get position on this and opposite face
+    for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+      for (int face_sign = 0; face_sign < 2; ++face_sign) {
+        face_pos[face_sign](i_qpoint, all) = math::to_mat(con.element().face_position(basis, 2*con.i_dim() + face_sign, i_qpoint));
+      }
+    }
+    Mat<dyn, dyn> lob_pos [2] {{nlq, nd}, {nlq, nd}};
+    for (int face_sign = 0; face_sign < 2; ++face_sign) {
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        lob_pos[face_sign](all, i_dim) = math::hypercube_matvec(to_lob, face_pos[face_sign](all, i_dim));
+      }
+    }
     for (int i_qpoint = 0; i_qpoint < nlq; ++i_qpoint) {
       // compute intersections
       Mat<> diff = (lob_pos[1](i_qpoint, all) - lob_pos[0](i_qpoint, all)).transpose();
@@ -634,8 +634,8 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
       Mat<> proj = math::dimension_matvec(nonsmooth, face_adj, i_dim);
       ns += proj.dot(reduced_weights.asDiagonal()*proj);
     }
-    if (ns > 1e-1*face_adj.dot(weights.asDiagonal()*face_adj)) break;
-    else adjustments = math::hypercube_matvec(from_lob, face_adj);
+    if (ns > 1e-2*face_adj.dot(weights.asDiagonal()*face_adj)) break;
+    else adjustments += math::hypercube_matvec(from_lob, face_adj);
   }
   bool positive_after = true;
   for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
