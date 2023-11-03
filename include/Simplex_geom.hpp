@@ -3,6 +3,7 @@
 
 #include "Surface_geom.hpp"
 #include "Stopwatch_tree.hpp"
+#include "Tree.hpp"
 
 namespace hexed
 {
@@ -26,15 +27,64 @@ class Simplex_geom : public Surface_geom
   static Stopwatch_tree stopwatch; // for benchmarking projection and intersection calculation
   #endif
   void merge(Nearest_point<n_dim>& nearest, Mat<n_dim, n_dim> sim, Mat<n_dim> point); // helper for `nearest_point`
+  static Mat<n_dim, 2> _get_bounding_box(const std::vector<Mat<n_dim, n_dim>>& sims)
+  {
+    Mat<n_dim, 2> box;
+    box(all, 0).setConstant(huge);
+    box(all, 1).setConstant(-huge);
+    for (auto& simplex : sims) {
+      for (int i_vertex = 0; i_vertex < n_dim; ++i_vertex) {
+        box(all, 0) = box(all, 0).cwiseMin(simplex(all, i_vertex));
+        box(all, 1) = box(all, 1).cwiseMax(simplex(all, i_vertex));
+      }
+    }
+    return box;
+  }
+
+  void sort_simplices(Tree& tree)
+  {
+    tree.refine();
+    std::vector<bool> in_child(tree.misc_data.size(), true);
+    for (Tree* child : tree.children()) {
+      Mat<n_dim> coords = child->nominal_position();
+      for (unsigned i_ind = 0; i_ind < tree.misc_data.size(); ++i_ind) {
+        if (!in_child[i_ind]) {
+          in_child[i_ind] = true;
+          for (int i_vertex = 0; i_vertex < n_dim; ++i_vertex) {
+            Mat<n_dim> diff = _simplices[tree.misc_data[i_ind]](all, i_vertex) - coords;
+            in_child[i_ind] = in_child[i_ind] && diff.minCoeff() > 0. && diff.maxCoeff() < child->nominal_size();
+          }
+          if (in_child[i_ind]) child->misc_data.push_back(tree.misc_data[i_ind]);
+        }
+      }
+    }
+    std::vector<int> remaining;
+    for (unsigned i_ind = 0; i_ind < tree.misc_data.size(); ++i_ind) {
+      if (in_child[i_ind]) remaining.push_back(tree.misc_data[i_ind]);
+    }
+    tree.misc_data = std::move(remaining);
+    for (Tree* child : tree.children()) if (!child->misc_data.empty()) sort_simplices(*child);
+  }
+
+  std::vector<Mat<n_dim, n_dim>> _simplices;
+  Mat<n_dim, 2> _bounding_box;
+  Tree _tree;
 
   public:
   double gap_tol = 1e-6; //!< extend triangles by this amount, relative to their original size, to fill gaps
-  std::vector<Mat<n_dim, n_dim>> simplices;
-  Simplex_geom(const std::vector<Mat<n_dim, n_dim>>&  sims) : simplices{sims} {}
-  Simplex_geom(      std::vector<Mat<n_dim, n_dim>>&& sims) : simplices{sims} {}
+
+  Simplex_geom(const std::vector<Mat<n_dim, n_dim>>& sims)
+  : _simplices{sims},
+    _bounding_box(_get_bounding_box(sims)),
+    _tree(n_dim, (_bounding_box(all, 1) - _bounding_box(all, 0)).maxCoeff(), _bounding_box(all, 0))
+  {
+    for (unsigned i_ind = 0; i_ind < sims.size(); ++i_ind) _tree.misc_data.push_back(i_ind);
+    sort_simplices(_tree);
+  }
+
   void visualize(std::string file_name); //!< writes geometry to a Tecplot file with the specified name + file extension
 
-  /*! \details Iterates through all simplices and finds the nearest point on each,
+  /*! \details Iterates through all _simplices and finds the nearest point on each,
    * whether that point lies in the interior or on the edge or a vertex.
    * Returns the global nearest of all those points.
    * `distance_guess` is taken into account, and it is generally preferable to overestimate rather than underestimate.
@@ -49,7 +99,7 @@ class Simplex_geom : public Surface_geom
     // try to find a point within `distance_guess`
     double limit = std::min(max_distance, distance_guess);
     Nearest_point<n_dim> nearest(point, limit);
-    for (Mat<n_dim, n_dim> sim : simplices) {
+    for (Mat<n_dim, n_dim> sim : _simplices) {
       auto bball = math::bounding_ball(sim);
       if ((bball.center - point).norm() - std::sqrt(bball.radius_sq) <= limit) { // only bother if at least the bounding ball is close enough
         merge(nearest, sim, point);
@@ -68,7 +118,7 @@ class Simplex_geom : public Surface_geom
 
   /*! \details Evaluates intersections with each individual element and assembles a global list.
    * Intersections with the boundary of a simplex are always considered valid intersections,
-   * so if the line passes exactly through the shared boundary of multiple simplices
+   * so if the line passes exactly through the shared boundary of multiple _simplices
    * then duplicate intersections may be obtained.
    */
   std::vector<double> intersections(Mat<> point0, Mat<> point1) override
@@ -79,7 +129,7 @@ class Simplex_geom : public Surface_geom
     #endif
     std::vector<double> inters;
     Mat<n_dim> diff = point1 - point0;
-    for (Mat<n_dim, n_dim> sim : simplices) {
+    for (Mat<n_dim, n_dim> sim : _simplices) {
       if (math::intersects<n_dim>(math::bounding_ball(sim), point0, point1)) { // if the line doesn't even intersect the bounding ball, don't bother
         // compute intersection between line and plane of simplex
         Mat<n_dim, n_dim> lhs;
