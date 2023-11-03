@@ -44,7 +44,7 @@ class Simplex_geom : public Surface_geom
   void sort_simplices(Tree& tree)
   {
     tree.refine();
-    std::vector<bool> in_child(tree.misc_data.size(), true);
+    std::vector<bool> in_child(tree.misc_data.size(), false);
     for (Tree* child : tree.children()) {
       Mat<n_dim> coords = child->nominal_position();
       for (unsigned i_ind = 0; i_ind < tree.misc_data.size(); ++i_ind) {
@@ -60,10 +60,17 @@ class Simplex_geom : public Surface_geom
     }
     std::vector<int> remaining;
     for (unsigned i_ind = 0; i_ind < tree.misc_data.size(); ++i_ind) {
-      if (in_child[i_ind]) remaining.push_back(tree.misc_data[i_ind]);
+      if (!in_child[i_ind]) remaining.push_back(tree.misc_data[i_ind]);
     }
     tree.misc_data = std::move(remaining);
     for (Tree* child : tree.children()) if (!child->misc_data.empty()) sort_simplices(*child);
+  }
+
+  void recursive_nearest(Nearest_point<n_dim>& nearest, Tree& tree, Mat<n_dim> point, double limit)
+  {
+    if ((point - tree.center()).norm() - tree.nominal_size()*std::sqrt(n_dim)/2 > limit) return;
+    for (int i_simplex : tree.misc_data) merge(nearest, _simplices[i_simplex], point);
+    for (Tree* child : tree.children()) recursive_nearest(nearest, *child, point, limit);
   }
 
   std::vector<Mat<n_dim, n_dim>> _simplices;
@@ -80,6 +87,7 @@ class Simplex_geom : public Surface_geom
   {
     for (unsigned i_ind = 0; i_ind < sims.size(); ++i_ind) _tree.misc_data.push_back(i_ind);
     sort_simplices(_tree);
+    printf("%lu\n", _tree.misc_data.size());
   }
 
   void visualize(std::string file_name); //!< writes geometry to a Tecplot file with the specified name + file extension
@@ -99,12 +107,7 @@ class Simplex_geom : public Surface_geom
     // try to find a point within `distance_guess`
     double limit = std::min(max_distance, distance_guess);
     Nearest_point<n_dim> nearest(point, limit);
-    for (Mat<n_dim, n_dim> sim : _simplices) {
-      auto bball = math::bounding_ball(sim);
-      if ((bball.center - point).norm() - std::sqrt(bball.radius_sq) <= limit) { // only bother if at least the bounding ball is close enough
-        merge(nearest, sim, point);
-      }
-    }
+    recursive_nearest(nearest, _tree, point, limit);
     #if HEXED_OBSESSIVE_TIMING
     sw.pause();
     stopwatch.stopwatch += sw;
