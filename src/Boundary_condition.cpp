@@ -597,6 +597,11 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
   const int nfq = params.n_qpoint()/params.row_size;
   Eigen::Map<Mat<>> adjustments(con.element().node_adjustments() + (2*con.i_dim() + con.inside_face_sign())*nfq, nfq);
   adjustments = Mat<>::Zero(nfq);
+  con.element().set_jacobian(basis);
+  bool positive_before = true;
+  for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
+    positive_before = positive_before && (con.element().jacobian_determinant(i_qpoint) > 0);
+  }
   Mat<dyn, dyn> face_pos [2] {{nfq, nd}, {nfq, nd}};
   // get position on this and opposite face
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
@@ -610,23 +615,36 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
       lob_pos[face_sign](all, i_dim) = math::hypercube_matvec(to_lob, face_pos[face_sign](all, i_dim));
     }
   }
-  Mat<> face_adj(nlq);
-  for (int i_qpoint = 0; i_qpoint < nlq; ++i_qpoint) {
-    // compute intersections
-    Mat<> diff = (lob_pos[1](i_qpoint, all) - lob_pos[0](i_qpoint, all)).transpose();
-    double retract = .2;
-    Mat<> start = lob_pos[con.inside_face_sign()](i_qpoint, all).transpose();
-    Mat<> project = (1 - retract)*start + retract*lob_pos[!con.inside_face_sign()](i_qpoint, all).transpose();
-    face_adj(i_qpoint) = 0.;
-    for (int i = 0; i < 3; ++i) {
+  Mat<> face_adj = Mat<>::Zero(nlq);
+  Mat<dyn, dyn> nonsmooth = basis.orthogonal(lob.row_size - 1).transpose()*basis.node_weights().asDiagonal()*from_lob;
+  Mat<> weights = math::pow_outer(lob.node_weights(), nd - 1);
+  Mat<> reduced_weights = math::pow_outer(lob.node_weights(), std::max(0, nd - 2));
+  for (int iter = 0; iter < 6; ++iter) {
+    for (int i_qpoint = 0; i_qpoint < nlq; ++i_qpoint) {
+      // compute intersections
+      Mat<> diff = (lob_pos[1](i_qpoint, all) - lob_pos[0](i_qpoint, all)).transpose();
+      double retract = .2*!iter;
+      Mat<> start = lob_pos[con.inside_face_sign()](i_qpoint, all).transpose();
+      Mat<> project = (1 - retract)*start + retract*lob_pos[!con.inside_face_sign()](i_qpoint, all).transpose();
       auto projected = geom->nearest_point(project, huge, diff.norm());
-      if (!projected.empty()) {
-        face_adj(i_qpoint) = (projected.point() - start).dot(diff)/diff.squaredNorm();
-        project = start + face_adj(i_qpoint)*diff;
-      }
+      if (!projected.empty()) face_adj(i_qpoint) = (projected.point() - start).dot(diff)/diff.squaredNorm();
     }
+    double ns = 0.;
+    for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
+      Mat<> proj = math::dimension_matvec(nonsmooth, face_adj, i_dim);
+      ns += proj.dot(reduced_weights.asDiagonal()*proj);
+    }
+    if (ns > 1e-1*face_adj.dot(weights.asDiagonal()*face_adj)) break;
+    else adjustments = math::hypercube_matvec(from_lob, face_adj);
   }
-  adjustments += math::hypercube_matvec(from_lob, face_adj);
+  bool positive_after = true;
+  for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
+    positive_after = positive_after && (con.element().jacobian_determinant(i_qpoint) > 0);
+  }
+  if (positive_before && !positive_after) {
+    #pragma omp critical
+    printf("nonpositive jacobian created\n");
+  }
 }
 
 }
