@@ -79,6 +79,29 @@ class Simplex_geom : public Surface_geom
     for (Tree* child : tree.children()) recursive_nearest(nearest, *child, point, limit);
   }
 
+  void recursive_intersections(std::vector<double>& inters, Tree& tree, Mat<n_dim> point0, Mat<n_dim> point1)
+  {
+    if (!math::intersects(math::Ball<n_dim>(tree.center(), tree.nominal_size()*n_dim/4.), point0, point1)) return;
+    Mat<n_dim> diff = point1 - point0;
+    for (int i_simplex : tree.misc_data) {
+      auto sim = _simplices[i_simplex];
+      if (math::intersects<n_dim>(math::bounding_ball(sim), point0, point1)) { // if the line doesn't even intersect the bounding ball, don't bother
+        // compute intersection between line and plane of simplex
+        Mat<n_dim, n_dim> lhs;
+        lhs(all, 0) = -diff;
+        for (int col = 1; col < n_dim; ++col) lhs(all, col) = sim(all, col) - sim(all, 0);
+        auto fact = lhs.lu();
+        if (fact.rcond() > 1e-7) {
+          Mat<n_dim> soln = fact.solve(point0 - sim(all, 0));
+          // if intersection is inside simplex, add it to the list
+          Eigen::Array<double, n_dim - 1, 1> arr = soln(Eigen::seqN(1, n_dim - 1)).array();
+          if ((arr >= -gap_tol).all() && arr.sum() <= 1 + gap_tol) inters.push_back(soln(0));
+        }
+      }
+    }
+    for (Tree* child : tree.children()) recursive_intersections(inters, *child, point0, point1);
+  }
+
   std::vector<Mat<n_dim, n_dim>> _simplices;
   Mat<n_dim, 2> _bounding_box;
   Tree _tree;
@@ -136,22 +159,7 @@ class Simplex_geom : public Surface_geom
     sw.start();
     #endif
     std::vector<double> inters;
-    Mat<n_dim> diff = point1 - point0;
-    for (Mat<n_dim, n_dim> sim : _simplices) {
-      if (math::intersects<n_dim>(math::bounding_ball(sim), point0, point1)) { // if the line doesn't even intersect the bounding ball, don't bother
-        // compute intersection between line and plane of simplex
-        Mat<n_dim, n_dim> lhs;
-        lhs(all, 0) = -diff;
-        for (int col = 1; col < n_dim; ++col) lhs(all, col) = sim(all, col) - sim(all, 0);
-        auto fact = lhs.lu();
-        if (fact.rcond() > 1e-7) {
-          Mat<n_dim> soln = fact.solve(point0 - sim(all, 0));
-          // if intersection is inside simplex, add it to the list
-          Eigen::Array<double, n_dim - 1, 1> arr = soln(Eigen::seqN(1, n_dim - 1)).array();
-          if ((arr >= -gap_tol).all() && arr.sum() <= 1 + gap_tol) inters.push_back(soln(0));
-        }
-      }
-    }
+    recursive_intersections(inters, _tree, point0, point1);
     #if HEXED_OBSESSIVE_TIMING
     sw.pause();
     stopwatch.stopwatch += sw;
