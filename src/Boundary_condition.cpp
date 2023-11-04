@@ -587,10 +587,10 @@ void Geom_mbc::snap_vertices(Boundary_connection& con)
 
 void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
 {
+  if (!con.element().node_adjustments()) return; // Cartesian elements don't have `node_adjustments()`, so in this case just exit
   Gauss_lobatto lob(basis.row_size - 1);
   Mat<dyn, dyn> to_lob = basis.interpolate(lob.nodes());
   Mat<dyn, dyn> from_lob = lob.interpolate(basis.nodes());
-  if (!con.element().node_adjustments()) return; // Cartesian elements don't have `node_adjustments()`, so in this case just exit
   auto params {con.storage_params()};
   const int nd = params.n_dim;
   int nlq = math::pow(lob.row_size, nd - 1);
@@ -657,6 +657,59 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
 
 void Geom_mbc::smooth_node_adj(Boundary_connection& con, const Basis& basis)
 {
+  if (!con.needs_smoothing || !con.element().node_adjustments()) return; // Cartesian elements don't have `node_adjustments()`, so in this case just exit
+  Gauss_lobatto lob(basis.row_size - 1);
+  Mat<dyn, dyn> to_lob = basis.interpolate(lob.nodes());
+  Mat<dyn, dyn> from_lob = lob.interpolate(basis.nodes());
+  auto params {con.storage_params()};
+  const int nd = params.n_dim;
+  int nlq = math::pow(lob.row_size, nd - 1);
+  const int nfq = params.n_qpoint()/params.row_size;
+  Eigen::Map<Mat<>> adjustments(con.element().node_adjustments() + (2*con.i_dim() + con.inside_face_sign())*nfq, nfq);
+  Mat<dyn, dyn> face_pos [2] {{nfq, nd}, {nfq, nd}};
+  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+    for (int face_sign = 0; face_sign < 2; ++face_sign) {
+      face_pos[face_sign](i_qpoint, all) = math::to_mat(con.element().face_position(basis, 2*con.i_dim() + face_sign, i_qpoint));
+    }
+  }
+  Mat<dyn, dyn> lob_pos [2] {{nlq, nd}, {nlq, nd}};
+  for (int face_sign = 0; face_sign < 2; ++face_sign) {
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      lob_pos[face_sign](all, i_dim) = math::hypercube_matvec(to_lob, face_pos[face_sign](all, i_dim));
+    }
+  }
+  Mat<dyn, dyn> gradients(nlq, (nd - 1)*nd);
+  for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
+    for (int j_dim = 0; j_dim < nd; ++j_dim) {
+      gradients(all, i_dim*nd + j_dim) = math::dimension_matvec(lob.diff_mat(), lob_pos[con.inside_face_sign()](all, j_dim), i_dim);
+    }
+  }
+  if (nd == 3) {
+    for (int i_qpoint = 0; i_qpoint < nlq; ++i_qpoint) {
+      Mat<3> vecs [2];
+      for (int i_dim = 0; i_dim < 2; ++i_dim) vecs[i_dim] = gradients(i_qpoint, Eigen::seqN(i_dim*nd, 3)).transpose();
+      Mat<3> normal = vecs[0].cross(vecs[1]).normalized();
+      for (int i_dim = 0; i_dim < 2; ++i_dim) {
+        gradients(i_qpoint, Eigen::seqN(i_dim*3, 3)) = math::sign(i_dim)*normal.cross(vecs[!i_dim]).transpose();
+      }
+    }
+  }
+  Mat<> diff_mat = lob.diff_mat();
+  for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
+    for (int j_dim = 0; j_dim < nd; ++j_dim) {
+      Mat<> g = gradients(all, i_dim*nd + j_dim);
+      Mat<> prod = math::dimension_matvec(diff_mat, g, i_dim);
+      gradients(all, i_dim*nd + j_dim) = prod;
+    }
+  }
+  Mat<> face_adj(nlq);
+  for (int i_qpoint = 0; i_qpoint < nlq; ++i_qpoint) {
+    Mat<> diff = (lob_pos[1](i_qpoint, all) - lob_pos[0](i_qpoint, all)).transpose();
+    Mat<> force = Mat<>::Zero(nd);
+    for (int i_dim = 0; i_dim < nd - 1; ++i_dim) force += gradients(i_qpoint, Eigen::seqN(i_dim*nd, nd)).transpose();
+    face_adj(i_qpoint) = force.dot(diff)/diff.squaredNorm()/-lob.min_eig_diffusion();
+  }
+  adjustments += math::hypercube_matvec(from_lob, face_adj);
 }
 
 }

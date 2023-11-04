@@ -262,6 +262,12 @@ void Solver::snap_faces()
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh.boundary_condition(bc_sn).mesh_bc->snap_node_adj(bc_cons[i_con], basis);
   }
+  #pragma omp parallel for
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    Lock::Acquire acq(bc_cons[i_con].element().lock);
+    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+    acc_mesh.boundary_condition(bc_sn).mesh_bc->smooth_node_adj(bc_cons[i_con], basis);
+  }
 }
 
 void Solver::calc_jacobian()

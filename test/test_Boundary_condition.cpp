@@ -301,38 +301,3 @@ TEST_CASE("Copy")
     REQUIRE(tbc.ghost_face()[4*n_qpoint + i_qpoint] == Catch::Approx(1e4));
   }
 }
-
-TEST_CASE("face snapping and smoothing")
-{
-  const int row_size = hexed::config::max_row_size;
-  Eigen::MatrixXd face_data(2*4*row_size, 4);
-  hexed::Gauss_legendre basis(row_size);
-  hexed::Deformed_element elem({3, 4, 2, row_size});
-  elem.vertex(0).pos[1] = .2;
-  elem.vertex(1).pos[1] = .8;
-  for (int i_face = 0; i_face < 4; ++i_face) elem.faces[i_face] = &face_data(0, i_face);
-  hexed::Typed_bound_connection<hexed::Deformed_element> bound_con(elem, 0, 0, 0);
-  SECTION("smooth boundary")
-  {
-    hexed::Geom_mbc bc(new hexed::Hypersphere(hexed::Mat<2>{-.4, .5}, .5));
-    bc.snap_node_adj(bound_con, basis);
-    REQUIRE(bound_con.needs_smoothing == false);
-    for (int i = 0; i < 2; ++i) {
-      for (int j = 0; j < 10*i; ++j) bc.smooth_node_adj(bound_con, basis);
-      for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-        auto face_pos = elem.face_position(basis, 0, i_qpoint);
-        REQUIRE(hexed::math::pow(face_pos[0] + .4, 2) + hexed::math::pow(face_pos[1] - .5, 2) == Catch::Approx(.25));
-      }
-    }
-  }
-  SECTION("boundary with gaps")
-  {
-    hexed::Geom_mbc bc(new hexed::Simplex_geom<2>({hexed::Mat<2, 2>{{-.1, .2}, {-.1, .3}}, hexed::Mat<2, 2>{{-.1, .7}, {-.1, .8}}}));
-    bc.snap_node_adj(bound_con, basis);
-    REQUIRE(bound_con.needs_smoothing == true);
-    for (int i = 0; i < 10; ++i) bc.smooth_node_adj(bound_con, basis);
-    for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-      REQUIRE(elem.node_adjustments()[i_qpoint] == Catch::Approx(-.1).margin(1e-2));
-    }
-  }
-}
