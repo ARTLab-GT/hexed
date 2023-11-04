@@ -344,6 +344,7 @@ inline void Refined_connection<Deformed_element>::disconnect_normal()
 class Boundary_connection : public Boundary_face, public Face_connection<Deformed_element>
 {
   public:
+  bool needs_smoothing = false;
   inline Boundary_connection(Storage_params params) : Face_connection<Deformed_element>{params} {}
   virtual Element& element() = 0;
   virtual int bound_cond_serial_n() = 0;

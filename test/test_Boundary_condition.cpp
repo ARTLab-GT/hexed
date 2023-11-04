@@ -4,6 +4,7 @@
 #include <hexed/Spacetime_func.hpp>
 #include <hexed/constants.hpp>
 #include <hexed/connection.hpp>
+#include <hexed/Gauss_legendre.hpp>
 
 class Dummy : public hexed::Boundary_condition
 {
@@ -297,5 +298,27 @@ TEST_CASE("Copy")
     REQUIRE(tbc.ghost_face()[2*n_qpoint + i_qpoint] == Catch::Approx(50.));
     REQUIRE(tbc.ghost_face()[3*n_qpoint + i_qpoint] == Catch::Approx(0.9));
     REQUIRE(tbc.ghost_face()[4*n_qpoint + i_qpoint] == Catch::Approx(1e4));
+  }
+}
+
+TEST_CASE("face snapping and smoothing")
+{
+  const int row_size = hexed::config::max_row_size;
+  Eigen::MatrixXd face_data(2*4*row_size, 4);
+  hexed::Gauss_legendre basis(row_size);
+  hexed::Deformed_element elem({3, 4, 2, row_size});
+  elem.vertex(0).pos[1] = .2;
+  elem.vertex(1).pos[1] = .8;
+  for (int i_face = 0; i_face < 4; ++i_face) elem.faces[i_face] = &face_data(0, i_face);
+  hexed::Typed_bound_connection<hexed::Deformed_element> bound_con(elem, 0, 0, 0);
+  SECTION("smooth boundary")
+  {
+    hexed::Geom_mbc bc(new hexed::Hypersphere(hexed::Mat<2>{-.4, .5}, .5));
+    bc.snap_node_adj(bound_con, basis);
+    REQUIRE(bound_con.needs_smoothing == false);
+    for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+      auto face_pos = elem.face_position(basis, 0, i_qpoint);
+      REQUIRE(hexed::math::pow(face_pos[0] + .4, 2) + hexed::math::pow(face_pos[1] - .5, 2) == Catch::Approx(.25));
+    }
   }
 }
