@@ -631,6 +631,13 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
     face_adj(i_qpoint) = best_adj;
   }
   adjustments += math::hypercube_matvec(from_lob, face_adj);
+  double tol = 1./math::pow(3, lob.row_size);
+  bool& ns = con.needs_smoothing;
+  ns = false;
+  for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
+    Mat<> nonsmooth = math::dimension_matvec(basis.orthogonal(lob.row_size - 1).transpose(), adjustments, i_dim);
+    ns = ns || nonsmooth.maxCoeff() > tol;
+  }
   double err = 0;
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
     Mat<> pos = math::to_mat(con.element().face_position(basis, 2*con.i_dim() + con.inside_face_sign(), i_qpoint));

@@ -5,6 +5,7 @@
 #include <hexed/constants.hpp>
 #include <hexed/connection.hpp>
 #include <hexed/Gauss_legendre.hpp>
+#include <hexed/Simplex_geom.hpp>
 
 class Dummy : public hexed::Boundary_condition
 {
@@ -320,5 +321,11 @@ TEST_CASE("face snapping and smoothing")
       auto face_pos = elem.face_position(basis, 0, i_qpoint);
       REQUIRE(hexed::math::pow(face_pos[0] + .4, 2) + hexed::math::pow(face_pos[1] - .5, 2) == Catch::Approx(.25));
     }
+  }
+  SECTION("boundary with gaps")
+  {
+    hexed::Geom_mbc bc(new hexed::Simplex_geom<2>({hexed::Mat<2, 2>{{-.1, .2}, {-.1, .3}}, hexed::Mat<2, 2>{{-.1, .7}, {-.1, .8}}}));
+    bc.snap_node_adj(bound_con, basis);
+    REQUIRE(bound_con.needs_smoothing == true);
   }
 }
