@@ -655,4 +655,8 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
   }
 }
 
+void Geom_mbc::smooth_node_adj(Boundary_connection& con, const Basis& basis)
+{
+}
+
 }

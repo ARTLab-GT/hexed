@@ -317,9 +317,12 @@ TEST_CASE("face snapping and smoothing")
     hexed::Geom_mbc bc(new hexed::Hypersphere(hexed::Mat<2>{-.4, .5}, .5));
     bc.snap_node_adj(bound_con, basis);
     REQUIRE(bound_con.needs_smoothing == false);
-    for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-      auto face_pos = elem.face_position(basis, 0, i_qpoint);
-      REQUIRE(hexed::math::pow(face_pos[0] + .4, 2) + hexed::math::pow(face_pos[1] - .5, 2) == Catch::Approx(.25));
+    for (int i = 0; i < 2; ++i) {
+      for (int j = 0; j < 10*i; ++j) bc.smooth_node_adj(bound_con, basis);
+      for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+        auto face_pos = elem.face_position(basis, 0, i_qpoint);
+        REQUIRE(hexed::math::pow(face_pos[0] + .4, 2) + hexed::math::pow(face_pos[1] - .5, 2) == Catch::Approx(.25));
+      }
     }
   }
   SECTION("boundary with gaps")
@@ -327,5 +330,9 @@ TEST_CASE("face snapping and smoothing")
     hexed::Geom_mbc bc(new hexed::Simplex_geom<2>({hexed::Mat<2, 2>{{-.1, .2}, {-.1, .3}}, hexed::Mat<2, 2>{{-.1, .7}, {-.1, .8}}}));
     bc.snap_node_adj(bound_con, basis);
     REQUIRE(bound_con.needs_smoothing == true);
+    for (int i = 0; i < 10; ++i) bc.smooth_node_adj(bound_con, basis);
+    for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+      REQUIRE(elem.node_adjustments()[i_qpoint] == Catch::Approx(-.1).margin(1e-2));
+    }
   }
 }
