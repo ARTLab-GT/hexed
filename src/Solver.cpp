@@ -8,6 +8,7 @@
 #include <thermo.hpp>
 #include <Xdmf_wrapper.hpp>
 #include <iterative.hpp>
+#include <Gauss_lobatto.hpp>
 
 // kernels
 #include <Restrict_refined.hpp>
@@ -262,11 +263,77 @@ void Solver::snap_faces()
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh.boundary_condition(bc_sn).mesh_bc->snap_node_adj(bc_cons[i_con], basis);
   }
+  auto& elems = acc_mesh.elements();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    double* state = elems[i_elem].stage(0);
+    for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) state[i_dof] = 0;
+  }
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    Lock::Acquire acq(bc_cons[i_con].element().lock);
-    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh.boundary_condition(bc_sn).mesh_bc->smooth_node_adj(bc_cons[i_con], basis);
+    auto& con = bc_cons[i_con];
+    Lock::Acquire acq(con.element().lock);
+    int bc_sn = con.bound_cond_serial_n();
+    if (bc_sn == acc_mesh.surface_bc_sn()) {
+      acc_mesh.boundary_condition(bc_sn).mesh_bc->smooth_node_adj(con, basis);
+      double* state = con.element().stage(0);
+      double* node_adj = con.element().node_adjustments();
+      if (node_adj) {
+        node_adj += (2*con.i_dim() + con.inside_face_sign())*params.n_qpoint()/params.row_size;
+        for (Row_index ind(params.n_dim, params.row_size, con.i_dim()); ind; ++ind) {
+          for (int i_node = 0; i_node < params.row_size; ++i_node) {
+            state[ind.i_qpoint(i_node)] = math::sign(con.inside_face_sign())*node_adj[ind.i_face_qpoint()];
+          }
+        }
+      }
+    }
+  }
+  (*write_face)(elems);
+  (*kernel_factory<Prolong_refined>(params.n_dim, params.row_size, basis))(acc_mesh.refined_faces());
+  Copy fake_bc;
+  #pragma omp parallel for
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    auto& con = bc_cons[i_con];
+    Lock::Acquire acq(con.element().lock);
+    fake_bc.apply_state(con);
+  }
+  (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Neighbor>(params.n_dim, params.row_size))(acc_mesh.deformed().face_connections());
+  (*kernel_factory<Restrict_refined>(params.n_dim, params.row_size, basis, false, true))(acc_mesh.refined_faces());
+  Gauss_lobatto lob(basis.row_size - 1);
+  Mat<dyn, dyn> to_lob = basis.interpolate(lob.nodes());
+  Mat<dyn, dyn> from_lob = lob.interpolate(basis.nodes());
+  #pragma omp parallel for
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    auto& con = bc_cons[i_con];
+    Lock::Acquire acq(con.element().lock);
+    int bc_sn = con.bound_cond_serial_n();
+    if (bc_sn == acc_mesh.surface_bc_sn()) {
+      acc_mesh.boundary_condition(bc_sn).mesh_bc->smooth_node_adj(con, basis);
+      double* state = con.element().stage(0);
+      double* node_adj = con.element().node_adjustments();
+      if (node_adj) {
+        node_adj += (2*con.i_dim() + con.inside_face_sign())*params.n_qpoint()/params.row_size;
+        for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) if (j_dim != con.i_dim()) {
+          for (Row_index ind(params.n_dim, params.row_size, j_dim); ind; ++ind) {
+            Mat<> row(params.row_size);
+            for (int i_node = 0; i_node < params.row_size; ++i_node) {
+              row(i_node) = state[ind.i_qpoint(i_node)];
+            }
+            Mat<> lrow = to_lob*row;
+            for (int i_sign = 0; i_sign < 2; ++i_sign) {
+              lrow(i_sign*(lob.row_size - 1)) = con.element().faces[2*j_dim + i_sign][2*params.n_var*params.n_qpoint()/params.row_size + ind.i_face_qpoint()];
+            }
+            row = from_lob*lrow;
+            for (int i_node = 0; i_node < params.row_size; ++i_node) {
+              state[ind.i_qpoint(i_node)] = row(i_node);
+            }
+          }
+        }
+        for (Row_index ind(params.n_dim, params.row_size, con.i_dim()); ind; ++ind) {
+          node_adj[ind.i_face_qpoint()] = math::sign(con.inside_face_sign())*state[ind.i_qpoint(0)];
+        }
+      }
+    }
   }
 }
 
