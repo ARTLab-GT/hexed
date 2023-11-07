@@ -286,32 +286,13 @@ void Solver::snap_faces()
     (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Neighbor>(params.n_dim, params.row_size))(acc_mesh.deformed().face_connections());
     (*kernel_factory<Restrict_refined>(params.n_dim, params.row_size, basis, false, true))(acc_mesh.refined_faces());
   };
-  for (int i = 0; i < 1; ++i)
+  for (int i = 0; i < 100; ++i)
   {
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       double* state = elems[i_elem].stage(0);
       for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) state[i_dof] = 0;
     }
-    #pragma omp parallel for
-    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-      auto& con = bc_cons[i_con];
-      Lock::Acquire acq(con.element().lock);
-      int bc_sn = con.bound_cond_serial_n();
-      if (bc_sn == acc_mesh.surface_bc_sn()) {
-        double* state = con.element().stage(0);
-        double* node_adj = con.element().node_adjustments();
-        if (node_adj) {
-          node_adj += (2*con.i_dim() + con.inside_face_sign())*params.n_qpoint()/params.row_size;
-          for (Row_index ind(params.n_dim, params.row_size, con.i_dim()); ind; ++ind) {
-            for (int i_node = 0; i_node < params.row_size; ++i_node) {
-              state[ind.i_qpoint(i_node)] = math::sign(con.inside_face_sign())*node_adj[ind.i_face_qpoint()];
-            }
-          }
-        }
-      }
-    }
-    average_faces();
     auto convert_tension = [&](Mat<dyn, dyn>& matrix, double nom_sz) {
       for (unsigned i_row = 0; i_row < matrix.rows(); ++i_row) {
         if (nd == 3) {
@@ -332,63 +313,43 @@ void Solver::snap_faces()
       Lock::Acquire acq(con.element().lock);
       int bc_sn = con.bound_cond_serial_n();
       if (bc_sn == acc_mesh.surface_bc_sn()) {
-        double* state = con.element().stage(0);
         double* node_adj = con.element().node_adjustments();
         if (node_adj) {
           node_adj += (2*con.i_dim() + con.inside_face_sign())*params.n_qpoint()/params.row_size;
-          for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) if (j_dim != con.i_dim()) {
-            for (Row_index ind(params.n_dim, params.row_size, j_dim); ind; ++ind) {
-              Mat<> row(params.row_size);
-              for (int i_node = 0; i_node < params.row_size; ++i_node) {
-                row(i_node) = state[ind.i_qpoint(i_node)];
+          Mat<dyn, dyn> face_pos(nfq, nd);
+          for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+            face_pos(i_qpoint, all) = math::to_mat(con.element().face_position(basis, 2*con.i_dim() + con.inside_face_sign(), i_qpoint));
+          }
+          Mat<dyn, dyn> lob_pos(nlq, nd);
+          for (int i_dim = 0; i_dim < nd; ++i_dim) {
+            lob_pos(all, i_dim) = math::hypercube_matvec(to_lob, face_pos(all, i_dim));
+          }
+          Mat<dyn, dyn> gradient(nlq, (nd - 1)*nd);
+          for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
+            for (int j_dim = 0; j_dim < nd; ++j_dim) {
+              gradient(all, i_dim*nd + j_dim) = math::dimension_matvec(diff_mat, lob_pos(all, j_dim), i_dim);
+            }
+          }
+          convert_tension(gradient, con.element().nominal_size());
+          for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
+            for (int j_dim = 0; j_dim < nd; ++j_dim) {
+              Mat<> lifted(math::pow(lob.row_size, nd));
+              for (Row_index ind(params.n_dim, lob.row_size, con.i_dim()); ind; ++ind) {
+                for (int i_node = 0; i_node < lob.row_size; ++i_node) {
+                  lifted(ind.i_qpoint(i_node)) = gradient(ind.i_face_qpoint(), i_dim*nd + j_dim);
+                }
               }
-              Mat<> lrow = to_lob*row;
+              Mat<dyn, dyn> face(nlq, 2);
+              int vol_dim = i_dim + (i_dim >= con.i_dim());
+              for (Row_index ind(params.n_dim, lob.row_size, vol_dim); ind; ++ind) {
+                for (int i_sign = 0; i_sign < 2; ++i_sign) {
+                  face(ind.i_face_qpoint(), i_sign) = lifted(ind.i_qpoint(i_sign*(lob.row_size - 1)));
+                }
+              }
               for (int i_sign = 0; i_sign < 2; ++i_sign) {
-                lrow(i_sign*(lob.row_size - 1)) = con.element().faces[2*j_dim + i_sign][2*params.n_var*params.n_qpoint()/params.row_size + ind.i_face_qpoint()];
+                Eigen::Map<Mat<>> face_data(con.element().faces[2*vol_dim + i_sign] + (2*params.n_var + j_dim)*nfq, nfq);
+                face_data = math::hypercube_matvec(from_lob, face(all, i_sign));
               }
-              row = from_lob*lrow;
-              for (int i_node = 0; i_node < params.row_size; ++i_node) {
-                state[ind.i_qpoint(i_node)] = row(i_node);
-              }
-            }
-          }
-          for (Row_index ind(params.n_dim, params.row_size, con.i_dim()); ind; ++ind) {
-            node_adj[ind.i_face_qpoint()] = math::sign(con.inside_face_sign())*state[ind.i_qpoint(0)];
-          }
-        }
-        Mat<dyn, dyn> face_pos(nfq, nd);
-        for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-          face_pos(i_qpoint, all) = math::to_mat(con.element().face_position(basis, 2*con.i_dim() + con.inside_face_sign(), i_qpoint));
-        }
-        Mat<dyn, dyn> lob_pos(nlq, nd);
-        for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          lob_pos(all, i_dim) = math::hypercube_matvec(to_lob, face_pos(all, i_dim));
-        }
-        Mat<dyn, dyn> gradient(nlq, (nd - 1)*nd);
-        for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
-          for (int j_dim = 0; j_dim < nd; ++j_dim) {
-            gradient(all, i_dim*nd + j_dim) = math::dimension_matvec(diff_mat, lob_pos(all, j_dim), i_dim);
-          }
-        }
-        convert_tension(gradient, con.element().nominal_size());
-        for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
-          for (int j_dim = 0; j_dim < nd; ++j_dim) {
-            Mat<> lifted(math::pow(lob.row_size, nd));
-            for (Row_index ind(params.n_dim, lob.row_size, con.i_dim()); ind; ++ind) {
-              for (int i_node = 0; i_node < lob.row_size; ++i_node) {
-                lifted(ind.i_qpoint(i_node)) = gradient(ind.i_face_qpoint(), i_dim*nd + j_dim);
-              }
-            }
-            Mat<dyn, dyn> face(nlq, 2);
-            int vol_dim = i_dim + (i_dim >= con.i_dim());
-            for (Row_index ind(params.n_dim, lob.row_size, vol_dim); ind; ++ind) {
-              for (int i_sign = 0; i_sign < 2; ++i_sign) {
-                face(ind.i_face_qpoint(), i_sign) = lifted(ind.i_qpoint(i_sign*(lob.row_size - 1)));
-              }
-            }
-            for (int i_sign = 0; i_sign < 2; ++i_sign) {
-              Eigen::Map<Mat<>> face_data(con.element().faces[2*vol_dim + i_sign] + (2*params.n_var + j_dim)*nfq, nfq);
-              face_data = math::hypercube_matvec(from_lob, face(all, i_sign));
             }
           }
         }
@@ -446,21 +407,16 @@ void Solver::snap_faces()
             }
           }
           for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
-            #pragma omp critical
             for (int j_dim = 0; j_dim < nd; ++j_dim) {
               for (Row_index ind(nd - 1, lob.row_size, i_dim); ind; ++ind) {
                 Mat<> row(lob.row_size);
                 for (int i_node = 0; i_node < lob.row_size; ++i_node) row(i_node) = gradients(ind.i_qpoint(i_node), i_dim*nd + j_dim);
                 Mat<2> interface;
                 for (int i_sign = 0; i_sign < 2; ++i_sign) interface(i_sign) = faces[i_sign](ind.i_face_qpoint(), i_dim*nd + j_dim);
-                if (std::abs(interface.norm() - (boundary*row).norm()) < .1*(interface - boundary*row).norm()) {
-                  std::cout << interface.transpose() << "    " << (boundary*row).transpose() << std::endl;
-                }
                 row = diff_mat*row + lift*interface;
                 for (int i_node = 0; i_node < lob.row_size; ++i_node) gradients(ind.i_qpoint(i_node), i_dim*nd + j_dim) = row(i_node);
               }
             }
-            printf("\n");
           }
           Mat<> face_adj(nlq);
           for (int i_qpoint = 0; i_qpoint < nlq; ++i_qpoint) {
@@ -470,6 +426,63 @@ void Solver::snap_faces()
             face_adj(i_qpoint) = force.dot(diff)/diff.squaredNorm()/-lob.min_eig_diffusion()/10;
           }
           adjustments += math::hypercube_matvec(from_lob, face_adj);
+        }
+      }
+    }
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      double* state = elems[i_elem].stage(0);
+      for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) state[i_dof] = 0;
+    }
+    #pragma omp parallel for
+    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+      auto& con = bc_cons[i_con];
+      Lock::Acquire acq(con.element().lock);
+      int bc_sn = con.bound_cond_serial_n();
+      if (bc_sn == acc_mesh.surface_bc_sn()) {
+        double* state = con.element().stage(0);
+        double* node_adj = con.element().node_adjustments();
+        if (node_adj) {
+          node_adj += (2*con.i_dim() + con.inside_face_sign())*params.n_qpoint()/params.row_size;
+          for (Row_index ind(params.n_dim, params.row_size, con.i_dim()); ind; ++ind) {
+            for (int i_node = 0; i_node < params.row_size; ++i_node) {
+              state[ind.i_qpoint(i_node)] = math::sign(con.inside_face_sign())*node_adj[ind.i_face_qpoint()];
+            }
+          }
+        }
+      }
+    }
+    average_faces();
+    #pragma omp parallel for
+    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+      auto& con = bc_cons[i_con];
+      Lock::Acquire acq(con.element().lock);
+      int bc_sn = con.bound_cond_serial_n();
+      if (bc_sn == acc_mesh.surface_bc_sn()) {
+        double* state = con.element().stage(0);
+        double* node_adj = con.element().node_adjustments();
+        if (node_adj) {
+          node_adj += (2*con.i_dim() + con.inside_face_sign())*params.n_qpoint()/params.row_size;
+          for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) if (j_dim != con.i_dim()) {
+            for (Row_index ind(params.n_dim, params.row_size, j_dim); ind; ++ind) {
+              Mat<> row(params.row_size);
+              for (int i_node = 0; i_node < params.row_size; ++i_node) {
+                row(i_node) = state[ind.i_qpoint(i_node)];
+              }
+              Mat<> lrow = to_lob*row;
+              for (int i_sign = 0; i_sign < 2; ++i_sign) {
+                lrow(i_sign*(lob.row_size - 1)) *= .8;
+                lrow(i_sign*(lob.row_size - 1)) += .2*con.element().faces[2*j_dim + i_sign][2*params.n_var*params.n_qpoint()/params.row_size + ind.i_face_qpoint()];
+              }
+              row = from_lob*lrow;
+              for (int i_node = 0; i_node < params.row_size; ++i_node) {
+                state[ind.i_qpoint(i_node)] = row(i_node);
+              }
+            }
+          }
+          for (Row_index ind(params.n_dim, params.row_size, con.i_dim()); ind; ++ind) {
+            node_adj[ind.i_face_qpoint()] = math::sign(con.inside_face_sign())*state[ind.i_qpoint(0)];
+          }
         }
       }
     }
