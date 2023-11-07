@@ -684,8 +684,8 @@ void Geom_mbc::smooth_node_adj(Boundary_connection& con, const Basis& basis)
       gradients(all, i_dim*nd + j_dim) = math::dimension_matvec(lob.diff_mat(), lob_pos[con.inside_face_sign()](all, j_dim), i_dim);
     }
   }
-  //if (nd == 3) {
-  if (false) {
+  #if 0
+  if (nd == 3) {
     for (int i_qpoint = 0; i_qpoint < nlq; ++i_qpoint) {
       Mat<3> vecs [2];
       for (int i_dim = 0; i_dim < 2; ++i_dim) vecs[i_dim] = gradients(i_qpoint, Eigen::seqN(i_dim*nd, 3)).transpose();
@@ -695,6 +695,7 @@ void Geom_mbc::smooth_node_adj(Boundary_connection& con, const Basis& basis)
       }
     }
   }
+  #endif
   Mat<> diff_mat = lob.diff_mat();
   for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
     for (int j_dim = 0; j_dim < nd; ++j_dim) {

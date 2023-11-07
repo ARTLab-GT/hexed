@@ -13,4 +13,5 @@ surface_max_iters = 20
 surface_refine = {is_extruded}
 surface_max_iters = 4
 working_dir = {hexed_out1}
+vis_n_sample = 30
 $init
