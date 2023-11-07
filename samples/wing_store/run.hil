@@ -14,5 +14,5 @@ surface_refine = {(res_bad > 3e-2 | snapping_error > 1e-2*nom_sz) & ref_level < 
 surface_max_iters = 1
 n_smooth = 20
 vis_field = false
-working_dir = {hexed_out10}
+working_dir = {hexed_out11}
 $init
