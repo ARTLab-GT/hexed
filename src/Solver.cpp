@@ -286,26 +286,21 @@ void Solver::snap_faces()
     (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Neighbor>(params.n_dim, params.row_size))(acc_mesh.deformed().face_connections());
     (*kernel_factory<Restrict_refined>(params.n_dim, params.row_size, basis, false, true))(acc_mesh.refined_faces());
   };
-  for (int i = 0; i < 1000; ++i)
+  for (int i = 0; i < 200; ++i)
   {
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       double* state = elems[i_elem].stage(0);
       for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) state[i_dof] = 0;
     }
-    auto convert_tension = [&](Mat<dyn, dyn>& matrix, const Mat<dyn, dyn>& unadjusted) {
-      for (unsigned i_row = 0; i_row < matrix.rows(); ++i_row) {
-        if (nd == 3) {
-          Mat<3> vecs [2];
-          for (int i_dim = 0; i_dim < 2; ++i_dim) vecs[i_dim] = matrix(i_row, Eigen::seqN(i_dim*nd, 3)).transpose();
-          Mat<3> normal = vecs[0].cross(vecs[1]).normalized();
-          for (int i_dim = 0; i_dim < 2; ++i_dim) {
-            matrix(i_row, Eigen::seqN(i_dim*3, 3)) = math::sign(i_dim)*normal.cross(vecs[!i_dim]).transpose();
-          }
-        } else if (nd == 2) {
-          matrix(i_row, all) /= unadjusted(i_row, all).norm();
+    auto convert_tension = [&](const Mat<dyn, dyn>& lob_pos) {
+      Mat<dyn, dyn> gradients(nlq, (nd - 1)*nd);
+      for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
+        for (int j_dim = 0; j_dim < nd; ++j_dim) {
+          gradients(all, i_dim*nd + j_dim) = math::dimension_matvec(lob.diff_mat(), lob_pos(all, j_dim), i_dim);
         }
       }
+      return gradients;
     };
     #pragma omp parallel for
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
@@ -316,35 +311,25 @@ void Solver::snap_faces()
         double* node_adj = con.element().node_adjustments();
         if (node_adj) {
           node_adj += (2*con.i_dim() + con.inside_face_sign())*params.n_qpoint()/params.row_size;
-          Mat<dyn, dyn> face_pos(nfq, nd);
+          std::array<Mat<dyn, dyn>, 2> face_pos {Mat<dyn, dyn>(nfq, nd), Mat<dyn, dyn>(nfq, nd)};
           for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-            face_pos(i_qpoint, all) = math::to_mat(con.element().face_position(basis, 2*con.i_dim() + con.inside_face_sign(), i_qpoint));
-          }
-          Mat<dyn, dyn> lob_pos(nlq, nd);
-          for (int i_dim = 0; i_dim < nd; ++i_dim) {
-            lob_pos(all, i_dim) = math::hypercube_matvec(to_lob, face_pos(all, i_dim));
-          }
-          Mat<dyn, dyn> gradient(nlq, (nd - 1)*nd);
-          for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
-            for (int j_dim = 0; j_dim < nd; ++j_dim) {
-              gradient(all, i_dim*nd + j_dim) = math::dimension_matvec(diff_mat, lob_pos(all, j_dim), i_dim);
+            for (int face_sign = 0; face_sign < 2; ++face_sign) {
+              face_pos[face_sign](i_qpoint, all) = math::to_mat(con.element().face_position(basis, 2*con.i_dim() + face_sign, i_qpoint));
             }
           }
-          Mat<dyn, dyn> vert_pos(params.n_vertices()/2, nd);
-          for (Row_index ind(nd, 2, con.i_dim()); ind; ++ind) {
-            vert_pos(ind.i_face_qpoint(), all) = con.element().vertex(ind.i_qpoint(con.inside_face_sign())).pos(Eigen::seqN(0, nd)).transpose();
+          std::array<Mat<dyn, dyn>, 2> lob_pos {Mat<dyn, dyn>(nlq, nd), Mat<dyn, dyn>(nlq, nd)};
+          for (int face_sign = 0; face_sign < 2; ++face_sign) {
+            for (int i_dim = 0; i_dim < nd; ++i_dim) {
+              lob_pos[face_sign](all, i_dim) = math::hypercube_matvec(to_lob, face_pos[face_sign](all, i_dim));
+            }
           }
-          Mat<dyn, dyn> unadjusted(nlq, nd);
-          for (int i_dim = 0; i_dim < nd; ++i_dim) {
-            unadjusted(all, i_dim) = math::hypercube_matvec(Gauss_lobatto(2).interpolate(lob.nodes()), vert_pos(all, i_dim));
-          }
-          convert_tension(gradient, unadjusted);
+          Mat<dyn, dyn> gradients = convert_tension(lob_pos[con.inside_face_sign()]);
           for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
             for (int j_dim = 0; j_dim < nd; ++j_dim) {
               Mat<> lifted(math::pow(lob.row_size, nd));
               for (Row_index ind(params.n_dim, lob.row_size, con.i_dim()); ind; ++ind) {
                 for (int i_node = 0; i_node < lob.row_size; ++i_node) {
-                  lifted(ind.i_qpoint(i_node)) = gradient(ind.i_face_qpoint(), i_dim*nd + j_dim);
+                  lifted(ind.i_qpoint(i_node)) = gradients(ind.i_face_qpoint(), i_dim*nd + j_dim);
                 }
               }
               Mat<dyn, dyn> face(nlq, 2);
@@ -364,13 +349,7 @@ void Solver::snap_faces()
       }
     }
     (*kernel_factory<Prolong_refined>(params.n_dim, params.row_size, basis, true, true))(acc_mesh.refined_faces());
-    Copy fake_bc;
-    #pragma omp parallel for
-    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-      auto& con = bc_cons[i_con];
-      Lock::Acquire acq(con.element().lock);
-      fake_bc.apply_flux(con);
-    }
+    apply_fta_flux_bcs();
     (*kernel_factory<Spatial<Deformed_element, pde::Fix_therm_admis>::Neighbor_reconcile>(params.n_dim, params.row_size))(acc_mesh.deformed().face_connections());
     (*kernel_factory<Restrict_refined>(params.n_dim, params.row_size, basis, true, true))(acc_mesh.refined_faces());
     #pragma omp parallel for
@@ -383,34 +362,19 @@ void Solver::snap_faces()
         if (node_adj) {
           node_adj += (2*con.i_dim() + con.inside_face_sign())*params.n_qpoint()/params.row_size;
           Eigen::Map<Mat<>> adjustments(node_adj, nfq);
-          Mat<dyn, dyn> face_pos [2] {{nfq, nd}, {nfq, nd}};
+          std::array<Mat<dyn, dyn>, 2> face_pos {Mat<dyn, dyn>(nfq, nd), Mat<dyn, dyn>(nfq, nd)};
           for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
             for (int face_sign = 0; face_sign < 2; ++face_sign) {
               face_pos[face_sign](i_qpoint, all) = math::to_mat(con.element().face_position(basis, 2*con.i_dim() + face_sign, i_qpoint));
             }
           }
-          Mat<dyn, dyn> lob_pos [2] {{nlq, nd}, {nlq, nd}};
+          std::array<Mat<dyn, dyn>, 2> lob_pos {Mat<dyn, dyn>(nlq, nd), Mat<dyn, dyn>(nlq, nd)};
           for (int face_sign = 0; face_sign < 2; ++face_sign) {
             for (int i_dim = 0; i_dim < nd; ++i_dim) {
               lob_pos[face_sign](all, i_dim) = math::hypercube_matvec(to_lob, face_pos[face_sign](all, i_dim));
             }
           }
-          Mat<dyn, dyn> gradients(nlq, (nd - 1)*nd);
-          for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
-            for (int j_dim = 0; j_dim < nd; ++j_dim) {
-              gradients(all, i_dim*nd + j_dim) = math::dimension_matvec(lob.diff_mat(), lob_pos[con.inside_face_sign()](all, j_dim), i_dim);
-            }
-          }
-          Mat<dyn, dyn> vert_pos(params.n_vertices()/2, nd);
-          for (Row_index ind(nd, 2, con.i_dim()); ind; ++ind) {
-            int i_vert = ind.i_qpoint(con.inside_face_sign());
-            vert_pos(ind.i_face_qpoint(), all) = con.element().vertex(ind.i_qpoint(con.inside_face_sign())).pos(Eigen::seqN(0, nd)).transpose();
-          }
-          Mat<dyn, dyn> unadjusted(nlq, nd);
-          for (int i_dim = 0; i_dim < nd; ++i_dim) {
-            unadjusted(all, i_dim) = math::hypercube_matvec(Gauss_lobatto(2).interpolate(lob.nodes()), vert_pos(all, i_dim));
-          }
-          convert_tension(gradients, unadjusted);
+          Mat<dyn, dyn> gradients = convert_tension(lob_pos[con.inside_face_sign()]);
           Mat<dyn, dyn> faces [2] {{nlq/lob.row_size, (nd - 1)*nd}, {nlq/lob.row_size, (nd - 1)*nd}};
           for (int i_sign = 0; i_sign < 2; ++i_sign) {
             for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
@@ -441,7 +405,7 @@ void Solver::snap_faces()
             for (int i_dim = 0; i_dim < nd - 1; ++i_dim) force += gradients(i_qpoint, Eigen::seqN(i_dim*nd, nd)).transpose();
             Mat<> point = lob_pos[con.inside_face_sign()](i_qpoint, all).transpose();
             force += 300*(acc_mesh.surface_geometry().nearest_point(point, huge, con.element().nominal_size()).point() - point);
-            face_adj(i_qpoint) = force.dot(diff)/diff.squaredNorm()/-lob.min_eig_diffusion()/10;
+            face_adj(i_qpoint) = force.dot(diff)/diff.squaredNorm()/-lob.min_eig_diffusion()/20;
           }
           adjustments += math::hypercube_matvec(from_lob, face_adj);
         }
