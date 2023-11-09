@@ -638,6 +638,7 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
     Mat<> nonsmooth = math::dimension_matvec(basis.orthogonal(lob.row_size - 1).transpose(), adjustments, i_dim);
     ns = ns || nonsmooth.maxCoeff() > tol;
   }
+  if (ns) adjustments.setZero();
   double err = 0;
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
     Mat<> pos = math::to_mat(con.element().face_position(basis, 2*con.i_dim() + con.inside_face_sign(), i_qpoint));

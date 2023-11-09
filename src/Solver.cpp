@@ -274,6 +274,7 @@ void Solver::snap_faces()
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh.boundary_condition(bc_sn).mesh_bc->snap_node_adj(bc_cons[i_con], basis);
   }
+  #if 0
   auto average_faces = [&]() {
     (*write_face)(elems);
     (*kernel_factory<Prolong_refined>(params.n_dim, params.row_size, basis))(acc_mesh.refined_faces());
@@ -496,6 +497,7 @@ void Solver::snap_faces()
     }
   }
   }
+  #endif
 }
 
 void Solver::calc_jacobian()
