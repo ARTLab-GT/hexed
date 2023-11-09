@@ -300,6 +300,20 @@ void Solver::snap_faces()
           gradients(all, i_dim*nd + j_dim) = math::dimension_matvec(lob.diff_mat(), lob_pos(all, j_dim), i_dim);
         }
       }
+      if (nd == 3) {
+        for (int i_qpoint = 0; i_qpoint < nlq; ++i_qpoint) {
+          Mat<3> vecs [2];
+          for (int i_dim = 0; i_dim < 2; ++i_dim) vecs[i_dim] = gradients(i_qpoint, Eigen::seqN(i_dim*nd, 3)).transpose();
+          Mat<3> normal = vecs[0].cross(vecs[1]).normalized();
+          for (int i_dim = 0; i_dim < 2; ++i_dim) {
+            gradients(i_qpoint, Eigen::seqN(i_dim*3, 3)) = math::sign(i_dim)*normal.cross(vecs[!i_dim]).transpose();
+          }
+        }
+      } else if (nd == 2) {
+        for (int i_qpoint = 0; i_qpoint < nlq; ++i_qpoint) {
+          gradients(i_qpoint, all) /= gradients(i_qpoint, all).norm() + 1e-10;
+        }
+      }
       return gradients;
     };
     #pragma omp parallel for
@@ -375,6 +389,13 @@ void Solver::snap_faces()
             }
           }
           Mat<dyn, dyn> gradients = convert_tension(lob_pos[con.inside_face_sign()]);
+          Mat<> scale(nlq);
+          #if 0
+          for (int i_qpoint = 0; i_qpoint < nlq; ++i_qpoint) {
+            scale(i_qpoint) = gradients(i_qpoint, all).norm() + 1e-10;
+            gradients(i_qpoint, all) /= scale(i_qpoint);
+          }
+          #endif
           Mat<dyn, dyn> faces [2] {{nlq/lob.row_size, (nd - 1)*nd}, {nlq/lob.row_size, (nd - 1)*nd}};
           for (int i_sign = 0; i_sign < 2; ++i_sign) {
             for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
@@ -404,8 +425,8 @@ void Solver::snap_faces()
             Mat<> force = Mat<>::Zero(nd);
             for (int i_dim = 0; i_dim < nd - 1; ++i_dim) force += gradients(i_qpoint, Eigen::seqN(i_dim*nd, nd)).transpose();
             Mat<> point = lob_pos[con.inside_face_sign()](i_qpoint, all).transpose();
-            force += 300*(acc_mesh.surface_geometry().nearest_point(point, huge, con.element().nominal_size()).point() - point);
-            face_adj(i_qpoint) = force.dot(diff)/diff.squaredNorm()/-lob.min_eig_diffusion()/20;
+            force += 100*(acc_mesh.surface_geometry().nearest_point(point, huge, con.element().nominal_size()).point() - point);
+            face_adj(i_qpoint) = force.dot(diff)/diff.squaredNorm()/-lob.min_eig_diffusion()/100;
           }
           adjustments += math::hypercube_matvec(from_lob, face_adj);
         }
@@ -453,7 +474,8 @@ void Solver::snap_faces()
               }
               Mat<> lrow = to_lob*row;
               for (int i_sign = 0; i_sign < 2; ++i_sign) {
-                lrow(i_sign*(lob.row_size - 1)) = con.element().faces[2*j_dim + i_sign][2*params.n_var*params.n_qpoint()/params.row_size + ind.i_face_qpoint()];
+                lrow(i_sign*(lob.row_size - 1)) += con.element().faces[2*j_dim + i_sign][2*params.n_var*params.n_qpoint()/params.row_size + ind.i_face_qpoint()];
+                lrow(i_sign*(lob.row_size - 1)) /= 2;
               }
               row = from_lob*lrow;
               for (int i_node = 0; i_node < params.row_size; ++i_node) {
