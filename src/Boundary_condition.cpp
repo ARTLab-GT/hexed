@@ -634,10 +634,14 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
   double tol = 1./math::pow(3, lob.row_size);
   bool& ns = con.needs_smoothing;
   ns = false;
-  for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
-    Mat<> nonsmooth = math::dimension_matvec(basis.orthogonal(lob.row_size - 1).transpose(), adjustments, i_dim);
-    ns = ns || nonsmooth.maxCoeff() > tol;
+  std::vector<Mat<>> derivatives;
+  Mat<dyn, dyn> dm = basis.diff_mat();
+  if (nd >= 2) derivatives.push_back(math::dimension_matvec(dm, adjustments, 0));
+  if (nd == 3) {
+    derivatives.push_back(math::dimension_matvec(dm, adjustments, 1));
+    derivatives.push_back(math::dimension_matvec(dm, derivatives[0], 1));
   }
+  for (Mat<>& derivative : derivatives) ns = ns || derivative.lpNorm<Eigen::Infinity>() > 1.;
   if (ns) adjustments.setZero();
   double err = 0;
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
