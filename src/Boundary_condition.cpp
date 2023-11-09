@@ -643,6 +643,25 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
   }
   for (Mat<>& derivative : derivatives) ns = ns || derivative.lpNorm<Eigen::Infinity>() > 1.;
   if (ns) adjustments.setZero();
+  if (ns && basis.row_size >= 3) {
+    Gauss_lobatto lob1(3);
+    int nlq1 = math::pow(3, nd - 1);
+    Mat<dyn, dyn> to_lob1 = basis.interpolate(lob1.nodes());
+    Mat<dyn, dyn> from_lob1 = lob1.interpolate(basis.nodes());
+    Mat<dyn, dyn> pos [2] {{nlq1, nd}, {nlq1, nd}};
+    for (int i_sign = 0; i_sign < 2; ++i_sign) {
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        pos[i_sign](all, i_dim) = math::hypercube_matvec(to_lob1, face_pos[i_sign](all, i_dim));
+      }
+    }
+    Mat<> adj1(nlq1);
+    for (int i_qpoint = 0; i_qpoint < nlq1; ++i_qpoint) {
+      Mat<> p = pos[con.inside_face_sign()](i_qpoint, all).transpose();
+      Mat<> diff = (pos[1](i_qpoint, all) - pos[0](i_qpoint, all)).transpose();
+      adj1(i_qpoint) = (geom->nearest_point(p, huge, con.element().nominal_size()).point() - p).dot(diff)/diff.squaredNorm();
+    }
+    adjustments = math::hypercube_matvec(from_lob1, adj1);
+  }
   double err = 0;
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
     Mat<> pos = math::to_mat(con.element().face_position(basis, 2*con.i_dim() + con.inside_face_sign(), i_qpoint));
