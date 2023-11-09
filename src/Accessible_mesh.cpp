@@ -942,30 +942,34 @@ void Accessible_mesh::delete_bad_extrusions()
         }
         // delete elements with exposed faces, edges, or vertices that face away from the surface geometry
         if (surf_geom) {
-          bool bad = false;
-          auto eval = [&](Mat<> direction) {
-            Mat<> center = elem.tree->center() + elem.tree->nominal_size()/2*direction;
-            Mat<> nearest = surf_geom->nearest_point(center).point();
-            double tol = .3;
-            bad = bad || (nearest - center).normalized().dot(direction.normalized()) < -tol;
-          };
-          for (int i_face = 0; i_face < 2*nd; ++i_face) if (exposed[i_face]) {
-            Mat<> direction = math::direction(nd, i_face).cast<double>();
-            eval(direction);
-            for (int j_face = 0; j_face < 2*(i_face/2); ++j_face) if (exposed[j_face]) {
-              Mat<> dir = direction;
-              dir(j_face/2) = math::sign(j_face%2);
-              eval(dir);
-              for (int k_face = 0; k_face < 2*(j_face/2); ++k_face) if (exposed[k_face]) {
-                dir(k_face/2) = math::sign(k_face%2);
+          bool exp = false;
+          for (int i_face = 0; i_face < 2*nd; ++i_face) exp = exp || exposed[i_face];
+          if (exp) {
+            bool bad = false;
+            auto eval = [&](Mat<> direction) {
+              Mat<> center = elem.tree->center() + elem.tree->nominal_size()/2*direction;
+              Mat<> nearest = surf_geom->nearest_point(center, huge, 2*elem.tree->nominal_size()).point();
+              double tol = .3;
+              bad = bad || (nearest - center).normalized().dot(direction.normalized()) < -tol;
+            };
+            for (int i_face = 0; i_face < 2*nd; ++i_face) if (exposed[i_face]) {
+              Mat<> direction = math::direction(nd, i_face).cast<double>();
+              eval(direction);
+              for (int j_face = 0; j_face < 2*(i_face/2); ++j_face) if (exposed[j_face]) {
+                Mat<> dir = direction;
+                dir(j_face/2) = math::sign(j_face%2);
                 eval(dir);
+                for (int k_face = 0; k_face < 2*(j_face/2); ++k_face) if (exposed[k_face]) {
+                  dir(k_face/2) = math::sign(k_face%2);
+                  eval(dir);
+                }
               }
             }
-          }
-          if (bad) {
-            changed = true;
-            #pragma omp atomic write
-            elem.record = 2;
+            if (bad) {
+              changed = true;
+              #pragma omp atomic write
+              elem.record = 2;
+            }
           }
         }
       }
