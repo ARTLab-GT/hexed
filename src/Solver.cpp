@@ -256,13 +256,14 @@ void Solver::snap_vertices()
 
 void Solver::snap_faces()
 {
+  const int nd = params.n_dim;
   Gauss_lobatto lob(basis.row_size - 1);
   Mat<dyn, dyn> to_lob = basis.interpolate(lob.nodes());
   Mat<dyn, dyn> from_lob = lob.interpolate(basis.nodes());
   Mat<dyn, dyn> diff_mat = lob.diff_mat();
   Mat<dyn, dyn> boundary = lob.boundary();
   Mat<dyn, dyn> lift = Mat<>::Ones(lob.row_size).cwiseQuotient(lob.node_weights()).asDiagonal()*boundary.transpose()*Mat<2>{-1, 1}.asDiagonal();
-  const int nd = params.n_dim;
+  Mat<> weights = math::pow_outer(lob.node_weights(), nd - 1);
   int nlq = math::pow(lob.row_size, nd - 1);
   const int nfq = params.n_qpoint()/params.row_size;
   auto& bc_cons {acc_mesh.boundary_connections()};
@@ -286,8 +287,10 @@ void Solver::snap_faces()
     (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Neighbor>(params.n_dim, params.row_size))(acc_mesh.deformed().face_connections());
     (*kernel_factory<Restrict_refined>(params.n_dim, params.row_size, basis, false, true))(acc_mesh.refined_faces());
   };
-  for (int i = 0; i < 200; ++i)
+  for (int i = 0; i < 1; ++i)
   {
+    const int n_cheby = 1;
+    for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       double* state = elems[i_elem].stage(0);
@@ -425,8 +428,8 @@ void Solver::snap_faces()
             Mat<> force = Mat<>::Zero(nd);
             for (int i_dim = 0; i_dim < nd - 1; ++i_dim) force += gradients(i_qpoint, Eigen::seqN(i_dim*nd, nd)).transpose();
             Mat<> point = lob_pos[con.inside_face_sign()](i_qpoint, all).transpose();
-            force += 100*(acc_mesh.surface_geometry().nearest_point(point, huge, con.element().nominal_size()).point() - point);
-            face_adj(i_qpoint) = force.dot(diff)/diff.squaredNorm()/-lob.min_eig_diffusion()/100;
+            //force += 300*(acc_mesh.surface_geometry().nearest_point(point, huge, con.element().nominal_size()).point() - point);
+            face_adj(i_qpoint) = force.dot(diff)/diff.squaredNorm()/-lob.min_eig_diffusion()*weights(i_qpoint)/10*math::chebyshev_step(n_cheby, i_cheby);
           }
           adjustments += math::hypercube_matvec(from_lob, face_adj);
         }
@@ -491,6 +494,7 @@ void Solver::snap_faces()
         }
       }
     }
+  }
   }
 }
 
