@@ -9,7 +9,7 @@ void element(Namespace& space, Element& elem)
   space.assign("ref_level", elem.refinement_level());
   space.assign("nom_sz", elem.nominal_size());
   space.assign("res_bad", elem.resolution_badness);
-  space.assign("snapping_error", elem.snapping_error);
+  space.assign("snapping_problem", int(elem.snapping_problem));
   auto params = elem.storage_params();
   Eigen::Vector3d center;
   center.setZero();
