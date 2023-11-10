@@ -41,7 +41,6 @@ class Mesh_bc
   //! \note must set the `Vertex::lock` on all vertices it accesses
   virtual void snap_vertices(Boundary_connection&) = 0;
   virtual void snap_node_adj(Boundary_connection&, const Basis&) = 0;
-  virtual inline void smooth_node_adj(Boundary_connection&, const Basis&) {}
   virtual ~Mesh_bc() = default;
 };
 
@@ -299,7 +298,6 @@ class Geom_mbc : public Mesh_bc
   inline Geom_mbc(Surface_geom* surf_geom) : geom{surf_geom} {}
   void snap_vertices(Boundary_connection&) override;
   void snap_node_adj(Boundary_connection&, const Basis&) override;
-  void smooth_node_adj(Boundary_connection&, const Basis&) override;
 };
 
 }
