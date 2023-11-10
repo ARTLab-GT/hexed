@@ -22,11 +22,6 @@ if(NOT CMAKE_BUILD_TYPE)
        "Select Release for high performance and Debug for easier debugging" FORCE)
    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Release" "Debug")
 endif()
-set(CMAKE_CXX_FLAGS_DEBUG "-g3 -DDEBUG")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
-set(CMAKE_CXX_FLAGS "-Wall")
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 if (NOT DEFINED PYTHON_INSTALL_PREFIX)
     set(PYTHON_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX}/lib CACHE PATH "where to install Python module" FORCE)
 endif()
@@ -42,6 +37,15 @@ option(use_cppcheck "use the cppcheck static analysis tool (requires cppcheck)" 
 option(use_nlopt "enable features that require root finding with NLopt" OFF)
 option(use_occt "enable CAD geometry processing with OpenCASCADE Technology" ON)
 option(obsessive_timing "turn on additional timing measurements, potentially to the point of slowing down the code" OFF)
+if (use_tecplot)
+    set(TECPLOT_DIR "/opt/tecplot/360ex_2020r2" CACHE STRING "where to find tecplot")
+    set(CMAKE_INSTALL_RPATH ${TECPLOT_DIR}/bin)
+endif()
+
+set(CMAKE_CXX_FLAGS_DEBUG "-g3 -DDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
+set(CMAKE_CXX_FLAGS "-Wall")
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # determine whether to compile with sanitizers
 if (sanitize)
@@ -116,6 +120,8 @@ add_library(hexed SHARED)
 
 # add external libraries
 if (use_tecplot)
+    target_include_directories(hexed PRIVATE ${TECPLOT_DIR}/include)
+    target_link_directories(hexed PRIVATE ${TECPLOT_DIR}/bin)
     target_link_libraries(hexed PRIVATE tecio)
 endif()
 if (use_nlopt)
