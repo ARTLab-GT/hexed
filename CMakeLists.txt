@@ -39,6 +39,7 @@ option(use_occt "enable CAD geometry processing with OpenCASCADE Technology" ON)
 option(obsessive_timing "turn on additional timing measurements, potentially to the point of slowing down the code" OFF)
 if (use_tecplot)
     set(TECPLOT_DIR "/opt/tecplot/360ex_2020r2" CACHE STRING "where to find tecplot")
+    set(CMAKE_INSTALL_RPATH ${TECPLOT_DIR}/bin)
 endif()
 
 set(CMAKE_CXX_FLAGS_DEBUG "-g3 -DDEBUG")
