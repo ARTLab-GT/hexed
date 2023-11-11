@@ -588,7 +588,7 @@ void Geom_mbc::snap_vertices(Boundary_connection& con)
 void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
 {
   if (!con.element().node_adjustments()) return; // Cartesian elements don't have `node_adjustments()`, so in this case just exit
-  Gauss_lobatto lob(basis.row_size - 1);
+  Gauss_lobatto lob(std::max(2, basis.row_size - 1));
   Mat<dyn, dyn> to_lob = basis.interpolate(lob.nodes());
   Mat<dyn, dyn> from_lob = lob.interpolate(basis.nodes());
   auto params {con.storage_params()};

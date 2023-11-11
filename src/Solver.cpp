@@ -257,13 +257,6 @@ void Solver::snap_vertices()
 void Solver::snap_faces()
 {
   const int nd = params.n_dim;
-  Gauss_lobatto lob(basis.row_size - 1);
-  Mat<dyn, dyn> to_lob = basis.interpolate(lob.nodes());
-  Mat<dyn, dyn> from_lob = lob.interpolate(basis.nodes());
-  Mat<dyn, dyn> diff_mat = lob.diff_mat();
-  Mat<dyn, dyn> boundary = lob.boundary();
-  Mat<dyn, dyn> lift = Mat<>::Ones(lob.row_size).cwiseQuotient(lob.node_weights()).asDiagonal()*boundary.transpose()*Mat<2>{-1, 1}.asDiagonal();
-  Mat<> weights = math::pow_outer(lob.node_weights(), nd - 1);
   const int nfq = params.n_qpoint()/params.row_size;
   auto& bc_cons {acc_mesh.boundary_connections()};
   auto& elems = acc_mesh.elements();
@@ -272,6 +265,15 @@ void Solver::snap_faces()
     Lock::Acquire acq(bc_cons[i_con].element().lock);
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh.boundary_condition(bc_sn).mesh_bc->snap_node_adj(bc_cons[i_con], basis);
+  }
+  Gauss_lobatto lob(std::max(2, basis.row_size - 1));
+  Mat<dyn, dyn> to_lob = basis.interpolate(lob.nodes());
+  Mat<dyn, dyn> from_lob = lob.interpolate(basis.nodes());
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    double* state = elems[i_elem].stage(0);
+    double* rk_ref = elems[i_elem].stage(1);
+    for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) rk_ref[i_dof] = state[i_dof];
   }
   for (int sweep = 0; sweep < nd - 1; ++sweep) {
     #pragma omp parallel for
@@ -353,6 +355,12 @@ void Solver::snap_faces()
         }
       }
     }
+  }
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    double* state = elems[i_elem].stage(0);
+    double* rk_ref = elems[i_elem].stage(1);
+    for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) state[i_dof] = rk_ref[i_dof];
   }
 }
 
