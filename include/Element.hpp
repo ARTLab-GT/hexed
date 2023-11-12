@@ -52,6 +52,7 @@ class Element
   Tree* tree = nullptr; //!< `Tree` this element was created from
   bool unrefinement_locked = false; //!< if this is set to `true`, `Mesh_interface::update()` won't unrefine it
   bool snapping_problem = false; //!< \brief if `true`, this element has a face on the surface which was not properly snapped
+  bool needs_snapping = true; //!< \brief once any faces of this element have been snapped to the surface, set this to `false`
   const Mat<> origin; //!< origin which integer coordinates are relative to
   Lock lock; //!< for any tasks where multiple threads might access an element simultaneously
 

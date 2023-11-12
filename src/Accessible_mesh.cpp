@@ -389,6 +389,7 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force)
     Con_dir<Deformed_element> dir {{face.i_dim, face.i_dim}, {!face.face_sign, bool(face.face_sign)}};
     auto& elem = def.elems.at(ref_level, sn);
     elem.record = sn;
+    elem.needs_snapping = !force;
     if (collapse) {
       int stride = math::pow(2, nd - 1 - face.i_dim);
       for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
