@@ -11,8 +11,7 @@ mesh_extreme00 = -10.
 mesh_extreme10 = -10.
 mesh_extreme01 =  10.
 mesh_extreme11 =  10.
-surface_max_iters = 10
-surface_refine = {res_bad > 3e-3 & ref_level < 20}
+$set_geometry_refinement
 
 {generate geometry with external script}
 shell {python3 make_geom.py}

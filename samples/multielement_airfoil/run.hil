@@ -6,13 +6,7 @@ mesh_extreme11 =  10.
 altitude = 0.
 freestream_speed = 0.
 geom0 = {crmhl-2dcut.igs}
-{
-surface_refine = {resolution_badness > 3e-3 & ref_level < 13}
-surface_max_iters = 20
-}
-init_layer_splits = 5
-surface_refine = {is_extruded}
-surface_max_iters = 4
-working_dir = {hexed_out1}
+max_ref_level = 13
+$set_geometry_refinement
 vis_n_sample = 30
 $init

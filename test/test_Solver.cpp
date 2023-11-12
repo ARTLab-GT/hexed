@@ -814,7 +814,7 @@ TEST_CASE("face extrusion")
   }
 }
 
-TEST_CASE("normal continuity resolution badness")
+TEST_CASE("normal continuity uncertainty")
 {
   hexed::Solver sol({3, hexed::config::max_row_size, .2});
   int elem_sn = sol.mesh().add_element(0, true, {0, 0, 0});
@@ -824,11 +824,11 @@ TEST_CASE("normal continuity resolution badness")
   sol.mesh().cleanup();
   sol.mesh().valid().assert_valid();
   sol.calc_jacobian();
-  sol.set_res_bad_surface_rep(bc_sn);
+  sol.set_uncert_surface_rep(bc_sn);
   for (auto handle : sol.mesh().elem_handles()) {
-    double res_bad = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, hexed::Resolution_badness())[0];
-    if (handle.serial_n == elem_sn) REQUIRE(res_bad == Catch::Approx(0).scale(1.));
-    else CHECK(res_bad == Catch::Approx(std::sqrt(2.)));
+    double uncertainty = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, hexed::Uncertainty())[0];
+    if (handle.serial_n == elem_sn) REQUIRE(uncertainty == Catch::Approx(0).scale(1.));
+    else CHECK(uncertainty == Catch::Approx(std::sqrt(2.)));
   }
 }
 
@@ -885,7 +885,7 @@ TEST_CASE("artificial viscosity convergence")
   #endif
 }
 
-TEST_CASE("resolution badness")
+TEST_CASE("uncertainty")
 {
   hexed::Solver sol(2, 2, 1.);
   int sn = sol.mesh().add_element(0, true, {0, 0});
@@ -896,13 +896,13 @@ TEST_CASE("resolution badness")
   sol.mesh().cleanup();
   sol.calc_jacobian();
   hexed::Position_func pos;
-  sol.set_resolution_badness(hexed::Elem_average(pos));
-  // check that the resolution badness of the middle element is the x-coordinate of its centroid
-  REQUIRE(sol.sample(0, true, sn, hexed::Resolution_badness())[0] == Catch::Approx(.5));
-  // resolution badness of the middle element will be set equal to the centroid of the (collapsed) element extruded 2 layers in the positive-x direction
-  sol.synch_extruded_res_bad();
+  sol.set_uncertainty(hexed::Elem_average(pos));
+  // check that the uncertainty of the middle element is the x-coordinate of its centroid
+  REQUIRE(sol.sample(0, true, sn, hexed::Uncertainty())[0] == Catch::Approx(.5));
+  // uncertainty of the middle element will be set equal to the centroid of the (collapsed) element extruded 2 layers in the positive-x direction
+  sol.synch_extruded_uncert();
   double correct = ((2*2*2 - 1.5*1.5*1.5)/3. - .5*(2.*2. - 1.5*1.5)/2.)/((1.5*1.5 - 1.)/2.);
-  REQUIRE(sol.sample(0, true, sn, hexed::Resolution_badness())[0] == Catch::Approx(correct));
+  REQUIRE(sol.sample(0, true, sn, hexed::Uncertainty())[0] == Catch::Approx(correct));
 }
 
 TEST_CASE("cylinder tree mesh")

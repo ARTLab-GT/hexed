@@ -145,23 +145,23 @@ class Solver
   virtual void set_art_visc_constant(double); //!< turns on artificial viscosity and initializes coefficient to a uniform value
   virtual void set_art_visc_row_size(int); //!< modify the polynomial order of smoothness-based artificial viscosity (must be <= row size of discretization (which is the default))
   virtual void set_fix_admissibility(bool); //!< turns on/off the thermodynamic admissibility-preserving scheme (increases robustness at some computational overhead)
-  /*! \brief set `Element::resolution_badness` for each element according to `func`.
-   * \details Resoltuion badness can be evaluated via `sample(ref_level, is_deformed, serial_n, Resolution_badness())`.
-   * This function does some additional work to enforce some conditions on the resolution badness of neighboring elements.
+  /*! \brief set `Element::uncertainty` for each element according to `func`.
+   * \details Uncertainty metric can be evaluated via `sample(ref_level, is_deformed, serial_n, Uncertainty())`.
+   * This function does some additional work to enforce some conditions on the uncertainty of neighboring elements.
    * Thus, use this function rather than just `sample(ref_level, is_deformed, serial_n, func)` directly.
    */
-  virtual void set_resolution_badness(const Element_func& func);
-  /*! \brief Set resolution badness based on surface representation quality.
+  virtual void set_uncertainty(const Element_func& func);
+  /*! \brief Set uncertainty metric based on surface representation quality.
    * \details For all deformed elements contacting the boundary specified by `bc_sn`, computes the
    * unit surface normals at the faces and compares to neighboring elements.
-   * `Element::resolution_badness` is set to the total difference between unit normals with all neighbors,
+   * `Element::uncertainty` is set to the total difference between unit normals with all neighbors,
    * where in 3D the total on each edge is computed by Gaussian quadrature in reference space.
    * \note Connections between deformed elements and Cartesian elements are ignored.
-   * Fully Cartesian connections trivially contribute zero to this metric of resolution badness.
+   * Fully Cartesian connections trivially contribute zero to this metric of uncertainty.
    */
-  virtual void set_res_bad_surface_rep(int bc_sn);
-  //! set resolution badness of each element to be at least the maximum badness of any elements extruded from it
-  virtual void synch_extruded_res_bad();
+  virtual void set_uncert_surface_rep(int bc_sn);
+  //! set uncertainty of each element to be at least the maximum uncertainty of any elements extruded from it
+  virtual void synch_extruded_uncert();
   //!\}
 
   //! \name time marching
@@ -210,7 +210,7 @@ class Solver
   //! \brief write a visualization file describing all surfaces where a particular boundary condition has been enforced.
   void visualize_surface_xdmf(int bc_sn, const Boundary_func&, std::string name, int n_sample = 20);
   //! \brief visualize the Cartesian surface which theoretically exists after element deletion but before any vertex snapping
-  void vis_cart_surf_xdmf(int bc_sn, std::string name, const Boundary_func& func = Resolution_badness());
+  void vis_cart_surf_xdmf(int bc_sn, std::string name, const Boundary_func& func = Uncertainty());
   //! \brief visualize the local time step constraints imposed by convection and diffusion, respectively
   //! \warning This function overwrites the reference state, which will invalidate any residual evaluation until `update` is called again.
   void vis_lts_constraints(std::string name, int n_sample = 20);
@@ -233,7 +233,7 @@ class Solver
    */
   void visualize_surface_tecplot(int bc_sn, std::string name, int n_sample = 20);
   //! \brief visualize the Cartesian surface which theoretically exists after element deletion but before any vertex snapping
-  void vis_cart_surf_tecplot(int bc_sn, std::string name, const Boundary_func& func = Resolution_badness());
+  void vis_cart_surf_tecplot(int bc_sn, std::string name, const Boundary_func& func = Uncertainty());
   #endif
   //!\}
 };

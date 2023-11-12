@@ -25,10 +25,10 @@ class Element_info : virtual public Element_func, virtual public Boundary_func
   virtual std::vector<double> operator()(Element& elem) const = 0; //!< \details --
 };
 
-/*! \brief function to fetch the value of the `resolution_badness` member of the `Element`.
- * \details Only useful if you have already set the `resolution_badness` member to something you are interested in.
+/*! \brief function to fetch the value of the `uncertainty` member of the `Element`.
+ * \details Only useful if you have already set the `uncertainty` member to something you are interested in.
  */
-class Resolution_badness : virtual public Element_info
+class Uncertainty : virtual public Element_info
 {
   public:
   inline int n_var(int n_dim) const override {return 1;}

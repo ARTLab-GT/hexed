@@ -112,10 +112,16 @@ set_aerothermo = { {further modify settings to be good for aerothermodynamics (a
         $$({case} + (iteration >= aerothermo_initial_iters))
     }
 }
+set_geometry_refinement = {
+    refine_if = {(uncertainty > geometry_uncertainty | snapping_problem) & ref_level < max_ref_level}
+    unrefine_if = {ref_level > init_ref_level & !is_extruded}
+}
 
 {scalar parameters}
 row_size = 6
 init_ref_level = 3
+max_ref_level = 10
+geometry_uncertainty = 1e-2
 transport_model = {inviscid}
 thermal_bc = {heat_flux = 0.}
 surface_bc = {auto}
@@ -129,9 +135,9 @@ working_dir = {hexed_out/}
 vis_freq = 10000
 iter_width = 10
 print_freq = 100
-surface_refine = {false}
-surface_unrefine = {ref_level > init_ref_level & !is_extruded}
-surface_max_iters = 100
+refine_if = {false}
+unrefine_if = {false}
+max_refinement_iters = 100
 n_smooth = 30
 geom_n_segments = 1000
 vis_surface = true
@@ -244,8 +250,8 @@ init = {
     init_refinement
     add_geom
     i_refinement = 0
-    keep_refining = false
-    while = {!keep_refining & i_refinement < surface_max_iters}
+    keep_refining = true
+    while = {keep_refining & i_refinement < max_refinement_iters}
     do = {
         print({geometry-based refinement sweep } + i_refinement + {... })
         keep_refining = keep_refining & refine

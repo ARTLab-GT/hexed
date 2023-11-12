@@ -785,16 +785,16 @@ void Solver::set_fix_admissibility(bool value)
   fix_admis = value;
 }
 
-void Solver::set_resolution_badness(const Element_func& func)
+void Solver::set_uncertainty(const Element_func& func)
 {
   auto& elems = acc_mesh.elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    elems[i_elem].resolution_badness = func(elems[i_elem], basis, status.flow_time)[0];
+    elems[i_elem].uncertainty = func(elems[i_elem], basis, status.flow_time)[0];
   }
 }
 
-void Solver::set_res_bad_surface_rep(int bc_sn)
+void Solver::set_uncert_surface_rep(int bc_sn)
 {
   const int nv = params.n_var;
   const int nd = params.n_dim;
@@ -805,7 +805,7 @@ void Solver::set_res_bad_surface_rep(int bc_sn)
   auto& elems = acc_mesh.elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    elems[i_elem].resolution_badness = 0;
+    elems[i_elem].uncertainty = 0;
     elems[i_elem].record = 0;
     double* state = elems[i_elem].stage(0);
     double* ref = elems[i_elem].stage(1);
@@ -898,7 +898,7 @@ void Solver::set_res_bad_surface_rep(int bc_sn)
     for (int i_dof = 0; i_dof < nv*nfq; ++i_dof) state[i_dof] = 0;
   }
   (*kernel_factory<Restrict_refined>(nd, params.row_size, basis, false))(acc_mesh.refined_faces());
-  // total up differences for each boundary element and write to resolution badness
+  // total up differences for each boundary element and write to uncertainty
   // also restore the flow state to what it was at the start of this function
   Mat<> weights = math::pow_outer(basis.node_weights(), nd - 1);
   #pragma omp parallel for
@@ -909,10 +909,10 @@ void Solver::set_res_bad_surface_rep(int bc_sn)
         if (i_face/2 != (elem.record - 2*nd)/2) {
           Eigen::Map<Mat<dyn, dyn>> face(elem.faces[i_face], nfq, nd);
           Mat<> norm = face.rowwise().norm();
-          elem.resolution_badness += std::sqrt(norm.dot(weights.asDiagonal()*norm));
+          elem.uncertainty += std::sqrt(norm.dot(weights.asDiagonal()*norm));
         }
       }
-      elem.resolution_badness /= 2*std::max(nd - 1, 1);
+      elem.uncertainty /= 2*std::max(nd - 1, 1);
     }
     double* state = elem.stage(0);
     double* ref = elem.stage(1);
@@ -925,7 +925,7 @@ void Solver::set_res_bad_surface_rep(int bc_sn)
   (*write_face)(elems);
 }
 
-void Solver::synch_extruded_res_bad()
+void Solver::synch_extruded_uncert()
 {
   auto cons = acc_mesh.extruded_connections();
   bool changed = true;
@@ -933,14 +933,14 @@ void Solver::synch_extruded_res_bad()
     changed = false;
     #pragma omp parallel for reduction(||:changed)
     for (int i_con = 0; i_con < cons.size(); ++i_con) {
-      double bad [2];
+      double uncert [2];
       for (int i_side = 0; i_side < 2; ++i_side) {
         #pragma omp atomic read
-        bad[i_side] = cons[i_con].element(i_side).resolution_badness;
+        uncert[i_side] = cons[i_con].element(i_side).uncertainty;
       }
-      if (bad[0] > bad[1] + 1e-14) {
+      if (uncert[0] > uncert[1] + 1e-14) {
         #pragma omp atomic write
-        cons[i_con].element(1).resolution_badness = bad[0];
+        cons[i_con].element(1).uncertainty = uncert[0];
         changed = true;
       }
     }

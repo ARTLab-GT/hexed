@@ -231,8 +231,8 @@ Case::Case(std::string input_file)
 
   _inter.variables->create<int>("refine", new Namespace::Heisenberg<int>([this]() {
     std::vector<std::string> crit_code;
-    crit_code.push_back("return = " + _vars("surface_refine").value());
-    crit_code.push_back("return = " + _vars("surface_unrefine").value());
+    crit_code.push_back("return = " + _vars("refine_if").value());
+    crit_code.push_back("return = " + _vars("unrefine_if").value());
     std::vector<std::function<bool(Element&)>> crits;
     for (std::string code : crit_code) {
       crits.emplace_back([this, code](Element& elem) {
@@ -243,7 +243,7 @@ Case::Case(std::string input_file)
       });
     }
     Jac_inv_det_func jidf;
-    _solver().set_resolution_badness(Elem_nonsmooth(jidf));
+    _solver().set_uncertainty(Elem_nonsmooth(jidf));
     _solver().mesh().set_unref_locks(criteria::if_extruded);
     bool changed = _solver().mesh().update(crits[0], crits[1]);
     for (int i_smooth = 0; i_smooth < _vari("n_smooth"); ++i_smooth) _solver().mesh().relax(0.7);
