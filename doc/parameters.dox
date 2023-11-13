@@ -66,7 +66,7 @@ Accepted values:
 - `{temperature = x}`: Prescribes the temperature at the wall to be `x`.
 - `{internal_energy = x}`: Prescribes the internal energy at the wall to be `x`.
   For now, since you're stuck in the CPG world, this is equivalent to `{temperature = x*(heat_rat - 1)/specific_gas_air}`.
-- `{emissivity = x; conductivity = y; temperature = z}`: \anchor thermal_equilibrium_bc
+- `{emissivity = x; conduction = y; temperature = z}`: \anchor thermal_equilibrium_bc
   Specifies that the wall is in thermal equalibrium according to a simple 1D heat equation.
   Specifically, sets the heat flux equal to the sum of the radiative cooling flux and the thermal conduction through the wall.
   The radiative cooling flux is determined by the [Stefan-Boltzmann Law](https://en.wikipedia.org/wiki/Stefan%E2%80%93Boltzmann_law)
@@ -76,7 +76,7 @@ Accepted values:
   \f$ L \f$ is the wall thickness, \f$ T_w \f$ is the current wall temperature, and \f$ T_p \f$ is the prescribed temperature.
   The product \f$ kL \f$ is equal to `conduction`
   and the prescribed temperature \f$ T_p \f$ is `temperature`.
-  You don't have to specify all 3 parameters.
+  You don't have to specify all 3 parameters -- they all default to 0.
   You may specify `emissivity` __and/or__ you may specify the other parameters,
   but if you specify either `conduction` or `temperature` you must specify both.
   If your wall is highly conductive, you might need to reduce \ref heat_flux_coercion to maintain stability.
