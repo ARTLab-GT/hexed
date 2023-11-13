@@ -99,6 +99,7 @@ The rest of the pages (<a href="namespaces.html">Namespaces</a>, <a href="classe
 serve as reference material on the API once you already know what you're doing.
 
 - \subpage installation
+- \subpage running
 - \subpage hil
 - \subpage parameters
 - \subpage boundary_conditions
@@ -108,15 +109,5 @@ serve as reference material on the API once you already know what you're doing.
 - \subpage geom_fitting
 - \subpage contributing
 - \subpage benchmarking
-
-\anchor hexecute
-Technically, Hexed is really two things.
-It is a C++ library, and it is an executable program.
-If you want to extend the functionality of Hexed or use it as a backend and develop your own UI,
-you should link with the C++ library `libhexed.so`
-(use CMake to import the package `hexed`, and you will have access to everything in the namespace \ref hexed).
-However, for most use cases, the executable should be sufficient.
-To distinguish it from the library and namespace, the command to _execute hexed_ is `hexecute` (sorry for my terrible sense of humor).
-It supports a text-based interface in the \ref hil.
 
 */

@@ -16,6 +16,15 @@ Number of dimensions.
 Must be at least 1 and at most 3.
 
 <hr>
+\subsubsection done
+__type:__ string \n
+__default:__ `{println {Error: you forgot to a set stop condition} & throw}` \n
+Termination condition.
+This should be a macro that evaluates to an integer.
+It will be evaluated at each iteration, and the simulation will continue iff it evaluates to \ref false.
+As should be clear from the default value, you __must__ set this variable yourself.
+
+<hr>
 \subsubsection local_time
 __type:__ integer \n
 __default:__ \ref true \n
