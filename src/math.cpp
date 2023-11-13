@@ -82,6 +82,7 @@ Eigen::VectorXd dimension_matvec(const Eigen::MatrixXd& mat, const Eigen::Vector
 
 Eigen::VectorXd pow_outer(const Eigen::VectorXd& vec, int n_dim)
 {
+  if (n_dim <= 0) return Eigen::VectorXd::Ones(1);
   // we basically have this logic already in `hypercube_matvec`
   // we just need it to be able to figure out the number of dimensions
   // so add an extra column to `vec` and pad it with zeros

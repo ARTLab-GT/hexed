@@ -20,7 +20,7 @@ std::vector<double> Element_info::operator()(Boundary_connection& con, int i_fqp
   return operator()(con.element());
 }
 
-std::vector<double> Resolution_badness::operator()(Element& elem) const {return {elem.resolution_badness};}
+std::vector<double> Uncertainty::operator()(Element& elem) const {return {elem.uncertainty};}
 
 Elem_average::Elem_average    (const Qpoint_func& func) : qf{func} {}
 Elem_l2::Elem_l2              (const Qpoint_func& func) : qf{func} {}

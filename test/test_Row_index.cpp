@@ -7,7 +7,9 @@ TEST_CASE("Row_index")
   REQUIRE(ind0.i_qpoint(0) == 0);
   REQUIRE(ind0.i_qpoint(1) == 25);
   REQUIRE(ind0.i_face_qpoint() == 0);
+  REQUIRE(ind0.i_node(25) == 1);
   ++ind0;
+  REQUIRE(ind0.i_node(25) == 1); // test that this gives the same result even after ind0 has been incremented
   REQUIRE(ind0.i_face_qpoint() == 1);
   REQUIRE(ind0.i_qpoint(0) == 1);
   REQUIRE(ind0.i_qpoint(1) == 26);

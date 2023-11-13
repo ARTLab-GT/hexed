@@ -49,7 +49,8 @@ class Tree
   void add_extremal_leves(std::vector<Tree*>& add_to, Eigen::VectorXi bias);
 
   public:
-  /*! Constructs the root element of a tree. All other elements will be descendents of this one.
+  /*! \brief Constructs the root element of a tree.
+   * \details All other elements will be descendents of this one.
    * \param n_dim number of spatial dimensions of the tree. `n_dim = 1` => bintree, `n_dim = 2` => quadtree, etc.
    * \param root_size sets the `nominal_size` of the root element.
    * \param origin sets the origin of the physical coordinate system.
@@ -58,8 +59,9 @@ class Tree
    */
   Tree(int n_dim, double root_size, Mat<> origin = Mat<>::Zero(3));
   const int n_dim;
-  Element* elem = nullptr; //!< `Element` generated from this tree (to be managed by the user of this class)
-  Deformed_element* def_elem = nullptr; //!< if `elem` points to a deformed element, this can also be set to allow it to be accessed as deformed
+  Element* elem = nullptr; //!< \brief `Element` generated from this tree (to be managed by the user of this class)
+  Deformed_element* def_elem = nullptr; //!< \brief if `elem` points to a deformed element, this can also be set to allow it to be accessed as deformed
+  std::vector<int> misc_data; //!< \brief As the name implies, used to store whatever random information you want
 
   //! \name basic instance information
   //!\{

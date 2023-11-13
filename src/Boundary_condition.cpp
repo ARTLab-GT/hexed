@@ -587,14 +587,17 @@ void Geom_mbc::snap_vertices(Boundary_connection& con)
 
 void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
 {
-  Gauss_lobatto lob(basis.row_size - 1);
+  if (!con.element().node_adjustments() || !con.element().needs_snapping) return; // Cartesian elements don't have `node_adjustments()`, so in this case just exit
+  Gauss_lobatto lob(std::max(2, basis.row_size - 1));
   Mat<dyn, dyn> to_lob = basis.interpolate(lob.nodes());
   Mat<dyn, dyn> from_lob = lob.interpolate(basis.nodes());
-  if (!con.element().node_adjustments()) return; // Cartesian elements don't have `node_adjustments()`, so in this case just exit
   auto params {con.storage_params()};
   const int nd = params.n_dim;
-  const int nlq = math::pow(lob.row_size, nd - 1);
+  int nlq = math::pow(lob.row_size, nd - 1);
   const int nfq = params.n_qpoint()/params.row_size;
+  Eigen::Map<Mat<>> adjustments(con.element().node_adjustments() + (2*con.i_dim() + con.inside_face_sign())*nfq, nfq);
+  adjustments = Mat<>::Zero(nfq);
+  Mat<> face_adj = Mat<>::Zero(nlq);
   Mat<dyn, dyn> face_pos [2] {{nfq, nd}, {nfq, nd}};
   // get position on this and opposite face
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
@@ -608,9 +611,9 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
       lob_pos[face_sign](all, i_dim) = math::hypercube_matvec(to_lob, face_pos[face_sign](all, i_dim));
     }
   }
-  Mat<> face_adj(nlq);
+  bool& snapping_problem = con.element().snapping_problem;
+  snapping_problem = false;
   for (int i_qpoint = 0; i_qpoint < nlq; ++i_qpoint) {
-    // compute intersections
     auto sects = geom->intersections(lob_pos[0](i_qpoint, all), lob_pos[1](i_qpoint, all));
     // set the node adjustment to match the nearest intersection, if any of them are reasonably close
     double best_adj = 0.;
@@ -623,9 +626,42 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
       }
     }
     face_adj(i_qpoint) = best_adj;
+    snapping_problem = snapping_problem || distance > .999;
   }
-  Eigen::Map<Mat<>>(con.element().node_adjustments() + (2*con.i_dim() + con.inside_face_sign())*nfq, nfq)
-    += math::hypercube_matvec(from_lob, face_adj);
+  adjustments += math::hypercube_matvec(from_lob, face_adj);
+  std::vector<Mat<>> derivatives;
+  Mat<dyn, dyn> dm = basis.diff_mat();
+  if (nd >= 2) derivatives.push_back(math::dimension_matvec(dm, adjustments, 0));
+  if (nd == 3) {
+    derivatives.push_back(math::dimension_matvec(dm, adjustments, 1));
+    derivatives.push_back(math::dimension_matvec(dm, derivatives[0], 1));
+  }
+  for (Mat<>& derivative : derivatives) snapping_problem = snapping_problem || derivative.lpNorm<Eigen::Infinity>() > 1.;
+  if (snapping_problem) adjustments.setZero();
+  if (snapping_problem && basis.row_size > 3) {
+    for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+      for (int face_sign = 0; face_sign < 2; ++face_sign) {
+        face_pos[face_sign](i_qpoint, all) = math::to_mat(con.element().face_position(basis, 2*con.i_dim() + face_sign, i_qpoint));
+      }
+    }
+    Gauss_lobatto lob1(3);
+    int nlq1 = math::pow(3, nd - 1);
+    Mat<dyn, dyn> to_lob1 = basis.interpolate(lob1.nodes());
+    Mat<dyn, dyn> from_lob1 = lob1.interpolate(basis.nodes());
+    Mat<dyn, dyn> pos [2] {{nlq1, nd}, {nlq1, nd}};
+    for (int i_sign = 0; i_sign < 2; ++i_sign) {
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        pos[i_sign](all, i_dim) = math::hypercube_matvec(to_lob1, face_pos[i_sign](all, i_dim));
+      }
+    }
+    Mat<> adj1(nlq1);
+    for (int i_qpoint = 0; i_qpoint < nlq1; ++i_qpoint) {
+      Mat<> p = pos[con.inside_face_sign()](i_qpoint, all).transpose();
+      Mat<> diff = (pos[1](i_qpoint, all) - pos[0](i_qpoint, all)).transpose();
+      adj1(i_qpoint) = (geom->nearest_point(p, huge, con.element().nominal_size()).point() - p).dot(diff)/diff.squaredNorm();
+    }
+    adjustments += math::hypercube_matvec(from_lob1, adj1);
+  }
 }
 
 }

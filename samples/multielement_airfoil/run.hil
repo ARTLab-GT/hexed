@@ -4,8 +4,9 @@ mesh_extreme10 = -10.
 mesh_extreme01 =  10.
 mesh_extreme11 =  10.
 altitude = 0.
-speed = 0.
+freestream_speed = 0.
 geom0 = {crmhl-2dcut.igs}
-surface_refine = {resolution_badness > 3e-3 & ref_level < 13}
-surface_max_iters = 20
+max_ref_level = 13
+$set_geometry_refinement
+vis_n_sample = 30
 $init

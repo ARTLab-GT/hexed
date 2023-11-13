@@ -1,6 +1,8 @@
 #ifndef HEXED_CONFIG_HPP_
 #define HEXED_CONFIG_HPP_
 
+#include <string>
+
 /*! \file hexed_config.hpp.in \brief Supplies CMake-configured options to C++ code.
  *
  * Note that anything wrapped in `@`s will be replaced
@@ -26,7 +28,7 @@ constexpr int version_minor = @CMAKE_PROJECT_VERSION_MINOR@; //!< \brief this is
 constexpr int version_patch = @CMAKE_PROJECT_VERSION_PATCH@; //!< \brief this is Hexed version \ref version_major .\ref version_minor .\ref version_patch
 //! \brief commit hash of the source this code was compiled from
 //! \note hex digits stored as a c-string since there isn't a standard integer type large enough to hold it as an integer
-constexpr char commit [] = "@COMMIT@";
+extern const std::string commit;
 constexpr int max_row_size = @MAX_BASIS_ROW_SIZE@; //!< \brief maximum \ref basis_row_size "row size" that a `Basis` is allowed to have
 #define HEXED_THREADED HEXED_@threaded@
 #if HEXED_THREADED

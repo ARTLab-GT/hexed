@@ -6,7 +6,7 @@ namespace hexed::criteria
 
 bool if_extruded(Element& elem) {return !elem.tree;}
 
-std::function<bool(Element&)> criterion(std::function<bool(bool is_extruded, int ref_level, double nom_sz, Eigen::Vector3d center, double res_bad)> f)
+std::function<bool(Element&)> criterion(std::function<bool(bool is_extruded, int ref_level, double nom_sz, Eigen::Vector3d center, double uncertainty)> f)
 {
   return [f](Element& elem) {
     auto params = elem.storage_params();
@@ -16,7 +16,7 @@ std::function<bool(Element&)> criterion(std::function<bool(bool is_extruded, int
       center += elem.vertex(i_vert).pos;
     }
     center /= params.n_vertices();
-    return f(!elem.tree, elem.refinement_level(), elem.nominal_size(), center, elem.resolution_badness);
+    return f(!elem.tree, elem.refinement_level(), elem.nominal_size(), center, elem.uncertainty);
   };
 }
 

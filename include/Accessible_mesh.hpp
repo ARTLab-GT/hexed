@@ -99,6 +99,7 @@ class Accessible_mesh : public Mesh
   void set_all_smooth() override;
   void relax(double factor = 0.9) override;
   inline int surface_bc_sn() override {return surf_bc_sn;}
+  inline Surface_geom& surface_geometry() {return *surf_geom;}
 
   //! \returns a view of all Bounday_condition objects owned by this mesh
   Vector_view<Boundary_condition&, Boundary_condition> boundary_conditions() {return bound_conds;}

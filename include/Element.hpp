@@ -46,11 +46,13 @@ class Element
   std::array<int, 6> face_record; //!< for algorithms to book-keep information related to faces
   //! Pointer to state data at faces. Must be populated by user
   std::array<double*, 6> faces; //!< layout: [2*i_dim + face_sign][i_var][i_qpoint]
-  double resolution_badness = 0; //!< refinement algorithms should set this value to some metric representing how badly this element needs to be refined
+  double uncertainty = 0; //!< refinement algorithms should set this value to some uncertainty metric
   static constexpr bool is_deformed = false; //!< is this `Element` subclass deformed?
   int record = 0; //!< for algorithms to book-keep general information
   Tree* tree = nullptr; //!< `Tree` this element was created from
   bool unrefinement_locked = false; //!< if this is set to `true`, `Mesh_interface::update()` won't unrefine it
+  bool snapping_problem = false; //!< \brief if `true`, this element has a face on the surface which was not properly snapped
+  bool needs_snapping = true; //!< \brief once any faces of this element have been snapped to the surface, set this to `false`
   const Mat<> origin; //!< origin which integer coordinates are relative to
   Lock lock; //!< for any tasks where multiple threads might access an element simultaneously
 

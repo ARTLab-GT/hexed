@@ -296,8 +296,8 @@ class Geom_mbc : public Mesh_bc
   public:
   //! acquire ownership of `*surf_geom`, which faces/vertices will be snapped to
   inline Geom_mbc(Surface_geom* surf_geom) : geom{surf_geom} {}
-  virtual void snap_vertices(Boundary_connection&);
-  virtual void snap_node_adj(Boundary_connection&, const Basis&);
+  void snap_vertices(Boundary_connection&) override;
+  void snap_node_adj(Boundary_connection&, const Basis&) override;
 };
 
 }

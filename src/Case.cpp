@@ -91,7 +91,7 @@ Case::Case(std::string input_file)
     std::time_t time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     std::strftime(utc, 100, "%Y-%m-%d %H:%M:%S", std::gmtime(&time));
     printer->print(format_str(1000, "Commencing simulation with Hexed version %i.%i.%i (commit %s) at %s UTC (%i Unix Time).\n",
-                              config::version_major, config::version_minor, config::version_patch, config::commit, utc, time));
+                              config::version_major, config::version_minor, config::version_patch, config::commit.c_str(), utc, time));
     // setup actual solver
     auto n_dim = _inter.variables->lookup<int>("n_dim");
     HEXED_ASSERT(n_dim && n_dim.value() > 0 && n_dim.value() <= 3,
@@ -231,8 +231,8 @@ Case::Case(std::string input_file)
 
   _inter.variables->create<int>("refine", new Namespace::Heisenberg<int>([this]() {
     std::vector<std::string> crit_code;
-    crit_code.push_back("return = " + _vars("surface_refine").value());
-    crit_code.push_back("return = " + _vars("surface_unrefine").value());
+    crit_code.push_back("return = " + _vars("refine_if").value());
+    crit_code.push_back("return = " + _vars("unrefine_if").value());
     std::vector<std::function<bool(Element&)>> crits;
     for (std::string code : crit_code) {
       crits.emplace_back([this, code](Element& elem) {
@@ -243,7 +243,7 @@ Case::Case(std::string input_file)
       });
     }
     Jac_inv_det_func jidf;
-    _solver().set_resolution_badness(Elem_nonsmooth(jidf));
+    _solver().set_uncertainty(Elem_nonsmooth(jidf));
     _solver().mesh().set_unref_locks(criteria::if_extruded);
     bool changed = _solver().mesh().update(crits[0], crits[1]);
     for (int i_smooth = 0; i_smooth < _vari("n_smooth"); ++i_smooth) _solver().mesh().relax(0.7);
@@ -266,6 +266,11 @@ Case::Case(std::string input_file)
   }));
 
   _inter.variables->create<int>("init_state", new Namespace::Heisenberg<int>([this]() {
+    #if HEXED_OBSESSIVE_TIMING
+    int nd = _inter.variables->lookup<int>("n_dim").value();
+    if (nd == 2) _inter.printer->print(Simplex_geom<2>::performance_report());
+    if (nd == 3) _inter.printer->print(Simplex_geom<3>::performance_report());
+    #endif
     _solver().initialize(Spacetime_expr(Struct_expr(_vars("init_cond").value()), _inter));
     return 0;
   }));

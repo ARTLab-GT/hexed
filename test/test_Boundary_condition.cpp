@@ -4,6 +4,8 @@
 #include <hexed/Spacetime_func.hpp>
 #include <hexed/constants.hpp>
 #include <hexed/connection.hpp>
+#include <hexed/Gauss_legendre.hpp>
+#include <hexed/Simplex_geom.hpp>
 
 class Dummy : public hexed::Boundary_condition
 {

@@ -15,7 +15,7 @@ namespace hexed::hil_properties
  * - `is_def = elem.get_is_deformed()`
  * - `ref_level = elem.refinement_level()`
  * - `nom_sz` = elem.nominal_size()`
- * - `res_bad` = elem.resolution_badness()`
+ * - `uncertainty` = elem.uncertainty`
  * - `center0`, `center1`, `center2`: center of mass of vertices (not necessarily of the element itself)
  */
 void element(Namespace&, Element& elem);

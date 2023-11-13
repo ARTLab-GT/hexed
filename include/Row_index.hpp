@@ -21,9 +21,9 @@ class Row_index
   const int n_dim;
   const int row_size;
   const int i_dim;
-  const int n_qpoint; //!< how many total quadrature points an element has
-  const int n_fqpoint; //!< how many quadrature points the face of an element has
-  const int stride; //!< the stride required to step through the row
+  const int n_qpoint; //!< \brief how many total quadrature points an element has
+  const int n_fqpoint; //!< \brief how many quadrature points the face of an element has
+  const int stride; //!< \brief the stride required to step through the row
 
   /*! constructs a `Row_index` in `nd` dimensions, with row size `rs`,
    * and applicable to rows in the `id`th dimension.
@@ -51,12 +51,16 @@ class Row_index
   //! and `false` if it is pointing past the last row
   constexpr operator bool() const {return i_fq < n_fqpoint;}
 
-  //! returns the index of the row (or equivalently the face quadrature point) the object is pointing to
+  //! \brief returns the index of the row (or equivalently the face quadrature point) the object is pointing to
   constexpr int i_face_qpoint() const {return i_fq;}
 
-  //! returns the index (with respect to the entire quadrature point array) of
+  //! \brief returns the index (with respect to the entire quadrature point array) of
   //! the `i_node`th quadrature point in the current row
   constexpr int i_qpoint(int i_node) const {return i_outer*stride*row_size + i_inner + i_node*stride;}
+
+  //! \brief returns the index of a quadrature point in its own row, i.e. which `Basis::node` it is
+  //! \details always gives the same value regardless of which `i_face_qpoint()` this object is pointing to
+  constexpr int i_node(int i_qpoint) const {return (i_qpoint/stride)%row_size;}
 };
 
 }
