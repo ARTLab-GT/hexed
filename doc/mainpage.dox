@@ -45,6 +45,45 @@ It uses Cartesian meshes with hanging-node refinement, modified to include body-
 In the relatively near future, I hope to include adaptive mesh refinement, moving geometry, and RANS turbulence modeling.
 It may not be the most robust or user-friendly, but I hope it makes your projects, if not easier, at least less tedious.
 
+\subsection citing Citing and Usage Guidelines
+Hexed is open source under terms specified in the [license](https://github.gatech.edu/ARTLab/hexed/blob/main/LICENSE.txt).
+This is version 0, the prototype.
+You are encouraged to study and experiment with it, but it is missing some important features and probably riddled with bugs.
+We hope to release a more complete, stable version in the next year or two.
+As a personal request, if you modify or improve this code, please share your work and credit our original version.
+We welcome pull requests.
+If you use Hexed in any academic research, please cite one or both of the following publications:
+
+Smith-Pierce, M., Ruffin, S. M., and Dement, D. C.,
+"Automated unstructured quad/hex meshing for high-order discontinuous Galerkin CFD,"
+_AIAA SCITECH 2024 Forum_, 2024. Submitted for publication.
+~~~{.unparsed}
+@inproceedings{smith-pierce2024,
+author = {Micaiah Smith-Pierce and Stephen M. Ruffin and David C. Dement},
+title = {Automated unstructured quad/hex meshing for high-order discontinuous Galerkin CFD},
+booktitle = {AIAA SCITECH 2024 Forum},
+year = 2024,
+chapter = {},
+pages = {},
+note = {submitted for publication},
+}
+~~~
+
+Smith-Pierce, M., Dement, D. C., and Ruffin, S. M.,
+"A high order discontinuous Galerkin Navier-Stokes solver with grid-convergent artificial viscosity",
+_AIAA SCITECH 2024 Forum_, 2024. Submitted for publication.
+~~~{.unparsed}
+@inproceedings{smith-pierce2024,
+author = {Micaiah Smith-Pierce and David C. Dement and Stephen M. Ruffin},
+title = {A high order discontinuous Galerkin Navier-Stokes solver with grid-convergent artificial viscosity},
+booktitle = {AIAA SCITECH 2024 Forum},
+year = 2024,
+chapter = {},
+pages = {},
+note = {submitted for publication},
+}
+~~~
+
 \subsection Contact
 \anchor me
 This code is developed and maintained by me, Micaiah Smith-Pierce.
@@ -60,6 +99,7 @@ The rest of the pages (<a href="namespaces.html">Namespaces</a>, <a href="classe
 serve as reference material on the API once you already know what you're doing.
 
 - \subpage installation
+- \subpage running
 - \subpage hil
 - \subpage parameters
 - \subpage boundary_conditions
@@ -69,15 +109,5 @@ serve as reference material on the API once you already know what you're doing.
 - \subpage geom_fitting
 - \subpage contributing
 - \subpage benchmarking
-
-\anchor hexecute
-Technically, Hexed is really two things.
-It is a C++ library, and it is an executable program.
-If you want to extend the functionality of Hexed or use it as a backend and develop your own UI,
-you should link with the C++ library `libhexed.so`
-(use CMake to import the package `hexed`, and you will have access to everything in the namespace \ref hexed).
-However, for most use cases, the executable should be sufficient.
-To distinguish it from the library and namespace, the command to _execute hexed_ is `hexecute` (sorry for my terrible sense of humor).
-It supports a text-based interface in the \ref hil.
 
 */

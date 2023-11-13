@@ -56,15 +56,6 @@ Feel free to change the name/location if you like.
   export PYTHONPATH=$PYTHONPATH:~/local/lib
   export PATH=$PATH:~/local/bin
   ~~~
-  - If you want to use Tecplot for visualization, you should also add the following lines to your `.bashrc`:
-  ~~~{.sh}
-  TECPLOT_DIR=/opt/tecplot/360ex_2020r2
-  TECPLOT_LIB_PATH=$TECPLOT_DIR/bin/
-  export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:$TECPLOT_DIR/include/
-  export LIBRARY_PATH=$LIBRARY_PATH:$TECPLOT_LIB_PATH
-  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$TECPLOT_LIB_PATH
-  ~~~
-  If you are not on an ARTLAB machine, rather than use Tecplot it is probably easier to just install ParaView.
 - Close and reopen the terminal.
 
 You also need somewhere to put all the code I'm about to make you download, as opposed to dumping it in your home directory.
@@ -124,8 +115,6 @@ Use the following steps to install the XDMF library:
 - `export XDMF_INSTALL_DIR=~/local`
 - `cmake .. -DCMAKE_INSTALL_PREFIX=${XDMF_INSTALL_DIR} -DBUILD_SHARED_LIBS=1 -Wno-dev`
 - `make install`
-  - if you get the compiler error `conflicting declaration ‘typedef int hid_t’`, try:
-    - `vi ../core/XdmfHDF5Controller.hpp`. Add `include <stdint.h>` after line 29 and on line 37 replace `typedef int hid_t` with `typedef int64_t hid_t`.
 
 \subsection install_occt Step 8: install OpenCASCADE Technology
 OpenCASCADE Technology is an open source CAD Engine which Hexed uses to read and manipulate geometry from standard CAD file formats.
@@ -168,6 +157,7 @@ OpenCASCADE Technology is an open source CAD Engine which Hexed uses to read and
   - Change `CMAKE_INSTALL_PREFIX` to `~/local` (or wherever you want to install binaries).
   - Change `PYTHON_INSTALL_PREFIX` to `~/local/lib` (or wherever you want Python modules to be installed).
   - If you want to use Tecplot, change `use_tecplot` to `ON`.
+    After you hit `c` the first time, you will have to edit the variable `TECPLOT_DIR` to point to wherever you installed Tecplot.
   - If you __don't__ want to use XDMF, change `use_xdmf` to `OFF`.
   - Otherwise, the default options should be fine.
 - Press `c` again.
@@ -230,5 +220,34 @@ So, we will create an new build directory where we compile in Debug mode.
 - `test/unit`. Again, you should see "All tests passed".
    However, now if you were to, for example, write to an array out of bounds, you will get an error message with the line number of the problem
    instead of just a segfault.
+
+\section Troubleshooting
+\subsection xdmf_problems XDMF problems
+When compiling XDMF, if you get the compiler error `conflicting declaration ‘typedef int hid_t’`, try:
+- `vi ../core/XdmfHDF5Controller.hpp`.
+- Add `include <stdint.h>` after line 29
+- On line 37 replace `typedef int hid_t` with `typedef int64_t hid_t`.
+
+When building Hexed, you might get a CMake warning that looks something like:
+~~~{.unparsed}
+CMake Warning (dev) at /home/micaiah/.local/lib/cmake/Xdmf/XdmfConfig.cmake:87:
+  Syntax Warning in cmake code at column 42
+
+  Argument not separated from preceding token by whitespace.
+Call Stack (most recent call first):
+  CMakeLists.txt:136 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+~~~
+(probably followed by many similar warnings).
+This appears to be because the XDMF developers forgot to escape some quotes in their CMake scripts.
+You can probably just ignore these errors (at least, this works for me).
+However, if you want to silence the warnings, or if you're afraid this might be the cause of some other problems you're having,
+you can fix it with a find/replace command in vim: 
+- `vi /your/install/path/lib/cmake/Xdmf/XdmfConfig.cmake`
+- \verbatim :%s/""\(.\{-}\)"/"\\"\1\\" \endverbatim
+  This changes, for instance, `""this is supposed to be in nested quotes" this is not"` to `"\"this is supposed to be in nested quotes\\" this is not"`.
+\if false
+If you're reading the .dox file directly, note that the double backslash in the example text above will render as a single backslash (the first one escapes the second).
+\endif
 
 */

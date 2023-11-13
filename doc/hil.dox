@@ -7,8 +7,6 @@ and there is the full program \ref hexecute which also supports the \ref paramet
 Both interpreters can be run with no arguments, in which case they will start an interactive session,
 or with a single argument which is the path to a file containing HIL code.
 For examples of effective HIL scripting, see the `samples` directory.
-To run any of the cases, navigate to the corresponding subdirectory and type `hexecute run.hil`.
-Execution time may vary from a few seconds to multiple hours for different cases.
 
 Creating a whole scripting language just to interface with a CFD solver may seem excessive,
 but in fact it addresses some of my greatest frustrations with computational analysis.

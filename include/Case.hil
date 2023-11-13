@@ -76,7 +76,7 @@ vortex = {
 }
 
 shock_sub_iters = 10; {number of sub-iterations to run in each nominal iteration to get efficient Chebyshev-accelerated diffusion}
-set_shock = { {modify settings to good defaults for simulations with shock capturing}
+set_shock = {
     art_visc_width = (mesh_extreme01 - mesh_extreme00)*2.^-init_ref_level
     fix_therm_admis = true
     n_cheby_av = shock_sub_iters
@@ -87,7 +87,7 @@ set_shock = { {modify settings to good defaults for simulations with shock captu
 aerothermo_initial_iters = 1000; {number of initial iterations to run at a small safety factor to let the artificial viscosity catch up}
 aerothermo_initial_safety = 3e-3
 aerothermo_final_safety = 0.7
-set_aerothermo = { {further modify settings to be good for aerothermodynamics (assumes `$set_shock` has already been called)}
+set_aerothermo = {
     transport_model = {sutherland}
     max_safety = aerothermo_initial_safety
     iterate = iterate + {
@@ -112,6 +112,7 @@ set_aerothermo = { {further modify settings to be good for aerothermodynamics (a
         $$({case} + (iteration >= aerothermo_initial_iters))
     }
 }
+
 set_geometry_refinement = {
     refine_if = {(uncertainty > geometry_uncertainty | snapping_problem) & ref_level < max_ref_level}
     unrefine_if = {ref_level > init_ref_level & !is_extruded}
