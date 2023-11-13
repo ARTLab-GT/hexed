@@ -108,13 +108,13 @@ If set to a positive number, turns on aritificial viscosity with a smoothness-ba
 and sets the smoothness width to `art_visc_width`.
 
 <hr>
-\subsubsection surface_refine
+\subsubsection refine_if
 __type:__ string \n
 __default:__ `{false}` \n
-Refinement criterion for surface-geometry-based refinement sweeps.
+Mesh refinement criterion.
 Should be an expression that can be evaluated for each mesh element
 in an environment that includes the variables assigned by `hexed::hil_properties::element()`.
-If this expression evaluates to \ref true, the element will be refined.
+If this expression evaluates to \ref true (and \ref unrefine_if evaluates to \ref false), the element will be refined.
 Otherwise it will not.
 
 <hr>
@@ -182,6 +182,15 @@ but having the boundary layer be one or two wall layers thick often works well f
 and significantly more layers are often required for hypersonic simulations with a cold wall.
 
 <hr>
+\subsubsection max_ref_level
+__type:__ float \n
+__default:__ 10 \n
+When performing geometry-based refinement with \ref set_geometry_refinement,
+elements will not be refined beyond this refinement level.
+This prevents excessive refinement in certain no-win scenarios such as sharp edges.
+This parameter must often be adjusted based on the scale of the geometry.
+
+<hr>
 
 \subsection useful_inputs Useful Input Parameters
 You will probably want to adjust these parameters for some simulations, but you can often leave them alone.
@@ -208,6 +217,16 @@ __type:__ float \n
 __default:__ `0.` \n
 Applicable when altitude is specified.
 Sets the temperature offset passed to `hexed::standard_atmosphere`.
+
+<hr>
+\subsubsection geometry_uncertainty
+__type:__ float \n
+__default:__ 3e-3 \n
+When performing geometry-based refinement with \ref set_geometry_refinement,
+a nondimensional uncertainty metric for the surface representation will be compared to this value,
+and any elements with a larger value will be refined.
+Thus reducing this number results in a finer mesh and vice versa,
+although the default value produces reasonable results in a wide range of cases, in my opinion.
 
 <hr>
 \subsubsection art_visc_constant
@@ -245,18 +264,18 @@ __default:__ 100 \n
 Solver status will be printed to stdout every `print_freq` iterations.
 
 <hr>
-\subsubsection surface_unrefine
+\subsubsection unrefine_if
 __type:__ string \n
-__default:__ `{ref_level > init_ref_level & !is_extruded}` \n
-Unrefinement criterion for surface-geometry-based refinement sweeps.
-Behaves the same as \ref surface_refine except that if this expression evaluates to \ref true, the element will be unrefined
-(subject to refinement level constraints).
+__default:__ `{false}` \n
+Mesh unrefinement criterion.
+Behaves the same as \ref refine_if except that if this expression evaluates to \ref true (and \ref refine_if evaluates to \ref false),
+the element will be unrefined (subject to refinement level constraints).
 
 <hr>
-\subsubsection surface_max_iters
+\subsubsection max_refinement_iters
 __type:__ integer \n
 __default:__ 100 \n
-Maximum number of surface-geometry-based refinement sweeps to run if refinement convergence is not achieved.
+Maximum number of refinement sweeps to run if refinement convergence is not achieved.
 
 <hr>
 \subsubsection n_smooth
@@ -486,6 +505,30 @@ As long as `buffer_dist >= .5*sqrt(n_dim)`, this guarantees that none of the rem
 but as the default suggests, a somewhat larger value can help to ensure viable mesh quality.
 
 <hr>
+\subsubsection shock_sub_iters
+__type:__ integer \n
+__default:__ 10
+number of sub-iterations to run in each nominal iteration to get efficient Chebyshev-accelerated diffusion (when $\ref set_shock has been called)
+
+<hr>
+\subsubsection aerothermo_initial_iters
+__type:__ integer \n
+__default:__ 1000 \n
+number of initial iterations to run at a small safety factor (\ref aerothermo_initial_safety) to let the artificial viscosity catch up (when $\ref set_aerothermo has been called)
+
+<hr>
+\subsubsection aerothermo_initial_safety
+__type:__ float \n
+__default:__ 3e-3 \n
+safety factor to use in initial iterations
+
+<hr>
+\subsubsection aerothermo_final_safety
+__type:__ float \n
+__default:__ 0.7 \n
+will revert to this factor after initial iterations are complete (when $\ref set_aerothermo)
+
+<hr>
 
 \section commands Command Variables & Macros
 The following variables are used to execute actions.
@@ -538,8 +581,8 @@ The following extension/format combinations are supported:
 <hr>
 \subsubsection refine
 __type:__ Heisenberg integer \n
-Performs one surface-geometry-based refinement sweep and returns 0.
-Elements are refined or unrefined based on \ref surface_refine and \ref surface_unrefine.
+Performs one refinement sweep and returns 0.
+Elements are refined or unrefined based on \ref refine_if and \ref unrefine_if.
 
 <hr>
 \subsubsection init_state
@@ -590,6 +633,23 @@ Thus split points should be strictly increasing and in the interval (0, 1).
 For example, to split the last wall layer into 4 approximately equal parts, you could set `layer_split_points = {split0 = 0.25; split1 = 0.5; split2 = 0.75}` and then evaluate `split_layers`.
 The state of the original layer will be interpolated into the new layers, so layer splitting can be performed dynamically as a simulation is running.
 Evaluates to 0.
+
+<hr>
+\subsubsection set_geometry_refinement
+__type:__ string (macro) \n
+Sets \ref refine_if and \ref unrefine_if to refine elements in order to efficiently resolve the geometry surface.
+\see \ref max_ref_level
+\see \ref geometry_uncertainty
+
+<hr>
+\subsubsection set_shock
+__type:__ string (macro) \n
+Configures settings to be good for shock capturing (in particular turning on smoothness-based artificial viscosity).
+
+<hr>
+\subsubsection set_aerothermo
+__type:__ string (macro) \n
+Configures settings to be good for aerothermodynamics (assumes $\ref set_shock has already been called).
 
 <hr>
 
