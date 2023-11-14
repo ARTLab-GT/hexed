@@ -10,23 +10,24 @@ init_ref_level = 5
 extremal_bc10 = {nonpenetration}
 extremal_bc01 = {pressure_outflow}
 geom0 = {auto.csv}
-init_layer_splits = 3
+init_layer_splits = 2
 
 {freestream/wall definition}
 freestream_mach = 7
-stag_temp = 600
+stag_temp = 1000
 freestream_temperature = stag_temp/(1 + 0.2*freestream_mach^2)
 reynolds = 1e6
 freestream_visc = 1.713e-5*(freestream_temperature/273)^1.5*(273 + 111)/(freestream_temperature + 111)
 freestream_cond =   0.0241*(freestream_temperature/273)^1.5*(273 + 194)/(freestream_temperature + 194)
 diam = 2.
 freestream_density = reynolds*freestream_visc/(freestream_mach*(1.4*specific_gas_air*freestream_temperature)^.5*diam)
-thermal_bc = {temperature = 80}
+thermal_bc = {temperature = 150}
 
 {iteration parameters}
 $set_shock
 done = {iteration >= 15*10^4}
 vis_freq = 10000
+aerothermo_initial_iters = 2000
 $set_aerothermo
 iterate = iterate + {
     case0 = {}
@@ -38,7 +39,7 @@ iterate = iterate + {
     $$({case} + (iteration == 3*10^4 | iteration == 5*10^4 | iteration == 7*10^4))
 }
 
-working_dir = {hexed_out_isothermal6}
+working_dir = {hexed_out_isothermal7}
 vis_n_sample = 2
 $init
 vis_n_sample = 10
