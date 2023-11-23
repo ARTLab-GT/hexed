@@ -21,13 +21,14 @@ freestream_visc = 1.713e-5*(freestream_temperature/273)^1.5*(273 + 111)/(freestr
 freestream_cond =   0.0241*(freestream_temperature/273)^1.5*(273 + 194)/(freestream_temperature + 194)
 diam = 2.
 freestream_density = reynolds*freestream_visc/(freestream_mach*(1.4*specific_gas_air*freestream_temperature)^.5*diam)
-thermal_bc = {temperature = 90}
+thermal_bc = {heat_flux = 0}
 
 {iteration parameters}
 $set_shock
 done = {iteration >= 10*10^4}
 vis_freq = 10000
 $set_aerothermo
+{
 iterate = iterate + {
     case0 = {}
     case1 = {
@@ -37,8 +38,9 @@ iterate = iterate + {
     }
     $$({case} + (iteration == 3*10^4 | iteration == 5*10^4))
 }
+}
 
-working_dir = {hexed_out_isothermal8}
+working_dir = {hexed_out_ad8}
 vis_n_sample = 2
 $init
 vis_n_sample = 10
