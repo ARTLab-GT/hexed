@@ -51,10 +51,6 @@ class Transport_model
 };
 
 const auto inviscid = Transport_model::inviscid(); //!< always returns zero
-const auto air_const_dyn_visc = Transport_model::constant(1.81206e-5); //!< always returns dynamic visosity of dry air at standard sea level
-const auto air_const_therm_cond = Transport_model::constant(1.81206e-5*1.4*constants::specific_gas_air/.4/.71); //!< always returns thermal conductivity of dry air at standard sea level
-const auto air_sutherland_dyn_visc = Transport_model::sutherland(1.716e-5, 273., 111.); //!< best Sutherland's law fit for dynamic viscosity of dry air
-const auto air_sutherland_therm_cond = Transport_model::sutherland(.0241, 273., 194.); //!< best Sutherland's law fit for thermal conductivity of dry air
 
 }
 #endif

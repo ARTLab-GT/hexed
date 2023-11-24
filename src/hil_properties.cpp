@@ -54,7 +54,7 @@ void state(Namespace& space, Element& elem, int i_qpoint)
 
 void surface(Namespace& space, Boundary_connection& con, int i_fqpoint)
 {
-  bool viscous = space.lookup<std::string>("transport_model").value() != "inviscid";
+  bool viscous = space.lookup<std::string>("viscosity_model").value() != "" || space.lookup<std::string>("conductivity_model").value() != "";;
   auto params = con.storage_params();
   int nfq = params.n_qpoint()/params.row_size;
   // fetch surface normal

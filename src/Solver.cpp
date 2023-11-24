@@ -140,7 +140,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("max_safety", .7); // maximum allowed safety factor for time stepping
   _namespace->assign_default("max_time_step", huge); // maximum allowed time step
   _namespace->assign_default("fix_admis_max_safety", .7); // staility ratio for fixing thermodynamic admissibility.
-  _namespace->assign_default("av_diff_ratio", .03); // ratio of diffusion time to advection width
+  _namespace->assign_default("av_diff_ratio", .03*16); // ratio of diffusion time to advection width
   _namespace->assign_default("av_visc_mult", 1e2); // final scaling parameter applied to artificial viscosity coefficient
   _namespace->assign_default("av_unscaled_max", .1); // maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
   _namespace->assign_default("av_advect_max_safety", .7); // stability ratio for advection
@@ -674,7 +674,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
   double n_cheby = _namespace->lookup<double>("n_cheby_av").value();
   (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true, false, 1., diff_safety))(acc_mesh.cartesian().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "compute time step");
   (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true, false, 1., diff_safety))(acc_mesh.deformed ().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "compute time step");
-  double diff_time = _namespace->lookup<double>("av_diff_ratio").value()*advect_length/n_real; // compute size of real time step (as opposed to pseudotime)
+  double diff_time = _namespace->lookup<double>("av_diff_ratio").value()*advect_length*advect_length/n_real; // compute size of real time step (as opposed to pseudotime)
   // initialize residual to zero (will compute RMS over all real time steps)
   status.diff_res = 0;
   for (int real_step = 0; real_step < n_real; ++real_step)
