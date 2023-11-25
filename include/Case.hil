@@ -119,7 +119,7 @@ set_aerothermo = {
             }
             $$({case} + ((iteration/print_freq)%2 == 0))
         }
-        $$({case} + (iteration >= aerothermo_initial_iters))
+        $$({case} + (iteration >= ramping_initial_iters))
     }
 }
 
