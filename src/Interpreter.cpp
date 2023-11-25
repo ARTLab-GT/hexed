@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <cstdlib>
+#include <chrono>
 #include <Interpreter.hpp>
 
 namespace hexed
@@ -334,6 +335,14 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
   variables->create("throw", new Namespace::Heisenberg<std::string>([this]() {
     throw std::runtime_error("Exception thrown from HIL by evaluating `throw`.");
     return "";
+  }));
+  variables->create("system_time", new Namespace::Heisenberg<double>([]() {
+    auto time = std::chrono::system_clock::now().time_since_epoch();
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(time).count()*1e-9;
+  }));
+  variables->create("steady_time", new Namespace::Heisenberg<double>([]() {
+    auto time = std::chrono::steady_clock::now().time_since_epoch();
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(time).count()*1e-9;
   }));
   // builtin values
   variables->assign("huge", huge);
