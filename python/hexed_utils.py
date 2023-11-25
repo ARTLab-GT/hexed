@@ -47,3 +47,26 @@ def naca(desig, n_points = 1000, closure = "warp"):
     elif closure and closure.lower() != "none":
         raise User_error("unrecognized value of `closure` parameter")
     return coords
+
+def joukowsky(thickness, camber = 0., n_points = 1000):
+    r"""! \brief constructs a [Joukowsky airfoil](https://en.wikipedia.org/wiki/Joukowsky_transform)
+    This is a family of airfoils with a cusped trailing edge which have analytic solutions for the incompressible flow around them.
+    \param thickness _approximate_ thickness-to-chord ratio
+    \param camber (radian) angle between the trailing edge and the chord line
+    \param n_points Number of points on the airfoil surface
+    """
+    # create circle in complex plain
+    points = np.exp(np.linspace(0, 2*np.pi, n_points)*1j)
+    # transform circle so that it has the correct position relative to the singularity of the Joukowsky transform
+    radius = 1 + 4*thickness/3**1.5
+    points *= radius
+    points = (points - radius)*np.exp(camber*-.5j) + 1
+    # apply Joukowsky transform
+    points = points + 1/points
+    # scale airfoil to match engineering conventions
+    points -= points.real.min()
+    points /= points.real.max()
+    return np.array([points.real, points.imag]).transpose()
+
+## \brief alternative transliteration XD
+zhukovsky = joukowsky

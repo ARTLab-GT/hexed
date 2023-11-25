@@ -328,12 +328,10 @@ Case::Case(std::string input_file)
     int nd = _solver().storage_params().n_dim;
     Physical_update update;
     auto res = _solver().integral_field(Pow(update, 2));
-    for (double& r : res) r /= math::pow(_inter.variables->lookup<double>("time_step").value(), 2);
-    double res_mmtm = 0;
-    for (int i_dim = 0; i_dim < nd; ++i_dim) {
-      res_mmtm += res[i_dim];
-    }
-    _inter.variables->assign("residual_momentum", res_mmtm);
+    for (int i_dim = 1; i_dim < nd; ++i_dim) res[0] += res[i_dim];
+    double dt = _inter.variables->lookup<double>("time_step").value();
+    for (double& r : res) r = std::sqrt(r)/dt;
+    _inter.variables->assign("residual_momentum", res[0]);
     _inter.variables->assign("residual_density", res[nd]);
     _inter.variables->assign("residual_energy", res[nd + 1]);
     return "";
