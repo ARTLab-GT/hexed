@@ -74,8 +74,8 @@ vortex = {
     state2 = $vortex_mass
     state3 = $vortex_energy
 }
-air_viscosity = {ref_value = 1.716e-5; ref_temperature = 273., offset = 111.}
-air_conductivity = {ref_value = .0241; ref_temperature = 273. offset = 194.}
+air_viscosity = {ref_value = 1.716e-5; ref_temperature = 273.; offset = 111.}
+air_conductivity = {ref_value = .0241; ref_temperature = 273; offset = 194.}
 
 shock_sub_iters = 10; {number of sub-iterations to run in each nominal iteration to get efficient Chebyshev-accelerated diffusion}
 set_shock = {
