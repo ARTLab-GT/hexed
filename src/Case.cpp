@@ -162,18 +162,20 @@ Case::Case(std::string input_file)
     }
     HEXED_ASSERT((mesh_extremes(all, 1) - mesh_extremes(all, 0)).minCoeff() > 0, "all mesh dimensions must be positive!");
     double root_sz = (mesh_extremes(all, 1) - mesh_extremes(all, 0)).maxCoeff();
-    std::unique_ptr<Transport_model> visc_model; // make these pointers since assignment operator is deleted
-    std::unique_ptr<Transport_model> therm_model;
-    if (_vars("transport_model").value() == "inviscid") {
-      visc_model.reset(new Transport_model(inviscid));
-      therm_model.reset(new Transport_model(inviscid));
-    } else if (_vars("transport_model").value() == "sutherland") {
-      visc_model.reset(new Transport_model(air_sutherland_dyn_visc));
-      therm_model.reset(new Transport_model(air_sutherland_therm_cond));
-    } else {
-      HEXED_ASSERT(false, "unrecognized transport model specification");
+    std::vector<std::string> transport_phenomena {"viscosity", "conductivity"};
+    std::vector<Transport_model> transport_models;
+    for (std::string name : transport_phenomena) {
+      auto sub = _inter.make_sub();
+      Struct_expr model(_vars(name + "_model").value());
+      model.eval(sub);
+      if (model.names.empty()) transport_models.emplace_back(inviscid);
+      else if (sub.variables->exists("offset")) {
+        transport_models.emplace_back(Transport_model::sutherland(sub.variables->lookup<double>("ref_value").value(),
+                                                                  sub.variables->lookup<double>("ref_temperature").value(),
+                                                                  sub.variables->lookup<double>("offset").value()));
+      } else HEXED_ASSERT(false, format_str(200, "invalid transport model specification for %s", name));
     }
-    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, true, *visc_model, *therm_model, _inter.variables, printer));
+    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, true, transport_models[0], transport_models[1], _inter.variables, printer));
     _solver().mesh().add_tree(bcs, mesh_extremes(all, 0));
     _solver().set_fix_admissibility(_vari("fix_therm_admis").value());
     return 0;

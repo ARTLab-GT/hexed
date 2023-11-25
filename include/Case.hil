@@ -74,6 +74,8 @@ vortex = {
     state2 = $vortex_mass
     state3 = $vortex_energy
 }
+air_viscosity = {ref_value = 1.716e-5; ref_temperature = 273.; offset = 111.}
+air_conductivity = {ref_value = .0241; ref_temperature = 273; offset = 194.}
 
 shock_sub_iters = 10; {number of sub-iterations to run in each nominal iteration to get efficient Chebyshev-accelerated diffusion}
 set_shock = {
@@ -88,7 +90,8 @@ aerothermo_initial_iters = 1000; {number of initial iterations to run at a small
 aerothermo_initial_safety = 3e-3
 aerothermo_final_safety = 0.7
 set_aerothermo = {
-    transport_model = {sutherland}
+    viscosity_model = air_viscosity
+    conductivity_model = air_conductivity
     max_safety = aerothermo_initial_safety
     iterate = iterate + {
         case0 = {}
@@ -123,7 +126,8 @@ row_size = 6
 init_ref_level = 3
 max_ref_level = 10
 geometry_uncertainty = 1e-2
-transport_model = {inviscid}
+viscosity_model = {}
+conductivity_model = {}
 thermal_bc = {heat_flux = 0.}
 surface_bc = {auto}
 temperature_offset = 0.
@@ -233,7 +237,7 @@ init = {
     case1 = {
         case1 = {surface_bc = {nonpenetration}}
         case0 = {surface_bc = {no_slip}}
-        $$({case} + (transport_model == {inviscid}))
+        $$({case} + (viscosity_model == {}))
     }
     $$({case} + (surface_bc == {auto}))
     case0 = {}

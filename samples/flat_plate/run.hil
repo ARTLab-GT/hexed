@@ -7,7 +7,8 @@ refine_if = {nom_sz > 0.05 & (center0^2 + center1^2)^.5 < nom_sz} ;{focus isotro
 unrefine_if = {(ref_level > init_ref_level) & !is_extruded}
 geom0 = {geom.csv}
 init_layer_splits = 3
-transport_model = {sutherland}
+viscosity_model = air_viscosity
+conductivity_model = air_conductivity
 
 {freestream definition. Note that not all of the variables below are parameters considered by the solver. Some are simply user-defined variables.}
 freestream_temperature = zero_celsius
