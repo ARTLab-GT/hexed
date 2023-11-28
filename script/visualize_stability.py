@@ -11,6 +11,7 @@ cfl_rk = [0, 0,
     0.05102,
     0.04073,
 ]
+cfl_diff = []
 calc_digits = 50
 repr_digits = 18
 n_elem = 16
@@ -21,6 +22,7 @@ for row_size in range(2, 9):
     basis = Basis(nodes, weights, calc_digits=calc_digits)
     ident = np.identity(n_elem*row_size)
     advection, diffusion = basis.discretizations(n_elem)
+    cfl_diff.append(-2/np.linalg.eigvals(diffusion).real.min())
     eigvals = np.linalg.eigvals(ident + .05*advection)
     cfl = -2*.9/np.linalg.eigvals(advection).real.min()
     if row_size == 6:
@@ -37,3 +39,6 @@ for row_size in range(2, 9):
         plt.savefig("/home/micaiah/orgs/artlab/scitech2023/eigenvalues.pdf")
         plt.show()
     print(f"{row_size - 1} & {cfl:.4f} & {cfl/2:.4f} & {cfl_rk[row_size]:.4f} & {cfl_rk[row_size]/3:.4f} \\\\")
+
+for cfl in cfl_diff:
+    print(f"{cfl:.5f}")
