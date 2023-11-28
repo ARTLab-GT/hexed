@@ -155,12 +155,11 @@ class Basis:
             dot += self.get_ortho(i_inner, i_result, True)*0.5**i_inner*self.get_ortho(i_inner, i_operand, True)*self.weights[i_operand]
         return sp.Float(dot, self.repr_digits)
 
-    def eigenvals(self, n_elem = 16):
-        r"""! \brief Computes eigenvalues for use in time step calculation.
-        \details Returns a list of two values which are the minimum real parts of the convection and diffusion operators, respectively.
-        Eigenvalues are evaluated on a 1D, uniformly spaced, periodic mesh with `n_elem` elements for the linear advection/diffusion equations.
-        These eigenvalues are nondimensionalized, so they apply to unit mesh spacing, wave speed, and diffusivity.
-        \note standard floating-point precision (whatever that is for Python -- I think double)
+    def discretizations(self, n_elem):
+        r"""! \brief Computes discrete operators for linear stability analsysis.
+        \details Returns two matrices which are respectively the discrete analogues of
+        \f$ -\partial u/\partial x \f$ and \f$ \partial^2 u/\partial x^2 \f$
+        on a periodic 1D mesh with `n_elem` elements.
         """
         # sorry for the lack of comments... remind me to get back to this later
         nodes, weights = gauss_lobatto(self.row_size, self.calc_digits)
@@ -189,9 +188,17 @@ class Basis:
                             neighb_avrg[row, col] += 0.5*(2*j_side - 1)*boundary
                             neighb_jump[row, col] += 0.5*(1 - 2*(j_side == i_side))*boundary
                             discon[row, col] += (.5 - (i_side == j_side))*self.interpolate(i_col, 1-j_side)*lobatto.interpolate((1 - i_side)*(self.row_size - 1), self.nodes[i_row])
-        ident = np.identity(n_elem*self.row_size)
         advection = -local_grad + -neighb_avrg + neighb_jump
         diffusion = (local_grad + neighb_avrg)@(local_grad + neighb_avrg)
         assert np.linalg.norm(global_weights@advection) < 1e-12
         assert np.linalg.norm(global_weights@diffusion) < 1e-12
-        return [np.linalg.eigvals(mat).real.min() for mat in [advection, diffusion]]
+        return advection, diffusion
+
+    def eigenvals(self, n_elem = 16):
+        r"""! \brief Computes eigenvalues for use in time step calculation.
+        \details Returns a list of two values which are the minimum real parts of the convection and diffusion operators, respectively.
+        Eigenvalues are evaluated on a 1D, uniformly spaced, periodic mesh with `n_elem` elements for the linear advection/diffusion equations.
+        These eigenvalues are nondimensionalized, so they apply to unit mesh spacing, wave speed, and diffusivity.
+        \note standard floating-point precision (whatever that is for Python -- I think double)
+        """
+        return [np.linalg.eigvals(mat).real.min() for mat in self.discretizations(n_elem)]
