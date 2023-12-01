@@ -27,6 +27,11 @@ for row_size in range(2, 9):
     cfl = -2*.9/np.linalg.eigvals(advection).real.min()
     if row_size == 6:
         plt.scatter(eigvals.real, eigvals.imag, marker = "+", label = "forward Euler")
+        dt = cfl_rk[row_size]
+        eigvals = np.linalg.eigvals(np.linalg.inv(ident - .05*advection))
+        plt.scatter(eigvals.real, eigvals.imag, marker = ".", label = "backward Euler")
+        eigvals = np.linalg.eigvals(1./3.*ident + 2./3.*(ident + dt*advection)@(.75*ident + .25*(ident + dt*advection)@(ident + dt*advection)))
+        plt.scatter(eigvals.real, eigvals.imag, marker = "1", label = "TVD RK3")
         eigvals = np.linalg.eigvals(ident + cfl*advection + .5/.9*cfl**2*(advection@advection))
         plt.scatter(eigvals.real, eigvals.imag, marker = "x", label = "proposed two-stage")
         angle = np.linspace(0, 2*np.pi, 300)
