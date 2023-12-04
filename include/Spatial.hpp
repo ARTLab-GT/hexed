@@ -262,28 +262,17 @@ class Spatial
         {
           double* curr_state = state + (Pde::curr_start + i_var)*n_qpoint;
           double* ref_state = state + (Pde::ref_start + i_var)*n_qpoint;
-          double* visc_state = nullptr; // only need this for viscous, of course
-          if constexpr (Pde::is_viscous) visc_state = state + (Pde::visc_start + i_var)*n_qpoint;
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
             double det = 1;
             if constexpr (element_t::is_deformed) det = elem_det[i_qpoint];
-            if constexpr (Pde::has_convection) {
-              double u = update_conv*time_rate[0][i_var][i_qpoint];
-              if constexpr (Pde::is_viscous) {
-                // for stage 1, we update convection but not diffusion,
-                // so we have to mix in some of the diffisive update from stage 0
-                // to achieve proper cancellation
-                if (_stage) u += (update_conv - update_diff)*visc_state[i_qpoint];
-                else {
-                  u += update_diff*time_rate[1][i_var][i_qpoint];
-                  visc_state[i_qpoint] = time_rate[1][i_var][i_qpoint]; // for stage 0, record the diffusive update to allow the aforementioned
-                }
-              }
-              u *= tss[i_qpoint]/det/d_pos;
-              curr_state[i_qpoint] = u + curr*curr_state[i_qpoint] + ref*ref_state[i_qpoint];
+            double u = time_rate[0][i_var][i_qpoint];
+            if (_stage) {
+              u -= ref_state[i_qpoint];
             } else {
-              curr_state[i_qpoint] += update_diff*time_rate[1][i_var][i_qpoint]*tss[i_qpoint]/det/d_pos;
+              if constexpr (Pde::has_convection) ref_state[i_qpoint] = u;
+              if constexpr (Pde::is_viscous) u += time_rate[1][i_var][i_qpoint];
             }
+            curr_state[i_qpoint] += u*update_conv*tss[i_qpoint]/det/d_pos;
           }
         }
         // write updated state to face storage.
@@ -356,12 +345,10 @@ class Spatial
         // write update to interior
         for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
           double* curr_state = state + (Pde::curr_start + i_var)*n_qpoint;
-          double* visc_state = state + (Pde::visc_start + i_var)*n_qpoint;
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
             double det = 1;
             if constexpr (element_t::is_deformed) det = elem_det[i_qpoint];
             curr_state[i_qpoint] += update*time_rate[i_var][i_qpoint]*tss[i_qpoint]/d_pos/det;
-            if constexpr (Pde::has_convection) if (!stage) visc_state[i_qpoint] += time_rate[i_var][i_qpoint]; // add face flux correction to viscous update to be used in stage 1
           }
         }
         // *now* we can extrapolate state to faces

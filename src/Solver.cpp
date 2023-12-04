@@ -964,13 +964,13 @@ void Solver::update()
     {
       double nominal_dt = std::min(max_dt(safety/max_cheby, safety), _namespace->lookup<double>("max_time_step").value());
       double dt = nominal_dt*math::chebyshev_step(n_cheby, i_cheby);
-      // record reference state for Runge-Kutta scheme
+      // record reference state for residual calculation
       auto& irk = stopwatch.children.at("initialize reference");
       irk.stopwatch.start();
       #pragma omp parallel for
       for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
         double* state = elems[i_elem].stage(0);
-        for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] = state[i_dof];
+        for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + 2*n_dof] = state[i_dof];
       }
       irk.stopwatch.pause();
       irk.work_units_completed += elems.size();
