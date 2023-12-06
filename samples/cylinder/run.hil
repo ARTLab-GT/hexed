@@ -37,7 +37,7 @@ iterate = iterate + {
     $$({case} + (iteration == 2*10^4 | iteration == 4*10^4 | iteration == 6*10^4 | iteration == 10*10^4))
 }
 
-working_dir = {hexed_out_blottner}
+working_dir = {hexed_out}
 vis_n_sample = 2
 $init
 vis_n_sample = 10

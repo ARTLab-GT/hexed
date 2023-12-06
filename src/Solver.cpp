@@ -631,8 +631,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
             // compute update
             double pseudotime_scale = + dt_adv*tss[i_qpoint]*2/advect_length;
             double old = adv[i_node*nq + i_qpoint]; // record for measuring residual
-            adv[i_node*nq + i_qpoint] += state[nd*nq + i_qpoint] - state[(nd + 1)*nq + i_qpoint] + pseudotime_scale*1.;
-            adv[i_node*nq + i_qpoint] /= 1. + pseudotime_scale;
+            adv[i_node*nq + i_qpoint] = (state[nd*nq + i_qpoint] + pseudotime_scale*1.)/(1. + pseudotime_scale);
             // add to residual
             double d = adv[i_node*nq + i_qpoint] - old;
             diff += d*d/dt_scaled/dt_scaled;
