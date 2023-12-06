@@ -326,8 +326,9 @@ Case::Case(std::string input_file)
 
   _inter.variables->create<std::string>("compute_residuals", new Namespace::Heisenberg<std::string>([this]() {
     int nd = _solver().storage_params().n_dim;
-    Physical_update update;
-    auto res = _solver().integral_field(Pow(update, 2));
+    Physical_residual phys_resid;
+    _solver().compute_residual();
+    auto res = _solver().integral_field(Pow(phys_resid, 2));
     for (int i_dim = 1; i_dim < nd; ++i_dim) res[0] += res[i_dim];
     double dt = _inter.variables->lookup<double>("time_step").value();
     for (double& r : res) r = std::sqrt(r)/dt;

@@ -597,9 +597,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
         for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
           double* state = elements[i_elem].stage(0);
           double* adv = elements[i_elem].advection_state();
-          for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-            state[nd*nq + i_qpoint] = state[(nd + 1)*nq + i_qpoint] = adv[i_node*nq + i_qpoint];
-          }
+          for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) state[nd*nq + i_qpoint] = adv[i_node*nq + i_qpoint];
         }
         // evaluate advection operator
         (*write_face)(elements);
@@ -958,28 +956,17 @@ void Solver::update()
     double n_cheby = _namespace->lookup<double>("n_cheby_flow").value();
     double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1);
     // run chebyshev iterations
-    const int n_dof = params.n_dof();
     for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
     {
       double nominal_dt = std::min(max_dt(safety/max_cheby, safety), _namespace->lookup<double>("max_time_step").value());
       double dt = nominal_dt*math::chebyshev_step(n_cheby, i_cheby);
       // record reference state for residual calculation
-      auto& irk = stopwatch.children.at("initialize reference");
-      irk.stopwatch.start();
-      #pragma omp parallel for
-      for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-        double* state = elems[i_elem].stage(0);
-        for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + 2*n_dof] = state[i_dof];
-      }
-      irk.stopwatch.pause();
-      irk.work_units_completed += elems.size();
-
       bool fixed = false;
       // compute inviscid update
       for (int i = 0; i < 2; ++i) {
         apply_state_bcs();
-        if (use_ldg()) compute_viscous(dt, i);
-        else compute_inviscid(dt, i);
+        if (use_ldg()) compute_viscous(dt, i, false);
+        else compute_inviscid(dt, i, false);
         // note that function call must come first to ensure it is evaluated despite short-circuiting
         fixed = fix_admissibility(_namespace->lookup<double>("fix_admis_max_safety").value()) || fixed;
       }
@@ -1013,18 +1000,16 @@ void Solver::update_implicit()
   fix_admissibility(.7);
 }
 
+void Solver::compute_residual()
+{
+  apply_state_bcs();
+  if (use_ldg()) compute_viscous(1., 0, true);
+  else compute_inviscid(1., 0, true);
+}
+
 Iteration_status Solver::iteration_status()
 {
   Iteration_status stat = status;
-  Physical_update update;
-  auto res = integral_field(Pow(update, 2));
-  for (double& r : res) r /= stat.time_step*stat.time_step;
-  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-    stat.mmtm_res += res[i_dim];
-  }
-  stat.mmtm_res = std::sqrt(stat.mmtm_res);
-  stat.mass_res = std::sqrt(res[params.n_dim]);
-  stat.ener_res = std::sqrt(res[params.n_dim + 1]);
   return stat;
 }
 

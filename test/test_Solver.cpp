@@ -567,6 +567,7 @@ void test_marching(Test_mesh& tm, std::string name)
   // update
   sol.nspace().assign("max_safety", 1e-3);
   sol.update();
+  sol.compute_residual();
   status = sol.iteration_status();
   REQUIRE(status.flow_time > 0.);
   REQUIRE(status.iteration == 1);
@@ -575,7 +576,7 @@ void test_marching(Test_mesh& tm, std::string name)
     for (int i_qpoint = 0; i_qpoint < sol.storage_params().n_qpoint(); ++i_qpoint) {
       for (int i_var = 0; i_var < sol.storage_params().n_var; ++i_var) {
         auto state   = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::State_variables());
-        auto update  = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Physical_update());
+        auto update  = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Physical_residual());
         auto correct = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, Nonuniform_residual());
         REQUIRE(update[i_var]/status.time_step == Catch::Approx(correct[i_var]).margin(1e-3*std::abs(state[i_var])));
       }
@@ -595,12 +596,13 @@ void test_visc(Test_mesh& tm, std::string name)
   // update
   sol.nspace().assign("max_safety", 1e-4);
   sol.update();
+  sol.compute_residual();
   auto status = sol.iteration_status();
   // check that the computed update is approximately equal to the exact solution
   for (auto handle : sol.mesh().elem_handles()) {
     for (int i_qpoint = 0; i_qpoint < sol.storage_params().n_qpoint(); ++i_qpoint) {
       auto state  = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::State_variables());
-      auto update = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Physical_update());
+      auto update = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Physical_residual());
       auto tss    = sol.sample(handle.ref_level, handle.is_deformed, handle.serial_n, i_qpoint, hexed::Time_step_scale_func());
       for (int i_var = 0; i_var < n_dim; ++i_var) {
         double margin = 1.2*(hexed::config::max_row_size > 6 ? 1e-3 : 1.);
@@ -626,12 +628,10 @@ void test_conservation(Test_mesh& tm, std::string name)
   // update
   sol.nspace().assign("max_safety", .01);
   sol.update();
-  #if HEXED_USE_XDMF
-  sol.visualize_field_xdmf(hexed::Physical_update(), name);
-  #endif
+  sol.compute_residual();
   status = sol.iteration_status();
   auto state  = sol.integral_field(hexed::State_variables());
-  auto update = sol.integral_field(hexed::Physical_update());
+  auto update = sol.integral_field(hexed::Physical_residual());
   for (int i_var : {sol.storage_params().n_var - 2, sol.storage_params().n_var - 1}) {
     REQUIRE(update[i_var]/status.time_step == Catch::Approx(0.).scale(std::abs(state[i_var])));
   }

@@ -39,7 +39,7 @@ class Qpoint_expr : public Qpoint_func
   std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
 };
 
-//! Returns a vector with one element: the Jacobian determinant at the quadrature point.
+//! \brief Returns a vector with one element: the Jacobian determinant at the quadrature point.
 class Jacobian_det_func : public Qpoint_func
 {
   public:
@@ -48,7 +48,7 @@ class Jacobian_det_func : public Qpoint_func
   std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
 };
 
-//! Determinant of inverse of Jacobian
+//! \brief Determinant of inverse of Jacobian
 class Jac_inv_det_func : public Qpoint_func
 {
   public:
@@ -57,7 +57,7 @@ class Jac_inv_det_func : public Qpoint_func
   std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
 };
 
-//! Fetches the value of the `Element::time_step_scale` member.
+//! \brief Fetches the value of the `Element::time_step_scale` member.
 class Time_step_scale_func : public Qpoint_func
 {
   public:
@@ -66,16 +66,17 @@ class Time_step_scale_func : public Qpoint_func
   std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
 };
 
-//! returns the most recent update to the state divided by the local time step scale.
-class Physical_update : public Qpoint_func
+//! \brief returns the residual of the Navier-Stokes equations, not weighted by local time step
+//! \details assumes that `Solver::compute_residual` has been invoked since the last time step or artificial viscosity update
+class Physical_residual : public Qpoint_func
 {
   public:
   inline int n_var(int n_dim) const override {return n_dim + 2;}
-  inline std::string variable_name(int n_dim, int i_var) const override {return "update" + std::to_string(i_var);}
+  inline std::string variable_name(int n_dim, int i_var) const override {return "residual" + std::to_string(i_var);}
   std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
 };
 
-//! fetches the artificial viscosity coefficient
+//! \brief fetches the artificial viscosity coefficient
 class Art_visc_coef : public Qpoint_func
 {
   public:
@@ -84,7 +85,7 @@ class Art_visc_coef : public Qpoint_func
   std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
 };
 
-//! fetches the `Element::fix_admis_coef`
+//! \brief fetches the `Element::fix_admis_coef`
 class Fix_admis_coef : public Qpoint_func
 {
   public:
@@ -93,7 +94,7 @@ class Fix_admis_coef : public Qpoint_func
   std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
 };
 
-//! returns a component of another `Qpoint_func`
+//! \brief returns a component of another `Qpoint_func`
 class Component : public Qpoint_func
 {
   const Qpoint_func& qf;
@@ -142,7 +143,7 @@ class Scaled : public Qpoint_func
   }
 };
 
-//! Raises the output of a `Qpoint_func` to a user-specified power.
+//! \brief Raises the output of a `Qpoint_func` to a user-specified power.
 class Pow : public Qpoint_func
 {
   const Qpoint_func& qf;
@@ -156,7 +157,7 @@ class Pow : public Qpoint_func
   std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
 };
 
-//! Fetches the advection states used for computing the smoothness-based artfificial viscosity
+//! \brief Fetches the advection states used for computing the smoothness-based artfificial viscosity
 class Advection_state : public Qpoint_func
 {
   int rs;
@@ -167,7 +168,7 @@ class Advection_state : public Qpoint_func
   std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
 };
 
-//! Fetches one of the forcing variables in artificial viscosity computation
+//! \brief Fetches one of the forcing variables in artificial viscosity computation
 class Art_visc_forcing : public Qpoint_func
 {
   public:
@@ -176,7 +177,7 @@ class Art_visc_forcing : public Qpoint_func
   std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
 };
 
-//! Concatenates `Qpoint_func`s
+//! \brief Concatenates `Qpoint_func`s
 typedef Concat_func<Qpoint_func, Element&, const Basis&, int, double> Qf_concat;
 
 }
