@@ -75,30 +75,27 @@ class Spatial
     Mat<2, row_size> boundary;
     Write_face<n_dim, row_size> write_face;
     Mat<row_size, row_size> filter;
+    const double _update;
     const int _stage;
+    const bool _compute_residual;
     const bool _use_filter;
     // weights for different parameters when assembling the updated state
-    const double update_conv; // how much of the convective time derivative to include
-    const double update_diff; // how much of the diffusive time derivative
-    const double ref; // how much of the reference state to include
-    const double curr; // how much of the current state to include
 
     public:
     template <typename... pde_args>
-    Local(const Basis& basis, double dt, bool stage, bool use_filter, pde_args... args) :
+    Local(const Basis& basis, double dt, bool stage, bool compute_residual, bool use_filter, pde_args... args) :
       eq(args...),
       derivative{basis},
       boundary{basis.boundary()},
       write_face{basis},
       filter{basis.filter()},
+      _update{stage ? dt*basis.step_ratio() : dt},
       _stage{stage},
-      _use_filter{use_filter},
-      update_conv{stage ? dt*basis.step_ratio() : dt},
-      update_diff{stage ? 0. : dt},
-      ref{_stage ? update_conv/dt : 0},
-      curr{1 - ref}
+      _compute_residual{compute_residual},
+      _use_filter{use_filter}
     {
-      HEXED_ASSERT(Pde::has_convection || !stage, "for pure diffusion use alternating time steps");
+      HEXED_ASSERT(Pde::has_convection || !_stage, "two-stage stabilization is not applicable to diffusion equations");
+      HEXED_ASSERT(!(_stage && _compute_residual), "residual calculation is a single-stage operation");
     }
 
     virtual void operator()(Sequence<element_t&>& elements)
@@ -262,28 +259,19 @@ class Spatial
         {
           double* curr_state = state + (Pde::curr_start + i_var)*n_qpoint;
           double* ref_state = state + (Pde::ref_start + i_var)*n_qpoint;
-          double* visc_state = nullptr; // only need this for viscous, of course
-          if constexpr (Pde::is_viscous) visc_state = state + (Pde::visc_start + i_var)*n_qpoint;
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
             double det = 1;
             if constexpr (element_t::is_deformed) det = elem_det[i_qpoint];
-            if constexpr (Pde::has_convection) {
-              double u = update_conv*time_rate[0][i_var][i_qpoint];
-              if constexpr (Pde::is_viscous) {
-                // for stage 1, we update convection but not diffusion,
-                // so we have to mix in some of the diffisive update from stage 0
-                // to achieve proper cancellation
-                if (_stage) u += (update_conv - update_diff)*visc_state[i_qpoint];
-                else {
-                  u += update_diff*time_rate[1][i_var][i_qpoint];
-                  visc_state[i_qpoint] = time_rate[1][i_var][i_qpoint]; // for stage 0, record the diffusive update to allow the aforementioned
-                }
-              }
-              u *= tss[i_qpoint]/det/d_pos;
-              curr_state[i_qpoint] = u + curr*curr_state[i_qpoint] + ref*ref_state[i_qpoint];
+            double u = time_rate[0][i_var][i_qpoint];
+            if (_stage) {
+              u -= ref_state[i_qpoint];
             } else {
-              curr_state[i_qpoint] += update_diff*time_rate[1][i_var][i_qpoint]*tss[i_qpoint]/det/d_pos;
+              if constexpr (Pde::has_convection) ref_state[i_qpoint] = u;
+              if constexpr (Pde::is_viscous) u += time_rate[1][i_var][i_qpoint];
             }
+            u *= _update*tss[i_qpoint]/det/d_pos;
+            if (_compute_residual) ref_state[i_qpoint] = u;
+            else curr_state[i_qpoint] += u;
           }
         }
         // write updated state to face storage.
@@ -302,20 +290,23 @@ class Spatial
     Derivative<row_size> derivative;
     Write_face<n_dim, row_size> write_face;
     Mat<row_size, row_size> filter;
-    int stage;
-    double update;
+    double _update;
+    int _stage;
+    bool _compute_residual;
     bool _use_filter;
 
     public:
-    Reconcile_ldg_flux(const Basis& basis, double dt, int which_stage, bool use_filter) :
+    Reconcile_ldg_flux(const Basis& basis, double dt, int which_stage, bool compute_residual, bool use_filter) :
       derivative{basis},
       write_face{basis},
       filter{basis.filter()},
-      stage{which_stage},
-      update{dt},
+      _update{dt},
+      _stage{which_stage},
+      _compute_residual{compute_residual},
       _use_filter{use_filter}
     {
-      HEXED_ASSERT(Pde::has_convection || !which_stage, "for pure diffusion use alternating time steps");
+      HEXED_ASSERT(Pde::has_convection || !_stage, "two-stage stabilization is not applicable to diffusion equations");
+      HEXED_ASSERT(Pde::has_convection || !_stage, "for pure diffusion use alternating time steps");
     }
 
     virtual void operator()(Sequence<element_t&>& elements)
@@ -355,13 +346,11 @@ class Spatial
 
         // write update to interior
         for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
-          double* curr_state = state + (Pde::curr_start + i_var)*n_qpoint;
-          double* visc_state = state + (Pde::visc_start + i_var)*n_qpoint;
+          double* to_update = state + ((_compute_residual ? Pde::ref_start : Pde::curr_start) + i_var)*n_qpoint;
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
             double det = 1;
             if constexpr (element_t::is_deformed) det = elem_det[i_qpoint];
-            curr_state[i_qpoint] += update*time_rate[i_var][i_qpoint]*tss[i_qpoint]/d_pos/det;
-            if constexpr (Pde::has_convection) if (!stage) visc_state[i_qpoint] += time_rate[i_var][i_qpoint]; // add face flux correction to viscous update to be used in stage 1
+            to_update[i_qpoint] += _update*time_rate[i_var][i_qpoint]*tss[i_qpoint]/d_pos/det;;
           }
         }
         // *now* we can extrapolate state to faces

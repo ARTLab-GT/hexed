@@ -14,6 +14,7 @@
 #include "Namespace.hpp"
 #include "Printer.hpp"
 #include "Linear_equation.hpp"
+#include "Visualizer.hpp"
 
 namespace hexed
 {
@@ -52,14 +53,15 @@ class Solver
   void apply_avc_diff_bcs();
   void apply_avc_diff_flux_bcs();
   void apply_fta_flux_bcs();
-  void compute_inviscid(double dt, int i_stage);
-  void compute_viscous(double dt, int i_stage);
+  void compute_inviscid(double dt, int i_stage, bool compute_residual);
+  void compute_viscous(double dt, int i_stage, bool compute_residual);
   void compute_fta(double dt, int i_stage);
   void compute_advection(double dt, int i_stage);
   void compute_avc_diff(double dt, int i_stage);
   void fta(double dt, int i_stage);
   bool use_ldg();
   double max_dt(double max_safety_conv, double max_safety_diff);
+  std::unique_ptr<Visualizer> _visualizer(std::string format, std::string name, const Output_data& output_variables, int n_dim_topo);
 
   //! \brief linearizes the steady state equations by finite difference
   class Linearized : public Linear_equation
@@ -174,6 +176,7 @@ class Solver
    */
   virtual void update();
   virtual void update_implicit();
+  virtual void compute_residual();
   virtual bool is_admissible(); //!< check whether flowfield is admissible (e.g. density and energy are positive)
   virtual void set_art_visc_smoothness(double advect_length); //!< updates the aritificial viscosity coefficient based on smoothness of the flow variables
   /*! \brief an object providing all available information about the status of the time marching iteration.
@@ -204,37 +207,20 @@ class Solver
    */
   virtual std::vector<std::array<double, 2>> bounds_field(const Qpoint_func&, int n_sample = 20);
 
-  #if HEXED_USE_XDMF
-  //! \brief write a visualization file describing the entire flow field (but not identifying surfaces)
-  void visualize_field_xdmf(const Qpoint_func& output_variables, std::string name, int n_sample = 20);
+  /*! \brief write a visualization file describing the entire flow field (but not identifying surfaces)
+   * \param format Which format to write the visualization file in. Accepted values are `"xdmf"` and `"tecplot"`
+   * \param name name of file to write (not including extension)
+   * \param output_variables what variables to write
+   * \param n_sample each element will contain an `n_sample` by `n_sample` array of uniformly-spaced sample points
+   */
+  void visualize_field(std::string format, std::string name, const Qpoint_func& output_variables, int n_sample = 10);
   //! \brief write a visualization file describing all surfaces where a particular boundary condition has been enforced.
-  void visualize_surface_xdmf(int bc_sn, const Boundary_func&, std::string name, int n_sample = 20);
+  void visualize_surface(std::string format, std::string name, int bc_sn, const Boundary_func&, int n_sample = 10);
   //! \brief visualize the Cartesian surface which theoretically exists after element deletion but before any vertex snapping
-  void vis_cart_surf_xdmf(int bc_sn, std::string name, const Boundary_func& func = Uncertainty());
+  void vis_cart_surf(std::string format, std::string name, int bc_sn, const Boundary_func& func = Uncertainty());
   //! \brief visualize the local time step constraints imposed by convection and diffusion, respectively
   //! \warning This function overwrites the reference state, which will invalidate any residual evaluation until `update` is called again.
-  void vis_lts_constraints(std::string name, int n_sample = 20);
-  #endif
-
-  #if HEXED_USE_TECPLOT
-  //! \brief write a visualization file describing the entire flow field (but not identifying surfaces)
-  void visualize_field_tecplot(const Qpoint_func& output_variables, std::string name, int n_sample = 20,
-                                       bool edges = false, bool qpoints = false, bool interior = true);
-  /*! if a `Qpoint_func` is not specified, all the state variables
-   * and the artificial viscosity coefficient will be output
-   */
-  void visualize_field_tecplot(std::string name, int n_sample = 20,
-                                       bool edges = false, bool qpoints = false, bool interior = true);
-  /*! \brief write a visualization file describing all surfaces where a particular boundary condition has been enforced.
-   */
-  void visualize_surface_tecplot(int bc_sn, const Boundary_func&, std::string name, int n_sample = 20);
-  /*! if a `Boundary_func` is not specified, all the state variables,
-   * the surface normal, the shear stress, and the heat flux will be output.
-   */
-  void visualize_surface_tecplot(int bc_sn, std::string name, int n_sample = 20);
-  //! \brief visualize the Cartesian surface which theoretically exists after element deletion but before any vertex snapping
-  void vis_cart_surf_tecplot(int bc_sn, std::string name, const Boundary_func& func = Uncertainty());
-  #endif
+  void vis_lts_constraints(std::string format, std::string name, int n_sample = 10);
   //!\}
 };
 

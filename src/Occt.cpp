@@ -90,7 +90,7 @@ void Occt::Geom::visualize(std::string file_name)
   #if HEXED_USE_TECPLOT
   int n_div = 20;
   if (nd == 3) {
-    Tecplot_file file(file_name, 3, {"real"}, 0.);
+    Tecplot_file file(file_name, 3, 2, {"real"}, 0.);
     for (unsigned i_surf = 0; i_surf < surfaces.size(); ++i_surf) {
       auto& surf = surfaces[i_surf];
       double param_bounds [2][2];
@@ -116,7 +116,7 @@ void Occt::Geom::visualize(std::string file_name)
       zone.write(data.data(), real.data());
     }
   } else {
-    Tecplot_file file(file_name, 2, {}, 0.);
+    Tecplot_file file(file_name, 2, 1, {}, 0.);
     for (unsigned i_curve = 0; i_curve < curves.size(); ++i_curve) {
       auto& curve = curves[i_curve];
       double param_bounds [2] {curve->FirstParameter(), curve->LastParameter()};

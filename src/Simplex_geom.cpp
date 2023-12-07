@@ -33,7 +33,7 @@ void Simplex_geom<3>::merge(Nearest_point<3>& nearest, Mat<3, 3> sim, Mat<3> poi
 template<> void Simplex_geom<3>::visualize(std::string fname)
 {
   #if HEXED_USE_TECPLOT
-  Tecplot_file tec_file(fname, 3, {}, 0.);
+  Tecplot_file tec_file(fname, 3, 2, {}, 0.);
   Tecplot_file::Triangles zone(tec_file, _simplices.size());
   for (Mat<3, 3> sim : _simplices) {
     Mat<3, 3> trans = sim.transpose();

@@ -86,20 +86,27 @@ set_shock = {
     av_advect_iters = ceil(shock_sub_iters/5.)
 }
 
-aerothermo_initial_iters = 1000; {number of initial iterations to run at a small safety factor to let the artificial viscosity catch up}
-aerothermo_initial_safety = 3e-3
-aerothermo_final_safety = 0.7
-set_aerothermo = {
-    viscosity_model = air_viscosity
-    conductivity_model = air_conductivity
-    max_safety = aerothermo_initial_safety
+ramping_initial_safety = 3e-3
+ramping_final_safety = 0.7
+ramping_initial_iters = 1000;
+set_ramping = {
+    max_safety = ramping_initial_safety
     iterate = iterate + {
         case0 = {}
         case1 = {
-            max_safety = aerothermo_final_safety
+            max_safety = ramping_final_safety
             println({Initial phase complete. Increasing safety factor to } + max_safety)
         }
-        $$({case} + (iteration == aerothermo_initial_iters))
+        $$({case} + (iteration == ramping_initial_iters))
+    }
+}
+
+set_aerothermo = {
+    $set_shock
+    $set_ramping
+    viscosity_model = air_viscosity
+    conductivity_model = air_conductivity
+    iterate = iterate + {
         {alternate between time stepping strategies optimized for convection and diffusion}
         case1 = {
             case0 = {
@@ -112,7 +119,7 @@ set_aerothermo = {
             }
             $$({case} + ((iteration/print_freq)%2 == 0))
         }
-        $$({case} + (iteration >= aerothermo_initial_iters))
+        $$({case} + (iteration >= ramping_initial_iters))
     }
 }
 

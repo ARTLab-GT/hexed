@@ -8,8 +8,8 @@
 namespace hexed
 {
 
-Tecplot_file::Tecplot_file(std::string file_name, int n_dim, std::vector<std::string> variable_names, double time, double heat_rat, double gas_const)
-: n_dim{n_dim}, n_var{int(variable_names.size())}, time{time}, strand_id{1}, i_zone{0}, file_handle{nullptr}
+Tecplot_file::Tecplot_file(std::string file_name, int n_dim, int n_dim_block, std::vector<std::string> variable_names, double time, double heat_rat, double gas_const)
+: n_dim{n_dim}, n_dim_topo{n_dim_block}, n_var{int(variable_names.size())}, time{time}, strand_id{1}, i_zone{0}, file_handle{nullptr}
 {
   std::string var_name_list = "";
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -34,6 +34,12 @@ Tecplot_file::Tecplot_file(std::string file_name, int n_dim, std::vector<std::st
   tecDataSetAddAuxData(file_handle, "Common.CVar", std::to_string(2*n_dim + 1).c_str());
   tecDataSetAddAuxData(file_handle, "Common.DensityVar", std::to_string(2*n_dim + 1).c_str());
   tecDataSetAddAuxData(file_handle, "Common.StagnationEnergyVar", std::to_string(2*n_dim + 2).c_str());
+}
+
+void Tecplot_file::write_block(int row_size, double* pos, double* vars)
+{
+  Structured_block block(*this, row_size, "block", n_dim_topo);
+  block.write(pos, vars);
 }
 
 Tecplot_file::~Tecplot_file()

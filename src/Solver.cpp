@@ -123,7 +123,7 @@ double Solver::max_dt(double msc, double msd)
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
                Transport_model viscosity_model, Transport_model thermal_conductivity_model,
                std::shared_ptr<Namespace> space, std::shared_ptr<Printer> printer, bool implicit) :
-  params{implicit ? Linearized::storage_start + Linearized::n_storage : 3, n_dim + 2, n_dim, row_size},
+  params{implicit ? Linearized::storage_start + Linearized::n_storage : 2, n_dim + 2, n_dim, row_size},
   acc_mesh{params, root_mesh_size},
   basis{row_size},
   stopwatch{"(element*iteration)"},
@@ -140,7 +140,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("max_safety", .7); // maximum allowed safety factor for time stepping
   _namespace->assign_default("max_time_step", huge); // maximum allowed time step
   _namespace->assign_default("fix_admis_max_safety", .7); // staility ratio for fixing thermodynamic admissibility.
-  _namespace->assign_default("av_diff_ratio", .03*16); // ratio of diffusion time to advection width
+  _namespace->assign_default("av_diff_ratio", .3); // ratio of diffusion time to advection width
   _namespace->assign_default("av_visc_mult", 1e2); // final scaling parameter applied to artificial viscosity coefficient
   _namespace->assign_default("av_unscaled_max", .1); // maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
   _namespace->assign_default("av_advect_max_safety", .7); // stability ratio for advection
@@ -162,7 +162,6 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign("wall_time", 0.);
   status.set_time();
   // setup categories for performance reporting
-  stopwatch.children.emplace("initialize reference", stopwatch.work_unit_name);
   std::string unit = "(element*(time integration stage))";
   stopwatch.children.emplace("prolong/restrict", unit);
   stopwatch.children.emplace("fix admis.", "(element*(fix admis. iter))");
@@ -597,9 +596,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
         for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
           double* state = elements[i_elem].stage(0);
           double* adv = elements[i_elem].advection_state();
-          for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-            state[nd*nq + i_qpoint] = state[(nd + 1)*nq + i_qpoint] = adv[i_node*nq + i_qpoint];
-          }
+          for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) state[nd*nq + i_qpoint] = adv[i_node*nq + i_qpoint];
         }
         // evaluate advection operator
         (*write_face)(elements);
@@ -631,8 +628,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
             // compute update
             double pseudotime_scale = + dt_adv*tss[i_qpoint]*2/advect_length;
             double old = adv[i_node*nq + i_qpoint]; // record for measuring residual
-            adv[i_node*nq + i_qpoint] += state[nd*nq + i_qpoint] - state[(nd + 1)*nq + i_qpoint] + pseudotime_scale*1.;
-            adv[i_node*nq + i_qpoint] /= 1. + pseudotime_scale;
+            adv[i_node*nq + i_qpoint] = (state[nd*nq + i_qpoint] + pseudotime_scale*1.)/(1. + pseudotime_scale);
             // add to residual
             double d = adv[i_node*nq + i_qpoint] - old;
             diff += d*d/dt_scaled/dt_scaled;
@@ -959,28 +955,17 @@ void Solver::update()
     double n_cheby = _namespace->lookup<double>("n_cheby_flow").value();
     double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1);
     // run chebyshev iterations
-    const int n_dof = params.n_dof();
     for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
     {
       double nominal_dt = std::min(max_dt(safety/max_cheby, safety), _namespace->lookup<double>("max_time_step").value());
       double dt = nominal_dt*math::chebyshev_step(n_cheby, i_cheby);
-      // record reference state for Runge-Kutta scheme
-      auto& irk = stopwatch.children.at("initialize reference");
-      irk.stopwatch.start();
-      #pragma omp parallel for
-      for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-        double* state = elems[i_elem].stage(0);
-        for (int i_dof = 0; i_dof < n_dof; ++i_dof) state[i_dof + n_dof] = state[i_dof];
-      }
-      irk.stopwatch.pause();
-      irk.work_units_completed += elems.size();
-
+      // record reference state for residual calculation
       bool fixed = false;
       // compute inviscid update
       for (int i = 0; i < 2; ++i) {
         apply_state_bcs();
-        if (use_ldg()) compute_viscous(dt, i);
-        else compute_inviscid(dt, i);
+        if (use_ldg()) compute_viscous(dt, i, false);
+        else compute_inviscid(dt, i, false);
         // note that function call must come first to ensure it is evaluated despite short-circuiting
         fixed = fix_admissibility(_namespace->lookup<double>("fix_admis_max_safety").value()) || fixed;
       }
@@ -1014,18 +999,16 @@ void Solver::update_implicit()
   fix_admissibility(.7);
 }
 
+void Solver::compute_residual()
+{
+  apply_state_bcs();
+  if (use_ldg()) compute_viscous(1., 0, true);
+  else compute_inviscid(1., 0, true);
+}
+
 Iteration_status Solver::iteration_status()
 {
   Iteration_status stat = status;
-  Physical_update update;
-  auto res = integral_field(Pow(update, 2));
-  for (double& r : res) r /= stat.time_step*stat.time_step;
-  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-    stat.mmtm_res += res[i_dim];
-  }
-  stat.mmtm_res = std::sqrt(stat.mmtm_res);
-  stat.mass_res = std::sqrt(res[params.n_dim]);
-  stat.ener_res = std::sqrt(res[params.n_dim + 1]);
   return stat;
 }
 
@@ -1088,7 +1071,7 @@ bool Solver::fix_admissibility(double stability_ratio)
       State_variables sv;
       Record rec;
       std::vector<const Qpoint_func*> to_vis {&sv, &rec};
-      visualize_field_xdmf(Qf_concat(to_vis), wd + "severe_indamis" + std::to_string(status.iteration));
+      visualize_field("xdmf", wd + "severe_indamis" + std::to_string(status.iteration), Qf_concat(to_vis));
     }
     #endif
     if (is_admissible()) {
@@ -1146,7 +1129,7 @@ bool Solver::fix_admissibility(double stability_ratio)
       Record rec;
       Fix_admis_coef fac;
       std::vector<const Qpoint_func*> to_vis {&sv, &rec, &fac};
-      visualize_field_xdmf(Qf_concat(to_vis), wd + "inadmis" + std::to_string(status.iteration));
+      visualize_field("xdmf", wd + "inadmis" + std::to_string(status.iteration), Qf_concat(to_vis));
     }
     #endif
     #pragma omp parallel for
@@ -1292,10 +1275,31 @@ std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func,
   return bounds;
 }
 
-#if HEXED_USE_XDMF
-void Solver::visualize_field_xdmf(const Qpoint_func& output_variables, std::string name, int n_sample)
+std::unique_ptr<Visualizer> Solver::_visualizer(std::string format, std::string name, const Output_data& output_variables, int n_dim_topo)
 {
-  Xdmf_wrapper xdmf(params.n_dim, params.n_dim, n_sample, name, output_variables, status.flow_time);
+  std::unique_ptr<Visualizer> visualizer;
+  if (format == "xdmf") {
+    #if HEXED_USE_XDMF
+    visualizer.reset(new Xdmf_wrapper(params.n_dim, n_dim_topo, name, output_variables, status.flow_time));
+    #else
+    HEXED_ASSERT(false, "`format = xdmf` requires `USE_XDMF ON`");
+    #endif
+  } else if (format == "tecplot") {
+    #if HEXED_USE_TECPLOT
+    const int n_vis = output_variables.n_var(params.n_dim); // number of variables to visualize
+    std::vector<std::string> var_names;
+    for (int i_vis = 0; i_vis < n_vis; ++i_vis) var_names.push_back(output_variables.variable_name(params.n_dim, i_vis));
+    visualizer.reset(new Tecplot_file(name, params.n_dim, n_dim_topo, var_names, status.flow_time));
+    #else
+    HEXED_ASSERT(false, "`format = tecplot` requires `USE_TECPLOT ON`");
+    #endif
+  } else HEXED_ASSERT(false, format_str(1000, "visualization format `%s` not recognized", format.c_str()));
+  return visualizer;
+}
+
+void Solver::visualize_field(std::string format, std::string name, const Qpoint_func& output_variables, int n_sample)
+{
+  auto visualizer = _visualizer(format, name, output_variables, params.n_dim);
   Position_func pos_func;
   auto& elems = acc_mesh.elements();
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -1303,14 +1307,14 @@ void Solver::visualize_field_xdmf(const Qpoint_func& output_variables, std::stri
     Vis_data out_dat(elems[i_elem], output_variables, basis, status.flow_time);
     Mat<> pos = pos_dat.interior(n_sample);
     Mat<> out = out_dat.interior(n_sample);
-    xdmf.write_block(pos.data(), out.data());
+    visualizer->write_block(n_sample, pos.data(), out.data());
   }
 }
 
-void Solver::visualize_surface_xdmf(int bc_sn, const Boundary_func& func, std::string name, int n_sample)
+void Solver::visualize_surface(std::string format, std::string name, int bc_sn, const Boundary_func& func, int n_sample)
 {
   HEXED_ASSERT(params.n_dim > 1, "cannot visualize surfaces in 1D");
-  Xdmf_wrapper xdmf(params.n_dim, params.n_dim - 1, n_sample, name, func, status.flow_time);
+  auto visualizer = _visualizer(format, name, func, params.n_dim - 1);
   // convenience definitions
   const int nfq = params.n_qpoint()/params.row_size;
   const int nd = params.n_dim;
@@ -1352,18 +1356,19 @@ void Solver::visualize_surface_xdmf(int bc_sn, const Boundary_func& func, std::s
         interp_vars.col(i_var) = math::hypercube_matvec(interp, qpoint_vars.col(i_var));
       }
       // visualize
-      xdmf.write_block(interp_pos.data(), interp_vars.data());
+      visualizer->write_block(n_sample, interp_pos.data(), interp_vars.data());
     }
   }
+  visualizer.reset();
 }
 
-void Solver::vis_cart_surf_xdmf(int bc_sn, std::string name, const Boundary_func& func)
+void Solver::vis_cart_surf(std::string format, std::string name, int bc_sn, const Boundary_func& func)
 {
   Mesh::Reset_vertices reset(acc_mesh);
-  visualize_surface_xdmf(bc_sn, func, name, 2);
+  visualize_surface(format, name, bc_sn, func, 2);
 }
 
-void Solver::vis_lts_constraints(std::string name, int n_sample)
+void Solver::vis_lts_constraints(std::string format, std::string name, int n_sample)
 {
   auto& elems = acc_mesh.elements();
   int nf = params.n_dof();
@@ -1392,142 +1397,12 @@ void Solver::vis_lts_constraints(std::string name, int n_sample)
   // visualize. Note that visualizing straight from the reference state would require implementing another `Qpoint_func` which would be ugly
   Interpreter inter(std::vector<std::string>{});
   Struct_expr expr("lts_convective = density; lts_diffusive = energy; lts_ratio = lts_diffusive/lts_convective;");
-  visualize_field_xdmf(Qpoint_expr(expr, inter), name, n_sample);
+  visualize_field(format, name, Qpoint_expr(expr, inter), n_sample);
   // restore the current state from the reference state
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     Eigen::Map<Mat<>>(elems[i_elem].stage(0), nf) = Eigen::Map<Mat<>>(elems[i_elem].stage(1), nf);
   }
 }
-#endif
-
-#if HEXED_USE_TECPLOT
-void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::string name, int n_sample, bool include_edges, bool include_qpoints, bool include_interior)
-{
-  const int n_dim = params.n_dim;
-  const int n_vis = output_variables.n_var(n_dim); // number of variables to visualize
-  const int n_corners {math::pow(2, n_dim - 1)};
-  Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
-  std::vector<std::string> var_names;
-  for (int i_vis = 0; i_vis < n_vis; ++i_vis) var_names.push_back(output_variables.variable_name(n_dim, i_vis));
-  Tecplot_file file {name, n_dim, var_names, status.flow_time};
-
-  auto& elems = acc_mesh.elements();
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem)
-  {
-    Element& elem {elems[i_elem]};
-    Vis_data vis_pos(elem, hexed::Position_func(), basis, status.flow_time);
-    Vis_data vis_out(elem, output_variables, basis, status.flow_time);
-    // note: each visualization stage is enclosed in `{}` to ensure that only one `Tecplot_file::Zone` is alive at a time
-    // visualize edges
-    if (n_dim > 1 && include_edges) { // 1D elements don't really have edges
-      Tecplot_file::Line_segments edges {file, n_dim*n_corners, n_sample, "edges"};
-      auto edge_pos = vis_pos.edges(n_sample);
-      auto edge_state = vis_out.edges(n_sample);
-      for (int i_edge = 0; i_edge < n_corners*n_dim; ++i_edge) {
-        edges.write(edge_pos.data() + i_edge*n_sample*n_dim, edge_state.data() + i_edge*n_sample*n_vis);
-      }
-    }
-
-    if (include_qpoints) { // visualize quadrature points
-      Tecplot_file::Structured_block qpoints {file, basis.row_size, "element_qpoints"};
-      qpoints.write(vis_pos.qpoints().data(), vis_out.qpoints().data());
-    }
-
-    if (include_interior) { // visualize interior (that is, quadrature point data interpolated to a fine mesh of sample points)
-      Tecplot_file::Structured_block interior {file, n_sample, "element_interior"};
-      auto interp_pos = vis_pos.interior(n_sample);
-      auto interp_out = vis_out.interior(n_sample);
-      interior.write(interp_pos.data(), interp_out.data());
-    }
-  }
-}
-
-void Solver::visualize_field_tecplot(std::string name, int n_sample, bool edges, bool qpoints, bool interior)
-{
-  State_variables sv;
-  Art_visc_coef avc;
-  Advection_state as(av_rs);
-  Art_visc_forcing avf;
-  std::vector<const Qpoint_func*> funcs {&sv};
-  if (use_art_visc) {
-    funcs.push_back(&avc);
-    funcs.push_back(&as);
-    funcs.push_back(&avf);
-  }
-  visualize_field_tecplot(Qf_concat(funcs), name, n_sample, edges, qpoints, interior);
-}
-
-void Solver::visualize_surface_tecplot(int bc_sn, const Boundary_func& func, std::string name, int n_sample)
-{
-  if (params.n_dim == 1) throw std::runtime_error("cannot visualize surfaces in 1D");
-  // convenience definitions
-  const int nfq = params.n_qpoint()/params.row_size;
-  const int nd = params.n_dim;
-  const int nv = func.n_var(nd);
-  const int n_block {math::pow(n_sample, nd - 1)};
-  // setup
-  std::vector<std::string> var_names;
-  for (int i_var = 0; i_var < nv; ++i_var) var_names.push_back(func.variable_name(nd, i_var));
-  Tecplot_file file {name, nd, var_names, status.flow_time};
-  Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
-  // iterate through boundary connections and visualize a zone for each
-  auto& bc_cons {acc_mesh.boundary_connections()};
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con)
-  {
-    auto& con {bc_cons[i_con]};
-    if (con.bound_cond_serial_n() == bc_sn)
-    {
-      auto& elem = con.element();
-      // fetch the position
-      const int i_face = con.direction().i_face(0);
-      Mat<dyn, dyn> qpoint_pos (nfq, nd);
-      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-        auto pos = elem.face_position(basis, i_face, i_qpoint);
-        for (int i_dim = 0; i_dim < nd; ++i_dim) qpoint_pos(i_qpoint, i_dim) = pos[i_dim];
-      }
-      // interpolate from quadrature points to sample points
-      Mat<dyn, dyn> interp_pos (n_block, nd);
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        interp_pos.col(i_dim) = math::hypercube_matvec(interp, qpoint_pos.col(i_dim));
-      }
-      // fetch the state
-      Mat<dyn, dyn> qpoint_vars (nfq, nv);
-      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-        auto vars = func(con, i_qpoint, status.flow_time);
-        for (int i_var = 0; i_var < nv; ++i_var) {
-          qpoint_vars(i_qpoint, i_var) = vars[i_var];
-        }
-      }
-      // interpolate to sample points
-      Mat<dyn, dyn> interp_vars (n_block, nv);
-      for (int i_var = 0; i_var < nv; ++i_var) {
-        interp_vars.col(i_var) = math::hypercube_matvec(interp, qpoint_vars.col(i_var));
-      }
-      // visualize zone
-      Tecplot_file::Structured_block zone {file, n_sample, "face_interior", nd - 1};
-      zone.write(interp_pos.data(), interp_vars.data());
-    }
-  }
-}
-
-void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample)
-{
-  State_variables sv;
-  Outward_normal on;
-  Viscous_stress vs;
-  Heat_flux hf;
-  std::vector<const Boundary_func*> funcs {&sv, &on};
-  if (visc.is_viscous) funcs.push_back(&vs);
-  if (therm_cond.is_viscous) funcs.push_back(&hf);
-  visualize_surface_tecplot(bc_sn, Bf_concat(funcs), name, n_sample);
-}
-
-void Solver::vis_cart_surf_tecplot(int bc_sn, std::string name, const Boundary_func& func)
-{
-  Mesh::Reset_vertices reset(acc_mesh);
-  visualize_surface_tecplot(bc_sn, func, name, 2);
-}
-#endif
 
 }
