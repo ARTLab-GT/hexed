@@ -9,15 +9,13 @@
 namespace hexed
 {
 
-Xdmf_wrapper::Xdmf_wrapper(int n_dim_geom, int n_dim_topo, int row_size, std::string file_name, const Output_data& data, double time) :
+Xdmf_wrapper::Xdmf_wrapper(int n_dim_geom, int n_dim_topo, std::string file_name, const Output_data& data, double time) :
   _topo{XdmfTopology::New()},
   _geom{XdmfGeometry::New()},
   _n_dim_geom{n_dim_geom},
   _n_dim_topo{n_dim_topo},
-  _row_size{row_size},
   _file_name{file_name},
   _time{time},
-  _n_point{math::pow(_row_size, _n_dim_topo)},
   _n_var{data.n_var(n_dim_geom)},
   _i_block{0},
   _node_inds(math::pow(2, n_dim_topo), n_dim_topo)
@@ -55,27 +53,28 @@ Xdmf_wrapper::Xdmf_wrapper(int n_dim_geom, int n_dim_topo, int row_size, std::st
   else HEXED_ASSERT(false, "invalid geometric dimensionality");
 }
 
-void Xdmf_wrapper::write_block(double* pos, double* vars)
+void Xdmf_wrapper::write_block(int row_size, double* pos, double* vars)
 {
-  for (int i_elem = 0; i_elem < math::pow(_row_size - 1, _n_dim_topo); ++i_elem) {
+  int n_point = math::pow(row_size, _n_dim_topo);
+  for (int i_elem = 0; i_elem < math::pow(row_size - 1, _n_dim_topo); ++i_elem) {
     for (int i_vert = 0; i_vert < math::pow(2, _n_dim_topo); ++i_vert) {
-      int i_node = _i_block*_n_point;
+      int i_node = _i_block*n_point;
       for (int i_dim = 0; i_dim < _n_dim_topo; ++i_dim) {
-        int row = (i_elem/Row_index(_n_dim_topo, _row_size - 1, i_dim).stride)%(_row_size - 1)
+        int row = (i_elem/Row_index(_n_dim_topo, row_size - 1, i_dim).stride)%(row_size - 1)
                   + _node_inds(i_vert, i_dim);
-        i_node += row*Row_index(_n_dim_topo, _row_size, i_dim).stride;
+        i_node += row*Row_index(_n_dim_topo, row_size, i_dim).stride;
       }
       _topo->pushBack(i_node);
     }
   }
-  for (int i_point = 0; i_point < _n_point; ++i_point) {
+  for (int i_point = 0; i_point < n_point; ++i_point) {
     for (int i_dim = 0; i_dim < _n_dim_geom; ++i_dim) {
-      _geom->pushBack(pos[i_dim*_n_point + i_point]);
+      _geom->pushBack(pos[i_dim*n_point + i_point]);
     }
   }
   for (int i_var = 0; i_var < _n_var; ++i_var) {
-    for (int i_point = 0; i_point < _n_point; ++i_point) {
-      _attrs[i_var]->pushBack(vars[i_var*_n_point + i_point]);
+    for (int i_point = 0; i_point < n_point; ++i_point) {
+      _attrs[i_var]->pushBack(vars[i_var*n_point + i_point]);
     }
   }
   ++_i_block;

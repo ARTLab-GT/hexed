@@ -1275,20 +1275,12 @@ std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func,
   return bounds;
 }
 
-void Solver::visualize_field(std::string format, std::string name, const Qpoint_func& output_variables, int n_sample)
+std::unique_ptr<Visualizer> Solver::_visualizer(std::string format, std::string name, const Output_data& output_variables, int n_dim_topo)
 {
+  std::unique_ptr<Visualizer> visualizer;
   if (format == "xdmf") {
     #if HEXED_USE_XDMF
-    Xdmf_wrapper xdmf(params.n_dim, params.n_dim, n_sample, name, output_variables, status.flow_time);
-    Position_func pos_func;
-    auto& elems = acc_mesh.elements();
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      Vis_data pos_dat(elems[i_elem], pos_func, basis, status.flow_time);
-      Vis_data out_dat(elems[i_elem], output_variables, basis, status.flow_time);
-      Mat<> pos = pos_dat.interior(n_sample);
-      Mat<> out = out_dat.interior(n_sample);
-      xdmf.write_block(pos.data(), out.data());
-    }
+    visualizer.reset(new Xdmf_wrapper(params.n_dim, n_dim_topo, name, output_variables, status.flow_time));
     #else
     HEXED_ASSERT(false, "`format = xdmf` requires `USE_XDMF ON`");
     #endif
@@ -1298,29 +1290,32 @@ void Solver::visualize_field(std::string format, std::string name, const Qpoint_
     std::vector<std::string> var_names;
     for (int i_vis = 0; i_vis < n_vis; ++i_vis) var_names.push_back(output_variables.variable_name(params.n_dim, i_vis));
     Tecplot_file file {name, params.n_dim, var_names, status.flow_time};
-
-    auto& elems = acc_mesh.elements();
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem)
-    {
-      Element& elem {elems[i_elem]};
-      Vis_data vis_pos(elem, Position_func(), basis, status.flow_time);
-      Vis_data vis_out(elem, output_variables, basis, status.flow_time);
-      Tecplot_file::Structured_block interior {file, n_sample, "element_interior"};
-      auto interp_pos = vis_pos.interior(n_sample);
-      auto interp_out = vis_out.interior(n_sample);
-      interior.write(interp_pos.data(), interp_out.data());
-    }
     #else
     HEXED_ASSERT(false, "`format = tecplot` requires `USE_TECPLOT ON`");
     #endif
   } else HEXED_ASSERT(false, format_str(1000, "visualization format `%s` not recognized", format.c_str()));
+  return visualizer;
+}
+
+void Solver::visualize_field(std::string format, std::string name, const Qpoint_func& output_variables, int n_sample)
+{
+  auto visualizer = _visualizer(format, name, output_variables, params.n_dim);
+  Position_func pos_func;
+  auto& elems = acc_mesh.elements();
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    Vis_data pos_dat(elems[i_elem], pos_func, basis, status.flow_time);
+    Vis_data out_dat(elems[i_elem], output_variables, basis, status.flow_time);
+    Mat<> pos = pos_dat.interior(n_sample);
+    Mat<> out = out_dat.interior(n_sample);
+    visualizer->write_block(n_sample, pos.data(), out.data());
+  }
 }
 
 #if HEXED_USE_XDMF
 void Solver::visualize_surface_xdmf(int bc_sn, const Boundary_func& func, std::string name, int n_sample)
 {
   HEXED_ASSERT(params.n_dim > 1, "cannot visualize surfaces in 1D");
-  Xdmf_wrapper xdmf(params.n_dim, params.n_dim - 1, n_sample, name, func, status.flow_time);
+  Xdmf_wrapper xdmf(params.n_dim, params.n_dim - 1, name, func, status.flow_time);
   // convenience definitions
   const int nfq = params.n_qpoint()/params.row_size;
   const int nd = params.n_dim;
@@ -1362,7 +1357,7 @@ void Solver::visualize_surface_xdmf(int bc_sn, const Boundary_func& func, std::s
         interp_vars.col(i_var) = math::hypercube_matvec(interp, qpoint_vars.col(i_var));
       }
       // visualize
-      xdmf.write_block(interp_pos.data(), interp_vars.data());
+      xdmf.write_block(n_sample, interp_pos.data(), interp_vars.data());
     }
   }
 }

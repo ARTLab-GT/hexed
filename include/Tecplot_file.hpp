@@ -5,6 +5,7 @@
 #include <vector>
 #include "config.hpp"
 #include "constants.hpp"
+#include "Visualizer.hpp"
 
 #if HEXED_USE_TECPLOT
 namespace hexed
@@ -12,13 +13,12 @@ namespace hexed
 
 /*! \brief Wrapper for Tecplot API.
  * \details This class provides an object-oriented wrapper to [TecIO](https://www.tecplot.com/products/tecio-library/)
- * because the standard API is verbose
- * and generally nauseating. Because the wrapped API involves calling several global functions
- * in a specific sequence, at most one `Tecplot_file` and one `Tecplot_file::Zone`
- * are allowed to exist at any given time.
+ * because the standard API is verbose and generally nauseating.
+ * Because the wrapped API involves calling several global functions in a specific sequence,
+ * at most one `Tecplot_file` and one `Tecplot_file::Zone` are allowed to exist at any given time.
  * \see [Tecplot Data Format Guide](https://tecplot.azureedge.net/products/360/current/360_data_format_guide.pdf)
  */
-class Tecplot_file
+class Tecplot_file : public Visualizer
 {
   int n_dim;
   int n_var;
@@ -112,6 +112,7 @@ class Tecplot_file
   Tecplot_file(std::string file_name, int n_dim, std::vector<std::string> variable_names, double time, double heat_rat = 1.4, double gas_const = constants::specific_gas_air);
   Tecplot_file(const Tecplot_file&) = delete; //!< copying is nonsense since there can't be more than one Tecplot_file at a time
   Tecplot_file& operator=(const Tecplot_file&) = delete; //!< see above
+  void write_block(int row_size, double* pos, double* vars) override;
   ~Tecplot_file();
 };
 

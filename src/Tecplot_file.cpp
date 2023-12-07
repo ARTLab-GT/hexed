@@ -36,6 +36,12 @@ Tecplot_file::Tecplot_file(std::string file_name, int n_dim, std::vector<std::st
   tecDataSetAddAuxData(file_handle, "Common.StagnationEnergyVar", std::to_string(2*n_dim + 2).c_str());
 }
 
+void Tecplot_file::write_block(int row_size, double* pos, double* vars)
+{
+  Structured_block block(*this, row_size);
+  block.write(pos, vars);
+}
+
 Tecplot_file::~Tecplot_file()
 {
   tecFileWriterClose(&file_handle);
