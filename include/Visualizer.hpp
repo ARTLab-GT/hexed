@@ -7,6 +7,7 @@ namespace hexed
 class Visualizer
 {
   public:
+  virtual ~Visualizer() = default;
   /*! \brief writes a structured block of data
    * \param row_size size of each row of sample points
    * \param pos layout: [i_dim][i_point]

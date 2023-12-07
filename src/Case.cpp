@@ -281,31 +281,23 @@ Case::Case(std::string input_file)
     std::string wd = _vars("working_dir").value();
     std::string suffix = format_str(100, "_iter%.*i", _vari("iter_width").value(), _vari("iteration").value());
     int n_sample = _vari("vis_n_sample").value();
-    if (_vari("vis_field").value()) {
-      Struct_expr vis_vars(_vars("vis_field_vars").value());
-      Qpoint_expr func(vis_vars, _inter);
-      std::string file_name = wd + "field" + suffix;
-      for (std::string format : {"xdmf", "tecplot"}) {
-        if (_vari("vis_" + format).value()) _solver().visualize_field(format, file_name, func, n_sample);
-      }
-      if (_vari("vis_xdmf").value()) {
-        if (std::filesystem::exists(wd + "field_latest1.xmf")) {
-          std::filesystem::copy_file(wd + "field_latest1.xmf", wd + "field_latest0.xmf", std::filesystem::copy_options::overwrite_existing);
+    for (std::string v : {"surface", "field"}) if (_vari("vis_" + v).value()) {
+      for (std::string format : {"xdmf", "tecplot"}) if (_vari("vis_" + format).value()) {
+        Struct_expr vis_vars(_vars("vis_" + v + "_vars").value());
+        std::string file_name = wd + v + suffix;
+        if (v == "surface") {
+          _solver().visualize_surface(format, file_name, _solver().mesh().surface_bc_sn(), Boundary_expr(vis_vars, _inter), n_sample);
+        } else if (v == "field") {
+          _solver().visualize_field(format, file_name, Qpoint_expr(vis_vars, _inter), n_sample);
         }
-        std::filesystem::copy_file(file_name + ".xmf", wd + "field_latest1.xmf", std::filesystem::copy_options::overwrite_existing);
+        if (format == "xdmf") {
+          std::string latest = wd + v + "_latest1.xmf";
+          if (std::filesystem::exists(latest)) {
+            std::filesystem::copy_file(latest, wd + v + "_latest0.xmf", std::filesystem::copy_options::overwrite_existing);
+          }
+          std::filesystem::copy_file(file_name + ".xmf", latest, std::filesystem::copy_options::overwrite_existing);
+        }
       }
-    }
-    if (_vari("vis_surface").value() && _has_geom) {
-      Struct_expr vis_vars(_vars("vis_surface_vars").value());
-      Boundary_expr func(vis_vars, _inter);
-      std::string file_name = wd + "surface" + suffix;
-      int bc_sn = _solver().mesh().surface_bc_sn();
-      #if HEXED_USE_TECPLOT
-      if (_vari("vis_tecplot").value()) _solver().visualize_surface_tecplot(bc_sn, func, file_name, n_sample);
-      #endif
-      #if HEXED_USE_XDMF
-      if (_vari("vis_xdmf").value()) _solver().visualize_surface_xdmf(bc_sn, func, file_name, n_sample);
-      #endif
     }
     return 0;
   }));

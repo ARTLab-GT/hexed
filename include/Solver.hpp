@@ -214,27 +214,13 @@ class Solver
    * \param n_sample each element will contain an `n_sample` by `n_sample` array of uniformly-spaced sample points
    */
   void visualize_field(std::string format, std::string name, const Qpoint_func& output_variables, int n_sample = 10);
-  #if HEXED_USE_XDMF
   //! \brief write a visualization file describing all surfaces where a particular boundary condition has been enforced.
-  void visualize_surface_xdmf(int bc_sn, const Boundary_func&, std::string name, int n_sample = 20);
+  void visualize_surface(std::string format, std::string name, int bc_sn, const Boundary_func&, int n_sample = 10);
   //! \brief visualize the Cartesian surface which theoretically exists after element deletion but before any vertex snapping
-  void vis_cart_surf_xdmf(int bc_sn, std::string name, const Boundary_func& func = Uncertainty());
+  void vis_cart_surf(std::string format, std::string name, int bc_sn, const Boundary_func& func = Uncertainty());
   //! \brief visualize the local time step constraints imposed by convection and diffusion, respectively
   //! \warning This function overwrites the reference state, which will invalidate any residual evaluation until `update` is called again.
-  void vis_lts_constraints(std::string name, int n_sample = 20);
-  #endif
-
-  #if HEXED_USE_TECPLOT
-  /*! \brief write a visualization file describing all surfaces where a particular boundary condition has been enforced.
-   */
-  void visualize_surface_tecplot(int bc_sn, const Boundary_func&, std::string name, int n_sample = 20);
-  /*! if a `Boundary_func` is not specified, all the state variables,
-   * the surface normal, the shear stress, and the heat flux will be output.
-   */
-  void visualize_surface_tecplot(int bc_sn, std::string name, int n_sample = 20);
-  //! \brief visualize the Cartesian surface which theoretically exists after element deletion but before any vertex snapping
-  void vis_cart_surf_tecplot(int bc_sn, std::string name, const Boundary_func& func = Uncertainty());
-  #endif
+  void vis_lts_constraints(std::string format, std::string name, int n_sample = 10);
   //!\}
 };
 

@@ -21,6 +21,7 @@ namespace hexed
 class Tecplot_file : public Visualizer
 {
   int n_dim;
+  int n_dim_topo;
   int n_var;
   double time;
   int strand_id; // This must not be 0, as 0 indicats a StaticZone (apparently)
@@ -109,7 +110,8 @@ class Tecplot_file : public Visualizer
   };
 
   //! \note `n_var` means number of state (i.e., not position) variables.
-  Tecplot_file(std::string file_name, int n_dim, std::vector<std::string> variable_names, double time, double heat_rat = 1.4, double gas_const = constants::specific_gas_air);
+  //! \note `n_dim_block` is the topological dimension of blocks and only affects the behavior of `write_block`
+  Tecplot_file(std::string file_name, int n_dim, int n_dim_block, std::vector<std::string> variable_names, double time, double heat_rat = 1.4, double gas_const = constants::specific_gas_air);
   Tecplot_file(const Tecplot_file&) = delete; //!< copying is nonsense since there can't be more than one Tecplot_file at a time
   Tecplot_file& operator=(const Tecplot_file&) = delete; //!< see above
   void write_block(int row_size, double* pos, double* vars) override;

@@ -1289,7 +1289,7 @@ std::unique_ptr<Visualizer> Solver::_visualizer(std::string format, std::string 
     const int n_vis = output_variables.n_var(params.n_dim); // number of variables to visualize
     std::vector<std::string> var_names;
     for (int i_vis = 0; i_vis < n_vis; ++i_vis) var_names.push_back(output_variables.variable_name(params.n_dim, i_vis));
-    Tecplot_file file {name, params.n_dim, var_names, status.flow_time};
+    visualizer.reset(new Tecplot_file(name, params.n_dim, n_dim_topo, var_names, status.flow_time));
     #else
     HEXED_ASSERT(false, "`format = tecplot` requires `USE_TECPLOT ON`");
     #endif
@@ -1311,11 +1311,10 @@ void Solver::visualize_field(std::string format, std::string name, const Qpoint_
   }
 }
 
-#if HEXED_USE_XDMF
-void Solver::visualize_surface_xdmf(int bc_sn, const Boundary_func& func, std::string name, int n_sample)
+void Solver::visualize_surface(std::string format, std::string name, int bc_sn, const Boundary_func& func, int n_sample)
 {
   HEXED_ASSERT(params.n_dim > 1, "cannot visualize surfaces in 1D");
-  Xdmf_wrapper xdmf(params.n_dim, params.n_dim - 1, name, func, status.flow_time);
+  auto visualizer = _visualizer(format, name, func, params.n_dim - 1);
   // convenience definitions
   const int nfq = params.n_qpoint()/params.row_size;
   const int nd = params.n_dim;
@@ -1357,18 +1356,19 @@ void Solver::visualize_surface_xdmf(int bc_sn, const Boundary_func& func, std::s
         interp_vars.col(i_var) = math::hypercube_matvec(interp, qpoint_vars.col(i_var));
       }
       // visualize
-      xdmf.write_block(n_sample, interp_pos.data(), interp_vars.data());
+      visualizer->write_block(n_sample, interp_pos.data(), interp_vars.data());
     }
   }
+  visualizer.reset();
 }
 
-void Solver::vis_cart_surf_xdmf(int bc_sn, std::string name, const Boundary_func& func)
+void Solver::vis_cart_surf(std::string format, std::string name, int bc_sn, const Boundary_func& func)
 {
   Mesh::Reset_vertices reset(acc_mesh);
-  visualize_surface_xdmf(bc_sn, func, name, 2);
+  visualize_surface(format, name, bc_sn, func, 2);
 }
 
-void Solver::vis_lts_constraints(std::string name, int n_sample)
+void Solver::vis_lts_constraints(std::string format, std::string name, int n_sample)
 {
   auto& elems = acc_mesh.elements();
   int nf = params.n_dof();
@@ -1397,86 +1397,12 @@ void Solver::vis_lts_constraints(std::string name, int n_sample)
   // visualize. Note that visualizing straight from the reference state would require implementing another `Qpoint_func` which would be ugly
   Interpreter inter(std::vector<std::string>{});
   Struct_expr expr("lts_convective = density; lts_diffusive = energy; lts_ratio = lts_diffusive/lts_convective;");
-  visualize_field("xdmf", name, Qpoint_expr(expr, inter), n_sample);
+  visualize_field(format, name, Qpoint_expr(expr, inter), n_sample);
   // restore the current state from the reference state
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     Eigen::Map<Mat<>>(elems[i_elem].stage(0), nf) = Eigen::Map<Mat<>>(elems[i_elem].stage(1), nf);
   }
 }
-#endif
-
-#if HEXED_USE_TECPLOT
-void Solver::visualize_surface_tecplot(int bc_sn, const Boundary_func& func, std::string name, int n_sample)
-{
-  if (params.n_dim == 1) throw std::runtime_error("cannot visualize surfaces in 1D");
-  // convenience definitions
-  const int nfq = params.n_qpoint()/params.row_size;
-  const int nd = params.n_dim;
-  const int nv = func.n_var(nd);
-  const int n_block {math::pow(n_sample, nd - 1)};
-  // setup
-  std::vector<std::string> var_names;
-  for (int i_var = 0; i_var < nv; ++i_var) var_names.push_back(func.variable_name(nd, i_var));
-  Tecplot_file file {name, nd, var_names, status.flow_time};
-  Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
-  // iterate through boundary connections and visualize a zone for each
-  auto& bc_cons {acc_mesh.boundary_connections()};
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con)
-  {
-    auto& con {bc_cons[i_con]};
-    if (con.bound_cond_serial_n() == bc_sn)
-    {
-      auto& elem = con.element();
-      // fetch the position
-      const int i_face = con.direction().i_face(0);
-      Mat<dyn, dyn> qpoint_pos (nfq, nd);
-      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-        auto pos = elem.face_position(basis, i_face, i_qpoint);
-        for (int i_dim = 0; i_dim < nd; ++i_dim) qpoint_pos(i_qpoint, i_dim) = pos[i_dim];
-      }
-      // interpolate from quadrature points to sample points
-      Mat<dyn, dyn> interp_pos (n_block, nd);
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        interp_pos.col(i_dim) = math::hypercube_matvec(interp, qpoint_pos.col(i_dim));
-      }
-      // fetch the state
-      Mat<dyn, dyn> qpoint_vars (nfq, nv);
-      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-        auto vars = func(con, i_qpoint, status.flow_time);
-        for (int i_var = 0; i_var < nv; ++i_var) {
-          qpoint_vars(i_qpoint, i_var) = vars[i_var];
-        }
-      }
-      // interpolate to sample points
-      Mat<dyn, dyn> interp_vars (n_block, nv);
-      for (int i_var = 0; i_var < nv; ++i_var) {
-        interp_vars.col(i_var) = math::hypercube_matvec(interp, qpoint_vars.col(i_var));
-      }
-      // visualize zone
-      Tecplot_file::Structured_block zone {file, n_sample, "face_interior", nd - 1};
-      zone.write(interp_pos.data(), interp_vars.data());
-    }
-  }
-}
-
-void Solver::visualize_surface_tecplot(int bc_sn, std::string name, int n_sample)
-{
-  State_variables sv;
-  Outward_normal on;
-  Viscous_stress vs;
-  Heat_flux hf;
-  std::vector<const Boundary_func*> funcs {&sv, &on};
-  if (visc.is_viscous) funcs.push_back(&vs);
-  if (therm_cond.is_viscous) funcs.push_back(&hf);
-  visualize_surface_tecplot(bc_sn, Bf_concat(funcs), name, n_sample);
-}
-
-void Solver::vis_cart_surf_tecplot(int bc_sn, std::string name, const Boundary_func& func)
-{
-  Mesh::Reset_vertices reset(acc_mesh);
-  visualize_surface_tecplot(bc_sn, func, name, 2);
-}
-#endif
 
 }

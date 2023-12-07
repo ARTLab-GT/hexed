@@ -33,7 +33,6 @@ class Xdmf_wrapper : public Visualizer
    *   Distinct from the number of topological dimensions.
    *   For example, a 3D surface will have 3 geometric dimensions and 2 topological dimensions.
    * \param n_dim_topo defines the topology type/dimensionality
-   * \param row_size row size of data sample blocks
    * \param file_name name of output file(s) without extension
    * \param data defines the number and names of variables to be visualized
    * \param time flow time
