@@ -123,7 +123,7 @@ double Solver::max_dt(double msc, double msd)
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
                Transport_model viscosity_model, Transport_model thermal_conductivity_model,
                std::shared_ptr<Namespace> space, std::shared_ptr<Printer> printer, bool implicit) :
-  params{implicit ? Linearized::storage_start + Linearized::n_storage : 3, n_dim + 2, n_dim, row_size},
+  params{implicit ? Linearized::storage_start + Linearized::n_storage : 2, n_dim + 2, n_dim, row_size},
   acc_mesh{params, root_mesh_size},
   basis{row_size},
   stopwatch{"(element*iteration)"},
@@ -162,7 +162,6 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign("wall_time", 0.);
   status.set_time();
   // setup categories for performance reporting
-  stopwatch.children.emplace("initialize reference", stopwatch.work_unit_name);
   std::string unit = "(element*(time integration stage))";
   stopwatch.children.emplace("prolong/restrict", unit);
   stopwatch.children.emplace("fix admis.", "(element*(fix admis. iter))");
