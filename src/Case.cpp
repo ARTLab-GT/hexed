@@ -285,19 +285,15 @@ Case::Case(std::string input_file)
       Struct_expr vis_vars(_vars("vis_field_vars").value());
       Qpoint_expr func(vis_vars, _inter);
       std::string file_name = wd + "field" + suffix;
-      #if HEXED_USE_TECPLOT
-      if (_vari("vis_tecplot").value()) _solver().visualize_field_tecplot(func, file_name, n_sample);
-      #endif
-      #if HEXED_USE_XDMF
-      if (_vari("vis_xdmf").value()) {
-        _solver().visualize_field_xdmf(func, file_name, n_sample);
-        Art_visc_forcing avf;
-        Advection_state as(_solver().storage_params().row_size);
-        _solver().visualize_field_xdmf(Qf_concat({&avf, &as}), wd + "av" + suffix, n_sample);
-        if (_vari("vis_lts_constraints").value()) _solver().vis_lts_constraints(wd + "lts" + suffix, n_sample);
+      for (std::string format : {"xdmf", "tecplot"}) {
+        if (_vari("vis_" + format).value()) _solver().visualize_field(format, file_name, func, n_sample);
       }
-      std::filesystem::copy_file(file_name + ".xmf", wd + "field_latest.xmf", std::filesystem::copy_options::overwrite_existing);
-      #endif
+      if (_vari("vis_xdmf").value()) {
+        if (std::filesystem::exists(wd + "field_latest1.xmf")) {
+          std::filesystem::copy_file(wd + "field_latest1.xmf", wd + "field_latest0.xmf", std::filesystem::copy_options::overwrite_existing);
+        }
+        std::filesystem::copy_file(file_name + ".xmf", wd + "field_latest1.xmf", std::filesystem::copy_options::overwrite_existing);
+      }
     }
     if (_vari("vis_surface").value() && _has_geom) {
       Struct_expr vis_vars(_vars("vis_surface_vars").value());

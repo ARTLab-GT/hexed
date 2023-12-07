@@ -1071,7 +1071,7 @@ bool Solver::fix_admissibility(double stability_ratio)
       State_variables sv;
       Record rec;
       std::vector<const Qpoint_func*> to_vis {&sv, &rec};
-      visualize_field_xdmf(Qf_concat(to_vis), wd + "severe_indamis" + std::to_string(status.iteration));
+      visualize_field("xdmf", wd + "severe_indamis" + std::to_string(status.iteration), Qf_concat(to_vis));
     }
     #endif
     if (is_admissible()) {
@@ -1129,7 +1129,7 @@ bool Solver::fix_admissibility(double stability_ratio)
       Record rec;
       Fix_admis_coef fac;
       std::vector<const Qpoint_func*> to_vis {&sv, &rec, &fac};
-      visualize_field_xdmf(Qf_concat(to_vis), wd + "inadmis" + std::to_string(status.iteration));
+      visualize_field("xdmf", wd + "inadmis" + std::to_string(status.iteration), Qf_concat(to_vis));
     }
     #endif
     #pragma omp parallel for
@@ -1275,21 +1275,48 @@ std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func,
   return bounds;
 }
 
-#if HEXED_USE_XDMF
-void Solver::visualize_field_xdmf(const Qpoint_func& output_variables, std::string name, int n_sample)
+void Solver::visualize_field(std::string format, std::string name, const Qpoint_func& output_variables, int n_sample)
 {
-  Xdmf_wrapper xdmf(params.n_dim, params.n_dim, n_sample, name, output_variables, status.flow_time);
-  Position_func pos_func;
-  auto& elems = acc_mesh.elements();
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    Vis_data pos_dat(elems[i_elem], pos_func, basis, status.flow_time);
-    Vis_data out_dat(elems[i_elem], output_variables, basis, status.flow_time);
-    Mat<> pos = pos_dat.interior(n_sample);
-    Mat<> out = out_dat.interior(n_sample);
-    xdmf.write_block(pos.data(), out.data());
-  }
+  if (format == "xdmf") {
+    #if HEXED_USE_XDMF
+    Xdmf_wrapper xdmf(params.n_dim, params.n_dim, n_sample, name, output_variables, status.flow_time);
+    Position_func pos_func;
+    auto& elems = acc_mesh.elements();
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      Vis_data pos_dat(elems[i_elem], pos_func, basis, status.flow_time);
+      Vis_data out_dat(elems[i_elem], output_variables, basis, status.flow_time);
+      Mat<> pos = pos_dat.interior(n_sample);
+      Mat<> out = out_dat.interior(n_sample);
+      xdmf.write_block(pos.data(), out.data());
+    }
+    #else
+    HEXED_ASSERT(false, "`format = xdmf` requires `USE_XDMF ON`");
+    #endif
+  } else if (format == "tecplot") {
+    #if HEXED_USE_TECPLOT
+    const int n_vis = output_variables.n_var(params.n_dim); // number of variables to visualize
+    std::vector<std::string> var_names;
+    for (int i_vis = 0; i_vis < n_vis; ++i_vis) var_names.push_back(output_variables.variable_name(params.n_dim, i_vis));
+    Tecplot_file file {name, params.n_dim, var_names, status.flow_time};
+
+    auto& elems = acc_mesh.elements();
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem)
+    {
+      Element& elem {elems[i_elem]};
+      Vis_data vis_pos(elem, Position_func(), basis, status.flow_time);
+      Vis_data vis_out(elem, output_variables, basis, status.flow_time);
+      Tecplot_file::Structured_block interior {file, n_sample, "element_interior"};
+      auto interp_pos = vis_pos.interior(n_sample);
+      auto interp_out = vis_out.interior(n_sample);
+      interior.write(interp_pos.data(), interp_out.data());
+    }
+    #else
+    HEXED_ASSERT(false, "`format = tecplot` requires `USE_TECPLOT ON`");
+    #endif
+  } else HEXED_ASSERT(false, format_str(1000, "visualization format `%s` not recognized", format.c_str()));
 }
 
+#if HEXED_USE_XDMF
 void Solver::visualize_surface_xdmf(int bc_sn, const Boundary_func& func, std::string name, int n_sample)
 {
   HEXED_ASSERT(params.n_dim > 1, "cannot visualize surfaces in 1D");
@@ -1375,7 +1402,7 @@ void Solver::vis_lts_constraints(std::string name, int n_sample)
   // visualize. Note that visualizing straight from the reference state would require implementing another `Qpoint_func` which would be ugly
   Interpreter inter(std::vector<std::string>{});
   Struct_expr expr("lts_convective = density; lts_diffusive = energy; lts_ratio = lts_diffusive/lts_convective;");
-  visualize_field_xdmf(Qpoint_expr(expr, inter), name, n_sample);
+  visualize_field("xdmf", name, Qpoint_expr(expr, inter), n_sample);
   // restore the current state from the reference state
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -1385,62 +1412,6 @@ void Solver::vis_lts_constraints(std::string name, int n_sample)
 #endif
 
 #if HEXED_USE_TECPLOT
-void Solver::visualize_field_tecplot(const Qpoint_func& output_variables, std::string name, int n_sample, bool include_edges, bool include_qpoints, bool include_interior)
-{
-  const int n_dim = params.n_dim;
-  const int n_vis = output_variables.n_var(n_dim); // number of variables to visualize
-  const int n_corners {math::pow(2, n_dim - 1)};
-  Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
-  std::vector<std::string> var_names;
-  for (int i_vis = 0; i_vis < n_vis; ++i_vis) var_names.push_back(output_variables.variable_name(n_dim, i_vis));
-  Tecplot_file file {name, n_dim, var_names, status.flow_time};
-
-  auto& elems = acc_mesh.elements();
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem)
-  {
-    Element& elem {elems[i_elem]};
-    Vis_data vis_pos(elem, hexed::Position_func(), basis, status.flow_time);
-    Vis_data vis_out(elem, output_variables, basis, status.flow_time);
-    // note: each visualization stage is enclosed in `{}` to ensure that only one `Tecplot_file::Zone` is alive at a time
-    // visualize edges
-    if (n_dim > 1 && include_edges) { // 1D elements don't really have edges
-      Tecplot_file::Line_segments edges {file, n_dim*n_corners, n_sample, "edges"};
-      auto edge_pos = vis_pos.edges(n_sample);
-      auto edge_state = vis_out.edges(n_sample);
-      for (int i_edge = 0; i_edge < n_corners*n_dim; ++i_edge) {
-        edges.write(edge_pos.data() + i_edge*n_sample*n_dim, edge_state.data() + i_edge*n_sample*n_vis);
-      }
-    }
-
-    if (include_qpoints) { // visualize quadrature points
-      Tecplot_file::Structured_block qpoints {file, basis.row_size, "element_qpoints"};
-      qpoints.write(vis_pos.qpoints().data(), vis_out.qpoints().data());
-    }
-
-    if (include_interior) { // visualize interior (that is, quadrature point data interpolated to a fine mesh of sample points)
-      Tecplot_file::Structured_block interior {file, n_sample, "element_interior"};
-      auto interp_pos = vis_pos.interior(n_sample);
-      auto interp_out = vis_out.interior(n_sample);
-      interior.write(interp_pos.data(), interp_out.data());
-    }
-  }
-}
-
-void Solver::visualize_field_tecplot(std::string name, int n_sample, bool edges, bool qpoints, bool interior)
-{
-  State_variables sv;
-  Art_visc_coef avc;
-  Advection_state as(av_rs);
-  Art_visc_forcing avf;
-  std::vector<const Qpoint_func*> funcs {&sv};
-  if (use_art_visc) {
-    funcs.push_back(&avc);
-    funcs.push_back(&as);
-    funcs.push_back(&avf);
-  }
-  visualize_field_tecplot(Qf_concat(funcs), name, n_sample, edges, qpoints, interior);
-}
-
 void Solver::visualize_surface_tecplot(int bc_sn, const Boundary_func& func, std::string name, int n_sample)
 {
   if (params.n_dim == 1) throw std::runtime_error("cannot visualize surfaces in 1D");

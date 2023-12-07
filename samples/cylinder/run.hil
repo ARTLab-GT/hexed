@@ -2,42 +2,32 @@ shell {python3 make_geom.py}
 
 {mesh setup}
 n_dim = 2
-mesh_extreme00 = -2.*.127/2
-mesh_extreme01 =  0.*.127/2
-mesh_extreme10 =  0.*.127/2
-mesh_extreme11 =  2.*.127/2
-init_ref_level = 5
+mesh_extreme00 = -2.*.02
+mesh_extreme01 =  0.*.02
+mesh_extreme10 =  0.*.02
+mesh_extreme11 =  2.*.02
+init_ref_level = 4
 extremal_bc10 = {nonpenetration}
 extremal_bc01 = {pressure_outflow}
 geom0 = {auto.csv}
-init_layer_splits = 2
+init_layer_splits = 4
 
 {freestream/wall definition}
-freestream_speed = 871.47
-freestream_density = 8.788e-2
-freestream_temperature = 75.58
-thermal_bc = {temperature = 98.89}
+freestream_mach = 8.1
+freestream_pressure = 370.6
+freestream_temperature = 63.73
+thermal_bc = {temperature = 300}
 
 {iteration parameters}
-$set_shock
-done = {iteration >= 30*10^4}
-vis_freq = 10000
 $set_aerothermo
-offset = 110.4
-ref_visc = 1.458e-6/(1 + offset);
-viscosity_model = {ref_value = ref_visc; ref_temperature = 1.; offset = offset}
-conductivity_model = {ref_value = 1.4/0.4*specific_gas_air/.72*ref_visc; ref_temperature = 1.; offset = offset}
-iterate = iterate + {
-    case0 = {}
-    case1 = {
-        print {splitting layers...}
-        split_layers
-        println({done. number of elements: } + n_elements)
-    }
-    $$({case} + (iteration == 2*10^4 | iteration == 4*10^4 | iteration == 6*10^4 | iteration == 10*10^4))
-}
+ramping_final_safety = .9
+art_visc_width = art_visc_width*.7
+$air_viscosity
+viscosity_model = air_viscosity
+conductivity_model = {ref_value = 1.4/0.4*specific_gas_air/.72*ref_value; ref_temperature = ref_temperature; offset = offset}
+done = {iteration >= 10*10^4}
+vis_freq = 10000
 
-working_dir = {hexed_out}
 vis_n_sample = 2
 $init
 vis_n_sample = 10

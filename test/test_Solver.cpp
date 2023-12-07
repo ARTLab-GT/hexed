@@ -772,9 +772,6 @@ TEST_CASE("face extrusion")
     REQUIRE(valid.n_missing == 16);
     solver.mesh().connect_rest(bc_sn);
     solver.calc_jacobian();
-    #if HEXED_USE_TECPLOT
-    solver.visualize_field_tecplot(hexed::Mass(), "extrude_2d");
-    #endif
     REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Catch::Approx(40./4.)); // check number of elements and that jacobian is nonsingular
     REQUIRE(solver.integral_field(hexed::Constant_func({1.}))[0] == Catch::Approx(area)); // check that area has not changed since first extrusion
     // check that state variables have been interpolated correctly during second extrusion
@@ -807,10 +804,6 @@ TEST_CASE("face extrusion")
     solver.mesh().cleanup();
     solver.calc_jacobian();
     REQUIRE(solver.integral_field(Reciprocal_jacobian())[0] == Catch::Approx(86.)); // check number of elements
-    #if HEXED_USE_TECPLOT
-    for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
-    solver.visualize_field_tecplot(hexed::State_variables(), "extrude");
-    #endif
   }
 }
 
@@ -920,9 +913,6 @@ TEST_CASE("cylinder tree mesh")
   for (int i = 0; i < 3; ++i) solver.mesh().relax();
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
-  #if HEXED_USE_TECPLOT
-  solver.visualize_field_tecplot(hexed::Is_deformed(), "cylinder_initial");
-  #endif
   REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
   for (int i = 0; i < 6; ++i) {
     // this criterion will refine all elements with a vertex that is within .1 of the midpoint of the arc
@@ -945,9 +935,6 @@ TEST_CASE("cylinder tree mesh")
   }
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
-  #if HEXED_USE_TECPLOT
-  solver.visualize_field_tecplot(hexed::Is_deformed(), "cylinder_refined");
-  #endif
   REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
   for (int i = 0; i < 6; ++i) {
     solver.mesh().update(hexed::criteria::never, [](hexed::Element& elem){return elem.refinement_level() > 3;});
@@ -957,8 +944,5 @@ TEST_CASE("cylinder tree mesh")
   REQUIRE(solver.mesh().n_elements() == n_initial); // this mesh should have been completely unrefined to where it started
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
-  #if HEXED_USE_TECPLOT
-  solver.visualize_field_tecplot(hexed::Is_deformed(), "cylinder_unrefined");
-  #endif
   REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
 }

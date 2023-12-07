@@ -205,9 +205,14 @@ class Solver
    */
   virtual std::vector<std::array<double, 2>> bounds_field(const Qpoint_func&, int n_sample = 20);
 
+  /*! \brief write a visualization file describing the entire flow field (but not identifying surfaces)
+   * \param format Which format to write the visualization file in. Accepted values are `"xdmf"` and `"tecplot"`
+   * \param name name of file to write (not including extension)
+   * \param output_variables what variables to write
+   * \param n_sample each element will contain an `n_sample` by `n_sample` array of uniformly-spaced sample points
+   */
+  void visualize_field(std::string format, std::string name, const Qpoint_func& output_variables, int n_sample = 10);
   #if HEXED_USE_XDMF
-  //! \brief write a visualization file describing the entire flow field (but not identifying surfaces)
-  void visualize_field_xdmf(const Qpoint_func& output_variables, std::string name, int n_sample = 20);
   //! \brief write a visualization file describing all surfaces where a particular boundary condition has been enforced.
   void visualize_surface_xdmf(int bc_sn, const Boundary_func&, std::string name, int n_sample = 20);
   //! \brief visualize the Cartesian surface which theoretically exists after element deletion but before any vertex snapping
@@ -218,14 +223,6 @@ class Solver
   #endif
 
   #if HEXED_USE_TECPLOT
-  //! \brief write a visualization file describing the entire flow field (but not identifying surfaces)
-  void visualize_field_tecplot(const Qpoint_func& output_variables, std::string name, int n_sample = 20,
-                                       bool edges = false, bool qpoints = false, bool interior = true);
-  /*! if a `Qpoint_func` is not specified, all the state variables
-   * and the artificial viscosity coefficient will be output
-   */
-  void visualize_field_tecplot(std::string name, int n_sample = 20,
-                                       bool edges = false, bool qpoints = false, bool interior = true);
   /*! \brief write a visualization file describing all surfaces where a particular boundary condition has been enforced.
    */
   void visualize_surface_tecplot(int bc_sn, const Boundary_func&, std::string name, int n_sample = 20);
