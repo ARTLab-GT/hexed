@@ -1,4 +1,10 @@
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+import os
+import time
+import re
+import pandas as pd
 
 ## \namespace hexed_utils
 # \brief A Python module with random useful tools.
@@ -48,12 +54,14 @@ def naca(desig, n_points = 1000, closure = "warp"):
         raise User_error("unrecognized value of `closure` parameter")
     return coords
 
-def joukowsky(thickness, camber = 0., n_points = 1000):
+def joukowsky(thickness, camber = 0., n_points = 1000, scale = True):
     r"""! \brief constructs a [Joukowsky airfoil](https://en.wikipedia.org/wiki/Joukowsky_transform)
     This is a family of airfoils with a cusped trailing edge which have analytic solutions for the incompressible flow around them.
     \param thickness _approximate_ thickness-to-chord ratio
     \param camber (radian) angle between the trailing edge and the chord line
     \param n_points Number of points on the airfoil surface
+    \param scale If `True`, scale the airfoil so that the leading edge is at (0, 0) and the trailing edge is at (0, 1).
+        Otherwise, the airfoil is left at the size and position dictated by the Joukowsky transform.
     """
     # create circle in complex plain
     points = np.exp(np.linspace(0, 2*np.pi, n_points)*1j)
@@ -64,9 +72,70 @@ def joukowsky(thickness, camber = 0., n_points = 1000):
     # apply Joukowsky transform
     points = points + 1/points
     # scale airfoil to match engineering conventions
-    points -= points.real.min()
-    points /= points.real.max()
+    if scale:
+        points -= points.real.min()
+        points /= points.real.max()
     return np.array([points.real, points.imag]).transpose()
 
-## \brief alternative transliteration XD
+## \brief alternative transliteration
 zhukovsky = joukowsky
+
+class History_plot:
+    def infinite_generator(self):
+        iteration = 0
+        while not self.stop:
+            yield iteration
+            iteration += 1
+
+    def get_new_lines(self):
+        if not os.path.exists(self.directory + "output.txt"): return
+        with open(self.directory + "output.txt", "rb") as output_file:
+            output_file.seek(self.file_position, 0)
+            self.lines += [line.decode("utf-8") for line in output_file.readlines()]
+            self.file_position = output_file.tell()
+
+    def __init__(self, directory = "hexed_out", interval = 0.2):
+        if directory[-1] != "/": directory += "/"
+        self.directory = directory
+        self.interval = interval
+        self.file_position = 0
+        self.data = None
+        self.lines = []
+        while self.data is None:
+            self.get_new_lines()
+            while self.lines:
+                line = self.lines.pop(0).replace(" ", "")
+                if re.match("iteration,", line):
+                    self.data = pd.DataFrame(columns = line.split(","))
+                    break
+            time.sleep(self.interval)
+        self.fig = plt.figure()
+        self.line, = plt.plot([], [])
+        self.stop = False
+        ani = FuncAnimation(self.fig, self.update, frames = self.infinite_generator, init_func = self.init,
+                            blit = True, repeat = False, interval = int(self.interval*1e3), cache_frame_data = False)
+        plt.show()
+
+    def init(self):
+        plt.xlim(0, 1)
+        plt.ylim(0.1, 1.)
+        plt.yscale("log")
+        return self.line,
+
+    def update(self, iteration):
+        self.get_new_lines()
+        while self.lines:
+            line = self.lines.pop(0)
+            if re.match(" *[0-9]+,", line):
+                entries = line.split(",")
+                self.data.loc[self.data.shape[0]] = [int(entries[0])] + [float(e) for e in entries[1:]]
+                last_iter = self.data["iteration"][self.data.shape[0] - 1]
+                last_value = self.data["normalized_residual"][self.data.shape[0] - 1]
+                if last_iter > plt.xlim()[1]:
+                    plt.xlim(0, plt.xlim()[1]*2)
+                if last_value < plt.ylim()[0]:
+                    plt.ylim(plt.ylim()[0]*.1, plt.ylim()[1])
+                elif last_value > plt.ylim()[1]:
+                    plt.ylim(plt.ylim()[0], plt.ylim()[1]*10)
+        self.line.set_data(self.data["iteration"], self.data["normalized_residual"])
+        return self.line,
