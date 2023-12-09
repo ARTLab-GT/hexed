@@ -81,13 +81,13 @@ def joukowsky(thickness, camber = 0., n_points = 1000, scale = True):
 zhukovsky = joukowsky
 
 class History_plot:
-    def infinite_generator(self):
-        iteration = 0
-        while not self.stop:
-            yield iteration
-            iteration += 1
+    column_blacklist = ["flow_time", "time_step"]
 
-    def get_new_lines(self):
+    def _infinite_generator(self):
+        while not self.stop:
+            yield None
+
+    def _read_new_lines(self):
         if not os.path.exists(self.directory + "output.txt"): return
         with open(self.directory + "output.txt", "rb") as output_file:
             output_file.seek(self.file_position, 0)
@@ -102,40 +102,65 @@ class History_plot:
         self.data = None
         self.lines = []
         while self.data is None:
-            self.get_new_lines()
+            self._read_new_lines()
             while self.lines:
                 line = self.lines.pop(0).replace(" ", "")
                 if re.match("iteration,", line):
                     self.data = pd.DataFrame(columns = line.split(","))
                     break
             time.sleep(self.interval)
-        self.fig = plt.figure()
-        self.line, = plt.plot([], [])
+        self.plot_columns = [col for col in self.data.columns if col not in self.column_blacklist + ["iteration"]]
         self.stop = False
-        ani = FuncAnimation(self.fig, self.update, frames = self.infinite_generator, init_func = self.init,
+        self.fig, self.axs = plt.subplots(1, len(self.plot_columns))
+        plt.tight_layout()
+        self.fig.set_size_inches(18, 5)
+        ani = FuncAnimation(self.fig, self._update, frames = self._infinite_generator, init_func = self._init,
                             blit = True, repeat = False, interval = int(self.interval*1e3), cache_frame_data = False)
         plt.show()
 
-    def init(self):
-        plt.xlim(0, 1)
-        plt.ylim(0.1, 1.)
-        plt.yscale("log")
-        return self.line,
+    def _init(self):
+        self.curves = []
+        for i_col in range(len(self.plot_columns)):
+            ax = self.axs[i_col]
+            self.curves.append(ax.plot([], [])[0])
+            ax.set_xlim(0, 1)
+            ax.grid(True)
+            ax.set_xlabel("iteration")
+            ax.set_ylabel(self.plot_columns[i_col])
+        self.axs[0].set_ylim(0.1, 1.)
+        self.axs[0].set_yscale("log")
+        return self.curves
 
-    def update(self, iteration):
-        self.get_new_lines()
+    def _update(self, _):
+        self._read_new_lines()
         while self.lines:
             line = self.lines.pop(0)
+            if line.startswith("simulation complete"):
+                self.stop = True
             if re.match(" *[0-9]+,", line):
                 entries = line.split(",")
                 self.data.loc[self.data.shape[0]] = [int(entries[0])] + [float(e) for e in entries[1:]]
                 last_iter = self.data["iteration"][self.data.shape[0] - 1]
                 last_value = self.data["normalized_residual"][self.data.shape[0] - 1]
-                if last_iter > plt.xlim()[1]:
-                    plt.xlim(0, plt.xlim()[1]*2)
-                if last_value < plt.ylim()[0]:
-                    plt.ylim(plt.ylim()[0]*.1, plt.ylim()[1])
-                elif last_value > plt.ylim()[1]:
-                    plt.ylim(plt.ylim()[0], plt.ylim()[1]*10)
-        self.line.set_data(self.data["iteration"], self.data["normalized_residual"])
-        return self.line,
+                if last_iter > self.axs[0].get_xlim()[1]:
+                    for ax in self.axs:
+                        ax.set_xlim(0, ax.get_xlim()[1]*2)
+                if last_value < self.axs[0].get_ylim()[0]:
+                    self.axs[0].set_ylim(self.axs[0].get_ylim()[0]*.1, self.axs[0].get_ylim()[1])
+                elif last_value > self.axs[0].get_ylim()[1]:
+                    self.axs[0].set_ylim(self.axs[0].get_ylim()[0], self.axs[0].get_ylim()[1]*10)
+            for i_col in range(1, len(self.plot_columns)):
+                ax = self.axs[i_col]
+                col = self.plot_columns[i_col]
+                if self.data.shape[0] == 2:
+                    ax.set_ylim(self.data[col].min(), self.data[col].max())
+                else:
+                    last_value = self.data[col][self.data.shape[0] - 1]
+                    ylim = ax.get_ylim()
+                    if last_value < ylim[0]:
+                        ax.set_ylim(ylim[0] - .5*(ylim[1] - ylim[0]), ylim[1])
+                    elif last_value > ylim[1]:
+                        ax.set_ylim(ylim[0], ylim[1] + .5*(ylim[1] - ylim[0]))
+        for i_col in range(len(self.plot_columns)):
+            self.curves[i_col].set_data(self.data["iteration"], self.data[self.plot_columns[i_col]])
+        return self.curves
