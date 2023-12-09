@@ -59,6 +59,12 @@ print_force = {
     println({side force coefficient: } + side_force_coef)
 }
 force_coef_expr = {lift_coef = lift_coef; drag_coef = drag_coef;}
+compute_heating = {
+    integrand_surface = heat_flux_expr
+    integrate_surface
+    heating_rate = integral_surface_heat_flux
+}
+heating_rate_expr = {heating_rate = heating_rate;}
 freestream_spec_int_ener = {(freestream3/freestream2 - 0.5*(freestream0^2 + freestream1^2)/freestream2^2)}
 freestream_sound_speed_expr = {((heat_rat*(heat_rat - 1)*$freestream_spec_int_ener)^0.5)}
 vortex_nondim_veloc = 0.3
@@ -108,7 +114,11 @@ set_aerothermo = {
     $set_ramping
     viscosity_model = air_viscosity
     conductivity_model = air_conductivity
-    iterate = iterate + {
+    print_vars = print_vars + heating_rate_expr
+    iterate = {
+        $compute_heating
+    } + iterate + {
+        $compute_heating
         {alternate between time stepping strategies optimized for convection and diffusion}
         case1 = {
             case0 = {
@@ -129,6 +139,8 @@ set_geometry_refinement = {
     refine_if = {(uncertainty > geometry_uncertainty | snapping_problem) & ref_level < max_ref_level}
     unrefine_if = {ref_level > init_ref_level & !is_extruded}
 }
+
+plot_history = {shell {python3 -c "from hexed_utils import History_plot;History_plot()" &}}
 
 {scalar parameters}
 row_size = 6

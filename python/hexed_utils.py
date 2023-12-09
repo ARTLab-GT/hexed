@@ -127,8 +127,9 @@ class History_plot:
             ax.grid(True)
             ax.set_xlabel("iteration")
             ax.set_ylabel(self.plot_columns[i_col])
-        self.axs[0].set_ylim(0.1, 1.)
-        self.axs[0].set_yscale("log")
+            if self.plot_columns[i_col].endswith("residual"):
+                self.axs[i_col].set_ylim(0.1, 1.)
+                self.axs[i_col].set_yscale("log")
         return self.curves
 
     def _update(self, _):
@@ -141,26 +142,27 @@ class History_plot:
                 entries = line.split(",")
                 self.data.loc[self.data.shape[0]] = [int(entries[0])] + [float(e) for e in entries[1:]]
                 last_iter = self.data["iteration"][self.data.shape[0] - 1]
-                last_value = self.data["normalized_residual"][self.data.shape[0] - 1]
                 if last_iter > self.axs[0].get_xlim()[1]:
                     for ax in self.axs:
                         ax.set_xlim(0, ax.get_xlim()[1]*2)
-                if last_value < self.axs[0].get_ylim()[0]:
-                    self.axs[0].set_ylim(self.axs[0].get_ylim()[0]*.1, self.axs[0].get_ylim()[1])
-                elif last_value > self.axs[0].get_ylim()[1]:
-                    self.axs[0].set_ylim(self.axs[0].get_ylim()[0], self.axs[0].get_ylim()[1]*10)
-            for i_col in range(1, len(self.plot_columns)):
+            for i_col in range(len(self.plot_columns)):
                 ax = self.axs[i_col]
                 col = self.plot_columns[i_col]
-                if self.data.shape[0] == 2:
-                    ax.set_ylim(self.data[col].min(), self.data[col].max())
+                last_value = self.data[col][self.data.shape[0] - 1]
+                if col.endswith("residual"):
+                    if last_value < ax.get_ylim()[0]:
+                        ax.set_ylim(ax.get_ylim()[0]*.1, ax.get_ylim()[1])
+                    elif last_value > ax.get_ylim()[1]:
+                        ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[1]*10)
                 else:
-                    last_value = self.data[col][self.data.shape[0] - 1]
-                    ylim = ax.get_ylim()
-                    if last_value < ylim[0]:
-                        ax.set_ylim(ylim[0] - .5*(ylim[1] - ylim[0]), ylim[1])
-                    elif last_value > ylim[1]:
-                        ax.set_ylim(ylim[0], ylim[1] + .5*(ylim[1] - ylim[0]))
+                    if self.data.shape[0] == 2:
+                        ax.set_ylim(self.data[col].min(), self.data[col].max())
+                    else:
+                        ylim = ax.get_ylim()
+                        if last_value < ylim[0]:
+                            ax.set_ylim(ylim[0] - .5*(ylim[1] - ylim[0]), ylim[1])
+                        elif last_value > ylim[1]:
+                            ax.set_ylim(ylim[0], ylim[1] + .5*(ylim[1] - ylim[0]))
         for i_col in range(len(self.plot_columns)):
             self.curves[i_col].set_data(self.data["iteration"], self.data[self.plot_columns[i_col]])
         return self.curves
