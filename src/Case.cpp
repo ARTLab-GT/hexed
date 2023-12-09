@@ -306,7 +306,8 @@ Case::Case(std::string input_file)
     std::string header = "";
     Struct_expr vars(_vars("print_vars").value());
     for (std::string name : vars.names) {
-      header += format_str(1000, "%14s, ", name.c_str());
+      int width = std::max<int>(15, name.size());
+      header += format_str(1000, "%*s, ", width, name.c_str());
     }
     header.erase(header.end() - 2, header.end());
     return header;

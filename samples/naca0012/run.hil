@@ -26,6 +26,8 @@ attack = 4*degree
 {iteration parameters}
 print_freq = 200
 done = {normalized_residual < 1e-4}
+iterate = compute_force + iterate
+print_vars = print_vars + force_coef_expr
 
 {run simulation}
 $init
