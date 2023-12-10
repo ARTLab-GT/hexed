@@ -81,88 +81,102 @@ def joukowsky(thickness, camber = 0., n_points = 1000, scale = True):
 zhukovsky = joukowsky
 
 class History_plot:
+    r"""! \brief creates a real-time, interactive plot of the convergence history
+    \details Convergence history is obtained from the `output.txt` file which contains the console output of \ref hexecute.
+    Every column in the output whose name is not in `History_plot.column_blacklist` will be plotted in its own subplot.
+    Columns with names ending in `residual` will be plotted on a log scale.
+    A `History_plot` instance should be created in a separate process from the solver
+    but may be created before, after, or during the simulation---the plot will not appear until an `output.txt` file exists.
+    A `History_plot` can be created directly from the \ref hil "HIL" solver script with $\ref plot_history.
+    """
+    ## \brief names of output columns __not__ to plot
+    ## \details You may modify this variable for the class or for instances
     column_blacklist = ["flow_time", "time_step"]
 
     def _infinite_generator(self):
-        while not self.stop:
+        while not self._stop:
             yield None
 
     def _read_new_lines(self):
-        if not os.path.exists(self.directory + "output.txt"): return
-        with open(self.directory + "output.txt", "rb") as output_file:
-            output_file.seek(self.file_position, 0)
-            self.lines += [line.decode("utf-8") for line in output_file.readlines()]
-            self.file_position = output_file.tell()
+        if not os.path.exists(self._directory + "output.txt"): return
+        with open(self._directory + "output.txt", "rb") as output_file:
+            output_file.seek(self._file_position, 0)
+            self._lines += [line.decode("utf-8") for line in output_file.readlines()]
+            self._file_position = output_file.tell()
 
     def __init__(self, directory = "hexed_out", interval = 0.2):
+        r"""! \brief creates and shows an animated history plot
+        \param directory Convergence history will be obtained by looking for a file `output.txt` in `directory`.
+        \param interval The plot will be updated every `interval` seconds to include new iterations.
+        """
         if directory[-1] != "/": directory += "/"
-        self.directory = directory
-        self.interval = interval
-        self.file_position = 0
-        self.data = None
-        self.lines = []
-        while self.data is None:
+        self._directory = directory
+        self._interval = interval
+        self._file_position = 0
+        self._data = None
+        self._lines = []
+        while self._data is None:
             self._read_new_lines()
-            while self.lines:
-                line = self.lines.pop(0).replace(" ", "")
+            while self._lines:
+                line = self._lines.pop(0).replace(" ", "")
                 if re.match("iteration,", line):
-                    self.data = pd.DataFrame(columns = line.split(","))
+                    self._data = pd.DataFrame(columns = line.split(","))
                     break
-            time.sleep(self.interval)
-        self.plot_columns = [col for col in self.data.columns if col not in self.column_blacklist + ["iteration"]]
-        self.stop = False
-        self.fig, self.axs = plt.subplots(1, len(self.plot_columns))
+            time.sleep(self._interval)
+        self._plot_columns = [col for col in self._data.columns if col not in self.column_blacklist + ["iteration"]]
+        self._stop = False
+        self._fig, self._axs = plt.subplots(1, len(self._plot_columns))
         plt.tight_layout()
-        self.fig.set_size_inches(18, 5)
-        ani = FuncAnimation(self.fig, self._update, frames = self._infinite_generator, init_func = self._init,
-                            blit = True, repeat = False, interval = int(self.interval*1e3), cache_frame_data = False)
+        self._fig.set_size_inches(18, 5)
+        ani = FuncAnimation(self._fig, self._update, frames = self._infinite_generator, init_func = self._init,
+                            blit = True, repeat = False, interval = int(self._interval*1e3), cache_frame_data = False)
         plt.show()
 
     def _init(self):
-        self.curves = []
-        for i_col in range(len(self.plot_columns)):
-            ax = self.axs[i_col]
-            self.curves.append(ax.plot([], [])[0])
+        self._curves = []
+        for i_col in range(len(self._plot_columns)):
+            ax = self._axs[i_col]
+            self._curves.append(ax.plot([], [])[0])
             ax.set_xlim(0, 1)
             ax.grid(True)
             ax.set_xlabel("iteration")
-            ax.set_ylabel(self.plot_columns[i_col])
-            if self.plot_columns[i_col].endswith("residual"):
-                self.axs[i_col].set_ylim(0.1, 1.)
-                self.axs[i_col].set_yscale("log")
-        return self.curves
+            ax.set_ylabel(self._plot_columns[i_col])
+            if self._plot_columns[i_col].endswith("residual"):
+                self._axs[i_col].set_ylim(0.1, 1.)
+                self._axs[i_col].set_yscale("log")
+        return self._curves
 
     def _update(self, _):
         self._read_new_lines()
-        while self.lines:
-            line = self.lines.pop(0)
+        while self._lines:
+            line = self._lines.pop(0)
             if line.startswith("simulation complete"):
-                self.stop = True
+                self._stop = True
             if re.match(" *[0-9]+,", line):
                 entries = line.split(",")
-                self.data.loc[self.data.shape[0]] = [int(entries[0])] + [float(e) for e in entries[1:]]
-                last_iter = self.data["iteration"][self.data.shape[0] - 1]
-                if last_iter > self.axs[0].get_xlim()[1]:
-                    for ax in self.axs:
+                self._data.loc[self._data.shape[0]] = [int(entries[0])] + [float(e) for e in entries[1:]]
+                last_iter = self._data["iteration"][self._data.shape[0] - 1]
+                if last_iter > self._axs[0].get_xlim()[1]:
+                    for ax in self._axs:
                         ax.set_xlim(0, ax.get_xlim()[1]*2)
-            for i_col in range(len(self.plot_columns)):
-                ax = self.axs[i_col]
-                col = self.plot_columns[i_col]
-                last_value = self.data[col][self.data.shape[0] - 1]
+            for i_col in range(len(self._plot_columns)):
+                ax = self._axs[i_col]
+                col = self._plot_columns[i_col]
+                last_value = self._data[col][self._data.shape[0] - 1]
                 if col.endswith("residual"):
                     if last_value < ax.get_ylim()[0]:
                         ax.set_ylim(ax.get_ylim()[0]*.1, ax.get_ylim()[1])
                     elif last_value > ax.get_ylim()[1]:
                         ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[1]*10)
                 else:
-                    if self.data.shape[0] == 2:
-                        ax.set_ylim(self.data[col].min(), self.data[col].max())
+                    if self._data.shape[0] == 2:
+                        ax.set_ylim(self._data[col].min(), self._data[col].max())
                     else:
                         ylim = ax.get_ylim()
                         if last_value < ylim[0]:
                             ax.set_ylim(ylim[0] - .5*(ylim[1] - ylim[0]), ylim[1])
                         elif last_value > ylim[1]:
                             ax.set_ylim(ylim[0], ylim[1] + .5*(ylim[1] - ylim[0]))
-        for i_col in range(len(self.plot_columns)):
-            self.curves[i_col].set_data(self.data["iteration"], self.data[self.plot_columns[i_col]])
-        return self.curves
+        for i_col in range(len(self._plot_columns)):
+            self._curves[i_col].set_data(self._data["iteration"], self._data[self._plot_columns[i_col]])
+        return self._curves
