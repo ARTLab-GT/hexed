@@ -17,6 +17,7 @@ test_func.cpp
 test_Face_permutation.cpp
 test_filter_limit.cpp
 test_Hanging_vertex_matcher.cpp
+test_History_monitor.cpp
 test_Interpreter.cpp
 test_Iteration_status.cpp
 test_iterative.cpp
