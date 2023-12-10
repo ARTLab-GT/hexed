@@ -15,11 +15,15 @@ namespace hexed
  */
 class History_monitor
 {
+  int _samples;
+  int _start;
+  int _sz;
   std::vector<int> _iterations;
   std::vector<double> _values;
-  int _sz;
-  int _start;
-  int _end;
+  double _win_sz;
+  double _add_threshold;
+  double _min;
+  double _max;
 
   public:
   /*!\param window_size Window size as a fraction of the iteration count.
@@ -28,8 +32,8 @@ class History_monitor
    */
   History_monitor(double window_size, int max_samples);
   void add_sample(int iteration, double value); //!< \brief stipulates that the value of the variable to be monitored is `value` at iteration `iteration`
-  double max(); //!< \brief obtains the maximum of the variable over the window
   double min(); //!< \brief obtains the minimum of the variable over the window
+  double max(); //!< \brief obtains the maximum of the variable over the window
 };
 
 }
