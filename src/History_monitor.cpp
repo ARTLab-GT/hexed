@@ -18,7 +18,7 @@ void History_monitor::add_sample(int iteration, double value)
   _values[end] = value;
   ++_sz;
   while (_sz > _samples || _iterations[_start] < iteration*(1 - _win_sz)) {
-    ++_start;
+    _start = (_start + 1)%_samples;
     --_sz;
   }
   _min =  huge;
