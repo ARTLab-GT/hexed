@@ -520,22 +520,22 @@ __default:__ 10
 number of sub-iterations to run in each nominal iteration to get efficient Chebyshev-accelerated diffusion (when $\ref set_shock has been called)
 
 <hr>
-\subsubsection aerothermo_initial_iters
+\subsubsection ramping_initial_iters
 __type:__ integer \n
 __default:__ 1000 \n
-number of initial iterations to run at a small safety factor (\ref aerothermo_initial_safety) to let the artificial viscosity catch up (when $\ref set_aerothermo has been called)
+number of initial iterations to run at a small safety factor (\ref ramping_initial_safety) to let the artificial viscosity catch up (when $\ref set_ramping has been called)
 
 <hr>
-\subsubsection aerothermo_initial_safety
+\subsubsection ramping_initial_safety
 __type:__ float \n
 __default:__ 3e-3 \n
 safety factor to use in initial iterations
 
 <hr>
-\subsubsection aerothermo_final_safety
+\subsubsection ramping_final_safety
 __type:__ float \n
 __default:__ 0.7 \n
-will revert to this factor after initial iterations are complete (when $\ref set_aerothermo)
+will revert to this factor after initial iterations are complete (when $\ref set_ramping)
 
 <hr>
 
@@ -544,12 +544,50 @@ The following variables are used to execute actions.
 Some are Heisenberg variables which, when evaluated, cause the solver to perform certain tasks,
 while others are simply HIL macros.
 Most of the time you shouldn't need to know about most of these variables.
-There are builtin macros to deal with them for you.
+The only ones you need to use in every simulation are `init` and `run.
+The remaining ones are either called by those two are are only necessary for specific situations,
+but all are made available to you to help you deal with edge cases that the default behavior does not cover.
 See example cases for standard best practices.
-This documentation exists to help you understand the implementation of the builtin macros and to help you in special cases
-where the standard workflows are inadequate.
 
 \subsection command_list List of Command Variables
+
+<hr>
+\subsubsection init
+__type:__ string (macro) \n
+Generates mesh and initializes solver.
+Behavior is roughly the following:
+-# creates working directory if it does not already exist
+-# copies the inpute file to the working directory for the user's future reference
+-# sets an automatically-determined variables
+-# calls \ref create_solver
+-# calls \ref init_refinement
+-# calls \ref add_geom
+-# calls \ref refine as many times as appropriate
+-# calls \ref split_layers as many times as appropriate
+-# calls \ref init_state
+-# visualizes solution
+
+<hr>
+\subsubsection run
+__type:__ string (macro) \n
+Executes solution (requires \ref init to have been called).
+Behavior is roughly the following:
+-# creates \ref runtime_cmd "runtime_cmd.hil" if it does not already exist.
+-# calls \ref iterate as many times as appropriate
+-# visualizes solution
+
+<hr>
+\subsubsection iterate
+__type:__ string (macro) \n
+Executes one iteration (called by \ref run).
+Behavior is roughly the following:
+-# calls \ref update
+-# computes residuals
+-# prints history variables
+-# visualizes solution
+-# executes any commands in \ref runtime_cmd "runtime_cmd.hil" and empties the file
+
+The user can modify the behavior of the iteration loop by adding additional \ref hil "HIL" code to the beginning or the end of this macro.
 
 <hr>
 \subsubsection create_solver
@@ -610,6 +648,36 @@ Evaluates the residuals and assigns them to float variables \ref residual_moment
 Returns the empty string.
 
 <hr>
+\subsubsection compute_forces
+__type:__ string (macro) \n
+Computes aerodynamic forces and force coefficients.
+Will assign values to the following variables
+- `force0`
+- `force1`
+- `force2`
+- `drag`
+- `lift`
+- `side_force`
+- `drag_coef`
+- `lift_coef`
+- `side_force_coef`
+
+Any of the above which are not applicable to the dimensionality of the problem are set to zero.
+This macro involves computing integrals, so it has non-negligible performance overhead if called very frequently.
+
+<hr>
+\subsubsection print_forces
+__type:__ string (macro) \n
+Calls \ref compute_forces and prints the results in a pretty way.
+
+<hr>
+\subsubsection plot_history
+__type:__ string (macro) \n
+Creates a real-time, interactive plot of the convergence history.
+Specifically, it starts a background process which creates a `hexed_utils.History_plot` instance in a Python interpreter.
+Usually, this macro should be executed before \ref init and \ref run.
+
+<hr>
 \subsubsection update
 __type:__ Heisenberg string \n
 Executes \ref print_freq solver iterations and returns an empty string.
@@ -656,9 +724,21 @@ __type:__ string (macro) \n
 Configures settings to be good for shock capturing (in particular turning on smoothness-based artificial viscosity).
 
 <hr>
+\subsubsection set_ramping
+__type:__ string (macro) \n
+Implements a crude CFL ramping scheme.
+The CFL safety factor is initially set to a very small value (\ref ramping_initial_safety)
+and then after a set number of iterations (\ref ramping_initial_iters) it is instantaneously increased to a reasonable value (\ref ramping_final_safety).
+The reason why this is necessary is that the artificial viscosity coefficient can take time to adjust to the flow conditions,
+so an initial condition where the flow does not satisfy the boundary conditions and the artificial viscosity coefficient is zero can cause robustness problems.
+It is usually only necessary in supersonic viscous simulations.
+
+<hr>
 \subsubsection set_aerothermo
 __type:__ string (macro) \n
-Configures settings to be good for aerothermodynamics (assumes $\ref set_shock has already been called).
+Configures settings to be good for aerothermodynamics.
+Assumes $\ref set_shock has already been called.
+Automaticall calls $\ref set_ramping.
 
 <hr>
 
