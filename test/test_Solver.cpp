@@ -186,19 +186,18 @@ class Tanh : public hexed::Spacetime_func
   }
 };
 
-class Parabola : public hexed::Surface_geometry
+class Parabola : public hexed::Surface_geom
 {
   public:
-  virtual std::array<double, 3> project_point(std::array<double, 3> point)
+  hexed::Nearest_point<Eigen::Dynamic> nearest_point(hexed::Mat<> point, double, double) override
   {
-    point[1] = 0.1*point[0]*point[0];
-    return point;
+    return hexed::Nearest_point<Eigen::Dynamic>(point); // empty point
   }
-  virtual std::vector<double> line_intersections(std::array<double, 3> point0, std::array<double, 3> point1)
+  std::vector<double> intersections(hexed::Mat<> point0, hexed::Mat<> point1) override
   {
     // only works for vertical lines
     if (std::abs(point0[0] - point1[0]) > 1e12) throw std::runtime_error("only for toy cases where the line is vertical");
-    double intersection = 0.1*point0[0]*point0[0]/(point1[1] - point0[1]);
+    double intersection = 1. + 0.3*point0[0]*point0[0]/(point1[1] - point0[1]);
     return {10., intersection, -3.}; // add some other points just to try to confuse the face snapper
   }
 };
@@ -279,7 +278,7 @@ TEST_CASE("Solver")
     int sn1 = sol.mesh().add_element(0,  true, {1, 0, 0});
     sol.mesh().connect_cartesian(0, {sn0, sn1}, {0}, {false, true});
     sol.mesh().cleanup();
-    sol.relax_vertices();
+    sol.mesh().relax(0.5);
     REQUIRE(sol.sample(0, false, sn0, 4, hexed::Position_func())[0] == Catch::Approx(0.8*0.5));
     REQUIRE(sol.sample(0,  true, sn1, 4, hexed::Position_func())[0] == Catch::Approx(0.8*1.375));
     REQUIRE(sol.sample(0,  true, sn1, 4, hexed::Position_func())[1] == Catch::Approx(0.8*0.5));
@@ -298,7 +297,7 @@ TEST_CASE("Solver")
     sol.mesh().connect_rest(catchall_bc);
     sol.mesh().cleanup();
     sol.mesh().valid().assert_valid();
-    sol.snap_vertices();
+    sol.mesh().relax(0.);
     sol.calc_jacobian();
     sol.initialize(hexed::Constant_func({0., 0., 1.4, 1./.4})); // initialize with zero velocity and unit speed of sound
     sol.update(); // sets the time step scale (among other things)
@@ -395,18 +394,21 @@ TEST_CASE("Solver")
     }
     SECTION("Surface_mbc")
     {
-      int el_sn = sol.mesh().add_element(1, true, {0, 0});
-      int bc_sn = sol.mesh().add_boundary_condition(new hexed::Copy, new hexed::Surface_mbc{new Parabola});
-      sol.mesh().connect_boundary(1, true, el_sn, 1, 1, bc_sn);
-      sol.mesh().connect_rest(catchall_bc);
-      sol.mesh().cleanup();
-      sol.mesh().valid().assert_valid();
-      sol.calc_jacobian();
+      static_assert (hexed::config::max_row_size >= 4);
+      hexed::Solver sol4 {2, 4, 0.8, true};
+      int catchall_bc4 = sol4.mesh().add_boundary_condition(new hexed::Copy(), new hexed::Null_mbc());
+      int el_sn = sol4.mesh().add_element(1, true, {0, 0});
+      int bc_sn = sol4.mesh().add_boundary_condition(new hexed::Copy, new hexed::Geom_mbc{new Parabola});
+      sol4.mesh().connect_boundary(1, true, el_sn, 1, 1, bc_sn);
+      sol4.mesh().connect_rest(catchall_bc4);
+      sol4.mesh().cleanup();
+      sol4.mesh().valid().assert_valid();
+      sol4.calc_jacobian();
       // top element face should now be a parabola
-      REQUIRE(sol.integral_field(hexed::Constant_func({1.}))[0] == Catch::Approx(0.1*0.4*0.4*0.4/3.));
+      REQUIRE(sol4.integral_field(hexed::Constant_func({1.}))[0] - .4*.4 == Catch::Approx(.3*0.4*0.4*0.4/3.));
       // make sure that snapping again doesn't change anything
-      sol.calc_jacobian();
-      REQUIRE(sol.integral_field(hexed::Constant_func({1.}))[0] == Catch::Approx(0.1*0.4*0.4*0.4/3.));
+      sol4.calc_jacobian();
+      REQUIRE(sol4.integral_field(hexed::Constant_func({1.}))[0] - .4*.4 == Catch::Approx(.3*0.4*0.4*0.4/3.));
     }
   }
 }
@@ -546,8 +548,7 @@ class Extrude_hanging : public Test_mesh
     sol.mesh().extrude();
     sol.mesh().connect_rest(bc_sn);
     sol.mesh().cleanup();
-    for (int i = 0; i < 2; ++i) sol.relax_vertices();
-    sol.snap_vertices();
+    for (int i = 0; i < 2; ++i) sol.mesh().relax(.5);
   }
 };
 
@@ -758,7 +759,7 @@ TEST_CASE("face extrusion")
     int bc_sn = solver.mesh().add_boundary_condition(new hexed::Copy(), new Boundary_perturbation());
     solver.mesh().extrude();
     solver.mesh().cleanup();
-    for (int i = 0; i < 3; ++i) solver.relax_vertices(); // so that we can see better
+    for (int i = 0; i < 3; ++i) solver.mesh().relax(.5); // so that we can see better
     solver.mesh().connect_rest(bc_sn);
     solver.calc_jacobian();
     hexed::Interpreter inter;

@@ -2,11 +2,11 @@
 
 When contributing to Hexed, please adhere to these guidelines.
 Some are standard practice in software development,
-which I feel the need to specify since most of the people who contribute to Hexed are not software engineers by training.
+which I feel the need to specify since people contributing to Hexed may not be software engineers by training.
 Others are meant to standardize what is otherwise a matter of personal preference.
 
 \section contrib_general General procedures
-Please do __not__ commit or push to the `master` branch.
+Please do __not__ commit or push to the `main` branch.
 The standard workflow should be the following:
 -# Create a new branch.
 -# Implement changes.
@@ -16,8 +16,8 @@ After reviewing the pull request, the maintainer will merge it and delete the br
 You are encouraged to create as many new branches as you like, for any reason,
 even if they are just experiments you don't intend to merge.
 However, if you are completely done with a branch, please delete it.
-You are also encouraged to push frequently (at least once per work day)
--- productivity is maximized when everyone can see the latest version of everything.
+You are also encouraged to push frequently
+(at least once per work day)---productivity is maximized when everyone can see the latest version of everything.
 Finally, development should be test-driven as much as possible,
 granted the inherent difficulty of testing a computational physics solver.
 
@@ -33,12 +33,14 @@ Please adhere to the following style conventions whenever possible.
 
 \subsection file_formatting File formatting
 - File names must not contain whitespace or other characters that have meaning in shell commands.
+- Prefer underscores (`_`) to hyphens (`-`) or camel case as word separaters in file names.
 - Source files must not contain the tab character. C++ code should be indented with 2 spaces
   and Python code should be indented with 4 spaces.
+- There should be no trailing spaces at the ends of lines.
 - Use blank lines sparingly.
 
 \subsection Names
-(of variables, functions, namespaces, classes, macros, etc. Anything in the code)
+(of variables, functions, namespaces, classes, macros, etc. Anything in the code.)
 - Should contain words, abbreviations, and/or numbers separated by underscores (not camelCase, and not multiplewordswithoutspaces).
 - Names of classes should begin with a capital letter. Otherwise, all letters should be lowercase.
 - A name should be a description of the variable it refers to.
@@ -48,7 +50,8 @@ Please adhere to the following style conventions whenever possible.
 - Maintain conventions in \ref conventions.
 - When practical, avoid overly long names.
   Abbreviations are encouraged, especially in a local scope where there are fewer opportunities to confuse similar names.
-- Some examples of names I do not approve of:
+
+Some examples of names I do not approve of:
   - `eye` to refer to the identity matrix.
     References the pronunciation of the mathematical symbol, two levels removed from any descriptive meaning.
     I prefer the name `identity`.
@@ -62,28 +65,31 @@ If the code encounters a fatal problem, it should throw an exception
 (using the constructs of whatever language it is currently in) with a helpful error message.
 The message should identify _what_ exactly was found to be wrong
 so that someone capable of understanding the problem has a clue _where_ to start trying to figure out _why_.
-In the interest of performance, some functions in the C++ API may produce segmentation faults, memory leaks, or undefined behavior
+In the interest of performance, some functions in the \ref hexed "C++ API" may produce segmentation faults, memory leaks, or undefined behavior
 upon incorrect usage.
-However, such incorrect usage should be caught and avoided by the Python API or any other frontend.
+However, the \ref hexecute "executable" should catch incorrect usage and throw a useful exception.
 If an end user makes a mistake and obtains a segfault instead of an exception, I consider that a bug.
 Some common things I would like to avoid in this code are:
-- Don't just say something vague like "there was a problem" or give a numeric error code
+- Don't just say something vague like "something went wrong" "the operation could not be completed" or give a numeric error code
   that the user then has to look up to get any information.
+  I'm thinking of the error messages commonly encourtered in a certain operating system whose name ironically evokes transparency.
   Error messages should be as specific as possible.
-  I'm thinking of the error messages in a certain operating system whose name ironically suggests transparency.
-- Don't presume to guess why the problem occurred or give verbose suggestions about how to fix it.
-  Exceptions generally occur because you failed to understand the situation,
-  so your _a priori_ insight is probably a waste of space at best and actively misleading at worst.
+- Don't presume to guess exactly why the problem occurred or give verbose suggestions about how to fix it.
+  Exceptions generally occur because you _failed_ to anticipate what actually happened,
+  so your speculations are probably a waste of space at best and actively misleading at worst.
   Just say what the exact, concrete problem was.
+
+Hexed provides the \ref HEXED_ASSERT macro to facilitate generating exceptions with detailed information about where the error occurred in the code.
 
 \see \ref error_types
 
 \subsection Miscellaneous
 - Avoid `using namespace`. The code is clearer when namespaces are referenced explicitly.
 - _Everything_ in the library must be wrapped in the namespace \ref hexed to avoid creating naming conflicts for library users.
-  - Macros, which do not respect namespaces, should be prefixed with `HEXED_`.
+  - Macros, which do not respect namespaces, should be either prefixed with `HEXED_` or `#undef`'d after they are no longer needed.
 - Code should conform to the ISO C++ standard.
-  For example, don't use variable-length arrays or the `constexpr` form of `std::pow`, which are non-conforming features of GCC.
+  For example, don't use variable-length arrays or the `constexpr` form of `std::pow`, which are non-conforming features of GCC
+  (for `constexpr` math functions, see `hexed::math`).
 - The default integral type should be `int`.
   For example, don't use `unsigned` for loop indices and array sizes unless there is a specific reason to.
 

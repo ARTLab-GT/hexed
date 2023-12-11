@@ -206,53 +206,6 @@ Mesh& Solver::mesh() {return acc_mesh;}
 Storage_params Solver::storage_params() {return params;}
 const Stopwatch_tree& Solver::stopwatch_tree() {return stopwatch;}
 
-void Solver::relax_vertices(double factor)
-{
-  // relax the vertices
-  auto verts {acc_mesh.vertices()};
-  #pragma omp parallel for
-  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) verts[i_vert].calc_relax(factor);
-  #pragma omp parallel for
-  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) verts[i_vert].apply_relax();
-}
-
-void Solver::snap_vertices()
-{
-  auto& bc_cons {acc_mesh.boundary_connections()};
-  #pragma omp parallel for
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh.boundary_condition(bc_sn).mesh_bc->snap_vertices(bc_cons[i_con]);
-  }
-  // if any immobile vertices have strayed from their nominal position (probably by `eat`ing)
-  // snap them back where they belong
-  auto& elems = acc_mesh.cartesian().elements();
-  int nd = params.n_dim;
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto& elem = elems[i_elem];
-    for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-      Lock::Acquire a(elem.vertex(i_vert).lock);
-      auto& pos = elem.vertex(i_vert).pos;
-      double nom_sz = elem.nominal_size();
-      auto nom_pos = elem.nominal_position();
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        pos[i_dim] = nom_sz*(nom_pos[i_dim] + (i_vert/math::pow(2, nd - 1 - i_dim))%2);
-      }
-      pos(Eigen::seqN(0, nd)) += elem.origin;
-    }
-  }
-  // vertex relaxation/snapping will cause hanging vertices to drift away from hanging vertex faces they are supposed to be coincident with
-  // so now we put them back where they belong
-  auto& matchers = acc_mesh.hanging_vertex_matchers();
-  #pragma omp parallel for
-  for (int i_match = 0; i_match < matchers.size(); ++i_match) {
-    matchers[i_match].match(&Element::vertex_position<0>);
-    matchers[i_match].match(&Element::vertex_position<1>);
-    matchers[i_match].match(&Element::vertex_position<2>);
-  }
-}
-
 void Solver::snap_faces()
 {
   const int nd = params.n_dim;

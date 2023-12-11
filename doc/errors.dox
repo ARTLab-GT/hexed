@@ -2,15 +2,12 @@
 This page provides, for the end user, an overview of the different types of errors
 Hexed might produce, what they mean, and how to address them.
 
-\section user_errors User Errors
-- `hexed_py.User_error`
+\section hil_exceptions HIL Exceptions
+- `hexed::Interpreter::Hil_unhandled_exception`
 
-If you, see this error, the code is telling you that you did something incorrect.
-Most likely, an input parameter or combination of parameters you specified was somehow invalid.
-Figuring out _how_ to change the parameter to get what you want is your problem,
-but if the error message doesn't make it clear _what_ the problem is,
-or you believe your inputs were actually valid and this exeption was raised spuriously,
-please let \ref me know.
+This indicates that an error was encountered in the \ref hil frontend.
+It almost certainly means you made a simple mistake in your input file,
+but if you believe it is the result of a bug please let \ref me know.
 
 \section numerical_errors Numerical Errors
 - `hexed::assert::Numerical_exception`
@@ -29,9 +26,7 @@ please let \ref me know.
 - Python [builtin exceptions](https://docs.python.org/3/library/exceptions.html)
 
 These errors indicate that something went wrong in a way that I did not specifically anticipate.
-These are most likely the result of something you did wrong.
-They could be simply errors in your script that don't actually involve Hexed,
-they could be the results of erroneous inputs, or they could come from bugs.
+It could be the result of a mistake you made, or it could be the result of a bug.
 If you obtain one of these errors and it is not at all clear what, if anything, you did wrong,
 feel free to let \ref me know.
 

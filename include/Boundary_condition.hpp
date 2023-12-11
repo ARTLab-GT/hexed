@@ -241,54 +241,6 @@ class Nominal_pos : public Mesh_bc
   virtual inline void snap_node_adj(Boundary_connection&, const Basis&) {}
 };
 
-//! \brief implicitly represents a surface by supporting a set of geometric operations
-//! \details NASCART-GT provides a derived class representing a simplex geometry.
-//! \deprecated Prefer `Surface_geom` instead.
-class Surface_geometry
-{
-  public:
-  /*!
-   * Return a point on the surface.
-   * Invoking this function on a point already on the surface should return the same point.
-   * Implementation suggestion: return the nearest point on the surface.
-   */
-  virtual std::array<double, 3> project_point(std::array<double, 3> point) = 0;
-  /*!
-   * compute intersections between a line and the surface.
-   * Line is represented parametrically as a linear inter/extrapolation between 2 points.
-   * Each element of the return value represents the value of the parameter at an intersection between the line and the surface.
-   * That is, a value of 0 means that the line intersects at `point0`, a value of 1 means that the line intersects at `point1`,
-   * 0.5 means half way in between, etc.
-   */
-  virtual std::vector<double> line_intersections(std::array<double, 3> point0, std::array<double, 3> point1) = 0;
-  virtual ~Surface_geometry() = default;
-};
-
-//! a `Surface_geometry` which represents the union of other `Surface_geometry`s
-class Surface_set : public Surface_geometry
-{
-  std::vector<std::unique_ptr<Surface_geometry>> geoms;
-  public:
-  //! acquires ownership of surface geometries
-  Surface_set(std::vector<Surface_geometry*>);
-  //! finds projection from all member surface geometries and takes nearest
-  virtual std::array<double, 3> project_point(std::array<double, 3> point);
-  //! returns union of line intersections of all member surface geometries
-  virtual std::vector<double> line_intersections(std::array<double, 3> point0, std::array<double, 3> point1);
-};
-
-//! \brief snaps to a `Surface_geometry`
-//! \deprecated Use `Geom_mbc` instead.
-class Surface_mbc : public Mesh_bc
-{
-  std::unique_ptr<Surface_geometry> sg;
-  public:
-  //! acquire ownership of `*surf_geom`, which faces/vertices will be snapped to
-  inline Surface_mbc(Surface_geometry* surf_geom) : sg{surf_geom} {}
-  virtual void snap_vertices(Boundary_connection&);
-  virtual void snap_node_adj(Boundary_connection&, const Basis&);
-};
-
 //! \brief snaps to a `Surface_geom`
 class Geom_mbc : public Mesh_bc
 {

@@ -53,10 +53,6 @@ class Vertex
    * sign that I've been reading too much SnK...
    */
   void eat(Vertex& other);
-  //! compute (but do not apply) a new position resulting in a smoother grid.
-  void calc_relax(double factor = .5); //!< \deprecated use `Mesh::relax`
-  //! If all the `Transferable_ptr`s to this vertex have `mobile = true`, apply the relaxation computed by `calc_relax`.
-  void apply_relax(); //!< update `pos` to the position computed by `calc_relax`.
   //! determine the shared shareable_value of all `Transferable_ptr`s to this by applying `reduction`. Thread safe.
   double shared_value(reduction = vector_max); //!< cppcheck-suppress internalAstError
   static void connect(Vertex&, Vertex&); //!< specify that two vertices are connected by an edge
