@@ -23,9 +23,6 @@ Specifically, it addresses the following problems with conventional CFD:
 - Meshing usually takes a lot of the user's time.
   Although automated meshing algorithms exist, they tend to be fragile when applied to complex geometry.
   This is especially true when attempting to generate quad/hex meshes, on which solvers tend to perform better.
-- Solvers are generally slow.
-  Most solvers work well for relatively simpler problems but scale poorly (at least, compared to other branches of computational science)
-  when the flow involves complex features or high accuracy is required.
 - The results are highly dependent on user inputs,
   as there are usually not sufficient computational resources to obtain a fully grid- and time-converged solution.
   User inexperience or insufficient effort can lead to results that look plausible but in fact are completely incorrect.
@@ -43,13 +40,13 @@ Thus when you manage to get an answer you can generally be confident in its accu
 Hexed is written in C++ and is currently capable of solving the compressible, laminar Navier-Stokes equations for a calorically-perfect gas.
 It uses Cartesian meshes with hanging-node refinement, modified to include body-fitted cells at the geometry surface.
 In the relatively near future, I hope to include adaptive mesh refinement, moving geometry, and RANS turbulence modeling.
-It may not be the most robust or user-friendly, but I hope it makes your projects, if not easier, at least less tedious.
 
 \subsection citing Citing and Usage Guidelines
 Hexed is open source under terms specified in the [license](https://github.gatech.edu/ARTLab/hexed/blob/main/LICENSE.txt).
-This is version 0, the prototype.
-You are encouraged to study and experiment with it, but it is missing some important features and probably riddled with bugs.
-We hope to release a more complete, stable version in the next year or two.
+This is Version 0, the prototype.
+You are encouraged to study and experiment with it, but it is missing some important features and probably riddled with bugs,
+and future versions may include substantial changes to the source code and user interface.
+We hope to release a stable and more feature-complete Version 1 in the next year or two.
 As a personal request, if you modify or improve this code, please share your work and credit our original version.
 We welcome pull requests.
 If you use Hexed in any academic research, please cite one or both of the following publications:
@@ -86,9 +83,9 @@ note = {submitted for publication},
 
 \subsection Contact
 \anchor me
-This code is developed and maintained by me, Micaiah Smith-Pierce.
+This code is maintained by Micaiah Smith-Pierce.
 I am a PhD student of Professor Stephen Ruffin at the Aerothermodynamics Research and Technology Laboratory (ARTLab),
-of the Daniel Guggenheim School of Aerospace Engineering at Georgia Tech.
+of the Georgia Tech School of Aerospace Engineering.
 If you have any questions or feedback, you can reach me at micaiah@gatech.edu or on [Github](https://github.gatech.edu/mcsp3).
 
 _Generated on \today for Hexed \proj_version._
