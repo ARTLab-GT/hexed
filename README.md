@@ -10,10 +10,7 @@ __hex__  (_verb_)
 Welcome to Hexed, a Discontinuous Galerkin CFD solver with automated, unstructured quad/hex meshing!
 You are on the `main` branch, where the next version is being developed.
 For the lastest stable release version, please switch to [placeholder].
-For more information, please see the following:
-
-  [documentation](https://github.gatech.edu/pages/ARTLab/hexed/)
-| [source repository](https://github.gatech.edu/ARTLab/hexed)
-| [license](LICENSE.txt)
-| [installing](https://github.gatech.edu/pages/ARTLab/hexed/installation.html)
-| [contributing](https://github.gatech.edu/pages/ARTLab/hexed/contributing.html)
+For more information, including [installation instructions](https://github.gatech.edu/pages/ARTLab/hexed/installation.html)
+and [contributing guidelines](https://github.gatech.edu/pages/ARTLab/hexed/contributing.html),
+please see the [documentation](https://github.gatech.edu/pages/ARTLab/hexed/).
+Hexed is open source; see [LICENSE.txt](LICENSE.txt) for terms.
