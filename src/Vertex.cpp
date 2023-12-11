@@ -57,19 +57,6 @@ bool Vertex::needs_smooth()
   return std::any_of(trbl_ptrs.begin(), trbl_ptrs.end(), [](Transferable_ptr* ptr){return ptr->needs_smooth;});
 }
 
-void Vertex::calc_relax(double factor)
-{
-  relax.setZero();
-  for (Vertex* neighbor : neighbors) relax += neighbor->pos;
-  relax = factor*(relax/neighbors.size() - pos);
-}
-
-void Vertex::apply_relax()
-{
-  if (is_mobile()) pos += relax;
-  relax.setZero();
-}
-
 void Vertex::connect(Vertex& vert0, Vertex& vert1)
 {
   if (&vert0 != &vert1) {

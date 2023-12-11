@@ -125,14 +125,6 @@ class Solver
    */
   virtual Mesh& mesh();
   virtual Storage_params storage_params();
-  //! moves all vertices to the mean of the current position and the mean of the neighbors' positions
-  virtual void relax_vertices(double factor = .5); //!< \deprecated use `Mesh::relax`
-  /*! \brief apply `Mesh_bc`s
-   * \details This is where hanging vertices are snapped to their coarse faces.
-   * \note if some elements participate in multiple BCs, then snapping may not satisfy all exactly.
-   *       However, if performed multiple times, it should converge;
-   */
-  virtual void snap_vertices(); //!< \deprecated tree meshing does this automatically
   //! warps the boundary elements such that the element faces coincide with the boundary at their quadrature points.
   virtual void snap_faces();
   /*!

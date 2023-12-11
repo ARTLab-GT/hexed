@@ -35,27 +35,6 @@ TEST_CASE("Deformed_element")
   hexed::Storage_params params3d {1, 1, 3, 2};
   hexed::Deformed_element element3d {params3d};
 
-  SECTION("vertex relaxation")
-  {
-    hexed::Storage_params params3d {3, 5, 3, 4};
-    hexed::Deformed_element elem3d {params3d, {1, 2, -1}, 0.2};
-    elem3d.vertex(5).calc_relax();
-    elem3d.vertex(5).apply_relax();
-    REQUIRE_THAT(elem3d.vertex(5).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{0.4 - 0.1/3., 0.4 + 0.1/3., -0.1/3.}, hexed::math::Approx_equal(0, 1e-12)));
-
-    hexed::Storage_params params2d {3, 4, 2, 4};
-    hexed::Deformed_element elem2d {params2d, {1, 2, -1}, 1.};
-    REQUIRE_THAT(elem2d.vertex(0).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{1., 2., 0.}, hexed::math::Approx_equal(0, 1e-12)));
-    REQUIRE_THAT(elem2d.vertex(1).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{1., 3., 0.}, hexed::math::Approx_equal(0, 1e-12)));
-    REQUIRE_THAT(elem2d.vertex(2).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{2., 2., 0.}, hexed::math::Approx_equal(0, 1e-12)));
-    elem2d.vertex(0).calc_relax();
-    elem2d.vertex(0).apply_relax();
-    REQUIRE_THAT(elem2d.vertex(0).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{1.25, 2.25, 0.}, hexed::math::Approx_equal(0, 1e-12)));
-
-    hexed::Deformed_element elem3d_1 {params3d, {3,}, 1.};
-    REQUIRE_THAT(elem3d_1.vertex(0).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{3., 0., 0.}, hexed::math::Approx_equal(0, 1e-12)));
-  }
-
   SECTION("position calculation")
   {
     const int row_size = 3;

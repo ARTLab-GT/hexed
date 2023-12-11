@@ -114,7 +114,7 @@ TEST_CASE("Vertex")
     REQUIRE(!ptr1_9);
   }
 
-  SECTION("connection and position relaxation")
+  SECTION("connection")
   {
     hexed::Vertex::Transferable_ptr vert0 {{0., 0., 0.}, true};
     hexed::Vertex::Transferable_ptr vert1 {{2., 0., 0.}, true};
@@ -146,45 +146,8 @@ TEST_CASE("Vertex")
         hexed::Vertex::connect(*vert3, *vert1);
         vert0->eat(*vert3);
         REQUIRE(vert0->mass() == 2);
-        vert0->calc_relax();
-        vert0->apply_relax();
-        REQUIRE_THAT(vert0->pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{1./6., 1./6., .5}, hexed::math::Approx_equal(0, 1e-12)));
       }
       REQUIRE(vert0->mass() == 1);
-    }
-
-    SECTION("calling relax once")
-    {
-      { // should only work while mobile
-        hexed::Vertex::Transferable_ptr immobile {{0., 0., 0.}, false};
-        vert0->eat(*immobile);
-        vert0->calc_relax();
-        REQUIRE_THAT(vert0->pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 0., 0.}, hexed::math::Approx_equal(0, 1e-12)));
-        vert0->apply_relax();
-        REQUIRE_THAT(vert0->pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 0., 0.}, hexed::math::Approx_equal(0, 1e-12)));
-      }
-      vert0->calc_relax();
-      vert0->apply_relax();
-      REQUIRE_THAT(vert1->pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{2., 0., 0.}, hexed::math::Approx_equal(0, 1e-12)));
-      REQUIRE_THAT(vert0->pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{.5, .5, 0.}, hexed::math::Approx_equal(0, 1e-12)));
-    }
-
-    SECTION("calling relax multiple times")
-    {
-      vert0->calc_relax();
-      vert0->calc_relax();
-      vert0->apply_relax();
-      vert0->apply_relax();
-      REQUIRE_THAT(vert1->pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{2., 0., 0.}, hexed::math::Approx_equal(0, 1e-12)));
-      REQUIRE_THAT(vert0->pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{.5, .5, 0.}, hexed::math::Approx_equal(0, 1e-12)));
-    }
-
-    SECTION("self-connection does nothing")
-    {
-      hexed::Vertex::connect(*vert0, *vert0);
-      vert0->calc_relax();
-      vert0->apply_relax();
-      REQUIRE_THAT(vert0->pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{.5, .5, 0.}, hexed::math::Approx_equal(0, 1e-12)));
     }
   }
 
