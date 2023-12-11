@@ -9,9 +9,11 @@ Also, please try to maintain these conventions when contributing to the code.
 - Unless otherwise specified, all quantities are dimensional in the applicable SI units
   (i.e., derived from m, kg, s, K).
 - Unless otherwise specified, all angles are radian.
+  Note, however, the radian is a concept for measuring angles,
+  not an SI base unit (the "unit" rad is [technically a dimensionless constant equal to 1](https://en.wikipedia.org/wiki/Radian)).
 - If you need to perform any unit conversions or reference physical constants,
   please use the values defined in `hexed::constants`,
-  which whenever possible are based on formal exact definitions
+  which are based on formal exact definitions
   (as opposed to approximations to some number of digits).
   In practice, of course, this isn't that important,
   but some obsessive part of my brain wants to know that all unit conversions are perfectly consistent
@@ -26,20 +28,20 @@ Also, please try to maintain these conventions when contributing to the code.
   The word "total" shall not be used to indicate stagnation quantities.
   To clarify, for any thermodynamic variable, the _stagnation_ value of that variable
   is the value it would take if the material in question were isentropically decelerated to zero velocity.
-  Thus stagnation pressure is not in general equal to the sum of static and dynamic pressures;
-  this is an approximation which is accurate in the limit as \f$ M \to 0 \f$.
+  For energy-type variables, "total" refers to the sum of internal (static) and kinetic components.
+  With that in mind, please recall the following results of basic aerodynamics:
+  - The stagnation pressure is not in general equal to the sum of static and dynamic pressures;
+    this is an approximation which is accurate in the limit as \f$ M \to 0 \f$.
+  - The total energy \f$ e_t = \rho e + \frac12 \rho v^2 \f$ is __not__ equal to the stagnation energy,
+    which for a CPG is given by \f$ e_0 = c_v T \left(1 + \frac{\gamma - 1}{2} M^2\right) \f$.
+  - The total enthalpy \f$ h_t = \rho h + \frac12 \rho v^2 \f$ __is__ equal to the stagnation enthalpy \f$ h_0 \f$.
 
 \subsection state_vector State vector
 The flow state vector (often simply referred to as `state`) consists of the
 conserved variables.
 It has components \[momentum, mass, total energy\]
-(a.k.a. [\f$ \rho \vec{v} \f$, \f$ \rho \f$, \f$ \rho u + \frac12 \rho v^2 \f$]). E.g., in 3D that is
+(a.k.a. [\f$ \rho \vec{v} \f$, \f$ \rho \f$, \f$ \rho e + \frac12 \rho v^2 \f$]). E.g., in 3D that is
 [momentum0 (\f$x\f$-direction), momentum1 (\f$y\f$-direction), momentum2 (\f$z\f$-direction), mass, total energy].
-"Total energy" means thermodynamic internal energy + kinetic energy.
-
-\note I have seen total energy inaccurately referred to as the "stagnation energy".
-The the value of the internal energy
-if the flow were isentropically decelerated to stagnation would not be equal to the sum of internal and kinetic energy.
 
 This order is different from most codes, which use the order (mass, momentum, energy).
 The order for Hexed was chosen because it groups the vector and scalar quantities together
@@ -59,7 +61,7 @@ They are defined as follows:
   the dimensionality. E.g., a 4th degree basis in 3 dimensions has row size 5
   and 125 quadrature points.
 - \anchor node __node__: An interpolation node for a basis of Lagrange (interpolating) polynomials.
-  These tend to coincide with the quadrature points for.
+  Hexed uses a collocated nodal scheme, so these coincide with the quadrature points.
 - \anchor vertex __vertex__: A single point shared by a collection of elements.
   Not to be confused with "node".
 
@@ -73,7 +75,7 @@ Some common abbreviations are defined as follows, in alphabetical order.
 - `elem`: mesh element
 - `ener`: energy
 - `enth`: enthalpy
-- `heat_rat`: ratio of heat capacities. Often denoted "gamma" in thermodynamics.
+- `heat_rat`: ratio of heat capacities. Often denoted \f$ \gamma \f$ ("gamma") in thermodynamics.
 - `i_`: index of ...
   - If this is an index in a nested loop, the inside loops may use `j_` and `k_`.
 - `n_`: number of ...

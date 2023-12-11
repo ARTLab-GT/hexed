@@ -105,7 +105,6 @@ serve as reference material on the API once you already know what you're doing.
 - \subpage boundary_conditions
 - \subpage error_types
 - \subpage conventions
-- \subpage visualization
 - \subpage geom_fitting
 - \subpage contributing
 - \subpage benchmarking

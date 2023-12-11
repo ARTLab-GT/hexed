@@ -138,13 +138,4 @@ if not quiet:
     plt.show()
 
 # write output file
-text = f"""
-1
-{n_interp} 1
-"""[1:]
-for i in range(n_interp):
-    text += f"{interp[i, 0]:.18e} {interp[i, 1]:.18e}\n"
-fname = ".".join(fname.split(".")[:-1])
-fname = fname + "_fitted.geom"
-with open(fname, "w") as out_file:
-    out_file.write(text)
+np.savetxt(f"{'.'.join(fname.split('.')[:-1])}_fitted.csv", interp, delimiter = ",")

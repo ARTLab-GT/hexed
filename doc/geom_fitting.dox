@@ -59,7 +59,7 @@ If you can get past the abstractness of it, it is useful for troubleshooting the
 The second plot shows the curve fit in physical space.
 By this plot you can decide whether you're satisfied with the accuracy of the fit and the smoothness of the curve.
 
-Finally, an output file named `[name]_fitted.geom` where `[name]` is the name of the input file with the extension removed will be generated.
-This will contain the curve-fit geometry in the NASCART-GT 2D geometry file format.
+Finally, an output file named `[name]_fitted.csv` where `[name]` is the name of the input file with the extension removed will be generated.
+This will contain the curve-fit geometry in CSV format.
 
 */
