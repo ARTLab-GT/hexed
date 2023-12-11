@@ -178,6 +178,13 @@ Case::Case(std::string input_file)
     _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, true, transport_models[0], transport_models[1], _inter.variables, printer));
     _solver().mesh().add_tree(bcs, mesh_extremes(all, 0));
     _solver().set_fix_admissibility(_vari("fix_therm_admis").value());
+    // create history monitors
+    _monitor_expr.reset(new Struct_expr(_vars("monitor_vars").value()));
+    for (std::string name : _monitor_expr->names) {
+      _monitors.emplace_back(_vard("monitor_window").value(), _vari("monitor_samples").value());
+      _inter.variables->assign(name + "_min", -huge);
+      _inter.variables->assign(name + "_max",  huge);
+    }
     return 0;
   }));
 
@@ -367,6 +374,13 @@ Case::Case(std::string input_file)
         _solver().set_art_visc_smoothness(_vard("art_visc_constant").value());
       }
       _solver().update();
+    }
+    auto sub = _inter.make_sub();
+    auto vals = _monitor_expr->eval(sub);
+    for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
+      _monitors[i_monitor].add_sample(iter, vals[i_monitor]);
+      _inter.variables->assign(_monitor_expr->names[i_monitor] + "_min", _monitors[i_monitor].min());
+      _inter.variables->assign(_monitor_expr->names[i_monitor] + "_max", _monitors[i_monitor].max());
     }
     return "";
   }));

@@ -4,6 +4,7 @@
 #include <fstream>
 #include "Solver.hpp"
 #include "Interpreter.hpp"
+#include "History_monitor.hpp"
 
 namespace hexed
 {
@@ -21,6 +22,8 @@ class Case
   Flow_bc* _make_bc(std::string name);
   bool _has_geom = false;
   std::unique_ptr<std::ofstream> _output_file; // anything printed to cout will also be printed here
+  std::unique_ptr<Struct_expr> _monitor_expr;
+  std::vector<History_monitor> _monitors;
   public:
   Case(std::string input_file = format_str(1000, "%s/include/interactive.hil", config::root_dir));
 };
