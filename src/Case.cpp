@@ -375,8 +375,7 @@ Case::Case(std::string input_file)
       }
       _solver().update();
     }
-    auto sub = _inter.make_sub();
-    auto vals = _monitor_expr->eval(sub);
+    auto vals = _monitor_expr->eval(_inter);
     for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
       _monitors[i_monitor].add_sample(iter, vals[i_monitor]);
       _inter.variables->assign(_monitor_expr->names[i_monitor] + "_min", _monitors[i_monitor].min());

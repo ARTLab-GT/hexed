@@ -56,7 +56,7 @@ def naca(desig, n_points = 1000, closure = "warp"):
 
 def joukowsky(thickness, camber = 0., n_points = 1000, scale = True):
     r"""! \brief constructs a [Joukowsky airfoil](https://en.wikipedia.org/wiki/Joukowsky_transform)
-    This is a family of airfoils with a cusped trailing edge which have analytic solutions for the incompressible flow around them.
+    \details This is a family of airfoils with a cusped trailing edge which have analytic solutions for the incompressible flow around them.
     \param thickness _approximate_ thickness-to-chord ratio
     \param camber (radian) angle between the trailing edge and the chord line
     \param n_points Number of points on the airfoil surface

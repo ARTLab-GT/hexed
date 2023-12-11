@@ -23,6 +23,8 @@ Termination condition.
 This should be a macro that evaluates to an integer.
 It will be evaluated at each iteration, and the simulation will continue iff it evaluates to \ref false.
 As should be clear from the default value, you __must__ set this variable yourself.
+You can consider setting it based on the \ref iteration "iteration count", \ref normalized_residual "residual",
+and/or \ref monitor_vars "output variable history".
 
 <hr>
 \subsubsection local_time
@@ -219,6 +221,16 @@ Specifies surface boundary condition.
 If `{auto}`, surface boundary condition will be determined automatically depending on the value of \ref transport_model.
 `{inviscid}` &rarr; `{nonpenetration}` and `{sutherland}` &rarr; `{no_slip}`.
 Otherwise, the name of a supported \ref boundary_conditions "Boundary condition type".
+
+<hr>
+\subsubsection monitor_vars
+__type:__ string \n
+__default:__ `{}` \n
+\ref struct_expr "Structured expression" defining variables to monitor the convergence history of.
+For each variable `myvar`, after every \ref update,
+variables `myvar_min` and `myvar_max` will be assigned to the minimum and maximum of `myvar` over the last \ref monitor_window fraction of the iterations
+among at most \ref monitor_samples evenly-spaced (roughly) samples.
+For additional details, see the implementation in `hexed::History_monitor`.
 
 <hr>
 \subsubsection temperature_offset
@@ -506,14 +518,6 @@ If this number is too large, the simulation might be unstable, but if it too sma
 The default value is adequate for almost all cases, but there are rare situations in which it might need to be reduced.
 
 <hr>
-\subsubsection buffer_dist
-__type:__ float \n
-__default:__ `0.8*sqrt(n_dim)` \n
-During the surface element deletion step of mesh generation, elements will be deleted iff their center is within `buffer_dist*nom_sz` of the geometry surface.
-As long as `buffer_dist >= .5*sqrt(n_dim)`, this guarantees that none of the remaining elements will intersect the surface,
-but as the default suggests, a somewhat larger value can help to ensure viable mesh quality.
-
-<hr>
 \subsubsection shock_sub_iters
 __type:__ integer \n
 __default:__ 10
@@ -536,6 +540,18 @@ safety factor to use in initial iterations
 __type:__ float \n
 __default:__ 0.7 \n
 will revert to this factor after initial iterations are complete (when $\ref set_ramping)
+
+<hr>
+\subsubsection monitor_window
+__type:__ float \n
+__default:__ 0.25 \n
+\see \ref monitor_vars
+
+<hr>
+\subsubsection monitor_samples
+__type:__ integer \n
+__default:__ 100 \n
+\see \ref monitor_vars
 
 <hr>
 
@@ -845,6 +861,11 @@ Begins the simulation uninitialized and is only assigned when \ref compute_resid
 __type:__ float \n
 Dimensional residual of the energy equation.
 Begins the simulation uninitialized and is only assigned when \ref compute_residuals is evaluated.
+
+<hr>
+\subsubsection normalized_residual
+__type:__ float \n
+Average of momentum, density, and energy residuals, each normalized by their value after the first iteration.
 
 <hr>
 \subsubsection av_advection_residual
