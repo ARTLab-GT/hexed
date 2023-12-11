@@ -22,10 +22,9 @@ thermal_bc = {temperature = 300}
 $set_aerothermo
 ramping_final_safety = .9
 art_visc_width = art_visc_width*.7
-$air_viscosity
 viscosity_model = air_viscosity
-conductivity_model = {ref_value = 1.4/0.4*specific_gas_air/.72*ref_value; ref_temperature = ref_temperature; offset = offset}
-done = {iteration >= 10*10^4}
+conductivity_model = {ref_value = 1.4/0.4*specific_gas_air/.72*air_visc_ref; ref_temperature = air_visc_ref_temp; offset = air_visc_offset}
+done = {iteration >= 10^5}
 vis_freq = 10000
 
 $plot_history

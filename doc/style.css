@@ -56,7 +56,7 @@ body, table, div, p, dl, #nav-tree .label, .title,
 
 /* format code blocks */
 code, div.fragment, pre.fragment {
-  font-family: "Ubuntu Mono", monospace;
+  font-family: "Noto Sans Mono", "Ubuntu Mono", monospace;
   color: var(--text-color);
   background-color: var(--highlight-color);
   border-radius: .2em;

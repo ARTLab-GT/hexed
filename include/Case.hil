@@ -81,8 +81,14 @@ vortex = {
     state2 = $vortex_mass
     state3 = $vortex_energy
 }
-air_viscosity = {ref_value = 1.716e-5; ref_temperature = 273.; offset = 111.}
-air_conductivity = {ref_value = .0241; ref_temperature = 273; offset = 194.}
+air_visc_ref = 1.716e-5
+air_visc_ref_temp = 273.
+air_visc_offset = 111.
+air_cond_ref = .0241
+air_cond_ref_temp = 273.
+air_cond_offset = 194.
+air_viscosity = {ref_value = air_visc_ref; ref_temperature = air_visc_ref_temp; offset = air_visc_offset}
+air_conductivity = {ref_value = air_cond_ref; ref_temperature = air_cond_ref_temp; offset = air_cond_offset}
 
 shock_sub_iters = 10; {number of sub-iterations to run in each nominal iteration to get efficient Chebyshev-accelerated diffusion}
 set_shock = {
@@ -175,6 +181,9 @@ vis_field_vars = state_vars + art_visc_expr
 vis_surface_vars = state_vars + visc_stress_expr + heat_flux_expr + pressure_coef_expr + skin_friction_coef_expr
 vis_n_sample = 10
 print_vars = iteration_expr + normalized_residual_expr + flow_time_expr + time_step_expr
+monitor_window = 0.25
+monitor_samples = 100
+monitor_vars = {}
 integrand_field = {}
 integrand_surface = {}
 max_angle = 10*degree

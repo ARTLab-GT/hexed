@@ -11,7 +11,7 @@ To distinguish it from the library and namespace, the command to _execute hexed_
 It supports a text-based interface in the \ref hil.
 
 A good basic example is the oblique shock case located in [samples/oblique_shock](https://github.gatech.edu/ARTLab/hexed/tree/main/samples/oblique_shock).
-In this directory, you should see two files -- `run.hil` is the input script (name and extension are arbitrary),
+In this directory, you should see two files---`run.hil` is the input script (name and extension are arbitrary),
 and `geom.csv` is a CSV file containing coordinates for a wedge geometry (see \ref add_geom for more information).
 To run this case, just type `hexecute run.hil`.
 You should see text output that looks something like:
@@ -53,7 +53,7 @@ In this directory will be a copy of the input file as well as a file `output.txt
 Also, each time you see `visualizing...done` in the command line output,
 the solver will have written a new set of `.h5` and `.xmf` files to this directory.
 You can view these files in Paraview by opening the `.xmf` (not `.h5`) files and selecting "XDMF Reader T" as the reader.
-Finally, the `hexed_out` directory will also contain an empty `runtime_cmd.hil`.
+Finally, the `hexed_out` directory will also contain an empty `runtime_cmd.hil` \anchor runtime_cmd.hil.
 Every time the solver prints output, it will execute the contents of this file as \ref hil "HIL" code and then overwrite it again with an empty file.
 Thus by writing HIL code to this file you can control the solver while it is running.
 I frequently use this to change the \ref done "termination condition" or the \ref max_safety "CFL constraint".
