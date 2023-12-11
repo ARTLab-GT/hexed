@@ -86,10 +86,16 @@ class Interpreter
    */
   Interpreter make_sub() const;
 
-  class Parsing_error : public assert::Exception
+  class Hil_unhandled_exception : public assert::Exception
   {
     public:
-    Parsing_error(std::string message) : Exception(message) {}
+    Hil_unhandled_exception(std::string message) : Exception(message) {}
+  };
+
+  class Hil_exception : public assert::Exception
+  {
+    public:
+    Hil_exception(std::string message) : Exception(message) {}
   };
 };
 
