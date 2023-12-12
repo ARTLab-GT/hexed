@@ -28,7 +28,7 @@ If look at these instructions and don't know what I'm talking about, skip to \re
 -# `make -j install`
 -# Hexed is now ready to use. To verify the success of the build, execute the following:
    - `test/unit` to run the unit tests.
-   - `cd ../samples/naca0012; hexecute run.hil` to run the [NACA 0012 sample case](https://github.gatech.edu/ARTLab/hexed/blob/test_tag/samples/naca0012/run.hil).
+   - `cd ../samples/naca0012; hexecute run.hil` to run the [NACA 0012 sample case](https://github.gatech.edu/ARTLab/hexed/blob/v0.1.0/samples/naca0012/run.hil).
 
 \section detailed Detailed instructions
 Since Hexed is meant for aerospace engineers, who often aren't programmers, this section provides a detailed tutorial on how to build the source.
