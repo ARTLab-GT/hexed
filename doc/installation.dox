@@ -144,10 +144,16 @@ OpenCASCADE Technology is an open source CAD Engine which Hexed uses to read and
 
 \subsection install_hexed Step 9: compile and install Hexed
 - `cd ~/codes`
-- `git clone git@github.gatech.edu:ARTLab/hexed.git`
-  - This may require you to
-    [add an SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
-    to your GitHub account, if you haven't already.
+- Obtain the Hexed source code.
+  - The simplest way to do this is by visiting the [releases](https://github.gatech.edu/ARTLab/hexed/releases) page,
+    downloading the latest one, and unpacking it in `~/codes`.
+  - However, if you want to make changes to the code or keep up to date with new releases, you should clone the GitHub repository:
+    `git clone git@github.gatech.edu:ARTLab/hexed.git`
+    - This may require you to
+      [add an SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
+      to your GitHub account, if you haven't already.
+  - You will, at this point, be on the `main` branch, which is the latest in-development version.
+    To switch to a stable release, you can do something like `git checkout v0.1.0 -b v0.1.0_branch`.
 - `cd hexed`
 - `mkdir build_Release`
 - `cd build_Release`
