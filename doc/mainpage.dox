@@ -42,7 +42,7 @@ It uses Cartesian meshes with hanging-node refinement, modified to include body-
 In the relatively near future, I hope to include adaptive mesh refinement, moving geometry, and RANS turbulence modeling.
 
 \subsection citing Citing and Usage Guidelines
-Hexed is open source under terms specified in the [license](https://github.gatech.edu/ARTLab/hexed/blob/main/LICENSE.txt).
+Hexed is open source under terms specified in the [license](https://github.gatech.edu/ARTLab/hexed/blob/v0.1.0/LICENSE.txt).
 This is Version 0, the prototype.
 You are encouraged to study and experiment with it, but it is missing some important features and probably riddled with bugs,
 and future versions may include substantial changes to the source code and user interface.

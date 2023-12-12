@@ -10,7 +10,7 @@ However, for most use cases, the executable should be sufficient.
 To distinguish it from the library and namespace, the command to _execute hexed_ is `hexecute` (sorry for my terrible sense of humor).
 It supports a text-based interface in the \ref hil.
 
-A good basic example is the oblique shock case located in [samples/oblique_shock](https://github.gatech.edu/ARTLab/hexed/tree/main/samples/oblique_shock).
+A good basic example is the oblique shock case located in [samples/oblique_shock](https://github.gatech.edu/ARTLab/hexed/tree/v0.1.0/samples/oblique_shock).
 In this directory, you should see two files---`run.hil` is the input script (name and extension are arbitrary),
 and `geom.csv` is a CSV file containing coordinates for a wedge geometry (see \ref add_geom for more information).
 To run this case, just type `hexecute run.hil`.

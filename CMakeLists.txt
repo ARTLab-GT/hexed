@@ -1,7 +1,7 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.16)
 
-project(hexed VERSION 0.0.0
-        DESCRIPTION "Discontinuous Galerkin engine for CFD with automated, unstructured quad/hex meshing."
+project(hexed VERSION 0.1.0
+        DESCRIPTION "discontinuous Galerkin CFD solver with automated, unstructured quad/hex meshing"
         LANGUAGES CXX)
 # get info about current build for documentation purposes
 string(TIMESTAMP DATE "%Y-%m-%d") # get the current date for reference purposes

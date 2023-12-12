@@ -1,7 +1,7 @@
 /*! \page geom_fitting Geometry fitting
 
 Hexed provides a script,
-[`hexed-fit-geom`](https://github.gatech.edu/ARTLab/hexed/blob/master/script/hexed-fit-geom),
+[`hexed-fit-geom`](https://github.gatech.edu/ARTLab/hexed/blob/v0.1.0/script/hexed-fit-geom),
 for creating a smooth curve fit to a 2D geometry.
 Given a geometry file, it computes parametric polynomial curve as a least squares fit to the geometry points.
 A new geometry file is created that contains the smooth fit sampled at an arbitrary number of points, uniformly distributed in parameter space.
@@ -13,7 +13,7 @@ The script is designed to work well for airfoils, but may also work for other ge
 The following argument is required:
 - __file name:__ Name of the file containing the input data points to which a smooth curve will be fitted.
   The file may have a  `.geom` extension, in which case it must be in the [NASCART-GT](https://github.gatech.edu/ARTLab/NASCART-GT)
-  geometry file format ([example](https://github.gatech.edu/ARTLab/NASCART-GT/blob/master/Examples/RAE2822_airfoil/RAE2822.geom)).
+  geometry file format ([example](https://github.gatech.edu/ARTLab/NASCART-GT/blob/v0.1.0/Examples/RAE2822_airfoil/RAE2822.geom)).
   Alternatively, it may have a `.txt` or `.csv` extension in which it must contain two columns of data representing \f$x\f$ and \f$y\f$ coordinates
   delimited by a single space or comma, respectively.
   This geometry should be smooth.
