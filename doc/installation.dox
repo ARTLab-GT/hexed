@@ -28,7 +28,7 @@ If look at these instructions and don't know what I'm talking about, skip to \re
 -# `make -j install`
 -# Hexed is now ready to use. To verify the success of the build, execute the following:
    - `test/unit` to run the unit tests.
-   - `cd ../samples/naca0012; hexecute run.hil` to run the [NACA 0012 sample case](https://github.gatech.edu/ARTLab/hexed/blob/v0.1.0/samples/naca0012/run.hil).
+   - `cd ../samples/naca0012; hexecute run.hil` to run the [NACA 0012 sample case](https://github.com/ARTLab-GT/hexed/blob/v0.1.1/samples/naca0012/run.hil).
 
 \section detailed Detailed instructions
 Since Hexed is meant for aerospace engineers, who often aren't programmers, this section provides a detailed tutorial on how to build the source.
@@ -145,15 +145,15 @@ OpenCASCADE Technology is an open source CAD Engine which Hexed uses to read and
 \subsection install_hexed Step 9: compile and install Hexed
 - `cd ~/codes`
 - Obtain the Hexed source code.
-  - The simplest way to do this is by visiting the [releases](https://github.gatech.edu/ARTLab/hexed/releases) page,
+  - The simplest way to do this is by visiting the [releases](https://github.com/ARTLab-GT/hexed/releases) page,
     downloading the latest one, and unpacking it in `~/codes`.
   - However, if you want to make changes to the code or keep up to date with new releases, you should clone the GitHub repository:
-    `git clone git@github.gatech.edu:ARTLab/hexed.git`
+    `git clone git@github.com:ARTLab-GT/hexed.git`
     - This may require you to
       [add an SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
       to your GitHub account, if you haven't already.
   - You will, at this point, be on the `main` branch, which is the latest in-development version.
-    To switch to a stable release, you can do something like `git checkout v0.1.0 -b v0.1.0_branch`.
+    To switch to a stable release, you can do something like `git checkout v0.1.1 -b v0.1.1_branch`.
 - `cd hexed`
 - `mkdir build_Release`
 - `cd build_Release`
