@@ -114,6 +114,7 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
   def_face_cons{def.elem_face_con_v, bound_face_cons},
   ref_face_v{car.refined_faces(), def.refined_faces()},
   matcher_v{car.hanging_vertex_matchers(), def.hanging_vertex_matchers()},
+  surf_bc_sn{-1}, // set to -1 to prevent uninitialized comparisons
   surf_geom{nullptr},
   verts_are_reset{false},
   buffer_dist{std::sqrt(params.n_dim)/2}
