@@ -1208,6 +1208,12 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
                 for (Tree* child : p->children()) can_unref = can_unref && !exists(child);
                 if (can_unref && !needs_refine(p)) {
                   changed = true;
+                  for (Tree* child : p->children()) {
+                    if (child->elem) {
+                      child->elem->record = 2;
+                      child->elem->tree = nullptr;
+                    }
+                  }
                   p->unrefine();
                 }
               } else if (neighbor->refinement_level() < elem.refinement_level() - 1) {
