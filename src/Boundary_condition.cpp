@@ -578,13 +578,15 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
       }
     }
     Mat<> adj1(nlq1);
+    double eps = 1e-12*con.element().nominal_size();
     for (int i_qpoint = 0; i_qpoint < nlq1; ++i_qpoint) {
       Mat<> p = pos[con.inside_face_sign()](i_qpoint, all).transpose();
       Mat<> diff = (pos[1](i_qpoint, all) - pos[0](i_qpoint, all)).transpose();
-      adj1(i_qpoint) = (geom->nearest_point(p, huge, con.element().nominal_size()).point() - p).dot(diff)/diff.squaredNorm();
+      adj1(i_qpoint) = (geom->nearest_point(p, huge, con.element().nominal_size()).point() - p).dot(diff)/(diff.squaredNorm() + eps);
     }
     adjustments += math::hypercube_matvec(from_lob1, adj1);
   }
+  HEXED_ASSERT(std::isfinite(adjustments.squaredNorm()), "face node adjustments are not finite");
 }
 
 }
