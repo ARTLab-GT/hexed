@@ -15,6 +15,7 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   data_size{params.n_dof_numeric()},
   data{Eigen::VectorXd::Zero(data_size)},
   vertex_tss{Eigen::VectorXd::Constant(params.n_vertices(), nom_sz/n_dim)},
+  tree(this),
   origin{origin_arg(Eigen::seqN(0, params.n_dim))}
 {
   face_record.fill(0);
