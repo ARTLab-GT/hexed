@@ -325,7 +325,7 @@ Whether to visualize field data when \ref visualize is invoked.
 <hr>
 \subsubsection vis_tecplot
 __type:__ integer \n
-__default:__ \ref true \n
+__default:__ \ref false \n
 If \ref true, write visualization files in Tecplot format (requires compilation with `use_tecplot` `ON`).
 
 <hr>
@@ -333,6 +333,12 @@ If \ref true, write visualization files in Tecplot format (requires compilation 
 __type:__ integer \n
 __default:__ \ref true \n
 If \ref true, write visualization files in XDMF format (requires compilation with `use_xdmf` `ON`).
+
+<hr>
+\subsubsection vis_skew
+__type:__ integer \n
+__default:__ \ref false \n
+If \ref true, write a (separate) visualization file with the \ref hexed::Equiangle_skewness "equiangle skewness" as a field variable.
 
 <hr>
 \subsubsection vis_field_vars

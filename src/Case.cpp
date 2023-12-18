@@ -296,7 +296,7 @@ Case::Case(std::string input_file)
           _solver().visualize_surface(format, file_name, _solver().mesh().surface_bc_sn(), Boundary_expr(vis_vars, _inter), n_sample);
         } else if (v == "field") {
           _solver().visualize_field(format, file_name, Qpoint_expr(vis_vars, _inter), n_sample);
-          if (_vari("vis_skew").value()) _solver().visualize_field(format, wd + "skew_" + suffix, Equiangle_skewness(), n_sample);
+          if (_vari("vis_skew").value()) _solver().visualize_field(format, wd + "skew" + suffix, Equiangle_skewness(), n_sample);
         }
         if (format == "xdmf") {
           std::string latest = wd + v + "_latest1.xmf";
