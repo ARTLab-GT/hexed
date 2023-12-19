@@ -538,6 +538,13 @@ void Solver::set_art_visc_smoothness(double advect_length)
           for (int i_dim = 0; i_dim < nd; ++i_dim) state[i_dim*nq + i_qpoint] *= -1;
         }
       }
+      if (rs%2) { // for odd row size have to set the advection state corresponding to t~ to 1
+        #pragma omp parallel for
+        for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+          double* adv = elements[i_elem].advection_state();
+          for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) adv[(rs/2)*nq + i_qpoint] = 1;
+        }
+      }
       // loop through nodes of projection basis
       for (int i_proj = rs - rs/2; i_proj < rs; ++i_proj)
       {
