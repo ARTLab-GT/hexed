@@ -142,7 +142,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("fix_admis_max_safety", .7); // staility ratio for fixing thermodynamic admissibility.
   _namespace->assign_default("av_diff_ratio", .3); // ratio of diffusion time to advection width
   _namespace->assign_default("av_visc_mult", 1e2); // final scaling parameter applied to artificial viscosity coefficient
-  _namespace->assign_default("av_unscaled_max", .1); // maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
+  _namespace->assign_default("av_unscaled_max", 5.); // maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
   _namespace->assign_default("av_advect_max_safety", .7); // stability ratio for advection
   _namespace->assign_default("av_diff_max_safety", .7); // stability ratio for diffusion
   _namespace->assign_default("buffer_dist", .8*std::sqrt(params.n_dim));
@@ -697,7 +697,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
   _namespace->assign("av_diffusion_residual", std::sqrt(status.diff_res/n_real));
   // clean up
   double mult = _namespace->lookup<double>("av_visc_mult").value()*advect_length;
-  double us_max = _namespace->lookup<double>("av_unscaled_max").value()*std::sqrt(2*_namespace->lookup<double>("freestream" + std::to_string(nd + 1)).value()/_namespace->lookup<double>("freestream" + std::to_string(nd)).value());
+  double us_max = advect_length*_namespace->lookup<double>("av_unscaled_max").value()*std::sqrt(2*_namespace->lookup<double>("freestream" + std::to_string(nd + 1)).value()/_namespace->lookup<double>("freestream" + std::to_string(nd)).value());
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
