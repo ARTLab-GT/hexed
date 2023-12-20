@@ -518,7 +518,6 @@ void Solver::set_art_visc_smoothness(double advect_length)
   double adv_safety = _namespace->lookup<double>("av_advect_max_safety").value();
   (*kernel_factory<Spatial<Element         , pde::Advection>::Max_dt>(nd, rs, basis, true, false, adv_safety, 1.))(acc_mesh.cartesian().elements(), sw_adv.children.at("cartesian"), "compute time step");
   (*kernel_factory<Spatial<Deformed_element, pde::Advection>::Max_dt>(nd, rs, basis, true, false, adv_safety, 1.))(acc_mesh.deformed ().elements(), sw_adv.children.at("deformed" ), "compute time step");
-  double dt_adv = 1.;
 
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
   double diff = 0; // for residual computation
@@ -538,7 +537,8 @@ void Solver::set_art_visc_smoothness(double advect_length)
           for (int i_dim = 0; i_dim < nd; ++i_dim) state[i_dim*nq + i_qpoint] *= -1;
         }
       }
-      if (rs%2) { // for odd row size have to set the advection state corresponding to t~ to 1
+      // for odd row size we have to set the advection state corresponding to t~ = 0 to 1
+      if (rs%2) {
         #pragma omp parallel for
         for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
           double* adv = elements[i_elem].advection_state();
@@ -562,7 +562,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
         (*write_face)(elements);
         (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
         sw_adv.children.at("setup").stopwatch.pause();
-        double dt_scaled = dt_adv*std::abs(basis.node(i_node) - .5)*2;
+        double dt_scaled = std::abs(basis.node(i_node) - .5)*2;
         for (int i = 0; i < 2; ++i) {
           sw_adv.children.at("BCs").stopwatch.start();
           auto& bc_cons {acc_mesh.boundary_connections()};
@@ -586,7 +586,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
           double* tss = elements[i_elem].time_step_scale();
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
             // compute update
-            double pseudotime_scale = + dt_adv*tss[i_qpoint]*2/advect_length;
+            double pseudotime_scale = tss[i_qpoint]*2/advect_length;
             double old = adv[i_node*nq + i_qpoint]; // record for measuring residual
             adv[i_node*nq + i_qpoint] = (state[nd*nq + i_qpoint] + pseudotime_scale*1.)/(1. + pseudotime_scale);
             // add to residual
