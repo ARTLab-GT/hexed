@@ -1,6 +1,6 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.16)
 
-project(hexed VERSION 0.1.1
+project(hexed VERSION 0.1.2
         DESCRIPTION "discontinuous Galerkin CFD solver with automated, unstructured quad/hex meshing"
         LANGUAGES CXX)
 # get info about current build for documentation purposes
