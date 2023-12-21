@@ -55,6 +55,12 @@ void Accessible_mesh::id_boundary_verts()
 
 void Accessible_mesh::snap_vertices()
 {
+  // this is a terrible way to find the max ref level. future self please fix
+  double min_sz = huge;
+  #pragma omp parallel for reduction(min : min_sz)
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    min_sz = std::max(min_sz, elems[i_elem].nominal_size());
+  }
   if (tree) {
     auto snap_extremes = [this]() {
       for (int i_bc = 0; i_bc < 2*params.n_dim; ++i_bc) {
@@ -70,14 +76,28 @@ void Accessible_mesh::snap_vertices()
     // snap extremes before and after snapping to surface to ensure exact extreme snapping and accurate surface snapping
     snap_extremes();
     if (surf_geom) {
+      // if i just implement a better way to find the distance guess, we won't need all these atomics
       #pragma omp parallel for
       for (auto& vert : boundary_verts[surf_bc_sn]) {
-        auto pos = vert->pos(Eigen::seqN(0, params.n_dim));
-        double dist_guess = 0;
+        Mat<> pos(params.n_dim);
+        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+          #pragma omp atomic read
+          pos(i_dim) = vert->pos(i_dim);
+        }
+        double dist_guess = min_sz;
         for (const Vertex& neighb : vert->get_neighbors()) {
-          dist_guess = std::max(dist_guess, (neighb.pos - vert->pos).norm());
+          Mat<> neighb_pos(params.n_dim);
+          for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+            #pragma omp atomic read
+            neighb_pos(i_dim) = neighb.pos(i_dim);
+          }
+          dist_guess = std::max(dist_guess, (neighb_pos - pos).norm());
         }
         pos = surf_geom->nearest_point(pos, huge, dist_guess).point();
+        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+          #pragma omp atomic write
+          vert->pos(i_dim) = pos(i_dim);
+        }
       }
     }
     snap_extremes();
