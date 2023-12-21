@@ -1,0 +1,6 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classhexed_1_1Element__connection.html" title=" " alt="" coords="5,15,207,42"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Element__face__connection.html" title=" " alt="" coords="272,5,468,47"/>
+<area shape="rect" id="node3" href="$classhexed_1_1Refined__connection_1_1Fine__connection.html" title="connection subclass to which will represent the connections for the numerical flux calculation" alt="" coords="255,71,485,112"/>
+<area shape="rect" id="node4" href="$classhexed_1_1Face__connection.html" title=" " alt="" coords="18,68,194,109"/>
+</map>

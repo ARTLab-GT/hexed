@@ -1,0 +1,5 @@
+<map id="hexed::Face_connection&lt; Deformed_element &gt;" name="hexed::Face_connection&lt; Deformed_element &gt;">
+<area shape="rect" id="node1" title=" " alt="" coords="21,5,199,47"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Boundary__connection.html" title="A Boundary_face that also provides details about the connection for the neighbor flux computation and..." alt="" coords="5,95,215,121"/>
+<area shape="rect" id="node3" href="$classhexed_1_1Typed__bound__connection.html" title=" " alt="" coords="12,169,208,211"/>
+</map>

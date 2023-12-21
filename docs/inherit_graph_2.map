@@ -1,0 +1,6 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classhexed_1_1Basis.html" title="Represents a basis of Lagrange polynomials." alt="" coords="5,56,109,83"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Equidistant.html" title="Basis with equidistant quadrature points." alt="" coords="173,5,315,32"/>
+<area shape="rect" id="node3" href="$classhexed_1_1Gauss__legendre.html" title="Basis based on Gauss&#45;Legendre quadrature." alt="" coords="157,56,331,83"/>
+<area shape="rect" id="node4" href="$classhexed_1_1Gauss__lobatto.html" title="Basis based on Gauss&#45;Lobatto quadrature." alt="" coords="163,107,325,133"/>
+</map>

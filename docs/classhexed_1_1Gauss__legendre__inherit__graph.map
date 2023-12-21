@@ -1,0 +1,4 @@
+<map id="hexed::Gauss_legendre" name="hexed::Gauss_legendre">
+<area shape="rect" id="node1" title="Basis based on Gauss&#45;Legendre quadrature." alt="" coords="5,80,179,107"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Basis.html" title="Represents a basis of Lagrange polynomials." alt="" coords="40,5,144,32"/>
+</map>

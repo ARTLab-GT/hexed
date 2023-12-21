@@ -1,0 +1,6 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classhexed_1_1Mesh__bc.html" title="Abstract class representing a mesh boundary condition." alt="" coords="5,56,132,83"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Geom__mbc.html" title="snaps to a Surface_geom" alt="" coords="186,5,329,32"/>
+<area shape="rect" id="node3" href="$classhexed_1_1Nominal__pos.html" title=" " alt="" coords="180,56,335,83"/>
+<area shape="rect" id="node4" href="$classhexed_1_1Null__mbc.html" title="provides snapping functions that do nothing" alt="" coords="192,107,323,133"/>
+</map>

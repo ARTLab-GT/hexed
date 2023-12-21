@@ -1,0 +1,5 @@
+<map id="hexed::Face_connection&lt; element_t &gt;" name="hexed::Face_connection&lt; element_t &gt;">
+<area shape="rect" id="node1" title=" " alt="" coords="5,39,181,80"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Element__face__connection.html" title=" " alt="" coords="247,5,443,47"/>
+<area shape="rect" id="node3" href="$classhexed_1_1Refined__connection_1_1Fine__connection.html" title="connection subclass to which will represent the connections for the numerical flux calculation" alt="" coords="229,71,460,112"/>
+</map>

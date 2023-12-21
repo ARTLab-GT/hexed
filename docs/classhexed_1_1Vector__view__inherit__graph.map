@@ -1,0 +1,4 @@
+<map id="hexed::Vector_view&lt; reference_t, storage_t, convert, sequence_template &gt;" name="hexed::Vector_view&lt; reference_t, storage_t, convert, sequence_template &gt;">
+<area shape="rect" id="node1" title="Provides a view of an existing container (e.g., std::vector) as a Sequence." alt="" coords="39,80,207,151"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Sequence.html" title=" " alt="" coords="5,5,241,32"/>
+</map>
