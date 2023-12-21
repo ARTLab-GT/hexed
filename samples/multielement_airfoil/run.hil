@@ -6,7 +6,6 @@ mesh_extreme11 =  10.
 altitude = 0.
 freestream_speed = 0.
 geom0 = {crmhl-2dcut.igs}
-max_ref_level = 13
+max_ref_level = 14
 $set_geometry_refinement
-vis_n_sample = 30
 $init

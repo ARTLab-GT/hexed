@@ -24,7 +24,9 @@ If look at these instructions and don't know what I'm talking about, skip to \re
 -# Use \ref ccmake to configure build options.
    This project has been configured to show you the available options and their defaults specifically with the `ccmake` interface for CMake.
    - Be sure to set `CMAKE_INSTALL_PREFIX`.
-   - `PYTHON_INSTALL_PREFIX` should be set to somewhere in your `PYTHONPATH`.
+   - `PYTHON_INSTALL_PREFIX` should be set to somewhere in your Python module search path.
+     It will try to automatically detect your [user site-packages](https://docs.python.org/3/library/site.html#cmdoption-site-user-site) directory,
+     but you might have to manually override it.
 -# `make -j install`
 -# Hexed is now ready to use. To verify the success of the build, execute the following:
    - `test/unit` to run the unit tests.
@@ -173,7 +175,6 @@ OpenCASCADE Technology is an open source CAD Engine which Hexed uses to read and
   To edit options, use the arrow keys or [hjkl](https://vimdoc.sourceforge.net/htmldoc/usr_02.html#hjkl)
   to move the cursor and Enter to edit the option under the cursor.
   - Change `CMAKE_INSTALL_PREFIX` to `~/local` (or wherever you want to install binaries).
-  - Change `PYTHON_INSTALL_PREFIX` to `~/local/lib` (or wherever you want Python modules to be installed).
   - If you want to use Tecplot, change `use_tecplot` to `ON`.
     After you hit `c` the first time, you will have to edit the variable `TECPLOT_DIR` to point to wherever you installed Tecplot.
   - If you __don't__ want to use XDMF, change `use_xdmf` to `OFF`.

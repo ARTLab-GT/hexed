@@ -23,7 +23,8 @@ if(NOT CMAKE_BUILD_TYPE)
    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Release" "Debug")
 endif()
 if (NOT DEFINED PYTHON_INSTALL_PREFIX)
-    set(PYTHON_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX}/lib CACHE PATH "where to install Python module" FORCE)
+    execute_process(COMMAND python3 -m site --user-site OUTPUT_VARIABLE python_site OUTPUT_STRIP_TRAILING_WHITESPACE)
+    set(PYTHON_INSTALL_PREFIX ${python_site} CACHE PATH "where to install Python module" FORCE)
 endif()
 
 option(build_tests "would you like to build the unit tests? (requires Catch2)" OFF)
@@ -43,7 +44,7 @@ if (use_tecplot)
 endif()
 
 set(CMAKE_CXX_FLAGS_DEBUG "-g3 -DDEBUG")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG -ffast-math")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
 set(CMAKE_CXX_FLAGS "-Wall")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
