@@ -18,7 +18,7 @@ namespace hexed
  * Lock l;
  * #pragma omp parallel for
  * for (int i = 0; i < N; ++i) {
- *   Acquire a(l); // acquires lock
+ *   Lock::Acquire a(l); // acquires lock
  *   // only one thread at a time can execute any statements here
  * } // lock is released because `a` is destroyed
  * ~~~
