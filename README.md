@@ -8,8 +8,9 @@ __hex__  (_verb_)
 1. to cast a hex
 
 Welcome to Hexed, a Discontinuous Galerkin CFD solver with automated, unstructured quad/hex meshing!
-You are currently viewing the `main` branch, which is the latest in-development version.
-For the latest stable release, please checkout the tag for [version 0.1.1](https://github.com/ARTLab-GT/hexed/releases/tag/v0.1.1)
+If you are looking for a usable solver, please visit the [releases](https://github.com/ARTLab-GT/hexed/releases) page
+or checkout the tag for the latest release.
+The `main` branch is for the next in-development version.
 For more information, including [installation instructions](https://artlab-gt.github.io/hexed/installation.html)
 and [contributing guidelines](https://artlab-gt.github.io/hexed/contributing.html),
 please see the [documentation](https://artlab-gt.github.io/hexed).
