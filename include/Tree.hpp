@@ -59,7 +59,7 @@ class Tree
    */
   Tree(int n_dim, double root_size, Mat<> origin = Mat<>::Zero(3));
   const int n_dim;
-  Element* elem = nullptr; //!< \brief `Element` generated from this tree (to be managed by the user of this class)
+  Mutual_ptr<Tree, Element> elem; //!< \brief `Element` generated from this tree (to be managed by the user of this class)
   Deformed_element* def_elem = nullptr; //!< \brief if `elem` points to a deformed element, this can also be set to allow it to be accessed as deformed
   std::vector<int> misc_data; //!< \brief As the name implies, used to store whatever random information you want
 

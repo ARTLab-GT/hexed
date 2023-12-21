@@ -114,6 +114,7 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
   def_face_cons{def.elem_face_con_v, bound_face_cons},
   ref_face_v{car.refined_faces(), def.refined_faces()},
   matcher_v{car.hanging_vertex_matchers(), def.hanging_vertex_matchers()},
+  surf_bc_sn{-1}, // set to -1 to prevent uninitialized comparisons
   surf_geom{nullptr},
   verts_are_reset{false},
   buffer_dist{std::sqrt(params.n_dim)/2}
@@ -625,8 +626,7 @@ Element& Accessible_mesh::add_elem(bool is_deformed, Tree& t)
   int sn = add_element(t.refinement_level(), is_deformed, std::vector<int>(np.begin(), np.end()), t.origin());
   auto& elem = element(t.refinement_level(), is_deformed, sn);
   elem.record = sn; // put the serial number in the record so it can be used for connections
-  elem.tree = &t;
-  t.elem = &elem;
+  elem.tree.pair(t.elem);
   if (is_deformed) {
     t.def_elem = &def.elems.at(t.refinement_level(), sn);
   }
@@ -1065,7 +1065,7 @@ void Accessible_mesh::deform()
       if (elem.record == 3) {
         add_elem(!is_deformed, *elem.tree).record = 0;
         elem.record = 2;
-        elem.tree = nullptr;
+        elem.tree.unpair();
       }
     }
   }
@@ -1166,7 +1166,6 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
             for (Tree* child : parent->children()) {
               if (child->elem) {
                 child->elem->record = 2;
-                child->elem->tree = nullptr;
               }
             }
             parent->unrefine();
@@ -1207,6 +1206,11 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
                 for (Tree* child : p->children()) can_unref = can_unref && !exists(child);
                 if (can_unref && !needs_refine(p)) {
                   changed = true;
+                  for (Tree* child : p->children()) {
+                    if (child->elem) {
+                      child->elem->record = 2;
+                    }
+                  }
                   p->unrefine();
                 }
               } else if (neighbor->refinement_level() < elem.refinement_level() - 1) {

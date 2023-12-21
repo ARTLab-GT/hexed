@@ -10,6 +10,7 @@
 #include "Vertex.hpp"
 #include "Basis.hpp"
 #include "Lock.hpp"
+#include "Mutual_ptr.hpp"
 
 namespace hexed
 {
@@ -49,7 +50,7 @@ class Element
   double uncertainty = 0; //!< refinement algorithms should set this value to some uncertainty metric
   static constexpr bool is_deformed = false; //!< is this `Element` subclass deformed?
   int record = 0; //!< for algorithms to book-keep general information
-  Tree* tree = nullptr; //!< `Tree` this element was created from
+  Mutual_ptr<Element, Tree> tree; //!< `Tree` this element was created from
   bool unrefinement_locked = false; //!< if this is set to `true`, `Mesh_interface::update()` won't unrefine it
   bool snapping_problem = false; //!< \brief if `true`, this element has a face on the surface which was not properly snapped
   bool needs_snapping = true; //!< \brief once any faces of this element have been snapped to the surface, set this to `false`

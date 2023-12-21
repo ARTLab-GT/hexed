@@ -142,7 +142,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("fix_admis_max_safety", .7); // staility ratio for fixing thermodynamic admissibility.
   _namespace->assign_default("av_diff_ratio", .3); // ratio of diffusion time to advection width
   _namespace->assign_default("av_visc_mult", 1e2); // final scaling parameter applied to artificial viscosity coefficient
-  _namespace->assign_default("av_unscaled_max", .1); // maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
+  _namespace->assign_default("av_unscaled_max", 5.); // maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
   _namespace->assign_default("av_advect_max_safety", .7); // stability ratio for advection
   _namespace->assign_default("av_diff_max_safety", .7); // stability ratio for diffusion
   _namespace->assign_default("buffer_dist", .8*std::sqrt(params.n_dim));
@@ -497,14 +497,14 @@ void Solver::set_art_visc_smoothness(double advect_length)
     }
   }
   // set advection velocity
-  double scale = _namespace->lookup<double>("freestream_speed").value();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
     double* rk_ref = elements[i_elem].stage(1);
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+      double scale = sqrt(2*rk_ref[nd*nq + i_qpoint]*rk_ref[(nd + 1)*nq + i_qpoint]);
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        state[i_dim*nq + i_qpoint] = rk_ref[i_dim*nq + i_qpoint]/rk_ref[nd*nq + i_qpoint]/scale;
+        state[i_dim*nq + i_qpoint] = rk_ref[i_dim*nq + i_qpoint]/scale;
       }
     }
   }
@@ -518,7 +518,6 @@ void Solver::set_art_visc_smoothness(double advect_length)
   double adv_safety = _namespace->lookup<double>("av_advect_max_safety").value();
   (*kernel_factory<Spatial<Element         , pde::Advection>::Max_dt>(nd, rs, basis, true, false, adv_safety, 1.))(acc_mesh.cartesian().elements(), sw_adv.children.at("cartesian"), "compute time step");
   (*kernel_factory<Spatial<Deformed_element, pde::Advection>::Max_dt>(nd, rs, basis, true, false, adv_safety, 1.))(acc_mesh.deformed ().elements(), sw_adv.children.at("deformed" ), "compute time step");
-  double dt_adv = 1.;
 
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
   double diff = 0; // for residual computation
@@ -538,6 +537,14 @@ void Solver::set_art_visc_smoothness(double advect_length)
           for (int i_dim = 0; i_dim < nd; ++i_dim) state[i_dim*nq + i_qpoint] *= -1;
         }
       }
+      // for odd row size we have to set the advection state corresponding to t~ = 0 to 1
+      if (rs%2) {
+        #pragma omp parallel for
+        for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+          double* adv = elements[i_elem].advection_state();
+          for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) adv[(rs/2)*nq + i_qpoint] = 1;
+        }
+      }
       // loop through nodes of projection basis
       for (int i_proj = rs - rs/2; i_proj < rs; ++i_proj)
       {
@@ -555,7 +562,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
         (*write_face)(elements);
         (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
         sw_adv.children.at("setup").stopwatch.pause();
-        double dt_scaled = dt_adv*std::abs(basis.node(i_node) - .5)*2;
+        double dt_scaled = std::abs(basis.node(i_node) - .5)*2;
         for (int i = 0; i < 2; ++i) {
           sw_adv.children.at("BCs").stopwatch.start();
           auto& bc_cons {acc_mesh.boundary_connections()};
@@ -579,7 +586,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
           double* tss = elements[i_elem].time_step_scale();
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
             // compute update
-            double pseudotime_scale = + dt_adv*tss[i_qpoint]*2/advect_length;
+            double pseudotime_scale = tss[i_qpoint]*2/advect_length;
             double old = adv[i_node*nq + i_qpoint]; // record for measuring residual
             adv[i_node*nq + i_qpoint] = (state[nd*nq + i_qpoint] + pseudotime_scale*1.)/(1. + pseudotime_scale);
             // add to residual
@@ -697,7 +704,7 @@ void Solver::set_art_visc_smoothness(double advect_length)
   _namespace->assign("av_diffusion_residual", std::sqrt(status.diff_res/n_real));
   // clean up
   double mult = _namespace->lookup<double>("av_visc_mult").value()*advect_length;
-  double us_max = _namespace->lookup<double>("av_unscaled_max").value()*std::sqrt(2*_namespace->lookup<double>("freestream" + std::to_string(nd + 1)).value()/_namespace->lookup<double>("freestream" + std::to_string(nd)).value());
+  double us_max = advect_length*_namespace->lookup<double>("av_unscaled_max").value()*std::sqrt(2*_namespace->lookup<double>("freestream" + std::to_string(nd + 1)).value()/_namespace->lookup<double>("freestream" + std::to_string(nd)).value());
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);

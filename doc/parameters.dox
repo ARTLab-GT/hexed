@@ -325,7 +325,7 @@ Whether to visualize field data when \ref visualize is invoked.
 <hr>
 \subsubsection vis_tecplot
 __type:__ integer \n
-__default:__ \ref true \n
+__default:__ \ref false \n
 If \ref true, write visualization files in Tecplot format (requires compilation with `use_tecplot` `ON`).
 
 <hr>
@@ -333,6 +333,12 @@ If \ref true, write visualization files in Tecplot format (requires compilation 
 __type:__ integer \n
 __default:__ \ref true \n
 If \ref true, write visualization files in XDMF format (requires compilation with `use_xdmf` `ON`).
+
+<hr>
+\subsubsection vis_skew
+__type:__ integer \n
+__default:__ \ref false \n
+If \ref true, write a (separate) visualization file with the \ref hexed::Equiangle_skewness "equiangle skewness" as a field variable.
 
 <hr>
 \subsubsection vis_field_vars
@@ -632,7 +638,8 @@ The following extension/format combinations are supported:
   A comma-delimited table with at least 2 columns, which are interpreted as \f$ x_0 \f$ and \f$ x_1 \f$ coordinates of the nodes of a polygonal curve,
   in \ref units "standard units".
   Curve is treated as open -- if you are trying to model a closed shape, simply make the first point (approximately) equal to the last.
-- `.igs`, `.iges`: [IGES](https://en.wikipedia.org/wiki/IGES) CAD format (2D or 3D).
+- `.igs`, `.iges`: [IGES](https://en.wikipedia.org/wiki/IGES) CAD
+  [format](https://www.govinfo.gov/content/pkg/GOVPUB-C13-7b81ba8b0f709555f162cb496aa63b3b/pdf/GOVPUB-C13-7b81ba8b0f709555f162cb496aa63b3b.pdf) (2D or 3D).
   For 2D simulations, the model edges will be extracted and projected onto the \f$ (x_0, x_1) \f$ plane.
   For 3D simulations, the model surfaces will be used.
   Units are read from the file and converted.

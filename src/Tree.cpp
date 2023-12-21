@@ -20,7 +20,8 @@ Tree::Tree(int nd, double root_size, Mat<> origin)
 : root_sz{root_size}, ref_level{0}, coords{Eigen::VectorXi::Zero(nd)},
   par{nullptr}, children_storage(),
   status{unprocessed},
-  n_dim{nd}
+  n_dim{nd},
+  elem(this)
 {
   HEXED_ASSERT(origin.size() >= n_dim, "`origin` is too small");
   orig = origin(Eigen::seqN(0, n_dim));

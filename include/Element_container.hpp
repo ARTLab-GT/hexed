@@ -85,9 +85,7 @@ class Complete_element_container : public Element_container
     std::vector<std::unique_ptr<element_t>> new_vec;
     std::vector<int> new_sns;
     for (int i_elem = 0; i_elem < old_size; ++i_elem) {
-      if (predicate(*vec[i_elem])) {
-        if (vec[i_elem]->tree) vec[i_elem]->tree->elem = nullptr;
-      } else {
+      if (!predicate(*vec[i_elem])) {
         new_vec.emplace_back(vec[i_elem].release());
         new_sns.push_back(serial_ns[i_elem]);
       }

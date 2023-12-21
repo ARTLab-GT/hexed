@@ -232,7 +232,7 @@ Case::Case(std::string input_file)
     if (!geoms.empty()) {
       _has_geom = true;
       _solver().mesh().set_surface(new Compound_geom(geoms), _make_bc(_vars("surface_bc").value()), _get_vector("flood_fill_start", nd));
-      for (int i_smooth = 0; i_smooth < _vari("n_smooth"); ++i_smooth) _solver().mesh().relax(0.7);
+      for (int i_smooth = 0; i_smooth < _vari("n_smooth"); ++i_smooth) _solver().mesh().relax(0.5);
       _solver().calc_jacobian();
     }
     return 0;
@@ -255,7 +255,7 @@ Case::Case(std::string input_file)
     _solver().set_uncertainty(Elem_nonsmooth(jidf));
     _solver().mesh().set_unref_locks(criteria::if_extruded);
     bool changed = _solver().mesh().update(crits[0], crits[1]);
-    for (int i_smooth = 0; i_smooth < _vari("n_smooth"); ++i_smooth) _solver().mesh().relax(0.7);
+    for (int i_smooth = 0; i_smooth < _vari("n_smooth"); ++i_smooth) _solver().mesh().relax(0.5);
     _solver().calc_jacobian();
     return changed;
   }));
@@ -296,6 +296,7 @@ Case::Case(std::string input_file)
           _solver().visualize_surface(format, file_name, _solver().mesh().surface_bc_sn(), Boundary_expr(vis_vars, _inter), n_sample);
         } else if (v == "field") {
           _solver().visualize_field(format, file_name, Qpoint_expr(vis_vars, _inter), n_sample);
+          if (_vari("vis_skew").value()) _solver().visualize_field(format, wd + "skew" + suffix, Equiangle_skewness(), n_sample);
         }
         if (format == "xdmf") {
           std::string latest = wd + v + "_latest1.xmf";
