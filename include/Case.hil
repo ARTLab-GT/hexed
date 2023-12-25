@@ -142,7 +142,7 @@ set_aerothermo = {
 }
 
 set_geometry_refinement = {
-    refine_if = {(uncertainty > geometry_uncertainty | snapping_problem) & ref_level < max_ref_level}
+    refine_if = {(uncertainty > geometry_uncertainty | snapping_problem) & ref_level < max_ref_level & nom_sz > min_elem_size}
     unrefine_if = {ref_level > init_ref_level & !is_extruded}
 }
 
@@ -193,6 +193,7 @@ mesh_extreme_eps = 1e-6
 layer_split_points = {split0 = 1./3.;}
 init_layer_splits = 0
 heat_flux_coercion = 2.
+min_elem_size = 0.
 
 {array parameters}
 i_dim = 0
