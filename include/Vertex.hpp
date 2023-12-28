@@ -54,7 +54,7 @@ class Vertex
    */
   void eat(Vertex& other);
   //! determine the shared shareable_value of all `Transferable_ptr`s to this by applying `reduction`. Thread safe.
-  double shared_value(reduction = vector_max); //!< cppcheck-suppress internalAstError
+  double shared_value(reduction = vector_max); // cppcheck-suppress internalAstError
   static void connect(Vertex&, Vertex&); //!< specify that two vertices are connected by an edge
   static bool are_neighbors(Vertex&, Vertex&);
   //! get neighbors as a `std::range` of `const Vertex&`

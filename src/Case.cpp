@@ -370,9 +370,9 @@ Case::Case(std::string input_file)
     int n = iter ? print_freq - iter%print_freq : 1;
     for (int i = 0; i < n; ++i) {
       if (avw) {
-        _solver().set_art_visc_smoothness(_vard("art_visc_width").value());
+        _solver().update_art_visc_smoothness(_vard("art_visc_width").value());
       } else if (avc) {
-        _solver().set_art_visc_smoothness(_vard("art_visc_constant").value());
+        _solver().set_art_visc_constant(_vard("art_visc_constant").value());
       }
       _solver().update();
     }

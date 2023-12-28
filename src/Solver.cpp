@@ -472,7 +472,7 @@ void Solver::set_art_visc_constant(double value)
   }
 }
 
-void Solver::set_art_visc_smoothness(double advect_length)
+void Solver::update_art_visc_smoothness(double advect_length)
 {
   stopwatch.stopwatch.start();
   stopwatch.children.at("set art visc").stopwatch.start();
@@ -727,6 +727,13 @@ void Solver::set_art_visc_smoothness(double advect_length)
   stopwatch.children.at("set art visc").stopwatch.pause();
   stopwatch.children.at("set art visc").work_units_completed += elements.size();
   stopwatch.stopwatch.pause();
+}
+
+void Solver::update_art_visc_elwise(bool pde_based)
+{
+  Mass mass;
+  set_uncertainty(Elem_nonsmooth(mass));
+  //share_vertex_data(&Element::vertex_fix_admis_coef, Vertex::vector_max);
 }
 
 void Solver::set_art_visc_row_size(int row_size)
