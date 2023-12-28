@@ -10,8 +10,6 @@ freestream_mach = 2.
 $set_shock
 vis_freq = 1000
 done = {normalized_residual < 1e-4}
-working_dir = {hexed_out1}
-use_filter = true
 vis_n_sample = 2
 $init
 vis_n_sample = 10

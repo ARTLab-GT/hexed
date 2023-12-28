@@ -46,7 +46,8 @@ class Solver
   std::shared_ptr<Printer> _printer;
   bool _implicit;
 
-  void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
+  void share_vertex_data(std::function<double&(Element&, int i_vertex)>, std::function<double(Mat<>)>);
+  void share_vertex_data(std::function<double(Element&, int i_vertex)> get, std::function<double&(Element&, int i_vertex)> set, std::function<double(Mat<>)>);
   bool fix_admissibility(double stability_ratio);
   void apply_state_bcs();
   void apply_flux_bcs();

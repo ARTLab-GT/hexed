@@ -10,7 +10,7 @@ Hanging_vertex_matcher::Hanging_vertex_matcher(std::vector<Element*> fine_elemen
   str{stretch}
 {}
 
-void Hanging_vertex_matcher::match(Element::vertex_value_access access_func)
+void Hanging_vertex_matcher::match(std::function<double&(Element&, int i_vertex)> access_func)
 {
   // extract the indices and values of the vertices on the desired face
   int inds [4]; // for `n_dim <= 3` the required size will be <= 4
@@ -18,7 +18,7 @@ void Hanging_vertex_matcher::match(Element::vertex_value_access access_func)
   for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
     int stride = math::pow(2, n_dim - 1 - id);
     inds[i_vert] = i_vert/stride*stride*2 + i_vert%stride + isp*stride;
-    values(i_vert) = std::invoke(access_func, elements[math::stretched_ind(n_dim, i_vert, str)], inds[i_vert]);
+    values(i_vert) = access_func(*elements[math::stretched_ind(n_dim, i_vert, str)], inds[i_vert]);
   }
   // compute interpolation
   Eigen::MatrixXd interp_mat {
@@ -35,7 +35,7 @@ void Hanging_vertex_matcher::match(Element::vertex_value_access access_func)
       // compute corresponding index in interpolated array
       int interp_ind = (i_elem*!str[n_dim - 2])%2 + (i_vert%2)*(1 + str[n_dim - 2]); // account for inner stride
       if (n_dim == 3) interp_ind += ((i_elem*!str[0])/(1 + !str[1]) + i_vert/2*(1 + str[0]))*3; // account for outer stride
-      std::invoke(access_func, elements[i_elem], inds[i_vert]) = interpolated(interp_ind);
+      access_func(*elements[i_elem], inds[i_vert]) = interpolated(interp_ind);
     }
   }
 }

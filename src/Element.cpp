@@ -146,17 +146,17 @@ double Element::jacobian(int i_dim, int j_dim, int i_qpoint)
   return (i_dim == j_dim) ? 1. : 0.;
 }
 
-void Element::push_shareable_value(vertex_value_access access_func)
+void Element::push_shareable_value(std::function<double(Element&, int i_vertex)> fun)
 {
   for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {
-    vertices[i_vert].shareable_value = std::invoke(access_func, *this, i_vert);
+    vertices[i_vert].shareable_value = fun(*this, i_vert);
   }
 }
 
-void Element::fetch_shareable_value(vertex_value_access access_func, Vertex::reduction reduce)
+void Element::fetch_shareable_value(std::function<double&(Element&, int i_vertex)> access_fun, std::function<double(Mat<>)> reduction)
 {
   for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {
-    std::invoke(access_func, *this, i_vert) = vertices[i_vert]->shared_value(reduce);
+    access_fun(*this, i_vert) = vertices[i_vert]->shared_value(reduction);
   }
 }
 

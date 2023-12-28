@@ -23,9 +23,8 @@ class Vertex
   public:
   class Transferable_ptr;
   class Non_transferable_ptr;
-  typedef double (Eigen::VectorXd::*reduction)() const;
-  static constexpr reduction vector_max = &Eigen::VectorXd::maxCoeff;
-  static constexpr reduction vector_min = &Eigen::VectorXd::minCoeff;
+  static double vector_max(Mat<>);
+  static double vector_min(Mat<>);
   Mat<3> pos {0, 0, 0}; //!< position of the vertex in space
   Mat<3> temp_vector; //!< for an algorithm to keep some temporary vector data if it desires
   std::vector<int> record; //!< for algorithms to keep notes as they please
@@ -54,7 +53,7 @@ class Vertex
    */
   void eat(Vertex& other);
   //! determine the shared shareable_value of all `Transferable_ptr`s to this by applying `reduction`. Thread safe.
-  double shared_value(reduction = vector_max); // cppcheck-suppress internalAstError
+  double shared_value(std::function<double(Mat<>)> reduction = vector_max); // cppcheck-suppress internalAstError
   static void connect(Vertex&, Vertex&); //!< specify that two vertices are connected by an edge
   static bool are_neighbors(Vertex&, Vertex&);
   //! get neighbors as a `std::range` of `const Vertex&`

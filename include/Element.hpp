@@ -42,8 +42,6 @@ class Element
   Eigen::VectorXd vertex_tss;
 
   public:
-  //! pointer to a function that can access some data associated with the vertices
-  typedef double& (Element::*vertex_value_access)(int i_vertex);
   std::array<int, 6> face_record; //!< for algorithms to book-keep information related to faces
   //! Pointer to state data at faces. Must be populated by user
   std::array<double*, 6> faces; //!< layout: [2*i_dim + face_sign][i_var][i_qpoint]
@@ -102,8 +100,8 @@ class Element
   inline Vertex& vertex(int i_vertex) { return *vertices[i_vertex]; }
   template <int i_dim> double& vertex_position(int i_vertex) {return vertices[i_vertex]->pos[i_dim];}
   //! functions to communicate with nodal neighbors
-  void push_shareable_value(vertex_value_access access_func); // writes shareable value to vertices so that shared value can be determined
-  void fetch_shareable_value(vertex_value_access access_func, Vertex::reduction = Vertex::vector_max); // set `this`'s copy of shareable value to the shared values at the vertices
+  void push_shareable_value(std::function<double(Element&, int i_vertex)>); // writes shareable value to vertices so that shared value can be determined
+  void fetch_shareable_value(std::function<double&(Element&, int i_vertex)> access_fun, std::function<double(Mat<>)> reduction = Vertex::vector_max); // set `this`'s copy of shareable value to the shared values at the vertices
   //! Time step scale at the vertices. TSS in the interior is set by interpolating this.
   double& vertex_time_step_scale(int i_vertex);
   double& vertex_fix_admis_coef(int i_vertex);

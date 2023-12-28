@@ -29,7 +29,7 @@ class Hanging_vertex_matcher
    * So, if the shared value is desired, then this function should
    * be called after `Element::fetch_shareable_value`.
    */
-  void match(Element::vertex_value_access);
+  void match(std::function<double&(Element&, int i_vertex)>);
 };
 
 }

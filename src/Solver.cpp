@@ -21,20 +21,25 @@
 namespace hexed
 {
 
-void Solver::share_vertex_data(Element::vertex_value_access access_func, Vertex::reduction reduce)
+void Solver::share_vertex_data(std::function<double&(Element&, int i_vertex)> access_fun, std::function<double(Mat<>)> reduce)
+{
+  share_vertex_data(access_fun, access_fun, reduce);
+}
+
+void Solver::share_vertex_data(std::function<double(Element&, int i_vertex)> get, std::function<double&(Element&, int i_vertex)> set, std::function<double(Mat<>)> reduce)
 {
   auto& elements = acc_mesh.elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    elements[i_elem].push_shareable_value(access_func);
+    elements[i_elem].push_shareable_value(get);
   }
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    elements[i_elem].fetch_shareable_value(access_func, reduce);
+    elements[i_elem].fetch_shareable_value(set, reduce);
   }
   auto& matchers = acc_mesh.hanging_vertex_matchers();
   #pragma omp parallel for
-  for (int i_match = 0; i_match < matchers.size(); ++i_match) matchers[i_match].match(access_func);
+  for (int i_match = 0; i_match < matchers.size(); ++i_match) matchers[i_match].match(set);
 }
 
 void Solver::apply_state_bcs()
@@ -733,7 +738,17 @@ void Solver::update_art_visc_elwise(bool pde_based)
 {
   Mass mass;
   set_uncertainty(Elem_nonsmooth(mass));
-  //share_vertex_data(&Element::vertex_fix_admis_coef, Vertex::vector_max);
+  share_vertex_data([](Element& elem, int){return elem.uncertainty;},
+                    [](Element& elem, int i_vert)->double&{return elem.vertex_time_step_scale(i_vert);},
+                    Vertex::vector_max);
+  Mat<dyn, dyn> interp = Gauss_lobatto(2).interpolate(basis.nodes());
+  auto& elems = acc_mesh.elements();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    Eigen::Map<Mat<>> qpoint_av(elems[i_elem].art_visc_coef(), params.n_qpoint());
+    Eigen::Map<Mat<>> vert_av(&elems[i_elem].vertex_time_step_scale(0), params.n_vertices());
+    qpoint_av = math::hypercube_matvec(interp, vert_av);
+  }
 }
 
 void Solver::set_art_visc_row_size(int row_size)
