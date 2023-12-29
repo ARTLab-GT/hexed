@@ -29,7 +29,7 @@ namespace hexed
   } \
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces(), stopwatch.children.at("prolong/restrict")); \
 
-#define PDE_ARGS , visc, therm_cond
+#define PDE_ARGS , visc, therm_cond, bool(_namespace->lookup<int>("elementwise_art_visc").value())
 void Solver::compute_viscous(double dt, int i_stage, bool compute_residual)
 {
   bool allow_filter = true;

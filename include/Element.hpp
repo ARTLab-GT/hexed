@@ -39,7 +39,7 @@ class Element
   int n_vert;
   int data_size;
   Eigen::VectorXd data;
-  Eigen::VectorXd vertex_tss;
+  Eigen::VectorXd vertex_data;
 
   public:
   std::array<int, 6> face_record; //!< for algorithms to book-keep information related to faces
@@ -104,6 +104,7 @@ class Element
   void fetch_shareable_value(std::function<double&(Element&, int i_vertex)> access_fun, std::function<double(Mat<>)> reduction = Vertex::vector_max); // set `this`'s copy of shareable value to the shared values at the vertices
   //! Time step scale at the vertices. TSS in the interior is set by interpolating this.
   double& vertex_time_step_scale(int i_vertex);
+  double& vertex_elwise_av(int i_vertex);
   double& vertex_fix_admis_coef(int i_vertex);
   void set_needs_smooth(bool); //!< sets the `Vertex::Transferable_ptr::needs_smooth` of the vertices
 };

@@ -153,11 +153,12 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("buffer_dist", .8*std::sqrt(params.n_dim));
   _namespace->assign_default("n_cheby_flow", 1);
   _namespace->assign_default("n_cheby_av", 1);
-  _namespace->assign_default("av_advect_iters", 1); // number of advection iterations to run each time `set_art_visc_smoothness` is called
-  _namespace->assign_default("av_diff_iters", 1); // number of diffusion iterations to run each time `set_art_visc_smoothness` is called
+  _namespace->assign_default("av_advect_iters", 1); // number of advection iterations to run each time `update_art_visc_smoothness` is called
+  _namespace->assign_default("av_diff_iters", 1); // number of diffusion iterations to run each time `update_art_visc_smoothness` is called
   _namespace->assign_default("flow_iters", 1);
   _namespace->assign_default("use_filter", 0); // whether to use modal filter acceleration
   _namespace->assign_default<int>("local_time", local_time_stepping);
+  _namespace->assign_default("elementwise_art_visc", 0);
   _namespace->assign_default<std::string>("working_dir", ".");
   _namespace->assign("fix_iters", 0);
   _namespace->assign("iteration", 0);
@@ -734,19 +735,32 @@ void Solver::update_art_visc_smoothness(double advect_length)
   stopwatch.stopwatch.pause();
 }
 
-void Solver::update_art_visc_elwise(bool pde_based)
+void Solver::update_art_visc_elwise(double width, bool pde_based)
 {
+  use_art_visc = true;
   Mass mass;
   set_uncertainty(Elem_nonsmooth(mass));
+  auto& elems = acc_mesh.elements();
+  double scale = width/(basis.row_size - 1)*(_namespace->lookup<double>("freestream_speed").value() + _namespace->lookup<double>("freestream_sound_speed").value());
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    double& u = elems[i_elem].uncertainty;
+    u = 2*std::log(u)/std::log(10);
+    double ramp_center = -4 - 4.25*std::log(basis.row_size - 1)/std::log(10);
+    double half_width = 0.5;
+    if (!(u > ramp_center - half_width)) u = 0;
+    else if (u >= ramp_center + half_width) u = 1;
+    else u = .5*(1 + std::sin(constants::pi*(u - ramp_center)/2/half_width));
+    u *= scale;
+  }
   share_vertex_data([](Element& elem, int){return elem.uncertainty;},
-                    [](Element& elem, int i_vert)->double&{return elem.vertex_time_step_scale(i_vert);},
+                    [](Element& elem, int i_vert)->double&{return elem.vertex_elwise_av(i_vert);},
                     Vertex::vector_max);
   Mat<dyn, dyn> interp = Gauss_lobatto(2).interpolate(basis.nodes());
-  auto& elems = acc_mesh.elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     Eigen::Map<Mat<>> qpoint_av(elems[i_elem].art_visc_coef(), params.n_qpoint());
-    Eigen::Map<Mat<>> vert_av(&elems[i_elem].vertex_time_step_scale(0), params.n_vertices());
+    Eigen::Map<Mat<>> vert_av(&elems[i_elem].vertex_elwise_av(0), params.n_vertices());
     qpoint_av = math::hypercube_matvec(interp, vert_av);
   }
 }

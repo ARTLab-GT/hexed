@@ -1,5 +1,5 @@
 n_dim = 2
-init_ref_level = 5
+init_ref_level = 4
 flood_fill_start0 = 0.5
 flood_fill_start1 = 0.5
 surface_max_iters = 1
@@ -8,7 +8,10 @@ geom0 = {geom.csv}
 altitude = 0
 freestream_mach = 2.
 $set_shock
+elementwise_art_visc = true
+fix_therm_admis = true
 vis_freq = 1000
+max_safety = 1e-1
 done = {normalized_residual < 1e-4}
 vis_n_sample = 2
 $init

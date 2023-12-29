@@ -178,7 +178,7 @@ class Solver
    * \warning Not recommended for use in practice.
    * Use `Solver::update_art_visc_smoothness`, which was developed to supplant this type of approach.
    */
-  virtual void update_art_visc_elwise(bool pde_based = false);
+  virtual void update_art_visc_elwise(double width, bool pde_based = false);
   /*! \brief an object providing all available information about the status of the time marching iteration.
    * \details The `Iteration_status::start_time` member will refer to when the `Solver` object was created
    * (specifically at the start of the `Solver::Solver` body).
