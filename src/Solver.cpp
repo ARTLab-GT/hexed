@@ -159,6 +159,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("use_filter", 0); // whether to use modal filter acceleration
   _namespace->assign_default<int>("local_time", local_time_stepping);
   _namespace->assign_default("elementwise_art_visc", 0);
+  _namespace->assign_default("elementwise_art_visc_diff_ratio", 5.);
   _namespace->assign_default<std::string>("working_dir", ".");
   _namespace->assign("fix_iters", 0);
   _namespace->assign("iteration", 0);
@@ -779,7 +780,7 @@ void Solver::update_art_visc_elwise(double width, bool pde_based)
         forcing[params.n_qpoint() + i_qpoint] = av[i_qpoint];
       }
     }
-    diffuse_art_visc(1, 5*width*width);
+    diffuse_art_visc(1, _namespace->lookup<double>("elementwise_art_visc_diff_ratio").value()*width*width);
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       double* stage0 = elems[i_elem].stage(0);
