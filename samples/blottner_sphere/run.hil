@@ -10,19 +10,19 @@ extremal_bc20 = {nonpenetration}
 extremal_bc10 = {nonpenetration}
 extremal_bc01 = {pressure_outflow}
 geom0 = {sphere.STEP}
-pressure = 120.96
-temperature = 75.61
-mach = 5.
-max_angle = 0.5*degree
+freestream_pressure = 120.96
+freestream_temperature = 75.61
+freestream_mach = 5.
 done = {iteration >= 2*10^5}
 vis_freq = 10000
-surface_max_iters = 3
-surface_refine = {(center0^2 + center1^2 + center2^2)^.5 < 1.4}
-surface_unrefine = {false}
+max_angle = .5*degree
+max_refinement_iters = 3
+refine_if = {(center0^2 + center1^2 + center2^2)^.5 < 1.4}
+unrefine_if = {false}
 
 {settings for different variants of this case}
 isothermal = {
-    working_dir = {hexed_out4}
+    working_dir = {hexed_out_isothermal}
     thermal_bc = {temperature = 98.89}
     init_layer_splits = 2
     $set_aerothermo
@@ -54,7 +54,5 @@ inviscid = {
 $set_shock
 $isothermal
 
-vis_n_sample = 2
 $init
-vis_n_sample = 10
 $run

@@ -27,7 +27,5 @@ done = {iteration >= 10^5}
 vis_freq = 1000
 
 $plot_history
-vis_n_sample = 2
 $init
-vis_n_sample = 10
 $run

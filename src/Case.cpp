@@ -291,19 +291,25 @@ Case::Case(std::string input_file)
     for (std::string v : {"surface", "field"}) if (_vari("vis_" + v).value()) {
       for (std::string format : {"xdmf", "tecplot"}) if (_vari("vis_" + format).value()) {
         Struct_expr vis_vars(_vars("vis_" + v + "_vars").value());
-        std::string file_name = wd + v + suffix;
-        if (v == "surface") {
-          _solver().visualize_surface(format, file_name, _solver().mesh().surface_bc_sn(), Boundary_expr(vis_vars, _inter), n_sample);
-        } else if (v == "field") {
-          _solver().visualize_field(format, file_name, Qpoint_expr(vis_vars, _inter), n_sample);
-          if (_vari("vis_skew").value()) _solver().visualize_field(format, wd + "skew" + suffix, Equiangle_skewness(), n_sample);
-        }
-        if (format == "xdmf") {
-          std::string latest = wd + v + "_latest1.xmf";
-          if (std::filesystem::exists(latest)) {
-            std::filesystem::copy_file(latest, wd + v + "_latest0.xmf", std::filesystem::copy_options::overwrite_existing);
+        for (bool edges : {false, true}) {
+          std::string name = v;
+          if (edges) name = name + "_edges";
+          if (!edges || (_vari("vis_edges").value() && _vari("n_dim").value() + (v == "field") > 2)) {
+            std::string file_name = wd + name + suffix;
+            if (v == "surface") {
+              _solver().visualize_surface(format, file_name, _solver().mesh().surface_bc_sn(), Boundary_expr(vis_vars, _inter), n_sample, edges);
+            } else if (v == "field") {
+              _solver().visualize_field(format, file_name, Qpoint_expr(vis_vars, _inter), n_sample, edges);
+              if (_vari("vis_skew").value()) _solver().visualize_field(format, wd + "skew" + suffix, Equiangle_skewness(), n_sample, edges);
+            }
+            if (format == "xdmf") {
+              std::string latest = wd + name + "_latest1.xmf";
+              if (std::filesystem::exists(latest)) {
+                std::filesystem::copy_file(latest, wd + name + "_latest0.xmf", std::filesystem::copy_options::overwrite_existing);
+              }
+              std::filesystem::copy_file(file_name + ".xmf", latest, std::filesystem::copy_options::overwrite_existing);
+            }
           }
-          std::filesystem::copy_file(file_name + ".xmf", latest, std::filesystem::copy_options::overwrite_existing);
         }
       }
     }
