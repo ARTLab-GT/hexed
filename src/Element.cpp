@@ -14,7 +14,7 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   n_vert(params.n_vertices()),
   data_size{params.n_dof_numeric()},
   data{Eigen::VectorXd::Zero(data_size)},
-  vertex_tss{Eigen::VectorXd::Constant(params.n_vertices(), nom_sz/n_dim)},
+  vertex_data{Eigen::VectorXd::Constant(2*params.n_vertices(), nom_sz/n_dim)},
   tree(this),
   origin{origin_arg(Eigen::seqN(0, params.n_dim))}
 {
@@ -146,23 +146,28 @@ double Element::jacobian(int i_dim, int j_dim, int i_qpoint)
   return (i_dim == j_dim) ? 1. : 0.;
 }
 
-void Element::push_shareable_value(vertex_value_access access_func)
+void Element::push_shareable_value(std::function<double(Element&, int i_vertex)> fun)
 {
   for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {
-    vertices[i_vert].shareable_value = std::invoke(access_func, *this, i_vert);
+    vertices[i_vert].shareable_value = fun(*this, i_vert);
   }
 }
 
-void Element::fetch_shareable_value(vertex_value_access access_func, Vertex::reduction reduce)
+void Element::fetch_shareable_value(std::function<double&(Element&, int i_vertex)> access_fun, std::function<double(Mat<>)> reduction)
 {
   for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {
-    std::invoke(access_func, *this, i_vert) = vertices[i_vert]->shared_value(reduce);
+    access_fun(*this, i_vert) = vertices[i_vert]->shared_value(reduction);
   }
 }
 
 double& Element::vertex_time_step_scale(int i_vertex)
 {
-  return vertex_tss[i_vertex];
+  return vertex_data[i_vertex];
+}
+
+double& Element::vertex_elwise_av(int i_vertex)
+{
+  return vertex_data[params.n_vertices() + i_vertex];
 }
 
 double& Element::vertex_fix_admis_coef(int i_vertex)

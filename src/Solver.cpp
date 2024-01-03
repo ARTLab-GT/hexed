@@ -21,20 +21,25 @@
 namespace hexed
 {
 
-void Solver::share_vertex_data(Element::vertex_value_access access_func, Vertex::reduction reduce)
+void Solver::share_vertex_data(std::function<double&(Element&, int i_vertex)> access_fun, std::function<double(Mat<>)> reduce)
+{
+  share_vertex_data(access_fun, access_fun, reduce);
+}
+
+void Solver::share_vertex_data(std::function<double(Element&, int i_vertex)> get, std::function<double&(Element&, int i_vertex)> set, std::function<double(Mat<>)> reduce)
 {
   auto& elements = acc_mesh.elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    elements[i_elem].push_shareable_value(access_func);
+    elements[i_elem].push_shareable_value(get);
   }
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    elements[i_elem].fetch_shareable_value(access_func, reduce);
+    elements[i_elem].fetch_shareable_value(set, reduce);
   }
   auto& matchers = acc_mesh.hanging_vertex_matchers();
   #pragma omp parallel for
-  for (int i_match = 0; i_match < matchers.size(); ++i_match) matchers[i_match].match(access_func);
+  for (int i_match = 0; i_match < matchers.size(); ++i_match) matchers[i_match].match(set);
 }
 
 void Solver::apply_state_bcs()
@@ -148,11 +153,14 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("buffer_dist", .8*std::sqrt(params.n_dim));
   _namespace->assign_default("n_cheby_flow", 1);
   _namespace->assign_default("n_cheby_av", 1);
-  _namespace->assign_default("av_advect_iters", 1); // number of advection iterations to run each time `set_art_visc_smoothness` is called
-  _namespace->assign_default("av_diff_iters", 1); // number of diffusion iterations to run each time `set_art_visc_smoothness` is called
+  _namespace->assign_default("av_advect_iters", 1); // number of advection iterations to run each time `update_art_visc_smoothness` is called
+  _namespace->assign_default("av_diff_iters", 1); // number of diffusion iterations to run each time `update_art_visc_smoothness` is called
   _namespace->assign_default("flow_iters", 1);
   _namespace->assign_default("use_filter", 0); // whether to use modal filter acceleration
   _namespace->assign_default<int>("local_time", local_time_stepping);
+  _namespace->assign_default("elementwise_art_visc", 0);
+  _namespace->assign_default("elementwise_art_visc_diff_ratio", 5.);
+  _namespace->assign_default("laplacian_art_visc", 0);
   _namespace->assign_default<std::string>("working_dir", ".");
   _namespace->assign("fix_iters", 0);
   _namespace->assign("iteration", 0);
@@ -472,7 +480,93 @@ void Solver::set_art_visc_constant(double value)
   }
 }
 
-void Solver::set_art_visc_smoothness(double advect_length)
+void Solver::diffuse_art_visc(int n_real, double diff_time)
+{
+  const int nd = params.n_dim;
+  const int nq = params.n_qpoint();
+  const int rs = params.row_size;
+  auto& elements = acc_mesh.elements();
+  // evaluate CFL condition
+  double diff_safety = _namespace->lookup<double>("av_diff_max_safety").value();
+  double n_cheby = _namespace->lookup<double>("n_cheby_av").value();
+  (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true, false, 1., diff_safety))(acc_mesh.cartesian().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "compute time step");
+  (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true, false, 1., diff_safety))(acc_mesh.deformed ().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "compute time step");
+  // initialize residual to zero (will compute RMS over all real time steps)
+  status.diff_res = 0;
+  for (int real_step = 0; real_step < n_real; ++real_step)
+  {
+    double diff = 0;
+    int n_avg = 0;
+    // copy value from forcing function storage to scalar variable of stage 0
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+      double* state = elements[i_elem].stage(0);
+      double* forcing = elements[i_elem].art_visc_forcing();
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        state[i_qpoint] = forcing[(real_step + 1)*nq + i_qpoint];
+      }
+    }
+    (*write_face)(elements);
+    (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+    diff = 0;
+    n_avg = 0;
+    // perform pseudotime iteration
+    for (int i_iter = 0; i_iter < _namespace->lookup<int>("av_diff_iters").value(); ++i_iter)
+    {
+      // record initial state for residual calculation
+      #pragma omp parallel for
+      for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+        double* state = elements[i_elem].stage(0);
+        double* forcing = elements[i_elem].art_visc_forcing();
+        for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+          forcing[(real_step + 1)*nq + i_qpoint] = state[i_qpoint];
+        }
+      }
+      for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
+        double s = math::chebyshev_step(n_cheby, i_cheby);
+        apply_avc_diff_bcs();
+        // update state with spatial term
+        compute_avc_diff(s, 0);
+        // update state with real time forcing term
+        #pragma omp parallel for
+        for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+          double* state = elements[i_elem].stage(0);
+          double* forcing = elements[i_elem].art_visc_forcing();
+          double* tss = elements[i_elem].time_step_scale();
+          for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+            double pseudotime_scale = s/diff_time*tss[i_qpoint];
+            double f = forcing[real_step*nq + i_qpoint];
+            f = (real_step == 1) ? std::sqrt(f) : f; // at time step 1 switch from square root domain to linear domain
+            state[i_qpoint] += f*pseudotime_scale;
+            state[i_qpoint] /= 1 + pseudotime_scale;
+          }
+        }
+        // update face state
+        (*write_face)(elements);
+        (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+      }
+    }
+    // update forcing function and residual
+    #pragma omp parallel for reduction(+:diff, n_avg)
+    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+      double* state = elements[i_elem].stage(0);
+      double* forcing = elements[i_elem].art_visc_forcing();
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        // update residual
+        double d = forcing[(real_step + 1)*nq + i_qpoint] - state[i_qpoint];
+        diff += d*d;
+        ++n_avg;
+        // update forcing
+        forcing[(real_step + 1)*nq + i_qpoint] = std::max(0., state[i_qpoint]);
+      }
+    }
+    status.diff_res += diff/n_avg;
+  }
+  status.diff_res = std::sqrt(status.diff_res/n_real); // finish computing RMS residual
+  _namespace->assign("av_diffusion_residual", std::sqrt(status.diff_res/n_real));
+}
+
+void Solver::update_art_visc_smoothness(double advect_length)
 {
   stopwatch.stopwatch.start();
   stopwatch.children.at("set art visc").stopwatch.start();
@@ -625,83 +719,9 @@ void Solver::set_art_visc_smoothness(double advect_length)
 
   // begin root-smear-square operation
   int n_real = params.n_forcing - 1; // number of real time steps (as apposed to pseudotime steps)
-  // evaluate CFL condition
-  double diff_safety = _namespace->lookup<double>("av_diff_max_safety").value();
-  double n_cheby = _namespace->lookup<double>("n_cheby_av").value();
-  (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true, false, 1., diff_safety))(acc_mesh.cartesian().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "compute time step");
-  (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true, false, 1., diff_safety))(acc_mesh.deformed ().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "compute time step");
   double diff_time = _namespace->lookup<double>("av_diff_ratio").value()*advect_length*advect_length/n_real; // compute size of real time step (as opposed to pseudotime)
-  // initialize residual to zero (will compute RMS over all real time steps)
-  status.diff_res = 0;
-  for (int real_step = 0; real_step < n_real; ++real_step)
-  {
-    // copy value from forcing function storage to scalar variable of stage 0
-    #pragma omp parallel for
-    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-      double* state = elements[i_elem].stage(0);
-      double* forcing = elements[i_elem].art_visc_forcing();
-      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        state[i_qpoint] = forcing[(real_step + 1)*nq + i_qpoint];
-      }
-    }
-    (*write_face)(elements);
-    (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-    diff = 0;
-    n_avg = 0;
-    // perform pseudotime iteration
-    for (int i_iter = 0; i_iter < _namespace->lookup<int>("av_diff_iters").value(); ++i_iter)
-    {
-      // record initial state for residual calculation
-      #pragma omp parallel for
-      for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-        double* state = elements[i_elem].stage(0);
-        double* forcing = elements[i_elem].art_visc_forcing();
-        for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-          forcing[(real_step + 1)*nq + i_qpoint] = state[i_qpoint];
-        }
-      }
-      for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
-        double s = math::chebyshev_step(n_cheby, i_cheby);
-        apply_avc_diff_bcs();
-        // update state with spatial term
-        compute_avc_diff(s, 0);
-        // update state with real time forcing term
-        #pragma omp parallel for
-        for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-          double* state = elements[i_elem].stage(0);
-          double* forcing = elements[i_elem].art_visc_forcing();
-          double* tss = elements[i_elem].time_step_scale();
-          for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-            double pseudotime_scale = s/diff_time*tss[i_qpoint];
-            double f = forcing[real_step*nq + i_qpoint];
-            f = (real_step == 1) ? std::sqrt(f) : f; // at time step 1 switch from square root domain to linear domain
-            state[i_qpoint] += f*pseudotime_scale;
-            state[i_qpoint] /= 1 + pseudotime_scale;
-          }
-        }
-        // update face state
-        (*write_face)(elements);
-        (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
-      }
-    }
-    // update forcing function and residual
-    #pragma omp parallel for reduction(+:diff, n_avg)
-    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-      double* state = elements[i_elem].stage(0);
-      double* forcing = elements[i_elem].art_visc_forcing();
-      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        // update residual
-        double d = forcing[(real_step + 1)*nq + i_qpoint] - state[i_qpoint];
-        diff += d*d;
-        ++n_avg;
-        // update forcing
-        forcing[(real_step + 1)*nq + i_qpoint] = std::max(0., state[i_qpoint]);
-      }
-    }
-    status.diff_res += diff/n_avg;
-  }
-  status.diff_res = std::sqrt(status.diff_res/n_real); // finish computing RMS residual
-  _namespace->assign("av_diffusion_residual", std::sqrt(status.diff_res/n_real));
+  diffuse_art_visc(n_real, diff_time);
+
   // clean up
   double mult = _namespace->lookup<double>("av_visc_mult").value()*advect_length;
   double us_max = advect_length*_namespace->lookup<double>("av_unscaled_max").value()*std::sqrt(2*_namespace->lookup<double>("freestream" + std::to_string(nd + 1)).value()/_namespace->lookup<double>("freestream" + std::to_string(nd)).value());
@@ -727,6 +747,64 @@ void Solver::set_art_visc_smoothness(double advect_length)
   stopwatch.children.at("set art visc").stopwatch.pause();
   stopwatch.children.at("set art visc").work_units_completed += elements.size();
   stopwatch.stopwatch.pause();
+}
+
+void Solver::update_art_visc_elwise(double width, bool pde_based)
+{
+  use_art_visc = true;
+  Mass mass;
+  set_uncertainty(Elem_nonsmooth(mass));
+  auto& elems = acc_mesh.elements();
+  double scale = width/(basis.row_size - 1)*(_namespace->lookup<double>("freestream_speed").value() + _namespace->lookup<double>("freestream_sound_speed").value());
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    double& u = elems[i_elem].uncertainty;
+    u = 2*std::log(u)/std::log(10);
+    double ramp_center = -4 - 4.25*std::log(basis.row_size - 1)/std::log(10);
+    double half_width = 0.5;
+    if (!(u > ramp_center - half_width)) u = 0;
+    else if (u >= ramp_center + half_width) u = 1;
+    else u = .5*(1 + std::sin(constants::pi*(u - ramp_center)/2/half_width));
+    u *= scale;
+  }
+  if (pde_based) {
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      double* stage0 = elems[i_elem].stage(0);
+      double* stage1 = elems[i_elem].stage(1);
+      double elem_av = elems[i_elem].uncertainty;
+      double* av = elems[i_elem].art_visc_coef();
+      double* forcing = elems[i_elem].art_visc_forcing();
+      for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) stage1[i_dof] = stage0[i_dof];
+      for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
+        forcing[i_qpoint] = elem_av;
+        forcing[params.n_qpoint() + i_qpoint] = av[i_qpoint];
+      }
+    }
+    diffuse_art_visc(1, _namespace->lookup<double>("elementwise_art_visc_diff_ratio").value()*width*width);
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      double* stage0 = elems[i_elem].stage(0);
+      double* stage1 = elems[i_elem].stage(1);
+      double* av = elems[i_elem].art_visc_coef();
+      double* forcing = elems[i_elem].art_visc_forcing();
+      for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) stage0[i_dof] = stage1[i_dof];
+      for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) av[i_qpoint] = forcing[params.n_qpoint() + i_qpoint];
+    }
+    (*write_face)(elems);
+    (*kernel_factory<Prolong_refined>(params.n_dim, params.row_size, basis))(acc_mesh.refined_faces());
+  } else {
+    share_vertex_data([](Element& elem, int){return elem.uncertainty;},
+                      [](Element& elem, int i_vert)->double&{return elem.vertex_elwise_av(i_vert);},
+                      Vertex::vector_max);
+    Mat<dyn, dyn> interp = Gauss_lobatto(2).interpolate(basis.nodes());
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      Eigen::Map<Mat<>> qpoint_av(elems[i_elem].art_visc_coef(), params.n_qpoint());
+      Eigen::Map<Mat<>> vert_av(&elems[i_elem].vertex_elwise_av(0), params.n_vertices());
+      qpoint_av = math::hypercube_matvec(interp, vert_av);
+    }
+  }
 }
 
 void Solver::set_art_visc_row_size(int row_size)

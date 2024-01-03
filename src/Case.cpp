@@ -369,10 +369,12 @@ Case::Case(std::string input_file)
     int print_freq = _vari("print_freq").value();
     int n = iter ? print_freq - iter%print_freq : 1;
     for (int i = 0; i < n; ++i) {
-      if (avw) {
-        _solver().set_art_visc_smoothness(_vard("art_visc_width").value());
+      if (_vari("elementwise_art_visc").value()) {
+        _solver().update_art_visc_elwise(_vard("art_visc_width").value(), _vari("elementwise_art_visc_pde").value());
+      } else if (avw) {
+        _solver().update_art_visc_smoothness(_vard("art_visc_width").value());
       } else if (avc) {
-        _solver().set_art_visc_smoothness(_vard("art_visc_constant").value());
+        _solver().set_art_visc_constant(_vard("art_visc_constant").value());
       }
       _solver().update();
     }

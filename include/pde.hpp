@@ -52,6 +52,7 @@ class Navier_stokes
   template <int n_dim>
   class Pde
   {
+    bool _laplacian;
     public:
     static constexpr bool is_viscous = visc;
     static constexpr bool has_convection = true;
@@ -64,8 +65,8 @@ class Navier_stokes
     Transport_model dyn_visc;
     Transport_model therm_cond;
 
-    Pde(Transport_model dynamic_visc = inviscid, Transport_model thermal_cond = inviscid)
-    : dyn_visc{dynamic_visc}, therm_cond{thermal_cond}
+    Pde(Transport_model dynamic_visc = inviscid, Transport_model thermal_cond = inviscid, bool laplacian = false)
+    : _laplacian{laplacian}, dyn_visc{dynamic_visc}, therm_cond{thermal_cond}
     {}
 
     double pressure(Mat<n_var> state) const
@@ -121,12 +122,13 @@ class Navier_stokes
       double sqrt_temp = std::sqrt(std::max(state(n_dim + 1)/mass - .5*veloc.squaredNorm(), 0.)*(heat_rat - 1)/constants::specific_gas_air);
       double nat_visc = dyn_visc.coefficient(sqrt_temp);
       Mat<n_dim, n_dim> stress = nat_visc*(veloc_grad + veloc_grad.transpose())
-                                 + (std::abs(av_coef)*mass - 2./3.*nat_visc)*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
+                                 + ((!_laplacian)*std::abs(av_coef)*mass - 2./3.*nat_visc)*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
       Mat<n_dim, n_update> flux;
       flux(all, seq) = -stress;
       flux(all, n_dim).setZero();
       Mat<n_dim> int_ener_grad = -state(n_dim + 1)/mass/mass*grad(all, n_dim) + grad(all, n_dim + 1)/mass - veloc_grad*veloc;
       flux(all, n_dim + 1) = -stress*veloc - therm_cond.coefficient(sqrt_temp)*int_ener_grad*(heat_rat - 1)/constants::specific_gas_air;
+      if (_laplacian) flux -= av_coef*grad;
       return flux;
     }
 

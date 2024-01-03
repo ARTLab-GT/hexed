@@ -3,6 +3,16 @@
 namespace hexed
 {
 
+double Vertex::vector_max(Mat<> vec)
+{
+  return vec.maxCoeff();
+}
+
+double Vertex::vector_min(Mat<> vec)
+{
+  return vec.minCoeff();
+}
+
 Vertex::Vertex (Mat<3> pos)
 : pos{pos}
 {}
@@ -70,14 +80,14 @@ bool Vertex::are_neighbors(Vertex& vert0, Vertex& vert1)
   return vert0.neighbors.count(&vert1);
 }
 
-double Vertex::shared_value(Vertex::reduction reduce)
+double Vertex::shared_value(std::function<double(Mat<>)> reduction)
 {
-  Eigen::VectorXd shareables (trbl_ptrs.size());
+  Mat<> shareables (trbl_ptrs.size());
   int i_ptr = 0;
   for (Transferable_ptr* ptr : trbl_ptrs) {
     shareables[i_ptr++] = ptr->shareable_value;
   }
-  return std::invoke(reduce, shareables);
+  return reduction(shareables);
 }
 
 Vertex::Transferable_ptr::Transferable_ptr(Mat<3> pos, bool mbl)

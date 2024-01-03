@@ -46,13 +46,15 @@ class Solver
   std::shared_ptr<Printer> _printer;
   bool _implicit;
 
-  void share_vertex_data(Element::vertex_value_access, Vertex::reduction = Vertex::vector_max);
+  void share_vertex_data(std::function<double&(Element&, int i_vertex)>, std::function<double(Mat<>)>);
+  void share_vertex_data(std::function<double(Element&, int i_vertex)> get, std::function<double&(Element&, int i_vertex)> set, std::function<double(Mat<>)>);
   bool fix_admissibility(double stability_ratio);
   void apply_state_bcs();
   void apply_flux_bcs();
   void apply_avc_diff_bcs();
   void apply_avc_diff_flux_bcs();
   void apply_fta_flux_bcs();
+  void diffuse_art_visc(int n_real, double diff_time);
   void compute_inviscid(double dt, int i_stage, bool compute_residual);
   void compute_viscous(double dt, int i_stage, bool compute_residual);
   void compute_fta(double dt, int i_stage);
@@ -167,10 +169,17 @@ class Solver
    * (it is scaled by the max allowable CFL for the chosen DG scheme which is often O(1e-2)).
    */
   virtual void update();
-  virtual void update_implicit();
+  virtual void update_implicit(); //!< \brief (experimental) performs an implicit time step \warning Experimental! Interesting for reasearch, not effective in practice (yet, anyway).
   virtual void compute_residual();
-  virtual bool is_admissible(); //!< check whether flowfield is admissible (e.g. density and energy are positive)
-  virtual void set_art_visc_smoothness(double advect_length); //!< updates the aritificial viscosity coefficient based on smoothness of the flow variables
+  virtual bool is_admissible(); //!< \brief check whether flowfield is admissible (e.g. density and energy are positive)
+  virtual void update_art_visc_smoothness(double advect_length); //!< \brief updates the aritificial viscosity coefficient based on smoothness of the flow variables
+  /*! \brief (experimental) sets artificial viscosity based on elementwise smoothness
+   * \details Based on the work of Persson et al. on artificial viscosity with elementwise smoothness indicators.
+   * Implemented primarily for evaluating the difference between grid-independent artificial viscosity and conventional methods.
+   * \warning Not recommended for use in practice.
+   * Use `Solver::update_art_visc_smoothness`, which was developed to supplant this type of approach.
+   */
+  virtual void update_art_visc_elwise(double width, bool pde_based = false);
   /*! \brief an object providing all available information about the status of the time marching iteration.
    * \details The `Iteration_status::start_time` member will refer to when the `Solver` object was created
    * (specifically at the start of the `Solver::Solver` body).
