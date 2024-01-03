@@ -15,8 +15,8 @@ freestream_temperature = 75.61
 freestream_mach = 5.
 done = {iteration >= 2*10^5}
 vis_freq = 10000
-max_angle = .3*max_angle
-max_refinement_iters = 1
+max_angle = .5*degree
+max_refinement_iters = 3
 refine_if = {(center0^2 + center1^2 + center2^2)^.5 < 1.4}
 unrefine_if = {false}
 
