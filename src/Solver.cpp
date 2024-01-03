@@ -1338,6 +1338,7 @@ std::unique_ptr<Visualizer> Solver::_visualizer(std::string format, std::string 
 void Solver::visualize_field(std::string format, std::string name, const Qpoint_func& output_variables, int n_sample, bool wireframe)
 {
   auto visualizer = _visualizer(format, name, output_variables, wireframe ? 1 : params.n_dim);
+  HEXED_ASSERT(params.n_dim > wireframe, "can only visualize field wireframes in > 1D");
   Position_func pos_func;
   int nv = output_variables.n_var(params.n_dim);
   auto& elems = acc_mesh.elements();
@@ -1361,14 +1362,17 @@ void Solver::visualize_field(std::string format, std::string name, const Qpoint_
 void Solver::visualize_surface(std::string format, std::string name, int bc_sn, const Boundary_func& func, int n_sample, bool wireframe)
 {
   HEXED_ASSERT(params.n_dim > 1, "cannot visualize surfaces in 1D");
-  auto visualizer = _visualizer(format, name, func, params.n_dim - 1);
+  HEXED_ASSERT(params.n_dim > 1 + wireframe, "can only visualize surface wireframes in 3D");
+  auto visualizer = _visualizer(format, name, func, wireframe ? 1 : params.n_dim - 1);
   // convenience definitions
   const int nfq = params.n_qpoint()/params.row_size;
   const int nd = params.n_dim;
   const int nv = func.n_var(nd);
   const int n_block {math::pow(n_sample, nd - 1)};
+  const int n_edge {math::pow(n_sample, nd - 2)};
   // setup
-  Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
+  Mat<dyn, dyn> interp = basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.));
+  Mat<dyn, dyn> boundary = basis.boundary();
   // iterate through boundary connections and visualize a zone for each
   auto& bc_cons {acc_mesh.boundary_connections()};
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con)
@@ -1384,12 +1388,7 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
         auto pos = elem.face_position(basis, i_face, i_qpoint);
         for (int i_dim = 0; i_dim < nd; ++i_dim) qpoint_pos(i_qpoint, i_dim) = pos[i_dim];
       }
-      // interpolate from quadrature points to sample points
-      Mat<dyn, dyn> interp_pos (n_block, nd);
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        interp_pos.col(i_dim) = math::hypercube_matvec(interp, qpoint_pos.col(i_dim));
-      }
-      // fetch the state
+      // fetch the output variables
       Mat<dyn, dyn> qpoint_vars (nfq, nv);
       for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
         auto vars = func(con, i_qpoint, status.flow_time);
@@ -1397,13 +1396,37 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
           qpoint_vars(i_qpoint, i_var) = vars[i_var];
         }
       }
-      // interpolate to sample points
-      Mat<dyn, dyn> interp_vars (n_block, nv);
-      for (int i_var = 0; i_var < nv; ++i_var) {
-        interp_vars.col(i_var) = math::hypercube_matvec(interp, qpoint_vars.col(i_var));
+      if (wireframe) {
+        for (int i_dim = 0; i_dim < params.n_dim - 1; ++i_dim) {
+          for (int i_sign = 0; i_sign < 2; ++i_sign) {
+            Mat<dyn, dyn> interp_pos (n_edge, nd);
+            for (int j_dim = 0; j_dim < nd; ++j_dim) {
+              // extrapolate from faces to edges
+              Mat<> uniform = math::dimension_matvec(boundary(i_sign, all), qpoint_pos.col(j_dim), i_dim);
+              // interpolate from edge qpoints to uniformly-spaced sample points
+              interp_pos.col(j_dim) = math::hypercube_matvec(interp, uniform);
+            }
+            Mat<dyn, dyn> interp_vars (n_edge, nv);
+            for (int i_var = 0; i_var < nv; ++i_var) {
+              Mat<> uniform = math::dimension_matvec(boundary(i_sign, all), qpoint_vars.col(i_var), i_dim);
+              interp_vars.col(i_var) = math::hypercube_matvec(interp, uniform);
+            }
+            visualizer->write_block(n_sample, interp_pos.data(), interp_vars.data());
+          }
+        }
+      } else {
+        // interpolate from quadrature points to sample points
+        Mat<dyn, dyn> interp_pos (n_block, nd);
+        for (int i_dim = 0; i_dim < nd; ++i_dim) {
+          interp_pos.col(i_dim) = math::hypercube_matvec(interp, qpoint_pos.col(i_dim));
+        }
+        Mat<dyn, dyn> interp_vars (n_block, nv);
+        for (int i_var = 0; i_var < nv; ++i_var) {
+          interp_vars.col(i_var) = math::hypercube_matvec(interp, qpoint_vars.col(i_var));
+        }
+        // visualize
+        visualizer->write_block(n_sample, interp_pos.data(), interp_vars.data());
       }
-      // visualize
-      visualizer->write_block(n_sample, interp_pos.data(), interp_vars.data());
     }
   }
   visualizer.reset();
