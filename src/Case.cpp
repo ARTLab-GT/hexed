@@ -294,7 +294,7 @@ Case::Case(std::string input_file)
         for (bool edges : {false, true}) {
           std::string name = v;
           if (edges) name = name + "_edges";
-          if (!edges || (_vari("vis_edges").value() && v != "surface")) {
+          if (!edges || (_vari("vis_edges").value() && _vari("n_dim").value() + (v == "field") > 2)) {
             std::string file_name = wd + name + suffix;
             if (v == "surface") {
               _solver().visualize_surface(format, file_name, _solver().mesh().surface_bc_sn(), Boundary_expr(vis_vars, _inter), n_sample, edges);
