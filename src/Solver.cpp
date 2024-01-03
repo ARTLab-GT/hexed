@@ -1335,21 +1335,30 @@ std::unique_ptr<Visualizer> Solver::_visualizer(std::string format, std::string 
   return visualizer;
 }
 
-void Solver::visualize_field(std::string format, std::string name, const Qpoint_func& output_variables, int n_sample)
+void Solver::visualize_field(std::string format, std::string name, const Qpoint_func& output_variables, int n_sample, bool wireframe)
 {
-  auto visualizer = _visualizer(format, name, output_variables, params.n_dim);
+  auto visualizer = _visualizer(format, name, output_variables, wireframe ? 1 : params.n_dim);
   Position_func pos_func;
+  int nv = output_variables.n_var(params.n_dim);
   auto& elems = acc_mesh.elements();
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     Vis_data pos_dat(elems[i_elem], pos_func, basis, status.flow_time);
     Vis_data out_dat(elems[i_elem], output_variables, basis, status.flow_time);
-    Mat<> pos = pos_dat.interior(n_sample);
-    Mat<> out = out_dat.interior(n_sample);
-    visualizer->write_block(n_sample, pos.data(), out.data());
+    if (wireframe) {
+      Mat<> pos = pos_dat.edges(n_sample);
+      Mat<> out = out_dat.edges(n_sample);
+      for (int i_edge = 0; i_edge < math::pow(2, params.n_dim - 1)*params.n_dim; ++i_edge) {
+        visualizer->write_block(n_sample, pos.data() + i_edge*params.n_dim*n_sample, out.data() + i_edge*nv*n_sample);
+      }
+    } else {
+      Mat<> pos = pos_dat.interior(n_sample);
+      Mat<> out = out_dat.interior(n_sample);
+      visualizer->write_block(n_sample, pos.data(), out.data());
+    }
   }
 }
 
-void Solver::visualize_surface(std::string format, std::string name, int bc_sn, const Boundary_func& func, int n_sample)
+void Solver::visualize_surface(std::string format, std::string name, int bc_sn, const Boundary_func& func, int n_sample, bool wireframe)
 {
   HEXED_ASSERT(params.n_dim > 1, "cannot visualize surfaces in 1D");
   auto visualizer = _visualizer(format, name, func, params.n_dim - 1);

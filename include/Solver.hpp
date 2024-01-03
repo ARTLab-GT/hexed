@@ -213,10 +213,11 @@ class Solver
    * \param name name of file to write (not including extension)
    * \param output_variables what variables to write
    * \param n_sample each element will contain an `n_sample` by `n_sample` array of uniformly-spaced sample points
+   * \param wireframe if `true`, visualize the mesh edges as a wireframe instead of the filled surface/solid
    */
-  void visualize_field(std::string format, std::string name, const Qpoint_func& output_variables, int n_sample = 10);
+  void visualize_field(std::string format, std::string name, const Qpoint_func& output_variables, int n_sample = 10, bool wireframe = false);
   //! \brief write a visualization file describing all surfaces where a particular boundary condition has been enforced.
-  void visualize_surface(std::string format, std::string name, int bc_sn, const Boundary_func&, int n_sample = 10);
+  void visualize_surface(std::string format, std::string name, int bc_sn, const Boundary_func&, int n_sample = 10, bool wireframe = false);
   //! \brief visualize the Cartesian surface which theoretically exists after element deletion but before any vertex snapping
   void vis_cart_surf(std::string format, std::string name, int bc_sn, const Boundary_func& func = Uncertainty());
   //! \brief visualize the local time step constraints imposed by convection and diffusion, respectively

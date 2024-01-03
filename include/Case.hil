@@ -178,6 +178,7 @@ vis_tecplot = false
 vis_xdmf = true
 vis_skew = false
 vis_lts_constraints = false
+vis_edges = true
 vis_field_vars = state_vars + art_visc_expr
 vis_surface_vars = state_vars + visc_stress_expr + heat_flux_expr + pressure_coef_expr + skin_friction_coef_expr
 vis_n_sample = 10
