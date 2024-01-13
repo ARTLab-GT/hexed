@@ -141,6 +141,34 @@ class Spatial
           }
         }
 
+        if constexpr (Pde::n_var == n_dim + 2 && Pde::has_convection) {
+          // compute flux
+          double flux [n_dim][Pde::n_update][n_qpoint];
+          for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+            Mat<n_dim, n_dim> qpoint_nrml;
+            if constexpr (element_t::is_deformed) {
+              for (int i_nrml = 0; i_nrml < n_dim*n_dim; ++i_nrml) qpoint_nrml(i_nrml) = nrml[i_nrml*n_qpoint + i_qpoint];
+            } else qpoint_nrml.setIdentity();
+            Mat<Pde::n_var> qpoint_state = eq.fetch_state(state + i_qpoint, n_qpoint);
+            Mat<n_dim, Pde::n_update> qpoint_flux = eq.flux_new(qpoint_state, qpoint_nrml);
+            for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+              for (int i_var = 0; i_var < Pde::n_update; ++i_var) flux[i_dim][i_var][i_qpoint] = qpoint_flux(i_dim, i_var);
+            }
+          }
+
+          // compute residual
+          for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+            for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
+              Mat<2, Pde::n_update> face_f;
+              // fetch row data
+              auto row_f = Row_rw<Pde::n_update, row_size>::read_row(flux[i_dim][0], ind);
+              // fetch face data
+              face_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
+              // differentiate and write to temporary storage
+              Row_rw<Pde::n_update, row_size>::write_row(-derivative(row_f, face_f), time_rate[0][0], ind, 1.);
+            }
+          }
+        } else {
         if constexpr (Pde::is_viscous) if (!_stage)
         {
           // compute gradient (times jacobian determinant, cause that's easier)
@@ -241,6 +269,7 @@ class Spatial
               Row_rw<Pde::n_update, row_size>::write_row(-derivative(flux), time_rate[1][0], ind, 1.);
             }
           }
+        }
         }
 
         // apply mode filtering

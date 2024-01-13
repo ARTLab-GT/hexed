@@ -96,6 +96,32 @@ class Navier_stokes
       return f;
     }
 
+    Mat<n_var> fetch_state(const double* state, int stride) const
+    {
+      Mat<n_var> s;
+      for (int i_var = 0; i_var < n_var; ++i_var) s(i_var) = state[i_var*stride];
+      return s;
+    }
+
+    //! \brief compute the convective flux
+    Mat<n_dim, n_update> flux_new(Mat<n_var> state, Mat<n_dim, n_dim> normal) const
+    {
+      Mat<n_dim, n_update> f;
+      double pres = pressure(state);
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        f(i_dim, n_dim) = 0;
+        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+          f(i_dim, n_dim) += state(j_dim)*normal(j_dim, i_dim);
+        }
+        double scaled = f(i_dim, n_dim)/state(n_dim);
+        f(i_dim, n_dim + 1) = (state(n_dim + 1) + pres)*scaled;
+        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+          f(i_dim, j_dim) = state(j_dim)*scaled + pres*normal(j_dim, i_dim);
+        }
+      }
+      return f;
+    }
+
     //! \brief compute the numerical convective flux shared at the element faces
     Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const
     {
