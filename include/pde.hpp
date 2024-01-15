@@ -97,27 +97,23 @@ class Navier_stokes
     }
 
     //! \brief compute the convective flux
-    Mat<n_dim, n_update> flux_new(const int stride, const double* state, const double* normal) const
+    Mat<n_dim, n_update> flux_new(Mat<n_var> state, Mat<n_dim, n_dim> normal) const
     {
       double kin_ener = 0;
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim) kin_ener += state[i_dim*stride]*state[i_dim*stride];
-      kin_ener *= .5/state[n_dim*stride];
-      double pres = (heat_rat - 1.)*(state[(n_dim + 1)*stride] - kin_ener);
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) kin_ener += state(i_dim)*state(i_dim);
+      kin_ener *= .5/state(n_dim);
+      double pres = (heat_rat - 1.)*(state((n_dim + 1)) - kin_ener);
       Mat<n_dim, n_update> f;
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        if (normal) {
-          f(i_dim, n_dim) = 0;
-          for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-            f(i_dim, n_dim) += state[j_dim*stride]*normal[(i_dim*n_dim + j_dim)*stride];
-          }
-        } else f(i_dim, n_dim) = state[i_dim*stride];
-        double scaled = f(i_dim, n_dim)/state[n_dim*stride];
-        f(i_dim, n_dim + 1) = (state[(n_dim + 1)*stride] + pres)*scaled;
+        f(i_dim, n_dim) = 0;
         for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-          f(i_dim, j_dim) = state[j_dim*stride]*scaled;
-          if (normal) f(i_dim, j_dim) += pres*normal[(i_dim*n_dim + j_dim)*stride];
+          f(i_dim, n_dim) += state(j_dim)*normal(j_dim, i_dim);
         }
-        if (!normal) f(i_dim, i_dim) += pres;
+        double scaled = f(i_dim, n_dim)/state(n_dim);
+        f(i_dim, n_dim + 1) = (state((n_dim + 1)) + pres)*scaled;
+        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+          f(i_dim, j_dim) = state(j_dim)*scaled + pres*normal(j_dim, i_dim);
+        }
       }
       return f;
     }

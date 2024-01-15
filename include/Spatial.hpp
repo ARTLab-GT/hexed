@@ -208,7 +208,15 @@ class Spatial
           // compute convective flux
           double flux [n_dim][Pde::n_update][n_qpoint];
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-            Mat<n_dim, Pde::n_update> qpoint_flux = eq.flux_new(n_qpoint, state + i_qpoint, nrml ? nrml + i_qpoint : nrml);
+            Mat<Pde::n_var> qpoint_state;
+            for (int i_var = 0; i_var < Pde::n_var; ++i_var) qpoint_state(i_var) = state[i_var*n_qpoint + i_qpoint];
+            Mat<n_dim, n_dim> qpoint_nrml;
+            if constexpr (element_t::is_deformed) {
+              for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+                for (int j_dim = 0; j_dim < n_dim; ++j_dim) qpoint_nrml(j_dim, i_dim) = nrml[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
+              }
+            } else qpoint_nrml.setIdentity();
+            Mat<n_dim, Pde::n_update> qpoint_flux = eq.flux_new(qpoint_state, qpoint_nrml);
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
               for (int i_var = 0; i_var < Pde::n_update; ++i_var) flux[i_dim][i_var][i_qpoint] = qpoint_flux(i_dim, i_var);
             }
