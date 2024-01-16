@@ -62,6 +62,7 @@ class Navier_stokes
     static constexpr int visc_start = 2*n_var;
     static constexpr int n_update = n_var;
     static constexpr int n_state = n_dim + 3;
+    static constexpr int n_extrap = n_dim + 2;
     static constexpr double heat_rat = 1.4;
     Transport_model dyn_visc;
     Transport_model therm_cond;
@@ -69,6 +70,18 @@ class Navier_stokes
     Pde(Transport_model dynamic_visc = inviscid, Transport_model thermal_cond = inviscid, bool laplacian = false)
     : _laplacian{laplacian}, dyn_visc{dynamic_visc}, therm_cond{thermal_cond}
     {}
+
+    Mat<n_extrap> fetch_extrap(int stride, const double* data) const
+    {
+      Mat<n_extrap> extrap;
+      for (int i_var = 0; i_var < n_extrap; ++i_var) extrap(i_var) = data[i_var*stride];
+      return extrap;
+    }
+
+    void write_update(Mat<n_update> update, int stride, double* data) const
+    {
+      for (int i_var = 0; i_var < n_update; ++i_var) data[i_var*stride] += update(i_var);
+    }
 
     class Computation
     {
@@ -113,7 +126,7 @@ class Navier_stokes
         }
       }
 
-      Mat<n_dim, n_var> gradient;
+      Mat<n_dim, n_extrap> gradient;
       Mat<n_dim, n_update> flux_diff;
       void compute_flux_diff()
       {
