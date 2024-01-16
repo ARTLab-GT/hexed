@@ -179,7 +179,7 @@ class Spatial
           double flux [n_dim][Pde::n_update][n_qpoint];
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
             typename Pde::Computation comp(eq);
-            comp.state = eq.fetch_state(n_qpoint, state + i_qpoint);
+            comp.fetch_state(n_qpoint, state + i_qpoint);
             if constexpr (element_t::is_deformed) {
               for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
                 for (int j_dim = 0; j_dim < n_dim; ++j_dim) comp.normal(j_dim, i_dim) = nrml[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
@@ -199,7 +199,6 @@ class Spatial
               if constexpr (element_t::is_deformed) comp.gradient /= elem_det[i_qpoint]; // divide by the determinant to get the actual gradient (see above)
               // compute flux and write to temporary storage
               comp.compute_flux_diff();
-              if constexpr (element_t::is_deformed) comp.flux_diff = comp.normal.transpose()*comp.flux_diff;
               for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
                 for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
                   visc_storage[i_dim][Pde::curr_start + i_var][i_qpoint] = comp.flux_diff(i_dim, i_var);

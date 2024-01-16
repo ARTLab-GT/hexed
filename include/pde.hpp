@@ -75,43 +75,54 @@ class Navier_stokes
       const Pde& _eq;
       public:
       Computation(const Pde& eq) : _eq{eq} {}
-      Mat<n_state> state;
-      Mat<n_dim, n_dim> normal = Mat<n_dim, n_dim>::Identity();
 
+      Mat<n_state> state;
+      void fetch_state(int stride, const double* data)
+      {
+        for (int i_var = 0; i_var < n_dim + 2; ++i_var) state(i_var) = data[i_var*stride];
+        state(n_dim + 2) = data[(2*(n_dim + 2) + 1)*stride];
+      }
+
+      double mass;
       double kin_ener;
-      double pres;
-      double vol_flux;
+      double pressure;
+      void compute_scalars()
+      {
+        mass = state(n_dim);
+        kin_ener = 0;
+        for (int i_dim = 0; i_dim < n_dim; ++i_dim) kin_ener += state(i_dim)*state(i_dim);
+        kin_ener *= .5/mass;
+        pressure = (heat_rat - 1.)*(state((n_dim + 1)) - kin_ener);
+      }
+
+      Mat<n_dim, n_dim> normal = Mat<n_dim, n_dim>::Identity();
       Mat<n_dim, n_update> flux_conv;
       void compute_flux_conv()
       {
-        kin_ener = 0;
-        for (int i_dim = 0; i_dim < n_dim; ++i_dim) kin_ener += state(i_dim)*state(i_dim);
-        kin_ener *= .5/state(n_dim);
-        pres = (heat_rat - 1.)*(state((n_dim + 1)) - kin_ener);
+        compute_scalars();
         for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
           flux_conv(i_dim, n_dim) = 0;
           for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
             flux_conv(i_dim, n_dim) += state(j_dim)*normal(j_dim, i_dim);
           }
-          vol_flux = flux_conv(i_dim, n_dim)/state(n_dim);
-          flux_conv(i_dim, n_dim + 1) = (state((n_dim + 1)) + pres)*vol_flux;
+          double vol_flux = flux_conv(i_dim, n_dim)/mass;
+          flux_conv(i_dim, n_dim + 1) = (state((n_dim + 1)) + pressure)*vol_flux;
           for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-            flux_conv(i_dim, j_dim) = state(j_dim)*vol_flux + pres*normal(j_dim, i_dim);
+            flux_conv(i_dim, j_dim) = state(j_dim)*vol_flux + pressure*normal(j_dim, i_dim);
           }
         }
       }
 
-      Mat<n_dim, n_var> gradient = Mat<n_dim, n_var>::Zero();
+      Mat<n_dim, n_var> gradient;
       Mat<n_dim, n_update> flux_diff;
       void compute_flux_diff()
       {
         auto seq = Eigen::seqN(0, n_dim);
         auto mmtm = state(seq);
-        double mass = state(n_dim);
         double av_coef = state(n_dim + 2);
         Mat<n_dim> veloc = mmtm/mass;
         Mat<n_dim, n_dim> veloc_grad = (gradient(all, seq) - gradient(all, n_dim)*veloc.transpose())/mass;
-        double sqrt_temp = std::sqrt(std::max(state(n_dim + 1)/mass - .5*veloc.squaredNorm(), 0.)*(heat_rat - 1)/constants::specific_gas_air);
+        double sqrt_temp = std::sqrt(std::max((state(n_dim + 1) - kin_ener)/mass, 0.)*(heat_rat - 1)/constants::specific_gas_air);
         double nat_visc = _eq.dyn_visc.coefficient(sqrt_temp);
         Mat<n_dim, n_dim> stress = nat_visc*(veloc_grad + veloc_grad.transpose())
                                    + ((!_eq._laplacian)*std::abs(av_coef)*mass - 2./3.*nat_visc)*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
@@ -120,6 +131,7 @@ class Navier_stokes
         Mat<n_dim> int_ener_grad = -state(n_dim + 1)/mass/mass*gradient(all, n_dim) + gradient(all, n_dim + 1)/mass - veloc_grad*veloc;
         flux_diff(all, n_dim + 1) = -stress*veloc - _eq.therm_cond.coefficient(sqrt_temp)*int_ener_grad*(heat_rat - 1)/constants::specific_gas_air;
         if (_eq._laplacian) flux_diff -= av_coef*gradient;
+        flux_diff = normal.transpose()*flux_diff;
       }
     };
 
@@ -158,28 +170,6 @@ class Navier_stokes
       return state;
     }
 
-    //! \brief compute the viscous flux
-    Mat<n_dim, n_update> flux_visc_new(Mat<n_state> state, Mat<n_dim, n_var> grad) const
-    {
-      auto seq = Eigen::seqN(0, n_dim);
-      auto mmtm = state(seq);
-      double mass = state(n_dim);
-      double av_coef = state(n_dim + 2);
-      Mat<n_dim> veloc = mmtm/mass;
-      Mat<n_dim, n_dim> veloc_grad = (grad(all, seq) - grad(all, n_dim)*veloc.transpose())/mass;
-      double sqrt_temp = std::sqrt(std::max(state(n_dim + 1)/mass - .5*veloc.squaredNorm(), 0.)*(heat_rat - 1)/constants::specific_gas_air);
-      double nat_visc = dyn_visc.coefficient(sqrt_temp);
-      Mat<n_dim, n_dim> stress = nat_visc*(veloc_grad + veloc_grad.transpose())
-                                 + ((!_laplacian)*std::abs(av_coef)*mass - 2./3.*nat_visc)*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
-      Mat<n_dim, n_update> flux;
-      flux(all, seq) = -stress;
-      flux(all, n_dim).setZero();
-      Mat<n_dim> int_ener_grad = -state(n_dim + 1)/mass/mass*grad(all, n_dim) + grad(all, n_dim + 1)/mass - veloc_grad*veloc;
-      flux(all, n_dim + 1) = -stress*veloc - therm_cond.coefficient(sqrt_temp)*int_ener_grad*(heat_rat - 1)/constants::specific_gas_air;
-      if (_laplacian) flux -= av_coef*grad;
-      return flux;
-    }
-
     //! \brief compute the numerical convective flux shared at the element faces
     Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const
     {
@@ -193,27 +183,6 @@ class Navier_stokes
         wave_speed(i_side) = char_speed(state)*nrml_mag;
       }
       return llf(wave_speed.maxCoeff(), face_flux, face_state);
-    }
-
-    //! \brief compute the viscous flux
-    Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const
-    {
-      auto seq = Eigen::seqN(0, n_dim);
-      auto mmtm = state(seq);
-      double mass = state(n_dim);
-      Mat<n_dim> veloc = mmtm/mass;
-      Mat<n_dim, n_dim> veloc_grad = (grad(all, seq) - grad(all, n_dim)*veloc.transpose())/mass;
-      double sqrt_temp = std::sqrt(std::max(state(n_dim + 1)/mass - .5*veloc.squaredNorm(), 0.)*(heat_rat - 1)/constants::specific_gas_air);
-      double nat_visc = dyn_visc.coefficient(sqrt_temp);
-      Mat<n_dim, n_dim> stress = nat_visc*(veloc_grad + veloc_grad.transpose())
-                                 + ((!_laplacian)*std::abs(av_coef)*mass - 2./3.*nat_visc)*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
-      Mat<n_dim, n_update> flux;
-      flux(all, seq) = -stress;
-      flux(all, n_dim).setZero();
-      Mat<n_dim> int_ener_grad = -state(n_dim + 1)/mass/mass*grad(all, n_dim) + grad(all, n_dim + 1)/mass - veloc_grad*veloc;
-      flux(all, n_dim + 1) = -stress*veloc - therm_cond.coefficient(sqrt_temp)*int_ener_grad*(heat_rat - 1)/constants::specific_gas_air;
-      if (_laplacian) flux -= av_coef*grad;
-      return flux;
     }
 
     //! \brief upper bound on characteristic speed for convection
