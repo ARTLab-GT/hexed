@@ -173,52 +173,38 @@ class Spatial
                 }
               }
             }
-            // compute viscous flux from gradient
-            for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
-            {
-              // fetch normals matrix, gradient, and state
-              Mat<Pde::n_var> qpoint_state;
-              Mat<n_dim, Pde::n_var> qpoint_grad;
-              Mat<n_dim, n_dim> qpoint_nrmls;
-              qpoint_nrmls.setIdentity();
-              for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
-                qpoint_state(i_var) = state[i_var*n_qpoint + i_qpoint];
-                for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-                  qpoint_grad(i_dim, i_var) = visc_storage[i_dim][i_var][i_qpoint];
-                }
-              }
-              for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-                for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-                  if constexpr (element_t::is_deformed) {
-                    qpoint_nrmls(i_dim, j_dim) = nrml[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
-                  }
-                }
-              }
-              if constexpr (element_t::is_deformed) qpoint_grad /= elem_det[i_qpoint]; // divide by the determinant to get the actual gradient (see above)
-              // compute flux and write to temporary storage
-              Mat<n_dim, Pde::n_var> flux = qpoint_nrmls*eq.flux_visc(qpoint_state, qpoint_grad, av_coef[i_qpoint]);
-              for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-                for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
-                  visc_storage[i_dim][Pde::curr_start + i_var][i_qpoint] = flux(i_dim, i_var);
-                }
-              }
-            }
           }
 
-          // compute convective flux
+          // compute flux
           double flux [n_dim][Pde::n_update][n_qpoint];
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-            Mat<Pde::n_var> qpoint_state;
-            for (int i_var = 0; i_var < Pde::n_var; ++i_var) qpoint_state(i_var) = state[i_var*n_qpoint + i_qpoint];
-            Mat<n_dim, n_dim> qpoint_nrml;
+            typename Pde::Computation comp(eq);
+            comp.state = eq.fetch_state(n_qpoint, state + i_qpoint);
             if constexpr (element_t::is_deformed) {
               for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-                for (int j_dim = 0; j_dim < n_dim; ++j_dim) qpoint_nrml(j_dim, i_dim) = nrml[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
+                for (int j_dim = 0; j_dim < n_dim; ++j_dim) comp.normal(j_dim, i_dim) = nrml[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
               }
-            } else qpoint_nrml.setIdentity();
-            Mat<n_dim, Pde::n_update> qpoint_flux = eq.flux_new(qpoint_state, qpoint_nrml);
+            }
+            comp.compute_flux_conv();
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-              for (int i_var = 0; i_var < Pde::n_update; ++i_var) flux[i_dim][i_var][i_qpoint] = qpoint_flux(i_dim, i_var);
+              for (int i_var = 0; i_var < Pde::n_update; ++i_var) flux[i_dim][i_var][i_qpoint] = comp.flux_conv(i_dim, i_var);
+            }
+            if constexpr (Pde::is_viscous) if (!_stage) {
+              // fetch gradient
+              for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
+                for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+                  comp.gradient(i_dim, i_var) = visc_storage[i_dim][i_var][i_qpoint];
+                }
+              }
+              if constexpr (element_t::is_deformed) comp.gradient /= elem_det[i_qpoint]; // divide by the determinant to get the actual gradient (see above)
+              // compute flux and write to temporary storage
+              comp.compute_flux_diff();
+              if constexpr (element_t::is_deformed) comp.flux_diff = comp.normal.transpose()*comp.flux_diff;
+              for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+                for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
+                  visc_storage[i_dim][Pde::curr_start + i_var][i_qpoint] = comp.flux_diff(i_dim, i_var);
+                }
+              }
             }
           }
 
