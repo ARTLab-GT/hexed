@@ -38,7 +38,6 @@ class Spatial
     //! apply to a single element
     void operator()(const double* read, std::array<double*, 6> faces)
     {
-      if constexpr (Pde::has_convection) {
       constexpr int n_qpoint = math::pow(row_size, n_dim);
       double extrap [Pde::n_extrap][n_qpoint];
       // fetch the extrapolation variables and store them in `time_rate`
@@ -52,15 +51,6 @@ class Spatial
           Mat<2, Pde::n_var> bound = boundary*row_r;
           Row_rw<Pde::n_var, row_size>::write_bound(bound, faces, ind);
         }
-      }
-      } else {
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
-          auto row_r = Row_rw<Pde::n_var, row_size>::read_row(read, ind);
-          Mat<2, Pde::n_var> bound = boundary*row_r;
-          Row_rw<Pde::n_var, row_size>::write_bound(bound, faces, ind);
-        }
-      }
       }
     }
 
@@ -140,14 +130,13 @@ class Spatial
         double* tss = elem.time_step_scale();
         double d_pos = elem.nominal_size();
         double time_rate [2][std::max(Pde::n_update, Pde::n_extrap - Pde::n_extrap/2)][n_qpoint] {}; // first part contains convective time derivative, second part diffusive
-        double* av_coef = elem.art_visc_coef();
         // only need the next 2 for deformed elements
         double* nrml = nullptr; // reference level normals
         double* elem_det = nullptr; // jacobian determinant
         #pragma GCC diagnostic push
         #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
         std::array<double*, 6> face_nrml;
-        double visc_storage [n_dim][Pde::n_update][n_qpoint] {}; // for viscous PDEs, will be used to store gradients and later viscous flux
+        double visc_storage [n_dim][Pde::n_extrap][n_qpoint] {}; // for viscous PDEs, will be used to store gradients and later viscous flux
         #pragma GCC diagnostic pop
         if constexpr (element_t::is_deformed) {
           elem_det = elem.jacobian_determinant();
@@ -158,164 +147,28 @@ class Spatial
           }
         }
 
-        if constexpr (Pde::has_convection || Pde::n_var == 1) {
-          if constexpr (Pde::is_viscous) if (!_stage)
-          {
-            static_assert(Pde::n_extrap >= Pde::n_update);
-            // compute gradient (times jacobian determinant, cause that's easier)
-            constexpr int n_qpoint = math::pow(row_size, n_dim);
-            std::array<double*, 6> visc_faces;
-            for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.faces[i_face] + 2*(n_dim + 2)*n_qpoint/row_size;
-            for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-              Mat<Pde::n_extrap> grad_vars = eq.fetch_extrap(n_qpoint, state + i_qpoint);
-              for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) (&time_rate[0][0][i_qpoint])[i_var*n_qpoint] = grad_vars(i_var);
-            }
-            for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-              for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
-                // fetch state data
-                auto row_r = Row_rw<Pde::n_extrap, row_size>::read_row(time_rate[0][0], ind);
-                auto face_state = Row_rw<Pde::n_extrap, row_size>::read_bound(visc_faces, ind);
-                if constexpr (element_t::is_deformed) {
-                  // fetch normal data
-                  auto row_n = Row_rw<n_dim, row_size>::read_row(nrml + i_dim*n_dim*n_qpoint, ind);
-                  auto face_n = Row_rw<n_dim, row_size>::read_bound(face_nrml, ind);
-                  // differentiate and write to temporary storage
-                  for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-                    for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) {
-                      Mat<row_size, 1> row = row_n(Eigen::all, j_dim).cwiseProduct(row_r(Eigen::all, i_var));
-                      Mat<2, 1> bound = face_n(Eigen::all, j_dim).cwiseProduct(face_state(Eigen::all, i_var));
-                      Row_rw<1, row_size>::write_row(derivative(row, bound)/d_pos, visc_storage[j_dim][i_var], ind, 1.);
-                    }
-                  }
-                } else {
-                  // differentiate and write to temporary storage
-                  Row_rw<Pde::n_extrap, row_size>::write_row(derivative(row_r, face_state)/d_pos, visc_storage[i_dim][0], ind, 0);
-                }
-              }
-            }
-            for (int i = 0; i < 2*Pde::n_update*n_qpoint; ++i) (&time_rate[0][0][0])[i] = 0;
-          }
-
-          // compute flux
-          double flux [n_dim][Pde::n_update][n_qpoint];
-          for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-            typename Pde::Computation comp(eq);
-            comp.fetch_state(n_qpoint, state + i_qpoint);
-            if constexpr (element_t::is_deformed) {
-              for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-                for (int j_dim = 0; j_dim < n_dim; ++j_dim) comp.normal(j_dim, i_dim) = nrml[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
-              }
-            }
-            if constexpr (Pde::has_convection) {
-              comp.compute_flux_conv();
-              for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-                for (int i_var = 0; i_var < Pde::n_update; ++i_var) flux[i_dim][i_var][i_qpoint] = comp.flux_conv(i_dim, i_var);
-              }
-            }
-            if constexpr (Pde::is_viscous) if (!_stage) {
-              // fetch gradient
-              for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) {
-                for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-                  comp.gradient(i_dim, i_var) = visc_storage[i_dim][i_var][i_qpoint];
-                }
-              }
-              if constexpr (element_t::is_deformed) comp.gradient /= elem_det[i_qpoint]; // divide by the determinant to get the actual gradient (see above)
-              // compute flux and write to temporary storage
-              comp.compute_flux_diff();
-              for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-                for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
-                  visc_storage[i_dim][Pde::curr_start + i_var][i_qpoint] = comp.flux_diff(i_dim, i_var);
-                }
-              }
-            }
-          }
-
-          // compute residual
-          for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-            for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
-              Mat<row_size, Pde::n_update> row_f;
-              Mat<2, Pde::n_update> face_f;
-              if constexpr (Pde::has_convection) {
-                // fetch row data
-                row_f = Row_rw<Pde::n_update, row_size>::read_row(flux[i_dim][0], ind);
-                // fetch face data
-                face_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
-                // differentiate and write to temporary storage
-                Row_rw<Pde::n_update, row_size>::write_row(-derivative(row_f, face_f), time_rate[0][0], ind, 1.);
-              }
-              // compute viscous update
-              if constexpr (Pde::is_viscous) if (!_stage) {
-                row_f = Row_rw<Pde::n_update, row_size>::read_row(visc_storage[i_dim][Pde::curr_start], ind);
-                face_f = boundary*row_f;
-                // write viscous row_f to faces to enable calculation of the numerical row_f
-                for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
-                  for (int is_positive : {0, 1}) {
-                    faces[ind.i_dim*2 + is_positive][(2*(n_dim + 2) + i_var)*ind.n_fqpoint + ind.i_face_qpoint()] = face_f(is_positive, i_var);
-                  }
-                }
-                Row_rw<Pde::n_update, row_size>::write_row(-derivative(row_f), time_rate[1][0], ind, 1.);
-              }
-            }
-          }
-
-          // apply mode filtering
-          if (_use_filter) {
-            for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-              for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
-                Mat<row_size, 2*Pde::n_update> row_r = Row_rw<2*Pde::n_update, row_size>::read_row(time_rate[0][0], ind);
-                row_r = filter*row_r;
-                Row_rw<2*Pde::n_update, row_size>::write_row(row_r, time_rate[0][0], ind, 0.);
-              }
-            }
-          }
-
-          // write update to interior
-          double* ref_state = state + Pde::ref_start*n_qpoint;
-          for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-            Mat<Pde::n_update> update;
-            update.setZero();
-            double mult = _update*tss[i_qpoint]/d_pos;
-            if constexpr (element_t::is_deformed) mult /= elem_det[i_qpoint];
-            for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
-              double u = time_rate[0][i_var][i_qpoint];
-              if (_stage) {
-                u -= ref_state[i_var*n_qpoint + i_qpoint];
-              } else {
-                if constexpr (Pde::has_convection) ref_state[i_var*n_qpoint + i_qpoint] = u;
-                if constexpr (Pde::is_viscous) u += time_rate[1][i_var][i_qpoint];
-              }
-              u *= mult;
-              if (_compute_residual) ref_state[i_var*n_qpoint + i_qpoint] = u;
-              else update(i_var) = u;
-            }
-            eq.write_update(update, n_qpoint, state + i_qpoint);
-          }
-
-          // write updated state to face storage.
-          // For viscous, don't bother since we still have to add the numerical flux term
-          if (!Pde::is_viscous || _stage) write_face(state, elem.faces);
-
-        } else {
+        // compute gradient (times jacobian determinant, cause that's easier)
         if constexpr (Pde::is_viscous) if (!_stage)
         {
-          // compute gradient (times jacobian determinant, cause that's easier)
-          constexpr int n_qpoint = math::pow(row_size, n_dim);
+          static_assert(Pde::n_extrap >= Pde::n_update);
           std::array<double*, 6> visc_faces;
           for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.faces[i_face] + 2*(n_dim + 2)*n_qpoint/row_size;
-          for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-          {
-            for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind)
-            {
+          for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+            Mat<Pde::n_extrap> grad_vars = eq.fetch_extrap(n_qpoint, state + i_qpoint);
+            for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) (&time_rate[0][0][i_qpoint])[i_var*n_qpoint] = grad_vars(i_var);
+          }
+          for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+            for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
               // fetch state data
-              auto row_r = Row_rw<Pde::n_var, row_size>::read_row(state, ind);
-              auto face_state = Row_rw<Pde::n_var, row_size>::read_bound(visc_faces, ind);
+              auto row_r = Row_rw<Pde::n_extrap, row_size>::read_row(time_rate[0][0], ind);
+              auto face_state = Row_rw<Pde::n_extrap, row_size>::read_bound(visc_faces, ind);
               if constexpr (element_t::is_deformed) {
                 // fetch normal data
                 auto row_n = Row_rw<n_dim, row_size>::read_row(nrml + i_dim*n_dim*n_qpoint, ind);
                 auto face_n = Row_rw<n_dim, row_size>::read_bound(face_nrml, ind);
                 // differentiate and write to temporary storage
                 for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-                  for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
+                  for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) {
                     Mat<row_size, 1> row = row_n(Eigen::all, j_dim).cwiseProduct(row_r(Eigen::all, i_var));
                     Mat<2, 1> bound = face_n(Eigen::all, j_dim).cwiseProduct(face_state(Eigen::all, i_var));
                     Row_rw<1, row_size>::write_row(derivative(row, bound)/d_pos, visc_storage[j_dim][i_var], ind, 1.);
@@ -323,83 +176,71 @@ class Spatial
                 }
               } else {
                 // differentiate and write to temporary storage
-                Row_rw<Pde::n_var, row_size>::write_row(derivative(row_r, face_state)/d_pos, visc_storage[i_dim][0], ind, 0);
+                Row_rw<Pde::n_extrap, row_size>::write_row(derivative(row_r, face_state)/d_pos, visc_storage[i_dim][0], ind, 0);
               }
             }
           }
-          // compute viscous flux from gradient
-          for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
-          {
-            // fetch normals matrix, gradient, and state
-            Mat<Pde::n_var> qpoint_state;
-            Mat<n_dim, Pde::n_var> qpoint_grad;
-            Mat<n_dim, n_dim> qpoint_nrmls;
-            qpoint_nrmls.setIdentity();
-            for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
-              qpoint_state(i_var) = state[i_var*n_qpoint + i_qpoint];
-              for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-                qpoint_grad(i_dim, i_var) = visc_storage[i_dim][i_var][i_qpoint];
-              }
-            }
+          for (int i = 0; i < 2*Pde::n_update*n_qpoint; ++i) (&time_rate[0][0][0])[i] = 0;
+        }
+
+        // compute flux
+        double flux [n_dim][Pde::n_update][n_qpoint];
+        for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+          typename Pde::Computation comp(eq);
+          comp.fetch_state(n_qpoint, state + i_qpoint);
+          if constexpr (element_t::is_deformed) {
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-              for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-                if constexpr (element_t::is_deformed) {
-                  qpoint_nrmls(i_dim, j_dim) = nrml[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
-                }
+              for (int j_dim = 0; j_dim < n_dim; ++j_dim) comp.normal(j_dim, i_dim) = nrml[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
+            }
+          }
+          if constexpr (Pde::has_convection) {
+            comp.compute_flux_conv();
+            for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+              for (int i_var = 0; i_var < Pde::n_update; ++i_var) flux[i_dim][i_var][i_qpoint] = comp.flux_conv(i_dim, i_var);
+            }
+          }
+          if constexpr (Pde::is_viscous) if (!_stage) {
+            // fetch gradient
+            for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) {
+              for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+                comp.gradient(i_dim, i_var) = visc_storage[i_dim][i_var][i_qpoint];
               }
             }
-            if constexpr (element_t::is_deformed) qpoint_grad /= elem_det[i_qpoint]; // divide by the determinant to get the actual gradient (see above)
+            if constexpr (element_t::is_deformed) comp.gradient /= elem_det[i_qpoint]; // divide by the determinant to get the actual gradient (see above)
             // compute flux and write to temporary storage
-            Mat<n_dim, Pde::n_var> flux = qpoint_nrmls*eq.flux_visc(qpoint_state, qpoint_grad, av_coef[i_qpoint]);
+            comp.compute_flux_diff();
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
               for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
-                visc_storage[i_dim][Pde::curr_start + i_var][i_qpoint] = flux(i_dim, i_var);
+                visc_storage[i_dim][Pde::curr_start + i_var][i_qpoint] = comp.flux_diff(i_dim, i_var);
               }
             }
-          }
-
-          // write updated state to face storage.
-          // For viscous, don't bother since we still have to add the numerical flux term
-          if (!Pde::is_viscous || _stage) {
-            write_face(state, elem.faces);
           }
         }
 
         // compute residual
-        for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-        {
-          for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind)
-          {
-            Mat<row_size, Pde::n_update> flux;
+        for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+          for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
+            Mat<row_size, Pde::n_update> row_f;
             Mat<2, Pde::n_update> face_f;
-            // compute convective update
             if constexpr (Pde::has_convection) {
               // fetch row data
-              auto row_r = Row_rw<Pde::n_var, row_size>::read_row(state, ind);
-              Mat<row_size, n_dim> row_n = Mat<row_size, 1>::Ones()*Mat<1, n_dim>::Unit(i_dim);
-              if constexpr (element_t::is_deformed) {
-                row_n = Row_rw<n_dim, row_size>::read_row(nrml + i_dim*n_dim*n_qpoint, ind);
-              }
-              // compute flux
-              for (int i_row = 0; i_row < row_size; ++i_row) {
-                flux(i_row, Eigen::all) = eq.flux(row_r(i_row, Eigen::all), row_n(i_row, Eigen::all));
-              }
+              row_f = Row_rw<Pde::n_update, row_size>::read_row(flux[i_dim][0], ind);
               // fetch face data
               face_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
               // differentiate and write to temporary storage
-              Row_rw<Pde::n_update, row_size>::write_row(-derivative(flux, face_f), time_rate[0][0], ind, 1.);
+              Row_rw<Pde::n_update, row_size>::write_row(-derivative(row_f, face_f), time_rate[0][0], ind, 1.);
             }
             // compute viscous update
             if constexpr (Pde::is_viscous) if (!_stage) {
-              flux = Row_rw<Pde::n_update, row_size>::read_row(visc_storage[i_dim][Pde::curr_start], ind);
-              face_f = boundary*flux;
-              // write viscous flux to faces to enable calculation of the numerical flux
-              for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
+              row_f = Row_rw<Pde::n_update, row_size>::read_row(visc_storage[i_dim][Pde::curr_start], ind);
+              face_f = boundary*row_f;
+              // write viscous row_f to faces to enable calculation of the numerical row_f
+              for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
                 for (int is_positive : {0, 1}) {
                   faces[ind.i_dim*2 + is_positive][(2*(n_dim + 2) + i_var)*ind.n_fqpoint + ind.i_face_qpoint()] = face_f(is_positive, i_var);
                 }
               }
-              Row_rw<Pde::n_update, row_size>::write_row(-derivative(flux), time_rate[1][0], ind, 1.);
+              Row_rw<Pde::n_update, row_size>::write_row(-derivative(row_f), time_rate[1][0], ind, 1.);
             }
           }
         }
@@ -416,30 +257,30 @@ class Spatial
         }
 
         // write update to interior
-        for (int i_var = 0; i_var < Pde::n_update; ++i_var)
-        {
-          double* curr_state = state + (Pde::curr_start + i_var)*n_qpoint;
-          double* ref_state = state + (Pde::ref_start + i_var)*n_qpoint;
-          for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-            double det = 1;
-            if constexpr (element_t::is_deformed) det = elem_det[i_qpoint];
+        double* ref_state = state + Pde::ref_start*n_qpoint;
+        for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+          Mat<Pde::n_update> update;
+          update.setZero();
+          double mult = _update*tss[i_qpoint]/d_pos;
+          if constexpr (element_t::is_deformed) mult /= elem_det[i_qpoint];
+          for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
             double u = time_rate[0][i_var][i_qpoint];
             if (_stage) {
-              u -= ref_state[i_qpoint];
+              u -= ref_state[i_var*n_qpoint + i_qpoint];
             } else {
-              if constexpr (Pde::has_convection) ref_state[i_qpoint] = u;
+              if constexpr (Pde::has_convection) ref_state[i_var*n_qpoint + i_qpoint] = u;
               if constexpr (Pde::is_viscous) u += time_rate[1][i_var][i_qpoint];
             }
-            u *= _update*tss[i_qpoint]/det/d_pos;
-            if (_compute_residual) ref_state[i_qpoint] = u;
-            else curr_state[i_qpoint] += u;
+            u *= mult;
+            if (_compute_residual) ref_state[i_var*n_qpoint + i_qpoint] = u;
+            else update(i_var) = u;
           }
+          eq.write_update(update, n_qpoint, state + i_qpoint);
         }
 
         // write updated state to face storage.
         // For viscous, don't bother since we still have to add the numerical flux term
         if (!Pde::is_viscous || _stage) write_face(state, elem.faces);
-        }
       }
     }
   };

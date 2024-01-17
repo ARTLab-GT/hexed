@@ -354,15 +354,6 @@ class Advection
     }
   };
 
-  Mat<1> flux(Mat<n_var> state, Mat<n_dim> normal) const
-  {
-    double nrml_veloc = 0;
-    for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-      nrml_veloc += state(j_dim)*normal(j_dim);
-    }
-    return Mat<1>::Constant(nrml_veloc*state(n_dim));
-  }
-
   Mat<1> flux_num(Mat<n_var, 2> face_vars, Mat<n_dim> normal) const
   {
     Mat<1, 2> vol_flux = normal.transpose()*face_vars(Eigen::seqN(0, n_dim), Eigen::all);
@@ -430,10 +421,6 @@ class Smooth_art_visc
   };
 
   Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const {return Mat<n_update>::Zero();}
-  Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const
-  {
-    return -grad;
-  }
   double diffusivity(Mat<n_var> state, double av_coef) const {return 1;}
 };
 
@@ -453,12 +440,42 @@ class Fix_therm_admis
   static constexpr int visc_start = 2*n_var;
   static constexpr int n_update = n_var;
   static constexpr int n_extrap = n_var;
+  static constexpr int n_state = n_var;
+
+  static Mat<n_extrap> fetch_extrap(int stride, const double* data)
+  {
+    Mat<n_extrap> extrap;
+    for (int i_var = 0; i_var < n_extrap; ++i_var) extrap(i_var) = data[i_var*stride];
+    return extrap;
+  }
+
+  static void write_update(Mat<n_update> update, int stride, double* data)
+  {
+    for (int i_var = 0; i_var < n_update; ++i_var) data[i_var*stride] += update(i_var);
+  }
+
+  class Computation
+  {
+    const Fix_therm_admis& _eq;
+    public:
+    Computation(const Fix_therm_admis& eq) : _eq{eq} {}
+
+    Mat<n_state> state;
+    void fetch_state(int stride, const double* data)
+    {
+      for (int i_var = 0; i_var < n_state; ++i_var) state(i_var) = data[i_var*stride];
+    }
+
+    Mat<n_dim, n_dim> normal = Mat<n_dim, n_dim>::Identity();
+    Mat<n_dim, n_extrap> gradient;
+    Mat<n_dim, n_update> flux_diff;
+    void compute_flux_diff()
+    {
+      flux_diff.noalias() = -normal.transpose()*gradient;
+    }
+  };
 
   Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const {return Mat<n_update>::Zero();}
-  Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const
-  {
-    return -grad;
-  }
   double diffusivity(Mat<n_var> state, double av_coef) const {return 1;}
 };
 
