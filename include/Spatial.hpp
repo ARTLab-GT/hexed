@@ -275,7 +275,7 @@ class Spatial
             if (_compute_residual) ref_state[i_var*n_qpoint + i_qpoint] = u;
             else update(i_var) = u;
           }
-          eq.write_update(update, n_qpoint, state + i_qpoint);
+          Pde::write_update(update, n_qpoint, state + i_qpoint);
         }
 
         // write updated state to face storage.
@@ -349,13 +349,15 @@ class Spatial
         }
 
         // write update to interior
-        for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
-          double* to_update = state + ((_compute_residual ? Pde::ref_start : Pde::curr_start) + i_var)*n_qpoint;
-          for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-            double det = 1;
-            if constexpr (element_t::is_deformed) det = elem_det[i_qpoint];
-            to_update[i_qpoint] += _update*time_rate[i_var][i_qpoint]*tss[i_qpoint]/d_pos/det;;
+        double* to_update = state + (_compute_residual ? Pde::ref_start : Pde::curr_start)*n_qpoint;
+        for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+          Mat<Pde::n_update> update;
+          double mult = _update*tss[i_qpoint]/d_pos;
+          if constexpr (element_t::is_deformed) mult /= elem_det[i_qpoint];
+          for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
+            update(i_var) = time_rate[i_var][i_qpoint]*mult;
           }
+          Pde::write_update(update, n_qpoint, to_update + i_qpoint);
         }
         // *now* we can extrapolate state to faces
         write_face(state, elem.faces);
