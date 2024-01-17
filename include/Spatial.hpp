@@ -196,14 +196,14 @@ class Spatial
           if constexpr (Pde::has_convection) {
             comp.compute_flux_conv();
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-              for (int i_var = 0; i_var < Pde::n_update; ++i_var) flux[i_dim][i_var][i_qpoint] = comp.flux_conv(i_dim, i_var);
+              for (int i_var = 0; i_var < Pde::n_update; ++i_var) flux[i_dim][i_var][i_qpoint] = comp.flux_conv(i_var, i_dim);
             }
           }
           if constexpr (Pde::is_viscous) if (!_stage) {
             // fetch gradient
-            for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) {
-              for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-                comp.gradient(i_dim, i_var) = visc_storage[i_dim][i_var][i_qpoint];
+            for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+              for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) {
+                comp.gradient(i_var, i_dim) = visc_storage[i_dim][i_var][i_qpoint];
               }
             }
             if constexpr (element_t::is_deformed) comp.gradient /= elem_det[i_qpoint]; // divide by the determinant to get the actual gradient (see above)
@@ -211,7 +211,7 @@ class Spatial
             comp.compute_flux_diff();
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
               for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
-                visc_storage[i_dim][Pde::curr_start + i_var][i_qpoint] = comp.flux_diff(i_dim, i_var);
+                visc_storage[i_dim][Pde::curr_start + i_var][i_qpoint] = comp.flux_diff(i_var, i_dim);
               }
             }
           }

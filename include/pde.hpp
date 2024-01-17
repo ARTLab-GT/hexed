@@ -99,7 +99,7 @@ class Navier_stokes
       double mass;
       double kin_ener;
       double pressure;
-      void compute_scalars()
+      void compute_scalars_conv()
       {
         mass = state(n_dim);
         kin_ener = 0;
@@ -109,42 +109,55 @@ class Navier_stokes
       }
 
       Mat<n_dim, n_dim> normal = Mat<n_dim, n_dim>::Identity();
-      Mat<n_dim, n_update> flux_conv;
+      Mat<n_update, n_dim> flux_conv;
       void compute_flux_conv()
       {
-        compute_scalars();
+        compute_scalars_conv();
         for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-          flux_conv(i_dim, n_dim) = 0;
+          flux_conv(n_dim, i_dim) = 0;
           for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-            flux_conv(i_dim, n_dim) += state(j_dim)*normal(j_dim, i_dim);
+            flux_conv(n_dim, i_dim) += state(j_dim)*normal(j_dim, i_dim);
           }
-          double vol_flux = flux_conv(i_dim, n_dim)/mass;
-          flux_conv(i_dim, n_dim + 1) = (state((n_dim + 1)) + pressure)*vol_flux;
+          double vol_flux = flux_conv(n_dim, i_dim)/mass;
+          flux_conv(n_dim + 1, i_dim) = (state((n_dim + 1)) + pressure)*vol_flux;
           for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-            flux_conv(i_dim, j_dim) = state(j_dim)*vol_flux + pressure*normal(j_dim, i_dim);
+            flux_conv(j_dim, i_dim) = state(j_dim)*vol_flux + pressure*normal(j_dim, i_dim);
           }
         }
       }
 
-      Mat<n_dim, n_extrap> gradient;
-      Mat<n_dim, n_update> flux_diff;
+      double bulk_av;
+      double laplacian_visc;
+      double sqrt_temp;
+      double dyn_visc_coef;
+      double therm_cond_coef;
+      double energy_diffusivity;
+      void compute_scalars_diff()
+      {
+        bulk_av = std::abs(state(n_dim + 2));
+        sqrt_temp = std::sqrt(std::max((state(n_dim + 1) - kin_ener)/mass, 0.)*(heat_rat - 1)/constants::specific_gas_air);
+        dyn_visc_coef = _eq.dyn_visc.coefficient(sqrt_temp);
+        therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp);
+        energy_diffusivity = therm_cond_coef*(heat_rat - 1)/constants::specific_gas_air;
+      }
+
+      Mat<n_extrap, n_dim> gradient;
+      Mat<n_update, n_dim> flux_diff;
       void compute_flux_diff()
       {
+        compute_scalars_diff();
         auto seq = Eigen::seqN(0, n_dim);
         auto mmtm = state(seq);
-        double av_coef = state(n_dim + 2);
         Mat<n_dim> veloc = mmtm/mass;
-        Mat<n_dim, n_dim> veloc_grad = (gradient(all, seq) - gradient(all, n_dim)*veloc.transpose())/mass;
-        double sqrt_temp = std::sqrt(std::max((state(n_dim + 1) - kin_ener)/mass, 0.)*(heat_rat - 1)/constants::specific_gas_air);
-        double nat_visc = _eq.dyn_visc.coefficient(sqrt_temp);
-        Mat<n_dim, n_dim> stress = nat_visc*(veloc_grad + veloc_grad.transpose())
-                                   + ((!_eq._laplacian)*std::abs(av_coef)*mass - 2./3.*nat_visc)*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
-        flux_diff(all, seq) = -stress;
-        flux_diff(all, n_dim).setZero();
-        Mat<n_dim> int_ener_grad = -state(n_dim + 1)/mass/mass*gradient(all, n_dim) + gradient(all, n_dim + 1)/mass - veloc_grad*veloc;
-        flux_diff(all, n_dim + 1) = -stress*veloc - _eq.therm_cond.coefficient(sqrt_temp)*int_ener_grad*(heat_rat - 1)/constants::specific_gas_air;
-        if (_eq._laplacian) flux_diff -= av_coef*gradient;
-        flux_diff = normal.transpose()*flux_diff;
+        Mat<n_dim, n_dim> veloc_grad = (gradient(seq, all) - veloc*gradient(n_dim, all))/mass;
+        Mat<n_dim, n_dim> stress = dyn_visc_coef*(veloc_grad + veloc_grad.transpose())
+                                   + ((!_eq._laplacian)*bulk_av*mass - 2./3.*dyn_visc_coef)*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
+        flux_diff(seq, all) = -stress;
+        flux_diff(n_dim, all).setZero();
+        Mat<1, n_dim> int_ener_grad = -state(n_dim + 1)/mass/mass*gradient(n_dim, all) + gradient(n_dim + 1, all)/mass - veloc.transpose()*veloc_grad;
+        flux_diff(n_dim + 1, all) = -veloc.transpose()*stress - energy_diffusivity*int_ener_grad;
+        if (_eq._laplacian) flux_diff -= bulk_av*gradient;
+        flux_diff = flux_diff*normal;
       }
     };
 
@@ -341,7 +354,7 @@ class Advection
     }
 
     Mat<n_dim, n_dim> normal = Mat<n_dim, n_dim>::Identity();
-    Mat<n_dim, n_update> flux_conv;
+    Mat<n_update, n_dim> flux_conv;
     void compute_flux_conv()
     {
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -349,7 +362,7 @@ class Advection
         for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
           nrml_veloc += state(j_dim)*normal(j_dim, i_dim);
         }
-        flux_conv(i_dim, 0) = nrml_veloc*state(n_dim);
+        flux_conv(0, i_dim) = nrml_veloc*state(n_dim);
       }
     }
   };
@@ -412,11 +425,11 @@ class Smooth_art_visc
     }
 
     Mat<n_dim, n_dim> normal = Mat<n_dim, n_dim>::Identity();
-    Mat<n_dim, n_extrap> gradient;
-    Mat<n_dim, n_update> flux_diff;
+    Mat<n_extrap, n_dim> gradient;
+    Mat<n_update, n_dim> flux_diff;
     void compute_flux_diff()
     {
-      flux_diff.noalias() = -normal.transpose()*gradient;
+      flux_diff.noalias() = -gradient*normal;
     }
   };
 
@@ -467,11 +480,11 @@ class Fix_therm_admis
     }
 
     Mat<n_dim, n_dim> normal = Mat<n_dim, n_dim>::Identity();
-    Mat<n_dim, n_extrap> gradient;
-    Mat<n_dim, n_update> flux_diff;
+    Mat<n_extrap, n_dim> gradient;
+    Mat<n_update, n_dim> flux_diff;
     void compute_flux_diff()
     {
-      flux_diff.noalias() = -normal.transpose()*gradient;
+      flux_diff.noalias() = -gradient*normal;
     }
   };
 
