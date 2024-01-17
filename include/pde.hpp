@@ -71,14 +71,14 @@ class Navier_stokes
     : _laplacian{laplacian}, dyn_visc{dynamic_visc}, therm_cond{thermal_cond}
     {}
 
-    Mat<n_extrap> fetch_extrap(int stride, const double* data) const
+    static Mat<n_extrap> fetch_extrap(int stride, const double* data)
     {
       Mat<n_extrap> extrap;
       for (int i_var = 0; i_var < n_extrap; ++i_var) extrap(i_var) = data[i_var*stride];
       return extrap;
     }
 
-    void write_update(Mat<n_update> update, int stride, double* data) const
+    static void write_update(Mat<n_update> update, int stride, double* data)
     {
       for (int i_var = 0; i_var < n_update; ++i_var) data[i_var*stride] += update(i_var);
     }
@@ -312,7 +312,47 @@ class Advection
   static constexpr int n_var = n_dim + 1;
   static constexpr int curr_start = n_dim;
   static constexpr int ref_start = n_dim + 1;
+  static constexpr int n_state = n_dim + 1;
+  static constexpr int n_extrap = n_dim + 1;
   static constexpr int n_update = 1;
+
+  static Mat<n_extrap> fetch_extrap(int stride, const double* data)
+  {
+    Mat<n_extrap> extrap;
+    for (int i_var = 0; i_var < n_extrap; ++i_var) extrap(i_var) = data[i_var*stride];
+    return extrap;
+  }
+
+  static void write_update(Mat<n_update> update, int stride, double* data)
+  {
+    data[n_dim*stride] += update(0);
+  }
+
+  class Computation
+  {
+    const Advection& _eq;
+    public:
+    Computation(const Advection& eq) : _eq{eq} {}
+
+    Mat<n_state> state;
+    void fetch_state(int stride, const double* data)
+    {
+      for (int i_var = 0; i_var < n_dim + 1; ++i_var) state(i_var) = data[i_var*stride];
+    }
+
+    Mat<n_dim, n_dim> normal = Mat<n_dim, n_dim>::Identity();
+    Mat<n_dim, n_update> flux_conv;
+    void compute_flux_conv()
+    {
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        double nrml_veloc = 0;
+        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+          nrml_veloc += state(j_dim)*normal(j_dim, i_dim);
+        }
+        flux_conv(i_dim, 0) = nrml_veloc*state(n_dim);
+      }
+    }
+  };
 
   Mat<1> flux(Mat<n_var> state, Mat<n_dim> normal) const
   {
@@ -353,6 +393,7 @@ class Smooth_art_visc
   static constexpr int ref_start = 1;
   static constexpr int visc_start = 2;
   static constexpr int n_update = 1;
+  static constexpr int n_extrap = 1;
 
   Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const {return Mat<n_update>::Zero();}
   Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const
@@ -377,6 +418,7 @@ class Fix_therm_admis
   static constexpr int ref_start = n_var;
   static constexpr int visc_start = 2*n_var;
   static constexpr int n_update = n_var;
+  static constexpr int n_extrap = n_var;
 
   Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const {return Mat<n_update>::Zero();}
   Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const

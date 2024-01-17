@@ -38,12 +38,29 @@ class Spatial
     //! apply to a single element
     void operator()(const double* read, std::array<double*, 6> faces)
     {
+      if constexpr (Pde::has_convection) {
+      constexpr int n_qpoint = math::pow(row_size, n_dim);
+      double extrap [Pde::n_extrap][n_qpoint];
+      // fetch the extrapolation variables and store them in `time_rate`
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        Mat<Pde::n_extrap> grad_vars = Pde::fetch_extrap(n_qpoint, read + i_qpoint);
+        for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) extrap[i_var][i_qpoint] = grad_vars(i_var);
+      }
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
+          auto row_r = Row_rw<Pde::n_extrap, row_size>::read_row(extrap[0], ind);
+          Mat<2, Pde::n_var> bound = boundary*row_r;
+          Row_rw<Pde::n_var, row_size>::write_bound(bound, faces, ind);
+        }
+      }
+      } else {
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
         for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
           auto row_r = Row_rw<Pde::n_var, row_size>::read_row(read, ind);
           Mat<2, Pde::n_var> bound = boundary*row_r;
           Row_rw<Pde::n_var, row_size>::write_bound(bound, faces, ind);
         }
+      }
       }
     }
 
@@ -122,7 +139,7 @@ class Spatial
         for (double*& face : faces) face += Pde::curr_start*n_qpoint/row_size;
         double* tss = elem.time_step_scale();
         double d_pos = elem.nominal_size();
-        double time_rate [2][Pde::n_update][n_qpoint] {}; // first part contains convective time derivative, second part diffusive
+        double time_rate [2][std::max(Pde::n_update, Pde::n_extrap - Pde::n_extrap/2)][n_qpoint] {}; // first part contains convective time derivative, second part diffusive
         double* av_coef = elem.art_visc_coef();
         // only need the next 2 for deformed elements
         double* nrml = nullptr; // reference level normals
@@ -141,10 +158,9 @@ class Spatial
           }
         }
 
-        if constexpr (Pde::n_var == n_dim + 2 && Pde::has_convection) {
+        if constexpr (Pde::has_convection) {
           if constexpr (Pde::is_viscous) if (!_stage)
           {
-            static_assert(2*Pde::n_update >= Pde::n_extrap);
             static_assert(Pde::n_extrap >= Pde::n_update);
             // compute gradient (times jacobian determinant, cause that's easier)
             constexpr int n_qpoint = math::pow(row_size, n_dim);
@@ -250,7 +266,7 @@ class Spatial
           }
 
           // write update to interior
-          double* ref_state = elem.stage(1);
+          double* ref_state = state + Pde::ref_start*n_qpoint;
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
             Mat<Pde::n_update> update;
             update.setZero();
@@ -273,15 +289,7 @@ class Spatial
 
           // write updated state to face storage.
           // For viscous, don't bother since we still have to add the numerical flux term
-          if (!Pde::is_viscous || _stage) {
-            static_assert(2*Pde::n_update >= Pde::n_extrap);
-            // fetch the extrapolation variables and store them in `time_rate`
-            for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-              Mat<Pde::n_extrap> grad_vars = eq.fetch_extrap(n_qpoint, state + i_qpoint);
-              for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) (&time_rate[0][0][i_qpoint])[i_var*n_qpoint] = grad_vars(i_var);
-            }
-            write_face(time_rate[0][0], elem.faces);
-          }
+          if (!Pde::is_viscous || _stage) write_face(state, elem.faces);
 
         } else {
         if constexpr (Pde::is_viscous) if (!_stage)
