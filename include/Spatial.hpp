@@ -158,7 +158,7 @@ class Spatial
           }
         }
 
-        if constexpr (Pde::has_convection) {
+        if constexpr (Pde::has_convection || Pde::n_var == 1) {
           if constexpr (Pde::is_viscous) if (!_stage)
           {
             static_assert(Pde::n_extrap >= Pde::n_update);
@@ -206,9 +206,11 @@ class Spatial
                 for (int j_dim = 0; j_dim < n_dim; ++j_dim) comp.normal(j_dim, i_dim) = nrml[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
               }
             }
-            comp.compute_flux_conv();
-            for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-              for (int i_var = 0; i_var < Pde::n_update; ++i_var) flux[i_dim][i_var][i_qpoint] = comp.flux_conv(i_dim, i_var);
+            if constexpr (Pde::has_convection) {
+              comp.compute_flux_conv();
+              for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+                for (int i_var = 0; i_var < Pde::n_update; ++i_var) flux[i_dim][i_var][i_qpoint] = comp.flux_conv(i_dim, i_var);
+              }
             }
             if constexpr (Pde::is_viscous) if (!_stage) {
               // fetch gradient
@@ -231,14 +233,16 @@ class Spatial
           // compute residual
           for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
             for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
+              Mat<row_size, Pde::n_update> row_f;
               Mat<2, Pde::n_update> face_f;
-              // fetch row data
-              auto row_f = Row_rw<Pde::n_update, row_size>::read_row(flux[i_dim][0], ind);
-              // fetch face data
-              face_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
-              // differentiate and write to temporary storage
-              Row_rw<Pde::n_update, row_size>::write_row(-derivative(row_f, face_f), time_rate[0][0], ind, 1.);
-
+              if constexpr (Pde::has_convection) {
+                // fetch row data
+                row_f = Row_rw<Pde::n_update, row_size>::read_row(flux[i_dim][0], ind);
+                // fetch face data
+                face_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
+                // differentiate and write to temporary storage
+                Row_rw<Pde::n_update, row_size>::write_row(-derivative(row_f, face_f), time_rate[0][0], ind, 1.);
+              }
               // compute viscous update
               if constexpr (Pde::is_viscous) if (!_stage) {
                 row_f = Row_rw<Pde::n_update, row_size>::read_row(visc_storage[i_dim][Pde::curr_start], ind);

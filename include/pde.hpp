@@ -393,7 +393,41 @@ class Smooth_art_visc
   static constexpr int ref_start = 1;
   static constexpr int visc_start = 2;
   static constexpr int n_update = 1;
+  static constexpr int n_state = 1;
   static constexpr int n_extrap = 1;
+
+  static Mat<n_extrap> fetch_extrap(int stride, const double* data)
+  {
+    Mat<n_extrap> extrap;
+    for (int i_var = 0; i_var < n_extrap; ++i_var) extrap(i_var) = data[i_var*stride];
+    return extrap;
+  }
+
+  static void write_update(Mat<n_update> update, int stride, double* data)
+  {
+    for (int i_var = 0; i_var < n_update; ++i_var) data[i_var*stride] += update(i_var);
+  }
+
+  class Computation
+  {
+    const Smooth_art_visc& _eq;
+    public:
+    Computation(const Smooth_art_visc& eq) : _eq{eq} {}
+
+    Mat<n_state> state;
+    void fetch_state(int stride, const double* data)
+    {
+      state(0) = *data;
+    }
+
+    Mat<n_dim, n_dim> normal = Mat<n_dim, n_dim>::Identity();
+    Mat<n_dim, n_extrap> gradient;
+    Mat<n_dim, n_update> flux_diff;
+    void compute_flux_diff()
+    {
+      flux_diff.noalias() = -normal.transpose()*gradient;
+    }
+  };
 
   Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const {return Mat<n_update>::Zero();}
   Mat<n_dim, n_update> flux_visc(Mat<n_var> state, Mat<n_dim, n_var> grad, double av_coef) const
