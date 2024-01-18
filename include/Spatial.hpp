@@ -322,8 +322,8 @@ class Spatial
       {
         auto& elem = elements[i_elem];
         double* state = elem.state();
-        std::array<double*, 6> faces;
-        for (int i_face = 0; i_face < 2*n_dim; ++i_face) faces[i_face] = elem.face(i_face);
+        std::array<double*, 6> visc_faces;
+        for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.face(i_face) + 2*(n_dim + 2)*n_qpoint/row_size;
         double* tss = elem.time_step_scale();
         double d_pos = elem.nominal_size();
         double time_rate [Pde::n_update][n_qpoint] {};
@@ -334,7 +334,7 @@ class Spatial
         // fetch the flux difference and lift it to the interior temporary storage
         for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
           for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
-            auto bound_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
+            auto bound_f = Row_rw<Pde::n_update, row_size>::read_bound(visc_faces, ind);
             Row_rw<Pde::n_update, row_size>::write_row(-derivative.boundary_term(bound_f), time_rate[0], ind, 1.);
           }
         }
@@ -362,6 +362,8 @@ class Spatial
           Pde::write_update(update, n_qpoint, to_update + i_qpoint);
         }
         // *now* we can extrapolate state to faces
+        std::array<double*, 6> faces;
+        for (int i_face = 0; i_face < 2*n_dim; ++i_face) faces[i_face] = elem.face(i_face);
         write_face(state, faces);
       }
     }
