@@ -171,4 +171,7 @@ double* Deformed_element::node_adjustments()
   return node_adj.data();
 }
 
+bool Deformed_element::deformed() const {return true;}
+double* Deformed_element::kernel_face_normal(int i_face) {return face_normal(i_face);}
+
 }

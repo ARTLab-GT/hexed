@@ -6,6 +6,7 @@
 
 #include <Eigen/Dense>
 
+#include "Kernel_element.hpp"
 #include "Storage_params.hpp"
 #include "Vertex.hpp"
 #include "Basis.hpp"
@@ -22,7 +23,7 @@ class Tree;
  * This class represents a Cartesian (i.e., regular) element.
  * See also derived class `Deformed_element`.
  */
-class Element
+class Element : public Kernel_element
 {
   protected:
   Storage_params params;
@@ -107,6 +108,14 @@ class Element
   double& vertex_elwise_av(int i_vertex);
   double& vertex_fix_admis_coef(int i_vertex);
   void set_needs_smooth(bool); //!< sets the `Vertex::Transferable_ptr::needs_smooth` of the vertices
+
+  double* state() override;
+  double* residual_cache() override;
+  double* face_state(int i_face) override;
+  bool deformed() const override;
+  double* reference_level_normals() override;
+  double* jacobian_determinant() override;
+  double* kernel_face_normal(int i_face) override;
 };
 
 }

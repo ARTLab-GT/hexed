@@ -182,4 +182,12 @@ void Element::set_needs_smooth(bool value)
   }
 }
 
+double* Element::state() {return stage(0);}
+double* Element::residual_cache() {return stage(1);}
+double* Element::face_state(int i_face) {return faces[i_face];}
+bool Element::deformed() const {return false;}
+double* Element::reference_level_normals() {return nullptr;}
+double* Element::jacobian_determinant() {return nullptr;}
+double* Element::kernel_face_normal(int i_face) {return nullptr;}
+
 }
