@@ -1,7 +1,7 @@
 #ifndef HEXED_PROLONG_REFINED_HPP_
 #define HEXED_PROLONG_REFINED_HPP_
 
-#include "Vector_view.hpp"
+#include "Sequences.hpp"
 #include "connection.hpp"
 #include "Basis.hpp"
 #include "kernel_factory.hpp"

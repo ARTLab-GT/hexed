@@ -3,7 +3,8 @@
 
 #include <Eigen/Dense>
 #include "kernel_factory.hpp"
-#include "connection.hpp"
+#include "Kernel_connection.hpp"
+#include "math.hpp"
 
 namespace hexed
 {
@@ -29,7 +30,7 @@ class Face_permutation : public Face_permutation_dynamic
 {
   static constexpr int n_qpoint = math::pow(row_size, n_dim - 1);
   static constexpr int n_var = n_dim + 2;
-  Con_dir<Deformed_element> dir;
+  Connection_direction dir;
   double* tgt;
 
   /*
@@ -76,7 +77,7 @@ class Face_permutation : public Face_permutation_dynamic
   // `target` points to the data for face 1
   // note that this might be the actual `Element::face()` data, or some temporary storage allocated by the caller,
   // but it should correspond to face 1
-  Face_permutation(Con_dir<Deformed_element> direction, double* target)
+  Face_permutation(Connection_direction direction, double* target)
   : dir{direction}, tgt{target} {}
   // reordering can consist of order reversal and/or transpose operations
   virtual void match_faces() {transpose(); flip();}

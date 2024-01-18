@@ -117,8 +117,8 @@ double Solver::max_dt(double msc, double msd)
   double use_filt = _namespace->lookup<int>("use_filter").value();
   bool local_time = _namespace->lookup<int>("local_time").value();
   #define MAX_DT(is_visc, ...) { \
-    return std::min((*kernel_factory<Spatial<Element         , pde::Navier_stokes<is_visc>::Pde>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd, __VA_ARGS__))(acc_mesh.cartesian().elements(), sw_car, "compute time step"), \
-                    (*kernel_factory<Spatial<Deformed_element, pde::Navier_stokes<is_visc>::Pde>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd, __VA_ARGS__))(acc_mesh.deformed ().elements(), sw_def, "compute time step")); \
+    return std::min((*kernel_factory<Spatial<pde::Navier_stokes<is_visc>::Pde, false>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd, __VA_ARGS__))(acc_mesh.cartesian().kernel_elements(), sw_car, "compute time step"), \
+                    (*kernel_factory<Spatial<pde::Navier_stokes<is_visc>::Pde,  true>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd, __VA_ARGS__))(acc_mesh.deformed ().kernel_elements(), sw_def, "compute time step")); \
   }
   if (use_ldg()) MAX_DT(true , visc, therm_cond)
   else           MAX_DT(false, visc, therm_cond)
@@ -135,7 +135,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   use_art_visc{false},
   fix_admis{false},
   av_rs{row_size},
-  write_face(kernel_factory<Spatial<Element, pde::Navier_stokes<false>::Pde>::Write_face>(params.n_dim, params.row_size, basis)), // note: for now, false and true are equivalent for `Write_face`
+  write_face(kernel_factory<Spatial<pde::Navier_stokes<false>::Pde, false>::Write_face>(params.n_dim, params.row_size, basis)), // note: for now, false and true are equivalent for `Write_face`
   visc{viscosity_model},
   therm_cond{thermal_conductivity_model},
   _namespace{space},
@@ -259,7 +259,7 @@ void Solver::snap_faces()
         }
       }
     }
-    (*write_face)(elems);
+    (*write_face)(acc_mesh.kernel_elements());
     (*kernel_factory<Prolong_refined>(params.n_dim, params.row_size, basis))(acc_mesh.refined_faces());
     Copy fake_bc;
     #pragma omp parallel for
@@ -281,7 +281,7 @@ void Solver::snap_faces()
         }
       }
     }
-    (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Neighbor>(params.n_dim, params.row_size, 0))(acc_mesh.deformed().face_connections());
+    (*kernel_factory<Spatial<pde::Smooth_art_visc, false>::Neighbor>(params.n_dim, params.row_size, 0))(acc_mesh.deformed().kernel_connections());
     (*kernel_factory<Restrict_refined>(params.n_dim, params.row_size, basis, false, true))(acc_mesh.refined_faces());
     #pragma omp parallel for
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
@@ -452,7 +452,7 @@ void Solver::initialize(const Spacetime_func& func)
       }
     }
   }
-  (*write_face)(elements);
+  (*write_face)(acc_mesh.kernel_elements());
   (*kernel_factory<Prolong_refined>(params.n_dim, params.row_size, basis))(acc_mesh.refined_faces());
   auto& bc_cons {acc_mesh.boundary_connections()};
   #pragma omp parallel for
@@ -489,8 +489,8 @@ void Solver::diffuse_art_visc(int n_real, double diff_time)
   // evaluate CFL condition
   double diff_safety = _namespace->lookup<double>("av_diff_max_safety").value();
   double n_cheby = _namespace->lookup<double>("n_cheby_av").value();
-  (*kernel_factory<Spatial<Element         , pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true, false, 1., diff_safety))(acc_mesh.cartesian().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "compute time step");
-  (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Max_dt>(nd, rs, basis, true, false, 1., diff_safety))(acc_mesh.deformed ().elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "compute time step");
+  (*kernel_factory<Spatial<pde::Smooth_art_visc, false>::Max_dt>(nd, rs, basis, true, false, 1., diff_safety))(acc_mesh.cartesian().kernel_elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "compute time step");
+  (*kernel_factory<Spatial<pde::Smooth_art_visc,  true>::Max_dt>(nd, rs, basis, true, false, 1., diff_safety))(acc_mesh.deformed ().kernel_elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "compute time step");
   // initialize residual to zero (will compute RMS over all real time steps)
   status.diff_res = 0;
   for (int real_step = 0; real_step < n_real; ++real_step)
@@ -506,7 +506,7 @@ void Solver::diffuse_art_visc(int n_real, double diff_time)
         state[i_qpoint] = forcing[(real_step + 1)*nq + i_qpoint];
       }
     }
-    (*write_face)(elements);
+    (*write_face)(acc_mesh.kernel_elements());
     (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
     diff = 0;
     n_avg = 0;
@@ -542,7 +542,7 @@ void Solver::diffuse_art_visc(int n_real, double diff_time)
           }
         }
         // update face state
-        (*write_face)(elements);
+        (*write_face)(acc_mesh.kernel_elements());
         (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
       }
     }
@@ -607,11 +607,11 @@ void Solver::update_art_visc_smoothness(double advect_length)
   // enforce CFL condition
   auto& sw_adv = stopwatch.children.at("set art visc").children.at("advection");
   sw_adv.stopwatch.start();
-  (*write_face)(elements);
+  (*write_face)(acc_mesh.kernel_elements());
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
   double adv_safety = _namespace->lookup<double>("av_advect_max_safety").value();
-  (*kernel_factory<Spatial<Element         , pde::Advection>::Max_dt>(nd, rs, basis, true, false, adv_safety, 1.))(acc_mesh.cartesian().elements(), sw_adv.children.at("cartesian"), "compute time step");
-  (*kernel_factory<Spatial<Deformed_element, pde::Advection>::Max_dt>(nd, rs, basis, true, false, adv_safety, 1.))(acc_mesh.deformed ().elements(), sw_adv.children.at("deformed" ), "compute time step");
+  (*kernel_factory<Spatial<pde::Advection, false>::Max_dt>(nd, rs, basis, true, false, adv_safety, 1.))(acc_mesh.cartesian().kernel_elements(), sw_adv.children.at("cartesian"), "compute time step");
+  (*kernel_factory<Spatial<pde::Advection,  true>::Max_dt>(nd, rs, basis, true, false, adv_safety, 1.))(acc_mesh.deformed ().kernel_elements(), sw_adv.children.at("deformed" ), "compute time step");
 
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
   double diff = 0; // for residual computation
@@ -653,7 +653,7 @@ void Solver::update_art_visc_smoothness(double advect_length)
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) state[nd*nq + i_qpoint] = adv[i_node*nq + i_qpoint];
         }
         // evaluate advection operator
-        (*write_face)(elements);
+        (*write_face)(acc_mesh.kernel_elements());
         (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
         sw_adv.children.at("setup").stopwatch.pause();
         double dt_scaled = std::abs(basis.node(i_node) - .5)*2;
@@ -742,7 +742,7 @@ void Solver::update_art_visc_smoothness(double advect_length)
     }
   }
   // update the face state
-  (*write_face)(elements);
+  (*write_face)(acc_mesh.kernel_elements());
   (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
   stopwatch.children.at("set art visc").stopwatch.pause();
   stopwatch.children.at("set art visc").work_units_completed += elements.size();
@@ -791,7 +791,7 @@ void Solver::update_art_visc_elwise(double width, bool pde_based)
       for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) stage0[i_dof] = stage1[i_dof];
       for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) av[i_qpoint] = forcing[params.n_qpoint() + i_qpoint];
     }
-    (*write_face)(elems);
+    (*write_face)(acc_mesh.kernel_elements());
     (*kernel_factory<Prolong_refined>(params.n_dim, params.row_size, basis))(acc_mesh.refined_faces());
   } else {
     share_vertex_data([](Element& elem, int){return elem.uncertainty;},
@@ -878,7 +878,7 @@ void Solver::set_uncert_surface_rep(int bc_sn)
     }
   }
   // extrapolate to faces
-  (*write_face)(elems);
+  (*write_face)(acc_mesh.kernel_elements());
   // for each face, compute unit surface normal from the reference level normal
   Mat<dyn, dyn> bound = basis.boundary();
   #pragma omp parallel for
@@ -956,7 +956,7 @@ void Solver::set_uncert_surface_rep(int bc_sn)
       }
     }
   }
-  (*write_face)(elems);
+  (*write_face)(acc_mesh.kernel_elements());
 }
 
 void Solver::synch_extruded_uncert()
@@ -1032,7 +1032,7 @@ void Solver::update_implicit()
   Linearized lin(*this);
   iterative::gmres(lin, 27, 1);
   lin.add(-Linearized::storage_start, 1., -Linearized::storage_start + 3, 1., 0.);
-  (*write_face)(acc_mesh.elements());
+  (*write_face)(acc_mesh.kernel_elements());
   (*kernel_factory<Prolong_refined>(params.n_dim, params.row_size, basis))(acc_mesh.refined_faces());
   fix_admissibility(.7);
 }
@@ -1178,8 +1178,8 @@ bool Solver::fix_admissibility(double stability_ratio)
       }
     }
     double dt = stability_ratio;
-    (*kernel_factory<Spatial<Element         , pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true, false, dt, dt))(acc_mesh.cartesian().elements(), stopwatch.children.at("fix admis.").children.at("cartesian"), "compute time step");
-    (*kernel_factory<Spatial<Deformed_element, pde::Fix_therm_admis>::Max_dt>(nd, rs, basis, true, false, dt, dt))(acc_mesh.deformed ().elements(), stopwatch.children.at("fix admis.").children.at("deformed" ), "compute time step");
+    (*kernel_factory<Spatial<pde::Fix_therm_admis, false>::Max_dt>(nd, rs, basis, true, false, dt, dt))(acc_mesh.cartesian().kernel_elements(), stopwatch.children.at("fix admis.").children.at("cartesian"), "compute time step");
+    (*kernel_factory<Spatial<pde::Fix_therm_admis,  true>::Max_dt>(nd, rs, basis, true, false, dt, dt))(acc_mesh.deformed ().kernel_elements(), stopwatch.children.at("fix admis.").children.at("deformed" ), "compute time step");
     dt = 1.;
     double linear = dt;
     double quadratic = dt*dt/8/0.9;
@@ -1263,7 +1263,7 @@ std::vector<double> Solver::integral_surface(const Boundary_func& integrand, int
   Eigen::MatrixXd boundary = basis.boundary();
   Eigen::VectorXd weights = math::pow_outer(basis.node_weights(), params.n_dim - 1);
   // write the state to the faces so that the BCs can access it
-  (*write_face)(acc_mesh.elements());
+  (*write_face)(acc_mesh.kernel_elements());
   // compute the integral
   std::vector<double> integral (n_int, 0.);
   auto& bc_cons {acc_mesh.boundary_connections()};

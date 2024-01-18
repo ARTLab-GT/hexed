@@ -2,6 +2,7 @@
 #define HEXED_CONNECTION_HPP_
 
 #include <Eigen/Dense>
+#include "Kernel_connection.hpp"
 #include "Deformed_element.hpp"
 #include "Hanging_vertex_matcher.hpp"
 #include "Boundary_face.hpp"
@@ -18,36 +19,10 @@ namespace hexed
 template <class element_t> class Con_dir {};
 
 template <>
-class Con_dir<Deformed_element>
+class Con_dir<Deformed_element> : public Connection_direction
 {
   public:
-  std::array<int, 2> i_dim;
-  std::array<bool, 2> face_sign;
-  int i_face(int i_side) {return 2*i_dim[i_side] + face_sign[i_side];}
-  /*!
-   * Answers the question: Is it necessary to flip the normal of element `i_side` so that it
-   * points from element 0 into element 1?
-   */
-  bool flip_normal(int i_side) {return face_sign[i_side] == i_side;}
-  /*!
-   * Answers the question: Is it neccesary to flip axis `face_index(0).i_dim` of element 1
-   * to match the coordinate systems?
-   */
-  bool flip_tangential()
-  {
-    //! if you're swapping two axes, you have to flip one of them to make a valid rotation. If you're not
-    //! flipping a normal (or flipping both of them) then you have to flip a tangential
-    return (i_dim[0] != i_dim[1]) && (flip_normal(0) == flip_normal(1));
-  }
-  /*!
-   * Answers the question: Is it necessary to transpose the rows/columns of the face
-   * quadrature points of element 1 to match element 0? Only applicable to 3D, where some
-   * face combinations can create a row vs column major mismatch. If 2D, always returns `false`.
-   */
-  bool transpose()
-  {
-    return ((i_dim[0] == 0) && (i_dim[1] == 2)) || ((i_dim[0] == 2) && (i_dim[1] == 0));
-  }
+  Con_dir(std::array<int, 2> i_dimension, std::array<bool, 2> sign) : Connection_direction{i_dimension, sign} {}
 };
 
 template <>
@@ -74,17 +49,19 @@ std::array<std::vector<int>, 2> vertex_inds(int n_dim, Con_dir<Deformed_element>
  * boundary conditions or `Refined_face`s).
  */
 template <class element_t>
-class Face_connection
+class Face_connection : public Kernel_connection
 {
   Eigen::VectorXd data;
   public:
   Face_connection(Storage_params params) : data(4*params.n_dof()/params.row_size) {}
   virtual Con_dir<element_t> direction() = 0;
-  virtual double* state() {return data.data();}
+  Connection_direction get_direction() override {return direction();}
+  double* state() override {return data.data();}
+  double* normal() override {return nullptr;}
 };
 
 template <>
-class Face_connection<Deformed_element>
+class Face_connection<Deformed_element> : public Kernel_connection
 {
   int nrml_sz;
   int state_sz;
@@ -96,9 +73,10 @@ class Face_connection<Deformed_element>
     data(2*(nrml_sz + 2*state_sz))
   {}
   virtual Con_dir<Deformed_element> direction() = 0;
-  virtual double* state() {return data.data();}
+  Connection_direction get_direction() override {return direction();}
+  double* state() override {return data.data();}
   double* normal(int i_side) {return data.data() + 4*state_sz + i_side*nrml_sz;}
-  double* normal() {return data.data() + 4*state_sz;} //!< area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
+  double* normal() override {return data.data() + 4*state_sz;} //!< area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
 };
 
 /*!

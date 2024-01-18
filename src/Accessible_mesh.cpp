@@ -128,6 +128,7 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
   def{params, root_sz},
   def_as_car{def.elements()},
   elems{car.elements(), def_as_car},
+  kernel_elems{elems},
   elem_cons{car.element_connections(), def.element_connections()},
   bound_face_cons{car.bound_face_con_view, def.bound_face_con_view},
   bound_cons{car.boundary_connections(), def.boundary_connections()},

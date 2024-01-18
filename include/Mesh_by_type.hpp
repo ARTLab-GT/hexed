@@ -23,7 +23,9 @@ class View_by_type
   virtual ~View_by_type() = default;
   //! \cond
   virtual Sequence<element_t&>& elements() = 0;
+  virtual Sequence<Kernel_element&>& kernel_elements() = 0;
   virtual Sequence<Face_connection<element_t>&>& face_connections() = 0;
+  virtual Sequence<Kernel_connection&>& kernel_connections() = 0;
   virtual Sequence<Element_connection&>& element_connections() = 0;
   virtual Sequence<Refined_face&>& refined_faces() = 0;
   virtual Sequence<Refined_connection<element_t>&>& refined_connections() = 0;
@@ -62,6 +64,7 @@ class Mesh_by_type : public View_by_type<element_t>
    */
   //!\{
   typename Complete_element_container<element_t>::view_t elem_v; //!< a view of the elements that does not allow addition or removal
+  Vector_view<Kernel_element&, element_t&, &trivial_convert<Kernel_element&, element_t&>, Sequence> kernel_elems;
 
   //! Sequence of some type of connection object which cycles through first the conformal connections and then the hanging-node connections.
   template <typename view_t>
@@ -91,6 +94,7 @@ class Mesh_by_type : public View_by_type<element_t>
     }
   };
   Connection_view<Face_connection<element_t>&> elem_face_con_v;
+  Vector_view<Kernel_connection&, Face_connection<element_t>&, &trivial_convert<Kernel_connection&, Face_connection<element_t>&>, Sequence> kernel_cons;
   // this is useful to allow optional concatenation by providing an empty vector to concatenate
   static std::vector<Element_face_connection<element_t>> empty_con_vec;
   static Vector_view<Face_connection<element_t>&, Element_face_connection<element_t>> empty_con_view;
@@ -116,7 +120,9 @@ class Mesh_by_type : public View_by_type<element_t>
     par{params},
     elems{params, root_spacing},
     elem_v{elems.elements()},
+    kernel_elems{elem_v},
     elem_face_con_v{*this},
+    kernel_cons{elem_face_con_v},
     elem_con_v{*this},
     ref_con_vs{ref_face_cons[0], ref_face_cons[1], ref_face_cons[2]},
     ref_con_cat01{ref_con_vs[0], ref_con_vs[1]},
@@ -130,7 +136,9 @@ class Mesh_by_type : public View_by_type<element_t>
 
   // `View_by_type` interface implementation
   Sequence<element_t&>& elements() override {return elem_v;}
+  Sequence<Kernel_element&>& kernel_elements() override {return kernel_elems;}
   Sequence<Face_connection<element_t>&>& face_connections() override {return face_con_v;}
+  Sequence<Kernel_connection&>& kernel_connections() override {return kernel_cons;}
   Sequence<Element_connection&>& element_connections() override {return elem_con_v;}
   Sequence<Refined_face&>& refined_faces() override {return ref_v;}
   Sequence<Refined_connection<element_t>&>& refined_connections() override {return ref_con_v;}

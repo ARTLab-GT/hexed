@@ -1,20 +1,10 @@
-#ifndef HEXED_VECTOR_VIEW_HPP_
-#define HEXED_VECTOR_VIEW_HPP_
+#ifndef HEXED_SEQUENCES_HPP_
+#define HEXED_SEQUENCES_HPP_
+
+#include "Sequence.hpp"
 
 namespace hexed
 {
-
-/*! \brief An interface for general sequence-type containers which supports access to elements
- * but intentionally doesn't support insertion or removal of elements.
- * \details This is useful for classes providing limited public access to otherwise private variables.
- */
-template<typename T>
-class Sequence
-{
-  public:
-  virtual int size() = 0;
-  virtual T operator[](int index) = 0;
-};
 
 template<typename S, typename T>
 S trivial_convert(T& t)
@@ -58,7 +48,7 @@ class Vector_view : public Sequence<reference_t>
 };
 
 /*! \brief A `Sequence` formed by concatenating two `Sequence`s.
- * \details For better or for worse, no copies are made -- it requres references to existing sequences.
+ * \details For better or for worse, no copies are made---it requres references to existing sequences.
  * More then 2 sequences can be concatenated by nesting `Concatenation`s.
  */
 template <typename T>

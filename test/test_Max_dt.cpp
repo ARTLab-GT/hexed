@@ -37,7 +37,7 @@ TEST_CASE("Max_dt")
         }
       }
       car_elem_view elem_view {elements};
-      double dt = (*hexed::kernel_factory<hexed::Spatial<hexed::Element, hexed::pde::Navier_stokes<false>::Pde>::Max_dt>(1, 2, basis, false, false, 0.7, 0.7))(elem_view);
+      double dt = (*hexed::kernel_factory<hexed::Spatial<hexed::pde::Navier_stokes<false>::Pde, false>::Max_dt>(1, 2, basis, false, false, 0.7, 0.7))(elem_view);
       REQUIRE(dt == Catch::Approx(0.7*basis.max_cfl()/(400/1.027)));
     }
     SECTION("2D")
@@ -54,7 +54,7 @@ TEST_CASE("Max_dt")
         read[3*4 + i_qpoint] = 101235/0.4 + 0.5*1.225*500;
       }
       car_elem_view elem_view {elements};
-      (*hexed::kernel_factory<hexed::Spatial<hexed::Element, hexed::pde::Navier_stokes<false>::Pde>::Max_dt>(2, 2, basis, true, true, 1., 1.))(elem_view);
+      (*hexed::kernel_factory<hexed::Spatial<hexed::pde::Navier_stokes<false>::Pde, false>::Max_dt>(2, 2, basis, true, true, 1., 1.))(elem_view);
       for (int i_qpoint = 0; i_qpoint < 4; ++i_qpoint)
       {
         REQUIRE(elements.back()->time_step_scale()[i_qpoint] == Catch::Approx(basis.max_cfl()/360./2.).epsilon(0.01));
@@ -85,7 +85,7 @@ TEST_CASE("Max_dt")
     }
     // test that actual characteristic speed is measured correctly
     def_elem_view elem_view {elems};
-    (*hexed::kernel_factory<hexed::Spatial<hexed::Deformed_element, hexed::pde::Navier_stokes<false>::Pde>::Max_dt>(3, 4, basis, true, true, 1., 1.))(elem_view);
+    (*hexed::kernel_factory<hexed::Spatial<hexed::pde::Navier_stokes<false>::Pde, true>::Max_dt>(3, 4, basis, true, true, 1., 1.))(elem_view);
     for (int i_elem = 0; i_elem < 3; ++i_elem) {
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
         REQUIRE(elems[i_elem]->time_step_scale()[i_qpoint] == Catch::Approx(basis.max_cfl()/((i_elem == 1 ? 1e3 : 1e2)/0.3)/3.));
@@ -99,7 +99,7 @@ TEST_CASE("Max_dt")
     }
     elems[1]->set_jacobian(basis);
     // test that jacobian & time step scale are accounted for
-    double dt = (*hexed::kernel_factory<hexed::Spatial<hexed::Deformed_element, hexed::pde::Navier_stokes<false>::Pde>::Max_dt>(3, 4, basis, false, false, 1., 1.))(elem_view);
+    double dt = (*hexed::kernel_factory<hexed::Spatial<hexed::pde::Navier_stokes<false>::Pde, true>::Max_dt>(3, 4, basis, false, false, 1., 1.))(elem_view);
     REQUIRE(dt == Catch::Approx(basis.max_cfl()/(1e3*(1. + 2*2.)/3./0.3)/3.));
   }
 }

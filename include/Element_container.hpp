@@ -4,7 +4,7 @@
 #include <vector>
 #include <map>
 #include "math.hpp"
-#include "Vector_view.hpp"
+#include "Sequences.hpp"
 #include "Element.hpp"
 #include "Deformed_element.hpp"
 
