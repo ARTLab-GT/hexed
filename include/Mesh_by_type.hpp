@@ -122,7 +122,7 @@ class Mesh_by_type : public View_by_type<element_t>
     elem_v{elems.elements()},
     kernel_elems{elem_v},
     elem_face_con_v{*this},
-    kernel_cons{elem_face_con_v},
+    kernel_cons{face_con_v},
     elem_con_v{*this},
     ref_con_vs{ref_face_cons[0], ref_face_cons[1], ref_face_cons[2]},
     ref_con_cat01{ref_con_vs[0], ref_con_vs[1]},
