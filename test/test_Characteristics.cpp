@@ -34,7 +34,7 @@ TEST_CASE("Characteristics")
     comp.state(Eigen::seqN(0, 5)) = state;
     comp.compute_flux_conv();
     perturb -= comp.flux_conv;
-    comp.state += diff*eigvec;
+    comp.state(Eigen::seqN(0, 5)) += diff*eigvec;
     comp.compute_flux_conv();
     perturb += comp.flux_conv;
     perturb /= normal.norm();
