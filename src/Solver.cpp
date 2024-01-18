@@ -281,7 +281,7 @@ void Solver::snap_faces()
         }
       }
     }
-    (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Neighbor>(params.n_dim, params.row_size))(acc_mesh.deformed().face_connections());
+    (*kernel_factory<Spatial<Deformed_element, pde::Smooth_art_visc>::Neighbor>(params.n_dim, params.row_size, 0))(acc_mesh.deformed().face_connections());
     (*kernel_factory<Restrict_refined>(params.n_dim, params.row_size, basis, false, true))(acc_mesh.refined_faces());
     #pragma omp parallel for
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {

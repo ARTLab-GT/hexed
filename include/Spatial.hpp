@@ -186,7 +186,7 @@ class Spatial
         // compute flux
         double flux [n_dim][Pde::n_update][n_qpoint];
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-          typename Pde::Computation comp(eq);
+          typename Pde::Computation<n_dim> comp(eq);
           comp.fetch_state(n_qpoint, state + i_qpoint);
           if constexpr (element_t::is_deformed) {
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -375,10 +375,11 @@ class Spatial
     using Pde = Pde_templ<n_dim>;
     const Pde eq;
     static constexpr int n_fqpoint = math::pow(row_size, n_dim - 1);
+    const int _stage;
 
     public:
     template <typename... pde_args>
-    Neighbor(pde_args... args) : eq{args...} {}
+    Neighbor(int i_stage, pde_args... args) : eq{args...}, _stage(i_stage) {}
 
     virtual void operator()(Sequence<Face_connection<element_t>&>& connections)
     {
@@ -387,7 +388,7 @@ class Spatial
       {
         auto& con = connections[i_con];
         auto dir = con.direction();
-        double face [4][(n_dim + 2)*n_fqpoint]; // copying face data to temporary stack storage improves efficiency
+        double face [4][(n_dim + 2)*n_fqpoint] {}; // copying face data to temporary stack storage improves efficiency
         #pragma GCC diagnostic push
         #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
         double face_nrml [n_dim*n_fqpoint]; // only set for deformed
@@ -396,11 +397,10 @@ class Spatial
         // fetch face data
         for (int i_side = 0; i_side < 2; ++i_side) {
           double* f = con.state() + i_side*n_fqpoint*(n_dim + 2);
-          for (int i_dof = 0; i_dof < Pde::n_var*n_fqpoint; ++i_dof) {
+          for (int i_dof = 0; i_dof < Pde::n_extrap*n_fqpoint; ++i_dof) {
             face[i_side][i_dof] = f[i_dof];
           }
         }
-        Mat<n_dim> nrml; // will be used in loop to contain reference level normal
         Face_permutation<n_dim, row_size> perm(dir, face[1]); // only used for deformed
         if constexpr (element_t::is_deformed) {
           perm.match_faces(); // if order of quadrature points on both faces does not match, reorder face 1 to match face 0
@@ -409,54 +409,64 @@ class Spatial
           for (int i_dof = 0; i_dof < n_dim*n_fqpoint; ++i_dof) {
             face_nrml[i_dof] = n[i_dof];
           }
-        } else {
-          nrml.setUnit(dir.i_dim); // normal vector is trivial for cartesian
         }
         // compute flux
         for (int i_qpoint = 0; i_qpoint < n_fqpoint; ++i_qpoint)
         {
-          // fetch data
-          if constexpr (element_t::is_deformed) {
-            for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-              nrml(i_dim) = sign[0]*face_nrml[i_dim*n_fqpoint + i_qpoint];
+          // compute average face state for LDG scheme
+          if constexpr (Pde::is_viscous) if (!_stage) {
+            for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) {
+              double avg = .5*(face[0][i_var*n_fqpoint + i_qpoint] + face[1][i_var*n_fqpoint + i_qpoint]);
+              for (int i_side = 0; i_side < 2; ++i_side) {
+                face[2 + i_side][i_var*n_fqpoint + i_qpoint] = avg;
+              }
             }
           }
-          Mat<Pde::n_var, 2> state;
-          for (int i_side = 0; i_side < 2; ++i_side) {
-            for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
-              state(i_var, i_side) = face[i_side][i_var*n_fqpoint + i_qpoint];
+          if constexpr (Pde::has_convection) {
+            // fetch data
+            typename Pde::Computation<1> comp [2] {eq, eq};
+            if constexpr (element_t::is_deformed) {
+              for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+                comp[0].normal(i_dim) = sign[0]*face_nrml[i_dim*n_fqpoint + i_qpoint];
+              }
+            } else comp[0].normal.setUnit(dir.i_dim);
+            comp[1].normal = comp[0].normal;
+            for (int i_side = 0; i_side < 2; ++i_side) {
+              comp[i_side].fetch_extrap_state(n_fqpoint, face[i_side] + i_qpoint);
             }
-          }
-          // compute flux
-          auto flux = eq.flux_num(state, nrml);
-          // write flux to temporary storage
-          for (int i_side = 0; i_side < 2; ++i_side) {
-            for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
-              face[i_side][(i_var + Pde::curr_start)*n_fqpoint + i_qpoint] = sign[i_side]*flux(i_var);
+            // compute flux
+            for (int i_side = 0; i_side < 2; ++i_side) {
+              comp[i_side].compute_flux_conv();
+              comp[i_side].compute_char_speed();
             }
-            // compute average face state for LDG scheme
-            if constexpr (Pde::is_viscous) {
-              for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
-                face[2 + i_side][i_var*n_fqpoint + i_qpoint] = .5*(state(i_var, 0) + state(i_var, 1));
+            Mat<Pde::n_update> flux = .5*(
+              comp[0].flux_conv + comp[1].flux_conv
+              + std::max(comp[0].char_speed, comp[1].char_speed)*comp[0].normal.norm()*(comp[0].update_state - comp[1].update_state)
+            );
+            for (int i_side = 0; i_side < 2; ++i_side) {
+              for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
+                face[i_side][(i_var + Pde::curr_start)*n_fqpoint + i_qpoint] = sign[i_side]*flux(i_var);
               }
             }
           }
         }
         if constexpr (element_t::is_deformed) {
           perm.restore(); // restore data of face 1 to original order
-          if constexpr (Pde::is_viscous) Face_permutation<n_dim, row_size>(dir, face[3]).restore();
+          if constexpr (Pde::is_viscous) if (!_stage) Face_permutation<n_dim, row_size>(dir, face[3]).restore();
         }
         // write data to actual face storage on heap
         for (int i_side = 0; i_side < 2; ++i_side) {
-          // write flux
           double* f = con.state() + i_side*n_fqpoint*(n_dim + 2);
-          int offset = Pde::curr_start*n_fqpoint;
-          for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
-            f[offset + i_dof] = face[i_side][offset + i_dof];
+          // write flux
+          if constexpr (Pde::has_convection) {
+            int offset = Pde::curr_start*n_fqpoint;
+            for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
+              f[offset + i_dof] = face[i_side][offset + i_dof];
+            }
           }
           // write average face state
-          if constexpr (Pde::is_viscous) {
-            for (int i_dof = 0; i_dof < Pde::n_var*n_fqpoint; ++i_dof) {
+          if constexpr (Pde::is_viscous) if (!_stage) {
+            for (int i_dof = 0; i_dof < Pde::n_extrap*n_fqpoint; ++i_dof) {
               f[2*(n_dim + 2)*n_fqpoint + i_dof] = face[2 + i_side][i_dof];
             }
           }

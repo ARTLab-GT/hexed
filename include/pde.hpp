@@ -83,6 +83,7 @@ class Navier_stokes
       for (int i_var = 0; i_var < n_update; ++i_var) data[i_var*stride] += update(i_var);
     }
 
+    template <int n_dim_flux>
     class Computation
     {
       const Pde& _eq;
@@ -94,6 +95,13 @@ class Navier_stokes
       {
         for (int i_var = 0; i_var < n_dim + 2; ++i_var) state(i_var) = data[i_var*stride];
         state(n_dim + 2) = data[(2*(n_dim + 2) + 1)*stride];
+      }
+      Mat<n_update> update_state;
+      void fetch_extrap_state(int stride, const double* data)
+      {
+        for (int i_var = 0; i_var < n_dim + 2; ++i_var) state(i_var) = data[i_var*stride];
+        state(n_dim + 2) = 0.;
+        update_state = state(Eigen::seqN(0, n_update));
       }
 
       double mass;
@@ -108,12 +116,12 @@ class Navier_stokes
         pressure = (heat_rat - 1.)*(state((n_dim + 1)) - kin_ener);
       }
 
-      Mat<n_dim, n_dim> normal = Mat<n_dim, n_dim>::Identity();
-      Mat<n_update, n_dim> flux_conv;
+      Mat<n_dim, n_dim_flux> normal = Mat<n_dim, n_dim_flux>::Identity();
+      Mat<n_update, n_dim_flux> flux_conv;
       void compute_flux_conv()
       {
         compute_scalars_conv();
-        for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        for (int i_dim = 0; i_dim < n_dim_flux; ++i_dim) {
           flux_conv(n_dim, i_dim) = 0;
           for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
             flux_conv(n_dim, i_dim) += state(j_dim)*normal(j_dim, i_dim);
@@ -145,19 +153,30 @@ class Navier_stokes
       Mat<n_update, n_dim> flux_diff;
       void compute_flux_diff()
       {
-        compute_scalars_diff();
-        auto seq = Eigen::seqN(0, n_dim);
-        auto mmtm = state(seq);
-        Mat<n_dim> veloc = mmtm/mass;
-        Mat<n_dim, n_dim> veloc_grad = (gradient(seq, all) - veloc*gradient(n_dim, all))/mass;
-        Mat<n_dim, n_dim> stress = dyn_visc_coef*(veloc_grad + veloc_grad.transpose())
-                                   + ((!_eq._laplacian)*bulk_av*mass - 2./3.*dyn_visc_coef)*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
-        flux_diff(seq, all) = -stress;
-        flux_diff(n_dim, all).setZero();
-        Mat<1, n_dim> int_ener_grad = -state(n_dim + 1)/mass/mass*gradient(n_dim, all) + gradient(n_dim + 1, all)/mass - veloc.transpose()*veloc_grad;
-        flux_diff(n_dim + 1, all) = -veloc.transpose()*stress - energy_diffusivity*int_ener_grad;
-        if (_eq._laplacian) flux_diff -= bulk_av*gradient;
-        flux_diff = flux_diff*normal;
+        if constexpr (n_dim_flux == n_dim) {
+          compute_scalars_diff();
+          auto seq = Eigen::seqN(0, n_dim);
+          auto mmtm = state(seq);
+          Mat<n_dim> veloc = mmtm/mass;
+          Mat<n_dim, n_dim> veloc_grad = (gradient(seq, all) - veloc*gradient(n_dim, all))/mass;
+          Mat<n_dim, n_dim> stress = dyn_visc_coef*(veloc_grad + veloc_grad.transpose())
+                                     + ((!_eq._laplacian)*bulk_av*mass - 2./3.*dyn_visc_coef)*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
+          flux_diff(seq, all) = -stress;
+          flux_diff(n_dim, all).setZero();
+          Mat<1, n_dim> int_ener_grad = -state(n_dim + 1)/mass/mass*gradient(n_dim, all) + gradient(n_dim + 1, all)/mass - veloc.transpose()*veloc_grad;
+          flux_diff(n_dim + 1, all) = -veloc.transpose()*stress - energy_diffusivity*int_ener_grad;
+          if (_eq._laplacian) flux_diff -= bulk_av*gradient;
+          flux_diff = flux_diff*normal;
+        } else HEXED_ASSERT(false, "`compute_flux_diff` requires `n_dim == n_dim_flux`");
+      }
+
+      double char_speed;
+      void compute_char_speed()
+      {
+        double mass = state(n_dim);
+        const double sound_speed = std::sqrt(heat_rat*(heat_rat - 1)*state(n_dim + 1)/mass); // numerical estimate (not less than actual speed of sound)
+        const double speed = state(Eigen::seqN(0, n_dim)).norm()/mass;
+        char_speed = sound_speed + speed;
       }
     };
 
@@ -186,14 +205,6 @@ class Navier_stokes
         f(j_dim) = state(j_dim)*scaled + pres*normal(j_dim);
       }
       return f;
-    }
-
-    Mat<n_state> fetch_state(int stride, const double* data) const
-    {
-      Mat<n_state> state;
-      for (int i_var = 0; i_var < n_dim + 2; ++i_var) state(i_var) = data[i_var*stride];
-      state(n_dim + 2) = data[(2*(n_dim + 2) + 1)*stride];
-      return state;
     }
 
     //! \brief compute the numerical convective flux shared at the element faces
@@ -341,6 +352,7 @@ class Advection
     data[n_dim*stride] += update(0);
   }
 
+  template <int n_dim_flux>
   class Computation
   {
     const Advection& _eq;
@@ -352,18 +364,30 @@ class Advection
     {
       for (int i_var = 0; i_var < n_dim + 1; ++i_var) state(i_var) = data[i_var*stride];
     }
+    Mat<n_update> update_state;
+    void fetch_extrap_state(int stride, const double* data)
+    {
+      for (int i_var = 0; i_var < n_dim + 1; ++i_var) state(i_var) = data[i_var*stride];
+      update_state(0) = state(n_dim);
+    }
 
-    Mat<n_dim, n_dim> normal = Mat<n_dim, n_dim>::Identity();
-    Mat<n_update, n_dim> flux_conv;
+    Mat<n_dim, n_dim_flux> normal = Mat<n_dim, n_dim_flux>::Identity();
+    Mat<n_update, n_dim_flux> flux_conv;
     void compute_flux_conv()
     {
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      for (int i_dim = 0; i_dim < n_dim_flux; ++i_dim) {
         double nrml_veloc = 0;
         for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
           nrml_veloc += state(j_dim)*normal(j_dim, i_dim);
         }
         flux_conv(0, i_dim) = nrml_veloc*state(n_dim);
       }
+    }
+
+    double char_speed;
+    void compute_char_speed()
+    {
+      char_speed = std::max(1., state(Eigen::seqN(0, n_dim)).norm());
     }
   };
 
@@ -412,6 +436,7 @@ class Smooth_art_visc
     for (int i_var = 0; i_var < n_update; ++i_var) data[i_var*stride] += update(i_var);
   }
 
+  template <int n_dim_flux>
   class Computation
   {
     const Smooth_art_visc& _eq;
@@ -423,13 +448,19 @@ class Smooth_art_visc
     {
       state(0) = *data;
     }
+    Mat<n_update> update_state;
+    void fetch_extrap_state(int stride, const double* data)
+    {
+      update_state(0) = *data;
+    }
 
-    Mat<n_dim, n_dim> normal = Mat<n_dim, n_dim>::Identity();
+    Mat<n_dim, n_dim_flux> normal = Mat<n_dim, n_dim_flux>::Identity();
     Mat<n_extrap, n_dim> gradient;
     Mat<n_update, n_dim> flux_diff;
     void compute_flux_diff()
     {
-      flux_diff.noalias() = -gradient*normal;
+      if constexpr (n_dim_flux == n_dim) flux_diff.noalias() = -gradient*normal;
+      else HEXED_ASSERT(false, "`compute_flux_diff` requires `n_dim == n_dim_flux`");
     }
   };
 
@@ -467,6 +498,7 @@ class Fix_therm_admis
     for (int i_var = 0; i_var < n_update; ++i_var) data[i_var*stride] += update(i_var);
   }
 
+  template <int n_dim_flux>
   class Computation
   {
     const Fix_therm_admis& _eq;
@@ -478,13 +510,19 @@ class Fix_therm_admis
     {
       for (int i_var = 0; i_var < n_state; ++i_var) state(i_var) = data[i_var*stride];
     }
+    Mat<n_update> update_state;
+    void fetch_extrap_state(int stride, const double* data)
+    {
+      for (int i_var = 0; i_var < n_state; ++i_var) update_state(i_var) = data[i_var*stride];
+    }
 
-    Mat<n_dim, n_dim> normal = Mat<n_dim, n_dim>::Identity();
+    Mat<n_dim, n_dim_flux> normal = Mat<n_dim, n_dim_flux>::Identity();
     Mat<n_extrap, n_dim> gradient;
     Mat<n_update, n_dim> flux_diff;
     void compute_flux_diff()
     {
-      flux_diff.noalias() = -gradient*normal;
+      if constexpr (n_dim_flux == n_dim) flux_diff.noalias() = -gradient*normal;
+      else HEXED_ASSERT(false, "`compute_flux_diff` requires `n_dim == n_dim_flux`");
     }
   };
 
