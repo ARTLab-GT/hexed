@@ -48,8 +48,8 @@ class Spatial
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
         for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
           auto row_r = Row_rw<Pde::n_extrap, row_size>::read_row(extrap[0], ind);
-          Mat<2, Pde::n_var> bound = boundary*row_r;
-          Row_rw<Pde::n_var, row_size>::write_bound(bound, faces, ind);
+          Mat<2, Pde::n_extrap> bound = boundary*row_r;
+          Row_rw<Pde::n_extrap, row_size>::write_bound(bound, faces, ind);
         }
       }
     }

@@ -56,13 +56,12 @@ class Navier_stokes
     public:
     static constexpr bool is_viscous = visc;
     static constexpr bool has_convection = true;
-    static constexpr int n_var = n_dim + 2;
-    static constexpr int curr_start = 0;
-    static constexpr int ref_start = n_var;
-    static constexpr int visc_start = 2*n_var;
-    static constexpr int n_update = n_var;
+    static constexpr int n_update = n_dim + 2;
     static constexpr int n_state = n_dim + 3;
     static constexpr int n_extrap = n_dim + 2;
+    static constexpr int curr_start = 0;
+    static constexpr int ref_start = n_update;
+    static constexpr int visc_start = 2*n_update;
     static constexpr double heat_rat = 1.4;
     Transport_model dyn_visc;
     Transport_model therm_cond;
@@ -188,66 +187,6 @@ class Navier_stokes
       }
     };
 
-    double pressure(Mat<n_var> state) const
-    {
-      double mmtm_sq = 0.;
-      for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-        mmtm_sq += (state(j_dim))*(state(j_dim));
-      }
-      return (heat_rat - 1.)*((state(n_dim + 1)) - 0.5*mmtm_sq/(state(n_dim)));
-    }
-
-    //! \brief compute the convective flux
-    Mat<n_update> flux(Mat<n_var> state, Mat<n_dim> normal) const
-    {
-      Mat<n_var> f;
-      f(n_dim) = 0.;
-      for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-        f(n_dim) += state(j_dim)*normal(j_dim);
-      }
-      double scaled = f(n_dim)/state(n_dim);
-      double pres = pressure(state);
-      ASSERT_THERM_ADMIS
-      f(n_var - 1) = (state(n_dim + 1) + pres)*scaled;
-      for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-        f(j_dim) = state(j_dim)*scaled + pres*normal(j_dim);
-      }
-      return f;
-    }
-
-    //! \brief compute the numerical convective flux shared at the element faces
-    Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const
-    {
-      Mat<n_var, 2> face_flux;
-      Mat<2> wave_speed;
-      double nrml_mag = normal.norm();
-      for (int i_side = 0; i_side < 2; ++i_side) {
-        auto state = face_state(Eigen::all, i_side);
-        face_flux(Eigen::all, i_side) = flux(state, normal);
-        ASSERT_THERM_ADMIS
-        wave_speed(i_side) = char_speed(state)*nrml_mag;
-      }
-      return llf(wave_speed.maxCoeff(), face_flux, face_state);
-    }
-
-    //! \brief upper bound on characteristic speed for convection
-    double char_speed(Mat<n_var> state) const
-    {
-      double mass = state(n_dim);
-      const double sound_speed = std::sqrt(heat_rat*(heat_rat - 1)*state(n_dim + 1)/mass);
-      const double speed = state(Eigen::seqN(0, n_dim)).norm()/mass;
-      return sound_speed + speed;
-    }
-
-    //! \brief maximum effective diffusivity (for enforcing the CFL condition)
-    double diffusivity(Mat<n_var> state, double av_coef) const
-    {
-      double mass = state(n_dim);
-      auto veloc = state(Eigen::seqN(0, n_dim))/mass;
-      double sqrt_temp = std::sqrt(std::max(state(n_dim + 1)/mass - .5*veloc.squaredNorm(), 0.)*(heat_rat - 1)/constants::specific_gas_air);
-      return std::max(std::abs(av_coef) + dyn_visc.coefficient(sqrt_temp)/mass, therm_cond.coefficient(sqrt_temp)*(heat_rat - 1)/constants::specific_gas_air/mass);
-    }
-
     /*!
      * Decomposes state vectors into characteristics
      * which are eigenvectors of the Jacobian of the inviscid flux function.
@@ -255,6 +194,7 @@ class Navier_stokes
      */
     class Characteristics
     {
+      static constexpr int n_var = n_dim + 2;
       Mat<3> vals;
       Mat<3, 3> vecs;
       // using a QR factorization allows a least-squares solution to be found if matrix is singular (i.e. if pressure is 0)
@@ -341,7 +281,6 @@ class Advection
   public:
   static constexpr bool is_viscous = false;
   static constexpr bool has_convection = true;
-  static constexpr int n_var = n_dim + 1;
   static constexpr int curr_start = n_dim;
   static constexpr int ref_start = n_dim + 1;
   static constexpr int n_state = n_dim + 1;
@@ -399,20 +338,6 @@ class Advection
     }
 
   };
-
-  Mat<1> flux_num(Mat<n_var, 2> face_vars, Mat<n_dim> normal) const
-  {
-    Mat<1, 2> vol_flux = normal.transpose()*face_vars(Eigen::seqN(0, n_dim), Eigen::all);
-    Mat<1, 2> face_state = face_vars(n_dim, Eigen::all);
-    Mat<1, 2> face_flux = face_state.cwiseProduct(vol_flux);
-    double speed = std::max(char_speed(face_vars(all, 0)), char_speed(face_vars(all, 1)));
-    return face_flux*Mat<2>{.5, .5} + face_state*Mat<2>{.5, -.5}*normal.norm()*speed;
-  }
-
-  double char_speed(Mat<n_var> state) const
-  {
-    return std::max(1., state(Eigen::seqN(0, n_dim)).norm());
-  }
 };
 
 /*!
@@ -425,7 +350,6 @@ class Smooth_art_visc
   public:
   static constexpr bool is_viscous = true;
   static constexpr bool has_convection = false;
-  static constexpr int n_var = 1;
   static constexpr int curr_start = 0;
   static constexpr int ref_start = 1;
   static constexpr int visc_start = 2;
@@ -478,9 +402,6 @@ class Smooth_art_visc
       diffusivity = 1;
     }
   };
-
-  Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const {return Mat<n_update>::Zero();}
-  double diffusivity(Mat<n_var> state, double av_coef) const {return 1;}
 };
 
 /*!
@@ -493,13 +414,12 @@ class Fix_therm_admis
   public:
   static constexpr bool is_viscous = true;
   static constexpr bool has_convection = false;
-  static constexpr int n_var = n_dim + 2;
+  static constexpr int n_state = n_dim + 2;
+  static constexpr int n_update = n_state;
+  static constexpr int n_extrap = n_state;
   static constexpr int curr_start = 0;
-  static constexpr int ref_start = n_var;
-  static constexpr int visc_start = 2*n_var;
-  static constexpr int n_update = n_var;
-  static constexpr int n_extrap = n_var;
-  static constexpr int n_state = n_var;
+  static constexpr int ref_start = n_state;
+  static constexpr int visc_start = 2*n_state;
 
   static Mat<n_extrap> fetch_extrap(int stride, const double* data)
   {
@@ -546,9 +466,6 @@ class Fix_therm_admis
       diffusivity = 1;
     }
   };
-
-  Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const {return Mat<n_update>::Zero();}
-  double diffusivity(Mat<n_var> state, double av_coef) const {return 1;}
 };
 
 }

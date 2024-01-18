@@ -24,9 +24,20 @@ TEST_CASE("Characteristics")
   // check that the columns are indeed eigenvectors of linearized flux
   double diff = 1e-6; // use a small perturbation so that flux is effectively linear
   hexed::pde::Navier_stokes<>::Pde<3> ns;
+  hexed::pde::Navier_stokes<>::Pde<3>::Computation<1> comp (ns);
+  comp.normal = normal;
   for (int i = 0; i < 3; ++i) {
     hexed::Mat<> eigvec = decomp(Eigen::all, i);
-    hexed::Mat<> perturb = (ns.flux(state + diff*eigvec, normal) - ns.flux(state, normal))/normal.norm();
+    // compute flux perturbation
+    hexed::Mat<5> perturb = hexed::Mat<5>::Zero();
+    comp.state.setZero();
+    comp.state(Eigen::seqN(0, 5)) = state;
+    comp.compute_flux_conv();
+    perturb -= comp.flux_conv;
+    comp.state += diff*eigvec;
+    comp.compute_flux_conv();
+    perturb += comp.flux_conv;
+    perturb /= normal.norm();
     REQUIRE((perturb.cwiseQuotient(diff*eigvals(i)*eigvec) - hexed::Mat<>::Ones(5)).norm() == Catch::Approx(0.).scale(1.));
   }
 }
