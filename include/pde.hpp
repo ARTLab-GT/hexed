@@ -135,18 +135,19 @@ class Navier_stokes
       }
 
       double bulk_av;
-      double laplacian_visc;
+      double laplacian_av;
       double sqrt_temp;
       double dyn_visc_coef;
       double therm_cond_coef;
-      double energy_diffusivity;
+      double energy_cond;
       void compute_scalars_diff()
       {
         bulk_av = std::abs(state(n_dim + 2));
+        laplacian_av = 0;
         sqrt_temp = std::sqrt(std::max((state(n_dim + 1) - kin_ener)/mass, 0.)*(heat_rat - 1)/constants::specific_gas_air);
         dyn_visc_coef = _eq.dyn_visc.coefficient(sqrt_temp);
         therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp);
-        energy_diffusivity = therm_cond_coef*(heat_rat - 1)/constants::specific_gas_air;
+        energy_cond = therm_cond_coef*(heat_rat - 1)/constants::specific_gas_air;
       }
 
       Mat<n_extrap, n_dim> gradient;
@@ -164,7 +165,7 @@ class Navier_stokes
           flux_diff(seq, all) = -stress;
           flux_diff(n_dim, all).setZero();
           Mat<1, n_dim> int_ener_grad = -state(n_dim + 1)/mass/mass*gradient(n_dim, all) + gradient(n_dim + 1, all)/mass - veloc.transpose()*veloc_grad;
-          flux_diff(n_dim + 1, all) = -veloc.transpose()*stress - energy_diffusivity*int_ener_grad;
+          flux_diff(n_dim + 1, all) = -veloc.transpose()*stress - energy_cond*int_ener_grad;
           if (_eq._laplacian) flux_diff -= bulk_av*gradient;
           flux_diff = flux_diff*normal;
         } else HEXED_ASSERT(false, "`compute_flux_diff` requires `n_dim == n_dim_flux`");
@@ -173,10 +174,17 @@ class Navier_stokes
       double char_speed;
       void compute_char_speed()
       {
-        double mass = state(n_dim);
-        const double sound_speed = std::sqrt(heat_rat*(heat_rat - 1)*state(n_dim + 1)/mass); // numerical estimate (not less than actual speed of sound)
-        const double speed = state(Eigen::seqN(0, n_dim)).norm()/mass;
+        const double sound_speed = std::sqrt(heat_rat*(heat_rat - 1)*state(n_dim + 1)/state(n_dim)); // numerical estimate (not less than actual speed of sound)
+        const double speed = state(Eigen::seqN(0, n_dim)).norm()/state(n_dim);
         char_speed = sound_speed + speed;
+      }
+
+      double diffusivity;
+      void compute_diffusivity()
+      {
+        compute_scalars_conv();
+        compute_scalars_diff();
+        diffusivity = std::abs(laplacian_av) + std::max(std::abs(bulk_av) + dyn_visc_coef/mass, energy_cond/mass);
       }
     };
 
@@ -389,6 +397,7 @@ class Advection
     {
       char_speed = std::max(1., state(Eigen::seqN(0, n_dim)).norm());
     }
+
   };
 
   Mat<1> flux_num(Mat<n_var, 2> face_vars, Mat<n_dim> normal) const
@@ -462,6 +471,12 @@ class Smooth_art_visc
       if constexpr (n_dim_flux == n_dim) flux_diff.noalias() = -gradient*normal;
       else HEXED_ASSERT(false, "`compute_flux_diff` requires `n_dim == n_dim_flux`");
     }
+
+    double diffusivity;
+    void compute_diffusivity()
+    {
+      diffusivity = 1;
+    }
   };
 
   Mat<n_update> flux_num(Mat<n_var, 2> face_state, Mat<n_dim> normal) const {return Mat<n_update>::Zero();}
@@ -523,6 +538,12 @@ class Fix_therm_admis
     {
       if constexpr (n_dim_flux == n_dim) flux_diff.noalias() = -gradient*normal;
       else HEXED_ASSERT(false, "`compute_flux_diff` requires `n_dim == n_dim_flux`");
+    }
+
+    double diffusivity;
+    void compute_diffusivity()
+    {
+      diffusivity = 1;
     }
   };
 

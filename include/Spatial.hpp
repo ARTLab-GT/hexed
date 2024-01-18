@@ -496,7 +496,7 @@ class Spatial
         // fetch face data
         for (int i_side = 0; i_side < 2; ++i_side) {
           double* f = con.state() + (2 + i_side)*n_fqpoint*(n_dim + 2);
-          for (int i_dof = 0; i_dof < Pde::n_var*n_fqpoint; ++i_dof) {
+          for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
             face[i_side][i_dof] = f[i_dof];
           }
         }
@@ -507,7 +507,7 @@ class Spatial
         }
         // compute flux
         for (int i_qpoint = 0; i_qpoint < n_fqpoint; ++i_qpoint) {
-          for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
+          for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
             double avg = 0;
             for (int i_side = 0; i_side < 2; ++i_side) {
               avg += .5*sign[i_side]*face[i_side][i_var*n_fqpoint + i_qpoint];
@@ -563,7 +563,6 @@ class Spatial
       {
         element_t& elem {elements[i_elem]};
         double* state = elem.stage(0);
-        double* art_visc = elem.art_visc_coef();
         double* tss = elem.time_step_scale();
         Mat<math::pow(2, n_dim)> vertex_spacing;
         for (unsigned i_vert = 0; i_vert < vertex_spacing.size(); ++i_vert) {
@@ -571,22 +570,25 @@ class Spatial
         }
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
         {
-          // fetch state variables
-          Mat<Pde::n_var> qpoint_state;
-          for (int i_var = 0; i_var < Pde::n_var; ++i_var) {
-            qpoint_state(i_var) = state[i_var*n_qpoint + i_qpoint];
-          }
-          // compute speeds
           // get mesh spacing
           Mat<n_dim> coords;
           for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
             coords(i_dim) = nodes((i_qpoint/math::pow(row_size, n_dim - 1 - i_dim))%row_size);
           }
-          // compute time step
           double spacing = math::interp(vertex_spacing, coords);
+          // fetch state
+          typename Pde::Computation<n_dim> comp(eq);
+          comp.fetch_state(n_qpoint, state + i_qpoint);
+          // compute time step
           double scale = 0;
-          if constexpr (Pde::has_convection) scale += eq.char_speed(qpoint_state)/max_cfl_c/spacing;
-          if constexpr (Pde::is_viscous) scale += eq.diffusivity(qpoint_state, art_visc[i_qpoint])/max_cfl_d/spacing/spacing;
+          if constexpr (Pde::has_convection) {
+            comp.compute_char_speed();
+            scale += comp.char_speed/max_cfl_c/spacing;
+          }
+          if constexpr (Pde::is_viscous) {
+            comp.compute_diffusivity();
+            scale += comp.diffusivity/max_cfl_d/spacing/spacing;
+          }
           if (_is_local) tss[i_qpoint] = 1./scale;
           else {
             tss[i_qpoint] = 1.;
