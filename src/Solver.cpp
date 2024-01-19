@@ -1089,7 +1089,7 @@ void Solver::compute_residual()
     acc_mesh.refined_faces(),
     1.,
     0,
-    false,
+    true,
     bool(_namespace->lookup<int>("use_filter").value()),
   };
   if (use_ldg()) compute_viscous(1., 0, true);
