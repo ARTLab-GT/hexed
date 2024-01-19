@@ -35,7 +35,6 @@ Qpoint_func.cpp
 read_csv.cpp
 Simplex_geom.cpp
 Solver.cpp
-Solver_diffusive.cpp
 Spacetime_func.cpp
 Stopwatch.cpp
 Stopwatch_tree.cpp

@@ -536,7 +536,16 @@ void Solver::diffuse_art_visc(int n_real, double diff_time)
         double s = math::chebyshev_step(n_cheby, i_cheby);
         apply_avc_diff_bcs();
         // update state with spatial term
-        compute_avc_diff(s, 0);
+        Kernel_options opts {
+          stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"),
+          stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed"),
+          stopwatch.children.at("prolong/restrict"),
+          s,
+          0,
+          false,
+          false,
+        };
+        compute_smooth_av(_kernel_mesh, opts, [this](){apply_avc_diff_flux_bcs();});
         // update state with real time forcing term
         #pragma omp parallel for
         for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
@@ -1030,7 +1039,7 @@ void Solver::update()
           bool(_namespace->lookup<int>("use_filter").value()),
         };
         apply_state_bcs();
-        if (use_ldg()) compute_viscous(dt, i, false);
+        if (use_ldg()) compute_navier_stokes(_kernel_mesh, opts, [this](){apply_flux_bcs();}, visc, therm_cond, _namespace->lookup<int>("laplacian_art_visc").value());
         else compute_euler(_kernel_mesh, opts);
         // note that function call must come first to ensure it is evaluated despite short-circuiting
         fixed = fix_admissibility(_namespace->lookup<double>("fix_admis_max_safety").value()) || fixed;
@@ -1077,7 +1086,7 @@ void Solver::compute_residual()
     true,
     bool(_namespace->lookup<int>("use_filter").value()),
   };
-  if (use_ldg()) compute_viscous(1., 0, true);
+  if (use_ldg()) compute_navier_stokes(_kernel_mesh, opts, [this](){apply_flux_bcs();}, visc, therm_cond, _namespace->lookup<int>("laplacian_art_visc").value());
   else compute_euler(_kernel_mesh, opts);
 }
 
@@ -1231,7 +1240,16 @@ bool Solver::fix_admissibility(double stability_ratio)
         double* gh_f = bc_cons[i_con].ghost_face();
         for (int i_dof = 0; i_dof < nq*(nd + 2)/rs; ++i_dof) gh_f[i_dof] = in_f[i_dof];
       }
-      compute_fta(s, 0);
+      Kernel_options opts {
+        stopwatch.children.at("fix admis.").children.at("cartesian"),
+        stopwatch.children.at("fix admis.").children.at("deformed" ),
+        stopwatch.children.at("prolong/restrict"),
+        s,
+        0,
+        false,
+        false,
+      };
+      compute_fix_therm_admis(_kernel_mesh, opts, [this](){apply_fta_flux_bcs();});
     }
     double safety = _namespace->lookup<double>("max_safety").value();
     double n_cheby = _namespace->lookup<double>("n_cheby_flow").value();
