@@ -55,10 +55,8 @@ class Solver
   void apply_avc_diff_flux_bcs();
   void apply_fta_flux_bcs();
   void diffuse_art_visc(int n_real, double diff_time);
-  void compute_inviscid(double dt, int i_stage, bool compute_residual);
   void compute_viscous(double dt, int i_stage, bool compute_residual);
   void compute_fta(double dt, int i_stage);
-  void compute_advection(double dt, int i_stage);
   void compute_avc_diff(double dt, int i_stage);
   void fta(double dt, int i_stage);
   bool use_ldg();

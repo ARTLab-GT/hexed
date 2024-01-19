@@ -13,24 +13,6 @@
 namespace hexed::pde
 {
 
-//! \brief computes HLL (Harten-Lax-Van Leer) numerical flux based on wave speed estimate
-template <int n_var>
-Mat<n_var> hll(Mat<2> speed, Mat<n_var, 2> flux, Mat<n_var, 2> state)
-{
-  if (speed(0) >= 0) return flux(Eigen::all, 0);
-  if (speed(1) <= 0) return flux(Eigen::all, 1);
-  return (speed(1)*flux(Eigen::all, 0) - speed(0)*flux(Eigen::all, 1)
-          + speed(0)*speed(1)*(state(Eigen::all, 1) - state(Eigen::all, 0)))
-         /(speed(1) - speed(0));
-}
-
-//! \brief computes local Lax-Friedrichs numerical flux based on wave speed estimate
-template <int n_var>
-Mat<n_var> llf(double speed, Mat<n_var, 2> flux, Mat<n_var, 2> state)
-{
-  return flux*Mat<2>{.5, .5} + speed*state*Mat<2>{.5, -.5};
-}
-
 /*!
  * contains a PDE class representing the Naver-Stokes equations
  * with template options to specify the details of the equation set

@@ -9,6 +9,7 @@
 #include <Xdmf_wrapper.hpp>
 #include <iterative.hpp>
 #include <Gauss_lobatto.hpp>
+#include <kernels.hpp>
 
 // kernels
 #include <Restrict_refined.hpp>
@@ -667,7 +668,24 @@ void Solver::update_art_visc_smoothness(double advect_length)
           }
           sw_adv.children.at("BCs").stopwatch.pause();
           sw_adv.children.at("BCs").work_units_completed += acc_mesh.elements().size();
-          compute_advection(dt_scaled, i);
+          Kernel_args ka {
+            params.n_dim,
+            params.row_size,
+            basis,
+            sw_adv.children.at("cartesian"),
+            sw_adv.children.at("deformed" ),
+            stopwatch.children.at("prolong/restrict"),
+            acc_mesh.cartesian().kernel_connections(),
+            acc_mesh.deformed ().kernel_connections(),
+            acc_mesh.cartesian().kernel_elements(),
+            acc_mesh.deformed ().kernel_elements(),
+            acc_mesh.refined_faces(),
+            dt_scaled,
+            i,
+            false,
+            false,
+          };
+          compute_advection(ka);
         }
         sw_adv.children.at("cartesian").work_units_completed += acc_mesh.cartesian().elements().size();
         sw_adv.children.at("deformed" ).work_units_completed += acc_mesh.deformed ().elements().size();
@@ -1001,9 +1019,26 @@ void Solver::update()
       bool fixed = false;
       // compute inviscid update
       for (int i = 0; i < 2; ++i) {
+        Kernel_args ka {
+          params.n_dim,
+          params.row_size,
+          basis,
+          stopwatch.children.at("cartesian"),
+          stopwatch.children.at("deformed" ),
+          stopwatch.children.at("prolong/restrict"),
+          acc_mesh.cartesian().kernel_connections(),
+          acc_mesh.deformed ().kernel_connections(),
+          acc_mesh.cartesian().kernel_elements(),
+          acc_mesh.deformed ().kernel_elements(),
+          acc_mesh.refined_faces(),
+          dt,
+          i,
+          false,
+          bool(_namespace->lookup<int>("use_filter").value()),
+        };
         apply_state_bcs();
         if (use_ldg()) compute_viscous(dt, i, false);
-        else compute_inviscid(dt, i, false);
+        else compute_euler(ka);
         // note that function call must come first to ensure it is evaluated despite short-circuiting
         fixed = fix_admissibility(_namespace->lookup<double>("fix_admis_max_safety").value()) || fixed;
       }
@@ -1040,8 +1075,25 @@ void Solver::update_implicit()
 void Solver::compute_residual()
 {
   apply_state_bcs();
+  Kernel_args ka {
+    params.n_dim,
+    params.row_size,
+    basis,
+    stopwatch.children.at("cartesian"),
+    stopwatch.children.at("deformed" ),
+    stopwatch.children.at("prolong/restrict"),
+    acc_mesh.cartesian().kernel_connections(),
+    acc_mesh.deformed ().kernel_connections(),
+    acc_mesh.cartesian().kernel_elements(),
+    acc_mesh.deformed ().kernel_elements(),
+    acc_mesh.refined_faces(),
+    1.,
+    0,
+    false,
+    bool(_namespace->lookup<int>("use_filter").value()),
+  };
   if (use_ldg()) compute_viscous(1., 0, true);
-  else compute_inviscid(1., 0, true);
+  else compute_euler(ka);
 }
 
 Iteration_status Solver::iteration_status()

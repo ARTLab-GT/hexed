@@ -7,6 +7,7 @@
 #include "Hanging_vertex_matcher.hpp"
 #include "Boundary_face.hpp"
 #include "math.hpp"
+#include "Refined_face.hpp"
 
 namespace hexed
 {
@@ -152,14 +153,6 @@ inline void Element_face_connection<Deformed_element>::disconnect_normal()
     elems[i_side]->face_normal(dir.i_face(i_side)) = nullptr;
   }
 }
-
-class Refined_face
-{
-  public:
-  double* coarse = nullptr;
-  std::array<double*, 4> fine {};
-  std::array<bool, 2> stretch;
-};
 
 /*!
  * Represents a connection between elements whose refinement levels differ by 1. This involves
