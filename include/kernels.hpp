@@ -21,6 +21,7 @@ struct Kernel_mesh
   Sequence<Kernel_connection&>& def_cons;
   Sequence<Kernel_element&>& car_elems;
   Sequence<Kernel_element&>& def_elems;
+  Sequence<Kernel_element&>& elems;
   Sequence<Refined_face&>& ref_faces;
 };
 
@@ -40,6 +41,9 @@ void compute_advection(Kernel_mesh, Kernel_options);
 void compute_navier_stokes(Kernel_mesh, Kernel_options, std::function<void()> flux_bc, Transport_model visc, Transport_model therm_cond, bool laplacian_av);
 void compute_smooth_av(Kernel_mesh, Kernel_options, std::function<void()> flux_bc);
 void compute_fix_therm_admis(Kernel_mesh, Kernel_options, std::function<void()> flux_bc);
+void compute_prolong(Kernel_mesh, bool scale = false, bool offset = false);
+void compute_restrict(Kernel_mesh, bool scale = true, bool offset = false);
+void compute_write_face(Kernel_mesh);
 
 }
 #endif

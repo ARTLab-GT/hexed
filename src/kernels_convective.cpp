@@ -23,4 +23,20 @@ void compute_advection(Kernel_mesh mesh, Kernel_options opts) COMPUTE_CONVECTION
 
 #undef COMPUTE_CONVECTION
 
+void compute_prolong(Kernel_mesh mesh, bool scale, bool offset)
+{
+  (*kernel_factory<Prolong_refined>(mesh.n_dim, mesh.row_size, mesh.basis, scale, offset))(mesh.ref_faces);
+}
+
+void compute_restrict(Kernel_mesh mesh, bool scale, bool offset)
+{
+  (*kernel_factory<Restrict_refined>(mesh.n_dim, mesh.row_size, mesh.basis, scale, offset))(mesh.ref_faces);
+}
+
+void compute_write_face(Kernel_mesh mesh)
+{
+  (*kernel_factory<Spatial<pde::Navier_stokes<false>::Pde, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis))(mesh.elems);
+  compute_prolong(mesh);
+}
+
 }

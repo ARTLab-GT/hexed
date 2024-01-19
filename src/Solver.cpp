@@ -9,10 +9,6 @@
 #include <Xdmf_wrapper.hpp>
 #include <iterative.hpp>
 #include <Gauss_lobatto.hpp>
-
-// kernels
-#include <Restrict_refined.hpp>
-#include <Prolong_refined.hpp>
 #include <Face_permutation.hpp>
 
 #include <pde.hpp>
@@ -135,7 +131,6 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   use_art_visc{false},
   fix_admis{false},
   av_rs{row_size},
-  write_face(kernel_factory<Spatial<pde::Navier_stokes<false>::Pde, false>::Write_face>(params.n_dim, params.row_size, basis)), // note: for now, false and true are equivalent for `Write_face`
   visc{viscosity_model},
   therm_cond{thermal_conductivity_model},
   _namespace{space},
@@ -149,6 +144,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
     acc_mesh.deformed ().kernel_connections(),
     acc_mesh.cartesian().kernel_elements(),
     acc_mesh.deformed ().kernel_elements(),
+    acc_mesh.kernel_elements(),
     acc_mesh.refined_faces(),
   }
 {
@@ -269,8 +265,8 @@ void Solver::snap_faces()
         }
       }
     }
-    (*write_face)(acc_mesh.kernel_elements());
-    (*kernel_factory<Prolong_refined>(params.n_dim, params.row_size, basis))(acc_mesh.refined_faces());
+    compute_write_face(_kernel_mesh);
+    compute_prolong(_kernel_mesh);
     Copy fake_bc;
     #pragma omp parallel for
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
@@ -292,7 +288,7 @@ void Solver::snap_faces()
       }
     }
     (*kernel_factory<Spatial<pde::Smooth_art_visc, false>::Neighbor>(params.n_dim, params.row_size, 0))(acc_mesh.deformed().kernel_connections());
-    (*kernel_factory<Restrict_refined>(params.n_dim, params.row_size, basis, false, true))(acc_mesh.refined_faces());
+    compute_restrict(_kernel_mesh, false, true);
     #pragma omp parallel for
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
       auto& con = bc_cons[i_con];
@@ -361,7 +357,7 @@ void Solver::calc_jacobian()
   }
   // for deformed refined faces, set normal to coarse face normal (for Cartesian, setting normal is not necessary)
   auto& ref_cons = acc_mesh.deformed().refined_connections();
-  (*kernel_factory<Prolong_refined>(n_dim, rs, basis, true))(acc_mesh.refined_faces());
+  compute_prolong(_kernel_mesh, true);
   #pragma omp parallel for
   for (int i_ref = 0; i_ref < ref_cons.size(); ++i_ref) {
     auto& ref = ref_cons[i_ref];
@@ -462,8 +458,8 @@ void Solver::initialize(const Spacetime_func& func)
       }
     }
   }
-  (*write_face)(acc_mesh.kernel_elements());
-  (*kernel_factory<Prolong_refined>(params.n_dim, params.row_size, basis))(acc_mesh.refined_faces());
+  compute_write_face(_kernel_mesh);
+  compute_prolong(_kernel_mesh);
   auto& bc_cons {acc_mesh.boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
@@ -516,8 +512,8 @@ void Solver::diffuse_art_visc(int n_real, double diff_time)
         state[i_qpoint] = forcing[(real_step + 1)*nq + i_qpoint];
       }
     }
-    (*write_face)(acc_mesh.kernel_elements());
-    (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+    compute_write_face(_kernel_mesh);
+    compute_prolong(_kernel_mesh);
     diff = 0;
     n_avg = 0;
     // perform pseudotime iteration
@@ -561,8 +557,8 @@ void Solver::diffuse_art_visc(int n_real, double diff_time)
           }
         }
         // update face state
-        (*write_face)(acc_mesh.kernel_elements());
-        (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+        compute_write_face(_kernel_mesh);
+        compute_prolong(_kernel_mesh);
       }
     }
     // update forcing function and residual
@@ -626,8 +622,8 @@ void Solver::update_art_visc_smoothness(double advect_length)
   // enforce CFL condition
   auto& sw_adv = stopwatch.children.at("set art visc").children.at("advection");
   sw_adv.stopwatch.start();
-  (*write_face)(acc_mesh.kernel_elements());
-  (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+  compute_write_face(_kernel_mesh);
+  compute_prolong(_kernel_mesh);
   double adv_safety = _namespace->lookup<double>("av_advect_max_safety").value();
   (*kernel_factory<Spatial<pde::Advection, false>::Max_dt>(nd, rs, basis, true, false, adv_safety, 1.))(acc_mesh.cartesian().kernel_elements(), sw_adv.children.at("cartesian"), "compute time step");
   (*kernel_factory<Spatial<pde::Advection,  true>::Max_dt>(nd, rs, basis, true, false, adv_safety, 1.))(acc_mesh.deformed ().kernel_elements(), sw_adv.children.at("deformed" ), "compute time step");
@@ -672,8 +668,8 @@ void Solver::update_art_visc_smoothness(double advect_length)
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) state[nd*nq + i_qpoint] = adv[i_node*nq + i_qpoint];
         }
         // evaluate advection operator
-        (*write_face)(acc_mesh.kernel_elements());
-        (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+        compute_write_face(_kernel_mesh);
+        compute_prolong(_kernel_mesh);
         sw_adv.children.at("setup").stopwatch.pause();
         double dt_scaled = std::abs(basis.node(i_node) - .5)*2;
         for (int i = 0; i < 2; ++i) {
@@ -770,8 +766,8 @@ void Solver::update_art_visc_smoothness(double advect_length)
     }
   }
   // update the face state
-  (*write_face)(acc_mesh.kernel_elements());
-  (*kernel_factory<Prolong_refined>(nd, rs, basis))(acc_mesh.refined_faces());
+  compute_write_face(_kernel_mesh);
+  compute_prolong(_kernel_mesh);
   stopwatch.children.at("set art visc").stopwatch.pause();
   stopwatch.children.at("set art visc").work_units_completed += elements.size();
   stopwatch.stopwatch.pause();
@@ -819,8 +815,8 @@ void Solver::update_art_visc_elwise(double width, bool pde_based)
       for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) stage0[i_dof] = stage1[i_dof];
       for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) av[i_qpoint] = forcing[params.n_qpoint() + i_qpoint];
     }
-    (*write_face)(acc_mesh.kernel_elements());
-    (*kernel_factory<Prolong_refined>(params.n_dim, params.row_size, basis))(acc_mesh.refined_faces());
+    compute_write_face(_kernel_mesh);
+    compute_prolong(_kernel_mesh);
   } else {
     share_vertex_data([](Element& elem, int){return elem.uncertainty;},
                       [](Element& elem, int i_vert)->double&{return elem.vertex_elwise_av(i_vert);},
@@ -906,7 +902,7 @@ void Solver::set_uncert_surface_rep(int bc_sn)
     }
   }
   // extrapolate to faces
-  (*write_face)(acc_mesh.kernel_elements());
+  compute_write_face(_kernel_mesh);
   // for each face, compute unit surface normal from the reference level normal
   Mat<dyn, dyn> bound = basis.boundary();
   #pragma omp parallel for
@@ -935,7 +931,7 @@ void Solver::set_uncert_surface_rep(int bc_sn)
       }
     }
   }
-  (*kernel_factory<Prolong_refined>(nd, params.row_size, basis))(acc_mesh.refined_faces());
+  compute_prolong(_kernel_mesh);
   // compute difference between neighboring elements
   auto& def_cons = acc_mesh.deformed().face_connections();
   #pragma omp parallel for
@@ -959,7 +955,7 @@ void Solver::set_uncert_surface_rep(int bc_sn)
     double* state = con.inside_face();
     for (int i_dof = 0; i_dof < nv*nfq; ++i_dof) state[i_dof] = 0;
   }
-  (*kernel_factory<Restrict_refined>(nd, params.row_size, basis, false))(acc_mesh.refined_faces());
+  compute_restrict(_kernel_mesh, false);
   // total up differences for each boundary element and write to uncertainty
   // also restore the flow state to what it was at the start of this function
   Mat<> weights = math::pow_outer(basis.node_weights(), nd - 1);
@@ -984,7 +980,7 @@ void Solver::set_uncert_surface_rep(int bc_sn)
       }
     }
   }
-  (*write_face)(acc_mesh.kernel_elements());
+  compute_write_face(_kernel_mesh);
 }
 
 void Solver::synch_extruded_uncert()
@@ -1069,8 +1065,8 @@ void Solver::update_implicit()
   Linearized lin(*this);
   iterative::gmres(lin, 27, 1);
   lin.add(-Linearized::storage_start, 1., -Linearized::storage_start + 3, 1., 0.);
-  (*write_face)(acc_mesh.kernel_elements());
-  (*kernel_factory<Prolong_refined>(params.n_dim, params.row_size, basis))(acc_mesh.refined_faces());
+  compute_write_face(_kernel_mesh);
+  compute_prolong(_kernel_mesh);
   fix_admissibility(.7);
 }
 
@@ -1318,7 +1314,7 @@ std::vector<double> Solver::integral_surface(const Boundary_func& integrand, int
   Eigen::MatrixXd boundary = basis.boundary();
   Eigen::VectorXd weights = math::pow_outer(basis.node_weights(), params.n_dim - 1);
   // write the state to the faces so that the BCs can access it
-  (*write_face)(acc_mesh.kernel_elements());
+  compute_write_face(_kernel_mesh);
   // compute the integral
   std::vector<double> integral (n_int, 0.);
   auto& bc_cons {acc_mesh.boundary_connections()};

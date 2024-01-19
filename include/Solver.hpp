@@ -10,7 +10,6 @@
 #include "Transport_model.hpp"
 #include "Mesh.hpp"
 #include "Accessible_mesh.hpp"
-#include "kernel_factory.hpp"
 #include "Namespace.hpp"
 #include "Printer.hpp"
 #include "Linear_equation.hpp"
@@ -39,7 +38,6 @@ class Solver
   bool use_art_visc;
   bool fix_admis;
   int av_rs;
-  std::unique_ptr<Kernel<Kernel_element&>> write_face;
   Transport_model visc;
   Transport_model therm_cond;
   int last_fix_vis_iter = std::numeric_limits<int>::min();

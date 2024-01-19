@@ -1,5 +1,4 @@
 #include <Solver.hpp>
-#include <Prolong_refined.hpp>
 
 namespace hexed
 {
@@ -72,18 +71,16 @@ double Solver::Linearized::inner(int input0, int input1)
 
 void Solver::Linearized::matvec(int output, int input)
 {
-  std::unique_ptr<Kernel<Refined_face&>> prolong(kernel_factory<Prolong_refined>(
-    _solver.params.n_dim, _solver.params.row_size, _solver.basis));
   add(-storage_start, 1., -storage_start, finite_diff, input);
-  (*_solver.write_face)(_solver.acc_mesh.kernel_elements());
-  (*prolong)(_solver.acc_mesh.refined_faces());
+  compute_write_face(_solver._kernel_mesh);
+  compute_prolong(_solver._kernel_mesh);
   _solver.update();
   add(output, 1., -storage_start, -1., -storage_start + 1);
   add(output, 1., output, -1., 1);
   scale(output, output, 1./finite_diff);
   scale(-storage_start, -storage_start + 3, 1.);
-  (*_solver.write_face)(_solver.acc_mesh.kernel_elements());
-  (*prolong)(_solver.acc_mesh.refined_faces());
+  compute_write_face(_solver._kernel_mesh);
+  compute_prolong(_solver._kernel_mesh);
 }
 
 }
