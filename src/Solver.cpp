@@ -10,9 +10,7 @@
 #include <iterative.hpp>
 #include <Gauss_lobatto.hpp>
 #include <Face_permutation.hpp>
-
-#include <pde.hpp>
-#include <Spatial.hpp>
+#include <Row_index.hpp>
 
 namespace hexed
 {
@@ -106,19 +104,15 @@ bool Solver::use_ldg()
 
 double Solver::max_dt(double msc, double msd)
 {
-  const int nd = params.n_dim;
-  const int rs = params.row_size;
-  auto& sw_car {stopwatch.children.at("cartesian")};
-  auto& sw_def {stopwatch.children.at("deformed" )};
-  double use_filt = _namespace->lookup<int>("use_filter").value();
+  Kernel_options opts {
+    stopwatch.children.at("cartesian"),
+    stopwatch.children.at("deformed" ),
+    stopwatch.children.at("prolong/restrict"),
+    0, 0, bool(_namespace->lookup<int>("use_filter").value()),
+  };
   bool local_time = _namespace->lookup<int>("local_time").value();
-  #define MAX_DT(is_visc, ...) { \
-    return std::min((*kernel_factory<Spatial<pde::Navier_stokes<is_visc>::Pde, false>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd, __VA_ARGS__))(acc_mesh.cartesian().kernel_elements(), sw_car, "compute time step"), \
-                    (*kernel_factory<Spatial<pde::Navier_stokes<is_visc>::Pde,  true>::Max_dt>(nd, rs, basis, local_time, use_filt, msc, msd, __VA_ARGS__))(acc_mesh.deformed ().kernel_elements(), sw_def, "compute time step")); \
-  }
-  if (use_ldg()) MAX_DT(true , visc, therm_cond)
-  else           MAX_DT(false, visc, therm_cond)
-  #undef MAX_DT
+  if (use_ldg()) return max_dt_navier_stokes(_kernel_mesh, opts, msc, msd, local_time, visc, therm_cond, _namespace->lookup<int>("laplacian_art_visc").value());
+  else return max_dt_euler(_kernel_mesh, opts, msc, msd, local_time);
 }
 
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
@@ -219,116 +213,6 @@ Namespace& Solver::nspace() {return *_namespace;}
 Mesh& Solver::mesh() {return acc_mesh;}
 Storage_params Solver::storage_params() {return params;}
 const Stopwatch_tree& Solver::stopwatch_tree() {return stopwatch;}
-
-void Solver::snap_faces()
-{
-  const int nd = params.n_dim;
-  const int nfq = params.n_qpoint()/params.row_size;
-  auto& bc_cons {acc_mesh.boundary_connections()};
-  auto& elems = acc_mesh.elements();
-  #pragma omp parallel for
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    Lock::Acquire acq(bc_cons[i_con].element().lock);
-    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh.boundary_condition(bc_sn).mesh_bc->snap_node_adj(bc_cons[i_con], basis);
-  }
-  Gauss_lobatto lob(std::max(2, basis.row_size - 1));
-  Mat<dyn, dyn> to_lob = basis.interpolate(lob.nodes());
-  Mat<dyn, dyn> from_lob = lob.interpolate(basis.nodes());
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    double* state = elems[i_elem].stage(0);
-    double* rk_ref = elems[i_elem].stage(1);
-    for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) rk_ref[i_dof] = state[i_dof];
-  }
-  for (int sweep = 0; sweep < nd - 1; ++sweep) {
-    #pragma omp parallel for
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      double* state = elems[i_elem].stage(0);
-      for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) state[i_dof] = 0;
-    }
-    #pragma omp parallel for
-    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-      auto& con = bc_cons[i_con];
-      Lock::Acquire acq(con.element().lock);
-      int bc_sn = con.bound_cond_serial_n();
-      if (bc_sn == acc_mesh.surface_bc_sn()) {
-        double* state = con.element().stage(0);
-        double* node_adj = con.element().node_adjustments();
-        if (node_adj) {
-          node_adj += (2*con.i_dim() + con.inside_face_sign())*params.n_qpoint()/params.row_size;
-          for (Row_index ind(params.n_dim, params.row_size, con.i_dim()); ind; ++ind) {
-            for (int i_node = 0; i_node < params.row_size; ++i_node) {
-              state[ind.i_qpoint(i_node)] = math::sign(con.inside_face_sign())*node_adj[ind.i_face_qpoint()];
-            }
-          }
-        }
-      }
-    }
-    compute_write_face(_kernel_mesh);
-    compute_prolong(_kernel_mesh);
-    Copy fake_bc;
-    #pragma omp parallel for
-    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-      auto& con = bc_cons[i_con];
-      Lock::Acquire acq(con.element().lock);
-      fake_bc.apply_state(con);
-    }
-    if (sweep) {
-      auto& ref_cons = acc_mesh.deformed().refined_connections();
-      #pragma omp parallel for
-      for (int i_con = 0; i_con < ref_cons.size(); ++i_con) {
-        for (int i_fine = 0; i_fine < 2; ++i_fine) {
-          double* state = ref_cons[i_con].connection(i_fine).state();
-          for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-            state[i_qpoint] *= 2;
-            state[nfq*params.n_var + i_qpoint] = 0;
-          }
-        }
-      }
-    }
-    (*kernel_factory<Spatial<pde::Smooth_art_visc, false>::Neighbor>(params.n_dim, params.row_size, 0))(acc_mesh.deformed().kernel_connections());
-    compute_restrict(_kernel_mesh, false, true);
-    #pragma omp parallel for
-    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-      auto& con = bc_cons[i_con];
-      Lock::Acquire acq(con.element().lock);
-      int bc_sn = con.bound_cond_serial_n();
-      if (bc_sn == acc_mesh.surface_bc_sn()) {
-        double* state = con.element().stage(0);
-        double* node_adj = con.element().node_adjustments();
-        if (node_adj) {
-          node_adj += (2*con.i_dim() + con.inside_face_sign())*params.n_qpoint()/params.row_size;
-          for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) if (j_dim != con.i_dim()) {
-            for (Row_index ind(params.n_dim, params.row_size, j_dim); ind; ++ind) {
-              Mat<> row(params.row_size);
-              for (int i_node = 0; i_node < params.row_size; ++i_node) {
-                row(i_node) = state[ind.i_qpoint(i_node)];
-              }
-              Mat<> lrow = to_lob*row;
-              for (int i_sign = 0; i_sign < 2; ++i_sign) {
-                lrow(i_sign*(lob.row_size - 1)) = con.element().faces[2*j_dim + i_sign][2*params.n_var*params.n_qpoint()/params.row_size + ind.i_face_qpoint()];
-              }
-              row = from_lob*lrow;
-              for (int i_node = 0; i_node < params.row_size; ++i_node) {
-                state[ind.i_qpoint(i_node)] = row(i_node);
-              }
-            }
-          }
-          for (Row_index ind(params.n_dim, params.row_size, con.i_dim()); ind; ++ind) {
-            node_adj[ind.i_face_qpoint()] = math::sign(con.inside_face_sign())*state[ind.i_qpoint(0)];
-          }
-        }
-      }
-    }
-  }
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    double* state = elems[i_elem].stage(0);
-    double* rk_ref = elems[i_elem].stage(1);
-    for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) state[i_dof] = rk_ref[i_dof];
-  }
-}
 
 void Solver::calc_jacobian()
 {
@@ -488,15 +372,21 @@ void Solver::set_art_visc_constant(double value)
 
 void Solver::diffuse_art_visc(int n_real, double diff_time)
 {
-  const int nd = params.n_dim;
   const int nq = params.n_qpoint();
-  const int rs = params.row_size;
   auto& elements = acc_mesh.elements();
   // evaluate CFL condition
   double diff_safety = _namespace->lookup<double>("av_diff_max_safety").value();
   double n_cheby = _namespace->lookup<double>("n_cheby_av").value();
-  (*kernel_factory<Spatial<pde::Smooth_art_visc, false>::Max_dt>(nd, rs, basis, true, false, 1., diff_safety))(acc_mesh.cartesian().kernel_elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"), "compute time step");
-  (*kernel_factory<Spatial<pde::Smooth_art_visc,  true>::Max_dt>(nd, rs, basis, true, false, 1., diff_safety))(acc_mesh.deformed ().kernel_elements(), stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed" ), "compute time step");
+  Kernel_options opts {
+    stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"),
+    stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed"),
+    stopwatch.children.at("prolong/restrict"),
+    0.,
+    0,
+    false,
+    false,
+  };
+  max_dt_smooth_av(_kernel_mesh, opts, 1., diff_safety, true);
   // initialize residual to zero (will compute RMS over all real time steps)
   status.diff_res = 0;
   for (int real_step = 0; real_step < n_real; ++real_step)
@@ -532,15 +422,7 @@ void Solver::diffuse_art_visc(int n_real, double diff_time)
         double s = math::chebyshev_step(n_cheby, i_cheby);
         apply_avc_diff_bcs();
         // update state with spatial term
-        Kernel_options opts {
-          stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"),
-          stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed"),
-          stopwatch.children.at("prolong/restrict"),
-          s,
-          0,
-          false,
-          false,
-        };
+        opts.dt = s;
         compute_smooth_av(_kernel_mesh, opts, [this](){apply_avc_diff_flux_bcs();});
         // update state with real time forcing term
         #pragma omp parallel for
@@ -625,8 +507,16 @@ void Solver::update_art_visc_smoothness(double advect_length)
   compute_write_face(_kernel_mesh);
   compute_prolong(_kernel_mesh);
   double adv_safety = _namespace->lookup<double>("av_advect_max_safety").value();
-  (*kernel_factory<Spatial<pde::Advection, false>::Max_dt>(nd, rs, basis, true, false, adv_safety, 1.))(acc_mesh.cartesian().kernel_elements(), sw_adv.children.at("cartesian"), "compute time step");
-  (*kernel_factory<Spatial<pde::Advection,  true>::Max_dt>(nd, rs, basis, true, false, adv_safety, 1.))(acc_mesh.deformed ().kernel_elements(), sw_adv.children.at("deformed" ), "compute time step");
+  Kernel_options opts {
+    sw_adv.children.at("cartesian"),
+    sw_adv.children.at("deformed" ),
+    stopwatch.children.at("prolong/restrict"),
+    0.,
+    0,
+    false,
+    false,
+  };
+  max_dt_advection(_kernel_mesh, opts, adv_safety, 1., true);
 
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
   double diff = 0; // for residual computation
@@ -682,15 +572,8 @@ void Solver::update_art_visc_smoothness(double advect_length)
           }
           sw_adv.children.at("BCs").stopwatch.pause();
           sw_adv.children.at("BCs").work_units_completed += acc_mesh.elements().size();
-          Kernel_options opts {
-            sw_adv.children.at("cartesian"),
-            sw_adv.children.at("deformed" ),
-            stopwatch.children.at("prolong/restrict"),
-            dt_scaled,
-            i,
-            false,
-            false,
-          };
+          opts.dt = dt_scaled;
+          opts.i_stage = i;
           compute_advection(_kernel_mesh, opts);
         }
         sw_adv.children.at("cartesian").work_units_completed += acc_mesh.cartesian().elements().size();
@@ -1220,8 +1103,16 @@ bool Solver::fix_admissibility(double stability_ratio)
       }
     }
     double dt = stability_ratio;
-    (*kernel_factory<Spatial<pde::Fix_therm_admis, false>::Max_dt>(nd, rs, basis, true, false, dt, dt))(acc_mesh.cartesian().kernel_elements(), stopwatch.children.at("fix admis.").children.at("cartesian"), "compute time step");
-    (*kernel_factory<Spatial<pde::Fix_therm_admis,  true>::Max_dt>(nd, rs, basis, true, false, dt, dt))(acc_mesh.deformed ().kernel_elements(), stopwatch.children.at("fix admis.").children.at("deformed" ), "compute time step");
+    Kernel_options opts {
+      stopwatch.children.at("fix admis.").children.at("cartesian"),
+      stopwatch.children.at("fix admis.").children.at("deformed" ),
+      stopwatch.children.at("prolong/restrict"),
+      0.,
+      0,
+      false,
+      false,
+    };
+    max_dt_fix_therm_admis(_kernel_mesh, opts, dt, dt, true);
     dt = 1.;
     double linear = dt;
     double quadratic = dt*dt/8/0.9;
@@ -1236,15 +1127,7 @@ bool Solver::fix_admissibility(double stability_ratio)
         double* gh_f = bc_cons[i_con].ghost_face();
         for (int i_dof = 0; i_dof < nq*(nd + 2)/rs; ++i_dof) gh_f[i_dof] = in_f[i_dof];
       }
-      Kernel_options opts {
-        stopwatch.children.at("fix admis.").children.at("cartesian"),
-        stopwatch.children.at("fix admis.").children.at("deformed" ),
-        stopwatch.children.at("prolong/restrict"),
-        s,
-        0,
-        false,
-        false,
-      };
+      opts.dt = s;
       compute_fix_therm_admis(_kernel_mesh, opts, [this](){apply_fta_flux_bcs();});
     }
     double safety = _namespace->lookup<double>("max_safety").value();

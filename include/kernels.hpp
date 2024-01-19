@@ -38,9 +38,18 @@ struct Kernel_options
 
 void compute_euler(Kernel_mesh, Kernel_options);
 void compute_advection(Kernel_mesh, Kernel_options);
-void compute_navier_stokes(Kernel_mesh, Kernel_options, std::function<void()> flux_bc, Transport_model visc, Transport_model therm_cond, bool laplacian_av);
+void compute_navier_stokes(Kernel_mesh, Kernel_options, std::function<void()> flux_bc,
+                           Transport_model visc, Transport_model therm_cond, bool laplacian_av);
 void compute_smooth_av(Kernel_mesh, Kernel_options, std::function<void()> flux_bc);
 void compute_fix_therm_admis(Kernel_mesh, Kernel_options, std::function<void()> flux_bc);
+
+double max_dt_euler(Kernel_mesh, Kernel_options, double convective_safety, double diffusive_safety, bool local_time);
+double max_dt_navier_stokes(Kernel_mesh, Kernel_options, double convective_safety, double diffusive_safety, bool local_time,
+                            Transport_model visc, Transport_model therm_cond, bool laplacian_av);
+double max_dt_advection(Kernel_mesh, Kernel_options, double convective_safety, double diffusive_safety, bool local_time);
+double max_dt_smooth_av(Kernel_mesh, Kernel_options, double convective_safety, double diffusive_safety, bool local_time);
+double max_dt_fix_therm_admis(Kernel_mesh, Kernel_options, double convective_safety, double diffusive_safety, bool local_time);
+
 void compute_prolong(Kernel_mesh, bool scale = false, bool offset = false);
 void compute_restrict(Kernel_mesh, bool scale = true, bool offset = false);
 void compute_write_face(Kernel_mesh);
