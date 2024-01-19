@@ -11,27 +11,31 @@
 namespace hexed
 {
 
-struct Kernel_args
+struct Kernel_mesh
 {
   int n_dim;
   int row_size;
   const Basis& basis;
-  Stopwatch_tree& sw_car;
-  Stopwatch_tree& sw_def;
-  Stopwatch_tree& sw_pr;
   Sequence<Kernel_connection&>& car_cons;
   Sequence<Kernel_connection&>& def_cons;
   Sequence<Kernel_element&>& car_elems;
   Sequence<Kernel_element&>& def_elems;
   Sequence<Refined_face&>& ref_faces;
+};
+
+struct Kernel_options
+{
+  Stopwatch_tree& sw_car;
+  Stopwatch_tree& sw_def;
+  Stopwatch_tree& sw_pr;
   double dt;
   int i_stage;
   bool compute_residual = false;
   bool use_filter = false;
 };
 
-void compute_euler(Kernel_args&);
-void compute_advection(Kernel_args&);
+void compute_euler(Kernel_mesh, Kernel_options);
+void compute_advection(Kernel_mesh, Kernel_options);
 
 }
 #endif

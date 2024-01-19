@@ -10,16 +10,16 @@ namespace hexed
 
 #define COMPUTE_CONVECTION(Pde_templ) \
 { \
-  (*kernel_factory<Spatial<Pde_templ, false>::Neighbor>(args.n_dim, args.row_size, args.i_stage))(args.car_cons, args.sw_car, "neighbor"); \
-  (*kernel_factory<Spatial<Pde_templ,  true>::Neighbor>(args.n_dim, args.row_size, args.i_stage))(args.def_cons, args.sw_def, "neighbor"); \
-  (*kernel_factory<Restrict_refined>(args.n_dim, args.row_size, args.basis))(args.ref_faces, args.sw_pr); \
-  (*kernel_factory<Spatial<Pde_templ, false>::Local>(args.n_dim, args.row_size, args.basis, args.dt, args.i_stage, args.compute_residual, args.use_filter))(args.car_elems, args.sw_car, "local"); \
-  (*kernel_factory<Spatial<Pde_templ,  true>::Local>(args.n_dim, args.row_size, args.basis, args.dt, args.i_stage, args.compute_residual, args.use_filter))(args.def_elems, args.sw_def, "local"); \
-  (*kernel_factory<Prolong_refined>(args.n_dim, args.row_size, args.basis))(args.ref_faces, args.sw_pr); \
+  (*kernel_factory<Spatial<Pde_templ, false>::Neighbor>(mesh.n_dim, mesh.row_size, opts.i_stage))(mesh.car_cons, opts.sw_car, "neighbor"); \
+  (*kernel_factory<Spatial<Pde_templ,  true>::Neighbor>(mesh.n_dim, mesh.row_size, opts.i_stage))(mesh.def_cons, opts.sw_def, "neighbor"); \
+  (*kernel_factory<Restrict_refined>(mesh.n_dim, mesh.row_size, mesh.basis))(mesh.ref_faces, opts.sw_pr); \
+  (*kernel_factory<Spatial<Pde_templ, false>::Local>(mesh.n_dim, mesh.row_size, mesh.basis, opts.dt, opts.i_stage, opts.compute_residual, opts.use_filter))(mesh.car_elems, opts.sw_car, "local"); \
+  (*kernel_factory<Spatial<Pde_templ,  true>::Local>(mesh.n_dim, mesh.row_size, mesh.basis, opts.dt, opts.i_stage, opts.compute_residual, opts.use_filter))(mesh.def_elems, opts.sw_def, "local"); \
+  (*kernel_factory<Prolong_refined>(mesh.n_dim, mesh.row_size, mesh.basis))(mesh.ref_faces, opts.sw_pr); \
 }
 
-void compute_euler(Kernel_args& args) COMPUTE_CONVECTION(pde::Navier_stokes<false>::Pde)
-void compute_advection(Kernel_args& args) COMPUTE_CONVECTION(pde::Advection)
+void compute_euler(Kernel_mesh mesh, Kernel_options opts) COMPUTE_CONVECTION(pde::Navier_stokes<false>::Pde)
+void compute_advection(Kernel_mesh mesh, Kernel_options opts) COMPUTE_CONVECTION(pde::Advection)
 
 #undef COMPUTE_CONVECTION
 

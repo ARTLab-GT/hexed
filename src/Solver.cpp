@@ -9,7 +9,6 @@
 #include <Xdmf_wrapper.hpp>
 #include <iterative.hpp>
 #include <Gauss_lobatto.hpp>
-#include <kernels.hpp>
 
 // kernels
 #include <Restrict_refined.hpp>
@@ -141,7 +140,17 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   therm_cond{thermal_conductivity_model},
   _namespace{space},
   _printer{printer},
-  _implicit{implicit}
+  _implicit{implicit},
+  _kernel_mesh{
+    n_dim,
+    row_size,
+    basis,
+    acc_mesh.cartesian().kernel_connections(),
+    acc_mesh.deformed ().kernel_connections(),
+    acc_mesh.cartesian().kernel_elements(),
+    acc_mesh.deformed ().kernel_elements(),
+    acc_mesh.refined_faces(),
+  }
 {
   _namespace->assign_default("max_safety", .7); // maximum allowed safety factor for time stepping
   _namespace->assign_default("max_time_step", huge); // maximum allowed time step
@@ -668,24 +677,16 @@ void Solver::update_art_visc_smoothness(double advect_length)
           }
           sw_adv.children.at("BCs").stopwatch.pause();
           sw_adv.children.at("BCs").work_units_completed += acc_mesh.elements().size();
-          Kernel_args ka {
-            params.n_dim,
-            params.row_size,
-            basis,
+          Kernel_options opts {
             sw_adv.children.at("cartesian"),
             sw_adv.children.at("deformed" ),
             stopwatch.children.at("prolong/restrict"),
-            acc_mesh.cartesian().kernel_connections(),
-            acc_mesh.deformed ().kernel_connections(),
-            acc_mesh.cartesian().kernel_elements(),
-            acc_mesh.deformed ().kernel_elements(),
-            acc_mesh.refined_faces(),
             dt_scaled,
             i,
             false,
             false,
           };
-          compute_advection(ka);
+          compute_advection(_kernel_mesh, opts);
         }
         sw_adv.children.at("cartesian").work_units_completed += acc_mesh.cartesian().elements().size();
         sw_adv.children.at("deformed" ).work_units_completed += acc_mesh.deformed ().elements().size();
@@ -1019,18 +1020,10 @@ void Solver::update()
       bool fixed = false;
       // compute inviscid update
       for (int i = 0; i < 2; ++i) {
-        Kernel_args ka {
-          params.n_dim,
-          params.row_size,
-          basis,
+        Kernel_options opts {
           stopwatch.children.at("cartesian"),
           stopwatch.children.at("deformed" ),
           stopwatch.children.at("prolong/restrict"),
-          acc_mesh.cartesian().kernel_connections(),
-          acc_mesh.deformed ().kernel_connections(),
-          acc_mesh.cartesian().kernel_elements(),
-          acc_mesh.deformed ().kernel_elements(),
-          acc_mesh.refined_faces(),
           dt,
           i,
           false,
@@ -1038,7 +1031,7 @@ void Solver::update()
         };
         apply_state_bcs();
         if (use_ldg()) compute_viscous(dt, i, false);
-        else compute_euler(ka);
+        else compute_euler(_kernel_mesh, opts);
         // note that function call must come first to ensure it is evaluated despite short-circuiting
         fixed = fix_admissibility(_namespace->lookup<double>("fix_admis_max_safety").value()) || fixed;
       }
@@ -1075,25 +1068,17 @@ void Solver::update_implicit()
 void Solver::compute_residual()
 {
   apply_state_bcs();
-  Kernel_args ka {
-    params.n_dim,
-    params.row_size,
-    basis,
+  Kernel_options opts {
     stopwatch.children.at("cartesian"),
     stopwatch.children.at("deformed" ),
     stopwatch.children.at("prolong/restrict"),
-    acc_mesh.cartesian().kernel_connections(),
-    acc_mesh.deformed ().kernel_connections(),
-    acc_mesh.cartesian().kernel_elements(),
-    acc_mesh.deformed ().kernel_elements(),
-    acc_mesh.refined_faces(),
     1.,
     0,
     true,
     bool(_namespace->lookup<int>("use_filter").value()),
   };
   if (use_ldg()) compute_viscous(1., 0, true);
-  else compute_euler(ka);
+  else compute_euler(_kernel_mesh, opts);
 }
 
 Iteration_status Solver::iteration_status()

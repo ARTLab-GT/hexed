@@ -15,6 +15,7 @@
 #include "Printer.hpp"
 #include "Linear_equation.hpp"
 #include "Visualizer.hpp"
+#include "kernels.hpp"
 
 namespace hexed
 {
@@ -45,6 +46,7 @@ class Solver
   std::shared_ptr<Namespace> _namespace;
   std::shared_ptr<Printer> _printer;
   bool _implicit;
+  Kernel_mesh _kernel_mesh;
 
   void share_vertex_data(std::function<double&(Element&, int i_vertex)>, std::function<double(Mat<>)>);
   void share_vertex_data(std::function<double(Element&, int i_vertex)> get, std::function<double&(Element&, int i_vertex)> set, std::function<double(Mat<>)>);
