@@ -36,7 +36,6 @@ void compute_restrict(Kernel_mesh mesh, bool scale, bool offset)
 void compute_write_face(Kernel_mesh mesh)
 {
   (*kernel_factory<Spatial<pde::Navier_stokes<false>::Pde, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis))(mesh.elems);
-  compute_prolong(mesh);
 }
 
 }

@@ -14,7 +14,7 @@ namespace hexed
 double max_dt_euler(Kernel_mesh mesh, Kernel_options opts, double msc, double msd, bool local_time) COMPUTE_MAX_DT(pde::Navier_stokes<false>::Pde)
 double max_dt_navier_stokes(Kernel_mesh mesh, Kernel_options opts, double msc, double msd, bool local_time,
                             Transport_model visc, Transport_model therm_cond, bool laplacian_av)
-COMPUTE_MAX_DT(pde::Navier_stokes<true>::Pde)
+COMPUTE_MAX_DT(pde::Navier_stokes<true>::Pde, visc, therm_cond, laplacian_av)
 double max_dt_advection(Kernel_mesh mesh, Kernel_options opts, double msc, double msd, bool local_time) COMPUTE_MAX_DT(pde::Advection)
 double max_dt_smooth_av(Kernel_mesh mesh, Kernel_options opts, double msc, double msd, bool local_time) COMPUTE_MAX_DT(pde::Smooth_art_visc)
 double max_dt_fix_therm_admis(Kernel_mesh mesh, Kernel_options opts, double msc, double msd, bool local_time) COMPUTE_MAX_DT(pde::Fix_therm_admis)
