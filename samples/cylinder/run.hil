@@ -28,7 +28,7 @@ viscosity_model = air_viscosity
 conductivity_model = {ref_value = 1.4/0.4*specific_gas_air/.72*air_visc_ref; ref_temperature = air_visc_ref_temp; offset = air_visc_offset}
 }
 art_visc_width = art_visc_width*.6
-done = {iteration >= 10^5}
+done = {iteration >= 3*10^3}
 vis_freq = 1000
 
 $plot_history
