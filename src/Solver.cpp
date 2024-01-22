@@ -516,7 +516,7 @@ void Solver::update_art_visc_smoothness(double advect_length)
     false,
     false,
   };
-  max_dt_advection(_kernel_mesh, opts, adv_safety, 1., true);
+  max_dt_advection(_kernel_mesh, opts, adv_safety, 1., true, advect_length, 1.);
 
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
   double diff = 0; // for residual computation
@@ -574,7 +574,7 @@ void Solver::update_art_visc_smoothness(double advect_length)
           sw_adv.children.at("BCs").work_units_completed += acc_mesh.elements().size();
           opts.dt = dt_scaled;
           opts.i_stage = i;
-          compute_advection(_kernel_mesh, opts);
+          compute_advection(_kernel_mesh, opts, advect_length, dt_scaled);
         }
         sw_adv.children.at("cartesian").work_units_completed += acc_mesh.cartesian().elements().size();
         sw_adv.children.at("deformed" ).work_units_completed += acc_mesh.deformed ().elements().size();
@@ -584,12 +584,10 @@ void Solver::update_art_visc_smoothness(double advect_length)
         for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
           double* state = elements[i_elem].stage(0);
           double* adv = elements[i_elem].advection_state();
-          double* tss = elements[i_elem].time_step_scale();
           for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
             // compute update
-            double pseudotime_scale = tss[i_qpoint]*2/advect_length;
             double old = adv[i_node*nq + i_qpoint]; // record for measuring residual
-            adv[i_node*nq + i_qpoint] = (state[nd*nq + i_qpoint] + pseudotime_scale*1.)/(1. + pseudotime_scale);
+            adv[i_node*nq + i_qpoint] = state[nd*nq + i_qpoint];
             // add to residual
             double d = adv[i_node*nq + i_qpoint] - old;
             diff += d*d/dt_scaled/dt_scaled;

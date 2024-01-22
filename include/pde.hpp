@@ -36,8 +36,9 @@ class Navier_stokes
   {
     bool _laplacian;
     public:
-    static constexpr bool is_viscous = visc;
+    static constexpr bool has_diffusion = visc;
     static constexpr bool has_convection = true;
+    static constexpr bool has_source = false;
     static constexpr int n_update = n_dim + 2;
     static constexpr int n_state = n_dim + 3;
     static constexpr int n_extrap = n_dim + 2;
@@ -59,7 +60,7 @@ class Navier_stokes
       return extrap;
     }
 
-    static void write_update(Mat<n_update> update, int stride, double* data)
+    void write_update(Mat<n_update> update, int stride, double* data, bool critical) const
     {
       for (int i_var = 0; i_var < n_update; ++i_var) data[i_var*stride] += update(i_var);
     }
@@ -261,13 +262,18 @@ template <int n_dim>
 class Advection
 {
   public:
-  static constexpr bool is_viscous = false;
+  static constexpr bool has_diffusion = false;
   static constexpr bool has_convection = true;
+  static constexpr bool has_source = true;
   static constexpr int curr_start = n_dim;
   static constexpr int ref_start = n_dim + 1;
   static constexpr int n_state = n_dim + 1;
   static constexpr int n_extrap = n_dim + 1;
   static constexpr int n_update = 1;
+  double _advect_length;
+  double _node;
+
+  Advection(double advect_length, double node) : _advect_length{advect_length}, _node{node} {}
 
   static Mat<n_extrap> fetch_extrap(int stride, const double* data)
   {
@@ -276,9 +282,11 @@ class Advection
     return extrap;
   }
 
-  static void write_update(Mat<n_update> update, int stride, double* data)
+  void write_update(Mat<n_update> update, int stride, double* data, bool is_critical) const
   {
-    data[n_dim*stride] += update(0);
+    double pseudo = 1 + data[2*(n_dim + 2)*stride]*2/_advect_length;
+    if (is_critical) data[n_dim*stride] = (data[n_dim*stride] + update(0))/pseudo;
+    else data[n_dim*stride] += update(0)/pseudo;
   }
 
   template <int n_dim_flux>
@@ -313,6 +321,12 @@ class Advection
       }
     }
 
+    Mat<n_update> source;
+    void compute_source()
+    {
+      source(0) = 2/(_eq._advect_length*_eq._node);
+    }
+
     double char_speed;
     void compute_char_speed()
     {
@@ -330,8 +344,9 @@ template <int n_dim>
 class Smooth_art_visc
 {
   public:
-  static constexpr bool is_viscous = true;
+  static constexpr bool has_diffusion = true;
   static constexpr bool has_convection = false;
+  static constexpr bool has_source = false;
   static constexpr int curr_start = 0;
   static constexpr int ref_start = 1;
   static constexpr int visc_start = 2;
@@ -346,7 +361,7 @@ class Smooth_art_visc
     return extrap;
   }
 
-  static void write_update(Mat<n_update> update, int stride, double* data)
+  void write_update(Mat<n_update> update, int stride, double* data, bool critical) const
   {
     for (int i_var = 0; i_var < n_update; ++i_var) data[i_var*stride] += update(i_var);
   }
@@ -394,8 +409,9 @@ template <int n_dim>
 class Fix_therm_admis
 {
   public:
-  static constexpr bool is_viscous = true;
+  static constexpr bool has_diffusion = true;
   static constexpr bool has_convection = false;
+  static constexpr bool has_source = false;
   static constexpr int n_state = n_dim + 2;
   static constexpr int n_update = n_state;
   static constexpr int n_extrap = n_state;
@@ -410,7 +426,7 @@ class Fix_therm_admis
     return extrap;
   }
 
-  static void write_update(Mat<n_update> update, int stride, double* data)
+  void write_update(Mat<n_update> update, int stride, double* data, bool critical) const
   {
     for (int i_var = 0; i_var < n_update; ++i_var) data[i_var*stride] += update(i_var);
   }

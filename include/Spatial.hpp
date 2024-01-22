@@ -101,7 +101,7 @@ class Spatial
       _compute_residual{compute_residual},
       _use_filter{use_filter}
     {
-      HEXED_ASSERT(!(Pde::is_viscous & _stage), "two-stage stabilization is not applicable to diffusion equations");
+      HEXED_ASSERT(!(Pde::has_diffusion & _stage), "two-stage stabilization is not applicable to diffusion equations");
       HEXED_ASSERT(!(_stage && _compute_residual), "residual calculation is a single-stage operation");
     }
 
@@ -150,7 +150,7 @@ class Spatial
         }
 
         // compute gradient (times jacobian determinant, cause that's easier)
-        if constexpr (Pde::is_viscous)
+        if constexpr (Pde::has_diffusion)
         {
           static_assert(Pde::n_extrap >= Pde::n_update);
           std::array<double*, 6> visc_faces;
@@ -201,7 +201,7 @@ class Spatial
               for (int i_var = 0; i_var < Pde::n_update; ++i_var) flux[i_dim][i_var][i_qpoint] = comp.flux_conv(i_var, i_dim);
             }
           }
-          if constexpr (Pde::is_viscous) {
+          if constexpr (Pde::has_diffusion) {
             // fetch gradient
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
               for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) {
@@ -216,6 +216,12 @@ class Spatial
                 visc_storage[i_dim][Pde::curr_start + i_var][i_qpoint] = comp.flux_diff(i_var, i_dim);
               }
             }
+          }
+          if constexpr (Pde::has_source) if (!_stage) {
+            comp.compute_source();
+            double mult = d_pos;
+            if constexpr (is_deformed) mult *= elem_det[i_qpoint];
+            for (int i_var = 0; i_var < Pde::n_update; ++i_var) time_rate[1][i_var][i_qpoint] = mult*comp.source(i_var);
           }
         }
 
@@ -233,7 +239,7 @@ class Spatial
               Row_rw<Pde::n_update, row_size>::write_row(-derivative(row_f, face_f), time_rate[0][0], ind, 1.);
             }
             // compute viscous update
-            if constexpr (Pde::is_viscous) {
+            if constexpr (Pde::has_diffusion) {
               row_f = Row_rw<Pde::n_update, row_size>::read_row(visc_storage[i_dim][Pde::curr_start], ind);
               face_f = boundary*row_f;
               // write viscous row_f to faces to enable calculation of the numerical row_f
@@ -271,18 +277,18 @@ class Spatial
               u -= ref_state[i_var*n_qpoint + i_qpoint];
             } else {
               if constexpr (Pde::has_convection) ref_state[i_var*n_qpoint + i_qpoint] = u;
-              if constexpr (Pde::is_viscous) u += time_rate[1][i_var][i_qpoint];
+              if constexpr (Pde::has_diffusion || Pde::has_source) u += time_rate[1][i_var][i_qpoint];
             }
             u *= mult;
             if (_compute_residual) ref_state[i_var*n_qpoint + i_qpoint] = u;
             else update(i_var) = u;
           }
-          Pde::write_update(update, n_qpoint, state + i_qpoint);
+          eq.write_update(update, n_qpoint, state + i_qpoint, !Pde::has_diffusion && !_stage);
         }
 
         // write updated state to face storage.
         // For viscous, don't bother since we still have to add the numerical flux term
-        if constexpr (!Pde::is_viscous) write_face(state, faces);
+        if constexpr (!Pde::has_diffusion) write_face(state, faces);
       }
     }
   };
@@ -292,6 +298,7 @@ class Spatial
   class Reconcile_ldg_flux : public Kernel<Kernel_element&>
   {
     using Pde = Pde_templ<n_dim>;
+    const Pde _eq;
     static constexpr int n_qpoint = math::pow(row_size, n_dim);
     Derivative<row_size> derivative;
     Write_face<n_dim, row_size> write_face;
@@ -302,7 +309,9 @@ class Spatial
     bool _use_filter;
 
     public:
-    Reconcile_ldg_flux(const Basis& basis, double dt, int which_stage, bool compute_residual, bool use_filter) :
+    template <typename... pde_args>
+    Reconcile_ldg_flux(const Basis& basis, double dt, int which_stage, bool compute_residual, bool use_filter, pde_args... args) :
+      _eq(args...),
       derivative{basis},
       write_face{basis},
       filter{basis.filter()},
@@ -311,7 +320,7 @@ class Spatial
       _compute_residual{compute_residual},
       _use_filter{use_filter}
     {
-      HEXED_ASSERT(!(Pde::is_viscous & _stage), "two-stage stabilization is not applicable to diffusion equations");
+      HEXED_ASSERT(!(Pde::has_diffusion & _stage), "two-stage stabilization is not applicable to diffusion equations");
       HEXED_ASSERT(Pde::has_convection || !_stage, "for pure diffusion use alternating time steps");
     }
 
@@ -359,7 +368,7 @@ class Spatial
           for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
             update(i_var) = time_rate[i_var][i_qpoint]*mult;
           }
-          Pde::write_update(update, n_qpoint, to_update + i_qpoint);
+          _eq.write_update(update, n_qpoint, to_update + i_qpoint, true);
         }
         // *now* we can extrapolate state to faces
         std::array<double*, 6> faces;
@@ -418,7 +427,7 @@ class Spatial
         for (int i_qpoint = 0; i_qpoint < n_fqpoint; ++i_qpoint)
         {
           // compute average face state for LDG scheme
-          if constexpr (Pde::is_viscous) {
+          if constexpr (Pde::has_diffusion) {
             for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) {
               double avg = .5*(face[0][i_var*n_fqpoint + i_qpoint] + face[1][i_var*n_fqpoint + i_qpoint]);
               for (int i_side = 0; i_side < 2; ++i_side) {
@@ -456,7 +465,7 @@ class Spatial
         }
         if constexpr (is_deformed) {
           perm.restore(); // restore data of face 1 to original order
-          if constexpr (Pde::is_viscous) Face_permutation<n_dim, row_size>(dir, face[3]).restore();
+          if constexpr (Pde::has_diffusion) Face_permutation<n_dim, row_size>(dir, face[3]).restore();
         }
         // write data to actual face storage on heap
         for (int i_side = 0; i_side < 2; ++i_side) {
@@ -469,7 +478,7 @@ class Spatial
             }
           }
           // write average face state
-          if constexpr (Pde::is_viscous) {
+          if constexpr (Pde::has_diffusion) {
             for (int i_dof = 0; i_dof < Pde::n_extrap*n_fqpoint; ++i_dof) {
               f[2*(n_dim + 2)*n_fqpoint + i_dof] = face[2 + i_side][i_dof];
             }
@@ -549,7 +558,7 @@ class Spatial
     public:
     template <typename... pde_args>
     Max_dt(const Basis& basis, bool is_local, bool use_filter, double safety_conv, double safety_diff, pde_args... args) :
-      eq{args...},
+      eq(args...),
       max_cfl_c{basis.max_cfl()*safety_conv},
       max_cfl_d{-2/basis.min_eig_diffusion()*safety_diff},
       _is_local{is_local}
@@ -589,7 +598,7 @@ class Spatial
             comp.compute_char_speed();
             scale += comp.char_speed/max_cfl_c/spacing;
           }
-          if constexpr (Pde::is_viscous) {
+          if constexpr (Pde::has_diffusion) {
             comp.compute_diffusivity();
             scale += comp.diffusivity/max_cfl_d/spacing/spacing;
           }
