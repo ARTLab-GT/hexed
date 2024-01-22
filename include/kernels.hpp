@@ -40,7 +40,7 @@ void compute_euler(Kernel_mesh, Kernel_options);
 void compute_advection(Kernel_mesh, Kernel_options, int i_node, double advect_length, double node);
 void compute_navier_stokes(Kernel_mesh, Kernel_options, std::function<void()> flux_bc,
                            Transport_model visc, Transport_model therm_cond, bool laplacian_av);
-void compute_smooth_av(Kernel_mesh, Kernel_options, std::function<void()> flux_bc);
+void compute_smooth_av(Kernel_mesh, Kernel_options, std::function<void()> flux_bc, int i_step, double diff_time, double chebyshev_step);
 void compute_fix_therm_admis(Kernel_mesh, Kernel_options, std::function<void()> flux_bc);
 
 double max_dt_euler(Kernel_mesh, Kernel_options, double convective_safety, double diffusive_safety, bool local_time);

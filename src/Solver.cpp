@@ -423,21 +423,7 @@ void Solver::diffuse_art_visc(int n_real, double diff_time)
         apply_avc_diff_bcs();
         // update state with spatial term
         opts.dt = s;
-        compute_smooth_av(_kernel_mesh, opts, [this](){apply_avc_diff_flux_bcs();});
-        // update state with real time forcing term
-        #pragma omp parallel for
-        for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-          double* state = elements[i_elem].stage(0);
-          double* forcing = elements[i_elem].art_visc_forcing();
-          double* tss = elements[i_elem].time_step_scale();
-          for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-            double pseudotime_scale = s/diff_time*tss[i_qpoint];
-            double f = forcing[real_step*nq + i_qpoint];
-            f = (real_step == 1) ? std::sqrt(f) : f; // at time step 1 switch from square root domain to linear domain
-            state[i_qpoint] += f*pseudotime_scale;
-            state[i_qpoint] /= 1 + pseudotime_scale;
-          }
-        }
+        compute_smooth_av(_kernel_mesh, opts, [this](){apply_avc_diff_flux_bcs();}, real_step, diff_time, s);
         // update face state
         compute_write_face(_kernel_mesh);
         compute_prolong(_kernel_mesh);

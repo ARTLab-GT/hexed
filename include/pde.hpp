@@ -42,7 +42,6 @@ class Navier_stokes
     static constexpr int n_update = n_dim + 2;
     static constexpr int n_state = n_dim + 3;
     static constexpr int n_extrap = n_dim + 2;
-    static constexpr int visc_start = 2*n_update;
     static constexpr double heat_rat = 1.4;
     Transport_model dyn_visc;
     Transport_model therm_cond;
@@ -348,11 +347,17 @@ class Smooth_art_visc
   public:
   static constexpr bool has_diffusion = true;
   static constexpr bool has_convection = false;
-  static constexpr bool has_source = false;
-  static constexpr int visc_start = 2;
-  static constexpr int n_update = 1;
-  static constexpr int n_state = 1;
+  static constexpr bool has_source = true;
+  static constexpr int n_state = 2;
   static constexpr int n_extrap = 1;
+  static constexpr int n_update = 1;
+  const int _i_step;
+  const double _diff_time;
+  const double _cheby;
+
+  Smooth_art_visc(int i_step, double diff_time, double chebyshev_step)
+  : _i_step{i_step}, _diff_time{diff_time}, _cheby{chebyshev_step}
+  {}
 
   Mat<n_extrap> fetch_extrap(int stride, const double* data) const
   {
@@ -363,7 +368,9 @@ class Smooth_art_visc
 
   void write_update(Mat<n_update> update, int stride, double* data, bool critical) const
   {
-    for (int i_var = 0; i_var < n_update; ++i_var) data[i_var*stride] += update(i_var);
+    double pseudo = 1 + data[2*(n_dim + 2)*stride]*_cheby/_diff_time;
+    *data += update(0);
+    if (critical) *data /= pseudo;
   }
 
   template <int n_dim_flux>
@@ -377,6 +384,7 @@ class Smooth_art_visc
     void fetch_state(int stride, const double* data)
     {
       state(0) = *data;
+      state(1) = data[(2*(n_dim + 2) + 3 + _eq._i_step)*stride];
     }
     Mat<n_update> update_state;
     void fetch_extrap_state(int stride, const double* data)
@@ -398,6 +406,13 @@ class Smooth_art_visc
     {
       diffusivity = 1;
     }
+
+    Mat<n_update> source;
+    void compute_source()
+    {
+      double f = std::abs(state(1));
+      source(0) = ((_eq._i_step == 1) ? std::sqrt(f) : f)/_eq._diff_time;
+    }
   };
 };
 
@@ -415,7 +430,6 @@ class Fix_therm_admis
   static constexpr int n_state = n_dim + 2;
   static constexpr int n_update = n_state;
   static constexpr int n_extrap = n_state;
-  static constexpr int visc_start = 2*n_state;
 
   Mat<n_extrap> fetch_extrap(int stride, const double* data) const
   {
