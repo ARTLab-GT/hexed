@@ -42,7 +42,6 @@ class Navier_stokes
     static constexpr int n_update = n_dim + 2;
     static constexpr int n_state = n_dim + 3;
     static constexpr int n_extrap = n_dim + 2;
-    static constexpr int curr_start = 0;
     static constexpr int ref_start = n_update;
     static constexpr int visc_start = 2*n_update;
     static constexpr double heat_rat = 1.4;
@@ -265,7 +264,6 @@ class Advection
   static constexpr bool has_diffusion = false;
   static constexpr bool has_convection = true;
   static constexpr bool has_source = true;
-  static constexpr int curr_start = n_dim;
   static constexpr int ref_start = n_dim + 1;
   static constexpr int n_state = n_dim + 1;
   static constexpr int n_extrap = n_dim + 1;
@@ -347,7 +345,6 @@ class Smooth_art_visc
   static constexpr bool has_diffusion = true;
   static constexpr bool has_convection = false;
   static constexpr bool has_source = false;
-  static constexpr int curr_start = 0;
   static constexpr int ref_start = 1;
   static constexpr int visc_start = 2;
   static constexpr int n_update = 1;
@@ -415,7 +412,6 @@ class Fix_therm_admis
   static constexpr int n_state = n_dim + 2;
   static constexpr int n_update = n_state;
   static constexpr int n_extrap = n_state;
-  static constexpr int curr_start = 0;
   static constexpr int ref_start = n_state;
   static constexpr int visc_start = 2*n_state;
 

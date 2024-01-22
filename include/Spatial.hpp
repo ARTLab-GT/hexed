@@ -127,8 +127,6 @@ class Spatial
         double* state = elem.state();
         std::array<double*, 6> faces;
         for (int i_face = 0; i_face < 2*n_dim; ++i_face) faces[i_face] = elem.face(i_face);
-        std::array<double*, 6> curr_faces;
-        for (int i_face = 0; i_face < 2*n_dim; ++i_face) curr_faces[i_face] = faces[i_face] + Pde::curr_start*n_qpoint/row_size;
         double* tss = elem.time_step_scale();
         double d_pos = elem.nominal_size();
         double time_rate [2][std::max(Pde::n_update, Pde::n_extrap - Pde::n_extrap/2)][n_qpoint] {}; // first part contains convective time derivative, second part diffusive
@@ -213,7 +211,7 @@ class Spatial
             comp.compute_flux_diff();
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
               for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
-                visc_storage[i_dim][Pde::curr_start + i_var][i_qpoint] = comp.flux_diff(i_var, i_dim);
+                visc_storage[i_dim][i_var][i_qpoint] = comp.flux_diff(i_var, i_dim);
               }
             }
           }
@@ -234,13 +232,13 @@ class Spatial
               // fetch row data
               row_f = Row_rw<Pde::n_update, row_size>::read_row(flux[i_dim][0], ind);
               // fetch face data
-              face_f = Row_rw<Pde::n_update, row_size>::read_bound(curr_faces, ind);
+              face_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
               // differentiate and write to temporary storage
               Row_rw<Pde::n_update, row_size>::write_row(-derivative(row_f, face_f), time_rate[0][0], ind, 1.);
             }
             // compute viscous update
             if constexpr (Pde::has_diffusion) {
-              row_f = Row_rw<Pde::n_update, row_size>::read_row(visc_storage[i_dim][Pde::curr_start], ind);
+              row_f = Row_rw<Pde::n_update, row_size>::read_row(visc_storage[i_dim][0], ind);
               face_f = boundary*row_f;
               // write viscous row_f to faces to enable calculation of the numerical row_f
               for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
@@ -360,7 +358,7 @@ class Spatial
         }
 
         // write update to interior
-        double* to_update = state + (_compute_residual ? Pde::ref_start : Pde::curr_start)*n_qpoint;
+        double* to_update = state + _compute_residual*Pde::ref_start*n_qpoint;
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           Mat<Pde::n_update> update;
           double mult = _update*tss[i_qpoint]/d_pos;
@@ -458,7 +456,7 @@ class Spatial
             );
             for (int i_side = 0; i_side < 2; ++i_side) {
               for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
-                face[i_side][(i_var + Pde::curr_start)*n_fqpoint + i_qpoint] = sign[i_side]*flux(i_var);
+                face[i_side][i_var*n_fqpoint + i_qpoint] = sign[i_side]*flux(i_var);
               }
             }
           }
@@ -472,9 +470,8 @@ class Spatial
           double* f = con.state() + i_side*n_fqpoint*(n_dim + 2);
           // write flux
           if constexpr (Pde::has_convection) {
-            int offset = Pde::curr_start*n_fqpoint;
             for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
-              f[offset + i_dof] = face[i_side][offset + i_dof];
+              f[i_dof] = face[i_side][i_dof];
             }
           }
           // write average face state
@@ -535,9 +532,8 @@ class Spatial
         // write data to actual face storage on heap
         for (int i_side = 0; i_side < 2; ++i_side) {
           double* f = con.state() + (2 + i_side)*n_fqpoint*(n_dim + 2);
-          int offset = Pde::curr_start*n_fqpoint;
           for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
-            f[offset + i_dof] = face[i_side][offset + i_dof];
+            f[i_dof] = face[i_side][i_dof];
           }
         }
       }
