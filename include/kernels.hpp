@@ -55,6 +55,7 @@ void compute_prolong(Kernel_mesh, bool scale = false, bool offset = false);
 void compute_restrict(Kernel_mesh, bool scale = true, bool offset = false);
 void compute_write_face(Kernel_mesh);
 void compute_write_face_advection(Kernel_mesh, int i_node);
+void compute_write_face_smooth_av(Kernel_mesh, int real_step);
 
 }
 #endif

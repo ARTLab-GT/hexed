@@ -43,4 +43,9 @@ void compute_write_face_advection(Kernel_mesh mesh, int i_node)
   (*kernel_factory<Spatial<pde::Advection, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, i_node, 1., 1.))(mesh.elems);
 }
 
+void compute_write_face_smooth_av(Kernel_mesh mesh, int real_step)
+{
+  (*kernel_factory<Spatial<pde::Smooth_art_visc, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, real_step, 1., 1.))(mesh.elems);
+}
+
 }

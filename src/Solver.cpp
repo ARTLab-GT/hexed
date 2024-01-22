@@ -372,8 +372,6 @@ void Solver::set_art_visc_constant(double value)
 
 void Solver::diffuse_art_visc(int n_real, double diff_time)
 {
-  const int nq = params.n_qpoint();
-  auto& elements = acc_mesh.elements();
   // evaluate CFL condition
   double diff_safety = _namespace->lookup<double>("av_diff_max_safety").value();
   double n_cheby = _namespace->lookup<double>("n_cheby_av").value();
@@ -389,64 +387,19 @@ void Solver::diffuse_art_visc(int n_real, double diff_time)
   max_dt_smooth_av(_kernel_mesh, opts, 1., diff_safety, true);
   // initialize residual to zero (will compute RMS over all real time steps)
   status.diff_res = 0;
-  for (int real_step = 0; real_step < n_real; ++real_step)
-  {
-    double diff = 0;
-    int n_avg = 0;
-    // copy value from forcing function storage to scalar variable of stage 0
-    #pragma omp parallel for
-    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-      double* state = elements[i_elem].stage(0);
-      double* forcing = elements[i_elem].art_visc_forcing();
-      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        state[i_qpoint] = forcing[(real_step + 1)*nq + i_qpoint];
-      }
-    }
-    compute_write_face(_kernel_mesh);
+  for (int real_step = 0; real_step < n_real; ++real_step) {
+    compute_write_face_smooth_av(_kernel_mesh, real_step);
     compute_prolong(_kernel_mesh);
-    diff = 0;
-    n_avg = 0;
     // perform pseudotime iteration
-    for (int i_iter = 0; i_iter < _namespace->lookup<int>("av_diff_iters").value(); ++i_iter)
-    {
-      // record initial state for residual calculation
-      #pragma omp parallel for
-      for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-        double* state = elements[i_elem].stage(0);
-        double* forcing = elements[i_elem].art_visc_forcing();
-        for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-          forcing[(real_step + 1)*nq + i_qpoint] = state[i_qpoint];
-        }
-      }
+    for (int i_iter = 0; i_iter < _namespace->lookup<int>("av_diff_iters").value(); ++i_iter) {
       for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
         double s = math::chebyshev_step(n_cheby, i_cheby);
         apply_avc_diff_bcs();
-        // update state with spatial term
         opts.dt = s;
         compute_smooth_av(_kernel_mesh, opts, [this](){apply_avc_diff_flux_bcs();}, real_step, diff_time, s);
-        // update face state
-        compute_write_face(_kernel_mesh);
-        compute_prolong(_kernel_mesh);
       }
     }
-    // update forcing function and residual
-    #pragma omp parallel for reduction(+:diff, n_avg)
-    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-      double* state = elements[i_elem].stage(0);
-      double* forcing = elements[i_elem].art_visc_forcing();
-      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        // update residual
-        double d = forcing[(real_step + 1)*nq + i_qpoint] - state[i_qpoint];
-        diff += d*d;
-        ++n_avg;
-        // update forcing
-        forcing[(real_step + 1)*nq + i_qpoint] = std::max(0., state[i_qpoint]);
-      }
-    }
-    status.diff_res += diff/n_avg;
   }
-  status.diff_res = std::sqrt(status.diff_res/n_real); // finish computing RMS residual
-  _namespace->assign("av_diffusion_residual", std::sqrt(status.diff_res/n_real));
 }
 
 void Solver::update_art_visc_smoothness(double advect_length)
