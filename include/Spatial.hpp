@@ -263,7 +263,7 @@ class Spatial
         }
 
         // write update to interior
-        double* ref_state = state + Pde::ref_start*n_qpoint;
+        double* ref_state = elem.residual_cache();
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           Mat<Pde::n_update> update;
           update.setZero();
@@ -358,7 +358,7 @@ class Spatial
         }
 
         // write update to interior
-        double* to_update = state + _compute_residual*Pde::ref_start*n_qpoint;
+        double* to_update = _compute_residual ? elem.residual_cache() : state;
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           Mat<Pde::n_update> update;
           double mult = _update*tss[i_qpoint]/d_pos;
