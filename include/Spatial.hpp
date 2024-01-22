@@ -29,10 +29,12 @@ class Spatial
   class Write_face : public Kernel<Kernel_element&>
   {
     using Pde = Pde_templ<n_dim>;
+    Pde _eq;
     const Eigen::Matrix<double, 2, row_size> boundary;
 
     public:
-    Write_face(const Basis& basis) : boundary{basis.boundary()} {}
+    template <typename... pde_args>
+    Write_face(const Basis& basis, pde_args... args) : _eq(args...), boundary{basis.boundary()} {}
 
     //! apply to a single element
     void operator()(const double* read, std::array<double*, 6> faces)
@@ -41,7 +43,7 @@ class Spatial
       double extrap [Pde::n_extrap][n_qpoint];
       // fetch the extrapolation variables and store them in `time_rate`
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-        Mat<Pde::n_extrap> grad_vars = Pde::fetch_extrap(n_qpoint, read + i_qpoint);
+        Mat<Pde::n_extrap> grad_vars = _eq.fetch_extrap(n_qpoint, read + i_qpoint);
         for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) extrap[i_var][i_qpoint] = grad_vars(i_var);
       }
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -76,7 +78,7 @@ class Spatial
   class Local : public Kernel<Kernel_element&>
   {
     using Pde = Pde_templ<n_dim>;
-    const Pde eq;
+    const Pde _eq;
     static constexpr int n_qpoint = math::pow(row_size, n_dim);
     Derivative<row_size> derivative;
     Mat<2, row_size> boundary;
@@ -91,10 +93,10 @@ class Spatial
     public:
     template <typename... pde_args>
     Local(const Basis& basis, double dt, bool stage, bool compute_residual, bool use_filter, pde_args... args) :
-      eq(args...),
+      _eq(args...),
       derivative{basis},
       boundary{basis.boundary()},
-      write_face{basis},
+      write_face(basis, args...),
       filter{basis.filter()},
       _update{stage ? dt*basis.step_ratio() : dt},
       _stage{stage},
@@ -154,7 +156,7 @@ class Spatial
           std::array<double*, 6> visc_faces;
           for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.face(i_face) + 2*(n_dim + 2)*n_qpoint/row_size;
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-            Mat<Pde::n_extrap> grad_vars = eq.fetch_extrap(n_qpoint, state + i_qpoint);
+            Mat<Pde::n_extrap> grad_vars = _eq.fetch_extrap(n_qpoint, state + i_qpoint);
             for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) (&time_rate[0][0][i_qpoint])[i_var*n_qpoint] = grad_vars(i_var);
           }
           for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -186,7 +188,7 @@ class Spatial
         // compute flux
         double flux [n_dim][Pde::n_update][n_qpoint];
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-          typename Pde::Computation<n_dim> comp(eq);
+          typename Pde::Computation<n_dim> comp(_eq);
           comp.fetch_state(n_qpoint, state + i_qpoint);
           if constexpr (is_deformed) {
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -281,7 +283,7 @@ class Spatial
             if (_compute_residual) ref_state[i_var*n_qpoint + i_qpoint] = u;
             else update(i_var) = u;
           }
-          eq.write_update(update, n_qpoint, state + i_qpoint, !Pde::has_diffusion && !_stage);
+          _eq.write_update(update, n_qpoint, state + i_qpoint, !Pde::has_diffusion && !_stage);
         }
 
         // write updated state to face storage.
@@ -311,7 +313,7 @@ class Spatial
     Reconcile_ldg_flux(const Basis& basis, double dt, int which_stage, bool compute_residual, bool use_filter, pde_args... args) :
       _eq(args...),
       derivative{basis},
-      write_face{basis},
+      write_face(basis, args...),
       filter{basis.filter()},
       _update{dt},
       _stage{which_stage},
@@ -384,13 +386,13 @@ class Spatial
   class Neighbor : public Kernel<Kernel_connection&>
   {
     using Pde = Pde_templ<n_dim>;
-    const Pde eq;
+    const Pde _eq;
     static constexpr int n_fqpoint = math::pow(row_size, n_dim - 1);
     const int _stage;
 
     public:
     template <typename... pde_args>
-    Neighbor(int i_stage, pde_args... args) : eq{args...}, _stage(i_stage) {}
+    Neighbor(int i_stage, pde_args... args) : _eq(args...), _stage{i_stage} {}
 
     virtual void operator()(Sequence<Kernel_connection&>& connections)
     {
@@ -435,7 +437,7 @@ class Spatial
           }
           if constexpr (Pde::has_convection) {
             // fetch data
-            typename Pde::Computation<1> comp [2] {eq, eq};
+            typename Pde::Computation<1> comp [2] {_eq, _eq};
             if constexpr (is_deformed) {
               for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
                 comp[0].normal(i_dim) = sign[0]*face_nrml[i_dim*n_fqpoint + i_qpoint];
@@ -545,7 +547,7 @@ class Spatial
   class Max_dt : public Kernel<Kernel_element&, double>
   {
     using Pde = Pde_templ<n_dim>;
-    const Pde eq;
+    const Pde _eq;
     double max_cfl_c;
     double max_cfl_d;
     Mat<row_size> nodes;
@@ -554,7 +556,7 @@ class Spatial
     public:
     template <typename... pde_args>
     Max_dt(const Basis& basis, bool is_local, bool use_filter, double safety_conv, double safety_diff, pde_args... args) :
-      eq(args...),
+      _eq(args...),
       max_cfl_c{basis.max_cfl()*safety_conv},
       max_cfl_d{-2/basis.min_eig_diffusion()*safety_diff},
       _is_local{is_local}
@@ -586,7 +588,7 @@ class Spatial
           }
           double spacing = math::interp(vertex_spacing, coords);
           // fetch state
-          typename Pde::Computation<n_dim> comp(eq);
+          typename Pde::Computation<n_dim> comp(_eq);
           comp.fetch_state(n_qpoint, state + i_qpoint);
           // compute time step
           double scale = 0;

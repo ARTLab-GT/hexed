@@ -51,7 +51,7 @@ class Navier_stokes
     : _laplacian{laplacian}, dyn_visc{dynamic_visc}, therm_cond{thermal_cond}
     {}
 
-    static Mat<n_extrap> fetch_extrap(int stride, const double* data)
+    Mat<n_extrap> fetch_extrap(int stride, const double* data) const
     {
       Mat<n_extrap> extrap;
       for (int i_var = 0; i_var < n_extrap; ++i_var) extrap(i_var) = data[i_var*stride];
@@ -266,23 +266,29 @@ class Advection
   static constexpr int n_state = n_dim + 1;
   static constexpr int n_extrap = n_dim + 1;
   static constexpr int n_update = 1;
-  double _advect_length;
-  double _node;
+  const int _i_node;
+  const double _advect_length;
+  const double _node;
+  const int _adv_var;
 
-  Advection(double advect_length, double node) : _advect_length{advect_length}, _node{node} {}
+  Advection(int i_node, double advect_length, double node)
+  : _i_node{i_node}, _advect_length{advect_length}, _node{node}, _adv_var{2*(n_dim + 2) + 3 + 4 + _i_node}
+  {}
 
-  static Mat<n_extrap> fetch_extrap(int stride, const double* data)
+  Mat<n_extrap> fetch_extrap(int stride, const double* data) const
   {
     Mat<n_extrap> extrap;
-    for (int i_var = 0; i_var < n_extrap; ++i_var) extrap(i_var) = data[i_var*stride];
+    for (int i_var = 0; i_var < n_dim; ++i_var) extrap(i_var) = data[i_var*stride];
+    extrap(n_dim) = data[_adv_var*stride];
     return extrap;
   }
 
   void write_update(Mat<n_update> update, int stride, double* data, bool is_critical) const
   {
     double pseudo = 1 + data[2*(n_dim + 2)*stride]*2/_advect_length;
-    if (is_critical) data[n_dim*stride] = (data[n_dim*stride] + update(0))/pseudo;
-    else data[n_dim*stride] += update(0)/pseudo;
+    double& d = data[_adv_var*stride];
+    if (is_critical) d = (d + update(0))/pseudo;
+    else d += update(0)/pseudo;
   }
 
   template <int n_dim_flux>
@@ -295,7 +301,7 @@ class Advection
     Mat<n_state> state;
     void fetch_state(int stride, const double* data)
     {
-      for (int i_var = 0; i_var < n_dim + 1; ++i_var) state(i_var) = data[i_var*stride];
+      state = _eq.fetch_extrap(stride, data);
     }
     Mat<n_update> update_state;
     void fetch_extrap_state(int stride, const double* data)
@@ -348,7 +354,7 @@ class Smooth_art_visc
   static constexpr int n_state = 1;
   static constexpr int n_extrap = 1;
 
-  static Mat<n_extrap> fetch_extrap(int stride, const double* data)
+  Mat<n_extrap> fetch_extrap(int stride, const double* data) const
   {
     Mat<n_extrap> extrap;
     for (int i_var = 0; i_var < n_extrap; ++i_var) extrap(i_var) = data[i_var*stride];
@@ -411,7 +417,7 @@ class Fix_therm_admis
   static constexpr int n_extrap = n_state;
   static constexpr int visc_start = 2*n_state;
 
-  static Mat<n_extrap> fetch_extrap(int stride, const double* data)
+  Mat<n_extrap> fetch_extrap(int stride, const double* data) const
   {
     Mat<n_extrap> extrap;
     for (int i_var = 0; i_var < n_extrap; ++i_var) extrap(i_var) = data[i_var*stride];

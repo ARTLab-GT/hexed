@@ -516,16 +516,12 @@ void Solver::update_art_visc_smoothness(double advect_length)
     false,
     false,
   };
-  max_dt_advection(_kernel_mesh, opts, adv_safety, 1., true, advect_length, 1.);
+  max_dt_advection(_kernel_mesh, opts, adv_safety, 1., true, 0, advect_length, 1.);
 
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
-  double diff = 0; // for residual computation
-  int n_avg = 0;
   // perform pseudotime iteration
   for (int iter = 0; iter < _namespace->lookup<int>("av_advect_iters").value(); ++iter)
   {
-    diff = 0;
-    n_avg = 0;
     for (int sign : {-1, 1}) // do forward and backward advection separately
     {
       // flip direction of advection velocity
@@ -551,14 +547,8 @@ void Solver::update_art_visc_smoothness(double advect_length)
         int i_node = (sign > 0) ? i_proj : rs - 1 - i_proj; // if sign < 0 we are looping through the nodes backward
         // copy advection state to the scalar variables of stage 1
         sw_adv.children.at("setup").stopwatch.start();
-        #pragma omp parallel for
-        for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-          double* state = elements[i_elem].stage(0);
-          double* adv = elements[i_elem].advection_state();
-          for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) state[nd*nq + i_qpoint] = adv[i_node*nq + i_qpoint];
-        }
         // evaluate advection operator
-        compute_write_face(_kernel_mesh);
+        compute_write_face_advection(_kernel_mesh, i_node);
         compute_prolong(_kernel_mesh);
         sw_adv.children.at("setup").stopwatch.pause();
         double dt_scaled = std::abs(basis.node(i_node) - .5)*2;
@@ -574,27 +564,10 @@ void Solver::update_art_visc_smoothness(double advect_length)
           sw_adv.children.at("BCs").work_units_completed += acc_mesh.elements().size();
           opts.dt = dt_scaled;
           opts.i_stage = i;
-          compute_advection(_kernel_mesh, opts, advect_length, dt_scaled);
+          compute_advection(_kernel_mesh, opts, i_node, advect_length, dt_scaled);
         }
         sw_adv.children.at("cartesian").work_units_completed += acc_mesh.cartesian().elements().size();
         sw_adv.children.at("deformed" ).work_units_completed += acc_mesh.deformed ().elements().size();
-        // update advection state and residual
-        sw_adv.children.at("update").stopwatch.start();
-        #pragma omp parallel for reduction(+:diff, n_avg)
-        for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-          double* state = elements[i_elem].stage(0);
-          double* adv = elements[i_elem].advection_state();
-          for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-            // compute update
-            double old = adv[i_node*nq + i_qpoint]; // record for measuring residual
-            adv[i_node*nq + i_qpoint] = state[nd*nq + i_qpoint];
-            // add to residual
-            double d = adv[i_node*nq + i_qpoint] - old;
-            diff += d*d/dt_scaled/dt_scaled;
-            ++n_avg;
-          }
-        }
-        sw_adv.children.at("update").stopwatch.pause();
       }
       sw_adv.children.at("setup").work_units_completed += elements.size();
       sw_adv.children.at("update").work_units_completed += elements.size();
@@ -602,9 +575,6 @@ void Solver::update_art_visc_smoothness(double advect_length)
   }
   stopwatch.children.at("set art visc").children.at("advection").stopwatch.pause();
   stopwatch.children.at("set art visc").children.at("advection").work_units_completed += elements.size();
-  // update iteration status for printing to screen
-  status.adv_res = std::sqrt(diff/n_avg);
-  _namespace->assign("av_advection_residual", std::sqrt(diff/n_avg));
   // compute projection onto Legendre polynomial
   Eigen::VectorXd weights = basis.node_weights();
   Eigen::VectorXd orth = basis.orthogonal(av_rs - 1);
