@@ -479,7 +479,7 @@ void Solver::update_art_visc_smoothness(double advect_length)
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
-    double* rk_ref = elements[i_elem].stage(1);
+    double* rk_ref = elements[i_elem].redundant_storage();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         int i = i_var*nq + i_qpoint;
@@ -491,7 +491,7 @@ void Solver::update_art_visc_smoothness(double advect_length)
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
-    double* rk_ref = elements[i_elem].stage(1);
+    double* rk_ref = elements[i_elem].redundant_storage();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       double scale = sqrt(2*rk_ref[nd*nq + i_qpoint]*rk_ref[(nd + 1)*nq + i_qpoint]);
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
@@ -612,7 +612,7 @@ void Solver::update_art_visc_smoothness(double advect_length)
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* forcing = elements[i_elem].art_visc_forcing();
     double* adv = elements[i_elem].advection_state();
-    double* rk_ref = elements[i_elem].stage(1);
+    double* rk_ref = elements[i_elem].redundant_storage();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       double proj = 0;
       for (int i_proj = 0; i_proj < rs; ++i_proj) {
@@ -633,7 +633,7 @@ void Solver::update_art_visc_smoothness(double advect_length)
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].stage(0);
-    double* rk_ref = elements[i_elem].stage(1);
+    double* rk_ref = elements[i_elem].redundant_storage();
     double* av = elements[i_elem].art_visc_coef();
     double* forcing = elements[i_elem].art_visc_forcing();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {

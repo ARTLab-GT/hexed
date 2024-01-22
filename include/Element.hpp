@@ -86,6 +86,7 @@ class Element : public Kernel_element
   double* art_visc_coef(); //!< layout: [i_qpoint]
   double* fix_admis_coef(); //!< layout: [i_qpoint]
   double* art_visc_forcing(); //!< layout: [i_forcing][i_qpoint]
+  double* redundant_storage(); //!< \todo this is temporary. remind me to get rid of it
   virtual double* node_adjustments() {return nullptr;} //!< overriden by `Deformed_element`
 
   /*! \brief Compute the Jacobian matrix.

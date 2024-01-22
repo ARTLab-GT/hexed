@@ -141,6 +141,11 @@ double* Element::advection_state()
   return art_visc_forcing() + params.n_forcing*params.n_qpoint();
 }
 
+double* Element::redundant_storage()
+{
+  return advection_state() + params.row_size*params.n_qpoint();
+}
+
 double Element::jacobian(int i_dim, int j_dim, int i_qpoint)
 {
   return (i_dim == j_dim) ? 1. : 0.;
