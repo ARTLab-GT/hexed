@@ -370,7 +370,7 @@ void Solver::set_art_visc_constant(double value)
   }
 }
 
-void Solver::diffuse_art_visc(int n_real, double diff_time)
+void Solver::diffuse_art_visc(double diff_time)
 {
   // evaluate CFL condition
   double diff_safety = _namespace->lookup<double>("av_diff_max_safety").value();
@@ -386,18 +386,15 @@ void Solver::diffuse_art_visc(int n_real, double diff_time)
   };
   max_dt_smooth_av(_kernel_mesh, opts, 1., diff_safety, true);
   // initialize residual to zero (will compute RMS over all real time steps)
-  status.diff_res = 0;
-  for (int real_step = 0; real_step < n_real; ++real_step) {
-    compute_write_face_smooth_av(_kernel_mesh, real_step);
-    compute_prolong(_kernel_mesh);
-    // perform pseudotime iteration
-    for (int i_iter = 0; i_iter < _namespace->lookup<int>("av_diff_iters").value(); ++i_iter) {
-      for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
-        double s = math::chebyshev_step(n_cheby, i_cheby);
-        apply_avc_diff_bcs();
-        opts.dt = s;
-        compute_smooth_av(_kernel_mesh, opts, [this](){apply_avc_diff_flux_bcs();}, real_step, diff_time, s);
-      }
+  compute_write_face_smooth_av(_kernel_mesh);
+  compute_prolong(_kernel_mesh);
+  // perform pseudotime iteration
+  for (int i_iter = 0; i_iter < _namespace->lookup<int>("av_diff_iters").value(); ++i_iter) {
+    for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
+      double s = math::chebyshev_step(n_cheby, i_cheby);
+      apply_avc_diff_bcs();
+      opts.dt = s;
+      compute_smooth_av(_kernel_mesh, opts, [this](){apply_avc_diff_flux_bcs();}, diff_time, s);
     }
   }
 }
@@ -535,7 +532,7 @@ void Solver::update_art_visc_smoothness(double advect_length)
   int n_real = params.n_forcing - 1; // number of real time steps (as apposed to pseudotime steps)
   double diff_time = _namespace->lookup<double>("av_diff_ratio").value()*advect_length*advect_length/n_real; // compute size of real time step (as opposed to pseudotime)
   stopwatch.children.at("set art visc").children.at("diffusion").stopwatch.start();
-  diffuse_art_visc(n_real, diff_time);
+  diffuse_art_visc(diff_time);
   stopwatch.children.at("set art visc").children.at("diffusion").stopwatch.pause();
   stopwatch.children.at("set art visc").children.at("diffusion").work_units_completed += elements.size();
 
@@ -598,7 +595,7 @@ void Solver::update_art_visc_elwise(double width, bool pde_based)
         forcing[params.n_qpoint() + i_qpoint] = av[i_qpoint];
       }
     }
-    diffuse_art_visc(1, _namespace->lookup<double>("elementwise_art_visc_diff_ratio").value()*width*width);
+    diffuse_art_visc(_namespace->lookup<double>("elementwise_art_visc_diff_ratio").value()*width*width);
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       double* stage0 = elems[i_elem].stage(0);

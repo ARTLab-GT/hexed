@@ -29,8 +29,8 @@ namespace hexed
 
 void compute_navier_stokes(Kernel_mesh mesh, Kernel_options opts, std::function<void()> flux_bc, Transport_model visc, Transport_model therm_cond, bool laplacian_av)
   COMPUTE_DIFFUSION(pde::Navier_stokes<true>::Pde, visc, therm_cond, laplacian_av)
-void compute_smooth_av(Kernel_mesh mesh, Kernel_options opts, std::function<void()> flux_bc, int i_step, double diff_time, double cheby_step)
-  COMPUTE_DIFFUSION(pde::Smooth_art_visc, i_step, diff_time, cheby_step)
+void compute_smooth_av(Kernel_mesh mesh, Kernel_options opts, std::function<void()> flux_bc, double diff_time, double cheby_step)
+  COMPUTE_DIFFUSION(pde::Smooth_art_visc, diff_time, cheby_step)
 void compute_fix_therm_admis(Kernel_mesh mesh, Kernel_options opts, std::function<void()> flux_bc) COMPUTE_DIFFUSION(pde::Fix_therm_admis)
 
 #undef COMPUTE_DIFFUSION

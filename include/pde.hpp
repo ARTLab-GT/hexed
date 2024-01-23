@@ -348,30 +348,32 @@ class Smooth_art_visc
   static constexpr bool has_diffusion = true;
   static constexpr bool has_convection = false;
   static constexpr bool has_source = true;
-  static constexpr int n_state = 2;
-  static constexpr int n_extrap = 1;
-  static constexpr int n_update = 1;
-  const int _i_step;
+  static constexpr int n_state = 4;
+  static constexpr int n_extrap = 3;
+  static constexpr int n_update = 3;
   const int _forcing_start;
   const double _diff_time;
   const double _cheby;
 
-  Smooth_art_visc(int i_step, double diff_time, double chebyshev_step)
-  : _i_step{i_step}, _forcing_start{2*(n_dim + 2) + 3}, _diff_time{diff_time}, _cheby{chebyshev_step}
+  Smooth_art_visc(double diff_time, double chebyshev_step)
+  : _forcing_start{2*(n_dim + 2) + 3}, _diff_time{diff_time}, _cheby{chebyshev_step}
   {}
 
   Mat<n_extrap> fetch_extrap(int stride, const double* data) const
   {
     Mat<n_extrap> extrap;
-    extrap(0) = data[(_forcing_start + _i_step + 1)*stride];
+    for (int i_var = 0; i_var < n_extrap; ++i_var) extrap(i_var) = data[(_forcing_start + 1 + i_var)*stride];
     return extrap;
   }
 
   void write_update(Mat<n_update> update, int stride, double* data, bool critical) const
   {
-    double& d = data[(_forcing_start + _i_step + 1)*stride];
-    d += update(0);
-    if (critical) d /= 1 + data[2*(n_dim + 2)*stride]*_cheby/_diff_time;
+    double pseudo = 1 + data[2*(n_dim + 2)*stride]*_cheby/_diff_time;
+    for (int i_var = 0; i_var < n_update; ++i_var) {
+      double& d = data[(_forcing_start + 1 + i_var)*stride];
+      d += update(i_var);
+      if (critical) d /= pseudo;
+    }
   }
 
   template <int n_dim_flux>
@@ -384,14 +386,12 @@ class Smooth_art_visc
     Mat<n_state> state;
     void fetch_state(int stride, const double* data)
     {
-      int f = (_eq._forcing_start + _eq._i_step)*stride;
-      state(0) = data[f + stride];
-      state(1) = data[f];
+      for (int i_var = 0; i_var < n_state; ++i_var) state(i_var) = data[(_eq._forcing_start + i_var)*stride];
     }
     Mat<n_update> update_state;
     void fetch_extrap_state(int stride, const double* data)
     {
-      update_state(0) = *data;
+      for (int i_var = 0; i_var < n_update; ++i_var) update_state(i_var) = data[i_var*stride];
     }
 
     Mat<n_dim, n_dim_flux> normal = Mat<n_dim, n_dim_flux>::Identity();
@@ -412,8 +412,10 @@ class Smooth_art_visc
     Mat<n_update> source;
     void compute_source()
     {
-      double f = std::abs(state(1));
-      source(0) = ((_eq._i_step == 1) ? std::sqrt(f) : f)/_eq._diff_time;
+      for (int i_var = 0; i_var < n_update; ++i_var) {
+        double f = std::abs(state(i_var));
+        source(i_var) = ((i_var == 1) ? std::sqrt(f) : f)/_eq._diff_time;
+      }
     }
   };
 };

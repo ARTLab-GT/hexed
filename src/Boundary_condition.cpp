@@ -42,12 +42,11 @@ void Flow_bc::apply_advection(Boundary_face& bf)
 void Flow_bc::apply_diffusion(Boundary_face& bf)
 {
   auto params = bf.storage_params();
-  const int nq = params.n_qpoint()/params.row_size;
   double* in_f = bf.inside_face();
   double* gh_f = bf.ghost_face();
   // set state equal to inside
-  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-    gh_f[i_qpoint] = in_f[i_qpoint];
+  for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) {
+    gh_f[i_dof] = in_f[i_dof];
   }
 }
 
