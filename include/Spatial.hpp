@@ -63,7 +63,7 @@ class Spatial
         Kernel_element& elem {elements[i_elem]};
         double* read = elem.state();
         std::array<double*, 6> faces {};
-        for (int i_face = 0; i_face < 2*n_dim; ++i_face) faces[i_face] = elem.face(i_face);
+        for (int i_face = 0; i_face < 2*n_dim; ++i_face) faces[i_face] = elem.face(i_face, false);
         operator()(read, faces);
       }
     }
@@ -128,7 +128,7 @@ class Spatial
         auto& elem = elements[i_elem];
         double* state = elem.state();
         std::array<double*, 6> faces;
-        for (int i_face = 0; i_face < 2*n_dim; ++i_face) faces[i_face] = elem.face(i_face);
+        for (int i_face = 0; i_face < 2*n_dim; ++i_face) faces[i_face] = elem.face(i_face, false);
         double* tss = elem.time_step_scale();
         double d_pos = elem.nominal_size();
         double time_rate [2][std::max(Pde::n_update, Pde::n_extrap - Pde::n_extrap/2)][n_qpoint] {}; // first part contains convective time derivative, second part diffusive
@@ -154,7 +154,7 @@ class Spatial
         {
           static_assert(Pde::n_extrap >= Pde::n_update);
           std::array<double*, 6> visc_faces;
-          for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.face(i_face) + 2*(n_dim + 2)*n_qpoint/row_size;
+          for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.face(i_face, true);
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
             Mat<Pde::n_extrap> grad_vars = _eq.fetch_extrap(n_qpoint, state + i_qpoint);
             for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) (&time_rate[0][0][i_qpoint])[i_var*n_qpoint] = grad_vars(i_var);
@@ -332,7 +332,7 @@ class Spatial
         auto& elem = elements[i_elem];
         double* state = elem.state();
         std::array<double*, 6> visc_faces;
-        for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.face(i_face) + 2*(n_dim + 2)*n_qpoint/row_size;
+        for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.face(i_face, true);
         double* tss = elem.time_step_scale();
         double d_pos = elem.nominal_size();
         double time_rate [Pde::n_update][n_qpoint] {};
@@ -372,7 +372,7 @@ class Spatial
         }
         // *now* we can extrapolate state to faces
         std::array<double*, 6> faces;
-        for (int i_face = 0; i_face < 2*n_dim; ++i_face) faces[i_face] = elem.face(i_face);
+        for (int i_face = 0; i_face < 2*n_dim; ++i_face) faces[i_face] = elem.face(i_face, false);
         write_face(state, faces);
       }
     }

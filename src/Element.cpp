@@ -189,7 +189,7 @@ void Element::set_needs_smooth(bool value)
 
 double* Element::state() {return stage(0);}
 double* Element::residual_cache() {return stage(1);}
-double* Element::face(int i_face) {return faces[i_face];}
+double* Element::face(int i_face, bool is_ldg) {return faces[i_face] + is_ldg*2*params.n_dof()/params.row_size;}
 bool Element::deformed() const {return false;}
 double* Element::reference_level_normals() {return nullptr;}
 double* Element::jacobian_determinant() {return nullptr;}
