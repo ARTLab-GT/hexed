@@ -52,32 +52,35 @@ std::array<std::vector<int>, 2> vertex_inds(int n_dim, Con_dir<Deformed_element>
 template <class element_t>
 class Face_connection : public Kernel_connection
 {
-  Eigen::VectorXd data;
+  int _state_sz;
+  Eigen::VectorXd _data;
   public:
-  Face_connection(Storage_params params) : data(4*params.n_dof()/params.row_size) {}
+  Face_connection(Storage_params params) : _state_sz{params.n_dof()/params.row_size}, _data(4*_state_sz) {}
   virtual Con_dir<element_t> direction() = 0;
   Connection_direction get_direction() override {return direction();}
-  double* state() override {return data.data();}
+  double* state() override {return _data.data();}
+  double* new_state(int i_side, bool is_ldg) override {return _data.data() + (i_side + 2*is_ldg)*_state_sz;}
   double* normal() override {return nullptr;}
 };
 
 template <>
 class Face_connection<Deformed_element> : public Kernel_connection
 {
-  int nrml_sz;
-  int state_sz;
-  Eigen::VectorXd data;
+  int _nrml_sz;
+  int _state_sz;
+  Eigen::VectorXd _data;
   public:
   Face_connection(Storage_params params)
-  : nrml_sz{params.n_dim*params.n_qpoint()/params.row_size},
-    state_sz{params.n_dof()/params.row_size},
-    data(2*(nrml_sz + 2*state_sz))
+  : _nrml_sz{params.n_dim*params.n_qpoint()/params.row_size},
+    _state_sz{params.n_dof()/params.row_size},
+    _data(2*(_nrml_sz + 2*_state_sz))
   {}
   virtual Con_dir<Deformed_element> direction() = 0;
   Connection_direction get_direction() override {return direction();}
-  double* state() override {return data.data();}
-  double* normal(int i_side) {return data.data() + 4*state_sz + i_side*nrml_sz;}
-  double* normal() override {return data.data() + 4*state_sz;} //!< area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
+  double* state() override {return _data.data();}
+  double* new_state(int i_side, bool is_ldg) override {return _data.data() + (i_side + 2*is_ldg)*_state_sz;}
+  double* normal(int i_side) {return _data.data() + 4*_state_sz + i_side*_nrml_sz;}
+  double* normal() override {return _data.data() + 4*_state_sz;} //!< area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
 };
 
 /*!
@@ -360,18 +363,18 @@ class Typed_bound_connection : public Boundary_connection
     elem.faces[direction().i_face(0)] = nullptr;
     disconnect_normal();
   }
-  virtual Storage_params storage_params() {return params;}
-  virtual double* ghost_face() {return state() + params.n_dof()/params.row_size;}
-  virtual double* inside_face() {return state();}
-  virtual int i_dim() {return i_d;}
-  virtual bool inside_face_sign() {return ifs;}
-  virtual double* surface_normal() {return normal();}
-  virtual double* surface_position() {return pos.data();}
-  virtual double* state_cache() {return cache.data();}
-  virtual double* flux_cache() {return cache.data() + state_size;}
-  virtual Con_dir<Deformed_element> direction() {return {{i_d, i_d}, {ifs, !ifs}};}
-  virtual int bound_cond_serial_n() {return bc_sn;}
-  element_t& element() {return elem;}
+  Storage_params storage_params() override {return params;}
+  double* ghost_face(bool is_ldg) override {return new_state(1, is_ldg);}
+  double* inside_face(bool is_ldg) override {return new_state(0, is_ldg);}
+  int i_dim() override {return i_d;}
+  bool inside_face_sign() override {return ifs;}
+  double* surface_normal() override {return normal();}
+  double* surface_position() override {return pos.data();}
+  double* state_cache() override {return cache.data();}
+  double* flux_cache() override {return cache.data() + state_size;}
+  Con_dir<Deformed_element> direction() override {return {{i_d, i_d}, {ifs, !ifs}};}
+  int bound_cond_serial_n() override {return bc_sn;}
+  element_t& element() override {return elem;}
 };
 
 template <>

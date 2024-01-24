@@ -409,7 +409,7 @@ class Spatial
         int sign [2] {1, 1}; // records whether the normal vector on each side needs to be flipped to obey sign convention
         // fetch face data
         for (int i_side = 0; i_side < 2; ++i_side) {
-          double* f = con.state() + i_side*n_fqpoint*(n_dim + 2);
+          double* f = con.new_state(i_side, false);
           for (int i_dof = 0; i_dof < Pde::n_extrap*n_fqpoint; ++i_dof) {
             face[i_side][i_dof] = f[i_dof];
           }
@@ -469,17 +469,18 @@ class Spatial
         }
         // write data to actual face storage on heap
         for (int i_side = 0; i_side < 2; ++i_side) {
-          double* f = con.state() + i_side*n_fqpoint*(n_dim + 2);
           // write flux
           if constexpr (Pde::has_convection) {
+            double* f = con.new_state(i_side, false);
             for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
               f[i_dof] = face[i_side][i_dof];
             }
           }
           // write average face state
           if constexpr (Pde::has_diffusion) {
+            double* f = con.new_state(i_side, true);
             for (int i_dof = 0; i_dof < Pde::n_extrap*n_fqpoint; ++i_dof) {
-              f[2*(n_dim + 2)*n_fqpoint + i_dof] = face[2 + i_side][i_dof];
+              f[i_dof] = face[2 + i_side][i_dof];
             }
           }
         }
@@ -507,7 +508,7 @@ class Spatial
         int sign [2] {1, 1}; // records whether the normal vector on each side needs to be flipped to obey sign convention
         // fetch face data
         for (int i_side = 0; i_side < 2; ++i_side) {
-          double* f = con.state() + (2 + i_side)*n_fqpoint*(n_dim + 2);
+          double* f = con.new_state(i_side, true);
           for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
             face[i_side][i_dof] = f[i_dof];
           }
@@ -533,7 +534,7 @@ class Spatial
         if constexpr (is_deformed) perm.restore(); // restore data of face 1 to original order
         // write data to actual face storage on heap
         for (int i_side = 0; i_side < 2; ++i_side) {
-          double* f = con.state() + (2 + i_side)*n_fqpoint*(n_dim + 2);
+          double* f = con.new_state(i_side, true);
           for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
             f[i_dof] = face[i_side][i_dof];
           }

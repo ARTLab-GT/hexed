@@ -56,7 +56,7 @@ void Solver::apply_flux_bcs()
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     // write inside flux to flux cache for surface visualization/integrals
     int n_dof = params.n_dof()/params.row_size;
-    Eigen::Map<Mat<>>(bc_cons[i_con].flux_cache(), n_dof) = Eigen::Map<Mat<>>(bc_cons[i_con].inside_face() + 2*n_dof, n_dof);
+    Eigen::Map<Mat<>>(bc_cons[i_con].flux_cache(), n_dof) = Eigen::Map<Mat<>>(bc_cons[i_con].inside_face(true), n_dof);
     // apply boundary conditions
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh.boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
@@ -91,8 +91,8 @@ void Solver::apply_fta_flux_bcs()
   auto& bc_cons {acc_mesh.boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    double* in_f = bc_cons[i_con].inside_face() + 2*(nd + 2)*nq/rs;
-    double* gh_f = bc_cons[i_con].ghost_face()  + 2*(nd + 2)*nq/rs;
+    double* in_f = bc_cons[i_con].inside_face(true);
+    double* gh_f = bc_cons[i_con].ghost_face(true);
     for (int i_dof = 0; i_dof < nq*(nd + 2)/rs; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
   }
 }
@@ -264,8 +264,8 @@ void Solver::calc_jacobian()
   auto& bc_cons = acc_mesh.boundary_connections();
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    double* in_f = bc_cons[i_con].inside_face();
-    double* gh_f = bc_cons[i_con].ghost_face();
+    double* in_f = bc_cons[i_con].inside_face(false);
+    double* gh_f = bc_cons[i_con].ghost_face(false);
     for (int i_data = 0; i_data < n_dim*nfq; ++i_data) gh_f[i_data] = in_f[i_data];
   }
   // compute the shared face normal
@@ -742,7 +742,7 @@ void Solver::set_uncert_surface_rep(int bc_sn)
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     auto& con = bc_cons[i_con];
-    double* state = con.inside_face();
+    double* state = con.inside_face(false);
     for (int i_dof = 0; i_dof < nv*nfq; ++i_dof) state[i_dof] = 0;
   }
   compute_restrict(_kernel_mesh, false);
@@ -1030,8 +1030,8 @@ bool Solver::fix_admissibility(double stability_ratio)
       auto& bc_cons {acc_mesh.boundary_connections()};
       #pragma omp parallel for
       for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-        double* in_f = bc_cons[i_con].inside_face();
-        double* gh_f = bc_cons[i_con].ghost_face();
+        double* in_f = bc_cons[i_con].inside_face(false);
+        double* gh_f = bc_cons[i_con].ghost_face(false);
         for (int i_dof = 0; i_dof < nq*(nd + 2)/rs; ++i_dof) gh_f[i_dof] = in_f[i_dof];
       }
       opts.dt = s;
