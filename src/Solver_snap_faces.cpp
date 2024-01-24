@@ -65,9 +65,9 @@ void hexed::Solver::snap_faces()
       #pragma omp parallel for
       for (int i_con = 0; i_con < ref_cons.size(); ++i_con) {
         for (int i_fine = 0; i_fine < 2; ++i_fine) {
-          double* state = ref_cons[i_con].connection(i_fine).new_state(0, false);
+          double* state = ref_cons[i_con].connection(i_fine).state(0, false);
           for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) state[i_qpoint] *= 2;
-          state = ref_cons[i_con].connection(i_fine).new_state(1, false);
+          state = ref_cons[i_con].connection(i_fine).state(1, false);
           for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) state[nfq*params.n_var + i_qpoint] = 0;
         }
       }

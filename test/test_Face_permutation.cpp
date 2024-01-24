@@ -35,10 +35,10 @@ void test_mesh(hexed::Accessible_mesh& mesh)
   const int n_fdof = params.n_dof()/params.row_size;
   for (int i_con = 0; i_con < connections.size(); ++i_con) {
     auto& con = connections[i_con];
-    auto fp = hexed::kernel_factory<hexed::Face_permutation>(params.n_dim, params.row_size, con.direction(), con.new_state(1, false));
+    auto fp = hexed::kernel_factory<hexed::Face_permutation>(params.n_dim, params.row_size, con.direction(), con.state(1, false));
     fp->match_faces();
     for (int i_dof = 0; i_dof < n_fdof; ++i_dof) {
-      REQUIRE(con.new_state(0, false)[i_dof] == Catch::Approx(con.new_state(1, false)[i_dof]).scale(1.));
+      REQUIRE(con.state(0, false)[i_dof] == Catch::Approx(con.state(1, false)[i_dof]).scale(1.));
     }
     fp->restore();
   }

@@ -44,7 +44,7 @@ class Kernel_connection
   virtual Connection_direction get_direction() = 0;
   //! \brief state data for one side and for either the extrapolated state or the LDG storage
   //! \details layout: [i_var][i_face_qpoint]
-  virtual double* new_state(int i_side, bool is_ldg) = 0;
+  virtual double* state(int i_side, bool is_ldg) = 0;
   virtual double* normal() = 0; //!< \brief face normal vector \details `nullptr` for Cartesian
 };
 
