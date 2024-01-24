@@ -71,7 +71,7 @@ void surface(Namespace& space, Boundary_connection& con, int i_fqpoint)
     double ref_flux = -con.flux_cache()[i_var*nfq + i_fqpoint];
     // compute stress
     flux.push_back((nrml_mag > 1e-3 && viscous) ? ref_flux*nrml_sign/nrml_mag : 0.);
-    state.push_back(con.inside_face()[i_var*nfq + i_fqpoint]);
+    state.push_back(con.inside_face(false)[i_var*nfq + i_fqpoint]);
   }
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
     space.assign("normal" + std::to_string(i_dim), nrml(i_dim)*nrml_sign/nrml_mag);

@@ -21,7 +21,7 @@ class Kernel_element
   virtual double* time_step_scale() = 0; //!< \brief storage for local time step \details layout: [i_qpoint]
   virtual double& vertex_time_step_scale(int i_vertex) = 0; //!< \todo the kernel should not need this
   virtual double nominal_size() = 0; //!< \brief nominal edge length of the element before any vertex motion
-  virtual double* face(int i_face) = 0; //! \brief where the extrapolated face data is stored
+  virtual double* face(int i_face, bool is_ldg = false) = 0; //! \brief where the extrapolated face data is stored
   virtual bool deformed() const = 0; //! \brief whether this element is deformed
   /*!
    * \details the `j_dim`th component (in physical space) of the normal vector of the level surface

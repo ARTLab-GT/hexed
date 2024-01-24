@@ -129,6 +129,10 @@ class Spatial
         double* state = elem.state();
         std::array<double*, 6> faces;
         for (int i_face = 0; i_face < 2*n_dim; ++i_face) faces[i_face] = elem.face(i_face);
+        std::array<double*, 6> curr_faces;
+        for (int i_face = 0; i_face < 2*n_dim; ++i_face) curr_faces[i_face] = faces[i_face] + Pde::curr_start*n_qpoint/row_size;
+        std::array<double*, 6> visc_faces;
+        for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.face(i_face, true);
         double* tss = elem.time_step_scale();
         double d_pos = elem.nominal_size();
         double time_rate [2][std::max(Pde::n_update, Pde::n_extrap - Pde::n_extrap/2)][n_qpoint] {}; // first part contains convective time derivative, second part diffusive
@@ -153,8 +157,6 @@ class Spatial
         if constexpr (Pde::has_diffusion)
         {
           static_assert(Pde::n_extrap >= Pde::n_update);
-          std::array<double*, 6> visc_faces;
-          for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.face(i_face) + 2*(n_dim + 2)*n_qpoint/row_size;
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
             Mat<Pde::n_extrap> grad_vars = _eq.fetch_extrap(n_qpoint, state + i_qpoint);
             for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) (&time_rate[0][0][i_qpoint])[i_var*n_qpoint] = grad_vars(i_var);
@@ -245,7 +247,7 @@ class Spatial
               // write viscous row_f to faces to enable calculation of the numerical row_f
               for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
                 for (int is_positive : {0, 1}) {
-                  faces[ind.i_dim*2 + is_positive][(2*(n_dim + 2) + i_var)*ind.n_fqpoint + ind.i_face_qpoint()] = face_f(is_positive, i_var);
+                  visc_faces[ind.i_dim*2 + is_positive][ind.i_face_qpoint()] = face_f(is_positive, i_var);
                 }
               }
               Row_rw<Pde::n_update, row_size>::write_row(-derivative(row_f), time_rate[1][0], ind, 1.);
@@ -332,7 +334,7 @@ class Spatial
         auto& elem = elements[i_elem];
         double* state = elem.state();
         std::array<double*, 6> visc_faces;
-        for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.face(i_face) + 2*(n_dim + 2)*n_qpoint/row_size;
+        for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.face(i_face, true);
         double* tss = elem.time_step_scale();
         double d_pos = elem.nominal_size();
         double time_rate [Pde::n_update][n_qpoint] {};
@@ -409,7 +411,7 @@ class Spatial
         int sign [2] {1, 1}; // records whether the normal vector on each side needs to be flipped to obey sign convention
         // fetch face data
         for (int i_side = 0; i_side < 2; ++i_side) {
-          double* f = con.state() + i_side*n_fqpoint*(n_dim + 2);
+          double* f = con.state(i_side, false);
           for (int i_dof = 0; i_dof < Pde::n_extrap*n_fqpoint; ++i_dof) {
             face[i_side][i_dof] = f[i_dof];
           }
@@ -469,17 +471,19 @@ class Spatial
         }
         // write data to actual face storage on heap
         for (int i_side = 0; i_side < 2; ++i_side) {
-          double* f = con.state() + i_side*n_fqpoint*(n_dim + 2);
           // write flux
           if constexpr (Pde::has_convection) {
+            double* f = con.state(i_side, false);
+            int offset = Pde::curr_start*n_fqpoint;
             for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
               f[i_dof] = face[i_side][i_dof];
             }
           }
           // write average face state
           if constexpr (Pde::has_diffusion) {
+            double* f = con.state(i_side, true);
             for (int i_dof = 0; i_dof < Pde::n_extrap*n_fqpoint; ++i_dof) {
-              f[2*(n_dim + 2)*n_fqpoint + i_dof] = face[2 + i_side][i_dof];
+              f[i_dof] = face[2 + i_side][i_dof];
             }
           }
         }
@@ -507,7 +511,7 @@ class Spatial
         int sign [2] {1, 1}; // records whether the normal vector on each side needs to be flipped to obey sign convention
         // fetch face data
         for (int i_side = 0; i_side < 2; ++i_side) {
-          double* f = con.state() + (2 + i_side)*n_fqpoint*(n_dim + 2);
+          double* f = con.state(i_side, true);
           for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
             face[i_side][i_dof] = f[i_dof];
           }
@@ -533,7 +537,8 @@ class Spatial
         if constexpr (is_deformed) perm.restore(); // restore data of face 1 to original order
         // write data to actual face storage on heap
         for (int i_side = 0; i_side < 2; ++i_side) {
-          double* f = con.state() + (2 + i_side)*n_fqpoint*(n_dim + 2);
+          double* f = con.state(i_side, true);
+          int offset = Pde::curr_start*n_fqpoint;
           for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
             f[i_dof] = face[i_side][i_dof];
           }

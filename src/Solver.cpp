@@ -56,7 +56,7 @@ void Solver::apply_flux_bcs()
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     // write inside flux to flux cache for surface visualization/integrals
     int n_dof = params.n_dof()/params.row_size;
-    Eigen::Map<Mat<>>(bc_cons[i_con].flux_cache(), n_dof) = Eigen::Map<Mat<>>(bc_cons[i_con].inside_face() + 2*n_dof, n_dof);
+    Eigen::Map<Mat<>>(bc_cons[i_con].flux_cache(), n_dof) = Eigen::Map<Mat<>>(bc_cons[i_con].inside_face(true), n_dof);
     // apply boundary conditions
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh.boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
@@ -91,8 +91,8 @@ void Solver::apply_fta_flux_bcs()
   auto& bc_cons {acc_mesh.boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    double* in_f = bc_cons[i_con].inside_face() + 2*(nd + 2)*nq/rs;
-    double* gh_f = bc_cons[i_con].ghost_face()  + 2*(nd + 2)*nq/rs;
+    double* in_f = bc_cons[i_con].inside_face(true);
+    double* gh_f = bc_cons[i_con].ghost_face(true);
     for (int i_dof = 0; i_dof < nq*(nd + 2)/rs; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
   }
 }
@@ -221,7 +221,6 @@ void Solver::calc_jacobian()
   const int n_dim = params.n_dim;
   const int rs = basis.row_size;
   const int nfq = params.n_qpoint()/rs;
-  const int nfdof = nfq*params.n_var;
 
   // compute element jacobians
   auto& elements = acc_mesh.elements();
@@ -251,7 +250,7 @@ void Solver::calc_jacobian()
     int sign = 1 - 2*(dir.flip_normal(0) != dir.flip_normal(1));
     for (int i_fine = 0; i_fine < ref.n_fine_elements(); ++i_fine) {
       auto& fine = ref.connection(i_fine);
-      double* face [2] {fine.state() + rev*nfdof, fine.state() + (!rev)*nfdof};
+      double* face [2] {fine.state(rev, false), fine.state(!rev, false)};
       auto fp = kernel_factory<Face_permutation>(n_dim, rs, dir, face[1]);
       fp->match_faces();
       for (int i_data = 0; i_data < n_dim*nfq; ++i_data) {
@@ -264,8 +263,8 @@ void Solver::calc_jacobian()
   auto& bc_cons = acc_mesh.boundary_connections();
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    double* in_f = bc_cons[i_con].inside_face();
-    double* gh_f = bc_cons[i_con].ghost_face();
+    double* in_f = bc_cons[i_con].inside_face(false);
+    double* gh_f = bc_cons[i_con].ghost_face(false);
     for (int i_data = 0; i_data < n_dim*nfq; ++i_data) gh_f[i_data] = in_f[i_data];
   }
   // compute the shared face normal
@@ -273,7 +272,7 @@ void Solver::calc_jacobian()
   for (int i_con = 0; i_con < def_cons.size(); ++i_con)
   {
     auto& con = def_cons[i_con];
-    double* elem_nrml [2] {con.state(), con.state() + nfdof};
+    double* elem_nrml [2] {con.state(0, false), con.state(1, false)};
     auto dir = con.direction();
     // permute face 1 so that quadrature points match up
     auto fp = kernel_factory<Face_permutation>(n_dim, rs, dir, elem_nrml[1]);
@@ -727,12 +726,12 @@ void Solver::set_uncert_surface_rep(int bc_sn)
   #pragma omp parallel for
   for (int i_con = 0; i_con < def_cons.size(); ++i_con) {
     auto& con = def_cons[i_con];
-    auto permute = kernel_factory<Face_permutation>(nd, params.row_size, con.direction(), con.state() + (nd + 2)*nfq);
+    auto permute = kernel_factory<Face_permutation>(nd, params.row_size, con.direction(), con.state(1, false));
     permute->match_faces();
     for (int i_dim = 0; i_dim < nd; ++i_dim) {
       for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
         double* f [2];
-        for (int i_side : {0, 1}) f[i_side] = con.state() + (i_side*(nd + 2) + i_dim)*nfq + i_qpoint;
+        for (int i_side : {0, 1}) f[i_side] = con.state(i_side, false) + i_dim*nfq + i_qpoint;
         *f[0] = *f[1] = *f[0] - *f[1];
       }
     }
@@ -742,7 +741,7 @@ void Solver::set_uncert_surface_rep(int bc_sn)
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     auto& con = bc_cons[i_con];
-    double* state = con.inside_face();
+    double* state = con.inside_face(false);
     for (int i_dof = 0; i_dof < nv*nfq; ++i_dof) state[i_dof] = 0;
   }
   compute_restrict(_kernel_mesh, false);
@@ -1030,8 +1029,8 @@ bool Solver::fix_admissibility(double stability_ratio)
       auto& bc_cons {acc_mesh.boundary_connections()};
       #pragma omp parallel for
       for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-        double* in_f = bc_cons[i_con].inside_face();
-        double* gh_f = bc_cons[i_con].ghost_face();
+        double* in_f = bc_cons[i_con].inside_face(false);
+        double* gh_f = bc_cons[i_con].ghost_face(false);
         for (int i_dof = 0; i_dof < nq*(nd + 2)/rs; ++i_dof) gh_f[i_dof] = in_f[i_dof];
       }
       opts.dt = s;

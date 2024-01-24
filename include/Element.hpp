@@ -112,7 +112,7 @@ class Element : public Kernel_element
 
   double* state() override;
   double* residual_cache() override;
-  double* face(int i_face) override;
+  double* face(int i_face, bool is_ldg = false) override;
   bool deformed() const override;
   double* reference_level_normals() override;
   double* jacobian_determinant() override;

@@ -42,7 +42,12 @@ class Kernel_connection
 {
   public:
   virtual Connection_direction get_direction() = 0;
-  virtual double* state() = 0; //! \brief state data for both sides \details layout: [is_ldg_state][i_side][i_var][i_face_qpoint]
+  /*! \brief state data for one side, and _either_ the convective state or the LDG state
+   * \details `is_ldg = true` gives you the LDG state for equations with actual diffusion terms---`pde::Advection`
+   * coopts this data for storing additional convection variables.
+   * layout: [i_var][i_face_qpoint]
+   */
+  virtual double* state(bool i_side, bool is_ldg) = 0;
   virtual double* normal() = 0; //! \brief face normal vector \details `nullptr` for Cartesian
 };
 
