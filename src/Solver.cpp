@@ -221,7 +221,6 @@ void Solver::calc_jacobian()
   const int n_dim = params.n_dim;
   const int rs = basis.row_size;
   const int nfq = params.n_qpoint()/rs;
-  const int nfdof = nfq*params.n_var;
 
   // compute element jacobians
   auto& elements = acc_mesh.elements();
@@ -251,7 +250,7 @@ void Solver::calc_jacobian()
     int sign = 1 - 2*(dir.flip_normal(0) != dir.flip_normal(1));
     for (int i_fine = 0; i_fine < ref.n_fine_elements(); ++i_fine) {
       auto& fine = ref.connection(i_fine);
-      double* face [2] {fine.state() + rev*nfdof, fine.state() + (!rev)*nfdof};
+      double* face [2] {fine.new_state(rev, false), fine.new_state(!rev, false)};
       auto fp = kernel_factory<Face_permutation>(n_dim, rs, dir, face[1]);
       fp->match_faces();
       for (int i_data = 0; i_data < n_dim*nfq; ++i_data) {
@@ -273,7 +272,7 @@ void Solver::calc_jacobian()
   for (int i_con = 0; i_con < def_cons.size(); ++i_con)
   {
     auto& con = def_cons[i_con];
-    double* elem_nrml [2] {con.state(), con.state() + nfdof};
+    double* elem_nrml [2] {con.new_state(0, false), con.new_state(1, false)};
     auto dir = con.direction();
     // permute face 1 so that quadrature points match up
     auto fp = kernel_factory<Face_permutation>(n_dim, rs, dir, elem_nrml[1]);
@@ -727,12 +726,12 @@ void Solver::set_uncert_surface_rep(int bc_sn)
   #pragma omp parallel for
   for (int i_con = 0; i_con < def_cons.size(); ++i_con) {
     auto& con = def_cons[i_con];
-    auto permute = kernel_factory<Face_permutation>(nd, params.row_size, con.direction(), con.state() + (nd + 2)*nfq);
+    auto permute = kernel_factory<Face_permutation>(nd, params.row_size, con.direction(), con.new_state(1, false));
     permute->match_faces();
     for (int i_dim = 0; i_dim < nd; ++i_dim) {
       for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
         double* f [2];
-        for (int i_side : {0, 1}) f[i_side] = con.state() + (i_side*(nd + 2) + i_dim)*nfq + i_qpoint;
+        for (int i_side : {0, 1}) f[i_side] = con.new_state(i_side, false) + i_dim*nfq + i_qpoint;
         *f[0] = *f[1] = *f[0] - *f[1];
       }
     }

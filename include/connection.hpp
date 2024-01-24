@@ -108,10 +108,8 @@ class Element_face_connection : public Element_connection, public Face_connectio
   Element_face_connection(std::array<element_t*, 2> elements, Con_dir<element_t> con_dir)
   : Face_connection<element_t>{elements[0]->storage_params()}, dir{con_dir}, elems{elements}
   {
-    Storage_params params {elements[0]->storage_params()};
-    int face_size = params.n_dof()/params.row_size;
     for (int i_side : {0, 1}) {
-      elements[i_side]->faces[dir.i_face(i_side)] = Face_connection<element_t>::state() + i_side*face_size;
+      elements[i_side]->faces[dir.i_face(i_side)] = Face_connection<element_t>::new_state(i_side, false);
     }
     auto inds = vertex_inds(elements[0]->storage_params().n_dim, dir);
     // cppcheck-suppress syntaxError
@@ -176,8 +174,7 @@ class Refined_connection
     Fine_connection(Refined_connection& r, element_t& f)
     : Face_connection<element_t>{r.params}, ref_con{r}, fine_elem{f}
     {
-      int face_sz = r.params.n_dof()/r.params.row_size;
-      f.faces[ref_con.dir.i_face(!ref_con.rev)] = Face_connection<element_t>::state() + (!ref_con.rev)*face_sz;
+      f.faces[ref_con.dir.i_face(!ref_con.rev)] = Face_connection<element_t>::new_state(!ref_con.rev, false);
     }
     virtual ~Fine_connection()
     {
@@ -260,7 +257,7 @@ class Refined_connection
       // it is merely necessary to figure out whether we need to swap the fine elements
       if (any_str) inds[1] = i_face != (def_dir.flip_tangential() && !str[2*def_dir.i_dim[rev] > 3 - def_dir.i_dim[!rev]]);
       fine_cons.emplace_back(new Fine_connection(*this, *fine[inds[!rev]]));
-      refined_face.fine[inds[rev]] = fine_cons.back()->state() + rev*params.n_dof()/params.row_size;
+      refined_face.fine[inds[rev]] = fine_cons.back()->new_state(rev, false);
     }
     connect_normal();
   }
@@ -354,7 +351,7 @@ class Typed_bound_connection : public Boundary_connection
     cache{Mat<>::Zero(2*state_size)}
   {
     connect_normal();
-    elem.faces[direction().i_face(0)] = state();
+    elem.faces[direction().i_face(0)] = new_state(0, false);
   }
   Typed_bound_connection(const Typed_bound_connection&) = delete; //!< can only have one `Typed_bound_connection` per face, so delete copy semantics
   Typed_bound_connection& operator=(const Typed_bound_connection&) = delete;

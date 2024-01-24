@@ -2,7 +2,7 @@
 #define HEXED_PROLONG_REFINED_HPP_
 
 #include "Sequences.hpp"
-#include "connection.hpp"
+#include "Refined_face.hpp"
 #include "Basis.hpp"
 #include "kernel_factory.hpp"
 #include "math.hpp"

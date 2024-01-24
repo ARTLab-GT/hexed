@@ -54,7 +54,6 @@ void Flow_bc::apply_diffusion(Boundary_face& bf)
 void Flow_bc::flux_diffusion(Boundary_face& bf)
 {
   auto params = bf.storage_params();
-  int nfq = params.n_qpoint()/params.row_size;
   double* gh_f = bf.ghost_face(true);
   double* in_f = bf.inside_face(true);
   for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
@@ -218,7 +217,6 @@ void Pressure_outflow::apply_flux(Boundary_face& bf)
 {
   // set to negative of inside flux
   auto params = bf.storage_params();
-  int nfq = params.n_qpoint()/params.row_size;
   double* gh_f = bf.ghost_face(true);
   double* in_f = bf.inside_face(true);
   for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
@@ -469,7 +467,6 @@ void Outflow::apply_flux(Boundary_face& bf)
 {
   // set to negative of inside flux
   auto params = bf.storage_params();
-  int nfq = params.n_qpoint()/params.row_size;
   double* gh_f = bf.ghost_face(true);
   double* in_f = bf.inside_face(true);
   for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
