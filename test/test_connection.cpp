@@ -139,13 +139,13 @@ TEST_CASE("Element_face_connection<Element>")
   REQUIRE(elem1.faces[2] == nullptr);
   {
     hexed::Element_face_connection<hexed::Element> con ({&elem0, &elem1}, hexed::Con_dir<hexed::Element>{1});
-    REQUIRE(elem0.faces[3] == con.state(0, false));
-    REQUIRE(elem1.faces[2] == con.state(1, false));
+    REQUIRE(elem0.faces[3] == con.state());
+    REQUIRE(elem1.faces[2] == con.state() + params.n_dof()/params.row_size);
     REQUIRE(con.direction().i_dim == 1);
     REQUIRE(&con.element(0) == &elem0);
     REQUIRE(&con.element(1) == &elem1);
-    REQUIRE(con.state(0, false) == elem0.faces[3]);
-    REQUIRE(con.state(1, false) == elem1.faces[2]);
+    REQUIRE(con.state()        == elem0.faces[3]);
+    REQUIRE(con.state() + 5*36 == elem1.faces[2]);
     REQUIRE(&elem0.vertex(2) == &elem1.vertex(0));
     REQUIRE(&elem0.vertex(7) == &elem1.vertex(5));
     // make sure it didn't just combine all the vertices or something stupid like that
@@ -162,8 +162,8 @@ TEST_CASE("Element_face_connection<Deformed_element>")
   hexed::Deformed_element elem0 (params);
   hexed::Deformed_element elem1 (params);
   hexed::Element_face_connection<hexed::Deformed_element> con ({&elem0, &elem1}, hexed::Con_dir<hexed::Deformed_element>{{2, 1}, {0, 1}});
-  REQUIRE(elem0.faces[4] == con.state(0, false));
-  REQUIRE(elem1.faces[3] == con.state(1, false));
+  REQUIRE(elem0.faces[4] == con.state());
+  REQUIRE(elem1.faces[3] == con.state() + params.n_dof()/params.row_size);
   REQUIRE(con.direction().i_dim[0] == 2);
   REQUIRE(con.direction().i_dim[1] == 1);
   REQUIRE(con.direction().face_sign[0] == 0);
@@ -173,8 +173,8 @@ TEST_CASE("Element_face_connection<Deformed_element>")
   con.normal(0)[3*6*6 - 1] = 1; // check that normal storage is big enough (otherwise segfault)
   con.normal(1)[3*6*6 - 1] = 1;
   REQUIRE(con.normal() == con.normal(0));
-  REQUIRE(con.state(0, false) == elem0.faces[4]);
-  REQUIRE(con.state(1, false) == elem1.faces[3]);
+  REQUIRE(con.state()        == elem0.faces[4]);
+  REQUIRE(con.state() + 5*36 == elem1.faces[3]);
   REQUIRE(&elem0.vertex(0) == &elem1.vertex(3));
   REQUIRE(&elem0.vertex(2) == &elem1.vertex(2));
   REQUIRE(&elem0.vertex(4) == &elem1.vertex(7));
@@ -206,7 +206,7 @@ TEST_CASE("Refined_connection<Deformed_element>")
       REQUIRE(fine_con.direction().i_dim[1] == 2);
       REQUIRE(&fine_con.element(0) == &coarse);
       REQUIRE(&fine_con.element(1) == &elem2); // note transposed
-      REQUIRE(fine_con.state(0, false) == con.refined_face.fine[1]);
+      REQUIRE(fine_con.state() == con.refined_face.fine[1]);
       REQUIRE(&coarse.vertex(4) == &elem0.vertex(1));
       REQUIRE(&coarse.vertex(5) == &elem2.vertex(5));
       REQUIRE(&coarse.vertex(6) == &elem1.vertex(3));
@@ -220,7 +220,7 @@ TEST_CASE("Refined_connection<Deformed_element>")
       REQUIRE(coarse.faces[1] == con.coarse_state());
       for (int i_con = 0; i_con < 4; ++i_con) {
         auto& c = con.connection(i_con);
-        REQUIRE(c.element(1).faces[5] == c.state(1, false));
+        REQUIRE(c.element(1).faces[5] == c.state() + params.n_dof()/params.row_size);
       }
     }
     REQUIRE(coarse.faces[1] == nullptr);
@@ -238,7 +238,7 @@ TEST_CASE("Refined_connection<Deformed_element>")
     REQUIRE(fine_con.direction().i_dim[1] == 2);
     REQUIRE(&fine_con.element(0) == &elem1);
     REQUIRE(&fine_con.element(1) == &coarse);
-    REQUIRE(fine_con.state(1, false) == con.refined_face.fine[2]); // note transposed
+    REQUIRE(fine_con.state() + 5*6*6 == con.refined_face.fine[2]); // note transposed
     REQUIRE(&elem0.vertex(4) == &coarse.vertex(1));
     REQUIRE(&elem1.vertex(5) == &coarse.vertex(5));
     REQUIRE(&elem2.vertex(6) == &coarse.vertex(3));
@@ -267,8 +267,8 @@ TEST_CASE("Refined_connection<Deformed_element>")
       REQUIRE(fine_con.direction().i_dim[1] == 0);
       REQUIRE(&fine_con.element(0) == &coarse);
       REQUIRE(&fine_con.element(1) == &elem1);
-      REQUIRE(fine_con.state(0, false) == con.refined_face.fine[1]);
-      REQUIRE(fine_con.state(1, false) == elem1.faces[2*0 + 1]);
+      REQUIRE(fine_con.state() == con.refined_face.fine[1]);
+      REQUIRE(fine_con.state() + 5*6*6 == elem1.faces[2*0 + 1]);
       REQUIRE(&elem0.vertex(4) == &coarse.vertex(1));
       REQUIRE(&elem1.vertex(5) == &coarse.vertex(5));
       REQUIRE(&elem0.vertex(6) == &coarse.vertex(3));
@@ -284,8 +284,8 @@ TEST_CASE("Refined_connection<Deformed_element>")
       REQUIRE(fine_con.direction().i_dim[1] == 2);
       REQUIRE(&fine_con.element(0) == &elem1);
       REQUIRE(&fine_con.element(1) == &coarse);
-      REQUIRE(fine_con.state(0, false) == elem1.faces[2*0 + 1]);
-      REQUIRE(fine_con.state(1, false) == con.refined_face.fine[1]);
+      REQUIRE(fine_con.state() == elem1.faces[2*0 + 1]);
+      REQUIRE(fine_con.state() + 5*6*6 == con.refined_face.fine[1]);
       REQUIRE(&elem0.vertex(4) == &coarse.vertex(1));
       REQUIRE(&elem1.vertex(5) == &coarse.vertex(5));
       REQUIRE(&elem0.vertex(6) == &coarse.vertex(3));
@@ -301,8 +301,8 @@ TEST_CASE("Refined_connection<Deformed_element>")
       REQUIRE(fine_con.direction().i_dim[1] == 0);
       REQUIRE(&fine_con.element(0) == &coarse);
       REQUIRE(&fine_con.element(1) == &elem1);
-      REQUIRE(fine_con.state(0, false) == con.refined_face.fine[1]);
-      REQUIRE(fine_con.state(1, false) == elem1.faces[2*0 + 1]);
+      REQUIRE(fine_con.state() == con.refined_face.fine[1]);
+      REQUIRE(fine_con.state() + 5*6*6 == elem1.faces[2*0 + 1]);
       REQUIRE(&elem0.vertex(4) == &coarse.vertex(1));
       REQUIRE(&elem0.vertex(5) == &coarse.vertex(5));
       REQUIRE(&elem1.vertex(6) == &coarse.vertex(3));
@@ -318,8 +318,8 @@ TEST_CASE("Refined_connection<Deformed_element>")
       REQUIRE(fine_con.direction().i_dim[1] == 2);
       REQUIRE(&fine_con.element(0) == &elem0);
       REQUIRE(&fine_con.element(1) == &coarse);
-      REQUIRE(fine_con.state(0, false) == elem0.faces[2*0 + 1]);
-      REQUIRE(fine_con.state(1, false) == con.refined_face.fine[0]);
+      REQUIRE(fine_con.state() == elem0.faces[2*0 + 1]);
+      REQUIRE(fine_con.state() + 5*6*6 == con.refined_face.fine[0]);
       REQUIRE(&elem0.vertex(4) == &coarse.vertex(1));
       REQUIRE(&elem0.vertex(5) == &coarse.vertex(5));
       REQUIRE(&elem0.vertex(6) == &coarse.vertex(3));

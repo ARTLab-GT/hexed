@@ -24,7 +24,7 @@ std::vector<double> Surface_func::operator()(Boundary_connection& con, int i_fqp
   nrml_mag = std::sqrt(nrml_mag);
   for (double& n : normal) n /= nrml_mag;
   std::vector<double> state;
-  for (int i_var = 0; i_var < params.n_var; ++i_var) state.push_back(con.inside_face(false)[i_var*nfq + i_fqpoint]);
+  for (int i_var = 0; i_var < params.n_var; ++i_var) state.push_back(con.inside_face()[i_var*nfq + i_fqpoint]);
   return operator()(pos, time, state, normal);
 }
 
