@@ -42,7 +42,6 @@ class Kernel_connection
 {
   public:
   virtual Connection_direction get_direction() = 0;
-  virtual double* state() = 0; //!< \brief state data for both sides \details layout: [is_ldg_state][i_side][i_var][i_face_qpoint]
   //! \brief state data for one side and for either the extrapolated state or the LDG storage
   //! \details layout: [i_var][i_face_qpoint]
   virtual double* new_state(int i_side, bool is_ldg) = 0;

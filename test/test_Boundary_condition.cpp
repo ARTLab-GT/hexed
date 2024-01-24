@@ -19,11 +19,11 @@ TEST_CASE("Typed_boundary_connection")
   hexed::Element element {params};
   Dummy bc;
   hexed::Typed_bound_connection<hexed::Element> tbc0 {element, 1, false, 0};
-  REQUIRE(element.faces[2] == tbc0.state());
-  REQUIRE(tbc0.ghost_face(false) == tbc0.state() + params.n_dof()/params.row_size);
+  REQUIRE(element.faces[2] == tbc0.new_state(0, false));
+  REQUIRE(tbc0.ghost_face(false) == tbc0.new_state(1, false));
   hexed::Typed_bound_connection<hexed::Element> tbc1 {element, 1,  true, 1};
-  REQUIRE(element.faces[3] == tbc1.state());
-  REQUIRE(tbc1.ghost_face(false) == tbc1.state() + params.n_dof()/params.row_size);
+  REQUIRE(element.faces[3] == tbc1.new_state(0, false));
+  REQUIRE(tbc1.ghost_face(false) == tbc1.new_state(1, false));
   REQUIRE(tbc0.storage_params().n_var == 4);
   // check that the correct face of the element is retrieved
   REQUIRE(tbc0.inside_face(false) == element.faces[2*1 + 0]);
@@ -32,10 +32,10 @@ TEST_CASE("Typed_boundary_connection")
   tbc0.ghost_face(false)[0] = 1.;
   tbc0.ghost_face(false)[4*4 - 1] = 1.;
   // check that order of faces is correct
-  REQUIRE(tbc0.state()                                  == tbc0.inside_face(false));
-  REQUIRE(tbc0.state() + params.n_dof()/params.row_size == tbc0.ghost_face(false));
-  REQUIRE(tbc1.state()                                  == tbc1.inside_face(false));
-  REQUIRE(tbc1.state() + params.n_dof()/params.row_size == tbc1.ghost_face(false));
+  REQUIRE(tbc0.new_state(0, false) == tbc0.inside_face(false));
+  REQUIRE(tbc0.new_state(1, false) == tbc0.ghost_face(false));
+  REQUIRE(tbc1.new_state(0, false) == tbc1.inside_face(false));
+  REQUIRE(tbc1.new_state(1, false) == tbc1.ghost_face(false));
   // check that the direction info is correct
   REQUIRE(tbc0.direction().i_dim[0] == 1);
   REQUIRE(tbc0.direction().i_dim[1] == 1);
