@@ -409,26 +409,14 @@ void Solver::update_art_visc_smoothness(double advect_length)
   auto& elements = acc_mesh.elements();
 
   stopwatch.children.at("set art visc").children.at("initialize").stopwatch.start();
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    double* state = elements[i_elem].state();
-    double* rk_ref = elements[i_elem].redundant_storage();
-    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      for (int i_var = 0; i_var < params.n_var; ++i_var) {
-        int i = i_var*nq + i_qpoint;
-        rk_ref[i] = state[i];
-      }
-    }
-  }
   // set advection velocity
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].state();
-    double* rk_ref = elements[i_elem].redundant_storage();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      double scale = sqrt(2*rk_ref[nd*nq + i_qpoint]*rk_ref[(nd + 1)*nq + i_qpoint]);
+      double scale = sqrt(2*state[nd*nq + i_qpoint]*state[(nd + 1)*nq + i_qpoint]);
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        state[i_dim*nq + i_qpoint] = rk_ref[i_dim*nq + i_qpoint]/scale;
+        state[i_dim*nq + i_qpoint] /= scale;
       }
     }
   }
@@ -514,13 +502,13 @@ void Solver::update_art_visc_smoothness(double advect_length)
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* forcing = elements[i_elem].art_visc_forcing();
     double* adv = elements[i_elem].advection_state();
-    double* rk_ref = elements[i_elem].redundant_storage();
+    double* state = elements[i_elem].state();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       double proj = 0;
       for (int i_proj = 0; i_proj < rs; ++i_proj) {
         proj += adv[i_proj*nq + i_qpoint]*weights(i_proj)*orth(i_proj);
       }
-      forcing[i_qpoint] = proj*proj*2*rk_ref[(nd + 1)*nq + i_qpoint]/rk_ref[nd*nq + i_qpoint];
+      forcing[i_qpoint] = proj*proj*2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint];
     }
   } // Cauchy-Kovalevskaya-style derivative estimate complete!
 
@@ -538,16 +526,15 @@ void Solver::update_art_visc_smoothness(double advect_length)
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].state();
-    double* rk_ref = elements[i_elem].redundant_storage();
     double* av = elements[i_elem].art_visc_coef();
     double* forcing = elements[i_elem].art_visc_forcing();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       double f = mult*forcing[n_real*nq + i_qpoint];
       av[i_qpoint] = us_max*f/(us_max + f);
       // put the flow state back how we found it
-      for (int i_var = 0; i_var < params.n_var; ++i_var) {
-        int i = i_var*nq + i_qpoint;
-        state[i] = rk_ref[i];
+      double scale = sqrt(2*state[nd*nq + i_qpoint]*state[(nd + 1)*nq + i_qpoint]);
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        state[i_dim*nq + i_qpoint] *= scale;
       }
     }
   }
@@ -580,12 +567,9 @@ void Solver::update_art_visc_elwise(double width, bool pde_based)
   if (pde_based) {
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      double* state = elems[i_elem].state();
-      double* temp_state = elems[i_elem].residual_cache();
       double elem_av = elems[i_elem].uncertainty;
       double* av = elems[i_elem].art_visc_coef();
       double* forcing = elems[i_elem].art_visc_forcing();
-      for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) temp_state[i_dof] = state[i_dof];
       for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
         forcing[i_qpoint] = elem_av;
         forcing[params.n_qpoint() + i_qpoint] = av[i_qpoint];
@@ -594,11 +578,8 @@ void Solver::update_art_visc_elwise(double width, bool pde_based)
     diffuse_art_visc(_namespace->lookup<double>("elementwise_art_visc_diff_ratio").value()*width*width);
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      double* state = elems[i_elem].state();
-      double* temp_state = elems[i_elem].residual_cache();
       double* av = elems[i_elem].art_visc_coef();
       double* forcing = elems[i_elem].art_visc_forcing();
-      for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) temp_state[i_dof] = state[i_dof]; //! \todo i don't think this is actually necessary anymore
       for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) av[i_qpoint] = forcing[params.n_qpoint() + i_qpoint];
     }
     compute_write_face(_kernel_mesh);
