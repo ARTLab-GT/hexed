@@ -135,25 +135,25 @@ TEST_CASE("Element_face_connection<Element>")
   hexed::Storage_params params {3, 5, 3, 6};
   hexed::Element elem0 (params);
   hexed::Element elem1 (params);
-  REQUIRE(elem0.faces[3] == nullptr);
-  REQUIRE(elem1.faces[2] == nullptr);
+  REQUIRE(!elem0.is_connected(3));
+  REQUIRE(!elem1.is_connected(2));
   {
     hexed::Element_face_connection<hexed::Element> con ({&elem0, &elem1}, hexed::Con_dir<hexed::Element>{1});
-    REQUIRE(elem0.faces[3] == con.state(0, false));
-    REQUIRE(elem1.faces[2] == con.state(1, false));
+    REQUIRE(elem0.face(3, false) == con.state(0, false));
+    REQUIRE(elem1.face(2, false) == con.state(1, false));
     REQUIRE(con.direction().i_dim == 1);
     REQUIRE(&con.element(0) == &elem0);
     REQUIRE(&con.element(1) == &elem1);
-    REQUIRE(con.state(0, false) == elem0.faces[3]);
-    REQUIRE(con.state(1, false) == elem1.faces[2]);
+    REQUIRE(con.state(0, false) == elem0.face(3, false));
+    REQUIRE(con.state(1, false) == elem1.face(2, false));
     REQUIRE(&elem0.vertex(2) == &elem1.vertex(0));
     REQUIRE(&elem0.vertex(7) == &elem1.vertex(5));
     // make sure it didn't just combine all the vertices or something stupid like that
     REQUIRE(&elem0.vertex(0) != &elem1.vertex(2));
   }
   // check that faces get reset to nullptr after the connection is deleted
-  REQUIRE(elem0.faces[3] == nullptr);
-  REQUIRE(elem1.faces[2] == nullptr);
+  REQUIRE(!elem0.is_connected(3));
+  REQUIRE(!elem1.is_connected(2));
 }
 
 TEST_CASE("Element_face_connection<Deformed_element>")
@@ -162,8 +162,8 @@ TEST_CASE("Element_face_connection<Deformed_element>")
   hexed::Deformed_element elem0 (params);
   hexed::Deformed_element elem1 (params);
   hexed::Element_face_connection<hexed::Deformed_element> con ({&elem0, &elem1}, hexed::Con_dir<hexed::Deformed_element>{{2, 1}, {0, 1}});
-  REQUIRE(elem0.faces[4] == con.state(0, false));
-  REQUIRE(elem1.faces[3] == con.state(1, false));
+  REQUIRE(elem0.face(4, false) == con.state(0, false));
+  REQUIRE(elem1.face(3, false) == con.state(1, false));
   REQUIRE(con.direction().i_dim[0] == 2);
   REQUIRE(con.direction().i_dim[1] == 1);
   REQUIRE(con.direction().face_sign[0] == 0);
@@ -173,8 +173,8 @@ TEST_CASE("Element_face_connection<Deformed_element>")
   con.normal(0)[3*6*6 - 1] = 1; // check that normal storage is big enough (otherwise segfault)
   con.normal(1)[3*6*6 - 1] = 1;
   REQUIRE(con.normal() == con.normal(0));
-  REQUIRE(con.state(0, false) == elem0.faces[4]);
-  REQUIRE(con.state(1, false) == elem1.faces[3]);
+  REQUIRE(con.state(0, false) == elem0.face(4, false));
+  REQUIRE(con.state(1, false) == elem1.face(3, false));
   REQUIRE(&elem0.vertex(0) == &elem1.vertex(3));
   REQUIRE(&elem0.vertex(2) == &elem1.vertex(2));
   REQUIRE(&elem0.vertex(4) == &elem1.vertex(7));
@@ -198,7 +198,7 @@ TEST_CASE("Refined_connection<Deformed_element>")
   {
     {
       hexed::Refined_connection<hexed::Deformed_element> con {&coarse, elem_ptrs, hexed::Con_dir<hexed::Deformed_element>{{0, 2}, {1, 1}}};
-      REQUIRE(con.refined_face.coarse == coarse.faces[2*0 + 1]);
+      REQUIRE(con.refined_face.coarse == coarse.face(2*0 + 1, false));
       REQUIRE(con.direction().i_dim[1] == 2);
       REQUIRE(con.direction().face_sign[1] == 1);
       auto& fine_con = con.connection(1);
@@ -217,22 +217,22 @@ TEST_CASE("Refined_connection<Deformed_element>")
       REQUIRE(elem1.vertex_time_step_scale(1) == Catch::Approx(0.5/3));
       REQUIRE(elem2.vertex_time_step_scale(3) == Catch::Approx(0.75/3));
       REQUIRE(elem2.vertex_time_step_scale(2) == Catch::Approx(1./3));
-      REQUIRE(coarse.faces[1] == con.coarse_state());
+      REQUIRE(coarse.face(1, false) == con.coarse_state());
       for (int i_con = 0; i_con < 4; ++i_con) {
         auto& c = con.connection(i_con);
-        REQUIRE(c.element(1).faces[5] == c.state(1, false));
+        REQUIRE(c.element(1).face(5, false) == c.state(1, false));
       }
     }
-    REQUIRE(coarse.faces[1] == nullptr);
+    REQUIRE(!coarse.is_connected(1));
     for (auto ptr : elem_ptrs) {
-      REQUIRE(ptr->faces[5] == nullptr);
+      REQUIRE(!ptr->is_connected(5));
     }
   }
   SECTION("reversed")
   {
     // the result should be the same as above, but with fine elements as the left side of the connection and coarse as the right
     hexed::Refined_connection<hexed::Deformed_element> con {&coarse, elem_ptrs, hexed::Con_dir<hexed::Deformed_element>{{0, 2}, {1, 1}}, true};
-    REQUIRE(con.refined_face.coarse == coarse.faces[2*2 + 1]);
+    REQUIRE(con.refined_face.coarse == coarse.face(2*2 + 1, false));
     auto& fine_con = con.connection(1);
     REQUIRE(fine_con.direction().i_dim[0] == 0);
     REQUIRE(fine_con.direction().i_dim[1] == 2);
@@ -261,14 +261,14 @@ TEST_CASE("Refined_connection<Deformed_element>")
       hexed::Refined_connection<hexed::Deformed_element> con {&coarse, elems2, hexed::Con_dir<hexed::Deformed_element>{{2, 0}, {1, 1}}, false, {true, false}};
       REQUIRE(con.refined_face.stretch[0] == false);
       REQUIRE(con.refined_face.stretch[1] == true);
-      REQUIRE(con.refined_face.coarse == coarse.faces[2*2 + 1]);
+      REQUIRE(con.refined_face.coarse == coarse.face(2*2 + 1, false));
       auto& fine_con = con.connection(1);
       REQUIRE(fine_con.direction().i_dim[0] == 2);
       REQUIRE(fine_con.direction().i_dim[1] == 0);
       REQUIRE(&fine_con.element(0) == &coarse);
       REQUIRE(&fine_con.element(1) == &elem1);
       REQUIRE(fine_con.state(0, false) == con.refined_face.fine[1]);
-      REQUIRE(fine_con.state(1, false) == elem1.faces[2*0 + 1]);
+      REQUIRE(fine_con.state(1, false) == elem1.face(2*0 + 1, false));
       REQUIRE(&elem0.vertex(4) == &coarse.vertex(1));
       REQUIRE(&elem1.vertex(5) == &coarse.vertex(5));
       REQUIRE(&elem0.vertex(6) == &coarse.vertex(3));
@@ -278,13 +278,13 @@ TEST_CASE("Refined_connection<Deformed_element>")
     SECTION("stretch dimension 0 reverse")
     {
       hexed::Refined_connection<hexed::Deformed_element> con {&coarse, elems2, hexed::Con_dir<hexed::Deformed_element>{{0, 2}, {1, 1}}, true, {true, false}};
-      REQUIRE(con.refined_face.coarse == coarse.faces[2*2 + 1]);
+      REQUIRE(con.refined_face.coarse == coarse.face(2*2 + 1, false));
       auto& fine_con = con.connection(1);
       REQUIRE(fine_con.direction().i_dim[0] == 0);
       REQUIRE(fine_con.direction().i_dim[1] == 2);
       REQUIRE(&fine_con.element(0) == &elem1);
       REQUIRE(&fine_con.element(1) == &coarse);
-      REQUIRE(fine_con.state(0, false) == elem1.faces[2*0 + 1]);
+      REQUIRE(fine_con.state(0, false) == elem1.face(2*0 + 1, false));
       REQUIRE(fine_con.state(1, false) == con.refined_face.fine[1]);
       REQUIRE(&elem0.vertex(4) == &coarse.vertex(1));
       REQUIRE(&elem1.vertex(5) == &coarse.vertex(5));
@@ -295,14 +295,14 @@ TEST_CASE("Refined_connection<Deformed_element>")
     SECTION("stretch dimension 1")
     {
       hexed::Refined_connection<hexed::Deformed_element> con {&coarse, elems2, hexed::Con_dir<hexed::Deformed_element>{{2, 0}, {1, 1}}, false, {false, true}};
-      REQUIRE(con.refined_face.coarse == coarse.faces[2*2 + 1]);
+      REQUIRE(con.refined_face.coarse == coarse.face(2*2 + 1, false));
       auto& fine_con = con.connection(1);
       REQUIRE(fine_con.direction().i_dim[0] == 2);
       REQUIRE(fine_con.direction().i_dim[1] == 0);
       REQUIRE(&fine_con.element(0) == &coarse);
       REQUIRE(&fine_con.element(1) == &elem1);
       REQUIRE(fine_con.state(0, false) == con.refined_face.fine[1]);
-      REQUIRE(fine_con.state(1, false) == elem1.faces[2*0 + 1]);
+      REQUIRE(fine_con.state(1, false) == elem1.face(2*0 + 1, false));
       REQUIRE(&elem0.vertex(4) == &coarse.vertex(1));
       REQUIRE(&elem0.vertex(5) == &coarse.vertex(5));
       REQUIRE(&elem1.vertex(6) == &coarse.vertex(3));
@@ -312,13 +312,13 @@ TEST_CASE("Refined_connection<Deformed_element>")
     SECTION("stretch both")
     {
       hexed::Refined_connection<hexed::Deformed_element> con {&coarse, {&elem0}, hexed::Con_dir<hexed::Deformed_element>{{0, 2}, {1, 1}}, true, {true, true}};
-      REQUIRE(con.refined_face.coarse == coarse.faces[2*2 + 1]);
+      REQUIRE(con.refined_face.coarse == coarse.face(2*2 + 1, false));
       auto& fine_con = con.connection(0);
       REQUIRE(fine_con.direction().i_dim[0] == 0);
       REQUIRE(fine_con.direction().i_dim[1] == 2);
       REQUIRE(&fine_con.element(0) == &elem0);
       REQUIRE(&fine_con.element(1) == &coarse);
-      REQUIRE(fine_con.state(0, false) == elem0.faces[2*0 + 1]);
+      REQUIRE(fine_con.state(0, false) == elem0.face(2*0 + 1, false));
       REQUIRE(fine_con.state(1, false) == con.refined_face.fine[0]);
       REQUIRE(&elem0.vertex(4) == &coarse.vertex(1));
       REQUIRE(&elem0.vertex(5) == &coarse.vertex(5));

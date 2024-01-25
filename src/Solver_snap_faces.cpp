@@ -92,7 +92,7 @@ void hexed::Solver::snap_faces()
               }
               Mat<> lrow = to_lob*row;
               for (int i_sign = 0; i_sign < 2; ++i_sign) {
-                lrow(i_sign*(lob.row_size - 1)) = con.element().faces[2*j_dim + i_sign][2*params.n_var*params.n_qpoint()/params.row_size + ind.i_face_qpoint()];
+                lrow(i_sign*(lob.row_size - 1)) = con.element().face(2*j_dim + i_sign, true)[ind.i_face_qpoint()];
               }
               row = from_lob*lrow;
               for (int i_node = 0; i_node < params.row_size; ++i_node) {

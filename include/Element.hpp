@@ -41,11 +41,11 @@ class Element : public Kernel_element
   int data_size;
   Eigen::VectorXd data;
   Eigen::VectorXd vertex_data;
+  std::array<double*, 6> faces; //!< layout: [2*i_dim + face_sign][i_var][i_qpoint]
 
   public:
   std::array<int, 6> face_record; //!< for algorithms to book-keep information related to faces
   //! Pointer to state data at faces. Must be populated by user
-  std::array<double*, 6> faces; //!< layout: [2*i_dim + face_sign][i_var][i_qpoint]
   double uncertainty = 0; //!< refinement algorithms should set this value to some uncertainty metric
   static constexpr bool is_deformed = false; //!< is this `Element` subclass deformed?
   int record = 0; //!< for algorithms to book-keep general information
@@ -109,6 +109,8 @@ class Element : public Kernel_element
   double& vertex_elwise_av(int i_vertex);
   double& vertex_fix_admis_coef(int i_vertex);
   void set_needs_smooth(bool); //!< sets the `Vertex::Transferable_ptr::needs_smooth` of the vertices
+  void set_face(int i_face, double* data);
+  bool is_connected(int i_face);
 
   double* state() override;
   double* residual_cache() override;

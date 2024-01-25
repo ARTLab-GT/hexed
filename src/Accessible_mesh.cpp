@@ -762,7 +762,7 @@ void Accessible_mesh::connect_new(int start_at)
     if (elem.tree) {
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         for (int sign = 0; sign < 2; ++sign) {
-          if (!elem.faces[2*i_dim + sign]) { // if this face hasn't been connected already
+          if (!elem.is_connected(2*i_dim + sign)) { // if this face hasn't been connected already
             Eigen::VectorXi direction = Eigen::VectorXi::Zero(nd);
             direction(i_dim) = math::sign(sign);
             auto neighbors = elem.tree->find_neighbors(direction);

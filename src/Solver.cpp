@@ -303,7 +303,7 @@ void Solver::calc_jacobian()
     auto dir = ref.direction();
     int i_face = 2*dir.i_dim[rev] + dir.face_sign[rev];
     double* nrml = elem.face_normal(i_face);
-    double* state = elem.faces[i_face];
+    double* state = elem.face(i_face, false);
     for (int i_data = 0; i_data < n_dim*nfq; ++i_data) {
       nrml[i_data] = state[i_data];
     }
@@ -705,7 +705,7 @@ void Solver::set_uncert_surface_rep(int bc_sn)
           // extrapolate the reference level normal to the wall surface
           // because only at the wall surface is the reference level normal the same as the wall normal
           // and then write that back to the whole face
-          Eigen::Map<Mat<dyn, dyn>> face(elem.faces[i_face], nfq, nd);
+          Eigen::Map<Mat<dyn, dyn>> face(elem.face(i_face, false), nfq, nd);
           int i_dim_extrap = (nd == 3) ? i_dim > 3 - i_dim - i_face/2 : 0;
           for (int j_dim = 0; j_dim < nd; ++j_dim) {
             Mat<dyn, dyn> b = Mat<>::Ones(params.row_size)*bound(positive, all);
@@ -754,7 +754,7 @@ void Solver::set_uncert_surface_rep(int bc_sn)
     if (elem.record/(2*nd) == 1) {
       for (int i_face = 0; i_face < 2*nd; ++i_face) {
         if (i_face/2 != (elem.record - 2*nd)/2) {
-          Eigen::Map<Mat<dyn, dyn>> face(elem.faces[i_face], nfq, nd);
+          Eigen::Map<Mat<dyn, dyn>> face(elem.face(i_face, false), nfq, nd);
           Mat<> norm = face.rowwise().norm();
           elem.uncertainty += std::sqrt(norm.dot(weights.asDiagonal()*norm));
         }
@@ -900,7 +900,7 @@ bool Solver::is_admissible()
     bool elem_admis = true;
     elem_admis = elem_admis && hexed::thermo::admissible(elem.stage(0), nd, nq);
     for (int i_face = 0; i_face < params.n_dim*2; ++i_face) {
-      elem_admis = elem_admis && hexed::thermo::admissible(elem.faces[i_face], nd, nq/rs);
+      elem_admis = elem_admis && hexed::thermo::admissible(elem.face(i_face, false), nd, nq/rs);
     }
     if (!elem_admis) elem.record = 1;
     admiss = admiss && elem_admis;

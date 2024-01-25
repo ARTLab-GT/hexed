@@ -187,6 +187,8 @@ void Element::set_needs_smooth(bool value)
   }
 }
 
+void Element::set_face(int i_face, double* data) {faces[i_face] = data;}
+bool Element::is_connected(int i_face) {return faces[i_face];}
 double* Element::state() {return stage(0);}
 double* Element::residual_cache() {return stage(1);}
 double* Element::face(int i_face, bool is_ldg) {return faces[i_face] + is_ldg*2*params.n_dof()/params.row_size;}

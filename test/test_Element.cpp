@@ -22,7 +22,7 @@ TEST_CASE("Element")
   }
   for (int i_face = 0; i_face < 6; ++i_face) {
     REQUIRE(element.face_record[i_face] == 0);
-    REQUIRE(element.faces[i_face] == nullptr);
+    REQUIRE(!element.is_connected(i_face));
   }
   for (int i_dof = 0; i_dof < n_dof; ++i_dof) element.stage(0)[i_dof] = 1.2;
   for (int i_dof = 0; i_dof < n_dof; ++i_dof) REQUIRE(element.stage(3)[i_dof] == 0.);
@@ -139,14 +139,14 @@ TEST_CASE("Element")
   {
     hexed::Equidistant basis(6);
     double faces[6][5*36];
-    for (int i_face = 0; i_face < 6; ++i_face) element.faces[i_face] = faces[i_face];
+    for (int i_face = 0; i_face < 6; ++i_face) element.set_face(i_face, faces[i_face]);
     element.set_jacobian(basis);
-    REQUIRE(element.faces[0][0] == Catch::Approx(1.));
-    REQUIRE(element.faces[0][1] == Catch::Approx(1.));
-    REQUIRE(element.faces[0][36] == Catch::Approx(0.));
-    REQUIRE(element.faces[1][0] == Catch::Approx(1.));
-    REQUIRE(element.faces[2][0] == Catch::Approx(0.));
-    REQUIRE(element.faces[2][1*36] == Catch::Approx(1.));
-    REQUIRE(element.faces[2][2*36] == Catch::Approx(0.));
+    REQUIRE(element.face(0, false)[0] == Catch::Approx(1.));
+    REQUIRE(element.face(0, false)[1] == Catch::Approx(1.));
+    REQUIRE(element.face(0, false)[36] == Catch::Approx(0.));
+    REQUIRE(element.face(1, false)[0] == Catch::Approx(1.));
+    REQUIRE(element.face(2, false)[0] == Catch::Approx(0.));
+    REQUIRE(element.face(2, false)[1*36] == Catch::Approx(1.));
+    REQUIRE(element.face(2, false)[2*36] == Catch::Approx(0.));
   }
 }

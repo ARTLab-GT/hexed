@@ -63,8 +63,8 @@ TEST_CASE("Accessible_mesh")
     mesh.connect_cartesian(0, {sn1, sn0}, {2});
     auto& con = mesh.cartesian().face_connections()[0];
     REQUIRE(con.direction().i_dim == 2);
-    REQUIRE(con.state(0, false) == mesh.element(0, false, sn1).faces[2*2 + 1]);
-    REQUIRE(con.state(1, false) == mesh.element(0, false, sn0).faces[2*2 + 0]);
+    REQUIRE(con.state(0, false) == mesh.element(0, false, sn1).face(2*2 + 1, false));
+    REQUIRE(con.state(1, false) == mesh.element(0, false, sn0).face(2*2 + 0, false));
     auto& elem_con = mesh.cartesian().element_connections()[0];
     REQUIRE(&elem_con.element(0) == &mesh.element(0, false, sn1));
     REQUIRE(&elem_con.element(1) == &mesh.element(0, false, sn0));
@@ -75,8 +75,8 @@ TEST_CASE("Accessible_mesh")
     mesh.connect_cartesian(3, {sn2, sn3}, {1}, {true, false});
     auto& con = mesh.cartesian().face_connections()[0];
     REQUIRE(con.direction().i_dim == 1);
-    REQUIRE(con.state(0, false) == mesh.element(3,  true, sn2).faces[1*2 + 1]);
-    REQUIRE(con.state(1, false) == mesh.element(3, false, sn3).faces[1*2 + 0]);
+    REQUIRE(con.state(0, false) == mesh.element(3,  true, sn2).face(1*2 + 1, false));
+    REQUIRE(con.state(1, false) == mesh.element(3, false, sn3).face(1*2 + 0, false));
   }
 
   SECTION("refined face connection")
@@ -87,14 +87,14 @@ TEST_CASE("Accessible_mesh")
     {
       mesh.connect_hanging(1, car0, {def0, def1, def2, def3}, {{2, 2}, {1, 0}}, false, {true, true, true, true});
       auto& ref_face {mesh.cartesian().refined_faces()[0]};
-      REQUIRE(ref_face.coarse == mesh.element(1, false, car0).faces[2*2 + 1]);
+      REQUIRE(ref_face.coarse == mesh.element(1, false, car0).face(2*2 + 1, false));
     }
     SECTION("deformed")
     {
       int coarse = mesh.add_element(1, true, {0, 0});
       mesh.connect_hanging(1, coarse, {def0, def1, def2, def3}, {{1, 0}, {1, 0}}, true, {true, true, true, true});
       auto& ref_face {mesh.deformed().refined_faces()[0]};
-      REQUIRE(ref_face.coarse == mesh.element(1, true, coarse).faces[1*2 + 1]);
+      REQUIRE(ref_face.coarse == mesh.element(1, true, coarse).face(1*2 + 1, false));
     }
   }
 
@@ -110,8 +110,8 @@ TEST_CASE("Accessible_mesh")
     REQUIRE(con.direction().i_dim[1] == 0);
     REQUIRE(con.direction().face_sign[0] == 0);
     REQUIRE(con.direction().face_sign[1] == 1);
-    REQUIRE(con.state(0, false) == mesh.element(3, true, sn4).faces[1*2 + 0]);
-    REQUIRE(con.state(1, false) == mesh.element(3, true, sn2).faces[0*2 + 1]);
+    REQUIRE(con.state(0, false) == mesh.element(3, true, sn4).face(1*2 + 0, false));
+    REQUIRE(con.state(1, false) == mesh.element(3, true, sn2).face(0*2 + 1, false));
   }
 
   SECTION("boundary conditions")
@@ -127,7 +127,7 @@ TEST_CASE("Accessible_mesh")
         // check that it got the right face
         auto& bc_cons {mesh.cartesian().boundary_connections()};
         REQUIRE(bc_cons.size() == 1);
-        REQUIRE(bc_cons[0].inside_face(false) == mesh.element(0, 0, sn1).faces[2*1 + 0]);
+        REQUIRE(bc_cons[0].inside_face(false) == mesh.element(0, 0, sn1).face(2*1 + 0, false));
         // check that the boundary connection is in the deformed connection sequence
         auto& cons = mesh.deformed().face_connections();
         REQUIRE(cons.size() == 1);
@@ -183,10 +183,10 @@ TEST_CASE("Accessible_mesh")
     for (int i_con = 0; i_con < cons.size(); ++i_con) {
       auto& con = cons[i_con];
       // is this the connection between sn1 and sn0?
-      if (   (con.state(0, false) == mesh.element(0, false, sn1).faces[0*2 + 1])
-          && (con.state(1, false) == mesh.element(0, false, sn0).faces[0*2 + 0])) ++count0;
+      if (   (con.state(0, false) == mesh.element(0, false, sn1).face(0*2 + 1, false))
+          && (con.state(1, false) == mesh.element(0, false, sn0).face(0*2 + 0, false))) ++count0;
       // is this the connection between def3 and car0 (or rather, the fine mortar face involved in that connection)?
-      if (   (con.state(1, false) == mesh.element(2, true, def3).faces[2*2 + 0])
+      if (   (con.state(1, false) == mesh.element(2, true, def3).face(2*2 + 0, false))
           && (con.state(0, false) == ref_face.fine[3])) ++count1;
     }
     REQUIRE(count0 == 1);

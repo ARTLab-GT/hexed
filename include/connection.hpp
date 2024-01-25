@@ -107,7 +107,7 @@ class Element_face_connection : public Element_connection, public Face_connectio
   : Face_connection<element_t>{elements[0]->storage_params()}, dir{con_dir}, elems{elements}
   {
     for (int i_side : {0, 1}) {
-      elements[i_side]->faces[dir.i_face(i_side)] = Face_connection<element_t>::state(i_side, false);
+      elements[i_side]->set_face(dir.i_face(i_side), Face_connection<element_t>::state(i_side, false));
     }
     auto inds = vertex_inds(elements[0]->storage_params().n_dim, dir);
     // cppcheck-suppress syntaxError
@@ -121,7 +121,7 @@ class Element_face_connection : public Element_connection, public Face_connectio
   virtual ~Element_face_connection()
   {
     for (int i_side : {0, 1}) {
-      elems[i_side]->faces[dir.i_face(i_side)] = nullptr;
+      elems[i_side]->set_face(dir.i_face(i_side), nullptr);
     }
     disconnect_normal();
   }
@@ -172,11 +172,11 @@ class Refined_connection
     Fine_connection(Refined_connection& r, element_t& f)
     : Face_connection<element_t>{r.params}, ref_con{r}, fine_elem{f}
     {
-      f.faces[ref_con.dir.i_face(!ref_con.rev)] = Face_connection<element_t>::state(!ref_con.rev, false);
+      f.set_face(ref_con.dir.i_face(!ref_con.rev), Face_connection<element_t>::state(!ref_con.rev, false));
     }
     virtual ~Fine_connection()
     {
-      fine_elem.faces[ref_con.dir.i_face(!ref_con.rev)] = nullptr;
+      fine_elem.set_face(ref_con.dir.i_face(!ref_con.rev), nullptr);
     }
     virtual Con_dir<element_t> direction() {return ref_con.direction();}
     virtual element_t& element(int i_side) {return (i_side != ref_con.rev) ? fine_elem : ref_con.c;}
@@ -227,7 +227,8 @@ class Refined_connection
     matcher{to_elementstar(fine), def_dir.i_dim[!reverse_order], def_dir.face_sign[!reverse_order], str}
   {
     refined_face.stretch = coarse_stretch();
-    coarse->faces[dir.i_face(rev)] = refined_face.coarse = coarse_state();
+    refined_face.coarse = coarse_state();
+    coarse->set_face(dir.i_face(rev), coarse_state());
     int nd = params.n_dim;
     n_fine = params.n_vertices()/2;
     bool any_str = false;
@@ -264,7 +265,7 @@ class Refined_connection
   Refined_connection& operator=(const Refined_connection&) = delete;
   virtual ~Refined_connection()
   {
-    c.faces[dir.i_face(rev)] = nullptr;
+    c.set_face(dir.i_face(rev), nullptr);
     disconnect_normal();
   }
   Con_dir<element_t> direction() {return dir;}
@@ -349,13 +350,13 @@ class Typed_bound_connection : public Boundary_connection
     cache{Mat<>::Zero(2*state_size)}
   {
     connect_normal();
-    elem.faces[direction().i_face(0)] = state(0, false);
+    elem.set_face(direction().i_face(0), state(0, false));
   }
   Typed_bound_connection(const Typed_bound_connection&) = delete; //!< can only have one `Typed_bound_connection` per face, so delete copy semantics
   Typed_bound_connection& operator=(const Typed_bound_connection&) = delete;
   virtual ~Typed_bound_connection()
   {
-    elem.faces[direction().i_face(0)] = nullptr;
+    elem.set_face(direction().i_face(0), nullptr);
     disconnect_normal();
   }
   Storage_params storage_params() override {return params;}

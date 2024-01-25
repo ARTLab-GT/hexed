@@ -95,7 +95,7 @@ TEST_CASE("Deformed_element")
     elem0.vertex(3).pos = {0.8*0.2, 0.8*0.2, 0.};
     elem1.node_adjustments()[6 + 1] = 0.1;
     // jacobian is correct
-    for (int i_face = 0; i_face < 6; ++i_face) elem0.faces[i_face] = faces[i_face];
+    for (int i_face = 0; i_face < 6; ++i_face) elem0.set_face(i_face, faces[i_face]);
     elem0.set_jacobian(basis);
     REQUIRE(elem0.jacobian(0, 0, 0) == Catch::Approx(1.));
     REQUIRE(elem0.jacobian(0, 1, 0) == Catch::Approx(0.));
@@ -110,7 +110,7 @@ TEST_CASE("Deformed_element")
     REQUIRE(elem0.jacobian(1, 0, 8) == Catch::Approx(-0.2));
     REQUIRE(elem0.jacobian(1, 1, 8) == Catch::Approx(0.8));
     REQUIRE(elem0.jacobian_determinant(6) == Catch::Approx(.8));
-    for (int i_face = 0; i_face < 6; ++i_face) elem1.faces[i_face] = faces[i_face];
+    for (int i_face = 0; i_face < 6; ++i_face) elem1.set_face(i_face, faces[i_face]);
     elem1.set_jacobian(basis);
     REQUIRE(elem1.jacobian(0, 0, 5) == Catch::Approx(1.));
     REQUIRE(elem1.jacobian(0, 1, 5) == Catch::Approx(0.));
@@ -118,10 +118,10 @@ TEST_CASE("Deformed_element")
     REQUIRE(elem1.jacobian(1, 1, 5) == Catch::Approx(0.9));
     // surface normal is written to face data
     elem0.set_jacobian(basis);
-    REQUIRE(elem0.faces[0][0] == Catch::Approx(1.));
-    REQUIRE(elem0.faces[0][row_size] == Catch::Approx(0.));
-    REQUIRE(elem0.faces[3][2] == Catch::Approx(.2));
-    REQUIRE(elem0.faces[3][row_size + 2] == Catch::Approx(.8));
+    REQUIRE(elem0.face(0, false)[0] == Catch::Approx(1.));
+    REQUIRE(elem0.face(0, false)[row_size] == Catch::Approx(0.));
+    REQUIRE(elem0.face(3, false)[2] == Catch::Approx(.2));
+    REQUIRE(elem0.face(3, false)[row_size + 2] == Catch::Approx(.8));
     // check time step scale
     REQUIRE(elem0.vertex_time_step_scale(0) == .2/2);
     REQUIRE(elem0.vertex_time_step_scale(3) == Catch::Approx(.2/2*(.8*.8 - .2*.2)/std::sqrt(.8*.8 + .2*.2)));
@@ -129,7 +129,7 @@ TEST_CASE("Deformed_element")
     hexed::Storage_params params3 {2, 5, 3, row_size};
     hexed::Deformed_element elem2 {params3, {0, 0, 0}, 0.2};
     elem2.vertex(7).pos = {0.8*0.2, 0.8*0.2, 0.8*0.2};
-    for (int i_face = 0; i_face < 6; ++i_face) elem2.faces[i_face] = faces[i_face];
+    for (int i_face = 0; i_face < 6; ++i_face) elem2.set_face(i_face, faces[i_face]);
     elem2.set_jacobian(basis);
     REQUIRE(elem2.jacobian(0, 0,  0) == 1.);
     REQUIRE(elem2.jacobian(0, 0, 26) == Catch::Approx( 0.8));
