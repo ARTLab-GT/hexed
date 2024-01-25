@@ -36,7 +36,7 @@ class Navier_stokes
   public:
   Navier_stokes() = delete;
 
-  template <int n_dim>
+  template <int n_dim, int row_size>
   class Pde
   {
     bool _laplacian;
@@ -260,7 +260,7 @@ class Navier_stokes
  * represents the nonuniform linear advection equation
  * used in the smoothness-based artificial viscosity scheme
  */
-template <int n_dim>
+template <int n_dim, int row_size>
 class Advection
 {
   public:
@@ -346,7 +346,7 @@ class Advection
  * represents the uniform linear diffusion equation
  * used in the smoothness-based artificial viscosity scheme
  */
-template <int n_dim>
+template <int n_dim, int row_size>
 class Smooth_art_visc
 {
   public:
@@ -428,7 +428,7 @@ class Smooth_art_visc
  * represents the uniform linear diffusion equation
  * used for fixing thermodynamic admissibility
  */
-template <int n_dim>
+template <int n_dim, int row_size>
 class Fix_therm_admis
 {
   public:

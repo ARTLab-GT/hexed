@@ -15,7 +15,7 @@ namespace hexed
 
 //! class to contain all the kernels in a scope
 //! parameterized by the type of element (deformed/cartesian) and the PDE
-template <template<int> typename Pde_templ, bool is_deformed>
+template <template<int, int> typename Pde_templ, bool is_deformed>
 class Spatial
 {
   public:
@@ -28,7 +28,7 @@ class Spatial
   template <int n_dim, int row_size>
   class Write_face : public Kernel<Kernel_element&>
   {
-    using Pde = Pde_templ<n_dim>;
+    using Pde = Pde_templ<n_dim, row_size>;
     Pde _eq;
     const Eigen::Matrix<double, 2, row_size> boundary;
 
@@ -77,7 +77,7 @@ class Spatial
   template <int n_dim, int row_size>
   class Local : public Kernel<Kernel_element&>
   {
-    using Pde = Pde_templ<n_dim>;
+    using Pde = Pde_templ<n_dim, row_size>;
     const Pde _eq;
     static constexpr int n_qpoint = math::pow(row_size, n_dim);
     Derivative<row_size> derivative;
@@ -297,7 +297,7 @@ class Spatial
   template <int n_dim, int row_size>
   class Reconcile_ldg_flux : public Kernel<Kernel_element&>
   {
-    using Pde = Pde_templ<n_dim>;
+    using Pde = Pde_templ<n_dim, row_size>;
     const Pde _eq;
     static constexpr int n_qpoint = math::pow(row_size, n_dim);
     Derivative<row_size> derivative;
@@ -385,7 +385,7 @@ class Spatial
   template <int n_dim, int row_size>
   class Neighbor : public Kernel<Kernel_connection&>
   {
-    using Pde = Pde_templ<n_dim>;
+    using Pde = Pde_templ<n_dim, row_size>;
     const Pde _eq;
     static constexpr int n_fqpoint = math::pow(row_size, n_dim - 1);
     const int _stage;
@@ -493,7 +493,7 @@ class Spatial
   template <int n_dim, int row_size>
   class Neighbor_reconcile : public Kernel<Kernel_connection&>
   {
-    using Pde = Pde_templ<n_dim>;
+    using Pde = Pde_templ<n_dim, row_size>;
     static constexpr int n_fqpoint = math::pow(row_size, n_dim - 1);
 
     public:
@@ -547,7 +547,7 @@ class Spatial
   template <int n_dim, int row_size>
   class Max_dt : public Kernel<Kernel_element&, double>
   {
-    using Pde = Pde_templ<n_dim>;
+    using Pde = Pde_templ<n_dim, row_size>;
     const Pde _eq;
     double max_cfl_c;
     double max_cfl_d;

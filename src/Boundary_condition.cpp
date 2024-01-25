@@ -83,7 +83,7 @@ template <int n_dim>
 Mat<> apply_char(Mat<> state, Mat<> normal, int sign, Mat<> inside, Mat<> outside)
 {
   // compute characteristics
-  typename pde::Navier_stokes<>::Pde<n_dim>::Characteristics ch(state, normal);
+  typename pde::Navier_stokes<>::Pde<n_dim, 2>::Characteristics ch(state, normal);
   auto eigvals = ch.eigvals();
   auto decomp = ch.decomp(inside);
   auto fs_decomp = ch.decomp(outside);
