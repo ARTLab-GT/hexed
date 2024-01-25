@@ -33,6 +33,11 @@ void compute_restrict(Kernel_mesh mesh, bool scale, bool offset)
   (*kernel_factory<Restrict_refined>(mesh.n_dim, mesh.row_size, mesh.basis, scale, offset))(mesh.ref_faces);
 }
 
+std::unique_ptr<Face_permutation_dynamic> face_permutation(int n_dim, int row_size, Connection_direction dir, double* data)
+{
+  return kernel_factory<Spatial<pde::Navier_stokes<false>::Pde, true>::Face_permutation>(n_dim, row_size, dir, data);
+}
+
 void compute_write_face(Kernel_mesh mesh)
 {
   (*kernel_factory<Spatial<pde::Navier_stokes<false>::Pde, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis))(mesh.elems);
