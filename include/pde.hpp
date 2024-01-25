@@ -264,37 +264,38 @@ class Navier_stokes
 template <int n_dim, int row_size>
 class Advection
 {
+  static constexpr int _n_adv = row_size;
+  const double _advect_length;
+  Mat<row_size> _nodes;
+
   public:
   static constexpr bool has_diffusion = false;
   static constexpr bool has_convection = true;
   static constexpr bool has_source = true;
-  static constexpr int n_state = n_dim + 1;
-  static constexpr int n_extrap = n_dim + 1;
-  static constexpr int n_update = 1;
-  const int _i_node;
-  const double _advect_length;
-  const int _adv_var;
-  Mat<row_size> _nodes;
+  static constexpr int n_state = n_dim + _n_adv;
+  static constexpr int n_extrap = n_dim + _n_adv;
+  static constexpr int n_update = _n_adv;
 
-  Advection(int i_node, double advect_length)
-  : _i_node{i_node}, _advect_length{advect_length}, _adv_var{advection_offset(n_dim) + _i_node},
-   _nodes{2*Gauss_legendre(row_size).nodes() - Mat<row_size>::Ones()}
+  Advection(double advect_length)
+  : _advect_length{advect_length}, _nodes{2*Gauss_legendre(row_size).nodes() - Mat<row_size>::Ones()}
   {}
 
   Mat<n_extrap> fetch_extrap(int stride, const double* data) const
   {
     Mat<n_extrap> extrap;
     for (int i_var = 0; i_var < n_dim; ++i_var) extrap(i_var) = data[i_var*stride];
-    extrap(n_dim) = data[_adv_var*stride];
+    for (int i_adv = 0; i_adv < _n_adv; ++i_adv) extrap(n_dim + i_adv) = data[(advection_offset(n_dim) + i_adv)*stride];
     return extrap;
   }
 
   void write_update(Mat<n_update> update, int stride, double* data, bool is_critical) const
   {
     double pseudo = 1 + data[tss_offset(n_dim)*stride]*2/_advect_length;
-    double& d = data[_adv_var*stride];
-    if (is_critical) d = (d + update(0))/pseudo;
-    else d += update(0)/pseudo;
+    for (int i_adv = 0; i_adv < _n_adv; ++i_adv) {
+      double& d = data[(advection_offset(n_dim) + i_adv)*stride];
+      if (is_critical) d = (d + update(i_adv))/pseudo;
+      else d += update(i_adv)/pseudo;
+    }
   }
 
   template <int n_dim_flux>
@@ -312,8 +313,8 @@ class Advection
     Mat<n_update> update_state;
     void fetch_extrap_state(int stride, const double* data)
     {
-      for (int i_var = 0; i_var < n_dim + 1; ++i_var) state(i_var) = data[i_var*stride];
-      update_state(0) = state(n_dim);
+      for (int i_var = 0; i_var < n_extrap; ++i_var) state(i_var) = data[i_var*stride];
+      for (int i_adv = 0; i_adv < _n_adv; ++i_adv) update_state(i_adv) = state(n_dim + i_adv);
     }
 
     Mat<n_dim, n_dim_flux> normal = Mat<n_dim, n_dim_flux>::Identity();
@@ -325,14 +326,16 @@ class Advection
         for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
           nrml_veloc += state(j_dim)*normal(j_dim, i_dim);
         }
-        flux_conv(0, i_dim) = _eq._nodes(_eq._i_node)*nrml_veloc*state(n_dim);
+        for (int i_adv = 0; i_adv < _n_adv; ++i_adv) {
+          flux_conv(i_adv, i_dim) = _eq._nodes(i_adv)*nrml_veloc*state(n_dim + i_adv);
+        }
       }
     }
 
     Mat<n_update> source;
     void compute_source()
     {
-      source(0) = 2/_eq._advect_length;
+      source.setConstant(2/_eq._advect_length);
     }
 
     double char_speed;

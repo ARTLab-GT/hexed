@@ -35,8 +35,8 @@ void Flow_bc::apply_advection(Boundary_face& bf)
     }
   }
   // set advected scalar to initial value
-  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-    gh_f[nd*nq + i_qpoint] = 2. - in_f[nd*nq + i_qpoint];
+  for (int i_adv = 0; i_adv < params.n_advection(params.row_size)*nq; ++i_adv) {
+    gh_f[nd*nq + i_adv] = 2. - in_f[nd*nq + i_adv];
   }
 }
 
@@ -362,7 +362,9 @@ void Nonpenetration::apply_advection(Boundary_face& bf)
     for (int i_dim = 0; i_dim < nd; ++i_dim) {
       gh_f[i_dim*nfq + i_qpoint] = veloc(i_dim);
     }
-    gh_f[nd*nfq + i_qpoint] = in_f[nd*nfq + i_qpoint];
+    for (int i_adv = 0; i_adv < params.n_advection(params.row_size); ++i_adv) {
+      gh_f[(nd + i_adv)*nfq + i_qpoint] = in_f[(nd + i_adv)*nfq + i_qpoint];
+    }
   }
 }
 
@@ -438,8 +440,10 @@ void No_slip::apply_advection(Boundary_face& bf)
     }
   }
   // don't change advected scalar
-  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-    gh_f[nd*nq + i_qpoint] = in_f[nd*nq + i_qpoint];
+  for (int i_adv = 0; i_adv < params.n_advection(params.row_size); ++i_adv) {
+    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+      gh_f[(nd + i_adv)*nq + i_qpoint] = in_f[(nd + i_adv)*nq + i_qpoint];
+    }
   }
 }
 

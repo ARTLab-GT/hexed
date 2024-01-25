@@ -437,38 +437,36 @@ void Solver::update_art_visc_smoothness(double advect_length)
     false,
     false,
   };
-  max_dt_advection(_kernel_mesh, opts, adv_safety, 1., true, 0, advect_length);
+  max_dt_advection(_kernel_mesh, opts, adv_safety, 1., true, advect_length);
 
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
   // perform pseudotime iteration
   for (int iter = 0; iter < _namespace->lookup<int>("av_advect_iters").value(); ++iter)
   {
-    // loop through nodes of projection basis
-    for (int i_node = 0; i_node < rs; ++i_node) {
-      sw_adv.children.at("setup").stopwatch.start();
-      // evaluate advection operator
-      compute_write_face_advection(_kernel_mesh, i_node);
-      compute_prolong(_kernel_mesh);
-      sw_adv.children.at("setup").stopwatch.pause();
-      for (int i = 0; i < 2; ++i) {
-        sw_adv.children.at("BCs").stopwatch.start();
-        auto& bc_cons {acc_mesh.boundary_connections()};
-        #pragma omp parallel for
-        for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-          int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-          acc_mesh.boundary_condition(bc_sn).flow_bc->apply_advection(bc_cons[i_con]);
-        }
-        sw_adv.children.at("BCs").stopwatch.pause();
-        sw_adv.children.at("BCs").work_units_completed += acc_mesh.elements().size();
-        opts.i_stage = i;
-        compute_advection(_kernel_mesh, opts, i_node, advect_length);
+    sw_adv.children.at("setup").stopwatch.start();
+    // evaluate advection operator
+    compute_write_face_advection(_kernel_mesh);
+    compute_prolong(_kernel_mesh);
+    compute_prolong(_kernel_mesh, false, true);
+    sw_adv.children.at("setup").stopwatch.pause();
+    for (int i = 0; i < 2; ++i) {
+      sw_adv.children.at("BCs").stopwatch.start();
+      auto& bc_cons {acc_mesh.boundary_connections()};
+      #pragma omp parallel for
+      for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+        int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+        acc_mesh.boundary_condition(bc_sn).flow_bc->apply_advection(bc_cons[i_con]);
       }
-      sw_adv.children.at("cartesian").work_units_completed += acc_mesh.cartesian().elements().size();
-      sw_adv.children.at("deformed" ).work_units_completed += acc_mesh.deformed ().elements().size();
+      sw_adv.children.at("BCs").stopwatch.pause();
+      sw_adv.children.at("BCs").work_units_completed += acc_mesh.elements().size();
+      opts.i_stage = i;
+      compute_advection(_kernel_mesh, opts, advect_length);
     }
-    sw_adv.children.at("setup").work_units_completed += elements.size();
-    sw_adv.children.at("update").work_units_completed += elements.size();
+    sw_adv.children.at("cartesian").work_units_completed += acc_mesh.cartesian().elements().size();
+    sw_adv.children.at("deformed" ).work_units_completed += acc_mesh.deformed ().elements().size();
   }
+  sw_adv.children.at("setup").work_units_completed += elements.size();
+  sw_adv.children.at("update").work_units_completed += elements.size();
   stopwatch.children.at("set art visc").children.at("advection").stopwatch.pause();
   stopwatch.children.at("set art visc").children.at("advection").work_units_completed += elements.size();
   // compute projection onto Legendre polynomial
