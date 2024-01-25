@@ -13,6 +13,11 @@
 namespace hexed::pde
 {
 
+constexpr int tss_offset(int n_dim) {return n_dim + 2;}
+constexpr int bulk_av_offset(int n_dim) {return n_dim + 3;}
+constexpr int forcing_offset(int n_dim) {return n_dim + 5;}
+constexpr int advection_offset(int n_dim) {return n_dim + 9;}
+
 /*!
  * contains a PDE class representing the Naver-Stokes equations
  * with template options to specify the details of the equation set
@@ -73,7 +78,7 @@ class Navier_stokes
       void fetch_state(int stride, const double* data)
       {
         for (int i_var = 0; i_var < n_dim + 2; ++i_var) state(i_var) = data[i_var*stride];
-        state(n_dim + 2) = data[(2*(n_dim + 2) + 1)*stride];
+        state(n_dim + 2) = data[bulk_av_offset(n_dim)*stride];
       }
       Mat<n_update> update_state;
       void fetch_extrap_state(int stride, const double* data)
@@ -271,7 +276,7 @@ class Advection
   const int _adv_var;
 
   Advection(int i_node, double advect_length, double node)
-  : _i_node{i_node}, _advect_length{advect_length}, _node{node}, _adv_var{2*(n_dim + 2) + 3 + 4 + _i_node}
+  : _i_node{i_node}, _advect_length{advect_length}, _node{node}, _adv_var{advection_offset(n_dim) + _i_node}
   {}
 
   Mat<n_extrap> fetch_extrap(int stride, const double* data) const
@@ -284,7 +289,7 @@ class Advection
 
   void write_update(Mat<n_update> update, int stride, double* data, bool is_critical) const
   {
-    double pseudo = 1 + data[2*(n_dim + 2)*stride]*2/_advect_length;
+    double pseudo = 1 + data[tss_offset(n_dim)*stride]*2/_advect_length;
     double& d = data[_adv_var*stride];
     if (is_critical) d = (d + update(0))/pseudo;
     else d += update(0)/pseudo;
@@ -351,26 +356,25 @@ class Smooth_art_visc
   static constexpr int n_state = 4;
   static constexpr int n_extrap = 3;
   static constexpr int n_update = 3;
-  const int _forcing_start;
   const double _diff_time;
   const double _cheby;
 
   Smooth_art_visc(double diff_time, double chebyshev_step)
-  : _forcing_start{2*(n_dim + 2) + 3}, _diff_time{diff_time}, _cheby{chebyshev_step}
+  : _diff_time{diff_time}, _cheby{chebyshev_step}
   {}
 
   Mat<n_extrap> fetch_extrap(int stride, const double* data) const
   {
     Mat<n_extrap> extrap;
-    for (int i_var = 0; i_var < n_extrap; ++i_var) extrap(i_var) = data[(_forcing_start + 1 + i_var)*stride];
+    for (int i_var = 0; i_var < n_extrap; ++i_var) extrap(i_var) = data[(forcing_offset(n_dim) + 1 + i_var)*stride];
     return extrap;
   }
 
   void write_update(Mat<n_update> update, int stride, double* data, bool critical) const
   {
-    double pseudo = 1 + data[2*(n_dim + 2)*stride]*_cheby/_diff_time;
+    double pseudo = 1 + data[tss_offset(n_dim)*stride]*_cheby/_diff_time;
     for (int i_var = 0; i_var < n_update; ++i_var) {
-      double& d = data[(_forcing_start + 1 + i_var)*stride];
+      double& d = data[(forcing_offset(n_dim) + 1 + i_var)*stride];
       d += update(i_var);
       if (critical) d /= pseudo;
     }
@@ -386,7 +390,7 @@ class Smooth_art_visc
     Mat<n_state> state;
     void fetch_state(int stride, const double* data)
     {
-      for (int i_var = 0; i_var < n_state; ++i_var) state(i_var) = data[(_eq._forcing_start + i_var)*stride];
+      for (int i_var = 0; i_var < n_state; ++i_var) state(i_var) = data[(forcing_offset(n_dim) + i_var)*stride];
     }
     Mat<n_update> update_state;
     void fetch_extrap_state(int stride, const double* data)

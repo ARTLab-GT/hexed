@@ -113,12 +113,12 @@ void Element::set_jacobian(const Basis& basis)
 
 double* Element::stage(int i_stage)
 {
-  return data.data() + i_stage*n_dof;
+  return (i_stage > 0) ? residual_cache() + (i_stage - 1)*n_dof : state();
 }
 
 double* Element::time_step_scale()
 {
-  return data.data() + params.n_stage*params.n_dof();
+  return data.data() + params.n_dof();
 }
 
 double* Element::art_visc_coef()
@@ -185,7 +185,7 @@ void Element::set_needs_smooth(bool value)
 void Element::set_face(int i_face, double* data) {faces[i_face] = data;}
 bool Element::is_connected(int i_face) {return faces[i_face];}
 double* Element::state() {return data.data();}
-double* Element::residual_cache() {return data.data() + n_dof;}
+double* Element::residual_cache() {return data.data() + (params.n_var + 3 + params.n_forcing + params.row_size)*params.n_qpoint();}
 double* Element::face(int i_face, bool is_ldg) {return faces[i_face] + is_ldg*params.n_dof()/params.row_size;}
 bool Element::deformed() const {return false;}
 double* Element::reference_level_normals() {return nullptr;}
