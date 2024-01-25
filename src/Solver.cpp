@@ -432,7 +432,7 @@ void Solver::update_art_visc_smoothness(double advect_length)
     sw_adv.children.at("cartesian"),
     sw_adv.children.at("deformed" ),
     stopwatch.children.at("prolong/restrict"),
-    0.,
+    1.,
     0,
     false,
     false,
@@ -443,55 +443,31 @@ void Solver::update_art_visc_smoothness(double advect_length)
   // perform pseudotime iteration
   for (int iter = 0; iter < _namespace->lookup<int>("av_advect_iters").value(); ++iter)
   {
-    for (int sign : {-1, 1}) // do forward and backward advection separately
-    {
-      // flip direction of advection velocity
-      #pragma omp parallel for
-      for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-        double* state = elements[i_elem].state();
-        for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-          for (int i_dim = 0; i_dim < nd; ++i_dim) state[i_dim*nq + i_qpoint] *= -1;
-        }
-      }
-      // for odd row size we have to set the advection state corresponding to t~ = 0 to 1
-      if (rs%2) {
+    // loop through nodes of projection basis
+    for (int i_node = 0; i_node < rs; ++i_node) {
+      sw_adv.children.at("setup").stopwatch.start();
+      // evaluate advection operator
+      compute_write_face_advection(_kernel_mesh, i_node);
+      compute_prolong(_kernel_mesh);
+      sw_adv.children.at("setup").stopwatch.pause();
+      for (int i = 0; i < 2; ++i) {
+        sw_adv.children.at("BCs").stopwatch.start();
+        auto& bc_cons {acc_mesh.boundary_connections()};
         #pragma omp parallel for
-        for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-          double* adv = elements[i_elem].advection_state();
-          for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) adv[(rs/2)*nq + i_qpoint] = 1;
+        for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+          int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+          acc_mesh.boundary_condition(bc_sn).flow_bc->apply_advection(bc_cons[i_con]);
         }
+        sw_adv.children.at("BCs").stopwatch.pause();
+        sw_adv.children.at("BCs").work_units_completed += acc_mesh.elements().size();
+        opts.i_stage = i;
+        compute_advection(_kernel_mesh, opts, i_node, advect_length, (basis.node(i_node) - .5)*2);
       }
-      // loop through nodes of projection basis
-      for (int i_proj = rs - rs/2; i_proj < rs; ++i_proj)
-      {
-        // find out which node we're advecting to
-        int i_node = (sign > 0) ? i_proj : rs - 1 - i_proj; // if sign < 0 we are looping through the nodes backward
-        sw_adv.children.at("setup").stopwatch.start();
-        // evaluate advection operator
-        compute_write_face_advection(_kernel_mesh, i_node);
-        compute_prolong(_kernel_mesh);
-        sw_adv.children.at("setup").stopwatch.pause();
-        double dt_scaled = std::abs(basis.node(i_node) - .5)*2;
-        for (int i = 0; i < 2; ++i) {
-          sw_adv.children.at("BCs").stopwatch.start();
-          auto& bc_cons {acc_mesh.boundary_connections()};
-          #pragma omp parallel for
-          for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-            int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-            acc_mesh.boundary_condition(bc_sn).flow_bc->apply_advection(bc_cons[i_con]);
-          }
-          sw_adv.children.at("BCs").stopwatch.pause();
-          sw_adv.children.at("BCs").work_units_completed += acc_mesh.elements().size();
-          opts.dt = dt_scaled;
-          opts.i_stage = i;
-          compute_advection(_kernel_mesh, opts, i_node, advect_length, dt_scaled);
-        }
-        sw_adv.children.at("cartesian").work_units_completed += acc_mesh.cartesian().elements().size();
-        sw_adv.children.at("deformed" ).work_units_completed += acc_mesh.deformed ().elements().size();
-      }
-      sw_adv.children.at("setup").work_units_completed += elements.size();
-      sw_adv.children.at("update").work_units_completed += elements.size();
+      sw_adv.children.at("cartesian").work_units_completed += acc_mesh.cartesian().elements().size();
+      sw_adv.children.at("deformed" ).work_units_completed += acc_mesh.deformed ().elements().size();
     }
+    sw_adv.children.at("setup").work_units_completed += elements.size();
+    sw_adv.children.at("update").work_units_completed += elements.size();
   }
   stopwatch.children.at("set art visc").children.at("advection").stopwatch.pause();
   stopwatch.children.at("set art visc").children.at("advection").work_units_completed += elements.size();

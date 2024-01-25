@@ -323,14 +323,14 @@ class Advection
         for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
           nrml_veloc += state(j_dim)*normal(j_dim, i_dim);
         }
-        flux_conv(0, i_dim) = nrml_veloc*state(n_dim);
+        flux_conv(0, i_dim) = _eq._node*nrml_veloc*state(n_dim);
       }
     }
 
     Mat<n_update> source;
     void compute_source()
     {
-      source(0) = 2/(_eq._advect_length*_eq._node);
+      source(0) = 2/_eq._advect_length;
     }
 
     double char_speed;
