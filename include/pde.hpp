@@ -277,7 +277,8 @@ class Advection
   Mat<row_size> _nodes;
 
   Advection(int i_node, double advect_length)
-  : _i_node{i_node}, _advect_length{advect_length}, _adv_var{advection_offset(n_dim) + _i_node}, _nodes{Gauss_legendre(row_size).nodes()}
+  : _i_node{i_node}, _advect_length{advect_length}, _adv_var{advection_offset(n_dim) + _i_node},
+   _nodes{2*Gauss_legendre(row_size).nodes() - Mat<row_size>::Ones()}
   {}
 
   Mat<n_extrap> fetch_extrap(int stride, const double* data) const
