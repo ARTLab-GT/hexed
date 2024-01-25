@@ -33,7 +33,7 @@ TEST_CASE("Max_dt")
         }
         elements[i_elem]->time_step_scale()[1] = 0.17;
         for (int i_dof = 0; i_dof < 6; ++i_dof) {
-          elements[i_elem]->stage(0)[i_dof] = read[i_elem][i_dof];
+          elements[i_elem]->state()[i_dof] = read[i_elem][i_dof];
         }
       }
       car_elem_view elem_view {elements};
@@ -45,7 +45,7 @@ TEST_CASE("Max_dt")
       hexed::Storage_params params {3, 4, 2, 2};
       std::vector<std::unique_ptr<hexed::Element>> elements;
       elements.emplace_back(new hexed::Element {params});
-      double* read = elements.back()->stage(0);
+      double* read = elements.back()->state();
       for (int i_qpoint = 0; i_qpoint < 4; ++i_qpoint)
       {
         read[0*4 + i_qpoint] = 2.25;
@@ -72,7 +72,7 @@ TEST_CASE("Max_dt")
     double faces [6][5*4*4];
     for (int i_elem = 0; i_elem < 3; ++i_elem) {
       elems.emplace_back(new hexed::Deformed_element {params, {}, 0.3});
-      double* state = elems.back()->stage(0);
+      double* state = elems.back()->state();
       for (int i_face = 0; i_face < 6; ++i_face) elems.back()->set_face(i_face, faces[i_face]);
       elems.back()->set_jacobian(basis);
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {

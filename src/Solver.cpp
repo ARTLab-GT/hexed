@@ -337,7 +337,7 @@ void Solver::initialize(const Spacetime_func& func)
       std::vector<double> pos_vec {};
       auto state = func(elements[i_elem].position(basis, i_qpoint), status.flow_time);
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
-        elements[i_elem].stage(0)[i_var*params.n_qpoint() + i_qpoint] = state[i_var];
+        elements[i_elem].state()[i_var*params.n_qpoint() + i_qpoint] = state[i_var];
       }
     }
   }
@@ -408,12 +408,10 @@ void Solver::update_art_visc_smoothness(double advect_length)
   const int rs = params.row_size;
   auto& elements = acc_mesh.elements();
 
-  // store the current state in stage 1 (normally the time integration reference)
-  // so we can use stage 0 for solving the advection equation
   stopwatch.children.at("set art visc").children.at("initialize").stopwatch.start();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    double* state = elements[i_elem].stage(0);
+    double* state = elements[i_elem].state();
     double* rk_ref = elements[i_elem].redundant_storage();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
@@ -425,7 +423,7 @@ void Solver::update_art_visc_smoothness(double advect_length)
   // set advection velocity
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    double* state = elements[i_elem].stage(0);
+    double* state = elements[i_elem].state();
     double* rk_ref = elements[i_elem].redundant_storage();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       double scale = sqrt(2*rk_ref[nd*nq + i_qpoint]*rk_ref[(nd + 1)*nq + i_qpoint]);
@@ -462,7 +460,7 @@ void Solver::update_art_visc_smoothness(double advect_length)
       // flip direction of advection velocity
       #pragma omp parallel for
       for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-        double* state = elements[i_elem].stage(0);
+        double* state = elements[i_elem].state();
         for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
           for (int i_dim = 0; i_dim < nd; ++i_dim) state[i_dim*nq + i_qpoint] *= -1;
         }
@@ -480,7 +478,6 @@ void Solver::update_art_visc_smoothness(double advect_length)
       {
         // find out which node we're advecting to
         int i_node = (sign > 0) ? i_proj : rs - 1 - i_proj; // if sign < 0 we are looping through the nodes backward
-        // copy advection state to the scalar variables of stage 1
         sw_adv.children.at("setup").stopwatch.start();
         // evaluate advection operator
         compute_write_face_advection(_kernel_mesh, i_node);
@@ -540,7 +537,7 @@ void Solver::update_art_visc_smoothness(double advect_length)
   double us_max = advect_length*_namespace->lookup<double>("av_unscaled_max").value()*std::sqrt(2*_namespace->lookup<double>("freestream" + std::to_string(nd + 1)).value()/_namespace->lookup<double>("freestream" + std::to_string(nd)).value());
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    double* state = elements[i_elem].stage(0);
+    double* state = elements[i_elem].state();
     double* rk_ref = elements[i_elem].redundant_storage();
     double* av = elements[i_elem].art_visc_coef();
     double* forcing = elements[i_elem].art_visc_forcing();
@@ -583,12 +580,12 @@ void Solver::update_art_visc_elwise(double width, bool pde_based)
   if (pde_based) {
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      double* stage0 = elems[i_elem].stage(0);
-      double* stage1 = elems[i_elem].stage(1);
+      double* state = elems[i_elem].state();
+      double* temp_state = elems[i_elem].residual_cache();
       double elem_av = elems[i_elem].uncertainty;
       double* av = elems[i_elem].art_visc_coef();
       double* forcing = elems[i_elem].art_visc_forcing();
-      for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) stage1[i_dof] = stage0[i_dof];
+      for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) temp_state[i_dof] = state[i_dof];
       for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
         forcing[i_qpoint] = elem_av;
         forcing[params.n_qpoint() + i_qpoint] = av[i_qpoint];
@@ -597,11 +594,11 @@ void Solver::update_art_visc_elwise(double width, bool pde_based)
     diffuse_art_visc(_namespace->lookup<double>("elementwise_art_visc_diff_ratio").value()*width*width);
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      double* stage0 = elems[i_elem].stage(0);
-      double* stage1 = elems[i_elem].stage(1);
+      double* state = elems[i_elem].state();
+      double* temp_state = elems[i_elem].residual_cache();
       double* av = elems[i_elem].art_visc_coef();
       double* forcing = elems[i_elem].art_visc_forcing();
-      for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) stage0[i_dof] = stage1[i_dof];
+      for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) temp_state[i_dof] = state[i_dof]; //! \todo i don't think this is actually necessary anymore
       for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) av[i_qpoint] = forcing[params.n_qpoint() + i_qpoint];
     }
     compute_write_face(_kernel_mesh);
@@ -654,8 +651,8 @@ void Solver::set_uncert_surface_rep(int bc_sn)
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].uncertainty = 0;
     elems[i_elem].record = 0;
-    double* state = elems[i_elem].stage(0);
-    double* ref = elems[i_elem].stage(1);
+    double* state = elems[i_elem].state();
+    double* ref = elems[i_elem].residual_cache();
     for (int i_var = 0; i_var < nv; ++i_var) {
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
         ref[i_var*nq + i_qpoint] = state[i_var*nq + i_qpoint];
@@ -681,7 +678,7 @@ void Solver::set_uncert_surface_rep(int bc_sn)
     auto& elem = def_elems[i_elem];
     if (elem.record/(2*nd) == 1) { // if this element is on the boundary...
       // pick out the reference level normal vector which is pointing out of the flow domain
-      double* state = elem.stage(0);
+      double* state = elem.state();
       double* nrml = elem.reference_level_normals() + (elem.record - 2*nd)/2*nd*nq;
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
@@ -761,8 +758,8 @@ void Solver::set_uncert_surface_rep(int bc_sn)
       }
       elem.uncertainty /= 2*std::max(nd - 1, 1);
     }
-    double* state = elem.stage(0);
-    double* ref = elem.stage(1);
+    double* state = elem.state();
+    double* ref = elem.residual_cache();
     for (int i_var = 0; i_var < nv; ++i_var) {
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
         state[i_var*nq + i_qpoint] = ref[i_var*nq + i_qpoint];
@@ -898,7 +895,7 @@ bool Solver::is_admissible()
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     bool elem_admis = true;
-    elem_admis = elem_admis && hexed::thermo::admissible(elem.stage(0), nd, nq);
+    elem_admis = elem_admis && hexed::thermo::admissible(elem.state(), nd, nq);
     for (int i_face = 0; i_face < params.n_dim*2; ++i_face) {
       elem_admis = elem_admis && hexed::thermo::admissible(elem.face(i_face, false), nd, nq/rs);
     }
@@ -1292,17 +1289,17 @@ void Solver::vis_lts_constraints(std::string format, std::string name, int n_sam
     max_dt(safeties[i_term]/max_cheby, safeties[!i_term]);
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      Eigen::Map<Mat<>>(elems[i_elem].stage(1) + (params.n_dim + i_term)*nq, nq) = Eigen::Map<Mat<>>(elems[i_elem].time_step_scale(), nq);
+      Eigen::Map<Mat<>>(elems[i_elem].residual_cache() + (params.n_dim + i_term)*nq, nq) = Eigen::Map<Mat<>>(elems[i_elem].time_step_scale(), nq);
     }
   }
   // swap current state and reference state
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    Eigen::Map<Mat<>> stage0(elems[i_elem].stage(0), nf);
-    Eigen::Map<Mat<>> stage1(elems[i_elem].stage(1), nf);
-    Mat<> ref_state = stage1;
-    stage1 = stage0;
-    stage0 = ref_state;
+    Eigen::Map<Mat<>> state(elems[i_elem].state(), nf);
+    Eigen::Map<Mat<>> res_cache(elems[i_elem].residual_cache(), nf);
+    Mat<> temp = res_cache;
+    res_cache = state;
+    state = temp;
   }
   // visualize. Note that visualizing straight from the reference state would require implementing another `Qpoint_func` which would be ugly
   Interpreter inter(std::vector<std::string>{});
@@ -1311,7 +1308,7 @@ void Solver::vis_lts_constraints(std::string format, std::string name, int n_sam
   // restore the current state from the reference state
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    Eigen::Map<Mat<>>(elems[i_elem].stage(0), nf) = Eigen::Map<Mat<>>(elems[i_elem].stage(1), nf);
+    Eigen::Map<Mat<>>(elems[i_elem].state(), nf) = Eigen::Map<Mat<>>(elems[i_elem].residual_cache(), nf);
   }
 }
 

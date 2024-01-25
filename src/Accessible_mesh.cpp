@@ -451,7 +451,7 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force)
           *na[1][sign] /= offset;
         }
       }
-      double* state [] {face.elem.stage(0), elem.stage(0)};
+      double* state [] {face.elem.state(), elem.state()};
       // interpolate data from original element to new ones
       for (int i_elem : {1, 0}) { // iterate in reverse order since new states for both elements depend on element 0
         Gauss_legendre basis(params.row_size); //! \todo apparently the mesh needs to know about the basis after all...

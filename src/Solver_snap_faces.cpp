@@ -23,14 +23,14 @@ void hexed::Solver::snap_faces()
   Mat<dyn, dyn> from_lob = lob.interpolate(basis.nodes());
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    double* state = elems[i_elem].stage(0);
-    double* rk_ref = elems[i_elem].stage(1);
+    double* state = elems[i_elem].state();
+    double* rk_ref = elems[i_elem].residual_cache();
     for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) rk_ref[i_dof] = state[i_dof];
   }
   for (int sweep = 0; sweep < nd - 1; ++sweep) {
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      double* state = elems[i_elem].stage(0);
+      double* state = elems[i_elem].state();
       for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) state[i_dof] = 0;
     }
     #pragma omp parallel for
@@ -39,7 +39,7 @@ void hexed::Solver::snap_faces()
       Lock::Acquire acq(con.element().lock);
       int bc_sn = con.bound_cond_serial_n();
       if (bc_sn == acc_mesh.surface_bc_sn()) {
-        double* state = con.element().stage(0);
+        double* state = con.element().state();
         double* node_adj = con.element().node_adjustments();
         if (node_adj) {
           node_adj += (2*con.i_dim() + con.inside_face_sign())*params.n_qpoint()/params.row_size;
@@ -80,7 +80,7 @@ void hexed::Solver::snap_faces()
       Lock::Acquire acq(con.element().lock);
       int bc_sn = con.bound_cond_serial_n();
       if (bc_sn == acc_mesh.surface_bc_sn()) {
-        double* state = con.element().stage(0);
+        double* state = con.element().state();
         double* node_adj = con.element().node_adjustments();
         if (node_adj) {
           node_adj += (2*con.i_dim() + con.inside_face_sign())*params.n_qpoint()/params.row_size;
@@ -109,8 +109,8 @@ void hexed::Solver::snap_faces()
   }
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    double* state = elems[i_elem].stage(0);
-    double* rk_ref = elems[i_elem].stage(1);
+    double* state = elems[i_elem].state();
+    double* rk_ref = elems[i_elem].residual_cache();
     for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) state[i_dof] = rk_ref[i_dof];
   }
 }
