@@ -8,6 +8,8 @@ namespace hexed
 class Storage_params
 {
   public:
+  static constexpr int n_advection(int row_size) {return row_size;}
+
   int n_stage; //!< \brief number of time integration stages
   int n_var; //!< \brief number of independent physical state variables
   int n_dim; //!< \brief number of dimensions
