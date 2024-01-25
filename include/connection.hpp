@@ -58,7 +58,7 @@ class Face_connection : public Kernel_connection
   Face_connection(Storage_params params) : _state_sz{params.n_dof()/params.row_size}, _data(4*_state_sz) {}
   virtual Con_dir<element_t> direction() = 0;
   Connection_direction get_direction() override {return direction();}
-  double* state(int i_side, bool is_ldg) override {return _data.data() + (i_side + 2*is_ldg)*_state_sz;}
+  double* state(int i_side, bool is_ldg) override {return _data.data() + (2*i_side + is_ldg)*_state_sz;}
   double* normal() override {return nullptr;}
 };
 
@@ -76,7 +76,7 @@ class Face_connection<Deformed_element> : public Kernel_connection
   {}
   virtual Con_dir<Deformed_element> direction() = 0;
   Connection_direction get_direction() override {return direction();}
-  double* state(int i_side, bool is_ldg) override {return _data.data() + (i_side + 2*is_ldg)*_state_sz;}
+  double* state(int i_side, bool is_ldg) override {return _data.data() + (2*i_side + is_ldg)*_state_sz;}
   double* normal(int i_side) {return _data.data() + 4*_state_sz + i_side*_nrml_sz;}
   double* normal() override {return _data.data() + 4*_state_sz;} //!< area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
 };
