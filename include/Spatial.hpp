@@ -73,7 +73,7 @@ class Spatial
   class Face_permutation : public Face_permutation_dynamic
   {
     static constexpr int n_qpoint = math::pow(row_size, n_dim - 1);
-    static constexpr int n_var = n_dim + 2;
+    static constexpr int n_var = Pde_templ<n_dim, row_size>::n_extrap;
     Connection_direction dir;
     double* tgt;
 
@@ -462,7 +462,7 @@ class Spatial
       {
         auto& con = connections[i_con];
         auto dir = con.get_direction();
-        double face [4][(n_dim + 2)*n_fqpoint] {}; // copying face data to temporary stack storage improves efficiency
+        double face [2 + 2*Pde::has_diffusion][Pde::n_extrap*n_fqpoint] {}; // copying face data to temporary stack storage improves efficiency
         #pragma GCC diagnostic push
         #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
         double face_nrml [n_dim*n_fqpoint]; // only set for deformed
