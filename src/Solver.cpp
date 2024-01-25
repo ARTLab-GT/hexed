@@ -437,7 +437,7 @@ void Solver::update_art_visc_smoothness(double advect_length)
     false,
     false,
   };
-  max_dt_advection(_kernel_mesh, opts, adv_safety, 1., true, 0, advect_length, 1.);
+  max_dt_advection(_kernel_mesh, opts, adv_safety, 1., true, 0, advect_length);
 
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
   // perform pseudotime iteration
@@ -461,7 +461,7 @@ void Solver::update_art_visc_smoothness(double advect_length)
         sw_adv.children.at("BCs").stopwatch.pause();
         sw_adv.children.at("BCs").work_units_completed += acc_mesh.elements().size();
         opts.i_stage = i;
-        compute_advection(_kernel_mesh, opts, i_node, advect_length, (basis.node(i_node) - .5)*2);
+        compute_advection(_kernel_mesh, opts, i_node, advect_length);
       }
       sw_adv.children.at("cartesian").work_units_completed += acc_mesh.cartesian().elements().size();
       sw_adv.children.at("deformed" ).work_units_completed += acc_mesh.deformed ().elements().size();

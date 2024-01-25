@@ -4,6 +4,7 @@
 #include "math.hpp"
 #include "constants.hpp"
 #include "Transport_model.hpp"
+#include "Gauss_legendre.hpp"
 
 /*! \brief This namespace contains classes representing the different PDEs Hexed can solve.
  * \details They are all possible arguments to the `Spatial` class template.
@@ -272,11 +273,11 @@ class Advection
   static constexpr int n_update = 1;
   const int _i_node;
   const double _advect_length;
-  const double _node;
   const int _adv_var;
+  Mat<row_size> _nodes;
 
-  Advection(int i_node, double advect_length, double node)
-  : _i_node{i_node}, _advect_length{advect_length}, _node{node}, _adv_var{advection_offset(n_dim) + _i_node}
+  Advection(int i_node, double advect_length)
+  : _i_node{i_node}, _advect_length{advect_length}, _adv_var{advection_offset(n_dim) + _i_node}, _nodes{Gauss_legendre(row_size).nodes()}
   {}
 
   Mat<n_extrap> fetch_extrap(int stride, const double* data) const
@@ -323,7 +324,7 @@ class Advection
         for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
           nrml_veloc += state(j_dim)*normal(j_dim, i_dim);
         }
-        flux_conv(0, i_dim) = _eq._node*nrml_veloc*state(n_dim);
+        flux_conv(0, i_dim) = _eq._nodes(_eq._i_node)*nrml_veloc*state(n_dim);
       }
     }
 

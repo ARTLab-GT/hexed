@@ -19,7 +19,7 @@ namespace hexed
 }
 
 void compute_euler(Kernel_mesh mesh, Kernel_options opts) COMPUTE_CONVECTION(pde::Navier_stokes<false>::Pde)
-void compute_advection(Kernel_mesh mesh, Kernel_options opts, int i_node, double advect_length, double node) COMPUTE_CONVECTION(pde::Advection, i_node, advect_length, node)
+void compute_advection(Kernel_mesh mesh, Kernel_options opts, int i_node, double advect_length) COMPUTE_CONVECTION(pde::Advection, i_node, advect_length)
 
 #undef COMPUTE_CONVECTION
 
@@ -40,7 +40,7 @@ void compute_write_face(Kernel_mesh mesh)
 
 void compute_write_face_advection(Kernel_mesh mesh, int i_node)
 {
-  (*kernel_factory<Spatial<pde::Advection, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, i_node, 1., 1.))(mesh.elems);
+  (*kernel_factory<Spatial<pde::Advection, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, i_node, 1.))(mesh.elems);
 }
 
 void compute_write_face_smooth_av(Kernel_mesh mesh)
