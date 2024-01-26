@@ -53,12 +53,17 @@ template <class element_t>
 class Face_connection : public Kernel_connection
 {
   int _state_sz;
+  int _face_sz;
   Eigen::VectorXd _data;
   public:
-  Face_connection(Storage_params params) : _state_sz{params.n_dof()/params.row_size}, _data(4*_state_sz) {}
+  Face_connection(Storage_params params) :
+    _state_sz{params.n_dof()/params.row_size},
+    _face_sz{std::max(2*_state_sz, (params.n_dim + params.n_advection(params.row_size))*params.n_face_qpoint())},
+    _data(2*_face_sz)
+    {}
   virtual Con_dir<element_t> direction() = 0;
   Connection_direction get_direction() override {return direction();}
-  double* state(int i_side, bool is_ldg) override {return _data.data() + (2*i_side + is_ldg)*_state_sz;}
+  double* state(int i_side, bool is_ldg) override {return _data.data() + i_side*_face_sz + is_ldg*_state_sz;}
   double* normal() override {return nullptr;}
 };
 
@@ -67,18 +72,20 @@ class Face_connection<Deformed_element> : public Kernel_connection
 {
   int _nrml_sz;
   int _state_sz;
+  int _face_sz;
   Eigen::VectorXd _data;
   public:
   Face_connection(Storage_params params)
-  : _nrml_sz{params.n_dim*params.n_qpoint()/params.row_size},
+  : _nrml_sz{params.n_dim*params.n_face_qpoint()},
     _state_sz{params.n_dof()/params.row_size},
-    _data(2*(_nrml_sz + 2*_state_sz))
+    _face_sz{std::max(2*_state_sz, (params.n_dim + params.n_advection(params.row_size))*params.n_face_qpoint())},
+    _data(2*(_nrml_sz + _face_sz))
   {}
   virtual Con_dir<Deformed_element> direction() = 0;
   Connection_direction get_direction() override {return direction();}
-  double* state(int i_side, bool is_ldg) override {return _data.data() + (2*i_side + is_ldg)*_state_sz;}
-  double* normal(int i_side) {return _data.data() + 4*_state_sz + i_side*_nrml_sz;}
-  double* normal() override {return _data.data() + 4*_state_sz;} //!< area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
+  double* state(int i_side, bool is_ldg) override {return _data.data() + i_side*_face_sz + is_ldg*_state_sz;}
+  double* normal(int i_side) {return _data.data() + 2*_face_sz + i_side*_nrml_sz;}
+  double* normal() override {return _data.data() + 2*_face_sz;} //!< area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
 };
 
 /*!

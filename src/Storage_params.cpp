@@ -9,6 +9,11 @@ int Storage_params::n_qpoint() const
   return math::pow(row_size, n_dim);
 }
 
+int Storage_params::n_face_qpoint() const
+{
+  return math::pow(row_size, n_dim - 1);
+}
+
 int Storage_params::n_dof() const
 {
   return n_qpoint()*n_var;
