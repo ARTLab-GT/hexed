@@ -2,7 +2,6 @@ shell {python3 make_geom.py}
 
 {mesh setup}
 n_dim = 2
-row_size = 5
 mesh_extreme00 = -2.*.02
 mesh_extreme01 =  0.*.02
 mesh_extreme10 =  0.*.02
@@ -10,12 +9,8 @@ mesh_extreme11 =  2.*.02
 init_ref_level = 4
 extremal_bc10 = {nonpenetration}
 extremal_bc01 = {pressure_outflow}
-refine_if = {center1 < .005}
-max_refinement_iters = 1
 geom0 = {auto.csv}
-{
 init_layer_splits = 4
-}
 
 {freestream/wall definition}
 freestream_mach = 8.1
@@ -24,14 +19,12 @@ freestream_temperature = 63.73
 thermal_bc = {temperature = 300}
 
 {iteration parameters}
-$set_shock
-{
 $set_aerothermo
+ramping_final_safety = .8
+art_visc_width = art_visc_width*.7
 viscosity_model = air_viscosity
 conductivity_model = {ref_value = 1.4/0.4*specific_gas_air/.72*air_visc_ref; ref_temperature = air_visc_ref_temp; offset = air_visc_offset}
-}
-art_visc_width = art_visc_width*.6
-done = {iteration >= 10^4}
+done = {iteration >= 10^5}
 vis_freq = 1000
 
 $plot_history
