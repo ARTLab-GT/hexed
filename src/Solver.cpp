@@ -446,8 +446,7 @@ void Solver::update_art_visc_smoothness(double advect_length)
     sw_adv.children.at("setup").stopwatch.start();
     // evaluate advection operator
     compute_write_face_advection(_kernel_mesh);
-    compute_prolong(_kernel_mesh);
-    compute_prolong(_kernel_mesh, false, true);
+    compute_prolong_advection(_kernel_mesh);
     sw_adv.children.at("setup").stopwatch.pause();
     for (int i = 0; i < 2; ++i) {
       sw_adv.children.at("BCs").stopwatch.start();

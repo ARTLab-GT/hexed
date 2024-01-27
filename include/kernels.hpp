@@ -53,6 +53,7 @@ double max_dt_fix_therm_admis(Kernel_mesh, Kernel_options, double convective_saf
 
 void compute_prolong(Kernel_mesh, bool scale = false, bool offset = false);
 void compute_restrict(Kernel_mesh, bool scale = true, bool offset = false);
+void compute_prolong_advection(Kernel_mesh);
 std::unique_ptr<Face_permutation_dynamic> face_permutation(int n_dim, int row_size, Connection_direction, double* data);
 void compute_write_face(Kernel_mesh);
 void compute_write_face_advection(Kernel_mesh);
