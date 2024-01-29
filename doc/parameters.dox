@@ -567,14 +567,6 @@ If \ref true, artificial viscosity determined in an elementwise fasion
 based on the work of [Persson](http://persson.berkeley.edu/pub/persson13transient_shocks.pdf).
 This feature is provided purely for the purpose of comparing the discretization-independent artificial viscosity to conventional methods.
 It is not recommended for practical simulations with this solver.
-If it is enabled, you are recommended to also set \ref laplacian_art_visc to \ref true.
-
-<hr>
-\subsubsection laplacian_art_visc
-__type:__ integer \n
-__default:__ \ref false \n
-If \ref true, the artificial viscosity will act as a [Laplacian diffusion](https://en.wikipedia.org/wiki/Laplace_operator#Diffusion) term
-instead of an artificial bulk viscosity.
 
 <hr>
 \subsubsection elementwise_art_visc_pde

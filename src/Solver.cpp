@@ -111,7 +111,7 @@ double Solver::max_dt(double msc, double msd)
     0, 0, bool(_namespace->lookup<int>("use_filter").value()),
   };
   bool local_time = _namespace->lookup<int>("local_time").value();
-  if (use_ldg()) return max_dt_navier_stokes(_kernel_mesh, opts, msc, msd, local_time, visc, therm_cond, _namespace->lookup<int>("laplacian_art_visc").value());
+  if (use_ldg()) return max_dt_navier_stokes(_kernel_mesh, opts, msc, msd, local_time, visc, therm_cond);
   else return max_dt_euler(_kernel_mesh, opts, msc, msd, local_time);
 }
 
@@ -160,7 +160,6 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default<int>("local_time", local_time_stepping);
   _namespace->assign_default("elementwise_art_visc", 0);
   _namespace->assign_default("elementwise_art_visc_diff_ratio", 5.);
-  _namespace->assign_default("laplacian_art_visc", 0);
   _namespace->assign_default<std::string>("working_dir", ".");
   _namespace->assign("fix_iters", 0);
   _namespace->assign("iteration", 0);
@@ -775,7 +774,7 @@ void Solver::update()
           bool(_namespace->lookup<int>("use_filter").value()),
         };
         apply_state_bcs();
-        if (use_ldg() && !i) compute_navier_stokes(_kernel_mesh, opts, [this](){apply_flux_bcs();}, visc, therm_cond, _namespace->lookup<int>("laplacian_art_visc").value());
+        if (use_ldg() && !i) compute_navier_stokes(_kernel_mesh, opts, [this](){apply_flux_bcs();}, visc, therm_cond);
         else compute_euler(_kernel_mesh, opts);
         // note that function call must come first to ensure it is evaluated despite short-circuiting
         fixed = fix_admissibility(_namespace->lookup<double>("fix_admis_max_safety").value()) || fixed;
@@ -822,7 +821,7 @@ void Solver::compute_residual()
     true,
     bool(_namespace->lookup<int>("use_filter").value()),
   };
-  if (use_ldg()) compute_navier_stokes(_kernel_mesh, opts, [this](){apply_flux_bcs();}, visc, therm_cond, _namespace->lookup<int>("laplacian_art_visc").value());
+  if (use_ldg()) compute_navier_stokes(_kernel_mesh, opts, [this](){apply_flux_bcs();}, visc, therm_cond);
   else compute_euler(_kernel_mesh, opts);
 }
 

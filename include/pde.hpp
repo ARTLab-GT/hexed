@@ -41,7 +41,6 @@ class Navier_stokes
   template <int n_dim, int row_size>
   class Pde
   {
-    bool _laplacian;
     public:
     static constexpr bool has_diffusion = visc;
     static constexpr bool has_convection = true;
@@ -53,8 +52,8 @@ class Navier_stokes
     Transport_model dyn_visc;
     Transport_model therm_cond;
 
-    Pde(Transport_model dynamic_visc = inviscid, Transport_model thermal_cond = inviscid, bool laplacian = false)
-    : _laplacian{laplacian}, dyn_visc{dynamic_visc}, therm_cond{thermal_cond}
+    Pde(Transport_model dynamic_visc = inviscid, Transport_model thermal_cond = inviscid)
+    : dyn_visc{dynamic_visc}, therm_cond{thermal_cond}
     {}
 
     Mat<n_extrap> fetch_extrap(int stride, const double* data) const

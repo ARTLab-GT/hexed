@@ -25,7 +25,6 @@ $set_shock
 $set_ramping
 done = {iteration >= 5*10^3}
 elementwise_art_visc = true
-laplacian_art_visc = true
 vis_freq = 1000
 {
 $set_aerothermo
