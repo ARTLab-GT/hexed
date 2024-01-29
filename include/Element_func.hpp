@@ -84,6 +84,20 @@ class Elem_nonsmooth : public Element_func
 
 };
 
+//! \brief same as `Elem_nonsmooth`, but normalized by `Elem_l2`
+class Normalized_nonsmooth : public Element_func
+{
+  const Qpoint_func& qf;
+  const Elem_nonsmooth ns;
+  const Elem_l2 l2;
+  public:
+  Normalized_nonsmooth(const Qpoint_func& func);
+  Normalized_nonsmooth(Qpoint_func&&) = delete;
+  inline int n_var(int n_dim) const override {return qf.n_var(n_dim);}
+  inline std::string variable_name(int n_dim, int i_var) const override {return "nonsmoothness_" + qf.variable_name(n_dim, i_var);}
+  std::vector<double> operator()(Element& elem, const Basis&, double time) const override;
+};
+
 /*! \brief Computes the equiangle skewness mesh quality metric.
  * \details tldr 0 is the best and 1 is the worst.
  * Specifically, the equiangle skewness for an element is given by

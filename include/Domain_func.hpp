@@ -112,6 +112,18 @@ class Mass : public Domain_func
   }
 };
 
+//! \brief useful for detecting elements that require stabilization
+class Stab_indicator : public Domain_func
+{
+  inline int n_var(int n_dim) const override {return 1;}
+  inline std::string variable_name(int n_dim, int i_var) const override {return "stab_indicator";}
+  inline std::vector<double> operator()(std::vector<double> point_pos, double point_time,
+                                        std::vector<double> state) const override
+  {
+    return {1./state[point_pos.size()]};
+  }
+};
+
 //! Computes Mach number
 class Mach : public Domain_func
 {

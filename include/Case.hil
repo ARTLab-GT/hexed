@@ -163,6 +163,7 @@ sideslip = 0.
 art_visc_constant = -1.
 art_visc_width = -1.
 fix_therm_admis = false
+diffusive_admissibility = false
 working_dir = {hexed_out/}
 vis_freq = 10000
 iter_width = 10
