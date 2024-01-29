@@ -105,7 +105,7 @@ if show:
 else:
     plt.savefig("html/summary.svg")
     plt.close()
-for case in ["naca0012", "flat_plate"]:
+for case in ["naca0012", "flat_plate", "blottner_sphere"]:
     benchmarks[case + ": ae-artl-408091"][-1].timing.plot()
     if show:
         plt.show()
