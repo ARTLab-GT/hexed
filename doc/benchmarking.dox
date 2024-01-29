@@ -5,6 +5,10 @@ To add another data point, simply navigate to the build directory and run `pytho
 This will append to `benchmark.txt` which is tracked by git.
 Commit the changes if you want your benchmark to be permanently recorded; discard otherwise.
 
+\note The case marked "blottner sphere" is a 3D case that is set up with the Blottner sphere initial and boundary conditions,
+but uses a very coarse grid and a completely insufficient number of iterations.
+It provides a cheap assessment of 3D kernel performance, but does not measure overall time to convergence.
+
 \section overall Overall performance
 The following figure illustrates the evolution of Hexed's performance over time, accross different systems.
 Different series in the scatter plots indicate different machines on which the benchmarks were run.
@@ -15,4 +19,5 @@ The following figures offer a more detailed breakdown of the latest benchmark on
 When the components don't add up to 100%, that indicates there are some subtasks whose execution time is not measured.
 \image html naca0012.svg "inviscid NACA 0012 case"
 \image html flat_plate.svg "viscous flat plate case"
+\image html blottner_sphere.svg "partial Blottner sphere case"
 */
