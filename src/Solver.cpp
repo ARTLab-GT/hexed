@@ -362,7 +362,7 @@ void Solver::set_art_visc_constant(double value)
   auto& elements = acc_mesh.elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    double* av = elements[i_elem].art_visc_coef();
+    double* av = elements[i_elem].bulk_av_coef();
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
      av[i_qpoint] = value;
     }
@@ -499,7 +499,7 @@ void Solver::update_art_visc_smoothness(double advect_length)
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].state();
-    double* av = elements[i_elem].art_visc_coef();
+    double* av = elements[i_elem].bulk_av_coef();
     double* forcing = elements[i_elem].art_visc_forcing();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       double f = mult*forcing[n_real*nq + i_qpoint];
@@ -541,7 +541,7 @@ void Solver::update_art_visc_elwise(double width, bool pde_based)
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       double elem_av = elems[i_elem].uncertainty;
-      double* av = elems[i_elem].art_visc_coef();
+      double* av = elems[i_elem].bulk_av_coef();
       double* forcing = elems[i_elem].art_visc_forcing();
       for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
         forcing[i_qpoint] = elem_av;
@@ -551,7 +551,7 @@ void Solver::update_art_visc_elwise(double width, bool pde_based)
     diffuse_art_visc(_namespace->lookup<double>("elementwise_art_visc_diff_ratio").value()*width*width);
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      double* av = elems[i_elem].art_visc_coef();
+      double* av = elems[i_elem].bulk_av_coef();
       double* forcing = elems[i_elem].art_visc_forcing();
       for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) av[i_qpoint] = forcing[params.n_qpoint() + i_qpoint];
     }
@@ -564,7 +564,7 @@ void Solver::update_art_visc_elwise(double width, bool pde_based)
     Mat<dyn, dyn> interp = Gauss_lobatto(2).interpolate(basis.nodes());
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      Eigen::Map<Mat<>> qpoint_av(elems[i_elem].art_visc_coef(), params.n_qpoint());
+      Eigen::Map<Mat<>> qpoint_av(elems[i_elem].bulk_av_coef(), params.n_qpoint());
       Eigen::Map<Mat<>> vert_av(&elems[i_elem].vertex_elwise_av(0), params.n_vertices());
       qpoint_av = math::hypercube_matvec(interp, vert_av);
     }
@@ -940,7 +940,7 @@ bool Solver::fix_admissibility(double stability_ratio)
       for (int i_vert = 0; i_vert < nv; ++i_vert) {
         vert_fac(i_vert) = elem.vertex_fix_admis_coef(i_vert);
       }
-      Eigen::Map<Mat<>>(elem.fix_admis_coef(), nq) = math::hypercube_matvec(interp, vert_fac);
+      Eigen::Map<Mat<>>(elem.laplacian_av_coef(), nq) = math::hypercube_matvec(interp, vert_fac);
     }
     #if HEXED_USE_XDMF
     if (status.iteration >= last_fix_vis_iter + 1000 && iter == 0) {
@@ -956,7 +956,7 @@ bool Solver::fix_admissibility(double stability_ratio)
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        std::swap(elem.fix_admis_coef()[i_qpoint], elem.art_visc_coef()[i_qpoint]);
+        std::swap(elem.laplacian_av_coef()[i_qpoint], elem.bulk_av_coef()[i_qpoint]);
       }
     }
     double dt = stability_ratio;
@@ -995,7 +995,7 @@ bool Solver::fix_admissibility(double stability_ratio)
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        std::swap(elem.fix_admis_coef()[i_qpoint], elem.art_visc_coef()[i_qpoint]);
+        std::swap(elem.laplacian_av_coef()[i_qpoint], elem.bulk_av_coef()[i_qpoint]);
       }
     }
   }

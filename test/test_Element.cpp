@@ -38,8 +38,8 @@ TEST_CASE("Element")
   REQUIRE(element.time_step_scale()[0] == 1.);
   REQUIRE(element.time_step_scale()[params.n_qpoint() - 1] == 1.);
   // artificial viscosity coefficient exists and should be initialized to 0.
-  REQUIRE(element.art_visc_coef()[0] == 0.);
-  REQUIRE(element.art_visc_coef()[params.n_qpoint() - 1] == 0.);
+  REQUIRE(element.bulk_av_coef()[0] == 0.);
+  REQUIRE(element.bulk_av_coef()[params.n_qpoint() - 1] == 0.);
   REQUIRE(element.art_visc_forcing()[0] == 0.);
   REQUIRE(element.art_visc_forcing()[4*params.n_qpoint() - 1] == 0.);
   REQUIRE(element.advection_state()[0] == 0.);

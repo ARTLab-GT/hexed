@@ -14,7 +14,7 @@ speed_expr = {speed = sqrt(velocity0^2 + velocity1^2 + velocity2^2);}
 pressure_expr = {pressure = (heat_rat - 1)*(energy - 0.5*density*speed^2);}
 temperature_expr = {temperature = pressure/(density*specific_gas_air);}
 mach_expr = {mach = speed/sqrt(heat_rat*pressure/density);}
-art_visc_expr = {art_visc = art_visc;}
+art_visc_expr = {bulk_art_visc = bulk_art_visc; laplacian_art_visc = laplacian_art_visc;}
 visc_stress_expr = {visc_stress0 = visc_stress0; visc_stress1 = visc_stress1; visc_stress2 = visc_stress2;}
 stress_expr = {stress0 = -pressure*normal0 + visc_stress0; stress1 = -pressure*normal1 + visc_stress1; stress2 = -pressure*normal2 + visc_stress2;}
 heat_flux_expr = {heat_flux = heat_flux;}

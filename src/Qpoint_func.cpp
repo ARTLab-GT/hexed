@@ -46,12 +46,12 @@ std::vector<double> Physical_residual::operator()(Element& element, const Basis&
 
 std::vector<double> Art_visc_coef::operator()(Element& element, const Basis&, int i_qpoint, double time) const
 {
-  return {element.art_visc_coef()[i_qpoint]};
+  return {element.bulk_av_coef()[i_qpoint]};
 }
 
 std::vector<double> Fix_admis_coef::operator()(Element& element, const Basis&, int i_qpoint, double time) const
 {
-  return {element.fix_admis_coef()[i_qpoint]};
+  return {element.laplacian_av_coef()[i_qpoint]};
 }
 
 std::string Pow::variable_name(int n_dim, int i_var) const
