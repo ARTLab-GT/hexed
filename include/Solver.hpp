@@ -10,11 +10,11 @@
 #include "Transport_model.hpp"
 #include "Mesh.hpp"
 #include "Accessible_mesh.hpp"
-#include "kernel_factory.hpp"
 #include "Namespace.hpp"
 #include "Printer.hpp"
 #include "Linear_equation.hpp"
 #include "Visualizer.hpp"
+#include "kernels.hpp"
 
 namespace hexed
 {
@@ -38,13 +38,13 @@ class Solver
   bool use_art_visc;
   bool fix_admis;
   int av_rs;
-  std::unique_ptr<Kernel<Element&>> write_face;
   Transport_model visc;
   Transport_model therm_cond;
   int last_fix_vis_iter = std::numeric_limits<int>::min();
   std::shared_ptr<Namespace> _namespace;
   std::shared_ptr<Printer> _printer;
   bool _implicit;
+  Kernel_mesh _kernel_mesh;
 
   void share_vertex_data(std::function<double&(Element&, int i_vertex)>, std::function<double(Mat<>)>);
   void share_vertex_data(std::function<double(Element&, int i_vertex)> get, std::function<double&(Element&, int i_vertex)> set, std::function<double(Mat<>)>);
@@ -54,12 +54,7 @@ class Solver
   void apply_avc_diff_bcs();
   void apply_avc_diff_flux_bcs();
   void apply_fta_flux_bcs();
-  void diffuse_art_visc(int n_real, double diff_time);
-  void compute_inviscid(double dt, int i_stage, bool compute_residual);
-  void compute_viscous(double dt, int i_stage, bool compute_residual);
-  void compute_fta(double dt, int i_stage);
-  void compute_advection(double dt, int i_stage);
-  void compute_avc_diff(double dt, int i_stage);
+  void diffuse_art_visc(double diff_time);
   void fta(double dt, int i_stage);
   bool use_ldg();
   double max_dt(double max_safety_conv, double max_safety_diff);

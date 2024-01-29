@@ -6,6 +6,7 @@
 
 #include <Eigen/Dense>
 
+#include "Kernel_element.hpp"
 #include "Storage_params.hpp"
 #include "Vertex.hpp"
 #include "Basis.hpp"
@@ -22,7 +23,7 @@ class Tree;
  * This class represents a Cartesian (i.e., regular) element.
  * See also derived class `Deformed_element`.
  */
-class Element
+class Element : public Kernel_element
 {
   protected:
   Storage_params params;
@@ -40,11 +41,11 @@ class Element
   int data_size;
   Eigen::VectorXd data;
   Eigen::VectorXd vertex_data;
+  std::array<double*, 6> faces; //!< layout: [2*i_dim + face_sign][i_var][i_qpoint]
 
   public:
   std::array<int, 6> face_record; //!< for algorithms to book-keep information related to faces
   //! Pointer to state data at faces. Must be populated by user
-  std::array<double*, 6> faces; //!< layout: [2*i_dim + face_sign][i_var][i_qpoint]
   double uncertainty = 0; //!< refinement algorithms should set this value to some uncertainty metric
   static constexpr bool is_deformed = false; //!< is this `Element` subclass deformed?
   int record = 0; //!< for algorithms to book-keep general information
@@ -74,14 +75,14 @@ class Element
   //! obtains face position based on interior qpoint positions (as defined by `position()`)
   std::vector<double> face_position(const Basis&, int i_face, int i_face_qpoint);
   virtual void set_jacobian(const Basis& basis);
-  inline double nominal_size() {return nom_sz;}
+  inline double nominal_size() override {return nom_sz;}
   inline int refinement_level() {return r_level;}
   inline std::vector<int> nominal_position() {return nom_pos;}
   //! pointer to state data for `i_stage`th Runge-Kutta stage.
   double* stage(int i_stage); //!< layout: [i_var][i_qpoint]
   double* advection_state(); //!< layout: [i_node][i_qpoint] \note `0 <= i_node < row_size`
   //! pointer to scaling factor for local time step.
-  double* time_step_scale(); //!< layout: [i_qpoint]
+  double* time_step_scale() override; //!< layout: [i_qpoint]
   double* art_visc_coef(); //!< layout: [i_qpoint]
   double* fix_admis_coef(); //!< layout: [i_qpoint]
   double* art_visc_forcing(); //!< layout: [i_forcing][i_qpoint]
@@ -103,10 +104,20 @@ class Element
   void push_shareable_value(std::function<double(Element&, int i_vertex)>); // writes shareable value to vertices so that shared value can be determined
   void fetch_shareable_value(std::function<double&(Element&, int i_vertex)> access_fun, std::function<double(Mat<>)> reduction = Vertex::vector_max); // set `this`'s copy of shareable value to the shared values at the vertices
   //! Time step scale at the vertices. TSS in the interior is set by interpolating this.
-  double& vertex_time_step_scale(int i_vertex);
+  double& vertex_time_step_scale(int i_vertex) override;
   double& vertex_elwise_av(int i_vertex);
   double& vertex_fix_admis_coef(int i_vertex);
   void set_needs_smooth(bool); //!< sets the `Vertex::Transferable_ptr::needs_smooth` of the vertices
+  void set_face(int i_face, double* data);
+  bool is_connected(int i_face);
+
+  double* state() override;
+  double* residual_cache() override;
+  double* face(int i_face, bool is_ldg) override;
+  bool deformed() const override;
+  double* reference_level_normals() override;
+  double* jacobian_determinant() override;
+  double* kernel_face_normal(int i_face) override;
 };
 
 }

@@ -1,5 +1,6 @@
 #include <catch2/catch_all.hpp>
-#include <hexed/Restrict_refined.hpp>
+#include <hexed/Spatial.hpp>
+#include <hexed/pde.hpp>
 #include <hexed/Gauss_legendre.hpp>
 
 TEST_CASE("Restrict_refined")
@@ -41,7 +42,7 @@ TEST_CASE("Restrict_refined")
         }
       }
     }
-    (*hexed::kernel_factory<hexed::Restrict_refined>(3, row_size, basis))(ref_face_v);
+    (*hexed::kernel_factory<hexed::Spatial<hexed::pde::Navier_stokes<false>::Pde, false>::Restrict_refined>(3, row_size, basis))(ref_face_v);
     check(1.);
   }
 
@@ -61,7 +62,7 @@ TEST_CASE("Restrict_refined")
         }
       }
     }
-    (*hexed::kernel_factory<hexed::Restrict_refined>(3, row_size, basis))(ref_face_v);
+    (*hexed::kernel_factory<hexed::Spatial<hexed::pde::Navier_stokes<false>::Pde, false>::Restrict_refined>(3, row_size, basis))(ref_face_v);
     check(.5);
   }
 
@@ -81,7 +82,7 @@ TEST_CASE("Restrict_refined")
         }
       }
     }
-    (*hexed::kernel_factory<hexed::Restrict_refined>(3, row_size, basis))(ref_face_v);
+    (*hexed::kernel_factory<hexed::Spatial<hexed::pde::Navier_stokes<false>::Pde, false>::Restrict_refined>(3, row_size, basis))(ref_face_v);
     check(.5);
   }
 }

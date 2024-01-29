@@ -20,6 +20,9 @@ hil_properties.cpp
 Interpreter.cpp
 iterative.cpp
 Iteration_status.cpp
+kernels_convective.cpp
+kernels_diffusive.cpp
+kernels_max_dt.cpp
 Layer_sequence.cpp
 Linearized.cpp
 Linear_equation.cpp
@@ -33,8 +36,7 @@ Qpoint_func.cpp
 read_csv.cpp
 Simplex_geom.cpp
 Solver.cpp
-Solver_convective.cpp
-Solver_diffusive.cpp
+Solver_snap_faces.cpp
 Spacetime_func.cpp
 Stopwatch.cpp
 Stopwatch_tree.cpp

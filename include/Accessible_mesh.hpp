@@ -23,6 +23,7 @@ class Accessible_mesh : public Mesh
   // create a `Vector_view` that can look at `def.elements()` as `Element&`s.
   Vector_view<Element&, Deformed_element&, &trivial_convert<Element&, Deformed_element&>, Sequence> def_as_car;
   Concatenation<Element&> elems;
+  Vector_view<Kernel_element&, Element&, &trivial_convert<Kernel_element&, Element&>, Sequence> kernel_elems;
   Concatenation<Element_connection&> elem_cons;
   std::vector<Boundary_condition> bound_conds;
   Concatenation<Face_connection<Deformed_element>&> bound_face_cons;
@@ -79,6 +80,7 @@ class Accessible_mesh : public Mesh
   Element& element(int ref_level, bool is_deformed, int serial_n);
   //! access all elements, both Cartesian and deformed
   Sequence<Element&>& elements() {return elems;}
+  Sequence<Kernel_element&>& kernel_elements() {return kernel_elems;}
   void connect_cartesian(int ref_level, std::array<int, 2> serial_n, Con_dir<Element> dir,
                          std::array<bool, 2> is_deformed = {false, false}) override;
   void connect_deformed(int ref_level, std::array<int, 2> serial_n, Con_dir<Deformed_element> direction) override;

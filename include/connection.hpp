@@ -2,10 +2,12 @@
 #define HEXED_CONNECTION_HPP_
 
 #include <Eigen/Dense>
+#include "Kernel_connection.hpp"
 #include "Deformed_element.hpp"
 #include "Hanging_vertex_matcher.hpp"
 #include "Boundary_face.hpp"
 #include "math.hpp"
+#include "Refined_face.hpp"
 
 namespace hexed
 {
@@ -18,36 +20,10 @@ namespace hexed
 template <class element_t> class Con_dir {};
 
 template <>
-class Con_dir<Deformed_element>
+class Con_dir<Deformed_element> : public Connection_direction
 {
   public:
-  std::array<int, 2> i_dim;
-  std::array<bool, 2> face_sign;
-  int i_face(int i_side) {return 2*i_dim[i_side] + face_sign[i_side];}
-  /*!
-   * Answers the question: Is it necessary to flip the normal of element `i_side` so that it
-   * points from element 0 into element 1?
-   */
-  bool flip_normal(int i_side) {return face_sign[i_side] == i_side;}
-  /*!
-   * Answers the question: Is it neccesary to flip axis `face_index(0).i_dim` of element 1
-   * to match the coordinate systems?
-   */
-  bool flip_tangential()
-  {
-    //! if you're swapping two axes, you have to flip one of them to make a valid rotation. If you're not
-    //! flipping a normal (or flipping both of them) then you have to flip a tangential
-    return (i_dim[0] != i_dim[1]) && (flip_normal(0) == flip_normal(1));
-  }
-  /*!
-   * Answers the question: Is it necessary to transpose the rows/columns of the face
-   * quadrature points of element 1 to match element 0? Only applicable to 3D, where some
-   * face combinations can create a row vs column major mismatch. If 2D, always returns `false`.
-   */
-  bool transpose()
-  {
-    return ((i_dim[0] == 0) && (i_dim[1] == 2)) || ((i_dim[0] == 2) && (i_dim[1] == 0));
-  }
+  Con_dir(std::array<int, 2> i_dimension, std::array<bool, 2> sign) : Connection_direction{i_dimension, sign} {}
 };
 
 template <>
@@ -74,31 +50,42 @@ std::array<std::vector<int>, 2> vertex_inds(int n_dim, Con_dir<Deformed_element>
  * boundary conditions or `Refined_face`s).
  */
 template <class element_t>
-class Face_connection
+class Face_connection : public Kernel_connection
 {
-  Eigen::VectorXd data;
+  int _state_sz;
+  int _face_sz;
+  Eigen::VectorXd _data;
   public:
-  Face_connection(Storage_params params) : data(4*params.n_dof()/params.row_size) {}
+  Face_connection(Storage_params params) :
+    _state_sz{params.n_dof()/params.row_size},
+    _face_sz{std::max(2*_state_sz, (params.n_dim + params.n_advection(params.row_size))*params.n_face_qpoint())},
+    _data(2*_face_sz)
+    {}
   virtual Con_dir<element_t> direction() = 0;
-  virtual double* state() {return data.data();}
+  Connection_direction get_direction() override {return direction();}
+  double* state(int i_side, bool is_ldg) override {return _data.data() + i_side*_face_sz + is_ldg*_state_sz;}
+  double* normal() override {return nullptr;}
 };
 
 template <>
-class Face_connection<Deformed_element>
+class Face_connection<Deformed_element> : public Kernel_connection
 {
-  int nrml_sz;
-  int state_sz;
-  Eigen::VectorXd data;
+  int _nrml_sz;
+  int _state_sz;
+  int _face_sz;
+  Eigen::VectorXd _data;
   public:
   Face_connection(Storage_params params)
-  : nrml_sz{params.n_dim*params.n_qpoint()/params.row_size},
-    state_sz{params.n_dof()/params.row_size},
-    data(2*(nrml_sz + 2*state_sz))
+  : _nrml_sz{params.n_dim*params.n_face_qpoint()},
+    _state_sz{params.n_dof()/params.row_size},
+    _face_sz{std::max(2*_state_sz, (params.n_dim + params.n_advection(params.row_size))*params.n_face_qpoint())},
+    _data(2*(_nrml_sz + _face_sz))
   {}
   virtual Con_dir<Deformed_element> direction() = 0;
-  virtual double* state() {return data.data();}
-  double* normal(int i_side) {return data.data() + 4*state_sz + i_side*nrml_sz;}
-  double* normal() {return data.data() + 4*state_sz;} //!< area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
+  Connection_direction get_direction() override {return direction();}
+  double* state(int i_side, bool is_ldg) override {return _data.data() + i_side*_face_sz + is_ldg*_state_sz;}
+  double* normal(int i_side) {return _data.data() + 2*_face_sz + i_side*_nrml_sz;}
+  double* normal() override {return _data.data() + 2*_face_sz;} //!< area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
 };
 
 /*!
@@ -126,10 +113,8 @@ class Element_face_connection : public Element_connection, public Face_connectio
   Element_face_connection(std::array<element_t*, 2> elements, Con_dir<element_t> con_dir)
   : Face_connection<element_t>{elements[0]->storage_params()}, dir{con_dir}, elems{elements}
   {
-    Storage_params params {elements[0]->storage_params()};
-    int face_size = params.n_dof()/params.row_size;
     for (int i_side : {0, 1}) {
-      elements[i_side]->faces[dir.i_face(i_side)] = Face_connection<element_t>::state() + i_side*face_size;
+      elements[i_side]->set_face(dir.i_face(i_side), Face_connection<element_t>::state(i_side, false));
     }
     auto inds = vertex_inds(elements[0]->storage_params().n_dim, dir);
     // cppcheck-suppress syntaxError
@@ -143,7 +128,7 @@ class Element_face_connection : public Element_connection, public Face_connectio
   virtual ~Element_face_connection()
   {
     for (int i_side : {0, 1}) {
-      elems[i_side]->faces[dir.i_face(i_side)] = nullptr;
+      elems[i_side]->set_face(dir.i_face(i_side), nullptr);
     }
     disconnect_normal();
   }
@@ -175,14 +160,6 @@ inline void Element_face_connection<Deformed_element>::disconnect_normal()
   }
 }
 
-class Refined_face
-{
-  public:
-  double* coarse = nullptr;
-  std::array<double*, 4> fine {};
-  std::array<bool, 2> stretch;
-};
-
 /*!
  * Represents a connection between elements whose refinement levels differ by 1. This involves
  * a `Refined_face` object to facilitate interpolating/projecting between the coarse face and the
@@ -202,12 +179,11 @@ class Refined_connection
     Fine_connection(Refined_connection& r, element_t& f)
     : Face_connection<element_t>{r.params}, ref_con{r}, fine_elem{f}
     {
-      int face_sz = r.params.n_dof()/r.params.row_size;
-      f.faces[ref_con.dir.i_face(!ref_con.rev)] = Face_connection<element_t>::state() + (!ref_con.rev)*face_sz;
+      f.set_face(ref_con.dir.i_face(!ref_con.rev), Face_connection<element_t>::state(!ref_con.rev, false));
     }
     virtual ~Fine_connection()
     {
-      fine_elem.faces[ref_con.dir.i_face(!ref_con.rev)] = nullptr;
+      fine_elem.set_face(ref_con.dir.i_face(!ref_con.rev), nullptr);
     }
     virtual Con_dir<element_t> direction() {return ref_con.direction();}
     virtual element_t& element(int i_side) {return (i_side != ref_con.rev) ? fine_elem : ref_con.c;}
@@ -258,7 +234,8 @@ class Refined_connection
     matcher{to_elementstar(fine), def_dir.i_dim[!reverse_order], def_dir.face_sign[!reverse_order], str}
   {
     refined_face.stretch = coarse_stretch();
-    coarse->faces[dir.i_face(rev)] = refined_face.coarse = coarse_state();
+    refined_face.coarse = coarse_state();
+    coarse->set_face(dir.i_face(rev), coarse_state());
     int nd = params.n_dim;
     n_fine = params.n_vertices()/2;
     bool any_str = false;
@@ -286,7 +263,7 @@ class Refined_connection
       // it is merely necessary to figure out whether we need to swap the fine elements
       if (any_str) inds[1] = i_face != (def_dir.flip_tangential() && !str[2*def_dir.i_dim[rev] > 3 - def_dir.i_dim[!rev]]);
       fine_cons.emplace_back(new Fine_connection(*this, *fine[inds[!rev]]));
-      refined_face.fine[inds[rev]] = fine_cons.back()->state() + rev*params.n_dof()/params.row_size;
+      refined_face.fine[inds[rev]] = fine_cons.back()->state(rev, false);
     }
     connect_normal();
   }
@@ -295,7 +272,7 @@ class Refined_connection
   Refined_connection& operator=(const Refined_connection&) = delete;
   virtual ~Refined_connection()
   {
-    c.faces[dir.i_face(rev)] = nullptr;
+    c.set_face(dir.i_face(rev), nullptr);
     disconnect_normal();
   }
   Con_dir<element_t> direction() {return dir;}
@@ -380,27 +357,27 @@ class Typed_bound_connection : public Boundary_connection
     cache{Mat<>::Zero(2*state_size)}
   {
     connect_normal();
-    elem.faces[direction().i_face(0)] = state();
+    elem.set_face(direction().i_face(0), state(0, false));
   }
   Typed_bound_connection(const Typed_bound_connection&) = delete; //!< can only have one `Typed_bound_connection` per face, so delete copy semantics
   Typed_bound_connection& operator=(const Typed_bound_connection&) = delete;
   virtual ~Typed_bound_connection()
   {
-    elem.faces[direction().i_face(0)] = nullptr;
+    elem.set_face(direction().i_face(0), nullptr);
     disconnect_normal();
   }
-  virtual Storage_params storage_params() {return params;}
-  virtual double* ghost_face() {return state() + params.n_dof()/params.row_size;}
-  virtual double* inside_face() {return state();}
-  virtual int i_dim() {return i_d;}
-  virtual bool inside_face_sign() {return ifs;}
-  virtual double* surface_normal() {return normal();}
-  virtual double* surface_position() {return pos.data();}
-  virtual double* state_cache() {return cache.data();}
-  virtual double* flux_cache() {return cache.data() + state_size;}
-  virtual Con_dir<Deformed_element> direction() {return {{i_d, i_d}, {ifs, !ifs}};}
-  virtual int bound_cond_serial_n() {return bc_sn;}
-  element_t& element() {return elem;}
+  Storage_params storage_params() override {return params;}
+  double* ghost_face(bool is_ldg) override {return state(1, is_ldg);}
+  double* inside_face(bool is_ldg) override {return state(0, is_ldg);}
+  int i_dim() override {return i_d;}
+  bool inside_face_sign() override {return ifs;}
+  double* surface_normal() override {return normal();}
+  double* surface_position() override {return pos.data();}
+  double* state_cache() override {return cache.data();}
+  double* flux_cache() override {return cache.data() + state_size;}
+  Con_dir<Deformed_element> direction() override {return {{i_d, i_d}, {ifs, !ifs}};}
+  int bound_cond_serial_n() override {return bc_sn;}
+  element_t& element() override {return elem;}
 };
 
 template <>

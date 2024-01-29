@@ -8,6 +8,9 @@ namespace hexed
 class Storage_params
 {
   public:
+  //! \brief number of variables in the artificial viscosity advection equation
+  static constexpr int n_advection(int row_size) {return row_size;}
+
   int n_stage; //!< \brief number of time integration stages
   int n_var; //!< \brief number of independent physical state variables
   int n_dim; //!< \brief number of dimensions
@@ -15,6 +18,7 @@ class Storage_params
   int n_forcing = 4; //!< \brief number of artificial viscosity forcing variables
 
   int n_qpoint() const; //!< \brief number of quadrature points per element
+  int n_face_qpoint() const; //!< \brief number of quadrature points on each element face
   int n_dof() const; //!< \brief total number of physical degrees of freedom per element
   int size() const; //!< \brief total number of values that must be stored per element (including stages)
   int n_vertices() const; //!< \brief number of vertices of each element

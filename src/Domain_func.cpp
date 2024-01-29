@@ -11,7 +11,7 @@ std::vector<double> Domain_func::operator()(Element& element, const Basis& basis
   Storage_params params {element.storage_params()};
   std::vector<double> qpoint_state;
   for (int i_var = 0; i_var < params.n_var; ++i_var) {
-    qpoint_state.push_back(element.stage(0)[i_var*params.n_qpoint() + i_qpoint]);
+    qpoint_state.push_back(element.state()[i_var*params.n_qpoint() + i_qpoint]);
   }
   return operator()(element.position(basis, i_qpoint), time, qpoint_state);
 }

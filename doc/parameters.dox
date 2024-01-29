@@ -165,7 +165,7 @@ but cause a larger fraction of the time to be spent in the aritificial viscosity
 __type:__ integer \n
 __default:__ 1 \n
 Number of pseudotime iterations to run in artificial viscosity advection equation per nominal iteration
-(i.e. per `hexed::Solver::set_art_visc_smoothness` call).
+(i.e. per `hexed::Solver::update_art_visc_smoothness` call).
 Increasing this number will help the artificial viscosity coefficient converge faster
 but cause a larger fraction of the CPU time to be spent in the aritificial viscosity calculation.
 \note Not defined until \ref create_solver is evaluated.
@@ -464,7 +464,7 @@ Relative to domain size.
 __type:__ integer \n
 __default:__ 1 \n
 Number of pseudotime iterations to run in artificial viscosity diffusion equation per nominal iteration
-(i.e. per `hexed::Solver::set_art_visc_smoothness` call).
+(i.e. per `hexed::Solver::update_art_visc_smoothness` call).
 Increasing this number will help the artificial viscosity coefficient converge faster
 but cause a larger fraction of the CPU time to be spent in the aritificial viscosity calculation.
 \note This was useful before Chebyshev acceleration was discovered.
@@ -558,6 +558,38 @@ __default:__ 0.25 \n
 __type:__ integer \n
 __default:__ 100 \n
 \see \ref monitor_vars
+
+<hr>
+\subsubsection elementwise_art_visc
+__type:__ integer \n
+__default:__ \ref false \n
+If \ref true, artificial viscosity determined in an elementwise fasion
+based on the work of [Persson](http://persson.berkeley.edu/pub/persson13transient_shocks.pdf).
+This feature is provided purely for the purpose of comparing the discretization-independent artificial viscosity to conventional methods.
+It is not recommended for practical simulations with this solver.
+If it is enabled, you are recommended to also set \ref laplacian_art_visc to \ref true.
+
+<hr>
+\subsubsection laplacian_art_visc
+__type:__ integer \n
+__default:__ \ref false \n
+If \ref true, the artificial viscosity will act as a [Laplacian diffusion](https://en.wikipedia.org/wiki/Laplace_operator#Diffusion) term
+instead of an artificial bulk viscosity.
+
+<hr>
+\subsubsection elementwise_art_visc_pde
+__type:__ integer \n
+__default:__ \ref false \n
+If \ref elementwise_art_visc "elementwise artificial viscosity" is used, if this variable is \ref true,
+the artificial viscosity field will be regularized with PDE-based smoothing.
+Otherwise, it will be continuous and piecewise n-linear.
+
+<hr>
+\subsubsection elementwise_art_visc_diff_ratio
+__type:__ float \n
+__default:__ 0.5 \n
+If \ref elementwise_art_visc_pde "PDE-based" \ref elementwise_art_visc "elementwise artificial viscosity" is used,
+this controls the amount of diffusion used to smooth the artificial viscosity coefficient.
 
 <hr>
 
@@ -706,7 +738,7 @@ __type:__ Heisenberg string \n
 Executes \ref print_freq solver iterations and returns an empty string.
 Each "solver iteration" consists of:
 -# Calling `hexed::Solver::set_art_visc_constant`, if applicable.
--# Calling `hexed::Solver::set_art_visc_smoothness`, if applicable.
+-# Calling `hexed::Solver::update_art_visc_smoothness`, if applicable.
 -# Calling `hexed::Solver::update`.
 
 <hr>

@@ -37,17 +37,14 @@ void state(Namespace& space, Element& elem, int i_qpoint)
 {
   auto params = elem.storage_params();
   int nq = params.n_qpoint();
-  std::string prefixes [2] {{""}, {"prev_"}};
-  for (int i_stage = 0; i_stage < 2; ++i_stage) {
-    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-      space.assign(prefixes[i_stage] + "momentum" + std::to_string(i_dim), elem.stage(i_stage)[i_dim*nq + i_qpoint]);
-    }
-    for (int i_dim = params.n_dim; i_dim < 3; ++i_dim) {
-      space.assign(prefixes[i_stage] + "momentum" + std::to_string(i_dim), 0.);
-    }
-    space.assign(prefixes[i_stage] + "density", elem.stage(i_stage)[params.n_dim*nq + i_qpoint]);
-    space.assign(prefixes[i_stage] + "energy", elem.stage(i_stage)[(params.n_dim + 1)*nq + i_qpoint]);
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+    space.assign("momentum" + std::to_string(i_dim), elem.state()[i_dim*nq + i_qpoint]);
   }
+  for (int i_dim = params.n_dim; i_dim < 3; ++i_dim) {
+    space.assign("momentum" + std::to_string(i_dim), 0.);
+  }
+  space.assign("density", elem.state()[params.n_dim*nq + i_qpoint]);
+  space.assign("energy", elem.state()[(params.n_dim + 1)*nq + i_qpoint]);
   space.assign("art_visc", elem.art_visc_coef()[i_qpoint]);
   space.assign("tss", elem.time_step_scale()[i_qpoint]);
 }
@@ -71,7 +68,7 @@ void surface(Namespace& space, Boundary_connection& con, int i_fqpoint)
     double ref_flux = -con.flux_cache()[i_var*nfq + i_fqpoint];
     // compute stress
     flux.push_back((nrml_mag > 1e-3 && viscous) ? ref_flux*nrml_sign/nrml_mag : 0.);
-    state.push_back(con.inside_face()[i_var*nfq + i_fqpoint]);
+    state.push_back(con.inside_face(false)[i_var*nfq + i_fqpoint]);
   }
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
     space.assign("normal" + std::to_string(i_dim), nrml(i_dim)*nrml_sign/nrml_mag);

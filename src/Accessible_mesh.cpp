@@ -128,6 +128,7 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
   def{params, root_sz},
   def_as_car{def.elements()},
   elems{car.elements(), def_as_car},
+  kernel_elems{elems},
   elem_cons{car.element_connections(), def.element_connections()},
   bound_face_cons{car.bound_face_con_view, def.bound_face_con_view},
   bound_cons{car.boundary_connections(), def.boundary_connections()},
@@ -450,7 +451,7 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force)
           *na[1][sign] /= offset;
         }
       }
-      double* state [] {face.elem.stage(0), elem.stage(0)};
+      double* state [] {face.elem.state(), elem.state()};
       // interpolate data from original element to new ones
       for (int i_elem : {1, 0}) { // iterate in reverse order since new states for both elements depend on element 0
         Gauss_legendre basis(params.row_size); //! \todo apparently the mesh needs to know about the basis after all...
@@ -761,7 +762,7 @@ void Accessible_mesh::connect_new(int start_at)
     if (elem.tree) {
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         for (int sign = 0; sign < 2; ++sign) {
-          if (!elem.faces[2*i_dim + sign]) { // if this face hasn't been connected already
+          if (!elem.is_connected(2*i_dim + sign)) { // if this face hasn't been connected already
             Eigen::VectorXi direction = Eigen::VectorXi::Zero(nd);
             direction(i_dim) = math::sign(sign);
             auto neighbors = elem.tree->find_neighbors(direction);

@@ -3,7 +3,7 @@
 
 #include <memory>
 #include "config.hpp"
-#include "Vector_view.hpp"
+#include "Sequences.hpp"
 #include "Stopwatch_tree.hpp"
 
 /*
