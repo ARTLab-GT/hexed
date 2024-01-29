@@ -16,6 +16,7 @@ namespace hexed::pde
 
 constexpr int tss_offset(int n_dim) {return n_dim + 2;}
 constexpr int bulk_av_offset(int n_dim) {return n_dim + 3;}
+constexpr int laplacian_av_offset(int n_dim) {return n_dim + 4;}
 constexpr int forcing_offset(int n_dim) {return n_dim + 5;}
 constexpr int advection_offset(int n_dim) {return n_dim + 9;}
 
@@ -46,7 +47,7 @@ class Navier_stokes
     static constexpr bool has_convection = true;
     static constexpr bool has_source = false;
     static constexpr int n_update = n_dim + 2;
-    static constexpr int n_state = n_dim + 3;
+    static constexpr int n_state = n_dim + 4;
     static constexpr int n_extrap = n_dim + 2;
     static constexpr double heat_rat = 1.4;
     Transport_model dyn_visc;
@@ -80,12 +81,14 @@ class Navier_stokes
       {
         for (int i_var = 0; i_var < n_dim + 2; ++i_var) state(i_var) = data[i_var*stride];
         state(n_dim + 2) = data[bulk_av_offset(n_dim)*stride];
+        state(n_dim + 3) = data[laplacian_av_offset(n_dim)*stride];
       }
       Mat<n_update> update_state;
       void fetch_extrap_state(int stride, const double* data)
       {
         for (int i_var = 0; i_var < n_dim + 2; ++i_var) state(i_var) = data[i_var*stride];
         state(n_dim + 2) = 0.;
+        state(n_dim + 3) = 0.;
         update_state = state(Eigen::seqN(0, n_update));
       }
 
@@ -128,7 +131,7 @@ class Navier_stokes
       void compute_scalars_diff()
       {
         bulk_av = std::abs(state(n_dim + 2));
-        laplacian_av = 0;
+        laplacian_av = std::abs(state(n_dim + 3));
         sqrt_temp = std::sqrt(std::max((state(n_dim + 1) - kin_ener)/mass, 0.)*(heat_rat - 1)/constants::specific_gas_air);
         dyn_visc_coef = _eq.dyn_visc.coefficient(sqrt_temp);
         therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp);
@@ -146,12 +149,11 @@ class Navier_stokes
           Mat<n_dim> veloc = mmtm/mass;
           Mat<n_dim, n_dim> veloc_grad = (gradient(seq, all) - veloc*gradient(n_dim, all))/mass;
           Mat<n_dim, n_dim> stress = dyn_visc_coef*(veloc_grad + veloc_grad.transpose())
-                                     + ((!_eq._laplacian)*bulk_av*mass - 2./3.*dyn_visc_coef)*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
-          flux_diff(seq, all) = -stress;
-          flux_diff(n_dim, all).setZero();
+                                     + (bulk_av*mass - 2./3.*dyn_visc_coef)*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
+          flux_diff = -laplacian_av*gradient;
+          flux_diff(seq, all) -= stress;
           Mat<1, n_dim> int_ener_grad = -state(n_dim + 1)/mass/mass*gradient(n_dim, all) + gradient(n_dim + 1, all)/mass - veloc.transpose()*veloc_grad;
-          flux_diff(n_dim + 1, all) = -veloc.transpose()*stress - energy_cond*int_ener_grad;
-          if (_eq._laplacian) flux_diff -= bulk_av*gradient;
+          flux_diff(n_dim + 1, all) -= veloc.transpose()*stress + energy_cond*int_ener_grad;
           flux_diff = flux_diff*normal;
         } else HEXED_ASSERT(false, "`compute_flux_diff` requires `n_dim == n_dim_flux`");
       }

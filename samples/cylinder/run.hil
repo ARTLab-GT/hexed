@@ -26,6 +26,7 @@ $set_ramping
 done = {iteration >= 5*10^3}
 elementwise_art_visc = true
 laplacian_art_visc = true
+vis_freq = 1000
 {
 $set_aerothermo
 ramping_final_safety = .8
@@ -33,8 +34,8 @@ art_visc_width = art_visc_width*.7
 viscosity_model = air_viscosity
 conductivity_model = {ref_value = 1.4/0.4*specific_gas_air/.72*air_visc_ref; ref_temperature = air_visc_ref_temp; offset = air_visc_offset}
 done = {iteration >= 10^5}
-}
 vis_freq = 10000
+}
 
 $plot_history
 $init

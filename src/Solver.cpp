@@ -541,7 +541,7 @@ void Solver::update_art_visc_elwise(double width, bool pde_based)
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       double elem_av = elems[i_elem].uncertainty;
-      double* av = elems[i_elem].bulk_av_coef();
+      double* av = elems[i_elem].laplacian_av_coef();
       double* forcing = elems[i_elem].art_visc_forcing();
       for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
         forcing[i_qpoint] = elem_av;
@@ -551,7 +551,7 @@ void Solver::update_art_visc_elwise(double width, bool pde_based)
     diffuse_art_visc(_namespace->lookup<double>("elementwise_art_visc_diff_ratio").value()*width*width);
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      double* av = elems[i_elem].bulk_av_coef();
+      double* av = elems[i_elem].laplacian_av_coef();
       double* forcing = elems[i_elem].art_visc_forcing();
       for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) av[i_qpoint] = forcing[params.n_qpoint() + i_qpoint];
     }
@@ -564,7 +564,7 @@ void Solver::update_art_visc_elwise(double width, bool pde_based)
     Mat<dyn, dyn> interp = Gauss_lobatto(2).interpolate(basis.nodes());
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      Eigen::Map<Mat<>> qpoint_av(elems[i_elem].bulk_av_coef(), params.n_qpoint());
+      Eigen::Map<Mat<>> qpoint_av(elems[i_elem].laplacian_av_coef(), params.n_qpoint());
       Eigen::Map<Mat<>> vert_av(&elems[i_elem].vertex_elwise_av(0), params.n_vertices());
       qpoint_av = math::hypercube_matvec(interp, vert_av);
     }

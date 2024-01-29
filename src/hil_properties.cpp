@@ -46,7 +46,7 @@ void state(Namespace& space, Element& elem, int i_qpoint)
   space.assign("density", elem.state()[params.n_dim*nq + i_qpoint]);
   space.assign("energy", elem.state()[(params.n_dim + 1)*nq + i_qpoint]);
   space.assign("bulk_art_visc", elem.bulk_av_coef()[i_qpoint]);
-  space.assign("laplacian_art_visc", elem.bulk_av_coef()[i_qpoint]);
+  space.assign("laplacian_art_visc", elem.laplacian_av_coef()[i_qpoint]);
   space.assign("tss", elem.time_step_scale()[i_qpoint]);
 }
 
