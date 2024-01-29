@@ -28,11 +28,18 @@ class Timing_data:
     def n_axes(self):
         return 1 + sum([c.n_axes for c in self.children if c.n_units and c.children])
 
+    @property
+    def n_rows(self):
+        return (self.n_axes + self.n_axes%3)//3
+
     def plot(self, axs = None):
         fig = None
         if axs is None:
-            fig, axs = plt.subplots(1, self.n_axes)
-            fig.set_size_inches(18, 6)
+            fig, axs = plt.subplots(self.n_rows, min(self.n_axes, 3))
+            fig.set_size_inches(18, 6*self.n_rows)
+            axs = axs.flatten()
+            for ax in axs:
+                ax.axis("off")
         plt.sca(axs[0])
         axs = axs[1:]
         components = [data for data in self.children if data.n_units]
