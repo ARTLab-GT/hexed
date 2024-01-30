@@ -41,6 +41,7 @@ class Kernel_element
   //! \brief where the extrapolated face area-weighted normal vectors are stored
   //! \details for Cartesian elements, returns `nullptr`
   virtual double* kernel_face_normal(int i_face) = 0;
+  virtual double& uncert() = 0; //!< \brief place to store some uncertainty metric
 };
 
 }

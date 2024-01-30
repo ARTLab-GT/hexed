@@ -11,6 +11,7 @@
 #include <Gauss_lobatto.hpp>
 #include <Face_permutation.hpp>
 #include <Row_index.hpp>
+#include <stabilizing_art_visc.hpp>
 
 namespace hexed
 {
@@ -574,25 +575,13 @@ void Solver::set_art_visc_admis()
 {
   stopwatch.children.at("set art visc").stopwatch.start();
   use_art_visc = true;
-  Stab_indicator si;
-  set_uncertainty(Normalized_nonsmooth(si));
-  auto& elems = acc_mesh.elements();
-  double scale = (basis.row_size - 1)*(_namespace->lookup<double>("freestream_speed").value() + _namespace->lookup<double>("freestream_sound_speed").value());
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    double& u = elems[i_elem].uncertainty;
-    u = 2*std::log(u)/std::log(10);
-    double ramp_center = -4.25*std::log(basis.row_size - 1)/std::log(10);
-    double half_width = 0.5;
-    if (u <= ramp_center - half_width) u = 0;
-    else if (u < ramp_center + half_width) u = .5*(1 + std::sin(constants::pi*(u - ramp_center)/2/half_width));
-    else u = 1;
-    u *= elems[i_elem].nominal_size()*scale;
-  }
+  double char_speed = _namespace->lookup<double>("freestream_speed").value() + _namespace->lookup<double>("freestream_sound_speed").value();
+  stabilizing_art_visc(_kernel_mesh, char_speed);
   share_vertex_data([](Element& elem, int){return elem.uncertainty;},
                     [](Element& elem, int i_vert)->double&{return elem.vertex_elwise_av(i_vert);},
                     Vertex::vector_max);
   Mat<dyn, dyn> interp = Gauss_lobatto(2).interpolate(basis.nodes());
+  auto& elems = acc_mesh.elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     Eigen::Map<Mat<>> qpoint_av(elems[i_elem].laplacian_av_coef(), params.n_qpoint());

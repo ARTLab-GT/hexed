@@ -191,5 +191,6 @@ bool Element::deformed() const {return false;}
 double* Element::reference_level_normals() {return nullptr;}
 double* Element::jacobian_determinant() {return nullptr;}
 double* Element::kernel_face_normal(int i_face) {return nullptr;}
+double& Element::uncert() {return uncertainty;}
 
 }
