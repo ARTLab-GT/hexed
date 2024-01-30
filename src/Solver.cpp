@@ -572,6 +572,7 @@ void Solver::update_art_visc_elwise(double width, bool pde_based)
 
 void Solver::set_art_visc_admis()
 {
+  stopwatch.children.at("set art visc").stopwatch.start();
   use_art_visc = true;
   Stab_indicator si;
   set_uncertainty(Normalized_nonsmooth(si));
@@ -598,6 +599,8 @@ void Solver::set_art_visc_admis()
     Eigen::Map<Mat<>> vert_av(&elems[i_elem].vertex_elwise_av(0), params.n_vertices());
     qpoint_av = math::hypercube_matvec(interp, vert_av);
   }
+  stopwatch.children.at("set art visc").stopwatch.pause();
+  stopwatch.children.at("set art visc").work_units_completed += elems.size();
 }
 
 void Solver::set_art_visc_row_size(int row_size)
