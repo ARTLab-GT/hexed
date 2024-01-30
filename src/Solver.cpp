@@ -575,12 +575,15 @@ void Solver::set_art_visc_admis()
 {
   stopwatch.children.at("set art visc").stopwatch.start();
   use_art_visc = true;
+  // compute the desired artificial viscosity in each element
   double char_speed = _namespace->lookup<double>("freestream_speed").value() + _namespace->lookup<double>("freestream_sound_speed").value();
   stabilizing_art_visc(_kernel_mesh, char_speed);
+  // enforce C^0 continuity
   share_vertex_data([](Element& elem, int){return elem.uncertainty;},
                     [](Element& elem, int i_vert)->double&{return elem.vertex_elwise_av(i_vert);},
                     Vertex::vector_max);
   Mat<dyn, dyn> interp = Gauss_lobatto(2).interpolate(basis.nodes());
+  // interpolate from vertices to quadrature points
   auto& elems = acc_mesh.elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {

@@ -33,12 +33,14 @@ class Stab_art_visc : public Kernel<Kernel_element&>
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
     {
       double* state = elements[i_elem].state();
+      // compute the indicator variable (specific volume) and it's L^2 norm
       double indicator_var [n_qpoint];
       double norm_sq = 0;
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
         indicator_var[i_qpoint] = 1./state[n_dim*n_qpoint + i_qpoint];
         norm_sq += indicator_var[i_qpoint]*indicator_var[i_qpoint]*_qpoint_weights(i_qpoint);
       }
+      // compute the normalized (non)smoothness indicator
       double nonsmooth = 0;
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
         for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
@@ -47,10 +49,12 @@ class Stab_art_visc : public Kernel<Kernel_element&>
         }
       }
       nonsmooth /= norm_sq*n_dim;
+      // transform the indicator to [0, 1] by comparing it to a threshold
       double indicator = std::log(nonsmooth)/std::log(10);
       if (indicator <= _ramp_center - _half_width) indicator = 0;
       else if (indicator < _ramp_center + _half_width) indicator = .5*(1 + std::sin(constants::pi*(indicator - _ramp_center)/2/_half_width));
       else indicator = 1;
+      // add dimensional scaling and write to the element
       elements[i_elem].uncert() = (row_size - 1)*_char_speed*elements[i_elem].nominal_size()*indicator;
     }
   }
