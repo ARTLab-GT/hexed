@@ -446,6 +446,20 @@ The values of the variables in the expression determine the split points in orde
 The names of the variables are irrelevant.
 
 <hr>
+\subsubsection diffusive_admissibility
+__type:__ integer \n
+__default:__ \ref false \n
+Experimental feature, but shows potential to be very useful.
+If \ref true, it will add a Laplacian artificial diffusion term triggered based on elementwise smoothness of the specific volume (reciprocal of density),
+with a very coarse tolerance.
+This appears to be very effective for stabilizing severely underresolved (or unresolvable) features without affecting well-resolved regions,
+including properly captured shocks.
+For example, this allows reasonable results to be obtained for inviscid flow around a square,
+which had thus far defeated the solver even with shock capturing.
+This feature introduces very little performance overhead in and of itself, but it will enable LDG,
+introducing significant overhead over pure inviscid problems.
+
+<hr>
 
 \subsection esoteric_inputs Esoteric Input Parameters
 You will probably never need to worry about these parameters.
@@ -567,14 +581,6 @@ If \ref true, artificial viscosity determined in an elementwise fasion
 based on the work of [Persson](http://persson.berkeley.edu/pub/persson13transient_shocks.pdf).
 This feature is provided purely for the purpose of comparing the discretization-independent artificial viscosity to conventional methods.
 It is not recommended for practical simulations with this solver.
-If it is enabled, you are recommended to also set \ref laplacian_art_visc to \ref true.
-
-<hr>
-\subsubsection laplacian_art_visc
-__type:__ integer \n
-__default:__ \ref false \n
-If \ref true, the artificial viscosity will act as a [Laplacian diffusion](https://en.wikipedia.org/wiki/Laplace_operator#Diffusion) term
-instead of an artificial bulk viscosity.
 
 <hr>
 \subsubsection elementwise_art_visc_pde

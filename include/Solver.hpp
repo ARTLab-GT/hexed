@@ -120,28 +120,28 @@ class Solver
    * The functions below must be used to complete the setup
    * before any flow calculation can begin.
    */
-  virtual Mesh& mesh();
-  virtual Storage_params storage_params();
+  Mesh& mesh();
+  Storage_params storage_params();
   //! warps the boundary elements such that the element faces coincide with the boundary at their quadrature points.
-  virtual void snap_faces();
+  void snap_faces();
   /*!
    * compute the Jacobian of all elements based on the current position of the vertices
    * and value of any face warping.
    * Mesh topology must be valid (no duplicate or missing connections) before calling this function.
    */
-  virtual void calc_jacobian();
+  void calc_jacobian();
   //! set the flow state
-  virtual void initialize(const Spacetime_func&);
-  virtual void set_art_visc_off(); //!< turns off artificial viscosity
-  virtual void set_art_visc_constant(double); //!< turns on artificial viscosity and initializes coefficient to a uniform value
-  virtual void set_art_visc_row_size(int); //!< modify the polynomial order of smoothness-based artificial viscosity (must be <= row size of discretization (which is the default))
-  virtual void set_fix_admissibility(bool); //!< turns on/off the thermodynamic admissibility-preserving scheme (increases robustness at some computational overhead)
+  void initialize(const Spacetime_func&);
+  void set_art_visc_off(); //!< turns off artificial viscosity
+  void set_art_visc_constant(double); //!< turns on artificial viscosity and initializes coefficient to a uniform value
+  void set_art_visc_row_size(int); //!< modify the polynomial order of smoothness-based artificial viscosity (must be <= row size of discretization (which is the default))
+  void set_fix_admissibility(bool); //!< turns on/off the thermodynamic admissibility-preserving scheme (increases robustness at some computational overhead)
   /*! \brief set `Element::uncertainty` for each element according to `func`.
    * \details Uncertainty metric can be evaluated via `sample(ref_level, is_deformed, serial_n, Uncertainty())`.
    * This function does some additional work to enforce some conditions on the uncertainty of neighboring elements.
    * Thus, use this function rather than just `sample(ref_level, is_deformed, serial_n, func)` directly.
    */
-  virtual void set_uncertainty(const Element_func& func);
+  void set_uncertainty(const Element_func& func);
   /*! \brief Set uncertainty metric based on surface representation quality.
    * \details For all deformed elements contacting the boundary specified by `bc_sn`, computes the
    * unit surface normals at the faces and compares to neighboring elements.
@@ -150,9 +150,9 @@ class Solver
    * \note Connections between deformed elements and Cartesian elements are ignored.
    * Fully Cartesian connections trivially contribute zero to this metric of uncertainty.
    */
-  virtual void set_uncert_surface_rep(int bc_sn);
+  void set_uncert_surface_rep(int bc_sn);
   //! set uncertainty of each element to be at least the maximum uncertainty of any elements extruded from it
-  virtual void synch_extruded_uncert();
+  void synch_extruded_uncert();
   //!\}
 
   //! \name time marching
@@ -163,45 +163,46 @@ class Solver
    * Also, the safety factor is __not__ the same as the CFL number
    * (it is scaled by the max allowable CFL for the chosen DG scheme which is often O(1e-2)).
    */
-  virtual void update();
-  virtual void update_implicit(); //!< \brief (experimental) performs an implicit time step \warning Experimental! Interesting for reasearch, not effective in practice (yet, anyway).
-  virtual void compute_residual();
-  virtual bool is_admissible(); //!< \brief check whether flowfield is admissible (e.g. density and energy are positive)
-  virtual void update_art_visc_smoothness(double advect_length); //!< \brief updates the aritificial viscosity coefficient based on smoothness of the flow variables
+  void update();
+  void update_implicit(); //!< \brief (experimental) performs an implicit time step \warning Experimental! Interesting for reasearch, not effective in practice (yet, anyway).
+  void compute_residual();
+  bool is_admissible(); //!< \brief check whether flowfield is admissible (e.g. density and energy are positive)
+  void update_art_visc_smoothness(double advect_length); //!< \brief updates the aritificial viscosity coefficient based on smoothness of the flow variables
   /*! \brief (experimental) sets artificial viscosity based on elementwise smoothness
    * \details Based on the work of Persson et al. on artificial viscosity with elementwise smoothness indicators.
    * Implemented primarily for evaluating the difference between grid-independent artificial viscosity and conventional methods.
    * \warning Not recommended for use in practice.
    * Use `Solver::update_art_visc_smoothness`, which was developed to supplant this type of approach.
    */
-  virtual void update_art_visc_elwise(double width, bool pde_based = false);
+  void update_art_visc_elwise(double width, bool pde_based = false);
   /*! \brief an object providing all available information about the status of the time marching iteration.
    * \details The `Iteration_status::start_time` member will refer to when the `Solver` object was created
    * (specifically at the start of the `Solver::Solver` body).
    */
-  virtual Iteration_status iteration_status();
+  void set_art_visc_admis(); //!< \brief set the Laplacian artificial viscosity to a minimal value that will encourage thermodynamic admissibility
+  Iteration_status iteration_status();
   /*!
    * reset any variables in `iteration_status()` that count something since the last call to `reset_counters()`
    * (e.g. number of artificial viscosity iterations)
    */
-  virtual void reset_counters();
+  void reset_counters();
   //!\}
 
   //! \name output
   //! functions that compute some form of output data
   //!\{
-  virtual std::vector<double> sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func&); //!< evaluate arbitrary functions at arbitrary locations
-  virtual std::vector<double> sample(int ref_level, bool is_deformed, int serial_n, const Element_func&); //!< \overload
+  std::vector<double> sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func&); //!< evaluate arbitrary functions at arbitrary locations
+  std::vector<double> sample(int ref_level, bool is_deformed, int serial_n, const Element_func&); //!< \overload
   //! obtain performance data
-  virtual const Stopwatch_tree& stopwatch_tree();
+  const Stopwatch_tree& stopwatch_tree();
   //! compute an integral over the entire flow field at the current time
-  virtual std::vector<double> integral_field(const Qpoint_func& integrand);
+  std::vector<double> integral_field(const Qpoint_func& integrand);
   //! compute an integral over all surfaces where a particular boundary condition has been enforced
-  virtual std::vector<double> integral_surface(const Boundary_func& integrand, int bc_sn);
+  std::vector<double> integral_surface(const Boundary_func& integrand, int bc_sn);
   /*! compute the min and max of variables over entire flow field. layout: `{{var0_min, var0_max}, {var1_min, var1_max}, ...}`
    * bounds are approximated by uniformly sampling a block `n_sample`-on-a-side in each element
    */
-  virtual std::vector<std::array<double, 2>> bounds_field(const Qpoint_func&, int n_sample = 20);
+  std::vector<std::array<double, 2>> bounds_field(const Qpoint_func&, int n_sample = 20);
 
   /*! \brief write a visualization file describing the entire flow field (but not identifying surfaces)
    * \param format Which format to write the visualization file in. Accepted values are `"xdmf"` and `"tecplot"`

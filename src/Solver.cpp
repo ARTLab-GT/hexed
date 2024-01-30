@@ -11,6 +11,7 @@
 #include <Gauss_lobatto.hpp>
 #include <Face_permutation.hpp>
 #include <Row_index.hpp>
+#include <stabilizing_art_visc.hpp>
 
 namespace hexed
 {
@@ -111,7 +112,7 @@ double Solver::max_dt(double msc, double msd)
     0, 0, bool(_namespace->lookup<int>("use_filter").value()),
   };
   bool local_time = _namespace->lookup<int>("local_time").value();
-  if (use_ldg()) return max_dt_navier_stokes(_kernel_mesh, opts, msc, msd, local_time, visc, therm_cond, _namespace->lookup<int>("laplacian_art_visc").value());
+  if (use_ldg()) return max_dt_navier_stokes(_kernel_mesh, opts, msc, msd, local_time, visc, therm_cond);
   else return max_dt_euler(_kernel_mesh, opts, msc, msd, local_time);
 }
 
@@ -160,7 +161,6 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default<int>("local_time", local_time_stepping);
   _namespace->assign_default("elementwise_art_visc", 0);
   _namespace->assign_default("elementwise_art_visc_diff_ratio", 5.);
-  _namespace->assign_default("laplacian_art_visc", 0);
   _namespace->assign_default<std::string>("working_dir", ".");
   _namespace->assign("fix_iters", 0);
   _namespace->assign("iteration", 0);
@@ -362,7 +362,7 @@ void Solver::set_art_visc_constant(double value)
   auto& elements = acc_mesh.elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    double* av = elements[i_elem].art_visc_coef();
+    double* av = elements[i_elem].bulk_av_coef();
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
      av[i_qpoint] = value;
     }
@@ -499,7 +499,7 @@ void Solver::update_art_visc_smoothness(double advect_length)
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].state();
-    double* av = elements[i_elem].art_visc_coef();
+    double* av = elements[i_elem].bulk_av_coef();
     double* forcing = elements[i_elem].art_visc_forcing();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       double f = mult*forcing[n_real*nq + i_qpoint];
@@ -523,7 +523,7 @@ void Solver::update_art_visc_elwise(double width, bool pde_based)
 {
   use_art_visc = true;
   Mass mass;
-  set_uncertainty(Elem_nonsmooth(mass));
+  set_uncertainty(Normalized_nonsmooth(mass));
   auto& elems = acc_mesh.elements();
   double scale = width/(basis.row_size - 1)*(_namespace->lookup<double>("freestream_speed").value() + _namespace->lookup<double>("freestream_sound_speed").value());
   #pragma omp parallel for
@@ -541,7 +541,7 @@ void Solver::update_art_visc_elwise(double width, bool pde_based)
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       double elem_av = elems[i_elem].uncertainty;
-      double* av = elems[i_elem].art_visc_coef();
+      double* av = elems[i_elem].laplacian_av_coef();
       double* forcing = elems[i_elem].art_visc_forcing();
       for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
         forcing[i_qpoint] = elem_av;
@@ -551,7 +551,7 @@ void Solver::update_art_visc_elwise(double width, bool pde_based)
     diffuse_art_visc(_namespace->lookup<double>("elementwise_art_visc_diff_ratio").value()*width*width);
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      double* av = elems[i_elem].art_visc_coef();
+      double* av = elems[i_elem].laplacian_av_coef();
       double* forcing = elems[i_elem].art_visc_forcing();
       for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) av[i_qpoint] = forcing[params.n_qpoint() + i_qpoint];
     }
@@ -564,11 +564,35 @@ void Solver::update_art_visc_elwise(double width, bool pde_based)
     Mat<dyn, dyn> interp = Gauss_lobatto(2).interpolate(basis.nodes());
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      Eigen::Map<Mat<>> qpoint_av(elems[i_elem].art_visc_coef(), params.n_qpoint());
+      Eigen::Map<Mat<>> qpoint_av(elems[i_elem].laplacian_av_coef(), params.n_qpoint());
       Eigen::Map<Mat<>> vert_av(&elems[i_elem].vertex_elwise_av(0), params.n_vertices());
       qpoint_av = math::hypercube_matvec(interp, vert_av);
     }
   }
+}
+
+void Solver::set_art_visc_admis()
+{
+  stopwatch.children.at("set art visc").stopwatch.start();
+  use_art_visc = true;
+  // compute the desired artificial viscosity in each element
+  double char_speed = _namespace->lookup<double>("freestream_speed").value() + _namespace->lookup<double>("freestream_sound_speed").value();
+  stabilizing_art_visc(_kernel_mesh, char_speed);
+  // enforce C^0 continuity
+  share_vertex_data([](Element& elem, int){return elem.uncertainty;},
+                    [](Element& elem, int i_vert)->double&{return elem.vertex_elwise_av(i_vert);},
+                    Vertex::vector_max);
+  Mat<dyn, dyn> interp = Gauss_lobatto(2).interpolate(basis.nodes());
+  // interpolate from vertices to quadrature points
+  auto& elems = acc_mesh.elements();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    Eigen::Map<Mat<>> qpoint_av(elems[i_elem].laplacian_av_coef(), params.n_qpoint());
+    Eigen::Map<Mat<>> vert_av(&elems[i_elem].vertex_elwise_av(0), params.n_vertices());
+    qpoint_av = math::hypercube_matvec(interp, vert_av);
+  }
+  stopwatch.children.at("set art visc").stopwatch.pause();
+  stopwatch.children.at("set art visc").work_units_completed += elems.size();
 }
 
 void Solver::set_art_visc_row_size(int row_size)
@@ -775,7 +799,7 @@ void Solver::update()
           bool(_namespace->lookup<int>("use_filter").value()),
         };
         apply_state_bcs();
-        if (use_ldg() && !i) compute_navier_stokes(_kernel_mesh, opts, [this](){apply_flux_bcs();}, visc, therm_cond, _namespace->lookup<int>("laplacian_art_visc").value());
+        if (use_ldg() && !i) compute_navier_stokes(_kernel_mesh, opts, [this](){apply_flux_bcs();}, visc, therm_cond);
         else compute_euler(_kernel_mesh, opts);
         // note that function call must come first to ensure it is evaluated despite short-circuiting
         fixed = fix_admissibility(_namespace->lookup<double>("fix_admis_max_safety").value()) || fixed;
@@ -822,7 +846,7 @@ void Solver::compute_residual()
     true,
     bool(_namespace->lookup<int>("use_filter").value()),
   };
-  if (use_ldg()) compute_navier_stokes(_kernel_mesh, opts, [this](){apply_flux_bcs();}, visc, therm_cond, _namespace->lookup<int>("laplacian_art_visc").value());
+  if (use_ldg()) compute_navier_stokes(_kernel_mesh, opts, [this](){apply_flux_bcs();}, visc, therm_cond);
   else compute_euler(_kernel_mesh, opts);
 }
 
@@ -940,7 +964,7 @@ bool Solver::fix_admissibility(double stability_ratio)
       for (int i_vert = 0; i_vert < nv; ++i_vert) {
         vert_fac(i_vert) = elem.vertex_fix_admis_coef(i_vert);
       }
-      Eigen::Map<Mat<>>(elem.fix_admis_coef(), nq) = math::hypercube_matvec(interp, vert_fac);
+      Eigen::Map<Mat<>>(elem.laplacian_av_coef(), nq) = math::hypercube_matvec(interp, vert_fac);
     }
     #if HEXED_USE_XDMF
     if (status.iteration >= last_fix_vis_iter + 1000 && iter == 0) {
@@ -956,7 +980,7 @@ bool Solver::fix_admissibility(double stability_ratio)
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        std::swap(elem.fix_admis_coef()[i_qpoint], elem.art_visc_coef()[i_qpoint]);
+        std::swap(elem.laplacian_av_coef()[i_qpoint], elem.bulk_av_coef()[i_qpoint]);
       }
     }
     double dt = stability_ratio;
@@ -995,7 +1019,7 @@ bool Solver::fix_admissibility(double stability_ratio)
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        std::swap(elem.fix_admis_coef()[i_qpoint], elem.art_visc_coef()[i_qpoint]);
+        std::swap(elem.laplacian_av_coef()[i_qpoint], elem.bulk_av_coef()[i_qpoint]);
       }
     }
   }

@@ -83,8 +83,8 @@ class Element : public Kernel_element
   double* advection_state(); //!< layout: [i_node][i_qpoint] \note `0 <= i_node < row_size`
   //! pointer to scaling factor for local time step.
   double* time_step_scale() override; //!< layout: [i_qpoint]
-  double* art_visc_coef(); //!< layout: [i_qpoint]
-  double* fix_admis_coef(); //!< layout: [i_qpoint]
+  double* bulk_av_coef(); //!< layout: [i_qpoint]
+  double* laplacian_av_coef(); //!< layout: [i_qpoint]
   double* art_visc_forcing(); //!< layout: [i_forcing][i_qpoint]
   virtual double* node_adjustments() {return nullptr;} //!< overriden by `Deformed_element`
 
@@ -118,6 +118,7 @@ class Element : public Kernel_element
   double* reference_level_normals() override;
   double* jacobian_determinant() override;
   double* kernel_face_normal(int i_face) override;
+  double& uncert() override;
 };
 
 }

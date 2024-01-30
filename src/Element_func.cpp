@@ -25,6 +25,7 @@ std::vector<double> Uncertainty::operator()(Element& elem) const {return {elem.u
 Elem_average::Elem_average    (const Qpoint_func& func) : qf{func} {}
 Elem_l2::Elem_l2              (const Qpoint_func& func) : qf{func} {}
 Elem_nonsmooth::Elem_nonsmooth(const Qpoint_func& func) : qf{func} {}
+Normalized_nonsmooth::Normalized_nonsmooth(const Qpoint_func& func) : qf{func}, ns(qf), l2(qf) {}
 
 int Elem_average::n_var(int n_dim) const
 {
@@ -88,6 +89,15 @@ std::vector<double> Elem_nonsmooth::operator()(Element& elem, const Basis& basis
     }
     result[i_var] = std::sqrt(result[i_var]/params.n_dim);
   }
+  return result;
+}
+
+std::vector<double> Normalized_nonsmooth::operator()(Element& elem, const Basis& basis, double time) const
+{
+  auto n = ns(elem, basis, time);
+  auto l = l2(elem, basis, time);
+  std::vector<double> result(n.size());
+  for (unsigned i = 0; i < n.size(); ++i) result[i] = n[i]/l[i];
   return result;
 }
 

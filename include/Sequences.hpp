@@ -1,6 +1,7 @@
 #ifndef HEXED_SEQUENCES_HPP_
 #define HEXED_SEQUENCES_HPP_
 
+#include <vector>
 #include "Sequence.hpp"
 
 namespace hexed

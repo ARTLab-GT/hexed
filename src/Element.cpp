@@ -121,19 +121,19 @@ double* Element::time_step_scale()
   return data.data() + params.n_dof();
 }
 
-double* Element::art_visc_coef()
+double* Element::bulk_av_coef()
 {
   return time_step_scale() + params.n_qpoint();
 }
 
-double* Element::fix_admis_coef()
+double* Element::laplacian_av_coef()
 {
-  return art_visc_coef() + params.n_qpoint();
+  return bulk_av_coef() + params.n_qpoint();
 }
 
 double* Element::art_visc_forcing()
 {
-  return fix_admis_coef() + params.n_qpoint();
+  return laplacian_av_coef() + params.n_qpoint();
 }
 
 double* Element::advection_state()
@@ -191,5 +191,6 @@ bool Element::deformed() const {return false;}
 double* Element::reference_level_normals() {return nullptr;}
 double* Element::jacobian_determinant() {return nullptr;}
 double* Element::kernel_face_normal(int i_face) {return nullptr;}
+double& Element::uncert() {return uncertainty;}
 
 }
