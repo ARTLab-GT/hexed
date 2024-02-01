@@ -19,9 +19,8 @@ visc_stress_expr = {visc_stress0 = visc_stress0; visc_stress1 = visc_stress1; vi
 stress_expr = {stress0 = -pressure*normal0 + visc_stress0; stress1 = -pressure*normal1 + visc_stress1; stress2 = -pressure*normal2 + visc_stress2;}
 heat_flux_expr = {heat_flux = heat_flux;}
 iteration_expr = {iteration = iteration;}
+art_visc_residual_expr = {art_visc_residual = art_visc_residual;}
 normalized_residual_expr = {normalized_residual = (residual_momentum/init_residual_momentum + residual_density/init_residual_density + residual_energy/init_residual_energy)/3;}
-av_advection_residual_expr = {av_advection_residual = av_advection_residual;}
-av_diffusion_residual_expr = {av_diffusion_residual = av_diffusion_residual;}
 flow_time_expr = {flow_time = flow_time;}
 time_step_expr = {time_step = time_step;}
 fix_iters_expr = {fix_iters = fix_iters;}
@@ -97,7 +96,7 @@ set_shock = {
     n_cheby_av = shock_sub_iters
     flow_iters = shock_sub_iters
     av_advect_iters = ceil(shock_sub_iters/5.)
-    print_vars = print_vars + av_advection_residual_expr + av_diffusion_residual_expr
+    print_vars = print_vars + art_visc_residual_expr
 }
 
 ramping_initial_safety = 3e-3
@@ -243,7 +242,13 @@ vis_iter = {
     }
     $$({case} + (iteration%vis_freq == 0))
 }
-print_iter = {println report}
+
+print_iter = {
+    case0 = {}
+    case1 = {println report}
+    $$({case} + (iteration != 1))
+}
+
 iterate = {
     update
     {compute initial residual for normalization}

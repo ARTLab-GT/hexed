@@ -118,7 +118,7 @@ class History_plot:
         while self._data is None:
             self._read_new_lines()
             while self._lines:
-                line = self._lines.pop(0).replace(" ", "")
+                line = self._lines.pop(0).replace(" ", "").replace("\n", "")
                 if re.match("iteration,", line):
                     self._data = pd.DataFrame(columns = line.split(","))
                     break
@@ -135,13 +135,14 @@ class History_plot:
     def _init(self):
         self._curves = []
         for i_col in range(len(self._plot_columns)):
+            col = self._plot_columns[i_col]
             ax = self._axs[i_col]
             self._curves.append(ax.plot([], [])[0])
-            ax.set_xlim(0, 1)
+            ax.set_xlim(0., 1.)
             ax.grid(True)
             ax.set_xlabel("iteration")
-            ax.set_ylabel(self._plot_columns[i_col])
-            if self._plot_columns[i_col].endswith("residual"):
+            ax.set_ylabel(col)
+            if col.endswith("residual"):
                 self._axs[i_col].set_ylim(0.1, 1.)
                 self._axs[i_col].set_yscale("log")
         return self._curves

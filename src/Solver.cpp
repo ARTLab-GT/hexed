@@ -165,8 +165,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign("fix_iters", 0);
   _namespace->assign("iteration", 0);
   _namespace->assign("flow_time", 0.);
-  _namespace->assign("av_advection_residual", 0.);
-  _namespace->assign("av_diffusion_residual", 0.);
+  _namespace->assign("art_visc_residual", 0.);
   _namespace->assign("wall_time", 0.);
   status.set_time();
   // setup categories for performance reporting
@@ -496,14 +495,19 @@ void Solver::update_art_visc_smoothness(double advect_length)
   // clean up
   double mult = _namespace->lookup<double>("av_visc_mult").value()*advect_length;
   double us_max = advect_length*_namespace->lookup<double>("av_unscaled_max").value()*std::sqrt(2*_namespace->lookup<double>("freestream" + std::to_string(nd + 1)).value()/_namespace->lookup<double>("freestream" + std::to_string(nd)).value());
-  #pragma omp parallel for
+  double resid = 0;
+  Mat<> qpoint_weights = math::pow_outer(basis.node_weights(), nd);
+  #pragma omp parallel for reduction(+:resid)
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* state = elements[i_elem].state();
     double* av = elements[i_elem].bulk_av_coef();
     double* forcing = elements[i_elem].art_visc_forcing();
+    double volume = math::pow(elements[i_elem].nominal_size(), nd);
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       double f = mult*forcing[n_real*nq + i_qpoint];
-      av[i_qpoint] = us_max*f/(us_max + f);
+      double new_av = us_max*f/(us_max + f);
+      resid += math::pow(av[i_qpoint] - new_av, 2)*qpoint_weights(i_qpoint)*volume;
+      av[i_qpoint] = new_av;
       // put the flow state back how we found it
       double scale = sqrt(2*state[nd*nq + i_qpoint]*state[(nd + 1)*nq + i_qpoint]);
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
@@ -511,6 +515,7 @@ void Solver::update_art_visc_smoothness(double advect_length)
       }
     }
   }
+  _namespace->assign("art_visc_residual", std::sqrt(resid));
   // update the face state
   compute_write_face(_kernel_mesh);
   compute_prolong(_kernel_mesh);
