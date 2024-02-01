@@ -2,10 +2,10 @@ shell {python3 make_geom.py}
 
 {mesh setup}
 n_dim = 2
-mesh_extreme00 = -2.*.02
+mesh_extreme00 = -3.*.02
 mesh_extreme01 =  0.*.02
 mesh_extreme10 =  0.*.02
-mesh_extreme11 =  2.*.02
+mesh_extreme11 =  3.*.02
 init_ref_level = 4
 extremal_bc10 = {nonpenetration}
 extremal_bc01 = {pressure_outflow}
