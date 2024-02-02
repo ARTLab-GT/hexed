@@ -2,11 +2,13 @@ shell {python3 make_geom.py}
 
 {mesh setup}
 n_dim = 2
-mesh_extreme00 = -3.*.02
+mesh_extreme00 = -4.*.02
 mesh_extreme01 =  0.*.02
 mesh_extreme10 =  0.*.02
-mesh_extreme11 =  3.*.02
-init_ref_level = 4
+mesh_extreme11 =  4.*.02
+init_ref_level = 2
+max_refinement_iters = 3
+refine_if = {center0 > -2*0.02 & center1 < 2*0.02}
 extremal_bc10 = {nonpenetration}
 extremal_bc01 = {pressure_outflow}
 geom0 = {auto.csv}
@@ -30,6 +32,7 @@ art_visc_width = art_visc_width*.7
 viscosity_model = air_viscosity
 conductivity_model = {ref_value = 1.4/0.4*specific_gas_air/.72*air_visc_ref; ref_temperature = air_visc_ref_temp; offset = air_visc_offset}
 }
+art_visc_width = art_visc_width/4
 done = {iteration >= 10^5}
 vis_freq = 10000
 diffusive_admissibility = true
