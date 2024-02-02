@@ -812,7 +812,7 @@ void Solver::update()
       if (fixed) break;
 
       // update status for reporting
-      _namespace->assign<double>("time_step", dt);
+      _namespace->assign<double>("time_step", nominal_dt);
       _namespace->assign<double>("flow_time", _namespace->lookup<double>("flow_time").value() + dt);
       status.time_step = dt;
       status.flow_time += dt;
