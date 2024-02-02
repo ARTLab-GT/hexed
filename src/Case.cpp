@@ -43,6 +43,7 @@ Flow_bc* Case::_make_bc(std::string name)
   if (name == "characteristic") return new Riemann_invariants(freestream);
   else if (name == "freestream") return new Freestream(freestream);
   else if (name == "pressure_outflow") return new Pressure_outflow(_vard("freestream_pressure").value());
+  else if (name == "outflow") return new Outflow;
   else if (name == "nonpenetration") return new Nonpenetration;
   else if (name == "no_slip") {
     auto sub = _inter.make_sub();
