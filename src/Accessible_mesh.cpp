@@ -1417,11 +1417,13 @@ void Accessible_mesh::restore_verts()
 void Accessible_mesh::write(std::string name)
 {
   H5::H5File file(name + ".h5", H5F_ACC_TRUNC);
+  #if 0
   hsize_t dims [2] {2, 3};
   H5::DataSpace dspace (2, dims);
   H5::DataSet dset = file.createDataSet("test_array", H5::PredType::NATIVE_DOUBLE, dspace);
   double data [2][3] {{0., .1, .2}, {1., 1.1, 1.2}};
   dset.write(data, H5::PredType::NATIVE_DOUBLE);
+  #endif
   auto add_attr = [&](std::string attr_name, int value) {
     hsize_t attr_dim = 1;
     H5::DataSpace attr_dspace(1, &attr_dim);
@@ -1431,6 +1433,22 @@ void Accessible_mesh::write(std::string name)
   add_attr("version_major", config::version_major);
   add_attr("version_minor", config::version_minor);
   add_attr("version_patch", config::version_patch);
+  {
+    auto group = file.createGroup("/vertices");
+    auto verts = vertices();
+    hsize_t dims [2] {hsize_t(verts.size()), 3};
+    H5::DataSpace dspace (2, dims);
+    auto dset = group.createDataSet("position", H5::PredType::NATIVE_DOUBLE, dspace);
+    for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
+      hsize_t row_dims [2] {1, 3};
+      H5::DataSpace mspace (2, row_dims, nullptr);
+      hsize_t offset [2] {hsize_t(i_vert), 0};
+      hsize_t stride [2] {1, 1};
+      hsize_t block [2] {1, 1};
+      dspace.selectHyperslab(H5S_SELECT_SET, row_dims, offset, stride, block);
+      dset.write(verts[i_vert].pos.data(), H5::PredType::NATIVE_DOUBLE, mspace, dspace);
+    }
+  }
 }
 
 }

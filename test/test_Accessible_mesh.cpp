@@ -464,5 +464,9 @@ TEST_CASE("Tree meshing")
 TEST_CASE("mesh I/O")
 {
   hexed::Accessible_mesh mesh({1, 4, 2, hexed::config::max_row_size}, .8);
+  std::vector<hexed::Flow_bc*> bcs;
+  for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Copy);
+  mesh.add_tree(bcs);
+  mesh.update();
   mesh.write("io_test");
 }
