@@ -4,6 +4,7 @@
 #include <erase_if.hpp>
 #include <utils.hpp>
 #include <Gauss_legendre.hpp>
+#include <H5Cpp.h>
 
 namespace hexed
 {
@@ -1411,6 +1412,25 @@ void Accessible_mesh::restore_verts()
   for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
     verts[i_vert].pos = verts[i_vert].temp_vector;
   }
+}
+
+void Accessible_mesh::write(std::string name)
+{
+  H5::H5File file(name + ".h5", H5F_ACC_TRUNC);
+  hsize_t dims [2] {2, 3};
+  H5::DataSpace dspace (2, dims);
+  H5::DataSet dset = file.createDataSet("test_array", H5::PredType::NATIVE_DOUBLE, dspace);
+  double data [2][3] {{0., .1, .2}, {1., 1.1, 1.2}};
+  dset.write(data, H5::PredType::NATIVE_DOUBLE);
+  auto add_attr = [&](std::string attr_name, int value) {
+    hsize_t attr_dim = 1;
+    H5::DataSpace attr_dspace(1, &attr_dim);
+    auto attr = file.createAttribute(attr_name, H5::PredType::NATIVE_INT, attr_dspace);
+    attr.write(H5::PredType::NATIVE_INT, &value);
+  };
+  add_attr("version_major", config::version_major);
+  add_attr("version_minor", config::version_minor);
+  add_attr("version_patch", config::version_patch);
 }
 
 }

@@ -460,3 +460,9 @@ TEST_CASE("Tree meshing")
     REQUIRE(count == 48);
   }
 }
+
+TEST_CASE("mesh I/O")
+{
+  hexed::Accessible_mesh mesh({1, 4, 2, hexed::config::max_row_size}, .8);
+  mesh.write("io_test");
+}

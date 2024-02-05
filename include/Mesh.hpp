@@ -218,6 +218,10 @@ class Mesh
   };
   //!\}
 
+  //! \name I/O
+  //!\{
+  virtual void write(std::string file_name) = 0;
+  //!\}
   protected:
   virtual void reset_verts() = 0;
   virtual void restore_verts() = 0;
