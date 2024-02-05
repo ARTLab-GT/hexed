@@ -141,6 +141,7 @@ Of course, only the first \ref n_dim dimensions are considered.
 __type:__ string \n
 __default:__ `{characteristic}` \n
 Boundary conditions for extremal boundaries (defined by \ref mesh_extreme).
+\see \ref boundary_conditions
 
 <hr>
 \subsubsection n_cheby_flow

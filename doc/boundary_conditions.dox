@@ -38,6 +38,15 @@ This technically makes it ill-posed (specifically, overdefined) for subsonic out
 and is an artifiact of pure laziness, since you can usually get away with it.
 In the future, I intend to set the appropriate number of transport fluxes to make this boundary condition well-posed.
 
+\section outflow Outflow
+`{outflow}` \n
+Does not constrain the state and sets the viscous flux to zero.
+This is valid for supersonic outflow boundaries.
+For genuinely inviscid flow, it is not valid for any other type of boundary.
+For viscous flow, the math becomes less clear (since you are technically adding a constraint on every flow variable by setting the flux to zero),
+but I have been able to get away with it for some outflow boundaries with limited subsonic regions.
+Indeed, for the hypersonic cylinder test case, it produces quite nice results.
+
 \section Nonpenetration
 `{nonpenetration}` \n
 A slip wall boundary condition.

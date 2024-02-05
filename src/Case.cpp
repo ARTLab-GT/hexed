@@ -40,7 +40,7 @@ void Case::_set_vector(std::string name, Mat<> vec)
 Flow_bc* Case::_make_bc(std::string name)
 {
   Mat<> freestream = _get_vector("freestream", _vari("n_dim").value() + 2);
-  if (name == "characteristic") return new Riemann_invariants(freestream);
+  if      (name == "characteristic") return new Riemann_invariants(freestream);
   else if (name == "freestream") return new Freestream(freestream);
   else if (name == "pressure_outflow") return new Pressure_outflow(_vard("freestream_pressure").value());
   else if (name == "outflow") return new Outflow;
