@@ -40,9 +40,10 @@ void Case::_set_vector(std::string name, Mat<> vec)
 Flow_bc* Case::_make_bc(std::string name)
 {
   Mat<> freestream = _get_vector("freestream", _vari("n_dim").value() + 2);
-  if (name == "characteristic") return new Riemann_invariants(freestream);
+  if      (name == "characteristic") return new Riemann_invariants(freestream);
   else if (name == "freestream") return new Freestream(freestream);
   else if (name == "pressure_outflow") return new Pressure_outflow(_vard("freestream_pressure").value());
+  else if (name == "outflow") return new Outflow;
   else if (name == "nonpenetration") return new Nonpenetration;
   else if (name == "no_slip") {
     auto sub = _inter.make_sub();
@@ -335,8 +336,7 @@ Case::Case(std::string input_file)
     _solver().compute_residual();
     auto res = _solver().integral_field(Pow(phys_resid, 2));
     for (int i_dim = 1; i_dim < nd; ++i_dim) res[0] += res[i_dim];
-    double dt = _inter.variables->lookup<double>("time_step").value();
-    for (double& r : res) r = std::sqrt(r)/dt;
+    for (double& r : res) r = std::sqrt(r);
     _inter.variables->assign("residual_momentum", res[0]);
     _inter.variables->assign("residual_density", res[nd]);
     _inter.variables->assign("residual_energy", res[nd + 1]);

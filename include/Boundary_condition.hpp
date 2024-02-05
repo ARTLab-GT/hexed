@@ -213,7 +213,8 @@ class Copy : public Flow_bc
   virtual void apply_advection(Boundary_face&);
 };
 
-//! for supersonic outlets
+//! \brief for supersonic outlets
+//! \details does not modify state and sets viscous flux to zero
 class Outflow : public Flow_bc
 {
   public:

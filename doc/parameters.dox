@@ -141,6 +141,7 @@ Of course, only the first \ref n_dim dimensions are considered.
 __type:__ string \n
 __default:__ `{characteristic}` \n
 Boundary conditions for extremal boundaries (defined by \ref mesh_extreme).
+\see \ref boundary_conditions
 
 <hr>
 \subsubsection n_cheby_flow
@@ -913,16 +914,11 @@ __type:__ float \n
 Average of momentum, density, and energy residuals, each normalized by their value after the first iteration.
 
 <hr>
-\subsubsection av_advection_residual
+\subsubsection art_visc_residual
 __type:__ float \n
-Residual of artificial viscosity advection equation.
-Begins the simulation uninitialized and is only assigned when \ref update is evaluated with smoothness-based artificial viscosity.
-
-<hr>
-\subsubsection av_diffusion_residual
-__type:__ float \n
-Residual of artificial viscosity diffusion equation.
-Begins the simulation uninitialized and is only assigned when \ref update is evaluated with smoothness-based artificial viscosity.
+\f$ L^2 \f$ norm of the most recent update to the artificial viscosity coefficient.
+This is a dimensional value that depends on the domain area and time step,
+but it can be useful to qualitatively asses the convergence of the simulation.
 
 <hr>
 \subsubsection n_elements

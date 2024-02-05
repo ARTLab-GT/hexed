@@ -2,13 +2,15 @@ shell {python3 make_geom.py}
 
 {mesh setup}
 n_dim = 2
-mesh_extreme00 = -2.*.02
+mesh_extreme00 = -4.*.02
 mesh_extreme01 =  0.*.02
 mesh_extreme10 =  0.*.02
-mesh_extreme11 =  2.*.02
-init_ref_level = 4
+mesh_extreme11 =  4.*.02
+init_ref_level = 2
+max_refinement_iters = 3
+refine_if = {center0 > -2.0*0.02 & center1 < 2.8*0.02}
 extremal_bc10 = {nonpenetration}
-extremal_bc01 = {pressure_outflow}
+extremal_bc01 = {outflow}
 geom0 = {auto.csv}
 init_layer_splits = 4
 
@@ -21,7 +23,7 @@ thermal_bc = {temperature = 300}
 {iteration parameters}
 $set_aerothermo
 ramping_final_safety = .8
-art_visc_width = art_visc_width*.7
+art_visc_width = art_visc_width*.7/8
 viscosity_model = air_viscosity
 conductivity_model = {ref_value = 1.4/0.4*specific_gas_air/.72*air_visc_ref; ref_temperature = air_visc_ref_temp; offset = air_visc_offset}
 done = {iteration >= 10^5}
