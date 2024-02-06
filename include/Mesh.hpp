@@ -220,6 +220,7 @@ class Mesh
 
   //! \name I/O
   //!\{
+  //! \brief write this mesh to a file to be reused in another simulation
   virtual void write(std::string file_name) = 0;
   //!\}
   protected:

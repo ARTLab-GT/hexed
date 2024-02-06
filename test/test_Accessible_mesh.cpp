@@ -463,12 +463,18 @@ TEST_CASE("Tree meshing")
 
 TEST_CASE("mesh I/O")
 {
-  hexed::Accessible_mesh mesh({1, 4, 2, hexed::config::max_row_size}, .8);
-  std::vector<hexed::Flow_bc*> bcs;
-  for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Copy);
-  mesh.add_tree(bcs);
-  mesh.update();
-  mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] > 0;});
-  mesh.set_surface(new hexed::Hypersphere(hexed::Mat<2>{.8, 0.}, 0.1), new hexed::Nonpenetration);
-  mesh.write("io_test");
+  { // create a mesh and write it to a file
+    hexed::Accessible_mesh mesh({1, 4, 2, hexed::config::max_row_size}, .8);
+    std::vector<hexed::Flow_bc*> bcs;
+    for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Copy);
+    mesh.add_tree(bcs);
+    mesh.update();
+    mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] > 0;});
+    mesh.set_surface(new hexed::Hypersphere(hexed::Mat<2>{.8, 0.}, 0.1), new hexed::Nonpenetration);
+    mesh.write("io_test");
+  }
+  { // read the above mesh from the file and check that it's the same
+    hexed::Accessible_mesh mesh("io_test");
+    REQUIRE(mesh.root_size() == Catch::Approx(0.8));
+  }
 }

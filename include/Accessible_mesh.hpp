@@ -69,6 +69,8 @@ class Accessible_mesh : public Mesh
    * \param root_size defines the \ref root_size of the mesh.
    */
   Accessible_mesh(Storage_params params, double root_size);
+  //! \brief reads mesh from a file created by `Mesh::write`
+  Accessible_mesh(std::string file_name);
   virtual ~Accessible_mesh();
   inline double root_size() override {return root_sz;}
   //! \returns a View_by_type containing only the Cartesian elements in the mesh

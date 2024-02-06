@@ -1427,18 +1427,27 @@ void h5_write_row(H5::DataSet& dset, int cols, int i_row, T* data)
   dset.write(data, dset.getDataType(), mspace, dspace);
 }
 
+template <typename T>
+void h5_add_attr(H5::H5Object& obj, std::string name, T value, H5::DataType dtype = H5::PredType::NATIVE_INT)
+{
+  hsize_t attr_dim = 1;
+  H5::DataSpace dspace(1, &attr_dim);
+  auto attr = obj.createAttribute(name, dtype, dspace);
+  attr.write(dtype, &value);
+}
+
 void Accessible_mesh::write(std::string name)
 {
   H5::H5File file(name + ".h5", H5F_ACC_TRUNC);
-  auto add_attr = [&](std::string attr_name, int value) {
-    hsize_t attr_dim = 1;
-    H5::DataSpace attr_dspace(1, &attr_dim);
-    auto attr = file.createAttribute(attr_name, H5::PredType::NATIVE_INT, attr_dspace);
-    attr.write(H5::PredType::NATIVE_INT, &value);
-  };
-  add_attr("version_major", config::version_major);
-  add_attr("version_minor", config::version_minor);
-  add_attr("version_patch", config::version_patch);
+  h5_add_attr(file, "version_major", config::version_major);
+  h5_add_attr(file, "version_minor", config::version_minor);
+  h5_add_attr(file, "version_patch", config::version_patch);
+  h5_add_attr(file, "n_dim", params.n_dim);
+  h5_add_attr(file, "row_size", params.row_size);
+  h5_add_attr(file, "n_stage", params.n_stage);
+  h5_add_attr(file, "n_var", params.n_var);
+  h5_add_attr(file, "n_forcing", params.n_forcing);
+  h5_add_attr(file, "root_size", root_sz, H5::PredType::NATIVE_DOUBLE);
   hsize_t dims[2];
   {
     auto group = file.createGroup("/vertices");
@@ -1471,6 +1480,40 @@ void Accessible_mesh::write(std::string name)
       h5_write_row(is_def_dset, 1, i_elem, &is_def);
     }
   }
+}
+
+template <typename T = int>
+T h5_get_attr(H5::H5Object& obj, std::string name, H5::DataType dtype = H5::PredType::NATIVE_INT)
+{
+  hsize_t attr_dim = 1;
+  H5::DataSpace dspace(1, &attr_dim);
+  auto attr = obj.openAttribute(name.c_str());
+  T value;
+  attr.read(dtype, &value);
+  return value;
+}
+
+Storage_params read_params(std::string file_name)
+{
+  H5::H5File file(file_name + ".h5", H5F_ACC_RDONLY);
+  Storage_params params {
+    h5_get_attr(file, "n_stage"),
+    h5_get_attr(file, "n_var"),
+    h5_get_attr(file, "n_dim"),
+    h5_get_attr(file, "row_size"),
+    h5_get_attr(file, "n_forcing"),
+  };
+  return params;
+}
+
+double read_root_sz(std::string file_name)
+{
+  H5::H5File file(file_name + ".h5", H5F_ACC_RDONLY);
+  return h5_get_attr<double>(file, "root_size", H5::PredType::NATIVE_DOUBLE);
+}
+
+Accessible_mesh::Accessible_mesh(std::string file_name) : Accessible_mesh(read_params(file_name), read_root_sz(file_name))
+{
 }
 
 }
