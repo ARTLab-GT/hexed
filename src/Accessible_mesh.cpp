@@ -1414,6 +1414,19 @@ void Accessible_mesh::restore_verts()
   }
 }
 
+template <typename T>
+void h5_write_row(H5::DataSet& dset, int cols, int i_row, T* data)
+{
+  hsize_t row_dims [2] {1, hsize_t(cols)};
+  H5::DataSpace mspace (2, row_dims, nullptr);
+  hsize_t offset [2] {hsize_t(i_row), 0};
+  hsize_t stride [2] {1, 1};
+  hsize_t block [2] {1, 1};
+  auto dspace = dset.getSpace();
+  dspace.selectHyperslab(H5S_SELECT_SET, row_dims, offset, stride, block);
+  dset.write(data, dset.getDataType(), mspace, dspace);
+}
+
 void Accessible_mesh::write(std::string name)
 {
   H5::H5File file(name + ".h5", H5F_ACC_TRUNC);
@@ -1426,43 +1439,36 @@ void Accessible_mesh::write(std::string name)
   add_attr("version_major", config::version_major);
   add_attr("version_minor", config::version_minor);
   add_attr("version_patch", config::version_patch);
+  hsize_t dims[2];
   {
     auto group = file.createGroup("/vertices");
     auto verts = vertices();
-    hsize_t dims [2] {hsize_t(verts.size()), 3};
-    H5::DataSpace dspace (2, dims);
-    auto dset = group.createDataSet("position", H5::PredType::NATIVE_DOUBLE, dspace);
+    dims[0] = verts.size();
+    dims[1] = 3;
+    auto dset = group.createDataSet("position", H5::PredType::NATIVE_DOUBLE, H5::DataSpace(2, dims));
     for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
-      hsize_t row_dims [2] {1, 3};
-      H5::DataSpace mspace (2, row_dims, nullptr);
-      hsize_t offset [2] {hsize_t(i_vert), 0};
-      hsize_t stride [2] {1, 1};
-      hsize_t block [2] {1, 1};
-      dspace.selectHyperslab(H5S_SELECT_SET, row_dims, offset, stride, block);
       auto& vert = verts[i_vert];
-      dset.write(vert.pos.data(), H5::PredType::NATIVE_DOUBLE, mspace, dspace);
+      h5_write_row(dset, 3, i_vert, vert.pos.data());
       vert.record.clear();
       vert.record.push_back(i_vert);
     }
   }
   {
     auto group = file.createGroup("/elements");
-    hsize_t vert_dims [2] {hsize_t(elems.size()), hsize_t(params.n_vertices())};
-    H5::DataSpace vert_dspace(2, vert_dims);
-    auto vert_dset = group.createDataSet("vertices", H5::PredType::NATIVE_INT, vert_dspace);
+    dims[0] = elems.size();
+    dims[1] = params.n_vertices();
+    auto vert_dset = group.createDataSet("vertices", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
+    dims[1] = 1;
+    auto is_def_dset = group.createDataSet("is_deformed", H5::PredType::NATIVE_HBOOL, H5::DataSpace(2, dims));
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
-      hsize_t row_dims [2] {1, hsize_t(params.n_vertices())};
-      H5::DataSpace mspace (2, row_dims, nullptr);
-      hsize_t offset [2] {hsize_t(i_elem), 0};
-      hsize_t stride [2] {1, 1};
-      hsize_t block [2] {1, 1};
-      vert_dspace.selectHyperslab(H5S_SELECT_SET, row_dims, offset, stride, block);
       int vert_inds [8] {};
       for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
         vert_inds[i_vert] = elem.vertex(i_vert).record[0];
       }
-      vert_dset.write(vert_inds, H5::PredType::NATIVE_INT, mspace, vert_dspace);
+      h5_write_row(vert_dset, params.n_vertices(), i_elem, vert_inds);
+      bool is_def = elem.get_is_deformed();
+      h5_write_row(is_def_dset, 1, i_elem, &is_def);
     }
   }
 }
