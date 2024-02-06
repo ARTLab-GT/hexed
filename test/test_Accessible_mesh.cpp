@@ -468,5 +468,7 @@ TEST_CASE("mesh I/O")
   for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Copy);
   mesh.add_tree(bcs);
   mesh.update();
+  mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] > 0;});
+  mesh.set_surface(new hexed::Hypersphere(hexed::Mat<2>{.8, 0.}, 0.1), new hexed::Nonpenetration);
   mesh.write("io_test");
 }
