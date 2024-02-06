@@ -1512,8 +1512,33 @@ double read_root_sz(std::string file_name)
   return h5_get_attr<double>(file, "root_size", H5::PredType::NATIVE_DOUBLE);
 }
 
+template <typename T>
+void h5_read_row(H5::DataSet& dset, int cols, int i_row, T* data)
+{
+  hsize_t row_dims [2] {1, hsize_t(cols)};
+  H5::DataSpace mspace (2, row_dims, nullptr);
+  hsize_t offset [2] {hsize_t(i_row), 0};
+  hsize_t stride [2] {1, 1};
+  hsize_t block [2] {1, 1};
+  auto dspace = dset.getSpace();
+  dspace.selectHyperslab(H5S_SELECT_SET, row_dims, offset, stride, block);
+  dset.read(data, dset.getDataType(), mspace, dspace);
+}
+
 Accessible_mesh::Accessible_mesh(std::string file_name) : Accessible_mesh(read_params(file_name), read_root_sz(file_name))
 {
+  H5::H5File file(file_name + ".h5", H5F_ACC_RDONLY);
+  auto vert_dset = file.openDataSet("elements/vertices");
+  auto is_def_dset = file.openDataSet("elements/is_deformed");
+  hsize_t dims [2];
+  is_def_dset.getSpace().getSimpleExtentDims(dims);
+  int n_elem = dims[0];
+  for (int i_elem = 0; i_elem < n_elem; ++i_elem) {
+    bool is_def;
+    h5_read_row(is_def_dset, 1, i_elem, &is_def);
+    add_element(0, is_def, {0, 0});
+  }
+  cleanup();
 }
 
 }

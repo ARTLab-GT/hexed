@@ -476,5 +476,7 @@ TEST_CASE("mesh I/O")
   { // read the above mesh from the file and check that it's the same
     hexed::Accessible_mesh mesh("io_test");
     REQUIRE(mesh.root_size() == Catch::Approx(0.8));
+    REQUIRE(mesh.cartesian().elements().size() == 6);
+    REQUIRE(mesh.deformed().elements().size() == 5);
   }
 }
