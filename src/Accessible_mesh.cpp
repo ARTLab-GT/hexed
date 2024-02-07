@@ -1442,53 +1442,6 @@ void h5_add_attr(H5::H5Object& obj, std::string name, T value, H5::DataType dtyp
   attr.write(dtype, &value);
 }
 
-void Accessible_mesh::write(std::string name)
-{
-  H5::H5File file(name + ".h5", H5F_ACC_TRUNC);
-  h5_add_attr(file, "version_major", config::version_major);
-  h5_add_attr(file, "version_minor", config::version_minor);
-  h5_add_attr(file, "version_patch", config::version_patch);
-  h5_add_attr(file, "n_dim", params.n_dim);
-  h5_add_attr(file, "row_size", params.row_size);
-  h5_add_attr(file, "n_stage", params.n_stage);
-  h5_add_attr(file, "n_var", params.n_var);
-  h5_add_attr(file, "n_forcing", params.n_forcing);
-  h5_add_attr(file, "root_size", root_sz, H5::PredType::NATIVE_DOUBLE);
-  hsize_t dims[2];
-  {
-    auto group = file.createGroup("/vertices");
-    auto verts = vertices();
-    dims[0] = verts.size();
-    dims[1] = 3;
-    auto dset = group.createDataSet("position", H5::PredType::NATIVE_DOUBLE, H5::DataSpace(2, dims));
-    for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
-      auto& vert = verts[i_vert];
-      h5_write_row(dset, 3, i_vert, vert.pos.data());
-      vert.record.clear();
-      vert.record.push_back(i_vert);
-    }
-  }
-  {
-    auto group = file.createGroup("/elements");
-    dims[0] = elems.size();
-    dims[1] = params.n_vertices();
-    auto vert_dset = group.createDataSet("vertices", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
-    dims[1] = 1;
-    auto is_def_dset = group.createDataSet("is_deformed", H5::PredType::NATIVE_HBOOL, H5::DataSpace(2, dims));
-    auto ref_level_dset = group.createDataSet("refinement_level", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      auto& elem = elems[i_elem];
-      int vert_inds [8] {};
-      for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-        vert_inds[i_vert] = elem.vertex(i_vert).record[0];
-      }
-      h5_write_row(vert_dset, params.n_vertices(), i_elem, vert_inds);
-      h5_write_value(is_def_dset, i_elem, elem.get_is_deformed());
-      h5_write_value(ref_level_dset, i_elem, elem.refinement_level());
-    }
-  }
-}
-
 template <typename T = int>
 T h5_get_attr(H5::H5Object& obj, std::string name, H5::DataType dtype = H5::PredType::NATIVE_INT)
 {
@@ -1540,17 +1493,80 @@ T h5_read_value(H5::DataSet& dset, int i_row)
   return data;
 }
 
+void Accessible_mesh::write(std::string name)
+{
+  H5::H5File file(name + ".h5", H5F_ACC_TRUNC);
+  h5_add_attr(file, "version_major", config::version_major);
+  h5_add_attr(file, "version_minor", config::version_minor);
+  h5_add_attr(file, "version_patch", config::version_patch);
+  h5_add_attr(file, "n_dim", params.n_dim);
+  h5_add_attr(file, "row_size", params.row_size);
+  h5_add_attr(file, "n_stage", params.n_stage);
+  h5_add_attr(file, "n_var", params.n_var);
+  h5_add_attr(file, "n_forcing", params.n_forcing);
+  h5_add_attr(file, "root_size", root_sz, H5::PredType::NATIVE_DOUBLE);
+  hsize_t dims[2];
+  {
+    auto group = file.createGroup("/vertices");
+    auto verts = vertices();
+    dims[0] = verts.size();
+    dims[1] = 3;
+    auto dset = group.createDataSet("position", H5::PredType::NATIVE_DOUBLE, H5::DataSpace(2, dims));
+    for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
+      auto& vert = verts[i_vert];
+      h5_write_row(dset, 3, i_vert, vert.pos.data());
+      vert.record.clear();
+      vert.record.push_back(i_vert);
+    }
+  }
+  {
+    auto group = file.createGroup("/elements");
+    dims[0] = elems.size();
+    dims[1] = params.n_vertices();
+    auto vert_dset = group.createDataSet("vertices", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
+    dims[1] = params.n_dim;
+    auto nom_pos_dset = group.createDataSet("nominal_position", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
+    dims[1] = 1;
+    auto is_def_dset = group.createDataSet("is_deformed", H5::PredType::NATIVE_HBOOL, H5::DataSpace(2, dims));
+    auto ref_level_dset = group.createDataSet("refinement_level", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      int vert_inds [8] {};
+      for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+        vert_inds[i_vert] = elem.vertex(i_vert).record[0];
+      }
+      h5_write_row(vert_dset, params.n_vertices(), i_elem, vert_inds);
+      std::vector<int> nom_pos = elem.nominal_position();
+      h5_write_row(nom_pos_dset, params.n_dim, i_elem, nom_pos.data());
+      h5_write_value(is_def_dset, i_elem, elem.get_is_deformed());
+      h5_write_value(ref_level_dset, i_elem, elem.refinement_level());
+    }
+  }
+}
+
 Accessible_mesh::Accessible_mesh(std::string file_name) : Accessible_mesh(read_params(file_name), read_root_sz(file_name))
 {
   H5::H5File file(file_name + ".h5", H5F_ACC_RDONLY);
-  auto vert_dset = file.openDataSet("elements/vertices");
+  auto vert_pos_dset = file.openDataSet("vertices/position");
+  auto vert_ind_dset = file.openDataSet("elements/vertices");
+  auto nom_pos_dset = file.openDataSet("elements/nominal_position");
   auto is_def_dset = file.openDataSet("elements/is_deformed");
   auto ref_level_dset = file.openDataSet("elements/refinement_level");
   hsize_t dims [2];
   is_def_dset.getSpace().getSimpleExtentDims(dims);
   int n_elem = dims[0];
+  int n_vert = params.n_vertices();
   for (int i_elem = 0; i_elem < n_elem; ++i_elem) {
-    add_element(h5_read_value<int>(ref_level_dset, i_elem), h5_read_value<bool>(is_def_dset, i_elem), {0, 0});
+    std::vector<int> nom_pos(params.n_dim);
+    h5_read_row(nom_pos_dset, params.n_dim, i_elem, nom_pos.data());
+    int ref_level = h5_read_value<int>(ref_level_dset, i_elem);
+    int is_def = h5_read_value<bool>(is_def_dset, i_elem);
+    int sn = add_element(ref_level, is_def, nom_pos);
+    int vert_inds[8] {};
+    h5_read_row(vert_ind_dset, n_vert, i_elem, vert_inds);
+    for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
+      h5_read_row(vert_pos_dset, params.n_dim, vert_inds[i_vert], element(ref_level, is_def, sn).vertex(i_vert).pos.data());
+    }
   }
   cleanup();
 }

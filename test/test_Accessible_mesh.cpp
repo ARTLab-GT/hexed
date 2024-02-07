@@ -463,6 +463,7 @@ TEST_CASE("Tree meshing")
 
 TEST_CASE("mesh I/O")
 {
+  hexed::Mat<3> correct_sum_vertices = hexed::Mat<3>::Zero();
   { // create a mesh and write it to a file
     hexed::Accessible_mesh mesh({1, 4, 2, hexed::config::max_row_size}, .8);
     std::vector<hexed::Flow_bc*> bcs;
@@ -472,6 +473,11 @@ TEST_CASE("mesh I/O")
     mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] > 0;});
     mesh.set_surface(new hexed::Hypersphere(hexed::Mat<2>{.8, 0.}, 0.1), new hexed::Nonpenetration);
     mesh.write("io_test");
+    // compute the sum of the vertex coordinates of all elements (counting each vertex once for each element using it) to check vertex position
+    auto& elems = mesh.elements();
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      for (int i_vert = 0; i_vert < 4; ++i_vert) correct_sum_vertices += elems[i_elem].vertex(i_vert).pos;
+    }
   }
   { // read the above mesh from the file and check that it's the same
     hexed::Accessible_mesh mesh("io_test");
@@ -481,11 +487,15 @@ TEST_CASE("mesh I/O")
     auto& elems = mesh.elements();
     int rl1 = 0;
     int rl2 = 0;
+    hexed::Mat<3> sum_vertices = hexed::Mat<3>::Zero();
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       rl1 += elems[i_elem].refinement_level() == 1;
       rl2 += elems[i_elem].refinement_level() == 2;
+      for (int i_vert = 0; i_vert < 4; ++i_vert) sum_vertices += elems[i_elem].vertex(i_vert).pos;
     }
     REQUIRE(rl1 == 2);
     REQUIRE(rl2 == 9);
+    REQUIRE(sum_vertices(0) == Catch::Approx(correct_sum_vertices(0)));
+    REQUIRE(sum_vertices(1) == Catch::Approx(correct_sum_vertices(1)));
   }
 }
