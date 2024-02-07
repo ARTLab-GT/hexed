@@ -1428,6 +1428,12 @@ void h5_write_row(H5::DataSet& dset, int cols, int i_row, T* data)
 }
 
 template <typename T>
+void h5_write_value(H5::DataSet& dset, int i_row, T data)
+{
+  h5_write_row(dset, 1, i_row, &data);
+}
+
+template <typename T>
 void h5_add_attr(H5::H5Object& obj, std::string name, T value, H5::DataType dtype = H5::PredType::NATIVE_INT)
 {
   hsize_t attr_dim = 1;
@@ -1469,6 +1475,7 @@ void Accessible_mesh::write(std::string name)
     auto vert_dset = group.createDataSet("vertices", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
     dims[1] = 1;
     auto is_def_dset = group.createDataSet("is_deformed", H5::PredType::NATIVE_HBOOL, H5::DataSpace(2, dims));
+    auto ref_level_dset = group.createDataSet("refinement_level", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
       int vert_inds [8] {};
@@ -1476,8 +1483,8 @@ void Accessible_mesh::write(std::string name)
         vert_inds[i_vert] = elem.vertex(i_vert).record[0];
       }
       h5_write_row(vert_dset, params.n_vertices(), i_elem, vert_inds);
-      bool is_def = elem.get_is_deformed();
-      h5_write_row(is_def_dset, 1, i_elem, &is_def);
+      h5_write_value(is_def_dset, i_elem, elem.get_is_deformed());
+      h5_write_value(ref_level_dset, i_elem, elem.refinement_level());
     }
   }
 }
@@ -1525,18 +1532,25 @@ void h5_read_row(H5::DataSet& dset, int cols, int i_row, T* data)
   dset.read(data, dset.getDataType(), mspace, dspace);
 }
 
+template <typename T>
+T h5_read_value(H5::DataSet& dset, int i_row)
+{
+  T data;
+  h5_read_row(dset, 1, i_row, &data);
+  return data;
+}
+
 Accessible_mesh::Accessible_mesh(std::string file_name) : Accessible_mesh(read_params(file_name), read_root_sz(file_name))
 {
   H5::H5File file(file_name + ".h5", H5F_ACC_RDONLY);
   auto vert_dset = file.openDataSet("elements/vertices");
   auto is_def_dset = file.openDataSet("elements/is_deformed");
+  auto ref_level_dset = file.openDataSet("elements/refinement_level");
   hsize_t dims [2];
   is_def_dset.getSpace().getSimpleExtentDims(dims);
   int n_elem = dims[0];
   for (int i_elem = 0; i_elem < n_elem; ++i_elem) {
-    bool is_def;
-    h5_read_row(is_def_dset, 1, i_elem, &is_def);
-    add_element(0, is_def, {0, 0});
+    add_element(h5_read_value<int>(ref_level_dset, i_elem), h5_read_value<bool>(is_def_dset, i_elem), {0, 0});
   }
   cleanup();
 }

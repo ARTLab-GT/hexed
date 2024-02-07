@@ -478,5 +478,14 @@ TEST_CASE("mesh I/O")
     REQUIRE(mesh.root_size() == Catch::Approx(0.8));
     REQUIRE(mesh.cartesian().elements().size() == 6);
     REQUIRE(mesh.deformed().elements().size() == 5);
+    auto& elems = mesh.elements();
+    int rl1 = 0;
+    int rl2 = 0;
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      rl1 += elems[i_elem].refinement_level() == 1;
+      rl2 += elems[i_elem].refinement_level() == 2;
+    }
+    REQUIRE(rl1 == 2);
+    REQUIRE(rl2 == 9);
   }
 }
