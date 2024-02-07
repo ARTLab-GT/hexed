@@ -1560,6 +1560,33 @@ void Accessible_mesh::write(std::string name)
     }
   WRITE_CONS(0, car.cons);
   WRITE_CONS(car.cons.size(), def.cons);
+  #undef WRITE_CONS
+  // write refined connections
+  auto& car_cons = car.refined_connections();
+  auto& def_cons = def.refined_connections();
+  dims[0] = car_cons.size() + def_cons.size();
+  dims[1] = 12;
+  auto ref_con_dset = file.createDataSet("/connections/refined", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
+  #define WRITE_REF_CONS(start, cons) \
+    for (int i_con = 0; i_con < cons.size(); ++i_con) { \
+      auto& con = cons[i_con]; \
+      int data[12] {}; \
+      data[0] = con.coarse_element().record; \
+      for (int i_fine = 0; i_fine < con.n_fine_elements(); ++i_fine) { \
+        data[1 + i_fine] = con.connection(i_fine).element(!con.order_reversed()).record; \
+      } \
+      data[5] = con.order_reversed(); \
+      for (int i_dim : {0, 1}) data[6 + i_dim] = con.stretch()[i_dim]; \
+      Con_dir<Deformed_element> dir = con.direction(); \
+      for (int i_side = 0; i_side < 2; ++i_side) { \
+        data[8 + i_side] = dir.i_dim[i_side]; \
+        data[10 + i_side] = dir.face_sign[i_side]; \
+      } \
+      h5_write_row(ref_con_dset, 12, start + i_con, data); \
+    }
+  WRITE_REF_CONS(0, car_cons);
+  WRITE_REF_CONS(car_cons.size(), def_cons);
+  #undef WRITE_REF_CONS
 }
 
 Accessible_mesh::Accessible_mesh(std::string file_name) : Accessible_mesh(read_params(file_name), read_root_sz(file_name))
@@ -1606,6 +1633,33 @@ Accessible_mesh::Accessible_mesh(std::string file_name) : Accessible_mesh(read_p
                                                                           {{data[2], data[3]}, {bool(data[4]), bool(data[5])}}));
     } else {
       car.cons.emplace_back(new Element_face_connection<Element>(el_ar, {data[2]}));
+    }
+  }
+  // read refined connections
+  auto ref_con_dset = file.openDataSet("/connections/refined");
+  ref_con_dset.getSpace().getSimpleExtentDims(dims);
+  n_con = dims[0];
+  for (int i_con = 0; i_con < n_con; ++i_con) {
+    int data[12];
+    h5_read_row(ref_con_dset, 12, i_con, data);
+    std::array<bool, 2> stretch {bool(data[6]), bool(data[7])};
+    int n_fine = math::pow(2, params.n_dim - 1 - stretch[0] - stretch[1]);
+    Element* coarse = elem_ptrs[data[0]];
+    std::vector<Element*> fine(n_fine);
+    bool is_def = coarse->get_is_deformed();
+    for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
+      fine[i_fine] = elem_ptrs[data[1 + i_fine]];
+      is_def = is_def && fine[i_fine]->get_is_deformed();
+    }
+    if (is_def) {
+      Deformed_element* def_coarse = def_elem_ptrs[data[0]];
+      std::vector<Deformed_element*> def_fine(n_fine);
+      for (int i_fine = 0; i_fine < n_fine; ++i_fine) def_fine[i_fine] = def_elem_ptrs[data[1 + i_fine]];
+      def.ref_face_cons[math::log(2, n_fine)].emplace_back(
+        new Refined_connection<Deformed_element>{def_coarse, def_fine, {{data[8], data[9]}, {bool(data[10]), bool(data[11])}}, bool(data[5]), stretch}
+      );
+    } else {
+      car.ref_face_cons[params.n_dim - 1].emplace_back(new Refined_connection<Element>{coarse, fine, {data[8]}, bool(data[5])});
     }
   }
   cleanup();
