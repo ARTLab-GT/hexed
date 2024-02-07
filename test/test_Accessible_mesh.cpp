@@ -497,5 +497,6 @@ TEST_CASE("mesh I/O")
     REQUIRE(rl2 == 9);
     REQUIRE(sum_vertices(0) == Catch::Approx(correct_sum_vertices(0)));
     REQUIRE(sum_vertices(1) == Catch::Approx(correct_sum_vertices(1)));
+    mesh.valid().assert_valid();
   }
 }
