@@ -1660,6 +1660,26 @@ void Accessible_mesh::read_file(std::string file_name)
       h5_read_row(vert_pos_dset, params.n_dim, vert_inds[i_vert], elem.vertex(i_vert).pos.data());
     }
   }
+  // read tree
+  if (tree) {
+    auto child_dset = file.openDataSet("/tree/children");
+    std::function<void(Tree*, int)> read_tree = [&](Tree* t, int row) {
+      std::vector<int> data(2 + n_vert);
+      h5_read_row(child_dset, 2 + n_vert, row, data.data());
+      if (data[0] >= 0) {
+        Element& elem = *elem_ptrs[data[0]];
+        t->elem.pair(elem.tree);
+        t->def_elem = def_elem_ptrs[data[0]]; // if not deformed, this is just `nullptr`, as it should be
+      }
+      t->set_status(data[1]);
+      if (data[2] >= 0) {
+        t->refine();
+        auto children = t->children();
+        for (int i_child = 0; i_child < n_vert; ++i_child) read_tree(children[i_child], data[2 + i_child]);
+      }
+    };
+    read_tree(tree.get(), 0);
+  }
   // read conformal connections
   auto con_dset = file.openDataSet("/connections/conformal");
   con_dset.getSpace().getSimpleExtentDims(dims);
@@ -1670,8 +1690,9 @@ void Accessible_mesh::read_file(std::string file_name)
     std::array<Element*, 2> el_ar;
     for (int i_side = 0; i_side < 2; ++i_side) el_ar[i_side] = elem_ptrs[data[i_side]];
     if (el_ar[0]->get_is_deformed() && el_ar[1]->get_is_deformed()) {
-      def.cons.emplace_back(new Element_face_connection<Deformed_element>({def_elem_ptrs[data[0]], def_elem_ptrs[data[1]]},
-                                                                          {{data[2], data[3]}, {bool(data[4]), bool(data[5])}}));
+      std::array<Deformed_element*, 2> def_el_ar {def_elem_ptrs[data[0]], def_elem_ptrs[data[1]]};
+      def.cons.emplace_back(new Element_face_connection<Deformed_element>(def_el_ar, {{data[2], data[3]}, {bool(data[4]), bool(data[5])}}));
+      if (bool(def_el_ar[0]->tree) != bool(def_el_ar[1]->tree)) extrude_cons.push_back(def.cons.back().get());
     } else {
       car.cons.emplace_back(new Element_face_connection<Element>(el_ar, {data[2]}));
     }
@@ -1715,26 +1736,6 @@ void Accessible_mesh::read_file(std::string file_name)
     } else {
       car.bound_cons.emplace_back(new Typed_bound_connection<Element         >(    *elem_ptrs[data[0]], data[2], data[3], data[1]));
     }
-  }
-  // read tree
-  if (tree) {
-    auto child_dset = file.openDataSet("/tree/children");
-    std::function<void(Tree*, int)> read_tree = [&](Tree* t, int row) {
-      std::vector<int> data(2 + n_vert);
-      h5_read_row(child_dset, 2 + n_vert, row, data.data());
-      if (data[0] >= 0) {
-        Element& elem = *elem_ptrs[data[0]];
-        t->elem.pair(elem.tree);
-        t->def_elem = def_elem_ptrs[data[0]]; // if not deformed, this is just `nullptr`, as it should be
-      }
-      t->set_status(data[1]);
-      if (data[2] >= 0) {
-        t->refine();
-        auto children = t->children();
-        for (int i_child = 0; i_child < n_vert; ++i_child) read_tree(children[i_child], data[2 + i_child]);
-      }
-    };
-    read_tree(tree.get(), 0);
   }
   cleanup();
 }

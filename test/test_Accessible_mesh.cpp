@@ -464,6 +464,8 @@ TEST_CASE("Tree meshing")
 TEST_CASE("mesh I/O")
 {
   hexed::Mat<3> correct_sum_vertices = hexed::Mat<3>::Zero();
+  int correct_n_car_after = 0;
+  int correct_n_def_after = 0;
   { // create a mesh and write it to a file
     hexed::Accessible_mesh mesh({1, 4, 2, hexed::config::max_row_size}, .8);
     std::vector<hexed::Flow_bc*> bcs;
@@ -477,6 +479,12 @@ TEST_CASE("mesh I/O")
     auto& elems = mesh.elements();
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       for (int i_vert = 0; i_vert < 4; ++i_vert) correct_sum_vertices += elems[i_elem].vertex(i_vert).pos;
+    }
+    // refine the mesh again and count the number of Cartesian and deformed elements to make sure the recreated mesh behaves the same way
+    mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] > 2;});
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      if (elems[i_elem].get_is_deformed()) ++correct_n_def_after;
+      else                                 ++correct_n_car_after;
     }
   }
   { // read the above mesh from the file and check that it's the same
@@ -503,5 +511,16 @@ TEST_CASE("mesh I/O")
     REQUIRE(sum_vertices(0) == Catch::Approx(correct_sum_vertices(0)));
     REQUIRE(sum_vertices(1) == Catch::Approx(correct_sum_vertices(1)));
     mesh.valid().assert_valid();
+    // refine the mesh and check that it's the same as refining the original mesh
+    mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] > 2;});
+    int n_car_after = 0;
+    int n_def_after = 0;
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      if (elems[i_elem].get_is_deformed()) ++n_def_after;
+      else                                 ++n_car_after;
+    }
+    mesh.valid().assert_valid();
+    REQUIRE(n_car_after == correct_n_car_after);
+    REQUIRE(n_def_after == correct_n_def_after);
   }
 }
