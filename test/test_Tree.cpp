@@ -70,6 +70,8 @@ TEST_CASE("Tree")
                                                                      }));
   REQUIRE_THAT(children[3]->children()[1]->find_neighbors(Eigen::Vector2i{0, -1}),
                Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{children[3]->children()[0]->children()[1], children[3]->children()[0]->children()[3]}));
+  REQUIRE(tree2.count() == 13);
+  REQUIRE(children[3]->count() == 9);
 
   // flood fill
   REQUIRE(children[0]->get_status() == hexed::Tree::unprocessed);

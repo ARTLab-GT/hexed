@@ -160,6 +160,8 @@ class Tree
    * Neighbors are returned in a depth-first, row-major order.
    */
   std::vector<Tree*> find_neighbors(Eigen::VectorXi direction);
+  //! \brief total number of tree elements descended from this tree (including itself)
+  int count();
   //!\}
 
   /*! \name flood fill algorithm

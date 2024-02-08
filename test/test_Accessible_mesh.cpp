@@ -489,14 +489,17 @@ TEST_CASE("mesh I/O")
     auto& elems = mesh.elements();
     int rl1 = 0;
     int rl2 = 0;
+    int n_tree = 0;
     hexed::Mat<3> sum_vertices = hexed::Mat<3>::Zero();
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       rl1 += elems[i_elem].refinement_level() == 1;
       rl2 += elems[i_elem].refinement_level() == 2;
+      if (elems[i_elem].tree) ++n_tree;
       for (int i_vert = 0; i_vert < 4; ++i_vert) sum_vertices += elems[i_elem].vertex(i_vert).pos;
     }
     REQUIRE(rl1 == 2);
     REQUIRE(rl2 == 9);
+    REQUIRE(n_tree == 9);
     REQUIRE(sum_vertices(0) == Catch::Approx(correct_sum_vertices(0)));
     REQUIRE(sum_vertices(1) == Catch::Approx(correct_sum_vertices(1)));
     mesh.valid().assert_valid();

@@ -1449,8 +1449,6 @@ void h5_add_attr(H5::H5Object& obj, std::string name, T value, H5::DataType dtyp
 template <typename T = int>
 T h5_get_attr(H5::H5Object& obj, std::string name, H5::DataType dtype = H5::PredType::NATIVE_INT)
 {
-  hsize_t attr_dim = 1;
-  H5::DataSpace dspace(1, &attr_dim);
   auto attr = obj.openAttribute(name.c_str());
   T value;
   attr.read(dtype, &value);
@@ -1605,6 +1603,31 @@ void Accessible_mesh::write(std::string name)
     data[3] = con.inside_face_sign();
     h5_write_row(bound_con_dset, 4, i_con, data);
   }
+  // write tree
+  if (tree) {
+    file.createGroup("/tree");
+    dims[0] = 1;
+    dims[1] = params.n_dim;
+    auto orig_dset = file.createDataSet("/tree/origin", H5::PredType::NATIVE_DOUBLE, H5::DataSpace(2, dims));
+    Mat<> origin = tree->origin();
+    h5_write_row(orig_dset, params.n_dim, 0, origin.data());
+    int n_vert = params.n_vertices();
+    dims[0] = tree->count();
+    dims[1] = 2 + n_vert;
+    auto child_dset = file.createDataSet("/tree/children", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
+    int row = 0;
+    std::function<int(Tree*)> write_tree = [&](Tree* t) {
+      std::vector<int> data(2 + n_vert, -1);
+      if (t->elem) data[0] = t->elem->record;
+      data[1] = t->get_status();
+      int my_row = row++;
+      auto children = t->children();
+      for (unsigned i_child = 0; i_child < children.size(); ++i_child) data[2 + i_child] = write_tree(children[i_child]);
+      h5_write_row(child_dset, 2 + n_vert, my_row, data.data());
+      return my_row;
+    };
+    write_tree(tree.get());
+  }
 }
 
 void Accessible_mesh::read_file(std::string file_name)
@@ -1693,6 +1716,26 @@ void Accessible_mesh::read_file(std::string file_name)
       car.bound_cons.emplace_back(new Typed_bound_connection<Element         >(    *elem_ptrs[data[0]], data[2], data[3], data[1]));
     }
   }
+  // read tree
+  if (tree) {
+    auto child_dset = file.openDataSet("/tree/children");
+    std::function<void(Tree*, int)> read_tree = [&](Tree* t, int row) {
+      std::vector<int> data(2 + n_vert);
+      h5_read_row(child_dset, 2 + n_vert, row, data.data());
+      if (data[0] >= 0) {
+        Element& elem = *elem_ptrs[data[0]];
+        t->elem.pair(elem.tree);
+        t->def_elem = def_elem_ptrs[data[0]]; // if not deformed, this is just `nullptr`, as it should be
+      }
+      t->set_status(data[1]);
+      if (data[2] >= 0) {
+        t->refine();
+        auto children = t->children();
+        for (int i_child = 0; i_child < n_vert; ++i_child) read_tree(children[i_child], data[2 + i_child]);
+      }
+    };
+    read_tree(tree.get(), 0);
+  }
   cleanup();
 }
 
@@ -1705,8 +1748,14 @@ Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> ex
   std::unique_ptr<Surface_geom> g;
   if (geometry) g.reset(geometry);
   // create the tree
-  create_tree(extremal_bcs, Mat<>::Zero(3));
-  // now we're exception-safe, so we can assert things
+  {
+    H5::H5File file(file_name + ".h5", H5F_ACC_RDONLY);
+    HEXED_ASSERT(file.exists("tree"), "attempt to read a non-tree mesh from a file as a tree mesh");
+    Mat<> orig(params.n_dim);
+    auto orig_dset = file.openDataSet("/tree/origin");
+    h5_read_row(orig_dset, params.n_dim, 0, orig.data());
+    create_tree(extremal_bcs, orig);
+  }
   HEXED_ASSERT(bool(fbc) == bool(g), "must specify both surface geometry and surface boundary condition or neither");
   if (surface_bc) {
     surf_bc_sn = add_boundary_condition(fbc.release(), new Geom_mbc(g.release()));
