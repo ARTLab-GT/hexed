@@ -124,9 +124,9 @@ class Solver
   /*! \brief reads mesh from file
    * \details Wipes old mesh and flow state.
    * File must be in the native (HDF5-based) mesh format, which you can generate from a previous simulation with `Mesh::write`.
-   * New mesh must match the `Storage_params` of the current one.
-   * Have to `calc_jacobian` and `initialize` again, but you shouldn't need to `snap_faces` (even as a part of `calc_jacobian`)
-   * unless you further modify the mesh.
+   * New mesh must match the `Storage_params` of the current one, but the root mesh size will be replaced with that of the new mesh.
+   * You still have to `initialize` (even if you already did before reading the new mesh),
+   * but you don't have to `calc_jacobian` unless you further modify the mesh.
    */
   void read_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs, Surface_geom* = nullptr, Flow_bc* surface_bc = nullptr);
   Storage_params storage_params();
