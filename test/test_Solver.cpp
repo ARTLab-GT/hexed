@@ -958,7 +958,6 @@ TEST_CASE("file I/O")
     solver.mesh().add_tree(bcs);
     solver.mesh().update();
     solver.mesh().set_surface(new hexed::Hypersphere(hexed::Mat<>::Zero(2), .2), new hexed::Nonpenetration, hexed::Mat<2>{.5, .5});
-    solver.snap_faces();
     solver.calc_jacobian();
     REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(.6*.6 - hexed::constants::pi*.2*.2/4, tol));
     solver.mesh().write("solver_io_test");

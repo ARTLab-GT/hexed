@@ -51,8 +51,8 @@ void hexed::Solver::snap_faces()
         }
       }
     }
-    compute_write_face(_kernel_mesh);
-    compute_prolong(_kernel_mesh);
+    compute_write_face(_kernel_mesh());
+    compute_prolong(_kernel_mesh());
     Copy fake_bc;
     #pragma omp parallel for
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
@@ -73,7 +73,7 @@ void hexed::Solver::snap_faces()
       }
     }
     (*kernel_factory<Spatial<pde::Smooth_art_visc, false>::Neighbor>(params.n_dim, params.row_size, 0, 1., 1.))(acc_mesh->deformed().kernel_connections());
-    compute_restrict(_kernel_mesh, false, true);
+    compute_restrict(_kernel_mesh(), false, true);
     #pragma omp parallel for
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
       auto& con = bc_cons[i_con];

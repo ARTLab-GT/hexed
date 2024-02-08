@@ -72,15 +72,15 @@ double Solver::Linearized::inner(int input0, int input1)
 void Solver::Linearized::matvec(int output, int input)
 {
   add(-storage_start, 1., -storage_start, finite_diff, input);
-  compute_write_face(_solver._kernel_mesh);
-  compute_prolong(_solver._kernel_mesh);
+  compute_write_face(_solver._kernel_mesh());
+  compute_prolong(_solver._kernel_mesh());
   _solver.update();
   add(output, 1., -storage_start, -1., -storage_start + 1);
   add(output, 1., output, -1., 1);
   scale(output, output, 1./finite_diff);
   scale(-storage_start, -storage_start + 3, 1.);
-  compute_write_face(_solver._kernel_mesh);
-  compute_prolong(_solver._kernel_mesh);
+  compute_write_face(_solver._kernel_mesh());
+  compute_prolong(_solver._kernel_mesh());
 }
 
 }

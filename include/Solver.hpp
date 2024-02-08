@@ -44,8 +44,8 @@ class Solver
   std::shared_ptr<Namespace> _namespace;
   std::shared_ptr<Printer> _printer;
   bool _implicit;
-  Kernel_mesh _kernel_mesh;
 
+  Kernel_mesh _kernel_mesh();
   void share_vertex_data(std::function<double&(Element&, int i_vertex)>, std::function<double(Mat<>)>);
   void share_vertex_data(std::function<double(Element&, int i_vertex)> get, std::function<double&(Element&, int i_vertex)> set, std::function<double(Mat<>)>);
   bool fix_admissibility(double stability_ratio);
@@ -125,18 +125,18 @@ class Solver
    * \details Wipes old mesh and flow state.
    * File must be in the native (HDF5-based) mesh format, which you can generate from a previous simulation with `Mesh::write`.
    * New mesh must match the `Storage_params` of the current one.
-   * Have to `calc_jacobian` and `initialize` again.
+   * Have to `calc_jacobian` and `initialize` again, but you shouldn't need to `snap_faces` (even as a part of `calc_jacobian`)
+   * unless you further modify the mesh.
    */
   void read_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs, Surface_geom* = nullptr, Flow_bc* surface_bc = nullptr);
   Storage_params storage_params();
   //! warps the boundary elements such that the element faces coincide with the boundary at their quadrature points.
   void snap_faces();
-  /*!
-   * compute the Jacobian of all elements based on the current position of the vertices
-   * and value of any face warping.
-   * Mesh topology must be valid (no duplicate or missing connections) before calling this function.
+  /*! \brief compute the Jacobian of all elements based on the current position of the vertices and value of any face warping.
+   * \details Mesh topology must be valid (no duplicate or missing connections) before calling this function.
+   * \param `snap_faces` if `true`, this function will go ahead and perform face snapping for you
    */
-  void calc_jacobian();
+  void calc_jacobian(bool snap_faces = true);
   //! set the flow state
   void initialize(const Spacetime_func&);
   void set_art_visc_off(); //!< turns off artificial viscosity
