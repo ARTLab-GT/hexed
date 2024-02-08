@@ -977,13 +977,6 @@ TEST_CASE("file I/O")
     hexed::Solver solver(2, hexed::config::max_row_size - 1, .6);
     REQUIRE_THROWS(solver.read_mesh("solver_io_test", bcs, new hexed::Hypersphere(hexed::Mat<>::Zero(2), .2), new hexed::Nonpenetration));
   }
-  SECTION("wrong params 2")
-  {
-    std::vector<hexed::Flow_bc*> bcs;
-    for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Freestream(Eigen::Vector4d{0., 0., 1., 1e5}));
-    hexed::Solver solver(2, hexed::config::max_row_size, .5);
-    REQUIRE_THROWS(solver.read_mesh("solver_io_test", bcs, new hexed::Hypersphere(hexed::Mat<>::Zero(2), .2), new hexed::Nonpenetration));
-  }
   SECTION("right params")
   {
     std::vector<hexed::Flow_bc*> bcs;

@@ -84,6 +84,7 @@ class Accessible_mesh : public Mesh
   Accessible_mesh(std::string file_name, std::vector<Flow_bc*>, std::vector<Mesh_bc*>);
   virtual ~Accessible_mesh();
   inline double root_size() override {return root_sz;}
+  inline Storage_params storage_params() {return params;}
   //! \returns a View_by_type containing only the Cartesian elements in the mesh
   inline View_by_type<         Element>& cartesian() {return car;}
   //! \returns a View_by_type containing only the deformed elements in the mesh

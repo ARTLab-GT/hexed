@@ -216,6 +216,11 @@ const Stopwatch_tree& Solver::stopwatch_tree() {return stopwatch;}
 void Solver::read_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs, Surface_geom* geom, Flow_bc* surface_bc)
 {
   acc_mesh.reset(new Accessible_mesh(file_name, extremal_bcs, geom, surface_bc));
+  HEXED_ASSERT(acc_mesh->storage_params().n_stage == params.n_stage, "attempt to read a mesh file with a different `n_stage`");
+  HEXED_ASSERT(acc_mesh->storage_params().n_var == params.n_var, "attempt to read a mesh file with a different `n_var`");
+  HEXED_ASSERT(acc_mesh->storage_params().n_dim == params.n_dim, "attempt to read a mesh file with a different `n_dim`");
+  HEXED_ASSERT(acc_mesh->storage_params().row_size == params.row_size, "attempt to read a mesh file with a different `row_size`");
+  HEXED_ASSERT(acc_mesh->storage_params().n_forcing == params.n_forcing, "attempt to read a mesh file with a different `n_forcing`");
 }
 
 void Solver::calc_jacobian()
