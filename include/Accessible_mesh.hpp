@@ -59,6 +59,8 @@ class Accessible_mesh : public Mesh
   // identify which vertices are on which boundaries and write it to `Vertex::record`
   // must be called directly befor `snap_vertices`
   void snap_vertices();
+  void create_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3));
+  void read_file(std::string file_name);
 
   public:
   //! \brief how far must the center of an element be from the geometry relative to the nominal size
@@ -69,8 +71,17 @@ class Accessible_mesh : public Mesh
    * \param root_size defines the \ref root_size of the mesh.
    */
   Accessible_mesh(Storage_params params, double root_size);
-  //! \brief reads mesh from a file created by `Mesh::write`
-  Accessible_mesh(std::string file_name);
+  /*! \brief Reads mesh from a file created by `Mesh::write`.
+   * \details Acquires ownership of boundary condition pointers.
+   * This variant is only for tree meshing.
+   * The surface boundary condition and geometry arguments must be specified iff the original mesh had a surface geometry (else exception).
+   */
+  Accessible_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs, Surface_geom* = nullptr, Flow_bc* surface_bc = nullptr);
+  /*! \brief Reads mesh from a file created by `Mesh::write`.
+   * \details Acquires ownership of boundary condition pointers.
+   * This variant is not for tree meshing.
+   */
+  Accessible_mesh(std::string file_name, std::vector<Flow_bc*>, std::vector<Mesh_bc*>);
   virtual ~Accessible_mesh();
   inline double root_size() override {return root_sz;}
   //! \returns a View_by_type containing only the Cartesian elements in the mesh

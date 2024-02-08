@@ -468,10 +468,10 @@ TEST_CASE("mesh I/O")
     hexed::Accessible_mesh mesh({1, 4, 2, hexed::config::max_row_size}, .8);
     std::vector<hexed::Flow_bc*> bcs;
     for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Copy);
-    mesh.add_tree(bcs);
+    mesh.add_tree(bcs, hexed::Mat<2>{0.1, 0.2});
     mesh.update();
     mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] > 0;});
-    mesh.set_surface(new hexed::Hypersphere(hexed::Mat<2>{.8, 0.}, 0.1), new hexed::Nonpenetration);
+    mesh.set_surface(new hexed::Hypersphere(hexed::Mat<2>{.9, 0.2}, 0.1), new hexed::Nonpenetration);
     mesh.write("io_test");
     // compute the sum of the vertex coordinates of all elements (counting each vertex once for each element using it) to check vertex position
     auto& elems = mesh.elements();
@@ -480,7 +480,9 @@ TEST_CASE("mesh I/O")
     }
   }
   { // read the above mesh from the file and check that it's the same
-    hexed::Accessible_mesh mesh("io_test");
+    std::vector<hexed::Flow_bc*> extr_bcs;
+    for (int i = 0; i < 4; ++i) extr_bcs.push_back(new hexed::Copy);
+    hexed::Accessible_mesh mesh("io_test", extr_bcs, new hexed::Hypersphere(hexed::Mat<2>{.9, 0.2}, 0.1), new hexed::Nonpenetration);
     REQUIRE(mesh.root_size() == Catch::Approx(0.8));
     REQUIRE(mesh.cartesian().elements().size() == 6);
     REQUIRE(mesh.deformed().elements().size() == 5);

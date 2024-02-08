@@ -655,18 +655,22 @@ Element& Accessible_mesh::add_elem(bool is_deformed, Tree& t)
   return elem;
 }
 
-void Accessible_mesh::add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin)
+void Accessible_mesh::create_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin)
 {
   // take ownership of bcs (do this first to avoid memory leak)
   std::vector<int> new_tree_bcs;
   //! \todo this could, in theory, be a resource leak because these are never erased if an exception is thrown...
   for (Flow_bc* fbc : extremal_bcs) new_tree_bcs.push_back(add_boundary_condition(fbc, new Nominal_pos));
-  // make assertions
   HEXED_ASSERT(int(extremal_bcs.size()) == 2*params.n_dim, "`extremal_bcs` has wrong number of elements");
   HEXED_ASSERT(!tree, "each `Mesh` may only contain one tree");
   // add the tree
   tree_bcs = new_tree_bcs;
   tree.reset(new Tree(params.n_dim, root_sz, origin));
+}
+
+void Accessible_mesh::add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin)
+{
+  create_tree(extremal_bcs, origin);
   auto& elem = add_elem(false, *tree);
   int sn = elem.record;
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
@@ -1587,9 +1591,23 @@ void Accessible_mesh::write(std::string name)
   WRITE_REF_CONS(0, car_cons);
   WRITE_REF_CONS(car_cons.size(), def_cons);
   #undef WRITE_REF_CONS
+  // write boundary connections
+  auto& bound_cons = boundary_connections();
+  dims[0] = bound_cons.size();
+  dims[1] = 4;
+  auto bound_con_dset = file.createDataSet("/connections/boundary", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
+  for (int i_con = 0; i_con < bound_cons.size(); ++i_con) {
+    auto& con = bound_cons[i_con];
+    int data[4];
+    data[0] = con.element().record;
+    data[1] = con.bound_cond_serial_n();
+    data[2] = con.i_dim();
+    data[3] = con.inside_face_sign();
+    h5_write_row(bound_con_dset, 4, i_con, data);
+  }
 }
 
-Accessible_mesh::Accessible_mesh(std::string file_name) : Accessible_mesh(read_params(file_name), read_root_sz(file_name))
+void Accessible_mesh::read_file(std::string file_name)
 {
   H5::H5File file(file_name + ".h5", H5F_ACC_RDONLY);
   hsize_t dims [2];
@@ -1640,7 +1658,7 @@ Accessible_mesh::Accessible_mesh(std::string file_name) : Accessible_mesh(read_p
   ref_con_dset.getSpace().getSimpleExtentDims(dims);
   n_con = dims[0];
   for (int i_con = 0; i_con < n_con; ++i_con) {
-    int data[12];
+    int data [12];
     h5_read_row(ref_con_dset, 12, i_con, data);
     std::array<bool, 2> stretch {bool(data[6]), bool(data[7])};
     int n_fine = math::pow(2, params.n_dim - 1 - stretch[0] - stretch[1]);
@@ -1662,7 +1680,49 @@ Accessible_mesh::Accessible_mesh(std::string file_name) : Accessible_mesh(read_p
       car.ref_face_cons[params.n_dim - 1].emplace_back(new Refined_connection<Element>{coarse, fine, {data[8]}, bool(data[5])});
     }
   }
+  // read boundary connections
+  auto bound_con_dset = file.openDataSet("/connections/boundary");
+  bound_con_dset.getSpace().getSimpleExtentDims(dims);
+  for (int i_con = 0; i_con < int(dims[0]); ++i_con) {
+    int data [4];
+    h5_read_row(bound_con_dset, 4, i_con, data);
+    HEXED_ASSERT(data[1] < int(bound_conds.size()), "mesh file refers to nonexistant boundary condition");
+    if (elem_ptrs[data[0]]->get_is_deformed()) {
+      def.bound_cons.emplace_back(new Typed_bound_connection<Deformed_element>(*def_elem_ptrs[data[0]], data[2], data[3], data[1]));
+    } else {
+      car.bound_cons.emplace_back(new Typed_bound_connection<Element         >(    *elem_ptrs[data[0]], data[2], data[3], data[1]));
+    }
+  }
   cleanup();
+}
+
+Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs, Surface_geom* geometry, Flow_bc* surface_bc)
+: Accessible_mesh(read_params(file_name), read_root_sz(file_name))
+{
+  // take ownership of these to avoid memory leaks in case of exception
+  std::unique_ptr<Flow_bc> fbc;
+  if (surface_bc) fbc.reset(surface_bc);
+  std::unique_ptr<Surface_geom> g;
+  if (geometry) g.reset(geometry);
+  // create the tree
+  create_tree(extremal_bcs, Mat<>::Zero(3));
+  // now we're exception-safe, so we can assert things
+  HEXED_ASSERT(bool(fbc) == bool(g), "must specify both surface geometry and surface boundary condition or neither");
+  if (surface_bc) {
+    surf_bc_sn = add_boundary_condition(fbc.release(), new Geom_mbc(g.release()));
+    surf_geom = geometry;
+  }
+  read_file(file_name);
+}
+
+Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> flow_bcs, std::vector<Mesh_bc*> mesh_bcs)
+: Accessible_mesh(read_params(file_name), read_root_sz(file_name))
+{
+  HEXED_ASSERT(flow_bcs.size() == mesh_bcs.size(), "must supply same number of flow and mesh boundary conditions");
+  for (unsigned i_bc = 0; i_bc < flow_bcs.size(); ++i_bc) {
+    add_boundary_condition(flow_bcs[i_bc], mesh_bcs[i_bc]);
+  }
+  read_file(file_name);
 }
 
 }
