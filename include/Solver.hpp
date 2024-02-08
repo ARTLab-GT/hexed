@@ -31,7 +31,7 @@ namespace hexed
 class Solver
 {
   Storage_params params;
-  Accessible_mesh acc_mesh;
+  std::unique_ptr<Accessible_mesh> acc_mesh;
   Gauss_legendre basis;
   Iteration_status status;
   Stopwatch_tree stopwatch;
@@ -121,6 +121,13 @@ class Solver
    * before any flow calculation can begin.
    */
   Mesh& mesh();
+  /*! \brief reads mesh from file
+   * \details Wipes old mesh and flow state.
+   * File must be in the native (HDF5-based) mesh format, which you can generate from a previous simulation with `Mesh::write`.
+   * New mesh must match the `Storage_params` of the current one.
+   * Have to `calc_jacobian` and `initialize` again.
+   */
+  void read_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs, Surface_geom* = nullptr, Flow_bc* surface_bc = nullptr);
   Storage_params storage_params();
   //! warps the boundary elements such that the element faces coincide with the boundary at their quadrature points.
   void snap_faces();

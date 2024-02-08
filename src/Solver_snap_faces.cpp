@@ -10,13 +10,13 @@ void hexed::Solver::snap_faces()
 {
   const int nd = params.n_dim;
   const int nfq = params.n_qpoint()/params.row_size;
-  auto& bc_cons {acc_mesh.boundary_connections()};
-  auto& elems = acc_mesh.elements();
+  auto& bc_cons {acc_mesh->boundary_connections()};
+  auto& elems = acc_mesh->elements();
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     Lock::Acquire acq(bc_cons[i_con].element().lock);
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh.boundary_condition(bc_sn).mesh_bc->snap_node_adj(bc_cons[i_con], basis);
+    acc_mesh->boundary_condition(bc_sn).mesh_bc->snap_node_adj(bc_cons[i_con], basis);
   }
   Gauss_lobatto lob(std::max(2, basis.row_size - 1));
   Mat<dyn, dyn> to_lob = basis.interpolate(lob.nodes());
@@ -38,7 +38,7 @@ void hexed::Solver::snap_faces()
       auto& con = bc_cons[i_con];
       Lock::Acquire acq(con.element().lock);
       int bc_sn = con.bound_cond_serial_n();
-      if (bc_sn == acc_mesh.surface_bc_sn()) {
+      if (bc_sn == acc_mesh->surface_bc_sn()) {
         double* state = con.element().state();
         double* node_adj = con.element().node_adjustments();
         if (node_adj) {
@@ -61,7 +61,7 @@ void hexed::Solver::snap_faces()
       fake_bc.apply_state(con);
     }
     if (sweep) {
-      auto& ref_cons = acc_mesh.deformed().refined_connections();
+      auto& ref_cons = acc_mesh->deformed().refined_connections();
       #pragma omp parallel for
       for (int i_con = 0; i_con < ref_cons.size(); ++i_con) {
         for (int i_fine = 0; i_fine < 2; ++i_fine) {
@@ -72,14 +72,14 @@ void hexed::Solver::snap_faces()
         }
       }
     }
-    (*kernel_factory<Spatial<pde::Smooth_art_visc, false>::Neighbor>(params.n_dim, params.row_size, 0, 1., 1.))(acc_mesh.deformed().kernel_connections());
+    (*kernel_factory<Spatial<pde::Smooth_art_visc, false>::Neighbor>(params.n_dim, params.row_size, 0, 1., 1.))(acc_mesh->deformed().kernel_connections());
     compute_restrict(_kernel_mesh, false, true);
     #pragma omp parallel for
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
       auto& con = bc_cons[i_con];
       Lock::Acquire acq(con.element().lock);
       int bc_sn = con.bound_cond_serial_n();
-      if (bc_sn == acc_mesh.surface_bc_sn()) {
+      if (bc_sn == acc_mesh->surface_bc_sn()) {
         double* state = con.element().state();
         double* node_adj = con.element().node_adjustments();
         if (node_adj) {

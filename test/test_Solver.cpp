@@ -947,3 +947,49 @@ TEST_CASE("cylinder tree mesh")
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
   REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
 }
+
+TEST_CASE("file I/O")
+{
+  double tol = 1e-6;
+  {
+    hexed::Solver solver(2, hexed::config::max_row_size, .6);
+    std::vector<hexed::Flow_bc*> bcs;
+    for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Freestream(Eigen::Vector4d{0., 0., 1., 1e5}));
+    solver.mesh().add_tree(bcs);
+    solver.mesh().update();
+    solver.mesh().set_surface(new hexed::Hypersphere(hexed::Mat<>::Zero(2), .2), new hexed::Nonpenetration, hexed::Mat<2>{.5, .5});
+    solver.snap_faces();
+    solver.calc_jacobian();
+    REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(.6*.6 - hexed::constants::pi*.2*.2/4, tol));
+    solver.mesh().write("solver_io_test");
+  }
+  SECTION("wrong params 0")
+  {
+    std::vector<hexed::Flow_bc*> bcs;
+    for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Freestream(Eigen::Vector4d{0., 0., 1., 1e5}));
+    hexed::Solver solver(1, hexed::config::max_row_size, .6);
+    REQUIRE_THROWS(solver.read_mesh("solver_io_test", bcs, new hexed::Hypersphere(hexed::Mat<>::Zero(2), .2), new hexed::Nonpenetration));
+  }
+  SECTION("wrong params 1")
+  {
+    std::vector<hexed::Flow_bc*> bcs;
+    for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Freestream(Eigen::Vector4d{0., 0., 1., 1e5}));
+    hexed::Solver solver(2, hexed::config::max_row_size - 1, .6);
+    REQUIRE_THROWS(solver.read_mesh("solver_io_test", bcs, new hexed::Hypersphere(hexed::Mat<>::Zero(2), .2), new hexed::Nonpenetration));
+  }
+  SECTION("wrong params 2")
+  {
+    std::vector<hexed::Flow_bc*> bcs;
+    for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Freestream(Eigen::Vector4d{0., 0., 1., 1e5}));
+    hexed::Solver solver(2, hexed::config::max_row_size, .5);
+    REQUIRE_THROWS(solver.read_mesh("solver_io_test", bcs, new hexed::Hypersphere(hexed::Mat<>::Zero(2), .2), new hexed::Nonpenetration));
+  }
+  SECTION("right params")
+  {
+    std::vector<hexed::Flow_bc*> bcs;
+    for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Freestream(Eigen::Vector4d{0., 0., 1., 1e5}));
+    hexed::Solver solver(2, hexed::config::max_row_size, .6);
+    solver.read_mesh("solver_io_test", bcs, new hexed::Hypersphere(hexed::Mat<>::Zero(2), .2), new hexed::Nonpenetration);
+    REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(.6*.6 - hexed::constants::pi*.2*.2/4, tol));
+  }
+}

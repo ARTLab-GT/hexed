@@ -27,7 +27,7 @@ int Solver::Linearized::n_vecs() {return n_storage;}
 
 void Solver::Linearized::scale(int output, int input, double scalar)
 {
-  auto& elems = _solver.acc_mesh.elements();
+  auto& elems = _solver.acc_mesh->elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     double* out = elems[i_elem].stage(storage_start + output);
@@ -38,7 +38,7 @@ void Solver::Linearized::scale(int output, int input, double scalar)
 
 void Solver::Linearized::add(int output, double coef0, int vec0, double coef1, int vec1)
 {
-  auto& elems = _solver.acc_mesh.elements();
+  auto& elems = _solver.acc_mesh->elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     double* out = elems[i_elem].stage(storage_start + output);
@@ -52,7 +52,7 @@ void Solver::Linearized::add(int output, double coef0, int vec0, double coef1, i
 
 double Solver::Linearized::inner(int input0, int input1)
 {
-  auto& elems = _solver.acc_mesh.elements();
+  auto& elems = _solver.acc_mesh->elements();
   double total = 0;
   const int nq = _solver.params.n_qpoint();
   #pragma omp parallel for reduction (+:total)
