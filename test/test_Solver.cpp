@@ -951,6 +951,7 @@ TEST_CASE("cylinder tree mesh")
 TEST_CASE("file I/O")
 {
   double tol = 1e-6;
+  double correct_mass_integral;
   {
     hexed::Solver solver(2, hexed::config::max_row_size, .6);
     std::vector<hexed::Flow_bc*> bcs;
@@ -961,6 +962,9 @@ TEST_CASE("file I/O")
     solver.calc_jacobian();
     REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(.6*.6 - hexed::constants::pi*.2*.2/4, tol));
     solver.mesh().write("solver_io_test");
+    solver.initialize(Nonuniform_mass());
+    solver.write_state("solver_io_test");
+    correct_mass_integral = solver.integral_field(hexed::Mass())[0];
   }
   SECTION("wrong params 0")
   {
@@ -983,5 +987,7 @@ TEST_CASE("file I/O")
     hexed::Solver solver(2, hexed::config::max_row_size, .6);
     solver.read_mesh("solver_io_test", bcs, new hexed::Hypersphere(hexed::Mat<>::Zero(2), .2), new hexed::Nonpenetration);
     REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(.6*.6 - hexed::constants::pi*.2*.2/4, tol));
+    solver.read_state("solver_io_test");
+    REQUIRE(solver.integral_field(hexed::Mass())[0] == Catch::Approx(correct_mass_integral));
   }
 }

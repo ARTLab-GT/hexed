@@ -124,11 +124,16 @@ class Solver
   /*! \brief reads mesh from file
    * \details Wipes old mesh and flow state.
    * File must be in the native (HDF5-based) mesh format, which you can generate from a previous simulation with `Mesh::write`.
+   * `.mesh.h5` will be automatically appended to `file_name`.
    * New mesh must match the `Storage_params` of the current one, but the root mesh size will be replaced with that of the new mesh.
    * You still have to `initialize` (even if you already did before reading the new mesh),
    * but you don't have to `calc_jacobian` unless you further modify the mesh.
    */
   void read_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs, Surface_geom* = nullptr, Flow_bc* surface_bc = nullptr);
+  //! \brief Reads flow state from file.
+  //! \details Essentially a substitute for `initialize`.
+  //! `.state.h5` will be appended to file name
+  void read_state(std::string file_name);
   Storage_params storage_params();
   //! warps the boundary elements such that the element faces coincide with the boundary at their quadrature points.
   void snap_faces();
@@ -226,6 +231,9 @@ class Solver
   //! \brief visualize the local time step constraints imposed by convection and diffusion, respectively
   //! \warning This function overwrites the reference state, which will invalidate any residual evaluation until `update` is called again.
   void vis_lts_constraints(std::string format, std::string name, int n_sample = 10);
+  //! \brief Writes flow state to file.
+  //! \details `.state.h5` will be appended to `file_name`.
+  void write_state(std::string file_name);
   //!\}
 };
 

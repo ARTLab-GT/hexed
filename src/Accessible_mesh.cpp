@@ -1457,7 +1457,7 @@ T h5_get_attr(H5::H5Object& obj, std::string name, H5::DataType dtype = H5::Pred
 
 Storage_params read_params(std::string file_name)
 {
-  H5::H5File file(file_name + ".h5", H5F_ACC_RDONLY);
+  H5::H5File file(file_name + ".mesh.h5", H5F_ACC_RDONLY);
   Storage_params params {
     h5_get_attr(file, "n_stage"),
     h5_get_attr(file, "n_var"),
@@ -1470,7 +1470,7 @@ Storage_params read_params(std::string file_name)
 
 double read_root_sz(std::string file_name)
 {
-  H5::H5File file(file_name + ".h5", H5F_ACC_RDONLY);
+  H5::H5File file(file_name + ".mesh.h5", H5F_ACC_RDONLY);
   return h5_get_attr<double>(file, "root_size", H5::PredType::NATIVE_DOUBLE);
 }
 
@@ -1497,7 +1497,7 @@ T h5_read_value(H5::DataSet& dset, int i_row)
 
 void Accessible_mesh::write(std::string name)
 {
-  H5::H5File file(name + ".h5", H5F_ACC_TRUNC);
+  H5::H5File file(name + ".mesh.h5", H5F_ACC_TRUNC);
   h5_add_attr(file, "version_major", config::version_major);
   h5_add_attr(file, "version_minor", config::version_minor);
   h5_add_attr(file, "version_patch", config::version_patch);
@@ -1645,7 +1645,7 @@ void Accessible_mesh::write(std::string name)
 
 void Accessible_mesh::read_file(std::string file_name)
 {
-  H5::H5File file(file_name + ".h5", H5F_ACC_RDONLY);
+  H5::H5File file(file_name + ".mesh.h5", H5F_ACC_RDONLY);
   hsize_t dims [2];
   // read elements
   auto vert_pos_dset = file.openDataSet("/vertices/position");
@@ -1772,7 +1772,7 @@ Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> ex
   if (geometry) g.reset(geometry);
   // create the tree
   {
-    H5::H5File file(file_name + ".h5", H5F_ACC_RDONLY);
+    H5::H5File file(file_name + ".mesh.h5", H5F_ACC_RDONLY);
     HEXED_ASSERT(file.exists("tree"), "attempt to read a non-tree mesh from a file as a tree mesh");
     Mat<> orig(params.n_dim);
     auto orig_dset = file.openDataSet("/tree/origin");

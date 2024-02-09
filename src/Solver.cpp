@@ -228,6 +228,14 @@ void Solver::read_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs
   calc_jacobian(false);
 }
 
+void Solver::read_state(std::string file_name)
+{
+}
+
+void Solver::write_state(std::string file_name)
+{
+}
+
 void Solver::calc_jacobian(bool snap)
 {
   acc_mesh->valid().assert_valid();
