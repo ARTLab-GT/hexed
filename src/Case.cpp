@@ -73,6 +73,18 @@ Flow_bc* Case::_make_bc(std::string name)
   return nullptr; // will never happen. just to shut up GCC warning
 }
 
+std::string Case::_iteration_suffix()
+{
+  return format_str(100, "iter%.*i", _vari("iter_width").value(), _vari("iteration").value());
+}
+
+std::string Case::_input_data_file()
+{
+  auto file_name = _vars("input_data_file");
+  HEXED_ASSERT(file_name, "to read input data, `input_data_file` must be set");
+  return file_name.value();
+}
+
 Case::Case(std::string input_file)
 {
   _inter.variables->assign("input_file", input_file);
@@ -287,9 +299,17 @@ Case::Case(std::string input_file)
     return 0;
   }));
 
+  _inter.variables->create<int>("read_mesh" , new Namespace::Heisenberg<int>([this]() {_solver().read_mesh (_input_data_file());}));
+  _inter.variables->create<int>("read_state", new Namespace::Heisenberg<int>([this]() {_solver().read_state(_input_data_file());}));
+  _inter.variables->create<int>("write", new Namespace::Heisenberg<int>([this]() {
+    std::string file_name = _vars("working_dir").value() + _iteration_suffix();
+    _solver().mesh().write(file_name);
+    _solver().write(file_name);
+  }));
+
   _inter.variables->create<int>("visualize", new Namespace::Heisenberg<int>([this]() {
     std::string wd = _vars("working_dir").value();
-    std::string suffix = format_str(100, "_iter%.*i", _vari("iter_width").value(), _vari("iteration").value());
+    std::string suffix = "_" + _iteration_suffix();
     int n_sample = _vari("vis_n_sample").value();
     for (std::string v : {"surface", "field"}) if (_vari("vis_" + v).value()) {
       for (std::string format : {"xdmf", "tecplot"}) if (_vari("vis_" + format).value()) {

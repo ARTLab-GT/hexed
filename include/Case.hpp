@@ -20,6 +20,8 @@ class Case
   void _set_vector(std::string name, Mat<>);
   std::optional<std::string> _vars(std::string name);
   Flow_bc* _make_bc(std::string name);
+  std::string _iteration_suffix();
+  std::string _input_data_file();
   bool _has_geom = false;
   std::unique_ptr<std::ofstream> _output_file; // anything printed to cout will also be printed here
   std::unique_ptr<Struct_expr> _monitor_expr;
