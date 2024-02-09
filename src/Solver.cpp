@@ -1,5 +1,6 @@
 #include <fstream>
 #include <iostream>
+#include <H5Cpp.h>
 
 #include <config.hpp>
 #include <Solver.hpp>
@@ -230,10 +231,43 @@ void Solver::read_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs
 
 void Solver::read_state(std::string file_name)
 {
+  auto& elems = acc_mesh->elements();
+  H5::H5File file(file_name + ".state.h5", H5F_ACC_RDONLY);
+  hsize_t n_elem = elems.size();
+  hsize_t n_var = params.n_var_numeric();
+  hsize_t n_qpoint = params.n_qpoint();
+  auto dset = file.openDataSet("state");
+  for (hsize_t i_elem = 0; i_elem < n_elem; ++i_elem) {
+    hsize_t elem_dims [3] {1, n_var, n_qpoint};
+    H5::DataSpace mspace (3, elem_dims, nullptr);
+    hsize_t offset [3] {i_elem, 0, 0};
+    hsize_t stride [3] {1, 1, 1};
+    hsize_t block [3] {1, 1, 1};
+    auto dspace = dset.getSpace();
+    dspace.selectHyperslab(H5S_SELECT_SET, elem_dims, offset, stride, block);
+    dset.read(elems[i_elem].state(), dset.getDataType(), mspace, dspace);
+  }
 }
 
 void Solver::write_state(std::string file_name)
 {
+  auto& elems = acc_mesh->elements();
+  H5::H5File file(file_name + ".state.h5", H5F_ACC_TRUNC);
+  hsize_t n_elem = elems.size();
+  hsize_t n_var = params.n_var_numeric();
+  hsize_t n_qpoint = params.n_qpoint();
+  hsize_t dims [3] {n_elem, n_var, n_qpoint};
+  H5::DataSpace dspace(3, dims);
+  auto dset = file.createDataSet("state", H5::PredType::NATIVE_DOUBLE, dspace);
+  for (hsize_t i_elem = 0; i_elem < n_elem; ++i_elem) {
+    hsize_t elem_dims [3] {1, n_var, n_qpoint};
+    H5::DataSpace mspace (3, elem_dims, nullptr);
+    hsize_t offset [3] {i_elem, 0, 0};
+    hsize_t stride [3] {1, 1, 1};
+    hsize_t block [3] {1, 1, 1};
+    dspace.selectHyperslab(H5S_SELECT_SET, elem_dims, offset, stride, block);
+    dset.write(elems[i_elem].state(), H5::PredType::NATIVE_DOUBLE, mspace, dspace);
+  }
 }
 
 void Solver::calc_jacobian(bool snap)
