@@ -20,6 +20,8 @@ class Case
   void _set_vector(std::string name, Mat<>);
   std::optional<std::string> _vars(std::string name);
   Flow_bc* _make_bc(std::string name);
+  std::vector<Flow_bc*> _make_extremal_bcs();
+  Surface_geom* _make_geom(); // `nullptr` if no geometry
   std::string _iteration_suffix();
   std::string _input_data_file();
   bool _has_geom = false;
@@ -27,7 +29,7 @@ class Case
   std::unique_ptr<Struct_expr> _monitor_expr;
   std::vector<History_monitor> _monitors;
   public:
-  Case(std::string input_file = format_str(1000, "%s/include/interactive.hil", config::root_dir));
+  Case(std::string input_script = format_str(1000, "%s/include/interactive.hil", config::root_dir));
 };
 
 }

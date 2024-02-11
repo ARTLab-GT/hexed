@@ -27,9 +27,16 @@ art_visc_width = art_visc_width*.7/8
 viscosity_model = air_viscosity
 conductivity_model = {ref_value = 1.4/0.4*specific_gas_air/.72*air_visc_ref; ref_temperature = air_visc_ref_temp; offset = air_visc_offset}
 done = {iteration >= 10^5}
+done = {iteration >= 2000}
 vis_freq = 10000
 diffusive_admissibility = true
 
 $plot_history
-$init
+$start
+{
+$mesh
+init_state
+}
+read_mesh
+read_state
 $run
