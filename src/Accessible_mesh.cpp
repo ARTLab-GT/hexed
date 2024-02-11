@@ -1663,7 +1663,7 @@ void Accessible_mesh::read_file(std::string file_name)
     h5_read_row(nom_pos_dset, params.n_dim, i_elem, nom_pos.data());
     int ref_level = h5_read_value<int>(ref_level_dset, i_elem);
     int is_def = h5_read_value<bool>(is_def_dset, i_elem);
-    int sn = add_element(ref_level, is_def, nom_pos);
+    int sn = add_element(ref_level, is_def, nom_pos, tree ? tree->origin() : Mat<>::Zero(params.n_dim));
     int vert_inds[8] {};
     h5_read_row(vert_ind_dset, n_vert, i_elem, vert_inds);
     auto& elem = element(ref_level, is_def, sn);
