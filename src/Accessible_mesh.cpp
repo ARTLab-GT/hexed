@@ -1822,14 +1822,40 @@ void Accessible_mesh::export_polymesh(std::string dir_name)
   dir_name = dir_name + "polyMesh/";
   if (std::filesystem::exists(dir_name)) std::filesystem::remove_all(dir_name);
   std::filesystem::create_directory(dir_name);
+  auto verts = vertices();
+  auto& bound_cons = boundary_connections();
+  auto& elems = elements();
+  int n_faces = bound_cons.size();
   std::string face_note = format_str(200, "nPoints:%i  nCells:%i  nFaces:%i  nInternalFaces:%i",
-                                     vertices().size(), elements().size(), element_connections().size() + boundary_connections().size(),
-                                     element_connections().size());
-  write_polymesh_file(dir_name, "boundary", "polyBoundaryMesh", 0, [&](int i_entry){return std::string();});
-  write_polymesh_file(dir_name, "faces", "faceList", 0, [&](int i_entry){return std::string();});
-  write_polymesh_file(dir_name, "owner",     "labelList", 0, [&](int i_entry){return std::string();}, face_note);
+                                     verts.size(), elems.size(), n_faces, element_connections().size());
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) elems[i_elem].record = i_elem;
+  write_polymesh_file(dir_name, "points", "vectorField", verts.size(), [&](int i_vert) {
+    Vertex& vert = verts[i_vert];
+    vert.record.clear();
+    vert.record.push_back(i_vert);
+    return format_str(100, "(%.20e %.20e %.20e)", vert.pos[0], vert.pos[1], vert.pos[2]);
+  });
+  std::vector<int> owners(n_faces);
+  write_polymesh_file(dir_name, "faces", "faceList", bound_cons.size(), [&](int i_entry) {
+    int i_con = i_entry;
+    auto& con = bound_cons[i_con];
+    auto& elem = con.element();
+    std::vector<int> verts;
+    for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+      if ((i_vert/math::pow(2, params.n_dim - con.i_dim() - 1))%2 == con.inside_face_sign()) {
+        verts.push_back(elem.vertex(i_vert).record[0]);
+      }
+    }
+    if (con.inside_face_sign() != con.i_dim()%2) std::swap(verts[0], verts[1]);
+    else std::swap(verts[2], verts[3]);
+    owners[i_entry] = elem.record;
+    return format_str(100, "4(%i %i %i %i)", verts[0], verts[1], verts[2], verts[3]);
+  });
+  write_polymesh_file(dir_name, "boundary", "polyBoundaryMesh", 1, [&](int i_bc) {
+    return format_str(200, "wallbc\n{\ntype wall;\nnFaces %i;\nstartFace 0;\n}\n", n_faces);
+  });
+  write_polymesh_file(dir_name, "owner",     "labelList", n_faces, [&](int i_entry){return format_str(100, "%i", owners[i_entry]);}, face_note);
   write_polymesh_file(dir_name, "neighbour", "labelList", 0, [&](int i_entry){return std::string();}, face_note);
-  write_polymesh_file(dir_name, "points", "vectorField", 0, [&](int i_entry){return std::string();});
 }
 
 }
