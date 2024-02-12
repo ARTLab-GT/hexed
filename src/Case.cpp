@@ -333,6 +333,10 @@ Case::Case(std::string input_script)
     force_symlink(_iteration_suffix() + ".state.h5", _vars("working_dir").value() + "latest.state.h5");
     return 0;
   }));
+  _inter.variables->create<int>("export_polymesh", new Namespace::Heisenberg<int>([this]() {
+    _solver().mesh().export_polymesh(_vars("working_dir").value());
+    return 0;
+  }));
 
   _inter.variables->create<int>("visualize", new Namespace::Heisenberg<int>([this]() {
     std::string wd = _vars("working_dir").value();

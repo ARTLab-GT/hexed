@@ -5,6 +5,8 @@
 #include <utils.hpp>
 #include <Gauss_legendre.hpp>
 #include <H5Cpp.h>
+#include <filesystem>
+#include <fstream>
 
 namespace hexed
 {
@@ -1795,6 +1797,39 @@ Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> fl
     add_boundary_condition(flow_bcs[i_bc], mesh_bcs[i_bc]);
   }
   read_file(file_name);
+}
+
+void write_polymesh_file(std::string dir_name, std::string name, std::string cls, int n_entries, std::function<std::string(int)> entries, std::string note = "")
+{
+  std::ofstream file(dir_name + name);
+  file
+    << "FoamFile\n"
+    << "{\n"
+    << "    format ascii;\n";
+  if (!note.empty()) file << "    note \"" << note << "\";\n";
+  file
+    << "    class " << cls << ";\n"
+    << "    location \"constant/polyMesh\";\n"
+    << "    object " << name << ";\n"
+    << "}\n"
+    << "\n" << n_entries << "\n(\n";
+  for (int i_entry = 0; i_entry < n_entries; ++i_entry) file << entries(i_entry) << "\n";
+  file << ")\n";
+}
+
+void Accessible_mesh::export_polymesh(std::string dir_name)
+{
+  dir_name = dir_name + "polyMesh/";
+  if (std::filesystem::exists(dir_name)) std::filesystem::remove_all(dir_name);
+  std::filesystem::create_directory(dir_name);
+  std::string face_note = format_str(200, "nPoints:%i  nCells:%i  nFaces:%i  nInternalFaces:%i",
+                                     vertices().size(), elements().size(), element_connections().size() + boundary_connections().size(),
+                                     element_connections().size());
+  write_polymesh_file(dir_name, "boundary", "polyBoundaryMesh", 0, [&](int i_entry){return std::string();});
+  write_polymesh_file(dir_name, "faces", "faceList", 0, [&](int i_entry){return std::string();});
+  write_polymesh_file(dir_name, "owner",     "labelList", 0, [&](int i_entry){return std::string();}, face_note);
+  write_polymesh_file(dir_name, "neighbour", "labelList", 0, [&](int i_entry){return std::string();}, face_note);
+  write_polymesh_file(dir_name, "points", "vectorField", 0, [&](int i_entry){return std::string();});
 }
 
 }

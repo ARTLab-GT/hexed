@@ -140,6 +140,7 @@ class Accessible_mesh : public Mesh
   inline Vector_view<Element_connection&, Element_face_connection<Deformed_element>*,
                      ptr_convert<Element_connection&, Element_face_connection<Deformed_element>*>> extruded_connections() {return {extrude_cons};}
   void write(std::string file_name) override;
+  void export_polymesh(std::string dir_name) override;
 
   protected:
   void reset_verts() override;
