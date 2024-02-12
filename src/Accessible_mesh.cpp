@@ -1803,7 +1803,7 @@ void write_polymesh_file(std::string dir_name, std::string name, std::string cls
 {
   std::ofstream file(dir_name + name);
   file
-    << "// this file was generated for OpenFOAM by Hexed, an open-source mesher and solver\n"
+    << "// this file was generated for OpenFOAM by Hexed, an open-source mesher and CFD solver\n"
     << "// https://github.com/ARTLab-GT/hexed\n\n"
     << "FoamFile\n"
     << "{\n"
@@ -1862,17 +1862,39 @@ void Accessible_mesh::export_polymesh(std::string dir_name)
     auto dir = con.get_direction();
     add_verts(con.element(finer_side), dir.i_dim[finer_side], dir.face_sign[finer_side], finer_side != owner_side);
   }
-  for (int i_con = 0; i_con < bound_cons.size(); ++i_con) {
-    auto& con = bound_cons[i_con];
-    owners[i_face] = con.element().record;
-    add_verts(con.element(), con.i_dim(), con.inside_face_sign(), false);
+  std::vector<int> n_bound_cons(bound_conds.size(), 0);
+  std::vector<int> bc_starts(bound_conds.size(), n_internal);
+  std::vector<std::string> bc_names(bound_conds.size());
+  std::vector<std::string> bc_types(bound_conds.size());
+  for (int i_bc = 0; i_bc < int(bound_conds.size()); ++i_bc) {
+    for (int i_con = 0; i_con < bound_cons.size(); ++i_con) {
+      auto& con = bound_cons[i_con];
+      if (con.bound_cond_serial_n() == i_bc) {
+        ++n_bound_cons[i_bc];
+        owners[i_face] = con.element().record;
+        add_verts(con.element(), con.i_dim(), con.inside_face_sign(), false);
+      }
+    }
+    if (i_bc) bc_starts[i_bc] = bc_starts[i_bc - 1] + n_bound_cons[i_bc];
+    if (tree) {
+      if (i_bc == surf_bc_sn) {
+        bc_names[i_bc] = "surface_bc";
+        bc_types[i_bc] = "wall";
+      } else {
+        bc_names[i_bc] = format_str(100, "extremal_bc%i%i", i_bc/2, i_bc%2);
+        bc_types[i_bc] = "patch";
+      }
+    } else {
+      bc_names[i_bc] = format_str(100, "bc%i", i_bc);
+      bc_types[i_bc] = "patch";
+    }
   }
   write_polymesh_file(dir_name, "faces", "faceList", n_faces, [&](int i_entry) {
     auto& verts = faces[i_entry];
     return format_str(100, "4(%i %i %i %i)", verts[0], verts[1], verts[2], verts[3]);
   });
-  write_polymesh_file(dir_name, "boundary", "polyBoundaryMesh", 1, [&](int i_bc) {
-    return format_str(200, "wallbc {type wall; nFaces %i; startFace %i;}", bound_cons.size(), n_internal);
+  write_polymesh_file(dir_name, "boundary", "polyBoundaryMesh", bound_conds.size(), [&](int i_bc) {
+    return format_str(200, "%s {type %s; nFaces %i; startFace %i;}", bc_names[i_bc].c_str(), bc_types[i_bc].c_str(), n_bound_cons[i_bc], bc_starts[i_bc]);
   });
   write_polymesh_file(dir_name, "owner",     "labelList", n_faces,    [&](int i_entry){return format_str(100, "%i", owners   [i_entry]);}, face_note);
   write_polymesh_file(dir_name, "neighbour", "labelList", n_internal, [&](int i_entry){return format_str(100, "%i", neighbors[i_entry]);}, face_note);
