@@ -62,7 +62,6 @@ class Face_connection : public Kernel_connection
     _data(2*_face_sz)
     {}
   virtual Con_dir<element_t> direction() = 0;
-  Connection_direction get_direction() override {return direction();}
   double* state(int i_side, bool is_ldg) override {return _data.data() + i_side*_face_sz + is_ldg*_state_sz;}
   double* normal() override {return nullptr;}
 };
@@ -82,7 +81,6 @@ class Face_connection<Deformed_element> : public Kernel_connection
     _data(2*(_nrml_sz + _face_sz))
   {}
   virtual Con_dir<Deformed_element> direction() = 0;
-  Connection_direction get_direction() override {return direction();}
   double* state(int i_side, bool is_ldg) override {return _data.data() + i_side*_face_sz + is_ldg*_state_sz;}
   double* normal(int i_side) {return _data.data() + 2*_face_sz + i_side*_nrml_sz;}
   double* normal() override {return _data.data() + 2*_face_sz;} //!< area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
@@ -92,7 +90,7 @@ class Face_connection<Deformed_element> : public Kernel_connection
  * Specifies that two elements are connected without asserting anything about how the faces are
  * connected. For example, this might be a regular connection, or it could be a hanging node connection.
  */
-class Element_connection
+class Element_connection : virtual public Connection
 {
   public:
   virtual Element& element(int i_side) = 0;
@@ -132,8 +130,9 @@ class Element_face_connection : public Element_connection, public Face_connectio
     }
     disconnect_normal();
   }
-  virtual Con_dir<element_t> direction() {return dir;}
-  virtual element_t& element(int i_side) {return *elems[i_side];}
+  Con_dir<element_t> direction() override {return dir;}
+  Connection_direction get_direction() override {return dir;}
+  element_t& element(int i_side) override {return *elems[i_side];}
 };
 
 template <>
@@ -186,6 +185,7 @@ class Refined_connection
       fine_elem.set_face(ref_con.dir.i_face(!ref_con.rev), nullptr);
     }
     virtual Con_dir<element_t> direction() {return ref_con.direction();}
+    Connection_direction get_direction() override {return ref_con.direction();}
     virtual element_t& element(int i_side) {return (i_side != ref_con.rev) ? fine_elem : ref_con.c;}
   };
 
@@ -376,6 +376,7 @@ class Typed_bound_connection : public Boundary_connection
   double* state_cache() override {return cache.data();}
   double* flux_cache() override {return cache.data() + state_size;}
   Con_dir<Deformed_element> direction() override {return {{i_d, i_d}, {ifs, !ifs}};}
+  Connection_direction get_direction() override {return direction();}
   int bound_cond_serial_n() override {return bc_sn;}
   element_t& element() override {return elem;}
 };

@@ -1825,9 +1825,11 @@ void Accessible_mesh::export_polymesh(std::string dir_name)
   auto verts = vertices();
   auto& bound_cons = boundary_connections();
   auto& elems = elements();
-  int n_faces = bound_cons.size();
+  auto& elem_cons = element_connections();
+  int n_internal = elem_cons.size();
+  int n_faces = n_internal + bound_cons.size();
   std::string face_note = format_str(200, "nPoints:%i  nCells:%i  nFaces:%i  nInternalFaces:%i",
-                                     verts.size(), elems.size(), n_faces, element_connections().size());
+                                     verts.size(), elems.size(), n_faces, n_internal);
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) elems[i_elem].record = i_elem;
   write_polymesh_file(dir_name, "points", "vectorField", verts.size(), [&](int i_vert) {
     Vertex& vert = verts[i_vert];
@@ -1836,26 +1838,42 @@ void Accessible_mesh::export_polymesh(std::string dir_name)
     return format_str(100, "(%.20e %.20e %.20e)", vert.pos[0], vert.pos[1], vert.pos[2]);
   });
   std::vector<int> owners(n_faces);
-  write_polymesh_file(dir_name, "faces", "faceList", bound_cons.size(), [&](int i_entry) {
-    int i_con = i_entry;
-    auto& con = bound_cons[i_con];
-    auto& elem = con.element();
-    std::vector<int> verts;
+  std::vector<int> neighbors(n_internal);
+  std::vector<std::vector<int>> faces(n_faces);
+  int i_face = 0;
+  auto add_verts = [&](Element& elem, int i_dim, int face_sign, bool flip) {
+    auto& verts = faces[i_face++];
     for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-      if ((i_vert/math::pow(2, params.n_dim - con.i_dim() - 1))%2 == con.inside_face_sign()) {
+      if ((i_vert/math::pow(2, params.n_dim - i_dim - 1))%2 == face_sign) {
         verts.push_back(elem.vertex(i_vert).record[0]);
       }
     }
-    if (con.inside_face_sign() != con.i_dim()%2) std::swap(verts[0], verts[1]);
+    if ((face_sign != i_dim%2) != flip) std::swap(verts[0], verts[1]);
     else std::swap(verts[2], verts[3]);
-    owners[i_entry] = elem.record;
+  };
+  for (int i_con = 0; i_con < elem_cons.size(); ++i_con) {
+    auto& con = elem_cons[i_con];
+    int owner_side = con.element(1).record < con.element(0).record;
+    owners[i_face] = con.element(owner_side).record;
+    neighbors[i_face] = con.element(!owner_side).record;
+    int finer_side = con.element(1).refinement_level() > con.element(0).refinement_level();
+    auto dir = con.get_direction();
+    add_verts(con.element(finer_side), dir.i_dim[finer_side], dir.face_sign[finer_side], finer_side != owner_side);
+  }
+  for (int i_con = 0; i_con < bound_cons.size(); ++i_con) {
+    auto& con = bound_cons[i_con];
+    owners[i_face] = con.element().record;
+    add_verts(con.element(), con.i_dim(), con.inside_face_sign(), false);
+  }
+  write_polymesh_file(dir_name, "faces", "faceList", n_faces, [&](int i_entry) {
+    auto& verts = faces[i_entry];
     return format_str(100, "4(%i %i %i %i)", verts[0], verts[1], verts[2], verts[3]);
   });
   write_polymesh_file(dir_name, "boundary", "polyBoundaryMesh", 1, [&](int i_bc) {
-    return format_str(200, "wallbc\n{\ntype wall;\nnFaces %i;\nstartFace 0;\n}\n", n_faces);
+    return format_str(200, "wallbc\n{\ntype wall;\nnFaces %i;\nstartFace %i;\n}\n", bound_cons.size(), n_internal);
   });
-  write_polymesh_file(dir_name, "owner",     "labelList", n_faces, [&](int i_entry){return format_str(100, "%i", owners[i_entry]);}, face_note);
-  write_polymesh_file(dir_name, "neighbour", "labelList", 0, [&](int i_entry){return std::string();}, face_note);
+  write_polymesh_file(dir_name, "owner",     "labelList", n_faces,    [&](int i_entry){return format_str(100, "%i", owners   [i_entry]);}, face_note);
+  write_polymesh_file(dir_name, "neighbour", "labelList", n_internal, [&](int i_entry){return format_str(100, "%i", neighbors[i_entry]);}, face_note);
 }
 
 }
