@@ -1803,6 +1803,8 @@ void write_polymesh_file(std::string dir_name, std::string name, std::string cls
 {
   std::ofstream file(dir_name + name);
   file
+    << "// this file was generated for OpenFOAM by Hexed, an open-source mesher and solver\n"
+    << "// https://github.com/ARTLab-GT/hexed\n\n"
     << "FoamFile\n"
     << "{\n"
     << "    format ascii;\n";
@@ -1813,7 +1815,7 @@ void write_polymesh_file(std::string dir_name, std::string name, std::string cls
     << "    object " << name << ";\n"
     << "}\n"
     << "\n" << n_entries << "\n(\n";
-  for (int i_entry = 0; i_entry < n_entries; ++i_entry) file << entries(i_entry) << "\n";
+  for (int i_entry = 0; i_entry < n_entries; ++i_entry) file << "    " << entries(i_entry) << "\n";
   file << ")\n";
 }
 
@@ -1870,7 +1872,7 @@ void Accessible_mesh::export_polymesh(std::string dir_name)
     return format_str(100, "4(%i %i %i %i)", verts[0], verts[1], verts[2], verts[3]);
   });
   write_polymesh_file(dir_name, "boundary", "polyBoundaryMesh", 1, [&](int i_bc) {
-    return format_str(200, "wallbc\n{\ntype wall;\nnFaces %i;\nstartFace %i;\n}\n", bound_cons.size(), n_internal);
+    return format_str(200, "wallbc {type wall; nFaces %i; startFace %i;}", bound_cons.size(), n_internal);
   });
   write_polymesh_file(dir_name, "owner",     "labelList", n_faces,    [&](int i_entry){return format_str(100, "%i", owners   [i_entry]);}, face_note);
   write_polymesh_file(dir_name, "neighbour", "labelList", n_internal, [&](int i_entry){return format_str(100, "%i", neighbors[i_entry]);}, face_note);
