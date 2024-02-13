@@ -1875,7 +1875,7 @@ void Accessible_mesh::export_polymesh(std::string dir_name)
         add_verts(con.element(), con.i_dim(), con.inside_face_sign(), false);
       }
     }
-    if (i_bc) bc_starts[i_bc] = bc_starts[i_bc - 1] + n_bound_cons[i_bc];
+    if (i_bc) bc_starts[i_bc] = bc_starts[i_bc - 1] + n_bound_cons[i_bc - 1];
     if (tree) {
       if (i_bc == surf_bc_sn) {
         bc_names[i_bc] = "surface_bc";
