@@ -1807,6 +1807,7 @@ void write_polymesh_file(std::string dir_name, std::string name, std::string cls
     << "// https://github.com/ARTLab-GT/hexed\n\n"
     << "FoamFile\n"
     << "{\n"
+    << "    version 2.0;\n"
     << "    format ascii;\n";
   if (!note.empty()) file << "    note \"" << note << "\";\n";
   file
@@ -1830,7 +1831,7 @@ void Accessible_mesh::export_polymesh(std::string dir_name)
   auto& elem_cons = element_connections();
   int n_internal = elem_cons.size();
   int n_faces = n_internal + bound_cons.size();
-  std::string face_note = format_str(200, "nPoints:%i  nCells:%i  nFaces:%i  nInternalFaces:%i",
+  std::string face_note = format_str(200, "nPoints:%i nCells:%i nFaces:%i nInternalFaces:%i",
                                      verts.size(), elems.size(), n_faces, n_internal);
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) elems[i_elem].record = i_elem;
   write_polymesh_file(dir_name, "points", "vectorField", verts.size(), [&](int i_vert) {
