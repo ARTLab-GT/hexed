@@ -101,6 +101,7 @@ serve as reference material on the API once you already know what you're doing.
 - \subpage parameters
 - \subpage boundary_conditions
 - \subpage error_types
+- \subpage mesh_io
 - \subpage conventions
 - \subpage geom_fitting
 - \subpage contributing

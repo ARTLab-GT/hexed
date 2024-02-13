@@ -139,7 +139,7 @@ class Solver
   void snap_faces();
   /*! \brief compute the Jacobian of all elements based on the current position of the vertices and value of any face warping.
    * \details Mesh topology must be valid (no duplicate or missing connections) before calling this function.
-   * \param `snap_faces` if `true`, this function will go ahead and perform face snapping for you
+   * \param snap_faces if `true`, this function will go ahead and perform face snapping for you
    */
   void calc_jacobian(bool snap_faces = true);
   //! set the flow state

@@ -1,0 +1,49 @@
+/*! \page mesh_io Mesh I/O
+
+Hexed has a few functions for input and output of mesh files.
+This is useful both for saving the simulation state to be restarted later,
+and for interacting with other meshers and/or solvers.
+Because, to my knowledge, there is no existing file format capable of representing all the information in a Hexed mesh,
+including hanging nodes, octree hierarchy, and face warping,
+it primarily uses its own custom file format, described below.
+If you wish to use Hexed as a mesher for your own solver, or to use the Hexed solver with a custom mesh,
+your best bet is probably to write a parser for the native format.
+Hexed also has limited support for exporting meshes in the native formats for other solvers (see \ref mesh_export "below"),
+but such export formats lose information.
+Currently, importing files from other formats is not supported.
+
+\section mesh_format Native file format
+The native file format for Hexed meshes is based on [HDF5](https://en.wikipedia.org/wiki/Hierarchical_Data_Format#HDF5).
+One could argue that it doesn't even deserve to be called a file format---a Hexed mesh file is an ordinary HDF5 file
+that you can interact with via the [HDF5 library](https://www.hdfgroup.org/solutions/hdf5/) or any of the other HDF tools,
+but with a specific structure.
+Before launching into the details of the file format itself, we should explain conceptually how Hexed represents its mesh.
+
+\subsection mesh_repr Mesh representation
+A Hexed mesh contains a collection of elements, each of which is either a line segment, a quadrilateral, or a hexahedron.
+The shape of each element is defined by a parametric mapping \f$ \vec{x}(\vec{\xi}) \f$,
+where \f$ \vec{\xi} \f$ is the vector of _reference coordinates_ in the _reference element_ (which is always the unit interval, square, or cube)
+and \f$ \vec{x} \f$ is the vector of _physical coordinates_ in the _physical element_ (the actual element with it's real size and shape).
+In Hexed, reference coordinates go from 0 to 1, not -1 to 1 as they do in some formulations. I.e. \f$ \xi_i \in [0, 1]\ :\ \forall i \f$.
+For an example, see the plot below.
+The mapping \f$ \vec{x}(\vec{\xi}) \f$ is always a polynomial.
+\image html ref_coords.svg "Element if reference space with isocontours of physical coordinates."
+\image html phys_coords.svg "Element if physical space with isocontours of reference coordinates."
+
+In a Hexed mesh, many of the elements are perfect squares/cubes.
+That is, \f$ \vec{x}(\vec{\xi}) = a \vec{\xi} + \vec{b} \f$ for scalar constant \f$ a \f$ and vector constant \f$ b \f$.
+Such elements are referred to as _Cartesian_ elements.
+Any elements that do not fit this description are called _deformed_.
+In many of the deformed elements, \f$ \vec{x} \f$ is a degree 1 (a.k.a. [multilinear](https://en.wikipedia.org/wiki/Multilinear_polynomial)) polynomial that can be obtained by
+[multilinear interpolation](https://en.wikipedia.org/wiki/Bilinear_interpolation) of the vertex coordinates.
+(Some people might be tempted to call this a "linear" polynomial, but it is not.)
+However, elements that are extruded to the surface geometry will have \f$ \vec{x} \f$ of full degree \f$p\f$ in order to better fit the surface by warping their faces.
+
+The vertices of each element are ordered in a row-major, array-based manner (the last coordinate changes the fastest).
+For example, the vertices of the unit square are {(0, 0), (0, 1), (1, 0), (1, 1)}
+and the vertices of the unit cube are {(0, 0, 0), (0, 0, 1), (0, 1, 0), (0, 1, 1), (1, 0, 0), (1, 0, 1), (1, 1, 0), (1, 1, 1)}.
+
+\section mesh_export Export formats
+[PolyMesh format](https://www.openfoam.com/documentation/user-guide/4-mesh-generation-and-conversion/4.1-mesh-description)
+
+*/
