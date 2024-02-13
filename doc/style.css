@@ -19,6 +19,9 @@ html {
   --anti-highlight-color: #606060;
   --anti-link-color: #8da7dc;
   --line-weight: 2px;
+  --syntax-comment-color: #2596b7;
+  --syntax-keyword-color: Blue;
+  --syntax-literal-color: #A347BA;
 }
 
 /* project title bar at the very top */
@@ -63,6 +66,14 @@ code, div.fragment, pre.fragment {
   padding-left: .2em;
   padding-right: .2em;
   border-width: 0px;
+}
+
+span.comment {
+  color: var(--syntax-comment-color);
+}
+
+span.stringliteral {
+  color: var(--syntax-literal-color);
 }
 
 div.fragment {

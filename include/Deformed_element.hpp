@@ -6,8 +6,7 @@
 namespace hexed
 {
 
-/*!
- * Represents an Element which is not a perfect axis-aligned square/cube.
+/*! \brief Represents an Element which is not a perfect axis-aligned square/cube.
  * \note Jacobian matrix is nontrivial.
  */
 class Deformed_element : public Element
@@ -24,9 +23,9 @@ class Deformed_element : public Element
   static constexpr bool is_deformed = true;
 
   Deformed_element(Storage_params, std::vector<int> pos = {}, double mesh_size = 1., int ref_level = 0, Mat<> origin_arg = Mat<>::Zero(3));
-  virtual inline bool get_is_deformed() {return is_deformed;} //!< for determining whether a pointer is deformed
-  virtual std::vector<double> position(const Basis&, int i_qpoint);
-  //! sets the Jacobian based on the current vertex locations and face node adjustments
+  virtual inline bool get_is_deformed() {return is_deformed;} //!< \brief for determining whether a pointer is deformed
+  std::vector<double> position(const Basis&, int i_qpoint) override; //!< \brief override that actually accounts for vertex positions and face warping
+  //! \brief sets the Jacobian based on the current vertex locations and face node adjustments
   virtual void set_jacobian(const Basis& basis);
 
   double* reference_level_normals() override;
@@ -35,7 +34,7 @@ class Deformed_element : public Element
 
   virtual double jacobian(int i_dim, int j_dim, int i_qpoint);
   virtual double jacobian_determinant(int i_qpoint);
-  //! represents adjustments to face quadrature points to fit surfaces (details are complicated)
+  //! \brief represents adjustments to face quadrature points to fit surfaces (details are complicated)
   virtual double* node_adjustments(); //!< Layout: [i_dim][is_positive][i_face_qpoint]
 
   bool deformed() const override;

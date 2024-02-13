@@ -20,6 +20,7 @@ but with a specific structure.
 Before launching into the details of the file format itself, we should explain conceptually how Hexed represents its mesh.
 
 \subsection mesh_repr Mesh representation
+\subsubsection Elements
 A Hexed mesh contains a collection of elements, each of which is either a line segment, a quadrilateral, or a hexahedron.
 The shape of each element is defined by a parametric mapping \f$ \vec{x}(\vec{\xi}) \f$,
 where \f$ \vec{\xi} \f$ is the vector of _reference coordinates_ in the _reference element_ (which is always the unit interval, square, or cube)
@@ -34,14 +35,59 @@ In a Hexed mesh, many of the elements are perfect squares/cubes.
 That is, \f$ \vec{x}(\vec{\xi}) = a \vec{\xi} + \vec{b} \f$ for scalar constant \f$ a \f$ and vector constant \f$ b \f$.
 Such elements are referred to as _Cartesian_ elements.
 Any elements that do not fit this description are called _deformed_.
+Hexed makes this distinction in order to exploit time and memory-saving simplifications of the numerical scheme for Cartesian elements.
 In many of the deformed elements, \f$ \vec{x} \f$ is a degree 1 (a.k.a. [multilinear](https://en.wikipedia.org/wiki/Multilinear_polynomial)) polynomial that can be obtained by
 [multilinear interpolation](https://en.wikipedia.org/wiki/Bilinear_interpolation) of the vertex coordinates.
-(Some people might be tempted to call this a "linear" polynomial, but it is not.)
+(Some people might be tempted to call this a "linear" polynomial, but it is technically not linear.)
 However, elements that are extruded to the surface geometry will have \f$ \vec{x} \f$ of full degree \f$p\f$ in order to better fit the surface by warping their faces.
+As described in our most recent publications, face warping is represented by a polynomial on each face which essentially gives the deviation of the warped face from the unwarped face.
 
+The following two sections explain the calculation of the coordinate transformation in more detail.
+As is often the case for computational science, the procedure is more neatly represented in code than in equations.
+So, some Python examples are included to demonstrate the process in 3D.
+Of course, you can also look at the real implementations in C++,
+but it is more complex due to the low-level language constructs, the dimensionality-independent formulation, and the context of how it fits into larger algorithms.
+I hope the Python snippets make it a bit more clear what the actual calculations are.
+
+\subsubsection vertex_def Vertex deformation
+In Hexed, all field data, including the physical coordinates \f$ \vec{x} \f$, is represented by a degree \f$ p \f$ polynomial in each element in a nodal basis.
+To define the physical coordinates, or any other field, means to compute their value at the element's quadrature points,
+which are chosen to be the tensor product Gauss-Legendre nodes mapped to [0, 1] (in reference space).
+Quadrature points are also arranged in a row-major array format ("z"-index changes the fastest).
+(Technically, because the physical coordinates at the quadrature points aren't directly used by the computational kernel,
+they aren't permanently stored, but they are still computed temporarily.)
+As mentioned above, for an element without face warping, the physical coordinates defined by degree 1 interpolation between the coordinates of the vertices.
 The vertices of each element are ordered in a row-major, array-based manner (the last coordinate changes the fastest).
 For example, the vertices of the unit square are {(0, 0), (0, 1), (1, 0), (1, 1)}
 and the vertices of the unit cube are {(0, 0, 0), (0, 0, 1), (0, 1, 0), (0, 1, 1), (1, 0, 0), (1, 0, 1), (1, 1, 0), (1, 1, 1)}.
+To further clarify, the following Python code snippet illustrates an example of computing quadrature point coordinates for a 3D element without face warping.
+For the actual implementation of this calculation in C++, see `hexed::Deformed_element::position` in [src/Deformed_element.cpp](https://github.com/ARTLab-GT/hexed/blob/main/src/Deformed_element.cpp).
+\snippet script/coords_example.py unwarped coordinates
+
+\subsubsection face_warping Face warping
+The face warping is represented as described in our 2024 SciTech meshing paper, with two exceptions:
+
+1. The warping function is stored at Gauss-Legendre points instead of Gauss-Lobatto.
+   They are still originally computed on Gauss-Lobatto points to ensure continuity between elements, but they are then mapped to Gauss-Legendre points,
+   for consistency with the field polynomials.
+2. Warping functions can be applied to any face, not just the +x face.
+   In fact, for simplicity, warping values are stored for _all_ faces of all deformed elements, even though they will only be nonzero for at most one face on each element,
+   or in the case that you have anisotropic layers, sometimes two opposite faces.
+
+These distinctions do not constitute inconsistencies with the paper.
+The underlying mathematics is completely equivalent, but the best way to represent that math in equations is not the same as the best way to represent it in code.
+In any case, the warping function is represented as an adjustment to the unwarped position of the face quadrature points.
+Note that the face quadrature points are an array of Gauss-Legendre points on the faces,
+which is __not__ a subset of the interior quadrature points---extrapolation is required to obtain values of field variables at face quadrature points.
+As in the publication, the face warping is a one-dimensional adjustment in the direction of increasing face-normal reference coordinate.
+Specifically, if \f$ \vec{x}_- \f$ and \f$ \vec{x}_+ \f$ are the positions of a matching pair of quadrature points on the negative and positive-facing x, y, or z faces,
+and \f$ w_- \f$ and \f$ w_+ \f$ are the warping functions at those faces, then the warping can be formulated as
+\f[ \vec{x}_{-, \text{warped}} = \vec{x}_- + w_-(\vec{x}_+ - \vec{x}_-) \f]
+\f[ \vec{x}_{+, \text{warped}} = \vec{x}_+ + w_+(\vec{x}_+ - \vec{x}_-) \f]
+and the corresponding adjustments to the interior quadrature points are computed by linear interpolation between the adjustments to the faces.
+The following Python snippet shows an example,
+whereas the real implementation is in `hexed::Deformed_element::position` in [src/Deformed_element.cpp](https://github.com/ARTLab-GT/hexed/blob/main/src/Deformed_element.cpp).
+\snippet script/coords_example.py warped coordinates
 
 \section mesh_export Export formats
 [PolyMesh format](https://www.openfoam.com/documentation/user-guide/4-mesh-generation-and-conversion/4.1-mesh-description)
