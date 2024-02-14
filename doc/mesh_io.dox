@@ -267,16 +267,20 @@ For the implementation of reading and writing a mesh file, see `hexed::Accessibl
 in [src/Accessible_mesh.cpp](https://github.com/ARTLab-GT/hexed/blob/main/src/Accessible_mesh.cpp).
 
 \section mesh_export Export formats
-In addition to the native format it can also be useful to export the mesh to another format,
-although you won't be able to then read the mesh back into Hexed.
-The challenge with exporting is finding formats that can adequately represent Hexed meshes, which are very unusual.
-So far, the only supported format is
-[OpenFOAM PolyMesh](https://www.openfoam.com/documentation/user-guide/4-mesh-generation-and-conversion/4.1-mesh-description).
-This format can handle hanging nodes (technically, they are actually implemented as polyhedral elements),
-but of course it does not account for face warping, being a mesh for a finite volume solver.
-Currently, only 3D meshes are supported.
-OpenFOAM is an inherently 3D solver, so to make it work for 2D I would have to extrude it into a 1 cell thick 3D mesh,
-which I've been too lazy to implement so far.
-Regardless, if there is another mesh format that would be useful to you, feel free to contact \ref me and we may be able to implement it.
+So far, Hexed has limited support for exporting the mesh into other formats, which it can write but not read.
+The challenge is finding formats that support hanging nodes, which are critical to the Hexed meshing scheme.
+Implementing an algorithm to remove the hanging nodes (only for exporting) may be of interest in the future, but that is a nontrivial task.
+
+Currently, the only export format currently supported is [OpenFoam](https://www.openfoam.com/)'s
+[PolyMesh](https://www.openfoam.com/documentation/user-guide/4-mesh-generation-and-conversion/4.1-mesh-description).
+Technically, the hanging nodes are implemented using polyhedral elements with more than 6 faces.
+At this time, only 3D is supported.
+OpenFOAM is an inherently 3D solver and 2D meshes have to be extruded to create a 1 cell thick slab,
+a capability that I have not yet implemented.
+
+I have been considering adding support for ANSYS Fluent [case files](https://www.afs.enea.it/project/neptunius/docs/fluent/html/ug/node1461.htm),
+which I believe support genuine hanging nodes.
+If this would be useful to you, or you know of another format that you believe would work,
+feel free to discuss it with \me so that I can factor it into future development plans.
 
 */
