@@ -7,7 +7,7 @@ Hexed might produce, what they mean, and how to address them.
 
 This indicates that an error was encountered in the \ref hil frontend.
 It almost certainly means you made a simple mistake in your input file,
-but if you believe it is the result of a bug please let \ref me know.
+but if you believe it is the result of a bug please let \me know.
 
 \section numerical_errors Numerical Errors
 - `hexed::assert::Numerical_exception`
@@ -19,7 +19,7 @@ and cannot recover.
 This error could likely be avoided by improvements to the algorithms or adjustments to your input parameters,
 but it is not necessarily the result of a blatant mistake on anyone's part.
 If you believe this error is actually the result of a bug or of some inputs you provided that were clearly wrong,
-please let \ref me know.
+please let \me know.
 
 \section other_exceptions Other Exceptions
 - `std::runtime_error`
@@ -28,12 +28,12 @@ please let \ref me know.
 These errors indicate that something went wrong in a way that I did not specifically anticipate.
 It could be the result of a mistake you made, or it could be the result of a bug.
 If you obtain one of these errors and it is not at all clear what, if anything, you did wrong,
-feel free to let \ref me know.
+feel free to let \me know.
 
 \section segfaults Segmentation faults
 - `Segmentation fault (core dumpted)`
 - `SIGSEGV`
 
-Woah, this is embarrassing. Please let \ref me know and also laugh at me.
+Woah, this is embarrassing. Please let \me know and also laugh at me.
 
 */

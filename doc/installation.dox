@@ -1,7 +1,7 @@
 /*! \page installation Installation
 
 Below are instructions to install Hexed by building from the source.
-Hexed currently only supports Linux and GCC compiler,
+Hexed currently only supports GNU/Linux and GCC compiler,
 although you may be able to coerce it to work in other environments.
 Precompiled binaries and support for other operating systems and compilers are planned in future releases.
 
@@ -36,12 +36,12 @@ If look at these instructions and don't know what I'm talking about, skip to \re
 Since Hexed is meant for aerospace engineers, who often aren't programmers, this section provides a detailed tutorial on how to build the source.
 If you don't want to use XDMF/Paraview for visualization, you can skip steps 4 through 7.
 These instructions will definitely work on an ARTLab machine.
-They will hopefully also work on any other Linux system, but you may have to adapt some of the details.
+They will hopefully also work on any other GNU/Linux system, but you may have to adapt some of the details.
 If you have any trouble following these instructions,
-please let \ref me know so that this documentation can be improved.
+please let \me know so that this documentation can be improved.
 
 \subsection configure Step 1: Set up installation directory
-In a Linux system, by convention programs are typically installed in `/usr/local`,
+In a GNU/Linux system, by convention programs are typically installed in `/usr/local`,
 so when you try to execute them, the system knows where to find them.
 However, this requires you to have superuser privileges, which, on the ARTLab machines for example, we do not.
 So, you need an alternative place to install things that the system knows about.
@@ -132,7 +132,7 @@ OpenCASCADE Technology is an open source CAD Engine which Hexed uses to read and
 - Obtain the source code by one of the following approaches:
   - Visit the [download page](https://dev.opencascade.org/release) and download the latest release.
     Before you can download the source, you will be prompted to make an account.
-  - If you're an ARTLab member, just ask \ref me for a copy.
+  - If you're an ARTLab member, just ask \me for a copy.
 - `cd ~/codes`
 - `tar -xzf ~/Downloads/opencascade-7.7.0.tgz`
 - `cd opencascade-7.7.0`
