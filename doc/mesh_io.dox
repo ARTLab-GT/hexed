@@ -93,6 +93,7 @@ whereas the real implementation is in `hexed::Deformed_element::position` in [sr
 Tree refinement (bintree in 1D, quadtree in 2D, and [octree](https://en.wikipedia.org/wiki/Octree) in 3D) is a key concept in the Hexed meshing scheme.
 This is represented by a recursive data structure (implemented as `hexed::Tree`),
 where each `Tree` object optionally contains pointers to 2/4/8 other `Tree` objects representing its children and/or a pointer to another `Tree` object representing its parent.
+The child pointers are in the same row-major array order as the vertices of an element, according to their spatial position.
 A tree with no parent is called the _root_ (the tree structure as a whole naturally contains exactly one of these), and a tree with no children is called a _leaf_.
 The _refinement level_ of a `Tree` object is the number of generations it is from the root. I.e., the root will have refinement level 0, its children will have refinement level 1, etc..
 
@@ -110,6 +111,68 @@ The association between elements and `Tree`s leads to elements also having a ref
 which is equal to that of their `Tree`, if they have one.
 Extruded elements without `Tree`s still have a refinement level and nominal position with is computed based on their relation to the element they were extruded from (their _extrusion parent_).
 E.g. if you extrude an element from the +x face of its extrusion parent, then the x-coordinate of its nominal position will be 1 greater than that of its extrusion parent.
+
+\subsection Connections
+Any mesh representation must have some way to indicate the connections between elements.
+Although you could, in principle, infer this information from the vertex list of the elments and the tree structure,
+Hexed indentifies the connections explicitly in both the `hexed::Accessible_mesh` object and the mesh file.
+If you are trying to read a Hexed mesh into your own solver, you may opt to simply ignore the connection data and just use the element/vertex data.
+Furthermore, Hexed does not allow completely arbitrary connections between elements---it only supports the manners of connections required to generate a tree mesh and to extrude elements from it.
+
+A __conformal__ connection (one between two elements of the same refinement level) is specified by 6 pieces of data:
+
+-# a pointer to the first element
+-# a pointer to the second element
+-# the index of the dimension of the face of the first element that is being connected (0 if it is an x-face, 1 for y, 2 for z)
+-# the dimension index of the second face
+-# the sign of the face of the first element (0 if the face faces in the negative x/y/z direction, 1 if it faces in the positive direction)
+-# the sign of the second face
+
+Either the dimensions or the signs of the two faces involved must be different.
+Connecting the +x face of one element to the +x face of another, for example, is not allowed.
+Of course, connecting two faces of the same element is also not allowed.
+This connection format doesn't explicitly specify the orientation of the faces that are connected (which vertex maps to which vertex).
+Instead, it is always assumed to be what you might call the "laziest possible orientation".
+Consider each element restored to its original Cartesian shape and location (coincident with its `Tree`, if it has one).
+Now, merge the vertices of the connected faces while only changing the coordinates corresponding to the dimensions of the connected faces.
+So, for example, if you are connecting a y-face to a z-face, then merge the vertices without changing the x-coordinate.
+In other words, connect the faces by only stretching the elements and not twisting them.
+Of course, in the actual mesh, the vertex coordinates are arbitrary---the principle of moving vertices without changing one of the coordinates
+is just a thought experiment to explain what I mean by the "laziest possible orientation".
+Note also that if you're just trying to read a Hexed mesh into your code,
+you don't necessarily have to worry about this orientation problem,
+since you can compare the vertices of the neighboring elements and see which are the same.
+However, if you're trying to create a mesh file for Hexed, you will need to make sure the orientation condition is satisfied.
+
+A __refined__ connection connects a coarse element with some elements that are 1 level finer.
+You cannot create a refined connection with elements that differ by more than 1 refinement level.
+A refined connection can accept up to 1/2/4 elements in 1/2/3 dimensions.
+It can also accept half as many fine elements, causing the remaining ones to be "stretched" by a factor of 2 to cover the coarse face.
+This occurs when you have extruded elements of different refinement levels.
+As a result, in 2D sometimes you will have one coarse element connected to one finer element,
+but this is still considered to be a refined connection, not a conformal one, since the elements have different refinement levels.
+Thus, a refined connection is specified by 11 pieces of data:
+-# a pointer to the coarse element
+-# up to 4 pointers to the fine elements
+   - The fine elements are in row-major array order.
+     That is, elements that come first in the list of child pointers of their parent tree will come first in the fine element list of a refined connection.
+-# boolean flag indicating whether the fine elements are stretched along the lesser dimension, i.e. the first of the (up to two) indices of the array of fine elements.
+   - If this is true, there will be half as many fine elements as there otherwise would be.
+-# boolean flag indicating whether the fine elements are stretched along the greater dimension, i.e. the second of the two indices of the array of fine elements, and only applicable in 3D.
+   - If this is true, there will be half as many fine elements as there otherwise would be.
+-# dimension index of the face of the coarse element that is being connected
+-# dimension index of the fine faces
+   - This is only a single number. It is assumed that the _same_ face of all the fine elements is being connected.
+-# sign of the coarse face
+-# sign of the fine faces
+   - again, only one number for all the fine elements
+
+Finally, a __boundary__ connection specifies that a face of an element is on a domain boundary.
+This is specified by 4 pieces of data:
+-# pointer to the element whose face is being connected
+-# pointer to the boundary condition
+-# dimension index of the face
+-# sign of the face
 
 \section mesh_export Export formats
 [PolyMesh format](https://www.openfoam.com/documentation/user-guide/4-mesh-generation-and-conversion/4.1-mesh-description)
