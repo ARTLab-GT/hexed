@@ -1579,6 +1579,7 @@ void Accessible_mesh::write(std::string name)
       for (int i_fine = 0; i_fine < con.n_fine_elements(); ++i_fine) { \
         data[1 + i_fine] = con.connection(i_fine).element(!con.order_reversed()).record; \
       } \
+      for (int i_fine = con.n_fine_elements(); i_fine < 4; ++i_fine) data[1 + i_fine] = -1; \
       data[5] = con.order_reversed(); \
       for (int i_dim : {0, 1}) data[6 + i_dim] = con.stretch()[i_dim]; \
       Con_dir<Deformed_element> dir = con.direction(); \
