@@ -89,7 +89,7 @@ The following Python snippet shows an example,
 whereas the real implementation is in `hexed::Deformed_element::position` in [src/Deformed_element.cpp](https://github.com/ARTLab-GT/hexed/blob/main/src/Deformed_element.cpp).
 \snippet script/coords_example.py warped coordinates
 
-\subsection Tree
+\subsubsection Tree
 Tree refinement (bintree in 1D, quadtree in 2D, and [octree](https://en.wikipedia.org/wiki/Octree) in 3D) is a key concept in the Hexed meshing scheme.
 This is represented by a recursive data structure (implemented as `hexed::Tree`),
 where each `Tree` object optionally contains pointers to 2/4/8 other `Tree` objects representing its children and/or a pointer to another `Tree` object representing its parent.
@@ -112,7 +112,7 @@ which is equal to that of their `Tree`, if they have one.
 Extruded elements without `Tree`s still have a refinement level and nominal position with is computed based on their relation to the element they were extruded from (their _extrusion parent_).
 E.g. if you extrude an element from the +x face of its extrusion parent, then the x-coordinate of its nominal position will be 1 greater than that of its extrusion parent.
 
-\subsection Connections
+\subsubsection Connections
 Any mesh representation must have some way to indicate the connections between elements.
 Although you could, in principle, infer this information from the vertex list of the elments and the tree structure,
 Hexed indentifies the connections explicitly in both the `hexed::Accessible_mesh` object and the mesh file.
@@ -173,6 +173,45 @@ This is specified by 4 pieces of data:
 -# pointer to the boundary condition
 -# dimension index of the face
 -# sign of the face
+
+\subsection file_format File format
+A Hexed mesh file is an HDF5 file, with a name ending in `.mesh.h5` by convention.
+Note that some of the attributes in this file aren't conceptually part of the mesh,
+but they are numerical scheme parameters that affect how much memory the mesh object needs to allocate.
+Its contents are the following:
+- __attribute__ `n_dim` (1 \f$\times\f$ 1 `int`): number of dimension
+- __attribute__ `row_size` (1 \f$\times\f$ 1 `int`): polynomial degree + 1
+- __attribute__ `n_forcing` (1 \f$\times\f$ 1 `int`): number of artificial viscosity forcing functions (numerical scheme parameter). Usually 4.
+- __attribute__ `n_stage` (1 \f$\times\f$ 1 `int`): number of time integration stages (numerical scheme parameter). Usually 2.
+- __attribute__ `n_var` (1 \f$\times\f$ 1 `int`): number of physical flow variables (numerical scheme parameter). Usually `n_dim + 2`.
+- __attribute__ `root_size` (1 \f$\times\f$ 1 `double`): edge length of the root tree element
+- __attribute__ `version_major` (1 \f$\times\f$ 1 `int`): major version of the Hexed executable used to create this file (if applicable).
+- __attribute__ `version_minor` (1 \f$\times\f$ 1 `int`): minor version of the Hexed executable used to create this file (if applicable).
+- __attribute__ `version_patch` (1 \f$\times\f$ 1 `int`): patch version of the Hexed executable used to create this file (if applicable).
+- __group__ `elements`
+  - __dataset__ `is_deformed` (n \f$\times\f$ 1 `bool`)
+    One entry for each element.
+    If that element is perfectly Cartesian, the value is 0.
+    If it is deformed, the value is 1.
+  - __dataset__ `nominal_position` (n \f$\times\f$ `n_dim` `int`) one entry for each element giving its nominal position
+  - __dataset__ `refinement_level` (n \f$\times\f$ 1 `int`) one entry for each element giving its refinement level
+  - __dataset__ `vertices` (n \f$\times\f$ \f$ 2^\verb|n_dim| \f$ `int`)
+    One row for each element giving the indices (in the `/vertices/position` dataset) of its vertices in standard row-major array order.
+    For elements that are connected, these will actually point to shared vertices,
+    so if you are reading a mesh file you can use this to infer the connectivity information, if you choose (although hanging nodes might make that tricky).
+  - __group__ `face_warping`
+    - __dataset__ `element_indices` (n \f$\times\f$ 1 `int`)
+      One entry for each _deformed_ element.
+      Each entry is the index of the element (in the datasets `is_deformed`, `nominal_position`, etc.) that this is warping referring to
+      (the `node_adjustments` dataset gives the actual warping values).
+      The entry of `is_deformed` at that index __must__ be 1.
+      There should not be multiple face warping entries referring to the same element.
+    - __dataset__ `node_adjustments` (n \f$\times\f$ \f$ \verb|n_dim*2*row_size|^{\verb|n_dim| - 1} \f$ `double`)
+      Face warping values for the element specified by the corresponding entry in the `element_indices` dataset.
+      These warping values behave as described in \ref face_warping, where the row-major `n_dim` \f$\times\f$ 2 \f$\times\f$ \f$ \verb|row_size|^{\verb|n_dim| - 1} \f$
+      array of values for each face (the face dimension index changes the slowest) has been flattened into a single array of values for all faces.
+- __group__ `connections`
+  - __dataset__ `conformal` (n \f$\times\f$ 6 `int`) each row provides the data for 1 conformal connection.
 
 \section mesh_export Export formats
 [PolyMesh format](https://www.openfoam.com/documentation/user-guide/4-mesh-generation-and-conversion/4.1-mesh-description)
