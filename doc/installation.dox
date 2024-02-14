@@ -9,6 +9,7 @@ Precompiled binaries and support for other operating systems and compilers are p
 If look at these instructions and don't know what I'm talking about, skip to \ref detailed
 -# Ensure that the following mandatory dependencies are installed (all Python packages must be installed for Python3):
    - [Eigen](https://eigen.tuxfamily.org/)
+   - [HDF5](https://www.hdfgroup.org/solutions/hdf5/)
    - [numpy](https://numpy.org/)
    - [scipy](https://scipy.org/)
    - [matplotlib](https://matplotlib.org/)
@@ -60,7 +61,6 @@ Feel free to change the name/location if you like.
   export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:~/local/include/
   export LIBRARY_PATH=$LIBRARY_PATH:~/local/lib
   export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/local/lib
-  export PYTHONPATH=$PYTHONPATH:~/local/lib
   export PATH=$PATH:~/local/bin
   ~~~
 - Close and reopen the terminal. This will allow changes to take effect.
@@ -88,8 +88,8 @@ a few 3rd-party libraries.
   - Obviously, if you decided to make your install path somewher other than `~/local`, substitute that instead.
 
 \subsection install_hdf5 Step 4: install HDF5
-\ref install_xdmf "XDMF" uses the [Hierarchical Data Format, version 5](https://www.hdfgroup.org/solutions/hdf5/) to store data.
-The following steps can be used to install the HDF5 I/O library.
+Hexed uses the [Hierarchical Data Format](https://en.wikipedia.org/wiki/Hierarchical_Data_Format), version 5 to store data.
+The following steps can be used to install the [HDF5 library](https://www.hdfgroup.org/solutions/hdf5/).
 - Download the [source code](https://www.hdfgroup.org/downloads/hdf5/source-code/) (latest release) and unpack it in `~/codes`.
   - Ignore the installation instructions that come with it---they are rather cursed.
 - `cd hdf5-X.XX.X`
