@@ -31,7 +31,10 @@ If you just want to generate a mesh for a different solver, then you can do:
    -# `init_state`
    -# `visualize`
 
-A good basic example is the oblique shock case located in [samples/oblique_shock](https://github.com/ARTLab-GT/hexed/tree/main/samples/oblique_shock).
+A good example of a meshing-only case is the [multielement airfoil](https://github.com/ARTLab-GT/hexed/tree/main/samples/multielement_airfoil) case.
+We currently do not have the physics necessary to obtain realistic results for this case, so we only generate the mesh.
+
+A good example of a basic simulation is the oblique shock case located in [samples/oblique_shock](https://github.com/ARTLab-GT/hexed/tree/main/samples/oblique_shock).
 In this directory, you should see two files---`run.hil` is the input script (name and extension are arbitrary),
 and `geom.csv` is a CSV file containing coordinates for a wedge geometry (see \ref add_geom for more information).
 To run this case, just type `hexecute run.hil`.

@@ -13,5 +13,6 @@ done = {normalized_residual < 1e-4}
 
 $start
 $mesh
+write_mesh
 init_state
-$run
+visualize
