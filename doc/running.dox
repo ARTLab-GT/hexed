@@ -10,42 +10,62 @@ However, for most use cases, the executable should be sufficient.
 To distinguish it from the library and namespace, the command to _execute hexed_ is `hexecute` (sorry for my terrible sense of humor).
 It supports a text-based interface in the \ref hil.
 
-A good basic example is the oblique shock case located in [samples/oblique_shock](https://github.com/ARTLab-GT/hexed/tree/v0.1.1/samples/oblique_shock).
+To run a typical simulation, you should create a script and run it with something like `hexecute your-script.hil`.
+A script should generally including the items below, in order.
+Note that some of the commands you include are \ref Macros, which have to be invoked with `$`,
+whereas others are \ref heisenberg "Heisenberg variables" for which you do not use `$`.
+-# define \ref important_inputs "basic input parameters"
+-# `$start`
+-# `$mesh`
+-# `init_state`
+-# `$run`
+
+If you just want to generate a mesh for a different solver, then you can do:
+-# define input parameters
+   - If you're not running iterations, you don't have to define \ref done,
+     but you do still have to define freestream conditions, even though their value is irrelevant.
+-# `$start`
+-# `$mesh`
+-# `write_mesh` or `export_polymesh`
+-# If you want to be able to directly visualize the mesh for debugging, you can add:
+   -# `init_state`
+   -# `visualize`
+
+A good basic example is the oblique shock case located in [samples/oblique_shock](https://github.com/ARTLab-GT/hexed/tree/main/samples/oblique_shock).
 In this directory, you should see two files---`run.hil` is the input script (name and extension are arbitrary),
 and `geom.csv` is a CSV file containing coordinates for a wedge geometry (see \ref add_geom for more information).
 To run this case, just type `hexecute run.hil`.
 You should see text output that looks something like:
 ~~~{.unparsed}
-Commencing simulation with Hexed version 0.0.0 (commit 18bf3ffe9437ba2d7fd8df5802847ef9833f7c6e) at 2023-11-13 20:54:33 UTC (1699908873 Unix Time).
-geometry-based refinement sweep 0... done
-initialization complete with 953 elements
+Commencing simulation with Hexed version 0.1.2 (commit 9f5e8a7bd88c464f56c4f5681f802da8bc94d121) at 2024-02-14 23:39:09 UTC (1707953949 Unix Time).
+meshing...
+    geometry-based refinement sweep 0... done
+meshing complete with 953 elements
 
-     iteration, normalized_residual, av_advection_residual, av_diffusion_residual,      flow_time,      time_step
-              1,      1.00000000e+00,        8.73715941e-02,        3.84209209e-01,  1.00000000e+01,  1.00000000e+00
-            100,      2.75139302e-01,        2.46612049e-04,        6.48590923e-02,  1.00000000e+03,  1.00000000e+00
-            200,      1.05065839e-01,        1.24743428e-04,        2.24627172e-02,  2.00000000e+03,  1.00000000e+00
-            300,      7.61332903e-02,        1.20518633e-04,        1.47022963e-02,  3.00000000e+03,  1.00000000e+00
-            400,      4.41623811e-02,        1.16214896e-04,        1.18778389e-02,  4.00000000e+03,  1.00000000e+00
-            500,      2.11077060e-02,        9.62806727e-05,        8.90772816e-03,  5.00000000e+03,  1.00000000e+00
-            600,      1.02738416e-02,        7.44614560e-05,        8.37431842e-03,  6.00000000e+03,  1.00000000e+00
-            700,      5.57505518e-03,        5.60666131e-05,        7.72173680e-03,  7.00000000e+03,  1.00000000e+00
-            800,      3.87909707e-03,        4.44539635e-05,        7.07799758e-03,  8.00000000e+03,  1.00000000e+00
-            900,      3.13039064e-03,        3.83886446e-05,        6.76125902e-03,  9.00000000e+03,  1.00000000e+00
-           1000,      2.37059905e-03,        3.32827934e-05,        6.37970546e-03,  1.00000000e+04,  1.00000000e+00
+      iteration, normalized_residual,       flow_time,       time_step, art_visc_residual
+            100,      3.63832762e-01,  1.00000000e+03,  1.00000000e+00,    1.80119128e-02
+            200,      4.25349338e-01,  2.00000000e+03,  1.00000000e+00,    3.68832565e-03
+            300,      2.06909093e-01,  3.00000000e+03,  1.00000000e+00,    3.59718903e-03
+            400,      8.00037011e-02,  4.00000000e+03,  1.00000000e+00,    3.12172465e-03
+            500,      8.18038829e-02,  5.00000000e+03,  1.00000000e+00,    2.66595033e-03
+            600,      6.51694373e-02,  6.00000000e+03,  1.00000000e+00,    2.08025464e-03
+            700,      4.95621245e-02,  7.00000000e+03,  1.00000000e+00,    1.83239963e-03
+            800,      3.60705212e-02,  8.00000000e+03,  1.00000000e+00,    1.25610899e-03
+            900,      2.85616889e-02,  9.00000000e+03,  1.00000000e+00,    8.77901998e-04
+           1000,      2.25270756e-02,  1.00000000e+04,  1.00000000e+00,    5.53306743e-04
+writing mesh/state data...done
 visualizing...done
-           1100,      1.60506506e-03,        2.70831254e-05,        6.30975624e-03,  1.10000000e+04,  1.00000000e+00
-           1200,      1.09168927e-03,        2.15065423e-05,        5.54286603e-03,  1.20000000e+04,  1.00000000e+00
-           1300,      6.69938098e-04,        1.66146135e-05,        5.45839925e-03,  1.30000000e+04,  1.00000000e+00
-           1400,      4.34087287e-04,        1.29743536e-05,        4.82102884e-03,  1.40000000e+04,  1.00000000e+00
-           1500,      2.74739067e-04,        1.01187926e-05,        4.50950705e-03,  1.50000000e+04,  1.00000000e+00
+           1100,      1.64693476e-02,  1.10000000e+04,  1.00000000e+00,    4.04425504e-04
+           1200,      1.14690508e-02,  1.20000000e+04,  1.00000000e+00,    2.48039501e-04
 ~~~
 ... etc.
 The `iteration` column tells you what iteration you're on (note that it doesn't print output on every iteration)
-and the `normalized_residual` column tells you the \f$ L_2 \f$ norm residual of the Navier-Stokes equations,
+and the `normalized_residual` column tells you the \f$ L^2 \f$ norm residual of the Navier-Stokes equations,
 normalized by the value after the first iteration.
-The `av_advection_residual` and `av_diffusion_residual` tell you the residual of the auxiliary advection and diffusion PDEs
-used to determine the artificial viscosity coefficient, which will be 0 if you run a simulation without artificial viscosity.
-If all three of these residuals vanish, the simulation has reached iterative convergence.
+The `art_visc_residual` gives you a measure of the residual of the auxiliary PDEs
+used to determine the artificial viscosity coefficient.
+It will not appear if you run a simulation without artificial viscosity.
+If both of these residuals vanish, the simulation has reached iterative convergence.
 The `flow_time` and `time_step` variables are meaningless in this case because local time stepping is used,
 but for a simulation with global time stepping their meaning should be self-explanatory.
 As soon as you start the solver, a directory called `hexed_out` will be created.
@@ -53,33 +73,38 @@ In this directory will be a copy of the input file as well as a file `output.txt
 Also, each time you see `visualizing...done` in the command line output,
 the solver will have written a new set of `.h5` and `.xmf` files to this directory.
 You can view these files in Paraview by opening the `.xmf` (not `.h5`) files and selecting "XDMF Reader T" as the reader.
+Each time you see `writing mesh/state data...done`,
+the solver will have written a new set of mesh and state files that you can use to restart the simulation from where you left off with \ref read_mesh and \ref read_state.
+Unlike many solvers, Hexed saves new mesh and state data files every time instead of overwriting old ones.
+In my experience, worrying about overwriting important restart files can be a bit of a headache,
+and avoiding that problem is worth a little extra disk space.
 Finally, the `hexed_out` directory will also contain an empty `runtime_cmd.hil` \anchor runtime_cmd.
 Every time the solver prints output, it will execute the contents of this file as \ref hil "HIL" code and then overwrite it again with an empty file.
 Thus by writing HIL code to this file you can control the solver while it is running.
 I frequently use this to change the \ref done "termination condition" or the \ref max_safety "CFL constraint".
+
 When the simulation is completed, you should see something like:
 ~~~{.unparsed}
-           7300,      1.08631818e-08,        1.94536395e-08,        2.73729806e-03,  7.30000000e+04,  1.00000000e+00
-           7400,      1.00613069e-08,        1.87430629e-08,        2.73805038e-03,  7.40000000e+04,  1.00000000e+00
-           7500,      9.32060583e-09,        1.80694404e-08,        2.73879871e-03,  7.50000000e+04,  1.00000000e+00
+           2400,      1.22283438e-04,  2.40000000e+04,  1.00000000e+00,    4.46415343e-06
+           2500,      8.42677583e-05,  2.50000000e+04,  1.00000000e+00,    3.19497299e-06
 simulation complete
-wall clock time = 153.157s = 2.55261min = 0.0425436hr
+wall clock time = 91.5954s = 1.52659min = 0.0254432hr
 
 performance summary:
-7147500 (element*iteration)s completed in 142.858 s at 1.99872e-05 s / (element*iteration).
-    boundary conditions: 19500000 (boundary connection)*(time integration stage)s completed in 5.59078 s at 2.86707e-07 s / (boundary connection)*(time integration stage).
-    cartesian: 6645000 (element*iteration)s completed in 63.3012 s at 9.52613e-06 s / (element*iteration).
-        compute time step: 66450000 (element*iteration)s completed in 8.47426 s at 1.27528e-07 s / (element*iteration).
-        local: 132900000 (element*(time integration stage))s completed in 39.7748 s at 2.99284e-07 s / (element*(time integration stage)).
-        neighbor: 392175000 (connection*(time integration stage))s completed in 9.4979 s at 2.42185e-08 s / (connection*(time integration stage)).
-        reconcile LDG flux: 66450000 (element*(time integration stage))s completed in 5.52692 s at 8.31741e-08 s / (element*(time integration stage)).
-    check admis.: 142950000 (element*iteration)s completed in 5.15453 s at 3.60583e-08 s / (element*iteration).
-    deformed: 502500 (element*iteration)s completed in 7.73355 s at 1.53901e-05 s / (element*iteration).
-        compute time step: 5025000 (element*iteration)s completed in 0.837211 s at 1.66609e-07 s / (element*iteration).
-        local: 10050000 (element*(time integration stage))s completed in 4.23641 s at 4.21533e-07 s / (element*(time integration stage)).
-        neighbor: 51300000 (connection*(time integration stage))s completed in 1.87009 s at 3.64539e-08 s / (connection*(time integration stage)).
-        reconcile LDG flux: 5025000 (element*(time integration stage))s completed in 0.761522 s at 1.51547e-07 s / (element*(time integration stage)).
-    fix admis.: 0 (element*(fix admis. iter))s completed in 5.26673 s.
+2382500 (element*iteration)s completed in 77.911 s at 3.27013e-05 s / (element*iteration).
+    boundary conditions: 6503380 (boundary connection)*(time integration stage)s completed in 5.5712 s at 8.56663e-07 s / (boundary connection)*(time integration stage).
+    cartesian: 2215000 (element*iteration)s completed in 39.307 s at 1.77458e-05 s / (element*iteration).
+        compute time step: 22150000 (element*iteration)s completed in 5.2021 s at 2.34858e-07 s / (element*iteration).
+        local: 44323036 (element*(time integration stage))s completed in 27.1661 s at 6.12911e-07 s / (element*(time integration stage)).
+        neighbor: 130815636 (connection*(time integration stage))s completed in 3.79712 s at 2.90265e-08 s / (connection*(time integration stage)).
+        reconcile LDG flux: 22173036 (element*(time integration stage))s completed in 3.12823 s at 1.41083e-07 s / (element*(time integration stage)).
+    check admis.: 47650000 (element*iteration)s completed in 4.25091 s at 8.92112e-08 s / (element*iteration).
+    deformed: 167500 (element*iteration)s completed in 4.53736 s at 2.70887e-05 s / (element*iteration).
+        compute time step: 1675000 (element*iteration)s completed in 0.459999 s at 2.74626e-07 s / (element*iteration).
+        local: 3351742 (element*(time integration stage))s completed in 2.96925 s at 8.85882e-07 s / (element*(time integration stage)).
+        neighbor: 17111856 (connection*(time integration stage))s completed in 0.782863 s at 4.57497e-08 s / (connection*(time integration stage)).
+        reconcile LDG flux: 1676742 (element*(time integration stage))s completed in 0.312915 s at 1.86621e-07 s / (element*(time integration stage)).
+    fix admis.: 0 (element*(fix admis. iter))s completed in 4.3366 s.
         cartesian: 0 (element*iteration)s completed in 0 s.
             compute time step: 0 (element*iteration)s completed in 0 s.
             local: 0 (element*(time integration stage))s completed in 0 s.
@@ -90,33 +115,32 @@ performance summary:
             local: 0 (element*(time integration stage))s completed in 0 s.
             neighbor: 0 (connection*(time integration stage))s completed in 0 s.
             reconcile LDG flux: 0 (element*(time integration stage))s completed in 0 s.
-    initialize reference: 71475000 (element*iteration)s completed in 1.05156 s at 1.47123e-08 s / (element*iteration).
-    prolong/restrict: 0 (element*(time integration stage))s completed in 4.51535 s.
-    set art visc: 7147500 (element*iteration)s completed in 54.7568 s at 7.66097e-06 s / (element*iteration).
-        advection: 7147500 (element*iteration)s completed in 20.6936 s at 2.89523e-06 s / (element*iteration).
-            BCs: 171540000 (element*(time integration stage))s completed in 0.795846 s at 4.63942e-09 s / (element*(time integration stage)).
-            cartesian: 79740000 (element*iteration)s completed in 10.5853 s at 1.32748e-07 s / (element*iteration).
-                compute time step: 6645000 (element*iteration)s completed in 0.231821 s at 3.48865e-08 s / (element*iteration).
-                local: 159480000 (element*(time integration stage))s completed in 6.13758 s at 3.84849e-08 s / (element*(time integration stage)).
-                neighbor: 313740000 (connection*(time integration stage))s completed in 4.19688 s at 1.33769e-08 s / (connection*(time integration stage)).
-            deformed: 6030000 (element*iteration)s completed in 2.33167 s at 3.86678e-07 s / (element*iteration).
-                compute time step: 502500 (element*iteration)s completed in 0.0841519 s at 1.67467e-07 s / (element*iteration).
-                local: 12060000 (element*(time integration stage))s completed in 1.12551 s at 9.33255e-08 s / (element*(time integration stage)).
-                neighbor: 41040000 (connection*(time integration stage))s completed in 1.1036 s at 2.68909e-08 s / (connection*(time integration stage)).
-            setup: 28590000 (element*iteration)s completed in 2.29555 s at 8.02921e-08 s / (element*iteration).
-            update: 28590000 (element*(time integration stage))s completed in 2.24329 s at 7.84641e-08 s / (element*(time integration stage)).
-        diffusion: 0 (element*iteration)s completed in 0 s.
-            cartesian: 0 (element*iteration)s completed in 16.8998 s.
-                compute time step: 6645000 (element*iteration)s completed in 0.16324 s at 2.45659e-08 s / (element*iteration).
-                local: 199350000 (element*(time integration stage))s completed in 9.84472 s at 4.93841e-08 s / (element*(time integration stage)).
-                neighbor: 784350000 (connection*(time integration stage))s completed in 2.77721 s at 3.54078e-09 s / (connection*(time integration stage)).
-                reconcile LDG flux: 199350000 (element*(time integration stage))s completed in 4.06918 s at 2.04123e-08 s / (element*(time integration stage)).
-            deformed: 0 (element*iteration)s completed in 4.41684 s.
-                compute time step: 502500 (element*iteration)s completed in 0.0275342 s at 5.47945e-08 s / (element*iteration).
-                local: 15075000 (element*(time integration stage))s completed in 1.90667 s at 1.26479e-07 s / (element*(time integration stage)).
-                neighbor: 102600000 (connection*(time integration stage))s completed in 1.5299 s at 1.49113e-08 s / (connection*(time integration stage)).
-                reconcile LDG flux: 15075000 (element*(time integration stage))s completed in 0.908002 s at 6.02323e-08 s / (element*(time integration stage)).
-        initialize: 7147500 (element*iteration)s completed in 0.419046 s at 5.86283e-08 s / (element*iteration).
+    prolong/restrict: 0 (element*(time integration stage))s completed in 0.818223 s.
+    set art visc: 2382500 (element*iteration)s completed in 20.1499 s at 8.45747e-06 s / (element*iteration).
+        advection: 2382500 (element*iteration)s completed in 5.65127 s at 2.37199e-06 s / (element*iteration).
+            BCs: 9530000 (element*(time integration stage))s completed in 0.0878124 s at 9.21431e-09 s / (element*(time integration stage)).
+            cartesian: 4430000 (element*iteration)s completed in 4.36745 s at 9.85879e-07 s / (element*iteration).
+                compute time step: 2215000 (element*iteration)s completed in 0.118299 s at 5.34082e-08 s / (element*iteration).
+                local: 8860000 (element*(time integration stage))s completed in 3.70495 s at 4.18166e-07 s / (element*(time integration stage)).
+                neighbor: 17430000 (connection*(time integration stage))s completed in 0.542288 s at 3.11123e-08 s / (connection*(time integration stage)).
+            deformed: 335000 (element*iteration)s completed in 0.471364 s at 1.40706e-06 s / (element*iteration).
+                compute time step: 167500 (element*iteration)s completed in 0.0155467 s at 9.28159e-08 s / (element*iteration).
+                local: 670000 (element*(time integration stage))s completed in 0.352525 s at 5.26157e-07 s / (element*(time integration stage)).
+                neighbor: 2280000 (connection*(time integration stage))s completed in 0.101534 s at 4.45325e-08 s / (connection*(time integration stage)).
+            setup: 2382500 (element*iteration)s completed in 0.456895 s at 1.91771e-07 s / (element*iteration).
+            update: 2382500 (element*(time integration stage))s completed in 0 s at 0 s / (element*(time integration stage)).
+        diffusion: 2382500 (element*iteration)s completed in 13.9486 s at 5.85462e-06 s / (element*iteration).
+            cartesian: 0 (element*iteration)s completed in 11.1789 s.
+                compute time step: 2215000 (element*iteration)s completed in 0.101966 s at 4.60343e-08 s / (element*iteration).
+                local: 22150000 (element*(time integration stage))s completed in 7.7929 s at 3.51824e-07 s / (element*(time integration stage)).
+                neighbor: 87150000 (connection*(time integration stage))s completed in 0.976395 s at 1.12036e-08 s / (connection*(time integration stage)).
+                reconcile LDG flux: 22150000 (element*(time integration stage))s completed in 2.30009 s at 1.03841e-07 s / (element*(time integration stage)).
+            deformed: 0 (element*iteration)s completed in 1.67144 s.
+                compute time step: 167500 (element*iteration)s completed in 0.0143642 s at 8.57565e-08 s / (element*iteration).
+                local: 1675000 (element*(time integration stage))s completed in 1.11925 s at 6.68208e-07 s / (element*(time integration stage)).
+                neighbor: 11400000 (connection*(time integration stage))s completed in 0.264148 s at 2.31709e-08 s / (connection*(time integration stage)).
+                reconcile LDG flux: 1675000 (element*(time integration stage))s completed in 0.265895 s at 1.58743e-07 s / (element*(time integration stage)).
+        initialize: 2382500 (element*iteration)s completed in 0.0917232 s at 3.84987e-08 s / (element*iteration).
 ~~~
 `simulation complete` tells you that the user-specified termination condition was met (in this case, a bound on `normalized_residual`; see \ref done).
 Below, you will see the elapsed time for which the simulation was running as well as some data on the kernel performance.

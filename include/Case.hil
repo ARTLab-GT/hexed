@@ -332,7 +332,7 @@ mesh = {
     while = {i_split < init_layer_splits}
     do = {split_layers; i_split = i_split + 1}
     $loop
-    println({meshing complete with } + n_elements + { elements})
+    println({meshing complete with } + n_elements + { elements} + newline)
 }
 
 run = {
