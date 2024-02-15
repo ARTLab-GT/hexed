@@ -17,3 +17,4 @@ EXAMPLE_PATH = @CMAKE_SOURCE_DIR@
 HTML_EXTRA_STYLESHEET = @CMAKE_SOURCE_DIR@/doc/style.css
 ALIASES += today="@DATE@" proj_version=" version @CMAKE_PROJECT_VERSION@, commit `@COMMIT@`" me="\ref Contact \"me\""
 IMAGE_PATH = html
+CITE_BIB_FILES = @CMAKE_SOURCE_DIR@/doc/references.bib
