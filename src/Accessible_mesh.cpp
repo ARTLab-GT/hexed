@@ -4,6 +4,9 @@
 #include <erase_if.hpp>
 #include <utils.hpp>
 #include <Gauss_legendre.hpp>
+#include <H5Cpp.h>
+#include <filesystem>
+#include <fstream>
 
 namespace hexed
 {
@@ -654,18 +657,22 @@ Element& Accessible_mesh::add_elem(bool is_deformed, Tree& t)
   return elem;
 }
 
-void Accessible_mesh::add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin)
+void Accessible_mesh::create_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin)
 {
   // take ownership of bcs (do this first to avoid memory leak)
   std::vector<int> new_tree_bcs;
   //! \todo this could, in theory, be a resource leak because these are never erased if an exception is thrown...
   for (Flow_bc* fbc : extremal_bcs) new_tree_bcs.push_back(add_boundary_condition(fbc, new Nominal_pos));
-  // make assertions
   HEXED_ASSERT(int(extremal_bcs.size()) == 2*params.n_dim, "`extremal_bcs` has wrong number of elements");
   HEXED_ASSERT(!tree, "each `Mesh` may only contain one tree");
   // add the tree
   tree_bcs = new_tree_bcs;
   tree.reset(new Tree(params.n_dim, root_sz, origin));
+}
+
+void Accessible_mesh::add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin)
+{
+  create_tree(extremal_bcs, origin);
   auto& elem = add_elem(false, *tree);
   int sn = elem.record;
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
@@ -1411,6 +1418,493 @@ void Accessible_mesh::restore_verts()
   for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
     verts[i_vert].pos = verts[i_vert].temp_vector;
   }
+}
+
+template <typename T>
+void h5_write_row(H5::DataSet& dset, int cols, int i_row, T* data)
+{
+  hsize_t row_dims [2] {1, hsize_t(cols)};
+  H5::DataSpace mspace (2, row_dims, nullptr);
+  hsize_t offset [2] {hsize_t(i_row), 0};
+  hsize_t stride [2] {1, 1};
+  hsize_t block [2] {1, 1};
+  auto dspace = dset.getSpace();
+  dspace.selectHyperslab(H5S_SELECT_SET, row_dims, offset, stride, block);
+  dset.write(data, dset.getDataType(), mspace, dspace);
+}
+
+template <typename T>
+void h5_write_value(H5::DataSet& dset, int i_row, T data)
+{
+  h5_write_row(dset, 1, i_row, &data);
+}
+
+template <typename T>
+void h5_add_attr(H5::H5Object& obj, std::string name, T value, H5::DataType dtype = H5::PredType::NATIVE_INT)
+{
+  hsize_t attr_dim = 1;
+  H5::DataSpace dspace(1, &attr_dim);
+  auto attr = obj.createAttribute(name, dtype, dspace);
+  attr.write(dtype, &value);
+}
+
+template <typename T = int>
+T h5_get_attr(H5::H5Object& obj, std::string name, H5::DataType dtype = H5::PredType::NATIVE_INT)
+{
+  auto attr = obj.openAttribute(name.c_str());
+  T value;
+  attr.read(dtype, &value);
+  return value;
+}
+
+Storage_params read_params(std::string file_name)
+{
+  H5::H5File file(file_name + ".mesh.h5", H5F_ACC_RDONLY);
+  Storage_params params {
+    h5_get_attr(file, "n_stage"),
+    h5_get_attr(file, "n_var"),
+    h5_get_attr(file, "n_dim"),
+    h5_get_attr(file, "row_size"),
+    h5_get_attr(file, "n_forcing"),
+  };
+  return params;
+}
+
+double read_root_sz(std::string file_name)
+{
+  H5::H5File file(file_name + ".mesh.h5", H5F_ACC_RDONLY);
+  return h5_get_attr<double>(file, "root_size", H5::PredType::NATIVE_DOUBLE);
+}
+
+template <typename T>
+void h5_read_row(H5::DataSet& dset, int cols, int i_row, T* data)
+{
+  hsize_t row_dims [2] {1, hsize_t(cols)};
+  H5::DataSpace mspace (2, row_dims, nullptr);
+  hsize_t offset [2] {hsize_t(i_row), 0};
+  hsize_t stride [2] {1, 1};
+  hsize_t block [2] {1, 1};
+  auto dspace = dset.getSpace();
+  dspace.selectHyperslab(H5S_SELECT_SET, row_dims, offset, stride, block);
+  dset.read(data, dset.getDataType(), mspace, dspace);
+}
+
+template <typename T>
+T h5_read_value(H5::DataSet& dset, int i_row)
+{
+  T data;
+  h5_read_row(dset, 1, i_row, &data);
+  return data;
+}
+
+void Accessible_mesh::write(std::string name)
+{
+  H5::H5File file(name + ".mesh.h5", H5F_ACC_TRUNC);
+  h5_add_attr(file, "version_major", config::version_major);
+  h5_add_attr(file, "version_minor", config::version_minor);
+  h5_add_attr(file, "version_patch", config::version_patch);
+  h5_add_attr(file, "n_dim", params.n_dim);
+  h5_add_attr(file, "row_size", params.row_size);
+  h5_add_attr(file, "n_stage", params.n_stage);
+  h5_add_attr(file, "n_var", params.n_var);
+  h5_add_attr(file, "n_forcing", params.n_forcing);
+  h5_add_attr(file, "root_size", root_sz, H5::PredType::NATIVE_DOUBLE);
+  hsize_t dims[2];
+  // write vertices
+  file.createGroup("/vertices");
+  auto verts = vertices();
+  dims[0] = verts.size();
+  dims[1] = 3;
+  auto dset = file.createDataSet("vertices/position", H5::PredType::NATIVE_DOUBLE, H5::DataSpace(2, dims));
+  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
+    auto& vert = verts[i_vert];
+    h5_write_row(dset, 3, i_vert, vert.pos.data());
+    vert.record.clear();
+    vert.record.push_back(i_vert);
+  }
+  // write elements
+  file.createGroup("/elements");
+  dims[0] = elems.size();
+  dims[1] = params.n_vertices();
+  auto vert_dset = file.createDataSet("/elements/vertices", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
+  dims[1] = params.n_dim;
+  auto nom_pos_dset = file.createDataSet("/elements/nominal_position", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
+  dims[1] = 1;
+  auto is_def_dset = file.createDataSet("/elements/is_deformed", H5::PredType::NATIVE_HBOOL, H5::DataSpace(2, dims));
+  auto ref_level_dset = file.createDataSet("/elements/refinement_level", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    int vert_inds [8] {};
+    for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+      vert_inds[i_vert] = elem.vertex(i_vert).record[0];
+    }
+    h5_write_row(vert_dset, params.n_vertices(), i_elem, vert_inds);
+    std::vector<int> nom_pos = elem.nominal_position();
+    h5_write_row(nom_pos_dset, params.n_dim, i_elem, nom_pos.data());
+    h5_write_value(is_def_dset, i_elem, elem.get_is_deformed());
+    h5_write_value(ref_level_dset, i_elem, elem.refinement_level());
+    elem.record = i_elem;
+  }
+  // write conformal connections
+  dims[0] = car.cons.size() + def.cons.size();
+  dims[1] = 6;
+  file.createGroup("/connections");
+  auto con_dset = file.createDataSet("/connections/conformal", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
+  #define WRITE_CONS(start, cons) \
+    for (int i_con = 0; i_con < int(cons.size()); ++i_con) { \
+      auto& con = *cons[i_con]; \
+      Connection_direction dir = con.get_direction(); \
+      int data [6]; \
+      for (int i_side = 0; i_side < 2; ++i_side) { \
+        data[i_side] = con.element(i_side).record; /* record element indices */ \
+        data[2 + i_side] = dir.i_dim[i_side]; \
+        data[4 + i_side] = dir.face_sign[i_side]; \
+      } \
+      h5_write_row(con_dset, 6, start + i_con, data); \
+    }
+  WRITE_CONS(0, car.cons);
+  WRITE_CONS(car.cons.size(), def.cons);
+  #undef WRITE_CONS
+  // write refined connections
+  auto& car_cons = car.refined_connections();
+  auto& def_cons = def.refined_connections();
+  dims[0] = car_cons.size() + def_cons.size();
+  dims[1] = 11;
+  auto ref_con_dset = file.createDataSet("/connections/refined", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
+  #define WRITE_REF_CONS(start, cons) \
+    for (int i_con = 0; i_con < cons.size(); ++i_con) { \
+      auto& con = cons[i_con]; \
+      int data[11] {}; \
+      data[0] = con.coarse_element().record; \
+      for (int i_fine = 0; i_fine < con.n_fine_elements(); ++i_fine) { \
+        data[1 + i_fine] = con.connection(i_fine).element(!con.order_reversed()).record; \
+      } \
+      for (int i_fine = con.n_fine_elements(); i_fine < 4; ++i_fine) data[1 + i_fine] = -1; \
+      for (int i_dim : {0, 1}) data[5 + i_dim] = con.stretch()[i_dim]; \
+      Con_dir<Deformed_element> dir = con.direction(); \
+      for (int i_side = 0; i_side < 2; ++i_side) { \
+        data[7 + i_side] = dir.i_dim[i_side]; \
+        data[9 + i_side] = dir.face_sign[i_side]; \
+      } \
+      if (con.order_reversed()) { \
+        /* rearrange order to turn reversed connections into un-reversed ones, \
+           since mesh file format does not support reversed connecions */ \
+        for (int i : {7, 9}) std::swap(data[i], data[i + 1]); \
+      } \
+      h5_write_row(ref_con_dset, 11, start + i_con, data); \
+    }
+  WRITE_REF_CONS(0, car_cons);
+  WRITE_REF_CONS(car_cons.size(), def_cons);
+  #undef WRITE_REF_CONS
+  // write boundary connections
+  auto& bound_cons = boundary_connections();
+  dims[0] = bound_cons.size();
+  dims[1] = 4;
+  auto bound_con_dset = file.createDataSet("/connections/boundary", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
+  for (int i_con = 0; i_con < bound_cons.size(); ++i_con) {
+    auto& con = bound_cons[i_con];
+    int data[4];
+    data[0] = con.element().record;
+    data[1] = con.bound_cond_serial_n();
+    data[2] = con.i_dim();
+    data[3] = con.inside_face_sign();
+    h5_write_row(bound_con_dset, 4, i_con, data);
+  }
+  // write tree
+  if (tree) {
+    file.createGroup("/tree");
+    dims[0] = 1;
+    dims[1] = params.n_dim;
+    auto orig_dset = file.createDataSet("/tree/origin", H5::PredType::NATIVE_DOUBLE, H5::DataSpace(2, dims));
+    Mat<> origin = tree->origin();
+    h5_write_row(orig_dset, params.n_dim, 0, origin.data());
+    int n_vert = params.n_vertices();
+    dims[0] = tree->count();
+    dims[1] = 2 + n_vert;
+    auto child_dset = file.createDataSet("/tree/children", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
+    int row = 0;
+    std::function<int(Tree*)> write_tree = [&](Tree* t) {
+      std::vector<int> data(2 + n_vert, -1);
+      if (t->elem) data[0] = t->elem->record;
+      data[1] = t->get_status();
+      int my_row = row++;
+      auto children = t->children();
+      for (unsigned i_child = 0; i_child < children.size(); ++i_child) data[2 + i_child] = write_tree(children[i_child]);
+      h5_write_row(child_dset, 2 + n_vert, my_row, data.data());
+      return my_row;
+    };
+    write_tree(tree.get());
+  }
+  // write face warping
+  file.createGroup("/elements/face_warping");
+  auto& def_elems = def.elements();
+  dims[0] = def_elems.size();
+  dims[1] = 1;
+  auto ind_dset = file.createDataSet("/elements/face_warping/element_indices", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
+  dims[1] = 2*params.n_dim*params.n_face_qpoint();
+  auto adj_dset = file.createDataSet("/elements/face_warping/node_adjustments", H5::PredType::NATIVE_DOUBLE, H5::DataSpace(2, dims));
+  for (int i_elem = 0; i_elem < def_elems.size(); ++i_elem) {
+    auto& elem = def_elems[i_elem];
+    h5_write_value(ind_dset, i_elem, elem.record);
+    h5_write_row(adj_dset, dims[1], i_elem, elem.node_adjustments());
+  }
+}
+
+void Accessible_mesh::read_file(std::string file_name)
+{
+  H5::H5File file(file_name + ".mesh.h5", H5F_ACC_RDONLY);
+  hsize_t dims [2];
+  // read elements
+  auto vert_pos_dset = file.openDataSet("/vertices/position");
+  auto vert_ind_dset = file.openDataSet("/elements/vertices");
+  auto nom_pos_dset = file.openDataSet("/elements/nominal_position");
+  auto is_def_dset = file.openDataSet("/elements/is_deformed");
+  auto ref_level_dset = file.openDataSet("/elements/refinement_level");
+  is_def_dset.getSpace().getSimpleExtentDims(dims);
+  int n_elem = dims[0];
+  int n_vert = params.n_vertices();
+  std::vector<Element*> elem_ptrs(n_elem); // really need to switch to storing a flat array of fully polymorphic elements to avoid this nonsense
+  std::vector<Deformed_element*> def_elem_ptrs(n_elem, nullptr);
+  for (int i_elem = 0; i_elem < n_elem; ++i_elem) {
+    std::vector<int> nom_pos(params.n_dim);
+    h5_read_row(nom_pos_dset, params.n_dim, i_elem, nom_pos.data());
+    int ref_level = h5_read_value<int>(ref_level_dset, i_elem);
+    int is_def = h5_read_value<bool>(is_def_dset, i_elem);
+    int sn = add_element(ref_level, is_def, nom_pos, tree ? tree->origin() : Mat<>::Zero(params.n_dim));
+    int vert_inds[8] {};
+    h5_read_row(vert_ind_dset, n_vert, i_elem, vert_inds);
+    auto& elem = element(ref_level, is_def, sn);
+    elem_ptrs[i_elem] = &elem;
+    if (is_def) def_elem_ptrs[i_elem] = &def.elems.at(ref_level, sn);
+    for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
+      h5_read_row(vert_pos_dset, params.n_dim, vert_inds[i_vert], elem.vertex(i_vert).pos.data());
+    }
+  }
+  // read tree
+  if (tree) {
+    auto child_dset = file.openDataSet("/tree/children");
+    std::function<void(Tree*, int)> read_tree = [&](Tree* t, int row) {
+      std::vector<int> data(2 + n_vert);
+      h5_read_row(child_dset, 2 + n_vert, row, data.data());
+      if (data[0] >= 0) {
+        Element& elem = *elem_ptrs[data[0]];
+        t->elem.pair(elem.tree);
+        t->def_elem = def_elem_ptrs[data[0]]; // if not deformed, this is just `nullptr`, as it should be
+      }
+      t->set_status(data[1]);
+      if (data[2] >= 0) {
+        t->refine();
+        auto children = t->children();
+        for (int i_child = 0; i_child < n_vert; ++i_child) read_tree(children[i_child], data[2 + i_child]);
+      }
+    };
+    read_tree(tree.get(), 0);
+  }
+  // read conformal connections
+  auto con_dset = file.openDataSet("/connections/conformal");
+  con_dset.getSpace().getSimpleExtentDims(dims);
+  int n_con = dims[0];
+  for (int i_con = 0; i_con < n_con; ++i_con) {
+    int data [6];
+    h5_read_row(con_dset, 6, i_con, data);
+    std::array<Element*, 2> el_ar;
+    for (int i_side = 0; i_side < 2; ++i_side) el_ar[i_side] = elem_ptrs[data[i_side]];
+    if (el_ar[0]->get_is_deformed() && el_ar[1]->get_is_deformed()) {
+      std::array<Deformed_element*, 2> def_el_ar {def_elem_ptrs[data[0]], def_elem_ptrs[data[1]]};
+      def.cons.emplace_back(new Element_face_connection<Deformed_element>(def_el_ar, {{data[2], data[3]}, {bool(data[4]), bool(data[5])}}));
+      if (bool(def_el_ar[0]->tree) != bool(def_el_ar[1]->tree)) extrude_cons.push_back(def.cons.back().get());
+    } else {
+      car.cons.emplace_back(new Element_face_connection<Element>(el_ar, {data[2]}));
+    }
+  }
+  // read refined connections
+  auto ref_con_dset = file.openDataSet("/connections/refined");
+  ref_con_dset.getSpace().getSimpleExtentDims(dims);
+  n_con = dims[0];
+  for (int i_con = 0; i_con < n_con; ++i_con) {
+    int data [11];
+    h5_read_row(ref_con_dset, 11, i_con, data);
+    std::array<bool, 2> stretch {bool(data[5]), bool(data[6])};
+    int n_fine = math::pow(2, params.n_dim - 1 - stretch[0] - stretch[1]);
+    Element* coarse = elem_ptrs[data[0]];
+    std::vector<Element*> fine(n_fine);
+    bool is_def = coarse->get_is_deformed();
+    for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
+      fine[i_fine] = elem_ptrs[data[1 + i_fine]];
+      is_def = is_def && fine[i_fine]->get_is_deformed();
+    }
+    if (is_def) {
+      Deformed_element* def_coarse = def_elem_ptrs[data[0]];
+      std::vector<Deformed_element*> def_fine(n_fine);
+      for (int i_fine = 0; i_fine < n_fine; ++i_fine) def_fine[i_fine] = def_elem_ptrs[data[1 + i_fine]];
+      def.ref_face_cons[math::log(2, n_fine)].emplace_back(
+        new Refined_connection<Deformed_element>{def_coarse, def_fine, {{data[7], data[8]}, {bool(data[9]), bool(data[10])}}, false, stretch}
+      );
+    } else {
+      bool reverse = data[9] < data[10]; // if this connection does not obey Cartesian face sign convention, it has to be reversed
+      car.ref_face_cons[params.n_dim - 1].emplace_back(new Refined_connection<Element>{coarse, fine, {data[7]}, reverse});
+    }
+  }
+  // read boundary connections
+  auto bound_con_dset = file.openDataSet("/connections/boundary");
+  bound_con_dset.getSpace().getSimpleExtentDims(dims);
+  for (int i_con = 0; i_con < int(dims[0]); ++i_con) {
+    int data [4];
+    h5_read_row(bound_con_dset, 4, i_con, data);
+    HEXED_ASSERT(data[1] < int(bound_conds.size()), "mesh file refers to nonexistant boundary condition");
+    if (elem_ptrs[data[0]]->get_is_deformed()) {
+      def.bound_cons.emplace_back(new Typed_bound_connection<Deformed_element>(*def_elem_ptrs[data[0]], data[2], data[3], data[1]));
+    } else {
+      car.bound_cons.emplace_back(new Typed_bound_connection<Element         >(    *elem_ptrs[data[0]], data[2], data[3], data[1]));
+    }
+  }
+  // read face warping
+  auto ind_dset = file.openDataSet("/elements/face_warping/element_indices");
+  auto adj_dset = file.openDataSet("/elements/face_warping/node_adjustments");
+  adj_dset.getSpace().getSimpleExtentDims(dims);
+  for (unsigned row = 0; row < dims[0]; ++row) {
+    Deformed_element* elem = def_elem_ptrs[h5_read_value<int>(ind_dset, row)];
+    HEXED_ASSERT(elem, "file specifies face warping for a Cartesian element");
+    h5_read_row(adj_dset, dims[1], row, elem->node_adjustments());
+  }
+  cleanup();
+}
+
+Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs, Surface_geom* geometry, Flow_bc* surface_bc)
+: Accessible_mesh(read_params(file_name), read_root_sz(file_name))
+{
+  // take ownership of these to avoid memory leaks in case of exception
+  std::unique_ptr<Flow_bc> fbc;
+  if (surface_bc) fbc.reset(surface_bc);
+  std::unique_ptr<Surface_geom> g;
+  if (geometry) g.reset(geometry);
+  // create the tree
+  {
+    H5::H5File file(file_name + ".mesh.h5", H5F_ACC_RDONLY);
+    HEXED_ASSERT(file.exists("tree"), "attempt to read a non-tree mesh from a file as a tree mesh");
+    Mat<> orig(params.n_dim);
+    auto orig_dset = file.openDataSet("/tree/origin");
+    h5_read_row(orig_dset, params.n_dim, 0, orig.data());
+    create_tree(extremal_bcs, orig);
+  }
+  HEXED_ASSERT(bool(fbc) == bool(g), "must specify both surface geometry and surface boundary condition or neither");
+  if (surface_bc) {
+    surf_bc_sn = add_boundary_condition(fbc.release(), new Geom_mbc(g.release()));
+    surf_geom = geometry;
+  }
+  read_file(file_name);
+}
+
+Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> flow_bcs, std::vector<Mesh_bc*> mesh_bcs)
+: Accessible_mesh(read_params(file_name), read_root_sz(file_name))
+{
+  HEXED_ASSERT(flow_bcs.size() == mesh_bcs.size(), "must supply same number of flow and mesh boundary conditions");
+  for (unsigned i_bc = 0; i_bc < flow_bcs.size(); ++i_bc) {
+    add_boundary_condition(flow_bcs[i_bc], mesh_bcs[i_bc]);
+  }
+  read_file(file_name);
+}
+
+void write_polymesh_file(std::string dir_name, std::string name, std::string cls, int n_entries, std::function<std::string(int)> entries, std::string note = "")
+{
+  std::ofstream file(dir_name + name);
+  file
+    << "// this file was generated for OpenFOAM by Hexed, an open-source mesher and CFD solver\n"
+    << "// https://github.com/ARTLab-GT/hexed\n\n"
+    << "FoamFile\n"
+    << "{\n"
+    << "    version 2.0;\n"
+    << "    format ascii;\n";
+  if (!note.empty()) file << "    note \"" << note << "\";\n";
+  file
+    << "    class " << cls << ";\n"
+    << "    location \"constant/polyMesh\";\n"
+    << "    object " << name << ";\n"
+    << "}\n"
+    << "\n" << n_entries << "\n(\n";
+  for (int i_entry = 0; i_entry < n_entries; ++i_entry) file << "    " << entries(i_entry) << "\n";
+  file << ")\n";
+}
+
+void Accessible_mesh::export_polymesh(std::string dir_name)
+{
+  dir_name = dir_name + "polyMesh/";
+  if (std::filesystem::exists(dir_name)) std::filesystem::remove_all(dir_name);
+  std::filesystem::create_directory(dir_name);
+  auto verts = vertices();
+  auto& bound_cons = boundary_connections();
+  auto& elems = elements();
+  auto& elem_cons = element_connections();
+  int n_internal = elem_cons.size();
+  int n_faces = n_internal + bound_cons.size();
+  std::string face_note = format_str(200, "nPoints:%i nCells:%i nFaces:%i nInternalFaces:%i",
+                                     verts.size(), elems.size(), n_faces, n_internal);
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) elems[i_elem].record = i_elem;
+  write_polymesh_file(dir_name, "points", "vectorField", verts.size(), [&](int i_vert) {
+    Vertex& vert = verts[i_vert];
+    vert.record.clear();
+    vert.record.push_back(i_vert);
+    return format_str(100, "(%.20e %.20e %.20e)", vert.pos[0], vert.pos[1], vert.pos[2]);
+  });
+  std::vector<int> owners(n_faces);
+  std::vector<int> neighbors(n_internal);
+  std::vector<std::vector<int>> faces(n_faces);
+  int i_face = 0;
+  auto add_verts = [&](Element& elem, int i_dim, int face_sign, bool flip) {
+    auto& verts = faces[i_face++];
+    for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+      if ((i_vert/math::pow(2, params.n_dim - i_dim - 1))%2 == face_sign) {
+        verts.push_back(elem.vertex(i_vert).record[0]);
+      }
+    }
+    if ((face_sign != i_dim%2) != flip) std::swap(verts[0], verts[1]);
+    else std::swap(verts[2], verts[3]);
+  };
+  for (int i_con = 0; i_con < elem_cons.size(); ++i_con) {
+    auto& con = elem_cons[i_con];
+    int owner_side = con.element(1).record < con.element(0).record;
+    owners[i_face] = con.element(owner_side).record;
+    neighbors[i_face] = con.element(!owner_side).record;
+    int finer_side = con.element(1).refinement_level() > con.element(0).refinement_level();
+    auto dir = con.get_direction();
+    add_verts(con.element(finer_side), dir.i_dim[finer_side], dir.face_sign[finer_side], finer_side != owner_side);
+  }
+  std::vector<int> n_bound_cons(bound_conds.size(), 0);
+  std::vector<int> bc_starts(bound_conds.size(), n_internal);
+  std::vector<std::string> bc_names(bound_conds.size());
+  std::vector<std::string> bc_types(bound_conds.size());
+  for (int i_bc = 0; i_bc < int(bound_conds.size()); ++i_bc) {
+    for (int i_con = 0; i_con < bound_cons.size(); ++i_con) {
+      auto& con = bound_cons[i_con];
+      if (con.bound_cond_serial_n() == i_bc) {
+        ++n_bound_cons[i_bc];
+        owners[i_face] = con.element().record;
+        add_verts(con.element(), con.i_dim(), con.inside_face_sign(), false);
+      }
+    }
+    if (i_bc) bc_starts[i_bc] = bc_starts[i_bc - 1] + n_bound_cons[i_bc - 1];
+    if (tree) {
+      if (i_bc == surf_bc_sn) {
+        bc_names[i_bc] = "surface_bc";
+        bc_types[i_bc] = "wall";
+      } else {
+        bc_names[i_bc] = format_str(100, "extremal_bc%i%i", i_bc/2, i_bc%2);
+        bc_types[i_bc] = "patch";
+      }
+    } else {
+      bc_names[i_bc] = format_str(100, "bc%i", i_bc);
+      bc_types[i_bc] = "patch";
+    }
+  }
+  write_polymesh_file(dir_name, "faces", "faceList", n_faces, [&](int i_entry) {
+    auto& verts = faces[i_entry];
+    return format_str(100, "4(%i %i %i %i)", verts[0], verts[1], verts[2], verts[3]);
+  });
+  write_polymesh_file(dir_name, "boundary", "polyBoundaryMesh", bound_conds.size(), [&](int i_bc) {
+    return format_str(200, "%s {type %s; nFaces %i; startFace %i;}", bc_names[i_bc].c_str(), bc_types[i_bc].c_str(), n_bound_cons[i_bc], bc_starts[i_bc]);
+  });
+  write_polymesh_file(dir_name, "owner",     "labelList", n_faces,    [&](int i_entry){return format_str(100, "%i", owners   [i_entry]);}, face_note);
+  write_polymesh_file(dir_name, "neighbour", "labelList", n_internal, [&](int i_entry){return format_str(100, "%i", neighbors[i_entry]);}, face_note);
 }
 
 }

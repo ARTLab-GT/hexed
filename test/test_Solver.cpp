@@ -828,7 +828,7 @@ TEST_CASE("normal continuity uncertainty")
 
 TEST_CASE("artificial viscosity convergence")
 {
-  //#if NDEBUG
+  #if NDEBUG
   const int len0 = 100;
   const int len1 = 2;
   hexed::Solver sol(2, hexed::config::max_row_size, 1./len0);
@@ -876,7 +876,7 @@ TEST_CASE("artificial viscosity convergence")
   REQUIRE(sol.iteration_status().adv_res < 1e-12);
   REQUIRE(sol.iteration_status().diff_res < 1e-12);
   CHECK(std::log(sol.bounds_field(hexed::Art_visc_coef())[0][1]/init_max)/std::log(2) > hexed::config::max_row_size - 2.);
-  //#endif
+  #endif
 }
 
 TEST_CASE("uncertainty")
@@ -946,4 +946,48 @@ TEST_CASE("cylinder tree mesh")
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
   REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
+}
+
+TEST_CASE("file I/O")
+{
+  double tol = 1e-6;
+  double correct_mass_integral;
+  {
+    hexed::Solver solver(2, hexed::config::max_row_size, .6);
+    std::vector<hexed::Flow_bc*> bcs;
+    for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Freestream(Eigen::Vector4d{0., 0., 1., 1e5}));
+    solver.mesh().add_tree(bcs);
+    solver.mesh().update();
+    solver.mesh().set_surface(new hexed::Hypersphere(hexed::Mat<>::Zero(2), .2), new hexed::Nonpenetration, hexed::Mat<2>{.5, .5});
+    solver.calc_jacobian();
+    REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(.6*.6 - hexed::constants::pi*.2*.2/4, tol));
+    solver.mesh().write("solver_io_test");
+    solver.initialize(Nonuniform_mass());
+    solver.write_state("solver_io_test");
+    correct_mass_integral = solver.integral_field(hexed::Mass())[0];
+  }
+  SECTION("wrong params 0")
+  {
+    std::vector<hexed::Flow_bc*> bcs;
+    for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Freestream(Eigen::Vector4d{0., 0., 1., 1e5}));
+    hexed::Solver solver(1, hexed::config::max_row_size, .6);
+    REQUIRE_THROWS(solver.read_mesh("solver_io_test", bcs, new hexed::Hypersphere(hexed::Mat<>::Zero(2), .2), new hexed::Nonpenetration));
+  }
+  SECTION("wrong params 1")
+  {
+    std::vector<hexed::Flow_bc*> bcs;
+    for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Freestream(Eigen::Vector4d{0., 0., 1., 1e5}));
+    hexed::Solver solver(2, hexed::config::max_row_size - 1, .6);
+    REQUIRE_THROWS(solver.read_mesh("solver_io_test", bcs, new hexed::Hypersphere(hexed::Mat<>::Zero(2), .2), new hexed::Nonpenetration));
+  }
+  SECTION("right params")
+  {
+    std::vector<hexed::Flow_bc*> bcs;
+    for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Freestream(Eigen::Vector4d{0., 0., 1., 1e5}));
+    hexed::Solver solver(2, hexed::config::max_row_size, .6);
+    solver.read_mesh("solver_io_test", bcs, new hexed::Hypersphere(hexed::Mat<>::Zero(2), .2), new hexed::Nonpenetration);
+    REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(.6*.6 - hexed::constants::pi*.2*.2/4, tol));
+    solver.read_state("solver_io_test");
+    REQUIRE(solver.integral_field(hexed::Mass())[0] == Catch::Approx(correct_mass_integral));
+  }
 }

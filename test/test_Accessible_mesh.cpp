@@ -460,3 +460,67 @@ TEST_CASE("Tree meshing")
     REQUIRE(count == 48);
   }
 }
+
+TEST_CASE("mesh I/O")
+{
+  hexed::Mat<3> correct_sum_vertices = hexed::Mat<3>::Zero();
+  int correct_n_car_after = 0;
+  int correct_n_def_after = 0;
+  { // create a mesh and write it to a file
+    hexed::Accessible_mesh mesh({1, 4, 2, hexed::config::max_row_size}, .8);
+    std::vector<hexed::Flow_bc*> bcs;
+    for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Copy);
+    mesh.add_tree(bcs, hexed::Mat<2>{0.1, 0.2});
+    mesh.update();
+    mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] != elem.nominal_position()[1];});
+    mesh.set_surface(new hexed::Hypersphere(hexed::Mat<2>{.9, 0.2}, 0.1), new hexed::Nonpenetration);
+    mesh.write("io_test");
+    // compute the sum of the vertex coordinates of all elements (counting each vertex once for each element using it) to check vertex position
+    auto& elems = mesh.elements();
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      for (int i_vert = 0; i_vert < 4; ++i_vert) correct_sum_vertices += elems[i_elem].vertex(i_vert).pos;
+    }
+    // refine the mesh again and count the number of Cartesian and deformed elements to make sure the recreated mesh behaves the same way
+    mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] > 2;});
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      if (elems[i_elem].get_is_deformed()) ++correct_n_def_after;
+      else                                 ++correct_n_car_after;
+    }
+  }
+  { // read the above mesh from the file and check that it's the same
+    std::vector<hexed::Flow_bc*> extr_bcs;
+    for (int i = 0; i < 4; ++i) extr_bcs.push_back(new hexed::Copy);
+    hexed::Accessible_mesh mesh("io_test", extr_bcs, new hexed::Hypersphere(hexed::Mat<2>{.9, 0.2}, 0.1), new hexed::Nonpenetration);
+    REQUIRE(mesh.root_size() == Catch::Approx(0.8));
+    REQUIRE(mesh.cartesian().elements().size() == 6);
+    REQUIRE(mesh.deformed().elements().size() == 5);
+    auto& elems = mesh.elements();
+    int rl1 = 0;
+    int rl2 = 0;
+    int n_tree = 0;
+    hexed::Mat<3> sum_vertices = hexed::Mat<3>::Zero();
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      rl1 += elems[i_elem].refinement_level() == 1;
+      rl2 += elems[i_elem].refinement_level() == 2;
+      if (elems[i_elem].tree) ++n_tree;
+      for (int i_vert = 0; i_vert < 4; ++i_vert) sum_vertices += elems[i_elem].vertex(i_vert).pos;
+    }
+    REQUIRE(rl1 == 2);
+    REQUIRE(rl2 == 9);
+    REQUIRE(n_tree == 9);
+    REQUIRE(sum_vertices(0) == Catch::Approx(correct_sum_vertices(0)));
+    REQUIRE(sum_vertices(1) == Catch::Approx(correct_sum_vertices(1)));
+    mesh.valid().assert_valid();
+    // refine the mesh and check that it's the same as refining the original mesh
+    mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] > 2;});
+    int n_car_after = 0;
+    int n_def_after = 0;
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      if (elems[i_elem].get_is_deformed()) ++n_def_after;
+      else                                 ++n_car_after;
+    }
+    mesh.valid().assert_valid();
+    REQUIRE(n_car_after == correct_n_car_after);
+    REQUIRE(n_def_after == correct_n_def_after);
+  }
+}

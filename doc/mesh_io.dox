@@ -1,0 +1,288 @@
+/*! \page mesh_io Mesh I/O
+
+Hexed has a few functions for input and output of mesh files.
+This is useful both for saving the simulation state to be restarted later,
+and for interacting with other meshers and/or solvers.
+Because, to my knowledge, there is no existing file format capable of representing all the information in a Hexed mesh,
+including hanging nodes, octree hierarchy, and face warping,
+it primarily uses its own custom file format, described below.
+If you wish to use Hexed as a mesher for your own solver, or to use the Hexed solver with a custom mesh,
+your best bet is probably to write a parser for the native format.
+Hexed also has limited support for exporting meshes in the native formats for other solvers (see \ref mesh_export "below"),
+but such export formats lose information.
+Currently, importing files from other formats is not supported.
+
+\section mesh_format Native file format
+The native file format for Hexed meshes is based on [HDF5](https://en.wikipedia.org/wiki/Hierarchical_Data_Format#HDF5).
+One could argue that it doesn't even deserve to be called a file format---a Hexed mesh file is an ordinary HDF5 file
+that you can interact with via the [HDF5 library](https://www.hdfgroup.org/solutions/hdf5/) or any of the other HDF tools,
+but with a specific structure.
+Before launching into the details of the file format itself, we should explain conceptually how Hexed represents its mesh.
+
+\subsection mesh_repr Mesh representation
+\subsubsection Elements
+A Hexed mesh contains a collection of elements, each of which is either a line segment, a quadrilateral, or a hexahedron.
+The shape of each element is defined by a parametric mapping \f$ \vec{x}(\vec{\xi}) \f$,
+where \f$ \vec{\xi} \f$ is the vector of _reference coordinates_ in the _reference element_ (which is always the unit interval, square, or cube)
+and \f$ \vec{x} \f$ is the vector of _physical coordinates_ in the _physical element_ (the actual element with it's real size and shape).
+In Hexed, reference coordinates go from 0 to 1, not -1 to 1 as they do in some formulations. I.e. \f$ \xi_i \in [0, 1]\ :\ \forall i \f$.
+For an example, see the plot below.
+The mapping \f$ \vec{x}(\vec{\xi}) \f$ is always a polynomial.
+\image html ref_coords.svg "Element if reference space with isocontours of physical coordinates."
+\image html phys_coords.svg "Element if physical space with isocontours of reference coordinates."
+
+In a Hexed mesh, many of the elements are perfect squares/cubes.
+That is, \f$ \vec{x}(\vec{\xi}) = a \vec{\xi} + \vec{b} \f$ for scalar constant \f$ a \f$ and vector constant \f$ b \f$.
+Such elements are referred to as _Cartesian_ elements.
+Any elements that do not fit this description are called _deformed_.
+Hexed makes this distinction in order to exploit time and memory-saving simplifications of the numerical scheme for Cartesian elements.
+In many of the deformed elements, \f$ \vec{x} \f$ is a degree 1 (a.k.a. [multilinear](https://en.wikipedia.org/wiki/Multilinear_polynomial)) polynomial that can be obtained by
+[multilinear interpolation](https://en.wikipedia.org/wiki/Bilinear_interpolation) of the vertex coordinates.
+(Some people might be tempted to call this a "linear" polynomial, but it is technically not linear.)
+However, elements that are extruded to the surface geometry will have \f$ \vec{x} \f$ of full degree \f$p\f$ in order to better fit the surface by warping their faces.
+As described in our most recent publications, face warping is represented by a polynomial on each face which essentially gives the deviation of the warped face from the unwarped face.
+
+The following two sections explain the calculation of the coordinate transformation in more detail.
+As is often the case for computational science, the procedure is more neatly represented in code than in equations.
+So, some Python examples are included to demonstrate the process in 3D.
+Of course, you can also look at the real implementations in C++,
+but it is more complex due to the low-level language constructs, the dimensionality-independent formulation, and the context of how it fits into larger algorithms.
+I hope the Python snippets make it a bit more clear what the actual calculations are.
+
+\subsubsection vertex_def Vertex deformation
+In Hexed, all field data, including the physical coordinates \f$ \vec{x} \f$, is represented by a degree \f$ p \f$ polynomial in each element in a nodal basis.
+To define the physical coordinates, or any other field, means to compute their value at the element's quadrature points,
+which are chosen to be the tensor product Gauss-Legendre nodes mapped to [0, 1] (in reference space).
+Quadrature points are also arranged in a row-major array format ("z"-index changes the fastest).
+(Technically, because the physical coordinates at the quadrature points aren't directly used by the computational kernel,
+they aren't permanently stored, but they are still computed temporarily.)
+As mentioned above, for an element without face warping, the physical coordinates defined by degree 1 interpolation between the coordinates of the vertices.
+The vertices of each element are ordered in a row-major, array-based manner (the last coordinate changes the fastest).
+For example, the vertices of the unit square are {(0, 0), (0, 1), (1, 0), (1, 1)}
+and the vertices of the unit cube are {(0, 0, 0), (0, 0, 1), (0, 1, 0), (0, 1, 1), (1, 0, 0), (1, 0, 1), (1, 1, 0), (1, 1, 1)}.
+To further clarify, the following Python code snippet illustrates an example of computing quadrature point coordinates for a 3D element without face warping.
+For the actual implementation of this calculation in C++, see `hexed::Deformed_element::position` in [src/Deformed_element.cpp](https://github.com/ARTLab-GT/hexed/blob/main/src/Deformed_element.cpp).
+\snippet script/coords_example.py unwarped coordinates
+
+\subsubsection face_warping Face warping
+The face warping is represented as described in our 2024 SciTech meshing paper, with two exceptions:
+
+1. The warping function is stored at Gauss-Legendre points instead of Gauss-Lobatto.
+   They are still originally computed on Gauss-Lobatto points to ensure continuity between elements, but they are then mapped to Gauss-Legendre points,
+   for consistency with the field polynomials.
+2. Warping functions can be applied to any face, not just the +x face.
+   In fact, for simplicity, warping values are stored for _all_ faces of all deformed elements, even though they will only be nonzero for at most one face on each element,
+   or in the case that you have anisotropic layers, sometimes two opposite faces.
+
+These distinctions do not constitute inconsistencies with the paper.
+The underlying mathematics is completely equivalent, but the best way to represent that math in equations is not the same as the best way to represent it in code.
+In any case, the warping function is represented as an adjustment to the unwarped position of the face quadrature points.
+Note that the face quadrature points are an array of Gauss-Legendre points on the faces,
+which is __not__ a subset of the interior quadrature points---extrapolation is required to obtain values of field variables at face quadrature points.
+As in the publication, the face warping is a one-dimensional adjustment in the direction of increasing face-normal reference coordinate.
+Specifically, if \f$ \vec{x}_- \f$ and \f$ \vec{x}_+ \f$ are the positions of a matching pair of quadrature points on the negative and positive-facing x, y, or z faces,
+and \f$ w_- \f$ and \f$ w_+ \f$ are the warping functions at those faces, then the warping can be formulated as
+\f[ \vec{x}_{-, \text{warped}} = \vec{x}_- + w_-(\vec{x}_+ - \vec{x}_-) \f]
+\f[ \vec{x}_{+, \text{warped}} = \vec{x}_+ + w_+(\vec{x}_+ - \vec{x}_-) \f]
+and the corresponding adjustments to the interior quadrature points are computed by linear interpolation between the adjustments to the faces.
+The following Python snippet shows an example,
+whereas the real implementation is in `hexed::Deformed_element::position` in [src/Deformed_element.cpp](https://github.com/ARTLab-GT/hexed/blob/main/src/Deformed_element.cpp).
+\snippet script/coords_example.py warped coordinates
+
+\subsubsection Tree
+Tree refinement (bintree in 1D, quadtree in 2D, and [octree](https://en.wikipedia.org/wiki/Octree) in 3D) is a key concept in the Hexed meshing scheme.
+This is represented by a recursive data structure (implemented as `hexed::Tree`),
+where each `Tree` object optionally contains pointers to 2/4/8 other `Tree` objects representing its children and/or a pointer to another `Tree` object representing its parent.
+The child pointers are in the same row-major array order as the vertices of an element, according to their spatial position.
+A tree with no parent is called the _root_ (the tree structure as a whole naturally contains exactly one of these), and a tree with no children is called a _leaf_.
+The _refinement level_ of a `Tree` object is the number of generations it is from the root. I.e., the root will have refinement level 0, its children will have refinement level 1, etc..
+
+A `Tree` can also contain a pointer to a computational element, as described above.
+The Hexed meshing scheme involves starting with a Cartesian tree mesh, cutting holes in it, and extruding new elements,
+meaning that not all `Tree`s have elements, and not all elements have `Tree`s.
+`Tree` objects are implicitly associated with a box in physical space, which, if the `Tree` is associated with a Cartesian element, will concide with that element.
+If the `Tree` is associated with a deformed element, that element will usually be close to but not exactly coincide with the `Tree`.
+To fully define the mapping from `Tree` objects to physical space,
+\anchor origin
+the tree as a whole also has an _origin_, which is the physical coordinates of the minimum (least x, y, and z) vertex of the root,
+and also a _root size_, which is the edge length of the root.
+The _nominal position_ of a `Tree` is a vector of 1/2/3 nonnegative integers
+representing its displacement relative to the tree origin in units of that `Tree` object's edge length (not the root size).
+The association between elements and `Tree`s leads to elements also having a refinement level and nominal position,
+which is equal to that of their `Tree`, if they have one.
+Extruded elements without `Tree`s still have a refinement level and nominal position with is computed based on their relation to the element they were extruded from (their _extrusion parent_).
+E.g. if you extrude an element from the +x face of its extrusion parent, then the x-coordinate of its nominal position will be 1 greater than that of its extrusion parent.
+
+\subsubsection Connections
+Any mesh representation must have some way to indicate the connections between elements.
+Although you could, in principle, infer this information from the vertex list of the elments and the tree structure,
+Hexed indentifies the connections explicitly in both the `hexed::Accessible_mesh` object and the mesh file.
+If you are trying to read a Hexed mesh into your own solver, you may opt to simply ignore the connection data and just use the element/vertex data.
+Furthermore, Hexed does not allow completely arbitrary connections between elements---it only supports the manners of connections required to generate a tree mesh and to extrude elements from it.
+
+\anchor conformal_connection
+A __conformal__ connection (one between two elements of the same refinement level) is specified by 6 pieces of data:
+
+-# a pointer to the first element
+-# a pointer to the second element
+-# the index of the dimension of the face of the first element that is being connected (0 if it is an x-face, 1 for y, 2 for z)
+-# the dimension index of the second face
+-# the sign of the face of the first element (0 if the face faces in the negative x/y/z direction, 1 if it faces in the positive direction)
+-# the sign of the second face
+
+Either the dimensions or the signs of the two faces involved must be different.
+Connecting the +x face of one element to the +x face of another, for example, is not allowed.
+Of course, connecting two faces of the same element is also not allowed.
+This connection format doesn't explicitly specify the orientation of the faces that are connected (which vertex maps to which vertex).
+Instead, it is always assumed to be what you might call the "laziest possible orientation".
+Consider each element restored to its original Cartesian shape and location (coincident with its `Tree`, if it has one).
+Now, merge the vertices of the connected faces while only changing the coordinates corresponding to the dimensions of the connected faces.
+So, for example, if you are connecting a y-face to a z-face, then merge the vertices without changing the x-coordinate.
+In other words, connect the faces by only stretching the elements and not twisting them.
+Of course, in the actual mesh, the vertex coordinates are arbitrary---the principle of moving vertices without changing one of the coordinates
+is just a thought experiment to explain what I mean by the "laziest possible orientation".
+Note also that if you're just trying to read a Hexed mesh into your code,
+you don't necessarily have to worry about this orientation problem,
+since you can compare the vertices of the neighboring elements and see which are the same.
+However, if you're trying to create a mesh file for Hexed, you will need to make sure the orientation condition is satisfied.
+
+\anchor refined_connection
+A __refined__ connection connects a coarse element with some elements that are 1 level finer.
+You cannot create a refined connection with elements that differ by more than 1 refinement level.
+A refined connection can accept up to 1/2/4 elements in 1/2/3 dimensions.
+It can also accept half as many fine elements, causing the remaining ones to be "stretched" by a factor of 2 to cover the coarse face.
+This occurs when you have extruded elements of different refinement levels.
+As a result, in 2D sometimes you will have one coarse element connected to one finer element,
+but this is still considered to be a refined connection, not a conformal one, since the elements have different refinement levels.
+Thus, a refined connection is specified by 11 pieces of data:
+-# a pointer to the coarse element
+-# up to 4 pointers to the fine elements
+   - The fine elements are in row-major array order.
+     That is, elements that come first in the list of child pointers of their parent tree will come first in the fine element list of a refined connection.
+-# boolean flag indicating whether the fine elements are stretched along the lesser dimension, i.e. the first of the (up to two) indices of the array of fine elements.
+   - If this is true, there will be half as many fine elements as there otherwise would be.
+-# boolean flag indicating whether the fine elements are stretched along the greater dimension, i.e. the second of the two indices of the array of fine elements, and only applicable in 3D.
+   - If this is true, there will be half as many fine elements as there otherwise would be.
+-# dimension index of the face of the coarse element that is being connected
+-# dimension index of the fine faces
+   - This is only a single number. It is assumed that the _same_ face of all the fine elements is being connected.
+-# sign of the coarse face
+-# sign of the fine faces
+   - again, only one number for all the fine elements
+
+\anchor boundary_connection
+Finally, a __boundary__ connection specifies that a face of an element is on a domain boundary.
+This is specified by 4 pieces of data:
+-# pointer to the element whose face is being connected
+-# pointer to the boundary condition
+-# dimension index of the face
+-# sign of the face
+
+\subsection file_format File format
+A Hexed mesh file is an HDF5 file, with a name ending in `.mesh.h5` by convention.
+Note that some of the attributes in this file aren't conceptually part of the mesh,
+but they are numerical scheme parameters that affect how much memory the mesh object needs to allocate.
+Its contents are the following:
+
+__group__ `/`:
+- __attribute__ `n_dim` (1 \f$\times\f$ 1 `int`): number of dimension
+- __attribute__ `row_size` (1 \f$\times\f$ 1 `int`): polynomial degree + 1
+- __attribute__ `n_forcing` (1 \f$\times\f$ 1 `int`): number of artificial viscosity forcing functions (numerical scheme parameter). Usually 4.
+- __attribute__ `n_stage` (1 \f$\times\f$ 1 `int`): number of time integration stages (numerical scheme parameter). Usually 2.
+- __attribute__ `n_var` (1 \f$\times\f$ 1 `int`): number of physical flow variables (numerical scheme parameter). Usually `n_dim + 2`.
+- __attribute__ `root_size` (1 \f$\times\f$ 1 `double`): edge length of the root tree element
+- __attribute__ `version_major` (1 \f$\times\f$ 1 `int`): major version of the Hexed executable used to create this file (if applicable).
+- __attribute__ `version_minor` (1 \f$\times\f$ 1 `int`): minor version of the Hexed executable used to create this file (if applicable).
+- __attribute__ `version_patch` (1 \f$\times\f$ 1 `int`): patch version of the Hexed executable used to create this file (if applicable).
+- __group__ `vertices`:
+  - __dataset__ `position` (n \f$\times\f$ 3):
+    Coordinates of the vertices.
+    There are always 3 even for 1D and 2D meshes.
+    Trailing coordinates are set to 0.
+- __group__ `elements`:
+  - __dataset__ `is_deformed` (n \f$\times\f$ 1 `bool`)
+    One entry for each element.
+    If that element is perfectly Cartesian, the value is 0.
+    If it is deformed, the value is 1.
+  - __dataset__ `nominal_position` (n \f$\times\f$ `n_dim` `int`) one entry for each element giving its nominal position
+  - __dataset__ `refinement_level` (n \f$\times\f$ 1 `int`) one entry for each element giving its refinement level
+  - __dataset__ `vertices` (n \f$\times\f$ \f$ 2^\verb|n_dim| \f$ `int`)
+    One row for each element giving the indices (in the `/vertices/position` dataset) of its vertices in standard row-major array order.
+    For elements that are connected, these will actually point to the same vertices,
+    so if you are reading a mesh file you can use this to infer the connectivity information, if you choose (although hanging nodes might make that tricky).
+  - __group__ `face_warping`:
+    - __dataset__ `element_indices` (n \f$\times\f$ 1 `int`)
+      One entry for each _deformed_ element.
+      Each entry is the index of the element (in the datasets `is_deformed`, `nominal_position`, etc.) that this is warping referring to
+      (the `node_adjustments` dataset gives the actual warping values).
+      The entry of `is_deformed` at that index __must__ be 1.
+      There should not be multiple face warping entries referring to the same element.
+    - __dataset__ `node_adjustments` (n \f$\times\f$ \f$ \verb|n_dim*2*row_size|^{\verb|n_dim| - 1} \f$ `double`)
+      Face warping values for the element specified by the corresponding entry in the `element_indices` dataset.
+      These warping values behave as described in \ref face_warping, where the row-major `n_dim` \f$\times\f$ 2 \f$\times\f$ \f$ \verb|row_size|^{\verb|n_dim| - 1} \f$
+      array of values for each face (the face dimension index changes the slowest) has been flattened into a single array of values for all faces.
+- __group__ `connections`:
+  - __dataset__ `conformal` (n \f$\times\f$ 6 `int`):
+    Each row provides the data for 1 \ref conformal_connection "conformal connection".
+    In each row, entries 0 and 1 are the indices of the elements participating in the connection.
+    Entries 2 and 3 are the dimension of the faces involved, and entries 4 and 5 are the signs of the faces (0|1).
+    If either of the elements are marked as Cartesian (via `/elements/is_deformed`), then there are additional restrictions:
+    both face dimensions must be the same, the first face sign must be 1, and the second face sign must be 0.
+    If you're writing a mesh file and that is inconvenient, you can just mark all elements as deformed, although this can add a modest performance overhead in the solver.
+  - __dataset__ `refined` (n \f$\times\f$ 11 `int`):
+    Each row provides the data for 1 \ref refined_connection "refined connection".
+    In each row, entry 0 is the index of the coarse element.
+    Entries 1, 2, 3, 4 are the indices of the fine elements in the connection.
+    If there are less than 4 fine elements (because the mesh is 2D or there is stretching) then the unused entries are set to -1.
+    Entries 5 and 6 indicate whether the fine elements are stretched in the first and second (if applicable) face dimensions.
+    Entries 7 and 8 are the dimension indices of the pertinent faces of the coarse and fine elements, respectively.
+    Entries 9 and 10 are the signs of the faces of the coarse and fine elements (0|1).
+    As is the case for conformal connections, if any of the elements involved are Cartesian, the face dimensions must be the same.
+    However, the Cartesian restriction of face signs does not apply
+    (because the coarse element is required to come first, regardless of which face is being connected).
+  - __dataset__ `boundary` (n \f$\times\f$ 4 `int`):
+    Each row provides the data for 1 boundary connection.
+    Entry 0 is the index of the element being connected.
+    Entry 1 is the index of the boundary condition being applied.
+    Entry 3 is the face dimension index.
+    Entry 4 is the face sign (0|1).
+    The mesh file does not record what the boundary conditions are---those are specific to each simulation.
+    However, there is a convention for mapping boundary condition indices to input file parameters:
+    - Boundary conditions [0, `2*n_dim`) are the extremal \ref extremal_bc "boundary conditions".
+      In particular, `extremal_bcIJ` is index `2*I + J` (the order of mesh extremes is analogous to the order of element faces).
+    - Boundary condition `2*n_dim`, if it exists, is the \ref surface_bc.
+- __group__ `tree`:
+  - __dataset__ `origin` (1 \f$\times\f$ `n_dim` `double`): \ref origin of the tree
+  - __dataset__ `children` (n \f$\times\f$ \f$ 2 + 2^\verb|n_dim| \f$ `int`):
+    Represents the actual topology of the tree via the child lists, plus a little extra data they gets tacked on.
+    Each row represents one `hexed::Tree` object.
+    Entry 0 in the row is the index if the computational element (i.e. a row in the `/elements` datasets) associated with this tree, if there is one.
+    If the tree does not have an element, then entry 0 is set to -1.
+    Entry 1 is the \ref hexed::Tree::get_status "flood fill status" of the tree (-1 &rArr; unprocessed | 0 &rArr; deleted | 1 &rArr; in domain).
+    The remaining entries are the indices of the children of the tree, if they exist, and are otherwise set to -1.
+    So, if a tree is a leaf, all entries after 1 will be -1.
+    If, for example, entry 2 were equal to 946, that would mean that you can find information about the first child of this tree on row 946 of the same dataset.
+    Note that there is no information about parents,
+    since a single recursive traversal through the `children` dataset is sufficient to fully reconstruct the tree structure including parent relations.
+
+For the implementation of reading and writing a mesh file, see `hexed::Accessible_mesh::read_file` and `hexed::Accessible_mesh::write`
+in [src/Accessible_mesh.cpp](https://github.com/ARTLab-GT/hexed/blob/main/src/Accessible_mesh.cpp).
+
+\section mesh_export Export formats
+So far, Hexed has limited support for exporting the mesh into other formats, which it can write but not read.
+The challenge is finding formats that support hanging nodes, which are critical to the Hexed meshing scheme.
+Implementing an algorithm to remove the hanging nodes (only for exporting) may be of interest in the future, but that is a nontrivial task.
+
+Currently, the only export format currently supported is [OpenFoam](https://www.openfoam.com/)'s
+[PolyMesh](https://www.openfoam.com/documentation/user-guide/4-mesh-generation-and-conversion/4.1-mesh-description).
+Technically, the hanging nodes are implemented using polyhedral elements with more than 6 faces.
+At this time, only 3D is supported.
+OpenFOAM is an inherently 3D solver and 2D meshes have to be extruded to create a 1 cell thick slab,
+a capability that I have not yet implemented.
+
+I have been considering adding support for ANSYS Fluent [case files](https://www.afs.enea.it/project/neptunius/docs/fluent/html/ug/node1461.htm),
+which I believe support genuine hanging nodes.
+If this would be useful to you, or you know of another format that you believe would work,
+feel free to discuss it with \me so that I can factor it into future development plans.
+
+*/

@@ -5,7 +5,7 @@ This section lists variables that directly affect the behavior of the solver.
 Some of them are preset to default values with the intent that you should override them,
 and some are __not__ defined and __must__ be defined by you.
 
-\subsection important_imputs Important Input Parameters
+\subsection important_inputs Important Input Parameters
 Setting these parameters appropriately is critical to get the right answer,
 and you should generally think about them every time you run a simulation.
 
@@ -280,6 +280,12 @@ __default:__ 10000 \n
 Visualization files will be written every `vis_freq` iterations.
 
 <hr>
+\subsubsection write_freq
+__type:__ integer \n
+__default:__ 10000 \n
+Mesh and state files will be written every `vis_freq` iterations.
+
+<hr>
 \subsubsection print_freq
 __type:__ integer \n
 __default:__ 100 \n
@@ -461,6 +467,16 @@ This feature introduces very little performance overhead in and of itself, but i
 introducing significant overhead over pure inviscid problems.
 
 <hr>
+\subsubsection input_data
+__type:__ string \n
+__default:__ `{auto}` \n
+Name of mesh and state files for \ref read_mesh and \ref read_state, _including the directory_, but not including the `.mesh.h5`/`.state.h5` suffix.
+If `{auto}`, it will be initialized to `working_dir + latest`,
+which is appropriate if you want to restart a previous simulation in the same working directory from the last available save point.
+Note that if you want to restart from mesh and state files with different names (questionable, since the state must be read with an exactly matching mesh),
+you can just change the value of this variable between calling \ref read_mesh and \ref read_state (or just rename your files).
+
+<hr>
 
 \subsection esoteric_inputs Esoteric Input Parameters
 You will probably never need to worry about these parameters.
@@ -605,36 +621,43 @@ The following variables are used to execute actions.
 Some are Heisenberg variables which, when evaluated, cause the solver to perform certain tasks,
 while others are simply HIL macros.
 Most of the time you shouldn't need to know about most of these variables.
-The only ones you need to use in every simulation are `init` and `run.
-The remaining ones are either called by those two are are only necessary for specific situations,
+For an overview of what variables you actually need to run a typical simulation, see \ref running.
+The remaining ones are used internally by other macros and/or are only necessary for specific situations,
 but all are made available to you to help you deal with edge cases that the default behavior does not cover.
 See example cases for standard best practices.
 
 \subsection command_list List of Command Variables
 
 <hr>
-\subsubsection init
+\subsubsection start
 __type:__ string (macro) \n
-Generates mesh and initializes solver.
+Performs basic initialization that has to happen before you can do anything with the solver
+(but after you've defined your parameters).
 Behavior is roughly the following:
 -# creates working directory if it does not already exist
 -# copies the inpute file to the working directory for the user's future reference
--# sets an automatically-determined variables
+-# initializes automatically-determined parameters
 -# calls \ref create_solver
+
+At this point, the mesh technically exists but contains only one element and no geometry.
+
+\subsubsection mesh
+Generates the initial mesh (although you can continue to modify it).
 -# calls \ref init_refinement
 -# calls \ref add_geom
 -# calls \ref refine as many times as appropriate
 -# calls \ref split_layers as many times as appropriate
--# calls \ref init_state
--# visualizes solution
 
 <hr>
 \subsubsection run
 __type:__ string (macro) \n
-Executes solution (requires \ref init to have been called).
+Executes solution (requires \ref start, \ref mesh "meshing", and \ref init_state "state initialization" to have been performed).
 Behavior is roughly the following:
+-# writes mesh and state files
+-# visualizes the solution
 -# creates \ref runtime_cmd "runtime_cmd.hil" if it does not already exist.
 -# calls \ref iterate as many times as appropriate
+-# writes mesh and state files
 -# visualizes solution
 
 <hr>
@@ -645,7 +668,8 @@ Behavior is roughly the following:
 -# calls \ref update
 -# computes residuals
 -# prints history variables
--# visualizes solution
+-# may writes mesh and state files, depending on \ref write_freq
+-# may write visualization files, depending on \ref vis_freq
 -# executes any commands in \ref runtime_cmd "runtime_cmd.hil" and empties the file
 
 The user can modify the behavior of the iteration loop by adding additional \ref hil "HIL" code to the beginning or the end of this macro.
@@ -737,7 +761,7 @@ Calls \ref compute_forces and prints the results in a pretty way.
 __type:__ string (macro) \n
 Creates a real-time, interactive plot of the convergence history.
 Specifically, it starts a background process which creates a `hexed_utils.History_plot` instance in a Python interpreter.
-Usually, this macro should be executed before \ref init and \ref run.
+Usually, this macro should be executed before the \ref start, \ref mesh, \ref init_state, \ref run sequence.
 
 <hr>
 \subsubsection update
@@ -801,6 +825,47 @@ __type:__ string (macro) \n
 Configures settings to be good for aerothermodynamics.
 Assumes $\ref set_shock has already been called.
 Automaticall calls $\ref set_ramping.
+
+<hr>
+\subsubsection read_mesh
+__type:__ Heisenberg int \n
+Reads the mesh from a \ref file_format "Hexed mesh file" (which you can create using \ref write_mesh).
+This can be used in place of \ref mesh, but you will still have to call \ref init_state or \ref read_state to initialize the flow state.
+The file name of the mesh file given by \ref input_data with `.mesh.h5` appended.
+Evaluates to 0.
+
+<hr>
+\subsubsection read_state
+__type:__ Heisenberg int \n
+Reads the flow state from a file created with the \ref write_state command.
+The file name is given by \ref input_data with `.state.h5` appended.
+The state file __must__ have been created for the exact same mesh,
+meaning that if the state file was not created during the same simulation you're currently running,
+you need to first use \ref read_mesh to get the mesh.
+Two meshes that look the same might not actually be the same for a variety of reasons.
+For example, if elements were refined in a different order, then you cannot use the same state files,
+even if the mesh is geometrically identical.
+So, just play it safe and read the mesh first.
+This command can be used instead of \ref init_state.
+`read_mesh` and `read_state` together can be used to restart a previous simulation from where it left off.
+Evaluates to 0.
+
+<hr>
+\subsubsection write_mesh
+__type:__ Heisenberg int \n
+Writes the mesh to a file in the \ref file_format "Hexed mesh format",
+which can then be used again in a future simulation using \ref read_mesh, or, in theory, imported into another program.
+The file name will be `iterXXXXXXXXXX.mesh.h5` in the working directory, where the `X`s are replaced with the current iteration number.
+Also creates a symlink `latest.mesh.h5` pointing to this file for convenience.
+Evaluates to 0.
+
+<hr>
+\subsubsection write_state
+__type:__ Heisenberg int \n
+Writes the flow state to a file which can then be used in a future simulation using \ref read_state.
+The file name will be `iterXXXXXXXXXX.state.h5` in the working directory, where the `X`s are replaced with the current iteration number.
+Also creates a symlink `latest.state.h5` pointing to this file for convenience.
+Evaluates to 0.
 
 <hr>
 

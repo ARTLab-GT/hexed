@@ -15,5 +15,5 @@ TAGFILES = @CMAKE_SOURCE_DIR@/doc/occt_short.tag=https://dev.opencascade.org/doc
            @CMAKE_SOURCE_DIR@/doc/Eigen.doxytags=https://eigen.tuxfamily.org/dox
 EXAMPLE_PATH = @CMAKE_SOURCE_DIR@
 HTML_EXTRA_STYLESHEET = @CMAKE_SOURCE_DIR@/doc/style.css
-ALIASES += today="@DATE@" proj_version=" version @CMAKE_PROJECT_VERSION@, commit `@COMMIT@`"
+ALIASES += today="@DATE@" proj_version=" version @CMAKE_PROJECT_VERSION@, commit `@COMMIT@`" me="\ref Contact \"me\""
 IMAGE_PATH = html

@@ -1,3 +1,8 @@
+{
+This case is a test intended to be small enough to run it with valgrind.
+The results don't tell you anything particularly meaningful
+}
+
 n_dim = 2
 altitude = 0.
 speed = 100.
@@ -14,5 +19,7 @@ surface_refine = {return = is_extruded}
 surface_max_iters = 1
 n_smooth = 1
 
-$init
+$start
+$mesh
+init_state
 $run

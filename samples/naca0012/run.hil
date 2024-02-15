@@ -31,6 +31,8 @@ monitor_vars = {lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
 
 {run simulation}
-$init
+$start
+$mesh
+init_state
 $run
 $print_force

@@ -8,4 +8,11 @@ freestream_speed = 0.
 geom0 = {crmhl-2dcut.igs}
 max_ref_level = 14
 $set_geometry_refinement
-$init
+diffusive_admissibility = true
+done = {normalized_residual < 1e-4}
+
+$start
+$mesh
+write_mesh
+init_state
+visualize

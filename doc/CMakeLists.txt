@@ -3,6 +3,8 @@ configure_file(config.in doc_config)
 file(MAKE_DIRECTORY html)
 file(COPY header.png DESTINATION html)
 file(COPY header_background.png DESTINATION html)
+file(COPY ref_coords.svg DESTINATION html)
+file(COPY phys_coords.svg DESTINATION html)
 add_custom_command(
     OUTPUT doxygen_output.txt
     COMMAND python3 ${CMAKE_SOURCE_DIR}/script/vis_benchmark.py ${CMAKE_SOURCE_DIR}/benchmark.txt False

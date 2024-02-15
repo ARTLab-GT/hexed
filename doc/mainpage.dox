@@ -82,11 +82,10 @@ note = {submitted for publication},
 ~~~
 
 \subsection Contact
-\anchor me
 This code is maintained by Micaiah Smith-Pierce.
 I am a PhD student of Professor Stephen Ruffin at the Aerothermodynamics Research and Technology Laboratory (ARTLab),
 of the Georgia Tech School of Aerospace Engineering.
-If you have any questions or feedback, you can reach me at micaiah@gatech.edu or on [Github](https://github.gatech.edu/mcsp3).
+If you have any questions or feedback, you can reach me at micaiah@gatech.edu or on [GitHub](https://github.com/micaiah-sp).
 
 _Generated on \today for Hexed \proj_version._
 
@@ -101,6 +100,7 @@ serve as reference material on the API once you already know what you're doing.
 - \subpage parameters
 - \subpage boundary_conditions
 - \subpage error_types
+- \subpage mesh_io
 - \subpage conventions
 - \subpage geom_fitting
 - \subpage contributing

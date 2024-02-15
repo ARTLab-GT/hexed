@@ -120,6 +120,9 @@ add_custom_target(
 add_library(hexed SHARED)
 
 # add external libraries
+find_package(HDF5 REQUIRED)
+target_link_libraries(hexed PRIVATE hdf5_cpp)
+
 if (use_tecplot)
     target_include_directories(hexed PRIVATE ${TECPLOT_DIR}/include)
     target_link_directories(hexed PRIVATE ${TECPLOT_DIR}/bin)

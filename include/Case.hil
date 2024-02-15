@@ -1,6 +1,6 @@
 {utilities}
 version = version_major + {.} + version_minor + {.} + version_patch
-license = {This software (Hexed) is currently not available under any license. Posession or usage outside of the Georgia Tech Research Corporation (including ARTLab) is not authorized.}
+license = newline + read(root_dir + {LICENSE.txt})
 heat_rat = 1.4
 momentum_expr = {momentum0 = momentum0; momentum1 = momentum1; momentum2 = momentum2;}
 density_expr = {density = density;}
@@ -164,7 +164,9 @@ art_visc_width = -1.
 fix_therm_admis = false
 diffusive_admissibility = false
 working_dir = {hexed_out/}
+input_data = {auto}
 vis_freq = 10000
+write_freq = 10000
 iter_width = 10
 print_freq = 100
 refine_if = {false}
@@ -222,6 +224,8 @@ do = {
 $loop
 
 {overrideable macros}
+write_init = {write_mesh}
+write_final = {write_mesh; write_state}
 vis_init = {visualize}
 vis_final = {visualize}
 print_init = {println header}
@@ -233,6 +237,18 @@ print_final = {
     println performance_report
 }
 done = {println {Error: you forgot to a set stop condition} & throw}
+
+write_iter = {
+    case0 = {}
+    case1 = {
+        print {writing mesh/state data...}
+        write_mesh
+        write_state
+        println {done}
+    }
+    $$({case} + (iteration%write_freq == 0))
+}
+
 vis_iter = {
     case0 = {}
     case1 = {
@@ -261,19 +277,22 @@ iterate = {
     }
     $$({case} + (iteration == 1))
     $print_iter
+    $write_iter
     $vis_iter
     except = {println exception}
     $(read(working_dir + {runtime_cmd.hil}))
     shell({echo > } + working_dir + {runtime_cmd.hil})
 }
 
-init = {
+start = {
     case0 = {}
     case1 = {working_dir = working_dir + {/}}
     $$({case} + (working_dir#(#working_dir - 1) != {/}))
     shell({if [ ! -d } + working_dir + { ]; then mkdir } + working_dir + {; fi})
-    case1 = {shell({cp } + input_file + { } + working_dir)}
-    $$({case} + (#input_file != 0))
+    case1 = {shell({cp } + input_script + { } + working_dir)}
+    $$({case} + (#input_script != 0))
+    case1 = {input_data = working_dir + {latest}}
+    $$({case} + (input_data == {auto}))
     case1 = {
         case1 = {surface_bc = {nonpenetration}}
         case0 = {surface_bc = {no_slip}}
@@ -292,13 +311,18 @@ init = {
     }
     $$({case} + (flood_fill_start0 == huge))
     create_solver
+    normalized_residual = 1.
+}
+
+mesh = {
+    println {meshing...}
     init_refinement
     add_geom
     i_refinement = 0
     keep_refining = true
     while = {keep_refining & i_refinement < max_refinement_iters}
     do = {
-        print({geometry-based refinement sweep } + i_refinement + {... })
+        print({    geometry-based refinement sweep } + i_refinement + {... })
         keep_refining = keep_refining & refine
         i_refinement = i_refinement + 1
         println {done}
@@ -308,19 +332,18 @@ init = {
     while = {i_split < init_layer_splits}
     do = {split_layers; i_split = i_split + 1}
     $loop
-    init_state
-    normalized_residual = 1.
-    println({initialization complete with } + n_elements + { elements})
-    println {}
-    $vis_init
+    println({meshing complete with } + n_elements + { elements} + newline)
 }
 
 run = {
+    $write_init
+    $vis_init
     $print_init
     shell({echo > } + working_dir + {runtime_cmd.hil})
     while = {!($done)}
     do = {$iterate}
     $loop
     $print_final
+    $write_final
     $vis_final
 }

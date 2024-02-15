@@ -138,6 +138,13 @@ std::vector<Tree*> Tree::find_neighbors(Eigen::VectorXi direction)
   return neighbs;
 }
 
+int Tree::count()
+{
+  int total = 1;
+  for (auto& child : children_storage) total += child->count();
+  return total;
+}
+
 int Tree::get_status()
 {
   return status;

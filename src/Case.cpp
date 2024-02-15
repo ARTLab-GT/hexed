@@ -73,13 +73,77 @@ Flow_bc* Case::_make_bc(std::string name)
   return nullptr; // will never happen. just to shut up GCC warning
 }
 
-Case::Case(std::string input_file)
+std::string Case::_iteration_suffix()
 {
-  _inter.variables->assign("input_file", input_file);
+  return format_str(100, "iter%.*i", _vari("iter_width").value(), _vari("iteration").value());
+}
+
+void force_symlink(const std::filesystem::path& target, const std::filesystem::path& link)
+{
+  if (std::filesystem::exists(link)) std::filesystem::remove(link);
+  std::filesystem::create_symlink(target, link);
+}
+
+std::vector<Flow_bc*> Case::_make_extremal_bcs()
+{
+  std::vector<Flow_bc*> bcs;
+  for (int i_dim = 0; i_dim < _vari("n_dim").value(); ++i_dim) {
+    for (int sign = 0; sign < 2; ++sign) {
+      bcs.push_back(_make_bc(_vars(format_str(50, "extremal_bc%i%i", i_dim, sign)).value()));
+    }
+  }
+  return bcs;
+}
+
+Surface_geom* Case::_make_geom()
+{
+  int nd = _vari("n_dim").value();
+  std::vector<Surface_geom*> geoms;
+  for (int i_geom = 0;; ++i_geom) {
+    auto geom = _vars("geom" + std::to_string(i_geom));
+    if (!geom) break;
+    unsigned dot = geom->rfind('.');
+    HEXED_ASSERT(dot < geom->size(), "file name must contain extension to infer format");
+    HEXED_ASSERT(std::filesystem::exists(geom.value()), format_str(1000, "geometry file `%s` not found", geom->c_str()));
+    std::string case_sensitive(geom->begin() + dot + 1, geom->end());
+    std::string ext = case_sensitive;
+    for (char& c : ext) c = tolower(c);
+    if (ext == "csv") {
+      HEXED_ASSERT(nd == 2, "3D geometry in CSV format is not supported");
+      auto data = read_csv(*geom);
+      HEXED_ASSERT(data.cols() >= nd, "CSV geometry file must have at least n_dim columns");
+      geoms.emplace_back(new Simplex_geom<2>(segments(data.transpose())));
+    #if HEXED_USE_OCCT
+    } else if (ext == "igs" || ext == "iges" || ext == "stp" || ext == "step") {
+      auto shape = Occt::read(*geom);
+      if (nd == 2) {
+        geoms.emplace_back(new Simplex_geom<2>(Occt::segments(shape, _vari("geom_n_segments").value())));
+      } else if (nd == 3) {
+        auto ptr = new Simplex_geom<3>(Occt::triangles(shape, _vard("max_angle").value(), _vard("max_deflection").value()));
+        #if HEXED_USE_TECPLOT
+        ptr->visualize(format_str(1000, "%sgeom%i_triangulation", _vars("working_dir").value().c_str(), i_geom));
+        #endif
+        geoms.emplace_back(ptr);
+      }
+    } else if (ext == "stl") {
+      HEXED_ASSERT(nd == 3, "STL format is only supported for 3D");
+      geoms.emplace_back(new Simplex_geom<3>(Occt::triangles(Occt::read_stl(geom.value()))));
+    #endif
+    } else {
+      HEXED_ASSERT(false, format_str(1000, "file extension `%s` not recognized", case_sensitive.c_str()));
+    }
+  }
+  return geoms.empty() ? nullptr : new Compound_geom(geoms);
+}
+
+Case::Case(std::string input_script)
+{
+  _inter.variables->assign("input_script", input_script);
   _inter.variables->assign("version_major", config::version_major);
   _inter.variables->assign("version_minor", config::version_minor);
   _inter.variables->assign("version_patch", config::version_patch);
   _inter.variables->assign<std::string>("commit", config::commit);
+  _inter.variables->assign<std::string>("root_dir", config::root_dir);
 
   // create custom Heisenberg variables
   _inter.variables->create("create_solver", new Namespace::Heisenberg<int>([this]() {
@@ -153,12 +217,9 @@ Case::Case(std::string input_file)
     }
     // create solver
     Mat<dyn, dyn> mesh_extremes(*n_dim, 2);
-    std::vector<Flow_bc*> bcs;
     for (int i_dim = 0; i_dim < *n_dim; ++i_dim) {
       for (int sign = 0; sign < 2; ++sign) {
-        std::string index = format_str(50, "%i%i", i_dim, sign);
-        mesh_extremes(i_dim, sign) = _vard("mesh_extreme" + index).value();
-        bcs.push_back(_make_bc(_vars("extremal_bc" + index).value()));
+        mesh_extremes(i_dim, sign) = _vard(format_str(50, "mesh_extreme%i%i", i_dim, sign)).value();
       }
     }
     HEXED_ASSERT((mesh_extremes(all, 1) - mesh_extremes(all, 0)).minCoeff() > 0, "all mesh dimensions must be positive!");
@@ -177,7 +238,7 @@ Case::Case(std::string input_file)
       } else HEXED_ASSERT(false, format_str(200, "invalid transport model specification for %s", name));
     }
     _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, true, transport_models[0], transport_models[1], _inter.variables, printer));
-    _solver().mesh().add_tree(bcs, mesh_extremes(all, 0));
+    _solver().mesh().add_tree(_make_extremal_bcs(), mesh_extremes(all, 0));
     _solver().set_fix_admissibility(_vari("fix_therm_admis").value());
     // create history monitors
     _monitor_expr.reset(new Struct_expr(_vars("monitor_vars").value()));
@@ -196,45 +257,10 @@ Case::Case(std::string input_file)
   }));
 
   _inter.variables->create<int>("add_geom", new Namespace::Heisenberg<int>([this]() {
-    int nd = _vari("n_dim").value();
-    std::vector<Surface_geom*> geoms;
-    for (int i_geom = 0;; ++i_geom) {
-      auto geom = _vars("geom" + std::to_string(i_geom));
-      if (!geom) break;
-      unsigned dot = geom->rfind('.');
-      HEXED_ASSERT(dot < geom->size(), "file name must contain extension to infer format");
-      HEXED_ASSERT(std::filesystem::exists(geom.value()), format_str(1000, "geometry file `%s` not found", geom->c_str()));
-      std::string case_sensitive(geom->begin() + dot + 1, geom->end());
-      std::string ext = case_sensitive;
-      for (char& c : ext) c = tolower(c);
-      if (ext == "csv") {
-        HEXED_ASSERT(nd == 2, "3D geometry in CSV format is not supported");
-        auto data = read_csv(*geom);
-        HEXED_ASSERT(data.cols() >= nd, "CSV geometry file must have at least n_dim columns");
-        geoms.emplace_back(new Simplex_geom<2>(segments(data.transpose())));
-      #if HEXED_USE_OCCT
-      } else if (ext == "igs" || ext == "iges" || ext == "stp" || ext == "step") {
-        auto shape = Occt::read(*geom);
-        if (nd == 2) {
-          geoms.emplace_back(new Simplex_geom<2>(Occt::segments(shape, _vari("geom_n_segments").value())));
-        } else if (nd == 3) {
-          auto ptr = new Simplex_geom<3>(Occt::triangles(shape, _vard("max_angle").value(), _vard("max_deflection").value()));
-          #if HEXED_USE_TECPLOT
-          ptr->visualize(format_str(1000, "%sgeom%i_triangulation", _vars("working_dir").value().c_str(), i_geom));
-          #endif
-          geoms.emplace_back(ptr);
-        }
-      } else if (ext == "stl") {
-        HEXED_ASSERT(nd == 3, "STL format is only supported for 3D");
-        geoms.emplace_back(new Simplex_geom<3>(Occt::triangles(Occt::read_stl(geom.value()))));
-      #endif
-      } else {
-        HEXED_ASSERT(false, format_str(1000, "file extension `%s` not recognized", case_sensitive.c_str()));
-      }
-    }
-    if (!geoms.empty()) {
+    Surface_geom* geom = _make_geom();
+    if (geom) {
       _has_geom = true;
-      _solver().mesh().set_surface(new Compound_geom(geoms), _make_bc(_vars("surface_bc").value()), _get_vector("flood_fill_start", nd));
+      _solver().mesh().set_surface(geom, _make_bc(_vars("surface_bc").value()), _get_vector("flood_fill_start", _vari("n_dim").value()));
       for (int i_smooth = 0; i_smooth < _vari("n_smooth"); ++i_smooth) _solver().mesh().relax(0.5);
       _solver().calc_jacobian();
     }
@@ -287,9 +313,35 @@ Case::Case(std::string input_file)
     return 0;
   }));
 
+  _inter.variables->create<int>("read_mesh", new Namespace::Heisenberg<int>([this]() {
+    Surface_geom* geom = _make_geom();
+    _solver().read_mesh(_vars("input_data").value(), _make_extremal_bcs(), geom, geom ? _make_bc(_vars("surface_bc").value()) : nullptr);
+    return 0;
+  }));
+  _inter.variables->create<int>("read_state", new Namespace::Heisenberg<int>([this]() {
+    _solver().read_state(_vars("input_data").value());
+    return 0;
+  }));
+  _inter.variables->create<int>("write_mesh", new Namespace::Heisenberg<int>([this]() {
+    std::string file_name = _vars("working_dir").value() + _iteration_suffix();
+    _solver().mesh().write(file_name);
+    force_symlink(_iteration_suffix() + ".mesh.h5", _vars("working_dir").value() + "latest.mesh.h5");
+    return 0;
+  }));
+  _inter.variables->create<int>("write_state", new Namespace::Heisenberg<int>([this]() {
+    std::string file_name = _vars("working_dir").value() + _iteration_suffix();
+    _solver().write_state(file_name);
+    force_symlink(_iteration_suffix() + ".state.h5", _vars("working_dir").value() + "latest.state.h5");
+    return 0;
+  }));
+  _inter.variables->create<int>("export_polymesh", new Namespace::Heisenberg<int>([this]() {
+    _solver().mesh().export_polymesh(_vars("working_dir").value());
+    return 0;
+  }));
+
   _inter.variables->create<int>("visualize", new Namespace::Heisenberg<int>([this]() {
     std::string wd = _vars("working_dir").value();
-    std::string suffix = format_str(100, "_iter%.*i", _vari("iter_width").value(), _vari("iteration").value());
+    std::string suffix = "_" + _iteration_suffix();
     int n_sample = _vari("vis_n_sample").value();
     for (std::string v : {"surface", "field"}) if (_vari("vis_" + v).value()) {
       for (std::string format : {"xdmf", "tecplot"}) if (_vari("vis_" + format).value()) {
@@ -423,7 +475,7 @@ Case::Case(std::string input_file)
   // load HIL code for the Case _interface
   _inter.exec(format_str(1000, "$read {%s/include/Case.hil}", config::root_dir));
   // execute input file
-  _inter.exec(format_str(1000, "$read {%s}", input_file.c_str()));
+  _inter.exec(format_str(1000, "$read {%s}", input_script.c_str()));
 }
 
 }

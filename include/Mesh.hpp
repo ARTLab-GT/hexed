@@ -218,6 +218,13 @@ class Mesh
   };
   //!\}
 
+  //! \name I/O
+  //!\{
+  //! \brief write this mesh to a file to be reused in another simulation
+  virtual void write(std::string file_name) = 0;
+  //! \brief write the mesh in the OpenFOAM PolyMesh format
+  virtual void export_polymesh(std::string dir_name) = 0;
+  //!\}
   protected:
   virtual void reset_verts() = 0;
   virtual void restore_verts() = 0;

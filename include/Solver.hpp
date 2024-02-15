@@ -31,7 +31,7 @@ namespace hexed
 class Solver
 {
   Storage_params params;
-  Accessible_mesh acc_mesh;
+  std::unique_ptr<Accessible_mesh> acc_mesh;
   Gauss_legendre basis;
   Iteration_status status;
   Stopwatch_tree stopwatch;
@@ -44,8 +44,8 @@ class Solver
   std::shared_ptr<Namespace> _namespace;
   std::shared_ptr<Printer> _printer;
   bool _implicit;
-  Kernel_mesh _kernel_mesh;
 
+  Kernel_mesh _kernel_mesh();
   void share_vertex_data(std::function<double&(Element&, int i_vertex)>, std::function<double(Mat<>)>);
   void share_vertex_data(std::function<double(Element&, int i_vertex)> get, std::function<double&(Element&, int i_vertex)> set, std::function<double(Mat<>)>);
   bool fix_admissibility(double stability_ratio);
@@ -121,15 +121,27 @@ class Solver
    * before any flow calculation can begin.
    */
   Mesh& mesh();
+  /*! \brief reads mesh from file
+   * \details Wipes old mesh and flow state.
+   * File must be in the native (HDF5-based) mesh format, which you can generate from a previous simulation with `Mesh::write`.
+   * `.mesh.h5` will be automatically appended to `file_name`.
+   * New mesh must match the `Storage_params` of the current one, but the root mesh size will be replaced with that of the new mesh.
+   * You still have to `initialize` (even if you already did before reading the new mesh),
+   * but you don't have to `calc_jacobian` unless you further modify the mesh.
+   */
+  void read_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs, Surface_geom* = nullptr, Flow_bc* surface_bc = nullptr);
+  //! \brief Reads flow state from file.
+  //! \details Essentially a substitute for `initialize`.
+  //! `.state.h5` will be appended to file name
+  void read_state(std::string file_name);
   Storage_params storage_params();
   //! warps the boundary elements such that the element faces coincide with the boundary at their quadrature points.
   void snap_faces();
-  /*!
-   * compute the Jacobian of all elements based on the current position of the vertices
-   * and value of any face warping.
-   * Mesh topology must be valid (no duplicate or missing connections) before calling this function.
+  /*! \brief compute the Jacobian of all elements based on the current position of the vertices and value of any face warping.
+   * \details Mesh topology must be valid (no duplicate or missing connections) before calling this function.
+   * \param snap_faces if `true`, this function will go ahead and perform face snapping for you
    */
-  void calc_jacobian();
+  void calc_jacobian(bool snap_faces = true);
   //! set the flow state
   void initialize(const Spacetime_func&);
   void set_art_visc_off(); //!< turns off artificial viscosity
@@ -219,6 +231,9 @@ class Solver
   //! \brief visualize the local time step constraints imposed by convection and diffusion, respectively
   //! \warning This function overwrites the reference state, which will invalidate any residual evaluation until `update` is called again.
   void vis_lts_constraints(std::string format, std::string name, int n_sample = 10);
+  //! \brief Writes flow state to file.
+  //! \details `.state.h5` will be appended to `file_name`.
+  void write_state(std::string file_name);
   //!\}
 };
 

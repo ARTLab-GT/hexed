@@ -146,6 +146,7 @@ Attempting to assign a value to a variable of a different type will produce an e
 with the exception that an integer may be assigned to a float (it will be automatically converted and the variable will continue to be a float).
 However, HIL is technically dynamically typed since the type that a variable can depend on the path a program takes at runtime.
 
+\anchor heisenberg
 HIL comes with some builtin variables which are already defined at the start of your program,
 and special variables whose value influences the behavior of the solver (i.e. input parameters).
 There are also some variables, which I call _Heisenberg variables_ that produce side effects when you evaluate them.
@@ -286,14 +287,19 @@ $$({case} + (predicate != 0))
 Note the two `$` operators in the last statement: the first converts the string containing the variable name to the value of the variable,
 which is a string containing code,
 and the second executes the code in the string.
-For example, if `predicate` is `false`, then the first `$` converts `{case0}` to `case0`, which evaluates to `{println {predicate is false}}`.
-The second `$` converts `{println {predicate is false}}` to `println {predicate is false}` which is then executed as code.
-The above conditional is essentially equivalent to the following Python code:
+For example, if `predicate` is equal to 0, then the above example plays out as follows:
+-# `({case} + (predicate != 0))` evaluates to `{case0}`
+-# the first `$` converts `{case0}` to `case0`
+-# `case0` evaluates to `{println {predicate is false}}`.
+-# The second `$` converts `{println {predicate is false}}` to `println {predicate is false}`
+-# `println {predicate is false}` is then executed, resulting in `predicate is false` being printed to the console.
+
+The above example conditional is essentially equivalent to the following Python code:
 ~~~{.py}
 if predicate:
-    print("predicate is false")
-else:
     print("predicate is true")
+else:
+    print("predicate is false")
 ~~~
 
 \subsection Iteration
