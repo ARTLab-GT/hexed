@@ -53,16 +53,15 @@ If you use Hexed in any academic research, please cite one or both of the follow
 
 Smith-Pierce, M., Ruffin, S. M., and Dement, D. C.,
 "Automated unstructured quad/hex meshing for high-order discontinuous Galerkin CFD,"
-_AIAA SCITECH 2024 Forum_, 2024. Submitted for publication.
+_AIAA SCITECH 2024 Forum_. Submitted for publication.
 ~~~{.unparsed}
-@inproceedings{smith-pierce2024,
-author = {Micaiah Smith-Pierce and Stephen M. Ruffin and David C. Dement},
-title = {Automated unstructured quad/hex meshing for high-order discontinuous Galerkin CFD},
+@inproceedings{smith-pierce_mesh2024,
+author = {Micaiah Smith-Pierce and Stephen Ruffin and David Dement},
+title = {Automated Unstructured Quad/Hex Meshing for High-Order Discontinuous Galerkin CFD},
 booktitle = {AIAA SCITECH 2024 Forum},
-year = 2024,
 chapter = {},
 pages = {},
-note = {submitted for publication},
+doi = {10.2514/6.2024-0384},
 }
 ~~~
 
@@ -70,14 +69,13 @@ Smith-Pierce, M., Dement, D. C., and Ruffin, S. M.,
 "A high order discontinuous Galerkin Navier-Stokes solver with grid-convergent artificial viscosity",
 _AIAA SCITECH 2024 Forum_, 2024. Submitted for publication.
 ~~~{.unparsed}
-@inproceedings{smith-pierce2024,
-author = {Micaiah Smith-Pierce and David C. Dement and Stephen M. Ruffin},
-title = {A high order discontinuous Galerkin Navier-Stokes solver with grid-convergent artificial viscosity},
+@inproceedings{smith-pierce_solver2024,
+author = {Micaiah Smith-Pierce and David Dement and Stephen Ruffin},
+title = {A High Order Discontinuous Galerkin Navier-Stokes Solver with Grid-Convergent Artificial Viscosity},
 booktitle = {AIAA SCITECH 2024 Forum},
-year = 2024,
 chapter = {},
 pages = {},
-note = {submitted for publication},
+doi = {10.2514/6.2024-2176},
 }
 ~~~
 
