@@ -1,5 +1,5 @@
 input_script = {}
 println {Hexed interactive session: enter Hexed Interface Language (HIL) code at the prompt.
 Type `license` for license and copyright information or `$quit` to quit.
-For full usage instructions, visit https://github.gatech.edu/pages/ARTLab/hexed/hil.html.}
+For full usage instructions, visit https://artlab-gt.github.io/hexed/running.html .}
 $repl
