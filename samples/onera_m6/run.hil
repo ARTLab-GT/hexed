@@ -1,3 +1,4 @@
+{note: this case doesn't work yet... bugs suspected}
 n_dim = 3
 mesh_extreme00 = -20.
 mesh_extreme01 =  20.
@@ -25,6 +26,8 @@ max_safety = 0.001
 done = {normalized_residual < 1e-7}
 
 vis_n_sample = 6
-$init
+$start
+$mesh
+init_state
 $run
 $print_force

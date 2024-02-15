@@ -61,5 +61,7 @@ $set_shock
 $isothermal
 
 vis_n_sample = 2
-$init
+$start
+$mesh
+init_state
 $run

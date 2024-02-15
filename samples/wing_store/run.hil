@@ -15,6 +15,7 @@ max_ref_level = 11
 max_refinement_iters = 10
 $set_geometry_refinement
 n_smooth = 20
-vis_field = false
-working_dir = {hexed_out13}
-$init
+
+$start
+$mesh
+write_mesh

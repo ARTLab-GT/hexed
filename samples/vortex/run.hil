@@ -14,7 +14,9 @@ print_freq = 1000
 vis_freq = 10000
 local_time = false
 
-$init
+$start
+$mesh
+init_state
 $run
 integrand_field = {errsq = (density - $vortex_mass)^2}
 integrate_field
