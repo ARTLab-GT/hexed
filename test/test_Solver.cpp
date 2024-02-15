@@ -828,7 +828,7 @@ TEST_CASE("normal continuity uncertainty")
 
 TEST_CASE("artificial viscosity convergence")
 {
-  //#if NDEBUG
+  #if NDEBUG
   const int len0 = 100;
   const int len1 = 2;
   hexed::Solver sol(2, hexed::config::max_row_size, 1./len0);
@@ -876,7 +876,7 @@ TEST_CASE("artificial viscosity convergence")
   REQUIRE(sol.iteration_status().adv_res < 1e-12);
   REQUIRE(sol.iteration_status().diff_res < 1e-12);
   CHECK(std::log(sol.bounds_field(hexed::Art_visc_coef())[0][1]/init_max)/std::log(2) > hexed::config::max_row_size - 2.);
-  //#endif
+  #endif
 }
 
 TEST_CASE("uncertainty")
