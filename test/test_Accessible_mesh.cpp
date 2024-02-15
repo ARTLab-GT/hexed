@@ -472,7 +472,7 @@ TEST_CASE("mesh I/O")
     for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Copy);
     mesh.add_tree(bcs, hexed::Mat<2>{0.1, 0.2});
     mesh.update();
-    mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] > 0;});
+    mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] != elem.nominal_position()[1];});
     mesh.set_surface(new hexed::Hypersphere(hexed::Mat<2>{.9, 0.2}, 0.1), new hexed::Nonpenetration);
     mesh.write("io_test");
     // compute the sum of the vertex coordinates of all elements (counting each vertex once for each element using it) to check vertex position

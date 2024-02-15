@@ -229,15 +229,17 @@ __group__ `/`:
     If either of the elements are marked as Cartesian (via `/elements/is_deformed`), then there are additional restrictions:
     both face dimensions must be the same, the first face sign must be 1, and the second face sign must be 0.
     If you're writing a mesh file and that is inconvenient, you can just mark all elements as deformed, although this can add a modest performance overhead in the solver.
-  - __dataset__ `refined` (n \f$\times\f$ 12 `int`):
+  - __dataset__ `refined` (n \f$\times\f$ 11 `int`):
     Each row provides the data for 1 \ref refined_connection "refined connection".
     In each row, entry 0 is the index of the coarse element.
     Entries 1, 2, 3, 4 are the indices of the fine elements in the connection.
     If there are less than 4 fine elements (because the mesh is 2D or there is stretching) then the unused entries are set to -1.
-    Entry 5 is deprecated and should always be 0.
-    Entries 6 and 7 indicate whether the fine elements are stretched in the first and second (if applicable) face dimensions.
-    Entries 8 and 9 are the dimension indices of the pertinent faces of the coarse and fine elements, respectively.
-    Entries 10 and 11 are the signs of the faces of the coarse and fine elements (0|1).
+    Entries 5 and 6 indicate whether the fine elements are stretched in the first and second (if applicable) face dimensions.
+    Entries 7 and 8 are the dimension indices of the pertinent faces of the coarse and fine elements, respectively.
+    Entries 9 and 10 are the signs of the faces of the coarse and fine elements (0|1).
+    As is the case for conformal connections, if any of the elements involved are Cartesian, the face dimensions must be the same.
+    However, the Cartesian restriction of face signs does not apply
+    (because the coarse element is required to come first, regardless of which face is being connected).
   - __dataset__ `boundary` (n \f$\times\f$ 4 `int`):
     Each row provides the data for 1 boundary connection.
     Entry 0 is the index of the element being connected.
