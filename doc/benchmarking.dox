@@ -15,9 +15,12 @@ Different series in the scatter plots indicate different machines on which the b
 \image html summary.svg
 
 \section breakdown Kernel performance breakdown
-The following figures offer a more detailed breakdown of the latest benchmark on the machine ae-artl-408091.
+The following figures offer a more detailed breakdown of the latest benchmark on the machine _ae-artl-408091_.
 When the components don't add up to 100%, that indicates there are some subtasks whose execution time is not measured.
-\image html naca0012.svg "inviscid NACA 0012 case"
-\image html flat_plate.svg "viscous flat plate case"
-\image html blottner_sphere.svg "partial Blottner sphere case"
+\subsection naca0012 inviscid NACA 0012 case
+\image html naca0012.svg
+\subsection flat_plate viscous flat plate case
+\image html flat_plate.svg
+\subsection blottner_sphere partial Blottner sphere case
+\image html blottner_sphere.svg
 */
