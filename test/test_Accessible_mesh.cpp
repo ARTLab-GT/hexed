@@ -536,8 +536,12 @@ TEST_CASE("masking")
   SECTION("initial mask")
   {
     auto masked = mesh.masked_mesh();
+    auto& elems = mesh.elements();
     REQUIRE(masked.n_dim == 2);
     REQUIRE(masked.row_size == 2);
+    int n_masked = 0;
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) n_masked += elems[i_elem].mask();
+    REQUIRE(n_masked == 10);
     REQUIRE(masked.elems.size() == 10);
     REQUIRE(masked.car_cons.size() == 16);
     REQUIRE(masked.def_cons.size() == 12);
@@ -547,6 +551,10 @@ TEST_CASE("masking")
   {
     mesh.set_mask([](hexed::Element& elem){return elem.vertex(2).pos[0] < .501;});
     auto masked = mesh.masked_mesh();
+    auto& elems = mesh.elements();
+    int n_masked = 0;
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) n_masked += elems[i_elem].mask();
+    REQUIRE(n_masked == 5);
     REQUIRE(masked.elems.size() == 5);
     REQUIRE(masked.car_cons.size() == 10);
     REQUIRE(masked.def_cons.size() == 6);

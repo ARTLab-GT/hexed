@@ -42,6 +42,27 @@ class Accessible_mesh : public Mesh
   std::vector<std::vector<Vertex::Non_transferable_ptr>> boundary_verts; // a vector of the vertices that are on each boundary
   std::vector<Vertex::Non_transferable_ptr> smooth_verts; // a vector of the vertices that need to be smoothed in this sweep
 
+  // masked sequences
+  template <typename view_t, typename storage_t>
+  struct Masked
+  {
+    std::vector<storage_t*> ptrs;
+    Vector_view<view_t&, storage_t*, ptr_convert<view_t&, storage_t*>> view;
+    Slice<view_t&> slice;
+    Masked() : view(ptrs), slice(view) {}
+    template <typename T, typename U>
+    void populate(T& base_seq, U criterion)
+    {
+      ptrs.resize(base_seq.size());
+      int i_ptr = 0;
+      for (int i = 0; i < int(base_seq.size()); ++i) {
+        if (criterion(base_seq[i])) ptrs[i_ptr++] = &base_seq[i];
+      }
+      slice = Slice<view_t&>(view, 0, i_ptr);
+    }
+  };
+  Masked<Kernel_element, Element> _masked_elems;
+
   Element_container& container(bool is_deformed);
   int add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin);
   Element& add_elem(bool is_deformed, Tree&);
@@ -131,6 +152,7 @@ class Accessible_mesh : public Mesh
    * \details The mask can be specified with `Accessible_mesh::set_mask`.
    * The masked elements are returned as a `Kernel_mesh` which includes all the elements where the mask is `true`
    * and all the connections and refined faces where the mask is `true` for at least one of the participating elements.
+   * \note performs a somewhat nontrivial computation, so keep a copy of the `Kernel_mesh` if you want to use it multiple times
    */
   Kernel_mesh masked_mesh();
 

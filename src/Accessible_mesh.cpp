@@ -1372,10 +1372,15 @@ void Accessible_mesh::relax(double factor)
 
 void Accessible_mesh::set_mask(std::function<bool(Element&)> mask)
 {
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    elems[i_elem]._mask = mask(elems[i_elem]);
+  }
 }
 
 Kernel_mesh Accessible_mesh::masked_mesh()
 {
+  _masked_elems.populate(elems, [](Element& elem){return elem.mask();});
   return {
     params.n_dim,
     params.row_size,
@@ -1384,7 +1389,7 @@ Kernel_mesh Accessible_mesh::masked_mesh()
     deformed ().kernel_connections(),
     cartesian().kernel_elements(),
     deformed ().kernel_elements(),
-    kernel_elements(),
+    _masked_elems.slice,
     refined_faces(),
   };
 }
