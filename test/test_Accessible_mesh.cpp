@@ -556,6 +556,8 @@ TEST_CASE("masking")
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) n_masked += elems[i_elem].mask();
     REQUIRE(n_masked == 5);
     REQUIRE(masked.elems.size() == 5);
+    REQUIRE(masked.car_elems.size() == 5);
+    REQUIRE(masked.def_elems.size() == 0);
     REQUIRE(masked.car_cons.size() == 10);
     REQUIRE(masked.def_cons.size() == 6);
     REQUIRE(masked.ref_faces.size() == 2);
