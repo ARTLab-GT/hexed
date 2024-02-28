@@ -120,7 +120,7 @@ binary | 1                | `^`           | integer, float | raises left operand
 ^      | 3                | `-`           | integer, float | subtraction
 ^      | ^                | `+`           | any            | For numeric-numeric, addition. For strings, concatenation.
 ^      | 4                | `==`          | any            | Evaluates to integer `1` if operands are equal, otherwise `0`.
-^      | ^                | `!=`          | any            | Evaluates to integer `1` if operands are inequal, otherwise `0` (including if both operands are NaN).
+^      | ^                | `!=`          | any            | Evaluates to integer `1` if operands are unequal, otherwise `0` (including if both operands are NaN).
 ^      | ^                | `>=`          | integer, float | `1` if left operand is greater than or equal to right, else `0`
 ^      | ^                | `<=`          | integer, float | `1` if left operand is less than or equal to right, else `0`
 ^      | ^                | `>`           | integer, float | `1` if left operand is greater than right, else `0`
@@ -140,7 +140,7 @@ __Notes:__
 \section variables Variables and Assignment
 The `=` operator can be used to assign a value to a variable.
 Variable names may contain letters (case-sensitive), digits, and underscores, but cannot start with a digit.
-Variables are created and their type determened when they are assigned a value; variables need not be declared.
+Variables are created and their type determined when they are assigned a value; variables need not be declared.
 Once a variable is created, its value can be referenced in subsequent expressions and its type cannot be changed.
 Attempting to assign a value to a variable of a different type will produce an exception,
 with the exception that an integer may be assigned to a float (it will be automatically converted and the variable will continue to be a float).
@@ -153,7 +153,7 @@ There are also some variables, which I call _Heisenberg variables_ that produce 
 You can't assign to these variables, and exactly what happens when you evaluate them is specially defined for each one.
 They are called "Heisenberg" because the fact that observing their value changes the state of the program
 is reminiscent of the collapse of the wave function in quantum mechanics.
-See \ref builtins and \ref parameters for a list of such variablels.
+See \ref builtins and \ref parameters for a list of such variables.
 
 Technically, an assignment statement is an expression which evaluates to the value of the right-hand-side.
 Also, a sequence of statements (assignment or otherwise) evaluates to the value of the last one.
@@ -168,7 +168,7 @@ However, these technicalities are unlikely to be relevant to using Hexed.
 In HIL, transfer of control flow (e.g. conditionals, iteration, subroutines, recursion) is accomplished by a macro substitution mechanic.
 HIL is an interpreted language, meaning that the text of the program is executed as it is parsed.
 If the character `$` is encountered while parsing (not inside a string literal),
-it must be immediately follwed by a string value (literal, variable, or expression).
+it must be immediately followed by a string value (literal, variable, or expression).
 This string is then prepended to the remaining text of the program.
 For example, suppose you have set `my_string = {1 + 1}` at some point in the program.
 Then `x = $my_string` is equivalent to `x = 1 + 1`.
@@ -249,14 +249,14 @@ Evaluates to a string containing those characters.
 __type:__ Heisenberg string \n
 Terminates the HIL interpreter and evaluates to an empty string.
 This is different from \ref quit in that it can be invoked from anywhere (not just the REPL)
-and even if it is invoked from the REPL, statements after the \ref repl invokation will not be executed
+and even if it is invoked from the REPL, statements after the \ref repl invocation will not be executed
 (because it terminates the whole interpreter).
 
 <hr>
 \subsubsection throw
 __type:__ Heisenberg string \n
 Throws an exception in the C++ implementation of HIL.
-Potentially useful if the C++ code contains subsequent statements after the invokation of the HIL interpreter which you don't want to execute.
+Potentially useful if the C++ code contains subsequent statements after the invocation of the HIL interpreter which you don't want to execute.
 
 <hr>
 
