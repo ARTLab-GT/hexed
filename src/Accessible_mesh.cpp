@@ -1370,6 +1370,25 @@ void Accessible_mesh::relax(double factor)
   snap_vertices();
 }
 
+void Accessible_mesh::set_mask(std::function<bool(Element&)> mask)
+{
+}
+
+Kernel_mesh Accessible_mesh::masked_mesh()
+{
+  return {
+    params.n_dim,
+    params.row_size,
+    Gauss_legendre{params.row_size},
+    cartesian().kernel_connections(),
+    deformed ().kernel_connections(),
+    cartesian().kernel_elements(),
+    deformed ().kernel_elements(),
+    kernel_elements(),
+    refined_faces(),
+  };
+}
+
 void Accessible_mesh::reset_verts()
 {
   int nv = params.n_vertices();

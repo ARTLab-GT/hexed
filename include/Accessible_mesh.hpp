@@ -4,6 +4,7 @@
 #include "Mesh.hpp"
 #include "Mesh_by_type.hpp"
 #include "Tree.hpp"
+#include "Kernel_mesh.hpp"
 
 namespace hexed
 {
@@ -116,6 +117,22 @@ class Accessible_mesh : public Mesh
   void relax(double factor = 0.9) override;
   inline int surface_bc_sn() override {return surf_bc_sn;}
   inline Surface_geom& surface_geometry() {return *surf_geom;}
+
+  /*! \brief Defines a masking function that allows kernel operations to be performed on a subset of the elements.
+   * \details Supply a function that returns `true` for elements that should be operated on.
+   * The set of masked elements can then be retrieved with `masked_mesh()`.
+   * `elements()`, `element_connections()`, etc. will not be affected.
+   * The masking persists until `set_mask` is called again.
+   * When the mesh is constructed, the mask is initialized to `true` for every element,
+   * as if you had done `set_mask()`.
+   */
+  void set_mask(std::function<bool(Element&)> = [](Element&){return true;});
+  /*! \brief Obtains the elements for which the mask is `true`.
+   * \details The mask can be specified with `Accessible_mesh::set_mask`.
+   * The masked elements are returned as a `Kernel_mesh` which includes all the elements where the mask is `true`
+   * and all the connections and refined faces where the mask is `true` for at least one of the participating elements.
+   */
+  Kernel_mesh masked_mesh();
 
   //! \returns a view of all Bounday_condition objects owned by this mesh
   Vector_view<Boundary_condition&, Boundary_condition> boundary_conditions() {return bound_conds;}

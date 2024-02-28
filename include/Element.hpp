@@ -17,6 +17,7 @@ namespace hexed
 {
 
 class Tree;
+class Accessible_mesh;
 
 /*! \brief Stores data associated with one mesh element.
  * \details Container only -- does not have implementations of or information about the basis and algorithms.
@@ -42,6 +43,8 @@ class Element : public Kernel_element
   Eigen::VectorXd data;
   Eigen::VectorXd vertex_data;
   std::array<double*, 6> faces; //!< layout: [2*i_dim + face_sign][i_var][i_qpoint]
+  bool _mask;
+  friend Accessible_mesh; // necessary for `Accessible_mesh::set_mask`... need a better way to do this
 
   public:
   std::array<int, 6> face_record; //!< for algorithms to book-keep information related to faces
@@ -86,7 +89,10 @@ class Element : public Kernel_element
   double* bulk_av_coef(); //!< layout: [i_qpoint]
   double* laplacian_av_coef(); //!< layout: [i_qpoint]
   double* art_visc_forcing(); //!< layout: [i_forcing][i_qpoint]
-  virtual double* node_adjustments() {return nullptr;} //!< overriden by `Deformed_element`
+  virtual double* node_adjustments() {return nullptr;} //!< \brief overriden by `Deformed_element`
+  //! \brief returns whether the element is included in the masked mesh.
+  //! \details value can be set with `Accessible_mesh::set_mask`
+  bool mask() const {return _mask;}
 
   /*! \brief Compute the Jacobian matrix.
    * \details I.e., derivative of `i_dim`th
@@ -95,19 +101,19 @@ class Element : public Kernel_element
    * For convenience, not performance.
    * For high-performance, use `double* Deformed_element::jacobian()`
    */
-  virtual double jacobian(int i_dim, int j_dim, int i_qpoint); //! identity matrix
-  virtual inline double jacobian_determinant(int i_qpoint) {return 1.;} //!< determinant of `jacobian`
+  virtual double jacobian(int i_dim, int j_dim, int i_qpoint);
+  virtual inline double jacobian_determinant(int i_qpoint) {return 1.;} //!< \brief determinant of `jacobian`
 
   inline Vertex& vertex(int i_vertex) { return *vertices[i_vertex]; }
   template <int i_dim> double& vertex_position(int i_vertex) {return vertices[i_vertex]->pos[i_dim];}
-  //! functions to communicate with nodal neighbors
-  void push_shareable_value(std::function<double(Element&, int i_vertex)>); // writes shareable value to vertices so that shared value can be determined
+  //! \brief functions to communicate with nodal neighbors
+  void push_shareable_value(std::function<double(Element&, int i_vertex)>); //!< \brief writes shareable value to vertices so that shared value can be determined
   void fetch_shareable_value(std::function<double&(Element&, int i_vertex)> access_fun, std::function<double(Mat<>)> reduction = Vertex::vector_max); // set `this`'s copy of shareable value to the shared values at the vertices
-  //! Time step scale at the vertices. TSS in the interior is set by interpolating this.
+  //! \brief Time step scale at the vertices. TSS in the interior is set by interpolating this.
   double& vertex_time_step_scale(int i_vertex) override;
   double& vertex_elwise_av(int i_vertex);
   double& vertex_fix_admis_coef(int i_vertex);
-  void set_needs_smooth(bool); //!< sets the `Vertex::Transferable_ptr::needs_smooth` of the vertices
+  void set_needs_smooth(bool); //!< \brief sets the `Vertex::Transferable_ptr::needs_smooth` of the vertices
   void set_face(int i_face, double* data);
   bool is_connected(int i_face);
 

@@ -524,3 +524,32 @@ TEST_CASE("mesh I/O")
     REQUIRE(n_def_after == correct_n_def_after);
   }
 }
+
+TEST_CASE("masking")
+{
+  hexed::Accessible_mesh mesh({2, 4, 2, 2}, 1.);
+  std::vector<hexed::Flow_bc*> bcs;
+  for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Copy);
+  mesh.add_tree(bcs);
+  mesh.update();
+  mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] == elem.nominal_position()[1];});
+  SECTION("initial mask")
+  {
+    auto masked = mesh.masked_mesh();
+    REQUIRE(masked.n_dim == 2);
+    REQUIRE(masked.row_size == 2);
+    REQUIRE(masked.elems.size() == 10);
+    REQUIRE(masked.car_cons.size() == 16);
+    REQUIRE(masked.def_cons.size() == 12);
+    REQUIRE(masked.ref_faces.size() == 4);
+  }
+  SECTION("custom mask")
+  {
+    mesh.set_mask([](hexed::Element& elem){return elem.vertex(2).pos[0] < .501;});
+    auto masked = mesh.masked_mesh();
+    REQUIRE(masked.elems.size() == 5);
+    REQUIRE(masked.car_cons.size() == 10);
+    REQUIRE(masked.def_cons.size() == 6);
+    REQUIRE(masked.ref_faces.size() == 2);
+  }
+}
