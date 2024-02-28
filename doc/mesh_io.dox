@@ -100,13 +100,13 @@ The _refinement level_ of a `Tree` object is the number of generations it is fro
 A `Tree` can also contain a pointer to a computational element, as described above.
 The Hexed meshing scheme involves starting with a Cartesian tree mesh, cutting holes in it, and extruding new elements,
 meaning that not all `Tree`s have elements, and not all elements have `Tree`s.
-`Tree` objects are implicitly associated with a box in physical space, which, if the `Tree` is associated with a Cartesian element, will concide with that element.
+`Tree` objects are implicitly associated with a box in physical space, which, if the `Tree` is associated with a Cartesian element, will coincide with that element.
 If the `Tree` is associated with a deformed element, that element will usually be close to but not exactly coincide with the `Tree`.
 To fully define the mapping from `Tree` objects to physical space,
 \anchor origin
 the tree as a whole also has an _origin_, which is the physical coordinates of the minimum (least x, y, and z) vertex of the root,
 and also a _root size_, which is the edge length of the root.
-The _nominal position_ of a `Tree` is a vector of 1/2/3 nonnegative integers
+The _nominal position_ of a `Tree` is a vector of 1/2/3 non-negative integers
 representing its displacement relative to the tree origin in units of that `Tree` object's edge length (not the root size).
 The association between elements and `Tree`s leads to elements also having a refinement level and nominal position,
 which is equal to that of their `Tree`, if they have one.
@@ -115,8 +115,8 @@ E.g. if you extrude an element from the +x face of its extrusion parent, then th
 
 \subsubsection Connections
 Any mesh representation must have some way to indicate the connections between elements.
-Although you could, in principle, infer this information from the vertex list of the elments and the tree structure,
-Hexed indentifies the connections explicitly in both the `hexed::Accessible_mesh` object and the mesh file.
+Although you could, in principle, infer this information from the vertex list of the elements and the tree structure,
+Hexed identifies the connections explicitly in both the `hexed::Accessible_mesh` object and the mesh file.
 If you are trying to read a Hexed mesh into your own solver, you may opt to simply ignore the connection data and just use the element/vertex data.
 Furthermore, Hexed does not allow completely arbitrary connections between elements---it only supports the manners of connections required to generate a tree mesh and to extrude elements from it.
 
@@ -273,7 +273,7 @@ So far, Hexed has limited support for exporting the mesh into other formats, whi
 The challenge is finding formats that support hanging nodes, which are critical to the Hexed meshing scheme.
 Implementing an algorithm to remove the hanging nodes (only for exporting) may be of interest in the future, but that is a nontrivial task.
 
-Currently, the only export format currently supported is [OpenFoam](https://www.openfoam.com/)'s
+Currently, the only export format currently supported is [OpenFOAM](https://www.openfoam.com/)'s
 [PolyMesh](https://www.openfoam.com/documentation/user-guide/4-mesh-generation-and-conversion/4.1-mesh-description).
 Technically, the hanging nodes are implemented using polyhedral elements with more than 6 faces.
 At this time, only 3D is supported.
