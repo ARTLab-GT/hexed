@@ -54,20 +54,20 @@ If you use Hexed in any academic research, please cite one or both of the follow
 Ref. \cite smith-pierce_mesh2024 :
 Smith-Pierce, M., Ruffin, S., and Dement, D.,
 "Automated Unstructured Quad/Hex Meshing for High-Order Discontinuous Galerkin CFD,"
-_AIAA SCITECH 2024 Forum_, 2024. https://doi.org/10.2514/6.2024-0384.
+_AIAA SCITECH 2024 Forum_, 2024. <https://doi.org/10.2514/6.2024-0384>.
 \snippet doc/references.bib mesh_citation
 
 Ref. \cite smith-pierce_solver2024 :
 Smith-Pierce, M., Dement, D., and Ruffin, S.,
 "A High Order Discontinuous Galerkin Navier-Stokes Solver with Grid-Convergent Artificial Viscosity,"
-_AIAA SCITECH 2024 Forum_, 2024. https://doi.org/10.2514/6.2024-2176.
+_AIAA SCITECH 2024 Forum_, 2024. <https://doi.org/10.2514/6.2024-2176>.
 \snippet doc/references.bib solver_citation
 
 \subsection Contact
 This code is maintained by Micaiah Smith-Pierce.
 I am a PhD student of Professor Stephen Ruffin at the Aerothermodynamics Research and Technology Laboratory (ARTLab),
 of the Georgia Tech School of Aerospace Engineering.
-If you have any questions or feedback, you can reach me at micaiah@gatech.edu or on [GitHub](https://github.com/micaiah-sp).
+If you have any questions or feedback, you can reach me at <micaiah@gatech.edu> or on [GitHub](https://github.com/micaiah-sp).
 
 _Generated on \today for Hexed \proj_version._
 

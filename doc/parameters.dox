@@ -81,13 +81,13 @@ Accepted values:
   Specifies that the wall is in thermal equalibrium according to a simple 1D heat equation.
   Specifically, sets the heat flux equal to the sum of the radiative cooling flux and the thermal conduction through the wall.
   The radiative cooling flux is determined by the [Stefan-Boltzmann Law](https://en.wikipedia.org/wiki/Stefan%E2%80%93Boltzmann_law)
-  law with the emissivity \f$ \sigma \f$ given by `emissivity`.
+  with the emissivity \f$ \sigma \f$ given by `emissivity`.
   The conductive flux is determined by assuming that the wall has a small but finite thickness and the temperature on the non-air side is known.
   Specifically, it is equal to \f$ kL(T_w - T_p) \f$ where \f$ k \f$ is the thermal conductivity of the wall material,
   \f$ L \f$ is the wall thickness, \f$ T_w \f$ is the current wall temperature, and \f$ T_p \f$ is the prescribed temperature.
   The product \f$ kL \f$ is equal to `conduction`
   and the prescribed temperature \f$ T_p \f$ is `temperature`.
-  You don't have to specify all 3 parameters -- they all default to 0.
+  You don't have to specify all 3 parameters---they all default to 0.
   You may specify `emissivity` __and/or__ you may specify the other parameters,
   but if you specify either `conduction` or `temperature` you must specify both.
   If your wall is highly conductive, you might need to reduce \ref heat_flux_coercion to maintain stability.
@@ -926,16 +926,16 @@ Equal to \ref print_freq times the number of \ref update evaluations.
 \subsubsection wall_time
 __type:__ float \n
 Wall clock time (seconds) elapsed since solver was created.
-Not to be confused with \ref flow_time -- if the distinction isn't clear, here is an example:
+Not to be confused with \ref flow_time ---if the distinction isn't clear, here is an example:
 if you start a simulation and then take a 5-minute break to make coffee,
-if your simulation is still running upon your return the wall time will be 5*60s = 300s.
+if your simulation is still running upon your return the wall time will be 5\*60s = 300s.
 
 <hr>
 \subsubsection flow_time
 __type:__ float \n
 Amount of time (seconds) elapsed in the physical flow since the simulation started.
 Only meaningful for global time stepping.
-Not to be confused with \ref wall_time -- if the distinction isn't clear, here is an example:
+Not to be confused with \ref wall_time ---if the distinction isn't clear, here is an example:
 if you have a shock propagating at 100 m/s and run your simulation with global time stepping
 until the flow time reaches 0.01 s, then the shock will have propaged a distance of 1 m.
 
