@@ -560,6 +560,6 @@ TEST_CASE("masking")
     REQUIRE(masked.def_elems.size() == 0);
     REQUIRE(masked.car_cons.size() == 10);
     REQUIRE(masked.def_cons.size() == 6);
-    REQUIRE(masked.ref_faces.size() == 2);
+    REQUIRE(masked.ref_faces.size() == 3);
   }
 }

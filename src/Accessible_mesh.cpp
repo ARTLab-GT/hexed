@@ -1376,6 +1376,20 @@ void Accessible_mesh::set_mask(std::function<bool(Element&)> mask)
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem]._mask = mask(elems[i_elem]);
   }
+  #define MASK_REF_CONS(mbt) \
+    for (int i_con = 0; i_con < mbt.refined_connections().size(); ++i_con) { \
+      auto& con = mbt.refined_connections()[i_con]; \
+      con.refined_face.coarse_mask = con.coarse_element().mask(); \
+      for (int i_fine = 0; i_fine < con.n_fine_elements(); ++i_fine) { \
+        con.refined_face.fine_masks[i_fine] = con.connection(i_fine).element(!con.order_reversed()).mask(); \
+      } \
+      for (int i_fine = con.n_fine_elements(); i_fine < 4; ++i_fine) con.refined_face.fine_masks[i_fine] = false; \
+    }
+  #pragma omp parallel for
+  MASK_REF_CONS(car)
+  #pragma omp parallel for
+  MASK_REF_CONS(def)
+  #undef MASK_REF_CONS
 }
 
 Kernel_mesh Accessible_mesh::masked_mesh()
@@ -1385,6 +1399,7 @@ Kernel_mesh Accessible_mesh::masked_mesh()
   _masked_def_elems.populate(def.elements(), [](Element& elem){return elem.mask();});
   _masked_car_cons.populate(car.kernel_connections(), [](Kernel_connection& con){return con.mask(0) || con.mask(1);});
   _masked_def_cons.populate(def.kernel_connections(), [](Kernel_connection& con){return con.mask(0) || con.mask(1);});
+  _masked_ref_faces.populate(ref_face_v, [](Refined_face& face){return face.coarse_mask || face.any_fine_mask();});
   return {
     params.n_dim,
     params.row_size,
@@ -1394,7 +1409,7 @@ Kernel_mesh Accessible_mesh::masked_mesh()
     _masked_car_elems.slice,
     _masked_def_elems.slice,
     _masked_elems.slice,
-    refined_faces(),
+    _masked_ref_faces.slice,
   };
 }
 

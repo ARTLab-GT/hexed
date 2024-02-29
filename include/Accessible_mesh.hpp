@@ -66,6 +66,7 @@ class Accessible_mesh : public Mesh
   Masked<Kernel_element, Element> _masked_def_elems;
   Masked<Kernel_connection, Kernel_connection> _masked_car_cons;
   Masked<Kernel_connection, Kernel_connection> _masked_def_cons;
+  Masked<Refined_face, Refined_face> _masked_ref_faces;
 
   Element_container& container(bool is_deformed);
   int add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin);
