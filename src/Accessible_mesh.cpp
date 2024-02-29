@@ -1381,14 +1381,16 @@ void Accessible_mesh::set_mask(std::function<bool(Element&)> mask)
 Kernel_mesh Accessible_mesh::masked_mesh()
 {
   _masked_elems.populate(elems, [](Element& elem){return elem.mask();});
-  _masked_car_elems.populate(cartesian().elements(), [](Element& elem){return elem.mask();});
-  _masked_def_elems.populate(deformed ().elements(), [](Element& elem){return elem.mask();});
+  _masked_car_elems.populate(car.elements(), [](Element& elem){return elem.mask();});
+  _masked_def_elems.populate(def.elements(), [](Element& elem){return elem.mask();});
+  _masked_car_cons.populate(car.kernel_connections(), [](Kernel_connection& con){return con.mask(0) || con.mask(1);});
+  _masked_def_cons.populate(def.kernel_connections(), [](Kernel_connection& con){return con.mask(0) || con.mask(1);});
   return {
     params.n_dim,
     params.row_size,
     Gauss_legendre{params.row_size},
-    cartesian().kernel_connections(),
-    deformed ().kernel_connections(),
+    _masked_car_cons.slice,
+    _masked_def_cons.slice,
     _masked_car_elems.slice,
     _masked_def_elems.slice,
     _masked_elems.slice,
