@@ -33,7 +33,7 @@ Please adhere to the following style conventions whenever possible.
 
 \subsection file_formatting File formatting
 - File names must not contain whitespace or other characters that have meaning in shell commands.
-- Prefer underscores (`_`) to hyphens (`-`) or camel case as word separaters in file names.
+- Prefer underscores (`_`) to hyphens (`-`) or camel case as word separators in file names.
 - Source files must not contain the tab character. C++ code should be indented with 2 spaces
   and Python code should be indented with 4 spaces.
 - There should be no trailing spaces at the ends of lines.
@@ -72,12 +72,14 @@ If an end user makes a mistake and obtains a segfault instead of an exception, I
 Some common things I would like to avoid in this code are:
 - Don't just say something vague like "something went wrong" "the operation could not be completed" or give a numeric error code
   that the user then has to look up to get any information.
-  I'm thinking of the error messages commonly encourtered in a certain operating system whose name ironically evokes transparency.
+  I'm thinking of the error messages commonly encountered in a [certain operating system](https://www.ioccc.org/1993/cmills.hint) whose name ironically evokes transparency.
   Error messages should be as specific as possible.
 - Don't presume to guess exactly why the problem occurred or give verbose suggestions about how to fix it.
   Exceptions generally occur because you _failed_ to anticipate what actually happened,
   so your speculations are probably a waste of space at best and actively misleading at worst.
   Just say what the exact, concrete problem was.
+  For example, if the code encounters a nonphysical state, don't say something like "The solver is unstable. Try reducing `max_safety` and verifying the boundary conditions are correct."
+  Instead, say something like "nonpositive density encountered in flux computation".
 
 Hexed provides the \ref HEXED_ASSERT macro to facilitate generating exceptions with detailed information about where the error occurred in the code.
 

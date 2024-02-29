@@ -41,7 +41,7 @@ The flow state vector (often simply referred to as `state`) consists of the
 conserved variables.
 It has components \[momentum, mass, total energy\]
 (a.k.a. [\f$ \rho \vec{v} \f$, \f$ \rho \f$, \f$ \rho e + \frac12 \rho v^2 \f$]). E.g., in 3D that is
-[momentum0 (\f$x\f$-direction), momentum1 (\f$y\f$-direction), momentum2 (\f$z\f$-direction), mass, total energy].
+[`momentum0` (\f$x\f$-direction), `momentum1` (\f$y\f$-direction), `momentum2` (\f$z\f$-direction), mass, total energy].
 
 This order is different from most codes, which use the order (mass, momentum, energy).
 The order for Hexed was chosen because it groups the vector and scalar quantities together
