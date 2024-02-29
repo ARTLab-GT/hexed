@@ -836,45 +836,53 @@ void Solver::update()
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
   auto& elems = acc_mesh->elements();
 
-  for (int i_flow = 0; i_flow < _namespace->lookup<int>("flow_iters").value(); ++i_flow)
-  {
-    // compute time step
-    double safety = _namespace->lookup<double>("max_safety").value();
-    double n_cheby = _namespace->lookup<double>("n_cheby_flow").value();
-    double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1);
-    // run chebyshev iterations
-    for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
+  auto step = [&]() {
+    auto km = acc_mesh->masked_mesh(basis);
+    for (int i_flow = 0; i_flow < _namespace->lookup<int>("flow_iters").value(); ++i_flow)
     {
-      double nominal_dt = std::min(max_dt(safety/max_cheby, safety), _namespace->lookup<double>("max_time_step").value());
-      double dt = nominal_dt*math::chebyshev_step(n_cheby, i_cheby);
-      // record reference state for residual calculation
-      bool fixed = false;
-      // compute inviscid update
-      for (int i = 0; i < 2; ++i) {
-        Kernel_options opts {
-          stopwatch.children.at("cartesian"),
-          stopwatch.children.at("deformed" ),
-          stopwatch.children.at("prolong/restrict"),
-          dt,
-          i,
-          false,
-          bool(_namespace->lookup<int>("use_filter").value()),
-        };
-        apply_state_bcs();
-        if (use_ldg() && !i) compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond);
-        else compute_euler(_kernel_mesh(), opts);
-        // note that function call must come first to ensure it is evaluated despite short-circuiting
-        fixed = fix_admissibility(_namespace->lookup<double>("fix_admis_max_safety").value()) || fixed;
-      }
-      if (fixed) break;
+      // compute time step
+      double safety = _namespace->lookup<double>("max_safety").value();
+      double n_cheby = _namespace->lookup<double>("n_cheby_flow").value();
+      double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1);
+      // run chebyshev iterations
+      for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
+      {
+        double nominal_dt = std::min(max_dt(safety/max_cheby, safety), _namespace->lookup<double>("max_time_step").value());
+        double dt = nominal_dt*math::chebyshev_step(n_cheby, i_cheby);
+        // record reference state for residual calculation
+        bool fixed = false;
+        // compute inviscid update
+        for (int i = 0; i < 2; ++i) {
+          Kernel_options opts {
+            stopwatch.children.at("cartesian"),
+            stopwatch.children.at("deformed" ),
+            stopwatch.children.at("prolong/restrict"),
+            dt,
+            i,
+            false,
+            bool(_namespace->lookup<int>("use_filter").value()),
+          };
+          apply_state_bcs();
+          if (use_ldg() && !i) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond);
+          else compute_euler(km, opts);
+          // note that function call must come first to ensure it is evaluated despite short-circuiting
+          fixed = fix_admissibility(_namespace->lookup<double>("fix_admis_max_safety").value()) || fixed;
+        }
+        if (fixed) break;
 
-      // update status for reporting
-      _namespace->assign<double>("time_step", dt);
-      _namespace->assign<double>("flow_time", _namespace->lookup<double>("flow_time").value() + dt);
-      status.time_step = dt;
-      status.flow_time += dt;
+        // update status for reporting
+        _namespace->assign<double>("time_step", dt);
+        _namespace->assign<double>("flow_time", _namespace->lookup<double>("flow_time").value() + dt);
+        status.time_step = dt;
+        status.flow_time += dt;
+      }
     }
-  }
+  };
+  acc_mesh->set_mask();
+  step();
+  acc_mesh->set_mask([](Element& elem){return !elem.tree;});
+  step();
+  acc_mesh->set_mask();
 
   _namespace->assign("iteration", _namespace->lookup<int>("iteration").value() + 1);
   _namespace->assign("wall_time", status.wall_time());

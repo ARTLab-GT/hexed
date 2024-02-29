@@ -2,6 +2,7 @@
 #include <hexed/config.hpp>
 #include <hexed/Accessible_mesh.hpp>
 #include <hexed/Simplex_geom.hpp>
+#include <hexed/Gauss_legendre.hpp>
 
 TEST_CASE("Accessible_mesh")
 {
@@ -528,6 +529,7 @@ TEST_CASE("mesh I/O")
 TEST_CASE("masking")
 {
   hexed::Accessible_mesh mesh({2, 4, 2, 2}, 1.);
+  hexed::Gauss_legendre basis(2);
   std::vector<hexed::Flow_bc*> bcs;
   for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Copy);
   mesh.add_tree(bcs);
@@ -535,7 +537,7 @@ TEST_CASE("masking")
   mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] == elem.nominal_position()[1];});
   SECTION("initial mask")
   {
-    auto masked = mesh.masked_mesh();
+    auto masked = mesh.masked_mesh(basis);
     auto& elems = mesh.elements();
     REQUIRE(masked.n_dim == 2);
     REQUIRE(masked.row_size == 2);
@@ -550,7 +552,7 @@ TEST_CASE("masking")
   SECTION("custom mask")
   {
     mesh.set_mask([](hexed::Element& elem){return elem.vertex(2).pos[0] < .501;});
-    auto masked = mesh.masked_mesh();
+    auto masked = mesh.masked_mesh(basis);
     auto& elems = mesh.elements();
     int n_masked = 0;
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) n_masked += elems[i_elem].mask();

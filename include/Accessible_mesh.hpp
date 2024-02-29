@@ -159,7 +159,7 @@ class Accessible_mesh : public Mesh
    * and all the connections and refined faces where the mask is `true` for at least one of the participating elements.
    * \note performs a somewhat nontrivial computation, so keep a copy of the `Kernel_mesh` if you want to use it multiple times
    */
-  Kernel_mesh masked_mesh();
+  Kernel_mesh masked_mesh(const Basis&);
 
   //! \returns a view of all Bounday_condition objects owned by this mesh
   Vector_view<Boundary_condition&, Boundary_condition> boundary_conditions() {return bound_conds;}

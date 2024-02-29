@@ -1392,7 +1392,7 @@ void Accessible_mesh::set_mask(std::function<bool(Element&)> mask)
   #undef MASK_REF_CONS
 }
 
-Kernel_mesh Accessible_mesh::masked_mesh()
+Kernel_mesh Accessible_mesh::masked_mesh(const Basis& basis)
 {
   _masked_elems.populate(elems, [](Element& elem){return elem.mask();});
   _masked_car_elems.populate(car.elements(), [](Element& elem){return elem.mask();});
@@ -1403,7 +1403,7 @@ Kernel_mesh Accessible_mesh::masked_mesh()
   return {
     params.n_dim,
     params.row_size,
-    Gauss_legendre{params.row_size},
+    basis,
     _masked_car_cons.slice,
     _masked_def_cons.slice,
     _masked_car_elems.slice,
