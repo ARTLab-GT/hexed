@@ -145,7 +145,7 @@ set_geometry_refinement = {
     unrefine_if = {ref_level > init_ref_level & !is_extruded}
 }
 
-plot_history = {shell {python3 -c "from hexed_utils import History_plot;History_plot()" &}}
+plot_history = {shell({python3 -c "from hexed_utils import History_plot;History_plot('} + working_dir + {')" &})}
 
 {scalar parameters}
 row_size = 6
@@ -225,7 +225,7 @@ $loop
 
 {overrideable macros}
 write_init = {write_mesh}
-write_final = {write_mesh; write_state}
+write_final = {write_mesh; write_state; write_status}
 vis_init = {visualize}
 vis_final = {visualize}
 print_init = {println header}
@@ -244,6 +244,7 @@ write_iter = {
         print {writing mesh/state data...}
         write_mesh
         write_state
+        write_status
         println {done}
     }
     $$({case} + (iteration%write_freq == 0))
@@ -265,17 +266,24 @@ print_iter = {
     $$({case} + (iteration != 1))
 }
 
+init_residual = {
+    compute_residuals
+    init_residual_momentum = residual_momentum
+    init_residual_density = residual_density
+    init_residual_energy = residual_energy
+}
+
+restart = {
+    print {reading restart data...}
+    read_mesh
+    read_state
+    $read(input_data + {.status.hil})
+    println {done}
+}
+
 iterate = {
     update
     {compute initial residual for normalization}
-    case0 = {}
-    case1 = {
-        compute_residuals
-        init_residual_momentum = residual_momentum
-        init_residual_density = residual_density
-        init_residual_energy = residual_energy
-    }
-    $$({case} + (iteration == 1))
     $print_iter
     $write_iter
     $vis_iter
@@ -340,6 +348,9 @@ run = {
     $vis_init
     $print_init
     shell({echo > } + working_dir + {runtime_cmd.hil})
+    case0 = {}
+    case1 = {$init_residual}
+    $$({case} + !iteration)
     while = {!($done)}
     do = {$iterate}
     $loop
