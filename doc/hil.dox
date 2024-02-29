@@ -107,7 +107,7 @@ unary  | 0                | `-`           | integer, float | inverts sign
 ^      | ^                | `ceil`        | float          | [ceiling function](https://mathworld.wolfram.com/CeilingFunction.html)
 ^      | ^                | `round`       | float          | rounds to nearest integer
 ^      | ^                | `abs`         | integer, float | absolute value
-^      | ^                | `read`        | string         | operand is a file path; returns the file contents as a string
+^      | ^                | `read`        | string         | \anchor read operand is a file path; returns the file contents as a string
 ^      | ^                | `print`       | string         | prints to stdout (without adding a newline) and evaluates to the empty string
 ^      | ^                | `println`     | string         | prints to stdout and then prints a newline (like the Python `print` function) and evaluates to the empty string
 ^      | ^                | `shell`       | string         | executes the operand in the system shell and returns the return code (integer)

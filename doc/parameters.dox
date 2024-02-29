@@ -30,7 +30,7 @@ and/or \ref monitor_vars "output variable history".
 \subsubsection local_time
 __type:__ integer \n
 __default:__ \ref true \n
-If \ref true, use local time stepping, otherwase use global.
+If \ref true, use local time stepping, otherwise use global.
 \note Not defined until \ref create_solver is evaluated.
 
 <hr>
@@ -63,7 +63,7 @@ __default:__ `{inviscid}` \n
 Specifies model to use for molecular transport coefficients (viscosity and thermal conductivity).
 Accepted values:
 - `{inviscid}`
-- `{sutherland}`: Uses sutherland's law for air (non-constant Prandtl number)
+- `{sutherland}`: Uses Sutherland's law for air (non-constant Prandtl number)
 
 <hr>
 \subsubsection thermal_bc
@@ -78,7 +78,7 @@ Accepted values:
 - `{internal_energy = x}`: Prescribes the internal energy at the wall to be `x`.
   For now, since you're stuck in the CPG world, this is equivalent to `{temperature = x*(heat_rat - 1)/specific_gas_air}`.
 - `{emissivity = x; conduction = y; temperature = z}`: \anchor thermal_equilibrium_bc
-  Specifies that the wall is in thermal equalibrium according to a simple 1D heat equation.
+  Specifies that the wall is in thermal equilibrium according to a simple 1D heat equation.
   Specifically, sets the heat flux equal to the sum of the radiative cooling flux and the thermal conduction through the wall.
   The radiative cooling flux is determined by the [Stefan-Boltzmann Law](https://en.wikipedia.org/wiki/Stefan%E2%80%93Boltzmann_law)
   with the emissivity \f$ \sigma \f$ given by `emissivity`.
@@ -115,7 +115,7 @@ Sideslip angle (radian, as specified in \ref units).
 \subsubsection art_visc_width
 __type:__ float \n
 __default:__ `-1.` \n
-If set to a positive number, turns on aritificial viscosity with a smoothness-based coefficient
+If set to a positive number, turns on artificial viscosity with a smoothness-based coefficient
 and sets the smoothness width to `art_visc_width`.
 
 <hr>
@@ -158,7 +158,7 @@ __type:__ integer \n
 __default:__ 0.7 \n
 Number of Chebyshev acceleration stages to use for diffusion equation for smoothness-based artificial viscosity.
 Increasing this number will help the artificial viscosity coefficient converge faster
-but cause a larger fraction of the time to be spent in the aritificial viscosity calculation.
+but cause a larger fraction of the time to be spent in the artificial viscosity calculation.
 \note Not defined until \ref create_solver is evaluated.
 
 <hr>
@@ -168,7 +168,7 @@ __default:__ 1 \n
 Number of pseudotime iterations to run in artificial viscosity advection equation per nominal iteration
 (i.e. per `hexed::Solver::update_art_visc_smoothness` call).
 Increasing this number will help the artificial viscosity coefficient converge faster
-but cause a larger fraction of the CPU time to be spent in the aritificial viscosity calculation.
+but cause a larger fraction of the CPU time to be spent in the artificial viscosity calculation.
 \note Not defined until \ref create_solver is evaluated.
 
 <hr>
@@ -254,14 +254,14 @@ although the default value produces reasonable results in a wide range of cases,
 \subsubsection art_visc_constant
 __type:__ float \n
 __default:__ `-1.` \n
-If set to a positive number, turns on aritificial viscosity and sets the artificial viscosity coefficient to be uniformly equal to `art_visc_constant`.
+If set to a positive number, turns on artificial viscosity and sets the artificial viscosity coefficient to be uniformly equal to `art_visc_constant`.
 
 <hr>
 \subsubsection fix_therm_admis
 __type:__ integer \n
 __default:__ \ref false \n
 If \ref true, check thermodynamic admissibility (positive density, nonnegative energy, non-NaN state) after every time integration stage
-and if problems are found, run as many Laplacian smearing iterations as neccessary to restore admissibility.
+and if problems are found, run as many Laplacian smearing iterations as necessary to restore admissibility.
 Results in a major robustness improvement for hypersonic cases and comes at a modest performance cost.
 
 <hr>
@@ -487,7 +487,7 @@ In some cases, even I don't fully understand why the accepted defaults work.
 \subsubsection mesh_extreme_eps
 __type:__ float \n
 __default:__ `1e-6` \n
-Comparison tolerance to use when deterimining whether points are inside or outside mesh extremes.
+Comparison tolerance to use when determining whether points are inside or outside mesh extremes.
 Relative to domain size.
 
 <hr>
@@ -497,7 +497,7 @@ __default:__ 1 \n
 Number of pseudotime iterations to run in artificial viscosity diffusion equation per nominal iteration
 (i.e. per `hexed::Solver::update_art_visc_smoothness` call).
 Increasing this number will help the artificial viscosity coefficient converge faster
-but cause a larger fraction of the CPU time to be spent in the aritificial viscosity calculation.
+but cause a larger fraction of the CPU time to be spent in the artificial viscosity calculation.
 \note This was useful before Chebyshev acceleration was discovered.
 Increasing \ref n_cheby_av instead will usually be more productive, up to the limit where stability falls apart.
 \note Not defined until \ref create_solver is evaluated.
@@ -594,7 +594,7 @@ __default:__ 100 \n
 \subsubsection elementwise_art_visc
 __type:__ integer \n
 __default:__ \ref false \n
-If \ref true, artificial viscosity determined in an elementwise fasion
+If \ref true, artificial viscosity determined in an elementwise fashion
 based on the work of [Persson](http://persson.berkeley.edu/pub/persson13transient_shocks.pdf).
 This feature is provided purely for the purpose of comparing the discretization-independent artificial viscosity to conventional methods.
 It is not recommended for practical simulations with this solver.
@@ -635,7 +635,7 @@ Performs basic initialization that has to happen before you can do anything with
 (but after you've defined your parameters).
 Behavior is roughly the following:
 -# creates working directory if it does not already exist
--# copies the inpute file to the working directory for the user's future reference
+-# copies the input file to the working directory for the user's future reference
 -# initializes automatically-determined parameters
 -# calls \ref create_solver
 
@@ -683,7 +683,7 @@ Mesh contains a single element and the flow is uninitialized.
 <hr>
 \subsubsection init_refinement
 __type:__ Heisenberg integer \n
-Performs initial refinment (not based on geometry surface) and returns 0.
+Performs initial refinement (not based on geometry surface) and returns 0.
 
 <hr>
 \subsubsection add_geom
@@ -824,7 +824,7 @@ It is usually only necessary in supersonic viscous simulations.
 __type:__ string (macro) \n
 Configures settings to be good for aerothermodynamics.
 Assumes $\ref set_shock has already been called.
-Automaticall calls $\ref set_ramping.
+Automatically calls $\ref set_ramping.
 
 <hr>
 \subsubsection read_mesh
@@ -851,6 +851,20 @@ This command can be used instead of \ref init_state.
 Evaluates to 0.
 
 <hr>
+\subsubsection restart
+__type:__ string (macro) \n
+Reads the mesh, state, and status variables from a previous simulation.
+File names without extensions are given by \ref input_data.
+This should be the method of choice for restarting a simulation.
+`restart` should be invoked after \ref start and before \ref run.
+\ref mesh and \ref init_state are not necessary.
+You will still have to include the input parameter definitions (e.g., freestream conditions and \ref done "termination condition"),
+which can be accomplished by copying the appropriate parts of the original input file if desired.
+Note that `restart` will override the current value of \ref max_safety and \ref max_time_step,
+which is necessary for \ref set_ramping to work correctly.
+If you want to set these values manually, you can do that in between `restart` and \ref run.
+
+<hr>
 \subsubsection write_mesh
 __type:__ Heisenberg int \n
 Writes the mesh to a file in the \ref file_format "Hexed mesh format",
@@ -865,6 +879,24 @@ __type:__ Heisenberg int \n
 Writes the flow state to a file which can then be used in a future simulation using \ref read_state.
 The file name will be `iterXXXXXXXXXX.state.h5` in the working directory, where the `X`s are replaced with the current iteration number.
 Also creates a symlink `latest.state.h5` pointing to this file for convenience.
+Evaluates to 0.
+
+<hr>
+\subsubsection write_status
+__type:__ Heisenberg int \n
+Writes certain status variables to a file to facilitate restarting the simulation exactly as it was.
+The file name will be `iterXXXXXXXXXX.status.hil` in the working directory, where the `X`s are replaced with the current iteration number.
+Also creates a symlink `latest.status.hil` pointing to this file for convenience.
+The file is a standard \ref hil "HIL" script that can be read using the standard \ref read operator.
+E.g., `$read {hexed_out/latest.status.hil}`.
+The variables that are included are:
+- \ref iteration
+- \ref init_residual_momentum
+- \ref init_residual_density
+- \ref init_residual_energy
+- \ref max_safety
+- \ref max_time_step
+
 Evaluates to 0.
 
 <hr>
@@ -937,7 +969,7 @@ Amount of time (seconds) elapsed in the physical flow since the simulation start
 Only meaningful for global time stepping.
 Not to be confused with \ref wall_time ---if the distinction isn't clear, here is an example:
 if you have a shock propagating at 100 m/s and run your simulation with global time stepping
-until the flow time reaches 0.01 s, then the shock will have propaged a distance of 1 m.
+until the flow time reaches 0.01 s, then the shock will have propagated a distance of 1 m.
 
 <hr>
 \subsubsection time_step
@@ -972,6 +1004,24 @@ Begins the simulation uninitialized and is only assigned when \ref compute_resid
 __type:__ float \n
 Dimensional residual of the energy equation.
 Begins the simulation uninitialized and is only assigned when \ref compute_residuals is evaluated.
+
+<hr>
+\subsubsection init_residual_momentum
+__type:__ float \n
+Magnitude of the dimensional residual of the vector momentum equation at the start of the simulation.
+Defined at the beginning of \ref run.
+
+<hr>
+\subsubsection init_residual_density
+__type:__ float \n
+Dimensional residual of the continuity equation at the start of the simulation.
+Defined at the beginning of \ref run.
+
+<hr>
+\subsubsection init_residual_energy
+__type:__ float \n
+Dimensional residual of the energy equation at the start of the simulation.
+Defined at the beginning of \ref run.
 
 <hr>
 \subsubsection normalized_residual
