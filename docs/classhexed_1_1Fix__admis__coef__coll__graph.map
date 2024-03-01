@@ -1,0 +1,5 @@
+<map id="hexed::Fix_admis_coef" name="hexed::Fix_admis_coef">
+<area shape="rect" id="node1" title="fetches the Element::fix_admis_coef" alt="" coords="5,155,176,181"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Qpoint__func.html" title="Represents a function which can be evaluated at quadrature points." alt="" coords="17,80,164,107"/>
+<area shape="rect" id="node3" href="$classhexed_1_1Output__data.html" title="Represents some numerical data which is of interest to the end user." alt="" coords="16,5,165,32"/>
+</map>

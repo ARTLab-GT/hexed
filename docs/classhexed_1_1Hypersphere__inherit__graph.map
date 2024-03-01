@@ -1,0 +1,4 @@
+<map id="hexed::Hypersphere" name="hexed::Hypersphere">
+<area shape="rect" id="node1" title="Represents hypersphere in any dimensionality." alt="" coords="11,80,163,107"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Surface__geom.html" title="Represents a surface geometry implicitly for meshing." alt="" coords="5,5,168,32"/>
+</map>

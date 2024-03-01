@@ -1,0 +1,7 @@
+<map id="hexed::Element_face_connection&lt; element_t &gt;" name="hexed::Element_face_connection&lt; element_t &gt;">
+<area shape="rect" id="node1" title=" " alt="" coords="115,244,311,285"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Element__connection.html" title=" " alt="" coords="5,162,207,189"/>
+<area shape="rect" id="node3" href="$classhexed_1_1Connection.html" title=" " alt="" coords="140,5,283,32"/>
+<area shape="rect" id="node5" href="$classhexed_1_1Kernel__connection.html" title="Represents a connection between elements as the kernel sees it." alt="" coords="204,80,392,107"/>
+<area shape="rect" id="node4" href="$classhexed_1_1Face__connection.html" title=" " alt="" coords="231,155,407,196"/>
+</map>

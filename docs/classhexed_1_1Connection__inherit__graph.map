@@ -1,0 +1,11 @@
+<map id="hexed::Connection" name="hexed::Connection">
+<area shape="rect" id="node1" title=" " alt="" coords="5,49,148,75"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Element__connection.html" title=" " alt="" coords="432,15,633,42"/>
+<area shape="rect" id="node5" href="$classhexed_1_1Kernel__connection.html" title="Represents a connection between elements as the kernel sees it." alt="" coords="196,74,384,101"/>
+<area shape="rect" id="node3" href="$classhexed_1_1Element__face__connection.html" title=" " alt="" coords="699,5,895,47"/>
+<area shape="rect" id="node4" href="$classhexed_1_1Refined__connection_1_1Fine__connection.html" title="connection subclass to which will represent the connections for the numerical flux calculation" alt="" coords="681,71,912,112"/>
+<area shape="rect" id="node6" href="$classhexed_1_1Face__connection.html" title=" " alt="" coords="445,67,621,108"/>
+<area shape="rect" id="node7" href="$classhexed_1_1Face__connection_3_01Deformed__element_01_4.html" title=" " alt="" coords="443,132,622,173"/>
+<area shape="rect" id="node8" href="$classhexed_1_1Boundary__connection.html" title="A Boundary_face that also provides details about the connection for the neighbor flux computation and..." alt="" coords="692,139,901,166"/>
+<area shape="rect" id="node9" href="$classhexed_1_1Typed__bound__connection.html" title=" " alt="" coords="960,132,1156,173"/>
+</map>

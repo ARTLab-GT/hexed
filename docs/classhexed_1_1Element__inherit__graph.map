@@ -1,0 +1,5 @@
+<map id="hexed::Element" name="hexed::Element">
+<area shape="rect" id="node1" title="Stores data associated with one mesh element." alt="" coords="41,80,164,107"/>
+<area shape="rect" id="node3" href="$classhexed_1_1Deformed__element.html" title="Represents an Element which is not a perfect axis&#45;aligned square/cube." alt="" coords="5,155,200,181"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Kernel__element.html" title="Represents an element as the kernels see it." alt="" coords="17,5,188,32"/>
+</map>

@@ -1,0 +1,4 @@
+<map id="hexed::Printer" name="hexed::Printer">
+<area shape="rect" id="node1" title="abstract base class for handling different variations of printing things for user" alt="" coords="33,5,145,32"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Stream__printer.html" title="prints to a collection of std::ostreams." alt="" coords="5,80,172,107"/>
+</map>

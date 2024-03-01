@@ -1,0 +1,4 @@
+<map id="hexed::General_freestream" name="hexed::General_freestream">
+<area shape="rect" id="node1" title="A robust and flexible freestream boundary condition." alt="" coords="5,80,204,107"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Flow__bc.html" title="Abstract class representing an arbitrary flow boundary condition (as opposed to a mesh BC)." alt="" coords="43,5,166,32"/>
+</map>

@@ -1,0 +1,4 @@
+<map id="hexed::Spatial&lt; Pde_templ, is_deformed &gt;::Neighbor&lt; n_dim, row_size &gt;" name="hexed::Spatial&lt; Pde_templ, is_deformed &gt;::Neighbor&lt; n_dim, row_size &gt;">
+<area shape="rect" id="node1" title="Computes the shared numerical flux at the element interfaces." alt="" coords="7,95,170,165"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Kernel.html" title=" " alt="" coords="5,5,172,47"/>
+</map>

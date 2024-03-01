@@ -1,0 +1,4 @@
+<map id="hexed::Prescribed_energy" name="hexed::Prescribed_energy">
+<area shape="rect" id="node1" title="prescribes the specific energy but doesn&#39;t touch the heat flux" alt="" coords="5,80,195,107"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Thermal__bc.html" title="specifies the thermal component of a No_slip wall boundary condition" alt="" coords="27,5,173,32"/>
+</map>

@@ -1,0 +1,8 @@
+<map id="hexed::Typed_bound_connection&lt; element_t &gt;" name="hexed::Typed_bound_connection&lt; element_t &gt;">
+<area shape="rect" id="node1" title=" " alt="" coords="89,319,285,360"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Boundary__connection.html" title="A Boundary_face that also provides details about the connection for the neighbor flux computation and..." alt="" coords="83,244,292,271"/>
+<area shape="rect" id="node3" href="$classhexed_1_1Boundary__face.html" title=" " alt="" coords="5,162,172,189"/>
+<area shape="rect" id="node4" href="$classhexed_1_1Face__connection_3_01Deformed__element_01_4.html" title=" " alt="" coords="197,155,375,196"/>
+<area shape="rect" id="node5" href="$classhexed_1_1Kernel__connection.html" title="Represents a connection between elements as the kernel sees it." alt="" coords="192,80,380,107"/>
+<area shape="rect" id="node6" href="$classhexed_1_1Connection.html" title=" " alt="" coords="215,5,357,32"/>
+</map>

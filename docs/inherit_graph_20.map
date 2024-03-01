@@ -1,0 +1,7 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classhexed_1_1Kernel.html" title=" " alt="" coords="5,163,172,204"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Spatial_1_1Local.html" title="Performs the update to the element state after the shared numerical flux has been computed." alt="" coords="224,5,391,76"/>
+<area shape="rect" id="node3" href="$classhexed_1_1Spatial_1_1Reconcile__ldg__flux.html" title="account for the difference between the real and numerical viscous fluxes to enforce conservation" alt="" coords="224,100,391,171"/>
+<area shape="rect" id="node4" href="$classhexed_1_1Spatial_1_1Write__face.html" title="extrapolates the values in the interior of an element to the faces" alt="" coords="220,195,395,265"/>
+<area shape="rect" id="node5" href="$classhexed_1_1Stab__art__visc.html" title=" " alt="" coords="229,289,386,331"/>
+</map>

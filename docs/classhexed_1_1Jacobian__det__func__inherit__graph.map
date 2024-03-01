@@ -1,0 +1,5 @@
+<map id="hexed::Jacobian_det_func" name="hexed::Jacobian_det_func">
+<area shape="rect" id="node1" title="Returns a vector with one element: the Jacobian determinant at the quadrature point." alt="" coords="5,155,192,181"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Qpoint__func.html" title="Represents a function which can be evaluated at quadrature points." alt="" coords="25,80,172,107"/>
+<area shape="rect" id="node3" href="$classhexed_1_1Output__data.html" title="Represents some numerical data which is of interest to the end user." alt="" coords="24,5,173,32"/>
+</map>

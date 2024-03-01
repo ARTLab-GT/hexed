@@ -1,0 +1,58 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classhexed_1_1Output__data.html" title="Represents some numerical data which is of interest to the end user." alt="" coords="5,563,155,589"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Boundary__func.html" title="A funtion that can be evaluated at any quadrature point which is on a boundary." alt="" coords="203,335,369,361"/>
+<area shape="rect" id="node38" href="$classhexed_1_1Qpoint__func.html" title="Represents a function which can be evaluated at quadrature points." alt="" coords="213,765,359,792"/>
+<area shape="rect" id="node3" href="$classhexed_1_1Boundary__expr.html" title="Evaluates a structured expression." alt="" coords="441,259,607,285"/>
+<area shape="rect" id="node4" href="$classhexed_1_1Element__info.html" title="an Element_func that doesn&#39;t depend on a Basis or the time" alt="" coords="713,613,868,640"/>
+<area shape="rect" id="node9" href="$classhexed_1_1Heat__flux.html" title="Computes heat flux into surface." alt="" coords="459,360,589,387"/>
+<area shape="rect" id="node10" href="$classhexed_1_1Surface__func.html" title="A class of functions that can be evaluated at a point on a surface, without reference to a Boundary_c..." alt="" coords="447,309,601,336"/>
+<area shape="rect" id="node37" href="$classhexed_1_1Viscous__stress.html" title="Computes viscous stress at surface." alt="" coords="441,208,607,235"/>
+<area shape="rect" id="node5" href="$classhexed_1_1Has__tree.html" title="Returns 1 if the element has a Tree pointer, else 0." alt="" coords="974,639,1101,665"/>
+<area shape="rect" id="node6" href="$classhexed_1_1Is__deformed.html" title="Returns 1 if the element is deformed, otherwise 0." alt="" coords="962,689,1113,716"/>
+<area shape="rect" id="node7" href="$classhexed_1_1Record.html" title="Returns Element::record" alt="" coords="980,740,1095,767"/>
+<area shape="rect" id="node8" href="$classhexed_1_1Uncertainty.html" title="function to fetch the value of the uncertainty member of the Element." alt="" coords="965,588,1110,615"/>
+<area shape="rect" id="node11" href="$classhexed_1_1Domain__func.html" title=" " alt="" coords="713,335,868,361"/>
+<area shape="rect" id="node35" href="$classhexed_1_1Outward__normal.html" title="Returns the surface normal vector." alt="" coords="702,284,879,311"/>
+<area shape="rect" id="node36" href="$classhexed_1_1Pressure__stress.html" title="Computes inviscid surface force per unit area (i.e. pressure times unit normal)." alt="" coords="705,233,876,260"/>
+<area shape="rect" id="node12" href="$classhexed_1_1Diff__sq.html" title="computes the elementwise squared difference between the output of 2 Domain_funcs" alt="" coords="980,436,1095,463"/>
+<area shape="rect" id="node13" href="$classhexed_1_1Error__func.html" title=" " alt="" coords="970,487,1105,513"/>
+<area shape="rect" id="node14" href="$classhexed_1_1Mach.html" title="Computes Mach number." alt="" coords="985,537,1089,564"/>
+<area shape="rect" id="node15" href="$classhexed_1_1Mass.html" title="Aka density." alt="" coords="986,31,1089,57"/>
+<area shape="rect" id="node16" href="$classhexed_1_1Pressure.html" title="Computes (static) pressure." alt="" coords="975,81,1100,108"/>
+<area shape="rect" id="node17" href="$classhexed_1_1Ringleb__errsq.html" title="Squared error metric for computing &#160;error of Ringleb flow." alt="" coords="958,132,1117,159"/>
+<area shape="rect" id="node18" href="$classhexed_1_1Spacetime__func.html" title="Represents a function of position and time." alt="" coords="951,183,1124,209"/>
+<area shape="rect" id="node31" href="$classhexed_1_1Stab__indicator.html" title="useful for detecting elements that require stabilization" alt="" coords="956,233,1119,260"/>
+<area shape="rect" id="node32" href="$classhexed_1_1Stag__pres.html" title="Computes stagnation pressure." alt="" coords="971,284,1104,311"/>
+<area shape="rect" id="node33" href="$classhexed_1_1State__variables.html" title="A function that simply gives you back the state variables. Useful for visualization and conservation ..." alt="" coords="952,335,1123,361"/>
+<area shape="rect" id="node34" href="$classhexed_1_1Velocity.html" title="Computes velocity vector." alt="" coords="977,385,1098,412"/>
+<area shape="rect" id="node19" href="$classhexed_1_1Constant__func.html" title="Always returns the same constant (vector) value." alt="" coords="1199,5,1361,32"/>
+<area shape="rect" id="node20" href="$classhexed_1_1Empty__func.html" title="Returns an empty vector. You can pass this to Solver::visualize_field_tecplot if you just want to vis..." alt="" coords="1207,56,1353,83"/>
+<area shape="rect" id="node21" href="$classhexed_1_1Linear.html" title="Computes a single output variable which is a linear combination of components of position." alt="" coords="1225,107,1335,133"/>
+<area shape="rect" id="node22" href="$classhexed_1_1Position__func.html" title="Returns the position vector." alt="" coords="1202,157,1358,184"/>
+<area shape="rect" id="node23" href="$classhexed_1_1Random__func.html" title="Returns a random output uniformly distributed in a user&#45;specified range." alt="" coords="1201,208,1359,235"/>
+<area shape="rect" id="node24" href="$classhexed_1_1Spacetime__expr.html" title="Evaluates a structured expression." alt="" coords="1193,259,1367,285"/>
+<area shape="rect" id="node25" href="$classhexed_1_1Spatial__gaussian.html" title="multivariate Gaussian distribution in terms of spatial coordinates normalized to evaluate to 1 at the..." alt="" coords="1191,309,1369,336"/>
+<area shape="rect" id="node26" href="$classhexed_1_1State__from__spacetime.html" title="A class of Spacetime_funcs whose output is a state vector." alt="" coords="1172,360,1388,387"/>
+<area shape="rect" id="node27" href="$classhexed_1_1Annular__diffusion__test.html" title="Steady&#45;state solution to Laplacian diffusion in an anular domain (for verification testing)." alt="" coords="1436,284,1651,311"/>
+<area shape="rect" id="node28" href="$classhexed_1_1Doublet.html" title=" " alt="" coords="1483,335,1603,361"/>
+<area shape="rect" id="node29" href="$classhexed_1_1Ringleb.html" title="Steady&#45;state solution for Ringleb flow." alt="" coords="1484,385,1603,412"/>
+<area shape="rect" id="node30" href="$classhexed_1_1Sod.html" title="Initial consition for classic Sod problem." alt="" coords="1497,436,1590,463"/>
+<area shape="rect" id="node39" href="$classhexed_1_1Advection__state.html" title="Fetches the advection states used for computing the smoothness&#45;based artfificial viscosity." alt="" coords="437,613,611,640"/>
+<area shape="rect" id="node40" href="$classhexed_1_1Art__visc__coef.html" title="fetches the artificial viscosity coefficient" alt="" coords="446,664,602,691"/>
+<area shape="rect" id="node41" href="$classhexed_1_1Art__visc__forcing.html" title="Fetches one of the forcing variables in artificial viscosity computation." alt="" coords="437,765,611,792"/>
+<area shape="rect" id="node42" href="$classhexed_1_1Component.html" title="returns a component of another Qpoint_func" alt="" coords="452,816,596,843"/>
+<area shape="rect" id="node43" href="$classhexed_1_1Element__func.html" title="a function that has a single value for each element" alt="" coords="445,715,603,741"/>
+<area shape="rect" id="node49" href="$classhexed_1_1Fix__admis__coef.html" title="fetches the Element::fix_admis_coef" alt="" coords="439,867,609,893"/>
+<area shape="rect" id="node50" href="$classhexed_1_1Jac__inv__det__func.html" title="Determinant of inverse of Jacobian." alt="" coords="435,917,613,944"/>
+<area shape="rect" id="node51" href="$classhexed_1_1Jacobian__det__func.html" title="Returns a vector with one element: the Jacobian determinant at the quadrature point." alt="" coords="431,968,617,995"/>
+<area shape="rect" id="node52" href="$classhexed_1_1Physical__residual.html" title="returns the residual of the Navier&#45;Stokes equations, not weighted by local time step" alt="" coords="433,1019,615,1045"/>
+<area shape="rect" id="node53" href="$classhexed_1_1Pow.html" title="Raises the output of a Qpoint_func to a user&#45;specified power." alt="" coords="476,1069,572,1096"/>
+<area shape="rect" id="node54" href="$classhexed_1_1Qpoint__expr.html" title="Evaluates a structured expression." alt="" coords="450,1120,598,1147"/>
+<area shape="rect" id="node55" href="$classhexed_1_1Scaled.html" title="Scales a function of a single variable." alt="" coords="468,512,580,539"/>
+<area shape="rect" id="node56" href="$classhexed_1_1Time__step__scale__func.html" title="Fetches the value of the Element::time_step_scale member." alt="" coords="417,563,631,589"/>
+<area shape="rect" id="node44" href="$classhexed_1_1Elem__average.html" title="computes the average of the provided Qpoint_func within the element by Gaussian quadrature" alt="" coords="709,867,872,893"/>
+<area shape="rect" id="node45" href="$classhexed_1_1Elem__l2.html" title="computes the &#160;norm of the provided Qpoint_func within the element by Gaussian quadrature" alt="" coords="730,664,851,691"/>
+<area shape="rect" id="node46" href="$classhexed_1_1Elem__nonsmooth.html" title="compute the elementwise nonsmoothness indicator of the provided function" alt="" coords="699,715,882,741"/>
+<area shape="rect" id="node47" href="$classhexed_1_1Equiangle__skewness.html" title="Computes the equiangle skewness mesh quality metric." alt="" coords="689,765,892,792"/>
+<area shape="rect" id="node48" href="$classhexed_1_1Normalized__nonsmooth.html" title="same as Elem_nonsmooth, but normalized by Elem_l2" alt="" coords="679,816,903,843"/>
+</map>

@@ -1,0 +1,8 @@
+<map id="hexed::Stag_pres" name="hexed::Stag_pres">
+<area shape="rect" id="node1" title="Computes stagnation pressure." alt="" coords="99,304,232,331"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Domain__func.html" title=" " alt="" coords="88,229,243,256"/>
+<area shape="rect" id="node3" href="$classhexed_1_1Qpoint__func.html" title="Represents a function which can be evaluated at quadrature points." alt="" coords="5,155,152,181"/>
+<area shape="rect" id="node4" href="$classhexed_1_1Output__data.html" title="Represents some numerical data which is of interest to the end user." alt="" coords="91,5,240,32"/>
+<area shape="rect" id="node6" href="$classhexed_1_1Boundary__func.html" title="A funtion that can be evaluated at any quadrature point which is on a boundary." alt="" coords="157,80,323,107"/>
+<area shape="rect" id="node5" href="$classhexed_1_1Surface__func.html" title="A class of functions that can be evaluated at a point on a surface, without reference to a Boundary_c..." alt="" coords="177,155,330,181"/>
+</map>

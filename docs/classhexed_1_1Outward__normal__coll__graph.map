@@ -1,0 +1,6 @@
+<map id="hexed::Outward_normal" name="hexed::Outward_normal">
+<area shape="rect" id="node1" title="Returns the surface normal vector." alt="" coords="5,229,183,256"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Surface__func.html" title="A class of functions that can be evaluated at a point on a surface, without reference to a Boundary_c..." alt="" coords="17,155,171,181"/>
+<area shape="rect" id="node3" href="$classhexed_1_1Boundary__func.html" title="A funtion that can be evaluated at any quadrature point which is on a boundary." alt="" coords="11,80,177,107"/>
+<area shape="rect" id="node4" href="$classhexed_1_1Output__data.html" title="Represents some numerical data which is of interest to the end user." alt="" coords="19,5,169,32"/>
+</map>

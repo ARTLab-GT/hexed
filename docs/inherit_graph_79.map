@@ -1,0 +1,7 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classhexed_1_1Surface__geom.html" title="Represents a surface geometry implicitly for meshing." alt="" coords="5,81,168,108"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Compound__geom.html" title="Combines multiple Surface_geoms into one." alt="" coords="216,5,399,32"/>
+<area shape="rect" id="node3" href="$classhexed_1_1Hypersphere.html" title="Represents hypersphere in any dimensionality." alt="" coords="231,56,383,83"/>
+<area shape="rect" id="node4" href="$classhexed_1_1Occt_1_1Geom.html" title="A Surface_geom that interacts with a CAD object directly." alt="" coords="235,107,380,133"/>
+<area shape="rect" id="node5" href="$classhexed_1_1Simplex__geom.html" title="Represents discrete geometry composed of simplices." alt="" coords="224,158,391,199"/>
+</map>

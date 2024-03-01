@@ -1,0 +1,6 @@
+<map id="hexed::Elem_l2" name="hexed::Elem_l2">
+<area shape="rect" id="node1" title="computes the &#160;norm of the provided Qpoint_func within the element by Gaussian quadrature" alt="" coords="24,229,145,256"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Element__func.html" title="a function that has a single value for each element" alt="" coords="5,155,164,181"/>
+<area shape="rect" id="node3" href="$classhexed_1_1Qpoint__func.html" title="Represents a function which can be evaluated at quadrature points." alt="" coords="11,80,158,107"/>
+<area shape="rect" id="node4" href="$classhexed_1_1Output__data.html" title="Represents some numerical data which is of interest to the end user." alt="" coords="10,5,159,32"/>
+</map>

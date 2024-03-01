@@ -1,0 +1,7 @@
+<map id="hexed::Kernel_mesh" name="hexed::Kernel_mesh">
+<area shape="rect" id="node1" title=" " alt="" coords="312,115,465,142"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Sequence.html" title=" " alt="" coords="5,5,192,47"/>
+<area shape="rect" id="node3" href="$classhexed_1_1Sequence.html" title=" " alt="" coords="5,71,192,112"/>
+<area shape="rect" id="node4" href="$classhexed_1_1Sequence.html" title=" " alt="" coords="5,145,192,187"/>
+<area shape="rect" id="node5" href="$classhexed_1_1Basis.html" title="Represents a basis of Lagrange polynomials." alt="" coords="47,211,151,238"/>
+</map>

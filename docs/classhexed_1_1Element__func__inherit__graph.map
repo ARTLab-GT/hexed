@@ -1,0 +1,15 @@
+<map id="hexed::Element_func" name="hexed::Element_func">
+<area shape="rect" id="node1" title="a function that has a single value for each element" alt="" coords="397,132,556,159"/>
+<area shape="rect" id="node4" href="$classhexed_1_1Elem__average.html" title="computes the average of the provided Qpoint_func within the element by Gaussian quadrature" alt="" coords="635,5,797,32"/>
+<area shape="rect" id="node5" href="$classhexed_1_1Elem__l2.html" title="computes the &#160;norm of the provided Qpoint_func within the element by Gaussian quadrature" alt="" coords="655,56,777,83"/>
+<area shape="rect" id="node6" href="$classhexed_1_1Elem__nonsmooth.html" title="compute the elementwise nonsmoothness indicator of the provided function" alt="" coords="625,107,807,133"/>
+<area shape="rect" id="node7" href="$classhexed_1_1Element__info.html" title="an Element_func that doesn&#39;t depend on a Basis or the time" alt="" coords="639,157,793,184"/>
+<area shape="rect" id="node12" href="$classhexed_1_1Equiangle__skewness.html" title="Computes the equiangle skewness mesh quality metric." alt="" coords="615,208,817,235"/>
+<area shape="rect" id="node13" href="$classhexed_1_1Normalized__nonsmooth.html" title="same as Elem_nonsmooth, but normalized by Elem_l2" alt="" coords="604,259,828,285"/>
+<area shape="rect" id="node2" href="$classhexed_1_1Qpoint__func.html" title="Represents a function which can be evaluated at quadrature points." alt="" coords="203,132,349,159"/>
+<area shape="rect" id="node3" href="$classhexed_1_1Output__data.html" title="Represents some numerical data which is of interest to the end user." alt="" coords="5,132,155,159"/>
+<area shape="rect" id="node8" href="$classhexed_1_1Has__tree.html" title="Returns 1 if the element has a Tree pointer, else 0." alt="" coords="888,81,1015,108"/>
+<area shape="rect" id="node9" href="$classhexed_1_1Is__deformed.html" title="Returns 1 if the element is deformed, otherwise 0." alt="" coords="876,132,1027,159"/>
+<area shape="rect" id="node10" href="$classhexed_1_1Record.html" title="Returns Element::record" alt="" coords="894,183,1009,209"/>
+<area shape="rect" id="node11" href="$classhexed_1_1Uncertainty.html" title="function to fetch the value of the uncertainty member of the Element." alt="" coords="879,233,1024,260"/>
+</map>
