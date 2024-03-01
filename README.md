@@ -9,7 +9,7 @@ __hex__  (_verb_)
 
 Welcome to Hexed, a Discontinuous Galerkin CFD solver with automated, unstructured quad/hex meshing!
 If you are looking for a usable solver, please visit the [releases](https://github.com/ARTLab-GT/hexed/releases) page
-or checkout the tag for the latest release.
+or checkout [latest_release](https://github.com/ARTLab-GT/hexed/blob/latest_release) branch, which will always match the latest release version.
 The `main` branch is for the next in-development version.
 For more information, including [installation instructions](https://artlab-gt.github.io/hexed/installation.html)
 and [contributing guidelines](https://artlab-gt.github.io/hexed/contributing.html),
