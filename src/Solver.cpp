@@ -836,13 +836,15 @@ void Solver::update()
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
   auto& elems = acc_mesh->elements();
 
-  auto step = [&]() {
+  int n_cheby = 1;
+  int n_flow = 1;
+  auto step = [&]()
+  {
     auto km = acc_mesh->masked_mesh(basis);
-    for (int i_flow = 0; i_flow < _namespace->lookup<int>("flow_iters").value(); ++i_flow)
+    for (int i_flow = 0; i_flow < n_flow; ++i_flow)
     {
       // compute time step
       double safety = _namespace->lookup<double>("max_safety").value();
-      double n_cheby = _namespace->lookup<double>("n_cheby_flow").value();
       double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1);
       // run chebyshev iterations
       for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
@@ -879,8 +881,14 @@ void Solver::update()
     }
   };
   acc_mesh->set_mask();
-  step();
-  acc_mesh->set_mask([](Element& elem){return !elem.tree;});
+  #if 0
+  if (_namespace->lookup<int>("iteration").value()) {
+    step();
+    acc_mesh->set_mask([](Element& elem){return !elem.tree;});
+  }
+  #endif
+  n_cheby = _namespace->lookup<int>("n_cheby_flow").value();
+  n_flow = _namespace->lookup<int>("flow_iters").value();
   step();
   acc_mesh->set_mask();
 

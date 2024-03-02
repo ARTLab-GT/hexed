@@ -26,11 +26,11 @@ ramping_final_safety = .8
 art_visc_width = art_visc_width*.7/8
 viscosity_model = air_viscosity
 conductivity_model = {ref_value = 1.4/0.4*specific_gas_air/.72*air_visc_ref; ref_temperature = air_visc_ref_temp; offset = air_visc_offset}
-done = {iteration >= 10^5}
-vis_freq = 200
+done = {iteration >= 3*10^4}
+vis_freq = 10000
 diffusive_admissibility = true
 
-working_dir = {hexed_out_restart1}
+working_dir = {hexed_out_restart0}
 input_data = {hexed_out/latest}
 $plot_history
 $start
@@ -39,5 +39,4 @@ $mesh
 init_state
 }
 $restart
-max_safety = max_safety/2
 $run
