@@ -747,7 +747,7 @@ class Spatial
         }
         if constexpr (is_deformed) perm.restore(); // restore data of face 1 to original order
         // write data to actual face storage on heap
-        for (int i_side = 0; i_side < 2; ++i_side) {
+        for (int i_side = 0; i_side < 2; ++i_side) if (con.mask(i_side)) {
           double* f = con.state(i_side, true);
           for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
             f[i_dof] = face[i_side][i_dof];
