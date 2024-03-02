@@ -128,8 +128,9 @@ double Solver::max_dt(double msc, double msd)
     0, 0, bool(_namespace->lookup<int>("use_filter").value()),
   };
   bool local_time = _namespace->lookup<int>("local_time").value();
-  if (use_ldg()) return max_dt_navier_stokes(_kernel_mesh(), opts, msc, msd, local_time, visc, therm_cond);
-  else return max_dt_euler(_kernel_mesh(), opts, msc, msd, local_time);
+  auto masked = acc_mesh->masked_mesh(basis);
+  if (use_ldg()) return max_dt_navier_stokes(masked, opts, msc, msd, local_time, visc, therm_cond);
+  else return max_dt_euler(masked, opts, msc, msd, local_time);
 }
 
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
@@ -881,12 +882,10 @@ void Solver::update()
     }
   };
   acc_mesh->set_mask();
-  #if 0
   if (_namespace->lookup<int>("iteration").value()) {
     step();
     acc_mesh->set_mask([](Element& elem){return !elem.tree;});
   }
-  #endif
   n_cheby = _namespace->lookup<int>("n_cheby_flow").value();
   n_flow = _namespace->lookup<int>("flow_iters").value();
   step();
