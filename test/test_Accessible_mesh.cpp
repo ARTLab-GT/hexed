@@ -548,6 +548,7 @@ TEST_CASE("masking")
     REQUIRE(masked.car_cons.size() == 16);
     REQUIRE(masked.def_cons.size() == 12);
     REQUIRE(masked.ref_faces.size() == 4);
+    REQUIRE(mesh.masked_boundary_connections().size()  == 12);
   }
   SECTION("custom mask")
   {
@@ -563,5 +564,6 @@ TEST_CASE("masking")
     REQUIRE(masked.car_cons.size() == 10);
     REQUIRE(masked.def_cons.size() == 6);
     REQUIRE(masked.ref_faces.size() == 3);
+    REQUIRE(mesh.masked_boundary_connections().size()  == 6);
   }
 }

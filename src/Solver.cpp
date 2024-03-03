@@ -56,7 +56,7 @@ void Solver::share_vertex_data(std::function<double(Element&, int i_vertex)> get
 void Solver::apply_state_bcs()
 {
   stopwatch.children.at("boundary conditions").stopwatch.start();
-  auto& bc_cons {acc_mesh->boundary_connections()};
+  auto& bc_cons = acc_mesh->masked_boundary_connections();
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
@@ -68,7 +68,7 @@ void Solver::apply_state_bcs()
 
 void Solver::apply_flux_bcs()
 {
-  auto& bc_cons {acc_mesh->boundary_connections()};
+  auto& bc_cons = acc_mesh->masked_boundary_connections();
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     // write inside flux to flux cache for surface visualization/integrals

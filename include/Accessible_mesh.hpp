@@ -67,6 +67,7 @@ class Accessible_mesh : public Mesh
   Masked<Kernel_connection, Kernel_connection> _masked_car_cons;
   Masked<Kernel_connection, Kernel_connection> _masked_def_cons;
   Masked<Refined_face, Refined_face> _masked_ref_faces;
+  Masked<Boundary_connection, Boundary_connection> _masked_bound_cons;
 
   Element_container& container(bool is_deformed);
   int add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin);
@@ -160,6 +161,7 @@ class Accessible_mesh : public Mesh
    * \note performs a somewhat nontrivial computation, so keep a copy of the `Kernel_mesh` if you want to use it multiple times
    */
   Kernel_mesh masked_mesh(const Basis&);
+  Sequence<Boundary_connection&>& masked_boundary_connections();
 
   //! \returns a view of all Bounday_condition objects owned by this mesh
   Vector_view<Boundary_condition&, Boundary_condition> boundary_conditions() {return bound_conds;}

@@ -1413,6 +1413,12 @@ Kernel_mesh Accessible_mesh::masked_mesh(const Basis& basis)
   };
 }
 
+Sequence<Boundary_connection&>& Accessible_mesh::masked_boundary_connections()
+{
+  _masked_bound_cons.populate(bound_cons, [](Boundary_connection& con){return con.mask(0);});
+  return _masked_bound_cons.slice;
+}
+
 void Accessible_mesh::reset_verts()
 {
   int nv = params.n_vertices();

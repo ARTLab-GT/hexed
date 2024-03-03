@@ -30,7 +30,7 @@ done = {iteration >= 3*10^4}
 vis_freq = 10000
 diffusive_admissibility = true
 
-working_dir = {hexed_out_restart2}
+working_dir = {hexed_out_restart3}
 input_data = {hexed_out/latest}
 $plot_history
 $start
