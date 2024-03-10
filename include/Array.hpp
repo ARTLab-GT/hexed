@@ -47,7 +47,6 @@ class Array
     for (int i = 0; i < size(); ++i) _data[i] = other[i];
     return *this;
   }
-  Array<T>& operator=(Array<T>&& other) = delete;
   ~Array() = default;
   Array<T> copy()
   {
