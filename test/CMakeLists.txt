@@ -4,6 +4,7 @@ target_sources(unit PRIVATE
 # please maintain alphabetical order
 testing_utils.cpp
 test_Accessible_mesh.cpp
+test_Array.cpp
 test_Basis.cpp
 test_Boundary_condition.cpp
 test_Characteristics.cpp
