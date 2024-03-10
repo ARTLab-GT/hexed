@@ -1,12 +1,16 @@
 #ifndef HEXED_ARRAY_HPP_
 #define HEXED_ARRAY_HPP_
 
+#ifndef HEXED_ARRAY_BOUNDS_CHECK
+#define HEXED_ARRAY_BOUNDS_CHECK DEBUG
+#endif
+
 #include "assert.hpp"
 
 namespace hexed
 {
 
-template <typename T, bool bounds_check = DEBUG>
+template <typename T>
 class Array
 {
   int _order;
@@ -32,6 +36,25 @@ class Array
       _data = _data_storage.data();
     }
   }
+  Array(Array& other) : Array(other.shape(), other.data()) {}
+  Array(Array&& other) : Array(other.shape(), other.data())
+  {
+    _data_storage = std::move(other._data_storage);
+    other._order = 0;
+  }
+  Array<T>& operator=(const Array<T>& other)
+  {
+    for (int i = 0; i < size(); ++i) _data[i] = other[i];
+    return *this;
+  }
+  Array<T>& operator=(Array<T>&& other) = delete;
+  ~Array() = default;
+  Array<T> copy()
+  {
+    Array<T> c(shape());
+    c = *this;
+    return c;
+  }
 
   int order() const {return _order;}
   std::vector<int> shape() const
@@ -46,16 +69,16 @@ class Array
     CVQ T* data() CVQ {return _data;} \
     CVQ T& operator[](int i) CVQ \
     { \
-      if constexpr (bounds_check) { \
+      if constexpr (HEXED_ARRAY_BOUNDS_CHECK) { \
         HEXED_ASSERT(_order, "indexing an order-0 `Array` with `[]`"); \
         HEXED_ASSERT(i < size(), "indexing an `Array` out of bounds with `[]`"); \
       } \
       return _data[i]; \
     } \
-    CVQ Array<T, bounds_check> operator()() CVQ {return {_order, _data, _shape, _strides};} \
-    CVQ Array<T, bounds_check> operator()(int i) CVQ \
+    CVQ Array<T> operator()() CVQ {return {_order, _data, _shape, _strides};} \
+    CVQ Array<T> operator()(int i) CVQ \
     { \
-      if constexpr (bounds_check) { \
+      if constexpr (HEXED_ARRAY_BOUNDS_CHECK) { \
         HEXED_ASSERT(_order, "indexing an order-0 `Array` with `()`"); \
         HEXED_ASSERT(i < _shape[0], "indexing an `Array` out of bounds with `()`"); \
       } \
