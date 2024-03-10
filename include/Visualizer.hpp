@@ -9,6 +9,7 @@ namespace hexed
 class Visualizer
 {
   public:
+  enum elem_type {block, simplex};
   virtual ~Visualizer() = default;
   /*! \brief writes a structured block of data
    * \param pos `Array` of position data. Layout: [i_dim][i_row]([j_row]([k_row]))

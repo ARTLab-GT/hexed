@@ -29,6 +29,7 @@ done = {iteration > 1000 & lift_coef_max - lift_coef_min < 1e-2*(lift_coef_min +
 iterate = compute_force + iterate
 monitor_vars = {lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
+vis_tecplot = true
 
 {run simulation}
 $start

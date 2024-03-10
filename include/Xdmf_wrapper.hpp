@@ -25,8 +25,10 @@ class Xdmf_wrapper : public Visualizer
   const std::string _file_name;
   const double _time;
   const int _n_var;
-  int _i_block = 0;
+  int _n_verts;
   Eigen::MatrixXi _node_inds;
+  elem_type _elem_t;
+  std::vector<int> _permutation;
   public:
   /*!
    * \param n_dim_geom Number of geometric dimensions.
@@ -37,7 +39,7 @@ class Xdmf_wrapper : public Visualizer
    * \param data defines the number and names of variables to be visualized
    * \param time flow time
    */
-  Xdmf_wrapper(int n_dim_geom, int n_dim_topo, std::string file_name, const Output_data& data, double time);
+  Xdmf_wrapper(int n_dim_geom, int n_dim_topo, std::string file_name, const Output_data& data, double time, elem_type = block);
   void write_block(Array<double> pos, Array<double> vars) override;
   void write_unstruct(Array<int> elements, Array<double> pos, Array<double> vars) override;
   ~Xdmf_wrapper(); //!< writes the data to the file(s)
