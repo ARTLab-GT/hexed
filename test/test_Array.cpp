@@ -52,4 +52,10 @@ TEST_CASE("Array")
   hexed::Array<double> arr4(arr0.copy());
   arr4[1] = 287.0528;
   REQUIRE(arr0[1] == Catch::Approx(406));
+
+  REQUIRE(arr0.same_shape(arr1));
+  REQUIRE(arr1.same_shape(arr0));
+  hexed::Array<double> arr5({3, 4, 2});
+  REQUIRE(!arr0.same_shape(arr5));
+  REQUIRE(!arr5.same_shape(arr0));
 }

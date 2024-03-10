@@ -39,4 +39,18 @@ int Storage_params::n_dof_numeric() const
   return n_var_numeric()*n_qpoint();
 }
 
+std::vector<int> Storage_params::physical_shape() const
+{
+  std::vector<int> shape(n_dim + 1, row_size);
+  shape[0] = n_var;
+  return shape;
+}
+
+std::vector<int> Storage_params::numerical_shape() const
+{
+  std::vector<int> shape(n_dim + 1, row_size);
+  shape[0] = n_var_numeric();
+  return shape;
+}
+
 }

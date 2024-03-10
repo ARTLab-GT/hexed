@@ -53,8 +53,11 @@ Xdmf_wrapper::Xdmf_wrapper(int n_dim_geom, int n_dim_topo, std::string file_name
   else HEXED_ASSERT(false, "invalid geometric dimensionality");
 }
 
-void Xdmf_wrapper::write_block(int row_size, double* pos, double* vars)
+void Xdmf_wrapper::write_block(Array<double> pos, Array<double> vars)
 {
+  HEXED_ASSERT(pos.order() == _n_dim_topo + 1, "input arrays have wrong order");
+  HEXED_ASSERT(pos(0).same_shape(vars(0)), "`pos` and `vars` must have the same shape");
+  int row_size = pos.shape()[1];
   int n_point = math::pow(row_size, _n_dim_topo);
   for (int i_elem = 0; i_elem < math::pow(row_size - 1, _n_dim_topo); ++i_elem) {
     for (int i_vert = 0; i_vert < math::pow(2, _n_dim_topo); ++i_vert) {
@@ -69,12 +72,12 @@ void Xdmf_wrapper::write_block(int row_size, double* pos, double* vars)
   }
   for (int i_point = 0; i_point < n_point; ++i_point) {
     for (int i_dim = 0; i_dim < _n_dim_geom; ++i_dim) {
-      _geom->pushBack(pos[i_dim*n_point + i_point]);
+      _geom->pushBack(pos(i_dim)[i_point]);
     }
   }
   for (int i_var = 0; i_var < _n_var; ++i_var) {
     for (int i_point = 0; i_point < n_point; ++i_point) {
-      _attrs[i_var]->pushBack(vars[i_var*n_point + i_point]);
+      _attrs[i_var]->pushBack(vars(i_var)[i_point]);
     }
   }
   ++_i_block;

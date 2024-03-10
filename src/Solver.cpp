@@ -13,6 +13,7 @@
 #include <Face_permutation.hpp>
 #include <Row_index.hpp>
 #include <stabilizing_art_visc.hpp>
+#include <Array.hpp>
 
 namespace hexed
 {
@@ -1218,20 +1219,27 @@ void Solver::visualize_field(std::string format, std::string name, const Qpoint_
   HEXED_ASSERT(params.n_dim > wireframe, "can only visualize field wireframes in > 1D");
   Position_func pos_func;
   int nv = output_variables.n_var(params.n_dim);
+  int n_edges = math::pow(2, params.n_dim - 1)*params.n_dim;
   auto& elems = acc_mesh->elements();
+  std::vector<int> pos_shape(params.n_dim + 1, n_sample);
+  pos_shape[0] = params.n_dim;
+  std::vector<int> out_shape(params.n_dim + 1, n_sample);
+  out_shape[0] = nv;
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     Vis_data pos_dat(elems[i_elem], pos_func, basis, status.flow_time);
     Vis_data out_dat(elems[i_elem], output_variables, basis, status.flow_time);
     if (wireframe) {
       Mat<> pos = pos_dat.edges(n_sample);
       Mat<> out = out_dat.edges(n_sample);
-      for (int i_edge = 0; i_edge < math::pow(2, params.n_dim - 1)*params.n_dim; ++i_edge) {
-        visualizer->write_block(n_sample, pos.data() + i_edge*params.n_dim*n_sample, out.data() + i_edge*nv*n_sample);
+      Array<double> pos_arr({n_edges, params.n_dim, n_sample}, pos.data());
+      Array<double> out_arr({n_edges,           nv, n_sample}, out.data());
+      for (int i_edge = 0; i_edge < n_edges; ++i_edge) {
+        visualizer->write_block(pos_arr(i_edge), out_arr(i_edge));
       }
     } else {
       Mat<> pos = pos_dat.interior(n_sample);
       Mat<> out = out_dat.interior(n_sample);
-      visualizer->write_block(n_sample, pos.data(), out.data());
+      visualizer->write_block(Array<double>(pos_shape, pos.data()), Array<double>(out_shape, out.data()));
     }
   }
 }
@@ -1252,6 +1260,10 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
   Mat<dyn, dyn> boundary = basis.boundary();
   // iterate through boundary connections and visualize a zone for each
   auto& bc_cons {acc_mesh->boundary_connections()};
+  std::vector<int> pos_shape(params.n_dim, n_sample);
+  pos_shape[0] = params.n_dim;
+  std::vector<int> out_shape(params.n_dim, n_sample);
+  out_shape[0] = nv;
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con)
   {
     auto& con {bc_cons[i_con]};
@@ -1288,7 +1300,8 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
               Mat<> uniform = math::dimension_matvec(boundary(i_sign, all), qpoint_vars.col(i_var), i_dim);
               interp_vars.col(i_var) = math::hypercube_matvec(interp, uniform);
             }
-            visualizer->write_block(n_sample, interp_pos.data(), interp_vars.data());
+            visualizer->write_block(Array<double>({params.n_dim, n_sample}, interp_pos.data()),
+                                    Array<double>({          nv, n_sample}, interp_vars.data()));
           }
         }
       } else {
@@ -1302,7 +1315,7 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
           interp_vars.col(i_var) = math::hypercube_matvec(interp, qpoint_vars.col(i_var));
         }
         // visualize
-        visualizer->write_block(n_sample, interp_pos.data(), interp_vars.data());
+        visualizer->write_block(Array<double>(pos_shape, interp_pos.data()), Array<double>(out_shape, interp_vars.data()));
       }
     }
   }

@@ -114,7 +114,7 @@ class Tecplot_file : public Visualizer
   Tecplot_file(std::string file_name, int n_dim, int n_dim_block, std::vector<std::string> variable_names, double time, double heat_rat = 1.4, double gas_const = constants::specific_gas_air);
   Tecplot_file(const Tecplot_file&) = delete; //!< copying is nonsense since there can't be more than one Tecplot_file at a time
   Tecplot_file& operator=(const Tecplot_file&) = delete; //!< see above
-  void write_block(int row_size, double* pos, double* vars) override;
+  void write_block(Array<double> pos, Array<double> vars) override;
   ~Tecplot_file();
 };
 

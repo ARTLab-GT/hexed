@@ -2,7 +2,11 @@
 #define HEXED_ARRAY_HPP_
 
 #ifndef HEXED_ARRAY_BOUNDS_CHECK
-#define HEXED_ARRAY_BOUNDS_CHECK DEBUG
+  #ifdef DEBUG
+    #define HEXED_ARRAY_BOUNDS_CHECK true
+  #else
+    #define HEXED_ARRAY_BOUNDS_CHECK false
+  #endif
 #endif
 
 #include "assert.hpp"
@@ -48,7 +52,7 @@ class Array
     return *this;
   }
   ~Array() = default;
-  Array<T> copy()
+  Array<T> copy() const
   {
     Array<T> c(shape());
     c = *this;
@@ -63,6 +67,12 @@ class Array
     return s;
   }
   int size() const {return bool(_order)*_strides[0];}
+  bool same_shape(const Array& other)
+  {
+    bool same = _order == other._order;
+    if (same) for (int i = 0; i < _order; ++i) same = same && _shape[i] == other._shape[i];
+    return same;
+  }
 
   #define ACCESS_FUNCS \
     CVQ T* data() CVQ {return _data;} \

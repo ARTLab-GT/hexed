@@ -38,7 +38,7 @@ class Xdmf_wrapper : public Visualizer
    * \param time flow time
    */
   Xdmf_wrapper(int n_dim_geom, int n_dim_topo, std::string file_name, const Output_data& data, double time);
-  void write_block(int row_size, double* pos, double* vars) override;
+  void write_block(Array<double> pos, Array<double> vars) override;
   ~Xdmf_wrapper(); //!< writes the data to the file(s)
 };
 

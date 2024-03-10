@@ -36,10 +36,11 @@ Tecplot_file::Tecplot_file(std::string file_name, int n_dim, int n_dim_block, st
   tecDataSetAddAuxData(file_handle, "Common.StagnationEnergyVar", std::to_string(2*n_dim + 2).c_str());
 }
 
-void Tecplot_file::write_block(int row_size, double* pos, double* vars)
+void Tecplot_file::write_block(Array<double> pos, Array<double> vars)
 {
-  Structured_block block(*this, row_size, "block", n_dim_topo);
-  block.write(pos, vars);
+  HEXED_ASSERT(pos(0).same_shape(vars(0)), "`pos` and `vars` must have the same shape");
+  Structured_block block(*this, pos.shape()[1], "block", n_dim_topo);
+  block.write(pos.data(), vars.data());
 }
 
 Tecplot_file::~Tecplot_file()
