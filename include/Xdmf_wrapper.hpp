@@ -39,6 +39,7 @@ class Xdmf_wrapper : public Visualizer
    */
   Xdmf_wrapper(int n_dim_geom, int n_dim_topo, std::string file_name, const Output_data& data, double time);
   void write_block(Array<double> pos, Array<double> vars) override;
+  void write_unstruct(Array<int> elements, Array<double> pos, Array<double> vars) override;
   ~Xdmf_wrapper(); //!< writes the data to the file(s)
 };
 

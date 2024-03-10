@@ -90,7 +90,7 @@ class Tecplot_file : public Visualizer
     std::vector<double> var_storage;
     public:
     Line_segments(Tecplot_file&, int n_segs, int row_size, std::string name_arg = "line_segments");
-    virtual void write(const double* pos, const double* vars);
+    void write(const double* pos, const double* vars) override;
     virtual ~Line_segments();
   };
 
@@ -109,12 +109,20 @@ class Tecplot_file : public Visualizer
     ~Triangles();
   };
 
+  class Unstructured : public Zone
+  {
+    public:
+    Unstructured(Tecplot_file&, Array<int> elements, Array<double> pos, Array<double> vars, std::string name_arg = "unstructured_zone");
+    void write(const double* pos, const double* vars) override;
+  };
+
   //! \note `n_var` means number of state (i.e., not position) variables.
-  //! \note `n_dim_block` is the topological dimension of blocks and only affects the behavior of `write_block`
-  Tecplot_file(std::string file_name, int n_dim, int n_dim_block, std::vector<std::string> variable_names, double time, double heat_rat = 1.4, double gas_const = constants::specific_gas_air);
+  //! \note `n_dim_topo_arg` is the topological dimension of blocks and only affects the behavior of `write_block`
+  Tecplot_file(std::string file_name, int n_dim, int n_dim_topo_arg, std::vector<std::string> variable_names, double time, double heat_rat = 1.4, double gas_const = constants::specific_gas_air);
   Tecplot_file(const Tecplot_file&) = delete; //!< copying is nonsense since there can't be more than one Tecplot_file at a time
   Tecplot_file& operator=(const Tecplot_file&) = delete; //!< see above
   void write_block(Array<double> pos, Array<double> vars) override;
+  void write_unstruct(Array<int> elements, Array<double> pos, Array<double> vars) override;
   ~Tecplot_file();
 };
 

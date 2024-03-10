@@ -83,6 +83,10 @@ void Xdmf_wrapper::write_block(Array<double> pos, Array<double> vars)
   ++_i_block;
 }
 
+void Xdmf_wrapper::write_unstruct(Array<int> elements, Array<double> pos, Array<double> vars)
+{
+}
+
 Xdmf_wrapper::~Xdmf_wrapper()
 {
   auto domain = XdmfDomain::New();

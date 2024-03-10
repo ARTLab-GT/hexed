@@ -34,11 +34,17 @@ template<> void Simplex_geom<3>::visualize(std::string fname)
 {
   #if HEXED_USE_TECPLOT
   Tecplot_file tec_file(fname, 3, 2, {}, 0.);
-  Tecplot_file::Triangles zone(tec_file, _simplices.size());
+  Array<int> triangles({int(_simplices.size()), 3});
+  Array<double> pos({3, 3*int(_simplices.size())});
+  Array<double> vars({0, 3*int(_simplices.size())});
+  int i_vert = 0;
   for (Mat<3, 3> sim : _simplices) {
-    Mat<3, 3> trans = sim.transpose();
-    zone.write(trans.data(), nullptr);
+    for (int elem_vert = 0; elem_vert < 3; ++elem_vert, ++i_vert) {
+      triangles[i_vert] = i_vert;
+      for (int i_dim = 0; i_dim < 3; ++i_dim) pos(i_dim)[i_vert] = sim(i_dim, elem_vert);
+    }
   }
+  tec_file.write_unstruct(triangles, pos, vars);
   #else
   HEXED_ASSERT(false, "needs tecplot");
   #endif
