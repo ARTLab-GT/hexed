@@ -116,7 +116,7 @@ void Xdmf_wrapper::write_unstruct(Array<int> elements, Array<double> pos, Array<
   for (int i_var = 0; i_var < _n_var; ++i_var) {
     for (int i_vert = 0; i_vert < n_vert; ++i_vert) _attrs[i_var]->pushBack(vars(i_var)[i_vert]);
   }
-  _n_verts += elements.shape()[0];
+  _n_verts += pos.shape()[1];
 }
 
 Xdmf_wrapper::~Xdmf_wrapper()
