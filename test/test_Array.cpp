@@ -58,4 +58,14 @@ TEST_CASE("Array")
   hexed::Array<double> arr5({3, 4, 2});
   REQUIRE(!arr0.same_shape(arr5));
   REQUIRE(!arr5.same_shape(arr0));
+
+  hexed::Array<double> arr6({5, 2});
+  hexed::Array<double> arr7(arr6(1, 4));
+  REQUIRE_THAT(arr7.shape(), Catch::Matchers::RangeEquals(std::vector<int>{3, 2}));
+  REQUIRE(&arr7(0)[0] == &arr6(1)[0]);
+  REQUIRE(&arr7(2)[1] == &arr6(3)[1]);
+  REQUIRE_THAT(arr6(1, 10).shape(), Catch::Matchers::RangeEquals(std::vector<int>{4, 2}));
+  REQUIRE_THAT(arr6(1,  0).shape(), Catch::Matchers::RangeEquals(std::vector<int>{0, 2}));
+  REQUIRE_THAT(arr6(6,  7).shape(), Catch::Matchers::RangeEquals(std::vector<int>{0, 2}));
+  REQUIRE_THROWS(arr6(0)(0)(0, 1));
 }

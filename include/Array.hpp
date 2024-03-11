@@ -31,13 +31,16 @@ class Array
   Array(std::vector<int> shape_arg, T* data_arg = nullptr)
   : _order{int(shape_arg.size())}, _shape_storage{shape_arg}, _shape{_shape_storage.data()}
   {
+    _shape_storage.shrink_to_fit();
     _stride_storage.resize(_order + 1);
+    _stride_storage.shrink_to_fit();
     _strides = _stride_storage.data();
     _strides[_order] = 1;
     for (int i = _order - 1; i >= 0; --i) _strides[i] = _strides[i + 1]*_shape[i];
     if (data_arg) _data = data_arg;
     else {
       _data_storage.resize(size(), T(0));
+      _data_storage.shrink_to_fit();
       _data = _data_storage.data();
     }
   }
@@ -76,8 +79,8 @@ class Array
   }
 
   #define ACCESS_FUNCS \
-    CVQ T* data() CVQ {return _data;} \
-    CVQ T& operator[](int i) CVQ \
+    CONST T* data() CONST {return _data;} \
+    CONST T& operator[](int i) CONST \
     { \
       if constexpr (HEXED_ARRAY_BOUNDS_CHECK) { \
         HEXED_ASSERT(_order, "indexing an order-0 `Array` with `[]`"); \
@@ -85,8 +88,8 @@ class Array
       } \
       return _data[i]; \
     } \
-    CVQ Array<T> operator()() CVQ {return {_order, _data, _shape, _strides};} \
-    CVQ Array<T> operator()(int i) CVQ \
+    CONST Array<T> operator()() CONST {return {_order, _data, _shape, _strides};} \
+    CONST Array<T> operator()(int i) CONST \
     { \
       if constexpr (HEXED_ARRAY_BOUNDS_CHECK) { \
         HEXED_ASSERT(_order, "indexing an order-0 `Array` with `()`"); \
@@ -94,13 +97,22 @@ class Array
       } \
       return {_order - 1, _data + i*_strides[1], _shape + 1, _strides + 1}; \
     } \
+    CONST Array<T> operator()(int start, int stop) CONST \
+    { \
+      if constexpr (HEXED_ARRAY_BOUNDS_CHECK) { \
+        HEXED_ASSERT(_order, "indexing an order-0 `Array` with `()`"); \
+      } \
+      std::vector<int> s = shape(); \
+      s[0] = std::max(0, std::min(stop, _shape[0]) - start); \
+      return {s, _data + start*_strides[1]}; \
+    } \
 
-  #define CVQ
+  #define CONST
   ACCESS_FUNCS
-  #undef CVQ
-  #define CVQ const
+  #undef CONST
+  #define CONST const
   ACCESS_FUNCS
-  #undef CFQ
+  #undef CONST
   #undef ACCESS_FUNCS
 };
 

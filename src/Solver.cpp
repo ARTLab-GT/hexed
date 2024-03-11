@@ -1301,6 +1301,24 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
   visualizer.reset();
 }
 
+void Solver::visualize_contour(std::string format, std::string name, const Qpoint_func& contour_by, const Qpoint_func& output_variables, int n_sample)
+{
+  HEXED_ASSERT(contour_by.n_var(params.n_dim) == 1, "can only compute isocontours of a scalar-valued function");
+  auto visualizer = Visualizer::create(format, params.n_dim, params.n_dim - 1, name, output_variables,
+                                       _namespace->lookup<double>("flow_time").value(), Visualizer::block);
+  Position_func pos_func;
+  int nv = output_variables.n_var(params.n_dim);
+  auto& elems = acc_mesh->elements();
+  std::vector<int> shape(params.n_dim + 1, n_sample);
+  shape[0] = 1 + params.n_dim + nv;
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    Vis_data dat(elems[i_elem], Qf_concat({&contour_by, &pos_func, &output_variables}), basis, _namespace->lookup<double>("flow_time").value());
+    Mat<> vec = dat.interior(n_sample);
+    Array<double> arr(shape, vec.data());
+    visualizer->write_block(arr(1, 1 + params.n_dim), arr(1 + params.n_dim, 1 + params.n_dim + nv));
+  }
+}
+
 void Solver::vis_cart_surf(std::string format, std::string name, int bc_sn, const Boundary_func& func)
 {
   Mesh::Reset_vertices reset(*acc_mesh);
