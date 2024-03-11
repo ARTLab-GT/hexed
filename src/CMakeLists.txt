@@ -50,6 +50,7 @@ Tecplot_file.cpp
 Tree.cpp
 thermo.cpp
 Vertex.cpp
+Visualizer.cpp
 Vis_data.cpp
 Xdmf_wrapper.cpp
 )

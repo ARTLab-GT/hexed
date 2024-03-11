@@ -9,6 +9,7 @@
   #endif
 #endif
 
+#include <vector>
 #include "assert.hpp"
 
 namespace hexed

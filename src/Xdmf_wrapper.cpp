@@ -9,21 +9,21 @@
 namespace hexed
 {
 
-Xdmf_wrapper::Xdmf_wrapper(int n_dim_geom, int n_dim_topo, std::string file_name, const Output_data& data, double time, elem_type elem_t) :
+Xdmf_wrapper::Xdmf_wrapper(int n_dim_geom, int n_dim_topo, std::string file_name, std::vector<std::string> var_names, double time, elem_type elem_t) :
   _topo{XdmfTopology::New()},
   _geom{XdmfGeometry::New()},
   _n_dim_geom{n_dim_geom},
   _n_dim_topo{n_dim_topo},
   _file_name{file_name},
   _time{time},
-  _n_var{data.n_var(n_dim_geom)},
+  _n_var{int(var_names.size())},
   _n_verts{0},
   _node_inds(math::pow(2, n_dim_topo), n_dim_topo),
   _elem_t{elem_t}
 {
   for (int i_var = 0; i_var < _n_var; ++i_var) {
     _attrs.push_back(XdmfAttribute::New());
-    _attrs.back()->setName(data.variable_name(_n_dim_geom, i_var));
+    _attrs.back()->setName(var_names[i_var]);
     _attrs.back()->setCenter(XdmfAttributeCenter::Node());
     _attrs.back()->setType(XdmfAttributeType::Scalar());
   }

@@ -58,7 +58,6 @@ class Solver
   void fta(double dt, int i_stage);
   bool use_ldg();
   double max_dt(double max_safety_conv, double max_safety_diff);
-  std::unique_ptr<Visualizer> _visualizer(std::string format, std::string name, const Output_data& output_variables, int n_dim_topo);
 
   //! \brief linearizes the steady state equations by finite difference
   class Linearized : public Linear_equation

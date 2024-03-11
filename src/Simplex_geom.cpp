@@ -32,7 +32,7 @@ void Simplex_geom<3>::merge(Nearest_point<3>& nearest, Mat<3, 3> sim, Mat<3> poi
 }
 
 //! \cond
-template<> void Simplex_geom<3>::visualize(std::string fname)
+template<> void Simplex_geom<3>::visualize(std::string format, std::string fname)
 {
   Array<int> triangles({int(_simplices.size()), 3});
   Array<double> pos({3, 3*int(_simplices.size())});
@@ -44,15 +44,7 @@ template<> void Simplex_geom<3>::visualize(std::string fname)
       for (int i_dim = 0; i_dim < 3; ++i_dim) pos(i_dim)[i_vert] = sim(i_dim, elem_vert);
     }
   }
-  #if HEXED_USE_XDMF
-  Xdmf_wrapper xdmf(3, 2, fname, Constant_func({}), 0., Visualizer::simplex);
-  xdmf.write_unstruct(triangles, pos, vars);
-  #elif HEXED_USE_TECPLOT
-  Tecplot_file tec_file(fname, 3, 2, {}, 0.);
-  tec_file.write_unstruct(triangles, pos, vars);
-  #else
-  HEXED_ASSERT(false, "needs tecplot");
-  #endif
+  Visualizer::create(format, 3, 2, fname, {}, 0., Visualizer::simplex)->write_unstruct(triangles, pos, vars);
 }
 //! \endcond
 

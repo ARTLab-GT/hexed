@@ -7,7 +7,6 @@
 #include <XdmfTopology.hpp>
 #include <XdmfGeometry.hpp>
 #include <Eigen/Dense>
-#include "Output_data.hpp"
 #include "Visualizer.hpp"
 
 namespace hexed
@@ -36,10 +35,10 @@ class Xdmf_wrapper : public Visualizer
    *   For example, a 3D surface will have 3 geometric dimensions and 2 topological dimensions.
    * \param n_dim_topo defines the topology type/dimensionality
    * \param file_name name of output file(s) without extension
-   * \param data defines the number and names of variables to be visualized
+   * \param var_names defines the number and names of variables to be visualized
    * \param time flow time
    */
-  Xdmf_wrapper(int n_dim_geom, int n_dim_topo, std::string file_name, const Output_data& data, double time, elem_type = block);
+  Xdmf_wrapper(int n_dim_geom, int n_dim_topo, std::string file_name, std::vector<std::string> var_names, double time, elem_type = block);
   void write_block(Array<double> pos, Array<double> vars) override;
   void write_unstruct(Array<int> elements, Array<double> pos, Array<double> vars) override;
   ~Xdmf_wrapper(); //!< writes the data to the file(s)

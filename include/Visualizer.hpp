@@ -1,7 +1,9 @@
 #ifndef HEXED_VISUALIZER_HPP_
 #define HEXED_VISUALIZER_HPP_
 
+#include <memory>
 #include "Array.hpp"
+#include "Output_data.hpp"
 
 namespace hexed
 {
@@ -11,12 +13,14 @@ class Visualizer
   public:
   enum elem_type {block, simplex};
   virtual ~Visualizer() = default;
+
   /*! \brief writes a structured block of data
    * \param pos `Array` of position data. Layout: [i_dim][i_row]([j_row]([k_row]))
    *   (j_row and k_row optional depending on the topological dimension)
    * \param vars `Array` of field variable data. Layout: [i_var][i_row]([j_row]([k_row]))
    */
   virtual void write_block(Array<double> pos, Array<double> vars) = 0;
+
   /*! \brief writes unstructured data
    * \details Unstructured data is specified by a list of vertices,
    * each of which has values of position and field variables associated with it,
@@ -35,6 +39,9 @@ class Visualizer
    *   The number of columns must be the same as `pos`.
    */
   virtual void write_unstruct(Array<int> elements, Array<double> pos, Array<double> vars) = 0;
+
+  static std::unique_ptr<Visualizer> create(std::string format, int n_dim_geom, int n_dim_topo, std::string file_name, std::vector<std::string> variable_names, double time, elem_type);
+  static std::unique_ptr<Visualizer> create(std::string format, int n_dim_geom, int n_dim_topo, std::string file_name, const Output_data&, double time, elem_type);
 };
 
 }
