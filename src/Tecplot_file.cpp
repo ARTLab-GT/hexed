@@ -154,6 +154,7 @@ Tecplot_file::Unstructured::Unstructured(Tecplot_file& file, Array<int> elements
   else if (n_elem_vert == 4 && file.n_dim_topo == 3) zone_t = us_tet;
   else if (n_elem_vert == 8 && file.n_dim_topo == 3) zone_t = us_hex;
   else HEXED_ASSERT(false, "current combination of number of vertices and toplogical dimension did not match any known element type");
+  HEXED_ASSERT(zone_t != us_quad && zone_t != us_hex, "vertex permutations for unstructured quad/hex visualization with Tecplot have not been implemented");
   tecZoneCreateFE(file.file_handle, name, zone_t, pos.shape()[1], n_elem,
                   var_types.data(), shared.data(), location.data(), passive.data(), 0, 0, 0, &tecio_zone_index);
   for (int i_dim = 0; i_dim < file.n_dim; ++i_dim) {

@@ -380,7 +380,9 @@ Case::Case(std::string input_script)
               if (std::filesystem::exists(latest)) {
                 std::filesystem::copy_file(latest, wd + name + "_latest0.xmf", std::filesystem::copy_options::overwrite_existing);
               }
-              std::filesystem::copy_file(file_name + ".xmf", latest, std::filesystem::copy_options::overwrite_existing);
+              if (std::filesystem::exists(file_name + ".xmf")) {
+                std::filesystem::copy_file(file_name + ".xmf", latest, std::filesystem::copy_options::overwrite_existing);
+              }
             }
           }
         }
