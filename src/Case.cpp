@@ -360,7 +360,7 @@ Case::Case(std::string input_script)
       else break;
     }
     for (std::string v : vis_objects) if (_vari("vis_" + strip_trailing_digits(v)).value()) {
-      for (std::string format : {"xdmf", "tecplot"}) if (_vari("vis_" + format).value()) {
+      for (std::string format : {"xdmf", "tecplot", "csv"}) if (_vari("vis_" + format).value()) {
         Struct_expr vis_vars(_vars("vis_" + strip_trailing_digits(v) + "_vars").value());
         for (bool edges : {false, true}) {
           std::string name = v;

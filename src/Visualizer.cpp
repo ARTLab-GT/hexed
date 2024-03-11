@@ -1,6 +1,7 @@
 #include <Visualizer.hpp>
-#include <Tecplot_file.hpp>
 #include <Xdmf_wrapper.hpp>
+#include <Tecplot_file.hpp>
+#include <Csv.hpp>
 
 namespace hexed
 {
@@ -21,6 +22,11 @@ std::unique_ptr<Visualizer> Visualizer::create(std::string format, int n_dim_geo
     #else
     HEXED_ASSERT(false, "`format = tecplot` requires `USE_TECPLOT ON`");
     #endif
+  } else if (format == "csv") {
+    std::vector<std::string> all_names;
+    for (int i_dim = 0; i_dim < n_dim_geom; ++i_dim) all_names.push_back("pos" + std::to_string(i_dim));
+    all_names.insert(all_names.end(), variable_names.begin(), variable_names.end());
+    visualizer.reset(new Csv(file_name, all_names));
   } else HEXED_ASSERT(false, format_str(1000, "visualization format `%s` not recognized", format.c_str()));
   return visualizer;
 }
