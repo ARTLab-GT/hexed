@@ -373,7 +373,8 @@ Case::Case(std::string input_script)
               _solver().visualize_field(format, file_name, Qpoint_expr(vis_vars, _inter), n_sample, edges);
               if (_vari("vis_skew").value()) _solver().visualize_field(format, wd + "skew" + suffix, Equiangle_skewness(), n_sample, edges);
             } else if (!edges) { // vis_type == contour0, contour1, etc
-              _solver().visualize_contour(format, file_name, Qpoint_expr(_vars(v).value(), _inter), Qpoint_expr(vis_vars, _inter), n_sample);
+              std::string contour_expr = v + "_var = " + _vars(v).value() + ";";
+              _solver().visualize_contour(format, file_name, Qpoint_expr(contour_expr, _inter), Qpoint_expr(vis_vars, _inter), n_sample);
             }
             if (format == "xdmf") {
               std::string latest = wd + name + "_latest1.xmf";
