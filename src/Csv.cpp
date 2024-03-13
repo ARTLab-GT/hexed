@@ -4,8 +4,9 @@
 namespace hexed
 {
 
-Csv::Csv(std::string name, std::vector<std::string> columns)
-: _row{0}, _cols{int(columns.size())}, _file(name + ".csv")
+Csv::Csv(std::string name, int n_columns) : _row{0}, _cols{n_columns}, _file(name + ".csv") {}
+
+Csv::Csv(std::string name, std::vector<std::string> columns) : Csv(name, columns.size())
 {
   std::string text;
   for (auto col : columns) text += col + ",";

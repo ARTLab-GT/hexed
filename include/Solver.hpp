@@ -234,6 +234,7 @@ class Solver
   //! \brief Writes flow state to file.
   //! \details `.state.h5` will be appended to `file_name`.
   void write_state(std::string file_name);
+  Array<double> skews(); //!< \brief get a list of the Equiangle_skewness for each element
   //!\}
 };
 

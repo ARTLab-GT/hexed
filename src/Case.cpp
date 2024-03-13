@@ -1,11 +1,12 @@
 #include <filesystem>
+#include <cctype>
 #include <Case.hpp>
 #include <Simplex_geom.hpp>
 #include <read_csv.hpp>
 #include <standard_atmosphere.hpp>
 #include <Occt.hpp>
 #include <hil_properties.hpp>
-#include <cctype>
+#include <Csv.hpp>
 
 namespace hexed
 {
@@ -389,6 +390,14 @@ Case::Case(std::string input_script)
         }
       }
     }
+    return 0;
+  }));
+
+  _inter.variables->create<int>("write_skews", new Namespace::Heisenberg<int>([this]() {
+    Csv csv(_vars("working_dir").value() + "skews", 1);
+    Array<double> skews(_solver().skews());
+    Array<double> reshaped({skews.size(), 1}, skews.data());
+    csv.write(reshaped);
     return 0;
   }));
 

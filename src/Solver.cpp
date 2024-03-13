@@ -1366,4 +1366,16 @@ void Solver::vis_lts_constraints(std::string format, std::string name, int n_sam
   }
 }
 
+Array<double> Solver::skews()
+{
+  auto& elems = acc_mesh->elements();
+  Array<double> s({elems.size()});
+  Equiangle_skewness equi;
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    s[i_elem] = equi(elems[i_elem], basis, _namespace->lookup<double>("flow_time").value())[0];
+  }
+  return s;
+}
+
 }

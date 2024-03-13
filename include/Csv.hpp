@@ -14,6 +14,7 @@ class Csv : public Visualizer
   std::ofstream _file;
   public:
   Csv(std::string name, std::vector<std::string> columns);
+  Csv(std::string name, int n_columns);
   void write(Array<double> data);
   void write_block(Array<double> pos, Array<double> vars) override;
   void write_unstruct(Array<int> elements, Array<double> pos, Array<double> vars) override;

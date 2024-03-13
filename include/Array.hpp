@@ -44,8 +44,8 @@ class Array
       _data = _data_storage.data();
     }
   }
-  Array(Array& other) : Array(other.shape(), other.data()) {}
-  Array(Array&& other) : Array(other.shape(), other.data())
+  Array(Array<T>& other) : Array(other.shape(), other.data()) {}
+  Array(Array<T>&& other) : Array(other.shape(), other.data())
   {
     _data_storage = std::move(other._data_storage);
     other._order = 0;
@@ -71,7 +71,7 @@ class Array
     return s;
   }
   int size() const {return bool(_order)*_strides[0];}
-  bool same_shape(const Array& other)
+  bool same_shape(const Array<T>& other)
   {
     bool same = _order == other._order;
     if (same) for (int i = 0; i < _order; ++i) same = same && _shape[i] == other._shape[i];
