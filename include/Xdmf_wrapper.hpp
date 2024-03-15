@@ -37,8 +37,9 @@ class Xdmf_wrapper : public Visualizer
    * \param file_name name of output file(s) without extension
    * \param var_names defines the number and names of variables to be visualized
    * \param time flow time
+   * \param element_type whether to visualize line/quad/hex (default) or line/tri/tet
    */
-  Xdmf_wrapper(int n_dim_geom, int n_dim_topo, std::string file_name, std::vector<std::string> var_names, double time, elem_type = block);
+  Xdmf_wrapper(int n_dim_geom, int n_dim_topo, std::string file_name, std::vector<std::string> var_names, double time, elem_type element_type = block);
   void write_block(Array<double> pos, Array<double> vars) override;
   void write_unstruct(Array<int> elements, Array<double> pos, Array<double> vars) override;
   ~Xdmf_wrapper(); //!< writes the data to the file(s)
