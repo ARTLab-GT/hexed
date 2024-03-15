@@ -46,7 +46,7 @@ class Vis_data
   //! \brief return function evaluated at quadrature points. \details layout: [n_var][n_qpoint]
   inline const Eigen::VectorXd& qpoints() {return vars;}
 
-  //! \brief stores data representing a contour line/surface, to be converted to an otter curve/surface object
+  //! \brief stores data representing a contour line/surface
   struct Contour
   {
     Eigen::MatrixXd vert_ref_coords; //!< coordinates of contour vertices in reference coordinates. layout: [n_vertex][n_dim]
