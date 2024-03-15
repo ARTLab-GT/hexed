@@ -247,8 +247,8 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int n_newto
   for (unsigned i_vert = 0; i_vert < i_block.size(); ++i_vert) {
     Eigen::MatrixXd coords = con.vert_ref_coords(i_vert, Eigen::all);
     Eigen::VectorXd grad = sample_qpoint_data(gradient, coords).transpose();
-    Eigen::MatrixXd jac_t = sample_qpoint_data(qpoint_jac, coords); // n_dim*n_dim by 1
-    jac_t.conservativeResize(n_dim, n_dim); // automatically transposed bc of storage order
+    Eigen::MatrixXd jac_t = sample_qpoint_data(qpoint_jac, coords); // 1 by n_dim*n_dim
+    jac_t.resize(n_dim, n_dim); // automatically transposed bc of storage order
     con.normals(i_vert, Eigen::all) = (jac_t.householderQr().solve(grad)).normalized();
   }
   // put face info into Eigen matrix

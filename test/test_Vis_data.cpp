@@ -119,11 +119,11 @@ TEST_CASE("Vis_data")
 
   SECTION("sample")
   {
-    auto sample = vis3.sample(Eigen::Matrix<double, 3, 2>{{.5, 1.}, {.5, 0.}, {.5, 0.}});
-    REQUIRE(sample.rows() == 3);
-    REQUIRE(sample.cols() == 2);
-    REQUIRE((sample(Eigen::all, 0) - Eigen::VectorXd::Constant(3, .5 - .1/8.)).norm() == Catch::Approx(0.).scale(1.));
-    REQUIRE((sample(Eigen::all, 1) - Eigen::Vector3d{1., 0., 0.}).norm() == Catch::Approx(0.).scale(1.));
+    auto sample = vis3.sample(Eigen::Matrix<double, 2, 3>{{.5, .5, .5}, {1., 0., 0.}});
+    REQUIRE(sample.rows() == 2);
+    REQUIRE(sample.cols() == 3);
+    REQUIRE((sample(0, Eigen::all).transpose() - Eigen::VectorXd::Constant(3, .5 - .1/8.)).norm() == Catch::Approx(0.).scale(1.));
+    REQUIRE((sample(1, Eigen::all).transpose() - Eigen::Vector3d{1., 0., 0.}).norm() == Catch::Approx(0.).scale(1.));
   }
 
   SECTION("contour")
