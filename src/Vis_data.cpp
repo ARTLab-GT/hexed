@@ -113,7 +113,7 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int n_newto
 {
   Contour con;
   // sample points used for identifying the contour vertices
-  auto sample = interior(n_div + 1);
+  Mat<> sample = interior(n_div + 1)(Eigen::seqN((n_var - 1)*math::pow(n_div + 1, n_dim)));
   const int n_sample = sample.size();
   // if the candidate vertices that could be in the contour were selected from a
   // uniformly spaced block, how many points would this block have?

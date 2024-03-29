@@ -362,9 +362,9 @@ __type:__ string \n
 Defines contours to visualize if \ref vis_contour is \ref true.
 By default, none of these variables are defined.
 If you define any number of these variables (consecutively numbered and starting with 0), then each of them will define one isocontour to be computed.
-Each should be a string containing an expression (which will be evaluated in the same environment as \ref vis_contour_vars),
+Each should be a string containing an expression (which will be evaluated directly after \ref vis_contour_vars in the same environment),
 and the resulting contour will be the locus of points where that expression evaluates to 0.
-So, for example, to visualize the sonic line/surface, you could do `contour0 = {$mach_expr - 1.}`,
+So, for example, to visualize the sonic line/surface, you could do `contour0 = {mach - 1.}`,
 and to visualize the slice at \f$ x_0 = 3 \f$, you could do `contour0 = {pos0 - 3.}`.
 Each of the contours will be written to a separate file.
 For details on the algorithm to compute contours, see the source code for `hexed::Vis_data::compute_contour`.
