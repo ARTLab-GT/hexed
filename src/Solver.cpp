@@ -1303,7 +1303,6 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
 
 void Solver::visualize_contour(std::string format, std::string name, const Qpoint_func& contour_by, const Qpoint_func& output_variables, int n_sample)
 {
-  HEXED_ASSERT(contour_by.n_var(params.n_dim) == 1, "can only compute isocontours of a scalar-valued function");
   auto visualizer = Visualizer::create(format, params.n_dim, params.n_dim - 1, name, output_variables,
                                        _namespace->lookup<double>("flow_time").value(), Visualizer::block);
   Position_func pos_func;
@@ -1312,9 +1311,8 @@ void Solver::visualize_contour(std::string format, std::string name, const Qpoin
   auto bounds = bounds_field(contour_by, n_sample);
   double tol = 1e-9*(bounds[0][1] - bounds[0][0]); // tolerance to avoid detecting contours on constant data
   Qf_concat vis_vars({&pos_func, &output_variables});
-  Qf_concat contour_func({&output_variables, &contour_by});
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto contour = Vis_data(elems[i_elem], contour_func, basis, _namespace->lookup<double>("flow_time").value()).compute_contour(0., n_sample/2, 4, tol);
+    auto contour = Vis_data(elems[i_elem], contour_by, basis, _namespace->lookup<double>("flow_time").value()).compute_contour(0., n_sample/2, 4, tol);
     Vis_data data(elems[i_elem], vis_vars, basis, _namespace->lookup<double>("flow_time").value());
     Mat<dyn, dyn> values = data.sample(contour.vert_ref_coords);
     Eigen::MatrixXi inds = contour.elem_vert_inds.transpose();

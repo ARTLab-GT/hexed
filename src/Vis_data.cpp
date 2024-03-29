@@ -113,8 +113,8 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int n_newto
 {
   Contour con;
   // sample points used for identifying the contour vertices
-  Mat<> sample = interior(n_div + 1)(Eigen::seqN((n_var - 1)*math::pow(n_div + 1, n_dim)));
-  const int n_sample = sample.size();
+  const int n_sample = math::pow(n_div + 1, n_dim);
+  Mat<> sample = interior(n_div + 1)(Eigen::seqN((n_var - 1)*n_sample, n_sample));
   // if the candidate vertices that could be in the contour were selected from a
   // uniformly spaced block, how many points would this block have?
   const int n_block = math::pow(2*n_div + 1, n_dim);
@@ -218,14 +218,14 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int n_newto
   // compute gradient at quadrature points (used for projection)
   Eigen::VectorXd gradient(n_qpoint*n_dim);
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-    gradient(Eigen::seqN(i_dim*n_qpoint, n_qpoint)) = math::dimension_matvec(bas.diff_mat(), vars, i_dim);
+    gradient(Eigen::seqN(i_dim*n_qpoint, n_qpoint)) = math::dimension_matvec(bas.diff_mat(), vars(Eigen::seqN((n_var - 1)*n_qpoint, n_qpoint)), i_dim);
   }
   // project points to contour surface
   // move in line search direction (computed above) and compute distance to move with newton's method
   for (int i_newton = 0; i_newton < n_newton; ++i_newton) {
     for (int i_vert = 0; i_vert < con.vert_ref_coords.rows(); ++i_vert) {
       auto coords = con.vert_ref_coords(i_vert, Eigen::all);
-      double curr_value = sample_qpoint_data(vars, coords)(0);
+      double curr_value = sample_qpoint_data(vars(Eigen::seqN((n_var - 1)*n_qpoint, n_qpoint)), coords)(0);
       Eigen::VectorXd grad = sample_qpoint_data(gradient, coords).transpose(); // interpolate gradient to current coordinates
       auto dir = directions[i_vert].transpose();
       double diff = (value - curr_value)/(dir*grad + 1e-4*grad.norm());
