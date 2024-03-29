@@ -46,16 +46,17 @@ class Vis_data
   //! \brief return function evaluated at quadrature points. \details layout: [n_var][n_qpoint]
   inline const Eigen::VectorXd& qpoints() {return vars;}
 
-  //! \brief stores data representing a contour line/surface, to be converted to an otter curve/surface object
+  //! \brief stores data representing a contour line/surface
   struct Contour
   {
-    Eigen::MatrixXd vert_ref_coords; //!< coordinates of contour vertices in reference coordinates
-    Eigen::MatrixXd normals; //!< unit normal vectors to the contour surface in physical space (not reference) located at vertices
-    Eigen::MatrixXi elem_vert_inds; //!< indices of contour elements (line segments/quads). layout: [i_element][i_vertex]
+    Eigen::MatrixXd vert_ref_coords; //!< coordinates of contour vertices in reference coordinates. layout: [n_vertex][n_dim]
+    //! unit normal vectors to the contour surface in physical space (not reference) located at vertices. layout: [n_vertex][n_dim]
+    Eigen::MatrixXd normals;
+    Eigen::MatrixXi elem_vert_inds; //!< indices of contour elements (line segments/quads). layout: [i_element][math::pow(2, n_dim - 1)]
   };
   /*! \brief sample the function at a set of points given in reference coordinates
-   * \param ref_coords: reference coordinates of sample points. layout: [n_dim][n_sample]
-   * \returns values of visualization variables at sample points. layout: [n_var][n_sample]
+   * \param ref_coords: reference coordinates of sample points. layout: [n_sample][n_dim]
+   * \returns values of visualization variables at sample points. layout: [n_sample][n_var]
    */
   Eigen::MatrixXd sample(Eigen::MatrixXd ref_coords);
   /*! \brief compute a contour line/surface where the `i_var`th variable is equal to `value`

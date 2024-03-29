@@ -1,10 +1,12 @@
 #include <filesystem>
+#include <cctype>
 #include <Case.hpp>
 #include <Simplex_geom.hpp>
 #include <read_csv.hpp>
 #include <standard_atmosphere.hpp>
 #include <Occt.hpp>
 #include <hil_properties.hpp>
+#include <Csv.hpp>
 
 namespace hexed
 {
@@ -15,6 +17,12 @@ Solver& Case::_solver()
 {
   HEXED_ASSERT(_solver_ptr, "`Solver` object does not exist");
   return *_solver_ptr;
+}
+
+std::string strip_trailing_digits(std::string s)
+{
+  while (std::isdigit(s.back())) s.pop_back();
+  return s;
 }
 
 std::optional<        int> Case::_vari(std::string name) {return _inter.variables->lookup<        int>(name);}
@@ -120,8 +128,11 @@ Surface_geom* Case::_make_geom()
         geoms.emplace_back(new Simplex_geom<2>(Occt::segments(shape, _vari("geom_n_segments").value())));
       } else if (nd == 3) {
         auto ptr = new Simplex_geom<3>(Occt::triangles(shape, _vard("max_angle").value(), _vard("max_deflection").value()));
-        #if HEXED_USE_TECPLOT
-        ptr->visualize(format_str(1000, "%sgeom%i_triangulation", _vars("working_dir").value().c_str(), i_geom));
+        std::string vis_name = format_str(1000, "%sgeom%i_triangulation", _vars("working_dir").value().c_str(), i_geom);
+        #if HEXED_USE_XDMF
+        ptr->visualize("xdmf", vis_name);
+        #elif HEXED_USE_TECPLOT
+        ptr->visualize("tecplot", vis_name);
         #endif
         geoms.emplace_back(ptr);
       }
@@ -343,9 +354,15 @@ Case::Case(std::string input_script)
     std::string wd = _vars("working_dir").value();
     std::string suffix = "_" + _iteration_suffix();
     int n_sample = _vari("vis_n_sample").value();
-    for (std::string v : {"surface", "field"}) if (_vari("vis_" + v).value()) {
-      for (std::string format : {"xdmf", "tecplot"}) if (_vari("vis_" + format).value()) {
-        Struct_expr vis_vars(_vars("vis_" + v + "_vars").value());
+    std::vector<std::string> vis_objects {"surface", "field"};
+    for (int i_contour = 0; ; ++i_contour) {
+      std::string name = "contour" + std::to_string(i_contour);
+      if (_vars(name)) vis_objects.push_back(name);
+      else break;
+    }
+    for (std::string v : vis_objects) if (_vari("vis_" + strip_trailing_digits(v)).value()) {
+      for (std::string format : {"xdmf", "tecplot", "csv"}) if (_vari("vis_" + format).value()) {
+        Struct_expr vis_vars(_vars("vis_" + strip_trailing_digits(v) + "_vars").value());
         for (bool edges : {false, true}) {
           std::string name = v;
           if (edges) name = name + "_edges";
@@ -356,18 +373,31 @@ Case::Case(std::string input_script)
             } else if (v == "field") {
               _solver().visualize_field(format, file_name, Qpoint_expr(vis_vars, _inter), n_sample, edges);
               if (_vari("vis_skew").value()) _solver().visualize_field(format, wd + "skew" + suffix, Equiangle_skewness(), n_sample, edges);
+            } else if (!edges) { // vis_type == contour0, contour1, etc
+              std::string contour_expr = _vars("vis_contour_vars").value() + v + "_var = " + _vars(v).value() + ";";
+              _solver().visualize_contour(format, file_name, Qpoint_expr(contour_expr, _inter), Qpoint_expr(vis_vars, _inter), n_sample);
             }
             if (format == "xdmf") {
               std::string latest = wd + name + "_latest1.xmf";
               if (std::filesystem::exists(latest)) {
                 std::filesystem::copy_file(latest, wd + name + "_latest0.xmf", std::filesystem::copy_options::overwrite_existing);
               }
-              std::filesystem::copy_file(file_name + ".xmf", latest, std::filesystem::copy_options::overwrite_existing);
+              if (std::filesystem::exists(file_name + ".xmf")) {
+                std::filesystem::copy_file(file_name + ".xmf", latest, std::filesystem::copy_options::overwrite_existing);
+              }
             }
           }
         }
       }
     }
+    return 0;
+  }));
+
+  _inter.variables->create<int>("write_skews", new Namespace::Heisenberg<int>([this]() {
+    Csv csv(_vars("working_dir").value() + "skews", 1);
+    Array<double> skews(_solver().skews());
+    Array<double> reshaped({skews.size(), 1}, skews.data());
+    csv.write(reshaped);
     return 0;
   }));
 

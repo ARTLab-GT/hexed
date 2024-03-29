@@ -30,7 +30,7 @@ and/or \ref monitor_vars "output variable history".
 \subsubsection local_time
 __type:__ integer \n
 __default:__ \ref true \n
-If \ref true, use local time stepping, otherwase use global.
+If \ref true, use local time stepping, otherwise use global.
 \note Not defined until \ref create_solver is evaluated.
 
 <hr>
@@ -63,7 +63,7 @@ __default:__ `{inviscid}` \n
 Specifies model to use for molecular transport coefficients (viscosity and thermal conductivity).
 Accepted values:
 - `{inviscid}`
-- `{sutherland}`: Uses sutherland's law for air (non-constant Prandtl number)
+- `{sutherland}`: Uses Sutherland's law for air (non-constant Prandtl number)
 
 <hr>
 \subsubsection thermal_bc
@@ -78,7 +78,7 @@ Accepted values:
 - `{internal_energy = x}`: Prescribes the internal energy at the wall to be `x`.
   For now, since you're stuck in the CPG world, this is equivalent to `{temperature = x*(heat_rat - 1)/specific_gas_air}`.
 - `{emissivity = x; conduction = y; temperature = z}`: \anchor thermal_equilibrium_bc
-  Specifies that the wall is in thermal equalibrium according to a simple 1D heat equation.
+  Specifies that the wall is in thermal equilibrium according to a simple 1D heat equation.
   Specifically, sets the heat flux equal to the sum of the radiative cooling flux and the thermal conduction through the wall.
   The radiative cooling flux is determined by the [Stefan-Boltzmann Law](https://en.wikipedia.org/wiki/Stefan%E2%80%93Boltzmann_law)
   with the emissivity \f$ \sigma \f$ given by `emissivity`.
@@ -115,7 +115,7 @@ Sideslip angle (radian, as specified in \ref units).
 \subsubsection art_visc_width
 __type:__ float \n
 __default:__ `-1.` \n
-If set to a positive number, turns on aritificial viscosity with a smoothness-based coefficient
+If set to a positive number, turns on artificial viscosity with a smoothness-based coefficient
 and sets the smoothness width to `art_visc_width`.
 
 <hr>
@@ -158,7 +158,7 @@ __type:__ integer \n
 __default:__ 0.7 \n
 Number of Chebyshev acceleration stages to use for diffusion equation for smoothness-based artificial viscosity.
 Increasing this number will help the artificial viscosity coefficient converge faster
-but cause a larger fraction of the time to be spent in the aritificial viscosity calculation.
+but cause a larger fraction of the time to be spent in the artificial viscosity calculation.
 \note Not defined until \ref create_solver is evaluated.
 
 <hr>
@@ -168,7 +168,7 @@ __default:__ 1 \n
 Number of pseudotime iterations to run in artificial viscosity advection equation per nominal iteration
 (i.e. per `hexed::Solver::update_art_visc_smoothness` call).
 Increasing this number will help the artificial viscosity coefficient converge faster
-but cause a larger fraction of the CPU time to be spent in the aritificial viscosity calculation.
+but cause a larger fraction of the CPU time to be spent in the artificial viscosity calculation.
 \note Not defined until \ref create_solver is evaluated.
 
 <hr>
@@ -254,14 +254,14 @@ although the default value produces reasonable results in a wide range of cases,
 \subsubsection art_visc_constant
 __type:__ float \n
 __default:__ `-1.` \n
-If set to a positive number, turns on aritificial viscosity and sets the artificial viscosity coefficient to be uniformly equal to `art_visc_constant`.
+If set to a positive number, turns on artificial viscosity and sets the artificial viscosity coefficient to be uniformly equal to `art_visc_constant`.
 
 <hr>
 \subsubsection fix_therm_admis
 __type:__ integer \n
 __default:__ \ref false \n
 If \ref true, check thermodynamic admissibility (positive density, nonnegative energy, non-NaN state) after every time integration stage
-and if problems are found, run as many Laplacian smearing iterations as neccessary to restore admissibility.
+and if problems are found, run as many Laplacian smearing iterations as necessary to restore admissibility.
 Results in a major robustness improvement for hypersonic cases and comes at a modest performance cost.
 
 <hr>
@@ -330,6 +330,46 @@ __default:__ \ref true \n
 Whether to visualize field data when \ref visualize is invoked.
 
 <hr>
+\subsubsection vis_contour
+__type:__ integer \n
+__default:__ \ref true \n
+Whether to explicitly compute and visualize contours when \ref visualize is invoked.
+Normally, you would visualize contour plots by loading the field visualization in your plotting software of choice
+and using its contour plotting feature.
+However, Hexed can also compute isocontours on its own and write out files containing just the contour.
+This could be useful if your computation is I/O bound or if you want to streamline some postprocessing pipeline that uses isocontours.
+This can also be used to visualize slices, which are simply special cases of contours.
+To control what contours are visualized, use \ref contourN and to control the variables included in each contour file, use \ref vis_contour_vars.
+If you want to visualize contours _and_ field data, but contours more frequently than field, you can add to \ref iterate, E.g.
+~~~{.unparsed}
+vis_freq = 10^5
+iterate = iterate + {
+    case0 = {}
+    case1 = {
+        vis_field = false
+        print {visualizing contours...}
+        visualize
+        println {done}
+        vis_field = true
+    }
+    $$({case} + (iteration%10^3 == 0))
+}
+~~~
+
+<hr>
+\subsubsection contourN contour0, contour1, contour2, ...
+__type:__ string \n
+Defines contours to visualize if \ref vis_contour is \ref true.
+By default, none of these variables are defined.
+If you define any number of these variables (consecutively numbered and starting with 0), then each of them will define one isocontour to be computed.
+Each should be a string containing an expression (which will be evaluated directly after \ref vis_contour_vars in the same environment),
+and the resulting contour will be the locus of points where that expression evaluates to 0.
+So, for example, to visualize the sonic line/surface, you could do `contour0 = {mach - 1.}`,
+and to visualize the slice at \f$ x_0 = 3 \f$, you could do `contour0 = {pos0 - 3.}`.
+Each of the contours will be written to a separate file.
+For details on the algorithm to compute contours, see the source code for `hexed::Vis_data::compute_contour`.
+
+<hr>
 \subsubsection vis_tecplot
 __type:__ integer \n
 __default:__ \ref false \n
@@ -358,6 +398,12 @@ __default:__ `state_vars + art_visc_expr` \n
 __type:__ string \n
 __default:__ `state_vars + visc_stress_expr + heat_flux_expr` \n
 \ref struct_expr "Structured expression" specifying which surface variables to visualize.
+
+<hr>
+\subsubsection vis_contour_vars
+__type:__ string \n
+__default:__ \ref vis_field_vars \n
+\ref struct_expr "Structured expression" specifying which variables to visualize in \ref vis_contour "natively-computed contours".
 
 <hr>
 \subsubsection vis_n_sample
@@ -487,7 +533,7 @@ In some cases, even I don't fully understand why the accepted defaults work.
 \subsubsection mesh_extreme_eps
 __type:__ float \n
 __default:__ `1e-6` \n
-Comparison tolerance to use when deterimining whether points are inside or outside mesh extremes.
+Comparison tolerance to use when determining whether points are inside or outside mesh extremes.
 Relative to domain size.
 
 <hr>
@@ -497,7 +543,7 @@ __default:__ 1 \n
 Number of pseudotime iterations to run in artificial viscosity diffusion equation per nominal iteration
 (i.e. per `hexed::Solver::update_art_visc_smoothness` call).
 Increasing this number will help the artificial viscosity coefficient converge faster
-but cause a larger fraction of the CPU time to be spent in the aritificial viscosity calculation.
+but cause a larger fraction of the CPU time to be spent in the artificial viscosity calculation.
 \note This was useful before Chebyshev acceleration was discovered.
 Increasing \ref n_cheby_av instead will usually be more productive, up to the limit where stability falls apart.
 \note Not defined until \ref create_solver is evaluated.
@@ -594,7 +640,7 @@ __default:__ 100 \n
 \subsubsection elementwise_art_visc
 __type:__ integer \n
 __default:__ \ref false \n
-If \ref true, artificial viscosity determined in an elementwise fasion
+If \ref true, artificial viscosity determined in an elementwise fashion
 based on the work of [Persson](http://persson.berkeley.edu/pub/persson13transient_shocks.pdf).
 This feature is provided purely for the purpose of comparing the discretization-independent artificial viscosity to conventional methods.
 It is not recommended for practical simulations with this solver.
@@ -635,7 +681,7 @@ Performs basic initialization that has to happen before you can do anything with
 (but after you've defined your parameters).
 Behavior is roughly the following:
 -# creates working directory if it does not already exist
--# copies the inpute file to the working directory for the user's future reference
+-# copies the input file to the working directory for the user's future reference
 -# initializes automatically-determined parameters
 -# calls \ref create_solver
 
@@ -683,7 +729,7 @@ Mesh contains a single element and the flow is uninitialized.
 <hr>
 \subsubsection init_refinement
 __type:__ Heisenberg integer \n
-Performs initial refinment (not based on geometry surface) and returns 0.
+Performs initial refinement (not based on geometry surface) and returns 0.
 
 <hr>
 \subsubsection add_geom
@@ -824,7 +870,7 @@ It is usually only necessary in supersonic viscous simulations.
 __type:__ string (macro) \n
 Configures settings to be good for aerothermodynamics.
 Assumes $\ref set_shock has already been called.
-Automaticall calls $\ref set_ramping.
+Automatically calls $\ref set_ramping.
 
 <hr>
 \subsubsection read_mesh
@@ -937,7 +983,7 @@ Amount of time (seconds) elapsed in the physical flow since the simulation start
 Only meaningful for global time stepping.
 Not to be confused with \ref wall_time ---if the distinction isn't clear, here is an example:
 if you have a shock propagating at 100 m/s and run your simulation with global time stepping
-until the flow time reaches 0.01 s, then the shock will have propaged a distance of 1 m.
+until the flow time reaches 0.01 s, then the shock will have propagated a distance of 1 m.
 
 <hr>
 \subsubsection time_step

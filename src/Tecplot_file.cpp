@@ -8,8 +8,8 @@
 namespace hexed
 {
 
-Tecplot_file::Tecplot_file(std::string file_name, int n_dim, int n_dim_block, std::vector<std::string> variable_names, double time, double heat_rat, double gas_const)
-: n_dim{n_dim}, n_dim_topo{n_dim_block}, n_var{int(variable_names.size())}, time{time}, strand_id{1}, i_zone{0}, file_handle{nullptr}
+Tecplot_file::Tecplot_file(std::string file_name, int n_dim, int n_dim_topo_arg, std::vector<std::string> variable_names, double time, double heat_rat, double gas_const)
+: n_dim{n_dim}, n_dim_topo{n_dim_topo_arg}, n_var{int(variable_names.size())}, time{time}, strand_id{1}, i_zone{0}, file_handle{nullptr}
 {
   std::string var_name_list = "";
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -36,10 +36,16 @@ Tecplot_file::Tecplot_file(std::string file_name, int n_dim, int n_dim_block, st
   tecDataSetAddAuxData(file_handle, "Common.StagnationEnergyVar", std::to_string(2*n_dim + 2).c_str());
 }
 
-void Tecplot_file::write_block(int row_size, double* pos, double* vars)
+void Tecplot_file::write_block(Array<double> pos, Array<double> vars)
 {
-  Structured_block block(*this, row_size, "block", n_dim_topo);
-  block.write(pos, vars);
+  HEXED_ASSERT(pos(0).same_shape(vars(0)), "`pos` and `vars` must have the same shape");
+  Structured_block block(*this, pos.shape()[1], "block", n_dim_topo);
+  block.write(pos.data(), vars.data());
+}
+
+void Tecplot_file::write_unstruct(Array<int> elements, Array<double> pos, Array<double> vars)
+{
+  Unstructured zone(*this, elements, pos, vars);
 }
 
 Tecplot_file::~Tecplot_file()
@@ -48,7 +54,7 @@ Tecplot_file::~Tecplot_file()
 }
 
 Tecplot_file::Zone::Zone(Tecplot_file& file, int n_nodes, std::string name_arg)
-: file{file}, name{name_arg + std::to_string(file.i_zone++)}, n_nodes{n_nodes}, n_total_vars{file.n_dim + file.n_var},
+: file{file}, name{name_arg + std::to_string(file.i_zone++)}, n_nodes{n_nodes}, tecio_zone_index{1}, n_total_vars{file.n_dim + file.n_var},
   var_types(n_total_vars, 2), // declare data type as double
   shared(n_total_vars, 0), // declare no variables shared
   location(n_total_vars, 1), // declare variable location as node-centered
@@ -127,6 +133,42 @@ Tecplot_file::Triangles::~Triangles()
   std::vector<int> inds;
   for (int i = 0; i < 3*n_tri; ++i) inds.push_back(i);
   tecZoneNodeMapWrite32(file.file_handle, tecio_zone_index, 0, 0, inds.size(), inds.data());
+}
+
+Tecplot_file::Unstructured::Unstructured(Tecplot_file& file, Array<int> elements, Array<double> pos, Array<double> vars, std::string name_arg)
+: Zone{file, 0, name_arg}
+{
+  HEXED_ASSERT(pos.order() == 2, "order of `pos` must be 2");
+  HEXED_ASSERT(pos.shape()[0] == file.n_dim, "must have same number of position variables as file dimensionality");
+  HEXED_ASSERT(pos(0).same_shape(vars(0)), "`pos` and `vars` must have same number of variables and same order");
+  HEXED_ASSERT(vars.shape()[0] == file.n_var, "must have same number of field variables as file");
+  const char* name = "unstructured_zone";
+  Zone z(file, 3, name);
+  int n_vert = pos.shape()[1];
+  int n_elem_vert = elements.shape()[1];
+  int n_elem = elements.shape()[0];
+  int zone_t;
+  if      (n_elem_vert == 2 && file.n_dim_topo == 1) zone_t = us_line_seg;
+  else if (n_elem_vert == 3 && file.n_dim_topo == 2) zone_t = us_triangle;
+  else if (n_elem_vert == 4 && file.n_dim_topo == 2) zone_t = us_quad;
+  else if (n_elem_vert == 4 && file.n_dim_topo == 3) zone_t = us_tet;
+  else if (n_elem_vert == 8 && file.n_dim_topo == 3) zone_t = us_hex;
+  else HEXED_ASSERT(false, "current combination of number of vertices and toplogical dimension did not match any known element type");
+  HEXED_ASSERT(zone_t != us_quad && zone_t != us_hex, "vertex permutations for unstructured quad/hex visualization with Tecplot have not been implemented");
+  tecZoneCreateFE(file.file_handle, name, zone_t, pos.shape()[1], n_elem,
+                  var_types.data(), shared.data(), location.data(), passive.data(), 0, 0, 0, &tecio_zone_index);
+  for (int i_dim = 0; i_dim < file.n_dim; ++i_dim) {
+    tecZoneVarWriteDoubleValues(file.file_handle, tecio_zone_index, i_dim + 1, 0, n_vert, pos(i_dim).data());
+  }
+  for (int i_var = 0; i_var < file.n_var; ++i_var) {
+    tecZoneVarWriteDoubleValues(file.file_handle, tecio_zone_index, file.n_dim + i_var + 1, 0, n_vert, vars(i_var).data());
+  }
+  tecZoneNodeMapWrite32(file.file_handle, tecio_zone_index, 0, 0, elements.size(), elements.data());
+}
+
+void Tecplot_file::Unstructured::write(const double* pos, const double* vars)
+{
+  HEXED_ASSERT(false, "don't use `write` for `hexed::Tecplot_file::Unstructured`. Constructor does it for you.");
 }
 
 }

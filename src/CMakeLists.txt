@@ -5,6 +5,7 @@ Basis.cpp
 Boundary_condition.cpp
 Boundary_func.cpp
 Case.cpp
+Csv.cpp
 connection.cpp
 criteria.cpp
 Deformed_element.cpp
@@ -50,6 +51,7 @@ Tecplot_file.cpp
 Tree.cpp
 thermo.cpp
 Vertex.cpp
+Visualizer.cpp
 Vis_data.cpp
 Xdmf_wrapper.cpp
 )

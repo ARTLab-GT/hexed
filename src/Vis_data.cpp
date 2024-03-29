@@ -7,11 +7,11 @@ namespace hexed
 Eigen::MatrixXd Vis_data::sample_qpoint_data(Eigen::VectorXd qpoint_data, Eigen::MatrixXd ref_coords)
 {
   int nv = qpoint_data.size()/n_qpoint;
-  const int n_sample = ref_coords.cols();
-  Eigen::MatrixXd result(nv, n_sample);
+  const int n_sample = ref_coords.rows();
+  Eigen::MatrixXd result(n_sample, nv);
   for (int i_sample = 0; i_sample < n_sample; ++i_sample) {
     // ith row is the interpolation matrix along the ith dimension
-    auto interp = bas.interpolate(ref_coords(Eigen::all, i_sample));
+    auto interp = bas.interpolate(ref_coords(i_sample, all));
     for (int i_var = 0; i_var < nv; ++i_var) {
       // start with all the data for this variable
       Eigen::VectorXd var = qpoint_data(Eigen::seqN(i_var*n_qpoint, n_qpoint));
@@ -20,7 +20,7 @@ Eigen::MatrixXd Vis_data::sample_qpoint_data(Eigen::VectorXd qpoint_data, Eigen:
         var = math::dimension_matvec(interp(i_dim, Eigen::all), var, i_dim);
       }
       // ...until all you have left is a vector with one element
-      result(i_var, i_sample) = var(0);
+      result(i_sample, i_var) = var(0);
     }
   }
   return result;
@@ -113,9 +113,9 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int n_newto
 {
   Contour con;
   // sample points used for identifying the contour vertices
-  auto sample = interior(n_div + 1);
-  const int n_sample = sample.size();
-  // if the candidate vertices that could be int the contour were selected from a
+  const int n_sample = math::pow(n_div + 1, n_dim);
+  Mat<> sample = interior(n_div + 1)(Eigen::seqN((n_var - 1)*n_sample, n_sample));
+  // if the candidate vertices that could be in the contour were selected from a
   // uniformly spaced block, how many points would this block have?
   const int n_block = math::pow(2*n_div + 1, n_dim);
   // number of corners of a contour element
@@ -157,7 +157,7 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int n_newto
               boundary[j_dim][1] = row == n_div;
               block += row*2*strides_block[j_dim];
             }
-            // there `n_corner` possible surface elements that share vertex `block` with normal in direction `i_dim`
+            // there are `n_corner` possible surface elements that share vertex `block` with normal in direction `i_dim`
             int n_vert = math::pow(3, n_dim - 1); // these elements collectively have `n_vert` vertices
             std::vector<int> verts(n_vert); // `i_block` for each of said vertices
             // populate `verts` and compute search direction
@@ -218,15 +218,15 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int n_newto
   // compute gradient at quadrature points (used for projection)
   Eigen::VectorXd gradient(n_qpoint*n_dim);
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-    gradient(Eigen::seqN(i_dim*n_qpoint, n_qpoint)) = math::dimension_matvec(bas.diff_mat(), vars, i_dim);
+    gradient(Eigen::seqN(i_dim*n_qpoint, n_qpoint)) = math::dimension_matvec(bas.diff_mat(), vars(Eigen::seqN((n_var - 1)*n_qpoint, n_qpoint)), i_dim);
   }
   // project points to contour surface
   // move in line search direction (computed above) and compute distance to move with newton's method
   for (int i_newton = 0; i_newton < n_newton; ++i_newton) {
     for (int i_vert = 0; i_vert < con.vert_ref_coords.rows(); ++i_vert) {
       auto coords = con.vert_ref_coords(i_vert, Eigen::all);
-      double curr_value = sample_qpoint_data(vars, coords.transpose())(0);
-      Eigen::VectorXd grad = sample_qpoint_data(gradient, coords.transpose()); // interpolate gradient to current coordinates
+      double curr_value = sample_qpoint_data(vars(Eigen::seqN((n_var - 1)*n_qpoint, n_qpoint)), coords)(0);
+      Eigen::VectorXd grad = sample_qpoint_data(gradient, coords).transpose(); // interpolate gradient to current coordinates
       auto dir = directions[i_vert].transpose();
       double diff = (value - curr_value)/(dir*grad + 1e-4*grad.norm());
       diff = std::max(-.5/n_div, std::min(.5/n_div, diff)); // limit search distance to prevent crazy-looking contours
@@ -245,9 +245,9 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int n_newto
   // compute normals
   con.normals.resize(i_block.size(), n_dim);
   for (unsigned i_vert = 0; i_vert < i_block.size(); ++i_vert) {
-    Eigen::VectorXd coords = con.vert_ref_coords(i_vert, Eigen::all).transpose();
-    Eigen::VectorXd grad = sample_qpoint_data(gradient, coords);
-    Eigen::MatrixXd jac_t = sample_qpoint_data(qpoint_jac, coords); // n_dim*n_dim by 1
+    Eigen::MatrixXd coords = con.vert_ref_coords(i_vert, Eigen::all);
+    Eigen::VectorXd grad = sample_qpoint_data(gradient, coords).transpose();
+    Eigen::MatrixXd jac_t = sample_qpoint_data(qpoint_jac, coords); // 1 by n_dim*n_dim
     jac_t.resize(n_dim, n_dim); // automatically transposed bc of storage order
     con.normals(i_vert, Eigen::all) = (jac_t.householderQr().solve(grad)).normalized();
   }
