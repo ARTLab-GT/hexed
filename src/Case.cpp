@@ -503,7 +503,7 @@ Case::Case(std::string input_script)
   }));
 
   // load HIL code for the Case _interface
-  _inter.exec(format_str(1000, "$read {%s/include/Case.hil}", config::root_dir));
+  _inter.exec(format_str(1000, "$read {hexed.hil}", config::root_dir));
   // execute input file
   _inter.exec(format_str(1000, "$read {%s}", input_script.c_str()));
 }
