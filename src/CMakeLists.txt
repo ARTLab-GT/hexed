@@ -32,6 +32,7 @@ math.cpp
 Occt.cpp
 Output_data.cpp
 otter_vis.cpp
+Path.cpp
 Physical_basis.cpp
 Qpoint_func.cpp
 read_csv.cpp

@@ -21,8 +21,6 @@ namespace hexed::config
 
 //! \name CMake options
 //!\{
-constexpr char root_dir [] = "@CMAKE_SOURCE_DIR@/"; //!< \brief root directory of the Hexed source code when it was built
-constexpr char build_dir [] = "@CMAKE_BINARY_DIR@/"; //!< \brief directory in which Hexed was built
 constexpr int version_major = @CMAKE_PROJECT_VERSION_MAJOR@; //!< \brief this is Hexed version \ref version_major .\ref version_minor .\ref version_patch
 constexpr int version_minor = @CMAKE_PROJECT_VERSION_MINOR@; //!< \brief this is Hexed version \ref version_major .\ref version_minor .\ref version_patch
 constexpr int version_patch = @CMAKE_PROJECT_VERSION_PATCH@; //!< \brief this is Hexed version \ref version_major .\ref version_minor .\ref version_patch

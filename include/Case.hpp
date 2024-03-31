@@ -29,7 +29,7 @@ class Case
   std::unique_ptr<Struct_expr> _monitor_expr;
   std::vector<History_monitor> _monitors;
   public:
-  Case(std::string input_script = format_str(1000, "%s/include/interactive.hil", config::root_dir));
+  Case(std::string input_script = "interactive.hil");
 };
 
 }

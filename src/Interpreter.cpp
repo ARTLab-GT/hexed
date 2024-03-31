@@ -5,12 +5,13 @@
 #include <cstdlib>
 #include <chrono>
 #include <Interpreter.hpp>
+#include <Path.hpp>
 
 namespace hexed
 {
 
-const std::string Interpreter::builtin_file = std::string(config::root_dir) + "include/builtin.hil";
-const std::string Interpreter::const_file = std::string(config::build_dir) + "constants.hil";
+const std::string Interpreter::builtin_file = "builtin.hil";
+const std::string Interpreter::const_file = "constants.hil";
 
 bool Interpreter::_more() {return _text.size() > 1;}
 char Interpreter::_pop()
@@ -276,7 +277,7 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
     }},
     {"read", [this](_Dynamic_value val) {
       HEXED_ASSERT(val.s.has_value(), "operand of `read` must be `string`", Hil_exception);
-      std::ifstream file(*val.s);
+      std::ifstream file(Path("lib/hexed").find(*val.s));
       HEXED_ASSERT(file.good(), format_str(1000, "failed to open file `%s`", (*val.s).c_str()), Hil_exception);
       _Dynamic_value str;
       str.s = "";

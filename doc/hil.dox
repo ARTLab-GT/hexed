@@ -136,6 +136,8 @@ __Notes:__
 - Unless otherwise specified, the return type of each operator is the same as its operands.
 - An operator expression which is not nested inside another expression is called a _statement_.
 - A statement is terminated by either a newline or a `;` (as long as this terminating character is not inside a string literal).
+- `read` will search for the target file in your current directory and `lib/hexed` in some standard install paths.
+  Specifically, it calls `hexed::Path("lib/hexed").find`.
 
 \section variables Variables and Assignment
 The `=` operator can be used to assign a value to a variable.
