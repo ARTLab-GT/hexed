@@ -1,7 +1,6 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/Path.hpp>
 #include <fstream>
-#include <iostream>
 
 TEST_CASE("Path")
 {
@@ -11,4 +10,6 @@ TEST_CASE("Path")
   std::ofstream file("find_this");
   file.close();
   REQUIRE(!p.find("find_this").empty());
+  REQUIRE(p.find("hexed_this_does_not_exist").empty());
+  REQUIRE(!p.find("/dev/null").empty());
 }
