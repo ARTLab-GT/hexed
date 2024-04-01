@@ -363,19 +363,21 @@ void Interpreter::exec(std::string comms)
   Lock::Acquire a(_lock);
   _text.assign(comms.begin(), comms.end());
   _text.push_back('\0');
-  try {
-    _eval(std::numeric_limits<int>::max() - 1);
-  } catch (const Hil_exception& e) {
-    std::string except = variables->lookup<std::string>("except").value();
-    std::string message = "Hexed Interface Language exception (in `hexed::Interpreter`):\n    " + std::string(e.what()) + "\n" + _debug_info();
-    if (!except.empty()) {
-      variables->assign<std::string>("exception", message);
-      _skip_spaces();
-      while (_more() && (_text.front() != '\n' && _text.front() != ';')) _pop();
-      except = except + "; exception = {}; except = {};";
-      _text.insert(_text.begin(), except.begin(), except.end());
+  while (true) {
+    try {
       _eval(std::numeric_limits<int>::max() - 1);
-    } else throw Hil_unhandled_exception(message);
+      break;
+    } catch (const Hil_exception& e) {
+      std::string except = variables->lookup<std::string>("except").value();
+      std::string message = "Hexed Interface Language exception (in `hexed::Interpreter`):\n    " + std::string(e.what()) + "\n" + _debug_info();
+      if (!except.empty()) {
+        variables->assign<std::string>("exception", message);
+        _skip_spaces();
+        while (_more() && (_text.front() != '\n' && _text.front() != ';')) _pop();
+        except = except + "; exception = {}; except = {};";
+        _text.insert(_text.begin(), except.begin(), except.end());
+      } else throw Hil_unhandled_exception(message);
+    }
   }
   _text.clear();
 }
