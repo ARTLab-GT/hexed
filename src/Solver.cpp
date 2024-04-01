@@ -445,7 +445,8 @@ void Solver::diffuse_art_visc(double diff_time)
   // initialize residual to zero (will compute RMS over all real time steps)
   compute_write_face_smooth_av(_kernel_mesh());
   compute_prolong(_kernel_mesh());
-  for (bool preti : {0, 1}) {
+  int n_preti = (1 + (_namespace->lookup<int>("iteration").value() > 20000));
+  for (int preti = 0; preti < n_preti; ++preti) {
     auto km = acc_mesh->masked_mesh(basis);
     // perform pseudotime iteration
     for (int i_iter = 0; i_iter < _namespace->lookup<int>("av_diff_iters").value(); ++i_iter) {
@@ -456,7 +457,7 @@ void Solver::diffuse_art_visc(double diff_time)
         compute_smooth_av(km, opts, [this](){apply_avc_diff_flux_bcs();}, diff_time, s);
       }
     }
-    if (preti) acc_mesh->set_mask();
+    if (preti == n_preti - 1) acc_mesh->set_mask();
     else acc_mesh->set_mask([](Element& elem){return !elem.tree;});
   }
 }
@@ -502,7 +503,8 @@ void Solver::update_art_visc_smoothness(double advect_length)
   };
   max_dt_advection(_kernel_mesh(), opts, adv_safety, 1., true, advect_length);
 
-  for (bool preti : {0, 1})
+  int n_preti = 1 + (_namespace->lookup<int>("iteration").value() > 20000);
+  for (int preti = 0; preti < n_preti; ++preti)
   {
     auto km = acc_mesh->masked_mesh(basis);
     // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
@@ -530,7 +532,7 @@ void Solver::update_art_visc_smoothness(double advect_length)
       sw_adv.children.at("cartesian").work_units_completed += acc_mesh->cartesian().elements().size();
       sw_adv.children.at("deformed" ).work_units_completed += acc_mesh->deformed ().elements().size();
     }
-    if (preti) acc_mesh->set_mask();
+    if (preti == n_preti - 1) acc_mesh->set_mask();
     else acc_mesh->set_mask([](Element& elem){return !elem.tree;});
   }
   sw_adv.children.at("setup").work_units_completed += elements.size();
@@ -850,7 +852,8 @@ void Solver::update()
   auto& elems = acc_mesh->elements();
   int n_cheby = _namespace->lookup<int>("n_cheby_flow").value();
   int n_flow = _namespace->lookup<int>("flow_iters").value();
-  for (bool preti : {0, 1})
+  int n_preti = (1 + (_namespace->lookup<int>("iteration").value() > 20000));
+  for (int preti = 0; preti < n_preti; ++preti)
   {
     auto km = acc_mesh->masked_mesh(basis);
     for (int i_flow = 0; i_flow < n_flow; ++i_flow)
@@ -891,7 +894,7 @@ void Solver::update()
         status.flow_time += dt;
       }
     }
-    if (preti) acc_mesh->set_mask();
+    if (preti == n_preti - 1) acc_mesh->set_mask();
     else acc_mesh->set_mask([](Element& elem){return !elem.tree;});
   }
 
@@ -1019,7 +1022,7 @@ bool Solver::fix_admissibility(double stability_ratio, Kernel_mesh& km)
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
       for (int i_vert = 0; i_vert < nv; ++i_vert) {
-        elem.vertex_fix_admis_coef(i_vert) = elem.record;
+        elem.vertex_fix_admis_coef(i_vert) = 1;
       }
     }
     share_vertex_data(&Element::vertex_fix_admis_coef, Vertex::vector_max);
