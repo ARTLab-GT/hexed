@@ -5,12 +5,13 @@
 #include <cstdlib>
 #include <chrono>
 #include <Interpreter.hpp>
+#include <Path.hpp>
 
 namespace hexed
 {
 
-const std::string Interpreter::builtin_file = std::string(config::root_dir) + "include/builtin.hil";
-const std::string Interpreter::const_file = std::string(config::build_dir) + "constants.hil";
+const std::string Interpreter::builtin_file = "builtin.hil";
+const std::string Interpreter::const_file = "constants.hil";
 
 bool Interpreter::_more() {return _text.size() > 1;}
 char Interpreter::_pop()
@@ -276,7 +277,7 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
     }},
     {"read", [this](_Dynamic_value val) {
       HEXED_ASSERT(val.s.has_value(), "operand of `read` must be `string`", Hil_exception);
-      std::ifstream file(*val.s);
+      std::ifstream file(Path("lib/hexed").find(*val.s));
       HEXED_ASSERT(file.good(), format_str(1000, "failed to open file `%s`", (*val.s).c_str()), Hil_exception);
       _Dynamic_value str;
       str.s = "";
@@ -362,19 +363,21 @@ void Interpreter::exec(std::string comms)
   Lock::Acquire a(_lock);
   _text.assign(comms.begin(), comms.end());
   _text.push_back('\0');
-  try {
-    _eval(std::numeric_limits<int>::max() - 1);
-  } catch (const Hil_exception& e) {
-    std::string except = variables->lookup<std::string>("except").value();
-    std::string message = "Hexed Interface Language exception (in `hexed::Interpreter`):\n    " + std::string(e.what()) + "\n" + _debug_info();
-    if (!except.empty()) {
-      variables->assign<std::string>("exception", message);
-      _skip_spaces();
-      while (_more() && (_text.front() != '\n' && _text.front() != ';')) _pop();
-      except = except + "; exception = {}; except = {};";
-      _text.insert(_text.begin(), except.begin(), except.end());
+  while (true) {
+    try {
       _eval(std::numeric_limits<int>::max() - 1);
-    } else throw Hil_unhandled_exception(message);
+      break;
+    } catch (const Hil_exception& e) {
+      std::string except = variables->lookup<std::string>("except").value();
+      std::string message = "Hexed Interface Language exception (in `hexed::Interpreter`):\n    " + std::string(e.what()) + "\n" + _debug_info();
+      if (!except.empty()) {
+        variables->assign<std::string>("exception", message);
+        _skip_spaces();
+        while (_more() && (_text.front() != '\n' && _text.front() != ';')) _pop();
+        except = except + "; exception = {}; except = {};";
+        _text.insert(_text.begin(), except.begin(), except.end());
+      } else throw Hil_unhandled_exception(message);
+    }
   }
   _text.clear();
 }

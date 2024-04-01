@@ -5,6 +5,7 @@ Basis.cpp
 Boundary_condition.cpp
 Boundary_func.cpp
 Case.cpp
+Csv.cpp
 connection.cpp
 criteria.cpp
 Deformed_element.cpp
@@ -31,6 +32,7 @@ math.cpp
 Occt.cpp
 Output_data.cpp
 otter_vis.cpp
+Path.cpp
 Physical_basis.cpp
 Qpoint_func.cpp
 read_csv.cpp
@@ -50,6 +52,7 @@ Tecplot_file.cpp
 Tree.cpp
 thermo.cpp
 Vertex.cpp
+Visualizer.cpp
 Vis_data.cpp
 Xdmf_wrapper.cpp
 )

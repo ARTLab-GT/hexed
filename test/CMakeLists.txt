@@ -4,6 +4,7 @@ target_sources(unit PRIVATE
 # please maintain alphabetical order
 testing_utils.cpp
 test_Accessible_mesh.cpp
+test_Array.cpp
 test_Basis.cpp
 test_Boundary_condition.cpp
 test_Characteristics.cpp
@@ -27,9 +28,10 @@ test_Max_dt.cpp
 test_Mutual_ptr.cpp
 test_Namespace.cpp
 test_Occt.cpp
-test_pde.cpp
+test_Path.cpp
 test_Physical_basis.cpp
 test_Prolong_refined.cpp
+test_pde.cpp
 test_Restrict_refined.cpp
 test_Row_index.cpp
 test_Row_rw.cpp

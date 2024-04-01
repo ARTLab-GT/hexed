@@ -91,8 +91,7 @@ TEST_CASE("Interpreter")
   int result = inter.variables->lookup<int>("result").value();
   REQUIRE(result >= 0);
   REQUIRE(result < 10);
-  inter.exec("except = {result = 21}");
-  inter.exec("result = nonexistant");
+  inter.exec("except = {result = 2}; result = nonexistant; except = {result = 21}; result = nonexistant;");
   REQUIRE(inter.variables->lookup<int>("result") == 21);
   // test evaluation of assignments
   inter.exec("a = b = 2");

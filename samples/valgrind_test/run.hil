@@ -12,7 +12,6 @@ done = {iteration > 0}
 print_freq = 1
 vis_init = {}
 vis_iter = {}
-vis_final = {}
 vis_surface = false
 geom0 = {geom.csv}
 surface_refine = {return = is_extruded}

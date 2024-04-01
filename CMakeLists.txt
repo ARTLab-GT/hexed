@@ -173,5 +173,12 @@ add_custom_target(constants ALL DEPENDS constants.hil)
 install(PROGRAMS script/hexed-post-process ${CMAKE_BINARY_DIR}/hexed-wrapped-post-process script/hexed-fit-geom TYPE BIN)
 install(TARGETS hexed hexecute hil)
 export(TARGETS hexed FILE hexed-targets.cmake)
+install(FILES
+    ${CMAKE_SOURCE_DIR}/hil/builtin.hil
+    ${CMAKE_SOURCE_DIR}/hil/interactive.hil
+    ${CMAKE_SOURCE_DIR}/hil/hexed.hil
+    ${CMAKE_BINARY_DIR}/constants.hil
+    ${CMAKE_SOURCE_DIR}/LICENSE.txt
+    DESTINATION lib/hexed)
 install(FILES ${CMAKE_BINARY_DIR}/hexed-config.cmake DESTINATION lib/cmake/hexed)
 install(FILES ${CMAKE_SOURCE_DIR}/python/hexed_utils.py DESTINATION ${PYTHON_INSTALL_PREFIX})
