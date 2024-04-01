@@ -83,7 +83,7 @@ void Solver::apply_flux_bcs()
 
 void Solver::apply_avc_diff_bcs()
 {
-  auto& bc_cons {acc_mesh->boundary_connections()};
+  auto& bc_cons {acc_mesh->masked_boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
@@ -93,7 +93,7 @@ void Solver::apply_avc_diff_bcs()
 
 void Solver::apply_avc_diff_flux_bcs()
 {
-  auto& bc_cons {acc_mesh->boundary_connections()};
+  auto& bc_cons {acc_mesh->masked_boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
@@ -445,14 +445,19 @@ void Solver::diffuse_art_visc(double diff_time)
   // initialize residual to zero (will compute RMS over all real time steps)
   compute_write_face_smooth_av(_kernel_mesh());
   compute_prolong(_kernel_mesh());
-  // perform pseudotime iteration
-  for (int i_iter = 0; i_iter < _namespace->lookup<int>("av_diff_iters").value(); ++i_iter) {
-    for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
-      double s = math::chebyshev_step(n_cheby, i_cheby);
-      apply_avc_diff_bcs();
-      opts.dt = s;
-      compute_smooth_av(_kernel_mesh(), opts, [this](){apply_avc_diff_flux_bcs();}, diff_time, s);
+  for (bool preti : {0, 1}) {
+    auto km = acc_mesh->masked_mesh(basis);
+    // perform pseudotime iteration
+    for (int i_iter = 0; i_iter < _namespace->lookup<int>("av_diff_iters").value(); ++i_iter) {
+      for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
+        double s = math::chebyshev_step(n_cheby, i_cheby);
+        apply_avc_diff_bcs();
+        opts.dt = s;
+        compute_smooth_av(km, opts, [this](){apply_avc_diff_flux_bcs();}, diff_time, s);
+      }
     }
+    if (preti) acc_mesh->set_mask();
+    else acc_mesh->set_mask([](Element& elem){return !elem.tree;});
   }
 }
 
@@ -497,30 +502,36 @@ void Solver::update_art_visc_smoothness(double advect_length)
   };
   max_dt_advection(_kernel_mesh(), opts, adv_safety, 1., true, advect_length);
 
-  // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
-  // perform pseudotime iteration
-  for (int iter = 0; iter < _namespace->lookup<int>("av_advect_iters").value(); ++iter)
+  for (bool preti : {0, 1})
   {
-    sw_adv.children.at("setup").stopwatch.start();
-    // evaluate advection operator
-    compute_write_face_advection(_kernel_mesh());
-    compute_prolong_advection(_kernel_mesh());
-    sw_adv.children.at("setup").stopwatch.pause();
-    for (int i = 0; i < 2; ++i) {
-      sw_adv.children.at("BCs").stopwatch.start();
-      auto& bc_cons {acc_mesh->boundary_connections()};
-      #pragma omp parallel for
-      for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-        int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-        acc_mesh->boundary_condition(bc_sn).flow_bc->apply_advection(bc_cons[i_con]);
+    auto km = acc_mesh->masked_mesh(basis);
+    // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
+    // perform pseudotime iteration
+    for (int iter = 0; iter < _namespace->lookup<int>("av_advect_iters").value(); ++iter)
+    {
+      sw_adv.children.at("setup").stopwatch.start();
+      // evaluate advection operator
+      compute_write_face_advection(km);
+      compute_prolong_advection(km);
+      sw_adv.children.at("setup").stopwatch.pause();
+      for (int i = 0; i < 2; ++i) {
+        sw_adv.children.at("BCs").stopwatch.start();
+        auto& bc_cons {acc_mesh->masked_boundary_connections()};
+        #pragma omp parallel for
+        for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+          int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+          acc_mesh->boundary_condition(bc_sn).flow_bc->apply_advection(bc_cons[i_con]);
+        }
+        sw_adv.children.at("BCs").stopwatch.pause();
+        sw_adv.children.at("BCs").work_units_completed += acc_mesh->elements().size();
+        opts.i_stage = i;
+        compute_advection(km, opts, advect_length);
       }
-      sw_adv.children.at("BCs").stopwatch.pause();
-      sw_adv.children.at("BCs").work_units_completed += acc_mesh->elements().size();
-      opts.i_stage = i;
-      compute_advection(_kernel_mesh(), opts, advect_length);
+      sw_adv.children.at("cartesian").work_units_completed += acc_mesh->cartesian().elements().size();
+      sw_adv.children.at("deformed" ).work_units_completed += acc_mesh->deformed ().elements().size();
     }
-    sw_adv.children.at("cartesian").work_units_completed += acc_mesh->cartesian().elements().size();
-    sw_adv.children.at("deformed" ).work_units_completed += acc_mesh->deformed ().elements().size();
+    if (preti) acc_mesh->set_mask();
+    else acc_mesh->set_mask([](Element& elem){return !elem.tree;});
   }
   sw_adv.children.at("setup").work_units_completed += elements.size();
   sw_adv.children.at("update").work_units_completed += elements.size();
@@ -837,10 +848,9 @@ void Solver::update()
 {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
   auto& elems = acc_mesh->elements();
-
-  int n_cheby = 1;
-  int n_flow = 1;
-  auto step = [&]()
+  int n_cheby = _namespace->lookup<int>("n_cheby_flow").value();
+  int n_flow = _namespace->lookup<int>("flow_iters").value();
+  for (bool preti : {0, 1})
   {
     auto km = acc_mesh->masked_mesh(basis);
     for (int i_flow = 0; i_flow < n_flow; ++i_flow)
@@ -870,7 +880,7 @@ void Solver::update()
           if (use_ldg() && !i) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond);
           else compute_euler(km, opts);
           // note that function call must come first to ensure it is evaluated despite short-circuiting
-          fixed = fix_admissibility(_namespace->lookup<double>("fix_admis_max_safety").value()) || fixed;
+          fixed = fix_admissibility(_namespace->lookup<double>("fix_admis_max_safety").value(), km) || fixed;
         }
         if (fixed) break;
 
@@ -881,16 +891,9 @@ void Solver::update()
         status.flow_time += dt;
       }
     }
-  };
-  acc_mesh->set_mask();
-  if (_namespace->lookup<int>("iteration").value()) {
-    step();
-    acc_mesh->set_mask([](Element& elem){return !elem.tree;});
+    if (preti) acc_mesh->set_mask();
+    else acc_mesh->set_mask([](Element& elem){return !elem.tree;});
   }
-  n_cheby = _namespace->lookup<int>("n_cheby_flow").value();
-  n_flow = _namespace->lookup<int>("flow_iters").value();
-  step();
-  acc_mesh->set_mask();
 
   _namespace->assign("iteration", _namespace->lookup<int>("iteration").value() + 1);
   _namespace->assign("wall_time", status.wall_time());
@@ -909,7 +912,8 @@ void Solver::update_implicit()
   lin.add(-Linearized::storage_start, 1., -Linearized::storage_start + 3, 1., 0.);
   compute_write_face(_kernel_mesh());
   compute_prolong(_kernel_mesh());
-  fix_admissibility(.7);
+  auto km = _kernel_mesh();
+  fix_admissibility(.7, km);
 }
 
 void Solver::compute_residual()
@@ -934,11 +938,11 @@ Iteration_status Solver::iteration_status()
   return stat;
 }
 
-bool Solver::is_admissible()
+bool Solver::is_admissible(Kernel_mesh& km)
 {
   auto& sw = stopwatch.children.at("check admis.");
   sw.stopwatch.start();
-  auto& elems = acc_mesh->elements();
+  auto& elems = km.elems;
   const int nd = params.n_dim;
   const int nq = params.n_qpoint();
   const int rs = params.row_size;
@@ -958,11 +962,10 @@ bool Solver::is_admissible()
     if (!elem_admis) elem.record = 1;
     admiss = admiss && elem_admis;
   }
-  auto& ref_faces = acc_mesh->refined_faces();
   bool refined_admiss = 1;
   #pragma omp parallel for reduction (&&:refined_admiss)
-  for (int i_face = 0; i_face < ref_faces.size(); ++i_face) {
-    auto& ref = ref_faces[i_face];
+  for (int i_face = 0; i_face < km.ref_faces.size(); ++i_face) {
+    auto& ref = km.ref_faces[i_face];
     int n_fine = params.n_vertices()/2;
     for (int i_dim = 0; i_dim < nd - 1; ++i_dim) n_fine /= 1 + ref.stretch[i_dim];
     for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
@@ -974,7 +977,7 @@ bool Solver::is_admissible()
   return admiss && refined_admiss;
 }
 
-bool Solver::fix_admissibility(double stability_ratio)
+bool Solver::fix_admissibility(double stability_ratio, Kernel_mesh& km)
 {
   if (!fix_admis) return false;
   auto& sw_fix = stopwatch.children.at("fix admis.");
@@ -996,7 +999,7 @@ bool Solver::fix_admissibility(double stability_ratio)
       visualize_field("xdmf", wd + "severe_indamis" + std::to_string(status.iteration), Qf_concat(to_vis));
     }
     #endif
-    if (is_admissible()) {
+    if (is_admissible(km)) {
       if (iter) n_iters = std::min(n_iters, 2*iter);
       else {
         ++iter;

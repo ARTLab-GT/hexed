@@ -14,6 +14,7 @@ namespace hexed
 class Kernel_element
 {
   public:
+  int record = 0; //!< for algorithms to book-keep general information
   //! \brief pointer to the data where the state variables are stored
   //! \details includes any non-conservation variables such as artificial viscosity coefficient
   virtual double* state() = 0;
