@@ -48,8 +48,7 @@ class Solver
   Kernel_mesh _kernel_mesh();
   void share_vertex_data(std::function<double&(Element&, int i_vertex)>, std::function<double(Mat<>)>);
   void share_vertex_data(std::function<double(Element&, int i_vertex)> get, std::function<double&(Element&, int i_vertex)> set, std::function<double(Mat<>)>);
-  bool is_admissible(Kernel_mesh& km); // check whether flowfield is admissible (e.g. density and energy are positive)
-  bool fix_admissibility(double stability_ratio, Kernel_mesh& km);
+  bool fix_admissibility(double stability_ratio);
   void apply_state_bcs();
   void apply_flux_bcs();
   void apply_avc_diff_bcs();
@@ -178,6 +177,7 @@ class Solver
   void update();
   void update_implicit(); //!< \brief (experimental) performs an implicit time step \warning Experimental! Interesting for reasearch, not effective in practice (yet, anyway).
   void compute_residual();
+  bool is_admissible(); //!< \brief check whether flowfield is admissible (e.g. density and energy are positive)
   void update_art_visc_smoothness(double advect_length); //!< \brief updates the aritificial viscosity coefficient based on smoothness of the flow variables
   /*! \brief (experimental) sets artificial viscosity based on elementwise smoothness
    * \details Based on the work of Persson et al. on artificial viscosity with elementwise smoothness indicators.
