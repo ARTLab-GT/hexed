@@ -180,7 +180,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   std::string unit = "(element*(time integration stage))";
   stopwatch.children.emplace("prolong/restrict", unit);
   stopwatch.children.emplace("fix admis.", "(element*(fix admis. iter))");
-  stopwatch.children.at("fix_admis").children.emplace("check admis.", "(element*iteration)");
+  stopwatch.children.at("fix admis.").children.emplace("check admis.", "(element*iteration)");
   stopwatch.children.emplace("set art visc", stopwatch.work_unit_name);
   stopwatch.children.at("set art visc").children.emplace("initialize", stopwatch.work_unit_name);
   stopwatch.children.at("set art visc").children.emplace("advection", stopwatch.work_unit_name);
@@ -931,7 +931,7 @@ Iteration_status Solver::iteration_status()
 
 bool Solver::is_admissible()
 {
-  auto& sw = stopwatch.children.at("fix_admis.").children.at("check admis.");
+  auto& sw = stopwatch.children.at("fix admis.").children.at("check admis.");
   sw.stopwatch.start();
   auto& elems = _preti_masks[_preti_level]->kernel_mesh.elems;
   const int nd = params.n_dim;
