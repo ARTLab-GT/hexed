@@ -23,6 +23,7 @@ Kernel_mesh Solver::_kernel_mesh()
   return {
     params.n_dim,
     params.row_size,
+    0,
     basis,
     acc_mesh->cartesian().kernel_connections(),
     acc_mesh->deformed ().kernel_connections(),
@@ -57,8 +58,7 @@ void Solver::share_vertex_data(std::function<double(Element&, int i_vertex)> get
 void Solver::apply_state_bcs()
 {
   stopwatch.children.at("boundary conditions").stopwatch.start();
-  //auto& bc_cons {_preti_masks[_preti_level]->bound_cons};
-  auto& bc_cons {acc_mesh->boundary_connections()};
+  auto& bc_cons {_preti_masks[_preti_level]->bound_cons};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
@@ -70,8 +70,7 @@ void Solver::apply_state_bcs()
 
 void Solver::apply_flux_bcs()
 {
-  //auto& bc_cons {_preti_masks[_preti_level]->bound_cons};
-  auto& bc_cons {acc_mesh->boundary_connections()};
+  auto& bc_cons {_preti_masks[_preti_level]->bound_cons};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     // write inside flux to flux cache for surface visualization/integrals
@@ -181,8 +180,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   std::string unit = "(element*(time integration stage))";
   stopwatch.children.emplace("prolong/restrict", unit);
   stopwatch.children.emplace("fix admis.", "(element*(fix admis. iter))");
-  stopwatch.children.emplace("check admis.", "(element*iteration)");
-  stopwatch.children.emplace("masking", "units");
+  stopwatch.children.at("fix_admis").children.emplace("check admis.", "(element*iteration)");
   stopwatch.children.emplace("set art visc", stopwatch.work_unit_name);
   stopwatch.children.at("set art visc").children.emplace("initialize", stopwatch.work_unit_name);
   stopwatch.children.at("set art visc").children.emplace("advection", stopwatch.work_unit_name);
@@ -849,15 +847,12 @@ void Solver::update()
     double n_cheby = _namespace->lookup<double>("n_cheby_flow").value();
     double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1);
     double dt;
-    Kernel_mesh k = _kernel_mesh();
     // run chebyshev iterations
     for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
     {
-      //int n_preti = 1 + 4*(_namespace->lookup<int>("iteration").value() > 10000);
-      int n_preti = 1;
+      int n_preti = 1 + 4*(_namespace->lookup<int>("iteration").value() > 10000);
       for (int i_preti = 0; i_preti < n_preti; ++i_preti) {
         _preti_level = i_preti > 0;
-        Kernel_mesh& km = k;
         double nominal_dt = std::min(max_dt(safety/max_cheby, safety), _namespace->lookup<double>("max_time_step").value());
         dt = nominal_dt*math::chebyshev_step(n_cheby, i_cheby);
         // record reference state for residual calculation
@@ -874,8 +869,9 @@ void Solver::update()
             bool(_namespace->lookup<int>("use_filter").value()),
           };
           apply_state_bcs();
-          if (use_ldg() && !i) compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond);
-          else compute_euler(_kernel_mesh(), opts);
+          Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
+          if (use_ldg() && !i) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond);
+          else compute_euler(km, opts);
           // note that function call must come first to ensure it is evaluated despite short-circuiting
           fixed = fix_admissibility(_namespace->lookup<double>("fix_admis_max_safety").value()) || fixed;
         }
@@ -935,9 +931,9 @@ Iteration_status Solver::iteration_status()
 
 bool Solver::is_admissible()
 {
-  auto& sw = stopwatch.children.at("check admis.");
+  auto& sw = stopwatch.children.at("fix_admis.").children.at("check admis.");
   sw.stopwatch.start();
-  auto& elems = acc_mesh->elements();
+  auto& elems = _preti_masks[_preti_level]->kernel_mesh.elems;
   const int nd = params.n_dim;
   const int nq = params.n_qpoint();
   const int rs = params.row_size;
@@ -957,7 +953,7 @@ bool Solver::is_admissible()
     if (!elem_admis) elem.record = 1;
     admiss = admiss && elem_admis;
   }
-  auto& ref_faces = acc_mesh->refined_faces();
+  auto& ref_faces = _preti_masks[_preti_level]->kernel_mesh.ref_faces;
   bool refined_admiss = 1;
   #pragma omp parallel for reduction (&&:refined_admiss)
   for (int i_face = 0; i_face < ref_faces.size(); ++i_face) {

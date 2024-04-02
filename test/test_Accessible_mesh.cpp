@@ -537,6 +537,8 @@ TEST_CASE("masking")
   mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] == elem.nominal_position()[1];});
   SECTION("initial mask")
   {
+    mesh.reset_masks();
+    hexed::Accessible_mesh::Masked_mesh(mesh, basis);
     hexed::Accessible_mesh::Masked_mesh masked(mesh, basis);
     auto& elems = mesh.elements();
     REQUIRE(masked.kernel_mesh.n_dim == 2);
@@ -552,6 +554,8 @@ TEST_CASE("masking")
   }
   SECTION("custom mask")
   {
+    mesh.reset_masks();
+    hexed::Accessible_mesh::Masked_mesh(mesh, basis);
     hexed::Accessible_mesh::Masked_mesh masked(mesh, basis, [](hexed::Element& elem){return elem.vertex(2).pos[0] < .501;});
     auto& elems = mesh.elements();
     int n_masked = 0;

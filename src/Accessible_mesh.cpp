@@ -141,6 +141,7 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
   surf_bc_sn{-1}, // set to -1 to prevent uninitialized comparisons
   surf_geom{nullptr},
   verts_are_reset{false},
+  _mask_levels{0},
   buffer_dist{std::sqrt(params.n_dim)/2}
 {
   def.face_con_v = def_face_cons;
@@ -1374,6 +1375,7 @@ Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& ba
 : kernel_mesh {
     mesh.params.n_dim,
     mesh.params.row_size,
+    mesh._mask_levels,
     basis,
     _masked_car_cons.slice,
     _masked_def_cons.slice,
@@ -1386,7 +1388,7 @@ Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& ba
 {
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < mesh.elems.size(); ++i_elem) {
-    mesh.elems[i_elem]._mask = mask(mesh.elems[i_elem]);
+    if (mesh.elems[i_elem]._mask >= mesh._mask_levels - 1 && mask(mesh.elems[i_elem])) mesh.elems[i_elem]._mask = mesh._mask_levels;
   }
   #define MASK_REF_CONS(mbt) \
     for (int i_con = 0; i_con < mbt.refined_connections().size(); ++i_con) { \
@@ -1395,24 +1397,35 @@ Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& ba
       for (int i_fine = 0; i_fine < con.n_fine_elements(); ++i_fine) { \
         con.refined_face.fine_masks[i_fine] = con.connection(i_fine).element(!con.order_reversed()).mask(); \
       } \
-      for (int i_fine = con.n_fine_elements(); i_fine < 4; ++i_fine) con.refined_face.fine_masks[i_fine] = false; \
+      for (int i_fine = con.n_fine_elements(); i_fine < 4; ++i_fine) con.refined_face.fine_masks[i_fine] = 0; \
     }
   #pragma omp parallel for
   MASK_REF_CONS(mesh.car)
   #pragma omp parallel for
   MASK_REF_CONS(mesh.def)
   #undef MASK_REF_CONS
-  _masked_elems.populate(mesh.elems, [](Element& elem){return elem.mask();});
-  _masked_car_elems.populate(mesh.car.elements(), [](Element& elem){return elem.mask();});
-  _masked_def_elems.populate(mesh.def.elements(), [](Element& elem){return elem.mask();});
-  _masked_car_cons.populate(mesh.car.kernel_connections(), [](Kernel_connection& con){return con.mask(0) || con.mask(1);});
-  _masked_def_cons.populate(mesh.def.kernel_connections(), [](Kernel_connection& con){return con.mask(0) || con.mask(1);});
-  _masked_ref_faces.populate(mesh.ref_face_v, [](Refined_face& face){return face.coarse_mask || face.any_fine_mask();});
-  _masked_bound_cons.populate(mesh.bound_cons, [](Boundary_connection& con){return con.mask(0);});
+  _masked_elems.populate(mesh.elems, [&](Element& elem){return elem.mask() >= mesh._mask_levels;});
+  _masked_car_elems.populate(mesh.car.elements(), [&](Element& elem){return elem.mask() >= mesh._mask_levels;});
+  _masked_def_elems.populate(mesh.def.elements(), [&](Element& elem){return elem.mask() >= mesh._mask_levels;});
+  _masked_car_cons.populate(mesh.car.kernel_connections(), [&](Kernel_connection& con){return con.mask() >= mesh._mask_levels;});
+  _masked_def_cons.populate(mesh.def.kernel_connections(), [&](Kernel_connection& con){return con.mask() >= mesh._mask_levels;});
+  _masked_ref_faces.populate(mesh.ref_face_v, [&](Refined_face& face){return face.mask() >= mesh._mask_levels;});
+  _masked_bound_cons.populate(mesh.bound_cons, [&](Boundary_connection& con){return con.mask() >= mesh._mask_levels;});
+  ++mesh._mask_levels;
+}
+
+void Accessible_mesh::reset_masks()
+{
+  _mask_levels = 0;
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    elems[i_elem]._mask = 0;
+  }
 }
 
 std::vector<std::unique_ptr<Accessible_mesh::Masked_mesh>> Accessible_mesh::preti_masks(const Basis& basis)
 {
+  reset_masks();
   std::vector<std::unique_ptr<Masked_mesh>> masks;
   masks.emplace_back(new Masked_mesh(*this, basis));
   masks.emplace_back(new Masked_mesh(*this, basis, [](Element& elem){return !elem.tree;}));

@@ -43,7 +43,7 @@ class Element : public Kernel_element
   Eigen::VectorXd data;
   Eigen::VectorXd vertex_data;
   std::array<double*, 6> faces; //!< layout: [2*i_dim + face_sign][i_var][i_qpoint]
-  bool _mask;
+  int _mask;
   friend Accessible_mesh; // necessary for `Accessible_mesh::set_mask`... need a better way to do this
 
   public:
@@ -91,7 +91,7 @@ class Element : public Kernel_element
   virtual double* node_adjustments() {return nullptr;} //!< \brief overriden by `Deformed_element`
   //! \brief returns whether the element is included in the masked mesh.
   //! \details value can be set with `Accessible_mesh::set_mask`
-  bool mask() const {return _mask;}
+  int mask() const {return _mask;}
 
   /*! \brief Compute the Jacobian matrix.
    * \details I.e., derivative of `i_dim`th

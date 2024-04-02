@@ -42,7 +42,7 @@ TEST_CASE("Restrict_refined")
         }
       }
     }
-    (*hexed::kernel_factory<hexed::Spatial<hexed::pde::Navier_stokes<false>::Pde, false>::Restrict_refined>(3, row_size, basis))(ref_face_v);
+    (*hexed::kernel_factory<hexed::Spatial<hexed::pde::Navier_stokes<false>::Pde, false>::Restrict_refined>(3, row_size, basis, 0))(ref_face_v);
     check(1.);
   }
 
@@ -62,7 +62,7 @@ TEST_CASE("Restrict_refined")
         }
       }
     }
-    (*hexed::kernel_factory<hexed::Spatial<hexed::pde::Navier_stokes<false>::Pde, false>::Restrict_refined>(3, row_size, basis))(ref_face_v);
+    (*hexed::kernel_factory<hexed::Spatial<hexed::pde::Navier_stokes<false>::Pde, false>::Restrict_refined>(3, row_size, basis, 0))(ref_face_v);
     check(.5);
   }
 
@@ -82,7 +82,7 @@ TEST_CASE("Restrict_refined")
         }
       }
     }
-    (*hexed::kernel_factory<hexed::Spatial<hexed::pde::Navier_stokes<false>::Pde, false>::Restrict_refined>(3, row_size, basis))(ref_face_v);
+    (*hexed::kernel_factory<hexed::Spatial<hexed::pde::Navier_stokes<false>::Pde, false>::Restrict_refined>(3, row_size, basis, 0))(ref_face_v);
     check(.5);
   }
 }

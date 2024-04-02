@@ -41,6 +41,7 @@ class Accessible_mesh : public Mesh
   bool verts_are_reset;
   std::vector<std::vector<Vertex::Non_transferable_ptr>> boundary_verts; // a vector of the vertices that are on each boundary
   std::vector<Vertex::Non_transferable_ptr> smooth_verts; // a vector of the vertices that need to be smoothed in this sweep
+  int _mask_levels;
 
   // masked sequences
   template <typename view_t, typename storage_t>
@@ -161,6 +162,7 @@ class Accessible_mesh : public Mesh
     Kernel_mesh kernel_mesh;
     Sequence<Boundary_connection&>& bound_cons;
   };
+  void reset_masks();
   std::vector<std::unique_ptr<Masked_mesh>> preti_masks(const Basis&);
 
   //! \returns a view of all Bounday_condition objects owned by this mesh
