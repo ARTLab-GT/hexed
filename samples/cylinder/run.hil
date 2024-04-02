@@ -31,7 +31,7 @@ done = {iteration > 10^4 & heating_rate_max - heating_rate_min < 10.}
 vis_freq = 10000
 diffusive_admissibility = true
 
-working_dir = {hexed_out_plain}
+working_dir = {hexed_out_preti}
 input_data = {hexed_out/latest}
 $plot_history
 $start

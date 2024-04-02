@@ -57,7 +57,7 @@ void Solver::share_vertex_data(std::function<double(Element&, int i_vertex)> get
 void Solver::apply_state_bcs()
 {
   stopwatch.children.at("boundary conditions").stopwatch.start();
-  auto& bc_cons {acc_mesh->boundary_connections()};
+  auto& bc_cons {acc_mesh->masked_boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
@@ -69,7 +69,7 @@ void Solver::apply_state_bcs()
 
 void Solver::apply_flux_bcs()
 {
-  auto& bc_cons {acc_mesh->boundary_connections()};
+  auto& bc_cons {acc_mesh->masked_boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     // write inside flux to flux cache for surface visualization/integrals
@@ -843,31 +843,38 @@ void Solver::update()
     double safety = _namespace->lookup<double>("max_safety").value();
     double n_cheby = _namespace->lookup<double>("n_cheby_flow").value();
     double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1);
+    double dt;
     // run chebyshev iterations
     for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
     {
-      double nominal_dt = std::min(max_dt(safety/max_cheby, safety), _namespace->lookup<double>("max_time_step").value());
-      double dt = nominal_dt*math::chebyshev_step(n_cheby, i_cheby);
-      // record reference state for residual calculation
-      bool fixed = false;
-      // compute inviscid update
-      for (int i = 0; i < 2; ++i) {
-        Kernel_options opts {
-          stopwatch.children.at("cartesian"),
-          stopwatch.children.at("deformed" ),
-          stopwatch.children.at("prolong/restrict"),
-          dt,
-          i,
-          false,
-          bool(_namespace->lookup<int>("use_filter").value()),
-        };
-        apply_state_bcs();
-        if (use_ldg() && !i) compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond);
-        else compute_euler(_kernel_mesh(), opts);
-        // note that function call must come first to ensure it is evaluated despite short-circuiting
-        fixed = fix_admissibility(_namespace->lookup<double>("fix_admis_max_safety").value()) || fixed;
+      int n_preti = 1 + (_namespace->lookup<int>("iteration").value() > 10000);
+      for (int i_preti = 0; i_preti < n_preti; ++i_preti) {
+        if (i_preti) acc_mesh->set_mask([](Element& elem){return !elem.tree;});
+        else acc_mesh->set_mask();
+        auto km = acc_mesh->masked_mesh(basis);
+        double nominal_dt = std::min(max_dt(safety/max_cheby, safety), _namespace->lookup<double>("max_time_step").value());
+        dt = nominal_dt*math::chebyshev_step(n_cheby, i_cheby);
+        // record reference state for residual calculation
+        bool fixed = false;
+        // compute inviscid update
+        for (int i = 0; i < 2; ++i) {
+          Kernel_options opts {
+            stopwatch.children.at("cartesian"),
+            stopwatch.children.at("deformed" ),
+            stopwatch.children.at("prolong/restrict"),
+            dt,
+            i,
+            false,
+            bool(_namespace->lookup<int>("use_filter").value()),
+          };
+          apply_state_bcs();
+          if (use_ldg() && !i) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond);
+          else compute_euler(km, opts);
+          // note that function call must come first to ensure it is evaluated despite short-circuiting
+          fixed = fix_admissibility(_namespace->lookup<double>("fix_admis_max_safety").value()) || fixed;
+        }
+        if (fixed) break;
       }
-      if (fixed) break;
 
       // update status for reporting
       _namespace->assign<double>("time_step", dt);
@@ -875,6 +882,7 @@ void Solver::update()
       status.time_step = dt;
       status.flow_time += dt;
     }
+    acc_mesh->set_mask();
   }
 
   _namespace->assign("iteration", _namespace->lookup<int>("iteration").value() + 1);

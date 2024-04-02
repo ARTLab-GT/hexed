@@ -122,8 +122,7 @@ set_aerothermo = {
     print_vars = print_vars + heating_rate_expr
     iterate = {
         $compute_heating
-    } + iterate + {
-        $compute_heating
+    } + iterate ; {
         {alternate between time stepping strategies optimized for convection and diffusion}
         case1 = {
             case0 = {
