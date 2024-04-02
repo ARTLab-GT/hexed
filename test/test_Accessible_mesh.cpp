@@ -537,33 +537,32 @@ TEST_CASE("masking")
   mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] == elem.nominal_position()[1];});
   SECTION("initial mask")
   {
-    auto masked = mesh.masked_mesh(basis);
+    hexed::Accessible_mesh::Masked_mesh masked(mesh, basis);
     auto& elems = mesh.elements();
-    REQUIRE(masked.n_dim == 2);
-    REQUIRE(masked.row_size == 2);
+    REQUIRE(masked.kernel_mesh.n_dim == 2);
+    REQUIRE(masked.kernel_mesh.row_size == 2);
     int n_masked = 0;
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) n_masked += elems[i_elem].mask();
     REQUIRE(n_masked == 10);
-    REQUIRE(masked.elems.size() == 10);
-    REQUIRE(masked.car_cons.size() == 16);
-    REQUIRE(masked.def_cons.size() == 12);
-    REQUIRE(masked.ref_faces.size() == 4);
-    REQUIRE(mesh.masked_boundary_connections().size()  == 12);
+    REQUIRE(masked.kernel_mesh.elems.size() == 10);
+    REQUIRE(masked.kernel_mesh.car_cons.size() == 16);
+    REQUIRE(masked.kernel_mesh.def_cons.size() == 12);
+    REQUIRE(masked.kernel_mesh.ref_faces.size() == 4);
+    REQUIRE(masked.bound_cons.size()  == 12);
   }
   SECTION("custom mask")
   {
-    mesh.set_mask([](hexed::Element& elem){return elem.vertex(2).pos[0] < .501;});
-    auto masked = mesh.masked_mesh(basis);
+    hexed::Accessible_mesh::Masked_mesh masked(mesh, basis, [](hexed::Element& elem){return elem.vertex(2).pos[0] < .501;});
     auto& elems = mesh.elements();
     int n_masked = 0;
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) n_masked += elems[i_elem].mask();
     REQUIRE(n_masked == 5);
-    REQUIRE(masked.elems.size() == 5);
-    REQUIRE(masked.car_elems.size() == 5);
-    REQUIRE(masked.def_elems.size() == 0);
-    REQUIRE(masked.car_cons.size() == 10);
-    REQUIRE(masked.def_cons.size() == 6);
-    REQUIRE(masked.ref_faces.size() == 3);
-    REQUIRE(mesh.masked_boundary_connections().size()  == 6);
+    REQUIRE(masked.kernel_mesh.elems.size() == 5);
+    REQUIRE(masked.kernel_mesh.car_elems.size() == 5);
+    REQUIRE(masked.kernel_mesh.def_elems.size() == 0);
+    REQUIRE(masked.kernel_mesh.car_cons.size() == 10);
+    REQUIRE(masked.kernel_mesh.def_cons.size() == 6);
+    REQUIRE(masked.kernel_mesh.ref_faces.size() == 3);
+    REQUIRE(masked.bound_cons.size()  == 6);
   }
 }

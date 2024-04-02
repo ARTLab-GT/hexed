@@ -1370,11 +1370,23 @@ void Accessible_mesh::relax(double factor)
   snap_vertices();
 }
 
-void Accessible_mesh::set_mask(std::function<bool(Element&)> mask)
+Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& basis, std::function<bool(Element&)> mask)
+: kernel_mesh {
+    mesh.params.n_dim,
+    mesh.params.row_size,
+    basis,
+    _masked_car_cons.slice,
+    _masked_def_cons.slice,
+    _masked_car_elems.slice,
+    _masked_def_elems.slice,
+    _masked_elems.slice,
+    _masked_ref_faces.slice,
+  },
+  bound_cons{_masked_bound_cons.slice}
 {
   #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    elems[i_elem]._mask = mask(elems[i_elem]);
+  for (int i_elem = 0; i_elem < mesh.elems.size(); ++i_elem) {
+    mesh.elems[i_elem]._mask = mask(mesh.elems[i_elem]);
   }
   #define MASK_REF_CONS(mbt) \
     for (int i_con = 0; i_con < mbt.refined_connections().size(); ++i_con) { \
@@ -1386,37 +1398,25 @@ void Accessible_mesh::set_mask(std::function<bool(Element&)> mask)
       for (int i_fine = con.n_fine_elements(); i_fine < 4; ++i_fine) con.refined_face.fine_masks[i_fine] = false; \
     }
   #pragma omp parallel for
-  MASK_REF_CONS(car)
+  MASK_REF_CONS(mesh.car)
   #pragma omp parallel for
-  MASK_REF_CONS(def)
+  MASK_REF_CONS(mesh.def)
   #undef MASK_REF_CONS
+  _masked_elems.populate(mesh.elems, [](Element& elem){return elem.mask();});
+  _masked_car_elems.populate(mesh.car.elements(), [](Element& elem){return elem.mask();});
+  _masked_def_elems.populate(mesh.def.elements(), [](Element& elem){return elem.mask();});
+  _masked_car_cons.populate(mesh.car.kernel_connections(), [](Kernel_connection& con){return con.mask(0) || con.mask(1);});
+  _masked_def_cons.populate(mesh.def.kernel_connections(), [](Kernel_connection& con){return con.mask(0) || con.mask(1);});
+  _masked_ref_faces.populate(mesh.ref_face_v, [](Refined_face& face){return face.coarse_mask || face.any_fine_mask();});
+  _masked_bound_cons.populate(mesh.bound_cons, [](Boundary_connection& con){return con.mask(0);});
 }
 
-Kernel_mesh Accessible_mesh::masked_mesh(const Basis& basis)
+std::vector<std::unique_ptr<Accessible_mesh::Masked_mesh>> Accessible_mesh::preti_masks(const Basis& basis)
 {
-  _masked_elems.populate(elems, [](Element& elem){return elem.mask();});
-  _masked_car_elems.populate(car.elements(), [](Element& elem){return elem.mask();});
-  _masked_def_elems.populate(def.elements(), [](Element& elem){return elem.mask();});
-  _masked_car_cons.populate(car.kernel_connections(), [](Kernel_connection& con){return con.mask(0) || con.mask(1);});
-  _masked_def_cons.populate(def.kernel_connections(), [](Kernel_connection& con){return con.mask(0) || con.mask(1);});
-  _masked_ref_faces.populate(ref_face_v, [](Refined_face& face){return face.coarse_mask || face.any_fine_mask();});
-  return {
-    params.n_dim,
-    params.row_size,
-    basis,
-    _masked_car_cons.slice,
-    _masked_def_cons.slice,
-    _masked_car_elems.slice,
-    _masked_def_elems.slice,
-    _masked_elems.slice,
-    _masked_ref_faces.slice,
-  };
-}
-
-Sequence<Boundary_connection&>& Accessible_mesh::masked_boundary_connections()
-{
-  _masked_bound_cons.populate(bound_cons, [](Boundary_connection& con){return con.mask(0);});
-  return _masked_bound_cons.slice;
+  std::vector<std::unique_ptr<Masked_mesh>> masks;
+  masks.emplace_back(new Masked_mesh(*this, basis));
+  masks.emplace_back(new Masked_mesh(*this, basis, [](Element& elem){return !elem.tree;}));
+  return masks;
 }
 
 void Accessible_mesh::reset_verts()

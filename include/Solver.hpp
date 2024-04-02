@@ -44,6 +44,8 @@ class Solver
   std::shared_ptr<Namespace> _namespace;
   std::shared_ptr<Printer> _printer;
   bool _implicit;
+  std::vector<std::unique_ptr<Accessible_mesh::Masked_mesh>> _preti_masks;
+  int _preti_level;
 
   Kernel_mesh _kernel_mesh();
   void share_vertex_data(std::function<double&(Element&, int i_vertex)>, std::function<double(Mat<>)>);
