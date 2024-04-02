@@ -847,7 +847,7 @@ void Solver::update()
     // run chebyshev iterations
     for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
     {
-      int n_preti = 1 + (_namespace->lookup<int>("iteration").value() > 10000);
+      int n_preti = 1 + 4*(_namespace->lookup<int>("iteration").value() > 10000);
       for (int i_preti = 0; i_preti < n_preti; ++i_preti) {
         if (i_preti) acc_mesh->set_mask([](Element& elem){return !elem.tree;});
         else acc_mesh->set_mask();
