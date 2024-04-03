@@ -154,9 +154,9 @@ Accessible_mesh::~Accessible_mesh()
   def.purge_connections(criteria::always);
 }
 
-int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin)
+int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin, int aniso_ref_level)
 {
-  int sn = container(is_deformed).emplace(ref_level, position, origin);
+  int sn = container(is_deformed).emplace(ref_level, position, origin, aniso_ref_level);
   Element& elem = element(ref_level, is_deformed, sn);
   for (int i_vert = 0; i_vert < n_vert; ++i_vert) vert_ptrs.emplace_back(elem.vertex(i_vert));
   return sn;
@@ -411,7 +411,7 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force)
     auto nom_pos = face.elem.nominal_position();
     nom_pos[face.i_dim] += 2*face.face_sign - 1;
     const int ref_level = face.elem.refinement_level();
-    int sn = add_element(ref_level, true, nom_pos, face.elem.origin);
+    int sn = add_element(ref_level, true, nom_pos, face.elem.origin, face.elem.aniso_ref_level() + 1);
     Con_dir<Deformed_element> dir {{face.i_dim, face.i_dim}, {!face.face_sign, bool(face.face_sign)}};
     auto& elem = def.elems.at(ref_level, sn);
     elem.record = sn;
