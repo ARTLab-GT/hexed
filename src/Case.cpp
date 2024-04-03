@@ -355,7 +355,7 @@ Case::Case(std::string input_script)
   }));
   _inter.variables->create<int>("write_status", new Namespace::Heisenberg<int>([this]() {
     std::ofstream status_file(_vars("working_dir").value() + _iteration_suffix() + ".status.hil");
-    for (std::string name : {"iteration", "max_safety", "max_time_step", "init_residual_momentum", "init_residual_density", "init_residual_energy"}) {
+    for (std::string name : {"iteration", "max_safety", "max_time_step", "residual_init", "init_residual_momentum", "init_residual_density", "init_residual_energy"}) {
       status_file << _assignment(name) + "\n";
     }
     status_file.close();
@@ -443,7 +443,6 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create<std::string>("report", new Namespace::Heisenberg<std::string>([this]() {
-    _inter.variables->lookup<std::string>("compute_residuals");
     std::string report = "";
     Struct_expr vars(_vars("print_vars").value());
     auto sub = _inter.make_sub();

@@ -20,6 +20,7 @@ target_reynolds = (5/target_thickness)^2
 freestream_density = target_reynolds*1.8e-5/freestream_speed
 
 print_freq = 500
+vis_freq = 3000
 done = {normalized_residual < 1e-4}
 
 $start
