@@ -114,16 +114,10 @@ set_ramping = {
     }
 }
 
-set_aerothermo = {
-    $set_shock
-    $set_ramping
-    viscosity_model = air_viscosity
-    conductivity_model = air_conductivity
-    print_vars = print_vars + heating_rate_expr
-    iterate = {
-        $compute_heating
-    } + iterate ; {
-        {alternate between time stepping strategies optimized for convection and diffusion}
+{alternate between time stepping strategies optimized for convection and diffusion}
+set_cheby = {
+    iterate = iterate + {
+        case0 = {}
         case1 = {
             case0 = {
                 flow_iters = 1
@@ -137,6 +131,31 @@ set_aerothermo = {
         }
         $$({case} + (iteration >= ramping_initial_iters))
     }
+}
+
+preti_initial_iters = 10000
+set_preti = {
+    iterate = iterate + {
+        case0 = {}
+        case1 = {
+            println {Activating PRETI scheme.}
+            preti = true
+        }
+        $$({case} + (iteration == preti_initial_iters))
+    }
+}
+
+aerothermo_preti = false
+set_aerothermo = {
+    $set_shock
+    $set_ramping
+    viscosity_model = air_viscosity
+    conductivity_model = air_conductivity
+    print_vars = print_vars + heating_rate_expr
+    iterate = {$compute_heating} + iterate
+    case0 = {$set_cheby}
+    case1 = {$set_preti}
+    $$({case} + aerothermo_preti)
 }
 
 set_geometry_refinement = {

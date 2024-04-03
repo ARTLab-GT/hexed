@@ -162,6 +162,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("buffer_dist", .8*std::sqrt(params.n_dim));
   _namespace->assign_default("n_cheby_flow", 1);
   _namespace->assign_default("n_cheby_av", 1);
+  _namespace->assign_default("preti", 0);
   _namespace->assign_default("av_advect_iters", 1); // number of advection iterations to run each time `update_art_visc_smoothness` is called
   _namespace->assign_default("av_diff_iters", 1); // number of diffusion iterations to run each time `update_art_visc_smoothness` is called
   _namespace->assign_default("flow_iters", 1);
@@ -846,13 +847,13 @@ void Solver::update()
     double safety = _namespace->lookup<double>("max_safety").value();
     double n_cheby = _namespace->lookup<double>("n_cheby_flow").value();
     double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1);
-    double dt;
-    // run chebyshev iterations
-    for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
-    {
-      int n_preti = 1 + std::max(0, int(_preti_masks.size()) - 1)*(_namespace->lookup<int>("iteration").value() > 10000);
-      for (int i_preti = 0; i_preti < n_preti; ++i_preti) {
-        _preti_level = i_preti > 0;
+    double dt = 0;
+    int n_preti = 1 + std::max(0, int(_preti_masks.size()) - 1)*(_namespace->lookup<int>("preti").value());
+    for (int i_preti = 0; i_preti < n_preti; ++i_preti) {
+      _preti_level = i_preti > 0;
+      // run chebyshev iterations
+      for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
+      {
         double nominal_dt = std::min(max_dt(safety/max_cheby, safety), _namespace->lookup<double>("max_time_step").value());
         dt = nominal_dt*math::chebyshev_step(n_cheby, i_cheby);
         // record reference state for residual calculation
