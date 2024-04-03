@@ -1428,7 +1428,10 @@ std::vector<std::unique_ptr<Accessible_mesh::Masked_mesh>> Accessible_mesh::pret
   reset_masks();
   std::vector<std::unique_ptr<Masked_mesh>> masks;
   masks.emplace_back(new Masked_mesh(*this, basis));
-  masks.emplace_back(new Masked_mesh(*this, basis, [](Element& elem){return !elem.tree;}));
+  while (masks.back()->kernel_mesh.elems.size()) {
+    masks.emplace_back(new Masked_mesh(*this, basis, [this](Element& elem){return elem.aniso_ref_level() >= _mask_levels;}));
+  }
+  masks.pop_back();
   return masks;
 }
 

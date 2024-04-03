@@ -850,7 +850,7 @@ void Solver::update()
     // run chebyshev iterations
     for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
     {
-      int n_preti = 1 + 4*(_namespace->lookup<int>("iteration").value() > 10000);
+      int n_preti = 1 + std::max(0, int(_preti_masks.size()) - 1)*(_namespace->lookup<int>("iteration").value() > 10000);
       for (int i_preti = 0; i_preti < n_preti; ++i_preti) {
         _preti_level = i_preti > 0;
         double nominal_dt = std::min(max_dt(safety/max_cheby, safety), _namespace->lookup<double>("max_time_step").value());
