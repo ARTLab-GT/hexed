@@ -21,7 +21,6 @@ freestream_temperature = 63.73
 thermal_bc = {temperature = 300}
 
 {iteration parameters}
-aerothermo_preti = true
 $set_aerothermo
 ramping_final_safety = .8
 art_visc_width = art_visc_width*.7/8
@@ -31,10 +30,8 @@ monitor_vars = {heating_rate = heating_rate;}
 done = {iteration > 10^4 & heating_rate_max - heating_rate_min < 10.}
 vis_freq = 10000
 diffusive_admissibility = true
-vis_field_vars = vis_field_vars + {aniso_ref_level = aniso_ref_level; mask = mask;}
 
-working_dir = {hexed_out_preti4}
-input_data = {hexed_out/latest}
+working_dir = {hexed_out}
 $plot_history
 $start
 $mesh
