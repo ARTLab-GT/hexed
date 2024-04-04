@@ -141,12 +141,20 @@ class Accessible_mesh : public Mesh
 
   /*! \brief Creates a mask that allows kernel operations to be performed on a subset of the elements.
    * \details Supply a function that returns `true` for elements that should be operated on.
-   * The masked elements are returned as a `Kernel_mesh` which includes all the elements where the mask is `true`
-   * and all the connections and refined faces where the mask is `true` for at least one of the participating elements.
-   * `elements()`, `element_connections()`, etc. will not be affected.
-   * The masking persists until `set_mask` is called again.
-   * When the mesh is constructed, the mask is initialized to `true` for every element,
-   * as if you had done `set_mask()`.
+   * The masked mesh is described by two objects:
+   * - a `Kernel_mesh` which includes all the elements where the mask is `true`
+   *   and all the connections and refined faces where the mask is `true` for at least one of the participating elements
+   * - a `Sequence` of `Boundary_connection`s which includes all boundary connections for whose element the mask is `true`
+   *
+   * The members `elements()`, `element_connections()`, etc. will not be affected.
+   * This feature has some quirks.
+   * The first mask you create will include all elements, regardless of what mask function you supply.
+   * After that, each mask will be a subset of all previous masks, again regardless of the mask function.
+   * Calling `reset_masks()` invalidates all previous masks and makes it as if you had not yet created any masks
+   * (so now your first one will include all elements, etc.).
+   * Modifying the mesh invalidates all existing masks but does __not__ perform a reset.
+   * After modifying the mesh, you should call `reset_masks()` before making any new masks.
+   * \todo Make this more intuitive and less error-prone.
    */
   class Masked_mesh
   {
@@ -162,7 +170,13 @@ class Accessible_mesh : public Mesh
     Kernel_mesh kernel_mesh;
     Sequence<Boundary_connection&>& bound_cons;
   };
+  //! \brief Resets effective number of masks created to 0 and invalidates existing masks.
+  //! \see `Masked_mesh`
   void reset_masks();
+  /*! \brief Experimental feature. Ignore for now.
+   * \details Has to do with an experimental performance-enhancing feature where anisotropic elements are updated more frequently than isotropic ones.
+   * Not ready for production use, although it was the motivation for the `Masked_mesh` feature.
+   */
   std::vector<std::unique_ptr<Masked_mesh>> preti_masks(const Basis&);
 
   //! \returns a view of all Bounday_condition objects owned by this mesh
