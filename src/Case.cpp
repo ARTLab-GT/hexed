@@ -147,6 +147,15 @@ Surface_geom* Case::_make_geom()
   return geoms.empty() ? nullptr : new Compound_geom(geoms);
 }
 
+std::string Case::_assignment(std::string var_name)
+{
+  std::string statement = var_name + " = ";
+  if      (_vari(var_name)) statement += std::to_string(_vari(var_name).value());
+  else if (_vard(var_name)) statement += format_str(100, "%.20e", _vard(var_name).value());
+  else if (_vars(var_name)) statement += "{" + _vars(var_name).value() + "}";
+  return statement;
+}
+
 Case::Case(std::string input_script)
 {
   _inter.variables->assign("input_script", input_script);
@@ -344,6 +353,15 @@ Case::Case(std::string input_script)
     force_symlink(_iteration_suffix() + ".state.h5", _vars("working_dir").value() + "latest.state.h5");
     return 0;
   }));
+  _inter.variables->create<int>("write_status", new Namespace::Heisenberg<int>([this]() {
+    std::ofstream status_file(_vars("working_dir").value() + _iteration_suffix() + ".status.hil");
+    for (std::string name : {"iteration", "max_safety", "max_time_step", "residual_init", "init_residual_momentum", "init_residual_density", "init_residual_energy"}) {
+      status_file << _assignment(name) + "\n";
+    }
+    status_file.close();
+    force_symlink(_iteration_suffix() + ".status.hil", _vars("working_dir").value() + "latest.status.hil");
+    return 0;
+  }));
   _inter.variables->create<int>("export_polymesh", new Namespace::Heisenberg<int>([this]() {
     _solver().mesh().export_polymesh(_vars("working_dir").value());
     return 0;
@@ -425,7 +443,6 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create<std::string>("report", new Namespace::Heisenberg<std::string>([this]() {
-    _inter.variables->lookup<std::string>("compute_residuals");
     std::string report = "";
     Struct_expr vars(_vars("print_vars").value());
     auto sub = _inter.make_sub();

@@ -13,8 +13,9 @@ namespace hexed
 
 struct Kernel_mesh
 {
-  int n_dim;
-  int row_size;
+  const int n_dim;
+  const int row_size;
+  const int mask_level;
   const Basis& basis;
   Sequence<Kernel_connection&>& car_cons;
   Sequence<Kernel_connection&>& def_cons;

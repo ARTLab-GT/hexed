@@ -142,12 +142,14 @@ class Spatial
     const Eigen::Matrix<double, row_size, row_size> prolong_mat [2];
     bool scl;
     bool off;
+    int _mask;
 
     public:
-    Prolong_refined(const Basis& basis, bool scale = false, bool offset = false) :
+    Prolong_refined(const Basis& basis, int mask, bool scale = false, bool offset = false) :
       prolong_mat{basis.prolong(0), basis.prolong(1)},
       scl{scale},
-      off{offset}
+      off{offset},
+      _mask{mask}
     {}
 
     virtual void operator()(Sequence<Refined_face&>& ref_faces)
@@ -159,42 +161,38 @@ class Spatial
       for (int i_ref_face = 0; i_ref_face < ref_faces.size(); ++i_ref_face)
       {
         auto& ref_face {ref_faces[i_ref_face]};
-        double* coarse {ref_face.coarse + off*(n_dim + 2)*nfq};
-        const auto str = ref_face.stretch;
-        // update number of faces to reflect any face stretching
-        int nf = n_face;
-        for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) nf /= 1 + str[i_dim];
-        for (int i_face = 0; i_face < nf; ++i_face)
-        {
-          double* fine {ref_face.fine[i_face] + off*(n_dim + 2)*nfq};
-          for (int i_var = 0; i_var < n_var; ++i_var)
-          {
-            double* var_face {fine + i_var*nfq};
-            // initialize fine face to be equal to coarse face
-            for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-              var_face[i_qpoint] = coarse[i_var*nfq + i_qpoint];
-            }
-            // interpolate one dimension at a time, in-place
-            for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim)
-            {
-              if (str[i_dim]) for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) var_face[i_qpoint] *= 1 + scl;
-              else
-              {
-                const int pow {n_dim - 2 - i_dim};
-                const int face_stride {str[n_dim - 2] ? 1 : math::pow(2, pow)};
-                const int qpoint_stride {math::pow(row_size, pow)};
-                const int i_half {(i_face/face_stride)%2}; // is this face covering the upper or lower half of the coarse face with respect to the current dimension?
-                for (int i_outer = 0; i_outer < nfq/(row_size*qpoint_stride); ++i_outer)
-                {
-                  for (int i_inner = 0; i_inner < qpoint_stride; ++i_inner)
-                  {
-                    Eigen::Matrix<double, row_size, 1> row;
-                    for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-                      row(i_qpoint) = var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner];
-                    }
-                    row = prolong_mat[i_half]*row;
-                    for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-                      var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner] = row(i_qpoint);
+        if (ref_face.fine_mask() >= _mask) {
+          double* coarse {ref_face.coarse + off*(n_dim + 2)*nfq};
+          const auto str = ref_face.stretch;
+          // update number of faces to reflect any face stretching
+          int nf = n_face;
+          for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) nf /= 1 + str[i_dim];
+          for (int i_face = 0; i_face < nf; ++i_face) if (ref_face.fine_masks[i_face] >= _mask) {
+            double* fine {ref_face.fine[i_face] + off*(n_dim + 2)*nfq};
+            for (int i_var = 0; i_var < n_var; ++i_var) {
+              double* var_face {fine + i_var*nfq};
+              // initialize fine face to be equal to coarse face
+              for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+                var_face[i_qpoint] = coarse[i_var*nfq + i_qpoint];
+              }
+              // interpolate one dimension at a time, in-place
+              for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) {
+                if (str[i_dim]) for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) var_face[i_qpoint] *= 1 + scl;
+                else {
+                  const int pow {n_dim - 2 - i_dim};
+                  const int face_stride {str[n_dim - 2] ? 1 : math::pow(2, pow)};
+                  const int qpoint_stride {math::pow(row_size, pow)};
+                  const int i_half {(i_face/face_stride)%2}; // is this face covering the upper or lower half of the coarse face with respect to the current dimension?
+                  for (int i_outer = 0; i_outer < nfq/(row_size*qpoint_stride); ++i_outer) {
+                    for (int i_inner = 0; i_inner < qpoint_stride; ++i_inner) {
+                      Eigen::Matrix<double, row_size, 1> row;
+                      for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+                        row(i_qpoint) = var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner];
+                      }
+                      row = prolong_mat[i_half]*row;
+                      for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+                        var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner] = row(i_qpoint);
+                      }
                     }
                   }
                 }
@@ -219,12 +217,14 @@ class Spatial
     const Eigen::Matrix<double, row_size, row_size> restrict_mat [2];
     bool scl;
     bool off;
+    int _mask;
 
     public:
-    Restrict_refined(const Basis& basis, bool scale = true, bool offset = false) :
+    Restrict_refined(const Basis& basis, int mask, bool scale = true, bool offset = false) :
       restrict_mat{basis.restrict(0), basis.restrict(1)},
       scl{scale},
-      off{offset}
+      off{offset},
+      _mask{mask}
     {}
 
     virtual void operator()(Sequence<Refined_face&>& ref_faces)
@@ -236,48 +236,50 @@ class Spatial
       for (int i_ref_face = 0; i_ref_face < ref_faces.size(); ++i_ref_face)
       {
         auto& ref_face {ref_faces[i_ref_face]};
-        double* coarse {ref_face.coarse + off*(n_dim + 2)*nfq};
-        for (int i_dof = 0; i_dof < n_var*nfq; ++i_dof) coarse[i_dof] = 0.;
-        auto str = ref_face.stretch;
-        // update number of faces to reflect any face stretching
-        int nf = n_face;
-        for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) nf /= 1 + str[i_dim];
-        for (int i_face = 0; i_face < nf; ++i_face)
-        {
-          double* fine {ref_face.fine[i_face] + off*(n_dim + 2)*nfq};
-          for (int i_var = 0; i_var < n_var; ++i_var)
+        if (ref_face.coarse_mask >= _mask) {
+          double* coarse {ref_face.coarse + off*(n_dim + 2)*nfq};
+          for (int i_dof = 0; i_dof < n_var*nfq; ++i_dof) coarse[i_dof] = 0.;
+          auto str = ref_face.stretch;
+          // update number of faces to reflect any face stretching
+          int nf = n_face;
+          for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) nf /= 1 + str[i_dim];
+          for (int i_face = 0; i_face < nf; ++i_face)
           {
-            double* var_face {fine + i_var*nfq};
-            for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim)
+            double* fine {ref_face.fine[i_face] + off*(n_dim + 2)*nfq};
+            for (int i_var = 0; i_var < n_var; ++i_var)
             {
-              if (str[i_dim])
+              double* var_face {fine + i_var*nfq};
+              for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim)
               {
-                for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) var_face[i_qpoint] /= 1 + scl;
-              }
-              else
-              {
-                const int pow {n_dim - 2 - i_dim};
-                const int face_stride {str[n_dim - 2] ? 1 : math::pow(2, pow)};
-                const int qpoint_stride {math::pow(row_size, pow)};
-                const int i_half {(i_face/face_stride)%2}; // is this face covering the upper or lower half of the coarse face with respect to the current dimension?
-                for (int i_outer = 0; i_outer < nfq/(row_size*qpoint_stride); ++i_outer)
+                if (str[i_dim])
                 {
-                  for (int i_inner = 0; i_inner < qpoint_stride; ++i_inner)
+                  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) var_face[i_qpoint] /= 1 + scl;
+                }
+                else
+                {
+                  const int pow {n_dim - 2 - i_dim};
+                  const int face_stride {str[n_dim - 2] ? 1 : math::pow(2, pow)};
+                  const int qpoint_stride {math::pow(row_size, pow)};
+                  const int i_half {(i_face/face_stride)%2}; // is this face covering the upper or lower half of the coarse face with respect to the current dimension?
+                  for (int i_outer = 0; i_outer < nfq/(row_size*qpoint_stride); ++i_outer)
                   {
-                    Eigen::Matrix<double, row_size, 1> row;
-                    for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-                      row(i_qpoint) = var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner];
-                    }
-                    row = restrict_mat[i_half]*row;
-                    for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-                      var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner] = row(i_qpoint);
+                    for (int i_inner = 0; i_inner < qpoint_stride; ++i_inner)
+                    {
+                      Eigen::Matrix<double, row_size, 1> row;
+                      for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+                        row(i_qpoint) = var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner];
+                      }
+                      row = restrict_mat[i_half]*row;
+                      for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+                        var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner] = row(i_qpoint);
+                      }
                     }
                   }
                 }
               }
-            }
-            for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-              coarse[i_var*nfq + i_qpoint] += var_face[i_qpoint];
+              for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+                coarse[i_var*nfq + i_qpoint] += var_face[i_qpoint];
+              }
             }
           }
         }
@@ -605,10 +607,11 @@ class Spatial
     const Pde _eq;
     static constexpr int n_fqpoint = math::pow(row_size, n_dim - 1);
     const int _stage;
+    const int _mask;
 
     public:
     template <typename... pde_args>
-    Neighbor(int i_stage, pde_args... args) : _eq(args...), _stage{i_stage} {}
+    Neighbor(int i_stage, int mask, pde_args... args) : _eq(args...), _stage{i_stage}, _mask{mask} {}
 
     virtual void operator()(Sequence<Kernel_connection&>& connections)
     {
@@ -684,7 +687,7 @@ class Spatial
           if constexpr (Pde::has_diffusion) Face_permutation<n_dim, row_size>(dir, face[3]).restore();
         }
         // write data to actual face storage on heap
-        for (int i_side = 0; i_side < 2; ++i_side) {
+        for (int i_side = 0; i_side < 2; ++i_side) if (con.mask(i_side) >= _mask) {
           // write flux
           if constexpr (Pde::has_convection) {
             double* f = con.state(i_side, false);
@@ -711,8 +714,10 @@ class Spatial
   {
     using Pde = Pde_templ<n_dim, row_size>;
     static constexpr int n_fqpoint = math::pow(row_size, n_dim - 1);
+    int _mask;
 
     public:
+    Neighbor_reconcile(int mask) : _mask{mask} {}
     virtual void operator()(Sequence<Kernel_connection&>& connections)
     {
       #pragma omp parallel for
@@ -749,7 +754,7 @@ class Spatial
         }
         if constexpr (is_deformed) perm.restore(); // restore data of face 1 to original order
         // write data to actual face storage on heap
-        for (int i_side = 0; i_side < 2; ++i_side) {
+        for (int i_side = 0; i_side < 2; ++i_side) if (con.mask(i_side) >= _mask) {
           double* f = con.state(i_side, true);
           for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
             f[i_dof] = face[i_side][i_dof];

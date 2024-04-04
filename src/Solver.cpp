@@ -23,6 +23,7 @@ Kernel_mesh Solver::_kernel_mesh()
   return {
     params.n_dim,
     params.row_size,
+    0,
     basis,
     acc_mesh->cartesian().kernel_connections(),
     acc_mesh->deformed ().kernel_connections(),
@@ -57,7 +58,7 @@ void Solver::share_vertex_data(std::function<double(Element&, int i_vertex)> get
 void Solver::apply_state_bcs()
 {
   stopwatch.children.at("boundary conditions").stopwatch.start();
-  auto& bc_cons {acc_mesh->boundary_connections()};
+  auto& bc_cons {_preti_masks[_preti_level]->bound_cons};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
@@ -69,7 +70,7 @@ void Solver::apply_state_bcs()
 
 void Solver::apply_flux_bcs()
 {
-  auto& bc_cons {acc_mesh->boundary_connections()};
+  auto& bc_cons {_preti_masks[_preti_level]->bound_cons};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     // write inside flux to flux cache for surface visualization/integrals
@@ -147,7 +148,8 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   therm_cond{thermal_conductivity_model},
   _namespace{space},
   _printer{printer},
-  _implicit{implicit}
+  _implicit{implicit},
+  _preti_level{0}
 {
   _namespace->assign_default("max_safety", .7); // maximum allowed safety factor for time stepping
   _namespace->assign_default("max_time_step", huge); // maximum allowed time step
@@ -160,6 +162,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("buffer_dist", .8*std::sqrt(params.n_dim));
   _namespace->assign_default("n_cheby_flow", 1);
   _namespace->assign_default("n_cheby_av", 1);
+  _namespace->assign_default("preti", 0);
   _namespace->assign_default("av_advect_iters", 1); // number of advection iterations to run each time `update_art_visc_smoothness` is called
   _namespace->assign_default("av_diff_iters", 1); // number of diffusion iterations to run each time `update_art_visc_smoothness` is called
   _namespace->assign_default("flow_iters", 1);
@@ -178,7 +181,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   std::string unit = "(element*(time integration stage))";
   stopwatch.children.emplace("prolong/restrict", unit);
   stopwatch.children.emplace("fix admis.", "(element*(fix admis. iter))");
-  stopwatch.children.emplace("check admis.", "(element*iteration)");
+  stopwatch.children.at("fix admis.").children.emplace("check admis.", "(element*iteration)");
   stopwatch.children.emplace("set art visc", stopwatch.work_unit_name);
   stopwatch.children.at("set art visc").children.emplace("initialize", stopwatch.work_unit_name);
   stopwatch.children.at("set art visc").children.emplace("advection", stopwatch.work_unit_name);
@@ -379,6 +382,7 @@ void Solver::calc_jacobian(bool snap)
     }
   }
   share_vertex_data(&Element::vertex_time_step_scale, Vertex::vector_min);
+  _preti_masks = acc_mesh->preti_masks(basis);
 }
 
 void Solver::initialize(const Spacetime_func& func)
@@ -843,31 +847,37 @@ void Solver::update()
     double safety = _namespace->lookup<double>("max_safety").value();
     double n_cheby = _namespace->lookup<double>("n_cheby_flow").value();
     double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1);
-    // run chebyshev iterations
-    for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
-    {
-      double nominal_dt = std::min(max_dt(safety/max_cheby, safety), _namespace->lookup<double>("max_time_step").value());
-      double dt = nominal_dt*math::chebyshev_step(n_cheby, i_cheby);
-      // record reference state for residual calculation
-      bool fixed = false;
-      // compute inviscid update
-      for (int i = 0; i < 2; ++i) {
-        Kernel_options opts {
-          stopwatch.children.at("cartesian"),
-          stopwatch.children.at("deformed" ),
-          stopwatch.children.at("prolong/restrict"),
-          dt,
-          i,
-          false,
-          bool(_namespace->lookup<int>("use_filter").value()),
-        };
-        apply_state_bcs();
-        if (use_ldg() && !i) compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond);
-        else compute_euler(_kernel_mesh(), opts);
-        // note that function call must come first to ensure it is evaluated despite short-circuiting
-        fixed = fix_admissibility(_namespace->lookup<double>("fix_admis_max_safety").value()) || fixed;
+    double dt = 0;
+    int n_preti = 1 + std::max(0, int(_preti_masks.size()) - 1)*(_namespace->lookup<int>("preti").value());
+    for (int i_preti = 0; i_preti < n_preti; ++i_preti) {
+      _preti_level = i_preti > 0;
+      // run chebyshev iterations
+      for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
+      {
+        double nominal_dt = std::min(max_dt(safety/max_cheby, safety), _namespace->lookup<double>("max_time_step").value());
+        dt = nominal_dt*math::chebyshev_step(n_cheby, i_cheby);
+        // record reference state for residual calculation
+        bool fixed = false;
+        // compute inviscid update
+        for (int i = 0; i < 2; ++i) {
+          Kernel_options opts {
+            stopwatch.children.at("cartesian"),
+            stopwatch.children.at("deformed" ),
+            stopwatch.children.at("prolong/restrict"),
+            dt,
+            i,
+            false,
+            bool(_namespace->lookup<int>("use_filter").value()),
+          };
+          apply_state_bcs();
+          Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
+          if (use_ldg() && !i) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond);
+          else compute_euler(km, opts);
+          // note that function call must come first to ensure it is evaluated despite short-circuiting
+          fixed = fix_admissibility(_namespace->lookup<double>("fix_admis_max_safety").value()) || fixed;
+        }
+        if (fixed) break;
       }
-      if (fixed) break;
 
       // update status for reporting
       _namespace->assign<double>("time_step", dt);
@@ -876,6 +886,7 @@ void Solver::update()
       status.flow_time += dt;
     }
   }
+  _preti_level = 0;
 
   _namespace->assign("iteration", _namespace->lookup<int>("iteration").value() + 1);
   _namespace->assign("wall_time", status.wall_time());
@@ -921,9 +932,9 @@ Iteration_status Solver::iteration_status()
 
 bool Solver::is_admissible()
 {
-  auto& sw = stopwatch.children.at("check admis.");
+  auto& sw = stopwatch.children.at("fix admis.").children.at("check admis.");
   sw.stopwatch.start();
-  auto& elems = acc_mesh->elements();
+  auto& elems = _preti_masks[_preti_level]->kernel_mesh.elems;
   const int nd = params.n_dim;
   const int nq = params.n_qpoint();
   const int rs = params.row_size;
@@ -943,7 +954,7 @@ bool Solver::is_admissible()
     if (!elem_admis) elem.record = 1;
     admiss = admiss && elem_admis;
   }
-  auto& ref_faces = acc_mesh->refined_faces();
+  auto& ref_faces = _preti_masks[_preti_level]->kernel_mesh.ref_faces;
   bool refined_admiss = 1;
   #pragma omp parallel for reduction (&&:refined_admiss)
   for (int i_face = 0; i_face < ref_faces.size(); ++i_face) {

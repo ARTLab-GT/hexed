@@ -48,6 +48,31 @@ class Vector_view : public Sequence<reference_t>
   }
 };
 
+template <typename T>
+class Slice : public Sequence<T>
+{
+  Sequence<T>* _seq;
+  int _start;
+  int _end;
+  int _stride;
+  int _real_end() {return _end < 0 ? _seq->size() : _end;}
+
+  public:
+  Slice(Sequence<T>& seq, int start = 0, int end = -1, int stride = 1)
+  : _seq{&seq}, _start{start}, _end{end}, _stride{stride}
+  {}
+
+  int size()
+  {
+    return (_real_end() - _start)/_stride;
+  }
+
+  T operator[](int index)
+  {
+    return (*_seq)[_start + _stride*index];
+  }
+};
+
 /*! \brief A `Sequence` formed by concatenating two `Sequence`s.
  * \details For better or for worse, no copies are made---it requres references to existing sequences.
  * More then 2 sequences can be concatenated by nesting `Concatenation`s.

@@ -133,6 +133,7 @@ class Element_face_connection : public Element_connection, public Face_connectio
   Con_dir<element_t> direction() override {return dir;}
   Connection_direction get_direction() override {return dir;}
   element_t& element(int i_side) override {return *elems[i_side];}
+  int mask(int i_side) override {return element(i_side).mask();}
 };
 
 template <>
@@ -184,9 +185,10 @@ class Refined_connection
     {
       fine_elem.set_face(ref_con.dir.i_face(!ref_con.rev), nullptr);
     }
-    virtual Con_dir<element_t> direction() {return ref_con.direction();}
+    Con_dir<element_t> direction() override {return ref_con.direction();}
     Connection_direction get_direction() override {return ref_con.direction();}
-    virtual element_t& element(int i_side) {return (i_side != ref_con.rev) ? fine_elem : ref_con.c;}
+    element_t& element(int i_side) override {return (i_side != ref_con.rev) ? fine_elem : ref_con.c;}
+    int mask(int i_side) override {return element(i_side).mask();}
   };
 
   private:
@@ -379,6 +381,7 @@ class Typed_bound_connection : public Boundary_connection
   Connection_direction get_direction() override {return direction();}
   int bound_cond_serial_n() override {return bc_sn;}
   element_t& element() override {return elem;}
+  int mask(int i_side) override {return i_side ? -1 : element().mask();}
 };
 
 template <>

@@ -51,6 +51,8 @@ class Kernel_connection : virtual public Connection
   //! \details layout: [i_var][i_face_qpoint]
   virtual double* state(int i_side, bool is_ldg) = 0;
   virtual double* normal() = 0; //!< \brief face normal vector \details `nullptr` for Cartesian
+  virtual int mask(int i_side) = 0; //!< \brief whether the element on side `i_side` is included in mesh masking
+  int mask() {return std::max(mask(0), mask(1));}
 };
 
 }

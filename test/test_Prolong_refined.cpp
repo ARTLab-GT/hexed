@@ -26,7 +26,7 @@ TEST_CASE("Prolong_refined")
     ref_faces.back().coarse = coarse[0][0];
     for (int i_fine = 0; i_fine < 4; ++i_fine) ref_faces.back().fine[i_fine] = fine[i_fine][0][0];
     ref_faces.back().stretch = std::array<bool, 2>{false, false};
-    (*hexed::kernel_factory<hexed::Spatial<hexed::pde::Navier_stokes<false>::Pde, false>::Prolong_refined>(3, row_size, basis))(ref_face_v);
+    (*hexed::kernel_factory<hexed::Spatial<hexed::pde::Navier_stokes<false>::Pde, false>::Prolong_refined>(3, row_size, basis, 0))(ref_face_v);
     for (int i_half : {0, 1}) {
       for (int j_half : {0, 1}) {
         for (int i_node = 0; i_node < row_size; ++i_node) {
@@ -48,7 +48,7 @@ TEST_CASE("Prolong_refined")
     ref_faces.back().coarse = coarse[0][0];
     for (int i_fine = 0; i_fine < 4; ++i_fine) ref_faces.back().fine[i_fine] = fine[i_fine][0][0];
     ref_faces.back().stretch = std::array<bool, 2>{true, false};
-    (*hexed::kernel_factory<hexed::Spatial<hexed::pde::Navier_stokes<false>::Pde, false>::Prolong_refined>(3, row_size, basis))(ref_face_v);
+    (*hexed::kernel_factory<hexed::Spatial<hexed::pde::Navier_stokes<false>::Pde, false>::Prolong_refined>(3, row_size, basis, 0))(ref_face_v);
     for (int j_half : {0, 1}) {
       for (int i_node = 0; i_node < row_size; ++i_node) {
         for (int j_node = 0; j_node < row_size; ++j_node) {
@@ -68,7 +68,7 @@ TEST_CASE("Prolong_refined")
     ref_faces.back().coarse = coarse[0][0];
     for (int i_fine = 0; i_fine < 4; ++i_fine) ref_faces.back().fine[i_fine] = fine[i_fine][0][0];
     ref_faces.back().stretch = std::array<bool, 2>{false, true};
-    (*hexed::kernel_factory<hexed::Spatial<hexed::pde::Navier_stokes<false>::Pde, false>::Prolong_refined>(3, row_size, basis))(ref_face_v);
+    (*hexed::kernel_factory<hexed::Spatial<hexed::pde::Navier_stokes<false>::Pde, false>::Prolong_refined>(3, row_size, basis, 0))(ref_face_v);
     for (int i_half : {0, 1}) {
       for (int i_node = 0; i_node < row_size; ++i_node) {
         for (int j_node = 0; j_node < row_size; ++j_node) {

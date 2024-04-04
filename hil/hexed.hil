@@ -114,17 +114,10 @@ set_ramping = {
     }
 }
 
-set_aerothermo = {
-    $set_shock
-    $set_ramping
-    viscosity_model = air_viscosity
-    conductivity_model = air_conductivity
-    print_vars = print_vars + heating_rate_expr
-    iterate = {
-        $compute_heating
-    } + iterate + {
-        $compute_heating
-        {alternate between time stepping strategies optimized for convection and diffusion}
+{alternate between time stepping strategies optimized for convection and diffusion}
+set_cheby = {
+    iterate = iterate + {
+        case0 = {}
         case1 = {
             case0 = {
                 flow_iters = 1
@@ -140,12 +133,37 @@ set_aerothermo = {
     }
 }
 
+preti_initial_iters = 10000
+set_preti = {
+    iterate = iterate + {
+        case0 = {}
+        case1 = {
+            println {Activating PRETI scheme.}
+            preti = true
+        }
+        $$({case} + (iteration == preti_initial_iters))
+    }
+}
+
+aerothermo_preti = false
+set_aerothermo = {
+    $set_shock
+    $set_ramping
+    viscosity_model = air_viscosity
+    conductivity_model = air_conductivity
+    print_vars = print_vars + heating_rate_expr
+    iterate = {$compute_heating} + iterate
+    case0 = {$set_cheby}
+    case1 = {$set_preti}
+    $$({case} + aerothermo_preti)
+}
+
 set_geometry_refinement = {
     refine_if = {(uncertainty > geometry_uncertainty | snapping_problem) & ref_level < max_ref_level & nom_sz > min_elem_size}
     unrefine_if = {ref_level > init_ref_level & !is_extruded}
 }
 
-plot_history = {shell {python3 -c "from hexed_utils import History_plot;History_plot()" &}}
+plot_history = {shell({python3 -c "from hexed_utils import History_plot;History_plot('} + working_dir + {')" &})}
 
 {scalar parameters}
 row_size = 6
@@ -228,7 +246,7 @@ $loop
 
 {overrideable macros}
 write_init = {write_mesh}
-write_final = {write_mesh; write_state}
+write_final = {write_mesh; write_state; write_status}
 vis_init = {visualize}
 vis_final = {visualize}
 print_init = {println header}
@@ -247,6 +265,7 @@ write_iter = {
         print {writing mesh/state data...}
         write_mesh
         write_state
+        write_status
         println {done}
     }
     $$({case} + (iteration%write_freq == 0))
@@ -262,24 +281,27 @@ vis_iter = {
     $$({case} + (iteration%vis_freq == 0))
 }
 
-print_iter = {
-    case0 = {}
-    case1 = {println report}
-    $$({case} + (iteration != 1))
+restart = {
+    print {reading restart data...}
+    read_mesh
+    read_state
+    $read(input_data + {.status.hil})
+    println {done}
 }
 
 iterate = {
     update
+    compute_residuals
     {compute initial residual for normalization}
     case0 = {}
     case1 = {
-        compute_residuals
         init_residual_momentum = residual_momentum
         init_residual_density = residual_density
         init_residual_energy = residual_energy
+        residual_init = true
     }
-    $$({case} + (iteration == 1))
-    $print_iter
+    $$({case} + !residual_init)
+    println report
     $write_iter
     $vis_iter
     except = {println exception}
@@ -314,6 +336,10 @@ start = {
     }
     $$({case} + (flood_fill_start0 == huge))
     create_solver
+    residual_init = false
+    init_residual_momentum = 0.
+    init_residual_density = 0.
+    init_residual_energy = 0.
     normalized_residual = 1.
 }
 

@@ -28,6 +28,7 @@ class Case
   std::unique_ptr<std::ofstream> _output_file; // anything printed to cout will also be printed here
   std::unique_ptr<Struct_expr> _monitor_expr;
   std::vector<History_monitor> _monitors;
+  std::string _assignment(std::string var_name);
   public:
   Case(std::string input_script = "interactive.hil");
 };

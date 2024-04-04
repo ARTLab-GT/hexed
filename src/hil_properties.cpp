@@ -7,6 +7,8 @@ void element(Namespace& space, Element& elem)
 {
   space.assign("is_extruded", int(!elem.tree));
   space.assign("ref_level", elem.refinement_level());
+  space.assign("aniso_ref_level", elem.aniso_ref_level());
+  space.assign("mask", elem.mask());
   space.assign("nom_sz", elem.nominal_size());
   space.assign("uncertainty", elem.uncertainty);
   space.assign("snapping_problem", int(elem.snapping_problem));

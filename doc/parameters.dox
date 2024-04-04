@@ -897,6 +897,20 @@ This command can be used instead of \ref init_state.
 Evaluates to 0.
 
 <hr>
+\subsubsection restart
+__type:__ string (macro) \n
+Reads the mesh, state, and status variables from a previous simulation.
+File names without extensions are given by \ref input_data.
+This should be the method of choice for restarting a simulation.
+`restart` should be invoked after \ref start and before \ref run.
+\ref mesh and \ref init_state are not necessary.
+You will still have to include the input parameter definitions (e.g., freestream conditions and \ref done "termination condition"),
+which can be accomplished by copying the appropriate parts of the original input file if desired.
+Note that `restart` will override the current value of \ref max_safety and \ref max_time_step,
+which is necessary for \ref set_ramping to work correctly.
+If you want to set these values manually, you can do that in between `restart` and \ref run.
+
+<hr>
 \subsubsection write_mesh
 __type:__ Heisenberg int \n
 Writes the mesh to a file in the \ref file_format "Hexed mesh format",
@@ -911,6 +925,24 @@ __type:__ Heisenberg int \n
 Writes the flow state to a file which can then be used in a future simulation using \ref read_state.
 The file name will be `iterXXXXXXXXXX.state.h5` in the working directory, where the `X`s are replaced with the current iteration number.
 Also creates a symlink `latest.state.h5` pointing to this file for convenience.
+Evaluates to 0.
+
+<hr>
+\subsubsection write_status
+__type:__ Heisenberg int \n
+Writes certain status variables to a file to facilitate restarting the simulation exactly as it was.
+The file name will be `iterXXXXXXXXXX.status.hil` in the working directory, where the `X`s are replaced with the current iteration number.
+Also creates a symlink `latest.status.hil` pointing to this file for convenience.
+The file is a standard \ref hil "HIL" script that can be read using the standard \ref read operator.
+E.g., `$read {hexed_out/latest.status.hil}`.
+The variables that are included are:
+- \ref iteration
+- \ref init_residual_momentum
+- \ref init_residual_density
+- \ref init_residual_energy
+- \ref max_safety
+- \ref max_time_step
+
 Evaluates to 0.
 
 <hr>
@@ -1018,6 +1050,24 @@ Begins the simulation uninitialized and is only assigned when \ref compute_resid
 __type:__ float \n
 Dimensional residual of the energy equation.
 Begins the simulation uninitialized and is only assigned when \ref compute_residuals is evaluated.
+
+<hr>
+\subsubsection init_residual_momentum
+__type:__ float \n
+Magnitude of the dimensional residual of the vector momentum equation at the start of the simulation.
+Defined at the beginning of \ref run.
+
+<hr>
+\subsubsection init_residual_density
+__type:__ float \n
+Dimensional residual of the continuity equation at the start of the simulation.
+Defined at the beginning of \ref run.
+
+<hr>
+\subsubsection init_residual_energy
+__type:__ float \n
+Dimensional residual of the energy equation at the start of the simulation.
+Defined at the beginning of \ref run.
 
 <hr>
 \subsubsection normalized_residual

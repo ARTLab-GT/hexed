@@ -4,6 +4,7 @@
 #include "Mesh.hpp"
 #include "Mesh_by_type.hpp"
 #include "Tree.hpp"
+#include "Kernel_mesh.hpp"
 
 namespace hexed
 {
@@ -40,9 +41,30 @@ class Accessible_mesh : public Mesh
   bool verts_are_reset;
   std::vector<std::vector<Vertex::Non_transferable_ptr>> boundary_verts; // a vector of the vertices that are on each boundary
   std::vector<Vertex::Non_transferable_ptr> smooth_verts; // a vector of the vertices that need to be smoothed in this sweep
+  int _mask_levels;
+
+  // masked sequences
+  template <typename view_t, typename storage_t>
+  struct Masked
+  {
+    std::vector<storage_t*> ptrs;
+    Vector_view<view_t&, storage_t*, ptr_convert<view_t&, storage_t*>> view;
+    Slice<view_t&> slice;
+    Masked() : view(ptrs), slice(view) {}
+    template <typename T, typename U>
+    void populate(T& base_seq, U criterion)
+    {
+      ptrs.resize(base_seq.size());
+      int i_ptr = 0;
+      for (int i = 0; i < int(base_seq.size()); ++i) {
+        if (criterion(base_seq[i])) ptrs[i_ptr++] = &base_seq[i];
+      }
+      slice = Slice<view_t&>(view, 0, i_ptr);
+    }
+  };
 
   Element_container& container(bool is_deformed);
-  int add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin);
+  int add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin, int aniso_ref_level = 0);
   Element& add_elem(bool is_deformed, Tree&);
   bool intersects_surface(Tree*);
   bool is_surface(Tree*);
@@ -116,6 +138,46 @@ class Accessible_mesh : public Mesh
   void relax(double factor = 0.9) override;
   inline int surface_bc_sn() override {return surf_bc_sn;}
   inline Surface_geom& surface_geometry() {return *surf_geom;}
+
+  /*! \brief Creates a mask that allows kernel operations to be performed on a subset of the elements.
+   * \details Supply a function that returns `true` for elements that should be operated on.
+   * The masked mesh is described by two objects:
+   * - a `Kernel_mesh` which includes all the elements where the mask is `true`
+   *   and all the connections and refined faces where the mask is `true` for at least one of the participating elements
+   * - a `Sequence` of `Boundary_connection`s which includes all boundary connections for whose element the mask is `true`
+   *
+   * The members `elements()`, `element_connections()`, etc. will not be affected.
+   * This feature has some quirks.
+   * The first mask you create will include all elements, regardless of what mask function you supply.
+   * After that, each mask will be a subset of all previous masks, again regardless of the mask function.
+   * Calling `reset_masks()` invalidates all previous masks and makes it as if you had not yet created any masks
+   * (so now your first one will include all elements, etc.).
+   * Modifying the mesh invalidates all existing masks but does __not__ perform a reset.
+   * After modifying the mesh, you should call `reset_masks()` before making any new masks.
+   * \todo Make this more intuitive and less error-prone.
+   */
+  class Masked_mesh
+  {
+    Masked<Kernel_element, Element> _masked_elems;
+    Masked<Kernel_element, Element> _masked_car_elems;
+    Masked<Kernel_element, Element> _masked_def_elems;
+    Masked<Kernel_connection, Kernel_connection> _masked_car_cons;
+    Masked<Kernel_connection, Kernel_connection> _masked_def_cons;
+    Masked<Refined_face, Refined_face> _masked_ref_faces;
+    Masked<Boundary_connection, Boundary_connection> _masked_bound_cons;
+    public:
+    Masked_mesh(Accessible_mesh&, const Basis&, std::function<bool(Element&)> = [](Element&){return true;});
+    Kernel_mesh kernel_mesh;
+    Sequence<Boundary_connection&>& bound_cons;
+  };
+  //! \brief Resets effective number of masks created to 0 and invalidates existing masks.
+  //! \see `Masked_mesh`
+  void reset_masks();
+  /*! \brief Experimental feature. Ignore for now.
+   * \details Has to do with an experimental performance-enhancing feature where anisotropic elements are updated more frequently than isotropic ones.
+   * Not ready for production use, although it was the motivation for the `Masked_mesh` feature.
+   */
+  std::vector<std::unique_ptr<Masked_mesh>> preti_masks(const Basis&);
 
   //! \returns a view of all Bounday_condition objects owned by this mesh
   Vector_view<Boundary_condition&, Boundary_condition> boundary_conditions() {return bound_conds;}

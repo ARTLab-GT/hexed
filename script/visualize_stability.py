@@ -41,7 +41,7 @@ for row_size in range(2, 9):
         plt.axis("equal")
         plt.grid(True)
         plt.legend(loc = "upper left")
-        plt.savefig("/home/micaiah/orgs/artlab/scitech2023/eigenvalues.pdf")
+        plt.savefig("eigenvalues.pdf")
         plt.show()
     print(f"{row_size - 1} & {cfl:.4f} & {cfl/2:.4f} & {cfl_rk[row_size]:.4f} & {cfl_rk[row_size]/3:.4f} \\\\")
 

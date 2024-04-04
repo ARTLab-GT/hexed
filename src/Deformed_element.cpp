@@ -4,8 +4,8 @@
 namespace hexed
 {
 
-Deformed_element::Deformed_element(Storage_params params, std::vector<int> pos, double mesh_size, int ref_level, Mat<> origin_arg) :
-  Element{params, pos, mesh_size, ref_level, origin_arg, true},
+Deformed_element::Deformed_element(Storage_params params, std::vector<int> pos, double mesh_size, int ref_level, Mat<> origin_arg, int aniso_r_level) :
+  Element{params, pos, mesh_size, ref_level, origin_arg, true, aniso_r_level},
   n_qpoint{params.n_qpoint()},
   jac_dat{(n_dim*n_dim + 1)*n_qpoint},
   node_adj{Eigen::VectorXd::Zero(n_qpoint/params.row_size*n_dim*2)},
@@ -68,7 +68,7 @@ void Deformed_element::set_jacobian(const Basis& basis)
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) pos(i_qpoint) = position(basis, i_qpoint)[i_dim];
     for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
       auto jac_entry {jac.segment((i_dim*n_dim + j_dim)*n_qpoint, n_qpoint)};
-      jac_entry = math::dimension_matvec(diff_mat, pos, j_dim)/nom_sz;
+      jac_entry = math::dimension_matvec(diff_mat, pos, j_dim)/_nom_sz;
     }
   }
   // compute interior normals

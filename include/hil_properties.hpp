@@ -14,6 +14,8 @@ namespace hexed::hil_properties
  * - `n_dim`: number of dimensions
  * - `is_def = elem.get_is_deformed()`
  * - `ref_level = elem.refinement_level()`
+ * - `aniso_ref_level = elem.aniso_ref_level()`
+ * - `mask = elem.mask()`
  * - `nom_sz` = elem.nominal_size()`
  * - `uncertainty` = elem.uncertainty`
  * - `center0`, `center1`, `center2`: center of mass of vertices (not necessarily of the element itself)

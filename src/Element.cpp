@@ -4,17 +4,20 @@
 namespace hexed
 {
 
-Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level, Mat<> origin_arg, bool mobile_vertices) :
+Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level,
+                 Mat<> origin_arg, bool mobile_vertices, int aniso_r_level) :
   params(params_arg),
   n_dim(params.n_dim),
-  nom_pos(n_dim, 0),
-  nom_sz{mesh_size/math::pow(2, ref_level)},
-  r_level{ref_level},
+  _nom_pos(n_dim, 0),
+  _nom_sz{mesh_size/math::pow(2, ref_level)},
+  _r_level{ref_level},
+  _aniso_r_level{aniso_r_level},
   n_dof(params.n_dof()),
   n_vert(params.n_vertices()),
   data_size{params.n_dof_numeric()},
   data{Eigen::VectorXd::Zero(data_size)},
-  vertex_data{Eigen::VectorXd::Constant(2*params.n_vertices(), nom_sz/n_dim)},
+  vertex_data{Eigen::VectorXd::Constant(2*params.n_vertices(), _nom_sz/n_dim)},
+  _mask{0},
   tree(this),
   origin{origin_arg(Eigen::seqN(0, params.n_dim))}
 {
@@ -27,8 +30,8 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   first_pos.setZero();
   int n_pos_set = std::min<int>(pos.size(), n_dim);
   for (int i_dim = 0; i_dim < n_pos_set; ++i_dim) {
-    nom_pos[i_dim] = pos[i_dim];
-    first_pos[i_dim] = pos[i_dim]*nom_sz;
+    _nom_pos[i_dim] = pos[i_dim];
+    first_pos[i_dim] = pos[i_dim]*_nom_sz;
   }
   first_pos(Eigen::seqN(0, n_dim)) += origin;
   // construct vertices
@@ -41,7 +44,7 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
       stride[i_dim] = math::pow(2, n_dim - i_dim - 1);
       i_row[i_dim] = (i_vert/stride[i_dim])%2;
-      vertex_pos[i_dim] += i_row[i_dim]*nom_sz;
+      vertex_pos[i_dim] += i_row[i_dim]*_nom_sz;
     }
     vertices.emplace_back(vertex_pos, mobile_vertices);
     // establish vertex connections (that is, edges).
@@ -51,8 +54,8 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   }
 }
 
-Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level, Mat<> origin_arg)
-: Element(params_arg, pos, mesh_size, ref_level, origin_arg, false)
+Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level, Mat<> origin_arg, int aniso_r_level)
+: Element(params_arg, pos, mesh_size, ref_level, origin_arg, false, aniso_r_level)
 {}
 
 Storage_params Element::storage_params()
@@ -65,7 +68,7 @@ std::vector<double> Element::position(const Basis& basis, int i_qpoint)
   std::vector<double> pos;
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
     const int stride = math::pow(params.row_size, params.n_dim - i_dim - 1);
-    pos.push_back((basis.node((i_qpoint/stride)%params.row_size) + nom_pos[i_dim])*nom_sz + origin(i_dim));
+    pos.push_back((basis.node((i_qpoint/stride)%params.row_size) + _nom_pos[i_dim])*_nom_sz + origin(i_dim));
   }
   return pos;
 }
