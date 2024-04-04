@@ -31,7 +31,6 @@ done = {iteration > 10^4 & heating_rate_max - heating_rate_min < 10.}
 vis_freq = 10000
 diffusive_admissibility = true
 
-working_dir = {hexed_out}
 $plot_history
 $start
 $mesh
