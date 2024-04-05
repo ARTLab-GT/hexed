@@ -91,7 +91,7 @@ add_custom_command(
     COMMAND python3 ${CMAKE_SOURCE_DIR}/script/auto_generate.py ${CMAKE_BINARY_DIR} ${MAX_BASIS_ROW_SIZE}
     DEPENDS
         ${CMAKE_SOURCE_DIR}/script/auto_generate.py
-        ${CMAKE_SOURCE_DIR}/script/Basis.py
+        ${CMAKE_SOURCE_DIR}/python/hexed_utils.py
 )
 set(colormap_files
     colormaps/cividis.map
