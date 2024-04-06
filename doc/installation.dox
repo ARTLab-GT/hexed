@@ -6,7 +6,7 @@ although you may be able to coerce it to work in other environments.
 Precompiled binaries and support for other operating systems and compilers are planned in future releases.
 
 \section quick Quick Start
-If look at these instructions and don't know what I'm talking about, skip to \ref detailed
+If look at these instructions and don't know what I'm talking about, skip to \ref detailed.
 -# Ensure that the following mandatory dependencies are installed (all Python packages must be installed for Python3):
    - [Eigen](https://eigen.tuxfamily.org/)
    - [HDF5](https://www.hdfgroup.org/solutions/hdf5/)
@@ -32,6 +32,11 @@ If look at these instructions and don't know what I'm talking about, skip to \re
 -# Hexed is now ready to use. To verify the success of the build, execute the following:
    - `test/unit` to run the unit tests.
    - `cd ../samples/naca0012; hexecute run.hil` to run the [NACA 0012 sample case](https://github.com/ARTLab-GT/hexed/blob/v0.1.1/samples/naca0012/run.hil).
+
+To uninstall Hexed (remove its files from the system-wide installation directories), do `make uninstall`.
+This uninstall rule _should_ be comprehensive.
+After executing it, there shouldn't be any traces of Hexed outside the build tree.
+If you find this is not the case, please let \me know.
 
 \section detailed Detailed instructions
 Since Hexed is meant for aerospace engineers, who often aren't programmers, this section provides a detailed tutorial on how to build the source.
@@ -243,6 +248,17 @@ So, we will create a new build directory where we compile in Debug mode.
    instead of just a segfault.
 
 \section Troubleshooting
+\subsection repeat_builds Repeat builds
+Under the hood, the build system of Hexed is fairly complicated.
+It involves automatically-generated source files as well as using some of the files that are later going to be installed and accessible system-wide.
+It is designed to work reliably the _first_ time you do it.
+When you change things and then rebuild it, _usually_ it still works, but sometimes it breaks.
+So, if your build used to work, but now it doesn't, try the following:
+-# Navigate to your build directory.
+-# `make uninstall`
+-# `rm -r *`
+-# Repeat the build from scratch.
+
 \subsection xdmf_problems XDMF problems
 When compiling XDMF, if you get the compiler error `conflicting declaration ‘typedef int hid_t’`, try:
 - `vi ../core/XdmfHDF5Controller.hpp`.
