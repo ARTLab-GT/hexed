@@ -179,6 +179,13 @@ install(FILES
     ${CMAKE_SOURCE_DIR}/hil/hexed.hil
     ${CMAKE_BINARY_DIR}/constants.hil
     ${CMAKE_SOURCE_DIR}/LICENSE.txt
-    DESTINATION lib/hexed)
+    DESTINATION lib/hexed
+)
+
 install(FILES ${CMAKE_BINARY_DIR}/hexed-config.cmake DESTINATION lib/cmake/hexed)
 install(FILES ${CMAKE_SOURCE_DIR}/python/hexed_utils.py DESTINATION ${PYTHON_INSTALL_PREFIX})
+
+# uninstall
+add_custom_target(uninstall
+    COMMAND ${CMAKE_SOURCE_DIR}/script/uninstall.sh
+)
