@@ -186,6 +186,7 @@ install(FILES ${CMAKE_BINARY_DIR}/hexed-config.cmake DESTINATION lib/cmake/hexed
 install(FILES ${CMAKE_SOURCE_DIR}/python/hexed_utils.py DESTINATION ${PYTHON_INSTALL_PREFIX})
 
 # uninstall
+configure_file(${CMAKE_SOURCE_DIR}/script/uninstall.sh.in uninstall.sh)
 add_custom_target(uninstall
-    COMMAND ${CMAKE_SOURCE_DIR}/script/uninstall.sh
+    COMMAND ./uninstall.sh
 )

@@ -1,5 +1,6 @@
 # This script is executed by the `uninstall` target.
 # It is not intended to be executed manually.
+install_prefix=@CMAKE_INSTALL_PREFIX@
 if [ -f install_manifest.txt ]
 then
     if [ ! -d uninstalled_files ]
@@ -8,7 +9,7 @@ then
     fi
     echo "Uninistalling hexed. For safety, uninstalled files are not removed but rather placed in \`./uninstalled_files\`."
     not_found=0
-    for name in $(cat install_manifest.txt)
+    for name in $(cat install_manifest.txt) $install_prefix/lib/hexed $install_prefix/lib/cmake/hexed
     do
         if [ -e $name ]
         then
