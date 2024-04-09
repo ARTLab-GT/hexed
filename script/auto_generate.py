@@ -52,7 +52,7 @@ namespace hexed
 
 ### Calculate bases ###
 
-sys.path.append("../python")
+sys.path.insert(0, "../python")
 from hexed_utils import Basis
 from sympy.integrals.quadrature import gauss_legendre, gauss_lobatto
 
