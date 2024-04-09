@@ -1,5 +1,5 @@
 build*/
-script/__pycache__/
+__pycache__
 .vscode
 *tags*
 !*doxytags

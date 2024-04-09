@@ -91,7 +91,7 @@ add_custom_command(
     COMMAND python3 ${CMAKE_SOURCE_DIR}/script/auto_generate.py ${CMAKE_BINARY_DIR} ${MAX_BASIS_ROW_SIZE}
     DEPENDS
         ${CMAKE_SOURCE_DIR}/script/auto_generate.py
-        ${CMAKE_SOURCE_DIR}/script/Basis.py
+        ${CMAKE_SOURCE_DIR}/python/hexed_utils.py
 )
 set(colormap_files
     colormaps/cividis.map
@@ -179,6 +179,14 @@ install(FILES
     ${CMAKE_SOURCE_DIR}/hil/hexed.hil
     ${CMAKE_BINARY_DIR}/constants.hil
     ${CMAKE_SOURCE_DIR}/LICENSE.txt
-    DESTINATION lib/hexed)
+    DESTINATION lib/hexed
+)
+
 install(FILES ${CMAKE_BINARY_DIR}/hexed-config.cmake DESTINATION lib/cmake/hexed)
 install(FILES ${CMAKE_SOURCE_DIR}/python/hexed_utils.py DESTINATION ${PYTHON_INSTALL_PREFIX})
+
+# uninstall
+configure_file(${CMAKE_SOURCE_DIR}/script/uninstall.sh.in uninstall.sh)
+add_custom_target(uninstall
+    COMMAND ./uninstall.sh
+)
