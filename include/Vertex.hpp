@@ -71,8 +71,7 @@ class Vertex
  * \details This is used by
  * `Deformed_element` to track its vertices, which are initially separate and then
  * eat those of neighboring elements as the grid connectivity is established.
- * All `Transferable_ptr`s to a vertex collectively own it
- * -- it will be destroyed with the last of its `Transferable_ptr`s.
+ * All `Transferable_ptr`s to a vertex collectively own it---it will be destroyed with the last of its `Transferable_ptr`s.
  */
 class Vertex::Transferable_ptr
 {
