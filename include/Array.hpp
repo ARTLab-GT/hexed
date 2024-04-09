@@ -11,6 +11,7 @@
 
 #include <vector>
 #include "assert.hpp"
+#include "math.hpp"
 
 namespace hexed
 {
@@ -64,11 +65,9 @@ class Array
   public:
   /*! \brief Creates an array from scratch.
    * \details Array will have dimensions specified by `shape_arg`.
-   * If `data_arg` is `nullptr` (the default), new data will be allocated which this `Array` will now own.
-   * Data values are set to `0`.
-   * Otherwise, this array will be a reference to the data starting at `data_arg` and will not own that data.
+   * This array will be a reference to the data starting at `data_arg` and will not own that data.
    */
-  Array(std::vector<int> shape_arg, T* data_arg = nullptr)
+  Array(std::vector<int> shape_arg, T* data_arg)
   : _order{int(shape_arg.size())}, _shape_storage{shape_arg}, _shape{_shape_storage.data()}
   {
     _shape_storage.shrink_to_fit();
@@ -77,13 +76,49 @@ class Array
     _strides = _stride_storage.data();
     _strides[_order] = 1;
     for (int i = _order - 1; i >= 0; --i) _strides[i] = _strides[i + 1]*_shape[i];
-    if (data_arg) _data = data_arg;
-    else {
-      _data_storage.resize(size(), T(0));
-      _data_storage.shrink_to_fit();
-      _data = _data_storage.data();
-    }
+    _data = data_arg;
   }
+  /*! \brief Creates an array from scratch.
+   * \details Array will have dimensions specified by `shape_arg`.
+   * This array will allocate new data, which it will now own.
+   * Data values are uninitialized.
+   */
+  Array(std::vector<int> shape_arg)
+  : Array(shape_arg, nullptr)
+  {
+    _data_storage.resize(size());
+    _data_storage.shrink_to_fit();
+    _data = _data_storage.data();
+  }
+
+  class Func_iterator : public std::iterator<std::input_iterator_tag, T, T*, T>
+  {
+    int _i;
+    std::function<T(int)> _func;
+    public:
+    Func_iterator(int i, std::function<T(int)> func) : _i{i}, _func{func} {}
+    Func_iterator& operator++() {++_i; return *this;}
+    Func_iterator operator++(int) {Func_iterator it = *this; ++(*this); return it;}
+    bool operator==(Func_iterator other) {return _i == other._i;}
+    bool operator!=(Func_iterator other) {return _i != other._i;}
+    T operator*() const {return _func(_i);}
+  };
+  template <typename input_it>
+  Array(std::vector<int> shape_arg, input_it first, input_it last)
+  : Array(shape_arg, nullptr)
+  {
+    _data_storage.assign(first, last);
+    _data_storage.shrink_to_fit();
+    _data = _data_storage.data();
+  }
+  Array(std::vector<int> shape_arg, std::function<T(int)> func)
+  : Array(shape_arg, nullptr)
+  {
+    _data_storage.assign(Func_iterator(0, func), Func_iterator(size(), func));
+    _data_storage.shrink_to_fit();
+    _data = _data_storage.data();
+  }
+
   //! \brief Creates an array which is a reference to `other`'s data.
   //! \details Note that this array does not own the data, and if `other` is deleted it will now contain a dangling pointer.
   Array(Array<T>& other) : Array(other.shape(), other.data()) {}
@@ -193,6 +228,9 @@ class Array
   Array<T>       operator()(int start, int stop)       {BODY}
   const Array<T> operator()(int start, int stop) const {BODY} //!< \overload
   #undef BODY
+
+        Eigen::Map<Mat<>> vector()       {return {data(), size()};}
+  const Eigen::Map<Mat<>> vector() const {return {data(), size()};}
 };
 
 }

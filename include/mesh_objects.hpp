@@ -9,6 +9,7 @@
 #include "Vertex.hpp"
 #include "Basis.hpp"
 #include "Storage_params.hpp"
+#include "Boundary_condition.hpp"
 
 namespace hexed
 {
@@ -23,9 +24,13 @@ class Element_new : public Kernel_element
 {
   bool _def;
   Storage_params _params;
+  int _ref_level;
+  Array<int> _pos_ind;
+  double _root_sz;
+  Array<double> _origin;
   const Basis& _basis;
   Array<Vertex::Transferable_ptr> _vertices;
-  Array<Face> _faces;
+  //Array<Face> _faces;
   Array<double> _data;
 
   public:
@@ -34,30 +39,46 @@ class Element_new : public Kernel_element
   Lock lock;
   Mutual_ptr<Element_new, Tree> tree; //!< \brief `Tree` this element was created from
 
-  Element_new(Storage_params, bool deformed, int ref_level, Array<int> pos_index, double root_sz, Array<double> origin, const Basis&);
+  Element_new(Storage_params, bool deformed, int ref_level, Array<int> pos_index, double root_size, Array<double> origin, const Basis&);
+  Element_new(Storage_params, bool deformed, int ref_level, Array<int> pos_index, double root_size, Array<double> origin, Basis&&) = delete;
   Element_new(const Element_new&) = delete;
   Element_new split(int i_dim, double ref_coord);
 
   bool deformed();
   int ref_level();
   int aniso_ref_level();
-  Array<int> pos_index();
-  double root_sz();
-  double nom_sz();
-  Array<double> nom_pos();
+  Array<int> position_index();
+  double root_size();
+  double nominal_size() override;
+  Array<double> nominal_position();
   Array<double> origin();
   const Basis& basis();
   Storage_params storage_params();
 
-  Array<double> state();
+  Array<double> full_state();
+  Array<double> flow_state();
+  Array<double> ltss();
+  Array<double> bulk_art_visc();
+  Array<double> laplacian_art_visc();
   Array<double> cache();
-  Array<double> pos();
+  Array<double> position();
   Array<double> jacobian_mat();
   Mat<dyn, dyn> jacobian_mat(int i_qpoint);
   Array<double> jacobian_det();
   double jacobian_det(int i_qpoint);
   Array<Face> faces();
   Vertex& vertex(int i_vertex);
+
+  double* state() override;
+  double* residual_cache() override;
+  double* time_step_scale() override;
+  double& vertex_time_step_scale(int i_vertex) override;
+  double* face(int i_face, bool is_ldg) override;
+  bool deformed() const override;
+  double* reference_level_normals() override;
+  double* jacobian_determinant() override;
+  double* kernel_face_normal(int i_face) override;
+  double& uncert() override;
 };
 
 class Face
@@ -71,12 +92,17 @@ class Face
   Array<double> _node_adj;
 
   public:
-  friend Connection::Connection(Face&, Face&);
-  friend Hanging::Hanging(Face*, Array<Face*>, Array<bool>);
   Face(Element_new&, int i_dim, int sign);
   Face(Boundary&, int i_dim, int sign);
   Face(Hanging&);
   Face(const Face&) = delete;
+
+  class Connect {
+    friend Connection;
+    friend Hanging;
+    Connect(Face&, Mutual_ptr<Connection, Face>&);
+    Connect(Face&, Mutual_ptr<Hanging, Face>&);
+  };
 
   bool deformed();
   int i_dim();
@@ -94,14 +120,13 @@ class Face
 
 class Connection
 {
-  Mutual_ptr<Connection, Face> _faces;
+  std::array<Mutual_ptr<Connection, Face>, 2> _faces;
 
   public:
   Connection(Face&, Face&);
   Connection(const Connection&) = delete;
   bool deformed();
   bool is_connected();
-  Connection_direction direction();
   Face* face(int i_face);
   Array<double> jacobian();
 };

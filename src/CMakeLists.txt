@@ -12,6 +12,7 @@ Deformed_element.cpp
 Domain_func.cpp
 Element.cpp
 Element_func.cpp
+Element_new.cpp
 Equidistant.cpp
 filter_limit.cpp
 global_hacks.cpp
