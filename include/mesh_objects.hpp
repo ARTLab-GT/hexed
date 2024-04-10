@@ -25,6 +25,7 @@ class Element_new : public Kernel_element
   bool _def;
   Storage_params _params;
   int _ref_level;
+  int _aniso_ref_level;
   Array<int> _pos_ind;
   double _root_sz;
   Array<double> _origin;

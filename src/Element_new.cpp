@@ -7,6 +7,7 @@ Element_new::Element_new(Storage_params params, bool def, int ref_level, Array<i
 : _def{def},
   _params{params},
   _ref_level{ref_level},
+  _aniso_ref_level{0},
   _pos_ind{pos_ind},
   _root_sz{root_sz},
   _origin{og},
@@ -25,13 +26,19 @@ Element_new::Element_new(Storage_params params, bool def, int ref_level, Array<i
   }),
   _data({}),
   tree(this)
-{}
+{
+  HEXED_ASSERT(_params.row_size == _basis.row_size, "row size of `Storage_params` and `Basis` differ");
+}
 
 bool Element_new::deformed() const {return _def;}
 int Element_new::ref_level() const {return _ref_level;}
+int Element_new::aniso_ref_level() const {return _aniso_ref_level;}
 Array<int> Element_new::position_index() const {return _pos_ind.copy();}
 double Element_new::nominal_size() const {return _root_sz/math::pow(2, _ref_level);}
-Array<double> Element_new::nominal_position() const {return {{}};}
+Array<double> Element_new::nominal_position() const {return _origin + nominal_size()*_pos_ind.copy<double>();}
+double Element_new::root_size() const {return _root_sz;}
+const Basis& Element_new::basis() const {return _basis;}
+Storage_params Element_new::storage_params() const {return _params;}
 
 Array<double> Element_new::full_state() {return {{}};}
 Array<double> Element_new::flow_state() {return {{}};}
