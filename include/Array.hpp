@@ -45,6 +45,12 @@ namespace hexed
  * Otherwise, no bounds checking is performed and out-of-bounds access is undefined behavior.
  * This can be overridden by explicitly defining the `HEXED_ARRAY_BOUNDS_CHECK` macro to be `true` or `false`.
  *
+ * `Array`s support the unary arithmetic operators `-` and `+` as well as the binary operators `-`, `+`, `/`, `*`, `%`, `&&`, and `||`.
+ * All operators perform their operations elementwise.
+ * They always create a copy, so for truly optimal performance you might consider a loop instead.
+ * For binary operators, both arrays must have the same data type.
+ * To perform operations on arrays that have different, but compatible, types, you can cast them to the same type with `Array::copy<U>()`.
+ *
  * \note Implementing a feature-complete array container is a large task,
  * and I have not yet implemented all of the features that I ultimately plan to.
  * If there is a feature you want and feel that an array class ought to have,
@@ -143,11 +149,15 @@ class Array
     return *this;
   }
   ~Array() = default;
-  //! \brief Creates a new array that owns its data, which is a copy of `this`'s data (i.e. new data is allocated).
-  Array<T> copy() const
+  /*! \brief Creates a new array that owns its data, which is a copy of `this`'s data (i.e. new data is allocated).
+   * \details If the template argument is specified to be something other than `T`, the array will be cast to a different type.
+   * The old type must by copy-assignable to the new type.
+   */
+  template <typename U = T>
+  Array<U> copy() const
   {
-    Array<T> c(shape());
-    c = *this;
+    Array<U> c(shape());
+    for (int i = 0; i < size(); ++i) c[i] = _data[i];
     return c;
   }
 
@@ -232,6 +242,38 @@ class Array
         Eigen::Map<Mat<>> vector()       {return {data(), size()};}
   const Eigen::Map<Mat<>> vector() const {return {data(), size()};}
 };
+
+#define DEFINE_OPERATOR(BIN_OP) \
+  template <typename T> \
+  Array<T> operator BIN_OP(const Array<T>& op0, const Array<T>& op1) \
+  { \
+    if constexpr (HEXED_ARRAY_BOUNDS_CHECK) { \
+      HEXED_ASSERT(op0.size() == op1.size(), "array sizes must match for arithmetic"); \
+    } \
+    Array<T> result = op0.copy(); \
+    for (int i = 0; i < op0.size(); ++i) result[i] = op0[i] BIN_OP op1[i]; \
+    return result; \
+  }
+DEFINE_OPERATOR(-)
+DEFINE_OPERATOR(+)
+DEFINE_OPERATOR(/)
+DEFINE_OPERATOR(*)
+DEFINE_OPERATOR(%)
+DEFINE_OPERATOR(&&)
+DEFINE_OPERATOR(||)
+#undef DEFINE_OPERATOR
+
+#define DEFINE_OPERATOR(UN_OP) \
+  template <typename T> \
+  Array<T> operator UN_OP(const Array<T>& op0) \
+  { \
+    Array<T> result = op0.copy(); \
+    for (int i = 0; i < op0.size(); ++i) result[i] = UN_OP op0[i]; \
+    return result; \
+  }
+DEFINE_OPERATOR(-)
+DEFINE_OPERATOR(+)
+#undef DEFINE_OPERATOR
 
 }
 #endif

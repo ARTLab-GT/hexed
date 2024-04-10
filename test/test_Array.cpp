@@ -68,4 +68,28 @@ TEST_CASE("Array")
   REQUIRE_THAT(arr6(1,  0).shape(), Catch::Matchers::RangeEquals(std::vector<int>{0, 2}));
   REQUIRE_THAT(arr6(6,  7).shape(), Catch::Matchers::RangeEquals(std::vector<int>{0, 2}));
   REQUIRE_THROWS(arr6(0)(0)(0, 1));
+
+  SECTION("arithmetic")
+  {
+    // only test one binary operator, since all of them are defined with the same macro
+    hexed::Array<double> a0({2, 2});
+    a0[0] = .0;
+    a0[1] = .1;
+    a0[2] = .2;
+    a0[3] = .3;
+    hexed::Array<double> a1({4});
+    a1[0] = 0.;
+    a1[1] = 1.;
+    a1[2] = 2.;
+    a1[3] = 3.;
+    hexed::Array<double> a2 = a0 + a1;
+    REQUIRE(a0[1] == Catch::Approx(.1));
+    REQUIRE(a1[1] == Catch::Approx(1.));
+    REQUIRE(a2[1] == Catch::Approx(1.1));
+    REQUIRE(a2[3] == Catch::Approx(3.3));
+    REQUIRE_THROWS(a0(0) + a1);
+    REQUIRE(a2.copy<int>()[2] == 2);
+    hexed::Array<double> a3 = -a2;
+    REQUIRE(a3[3] == Catch::Approx(-3.3));
+  }
 }
