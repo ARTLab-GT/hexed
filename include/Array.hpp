@@ -46,9 +46,10 @@ namespace hexed
  * This can be overridden by explicitly defining the `HEXED_ARRAY_BOUNDS_CHECK` macro to be `true` or `false`.
  *
  * `Array`s support the unary arithmetic operators `-` and `+` as well as the binary operators `-`, `+`, `/`, `*`, `%`, `&&`, and `||`.
+ * Binary operators can operate on two arrays or on an array and a scalar.
  * All operators perform their operations elementwise.
  * They always create a copy, so for truly optimal performance you might consider a loop instead.
- * For binary operators, both arrays must have the same data type.
+ * For binary operators, both operands (arrays or scalars) must have the same data type.
  * To perform operations on arrays that have different, but compatible, types, you can cast them to the same type with `Array::copy<U>()`.
  *
  * \note Implementing a feature-complete array container is a large task,
@@ -252,6 +253,20 @@ class Array
     } \
     Array<T> result = op0.copy(); \
     for (int i = 0; i < op0.size(); ++i) result[i] = op0[i] BIN_OP op1[i]; \
+    return result; \
+  } \
+  template <typename T> \
+  Array<T> operator BIN_OP(const Array<T>& op0, const T& op1) \
+  { \
+    Array<T> result = op0.copy(); \
+    for (int i = 0; i < op0.size(); ++i) result[i] = op0[i] BIN_OP op1; \
+    return result; \
+  } \
+  template <typename T> \
+  Array<T> operator BIN_OP(const T& op0, const Array<T>& op1) \
+  { \
+    Array<T> result = op1.copy(); \
+    for (int i = 0; i < op1.size(); ++i) result[i] = op0 BIN_OP op1[i]; \
     return result; \
   }
 DEFINE_OPERATOR(-)

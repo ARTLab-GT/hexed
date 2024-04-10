@@ -91,5 +91,9 @@ TEST_CASE("Array")
     REQUIRE(a2.copy<int>()[2] == 2);
     hexed::Array<double> a3 = -a2;
     REQUIRE(a3[3] == Catch::Approx(-3.3));
+    hexed::Array<double> a4 = 2.*a0 + 10.;
+    REQUIRE(a4[1] == Catch::Approx(10.2));
+    a4 = 3./a0/2.;
+    REQUIRE(a4[2] == Catch::Approx(7.5));
   }
 }
