@@ -24,5 +24,21 @@ TEST_CASE("Element_new")
     REQUIRE(elem.nominal_position()[0] == Catch::Approx(.3));
     REQUIRE(elem.nominal_position()[1] == Catch::Approx(.8));
     REQUIRE(elem.basis().row_size == rs);
+
+    REQUIRE_THAT(elem.full_state().shape()        , Catch::Matchers::RangeEquals(std::vector<int>{11 + 2*rs, rs, rs}));
+    REQUIRE_THAT(elem.flow_state().shape()        , Catch::Matchers::RangeEquals(std::vector<int>{4, rs, rs}));
+    REQUIRE_THAT(elem.ltss().shape()              , Catch::Matchers::RangeEquals(std::vector<int>{rs, rs}));
+    REQUIRE_THAT(elem.bulk_art_visc().shape()     , Catch::Matchers::RangeEquals(std::vector<int>{rs, rs}));
+    REQUIRE_THAT(elem.laplacian_art_visc().shape(), Catch::Matchers::RangeEquals(std::vector<int>{rs, rs}));
+    REQUIRE_THAT(elem.art_visc_forcing().shape()  , Catch::Matchers::RangeEquals(std::vector<int>{4, rs, rs}));
+    REQUIRE_THAT(elem.advection_state().shape()   , Catch::Matchers::RangeEquals(std::vector<int>{rs, rs, rs}));
+    REQUIRE_THAT(elem.cache().shape()             , Catch::Matchers::RangeEquals(std::vector<int>{std::max(4, rs), rs, rs}));
+    REQUIRE(elem.flow_state().data()         == elem.full_state().data());
+    REQUIRE(elem.ltss().data()               == elem.full_state()(4).data());
+    REQUIRE(elem.bulk_art_visc().data()      == elem.full_state()(5).data());
+    REQUIRE(elem.laplacian_art_visc().data() == elem.full_state()(6).data());
+    REQUIRE(elem.art_visc_forcing().data()   == elem.full_state()(7).data());
+    REQUIRE(elem.advection_state().data()    == elem.full_state()(11).data());
+    REQUIRE(elem.cache().data()              == elem.full_state()(11 + rs).data());
   }
 }

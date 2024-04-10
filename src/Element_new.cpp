@@ -3,6 +3,13 @@
 namespace hexed
 {
 
+std::vector<int> get_shape(Storage_params params)
+{
+  std::vector<int> shape(params.n_dim + 1, params.row_size);
+  shape[0] = params.n_var_numeric();
+  return shape;
+}
+
 Element_new::Element_new(Storage_params params, bool def, int ref_level, Array<int> pos_ind, double root_sz, Array<double> og, const Basis& b)
 : _def{def},
   _params{params},
@@ -24,7 +31,13 @@ Element_new::Element_new(Storage_params params, bool def, int ref_level, Array<i
   _faces(std::vector<int>({_params.n_dim, 2}), [this](int i) {
     return Face(*this, i/2, i%2);
   }),
-  _data({}),
+  _full_state(get_shape(_params)),
+  _i_ltss{_params.n_var},
+  _i_bulk_art_visc{_i_ltss + 1},
+  _i_laplacian_art_visc{_i_bulk_art_visc + 1},
+  _i_art_visc_forcing{_i_laplacian_art_visc + 1},
+  _i_advection_state{_i_art_visc_forcing + _params.n_forcing},
+  _i_cache{_i_advection_state + Storage_params::n_advection(_params.row_size)},
   tree(this)
 {
   HEXED_ASSERT(_params.row_size == _basis.row_size, "row size of `Storage_params` and `Basis` differ");
@@ -40,13 +53,15 @@ double Element_new::root_size() const {return _root_sz;}
 const Basis& Element_new::basis() const {return _basis;}
 Storage_params Element_new::storage_params() const {return _params;}
 
-Array<double> Element_new::full_state() {return {{}};}
-Array<double> Element_new::flow_state() {return {{}};}
-Array<double> Element_new::ltss() {return {{}};}
+Array<double> Element_new::full_state() {return _full_state;}
+Array<double> Element_new::flow_state() {return _full_state(0, _params.n_var);}
+Array<double> Element_new::ltss() {return _full_state(_i_ltss);}
 Array<double> Element_new::vtss() {return {{}};}
-Array<double> Element_new::bulk_art_visc() {return {{}};}
-Array<double> Element_new::laplacian_art_visc() {return {{}};}
-Array<double> Element_new::cache() {return {{}};}
+Array<double> Element_new::bulk_art_visc() {return _full_state(_i_bulk_art_visc);}
+Array<double> Element_new::laplacian_art_visc() {return _full_state(_i_laplacian_art_visc);}
+Array<double> Element_new::art_visc_forcing() {return _full_state(_i_art_visc_forcing, _i_art_visc_forcing + _params.n_forcing);}
+Array<double> Element_new::advection_state() {return _full_state(_i_advection_state, _i_advection_state + Storage_params::n_advection(_params.row_size));}
+Array<double> Element_new::cache() {return _full_state(_i_cache, _i_cache + std::max(_params.n_var, Storage_params::n_advection(_params.row_size)));}
 Array<double> Element_new::position() {return {{}};}
 Array<double> Element_new::reference_level_normal_arr() {return {{}};}
 Mat<dyn, dyn> Element_new::reference_level_normals(int i_qpoint) const {return {};}

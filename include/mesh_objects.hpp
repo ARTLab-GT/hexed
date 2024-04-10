@@ -33,7 +33,13 @@ class Element_new : public Kernel_element
   Array<Vertex::Transferable_ptr> _vertices;
   Array<double> _vtss;
   Array<Face> _faces;
-  Array<double> _data;
+  Array<double> _full_state;
+  int _i_ltss;
+  int _i_bulk_art_visc;
+  int _i_laplacian_art_visc;
+  int _i_art_visc_forcing;
+  int _i_advection_state;
+  int _i_cache;
 
   public:
   std::vector<int> record;
@@ -63,6 +69,8 @@ class Element_new : public Kernel_element
   Array<double> vtss();
   Array<double> bulk_art_visc();
   Array<double> laplacian_art_visc();
+  Array<double> art_visc_forcing();
+  Array<double> advection_state();
   Array<double> cache();
   Array<double> position();
   Array<double> reference_level_normal_arr();
