@@ -30,7 +30,8 @@ class Element_new : public Kernel_element
   Array<double> _origin;
   const Basis& _basis;
   Array<Vertex::Transferable_ptr> _vertices;
-  //Array<Face> _faces;
+  Array<double> _vtss;
+  Array<Face> _faces;
   Array<double> _data;
 
   public:
@@ -44,28 +45,30 @@ class Element_new : public Kernel_element
   Element_new(const Element_new&) = delete;
   Element_new split(int i_dim, double ref_coord);
 
-  bool deformed();
-  int ref_level();
-  int aniso_ref_level();
-  Array<int> position_index();
-  double root_size();
-  double nominal_size() override;
-  Array<double> nominal_position();
-  Array<double> origin();
-  const Basis& basis();
-  Storage_params storage_params();
+  bool deformed() const override;
+  int ref_level() const;
+  int aniso_ref_level() const;
+  Array<int> position_index() const;
+  double root_size() const;
+  double nominal_size() const override;
+  Array<double> nominal_position() const;
+  Array<double> origin() const;
+  const Basis& basis() const;
+  Storage_params storage_params() const;
 
   Array<double> full_state();
   Array<double> flow_state();
   Array<double> ltss();
+  Array<double> vtss();
   Array<double> bulk_art_visc();
   Array<double> laplacian_art_visc();
   Array<double> cache();
   Array<double> position();
-  Array<double> jacobian_mat();
-  Mat<dyn, dyn> jacobian_mat(int i_qpoint);
-  Array<double> jacobian_det();
-  double jacobian_det(int i_qpoint);
+  Array<double> reference_level_normal_arr();
+  Mat<dyn, dyn> reference_level_normals(int i_qpoint) const;
+  Mat<dyn, dyn> jacobian_mat(int i_qpoint) const;
+  Array<double> jacobian_det_arr();
+  double jacobian_det(int i_qpoint) const;
   Array<Face> faces();
   Vertex& vertex(int i_vertex);
 
@@ -74,7 +77,6 @@ class Element_new : public Kernel_element
   double* time_step_scale() override;
   double& vertex_time_step_scale(int i_vertex) override;
   double* face(int i_face, bool is_ldg) override;
-  bool deformed() const override;
   double* reference_level_normals() override;
   double* jacobian_determinant() override;
   double* kernel_face_normal(int i_face) override;
@@ -90,12 +92,14 @@ class Face
   Mutual_ptr<Face, Hanging> _hanging;
   Array<double> _state;
   Array<double> _node_adj;
+  bool _def;
+  int _i_dim;
+  int _sign;
 
   public:
   Face(Element_new&, int i_dim, int sign);
   Face(Boundary&, int i_dim, int sign);
   Face(Hanging&);
-  Face(const Face&) = delete;
 
   class Connect {
     friend Connection;
