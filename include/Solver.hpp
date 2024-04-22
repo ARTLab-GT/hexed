@@ -48,6 +48,8 @@ class Solver
   int _preti_level;
 
   Kernel_mesh _kernel_mesh();
+  void _put_cache(); // copies the flow state to the residual cache
+  void _get_cache(); // copies the residual cache to the flow state
   void share_vertex_data(std::function<double&(Element&, int i_vertex)>, std::function<double(Mat<>)>);
   void share_vertex_data(std::function<double(Element&, int i_vertex)> get, std::function<double&(Element&, int i_vertex)> set, std::function<double(Mat<>)>);
   bool fix_admissibility(double stability_ratio);
