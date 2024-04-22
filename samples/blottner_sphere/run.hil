@@ -13,6 +13,7 @@ freestream_pressure = 120.96
 freestream_temperature = 75.61
 freestream_mach = 5.
 done = {iteration >= 2*10^5}
+max_angle = 1*degree
 
 {
   max_angle = .5*degree
@@ -58,10 +59,12 @@ inviscid = {
 }
 
 $set_shock
-$isothermal
+$inviscid
+max_refinement_iters = 1
+point = 3^-.45
+radius = .25
+refine_if = {(center0 + point)^2 + (center1 - point)^2 + (center2 - point)^2 < radius^2}
 
-vis_n_sample = 2
 $start
 $mesh
-init_state
-$run
+visualize

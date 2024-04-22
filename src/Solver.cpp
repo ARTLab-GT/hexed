@@ -34,6 +34,28 @@ Kernel_mesh Solver::_kernel_mesh()
   };
 }
 
+void Solver::_put_cache()
+{
+  auto& elems = acc_mesh->elements();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    double* state = elems[i_elem].state();
+    double* cache = elems[i_elem].residual_cache();
+    for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) cache[i_dof] = state[i_dof];
+  }
+}
+
+void Solver::_get_cache()
+{
+  auto& elems = acc_mesh->elements();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    double* state = elems[i_elem].state();
+    double* cache = elems[i_elem].residual_cache();
+    for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) state[i_dof] = cache[i_dof];
+  }
+}
+
 void Solver::share_vertex_data(std::function<double&(Element&, int i_vertex)> access_fun, std::function<double(Mat<>)> reduce)
 {
   share_vertex_data(access_fun, access_fun, reduce);
