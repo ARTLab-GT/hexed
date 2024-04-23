@@ -29,6 +29,7 @@ class Simplex_geom_nd : public Surface_geom
     return "";
     #endif
   }
+  virtual std::pair<std::vector<double>, std::vector<int>> simplex_intersections(Mat<> point0, Mat<> point1) = 0;
 };
 
 /*! \brief Represents discrete geometry composed of [simplices](https://en.wikipedia.org/wiki/Simplex).
@@ -99,7 +100,7 @@ class Simplex_geom : public Simplex_geom_nd
     for (Tree* child : tree.children()) recursive_nearest(nearest, *child, point, limit);
   }
 
-  void recursive_intersections(std::vector<double>& inters, Tree& tree, Mat<n_dim> point0, Mat<n_dim> point1)
+  void recursive_intersections(std::vector<double>& inters, std::vector<int>& inds, Tree& tree, Mat<n_dim> point0, Mat<n_dim> point1)
   {
     if (!math::intersects(math::Ball<n_dim>(tree.center(), tree.nominal_size()*n_dim/4.), point0, point1)) return;
     Mat<n_dim> diff = point1 - point0;
@@ -115,28 +116,41 @@ class Simplex_geom : public Simplex_geom_nd
           Mat<n_dim> soln = fact.solve(point0 - sim(all, 0));
           // if intersection is inside simplex, add it to the list
           Eigen::Array<double, n_dim - 1, 1> arr = soln(Eigen::seqN(1, n_dim - 1)).array();
-          if ((arr >= -gap_tol).all() && arr.sum() <= 1 + gap_tol) inters.push_back(soln(0));
+          if ((arr >= -gap_tol).all() && arr.sum() <= 1 + gap_tol) {
+            inters.push_back(soln(0));
+            inds.push_back(i_simplex);
+          }
         }
       }
     }
-    for (Tree* child : tree.children()) recursive_intersections(inters, *child, point0, point1);
+    for (Tree* child : tree.children()) recursive_intersections(inters, inds, *child, point0, point1);
   }
 
   std::vector<Mat<n_dim, n_dim>> _simplices;
+  std::vector<Mat<n_dim - 1, n_dim>> _parameters;
+  std::vector<int> _faces;
   Mat<n_dim, 2> _bounding_box;
   Tree _tree;
 
   public:
   double gap_tol = 1e-6; //!< extend triangles by this amount, relative to their original size, to fill gaps
 
-  Simplex_geom(const std::vector<Mat<n_dim, n_dim>>& sims)
+  Simplex_geom(const std::vector<Mat<n_dim, n_dim>>& sims, const std::vector<Mat<n_dim - 1, n_dim>>& params = {}, const std::vector<int>& face = {})
   : _simplices{sims},
+    _parameters{params},
+    _faces{face},
     _bounding_box(_get_bounding_box(sims)),
     _tree(n_dim, (_bounding_box(all, 1) - _bounding_box(all, 0)).maxCoeff(), _bounding_box(all, 0))
   {
+    HEXED_ASSERT(_parameters.empty() || _parameters.size() == _simplices.size(), "`params` must be either empty or the same size as `sims`");
+    HEXED_ASSERT(_parameters.size() == _faces.size(), "`params` and `face` must be the same size");
     for (unsigned i_ind = 0; i_ind < sims.size(); ++i_ind) _tree.misc_data.push_back(i_ind);
     sort_simplices(_tree);
   }
+
+  const std::vector<Mat<n_dim, n_dim>>& simplices() const {return _simplices;}
+  const std::vector<Mat<n_dim - 1, n_dim>>& parameters() const {return _parameters;}
+  const std::vector<int>& faces() const {return _faces;}
 
   /*! \details Iterates through all _simplices and finds the nearest point on each,
    * whether that point lies in the interior or on the edge or a vertex.
@@ -165,19 +179,15 @@ class Simplex_geom : public Simplex_geom_nd
     return (nearest.empty() && distance_guess < max_distance) ? nearest_point(point, max_distance, 2*distance_guess) : Nearest_point<dyn>(nearest);
   }
 
-  /*! \details Evaluates intersections with each individual element and assembles a global list.
-   * Intersections with the boundary of a simplex are always considered valid intersections,
-   * so if the line passes exactly through the shared boundary of multiple _simplices
-   * then duplicate intersections may be obtained.
-   */
-  std::vector<double> intersections(Mat<> point0, Mat<> point1) override
+  std::pair<std::vector<double>, std::vector<int>> simplex_intersections(Mat<> point0, Mat<> point1) override
   {
     #if HEXED_OBSESSIVE_TIMING
     Stopwatch sw;
     sw.start();
     #endif
     std::vector<double> inters;
-    recursive_intersections(inters, _tree, point0, point1);
+    std::vector<int> inds;
+    recursive_intersections(inters, inds, _tree, point0, point1);
     #if HEXED_OBSESSIVE_TIMING
     sw.pause();
     stopwatch.stopwatch += sw;
@@ -185,8 +195,15 @@ class Simplex_geom : public Simplex_geom_nd
     #pragma omp atomic update
     ++stopwatch.children.at("intersections").work_units_completed;
     #endif
-    return inters;
+    return {inters, inds};
   }
+
+  /*! \details Evaluates intersections with each individual element and assembles a global list.
+   * Intersections with the boundary of a simplex are always considered valid intersections,
+   * so if the line passes exactly through the shared boundary of multiple _simplices
+   * then duplicate intersections may be obtained.
+   */
+  std::vector<double> intersections(Mat<> point0, Mat<> point1) override {return simplex_intersections(point0, point1).first;}
 
   void visualize(std::string format, std::string file_name) override;
 };

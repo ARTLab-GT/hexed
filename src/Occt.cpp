@@ -76,14 +76,17 @@ Occt::Geom::Geom(const TopoDS_Shape& shape, int n_dim, double angle, double defl
 {
   if (nd == 2) {
     collect_curves(_curves, shape);
-    _simplex.reset(new Simplex_geom<2>(segments(shape, n_segments)));
+    _simplex2.reset(new Simplex_geom<2>(segments(shape, n_segments)));
+    _simplex = _simplex2.get();
   } else if (nd == 3) {
     // collect all surfaces
     iterate(shape, TopAbs_FACE, [&](const TopoDS_Shape& s){
       TopoDS_Face face = TopoDS::Face(s);
       _surfaces.push_back(BRep_Tool::Surface(face));
     });
-    _simplex.reset(new Simplex_geom<3>(triangles(shape, angle, deflection)));
+    Triangulation triang = _triangulate(shape, angle, deflection);
+    _simplex3.reset(new Simplex_geom<3>(triang.tris, triang.params, triang.faces));
+    _simplex = _simplex3.get();
   } else throw std::runtime_error("`hexed::Occt_gom` must be either 2D or 3D.");
 }
 
@@ -99,53 +102,25 @@ std::vector<double> Occt::Geom::intersections(Mat<> point0, Mat<> point1)
 {
   HEXED_ASSERT(point0.size() == nd, format_str(100, "`point0` must be %iD", nd));
   HEXED_ASSERT(point1.size() == nd, format_str(100, "`point1` must be %iD", nd));
-  // convert to mm
-  Mat<> scaled0 = 1000*point0;
-  Mat<> scaled1 = 1000*point1;
-  double dist = (scaled1 - scaled0).norm();
-  std::vector<double> sects;
-  if (nd == 2) {
-    // compute the line through the given points
-    gp_Pnt2d pnt0(scaled0(0), scaled0(1));
-    gp_Pnt2d pnt1(scaled1(0), scaled1(1));
-    opencascade::handle<Geom2d_Line> line = GCE2d_MakeLine(pnt0, pnt1);
-    // iterate through _curves and compute the indersections with each
-    for (auto& curve : _curves) {
-      // find intersections
-      Geom2dAPI_InterCurveCurve inter(line, curve);
-      int n = inter.NbPoints();
-      for (int i = 0; i < n; ++i) {
-        // 2d intersector doesn't seem to have a `Parameters` member,
-        // so we have to compute the parametric representation ourselves
-        // as the least squares solution to `t*(scaled1 - scaled0) = point - scaled0`
-        gp_Pnt2d occt_point = inter.Point(i + 1);
-        Mat<2> point{occt_point.X(), occt_point.Y()};
-        Mat<2> lhs = scaled1 - scaled0;
-        Mat<2> rhs = point - scaled0;
-        sects.push_back(lhs.dot(rhs)/lhs.squaredNorm());
-      }
-    }
-  } else {
-    // compute the line through the given points
-    gp_Pnt pnt0(scaled0(0), scaled0(1), scaled0(2));
-    gp_Pnt pnt1(scaled1(0), scaled1(1), scaled1(2));
-    opencascade::handle<Geom_Line> line = GC_MakeLine(pnt0, pnt1);
-    opencascade::handle<Geom_Curve> curve = line;
-    // iterate through _surfaces and compute the indersections with each
-    for (auto& surface : _surfaces) {
-      // compute intersections
-      GeomAPI_IntCS inter(curve, surface);
-      HEXED_ASSERT(inter.IsDone(), "line/surface intersection failed in OCCT kernel", assert::Numerical_exception);
-      // translate to our parametric format
-      int n = inter.NbPoints();
-      for (int i = 0; i < n; ++i) {
-        double params [3];
-        inter.Parameters(i + 1, params[0], params[1], params[2]);
-        sects.push_back(params[2]/dist);
-      }
-    }
+  auto inters = _simplex->simplex_intersections(point0, point1);
+  if (nd == 2) return inters.first;
+  Mat<3> normalized = (point0 - point1).normalized();
+  for (unsigned i_inter = 0; i_inter < inters.first.size(); ++i_inter) {
+    int i_tri = inters.second[i_inter];
+    Mat<2, 3> simplex_params = _simplex3->parameters()[i_tri];
+    Mat<2> params; params.setZero();
+    for (int i_vert = 0; i_vert < 3; ++i_vert) params += .3*simplex_params(all, i_vert);
+    auto& surf = _surfaces[_simplex3->faces()[i_tri]];
+    if (!(surf->Continuity() >= GeomAbs_C1)) std::cerr << "WARNING: Surface is not C1 continuous! Falling back on triangulated intersections.\n";
+    gp_Pnt point;
+    gp_Vec vec0, vec1;
+    surf->D1(params[0], params[1], point, vec0, vec1);
+    Mat<3> pos {point.X(), point.Y(), point.Z()};
+    double err = (pos - pos.dot(normalized)*normalized).squaredNorm();
+    pos *= 1e-3;
+    std::cout << pos.transpose() << "\n";
   }
-  return math::correct_values(_simplex->intersections(point0, point1), sects);
+  return inters.first;
 }
 
 void Occt::write_image(const TopoDS_Shape& shape, std::string file_name, Mat<3> eye_pos, Mat<3> look_at_pos, int resolution)
@@ -208,10 +183,11 @@ TopoDS_Shape Occt::read(std::string file_name)
   throw std::runtime_error(format_str(1000, "`hexed::Occt::read` failed to recognize file exteinsion `.%s`.", case_sensitive.c_str()));
 }
 
-std::vector<Mat<3, 3>> Occt::triangles(opencascade::handle<Poly_Triangulation> poly)
+Occt::Triangulation Occt::_triangulate(opencascade::handle<Poly_Triangulation> poly, int face)
 {
   HEXED_ASSERT(!poly.IsNull(), "handle is null");
-  std::vector<Mat<3, 3>> sims;
+  Triangulation triang;
+  bool has_params = poly->HasUVNodes();
   for (int i_tri = 0; i_tri < poly->NbTriangles(); ++i_tri) {
     auto& triangle = poly->Triangle(i_tri + 1);
     Mat<3, 3> sim;
@@ -219,10 +195,52 @@ std::vector<Mat<3, 3>> Occt::triangles(opencascade::handle<Poly_Triangulation> p
       gp_Pnt point = poly->Node(triangle.Value(i_vert + 1));
       sim(all, i_vert) << point.X(), point.Y(), point.Z();
     }
-    sims.push_back(sim*1e-3);
+    triang.tris.push_back(sim*1e-3);
+    if (has_params) {
+      Mat<2, 3> params;
+      for (int i_vert = 0; i_vert < 3; ++i_vert) {
+        gp_Pnt2d point = poly->UVNode(triangle.Value(i_vert + 1));
+        params(all, i_vert) << point.X(), point.Y();
+      }
+      triang.params.push_back(params);
+      triang.faces.push_back(face);
+    }
   }
-  return sims;
+  return triang;
 }
+
+Occt::Triangulation Occt::_triangulate(TopoDS_Shape shape, double angle, double deflection)
+{
+  // setup parameters
+  IMeshTools_Parameters params;
+  params.Deflection               = deflection*1e3;
+  params.DeflectionInterior       = deflection*1e3;
+  params.Angle                    = angle;
+  params.AngleInterior            = angle;
+  params.Relative                 = false;
+  params.InParallel               = true;
+  params.MinSize                  = Precision::Confusion();
+  params.InternalVerticesMode     = false;
+  params.ControlSurfaceDeflection = true;
+  // generate mesh
+  BRepTools::Clean(shape); // get rid of any existing triangulations
+  BRepMesh_IncrementalMesh mesher(shape, params);
+  // fetch triangles
+  Triangulation triang;
+  int i_face = 0;
+  iterate(shape, TopAbs_FACE, [&](const TopoDS_Shape& s){
+    TopoDS_Face face = TopoDS::Face(s);
+    TopLoc_Location location;
+    auto face_tri = _triangulate(BRep_Tool::Triangulation(face, location), i_face++);
+    triang.tris.insert(triang.tris.end(), face_tri.tris.begin(), face_tri.tris.end());
+    triang.params.insert(triang.params.end(), face_tri.params.begin(), face_tri.params.end());
+    triang.faces.insert(triang.faces.end(), face_tri.faces.begin(), face_tri.faces.end());
+  });
+  BRepTools::Clean(shape); // get rid of triangulation to avoid messing other things up
+  return triang;
+}
+
+std::vector<Mat<3, 3>> Occt::triangles(opencascade::handle<Poly_Triangulation> poly) {return _triangulate(poly, 0).tris;}
 
 std::vector<Mat<3, 3>> Occt::triangles(TopoDS_Shape shape, double angle, double deflection)
 {

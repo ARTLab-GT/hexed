@@ -49,6 +49,14 @@ class Occt
   // reads a file of a specific type
   template<typename reader_t> static TopoDS_Shape execute_reader(std::string file_name);
 
+  struct Triangulation {
+    std::vector<Mat<3, 3>> tris;
+    std::vector<Mat<2, 3>> params;
+    std::vector<int> faces;
+  };
+  static Triangulation _triangulate(opencascade::handle<Poly_Triangulation>, int face);
+  static Triangulation _triangulate(TopoDS_Shape shape, double angle = 10*constants::degree, double deflection = huge);
+
   public:
   Occt() = delete; //!< \brief Don't instantiate this class. Use its static members.
 
@@ -100,7 +108,7 @@ class Occt
    */
   static std::vector<Mat<3, 3>> triangles(opencascade::handle<Poly_Triangulation>);
   /*! \brief Obtains a triangulation of a CAD geometry.
-   * \details This is now the preferred way to interact with CAD geometry -- `Occt_geom` instances are unreliable.
+   * \details This is now the preferred way to interact with CAD geometry---`Occt_geom` instances are unreliable.
    * Size of the mesh is determined by `angle` and `deflection`, where in both cases a smaller value results in a finer mesh.
    * Usually, it is preferable to use only `angle`, since `deflection` doesn't do as well at refining high-curvature regions.
    * The result can be piped to `triangles()` to fetch the elements of the triangulation.
@@ -111,6 +119,8 @@ class Occt
    *        which is why the only reasonable default is an irrelevantly large parameter.
    */
   static std::vector<Mat<3, 3>> triangles(TopoDS_Shape shape, double angle = 10*constants::degree, double deflection = huge);
+
+  static Simplex_geom<3> triangulate(TopoDS_Shape shape, double angle = 10*constants::degree, double deflection = huge);
 
   //! \brief Discretizes the curves in a `TopoDS_Shape` into segments of a polygonal line.
   //! \details A `TopoDS_Shape` can be obtained from `read()`, and the results can be used to construct a `Simplex_geom<2>`.
@@ -136,7 +146,9 @@ class Occt
     const int nd;
     std::vector<opencascade::handle<Geom_Surface>> _surfaces;
     std::vector<opencascade::handle<Geom2d_Curve>> _curves;
-    std::unique_ptr<Simplex_geom_nd> _simplex;
+    std::unique_ptr<Simplex_geom<2>> _simplex2;
+    std::unique_ptr<Simplex_geom<3>> _simplex3;
+    Simplex_geom_nd* _simplex;
     public:
     /*! \brief Construct directly from an OCCT shape object.
      * \details The shape is interpreted to have dimensionality specified by `n_dim`,
