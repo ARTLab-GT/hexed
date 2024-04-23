@@ -191,11 +191,6 @@ class Simplex_geom : public Simplex_geom_nd
   void visualize(std::string format, std::string file_name) override;
 };
 
-#if HEXED_OBSESSIVE_TIMING
-template <int n_dim>
-Stopwatch_tree Simplex_geom<n_dim>::stopwatch("", {{"nearest_point", Stopwatch_tree("projection")}, {"intersections", Stopwatch_tree("intersection")}}); // for benchmarking projection and intersection calculation
-#endif
-
 template<> void Simplex_geom<2>::merge(Nearest_point<2>& nearest, Mat<2, 2> sim, Mat<2> point);
 template<> void Simplex_geom<3>::merge(Nearest_point<3>& nearest, Mat<3, 3> sim, Mat<3> point);
 //! \cond

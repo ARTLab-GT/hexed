@@ -6,6 +6,10 @@
 namespace hexed
 {
 
+#if HEXED_OBSESSIVE_TIMING
+Stopwatch_tree Simplex_geom_nd::stopwatch("", {{"nearest_point", Stopwatch_tree("projection")}, {"intersections", Stopwatch_tree("intersection")}});
+#endif
+
 template<>
 void Simplex_geom<2>::merge(Nearest_point<2>& nearest, Mat<2, 2> sim, Mat<2> point)
 {
