@@ -123,19 +123,14 @@ Surface_geom* Case::_make_geom()
       geoms.emplace_back(new Simplex_geom<2>(segments(data.transpose())));
     #if HEXED_USE_OCCT
     } else if (ext == "igs" || ext == "iges" || ext == "stp" || ext == "step") {
-      auto shape = Occt::read(*geom);
-      if (nd == 2) {
-        geoms.emplace_back(new Simplex_geom<2>(Occt::segments(shape, _vari("geom_n_segments").value())));
-      } else if (nd == 3) {
-        auto ptr = new Simplex_geom<3>(Occt::triangles(shape, _vard("max_angle").value(), _vard("max_deflection").value()));
-        std::string vis_name = format_str(1000, "%sgeom%i_triangulation", _vars("working_dir").value().c_str(), i_geom);
-        #if HEXED_USE_XDMF
-        ptr->visualize("xdmf", vis_name);
-        #elif HEXED_USE_TECPLOT
-        ptr->visualize("tecplot", vis_name);
-        #endif
-        geoms.emplace_back(ptr);
-      }
+      auto ptr = new Occt::Geom(Occt::read(*geom), nd, _vard("max_angle").value(), _vard("max_deflection").value(), _vari("geom_n_segments").value());
+      std::string vis_name = format_str(1000, "%sgeom%i_triangulation", _vars("working_dir").value().c_str(), i_geom);
+      #if HEXED_USE_XDMF
+      ptr->visualize("xdmf", vis_name);
+      #elif HEXED_USE_TECPLOT
+      ptr->visualize("tecplot", vis_name);
+      #endif
+      geoms.emplace_back(ptr);
     } else if (ext == "stl") {
       HEXED_ASSERT(nd == 3, "STL format is only supported for 3D");
       geoms.emplace_back(new Simplex_geom<3>(Occt::triangles(Occt::read_stl(geom.value()))));

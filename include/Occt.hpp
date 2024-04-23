@@ -9,7 +9,7 @@
 #include <Geom2d_Curve.hxx>
 #include <Poly_Triangulation.hxx>
 #include "constants.hpp"
-#include "Surface_geom.hpp"
+#include "Simplex_geom.hpp"
 
 namespace hexed
 {
@@ -136,7 +136,7 @@ class Occt
     const int nd;
     std::vector<opencascade::handle<Geom_Surface>> _surfaces;
     std::vector<opencascade::handle<Geom2d_Curve>> _curves;
-    std::unique_ptr<Surface_geom> _simplex;
+    std::unique_ptr<Simplex_geom_nd> _simplex;
     public:
     /*! \brief Construct directly from an OCCT shape object.
      * \details The shape is interpreted to have dimensionality specified by `n_dim`,
@@ -147,11 +147,12 @@ class Occt
      * (i.e. xy-plane).
      * Coordinates are interpreted dimensionally and automatically converted to m.
      */
-    Geom(const TopoDS_Shape&, int n_dim, double angle = 10*constants::degree, double deflection = huge, int n_segments = 100);
+    Geom(const TopoDS_Shape&, int n_dim, double angle = 10*constants::degree, double deflection = huge, int n_segments = 1000);
     Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
     //! \note May return duplicate points if intersection is on the boundary of multiple faces.
     std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
-    void visualize(std::string file_name);
+    //! \brief Visualizes the triangulated geometry
+    void visualize(std::string format, std::string file_name);
   };
 };
 

@@ -84,94 +84,15 @@ Occt::Geom::Geom(const TopoDS_Shape& shape, int n_dim, double angle, double defl
       _surfaces.push_back(BRep_Tool::Surface(face));
     });
     _simplex.reset(new Simplex_geom<3>(triangles(shape, angle, deflection)));
-    Simplex_geom<3> foo(triangles(shape, angle, deflection));
-    foo.visualize("xdmf", "foo");
   } else throw std::runtime_error("`hexed::Occt_gom` must be either 2D or 3D.");
 }
 
-void Occt::Geom::visualize(std::string file_name)
-{
-  #if HEXED_USE_TECPLOT
-  int n_div = 20;
-  if (nd == 3) {
-    Tecplot_file file(file_name, 3, 2, {"real"}, 0.);
-    for (unsigned i_surf = 0; i_surf < _surfaces.size(); ++i_surf) {
-      auto& surf = _surfaces[i_surf];
-      double param_bounds [2][2];
-      surf->Bounds(param_bounds[0][0], param_bounds[0][1], param_bounds[1][0], param_bounds[1][1]);
-      Mat<dyn, dyn> data(math::pow(n_div + 1, 2), 3);
-      Mat<dyn> real(math::pow(n_div + 1, 2));
-      int node_coords [2];
-      for (node_coords[0] = 0; node_coords[0] <= n_div; ++node_coords[0]) {
-        for (node_coords[1] = 0; node_coords[1] <= n_div; ++node_coords[1]) {
-          double params [2];
-          for (int i_dim = 0; i_dim < 2; ++i_dim) {
-            double interp = double(node_coords[i_dim])/n_div;
-            params[i_dim] = (1 - interp)*param_bounds[i_dim][0] + interp*param_bounds[i_dim][1];
-          }
-          auto pnt = surf->Value(params[0], params[1]);
-          int i_node = node_coords[0]*(n_div + 1) + node_coords[1];
-          data(i_node, all) << pnt.X(), pnt.Y(), pnt.Z();
-          real(i_node) = 1;
-        }
-      }
-      data *= 1e-3; // convert to meters
-      Tecplot_file::Structured_block zone(file, n_div + 1, format_str(100, "surface%u", i_surf), 2);
-      zone.write(data.data(), real.data());
-    }
-  } else {
-    Tecplot_file file(file_name, 2, 1, {}, 0.);
-    for (unsigned i_curve = 0; i_curve < _curves.size(); ++i_curve) {
-      auto& curve = _curves[i_curve];
-      double param_bounds [2] {curve->FirstParameter(), curve->LastParameter()};
-      Mat<dyn, dyn> data(n_div + 1, 2);
-      for (int i_node = 0; i_node <= n_div; ++i_node) {
-        double interp = double(i_node)/n_div;
-        double param = (1 - interp)*param_bounds[0] + interp*param_bounds[1];
-        auto pnt = curve->Value(param);
-        data(i_node, all) << pnt.X(), pnt.Y();
-      }
-      data *= 1e-3; // convert to meters
-      Tecplot_file::Structured_block zone(file, n_div + 1, format_str(100, "curve%u", i_curve), 1);
-      zone.write(data.data(), nullptr);
-    }
-  }
-  #else
-  HEXED_ASSERT(false, "needs tecplot");
-  #endif
-}
+void Occt::Geom::visualize(std::string format, std::string file_name) {_simplex->visualize(format, file_name);}
 
 Nearest_point<dyn> Occt::Geom::nearest_point(Mat<> point, double max_distance, double distance_guess)
 {
   HEXED_ASSERT(point.size() == nd, format_str(100, "`point` must be %iD", nd));
-  #if 0
-  Nearest_point<> nearest(point, max_distance);
-  point *= 1e3; // convert to mm
-  if (nd == 2) {
-    gp_Pnt2d occt_point(point(0), point(1));
-    // iterate through _curves and find which ones has the nearest point
-    for (auto& curve : _curves) {
-      Geom2dAPI_ProjectPointOnCurve proj(occt_point, curve);
-      if(proj.NbPoints()) {
-        gp_Pnt2d occt_candidate = proj.NearestPoint();
-        nearest.merge(Mat<2>{occt_candidate.X(), occt_candidate.Y()}*1e-3);
-      }
-    }
-  } else {
-    gp_Pnt occt_point(point(0), point(1), point(2));
-    // iterate through the _surfaces and find which one has the nearest point
-    for (auto& surface : _surfaces) {
-      GeomAPI_ProjectPointOnSurf proj(occt_point, surface);
-      if (proj.IsDone()) {
-        gp_Pnt occt_candidate = proj.NearestPoint();
-        nearest.merge(Mat<3>{occt_candidate.X(), occt_candidate.Y(), occt_candidate.Z()}*1e-3);
-      }
-    }
-  }
-  return nearest;
-  #else
   return _simplex->nearest_point(point, max_distance, distance_guess);
-  #endif
 }
 
 std::vector<double> Occt::Geom::intersections(Mat<> point0, Mat<> point1)
@@ -214,6 +135,7 @@ std::vector<double> Occt::Geom::intersections(Mat<> point0, Mat<> point1)
     for (auto& surface : _surfaces) {
       // compute intersections
       GeomAPI_IntCS inter(curve, surface);
+      HEXED_ASSERT(inter.IsDone(), "line/surface intersection failed in OCCT kernel", assert::Numerical_exception);
       // translate to our parametric format
       int n = inter.NbPoints();
       for (int i = 0; i < n; ++i) {
@@ -223,9 +145,7 @@ std::vector<double> Occt::Geom::intersections(Mat<> point0, Mat<> point1)
       }
     }
   }
-  //return math::correct_values(_simplex->intersections(point0, point1), sects);
-  //return _simplex->intersections(point0, point1);
-  return sects;
+  return math::correct_values(_simplex->intersections(point0, point1), sects);
 }
 
 void Occt::write_image(const TopoDS_Shape& shape, std::string file_name, Mat<3> eye_pos, Mat<3> look_at_pos, int resolution)
@@ -328,6 +248,7 @@ std::vector<Mat<3, 3>> Occt::triangles(TopoDS_Shape shape, double angle, double 
     auto face_tris = triangles(BRep_Tool::Triangulation(face, location));
     tris.insert(tris.end(), face_tris.begin(), face_tris.end());
   });
+  BRepTools::Clean(shape); // get rid of triangulation to avoid messing other things up
   return tris;
 }
 

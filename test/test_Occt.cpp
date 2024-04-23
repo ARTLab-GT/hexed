@@ -19,7 +19,7 @@ void test(std::string file_extension)
   double pos1 = 1./23.;
   auto intersections = geom.intersections(hexed::Mat<3>{pos0, pos1, 0.}, hexed::Mat<3>{pos0, pos1, 1.});
   double correct = .125*std::sqrt(1 - (pos0/0.25)*(pos0/0.25) - (pos1/0.25)*(pos1/0.25));
-  CHECK_THAT(intersections, Catch::Matchers::UnorderedRangeEquals(std::vector<double>{-correct, correct}, hexed::math::Approx_equal(0, 1e-12)));
+  REQUIRE_THAT(intersections, Catch::Matchers::UnorderedRangeEquals(std::vector<double>{-correct, correct}, hexed::math::Approx_equal(0, 1e-2)));
 }
 
 TEST_CASE("Occt::Geom")

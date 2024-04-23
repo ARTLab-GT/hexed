@@ -8,6 +8,29 @@
 namespace hexed
 {
 
+//! \brief Abstract base class for `Simplex_geom` exposing the dimensionality-independent functionality.
+class Simplex_geom_nd : public Surface_geom
+{
+  protected:
+  #if HEXED_OBSESSIVE_TIMING
+  static Stopwatch_tree stopwatch; // for benchmarking projection and intersection calculation
+  #endif
+
+  public:
+  //! \brief Writes geometry to a visualization file with the specified name + file extension.
+  //! \details Only for 3D. For 2D, does nothing.
+  virtual void visualize(std::string format, std::string file_name) = 0;
+  //! \brief if compiled with `HEXED_OBSESSIVE_TIMING ON`, return a performance report. Otherwise, empty string.
+  static std::string performance_report()
+  {
+    #if HEXED_OBSESSIVE_TIMING
+    return stopwatch.report();
+    #else
+    return "";
+    #endif
+  }
+};
+
 /*! \brief Represents discrete geometry composed of [simplices](https://en.wikipedia.org/wiki/Simplex).
  * \details This can be used as an interface for geometry derived from an STL file in 3D
  * or a list of node coordinates in 2D.
@@ -21,11 +44,8 @@ namespace hexed
  * \see `Occt::triangles`
  */
 template <int n_dim>
-class Simplex_geom : public Surface_geom
+class Simplex_geom : public Simplex_geom_nd
 {
-  #if HEXED_OBSESSIVE_TIMING
-  static Stopwatch_tree stopwatch; // for benchmarking projection and intersection calculation
-  #endif
   void merge(Nearest_point<n_dim>& nearest, Mat<n_dim, n_dim> sim, Mat<n_dim> point); // helper for `nearest_point`
   static Mat<n_dim, 2> _get_bounding_box(const std::vector<Mat<n_dim, n_dim>>& sims)
   {
@@ -118,8 +138,6 @@ class Simplex_geom : public Surface_geom
     sort_simplices(_tree);
   }
 
-  void visualize(std::string format, std::string file_name); //!< writes geometry to a visualization file with the specified name + file extension
-
   /*! \details Iterates through all _simplices and finds the nearest point on each,
    * whether that point lies in the interior or on the edge or a vertex.
    * Returns the global nearest of all those points.
@@ -170,15 +188,7 @@ class Simplex_geom : public Surface_geom
     return inters;
   }
 
-  //! if compiled with `HEXED_OBSESSIVE_TIMING ON`, return a performance report. Otherwise, empty string.
-  static std::string performance_report()
-  {
-    #if HEXED_OBSESSIVE_TIMING
-    return stopwatch.report();
-    #else
-    return "";
-    #endif
-  }
+  void visualize(std::string format, std::string file_name) override;
 };
 
 #if HEXED_OBSESSIVE_TIMING
@@ -189,6 +199,7 @@ Stopwatch_tree Simplex_geom<n_dim>::stopwatch("", {{"nearest_point", Stopwatch_t
 template<> void Simplex_geom<2>::merge(Nearest_point<2>& nearest, Mat<2, 2> sim, Mat<2> point);
 template<> void Simplex_geom<3>::merge(Nearest_point<3>& nearest, Mat<3, 3> sim, Mat<3> point);
 //! \cond
+template<> inline void Simplex_geom<2>::visualize(std::string format, std::string) {}
 template<> void Simplex_geom<3>::visualize(std::string format, std::string);
 //! \endcond
 
