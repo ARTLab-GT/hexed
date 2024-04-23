@@ -106,4 +106,9 @@ double chebyshev_step(int n_steps, int i_step)
   return 1/(1 - std::cos((n_steps - i_step - 0.5)*M_PI/n_steps));
 }
 
+std::vector<double> correct_values(std::vector<double> estimates, std::vector<double> exacts, double tol)
+{
+  return estimates;
+}
+
 }

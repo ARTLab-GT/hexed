@@ -247,3 +247,23 @@ TEST_CASE("chebyshev_step")
   REQUIRE(result.maxCoeff() == Catch::Approx(1.));
   REQUIRE(result.minCoeff() == Catch::Approx(-1.));
 }
+
+TEST_CASE("correct_values")
+{
+  std::vector<double> estimates {.3, -.55, -.6};
+  SECTION("too few values")
+  {
+    std::vector<double> exacts {-.61, .29};
+    REQUIRE_THAT(hexed::math::correct_values(estimates, exacts, .2), Catch::Matchers::RangeEquals(std::vector<double>{.29, -.55, -.61}));
+  }
+  SECTION("too many values")
+  {
+    std::vector<double> exacts {-.61, .28, -.58, .29};
+    REQUIRE_THAT(hexed::math::correct_values(estimates, exacts, .2), Catch::Matchers::RangeEquals(std::vector<double>{.29, -.58, -.61}));
+  }
+  SECTION("implausible values")
+  {
+    std::vector<double> exacts {-.61, .98, -.54, .99};
+    REQUIRE_THAT(hexed::math::correct_values(estimates, exacts, .2), Catch::Matchers::RangeEquals(std::vector<double>{.3, -.54, -.61}));
+  }
+}

@@ -290,6 +290,18 @@ bool intersects(Ball<n_dim> b, Mat<n_dim> endpoint0, Mat<n_dim> endpoint1)
 //! [Chebyshev polynomial](https://mathworld.wolfram.com/ChebyshevPolynomialoftheFirstKind.html) multistge time stepping
 double chebyshev_step(int n_steps, int i_step);
 
+/*! \details Suppose that you compute some values, `estimates`, with a method that is very robust but has low accuracy.
+ * Suppose you also recompute these values as `exacts`
+ * with a method that is very accurate but not robust---It may give you extraneous values and/or fail to produce some of the correct values.
+ * The purpose of this function is to filter out the implausible values from `exacts` and give you only the ones that appear to be correct.
+ * The return value will have the same number of values as `estimates`,
+ * but some of them will be replaced with values from `exacts` in a way that obtains the best possible agreement.
+ * Replacements will be considered only if the difference between the "exact" value and the "estimate" is less than `tol`.
+ * The order of `exacts` does not matter.
+ * Values will be returned in the same order as `estimates`.
+ */
+std::vector<double> correct_values(std::vector<double> estimates, std::vector<double> exacts, double tol = huge);
+
 }
 }
 #endif
