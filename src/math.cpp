@@ -108,6 +108,29 @@ double chebyshev_step(int n_steps, int i_step)
 
 std::vector<double> correct_values(std::vector<double> estimates, std::vector<double> exacts, double tol)
 {
+  std::vector<int> avail_inds(estimates.size());
+  for (unsigned i = 0; i < avail_inds.size(); ++i) avail_inds[i] = i;
+  while (true) {
+    double best_diff = tol;
+    bool found = false;
+    int best_exact, best_est;
+    for (unsigned i_exact = 0; i_exact < exacts.size(); ++i_exact) {
+      for (unsigned i_est = 0; i_est < avail_inds.size(); ++i_est) {
+        double diff = std::abs(exacts[i_exact] - estimates[avail_inds[i_est]]);
+        if (diff <= best_diff) {
+          found = true;
+          best_diff = diff;
+          best_exact = i_exact;
+          best_est = i_est;
+        }
+      }
+    }
+    if (found) {
+      estimates[avail_inds[best_est]] = exacts[best_exact];
+      avail_inds.erase(avail_inds.begin() + best_est);
+      exacts.erase(exacts.begin() + best_exact);
+    } else break;
+  }
   return estimates;
 }
 

@@ -34,7 +34,7 @@
 #if HEXED_USE_TECPLOT
 #include <Tecplot_file.hpp>
 #endif
-#include <iostream>
+#include <Simplex_geom.hpp>
 
 namespace hexed
 {
@@ -71,17 +71,21 @@ void collect_curves(std::vector<opencascade::handle<Geom2d_Curve>>& curves, cons
   });
 }
 
-Occt::Geom::Geom(const TopoDS_Shape& shape, int n_dim)
+Occt::Geom::Geom(const TopoDS_Shape& shape, int n_dim, double angle, double deflection, int n_segments)
 : nd{n_dim}
 {
   if (nd == 2) {
-    collect_curves(curves, shape);
+    collect_curves(_curves, shape);
+    _simplex.reset(new Simplex_geom<2>(segments(shape, n_segments)));
   } else if (nd == 3) {
     // collect all surfaces
     iterate(shape, TopAbs_FACE, [&](const TopoDS_Shape& s){
       TopoDS_Face face = TopoDS::Face(s);
-      surfaces.push_back(BRep_Tool::Surface(face));
+      _surfaces.push_back(BRep_Tool::Surface(face));
     });
+    _simplex.reset(new Simplex_geom<3>(triangles(shape, angle, deflection)));
+    Simplex_geom<3> foo(triangles(shape, angle, deflection));
+    foo.visualize("xdmf", "foo");
   } else throw std::runtime_error("`hexed::Occt_gom` must be either 2D or 3D.");
 }
 
@@ -91,8 +95,8 @@ void Occt::Geom::visualize(std::string file_name)
   int n_div = 20;
   if (nd == 3) {
     Tecplot_file file(file_name, 3, 2, {"real"}, 0.);
-    for (unsigned i_surf = 0; i_surf < surfaces.size(); ++i_surf) {
-      auto& surf = surfaces[i_surf];
+    for (unsigned i_surf = 0; i_surf < _surfaces.size(); ++i_surf) {
+      auto& surf = _surfaces[i_surf];
       double param_bounds [2][2];
       surf->Bounds(param_bounds[0][0], param_bounds[0][1], param_bounds[1][0], param_bounds[1][1]);
       Mat<dyn, dyn> data(math::pow(n_div + 1, 2), 3);
@@ -117,8 +121,8 @@ void Occt::Geom::visualize(std::string file_name)
     }
   } else {
     Tecplot_file file(file_name, 2, 1, {}, 0.);
-    for (unsigned i_curve = 0; i_curve < curves.size(); ++i_curve) {
-      auto& curve = curves[i_curve];
+    for (unsigned i_curve = 0; i_curve < _curves.size(); ++i_curve) {
+      auto& curve = _curves[i_curve];
       double param_bounds [2] {curve->FirstParameter(), curve->LastParameter()};
       Mat<dyn, dyn> data(n_div + 1, 2);
       for (int i_node = 0; i_node <= n_div; ++i_node) {
@@ -140,12 +144,13 @@ void Occt::Geom::visualize(std::string file_name)
 Nearest_point<dyn> Occt::Geom::nearest_point(Mat<> point, double max_distance, double distance_guess)
 {
   HEXED_ASSERT(point.size() == nd, format_str(100, "`point` must be %iD", nd));
+  #if 0
   Nearest_point<> nearest(point, max_distance);
   point *= 1e3; // convert to mm
   if (nd == 2) {
     gp_Pnt2d occt_point(point(0), point(1));
-    // iterate through curves and find which ones has the nearest point
-    for (auto& curve : curves) {
+    // iterate through _curves and find which ones has the nearest point
+    for (auto& curve : _curves) {
       Geom2dAPI_ProjectPointOnCurve proj(occt_point, curve);
       if(proj.NbPoints()) {
         gp_Pnt2d occt_candidate = proj.NearestPoint();
@@ -154,8 +159,8 @@ Nearest_point<dyn> Occt::Geom::nearest_point(Mat<> point, double max_distance, d
     }
   } else {
     gp_Pnt occt_point(point(0), point(1), point(2));
-    // iterate through the surfaces and find which one has the nearest point
-    for (auto& surface : surfaces) {
+    // iterate through the _surfaces and find which one has the nearest point
+    for (auto& surface : _surfaces) {
       GeomAPI_ProjectPointOnSurf proj(occt_point, surface);
       if (proj.IsDone()) {
         gp_Pnt occt_candidate = proj.NearestPoint();
@@ -164,10 +169,14 @@ Nearest_point<dyn> Occt::Geom::nearest_point(Mat<> point, double max_distance, d
     }
   }
   return nearest;
+  #else
+  return _simplex->nearest_point(point, max_distance, distance_guess);
+  #endif
 }
 
 std::vector<double> Occt::Geom::intersections(Mat<> point0, Mat<> point1)
 {
+  #if 0
   HEXED_ASSERT(point0.size() == nd, format_str(100, "`point0` must be %iD", nd));
   HEXED_ASSERT(point1.size() == nd, format_str(100, "`point1` must be %iD", nd));
   // convert to mm
@@ -180,8 +189,8 @@ std::vector<double> Occt::Geom::intersections(Mat<> point0, Mat<> point1)
     gp_Pnt2d pnt0(scaled0(0), scaled0(1));
     gp_Pnt2d pnt1(scaled1(0), scaled1(1));
     opencascade::handle<Geom2d_Line> line = GCE2d_MakeLine(pnt0, pnt1);
-    // iterate through curves and compute the indersections with each
-    for (auto& curve : curves) {
+    // iterate through _curves and compute the indersections with each
+    for (auto& curve : _curves) {
       // find intersections
       Geom2dAPI_InterCurveCurve inter(line, curve);
       int n = inter.NbPoints();
@@ -202,8 +211,8 @@ std::vector<double> Occt::Geom::intersections(Mat<> point0, Mat<> point1)
     gp_Pnt pnt1(scaled1(0), scaled1(1), scaled1(2));
     opencascade::handle<Geom_Line> line = GC_MakeLine(pnt0, pnt1);
     opencascade::handle<Geom_Curve> curve = line;
-    // iterate through surfaces and compute the indersections with each
-    for (auto& surface : surfaces) {
+    // iterate through _surfaces and compute the indersections with each
+    for (auto& surface : _surfaces) {
       // compute intersections
       GeomAPI_IntCS inter(curve, surface);
       // translate to our parametric format
@@ -216,6 +225,9 @@ std::vector<double> Occt::Geom::intersections(Mat<> point0, Mat<> point1)
     }
   }
   return sects;
+  #else
+  return _simplex->intersections(point0, point1);
+  #endif
 }
 
 void Occt::write_image(const TopoDS_Shape& shape, std::string file_name, Mat<3> eye_pos, Mat<3> look_at_pos, int resolution)

@@ -50,50 +50,7 @@ class Occt
   template<typename reader_t> static TopoDS_Shape execute_reader(std::string file_name);
 
   public:
-  /*! \brief A `Surface_geom` that interacts with a CAD object directly.
-   * \details Represents a CAD object defined with the OCCT interface as a `Surface_geom`.
-   * Implements `nearest_point` and `intersections`
-   * by directly working with the OCCT projection and intersection functions,
-   * which can in principle be faster than working with triangulations when high accuracy is desired.
-   * However, it has two important drawbacks:
-   * - Projections and intersections are not very robust,
-   *   which defeats the whole purpose of Hexed which is robust and automated meshing.
-   * - It cannot understand face trimming, which is required to correctly represent some 3D shapes defined with
-   *   [BRep Topology](https://dev.opencascade.org/doc/occt-6.7.0/overview/html/user_guides__modeling_data.html#occt_modat_5_2_1).
-   *   It only supports curves and faces that are purely parametric (they are not trimmed by any curves).
-   *
-   * As a result, the preferred way to interact with CAD geometry is to discretize it with `triangles()`
-   * and then convert it to a `Simplex geom`.
-   */
-  class Geom : public Surface_geom
-  {
-    const int nd;
-    std::vector<opencascade::handle<Geom_Surface>> surfaces;
-    std::vector<opencascade::handle<Geom2d_Curve>> curves;
-    public:
-    /*! \brief Construct directly from an OCCT shape object.
-     * \details The shape is interpreted to have dimensionality specified by `n_dim`,
-     * which may be either 2 or 3.
-     * All input points must have `n_dim` elements, as will all output points.
-     * If 3D, only faces are considered.
-     * If 2D, only edges are considered, and all are projected onto the \f$ x_2 = 0 \f$ plane
-     * (i.e. xy-plane).
-     * Coordinates are interpreted dimensionally and automatically converted to m.
-     */
-    Geom(const TopoDS_Shape&, int n_dim);
-    Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
-    //! \note May return duplicate points if intersection is on the boundary of multiple faces.
-    std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
-    /*! discretizes the curves/surfaces and writes them to a Tecplot file `[file_name].szplt`
-     * \warning as described above, this class does not understand face trimming,
-     * so some faces may appear to extend beyond their true limits.
-     * If you just want to visualize a CAD file for diagnostics, use `write_image()`
-     * or triangulate it into a `Simplex_geom` and visualize that.
-     */
-    void visualize(std::string file_name);
-  };
-
-  Occt() = delete; //!< Don't instantiate this class. Use its static members.
+  Occt() = delete; //!< \brief Don't instantiate this class. Use its static members.
 
   /*! \brief Renders an image of the geometry and writes it to an image file.
    * \details Useful for verifying/debuggin CAD translations.
@@ -109,7 +66,8 @@ class Occt
    * \param look_at_pos Eye will be pointed directly at this point.
    * \param resolution Width/height of image in pixels (it's always square).
    */
-  static void write_image(const TopoDS_Shape& shape, std::string file_name, Mat<3> eye_pos = {0, 0, 1}, Mat<3> look_at_pos = {0, 0, 0}, int resolution = 1000);
+  static void write_image(const TopoDS_Shape& shape, std::string file_name,
+                          Mat<3> eye_pos = {0, 0, 1}, Mat<3> look_at_pos = {0, 0, 0}, int resolution = 1000);
 
   /*! \brief Reads a CAD file.
    * \details
@@ -157,6 +115,44 @@ class Occt
   //! \brief Discretizes the curves in a `TopoDS_Shape` into segments of a polygonal line.
   //! \details A `TopoDS_Shape` can be obtained from `read()`, and the results can be used to construct a `Simplex_geom<2>`.
   static std::vector<Mat<2, 2>> segments(const TopoDS_Shape&, int n_segments);
+
+  /*! \brief A `Surface_geom` that interacts with a CAD object directly.
+   * \details Represents a CAD object defined with the OCCT interface as a `Surface_geom`.
+   * Implements `nearest_point` and `intersections`
+   * by directly working with the OCCT projection and intersection functions,
+   * which can in principle be faster than working with triangulations when high accuracy is desired.
+   * However, it has two important drawbacks:
+   * - Projections and intersections are not very robust,
+   *   which defeats the whole purpose of Hexed which is robust and automated meshing.
+   * - It cannot understand face trimming, which is required to correctly represent some 3D shapes defined with
+   *   [BRep Topology](https://dev.opencascade.org/doc/occt-6.7.0/overview/html/user_guides__modeling_data.html#occt_modat_5_2_1).
+   *   It only supports curves and faces that are purely parametric (they are not trimmed by any curves).
+   *
+   * As a result, the preferred way to interact with CAD geometry is to discretize it with `triangles()`
+   * and then convert it to a `Simplex geom`.
+   */
+  class Geom : public Surface_geom
+  {
+    const int nd;
+    std::vector<opencascade::handle<Geom_Surface>> _surfaces;
+    std::vector<opencascade::handle<Geom2d_Curve>> _curves;
+    std::unique_ptr<Surface_geom> _simplex;
+    public:
+    /*! \brief Construct directly from an OCCT shape object.
+     * \details The shape is interpreted to have dimensionality specified by `n_dim`,
+     * which may be either 2 or 3.
+     * All input points must have `n_dim` elements, as will all output points.
+     * If 3D, only faces are considered.
+     * If 2D, only edges are considered, and all are projected onto the \f$ x_2 = 0 \f$ plane
+     * (i.e. xy-plane).
+     * Coordinates are interpreted dimensionally and automatically converted to m.
+     */
+    Geom(const TopoDS_Shape&, int n_dim, double angle = 10*constants::degree, double deflection = huge, int n_segments = 100);
+    Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
+    //! \note May return duplicate points if intersection is on the boundary of multiple faces.
+    std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
+    void visualize(std::string file_name);
+  };
 };
 
 }
