@@ -176,7 +176,6 @@ Nearest_point<dyn> Occt::Geom::nearest_point(Mat<> point, double max_distance, d
 
 std::vector<double> Occt::Geom::intersections(Mat<> point0, Mat<> point1)
 {
-  #if 0
   HEXED_ASSERT(point0.size() == nd, format_str(100, "`point0` must be %iD", nd));
   HEXED_ASSERT(point1.size() == nd, format_str(100, "`point1` must be %iD", nd));
   // convert to mm
@@ -224,10 +223,9 @@ std::vector<double> Occt::Geom::intersections(Mat<> point0, Mat<> point1)
       }
     }
   }
+  //return math::correct_values(_simplex->intersections(point0, point1), sects);
+  //return _simplex->intersections(point0, point1);
   return sects;
-  #else
-  return _simplex->intersections(point0, point1);
-  #endif
 }
 
 void Occt::write_image(const TopoDS_Shape& shape, std::string file_name, Mat<3> eye_pos, Mat<3> look_at_pos, int resolution)
