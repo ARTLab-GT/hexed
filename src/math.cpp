@@ -16,8 +16,54 @@ Eigen::VectorXi direction(int n_dim, int i_face)
   return direction(n_dim, i_face/2, i_face%2);
 }
 
+double broyden(std::function<double(double)> error, double init_guess, Root_options opts, double init_diff)
+{
+  double guess_prev = init_guess - init_diff;
+  double err_prev = error(guess_prev);
+  double guess = init_guess;
+  for (int iter = 0; iter < opts.max_iters; ++iter) {
+    double err_curr = error(guess);
+    if (std::abs(err_curr) < opts.ftol) break;
+    double slope = (err_curr - err_prev)/(guess - guess_prev);
+    guess_prev = guess;
+    err_prev = err_curr;
+    guess -= err_curr/slope;
+    if (std::abs(guess - guess_prev) < opts.xtol) break;
+  }
+  return guess;
+}
+
+double bisection(std::function<double(double)> error, std::array<double, 2> bounds, Root_options opts)
+{
+  double midpoint = 0;
+  std::array<double, 2> err_bounds {error(bounds[0]), error(bounds[1])};
+  HEXED_ASSERT(!(err_bounds[0]*err_bounds[1] > 0), format_str(300, "bounds do not bracket a root (f = {%e, %e})", err_bounds[0], err_bounds[1]));
+  HEXED_ASSERT(!(std::isnan(err_bounds[0]) && std::isnan(err_bounds[1])),
+               "`err` evaluates to NaN at bouth bounds");
+  for (int iter = 0; iter < opts.max_iters; ++iter) {
+    midpoint = (bounds[0] + bounds[1])/2;
+    double mid_err = error(midpoint);
+    if (std::abs(mid_err) < opts.ftol) break;
+    int i_repl = (mid_err*err_bounds[0] <= 0);
+    for (int i = 0; i < 2; ++i) {
+      if (std::isnan(err_bounds[i])) i_repl = i;
+    }
+    bounds[i_repl] = midpoint;
+    err_bounds[i_repl] = mid_err;
+    if (bounds[1] - bounds[0] < opts.xtol) break;
+  }
+  return midpoint;
+}
+
 Mat<> newton(std::function<Mat<>(Mat<>)> error, std::function<Mat<dyn, dyn>(Mat<>)> jacobian, Mat<> guess, Root_options opts)
 {
+  for (int iter = 0; iter < opts.max_iters; ++iter) {
+    Mat<> err = error(guess);
+    if (err.norm() < opts.ftol) break;
+    Mat<> update = -jacobian(guess).partialPivLu().solve(err);
+    guess += update;
+    if (update.norm() < opts.xtol) break;
+  }
   return guess;
 }
 
