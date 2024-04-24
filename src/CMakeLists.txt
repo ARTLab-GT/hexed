@@ -46,6 +46,7 @@ Storage_params.cpp
 Struct_expr.cpp
 Surface_func.cpp
 Surface_geom.cpp
+split_triangle.cpp
 stabilizing_art_visc.cpp
 standard_atmosphere.cpp
 Tecplot_file.cpp
