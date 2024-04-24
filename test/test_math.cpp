@@ -47,6 +47,24 @@ TEST_CASE("bisection root finder")
           == Catch::Approx(std::log(2.)));
 }
 
+TEST_CASE("newton root finder")
+{
+  auto error = [](hexed::Mat<> x) {
+    hexed::Mat<> err(3);
+    err << std::pow(2., x(0)) - 8., 1.5 - x(0)*x(1), .3*x(0) + .4*x(1) + .5*x(2);
+    return err;
+  };
+  auto jacobian = [](hexed::Mat<> x) {
+    hexed::Mat<> jac(3, 3);
+    jac << std::log(2.)*std::pow(1., x(0)), 0, 0,
+           -x(1), -x(0), 0,
+           .3, .4, .5;
+    return jac;
+  };
+  auto soln = hexed::math::newton(error, jacobian, hexed::Mat<3>{.1, .1, .1}, {.xtol = 1e-12});
+  REQUIRE_THAT(soln, Catch::Matchers::RangeEquals(hexed::Mat<3>{3., .5, 2.2}));
+}
+
 TEST_CASE("hypercube_matvec")
 {
   auto hcmv {hexed::math::hypercube_matvec};

@@ -16,6 +16,11 @@ Eigen::VectorXi direction(int n_dim, int i_face)
   return direction(n_dim, i_face/2, i_face%2);
 }
 
+Mat<> newton(std::function<Mat<>(Mat<>)> error, std::function<Mat<dyn, dyn>(Mat<>)> jacobian, Mat<> guess, Root_options opts)
+{
+  return guess;
+}
+
 Eigen::VectorXd hypercube_matvec(const Eigen::MatrixXd& mat, const Eigen::VectorXd& vec)
 {
   #if DEBUG

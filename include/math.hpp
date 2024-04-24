@@ -111,6 +111,14 @@ double bisection(Func_type func, std::array<double, 2> bounds, double atol=1e-10
   return midpoint;
 }
 
+struct Root_options {
+  double ftol = 0;
+  double xtol = 0;
+  int max_iters = std::numeric_limits<int>::max();
+};
+
+Mat<> newton(std::function<Mat<>(Mat<>)> error, std::function<Mat<dyn, dyn>(Mat<>)> jacobian, Mat<> guess, Root_options);
+
 /*! \brief Multiply every dimension of a (flattened) N-dimensional array by a matrix.
  *
  * Size of array along each dimension must be equal
