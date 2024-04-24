@@ -211,7 +211,7 @@ monitor_samples = 100
 monitor_vars = {}
 integrand_field = {}
 integrand_surface = {}
-max_angle = 10*degree
+max_angle = 15*degree
 max_deflection = huge
 mesh_extreme_eps = 1e-6
 layer_split_points = {split0 = 1./3.;}

@@ -57,12 +57,22 @@ double bisection(std::function<double(double)> error, std::array<double, 2> boun
 
 Mat<> newton(std::function<Mat<dyn, dyn>(Mat<>)> error_jacobian, Mat<> guess, Root_options opts)
 {
+  double prev_err = huge;
+  Mat<> prev_guess = guess;
   for (int iter = 0; iter < opts.max_iters; ++iter) {
-    Mat<dyn, dyn> err_jac = error_jacobian(guess);
-    if (err_jac(all, 0).norm() < opts.ftol) break;
-    Mat<> update = -err_jac(all, Eigen::seqN(1, err_jac.rows())).partialPivLu().solve(err_jac(all, 0));
-    guess += update;
-    if (update.norm() < opts.xtol) break;
+    Mat<dyn, dyn> err_jac;
+    double err;
+    for (int i = 0; i < 100; ++i) {
+      err_jac = error_jacobian(guess);
+      err = err_jac(all, 0).norm();
+      if (err < std::max(prev_err, opts.ftol)) break;
+      else guess = .1*guess + .9*prev_guess;
+    }
+    prev_err = err;
+    if (err < opts.ftol) break;
+    prev_guess = guess;
+    guess -= err_jac(all, Eigen::seqN(1, err_jac.rows())).partialPivLu().solve(err_jac(all, 0));
+    if ((guess - prev_guess).norm() < opts.xtol) break;
   }
   return guess;
 }

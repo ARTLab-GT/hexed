@@ -83,6 +83,10 @@ Occt::Geom::Geom(const TopoDS_Shape& shape, int n_dim, double angle, double defl
     iterate(shape, TopAbs_FACE, [&](const TopoDS_Shape& s){
       TopoDS_Face face = TopoDS::Face(s);
       _surfaces.push_back(BRep_Tool::Surface(face));
+      if (!(_surfaces.back()->Continuity() >= GeomAbs_C1)) {
+        std::cerr << "WARNING: Surface is not C1 continuous! Falling back on triangulated intersections.\n"
+                  << "If you see this warning, please contact Micaiah: https://artlab-gt.github.io/hexed/index.html#Contact\n";
+      }
     });
     Triangulation triang = _triangulate(shape, angle, deflection);
     _simplex3.reset(new Simplex_geom<3>(triang.tris, triang.params, triang.faces));
@@ -103,18 +107,17 @@ std::vector<double> Occt::Geom::intersections(Mat<> point0, Mat<> point1)
   HEXED_ASSERT(point0.size() == nd, format_str(100, "`point0` must be %iD", nd));
   HEXED_ASSERT(point1.size() == nd, format_str(100, "`point1` must be %iD", nd));
   auto inters = _simplex->simplex_intersections(point0, point1);
-  if (nd == 2) return inters.first;
+  if (nd == 2) return inters.points;
   Mat<3> diff = point1 - point0;
-  for (unsigned i_inter = 0; i_inter < inters.first.size(); ++i_inter) {
-    int i_tri = inters.second[i_inter];
+  for (unsigned i_inter = 0; i_inter < inters.points.size(); ++i_inter) {
+    int i_tri = inters.inds[i_inter];
     Mat<2, 3> simplex_params = _simplex3->parameters()[i_tri];
-    Mat<2> params; params.setZero();
-    for (int i_vert = 0; i_vert < 3; ++i_vert) params += .3*simplex_params(all, i_vert);
+    Mat<2> params = simplex_params(all, 0);
+    for (int i_coord = 0; i_coord < 2; ++i_coord) {
+      params += inters.coords[i_inter](i_coord)*(simplex_params(all, 1 + i_coord) - simplex_params(all, 0));
+    }
     auto& surf = _surfaces[_simplex3->faces()[i_tri]];
-    if (!(surf->Continuity() >= GeomAbs_C1)) {
-      std::cerr << "WARNING: Surface is not C1 continuous! Falling back on triangulated intersections.\n"
-                << "If you see this warning, please contact Micaiah: https://artlab-gt.github.io/hexed/index.html#Contact\n";
-    } else {
+    if (surf->Continuity() >= GeomAbs_C1) {
       auto error_jacobian = [point0, diff, &surf](Mat<> guess){
         Mat<dyn, dyn> err_jac(3, 4);
         gp_Pnt point;
@@ -130,12 +133,11 @@ std::vector<double> Occt::Geom::intersections(Mat<> point0, Mat<> point1)
         err_jac(all, 3) = -diff;
         return err_jac;
       };
-      Mat<> soln = math::newton(error_jacobian, Mat<3>{params[0], params[1], inters.first[i_inter]}, {.xtol = 1e-10, .max_iters = 100});
-      if (std::abs(soln(2) - inters.first[i_inter]) < 0.5) inters.first[i_inter] = soln(2);
-      else std::cerr << "WARNING: Intersection calculation by Newton's method failed! Falling back on triangulated intersections.\n";
+      Mat<> soln = math::newton(error_jacobian, Mat<3>{params[0], params[1], inters.points[i_inter]}, {.ftol = 1e-10*diff.norm(), .max_iters = 100});
+      if (std::abs(soln(2) - inters.points[i_inter]) < 0.5) inters.points[i_inter] = soln(2);
     }
   }
-  return inters.first;
+  return inters.points;
 }
 
 void Occt::write_image(const TopoDS_Shape& shape, std::string file_name, Mat<3> eye_pos, Mat<3> look_at_pos, int resolution)
