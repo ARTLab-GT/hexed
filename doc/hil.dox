@@ -190,8 +190,8 @@ In addition to the below variables, there are also some internal variables used 
 The names of these variables always start with `hexed_` to avoid naming conflicts.
 
 \attention
-You are advised not to create, write to, or depend on the value of any variables whose names begin with `hexed_`
--- such variables are private to the implementation by convention.
+You are advised not to create, write to, or depend on the value of
+any variables whose names begin with `hexed_`---such variables are private to the implementation by convention.
 
 \subsection builtin_list List of Builtin Variables
 
@@ -205,6 +205,11 @@ So if you want Boltzmann's constant, for instance, which in C++ would be `hexed:
 \subsubsection huge
 __type:__ float \n
 Maximum representable float value (equal to `std::numeric_limits<double>::%max`).
+
+<hr>
+\subsubsection nan
+__type:__ float \n
+[Not a Number](https://en.wikipedia.org/wiki/NaN#Floating_point)
 
 <hr>
 \subsubsection newline
@@ -261,12 +266,13 @@ Throws an exception in the C++ implementation of HIL.
 Potentially useful if the C++ code contains subsequent statements after the invocation of the HIL interpreter which you don't want to execute.
 
 <hr>
-\subsection system_time
+\subsubsection system_time
 __type:__ Heisenberg float \n
 Evaluates to the Unix time (in seconds) according to the [system clock](https://en.cppreference.com/w/cpp/chrono/system_clock).
 Good for obtaining the calendar date/time, but not ideal for measuring small intervals (prefer \ref steady_time ).
 
-\subsection steady_time
+<hr>
+\subsubsection steady_time
 __type:__ Heisenberg float \n
 Evaluates to the time (in seconds) according to a [steady clock](https://en.cppreference.com/w/cpp/chrono/steady_clock).
 The difference between sequential calls is guaranteed to be an accurate measure of elapsed time, but the epoch is arbitrary.
