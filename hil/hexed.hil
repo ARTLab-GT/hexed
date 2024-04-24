@@ -161,6 +161,13 @@ set_aerothermo = {
 set_geometry_refinement = {
     refine_if = {(uncertainty > geometry_uncertainty | snapping_problem) & ref_level < max_ref_level & nom_sz > min_elem_size}
     unrefine_if = {ref_level > init_ref_level & !is_extruded}
+    hexed_min_sz = (mesh_extreme01 - mesh_extreme00)*2.^-max_ref_level
+    case0 = {}
+    case1 = {hexed_min_sz = min_elem_size}
+    $$({case} + (min_elem_size > hexed_min_sz))
+    case1 = {max_deflection = 0.1*hexed_min_sz}
+    $$({case} + (0.1*hexed_min_sz < max_deflection))
+    println({max deflection } + max_deflection)
 }
 
 plot_history = {shell({python3 -c "from hexed_utils import History_plot;History_plot('} + working_dir + {')" &})}
@@ -211,7 +218,7 @@ monitor_samples = 100
 monitor_vars = {}
 integrand_field = {}
 integrand_surface = {}
-max_angle = 15*degree
+max_angle = 20*degree
 max_deflection = huge
 mesh_extreme_eps = 1e-6
 layer_split_points = {split0 = 1./3.;}
