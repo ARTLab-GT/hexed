@@ -87,12 +87,15 @@ double broyden(std::function<double(double)> error, double init_guess, Root_opti
 double bisection(std::function<double(double)> error, std::array<double, 2> bounds, Root_options opts);
 
 /*! \brief Finds a root of a vector function with [Newton's method](https://en.wikipedia.org/wiki/Newton%27s_method).
- * \param error function to find the root of
- * \param jacobian entry i, j should be the derivative of the ith component of the error w.r.t. the jth component of the input
+ * \param error_jacobian Function to find the root of.
+ *     If the input (\f$ x \f$) has \f$ n \f$ entries, this should be an \f$ n \times n + 1 \f$ matrix.
+ *     The first column should be the error vector, and the remaing columns should be the Jacobian matrix,
+ *     such that entry i, j of the Jacobian (i, j + 1 of the return matrix)
+ *     should be the derivative of the ith component of the error w.r.t. the jth component of the input.
  * \param guess initial guess for the root
  * \param options use this to set the termination condition
  */
-Mat<> newton(std::function<Mat<>(Mat<>)> error, std::function<Mat<dyn, dyn>(Mat<>)> jacobian, Mat<> guess, Root_options options);
+Mat<> newton(std::function<Mat<dyn, dyn>(Mat<>)> error_jacobian, Mat<> guess, Root_options options);
 
 /*! \brief Multiply every dimension of a (flattened) N-dimensional array by a matrix.
  *

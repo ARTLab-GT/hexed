@@ -55,12 +55,12 @@ double bisection(std::function<double(double)> error, std::array<double, 2> boun
   return midpoint;
 }
 
-Mat<> newton(std::function<Mat<>(Mat<>)> error, std::function<Mat<dyn, dyn>(Mat<>)> jacobian, Mat<> guess, Root_options opts)
+Mat<> newton(std::function<Mat<dyn, dyn>(Mat<>)> error_jacobian, Mat<> guess, Root_options opts)
 {
   for (int iter = 0; iter < opts.max_iters; ++iter) {
-    Mat<> err = error(guess);
-    if (err.norm() < opts.ftol) break;
-    Mat<> update = -jacobian(guess).partialPivLu().solve(err);
+    Mat<dyn, dyn> err_jac = error_jacobian(guess);
+    if (err_jac(all, 0).norm() < opts.ftol) break;
+    Mat<> update = -err_jac(all, Eigen::seqN(1, err_jac.rows())).partialPivLu().solve(err_jac(all, 0));
     guess += update;
     if (update.norm() < opts.xtol) break;
   }

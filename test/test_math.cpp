@@ -49,19 +49,15 @@ TEST_CASE("bisection root finder")
 
 TEST_CASE("newton root finder")
 {
-  auto error = [](hexed::Mat<> x) {
-    hexed::Mat<> err(3);
-    err << std::pow(2., x(0)) - 8., 1.5 - x(0)*x(1), .3*x(0) + .4*x(1) + .5*x(2);
-    return err;
+  auto error_jacobian = [](hexed::Mat<> x) {
+    hexed::Mat<hexed::dyn, hexed::dyn> err_jac(3, 4);
+    err_jac(hexed::all, 0) << std::pow(2., x(0)) - 8., 1.5 - x(0)*x(1), .3*x(0) + .4*x(1) + .5*x(2);
+    err_jac(hexed::all, Eigen::seqN(1, 3)) << std::log(2.)*std::pow(2., x(0)), 0, 0,
+                                              -x(1), -x(0), 0,
+                                              .3, .4, .5;
+    return err_jac;
   };
-  auto jacobian = [](hexed::Mat<> x) {
-    hexed::Mat<hexed::dyn, hexed::dyn> jac(3, 3);
-    jac << std::log(2.)*std::pow(2., x(0)), 0, 0,
-           -x(1), -x(0), 0,
-           .3, .4, .5;
-    return jac;
-  };
-  auto soln = hexed::math::newton(error, jacobian, hexed::Mat<3>{.1, .1, .1}, {.xtol = 1e-12});
+  auto soln = hexed::math::newton(error_jacobian, hexed::Mat<3>{.1, .1, .1}, {.xtol = 1e-12});
   REQUIRE_THAT(soln, Catch::Matchers::RangeEquals(hexed::Mat<3>{3., .5, -2.2}, hexed::math::Approx_equal(0, 1e-10)));
 }
 

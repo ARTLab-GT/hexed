@@ -104,21 +104,36 @@ std::vector<double> Occt::Geom::intersections(Mat<> point0, Mat<> point1)
   HEXED_ASSERT(point1.size() == nd, format_str(100, "`point1` must be %iD", nd));
   auto inters = _simplex->simplex_intersections(point0, point1);
   if (nd == 2) return inters.first;
-  Mat<3> normalized = (point0 - point1).normalized();
+  Mat<3> diff = point1 - point0;
   for (unsigned i_inter = 0; i_inter < inters.first.size(); ++i_inter) {
     int i_tri = inters.second[i_inter];
     Mat<2, 3> simplex_params = _simplex3->parameters()[i_tri];
     Mat<2> params; params.setZero();
     for (int i_vert = 0; i_vert < 3; ++i_vert) params += .3*simplex_params(all, i_vert);
     auto& surf = _surfaces[_simplex3->faces()[i_tri]];
-    if (!(surf->Continuity() >= GeomAbs_C1)) std::cerr << "WARNING: Surface is not C1 continuous! Falling back on triangulated intersections.\n";
-    gp_Pnt point;
-    gp_Vec vec0, vec1;
-    surf->D1(params[0], params[1], point, vec0, vec1);
-    Mat<3> pos {point.X(), point.Y(), point.Z()};
-    double err = (pos - pos.dot(normalized)*normalized).squaredNorm();
-    pos *= 1e-3;
-    std::cout << pos.transpose() << "\n";
+    if (!(surf->Continuity() >= GeomAbs_C1)) {
+      std::cerr << "WARNING: Surface is not C1 continuous! Falling back on triangulated intersections.\n"
+                << "If you see this warning, please contact Micaiah: https://artlab-gt.github.io/hexed/index.html#Contact\n";
+    } else {
+      auto error_jacobian = [point0, diff, &surf](Mat<> guess){
+        Mat<dyn, dyn> err_jac(3, 4);
+        gp_Pnt point;
+        gp_Vec vecs[2];
+        surf->D1(guess(0), guess(1), point, vecs[0], vecs[1]);
+        Mat<3> pos {point.X(), point.Y(), point.Z()};
+        pos *= 1e-3;
+        err_jac(all, 0) = pos - (point0 + guess(2)*diff);
+        for (int i_param = 0; i_param < 2; ++i_param) {
+          Mat<3> deriv {vecs[i_param].X(), vecs[i_param].Y(), vecs[i_param].Z()};
+          err_jac(all, 1 + i_param) = deriv*1e-3;
+        };
+        err_jac(all, 3) = -diff;
+        return err_jac;
+      };
+      Mat<> soln = math::newton(error_jacobian, Mat<3>{params[0], params[1], inters.first[i_inter]}, {.xtol = 1e-10, .max_iters = 100});
+      if (std::abs(soln(2) - inters.first[i_inter]) < 0.5) inters.first[i_inter] = soln(2);
+      else std::cerr << "WARNING: Intersection calculation by Newton's method failed! Falling back on triangulated intersections.\n";
+    }
   }
   return inters.first;
 }
