@@ -6,6 +6,7 @@
 namespace hexed
 {
 
+//! \brief computes the area of a triangle
 template <int n_dim>
 double triangle_area(Mat<n_dim, 3> triangle)
 {
