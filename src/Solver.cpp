@@ -162,7 +162,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   params{implicit ? Linearized::storage_start + Linearized::n_storage : 2, n_dim + 2, n_dim, row_size},
   acc_mesh{new Accessible_mesh(params, root_mesh_size)},
   basis{row_size},
-  stopwatch{"(element*iteration)"},
+  stopwatch{"(element*update)"},
   use_art_visc{false},
   fix_admis{false},
   av_rs{row_size},
@@ -203,7 +203,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   std::string unit = "(element*(time integration stage))";
   stopwatch.children.emplace("prolong/restrict", unit);
   stopwatch.children.emplace("fix admis.", "(element*(fix admis. iter))");
-  stopwatch.children.at("fix admis.").children.emplace("check admis.", "(element*iteration)");
+  stopwatch.children.at("fix admis.").children.emplace("check admis.", "(element*update)");
   stopwatch.children.emplace("set art visc", stopwatch.work_unit_name);
   stopwatch.children.at("set art visc").children.emplace("initialize", stopwatch.work_unit_name);
   stopwatch.children.at("set art visc").children.emplace("advection", stopwatch.work_unit_name);
@@ -861,8 +861,6 @@ void Solver::synch_extruded_uncert()
 void Solver::update()
 {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
-  auto& elems = acc_mesh->elements();
-
   for (int i_flow = 0; i_flow < _namespace->lookup<int>("flow_iters").value(); ++i_flow)
   {
     // compute time step
@@ -873,6 +871,7 @@ void Solver::update()
     int n_preti = 1 + std::max(0, int(_preti_masks.size()) - 1)*(_namespace->lookup<int>("preti").value());
     for (int i_preti = 0; i_preti < n_preti; ++i_preti) {
       _preti_level = i_preti > 0;
+      Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
       // run chebyshev iterations
       for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
       {
@@ -892,12 +891,14 @@ void Solver::update()
             bool(_namespace->lookup<int>("use_filter").value()),
           };
           apply_state_bcs();
-          Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
           if (use_ldg() && !i) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond);
           else compute_euler(km, opts);
           // note that function call must come first to ensure it is evaluated despite short-circuiting
           fixed = fix_admissibility(_namespace->lookup<double>("fix_admis_max_safety").value()) || fixed;
         }
+        stopwatch.work_units_completed += km.elems.size();
+        stopwatch.children.at("cartesian").work_units_completed += km.car_elems.size();
+        stopwatch.children.at("deformed" ).work_units_completed += km.def_elems.size();
         if (fixed) break;
       }
 
@@ -913,9 +914,6 @@ void Solver::update()
   _namespace->assign("iteration", _namespace->lookup<int>("iteration").value() + 1);
   _namespace->assign("wall_time", status.wall_time());
   ++status.iteration;
-  stopwatch.work_units_completed += elems.size();
-  stopwatch.children.at("cartesian").work_units_completed += acc_mesh->cartesian().elements().size();
-  stopwatch.children.at("deformed" ).work_units_completed += acc_mesh->deformed ().elements().size();
   stopwatch.stopwatch.pause();
 }
 
