@@ -730,9 +730,7 @@ class Spatial
         // fetch face data
         for (int i_side = 0; i_side < 2; ++i_side) {
           double* f = con.state(i_side, true);
-          for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
-            face[i_side][i_dof] = f[i_dof];
-          }
+          for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) face[i_side][i_dof] = f[i_dof];
         }
         Face_permutation<n_dim, row_size> perm(dir, face[1]); // only used for deformed
         if constexpr (is_deformed) {
@@ -743,22 +741,15 @@ class Spatial
         for (int i_qpoint = 0; i_qpoint < n_fqpoint; ++i_qpoint) {
           for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
             double avg = 0;
-            for (int i_side = 0; i_side < 2; ++i_side) {
-              avg += .5*sign[i_side]*face[i_side][i_var*n_fqpoint + i_qpoint];
-            }
-            for (int i_side = 0; i_side < 2; ++i_side) {
-              double& f = face[i_side][i_var*n_fqpoint + i_qpoint];
-              f = sign[i_side]*avg - f;
-            }
+            for (int i_side = 0; i_side < 2; ++i_side) avg += .5*sign[i_side]*face[i_side][i_var*n_fqpoint + i_qpoint];
+            for (int i_side = 0; i_side < 2; ++i_side) face[i_side][i_var*n_fqpoint + i_qpoint] = sign[i_side]*avg;
           }
         }
         if constexpr (is_deformed) perm.restore(); // restore data of face 1 to original order
         // write data to actual face storage on heap
         for (int i_side = 0; i_side < 2; ++i_side) if (con.mask(i_side) >= _mask) {
           double* f = con.state(i_side, true);
-          for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
-            f[i_dof] = face[i_side][i_dof];
-          }
+          for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) f[i_dof] = face[i_side][i_dof];
         }
       }
     }
