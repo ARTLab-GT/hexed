@@ -104,7 +104,7 @@ for is_3d in [0, 1]:
     plt.sca(axs[1 - is_3d][0])
     plot(lambda mark: mark.elapsed_time, "total execution time (s)", benchmarks_by_dim[is_3d])
     plt.sca(axs[1 - is_3d][1])
-    plot(lambda mark: mark.timing.time/mark.timing.n_units, "kernel performance (s/iteration/element)", benchmarks_by_dim[is_3d])
+    plot(lambda mark: mark.timing.time/mark.timing.n_units, "kernel performance (s/update/element)", benchmarks_by_dim[is_3d])
     axs[1 - is_3d][1].legend()
 plt.gcf().set_size_inches(16, 16)
 if show:

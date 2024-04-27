@@ -3432,7 +3432,7 @@ output:
 wall clock time = 54.6372s = 0.91062min = 0.015177hr
 
 performance summary:
-311500 (element*iteration)s completed in 44.8867 s at 0.000144099 s / (element*iteration).
+3115000 (element*update)s completed in 44.8867 s at 0.0000144099 s / (element*update).
     boundary conditions: 4743318 (boundary connection)*(time integration stage)s completed in 6.10892 s at 1.2879e-06 s / (boundary connection)*(time integration stage).
     cartesian: 196000 (element*iteration)s completed in 12.6987 s at 6.47892e-05 s / (element*iteration).
         compute time step: 1960000 (element*iteration)s completed in 1.4864 s at 7.58368e-07 s / (element*iteration).
@@ -3636,7 +3636,7 @@ output:
 wall clock time = 178.485s = 2.97476min = 0.0495793hr
 
 performance summary:
-311500 (element*iteration)s completed in 159.384 s at 0.000511667 s / (element*iteration).
+3115000 (element*update)s completed in 159.384 s at 0.0000511667 s / (element*update).
     boundary conditions: 4743318 (boundary connection)*(time integration stage)s completed in 18.9572 s at 3.99662e-06 s / (boundary connection)*(time integration stage).
     cartesian: 196000 (element*iteration)s completed in 40.1031 s at 0.000204608 s / (element*iteration).
         compute time step: 1960000 (element*iteration)s completed in 3.09637 s at 1.57978e-06 s / (element*iteration).
@@ -4399,7 +4399,7 @@ output:
 wall clock time = 144.181s = 2.40301min = 0.0400502hr
 
 performance summary:
-311500 (element*iteration)s completed in 125.558 s at 0.000403075 s / (element*iteration).
+3115000 (element*update)s completed in 125.558 s at 0.0000403075 s / (element*update).
     boundary conditions: 4743318 (boundary connection)*(time integration stage)s completed in 18.1457 s at 3.82553e-06 s / (boundary connection)*(time integration stage).
     cartesian: 196000 (element*iteration)s completed in 32.7187 s at 0.000166932 s / (element*iteration).
         compute time step: 1960000 (element*iteration)s completed in 2.98351 s at 1.5222e-06 s / (element*iteration).
@@ -4603,7 +4603,7 @@ output:
 wall clock time = 54.0797s = 0.901328min = 0.0150221hr
 
 performance summary:
-311500 (element*iteration)s completed in 44.8959 s at 0.000144128 s / (element*iteration).
+3115000 (element*update)s completed in 44.8959 s at 0.0000144128 s / (element*update).
     boundary conditions: 4743318 (boundary connection)*(time integration stage)s completed in 6.12707 s at 1.29173e-06 s / (boundary connection)*(time integration stage).
     cartesian: 196000 (element*iteration)s completed in 12.7153 s at 6.48738e-05 s / (element*iteration).
         compute time step: 1960000 (element*iteration)s completed in 1.4858 s at 7.58059e-07 s / (element*iteration).
@@ -4807,7 +4807,7 @@ output:
 wall clock time = 143.717s = 2.39529min = 0.0399215hr
 
 performance summary:
-311500 (element*iteration)s completed in 124.521 s at 0.000399747 s / (element*iteration).
+3115000 (element*update)s completed in 124.521 s at 0.0000399747 s / (element*update).
     boundary conditions: 4742844 (boundary connection)*(time integration stage)s completed in 18.4103 s at 3.88171e-06 s / (boundary connection)*(time integration stage).
     cartesian: 196000 (element*iteration)s completed in 33.3462 s at 0.000170134 s / (element*iteration).
         compute time step: 1960000 (element*iteration)s completed in 2.95316 s at 1.50672e-06 s / (element*iteration).
@@ -5011,7 +5011,7 @@ output:
 wall clock time = 56.7483s = 0.945805min = 0.0157634hr
 
 performance summary:
-311500 (element*iteration)s completed in 46.7747 s at 0.000150159 s / (element*iteration).
+3115000 (element*update)s completed in 46.7747 s at 0.0000150159 s / (element*update).
     boundary conditions: 4742844 (boundary connection)*(time integration stage)s completed in 6.51448 s at 1.37354e-06 s / (boundary connection)*(time integration stage).
     cartesian: 196000 (element*iteration)s completed in 13.3171 s at 6.79443e-05 s / (element*iteration).
         compute time step: 1960000 (element*iteration)s completed in 1.52481 s at 7.77962e-07 s / (element*iteration).
@@ -5215,7 +5215,7 @@ output:
 wall clock time = 146.058s = 2.43431min = 0.0405718hr
 
 performance summary:
-311500 (element*iteration)s completed in 125.716 s at 0.000403582 s / (element*iteration).
+3115000 (element*update)s completed in 125.716 s at 0.0000403582 s / (element*update).
     boundary conditions: 4742844 (boundary connection)*(time integration stage)s completed in 18.8053 s at 3.96499e-06 s / (boundary connection)*(time integration stage).
     cartesian: 196000 (element*iteration)s completed in 33.7407 s at 0.000172146 s / (element*iteration).
         compute time step: 1960000 (element*iteration)s completed in 2.97536 s at 1.51804e-06 s / (element*iteration).
@@ -5419,7 +5419,7 @@ output:
 wall clock time = 59.3793s = 0.989655min = 0.0164943hr
 
 performance summary:
-311500 (element*iteration)s completed in 48.8567 s at 0.000156843 s / (element*iteration).
+3115000 (element*update)s completed in 48.8567 s at 0.0000156843 s / (element*update).
     boundary conditions: 4742844 (boundary connection)*(time integration stage)s completed in 6.56951 s at 1.38514e-06 s / (boundary connection)*(time integration stage).
     cartesian: 196000 (element*iteration)s completed in 14.0632 s at 7.17509e-05 s / (element*iteration).
         compute time step: 1960000 (element*iteration)s completed in 1.60545 s at 8.19107e-07 s / (element*iteration).
@@ -5623,7 +5623,7 @@ output:
 wall clock time = 143.874s = 2.39789min = 0.0399649hr
 
 performance summary:
-311500 (element*iteration)s completed in 124.361 s at 0.000399232 s / (element*iteration).
+3115000 (element*update)s completed in 124.361 s at 0.0000399232 s / (element*update).
     boundary conditions: 4742844 (boundary connection)*(time integration stage)s completed in 17.9008 s at 3.77427e-06 s / (boundary connection)*(time integration stage).
     cartesian: 196000 (element*iteration)s completed in 33.4033 s at 0.000170425 s / (element*iteration).
         compute time step: 1960000 (element*iteration)s completed in 2.98499 s at 1.52295e-06 s / (element*iteration).
