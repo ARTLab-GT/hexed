@@ -15,6 +15,9 @@ class Kernel_element
 {
   public:
   int record = 0; //!< for algorithms to book-keep general information
+  virtual bool is_fringe(int mask) const = 0;
+  virtual int fringe_dim() const = 0;
+  virtual bool fringe_sign() const = 0;
   //! \brief pointer to the data where the state variables are stored
   //! \details includes any non-conservation variables such as artificial viscosity coefficient
   virtual double* state() = 0;
