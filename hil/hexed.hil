@@ -133,7 +133,7 @@ set_cheby = {
     }
 }
 
-preti_initial_iters = 10000
+preti_initial_iters = 2000
 set_preti = {
     iterate = iterate + {
         case0 = {}

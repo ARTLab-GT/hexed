@@ -17,6 +17,7 @@ struct Kernel_options
   int i_stage;
   bool compute_residual = false;
   bool use_filter = false;
+  int mask = 0;
 };
 
 void compute_euler(Kernel_mesh, Kernel_options);
