@@ -19,6 +19,7 @@ target_thickness = .01
 target_reynolds = (5/target_thickness)^2
 freestream_density = target_reynolds*1.8e-5/freestream_speed
 
+$set_preti
 print_freq = 500
 vis_freq = 30000
 done = {normalized_residual < 1e-4}
@@ -28,3 +29,7 @@ $mesh
 init_state
 $run
 $print_force
+vis_csv = true
+vis_xdmf = false
+vis_field = false
+visualize
