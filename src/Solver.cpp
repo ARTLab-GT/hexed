@@ -882,13 +882,14 @@ void Solver::update()
         // compute inviscid update
         for (int i = 0; i < 2; ++i) {
           Kernel_options opts {
-            stopwatch.children.at("cartesian"),
-            stopwatch.children.at("deformed" ),
-            stopwatch.children.at("prolong/restrict"),
-            dt,
-            i,
-            false,
-            bool(_namespace->lookup<int>("use_filter").value()),
+            .sw_car = stopwatch.children.at("cartesian"),
+            .sw_def = stopwatch.children.at("deformed" ),
+            .sw_pr = stopwatch.children.at("prolong/restrict"),
+            .dt = dt,
+            .i_stage = i,
+            .compute_residual = false,
+            .use_filter = bool(_namespace->lookup<int>("use_filter").value()),
+            .mask = i_preti,
           };
           apply_state_bcs();
           if (use_ldg() && !i) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond);
