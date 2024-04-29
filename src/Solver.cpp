@@ -184,6 +184,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("buffer_dist", .8*std::sqrt(params.n_dim));
   _namespace->assign_default("n_cheby_flow", 1);
   _namespace->assign_default("n_cheby_av", 1);
+  _namespace->assign_default("cheby_safety", .9); // safety factor to apply to Chebyshev-acceleration
   _namespace->assign_default("preti", 0);
   _namespace->assign_default("av_advect_iters", 1); // number of advection iterations to run each time `update_art_visc_smoothness` is called
   _namespace->assign_default("av_diff_iters", 1); // number of diffusion iterations to run each time `update_art_visc_smoothness` is called
@@ -457,6 +458,7 @@ void Solver::diffuse_art_visc(double diff_time)
   // evaluate CFL condition
   double diff_safety = _namespace->lookup<double>("av_diff_max_safety").value();
   double n_cheby = _namespace->lookup<double>("n_cheby_av").value();
+  double cheby_safety = _namespace->lookup<double>("cheby_safety").value();
   Kernel_options opts {
     stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"),
     stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed"),
@@ -473,7 +475,7 @@ void Solver::diffuse_art_visc(double diff_time)
   // perform pseudotime iteration
   for (int i_iter = 0; i_iter < _namespace->lookup<int>("av_diff_iters").value(); ++i_iter) {
     for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
-      double s = math::chebyshev_step(n_cheby, i_cheby);
+      double s = math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
       apply_avc_diff_bcs();
       opts.dt = s;
       compute_smooth_av(_kernel_mesh(), opts, [this](){apply_avc_diff_flux_bcs();}, diff_time, s);
@@ -866,7 +868,8 @@ void Solver::update()
     // compute time step
     double safety = _namespace->lookup<double>("max_safety").value();
     double n_cheby = _namespace->lookup<double>("n_cheby_flow").value();
-    double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1);
+    double cheby_safety = _namespace->lookup<double>("cheby_safety").value();
+    double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1, cheby_safety);
     double dt = 0;
     int n_preti = 1 + std::max(0, int(_preti_masks.size()) - 1)*(_namespace->lookup<int>("preti").value());
     for (int i_preti = 0; i_preti < n_preti; ++i_preti) {
@@ -876,7 +879,7 @@ void Solver::update()
       for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
       {
         double nominal_dt = std::min(max_dt(safety/max_cheby, safety), _namespace->lookup<double>("max_time_step").value());
-        dt = nominal_dt*math::chebyshev_step(n_cheby, i_cheby);
+        dt = nominal_dt*math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
         // record reference state for residual calculation
         bool fixed = false;
         // compute inviscid update
@@ -1108,7 +1111,8 @@ bool Solver::fix_admissibility(double stability_ratio)
     }
     double safety = _namespace->lookup<double>("max_safety").value();
     double n_cheby = _namespace->lookup<double>("n_cheby_flow").value();
-    double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1);
+    double cheby_safety = _namespace->lookup<double>("cheby_safety").value();
+    double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1, cheby_safety);
     max_dt(safety/max_cheby, safety);
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -1366,7 +1370,8 @@ void Solver::vis_lts_constraints(std::string format, std::string name, int n_sam
   int nf = params.n_dof();
   int nq = params.n_qpoint();
   double n_cheby = _namespace->lookup<double>("n_cheby_flow").value();
-  double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1);
+  double cheby_safety = _namespace->lookup<double>("cheby_safety").value();
+  double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1, cheby_safety);
   // write local time steps for convection and diffusion to the mass and energy of the reference state.
   // Reference state is used for storage because `Element::time_step_scale` only has space for one scalar
   for (int i_term = 0; i_term < 2; ++i_term) {

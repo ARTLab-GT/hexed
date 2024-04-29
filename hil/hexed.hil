@@ -89,7 +89,7 @@ air_cond_offset = 194.
 air_viscosity = {ref_value = air_visc_ref; ref_temperature = air_visc_ref_temp; offset = air_visc_offset}
 air_conductivity = {ref_value = air_cond_ref; ref_temperature = air_cond_ref_temp; offset = air_cond_offset}
 
-shock_sub_iters = 10; {number of sub-iterations to run in each nominal iteration to get efficient Chebyshev-accelerated diffusion}
+shock_sub_iters = 12; {number of sub-iterations to run in each nominal iteration to get efficient Chebyshev-accelerated diffusion}
 set_shock = {
     art_visc_width = (mesh_extreme01 - mesh_extreme00)*2.^-init_ref_level
     fix_therm_admis = true
