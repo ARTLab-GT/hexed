@@ -101,9 +101,9 @@ Eigen::MatrixXd orthonormal (Eigen::MatrixXd basis, int i_dim)
   }
 }
 
-double chebyshev_step(int n_steps, int i_step)
+double chebyshev_step(int n_steps, int i_step, double safety)
 {
-  return 1/(1 - std::cos((n_steps - i_step - 0.5)*M_PI/n_steps));
+  return 1/(1 - std::cos((n_steps - i_step - 0.5)*M_PI/n_steps)/(1 + (1/safety - 1)/n_steps/n_steps));
 }
 
 }
