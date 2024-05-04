@@ -320,15 +320,12 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
     {"&" , {5, _comparison_op<_and<double>, _and<int>>}},
     {"|" , {5, _comparison_op<_or<double>, _or<int>>}},
   },
+  _input(100),
   variables{std::make_shared<Namespace>()},
   printer{std::make_shared<Stream_printer>()}
 {
   // create some Heisenberg variables
-  variables->create("ask", new Namespace::Heisenberg<std::string>([]() {
-    std::string input;
-    std::getline(std::cin, input);
-    return input;
-  }));
+  variables->create("ask", new Namespace::Heisenberg<std::string>([this]() {return _input.get();}));
   variables->create("exit", new Namespace::Heisenberg<std::string>([this]() {
     _text.clear();
     return "";

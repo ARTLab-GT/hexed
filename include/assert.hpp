@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <omp.h>
 #include "config.hpp"
+#include "utils.hpp"
 
 //! \file assert.hpp utilities for custom assertions
 
@@ -64,7 +65,11 @@ void throw_critical(const char* message)
                            "technical details: assertion `%s` failed in `%s`.\n" \
                            "Assertion invoked at line %d of %s in function %s.", \
              std::string(message).c_str(), #expression, __FUNCTION__, __LINE__, __FILE__, __PRETTY_FUNCTION__); \
-    assert::throw_critical<__VA_ARGS__>(buffer); \
+    assert::throw_critical<__VA_ARGS__>(format_str(1000, \
+      "%s\n" \
+      "technical details: assertion `%s` failed in `%s`.\n" \
+      "Assertion invoked at line %d of %s in function %s.", \
+      std::string(message).c_str(), #expression, __FUNCTION__, __LINE__, __FILE__, __PRETTY_FUNCTION__).c_str()); \
   } \
 }
 

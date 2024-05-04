@@ -5,6 +5,7 @@ Basis.cpp
 Boundary_condition.cpp
 Boundary_func.cpp
 Case.cpp
+Command_input.cpp
 Csv.cpp
 connection.cpp
 criteria.cpp

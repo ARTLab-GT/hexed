@@ -7,6 +7,7 @@
 #include "Namespace.hpp"
 #include "Lock.hpp"
 #include "Printer.hpp"
+#include "Command_input.hpp"
 
 namespace hexed
 {
@@ -69,6 +70,7 @@ class Interpreter
   std::map<std::string, std::function<_Dynamic_value(_Dynamic_value)>> _un_ops;
   std::map<std::string, _Binary_op> _bin_ops;
   Lock _lock;
+  Command_input _input;
 
   public:
   static const std::string builtin_file;
