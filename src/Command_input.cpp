@@ -39,6 +39,7 @@ void read_char(char* c, int n)
 
 std::string Command_input::get()
 {
+  while (_history.size() > size_t(_n_hist)) _history.pop_back();
   _history.emplace_front();
   auto display = _history.begin();
   auto begin = _history.begin();
@@ -89,8 +90,6 @@ std::string Command_input::get()
         if (pos) --pos;
       } else HEXED_ASSERT(false, format_str(100, "could not parse escape sequence `%s` in keyboard input", escape.c_str()));
     }
-    //printf("%i\x1b[%iG\x1b[K\x1b[0G", line_start, line_start);
-    //printf("\x1b[%iG%s\x1b[%iG", line_start, "foo", line_start + pos);
     printf("\x1b[%iG\x1b[K%s\x1b[%iG", line_start, display->c_str(), line_start + pos);
     std::cout << std::flush;
   } while (c != '\n' && c != EOF);
