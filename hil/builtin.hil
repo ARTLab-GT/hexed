@@ -49,6 +49,7 @@ quit = {hexed_quit_repl = true; {}}
 repl = {
     while = {!hexed_quit_repl}
     do = {
+        hexed_result = {}
         except = {println exception;}
         print {#+^$ }
         hexed_repl_cmd = ask
@@ -57,7 +58,6 @@ repl = {
         hexed_repl_case0 = {println hexed_result}
         hexed_repl_case1 = {}
         $$({hexed_repl_case} + (hexed_result == {}))
-        hexed_result = {}
     }
     $loop
     except = {}
