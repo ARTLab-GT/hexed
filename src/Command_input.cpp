@@ -42,6 +42,15 @@ std::string Command_input::get()
   _history.emplace_front();
   auto display = _history.begin();
   auto begin = _history.begin();
+  // get current cursor position
+  std::cout << "\x1b[6n" << std::flush;
+  char response [100] {};
+  for (char* data = response;; ++data) {
+    read_char(data, 1);
+    if (*data == 'R') break;
+  }
+  HEXED_ASSERT(response[0] == 27 && response[1] == '[', "attempt to obtain cursor position received unintelligible response");
+  int line_start = std::stoi(std::find(response, response + 100, ';') + 1);
   char c;
   int pos = 0;
   auto modify = [&]() {
@@ -80,7 +89,10 @@ std::string Command_input::get()
         if (pos) --pos;
       } else HEXED_ASSERT(false, format_str(100, "could not parse escape sequence `%s` in keyboard input", escape.c_str()));
     }
-    std::cout << "\x1b[2K\x1b[0G" << *display << std::string(display->size() - pos, '\b') << std::flush;;
+    //printf("%i\x1b[%iG\x1b[K\x1b[0G", line_start, line_start);
+    //printf("\x1b[%iG%s\x1b[%iG", line_start, "foo", line_start + pos);
+    printf("\x1b[%iG\x1b[K%s\x1b[%iG", line_start, display->c_str(), line_start + pos);
+    std::cout << std::flush;
   } while (c != '\n' && c != EOF);
   std::cout << std::endl;
   std::string input = *display;
