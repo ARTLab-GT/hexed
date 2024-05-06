@@ -13,14 +13,14 @@ class Printer
 {
   public:
   virtual ~Printer() = default;
-  virtual void operator()(std::string) = 0;
+  virtual void operator()(std::string, bool emph = false) = 0;
 };
 
 class Compound_printer : public Printer
 {
   public:
   std::vector<std::shared_ptr<Printer>> printers;
-  inline void operator()(std::string message) override {for (auto& printer : printers) (*printer)(message);}
+  inline void operator()(std::string message, bool emph = false) override {for (auto& printer : printers) (*printer)(message, emph);}
 };
 
 //! \brief prints to a `std::ostream`.
@@ -57,19 +57,22 @@ class Stream_printer : public Printer
     bool light;
     bool background;
   };
-  Stream_printer(std::ostream& stream = std::cout, Format format = {
+  Stream_printer(std::ostream& stream = std::cout, Format emph_format = {
     .type = unspecified_type,
     .color = unspecified_color,
     .light = false,
     .background = false})
   : _stream{stream}, _format_code(""), _reset_code("")
   {
-    if (!(format.type == unspecified_type && format.color == unspecified_color)) {
-      _format_code = format_str(100, "\x1b[%i;%i%im", format.type, 3 + 6*format.light + format.background, format.color);
+    if (!(emph_format.type == unspecified_type && emph_format.color == unspecified_color)) {
+      _format_code = format_str(100, "\x1b[%i;%i%im", emph_format.type, 3 + 6*emph_format.light + emph_format.background, emph_format.color);
       _reset_code = "\x1b[0m";
     }
   }
-  inline void operator()(std::string message) override {_stream << _format_code << message << _reset_code << std::flush;}
+  inline void operator()(std::string message, bool emph = false) override
+  {
+    _stream << (emph ? _format_code : "") << message << (emph ? _reset_code : "") << std::flush;
+  }
 };
 
 struct Printer_set

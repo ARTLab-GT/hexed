@@ -914,7 +914,6 @@ void Solver::update()
   }
   _preti_level = 0;
 
-  _namespace->assign("iteration", _namespace->lookup<int>("iteration").value() + 1);
   _namespace->assign("wall_time", status.wall_time());
   ++status.iteration;
   stopwatch.stopwatch.pause();
@@ -1042,6 +1041,7 @@ bool Solver::fix_admissibility(double stability_ratio)
       n_iters = std::numeric_limits<int>::max();
     }
     if (iter == 0) {
+      _printer->warn("Warning: ", true);
       _printer->warn(format_str(200, "Thermodynamically inadmissible state detected (solver iteration %i). Attempting to fix...\n",
                                 _namespace->lookup<int>("iteration").value()));
     }

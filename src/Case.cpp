@@ -477,6 +477,7 @@ Case::Case(std::string input_script)
     int print_freq = _vari("print_freq").value();
     int n = iter ? print_freq - iter%print_freq : 1;
     for (int i = 0; i < n; ++i) {
+      ++iter;
       try {
         if (_vari("diffusive_admissibility").value()) _solver().set_art_visc_admis();
         if (_vari("elementwise_art_visc").value()) {
@@ -488,11 +489,14 @@ Case::Case(std::string input_script)
         }
         _solver().update();
       } catch (const assert::Numerical_exception& except) {
-        _printers->error("Numerical exception: " + std::string(except.what()) + "\nTerminating simulation.\n");
+        _printers->error("Numerical exception: ", true);
+        _printers->error(except.what());
+        _printers->error("\nTerminating simulation.\n", true);
         _inter.variables->assign("failed", 1);
         break;
       }
     }
+    _inter.variables->assign("iteration", iter);
     auto sub = _inter.make_sub();
     auto vals = _monitor_expr->eval(sub);
     for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
