@@ -2,6 +2,7 @@
 #define HEXED_PRINTER_HPP_
 
 #include <iostream>
+#include "utils.hpp"
 
 namespace hexed
 {
@@ -15,12 +16,60 @@ class Printer
   virtual void print(std::string) = 0;
 };
 
-//! \brief prints to a collection of `std::ostream`s.
-class Stream_printer : public Printer
+class Compound_printer : public Printer
 {
   public:
-  std::vector<std::ostream*> streams {&std::cout}; //!< \note does not own
-  inline void print(std::string message) override {for (auto stream : streams) (*stream) << message << std::flush;}
+  std::vector<std::shared_ptr<Printer>> printers;
+  inline void print(std::string message) override {for (auto& printer : printers) printer->print(message);}
+};
+
+//! \brief prints to a `std::ostream`.
+class Stream_printer : public Printer
+{
+  std::ostream& _stream;
+  std::string _format_code;
+  std::string _reset_code;
+  public:
+  enum format_type {
+    unspecified_type = -1,
+    bold = 1,
+    dim = 2,
+    underline = 4,
+    blink = 5,
+    reverse = 7,
+    hidden = 8,
+  };
+  enum format_color {
+    unspecified_color = -1,
+    default_color = 9,
+    black = 0,
+    red = 1,
+    green = 2,
+    yellow = 3,
+    blue = 4,
+    magenta = 5,
+    cyan = 6,
+    gray = 7,
+  };
+  struct Format {
+    format_type type;
+    format_color color;
+    bool light;
+    bool background;
+  };
+  Stream_printer(std::ostream& stream = std::cout, Format format = {
+    .type = unspecified_type,
+    .color = unspecified_color,
+    .light = false,
+    .background = false})
+  : _stream{stream}, _format_code(""), _reset_code("")
+  {
+    if (!(format.type == unspecified_type && format.color == unspecified_color)) {
+      _format_code = format_str(100, "\x1b[%i;%i%im", format.type, 3 + 6*format.light + format.background, format.color);
+      _reset_code = "\x1b[0m";
+    }
+  }
+  inline void print(std::string message) override {_stream << _format_code << message << _reset_code << std::flush;}
 };
 
 }

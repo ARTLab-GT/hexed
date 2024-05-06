@@ -168,8 +168,9 @@ Case::Case(std::string input_script)
   _inter.variables->create("create_solver", new Namespace::Heisenberg<int>([this]() {
     // basic IO setup
     _output_file.reset(new std::ofstream(_vars("working_dir").value() + "output.txt"));
-    auto printer = std::make_shared<Stream_printer>();
-    printer->streams.emplace_back(_output_file.get());
+    auto printer = std::make_shared<Compound_printer>();
+    printer->printers.emplace_back(std::make_shared<Stream_printer>());
+    printer->printers.emplace_back(std::make_shared<Stream_printer>(*_output_file));
     _inter.printer = printer;
     char utc [100];
     std::time_t time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
