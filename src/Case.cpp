@@ -168,14 +168,15 @@ Case::Case(std::string input_script)
   _inter.variables->create("create_solver", new Namespace::Heisenberg<int>([this]() {
     // basic IO setup
     _output_file.reset(new std::ofstream(_vars("working_dir").value() + "output.txt"));
-    auto printer = std::make_shared<Compound_printer>();
-    printer->printers.emplace_back(std::make_shared<Stream_printer>());
-    printer->printers.emplace_back(std::make_shared<Stream_printer>(*_output_file));
-    _inter.printer = printer;
+    auto printers = std::make_shared<Printer_set>();
+    for (auto* printer : {&printers->info, &printers->warn, &printers->error}) {
+      printer->printers.emplace_back(std::make_shared<Stream_printer>(*_output_file));
+    }
+    _inter.printer = printers;
     char utc [100];
     std::time_t time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     std::strftime(utc, 100, "%Y-%m-%d %H:%M:%S", std::gmtime(&time));
-    printer->print(format_str(1000, "Commencing simulation with Hexed version %i.%i.%i (commit %s) at %s UTC (%i Unix Time).\n",
+    printers->info(format_str(1000, "Commencing simulation with Hexed version %i.%i.%i (commit %s) at %s UTC (%i Unix Time).\n",
                               config::version_major, config::version_minor, config::version_patch, config::commit.c_str(), utc, time));
     // setup actual solver
     auto n_dim = _inter.variables->lookup<int>("n_dim");
@@ -257,7 +258,7 @@ Case::Case(std::string input_script)
                                                                   sub.variables->lookup<double>("offset").value()));
       } else HEXED_ASSERT(false, format_str(200, "invalid transport model specification for %s", name));
     }
-    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, true, transport_models[0], transport_models[1], _inter.variables, printer));
+    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, true, transport_models[0], transport_models[1], _inter.variables, printers));
     _solver().mesh().add_tree(_make_extremal_bcs(), mesh_extremes(all, 0));
     _solver().set_fix_admissibility(_vari("fix_therm_admis").value());
     // create history monitors

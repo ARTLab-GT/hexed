@@ -13,14 +13,14 @@ class Printer
 {
   public:
   virtual ~Printer() = default;
-  virtual void print(std::string) = 0;
+  virtual void operator()(std::string) = 0;
 };
 
 class Compound_printer : public Printer
 {
   public:
   std::vector<std::shared_ptr<Printer>> printers;
-  inline void print(std::string message) override {for (auto& printer : printers) printer->print(message);}
+  inline void operator()(std::string message) override {for (auto& printer : printers) (*printer)(message);}
 };
 
 //! \brief prints to a `std::ostream`.
@@ -69,8 +69,23 @@ class Stream_printer : public Printer
       _reset_code = "\x1b[0m";
     }
   }
-  inline void print(std::string message) override {_stream << _format_code << message << _reset_code << std::flush;}
+  inline void operator()(std::string message) override {_stream << _format_code << message << _reset_code << std::flush;}
 };
+
+struct Printer_set
+{
+  Compound_printer info;
+  Compound_printer warn;
+  Compound_printer error;
+  Printer_set()
+  {
+    info.printers.emplace_back(std::make_shared<Stream_printer>());
+    warn.printers.emplace_back(std::make_shared<Stream_printer>(std::cerr, Stream_printer::Format{.color = Stream_printer::yellow, .light = true}));
+    error.printers.emplace_back(std::make_shared<Stream_printer>(std::cerr, Stream_printer::Format{.type = Stream_printer::bold,
+                                                                                                   .color = Stream_printer::red}));
+  }
+};
+
 
 }
 #endif

@@ -158,7 +158,7 @@ double Solver::max_dt(double msc, double msd)
 
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
                Transport_model viscosity_model, Transport_model thermal_conductivity_model,
-               std::shared_ptr<Namespace> space, std::shared_ptr<Printer> printer, bool implicit) :
+               std::shared_ptr<Namespace> space, std::shared_ptr<Printer_set> printer, bool implicit) :
   params{implicit ? Linearized::storage_start + Linearized::n_storage : 2, n_dim + 2, n_dim, row_size},
   acc_mesh{new Accessible_mesh(params, root_mesh_size)},
   basis{row_size},
@@ -1026,11 +1026,12 @@ bool Solver::fix_admissibility(double stability_ratio)
       n_iters = std::numeric_limits<int>::max();
     }
     if (iter == 0) {
-      _printer->print(format_str(200, "Thermodynamically inadmissible state detected (solver iteration %i). Attempting to fix...\n",
-                                 _namespace->lookup<int>("iteration").value()));
+      _printer->warn(format_str(200, "Thermodynamically inadmissible state detected (solver iteration %i). Attempting to fix...\n",
+                                _namespace->lookup<int>("iteration").value()));
     }
     auto bounds = bounds_field(State_variables(), 2*rs);
-    _printer->print(format_str(200, "    iteration %i: mass in [%e, %e]; energy in [%e, %e]\n", iter, bounds[nd][0], bounds[nd][1], bounds[nd + 1][0], bounds[nd + 1][1]));
+    _printer->warn(format_str(200, "    iteration %i: mass in [%e, %e]; energy in [%e, %e]\n",
+                              iter, bounds[nd][0], bounds[nd][1], bounds[nd + 1][0], bounds[nd + 1][1]));
     auto& elems = acc_mesh->elements();
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -1123,7 +1124,7 @@ bool Solver::fix_admissibility(double stability_ratio)
     }
   }
   --iter;
-  if (iter) _printer->print("done\n");
+  if (iter) _printer->warn("done\n");
   status.fix_admis_iters += iter;
   _namespace->assign("fix_iters", _namespace->lookup<int>("fix_iters").value() + iter);
   sw_fix.work_units_completed += acc_mesh->elements().size()*iter;

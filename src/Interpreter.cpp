@@ -288,7 +288,7 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
     }},
     {"print", [this](_Dynamic_value val) {
       auto s = _general_add({""}, val);
-      printer->print(s.s.value());
+      printer->info(s.s.value());
       return _Dynamic_value("");
     }},
     {"println", [this](_Dynamic_value val){return _un_ops["print"](_general_add(val, {"\n"}));}},
@@ -322,7 +322,7 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
   },
   _input(100),
   variables{std::make_shared<Namespace>()},
-  printer{std::make_shared<Stream_printer>()}
+  printer{std::make_shared<Printer_set>()}
 {
   // create some Heisenberg variables
   variables->create("ask", new Namespace::Heisenberg<std::string>([this]() {return _input.get();}));
