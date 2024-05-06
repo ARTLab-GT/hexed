@@ -252,13 +252,16 @@ vis_init = {visualize}
 vis_final = {visualize}
 print_init = {println header}
 print_final = {
-    println {simulation complete}
+    case0 = {simulation complete}
+    case1 = {simulation failed}
+    println $({case} + failed)
     println({wall clock time = } + wall_time + {s = } + wall_time/minute + {min = } + wall_time/hour + {hr})
     println {}
     println {performance summary:}
     println performance_report
 }
 done = {println {Error: you forgot to a set stop condition} & throw}
+failed = false
 
 write_iter = {
     case0 = {}
@@ -370,7 +373,7 @@ run = {
     $vis_init
     $print_init
     shell({echo > } + working_dir + {runtime_cmd.hil})
-    while = {!($done)}
+    while = {!($done | failed)}
     do = {$iterate}
     $loop
     $print_final
