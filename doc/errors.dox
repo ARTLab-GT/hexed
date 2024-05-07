@@ -2,14 +2,23 @@
 This page provides, for the end user, an overview of the different types of errors
 Hexed might produce, what they mean, and how to address them.
 
-\section hil_exceptions HIL Exceptions
+\section hil_exception HIL Exception
 - `hexed::Interpreter::Hil_unhandled_exception`
 
-This indicates that an error was encountered in the \ref hil frontend.
-It almost certainly means you made a simple mistake in your input file,
-but if you believe it is the result of a bug please let \me know.
+This indicates that an error was encountered in the \ref hil frontend which was not handled with the \ref except macro.
+It probably means you made a simple mistake in your input file.
+Basic errors in the \ref hil, such as undefined variables, invalid syntax, etc., will produce this exception.
 
-\section numerical_errors Numerical Errors
+\section user_error User Error
+- `hexed::assert::User_error`
+
+This one is almost certainly your fault.
+This type of error indicates a basic mistake in the input parameters
+(such as an invalid \ref row_size or specifying the wrong number of freestream variables).
+Unlike a \ref hil_exception, this indicates that your input file is (probably) valid \ref hil code,
+but what you're specifying with that code doesn't make sense.
+
+\section numerical_error Numerical Exception
 - `hexed::assert::Numerical_exception`
 
 The most frustrating thing about CFD is that no solver is guaranteed to converge for all meshes and all problems.
@@ -30,7 +39,7 @@ It could be the result of a mistake you made, or it could be the result of a bug
 If you obtain one of these errors and it is not at all clear what, if anything, you did wrong,
 feel free to let \me know.
 
-\section segfaults Segmentation faults
+\section segfault Segmentation fault
 - `Segmentation fault (core dumpted)`
 - `SIGSEGV`
 

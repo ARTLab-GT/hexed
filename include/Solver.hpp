@@ -42,7 +42,7 @@ class Solver
   Transport_model therm_cond;
   int last_fix_vis_iter = std::numeric_limits<int>::min();
   std::shared_ptr<Namespace> _namespace;
-  std::shared_ptr<Printer> _printer;
+  std::shared_ptr<Printer_set> _printer;
   bool _implicit;
   std::vector<std::unique_ptr<Accessible_mesh::Masked_mesh>> _preti_masks;
   int _preti_level;
@@ -109,7 +109,7 @@ class Solver
    */
   Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping = false,
          Transport_model viscosity_model = inviscid, Transport_model thermal_conductivity_model = inviscid,
-         std::shared_ptr<Namespace> space = std::make_shared<Namespace>(), std::shared_ptr<Printer> printer = std::make_shared<Stream_printer>(),
+         std::shared_ptr<Namespace> space = std::make_shared<Namespace>(), std::shared_ptr<Printer_set> printer = std::make_shared<Printer_set>(),
          bool implicit = false);
 
   //! \name setup

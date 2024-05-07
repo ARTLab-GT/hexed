@@ -6,6 +6,10 @@ newline = {
 false = 0
 true = 1
 
+{print formatting}
+print_type = {info}
+print_emph = false
+
 {while loop}
 hexed_loop_depth = 0
 while = {}
@@ -49,7 +53,11 @@ quit = {hexed_quit_repl = true; {}}
 repl = {
     while = {!hexed_quit_repl}
     do = {
-        except = {println exception;}
+        hexed_result = {}
+        except = {
+            print_type = {error}; print_emph = true; print{Error: }
+            print_type = {error}; println exception;
+        }
         print {#+^$ }
         hexed_repl_cmd = ask
         {basically reimplement the conditional to avoid overwriting `if`/`then`/`else`}
@@ -57,7 +65,6 @@ repl = {
         hexed_repl_case0 = {println hexed_result}
         hexed_repl_case1 = {}
         $$({hexed_repl_case} + (hexed_result == {}))
-        hexed_result = {}
     }
     $loop
     except = {}

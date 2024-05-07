@@ -15,7 +15,7 @@ const double heat_rat = 1.4;
 
 Solver& Case::_solver()
 {
-  HEXED_ASSERT(_solver_ptr, "`Solver` object does not exist");
+  HEXED_ASSERT(_solver_ptr, "`Solver` object does not exist", assert::User_error);
   return *_solver_ptr;
 }
 
@@ -33,7 +33,7 @@ Mat<> Case::_get_vector(std::string name, int size)
 {
   Mat<> vec(size);
   for (int i = 0; i < size; ++i) {
-    HEXED_ASSERT(_vard(name + std::to_string(i)), "must specify all components of `" + name + "` or none");
+    HEXED_ASSERT(_vard(name + std::to_string(i)), "must specify all components of `" + name + "` or none", assert::User_error);
     vec(i) = *_vard(name + std::to_string(i));
   }
   return vec;
@@ -61,7 +61,8 @@ Flow_bc* Case::_make_bc(std::string name)
       thermal = std::make_shared<Prescribed_heat_flux>(sub.variables->lookup<double>("heat_flux").value());
     } else if (sub.variables->exists("emissivity") || sub.variables->exists("heat_transfer_coef")) {
       auto equilibrium = std::make_shared<Thermal_equilibrium>();
-      HEXED_ASSERT(sub.variables->exists("heat_transfer_coef") == sub.variables->exists("temperature"), "must specify both surface heat_transfer_coef and temperature or neither");
+      HEXED_ASSERT(sub.variables->exists("heat_transfer_coef") == sub.variables->exists("temperature"),
+        "must specify both surface heat_transfer_coef and temperature or neither", assert::User_error);
       if (sub.variables->exists("emissivity")) equilibrium->emissivity = sub.variables->lookup<double>("emissivity").value();
       if (sub.variables->exists("heat_transfer_coef")) {
         equilibrium->heat_transfer_coef = sub.variables->lookup<double>("heat_transfer_coef").value();
@@ -74,10 +75,10 @@ Flow_bc* Case::_make_bc(std::string name)
       double energy = sub.variables->lookup<double>("temperature").value()*constants::specific_gas_air/(heat_rat - 1.);
       thermal = std::make_shared<Prescribed_energy>(energy);
     }
-    HEXED_ASSERT(thermal, "thermal BC specification not understood");
+    HEXED_ASSERT(thermal, "thermal BC specification not understood", assert::User_error);
     return new No_slip(thermal, _vard("heat_flux_coercion").value());
   }
-  else HEXED_ASSERT(false, format_str(1000, "unrecognized boundary condition type `%s`", name.c_str()));
+  else HEXED_ASSERT(false, format_str(1000, "unrecognized boundary condition type `%s`", name.c_str()), assert::User_error);
   return nullptr; // will never happen. just to shut up GCC warning
 }
 
@@ -111,15 +112,15 @@ Surface_geom* Case::_make_geom()
     auto geom = _vars("geom" + std::to_string(i_geom));
     if (!geom) break;
     unsigned dot = geom->rfind('.');
-    HEXED_ASSERT(dot < geom->size(), "file name must contain extension to infer format");
-    HEXED_ASSERT(std::filesystem::exists(geom.value()), format_str(1000, "geometry file `%s` not found", geom->c_str()));
+    HEXED_ASSERT(dot < geom->size(), "file name must contain extension to infer format", assert::User_error);
+    HEXED_ASSERT(std::filesystem::exists(geom.value()), format_str(1000, "geometry file `%s` not found", geom->c_str()), assert::User_error);
     std::string case_sensitive(geom->begin() + dot + 1, geom->end());
     std::string ext = case_sensitive;
     for (char& c : ext) c = tolower(c);
     if (ext == "csv") {
-      HEXED_ASSERT(nd == 2, "3D geometry in CSV format is not supported");
+      HEXED_ASSERT(nd == 2, "3D geometry in CSV format is not supported", assert::User_error);
       auto data = read_csv(*geom);
-      HEXED_ASSERT(data.cols() >= nd, "CSV geometry file must have at least n_dim columns");
+      HEXED_ASSERT(data.cols() >= nd, "CSV geometry file must have at least n_dim columns", assert::User_error);
       geoms.emplace_back(new Simplex_geom<2>(segments(data.transpose())));
     #if HEXED_USE_OCCT
     } else if (ext == "igs" || ext == "iges" || ext == "stp" || ext == "step") {
@@ -137,11 +138,11 @@ Surface_geom* Case::_make_geom()
         geoms.emplace_back(ptr);
       }
     } else if (ext == "stl") {
-      HEXED_ASSERT(nd == 3, "STL format is only supported for 3D");
+      HEXED_ASSERT(nd == 3, "STL format is only supported for 3D", assert::User_error);
       geoms.emplace_back(new Simplex_geom<3>(Occt::triangles(Occt::read_stl(geom.value()))));
     #endif
     } else {
-      HEXED_ASSERT(false, format_str(1000, "file extension `%s` not recognized", case_sensitive.c_str()));
+      HEXED_ASSERT(false, format_str(1000, "file extension `%s` not recognized", case_sensitive.c_str()), assert::User_error);
     }
   }
   return geoms.empty() ? nullptr : new Compound_geom(geoms);
@@ -168,40 +169,51 @@ Case::Case(std::string input_script)
   _inter.variables->create("create_solver", new Namespace::Heisenberg<int>([this]() {
     // basic IO setup
     _output_file.reset(new std::ofstream(_vars("working_dir").value() + "output.txt"));
-    auto printer = std::make_shared<Stream_printer>();
-    printer->streams.emplace_back(_output_file.get());
-    _inter.printer = printer;
+    _printers = std::make_shared<Printer_set>();
+    for (auto* printer : {&_printers->info, &_printers->warn, &_printers->error}) {
+      printer->printers.emplace_back(std::make_shared<Stream_printer>(*_output_file));
+    }
+    _inter.printer = _printers;
     char utc [100];
     std::time_t time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     std::strftime(utc, 100, "%Y-%m-%d %H:%M:%S", std::gmtime(&time));
-    printer->print(format_str(1000, "Commencing simulation with Hexed version %i.%i.%i (commit %s) at %s UTC (%i Unix Time).\n",
-                              config::version_major, config::version_minor, config::version_patch, config::commit.c_str(), utc, time));
+    _printers->info(format_str(1000, "Commencing simulation with Hexed version %i.%i.%i (commit %s) at %s UTC (%i Unix Time).\n",
+                               config::version_major, config::version_minor, config::version_patch, config::commit.c_str(), utc, time));
     // setup actual solver
     auto n_dim = _inter.variables->lookup<int>("n_dim");
-    HEXED_ASSERT(n_dim && n_dim.value() > 0 && n_dim.value() <= 3,
-                 "`n_dim` must be defined as an integer in [1, 3]");
+    HEXED_ASSERT(n_dim && (n_dim.value() > 0) && (n_dim.value() <= 3),
+                 "`n_dim` must be defined as an integer in [1, 3]", assert::User_error);
     auto row_size = _inter.variables->lookup<int>("row_size");
     HEXED_ASSERT(row_size.value() >= 2 && row_size.value() <= config::max_row_size,
-                 format_str(300, "`row_size` must be between 2 and %i", config::max_row_size));
+                 format_str(300, "`row_size` must be between 2 and %i", config::max_row_size), assert::User_error);
     // compute freestream
     Mat<> freestream(*n_dim + 2);
     if (_vard("freestream0")) freestream = _get_vector("freestream", *n_dim + 2);
     else {
       if (_vard("altitude")) {
-        HEXED_ASSERT(!_vard("freestream_temperature"), "cannot specify both altitude and temperature (consider `temperature_offset`)");
+        HEXED_ASSERT(!_vard("freestream_temperature"), "cannot specify both altitude and temperature (consider `temperature_offset`)",
+                      assert::User_error);
         auto dens_pres = standard_atmosphere(_vard("altitude").value(), _vard("temperature_offset").value());
         _inter.variables->assign<double>("freestream_density", dens_pres[0]);
         _inter.variables->assign<double>("freestream_pressure", dens_pres[1]);
       }
       HEXED_ASSERT(_vard("freestream_density").has_value() + _vard("freestream_pressure").has_value() + _vard("freestream_temperature").has_value() == 2,
-                   "exactly two of freestream density, pressure, and temperature must be specified");
+                   "exactly two of freestream density, pressure, and temperature must be specified", assert::User_error);
       if (_vard("freestream_density")) {
         freestream(*n_dim) = *_vard("freestream_density");
-        if (_vard("freestream_pressure")) _inter.variables->assign<double>("freestream_temperature", *_vard("freestream_pressure")/(constants::specific_gas_air**_vard("freestream_density")));
-        else _inter.variables->assign<double>("freestream_pressure", *_vard("freestream_density")*constants::specific_gas_air**_vard("freestream_temperature"));
-      } else _inter.variables->assign<double>("freestream_density", *_vard("freestream_pressure")/(constants::specific_gas_air**_vard("freestream_temperature")));
+        if (_vard("freestream_pressure")) {
+          _inter.variables->assign<double>("freestream_temperature",
+            *_vard("freestream_pressure")/(constants::specific_gas_air**_vard("freestream_density")));
+        } else {
+          _inter.variables->assign<double>("freestream_pressure",
+            *_vard("freestream_density")*constants::specific_gas_air**_vard("freestream_temperature"));
+        }
+      } else {
+        _inter.variables->assign<double>("freestream_density",
+          *_vard("freestream_pressure")/(constants::specific_gas_air**_vard("freestream_temperature")));
+      }
       HEXED_ASSERT(_vard("freestream_velocity0").has_value() + _vard("freestream_speed").has_value() + _vard("freestream_mach").has_value() == 1,
-                   "exactly one of velocity, speed, and Mach number must be specified");
+                   "exactly one of velocity, speed, and Mach number must be specified", assert::User_error);
       Mat<> veloc;
       Mat<> full_direction = Mat<>::Zero(3);
       auto direction = full_direction(Eigen::seqN(0, *n_dim));
@@ -241,7 +253,7 @@ Case::Case(std::string input_script)
         mesh_extremes(i_dim, sign) = _vard(format_str(50, "mesh_extreme%i%i", i_dim, sign)).value();
       }
     }
-    HEXED_ASSERT((mesh_extremes(all, 1) - mesh_extremes(all, 0)).minCoeff() > 0, "all mesh dimensions must be positive!");
+    HEXED_ASSERT((mesh_extremes(all, 1) - mesh_extremes(all, 0)).minCoeff() > 0, "all mesh dimensions must be positive!", assert::User_error);
     double root_sz = (mesh_extremes(all, 1) - mesh_extremes(all, 0)).maxCoeff();
     std::vector<std::string> transport_phenomena {"viscosity", "conductivity"};
     std::vector<Transport_model> transport_models;
@@ -254,9 +266,9 @@ Case::Case(std::string input_script)
         transport_models.emplace_back(Transport_model::sutherland(sub.variables->lookup<double>("ref_value").value(),
                                                                   sub.variables->lookup<double>("ref_temperature").value(),
                                                                   sub.variables->lookup<double>("offset").value()));
-      } else HEXED_ASSERT(false, format_str(200, "invalid transport model specification for %s", name));
+      } else HEXED_ASSERT(false, format_str(200, "invalid transport model specification for %s", name), assert::User_error);
     }
-    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, true, transport_models[0], transport_models[1], _inter.variables, printer));
+    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, true, transport_models[0], transport_models[1], _inter.variables, _printers));
     _solver().mesh().add_tree(_make_extremal_bcs(), mesh_extremes(all, 0));
     _solver().set_fix_admissibility(_vari("fix_therm_admis").value());
     // create history monitors
@@ -475,16 +487,26 @@ Case::Case(std::string input_script)
     int print_freq = _vari("print_freq").value();
     int n = iter ? print_freq - iter%print_freq : 1;
     for (int i = 0; i < n; ++i) {
-      if (_vari("diffusive_admissibility").value()) _solver().set_art_visc_admis();
-      if (_vari("elementwise_art_visc").value()) {
-        _solver().update_art_visc_elwise(_vard("art_visc_width").value(), _vari("elementwise_art_visc_pde").value());
-      } else if (avw) {
-        _solver().update_art_visc_smoothness(_vard("art_visc_width").value());
-      } else if (avc) {
-        _solver().set_art_visc_constant(_vard("art_visc_constant").value());
+      ++iter;
+      try {
+        if (_vari("diffusive_admissibility").value()) _solver().set_art_visc_admis();
+        if (_vari("elementwise_art_visc").value()) {
+          _solver().update_art_visc_elwise(_vard("art_visc_width").value(), _vari("elementwise_art_visc_pde").value());
+        } else if (avw) {
+          _solver().update_art_visc_smoothness(_vard("art_visc_width").value());
+        } else if (avc) {
+          _solver().set_art_visc_constant(_vard("art_visc_constant").value());
+        }
+        _solver().update();
+      } catch (const assert::Numerical_exception& except) {
+        _printers->error("Numerical exception: ", true);
+        _printers->error(except.what());
+        _printers->error("\nTerminating simulation.\n", true);
+        _inter.variables->assign("failed", 1);
+        break;
       }
-      _solver().update();
     }
+    _inter.variables->assign("iteration", iter);
     auto sub = _inter.make_sub();
     auto vals = _monitor_expr->eval(sub);
     for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
@@ -521,7 +543,12 @@ Case::Case(std::string input_script)
   // load HIL code for the Case _interface
   _inter.exec("$read {hexed.hil}");
   // execute input file
-  _inter.exec(format_str(1000, "$read {%s}", input_script.c_str()));
+  try {
+    _inter.exec(format_str(1000, "$read {%s}", input_script.c_str()));
+  } catch (const assert::User_error& except) {
+    if (_printers) _printers->error("User error: ", true);
+    throw except;
+  }
 }
 
 }

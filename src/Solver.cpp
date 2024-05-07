@@ -6,7 +6,6 @@
 #include <Solver.hpp>
 #include <Tecplot_file.hpp>
 #include <Vis_data.hpp>
-#include <thermo.hpp>
 #include <Xdmf_wrapper.hpp>
 #include <iterative.hpp>
 #include <Gauss_lobatto.hpp>
@@ -158,7 +157,7 @@ double Solver::max_dt(double msc, double msd)
 
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
                Transport_model viscosity_model, Transport_model thermal_conductivity_model,
-               std::shared_ptr<Namespace> space, std::shared_ptr<Printer> printer, bool implicit) :
+               std::shared_ptr<Namespace> space, std::shared_ptr<Printer_set> printer, bool implicit) :
   params{implicit ? Linearized::storage_start + Linearized::n_storage : 2, n_dim + 2, n_dim, row_size},
   acc_mesh{new Accessible_mesh(params, root_mesh_size)},
   basis{row_size},
@@ -915,7 +914,6 @@ void Solver::update()
   }
   _preti_level = 0;
 
-  _namespace->assign("iteration", _namespace->lookup<int>("iteration").value() + 1);
   _namespace->assign("wall_time", status.wall_time());
   ++status.iteration;
   stopwatch.stopwatch.pause();
@@ -963,6 +961,22 @@ bool Solver::is_admissible()
   const int nq = params.n_qpoint();
   const int rs = params.row_size;
   bool admiss = 1;
+  bool finite = 1;
+  auto check_admis = [&](double* data, int n_qpoint) {
+    const int n_var = nd + 2;
+    bool adm = true;
+    for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+      adm = adm && (data[nd*n_qpoint + i_qpoint] > 0.)
+                && (data[(nd + 1)*n_qpoint + i_qpoint] > 0.);
+      for (int i_var = 0; i_var < n_var; ++i_var) {
+        if (!std::isfinite(data[i_var*n_qpoint + i_qpoint])) {
+          #pragma omp atomic write
+          finite = false;
+        }
+      }
+    }
+    return adm;
+  };
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].record = 0;
@@ -971,9 +985,9 @@ bool Solver::is_admissible()
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     bool elem_admis = true;
-    elem_admis = elem_admis && hexed::thermo::admissible(elem.state(), nd, nq);
+    elem_admis = elem_admis && check_admis(elem.state(), nq);
     for (int i_face = 0; i_face < params.n_dim*2; ++i_face) {
-      elem_admis = elem_admis && hexed::thermo::admissible(elem.face(i_face, false), nd, nq/rs);
+      elem_admis = elem_admis && check_admis(elem.face(i_face, false), nq/rs);
     }
     if (!elem_admis) elem.record = 1;
     admiss = admiss && elem_admis;
@@ -986,9 +1000,10 @@ bool Solver::is_admissible()
     int n_fine = params.n_vertices()/2;
     for (int i_dim = 0; i_dim < nd - 1; ++i_dim) n_fine /= 1 + ref.stretch[i_dim];
     for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
-      refined_admiss = refined_admiss && hexed::thermo::admissible(ref.fine[i_fine], nd, nq/rs);
+      refined_admiss = refined_admiss && check_admis(ref.fine[i_fine], nq/rs);
     }
   }
+  HEXED_ASSERT(finite, "non-finite state encountered", assert::Numerical_exception);
   sw.work_units_completed += acc_mesh->elements().size();
   sw.stopwatch.pause();
   return admiss && refined_admiss;
@@ -1026,11 +1041,13 @@ bool Solver::fix_admissibility(double stability_ratio)
       n_iters = std::numeric_limits<int>::max();
     }
     if (iter == 0) {
-      _printer->print(format_str(200, "Thermodynamically inadmissible state detected (solver iteration %i). Attempting to fix...\n",
-                                 _namespace->lookup<int>("iteration").value()));
+      _printer->warn("Warning: ", true);
+      _printer->warn(format_str(200, "Thermodynamically inadmissible state detected (solver iteration %i). Attempting to fix...\n",
+                                _namespace->lookup<int>("iteration").value()));
     }
     auto bounds = bounds_field(State_variables(), 2*rs);
-    _printer->print(format_str(200, "    iteration %i: mass in [%e, %e]; energy in [%e, %e]\n", iter, bounds[nd][0], bounds[nd][1], bounds[nd + 1][0], bounds[nd + 1][1]));
+    _printer->warn(format_str(200, "    iteration %i: mass in [%e, %e]; energy in [%e, %e]\n",
+                              iter, bounds[nd][0], bounds[nd][1], bounds[nd + 1][0], bounds[nd + 1][1]));
     auto& elems = acc_mesh->elements();
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -1123,7 +1140,7 @@ bool Solver::fix_admissibility(double stability_ratio)
     }
   }
   --iter;
-  if (iter) _printer->print("done\n");
+  if (iter) _printer->warn("done\n");
   status.fix_admis_iters += iter;
   _namespace->assign("fix_iters", _namespace->lookup<int>("fix_iters").value() + iter);
   sw_fix.work_units_completed += acc_mesh->elements().size()*iter;

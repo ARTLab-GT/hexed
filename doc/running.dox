@@ -75,7 +75,7 @@ As soon as you start the solver, a directory called `hexed_out` will be created.
 In this directory will be a copy of the input file as well as a file `output.txt` with a copy of the command line output.
 Also, each time you see `visualizing...done` in the command line output,
 the solver will have written a new set of `.h5` and `.xmf` files to this directory.
-You can view these files in Paraview by opening the `.xmf` (not `.h5`) files and selecting "XDMF Reader T" as the reader.
+You can view these files in ParaView by opening the `.xmf` (not `.h5`) files and selecting "XDMF Reader T" as the reader.
 Each time you see `writing mesh/state data...done`,
 the solver will have written a new set of mesh and state files that you can use to restart the simulation from where you left off with \ref read_mesh and \ref read_state.
 Unlike many solvers, Hexed saves new mesh and state data files every time instead of overwriting old ones.

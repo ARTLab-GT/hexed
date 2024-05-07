@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <omp.h>
 #include "config.hpp"
+#include "utils.hpp"
 
 //! \file assert.hpp utilities for custom assertions
 
@@ -19,13 +20,20 @@ class Exception : public std::exception
   inline const char* what() const noexcept override {return msg.c_str();}
 };
 
-//! represents a fatal problem in the numerics of the code (such as nonphysical values)
-//! as opposed to, for example, an out-of-bounds error or user error
-//! \see \ref numerical_errors
+//! \brief represents a fatal problem in the numerics of the code (such as nonphysical values)
+//! \details as opposed to, for example, an out-of-bounds error or user error
+//! \see \ref numerical_error
 class Numerical_exception : public Exception
 {
   public:
   Numerical_exception(std::string message) : Exception(message) {}
+};
+
+//! \brief represents an exception which clearly results from a mistake made by the user
+class User_error : public Exception
+{
+  public:
+  User_error(std::string message) : Exception(message) {}
 };
 
 //! throws a `std::runtime_error` with message `message`, wrapped in a `#pragma omp critical` if necessary.
@@ -64,7 +72,11 @@ void throw_critical(const char* message)
                            "technical details: assertion `%s` failed in `%s`.\n" \
                            "Assertion invoked at line %d of %s in function %s.", \
              std::string(message).c_str(), #expression, __FUNCTION__, __LINE__, __FILE__, __PRETTY_FUNCTION__); \
-    assert::throw_critical<__VA_ARGS__>(buffer); \
+    assert::throw_critical<__VA_ARGS__>(format_str(1000, \
+      "%s\n" \
+      "technical details: assertion `%s` failed in `%s`.\n" \
+      "Assertion invoked at line %d of %s in function %s.", \
+      std::string(message).c_str(), #expression, __FUNCTION__, __LINE__, __FILE__, __PRETTY_FUNCTION__).c_str()); \
   } \
 }
 
