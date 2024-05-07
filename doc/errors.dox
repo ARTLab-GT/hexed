@@ -9,6 +9,15 @@ This indicates that an error was encountered in the \ref hil frontend which was 
 It probably means you made a simple mistake in your input file.
 Basic errors in the \ref hil, such as undefined variables, invalid syntax, etc., will produce this exception.
 
+\section user_error User Error
+- `hexed::assert::User_error`
+
+This one is almost certainly your fault.
+This type of error indicates a basic mistake in the input parameters
+(such as an invalid \ref row_size or specifying the wrong number of freestream variables).
+Unlike a \ref hil_exception, this indicates that your input file is (probably) valid \ref hil code,
+but what you're specifying with that code doesn't make sense.
+
 \section numerical_error Numerical Exception
 - `hexed::assert::Numerical_exception`
 

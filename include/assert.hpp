@@ -20,13 +20,20 @@ class Exception : public std::exception
   inline const char* what() const noexcept override {return msg.c_str();}
 };
 
-//! represents a fatal problem in the numerics of the code (such as nonphysical values)
-//! as opposed to, for example, an out-of-bounds error or user error
+//! \brief represents a fatal problem in the numerics of the code (such as nonphysical values)
+//! \details as opposed to, for example, an out-of-bounds error or user error
 //! \see \ref numerical_error
 class Numerical_exception : public Exception
 {
   public:
   Numerical_exception(std::string message) : Exception(message) {}
+};
+
+//! \brief represents an exception which clearly results from a mistake made by the user
+class User_error : public Exception
+{
+  public:
+  User_error(std::string message) : Exception(message) {}
 };
 
 //! throws a `std::runtime_error` with message `message`, wrapped in a `#pragma omp critical` if necessary.

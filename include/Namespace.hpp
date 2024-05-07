@@ -48,13 +48,10 @@ class Namespace
     std::function<T()> fetcher;
     public:
     Heisenberg(std::function<T()>f ) : fetcher{f} {}
-    void set(T v) override {throw std::runtime_error("attempt to write to `Heisenberg` variable.");}
+    void set(T v) override {throw Hil_exception("attempt to write to `Heisenberg` variable.");}
     T get() override
     {
-      try {return fetcher();}
-      catch (const std::exception& e) {
-        throw std::runtime_error("Heisenberg variable evaluation failed because:\n      " + std::string(e.what()));
-      }
+      return fetcher();
     }
   };
 
@@ -129,10 +126,7 @@ template<typename T>
 std::optional<T> Namespace::lookup(std::string name)
 {
   if (_get_map<T>().count(name)) {
-    try {return {_get_map<T>().at(name)->get()};}
-    catch (const std::exception& e) {
-      throw std::runtime_error(format_str(1000, "error while evaluating variable `%s`:\n    %s", name.c_str(), e.what()));
-    }
+    return {_get_map<T>().at(name)->get()};
   }
   if constexpr (std::is_same<T, double>::value) {
     if (_get_map<int>().count(name)) {
