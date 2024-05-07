@@ -93,12 +93,6 @@ class Interpreter
     public:
     Hil_unhandled_exception(std::string message) : Exception(message) {}
   };
-
-  class Hil_exception : public assert::Exception
-  {
-    public:
-    Hil_exception(std::string message) : Exception(message) {}
-  };
 };
 
 }

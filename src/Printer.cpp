@@ -24,7 +24,8 @@ void Stream_printer::operator()(std::string message, bool emph)
 
 Printer_set::Printer_set()
 {
-  info.printers.emplace_back(std::make_shared<Stream_printer>());
+  info.printers.emplace_back(std::make_shared<Stream_printer>(std::cout, Stream_printer::Format{.type = Stream_printer::bold,
+                                                                                                .color = Stream_printer::green}));
   warn.printers.emplace_back(std::make_shared<Stream_printer>(std::cerr, Stream_printer::Format{.color = Stream_printer::yellow, .light = true}));
   error.printers.emplace_back(std::make_shared<Stream_printer>(std::cerr, Stream_printer::Format{.type = Stream_printer::bold,
                                                                                                  .color = Stream_printer::red}));

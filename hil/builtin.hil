@@ -6,6 +6,10 @@ newline = {
 false = 0
 true = 1
 
+{print formatting}
+print_type = {info}
+print_emph = false
+
 {while loop}
 hexed_loop_depth = 0
 while = {}
@@ -50,7 +54,10 @@ repl = {
     while = {!hexed_quit_repl}
     do = {
         hexed_result = {}
-        except = {println exception;}
+        except = {
+            print_type = {error}; print_emph = true; print{Error: }
+            print_type = {error}; println exception;
+        }
         print {#+^$ }
         hexed_repl_cmd = ask
         {basically reimplement the conditional to avoid overwriting `if`/`then`/`else`}

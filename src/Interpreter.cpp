@@ -288,7 +288,20 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
     }},
     {"print", [this](_Dynamic_value val) {
       auto s = _general_add({""}, val);
-      printer->info(s.s.value());
+      Printer* p;
+      std::string print_type = variables->lookup<std::string>("print_type").value();
+      if (print_type == "warn") p = &printer->warn;
+      else if (print_type == "error") p = &printer->error;
+      else {
+        p = &printer->info;
+        if (print_type != "info") {
+          printer->warn("Warning: ", true);
+          printer->warn(format_str(1000, "Invalid `print_type` `{%s}`. Defaulting to `{info}`\n", print_type.c_str()));
+        }
+      }
+      (*p)(s.s.value(), variables->lookup<int>("print_emph").value());
+      variables->assign("print_type", std::string("info"));
+      variables->assign("print_emph", 0);
       return _Dynamic_value("");
     }},
     {"println", [this](_Dynamic_value val){return _un_ops["print"](_general_add(val, {"\n"}));}},

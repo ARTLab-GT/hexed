@@ -108,7 +108,8 @@ set_ramping = {
         case0 = {}
         case1 = {
             max_safety = ramping_final_safety
-            println({Initial phase complete. Increasing safety factor to } + max_safety)
+            print_emph = true; print{Initial phase complete. }
+            println({Increasing safety factor to } + max_safety)
         }
         $$({case} + (iteration == ramping_initial_iters))
     }
@@ -138,7 +139,7 @@ set_preti = {
     iterate = iterate + {
         case0 = {}
         case1 = {
-            println {Activating PRETI scheme.}
+            print_emph = true; println {Activating PRETI scheme.}
             preti = true
         }
         $$({case} + (iteration == preti_initial_iters))
@@ -252,15 +253,15 @@ vis_init = {visualize}
 vis_final = {visualize}
 print_init = {println header}
 print_final = {
-    case0 = {simulation complete}
-    case1 = {simulation failed}
-    println $({case} + failed)
+    case0 = {println{simulation complete}}
+    case1 = {print_type = {error}; println{simulation failed}}
+    print_emph = true; $$({case} + failed)
     println({wall clock time = } + wall_time + {s = } + wall_time/minute + {min = } + wall_time/hour + {hr})
     println {}
     println {performance summary:}
     println performance_report
 }
-done = {println {Error: you forgot to a set stop condition} & throw}
+done = {print_emph = true; print_type = {error}; println {Error: you forgot to a set stop condition} & throw}
 failed = false
 
 write_iter = {
@@ -365,7 +366,7 @@ mesh = {
     while = {i_split < init_layer_splits}
     do = {split_layers; i_split = i_split + 1}
     $loop
-    println({meshing complete with } + n_elements + { elements} + newline)
+    print_emph = true; println({meshing complete with } + n_elements + { elements} + newline)
 }
 
 run = {

@@ -13,6 +13,13 @@
 namespace hexed
 {
 
+
+class Hil_exception : public assert::Exception
+{
+  public:
+  Hil_exception(std::string message) : Exception(message) {}
+};
+
 class Namespace
 {
   public:
@@ -95,7 +102,8 @@ template<typename T>
 void Namespace::create(std::string name, Namespace::Variable<T>* value)
 {
   std::unique_ptr<Variable<T>> ptr(value);
-  HEXED_ASSERT(!exists(name), format_str(100, "attempt to re-create existing variable `%s` as type `%s`", name.c_str(), type_name<T>().c_str()))
+  HEXED_ASSERT(!exists(name),
+    format_str(100, "attempt to re-create existing variable `%s` as type `%s`", name.c_str(), type_name<T>().c_str()), Hil_exception)
   _get_map<T>().emplace(name, ptr.release());
 }
 
