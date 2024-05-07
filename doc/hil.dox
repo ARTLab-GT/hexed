@@ -239,7 +239,7 @@ You really don't have to worry about this variable---it's mostly used in the imp
 __type:__ string \n
 Controls whether the text printed with `print` and `println` is information, a warning, or an error.
 Valid values are `{info}`, `{warn}`, and `{error}`.
-Info goes to the standard output, whereas warnings and errors go to the standard error.
+Info goes to the [standard output](https://en.wikipedia.org/wiki/Standard_streams), whereas warnings and errors go to the standard error.
 Furthermore, the emphasis formatting is green for info, yellow for warnings, and red for errors.
 The value of this variable is automatically reset to `{info}` after every call to `print` and `println`.
 You really don't have to worry about this variable---it's mostly used in the implementation of the \ref hexecute command line interface.
