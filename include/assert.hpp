@@ -22,7 +22,7 @@ class Exception : public std::exception
 
 //! represents a fatal problem in the numerics of the code (such as nonphysical values)
 //! as opposed to, for example, an out-of-bounds error or user error
-//! \see \ref numerical_errors
+//! \see \ref numerical_error
 class Numerical_exception : public Exception
 {
   public:

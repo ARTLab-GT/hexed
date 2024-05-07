@@ -344,7 +344,7 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
     return "";
   }));
   variables->create("throw", new Namespace::Heisenberg<std::string>([this]() {
-    throw std::runtime_error("Exception thrown from HIL by evaluating `throw`.");
+    throw Hil_exception("Exception thrown from HIL by evaluating `throw`.");
     return "";
   }));
   variables->create("system_time", new Namespace::Heisenberg<double>([]() {
@@ -384,7 +384,7 @@ void Interpreter::exec(std::string comms)
         variables->assign<std::string>("exception", message);
         _skip_spaces();
         while (_more() && (_text.front() != '\n' && _text.front() != ';')) _pop();
-        except = except + "; exception = {}; except = {};";
+        except = "except = {}; " + except + "; except = {};";
         _text.insert(_text.begin(), except.begin(), except.end());
       } else throw Hil_unhandled_exception(message);
     }
