@@ -148,9 +148,9 @@ double Solver::max_dt(double msc, double msd)
     stopwatch.children.at("cartesian"),
     stopwatch.children.at("deformed" ),
     stopwatch.children.at("prolong/restrict"),
-    0, 0, bool(_namespace->lookup<int>("use_filter").value()),
+    0, 0, bool(_namespace->get<int>("use_filter")),
   };
-  bool local_time = _namespace->lookup<int>("local_time").value();
+  bool local_time = _namespace->get<int>("local_time");
   if (use_ldg()) return max_dt_navier_stokes(_kernel_mesh(), opts, msc, msd, local_time, visc, therm_cond);
   else return max_dt_euler(_kernel_mesh(), opts, msc, msd, local_time);
 }
@@ -181,13 +181,14 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("av_advect_max_safety", .7); // stability ratio for advection
   _namespace->assign_default("av_diff_max_safety", .7); // stability ratio for diffusion
   _namespace->assign_default("buffer_dist", .8*std::sqrt(params.n_dim));
-  _namespace->assign_default("n_cheby_flow", 1);
+  _namespace->assign_default("n_cheby_bl", 1);
   _namespace->assign_default("n_cheby_av", 1);
   _namespace->assign_default("cheby_safety", .9); // safety factor to apply to Chebyshev-acceleration
   _namespace->assign_default("preti", 0);
   _namespace->assign_default("av_advect_iters", 1); // number of advection iterations to run each time `update_art_visc_smoothness` is called
   _namespace->assign_default("av_diff_iters", 1); // number of diffusion iterations to run each time `update_art_visc_smoothness` is called
   _namespace->assign_default("flow_iters", 1);
+  _namespace->assign_default("bl_iters", 1);
   _namespace->assign_default("use_filter", 0); // whether to use modal filter acceleration
   _namespace->assign_default<int>("local_time", local_time_stepping);
   _namespace->assign_default("elementwise_art_visc", 0);
@@ -196,6 +197,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign("fix_iters", 0);
   _namespace->assign("iteration", 0);
   _namespace->assign("flow_time", 0.);
+  _namespace->assign("time_step", 0.);
   _namespace->assign("art_visc_residual", 0.);
   _namespace->assign("wall_time", 0.);
   status.set_time();
@@ -418,7 +420,7 @@ void Solver::initialize(const Spacetime_func& func)
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
       std::vector<double> pos_vec {};
-      auto state = func(elements[i_elem].position(basis, i_qpoint), _namespace->lookup<double>("flow_time").value());
+      auto state = func(elements[i_elem].position(basis, i_qpoint), _namespace->get<double>("flow_time"));
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         elements[i_elem].state()[i_var*params.n_qpoint() + i_qpoint] = state[i_var];
       }
@@ -455,9 +457,9 @@ void Solver::set_art_visc_constant(double value)
 void Solver::diffuse_art_visc(double diff_time)
 {
   // evaluate CFL condition
-  double diff_safety = _namespace->lookup<double>("av_diff_max_safety").value();
-  double n_cheby = _namespace->lookup<double>("n_cheby_av").value();
-  double cheby_safety = _namespace->lookup<double>("cheby_safety").value();
+  double diff_safety = _namespace->get<double>("av_diff_max_safety");
+  double n_cheby = _namespace->get<double>("n_cheby_av");
+  double cheby_safety = _namespace->get<double>("cheby_safety");
   Kernel_options opts {
     stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"),
     stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed"),
@@ -472,7 +474,7 @@ void Solver::diffuse_art_visc(double diff_time)
   compute_write_face_smooth_av(_kernel_mesh());
   compute_prolong(_kernel_mesh());
   // perform pseudotime iteration
-  for (int i_iter = 0; i_iter < _namespace->lookup<int>("av_diff_iters").value(); ++i_iter) {
+  for (int i_iter = 0; i_iter < _namespace->get<int>("av_diff_iters"); ++i_iter) {
     for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
       double s = math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
       apply_avc_diff_bcs();
@@ -511,7 +513,7 @@ void Solver::update_art_visc_smoothness(double advect_length)
   sw_adv.stopwatch.start();
   compute_write_face(_kernel_mesh());
   compute_prolong(_kernel_mesh());
-  double adv_safety = _namespace->lookup<double>("av_advect_max_safety").value();
+  double adv_safety = _namespace->get<double>("av_advect_max_safety");
   Kernel_options opts {
     sw_adv.children.at("cartesian"),
     sw_adv.children.at("deformed" ),
@@ -525,7 +527,7 @@ void Solver::update_art_visc_smoothness(double advect_length)
 
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
   // perform pseudotime iteration
-  for (int iter = 0; iter < _namespace->lookup<int>("av_advect_iters").value(); ++iter)
+  for (int iter = 0; iter < _namespace->get<int>("av_advect_iters"); ++iter)
   {
     sw_adv.children.at("setup").stopwatch.start();
     // evaluate advection operator
@@ -571,15 +573,15 @@ void Solver::update_art_visc_smoothness(double advect_length)
 
   // begin root-smear-square operation
   int n_real = params.n_forcing - 1; // number of real time steps (as apposed to pseudotime steps)
-  double diff_time = _namespace->lookup<double>("av_diff_ratio").value()*advect_length*advect_length/n_real; // compute size of real time step (as opposed to pseudotime)
+  double diff_time = _namespace->get<double>("av_diff_ratio")*advect_length*advect_length/n_real; // compute size of real time step (as opposed to pseudotime)
   stopwatch.children.at("set art visc").children.at("diffusion").stopwatch.start();
   diffuse_art_visc(diff_time);
   stopwatch.children.at("set art visc").children.at("diffusion").stopwatch.pause();
   stopwatch.children.at("set art visc").children.at("diffusion").work_units_completed += elements.size();
 
   // clean up
-  double mult = _namespace->lookup<double>("av_visc_mult").value()*advect_length;
-  double us_max = advect_length*_namespace->lookup<double>("av_unscaled_max").value()*std::sqrt(2*_namespace->lookup<double>("freestream" + std::to_string(nd + 1)).value()/_namespace->lookup<double>("freestream" + std::to_string(nd)).value());
+  double mult = _namespace->get<double>("av_visc_mult")*advect_length;
+  double us_max = advect_length*_namespace->get<double>("av_unscaled_max")*std::sqrt(2*_namespace->get<double>("freestream" + std::to_string(nd + 1))/_namespace->get<double>("freestream" + std::to_string(nd)));
   double resid = 0;
   Mat<> qpoint_weights = math::pow_outer(basis.node_weights(), nd);
   #pragma omp parallel for reduction(+:resid)
@@ -615,7 +617,7 @@ void Solver::update_art_visc_elwise(double width, bool pde_based)
   Mass mass;
   set_uncertainty(Normalized_nonsmooth(mass));
   auto& elems = acc_mesh->elements();
-  double scale = width/(basis.row_size - 1)*(_namespace->lookup<double>("freestream_speed").value() + _namespace->lookup<double>("freestream_sound_speed").value());
+  double scale = width/(basis.row_size - 1)*(_namespace->get<double>("freestream_speed") + _namespace->get<double>("freestream_sound_speed"));
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     double& u = elems[i_elem].uncertainty;
@@ -638,7 +640,7 @@ void Solver::update_art_visc_elwise(double width, bool pde_based)
         forcing[params.n_qpoint() + i_qpoint] = av[i_qpoint];
       }
     }
-    diffuse_art_visc(_namespace->lookup<double>("elementwise_art_visc_diff_ratio").value()*width*width);
+    diffuse_art_visc(_namespace->get<double>("elementwise_art_visc_diff_ratio")*width*width);
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       double* av = elems[i_elem].laplacian_av_coef();
@@ -666,7 +668,7 @@ void Solver::set_art_visc_admis()
   stopwatch.children.at("set art visc").stopwatch.start();
   use_art_visc = true;
   // compute the desired artificial viscosity in each element
-  double char_speed = _namespace->lookup<double>("freestream_speed").value() + _namespace->lookup<double>("freestream_sound_speed").value();
+  double char_speed = _namespace->get<double>("freestream_speed") + _namespace->get<double>("freestream_sound_speed");
   stabilizing_art_visc(_kernel_mesh(), char_speed);
   // enforce C^0 continuity
   share_vertex_data([](Element& elem, int){return elem.uncertainty;},
@@ -702,7 +704,7 @@ void Solver::set_uncertainty(const Element_func& func)
   auto& elems = acc_mesh->elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    elems[i_elem].uncertainty = func(elems[i_elem], basis, _namespace->lookup<double>("flow_time").value())[0];
+    elems[i_elem].uncertainty = func(elems[i_elem], basis, _namespace->get<double>("flow_time"))[0];
   }
 }
 
@@ -862,56 +864,61 @@ void Solver::synch_extruded_uncert()
 void Solver::update()
 {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
-  int shock_sub_iters = _namespace->lookup<int>("shock_sub_iters").value();
-  double safety = _namespace->lookup<double>("max_safety").value();
-  double cheby_safety = _namespace->lookup<double>("cheby_safety").value();
-  for (int i_flow = 0; i_flow < shock_sub_iters; ++i_flow)
+  double safety = _namespace->get<double>("max_safety");
+  double cheby_safety = _namespace->get<double>("cheby_safety");
+  for (int i_flow = 0; i_flow < _namespace->get<int>("flow_iters"); ++i_flow)
   {
     // compute time step
     double dt = 0;
-    int n_preti = (_namespace->lookup<int>("preti").value() && !i_flow) ? _preti_masks.size() : 1;
-    for (int i_preti = 0; i_preti < n_preti; ++i_preti) {
+    int n_preti = (_namespace->get<int>("preti") && !i_flow) ? _preti_masks.size() : 1;
+    for (int i_preti = 0; i_preti < n_preti; ++i_preti)
+    {
       _preti_level = i_preti > 0;
       Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
-      int n_cheby = i_preti ? shock_sub_iters : 1;
-      double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1, cheby_safety);
-      // run chebyshev iterations
-      for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
+      int n_bl = i_preti ? _namespace->get<int>("bl_iters") : 1;
+      for (int i_bl = 0; i_bl < n_bl; ++i_bl)
       {
-        double nominal_dt = std::min(max_dt(safety/max_cheby, safety), _namespace->lookup<double>("max_time_step").value());
-        dt = nominal_dt*math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
-        HEXED_ASSERT(!std::isnan(dt), "time step is NaN", assert::Numerical_exception);
-        // record reference state for residual calculation
-        bool fixed = false;
-        // compute inviscid update
-        for (int i = 0; i < 2; ++i) {
-          Kernel_options opts {
-            .sw_car = stopwatch.children.at("cartesian"),
-            .sw_def = stopwatch.children.at("deformed" ),
-            .sw_pr = stopwatch.children.at("prolong/restrict"),
-            .dt = dt,
-            .i_stage = i,
-            .compute_residual = false,
-            .use_filter = bool(_namespace->lookup<int>("use_filter").value()),
-            .mask = i_preti,
-          };
-          apply_state_bcs();
-          if (use_ldg() && !i) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond);
-          else compute_euler(km, opts);
-          // note that function call must come first to ensure it is evaluated despite short-circuiting
-          fixed = fix_admissibility(_namespace->lookup<double>("fix_admis_max_safety").value()) || fixed;
-        }
-        stopwatch.work_units_completed += km.elems.size();
-        stopwatch.children.at("cartesian").work_units_completed += km.car_elems.size();
-        stopwatch.children.at("deformed" ).work_units_completed += km.def_elems.size();
-        if (fixed) break;
-      }
+        int n_cheby = i_preti ? _namespace->get<int>("n_cheby_bl") : 1;
+        double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1, cheby_safety);
+        // run chebyshev iterations
+        for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
+        {
+          double nominal_dt = std::min(max_dt(safety/max_cheby, safety), _namespace->get<double>("max_time_step"));
+          dt = nominal_dt*math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
+          HEXED_ASSERT(!std::isnan(dt), "time step is NaN", assert::Numerical_exception);
 
-      // update status for reporting
-      _namespace->assign<double>("time_step", dt);
-      _namespace->assign<double>("flow_time", _namespace->lookup<double>("flow_time").value() + dt);
-      status.time_step = dt;
-      status.flow_time += dt;
+          bool fixed = false;
+          // compute inviscid update
+          for (int i = 0; i < 2; ++i) {
+            Kernel_options opts {
+              .sw_car = stopwatch.children.at("cartesian"),
+              .sw_def = stopwatch.children.at("deformed" ),
+              .sw_pr = stopwatch.children.at("prolong/restrict"),
+              .dt = dt,
+              .i_stage = i,
+              .compute_residual = false,
+              .use_filter = bool(_namespace->get<int>("use_filter")),
+              .mask = i_preti,
+            };
+            apply_state_bcs();
+            if (use_ldg() && !i) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond);
+            else compute_euler(km, opts);
+            // note that function call must come first to ensure it is evaluated despite short-circuiting
+            fixed = fix_admissibility(_namespace->get<double>("fix_admis_max_safety")) || fixed;
+          }
+
+          stopwatch.work_units_completed += km.elems.size();
+          stopwatch.children.at("cartesian").work_units_completed += km.car_elems.size();
+          stopwatch.children.at("deformed" ).work_units_completed += km.def_elems.size();
+          if (fixed) break;
+
+          // update status for reporting
+          _namespace->assign<double>("time_step", dt);
+          _namespace->assign<double>("flow_time", _namespace->get<double>("flow_time") + dt);
+          status.time_step = dt;
+          status.flow_time += dt;
+        }
+      }
     }
   }
   _preti_level = 0;
@@ -942,7 +949,7 @@ void Solver::compute_residual()
     1.,
     0,
     true,
-    bool(_namespace->lookup<int>("use_filter").value()),
+    bool(_namespace->get<int>("use_filter")),
   };
   if (use_ldg()) compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond);
   else compute_euler(_kernel_mesh(), opts);
@@ -1071,7 +1078,7 @@ bool Solver::fix_admissibility(double stability_ratio)
     if (iter == 0) {
       _printer->warn("Warning: ", true);
       _printer->warn(format_str(200, "Thermodynamically inadmissible state detected (solver iteration %i). Attempting to fix...\n",
-                                _namespace->lookup<int>("iteration").value()));
+                                _namespace->get<int>("iteration")));
     }
     auto bounds = bounds_field(State_variables(), 2*rs);
     _printer->warn(format_str(200, "    iteration %i: mass in [%e, %e]; energy in [%e, %e]\n",
@@ -1154,11 +1161,6 @@ bool Solver::fix_admissibility(double stability_ratio)
       opts.dt = s;
       compute_fix_therm_admis(_kernel_mesh(), opts, [this](){apply_fta_flux_bcs();});
     }
-    double safety = _namespace->lookup<double>("max_safety").value();
-    double n_cheby = _namespace->lookup<double>("n_cheby_flow").value();
-    double cheby_safety = _namespace->lookup<double>("cheby_safety").value();
-    double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1, cheby_safety);
-    max_dt(safety/max_cheby, safety);
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
@@ -1170,7 +1172,7 @@ bool Solver::fix_admissibility(double stability_ratio)
   --iter;
   if (iter) _printer->warn("done\n");
   status.fix_admis_iters += iter;
-  _namespace->assign("fix_iters", _namespace->lookup<int>("fix_iters").value() + iter);
+  _namespace->assign("fix_iters", _namespace->get<int>("fix_iters") + iter);
   sw_fix.work_units_completed += acc_mesh->elements().size()*iter;
   sw_fix.stopwatch.pause();
   return iter;
@@ -1184,12 +1186,12 @@ void Solver::reset_counters()
 
 std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func& func)
 {
-  return func(acc_mesh->element(ref_level, is_deformed, serial_n), basis, i_qpoint, _namespace->lookup<double>("flow_time").value());
+  return func(acc_mesh->element(ref_level, is_deformed, serial_n), basis, i_qpoint, _namespace->get<double>("flow_time"));
 }
 
 std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n, const Element_func& func)
 {
-  return func(acc_mesh->element(ref_level, is_deformed, serial_n), basis, _namespace->lookup<double>("flow_time").value());
+  return func(acc_mesh->element(ref_level, is_deformed, serial_n), basis, _namespace->get<double>("flow_time"));
 }
 
 std::vector<double> Solver::integral_field(const Qpoint_func& integrand)
@@ -1203,7 +1205,7 @@ std::vector<double> Solver::integral_field(const Qpoint_func& integrand)
     Element& element {elements[i_elem]};
     double volume = math::pow(element.nominal_size(), params.n_dim);
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
-      auto qpoint_integrand {integrand(element, basis, i_qpoint, _namespace->lookup<double>("flow_time").value())};
+      auto qpoint_integrand {integrand(element, basis, i_qpoint, _namespace->get<double>("flow_time"))};
       for (unsigned i_var = 0; i_var < qpoint_integrand.size(); ++i_var) {
         integral[i_var] += weights[i_qpoint]*volume*qpoint_integrand[i_var]*element.jacobian_determinant(i_qpoint);
       }
@@ -1240,7 +1242,7 @@ std::vector<double> Solver::integral_surface(const Boundary_func& integrand, int
           nrml_mag += math::pow(nrml[i_dim*nfq + i_qpoint], 2);
         }
         nrml_mag = std::sqrt(nrml_mag);
-        auto qpoint_integrand = integrand(con, i_qpoint, _namespace->lookup<double>("flow_time").value());
+        auto qpoint_integrand = integrand(con, i_qpoint, _namespace->get<double>("flow_time"));
         for (int i_var = 0; i_var < n_int; ++i_var) {
           integral[i_var] += qpoint_integrand[i_var]*weights(i_qpoint)*area*nrml_mag;
         }
@@ -1262,7 +1264,7 @@ std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func,
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem)
   {
     Element& elem {elems[i_elem]};
-    Eigen::VectorXd vars = Vis_data(elem, func, basis, _namespace->lookup<double>("flow_time").value()).interior(n_sample);
+    Eigen::VectorXd vars = Vis_data(elem, func, basis, _namespace->get<double>("flow_time")).interior(n_sample);
     for (int i_var = 0; i_var < n_var; ++i_var) {
       auto var = vars(Eigen::seqN(i_var*n_block, n_block));
       bounds[i_var][0] = std::min(var.minCoeff(), bounds[i_var][0]);
@@ -1275,7 +1277,7 @@ std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func,
 void Solver::visualize_field(std::string format, std::string name, const Qpoint_func& output_variables, int n_sample, bool wireframe)
 {
   auto visualizer = Visualizer::create(format, params.n_dim, wireframe ? 1 : params.n_dim, name, output_variables,
-                                       _namespace->lookup<double>("flow_time").value(), Visualizer::block);
+                                       _namespace->get<double>("flow_time"), Visualizer::block);
   HEXED_ASSERT(params.n_dim > wireframe, "can only visualize field wireframes in > 1D");
   Position_func pos_func;
   int nv = output_variables.n_var(params.n_dim);
@@ -1286,8 +1288,8 @@ void Solver::visualize_field(std::string format, std::string name, const Qpoint_
   std::vector<int> out_shape(params.n_dim + 1, n_sample);
   out_shape[0] = nv;
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    Vis_data pos_dat(elems[i_elem], pos_func, basis, _namespace->lookup<double>("flow_time").value());
-    Vis_data out_dat(elems[i_elem], output_variables, basis, _namespace->lookup<double>("flow_time").value());
+    Vis_data pos_dat(elems[i_elem], pos_func, basis, _namespace->get<double>("flow_time"));
+    Vis_data out_dat(elems[i_elem], output_variables, basis, _namespace->get<double>("flow_time"));
     if (wireframe) {
       Mat<> pos = pos_dat.edges(n_sample);
       Mat<> out = out_dat.edges(n_sample);
@@ -1308,7 +1310,7 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
 {
   HEXED_ASSERT(params.n_dim > 1, "cannot visualize surfaces in 1D");
   HEXED_ASSERT(params.n_dim > 1 + wireframe, "can only visualize surface wireframes in 3D");
-  auto visualizer = Visualizer::create(format, params.n_dim, wireframe ? 1 : params.n_dim - 1, name, func, _namespace->lookup<double>("flow_time").value(), Visualizer::block);
+  auto visualizer = Visualizer::create(format, params.n_dim, wireframe ? 1 : params.n_dim - 1, name, func, _namespace->get<double>("flow_time"), Visualizer::block);
   // convenience definitions
   const int nfq = params.n_qpoint()/params.row_size;
   const int nd = params.n_dim;
@@ -1340,7 +1342,7 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
       // fetch the output variables
       Mat<dyn, dyn> qpoint_vars (nfq, nv);
       for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-        auto vars = func(con, i_qpoint, _namespace->lookup<double>("flow_time").value());
+        auto vars = func(con, i_qpoint, _namespace->get<double>("flow_time"));
         for (int i_var = 0; i_var < nv; ++i_var) {
           qpoint_vars(i_qpoint, i_var) = vars[i_var];
         }
@@ -1385,7 +1387,7 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
 void Solver::visualize_contour(std::string format, std::string name, const Qpoint_func& contour_by, const Qpoint_func& output_variables, int n_sample)
 {
   auto visualizer = Visualizer::create(format, params.n_dim, params.n_dim - 1, name, output_variables,
-                                       _namespace->lookup<double>("flow_time").value(), Visualizer::block);
+                                       _namespace->get<double>("flow_time"), Visualizer::block);
   Position_func pos_func;
   int nv = output_variables.n_var(params.n_dim);
   auto& elems = acc_mesh->elements();
@@ -1393,8 +1395,8 @@ void Solver::visualize_contour(std::string format, std::string name, const Qpoin
   double tol = 1e-9*(bounds[0][1] - bounds[0][0]); // tolerance to avoid detecting contours on constant data
   Qf_concat vis_vars({&pos_func, &output_variables});
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto contour = Vis_data(elems[i_elem], contour_by, basis, _namespace->lookup<double>("flow_time").value()).compute_contour(0., n_sample/2, 4, tol);
-    Vis_data data(elems[i_elem], vis_vars, basis, _namespace->lookup<double>("flow_time").value());
+    auto contour = Vis_data(elems[i_elem], contour_by, basis, _namespace->get<double>("flow_time")).compute_contour(0., n_sample/2, 4, tol);
+    Vis_data data(elems[i_elem], vis_vars, basis, _namespace->get<double>("flow_time"));
     Mat<dyn, dyn> values = data.sample(contour.vert_ref_coords);
     Eigen::MatrixXi inds = contour.elem_vert_inds.transpose();
     Array<double> arr({params.n_dim + nv, int(values.rows())}, values.data());
@@ -1451,7 +1453,7 @@ Array<double> Solver::skews()
   Equiangle_skewness equi;
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    s[i_elem] = equi(elems[i_elem], basis, _namespace->lookup<double>("flow_time").value())[0];
+    s[i_elem] = equi(elems[i_elem], basis, _namespace->get<double>("flow_time"))[0];
   }
   return s;
 }

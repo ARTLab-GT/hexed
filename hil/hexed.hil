@@ -115,26 +115,6 @@ set_ramping = {
     }
 }
 
-{alternate between time stepping strategies optimized for convection and diffusion}
-set_cheby = {
-    iterate = {compute_lts_constraints;} + iterate + {
-        case0 = {}
-        case1 = {
-            case0 = {
-                flow_iters = 1
-                n_cheby_flow = shock_sub_iters
-            }
-            case1 = {
-                flow_iters = shock_sub_iters
-                n_cheby_flow = 1
-            }
-            $$({case} + ((iteration/print_freq)%2 == 0 | min_lts_dc_ratio > .5))
-        }
-        $$({case} + (iteration >= ramping_initial_iters))
-    }
-    print_vars = print_vars + {min_lts_dc_ratio = min_lts_dc_ratio;}
-}
-
 preti_initial_iters = 2000
 set_preti = {
     iterate = iterate + {
@@ -155,7 +135,7 @@ set_aerothermo = {
     conductivity_model = air_conductivity
     print_vars = print_vars + heating_rate_expr
     iterate = {$compute_heating} + iterate
-    $set_cheby
+    n_cheby_bl = 12
     case0 = {}
     case1 = {$set_preti}
     $$({case} + aerothermo_preti)
