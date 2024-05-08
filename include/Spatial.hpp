@@ -689,10 +689,11 @@ class Spatial
               comp[i_side].compute_flux_conv();
               comp[i_side].compute_char_speed();
             }
-            Mat<Pde::n_update> flux = .5*(
-              comp[0].flux_conv + comp[1].flux_conv
-              + std::max(comp[0].char_speed, comp[1].char_speed)*comp[0].normal.norm()*(comp[0].update_state - comp[1].update_state)
-            );
+            double n = comp[0].normal.norm();
+            double char_flux = std::max(comp[0].scalar_char*n + std::abs(comp[0].vector_char.dot(comp[0].normal)),
+                                        comp[1].scalar_char*n + std::abs(comp[1].vector_char.dot(comp[1].normal)));
+            Mat<Pde::n_update> flux = .5*(comp[0].flux_conv + comp[1].flux_conv
+                                          + char_flux*(comp[0].update_state - comp[1].update_state));
             for (int i_side = 0; i_side < 2; ++i_side) {
               for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
                 face[i_side][i_var*n_fqpoint + i_qpoint] = sign[i_side]*flux(i_var);
