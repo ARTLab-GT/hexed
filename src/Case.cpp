@@ -472,6 +472,11 @@ Case::Case(std::string input_script)
     return "";
   }));
 
+  _inter.variables->create<std::string>("compute_lts_constraints", new Namespace::Heisenberg<std::string>([this]() {
+    _solver().compute_lts_constraints();
+    return "";
+  }));
+
   _inter.variables->create<std::string>("report", new Namespace::Heisenberg<std::string>([this]() {
     std::string report = "";
     Struct_expr vars(_vars("print_vars").value());

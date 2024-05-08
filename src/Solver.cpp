@@ -947,6 +947,32 @@ void Solver::compute_residual()
   else compute_euler(_kernel_mesh(), opts);
 }
 
+void Solver::compute_lts_constraints()
+{
+  auto& elems = acc_mesh->deformed().elements();
+  int nd = params.n_dim;
+  int nq = params.n_qpoint();
+  // write local time steps for convection and diffusion to the mass and energy of the reference state.
+  // Reference state is used for storage because `Element::time_step_scale` only has space for one scalar
+  for (int i_term = 0; i_term < 2; ++i_term) {
+    double safeties [] {1., huge};
+    max_dt(safeties[i_term], safeties[!i_term]);
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      Eigen::Map<Mat<>>(elems[i_elem].residual_cache() + (params.n_dim + i_term)*nq, nq) = Eigen::Map<Mat<>>(elems[i_elem].time_step_scale(), nq);
+    }
+  }
+  double min_ratio = huge;
+  #pragma omp parallel for reduction(min:min_ratio)
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    double* cache = elems[i_elem].residual_cache();
+    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+      min_ratio = std::min(min_ratio, cache[(nd + 1)*nq + i_qpoint]/cache[nd*nq + i_qpoint]);
+    }
+  }
+  _namespace->assign("min_lts_dc_ratio", min_ratio);
+}
+
 Iteration_status Solver::iteration_status()
 {
   Iteration_status stat = status;
@@ -1387,14 +1413,11 @@ void Solver::vis_lts_constraints(std::string format, std::string name, int n_sam
   auto& elems = acc_mesh->elements();
   int nf = params.n_dof();
   int nq = params.n_qpoint();
-  double n_cheby = _namespace->lookup<double>("n_cheby_flow").value();
-  double cheby_safety = _namespace->lookup<double>("cheby_safety").value();
-  double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1, cheby_safety);
   // write local time steps for convection and diffusion to the mass and energy of the reference state.
   // Reference state is used for storage because `Element::time_step_scale` only has space for one scalar
   for (int i_term = 0; i_term < 2; ++i_term) {
     double safeties [] {1., huge};
-    max_dt(safeties[i_term]/max_cheby, safeties[!i_term]);
+    max_dt(safeties[i_term], safeties[!i_term]);
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       Eigen::Map<Mat<>>(elems[i_elem].residual_cache() + (params.n_dim + i_term)*nq, nq) = Eigen::Map<Mat<>>(elems[i_elem].time_step_scale(), nq);

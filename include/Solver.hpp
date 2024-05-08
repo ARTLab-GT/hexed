@@ -181,6 +181,11 @@ class Solver
   void update();
   void update_implicit(); //!< \brief (experimental) performs an implicit time step \warning Experimental! Interesting for reasearch, not effective in practice (yet, anyway).
   void compute_residual();
+  /*! \brief Computes the minimum ratio between the local diffusive and convective time steps.
+   * \details Assumes no Chebyshev acceleration.
+   * Result is written to `min_lts_dc_ratio` in the HIL namespace.
+   */
+  void compute_lts_constraints();
   bool is_admissible(); //!< \brief check whether flowfield is admissible (e.g. density and energy are positive)
   void update_art_visc_smoothness(double advect_length); //!< \brief updates the aritificial viscosity coefficient based on smoothness of the flow variables
   /*! \brief (experimental) sets artificial viscosity based on elementwise smoothness

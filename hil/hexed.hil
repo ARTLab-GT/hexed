@@ -117,7 +117,7 @@ set_ramping = {
 
 {alternate between time stepping strategies optimized for convection and diffusion}
 set_cheby = {
-    iterate = iterate + {
+    iterate = {compute_lts_constraints;} + iterate + {
         case0 = {}
         case1 = {
             case0 = {
@@ -128,10 +128,11 @@ set_cheby = {
                 flow_iters = shock_sub_iters
                 n_cheby_flow = 1
             }
-            $$({case} + ((iteration/print_freq)%2 == 0))
+            $$({case} + ((iteration/print_freq)%2 == 0 | min_lts_dc_ratio > .5))
         }
         $$({case} + (iteration >= ramping_initial_iters))
     }
+    print_vars = print_vars + {min_lts_dc_ratio = min_lts_dc_ratio;}
 }
 
 preti_initial_iters = 2000
