@@ -862,18 +862,19 @@ void Solver::synch_extruded_uncert()
 void Solver::update()
 {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
-  for (int i_flow = 0; i_flow < _namespace->lookup<int>("flow_iters").value(); ++i_flow)
+  int shock_sub_iters = _namespace->lookup<int>("shock_sub_iters").value();
+  double safety = _namespace->lookup<double>("max_safety").value();
+  double cheby_safety = _namespace->lookup<double>("cheby_safety").value();
+  for (int i_flow = 0; i_flow < shock_sub_iters; ++i_flow)
   {
     // compute time step
-    double safety = _namespace->lookup<double>("max_safety").value();
-    double n_cheby = _namespace->lookup<double>("n_cheby_flow").value();
-    double cheby_safety = _namespace->lookup<double>("cheby_safety").value();
-    double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1, cheby_safety);
     double dt = 0;
-    int n_preti = 1 + std::max(0, int(_preti_masks.size()) - 1)*(_namespace->lookup<int>("preti").value());
+    int n_preti = (_namespace->lookup<int>("preti").value() && !i_flow) ? _preti_masks.size() : 1;
     for (int i_preti = 0; i_preti < n_preti; ++i_preti) {
       _preti_level = i_preti > 0;
       Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
+      int n_cheby = i_preti ? shock_sub_iters : 1;
+      double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1, cheby_safety);
       // run chebyshev iterations
       for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
       {
