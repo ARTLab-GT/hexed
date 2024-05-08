@@ -104,5 +104,14 @@ struct Printer_set
   Printer_set();
 };
 
+//! \brief prints messages like "message... done"
+class Task_message
+{
+  Printer& _printer;
+  public:
+  Task_message(Printer& p, std::string message, std::string sep = " ") : _printer(p) {_printer(message + "..." + sep);}
+  ~Task_message() {_printer("done\n");}
+};
+
 }
 #endif

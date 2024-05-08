@@ -345,41 +345,54 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create<int>("read_mesh", new Namespace::Heisenberg<int>([this]() {
+    _printers->info("reading mesh... ");
     Surface_geom* geom = _make_geom();
     _solver().read_mesh(_vars("input_data").value(), _make_extremal_bcs(), geom, geom ? _make_bc(_vars("surface_bc").value()) : nullptr);
+    _printers->info("done\n");
     return 0;
   }));
   _inter.variables->create<int>("read_state", new Namespace::Heisenberg<int>([this]() {
+    _printers->info("reading state... ");
     _solver().read_state(_vars("input_data").value());
+    _printers->info("done\n");
     return 0;
   }));
   _inter.variables->create<int>("write_mesh", new Namespace::Heisenberg<int>([this]() {
+    _printers->info("writing mesh... ");
     std::string file_name = _vars("working_dir").value() + _iteration_suffix();
     _solver().mesh().write(file_name);
     force_symlink(_iteration_suffix() + ".mesh.h5", _vars("working_dir").value() + "latest.mesh.h5");
+    _printers->info("done\n");
     return 0;
   }));
   _inter.variables->create<int>("write_state", new Namespace::Heisenberg<int>([this]() {
+    _printers->info("writing state... ");
     std::string file_name = _vars("working_dir").value() + _iteration_suffix();
     _solver().write_state(file_name);
     force_symlink(_iteration_suffix() + ".state.h5", _vars("working_dir").value() + "latest.state.h5");
+    _printers->info("done\n");
     return 0;
   }));
   _inter.variables->create<int>("write_status", new Namespace::Heisenberg<int>([this]() {
+    _printers->info("writing status... ");
     std::ofstream status_file(_vars("working_dir").value() + _iteration_suffix() + ".status.hil");
     for (std::string name : {"iteration", "max_safety", "max_time_step", "residual_init", "init_residual_momentum", "init_residual_density", "init_residual_energy"}) {
       status_file << _assignment(name) + "\n";
     }
     status_file.close();
     force_symlink(_iteration_suffix() + ".status.hil", _vars("working_dir").value() + "latest.status.hil");
+    _printers->info("done\n");
     return 0;
   }));
   _inter.variables->create<int>("export_polymesh", new Namespace::Heisenberg<int>([this]() {
+    _printers->info("exporting polymesh... ");
     _solver().mesh().export_polymesh(_vars("working_dir").value());
+    _printers->info("done\n");
     return 0;
   }));
 
   _inter.variables->create<int>("visualize", new Namespace::Heisenberg<int>([this]() {
+    _printers->info("visualizing... ");
     std::string wd = _vars("working_dir").value();
     std::string suffix = "_" + _iteration_suffix();
     int n_sample = _vari("vis_n_sample").value();
@@ -419,6 +432,7 @@ Case::Case(std::string input_script)
         }
       }
     }
+    _printers->info("done\n");
     return 0;
   }));
 
@@ -447,7 +461,10 @@ Case::Case(std::string input_script)
     _solver().compute_residual();
     auto res = _solver().integral_field(Pow(phys_resid, 2));
     for (int i_dim = 1; i_dim < nd; ++i_dim) res[0] += res[i_dim];
-    for (double& r : res) r = std::sqrt(r);
+    for (double& r : res) {
+      r = std::sqrt(r);
+      HEXED_ASSERT(!std::isnan(r), "residual is NaN", assert::Numerical_exception);
+    }
     _inter.variables->assign("residual_momentum", res[0]);
     _inter.variables->assign("residual_density", res[nd]);
     _inter.variables->assign("residual_energy", res[nd + 1]);
@@ -488,23 +505,15 @@ Case::Case(std::string input_script)
     int n = iter ? print_freq - iter%print_freq : 1;
     for (int i = 0; i < n; ++i) {
       ++iter;
-      try {
-        if (_vari("diffusive_admissibility").value()) _solver().set_art_visc_admis();
-        if (_vari("elementwise_art_visc").value()) {
-          _solver().update_art_visc_elwise(_vard("art_visc_width").value(), _vari("elementwise_art_visc_pde").value());
-        } else if (avw) {
-          _solver().update_art_visc_smoothness(_vard("art_visc_width").value());
-        } else if (avc) {
-          _solver().set_art_visc_constant(_vard("art_visc_constant").value());
-        }
-        _solver().update();
-      } catch (const assert::Numerical_exception& except) {
-        _printers->error("Numerical exception: ", true);
-        _printers->error(except.what());
-        _printers->error("\nTerminating simulation.\n", true);
-        _inter.variables->assign("failed", 1);
-        break;
+      if (_vari("diffusive_admissibility").value()) _solver().set_art_visc_admis();
+      if (_vari("elementwise_art_visc").value()) {
+        _solver().update_art_visc_elwise(_vard("art_visc_width").value(), _vari("elementwise_art_visc_pde").value());
+      } else if (avw) {
+        _solver().update_art_visc_smoothness(_vard("art_visc_width").value());
+      } else if (avc) {
+        _solver().set_art_visc_constant(_vard("art_visc_constant").value());
       }
+      _solver().update();
     }
     _inter.variables->assign("iteration", iter);
     auto sub = _inter.make_sub();
@@ -548,6 +557,12 @@ Case::Case(std::string input_script)
   } catch (const assert::User_error& except) {
     if (_printers) _printers->error("User error: ", true);
     throw except;
+  } catch (const assert::Numerical_exception& except) {
+    _printers->error("Numerical exception: ", true);
+    _printers->error(except.what());
+    _printers->error("\nTerminating simulation.\n", true);
+    if (_solver_ptr) _inter.exec("write_mesh; write_state; write_status; visualize;");
+    _inter.variables->assign("failed", 1);
   }
 }
 

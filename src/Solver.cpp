@@ -879,6 +879,7 @@ void Solver::update()
       {
         double nominal_dt = std::min(max_dt(safety/max_cheby, safety), _namespace->lookup<double>("max_time_step").value());
         dt = nominal_dt*math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
+        HEXED_ASSERT(!std::isnan(dt), "time step is NaN", assert::Numerical_exception);
         // record reference state for residual calculation
         bool fixed = false;
         // compute inviscid update

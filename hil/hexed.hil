@@ -267,22 +267,16 @@ failed = false
 write_iter = {
     case0 = {}
     case1 = {
-        print {writing mesh/state data...}
         write_mesh
         write_state
         write_status
-        println {done}
     }
     $$({case} + (iteration%write_freq == 0))
 }
 
 vis_iter = {
     case0 = {}
-    case1 = {
-        print {visualizing...}
-        visualize
-        println {done}
-    }
+    case1 = {visualize}
     $$({case} + (iteration%vis_freq == 0))
 }
 
