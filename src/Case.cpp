@@ -415,6 +415,7 @@ Case::Case(std::string input_script)
             } else if (v == "field") {
               _solver().visualize_field(format, file_name, Qpoint_expr(vis_vars, _inter), n_sample, edges);
               if (_vari("vis_skew").value()) _solver().visualize_field(format, wd + "skew" + suffix, Equiangle_skewness(), n_sample, edges);
+              if (_vari("vis_lts_constraints").value()) _solver().vis_lts_constraints(format, wd + "lts_constraints" + suffix, n_sample);
             } else if (!edges) { // vis_type == contour0, contour1, etc
               std::string contour_expr = _vars("vis_contour_vars").value() + v + "_var = " + _vars(v).value() + ";";
               _solver().visualize_contour(format, file_name, Qpoint_expr(contour_expr, _inter), Qpoint_expr(vis_vars, _inter), n_sample);
