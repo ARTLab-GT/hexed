@@ -689,11 +689,10 @@ class Spatial
               comp[i_side].compute_flux_conv();
               comp[i_side].compute_char_speed();
             }
-            double n = comp[0].normal.norm();
-            double char_flux = std::max(comp[0].scalar_char*n + std::abs(comp[0].vector_char.dot(comp[0].normal)),
-                                        comp[1].scalar_char*n + std::abs(comp[1].vector_char.dot(comp[1].normal)));
-            Mat<Pde::n_update> flux = .5*(comp[0].flux_conv + comp[1].flux_conv
-                                          + char_flux*(comp[0].update_state - comp[1].update_state));
+            Mat<Pde::n_update> flux = .5*(
+              comp[0].flux_conv + comp[1].flux_conv
+              + std::max(comp[0].char_speed, comp[1].char_speed)*comp[0].normal.norm()*(comp[0].update_state - comp[1].update_state)
+            );
             for (int i_side = 0; i_side < 2; ++i_side) {
               for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
                 face[i_side][i_var*n_fqpoint + i_qpoint] = sign[i_side]*flux(i_var);
@@ -808,11 +807,8 @@ class Spatial
         double* state = elem.state();
         double* tss = elem.time_step_scale();
         Mat<math::pow(2, n_dim)> vertex_spacing;
-        bool perfect_car = !elem.deformed();
-        double nom_sz = elem.nominal_size();
         for (unsigned i_vert = 0; i_vert < vertex_spacing.size(); ++i_vert) {
           vertex_spacing(i_vert) = elem.vertex_time_step_scale(i_vert);
-          perfect_car = perfect_car && (std::abs(vertex_spacing(i_vert)*n_dim/nom_sz - 1.) < 1e-6);
         }
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
         {
@@ -829,8 +825,7 @@ class Spatial
           double scale = 0;
           if constexpr (Pde::has_convection) {
             comp.compute_char_speed();
-            scale += perfect_car ? (comp.scalar_char + comp.vector_char.cwiseAbs().sum())/max_cfl_c/nom_sz
-                                 : comp.char_speed/max_cfl_c/spacing;
+            scale += comp.char_speed/max_cfl_c/spacing;
           }
           if constexpr (Pde::has_diffusion) {
             comp.compute_diffusivity();

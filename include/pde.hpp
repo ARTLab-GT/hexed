@@ -158,13 +158,11 @@ class Navier_stokes
       }
 
       double char_speed;
-      double scalar_char;
-      Mat<n_dim> vector_char;
       void compute_char_speed()
       {
-        vector_char = state(Eigen::seqN(0, n_dim))/state(n_dim);
-        scalar_char = std::sqrt(heat_rat*(heat_rat - 1)*state(n_dim + 1)/state(n_dim)); // numerical estimate (not less than actual speed of sound)
-        char_speed = scalar_char + vector_char.norm();
+        const double sound_speed = std::sqrt(heat_rat*(heat_rat - 1)*state(n_dim + 1)/state(n_dim)); // numerical estimate (not less than actual speed of sound)
+        const double speed = state(Eigen::seqN(0, n_dim)).norm()/state(n_dim);
+        char_speed = sound_speed + speed;
       }
 
       double diffusivity;
@@ -342,13 +340,9 @@ class Advection
     }
 
     double char_speed;
-    double scalar_char;
-    Mat<n_dim> vector_char;
     void compute_char_speed()
     {
-      scalar_char = .2;
-      vector_char = state(Eigen::seqN(0, n_dim));
-      char_speed = scalar_char + vector_char.norm();
+      char_speed = std::max(1., state(Eigen::seqN(0, n_dim)).norm());
     }
 
   };
