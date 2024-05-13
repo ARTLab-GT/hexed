@@ -879,37 +879,41 @@ void Solver::update()
       for (int i_bl = 0; i_bl < n_bl; ++i_bl)
       {
         int n_cheby = i_preti ? _namespace->get<int>("n_cheby_bl") : 1;
+        int max_sub_iters = 2;
         double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1, cheby_safety);
         // run chebyshev iterations
         for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
         {
-          double nominal_dt = std::min(max_dt(safety/max_cheby, safety), _namespace->get<double>("max_time_step"));
+          int sub_iters = (i_cheby == n_cheby - 1 && i_cheby > 0) ? max_sub_iters : 1;
+          double nominal_dt = std::min(max_dt(safety/max_cheby*sub_iters, safety), _namespace->get<double>("max_time_step"));
           dt = nominal_dt*math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
           HEXED_ASSERT(!std::isnan(dt), "time step is NaN", assert::Numerical_exception);
-
           bool fixed = false;
-          // compute inviscid update
-          for (int i = 0; i < 2; ++i) {
-            Kernel_options opts {
-              .sw_car = stopwatch.children.at("cartesian"),
-              .sw_def = stopwatch.children.at("deformed" ),
-              .sw_pr = stopwatch.children.at("prolong/restrict"),
-              .dt = dt,
-              .i_stage = i,
-              .compute_residual = false,
-              .use_filter = bool(_namespace->get<int>("use_filter")),
-              .mask = i_preti,
-            };
-            apply_state_bcs();
-            if (use_ldg() && !i) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond);
-            else compute_euler(km, opts);
-            // note that function call must come first to ensure it is evaluated despite short-circuiting
-            fixed = fix_admissibility(_namespace->get<double>("fix_admis_max_safety")) || fixed;
+          for (int i_sub = 0; i_sub < sub_iters; ++i_sub) {
+            // compute inviscid update
+            for (int i = 0; i < 2; ++i) {
+              Kernel_options opts {
+                .sw_car = stopwatch.children.at("cartesian"),
+                .sw_def = stopwatch.children.at("deformed" ),
+                .sw_pr = stopwatch.children.at("prolong/restrict"),
+                .dt = dt/sub_iters,
+                .i_stage = i,
+                .compute_residual = false,
+                .use_filter = bool(_namespace->get<int>("use_filter")),
+                .mask = i_preti,
+                .conv_substep = (sub_iters > 1) && use_ldg(),
+              };
+              apply_state_bcs();
+              if (use_ldg() && !i && !i_sub) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond);
+              else compute_euler(km, opts);
+              // note that function call must come first to ensure it is evaluated despite short-circuiting
+              fixed = fix_admissibility(_namespace->get<double>("fix_admis_max_safety")) || fixed;
+            }
+            stopwatch.work_units_completed += km.elems.size();
+            stopwatch.children.at("cartesian").work_units_completed += km.car_elems.size();
+            stopwatch.children.at("deformed" ).work_units_completed += km.def_elems.size();
+            if (fixed) break;
           }
-
-          stopwatch.work_units_completed += km.elems.size();
-          stopwatch.children.at("cartesian").work_units_completed += km.car_elems.size();
-          stopwatch.children.at("deformed" ).work_units_completed += km.def_elems.size();
           if (fixed) break;
 
           // update status for reporting

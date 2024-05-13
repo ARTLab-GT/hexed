@@ -135,7 +135,7 @@ set_aerothermo = {
     conductivity_model = air_conductivity
     print_vars = print_vars + heating_rate_expr
     iterate = {$compute_heating} + iterate
-    n_cheby_bl = 12
+    n_cheby_bl = 10
     case0 = {}
     case1 = {$set_preti}
     $$({case} + aerothermo_preti)
