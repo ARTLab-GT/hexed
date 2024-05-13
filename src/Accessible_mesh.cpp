@@ -123,12 +123,18 @@ void Accessible_mesh::snap_vertices()
   }
 }
 
+Storage_params incr_res_cache(Storage_params params)
+{
+  params.n_stage += 1;
+  return params;
+}
+
 Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg) :
   params{params_arg},
   n_vert{math::pow(2, params.n_dim)},
   root_sz{root_size_arg},
   car{params, root_sz},
-  def{params, root_sz},
+  def{incr_res_cache(params), root_sz},
   def_as_car{def.elements()},
   elems{car.elements(), def_as_car},
   kernel_elems{elems},
