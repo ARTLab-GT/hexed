@@ -182,6 +182,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("av_diff_max_safety", .7); // stability ratio for diffusion
   _namespace->assign_default("buffer_dist", .8*std::sqrt(params.n_dim));
   _namespace->assign_default("n_cheby_bl", 1);
+  _namespace->assign_default("max_conv_sub_iters", 1);
   _namespace->assign_default("n_cheby_av", 1);
   _namespace->assign_default("cheby_safety", .9); // safety factor to apply to Chebyshev-acceleration
   _namespace->assign_default("preti", 0);
@@ -879,14 +880,15 @@ void Solver::update()
       for (int i_bl = 0; i_bl < n_bl; ++i_bl)
       {
         int n_cheby = i_preti ? _namespace->get<int>("n_cheby_bl") : 1;
-        int max_sub_iters = 2;
+        int max_sub_iters = i_preti ? _namespace->get<int>("max_conv_sub_iters") : 1;
         double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1, cheby_safety);
         // run chebyshev iterations
         for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
         {
-          int sub_iters = (i_cheby == n_cheby - 1 && i_cheby > 0) ? max_sub_iters : 1;
+          double cheby_step = math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
+          int sub_iters = std::ceil(max_sub_iters*cheby_step/max_cheby - 1e-6);
           double nominal_dt = std::min(max_dt(safety/max_cheby*sub_iters, safety), _namespace->get<double>("max_time_step"));
-          dt = nominal_dt*math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
+          dt = nominal_dt*cheby_step;
           HEXED_ASSERT(!std::isnan(dt), "time step is NaN", assert::Numerical_exception);
           bool fixed = false;
           for (int i_sub = 0; i_sub < sub_iters; ++i_sub) {
@@ -964,11 +966,14 @@ void Solver::compute_lts_constraints()
   auto& elems = acc_mesh->deformed().elements();
   int nd = params.n_dim;
   int nq = params.n_qpoint();
+  int n_cheby = _namespace->get<int>("n_cheby_bl");
+  double cheby_safety = _namespace->get<double>("cheby_safety");
+  double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1, cheby_safety);
   // write local time steps for convection and diffusion to the mass and energy of the reference state.
   // Reference state is used for storage because `Element::time_step_scale` only has space for one scalar
   for (int i_term = 0; i_term < 2; ++i_term) {
     double safeties [] {1., huge};
-    max_dt(safeties[i_term], safeties[!i_term]);
+    max_dt(safeties[i_term]/max_cheby, safeties[!i_term]);
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       Eigen::Map<Mat<>>(elems[i_elem].residual_cache() + (params.n_dim + i_term)*nq, nq) = Eigen::Map<Mat<>>(elems[i_elem].time_step_scale(), nq);
