@@ -9,6 +9,13 @@ residual_momentum_expr = {residual_momentum0 = (momentum0 - prev_momentum0)/tss;
 residual_density_expr = {residual_density = (density - prev_density)/tss;}
 residual_energy_expr = {residual_energy = (energy - prev_energy)/tss;}
 residual_expr = residual_momentum_expr + residual_density_expr + residual_energy_expr
+field_residual_expr = {
+    residual_momentum0 = residual_momentum0
+    residual_momentum1 = residual_momentum1
+    residual_momentum2 = residual_momentum2
+    residual_density = residual_density
+    residual_energy = residual_energy
+}
 velocity_expr = {velocity0 = momentum0/density; velocity1 = momentum1/density; velocity2 = momentum2/density;}
 speed_expr = {speed = sqrt(velocity0^2 + velocity1^2 + velocity2^2);}
 pressure_expr = {pressure = (heat_rat - 1)*(energy - 0.5*density*speed^2);}

@@ -32,6 +32,7 @@ done = {iteration > 10^4 & heating_rate_max - heating_rate_min < 10.}
 vis_freq = 5000
 diffusive_admissibility = true
 vis_lts_constraints = true
+vis_field_vars = vis_field_vars + field_residual_expr
 
 $plot_history
 $start
