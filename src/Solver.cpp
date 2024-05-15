@@ -874,7 +874,7 @@ void Solver::update()
     int n_preti = (_namespace->get<int>("preti") && !i_flow) ? _preti_masks.size() : 1;
     for (int i_preti = 0; i_preti < n_preti; ++i_preti)
     {
-      _preti_level = i_preti > 0;
+      _preti_level = i_preti;
       Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
       int n_bl = i_preti ? _namespace->get<int>("bl_iters") : 1;
       for (int i_bl = 0; i_bl < n_bl; ++i_bl)

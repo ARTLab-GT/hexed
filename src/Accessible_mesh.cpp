@@ -1440,6 +1440,7 @@ void Accessible_mesh::reset_masks()
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem]._mask = 0;
+    elems[i_elem]._mask_fringe = false;
   }
 }
 
