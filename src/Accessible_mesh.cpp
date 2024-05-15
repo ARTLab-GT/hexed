@@ -125,7 +125,7 @@ void Accessible_mesh::snap_vertices()
 
 Storage_params incr_res_cache(Storage_params params)
 {
-  params.n_stage += 1;
+  params.n_stage += 3; //! \todo should be able to get away with 2
   return params;
 }
 
