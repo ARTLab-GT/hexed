@@ -489,16 +489,12 @@ class Spatial
         }
 
         bool fringe = elem.is_fringe(_mask);
-        int i_dim = fringe ? elem.fringe_dim() : 0;
-        bool sign = fringe ? elem.fringe_sign() : 0;
-        Mat<row_size> row_mult = sign*Mat<row_size>::Ones() - math::sign(sign)*_nodes;
-        int stride = math::pow(row_size, n_dim - 1 - i_dim);
         // write update to interior
         double* ref_state = elem.residual_cache();
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           Mat<Pde::n_update> update;
           update.setZero();
-          double mult = _update*tss[i_qpoint]/d_pos*(fringe ? row_mult((i_qpoint/stride)%row_size) : 1.);
+          double mult = _update*tss[i_qpoint]/d_pos*(!fringe);
           if constexpr (is_deformed) mult /= elem_det[i_qpoint];
           for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
             double u = time_rate[0][i_var][i_qpoint];
@@ -602,16 +598,12 @@ class Spatial
         }
 
         bool fringe = elem.is_fringe(_mask);
-        int i_dim = fringe ? elem.fringe_dim() : 0;
-        bool sign = fringe ? elem.fringe_sign() : 0;
-        Mat<row_size> row_mult = sign*Mat<row_size>::Ones() - math::sign(sign)*_nodes;
-        int stride = math::pow(row_size, n_dim - 1 - i_dim);
         // write update to interior
         double* to_update = _compute_residual ? elem.residual_cache() : state;
         double* res_cache = elem.residual_cache();
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           Mat<Pde::n_update> update;
-          double mult = _update*tss[i_qpoint]/d_pos*(fringe ? row_mult((i_qpoint/stride)%row_size) : 1.);
+          double mult = _update*tss[i_qpoint]/d_pos*(!fringe);
           if constexpr (is_deformed) mult /= elem_det[i_qpoint];
           for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
             update(i_var) = time_rate[i_var][i_qpoint]*mult;

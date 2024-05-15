@@ -867,21 +867,6 @@ void Solver::update()
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
   double safety = _namespace->get<double>("max_safety");
   double cheby_safety = _namespace->get<double>("cheby_safety");
-  int nv = params.n_var;
-  int nq = params.n_qpoint();
-  Mat<> weights = math::pow_outer(basis.node_weights(), params.n_dim);
-  Mat<> freestream(nv);
-  for (int i_var = 0; i_var < nv; ++i_var) freestream(i_var) = _namespace->get<double>("freestream" + std::to_string(i_var));
-  double mmtm_norm = freestream(Eigen::seqN(0, params.n_dim)).norm();
-  freestream(Eigen::seqN(0, params.n_dim)).setConstant(mmtm_norm);
-  auto& elems = acc_mesh->deformed().elements();
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    double* state = elems[i_elem].state();
-    double* cache = elems[i_elem].residual_cache() + 3*params.n_dof();
-    for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) cache[i_dof] = state[i_dof];
-  }
-  double norm_sq = 0;
   for (int i_flow = 0; i_flow < _namespace->get<int>("flow_iters"); ++i_flow)
   {
     // compute time step
@@ -938,58 +923,6 @@ void Solver::update()
           _namespace->assign<double>("flow_time", _namespace->get<double>("flow_time") + dt);
           status.time_step = dt;
           status.flow_time += dt;
-        }
-        if (!i_flow) {
-          if (!(i_preti || i_bl)) {
-            #pragma omp parallel for reduction(+:norm_sq)
-            for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-              double* state = elems[i_elem].state();
-              double* cache0 = elems[i_elem].residual_cache() + 3*params.n_dof();
-              double* cache1 = elems[i_elem].residual_cache() + 2*params.n_dof();
-              for (int i_var = 0; i_var < nv; ++i_var) {
-                for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-                  int i_dof = i_var*nq + i_qpoint;
-                  cache1[i_dof] = state[i_dof];
-                  norm_sq += math::pow((cache1[i_dof] - cache0[i_dof])/freestream(i_var), 2)*weights[i_qpoint];
-                }
-              }
-            }
-          }
-          if (i_preti == n_preti - 1 && i_bl == n_bl - 1) {
-            double dot = 0;
-            #pragma omp parallel for reduction(+:dot)
-            for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-              double* state = elems[i_elem].state();
-              double* cache0 = elems[i_elem].residual_cache() + 3*params.n_dof();
-              double* cache1 = elems[i_elem].residual_cache() + 2*params.n_dof();
-              for (int i_var = 0; i_var < nv; ++i_var) {
-                for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-                  int i_dof = i_var*nq + i_qpoint;
-                  dot += (state[i_dof] - cache1[i_dof])*(cache1[i_dof] - cache0[i_dof])/math::pow(freestream(i_var), 2)*weights[i_qpoint];
-                }
-              }
-            }
-            if (dot < 0) {
-              double coef = dot/norm_sq;
-              #pragma omp parallel for
-              for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-                double* state = elems[i_elem].state();
-                #if 0
-                double* cache0 = elems[i_elem].residual_cache() + 3*params.n_dof();
-                double* cache1 = elems[i_elem].residual_cache() + 2*params.n_dof();
-                for (int i_var = 0; i_var < nv; ++i_var) {
-                  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-                    int i_dof = i_var*nq + i_qpoint;
-                    state[i_dof] -= coef*(cache1[i_dof] - cache0[i_dof]);
-                  }
-                }
-                #else
-                double* cache1 = elems[i_elem].residual_cache() + 2*params.n_dof();
-                for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) state[i_dof] = cache1[i_dof];
-                #endif
-              }
-            }
-          }
         }
       }
     }

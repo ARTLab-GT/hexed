@@ -46,8 +46,6 @@ class Element : public Kernel_element
   std::array<double*, 6> faces; //!< layout: [2*i_dim + face_sign][i_var][i_qpoint]
   int _mask;
   bool _mask_fringe;
-  int _fringe_dim;
-  bool _fringe_sign;
   friend Accessible_mesh; // necessary for `Accessible_mesh::set_mask`... need a better way to do this
 
   public:
@@ -99,8 +97,6 @@ class Element : public Kernel_element
   //! \details value can be set with `Accessible_mesh::set_mask`
   int mask() const {return _mask;}
   bool is_fringe(int m) const override {return _mask_fringe && (m == _mask);}
-  int fringe_dim() const override {return _fringe_dim;}
-  bool fringe_sign() const override {return _fringe_sign;}
 
   /*! \brief Compute the Jacobian matrix.
    * \details I.e., derivative of `i_dim`th

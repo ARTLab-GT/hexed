@@ -511,8 +511,8 @@ Case::Case(std::string input_script)
     int n = iter ? print_freq - iter%print_freq : 1;
     for (int i = 0; i < n; ++i) {
       ++iter;
-      if (_vari("diffusive_admissibility").value()) _solver().set_art_visc_admis();
-      if (_vari("elementwise_art_visc").value()) {
+      if (_inter.variables->get<int>("diffusive_admissibility")) _solver().set_art_visc_admis();
+      if (_inter.variables->get<int>("elementwise_art_visc")) {
         _solver().update_art_visc_elwise(_vard("art_visc_width").value(), _vari("elementwise_art_visc_pde").value());
       } else if (avw) {
         _solver().update_art_visc_smoothness(_vard("art_visc_width").value());
