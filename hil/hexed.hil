@@ -122,29 +122,17 @@ set_ramping = {
     }
 }
 
-preti_initial_iters = 2000
-max_cheby_bl = 10
-set_preti = {
-    iterate = iterate + {
-        case0 = {}
-        case1 = {
-            print_emph = true; println {Activating PRETI scheme.}
-            preti = true
-            n_cheby_bl = 2
-            max_conv_sub_iters = 2
-            iterate = iterate + {
-                case0 = {}
-                case1 = {
-                    n_cheby_bl = n_cheby_bl + 2
-                }
-                $$({case} + (n_cheby_bl < max_cheby_bl))
-            }
-        }
-        $$({case} + (iteration == preti_initial_iters))
-    }
+subsonic_preti_iters = 10
+set_subsonic_preti = {
+    preti = true
+    flow_iters = subsonic_preti_iters
+    bl_iters = subsonic_preti_iters
 }
 
+
 aerothermo_preti = false
+preti_initial_iters = 2000
+max_cheby_bl = 10
 set_aerothermo = {
     $set_shock
     $set_ramping
@@ -153,7 +141,25 @@ set_aerothermo = {
     print_vars = print_vars + heating_rate_expr
     iterate = {$compute_heating} + iterate
     case0 = {}
-    case1 = {$set_preti}
+    case1 = {
+        iterate = iterate + {
+            case0 = {}
+            case1 = {
+                print_emph = true; println {Activating PRETI scheme.}
+                preti = true
+                n_cheby_bl = 2
+                max_conv_sub_iters = 2
+                iterate = iterate + {
+                    case0 = {}
+                    case1 = {
+                        n_cheby_bl = n_cheby_bl + 2
+                    }
+                    $$({case} + (n_cheby_bl < max_cheby_bl))
+                }
+            }
+            $$({case} + (iteration == preti_initial_iters))
+        }
+    }
     $$({case} + aerothermo_preti)
 }
 
