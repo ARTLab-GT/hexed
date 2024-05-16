@@ -872,10 +872,8 @@ void Solver::update()
     // compute time step
     double dt = 0;
     int n_preti = (_namespace->get<int>("preti") && !i_flow) ? _preti_masks.size() : 1;
-    for (int i_preti = 0; i_preti < n_preti; ++i_preti)
+    for (int i_preti = 0; i_preti < n_preti; ++i_preti) if (i_preti != 1)
     {
-      _preti_level = i_preti;
-      Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
       int n_bl = i_preti ? _namespace->get<int>("bl_iters") : 1;
       for (int i_bl = 0; i_bl < n_bl; ++i_bl)
       {
@@ -885,6 +883,8 @@ void Solver::update()
         // run chebyshev iterations
         for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
         {
+          _preti_level = i_preti - bool(i_preti);
+          Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
           double cheby_step = math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
           int sub_iters = std::ceil(max_sub_iters*cheby_step/max_cheby - 1e-6);
           double nominal_dt = std::min(max_dt(safety/max_cheby*sub_iters, safety), _namespace->get<double>("max_time_step"));

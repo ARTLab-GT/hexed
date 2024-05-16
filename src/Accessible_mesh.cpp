@@ -1417,17 +1417,6 @@ Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& ba
   _masked_def_cons.populate(mesh.def.kernel_connections(), [&](Kernel_connection& con){return con.mask() >= mesh._mask_levels;});
   _masked_ref_faces.populate(mesh.ref_face_v, [&](Refined_face& face){return face.mask() >= mesh._mask_levels;});
   _masked_bound_cons.populate(mesh.bound_cons, [&](Boundary_connection& con){return con.mask() >= mesh._mask_levels;});
-  // find out which elements are on the fringe of the mask
-  auto& elem_cons = mesh.element_connections();
-  for (int i_con = 0; i_con < elem_cons.size(); ++i_con) {
-    auto& con = elem_cons[i_con];
-    for (int i_side = 0; i_side < 2; ++i_side) {
-      auto& elem = con.element(i_side);
-      if ((elem._mask == mesh._mask_levels) && (con.element(!i_side)._mask < mesh._mask_levels)) {
-        elem._mask_fringe = true;
-      }
-    }
-  }
   ++mesh._mask_levels;
 }
 
@@ -1437,7 +1426,6 @@ void Accessible_mesh::reset_masks()
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem]._mask = 0;
-    elems[i_elem]._mask_fringe = false;
   }
 }
 

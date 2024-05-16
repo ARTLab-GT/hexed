@@ -488,7 +488,7 @@ class Spatial
           }
         }
 
-        bool fringe = elem.is_fringe(_mask);
+        bool fringe = elem.mask() < _mask;
         // write update to interior
         double* ref_state = elem.residual_cache();
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
@@ -597,7 +597,7 @@ class Spatial
           }
         }
 
-        bool fringe = elem.is_fringe(_mask);
+        bool fringe = elem.mask() < _mask;
         // write update to interior
         double* to_update = _compute_residual ? elem.residual_cache() : state;
         double* res_cache = elem.residual_cache();

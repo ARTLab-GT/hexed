@@ -18,7 +18,6 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   data{Eigen::VectorXd::Zero(data_size)},
   vertex_data{Eigen::VectorXd::Constant(2*params.n_vertices(), _nom_sz/n_dim)},
   _mask{0},
-  _mask_fringe{0},
   tree(this),
   origin{origin_arg(Eigen::seqN(0, params.n_dim))}
 {
