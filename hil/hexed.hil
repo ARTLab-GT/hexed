@@ -128,8 +128,8 @@ set_ramping = {
 bl_multirate_iters = 10
 set_subsonic_bl_multirate = {
     bl_multirate = true
-    flow_iters = bl_accel_iters
-    bl_iters = bl_accel_iters
+    flow_iters = bl_multirate_iters
+    bl_iters = bl_multirate_iters
 }
 
 aerothermo_bl_multirate = false
