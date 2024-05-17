@@ -108,7 +108,7 @@ set_shock = {
 
 ramping_initial_safety = 3e-3
 ramping_final_safety = 0.7
-ramp_if = {normalized_residual < prev_residual}
+ramp_if = {iteration >= 1000}
 ramped = false
 ramp_action = {
     ramped = true;
