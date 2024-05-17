@@ -22,6 +22,7 @@ class Interpreter
     _Dynamic_value(int         arg) : i{arg} {}
     _Dynamic_value(double      arg) : d{arg} {}
     _Dynamic_value(std::string arg) : s{arg} {}
+    bool has_value() const {return i || d || s;}
   };
 
   bool _more();

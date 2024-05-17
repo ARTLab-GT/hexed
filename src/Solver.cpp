@@ -185,7 +185,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("max_conv_sub_iters", 1);
   _namespace->assign_default("n_cheby_av", 1);
   _namespace->assign_default("cheby_safety", .9); // safety factor to apply to Chebyshev-acceleration
-  _namespace->assign_default("preti", 0);
+  _namespace->assign_default("bl_multirate", 0);
   _namespace->assign_default("av_advect_iters", 1); // number of advection iterations to run each time `update_art_visc_smoothness` is called
   _namespace->assign_default("av_diff_iters", 1); // number of diffusion iterations to run each time `update_art_visc_smoothness` is called
   _namespace->assign_default("flow_iters", 1);
@@ -871,7 +871,7 @@ void Solver::update()
   {
     // compute time step
     double dt = 0;
-    int n_preti = (_namespace->get<int>("preti") && !i_flow) ? _preti_masks.size() : 1;
+    int n_preti = (_namespace->get<int>("bl_multirate") && !i_flow) ? _preti_masks.size() : 1;
     for (int i_preti = 0; i_preti < n_preti; ++i_preti) if (i_preti != 1)
     {
       int n_bl = i_preti ? _namespace->get<int>("bl_iters") : 1;
