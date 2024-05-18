@@ -9,7 +9,7 @@
 namespace hexed::hil_properties
 {
 
-/*! Assigns the follwing variables:
+/*! \details Assigns the follwing variables:
  * - `is_extruded`: 1 if element is extruded, else 0
  * - `n_dim`: number of dimensions
  * - `is_def = elem.get_is_deformed()`
@@ -22,22 +22,25 @@ namespace hexed::hil_properties
  */
 void element(Namespace&, Element& elem);
 
-/*! Assigns the variables `pos0`, `pos1`, `pos2`
- * to the position of the `i_qpoint`th quadrature point.
+/*! \brief Assigns the variables `pos0`, `pos1`, `pos2`
+ * \details to the position of the `i_qpoint`th quadrature point.
  * Trailing dimensions are set to 0.
  */
 void position(Namespace&, Element&, const Basis&, int i_qpoint);
 
-/*! Assigns the follwing variables:
+/*! \details Assigns the follwing variables:
  * - `momentum0`, `momentum1`, `momentum2` : momentum per volume
  * - `mass`: mass per volume (aka density)
  * - `energy`: total energy per volume
  * - `tss`: time step scale
  * - `art_visc`: artificial viscosity coefficient
+ * - `residual_xxx` for `xxx` in {`momentum0`, ..., `energy`}: residual of each of the conserved state variables
+ * \attention If `Solver::update` or `Solver::update_art_visc_smoothness` have been called since the last call to `Solver::compute_residuals`
+ * then the residual variables will be incorrect.
  */
 void state(Namespace&, Element&, int i_qpoint);
 
-/*! Assigns the follwing variables:
+/*! \details Assigns the follwing variables:
  * - `pos0`, `pos`, `pos2`: position
  * - `normal0`, `normal1`, `normal2`: unit surface normal (out of surface, into domain)
  * - `momentum0`, `momentum1`, `momentum2` : momentum per volume

@@ -18,6 +18,7 @@ struct Kernel_options
   bool compute_residual = false;
   bool use_filter = false;
   int mask = 0;
+  bool conv_substep = false;
 };
 
 void compute_euler(Kernel_mesh, Kernel_options);

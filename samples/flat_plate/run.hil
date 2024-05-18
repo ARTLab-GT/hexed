@@ -19,9 +19,7 @@ target_thickness = .01
 target_reynolds = (5/target_thickness)^2
 freestream_density = target_reynolds*1.8e-5/freestream_speed
 
-$set_preti
-print_freq = 500
-vis_freq = 30000
+$set_subsonic_bl_multirate
 done = {normalized_residual < 1e-4}
 
 $start

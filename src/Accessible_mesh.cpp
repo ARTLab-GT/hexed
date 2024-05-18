@@ -123,12 +123,18 @@ void Accessible_mesh::snap_vertices()
   }
 }
 
+Storage_params incr_res_cache(Storage_params params)
+{
+  params.n_stage += 1;
+  return params;
+}
+
 Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg) :
   params{params_arg},
   n_vert{math::pow(2, params.n_dim)},
   root_sz{root_size_arg},
   car{params, root_sz},
-  def{params, root_sz},
+  def{incr_res_cache(params), root_sz},
   def_as_car{def.elements()},
   elems{car.elements(), def_as_car},
   kernel_elems{elems},
@@ -1411,20 +1417,6 @@ Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& ba
   _masked_def_cons.populate(mesh.def.kernel_connections(), [&](Kernel_connection& con){return con.mask() >= mesh._mask_levels;});
   _masked_ref_faces.populate(mesh.ref_face_v, [&](Refined_face& face){return face.mask() >= mesh._mask_levels;});
   _masked_bound_cons.populate(mesh.bound_cons, [&](Boundary_connection& con){return con.mask() >= mesh._mask_levels;});
-  // find out which elements are on the fringe of the mask
-  auto& elem_cons = mesh.element_connections();
-  for (int i_con = 0; i_con < elem_cons.size(); ++i_con) {
-    auto& con = elem_cons[i_con];
-    for (int i_side = 0; i_side < 2; ++i_side) {
-      auto& elem = con.element(i_side);
-      if ((elem._mask == mesh._mask_levels) && (con.element(!i_side)._mask < mesh._mask_levels)) {
-        auto dir = con.get_direction();
-        elem._mask_fringe = true;
-        elem._fringe_dim = dir.i_dim[i_side];
-        elem._fringe_sign = dir.face_sign[i_side];
-      }
-    }
-  }
   ++mesh._mask_levels;
 }
 

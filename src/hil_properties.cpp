@@ -39,14 +39,17 @@ void state(Namespace& space, Element& elem, int i_qpoint)
 {
   auto params = elem.storage_params();
   int nq = params.n_qpoint();
-  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-    space.assign("momentum" + std::to_string(i_dim), elem.state()[i_dim*nq + i_qpoint]);
-  }
+  auto assign_state = [&](std::string name, int i_var) {
+    space.assign(name, elem.state()[i_var*nq + i_qpoint]);
+    space.assign("residual_" + name, elem.residual_cache()[i_var*nq + i_qpoint]);
+  };
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) assign_state("momentum" + std::to_string(i_dim), i_dim);
   for (int i_dim = params.n_dim; i_dim < 3; ++i_dim) {
     space.assign("momentum" + std::to_string(i_dim), 0.);
+    space.assign("residual_momentum" + std::to_string(i_dim), 0.);
   }
-  space.assign("density", elem.state()[params.n_dim*nq + i_qpoint]);
-  space.assign("energy", elem.state()[(params.n_dim + 1)*nq + i_qpoint]);
+  assign_state("density", params.n_dim);
+  assign_state("energy", params.n_dim + 1);
   space.assign("bulk_art_visc", elem.bulk_av_coef()[i_qpoint]);
   space.assign("laplacian_art_visc", elem.laplacian_av_coef()[i_qpoint]);
   space.assign("tss", elem.time_step_scale()[i_qpoint]);

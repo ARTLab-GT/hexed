@@ -21,7 +21,6 @@ freestream_temperature = 63.73
 thermal_bc = {temperature = 300}
 
 {iteration parameters}
-aerothermo_preti = true
 $set_aerothermo
 ramping_final_safety = .8
 art_visc_width = art_visc_width*.7/8
@@ -29,8 +28,10 @@ viscosity_model = air_viscosity
 conductivity_model = {ref_value = 1.4/0.4*specific_gas_air/.72*air_visc_ref; ref_temperature = air_visc_ref_temp; offset = air_visc_offset}
 monitor_vars = {heating_rate = heating_rate;}
 done = {iteration > 10^4 & heating_rate_max - heating_rate_min < 10.}
-vis_freq = 10000
+vis_freq = 5000
 diffusive_admissibility = true
+vis_lts_constraints = true
+vis_field_vars = vis_field_vars + field_residual_expr
 
 $plot_history
 $start

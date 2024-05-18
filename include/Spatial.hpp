@@ -308,11 +308,12 @@ class Spatial
     const bool _compute_residual;
     const bool _use_filter;
     int _mask;
+    bool _conv_substep;
     // weights for different parameters when assembling the updated state
 
     public:
     template <typename... pde_args>
-    Local(const Basis& basis, double dt, bool stage, bool compute_residual, bool use_filter, int mask, pde_args... args) :
+    Local(const Basis& basis, double dt, bool stage, bool compute_residual, bool use_filter, int mask, bool conv_substep, pde_args... args) :
       _eq(args...),
       derivative{basis},
       boundary{basis.boundary()},
@@ -323,7 +324,8 @@ class Spatial
       _stage{stage},
       _compute_residual{compute_residual},
       _use_filter{use_filter},
-      _mask{mask}
+      _mask{mask},
+      _conv_substep{conv_substep}
     {
       HEXED_ASSERT(!(Pde::has_diffusion & _stage), "two-stage stabilization is not applicable to diffusion equations");
       HEXED_ASSERT(!(_stage && _compute_residual), "residual calculation is a single-stage operation");
@@ -486,17 +488,13 @@ class Spatial
           }
         }
 
-        bool fringe = elem.is_fringe(_mask);
-        int i_dim = fringe ? elem.fringe_dim() : 0;
-        bool sign = fringe ? elem.fringe_sign() : 0;
-        Mat<row_size> row_mult = sign*Mat<row_size>::Ones() - math::sign(sign)*_nodes;
-        int stride = math::pow(row_size, n_dim - 1 - i_dim);
+        bool fringe = elem.mask() < _mask;
         // write update to interior
         double* ref_state = elem.residual_cache();
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           Mat<Pde::n_update> update;
           update.setZero();
-          double mult = _update*tss[i_qpoint]/d_pos*(fringe ? row_mult((i_qpoint/stride)%row_size) : 1.);
+          double mult = _update*tss[i_qpoint]/d_pos*(!fringe);
           if constexpr (is_deformed) mult /= elem_det[i_qpoint];
           for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
             double u = time_rate[0][i_var][i_qpoint];
@@ -505,6 +503,13 @@ class Spatial
             } else {
               if constexpr (Pde::has_convection) ref_state[i_var*n_qpoint + i_qpoint] = u;
               if constexpr (Pde::has_diffusion || Pde::has_source) u += time_rate[1][i_var][i_qpoint];
+              if constexpr (is_deformed) {
+                if (_conv_substep) {
+                  double& diff_cache = ref_state[(Pde::n_update + i_var)*n_qpoint + i_qpoint];
+                  if constexpr (Pde::has_diffusion || Pde::has_source) diff_cache = time_rate[1][i_var][i_qpoint];
+                  else u += diff_cache;
+                }
+              }
             }
             u *= mult;
             if (_compute_residual) ref_state[i_var*n_qpoint + i_qpoint] = u;
@@ -536,10 +541,11 @@ class Spatial
     bool _compute_residual;
     bool _use_filter;
     int _mask;
+    bool _conv_substep;
 
     public:
     template <typename... pde_args>
-    Reconcile_ldg_flux(const Basis& basis, double dt, int which_stage, bool compute_residual, bool use_filter, int mask, pde_args... args) :
+    Reconcile_ldg_flux(const Basis& basis, double dt, int which_stage, bool compute_residual, bool use_filter, int mask, bool conv_substep, pde_args... args) :
       _eq(args...),
       _nodes{basis.nodes()},
       derivative{basis},
@@ -549,7 +555,8 @@ class Spatial
       _stage{which_stage},
       _compute_residual{compute_residual},
       _use_filter{use_filter},
-      _mask{mask}
+      _mask{mask},
+      _conv_substep{conv_substep}
     {
       HEXED_ASSERT(!(Pde::has_diffusion & _stage), "two-stage stabilization is not applicable to diffusion equations");
       HEXED_ASSERT(Pde::has_convection || !_stage, "for pure diffusion use alternating time steps");
@@ -590,19 +597,17 @@ class Spatial
           }
         }
 
-        bool fringe = elem.is_fringe(_mask);
-        int i_dim = fringe ? elem.fringe_dim() : 0;
-        bool sign = fringe ? elem.fringe_sign() : 0;
-        Mat<row_size> row_mult = sign*Mat<row_size>::Ones() - math::sign(sign)*_nodes;
-        int stride = math::pow(row_size, n_dim - 1 - i_dim);
+        bool fringe = elem.mask() < _mask;
         // write update to interior
         double* to_update = _compute_residual ? elem.residual_cache() : state;
+        double* res_cache = elem.residual_cache();
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           Mat<Pde::n_update> update;
-          double mult = _update*tss[i_qpoint]/d_pos*(fringe ? row_mult((i_qpoint/stride)%row_size) : 1.);
+          double mult = _update*tss[i_qpoint]/d_pos*(!fringe);
           if constexpr (is_deformed) mult /= elem_det[i_qpoint];
           for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
             update(i_var) = time_rate[i_var][i_qpoint]*mult;
+            if constexpr (is_deformed) if (_conv_substep) res_cache[(Pde::n_update + i_var)*n_qpoint + i_qpoint] += time_rate[i_var][i_qpoint];
           }
           _eq.write_update(update, n_qpoint, to_update + i_qpoint, true);
         }

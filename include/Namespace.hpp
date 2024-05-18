@@ -70,6 +70,7 @@ class Namespace
   template<typename T> void assign(std::string name, T value);
   template<typename T> void assign_default(std::string name, T value);
   template<typename T> std::optional<T> lookup(std::string name);
+  template<typename T> T get(std::string name);
 };
 
 template<> inline std::map<std::string, std::unique_ptr<Namespace::Variable<int>>>&         Namespace::_get_map() {return _ints;}
@@ -139,6 +140,14 @@ std::optional<T> Namespace::lookup(std::string name)
     }
   }
   return {};
+}
+
+template<typename T>
+T Namespace::get(std::string name)
+{
+  auto val = lookup<T>(name);
+  HEXED_ASSERT(val, format_str(1000, "failed to obtain variable `%s` as type `%s`", name.c_str(), typeid(T).name()));
+  return *val;
 }
 
 }

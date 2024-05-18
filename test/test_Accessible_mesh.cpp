@@ -559,14 +559,8 @@ TEST_CASE("masking")
     hexed::Accessible_mesh::Masked_mesh masked(mesh, basis, [](hexed::Element& elem){return elem.vertex(3).pos[1] < .501;});
     auto& elems = mesh.elements();
     int n_masked = 0;
-    std::vector<int> fringe_dims;
-    std::vector<bool> fringe_signs;
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       n_masked += elems[i_elem].mask();
-      if (elems[i_elem].is_fringe(1)) {
-        fringe_dims.push_back(elems[i_elem].fringe_dim());
-        fringe_signs.push_back(elems[i_elem].fringe_sign());
-      }
     }
     REQUIRE(n_masked == 5);
     REQUIRE(masked.kernel_mesh.elems.size() == 5);
@@ -576,7 +570,5 @@ TEST_CASE("masking")
     REQUIRE(masked.kernel_mesh.def_cons.size() == 6);
     REQUIRE(masked.kernel_mesh.ref_faces.size() == 3);
     REQUIRE(masked.bound_cons.size() == 6);
-    REQUIRE_THAT(fringe_dims, Catch::Matchers::RangeEquals(std::vector<int>(3, 1)));
-    REQUIRE_THAT(fringe_signs, Catch::Matchers::RangeEquals(std::vector<bool>(3, 1)));
   }
 }

@@ -9,6 +9,13 @@ residual_momentum_expr = {residual_momentum0 = (momentum0 - prev_momentum0)/tss;
 residual_density_expr = {residual_density = (density - prev_density)/tss;}
 residual_energy_expr = {residual_energy = (energy - prev_energy)/tss;}
 residual_expr = residual_momentum_expr + residual_density_expr + residual_energy_expr
+field_residual_expr = {
+    residual_momentum0 = residual_momentum0
+    residual_momentum1 = residual_momentum1
+    residual_momentum2 = residual_momentum2
+    residual_density = residual_density
+    residual_energy = residual_energy
+}
 velocity_expr = {velocity0 = momentum0/density; velocity1 = momentum1/density; velocity2 = momentum2/density;}
 speed_expr = {speed = sqrt(velocity0^2 + velocity1^2 + velocity2^2);}
 pressure_expr = {pressure = (heat_rat - 1)*(energy - 0.5*density*speed^2);}
@@ -101,52 +108,32 @@ set_shock = {
 
 ramping_initial_safety = 3e-3
 ramping_final_safety = 0.7
-ramping_initial_iters = 1000;
+ramp_if = {iteration >= 1000}
+ramped = false
+ramp_action = {
+    ramped = true;
+    max_safety = ramping_final_safety
+    print_emph = true; print{Initial phase complete.}
+    print({ Increasing safety factor to } + max_safety + {.})
+}
 set_ramping = {
     max_safety = ramping_initial_safety
     iterate = iterate + {
         case0 = {}
-        case1 = {
-            max_safety = ramping_final_safety
-            print_emph = true; print{Initial phase complete. }
-            println({Increasing safety factor to } + max_safety)
-        }
-        $$({case} + (iteration == ramping_initial_iters))
+        case1 = {$ramp_action; println{}}
+        $$({case} + (!ramped & ($ramp_if) != 0))
     }
 }
 
-{alternate between time stepping strategies optimized for convection and diffusion}
-set_cheby = {
-    iterate = iterate + {
-        case0 = {}
-        case1 = {
-            case0 = {
-                flow_iters = 1
-                n_cheby_flow = shock_sub_iters
-            }
-            case1 = {
-                flow_iters = shock_sub_iters
-                n_cheby_flow = 1
-            }
-            $$({case} + ((iteration/print_freq)%2 == 0))
-        }
-        $$({case} + (iteration >= ramping_initial_iters))
-    }
+bl_multirate_iters = 10
+set_subsonic_bl_multirate = {
+    bl_multirate = true
+    flow_iters = bl_multirate_iters
+    bl_iters = bl_multirate_iters
 }
 
-preti_initial_iters = 2000
-set_preti = {
-    iterate = iterate + {
-        case0 = {}
-        case1 = {
-            print_emph = true; println {Activating PRETI scheme.}
-            preti = true
-        }
-        $$({case} + (iteration == preti_initial_iters))
-    }
-}
-
-aerothermo_preti = false
+aerothermo_bl_multirate = true
+aerothermo_conv_sub_iters = 2
 set_aerothermo = {
     $set_shock
     $set_ramping
@@ -154,10 +141,23 @@ set_aerothermo = {
     conductivity_model = air_conductivity
     print_vars = print_vars + heating_rate_expr
     iterate = {$compute_heating} + iterate
-    $set_cheby
     case0 = {}
-    case1 = {$set_preti}
-    $$({case} + aerothermo_preti)
+    case1 = {
+        ramp_action = ramp_action + {
+            print{ Activating boundary layer acceleration scheme.}
+            bl_multirate = true
+            n_cheby_bl = 2
+            max_conv_sub_iters = aerothermo_conv_sub_iters
+            iterate = iterate + {
+                case0 = {}
+                case1 = {
+                    n_cheby_bl = n_cheby_bl + 2
+                }
+                $$({case} + (n_cheby_bl < bl_multirate_iters))
+            }
+        }
+    }
+    $$({case} + aerothermo_bl_multirate)
 }
 
 set_geometry_refinement = {
@@ -289,6 +289,7 @@ restart = {
 }
 
 iterate = {
+    prev_residual = normalized_residual
     update
     compute_residuals
     {compute initial residual for normalization}
@@ -340,6 +341,7 @@ start = {
     init_residual_density = 0.
     init_residual_energy = 0.
     normalized_residual = 1.
+    prev_residual = 0.
 }
 
 mesh = {

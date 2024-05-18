@@ -415,6 +415,7 @@ Case::Case(std::string input_script)
             } else if (v == "field") {
               _solver().visualize_field(format, file_name, Qpoint_expr(vis_vars, _inter), n_sample, edges);
               if (_vari("vis_skew").value()) _solver().visualize_field(format, wd + "skew" + suffix, Equiangle_skewness(), n_sample, edges);
+              if (_vari("vis_lts_constraints").value()) _solver().vis_lts_constraints(format, wd + "lts_constraints" + suffix, n_sample);
             } else if (!edges) { // vis_type == contour0, contour1, etc
               std::string contour_expr = _vars("vis_contour_vars").value() + v + "_var = " + _vars(v).value() + ";";
               _solver().visualize_contour(format, file_name, Qpoint_expr(contour_expr, _inter), Qpoint_expr(vis_vars, _inter), n_sample);
@@ -471,6 +472,11 @@ Case::Case(std::string input_script)
     return "";
   }));
 
+  _inter.variables->create<std::string>("compute_lts_constraints", new Namespace::Heisenberg<std::string>([this]() {
+    _solver().compute_lts_constraints();
+    return "";
+  }));
+
   _inter.variables->create<std::string>("report", new Namespace::Heisenberg<std::string>([this]() {
     std::string report = "";
     Struct_expr vars(_vars("print_vars").value());
@@ -505,8 +511,8 @@ Case::Case(std::string input_script)
     int n = iter ? print_freq - iter%print_freq : 1;
     for (int i = 0; i < n; ++i) {
       ++iter;
-      if (_vari("diffusive_admissibility").value()) _solver().set_art_visc_admis();
-      if (_vari("elementwise_art_visc").value()) {
+      if (_inter.variables->get<int>("diffusive_admissibility")) _solver().set_art_visc_admis();
+      if (_inter.variables->get<int>("elementwise_art_visc")) {
         _solver().update_art_visc_elwise(_vard("art_visc_width").value(), _vari("elementwise_art_visc_pde").value());
       } else if (avw) {
         _solver().update_art_visc_smoothness(_vard("art_visc_width").value());
