@@ -13,6 +13,13 @@
 namespace hexed
 {
 
+
+class Hil_exception : public assert::Exception
+{
+  public:
+  Hil_exception(std::string message) : Exception(message) {}
+};
+
 class Namespace
 {
   public:
@@ -41,13 +48,10 @@ class Namespace
     std::function<T()> fetcher;
     public:
     Heisenberg(std::function<T()>f ) : fetcher{f} {}
-    void set(T v) override {throw std::runtime_error("attempt to write to `Heisenberg` variable.");}
+    void set(T v) override {throw Hil_exception("attempt to write to `Heisenberg` variable.");}
     T get() override
     {
-      try {return fetcher();}
-      catch (const std::exception& e) {
-        throw std::runtime_error("Heisenberg variable evaluation failed because:\n      " + std::string(e.what()));
-      }
+      return fetcher();
     }
   };
 
@@ -66,6 +70,7 @@ class Namespace
   template<typename T> void assign(std::string name, T value);
   template<typename T> void assign_default(std::string name, T value);
   template<typename T> std::optional<T> lookup(std::string name);
+  template<typename T> T get(std::string name);
 };
 
 template<> inline std::map<std::string, std::unique_ptr<Namespace::Variable<int>>>&         Namespace::_get_map() {return _ints;}
@@ -95,7 +100,8 @@ template<typename T>
 void Namespace::create(std::string name, Namespace::Variable<T>* value)
 {
   std::unique_ptr<Variable<T>> ptr(value);
-  HEXED_ASSERT(!exists(name), format_str(100, "attempt to re-create existing variable `%s` as type `%s`", name.c_str(), type_name<T>().c_str()))
+  HEXED_ASSERT(!exists(name),
+    format_str(100, "attempt to re-create existing variable `%s` as type `%s`", name.c_str(), type_name<T>().c_str()), Hil_exception)
   _get_map<T>().emplace(name, ptr.release());
 }
 
@@ -121,10 +127,7 @@ template<typename T>
 std::optional<T> Namespace::lookup(std::string name)
 {
   if (_get_map<T>().count(name)) {
-    try {return {_get_map<T>().at(name)->get()};}
-    catch (const std::exception& e) {
-      throw std::runtime_error(format_str(1000, "error while evaluating variable `%s`:\n    %s", name.c_str(), e.what()));
-    }
+    return {_get_map<T>().at(name)->get()};
   }
   if constexpr (std::is_same<T, double>::value) {
     if (_get_map<int>().count(name)) {
@@ -137,6 +140,14 @@ std::optional<T> Namespace::lookup(std::string name)
     }
   }
   return {};
+}
+
+template<typename T>
+T Namespace::get(std::string name)
+{
+  auto val = lookup<T>(name);
+  HEXED_ASSERT(val, format_str(1000, "failed to obtain variable `%s` as type `%s`", name.c_str(), typeid(T).name()));
+  return *val;
 }
 
 }

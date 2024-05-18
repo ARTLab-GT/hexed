@@ -9,6 +9,13 @@ residual_momentum_expr = {residual_momentum0 = (momentum0 - prev_momentum0)/tss;
 residual_density_expr = {residual_density = (density - prev_density)/tss;}
 residual_energy_expr = {residual_energy = (energy - prev_energy)/tss;}
 residual_expr = residual_momentum_expr + residual_density_expr + residual_energy_expr
+field_residual_expr = {
+    residual_momentum0 = residual_momentum0
+    residual_momentum1 = residual_momentum1
+    residual_momentum2 = residual_momentum2
+    residual_density = residual_density
+    residual_energy = residual_energy
+}
 velocity_expr = {velocity0 = momentum0/density; velocity1 = momentum1/density; velocity2 = momentum2/density;}
 speed_expr = {speed = sqrt(velocity0^2 + velocity1^2 + velocity2^2);}
 pressure_expr = {pressure = (heat_rat - 1)*(energy - 0.5*density*speed^2);}
@@ -89,7 +96,7 @@ air_cond_offset = 194.
 air_viscosity = {ref_value = air_visc_ref; ref_temperature = air_visc_ref_temp; offset = air_visc_offset}
 air_conductivity = {ref_value = air_cond_ref; ref_temperature = air_cond_ref_temp; offset = air_cond_offset}
 
-shock_sub_iters = 10; {number of sub-iterations to run in each nominal iteration to get efficient Chebyshev-accelerated diffusion}
+shock_sub_iters = 12; {number of sub-iterations to run in each nominal iteration to get efficient Chebyshev-accelerated diffusion}
 set_shock = {
     art_visc_width = (mesh_extreme01 - mesh_extreme00)*2.^-init_ref_level
     fix_therm_admis = true
@@ -101,51 +108,32 @@ set_shock = {
 
 ramping_initial_safety = 3e-3
 ramping_final_safety = 0.7
-ramping_initial_iters = 1000;
+ramp_if = {iteration >= 1000}
+ramped = false
+ramp_action = {
+    ramped = true;
+    max_safety = ramping_final_safety
+    print_emph = true; print{Initial phase complete.}
+    print({ Increasing safety factor to } + max_safety + {.})
+}
 set_ramping = {
     max_safety = ramping_initial_safety
     iterate = iterate + {
         case0 = {}
-        case1 = {
-            max_safety = ramping_final_safety
-            println({Initial phase complete. Increasing safety factor to } + max_safety)
-        }
-        $$({case} + (iteration == ramping_initial_iters))
+        case1 = {$ramp_action; println{}}
+        $$({case} + (!ramped & ($ramp_if) != 0))
     }
 }
 
-{alternate between time stepping strategies optimized for convection and diffusion}
-set_cheby = {
-    iterate = iterate + {
-        case0 = {}
-        case1 = {
-            case0 = {
-                flow_iters = 1
-                n_cheby_flow = shock_sub_iters
-            }
-            case1 = {
-                flow_iters = shock_sub_iters
-                n_cheby_flow = 1
-            }
-            $$({case} + ((iteration/print_freq)%2 == 0))
-        }
-        $$({case} + (iteration >= ramping_initial_iters))
-    }
+bl_multirate_iters = 10
+set_subsonic_bl_multirate = {
+    bl_multirate = true
+    flow_iters = bl_multirate_iters
+    bl_iters = bl_multirate_iters
 }
 
-preti_initial_iters = 10000
-set_preti = {
-    iterate = iterate + {
-        case0 = {}
-        case1 = {
-            println {Activating PRETI scheme.}
-            preti = true
-        }
-        $$({case} + (iteration == preti_initial_iters))
-    }
-}
-
-aerothermo_preti = false
+aerothermo_bl_multirate = true
+aerothermo_conv_sub_iters = 2
 set_aerothermo = {
     $set_shock
     $set_ramping
@@ -153,9 +141,23 @@ set_aerothermo = {
     conductivity_model = air_conductivity
     print_vars = print_vars + heating_rate_expr
     iterate = {$compute_heating} + iterate
-    case0 = {$set_cheby}
-    case1 = {$set_preti}
-    $$({case} + aerothermo_preti)
+    case0 = {}
+    case1 = {
+        ramp_action = ramp_action + {
+            print{ Activating boundary layer acceleration scheme.}
+            bl_multirate = true
+            n_cheby_bl = 2
+            max_conv_sub_iters = aerothermo_conv_sub_iters
+            iterate = iterate + {
+                case0 = {}
+                case1 = {
+                    n_cheby_bl = n_cheby_bl + 2
+                }
+                $$({case} + (n_cheby_bl < bl_multirate_iters))
+            }
+        }
+    }
+    $$({case} + aerothermo_bl_multirate)
 }
 
 set_geometry_refinement = {
@@ -258,33 +260,30 @@ vis_init = {visualize}
 vis_final = {visualize}
 print_init = {println header}
 print_final = {
-    println {simulation complete}
+    case0 = {println{simulation complete}}
+    case1 = {print_type = {error}; println{simulation failed}}
+    print_emph = true; $$({case} + failed)
     println({wall clock time = } + wall_time + {s = } + wall_time/minute + {min = } + wall_time/hour + {hr})
     println {}
     println {performance summary:}
     println performance_report
 }
-done = {println {Error: you forgot to a set stop condition} & throw}
+done = {print_emph = true; print_type = {error}; println {Error: you forgot to a set stop condition} & throw}
+failed = false
 
 write_iter = {
     case0 = {}
     case1 = {
-        print {writing mesh/state data...}
         write_mesh
         write_state
         write_status
-        println {done}
     }
     $$({case} + (iteration%write_freq == 0))
 }
 
 vis_iter = {
     case0 = {}
-    case1 = {
-        print {visualizing...}
-        visualize
-        println {done}
-    }
+    case1 = {visualize}
     $$({case} + (iteration%vis_freq == 0))
 }
 
@@ -297,6 +296,7 @@ restart = {
 }
 
 iterate = {
+    prev_residual = normalized_residual
     update
     compute_residuals
     {compute initial residual for normalization}
@@ -348,6 +348,7 @@ start = {
     init_residual_density = 0.
     init_residual_energy = 0.
     normalized_residual = 1.
+    prev_residual = 0.
 }
 
 mesh = {
@@ -368,7 +369,7 @@ mesh = {
     while = {i_split < init_layer_splits}
     do = {split_layers; i_split = i_split + 1}
     $loop
-    println({meshing complete with } + n_elements + { elements} + newline)
+    print_emph = true; println({meshing complete with } + n_elements + { elements} + newline)
 }
 
 run = {
@@ -376,7 +377,7 @@ run = {
     $vis_init
     $print_init
     shell({echo > } + working_dir + {runtime_cmd.hil})
-    while = {!($done)}
+    while = {!($done | failed)}
     do = {$iterate}
     $loop
     $print_final

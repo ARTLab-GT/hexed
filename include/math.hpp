@@ -272,9 +272,13 @@ bool intersects(Ball<n_dim> b, Mat<n_dim> endpoint0, Mat<n_dim> endpoint1)
   return (center - center.dot(diff)/diff.squaredNorm()*diff).squaredNorm() <= b.radius_sq;
 }
 
-//! \brief return the scaling factor for
-//! [Chebyshev polynomial](https://mathworld.wolfram.com/ChebyshevPolynomialoftheFirstKind.html) multistge time stepping
-double chebyshev_step(int n_steps, int i_step);
+/*! \brief the scaling factor for
+ * [Chebyshev polynomial](https://mathworld.wolfram.com/ChebyshevPolynomialoftheFirstKind.html) multistge time stepping
+ * \details Returns the ratio of the `i_step`th step of `n_steps` to the nominal time step.
+ * A value of `safety = 1` gives you the maximum stable time step and `safety = 0` gives you a time step of 0
+ * (although it isn't a linear function).
+ */
+double chebyshev_step(int n_steps, int i_step, double safety = .9);
 
 /*! \details Suppose that you compute some values, `estimates`, with a method that is very robust but has low accuracy.
  * Suppose you also recompute these values as `exacts`

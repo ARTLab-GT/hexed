@@ -5,6 +5,7 @@ Basis.cpp
 Boundary_condition.cpp
 Boundary_func.cpp
 Case.cpp
+Command_input.cpp
 Csv.cpp
 connection.cpp
 criteria.cpp
@@ -34,6 +35,7 @@ Output_data.cpp
 otter_vis.cpp
 Path.cpp
 Physical_basis.cpp
+Printer.cpp
 Qpoint_func.cpp
 read_csv.cpp
 Simplex_geom.cpp

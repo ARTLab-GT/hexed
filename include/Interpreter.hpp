@@ -7,6 +7,7 @@
 #include "Namespace.hpp"
 #include "Lock.hpp"
 #include "Printer.hpp"
+#include "Command_input.hpp"
 
 namespace hexed
 {
@@ -21,6 +22,7 @@ class Interpreter
     _Dynamic_value(int         arg) : i{arg} {}
     _Dynamic_value(double      arg) : d{arg} {}
     _Dynamic_value(std::string arg) : s{arg} {}
+    bool has_value() const {return i || d || s;}
   };
 
   bool _more();
@@ -69,12 +71,13 @@ class Interpreter
   std::map<std::string, std::function<_Dynamic_value(_Dynamic_value)>> _un_ops;
   std::map<std::string, _Binary_op> _bin_ops;
   Lock _lock;
+  Command_input _input;
 
   public:
   static const std::string builtin_file;
   static const std::string const_file;
   std::shared_ptr<Namespace> variables;
-  std::shared_ptr<Printer> printer;
+  std::shared_ptr<Printer_set> printer;
   Interpreter(std::vector<std::string> preload = {builtin_file, const_file});
   //! safe to call in threads, but it's mutex-locked so it won't actually execute concurrently (for that, use `child()`)
   void exec(std::string commands);
@@ -90,12 +93,6 @@ class Interpreter
   {
     public:
     Hil_unhandled_exception(std::string message) : Exception(message) {}
-  };
-
-  class Hil_exception : public assert::Exception
-  {
-    public:
-    Hil_exception(std::string message) : Exception(message) {}
   };
 };
 

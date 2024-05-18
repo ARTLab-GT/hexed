@@ -556,10 +556,12 @@ TEST_CASE("masking")
   {
     mesh.reset_masks();
     hexed::Accessible_mesh::Masked_mesh(mesh, basis);
-    hexed::Accessible_mesh::Masked_mesh masked(mesh, basis, [](hexed::Element& elem){return elem.vertex(2).pos[0] < .501;});
+    hexed::Accessible_mesh::Masked_mesh masked(mesh, basis, [](hexed::Element& elem){return elem.vertex(3).pos[1] < .501;});
     auto& elems = mesh.elements();
     int n_masked = 0;
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) n_masked += elems[i_elem].mask();
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      n_masked += elems[i_elem].mask();
+    }
     REQUIRE(n_masked == 5);
     REQUIRE(masked.kernel_mesh.elems.size() == 5);
     REQUIRE(masked.kernel_mesh.car_elems.size() == 5);
@@ -567,6 +569,6 @@ TEST_CASE("masking")
     REQUIRE(masked.kernel_mesh.car_cons.size() == 10);
     REQUIRE(masked.kernel_mesh.def_cons.size() == 6);
     REQUIRE(masked.kernel_mesh.ref_faces.size() == 3);
-    REQUIRE(masked.bound_cons.size()  == 6);
+    REQUIRE(masked.bound_cons.size() == 6);
   }
 }

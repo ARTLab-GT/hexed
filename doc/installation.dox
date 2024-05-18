@@ -110,7 +110,7 @@ To install these:
 - Go to the [Boost website](https://www.boost.org/) and download the latest release.
 - Unpack it in `~/codes`.
 - Copy the header files: `cp -r boost_X_XX_X/boost ~/.local/include`
-  - __or__ symlink them: `ln -s $(pwd )/boost_X_XX_X/boost ~/.local/include`
+  - __or__ symlink them: \verbatim ln -s $(pwd )/boost_X_XX_X/boost ~/.local/include \endverbatim
 
 \subsection install_xml Step 6: install libxml2
 \ref install_xdmf "XDMF" uses [XML](https://github.com/GNOME/libxml2).

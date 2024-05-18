@@ -94,7 +94,7 @@ class Element : public Kernel_element
   virtual double* node_adjustments() {return nullptr;} //!< \brief overriden by `Deformed_element`
   //! \brief returns whether the element is included in the masked mesh.
   //! \details value can be set with `Accessible_mesh::set_mask`
-  int mask() const {return _mask;}
+  int mask() const override {return _mask;}
 
   /*! \brief Compute the Jacobian matrix.
    * \details I.e., derivative of `i_dim`th

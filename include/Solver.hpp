@@ -42,7 +42,7 @@ class Solver
   Transport_model therm_cond;
   int last_fix_vis_iter = std::numeric_limits<int>::min();
   std::shared_ptr<Namespace> _namespace;
-  std::shared_ptr<Printer> _printer;
+  std::shared_ptr<Printer_set> _printer;
   bool _implicit;
   std::vector<std::unique_ptr<Accessible_mesh::Masked_mesh>> _preti_masks;
   int _preti_level;
@@ -109,7 +109,7 @@ class Solver
    */
   Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping = false,
          Transport_model viscosity_model = inviscid, Transport_model thermal_conductivity_model = inviscid,
-         std::shared_ptr<Namespace> space = std::make_shared<Namespace>(), std::shared_ptr<Printer> printer = std::make_shared<Stream_printer>(),
+         std::shared_ptr<Namespace> space = std::make_shared<Namespace>(), std::shared_ptr<Printer_set> printer = std::make_shared<Printer_set>(),
          bool implicit = false);
 
   //! \name setup
@@ -181,6 +181,11 @@ class Solver
   void update();
   void update_implicit(); //!< \brief (experimental) performs an implicit time step \warning Experimental! Interesting for reasearch, not effective in practice (yet, anyway).
   void compute_residual();
+  /*! \brief Computes the minimum ratio between the local diffusive and convective time steps.
+   * \details Assumes no Chebyshev acceleration.
+   * Result is written to `min_lts_dc_ratio` in the HIL namespace.
+   */
+  void compute_lts_constraints();
   bool is_admissible(); //!< \brief check whether flowfield is admissible (e.g. density and energy are positive)
   void update_art_visc_smoothness(double advect_length); //!< \brief updates the aritificial viscosity coefficient based on smoothness of the flow variables
   /*! \brief (experimental) sets artificial viscosity based on elementwise smoothness

@@ -25,6 +25,7 @@ done = {iteration >= 2*10^5}
 done = {iteration >= 500}
 vis_freq = 10000
 init_ref_level = 3
+aerothermo_bl_multirate = false
 
 {settings for different variants of this case}
 isothermal = {

@@ -288,7 +288,20 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
     }},
     {"print", [this](_Dynamic_value val) {
       auto s = _general_add({""}, val);
-      printer->print(s.s.value());
+      Printer* p;
+      std::string print_type = variables->lookup<std::string>("print_type").value();
+      if (print_type == "warn") p = &printer->warn;
+      else if (print_type == "error") p = &printer->error;
+      else {
+        p = &printer->info;
+        if (print_type != "info") {
+          printer->warn("Warning: ", true);
+          printer->warn(format_str(1000, "Invalid `print_type` `{%s}`. Defaulting to `{info}`\n", print_type.c_str()));
+        }
+      }
+      (*p)(s.s.value(), variables->lookup<int>("print_emph").value());
+      variables->assign("print_type", std::string("info"));
+      variables->assign("print_emph", 0);
       return _Dynamic_value("");
     }},
     {"println", [this](_Dynamic_value val){return _un_ops["print"](_general_add(val, {"\n"}));}},
@@ -320,21 +333,18 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
     {"&" , {5, _comparison_op<_and<double>, _and<int>>}},
     {"|" , {5, _comparison_op<_or<double>, _or<int>>}},
   },
+  _input(100),
   variables{std::make_shared<Namespace>()},
-  printer{std::make_shared<Stream_printer>()}
+  printer{std::make_shared<Printer_set>()}
 {
   // create some Heisenberg variables
-  variables->create("ask", new Namespace::Heisenberg<std::string>([]() {
-    std::string input;
-    std::getline(std::cin, input);
-    return input;
-  }));
+  variables->create("ask", new Namespace::Heisenberg<std::string>([this]() {return _input.get();}));
   variables->create("exit", new Namespace::Heisenberg<std::string>([this]() {
     _text.clear();
     return "";
   }));
   variables->create("throw", new Namespace::Heisenberg<std::string>([this]() {
-    throw std::runtime_error("Exception thrown from HIL by evaluating `throw`.");
+    throw Hil_exception("Exception thrown from HIL by evaluating `throw`.");
     return "";
   }));
   variables->create("system_time", new Namespace::Heisenberg<double>([]() {
@@ -375,7 +385,7 @@ void Interpreter::exec(std::string comms)
         variables->assign<std::string>("exception", message);
         _skip_spaces();
         while (_more() && (_text.front() != '\n' && _text.front() != ';')) _pop();
-        except = except + "; exception = {}; except = {};";
+        except = "except = {}; " + except + "; except = {};";
         _text.insert(_text.begin(), except.begin(), except.end());
       } else throw Hil_unhandled_exception(message);
     }

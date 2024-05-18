@@ -190,8 +190,8 @@ In addition to the below variables, there are also some internal variables used 
 The names of these variables always start with `hexed_` to avoid naming conflicts.
 
 \attention
-You are advised not to create, write to, or depend on the value of
-any variables whose names begin with `hexed_`---such variables are private to the implementation by convention.
+You are advised not to create, write to, or depend on the value of any variables
+whose names begin with `hexed_`---such variables are private to the implementation by convention.
 
 \subsection builtin_list List of Builtin Variables
 
@@ -233,6 +233,23 @@ Macro which makes iteration more convenient, especially if you need nested loops
 \see \ref Iteration
 
 <hr>
+\subsubsection print_emph
+__type:__ integer \n
+If \ref true, the formatting of text printed with `print` and `println` will be modified to convey some form of emphasis (usually bold green).
+It is \ref false by default, and every call to `print`(`ln`) will reset it to \ref false.
+You really don't have to worry about this variable---it's mostly used in the implementation of the \ref hexecute command line interface.
+
+<hr>
+\subsubsection print_type
+__type:__ string \n
+Controls whether the text printed with `print` and `println` is information, a warning, or an error.
+Valid values are `{info}`, `{warn}`, and `{error}`.
+Info goes to the [standard output](https://en.wikipedia.org/wiki/Standard_streams), whereas warnings and errors go to the standard error.
+Furthermore, the emphasis formatting is green for info, yellow for warnings, and red for errors.
+The value of this variable is automatically reset to `{info}` after every call to `print` and `println`.
+You really don't have to worry about this variable---it's mostly used in the implementation of the \ref hexecute command line interface.
+
+<hr>
 \subsubsection repl
 __type:__ string \n
 Macro which starts a Read-Evaluate-Print Loop (a.k.a. an interactive session).
@@ -252,6 +269,23 @@ Queries stdin (command line input) and gets characters until a newline is receiv
 Evaluates to a string containing those characters.
 
 <hr>
+\subsubsection except
+__type:__ string \n
+Implements basic exception handling.
+If you set this variable to a non-empty string, and a \ref hil_exception occurs,
+instead of terminating the program it will execute `except` as a macro.
+In case you wish to reference the text description of the exception, whatever that may be,
+it will be stored in the variable \ref exception.
+`except` defaults to `{}`, and after the exception is handled, `except` and \ref exception will both be reset to `{}`.
+
+<hr>
+\subsection exception
+__type:__ string \n
+If a \ref hil_exception is thrown (either from C++ or from the HIL itself), this should be set to a description of what went wrong.
+\see \ref except
+\see \ref throw
+
+<hr>
 \subsubsection exit
 __type:__ Heisenberg string \n
 Terminates the HIL interpreter and evaluates to an empty string.
@@ -264,6 +298,7 @@ and even if it is invoked from the REPL, statements after the \ref repl invocati
 __type:__ Heisenberg string \n
 Throws an exception in the C++ implementation of HIL.
 Potentially useful if the C++ code contains subsequent statements after the invocation of the HIL interpreter which you don't want to execute.
+You may consider setting the value of \ref except before evaluating this variable.
 
 <hr>
 \subsubsection system_time
