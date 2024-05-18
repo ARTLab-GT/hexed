@@ -21,7 +21,6 @@ freestream_temperature = 63.73
 thermal_bc = {temperature = 300}
 
 {iteration parameters}
-aerothermo_bl_multirate = true
 $set_aerothermo
 ramping_final_safety = .8
 art_visc_width = art_visc_width*.7/8

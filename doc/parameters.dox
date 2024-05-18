@@ -144,14 +144,6 @@ Boundary conditions for extremal boundaries (defined by \ref mesh_extreme).
 \see \ref boundary_conditions
 
 <hr>
-\subsubsection n_cheby_flow
-__type:__ integer \n
-__default:__ 1 \n
-Number of Chebyshev acceleration stages to use for physical flow.
-Increasing this number will help the flow converge faster when/where it is diffusion-dominated but slow it down when/where it is convection-dominated.
-Also, it seems to be difficult to maintain stability if this number is greater than roughly 10.
-\note Not defined until \ref create_solver is evaluated.
-
 <hr>
 \subsubsection n_cheby_av
 __type:__ integer \n
@@ -177,8 +169,7 @@ __type:__ integer \n
 __default:__ 1 \n
 Number of physical flow iterations to run per nominal iteration
 (i.e. per `hexed::Solver::update` call).
-Increasing this number can help balance the amount of CPU time spent in the physical flow relative to the artificial viscosity iteration
-if `n_cheby_av` is larger than `n_cheby_flow`.
+Increasing this number can help balance the amount of CPU time spent in the physical flow relative to the artificial viscosity iteration.
 The disadvantage is it can cause the \ref iteration count to be misleading.
 \note Not defined until \ref create_solver is evaluated.
 
@@ -522,6 +513,36 @@ which is appropriate if you want to restart a previous simulation in the same wo
 Note that if you want to restart from mesh and state files with different names (questionable, since the state must be read with an exactly matching mesh),
 you can just change the value of this variable between calling \ref read_mesh and \ref read_state (or just rename your files).
 
+<hr> \subsubsection aerothermo_bl_multirate
+__type:__ integer \n
+__default:__ \ref true \n
+If \ref true, activates a form of Chebyshev-accelerated multirate time integration in the boundary layer.
+This is still somewhat experimental, but has been shown to dramatically accelerate (\f$ \approx 6 \times \f$)
+aerodynamic heating simulations.
+If you encounter stability problems, consider reducing \ref bl_multirate_iters or modifying \ref aerothermo_conv_sub_iters .
+
+<hr> \subsubsection bl_multirate_iters
+__type:__ integer \n
+__default:__ 10 \n
+For multirate boundary layer marching (\ref aerothermo_bl_multirate = \ref true or \ref set_subsonic_bl_multirate ),
+this many sub-iterations will be executed at each multirate level before proceeding to the next level,
+except for the first (global) level, which will use \ref flow_iters iterations.
+Thus, \ref flow_iters and \ref bl_multirate_iters should usually be similar.
+For Chebyshev acceleration (e.g. if \ref aerothermo_bl_multirate = \ref true ),
+a large number can help overcome a severe diffusive time step restriction.
+However, a large number can also cause stability issues and induces a stricter convective time step restriction
+(although this can be somewhat mitigated by increasing \ref aerothermo_conv_sub_iters ).
+
+<hr> \subsubsection aerothermo_conv_sub_iters
+__type:__ integer \n
+__default:__ 2 \n
+Problem: Using a large number of Chebyshev acceleration stages causes the convective CFL condition to be more restrictive.
+Solution: On the last stage of the Chebyshev scheme,
+take multiple sub-steps where the convective residual is updated but the diffusive is not.
+This is the number of sub-steps to take on the last Chebyshev stage
+(sometimes, an automatically-determined number of sub-steps may be applied to other stages as well).
+In general, it appears that less is more with this parameter, but a small (but > 1) number is usually beneficial.
+
 <hr>
 
 \subsection esoteric_inputs Esoteric Input Parameters
@@ -603,7 +624,7 @@ The default value is adequate for almost all cases, but there are rare situation
 <hr>
 \subsubsection shock_sub_iters
 __type:__ integer \n
-__default:__ 10
+__default:__ 12
 number of sub-iterations to run in each nominal iteration to get efficient Chebyshev-accelerated diffusion (when $\ref set_shock has been called)
 
 <hr>
@@ -871,6 +892,14 @@ __type:__ string (macro) \n
 Configures settings to be good for aerothermodynamics.
 Assumes $\ref set_shock has already been called.
 Automatically calls $\ref set_ramping.
+
+<hr>
+\subsubsection set_subsonic_bl_multirate
+__type:__ string (macro) \n
+Activates a form of multirate time integration which causes the solver
+to spend more time in the boundary layer instead of the mainstream flow.
+This is an experimental feature, but it has shown promise to substantially accelerate (2 to 3 \f$ \times \f$)
+high-Reynolds-number simulations.
 
 <hr>
 \subsubsection read_mesh

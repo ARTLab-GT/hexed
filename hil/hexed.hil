@@ -132,7 +132,8 @@ set_subsonic_bl_multirate = {
     bl_iters = bl_multirate_iters
 }
 
-aerothermo_bl_multirate = false
+aerothermo_bl_multirate = true
+aerothermo_conv_sub_iters = 2
 set_aerothermo = {
     $set_shock
     $set_ramping
@@ -146,7 +147,7 @@ set_aerothermo = {
             print{ Activating boundary layer acceleration scheme.}
             bl_multirate = true
             n_cheby_bl = 2
-            max_conv_sub_iters = 2
+            max_conv_sub_iters = aerothermo_conv_sub_iters
             iterate = iterate + {
                 case0 = {}
                 case1 = {
