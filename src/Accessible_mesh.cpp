@@ -1847,8 +1847,7 @@ Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> ex
   // take ownership of these to avoid memory leaks in case of exception
   std::unique_ptr<Flow_bc> fbc;
   if (surface_bc) fbc.reset(surface_bc);
-  std::unique_ptr<Surface_geom> g;
-  if (geometry) g.reset(geometry);
+  std::unique_ptr<Surface_geom> g(geometry);
   // create the tree
   {
     H5::H5File file(file_name + ".mesh.h5", H5F_ACC_RDONLY);
