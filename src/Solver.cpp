@@ -155,6 +155,18 @@ double Solver::max_dt(double msc, double msd)
   else return max_dt_euler(_kernel_mesh(), opts, msc, msd, local_time);
 }
 
+void Solver::_init_face_state()
+{
+  compute_write_face(_kernel_mesh());
+  compute_prolong(_kernel_mesh());
+  auto& bc_cons {acc_mesh->boundary_connections()};
+  #pragma omp parallel for
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+    acc_mesh->boundary_condition(bc_sn).flow_bc->init_cache(bc_cons[i_con]);
+  }
+}
+
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
                Transport_model viscosity_model, Transport_model thermal_conductivity_model,
                std::shared_ptr<Namespace> space, std::shared_ptr<Printer_set> printer, bool implicit) :
@@ -276,6 +288,7 @@ void Solver::read_state(std::string file_name)
     dspace.selectHyperslab(H5S_SELECT_SET, elem_dims, offset, stride, block);
     dset.read(elems[i_elem].state(), dset.getDataType(), mspace, dspace);
   }
+  _init_face_state();
 }
 
 void Solver::write_state(std::string file_name)
@@ -427,14 +440,7 @@ void Solver::initialize(const Spacetime_func& func)
       }
     }
   }
-  compute_write_face(_kernel_mesh());
-  compute_prolong(_kernel_mesh());
-  auto& bc_cons {acc_mesh->boundary_connections()};
-  #pragma omp parallel for
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh->boundary_condition(bc_sn).flow_bc->init_cache(bc_cons[i_con]);
-  }
+  _init_face_state();
 }
 
 void Solver::set_art_visc_off()

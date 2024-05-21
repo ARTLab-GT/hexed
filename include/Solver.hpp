@@ -62,6 +62,7 @@ class Solver
   void fta(double dt, int i_stage);
   bool use_ldg();
   double max_dt(double max_safety_conv, double max_safety_diff);
+  void _init_face_state();
 
   //! \brief linearizes the steady state equations by finite difference
   class Linearized : public Linear_equation
