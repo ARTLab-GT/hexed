@@ -168,8 +168,8 @@ Case::Case(std::string input_script)
   _inter.variables->assign<std::string>("commit", config::commit);
 
   // create custom Heisenberg variables
-  _inter.variables->create("create_solver", new Namespace::Heisenberg<int>([this]() {
-    // basic IO setup
+
+  _inter.variables->create("setup_output", new Namespace::Heisenberg<std::string>([this]() {
     _output_file.reset(new std::ofstream(_vars("working_dir") + "output.txt"));
     for (auto* printer : {&_printers->info, &_printers->warn, &_printers->error}) {
       printer->printers.emplace_back(std::make_shared<Stream_printer>(*_output_file));
@@ -180,7 +180,11 @@ Case::Case(std::string input_script)
     std::strftime(utc, 100, "%Y-%m-%d %H:%M:%S", std::gmtime(&time));
     _printers->info(format_str(1000, "Commencing simulation with Hexed version %i.%i.%i (commit %s) at %s UTC (%i Unix Time).\n",
                                config::version_major, config::version_minor, config::version_patch, config::commit.c_str(), utc, time));
-    // setup actual solver
+    return "";
+  }));
+
+  _inter.variables->create("setup_parameters", new Namespace::Heisenberg<std::string>([this]() {
+    // setup storage parameters
     auto n_dim = _inter.variables->lookup<int>("n_dim");
     HEXED_ASSERT(n_dim && (n_dim.value() > 0) && (n_dim.value() <= 3),
                  "`n_dim` must be defined as an integer in [1, 3]", assert::User_error);
@@ -251,15 +255,28 @@ Case::Case(std::string input_script)
       freestream(Eigen::seqN(*n_dim + 2, 5 - (*n_dim + 2))).setZero();
       _set_vector("freestream", freestream);
     }
-    // create solver
-    Mat<dyn, dyn> mesh_extremes(*n_dim, 2);
-    for (int i_dim = 0; i_dim < *n_dim; ++i_dim) {
+    // create history monitors
+    _monitor_expr.reset(new Struct_expr(_vars("monitor_vars")));
+    for (std::string name : _monitor_expr->names) {
+      _monitors.emplace_back(_vard("monitor_window"), _vari("monitor_samples"));
+      _inter.variables->assign(name + "_min", -huge);
+      _inter.variables->assign(name + "_max",  huge);
+    }
+    return "";
+  }));
+
+  _inter.variables->create("create_solver", new Namespace::Heisenberg<std::string>([this]() {
+    int n_dim = _vari("n_dim");
+    // evaluate dimensions
+    Mat<dyn, dyn> mesh_extremes(n_dim, 2);
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
       for (int sign = 0; sign < 2; ++sign) {
         mesh_extremes(i_dim, sign) = _vard(format_str(50, "mesh_extreme%i%i", i_dim, sign));
       }
     }
     HEXED_ASSERT((mesh_extremes(all, 1) - mesh_extremes(all, 0)).minCoeff() > 0, "all mesh dimensions must be positive!", assert::User_error);
-    double root_sz = (mesh_extremes(all, 1) - mesh_extremes(all, 0)).maxCoeff();
+    double root_size = (mesh_extremes(all, 1) - mesh_extremes(all, 0)).maxCoeff();
+    // construct molecular transport models
     std::vector<std::string> transport_phenomena {"viscosity", "conductivity"};
     std::vector<Transport_model> transport_models;
     for (std::string name : transport_phenomena) {
@@ -273,26 +290,20 @@ Case::Case(std::string input_script)
                                                                   sub.variables->lookup<double>("offset").value()));
       } else HEXED_ASSERT(false, format_str(200, "invalid transport model specification for %s", name), assert::User_error);
     }
-    _solver_ptr.reset(new Solver(*n_dim, *row_size, root_sz, true, transport_models[0], transport_models[1], _inter.variables, _printers));
+    // setup actual solver
+    _solver_ptr.reset(new Solver(n_dim, _vari("row_size"), root_size, true, transport_models[0], transport_models[1], _inter.variables, _printers));
     _solver().mesh().add_tree(_make_extremal_bcs(), mesh_extremes(all, 0));
     _solver().set_fix_admissibility(_vari("fix_therm_admis"));
-    // create history monitors
-    _monitor_expr.reset(new Struct_expr(_vars("monitor_vars")));
-    for (std::string name : _monitor_expr->names) {
-      _monitors.emplace_back(_vard("monitor_window"), _vari("monitor_samples"));
-      _inter.variables->assign(name + "_min", -huge);
-      _inter.variables->assign(name + "_max",  huge);
-    }
-    return 0;
+    return "";
   }));
 
-  _inter.variables->create<int>("init_refinement", new Namespace::Heisenberg<int>([this]() {
+  _inter.variables->create("init_refinement", new Namespace::Heisenberg<std::string>([this]() {
     for (int i = 0; i < _vari("init_ref_level"); ++i) _solver().mesh().update();
     _solver().calc_jacobian();
-    return 0;
+    return "";
   }));
 
-  _inter.variables->create<int>("add_geom", new Namespace::Heisenberg<int>([this]() {
+  _inter.variables->create("add_geom", new Namespace::Heisenberg<std::string>([this]() {
     Surface_geom* geom = _make_geom();
     if (geom) {
       _has_geom = true;
@@ -300,10 +311,10 @@ Case::Case(std::string input_script)
       for (int i_smooth = 0; i_smooth < _vari("n_smooth"); ++i_smooth) _solver().mesh().relax(0.5);
       _solver().calc_jacobian();
     }
-    return 0;
+    return "";
   }));
 
-  _inter.variables->create<int>("refine", new Namespace::Heisenberg<int>([this]() {
+  _inter.variables->create("refine", new Namespace::Heisenberg<int>([this]() {
     std::vector<std::string> crit_code;
     crit_code.push_back("return = " + _vars("refine_if"));
     crit_code.push_back("return = " + _vars("unrefine_if"));
@@ -325,7 +336,7 @@ Case::Case(std::string input_script)
     return changed;
   }));
 
-  _inter.variables->create<int>("split_layers", new Namespace::Heisenberg<int>([this]() {
+  _inter.variables->create("split_layers", new Namespace::Heisenberg<std::string>([this]() {
     _solver().mesh().disconnect_boundary(_solver().mesh().surface_bc_sn());
     auto sub = _inter.make_sub();
     std::vector<double> split_points = Struct_expr(_vars("layer_split_points")).eval(sub);
@@ -336,49 +347,49 @@ Case::Case(std::string input_script)
     }
     _solver().mesh().connect_rest(_solver().mesh().surface_bc_sn());
     _solver().calc_jacobian();
-    return 0;
+    return "";
   }));
 
-  _inter.variables->create<int>("init_state", new Namespace::Heisenberg<int>([this]() {
+  _inter.variables->create("init_state", new Namespace::Heisenberg<std::string>([this]() {
     #if HEXED_OBSESSIVE_TIMING
     int nd = _inter.variables->lookup<int>("n_dim").value();
     if (nd == 2) _inter.printer->print(Simplex_geom<2>::performance_report());
     if (nd == 3) _inter.printer->print(Simplex_geom<3>::performance_report());
     #endif
     _solver().initialize(Spacetime_expr(Struct_expr(_vars("init_cond")), _inter));
-    return 0;
+    return "";
   }));
 
-  _inter.variables->create<int>("read_mesh", new Namespace::Heisenberg<int>([this]() {
+  _inter.variables->create("read_mesh", new Namespace::Heisenberg<std::string>([this]() {
     _printers->info("reading mesh... ");
     Surface_geom* geom = _make_geom();
     _solver().read_mesh(_vars("input_data"), _make_extremal_bcs(), geom, geom ? _make_bc(_vars("surface_bc")) : nullptr);
     _printers->info("done\n");
-    return 0;
+    return "";
   }));
-  _inter.variables->create<int>("read_state", new Namespace::Heisenberg<int>([this]() {
+  _inter.variables->create("read_state", new Namespace::Heisenberg<std::string>([this]() {
     _printers->info("reading state... ");
     _solver().read_state(_vars("input_data"));
     _printers->info("done\n");
-    return 0;
+    return "";
   }));
-  _inter.variables->create<int>("write_mesh", new Namespace::Heisenberg<int>([this]() {
+  _inter.variables->create("write_mesh", new Namespace::Heisenberg<std::string>([this]() {
     _printers->info("writing mesh... ");
     std::string file_name = _vars("working_dir") + _iteration_suffix();
     _solver().mesh().write(file_name);
     force_symlink(_iteration_suffix() + ".mesh.h5", _vars("working_dir") + "latest.mesh.h5");
     _printers->info("done\n");
-    return 0;
+    return "";
   }));
-  _inter.variables->create<int>("write_state", new Namespace::Heisenberg<int>([this]() {
+  _inter.variables->create("write_state", new Namespace::Heisenberg<std::string>([this]() {
     _printers->info("writing state... ");
     std::string file_name = _vars("working_dir") + _iteration_suffix();
     _solver().write_state(file_name);
     force_symlink(_iteration_suffix() + ".state.h5", _vars("working_dir") + "latest.state.h5");
     _printers->info("done\n");
-    return 0;
+    return "";
   }));
-  _inter.variables->create<int>("write_status", new Namespace::Heisenberg<int>([this]() {
+  _inter.variables->create("write_status", new Namespace::Heisenberg<std::string>([this]() {
     _printers->info("writing status... ");
     std::ofstream status_file(_vars("working_dir") + _iteration_suffix() + ".status.hil");
     for (std::string name : {"iteration", "max_safety", "max_time_step", "residual_init", "init_residual_momentum", "init_residual_density", "init_residual_energy"}) {
@@ -387,16 +398,16 @@ Case::Case(std::string input_script)
     status_file.close();
     force_symlink(_iteration_suffix() + ".status.hil", _vars("working_dir") + "latest.status.hil");
     _printers->info("done\n");
-    return 0;
+    return "";
   }));
-  _inter.variables->create<int>("export_polymesh", new Namespace::Heisenberg<int>([this]() {
+  _inter.variables->create("export_polymesh", new Namespace::Heisenberg<std::string>([this]() {
     _printers->info("exporting polymesh... ");
     _solver().mesh().export_polymesh(_vars("working_dir"));
     _printers->info("done\n");
-    return 0;
+    return "";
   }));
 
-  _inter.variables->create<int>("visualize", new Namespace::Heisenberg<int>([this]() {
+  _inter.variables->create("visualize", new Namespace::Heisenberg<std::string>([this]() {
     _printers->info("visualizing... ");
     std::string wd = _vars("working_dir");
     std::string suffix = "_" + _iteration_suffix();
@@ -439,15 +450,15 @@ Case::Case(std::string input_script)
       }
     }
     _printers->info("done\n");
-    return 0;
+    return "";
   }));
 
-  _inter.variables->create<int>("write_skews", new Namespace::Heisenberg<int>([this]() {
+  _inter.variables->create("write_skews", new Namespace::Heisenberg<std::string>([this]() {
     Csv csv(_vars("working_dir") + "skews", 1);
     Array<double> skews(_solver().skews());
     Array<double> reshaped({skews.size(), 1}, skews.data());
     csv.write(reshaped);
-    return 0;
+    return "";
   }));
 
   _inter.variables->create<std::string>("header", new Namespace::Heisenberg<std::string>([this]() {

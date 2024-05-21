@@ -315,6 +315,7 @@ start = {
     case1 = {working_dir = working_dir + {/}}
     $$({case} + (working_dir#(#working_dir - 1) != {/}))
     shell({if [ ! -d } + working_dir + { ]; then mkdir } + working_dir + {; fi})
+    setup_output
     case1 = {shell({cp } + input_script + { } + working_dir)}
     $$({case} + (#input_script != 0))
     case1 = {input_data = working_dir + {latest}}
@@ -336,6 +337,7 @@ start = {
         $loop
     }
     $$({case} + (flood_fill_start0 == huge))
+    setup_parameters
     create_solver
     residual_init = false
     init_residual_momentum = 0.
@@ -379,4 +381,11 @@ run = {
     $print_final
     $write_final
     $vis_final
+}
+
+simulate = {
+    $start
+    $mesh
+    init_state
+    $run
 }
