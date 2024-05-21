@@ -283,6 +283,7 @@ vis_iter = {
 restart = {
     print {reading restart data...}
     read_mesh
+    mesh_init = true
     read_state
     $read(input_data + {.status.hil})
     println {done}
@@ -344,6 +345,7 @@ start = {
     prev_residual = 0.
 }
 
+mesh_init = false
 mesh = {
     println {meshing...}
     init_refinement
@@ -362,6 +364,7 @@ mesh = {
     while = {i_split < init_layer_splits}
     do = {split_layers; i_split = i_split + 1}
     $loop
+    mesh_init = true
     print_emph = true; println({meshing complete with } + n_elements + { elements} + newline)
 }
 

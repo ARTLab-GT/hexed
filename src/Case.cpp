@@ -509,6 +509,7 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create<std::string>("update", new Namespace::Heisenberg<std::string>([this]() {
+    HEXED_ASSERT(_vari("mesh_init"), "attempt to update flow when mesh has not been created", assert::User_error);
     bool avw = _vard("art_visc_width") > 0;
     bool avc = _vard("art_visc_constant") > 0;
     int iter = _vari("iteration");

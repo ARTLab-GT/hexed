@@ -33,7 +33,11 @@ print_vars = print_vars + force_coef_expr
 
 {run simulation}
 $start
+{
 $mesh
 init_state
+}
+done = {false}
+$restart
 $run
 $print_force

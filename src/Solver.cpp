@@ -871,6 +871,7 @@ void Solver::update()
   {
     // compute time step
     double dt = 0;
+    HEXED_ASSERT(_preti_masks.size(), "meshing mask list is empty");
     int n_preti = (_namespace->get<int>("bl_multirate") && !i_flow) ? _preti_masks.size() : 1;
     for (int i_preti = 0; i_preti < n_preti; ++i_preti) if (i_preti != 1)
     {
