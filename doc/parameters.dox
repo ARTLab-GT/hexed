@@ -144,36 +144,6 @@ Boundary conditions for extremal boundaries (defined by \ref mesh_extreme).
 \see \ref boundary_conditions
 
 <hr>
-<hr>
-\subsubsection n_cheby_av
-__type:__ integer \n
-__default:__ 0.7 \n
-Number of Chebyshev acceleration stages to use for diffusion equation for smoothness-based artificial viscosity.
-Increasing this number will help the artificial viscosity coefficient converge faster
-but cause a larger fraction of the time to be spent in the artificial viscosity calculation.
-\note Not defined until \ref create_solver is evaluated.
-
-<hr>
-\subsubsection av_advect_iters
-__type:__ integer \n
-__default:__ 1 \n
-Number of pseudotime iterations to run in artificial viscosity advection equation per nominal iteration
-(i.e. per `hexed::Solver::update_art_visc_smoothness` call).
-Increasing this number will help the artificial viscosity coefficient converge faster
-but cause a larger fraction of the CPU time to be spent in the artificial viscosity calculation.
-\note Not defined until \ref create_solver is evaluated.
-
-<hr>
-\subsubsection flow_iters
-__type:__ integer \n
-__default:__ 1 \n
-Number of physical flow iterations to run per nominal iteration
-(i.e. per `hexed::Solver::update` call).
-Increasing this number can help balance the amount of CPU time spent in the physical flow relative to the artificial viscosity iteration.
-The disadvantage is it can cause the \ref iteration count to be misleading.
-\note Not defined until \ref create_solver is evaluated.
-
-<hr>
 \subsubsection init_layer_splits
 __type:__ integer \n
 __default:__ 0 \n
@@ -544,6 +514,34 @@ This is the number of sub-steps to take on the last Chebyshev stage
 In general, it appears that less is more with this parameter, but a small (but > 1) number is usually beneficial.
 
 <hr>
+\subsubsection n_cheby_av
+__type:__ integer \n
+__default:__ 0.7 \n
+Number of Chebyshev acceleration stages to use for diffusion equation for smoothness-based artificial viscosity.
+Increasing this number will help the artificial viscosity coefficient converge faster
+but cause a larger fraction of the time to be spent in the artificial viscosity calculation.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection av_advect_iters
+__type:__ integer \n
+__default:__ 1 \n
+Number of pseudotime iterations to run in artificial viscosity advection equation per nominal iteration
+(i.e. per `hexed::Solver::update_art_visc_smoothness` call).
+Increasing this number will help the artificial viscosity coefficient converge faster
+but cause a larger fraction of the CPU time to be spent in the artificial viscosity calculation.
+\note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection flow_iters
+__type:__ integer \n
+__default:__ 1 \n
+Number of physical flow iterations to run per nominal iteration
+(i.e. per `hexed::Solver::update` call).
+Increasing this number can help balance the amount of CPU time spent in the physical flow relative to the artificial viscosity iteration.
+The disadvantage is it can cause the \ref iteration count to be misleading.
+\note Not defined until \ref create_solver is evaluated.
+
 
 \subsection esoteric_inputs Esoteric Input Parameters
 You will probably never need to worry about these parameters.
