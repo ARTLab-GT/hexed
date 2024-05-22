@@ -255,14 +255,20 @@ print_init = {println header}
 print_final = {
     case0 = {println{simulation complete}}
     case1 = {print_type = {error}; println{simulation failed}}
-    print_emph = true; $$({case} + failed)
+    print_emph = true; $$({case} + hexed_failed)
     println({wall clock time = } + wall_time + {s = } + wall_time/minute + {min = } + wall_time/hour + {hr})
     println {}
     println {performance summary:}
     println performance_report
 }
 done = {print_emph = true; print_type = {error}; println {Error: you forgot to a set stop condition} & throw}
-failed = false
+hexed_failed = false
+terminate = {
+    print_emph = true
+    print_type = {error}
+    println {User commanded termination.}
+    hexed_failed = true
+}
 
 write_iter = {
     case0 = {}
@@ -300,6 +306,7 @@ restart = {
     read_mesh
     mesh_init = true
     read_state
+    read_status
     println {done}
 }
 
@@ -319,8 +326,10 @@ iterate = {
     println report
     $write_iter
     $vis_iter
+    hexed_prev_except = except
     except = {println exception}
     $(read(working_dir + {runtime_cmd.hil}))
+    except = hexed_prev_except
     shell({echo > } + working_dir + {runtime_cmd.hil})
 }
 
@@ -381,7 +390,7 @@ run = {
     $vis_init
     $print_init
     shell({echo > } + working_dir + {runtime_cmd.hil})
-    while = {!($done | failed)}
+    while = {!($done | hexed_failed)}
     do = {$iterate}
     $loop
     $print_final

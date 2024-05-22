@@ -373,6 +373,17 @@ Case::Case(std::string input_script)
     _printers->info("done\n");
     return "";
   }));
+  _inter.variables->create("read_status", new Namespace::Heisenberg<std::string>([this]() {
+    _printers->info("reading status... ");
+    auto sub = _inter.make_sub();
+    sub.exec("$read {" + _vars("input_data") + ".status.hil}");
+    for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
+      _monitors[i_monitor].add_sample(_vari("iteration"), _vard(_monitor_expr->names[i_monitor] + "_min"));
+      _monitors[i_monitor].add_sample(_vari("iteration"), _vard(_monitor_expr->names[i_monitor] + "_max"));
+    }
+    _printers->info("done\n");
+    return "";
+  }));
   _inter.variables->create("write_mesh", new Namespace::Heisenberg<std::string>([this]() {
     _printers->info("writing mesh... ");
     std::string file_name = _vars("working_dir") + _iteration_suffix();
@@ -586,7 +597,7 @@ Case::Case(std::string input_script)
     _printers->error(except.what());
     _printers->error("\nTerminating simulation.\n", true);
     if (_solver_ptr) _inter.exec("write_mesh; write_state; write_status; visualize;");
-    _inter.variables->assign("failed", 1);
+    _inter.variables->assign("hexed_failed", 1);
   }
 }
 

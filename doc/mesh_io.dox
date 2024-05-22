@@ -206,6 +206,9 @@ __group__ `/`:
     If it is deformed, the value is 1.
   - __dataset__ `nominal_position` (n \f$\times\f$ `n_dim` `int`) one entry for each element giving its nominal position
   - __dataset__ `refinement_level` (n \f$\times\f$ 1 `int`) one entry for each element giving its refinement level
+  - __dataset__ `aniso_refinement_level` (n \f$\times\f$ 1 `int`) one entry for each element giving its anisotropic refinement level.
+    The first extruded element will have an anisotropic refinement level of 1, and if any layer splits are performed,
+    each subsequent element will have an anisotropic refinement level 1 higher than the previous (but the same `refinement level`).
   - __dataset__ `vertices` (n \f$\times\f$ \f$ 2^\verb|n_dim| \f$ `int`)
     One row for each element giving the indices (in the `/vertices/position` dataset) of its vertices in standard row-major array order.
     For elements that are connected, these will actually point to the same vertices,

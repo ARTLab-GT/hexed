@@ -741,19 +741,21 @@ The user can modify the behavior of the iteration loop by adding additional \ref
 
 <hr>
 \subsubsection create_solver
-__type:__ Heisenberg integer \n
-Creates a `hexed::Solver` object and returns 0.
+__type:__ Heisenberg string \n
+Creates a `hexed::Solver` object.
 Mesh contains a single element and the flow is uninitialized.
+Evaluates to `{}`.
 
 <hr>
 \subsubsection init_refinement
-__type:__ Heisenberg integer \n
-Performs initial refinement (not based on geometry surface) and returns 0.
+__type:__ Heisenberg string \n
+Performs initial refinement (not based on geometry surface).
+Evaluates to `{}`.
 
 <hr>
 \subsubsection add_geom
-__type:__ Heisenberg integer \n
-Inserts geometry into mesh and returns 0.
+__type:__ Heisenberg string \n
+Inserts geometry into mesh.
 You can define 0 or more string variables named `geom0`, `geom1`, `geom2`, ... containing paths to geometry definition files.
 Paths can be absolute or relative to execution directory (not \ref working_dir).
 Geometry variable numbers must start at 0 and be consecutive.
@@ -775,22 +777,26 @@ The following extension/format combinations are supported:
 - `.stl`: [STL](https://en.wikipedia.org/wiki/STL_(file_format)) 3D geometry format (3D only).
   ASCII or binary formats accepted.
   Units are assumed to be \ref units "standard".
+Evaluates to `{}`.
 
 <hr>
 \subsubsection refine
-__type:__ Heisenberg integer \n
-Performs one refinement sweep and returns 0.
+__type:__ Heisenberg string \n
+Performs one refinement sweep.
 Elements are refined or unrefined based on \ref refine_if and \ref unrefine_if.
+Evaluates to `{}`.
 
 <hr>
 \subsubsection init_state
-__type:__ Heisenberg integer \n
-Initializes the solver state to \ref init_cond and returns 0.
+__type:__ Heisenberg string \n
+Initializes the solver state to \ref init_cond.
+Evaluates to `{}`.
 
 <hr>
 \subsubsection visualize
-__type:__ Heisenberg integer \n
-Writes visualization files and returns 0.
+__type:__ Heisenberg string \n
+Writes visualization files.
+Evaluates to `{}`.
 
 <hr>
 \subsubsection compute_residuals
@@ -853,14 +859,14 @@ Returns an empty string.
 
 <hr>
 \subsubsection split_layers
-__type:__ Heisenberg integer \n
+__type:__ Heisenberg string \n
 Creates anisotropic wall layers by splitting the last wall layer (the layer of extruded elements closest to the geometry surface) into thinner layers.
 The layer will be split at user-specified set of points controlled by \ref layer_split_points.
 For each split point, the layer will be cut by the level surface where the wall-normal reference coordinate equals that value.
 Thus split points should be strictly increasing and in the interval (0, 1).
 For example, to split the last wall layer into 4 approximately equal parts, you could set `layer_split_points = {split0 = 0.25; split1 = 0.5; split2 = 0.75}` and then evaluate `split_layers`.
 The state of the original layer will be interpolated into the new layers, so layer splitting can be performed dynamically as a simulation is running.
-Evaluates to 0.
+Evaluates to `{}`.
 
 <hr>
 \subsubsection set_geometry_refinement
@@ -901,15 +907,15 @@ high-Reynolds-number simulations.
 
 <hr>
 \subsubsection read_mesh
-__type:__ Heisenberg int \n
+__type:__ Heisenberg string \n
 Reads the mesh from a \ref file_format "Hexed mesh file" (which you can create using \ref write_mesh).
 This can be used in place of \ref mesh, but you will still have to call \ref init_state or \ref read_state to initialize the flow state.
 The file name of the mesh file given by \ref input_data with `.mesh.h5` appended.
-Evaluates to 0.
+Evaluates to `{}`.
 
 <hr>
 \subsubsection read_state
-__type:__ Heisenberg int \n
+__type:__ Heisenberg string \n
 Reads the flow state from a file created with the \ref write_state command.
 The file name is given by \ref input_data with `.state.h5` appended.
 The state file __must__ have been created for the exact same mesh,
@@ -921,56 +927,70 @@ even if the mesh is geometrically identical.
 So, just play it safe and read the mesh first.
 This command can be used instead of \ref init_state.
 `read_mesh` and `read_state` together can be used to restart a previous simulation from where it left off.
-Evaluates to 0.
+Evaluates to `{}`.
+
+<hr>
+\subsubsection read_status
+__type:__ Heisenberg string \n
+Reads HIL variables from a file created with the \ref write_status command.
+This should be preferred over simply using the \ref read command to read the HIL code
+because it also reinitializes the \ref monitor_vars "history monitors" from the `_max` and `_min` variables.
+Evaluates to `{}`.
 
 <hr>
 \subsubsection restart
 __type:__ string (macro) \n
-Reads the mesh, state, and status variables from a previous simulation.
+Reads the mesh, state, and \ref hil "HIL" variables from a previous simulation.
 File names without extensions are given by \ref input_data.
 This should be the method of choice for restarting a simulation.
-`restart` should be invoked after \ref start and before \ref run.
-\ref mesh and \ref init_state are not necessary.
-You will still have to include the input parameter definitions (e.g., freestream conditions and \ref done "termination condition"),
-which can be accomplished by copying the appropriate parts of the original input file if desired.
-Note that `restart` will override the current value of \ref max_safety and \ref max_time_step,
-which is necessary for \ref set_ramping to work correctly.
-If you want to set these values manually, you can do that in between `restart` and \ref run.
+`restart` replaces \ref start, \ref mesh, and \ref init_state, but you still need to evaluate \ref run.
+You may need to modify some parameters between `restart` and `run` (probably \ref done).
+A typical input for a restart simulation would look something like:
+~~~{.unparsed}
+$restart
+done = {iteration >= 10^5}
+$run
+~~~
 
 <hr>
 \subsubsection write_mesh
-__type:__ Heisenberg int \n
+__type:__ Heisenberg string \n
 Writes the mesh to a file in the \ref file_format "Hexed mesh format",
 which can then be used again in a future simulation using \ref read_mesh, or, in theory, imported into another program.
 The file name will be `iterXXXXXXXXXX.mesh.h5` in the working directory, where the `X`s are replaced with the current iteration number.
 Also creates a symlink `latest.mesh.h5` pointing to this file for convenience.
-Evaluates to 0.
+Evaluates to `{}`.
 
 <hr>
 \subsubsection write_state
-__type:__ Heisenberg int \n
+__type:__ Heisenberg string \n
 Writes the flow state to a file which can then be used in a future simulation using \ref read_state.
 The file name will be `iterXXXXXXXXXX.state.h5` in the working directory, where the `X`s are replaced with the current iteration number.
 Also creates a symlink `latest.state.h5` pointing to this file for convenience.
-Evaluates to 0.
+Evaluates to `{}`.
 
 <hr>
 \subsubsection write_status
-__type:__ Heisenberg int \n
-Writes certain status variables to a file to facilitate restarting the simulation exactly as it was.
+__type:__ Heisenberg string \n
+Writes the values of all user-defined variables to a file.
+"User-defined" means variables that were written to after the start of the input script (i.e. not the default values of builtin variables).
+Some variables are explicitly excluded as their values should always be redefined for the restarted simulation,
+namely \ref working_dir, \ref input_data.
 The file name will be `iterXXXXXXXXXX.status.hil` in the working directory, where the `X`s are replaced with the current iteration number.
 Also creates a symlink `latest.status.hil` pointing to this file for convenience.
 The file is a standard \ref hil "HIL" script that can be read using the standard \ref read operator.
 E.g., `$read {hexed_out/latest.status.hil}`.
-The variables that are included are:
-- \ref iteration
-- \ref init_residual_momentum
-- \ref init_residual_density
-- \ref init_residual_energy
-- \ref max_safety
-- \ref max_time_step
+Evaluates to `{}`.
 
-Evaluates to 0.
+<hr>
+\subsubsection terminate
+__type:__ string (macro) \n
+Terminates the simulation.
+Ending activities including writing restart and visualization data will still be performed,
+but \ref done will not be modified and the simulation will be considered to have failed.
+If the simulation is not going the way you want, this should be the method of choice to terminate it.
+Generally, you should only use the keyboard interrupt (Ctrl C) or kill signals if you encounter a bug,
+as they will not write visualization and restart data to help you diagnose the problem.
 
 <hr>
 
@@ -1110,8 +1130,9 @@ but it can be useful to qualitatively asses the convergence of the simulation.
 
 <hr>
 \subsubsection n_elements
-__type:__ Heisenberg integer \n
+__type:__ Heisenberg string \n
 The number of elements currently in the mesh.
+Evaluates to `{}`.
 
 <hr>
 \subsubsection performance_report

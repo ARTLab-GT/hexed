@@ -202,6 +202,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("av_diff_iters", 1); // number of diffusion iterations to run each time `update_art_visc_smoothness` is called
   _namespace->assign_default("flow_iters", 1);
   _namespace->assign_default("bl_iters", 1);
+  _namespace->assign_default("fix_iters", 0);
   _namespace->assign_default("use_filter", 0); // whether to use modal filter acceleration
   _namespace->assign_default<int>("local_time", local_time_stepping);
   _namespace->assign_default("elementwise_art_visc", 0);
