@@ -71,6 +71,7 @@ class Namespace
   template<typename T> void assign_default(std::string name, T value);
   template<typename T> std::optional<T> lookup(std::string name);
   template<typename T> T get(std::string name);
+  std::vector<std::string> names() const;
 };
 
 template<> inline std::map<std::string, std::unique_ptr<Namespace::Variable<int>>>&         Namespace::_get_map() {return _ints;}
@@ -90,7 +91,7 @@ inline bool Namespace::exists_recursive(std::string name)
 {
   if (exists(name)) return true;
   if (!supers.empty()) {
-    auto predicate = [name](std::shared_ptr<Namespace>& space) {return space->exists(name);};
+    auto predicate = [name](std::shared_ptr<Namespace>& space) {return space->exists_recursive(name);};
     return std::all_of(supers.begin(), supers.end(), predicate);
   }
   return false;
@@ -148,6 +149,15 @@ T Namespace::get(std::string name)
   auto val = lookup<T>(name);
   HEXED_ASSERT(val, format_str(1000, "failed to obtain variable `%s` as type `%s`", name.c_str(), typeid(T).name()));
   return *val;
+}
+
+inline std::vector<std::string> Namespace::names() const
+{
+  std::vector<std::string> n;
+  for (auto& pair : _ints)    n.push_back(pair.first);
+  for (auto& pair : _doubles) n.push_back(pair.first);
+  for (auto& pair : _strings) n.push_back(pair.first);
+  return n;
 }
 
 }

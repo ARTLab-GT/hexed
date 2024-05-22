@@ -1,5 +1,15 @@
 /*! \page hil Hexed Interface Language
 
+\section hil_tldr TL;DR
+Input files for Hexed are written in the Hexed Interface Language (HIL).
+Most of your input files should consist of simple \ref variables "assignment statements" of the form `variable = expression`.
+E.g., `x = 1 + 1`.
+You can create any variable you want, but some variables are \ref parameters "parameters" that affect the behavior of the solver,
+some are \ref builtins "builtin", and some have \ref heisenberg "side effects" when you evaluate them.
+Strings are enclosed in `{}`, e(.g., `working_dir = {my_working_dir_name}`),
+and some string variables are actually \ref Macros "macros" which should be evaluated with a `$` in front of them (e.g., `$run` runs the simulation).
+
+\section Introduction
 __The Hexed Interface Language (HIL) is a simple scripting language designed for interfacing with Hexed.__
 The Hexed project has two interpreters for it.
 There is the basic executable `hil`, which supports all the basic features described on this page,
@@ -151,7 +161,7 @@ However, HIL is technically dynamically typed since the type that a variable can
 \anchor heisenberg
 HIL comes with some builtin variables which are already defined at the start of your program,
 and special variables whose value influences the behavior of the solver (i.e. input parameters).
-There are also some variables, which I call _Heisenberg variables_ that produce side effects when you evaluate them.
+There are also some variables, which I call _Heisenberg variables_, that produce side effects when you evaluate them.
 You can't assign to these variables, and exactly what happens when you evaluate them is specially defined for each one.
 They are called "Heisenberg" because the fact that observing their value changes the state of the program
 is reminiscent of the collapse of the wave function in quantum mechanics.

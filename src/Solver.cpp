@@ -155,6 +155,18 @@ double Solver::max_dt(double msc, double msd)
   else return max_dt_euler(_kernel_mesh(), opts, msc, msd, local_time);
 }
 
+void Solver::_init_face_state()
+{
+  compute_write_face(_kernel_mesh());
+  compute_prolong(_kernel_mesh());
+  auto& bc_cons {acc_mesh->boundary_connections()};
+  #pragma omp parallel for
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+    acc_mesh->boundary_condition(bc_sn).flow_bc->init_cache(bc_cons[i_con]);
+  }
+}
+
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
                Transport_model viscosity_model, Transport_model thermal_conductivity_model,
                std::shared_ptr<Namespace> space, std::shared_ptr<Printer_set> printer, bool implicit) :
@@ -190,17 +202,17 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("av_diff_iters", 1); // number of diffusion iterations to run each time `update_art_visc_smoothness` is called
   _namespace->assign_default("flow_iters", 1);
   _namespace->assign_default("bl_iters", 1);
+  _namespace->assign_default("fix_iters", 0);
   _namespace->assign_default("use_filter", 0); // whether to use modal filter acceleration
   _namespace->assign_default<int>("local_time", local_time_stepping);
   _namespace->assign_default("elementwise_art_visc", 0);
   _namespace->assign_default("elementwise_art_visc_diff_ratio", 5.);
   _namespace->assign_default<std::string>("working_dir", ".");
-  _namespace->assign("fix_iters", 0);
-  _namespace->assign("iteration", 0);
-  _namespace->assign("flow_time", 0.);
-  _namespace->assign("time_step", 0.);
-  _namespace->assign("art_visc_residual", 0.);
-  _namespace->assign("wall_time", 0.);
+  _namespace->assign_default("iteration", 0);
+  _namespace->assign_default("flow_time", 0.);
+  _namespace->assign_default("time_step", 0.);
+  _namespace->assign_default("art_visc_residual", 0.);
+  _namespace->assign_default("wall_time", 0.);
   status.set_time();
   // setup categories for performance reporting
   std::string unit = "(element*(time integration stage))";
@@ -276,6 +288,7 @@ void Solver::read_state(std::string file_name)
     dspace.selectHyperslab(H5S_SELECT_SET, elem_dims, offset, stride, block);
     dset.read(elems[i_elem].state(), dset.getDataType(), mspace, dspace);
   }
+  _init_face_state();
 }
 
 void Solver::write_state(std::string file_name)
@@ -427,14 +440,7 @@ void Solver::initialize(const Spacetime_func& func)
       }
     }
   }
-  compute_write_face(_kernel_mesh());
-  compute_prolong(_kernel_mesh());
-  auto& bc_cons {acc_mesh->boundary_connections()};
-  #pragma omp parallel for
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh->boundary_condition(bc_sn).flow_bc->init_cache(bc_cons[i_con]);
-  }
+  _init_face_state();
 }
 
 void Solver::set_art_visc_off()
@@ -871,6 +877,7 @@ void Solver::update()
   {
     // compute time step
     double dt = 0;
+    HEXED_ASSERT(_preti_masks.size(), "meshing mask list is empty");
     int n_preti = (_namespace->get<int>("bl_multirate") && !i_flow) ? _preti_masks.size() : 1;
     for (int i_preti = 0; i_preti < n_preti; ++i_preti) if (i_preti != 1)
     {
