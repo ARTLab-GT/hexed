@@ -32,7 +32,6 @@ vis_freq = 5000
 diffusive_admissibility = true
 vis_lts_constraints = true
 vis_field_vars = vis_field_vars + field_residual_expr
-working_dir = {hexed_out_full}
 
 $plot_history
 $start
