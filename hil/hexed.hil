@@ -280,13 +280,28 @@ vis_iter = {
     $$({case} + (iteration%vis_freq == 0))
 }
 
+setup_io = {
+    case0 = {}
+    case1 = {working_dir = working_dir + {/}}
+    $$({case} + (working_dir#(#working_dir - 1) != {/}))
+    shell({if [ ! -d } + working_dir + { ]; then mkdir } + working_dir + {; fi})
+    setup_output
+    case1 = {shell({cp } + input_script + { } + working_dir)}
+    $$({case} + (#input_script != 0))
+    case1 = {input_data = working_dir + {latest}}
+    $$({case} + (input_data == {auto}))
+}
+
 restart = {
     print {reading restart data...}
+    $setup_io
+    $read(input_data + {.status.hil})
+    create_solver
     read_mesh
     mesh_init = true
     read_state
-    $read(input_data + {.status.hil})
     println {done}
+    $run
 }
 
 iterate = {
@@ -311,15 +326,7 @@ iterate = {
 }
 
 start = {
-    case0 = {}
-    case1 = {working_dir = working_dir + {/}}
-    $$({case} + (working_dir#(#working_dir - 1) != {/}))
-    shell({if [ ! -d } + working_dir + { ]; then mkdir } + working_dir + {; fi})
-    setup_output
-    case1 = {shell({cp } + input_script + { } + working_dir)}
-    $$({case} + (#input_script != 0))
-    case1 = {input_data = working_dir + {latest}}
-    $$({case} + (input_data == {auto}))
+    $setup_io
     case1 = {
         case1 = {surface_bc = {nonpenetration}}
         case0 = {surface_bc = {no_slip}}

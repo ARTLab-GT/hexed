@@ -392,17 +392,14 @@ Case::Case(std::string input_script)
   _inter.variables->create("write_status", new Namespace::Heisenberg<std::string>([this]() {
     _printers->info("writing status... ");
     std::ofstream status_file(_vars("working_dir") + _iteration_suffix() + ".status.hil");
-    for (std::string name : {"iteration", "max_safety", "max_time_step", "residual_init", "init_residual_momentum", "init_residual_density", "init_residual_energy"}) {
-      status_file << _assignment(name) + "\n";
+    std::vector<std::string> no_write {"working_dir", "input_data"};
+    for (std::string name : _inter.variables->names()) {
+      if (name.substr(0, 6) != "hexed_" && std::none_of(no_write.begin(), no_write.end(), [name](std::string nw){return name == nw;})) {
+        status_file << _assignment(name) + "\n";
+      }
     }
     status_file.close();
     force_symlink(_iteration_suffix() + ".status.hil", _vars("working_dir") + "latest.status.hil");
-    _printers->info("done\n");
-    return "";
-  }));
-  _inter.variables->create("export_polymesh", new Namespace::Heisenberg<std::string>([this]() {
-    _printers->info("exporting polymesh... ");
-    _solver().mesh().export_polymesh(_vars("working_dir"));
     _printers->info("done\n");
     return "";
   }));
@@ -574,6 +571,10 @@ Case::Case(std::string input_script)
 
   // load HIL code for the Case _interface
   _inter.exec("$read {hexed.hil}");
+  // make a sub-namespace for all new user-created variables which is useful for `write_status`
+  std::shared_ptr<Namespace> space = std::make_shared<Namespace>();
+  space->supers.push_back(_inter.variables);
+  _inter.variables = space;
   // execute input file
   try {
     _inter.exec(format_str(1000, "$read {%s}", input_script.c_str()));
