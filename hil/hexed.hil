@@ -301,7 +301,6 @@ restart = {
     mesh_init = true
     read_state
     println {done}
-    $run
 }
 
 iterate = {

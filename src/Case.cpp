@@ -255,13 +255,6 @@ Case::Case(std::string input_script)
       freestream(Eigen::seqN(*n_dim + 2, 5 - (*n_dim + 2))).setZero();
       _set_vector("freestream", freestream);
     }
-    // create history monitors
-    _monitor_expr.reset(new Struct_expr(_vars("monitor_vars")));
-    for (std::string name : _monitor_expr->names) {
-      _monitors.emplace_back(_vard("monitor_window"), _vari("monitor_samples"));
-      _inter.variables->assign(name + "_min", -huge);
-      _inter.variables->assign(name + "_max",  huge);
-    }
     return "";
   }));
 
@@ -289,6 +282,13 @@ Case::Case(std::string input_script)
                                                                   sub.variables->lookup<double>("ref_temperature").value(),
                                                                   sub.variables->lookup<double>("offset").value()));
       } else HEXED_ASSERT(false, format_str(200, "invalid transport model specification for %s", name), assert::User_error);
+    }
+    // create history monitors
+    _monitor_expr.reset(new Struct_expr(_vars("monitor_vars")));
+    for (std::string name : _monitor_expr->names) {
+      _monitors.emplace_back(_vard("monitor_window"), _vari("monitor_samples"));
+      _inter.variables->assign_default(name + "_min", -huge);
+      _inter.variables->assign_default(name + "_max",  huge);
     }
     // setup actual solver
     _solver_ptr.reset(new Solver(n_dim, _vari("row_size"), root_size, true, transport_models[0], transport_models[1], _inter.variables, _printers));

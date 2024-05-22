@@ -207,12 +207,11 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("elementwise_art_visc", 0);
   _namespace->assign_default("elementwise_art_visc_diff_ratio", 5.);
   _namespace->assign_default<std::string>("working_dir", ".");
-  _namespace->assign("fix_iters", 0);
-  _namespace->assign("iteration", 0);
-  _namespace->assign("flow_time", 0.);
-  _namespace->assign("time_step", 0.);
-  _namespace->assign("art_visc_residual", 0.);
-  _namespace->assign("wall_time", 0.);
+  _namespace->assign_default("iteration", 0);
+  _namespace->assign_default("flow_time", 0.);
+  _namespace->assign_default("time_step", 0.);
+  _namespace->assign_default("art_visc_residual", 0.);
+  _namespace->assign_default("wall_time", 0.);
   status.set_time();
   // setup categories for performance reporting
   std::string unit = "(element*(time integration stage))";
