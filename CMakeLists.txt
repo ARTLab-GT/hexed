@@ -172,7 +172,13 @@ add_custom_command(
     COMMAND python3 ${CMAKE_SOURCE_DIR}/script/translate.py ${CMAKE_SOURCE_DIR}/include/constants.hpp
     DEPENDS         ${CMAKE_SOURCE_DIR}/script/translate.py ${CMAKE_SOURCE_DIR}/include/constants.hpp
 )
-add_custom_target(constants ALL DEPENDS constants.hil)
+add_custom_command(
+    OUTPUT hexed_constants.py
+    COMMAND cp constants.hil hexed_constants.py
+    COMMAND sed -i \"s/\\^/**/g\" hexed_constants.py
+    DEPENDS constants.hil
+)
+add_custom_target(constants ALL DEPENDS constants.hil hexed_constants.py)
 
 # install
 install(PROGRAMS script/hexed-post-process ${CMAKE_BINARY_DIR}/hexed-wrapped-post-process script/hexed-fit-geom TYPE BIN)
@@ -188,7 +194,7 @@ install(FILES
 )
 
 install(FILES ${CMAKE_BINARY_DIR}/hexed-config.cmake DESTINATION lib/cmake/hexed)
-install(FILES ${CMAKE_SOURCE_DIR}/python/hexed_utils.py DESTINATION ${PYTHON_INSTALL_PREFIX})
+install(FILES ${CMAKE_SOURCE_DIR}/python/hexed_utils.py ${CMAKE_BINARY_DIR}/hexed_constants.py DESTINATION ${PYTHON_INSTALL_PREFIX})
 
 # uninstall
 configure_file(${CMAKE_SOURCE_DIR}/script/uninstall.sh.in uninstall.sh)
