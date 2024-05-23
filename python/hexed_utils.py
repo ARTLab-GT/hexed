@@ -21,14 +21,14 @@ def naca(desig, n_points = 1000, closure = "warp"):
     This function is the recommended way to generate NACA airfoil geometry for Hexed simulations,
     as importing airfoils from coordinate files requires some \ref geom_fitting "special care".
     \param desig String representing the airfoil designation (e.g., `"0012"` for the NACA0012).
-                 In general, we cannot accept this parameter as an `int` because of possible leading zeros.
-    \param n_points Number of points on the airfoil surface. Don't be stingy, since DG is finnicky with discrete geometry representations --
-                    1000 is actually on the lower end of what I normally use.
+        In general, we cannot accept this parameter as an `int` because of possible leading zeros.
+    \param n_points Number of points on the airfoil surface. Don't be stingy,
+        since DG is finnicky with discrete geometry representations---1000 is actually on the lower end of what I normally use.
     \param closure If and how to close the trailing edge. There are 3 options:
-                   - `"warp"`: Close the trailing edge by adding a 4th-degree polyomial of \f$ x_0 \f$ to \f$ x_1 \f$.
-                   - `"segment"`: Close the trailing edge by adding a line segment connecting the last point to the first point,
-                     causing the array to be `(n_points + 1)*2` instead of `n_points*2`.
-                   - `"none"`, `None`, or `False`: Don't close the trailing edge.
+        - `"warp"`: Close the trailing edge by adding a 4th-degree polyomial of \f$ x_0 \f$ to \f$ x_1 \f$.
+        - `"segment"`: Close the trailing edge by adding a line segment connecting the last point to the first point,
+            causing the array to be `(n_points + 1)*2` instead of `n_points*2`.
+        - `"none"`, `None`, or `False`: Don't close the trailing edge.
     """
     try:
         desig = str(desig)
