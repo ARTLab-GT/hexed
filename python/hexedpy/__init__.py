@@ -10,7 +10,7 @@ from scipy.optimize import fsolve, minimize
 import warnings
 from sympy.integrals.quadrature import gauss_legendre, gauss_lobatto
 
-## \namespace hexed_utils
+## \namespace hexedpy
 # \brief A Python module with random useful tools.
 
 def naca(desig, n_points = 1000, closure = "warp"):

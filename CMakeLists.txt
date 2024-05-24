@@ -86,13 +86,6 @@ file(COPY_FILE ${CMAKE_SOURCE_DIR}/test/ellipsoid.igs ${CMAKE_BINARY_DIR}/ellips
 file(COPY_FILE ${CMAKE_SOURCE_DIR}/test/ellipsoid.stp ${CMAKE_BINARY_DIR}/ellipsoid.stp)
 file(COPY_FILE ${CMAKE_SOURCE_DIR}/test/ellipse.IGS ${CMAKE_BINARY_DIR}/ellipse.IGS)
 file(COPY_FILE ${CMAKE_SOURCE_DIR}/test/ellipse.STEP ${CMAKE_BINARY_DIR}/ellipse.STEP)
-add_custom_command(
-    OUTPUT Gauss_lobatto.cpp Gauss_legendre.cpp
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/script/auto_generate.py ${CMAKE_BINARY_DIR} ${MAX_BASIS_ROW_SIZE}
-    DEPENDS
-        ${CMAKE_SOURCE_DIR}/script/auto_generate.py
-        ${CMAKE_SOURCE_DIR}/python/hexed_utils.py
-)
 set(colormap_files
     colormaps/cividis.map
     colormaps/inferno.map
@@ -104,6 +97,40 @@ set(colormap_files
 )
 configure_file(script/hexed-wrapped-post-process.in hexed-wrapped-post-process)
 configure_file(script/format.mcr.in format.mcr)
+add_custom_command(
+    OUTPUT constants.hil
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/script/translate.py ${CMAKE_SOURCE_DIR}/include/constants.hpp
+    DEPENDS         ${CMAKE_SOURCE_DIR}/script/translate.py ${CMAKE_SOURCE_DIR}/include/constants.hpp
+)
+add_custom_target(constants ALL DEPENDS constants.hil)
+
+# install:
+# pip3 install --upgrade build
+
+# build Python package
+file(COPY ${CMAKE_SOURCE_DIR}/python DESTINATION ${CMAKE_BINARY_DIR})
+file(COPY ${CMAKE_SOURCE_DIR}/LICENSE.txt DESTINATION ${CMAKE_BINARY_DIR}/python/)
+configure_file(python/pyproject.toml.in python/pyproject.toml)
+set(wheel python/dist/hexedpy-${CMAKE_PROJECT_VERSION}-py3-none-any.whl)
+set(pysrc python/dist/hexedpy-${CMAKE_PROJECT_VERSION}.tar.gz)
+add_custom_command(
+    OUTPUT ${wheel} ${pysrc}
+    COMMAND ${CMAKE_SOURCE_DIR}/script/build_python.sh
+    DEPENDS constants.hil python ${CMAKE_SOURCE_DIR}/LICENSE.txt
+)
+add_custom_target(hexedpy_package ALL DEPENDS ${wheel} ${pysrc})
+
+# autogenerate C++ files
+configure_file(script/autogen.sh.in autogen.sh)
+file(CHMOD autogen.sh PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE)
+add_custom_command(
+    OUTPUT Gauss_lobatto.cpp Gauss_legendre.cpp
+    COMMAND ./autogen.sh
+    DEPENDS
+        autogen.sh
+        ${CMAKE_SOURCE_DIR}/script/auto_generate.py
+        python
+)
 
 # generate colormaps to use in tecplot
 add_custom_command(
@@ -167,19 +194,6 @@ if (use_cppcheck)
     add_custom_target(cppcheck ALL DEPENDS cppcheck_output.txt)
 endif()
 
-add_custom_command(
-    OUTPUT constants.hil
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/script/translate.py ${CMAKE_SOURCE_DIR}/include/constants.hpp
-    DEPENDS         ${CMAKE_SOURCE_DIR}/script/translate.py ${CMAKE_SOURCE_DIR}/include/constants.hpp
-)
-add_custom_command(
-    OUTPUT hexed_constants.py
-    COMMAND cp constants.hil hexed_constants.py
-    COMMAND sed -i \"s/\\^/**/g\" hexed_constants.py
-    DEPENDS constants.hil
-)
-add_custom_target(constants ALL DEPENDS constants.hil hexed_constants.py)
-
 # install
 install(PROGRAMS script/hexed-post-process ${CMAKE_BINARY_DIR}/hexed-wrapped-post-process script/hexed-fit-geom TYPE BIN)
 install(TARGETS hexed hexecute hil)
@@ -194,7 +208,6 @@ install(FILES
 )
 
 install(FILES ${CMAKE_BINARY_DIR}/hexed-config.cmake DESTINATION lib/cmake/hexed)
-install(FILES ${CMAKE_SOURCE_DIR}/python/hexed_utils.py ${CMAKE_BINARY_DIR}/hexed_constants.py DESTINATION ${PYTHON_INSTALL_PREFIX})
 
 # uninstall
 configure_file(${CMAKE_SOURCE_DIR}/script/uninstall.sh.in uninstall.sh)

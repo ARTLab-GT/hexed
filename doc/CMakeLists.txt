@@ -12,7 +12,7 @@ add_custom_command(
     DEPENDS
         doc_config
         hexed
-        ${CMAKE_SOURCE_DIR}/python/hexed_utils.py
+        hexedpy_package
         style.css
         ${DOC_FILES}
         ${CMAKE_SOURCE_DIR}/script/vis_benchmark.py
