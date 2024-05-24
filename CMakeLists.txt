@@ -116,7 +116,7 @@ set(pysrc python/dist/hexedpy-${CMAKE_PROJECT_VERSION}.tar.gz)
 add_custom_command(
     OUTPUT ${wheel} ${pysrc}
     COMMAND ${CMAKE_SOURCE_DIR}/script/build_python.sh
-    DEPENDS constants.hil python ${CMAKE_SOURCE_DIR}/LICENSE.txt
+    DEPENDS constants.hil python ${CMAKE_SOURCE_DIR}/LICENSE.txt ${CMAKE_SOURCE_DIR}/script/build_python.sh
 )
 add_custom_target(hexedpy_package ALL DEPENDS ${wheel} ${pysrc})
 
