@@ -16,6 +16,13 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
+dependencies = [
+    "numpy",
+    "matplotlib",
+    "pandas",
+    "sympy",
+    "scipy",
+]
 
 [project.urls]
 Homepage = "https://github.com/ARTLab-GT/hexed"
