@@ -165,7 +165,7 @@ set_geometry_refinement = {
     unrefine_if = {ref_level > init_ref_level & !is_extruded}
 }
 
-plot_history = {shell({python3 -c "from hexed_utils import History_plot;History_plot('} + working_dir + {')" &})}
+plot_history = {shell({python3 -c "from hexedpy import History_plot;History_plot('} + working_dir + {')" &})}
 
 {scalar parameters}
 row_size = 6
