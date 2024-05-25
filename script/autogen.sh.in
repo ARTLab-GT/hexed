@@ -1,0 +1,2 @@
+export PYTHONPATH=python/:$PYTHONPATH
+python3 @CMAKE_SOURCE_DIR@/script/auto_generate.py @CMAKE_BINARY_DIR@ @MAX_BASIS_ROW_SIZE@

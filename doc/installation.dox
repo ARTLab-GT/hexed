@@ -190,7 +190,7 @@ OpenCASCADE Technology is an open source CAD Engine which Hexed uses to read and
 - `make -j install`
   - You do actually have to install it.
     If you try to do `make -j` and just execute the binary executable from the build directory,
-    it won't be able to find its \ref hil "HIL" scripts and \ref hexed_utils "Python modules".
+    it won't be able to find its \ref hil "HIL" scripts.
 
 \subsection verify Step 10: verify success
 Hexed should now be ready to use.
