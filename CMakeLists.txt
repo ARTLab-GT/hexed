@@ -127,7 +127,7 @@ if (autoinstall_python)
     add_custom_target(install_hexedpy ALL
         COMMAND pip3 uninstall -y hexedpy
         COMMAND pip3 install ${wheel}
-        DEPENDS ${wheel}
+        DEPENDS hexedpy_package
     )
 endif()
 
