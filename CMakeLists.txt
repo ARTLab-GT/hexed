@@ -22,11 +22,8 @@ if(NOT CMAKE_BUILD_TYPE)
        "Select Release for high performance and Debug for easier debugging" FORCE)
    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Release" "Debug")
 endif()
-if (NOT DEFINED PYTHON_INSTALL_PREFIX)
-    execute_process(COMMAND python3 -m site --user-site OUTPUT_VARIABLE python_site OUTPUT_STRIP_TRAILING_WHITESPACE)
-    set(PYTHON_INSTALL_PREFIX ${python_site} CACHE PATH "where to install Python module" FORCE)
-endif()
 
+option(autoinstall_python "automatically use pip to install python dependencies and hexedpy in your current environment" OFF)
 option(build_tests "would you like to build the unit tests? (requires Catch2)" OFF)
 option(build_docs "build documentation? (requires doxygen)" OFF)
 option(sanitize "If ON, compile with sanitizer flags." OFF)
@@ -76,6 +73,16 @@ if(NOT DEFINED MAX_BASIS_ROW_SIZE)
        "Maximum degree of basis polynomials + 1. Must be an integer greater than 1." FORCE)
 endif()
 
+# install Python dependencies
+if (autoinstall_python)
+    add_custom_target(install_py_deps ALL
+        COMMAND ${CMAKE_SOURCE_DIR}/script/install_py_deps.sh
+        DEPENDS ${CMAKE_SOURCE_DIR}/script/install_py_deps.sh
+    )
+else()
+    add_custom_target(install_py_deps ALL)
+endif()
+
 # configure files
 configure_file(hexed-config.cmake.in hexed-config.cmake)
 configure_file(hexed_config.hpp.in include/auto/hexed_config.hpp)
@@ -104,9 +111,6 @@ add_custom_command(
 )
 add_custom_target(constants ALL DEPENDS constants.hil)
 
-# install:
-# pip3 install --upgrade build
-
 # build Python package
 file(COPY ${CMAKE_SOURCE_DIR}/python DESTINATION ${CMAKE_BINARY_DIR})
 file(COPY ${CMAKE_SOURCE_DIR}/LICENSE.txt DESTINATION ${CMAKE_BINARY_DIR}/python/)
@@ -119,6 +123,13 @@ add_custom_command(
     DEPENDS constants.hil python ${CMAKE_SOURCE_DIR}/LICENSE.txt ${CMAKE_SOURCE_DIR}/script/build_python.sh
 )
 add_custom_target(hexedpy_package ALL DEPENDS ${wheel} ${pysrc})
+if (autoinstall_python)
+    add_custom_target(install_hexedpy ALL
+        COMMAND pip3 uninstall -y hexedpy
+        COMMAND pip3 install ${wheel}
+        DEPENDS ${wheel}
+    )
+endif()
 
 # autogenerate C++ files
 configure_file(script/autogen.sh.in autogen.sh)
@@ -130,6 +141,7 @@ add_custom_command(
         autogen.sh
         ${CMAKE_SOURCE_DIR}/script/auto_generate.py
         python
+        install_py_deps
 )
 
 # generate colormaps to use in tecplot
@@ -140,7 +152,7 @@ add_custom_command(
 )
 add_custom_target(
     colormaps ALL
-    DEPENDS ${colormap_files}
+    DEPENDS ${colormap_files} install_py_deps
 )
 
 # define main target, which is a library
@@ -206,7 +218,6 @@ install(FILES
     ${CMAKE_SOURCE_DIR}/LICENSE.txt
     DESTINATION lib/hexed
 )
-
 install(FILES ${CMAKE_BINARY_DIR}/hexed-config.cmake DESTINATION lib/cmake/hexed)
 
 # uninstall

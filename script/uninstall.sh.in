@@ -8,6 +8,7 @@ then
         mkdir uninstalled_files
     fi
     echo "Uninistalling hexed. For safety, uninstalled files are not removed but rather placed in \`./uninstalled_files\`."
+    pip3 uninstall -y hexedpy
     not_found=0
     for name in $(cat install_manifest.txt) $install_prefix/lib/hexed $install_prefix/lib/cmake/hexed
     do
