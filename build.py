@@ -34,7 +34,7 @@ def option(name):
     return Option.get(name).value
 
 Option("build-dir", default="build")
-Option("install-prefix", default=os.path.expanduser("~/.local"))
+Option("install-prefix", default="~/.local")
 
 for opt in sys.argv[1:]:
     assert opt[:2] == "--", f"invalid option `{opt}`: options must start with `--`"
@@ -56,10 +56,12 @@ if "cache_file.txt" in os.listdir():
                 if not Option.get(opt[0]).user_defined:
                     Option.get(opt[0]).set(opt[1])
 
+install_dir = os.path.expanduser(option("install-prefix")) + "/"
+Option.get("install-prefix").set(install_dir)
 def build(code, output=[], depends=[]):
     for out in output:
         out_of_date = True
-        out_dir = "/".join(out.split("/")[:-1])
+        out_dir = install_dir + "/".join(out.split("/")[:-1])
         out_file = out.split("/")[-1]
         if os.path.isdir(out_dir):
             if out_file == "":
@@ -71,35 +73,90 @@ def build(code, output=[], depends=[]):
         if out_of_date:
             assert code() == 0, f"Failed to build {output}"
 
-os.makedirs("include", exist_ok=True)
-os.makedirs("lib", exist_ok=True)
-os.makedirs("bin", exist_ok=True)
+def shell(code):
+    return lambda: subprocess.run(code, shell=True).returncode
+
+os.makedirs(install_dir + "include", exist_ok=True)
+os.makedirs(install_dir + "lib", exist_ok=True)
+os.makedirs(install_dir + "bin", exist_ok=True)
 unpack_tar = "tar -xf *.tar.gz\nrm *.tar.gz"
 
 eigen_version = "3.4.0"
 build(
-    lambda: subprocess.run(f"""
+    shell(f"""
         wget https://gitlab.com/libeigen/eigen/-/archive/{eigen_version}/eigen-{eigen_version}.tar.gz
         {unpack_tar}
-        ln -sf $(pwd)/eigen-{eigen_version}/Eigen include/
-    """, shell=True).returncode,
+        ln -sf {build_dir}/eigen-{eigen_version}/Eigen {install_dir}/include/
+    """),
     output=[f"include/Eigen"],
 )
 
 hdf5_version = "1.14.4"
 build(
-    lambda: subprocess.run(f"""
+    shell(f"""
         wget https://github.com/ARTLab-GT/hexed/raw/assets/hdf5-{hdf5_version}-2.tar.gz
         {unpack_tar}
         cd hdf5-{hdf5_version}-2/
         mkdir build
         cd build
-        cmake -D CMAKE_INSTALL_PREFIX={build_dir} -D HDF5_BUILD_CPP_LIB=ON ..
+        cmake -D CMAKE_INSTALL_PREFIX={install_dir} -D HDF5_BUILD_CPP_LIB=ON ..
         make install
-    """, shell=True).returncode,
-    output=["include/H5*", "lib/libhdf5_cpp.a"]
+    """),
+    output=["include/H5Cpp.h", "lib/libhdf5_cpp.so"],
 )
 
+boost_version = "1.85.0"
+build(
+    shell(f"""
+        wget https://boostorg.jfrog.io/artifactory/main/release/{boost_version}/source/boost_{boost_version.replace(".", "_")}.tar.gz
+        {unpack_tar}
+        cd boost*
+        ln -s $(pwd)/boost {install_dir}/include
+    """),
+    output=["include/boost"],
+)
+
+libxml2_version = "2.12.7"
+build(
+    shell(f"""
+        wget https://download.gnome.org/sources/libxml2/{".".join(libxml2_version.split(".")[:-1])}/libxml2-{libxml2_version}.tar.xz
+        tar -xf libxml2-{libxml2_version}.tar.xz
+        rm libxml2-{libxml2_version}.tar.xz
+        cd libxml2-{libxml2_version}
+        ./configure --prefix={install_dir} --with-python=no
+        make install
+        cd ..
+    """),
+    output=["include/libxml2/", "lib/libxml2.so"],
+)
+
+build(
+    shell(f"""
+        git clone https://gitlab.kitware.com/xdmf/xdmf.git
+        cd xdmf
+        vi -c "normal! /#include" -c "normal! O#include <stdint.h>" -c "%s/typedef int hid_t/typedef int64_t hid_t/" -c wq core/XdmfHDF5Controller.hpp
+        mkdir build
+        cd build
+        export XDMF_INSTALL_DIR={install_dir}
+        cmake .. -DCMAKE_INSTALL_PREFIX=${{XDMF_INSTALL_DIR}} -DBUILD_SHARED_LIBS=1 -Wno-dev
+        make install
+    """),
+    output=["include/Xdmf.hpp", "lib/libXdmf.so"],
+)
+
+occt_version = "7.8.0"
+build(
+    shell(f"""
+        wget https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V{occt_version.replace(".", "_")}.tar.gz
+        {unpack_tar}
+        cd OCCT*
+        mkdir build
+        cd build
+        cmake -D INSTALL_DIR={install_dir} -D BUILD_MODULE_Draw=OFF -D USE_FREETYPE=OFF ..
+        make install
+    """),
+    output=["include/opencascade", "lib/libTKDEIGES.so", "lib/libTKDESTEP.so", "lib/libTKDESTL.so"],
+)
 
 with open("cache_file.txt", "w") as cache:
     for name in Option.names():
