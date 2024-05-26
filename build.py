@@ -71,18 +71,35 @@ def build(code, output=[], depends=[]):
         if out_of_date:
             assert code() == 0, f"Failed to build {output}"
 
-include_path = ":"
+os.makedirs("include", exist_ok=True)
+os.makedirs("lib", exist_ok=True)
+os.makedirs("bin", exist_ok=True)
+unpack_tar = "tar -xf *.tar.gz\nrm *.tar.gz"
 
 eigen_version = "3.4.0"
 build(
     lambda: subprocess.run(f"""
         wget https://gitlab.com/libeigen/eigen/-/archive/{eigen_version}/eigen-{eigen_version}.tar.gz
-        tar -xf eigen-{eigen_version}.tar.gz
-        rm eigen-{eigen_version}.tar.gz
+        {unpack_tar}
+        ln -sf $(pwd)/eigen-{eigen_version}/Eigen include/
     """, shell=True).returncode,
-    output=[f"eigen-{eigen_version}/"],
+    output=[f"include/Eigen"],
 )
-include_path += f"eigen-{eigen_version}/"
+
+hdf5_version = "1.14.4"
+build(
+    lambda: subprocess.run(f"""
+        wget https://github.com/ARTLab-GT/hexed/raw/assets/hdf5-{hdf5_version}-2.tar.gz
+        {unpack_tar}
+        cd hdf5-{hdf5_version}-2/
+        mkdir build
+        cd build
+        cmake -D CMAKE_INSTALL_PREFIX={build_dir} -D HDF5_BUILD_CPP_LIB=ON ..
+        make install
+    """, shell=True).returncode,
+    output=["include/H5*", "lib/libhdf5_cpp.a"]
+)
+
 
 with open("cache_file.txt", "w") as cache:
     for name in Option.names():
