@@ -14,12 +14,19 @@ class Option:
     def names(cls):
         return cls._all.keys()
 
-    def __init__(self, name, default=None, assertions=lambda x: None):
+    def __init__(self, name, default=None, assertions=lambda x: None, dtype = None):
         self.name = name
         self._value = default
         self.assertions = assertions
         self.user_defined = False
         self.__class__._all[name] = self
+        if dtype is None:
+            if default is None:
+                self._dtype = None
+            else:
+                self._dtype = type(default)
+        else:
+            self._dtype = dtype
 
     def set(self, value):
         self.assertions(value)
@@ -28,14 +35,19 @@ class Option:
 
     @property
     def value(self):
-        return self._value
+        if self._dtype is None:
+            return self._value
+        else:
+            return self._dtype(self._value)
 
 def option(name):
     return Option.get(name).value
 
 Option("build-dir", default="build")
 Option("install-prefix", default="~/.local")
+Option("n-procs", default=1)
 
+# determine and cache options
 for opt in sys.argv[1:]:
     assert opt[:2] == "--", f"invalid option `{opt}`: options must start with `--`"
     parts = opt[2:].split("=")
@@ -58,6 +70,44 @@ if "cache_file.txt" in os.listdir():
 
 install_dir = os.path.expanduser(option("install-prefix")) + "/"
 Option.get("install-prefix").set(install_dir)
+
+with open("cache_file.txt", "w") as cache:
+    for name in Option.names():
+        cache.write(f"{name}={option(name)}\n")
+
+# define some tools
+
+class Target:
+    def __init__(self, name, search_paths):
+        self.name = name
+        self.search_paths = search_paths
+        self._ops = []
+        self._operands = []
+
+    def __and__(self, other):
+        self._ops.append(lambda x, y: x and y)
+        self._operands.append(other)
+        return self
+
+    def __or(self, other):
+        self._ops.append(lambda x, y: x or y)
+        self._operands.append(other)
+        return self
+
+    def find(self):
+        found = False
+        for path in search_paths:
+        if os.path.isdir(path):
+            if out_file == "":
+                found = True
+            else:
+                for fname in os.listdir(path):
+                    if re.fullmatch(out_file, fname):
+                        found = True
+        for i in range(len(_ops)):
+            found = _ops[i](found, _operands[i].find())
+        return found
+
 def build(code, output=[], depends=[]):
     for out in output:
         out_of_date = True
@@ -80,6 +130,11 @@ os.makedirs(install_dir + "include", exist_ok=True)
 os.makedirs(install_dir + "lib", exist_ok=True)
 os.makedirs(install_dir + "bin", exist_ok=True)
 unpack_tar = "tar -xf *.tar.gz\nrm *.tar.gz"
+make = f"make -j {option("n-procs")}"
+def underscore(version):
+    return version.replace(".", "_")
+
+# execute the build
 
 eigen_version = "3.4.0"
 build(
@@ -100,7 +155,7 @@ build(
         mkdir build
         cd build
         cmake -D CMAKE_INSTALL_PREFIX={install_dir} -D HDF5_BUILD_CPP_LIB=ON ..
-        make install
+        {make}
     """),
     output=["include/H5Cpp.h", "lib/libhdf5_cpp.so"],
 )
@@ -108,7 +163,7 @@ build(
 boost_version = "1.85.0"
 build(
     shell(f"""
-        wget https://boostorg.jfrog.io/artifactory/main/release/{boost_version}/source/boost_{boost_version.replace(".", "_")}.tar.gz
+        wget https://boostorg.jfrog.io/artifactory/main/release/{boost_version}/source/boost_{underscore(boost_versio)}.tar.gz
         {unpack_tar}
         cd boost*
         ln -s $(pwd)/boost {install_dir}/include
@@ -124,7 +179,7 @@ build(
         rm libxml2-{libxml2_version}.tar.xz
         cd libxml2-{libxml2_version}
         ./configure --prefix={install_dir} --with-python=no
-        make install
+        {make}
         cd ..
     """),
     output=["include/libxml2/", "lib/libxml2.so"],
@@ -139,7 +194,7 @@ build(
         cd build
         export XDMF_INSTALL_DIR={install_dir}
         cmake .. -DCMAKE_INSTALL_PREFIX=${{XDMF_INSTALL_DIR}} -DBUILD_SHARED_LIBS=1 -Wno-dev
-        make install
+        {make}
     """),
     output=["include/Xdmf.hpp", "lib/libXdmf.so"],
 )
@@ -147,17 +202,13 @@ build(
 occt_version = "7.8.0"
 build(
     shell(f"""
-        wget https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V{occt_version.replace(".", "_")}.tar.gz
+        wget https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V{underscore(occt_version)}.tar.gz
         {unpack_tar}
-        cd OCCT*
+        cd OCCT-{underscore(occt_version)}
         mkdir build
         cd build
         cmake -D INSTALL_DIR={install_dir} -D BUILD_MODULE_Draw=OFF -D USE_FREETYPE=OFF ..
-        make install
+        {make}
     """),
     output=["include/opencascade", "lib/libTKDEIGES.so", "lib/libTKDESTEP.so", "lib/libTKDESTL.so"],
 )
-
-with open("cache_file.txt", "w") as cache:
-    for name in Option.names():
-        cache.write(f"{name}={option(name)}\n")
