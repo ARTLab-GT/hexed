@@ -2,6 +2,7 @@ import sys
 import os
 import subprocess
 import re
+from termcolor import colored, cprint
 
 class Option:
     _all = {}
@@ -58,7 +59,7 @@ for opt in sys.argv[1:]:
 source_dir = os.getcwd()
 os.makedirs(option("build-dir"), exist_ok=True)
 os.chdir(option("build-dir"))
-build_dir = os.getcwd()
+build_dir = os.getcwd() + "/"
 if "cache_file.txt" in os.listdir():
     with open("cache_file.txt", "r") as cache:
         cache_options = cache.read().split("\n")[:-1]
@@ -77,41 +78,20 @@ with open("cache_file.txt", "w") as cache:
 
 # define some tools
 
-class Target:
-    def __init__(self, name, search_paths):
-        self.name = name
-        self.search_paths = search_paths
-        self._ops = []
-        self._operands = []
-
-    def __and__(self, other):
-        self._ops.append(lambda x, y: x and y)
-        self._operands.append(other)
-        return self
-
-    def __or(self, other):
-        self._ops.append(lambda x, y: x or y)
-        self._operands.append(other)
-        return self
-
-    def find(self):
-        found = False
-        for path in search_paths:
-        if os.path.isdir(path):
-            if out_file == "":
-                found = True
-            else:
-                for fname in os.listdir(path):
-                    if re.fullmatch(out_file, fname):
-                        found = True
-        for i in range(len(_ops)):
-            found = _ops[i](found, _operands[i].find())
-        return found
+def good_news(message):
+    return cprint(message, "green")
+warnings = []
+def warn(message):
+    warnings.append(message)
+    return cprint(message, "yellow", file=sys.stderr)
+def error(message):
+    cprint(message, "red", attrs=["bold"], file=sys.stderr)
+    exit(1)
 
 def build(code, output=[], depends=[]):
     for out in output:
         out_of_date = True
-        out_dir = install_dir + "/".join(out.split("/")[:-1])
+        out_dir = "/".join(out.split("/")[:-1])
         out_file = out.split("/")[-1]
         if os.path.isdir(out_dir):
             if out_file == "":
@@ -120,28 +100,52 @@ def build(code, output=[], depends=[]):
                 for fname in os.listdir(out_dir):
                     if re.fullmatch(out_file, fname):
                         out_of_date = False
-        if out_of_date:
-            assert code() == 0, f"Failed to build {output}"
+    if out_of_date:
+        good_news(f"Building {output}...")
+        if code() != 0:
+            error(f"Failed to build {output}")
+        good_news(f"Built {output}.")
+    else:
+        good_news(f"{output} already up to date.")
 
 def shell(code):
     return lambda: subprocess.run(code, shell=True).returncode
 
-os.makedirs(install_dir + "include", exist_ok=True)
-os.makedirs(install_dir + "lib", exist_ok=True)
-os.makedirs(install_dir + "bin", exist_ok=True)
-unpack_tar = "tar -xf *.tar.gz\nrm *.tar.gz"
-make = f"make -j {option("n-procs")}"
+os.makedirs(build_dir + "include", exist_ok=True)
+os.makedirs(build_dir + "lib", exist_ok=True)
+os.makedirs(build_dir + "bin", exist_ok=True)
+def fetch_tar(url, dir_name=None):
+    fname = url.split("/")[-1]
+    if dir_name is None:
+        dir_name = fname.split(".tar")[0]
+    return f"""
+    if [ -e {fname} ]; then
+        rm {fname}
+    fi
+    wget {url}
+    tar -xf {fname}
+    rm {fname}
+    cd {dir_name}
+    """
+make = f"make -j {option('n-procs')} install"
 def underscore(version):
     return version.replace(".", "_")
+def cmake(opts):
+    return f"""
+    mkdir build
+    cd build
+    export CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH=FALSE
+    cmake -D PREFIX_PATH={build_dir} -D CMAKE_PREFIX_PATH={build_dir} -D CMAKE_INSTALL_PREFIX={build_dir} -D BUILD_STATIC_LIBS=ON -D BUILD_SHARED_LIBS=OFF {opts} ..
+    {make}
+    """
 
 # execute the build
 
 eigen_version = "3.4.0"
 build(
     shell(f"""
-        wget https://gitlab.com/libeigen/eigen/-/archive/{eigen_version}/eigen-{eigen_version}.tar.gz
-        {unpack_tar}
-        ln -sf {build_dir}/eigen-{eigen_version}/Eigen {install_dir}/include/
+        {fetch_tar(f"wget https://gitlab.com/libeigen/eigen/-/archive/{eigen_version}/eigen-{eigen_version}.tar.gz")}
+        ln -sf $(pwd)/Eigen {build_dir}/include/
     """),
     output=[f"include/Eigen"],
 )
@@ -149,40 +153,31 @@ build(
 hdf5_version = "1.14.4"
 build(
     shell(f"""
-        wget https://github.com/ARTLab-GT/hexed/raw/assets/hdf5-{hdf5_version}-2.tar.gz
-        {unpack_tar}
-        cd hdf5-{hdf5_version}-2/
-        mkdir build
-        cd build
-        cmake -D CMAKE_INSTALL_PREFIX={install_dir} -D HDF5_BUILD_CPP_LIB=ON ..
-        {make}
+        {fetch_tar(f"https://github.com/ARTLab-GT/hexed/raw/assets/hdf5-{hdf5_version}-2.tar.gz")}
+        {cmake("-D HDF5_BUILD_CPP_LIB=ON")}
     """),
-    output=["include/H5Cpp.h", "lib/libhdf5_cpp.so"],
+    output=["include/H5Cpp.h", "lib/libhdf5_cpp.a", "cmake/hdf5-config.cmake"],
 )
 
 boost_version = "1.85.0"
 build(
     shell(f"""
-        wget https://boostorg.jfrog.io/artifactory/main/release/{boost_version}/source/boost_{underscore(boost_versio)}.tar.gz
-        {unpack_tar}
-        cd boost*
-        ln -s $(pwd)/boost {install_dir}/include
+        {fetch_tar(f"https://boostorg.jfrog.io/artifactory/main/release/{boost_version}/source/boost_{underscore(boost_version)}.tar.gz")}
+        ./bootstrap.sh --prefix={build_dir} --with-libraries=atomic
+        ./b2 install
     """),
-    output=["include/boost"],
+    output=["include/boost", f"lib/cmake/Boost-{boost_version}"],
 )
 
 libxml2_version = "2.12.7"
 build(
     shell(f"""
-        wget https://download.gnome.org/sources/libxml2/{".".join(libxml2_version.split(".")[:-1])}/libxml2-{libxml2_version}.tar.xz
-        tar -xf libxml2-{libxml2_version}.tar.xz
-        rm libxml2-{libxml2_version}.tar.xz
-        cd libxml2-{libxml2_version}
-        ./configure --prefix={install_dir} --with-python=no
+        {fetch_tar(f"https://download.gnome.org/sources/libxml2/{'.'.join(libxml2_version.split('.')[:-1])}/libxml2-{libxml2_version}.tar.xz")}
+        ./configure --prefix={build_dir} --with-python=no --enable-static=yes --enable-shared=no
         {make}
         cd ..
     """),
-    output=["include/libxml2/", "lib/libxml2.so"],
+    output=["include/libxml2/", "lib/libxml2.a", "lib/cmake/libxml2"],
 )
 
 build(
@@ -190,25 +185,31 @@ build(
         git clone https://gitlab.kitware.com/xdmf/xdmf.git
         cd xdmf
         vi -c "normal! /#include" -c "normal! O#include <stdint.h>" -c "%s/typedef int hid_t/typedef int64_t hid_t/" -c wq core/XdmfHDF5Controller.hpp
-        mkdir build
-        cd build
-        export XDMF_INSTALL_DIR={install_dir}
-        cmake .. -DCMAKE_INSTALL_PREFIX=${{XDMF_INSTALL_DIR}} -DBUILD_SHARED_LIBS=1 -Wno-dev
-        {make}
+        export XDMF_INSTALL_DIR={build_dir}
+        {cmake("-D CMAKE_INSTALL_PREFIX=${XDMF_INSTALL_DIR} -Wno-dev")}
     """),
-    output=["include/Xdmf.hpp", "lib/libXdmf.so"],
+    output=["include/Xdmf.hpp", "lib/libXdmf.a", "lib/cmake/Xdmf"],
 )
 
 occt_version = "7.8.0"
 build(
     shell(f"""
-        wget https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V{underscore(occt_version)}.tar.gz
-        {unpack_tar}
-        cd OCCT-{underscore(occt_version)}
-        mkdir build
-        cd build
-        cmake -D INSTALL_DIR={install_dir} -D BUILD_MODULE_Draw=OFF -D USE_FREETYPE=OFF ..
-        {make}
+        {fetch_tar(f"https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V{underscore(occt_version)}.tar.gz", dir_name=f"OCCT-{underscore(occt_version)}")}
+        {cmake(f"-D INSTALL_DIR={build_dir}"
+            + " -D BUILD_MODULE_ApplicationFramework=ON"
+            + " -D BUILD_MODULE_DETools=OFF"
+            + " -D BUILD_MODULE_DataExchange=ON"
+            + " -D BUILD_MODULE_Draw=OFF"
+            + " -D BUILD_MODULE_FoundationClasses=OFF"
+            + " -D BUILD_MODULE_ModelingAlgorithms=OFF"
+            + " -D BUILD_MODULE_ModelingData=OFF"
+            + " -D BUILD_MODULE_Visualization=OFF"
+            + " -D BUILD_DOC_Overview=OFF"
+            + " -D USE_FREETYPE=OFF"
+            + " -D USE_OPENGL=OFF"
+            + " -D USE_TK=OFF"
+            + " -D USE_XLIB=OFF"
+            + " -D BUILD_LIBRARY_TYPE=Static")}
     """),
-    output=["include/opencascade", "lib/libTKDEIGES.so", "lib/libTKDESTEP.so", "lib/libTKDESTL.so"],
+    output=["include/opencascade", "lib/libTKDEIGES.a", "lib/libTKDESTEP.a", "lib/libTKDESTL.a", "lib/cmake/opencascade"],
 )
