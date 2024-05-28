@@ -108,7 +108,7 @@ def build(code, output=[], depends=[]):
             item_exists = False
             item_mtime = init
             if p[0] != "/":
-                p = prefix + "/"
+                p = prefix + "/" + p
             path_dir, path_file = os.path.split(p)
             if os.path.isdir(path_dir):
                 if path_file == "":
@@ -118,6 +118,7 @@ def build(code, output=[], depends=[]):
                         if re.fullmatch(path_file, fname):
                             item_exists = True
                             item_mtime = reduce(item_mtime, os.path.getmtime(f"{path_dir}/{path_file}"))
+            else: print("dir is not dir")
             exists = exists and item_exists
             mtime = reduce(mtime, item_mtime)
         return exists, mtime
@@ -144,7 +145,7 @@ flags = ["-I", f"{source_dir}/include", "-I", f"{build_dir}/include"]
 def build_compile(name, directory=f"{source_dir}/src"):
     output = f"{build_dir}/object/{'.'.join(name.split('.')[:-1] + ['o'])}"
     depend = f"{directory}/{name}"
-    build(lambda: subprocess.run(["g++"] + flags + ["-c", "-o", output, depend]), output=[output], depends=depend)
+    build(lambda: subprocess.run(["g++"] + flags + ["-c", "-o", output, depend]), output=[output], depends=[depend])
 
 def build_copy(path, dest=None, link=False):
     name = path.split("/")[-1]
@@ -180,7 +181,7 @@ def cmake(opts):
     mkdir build
     cd build
     export CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH=FALSE
-    cmake -D PREFIX_PATH={build_dir} -D CMAKE_PREFIX_PATH={build_dir} -D CMAKE_INSTALL_PREFIX={build_dir} -D BUILD_STATIC_LIBS=ON -D BUILD_SHARED_LIBS=OFF {opts} ..
+    {build_dir}/build_venv/bin/cmake -D PREFIX_PATH={build_dir} -D CMAKE_PREFIX_PATH={build_dir} -D CMAKE_INSTALL_PREFIX={build_dir} -D BUILD_STATIC_LIBS=ON -D BUILD_SHARED_LIBS=OFF {opts} ..
     {make}
     """
 
@@ -266,5 +267,6 @@ build(autogen, output=["Gauss_legendre.cpp", "Gauss_lobatto.cpp"], depends=["scr
 
 build_compile("Gauss_legendre.cpp", directory=build_dir)
 build_compile("Gauss_lobatto.cpp", directory=build_dir)
+exit()
 for source in os.listdir(f"{source_dir}/src"):
     build_compile(source)
