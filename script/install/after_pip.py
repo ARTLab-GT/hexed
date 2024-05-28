@@ -8,7 +8,7 @@ import time
 from termcolor import colored, cprint
 import git
 
-# definitions
+# definitions for parameters
 
 class Option:
     _all = {}
@@ -57,6 +57,37 @@ Option("install-prefix", default="~/.local")
 Option("n-procs", default=1)
 Option("max-row-size", 8)
 
+# process arguments
+
+for opt in sys.argv[1:]:
+    parts = opt[2:].split("=")
+    assert parts[0] in Option.names(), f"unrecognized option `{parts[0]}`"
+    Option.get(parts[0]).set(parts[1])
+
+if "cache_file.txt" in os.listdir():
+    with open("cache_file.txt", "r") as cache:
+        cache_options = cache.read().split("\n")[:-1]
+        for opt in cache_options:
+            opt = opt.split("=")
+            if opt[0] in Option.names():
+                if not Option.get(opt[0]).user_defined:
+                    Option.get(opt[0]).set(opt[1])
+
+with open("cache_file.txt", "w") as cache:
+    for name in Option.names():
+        cache.write(f"{name}={option(name)}\n")
+
+# create directory structure
+
+source_dir = option("source-dir")
+build_dir = os.getcwd()
+os.makedirs(f"{build_dir}/include", exist_ok=True)
+os.makedirs(f"{build_dir}/lib", exist_ok=True)
+os.makedirs(f"{build_dir}/bin", exist_ok=True)
+os.makedirs("object", exist_ok=True)
+
+# definitions for building
+
 def info(message):
     return cprint(message, "light_blue")
 def good_news(message):
@@ -76,7 +107,9 @@ def build(code, output=[], depends=[]):
         for p in paths:
             item_exists = False
             item_mtime = init
-            path_dir, path_file = os.path.split(prefix + "/" + p)
+            if p[0] != "/":
+                p = prefix + "/"
+            path_dir, path_file = os.path.split(p)
             if os.path.isdir(path_dir):
                 if path_file == "":
                     item_exists = True
@@ -106,6 +139,12 @@ def shell(code):
     def run_code():
          assert subprocess.run(code, shell=True).returncode == 0, "shell returned failure"
     return run_code
+
+flags = ["-I", f"{source_dir}/include", "-I", f"{build_dir}/include"]
+def build_compile(name, directory=f"{source_dir}/src"):
+    output = f"{build_dir}/object/{'.'.join(name.split('.')[:-1] + ['o'])}"
+    depend = f"{directory}/{name}"
+    build(lambda: subprocess.run(["g++"] + flags + ["-c", "-o", output, depend]), output=[output], depends=depend)
 
 def build_copy(path, dest=None, link=False):
     name = path.split("/")[-1]
@@ -144,34 +183,6 @@ def cmake(opts):
     cmake -D PREFIX_PATH={build_dir} -D CMAKE_PREFIX_PATH={build_dir} -D CMAKE_INSTALL_PREFIX={build_dir} -D BUILD_STATIC_LIBS=ON -D BUILD_SHARED_LIBS=OFF {opts} ..
     {make}
     """
-
-# process arguments
-
-for opt in sys.argv[1:]:
-    parts = opt[2:].split("=")
-    assert parts[0] in Option.names(), f"unrecognized option `{parts[0]}`"
-    Option.get(parts[0]).set(parts[1])
-
-if "cache_file.txt" in os.listdir():
-    with open("cache_file.txt", "r") as cache:
-        cache_options = cache.read().split("\n")[:-1]
-        for opt in cache_options:
-            opt = opt.split("=")
-            if opt[0] in Option.names():
-                if not Option.get(opt[0]).user_defined:
-                    Option.get(opt[0]).set(opt[1])
-
-with open("cache_file.txt", "w") as cache:
-    for name in Option.names():
-        cache.write(f"{name}={option(name)}\n")
-
-# create directory structure
-
-source_dir = option("source-dir")
-build_dir = os.getcwd()
-os.makedirs(f"{build_dir}/include", exist_ok=True)
-os.makedirs(f"{build_dir}/lib", exist_ok=True)
-os.makedirs(f"{build_dir}/bin", exist_ok=True)
 
 # execute the build
 
@@ -252,3 +263,8 @@ def autogen():
     import auto_generate
     auto_generate.auto_generate(build_dir, int(option("max-row-size")))
 build(autogen, output=["Gauss_legendre.cpp", "Gauss_lobatto.cpp"], depends=["script/install/auto_generate.py", "script/install/basis.py"])
+
+build_compile("Gauss_legendre.cpp", directory=build_dir)
+build_compile("Gauss_lobatto.cpp", directory=build_dir)
+for source in os.listdir(f"{source_dir}/src"):
+    build_compile(source)
