@@ -31,4 +31,4 @@ subprocess.run(["build_venv/bin/pip3", "install",
     "gitpython",
     "termcolor",
 ])
-subprocess.run(["build_venv/bin/python3", f"{source_dir}/script/install/after_pip.py"] + sys.argv[1:])
+subprocess.run(["build_venv/bin/python3", f"{source_dir}/script/install/after_pip.py"] + sys.argv[1:] + [f"--source-dir={source_dir}"])

@@ -2,6 +2,9 @@ import sys
 import os
 import subprocess
 import re
+import shutil
+import traceback
+import time
 from termcolor import colored, cprint
 import git
 
@@ -12,6 +15,7 @@ class Option:
 
     @classmethod
     def get(cls, name):
+        assert name in cls._all.keys(), f"Internal error: nonexistant option `{name}`"
         return cls._all[name]
 
     @classmethod
@@ -51,7 +55,10 @@ Option("build-dir", default="build")
 Option("source-dir", default=".")
 Option("install-prefix", default="~/.local")
 Option("n-procs", default=1)
+Option("max-row-size", 8)
 
+def info(message):
+    return cprint(message, "light_blue")
 def good_news(message):
     return cprint(message, "green")
 warnings = []
@@ -63,26 +70,33 @@ def error(message):
     exit(1)
 
 def build(code, output=[], depends=[]):
-    out_of_date = False
-    for out in output:
-        item_ood = True
-        out_dir, out_file = os.path.split(out)
-        if len(out_dir) == 0:
-            out_dir = "./"
-        if os.path.isdir(out_dir):
-            if out_file == "":
-                item_ood = False
-            else:
-                for fname in os.listdir(out_dir):
-                    if re.fullmatch(out_file, fname):
-                        item_ood = False
-        out_of_date = out_of_date or item_ood
-    if out_of_date:
-        good_news(f"Building {output}...")
+    def check_path(paths, prefix, init, reduce):
+        exists = True
+        mtime = init
+        for p in paths:
+            item_exists = False
+            item_mtime = init
+            path_dir, path_file = os.path.split(prefix + "/" + p)
+            if os.path.isdir(path_dir):
+                if path_file == "":
+                    item_exists = True
+                else:
+                    for fname in os.listdir(path_dir):
+                        if re.fullmatch(path_file, fname):
+                            item_exists = True
+                            item_mtime = reduce(item_mtime, os.path.getmtime(f"{path_dir}/{path_file}"))
+            exists = exists and item_exists
+            mtime = reduce(mtime, item_mtime)
+        return exists, mtime
+    out_exists, out_mtime = check_path(output, build_dir, time.time(), min)
+    dep_exists, dep_mtime = check_path(depends, source_dir, 0, max)
+    assert dep_exists, f"dependencies {depends} not found"
+    if (len(depends) > 0 and out_mtime < dep_mtime) or not out_exists:
+        info(f"Building {output}...")
         try:
             code()
-        except Exception as e:
-            print(e)
+        except:
+            traceback.print_exc()
             error(f"Failed to build {output}")
         good_news(f"Built {output}.")
     else:
@@ -92,6 +106,19 @@ def shell(code):
     def run_code():
          assert subprocess.run(code, shell=True).returncode == 0, "shell returned failure"
     return run_code
+
+def build_copy(path, dest=None, link=False):
+    name = path.split("/")[-1]
+    if link:
+        fun = os.symlink
+    else:
+        if os.path.isdir(path):
+            fun = shutil.copytree
+        else:
+            fun = shutil.copy
+    if dest is None:
+        dest = f"{build_dir}/{name}"
+    build(lambda: fun(path, dest), output=[name])
 
 def fetch_tar(url, dir_name=None):
     fname = url.split("/")[-1]
@@ -221,4 +248,7 @@ build(
     output=["include/opencascade", "lib/libTKDEIGES.a", "lib/libTKDESTEP.a", "lib/libTKDESTL.a", "lib/cmake/opencascade"],
 )
 
-
+def autogen():
+    import auto_generate
+    auto_generate.auto_generate(build_dir, int(option("max-row-size")))
+build(autogen, output=["Gauss_legendre.cpp", "Gauss_lobatto.cpp"], depends=["script/install/auto_generate.py", "script/install/basis.py"])
