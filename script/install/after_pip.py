@@ -3,6 +3,7 @@ import os
 import subprocess
 import re
 from termcolor import colored, cprint
+import git
 
 # definitions
 
@@ -62,27 +63,35 @@ def error(message):
     exit(1)
 
 def build(code, output=[], depends=[]):
+    out_of_date = False
     for out in output:
-        out_of_date = True
-        out_dir = "/".join(out.split("/")[:-1])
-        out_file = out.split("/")[-1]
+        item_ood = True
+        out_dir, out_file = os.path.split(out)
+        if len(out_dir) == 0:
+            out_dir = "./"
         if os.path.isdir(out_dir):
             if out_file == "":
-                out_of_date = False
+                item_ood = False
             else:
                 for fname in os.listdir(out_dir):
                     if re.fullmatch(out_file, fname):
-                        out_of_date = False
+                        item_ood = False
+        out_of_date = out_of_date or item_ood
     if out_of_date:
         good_news(f"Building {output}...")
-        if code() != 0:
+        try:
+            code()
+        except Exception as e:
+            print(e)
             error(f"Failed to build {output}")
         good_news(f"Built {output}.")
     else:
         good_news(f"{output} already up to date.")
 
 def shell(code):
-    return lambda: subprocess.run(code, shell=True).returncode
+    def run_code():
+         assert subprocess.run(code, shell=True).returncode == 0, "shell returned failure"
+    return run_code
 
 def fetch_tar(url, dir_name=None):
     fname = url.split("/")[-1]
@@ -178,9 +187,9 @@ build(
     output=["include/libxml2/", "lib/libxml2.a", "lib/cmake/libxml2"],
 )
 
+build(lambda: git.Repo.clone_from("https://gitlab.kitware.com/xdmf/xdmf.git", "xdmf_source"), output=["xdmf_source"])
 build(
     shell(f"""
-        git clone https://gitlab.kitware.com/xdmf/xdmf.git
         cd xdmf
         vi -c "normal! /#include" -c "normal! O#include <stdint.h>" -c "%s/typedef int hid_t/typedef int64_t hid_t/" -c wq core/XdmfHDF5Controller.hpp
         export XDMF_INSTALL_DIR={build_dir}
@@ -211,3 +220,5 @@ build(
     """),
     output=["include/opencascade", "lib/libTKDEIGES.a", "lib/libTKDESTEP.a", "lib/libTKDESTL.a", "lib/cmake/opencascade"],
 )
+
+
