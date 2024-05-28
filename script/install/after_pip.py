@@ -7,6 +7,7 @@ import traceback
 import time
 from termcolor import colored, cprint
 import git
+from cpuinfo import get_cpu_info
 
 # definitions for parameters
 
@@ -22,10 +23,11 @@ class Option:
     def names(cls):
         return cls._all.keys()
 
-    def __init__(self, name, default=None, assertions=lambda x: None, dtype = None):
+    def __init__(self, name, default=None, assertions=lambda x: None, dtype=None, convert=None):
         self.name = name
         self._value = default
         self.assertions = assertions
+        self.convert = convert
         self.user_defined = False
         self.__class__._all[name] = self
         if dtype is None:
@@ -37,6 +39,8 @@ class Option:
             self._dtype = dtype
 
     def set(self, value):
+        if self.convert:
+            value = self.convert(value)
         self.assertions(value)
         self._value = value
         self.user_defined = True
@@ -51,17 +55,45 @@ class Option:
 def option(name):
     return Option.get(name).value
 
+def as_bool(string):
+    lower = string.lower()
+    if lower in ["1", "true", "yes", "on", "y", "t", "yeet"]:
+        return True
+    elif lower in ["0", "false", "no", "off", "n", "f", "yoink"]:
+        return False
+    else:
+        raise Exception(f'Could not interpret "{string}" as a Boolean.')
+
+as_int = lambda i: int(i)
+
+cpu = get_cpu_info()
+
 Option("build-dir", default="build")
 Option("source-dir", default=".")
 Option("install-prefix", default="~/.local")
-Option("n-procs", default=1)
-Option("max-row-size", 8)
+Option("n-procs", default=1, convert=as_int)
+def assertion(i):
+    assert i >= 2, "`row-size` is < 2"
+Option("max-row-size", default=8, convert=as_int, assertions=assertion)
+Option("threaded", default=True, convert=as_bool)
+Option("n-threads", default=cpu["count"], convert=as_int, assertions=assertion)
+Option("use-xdmf", default=True, convert=as_bool)
+Option("use-tecplot", default=False, convert=as_bool)
+Option("use-occt", default=True, convert=as_bool)
+Option("obsessive-timing", default=False, convert=as_bool)
+
+version_major = 0
+version_minor = 2
+version_patch = 1
 
 # process arguments
 
+modify_cache = False
 for opt in sys.argv[1:]:
     parts = opt[2:].split("=")
     assert parts[0] in Option.names(), f"unrecognized option `{parts[0]}`"
+    if parts[0] not in ["build-dir", "source-dir"]:
+        modify_cache = True
     Option.get(parts[0]).set(parts[1])
 
 if "cache_file.txt" in os.listdir():
@@ -72,10 +104,13 @@ if "cache_file.txt" in os.listdir():
             if opt[0] in Option.names():
                 if not Option.get(opt[0]).user_defined:
                     Option.get(opt[0]).set(opt[1])
+else:
+    modfiy_cache = True
 
-with open("cache_file.txt", "w") as cache:
-    for name in Option.names():
-        cache.write(f"{name}={option(name)}\n")
+if modify_cache:
+    with open("cache_file.txt", "w") as cache:
+        for name in Option.names():
+            cache.write(f"{name}={option(name)}\n")
 
 # create directory structure
 
@@ -147,18 +182,34 @@ def build_compile(name, directory=f"{source_dir}/src"):
     depend = f"{directory}/{name}"
     build(lambda: subprocess.run(["g++"] + flags + ["-c", "-o", output, depend]), output=[output], depends=[depend])
 
-def build_copy(path, dest=None, link=False):
+def build_copy(path, dest=None, link=False, configure=False):
+    if path[0] != "/":
+        path = source_dir + "/" + path
     name = path.split("/")[-1]
+    deps = [path]
     if link:
         fun = os.symlink
     else:
         if os.path.isdir(path):
             fun = shutil.copytree
         else:
-            fun = shutil.copy
+            if configure:
+                deps += ["build.py", "script/install/after_pip.py", f"{build_dir}/cache_file.txt"]
+                def conf(p, d):
+                    with open(p, "r") as in_file:
+                        text = in_file.read()
+                    while True:
+                        match = re.search(r"{\[([^}]+)\]}", text)
+                        if match is None: break
+                        text = f"{text[:match.start()]}{eval(match.group(1))}{text[match.end():]}"
+                    with open(d, "w") as out_file:
+                        out_file.write(text)
+                fun = conf
+            else:
+                fun = shutil.copy
     if dest is None:
         dest = f"{build_dir}/{name}"
-    build(lambda: fun(path, dest), output=[name])
+    build(lambda: fun(path, dest), output=[dest], depends=deps)
 
 def fetch_tar(url, dir_name=None):
     fname = url.split("/")[-1]
@@ -173,7 +224,7 @@ def fetch_tar(url, dir_name=None):
     rm {fname}
     cd {dir_name}
     """
-make = f"make -j {option('n-procs')} install"
+make = f"make -j{option('n-procs')} install"
 def underscore(version):
     return version.replace(".", "_")
 def cmake(opts):
@@ -188,6 +239,10 @@ def cmake(opts):
 # execute the build
 
 eigen_version = "3.4.0"
+boost_version = "1.85.0"
+libxml2_version = "2.12.7"
+occt_version = "7.8.0"
+
 build(
     shell(f"""
         {fetch_tar(f"wget https://gitlab.com/libeigen/eigen/-/archive/{eigen_version}/eigen-{eigen_version}.tar.gz")}
@@ -195,7 +250,6 @@ build(
     """),
     output=[f"include/Eigen"],
 )
-
 hdf5_version = "1.14.4"
 build(
     shell(f"""
@@ -205,60 +259,57 @@ build(
     output=["include/H5Cpp.h", "lib/libhdf5_cpp.a", "cmake/hdf5-config.cmake"],
 )
 
-boost_version = "1.85.0"
-build(
-    shell(f"""
-        {fetch_tar(f"https://boostorg.jfrog.io/artifactory/main/release/{boost_version}/source/boost_{underscore(boost_version)}.tar.gz")}
-        ./bootstrap.sh --prefix={build_dir} --with-libraries=atomic
-        ./b2 install
-    """),
-    output=["include/boost", f"lib/cmake/Boost-{boost_version}"],
-)
+if option("use-xdmf"):
+    build(
+        shell(f"""
+            {fetch_tar(f"https://boostorg.jfrog.io/artifactory/main/release/{boost_version}/source/boost_{underscore(boost_version)}.tar.gz")}
+            ./bootstrap.sh --prefix={build_dir} --with-libraries=atomic
+            ./b2 install
+        """),
+        output=["include/boost", f"lib/cmake/Boost-{boost_version}"],
+    )
+    build(
+        shell(f"""
+            {fetch_tar(f"https://download.gnome.org/sources/libxml2/{'.'.join(libxml2_version.split('.')[:-1])}/libxml2-{libxml2_version}.tar.xz")}
+            ./configure --prefix={build_dir} --with-python=no --enable-static=yes --enable-shared=no
+            {make}
+            cd ..
+        """),
+        output=["include/libxml2/", "lib/libxml2.a", "lib/cmake/libxml2"],
+    )
+    build(lambda: git.Repo.clone_from("https://gitlab.kitware.com/xdmf/xdmf.git", "xdmf_source"), output=["xdmf_source"])
+    build(
+        shell(f"""
+            cd xdmf
+            vi -c "normal! /#include" -c "normal! O#include <stdint.h>" -c "%s/typedef int hid_t/typedef int64_t hid_t/" -c wq core/XdmfHDF5Controller.hpp
+            export XDMF_INSTALL_DIR={build_dir}
+            {cmake("-D CMAKE_INSTALL_PREFIX=${XDMF_INSTALL_DIR} -Wno-dev")}
+        """),
+        output=["include/Xdmf.hpp", "lib/libXdmf.a", "lib/cmake/Xdmf"],
+    )
 
-libxml2_version = "2.12.7"
-build(
-    shell(f"""
-        {fetch_tar(f"https://download.gnome.org/sources/libxml2/{'.'.join(libxml2_version.split('.')[:-1])}/libxml2-{libxml2_version}.tar.xz")}
-        ./configure --prefix={build_dir} --with-python=no --enable-static=yes --enable-shared=no
-        {make}
-        cd ..
-    """),
-    output=["include/libxml2/", "lib/libxml2.a", "lib/cmake/libxml2"],
-)
-
-build(lambda: git.Repo.clone_from("https://gitlab.kitware.com/xdmf/xdmf.git", "xdmf_source"), output=["xdmf_source"])
-build(
-    shell(f"""
-        cd xdmf
-        vi -c "normal! /#include" -c "normal! O#include <stdint.h>" -c "%s/typedef int hid_t/typedef int64_t hid_t/" -c wq core/XdmfHDF5Controller.hpp
-        export XDMF_INSTALL_DIR={build_dir}
-        {cmake("-D CMAKE_INSTALL_PREFIX=${XDMF_INSTALL_DIR} -Wno-dev")}
-    """),
-    output=["include/Xdmf.hpp", "lib/libXdmf.a", "lib/cmake/Xdmf"],
-)
-
-occt_version = "7.8.0"
-build(
-    shell(f"""
-        {fetch_tar(f"https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V{underscore(occt_version)}.tar.gz", dir_name=f"OCCT-{underscore(occt_version)}")}
-        {cmake(f"-D INSTALL_DIR={build_dir}"
-            + " -D BUILD_MODULE_ApplicationFramework=ON"
-            + " -D BUILD_MODULE_DETools=OFF"
-            + " -D BUILD_MODULE_DataExchange=ON"
-            + " -D BUILD_MODULE_Draw=OFF"
-            + " -D BUILD_MODULE_FoundationClasses=OFF"
-            + " -D BUILD_MODULE_ModelingAlgorithms=OFF"
-            + " -D BUILD_MODULE_ModelingData=OFF"
-            + " -D BUILD_MODULE_Visualization=OFF"
-            + " -D BUILD_DOC_Overview=OFF"
-            + " -D USE_FREETYPE=OFF"
-            + " -D USE_OPENGL=OFF"
-            + " -D USE_TK=OFF"
-            + " -D USE_XLIB=OFF"
-            + " -D BUILD_LIBRARY_TYPE=Static")}
-    """),
-    output=["include/opencascade", "lib/libTKDEIGES.a", "lib/libTKDESTEP.a", "lib/libTKDESTL.a", "lib/cmake/opencascade"],
-)
+if option("use-occt"):
+    build(
+        shell(f"""
+            {fetch_tar(f"https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V{underscore(occt_version)}.tar.gz", dir_name=f"OCCT-{underscore(occt_version)}")}
+            {cmake(f"-D INSTALL_DIR={build_dir}"
+                + " -D BUILD_MODULE_ApplicationFramework=ON"
+                + " -D BUILD_MODULE_DETools=OFF"
+                + " -D BUILD_MODULE_DataExchange=ON"
+                + " -D BUILD_MODULE_Draw=OFF"
+                + " -D BUILD_MODULE_FoundationClasses=OFF"
+                + " -D BUILD_MODULE_ModelingAlgorithms=OFF"
+                + " -D BUILD_MODULE_ModelingData=OFF"
+                + " -D BUILD_MODULE_Visualization=OFF"
+                + " -D BUILD_DOC_Overview=OFF"
+                + " -D USE_FREETYPE=OFF"
+                + " -D USE_OPENGL=OFF"
+                + " -D USE_TK=OFF"
+                + " -D USE_XLIB=OFF"
+                + " -D BUILD_LIBRARY_TYPE=Static")}
+        """),
+        output=["include/opencascade", "lib/libTKDEIGES.a", "lib/libTKDESTEP.a", "lib/libTKDESTL.a", "lib/cmake/opencascade"],
+    )
 
 def autogen():
     import auto_generate
@@ -267,6 +318,7 @@ build(autogen, output=["Gauss_legendre.cpp", "Gauss_lobatto.cpp"], depends=["scr
 
 build_compile("Gauss_legendre.cpp", directory=build_dir)
 build_compile("Gauss_lobatto.cpp", directory=build_dir)
-exit()
+build_copy("hexed_config.hpp.in", dest=f"{build_dir}/include/hexed_config.hpp", configure=True)
+
 for source in os.listdir(f"{source_dir}/src"):
     build_compile(source)

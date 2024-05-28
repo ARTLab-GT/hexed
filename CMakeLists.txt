@@ -87,7 +87,7 @@ endif()
 
 # configure files
 configure_file(hexed-config.cmake.in hexed-config.cmake)
-configure_file(hexed_config.hpp.in include/auto/hexed_config.hpp)
+configure_file(hexed_config_old.hpp.in include/auto/hexed_config.hpp)
 configure_file(config.cpp.in config.cpp)
 configure_file(script/benchmark.py.in benchmark.py)
 file(CREATE_LINK ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/include/hexed SYMBOLIC)
