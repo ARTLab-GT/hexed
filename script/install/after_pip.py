@@ -5,6 +5,7 @@ import re
 import shutil
 import traceback
 import time
+from multiprocess import Pool
 from termcolor import colored, cprint
 import git
 from cpuinfo import get_cpu_info
@@ -337,5 +338,6 @@ build(autogen, output=["Gauss_legendre.cpp", "Gauss_lobatto.cpp"], depends=["scr
 # compile
 build_compile("Gauss_legendre.cpp", directory=build_dir)
 build_compile("Gauss_lobatto.cpp", directory=build_dir)
-for source in os.listdir(f"{source_dir}/src"):
-    build_compile(source)
+sources = sorted(sorted(os.listdir(f"{source_dir}/src")), key=lambda s: "kernels" not in s)
+with Pool(processes=int(option("n-procs"))) as pool:
+    pool.map(build_compile, sources, chunksize=1)
