@@ -124,6 +124,8 @@ source_dir = option("source-dir")
 build_dir = os.getcwd()
 os.makedirs(f"{build_dir}/include/hexed", exist_ok=True)
 os.makedirs(f"{build_dir}/lib", exist_ok=True)
+os.makedirs(f"{build_dir}/lib/cmake", exist_ok=True)
+os.makedirs(f"{build_dir}/cmake", exist_ok=True)
 os.makedirs(f"{build_dir}/bin", exist_ok=True)
 os.makedirs("object", exist_ok=True)
 
@@ -159,7 +161,7 @@ def build(code, output=[], depends=[]):
                         if re.fullmatch(path_file, fname):
                             item_exists = True
                             item_mtime = reduce(item_mtime, os.path.getmtime(f"{path_dir}/{path_file}"))
-            else: print("dir is not dir")
+            else: print(f"output directory {path_dir} is not an existing directory")
             exists = exists and item_exists
             mtime = reduce(mtime, item_mtime)
         return exists, mtime
@@ -173,7 +175,7 @@ def build(code, output=[], depends=[]):
         except:
             traceback.print_exc()
             error(f"Failed to build {output}")
-        good_news(f"Built {output}.")
+        good_news(f"Built    {output}.")
     else:
         good_news(f"{output} already up to date.")
 
@@ -244,6 +246,7 @@ def cmake(opts):
 # execute the build
 
 eigen_version = "3.4.0"
+hdf5_version = "1.14.4.3"
 boost_version = "1.85.0"
 libxml2_version = "2.12.7"
 occt_version = "7.8.0"
@@ -255,13 +258,12 @@ build(
     """),
     output=[f"include/Eigen"],
 )
-hdf5_version = "1.14.4"
 build(
     shell(f"""
-        {fetch_tar(f"https://github.com/ARTLab-GT/hexed/raw/assets/hdf5-{hdf5_version}-2.tar.gz")}
+        {fetch_tar(f"https://github.com/HDFGroup/hdf5/archive/refs/tags/hdf5_{hdf5_version}.tar.gz", dir_name=f"hdf5-hdf5_{hdf5_version}")}
         {cmake("-D HDF5_BUILD_CPP_LIB=ON")}
     """),
-    output=["include/H5Cpp.h", "lib/libhdf5_cpp.a", "cmake/hdf5-config.cmake"],
+    output=["include/H5Cpp.h", "lib/libhdf5.a", "lib/libhdf5_cpp.a", "cmake/hdf5-config.cmake"],
 )
 
 if option("use-xdmf"):
@@ -286,7 +288,7 @@ if option("use-xdmf"):
     build(lambda: git.Repo.clone_from("https://gitlab.kitware.com/xdmf/xdmf.git", "xdmf_source"), output=["xdmf_source"])
     build(
         shell(f"""
-            cd xdmf
+            cd xdmf_source
             vi -c "normal! /#include" -c "normal! O#include <stdint.h>" -c "%s/typedef int hid_t/typedef int64_t hid_t/" -c wq core/XdmfHDF5Controller.hpp
             export XDMF_INSTALL_DIR={build_dir}
             {cmake("-D CMAKE_INSTALL_PREFIX=${XDMF_INSTALL_DIR} -Wno-dev")}
@@ -300,12 +302,12 @@ if option("use-occt"):
             {fetch_tar(f"https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V{underscore(occt_version)}.tar.gz", dir_name=f"OCCT-{underscore(occt_version)}")}
             {cmake(f"-D INSTALL_DIR={build_dir}"
                 + " -D BUILD_MODULE_ApplicationFramework=ON"
-                + " -D BUILD_MODULE_DETools=OFF"
+                + " -D BUILD_MODULE_DETools=ON"
                 + " -D BUILD_MODULE_DataExchange=ON"
                 + " -D BUILD_MODULE_Draw=OFF"
-                + " -D BUILD_MODULE_FoundationClasses=OFF"
-                + " -D BUILD_MODULE_ModelingAlgorithms=OFF"
-                + " -D BUILD_MODULE_ModelingData=OFF"
+                + " -D BUILD_MODULE_FoundationClasses=ON"
+                + " -D BUILD_MODULE_ModelingAlgorithms=ON"
+                + " -D BUILD_MODULE_ModelingData=ON"
                 + " -D BUILD_MODULE_Visualization=OFF"
                 + " -D BUILD_DOC_Overview=OFF"
                 + " -D USE_FREETYPE=OFF"
@@ -314,7 +316,7 @@ if option("use-occt"):
                 + " -D USE_XLIB=OFF"
                 + " -D BUILD_LIBRARY_TYPE=Static")}
         """),
-        output=["include/opencascade", "lib/libTKDEIGES.a", "lib/libTKDESTEP.a", "lib/libTKDESTL.a", "lib/cmake/opencascade"],
+        output=["include/opencascade", "lib/libTK.*\.a", "lib/cmake/opencascade"],
     )
     include_dirs.append(f"{build_dir}/include/opencascade")
 
@@ -325,6 +327,7 @@ if option("use-tecio"):
     include_dirs.append(f"{tecio_dir}/include")
     assert os.path.isfile(f"{tecio_dir}/include/TECIO.h")
     assert os.path.isfile(f"{tecio_dir}/bin/libtecio.so")
+    build_copy(f"{tecio_dir}/bin/libtecio.so", "lib/", link=True)
 
 # copy/configure/autogenerate files
 build_copy("config.hpp.in", dest=f"{build_dir}/include/hexed/config.hpp", configure=True)
@@ -338,6 +341,17 @@ build(autogen, output=["Gauss_legendre.cpp", "Gauss_lobatto.cpp"], depends=["scr
 # compile
 build_compile("Gauss_legendre.cpp", directory=build_dir)
 build_compile("Gauss_lobatto.cpp", directory=build_dir)
-sources = sorted(sorted(os.listdir(f"{source_dir}/src")), key=lambda s: "kernels" not in s)
+sources = [s for s in os.listdir(f"{source_dir}/src") if s not in ["CMakeLists.txt", "hil.cpp", "hexecute.cpp"]]
+sources.sort()
+sources.sort(key=lambda s: "kernels" not in s)
 with Pool(processes=int(option("n-procs"))) as pool:
     pool.map(build_compile, sources, chunksize=1)
+
+# link
+objects = [f"{build_dir}/object/" + o for o in os.listdir("object")]
+print(objects)
+def create_archive():
+    assert subprocess.run(["ar", "cr", "lib/libhexed.a"] + objects).returncode == 0, "static library creation failed"
+build(create_archive, output=["lib/libhexed.a"], depends=objects)
+build_link(f"{source_dir}/src/hil.cpp")
+build_link(f"{source_dir}/src/hexecute.cpp")
