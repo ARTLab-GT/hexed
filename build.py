@@ -6,7 +6,7 @@ import venv
 
 build_dir = "build"
 for arg in sys.argv[1:]:
-    assert re.match("--[a-z\-]+=[a-zA-Z0-9_\-]+", arg), f"Invalid argument syntax `{arg}`. Must be of the form `--arg-name=arg-value`."
+    assert re.match("--[a-z\-]+=.*", arg), f"Invalid argument syntax `{arg}`. Must be of the form `--arg-name=arg-value`."
     value = arg.split("=")[1]
     if arg.startswith("--build-dir="):
         build_dir = value

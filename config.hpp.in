@@ -6,8 +6,6 @@
 /*! \file hexed_config.hpp.in
  * \brief Supplies options configured by `build.py` to C++ code.
  * \details Anything wrapped in `{[]}`s will be evaluated as Python code and substituted at build time.
- * If you want to include this file, instead include `config.hpp` which will redirect to this file
- * in a way that works for use in both Hexed itself and code that uses the `hexed` library.
  */
 
 //! \brief Namespace for options configured at build time. See \ref hexed_config.hpp.in.
@@ -26,7 +24,7 @@ constexpr int max_row_size = {[option("max-row-size")]}; //!< \brief maximum \re
 constexpr int n_threads = {[option("n-threads")]}; //!< \brief number of threads with which to execute parallel regions
 #endif
 #define HEXED_USE_XDMF {[int(option("use-xdmf"))]}
-#define HEXED_USE_TECPLOT {[int(option("use-tecplot"))]}
+#define HEXED_USE_TECPLOT {[int(option("use-tecio"))]}
 #define HEXED_USE_NLOPT 0
 #define HEXED_USE_OCCT {[int(option("use-occt"))]}
 #define HEXED_OBSESSIVE_TIMING {[int(option("obsessive-timing"))]}

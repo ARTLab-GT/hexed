@@ -66,19 +66,24 @@ def as_bool(string):
 
 as_int = lambda i: int(i)
 
+def assert_true(fun, message):
+    def assertion(x):
+        assert fun(x), message
+    return assertion
+
 cpu = get_cpu_info()
 
 Option("build-dir", default="build")
 Option("source-dir", default=".")
 Option("install-prefix", default="~/.local")
+Option("build-mode", default="release", convert=lambda s: str(s).lower(), assertions=assert_true(lambda s: s in ["release", "debug"], "invalide build mode"))
 Option("n-procs", default=1, convert=as_int)
-def assertion(i):
-    assert i >= 2, "`row-size` is < 2"
-Option("max-row-size", default=8, convert=as_int, assertions=assertion)
+Option("max-row-size", default=8, convert=as_int, assertions=assert_true(lambda i: i >= 2, "`row-size` is < 2"))
 Option("threaded", default=True, convert=as_bool)
-Option("n-threads", default=cpu["count"], convert=as_int, assertions=assertion)
+Option("n-threads", default=cpu["count"], convert=as_int)
 Option("use-xdmf", default=True, convert=as_bool)
-Option("use-tecplot", default=False, convert=as_bool)
+Option("use-tecio", default=False, convert=as_bool)
+Option("tecio-dir")
 Option("use-occt", default=True, convert=as_bool)
 Option("obsessive-timing", default=False, convert=as_bool)
 
@@ -116,7 +121,7 @@ if modify_cache:
 
 source_dir = option("source-dir")
 build_dir = os.getcwd()
-os.makedirs(f"{build_dir}/include", exist_ok=True)
+os.makedirs(f"{build_dir}/include/hexed", exist_ok=True)
 os.makedirs(f"{build_dir}/lib", exist_ok=True)
 os.makedirs(f"{build_dir}/bin", exist_ok=True)
 os.makedirs("object", exist_ok=True)
@@ -176,11 +181,8 @@ def shell(code):
          assert subprocess.run(code, shell=True).returncode == 0, "shell returned failure"
     return run_code
 
-flags = ["-I", f"{source_dir}/include", "-I", f"{build_dir}/include"]
-def build_compile(name, directory=f"{source_dir}/src"):
-    output = f"{build_dir}/object/{'.'.join(name.split('.')[:-1] + ['o'])}"
-    depend = f"{directory}/{name}"
-    build(lambda: subprocess.run(["g++"] + flags + ["-c", "-o", output, depend]), output=[output], depends=[depend])
+with open(f"{source_dir}/script/install/compile_helper.py", "r") as helper_code:
+    exec(helper_code.read())
 
 def build_copy(path, dest=None, link=False, configure=False):
     if path[0] != "/":
@@ -194,7 +196,7 @@ def build_copy(path, dest=None, link=False, configure=False):
             fun = shutil.copytree
         else:
             if configure:
-                deps += ["build.py", "script/install/after_pip.py", f"{build_dir}/cache_file.txt"]
+                deps += [f"{build_dir}/cache_file.txt"]
                 def conf(p, d):
                     with open(p, "r") as in_file:
                         text = in_file.read()
@@ -209,6 +211,8 @@ def build_copy(path, dest=None, link=False, configure=False):
                 fun = shutil.copy
     if dest is None:
         dest = f"{build_dir}/{name}"
+    elif os.path.isdir(dest) and not os.path.isdir(path):
+        dest += "/" + name
     build(lambda: fun(path, dest), output=[dest], depends=deps)
 
 def fetch_tar(url, dir_name=None):
@@ -277,6 +281,7 @@ if option("use-xdmf"):
         """),
         output=["include/libxml2/", "lib/libxml2.a", "lib/cmake/libxml2"],
     )
+    include_dirs.append(f"{build_dir}/include/libxml2")
     build(lambda: git.Repo.clone_from("https://gitlab.kitware.com/xdmf/xdmf.git", "xdmf_source"), output=["xdmf_source"])
     build(
         shell(f"""
@@ -310,15 +315,27 @@ if option("use-occt"):
         """),
         output=["include/opencascade", "lib/libTKDEIGES.a", "lib/libTKDESTEP.a", "lib/libTKDESTL.a", "lib/cmake/opencascade"],
     )
+    include_dirs.append(f"{build_dir}/include/opencascade")
 
+if option("use-tecio"):
+    tecio_dir = str(option("tecio-dir"))
+    assert str(tecio_dir) != "None", "if you want to `--use-tecio`, you have to supply the `--tecio-dir` (sorry)"
+    assert os.path.isdir(tecio_dir), "`tecio-dir` is not an existing directory"
+    include_dirs.append(f"{tecio_dir}/include")
+    assert os.path.isfile(f"{tecio_dir}/include/TECIO.h")
+    assert os.path.isfile(f"{tecio_dir}/bin/libtecio.so")
+
+# copy/configure/autogenerate files
+build_copy("config.hpp.in", dest=f"{build_dir}/include/hexed/config.hpp", configure=True)
+for fname in os.listdir(f"{source_dir}/include"):
+    build_copy(f"include/{fname}", dest=f"include/hexed", link=True)
 def autogen():
     import auto_generate
     auto_generate.auto_generate(build_dir, int(option("max-row-size")))
 build(autogen, output=["Gauss_legendre.cpp", "Gauss_lobatto.cpp"], depends=["script/install/auto_generate.py", "script/install/basis.py"])
 
+# compile
 build_compile("Gauss_legendre.cpp", directory=build_dir)
 build_compile("Gauss_lobatto.cpp", directory=build_dir)
-build_copy("hexed_config.hpp.in", dest=f"{build_dir}/include/hexed_config.hpp", configure=True)
-
 for source in os.listdir(f"{source_dir}/src"):
     build_compile(source)
