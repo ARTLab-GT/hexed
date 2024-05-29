@@ -8,7 +8,6 @@ import time
 from multiprocess import Pool
 from termcolor import colored, cprint
 import git
-from cpuinfo import get_cpu_info
 
 # definitions for parameters
 
@@ -72,8 +71,6 @@ def assert_true(fun, message):
         assert fun(x), message
     return assertion
 
-cpu = get_cpu_info()
-
 Option("build-dir", default="build")
 Option("source-dir", default=".")
 Option("install-prefix", default="~/.local")
@@ -81,7 +78,7 @@ Option("build-mode", default="release", convert=lambda s: str(s).lower(), assert
 Option("n-procs", default=1, convert=as_int)
 Option("max-row-size", default=8, convert=as_int, assertions=assert_true(lambda i: i >= 2, "`row-size` is < 2"))
 Option("threaded", default=True, convert=as_bool)
-Option("n-threads", default=cpu["count"], convert=as_int)
+Option("n-threads", default=os.cpu_count(), convert=as_int)
 Option("use-xdmf", default=True, convert=as_bool)
 Option("use-tecio", default=False, convert=as_bool)
 Option("tecio-dir")

@@ -6,7 +6,7 @@ import venv
 
 build_dir = "build"
 for arg in sys.argv[1:]:
-    assert re.match("--[a-z\-]+=.*", arg), f"Invalid argument syntax `{arg}`. Must be of the form `--arg-name=arg-value`."
+    assert re.match(r"--[a-z\-]+=.*", arg), f"Invalid argument syntax `{arg}`. Must be of the form `--arg-name=arg-value`."
     value = arg.split("=")[1]
     if arg.startswith("--build-dir="):
         build_dir = value
@@ -31,7 +31,6 @@ subprocess.run(["build_venv/bin/pip3", "install",
     "gitpython",
     "termcolor",
     "cmake",
-    "py-cpuinfo",
     "multiprocess",
 ])
 subprocess.run(["build_venv/bin/python3", f"{source_dir}/script/install/after_pip.py"] + sys.argv[1:] + [f"--source-dir={source_dir}"])
