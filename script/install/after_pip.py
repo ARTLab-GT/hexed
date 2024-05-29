@@ -157,7 +157,7 @@ def build(code, output=[], depends=[]):
                     for fname in os.listdir(path_dir):
                         if re.fullmatch(path_file, fname):
                             item_exists = True
-                            item_mtime = reduce(item_mtime, os.path.getmtime(f"{path_dir}/{path_file}"))
+                            item_mtime = reduce(item_mtime, os.path.getmtime(f"{path_dir}/{fname}"))
             else: print(f"output directory {path_dir} is not an existing directory")
             exists = exists and item_exists
             mtime = reduce(mtime, item_mtime)
@@ -297,6 +297,7 @@ if option("use-occt"):
     build(
         shell(f"""
             {fetch_tar(f"https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V{underscore(occt_version)}.tar.gz", dir_name=f"OCCT-{underscore(occt_version)}")}
+            rm src/ExpToCasExe/CMakeLists.txt
             {cmake(f"-D INSTALL_DIR={build_dir}"
                 + " -D BUILD_MODULE_ApplicationFramework=ON"
                 + " -D BUILD_MODULE_DETools=ON"
@@ -313,7 +314,7 @@ if option("use-occt"):
                 + " -D USE_XLIB=OFF"
                 + " -D BUILD_LIBRARY_TYPE=Static")}
         """),
-        output=["include/opencascade", "lib/libTK.*\.a", "lib/cmake/opencascade"],
+        output=["include/opencascade", r"lib/libTK.*a", "lib/cmake/opencascade"],
     )
     include_dirs.append(f"{build_dir}/include/opencascade")
 

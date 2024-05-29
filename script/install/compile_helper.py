@@ -27,11 +27,23 @@ def build_compile(name, directory=f"{source_dir}/src"):
 
 def build_link(source):
     exec_name = os.path.split(source)[1].replace(".cpp", "")
-    flags = compile_flags
+    flags = compile_flags + [
+        "-lhexed",
+        "-lhdf5_cpp",
+        "-lhdf5",
+        "-lTKDEIGES",
+        "-lTKDESTEP",
+        "-lTKDESTL",
+        "-lTKMath",
+        "-lTKernel",
+        "-lTKBRep",
+    ]
+    """
     for fname in os.listdir(f"{build_dir}/lib"):
         match = re.fullmatch("lib(.*)\.(a|so)", fname)
         if match:
             flags.append("-l" + match.group(1))
+    """
     args = ["g++", source, "-o", exec_name, "-L", f"{build_dir}/lib"] + flags
     for d in include_dirs:
         args += ["-I", d]
