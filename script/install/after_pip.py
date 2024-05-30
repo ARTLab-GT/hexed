@@ -348,7 +348,7 @@ build(autogen, output=["Gauss_legendre.cpp", "Gauss_lobatto.cpp"], depends=["scr
 build_compile("Gauss_legendre.cpp", directory=build_dir)
 build_compile("Gauss_lobatto.cpp", directory=build_dir)
 build_compile("config.cpp", directory=build_dir)
-sources = [s for s in os.listdir(f"{source_dir}/src") if s not in ["CMakeLists.txt"]]
+sources = [s for s in os.listdir(f"{source_dir}/src") if s.endswith(".cpp")]
 sources.sort()
 sources.sort(key=lambda s: "kernels" not in s)
 with Pool(processes=int(option("n-procs"))) as pool:

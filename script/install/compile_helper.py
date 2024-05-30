@@ -19,7 +19,17 @@ else:
 def build_compile(name, directory=f"{source_dir}/src"):
     output = f"{build_dir}/object/{'.'.join(name.split('.')[:-1] + ['o'])}"
     src = f"{directory}/{name}"
-    depends = [src, f"{build_dir}/cache_file.txt"]#, f"{source_dir}/script/install/compile_helper.py"]
+    depends = [src, f"{build_dir}/cache_file.txt", f"{source_dir}/script/install/compile_helper.py"]
+    def add_includes(src_name):
+        with open(src_name, "r") as src_file:
+            text = src_file.read()
+        for include in re.findall(r'#include *[\"<](.*)[>\"]', text):
+            path = f"{build_dir}/include/hexed/{include}"
+            if os.path.isfile(path):
+                if path not in depends:
+                    depends.append(path)
+                    add_includes(path)
+    add_includes(src)
     args = ["g++"] + compile_flags + ["-c", "-o", output, src]
     for d in include_dirs:
         args += ["-I", d]
