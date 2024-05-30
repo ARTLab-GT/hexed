@@ -25,28 +25,17 @@ def build_compile(name, directory=f"{source_dir}/src"):
         args += ["-I", d]
     build(lambda: subprocess.run(args), output=[output], depends=depends)
 
-def build_link(source):
-    exec_name = os.path.split(source)[1].replace(".cpp", "")
-    flags = compile_flags + [
-        "-lhexed",
-        "-lhdf5_cpp",
-        "-lhdf5",
-        "-lTKDEIGES",
-        "-lTKDESTEP",
-        "-lTKDESTL",
-        "-lTKMath",
-        "-lTKernel",
-        "-lTKBRep",
-    ]
-    """
-    for fname in os.listdir(f"{build_dir}/lib"):
-        match = re.fullmatch("lib(.*)\.(a|so)", fname)
-        if match:
-            flags.append("-l" + match.group(1))
-    """
-    args = ["g++", source, "-o", exec_name, "-L", f"{build_dir}/lib"] + flags
-    for d in include_dirs:
-        args += ["-I", d]
-    print(args)
-    assert subprocess.run(args).returncode == 0, f"failed to link executable {exec_name}"
-
+def build_link(objects, name, is_lib=False, libs=[]):
+    if is_lib:
+        full_name = f"{build_dir}/lib/lib{name}.so"
+    else:
+        full_name = f"{build_dir}/bin/{name}"
+    args = ["g++", "-o", full_name, f"-L{build_dir}/lib", f"-Wl,-rpath=$ORIGIN/../lib,-rpath-link=lib"] + compile_flags
+    if is_lib:
+        args.append("-shared")
+    depends = objects
+    args += objects
+    for lib in libs:
+        args.append(f"-l{lib}")
+        depends.append(f"{build_dir}/lib/lib{lib}.so")
+    build(subproc(args), output=[full_name], depends=depends)

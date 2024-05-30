@@ -85,10 +85,6 @@ Option("tecio-dir")
 Option("use-occt", default=True, convert=as_bool)
 Option("obsessive-timing", default=False, convert=as_bool)
 
-version_major = 0
-version_minor = 2
-version_patch = 1
-
 # process arguments
 
 modify_cache = False
@@ -125,6 +121,12 @@ os.makedirs(f"{build_dir}/lib/cmake", exist_ok=True)
 os.makedirs(f"{build_dir}/cmake", exist_ok=True)
 os.makedirs(f"{build_dir}/bin", exist_ok=True)
 os.makedirs("object", exist_ok=True)
+
+repo = git.Repo(source_dir)
+commit = repo.head.commit
+version_major = 0
+version_minor = 2
+version_patch = 1
 
 # definitions for building
 
@@ -179,6 +181,11 @@ def build(code, output=[], depends=[]):
 def shell(code):
     def run_code():
          assert subprocess.run(code, shell=True).returncode == 0, "shell returned failure"
+    return run_code
+
+def subproc(args):
+    def run_code():
+         assert subprocess.run(args).returncode == 0, "subprocess returned failure"
     return run_code
 
 with open(f"{source_dir}/script/install/compile_helper.py", "r") as helper_code:
@@ -236,7 +243,7 @@ def cmake(opts):
     mkdir build
     cd build
     export CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH=FALSE
-    {build_dir}/build_venv/bin/cmake -D PREFIX_PATH={build_dir} -D CMAKE_PREFIX_PATH={build_dir} -D CMAKE_INSTALL_PREFIX={build_dir} -D BUILD_STATIC_LIBS=ON -D BUILD_SHARED_LIBS=OFF {opts} ..
+    {build_dir}/build_venv/bin/cmake -D PREFIX_PATH={build_dir} -D CMAKE_PREFIX_PATH={build_dir} -D CMAKE_INSTALL_PREFIX={build_dir} -D BUILD_STATIC_LIBS=OFF -D BUILD_SHARED_LIBS=ON -D CMAKE_INSTALL_RPATH='$ORIGIN/../lib' {opts} ..
     {make}
     """
 
@@ -260,7 +267,7 @@ build(
         {fetch_tar(f"https://github.com/HDFGroup/hdf5/archive/refs/tags/hdf5_{hdf5_version}.tar.gz", dir_name=f"hdf5-hdf5_{hdf5_version}")}
         {cmake("-D HDF5_BUILD_CPP_LIB=ON")}
     """),
-    output=["include/H5Cpp.h", "lib/libhdf5.a", "lib/libhdf5_cpp.a", "cmake/hdf5-config.cmake"],
+    output=["include/H5Cpp.h", "lib/libhdf5.so", "lib/libhdf5_cpp.so", "cmake/hdf5-config.cmake"],
 )
 
 if option("use-xdmf"):
@@ -275,11 +282,11 @@ if option("use-xdmf"):
     build(
         shell(f"""
             {fetch_tar(f"https://download.gnome.org/sources/libxml2/{'.'.join(libxml2_version.split('.')[:-1])}/libxml2-{libxml2_version}.tar.xz")}
-            ./configure --prefix={build_dir} --with-python=no --enable-static=yes --enable-shared=no
+            ./configure --prefix={build_dir} --with-python=no --enable-static=no --enable-shared=yes
             {make}
             cd ..
         """),
-        output=["include/libxml2/", "lib/libxml2.a", "lib/cmake/libxml2"],
+        output=["include/libxml2/", "lib/libxml2.so", "lib/cmake/libxml2"],
     )
     include_dirs.append(f"{build_dir}/include/libxml2")
     build(lambda: git.Repo.clone_from("https://gitlab.kitware.com/xdmf/xdmf.git", "xdmf_source"), output=["xdmf_source"])
@@ -290,7 +297,7 @@ if option("use-xdmf"):
             export XDMF_INSTALL_DIR={build_dir}
             {cmake("-D CMAKE_INSTALL_PREFIX=${XDMF_INSTALL_DIR} -Wno-dev")}
         """),
-        output=["include/Xdmf.hpp", "lib/libXdmf.a", "lib/cmake/Xdmf"],
+        output=["include/Xdmf.hpp", "lib/libXdmf.so", "lib/libXdmfCore.so", "lib/cmake/Xdmf"],
     )
 
 if option("use-occt"):
@@ -312,9 +319,9 @@ if option("use-occt"):
                 + " -D USE_OPENGL=OFF"
                 + " -D USE_TK=OFF"
                 + " -D USE_XLIB=OFF"
-                + " -D BUILD_LIBRARY_TYPE=Static")}
+                + " -D BUILD_LIBRARY_TYPE=Shared")}
         """),
-        output=["include/opencascade", r"lib/libTK.*a", "lib/cmake/opencascade"],
+        output=["include/opencascade", r"lib/libTK.*so", "lib/cmake/opencascade"],
     )
     include_dirs.append(f"{build_dir}/include/opencascade")
 
@@ -329,6 +336,7 @@ if option("use-tecio"):
 
 # copy/configure/autogenerate files
 build_copy("config.hpp.in", dest=f"{build_dir}/include/hexed/config.hpp", configure=True)
+build_copy("config.cpp.in", dest=f"{build_dir}/config.cpp", configure=True)
 for fname in os.listdir(f"{source_dir}/include"):
     build_copy(f"include/{fname}", dest=f"include/hexed", link=True)
 def autogen():
@@ -339,17 +347,22 @@ build(autogen, output=["Gauss_legendre.cpp", "Gauss_lobatto.cpp"], depends=["scr
 # compile
 build_compile("Gauss_legendre.cpp", directory=build_dir)
 build_compile("Gauss_lobatto.cpp", directory=build_dir)
-sources = [s for s in os.listdir(f"{source_dir}/src") if s not in ["CMakeLists.txt", "hil.cpp", "hexecute.cpp"]]
+build_compile("config.cpp", directory=build_dir)
+sources = [s for s in os.listdir(f"{source_dir}/src") if s not in ["CMakeLists.txt"]]
 sources.sort()
 sources.sort(key=lambda s: "kernels" not in s)
 with Pool(processes=int(option("n-procs"))) as pool:
     pool.map(build_compile, sources, chunksize=1)
 
 # link
-objects = [f"{build_dir}/object/" + o for o in os.listdir("object")]
-print(objects)
-def create_archive():
-    assert subprocess.run(["ar", "cr", "lib/libhexed.a"] + objects).returncode == 0, "static library creation failed"
-build(create_archive, output=["lib/libhexed.a"], depends=objects)
-build_link(f"{source_dir}/src/hil.cpp")
-build_link(f"{source_dir}/src/hexecute.cpp")
+hexed_libs = ["hdf5_cpp", "Xdmf", "TKDEIGES", "TKDESTEP", "TKDESTL", "TKBRep"]
+if option("use-tecio"):
+    hexed_libs.append("tecio")
+build_link(
+    [f"{build_dir}/object/" + o for o in os.listdir("object") if o not in ["hil.o", "hexecute.o"]],
+    "hexed",
+    is_lib=True,
+    libs=hexed_libs,
+)
+build_link([f"{build_dir}/object/hil.o"], "hil", libs=["hexed"])
+build_link([f"{build_dir}/object/hexecute.o"], "hexecute", libs=["hexed"]+hexed_libs)
