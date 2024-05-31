@@ -376,6 +376,7 @@ build_copy("hil/hexed.hil", "python/hexedpy/lib/")
 build_copy("hil/interactive.hil", "python/hexedpy/lib/")
 build_copy(f"{build_dir}/constants.py", "python/hexedpy")
 build_copy(f"{build_dir}/constants.hil", "python/hexedpy/lib")
+build_copy("LICENSE.txt", "python/hexedpy/lib")
 build(
     shell(f"""
         cd python
