@@ -8,6 +8,8 @@ import time
 from multiprocess import Pool
 from termcolor import colored, cprint
 import git
+import auto_generate
+import translate
 
 # definitions for parameters
 
@@ -333,9 +335,10 @@ build_copy("config.cpp.in", dest=f"{build_dir}/config.cpp", configure=True)
 for fname in os.listdir(f"{source_dir}/include"):
     build_copy(f"include/{fname}", dest=f"include/hexed", link=True)
 def autogen():
-    import auto_generate
     auto_generate.auto_generate(build_dir, int(option("max-row-size")))
 build(autogen, output=["Gauss_legendre.cpp", "Gauss_lobatto.cpp"], depends=["script/install/auto_generate.py", "script/install/basis.py"])
+for lang in ["hil", "py"]:
+    build(lambda: translate.translate(f"{source_dir}/include/constants.hpp", lang), output=["constants." + lang], depends=["include/constants.hpp"])
 
 # compile
 sources = [s for s in os.listdir(f"{source_dir}/src") if s.endswith(".cpp")]
@@ -371,6 +374,8 @@ for fname in os.listdir("lib"):
 build_copy("hil/builtin.hil", "python/hexedpy/lib/")
 build_copy("hil/hexed.hil", "python/hexedpy/lib/")
 build_copy("hil/interactive.hil", "python/hexedpy/lib/")
+build_copy(f"{build_dir}/constants.py", "python/hexedpy")
+build_copy(f"{build_dir}/constants.hil", "python/hexedpy/lib")
 build(
     shell(f"""
         cd python

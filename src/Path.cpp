@@ -17,7 +17,6 @@ Path::path Path::find(path target, std::vector<path> extra_dirs)
   const char* env_hexedpath = std::getenv("HEXEDPATH");
   if (env_hexedpath) {
     std::string hexedpath = env_hexedpath;
-    printf("%s\n", hexedpath.c_str());
     std::string::size_type start = 0;
     while (start < hexedpath.size()) {
       std::string::size_type end = std::min(hexedpath.find(":", start), hexedpath.size());
