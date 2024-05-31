@@ -8,13 +8,13 @@ version = "{[version]}"
 authors = [
   { name="Micaiah Smith-Pierce", email="micaiah@gatech.edu" },
 ]
-description = "Python utilities for use with the Hexed CFD solver"
+description = "Hexed CFD solver as a Python package"
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+    "Operating System :: POSIX :: Linux",
 ]
 dependencies = [
     "numpy",

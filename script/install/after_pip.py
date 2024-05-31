@@ -128,7 +128,7 @@ repo = git.Repo(source_dir)
 commit = repo.head.commit
 version_major = 0
 version_minor = 2
-version_patch = 1
+version_patch = 2
 version = f"{version_major}.{version_minor}.{version_patch}"
 
 # definitions for building

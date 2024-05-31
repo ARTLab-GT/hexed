@@ -5,11 +5,11 @@ import subprocess
 import venv
 
 build_dir = "build"
-install = False
+targets = {"install":False, "upload":False}
 sys.argv.pop(0)
-if len(sys.argv) and sys.argv[0] == "install":
-    install = True
-    sys.argv.pop(0)
+while len(sys.argv) and sys.argv[0] in targets.keys():
+    arg = sys.argv.pop(0)
+    targets[arg] = True
 for arg in sys.argv:
     assert re.match(r"--[a-z\-]+=.*", arg), f"Invalid argument syntax `{arg}`. Must be of the form `--arg-name=arg-value`."
     value = arg.split("=")[1]
@@ -37,13 +37,16 @@ subprocess.run(["build_venv/bin/pip3", "install",
     "termcolor",
     "cmake",
     "multiprocess",
+    "twine",
 ])
 rcode = subprocess.run(["build_venv/bin/python3", f"{source_dir}/script/install/after_pip.py"] + sys.argv + [f"--source-dir={source_dir}"]).returncode
-if install and rcode == 0:
+if targets["install"] and rcode == 0:
     print("Installing Python package in your current environment.")
     wheels = [f for f in os.listdir(f"{build_dir}/python/dist") if f.endswith(".whl")]
     assert len(wheels), "Cannot install: no wheels were created."
-    output = subprocess.run(["pip3", "install", f"{build_dir}/python/dist/{wheels[0]}"], stdout=subprocess.PIPE).stdout.decode()
+    output = subprocess.run(["build_venv/bin/pip3", "install", f"{build_dir}/python/dist/{wheels[0]}"], stdout=subprocess.PIPE).stdout.decode()
     print(output)
     if "hexedpy is already installed" in output:
-        print(subprocess.run(["pip3", "install", "--force-reinstall", "--no-deps", f"{build_dir}/python/dist/{wheels[0]}"], stdout=subprocess.PIPE).stdout.decode())
+        print(subprocess.run(["build_venv/bin/pip3", "install", "--force-reinstall", "--no-deps", f"{build_dir}/python/dist/{wheels[0]}"], stdout=subprocess.PIPE).stdout.decode())
+if targets["upload"] and rcode == 0:
+    subprocess.run(["build_venv/bin/python3", "-m", "twine", "upload", "--repository", "testpypi", f"{build_dir}/python/dist/*"])
