@@ -1,6 +1,6 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "hexedpy"
@@ -28,3 +28,10 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/ARTLab-GT/hexed"
 Documentation = "https://artlab-gt.github.io/hexed/"
+
+[project.scripts]
+hil = "hexedpy.wrappers:hil"
+hexecute = "hexedpy.wrappers:hexecute"
+
+[tool.setuptools.package-data]
+hexedpy = ["bin/*", "lib/*"]

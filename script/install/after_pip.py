@@ -203,7 +203,7 @@ def build_copy(path, dest=None, link=False, configure=False):
             def fun(p, d):
                 if os.path.isdir(d):
                     shutil.rmtree(d)
-                    shutil.copytree(p, d)
+                shutil.copytree(p, d)
         else:
             if configure:
                 deps += [f"{build_dir}/cache_file.txt"]
@@ -218,7 +218,7 @@ def build_copy(path, dest=None, link=False, configure=False):
                         out_file.write(text)
                 fun = conf
             else:
-                fun = shutil.copy
+                fun = lambda p, d: shutil.copy(p, d, follow_symlinks=False)
     if dest is None:
         dest = f"{build_dir}/{name}"
     elif os.path.isdir(dest) and not os.path.isdir(path):
@@ -351,10 +351,21 @@ build_link([f"{build_dir}/object/hexecute.o"], "hexecute", libs=["hexed"]+hexed_
 # build python package
 build_copy("python")
 build_copy(f"{build_dir}/python/pyproject.toml.in", dest="python/pyproject.toml", configure=True)
+os.makedirs("python/hexedpy/bin", exist_ok=True)
+os.makedirs("python/hexedpy/lib", exist_ok=True)
+build_copy(f"{build_dir}/bin/hil", dest="python/hexedpy/bin")
+build_copy(f"{build_dir}/bin/hexecute", dest="python/hexedpy/bin")
+for fname in os.listdir("lib"):
+    if re.match(r"lib.*\.so", fname):
+        build_copy(f"{build_dir}/lib/{fname}", dest="python/hexedpy/lib")
 build(
     shell(f"""
         cd python
+        if [ -d python/dist ]; then
+            rm python/dist
+        fi
         {build_dir}/build_venv/bin/python3 -m build
     """),
     output=["python/dist/hexedpy.*whl"],
+    depends=[f"{build_dir}/python/pyproject.toml", f"{build_dir}/python/hexedpy/.*", f"{build_dir}/python/hexedpy/bin/.*", f"{build_dir}/python/hexedpy/lib/.*"],
 )
