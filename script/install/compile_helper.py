@@ -16,9 +16,12 @@ if option("threaded"):
 else:
     compile_flags.append("-Wno-unknown-pragmas")
 
-def build_compile(name, directory=f"{source_dir}/src"):
-    output = f"{build_dir}/object/{'.'.join(name.split('.')[:-1] + ['o'])}"
-    src = f"{directory}/{name}"
+def build_compile(name):
+    if name[0] != "/":
+        src = f"{source_dir}/src/{name}"
+    else:
+        src = name
+    output = f"{build_dir}/object/{'.'.join(src.split('/')[-1].split('.')[:-1] + ['o'])}"
     depends = [src, f"{build_dir}/cache_file.txt", f"{source_dir}/script/install/compile_helper.py"]
     def add_includes(src_name):
         with open(src_name, "r") as src_file:

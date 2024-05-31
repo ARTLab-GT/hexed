@@ -26,7 +26,7 @@ constexpr int n_threads = {[option("n-threads")]}; //!< \brief number of threads
 #define HEXED_USE_XDMF {[int(option("use-xdmf"))]}
 #define HEXED_USE_TECPLOT {[int(option("use-tecio"))]}
 #define HEXED_USE_NLOPT 0
-#define HEXED_USE_OCCT {[int(option("use-occt"))]}
+#define HEXED_USE_OCCT 0
 #define HEXED_OBSESSIVE_TIMING {[int(option("obsessive-timing"))]}
 
 }

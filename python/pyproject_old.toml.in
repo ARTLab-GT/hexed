@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "hexedpy"
-version = "{[version]}"
+version = "@CMAKE_PROJECT_VERSION@"
 authors = [
   { name="Micaiah Smith-Pierce", email="micaiah@gatech.edu" },
 ]

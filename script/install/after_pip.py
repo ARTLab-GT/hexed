@@ -127,6 +127,7 @@ commit = repo.head.commit
 version_major = 0
 version_minor = 2
 version_patch = 1
+version = f"{version_major}.{version_minor}.{version_patch}"
 
 # definitions for building
 
@@ -160,7 +161,6 @@ def build(code, output=[], depends=[]):
                         if re.fullmatch(path_file, fname):
                             item_exists = True
                             item_mtime = reduce(item_mtime, os.path.getmtime(f"{path_dir}/{fname}"))
-            else: print(f"output directory {path_dir} is not an existing directory")
             exists = exists and item_exists
             mtime = reduce(mtime, item_mtime)
         return exists, mtime
@@ -200,7 +200,10 @@ def build_copy(path, dest=None, link=False, configure=False):
         fun = os.symlink
     else:
         if os.path.isdir(path):
-            fun = shutil.copytree
+            def fun(p, d):
+                if os.path.isdir(d):
+                    shutil.rmtree(d)
+                    shutil.copytree(p, d)
         else:
             if configure:
                 deps += [f"{build_dir}/cache_file.txt"]
@@ -230,9 +233,14 @@ def fetch_tar(url, dir_name=None):
     if [ -e {fname} ]; then
         rm {fname}
     fi
-    wget {url}
-    tar -xf {fname}
-    rm {fname}
+    if [ -d {dir_name} ]; then
+        echo found existing {dir_name}
+    else
+        echo fetching {dir_name}
+        wget {url}
+        tar -xf {fname}
+        rm {fname}
+    fi
     cd {dir_name}
     """
 make = f"make -j{option('n-procs')} install"
@@ -300,31 +308,6 @@ if option("use-xdmf"):
         output=["include/Xdmf.hpp", "lib/libXdmf.so", "lib/libXdmfCore.so", "lib/cmake/Xdmf"],
     )
 
-if option("use-occt"):
-    build(
-        shell(f"""
-            {fetch_tar(f"https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V{underscore(occt_version)}.tar.gz", dir_name=f"OCCT-{underscore(occt_version)}")}
-            rm src/ExpToCasExe/CMakeLists.txt
-            {cmake(f"-D INSTALL_DIR={build_dir}"
-                + " -D BUILD_MODULE_ApplicationFramework=ON"
-                + " -D BUILD_MODULE_DETools=ON"
-                + " -D BUILD_MODULE_DataExchange=ON"
-                + " -D BUILD_MODULE_Draw=OFF"
-                + " -D BUILD_MODULE_FoundationClasses=ON"
-                + " -D BUILD_MODULE_ModelingAlgorithms=ON"
-                + " -D BUILD_MODULE_ModelingData=ON"
-                + " -D BUILD_MODULE_Visualization=OFF"
-                + " -D BUILD_DOC_Overview=OFF"
-                + " -D USE_FREETYPE=OFF"
-                + " -D USE_OPENGL=OFF"
-                + " -D USE_TK=OFF"
-                + " -D USE_XLIB=OFF"
-                + " -D BUILD_LIBRARY_TYPE=Shared")}
-        """),
-        output=["include/opencascade", r"lib/libTK.*so", "lib/cmake/opencascade"],
-    )
-    include_dirs.append(f"{build_dir}/include/opencascade")
-
 if option("use-tecio"):
     tecio_dir = str(option("tecio-dir"))
     assert str(tecio_dir) != "None", "if you want to `--use-tecio`, you have to supply the `--tecio-dir` (sorry)"
@@ -345,17 +328,15 @@ def autogen():
 build(autogen, output=["Gauss_legendre.cpp", "Gauss_lobatto.cpp"], depends=["script/install/auto_generate.py", "script/install/basis.py"])
 
 # compile
-build_compile("Gauss_legendre.cpp", directory=build_dir)
-build_compile("Gauss_lobatto.cpp", directory=build_dir)
-build_compile("config.cpp", directory=build_dir)
 sources = [s for s in os.listdir(f"{source_dir}/src") if s.endswith(".cpp")]
 sources.sort()
 sources.sort(key=lambda s: "kernels" not in s)
+sources += [f"{build_dir}/Gauss_legendre.cpp", f"{build_dir}/Gauss_lobatto.cpp", f"{build_dir}/config.cpp"]
 with Pool(processes=int(option("n-procs"))) as pool:
     pool.map(build_compile, sources, chunksize=1)
 
 # link
-hexed_libs = ["hdf5_cpp", "Xdmf", "TKDEIGES", "TKDESTEP", "TKDESTL", "TKBRep"]
+hexed_libs = ["hdf5_cpp", "Xdmf"]
 if option("use-tecio"):
     hexed_libs.append("tecio")
 build_link(
@@ -366,3 +347,14 @@ build_link(
 )
 build_link([f"{build_dir}/object/hil.o"], "hil", libs=["hexed"])
 build_link([f"{build_dir}/object/hexecute.o"], "hexecute", libs=["hexed"]+hexed_libs)
+
+# build python package
+build_copy("python")
+build_copy(f"{build_dir}/python/pyproject.toml.in", dest="python/pyproject.toml", configure=True)
+build(
+    shell(f"""
+        cd python
+        {build_dir}/build_venv/bin/python3 -m build
+    """),
+    output=["python/dist/hexedpy.*whl"],
+)
