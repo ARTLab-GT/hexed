@@ -10,7 +10,7 @@ sys.argv.pop(0)
 if len(sys.argv) and sys.argv[0] == "install":
     install = True
     sys.argv.pop(0)
-for arg in sys.argv[1:]:
+for arg in sys.argv:
     assert re.match(r"--[a-z\-]+=.*", arg), f"Invalid argument syntax `{arg}`. Must be of the form `--arg-name=arg-value`."
     value = arg.split("=")[1]
     if arg.startswith("--build-dir="):
@@ -38,7 +38,7 @@ subprocess.run(["build_venv/bin/pip3", "install",
     "cmake",
     "multiprocess",
 ])
-rcode = subprocess.run(["build_venv/bin/python3", f"{source_dir}/script/install/after_pip.py"] + sys.argv[1:] + [f"--source-dir={source_dir}"]).returncode
+rcode = subprocess.run(["build_venv/bin/python3", f"{source_dir}/script/install/after_pip.py"] + sys.argv + [f"--source-dir={source_dir}"]).returncode
 if install and rcode == 0:
     print("Installing Python package in your current environment.")
     wheels = [f for f in os.listdir(f"{build_dir}/python/dist") if f.endswith(".whl")]

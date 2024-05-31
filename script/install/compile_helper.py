@@ -43,7 +43,7 @@ def build_link(objects, name, is_lib=False, libs=[]):
         full_name = f"{build_dir}/lib/lib{name}.so"
     else:
         full_name = f"{build_dir}/bin/{name}"
-    args = ["g++", "-o", full_name, f"-L{build_dir}/lib", f"-Wl,-rpath=$ORIGIN/../lib,-rpath-link=lib"] + compile_flags
+    args = ["g++", "-o", full_name, f"-L{build_dir}/lib", f"-Wl,-rpath-link=lib"] + compile_flags
     if is_lib:
         args.append("-shared")
     depends = objects

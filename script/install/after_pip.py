@@ -106,7 +106,7 @@ if "cache_file.txt" in os.listdir():
                 if not Option.get(opt[0]).user_defined:
                     Option.get(opt[0]).set(opt[1])
 else:
-    modfiy_cache = True
+    modify_cache = True
 
 if modify_cache:
     with open("cache_file.txt", "w") as cache:
@@ -263,7 +263,7 @@ def cmake(opts):
     mkdir build
     cd build
     export CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH=FALSE
-    {build_dir}/build_venv/bin/cmake -D PREFIX_PATH={build_dir} -D CMAKE_PREFIX_PATH={build_dir} -D CMAKE_INSTALL_PREFIX={build_dir} -D BUILD_STATIC_LIBS=OFF -D BUILD_SHARED_LIBS=ON -D CMAKE_INSTALL_RPATH='$ORIGIN/../lib' {opts} ..
+    {build_dir}/build_venv/bin/cmake -D PREFIX_PATH={build_dir} -D CMAKE_PREFIX_PATH={build_dir} -D CMAKE_INSTALL_PREFIX={build_dir} -D BUILD_STATIC_LIBS=OFF -D BUILD_SHARED_LIBS=ON {opts} ..
     {make}
     """
 
