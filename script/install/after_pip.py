@@ -148,21 +148,31 @@ def build(code, output=[], depends=[]):
         exists = True
         mtime = init
         for p in paths:
-            item_exists = False
-            item_mtime = init
             if p[0] != "/":
                 p = prefix + "/" + p
-            path_dir, path_file = os.path.split(p)
-            if os.path.isdir(path_dir):
-                if path_file == "":
-                    item_exists = True
-                else:
-                    for fname in os.listdir(path_dir):
-                        if re.fullmatch(path_file, fname):
-                            item_exists = True
-                            item_mtime = reduce(item_mtime, os.path.getmtime(f"{path_dir}/{fname}"))
-            exists = exists and item_exists
-            mtime = reduce(mtime, item_mtime)
+            class Item_info:
+                mtime = init
+            if os.path.isdir(p):
+                path_dir = p
+                path_file = ""
+                Item_info.exists = True
+            else:
+                path_dir, path_file = os.path.split(p)
+                Item_info.exists = False
+            def traverse_dir(dname):
+                if os.path.isdir(dname):
+                    for fname in os.listdir(dname):
+                        pname = f"{dname}/{fname}"
+                        if os.path.isdir(pname):
+                            if path_file == "":
+                                traverse_dir(pname)
+                        else:
+                            if path_file == "" or re.fullmatch(path_file, fname):
+                                Item_info.exists = True
+                                Item_info.mtime = reduce(Item_info.mtime, os.path.getmtime(pname))
+            traverse_dir(path_dir)
+            exists = exists and Item_info.exists
+            mtime = reduce(mtime, Item_info.mtime)
         return exists, mtime
     out_exists, out_mtime = check_path(output, build_dir, time.time(), min)
     dep_exists, dep_mtime = check_path(depends, source_dir, 0, max)
@@ -203,7 +213,7 @@ def build_copy(path, dest=None, link=False, configure=False):
             def fun(p, d):
                 if os.path.isdir(d):
                     shutil.rmtree(d)
-                shutil.copytree(p, d)
+                shutil.copytree(p, d, copy_function=shutil.copy)
         else:
             if configure:
                 deps += [f"{build_dir}/cache_file.txt"]
@@ -218,7 +228,7 @@ def build_copy(path, dest=None, link=False, configure=False):
                         out_file.write(text)
                 fun = conf
             else:
-                fun = lambda p, d: shutil.copy(p, d, follow_symlinks=False)
+                fun = lambda p, d: shutil.copy(p, d)
     if dest is None:
         dest = f"{build_dir}/{name}"
     elif os.path.isdir(dest) and not os.path.isdir(path):
@@ -358,6 +368,9 @@ build_copy(f"{build_dir}/bin/hexecute", dest="python/hexedpy/bin")
 for fname in os.listdir("lib"):
     if re.match(r"lib.*\.so", fname):
         build_copy(f"{build_dir}/lib/{fname}", dest="python/hexedpy/lib")
+build_copy("hil/builtin.hil", "python/hexedpy/lib/")
+build_copy("hil/hexed.hil", "python/hexedpy/lib/")
+build_copy("hil/interactive.hil", "python/hexedpy/lib/")
 build(
     shell(f"""
         cd python
