@@ -86,6 +86,7 @@ Option("use-tecio", default=False, convert=as_bool)
 Option("tecio-dir")
 Option("use-occt", default=True, convert=as_bool)
 Option("obsessive-timing", default=False, convert=as_bool)
+Option("build-docs", default=False, convert=as_bool)
 
 # process arguments
 
@@ -126,6 +127,7 @@ os.makedirs("object", exist_ok=True)
 
 repo = git.Repo(source_dir)
 commit = repo.head.commit
+date = time.strftime("%Y-%m-%d", time.gmtime())
 version_major = 0
 version_minor = 2
 version_patch = 2
@@ -388,3 +390,29 @@ build(
     output=["python/dist/hexedpy.*whl"],
     depends=[f"{build_dir}/python/pyproject.toml", f"{build_dir}/python/hexedpy/.*", f"{build_dir}/python/hexedpy/bin/.*", f"{build_dir}/python/hexedpy/lib/.*"],
 )
+
+# build docs
+if option("build-docs"):
+    assert subprocess.run(["which", "doxygen"], capture_output=True).stdout.decode(), \
+        "Doxygen not found (`which doxygen` returned empty). Cannot build documentation."
+    build_copy("doc", dest=f"{build_dir}/doc")
+    os.makedirs("doc/html", exist_ok=True)
+    build_copy("doc/config.in", dest="doc/config", configure=True)
+    permanent_images = ["header.png", "header_background.png", "ref_coords.svg", "phys_coords.svg"]
+    for fname in permanent_images:
+        build_copy(f"{build_dir}/doc/{fname}", dest="doc/html")
+    from vis_benchmark import vis_benchmark
+    update_images = [f"doc/html/{img}.svg" for img in ["summary", "naca0012", "flat_plate", "blottner_sphere"]]
+    build(
+        lambda: vis_benchmark(f"{source_dir}/benchmark.txt", "doc/html/"),
+        output=update_images,
+        depends=["benchmark.txt", "script/install/vis_benchmark.py"],
+    )
+    build(
+        shell(f"""
+            cd doc
+            doxygen config > doxygen_output.txt
+        """),
+        output=["doc/doxygen_output.txt"],
+        depends=[f"{build_dir}/doc/config", f"{build_dir}/doc/style.css", f"{build_dir}/doc/.*dox", f"{build_dir}/doc/.*tag"],
+    )

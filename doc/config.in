@@ -1,6 +1,6 @@
 PROJECT_NAME = hexed
-PROJECT_NUMBER = @CMAKE_PROJECT_VERSION@
-INPUT = @CMAKE_SOURCE_DIR@/include @CMAKE_SOURCE_DIR@/src @CMAKE_BINARY_DIR@/python/hexedpy @CMAKE_SOURCE_DIR@/doc @CMAKE_SOURCE_DIR@/script @CMAKE_SOURCE_DIR@/hexed_config.hpp.in
+PROJECT_NUMBER = {[version]}
+INPUT = {[source_dir]}/include {[source_dir]}/src {[build_dir]}/python/hexedpy {[source_dir]}/doc {[source_dir]}/script {[source_dir]}/hexed_config.hpp.in
 GENERATE_TREEVIEW = YES
 DISABLE_INDEX = YES
 USE_MATHJAX = YES
@@ -11,10 +11,10 @@ GENERATE_LATEX = NO
 GENERATE_TAGFILE = hexed.tag
 PREDEFINED = HEXED_USE_NLOPT=1 HEXED_USE_OTTER=1 HEXED_USE_TECPLOT=1 HEXED_USE_XDMF=1 HEXED_THREADED=1 HEXED_USE_OCCT=1
 VERBATIM_HEADERS = NO
-TAGFILES = @CMAKE_SOURCE_DIR@/doc/occt_short.tag=https://dev.opencascade.org/doc/refman/html \
-           @CMAKE_SOURCE_DIR@/doc/Eigen.doxytags=https://eigen.tuxfamily.org/dox
-EXAMPLE_PATH = @CMAKE_SOURCE_DIR@
-HTML_EXTRA_STYLESHEET = @CMAKE_SOURCE_DIR@/doc/style.css
-ALIASES += today="@DATE@" proj_version=" version @CMAKE_PROJECT_VERSION@, commit `@COMMIT@`" me="\ref Contact \"me\"" show_details="\details \f$ \f$"
+TAGFILES = {[source_dir]}/doc/occt_short.tag=https://dev.opencascade.org/doc/refman/html \
+           {[source_dir]}/doc/Eigen.doxytags=https://eigen.tuxfamily.org/dox
+EXAMPLE_PATH = {[source_dir]}
+HTML_EXTRA_STYLESHEET = {[source_dir]}/doc/style.css
+ALIASES += today="{[date]}" proj_version=" version {[version]}, commit `{[commit]}`" me="\ref Contact \"me\"" show_details="\details \f$ \f$"
 IMAGE_PATH = html
-CITE_BIB_FILES = @CMAKE_SOURCE_DIR@/doc/references.bib
+CITE_BIB_FILES = {[source_dir]}/doc/references.bib

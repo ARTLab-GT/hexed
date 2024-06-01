@@ -3,12 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime, timezone
 
-assert len(sys.argv) >= 2, "`vis_benchmark.py` has one mandatory argument (name of benchmark file)"
-file_name = sys.argv[1]
-show = True
-if len(sys.argv) > 2: show = sys.argv[2] == "True"
-with open(file_name, "r") as in_file: text = in_file.read()
-
 class Timing_data:
     def __init__(self, lines):
         line = lines.pop(0)
@@ -75,47 +69,58 @@ class Benchmark:
     @property
     def elapsed_time(self): return self._get_attr("elapsed execution time", lambda s: float(s.split(" ")[0]))
 
-benchmarks = {}
-for t in text.split("execution context:\n"):
-    if "output:" in t:
-        mark = Benchmark(t)
-        context = f"{mark.case}: {mark.system}"
-        if context not in benchmarks.keys():
-            benchmarks[context] = []
-        benchmarks[context].append(mark)
-
-def plot(function, ylabel, keys):
-    for system in keys:
-        commit_times = [datetime.fromtimestamp(mark.commit_time, tz = timezone.utc) for mark in benchmarks[system]]
-        values = [function(mark) for mark in benchmarks[system]]
-        plt.scatter(commit_times, values, label = system)
-        n = len(commit_times)
-        plt.plot([commit_times[(i + 1)//2] for i in range(2*n - 1)], [values[i//2] for i in range(2*n - 1)])
-    plt.ylabel(ylabel)
-    plt.xlabel("commit date/time (UTC)")
-    plt.xticks(rotation = 30, ha = "right")
-    plt.grid(True)
-
 def key_is_3d(context):
     return "blottner_sphere" not in context
-benchmarks_by_dim = [[key for key in benchmarks.keys() if not key_is_3d(key)], [key for key in benchmarks.keys() if key_is_3d(key)]]
-fig, axs = plt.subplots(2, 2)
-for is_3d in [0, 1]:
-    plt.sca(axs[1 - is_3d][0])
-    plot(lambda mark: mark.elapsed_time, "total execution time (s)", benchmarks_by_dim[is_3d])
-    plt.sca(axs[1 - is_3d][1])
-    plot(lambda mark: mark.timing.time/mark.timing.n_units, "kernel performance (s/update/element)", benchmarks_by_dim[is_3d])
-    axs[1 - is_3d][1].legend()
-plt.gcf().set_size_inches(16, 16)
-if show:
-    plt.show()
-else:
-    plt.savefig("html/summary.svg")
-    plt.close()
-for case in ["naca0012", "flat_plate", "blottner_sphere"]:
-    benchmarks[case + ": ae-artl-408091"][-1].timing.plot()
-    if show:
-        plt.show()
-    else:
-        plt.savefig(f"html/{case}.svg")
+
+def vis_benchmark(file_name, image_dir=None):
+    with open(file_name, "r") as in_file:
+        text = in_file.read()
+    benchmarks = {}
+    for t in text.split("execution context:\n"):
+        if "output:" in t:
+            mark = Benchmark(t)
+            context = f"{mark.case}: {mark.system}"
+            if context not in benchmarks.keys():
+                benchmarks[context] = []
+            benchmarks[context].append(mark)
+    benchmarks_by_dim = [[key for key in benchmarks.keys() if not key_is_3d(key)], [key for key in benchmarks.keys() if key_is_3d(key)]]
+    fig, axs = plt.subplots(2, 2)
+    def plot(function, ylabel, keys):
+        for system in keys:
+            commit_times = [datetime.fromtimestamp(mark.commit_time, tz = timezone.utc) for mark in benchmarks[system]]
+            values = [function(mark) for mark in benchmarks[system]]
+            plt.scatter(commit_times, values, label = system)
+            n = len(commit_times)
+            plt.plot([commit_times[(i + 1)//2] for i in range(2*n - 1)], [values[i//2] for i in range(2*n - 1)])
+        plt.ylabel(ylabel)
+        plt.xlabel("commit date/time (UTC)")
+        plt.xticks(rotation = 30, ha = "right")
+        plt.grid(True)
+
+    for is_3d in [0, 1]:
+        plt.sca(axs[1 - is_3d][0])
+        plot(lambda mark: mark.elapsed_time, "total execution time (s)", benchmarks_by_dim[is_3d])
+        plt.sca(axs[1 - is_3d][1])
+        plot(lambda mark: mark.timing.time/mark.timing.n_units, "kernel performance (s/update/element)", benchmarks_by_dim[is_3d])
+        axs[1 - is_3d][1].legend()
+    plt.gcf().set_size_inches(16, 16)
+    if image_dir:
+        plt.savefig(f"{image_dir}/summary.svg")
         plt.close()
+    else:
+        plt.show()
+    for case in ["naca0012", "flat_plate", "blottner_sphere"]:
+        benchmarks[case + ": ae-artl-408091"][-1].timing.plot()
+        if image_dir:
+            plt.savefig(f"{image_dir}/{case}.svg")
+            plt.close()
+        else:
+            plt.show()
+
+if __name__ == "__main__":
+    assert len(sys.argv) >= 2, "`vis_benchmark.py` has one mandatory argument (name of benchmark file)"
+    file_name = sys.argv[1]
+    kwargs = {}
+    if len(sys.argv) > 2:
+        kwargs["image_dir"] = sys.argv[2]
+    vis_benchmark(file_name, **kwargs)
