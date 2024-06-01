@@ -3,6 +3,10 @@ from subprocess import run
 from os import environ
 from sys import argv
 
+# Not part of the API.
+# Wraps executables so that they can appear to be installed in the `bin` directory
+# using entrypoints in the the [project.scripts] field of `pyproject.toml`
+
 def add_path(path_name, var):
     old_value = ""
     if var in environ.keys():

@@ -8,7 +8,7 @@ import pandas as pd
 import warnings
 
 ## \namespace hexedpy.utils
-# \brief A Python module with random useful tools.
+# \brief A Python module with random tools that are useful for Hexed simulations.
 
 def naca(desig, n_points = 1000, closure = "warp"):
     r"""! \brief Constructs a NACA 4-digit airfoil geometry.

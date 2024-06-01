@@ -340,7 +340,14 @@ def autogen():
     auto_generate.auto_generate(build_dir, int(option("max-row-size")))
 build(autogen, output=["Gauss_legendre.cpp", "Gauss_lobatto.cpp"], depends=["script/install/auto_generate.py", "script/install/basis.py"])
 for lang in ["hil", "py"]:
-    build(lambda: translate.translate(f"{source_dir}/include/constants.hpp", lang), output=["constants." + lang], depends=["include/constants.hpp"])
+    preamble = ""
+    if lang == "py":
+        preamble = r"""
+            ## \namespace hexedpy.constants
+            # \brief Basically a port of `hexed::constants` into Python.
+            # \see `hexed::constants` for more information.
+        """[1:].replace(4*" ", "")
+    build(lambda: translate.translate(f"{source_dir}/include/constants.hpp", lang, preamble), output=["constants." + lang], depends=["include/constants.hpp", "script/install/translate.py"])
 
 # compile
 sources = [s for s in os.listdir(f"{source_dir}/src") if s.endswith(".cpp")]
@@ -414,5 +421,12 @@ if option("build-docs"):
             doxygen config > doxygen_output.txt
         """),
         output=["doc/doxygen_output.txt"],
-        depends=[f"{build_dir}/doc/config", f"{build_dir}/doc/style.css", f"{build_dir}/doc/.*dox", f"{build_dir}/doc/.*tag"],
+        depends=[
+            f"{build_dir}/doc/config",
+            f"{build_dir}/doc/style.css",
+            f"{build_dir}/doc/.*dox",
+            f"{build_dir}/doc/.*tag",
+            "include",
+            f"{build_dir}/python/hexedpy/.*py",
+        ],
     )

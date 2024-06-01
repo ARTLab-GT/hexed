@@ -1,10 +1,10 @@
 from math import pi
 import re
 
-def translate(file_name, lang):
+def translate(file_name, lang, preamble=""):
     with open(file_name, "r") as in_file:
         text = in_file.read()
-    hil_text = ""
+    translated = preamble
     if lang == "hil":
         pow_op = "^"
     elif lang == "py":
@@ -23,6 +23,6 @@ def translate(file_name, lang):
                 line = re.sub(r"((?<!\.)\b[0-9]{9,}\b)", r"\1.", line) # `double`ize integer literals that would overflow
                 if double: # make sure that things originally intended as doubles stay doubles
                     line += " + 0."
-            hil_text += line + "\n" # add to translated file
+            translated += line + "\n" # add to translated file
     with open(file_name.split("/")[-1].replace("hpp", lang), "w") as out_file:
-        out_file.write(hil_text)
+        out_file.write(translated)
