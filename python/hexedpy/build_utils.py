@@ -1,8 +1,8 @@
 import os
 import subprocess as subp
 import shutil
-import multiprocess as multip
 import time
+import site
 
 def format_time(t):
     return time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(t))
@@ -33,10 +33,49 @@ class Completed:
             Found?: {self.found}
             Modification time range: [{self.earliest_mtime}, {self.latest_mtime}] = [{format_time(self.earliest_mtime)}, {format_time(self.latest_mtime)}]
         """[1:-1].replace(12*" ", "")
+    @staticmethod
+    def and_(compl0, compl1):
+        return Completed(
+            compl0.assets + compl1.assets,
+            compl0.found and compl1.found,
+            min(compl0.earliest_mtime, compl1.earliest_mtime),
+            max(compl0.latest_mtime, compl1.latest_mtime),
+        )
+    @staticmethod
+    def or_(compl0, compl1):
+        if compl0.found:
+            return compl0
+        else:
+            return compl1
+    @staticmethod
+    def and_or(compl0, compl1):
+        return Completed(
+            compl0.assets + compl1.assets,
+            compl0.found or compl1.found,
+            min(compl0.earliest_mtime, compl1.earliest_mtime),
+            max(compl1.latest_mtime, compl1.latest_mtime),
+        )
 
 class Deliverable:
     def find(self):
         raise NotImplementedError("`Deliverable.find` must be overridden by subclasses")
+    def __and__(self, other):
+        return Boolean(self, other, Completed.and_)
+    def __or__(self, other):
+        return Boolean(self, other, Completed.or_)
+    def __add__(self, other):
+        return Boolean(self, other, Completed.and_or)
+    @staticmethod
+    def make(arg):
+        if isinstance(arg, Deliverable):
+            return arg
+        elif isinstance(arg, str):
+            return File(arg)
+        else:
+            try:
+                return all_(arg)
+            except AttributeError:
+                raise Exception("can only make a `Deliverable` out of a `Deliverable`, a `str`, or an iterable")
 
 class File(Deliverable):
     def __init__(self, path):
@@ -59,5 +98,58 @@ class File(Deliverable):
         add(self._path)
         return compl
 
+class Boolean(Deliverable):
+    def __init__(self, operand0, operand1, operator):
+        self._op0 = operand0
+        self._op1 = operand1
+        self._op = operator
+    def find(self):
+        return self._op(self._op0.find(), self._op1.find())
+
+class Dummy(Deliverable):
+    def __init__(self, compl):
+        self._compl = compl
+    def find(self):
+        return self._compl
+
+def all_(deliverables):
+    result = Dummy(Completed([], True, time.time(), 0.))
+    for d in deliverables:
+        result = result & Deliverable.make(d)
+    return result
+
+def any_(deliverables):
+    result = Dummy(Completed([], False, time.time(), 0.))
+    for d in deliverables:
+        result = result | Deliverable.make(d)
+    return result
+
+def env_path(name):
+    if name in os.environ.keys():
+        return os.environ[name].split(":")
+    else:
+        return []
+
+prefices = {
+    "bin": env_path("PATH"),
+    "include": env_path("INCLUDE_PATH"),
+    "lib": env_path("LIBRARY_PATH"),
+    "python": site.PREFIXES + ["."],
+}
+
+def find_in(prefix, names):
+    if isinstance(names, str):
+        names = [names]
+    if isinstance(prefix, str):
+        prefix = prefices[prefix]
+    combos = []
+    for name in names:
+        if name.startswith("/"):
+            combos.append(name)
+        else:
+            for p in prefix:
+                combos.append(slash(p) + name)
+    return any_(combos)
+
 print(format_time(time.time()))
-print(File("script").find())
+print(find_in("bin", "apt").find())
