@@ -86,6 +86,7 @@ Option("use-tecio", default=False, convert=as_bool)
 Option("tecio-dir")
 Option("use-occt", default=True, convert=as_bool)
 Option("obsessive-timing", default=False, convert=as_bool)
+Option("build-tests", default=False, convert=as_bool)
 Option("build-docs", default=False, convert=as_bool)
 
 # process arguments
@@ -275,7 +276,7 @@ eigen_version = "3.4.0"
 hdf5_version = "1.14.4.3"
 boost_version = "1.85.0"
 libxml2_version = "2.12.7"
-occt_version = "7.8.0"
+catch2_version = "3.6.0"
 
 build(
     shell(f"""
@@ -349,7 +350,7 @@ for lang in ["hil", "py"]:
         """[1:].replace(4*" ", "")
     build(lambda: translate.translate(f"{source_dir}/include/constants.hpp", lang, preamble), output=["constants." + lang], depends=["include/constants.hpp", "script/install/translate.py"])
 
-# compile
+# build Hexed
 sources = [s for s in os.listdir(f"{source_dir}/src") if s.endswith(".cpp")]
 sources.sort()
 sources.sort(key=lambda s: "kernels" not in s)
@@ -357,32 +358,52 @@ sources += [f"{build_dir}/Gauss_legendre.cpp", f"{build_dir}/Gauss_lobatto.cpp",
 with Pool(processes=int(option("n-procs"))) as pool:
     pool.map(build_compile, sources, chunksize=1)
 
-# link
 hexed_libs = ["hdf5_cpp", "Xdmf"]
 if option("use-tecio"):
     hexed_libs.append("tecio")
 build_link(
-    [f"{build_dir}/object/" + o for o in os.listdir("object") if o not in ["hil.o", "hexecute.o"]],
+    [f"{build_dir}/object/" + o for o in os.listdir("object") if not (o in ["hil.o", "hexecute.o"] or o.startswith("test_"))],
     "hexed",
     is_lib=True,
     libs=hexed_libs,
 )
 build_link([f"{build_dir}/object/hil.o"], "hil", libs=["hexed"])
 build_link([f"{build_dir}/object/hexecute.o"], "hexecute", libs=["hexed"]+hexed_libs)
+execs = ["hil", "hexecute"]
+
+# build tests
+if option("build-tests"):
+    build(
+        shell(f"""
+            {fetch_tar(f"https://github.com/catchorg/Catch2/archive/refs/tags/v{catch2_version}.tar.gz", dir_name=f"Catch2-{catch2_version}")}
+            {cmake("-D BUILD_TESTING=OFF")}
+        """),
+        output=["include/catch2/catch_all.hpp", "lib/libCatch2.so", "lib/libCatch2Main.so"],
+    )
+    for fname in os.listdir(f"{source_dir}/test"):
+        if fname.endswith(".cpp"):
+            build_compile(f"{source_dir}/test/{fname}")
+        else:
+            build_copy(f"test/{fname}")
+    build_link(
+        [f"{build_dir}/object/{o}" for o in os.listdir("object") if o.startswith("test_")],
+        "hexed_test",
+        libs=["hexed", "Catch2", "Catch2Main"],
+    )
+    execs.append("hexed_test")
 
 # build python package
 build_copy("python")
 build_copy(f"{build_dir}/python/pyproject.toml.in", dest="python/pyproject.toml", configure=True)
 os.makedirs("python/hexedpy/bin", exist_ok=True)
 os.makedirs("python/hexedpy/lib", exist_ok=True)
-build_copy(f"{build_dir}/bin/hil", dest="python/hexedpy/bin")
-build_copy(f"{build_dir}/bin/hexecute", dest="python/hexedpy/bin")
+for ex in execs:
+    build_copy(f"{build_dir}/bin/{ex}", dest="python/hexedpy/bin")
 for fname in os.listdir("lib"):
     if re.match(r"lib.*\.so", fname):
         build_copy(f"{build_dir}/lib/{fname}", dest="python/hexedpy/lib")
-build_copy("hil/builtin.hil", "python/hexedpy/lib/")
-build_copy("hil/hexed.hil", "python/hexedpy/lib/")
-build_copy("hil/interactive.hil", "python/hexedpy/lib/")
+for fname in ["builtin", "interactive", "hexed", "test_builtin"]:
+    build_copy(f"hil/{fname}.hil", "python/hexedpy/lib/")
 build_copy(f"{build_dir}/constants.py", "python/hexedpy")
 build_copy(f"{build_dir}/constants.hil", "python/hexedpy/lib")
 build_copy("LICENSE.txt", "python/hexedpy/lib")

@@ -32,6 +32,7 @@ Documentation = "https://artlab-gt.github.io/hexed/"
 [project.scripts]
 hil = "hexedpy.wrappers:hil"
 hexecute = "hexedpy.wrappers:hexecute"
+hexed_test = "hexedpy.wrappers:hexed_test"
 
 [tool.setuptools.package-data]
 hexedpy = ["bin/*", "lib/*"]

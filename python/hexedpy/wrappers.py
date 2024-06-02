@@ -25,3 +25,6 @@ def hil():
 
 def hexecute():
     run_exec("hexecute")
+
+def hexed_test():
+    run_exec("hexed_test")

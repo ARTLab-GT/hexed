@@ -40,13 +40,14 @@ subprocess.run(["build_venv/bin/pip3", "install",
     "twine",
 ])
 rcode = subprocess.run(["build_venv/bin/python3", f"{source_dir}/script/install/after_pip.py"] + sys.argv + [f"--source-dir={source_dir}"]).returncode
-if targets["install"] and rcode == 0:
-    print("Installing Python package in your current environment.")
-    wheels = [f for f in os.listdir(f"{build_dir}/python/dist") if f.endswith(".whl")]
-    assert len(wheels), "Cannot install: no wheels were created."
-    output = subprocess.run(["build_venv/bin/pip3", "install", f"{build_dir}/python/dist/{wheels[0]}"], stdout=subprocess.PIPE).stdout.decode()
-    print(output)
-    if "hexedpy is already installed" in output:
-        print(subprocess.run(["build_venv/bin/pip3", "install", "--force-reinstall", "--no-deps", f"{build_dir}/python/dist/{wheels[0]}"], stdout=subprocess.PIPE).stdout.decode())
-if targets["upload"] and rcode == 0:
-    subprocess.run(["build_venv/bin/python3", "-m", "twine", "upload", "--repository", "testpypi", f"{build_dir}/python/dist/*"])
+if rcode == 0:
+    if targets["install"]:
+        print("Installing Python package in your current environment.")
+        wheels = [f for f in os.listdir(f"{build_dir}/python/dist") if f.endswith(".whl")]
+        assert len(wheels), "Cannot install: no wheels were created."
+        output = subprocess.run(["pip3", "install", f"{build_dir}/python/dist/{wheels[0]}"], stdout=subprocess.PIPE).stdout.decode()
+        print(output)
+        if "hexedpy is already installed" in output:
+            print(subprocess.run(["pip3", "install", "--force-reinstall", "--no-deps", f"{build_dir}/python/dist/{wheels[0]}"], stdout=subprocess.PIPE).stdout.decode())
+    if targets["upload"]:
+        subprocess.run(["build_venv/bin/python3", "-m", "twine", "upload", "--repository", "testpypi", f"{build_dir}/python/dist/*"])
