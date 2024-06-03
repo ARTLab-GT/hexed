@@ -188,6 +188,7 @@ class Buildable(Deliverable):
     def __str__(self):
         return str(self.output())
     def find(self):
+        assert self.builder, "A `Buildable` can only be `find`ed by a `Builder` (use `builder(buildable)`)"
         depends = Deliverable.make(self.depends())
         self.found_depends = depends.find()
         output = Deliverable.make(self.output())
@@ -271,7 +272,6 @@ class Pip(Buildable):
     def output(self):
         return all_(self.builder.find_in("python", self._get_name(n)) for n in self._names)
     def build(self):
-        assert self.builder, "`Pip` objects must be built by a `Builder`"
         self.builder.python("-m", "pip", "install", *self._names)
     def __str__(self):
         return re.sub("[\['\]]", "", f"packages {self._names}")
@@ -371,6 +371,7 @@ class Builder:
         if isinstance(deliverable, Deliverable):
             deliverable.builder = self
             assert deliverable.find(), f"Failed to build deliverable {deliverable}."
+            deliverable.builder = None
         else:
             for d in deliverable:
                 self(d)
