@@ -117,13 +117,15 @@ class Boolean(Deliverable):
             op_name = "+"
         else:
             op_name = str(self._op)
-        return f"({_op0} {op_name} {_op1})"
+        return f"({self._op0} {op_name} {self._op1})"
 
 class Dummy(Deliverable):
     def __init__(self, compl):
         self._compl = compl
     def find(self):
         return self._compl
+    def __str__(self):
+        return "Dummy deliverable"
 
 def all_(deliverables):
     result = Dummy(Completed([], True, time.time(), 0.))
@@ -143,28 +145,10 @@ def env_path(name):
     else:
         return []
 
-prefices = {
-    "bin": env_path("PATH"),
-    "include": env_path("INCLUDE_PATH"),
-    "lib": env_path("LIBRARY_PATH"),
-    "python": site.getsitepackages() + ["."],
-}
-
-def find_in(prefix, names):
-    if isinstance(names, str):
-        names = [names]
-    if isinstance(prefix, str):
-        prefix = prefices[prefix]
-    combos = []
-    for name in names:
-        if name.startswith("/"):
-            combos.append(name)
-        else:
-            for p in prefix:
-                combos.append(slash(p) + name)
-    return any_(combos)
-
 class Buildable(Deliverable):
+    builder = None
+    found_output = None
+    found_depends = None
     def depends(self):
         raise NotImplementedError("`Constructable.depends` must be implemented by derived classes")
     def output(self):
@@ -173,6 +157,8 @@ class Buildable(Deliverable):
         raise NotImplementedError("`Constructable.build` must be implemented by derived classes")
     def extra_utd_req(self):
         return True
+    def __str__(self):
+        return str(self.output())
     def find(self):
         depends = Deliverable.make(self.depends())
         self.found_depends = depends.find()
@@ -180,12 +166,13 @@ class Buildable(Deliverable):
         self.found_output = output.find()
         assert self.found_depends, f"Failed to obtain dependencies {depends} for {output}. Search result:\n{self.found_depends}"
         if self.found_output and self.found_output.earliest_mtime >= self.found_depends.latest_mtime and self.extra_utd_req():
-            print("\x1b[0;32mFound up to date \x1b[0m", output)
+            print("\x1b[0;32mFound up to date \x1b[0m" + str(self))
         else:
-            print("\x1b[1;34mBuilding         \x1b[0m", output)
+            print("\x1b[1;34mBuilding         \x1b[0m" + str(self))
             self.build()
-            print("\x1b[1;32mBuilt            \x1b[0m", output)
-        return output.find()
+            self.found_output = output.find()
+            print("\x1b[1;32mBuilt            \x1b[0m" + str(self))
+        return self.found_output
 
 class Copy(Buildable):
     def __init__(self, source, destination):
@@ -198,7 +185,7 @@ class Copy(Buildable):
     def depends(self):
         return File(self._source)
     def output(self):
-        return self._dest
+        return File(self._dest)
     def extra_utd_req(self):
         return [self._translate(f) for f in self.found_depends.assets] == self.found_output.assets
     def build(self):
@@ -209,4 +196,84 @@ class Copy(Buildable):
             else:
                 shutil.copy(source_name, dest_name)
 
-Copy("src", "build_test/").find()
+class Commands(Buildable):
+    def __init__(self, commands, outputs, depends=[]):
+        self._depends = Deliverable.make(depends)
+        self._output = Deliverable.make(outputs)
+        if isinstance(commands, str):
+            self._commands = [[commands]]
+        elif len(commands) and isinstance(commands[0], str):
+            self._commands = [list(commands)]
+        else:
+            self._commands = list(commands)
+    def depends(self):
+        return self._depends
+    def output(self):
+        return self._output
+    def build(self):
+        for comm in self._commands:
+            assert subp.run(comm).returncode == 0, f"Command `{comm}` returned failure"
+
+class Pip(Buildable):
+    def __init__(self, package_name):
+        self._name = package_name
+    def depends(self):
+        return all_([])
+    def output(self):
+        return self.builder.find_in("python", [self._name, self._name + ".py"])
+    def build(self):
+        self.builder.python("-m", "pip", "install", self._name)
+    def __str__(self):
+        return f"package `{self._name}`"
+
+class Builder:
+    def __init__(self, build_dir, venv=True):
+        self.source_dir = slash(os.getcwd())
+        self.build_dir = self.source_dir + "build_test/"
+        if venv:
+            self.venv_dir = self.build_dir + ".build_venv/"
+            self(Commands(["python3", "-m", "venv", self.venv_dir], self.venv_dir))
+            self._python = self.venv_dir + "bin/python3"
+        else:
+            self.venv_dir = None
+            self._python = "python3"
+        self.mkdir("bin")
+        self.mkdir("include")
+        self.mkdir("lib")
+        self.mkdir("share")
+        self.prefices = {
+            "bin": env_path("PATH"),
+            "include": env_path("INCLUDE_PATH"),
+            "lib": env_path("LIBRARY_PATH"),
+            "python": eval(self.python("-c", "import sys; print(sys.path)", capture_output=True).stdout.decode()),
+        }
+
+    def mkdir(self, name):
+        os.makedirs(self.build_dir + name, exist_ok=True)
+
+    def python(self, *args, **kwargs):
+        subp_args = [self._python] + list(args)
+        proc = subp.run(subp_args, **kwargs)
+        assert proc.returncode == 0, f"Python command `{' '.join(subp_args)}` failed with output {proc.stdout} and error {proc.stderr}"
+        return proc
+
+    def find_in(self, prefix, names, inner_op=any_):
+        if isinstance(names, str):
+            names = [names]
+        if isinstance(prefix, str):
+            prefix = self.prefices[prefix]
+        total = []
+        for name in names:
+            prefixed = []
+            if name.startswith("/"):
+                prefixed.append(name)
+            else:
+                for p in prefix:
+                    prefixed.append(slash(p) + name)
+            total.append(inner_op(prefixed))
+        return any_(total)
+
+    def __call__(self, deliverable):
+        deliverable.builder = self
+        assert deliverable.find(), f"Failed to build deliverable {deliverable}."
+
