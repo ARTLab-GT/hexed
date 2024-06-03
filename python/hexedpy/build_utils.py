@@ -4,6 +4,7 @@ import shutil
 import time
 import site
 import inspect
+import re
 
 def format_time(t):
     return time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(t))
@@ -215,21 +216,32 @@ class Commands(Buildable):
             assert subp.run(comm).returncode == 0, f"Command `{comm}` returned failure"
 
 class Pip(Buildable):
-    def __init__(self, package_name):
-        self._name = package_name
+    fake_names = {
+        "gitpython": "git",
+    }
+    def _get_name(self, name):
+        if name in self.fake_names.keys():
+            name = self.fake_names[name]
+        return [name, name + ".py"]
+    def __init__(self, package_names):
+        self._names = package_names
+        if isinstance(self._names, str):
+            self._names = [self._names]
     def depends(self):
         return all_([])
     def output(self):
-        return self.builder.find_in("python", [self._name, self._name + ".py"])
+        return all_(self.builder.find_in("python", self._get_name(n)) for n in self._names)
     def build(self):
-        self.builder.python("-m", "pip", "install", self._name)
+        assert self.builder, "`Pip` objects must be built by a `Builder`"
+        self.builder.python("-m", "pip", "install", *self._names)
     def __str__(self):
-        return f"package `{self._name}`"
+        return re.sub("[\['\]]", "", f"packages {self._names}")
 
 class Builder:
     def __init__(self, build_dir, venv=True):
         self.source_dir = slash(os.getcwd())
         self.build_dir = self.source_dir + "build_test/"
+        self.line_sep = ""
         if venv:
             self.venv_dir = self.build_dir + ".build_venv/"
             self(Commands(["python3", "-m", "venv", self.venv_dir], self.venv_dir))
@@ -245,17 +257,37 @@ class Builder:
             "bin": env_path("PATH"),
             "include": env_path("INCLUDE_PATH"),
             "lib": env_path("LIBRARY_PATH"),
-            "python": eval(self.python("-c", "import sys; print(sys.path)", capture_output=True).stdout.decode()),
+            "python": eval(self.python("-c", "import sys; print(sys.path)", silent=True)[1]),
         }
 
     def mkdir(self, name):
         os.makedirs(self.build_dir + name, exist_ok=True)
 
+    def subproc(self, args, **kwargs):
+        silent = False
+        if "silent" in kwargs.keys():
+            silent = kwargs.pop("silent")
+        kwargs["stdout"] = subp.PIPE
+        kwargs["stderr"] = subp.PIPE
+        proc = subp.Popen(args, **kwargs)
+        output = ""
+        indent = " \x1b[1;34m|\x1b[0m"
+        while proc.poll() is None:
+            for stream in [proc.stdout, proc.stderr]:
+                text = stream.read().decode()
+                if not silent:
+                    if not output:
+                        print(indent, end="", flush=True)
+                    print(text.replace("\n", "\n" + indent), end="", flush=True)
+                output += text
+            time.sleep(0.1)
+        if not silent:
+            print(2*"\x1b[1D", end="", flush=True)
+        assert proc.returncode == 0, f"command `{args}` failed"
+        return proc.returncode, output
+
     def python(self, *args, **kwargs):
-        subp_args = [self._python] + list(args)
-        proc = subp.run(subp_args, **kwargs)
-        assert proc.returncode == 0, f"Python command `{' '.join(subp_args)}` failed with output {proc.stdout} and error {proc.stderr}"
-        return proc
+        return self.subproc([self._python] + list(args), **kwargs)
 
     def find_in(self, prefix, names, inner_op=any_):
         if isinstance(names, str):
