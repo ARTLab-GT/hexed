@@ -3,6 +3,7 @@ import subprocess as subp
 import shutil
 import time
 import site
+import inspect
 
 def format_time(t):
     return time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(t))
@@ -58,7 +59,7 @@ class Completed:
 
 class Deliverable:
     def find(self):
-        raise NotImplementedError("`Deliverable.find` must be overridden by subclasses")
+        raise NotImplementedError("`Deliverable.find` must be implemented by derived classes")
     def __and__(self, other):
         return Boolean(self, other, Completed.and_)
     def __or__(self, other):
@@ -93,10 +94,12 @@ class File(Deliverable):
                 path = slash(path)
                 compl.assets.append(path)
                 compl.found = True
-                for p in os.listdir(path):
+                for p in sorted(os.listdir(path)):
                     add(path + p)
         add(self._path)
         return compl
+    def __str__(self):
+        return f"`{self._path}`"
 
 class Boolean(Deliverable):
     def __init__(self, operand0, operand1, operator):
@@ -105,6 +108,16 @@ class Boolean(Deliverable):
         self._op = operator
     def find(self):
         return self._op(self._op0.find(), self._op1.find())
+    def __str__(self):
+        if   self._op is Completed.and_:
+            op_name = "&"
+        elif self._op is Completed.or_:
+            op_name = "|"
+        elif self._op is Completed.and_or:
+            op_name = "+"
+        else:
+            op_name = str(self._op)
+        return f"({_op0} {op_name} {_op1})"
 
 class Dummy(Deliverable):
     def __init__(self, compl):
@@ -151,5 +164,49 @@ def find_in(prefix, names):
                 combos.append(slash(p) + name)
     return any_(combos)
 
-print(format_time(time.time()))
-print(File("config.cpp.in").find())
+class Buildable(Deliverable):
+    def depends(self):
+        raise NotImplementedError("`Constructable.depends` must be implemented by derived classes")
+    def output(self):
+        raise NotImplementedError("`Constructable.output` must be implemented by derived classes")
+    def build(self):
+        raise NotImplementedError("`Constructable.build` must be implemented by derived classes")
+    def extra_utd_req(self):
+        return True
+    def find(self):
+        depends = Deliverable.make(self.depends())
+        self.found_depends = depends.find()
+        output = Deliverable.make(self.output())
+        self.found_output = output.find()
+        assert self.found_depends, f"Failed to obtain dependencies {depends} for {output}. Search result:\n{self.found_depends}"
+        if self.found_output and self.found_output.earliest_mtime >= self.found_depends.latest_mtime and self.extra_utd_req():
+            print("\x1b[0;32mFound up to date \x1b[0m", output)
+        else:
+            print("\x1b[1;34mBuilding         \x1b[0m", output)
+            self.build()
+            print("\x1b[1;32mBuilt            \x1b[0m", output)
+        return output.find()
+
+class Copy(Buildable):
+    def __init__(self, source, destination):
+        self._source = source
+        self._dest = destination
+        if os.path.isdir(self._dest):
+            self._dest = slash(self._dest) + self._source.split("/")[-1]
+    def _translate(self, source_name):
+        return self._dest + source_name[len(self._source):]
+    def depends(self):
+        return File(self._source)
+    def output(self):
+        return self._dest
+    def extra_utd_req(self):
+        return [self._translate(f) for f in self.found_depends.assets] == self.found_output.assets
+    def build(self):
+        for source_name in self.found_depends.assets:
+            dest_name = self._translate(source_name)
+            if os.path.isdir(source_name):
+                os.makedirs(dest_name, exist_ok=True)
+            else:
+                shutil.copy(source_name, dest_name)
+
+Copy("src", "build_test/").find()
