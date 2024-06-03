@@ -16,7 +16,7 @@ builder.obsessive_timing = False
 builder.build_tests = False
 builder.build_docs = False
 
-builder(bu.Pip([
+bu.Pip(builder, [
     "numpy",
     "scipy",
     "matplotlib",
@@ -28,6 +28,6 @@ builder(bu.Pip([
     "cmake",
     "multiprocess",
     "twine",
-]))
-builder(bu.copy(builder.source_dir + "include", builder.build_dir))
-builder(bu.Configure(builder.source_dir + "config.hpp.in", builder.build_dir + "include/config.hpp"))
+])()
+builder.copy(builder.source_dir + "include", builder.build_dir)()
+bu.Configure(builder, builder.source_dir + "config.hpp.in", builder.build_dir + "include/config.hpp")()

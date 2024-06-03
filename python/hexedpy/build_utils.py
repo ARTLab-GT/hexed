@@ -185,37 +185,50 @@ class Buildable(Deliverable):
         raise NotImplementedError("`Constructable.build` must be implemented by derived classes")
     def extra_utd_req(self):
         return True
-    def __str__(self):
-        return str(self.output())
-    def find(self):
-        assert self.builder, "A `Buildable` can only be `find`ed by a `Builder` (use `builder(buildable)`)"
+    def up_to_date(self):
+        assert isinstance(self.builder, Builder), "Classes derived from `Buildable` must set `self.builder` to a `Builder`"
         depends = Deliverable.make(self.depends())
         self.found_depends = depends.find()
         output = Deliverable.make(self.output())
         self.found_output = output.find()
         assert self.found_depends, f"Failed to obtain dependencies {depends} for {output}. Search result:\n{self.found_depends}"
-        if self.found_output and self.found_output.earliest_mtime >= self.found_depends.latest_mtime and self.extra_utd_req():
-            print("\x1b[0;32mFound up to date \x1b[0m" + str(self))
+        return self.found_output and self.found_output.earliest_mtime >= self.found_depends.latest_mtime and self.extra_utd_req()
+    def __str__(self):
+        return str(self.output())
+    def find(self):
+        if self.up_to_date():
+            self.builder.message("\x1b[0;32mFound up to date \x1b[0m" + str(self))
         else:
-            print("\x1b[1;34mBuilding         \x1b[0m" + str(self))
+            self.builder.message("\x1b[1;34mBuilding         \x1b[0m" + str(self))
+            self.builder.indent_level += 1
             self.build()
-            self.found_output = output.find()
-            print("\x1b[1;32mBuilt            \x1b[0m" + str(self))
+            self.builder.indent_level -= 1
+            self.found_output = self.output().find()
+            self.builder.message("\x1b[1;32mBuilt            \x1b[0m" + str(self))
         return self.found_output
+    def __call__(self):
+        return self.find()
 
 class Copy(Buildable):
-    def __init__(self, source, destination, origin=""):
+    @staticmethod
+    def names(source, destination, origin=""):
         source = absolute(source)
         if len(origin):
             origin = slash(absolute(origin))
         else:
             origin = slash("/".join(source.split("/")[:-1]))
-        assert source.startswith(origin), f"Cannot copy: Source `{source}` is not contained in origin `{origin}`."
-        self._name = source[len(origin):]
-        self._source = origin + self._name
-        self._dest = destination
-        if os.path.isdir(self._dest):
-            self._dest = absolute(slash(self._dest)) + self._name
+        assert source.startswith(origin), f"Source `{source}` is not contained in origin `{origin}`."
+        source_name = source[len(origin):]
+        destination = absolute(destination)
+        if os.path.isdir(destination):
+            destination = slash(destination)
+            dest_name = source_name
+        else:
+            destination, dest_name = os.path.split(destination)
+        return origin + source_name, destination + dest_name, origin, source_name, destination, dest_name
+    def __init__(self, builder, source, destination, origin=""):
+        self.builder = builder
+        self._source, self._dest = self.names(source, destination, origin)[:2]
     def depends(self):
         assert not os.path.isdir(self._source), f"`Copy` is only for files. `{self._source}` is a directory."
         return File(self._source)
@@ -226,19 +239,9 @@ class Copy(Buildable):
         os.makedirs(os.path.split(self._dest)[0], exist_ok=True)
         shutil.copy(self._source, self._dest)
 
-def copy_directory(source, destination):
-    return [Copy(f, destination, origin=parent(source)) for f in contents(source)]
-
-def copy(source, destination):
-    if os.path.isdir(source):
-        return copy_directory(source, destination)
-    elif os.path.isfile(source):
-        return Copy(source, destination)
-    else:
-        raise Exception(f"Cannot copy from {source} as it does not exist")
-
 class Commands(Buildable):
-    def __init__(self, commands, outputs, depends=[]):
+    def __init__(self, builder, commands, outputs, depends=[]):
+        self.builder = builder
         self._depends = Deliverable.make(depends)
         self._output = Deliverable.make(outputs)
         if isinstance(commands, str):
@@ -263,7 +266,8 @@ class Pip(Buildable):
         if name in self.fake_names.keys():
             name = self.fake_names[name]
         return [name, name + ".py"]
-    def __init__(self, package_names):
+    def __init__(self, builder, package_names):
+        self.builder = builder
         self._names = package_names
         if isinstance(self._names, str):
             self._names = [self._names]
@@ -277,7 +281,8 @@ class Pip(Buildable):
         return re.sub("[\['\]]", "", f"packages {self._names}")
 
 class Configure(Buildable):
-    def __init__(self, old_name, new_name):
+    def __init__(self, builder, old_name, new_name):
+        self.builder = builder
         self.old_name = old_name
         self.new_name = new_name
     def depends(self):
@@ -297,6 +302,26 @@ class Configure(Buildable):
         with open(self.new_name, "w") as out_file:
             out_file.write(text)
 
+class Union(Buildable):
+    def __init__(self, builder, buildables, name=""):
+        self.builder = builder
+        self._buildables = buildables
+        if name:
+            self._name = name
+        else:
+            self._name = sum([str(b.output()) for b in self._buildables])
+    def depends(self):
+        return all_([b.depends() for b in self._buildables])
+    def output(self):
+        return all_([b.output() for b in self._buildables])
+    def up_to_date(self):
+        return all([b.up_to_date() for b in self._buildables])
+    def build(self):
+        for b in self._buildables:
+            b()
+    def __str__(self):
+        return self._name
+
 class Builder:
     def __init__(self, build_dir, venv=True, version=(1, 0, 0)):
         self.source_dir = slash(os.getcwd())
@@ -304,9 +329,11 @@ class Builder:
         self.version_major = version[0]
         self.version_minor = version[1]
         self.version_patch = version[2]
+        self.indent_level = 0
+        self.tab = " \x1b[1;34m|\x1b[0m"
         if venv:
             self.venv_dir = self.build_dir + ".build_venv/"
-            self(Commands(["python3", "-m", "venv", self.venv_dir], self.venv_dir))
+            self(Commands(self, ["python3", "-m", "venv", self.venv_dir], self.venv_dir))
             self._python = self.venv_dir + "bin/python3"
         else:
             self.venv_dir = None
@@ -322,6 +349,12 @@ class Builder:
             "python": eval(self.python("-c", "import sys; print(sys.path)", silent=True)[1]),
         }
 
+    def indent(self):
+        return self.indent_level*self.tab
+
+    def message(self, text):
+        print(self.indent() + text)
+
     def mkdir(self, name):
         os.makedirs(self.build_dir + name, exist_ok=True)
 
@@ -333,18 +366,17 @@ class Builder:
         kwargs["stderr"] = subp.PIPE
         proc = subp.Popen(args, **kwargs)
         output = ""
-        indent = " \x1b[1;34m|\x1b[0m"
         while proc.poll() is None:
             for stream in [proc.stdout, proc.stderr]:
                 text = stream.read().decode()
                 if not silent:
                     if not output:
-                        print(indent, end="", flush=True)
-                    print(text.replace("\n", "\n" + indent), end="", flush=True)
+                        print(self.indent(), end="", flush=True)
+                    print(text.replace("\n", "\n" + self.indent()), end="", flush=True)
                 output += text
             time.sleep(0.1)
         if not silent:
-            print(2*"\x1b[1D", end="", flush=True)
+            print(len(self.indent())*"\x1b[1D", end="", flush=True)
         assert proc.returncode == 0, f"command `{args}` failed"
         return proc.returncode, output
 
@@ -369,9 +401,7 @@ class Builder:
 
     def __call__(self, deliverable):
         if isinstance(deliverable, Deliverable):
-            deliverable.builder = self
             assert deliverable.find(), f"Failed to build deliverable {deliverable}."
-            deliverable.builder = None
         else:
             for d in deliverable:
                 self(d)
@@ -384,3 +414,15 @@ class Builder:
                 if type(value) in [int, float, str] or hasattr(d, "__str__"):
                     d[attr] = value
         return d
+
+    def copy_directory(self, source, destination):
+        return Union(self, [Copy(self, f, destination, origin=parent(source)) for f in contents(source)], name=f"`{Copy.names(source, destination)[1]}`")
+
+    def copy(self, source, destination):
+        if os.path.isdir(source):
+            return self.copy_directory(source, destination)
+        elif os.path.isfile(source):
+            return Copy(self, source, destination)
+        else:
+            raise Exception(f"Cannot copy from {source} as it does not exist")
+
