@@ -7,7 +7,7 @@ import inspect
 import re
 
 def format_time(t):
-    return time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(t))
+    return time.strftime("%Y-%m-%d %H:%M:%S (UTC %z)", time.localtime(t))
 
 def format_list(l):
     s = "[\n"
@@ -130,22 +130,26 @@ class File(Deliverable):
         return f"`{self._path}`"
 
 class Boolean(Deliverable):
-    def __init__(self, operand0, operand1, operator):
+    def __init__(self, operand0, operand1, operator, name=None):
         self._op0 = operand0
         self._op1 = operand1
         self._op = operator
+        self.name = name
     def find(self):
         return self._op(self._op0.find(), self._op1.find())
     def __str__(self):
-        if   self._op is Completed.and_:
-            op_name = "&"
-        elif self._op is Completed.or_:
-            op_name = "|"
-        elif self._op is Completed.and_or:
-            op_name = "+"
+        if self.name:
+            return self.name
         else:
-            op_name = str(self._op)
-        return f"({self._op0} {op_name} {self._op1})"
+            if   self._op is Completed.and_:
+                op_name = "&"
+            elif self._op is Completed.or_:
+                op_name = "|"
+            elif self._op is Completed.and_or:
+                op_name = "+"
+            else:
+                op_name = str(self._op)
+            return f"({self._op0} {op_name} {self._op1})"
 
 class Dummy(Deliverable):
     def __init__(self, compl):
@@ -155,16 +159,18 @@ class Dummy(Deliverable):
     def __str__(self):
         return "Dummy deliverable"
 
-def all_(deliverables):
+def all_(deliverables, name=None):
     result = Dummy(Completed([], True, time.time(), 0.))
     for d in deliverables:
         result = result & Deliverable.make(d)
+    result.name = name
     return result
 
-def any_(deliverables):
+def any_(deliverables, name=None):
     result = Dummy(Completed([], False, time.time(), 0.))
     for d in deliverables:
         result = result | Deliverable.make(d)
+    result.name = name
     return result
 
 def env_path(name):
@@ -172,6 +178,9 @@ def env_path(name):
         return os.environ[name].split(":")
     else:
         return []
+
+def add_env_path(name, path):
+    os.environ[name] = ":".join(env_path(name) + [path])
 
 class Buildable(Deliverable):
     builder = None
@@ -201,13 +210,17 @@ class Buildable(Deliverable):
         else:
             self.builder.message("\x1b[1;34mBuilding         \x1b[0m" + str(self))
             self.builder.indent_level += 1
+            cwd = os.getcwd()
+            os.chdir(self.builder.build_dir)
             self.build()
+            os.chdir(cwd)
             self.builder.indent_level -= 1
             self.found_output = self.output().find()
             self.builder.message("\x1b[1;32mBuilt            \x1b[0m" + str(self))
         return self.found_output
     def __call__(self):
-        return self.find()
+        self.find()
+        return self
 
 class Copy(Buildable):
     @staticmethod
@@ -256,7 +269,48 @@ class Commands(Buildable):
         return self._output
     def build(self):
         for comm in self._commands:
-            assert subp.run(comm).returncode == 0, f"Command `{comm}` returned failure"
+            assert self.builder.subproc(comm)
+
+class Wget(Commands):
+    def __init__(self, builder, url):
+        self.file_name = url.split("/")[-1]
+        super().__init__(builder, ["wget", url], self.file_name, depends=[])
+
+class Extract(Buildable):
+    def __init__(self, builder, archive, outputs=None):
+        self.builder = builder
+        self.extracted = []
+        self.archive = archive
+        if outputs is None:
+            outputs = re.sub(r"\.tar\.?([xg]z)", "", archive)
+        if isinstance(outputs, str):
+            outputs = File(outputs)
+        self.extracted = outputs
+        self.working_dir = parent(self.archive)
+    def depends(self):
+        return File(self.archive)
+    def output(self):
+        return self.extracted
+    def build(self):
+        self.builder.subproc(["tar", "-xf", self.archive])
+        for asset in self.found_output.assets:
+            for file in contents(asset):
+                os.utime(file)
+    def __str__(self):
+        return str(self.extracted)
+
+class Eigen(Buildable):
+    version = "3.4.0"
+    def __init__(self, builder):
+        self.builder = builder
+    def depends(self):
+        return Dummy(Completed([], True, 0., 0.))
+    def output(self):
+        return self.builder.find_in("include", "Eigen")
+    def build(self):
+        archive = self.builder.Wget(f"https://gitlab.com/libeigen/eigen/-/archive/{self.version}/eigen-{self.version}.tar.gz")().file_name
+        directory = self.builder.Extract(archive)().extracted.find().assets[0]
+        self.builder.copy(directory + "Eigen", self.builder.build_dir + "include")()
 
 class Pip(Buildable):
     fake_names = {
@@ -335,6 +389,7 @@ class Builder:
     def __init__(self, build_dir, venv=True, version=(1, 0, 0)):
         self.source_dir = slash(os.getcwd())
         self.build_dir = self.source_dir + "build_test/"
+        self.mkdir(build_dir)
         self.version_major = version[0]
         self.version_minor = version[1]
         self.version_patch = version[2]
@@ -347,16 +402,18 @@ class Builder:
         else:
             self.venv_dir = None
             self._python = "python3"
-        self.mkdir("bin")
-        self.mkdir("include")
-        self.mkdir("lib")
-        self.mkdir("share")
         self.prefices = {
-            "bin": env_path("PATH"),
-            "include": env_path("INCLUDE_PATH"),
-            "lib": env_path("LIBRARY_PATH"),
             "python": eval(self.python("-c", "import sys; print(sys.path)", silent=True)[1]),
         }
+        self.add_sys_path("bin", "PATH")
+        self.add_sys_path("include", "INCLUDE_PATH")
+        self.add_sys_path("lib", "LIBRARY_PATH")
+        self.mkdir("share")
+
+    def add_sys_path(self, dir_name, env_name):
+        self.mkdir(dir_name)
+        add_env_path(env_name, self.build_dir + dir_name)
+        self.prefices[dir_name] = env_path(env_name)
 
     def indent(self):
         return self.indent_level*self.tab
@@ -396,17 +453,17 @@ class Builder:
         if isinstance(names, str):
             names = [names]
         if isinstance(prefix, str):
-            prefix = self.prefices[prefix]
+            prefices = self.prefices[prefix]
         total = []
         for name in names:
             prefixed = []
             if name.startswith("/"):
                 prefixed.append(name)
             else:
-                for p in prefix:
+                for p in prefices:
                     prefixed.append(slash(p) + name)
             total.append(inner_op(prefixed))
-        return any_(total)
+        return any_(total, name=f"<{prefix}>/{names}")
 
     def parameters(self):
         d = {}
