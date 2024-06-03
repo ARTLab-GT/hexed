@@ -323,6 +323,15 @@ class Union(Buildable):
         return self._name
 
 class Builder:
+    def __getattr__(self, attr_name):
+        if attr_name in globals().keys():
+            attr = globals()[attr_name]
+            if inspect.isclass(attr) and issubclass(attr, Buildable):
+                def construct_buildable(*args, **kwargs):
+                    args = (self,) + args
+                    return attr(*args, **kwargs)
+                return construct_buildable
+        raise Exception(f"`{attr_name}` is neither an attribute of `Builder` nor a `Buildable` subclass")
     def __init__(self, build_dir, venv=True, version=(1, 0, 0)):
         self.source_dir = slash(os.getcwd())
         self.build_dir = self.source_dir + "build_test/"
@@ -333,7 +342,7 @@ class Builder:
         self.tab = " \x1b[1;34m|\x1b[0m"
         if venv:
             self.venv_dir = self.build_dir + ".build_venv/"
-            self(Commands(self, ["python3", "-m", "venv", self.venv_dir], self.venv_dir))
+            self.Commands(["python3", "-m", "venv", self.venv_dir], self.venv_dir)()
             self._python = self.venv_dir + "bin/python3"
         else:
             self.venv_dir = None
@@ -398,13 +407,6 @@ class Builder:
                     prefixed.append(slash(p) + name)
             total.append(inner_op(prefixed))
         return any_(total)
-
-    def __call__(self, deliverable):
-        if isinstance(deliverable, Deliverable):
-            assert deliverable.find(), f"Failed to build deliverable {deliverable}."
-        else:
-            for d in deliverable:
-                self(d)
 
     def parameters(self):
         d = {}
