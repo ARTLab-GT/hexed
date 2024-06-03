@@ -21,6 +21,28 @@ def slash(d):
         d += "/"
     return d
 
+def absolute(p):
+    if not p.startswith("/"):
+        p = slash(os.getcwd()) + p
+    return p
+
+def parent(p):
+    p = absolute(p)
+    if p.endswith("/"):
+        p = p[:-1]
+    return slash("/".join(p.split("/")[:-1]))
+
+def contents(name, recursive=True):
+    c = []
+    def add_contents(path):
+        if os.path.isfile(path):
+            c.append(path)
+        elif os.path.isdir(path):
+            for name in sorted(os.listdir(path)):
+                add_contents(slash(path) + name)
+    add_contents(name)
+    return c
+
 class Completed:
     def __init__(self, assets, found, earliest_mtime, latest_mtime):
         self.assets = list(assets)
@@ -99,6 +121,11 @@ class File(Deliverable):
                     add(path + p)
         add(self._path)
         return compl
+        if os.path.isfile(self._path):
+            mtime = os.path.getmtime(self._path)
+            return Completed([self._path], True, mtime, mtime)
+        else:
+            return Completed([], False, time.time(), 0.)
     def __str__(self):
         return f"`{self._path}`"
 
@@ -176,26 +203,38 @@ class Buildable(Deliverable):
         return self.found_output
 
 class Copy(Buildable):
-    def __init__(self, source, destination):
-        self._source = source
+    def __init__(self, source, destination, origin=""):
+        source = absolute(source)
+        if len(origin):
+            origin = slash(absolute(origin))
+        else:
+            origin = slash("/".join(source.split("/")[:-1]))
+        assert source.startswith(origin), f"Cannot copy: Source `{source}` is not contained in origin `{origin}`."
+        self._name = source[len(origin):]
+        self._source = origin + self._name
         self._dest = destination
         if os.path.isdir(self._dest):
-            self._dest = slash(self._dest) + self._source.split("/")[-1]
-    def _translate(self, source_name):
-        return self._dest + source_name[len(self._source):]
+            self._dest = absolute(slash(self._dest)) + self._name
     def depends(self):
+        assert not os.path.isdir(self._source), f"`Copy` is only for files. `{self._source}` is a directory."
         return File(self._source)
     def output(self):
+        assert not os.path.isdir(self._dest), f"Target file name `{self._dest}` is an existing directory."
         return File(self._dest)
-    def extra_utd_req(self):
-        return [self._translate(f) for f in self.found_depends.assets] == self.found_output.assets
     def build(self):
-        for source_name in self.found_depends.assets:
-            dest_name = self._translate(source_name)
-            if os.path.isdir(source_name):
-                os.makedirs(dest_name, exist_ok=True)
-            else:
-                shutil.copy(source_name, dest_name)
+        os.makedirs(os.path.split(self._dest)[0], exist_ok=True)
+        shutil.copy(self._source, self._dest)
+
+def copy_directory(source, destination):
+    return [Copy(f, destination, origin=parent(source)) for f in contents(source)]
+
+def copy(source, destination):
+    if os.path.isdir(source):
+        return copy_directory(source, destination)
+    elif os.path.isfile(source):
+        return Copy(source, destination)
+    else:
+        raise Exception(f"Cannot copy from {source} as it does not exist")
 
 class Commands(Buildable):
     def __init__(self, commands, outputs, depends=[]):
@@ -237,11 +276,34 @@ class Pip(Buildable):
     def __str__(self):
         return re.sub("[\['\]]", "", f"packages {self._names}")
 
+class Configure(Buildable):
+    def __init__(self, old_name, new_name):
+        self.old_name = old_name
+        self.new_name = new_name
+    def depends(self):
+        return File(self.old_name)
+    def output(self):
+        return File(self.new_name)
+    def build(self):
+        with open(self.old_name, "r") as in_file:
+            text = in_file.read()
+        while True:
+            match = re.search(r"{\[([^}]+)\]}", text)
+            if match is None: break
+            args = [match.group(1)]
+            if self.builder:
+                args.append(self.builder.parameters())
+            text = f"{text[:match.start()]}{eval(*args)}{text[match.end():]}"
+        with open(self.new_name, "w") as out_file:
+            out_file.write(text)
+
 class Builder:
-    def __init__(self, build_dir, venv=True):
+    def __init__(self, build_dir, venv=True, version=(1, 0, 0)):
         self.source_dir = slash(os.getcwd())
         self.build_dir = self.source_dir + "build_test/"
-        self.line_sep = ""
+        self.version_major = version[0]
+        self.version_minor = version[1]
+        self.version_patch = version[2]
         if venv:
             self.venv_dir = self.build_dir + ".build_venv/"
             self(Commands(["python3", "-m", "venv", self.venv_dir], self.venv_dir))
@@ -306,6 +368,18 @@ class Builder:
         return any_(total)
 
     def __call__(self, deliverable):
-        deliverable.builder = self
-        assert deliverable.find(), f"Failed to build deliverable {deliverable}."
+        if isinstance(deliverable, Deliverable):
+            deliverable.builder = self
+            assert deliverable.find(), f"Failed to build deliverable {deliverable}."
+        else:
+            for d in deliverable:
+                self(d)
 
+    def parameters(self):
+        d = {}
+        for attr in self.__dict__:
+            if not attr.startswith("_"):
+                value = self.__getattribute__(attr)
+                if type(value) in [int, float, str] or hasattr(d, "__str__"):
+                    d[attr] = value
+        return d
