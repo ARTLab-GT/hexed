@@ -134,7 +134,7 @@ prefices = {
     "bin": env_path("PATH"),
     "include": env_path("INCLUDE_PATH"),
     "lib": env_path("LIBRARY_PATH"),
-    "python": site.PREFIXES + ["."],
+    "python": site.getsitepackages() + ["."],
 }
 
 def find_in(prefix, names):
@@ -152,4 +152,4 @@ def find_in(prefix, names):
     return any_(combos)
 
 print(format_time(time.time()))
-print(find_in("bin", "apt").find())
+print(File("config.cpp.in").find())
