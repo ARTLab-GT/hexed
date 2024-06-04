@@ -11,25 +11,13 @@ builder.threaded = True
 builder.n_threads = os.cpu_count()
 builder.use_xdmf = True
 builder.use_tecio = False
-builder.use_occt = True
 builder.obsessive_timing = False
 builder.build_tests = False
 builder.build_docs = False
 
-builder.Pip([
-    "numpy",
-    "scipy",
-    "matplotlib",
-    "sympy",
-    "pandas",
-    "build",
-    "gitpython",
-    "termcolor",
-    "cmake",
-    "multiprocess",
-    "twine",
-])()
 builder.Eigen()()
 builder.HDF5()()
+if builder.use_xdmf:
+    builder.Xdmf()()
 builder.copy(builder.source_dir + "include", builder.build_dir)()
 builder.Configure(builder.source_dir + "config.hpp.in", builder.build_dir + "include/config.hpp")()

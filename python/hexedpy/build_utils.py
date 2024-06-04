@@ -191,6 +191,10 @@ class Buildable(Deliverable):
         raise NotImplementedError("`Constructable.output` must be implemented by derived classes")
     def build(self):
         raise NotImplementedError("`Constructable.build` must be implemented by derived classes")
+    def touch(self):
+        for asset in self.found_output.assets:
+            for file in contents(asset):
+                os.utime(file)
     @property
     def found_output(self):
         if self._found_output is None:
@@ -219,6 +223,7 @@ class Buildable(Deliverable):
             os.chdir(cwd)
             self.builder.indent_level -= 1
             self._found_output = self.output().find()
+            self.touch()
             self.builder.message("\x1b[1;32mBuilt:      \x1b[0m" + str(self))
         return self.found_output
     def __call__(self):
@@ -296,11 +301,22 @@ class Extract(Buildable):
         return self.extracted
     def build(self):
         self.builder.subproc(["tar", "-xf", self.archive])
-        for asset in self.found_output.assets:
-            for file in contents(asset):
-                os.utime(file)
     def __str__(self):
         return str(self.extracted)
+
+class Git_clone(Buildable):
+    def __init__(self, builder, repo, cloned_name):
+        self.builder = builder
+        self.repo = repo
+        self.name = cloned_name
+    def __str__(self):
+        return f"git repo `{self.name}`"
+    def depends(self):
+        return self.builder.Pip("gitpython")
+    def output(self):
+        return File(self.name)
+    def build(self):
+        self.builder.python("-c", f"import git; git.Repo.clone_from('{self.repo}', '{self.name}')")
 
 class C_project(Buildable):
     version = "<unspecified version>"
@@ -328,6 +344,34 @@ class HDF5(C_project):
         directory = self.builder.fetch_archive(f"https://github.com/HDFGroup/hdf5/archive/refs/tags/hdf5_{self.version}.tar.gz",
                                                outputs=f"hdf5-hdf5_{self.version}")[0]
         self.builder.cmake(directory, ["-DHDF5_BUILD_CPP_LIB=ON"])
+
+class Libxml2(C_project):
+    version = "2.12.7"
+    installed_files = {"include":["libxml2"], "lib":["libxml2.so"], "cmake":["libxml2"]}
+    def build(self):
+        directory = self.builder.fetch_archive(
+            f"https://download.gnome.org/sources/libxml2/{'.'.join(self.version.split('.')[:-1])}/libxml2-{self.version}.tar.xz"
+        )[0]
+        os.chdir(directory)
+        self.builder.subproc([slash(os.getcwd()) + "configure", f"--prefix={self.builder.build_dir}", "--with-python=no", "--enable-static=no", "--enable-shared=yes"])
+        self.builder.subproc(["make", f"-j{self.builder.n_procs}", "install"])
+
+class Xdmf(C_project):
+    installed_files = {"include":["Xdmf.hpp"], "lib":["libXdmf.so", "libXdmfCore.so"], "cmake":["Xdmf"]}
+    def depends(self):
+        return self.builder.Libxml2()
+    def build(self):
+        self.builder.Git_clone("https://gitlab.kitware.com/xdmf/xdmf.git", "xdmf")()
+        self.builder.env["XDMF_INSTALL_DIR"] = self.builder.build_dir
+        problem_file = f"{os.getcwd()}/xdmf/core/XdmfHDF5Controller.hpp"
+        with open(problem_file, "r") as in_file:
+            text = in_file.read()
+        ind = text.find("#include")
+        text = text[:ind] + "#include <stdint.h>\n" + text[ind:]
+        text = text.replace("typedef int hid_t", "typedef int64_t hid_t")
+        with open(problem_file, "w") as out_file:
+            out_file.write(text)
+        self.builder.cmake("xdmf", opts=["-Wno-dev", "-DBUILD_STATIC_LIBS=OFF", "-DBUILD_SHARED_LIBS=ON"])
 
 class Pip(Buildable):
     fake_names = {
@@ -382,6 +426,8 @@ class Union(Buildable):
             self._name = name
         else:
             self._name = sum([str(b.output()) for b in self._buildables])
+    def touch(self):
+        pass
     def depends(self):
         return all_([b.depends() for b in self._buildables])
     def output(self):
@@ -429,6 +475,7 @@ class Builder:
         self.add_prefix("cmake", ["CMAKE_PREFIX_PATH"])
         self.prefices["cmake"].append(self.build_dir + "lib/cmake/")
         self.env["CMAKE_PREFIX_PATH"] = self.env["CMAKE_PREFIX_PATH"].replace(self.build_dir + "cmake/", self.build_dir)
+        self.Pip("cmake")()
 
     def add_prefix(self, dir_name, var_names):
         path = slash(self.build_dir + dir_name)
