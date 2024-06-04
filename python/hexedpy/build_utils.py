@@ -217,7 +217,7 @@ class Buildable(Deliverable):
             self.builder.message(    "\x1b[0;94mChecking dependencies--\x1b[0m" + str(self))
         self.builder.indent_level += 1
         assert isinstance(self.builder, Builder), "Classes derived from `Buildable` must set `self.builder` to a `Builder`"
-        assert self.found_depends, f"Failed to obtain dependencies {self.depends()} for {self.output()}. Search result:\n{self.found_depends}"
+        assert self.found_depends, f"Failed to obtain dependencies {self.depends()} for {self.output()}."
         if self.up_to_date():
             self.builder.indent_level -= 1
             self.builder.message("\x1b[0;32mFound up-to-date-------\x1b[0m" + str(self))
@@ -388,9 +388,9 @@ class Catch2(C_project):
     installed_files = {"include":["catch2/catch_all.hpp"], "lib":["libCatch2.so"], "lib":["libCatch2Main.so"]}
     def build(self):
         directory = self.builder.fetch_archive(
-            f"https://github.com/catchorg/Catch2/archive/refs/tags/v{version}.tar.gz", dir_name=f"Catch2-{version}"
+            f"https://github.com/catchorg/Catch2/archive/refs/tags/v{self.version}.tar.gz", outputs=f"Catch2-{self.version}"
         )[0]
-        self.builder.cmake(directory, "-DBUILD_TESTING=OFF")
+        self.builder.cmake(directory, ["-DBUILD_TESTING=OFF", "-DBUILD_SHARED_LIBS=ON"])
 
 class Pip(Buildable):
     fake_names = {

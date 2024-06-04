@@ -15,7 +15,7 @@ class Hexed(bu.C_project):
         self.builder.use_xdmf = True
         self.builder.use_tecio = False
         self.builder.obsessive_timing = False
-        self.builder.build_tests = False
+        self.builder.build_tests = True
         self.builder.build_docs = False
     def depends(self):
         deps = [
