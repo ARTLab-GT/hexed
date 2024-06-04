@@ -186,6 +186,8 @@ class Buildable(Deliverable):
     builder = None
     _found_output = None
     _found_depends = None
+    def __init__(self, builder):
+        self.builder = builder
     def depends(self):
         raise NotImplementedError("`Constructable.depends` must be implemented by derived classes")
     def output(self):
@@ -303,14 +305,23 @@ class Extract(Buildable):
     def __str__(self):
         return str(self.extracted)
 
-class Eigen(Buildable):
+class C_project(Buildable):
+    version = "<unspecified version>"
+    installed_files = {"bin":[], "include":[], "lib":[], "cmake":[]}
+    def output(self):
+        outs = []
+        for prefix in self.installed_files.keys():
+            for name in self.installed_files[prefix]:
+                outs.append(self.builder.find_in(prefix, name))
+        return all_(outs)
+    def __str__(self):
+        return f"{type(self).__name__.lower()} {self.version}"
+
+class Eigen(C_project):
     version = "3.4.0"
-    def __init__(self, builder):
-        self.builder = builder
+    installed_files = {"include": ["Eigen"]}
     def depends(self):
         return Dummy(Completed([], True, 0., 0.))
-    def output(self):
-        return self.builder.find_in("include", "Eigen")
     def build(self):
         directory = self.builder.fetch_tar(f"https://gitlab.com/libeigen/eigen/-/archive/{self.version}/eigen-{self.version}.tar.gz")[0]
         self.builder.copy(directory + "Eigen", self.builder.build_dir + "include")()
@@ -319,10 +330,6 @@ class Pip(Buildable):
     fake_names = {
         "gitpython": "git",
     }
-    def _get_name(self, name):
-        if name in self.fake_names.keys():
-            name = self.fake_names[name]
-        return [name, name + ".py"]
     def __init__(self, builder, package_names):
         self.builder = builder
         self._names = package_names
@@ -331,7 +338,12 @@ class Pip(Buildable):
     def depends(self):
         return all_([])
     def output(self):
-        return all_(self.builder.find_in("python", self._get_name(n)) for n in self._names)
+        outs = []
+        for name in self._names:
+            if name in self.fake_names.keys():
+                name = self.fake_names[name]
+            outs.append(any_([self.builder.find_in("python", name + ext) for ext in ["", ".py"]]))
+        return all_(outs)
     def build(self):
         self.builder.python("-m", "pip", "install", *self._names)
     def __str__(self):
@@ -456,21 +468,16 @@ class Builder:
         archive = self.Wget(url)().file_name
         return self.Extract(archive)().extracted.find().assets
 
-    def find_in(self, prefix, names, inner_op=any_):
-        if isinstance(names, str):
-            names = [names]
+    def find_in(self, prefix, name):
         if isinstance(prefix, str):
             prefices = self.prefices[prefix]
-        total = []
-        for name in names:
-            prefixed = []
-            if name.startswith("/"):
-                prefixed.append(name)
-            else:
-                for p in prefices:
-                    prefixed.append(slash(p) + name)
-            total.append(inner_op(prefixed))
-        return any_(total, name=f"<{prefix}>/{names}")
+        prefixed = []
+        if name.startswith("/"):
+            prefixed.append(name)
+        else:
+            for p in prefices:
+                prefixed.append(slash(p) + name)
+        return any_(prefixed, name=f"<{prefix}>/{name}")
 
     def parameters(self):
         d = {}
