@@ -102,11 +102,14 @@ class Deliverable:
                 raise Exception("can only make a `Deliverable` out of a `Deliverable`, a `str`, or an iterable")
 
 class File(Deliverable):
-    def __init__(self, path):
+    def __init__(self, path, ignore=lambda f: False):
         self._path = path
+        self.ignore = ignore
     def find(self):
         compl = Completed([], False, time.time(), 0.)
         def add(path):
+            if self.ignore(path):
+                return
             if os.path.isfile(path):
                 compl.found = True
                 compl.assets.append(path)
@@ -210,21 +213,26 @@ class Buildable(Deliverable):
     def __str__(self):
         return str(self.output())
     def find(self):
+        if not isinstance(self.depends(), Dummy):
+            self.builder.message(    "\x1b[0;94mChecking dependencies--\x1b[0m" + str(self))
+        self.builder.indent_level += 1
         assert isinstance(self.builder, Builder), "Classes derived from `Buildable` must set `self.builder` to a `Builder`"
         assert self.found_depends, f"Failed to obtain dependencies {self.depends()} for {self.output()}. Search result:\n{self.found_depends}"
         if self.up_to_date():
-            self.builder.message("\x1b[0;32mUp to date: \x1b[0m" + str(self))
+            self.builder.indent_level -= 1
+            self.builder.message("\x1b[0;32mFound up-to-date-------\x1b[0m" + str(self))
         else:
-            self.builder.message("\x1b[1;34mBuilding:   \x1b[0m" + str(self))
-            self.builder.indent_level += 1
+            self.builder.indent_level -= 1
+            self.builder.message("\x1b[1;35mBuilding---------------\x1b[0m" + str(self))
             cwd = os.getcwd()
             os.chdir(self.builder.build_dir)
+            self.builder.indent_level += 1
             self.build()
             os.chdir(cwd)
-            self.builder.indent_level -= 1
             self._found_output = self.output().find()
             self.touch()
-            self.builder.message("\x1b[1;32mBuilt:      \x1b[0m" + str(self))
+            self.builder.indent_level -= 1
+            self.builder.message("\x1b[1;32mBuilt------------------\x1b[0m" + str(self))
         return self.found_output
     def __call__(self):
         assert self.find(), f"Attempt to build {self} did not produce required output."
@@ -234,6 +242,8 @@ class Copy(Buildable):
     @staticmethod
     def names(source, destination, origin=""):
         source = absolute(source)
+        if os.path.isdir(source):
+            source = slash(source)
         if len(origin):
             origin = slash(absolute(origin))
         else:
@@ -241,11 +251,11 @@ class Copy(Buildable):
         assert source.startswith(origin), f"Source `{source}` is not contained in origin `{origin}`."
         source_name = source[len(origin):]
         destination = absolute(destination)
-        if os.path.isdir(destination):
-            destination = slash(destination)
+        if destination.endswith("/") or os.path.isdir(destination) or os.path.isdir(source):
             dest_name = source_name
         else:
             destination, dest_name = os.path.split(destination)
+        destination = slash(destination)
         return origin + source_name, destination + dest_name, origin, source_name, destination, dest_name
     def __init__(self, builder, source, destination, origin=""):
         self.builder = builder
@@ -312,7 +322,7 @@ class Git_clone(Buildable):
     def __str__(self):
         return f"git repo `{self.name}`"
     def depends(self):
-        return self.builder.Pip("gitpython")
+        return self.builder.build(Pip)("gitpython")
     def output(self):
         return File(self.name)
     def build(self):
@@ -359,9 +369,9 @@ class Libxml2(C_project):
 class Xdmf(C_project):
     installed_files = {"include":["Xdmf.hpp"], "lib":["libXdmf.so", "libXdmfCore.so"], "cmake":["Xdmf"]}
     def depends(self):
-        return self.builder.Libxml2()
+        return self.builder.build(Libxml2)()
     def build(self):
-        self.builder.Git_clone("https://gitlab.kitware.com/xdmf/xdmf.git", "xdmf")()
+        self.builder.build(Git_clone)("https://gitlab.kitware.com/xdmf/xdmf.git", "xdmf")()
         self.builder.env["XDMF_INSTALL_DIR"] = self.builder.build_dir
         problem_file = f"{os.getcwd()}/xdmf/core/XdmfHDF5Controller.hpp"
         with open(problem_file, "r") as in_file:
@@ -372,6 +382,15 @@ class Xdmf(C_project):
         with open(problem_file, "w") as out_file:
             out_file.write(text)
         self.builder.cmake("xdmf", opts=["-Wno-dev", "-DBUILD_STATIC_LIBS=OFF", "-DBUILD_SHARED_LIBS=ON"])
+
+class Catch2(C_project):
+    version = "3.6.0"
+    installed_files = {"include":["catch2/catch_all.hpp"], "lib":["libCatch2.so"], "lib":["libCatch2Main.so"]}
+    def build(self):
+        directory = self.builder.fetch_archive(
+            f"https://github.com/catchorg/Catch2/archive/refs/tags/v{version}.tar.gz", dir_name=f"Catch2-{version}"
+        )[0]
+        self.builder.cmake(directory, "-DBUILD_TESTING=OFF")
 
 class Pip(Buildable):
     fake_names = {
@@ -441,15 +460,6 @@ class Union(Buildable):
         return self._name
 
 class Builder:
-    def __getattr__(self, attr_name):
-        if attr_name in globals().keys():
-            attr = globals()[attr_name]
-            if inspect.isclass(attr) and issubclass(attr, Buildable):
-                def construct_buildable(*args, **kwargs):
-                    args = (self,) + args
-                    return attr(*args, **kwargs)
-                return construct_buildable
-        raise Exception(f"`{attr_name}` is neither an attribute of `Builder` nor a `Buildable` subclass")
     def __init__(self, build_dir, venv=True, version=(1, 0, 0)):
         self.source_dir = slash(os.getcwd())
         self.build_dir = self.source_dir + "build_test/"
@@ -462,7 +472,7 @@ class Builder:
         self.env = dict(os.environ)
         if venv:
             self.venv_dir = self.build_dir + ".build_venv/"
-            self.Subprocess(["python3", "-m", "venv", self.venv_dir], self.venv_dir)()
+            self.build(Subprocess)(["python3", "-m", "venv", self.venv_dir], self.venv_dir)()
             self._python = self.venv_dir + "bin/python3"
         else:
             self.venv_dir = None
@@ -475,7 +485,7 @@ class Builder:
         self.add_prefix("cmake", ["CMAKE_PREFIX_PATH"])
         self.prefices["cmake"].append(self.build_dir + "lib/cmake/")
         self.env["CMAKE_PREFIX_PATH"] = self.env["CMAKE_PREFIX_PATH"].replace(self.build_dir + "cmake/", self.build_dir)
-        self.Pip("cmake")()
+        self.build(Pip)("cmake")()
 
     def add_prefix(self, dir_name, var_names):
         path = slash(self.build_dir + dir_name)
@@ -533,8 +543,8 @@ class Builder:
         os.chdir(cwd)
 
     def fetch_archive(self, url, outputs=None):
-        archive = self.Wget(url)().file_name
-        return self.Extract(archive, outputs)().extracted.find().assets
+        archive = self.build(Wget)(url)().file_name
+        return self.build(Extract)(archive, outputs)().extracted.find().assets
 
     def find_in(self, prefix, name):
         if isinstance(prefix, str):
@@ -556,14 +566,23 @@ class Builder:
                     d[attr] = value
         return d
 
-    def copy_directory(self, source, destination):
-        return Union(self, [Copy(self, f, destination, origin=parent(source)) for f in contents(source)], name=f"`{Copy.names(source, destination)[1]}`")
-
     def copy(self, source, destination):
         if os.path.isdir(source):
-            return self.copy_directory(source, destination)
+            if os.path.exists(destination):
+                assert os.path.isdir(destination), f"Cannot copy directory {source} to file {destination}."
+                origin = parent(source)
+            else:
+                origin = source
+            destination = slash(destination)
+            return Union(self, [Copy(self, f, destination, origin=origin) for f in contents(source)],
+                         name=f"`{Copy.names(source, destination)[0]}`")
         elif os.path.isfile(source):
             return Copy(self, source, destination)
         else:
             raise Exception(f"Cannot copy from {source} as it does not exist")
 
+    def build(self, b):
+        assert issubclass(b, Buildable), "A `Builder` can only build a `Buildable`."
+        def construct(*args, **kwargs):
+            return b(*([self] + list(args)), **kwargs)
+        return construct
