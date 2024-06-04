@@ -30,5 +30,6 @@ builder.Pip([
     "twine",
 ])()
 builder.Eigen()()
+builder.HDF5()()
 builder.copy(builder.source_dir + "include", builder.build_dir)()
 builder.Configure(builder.source_dir + "config.hpp.in", builder.build_dir + "include/config.hpp")()

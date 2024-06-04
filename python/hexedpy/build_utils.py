@@ -179,9 +179,6 @@ def env_path(name):
     else:
         return []
 
-def add_env_path(name, path):
-    os.environ[name] = ":".join(env_path(name) + [path])
-
 class Buildable(Deliverable):
     builder = None
     _found_output = None
@@ -189,7 +186,7 @@ class Buildable(Deliverable):
     def __init__(self, builder):
         self.builder = builder
     def depends(self):
-        raise NotImplementedError("`Constructable.depends` must be implemented by derived classes")
+        return Dummy(Completed([], True, 0., 0.))
     def output(self):
         raise NotImplementedError("`Constructable.output` must be implemented by derived classes")
     def build(self):
@@ -315,16 +312,22 @@ class C_project(Buildable):
                 outs.append(self.builder.find_in(prefix, name))
         return all_(outs)
     def __str__(self):
-        return f"{type(self).__name__.lower()} {self.version}"
+        return f"{type(self).__name__} {self.version}"
 
 class Eigen(C_project):
     version = "3.4.0"
     installed_files = {"include": ["Eigen"]}
-    def depends(self):
-        return Dummy(Completed([], True, 0., 0.))
     def build(self):
-        directory = self.builder.fetch_tar(f"https://gitlab.com/libeigen/eigen/-/archive/{self.version}/eigen-{self.version}.tar.gz")[0]
+        directory = self.builder.fetch_archive(f"https://gitlab.com/libeigen/eigen/-/archive/{self.version}/eigen-{self.version}.tar.gz")[0]
         self.builder.copy(directory + "Eigen", self.builder.build_dir + "include")()
+
+class HDF5(C_project):
+    version = "1.14.4.3"
+    installed_files = {"include":["H5Cpp.h"], "lib":["libhdf5.so", "libhdf5_cpp.so"], "cmake":["hdf5-config.cmake"]}
+    def build(self):
+        directory = self.builder.fetch_archive(f"https://github.com/HDFGroup/hdf5/archive/refs/tags/hdf5_{self.version}.tar.gz",
+                                               outputs=f"hdf5-hdf5_{self.version}")[0]
+        self.builder.cmake(directory, ["-DHDF5_BUILD_CPP_LIB=ON"])
 
 class Pip(Buildable):
     fake_names = {
@@ -410,6 +413,7 @@ class Builder:
         self.version_patch = version[2]
         self.indent_level = 0
         self.tab = " \x1b[1;34m|\x1b[0m"
+        self.env = dict(os.environ)
         if venv:
             self.venv_dir = self.build_dir + ".build_venv/"
             self.Subprocess(["python3", "-m", "venv", self.venv_dir], self.venv_dir)()
@@ -417,18 +421,26 @@ class Builder:
         else:
             self.venv_dir = None
             self._python = "python3"
-        self.prefices = {
-            "python": eval(self.python("-c", "import sys; print(sys.path)", silent=True)[1]),
-        }
-        self.add_sys_path("bin", "PATH")
-        self.add_sys_path("include", "INCLUDE_PATH")
-        self.add_sys_path("lib", "LIBRARY_PATH")
-        self.mkdir("share")
+        self.prefices = {"python": eval(self.python("-c", "import sys; print(sys.path)", silent=True)[1])}
+        self.add_prefix("bin", ["PATH"])
+        self.add_prefix("lib", ["LIBRARY_PATH", "LD_LIBRARY_PATH", "DT_RPATH"])
+        self.add_prefix("include", ["INCLUDE_PATH", "CPLUS_INCLUDE_PATH"])
+        self.add_prefix("share", [])
+        self.add_prefix("cmake", ["CMAKE_PREFIX_PATH"])
+        self.prefices["cmake"].append(self.build_dir + "lib/cmake/")
+        self.env["CMAKE_PREFIX_PATH"] = self.env["CMAKE_PREFIX_PATH"].replace(self.build_dir + "cmake/", self.build_dir)
 
-    def add_sys_path(self, dir_name, env_name):
-        self.mkdir(dir_name)
-        add_env_path(env_name, self.build_dir + dir_name)
-        self.prefices[dir_name] = env_path(env_name)
+    def add_prefix(self, dir_name, var_names):
+        path = slash(self.build_dir + dir_name)
+        self.mkdir(path)
+        self.prefices[dir_name] = [path]
+        for var in var_names:
+            if var in self.env.keys():
+                for p in self.env[var].split(":"):
+                    if p and p not in self.prefices[dir_name]:
+                        self.prefices[dir_name].append(p)
+        for var in var_names:
+            self.env[var] = ":".join(self.prefices[dir_name])
 
     def indent(self):
         return self.indent_level*self.tab
@@ -437,7 +449,7 @@ class Builder:
         print(self.indent() + text)
 
     def mkdir(self, name):
-        os.makedirs(self.build_dir + name, exist_ok=True)
+        os.makedirs(absolute(name), exist_ok=True)
 
     def subproc(self, args, **kwargs):
         silent = False
@@ -445,7 +457,7 @@ class Builder:
             silent = kwargs.pop("silent")
         kwargs["stdout"] = subp.PIPE
         kwargs["stderr"] = subp.PIPE
-        proc = subp.Popen(args, **kwargs)
+        proc = subp.Popen(args, env=self.env, **kwargs)
         output = ""
         while proc.poll() is None:
             for stream in [proc.stdout, proc.stderr]:
@@ -464,9 +476,18 @@ class Builder:
     def python(self, *args, **kwargs):
         return self.subproc([self._python] + list(args), **kwargs)
 
-    def fetch_tar(self, url):
+    def cmake(self, source_dir, opts=[], build_dir="build"):
+        cwd = os.getcwd()
+        os.chdir(source_dir)
+        self.mkdir(build_dir)
+        os.chdir(build_dir)
+        self.subproc([self.venv_dir + "bin/cmake", "-DCMAKE_INSTALL_PREFIX=" + self.build_dir] + opts + [".."])
+        self.subproc(["make", f"-j{self.n_procs}", "install"])
+        os.chdir(cwd)
+
+    def fetch_archive(self, url, outputs=None):
         archive = self.Wget(url)().file_name
-        return self.Extract(archive)().extracted.find().assets
+        return self.Extract(archive, outputs)().extracted.find().assets
 
     def find_in(self, prefix, name):
         if isinstance(prefix, str):
