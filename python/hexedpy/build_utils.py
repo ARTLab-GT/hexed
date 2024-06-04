@@ -184,42 +184,46 @@ def add_env_path(name, path):
 
 class Buildable(Deliverable):
     builder = None
-    found_output = None
-    found_depends = None
+    _found_output = None
+    _found_depends = None
     def depends(self):
         raise NotImplementedError("`Constructable.depends` must be implemented by derived classes")
     def output(self):
         raise NotImplementedError("`Constructable.output` must be implemented by derived classes")
     def build(self):
         raise NotImplementedError("`Constructable.build` must be implemented by derived classes")
-    def extra_utd_req(self):
-        return True
+    @property
+    def found_output(self):
+        if self._found_output is None:
+            self._found_output = Deliverable.make(self.output()).find()
+        return self._found_output
+    @property
+    def found_depends(self):
+        if self._found_depends is None:
+            self._found_depends = Deliverable.make(self.depends()).find()
+        return self._found_depends
     def up_to_date(self):
-        assert isinstance(self.builder, Builder), "Classes derived from `Buildable` must set `self.builder` to a `Builder`"
-        depends = Deliverable.make(self.depends())
-        self.found_depends = depends.find()
-        output = Deliverable.make(self.output())
-        self.found_output = output.find()
-        assert self.found_depends, f"Failed to obtain dependencies {depends} for {output}. Search result:\n{self.found_depends}"
-        return self.found_output and self.found_output.earliest_mtime >= self.found_depends.latest_mtime and self.extra_utd_req()
+        return self.found_output and self.found_output.earliest_mtime >= self.found_depends.latest_mtime
     def __str__(self):
         return str(self.output())
     def find(self):
+        assert isinstance(self.builder, Builder), "Classes derived from `Buildable` must set `self.builder` to a `Builder`"
+        assert self.found_depends, f"Failed to obtain dependencies {self.depends()} for {self.output()}. Search result:\n{self.found_depends}"
         if self.up_to_date():
-            self.builder.message("\x1b[0;32mFound up to date \x1b[0m" + str(self))
+            self.builder.message("\x1b[0;32mUp to date: \x1b[0m" + str(self))
         else:
-            self.builder.message("\x1b[1;34mBuilding         \x1b[0m" + str(self))
+            self.builder.message("\x1b[1;34mBuilding:   \x1b[0m" + str(self))
             self.builder.indent_level += 1
             cwd = os.getcwd()
             os.chdir(self.builder.build_dir)
             self.build()
             os.chdir(cwd)
             self.builder.indent_level -= 1
-            self.found_output = self.output().find()
-            self.builder.message("\x1b[1;32mBuilt            \x1b[0m" + str(self))
+            self._found_output = self.output().find()
+            self.builder.message("\x1b[1;32mBuilt:      \x1b[0m" + str(self))
         return self.found_output
     def __call__(self):
-        self.find()
+        assert self.find(), f"Attempt to build {self} did not produce required output."
         return self
 
 class Copy(Buildable):
@@ -252,7 +256,7 @@ class Copy(Buildable):
         os.makedirs(os.path.split(self._dest)[0], exist_ok=True)
         shutil.copy(self._source, self._dest)
 
-class Commands(Buildable):
+class Subprocess(Buildable):
     def __init__(self, builder, commands, outputs, depends=[]):
         self.builder = builder
         self._depends = Deliverable.make(depends)
@@ -271,7 +275,7 @@ class Commands(Buildable):
         for comm in self._commands:
             assert self.builder.subproc(comm)
 
-class Wget(Commands):
+class Wget(Subprocess):
     def __init__(self, builder, url):
         self.file_name = url.split("/")[-1]
         super().__init__(builder, ["wget", url], self.file_name, depends=[])
@@ -308,8 +312,7 @@ class Eigen(Buildable):
     def output(self):
         return self.builder.find_in("include", "Eigen")
     def build(self):
-        archive = self.builder.Wget(f"https://gitlab.com/libeigen/eigen/-/archive/{self.version}/eigen-{self.version}.tar.gz")().file_name
-        directory = self.builder.Extract(archive)().extracted.find().assets[0]
+        directory = self.builder.fetch_tar(f"https://gitlab.com/libeigen/eigen/-/archive/{self.version}/eigen-{self.version}.tar.gz")[0]
         self.builder.copy(directory + "Eigen", self.builder.build_dir + "include")()
 
 class Pip(Buildable):
@@ -332,7 +335,7 @@ class Pip(Buildable):
     def build(self):
         self.builder.python("-m", "pip", "install", *self._names)
     def __str__(self):
-        return re.sub("[\['\]]", "", f"packages {self._names}")
+        return re.sub(r"[\['\]]", "", f"packages {self._names}")
 
 class Configure(Buildable):
     def __init__(self, builder, old_name, new_name):
@@ -397,7 +400,7 @@ class Builder:
         self.tab = " \x1b[1;34m|\x1b[0m"
         if venv:
             self.venv_dir = self.build_dir + ".build_venv/"
-            self.Commands(["python3", "-m", "venv", self.venv_dir], self.venv_dir)()
+            self.Subprocess(["python3", "-m", "venv", self.venv_dir], self.venv_dir)()
             self._python = self.venv_dir + "bin/python3"
         else:
             self.venv_dir = None
@@ -448,6 +451,10 @@ class Builder:
 
     def python(self, *args, **kwargs):
         return self.subproc([self._python] + list(args), **kwargs)
+
+    def fetch_tar(self, url):
+        archive = self.Wget(url)().file_name
+        return self.Extract(archive)().extracted.find().assets
 
     def find_in(self, prefix, names, inner_op=any_):
         if isinstance(names, str):
