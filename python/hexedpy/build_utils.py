@@ -442,7 +442,7 @@ class Configure(Buildable):
         self.old_name = old_name
         self.new_name = new_name
     def depends(self):
-        return File(self.old_name)
+        return File(self.old_name) & File(self.builder.cache_file)
     def output(self):
         return File(self.new_name)
     def build(self):
@@ -531,6 +531,7 @@ class Builder:
         for opt in opts:
             self._merge_option(opt)
         self.mkdir(self.build_dir)
+        self.cache_file = self.build_dir + "option_cache"
         self.synch_cache()
         self.indent_level = 0
         self.tab = " \x1b[1;34m|\x1b[0m"
@@ -580,18 +581,20 @@ class Builder:
         return self["build_dir"]
 
     def synch_cache(self):
-        cache_file = self.build_dir + "option_cache"
-        if os.path.isfile(cache_file):
-            with open(cache_file, "r") as cache:
-                for line in cache.read().split("\n"):
+        in_text = ""
+        if os.path.isfile(self.cache_file):
+            with open(self.cache_file, "r") as cache:
+                in_text = cache.read()
+                for line in in_text.split("\n"):
                     if line:
                         self._merge_option(line)
-        text = ""
+        out_text = ""
         for name in self.options():
             if name != "build_dir":
-                text += f"--{name}={self[name]}\n"
-        with open(cache_file, "w") as cache:
-            cache.write(text)
+                out_text += f"--{name}={self[name]}\n"
+        if out_text != in_text:
+            with open(self.cache_file, "w") as cache:
+                cache.write(out_text)
 
     def add_prefix(self, dir_name, var_names):
         path = slash(self.build_dir + dir_name)
