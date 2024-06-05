@@ -6,30 +6,31 @@ class Hexed(bu.C_project):
     installed_files = {"bin":[], "include":["hexed"], "lib":[]}
     def __init__(self, builder):
         self.builder = builder
-        self.builder.install_prefix = "/usr/local"
-        self.builder.build_mode = "release"
-        self.builder.n_procs = 1
-        self.builder.max_row_size = 8
-        self.builder.threaded = True
-        self.builder.n_threads = os.cpu_count()
-        self.builder.use_xdmf = True
-        self.builder.use_tecio = False
-        self.builder.obsessive_timing = False
-        self.builder.build_tests = True
-        self.builder.build_docs = False
+        self.builder.add_options({
+            "build_mode": bu.Option("release", assertions=bu.assert_true(lambda s: s in ["release", "debug", "fast_debug"])),
+            "max_row_size": bu.Option(8, convert=int, assertions=bu.assert_true(lambda n: n >= 2, "max_row_size must be at least 2")),
+            "threaded": bu.Option(True, convert=bu.as_bool),
+            "n_threads": bu.Option(os.cpu_count(), convert=int, assertions=bu.assert_nonneg),
+            "use_xdmf": bu.Option(True, convert=bu.as_bool),
+            "use_tecio": bu.Option(False, convert=bu.as_bool),
+            "obsessive_timing": bu.Option(False, convert=bu.as_bool),
+            "build_tests": bu.Option(True, convert=bu.as_bool),
+            "build_docs": bu.Option(False, convert=bu.as_bool),
+        })
+        self.builder.info["version_major"], self.builder.info["version_minor"], self.builder.info["version_patch"] = self.version.split(".")
     def depends(self):
         deps = [
             bu.File(self.builder.source_dir, ignore=lambda f: bu.absolute(f) == self.builder.build_dir),
             self.builder.build(bu.Eigen)(),
             self.builder.build(bu.HDF5)(),
         ]
-        if self.builder.use_xdmf:
+        if self.builder["use_xdmf"]:
             deps.append(self.builder.build(bu.Xdmf)())
-        if self.builder.build_tests:
+        if self.builder["build_tests"]:
             deps.append(self.builder.build(bu.Catch2)())
         return deps
     def build(self):
         self.builder.copy(self.builder.source_dir + "include", self.builder.build_dir + "include/hexed")()
         self.builder.build(bu.Configure)(self.builder.source_dir + "config.hpp.in", self.builder.build_dir + "include/config.hpp")()
 
-bu.Builder("build_test", version=(0, 2, 2)).build(Hexed)()()
+bu.Builder().build(Hexed)()()

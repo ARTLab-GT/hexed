@@ -5,6 +5,7 @@ import time
 import site
 import inspect
 import re
+import sys
 
 def format_time(t):
     return time.strftime("%Y-%m-%d %H:%M:%S (UTC %z)", time.localtime(t))
@@ -42,6 +43,26 @@ def contents(name, recursive=True):
                 add_contents(slash(path) + name)
     add_contents(name)
     return c
+
+def as_bool(s):
+    if isinstance(s, str):
+        lower = s.lower()
+        if lower in ["1", "true", "yes", "on", "y", "t", "yeet"]:
+            return True
+        elif lower in ["0", "false", "no", "off", "n", "f", "yoink"]:
+            return False
+        else:
+            raise Exception(f'Could not interpret "{string}" as a Boolean.')
+    else:
+        return bool(s)
+
+def assert_true(fun, message=""):
+    def assertion(arg):
+        assert fun(arg), message
+    return assertion
+
+def assert_nonneg(arg):
+    assert arg >= 0, "negative values forbidden"
 
 class Completed:
     def __init__(self, assets, found, earliest_mtime, latest_mtime):
@@ -82,7 +103,7 @@ class Completed:
 
 class Deliverable:
     def find(self):
-        raise NotImplementedError("`Deliverable.find` must be implemented by derived classes")
+        raise NotImplementedError("Deliverable.find must be implemented by derived classes")
     def __and__(self, other):
         return Boolean(self, other, Completed.and_)
     def __or__(self, other):
@@ -99,7 +120,7 @@ class Deliverable:
             try:
                 return all_(arg)
             except AttributeError:
-                raise Exception("can only make a `Deliverable` out of a `Deliverable`, a `str`, or an iterable")
+                raise Exception("can only make a Deliverable out of a Deliverable, a str, or an iterable")
 
 class File(Deliverable):
     def __init__(self, path, ignore=lambda f: False):
@@ -130,7 +151,7 @@ class File(Deliverable):
         else:
             return Completed([], False, time.time(), 0.)
     def __str__(self):
-        return f"`{self._path}`"
+        return f"{self._path}"
 
 class Boolean(Deliverable):
     def __init__(self, operand0, operand1, operator, name=None):
@@ -191,9 +212,9 @@ class Buildable(Deliverable):
     def depends(self):
         return Dummy(Completed([], True, 0., 0.))
     def output(self):
-        raise NotImplementedError("`Constructable.output` must be implemented by derived classes")
+        raise NotImplementedError("Constructable.output must be implemented by derived classes")
     def build(self):
-        raise NotImplementedError("`Constructable.build` must be implemented by derived classes")
+        raise NotImplementedError("Constructable.build must be implemented by derived classes")
     def touch(self):
         for asset in self.found_output.assets:
             for file in contents(asset):
@@ -216,7 +237,7 @@ class Buildable(Deliverable):
         if not isinstance(self.depends(), Dummy):
             self.builder.message(    "\x1b[0;94mChecking dependencies--\x1b[0m" + str(self))
         self.builder.indent_level += 1
-        assert isinstance(self.builder, Builder), "Classes derived from `Buildable` must set `self.builder` to a `Builder`"
+        assert isinstance(self.builder, Builder), "Classes derived from Buildable must set self.builder to a Builder"
         assert self.found_depends, f"Failed to obtain dependencies {self.depends()} for {self.output()}."
         if self.up_to_date():
             self.builder.indent_level -= 1
@@ -248,7 +269,7 @@ class Copy(Buildable):
             origin = slash(absolute(origin))
         else:
             origin = slash("/".join(source.split("/")[:-1]))
-        assert source.startswith(origin), f"Source `{source}` is not contained in origin `{origin}`."
+        assert source.startswith(origin), f"Source {source} is not contained in origin {origin}."
         source_name = source[len(origin):]
         destination = absolute(destination)
         if destination.endswith("/") or os.path.isdir(destination) or os.path.isdir(source):
@@ -261,10 +282,10 @@ class Copy(Buildable):
         self.builder = builder
         self._source, self._dest = self.names(source, destination, origin)[:2]
     def depends(self):
-        assert not os.path.isdir(self._source), f"`Copy` is only for files. `{self._source}` is a directory."
+        assert not os.path.isdir(self._source), f"Copy is only for files. {self._source} is a directory."
         return File(self._source)
     def output(self):
-        assert not os.path.isdir(self._dest), f"Target file name `{self._dest}` is an existing directory."
+        assert not os.path.isdir(self._dest), f"Target file name {self._dest} is an existing directory."
         return File(self._dest)
     def build(self):
         os.makedirs(os.path.split(self._dest)[0], exist_ok=True)
@@ -320,7 +341,7 @@ class Git_clone(Buildable):
         self.repo = repo
         self.name = cloned_name
     def __str__(self):
-        return f"git repo `{self.name}`"
+        return f"git repo {self.name}"
     def depends(self):
         return self.builder.build(Pip)("gitpython")
     def output(self):
@@ -364,7 +385,7 @@ class Libxml2(C_project):
         )[0]
         os.chdir(directory)
         self.builder.subproc([slash(os.getcwd()) + "configure", f"--prefix={self.builder.build_dir}", "--with-python=no", "--enable-static=no", "--enable-shared=yes"])
-        self.builder.subproc(["make", f"-j{self.builder.n_procs}", "install"])
+        self.builder.subproc(["make", f"-j{self.builder['n_build_procs']}", "install"])
 
 class Xdmf(C_project):
     installed_files = {"include":["Xdmf.hpp"], "lib":["libXdmf.so", "libXdmfCore.so"], "cmake":["Xdmf"]}
@@ -430,10 +451,9 @@ class Configure(Buildable):
         while True:
             match = re.search(r"{\[([^}]+)\]}", text)
             if match is None: break
-            args = [match.group(1)]
-            if self.builder:
-                args.append(self.builder.parameters())
-            text = f"{text[:match.start()]}{eval(*args)}{text[match.end():]}"
+            options = self.builder
+            info = self.builder.info
+            text = f"{text[:match.start()]}{eval(match.group(1))}{text[match.end():]}"
         with open(self.new_name, "w") as out_file:
             out_file.write(text)
 
@@ -459,18 +479,63 @@ class Union(Buildable):
     def __str__(self):
         return self._name
 
+class Option:
+    def _set(self, value):
+        self._value = self._convert(value)
+        self._assertions(self._value)
+    def __init__(self, value="", convert=lambda x: x, assertions=lambda x: None):
+        self._convert = convert
+        self._assertions = assertions
+        self._set(value)
+        self._modified = False
+    @property
+    def value(self):
+        return self._value
+    @property
+    def modified(self):
+        return self._modified
+    def set_to(self, value):
+        self._set(value)
+        self._modified = True
+    def merge(self, other):
+        self._convert = other._convert
+        self._assertions = other._assertions
+        self._set(self._value)
+    @staticmethod
+    def directory(default):
+        def assert_is_dir(path):
+            assert os.path.isdir(path), f"{path} is not a directory."
+        return Option(value=default, convert=lambda p: absolute(slash(p)), assertions=assert_is_dir)
+    def __str__(self):
+        return str(self.value)
+
 class Builder:
-    def __init__(self, build_dir, venv=True, version=(1, 0, 0)):
-        self.source_dir = slash(os.getcwd())
-        self.build_dir = self.source_dir + "build_test/"
-        self.mkdir(build_dir)
-        self.version_major = version[0]
-        self.version_minor = version[1]
-        self.version_patch = version[2]
+    def _merge_option(self, opt):
+        match = re.fullmatch("--([a-z_]+)=(.*)", opt)
+        assert match, f"Invalid option syntax `{opt}`. Options must be of the form --option_name=value"
+        name = match.group(1)
+        if name not in self.options():
+            self._options[name] = Option()
+        if not self._options[name].modified:
+            self._options[name].set_to(match.group(2))
+
+    def __init__(self, opts=sys.argv[1:]):
+        self._options = {
+            "source_dir": Option.directory(os.getcwd()),
+            "build_dir": Option("build", convert=lambda p: absolute(slash(p))),
+            "venv": Option(True, convert=as_bool),
+            "n_build_procs": Option(1, convert=int),
+            "install_prefix": Option.directory("/usr/local"),
+        }
+        self.info = {}
+        for opt in opts:
+            self._merge_option(opt)
+        self.mkdir(self.build_dir)
+        self.synch_cache()
         self.indent_level = 0
         self.tab = " \x1b[1;34m|\x1b[0m"
         self.env = dict(os.environ)
-        if venv:
+        if self["venv"]:
             self.venv_dir = self.build_dir + ".build_venv/"
             self.build(Subprocess)(["python3", "-m", "venv", self.venv_dir], self.venv_dir)()
             self._python = self.venv_dir + "bin/python3"
@@ -486,6 +551,47 @@ class Builder:
         self.prefices["cmake"].append(self.build_dir + "lib/cmake/")
         self.env["CMAKE_PREFIX_PATH"] = self.env["CMAKE_PREFIX_PATH"].replace(self.build_dir + "cmake/", self.build_dir)
         self.build(Pip)("cmake")()
+
+    def __getitem__(self, name):
+        if name in self.options():
+            return self._options[name].value
+        elif name in self.info.keys():
+            return self.info[name]
+        else:
+            raise Exception(f"`{name}` is neither an `Option` nor an `info` field of this `Builder`")
+
+    def options(self):
+        return sorted(self._options.keys())
+
+    def add_options(self, opts):
+        for name in opts.keys():
+            if name in self.options():
+                self._options[name].merge(opts[name])
+            else:
+                self._options[name] = opts[name]
+        self.synch_cache()
+
+    @property
+    def source_dir(self):
+        return self["source_dir"]
+
+    @property
+    def build_dir(self):
+        return self["build_dir"]
+
+    def synch_cache(self):
+        cache_file = self.build_dir + "option_cache"
+        if os.path.isfile(cache_file):
+            with open(cache_file, "r") as cache:
+                for line in cache.read().split("\n"):
+                    if line:
+                        self._merge_option(line)
+        text = ""
+        for name in self.options():
+            if name != "build_dir":
+                text += f"--{name}={self[name]}\n"
+        with open(cache_file, "w") as cache:
+            cache.write(text)
 
     def add_prefix(self, dir_name, var_names):
         path = slash(self.build_dir + dir_name)
@@ -527,7 +633,7 @@ class Builder:
             time.sleep(0.1)
         if not silent:
             print(len(self.indent())*"\x1b[1D", end="", flush=True)
-        assert proc.returncode == 0, f"command `{args}` failed"
+        assert proc.returncode == 0, f"command {args} failed"
         return proc.returncode, output
 
     def python(self, *args, **kwargs):
@@ -539,7 +645,7 @@ class Builder:
         self.mkdir(build_dir)
         os.chdir(build_dir)
         self.subproc([self.venv_dir + "bin/cmake", "-DCMAKE_INSTALL_PREFIX=" + self.build_dir] + opts + [".."])
-        self.subproc(["make", f"-j{self.n_procs}", "install"])
+        self.subproc(["make", f"-j{self['n_build_procs']}", "install"])
         os.chdir(cwd)
 
     def fetch_archive(self, url, outputs=None):
@@ -575,14 +681,14 @@ class Builder:
                 origin = source
             destination = slash(destination)
             return Union(self, [Copy(self, f, destination, origin=origin) for f in contents(source)],
-                         name=f"`{Copy.names(source, destination)[0]}`")
+                         name=f"{Copy.names(source, destination)[0]}")
         elif os.path.isfile(source):
             return Copy(self, source, destination)
         else:
             raise Exception(f"Cannot copy from {source} as it does not exist")
 
     def build(self, b):
-        assert issubclass(b, Buildable), "A `Builder` can only build a `Buildable`."
+        assert issubclass(b, Buildable), "A Builder can only build a Buildable."
         def construct(*args, **kwargs):
             return b(*([self] + list(args)), **kwargs)
         return construct
