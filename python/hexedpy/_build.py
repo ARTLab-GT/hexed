@@ -56,7 +56,6 @@ class Hexed(bu.C_project):
         sources = ["src/" + s for s in os.listdir(f"{self.builder.source_dir}/src") if s.endswith(".cpp")]
         sources.sort()
         sources.sort(key=lambda s: "kernels" not in s)
-        sources = [s for s in sources if "kernel" not in s]
         sources += [
             f"{self.builder.build_dir}/Gauss_legendre.cpp",
             f"{self.builder.build_dir}/Gauss_lobatto.cpp",

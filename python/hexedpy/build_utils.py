@@ -243,7 +243,7 @@ class Buildable(Deliverable):
         assert self.found_depends, f"Failed to obtain dependencies {self.depends()} for {self.output()}."
         if self.up_to_date():
             #self.builder.indent_level -= 1
-            self.builder.message("\x1b[0;32mFound up-to-date-------\x1b[0m" + str(self))
+            self.builder.message("\x1b[0;94mFound up-to-date-------\x1b[0m" + str(self))
         else:
             #self.builder.indent_level -= 1
             self.builder.message("\x1b[1;35mBuilding---------------\x1b[0m" + str(self))
