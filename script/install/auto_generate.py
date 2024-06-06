@@ -264,4 +264,7 @@ double {name}::min_eig_diffusion() const
         with open(f"{build_dir}/{name}.cpp", "w") as write_file:
             write_file.write(format_file_text(include, text))
 
+if __name__ == "__main__":
+    auto_generate(sys.argv[1], int(sys.argv[2]))
+
 ## \endcond

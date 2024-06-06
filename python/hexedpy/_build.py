@@ -33,5 +33,10 @@ class Hexed(bu.C_project):
         self.builder.add_path("include", self.builder.build_dir + "include/hexed")
         self.builder.copy(self.builder.source_dir + "include", self.builder.build_dir + "include/hexed")()
         self.builder.build(bu.Configure)(self.builder.source_dir + "config.hpp.in", self.builder.build_dir + "include/hexed/config.hpp")()
+        self.builder.build(bu.Python_script)(
+            ["Gauss_legendre.cpp", "Gauss_lobatto.cpp"],
+            self.builder.source_dir + "script/install/auto_generate.py",
+            args=[self.builder.build_dir, str(self.builder['max_row_size'])],
+        )()
 
 bu.Builder().build(Hexed)()()

@@ -250,7 +250,7 @@ class Buildable(Deliverable):
             self.builder.indent_level += 1
             self.build()
             os.chdir(cwd)
-            self._found_output = self.output().find()
+            self._found_output = Deliverable.make(self.output()).find()
             self.touch()
             self.builder.indent_level -= 1
             self.builder.message("\x1b[1;32mBuilt------------------\x1b[0m" + str(self))
@@ -461,11 +461,18 @@ class Configure(Buildable):
         with open(self.new_name, "w") as out_file:
             out_file.write(text)
 
-class Python(Buildable):
-    def __init__(self, builder, module=None, commands=[]):
+class Python_script(Buildable):
+    def __init__(self, builder, output, script, args=[]):
         self.builder = builder
-        self._module = module
-        self._commands = commands
+        self._output = output
+        self._script = absolute(script)
+        self._args = args
+    def depends(self):
+        return self.builder.find_source_depends(self._script)
+    def output(self):
+        return self._output
+    def build(self):
+        self.builder.python(self._script, *self._args)
 
 class Union(Buildable):
     def __init__(self, builder, buildables, name=""):
@@ -734,7 +741,7 @@ class Builder:
             patterns = [r"read {(\w+)}"]
             raise NotImplementedError("need to implement prefix for HIL")
         else:
-            raise Exception(f"Unrecognized language option `{lang}`")
+            raise Exception(f"Unrecognized file extension `{ext}`")
         files = []
         depends = []
         def find_recursive(f):
