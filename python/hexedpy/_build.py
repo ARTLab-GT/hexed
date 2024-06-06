@@ -8,7 +8,7 @@ class Hexed(bu.C_project):
     def __init__(self, builder):
         self.builder = builder
         self.builder.add_options({
-            "build_mode": bu.Option("release", assertions=bu.assert_true(lambda s: s in ["release", "debug", "fast_debug"])),
+            "build_mode": bu.Option("release", assertions=bu.assert_true(lambda s: s in ["release", "debug"])),
             "max_row_size": bu.Option(8, convert=int, assertions=bu.assert_true(lambda n: n >= 2, "max_row_size must be at least 2")),
             "threaded": bu.Option(True, convert=bu.as_bool),
             "n_threads": bu.Option(os.cpu_count(), convert=int, assertions=bu.assert_nonneg),
@@ -22,6 +22,10 @@ class Hexed(bu.C_project):
         self.builder.build(bu.Pip)("gitpython")()
         command = f"import git; repo = git.Repo('{self.builder.source_dir}'); print(repo.head.commit)"
         self.builder.info["commit"] = self.builder.python("-c", command, silent=True)[1]
+        if self.builder["build_mode"] == "release":
+            bu.Compile.flags += ["-O3", "-march=native", "-DNDEBUG"]
+        elif self.builder["build_mode"] == "debug":
+            bu.Compile.flags += ["-g3", "-DDEBUG"]
 
     def depends(self):
         deps = [
@@ -45,5 +49,6 @@ class Hexed(bu.C_project):
             self.builder.source_dir + "script/install/auto_generate.py",
             args=[self.builder.build_dir, str(self.builder['max_row_size'])],
         )()
+        self.builder.build(bu.Compile)("src/math.cpp")()
 
 bu.Builder().build(Hexed)()()

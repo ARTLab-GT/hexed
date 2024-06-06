@@ -22,9 +22,11 @@ def slash(d):
         d += "/"
     return d
 
-def absolute(p):
+def absolute(p, default=None):
+    if default is None:
+        default = os.getcwd()
     if not p.startswith("/"):
-        p = slash(os.getcwd()) + p
+        p = slash(default) + p
     return p
 
 def parent(p):
@@ -143,7 +145,7 @@ class File(Deliverable):
                 compl.found = True
                 for p in sorted(os.listdir(path)):
                     add(path + p)
-        add(self._path)
+        add(absolute(self._path))
         return compl
         if os.path.isfile(self._path):
             mtime = os.path.getmtime(self._path)
@@ -325,7 +327,6 @@ class Extract(Buildable):
         if isinstance(outputs, str):
             outputs = File(outputs)
         self.extracted = outputs
-        self.working_dir = parent(self.archive)
     def depends(self):
         return File(self.archive)
     def output(self):
@@ -342,11 +343,10 @@ class Git_clone(Buildable):
         self.name = cloned_name
     def __str__(self):
         return f"git repo {self.name}"
-    def depends(self):
-        return self.builder.build(Pip)("gitpython")
     def output(self):
         return File(self.name)
     def build(self):
+        return self.builder.build(Pip)("gitpython").find()
         self.builder.python("-c", f"import git; git.Repo.clone_from('{self.repo}', '{self.name}')")
 
 class C_project(Buildable):
@@ -366,7 +366,7 @@ class Eigen(C_project):
     installed_files = {"include": ["Eigen"]}
     def build(self):
         directory = self.builder.fetch_archive(f"https://gitlab.com/libeigen/eigen/-/archive/{self.version}/eigen-{self.version}.tar.gz")[0]
-        self.builder.copy(directory + "Eigen", self.builder.build_dir + "include")()
+        self.builder.copy(directory + "Eigen", self.builder.build_dir + "include/Eigen")()
 
 class HDF5(C_project):
     version = "1.14.4.3"
@@ -473,6 +473,27 @@ class Python_script(Buildable):
         return self._output
     def build(self):
         self.builder.python(self._script, *self._args)
+
+class Compile(Buildable):
+    flags = [
+        "-fPIC",
+        "-Wall",
+        "-std=c++20",
+        "-pedantic",
+    ]
+    def __init__(self, builder, source, output_dir=None):
+        self.builder = builder
+        self._source = absolute(source, self.builder.source_dir)
+        if output_dir is None:
+            output_dir = self.builder.build_dir + "object/"
+        self.builder.mkdir(output_dir)
+        self._output = slash(absolute(output_dir)) + ".".join(self._source.split("/")[-1].split(".")[:-1] + ["o"])
+    def depends(self):
+        return self._source
+    def output(self):
+        return self._output
+    def build(self):
+        self.builder.subproc(["g++", "-c"] + self.flags + ["-I" + d for d in self.builder.prefices["include"]] + ["-o", self._output, self._source])
 
 class Union(Buildable):
     def __init__(self, builder, buildables, name=""):
@@ -652,11 +673,10 @@ class Builder:
         if "silent" in kwargs.keys():
             silent = kwargs.pop("silent")
         kwargs["stdout"] = subp.PIPE
-        kwargs["stderr"] = subp.PIPE
         proc = subp.Popen(args, env=self.env, **kwargs)
         output = ""
         while proc.poll() is None:
-            for stream in [proc.stdout, proc.stderr]:
+            for stream in [proc.stdout]:
                 text = stream.read().decode()
                 if not silent:
                     if not output:
@@ -715,9 +735,7 @@ class Builder:
         if os.path.isdir(source):
             if os.path.exists(destination):
                 assert os.path.isdir(destination), f"Cannot copy directory {source} to file {destination}."
-                origin = parent(source)
-            else:
-                origin = source
+            origin = source
             destination = slash(destination)
             return Union(self, [Copy(self, f, destination, origin=origin) for f in contents(source)],
                          name=f"{Copy.names(source, destination)[0]}")
