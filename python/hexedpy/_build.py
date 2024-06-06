@@ -30,7 +30,8 @@ class Hexed(bu.C_project):
             deps.append(self.builder.build(bu.Catch2)())
         return deps
     def build(self):
+        self.builder.add_path("include", self.builder.build_dir + "include/hexed")
         self.builder.copy(self.builder.source_dir + "include", self.builder.build_dir + "include/hexed")()
-        self.builder.build(bu.Configure)(self.builder.source_dir + "config.hpp.in", self.builder.build_dir + "include/config.hpp")()
+        self.builder.build(bu.Configure)(self.builder.source_dir + "config.hpp.in", self.builder.build_dir + "include/hexed/config.hpp")()
 
 bu.Builder().build(Hexed)()()

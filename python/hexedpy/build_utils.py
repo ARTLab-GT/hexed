@@ -434,7 +434,11 @@ class Pip(Buildable):
     def build(self):
         self.builder.python("-m", "pip", "install", *self._names)
     def __str__(self):
-        return re.sub(r"[\['\]]", "", f"packages {self._names}")
+        if len(self._names):
+            s = "s"
+        else:
+            s = ""
+        return re.sub(r"[\['\]]", "", f"package{s} {self._names}")
 
 class Configure(Buildable):
     def __init__(self, builder, old_name, new_name):
@@ -456,6 +460,12 @@ class Configure(Buildable):
             text = f"{text[:match.start()]}{eval(match.group(1))}{text[match.end():]}"
         with open(self.new_name, "w") as out_file:
             out_file.write(text)
+
+class Python(Buildable):
+    def __init__(self, builder, module=None, commands=[]):
+        self.builder = builder
+        self._module = module
+        self._commands = commands
 
 class Union(Buildable):
     def __init__(self, builder, buildables, name=""):
@@ -543,7 +553,8 @@ class Builder:
         else:
             self.venv_dir = None
             self._python = "python3"
-        self.prefices = {"python": eval(self.python("-c", "import sys; print(sys.path)", silent=True)[1])}
+        self.prefices = {"python": [p for p in eval(self.python("-c", "import sys; print(sys.path)", silent=True)[1]) if p]}
+        self.env_paths = {}
         self.add_prefix("bin", ["PATH"])
         self.add_prefix("lib", ["LIBRARY_PATH", "LD_LIBRARY_PATH", "DT_RPATH"])
         self.add_prefix("include", ["INCLUDE_PATH", "CPLUS_INCLUDE_PATH"])
@@ -552,6 +563,7 @@ class Builder:
         self.prefices["cmake"].append(self.build_dir + "lib/cmake/")
         self.env["CMAKE_PREFIX_PATH"] = self.env["CMAKE_PREFIX_PATH"].replace(self.build_dir + "cmake/", self.build_dir)
         self.build(Pip)("cmake")()
+        self.build(Pip)("pypisearch")()
 
     def __getitem__(self, name):
         if name in self.options():
@@ -600,13 +612,24 @@ class Builder:
         path = slash(self.build_dir + dir_name)
         self.mkdir(path)
         self.prefices[dir_name] = [path]
+        self.env_paths[dir_name] = var_names
         for var in var_names:
             if var in self.env.keys():
                 for p in self.env[var].split(":"):
                     if p and p not in self.prefices[dir_name]:
                         self.prefices[dir_name].append(p)
-        for var in var_names:
-            self.env[var] = ":".join(self.prefices[dir_name])
+        self._update_env_paths()
+
+    def _update_env_paths(self):
+        for dir_name in self.env_paths.keys():
+            for var in self.env_paths[dir_name]:
+                self.env[var] = ":".join(self.prefices[dir_name])
+
+    def add_path(self, prefix, path):
+        if prefix not in self.prefices:
+            self.prefices[prefix] = []
+        self.prefices[prefix].append(slash(absolute(path)))
+        self._update_env_paths()
 
     def indent(self):
         return self.indent_level*self.tab
@@ -642,6 +665,10 @@ class Builder:
     def python(self, *args, **kwargs):
         return self.subproc([self._python] + list(args), **kwargs)
 
+    def in_pypi(self, package):
+        output = self.python("-m", "pypisearch", package, silent=True)[1]
+        return f"\n{package} " in "\n" + output
+
     def cmake(self, source_dir, opts=[], build_dir="build"):
         cwd = os.getcwd()
         os.chdir(source_dir)
@@ -658,6 +685,8 @@ class Builder:
     def find_in(self, prefix, name):
         if isinstance(prefix, str):
             prefices = self.prefices[prefix]
+        else:
+            prefices = prefix
         prefixed = []
         if name.startswith("/"):
             prefixed.append(name)
@@ -689,6 +718,47 @@ class Builder:
             return Copy(self, source, destination)
         else:
             raise Exception(f"Cannot copy from {source} as it does not exist")
+
+    def find_source_depends(self, file):
+        ext = file.split(".")[-1]
+        if ext == "py":
+            patterns = [
+                r"(?:^|\n) *import +([a-zA-Z]+)(?:\.[a-zA-Z.]+)?(?: +as [a-zA-Z.]+)?",
+                r"(?:^|\n) *from +([a-zA-Z]+)(?:\.[a-zA-Z.]+)? +import +(?:[a-zA-Z.]+|\*)",
+            ]
+            prefix = self.prefices["python"] + [parent(absolute(file))]
+        elif ext in ["c", "cpp", "cxx", "c++", "h", "hpp", "hxx", "h++"]:
+            patterns = [r'#include ["<]([a-zA-Z.]+)[">]']
+            prefix = "include"
+        elif ext == "hil":
+            patterns = [r"read {(\w+)}"]
+            raise NotImplementedError("need to implement prefix for HIL")
+        else:
+            raise Exception(f"Unrecognized language option `{lang}`")
+        files = []
+        depends = []
+        def find_recursive(f):
+            depend = self.find_in(prefix, f)
+            if ext == "py":
+                depend = depend | self.find_in(prefix, f + ".py")
+            assets = depend.find().assets
+            if len(assets):
+                asset = assets[0]
+                files.append(asset)
+                depends.append(depend)
+                if (asset.startswith(self.source_dir) or asset.startswith(self.build_dir)) and not asset.startswith(self.venv_dir):
+                    with open(asset, "r") as in_file:
+                        text = in_file.read()
+                    for pattern in patterns:
+                        for match in re.findall(pattern, text):
+                            if match not in files:
+                                files.append(match)
+                                find_recursive(match)
+            else:
+                if ext == "py" and self.in_pypi(f):
+                    depends.append(self.build(Pip)(f))
+        find_recursive(file)
+        return all_(depends)
 
     def build(self, b):
         assert issubclass(b, Buildable), "A Builder can only build a Buildable."
