@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hexedpy"
-version = "{[version]}"
+version = "{[info['version']]}"
 authors = [
   { name="Micaiah Smith-Pierce", email="micaiah@gatech.edu" },
 ]
@@ -23,6 +23,7 @@ dependencies = [
     "sympy",
     "scipy",
     "gitpython",
+    "setuptools",
 ]
 
 [project.urls]
@@ -30,9 +31,9 @@ Homepage = "https://github.com/ARTLab-GT/hexed"
 Documentation = "https://artlab-gt.github.io/hexed/"
 
 [project.scripts]
-hil = "hexedpy.wrappers:hil"
-hexecute = "hexedpy.wrappers:hexecute"
-hexed_test = "hexedpy.wrappers:hexed_test"
+hil = "hexedpy._wrappers:hil"
+hexecute = "hexedpy._wrappers:hexecute"
+hexed_test = "hexedpy._wrappers:hexed_test"
 
 [tool.setuptools.package-data]
-hexedpy = ["bin/*", "lib/*"]
+hexedpy = ["bin/*", "lib/*", "lib/hexed/*"]

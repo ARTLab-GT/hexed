@@ -472,13 +472,14 @@ class Configure(Buildable):
             out_file.write(text)
 
 class Python_script(Buildable):
-    def __init__(self, builder, output, script, args=[]):
+    def __init__(self, builder, output, script, args=[], extra_depends=[]):
         self.builder = builder
         self._output = output
         self._script = absolute(script)
         self._args = args
+        self._extra_depends = extra_depends
     def depends(self):
-        return self.builder.find_source_depends(self._script)
+        return self.builder.find_source_depends(self._script) & Deliverable.make(self._extra_depends)
     def output(self):
         return self._output
     def build(self):
@@ -518,6 +519,24 @@ class Link(Subprocess):
             args.append("-l" + lib)
             depends.append(builder.find_in("lib", f"lib{lib}.so") | builder.find_in("lib", f"lib{lib}.a"))
         super().__init__(builder, args, name, depends=depends)
+
+class Python_package(Buildable):
+    def __init__(self, builder, source_dir):
+        self.builder = builder
+        self._source = slash(absolute(source_dir))
+        self._dist = self._source + "dist/"
+    def depends(self):
+        return self._source
+    def output(self):
+        return any_([f for f in contents(self._dist) if f.endswith(".whl")])
+    def build(self):
+        self.builder.build(Pip)("build")()
+        if os.path.exists(self._dist):
+            shutil.rmtree(self._dist)
+        os.chdir(self._source)
+        self.builder.python("-m", "build")
+    def __str__(self):
+        return f"local Python package `{self._source}`"
 
 class Union(Buildable):
     def __init__(self, builder, buildables, name="", parallel=False):

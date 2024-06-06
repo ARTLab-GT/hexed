@@ -16,8 +16,9 @@ def add_path(path_name, var):
 def run_exec(name):
     exec_path = resource_filename("hexedpy", "bin/" + name)
     lib_dir = "/".join(exec_path.split("/")[:-2] + ["lib"])
-    for var in ["HEXEDPATH", "LD_LIBRARY_PATH", "DT_RPATH"]:
-        add_path(lib_dir, var)
+    add_path(lib_dir, "LD_LIBRARY_PATH")
+    add_path(lib_dir, "DT_RPATH")
+    add_path(lib_dir + "/hexed/", "HEXEDPATH")
     run([exec_path] + argv[1:])
 
 def hil():

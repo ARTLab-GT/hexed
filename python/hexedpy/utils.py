@@ -182,4 +182,3 @@ class History_plot:
         for i_col in range(len(self._plot_columns)):
             self._curves[i_col].set_data(self._data["iteration"], self._data[self._plot_columns[i_col]])
         return self._curves
-

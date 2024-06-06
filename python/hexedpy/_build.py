@@ -18,6 +18,7 @@ class Hexed(bu.C_project):
             "build_tests": bu.Option(True, convert=bu.as_bool),
             "build_docs": bu.Option(False, convert=bu.as_bool),
         })
+        self.builder.info["version"] = self.version
         self.builder.info["version_major"], self.builder.info["version_minor"], self.builder.info["version_patch"] = self.version.split(".")
         self.builder.build(bu.Pip)("gitpython")()
         command = f"import git; repo = git.Repo('{self.builder.source_dir}'); print(repo.head.commit, end='')"
@@ -71,5 +72,24 @@ class Hexed(bu.C_project):
         libs.append("hexed")
         self.builder.build(bu.Link)("hexecute", ["hexecute.o"], libs=libs)()
         self.builder.build(bu.Link)("hil", ["hil.o"], libs=libs)()
+        package_dir = self.builder.build_dir + "python_package/"
+        self.builder.copy(self.builder.source_dir + "python/", package_dir)()
+        self.builder.build(bu.Configure)(package_dir + "pyproject.toml.in", package_dir + "pyproject.toml")()
+        for d in ["lib", "bin"]:
+            self.builder.copy(self.builder.build_dir + d, f"{package_dir}hexedpy/{d}")()
+        self.builder.copy(self.builder.source_dir + "hil/", package_dir + "hexedpy/lib/hexed/")()
+        self.builder.copy(self.builder.source_dir + "LICENSE.txt", package_dir + "hexedpy/lib/hexed/")()
+        def translate(out_file, preamble, lang):
+            const_file = self.builder.source_dir + "include/constants.hpp"
+            self.builder.build(bu.Python_script)(
+                [out_file],
+                self.builder.source_dir + "script/install/translate.py",
+                args=[const_file, out_file, lang, preamble],
+                extra_depends=[const_file],
+            )()
+        translate(package_dir + "hexedpy/lib/hexed/constants.hil", "{This is an automatically-generated port of `constants.hpp` into HIL.}", "hil")
+        translate(package_dir + "hexedpy/constants.py",
+            r"## \namespace hexed.constants \brief Ports `hexed::constants` into Python. \see `constants.hpp`", "py")
+        self.builder.build(bu.Python_package)(package_dir)()
 
 bu.Builder().build(Hexed)()()
