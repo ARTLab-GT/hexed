@@ -4,6 +4,7 @@ import os
 class Hexed(bu.C_project):
     version = "0.2.2"
     installed_files = {"bin":[], "include":["hexed"], "lib":[]}
+
     def __init__(self, builder):
         self.builder = builder
         self.builder.add_options({
@@ -18,6 +19,10 @@ class Hexed(bu.C_project):
             "build_docs": bu.Option(False, convert=bu.as_bool),
         })
         self.builder.info["version_major"], self.builder.info["version_minor"], self.builder.info["version_patch"] = self.version.split(".")
+        self.builder.build(bu.Pip)("gitpython")()
+        command = f"import git; repo = git.Repo('{self.builder.source_dir}'); print(repo.head.commit)"
+        self.builder.info["commit"] = self.builder.python("-c", command, silent=True)[1]
+
     def depends(self):
         deps = [
             bu.File(self.builder.source_dir, ignore=lambda f: bu.absolute(f) == self.builder.build_dir),
@@ -29,10 +34,12 @@ class Hexed(bu.C_project):
         if self.builder["build_tests"]:
             deps.append(self.builder.build(bu.Catch2)())
         return deps
+
     def build(self):
         self.builder.add_path("include", self.builder.build_dir + "include/hexed")
         self.builder.copy(self.builder.source_dir + "include", self.builder.build_dir + "include/hexed")()
         self.builder.build(bu.Configure)(self.builder.source_dir + "config.hpp.in", self.builder.build_dir + "include/hexed/config.hpp")()
+        self.builder.build(bu.Configure)(self.builder.source_dir + "config.cpp.in", self.builder.build_dir + "config.cpp")()
         self.builder.build(bu.Python_script)(
             ["Gauss_legendre.cpp", "Gauss_lobatto.cpp"],
             self.builder.source_dir + "script/install/auto_generate.py",

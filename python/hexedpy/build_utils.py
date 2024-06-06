@@ -434,11 +434,11 @@ class Pip(Buildable):
     def build(self):
         self.builder.python("-m", "pip", "install", *self._names)
     def __str__(self):
-        if len(self._names):
+        if len(self._names) > 1:
             s = "s"
         else:
             s = ""
-        return re.sub(r"[\['\]]", "", f"package{s} {self._names}")
+        return re.sub(r"[\['\]]", "", f"PyPI package{s} {self._names}")
 
 class Configure(Buildable):
     def __init__(self, builder, old_name, new_name):
