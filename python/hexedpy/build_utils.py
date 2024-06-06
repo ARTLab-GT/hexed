@@ -500,6 +500,25 @@ class Compile(Subprocess):
         command = ["g++", "-c"] + self.flags + ["-I" + d for d in builder.prefices["include"]] + ["-o", obj, src]
         super().__init__(builder, command, obj, depends=[src])
 
+class Link(Subprocess):
+    flags = ["-Wall"]
+    def __init__(self, builder, name, objects, libs=[]):
+        args = ["g++"] + self.flags
+        if re.fullmatch(r"lib\w+\.so", name):
+            args.append("-shared")
+            name = absolute(name, builder.build_dir + "lib/")
+        elif re.fullmatch(r"lib\w+\.a", name):
+            raise NotImplementedError("static library linking has not been implemented yet")
+        else:
+            name = absolute(name, builder.build_dir + "bin/")
+        args += ["-o", name]
+        depends = [absolute(o, builder.build_dir + "object/") for o in objects]
+        args += depends
+        for lib in libs:
+            args.append("-l" + lib)
+            depends.append(builder.find_in("lib", f"lib{lib}.so") | builder.find_in("lib", f"lib{lib}.a"))
+        super().__init__(builder, args, name, depends=depends)
+
 class Union(Buildable):
     def __init__(self, builder, buildables, name="", parallel=False):
         self.builder = builder

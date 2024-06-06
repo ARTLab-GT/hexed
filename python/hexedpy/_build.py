@@ -28,6 +28,7 @@ class Hexed(bu.C_project):
             bu.Compile.flags += ["-g3", "-DDEBUG"]
         if self.builder["threaded"]:
             bu.Compile.flags.append("-fopenmp")
+            bu.Link.flags.append("-fopenmp")
         else:
             bu.Compile.flags.append("-Wno-unknown-pragmas")
 
@@ -62,5 +63,13 @@ class Hexed(bu.C_project):
             f"{self.builder.build_dir}/config.cpp"
         ]
         self.builder.build(bu.Union)([self.builder.build(bu.Compile)(s) for s in sources], name="compile", parallel=True)()
+        objects = [o for o in bu.contents(self.builder.build_dir + "object/") if "hexecute.o" not in o and "hil.o" not in o]
+        libs = ["hdf5_cpp"]
+        if self.builder["use_xdmf"]:
+            libs.append("Xdmf")
+        self.builder.build(bu.Link)("libhexed.so", objects, libs=libs)()
+        libs.append("hexed")
+        self.builder.build(bu.Link)("hexecute", ["hexecute.o"], libs=libs)()
+        self.builder.build(bu.Link)("hil", ["hil.o"], libs=libs)()
 
 bu.Builder().build(Hexed)()()
