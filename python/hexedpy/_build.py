@@ -20,12 +20,16 @@ class Hexed(bu.C_project):
         })
         self.builder.info["version_major"], self.builder.info["version_minor"], self.builder.info["version_patch"] = self.version.split(".")
         self.builder.build(bu.Pip)("gitpython")()
-        command = f"import git; repo = git.Repo('{self.builder.source_dir}'); print(repo.head.commit)"
-        self.builder.info["commit"] = self.builder.python("-c", command, silent=True)[1]
+        command = f"import git; repo = git.Repo('{self.builder.source_dir}'); print(repo.head.commit, end='')"
+        self.builder.info["commit"] = self.builder.python("-c", command, capture_output=True).stdout.decode()
         if self.builder["build_mode"] == "release":
             bu.Compile.flags += ["-O3", "-march=native", "-DNDEBUG"]
         elif self.builder["build_mode"] == "debug":
             bu.Compile.flags += ["-g3", "-DDEBUG"]
+        if self.builder["threaded"]:
+            bu.Compile.flags.append("-fopenmp")
+        else:
+            bu.Compile.flags.append("-Wno-unknown-pragmas")
 
     def depends(self):
         deps = [
@@ -49,6 +53,15 @@ class Hexed(bu.C_project):
             self.builder.source_dir + "script/install/auto_generate.py",
             args=[self.builder.build_dir, str(self.builder['max_row_size'])],
         )()
-        self.builder.build(bu.Compile)("src/math.cpp")()
+        sources = ["src/" + s for s in os.listdir(f"{self.builder.source_dir}/src") if s.endswith(".cpp")]
+        sources.sort()
+        sources.sort(key=lambda s: "kernels" not in s)
+        sources = [s for s in sources if "kernel" not in s]
+        sources += [
+            f"{self.builder.build_dir}/Gauss_legendre.cpp",
+            f"{self.builder.build_dir}/Gauss_lobatto.cpp",
+            f"{self.builder.build_dir}/config.cpp"
+        ]
+        self.builder.build(bu.Union)([self.builder.build(bu.Compile)(s) for s in sources], name="compile", parallel=True)()
 
 bu.Builder().build(Hexed)()()

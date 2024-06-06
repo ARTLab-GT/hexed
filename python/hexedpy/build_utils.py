@@ -238,23 +238,23 @@ class Buildable(Deliverable):
     def find(self):
         if not isinstance(self.depends(), Dummy):
             self.builder.message(    "\x1b[0;94mChecking dependencies--\x1b[0m" + str(self))
-        self.builder.indent_level += 1
+        #self.builder.indent_level += 1
         assert isinstance(self.builder, Builder), "Classes derived from Buildable must set self.builder to a Builder"
         assert self.found_depends, f"Failed to obtain dependencies {self.depends()} for {self.output()}."
         if self.up_to_date():
-            self.builder.indent_level -= 1
+            #self.builder.indent_level -= 1
             self.builder.message("\x1b[0;32mFound up-to-date-------\x1b[0m" + str(self))
         else:
-            self.builder.indent_level -= 1
+            #self.builder.indent_level -= 1
             self.builder.message("\x1b[1;35mBuilding---------------\x1b[0m" + str(self))
             cwd = os.getcwd()
             os.chdir(self.builder.build_dir)
-            self.builder.indent_level += 1
+            #self.builder.indent_level += 1
             self.build()
             os.chdir(cwd)
             self._found_output = Deliverable.make(self.output()).find()
             self.touch()
-            self.builder.indent_level -= 1
+            #self.builder.indent_level -= 1
             self.builder.message("\x1b[1;32mBuilt------------------\x1b[0m" + str(self))
         return self.found_output
     def __call__(self):
@@ -296,21 +296,21 @@ class Copy(Buildable):
 class Subprocess(Buildable):
     def __init__(self, builder, commands, outputs, depends=[]):
         self.builder = builder
-        self._depends = Deliverable.make(depends)
-        self._output = Deliverable.make(outputs)
+        self._depends = depends
+        self._output = outputs
         if isinstance(commands, str):
-            self._commands = [[commands]]
+            self.commands = [[commands]]
         elif len(commands) and isinstance(commands[0], str):
-            self._commands = [list(commands)]
+            self.commands = [list(commands)]
         else:
-            self._commands = list(commands)
+            self.commands = list(commands)
     def depends(self):
         return self._depends
     def output(self):
         return self._output
     def build(self):
-        for comm in self._commands:
-            assert self.builder.subproc(comm)
+        for comm in self.commands:
+            self.builder.subproc(comm)
 
 class Wget(Subprocess):
     def __init__(self, builder, url):
@@ -346,7 +346,7 @@ class Git_clone(Buildable):
     def output(self):
         return File(self.name)
     def build(self):
-        return self.builder.build(Pip)("gitpython").find()
+        self.builder.build(Pip)("gitpython").find()
         self.builder.python("-c", f"import git; git.Repo.clone_from('{self.repo}', '{self.name}')")
 
 class C_project(Buildable):
@@ -378,14 +378,24 @@ class HDF5(C_project):
 
 class Libxml2(C_project):
     version = "2.12.7"
-    installed_files = {"include":["libxml2"], "lib":["libxml2.so"], "cmake":["libxml2"]}
+    installed_files = {"include":["libxml2", "libxml"], "lib":["libxml2.so"], "cmake":["libxml2"]}
     def build(self):
         directory = self.builder.fetch_archive(
             f"https://download.gnome.org/sources/libxml2/{'.'.join(self.version.split('.')[:-1])}/libxml2-{self.version}.tar.xz"
         )[0]
         os.chdir(directory)
-        self.builder.subproc([slash(os.getcwd()) + "configure", f"--prefix={self.builder.build_dir}", "--with-python=no", "--enable-static=no", "--enable-shared=yes"])
+        self.builder.subproc([
+            slash(os.getcwd()) + "configure",
+            f"--prefix={self.builder.build_dir}",
+            "--with-python=no",
+            "--enable-static=no",
+            "--enable-shared=yes"
+        ])
         self.builder.subproc(["make", f"-j{self.builder['n_build_procs']}", "install"])
+        link = self.builder.build_dir + "include/libxml"
+        if os.path.exists(link):
+            os.remove(link)
+        os.symlink(self.builder.build_dir + "include/libxml2/libxml", link)
 
 class Xdmf(C_project):
     installed_files = {"include":["Xdmf.hpp"], "lib":["libXdmf.so", "libXdmfCore.so"], "cmake":["Xdmf"]}
@@ -474,7 +484,7 @@ class Python_script(Buildable):
     def build(self):
         self.builder.python(self._script, *self._args)
 
-class Compile(Buildable):
+class Compile(Subprocess):
     flags = [
         "-fPIC",
         "-Wall",
@@ -482,27 +492,23 @@ class Compile(Buildable):
         "-pedantic",
     ]
     def __init__(self, builder, source, output_dir=None):
-        self.builder = builder
-        self._source = absolute(source, self.builder.source_dir)
+        src = absolute(source, builder.source_dir)
         if output_dir is None:
-            output_dir = self.builder.build_dir + "object/"
-        self.builder.mkdir(output_dir)
-        self._output = slash(absolute(output_dir)) + ".".join(self._source.split("/")[-1].split(".")[:-1] + ["o"])
-    def depends(self):
-        return self._source
-    def output(self):
-        return self._output
-    def build(self):
-        self.builder.subproc(["g++", "-c"] + self.flags + ["-I" + d for d in self.builder.prefices["include"]] + ["-o", self._output, self._source])
+            output_dir = builder.build_dir + "object/"
+        builder.mkdir(output_dir)
+        obj = slash(absolute(output_dir)) + ".".join(src.split("/")[-1].split(".")[:-1] + ["o"])
+        command = ["g++", "-c"] + self.flags + ["-I" + d for d in builder.prefices["include"]] + ["-o", obj, src]
+        super().__init__(builder, command, obj, depends=[src])
 
 class Union(Buildable):
-    def __init__(self, builder, buildables, name=""):
+    def __init__(self, builder, buildables, name="", parallel=False):
         self.builder = builder
         self._buildables = buildables
         if name:
             self._name = name
         else:
             self._name = sum([str(b.output()) for b in self._buildables])
+        self._parallel = parallel
     def touch(self):
         pass
     def depends(self):
@@ -512,8 +518,25 @@ class Union(Buildable):
     def up_to_date(self):
         return all([b.up_to_date() for b in self._buildables])
     def build(self):
-        for b in self._buildables:
-            b()
+        if self._parallel:
+            commands = ""
+            for b in self._buildables:
+                assert isinstance(b, Subprocess), "Can only parallelize a list of `Subprocess` objects"
+                def to_list(x):
+                    if isinstance(x, str):
+                        return [x]
+                    elif isinstance(x, list):
+                        return x
+                    else:
+                        return []
+                commands += f"builder.build(Subprocess)({b.commands}, {to_list(b.output())}, depends={to_list(b.depends())})()\n"
+            with open(self.builder.build_dir + "parallel_commands", "w") as out_file:
+                out_file.write(commands)
+            self.builder.build(Pip)("multiprocess")()
+            self.builder.python(self.builder.source_dir + "python/hexedpy/_build_parallel.py", "--build_dir=" + self.builder.build_dir)
+        else:
+            for b in self._buildables:
+                b()
     def __str__(self):
         return self._name
 
@@ -581,7 +604,7 @@ class Builder:
         else:
             self.venv_dir = None
             self._python = "python3"
-        self.prefices = {"python": [p for p in eval(self.python("-c", "import sys; print(sys.path)", silent=True)[1]) if p]}
+        self.prefices = {"python": [p for p in eval(self.python("-c", "import sys; print(sys.path)", capture_output=True).stdout.decode()) if p]}
         self.env_paths = {}
         self.add_prefix("bin", ["PATH"])
         self.add_prefix("lib", ["LIBRARY_PATH", "LD_LIBRARY_PATH", "DT_RPATH"])
@@ -669,31 +692,15 @@ class Builder:
         os.makedirs(absolute(name), exist_ok=True)
 
     def subproc(self, args, **kwargs):
-        silent = False
-        if "silent" in kwargs.keys():
-            silent = kwargs.pop("silent")
-        kwargs["stdout"] = subp.PIPE
-        proc = subp.Popen(args, env=self.env, **kwargs)
-        output = ""
-        while proc.poll() is None:
-            for stream in [proc.stdout]:
-                text = stream.read().decode()
-                if not silent:
-                    if not output:
-                        print(self.indent(), end="", flush=True)
-                    print(text.replace("\n", "\n" + self.indent()), end="", flush=True)
-                output += text
-            time.sleep(0.1)
-        if not silent:
-            print(len(self.indent())*"\x1b[1D", end="", flush=True)
+        proc = subp.run(args, env=self.env, **kwargs)
         assert proc.returncode == 0, f"command {args} failed"
-        return proc.returncode, output
+        return proc
 
     def python(self, *args, **kwargs):
         return self.subproc([self._python] + list(args), **kwargs)
 
     def in_pypi(self, package):
-        output = self.python("-m", "pypisearch", package, silent=True)[1]
+        output = self.python("-m", "pypisearch", package, capture_output=True).stdout.decode()
         return f"\n{package} " in "\n" + output
 
     def cmake(self, source_dir, opts=[], build_dir="build"):
