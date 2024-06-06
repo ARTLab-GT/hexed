@@ -519,7 +519,12 @@ class Union(Buildable):
         return all([b.up_to_date() for b in self._buildables])
     def build(self):
         if self._parallel:
-            commands = ""
+            commands = """
+                from hexedpy.build_utils import *
+                from multiprocess import Pool
+                builder = Builder()
+                procs = [
+            """.replace(16*" ", "")
             for b in self._buildables:
                 assert isinstance(b, Subprocess), "Can only parallelize a list of `Subprocess` objects"
                 def to_list(x):
@@ -529,11 +534,14 @@ class Union(Buildable):
                         return x
                     else:
                         return []
-                commands += f"builder.build(Subprocess)({b.commands}, {to_list(b.output())}, depends={to_list(b.depends())})()\n"
-            with open(self.builder.build_dir + "parallel_commands", "w") as out_file:
-                out_file.write(commands)
+                commands += f"builder.build(Subprocess)({b.commands}, {to_list(b.output())}, depends={to_list(b.depends())}),\n"
             self.builder.build(Pip)("multiprocess")()
-            self.builder.python(self.builder.source_dir + "python/hexedpy/_build_parallel.py", "--build_dir=" + self.builder.build_dir)
+            commands += """
+                ]
+                with Pool(processes=builder["n_build_procs"]) as pool:
+                    pool.map(lambda p: p(), procs, chunksize=1)
+            """.replace(16*" ", "")
+            self.builder.python("-", "--build_dir=" + self.builder.build_dir, input=bytes(commands, encoding="utf8"))
         else:
             for b in self._buildables:
                 b()
@@ -605,6 +613,13 @@ class Builder:
             self.venv_dir = None
             self._python = "python3"
         self.prefices = {"python": [p for p in eval(self.python("-c", "import sys; print(sys.path)", capture_output=True).stdout.decode()) if p]}
+        module_path = parent(parent(os.path.realpath(__file__)))
+        if module_path not in self.prefices["python"]:
+            self.prefices["python"].append(module_path)
+            if "PYTHONPATH" not in self.env.keys():
+                self.env["PYTHONPATH"] = module_path
+            else:
+                self.env["PYTHONPATH"] += ":" + module_path
         self.env_paths = {}
         self.add_prefix("bin", ["PATH"])
         self.add_prefix("lib", ["LIBRARY_PATH", "LD_LIBRARY_PATH", "DT_RPATH"])
