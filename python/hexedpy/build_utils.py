@@ -209,8 +209,11 @@ class Buildable(Deliverable):
     builder = None
     _found_output = None
     _found_depends = None
-    def __init__(self, builder):
-        self.builder = builder
+    def __new__(cls, builder, *args, **kwargs):
+        instance = super().__new__(cls)
+        assert isinstance(builder, Builder), "The first argument must be a `Builder`."
+        instance.builder = builder
+        return instance
     def depends(self):
         return Dummy(Completed([], True, 0., 0.))
     def output(self):
@@ -239,7 +242,6 @@ class Buildable(Deliverable):
         if not isinstance(self.depends(), Dummy):
             self.builder.message(    "\x1b[0;94mChecking dependencies--\x1b[0m" + str(self))
         #self.builder.indent_level += 1
-        assert isinstance(self.builder, Builder), "Classes derived from Buildable must set self.builder to a Builder"
         assert self.found_depends, f"Failed to obtain dependencies {self.depends()} for {self.output()}."
         if self.up_to_date():
             #self.builder.indent_level -= 1
@@ -287,7 +289,6 @@ class Copy(Buildable):
         destination = slash(destination)
         return origin + source_name, destination + dest_name, origin, source_name, destination, dest_name
     def __init__(self, builder, source, destination, origin=""):
-        self.builder = builder
         self._source, self._dest = self.names(source, destination, origin)[:2]
     def depends(self):
         assert not os.path.isdir(self._source), f"Copy is only for files. {self._source} is a directory."
@@ -301,7 +302,6 @@ class Copy(Buildable):
 
 class Subprocess(Buildable):
     def __init__(self, builder, commands, outputs, depends=[], **kwargs):
-        self.builder = builder
         self._depends = depends
         self._output = outputs
         if isinstance(commands, str):
@@ -326,7 +326,6 @@ class Wget(Subprocess):
 
 class Extract(Buildable):
     def __init__(self, builder, archive, outputs=None):
-        self.builder = builder
         self.extracted = []
         self.archive = archive
         if outputs is None:
@@ -345,7 +344,6 @@ class Extract(Buildable):
 
 class Git_clone(Buildable):
     def __init__(self, builder, repo, cloned_name):
-        self.builder = builder
         self.repo = repo
         self.name = cloned_name
     def __str__(self):
@@ -435,7 +433,6 @@ class Pip(Buildable):
         "gitpython": "git",
     }
     def __init__(self, builder, package_names):
-        self.builder = builder
         self._names = package_names
         if isinstance(self._names, str):
             self._names = [self._names]
@@ -459,7 +456,6 @@ class Pip(Buildable):
 
 class Configure(Buildable):
     def __init__(self, builder, old_name, new_name):
-        self.builder = builder
         self.old_name = old_name
         self.new_name = new_name
     def depends(self):
@@ -480,7 +476,6 @@ class Configure(Buildable):
 
 class Python_script(Buildable):
     def __init__(self, builder, output, script, args=[], extra_depends=[]):
-        self.builder = builder
         self._output = output
         self._script = absolute(script)
         self._args = args
@@ -529,7 +524,6 @@ class Link(Subprocess):
 
 class Python_package(Buildable):
     def __init__(self, builder, source_dir):
-        self.builder = builder
         self._source = slash(absolute(source_dir))
         self._dist = self._source + "dist/"
     def depends(self):
@@ -547,7 +541,6 @@ class Python_package(Buildable):
 
 class Union(Buildable):
     def __init__(self, builder, buildables, name="", parallel=False):
-        self.builder = builder
         self._buildables = buildables
         if name:
             self._name = name
@@ -579,12 +572,12 @@ class Union(Buildable):
                         return x
                     else:
                         return []
-                commands += f"builder.build(Subprocess)({b.commands}, {to_list(b.output())}, depends={to_list(b.depends())}),\n"
+                commands += f"\"builder[Subprocess]({b.commands}, {to_list(b.output())}, depends={to_list(b.depends())}).do\",\n"
             self[Pip]("multiprocess").do
             commands += """
                 ]
                 with Pool(processes=builder.options["n_build_procs"]) as pool:
-                    pool.map(lambda p: p(), procs, chunksize=1)
+                    pool.map(lambda p: exec(p), procs, chunksize=1)
             """.replace(16*" ", "")
             self.builder.python("-", "--build_dir=" + self.builder.build_dir, input=bytes(commands, encoding="utf8"))
         else:
