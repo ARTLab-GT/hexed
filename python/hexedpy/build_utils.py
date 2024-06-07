@@ -58,6 +58,12 @@ def as_bool(s):
     else:
         return bool(s)
 
+def is_swp(f):
+    return re.search(r"\.[^/]*\.swp$", f)
+
+def maybe_source(f):
+    return not (is_swp(f) or ("__pycache__" in f))
+
 def assert_true(fun, message=""):
     def assertion(arg):
         assert fun(arg), message
@@ -553,6 +559,24 @@ class Python_package(Buildable):
     def __str__(self):
         return f"local Python package `{self._source}`"
 
+class Install_wheel(Buildable):
+    def __init__(self, builder, wheel, python="python3", module_name=None):
+        self._wheel = absolute(wheel, self.sdir)
+        self._name = module_name
+        if not self._name:
+            self._name = self._wheel.split("/")[-1].split("-")[0]
+        self._python = python
+    def depends(self):
+        return self._wheel
+    def output(self):
+        return self.builder.find_in(self.builder.sys_path(self._python), self._name)
+    def build(self):
+        if self.output().find():
+            self.builder.subproc([self._python, "-m", "pip", "uninstall", "--yes", self._wheel])
+        self.builder.subproc([self._python, "-m", "pip", "install", self._wheel])
+    def __str__(self):
+        return f"install `{self._name}` for `{self._python}`"
+
 class Union(Buildable):
     def __init__(self, builder, buildables, name="", parallel=False):
         self._buildables = buildables
@@ -672,7 +696,7 @@ class Builder:
         else:
             self.venv_dir = None
             self._python = "python3"
-        self.prefices = {"python": [p for p in eval(self.python("-c", "import sys; print(sys.path)", capture_output=True).stdout.decode()) if p]}
+        self.prefices = {"python": [p for p in self.sys_path() if p]}
         module_path = parent(parent(os.path.realpath(__file__)))
         if module_path not in self.prefices["python"]:
             self.prefices["python"].append(module_path)
@@ -690,6 +714,11 @@ class Builder:
         self.env["CMAKE_PREFIX_PATH"] = self.env["CMAKE_PREFIX_PATH"].replace(self.build_dir + "cmake/", self.build_dir)
         self[Pip]("cmake").do
         self[Pip]("pypisearch").do
+
+    def sys_path(self, python=None):
+        if not python:
+            python = self._python
+        return eval(self.subproc([python, "-c", "import sys; print(sys.path)"], capture_output=True).stdout.decode())
 
     @property
     def options(self):
@@ -806,7 +835,7 @@ class Builder:
                     d[attr] = value
         return d
 
-    def copy(self, source, destination, name_filter=lambda f: True):
+    def copy(self, source, destination, name_filter=maybe_source):
         if os.path.isdir(source):
             if os.path.exists(destination):
                 assert os.path.isdir(destination), f"Cannot copy directory {source} to file {destination}."

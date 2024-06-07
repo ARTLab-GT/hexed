@@ -1,6 +1,5 @@
 import build_utils as bu
 import os
-import time
 
 class Hexed(bu.C_project):
     version = "0.2.2"
@@ -73,7 +72,6 @@ class Hexed(bu.C_project):
             sources += bu.contents(self.sdir + "test")
         sources.sort()
         sources.sort(key=lambda s: "kernels" not in s)
-        print(time.strftime("%H:%M:%S", time.localtime(time.time())))
         self[bu.Union]([self[bu.Compile](s) for s in sources], name="compile", parallel=True).do
         libs = ["hdf5_cpp"]
         if self.builder.options["use_xdmf"]:
@@ -104,18 +102,9 @@ class Hexed(bu.C_project):
             translate(package_dir + "hexedpy/lib/hexed/constants.hil", "{This is an automatically-generated port of `constants.hpp` into HIL.}", "hil")
             translate(package_dir + "hexedpy/constants.py",
                 r"## \namespace hexed.constants \brief Ports `hexed::constants` into Python. \see `constants.hpp`", "py")
-            package = self[bu.Python_package](package_dir).do
-            """
+            package = self[bu.Python_package](package_dir).find()
             if self.builder.options["install_python"]:
-                self["bu.
-                self.builder.message("Installing Python package in your current environment.")
-                wheels = [f for f in os.listdir(f"{build_dir}/python/dist") if f.endswith(".whl")]
-                assert len(wheels), "Cannot install: no wheels were created."
-                output = subprocess.run(["pip3", "install", f"{build_dir}/python/dist/{wheels[0]}"], stdout=subprocess.PIPE).stdout.decode()
-                print(output)
-                if "hexedpy is already installed" in output:
-                    print(subprocess.run(["pip3", "install", "--force-reinstall", "--no-deps", f"{build_dir}/python/dist/{wheels[0]}"], stdout=subprocess.PIPE).stdout.decode())
-            """
+                self[bu.Install_wheel](package.assets[0]).do
 
         ### build documentation
         if self.builder.options["build_docs"]:
