@@ -329,6 +329,8 @@ class Subprocess(Buildable):
         return self._output
     def build(self):
         for comm in self.commands:
+            if self.builder.options["verbose"]:
+                self.builder.message(" ".join(comm))
             self.builder.subproc(comm, **self._kwargs)
 
 class Wget(Subprocess):
@@ -501,14 +503,35 @@ class Python_script(Buildable):
     def build(self):
         self.builder.python(self._script, *self._args)
 
+class Compiler:
+    high_level_flags = True
+    position_independent = True
+    warn = ["all"]
+    cpp_standard = None
+    optimize = 0
+    debug = 0
+    sanitize = False
+    openmp = False
+    architecture = None
+    extra_flags = []
+    def flags(self):
+        fs = []
+        if self.high_level_flags:
+            if self.position_independent: fs.append("-fPIC")
+            assert isinstance(self.warn, list), '`Compiler.warn` must be a list of warning options (e.g. `["all", "error"]` for `-Wall -Werror`)'
+            for w in self.warn: fs.append("-W" + w)
+            if self.cpp_standard: fs += [f"-std=c++{int(self.cpp_standard)}", "-pedantic"]
+            if self.optimize: fs += [f"-O{self.optimize}", "-DNDEBUG"]
+            if self.debug: fs += [f"-g{self.debug}", "-DDEBUG"]
+            if self.sanitize: fs += [f"-fsanitize={f}" for f in ["bounds-strict", "undefined", "address", "leak", "pointer-compare", "pointer-subtract"]]
+            if self.openmp: fs.append("-fopenmp")
+            if self.architecture: fs.append("-march=" + self.architecture)
+        assert isinstance(self.extra_flags, list)
+        for f in self.extra_flags: fs.append(f)
+        return fs
+
 class Compile(Subprocess):
-    flags = [
-        "-fPIC",
-        "-Wall",
-        "-std=c++20",
-        "-pedantic",
-    ]
-    def __init__(self, builder, source, output=None):
+    def __init__(self, builder, source, output=None, compiler=Compiler()):
         src = absolute(source, self.sdir)
         if source.startswith(self.bdir):
             root = self.bdir
@@ -520,13 +543,12 @@ class Compile(Subprocess):
             output = self.bdir + "object/" + src[len(root):]
         obj = ".".join(output.split(".")[:-1] + ["o"])
         builder.mkdir(parent(obj))
-        command = ["g++", "-c"] + self.flags + ["-I" + d for d in builder.prefices["include"]] + ["-o", obj, src]
+        command = ["g++", "-c"] + compiler.flags() + ["-I" + d for d in builder.prefices["include"]] + ["-o", obj, src]
         super().__init__(builder, command, obj, depends=self.builder.find_source_depends(src).find().assets)
 
 class Link(Subprocess):
-    flags = ["-Wall"]
-    def __init__(self, builder, name, objects, libs=[]):
-        args = ["g++"] + self.flags
+    def __init__(self, builder, name, objects, libs=[], compiler=Compiler()):
+        args = ["g++"] + compiler.flags()
         if re.fullmatch(r"lib\w+\.so", name):
             args.append("-shared")
             name = absolute(name, builder.build_dir + "lib/")
@@ -679,6 +701,7 @@ class Builder:
             "venv": Option(True, convert=as_bool),
             "n_build_procs": Option(1, convert=int),
             "install_prefix": Option.directory("/usr/local"),
+            "verbose": Option(False, convert=as_bool),
         }
         self.info = {"date":time.strftime("%Y-%m-%d", time.gmtime())}
         for opt in opts:
@@ -805,7 +828,10 @@ class Builder:
         os.chdir(source_dir)
         self.mkdir(build_dir)
         os.chdir(build_dir)
-        self.subproc([self.venv_dir + "bin/cmake", "-DCMAKE_INSTALL_PREFIX=" + self.build_dir] + opts + [".."])
+        args = [self.venv_dir + "bin/cmake", "-DCMAKE_INSTALL_PREFIX=" + self.build_dir]
+        if Compiler.sanitize:
+            args.append('-DCMAKE_CXX_FLAGS=' + " ".join([f for f in Compiler().flags() if f.startswith("-fsanitize=")]))
+        self.subproc(args + opts + [".."])
         self.subproc(["make", f"-j{self.options['n_build_procs']}", "install"])
         os.chdir(cwd)
 

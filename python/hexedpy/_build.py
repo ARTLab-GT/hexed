@@ -9,17 +9,23 @@ class Hexed(bu.C_project):
         self.builder = builder
         #### add extra build options and information to be passed to the code
         self.builder.add_options({
-            "build_mode": bu.Option("release", assertions=bu.assert_true(lambda s: s in ["release", "debug"])),
+            "build_mode": bu.Option("release", convert=lambda s: s.lower(), assertions=bu.assert_true(lambda s: s in ["release", "debug"])),
             "max_row_size": bu.Option(8, convert=int, assertions=bu.assert_true(lambda n: n >= 2, "max_row_size must be at least 2")),
             "threaded": bu.Option(True, convert=bu.as_bool),
             "n_threads": bu.Option(os.cpu_count(), convert=int, assertions=bu.assert_nonneg),
             "use_xdmf": bu.Option(True, convert=bu.as_bool),
             "use_tecio": bu.Option(False, convert=bu.as_bool),
-            "obsessive_timing": bu.Option(False, convert=bu.as_bool),
             "build_tests": bu.Option(True, convert=bu.as_bool),
-            "build_python": bu.Option(True, convert=bu.as_bool),
             "build_docs": bu.Option(False, convert=bu.as_bool),
-            "install_python": bu.Option(False, convert=bu.as_bool),
+            "obsessive_timing": bu.Option(False, convert=bu.as_bool),
+            "install_wheel": bu.Option(True, convert=bu.as_bool),
+            "test_args": bu.Option(""),
+        })
+        is_release = self.builder.options["build_mode"] == "release"
+        self.builder.add_options({
+            "architecture": bu.Option(["any", "native"][is_release]),
+            "build_wheel": bu.Option(is_release, convert=bu.as_bool),
+            "run_tests": bu.Option(not is_release, convert=bu.as_bool),
         })
         self.builder.info["version"] = self.version
         self.builder.info["version_major"], self.builder.info["version_minor"], self.builder.info["version_patch"] = self.version.split(".")
@@ -27,15 +33,18 @@ class Hexed(bu.C_project):
         command = f"import git; repo = git.Repo('{self.sdir}'); print(repo.head.commit, end='')"
         self.builder.info["commit"] = self.builder.python("-c", command, capture_output=True).stdout.decode()
         #### determine compile flags
+        bu.Compiler.cpp_standard = 20
+        if self.builder.options["architecture"] != "any":
+            bu.Compiler.architecture = self.builder.options["architecture"]
         if self.builder.options["build_mode"] == "release":
-            bu.Compile.flags += ["-O3", "-march=native", "-DNDEBUG"]
+            bu.Compiler.optimize = 3
         elif self.builder.options["build_mode"] == "debug":
-            bu.Compile.flags += ["-g3", "-DDEBUG"]
+            bu.Compiler.debug = 3
+            bu.Compiler.sanitize = True
         if self.builder.options["threaded"]:
-            bu.Compile.flags.append("-fopenmp")
-            bu.Link.flags.append("-fopenmp")
+            bu.Compiler.openmp = True
         else:
-            bu.Compile.flags.append("-Wno-unknown-pragmas")
+            bu.Compiler.warn.append("no-unknown-pragmas")
         # Get a list of all source files. The entire build process can be bypassed if there are no changes to any of these files
         self._all_sources = bu.File(self.sdir, ignore=lambda f: bu.absolute(f) == self.bdir),
 
@@ -83,27 +92,27 @@ class Hexed(bu.C_project):
             self[bu.Link]("hexed_test", bu.contents(self.bdir + "object/test"), libs=["hexed", "Catch2", "Catch2Main"]).do
 
         ### build python package
-        if self.builder.options["build_python"]:
-            package_dir = self.bdir + "python_package/"
-            self.builder.copy(self.sdir + "python/", package_dir).do
-            self[bu.Configure](package_dir + "pyproject.toml.in", package_dir + "pyproject.toml").do
-            for d in ["lib", "bin"]:
-                self.builder.copy(self.bdir + d, f"{package_dir}hexedpy/{d}").do
-            self.builder.copy(self.sdir + "hil/", package_dir + "hexedpy/lib/hexed/").do
-            self.builder.copy(self.sdir + "LICENSE.txt", package_dir + "hexedpy/lib/hexed/").do
-            def translate(out_file, preamble, lang):
-                const_file = self.sdir + "include/constants.hpp"
-                self[bu.Python_script](
-                    [out_file],
-                    self.sdir + "script/install/translate.py",
-                    args=[const_file, out_file, lang, preamble],
-                    extra_depends=[const_file],
-                ).do
-            translate(package_dir + "hexedpy/lib/hexed/constants.hil", "{This is an automatically-generated port of `constants.hpp` into HIL.}", "hil")
-            translate(package_dir + "hexedpy/constants.py",
-                r"## \namespace hexed.constants \brief Ports `hexed::constants` into Python. \see `constants.hpp`", "py")
+        package_dir = self.bdir + "python_package/"
+        self.builder.copy(self.sdir + "python/", package_dir).do
+        self[bu.Configure](package_dir + "pyproject.toml.in", package_dir + "pyproject.toml").do
+        for d in ["lib", "bin"]:
+            self.builder.copy(self.bdir + d, f"{package_dir}hexedpy/{d}").do
+        self.builder.copy(self.sdir + "hil/", package_dir + "hexedpy/lib/hexed/").do
+        self.builder.copy(self.sdir + "LICENSE.txt", package_dir + "hexedpy/lib/hexed/").do
+        def translate(out_file, preamble, lang):
+            const_file = self.sdir + "include/constants.hpp"
+            self[bu.Python_script](
+                [out_file],
+                self.sdir + "script/install/translate.py",
+                args=[const_file, out_file, lang, preamble],
+                extra_depends=[const_file],
+            ).do
+        translate(package_dir + "hexedpy/lib/hexed/constants.hil", "{This is an automatically-generated port of `constants.hpp` into HIL.}", "hil")
+        translate(package_dir + "hexedpy/constants.py",
+            r"## \namespace hexed.constants \brief Ports `hexed::constants` into Python. \see `constants.hpp`", "py")
+        if self.builder.options["build_wheel"]:
             package = self[bu.Python_package](package_dir).find()
-            if self.builder.options["install_python"]:
+            if self.builder.options["install_wheel"]:
                 self[bu.Install_wheel](package.assets[0]).do
 
         ### build documentation
@@ -134,6 +143,13 @@ class Hexed(bu.C_project):
                     depends=[self._all_sources],
                     stdout=log_file,
                 ).do
+
+        ### run tests
+        if self.builder.options["build_tests"] and self.builder.options["run_tests"]:
+            try:
+                self.builder.subproc([self.bdir + "bin/hexed_test", self.builder.options["test_args"]])
+            except Exception as e:
+                print(e)
 
 if __name__ == "__main__":
     builder = bu.Builder()
