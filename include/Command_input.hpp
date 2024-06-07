@@ -13,7 +13,7 @@ class Command_input
   int _n_hist;
   std::deque<std::string> _history;
   public:
-  static const int unlimited; //! \brief opaque value used to communicate no limit on the size of the history buffer
+  static const int unlimited; //!< \brief opaque value used to communicate no limit on the size of the history buffer
   /*! \brief Constructs a `Command_input` and sets the history buffer size.
    * \details All calls to `get()` with this `Command_input` instance will share the same history.
    * If `n_history` is not `Command_input::unlimited`,

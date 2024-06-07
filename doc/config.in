@@ -1,6 +1,6 @@
 PROJECT_NAME = hexed
 PROJECT_NUMBER = {[info["version"]]}
-INPUT = {[options["source_dir"]]}include {[options["source_dir"]]}src {[options["source_dir"]]} {[options["build_dir"]]}python_package/hexedpy {[options["build_dir"]]}doc {[options["source_dir"]]}/config.hpp.in
+INPUT = {[options["source_dir"]]}include {[options["source_dir"]]}libhexed {[options["source_dir"]]} {[options["build_dir"]]}python_package/hexedpy {[options["build_dir"]]}doc {[options["source_dir"]]}/config.hpp.in
 OUTPUT_DIRECTORY = {[options["build_dir"]]}doc
 GENERATE_TREEVIEW = YES
 DISABLE_INDEX = YES

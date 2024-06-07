@@ -242,7 +242,7 @@ class Buildable(Deliverable):
         if not isinstance(self.depends(), Dummy):
             self.builder.message(    "\x1b[0;94mChecking dependencies--\x1b[0m" + str(self))
         #self.builder.indent_level += 1
-        assert self.found_depends, f"Failed to obtain dependencies {self.depends()} for {self.output()}."
+        assert self.found_depends, f"Failed to obtain dependencies {Deliverable.make(self.depends())} for {self.output()}."
         if self.up_to_date():
             #self.builder.indent_level -= 1
             self.builder.message("\x1b[0;94mFound up-to-date-------\x1b[0m" + str(self))
@@ -268,6 +268,12 @@ class Buildable(Deliverable):
         def construct(*args, **kwargs):
             return class_(self.builder, *args, **kwargs)
         return construct
+    @property
+    def sdir(self):
+        return self.builder.source_dir
+    @property
+    def bdir(self):
+        return self.builder.build_dir
 
 class Copy(Buildable):
     @staticmethod
@@ -363,6 +369,8 @@ class C_project(Buildable):
             for name in self.installed_files[prefix]:
                 outs.append(self.builder.find_in(prefix, name))
         return all_(outs)
+    def touch(self): # if you touch your header files after building, it's going to mess up your next build
+        pass
     def __str__(self):
         return f"{type(self).__name__} {self.version}"
 
@@ -494,14 +502,20 @@ class Compile(Subprocess):
         "-std=c++20",
         "-pedantic",
     ]
-    def __init__(self, builder, source, output_dir=None):
-        src = absolute(source, builder.source_dir)
-        if output_dir is None:
-            output_dir = builder.build_dir + "object/"
-        builder.mkdir(output_dir)
-        obj = slash(absolute(output_dir)) + ".".join(src.split("/")[-1].split(".")[:-1] + ["o"])
+    def __init__(self, builder, source, output=None):
+        src = absolute(source, self.sdir)
+        if source.startswith(self.bdir):
+            root = self.bdir
+        elif source.startswith(self.sdir):
+            root = self.sdir
+        else:
+            root = parent(src)
+        if output is None:
+            output = self.bdir + "object/" + src[len(root):]
+        obj = ".".join(output.split(".")[:-1] + ["o"])
+        builder.mkdir(parent(obj))
         command = ["g++", "-c"] + self.flags + ["-I" + d for d in builder.prefices["include"]] + ["-o", obj, src]
-        super().__init__(builder, command, obj, depends=[src])
+        super().__init__(builder, command, obj, depends=self.builder.find_source_depends(src).find().assets)
 
 class Link(Subprocess):
     flags = ["-Wall"]
@@ -814,8 +828,8 @@ class Builder:
             ]
             prefix = self.prefices["python"] + [parent(absolute(file))]
         elif ext in ["c", "cpp", "cxx", "c++", "h", "hpp", "hxx", "h++"]:
-            patterns = [r'#include ["<]([a-zA-Z.]+)[">]']
-            prefix = "include"
+            patterns = [r'#include +["<]([\w.]+)[">]']
+            prefix = [self.build_dir + "include/hexed"]
         elif ext == "hil":
             patterns = [r"read {(\w+)}"]
             raise NotImplementedError("need to implement prefix for HIL")

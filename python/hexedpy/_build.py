@@ -1,5 +1,6 @@
 import build_utils as bu
 import os
+import time
 
 class Hexed(bu.C_project):
     version = "0.2.2"
@@ -19,11 +20,12 @@ class Hexed(bu.C_project):
             "build_tests": bu.Option(True, convert=bu.as_bool),
             "build_python": bu.Option(True, convert=bu.as_bool),
             "build_docs": bu.Option(False, convert=bu.as_bool),
+            "install_python": bu.Option(False, convert=bu.as_bool),
         })
         self.builder.info["version"] = self.version
         self.builder.info["version_major"], self.builder.info["version_minor"], self.builder.info["version_patch"] = self.version.split(".")
         self[bu.Pip]("gitpython").do
-        command = f"import git; repo = git.Repo('{self.builder.source_dir}'); print(repo.head.commit, end='')"
+        command = f"import git; repo = git.Repo('{self.sdir}'); print(repo.head.commit, end='')"
         self.builder.info["commit"] = self.builder.python("-c", command, capture_output=True).stdout.decode()
         #### determine compile flags
         if self.builder.options["build_mode"] == "release":
@@ -36,7 +38,7 @@ class Hexed(bu.C_project):
         else:
             bu.Compile.flags.append("-Wno-unknown-pragmas")
         # Get a list of all source files. The entire build process can be bypassed if there are no changes to any of these files
-        self._all_sources = bu.File(self.builder.source_dir, ignore=lambda f: bu.absolute(f) == self.builder.build_dir),
+        self._all_sources = bu.File(self.sdir, ignore=lambda f: bu.absolute(f) == self.bdir),
 
     def depends(self):
         deps = [
@@ -51,55 +53,69 @@ class Hexed(bu.C_project):
         return deps
 
     def build(self):
-        #### build C++ library and executables
-        self.builder.add_path("include", self.builder.build_dir + "include/hexed")
-        self.builder.copy(self.builder.source_dir + "include", self.builder.build_dir + "include/hexed").do
-        self[bu.Configure](self.builder.source_dir + "config.hpp.in", self.builder.build_dir + "include/hexed/config.hpp").do
-        self[bu.Configure](self.builder.source_dir + "config.cpp.in", self.builder.build_dir + "config.cpp").do
+        #### compile and link
+        self.builder.add_path("include", self.bdir + "include/hexed")
+        self.builder.mkdir(self.bdir + "libhexed")
+        self.builder.copy(self.sdir + "include", self.bdir + "include/hexed").do
+        self[bu.Configure](self.sdir + "config.hpp.in", self.bdir + "include/hexed/config.hpp").do
+        self[bu.Configure](self.sdir + "config.cpp.in", self.bdir + "libhexed/config.cpp").do
         self[bu.Python_script](
-            ["Gauss_legendre.cpp", "Gauss_lobatto.cpp"],
-            self.builder.source_dir + "script/install/auto_generate.py",
-            args=[self.builder.build_dir, str(self.builder.options['max_row_size'])],
+            ["libhexed/Gauss_legendre.cpp", "libhexed/Gauss_lobatto.cpp"],
+            self.sdir + "script/install/auto_generate.py",
+            args=[self.bdir + "libhexed", str(self.builder.options['max_row_size'])],
         ).do
-        sources = ["src/" + s for s in os.listdir(f"{self.builder.source_dir}/src") if s.endswith(".cpp")]
+        sources = bu.contents(self.sdir + "libhexed") + bu.contents(self.sdir + "execs") + [
+            f"{self.bdir}libhexed/Gauss_legendre.cpp",
+            f"{self.bdir}libhexed/Gauss_lobatto.cpp",
+            f"{self.bdir}libhexed/config.cpp"
+        ]
+        if self.builder.options["build_tests"]:
+            sources += bu.contents(self.sdir + "test")
         sources.sort()
         sources.sort(key=lambda s: "kernels" not in s)
-        sources += [
-            f"{self.builder.build_dir}/Gauss_legendre.cpp",
-            f"{self.builder.build_dir}/Gauss_lobatto.cpp",
-            f"{self.builder.build_dir}/config.cpp"
-        ]
+        print(time.strftime("%H:%M:%S", time.localtime(time.time())))
         self[bu.Union]([self[bu.Compile](s) for s in sources], name="compile", parallel=True).do
-        objects = [o for o in bu.contents(self.builder.build_dir + "object/") if "hexecute.o" not in o and "hil.o" not in o]
         libs = ["hdf5_cpp"]
         if self.builder.options["use_xdmf"]:
             libs.append("Xdmf")
-        self[bu.Link]("libhexed.so", objects, libs=libs).do
-        libs.append("hexed")
-        self[bu.Link]("hexecute", ["hexecute.o"], libs=libs).do
-        self[bu.Link]("hil", ["hil.o"], libs=libs).do
+        self[bu.Link]("libhexed.so", bu.contents(self.bdir + "object/libhexed"), libs=libs).do
+        self[bu.Link]("hil", ["execs/hil.o"], libs=["hexed"]).do
+        self[bu.Link]("hexecute", ["execs/hexecute.o"], libs=["hexed"]).do
+        if self.builder.options["build_tests"]:
+            self[bu.Link]("hexed_test", bu.contents(self.bdir + "object/test"), libs=["hexed", "Catch2", "Catch2Main"]).do
 
         ### build python package
         if self.builder.options["build_python"]:
-            package_dir = self.builder.build_dir + "python_package/"
-            self.builder.copy(self.builder.source_dir + "python/", package_dir).do
+            package_dir = self.bdir + "python_package/"
+            self.builder.copy(self.sdir + "python/", package_dir).do
             self[bu.Configure](package_dir + "pyproject.toml.in", package_dir + "pyproject.toml").do
             for d in ["lib", "bin"]:
-                self.builder.copy(self.builder.build_dir + d, f"{package_dir}hexedpy/{d}").do
-            self.builder.copy(self.builder.source_dir + "hil/", package_dir + "hexedpy/lib/hexed/").do
-            self.builder.copy(self.builder.source_dir + "LICENSE.txt", package_dir + "hexedpy/lib/hexed/").do
+                self.builder.copy(self.bdir + d, f"{package_dir}hexedpy/{d}").do
+            self.builder.copy(self.sdir + "hil/", package_dir + "hexedpy/lib/hexed/").do
+            self.builder.copy(self.sdir + "LICENSE.txt", package_dir + "hexedpy/lib/hexed/").do
             def translate(out_file, preamble, lang):
-                const_file = self.builder.source_dir + "include/constants.hpp"
+                const_file = self.sdir + "include/constants.hpp"
                 self[bu.Python_script](
                     [out_file],
-                    self.builder.source_dir + "script/install/translate.py",
+                    self.sdir + "script/install/translate.py",
                     args=[const_file, out_file, lang, preamble],
                     extra_depends=[const_file],
                 ).do
             translate(package_dir + "hexedpy/lib/hexed/constants.hil", "{This is an automatically-generated port of `constants.hpp` into HIL.}", "hil")
             translate(package_dir + "hexedpy/constants.py",
                 r"## \namespace hexed.constants \brief Ports `hexed::constants` into Python. \see `constants.hpp`", "py")
-            self[bu.Python_package](package_dir)
+            package = self[bu.Python_package](package_dir).do
+            """
+            if self.builder.options["install_python"]:
+                self["bu.
+                self.builder.message("Installing Python package in your current environment.")
+                wheels = [f for f in os.listdir(f"{build_dir}/python/dist") if f.endswith(".whl")]
+                assert len(wheels), "Cannot install: no wheels were created."
+                output = subprocess.run(["pip3", "install", f"{build_dir}/python/dist/{wheels[0]}"], stdout=subprocess.PIPE).stdout.decode()
+                print(output)
+                if "hexedpy is already installed" in output:
+                    print(subprocess.run(["pip3", "install", "--force-reinstall", "--no-deps", f"{build_dir}/python/dist/{wheels[0]}"], stdout=subprocess.PIPE).stdout.decode())
+            """
 
         ### build documentation
         if self.builder.options["build_docs"]:
@@ -107,25 +123,25 @@ class Hexed(bu.C_project):
                 "Doxygen not found (`which doxygen` returned empty). Cannot build documentation."
             def is_dox(f):
                 return f.endswith(".dox") or f.endswith(".tag") or f.endswith(".doxytags")
-            self.builder.copy(self.builder.source_dir + "doc/", self.builder.build_dir + "doc/", is_dox).do
-            self[bu.Configure](self.builder.source_dir + "doc/config.in", self.builder.build_dir + "doc/config").do
+            self.builder.copy(self.sdir + "doc/", self.bdir + "doc/", is_dox).do
+            self[bu.Configure](self.sdir + "doc/config.in", self.bdir + "doc/config").do
             self.builder.copy(
-                self.builder.source_dir + "doc/",
-                self.builder.build_dir + "doc/html/",
+                self.sdir + "doc/",
+                self.bdir + "doc/html/",
                 lambda f: f.endswith(".png") or f.endswith(".svg"),
             ).do
             auto_images = ["blottner_sphere.svg", "flat_plate.svg", "header_background.png", "header.png", "naca0012.svg", "summary.svg"]
             self[bu.Python_script](
-                bu.all_([self.builder.build_dir + "doc/html/" + f for f in auto_images], name="benchmark images"),
-                self.builder.source_dir + "script/install/vis_benchmark.py",
-                args=[self.builder.source_dir + "benchmark.txt", self.builder.build_dir + "doc/html/"],
-                extra_depends=[self.builder.source_dir + "benchmark.txt"],
+                bu.all_([self.bdir + "doc/html/" + f for f in auto_images], name="benchmark images"),
+                self.sdir + "script/install/vis_benchmark.py",
+                args=[self.sdir + "benchmark.txt", self.bdir + "doc/html/"],
+                extra_depends=[self.sdir + "benchmark.txt"],
             ).do
-            with open(self.builder.build_dir + "doc/log.txt", "w") as log_file:
-                os.chdir(self.builder.build_dir + "doc/")
+            with open(self.bdir + "doc/log.txt", "w") as log_file:
+                os.chdir(self.bdir + "doc/")
                 self[bu.Subprocess](
-                    ["doxygen", self.builder.build_dir + "doc/config"],
-                    self.builder.build_dir + "doc/html/index.html",
+                    ["doxygen", self.bdir + "doc/config"],
+                    self.bdir + "doc/html/index.html",
                     depends=[self._all_sources],
                     stdout=log_file,
                 ).do
