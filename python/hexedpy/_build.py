@@ -16,6 +16,7 @@ class Hexed(bu.C_project):
             "use_tecio": bu.Option(False, convert=bu.as_bool),
             "obsessive_timing": bu.Option(False, convert=bu.as_bool),
             "build_tests": bu.Option(True, convert=bu.as_bool),
+            "build_python": bu.Option(True, convert=bu.as_bool),
             "build_docs": bu.Option(False, convert=bu.as_bool),
         })
         self.builder.info["version"] = self.version
@@ -32,10 +33,11 @@ class Hexed(bu.C_project):
             bu.Link.flags.append("-fopenmp")
         else:
             bu.Compile.flags.append("-Wno-unknown-pragmas")
+        self._all_sources = bu.File(self.builder.source_dir, ignore=lambda f: bu.absolute(f) == self.builder.build_dir),
 
     def depends(self):
         deps = [
-            bu.File(self.builder.source_dir, ignore=lambda f: bu.absolute(f) == self.builder.build_dir),
+            self._all_sources,
             self.builder.build(bu.Eigen)(),
             self.builder.build(bu.HDF5)(),
         ]
@@ -72,24 +74,52 @@ class Hexed(bu.C_project):
         libs.append("hexed")
         self.builder.build(bu.Link)("hexecute", ["hexecute.o"], libs=libs)()
         self.builder.build(bu.Link)("hil", ["hil.o"], libs=libs)()
-        package_dir = self.builder.build_dir + "python_package/"
-        self.builder.copy(self.builder.source_dir + "python/", package_dir)()
-        self.builder.build(bu.Configure)(package_dir + "pyproject.toml.in", package_dir + "pyproject.toml")()
-        for d in ["lib", "bin"]:
-            self.builder.copy(self.builder.build_dir + d, f"{package_dir}hexedpy/{d}")()
-        self.builder.copy(self.builder.source_dir + "hil/", package_dir + "hexedpy/lib/hexed/")()
-        self.builder.copy(self.builder.source_dir + "LICENSE.txt", package_dir + "hexedpy/lib/hexed/")()
-        def translate(out_file, preamble, lang):
-            const_file = self.builder.source_dir + "include/constants.hpp"
-            self.builder.build(bu.Python_script)(
-                [out_file],
-                self.builder.source_dir + "script/install/translate.py",
-                args=[const_file, out_file, lang, preamble],
-                extra_depends=[const_file],
+        if self.builder["build_python"]:
+            package_dir = self.builder.build_dir + "python_package/"
+            self.builder.copy(self.builder.source_dir + "python/", package_dir)()
+            self.builder.build(bu.Configure)(package_dir + "pyproject.toml.in", package_dir + "pyproject.toml")()
+            for d in ["lib", "bin"]:
+                self.builder.copy(self.builder.build_dir + d, f"{package_dir}hexedpy/{d}")()
+            self.builder.copy(self.builder.source_dir + "hil/", package_dir + "hexedpy/lib/hexed/")()
+            self.builder.copy(self.builder.source_dir + "LICENSE.txt", package_dir + "hexedpy/lib/hexed/")()
+            def translate(out_file, preamble, lang):
+                const_file = self.builder.source_dir + "include/constants.hpp"
+                self.builder.build(bu.Python_script)(
+                    [out_file],
+                    self.builder.source_dir + "script/install/translate.py",
+                    args=[const_file, out_file, lang, preamble],
+                    extra_depends=[const_file],
+                )()
+            translate(package_dir + "hexedpy/lib/hexed/constants.hil", "{This is an automatically-generated port of `constants.hpp` into HIL.}", "hil")
+            translate(package_dir + "hexedpy/constants.py",
+                r"## \namespace hexed.constants \brief Ports `hexed::constants` into Python. \see `constants.hpp`", "py")
+            self.builder.build(bu.Python_package)(package_dir)()
+        if self.builder["build_docs"]:
+            assert self.builder.subproc(["which", "doxygen"], capture_output=True).stdout.decode(), \
+                "Doxygen not found (`which doxygen` returned empty). Cannot build documentation."
+            def is_dox(f):
+                return f.endswith(".dox") or f.endswith(".tag") or f.endswith(".doxytags")
+            self.builder.copy(self.builder.source_dir + "doc/", self.builder.build_dir + "doc/", is_dox)()
+            self.builder.build(bu.Configure)(self.builder.source_dir + "doc/config.in", self.builder.build_dir + "doc/config")()
+            self.builder.copy(
+                self.builder.source_dir + "doc/",
+                self.builder.build_dir + "doc/html/",
+                lambda f: f.endswith(".png") or f.endswith(".svg"),
             )()
-        translate(package_dir + "hexedpy/lib/hexed/constants.hil", "{This is an automatically-generated port of `constants.hpp` into HIL.}", "hil")
-        translate(package_dir + "hexedpy/constants.py",
-            r"## \namespace hexed.constants \brief Ports `hexed::constants` into Python. \see `constants.hpp`", "py")
-        self.builder.build(bu.Python_package)(package_dir)()
+            auto_images = ["blottner_sphere.svg", "flat_plate.svg", "header_background.png", "header.png", "naca0012.svg", "summary.svg"]
+            self.builder.build(bu.Python_script)(
+                bu.all_([self.builder.build_dir + "doc/html/" + f for f in auto_images], name="benchmark images"),
+                self.builder.source_dir + "script/install/vis_benchmark.py",
+                args=[self.builder.source_dir + "benchmark.txt", self.builder.build_dir + "doc/html/"],
+                extra_depends=[self.builder.source_dir + "benchmark.txt"],
+            )()
+            with open(self.builder.build_dir + "doc/log.txt", "w") as log_file:
+                os.chdir(self.builder.build_dir + "doc/")
+                self.builder.build(bu.Subprocess)(
+                    ["doxygen", self.builder.build_dir + "doc/config"],
+                    self.builder.build_dir + "doc/html/index.html",
+                    depends=[self._all_sources],
+                    stdout=log_file,
+                )()
 
 bu.Builder().build(Hexed)()()

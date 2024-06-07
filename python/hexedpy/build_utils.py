@@ -294,7 +294,7 @@ class Copy(Buildable):
         shutil.copy(self._source, self._dest)
 
 class Subprocess(Buildable):
-    def __init__(self, builder, commands, outputs, depends=[]):
+    def __init__(self, builder, commands, outputs, depends=[], **kwargs):
         self.builder = builder
         self._depends = depends
         self._output = outputs
@@ -304,13 +304,14 @@ class Subprocess(Buildable):
             self.commands = [list(commands)]
         else:
             self.commands = list(commands)
+        self._kwargs = kwargs
     def depends(self):
         return self._depends
     def output(self):
         return self._output
     def build(self):
         for comm in self.commands:
-            self.builder.subproc(comm)
+            self.builder.subproc(comm, **self._kwargs)
 
 class Wget(Subprocess):
     def __init__(self, builder, url):
@@ -634,7 +635,7 @@ class Builder:
             "n_build_procs": Option(1, convert=int),
             "install_prefix": Option.directory("/usr/local"),
         }
-        self.info = {}
+        self.info = {"date":time.strftime("%Y-%m-%d", time.gmtime())}
         for opt in opts:
             self._merge_option(opt)
         self.mkdir(self.build_dir)
@@ -791,13 +792,13 @@ class Builder:
                     d[attr] = value
         return d
 
-    def copy(self, source, destination):
+    def copy(self, source, destination, name_filter=lambda f: True):
         if os.path.isdir(source):
             if os.path.exists(destination):
                 assert os.path.isdir(destination), f"Cannot copy directory {source} to file {destination}."
             origin = source
             destination = slash(destination)
-            return Union(self, [Copy(self, f, destination, origin=origin) for f in contents(source)],
+            return Union(self, [Copy(self, f, destination, origin=origin) for f in contents(source) if name_filter(f)],
                          name=f"{Copy.names(source, destination)[0]}")
         elif os.path.isfile(source):
             return Copy(self, source, destination)

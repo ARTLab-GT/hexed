@@ -1,6 +1,7 @@
 PROJECT_NAME = hexed
-PROJECT_NUMBER = {[version]}
-INPUT = {[source_dir]}/include {[source_dir]}/src {[build_dir]}/python/hexedpy {[source_dir]}/doc {[source_dir]}/script {[source_dir]}/hexed_config.hpp.in
+PROJECT_NUMBER = {[info["version"]]}
+INPUT = {[options["source_dir"]]}include {[options["source_dir"]]}src {[options["source_dir"]]} {[options["build_dir"]]}python_package/hexedpy {[options["build_dir"]]}doc {[options["source_dir"]]}/config.hpp.in
+OUTPUT_DIRECTORY = {[options["build_dir"]]}doc
 GENERATE_TREEVIEW = YES
 DISABLE_INDEX = YES
 USE_MATHJAX = YES
@@ -11,10 +12,10 @@ GENERATE_LATEX = NO
 GENERATE_TAGFILE = hexed.tag
 PREDEFINED = HEXED_USE_NLOPT=1 HEXED_USE_OTTER=1 HEXED_USE_TECPLOT=1 HEXED_USE_XDMF=1 HEXED_THREADED=1 HEXED_USE_OCCT=1
 VERBATIM_HEADERS = NO
-TAGFILES = {[source_dir]}/doc/occt_short.tag=https://dev.opencascade.org/doc/refman/html \
-           {[source_dir]}/doc/Eigen.doxytags=https://eigen.tuxfamily.org/dox
-EXAMPLE_PATH = {[source_dir]}
-HTML_EXTRA_STYLESHEET = {[source_dir]}/doc/style.css
-ALIASES += today="{[date]}" proj_version=" version {[version]}, commit `{[commit]}`" me="\ref Contact \"me\"" show_details="\details \f$ \f$"
-IMAGE_PATH = html
-CITE_BIB_FILES = {[source_dir]}/doc/references.bib
+TAGFILES = {[options["source_dir"]]}/doc/occt_short.tag=https://dev.opencascade.org/doc/refman/html \
+           {[options["source_dir"]]}/doc/Eigen.doxytags=https://eigen.tuxfamily.org/dox
+EXAMPLE_PATH = {[options["source_dir"]]}
+HTML_EXTRA_STYLESHEET = {[options["source_dir"]]}/doc/style.css
+ALIASES += today="{[info["date"]]}" proj_version=" version {[info["version"]]}, commit `{[info["commit"]]}`" me="\ref Contact \"me\"" show_details="\details \f$ \f$"
+IMAGE_PATH = {[options["build_dir"]]}doc/html/
+CITE_BIB_FILES = {[options["source_dir"]]}/doc/references.bib
