@@ -257,9 +257,15 @@ class Buildable(Deliverable):
             #self.builder.indent_level -= 1
             self.builder.message("\x1b[1;32mBuilt------------------\x1b[0m" + str(self))
         return self.found_output
-    def __call__(self):
+    @property
+    def do(self):
         assert self.find(), f"Attempt to build {self} did not produce required output."
         return self
+    def __getitem__(self, class_):
+        assert issubclass(class_, Buildable), "`self[buildable]` syntax is only for `Buildable` objects"
+        def construct(*args, **kwargs):
+            return class_(self.builder, *args, **kwargs)
+        return construct
 
 class Copy(Buildable):
     @staticmethod
@@ -347,7 +353,7 @@ class Git_clone(Buildable):
     def output(self):
         return File(self.name)
     def build(self):
-        self.builder.build(Pip)("gitpython").find()
+        self[Pip]("gitpython").find()
         self.builder.python("-c", f"import git; git.Repo.clone_from('{self.repo}', '{self.name}')")
 
 class C_project(Buildable):
@@ -367,7 +373,7 @@ class Eigen(C_project):
     installed_files = {"include": ["Eigen"]}
     def build(self):
         directory = self.builder.fetch_archive(f"https://gitlab.com/libeigen/eigen/-/archive/{self.version}/eigen-{self.version}.tar.gz")[0]
-        self.builder.copy(directory + "Eigen", self.builder.build_dir + "include/Eigen")()
+        self.builder.copy(directory + "Eigen", self.builder.build_dir + "include/Eigen").do
 
 class HDF5(C_project):
     version = "1.14.4.3"
@@ -392,7 +398,7 @@ class Libxml2(C_project):
             "--enable-static=no",
             "--enable-shared=yes"
         ])
-        self.builder.subproc(["make", f"-j{self.builder['n_build_procs']}", "install"])
+        self.builder.subproc(["make", f"-j{self.builder.options['n_build_procs']}", "install"])
         link = self.builder.build_dir + "include/libxml"
         if os.path.exists(link):
             os.remove(link)
@@ -401,9 +407,9 @@ class Libxml2(C_project):
 class Xdmf(C_project):
     installed_files = {"include":["Xdmf.hpp"], "lib":["libXdmf.so", "libXdmfCore.so"], "cmake":["Xdmf"]}
     def depends(self):
-        return self.builder.build(Libxml2)()
+        return self[Libxml2]().do
     def build(self):
-        self.builder.build(Git_clone)("https://gitlab.kitware.com/xdmf/xdmf.git", "xdmf")()
+        self[Git_clone]("https://gitlab.kitware.com/xdmf/xdmf.git", "xdmf").do
         self.builder.env["XDMF_INSTALL_DIR"] = self.builder.build_dir
         problem_file = f"{os.getcwd()}/xdmf/core/XdmfHDF5Controller.hpp"
         with open(problem_file, "r") as in_file:
@@ -466,7 +472,7 @@ class Configure(Buildable):
         while True:
             match = re.search(r"{\[([^}]+)\]}", text)
             if match is None: break
-            options = self.builder
+            options = self.builder.options
             info = self.builder.info
             text = f"{text[:match.start()]}{eval(match.group(1))}{text[match.end():]}"
         with open(self.new_name, "w") as out_file:
@@ -531,7 +537,7 @@ class Python_package(Buildable):
     def output(self):
         return any_([f for f in contents(self._dist) if f.endswith(".whl")])
     def build(self):
-        self.builder.build(Pip)("build")()
+        self[Pip]("build").do
         if os.path.exists(self._dist):
             shutil.rmtree(self._dist)
         os.chdir(self._source)
@@ -574,16 +580,16 @@ class Union(Buildable):
                     else:
                         return []
                 commands += f"builder.build(Subprocess)({b.commands}, {to_list(b.output())}, depends={to_list(b.depends())}),\n"
-            self.builder.build(Pip)("multiprocess")()
+            self[Pip]("multiprocess").do
             commands += """
                 ]
-                with Pool(processes=builder["n_build_procs"]) as pool:
+                with Pool(processes=builder.options["n_build_procs"]) as pool:
                     pool.map(lambda p: p(), procs, chunksize=1)
             """.replace(16*" ", "")
             self.builder.python("-", "--build_dir=" + self.builder.build_dir, input=bytes(commands, encoding="utf8"))
         else:
             for b in self._buildables:
-                b()
+                b.do
     def __str__(self):
         return self._name
 
@@ -617,12 +623,20 @@ class Option:
     def __str__(self):
         return str(self.value)
 
+class _Options: # \todo this is ugly... there has to be a nicer way to do this
+    def __init__(self, opts):
+        self._opts = opts
+    def __getitem__(self, name):
+        return self._opts[name].value
+    def __iter__(self):
+        return sorted(self._opts.keys()).__iter__()
+
 class Builder:
     def _merge_option(self, opt):
         match = re.fullmatch("--([a-z_]+)=(.*)", opt)
         assert match, f"Invalid option syntax `{opt}`. Options must be of the form --option_name=value"
         name = match.group(1)
-        if name not in self.options():
+        if name not in self.options:
             self._options[name] = Option()
         if not self._options[name].modified:
             self._options[name].set_to(match.group(2))
@@ -644,9 +658,9 @@ class Builder:
         self.indent_level = 0
         self.tab = " \x1b[1;34m|\x1b[0m"
         self.env = dict(os.environ)
-        if self["venv"]:
+        if self.options["venv"]:
             self.venv_dir = self.build_dir + ".build_venv/"
-            self.build(Subprocess)(["python3", "-m", "venv", self.venv_dir], self.venv_dir)()
+            self[Subprocess](["python3", "-m", "venv", self.venv_dir], self.venv_dir).do
             self._python = self.venv_dir + "bin/python3"
         else:
             self.venv_dir = None
@@ -667,23 +681,16 @@ class Builder:
         self.add_prefix("cmake", ["CMAKE_PREFIX_PATH"])
         self.prefices["cmake"].append(self.build_dir + "lib/cmake/")
         self.env["CMAKE_PREFIX_PATH"] = self.env["CMAKE_PREFIX_PATH"].replace(self.build_dir + "cmake/", self.build_dir)
-        self.build(Pip)("cmake")()
-        self.build(Pip)("pypisearch")()
+        self[Pip]("cmake").do
+        self[Pip]("pypisearch").do
 
-    def __getitem__(self, name):
-        if name in self.options():
-            return self._options[name].value
-        elif name in self.info.keys():
-            return self.info[name]
-        else:
-            raise Exception(f"`{name}` is neither an `Option` nor an `info` field of this `Builder`")
-
+    @property
     def options(self):
-        return sorted(self._options.keys())
+        return _Options(self._options)
 
     def add_options(self, opts):
         for name in opts.keys():
-            if name in self.options():
+            if name in self.options:
                 self._options[name].merge(opts[name])
             else:
                 self._options[name] = opts[name]
@@ -691,11 +698,11 @@ class Builder:
 
     @property
     def source_dir(self):
-        return self["source_dir"]
+        return self.options["source_dir"]
 
     @property
     def build_dir(self):
-        return self["build_dir"]
+        return self.options["build_dir"]
 
     def synch_cache(self):
         in_text = ""
@@ -706,9 +713,9 @@ class Builder:
                     if line:
                         self._merge_option(line)
         out_text = ""
-        for name in self.options():
+        for name in self.options:
             if name != "build_dir":
-                out_text += f"--{name}={self[name]}\n"
+                out_text += f"--{name}={self.options[name]}\n"
         if out_text != in_text:
             with open(self.cache_file, "w") as cache:
                 cache.write(out_text)
@@ -763,12 +770,12 @@ class Builder:
         self.mkdir(build_dir)
         os.chdir(build_dir)
         self.subproc([self.venv_dir + "bin/cmake", "-DCMAKE_INSTALL_PREFIX=" + self.build_dir] + opts + [".."])
-        self.subproc(["make", f"-j{self['n_build_procs']}", "install"])
+        self.subproc(["make", f"-j{self.options['n_build_procs']}", "install"])
         os.chdir(cwd)
 
     def fetch_archive(self, url, outputs=None):
-        archive = self.build(Wget)(url)().file_name
-        return self.build(Extract)(archive, outputs)().extracted.find().assets
+        archive = self[Wget](url).do.file_name
+        return self[Extract](archive, outputs).do.extracted.find().assets
 
     def find_in(self, prefix, name):
         if isinstance(prefix, str):
@@ -842,12 +849,12 @@ class Builder:
                                 find_recursive(match)
             else:
                 if ext == "py" and self.in_pypi(f):
-                    depends.append(self.build(Pip)(f))
+                    depends.append(self[Pip](f))
         find_recursive(file)
         return all_(depends)
 
-    def build(self, b):
-        assert issubclass(b, Buildable), "A Builder can only build a Buildable."
+    def __getitem__(self, class_):
+        assert issubclass(class_, Buildable), "`self[buildable]` syntax is only for `Buildable` objects"
         def construct(*args, **kwargs):
-            return b(*([self] + list(args)), **kwargs)
+            return class_(self, *args, **kwargs)
         return construct
