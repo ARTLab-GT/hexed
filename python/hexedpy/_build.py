@@ -62,7 +62,7 @@ class Hexed(bu.C_project):
 
     def build(self):
         #### compile and link
-        self.builder.add_path("include", self.bdir + "include/hexed")
+        self.builder.prefices["include"] = (self.bdir + "include/hexed",) + self.builder.prefices["include"]
         self.builder.mkdir(self.bdir + "libhexed")
         self.builder.copy(self.sdir + "include", self.bdir + "include/hexed").do
         self[bu.Configure](self.sdir + "config.hpp.in", self.bdir + "include/hexed/config.hpp").do

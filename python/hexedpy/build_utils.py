@@ -684,6 +684,62 @@ class _Options: # \todo this is ugly... there has to be a nicer way to do this
     def __iter__(self):
         return sorted(self._opts.keys()).__iter__()
 
+class Dict_wrapper:
+    def __init__(self, d={}):
+        self._dict = d
+    def __getitem__(self, key):
+        return self.on_get(key, self._dict[key])
+    def __setitem__(self, key, value):
+        value = self.on_set(key, value)
+        self._dict[key] = value
+    def keys(self):
+        return sorted(self._dict.keys())
+    def __iter__(self):
+        return self.keys().__iter__()
+    def on_get(self, key, value):
+        return value
+    def on_set(self, key, value):
+        return value
+
+class Prefices(Dict_wrapper):
+    def __init__(self, env):
+        super().__init__()
+        self.env = env
+        self._env_vars = {}
+        self._suffices = {}
+    @staticmethod
+    def remove_suffix(path, suffix):
+        path = slash(path)
+        suffix = "/" + slash(suffix)
+        if path.endswith(suffix):
+            path = slash(path[:-len(suffix)])
+        return path
+    def add(self, name, env_vars=[], suffix=""):
+        self._env_vars[name] = env_vars
+        self._suffices[name] = suffix
+        paths = []
+        for var in env_vars:
+            if var in self.env.keys():
+                for p in self.env[var].split(":"):
+                    if p and p not in paths:
+                        paths.append(slash(p))
+        self[name] = paths
+    def on_set(self, key, value):
+        for d in [self._env_vars, self._suffices]:
+            if key not in d.keys():
+                self.add(key)
+        new_value = []
+        for v in value:
+            v = self.remove_suffix(absolute(v), self._suffices[key])
+            if v not in new_value:
+                new_value.append(v)
+        value = tuple(new_value)
+        for var in self._env_vars[key]:
+            self.env[var] = ":".join(value)
+        return value
+    def on_get(self, key, value):
+        return tuple([v + self._suffices[key] for v in value])
+
 class Builder:
     def _merge_option(self, opt):
         match = re.fullmatch("--([a-z_]+)=(.*)", opt)
@@ -702,6 +758,8 @@ class Builder:
             "n_build_procs": Option(1, convert=int),
             "install_prefix": Option.directory("/usr/local"),
             "verbose": Option(False, convert=as_bool),
+            "use_system_paths": Option(True, convert=as_bool),
+            "use_env_paths": Option(True, convert=as_bool),
         }
         self.info = {"date":time.strftime("%Y-%m-%d", time.gmtime())}
         for opt in opts:
@@ -719,24 +777,37 @@ class Builder:
         else:
             self.venv_dir = None
             self._python = "python3"
-        self.prefices = {"python": [p for p in self.sys_path() if p]}
+        self.prefices = Prefices(self.env)
+        self.prefices.add("python", env_vars=["PYTHONPATH"])
+        self.prefices.add("bin", env_vars=["PATH"])
+        self.prefices.add("lib", env_vars=["LIBRARY_PATH", "LD_LIBRARY_PATH", "DT_RPATH"])
+        self.prefices.add("include", env_vars=["INCLUDE_PATH", "CPLUS_INCLUDE_PATH"])
+        self.prefices.add("share")
+        self.prefices.add("cmake", env_vars=["CMAKE_PREFIX_PATH"], suffix="cmake")
+        """
+        if not self.options["use_env_paths"]:
+            for prefix in self.prefices:
+                self.prefices[prefix] = ()
+        if self.options["use_system_paths"]:
+            for root in ["/", "/usr/", "/usr/local/"]:
+                for prefix in ["bin", "include", "lib", "share"]:
+                    self.prefices[prefix] = self.prefices[prefix] + (f"{root}{prefix}/",)
+        """
         module_path = parent(parent(os.path.realpath(__file__)))
-        if module_path not in self.prefices["python"]:
-            self.prefices["python"].append(module_path)
-            if "PYTHONPATH" not in self.env.keys():
-                self.env["PYTHONPATH"] = module_path
-            else:
-                self.env["PYTHONPATH"] += ":" + module_path
-        self.env_paths = {}
-        self.add_prefix("bin", ["PATH"])
-        self.add_prefix("lib", ["LIBRARY_PATH", "LD_LIBRARY_PATH", "DT_RPATH"])
-        self.add_prefix("include", ["INCLUDE_PATH", "CPLUS_INCLUDE_PATH"])
-        self.add_prefix("share", [])
-        self.add_prefix("cmake", ["CMAKE_PREFIX_PATH"])
-        self.prefices["cmake"].append(self.build_dir + "lib/cmake/")
-        self.env["CMAKE_PREFIX_PATH"] = self.env["CMAKE_PREFIX_PATH"].replace(self.build_dir + "cmake/", self.build_dir)
-        self[Pip]("cmake").do
-        self[Pip]("pypisearch").do
+        self.prefices["python"] = (module_path,) + self.prefices["python"] + tuple(self.sys_path())
+        """
+        self.prefices["cmake"] = (f"{self.build_dir}lib/cmake/",) + self.prefices["cmake"]
+        for p in self.prefices:
+            self.prefices[p] = (f"{self.build_dir}{p}/",) + self.prefices[p]
+        cmake_paths = ()
+        for p in self.prefices["bin"]:
+            p = Prefices.remove_suffix(p, "bin")
+            p = Prefices.remove_suffix(p, "sbin")
+            cmake_paths += (p, p + "lib/")
+        self.subproc("echo $PATH", shell=True)
+        self.prefices["cmake"] = (self.build_dir + "lib/",) + tuple(self.prefices["cmake"]) + ('/home/mcsp3/codes/hexed/build_test/', '/home/mcsp3/codes/hexed/build_test/lib/', '/home/mcsp3/.main_venv/', '/home/mcsp3/.main_venv/lib/', '/home/mcsp3/.local/', '/home/mcsp3/.local/lib/', '/usr/local/', '/usr/local/lib/', '/usr/local/', '/usr/local/lib/', '/usr/', '/usr/lib/', '/usr/', '/usr/lib/', '/', '/lib/', '/', '/lib/', '/usr/games/', '/usr/games/lib/', '/usr/local/games/', '/usr/local/games/lib/', '/snap/', '/snap/lib/', '/opt/tecplot/360ex_2020r2/', '/opt/tecplot/360ex_2020r2/lib/', '/opt/tecplot/chorus_2020r2/', '/opt/tecplot/chorus_2020r2/lib/')
+        """
+        self[Pip](["cmake", "pypisearch"]).do
 
     def sys_path(self, python=None):
         if not python:
@@ -779,29 +850,6 @@ class Builder:
             with open(self.cache_file, "w") as cache:
                 cache.write(out_text)
 
-    def add_prefix(self, dir_name, var_names):
-        path = slash(self.build_dir + dir_name)
-        self.mkdir(path)
-        self.prefices[dir_name] = [path]
-        self.env_paths[dir_name] = var_names
-        for var in var_names:
-            if var in self.env.keys():
-                for p in self.env[var].split(":"):
-                    if p and p not in self.prefices[dir_name]:
-                        self.prefices[dir_name].append(p)
-        self._update_env_paths()
-
-    def _update_env_paths(self):
-        for dir_name in self.env_paths.keys():
-            for var in self.env_paths[dir_name]:
-                self.env[var] = ":".join(self.prefices[dir_name])
-
-    def add_path(self, prefix, path):
-        if prefix not in self.prefices:
-            self.prefices[prefix] = []
-        self.prefices[prefix].append(slash(absolute(path)))
-        self._update_env_paths()
-
     def indent(self):
         return self.indent_level*self.tab
 
@@ -828,7 +876,10 @@ class Builder:
         os.chdir(source_dir)
         self.mkdir(build_dir)
         os.chdir(build_dir)
-        args = [self.venv_dir + "bin/cmake", "-DCMAKE_INSTALL_PREFIX=" + self.build_dir]
+        args = [
+            self.venv_dir + "bin/cmake",
+            "-DCMAKE_INSTALL_PREFIX=" + self.build_dir,
+        ]
         if Compiler.sanitize:
             args.append('-DCMAKE_CXX_FLAGS=' + " ".join([f for f in Compiler().flags() if f.startswith("-fsanitize=")]))
         self.subproc(args + opts + [".."])
