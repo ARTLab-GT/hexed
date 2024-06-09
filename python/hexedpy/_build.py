@@ -3,7 +3,7 @@ import os
 
 class Hexed(bu.C_project):
     version = "0.2.2"
-    installed_files = {"bin":[], "include":["hexed"], "lib":[]}
+    installed_files = {"bin":["hil", "hexecute"], "include":["hexed"], "lib":["hexed"]}
 
     def __init__(self, builder):
         self.builder = builder
@@ -51,8 +51,8 @@ class Hexed(bu.C_project):
     def depends(self):
         deps = [
             self._all_sources,
-            self[bu.Eigen]().do,
-            self[bu.HDF5]().do,
+            self[bu.Eigen](),
+            self[bu.HDF5](),
         ]
         if self.builder.options["use_xdmf"]:
             deps.append(self[bu.Xdmf]())
@@ -89,7 +89,7 @@ class Hexed(bu.C_project):
         self[bu.Link]("hil", ["execs/hil.o"], libs=["hexed"]).do
         self[bu.Link]("hexecute", ["execs/hexecute.o"], libs=["hexed"]).do
         if self.builder.options["build_tests"]:
-            self[bu.Link]("hexed_test", bu.contents(self.bdir + "object/test"), libs=["hexed", "Catch2", "Catch2Main"]).do
+            self[bu.Link]("hexed_test", bu.contents(self.bdir + "object/test"), libs=["hexed", "Catch2Main", "Catch2"]).do
 
         ### build python package
         package_dir = self.bdir + "python_package/"
@@ -112,6 +112,7 @@ class Hexed(bu.C_project):
             r"## \namespace hexed.constants \brief Ports `hexed::constants` into Python. \see `constants.hpp`", "py")
         if self.builder.options["build_wheel"]:
             package = self[bu.Python_package](package_dir).find()
+            assert package, "Failed to build Hexed Python package"
             if self.builder.options["install_wheel"]:
                 self[bu.Install_wheel](package.assets[0]).do
 

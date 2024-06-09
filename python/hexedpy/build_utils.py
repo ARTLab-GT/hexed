@@ -241,7 +241,10 @@ class Buildable(Deliverable):
             self._found_depends = Deliverable.make(self.depends()).find()
         return self._found_depends
     def up_to_date(self):
-        return self.found_output and self.found_output.earliest_mtime >= self.found_depends.latest_mtime
+        utd = bool(self.found_output)
+        if any([a.startswith(self.bdir) for a in self.found_output.assets]):
+            utd = utd and self.found_output.earliest_mtime >= self.found_depends.latest_mtime
+        return utd
     def __str__(self):
         return str(self.output())
     def find(self):
@@ -375,7 +378,10 @@ class C_project(Buildable):
         outs = []
         for prefix in self.installed_files.keys():
             for name in self.installed_files[prefix]:
-                outs.append(self.builder.find_in(prefix, name))
+                if prefix == "lib":
+                    outs.append(self.builder.find_in(prefix, f"lib{name}.so") | self.builder.find_in(prefix, f"lib{name}.a"))
+                else:
+                    outs.append(self.builder.find_in(prefix, name))
         return all_(outs)
     def touch(self): # if you touch your header files after building, it's going to mess up your next build
         pass
@@ -391,15 +397,15 @@ class Eigen(C_project):
 
 class HDF5(C_project):
     version = "1.14.4.3"
-    installed_files = {"include":["H5Cpp.h"], "lib":["libhdf5.so", "libhdf5_cpp.so"], "cmake":["hdf5-config.cmake"]}
+    installed_files = {"include":["H5Cpp.h"], "lib":["hdf5_cpp", "hdf5"], "cmake":["hdf5-config.cmake"]}
     def build(self):
         directory = self.builder.fetch_archive(f"https://github.com/HDFGroup/hdf5/archive/refs/tags/hdf5_{self.version}.tar.gz",
                                                outputs=f"hdf5-hdf5_{self.version}")[0]
         self.builder.cmake(directory, ["-DHDF5_BUILD_CPP_LIB=ON"])
 
-class Libxml2(C_project):
+class Libxml2_base(C_project):
     version = "2.12.7"
-    installed_files = {"include":["libxml2", "libxml"], "lib":["libxml2.so"], "cmake":["libxml2"]}
+    installed_files = {"include":["libxml2"], "lib":["xml2"], "cmake":["libxml2"]}
     def build(self):
         directory = self.builder.fetch_archive(
             f"https://download.gnome.org/sources/libxml2/{'.'.join(self.version.split('.')[:-1])}/libxml2-{self.version}.tar.xz"
@@ -412,16 +418,22 @@ class Libxml2(C_project):
             "--enable-static=no",
             "--enable-shared=yes"
         ])
-        self.builder.subproc(["make", f"-j{self.builder.options['n_build_procs']}", "install"])
-        link = self.builder.build_dir + "include/libxml"
+        self.builder.make()
+
+class Libxml2(C_project):
+    version = "2.12.7"
+    installed_files = {"include":["libxml2", "libxml"], "lib":["xml2"], "cmake":["libxml2"]}
+    def build(self):
+        self[Libxml2_base]().do
+        link = self.bdir + "include/libxml"
         if os.path.exists(link):
             os.remove(link)
-        os.symlink(self.builder.build_dir + "include/libxml2/libxml", link)
+        os.symlink(self.builder.find_in("include", "libxml2/libxml").find().assets[0], link)
 
 class Xdmf(C_project):
-    installed_files = {"include":["Xdmf.hpp"], "lib":["libXdmf.so", "libXdmfCore.so"], "cmake":["Xdmf"]}
+    installed_files = {"include":["Xdmf.hpp"], "lib":["Xdmf", "XdmfCore"], "cmake":["Xdmf"]}
     def depends(self):
-        return self[Libxml2]().do
+        return self[Libxml2]() & self[HDF5]()
     def build(self):
         self[Git_clone]("https://gitlab.kitware.com/xdmf/xdmf.git", "xdmf").do
         self.builder.env["XDMF_INSTALL_DIR"] = self.builder.build_dir
@@ -437,7 +449,7 @@ class Xdmf(C_project):
 
 class Catch2(C_project):
     version = "3.6.0"
-    installed_files = {"include":["catch2/catch_all.hpp"], "lib":["libCatch2.so"], "lib":["libCatch2Main.so"]}
+    installed_files = {"include":["catch2/catch_all.hpp"], "lib":["Catch2Main", "Catch2"]}
     def build(self):
         directory = self.builder.fetch_archive(
             f"https://github.com/catchorg/Catch2/archive/refs/tags/v{self.version}.tar.gz", outputs=f"Catch2-{self.version}"
@@ -459,7 +471,7 @@ class Pip(Buildable):
         for name in self._names:
             if name in self.fake_names.keys():
                 name = self.fake_names[name]
-            outs.append(any_([self.builder.find_in("python", name + ext) for ext in ["", ".py"]]))
+            outs.append(any_([self.builder.find_in("python", name + ext) for ext in ["/__init__.py", ".py"]]))
         return all_(outs)
     def build(self):
         self.builder.python("-m", "pip", "install", *self._names)
@@ -574,10 +586,13 @@ class Python_package(Buildable):
         return any_([f for f in contents(self._dist) if f.endswith(".whl")])
     def build(self):
         self[Pip]("build").do
+        print(self[Pip]("build").output().find())
         if os.path.exists(self._dist):
             shutil.rmtree(self._dist)
         os.chdir(self._source)
+        print("foo")
         self.builder.python("-m", "build")
+        print("bar")
     def __str__(self):
         return f"local Python package `{self._source}`"
 
@@ -591,7 +606,7 @@ class Install_wheel(Buildable):
     def depends(self):
         return self._wheel
     def output(self):
-        return self.builder.find_in(self.builder.sys_path(self._python), self._name)
+        return self.builder.find_in(self.builder.site_packages(self._python), self._name)
     def build(self):
         if self.output().find():
             self.builder.subproc([self._python, "-m", "pip", "uninstall", "--yes", self._wheel])
@@ -778,13 +793,15 @@ class Builder:
             self.venv_dir = None
             self._python = "python3"
         self.prefices = Prefices(self.env)
-        self.prefices.add("python", env_vars=["PYTHONPATH"])
         self.prefices.add("bin", env_vars=["PATH"])
         self.prefices.add("lib", env_vars=["LIBRARY_PATH", "LD_LIBRARY_PATH", "DT_RPATH"])
         self.prefices.add("include", env_vars=["INCLUDE_PATH", "CPLUS_INCLUDE_PATH"])
         self.prefices.add("share")
         self.prefices.add("cmake", env_vars=["CMAKE_PREFIX_PATH"], suffix="cmake")
-        """
+        for p in self.prefices:
+            self.mkdir(self.build_dir + p)
+        self.mkdir(self.build_dir + "lib/cmake")
+        self.prefices.add("python", env_vars=["PYTHONPATH"])
         if not self.options["use_env_paths"]:
             for prefix in self.prefices:
                 self.prefices[prefix] = ()
@@ -792,10 +809,8 @@ class Builder:
             for root in ["/", "/usr/", "/usr/local/"]:
                 for prefix in ["bin", "include", "lib", "share"]:
                     self.prefices[prefix] = self.prefices[prefix] + (f"{root}{prefix}/",)
-        """
         module_path = parent(parent(os.path.realpath(__file__)))
-        self.prefices["python"] = (module_path,) + self.prefices["python"] + tuple(self.sys_path())
-        """
+        self.prefices["python"] = (module_path,) + self.prefices["python"] + tuple(self.site_packages())
         self.prefices["cmake"] = (f"{self.build_dir}lib/cmake/",) + self.prefices["cmake"]
         for p in self.prefices:
             self.prefices[p] = (f"{self.build_dir}{p}/",) + self.prefices[p]
@@ -804,15 +819,13 @@ class Builder:
             p = Prefices.remove_suffix(p, "bin")
             p = Prefices.remove_suffix(p, "sbin")
             cmake_paths += (p, p + "lib/")
-        self.subproc("echo $PATH", shell=True)
         self.prefices["cmake"] = (self.build_dir + "lib/",) + tuple(self.prefices["cmake"]) + ('/home/mcsp3/codes/hexed/build_test/', '/home/mcsp3/codes/hexed/build_test/lib/', '/home/mcsp3/.main_venv/', '/home/mcsp3/.main_venv/lib/', '/home/mcsp3/.local/', '/home/mcsp3/.local/lib/', '/usr/local/', '/usr/local/lib/', '/usr/local/', '/usr/local/lib/', '/usr/', '/usr/lib/', '/usr/', '/usr/lib/', '/', '/lib/', '/', '/lib/', '/usr/games/', '/usr/games/lib/', '/usr/local/games/', '/usr/local/games/lib/', '/snap/', '/snap/lib/', '/opt/tecplot/360ex_2020r2/', '/opt/tecplot/360ex_2020r2/lib/', '/opt/tecplot/chorus_2020r2/', '/opt/tecplot/chorus_2020r2/lib/')
-        """
         self[Pip](["cmake", "pypisearch"]).do
 
-    def sys_path(self, python=None):
+    def site_packages(self, python=None):
         if not python:
             python = self._python
-        return eval(self.subproc([python, "-c", "import sys; print(sys.path)"], capture_output=True).stdout.decode())
+        return eval(self.subproc([python, "-c", "import site; print(site.getsitepackages())"], capture_output=True).stdout.decode())
 
     @property
     def options(self):
@@ -876,6 +889,7 @@ class Builder:
         os.chdir(source_dir)
         self.mkdir(build_dir)
         os.chdir(build_dir)
+        print(self.env["CMAKE_PREFIX_PATH"])
         args = [
             self.venv_dir + "bin/cmake",
             "-DCMAKE_INSTALL_PREFIX=" + self.build_dir,
@@ -883,8 +897,11 @@ class Builder:
         if Compiler.sanitize:
             args.append('-DCMAKE_CXX_FLAGS=' + " ".join([f for f in Compiler().flags() if f.startswith("-fsanitize=")]))
         self.subproc(args + opts + [".."])
-        self.subproc(["make", f"-j{self.options['n_build_procs']}", "install"])
+        self.make()
         os.chdir(cwd)
+
+    def make(self, args=["install"]):
+        self.subproc(["make", f"-j{self.options['n_build_procs']}", *args])
 
     def fetch_archive(self, url, outputs=None):
         archive = self[Wget](url).do.file_name
@@ -932,10 +949,10 @@ class Builder:
                 r"(?:^|\n) *import +([a-zA-Z]+)(?:\.[a-zA-Z.]+)?(?: +as [a-zA-Z.]+)?",
                 r"(?:^|\n) *from +([a-zA-Z]+)(?:\.[a-zA-Z.]+)? +import +(?:[a-zA-Z.]+|\*)",
             ]
-            prefix = self.prefices["python"] + [parent(absolute(file))]
+            prefix = self.prefices["python"] + (parent(absolute(file)),)
         elif ext in ["c", "cpp", "cxx", "c++", "h", "hpp", "hxx", "h++"]:
             patterns = [r'#include +["<]([\w.]+)[">]']
-            prefix = [self.build_dir + "include/hexed"]
+            prefix = (self.build_dir + "include/hexed",)
         elif ext == "hil":
             patterns = [r"read {(\w+)}"]
             raise NotImplementedError("need to implement prefix for HIL")
