@@ -236,7 +236,7 @@ class Buildable(Deliverable):
         return self._found_depends
     def up_to_date(self):
         utd = bool(self.found_output)
-        if any([a.startswith(self.bdir) for a in self.found_output.assets]):
+        if any([a.startswith(self.bdir) for a in self.found_output.assets + self.found_depends.assets]):
             utd = utd and self.found_output.earliest_mtime >= self.found_depends.latest_mtime
         return utd
     def __str__(self):
