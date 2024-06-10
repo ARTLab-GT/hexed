@@ -137,9 +137,8 @@ class Hexed(bu.C_project):
                 self.bdir + "doc/html/",
                 lambda f: f.endswith(".png") or f.endswith(".svg"),
             ).do
-            auto_images = ["blottner_sphere.svg", "flat_plate.svg", "header_background.png", "header.png", "naca0012.svg", "summary.svg"]
             self[bu.Python_script](
-                bu.all_([self.bdir + "doc/html/" + f for f in auto_images], name="benchmark images"),
+                bu.all_([self.bdir + "doc/html/" + f for f in ["blottner_sphere.svg", "flat_plate.svg", "naca0012.svg", "summary.svg"]]),
                 self.sdir + "script/install/vis_benchmark.py",
                 args=[self.sdir + "benchmark.txt", self.bdir + "doc/html/"],
                 extra_depends=[self.sdir + "benchmark.txt"],
