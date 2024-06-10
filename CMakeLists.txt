@@ -75,10 +75,12 @@ endif()
 
 # install Python dependencies
 if (autoinstall_python)
-    add_custom_target(install_py_deps ALL
+    add_custom_command(OUTPUT py_deps_installed
         COMMAND ${CMAKE_SOURCE_DIR}/script/install_py_deps.sh
+        COMMAND touch py_deps_installed
         DEPENDS ${CMAKE_SOURCE_DIR}/script/install_py_deps.sh
     )
+    add_custom_target(install_py_deps ALL DEPENDS py_deps_installed)
 else()
     add_custom_target(install_py_deps ALL)
 endif()
@@ -86,7 +88,7 @@ endif()
 # configure files
 configure_file(hexed-config.cmake.in hexed-config.cmake)
 configure_file(hexed_config.hpp.in include/auto/hexed_config.hpp)
-configure_file(config.cpp.in config.cpp)
+configure_file(hexed_config.cpp.in config.cpp)
 configure_file(script/benchmark.py.in benchmark.py)
 file(CREATE_LINK ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/include/hexed SYMBOLIC)
 file(COPY_FILE ${CMAKE_SOURCE_DIR}/test/ellipsoid.igs ${CMAKE_BINARY_DIR}/ellipsoid.igs)
@@ -120,15 +122,22 @@ set(pysrc python/dist/hexedpy-${CMAKE_PROJECT_VERSION}.tar.gz)
 add_custom_command(
     OUTPUT ${wheel} ${pysrc}
     COMMAND ${CMAKE_SOURCE_DIR}/script/build_python.sh
-    DEPENDS constants.hil python ${CMAKE_SOURCE_DIR}/LICENSE.txt ${CMAKE_SOURCE_DIR}/script/build_python.sh install_py_deps
+    DEPENDS constants.hil python ${CMAKE_SOURCE_DIR}/LICENSE.txt ${CMAKE_SOURCE_DIR}/script/build_python.sh py_deps_installed
 )
 add_custom_target(hexedpy_package ALL DEPENDS ${wheel} ${pysrc})
 if (autoinstall_python)
-    add_custom_target(install_hexedpy ALL
-        COMMAND pip3 uninstall -y hexedpy
-        COMMAND pip3 install ${wheel}
-        DEPENDS hexedpy_package
+    # note: Both install commands are necessary to ensure that `hexedpy` is reinstalled with each new build.
+    # The first one installs `hexedpy` with all its dependencies (but won't reinstall anything if it has already been installed)
+    # and the second forces the reinstallation of `hexedpy` itself, but not its dependencies.
+    # Thus `hexedpy` will always be reinstalled, but the dependencies will only be installed if they aren't already.
+    add_custom_command(
+        OUTPUT hexedpy_installed
+        COMMAND pip3 install --upgrade ${wheel}
+        COMMAND pip3 install --force-reinstall --no-deps ${wheel}
+        COMMAND touch hexedpy_installed
+        DEPENDS ${wheel}
     )
+    add_custom_target(install_hexedpy ALL DEPENDS hexedpy_installed)
 endif()
 
 # autogenerate C++ files
@@ -141,7 +150,7 @@ add_custom_command(
         autogen.sh
         ${CMAKE_SOURCE_DIR}/script/auto_generate.py
         python
-        install_py_deps
+        py_deps_installed
 )
 
 # generate colormaps to use in tecplot
@@ -152,7 +161,7 @@ add_custom_command(
 )
 add_custom_target(
     colormaps ALL
-    DEPENDS ${colormap_files} install_py_deps
+    DEPENDS ${colormap_files} py_deps_installed
 )
 
 # define main target, which is a library

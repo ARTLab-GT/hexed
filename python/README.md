@@ -7,9 +7,6 @@ __hex__ (_noun_)
 __hex__  (_verb_)
 1. to cast a hex
 
-Hexedpy is a Python package which is a small part of the [Hexed project](https://artlab-gt.github.io/hexed/).
-On its own, it doesn't really have a single goal and isn't particularly interesting.
-It simply provides some miscellaneous tools that are useful for undertaking projects with the Hexed CFD solver,
-and some of the Hexed example cases use Hexedpy.
-It should be automatically built and installed when you build Hexed,
-and the full documentation for the module can be found [here](https://artlab-gt.github.io/hexed/namespacehexedpy.html).
+Hexedpy is a pre-compiled package for the [Hexed](https://artlab-gt.github.io/hexed/) CFD solver.
+It contains the `hexedpy` Python module (which provides pre/post processing tools for use with the Hexed solver)
+in addition to pre-compiled binaries for the solver itself, including the `hexecute` executable.

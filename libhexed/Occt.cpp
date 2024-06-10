@@ -17,13 +17,6 @@
 // messages
 #include <Message.hxx>
 #include <Message_PrinterToReport.hxx>
-// rendering
-#include <AIS_InteractiveContext.hxx>
-#include <AIS_Shape.hxx>
-#include <Aspect_DisplayConnection.hxx>
-#include <OpenGl_GraphicDriver.hxx>
-#include <V3d_View.hxx>
-#include <Xw_Window.hxx>
 // file import
 #include <IGESControl_Reader.hxx>
 #include <STEPControl_Reader.hxx>
@@ -216,43 +209,6 @@ std::vector<double> Occt::Geom::intersections(Mat<> point0, Mat<> point1)
     }
   }
   return sects;
-}
-
-void Occt::write_image(const TopoDS_Shape& shape, std::string file_name, Mat<3> eye_pos, Mat<3> look_at_pos, int resolution)
-{
-  // general setup
-  opencascade::handle<Aspect_DisplayConnection> displayConnection = new Aspect_DisplayConnection();
-  opencascade::handle<OpenGl_GraphicDriver> graphicDriver = new OpenGl_GraphicDriver(displayConnection);
-  opencascade::handle<V3d_Viewer> viewer = new V3d_Viewer(graphicDriver);
-  viewer->SetDefaultLights();
-  viewer->SetLightOn();
-  opencascade::handle<AIS_InteractiveContext> context = new AIS_InteractiveContext(viewer);
-  opencascade::handle<V3d_View> view = viewer->CreateView();
-  opencascade::handle<Xw_Window> win = new Xw_Window(graphicDriver->GetDisplayConnection(), "", 0, 0, resolution, resolution);
-  win->SetVirtual(true);
-  view->SetWindow(win);
-  view->SetBackgroundColor(Quantity_Color(Quantity_NOC_BLACK));
-  view->MustBeResized();
-  view->AutoZFit();
-  // add shapes
-  opencascade::handle<AIS_Shape> shaded = new AIS_Shape(shape);
-  context->Display(shaded, false);
-  context->SetDisplayMode(shaded, AIS_Shaded, false);
-  opencascade::handle<AIS_Shape> wireframe = new AIS_Shape(shape);
-  context->Display(wireframe, false);
-  context->SetDisplayMode(wireframe, AIS_WireFrame, false);
-  view->SetFront();
-  // set view orientation
-  eye_pos *= 1e3;
-  look_at_pos *= 1e3;
-  view->SetEye(eye_pos(0), eye_pos(1), eye_pos(2));
-  view->SetAt(look_at_pos(0), look_at_pos(1), look_at_pos(2));
-  view->FitAll(.2);
-  // add coordinate axes
-  view->TriedronDisplay(Aspect_TOTP_LEFT_LOWER, Quantity_NOC_WHITE, .1);
-  // render/save
-  view->Redraw();
-  view->Dump(file_name.c_str());
 }
 
 template <typename reader_t>

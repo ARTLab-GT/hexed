@@ -3,6 +3,6 @@
 namespace hexed::config
 {
 
-const std::string commit = "{[info['commit']]}";
+const std::string commit = "@COMMIT@";
 
 }

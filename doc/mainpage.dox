@@ -47,8 +47,7 @@ This is Version 0, the prototype.
 You are encouraged to study and experiment with it, but it is missing some important features and probably riddled with bugs,
 and future versions may include substantial changes to the source code and user interface.
 We hope to release a stable and more feature-complete Version 1 in the next year or two.
-As a personal request, if you modify or improve this code, please share your work and credit our original version.
-We welcome pull requests.
+As a personal (non-legally-binding) request, if you modify or improve this code, please share your work and credit our original version.
 If you use Hexed in any academic research, please cite one or both of the following publications:
 
 Ref. \cite smith-pierce_mesh2024 :

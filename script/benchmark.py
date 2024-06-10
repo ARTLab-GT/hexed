@@ -3,9 +3,10 @@ import os
 import git
 import subprocess
 
-root_dir = "@CMAKE_SOURCE_DIR@"
+root_dir = os.getcwd()
 repo = git.Repo(root_dir)
-for case in ["naca0012", "flat_plate", "blottner_sphere"]:
+#for case in ["naca0012", "flat_plate", "blottner_sphere"]:
+for case in ["naca0012", "flat_plate"]:
     print(f"benchmarking case `{case}`")
     os.chdir(f"{root_dir}/samples/{case}/")
     start_time = time.time()
