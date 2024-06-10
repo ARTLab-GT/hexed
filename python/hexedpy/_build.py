@@ -110,6 +110,7 @@ class Hexed(bu.C_project):
         translate(package_dir + "hexedpy/lib/hexed/constants.hil", "{This is an automatically-generated port of `constants.hpp` into HIL.}", "hil")
         translate(package_dir + "hexedpy/constants.py",
             r"## \namespace hexed.constants \brief Ports `hexed::constants` into Python. \see `constants.hpp`", "py")
+        self.builder.env["HEXED_PATH"] = self.bdir + "python_package/hexedpy/lib/hexed/"
         if self.builder.options["build_wheel"]:
             package = self[bu.Python_package](package_dir).find()
             assert package, "Failed to build Hexed Python package"

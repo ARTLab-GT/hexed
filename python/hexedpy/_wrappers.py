@@ -18,7 +18,7 @@ def run_exec(name):
     lib_dir = "/".join(exec_path.split("/")[:-2] + ["lib"])
     add_path(lib_dir, "LD_LIBRARY_PATH")
     add_path(lib_dir, "DT_RPATH")
-    add_path(lib_dir + "/hexed/", "HEXEDPATH")
+    add_path(lib_dir + "/hexed/", "HEXED_PATH")
     run([exec_path] + argv[1:])
 
 def hil():

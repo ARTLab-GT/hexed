@@ -722,6 +722,7 @@ class Prefices(Dict_wrapper):
         self.env = env
         self._env_vars = {}
         self._suffices = {}
+        self._sys_paths = {}
     @staticmethod
     def remove_suffix(path, suffix):
         path = slash(path)
@@ -729,9 +730,10 @@ class Prefices(Dict_wrapper):
         if path.endswith(suffix):
             path = slash(path[:-len(suffix)])
         return path
-    def add(self, name, env_vars=[], suffix=""):
+    def add(self, name, env_vars=[], suffix="", sys_paths=()):
         self._env_vars[name] = env_vars
         self._suffices[name] = suffix
+        self._sys_paths[name] = tuple(sys_paths)
         paths = []
         for var in env_vars:
             if var in self.env.keys():
@@ -746,14 +748,14 @@ class Prefices(Dict_wrapper):
         new_value = []
         for v in value:
             v = self.remove_suffix(absolute(v), self._suffices[key])
-            if v not in new_value:
+            if v not in new_value and v not in self._sys_paths[key]:
                 new_value.append(v)
         value = tuple(new_value)
         for var in self._env_vars[key]:
             self.env[var] = ":".join(value)
         return value
     def on_get(self, key, value):
-        return tuple([v + self._suffices[key] for v in value])
+        return tuple([v + self._suffices[key] for v in value]) + self._sys_paths[key]
 
 class Builder:
     def _merge_option(self, opt):
@@ -794,23 +796,22 @@ class Builder:
             self._python = "python3"
         self.prefices = Prefices(self.env)
         self.prefices.add("bin", env_vars=["PATH"])
-        self.prefices.add("lib", env_vars=["LIBRARY_PATH", "LD_LIBRARY_PATH", "DT_RPATH"])
-        self.prefices.add("include", env_vars=["INCLUDE_PATH", "CPLUS_INCLUDE_PATH"])
+        self.prefices.add("lib", env_vars=["LIBRARY_PATH", "LD_LIBRARY_PATH", "DT_RPATH"],
+            sys_paths=(("usr/lib/") if self.options["use_system_paths"] else ()))
+        self.prefices.add("include", env_vars=["INCLUDE_PATH", "CPLUS_INCLUDE_PATH"],
+            sys_paths=(("/usr/include/", "/usr/local/include/") if self.options["use_system_paths"] else ()))
         self.prefices.add("share")
         self.prefices.add("cmake", env_vars=["CMAKE_PREFIX_PATH"], suffix="cmake")
         for p in self.prefices:
             self.mkdir(self.build_dir + p)
         self.mkdir(self.build_dir + "lib/cmake")
-        self.prefices.add("python", env_vars=["PYTHONPATH"])
+        self.prefices.add("python", env_vars=["PYTHONPATH"], sys_paths=tuple(self.site_packages()))
         if not self.options["use_env_paths"]:
             for prefix in self.prefices:
-                self.prefices[prefix] = ()
-        if self.options["use_system_paths"]:
-            for root in ["/", "/usr/", "/usr/local/"]:
-                for prefix in ["bin", "include", "lib", "share"]:
-                    self.prefices[prefix] = self.prefices[prefix] + (f"{root}{prefix}/",)
+                if prefix != "bin":
+                    self.prefices[prefix] = ()
         module_path = parent(parent(os.path.realpath(__file__)))
-        self.prefices["python"] = (module_path,) + self.prefices["python"] + tuple(self.site_packages())
+        self.prefices["python"] = (module_path,) + self.prefices["python"]
         self.prefices["cmake"] = (f"{self.build_dir}lib/cmake/",) + self.prefices["cmake"]
         for p in self.prefices:
             self.prefices[p] = (f"{self.build_dir}{p}/",) + self.prefices[p]
