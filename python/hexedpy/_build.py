@@ -1,5 +1,6 @@
 import build_utils as bu
 import os
+import re
 
 class Hexed(bu.C_project):
     version = "0.2.2"
@@ -46,7 +47,13 @@ class Hexed(bu.C_project):
         else:
             bu.Compiler.warn.append("no-unknown-pragmas")
         # Get a list of all source files. The entire build process can be bypassed if there are no changes to any of these files
-        self._all_sources = bu.File(self.sdir, ignore=lambda f: bu.absolute(f) == self.bdir),
+        self._all_sources = bu.all_(bu.contents(self.sdir, ignore=lambda f:
+            bu.not_source(f) or
+            re.match(self.sdir + r"build(?!\.py)", bu.absolute(f)) or
+            f.startswith(self.sdir + "samples") or
+            f.startswith(self.sdir + ".git") or
+            f.endswith(".tags")
+        ))
 
     def depends(self):
         deps = [
