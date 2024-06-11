@@ -223,7 +223,8 @@ class Buildable(Deliverable):
     def touch(self):
         for asset in self.found_output.assets:
             for file in contents(asset, ignore=lambda f: False):
-                os.utime(file)
+                if os.access(file, os.W_OK):
+                    os.utime(file)
     @property
     def found_output(self):
         if self._found_output is None:
@@ -858,8 +859,8 @@ class Builder:
     def indent(self):
         return self.indent_level*self.tab
 
-    def message(self, text):
-        print(self.indent() + text)
+    def message(self, text, **kwargs):
+        print(self.indent() + text, flush=True, **kwargs)
 
     def mkdir(self, name):
         os.makedirs(absolute(name), exist_ok=True)
@@ -873,7 +874,9 @@ class Builder:
         return self.subproc([self._python] + list(args), **kwargs)
 
     def in_pypi(self, package):
+        self.message("searching PyPI...", end="")
         output = self.python("-m", "pypisearch", package, capture_output=True).stdout.decode()
+        self.message("done")
         return f"\n{package} " in "\n" + output
 
     def cmake(self, source_dir, opts=[], build_dir="build"):

@@ -1,4 +1,4 @@
-from pkg_resources import resource_filename
+from importlib.resources import files, as_file
 from subprocess import run
 from os import environ
 from sys import argv
@@ -14,7 +14,8 @@ def add_path(path_name, var):
     environ[var] = old_value + path_name
 
 def run_exec(name):
-    exec_path = resource_filename("hexedpy", "bin/" + name)
+    with as_file(files("hexedpy")/"bin"/name) as file:
+        exec_path = str(file)
     lib_dir = "/".join(exec_path.split("/")[:-2] + ["lib"])
     add_path(lib_dir, "LD_LIBRARY_PATH")
     add_path(lib_dir, "DT_RPATH")
