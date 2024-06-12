@@ -543,6 +543,9 @@ Case::Case(std::string input_script)
         _solver().update_art_visc_smoothness(_vard("art_visc_width"));
       } else if (avc) {
         _solver().set_art_visc_constant(_vard("art_visc_constant"));
+      } else if (!_vari("diffusive_admissibility") && _solver().using_art_visc()) {
+        _printers->info("Turning off artificial viscosity.\n", true);
+        _solver().set_art_visc_off();
       }
       _solver().update();
     }

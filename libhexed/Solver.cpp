@@ -443,6 +443,11 @@ void Solver::initialize(const Spacetime_func& func)
   _init_face_state();
 }
 
+bool Solver::using_art_visc()
+{
+  return use_art_visc;
+}
+
 void Solver::set_art_visc_off()
 {
   use_art_visc = false;
