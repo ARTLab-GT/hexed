@@ -35,9 +35,17 @@ def parent(p):
         p = p[:-1]
     return slash("/".join(p.split("/")[:-1]))
 
-def contents(name, recursive=True):
+def is_swp(f):
+    return re.search(r"\.[^/]*\.swp$", f)
+
+def not_source(f):
+    return is_swp(f) or slash(f).endswith("__pycache__/")
+
+def contents(name, recursive=True, ignore=not_source):
     c = []
     def add_contents(path):
+        if ignore(path):
+            return
         if os.path.isfile(path):
             c.append(path)
         elif os.path.isdir(path):
@@ -57,12 +65,6 @@ def as_bool(s):
             raise Exception(f'Could not interpret "{string}" as a Boolean.')
     else:
         return bool(s)
-
-def is_swp(f):
-    return re.search(r"\.[^/]*\.swp$", f)
-
-def maybe_source(f):
-    return not (is_swp(f) or ("__pycache__" in f))
 
 def assert_true(fun, message=""):
     def assertion(arg):
@@ -131,14 +133,11 @@ class Deliverable:
                 raise Exception("can only make a Deliverable out of a Deliverable, a str, or an iterable")
 
 class File(Deliverable):
-    def __init__(self, path, ignore=lambda f: False):
+    def __init__(self, path):
         self._path = path
-        self.ignore = ignore
     def find(self):
         compl = Completed([], False, time.time(), 0.)
         def add(path):
-            if self.ignore(path):
-                return
             if os.path.isfile(path):
                 compl.found = True
                 compl.assets.append(path)
@@ -153,11 +152,6 @@ class File(Deliverable):
                     add(path + p)
         add(absolute(self._path))
         return compl
-        if os.path.isfile(self._path):
-            mtime = os.path.getmtime(self._path)
-            return Completed([self._path], True, mtime, mtime)
-        else:
-            return Completed([], False, time.time(), 0.)
     def __str__(self):
         return f"{self._path}"
 
@@ -228,8 +222,9 @@ class Buildable(Deliverable):
         raise NotImplementedError("Constructable.build must be implemented by derived classes")
     def touch(self):
         for asset in self.found_output.assets:
-            for file in contents(asset):
-                os.utime(file)
+            for file in contents(asset, ignore=lambda f: False):
+                if os.access(file, os.W_OK):
+                    os.utime(file)
     @property
     def found_output(self):
         if self._found_output is None:
@@ -242,7 +237,7 @@ class Buildable(Deliverable):
         return self._found_depends
     def up_to_date(self):
         utd = bool(self.found_output)
-        if any([a.startswith(self.bdir) for a in self.found_output.assets]):
+        if any([a.startswith(self.bdir) for a in self.found_output.assets + self.found_depends.assets]):
             utd = utd and self.found_output.earliest_mtime >= self.found_depends.latest_mtime
         return utd
     def __str__(self):
@@ -586,13 +581,10 @@ class Python_package(Buildable):
         return any_([f for f in contents(self._dist) if f.endswith(".whl")])
     def build(self):
         self[Pip]("build").do
-        print(self[Pip]("build").output().find())
         if os.path.exists(self._dist):
             shutil.rmtree(self._dist)
         os.chdir(self._source)
-        print("foo")
         self.builder.python("-m", "build")
-        print("bar")
     def __str__(self):
         return f"local Python package `{self._source}`"
 
@@ -867,8 +859,8 @@ class Builder:
     def indent(self):
         return self.indent_level*self.tab
 
-    def message(self, text):
-        print(self.indent() + text)
+    def message(self, text, **kwargs):
+        print(self.indent() + text, flush=True, **kwargs)
 
     def mkdir(self, name):
         os.makedirs(absolute(name), exist_ok=True)
@@ -882,7 +874,9 @@ class Builder:
         return self.subproc([self._python] + list(args), **kwargs)
 
     def in_pypi(self, package):
+        self.message("searching PyPI...", end="")
         output = self.python("-m", "pypisearch", package, capture_output=True).stdout.decode()
+        self.message("done")
         return f"\n{package} " in "\n" + output
 
     def cmake(self, source_dir, opts=[], build_dir="build"):
@@ -890,7 +884,6 @@ class Builder:
         os.chdir(source_dir)
         self.mkdir(build_dir)
         os.chdir(build_dir)
-        print(self.env["CMAKE_PREFIX_PATH"])
         args = [
             self.venv_dir + "bin/cmake",
             "-DCMAKE_INSTALL_PREFIX=" + self.build_dir,
@@ -930,13 +923,13 @@ class Builder:
                     d[attr] = value
         return d
 
-    def copy(self, source, destination, name_filter=maybe_source):
+    def copy(self, source, destination, ignore=not_source):
         if os.path.isdir(source):
             if os.path.exists(destination):
                 assert os.path.isdir(destination), f"Cannot copy directory {source} to file {destination}."
             origin = source
             destination = slash(destination)
-            return Union(self, [Copy(self, f, destination, origin=origin) for f in contents(source) if name_filter(f)],
+            return Union(self, [Copy(self, f, destination, origin=origin) for f in contents(source, ignore=ignore)],
                          name=f"{Copy.names(source, destination)[0]}")
         elif os.path.isfile(source):
             return Copy(self, source, destination)

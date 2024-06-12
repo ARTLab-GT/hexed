@@ -1,5 +1,6 @@
 import build_utils as bu
 import os
+import re
 
 class Hexed(bu.C_project):
     version = "0.2.2"
@@ -46,7 +47,13 @@ class Hexed(bu.C_project):
         else:
             bu.Compiler.warn.append("no-unknown-pragmas")
         # Get a list of all source files. The entire build process can be bypassed if there are no changes to any of these files
-        self._all_sources = bu.File(self.sdir, ignore=lambda f: bu.absolute(f) == self.bdir),
+        self._all_sources = bu.all_(bu.contents(self.sdir, ignore=lambda f:
+            bu.not_source(f) or
+            re.match(self.sdir + r"build(?!\.py)", bu.absolute(f)) or
+            f.startswith(self.sdir + "samples") or
+            f.startswith(self.sdir + ".git") or
+            f.endswith(".tags")
+        ))
 
     def depends(self):
         deps = [
@@ -130,9 +137,8 @@ class Hexed(bu.C_project):
                 self.bdir + "doc/html/",
                 lambda f: f.endswith(".png") or f.endswith(".svg"),
             ).do
-            auto_images = ["blottner_sphere.svg", "flat_plate.svg", "header_background.png", "header.png", "naca0012.svg", "summary.svg"]
             self[bu.Python_script](
-                bu.all_([self.bdir + "doc/html/" + f for f in auto_images], name="benchmark images"),
+                bu.all_([self.bdir + "doc/html/" + f for f in ["blottner_sphere.svg", "flat_plate.svg", "naca0012.svg", "summary.svg"]]),
                 self.sdir + "script/install/vis_benchmark.py",
                 args=[self.sdir + "benchmark.txt", self.bdir + "doc/html/"],
                 extra_depends=[self.sdir + "benchmark.txt"],

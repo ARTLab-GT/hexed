@@ -1,12 +1,12 @@
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "hexedpy"
 version = "{[info['version']]}"
 authors = [
-  { name="Micaiah Smith-Pierce", email="micaiah@gatech.edu" },
+    {name="Micaiah Smith-Pierce", email="micaiah@gatech.edu"},
 ]
 description = "Hexed CFD solver as a Python package"
 readme = "README.md"
@@ -23,7 +23,6 @@ dependencies = [
     "sympy",
     "scipy",
     "gitpython",
-    "setuptools",
 ]
 
 [project.urls]
@@ -35,5 +34,5 @@ hil = "hexedpy._wrappers:hil"
 hexecute = "hexedpy._wrappers:hexecute"
 hexed_test = "hexedpy._wrappers:hexed_test"
 
-[tool.setuptools.package-data]
-hexedpy = ["bin/*", "lib/*", "lib/hexed/*"]
+[tool.hatchling.build]
+include = ["bin/*", "lib/*", "lib/hexed/*"]
