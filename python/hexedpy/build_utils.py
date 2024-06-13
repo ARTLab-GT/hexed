@@ -487,21 +487,25 @@ class Configure(Buildable):
     def __init__(self, builder, old_name, new_name):
         self.old_name = old_name
         self.new_name = new_name
+        with open(self.old_name, "r") as in_file:
+            self._text = in_file.read()
+        self._opts = []
+        for opt in re.findall(r'options\["(\w+)"\]', self._text):
+            if opt != "build_dir" and opt not in self._opts:
+                self._opts.append(opt)
     def depends(self):
-        return File(self.old_name) & File(self.builder.cache_file)
+        return File(self.old_name) & all_([self.builder.cache_dir + opt for opt in self._opts], name="configuration options")
     def output(self):
         return File(self.new_name)
     def build(self):
-        with open(self.old_name, "r") as in_file:
-            text = in_file.read()
         while True:
-            match = re.search(r"{\[([^}]+)\]}", text)
+            match = re.search(r"{\[([^}]+)\]}", self._text)
             if match is None: break
             options = self.builder.options
             info = self.builder.info
-            text = f"{text[:match.start()]}{eval(match.group(1))}{text[match.end():]}"
+            self._text = f"{self._text[:match.start()]}{eval(match.group(1))}{self._text[match.end():]}"
         with open(self.new_name, "w") as out_file:
-            out_file.write(text)
+            out_file.write(self._text)
 
 class Python_script(Buildable):
     def __init__(self, builder, output, script, args=[], extra_depends=[]):
@@ -781,7 +785,8 @@ class Builder:
         for opt in opts:
             self._merge_option(opt)
         self.mkdir(self.build_dir)
-        self.cache_file = self.build_dir + "option_cache"
+        self.cache_dir = self.build_dir + "cache/"
+        self.mkdir(self.cache_dir)
         self.synch_cache()
         self.indent_level = 0
         self.tab = " \x1b[1;34m|\x1b[0m"
@@ -849,19 +854,18 @@ class Builder:
 
     def synch_cache(self):
         in_text = ""
-        if os.path.isfile(self.cache_file):
-            with open(self.cache_file, "r") as cache:
-                in_text = cache.read()
-                for line in in_text.split("\n"):
-                    if line:
-                        self._merge_option(line)
-        out_text = ""
+        existing_opts = {}
+        for fname in os.listdir(self.cache_dir):
+            with open(self.cache_dir + fname, "r") as cache:
+                text = cache.read()
+                existing_opts[fname] = text
+                self._merge_option(f"--{fname}={text}")
         for name in self.options:
             if name != "build_dir":
-                out_text += f"--{name}={self.options[name]}\n"
-        if out_text != in_text:
-            with open(self.cache_file, "w") as cache:
-                cache.write(out_text)
+                text = str(self.options[name])
+                if name not in existing_opts.keys() or text != existing_opts[name]:
+                    with open(self.cache_dir + name, "w") as cache:
+                        cache.write(text)
 
     def indent(self):
         return self.indent_level*self.tab
