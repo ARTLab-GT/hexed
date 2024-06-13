@@ -62,6 +62,7 @@ class Element_new : public Kernel_element
   Array<double> origin() const;
   const Basis& basis() const;
   Storage_params storage_params() const;
+  inline int mask() const {throw std::runtime_error("`Element_new::mask()` is not yet implemented");}
 
   Array<double> full_state();
   Array<double> flow_state();
