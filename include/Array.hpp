@@ -11,6 +11,7 @@
 
 #include <vector>
 #include "assert.hpp"
+#include "math.hpp"
 
 namespace hexed
 {
@@ -44,6 +45,13 @@ namespace hexed
  * Otherwise, no bounds checking is performed and out-of-bounds access is undefined behavior.
  * This can be overridden by explicitly defining the `HEXED_ARRAY_BOUNDS_CHECK` macro to be `true` or `false`.
  *
+ * `Array`s support the unary arithmetic operators `-` and `+` as well as the binary operators `-`, `+`, `/`, `*`, `%`, `&&`, and `||`.
+ * Binary operators can operate on two arrays or on an array and a scalar.
+ * All operators perform their operations elementwise.
+ * They always create a copy, so for truly optimal performance you might consider a loop instead.
+ * For binary operators, both operands (arrays or scalars) must have the same data type.
+ * To perform operations on arrays that have different, but compatible, types, you can cast them to the same type with `Array::copy<U>()`.
+ *
  * \note Implementing a feature-complete array container is a large task,
  * and I have not yet implemented all of the features that I ultimately plan to.
  * If there is a feature you want and feel that an array class ought to have,
@@ -64,11 +72,9 @@ class Array
   public:
   /*! \brief Creates an array from scratch.
    * \details Array will have dimensions specified by `shape_arg`.
-   * If `data_arg` is `nullptr` (the default), new data will be allocated which this `Array` will now own.
-   * Data values are set to `0`.
-   * Otherwise, this array will be a reference to the data starting at `data_arg` and will not own that data.
+   * This array will be a reference to the data starting at `data_arg` and will not own that data.
    */
-  Array(std::vector<int> shape_arg, T* data_arg = nullptr)
+  Array(std::vector<int> shape_arg, T* data_arg)
   : _order{int(shape_arg.size())}, _shape_storage{shape_arg}, _shape{_shape_storage.data()}
   {
     _shape_storage.shrink_to_fit();
@@ -77,13 +83,49 @@ class Array
     _strides = _stride_storage.data();
     _strides[_order] = 1;
     for (int i = _order - 1; i >= 0; --i) _strides[i] = _strides[i + 1]*_shape[i];
-    if (data_arg) _data = data_arg;
-    else {
-      _data_storage.resize(size(), T(0));
-      _data_storage.shrink_to_fit();
-      _data = _data_storage.data();
-    }
+    _data = data_arg;
   }
+  /*! \brief Creates an array from scratch.
+   * \details Array will have dimensions specified by `shape_arg`.
+   * This array will allocate new data, which it will now own.
+   * Data values are uninitialized.
+   */
+  Array(std::vector<int> shape_arg)
+  : Array(shape_arg, nullptr)
+  {
+    _data_storage.resize(size());
+    _data_storage.shrink_to_fit();
+    _data = _data_storage.data();
+  }
+
+  class Func_iterator : public std::iterator<std::input_iterator_tag, T, T*, T>
+  {
+    int _i;
+    std::function<T(int)> _func;
+    public:
+    Func_iterator(int i, std::function<T(int)> func) : _i{i}, _func{func} {}
+    Func_iterator& operator++() {++_i; return *this;}
+    Func_iterator operator++(int) {Func_iterator it = *this; ++(*this); return it;}
+    bool operator==(Func_iterator other) {return _i == other._i;}
+    bool operator!=(Func_iterator other) {return _i != other._i;}
+    T operator*() const {return _func(_i);}
+  };
+  template <typename input_it>
+  Array(std::vector<int> shape_arg, input_it first, input_it last)
+  : Array(shape_arg, nullptr)
+  {
+    _data_storage.assign(first, last);
+    _data_storage.shrink_to_fit();
+    _data = _data_storage.data();
+  }
+  Array(std::vector<int> shape_arg, std::function<T(int)> func)
+  : Array(shape_arg, nullptr)
+  {
+    _data_storage.assign(Func_iterator(0, func), Func_iterator(size(), func));
+    _data_storage.shrink_to_fit();
+    _data = _data_storage.data();
+  }
+
   //! \brief Creates an array which is a reference to `other`'s data.
   //! \details Note that this array does not own the data, and if `other` is deleted it will now contain a dangling pointer.
   Array(Array<T>& other) : Array(other.shape(), other.data()) {}
@@ -108,11 +150,15 @@ class Array
     return *this;
   }
   ~Array() = default;
-  //! \brief Creates a new array that owns its data, which is a copy of `this`'s data (i.e. new data is allocated).
-  Array<T> copy() const
+  /*! \brief Creates a new array that owns its data, which is a copy of `this`'s data (i.e. new data is allocated).
+   * \details If the template argument is specified to be something other than `T`, the array will be cast to a different type.
+   * The old type must by copy-assignable to the new type.
+   */
+  template <typename U = T>
+  Array<U> copy() const
   {
-    Array<T> c(shape());
-    c = *this;
+    Array<U> c(shape());
+    for (int i = 0; i < size(); ++i) c[i] = _data[i];
     return c;
   }
 
@@ -193,7 +239,56 @@ class Array
   Array<T>       operator()(int start, int stop)       {BODY}
   const Array<T> operator()(int start, int stop) const {BODY} //!< \overload
   #undef BODY
+
+        Eigen::Map<Mat<>> vector()       {return {data(), size()};}
+  const Eigen::Map<Mat<>> vector() const {return {data(), size()};}
 };
+
+#define DEFINE_OPERATOR(BIN_OP) \
+  template <typename T> \
+  Array<T> operator BIN_OP(const Array<T>& op0, const Array<T>& op1) \
+  { \
+    if constexpr (HEXED_ARRAY_BOUNDS_CHECK) { \
+      HEXED_ASSERT(op0.size() == op1.size(), "array sizes must match for arithmetic"); \
+    } \
+    Array<T> result = op0.copy(); \
+    for (int i = 0; i < op0.size(); ++i) result[i] = op0[i] BIN_OP op1[i]; \
+    return result; \
+  } \
+  template <typename T> \
+  Array<T> operator BIN_OP(const Array<T>& op0, const T& op1) \
+  { \
+    Array<T> result = op0.copy(); \
+    for (int i = 0; i < op0.size(); ++i) result[i] = op0[i] BIN_OP op1; \
+    return result; \
+  } \
+  template <typename T> \
+  Array<T> operator BIN_OP(const T& op0, const Array<T>& op1) \
+  { \
+    Array<T> result = op1.copy(); \
+    for (int i = 0; i < op1.size(); ++i) result[i] = op0 BIN_OP op1[i]; \
+    return result; \
+  }
+DEFINE_OPERATOR(-)
+DEFINE_OPERATOR(+)
+DEFINE_OPERATOR(/)
+DEFINE_OPERATOR(*)
+DEFINE_OPERATOR(%)
+DEFINE_OPERATOR(&&)
+DEFINE_OPERATOR(||)
+#undef DEFINE_OPERATOR
+
+#define DEFINE_OPERATOR(UN_OP) \
+  template <typename T> \
+  Array<T> operator UN_OP(const Array<T>& op0) \
+  { \
+    Array<T> result = op0.copy(); \
+    for (int i = 0; i < op0.size(); ++i) result[i] = UN_OP op0[i]; \
+    return result; \
+  }
+DEFINE_OPERATOR(-)
+DEFINE_OPERATOR(+)
+#undef DEFINE_OPERATOR
 
 }
 #endif

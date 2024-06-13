@@ -14,6 +14,7 @@ namespace hexed
 class Kernel_element
 {
   public:
+  virtual ~Kernel_element() = default;
   int record = 0; //!< for algorithms to book-keep general information
   virtual int mask() const = 0;
   //! \brief pointer to the data where the state variables are stored
@@ -22,7 +23,7 @@ class Kernel_element
   virtual double* residual_cache() = 0; //! \brief where the convective residual is stored for 2-stage time integration
   virtual double* time_step_scale() = 0; //!< \brief storage for local time step \details layout: [i_qpoint]
   virtual double& vertex_time_step_scale(int i_vertex) = 0; //!< \todo the kernel should not need this
-  virtual double nominal_size() = 0; //!< \brief nominal edge length of the element before any vertex motion
+  virtual double nominal_size() const = 0; //!< \brief nominal edge length of the element before any vertex motion
   virtual double* face(int i_face, bool is_ldg) = 0; //! \brief where the extrapolated face data is stored
   virtual bool deformed() const = 0; //! \brief whether this element is deformed
   /*!

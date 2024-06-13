@@ -79,7 +79,7 @@ class Element : public Kernel_element
   //! obtains face position based on interior qpoint positions (as defined by `position()`)
   std::vector<double> face_position(const Basis&, int i_face, int i_face_qpoint);
   virtual void set_jacobian(const Basis& basis);
-  inline double nominal_size() override {return _nom_sz;}
+  inline double nominal_size() const override {return _nom_sz;}
   inline int refinement_level() {return _r_level;} //!< \brief indicates how many times this element has been isotropically refined
   int aniso_ref_level() {return _aniso_r_level;} //!< \brief indicates how many times this element has been anisotropically refined
   inline std::vector<int> nominal_position() {return _nom_pos;}
