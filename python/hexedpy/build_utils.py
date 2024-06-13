@@ -335,6 +335,9 @@ class Wget(Subprocess):
     def __init__(self, builder, url):
         self.file_name = url.split("/")[-1]
         super().__init__(builder, ["wget", url], self.file_name, depends=[])
+    def build(self):
+        assert self.builder.option["internet"], "`Wget` requires internet access. (You passed `--internet=False`.)"
+        super().build()
 
 class Extract(Buildable):
     def __init__(self, builder, archive, outputs=None):
@@ -364,6 +367,8 @@ class Git_clone(Buildable):
         return File(self.name)
     def build(self):
         self[Pip]("gitpython").find()
+        assert not self.repo.startswith("https://") or self.builder.option["internet"], \
+            "`Git_clone` from a remote repository requires internet access. (You passed `--internet=False`.)"
         self.builder.python("-c", f"import git; git.Repo.clone_from('{self.repo}', '{self.name}')")
 
 class C_project(Buildable):
@@ -469,6 +474,7 @@ class Pip(Buildable):
             outs.append(any_([self.builder.find_in("python", name + ext) for ext in ["/__init__.py", ".py"]]))
         return all_(outs)
     def build(self):
+        assert self.builder.option["internet"], "`Pip` requires internet access. (You passed `--internet=False`.)"
         self.builder.python("-m", "pip", "install", *self._names)
     def __str__(self):
         if len(self._names) > 1:
@@ -769,6 +775,7 @@ class Builder:
             "verbose": Option(False, convert=as_bool),
             "use_system_paths": Option(True, convert=as_bool),
             "use_env_paths": Option(True, convert=as_bool),
+            "internet": Option(True, convert=as_bool),
         }
         self.info = {"date":time.strftime("%Y-%m-%d", time.gmtime())}
         for opt in opts:
@@ -972,7 +979,7 @@ class Builder:
                                 files.append(match)
                                 find_recursive(match)
             else:
-                if ext == "py" and self.in_pypi(f):
+                if self.options["internet"] and ext == "py" and self.in_pypi(f):
                     depends.append(self[Pip](f))
         find_recursive(file)
         return all_(depends)

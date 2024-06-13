@@ -128,14 +128,15 @@ class Hexed(bu.C_project):
         if self.builder.options["build_docs"]:
             assert self.builder.subproc(["which", "doxygen"], capture_output=True).stdout.decode(), \
                 "Doxygen not found (`which doxygen` returned empty). Cannot build documentation."
-            def is_dox(f):
-                return f.endswith(".dox") or f.endswith(".tag") or f.endswith(".doxytags")
-            self.builder.copy(self.sdir + "doc/", self.bdir + "doc/", is_dox).do
+            def not_dox(f):
+                return not (f.endswith(".dox") or f.endswith(".tag") or f.endswith(".doxytags") or os.path.isdir(f))
+            self.builder.copy(self.sdir + "doc/", self.bdir + "doc/", ignore=not_dox).do
             self[bu.Configure](self.sdir + "doc/config.in", self.bdir + "doc/config").do
+            self.builder.mkdir(self.bdir + "doc/html")
             self.builder.copy(
                 self.sdir + "doc/",
                 self.bdir + "doc/html/",
-                lambda f: f.endswith(".png") or f.endswith(".svg"),
+                ignore=lambda f: not (f.endswith(".png") or f.endswith(".svg") or os.path.isdir(f)),
             ).do
             self[bu.Python_script](
                 bu.all_([self.bdir + "doc/html/" + f for f in ["blottner_sphere.svg", "flat_plate.svg", "naca0012.svg", "summary.svg"]]),
