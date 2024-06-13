@@ -357,6 +357,7 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
   }));
   // builtin values
   variables->assign("huge", huge);
+  variables->assign("nan", std::nan(""));
   // initialize exception handling variables
   variables->assign<std::string>("exception", "");
   variables->assign<std::string>("except", "");

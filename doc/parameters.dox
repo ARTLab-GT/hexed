@@ -394,7 +394,7 @@ __default:__ `{}` \n
 <hr>
 \subsubsection max_angle
 __type:__ float \n
-__default:__ `10*degree`
+__default:__ `15*degree`
 Maximum allowable angle between adjacent panels when discretizing 3D CAD geometry with `hexed::Occt::triangles`.
 
 <hr>

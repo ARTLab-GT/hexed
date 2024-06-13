@@ -16,6 +16,67 @@ Eigen::VectorXi direction(int n_dim, int i_face)
   return direction(n_dim, i_face/2, i_face%2);
 }
 
+double broyden(std::function<double(double)> error, double init_guess, Root_options opts, double init_diff)
+{
+  double guess_prev = init_guess - init_diff;
+  double err_prev = error(guess_prev);
+  double guess = init_guess;
+  for (int iter = 0; iter < opts.max_iters; ++iter) {
+    double err_curr = error(guess);
+    if (std::abs(err_curr) < opts.ftol) break;
+    double slope = (err_curr - err_prev)/(guess - guess_prev);
+    guess_prev = guess;
+    err_prev = err_curr;
+    guess -= err_curr/slope;
+    if (std::abs(guess - guess_prev) < opts.xtol) break;
+  }
+  return guess;
+}
+
+double bisection(std::function<double(double)> error, std::array<double, 2> bounds, Root_options opts)
+{
+  double midpoint = 0;
+  std::array<double, 2> err_bounds {error(bounds[0]), error(bounds[1])};
+  HEXED_ASSERT(!(err_bounds[0]*err_bounds[1] > 0), format_str(300, "bounds do not bracket a root (f = {%e, %e})", err_bounds[0], err_bounds[1]));
+  HEXED_ASSERT(!(std::isnan(err_bounds[0]) && std::isnan(err_bounds[1])),
+               "`err` evaluates to NaN at bouth bounds");
+  for (int iter = 0; iter < opts.max_iters; ++iter) {
+    midpoint = (bounds[0] + bounds[1])/2;
+    double mid_err = error(midpoint);
+    if (std::abs(mid_err) < opts.ftol) break;
+    int i_repl = (mid_err*err_bounds[0] <= 0);
+    for (int i = 0; i < 2; ++i) {
+      if (std::isnan(err_bounds[i])) i_repl = i;
+    }
+    bounds[i_repl] = midpoint;
+    err_bounds[i_repl] = mid_err;
+    if (bounds[1] - bounds[0] < opts.xtol) break;
+  }
+  return midpoint;
+}
+
+Mat<> newton(std::function<Mat<dyn, dyn>(Mat<>)> error_jacobian, Mat<> guess, Root_options opts)
+{
+  double prev_err = huge;
+  Mat<> prev_guess = guess;
+  for (int iter = 0; iter < opts.max_iters; ++iter) {
+    Mat<dyn, dyn> err_jac;
+    double err;
+    for (int i = 0; i < 100; ++i) {
+      err_jac = error_jacobian(guess);
+      err = err_jac(all, 0).norm();
+      if (err < std::max(prev_err, opts.ftol)) break;
+      else guess = .1*guess + .9*prev_guess;
+    }
+    prev_err = err;
+    if (err < opts.ftol) break;
+    prev_guess = guess;
+    guess -= err_jac(all, Eigen::seqN(1, err_jac.rows())).partialPivLu().solve(err_jac(all, 0));
+    if ((guess - prev_guess).norm() < opts.xtol) break;
+  }
+  return guess;
+}
+
 Eigen::VectorXd hypercube_matvec(const Eigen::MatrixXd& mat, const Eigen::VectorXd& vec)
 {
   #if DEBUG
@@ -104,6 +165,34 @@ Eigen::MatrixXd orthonormal (Eigen::MatrixXd basis, int i_dim)
 double chebyshev_step(int n_steps, int i_step, double safety)
 {
   return 1/(1 - std::cos((n_steps - i_step - 0.5)*M_PI/n_steps)/(1 + (1/safety - 1)/n_steps/n_steps));
+}
+
+std::vector<double> correct_values(std::vector<double> estimates, std::vector<double> exacts, double tol)
+{
+  std::vector<int> avail_inds(estimates.size());
+  for (unsigned i = 0; i < avail_inds.size(); ++i) avail_inds[i] = i;
+  while (true) {
+    double best_diff = tol;
+    bool found = false;
+    int best_exact, best_est;
+    for (unsigned i_exact = 0; i_exact < exacts.size(); ++i_exact) {
+      for (unsigned i_est = 0; i_est < avail_inds.size(); ++i_est) {
+        double diff = std::abs(exacts[i_exact] - estimates[avail_inds[i_est]]);
+        if (diff <= best_diff) {
+          found = true;
+          best_diff = diff;
+          best_exact = i_exact;
+          best_est = i_est;
+        }
+      }
+    }
+    if (found) {
+      estimates[avail_inds[best_est]] = exacts[best_exact];
+      avail_inds.erase(avail_inds.begin() + best_est);
+      exacts.erase(exacts.begin() + best_exact);
+    } else break;
+  }
+  return estimates;
 }
 
 }

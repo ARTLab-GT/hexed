@@ -31,20 +31,34 @@ double quad_func(double x)
 
 TEST_CASE("broyden root finder")
 {
-  REQUIRE(hexed::math::broyden(lin_func, -1e7) == Catch::Approx(0.5));
-  REQUIRE(hexed::math::broyden(quad_func, -0.8) == Catch::Approx(-.6));
-  REQUIRE(hexed::math::broyden(quad_func, 2.3) == Catch::Approx(2.));
-  REQUIRE(hexed::math::broyden([](double x){return std::exp(x) - 2.;}, 0.)
+  REQUIRE(hexed::math::broyden(lin_func, -1e7, {.xtol = 1e-10}) == Catch::Approx(0.5));
+  REQUIRE(hexed::math::broyden(quad_func, -0.8, {.xtol = 1e-10}) == Catch::Approx(-.6));
+  REQUIRE(hexed::math::broyden(quad_func, 2.3, {.xtol = 1e-10}) == Catch::Approx(2.));
+  REQUIRE(hexed::math::broyden([](double x){return std::exp(x) - 2.;}, 0., {.xtol = 1e-10})
           == Catch::Approx(std::log(2.)));
 }
 
 TEST_CASE("bisection root finder")
 {
-  REQUIRE(hexed::math::bisection(lin_func , {  0,   2}) == Catch::Approx(0.5));
-  REQUIRE(hexed::math::bisection(quad_func, { -1,   0}) == Catch::Approx(-.6));
-  REQUIRE(hexed::math::bisection(quad_func, {0.1, 3.4}) == Catch::Approx(2.));
-  REQUIRE(hexed::math::bisection([](double x){return std::exp(x) - 2.;}, {0, 1})
+  REQUIRE(hexed::math::bisection(lin_func , {  0,   2}, {.xtol = 1e-10}) == Catch::Approx(0.5));
+  REQUIRE(hexed::math::bisection(quad_func, { -1,   0}, {.xtol = 1e-10}) == Catch::Approx(-.6));
+  REQUIRE(hexed::math::bisection(quad_func, {0.1, 3.4}, {.xtol = 1e-10}) == Catch::Approx(2.));
+  REQUIRE(hexed::math::bisection([](double x){return std::exp(x) - 2.;}, {0, 1}, {.xtol = 1e-10})
           == Catch::Approx(std::log(2.)));
+}
+
+TEST_CASE("newton root finder")
+{
+  auto error_jacobian = [](hexed::Mat<> x) {
+    hexed::Mat<hexed::dyn, hexed::dyn> err_jac(3, 4);
+    err_jac(hexed::all, 0) << std::pow(2., x(0)) - 8., 1.5 - x(0)*x(1), .3*x(0) + .4*x(1) + .5*x(2);
+    err_jac(hexed::all, Eigen::seqN(1, 3)) << std::log(2.)*std::pow(2., x(0)), 0, 0,
+                                              -x(1), -x(0), 0,
+                                              .3, .4, .5;
+    return err_jac;
+  };
+  auto soln = hexed::math::newton(error_jacobian, hexed::Mat<3>{.1, .1, .1}, {.xtol = 1e-12});
+  REQUIRE_THAT(soln, Catch::Matchers::RangeEquals(hexed::Mat<3>{3., .5, -2.2}, hexed::math::Approx_equal(0, 1e-10)));
 }
 
 TEST_CASE("hypercube_matvec")
@@ -246,4 +260,24 @@ TEST_CASE("chebyshev_step")
   }
   REQUIRE(result.maxCoeff() == Catch::Approx(1.));
   REQUIRE(result.minCoeff() == Catch::Approx(-1.));
+}
+
+TEST_CASE("correct_values")
+{
+  std::vector<double> estimates {.3, -.55, -.6};
+  SECTION("too few values")
+  {
+    std::vector<double> exacts {-.61, .29};
+    REQUIRE_THAT(hexed::math::correct_values(estimates, exacts, .2), Catch::Matchers::RangeEquals(std::vector<double>{.29, -.55, -.61}));
+  }
+  SECTION("too many values")
+  {
+    std::vector<double> exacts {-.61, .28, -.58, .29};
+    REQUIRE_THAT(hexed::math::correct_values(estimates, exacts, .2), Catch::Matchers::RangeEquals(std::vector<double>{.29, -.58, -.61}));
+  }
+  SECTION("implausible values")
+  {
+    std::vector<double> exacts {-.61, .98, -.54, .99};
+    REQUIRE_THAT(hexed::math::correct_values(estimates, exacts, .2), Catch::Matchers::RangeEquals(std::vector<double>{.3, -.54, -.61}));
+  }
 }

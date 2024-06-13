@@ -59,57 +59,43 @@ Eigen::VectorXi direction(int n_dim, int i_dim, bool is_positive);
 //! the unit vector describing the direction from the center of an `n_dim`-dimensional Cartesian element to the `i_face`th face
 Eigen::VectorXi direction(int n_dim, int i_face);
 
+//! \brief provides a convenient way to pass options to root-finding algorithms
+struct Root_options {
+  //! \brief the algorithm should terminate if the absolute value of the _residual_ (the value of the error function) is less than this
+  double ftol = 0;
+  //! \brief the algorithm should terminate if its best estimate of the _error_ is less than this
+  //! \details error is usually estimated by the distance between the solution guess at consecutive iterations
+  double xtol = 0;
+  //! \brief the algorithm should terminate if it exceeds this many iterations
+  int max_iters = std::numeric_limits<int>::max();
+};
+
 /*! \brief Finds a root of a scalar function with [Broyden's method](https://en.wikipedia.org/wiki/Broyden%27s_method).
- * \param func Should return a `double` when called on a `double` argument.
+ * \param error error function to find the root of
  * \param init_guess Initial guess for the root.
- * \param atol Absolute tolerance for the root (not the residual).
+ * \param opts Use this to set the termination condition
  * \param init_diff How far away the second point used to initialize the derivative estimate should be.
  */
-template <typename Func_type>
-double broyden(Func_type func, double init_guess, double atol=1e-10, double init_diff=1e-3)
-{
-  double guess_prev = init_guess - init_diff;
-  double func_prev = func(guess_prev);
-  double guess = init_guess;
-  do {
-    double func_curr = func(guess);
-    double slope = (func_curr - func_prev)/(guess - guess_prev);
-    guess_prev = guess;
-    func_prev = func_curr;
-    guess -= func_curr/slope;
-  }
-  while (std::abs(guess - guess_prev) > atol);
-  return guess;
-}
+double broyden(std::function<double(double)> error, double init_guess, Root_options opts, double init_diff = 1e-3);
 
 /*! \brief Finds a root of a scalar function with the [bisection method](https://en.wikipedia.org/wiki/Bisection_method).
- *
- * This is slower than \ref broyden but very robust.
- * \param func Should return a `double` when called on a `double` argument.
+ * \details This is slower than `broyden()` but very robust.
+ * \param error function to find the root of
  * \param bounds Lower and upper bounds for a root.
- * \param atol Absolute tolerance for the root.
+ * \param opts Use this to set the termination condition
  */
-template <typename Func_type>
-double bisection(Func_type func, std::array<double, 2> bounds, double atol=1e-10)
-{
-  double midpoint;
-  std::array<double, 2> func_bounds {func(bounds[0]), func(bounds[1])};
-  HEXED_ASSERT(!(func_bounds[0]*func_bounds[1] > 0), format_str(300, "bounds do not bracket a root (f = {%e, %e})", func_bounds[0], func_bounds[1]));
-  HEXED_ASSERT(!(std::isnan(func_bounds[0]) && std::isnan(func_bounds[1])),
-               "`func` evaluates to NaN at bouth bounds");
-  do {
-    midpoint = (bounds[0] + bounds[1])/2;
-    double mid_func = func(midpoint);
-    int i_repl = (mid_func*func_bounds[0] <= 0);
-    for (int i = 0; i < 2; ++i) {
-      if (std::isnan(func_bounds[i])) i_repl = i;
-    }
-    bounds[i_repl] = midpoint;
-    func_bounds[i_repl] = mid_func;
-  }
-  while(bounds[1] - bounds[0] > atol);
-  return midpoint;
-}
+double bisection(std::function<double(double)> error, std::array<double, 2> bounds, Root_options opts);
+
+/*! \brief Finds a root of a vector function with [Newton's method](https://en.wikipedia.org/wiki/Newton%27s_method).
+ * \param error_jacobian Function to find the root of.
+ *     If the input (\f$ x \f$) has \f$ n \f$ entries, this should be an \f$ n \times n + 1 \f$ matrix.
+ *     The first column should be the error vector, and the remaing columns should be the Jacobian matrix,
+ *     such that entry i, j of the Jacobian (i, j + 1 of the return matrix)
+ *     should be the derivative of the ith component of the error w.r.t. the jth component of the input.
+ * \param guess initial guess for the root
+ * \param options use this to set the termination condition
+ */
+Mat<> newton(std::function<Mat<dyn, dyn>(Mat<>)> error_jacobian, Mat<> guess, Root_options options);
 
 /*! \brief Multiply every dimension of a (flattened) N-dimensional array by a matrix.
  *
@@ -293,6 +279,18 @@ bool intersects(Ball<n_dim> b, Mat<n_dim> endpoint0, Mat<n_dim> endpoint1)
  * (although it isn't a linear function).
  */
 double chebyshev_step(int n_steps, int i_step, double safety = .9);
+
+/*! \details Suppose that you compute some values, `estimates`, with a method that is very robust but has low accuracy.
+ * Suppose you also recompute these values as `exacts`
+ * with a method that is very accurate but not robust---It may give you extraneous values and/or fail to produce some of the correct values.
+ * The purpose of this function is to filter out the implausible values from `exacts` and give you only the ones that appear to be correct.
+ * The return value will have the same number of values as `estimates`,
+ * but some of them will be replaced with values from `exacts` in a way that obtains the best possible agreement.
+ * Replacements will be considered only if the difference between the "exact" value and the "estimate" is less than `tol`.
+ * The order of `exacts` does not matter.
+ * Values will be returned in the same order as `estimates`.
+ */
+std::vector<double> correct_values(std::vector<double> estimates, std::vector<double> exacts, double tol = huge);
 
 }
 }

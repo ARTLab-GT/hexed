@@ -43,6 +43,7 @@ test_Stopwatch_tree.cpp
 test_Storage_params.cpp
 test_Struct_expr.cpp
 test_Surface_geom.cpp
+test_split_triangle.cpp
 test_standard_atmosphere.cpp
 test_Tecplot_file.cpp
 test_Tree.cpp

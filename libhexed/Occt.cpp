@@ -27,7 +27,7 @@
 #if HEXED_USE_TECPLOT
 #include <Tecplot_file.hpp>
 #endif
-#include <iostream>
+#include <Simplex_geom.hpp>
 
 namespace hexed
 {
@@ -64,151 +64,73 @@ void collect_curves(std::vector<opencascade::handle<Geom2d_Curve>>& curves, cons
   });
 }
 
-Occt::Geom::Geom(const TopoDS_Shape& shape, int n_dim)
+Occt::Geom::Geom(const TopoDS_Shape& shape, int n_dim, double angle, double deflection, int n_segments)
 : nd{n_dim}
 {
   if (nd == 2) {
-    collect_curves(curves, shape);
+    collect_curves(_curves, shape);
+    _simplex2.reset(new Simplex_geom<2>(segments(shape, n_segments)));
+    _simplex = _simplex2.get();
   } else if (nd == 3) {
     // collect all surfaces
     iterate(shape, TopAbs_FACE, [&](const TopoDS_Shape& s){
       TopoDS_Face face = TopoDS::Face(s);
-      surfaces.push_back(BRep_Tool::Surface(face));
+      _surfaces.push_back(BRep_Tool::Surface(face));
+      if (!(_surfaces.back()->Continuity() >= GeomAbs_C1)) {
+        std::cerr << "WARNING: Surface is not C1 continuous! Falling back on triangulated intersections.\n"
+                  << "If you see this warning, please contact Micaiah: https://artlab-gt.github.io/hexed/index.html#Contact\n";
+      }
     });
+    Triangulation triang = _triangulate(shape, angle, deflection);
+    _simplex3.reset(new Simplex_geom<3>(triang.tris, triang.params, triang.faces));
+    _simplex = _simplex3.get();
   } else throw std::runtime_error("`hexed::Occt_gom` must be either 2D or 3D.");
 }
 
-void Occt::Geom::visualize(std::string file_name)
-{
-  #if HEXED_USE_TECPLOT
-  int n_div = 20;
-  if (nd == 3) {
-    Tecplot_file file(file_name, 3, 2, {"real"}, 0.);
-    for (unsigned i_surf = 0; i_surf < surfaces.size(); ++i_surf) {
-      auto& surf = surfaces[i_surf];
-      double param_bounds [2][2];
-      surf->Bounds(param_bounds[0][0], param_bounds[0][1], param_bounds[1][0], param_bounds[1][1]);
-      Mat<dyn, dyn> data(math::pow(n_div + 1, 2), 3);
-      Mat<dyn> real(math::pow(n_div + 1, 2));
-      int node_coords [2];
-      for (node_coords[0] = 0; node_coords[0] <= n_div; ++node_coords[0]) {
-        for (node_coords[1] = 0; node_coords[1] <= n_div; ++node_coords[1]) {
-          double params [2];
-          for (int i_dim = 0; i_dim < 2; ++i_dim) {
-            double interp = double(node_coords[i_dim])/n_div;
-            params[i_dim] = (1 - interp)*param_bounds[i_dim][0] + interp*param_bounds[i_dim][1];
-          }
-          auto pnt = surf->Value(params[0], params[1]);
-          int i_node = node_coords[0]*(n_div + 1) + node_coords[1];
-          data(i_node, all) << pnt.X(), pnt.Y(), pnt.Z();
-          real(i_node) = 1;
-        }
-      }
-      data *= 1e-3; // convert to meters
-      Tecplot_file::Structured_block zone(file, n_div + 1, format_str(100, "surface%u", i_surf), 2);
-      zone.write(data.data(), real.data());
-    }
-  } else {
-    Tecplot_file file(file_name, 2, 1, {}, 0.);
-    for (unsigned i_curve = 0; i_curve < curves.size(); ++i_curve) {
-      auto& curve = curves[i_curve];
-      double param_bounds [2] {curve->FirstParameter(), curve->LastParameter()};
-      Mat<dyn, dyn> data(n_div + 1, 2);
-      for (int i_node = 0; i_node <= n_div; ++i_node) {
-        double interp = double(i_node)/n_div;
-        double param = (1 - interp)*param_bounds[0] + interp*param_bounds[1];
-        auto pnt = curve->Value(param);
-        data(i_node, all) << pnt.X(), pnt.Y();
-      }
-      data *= 1e-3; // convert to meters
-      Tecplot_file::Structured_block zone(file, n_div + 1, format_str(100, "curve%u", i_curve), 1);
-      zone.write(data.data(), nullptr);
-    }
-  }
-  #else
-  HEXED_ASSERT(false, "needs tecplot");
-  #endif
-}
+void Occt::Geom::visualize(std::string format, std::string file_name) {_simplex->visualize(format, file_name);}
 
 Nearest_point<dyn> Occt::Geom::nearest_point(Mat<> point, double max_distance, double distance_guess)
 {
   HEXED_ASSERT(point.size() == nd, format_str(100, "`point` must be %iD", nd));
-  Nearest_point<> nearest(point, max_distance);
-  point *= 1e3; // convert to mm
-  if (nd == 2) {
-    gp_Pnt2d occt_point(point(0), point(1));
-    // iterate through curves and find which ones has the nearest point
-    for (auto& curve : curves) {
-      Geom2dAPI_ProjectPointOnCurve proj(occt_point, curve);
-      if(proj.NbPoints()) {
-        gp_Pnt2d occt_candidate = proj.NearestPoint();
-        nearest.merge(Mat<2>{occt_candidate.X(), occt_candidate.Y()}*1e-3);
-      }
-    }
-  } else {
-    gp_Pnt occt_point(point(0), point(1), point(2));
-    // iterate through the surfaces and find which one has the nearest point
-    for (auto& surface : surfaces) {
-      GeomAPI_ProjectPointOnSurf proj(occt_point, surface);
-      if (proj.IsDone()) {
-        gp_Pnt occt_candidate = proj.NearestPoint();
-        nearest.merge(Mat<3>{occt_candidate.X(), occt_candidate.Y(), occt_candidate.Z()}*1e-3);
-      }
-    }
-  }
-  return nearest;
+  return _simplex->nearest_point(point, max_distance, distance_guess);
 }
 
 std::vector<double> Occt::Geom::intersections(Mat<> point0, Mat<> point1)
 {
   HEXED_ASSERT(point0.size() == nd, format_str(100, "`point0` must be %iD", nd));
   HEXED_ASSERT(point1.size() == nd, format_str(100, "`point1` must be %iD", nd));
-  // convert to mm
-  Mat<> scaled0 = 1000*point0;
-  Mat<> scaled1 = 1000*point1;
-  double dist = (scaled1 - scaled0).norm();
-  std::vector<double> sects;
-  if (nd == 2) {
-    // compute the line through the given points
-    gp_Pnt2d pnt0(scaled0(0), scaled0(1));
-    gp_Pnt2d pnt1(scaled1(0), scaled1(1));
-    opencascade::handle<Geom2d_Line> line = GCE2d_MakeLine(pnt0, pnt1);
-    // iterate through curves and compute the indersections with each
-    for (auto& curve : curves) {
-      // find intersections
-      Geom2dAPI_InterCurveCurve inter(line, curve);
-      int n = inter.NbPoints();
-      for (int i = 0; i < n; ++i) {
-        // 2d intersector doesn't seem to have a `Parameters` member,
-        // so we have to compute the parametric representation ourselves
-        // as the least squares solution to `t*(scaled1 - scaled0) = point - scaled0`
-        gp_Pnt2d occt_point = inter.Point(i + 1);
-        Mat<2> point{occt_point.X(), occt_point.Y()};
-        Mat<2> lhs = scaled1 - scaled0;
-        Mat<2> rhs = point - scaled0;
-        sects.push_back(lhs.dot(rhs)/lhs.squaredNorm());
-      }
+  auto inters = _simplex->simplex_intersections(point0, point1);
+  if (nd == 2) return inters.points;
+  Mat<3> diff = point1 - point0;
+  for (unsigned i_inter = 0; i_inter < inters.points.size(); ++i_inter) {
+    int i_tri = inters.inds[i_inter];
+    Mat<2, 3> simplex_params = _simplex3->parameters()[i_tri];
+    Mat<2> params = simplex_params(all, 0);
+    for (int i_coord = 0; i_coord < 2; ++i_coord) {
+      params += inters.coords[i_inter](i_coord)*(simplex_params(all, 1 + i_coord) - simplex_params(all, 0));
     }
-  } else {
-    // compute the line through the given points
-    gp_Pnt pnt0(scaled0(0), scaled0(1), scaled0(2));
-    gp_Pnt pnt1(scaled1(0), scaled1(1), scaled1(2));
-    opencascade::handle<Geom_Line> line = GC_MakeLine(pnt0, pnt1);
-    opencascade::handle<Geom_Curve> curve = line;
-    // iterate through surfaces and compute the indersections with each
-    for (auto& surface : surfaces) {
-      // compute intersections
-      GeomAPI_IntCS inter(curve, surface);
-      // translate to our parametric format
-      int n = inter.NbPoints();
-      for (int i = 0; i < n; ++i) {
-        double params [3];
-        inter.Parameters(i + 1, params[0], params[1], params[2]);
-        sects.push_back(params[2]/dist);
-      }
+    auto& surf = _surfaces[_simplex3->faces()[i_tri]];
+    if (surf->Continuity() >= GeomAbs_C1) {
+      auto error_jacobian = [point0, diff, &surf](Mat<> guess){
+        Mat<dyn, dyn> err_jac(3, 4);
+        gp_Pnt point;
+        gp_Vec vecs[2];
+        surf->D1(guess(0), guess(1), point, vecs[0], vecs[1]);
+        Mat<3> pos {point.X(), point.Y(), point.Z()};
+        pos *= 1e-3;
+        err_jac(all, 0) = pos - (point0 + guess(2)*diff);
+        for (int i_param = 0; i_param < 2; ++i_param) {
+          Mat<3> deriv {vecs[i_param].X(), vecs[i_param].Y(), vecs[i_param].Z()};
+          err_jac(all, 1 + i_param) = deriv*1e-3;
+        };
+        err_jac(all, 3) = -diff;
+        return err_jac;
+      };
+      Mat<> soln = math::newton(error_jacobian, Mat<3>{params[0], params[1], inters.points[i_inter]}, {.ftol = 1e-10*diff.norm(), .max_iters = 100});
+      if (std::abs(soln(2) - inters.points[i_inter]) < 0.5) inters.points[i_inter] = soln(2);
     }
   }
-  return sects;
+  return inters.points;
 }
 
 template <typename reader_t>
@@ -234,10 +156,11 @@ TopoDS_Shape Occt::read(std::string file_name)
   throw std::runtime_error(format_str(1000, "`hexed::Occt::read` failed to recognize file exteinsion `.%s`.", case_sensitive.c_str()));
 }
 
-std::vector<Mat<3, 3>> Occt::triangles(opencascade::handle<Poly_Triangulation> poly)
+Occt::Triangulation Occt::_triangulate(opencascade::handle<Poly_Triangulation> poly, int face)
 {
   HEXED_ASSERT(!poly.IsNull(), "handle is null");
-  std::vector<Mat<3, 3>> sims;
+  Triangulation triang;
+  bool has_params = poly->HasUVNodes();
   for (int i_tri = 0; i_tri < poly->NbTriangles(); ++i_tri) {
     auto& triangle = poly->Triangle(i_tri + 1);
     Mat<3, 3> sim;
@@ -245,10 +168,52 @@ std::vector<Mat<3, 3>> Occt::triangles(opencascade::handle<Poly_Triangulation> p
       gp_Pnt point = poly->Node(triangle.Value(i_vert + 1));
       sim(all, i_vert) << point.X(), point.Y(), point.Z();
     }
-    sims.push_back(sim*1e-3);
+    triang.tris.push_back(sim*1e-3);
+    if (has_params) {
+      Mat<2, 3> params;
+      for (int i_vert = 0; i_vert < 3; ++i_vert) {
+        gp_Pnt2d point = poly->UVNode(triangle.Value(i_vert + 1));
+        params(all, i_vert) << point.X(), point.Y();
+      }
+      triang.params.push_back(params);
+      triang.faces.push_back(face);
+    }
   }
-  return sims;
+  return triang;
 }
+
+Occt::Triangulation Occt::_triangulate(TopoDS_Shape shape, double angle, double deflection)
+{
+  // setup parameters
+  IMeshTools_Parameters params;
+  params.Deflection               = deflection*1e3;
+  params.DeflectionInterior       = deflection*1e3;
+  params.Angle                    = angle;
+  params.AngleInterior            = angle;
+  params.Relative                 = false;
+  params.InParallel               = true;
+  params.MinSize                  = Precision::Confusion();
+  params.InternalVerticesMode     = false;
+  params.ControlSurfaceDeflection = true;
+  // generate mesh
+  BRepTools::Clean(shape); // get rid of any existing triangulations
+  BRepMesh_IncrementalMesh mesher(shape, params);
+  // fetch triangles
+  Triangulation triang;
+  int i_face = 0;
+  iterate(shape, TopAbs_FACE, [&](const TopoDS_Shape& s){
+    TopoDS_Face face = TopoDS::Face(s);
+    TopLoc_Location location;
+    auto face_tri = _triangulate(BRep_Tool::Triangulation(face, location), i_face++);
+    triang.tris.insert(triang.tris.end(), face_tri.tris.begin(), face_tri.tris.end());
+    triang.params.insert(triang.params.end(), face_tri.params.begin(), face_tri.params.end());
+    triang.faces.insert(triang.faces.end(), face_tri.faces.begin(), face_tri.faces.end());
+  });
+  BRepTools::Clean(shape); // get rid of triangulation to avoid messing other things up
+  return triang;
+}
+
+std::vector<Mat<3, 3>> Occt::triangles(opencascade::handle<Poly_Triangulation> poly) {return _triangulate(poly, 0).tris;}
 
 std::vector<Mat<3, 3>> Occt::triangles(TopoDS_Shape shape, double angle, double deflection)
 {
@@ -274,6 +239,7 @@ std::vector<Mat<3, 3>> Occt::triangles(TopoDS_Shape shape, double angle, double 
     auto face_tris = triangles(BRep_Tool::Triangulation(face, location));
     tris.insert(tris.end(), face_tris.begin(), face_tris.end());
   });
+  BRepTools::Clean(shape); // get rid of triangulation to avoid messing other things up
   return tris;
 }
 

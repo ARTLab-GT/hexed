@@ -25,6 +25,8 @@ std::string format_str(int max_chars, std::string fstring, format_args... args)
 
 template <typename T> T gotcha(T) {throw std::runtime_error("hexed::gotcha");} //!< \brief don't ask
 
+//! \brief prints its argument and then returns it
+//! \details you can wrap this around an expression to print it without computing it again
 template <typename T>
 T& printed(T& t)
 {

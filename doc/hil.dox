@@ -217,6 +217,11 @@ __type:__ float \n
 Maximum representable float value (equal to `std::numeric_limits<double>::%max`).
 
 <hr>
+\subsubsection nan
+__type:__ float \n
+[Not a Number](https://en.wikipedia.org/wiki/NaN#Floating_point)
+
+<hr>
 \subsubsection newline
 __type:__ string \n
 A string containing a single newline character, so you can write strings containing newlines on a single line.
@@ -304,6 +309,19 @@ __type:__ Heisenberg string \n
 Throws an exception in the C++ implementation of HIL.
 Potentially useful if the C++ code contains subsequent statements after the invocation of the HIL interpreter which you don't want to execute.
 You may consider setting the value of \ref except before evaluating this variable.
+
+<hr>
+\subsubsection system_time
+__type:__ Heisenberg float \n
+Evaluates to the Unix time (in seconds) according to the [system clock](https://en.cppreference.com/w/cpp/chrono/system_clock).
+Good for obtaining the calendar date/time, but not ideal for measuring small intervals (prefer \ref steady_time ).
+
+<hr>
+\subsubsection steady_time
+__type:__ Heisenberg float \n
+Evaluates to the time (in seconds) according to a [steady clock](https://en.cppreference.com/w/cpp/chrono/steady_clock).
+The difference between sequential calls is guaranteed to be an accurate measure of elapsed time, but the epoch is arbitrary.
+This clock is good for measuring small intervals, but cannot be used to obtain the calendar date/time (prefer \ref system_time ).
 
 <hr>
 

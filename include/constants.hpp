@@ -36,7 +36,7 @@ const double plank = 6.62607015e-34; //!< \brief \f$ h \f$
 const double electron_charge = 1.602176634e-19; //!< \brief \f$ e \f$
 const double boltzmann = 1.380649e-23; //!< \brief \f$ k \f$
 const double avogadro = 6.02214076e23; //!< \brief \f$ mol \f$
-const double lum_eff_540e12 = 683; //!< \brief \f$ K_cd \f$
+const double lum_eff_540e12 = 683; //!< \brief \f$ K_{cd} \f$
 //!\}
 
 //! \name empirical values
@@ -54,7 +54,7 @@ const double stefan_boltzmann = 2*math::pow(pi, 5)*math::pow(boltzmann, 4)/(15*m
 
 /*! \name unit definitions
  * Conversion factors from various units to standard SI units. Since hexed works \ref units "exclusively in SI units",
- * these are the values of each of these units _in m, kg, s, K_.
+ * these are the values of each of these units in [m, kg, s, K].
  * E.g. If you have a wing with a chord of 3 feet, then you should tell hexed it's chord is `3*foot`.
  * If hexed told you your drag force is 10 (implying newtons) and your (ill advised) chief engineer wants it in pounds,
  * the number they're looking for is `10/pound_force` (note that `pound_force != pound_mass`).
@@ -73,7 +73,7 @@ const double mile = 5280*foot; //!< \brief mi
 const double nautical_mile = 1852; //!< nmi
 const double pound_mass = 0.45359237; //!< \brief [\f$ lb_m \f$](https://en.wikipedia.org/wiki/International_yard_and_pound)
 /*! \brief [slug](https://en.wikipedia.org/wiki/Slug_(unit))
- * \details This definition may be backward from the perspective of slug, ft, s proponents, but
+ * \details This definition may seem backward from the perspective of [slug, ft, s] proponents, but
  * \f[ slug \cdot ft/s^2 = lb_f = g_0 lb_m \f]
  * is an exact equation for the slug since the pound mass has been exactly defined by the
  * [international yard and pound](https://en.wikipedia.org/wiki/International_yard_and_pound).

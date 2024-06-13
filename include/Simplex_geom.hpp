@@ -8,6 +8,35 @@
 namespace hexed
 {
 
+//! \brief Abstract base class for `Simplex_geom` exposing the dimensionality-independent functionality.
+class Simplex_geom_nd : public Surface_geom
+{
+  protected:
+  #if HEXED_OBSESSIVE_TIMING
+  static Stopwatch_tree stopwatch; // for benchmarking projection and intersection calculation
+  #endif
+
+  public:
+  //! \brief Writes geometry to a visualization file with the specified name + file extension.
+  //! \details Only for 3D. For 2D, does nothing.
+  virtual void visualize(std::string format, std::string file_name) = 0;
+  //! \brief if compiled with `HEXED_OBSESSIVE_TIMING ON`, return a performance report. Otherwise, empty string.
+  static std::string performance_report()
+  {
+    #if HEXED_OBSESSIVE_TIMING
+    return stopwatch.report();
+    #else
+    return "";
+    #endif
+  }
+  struct Intersections {
+    std::vector<double> points;
+    std::vector<int> inds;
+    std::vector<Mat<>> coords;
+  };
+  virtual Intersections simplex_intersections(Mat<> point0, Mat<> point1) = 0;
+};
+
 /*! \brief Represents discrete geometry composed of [simplices](https://en.wikipedia.org/wiki/Simplex).
  * \details This can be used as an interface for geometry derived from an STL file in 3D
  * or a list of node coordinates in 2D.
@@ -21,11 +50,8 @@ namespace hexed
  * \see `Occt::triangles`
  */
 template <int n_dim>
-class Simplex_geom : public Surface_geom
+class Simplex_geom : public Simplex_geom_nd
 {
-  #if HEXED_OBSESSIVE_TIMING
-  static Stopwatch_tree stopwatch; // for benchmarking projection and intersection calculation
-  #endif
   void merge(Nearest_point<n_dim>& nearest, Mat<n_dim, n_dim> sim, Mat<n_dim> point); // helper for `nearest_point`
   static Mat<n_dim, 2> _get_bounding_box(const std::vector<Mat<n_dim, n_dim>>& sims)
   {
@@ -79,7 +105,7 @@ class Simplex_geom : public Surface_geom
     for (Tree* child : tree.children()) recursive_nearest(nearest, *child, point, limit);
   }
 
-  void recursive_intersections(std::vector<double>& inters, Tree& tree, Mat<n_dim> point0, Mat<n_dim> point1)
+  void recursive_intersections(Intersections& inters, Tree& tree, Mat<n_dim> point0, Mat<n_dim> point1)
   {
     if (!math::intersects(math::Ball<n_dim>(tree.center(), tree.nominal_size()*n_dim/4.), point0, point1)) return;
     Mat<n_dim> diff = point1 - point0;
@@ -95,7 +121,11 @@ class Simplex_geom : public Surface_geom
           Mat<n_dim> soln = fact.solve(point0 - sim(all, 0));
           // if intersection is inside simplex, add it to the list
           Eigen::Array<double, n_dim - 1, 1> arr = soln(Eigen::seqN(1, n_dim - 1)).array();
-          if ((arr >= -gap_tol).all() && arr.sum() <= 1 + gap_tol) inters.push_back(soln(0));
+          if ((arr >= -gap_tol).all() && arr.sum() <= 1 + gap_tol) {
+            inters.points.push_back(soln(0));
+            inters.inds.push_back(i_simplex);
+            inters.coords.push_back(soln(Eigen::seqN(1, n_dim - 1)));
+          }
         }
       }
     }
@@ -103,22 +133,30 @@ class Simplex_geom : public Surface_geom
   }
 
   std::vector<Mat<n_dim, n_dim>> _simplices;
+  std::vector<Mat<n_dim - 1, n_dim>> _parameters;
+  std::vector<int> _faces;
   Mat<n_dim, 2> _bounding_box;
   Tree _tree;
 
   public:
   double gap_tol = 1e-6; //!< extend triangles by this amount, relative to their original size, to fill gaps
 
-  Simplex_geom(const std::vector<Mat<n_dim, n_dim>>& sims)
+  Simplex_geom(const std::vector<Mat<n_dim, n_dim>>& sims, const std::vector<Mat<n_dim - 1, n_dim>>& params = {}, const std::vector<int>& face = {})
   : _simplices{sims},
+    _parameters{params},
+    _faces{face},
     _bounding_box(_get_bounding_box(sims)),
     _tree(n_dim, (_bounding_box(all, 1) - _bounding_box(all, 0)).maxCoeff(), _bounding_box(all, 0))
   {
+    HEXED_ASSERT(_parameters.empty() || _parameters.size() == _simplices.size(), "`params` must be either empty or the same size as `sims`");
+    HEXED_ASSERT(_parameters.size() == _faces.size(), "`params` and `face` must be the same size");
     for (unsigned i_ind = 0; i_ind < sims.size(); ++i_ind) _tree.misc_data.push_back(i_ind);
     sort_simplices(_tree);
   }
 
-  void visualize(std::string format, std::string file_name); //!< writes geometry to a visualization file with the specified name + file extension
+  const std::vector<Mat<n_dim, n_dim>>& simplices() const {return _simplices;}
+  const std::vector<Mat<n_dim - 1, n_dim>>& parameters() const {return _parameters;}
+  const std::vector<int>& faces() const {return _faces;}
 
   /*! \details Iterates through all _simplices and finds the nearest point on each,
    * whether that point lies in the interior or on the edge or a vertex.
@@ -147,18 +185,13 @@ class Simplex_geom : public Surface_geom
     return (nearest.empty() && distance_guess < max_distance) ? nearest_point(point, max_distance, 2*distance_guess) : Nearest_point<dyn>(nearest);
   }
 
-  /*! \details Evaluates intersections with each individual element and assembles a global list.
-   * Intersections with the boundary of a simplex are always considered valid intersections,
-   * so if the line passes exactly through the shared boundary of multiple _simplices
-   * then duplicate intersections may be obtained.
-   */
-  std::vector<double> intersections(Mat<> point0, Mat<> point1) override
+  Intersections simplex_intersections(Mat<> point0, Mat<> point1) override
   {
     #if HEXED_OBSESSIVE_TIMING
     Stopwatch sw;
     sw.start();
     #endif
-    std::vector<double> inters;
+    Intersections inters;
     recursive_intersections(inters, _tree, point0, point1);
     #if HEXED_OBSESSIVE_TIMING
     sw.pause();
@@ -170,25 +203,20 @@ class Simplex_geom : public Surface_geom
     return inters;
   }
 
-  //! if compiled with `HEXED_OBSESSIVE_TIMING ON`, return a performance report. Otherwise, empty string.
-  static std::string performance_report()
-  {
-    #if HEXED_OBSESSIVE_TIMING
-    return stopwatch.report();
-    #else
-    return "";
-    #endif
-  }
-};
+  /*! \details Evaluates intersections with each individual element and assembles a global list.
+   * Intersections with the boundary of a simplex are always considered valid intersections,
+   * so if the line passes exactly through the shared boundary of multiple _simplices
+   * then duplicate intersections may be obtained.
+   */
+  std::vector<double> intersections(Mat<> point0, Mat<> point1) override {return simplex_intersections(point0, point1).points;}
 
-#if HEXED_OBSESSIVE_TIMING
-template <int n_dim>
-Stopwatch_tree Simplex_geom<n_dim>::stopwatch("", {{"nearest_point", Stopwatch_tree("projection")}, {"intersections", Stopwatch_tree("intersection")}}); // for benchmarking projection and intersection calculation
-#endif
+  void visualize(std::string format, std::string file_name) override;
+};
 
 template<> void Simplex_geom<2>::merge(Nearest_point<2>& nearest, Mat<2, 2> sim, Mat<2> point);
 template<> void Simplex_geom<3>::merge(Nearest_point<3>& nearest, Mat<3, 3> sim, Mat<3> point);
 //! \cond
+template<> inline void Simplex_geom<2>::visualize(std::string format, std::string) {}
 template<> void Simplex_geom<3>::visualize(std::string format, std::string);
 //! \endcond
 
