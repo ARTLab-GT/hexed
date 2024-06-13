@@ -79,10 +79,7 @@ TEST_CASE("Riemann_invariants")
   hexed::Element element {params};
   const int n_qpoint = row_size*row_size;
   hexed::Mat<5> fs {10., 30., -20., 1.3, 4e5};
-  std::string code = "";
-  for (int i_var = 0; i_var < 5; ++i_var) code += hexed::format_str(100, "outside%i = %e; ", i_var, fs[i_var]);
-  hexed::Interpreter inter;
-  hexed::Riemann_invariants ri{inter, hexed::Struct_expr(code)};
+  hexed::Riemann_invariants ri {fs};
   hexed::Typed_bound_connection<hexed::Element> tbc {element, 1, false, 0};
   hexed::Mat<5> inside_state {1/1.2, -600/1.2, 1/1.2, 1.2, 101325/.4 + .5*1.2*360002};
   SECTION("supersonic inflow")
