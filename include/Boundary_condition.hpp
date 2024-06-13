@@ -74,9 +74,11 @@ class Freestream : public Flow_bc
  */
 class Riemann_invariants : public Flow_bc
 {
-  Mat<> fs;
+  Interpreter& _inter;
+  Struct_expr _expr;
+  void _outside_state(Boundary_face&, double* outside);
   public:
-  Riemann_invariants(Mat<> freestream_state);
+  Riemann_invariants(Interpreter&, Struct_expr boundary_state);
   virtual void apply_state(Boundary_face&);
   virtual void apply_flux(Boundary_face&);
 };

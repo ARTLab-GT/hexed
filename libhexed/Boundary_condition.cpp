@@ -75,9 +75,36 @@ void Freestream::apply_state(Boundary_face& bf)
   }
 }
 
-Riemann_invariants::Riemann_invariants(Mat<> freestream_state)
-: fs{freestream_state}
+Riemann_invariants::Riemann_invariants(Interpreter& inter, Struct_expr boundary_state)
+: _inter{inter}, _expr{boundary_state}
 {}
+
+void Riemann_invariants::_outside_state(Boundary_face& bf, double* outside)
+{
+  auto sub = _inter.make_sub();
+  auto params = bf.storage_params();
+  int nfq = params.n_qpoint()/params.row_size;
+  int nv = params.n_var;
+  int nd = params.n_dim;
+  double* sc = bf.state_cache();
+  double* nrml = bf.surface_normal();
+  double* pos = bf.surface_position();
+  int sign = 1 - 2*bf.inside_face_sign(); // sign of velocity of incoming characteristics
+  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+    for (int i_var = 0; i_var < nv; ++i_var) {
+      sub.variables->assign("inside" + std::to_string(i_var), sc[i_var*nfq + i_qpoint]);
+    }
+    for (int i_var = 0; i_var < 5; ++i_var) sub.variables->assign("inside" + std::to_string(i_var), 0.);
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      sub.variables->assign("normal" + std::to_string(i_dim), sign*nrml[i_dim*nfq + i_qpoint]);
+      sub.variables->assign("pos" + std::to_string(i_dim), pos[i_dim*nfq + i_qpoint]);
+    }
+    auto qpoint_outside = _expr.eval(sub);
+    for (int i_var = 0; i_var < nv; ++i_var) {
+      outside[i_var*nfq + i_qpoint] = qpoint_outside[i_var];
+    }
+  }
+}
 
 template <int n_dim>
 Mat<> apply_char(Mat<> state, Mat<> normal, int sign, Mat<> inside, Mat<> outside)
@@ -102,23 +129,34 @@ void Riemann_invariants::apply_state(Boundary_face& bf)
   double* gh_f = bf.ghost_face(false);
   double* nrml = bf.surface_normal();
   int sign = 1 - 2*bf.inside_face_sign(); // sign of velocity of incoming characteristics
+  // prime state cache with inside state
+  double* sc = bf.state_cache();
+  for (int i_dof = 0; i_dof < params.n_var*nfq; ++i_dof) {
+    sc[i_dof] = in_f[i_dof];
+  }
+  std::vector<double> outside_state(params.n_var*nfq);
+  _outside_state(bf, outside_state.data());
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
     Mat<> state;
     // fetch data
     Mat<> inside(params.n_var);
-    for (int i_var = 0; i_var < params.n_var; ++i_var) inside(i_var) = in_f[i_var*nfq + i_qpoint];
+    Mat<> outside(params.n_var);
+    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+      inside(i_var) = in_f[i_var*nfq + i_qpoint];
+      outside(i_var) = outside_state[i_var*nfq + i_qpoint];
+    }
     Mat<> n(params.n_dim);
     for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) n(i_dim) = nrml[i_dim*nfq + i_qpoint];
     // compute characteristics
     switch (params.n_dim) {
       case 1:
-        state = apply_char<1>(inside, n, sign, inside, fs); // set incoming characteristics to zero and leave outgoing alone
+        state = apply_char<1>(inside, n, sign, inside, outside); // set incoming characteristics to zero and leave outgoing alone
         break;
       case 2:
-        state = apply_char<2>(inside, n, sign, inside, fs);
+        state = apply_char<2>(inside, n, sign, inside, outside);
         break;
       case 3:
-        state = apply_char<3>(inside, n, sign, inside, fs);
+        state = apply_char<3>(inside, n, sign, inside, outside);
         break;
       default:
         throw std::runtime_error("invalid dimensionality");
@@ -132,11 +170,6 @@ void Riemann_invariants::apply_state(Boundary_face& bf)
     for (int i_var = 0; i_var < params.n_var; ++i_var) {
       gh_f[i_var*nfq + i_qpoint] = state(i_var);
     }
-  }
-  // prime state cache with inside state
-  double* sc = bf.state_cache();
-  for (int i_dof = 0; i_dof < params.n_var*nfq; ++i_dof) {
-    sc[i_dof] = in_f[i_dof];
   }
 }
 
