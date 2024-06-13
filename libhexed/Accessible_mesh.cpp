@@ -1603,6 +1603,7 @@ void Accessible_mesh::write(std::string name)
   dims[1] = 1;
   auto is_def_dset = file.createDataSet("/elements/is_deformed", H5::PredType::NATIVE_HBOOL, H5::DataSpace(2, dims));
   auto ref_level_dset = file.createDataSet("/elements/refinement_level", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
+  auto aniso_ref_level_dset = file.createDataSet("/elements/aniso_refinement_level", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     int vert_inds [8] {};
@@ -1614,6 +1615,7 @@ void Accessible_mesh::write(std::string name)
     h5_write_row(nom_pos_dset, params.n_dim, i_elem, nom_pos.data());
     h5_write_value(is_def_dset, i_elem, elem.get_is_deformed());
     h5_write_value(ref_level_dset, i_elem, elem.refinement_level());
+    h5_write_value(aniso_ref_level_dset, i_elem, elem.aniso_ref_level());
     elem.record = i_elem;
   }
   // write conformal connections
@@ -1731,6 +1733,7 @@ void Accessible_mesh::read_file(std::string file_name)
   auto nom_pos_dset = file.openDataSet("/elements/nominal_position");
   auto is_def_dset = file.openDataSet("/elements/is_deformed");
   auto ref_level_dset = file.openDataSet("/elements/refinement_level");
+  auto aniso_ref_level_dset = file.openDataSet("/elements/aniso_refinement_level");
   is_def_dset.getSpace().getSimpleExtentDims(dims);
   int n_elem = dims[0];
   int n_vert = params.n_vertices();
@@ -1740,8 +1743,9 @@ void Accessible_mesh::read_file(std::string file_name)
     std::vector<int> nom_pos(params.n_dim);
     h5_read_row(nom_pos_dset, params.n_dim, i_elem, nom_pos.data());
     int ref_level = h5_read_value<int>(ref_level_dset, i_elem);
+    int aniso_ref_level = h5_read_value<int>(aniso_ref_level_dset, i_elem);
     int is_def = h5_read_value<bool>(is_def_dset, i_elem);
-    int sn = add_element(ref_level, is_def, nom_pos, tree ? tree->origin() : Mat<>::Zero(params.n_dim));
+    int sn = add_element(ref_level, is_def, nom_pos, tree ? tree->origin() : Mat<>::Zero(params.n_dim), aniso_ref_level);
     int vert_inds[8] {};
     h5_read_row(vert_ind_dset, n_vert, i_elem, vert_inds);
     auto& elem = element(ref_level, is_def, sn);
@@ -1847,8 +1851,7 @@ Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> ex
   // take ownership of these to avoid memory leaks in case of exception
   std::unique_ptr<Flow_bc> fbc;
   if (surface_bc) fbc.reset(surface_bc);
-  std::unique_ptr<Surface_geom> g;
-  if (geometry) g.reset(geometry);
+  std::unique_ptr<Surface_geom> g(geometry);
   // create the tree
   {
     H5::H5File file(file_name + ".mesh.h5", H5F_ACC_RDONLY);

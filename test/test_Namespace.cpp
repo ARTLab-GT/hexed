@@ -16,6 +16,11 @@ TEST_CASE("Namespace")
   REQUIRE(space->lookup<double>("number0").value() == Catch::Approx(4.0)); // can read a double as an int
   REQUIRE(space->lookup<int>("number0").value() == 4);
   REQUIRE(!space->lookup<std::string>("number1")); // can't read a double as a string
+  REQUIRE(space->exists("person"));
+  REQUIRE(space->exists_recursive("person"));
+  REQUIRE(!space->exists("unperson"));
+  REQUIRE(!space->exists_recursive("unperson"));
+  REQUIRE_THAT(space->names(), Catch::Matchers::UnorderedEquals(std::vector<std::string>{"number0", "number1", "person"}));
   // reassignment mechanics
   space->assign<std::string>("person", "Robert Jones");
   REQUIRE(space->lookup<std::string>("person").value() == "Robert Jones");
@@ -39,12 +44,19 @@ TEST_CASE("Namespace")
   sub->supers.push_back(space);
   auto subsub = std::make_shared<hexed::Namespace>();
   subsub->supers.push_back(sub);
+  auto subsubsub = std::make_shared<hexed::Namespace>();
+  subsubsub->supers.push_back(subsub);
+  REQUIRE(sub->names().empty());
   REQUIRE(sub->lookup<int>("number0").value() == 4);
-  REQUIRE(subsub->lookup<int>("number0").value() == 4);
+  REQUIRE(subsubsub->lookup<int>("number0").value() == 4);
   sub->assign<int>("number0", 6);
   REQUIRE(sub->lookup<int>("number0").value() == 6);
   REQUIRE(space->lookup<int>("number0").value() == 4);
+  REQUIRE(!sub->exists("person"));
+  REQUIRE(sub->exists_recursive("person"));
   sub->assign<int>("person", 0);
   REQUIRE(sub->lookup<int>("person").value() == 0);
   REQUIRE(!sub->lookup<std::string>("person"));
+  REQUIRE(!sub->exists("unperson"));
+  REQUIRE(!sub->exists_recursive("unperson"));
 }

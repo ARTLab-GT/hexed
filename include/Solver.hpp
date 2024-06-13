@@ -62,6 +62,7 @@ class Solver
   void fta(double dt, int i_stage);
   bool use_ldg();
   double max_dt(double max_safety_conv, double max_safety_diff);
+  void _init_face_state();
 
   //! \brief linearizes the steady state equations by finite difference
   class Linearized : public Linear_equation
@@ -147,10 +148,11 @@ class Solver
   void calc_jacobian(bool snap_faces = true);
   //! set the flow state
   void initialize(const Spacetime_func&);
-  void set_art_visc_off(); //!< turns off artificial viscosity
-  void set_art_visc_constant(double); //!< turns on artificial viscosity and initializes coefficient to a uniform value
-  void set_art_visc_row_size(int); //!< modify the polynomial order of smoothness-based artificial viscosity (must be <= row size of discretization (which is the default))
-  void set_fix_admissibility(bool); //!< turns on/off the thermodynamic admissibility-preserving scheme (increases robustness at some computational overhead)
+  bool using_art_visc(); //!< \brief returns `true` if artificial viscosity is currently turned on
+  void set_art_visc_off(); //!< \brief turns off artificial viscosity
+  void set_art_visc_constant(double); //!< \brief turns on artificial viscosity and initializes coefficient to a uniform value
+  void set_art_visc_row_size(int); //!< \brief modify the polynomial order of smoothness-based artificial viscosity (must be <= row size of discretization (which is the default))
+  void set_fix_admissibility(bool); //!< \brief turns on/off the thermodynamic admissibility-preserving scheme \details increases robustness at some computational overhead
   /*! \brief set `Element::uncertainty` for each element according to `func`.
    * \details Uncertainty metric can be evaluated via `sample(ref_level, is_deformed, serial_n, Uncertainty())`.
    * This function does some additional work to enforce some conditions on the uncertainty of neighboring elements.

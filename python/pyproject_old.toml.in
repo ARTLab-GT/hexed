@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hexedpy"
+version = "@CMAKE_PROJECT_VERSION@"
+authors = [
+  { name="Micaiah Smith-Pierce", email="micaiah@gatech.edu" },
+]
+description = "Python utilities for use with the Hexed CFD solver"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "numpy",
+    "matplotlib",
+    "pandas",
+    "sympy",
+    "scipy",
+    "gitpython",
+]
+
+[project.urls]
+Homepage = "https://github.com/ARTLab-GT/hexed"
+Documentation = "https://artlab-gt.github.io/hexed/"
