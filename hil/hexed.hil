@@ -238,12 +238,10 @@ do = {
 }
 $loop
 init_cond = {}
-boundary_expr = {}
 i_var = 0
 while = {i_var < 5}
 do = {
     init_cond = init_cond + {state} + i_var + { = freestream} + i_var + newline
-    boundary_expr = boundary_expr + {outside} + i_var + { = freestream} + i_var + newline
     i_var = i_var + 1
 }
 $loop
