@@ -126,6 +126,7 @@ class Array
     _data = _data_storage.data();
   }
 
+  //! \brief Constructs a 1D array whose elements are `args`.
   template <typename... U>
   static Array<T> make(U... args)
   {
@@ -248,12 +249,15 @@ class Array
   const Array<T> operator()(int start, int stop) const {BODY} //!< \overload
   #undef BODY
 
+  //! \brief Iterator type to allow `Array` to function like a [standard container](https://en.cppreference.com/w/cpp/container).
+  //! \details Iterators remain valid throughout the lifetime of the array,
+  //! since there is no mechanism that changes the address of its underlying data.
   typedef T* iterator;
-  typedef const T* const_iterator;
-  iterator begin() {return data();}
-  const_iterator begin() const {return data();}
-  iterator end() {return data() + size();}
-  const_iterator end() const {return data() + size();}
+  typedef const T* const_iterator; //!< \see `Array::iterator`
+  iterator begin() {return data();} //!< \brief Iterator to beginning of (flat) data.
+  const_iterator begin() const {return data();} //!< \brief Const iterator to beginning of (flat) data.
+  iterator end() {return data() + size();} //!< \brief Iterator 1 word past the end of (flat) data.
+  const_iterator end() const {return data() + size();} //!< \brief Const iterator 1 word past the end of (flat) data.
 
         Eigen::Map<Eigen::Matrix<T, dyn, 1>> vector()       {return {data(), size()};}
   const Eigen::Map<Eigen::Matrix<T, dyn, 1>> vector() const {return {data(), size()};}
