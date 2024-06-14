@@ -126,6 +126,14 @@ class Array
     _data = _data_storage.data();
   }
 
+  template <typename... U>
+  static Array<T> make(U... args)
+  {
+    std::vector<T> vec{args...};
+    Array<T> arr({int(vec.size())}, vec.data());
+    return arr.copy();
+  }
+
   //! \brief Creates an array which is a reference to `other`'s data.
   //! \details Note that this array does not own the data, and if `other` is deleted it will now contain a dangling pointer.
   Array(Array<T>& other) : Array(other.shape(), other.data()) {}
@@ -239,6 +247,13 @@ class Array
   Array<T>       operator()(int start, int stop)       {BODY}
   const Array<T> operator()(int start, int stop) const {BODY} //!< \overload
   #undef BODY
+
+  typedef T* iterator;
+  typedef const T* const_iterator;
+  iterator begin() {return data();}
+  const_iterator begin() const {return data();}
+  iterator end() {return data() + size();}
+  const_iterator end() const {return data() + size();}
 
         Eigen::Map<Eigen::Matrix<T, dyn, 1>> vector()       {return {data(), size()};}
   const Eigen::Map<Eigen::Matrix<T, dyn, 1>> vector() const {return {data(), size()};}

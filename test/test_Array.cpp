@@ -69,6 +69,9 @@ TEST_CASE("Array")
   REQUIRE_THAT(arr6(6,  7).shape(), Catch::Matchers::RangeEquals(std::vector<int>{0, 2}));
   REQUIRE_THROWS(arr6(0)(0)(0, 1));
 
+  auto arr8{hexed::Array<double>::make(.1, -.2, 1.5)};
+  REQUIRE_THAT(arr8, Catch::Matchers::RangeEquals(std::vector<double>{.1, -.2, 1.5}, hexed::math::Approx_equal()));
+
   SECTION("arithmetic")
   {
     // only test one binary operator, since all of them are defined with the same macro
