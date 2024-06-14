@@ -240,8 +240,8 @@ class Array
   const Array<T> operator()(int start, int stop) const {BODY} //!< \overload
   #undef BODY
 
-        Eigen::Map<Mat<>> vector()       {return {data(), size()};}
-  const Eigen::Map<Mat<>> vector() const {return {data(), size()};}
+        Eigen::Map<Eigen::Matrix<T, dyn, 1>> vector()       {return {data(), size()};}
+  const Eigen::Map<Eigen::Matrix<T, dyn, 1>> vector() const {return {data(), size()};}
 };
 
 #define DEFINE_OPERATOR(BIN_OP) \
