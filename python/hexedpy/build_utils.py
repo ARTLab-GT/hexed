@@ -956,8 +956,8 @@ class Builder:
             ]
             prefix = self.prefices["python"] + (parent(absolute(file)),)
         elif ext in ["c", "cpp", "cxx", "c++", "h", "hpp", "hxx", "h++"]:
-            patterns = [r'#include +["<]([\w.]+)[">]']
-            prefix = (self.build_dir + "include/hexed",)
+            patterns = [r'#include +["<]([\w./]+)[">]']
+            prefix = self.prefices["include"]
         elif ext == "hil":
             patterns = [r"read {(\w+)}"]
             raise NotImplementedError("need to implement prefix for HIL")
