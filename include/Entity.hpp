@@ -25,9 +25,11 @@ class Entity
 class Cartesian : public Entity
 {
   Array<int> _nom_pos;
+  double _nom_sz;
   public:
   Cartesian(int n_dim, int my_dim, const std::shared_ptr<Basis>, Array<int> nom_pos, double nom_sz);
-  Array<int> nominal_position();
+  Array<int> nominal_position() const;
+  double nominal_size() const;
   inline type get_type() const {return cartesian;}
   const Array<double> points() const;
 };

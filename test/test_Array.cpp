@@ -16,6 +16,9 @@ TEST_CASE("Array")
   REQUIRE(arr0.order() == 3);
   REQUIRE_THAT(arr0.shape(), Catch::Matchers::RangeEquals(std::vector<int>{2, 3, 4}));
   REQUIRE(arr0.size() == 24);
+  REQUIRE(arr0.stride(0) == 12);
+  REQUIRE(arr0.stride(1) == 4);
+  REQUIRE(arr0.stride(2) == 1);
 
   hexed::Array<double> zero_size({});
   REQUIRE(zero_size.shape().empty());

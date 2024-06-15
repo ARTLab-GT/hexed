@@ -10,6 +10,7 @@ TEST_CASE("Entity")
   REQUIRE_THAT(ent3.nominal_position().vector(), Catch::Matchers::RangeEquals(std::vector<int>{1, -3, -1}));
   auto points = ent3.points();
   REQUIRE_THAT(points.shape(), Catch::Matchers::RangeEquals(std::vector<int>{3, 3, 3, 3}));
+  REQUIRE(ent3.nominal_size() == Catch::Approx(.1));
 
   REQUIRE(points(0)(0)(0)[0] == Catch::Approx(.1));
   REQUIRE(points(1)(0)(0)[0] == Catch::Approx(-.3));

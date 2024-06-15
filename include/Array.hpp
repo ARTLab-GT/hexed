@@ -192,6 +192,15 @@ class Array
     if (same) for (int i = 0; i < _order; ++i) same = same && _shape[i] == other._shape[i];
     return same;
   }
+  /*! \brief The stride for indexing along demension `i_dim`.
+   * \details E.g.,
+   * - `arr(1).data() == arr.data() + arr.stride(0)`
+   * - `arr(0)(1).data() == arr.data() + arr.stride(1)`
+   */
+  int stride(int i_dim) const
+  {
+    return _strides[i_dim + 1];
+  }
 
   T* data() {return _data;} //!< \brief fetches pointer to data
   const T* data() const {return _data;} //!< \overload
