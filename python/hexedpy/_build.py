@@ -30,9 +30,12 @@ class Hexed(bu.C_project):
         })
         self.builder.info["version"] = self.version
         self.builder.info["version_major"], self.builder.info["version_minor"], self.builder.info["version_patch"] = self.version.split(".")
-        self[bu.Pip]("gitpython").do
-        command = f"import git; repo = git.Repo('{self.sdir}'); print(repo.head.commit, end='')"
-        self.builder.info["commit"] = self.builder.python("-c", command, capture_output=True).stdout.decode()
+        if os.path.isdir(self.sdir + ".git/"):
+            self[bu.Pip]("gitpython").do
+            command = f"import git; repo = git.Repo('{self.sdir}'); print(repo.head.commit, end='')"
+            self.builder.info["commit"] = self.builder.python("-c", command, capture_output=True).stdout.decode()
+        else:
+            self.builder.info["commit"] = "notagitrepo"
         #### determine compile flags
         bu.Compiler.cpp_standard = 20
         if self.builder.options["architecture"] != "any":
@@ -126,8 +129,7 @@ class Hexed(bu.C_project):
 
         ### build documentation
         if self.builder.options["build_docs"]:
-            assert self.builder.subproc(["which", "doxygen"], capture_output=True).stdout.decode(), \
-                "Doxygen not found (`which doxygen` returned empty). Cannot build documentation."
+            self.builder.assert_command("doxygen", "doxygen")
             def not_dox(f):
                 return not (f.endswith(".dox") or f.endswith(".tag") or f.endswith(".doxytags") or os.path.isdir(f))
             self.builder.copy(self.sdir + "doc/", self.bdir + "doc/", ignore=not_dox).do

@@ -405,24 +405,16 @@ class HDF5(C_project):
 
 class Libxml2_base(C_project):
     version = "2.12.7"
-    installed_files = {"include":["libxml2"], "lib":["xml2"], "cmake":["libxml2"]}
+    installed_files = {"include":["libxml2"], "lib":["xml2"], "cmake":[f"libxml2-{version}"]}
     def build(self):
         directory = self.builder.fetch_archive(
             f"https://download.gnome.org/sources/libxml2/{'.'.join(self.version.split('.')[:-1])}/libxml2-{self.version}.tar.xz"
         )[0]
-        os.chdir(directory)
-        self.builder.subproc([
-            slash(os.getcwd()) + "configure",
-            f"--prefix={self.builder.build_dir}",
-            "--with-python=no",
-            "--enable-static=no",
-            "--enable-shared=yes"
-        ])
-        self.builder.make()
+        self.builder.cmake(directory, opts=["-DBUILD_STATIC_LIBS=OFF", "-DBUILD_SHARED_LIBS=ON"])
 
 class Libxml2(C_project):
-    version = "2.12.7"
-    installed_files = {"include":["libxml2", "libxml"], "lib":["xml2"], "cmake":["libxml2"]}
+    version = Libxml2_base.version
+    installed_files = {"include":["libxml2", "libxml"], "lib":["xml2"], "cmake":[f"libxml2-{Libxml2_base.version}"]}
     def build(self):
         self[Libxml2_base]().do
         link = self.bdir + "include/libxml"
@@ -560,11 +552,13 @@ class Compile(Subprocess):
             output = self.bdir + "object/" + src[len(root):]
         obj = ".".join(output.split(".")[:-1] + ["o"])
         builder.mkdir(parent(obj))
+        self.builder.assert_command("g++", "build-essential")
         command = ["g++", "-c"] + compiler.flags() + ["-I" + d for d in builder.prefices["include"]] + ["-o", obj, src]
         super().__init__(builder, command, obj, depends=self.builder.find_source_depends(src).find().assets)
 
 class Link(Subprocess):
     def __init__(self, builder, name, objects, libs=[], compiler=Compiler()):
+        self.builder.assert_command("g++", "build-essential")
         args = ["g++"] + compiler.flags()
         if re.fullmatch(r"lib\w+\.so", name):
             args.append("-shared")
@@ -905,7 +899,14 @@ class Builder:
         self.make()
         os.chdir(cwd)
 
+    def assert_command(self, command, package=None):
+        message = f"Command `{command}` not found."
+        if package:
+            message += f" (Have you tried `sudo apt install {package}`?)"
+        assert self.subproc(["which", command], capture_output=True).stdout.decode(), message
+
     def make(self, args=["install"]):
+        self.assert_command("make", "build-essential")
         self.subproc(["make", f"-j{self.options['n_build_procs']}", *args])
 
     def fetch_archive(self, url, outputs=None):
