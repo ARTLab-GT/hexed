@@ -410,7 +410,12 @@ class Libxml2_base(C_project):
         directory = self.builder.fetch_archive(
             f"https://download.gnome.org/sources/libxml2/{'.'.join(self.version.split('.')[:-1])}/libxml2-{self.version}.tar.xz"
         )[0]
-        self.builder.cmake(directory, opts=["-DBUILD_STATIC_LIBS=OFF", "-DBUILD_SHARED_LIBS=ON"])
+        self.builder.cmake(directory, opts=[
+            "-DBUILD_SHARED_LIBS=ON",
+            "-DLIBXML2_WITH_PYTHON=OFF",
+            "-DLIBXML2_WITH_LZMA=OFF",
+            "-DLIBXML2_WITH_ZLIB=OFF",
+        ])
 
 class Libxml2(C_project):
     version = Libxml2_base.version
