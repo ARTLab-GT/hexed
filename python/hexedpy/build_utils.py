@@ -890,7 +890,6 @@ class Builder:
         self.assert_command("g++", "build-essential")
         self.assert_command("gcc", "build-essential")
         self.assert_command("make", "build-essential")
-        self.assert_command("cmake", "build-essential")
         cwd = os.getcwd()
         os.chdir(source_dir)
         self.mkdir(build_dir)
