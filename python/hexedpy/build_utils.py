@@ -870,9 +870,11 @@ class Builder:
     def mkdir(self, name):
         os.makedirs(absolute(name), exist_ok=True)
 
-    def subproc(self, args, **kwargs):
+    def subproc(self, args, err_message=None, **kwargs):
         proc = subp.run(args, env=self.env, **kwargs)
-        assert proc.returncode == 0, f"command {args} failed"
+        if err_message is None:
+            err_message = f"command {args} failed"
+        assert proc.returncode == 0, err_message
         return proc
 
     def python(self, *args, **kwargs):
@@ -907,7 +909,7 @@ class Builder:
         message = f"Command `{command}` not found."
         if package:
             message += f" (Have you tried `sudo apt install {package}`?)"
-        assert self.subproc(["which", command], capture_output=True).stdout.decode(), message
+        self.subproc(["which", command], capture_output=True, err_message=message).stdout.decode()
 
     def make(self, args=["install"]):
         self.assert_command("make", "build-essential")
