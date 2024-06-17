@@ -446,6 +446,7 @@ class Xdmf(C_project):
     def depends(self):
         return self[Boost](modules=[
             "assert.hpp",
+            "core",
             "iterator",
             "static_assert.hpp",
             "tokenizer.hpp",
