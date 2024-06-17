@@ -447,6 +447,7 @@ class Xdmf(C_project):
         return self[Boost](modules=[
             "assert.hpp",
             "core",
+            "detail",
             "iterator",
             "mpl",
             "preprocessor",
