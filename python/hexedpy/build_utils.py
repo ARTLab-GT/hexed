@@ -455,6 +455,7 @@ class Xdmf(C_project):
             "smart_ptr",
             "throw_exception.hpp",
             "tokenizer.hpp",
+            "type_index.hpp",
             "type_traits",
             "variant.hpp",
         ]) & self[Libxml2]() & self[HDF5]()
