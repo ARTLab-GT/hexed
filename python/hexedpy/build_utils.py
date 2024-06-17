@@ -431,7 +431,7 @@ class Boost(C_project):
                 mod = mod.split(".")[0]
             if "/" in mod:
                 mod = mod.split("/")[0]
-            submods.append(f"libs/{mod}/.git")
+            submods.append(f"libs/{mod}")
         self[Subprocess](["git", "clone", "https://github.com/boostorg/boost.git"], ["boost"]).do
         self[Subprocess]([
             ["git", "checkout", f"boost-{self.version}"],
