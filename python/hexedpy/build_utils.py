@@ -449,6 +449,7 @@ class Xdmf(C_project):
             "core",
             "iterator",
             "mpl",
+            "preprocessor",
             "static_assert.hpp",
             "tokenizer.hpp",
         ]) & self[Libxml2]() & self[HDF5]()
