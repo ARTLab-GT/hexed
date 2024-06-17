@@ -452,6 +452,7 @@ class Xdmf(C_project):
             "preprocessor",
             "static_assert.hpp",
             "tokenizer.hpp",
+            "type_traits",
         ]) & self[Libxml2]() & self[HDF5]()
     def build(self):
         self.builder.assert_command("git", "git")
