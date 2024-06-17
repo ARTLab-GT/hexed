@@ -524,7 +524,7 @@ class Python_script(Buildable):
 class Compiler:
     high_level_flags = True
     position_independent = True
-    warn = ["all"]
+    warn = ["all", "no-array-bounds"]
     cpp_standard = None
     optimize = 0
     debug = 0
