@@ -311,7 +311,7 @@ class Copy(Buildable):
         shutil.copy(self._source, self._dest)
 
 class Subprocess(Buildable):
-    def __init__(self, builder, commands, outputs, depends=[], **kwargs):
+    def __init__(self, builder, commands, outputs, depends=[], directory=None, **kwargs):
         self._depends = depends
         self._output = outputs
         if isinstance(commands, str):
@@ -320,12 +320,15 @@ class Subprocess(Buildable):
             self.commands = [list(commands)]
         else:
             self.commands = list(commands)
+        self._dir = directory
         self._kwargs = kwargs
     def depends(self):
         return self._depends
     def output(self):
         return self._output
     def build(self):
+        if self._dir:
+            os.chdir(self._dir)
         for comm in self.commands:
             if self.builder.options["verbose"]:
                 self.builder.message(" ".join(comm))
@@ -356,20 +359,6 @@ class Extract(Buildable):
         self.builder.subproc(["tar", "-xf", self.archive])
     def __str__(self):
         return str(self.extracted)
-
-class Git_clone(Buildable):
-    def __init__(self, builder, repo, cloned_name):
-        self.repo = repo
-        self.name = cloned_name
-    def __str__(self):
-        return f"git repo {self.name}"
-    def output(self):
-        return File(self.name)
-    def build(self):
-        self[Pip]("gitpython").find()
-        assert not self.repo.startswith("https://") or self.builder.options["internet"], \
-            "`Git_clone` from a remote repository requires internet access. (You passed `--internet=False`.)"
-        self.builder.python("-c", f"import git; git.Repo.clone_from('{self.repo}', '{self.name}')")
 
 class C_project(Buildable):
     version = "<unspecified version>"
@@ -427,12 +416,30 @@ class Libxml2(C_project):
             os.remove(link)
         os.symlink(self.builder.find_in("include", "libxml2/libxml").find().assets[0], link)
 
+class Boost(C_project):
+    version = "1.85.0"
+    installed_files = {"include":["boost/version.hpp"], "lib":[], "cmake":[f"Boost-{version}"]}
+    def __init__(self, builder, modules=[]):
+        self.modules = modules
+    def build(self):
+        self.builder.assert_command("git", "git")
+        submods = ["libs/" + mod for mod in self.modules] + ["libs/config", "libs/headers", "tools/boost_install", "tools/build"]
+        self[Subprocess](["git", "clone", "https://github.com/boostorg/boost.git"], ["boost"]).do
+        self[Subprocess]([
+            ["git", "checkout", f"boost-{self.version}"],
+            ["git", "submodule", "update", "--init", "--depth=1"] + submods,
+        ], [self.bdir + "boost/" + mod + "/.git" for mod in submods], directory="boost").do
+        os.chdir("boost")
+        self.builder.subproc([os.getcwd() + "/bootstrap.sh", "--prefix=" + self.bdir])
+        self.builder.subproc([os.getcwd() + "/b2", "install"])
+
 class Xdmf(C_project):
     installed_files = {"include":["Xdmf.hpp"], "lib":["Xdmf", "XdmfCore"], "cmake":["Xdmf"]}
     def depends(self):
-        return self[Libxml2]() & self[HDF5]()
+        return self[Boost](modules=[]) & self[Libxml2]() & self[HDF5]()
     def build(self):
-        self[Git_clone]("https://gitlab.kitware.com/xdmf/xdmf.git", "xdmf").do
+        self.builder.assert_command("git", "git")
+        self[Subprocess](["git", "clone", "https://gitlab.kitware.com/xdmf/xdmf.git"], ["xdmf"]).do
         self.builder.env["XDMF_INSTALL_DIR"] = self.builder.build_dir
         problem_file = f"{os.getcwd()}/xdmf/core/XdmfHDF5Controller.hpp"
         with open(problem_file, "r") as in_file:
