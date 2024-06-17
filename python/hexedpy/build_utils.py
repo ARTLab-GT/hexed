@@ -452,7 +452,7 @@ class Xdmf(C_project):
             "mpl",
             "preprocessor",
             "static_assert.hpp",
-            "shared_ptr.hpp",
+            "smart_ptr.hpp",
             "throw_exception.hpp",
             "tokenizer.hpp",
             "type_traits",
