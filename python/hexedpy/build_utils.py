@@ -418,9 +418,11 @@ class Libxml2(C_project):
 
 class Boost(C_project):
     version = "1.85.0"
-    installed_files = {"include":["boost/version.hpp"], "lib":[], "cmake":[f"Boost-{version}"]}
     def __init__(self, builder, modules=[]):
+        self.installed_files = {"include":["boost/version.hpp"], "lib":[], "cmake":[f"Boost-{self.version}"]}
         self.modules = modules
+        for module in self.modules:
+            self.installed_files["include"].append(f"boost/{module}.hpp")
     def build(self):
         self.builder.assert_command("git", "git")
         submods = ["libs/" + mod for mod in self.modules] + ["libs/config", "libs/headers", "tools/boost_install", "tools/build"]
@@ -436,7 +438,7 @@ class Boost(C_project):
 class Xdmf(C_project):
     installed_files = {"include":["Xdmf.hpp"], "lib":["Xdmf", "XdmfCore"], "cmake":["Xdmf"]}
     def depends(self):
-        return self[Boost](modules=[]) & self[Libxml2]() & self[HDF5]()
+        return self[Boost](modules=["tokenizer"]) & self[Libxml2]() & self[HDF5]()
     def build(self):
         self.builder.assert_command("git", "git")
         self[Subprocess](["git", "clone", "https://gitlab.kitware.com/xdmf/xdmf.git"], ["xdmf"]).do
