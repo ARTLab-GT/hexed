@@ -130,6 +130,7 @@ class Hexed(bu.C_project):
         ### build documentation
         if self.builder.options["build_docs"]:
             self.builder.assert_command("doxygen", "doxygen")
+            self.builder.assert_command("dot", "graphviz")
             def not_dox(f):
                 return not (f.endswith(".dox") or f.endswith(".tag") or f.endswith(".doxytags") or os.path.isdir(f))
             self.builder.copy(self.sdir + "doc/", self.bdir + "doc/", ignore=not_dox).do
