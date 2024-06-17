@@ -4,8 +4,8 @@
 
 TEST_CASE("Path")
 {
-  hexed::Path p("lib");
-  REQUIRE(!p.find("libhdf5_cpp.so").empty()); // this should exist somewhere, since HDF5 is a mandatory dependency
+  hexed::Path p("bin");
+  REQUIRE(!p.find("python3").empty()); // this should exist somewhere, since python is a mandatory dependency
   // find a file in the home directory
   std::ofstream file("find_this");
   file.close();
