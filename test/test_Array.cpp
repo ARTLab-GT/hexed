@@ -50,7 +50,10 @@ TEST_CASE("Array")
   REQUIRE(arr2[1] == Catch::Approx(42));
   arr2[1] = 406;
   REQUIRE(arr0[1] == Catch::Approx(406));
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wpessimizing-move"
   hexed::Array<double> arr3(std::move(make_array()));
+  #pragma GCC diagnostic pop
   REQUIRE(arr3[1] == Catch::Approx(.1));
   hexed::Array<double> arr4(arr0.copy());
   arr4[1] = 287.0528;
