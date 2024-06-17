@@ -418,54 +418,21 @@ class Libxml2(C_project):
 
 class Boost(C_project):
     version = "1.85.0"
-    def __init__(self, builder, modules=[]):
-        self.installed_files = {"include":["boost/version.hpp"], "lib":[], "cmake":[f"Boost-{self.version}"]}
-        self.modules = modules
-        for module in self.modules:
-            self.installed_files["include"].append(f"boost/{module}")
+    installed_files = {"include":["boost"], "lib":[], "cmake":[f"Boost-{version}"]}
     def build(self):
-        self.builder.assert_command("git", "git")
-        submods = ["libs/config", "libs/headers", "tools/boost_install", "tools/build"]
-        for mod in self.modules:
-            if "." in mod:
-                mod = mod.split(".")[0]
-            if "/" in mod:
-                mod = mod.split("/")[0]
-            submods.append(f"libs/{mod}")
-        self[Subprocess](["git", "clone", "https://github.com/boostorg/boost.git"], ["boost"]).do
-        self[Subprocess]([
-            ["git", "checkout", f"boost-{self.version}"],
-            ["git", "submodule", "update", "--init", "--depth=1"] + submods,
-        ], [self.bdir + "boost/" + mod + "/.git" for mod in submods], directory="boost").do
-        os.chdir("boost")
-        self.builder.subproc([os.getcwd() + "/bootstrap.sh", "--prefix=" + self.bdir])
-        self.builder.subproc([os.getcwd() + "/b2", "install"])
+        directory = self.builder.fetch_archive(f"https://archives.boost.io/release/1.85.0/source/boost_{self.version.replace('.', '_')}.tar.gz")[0]
+        os.chdir(directory)
+        self.builder.subproc([os.getcwd() + "/bootstrap.sh", "--prefix=" + self.bdir, "--with-libraries=chrono"])
+        self.builder.subproc([os.getcwd() + "/b2", "headers", "install"])
 
 class Xdmf(C_project):
     installed_files = {"include":["Xdmf.hpp"], "lib":["Xdmf", "XdmfCore"], "cmake":["Xdmf"]}
     def depends(self):
-        return self[Boost](modules=[
-            "assert.hpp",
-            "callable_traits",
-            "container_hash",
-            "core",
-            "detail",
-            "iterator",
-            "mpl",
-            "preprocessor",
-            "static_assert.hpp",
-            "smart_ptr",
-            "throw_exception.hpp",
-            "tokenizer.hpp",
-            "type_index.hpp",
-            "type_traits",
-            "variant.hpp",
-        ]) & self[Libxml2]() & self[HDF5]()
+        return self[Boost]() & self[Libxml2]() & self[HDF5]()
     def build(self):
-        self.builder.assert_command("git", "git")
-        self[Subprocess](["git", "clone", "https://gitlab.kitware.com/xdmf/xdmf.git"], ["xdmf"]).do
+        directory = self.builder.fetch_archive(f"https://gitlab.kitware.com/xdmf/xdmf/-/archive/master/xdmf-master.tar.gz")[0]
         self.builder.env["XDMF_INSTALL_DIR"] = self.builder.build_dir
-        problem_file = f"{os.getcwd()}/xdmf/core/XdmfHDF5Controller.hpp"
+        problem_file = directory + "core/XdmfHDF5Controller.hpp"
         with open(problem_file, "r") as in_file:
             text = in_file.read()
         ind = text.find("#include")
@@ -473,7 +440,7 @@ class Xdmf(C_project):
         text = text.replace("typedef int hid_t", "typedef int64_t hid_t")
         with open(problem_file, "w") as out_file:
             out_file.write(text)
-        self.builder.cmake("xdmf", opts=["-Wno-dev", "-DBUILD_STATIC_LIBS=OFF", "-DBUILD_SHARED_LIBS=ON"])
+        self.builder.cmake(directory, opts=["-Wno-dev", "-DBUILD_STATIC_LIBS=OFF", "-DBUILD_SHARED_LIBS=ON"])
 
 class Catch2(C_project):
     version = "3.6.0"
