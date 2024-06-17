@@ -7,6 +7,12 @@ import inspect
 import re
 import sys
 
+## \namespace hexedpy.build_utils
+## \brief Library for creating build scripts.
+## \details Provides classes to manage dependency resolution (which can apply to both package management and building)
+## and option configuration, as well as miscellaneous tools that are useful for building.
+## \todo more documentation is needed here.
+
 def format_time(t):
     return time.strftime("%Y-%m-%d %H:%M:%S (UTC %z)", time.localtime(t))
 
