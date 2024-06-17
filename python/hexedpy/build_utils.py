@@ -444,7 +444,12 @@ class Boost(C_project):
 class Xdmf(C_project):
     installed_files = {"include":["Xdmf.hpp"], "lib":["Xdmf", "XdmfCore"], "cmake":["Xdmf"]}
     def depends(self):
-        return self[Boost](modules=["assert.hpp", "iterator", "tokenizer.hpp"]) & self[Libxml2]() & self[HDF5]()
+        return self[Boost](modules=[
+            "assert.hpp",
+            "iterator",
+            "static_assert.hpp",
+            "tokenizer.hpp",
+        ]) & self[Libxml2]() & self[HDF5]()
     def build(self):
         self.builder.assert_command("git", "git")
         self[Subprocess](["git", "clone", "https://gitlab.kitware.com/xdmf/xdmf.git"], ["xdmf"]).do
