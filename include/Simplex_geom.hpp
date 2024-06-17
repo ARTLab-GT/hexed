@@ -124,7 +124,8 @@ class Simplex_geom : public Simplex_geom_nd
           if ((arr >= -gap_tol).all() && arr.sum() <= 1 + gap_tol) {
             inters.points.push_back(soln(0));
             inters.inds.push_back(i_simplex);
-            inters.coords.push_back(soln(Eigen::seqN(1, n_dim - 1)));
+            Mat<n_dim-1> inter = soln(Eigen::seqN(1, n_dim - 1));
+            inters.coords.push_back(inter);
           }
         }
       }
