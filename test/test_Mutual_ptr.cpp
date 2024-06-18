@@ -23,8 +23,6 @@ TEST_CASE("Mutual_ptr")
   REQUIRE(pdi.value() == 6);
   REQUIRE(*pdi == 6);
   REQUIRE(pdi.get() == &i);
-  int* p = pdi;
-  REQUIRE(p == &i);
 
   SECTION("unpairing")
   {
@@ -45,6 +43,15 @@ TEST_CASE("Mutual_ptr")
     REQUIRE(!pdi);
     REQUIRE(qdi.value() == 6);
     REQUIRE(pid.value() == Catch::Approx(287.0528));
+  }
+
+  SECTION("redundant pairing")
+  {
+    pdi.pair(*pdi.partner());
+    REQUIRE(pdi);
+    REQUIRE(pid);
+    REQUIRE(pid.value() == Catch::Approx(8.314));
+    REQUIRE(pdi.value() == 6);
   }
 
   SECTION("move semantics")

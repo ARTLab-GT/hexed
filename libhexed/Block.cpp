@@ -16,6 +16,7 @@ Mat<3> Block::point(std::vector<int> node_coords) const
 
 void Vertex::eat(Vertex& other)
 {
+  if (&other == this) return;
   other._alive = false;
   pos = (_mass*pos + other._mass*other.pos)/(_mass + other._mass);
   _mass += other._mass;
@@ -23,8 +24,6 @@ void Vertex::eat(Vertex& other)
   for (auto& edge : other._edges) pair(*edge.partner());
   other._mass = 0;
 }
-
-void Vertex::average(std::vector<Vertex*>) {}
 
 void Vertex::pair(Mutual_ptr<Edge, Vertex>& ptr)
 {
@@ -37,8 +36,13 @@ void Vertex::purge()
   std::erase(_edges, false);
 }
 
-Edge::Edge(Vertex& vertex0, Vertex& vertex1, std::shared_ptr<Basis> basis)
-: Block(1, basis->row_size), _rs{basis->row_size}, _verts{this, this}, _interior({_rs, 3}), _basis{basis}
+Edge::Edge(Vertex& vertex0, Vertex& vertex1, std::shared_ptr<Basis> basis) :
+  Block(1, basis->row_size),
+  _rs{basis->row_size},
+  _verts{this, this},
+  _interior({_rs, 3}),
+  _basis{basis},
+  _glued_to{this}
 {
   vertex0.pair(_verts[0]);
   vertex1.pair(_verts[1]);
@@ -47,6 +51,10 @@ Edge::Edge(Vertex& vertex0, Vertex& vertex1, std::shared_ptr<Basis> basis)
 
 Mat<3> Edge::_point(std::vector<int> coords) const
 {
+  if (glued()) {
+    if (_half == no) return _glued_to->_point(coords);
+    else return Mat<3>::Zero();
+  }
   int coord = coords[0];
   if (coord ==       0) return _verts[0]->point({});
   if (coord == _rs - 1) return _verts[1]->point({});
@@ -61,8 +69,25 @@ void Edge::reset()
   }
 }
 
-void Edge::glue(Edge& other, double start, double stop)
+const int Edge::no = -1;
+
+void Edge::glue(Edge& other, int half)
 {
+  other._glued.emplace_back(&other);
+  _glued_to.pair(other._glued.back());
+  _half = half;
+}
+
+void Edge::unglue()
+{
+  Edge& other = _glued_to.value();
+  _glued_to.unpair();
+  std::erase(other._glued, false);
+}
+
+bool Edge::glued() const
+{
+  return _glued_to;
 }
 
 }

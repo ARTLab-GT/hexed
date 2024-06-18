@@ -33,7 +33,6 @@ class Vertex : public Block
   Mat<3> pos;
   inline Vertex(Mat<3> pos, int row_size) : Block{0, row_size}, pos{pos}, _alive{true}, _mass{1} {}
   void eat(Vertex& other);
-  void average(std::vector<Vertex*>);
   void pair(Mutual_ptr<Edge, Vertex>& ptr);
   void purge();
   inline bool alive() {return _alive;}
@@ -45,12 +44,18 @@ class Edge : public Block
   std::array<Mutual_ptr<Edge, Vertex>, 2> _verts;
   Array<double> _interior;
   std::shared_ptr<Basis> _basis;
+  Mutual_ptr<Edge, Edge> _glued_to;
+  int _half;
+  std::vector<Mutual_ptr<Edge, Edge>> _glued;
   Mat<3> _point(std::vector<int>) const override;
   public:
   Edge(Vertex& vertex0, Vertex& vertex1, std::shared_ptr<Basis>);
   inline Array<double> interior() {return _interior;};
   void reset();
-  void glue(Edge& other, double start, double stop);
+  static const int no;
+  void glue(Edge& other, int half = no);
+  void unglue();
+  bool glued() const;
 };
 
 }

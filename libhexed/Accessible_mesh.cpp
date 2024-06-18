@@ -712,7 +712,7 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
-    if (elem.tree) if (intersects_surface(elem.tree)) elem.tree->set_status(0);
+    if (elem.tree) if (intersects_surface(elem.tree.get())) elem.tree->set_status(0);
   }
   // pefrorm flood fill
   Tree* start = tree->find_leaf(flood_fill_start);
@@ -767,7 +767,7 @@ void Accessible_mesh::connect_new(int start_at)
       def.ref_face_cons[nd - 1].emplace_back(new Refined_connection<Deformed_element>(elem.tree->def_elem, fine, Con_dir<Deformed_element>{{i_dim, i_dim}, {!sign, bool(sign)}}));
     } else {
       std::vector<Element*> fine;
-      for (Tree* neighbor : neighbors) fine.push_back(neighbor->elem);
+      for (Tree* neighbor : neighbors) fine.push_back(neighbor->elem.get());
       car.ref_face_cons[nd - 1].emplace_back(new Refined_connection<Element>(&elem, fine, {i_dim}, sign));
     }
   };
@@ -835,7 +835,7 @@ void Accessible_mesh::refine_by_record(bool is_deformed, int start, int end)
     if (elem.tree) {
       if (elem.record == 1) {
         elem.record = 2;
-        refine_set_status(elem.tree);
+        refine_set_status(elem.tree.get());
         for (Tree* child : elem.tree->children()) {
           add_elem(is_deformed, *child).record = 0;
         }
@@ -1221,7 +1221,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
     #pragma omp parallel for
     for (int i_elem = n_orig[is_deformed]; i_elem < cont_elems.size(); ++i_elem) {
       auto& elem = cont_elems[i_elem];
-      if (elem.tree && elem.record != 2) if (is_surface(elem.tree)) elem.record = 2;
+      if (elem.tree && elem.record != 2) if (is_surface(elem.tree.get())) elem.record = 2;
     }
   }
   // incremental flood fill
@@ -1230,7 +1230,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
     // synchronize refinement level of surface elements with their non-surface neighbors
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
-      if (exists(elem.tree)) {
+      if (exists(elem.tree.get())) {
         for (int i_face = 0; i_face < 2*nd; ++i_face) {
           Tree* neighbor = elem.tree->find_neighbor(math::direction(nd, i_face));
           if (neighbor) {
@@ -1274,7 +1274,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
       int sz = cont_elems.size();
       for (int i_elem = 0; i_elem < sz; ++i_elem) {
         auto& elem = cont_elems[i_elem];
-        if (exists(elem.tree)) {
+        if (exists(elem.tree.get())) {
           for (int i_face = 0; i_face < 2*nd; ++i_face) {
             for (Tree* neighbor : elem.tree->find_neighbors(math::direction(nd, i_face))) {
               if (!exists(neighbor)) if (!is_surface(neighbor)) {
@@ -1295,7 +1295,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
       if (elem.record != 2 && elem.tree) {
-        if (needs_refine(elem.tree)) {
+        if (needs_refine(elem.tree.get())) {
           changed = true;
           elem.record = 1;
         }
