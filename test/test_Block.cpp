@@ -56,10 +56,13 @@ TEST_CASE("Block")
     hexed::next::Vertex vert4({1., 1., 1.}, 4);
     hexed::next::Vertex vert5({2., 1., 1.}, 4);
     std::unique_ptr<hexed::next::Edge> edge3(new hexed::next::Edge(vert4, vert5, basis));
+    hexed::next::Edge edge4(vert4, vert5, basis);
     test_interp(edge0);
     REQUIRE(!edge0.glued());
     edge0.glue(*edge3);
     REQUIRE(edge0.glued());
+    edge4.glue(*edge3, 0);
+    REQUIRE(edge4.glued());
     REQUIRE(!edge3->glued());
     REQUIRE(edge3->point({1})(0) == Catch::Approx(4./3.));
     REQUIRE(edge0.point({0})(0) == Catch::Approx(1.));
@@ -70,6 +73,13 @@ TEST_CASE("Block")
       REQUIRE(!edge0.glued());
       test_interp(edge0);
     }
+    REQUIRE(edge4.point({0})(0) == Catch::Approx(1.));
+    REQUIRE(edge4.point({1})(2) == Catch::Approx(1. + .5/3.));
+    edge4.unglue();
+    edge4.glue(*edge3, 1);
+    REQUIRE(edge4.point({0})(0) == Catch::Approx(1.5));
+    REQUIRE(edge4.point({0})(2) == Catch::Approx(1.));
+    REQUIRE(edge4.point({1})(2) == Catch::Approx(1.5 + .5/3.));
     SECTION("delete") {
       edge3.reset();
       REQUIRE(!edge0.glued());
