@@ -135,6 +135,13 @@ class Array
     return arr.copy();
   }
 
+  //! \brief Constructs an array from an `Eigen::Vector`.
+  //! \details Elements are copied.
+  template <int sz>
+  Array(Eigen::Vector<T, sz> vec)
+  : Array({vec.size()}, vec.begin(), vec.end())
+  {}
+
   //! \brief Creates an array which is a reference to `other`'s data.
   //! \details Note that this array does not own the data, and if `other` is deleted it will now contain a dangling pointer.
   Array(Array<T>& other) : Array(other.shape(), other.data()) {}
@@ -268,8 +275,8 @@ class Array
   iterator end() {return data() + size();} //!< \brief Iterator 1 word past the end of (flat) data.
   const_iterator end() const {return data() + size();} //!< \brief Const iterator 1 word past the end of (flat) data.
 
-        Eigen::Map<Eigen::Matrix<T, dyn, 1>> vector()       {return {data(), size()};}
-  const Eigen::Map<Eigen::Matrix<T, dyn, 1>> vector() const {return {data(), size()};}
+        Eigen::Map<Eigen::Matrix<T, dyn, 1>> vector()       {return {_data, size()};}
+  const Eigen::Map<Eigen::Matrix<T, dyn, 1>> vector() const {return {_data, size()};}
 };
 
 #define DEFINE_OPERATOR(BIN_OP) \

@@ -68,18 +68,27 @@ class Mutual_ptr
   }
 
   operator bool() {return _partner;} //!< \brief returns `true` iff currently paired
-  T& mine() {return *_mine;} //!< \brief the object that `this` is permanently associated with
-  Mutual_ptr<U, T>* partner() {return _partner;} //!< \brief if paired, the `Mutual_ptr` this is currently paired with; else `nullptr`
-  U* get() {return _partner ? _partner->_mine : nullptr;} //!< \brief if paired, returns `partner()`'s `mine()`; else `nullptr`
-  operator U*() {return get();} //!< \brief casting `this` to `U*` returns the same as `get()`
-  U& operator*() {return *_partner->_mine;} //!< \brief dereferencing obtains `partner()`s `mine()` (undefined if unpaired)
-  U* operator->() {return _partner->_mine;} //!< \brief dereferencing members refers to `partner()`s `mine()` (undefined if unpaired)
-  //! \brief obtains reference to `partner()`'s `mine()` if paired and throws exception if not paired
-  U& value()
-  {
-    HEXED_ASSERT(partner(), "attempt to get the value of an unpaired `Mutual_ptr`");
-    return *_partner->_mine;
-  }
+  #define ACCESS \
+    CONST T& mine() CONST {return *_mine;} /*!< \brief the object that `this` is permanently associated with */ \
+    CONST Mutual_ptr<U, T>* partner() CONST {return _partner;} /*!< \brief if paired, the `Mutual_ptr` this is currently paired with; else `nullptr` */ \
+    CONST U* get() CONST {return _partner ? _partner->_mine : nullptr;} /*!< \brief if paired, returns `partner()`'s `mine()`; else `nullptr` */ \
+    operator CONST U*() {return get();} /*!< \brief casting `this` to `U*` returns the same as `get()` */ \
+    CONST U& operator*() CONST {return *_partner->_mine;} /*!< \brief dereferencing obtains `partner()`s `mine()` (undefined if unpaired) */ \
+    CONST U* operator->() CONST {return _partner->_mine;} /*!< \brief dereferencing members refers to `partner()`s `mine()` (undefined if unpaired) */ \
+    /*! \brief obtains reference to `partner()`'s `mine()` if paired and throws exception if not paired */ \
+    CONST U& value()  CONST \
+    { \
+      HEXED_ASSERT(partner(), "attempt to get the value of an unpaired `Mutual_ptr`"); \
+      return *_partner->_mine; \
+    } \
+
+  #define CONST
+  ACCESS
+  #undef CONST
+  #define CONST const
+  ACCESS
+  #undef CONST
+  #undef ACCESS
 };
 
 }
