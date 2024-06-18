@@ -1,3 +1,6 @@
+#ifndef HEXED_BLOCK_HPP_
+#define HEXED_BLOCK_HPP_
+
 #include <memory>
 #include "math.hpp"
 #include "Mutual_ptr.hpp"
@@ -24,12 +27,16 @@ class Vertex : public Block
 {
   std::vector<Mutual_ptr<Vertex, Edge>> _edges;
   inline Mat<3> _point(std::vector<int>) const override {return pos;}
+  bool _alive;
+  int _mass;
   public:
   Mat<3> pos;
-  inline Vertex(Mat<3> pos, int row_size) : Block{0, row_size}, pos{pos} {}
+  inline Vertex(Mat<3> pos, int row_size) : Block{0, row_size}, pos{pos}, _alive{true}, _mass{1} {}
   void eat(Vertex& other);
   void average(std::vector<Vertex*>);
   void pair(Mutual_ptr<Edge, Vertex>& ptr);
+  void purge();
+  inline bool alive() {return _alive;}
 };
 
 class Edge : public Block
@@ -47,3 +54,4 @@ class Edge : public Block
 };
 
 }
+#endif

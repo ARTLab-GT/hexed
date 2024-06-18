@@ -6,12 +6,18 @@
 TEST_CASE("Block")
 {
   static_assert(hexed::config::max_row_size >= 4); // these tests require a row size of at least 4
-  hexed::next::Vertex vert0({0.1, -.3, .2}, 4);
+
+  // vertex construction
+  hexed::next::Vertex vert0({.1, -.3, .2}, 4);
   REQUIRE(vert0.n_dim == 0);
   REQUIRE(vert0.row_size == 4);
+  REQUIRE(vert0.alive());
   REQUIRE_THAT(vert0.point({}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2}, hexed::math::Approx_equal()));
   hexed::next::Vertex vert1({.3, -.1, .4}, 4);
-  hexed::next::Edge edge0(vert0, vert1, std::make_shared<hexed::Equidistant>(4));
+
+  // edge construction
+  std::shared_ptr<hexed::Basis> basis = std::make_shared<hexed::Equidistant>(4);
+  hexed::next::Edge edge0(vert0, vert1, basis);
   REQUIRE(edge0.n_dim == 1);
   REQUIRE(edge0.row_size == 4);
   auto test_interp = [&](){
@@ -20,9 +26,26 @@ TEST_CASE("Block")
     }
   };
   test_interp();
+
+  // edge modification
   REQUIRE_THAT(edge0.interior().shape(), Catch::Matchers::RangeEquals(std::vector<int>{4, 3}));
   edge0.interior()(0)[2] = 2.3;
   REQUIRE(edge0.point({1})(2) == Catch::Approx(2.3));
   edge0.reset();
   test_interp();
+
+  // vertex `eat`ing
+  hexed::next::Vertex vert2({3., 3., 3.}, 4);
+  hexed::next::Vertex vert3({0., 0., 0.}, 4);
+  hexed::next::Edge edge1(vert0, vert2, basis);
+  hexed::next::Edge edge2(vert0, vert3, basis);
+  REQUIRE_THAT(edge1.point({3}), Catch::Matchers::RangeEquals(hexed::Mat<3>{3., 3., 3.}));
+  vert2.eat(vert1);
+  REQUIRE(!vert1.alive());
+  REQUIRE(vert2.alive());
+  vert3.eat(vert2);
+  REQUIRE(!vert2.alive());
+  for (auto edge : {&edge0, &edge1, &edge2}) {
+    REQUIRE_THAT(edge->point({3}), Catch::Matchers::RangeEquals(hexed::Mat<3>{3.3, 2.9, 3.4}/3.));
+  }
 }

@@ -14,13 +14,27 @@ Mat<3> Block::point(std::vector<int> node_coords) const
   return _point(node_coords);
 }
 
-void Vertex::eat(Vertex& other) {}
+void Vertex::eat(Vertex& other)
+{
+  other._alive = false;
+  pos = (_mass*pos + other._mass*other.pos)/(_mass + other._mass);
+  _mass += other._mass;
+  other.purge();
+  for (auto& edge : other._edges) pair(*edge.partner());
+  other._mass = 0;
+}
+
 void Vertex::average(std::vector<Vertex*>) {}
 
 void Vertex::pair(Mutual_ptr<Edge, Vertex>& ptr)
 {
   _edges.emplace_back(this);
   _edges.back().pair(ptr);
+}
+
+void Vertex::purge()
+{
+  std::erase(_edges, false);
 }
 
 Edge::Edge(Vertex& vertex0, Vertex& vertex1, std::shared_ptr<Basis> basis)
