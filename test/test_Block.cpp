@@ -20,4 +20,9 @@ TEST_CASE("Block")
     }
   };
   test_interp();
+  REQUIRE_THAT(edge0.interior().shape(), Catch::Matchers::RangeEquals(std::vector<int>{4, 3}));
+  edge0.interior()(0)[2] = 2.3;
+  REQUIRE(edge0.point({1})(2) == Catch::Approx(2.3));
+  edge0.reset();
+  test_interp();
 }
