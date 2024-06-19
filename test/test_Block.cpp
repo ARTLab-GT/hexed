@@ -73,13 +73,13 @@ TEST_CASE("Block")
       REQUIRE(!edge0.glued());
       test_interp(edge0);
     }
-    REQUIRE(edge4.point({0})(0) == Catch::Approx(1.));
-    REQUIRE(edge4.point({1})(2) == Catch::Approx(1. + .5/3.));
+    CHECK(edge4.point({0})(0) == Catch::Approx(1.));
+    CHECK(edge4.point({1})(0) == Catch::Approx(1. + .5/3.));
     edge4.unglue();
     edge4.glue(*edge3, 1);
-    REQUIRE(edge4.point({0})(0) == Catch::Approx(1.5));
-    REQUIRE(edge4.point({0})(2) == Catch::Approx(1.));
-    REQUIRE(edge4.point({1})(2) == Catch::Approx(1.5 + .5/3.));
+    CHECK(edge4.point({0})(0) == Catch::Approx(1.5));
+    CHECK(edge4.point({0})(2) == Catch::Approx(1.));
+    CHECK(edge4.point({1})(0) == Catch::Approx(1.5 + .5/3.));
     SECTION("delete") {
       edge3.reset();
       REQUIRE(!edge0.glued());

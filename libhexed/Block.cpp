@@ -51,11 +51,15 @@ Edge::Edge(Vertex& vertex0, Vertex& vertex1, std::shared_ptr<Basis> basis) :
 
 Mat<3> Edge::_point(std::vector<int> coords) const
 {
+  int coord = coords[0];
   if (glued()) {
     if (_half == no) return _glued_to->_point(coords);
-    else return Mat<3>::Zero();
+    else {
+      Mat<3, dyn> pts(3, _rs);
+      for (int c = 0; c < _rs; ++c) pts(all, c) = _glued_to->point({c});
+      return pts*_basis->restrict(_half)(coord, all).transpose();
+    }
   }
-  int coord = coords[0];
   if (coord ==       0) return _verts[0]->point({});
   if (coord == _rs - 1) return _verts[1]->point({});
   return _interior(coord - 1).vector();

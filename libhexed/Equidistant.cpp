@@ -23,16 +23,16 @@ double Equidistant::node(int i) const
   return (double)i/(row_size - 1);
 }
 
-Eigen::VectorXd Equidistant::node_weights() const
+Mat<> Equidistant::node_weights() const
 {
   throw std::runtime_error("Not implemented.");
-  Eigen::VectorXd unused (0);
+  Mat<> unused (0);
   return unused;
 }
 
-Eigen::MatrixXd Equidistant::diff_mat() const
+Mat<dyn, dyn> Equidistant::diff_mat() const
 {
-  Eigen::MatrixXd dm (row_size, row_size);
+  Mat<dyn, dyn> dm (row_size, row_size);
   for (int i_operand = 0; i_operand < row_size; ++i_operand)
   {
     for (int i_result = 0; i_result < row_size; ++i_result)
@@ -69,33 +69,27 @@ Eigen::MatrixXd Equidistant::diff_mat() const
   return dm;
 }
 
-Eigen::MatrixXd Equidistant::boundary() const
+Mat<dyn, dyn> Equidistant::boundary() const
 {
-  Eigen::MatrixXd b {Eigen::MatrixXd::Zero(2, row_size)};
+  Mat<dyn, dyn> b {Mat<dyn, dyn>::Zero(2, row_size)};
   b(0, 0) = 1.;
   b(1, row_size - 1) = 1.;
   return b;
 }
 
-Eigen::VectorXd Equidistant::orthogonal(int degree) const
+Mat<> Equidistant::orthogonal(int degree) const
 {
   HEXED_ASSERT(false, "Not implemented");
   return {};
 }
 
-Eigen::MatrixXd Equidistant::filter() const
+Mat<dyn, dyn> Equidistant::filter() const
 {
   HEXED_ASSERT(false, "Not implemented");
   return {};
 }
 
-Eigen::MatrixXd Equidistant::prolong (int i_half) const
-{
-  HEXED_ASSERT(false, "Not implemented");
-  return {};
-}
-
-Eigen::MatrixXd Equidistant::restrict (int i_half) const
+Mat<dyn, dyn> Equidistant::prolong (int i_half) const
 {
   HEXED_ASSERT(false, "Not implemented");
   return {};
