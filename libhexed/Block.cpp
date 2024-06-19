@@ -94,4 +94,18 @@ bool Edge::glued() const
   return _glued_to;
 }
 
+Mat<3> Surface_face::_point(std::vector<int> coords) const
+{
+  return Mat<3>::Zero();
+}
+
+Surface_face::Surface_face(std::array<Vertex*, 4> verts, std::shared_ptr<Basis> basis)
+: Block(2, basis->row_size), _rs{basis->row_size}, _interior({_rs*_rs, 3})
+{
+}
+
+void Surface_face::reset()
+{
+}
+
 }

@@ -58,5 +58,18 @@ class Edge : public Block
   bool glued() const;
 };
 
+class Surface_face : public Block
+{
+  int _rs;
+  std::vector<Edge> _edges;
+  Array<double> _interior;
+  Mat<3> _point(std::vector<int>) const override;
+  public:
+  Surface_face(std::array<Vertex*, 4>, std::shared_ptr<Basis>);
+  inline Array<double> interior() {return _interior;};
+  inline Edge& edge(int i) {return _edges[i];}
+  void reset();
+};
+
 }
 #endif

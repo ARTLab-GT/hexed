@@ -5,7 +5,7 @@
 
 TEST_CASE("Block")
 {
-  static_assert(hexed::config::max_row_size >= 4); // these tests require a row size of at least 4
+  static_assert(hexed::config::max_row_size >= 5); // these tests require a row size of at least 5
 
   // vertex construction
   hexed::next::Vertex vert0({.1, -.3, .2}, 4);
@@ -73,17 +73,36 @@ TEST_CASE("Block")
       REQUIRE(!edge0.glued());
       test_interp(edge0);
     }
-    CHECK(edge4.point({0})(0) == Catch::Approx(1.));
-    CHECK(edge4.point({1})(0) == Catch::Approx(1. + .5/3.));
+    REQUIRE(edge4.point({0})(0) == Catch::Approx(1.));
+    REQUIRE(edge4.point({1})(0) == Catch::Approx(1. + .5/3.));
     edge4.unglue();
     edge4.glue(*edge3, 1);
-    CHECK(edge4.point({0})(0) == Catch::Approx(1.5));
-    CHECK(edge4.point({0})(2) == Catch::Approx(1.));
-    CHECK(edge4.point({1})(0) == Catch::Approx(1.5 + .5/3.));
+    REQUIRE(edge4.point({0})(0) == Catch::Approx(1.5));
+    REQUIRE(edge4.point({0})(2) == Catch::Approx(1.));
+    REQUIRE(edge4.point({1})(0) == Catch::Approx(1.5 + .5/3.));
     SECTION("delete") {
       edge3.reset();
       REQUIRE(!edge0.glued());
       test_interp(edge0);
     }
+  }
+
+  SECTION("Surface_face") {
+    std::shared_ptr<hexed::Basis> basis3 = std::make_shared<hexed::Equidistant>(5);
+    std::vector<hexed::next::Vertex> verts;
+    verts.emplace_back(hexed::Mat<3>{1., 1.5, 1.}, 5);
+    verts.emplace_back(hexed::Mat<3>{2., 1.0, 1.}, 5);
+    verts.emplace_back(hexed::Mat<3>{1., 2.0, 3.}, 5);
+    verts.emplace_back(hexed::Mat<3>{2., 2.0, 1.}, 5);
+    hexed::next::Surface_face face({&verts[0], &verts[1], &verts[2], &verts[3]}, basis3);
+    REQUIRE_THAT(face.edge(0).point({0}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.0, 1.500, 1.0}, hexed::math::Approx_equal()));
+    REQUIRE_THAT(face.edge(0).point({2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, 1.250, 1.0}, hexed::math::Approx_equal()));
+    REQUIRE_THAT(face.edge(3).point({2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{2.0, 1.500, 1.5}, hexed::math::Approx_equal()));
+    REQUIRE_THAT(face.point({0, 0}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.0, 1.500, 1.0}, hexed::math::Approx_equal()));
+    REQUIRE_THAT(face.point({4, 4}), Catch::Matchers::RangeEquals(hexed::Mat<3>{2.0, 2.000, 1.0}, hexed::math::Approx_equal()));
+    REQUIRE_THAT(face.point({2, 0}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, 1.250, 1.0}, hexed::math::Approx_equal()));
+    REQUIRE_THAT(face.point({0, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.0, 1.750, 1.5}, hexed::math::Approx_equal()));
+    REQUIRE_THAT(face.point({1, 4}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, 2.000, 1.5}, hexed::math::Approx_equal()));
+    REQUIRE_THAT(face.point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, 1.625, 1.5}, hexed::math::Approx_equal()));
   }
 }
