@@ -96,6 +96,10 @@ bool Edge::glued() const
 
 Mat<3> Surface_face::_point(std::vector<int> coords) const
 {
+  for (int i_dim = 0; i_dim < 2; ++i_dim) {
+    if (coords[i_dim] ==       0) return _edges[2*i_dim    ].point({coords[!i_dim]});
+    if (coords[i_dim] == _rs - 1) return _edges[2*i_dim + 1].point({coords[!i_dim]});
+  }
   return Mat<3>::Zero();
 }
 
