@@ -7,9 +7,9 @@
 
 void test_diff_mat(hexed::Basis& basis)
 {
-  Eigen::MatrixXd diff_mat = basis.diff_mat();
-  for (int i_result = 0; i_result < basis.row_size; ++i_result)
-  {
+  hexed::Mat<hexed::dyn, hexed::dyn> diff_mat = basis.diff_mat();
+  // test that the sum of each row (derivative of a constant) is 0
+  for (int i_result = 0; i_result < basis.row_size; ++i_result) {
     double derivative = 0;
     for (int i_operand = 0; i_operand < basis.row_size; ++i_operand)
     {
@@ -18,31 +18,22 @@ void test_diff_mat(hexed::Basis& basis)
     REQUIRE( derivative == Catch::Approx(0).margin(1e-13) );
   }
 
-  std::vector<double> linear;
-  std::vector<double> quadratic;
-  for (int i_node = 0; i_node < basis.row_size; ++i_node)
-  {
+  // compute a linear and a quadratic polynomial, each of which will have its derivative taken below
+  hexed::Mat<> linear(basis.row_size);
+  hexed::Mat<> quadratic(basis.row_size);
+  for (int i_node = 0; i_node < basis.row_size; ++i_node) {
     double node = basis.node(i_node);
-    linear.push_back(-2.14 + 9.07*node);
-    quadratic.push_back(0.07 - 0.38*node - 4.43*node*node);
+    linear(i_node) = -2.14 + 9.07*node;
+    quadratic(i_node) = 0.07 - 0.38*node - 4.43*node*node;
   }
 
-  for (int i_result = 0; i_result < basis.row_size; ++i_result)
-  {
-    double derivative_lin = 0;
-    double derivative_quad = 0;
-    for (int i_operand = 0; i_operand < basis.row_size; ++i_operand)
-    {
-      derivative_lin  += diff_mat(i_result, i_operand)*linear   [i_operand];
-      derivative_quad += diff_mat(i_result, i_operand)*quadratic[i_operand];
-    }
-    if (basis.row_size > 1)
-    {
-      REQUIRE( derivative_lin  == Catch::Approx(9.07) );
-    }
-    if (basis.row_size > 2)
-    {
-      REQUIRE( derivative_quad == Catch::Approx(-0.38 - 2*4.43*basis.node(i_result)) );
+  // compute derivatives and test that they are correct
+  hexed::Mat<> derivative_lin = diff_mat*linear;
+  hexed::Mat<> derivative_quad = diff_mat*quadratic;
+  for (int i_result = 0; i_result < basis.row_size; ++i_result) {
+    if (basis.row_size > 1) REQUIRE(derivative_lin(i_result) == Catch::Approx(9.07));
+    if (basis.row_size > 2) {
+      REQUIRE(derivative_quad(i_result) == Catch::Approx(-0.38 - 2*4.43*basis.node(i_result)));
     }
   }
 }

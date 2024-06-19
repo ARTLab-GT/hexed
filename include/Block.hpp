@@ -63,6 +63,7 @@ class Surface_face : public Block
   int _rs;
   std::vector<Edge> _edges;
   Array<double> _interior;
+  std::shared_ptr<Basis> _basis;
   Mat<3> _point(std::vector<int>) const override;
   public:
   Surface_face(std::array<Vertex*, 4>, std::shared_ptr<Basis>);

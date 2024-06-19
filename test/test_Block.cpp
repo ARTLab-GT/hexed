@@ -2,6 +2,7 @@
 #include <hexed/Block.hpp>
 #include <hexed/config.hpp>
 #include <hexed/Equidistant.hpp>
+#include <hexed/Gauss_lobatto.hpp>
 
 TEST_CASE("Block")
 {
@@ -28,7 +29,7 @@ TEST_CASE("Block")
   test_interp(edge0);
 
   // edge modification
-  REQUIRE_THAT(edge0.interior().shape(), Catch::Matchers::RangeEquals(std::vector<int>{4, 3}));
+  REQUIRE_THAT(edge0.interior().shape(), Catch::Matchers::RangeEquals(std::vector<int>{2, 3}));
   edge0.interior()(0)[2] = 2.3;
   REQUIRE(edge0.point({1})(2) == Catch::Approx(2.3));
   edge0.reset();
@@ -88,7 +89,7 @@ TEST_CASE("Block")
   }
 
   SECTION("Surface_face") {
-    std::shared_ptr<hexed::Basis> basis3 = std::make_shared<hexed::Equidistant>(5);
+    std::shared_ptr<hexed::Basis> basis3 = std::make_shared<hexed::Gauss_lobatto>(5);
     std::vector<hexed::next::Vertex> verts;
     verts.emplace_back(hexed::Mat<3>{1., 1.5, 1.}, 5);
     verts.emplace_back(hexed::Mat<3>{2., 1.0, 1.}, 5);
@@ -103,6 +104,10 @@ TEST_CASE("Block")
     REQUIRE_THAT(face.point({2, 0}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.0, 1.750, 2.0}, hexed::math::Approx_equal()));
     REQUIRE_THAT(face.point({0, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, 1.250, 1.0}, hexed::math::Approx_equal()));
     REQUIRE_THAT(face.point({2, 4}), Catch::Matchers::RangeEquals(hexed::Mat<3>{2.0, 1.500, 1.0}, hexed::math::Approx_equal()));
-    REQUIRE_THAT(face.point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, 1.625, 1.5}, hexed::math::Approx_equal()));
+    CHECK_THAT(face.point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, 1.625, 1.5}, hexed::math::Approx_equal()));
+    face.interior()(1)(1)[1] = -5.;
+    CHECK_THAT(face.point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, -5., 1.5}, hexed::math::Approx_equal()));
+    face.reset();
+    CHECK_THAT(face.point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, 1.625, 1.5}, hexed::math::Approx_equal()));
   }
 }
