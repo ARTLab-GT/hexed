@@ -128,27 +128,19 @@ void Surface_face::reset()
   Array<double> rhs({_rs, _rs, 3}, rhs_mat.data());
   for (int i_row = 0; i_row < _rs; ++i_row) {
     for (int j_row = 1; j_row < _rs - 1; ++j_row) {
-      for (int i_col = 1; i_col < _rs - 1; ++i_col) {
-        for (int j_col = 1; j_col < _rs - 1; ++j_col) {
-          lhs(i_row)(j_row)(i_col - 1)[j_col - 1] += dmsq(i_row, i_col) + dmsq(j_row, j_col);
-        }
+      for (int col = 1; col < _rs - 1; ++col) {
+        lhs(i_row)(j_row)(j_row - 1)[col - 1] += dmsq(i_row, col);
+        lhs(j_row)(i_row)(col - 1)[j_row - 1] += dmsq(i_row, col);
       }
-      for (int sign = 0; sign < 2; ++sign) {
-        int col = sign*(_rs - 1);
-        int row [2] {i_row, j_row};
-        for (int j_dim = 0; j_dim < 2; ++j_dim) {
-          rhs(i_row)(j_row).vector() -= dmsq(row[j_dim], col)*edge(2*j_dim + sign).point({row[!j_dim]});
-        }
+      for (int col : {0, _rs - 1}) {
+        rhs(i_row)(j_row).vector() -= dmsq(i_row, col)*edge(    bool(col)).point({j_row});
+        rhs(j_row)(i_row).vector() -= dmsq(i_row, col)*edge(2 + bool(col)).point({j_row});
       }
     }
-  }
-  for (int sign = 0; sign < 2; ++sign) {
-    for (int row = 1; row < _rs - 1; ++row) {
-      int inds [2] {sign*(_rs - 1), row};
-      for (int j_dim = 0; j_dim < 2; ++j_dim) {
-        for (int col = 1; col < _rs - 1; ++col) {
-          rhs(inds[j_dim])(inds[!j_dim]).vector() -= dmsq(row, col)*edge(2*j_dim + sign).point({col});
-        }
+    for (int j_row : {0, _rs - 1}) {
+      for (int col = 0; col < _rs; ++col) {
+        rhs(j_row)(i_row).vector() -= dmsq(i_row, col)*edge(    bool(j_row)).point({col});
+        rhs(i_row)(j_row).vector() -= dmsq(i_row, col)*edge(2 + bool(j_row)).point({col});
       }
     }
   }
@@ -157,9 +149,10 @@ void Surface_face::reset()
   auto fact = lhs_mat.fullPivHouseholderQr();
   std::cout << fact.rank() << "\n\n";
   //HEXED_ASSERT(fact.rank() == sz, format_str(100, "LU factorization failed: rank = %i", fact.rank()));
-  Mat<dyn, dyn> soln = fact.solve(rhs_mat);
+  Eigen::Matrix<double, dyn, dyn, Eigen::RowMajor> soln = fact.solve(rhs_mat);
   std::cout << soln << "\n\n";
   soln.resize(3*int_sz, 1);
+  std::cout << soln << "\n\n";
   _interior.vector() = soln;
 }
 
