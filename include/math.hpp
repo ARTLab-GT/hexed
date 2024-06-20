@@ -10,8 +10,10 @@ namespace hexed
 {
 
 const int dyn = Eigen::Dynamic; //!< \brief convenience alias for `Eigen::dynamic`
-template <int rows = dyn, int cols = 1>
-using Mat = Eigen::Matrix<double, rows, cols>; //!< \brief convenience alias for `Eigen::Matrix<double, rows = dyn, cols = 1>`
+//! \brief convenience alias for `Eigen::Matrix<double, rows = dyn, cols = 1>`
+template <int rows = dyn, int cols = 1> using Mat = Eigen::Matrix<double, rows, cols>;
+//! \brief convenience alias for `Eigen::Matrix<double, rows = dyn, cols = dyn, Eigen::RowMajor>`
+template <int rows = dyn, int cols = dyn> using Mat_rm = Eigen::Matrix<double, rows, cols, Eigen::RowMajor>;
 const auto all = Eigen::all; //!< \brief convenience alias for `Eigen::all`
 const auto last = Eigen::last; //!< \brief convenience alias for `Eigen::last`
 //! \brief convenience alias for largest double value

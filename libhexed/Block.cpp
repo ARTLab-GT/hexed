@@ -119,10 +119,8 @@ void Surface_face::reset()
   int int_sz = (_rs - 2)*(_rs - 2);
   int tot_sz = _rs*_rs;
   Mat<dyn, dyn> dmsq = _basis->diff_mat()*_basis->diff_mat();
-  Eigen::Matrix<double, dyn, dyn, Eigen::RowMajor> lhs_mat(tot_sz, int_sz);
-  Eigen::Matrix<double, dyn, dyn, Eigen::RowMajor> rhs_mat(tot_sz, 3);
-  lhs_mat.setZero();
-  rhs_mat.setZero();
+  Mat_rm<> lhs_mat = Mat_rm<>::Zero(tot_sz, int_sz);
+  Mat_rm<> rhs_mat = Mat_rm<>::Zero(tot_sz, 3);
   Array<double> lhs({_rs, _rs, _rs - 2, _rs - 2}, lhs_mat.data());
   Array<double> rhs({_rs, _rs, 3}, rhs_mat.data());
   for (int i_row = 0; i_row < _rs; ++i_row) {
@@ -143,7 +141,7 @@ void Surface_face::reset()
       }
     }
   }
-  Eigen::Matrix<double, dyn, dyn, Eigen::RowMajor> soln = lhs_mat.fullPivHouseholderQr().solve(rhs_mat);
+  Mat_rm<> soln = lhs_mat.fullPivHouseholderQr().solve(rhs_mat);
   _interior = soln.data();
 }
 
