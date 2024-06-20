@@ -19,6 +19,7 @@ class Block
   const int row_size;
   inline Block(int n_dim, int row_size) : n_dim{n_dim}, row_size{row_size} {}
   Mat<3> point(std::vector<int> node_coords) const;
+  static void visualize(std::string format, std::string file_name, const std::vector<Block*>&, double time = 0.);
 };
 
 class Edge;

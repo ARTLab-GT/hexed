@@ -1,7 +1,14 @@
 #include <hexed/Block.hpp>
+#include <hexed/Visualizer.hpp>
 
 namespace hexed::next
 {
+
+void Block::visualize(std::string format, std::string file_name, const std::vector<Block*>& blocks, double time)
+{
+  int block_dim = blocks.empty() ? 1 : blocks[0]->n_dim;
+  auto visualizer = Visualizer::create(format, 3, block_dim, file_name, {}, time, Visualizer::block);
+}
 
 Mat<3> Block::point(std::vector<int> node_coords) const
 {
