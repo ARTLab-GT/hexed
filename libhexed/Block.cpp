@@ -116,23 +116,21 @@ Surface_face::Surface_face(std::array<Vertex*, 4> verts, std::shared_ptr<Basis> 
 
 void Surface_face::reset()
 {
-  int sz = (_rs - 2)*(_rs - 2);
+  int int_sz = (_rs - 2)*(_rs - 2);
+  int tot_sz = _rs*_rs;
   Mat<dyn, dyn> dm = _basis->diff_mat();
   Mat<dyn, dyn> dmsq = dm*dm;
-  std::cout << dmsq << "\n\n";
-  std::cout << dmsq(Eigen::seqN(1, _rs - 2), Eigen::seqN(1, _rs - 2)).fullPivLu().rank() << "\n\n";
-  Mat<dyn, dyn> lhs_mat(sz, sz);
-  Mat<dyn, dyn> lhs_mat1(sz, sz);
-  Mat<dyn, dyn> rhs_mat = Mat<dyn, dyn>::Zero(3, sz);
-  Array<double> lhs(std::vector<int>(4, _rs - 2), lhs_mat.data());
-  Array<double> lhs1(std::vector<int>(4, _rs - 2), lhs_mat1.data());
-  Array<double> rhs({_rs - 2, _rs - 2, 3}, rhs_mat.data());
-  for (int i_row = 0; i_row < _rs - 2; ++i_row) {
-    for (int j_row = 0; j_row < _rs - 2; ++j_row) {
-      for (int i_col = 0; i_col < _rs - 2; ++i_col) {
-        for (int j_col = 0; j_col < _rs - 2; ++j_col) {
-          lhs (i_row)(j_row)(i_col)[j_col] = dmsq(i_row + 1, i_col + 1);
-          lhs1(i_row)(j_row)(i_col)[j_col] = dmsq(j_row + 1, j_col + 1);
+  Eigen::Matrix<double, dyn, dyn, Eigen::RowMajor> lhs_mat(tot_sz, int_sz);
+  Eigen::Matrix<double, dyn, dyn, Eigen::RowMajor> rhs_mat(tot_sz, 3);
+  lhs_mat.setZero();
+  rhs_mat.setZero();
+  Array<double> lhs({_rs, _rs, _rs - 2, _rs - 2}, lhs_mat.data());
+  Array<double> rhs({_rs, _rs, 3}, rhs_mat.data());
+  for (int i_row = 0; i_row < _rs; ++i_row) {
+    for (int j_row = 1; j_row < _rs - 1; ++j_row) {
+      for (int i_col = 1; i_col < _rs - 1; ++i_col) {
+        for (int j_col = 1; j_col < _rs - 1; ++j_col) {
+          lhs(i_row)(j_row)(i_col - 1)[j_col - 1] += dmsq(i_row, i_col) + dmsq(j_row, j_col);
         }
       }
       for (int sign = 0; sign < 2; ++sign) {
@@ -144,30 +142,24 @@ void Surface_face::reset()
       }
     }
   }
-  Mat<dyn, dyn> lhs_mat2 = lhs_mat + lhs_mat1;
-  std::cout << lhs_mat << "\n\n";
-  std::cout << lhs_mat1 << "\n\n";
-  std::cout << lhs_mat2 << "\n\n";
-  std::cout << rhs_mat << "\n\n";
-  Mat<dyn, dyn> rhs_t = rhs_mat.transpose();
-  //Eigen::FullPivHouseholderQR<Mat<dyn, dyn>> fact(sz, sz);
-  //fact.setThreshold(1e-16);
-  //fact.compute(lhs_mat);
-  {
-  auto fact = lhs_mat.fullPivHouseholderQr();
-  std::cout << fact.inverse() << "\n\n";
-  }{
-  auto fact = lhs_mat1.fullPivHouseholderQr();
-  std::cout << fact.inverse() << "\n\n";
-  }{
-  auto fact = lhs_mat2.fullPivHouseholderQr();
-  std::cout << fact.inverse() << "\n\n";
+  for (int sign = 0; sign < 2; ++sign) {
+    for (int row = 1; row < _rs - 1; ++row) {
+      int inds [2] {sign*(_rs - 1), row};
+      for (int j_dim = 0; j_dim < 2; ++j_dim) {
+        for (int col = 1; col < _rs - 1; ++col) {
+          rhs(inds[j_dim])(inds[!j_dim]).vector() -= dmsq(row, col)*edge(2*j_dim + sign).point({col});
+        }
+      }
+    }
   }
+  std::cout << lhs_mat << "\n\n";
+  std::cout << rhs_mat << "\n\n";
+  auto fact = lhs_mat.fullPivHouseholderQr();
+  std::cout << fact.rank() << "\n\n";
   //HEXED_ASSERT(fact.rank() == sz, format_str(100, "LU factorization failed: rank = %i", fact.rank()));
-  Mat<dyn, dyn> soln = lhs_mat.householderQr().solve(rhs_t);
+  Mat<dyn, dyn> soln = fact.solve(rhs_mat);
   std::cout << soln << "\n\n";
-  soln.transposeInPlace();
-  soln.resize(3*sz, 1);
+  soln.resize(3*int_sz, 1);
   _interior.vector() = soln;
 }
 
