@@ -118,8 +118,7 @@ void Surface_face::reset()
 {
   int int_sz = (_rs - 2)*(_rs - 2);
   int tot_sz = _rs*_rs;
-  Mat<dyn, dyn> dm = _basis->diff_mat();
-  Mat<dyn, dyn> dmsq = dm*dm;
+  Mat<dyn, dyn> dmsq = _basis->diff_mat()*_basis->diff_mat();
   Eigen::Matrix<double, dyn, dyn, Eigen::RowMajor> lhs_mat(tot_sz, int_sz);
   Eigen::Matrix<double, dyn, dyn, Eigen::RowMajor> rhs_mat(tot_sz, 3);
   lhs_mat.setZero();
@@ -144,16 +143,8 @@ void Surface_face::reset()
       }
     }
   }
-  std::cout << lhs_mat << "\n\n";
-  std::cout << rhs_mat << "\n\n";
-  auto fact = lhs_mat.fullPivHouseholderQr();
-  std::cout << fact.rank() << "\n\n";
-  //HEXED_ASSERT(fact.rank() == sz, format_str(100, "LU factorization failed: rank = %i", fact.rank()));
-  Eigen::Matrix<double, dyn, dyn, Eigen::RowMajor> soln = fact.solve(rhs_mat);
-  std::cout << soln << "\n\n";
-  soln.resize(3*int_sz, 1);
-  std::cout << soln << "\n\n";
-  _interior.vector() = soln;
+  Eigen::Matrix<double, dyn, dyn, Eigen::RowMajor> soln = lhs_mat.fullPivHouseholderQr().solve(rhs_mat);
+  _interior = soln.data();
 }
 
 }

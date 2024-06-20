@@ -165,6 +165,18 @@ class Array
     for (int i = 0; i < size(); ++i) _data[i] = other[i];
     return *this;
   }
+  //! \brief Sets all entries to the specified value.
+  Array<T>& operator=(const T& value)
+  {
+    for (int i = 0; i < size(); ++i) _data[i] = value;
+    return *this;
+  }
+  //! \brief Sets the entries to the first `size()` objects pointed to by `ptr`.
+  Array<T>& operator=(T* ptr)
+  {
+    for (int i = 0; i < size(); ++i) _data[i] = ptr[i];
+    return *this;
+  }
   ~Array() = default;
   /*! \brief Creates a new array that owns its data, which is a copy of `this`'s data (i.e. new data is allocated).
    * \details If the template argument is specified to be something other than `T`, the array will be cast to a different type.

@@ -104,5 +104,10 @@ TEST_CASE("Array")
     REQUIRE(a4[1] == Catch::Approx(10.2));
     a4 = 3./a0/2.;
     REQUIRE(a4[2] == Catch::Approx(7.5));
+    a0 = .4;
+    for (int i = 0; i < 4; ++i) REQUIRE(a0[i] == Catch::Approx(.4));
+    std::vector<double> data {-.1, -.7, 1., -.3};
+    a0 = data.data();
+    REQUIRE_THAT(a0, Catch::Matchers::RangeEquals(data, hexed::math::Approx_equal()));
   }
 }
