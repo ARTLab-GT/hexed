@@ -34,6 +34,11 @@ TEST_CASE("Block")
   REQUIRE(edge0.point({1})(2) == Catch::Approx(2.3));
   edge0.reset();
   test_interp(edge0);
+  hexed::Array<double> points = edge0.points();
+  REQUIRE_THAT(points.shape(), Catch::Matchers::RangeEquals(std::vector<int>{4, 3}));
+  for (int row = 0; row < 4; ++row) {
+    REQUIRE_THAT(points(row), Catch::Matchers::RangeEquals(edge0.point({row})));
+  }
 
   SECTION("vertex `eat`ing") {
     hexed::next::Vertex vert2({3., 3., 3.}, 4);
@@ -109,5 +114,12 @@ TEST_CASE("Block")
     CHECK_THAT(face.point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, -5., 1.5}, hexed::math::Approx_equal()));
     face.reset();
     CHECK_THAT(face.point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, 1.625, 1.5}, hexed::math::Approx_equal()));
+    hexed::Array<double> points = face.points();
+    REQUIRE_THAT(points.shape(), Catch::Matchers::RangeEquals(std::vector<int>{5, 5, 3}));
+    for (int i = 0; i < 5; ++i) {
+      for (int j = 0; j < 5; ++j) {
+        REQUIRE_THAT(points(i)(j), Catch::Matchers::RangeEquals(face.point({i, j})));
+      }
+    }
   }
 }

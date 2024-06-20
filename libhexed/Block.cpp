@@ -4,10 +4,26 @@
 namespace hexed::next
 {
 
+Array<double> Block::points() const
+{
+  std::vector<int> shape(n_dim, row_size);
+  shape.push_back(3);
+  Array<double> pts(shape);
+  for (int i_point = 0; i_point < pts.size()/3; ++i_point) {
+    std::vector<int> inds(n_dim);
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) inds[i_dim] = (i_point*3/pts.stride(i_dim))%row_size;
+    pts.vector()(Eigen::seqN(3*i_point, 3)) = point(inds);
+  }
+  return pts;
+}
+
 void Block::visualize(std::string format, std::string file_name, const std::vector<Block*>& blocks, double time)
 {
   int block_dim = blocks.empty() ? 1 : blocks[0]->n_dim;
   auto visualizer = Visualizer::create(format, 3, block_dim, file_name, {}, time, Visualizer::block);
+  for (Block* block : blocks) {
+    HEXED_ASSERT(block, "Null pointer passed to `Block::visualize`.");
+  }
 }
 
 Mat<3> Block::point(std::vector<int> node_coords) const
