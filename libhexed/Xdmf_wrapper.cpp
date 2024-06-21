@@ -69,7 +69,10 @@ Xdmf_wrapper::Xdmf_wrapper(int n_dim_geom, int n_dim_topo, std::string file_name
 void Xdmf_wrapper::write_block(Array<double> pos, Array<double> vars)
 {
   HEXED_ASSERT(pos.order() == _n_dim_topo + 1, "input arrays have wrong order");
-  HEXED_ASSERT(pos(0).same_shape(vars(0)), "`pos` and `vars` must have compatible shape");
+  if (_n_var) {
+    HEXED_ASSERT(vars.shape()[0] == _n_var, "`vars` has wrong number of rows");
+    HEXED_ASSERT(pos(0).same_shape(vars(0)), "`pos` and `vars` must have compatible shape");
+  }
   int row_size = pos.shape()[1];
   int n_point = math::pow(row_size, _n_dim_topo);
   for (int i_elem = 0; i_elem < math::pow(row_size - 1, _n_dim_topo); ++i_elem) {

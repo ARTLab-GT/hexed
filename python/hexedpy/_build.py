@@ -21,12 +21,14 @@ class Hexed(bu.C_project):
             "obsessive_timing": bu.Option(False, convert=bu.as_bool),
             "install_wheel": bu.Option(True, convert=bu.as_bool),
             "test_args": bu.Option(""),
+            "gdb": bu.Option(False, convert=bu.as_bool),
         })
         is_release = self.builder.options["build_mode"] == "release"
         self.builder.add_options({
             "architecture": bu.Option(["any", "native"][is_release]),
             "build_wheel": bu.Option(is_release, convert=bu.as_bool),
             "run_tests": bu.Option(not is_release, convert=bu.as_bool),
+            "sanitize": bu.Option(not is_release, convert=bu.as_bool),
         })
         self.builder.info["version"] = self.version
         self.builder.info["version_major"], self.builder.info["version_minor"], self.builder.info["version_patch"] = self.version.split(".")
@@ -44,11 +46,12 @@ class Hexed(bu.C_project):
             bu.Compiler.optimize = 3
         elif self.builder.options["build_mode"] == "debug":
             bu.Compiler.debug = 3
-            bu.Compiler.sanitize = True
         if self.builder.options["threaded"]:
             bu.Compiler.openmp = True
         else:
             bu.Compiler.warn.append("no-unknown-pragmas")
+        if self.builder.options["sanitize"]:
+            bu.Compiler.sanitize = True
         # Get a list of all source files. The entire build process can be bypassed if there are no changes to any of these files
         self._all_sources = bu.all_(bu.contents(self.sdir, ignore=lambda f:
             bu.not_source(f) or
@@ -159,7 +162,10 @@ class Hexed(bu.C_project):
         ### run tests
         if self.builder.options["build_tests"] and self.builder.options["run_tests"]:
             try:
-                self.builder.subproc([self.bdir + "bin/hexed_test", self.builder.options["test_args"]])
+                args = [self.bdir + "bin/hexed_test", self.builder.options["test_args"]]
+                if self.builder.options["gdb"]:
+                    args = ["gdb", "--args"] + args
+                self.builder.subproc(args)
             except Exception as e:
                 print(e)
 

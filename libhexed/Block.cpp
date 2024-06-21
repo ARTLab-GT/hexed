@@ -23,6 +23,7 @@ void Block::visualize(std::string format, std::string file_name, const std::vect
   auto visualizer = Visualizer::create(format, 3, block_dim, file_name, {}, time, Visualizer::block);
   for (Block* block : blocks) {
     HEXED_ASSERT(block, "Null pointer passed to `Block::visualize`.");
+    visualizer->write_block(block->points(), Array<double>({}));
   }
 }
 

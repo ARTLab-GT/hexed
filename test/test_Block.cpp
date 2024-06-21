@@ -121,5 +121,8 @@ TEST_CASE("Block")
         REQUIRE_THAT(points(i)(j), Catch::Matchers::RangeEquals(face.point({i, j})));
       }
     }
+    #if HEXED_USE_XDMF
+    hexed::next::Block::visualize("xdmf", "vertex_interp_face", {&face});
+    #endif
   }
 }
