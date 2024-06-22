@@ -129,7 +129,22 @@ TEST_CASE("Block")
       }
     }
     #if HEXED_USE_XDMF
-    hexed::next::Block::visualize("xdmf", "vertex_interp_face", {&face});
+    hexed::next::Block::visualize("xdmf", "vertex_interp_face0", {&face});
+    #endif
+    auto pos2 = [](double pos0, double pos1){return 4.*pos0 - 2.*pos0*pos0 - 2*pos1 + 1.*pos1*pos1;};
+    for (auto& vert : verts) {
+      vert.pos(2) = pos2(vert.pos(0), vert.pos(1));
+    }
+    for (int i_edge = 0; i_edge < 4; ++i_edge) {
+      face.edge(i_edge).reset();
+      hexed::Array<double> inter = face.edge(i_edge).interior();
+      for (int node = 0; node < 3; ++node) {
+        inter(node)[2] = pos2(inter(node)[0], inter(node)[1]);
+      }
+    }
+    face.reset();
+    #if HEXED_USE_XDMF
+    hexed::next::Block::visualize("xdmf", "vertex_interp_face1", {&face});
     #endif
   }
 }
