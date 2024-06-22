@@ -128,9 +128,7 @@ TEST_CASE("Block")
         }
       }
     }
-    #if HEXED_USE_XDMF
-    hexed::next::Block::visualize("xdmf", "vertex_interp_face0", {&face});
-    #endif
+    hexed::next::Block::visualize("default", "vertex_interp_face0", {&face});
     auto pos2 = [](double pos0, double pos1){return 4.*pos0 - 2.*pos0*pos0 - 2*pos1 + 1.*pos1*pos1;};
     for (auto& vert : verts) {
       vert.pos(2) = pos2(vert.pos(0), vert.pos(1));
@@ -143,8 +141,6 @@ TEST_CASE("Block")
       }
     }
     face.reset();
-    #if HEXED_USE_XDMF
-    hexed::next::Block::visualize("xdmf", "vertex_interp_face1", {&face});
-    #endif
+    hexed::next::Block::visualize("default", "vertex_interp_face1", {&face});
   }
 }

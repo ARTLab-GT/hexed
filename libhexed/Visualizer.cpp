@@ -6,10 +6,21 @@
 namespace hexed
 {
 
+const std::string Visualizer::default_format =
+  #if HEXED_USE_XDMF
+  "xdmf"
+  #elif HEXED_USE_TECPLOT
+  "tecplot"
+  #else
+  "csv"
+  #endif
+;
+
 std::unique_ptr<Visualizer> Visualizer::create(std::string format, int n_dim_geom, int n_dim_topo, std::string file_name,
                                                std::vector<std::string> variable_names, double time, elem_type elem_t)
 {
   std::unique_ptr<Visualizer> visualizer;
+  if (format == "default") format = default_format;
   if (format == "xdmf") {
     #if HEXED_USE_XDMF
     visualizer.reset(new Xdmf_wrapper(n_dim_geom, n_dim_topo, file_name, variable_names, time, elem_t));

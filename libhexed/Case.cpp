@@ -166,6 +166,7 @@ Case::Case(std::string input_script)
   _inter.variables->assign("version_minor", config::version_minor);
   _inter.variables->assign("version_patch", config::version_patch);
   _inter.variables->assign<std::string>("commit", config::commit);
+  _inter.variables->assign("vis_default_format", Visualizer::default_format);
 
   // create custom Heisenberg variables
 
