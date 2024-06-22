@@ -6,13 +6,14 @@ namespace hexed::next
 
 Array<double> Block::points() const
 {
-  std::vector<int> shape(n_dim, row_size);
-  shape.push_back(3);
+  std::vector<int> shape {3};
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) shape.push_back(row_size);
   Array<double> pts(shape);
-  for (int i_point = 0; i_point < pts.size()/3; ++i_point) {
+  for (int i_point = 0; i_point < pts.stride(0); ++i_point) {
     std::vector<int> inds(n_dim);
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) inds[i_dim] = (i_point*3/pts.stride(i_dim))%row_size;
-    pts.vector()(Eigen::seqN(3*i_point, 3)) = point(inds);
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) inds[i_dim] = (i_point/pts.stride(1 + i_dim))%row_size;
+    auto pt = point(inds);
+    for (int i_dim = 0; i_dim < 3; ++i_dim) pts(i_dim)[i_point] = pt(i_dim);
   }
   return pts;
 }
@@ -124,7 +125,7 @@ Mat<3> Surface_face::_point(std::vector<int> coords) const
     if (coords[i_dim] ==       0) return _edges[2*i_dim    ].point({coords[!i_dim]});
     if (coords[i_dim] == _rs - 1) return _edges[2*i_dim + 1].point({coords[!i_dim]});
   }
-  return _interior(coords[0] - 1)(coords[0] - 1).vector();
+  return _interior(coords[0] - 1)(coords[1] - 1).vector();
 }
 
 Surface_face::Surface_face(std::array<Vertex*, 4> verts, std::shared_ptr<Basis> basis)
@@ -150,8 +151,8 @@ void Surface_face::reset()
   for (int i_row = 0; i_row < _rs; ++i_row) {
     for (int j_row = 1; j_row < _rs - 1; ++j_row) {
       for (int col = 1; col < _rs - 1; ++col) {
-        lhs(i_row)(j_row)(j_row - 1)[col - 1] += dmsq(i_row, col);
-        lhs(j_row)(i_row)(col - 1)[j_row - 1] += dmsq(i_row, col);
+        lhs(i_row)(j_row)(col - 1)[j_row - 1] += dmsq(i_row, col);
+        lhs(j_row)(i_row)(j_row - 1)[col - 1] += dmsq(i_row, col);
       }
       for (int col : {0, _rs - 1}) {
         rhs(i_row)(j_row).vector() -= dmsq(i_row, col)*edge(    bool(col)).point({j_row});

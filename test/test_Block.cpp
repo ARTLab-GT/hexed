@@ -35,9 +35,11 @@ TEST_CASE("Block")
   edge0.reset();
   test_interp(edge0);
   hexed::Array<double> points = edge0.points();
-  REQUIRE_THAT(points.shape(), Catch::Matchers::RangeEquals(std::vector<int>{4, 3}));
-  for (int row = 0; row < 4; ++row) {
-    REQUIRE_THAT(points(row), Catch::Matchers::RangeEquals(edge0.point({row})));
+  REQUIRE_THAT(points.shape(), Catch::Matchers::RangeEquals(std::vector<int>{3, 4}));
+  for (int i_dim = 0; i_dim < 3; ++i_dim) {
+    for (int row = 0; row < 4; ++row) {
+      REQUIRE(points(i_dim)[row] == Catch::Approx(edge0.point({row})(i_dim)));
+    }
   }
 
   SECTION("vertex `eat`ing") {
@@ -109,16 +111,21 @@ TEST_CASE("Block")
     REQUIRE_THAT(face.point({2, 0}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.0, 1.750, 2.0}, hexed::math::Approx_equal()));
     REQUIRE_THAT(face.point({0, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, 1.250, 1.0}, hexed::math::Approx_equal()));
     REQUIRE_THAT(face.point({2, 4}), Catch::Matchers::RangeEquals(hexed::Mat<3>{2.0, 1.500, 1.0}, hexed::math::Approx_equal()));
-    CHECK_THAT(face.point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, 1.625, 1.5}, hexed::math::Approx_equal()));
+    REQUIRE_THAT(face.point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, 1.625, 1.5}, hexed::math::Approx_equal()));
+    REQUIRE(face.point({1, 2})(0) == Catch::Approx(face.point({2, 2})(0)));
     face.interior()(1)(1)[1] = -5.;
-    CHECK_THAT(face.point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, -5., 1.5}, hexed::math::Approx_equal()));
+    REQUIRE_THAT(face.point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, -5., 1.5}, hexed::math::Approx_equal()));
     face.reset();
-    CHECK_THAT(face.point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, 1.625, 1.5}, hexed::math::Approx_equal()));
+    REQUIRE_THAT(face.point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, 1.625, 1.5}, hexed::math::Approx_equal()));
+    REQUIRE_THAT(face.point({4, 4}), Catch::Matchers::RangeEquals(hexed::Mat<3>{2.0, 2.000, 1.0}, hexed::math::Approx_equal()));
+    REQUIRE_THAT(face.point({4, 0}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.0, 2.000, 3.0}, hexed::math::Approx_equal()));
     hexed::Array<double> points = face.points();
-    REQUIRE_THAT(points.shape(), Catch::Matchers::RangeEquals(std::vector<int>{5, 5, 3}));
-    for (int i = 0; i < 5; ++i) {
-      for (int j = 0; j < 5; ++j) {
-        REQUIRE_THAT(points(i)(j), Catch::Matchers::RangeEquals(face.point({i, j})));
+    REQUIRE_THAT(points.shape(), Catch::Matchers::RangeEquals(std::vector<int>{3, 5, 5}));
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+      for (int i = 0; i < 5; ++i) {
+        for (int j = 0; j < 5; ++j) {
+          REQUIRE(points(i_dim)(i)[j] == Catch::Approx(face.point({i, j})(i_dim)));
+        }
       }
     }
     #if HEXED_USE_XDMF
