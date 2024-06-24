@@ -251,7 +251,7 @@ std::unique_ptr<Mesh_element> Mesh_blocks::create_element(Mat<3> pos, double siz
   for (int i_vert = 0; i_vert < nv; ++i_vert) {
     auto vec = &_interior_verts;
     if (boundary_face != no_face) {
-      if ((i_vert/math::pow(2, n_dim - 1 - boundary_face/2))%2 == boundary_face%2) vec = &_boundary_verts;
+      if ((i_vert/vstride(n_dim, boundary_face/2))%2 == boundary_face%2) vec = &_boundary_verts;
     }
     Mat<3> p = pos;
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) p(i_dim) += i_vert/vstride(n_dim, i_dim)%2*size;
