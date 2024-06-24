@@ -148,11 +148,20 @@ TEST_CASE("Block")
   SECTION("Mesh_element/Mesh_blocks") {
     SECTION("2D") {
       hexed::next::Mesh_blocks blocks(2, basis5);
-      auto elem = blocks.create_element({-.2, .3, .1}, .8);
-      auto seq = blocks.interior_verts();
-      REQUIRE(seq.size() == 4);
-      REQUIRE(&elem->vertex(0) == &seq[0]);
-      REQUIRE(&elem->vertex(3) == &seq[3]);
+      std::vector<std::unique_ptr<hexed::next::Mesh_element>> elems;
+      elems.push_back(blocks.create_element({-.2, .3, .1}, .7));
+      elems.push_back(blocks.create_element({-.9, .3, .1}, .7, 0));
+      elems.push_back(blocks.create_element({-.2, 1., .1}, .7, 3));
+      auto interior = blocks.interior_verts();
+      REQUIRE(interior.size() == 8);
+      REQUIRE(&elems[0]->vertex(0) == &interior[0]);
+      REQUIRE(&elems[0]->vertex(3) == &interior[3]);
+      REQUIRE(&elems[1]->vertex(2) == &interior[4]);
+      REQUIRE(&elems[2]->vertex(2) == &interior[7]);
+      auto boundary = blocks.boundary_verts();
+      REQUIRE(boundary.size() == 4);
+      REQUIRE(&elems[1]->vertex(1) == &boundary[1]);
+      REQUIRE(&elems[2]->vertex(1) == &boundary[2]);
     }
   }
 }

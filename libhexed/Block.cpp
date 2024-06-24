@@ -75,7 +75,7 @@ std::vector<int> interior_dims(int n_dim, int row_size)
 }
 
 Boundary_interior::Boundary_interior(int n_dim, const Basis& b)
-: Block(n_dim, b.row_size), basis{b}, _interior(interior_dims(n_dim, row_size))
+: Block(n_dim, b.row_size), _interior(interior_dims(n_dim, row_size)), basis{b}
 {}
 
 Edge::Edge(Vertex& vertex0, Vertex& vertex1, const Basis& b) :
@@ -198,7 +198,7 @@ Mesh_element::Mesh_element(int nd, int rs)
 const int Mesh_blocks::no_face = -1;
 
 Mesh_blocks::Mesh_blocks(int nd, const Basis& b)
-: basis{b}, n_dim{nd}
+: n_dim{nd}, basis{b}
 {}
 
 Sequence<Vertex&> Mesh_blocks::interior_verts()
@@ -216,8 +216,12 @@ std::unique_ptr<Mesh_element> Mesh_blocks::create_element(Mat<3> pos, double siz
   std::unique_ptr<Mesh_element> ptr(new Mesh_element(n_dim, basis.row_size));
   int nv = math::pow(2, n_dim);
   for (int i_vert = 0; i_vert < nv; ++i_vert) {
-    _interior_verts.emplace_back(new Vertex(pos, basis.row_size));
-    _interior_verts.back()->pair(ptr->_verts[i_vert]);
+    auto vec = &_interior_verts;
+    if (boundary_face != no_face) {
+      if ((i_vert/math::pow(2, n_dim - 1 - boundary_face/2))%2 == boundary_face%2) vec = &_boundary_verts;
+    }
+    vec->emplace_back(new Vertex(pos, basis.row_size));
+    vec->back()->pair(ptr->_verts[i_vert]);
   }
   return ptr;
 }
