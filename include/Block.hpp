@@ -48,10 +48,10 @@ class Vertex : public Block
 class Boundary_interior : public Block
 {
   protected:
-  std::shared_ptr<Basis> _basis;
   Array<double> _interior;
   public:
-  Boundary_interior(int n_dim, std::shared_ptr<Basis> basis);
+  const Basis& basis;
+  Boundary_interior(int n_dim, const Basis& basis);
   virtual void reset() = 0;
   inline Array<double> interior() {return _interior;};
 };
@@ -64,7 +64,7 @@ class Edge : public Boundary_interior
   std::vector<Mutual_ptr<Edge, Edge>> _glued;
   Mat<3> _point(std::vector<int>) const override;
   public:
-  Edge(Vertex& vertex0, Vertex& vertex1, std::shared_ptr<Basis>);
+  Edge(Vertex& vertex0, Vertex& vertex1, const Basis&);
   void reset() override;
   static const int no;
   void glue(Edge& other, int half = no);
@@ -77,7 +77,7 @@ class Surface_face : public Boundary_interior
   std::vector<Edge> _edges;
   Mat<3> _point(std::vector<int>) const override;
   public:
-  Surface_face(std::array<Vertex*, 4>, std::shared_ptr<Basis>);
+  Surface_face(std::array<Vertex*, 4>, const Basis&);
   inline Edge& edge(int i) {return _edges[i];}
   void reset() override;
 };
@@ -94,7 +94,6 @@ class Mesh_element : public Block
 
 class Mesh_blocks
 {
-  std::shared_ptr<Basis> _basis;
   std::vector<std::unique_ptr<Vertex>> _interior_verts;
   std::vector<std::unique_ptr<Vertex>> _boundary_verts;
   std::vector<std::unique_ptr<Edge>> _2d_edges;
@@ -102,8 +101,8 @@ class Mesh_blocks
   public:
   static const int no_face;
   const int n_dim;
-  Mesh_blocks(int n_dim, std::shared_ptr<Basis>);
-  inline const Basis& basis() const {return *_basis;}
+  const Basis& basis;
+  Mesh_blocks(int n_dim, const Basis&);
   Sequence<Vertex&> interior_verts();
   Sequence<Vertex&> boundary_verts();
   std::unique_ptr<Mesh_element> create_element(Mat<3> pos, double size, int boundary_face = no_face);

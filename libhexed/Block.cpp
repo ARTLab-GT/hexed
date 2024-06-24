@@ -74,12 +74,12 @@ std::vector<int> interior_dims(int n_dim, int row_size)
   return dims;
 }
 
-Boundary_interior::Boundary_interior(int n_dim, std::shared_ptr<Basis> basis)
-: Block(n_dim, basis->row_size), _basis{basis}, _interior(interior_dims(n_dim, row_size))
+Boundary_interior::Boundary_interior(int n_dim, const Basis& b)
+: Block(n_dim, b.row_size), basis{b}, _interior(interior_dims(n_dim, row_size))
 {}
 
-Edge::Edge(Vertex& vertex0, Vertex& vertex1, std::shared_ptr<Basis> basis) :
-  Boundary_interior(1, basis),
+Edge::Edge(Vertex& vertex0, Vertex& vertex1, const Basis& b) :
+  Boundary_interior(1, b),
   _verts{this, this},
   _glued_to{this}
 {
@@ -96,7 +96,7 @@ Mat<3> Edge::_point(std::vector<int> coords) const
     else {
       Mat<3, dyn> pts(3, row_size);
       for (int c = 0; c < row_size; ++c) pts(all, c) = _glued_to->point({c});
-      return pts*_basis->restrict(_half)(coord, all).transpose();
+      return pts*basis.restrict(_half)(coord, all).transpose();
     }
   }
   if (coord ==       0) return _verts[0]->point({});
@@ -107,7 +107,7 @@ Mat<3> Edge::_point(std::vector<int> coords) const
 void Edge::reset()
 {
   for (int i = 1; i < row_size - 1; ++i) {
-    double n = _basis->node(i);
+    double n = basis.node(i);
     _interior(i - 1) = Array<double>(Mat<3>((1 - n)*_verts[0]->point({}) + n*_verts[1]->point({})));
   }
 }
@@ -142,8 +142,8 @@ Mat<3> Surface_face::_point(std::vector<int> coords) const
   return _interior(coords[0] - 1)(coords[1] - 1).vector();
 }
 
-Surface_face::Surface_face(std::array<Vertex*, 4> verts, std::shared_ptr<Basis> basis)
-: Boundary_interior(2, basis)
+Surface_face::Surface_face(std::array<Vertex*, 4> verts, const Basis& b)
+: Boundary_interior(2, b)
 {
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
@@ -157,7 +157,7 @@ void Surface_face::reset()
 {
   int int_sz = (row_size - 2)*(row_size - 2);
   int tot_sz = row_size*row_size;
-  Mat<dyn, dyn> dmsq = _basis->diff_mat()*_basis->diff_mat();
+  Mat<dyn, dyn> dmsq = basis.diff_mat()*basis.diff_mat();
   Mat_rm<> lhs_mat = Mat_rm<>::Zero(tot_sz, int_sz);
   Mat_rm<> rhs_mat = Mat_rm<>::Zero(tot_sz, 3);
   Array<double> lhs({row_size, row_size, row_size - 2, row_size - 2}, lhs_mat.data());
@@ -197,8 +197,8 @@ Mesh_element::Mesh_element(int nd, int rs)
 
 const int Mesh_blocks::no_face = -1;
 
-Mesh_blocks::Mesh_blocks(int nd, std::shared_ptr<Basis> b)
-: _basis{b}, n_dim{nd}
+Mesh_blocks::Mesh_blocks(int nd, const Basis& b)
+: basis{b}, n_dim{nd}
 {}
 
 Sequence<Vertex&> Mesh_blocks::interior_verts()
@@ -213,10 +213,10 @@ Sequence<Vertex&> Mesh_blocks::boundary_verts()
 
 std::unique_ptr<Mesh_element> Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_face)
 {
-  std::unique_ptr<Mesh_element> ptr(new Mesh_element(n_dim, _basis->row_size));
+  std::unique_ptr<Mesh_element> ptr(new Mesh_element(n_dim, basis.row_size));
   int nv = math::pow(2, n_dim);
   for (int i_vert = 0; i_vert < nv; ++i_vert) {
-    _interior_verts.emplace_back(new Vertex(pos, _basis->row_size));
+    _interior_verts.emplace_back(new Vertex(pos, basis.row_size));
     _interior_verts.back()->pair(ptr->_verts[i_vert]);
   }
   return ptr;

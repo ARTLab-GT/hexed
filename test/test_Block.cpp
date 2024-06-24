@@ -17,7 +17,7 @@ TEST_CASE("Block")
   hexed::next::Vertex vert1({.3, -.1, .4}, 4);
 
   // edge construction
-  std::shared_ptr<hexed::Basis> basis = std::make_shared<hexed::Equidistant>(4);
+  hexed::Equidistant basis(4);
   hexed::next::Edge edge0(vert0, vert1, basis);
   REQUIRE(edge0.n_dim == 1);
   REQUIRE(edge0.row_size == 4);
@@ -95,7 +95,7 @@ TEST_CASE("Block")
     }
   }
 
-  std::shared_ptr<hexed::Basis> basis5 = std::make_shared<hexed::Gauss_lobatto>(5);
+  hexed::Gauss_lobatto basis5(5);
 
   SECTION("Surface_face") {
     std::vector<hexed::next::Vertex> verts;
