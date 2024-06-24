@@ -76,7 +76,7 @@ std::vector<int> interior_dims(int n_dim, int row_size)
 }
 
 Boundary_interior::Boundary_interior(int n_dim, const Basis& b)
-: Block(n_dim, b.row_size), _interior(interior_dims(n_dim, row_size)), basis{b}
+: Block(n_dim, b.row_size), _elem(this), _interior(interior_dims(n_dim, row_size)), basis{b}
 {}
 
 Edge::Edge(Vertex& vertex0, Vertex& vertex1, const Basis& b) :
@@ -185,13 +185,39 @@ void Surface_face::reset()
   _interior = soln.data();
 }
 
-Mat<3> Mesh_element::_point(std::vector<int>) const
+int vstride(int n_dim, int i_dim) {return math::pow(2, n_dim - 1 - i_dim);}
+
+Mat<3> Mesh_element::_vertex_point(std::vector<int> coords) const
 {
-  return Mat<3>::Zero();
+  Mat<3> point = Mat<3>::Zero();
+  for (int i_vert = 0; i_vert < math::pow(2, n_dim); ++i_vert) {
+    double weight = 1;
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      bool sign = i_vert/vstride(n_dim, i_dim)%2;
+      weight *= !sign + math::sign(sign)*basis.node(coords[i_dim]);
+    }
+    point += weight*_verts[i_vert]->pos;
+  }
+  return point;
 }
 
-Mesh_element::Mesh_element(int nd, int rs)
-: Block(nd, rs)
+Mat<3> Mesh_element::_point(std::vector<int> coords) const
+{
+  Mat<3> point = _vertex_point(coords);
+  if (_i_bf != Mesh_blocks::no_face) {
+    int sign = _i_bf%2;
+    int i_dim = _i_bf/2;
+    double interp_coef = !sign + math::sign(sign)*basis.node(coords[i_dim]);
+    coords[i_dim] = sign*(row_size - 1);
+    Mat<3> uncorrected = _vertex_point(coords);
+    coords.erase(coords.begin() + i_dim);
+    point += interp_coef*(_bf->point(coords) - uncorrected);
+  }
+  return point;
+}
+
+Mesh_element::Mesh_element(int nd, const Basis& b)
+: Block(nd, b.row_size), _bf(this), basis{b}
 {
   for (int i_vert = 0; i_vert < math::pow(2, nd); ++i_vert) _verts.emplace_back(this);
 }
@@ -219,7 +245,8 @@ Sequence<Edge&> Mesh_blocks::edges_2d()
 
 std::unique_ptr<Mesh_element> Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_face)
 {
-  std::unique_ptr<Mesh_element> ptr(new Mesh_element(n_dim, basis.row_size));
+  std::unique_ptr<Mesh_element> ptr(new Mesh_element(n_dim, basis));
+  ptr->_i_bf = boundary_face;
   int nv = math::pow(2, n_dim);
   for (int i_vert = 0; i_vert < nv; ++i_vert) {
     auto vec = &_interior_verts;
@@ -227,9 +254,17 @@ std::unique_ptr<Mesh_element> Mesh_blocks::create_element(Mat<3> pos, double siz
       if ((i_vert/math::pow(2, n_dim - 1 - boundary_face/2))%2 == boundary_face%2) vec = &_boundary_verts;
     }
     Mat<3> p = pos;
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) p(i_dim) += i_vert/math::pow(2, n_dim - 1 - i_dim)%2*size;
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) p(i_dim) += i_vert/vstride(n_dim, i_dim)%2*size;
     vec->emplace_back(new Vertex(p, basis.row_size));
     vec->back()->pair(ptr->_verts[i_vert]);
+  }
+  if (boundary_face != no_face) {
+    if (n_dim == 2) {
+      int i_dim = boundary_face/2;
+      int vert0 = boundary_face%2*vstride(2, i_dim);
+      _edges_2d.emplace_back(new Edge(ptr->vertex(vert0), ptr->vertex(vert0 + vstride(2, !i_dim)), basis));
+      _edges_2d.back()->pair(ptr->_bf);
+    }
   }
   return ptr;
 }

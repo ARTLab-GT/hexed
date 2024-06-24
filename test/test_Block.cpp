@@ -162,10 +162,18 @@ TEST_CASE("Block")
       REQUIRE(boundary.size() == 4);
       REQUIRE(&elems[1]->vertex(1) == &boundary[1]);
       REQUIRE(&elems[2]->vertex(1) == &boundary[2]);
-      REQUIRE_THAT(elems[1]->vertex(0).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{-.9, .3, .1}, hexed::math::Approx_equal()));
-      REQUIRE_THAT(elems[1]->vertex(1).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{-.9, 1., .1}, hexed::math::Approx_equal()));
-      REQUIRE_THAT(elems[0]->vertex(2).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{ .5, .3, .1}, hexed::math::Approx_equal()));
-      REQUIRE_THAT(elems[2]->vertex(3).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{ .5, 1.7,.1}, hexed::math::Approx_equal()));
+      REQUIRE_THAT(elems[1]->vertex(0).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{-.9,  .3, .1}, hexed::math::Approx_equal()));
+      REQUIRE_THAT(elems[1]->vertex(1).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{-.9,  1., .1}, hexed::math::Approx_equal()));
+      REQUIRE_THAT(elems[0]->vertex(2).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{ .5,  .3, .1}, hexed::math::Approx_equal()));
+      REQUIRE_THAT(elems[2]->vertex(3).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{ .5, 1.7, .1}, hexed::math::Approx_equal()));
+      REQUIRE_THAT(elems[0]->point({0, 0}), Catch::Matchers::RangeEquals(hexed::Mat<3>{-.2,  .3, .1}, hexed::math::Approx_equal()));
+      REQUIRE_THAT(elems[0]->point({2, 0}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.15,  .3, .1}, hexed::math::Approx_equal()));
+      REQUIRE_THAT(elems[0]->point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.15, .65, .1}, hexed::math::Approx_equal()));
+      auto edges = blocks.edges_2d();
+      REQUIRE(edges.size() == 2);
+      REQUIRE_THAT(edges[0].interior()(1), Catch::Matchers::RangeEquals(hexed::Mat<3>{-.9, .65, .1}, hexed::math::Approx_equal()));
+      edges[0].interior()(1)[0] = -.8;
+      REQUIRE_THAT(elems[1]->point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{-.5, .65, .1}, hexed::math::Approx_equal()));
     }
   }
 }

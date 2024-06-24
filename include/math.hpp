@@ -187,8 +187,7 @@ inline int stretched_ind(int n_dim, int ind, std::array<bool, 2> stretch)
 }
 
 /*! \brief \f$n\f$-linear interpolation of `values`.
- *
- * ND generalization of [bilinear interpolation](https://en.wikipedia.org/wiki/Bilinear_interpolation).
+ * \details ND generalization of [bilinear interpolation](https://en.wikipedia.org/wiki/Bilinear_interpolation).
  * \param values Values to interpolate. Assumed to be at corners of the unit hypercube.
  * \param coords Coordinates to interpolate to.
  */

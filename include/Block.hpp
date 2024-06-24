@@ -47,6 +47,7 @@ class Vertex : public Block
 
 class Boundary_interior : public Block
 {
+  Mutual_ptr<Boundary_interior, Mesh_element> _elem;
   protected:
   Array<double> _interior;
   public:
@@ -54,6 +55,8 @@ class Boundary_interior : public Block
   Boundary_interior(int n_dim, const Basis& basis);
   virtual void reset() = 0;
   inline Array<double> interior() {return _interior;};
+  inline void pair(Mutual_ptr<Mesh_element, Boundary_interior>& ptr) {_elem.pair(ptr);}
+  inline bool alive() {return _elem;}
 };
 
 class Edge : public Boundary_interior
@@ -86,9 +89,13 @@ class Mesh_element : public Block
 {
   friend class Mesh_blocks;
   std::vector<Mutual_ptr<Mesh_element, Vertex>> _verts;
+  int _i_bf;
+  Mutual_ptr<Mesh_element, Boundary_interior> _bf;
+  Mat<3> _vertex_point(std::vector<int>) const;
   Mat<3> _point(std::vector<int>) const override;
-  Mesh_element(int nd, int rs);
+  Mesh_element(int nd, const Basis&);
   public:
+  const Basis& basis;
   inline Vertex& vertex(int i_vert) {return *_verts[i_vert];}
 };
 
