@@ -243,6 +243,11 @@ Sequence<Edge&> Mesh_blocks::edges_2d()
   return Sequence<Edge&>::ptr_vector_view<std::unique_ptr<Edge>&>(_edges_2d);
 }
 
+Sequence<Surface_face&> Mesh_blocks::faces_3d()
+{
+  return Sequence<Surface_face&>::ptr_vector_view<std::unique_ptr<Surface_face>&>(_faces_3d);
+}
+
 std::unique_ptr<Mesh_element> Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_face)
 {
   std::unique_ptr<Mesh_element> ptr(new Mesh_element(n_dim, basis));
@@ -259,11 +264,17 @@ std::unique_ptr<Mesh_element> Mesh_blocks::create_element(Mat<3> pos, double siz
     vec->back()->pair(ptr->_verts[i_vert]);
   }
   if (boundary_face != no_face) {
+    int i_dim = boundary_face/2;
+    int sign = boundary_face%2;
     if (n_dim == 2) {
-      int i_dim = boundary_face/2;
-      int vert0 = boundary_face%2*vstride(2, i_dim);
+      int vert0 = sign*vstride(2, i_dim);
       _edges_2d.emplace_back(new Edge(ptr->vertex(vert0), ptr->vertex(vert0 + vstride(2, !i_dim)), basis));
       _edges_2d.back()->pair(ptr->_bf);
+    } else if (n_dim == 3) {
+      std::array<Vertex*, 4> verts;
+      for (int i_vert = 0; i_vert < 4; ++i_vert) verts[i_vert] = _boundary_verts.end()[i_vert - 4].get();
+      _faces_3d.emplace_back(new Surface_face(verts, basis));
+      _faces_3d.back()->pair(ptr->_bf);
     }
   }
   return ptr;

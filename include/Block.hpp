@@ -113,6 +113,7 @@ class Mesh_blocks
   Sequence<Vertex&> interior_verts();
   Sequence<Vertex&> boundary_verts();
   Sequence<Edge&> edges_2d();
+  Sequence<Surface_face&> faces_3d();
   std::unique_ptr<Mesh_element> create_element(Mat<3> pos, double size, int boundary_face = no_face);
 };
 

@@ -198,6 +198,17 @@ TEST_CASE("Block")
       REQUIRE_THAT(elems[0]->point({2, 2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.51, .71, .61}, hexed::math::Approx_equal()));
       REQUIRE_THAT(elems[0]->point({4, 2, 4}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.52, .71, .62}, hexed::math::Approx_equal()));
       REQUIRE_THAT(elems[0]->point({0, 0, 4}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.50, .70, .62}, hexed::math::Approx_equal()));
+      auto faces = blocks.faces_3d();
+      REQUIRE(faces.size() == 3);
+      faces[0].edge(3).interior()(1)[2] += .002;
+      faces[1].interior()(1)(1)[1] += .002;
+      REQUIRE_THAT(elems[1]->point({4, 2, 4}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.54, .710, .622}, hexed::math::Approx_equal()));
+      REQUIRE_THAT(elems[1]->point({2, 2, 4}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.53, .710, .621}, hexed::math::Approx_equal()));
+      REQUIRE_THAT(elems[1]->point({4, 2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.54, .710, .610}, hexed::math::Approx_equal()));
+      REQUIRE_THAT(elems[2]->point({2, 0, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.51, .682, .610}, hexed::math::Approx_equal()));
+      REQUIRE_THAT(elems[2]->point({2, 2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.51, .691, .610}, hexed::math::Approx_equal()));
+      REQUIRE_THAT(elems[2]->point({2, 4, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.51, .700, .610}, hexed::math::Approx_equal()));
+      REQUIRE_THAT(elems[2]->point({0, 2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.50, .690, .610}, hexed::math::Approx_equal()));
     }
   }
 }
