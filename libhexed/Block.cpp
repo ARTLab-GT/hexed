@@ -61,12 +61,20 @@ void Vertex::purge()
   std::erase(_edges, false);
 }
 
+std::vector<int> interior_dims(int n_dim, int row_size)
+{
+  std::vector<int> dims(n_dim, row_size - 2);
+  dims.push_back(3);
+  return dims;
+}
+
+Boundary_interior::Boundary_interior(int n_dim, std::shared_ptr<Basis> basis)
+: Block(n_dim, basis->row_size), _basis{basis}, _interior(interior_dims(n_dim, row_size))
+{}
+
 Edge::Edge(Vertex& vertex0, Vertex& vertex1, std::shared_ptr<Basis> basis) :
-  Block(1, basis->row_size),
-  _rs{basis->row_size},
+  Boundary_interior(1, basis),
   _verts{this, this},
-  _interior({_rs - 2, 3}),
-  _basis{basis},
   _glued_to{this}
 {
   vertex0.pair(_verts[0]);
@@ -80,13 +88,13 @@ Mat<3> Edge::_point(std::vector<int> coords) const
   if (glued()) {
     if (_half == no) return _glued_to->_point(coords);
     else {
-      Mat<3, dyn> pts(3, _rs);
-      for (int c = 0; c < _rs; ++c) pts(all, c) = _glued_to->point({c});
+      Mat<3, dyn> pts(3, row_size);
+      for (int c = 0; c < row_size; ++c) pts(all, c) = _glued_to->point({c});
       return pts*_basis->restrict(_half)(coord, all).transpose();
     }
   }
   if (coord ==       0) return _verts[0]->point({});
-  if (coord == _rs - 1) return _verts[1]->point({});
+  if (coord == row_size - 1) return _verts[1]->point({});
   return _interior(coord - 1).vector();
 }
 
@@ -123,13 +131,13 @@ Mat<3> Surface_face::_point(std::vector<int> coords) const
 {
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
     if (coords[i_dim] ==       0) return _edges[2*i_dim    ].point({coords[!i_dim]});
-    if (coords[i_dim] == _rs - 1) return _edges[2*i_dim + 1].point({coords[!i_dim]});
+    if (coords[i_dim] == row_size - 1) return _edges[2*i_dim + 1].point({coords[!i_dim]});
   }
   return _interior(coords[0] - 1)(coords[1] - 1).vector();
 }
 
 Surface_face::Surface_face(std::array<Vertex*, 4> verts, std::shared_ptr<Basis> basis)
-: Block(2, basis->row_size), _rs{basis->row_size}, _interior({_rs - 2, _rs - 2, 3}), _basis{basis}
+: Boundary_interior(2, basis)
 {
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
@@ -141,26 +149,26 @@ Surface_face::Surface_face(std::array<Vertex*, 4> verts, std::shared_ptr<Basis> 
 
 void Surface_face::reset()
 {
-  int int_sz = (_rs - 2)*(_rs - 2);
-  int tot_sz = _rs*_rs;
+  int int_sz = (row_size - 2)*(row_size - 2);
+  int tot_sz = row_size*row_size;
   Mat<dyn, dyn> dmsq = _basis->diff_mat()*_basis->diff_mat();
   Mat_rm<> lhs_mat = Mat_rm<>::Zero(tot_sz, int_sz);
   Mat_rm<> rhs_mat = Mat_rm<>::Zero(tot_sz, 3);
-  Array<double> lhs({_rs, _rs, _rs - 2, _rs - 2}, lhs_mat.data());
-  Array<double> rhs({_rs, _rs, 3}, rhs_mat.data());
-  for (int i_row = 0; i_row < _rs; ++i_row) {
-    for (int j_row = 1; j_row < _rs - 1; ++j_row) {
-      for (int col = 1; col < _rs - 1; ++col) {
+  Array<double> lhs({row_size, row_size, row_size - 2, row_size - 2}, lhs_mat.data());
+  Array<double> rhs({row_size, row_size, 3}, rhs_mat.data());
+  for (int i_row = 0; i_row < row_size; ++i_row) {
+    for (int j_row = 1; j_row < row_size - 1; ++j_row) {
+      for (int col = 1; col < row_size - 1; ++col) {
         lhs(i_row)(j_row)(col - 1)[j_row - 1] += dmsq(i_row, col);
         lhs(j_row)(i_row)(j_row - 1)[col - 1] += dmsq(i_row, col);
       }
-      for (int col : {0, _rs - 1}) {
+      for (int col : {0, row_size - 1}) {
         rhs(i_row)(j_row).vector() -= dmsq(i_row, col)*edge(    bool(col)).point({j_row});
         rhs(j_row)(i_row).vector() -= dmsq(i_row, col)*edge(2 + bool(col)).point({j_row});
       }
     }
-    for (int j_row : {0, _rs - 1}) {
-      for (int col = 0; col < _rs; ++col) {
+    for (int j_row : {0, row_size - 1}) {
+      for (int col = 0; col < row_size; ++col) {
         rhs(j_row)(i_row).vector() -= dmsq(i_row, col)*edge(    bool(j_row)).point({col});
         rhs(i_row)(j_row).vector() -= dmsq(i_row, col)*edge(2 + bool(j_row)).point({col});
       }

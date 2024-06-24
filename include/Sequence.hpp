@@ -1,6 +1,9 @@
 #ifndef HEXED_SEQUENCE_HPP_
 #define HEXED_SEQUENCE_HPP_
 
+#include <functional>
+#include <vector>
+
 namespace hexed
 {
 
@@ -16,5 +19,47 @@ class Sequence
   virtual T operator[](int index) = 0;
 };
 
+namespace next
+{
+
+template <typename T>
+class Sequence
+{
+  public:
+  typedef std::function<std::size_t()> sizer;
+  typedef std::function<T(std::size_t)> getter;
+
+  private:
+  sizer _size;
+  getter _get;
+
+  public:
+  Sequence(getter get, sizer size)
+  : _get{get}, _size{size}
+  {}
+  std::size_t size() {return _size();}
+  T operator[](std::size_t index) {return _get(index);}
+
+  template <typename storage_t = std::remove_reference<T>::type>
+  static Sequence vector_view(std::vector<storage_t>& vec)
+  {
+    return {[&vec](std::size_t index)->T{return vec[index];}, [&vec](){return vec.size();}};
+  }
+
+  template <typename U>
+  Sequence<U> transform(std::function<U(T)> trans)
+  {
+    getter get = _get;
+    return {[trans, get](std::size_t index)->U{return trans(get(index));}, _size};
+  }
+
+  template <typename ptr_t>
+  static Sequence ptr_vector_view(std::vector<typename std::remove_reference<ptr_t>::type>& vec)
+  {
+    return Sequence<ptr_t>::vector_view(vec).transform(std::function<T(ptr_t)>([](ptr_t p)->T{return *p;}));
+  }
+};
+
+}
 }
 #endif
