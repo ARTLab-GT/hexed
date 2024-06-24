@@ -96,8 +96,8 @@ class Mesh_blocks
 {
   std::vector<std::unique_ptr<Vertex>> _interior_verts;
   std::vector<std::unique_ptr<Vertex>> _boundary_verts;
-  std::vector<std::unique_ptr<Edge>> _2d_edges;
-  std::vector<std::unique_ptr<Surface_face>> _3d_faces;
+  std::vector<std::unique_ptr<Edge>> _edges_2d;
+  std::vector<std::unique_ptr<Surface_face>> _faces_3d;
   public:
   static const int no_face;
   const int n_dim;
@@ -105,6 +105,7 @@ class Mesh_blocks
   Mesh_blocks(int n_dim, const Basis&);
   Sequence<Vertex&> interior_verts();
   Sequence<Vertex&> boundary_verts();
+  Sequence<Edge&> edges_2d();
   std::unique_ptr<Mesh_element> create_element(Mat<3> pos, double size, int boundary_face = no_face);
 };
 

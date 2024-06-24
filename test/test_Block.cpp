@@ -162,6 +162,10 @@ TEST_CASE("Block")
       REQUIRE(boundary.size() == 4);
       REQUIRE(&elems[1]->vertex(1) == &boundary[1]);
       REQUIRE(&elems[2]->vertex(1) == &boundary[2]);
+      REQUIRE_THAT(elems[1]->vertex(0).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{-.9, .3, .1}, hexed::math::Approx_equal()));
+      REQUIRE_THAT(elems[1]->vertex(1).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{-.9, 1., .1}, hexed::math::Approx_equal()));
+      REQUIRE_THAT(elems[0]->vertex(2).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{ .5, .3, .1}, hexed::math::Approx_equal()));
+      REQUIRE_THAT(elems[2]->vertex(3).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{ .5, 1.7,.1}, hexed::math::Approx_equal()));
     }
   }
 }

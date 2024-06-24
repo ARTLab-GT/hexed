@@ -65,6 +65,7 @@ void Vertex::pair(Mutual_ptr<Mesh_element, Vertex>& ptr)
 void Vertex::purge()
 {
   std::erase(_edges, false);
+  std::erase(_elems, false);
 }
 
 std::vector<int> interior_dims(int n_dim, int row_size)
@@ -211,6 +212,11 @@ Sequence<Vertex&> Mesh_blocks::boundary_verts()
   return Sequence<Vertex&>::ptr_vector_view<std::unique_ptr<Vertex>&>(_boundary_verts);
 }
 
+Sequence<Edge&> Mesh_blocks::edges_2d()
+{
+  return Sequence<Edge&>::ptr_vector_view<std::unique_ptr<Edge>&>(_edges_2d);
+}
+
 std::unique_ptr<Mesh_element> Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_face)
 {
   std::unique_ptr<Mesh_element> ptr(new Mesh_element(n_dim, basis.row_size));
@@ -220,7 +226,9 @@ std::unique_ptr<Mesh_element> Mesh_blocks::create_element(Mat<3> pos, double siz
     if (boundary_face != no_face) {
       if ((i_vert/math::pow(2, n_dim - 1 - boundary_face/2))%2 == boundary_face%2) vec = &_boundary_verts;
     }
-    vec->emplace_back(new Vertex(pos, basis.row_size));
+    Mat<3> p = pos;
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) p(i_dim) += i_vert/math::pow(2, n_dim - 1 - i_dim)%2*size;
+    vec->emplace_back(new Vertex(p, basis.row_size));
     vec->back()->pair(ptr->_verts[i_vert]);
   }
   return ptr;
