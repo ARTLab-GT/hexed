@@ -19,16 +19,19 @@ class Block
   const int n_dim;
   const int row_size;
   inline Block(int n_dim, int row_size) : n_dim{n_dim}, row_size{row_size} {}
+  virtual ~Block() = default;
   Mat<3> point(std::vector<int> node_coords) const;
   virtual Array<double> points() const;
   static void visualize(std::string format, std::string file_name, const std::vector<Block*>&, double time = 0.);
 };
 
 class Edge;
+class Mesh_element;
 
 class Vertex : public Block
 {
   std::vector<Mutual_ptr<Vertex, Edge>> _edges;
+  std::vector<Mutual_ptr<Vertex, Mesh_element>> _elems;
   inline Mat<3> _point(std::vector<int>) const override {return pos;}
   bool _alive;
   int _mass;
@@ -37,6 +40,7 @@ class Vertex : public Block
   inline Vertex(Mat<3> pos, int row_size) : Block{0, row_size}, pos{pos}, _alive{true}, _mass{1} {}
   void eat(Vertex& other);
   void pair(Mutual_ptr<Edge, Vertex>& ptr);
+  void pair(Mutual_ptr<Mesh_element, Vertex>& ptr);
   void purge();
   inline bool alive() {return _alive;}
 };
@@ -80,25 +84,29 @@ class Surface_face : public Boundary_interior
 
 class Mesh_element : public Block
 {
-  Mesh_element(std::vector<std::unique_ptr<Vertex>>&, std::shared_ptr<Basis>);
+  friend class Mesh_blocks;
+  std::vector<Mutual_ptr<Mesh_element, Vertex>> _verts;
   Mat<3> _point(std::vector<int>) const override;
+  Mesh_element(int nd, int rs);
   public:
-  Vertex& vertex(int i_vert);
+  inline Vertex& vertex(int i_vert) {return *_verts[i_vert];}
 };
 
 class Mesh_blocks
 {
+  std::shared_ptr<Basis> _basis;
   std::vector<std::unique_ptr<Vertex>> _interior_verts;
   std::vector<std::unique_ptr<Vertex>> _boundary_verts;
   std::vector<std::unique_ptr<Edge>> _2d_edges;
   std::vector<std::unique_ptr<Surface_face>> _3d_faces;
   public:
+  static const int no_face;
+  const int n_dim;
   Mesh_blocks(int n_dim, std::shared_ptr<Basis>);
-  std::unique_ptr<Mesh_element> create_element(Mat<3> pos, double size);
-  inline Sequence<Vertex&> interior_verts()
-  {
-    return Sequence<Vertex&>::ptr_vector_view<std::unique_ptr<Vertex>&>(_interior_verts);
-  }
+  inline const Basis& basis() const {return *_basis;}
+  Sequence<Vertex&> interior_verts();
+  Sequence<Vertex&> boundary_verts();
+  std::unique_ptr<Mesh_element> create_element(Mat<3> pos, double size, int boundary_face = no_face);
 };
 
 }

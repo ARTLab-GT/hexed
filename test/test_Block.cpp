@@ -95,14 +95,15 @@ TEST_CASE("Block")
     }
   }
 
+  std::shared_ptr<hexed::Basis> basis5 = std::make_shared<hexed::Gauss_lobatto>(5);
+
   SECTION("Surface_face") {
-    std::shared_ptr<hexed::Basis> basis3 = std::make_shared<hexed::Gauss_lobatto>(5);
     std::vector<hexed::next::Vertex> verts;
     verts.emplace_back(hexed::Mat<3>{1., 1.5, 1.}, 5);
     verts.emplace_back(hexed::Mat<3>{2., 1.0, 1.}, 5);
     verts.emplace_back(hexed::Mat<3>{1., 2.0, 3.}, 5);
     verts.emplace_back(hexed::Mat<3>{2., 2.0, 1.}, 5);
-    hexed::next::Surface_face face({&verts[0], &verts[1], &verts[2], &verts[3]}, basis3);
+    hexed::next::Surface_face face({&verts[0], &verts[1], &verts[2], &verts[3]}, basis5);
     REQUIRE_THAT(face.edge(0).point({0}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.0, 1.500, 1.0}, hexed::math::Approx_equal()));
     REQUIRE_THAT(face.edge(0).point({2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, 1.250, 1.0}, hexed::math::Approx_equal()));
     REQUIRE_THAT(face.edge(3).point({2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{2.0, 1.500, 1.0}, hexed::math::Approx_equal()));
@@ -142,5 +143,16 @@ TEST_CASE("Block")
     }
     face.reset();
     hexed::next::Block::visualize("default", "vertex_interp_face1", {&face});
+  }
+
+  SECTION("Mesh_element/Mesh_blocks") {
+    SECTION("2D") {
+      hexed::next::Mesh_blocks blocks(2, basis5);
+      auto elem = blocks.create_element({-.2, .3, .1}, .8);
+      auto seq = blocks.interior_verts();
+      REQUIRE(seq.size() == 4);
+      REQUIRE(&elem->vertex(0) == &seq[0]);
+      REQUIRE(&elem->vertex(3) == &seq[3]);
+    }
   }
 }

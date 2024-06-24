@@ -56,6 +56,12 @@ void Vertex::pair(Mutual_ptr<Edge, Vertex>& ptr)
   _edges.back().pair(ptr);
 }
 
+void Vertex::pair(Mutual_ptr<Mesh_element, Vertex>& ptr)
+{
+  _elems.emplace_back(this);
+  _elems.back().pair(ptr);
+}
+
 void Vertex::purge()
 {
   std::erase(_edges, false);
@@ -176,6 +182,44 @@ void Surface_face::reset()
   }
   Mat_rm<> soln = lhs_mat.fullPivHouseholderQr().solve(rhs_mat);
   _interior = soln.data();
+}
+
+Mat<3> Mesh_element::_point(std::vector<int>) const
+{
+  return Mat<3>::Zero();
+}
+
+Mesh_element::Mesh_element(int nd, int rs)
+: Block(nd, rs)
+{
+  for (int i_vert = 0; i_vert < math::pow(2, nd); ++i_vert) _verts.emplace_back(this);
+}
+
+const int Mesh_blocks::no_face = -1;
+
+Mesh_blocks::Mesh_blocks(int nd, std::shared_ptr<Basis> b)
+: _basis{b}, n_dim{nd}
+{}
+
+Sequence<Vertex&> Mesh_blocks::interior_verts()
+{
+  return Sequence<Vertex&>::ptr_vector_view<std::unique_ptr<Vertex>&>(_interior_verts);
+}
+
+Sequence<Vertex&> Mesh_blocks::boundary_verts()
+{
+  return Sequence<Vertex&>::ptr_vector_view<std::unique_ptr<Vertex>&>(_boundary_verts);
+}
+
+std::unique_ptr<Mesh_element> Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_face)
+{
+  std::unique_ptr<Mesh_element> ptr(new Mesh_element(n_dim, _basis->row_size));
+  int nv = math::pow(2, n_dim);
+  for (int i_vert = 0; i_vert < nv; ++i_vert) {
+    _interior_verts.emplace_back(new Vertex(pos, _basis->row_size));
+    _interior_verts.back()->pair(ptr->_verts[i_vert]);
+  }
+  return ptr;
 }
 
 }
