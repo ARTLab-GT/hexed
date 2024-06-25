@@ -1,5 +1,6 @@
 #include <hexed/Block.hpp>
 #include <hexed/Visualizer.hpp>
+#include <hexed/vertex_inds.hpp>
 
 namespace hexed::next
 {
@@ -47,6 +48,7 @@ void Vertex::eat(Vertex& other)
   _mass += other._mass;
   other.purge();
   for (auto& edge : other._edges) pair(*edge.partner());
+  for (auto& elem : other._elems) pair(*elem.partner());
   other._mass = 0;
 }
 
@@ -224,6 +226,10 @@ Mesh_element::Mesh_element(int nd, const Basis& b)
 
 void Mesh_element::connect(Mesh_element& other, Connection_direction dir)
 {
+  auto inds = vertex_inds(n_dim, dir);
+  for (int i_vert = 0; i_vert < math::pow(2, n_dim - 1); ++i_vert) {
+    vertex(inds[0][i_vert]).eat(other.vertex(inds[1][i_vert]));
+  }
 }
 
 const int Mesh_blocks::no_face = -1;
@@ -232,25 +238,17 @@ Mesh_blocks::Mesh_blocks(int nd, const Basis& b)
 : n_dim{nd}, basis{b}
 {}
 
-Sequence<Vertex&> Mesh_blocks::interior_verts()
+template <typename T>
+Sequence<T&> purge_fetch(std::vector<std::unique_ptr<T>>& vec)
 {
-  return Sequence<Vertex&>::ptr_vector_view<std::unique_ptr<Vertex>&>(_interior_verts);
+  std::erase_if(vec, [](std::unique_ptr<T>& ptr){return !ptr->alive();});
+  return Sequence<T&>::template ptr_vector_view<std::unique_ptr<T>&>(vec);
 }
 
-Sequence<Vertex&> Mesh_blocks::boundary_verts()
-{
-  return Sequence<Vertex&>::ptr_vector_view<std::unique_ptr<Vertex>&>(_boundary_verts);
-}
-
-Sequence<Edge&> Mesh_blocks::edges_2d()
-{
-  return Sequence<Edge&>::ptr_vector_view<std::unique_ptr<Edge>&>(_edges_2d);
-}
-
-Sequence<Surface_face&> Mesh_blocks::faces_3d()
-{
-  return Sequence<Surface_face&>::ptr_vector_view<std::unique_ptr<Surface_face>&>(_faces_3d);
-}
+Sequence<Vertex&> Mesh_blocks::interior_verts() {return purge_fetch(_interior_verts);}
+Sequence<Vertex&> Mesh_blocks::boundary_verts() {return purge_fetch(_boundary_verts);}
+Sequence<Edge&> Mesh_blocks::edges_2d() {return purge_fetch(_edges_2d);}
+Sequence<Surface_face&> Mesh_blocks::faces_3d() {return purge_fetch(_faces_3d);}
 
 std::unique_ptr<Mesh_element> Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_face)
 {
