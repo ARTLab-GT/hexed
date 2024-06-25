@@ -152,16 +152,18 @@ TEST_CASE("Block")
       elems.push_back(blocks.create_element({-.2, .3, .1}, .7));
       elems.push_back(blocks.create_element({-.9, .3, .1}, .7, 0));
       elems.push_back(blocks.create_element({-.2, 1., .1}, .7, 3));
-      auto interior = blocks.interior_verts();
-      REQUIRE(interior.size() == 8);
-      REQUIRE(&elems[0]->vertex(0) == &interior[0]);
-      REQUIRE(&elems[0]->vertex(3) == &interior[3]);
-      REQUIRE(&elems[1]->vertex(2) == &interior[4]);
-      REQUIRE(&elems[2]->vertex(2) == &interior[7]);
-      auto boundary = blocks.boundary_verts();
-      REQUIRE(boundary.size() == 4);
-      REQUIRE(&elems[1]->vertex(1) == &boundary[1]);
-      REQUIRE(&elems[2]->vertex(1) == &boundary[2]);
+      {
+        auto interior = blocks.interior_verts();
+        REQUIRE(interior.size() == 8);
+        REQUIRE(&elems[0]->vertex(0) == &interior[0]);
+        REQUIRE(&elems[0]->vertex(3) == &interior[3]);
+        REQUIRE(&elems[1]->vertex(2) == &interior[4]);
+        REQUIRE(&elems[2]->vertex(2) == &interior[7]);
+        auto boundary = blocks.boundary_verts();
+        REQUIRE(boundary.size() == 4);
+        REQUIRE(&elems[1]->vertex(1) == &boundary[1]);
+        REQUIRE(&elems[2]->vertex(1) == &boundary[2]);
+      }
       REQUIRE_THAT(elems[1]->vertex(0).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{-.9,  .3, .1}, hexed::math::Approx_equal()));
       REQUIRE_THAT(elems[1]->vertex(1).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{-.9,  1., .1}, hexed::math::Approx_equal()));
       REQUIRE_THAT(elems[0]->vertex(2).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{ .5,  .3, .1}, hexed::math::Approx_equal()));
@@ -174,7 +176,16 @@ TEST_CASE("Block")
       REQUIRE_THAT(edges[0].interior()(1), Catch::Matchers::RangeEquals(hexed::Mat<3>{-.9, .65, .1}, hexed::math::Approx_equal()));
       edges[0].interior()(1)[0] = -.8;
       REQUIRE_THAT(elems[1]->point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{-.5, .65, .1}, hexed::math::Approx_equal()));
+      elems[0]->connect(*elems[1], {{0, 0}, {0, 1}});
+      {
+        auto interior = blocks.interior_verts();
+        REQUIRE(interior.size() == 6);
+        REQUIRE(blocks.boundary_verts().size() == 4);
+        REQUIRE(&elems[0]->vertex(0) == &elems[1]->vertex(2));
+        REQUIRE(&elems[0]->vertex(1) == &elems[1]->vertex(3));
+      }
     }
+
     SECTION("3D") {
       hexed::next::Mesh_blocks blocks(3, basis5);
       std::vector<std::unique_ptr<hexed::next::Mesh_element>> elems;
@@ -209,6 +220,17 @@ TEST_CASE("Block")
       REQUIRE_THAT(elems[2]->point({2, 2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.51, .691, .610}, hexed::math::Approx_equal()));
       REQUIRE_THAT(elems[2]->point({2, 4, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.51, .700, .610}, hexed::math::Approx_equal()));
       REQUIRE_THAT(elems[2]->point({0, 2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.50, .690, .610}, hexed::math::Approx_equal()));
+      elems[1]->connect(*elems[3], {{2, 0}, {0, 1}});
+      {
+        auto interior = blocks.interior_verts();
+        auto boundary = blocks.boundary_verts();
+        REQUIRE(interior.size() == 18);
+        REQUIRE(boundary.size() == 10);
+        REQUIRE(&elems[1]->vertex(0) == &elems[3]->vertex(5));
+        REQUIRE(&elems[1]->vertex(2) == &elems[3]->vertex(7));
+        REQUIRE(&elems[1]->vertex(4) == &elems[3]->vertex(4));
+        REQUIRE(&elems[1]->vertex(6) == &elems[3]->vertex(6));
+      }
     }
   }
 }

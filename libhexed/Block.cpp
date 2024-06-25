@@ -222,6 +222,10 @@ Mesh_element::Mesh_element(int nd, const Basis& b)
   for (int i_vert = 0; i_vert < math::pow(2, nd); ++i_vert) _verts.emplace_back(this);
 }
 
+void Mesh_element::connect(Mesh_element& other, Connection_direction dir)
+{
+}
+
 const int Mesh_blocks::no_face = -1;
 
 Mesh_blocks::Mesh_blocks(int nd, const Basis& b)

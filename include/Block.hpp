@@ -7,6 +7,7 @@
 #include "Basis.hpp"
 #include "Array.hpp"
 #include "Sequence.hpp"
+#include "Kernel_connection.hpp"
 
 namespace hexed::next
 {
@@ -97,6 +98,7 @@ class Mesh_element : public Block
   public:
   const Basis& basis;
   inline Vertex& vertex(int i_vert) {return *_verts[i_vert];}
+  void connect(Mesh_element& other, Connection_direction);
 };
 
 class Mesh_blocks
