@@ -92,6 +92,7 @@ class Mesh_element : public Block
   std::vector<Mutual_ptr<Mesh_element, Vertex>> _verts;
   int _i_bf;
   Mutual_ptr<Mesh_element, Boundary_interior> _bf;
+  Surface_face* _sf;
   Mat<3> _vertex_point(std::vector<int>) const;
   Mat<3> _point(std::vector<int>) const override;
   Mesh_element(int nd, const Basis&);

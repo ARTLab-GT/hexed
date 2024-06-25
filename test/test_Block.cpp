@@ -231,6 +231,11 @@ TEST_CASE("Block")
         REQUIRE(&elems[1]->vertex(4) == &elems[3]->vertex(4));
         REQUIRE(&elems[1]->vertex(6) == &elems[3]->vertex(6));
       }
+      REQUIRE_THAT(faces[2].edge(1).point({1}), Catch::Matchers::RangeEquals(faces[0].edge(2).point({1}), hexed::math::Approx_equal()));
+      elems[2]->connect(*elems[1], {{0, 1}, {1, 0}});
+      elems[3]->connect(*elems[2], {{1, 2}, {0, 0}});
+      REQUIRE_THAT(faces[0].edge(0).point({1}), Catch::Matchers::RangeEquals(faces[1].edge(1).point({1}), hexed::math::Approx_equal()));
+      REQUIRE_THAT(faces[1].edge(2).point({1}), Catch::Matchers::RangeEquals(faces[2].edge(2).point({1}), hexed::math::Approx_equal()));
     }
   }
 }

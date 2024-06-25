@@ -224,11 +224,22 @@ Mesh_element::Mesh_element(int nd, const Basis& b)
   for (int i_vert = 0; i_vert < math::pow(2, nd); ++i_vert) _verts.emplace_back(this);
 }
 
+int i_edge(Connection_direction dir, int side)
+{
+  return 2*(dir.i_dim[side] > 3 - dir.i_dim[0] - dir.i_dim[1]) + dir.face_sign[side];
+}
+
 void Mesh_element::connect(Mesh_element& other, Connection_direction dir)
 {
+  HEXED_ASSERT(other.n_dim == n_dim, "attempt to connect elements with different dimensionality");
+  HEXED_ASSERT(&other.basis == &basis, "attempt to connect elements with different basis");
   auto inds = vertex_inds(n_dim, dir);
   for (int i_vert = 0; i_vert < math::pow(2, n_dim - 1); ++i_vert) {
     vertex(inds[0][i_vert]).eat(other.vertex(inds[1][i_vert]));
+  }
+  if (n_dim == 3 && _bf) {
+    HEXED_ASSERT(other._bf, "attempt to connect an element with a boundary face to one without");
+    other._sf->edge(i_edge(dir, 1)).glue(_sf->edge(i_edge(dir, 0)));
   }
 }
 
@@ -277,6 +288,7 @@ std::unique_ptr<Mesh_element> Mesh_blocks::create_element(Mat<3> pos, double siz
       for (int i_vert = 0; i_vert < 4; ++i_vert) verts[i_vert] = _boundary_verts.end()[i_vert - 4].get();
       _faces_3d.emplace_back(new Surface_face(verts, basis));
       _faces_3d.back()->pair(ptr->_bf);
+      ptr->_sf = _faces_3d.back().get();
     }
   }
   return ptr;
