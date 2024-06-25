@@ -33,6 +33,8 @@ class Vertex : public Block
 {
   std::vector<Mutual_ptr<Vertex, Edge>> _edges;
   std::vector<Mutual_ptr<Vertex, Mesh_element>> _elems;
+  Mutual_ptr<Vertex, Mesh_element> _glued_to;
+  std::vector<3> _glued_coords;
   inline Mat<3> _point(std::vector<int>) const override {return pos;}
   bool _alive;
   int _mass;
@@ -40,6 +42,7 @@ class Vertex : public Block
   Mat<3> pos;
   inline Vertex(Mat<3> pos, int row_size) : Block{0, row_size}, pos{pos}, _alive{true}, _mass{1} {}
   void eat(Vertex& other);
+  void glue(Element& to, std::vector<double> coords);
   void pair(Mutual_ptr<Edge, Vertex>& ptr);
   void pair(Mutual_ptr<Mesh_element, Vertex>& ptr);
   void purge();
@@ -93,6 +96,7 @@ class Mesh_element : public Block
   int _i_bf;
   Mutual_ptr<Mesh_element, Boundary_interior> _bf;
   Surface_face* _sf;
+  Mutual_ptr<Mesh_element, Vertex> _glued_vert;
   Mat<3> _vertex_point(std::vector<int>) const;
   Mat<3> _point(std::vector<int>) const override;
   Mesh_element(int nd, const Basis&);
