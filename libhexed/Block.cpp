@@ -219,7 +219,7 @@ Mat<3> Mesh_element::_point(std::vector<int> coords) const
 }
 
 Mesh_element::Mesh_element(int nd, const Basis& b)
-: Block(nd, b.row_size), _bf(this), basis{b}
+: Block(nd, b.row_size), _bf(this), _glued_vert(this), basis{b}
 {
   for (int i_vert = 0; i_vert < math::pow(2, nd); ++i_vert) _verts.emplace_back(this);
 }
@@ -241,6 +241,10 @@ void Mesh_element::connect(Mesh_element& other, Connection_direction dir)
     HEXED_ASSERT(other._bf, "attempt to connect an element with a boundary face to one without");
     other._sf->edge(i_edge(dir, 1)).glue(_sf->edge(i_edge(dir, 0)));
   }
+}
+
+void Mesh_element::connect(std::vector<Mesh_element*> others, Connection_direction dir)
+{
 }
 
 const int Mesh_blocks::no_face = -1;

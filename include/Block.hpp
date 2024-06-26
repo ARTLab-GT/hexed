@@ -33,16 +33,16 @@ class Vertex : public Block
 {
   std::vector<Mutual_ptr<Vertex, Edge>> _edges;
   std::vector<Mutual_ptr<Vertex, Mesh_element>> _elems;
-  Mutual_ptr<Vertex, Mesh_element> _glued_to;
-  std::vector<3> _glued_coords;
-  inline Mat<3> _point(std::vector<int>) const override {return pos;}
   bool _alive;
   int _mass;
+  Mutual_ptr<Vertex, Mesh_element> _glued_to;
+  Mat<3> _glued_coords;
+  inline Mat<3> _point(std::vector<int>) const override {return pos;}
   public:
   Mat<3> pos;
-  inline Vertex(Mat<3> pos, int row_size) : Block{0, row_size}, pos{pos}, _alive{true}, _mass{1} {}
+  inline Vertex(Mat<3> pos, int row_size) : Block{0, row_size}, pos{pos}, _alive{true}, _mass{1}, _glued_to(this) {}
   void eat(Vertex& other);
-  void glue(Element& to, std::vector<double> coords);
+  void glue(Mesh_element& to, std::vector<double> coords);
   void pair(Mutual_ptr<Edge, Vertex>& ptr);
   void pair(Mutual_ptr<Mesh_element, Vertex>& ptr);
   void purge();
@@ -104,6 +104,7 @@ class Mesh_element : public Block
   const Basis& basis;
   inline Vertex& vertex(int i_vert) {return *_verts[i_vert];}
   void connect(Mesh_element& other, Connection_direction);
+  void connect(std::vector<Mesh_element*> others, Connection_direction);
 };
 
 class Mesh_blocks
