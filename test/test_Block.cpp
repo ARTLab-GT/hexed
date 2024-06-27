@@ -271,8 +271,8 @@ TEST_CASE("Block")
         REQ_VEC_EQ(elems[0]->vertex(3).point({}), hexed::Mat<3>{1.55, .55, .1});
         REQ_VEC_EQ(elems[3]->vertex(1).point({}), hexed::Mat<3>{1.05, .05, .1});
         REQ_VEC_EQ(elems[4]->vertex(3).point({}), hexed::Mat<3>{1.55, .55, .1});
-        REQ_VEC_EQ(elems[3]->vertex(3).point({}), hexed::Mat<3>{1.80, .30, .1});
-        REQ_VEC_EQ(elems[4]->vertex(1).point({}), hexed::Mat<3>{1.80, .30, .1});
+        REQ_VEC_EQ(elems[3]->vertex(3).point({}), hexed::Mat<3>{1.30, .30, .1});
+        REQ_VEC_EQ(elems[4]->vertex(1).point({}), hexed::Mat<3>{1.30, .30, .1});
       }
       SECTION("stretched") {
         elems[0]->connect({elems[5].get(), elems[5].get()}, {{1, 0}, {1, 1}});
@@ -309,7 +309,7 @@ TEST_CASE("Block")
         REQ_VEC_EQ(elems[2]->vertex(1).point({}), hexed::Mat<3>{.05, 1.3, .3});
         REQ_VEC_EQ(elems[4]->vertex(1).point({}), hexed::Mat<3>{.55, 1.3, .3});
         REQ_VEC_EQ(elems[3]->vertex(7).point({}), hexed::Mat<3>{1.05, 1.3, .3});
-        REQ_VEC_EQ(elems[2]->vertex(3).point({}), hexed::Mat<3>{.55, 1.55, .55});
+        REQ_VEC_EQ(elems[2]->vertex(3).point({}), hexed::Mat<3>{.05, 1.55, .55});
       }
       SECTION("stretched out of plane") {
         elems[0]->connect({elems[5].get(), elems[5].get(), elems[6].get(), elems[6].get()}, {{1, 0}, {0, 1}});
@@ -321,8 +321,8 @@ TEST_CASE("Block")
         REQ_VEC_EQ(elems[6]->vertex(6).point({}), hexed::Mat<3>{.05, .05, .05});
         REQ_VEC_EQ(elems[6]->vertex(7).point({}), hexed::Mat<3>{.05, .05, .8});
         REQ_VEC_EQ(elems[5]->vertex(5).point({}), hexed::Mat<3>{.55, -.45, .8});
-        REQ_VEC_EQ(elems[5]->vertex(4).point({}), hexed::Mat<3>{.30, -.2, .05});
-        REQ_VEC_EQ(elems[6]->vertex(7).point({}), hexed::Mat<3>{.30, -.2, .55});
+        REQ_VEC_EQ(elems[5]->vertex(7).point({}), hexed::Mat<3>{.30, -.2, .8});
+        REQ_VEC_EQ(elems[6]->vertex(4).point({}), hexed::Mat<3>{.30, -.2, .05});
       }
       SECTION("stretched in plane") {
         elems[0]->connect({elems[7].get(), elems[8].get(), elems[7].get(), elems[8].get()}, {{0, 2}, {1, 0}});

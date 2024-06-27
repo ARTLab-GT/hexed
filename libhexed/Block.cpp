@@ -280,8 +280,24 @@ void Mesh_element::connect(std::vector<Mesh_element*> others, Connection_directi
   }
   auto inds = vertex_inds(n_dim, dir);
   auto face_inds = face_vertex_inds(n_dim, dir);
-  for (int i_vert = 0; i_vert < math::pow(2, n_dim - 1); ++i_vert) {
+  int nv = math::pow(2, n_dim - 1);
+  for (int i_vert = 0; i_vert < nv; ++i_vert) {
     vertex(inds[0][i_vert]).eat(others[face_inds[i_vert]]->vertex(inds[1][i_vert]));
+    for (int j_vert = 0; j_vert < nv; ++j_vert) if (j_vert != i_vert) {
+      std::vector<double> coords(n_dim);
+      bool do_it = true;
+      for (int i_dim = 0, face_dim = 0; i_dim < n_dim; ++i_dim) {
+        if (i_dim == dir.i_dim[0]) coords[i_dim] = dir.face_sign[0];
+        else {
+          int vs = vstride(n_dim - 1, face_dim++);
+          int c = i_vert/vs%2 + j_vert/vs%2;
+          do_it = do_it && !(c == 1 &&    others[face_inds[i_vert - i_vert/vs%2*vs]]
+                                       == others[face_inds[i_vert + (1 - i_vert/vs%2)*vs]]);
+          coords[i_dim] = .5*c;
+        }
+      }
+      if (do_it) others[face_inds[i_vert]]->vertex(inds[1][j_vert]).glue(*this, coords);
+    }
   }
 }
 
