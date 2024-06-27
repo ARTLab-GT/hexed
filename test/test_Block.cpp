@@ -6,6 +6,14 @@
 
 #define REQ_VEC_EQ(vec0, ...) REQUIRE_THAT(vec0, Catch::Matchers::RangeEquals(__VA_ARGS__, hexed::math::Approx_equal()))
 
+void warp(hexed::next::Edge& e)
+{
+  for (int i_node = 0; i_node < 3; ++i_node) {
+    double n = e.basis.node(i_node + 1);
+    e.interior()(i_node)[2] += .16*(n - .5)*(n - .5);
+  }
+}
+
 TEST_CASE("Block")
 {
   static_assert(hexed::config::max_row_size >= 5); // these tests require a row size of at least 5
@@ -335,6 +343,30 @@ TEST_CASE("Block")
         REQ_VEC_EQ(elems[7]->vertex(4).point({}), hexed::Mat<3>{1.3, 0.05, .55});
         REQ_VEC_EQ(elems[7]->vertex(6).point({}), hexed::Mat<3>{1.3, 0.55, .55});
         REQ_VEC_EQ(elems[8]->vertex(0).point({}), hexed::Mat<3>{1.05, 0.55, 1.05});
+      }
+    }
+
+    SECTION("connection with edge gluing") {
+      hexed::next::Mesh_blocks blocks(3, basis5);
+      std::vector<std::unique_ptr<hexed::next::Mesh_element>> elems;
+      hexed::Mat<3> zero = hexed::Mat<3>::Zero();
+      SECTION("dim 0") {
+        elems.push_back(blocks.create_element(zero, 1., 4));
+        elems.push_back(blocks.create_element({-.5, .0, .0}, .5, 4));
+        elems.push_back(blocks.create_element({-.5, .0, .5}, .5));
+        elems.push_back(blocks.create_element({-.5, .5, .0}, .5, 4));
+        elems.push_back(blocks.create_element({-.5, .5, .5}, .5));
+        elems[0]->connect({elems[1].get(), elems[2].get(), elems[3].get(), elems[4].get()}, {{1, 0}, {1, 1}});
+        for (unsigned i_face = 0; i_face < blocks.faces_3d().size(); ++i_face) {
+          for (int i_edge = 0; i_edge < 4; ++i_edge) {
+            blocks.faces_3d()[i_face].edge(i_edge).reset();
+          }
+        }
+        warp(blocks.faces_3d()[0].edge(3));
+        REQUIRE(blocks.faces_3d()[1].edge(1).point({2})(0) == Catch::Approx(.125));
+        REQUIRE(blocks.faces_3d()[1].edge(1).point({2})(2) == Catch::Approx(.03));
+        REQUIRE(blocks.faces_3d()[2].edge(1).point({2})(0) == Catch::Approx(.125));
+        REQUIRE(blocks.faces_3d()[2].edge(1).point({2})(2) == Catch::Approx(.03));
       }
     }
   }
