@@ -40,6 +40,24 @@ Mat<3> Block::point(std::vector<int> node_coords) const
   return _point(node_coords);
 }
 
+Mat<3> Vertex::_point(std::vector<int>) const
+{
+  if (!_glued_to) return pos;
+  Array<double> points = _glued_to->points();
+  Mat<3> p;
+  Eigen::Map<const Mat<>> sample(_glued_coords.data(), _glued_coords.size());
+  Mat<dyn, dyn> proj = _glued_to->basis.interpolate(sample);
+  for (int i_dim = 0; i_dim < 3; ++i_dim) {
+    Mat<> vec = points(i_dim).vector();
+    for (int j_dim = _glued_coords.size() - 1; j_dim >= 0; --j_dim) {
+      Mat<> new_vec = math::dimension_matvec(proj(j_dim, all), vec, j_dim);
+      vec = new_vec;
+    }
+    p(i_dim) = vec(0);
+  }
+  return p;
+}
+
 void Vertex::eat(Vertex& other)
 {
   if (&other == this) return;
@@ -50,6 +68,15 @@ void Vertex::eat(Vertex& other)
   for (auto& edge : other._edges) pair(*edge.partner());
   for (auto& elem : other._elems) pair(*elem.partner());
   other._mass = 0;
+}
+
+void Vertex::glue(Mesh_element& to, std::vector<double> coords)
+{
+  HEXED_ASSERT(std::size_t(to.n_dim) == coords.size(), "wrong number of glued coordinates");
+  std::erase(to._glued_verts, false);
+  to._glued_verts.emplace_back(&to);
+  to._glued_verts.back().pair(_glued_to);
+  _glued_coords = coords;
 }
 
 void Vertex::pair(Mutual_ptr<Edge, Vertex>& ptr)
@@ -219,7 +246,7 @@ Mat<3> Mesh_element::_point(std::vector<int> coords) const
 }
 
 Mesh_element::Mesh_element(int nd, const Basis& b)
-: Block(nd, b.row_size), _bf(this), _glued_vert(this), basis{b}
+: Block(nd, b.row_size), _bf(this), basis{b}
 {
   for (int i_vert = 0; i_vert < math::pow(2, nd); ++i_vert) _verts.emplace_back(this);
 }
