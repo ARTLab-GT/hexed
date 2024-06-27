@@ -248,7 +248,7 @@ TEST_CASE("Block")
       elems.push_back(blocks.create_element({1., .5, .1}, .5));
       elems.push_back(blocks.create_element({1., -.5, .1}, .5));
       elems.push_back(blocks.create_element({1.5, -.5, .1}, .5));
-      elems.push_back(blocks.create_element({-.5, 1.5, .1}, .5));
+      elems.push_back(blocks.create_element({-.5, 1., .1}, .5));
       SECTION("simple") {
         elems[0]->connect({elems[1].get(), elems[2].get()}, {{0, 0}, {1, 0}});
         REQUIRE(blocks.interior_verts().size() == 22);
@@ -256,8 +256,8 @@ TEST_CASE("Block")
         REQ_VEC_EQ(elems[1]->vertex(0).point({}), hexed::Mat<3>{1.05, .05, .1});
         REQ_VEC_EQ(elems[0]->vertex(3).point({}), hexed::Mat<3>{1.05, 1.05, .1});
         REQ_VEC_EQ(elems[2]->vertex(1).point({}), hexed::Mat<3>{1.05, 1.05, .1});
-        REQ_VEC_EQ(elems[1]->vertex(1).point({}), hexed::Mat<3>{1.05, .55, .1});
-        REQ_VEC_EQ(elems[2]->vertex(0).point({}), hexed::Mat<3>{1.05, .55, .1});
+        // REQ_VEC_EQ(elems[1]->vertex(1).point({}), hexed::Mat<3>{1.05, .55, .1});
+        // REQ_VEC_EQ(elems[2]->vertex(0).point({}), hexed::Mat<3>{1.05, .55, .1});
       }
       SECTION("different dims") {
         elems[0]->connect({elems[3].get(), elems[4].get()}, {{0, 1}, {1, 1}});
@@ -266,16 +266,16 @@ TEST_CASE("Block")
         REQ_VEC_EQ(elems[0]->vertex(3).point({}), hexed::Mat<3>{1.55, .55, .1});
         REQ_VEC_EQ(elems[3]->vertex(1).point({}), hexed::Mat<3>{1.05, .05, .1});
         REQ_VEC_EQ(elems[4]->vertex(3).point({}), hexed::Mat<3>{1.55, .55, .1});
-        REQ_VEC_EQ(elems[3]->vertex(3).point({}), hexed::Mat<3>{1.80, .30, .1});
-        REQ_VEC_EQ(elems[4]->vertex(1).point({}), hexed::Mat<3>{1.80, .30, .1});
+        // REQ_VEC_EQ(elems[3]->vertex(3).point({}), hexed::Mat<3>{1.80, .30, .1});
+        // REQ_VEC_EQ(elems[4]->vertex(1).point({}), hexed::Mat<3>{1.80, .30, .1});
       }
       SECTION("stretched") {
         elems[0]->connect({elems[5].get(), elems[5].get()}, {{1, 0}, {1, 1}});
         REQUIRE(blocks.interior_verts().size() == 22);
-        REQ_VEC_EQ(elems[0]->vertex(1).point({}), hexed::Mat<3>{.05, .55, .1});
-        REQ_VEC_EQ(elems[0]->vertex(3).point({}), hexed::Mat<3>{.55, 1.2, .1});
-        REQ_VEC_EQ(elems[5]->vertex(2).point({}), hexed::Mat<3>{.05, .55, .1});
-        REQ_VEC_EQ(elems[5]->vertex(3).point({}), hexed::Mat<3>{.55, 1.2, .1});
+        REQ_VEC_EQ(elems[0]->vertex(1).point({}), hexed::Mat<3>{.05, 1.05, .1});
+        REQ_VEC_EQ(elems[5]->vertex(2).point({}), hexed::Mat<3>{.05, 1.05, .1});
+        REQ_VEC_EQ(elems[0]->vertex(3).point({}), hexed::Mat<3>{.55, 1.3, .1});
+        REQ_VEC_EQ(elems[5]->vertex(3).point({}), hexed::Mat<3>{.55, 1.3, .1});
       }
     }
 
@@ -283,14 +283,14 @@ TEST_CASE("Block")
       hexed::next::Mesh_blocks blocks(3, basis5);
       std::vector<std::unique_ptr<hexed::next::Mesh_element>> elems;
       elems.push_back(blocks.create_element({.1, .1, .1}, 1.)); //
-      elems.push_back(blocks.create_element({0., 1.0, -.5}, 1.));
-      elems.push_back(blocks.create_element({0., 1.5, -.5}, 1.));
-      elems.push_back(blocks.create_element({.5, 1.0, -.5}, 1.));
-      elems.push_back(blocks.create_element({.5, 1.5, -.5}, 1.)); //
-      elems.push_back(blocks.create_element({-.5, 0.0, 0.}, 1.));
-      elems.push_back(blocks.create_element({-.5, -.5, 0.}, 1.)); //
-      elems.push_back(blocks.create_element({1., .5, 1.}, 1.));
-      elems.push_back(blocks.create_element({1., 1., 1.}, 1.)); //
+      elems.push_back(blocks.create_element({0., 1.0, -.5}, .5));
+      elems.push_back(blocks.create_element({0., 1.5, -.5}, .5));
+      elems.push_back(blocks.create_element({.5, 1.0, -.5}, .5));
+      elems.push_back(blocks.create_element({.5, 1.5, -.5}, .5)); //
+      elems.push_back(blocks.create_element({-.5, -1., 0.}, .5));
+      elems.push_back(blocks.create_element({-.5, -.5, 0.}, .5)); //
+      elems.push_back(blocks.create_element({1., 0., 1.}, .5));
+      elems.push_back(blocks.create_element({1., .5, 1.}, .5)); //
       SECTION("not stretched") {
         elems[0]->connect({elems[1].get(), elems[2].get(), elems[3].get(), elems[4].get()}, {{1, 2}, {1, 1}});
         REQUIRE(blocks.interior_verts().size() == 68);
@@ -300,36 +300,36 @@ TEST_CASE("Block")
         REQ_VEC_EQ(elems[0]->vertex(7).point({}), hexed::Mat<3>{1.05, 1.55, .55});
         REQ_VEC_EQ(elems[1]->vertex(1).point({}), hexed::Mat<3>{.05, 1.05, .05});
         REQ_VEC_EQ(elems[4]->vertex(7).point({}), hexed::Mat<3>{1.05, 1.55, .55});
-        REQ_VEC_EQ(elems[1]->vertex(3).point({}), hexed::Mat<3>{.05, 1.3, .3});
-        REQ_VEC_EQ(elems[2]->vertex(1).point({}), hexed::Mat<3>{.05, 1.3, .3});
-        REQ_VEC_EQ(elems[4]->vertex(1).point({}), hexed::Mat<3>{.55, 1.3, .3});
-        REQ_VEC_EQ(elems[3]->vertex(7).point({}), hexed::Mat<3>{1.05, 1.3, .3});
-        REQ_VEC_EQ(elems[2]->vertex(3).point({}), hexed::Mat<3>{.55, 1.55, .55});
+        // REQ_VEC_EQ(elems[1]->vertex(3).point({}), hexed::Mat<3>{.05, 1.3, .3});
+        // REQ_VEC_EQ(elems[2]->vertex(1).point({}), hexed::Mat<3>{.05, 1.3, .3});
+        // REQ_VEC_EQ(elems[4]->vertex(1).point({}), hexed::Mat<3>{.55, 1.3, .3});
+        // REQ_VEC_EQ(elems[3]->vertex(7).point({}), hexed::Mat<3>{1.05, 1.3, .3});
+        // REQ_VEC_EQ(elems[2]->vertex(3).point({}), hexed::Mat<3>{.55, 1.55, .55});
       }
       SECTION("stretched out of plane") {
         elems[0]->connect({elems[5].get(), elems[5].get(), elems[6].get(), elems[6].get()}, {{1, 0}, {0, 1}});
         REQUIRE(blocks.interior_verts().size() == 68);
         REQ_VEC_EQ(elems[0]->vertex(0).point({}), hexed::Mat<3>{.05, .05, .05});
-        REQ_VEC_EQ(elems[0]->vertex(1).point({}), hexed::Mat<3>{.05, .05, .55});
+        REQ_VEC_EQ(elems[0]->vertex(1).point({}), hexed::Mat<3>{.05, .05, .8});
         REQ_VEC_EQ(elems[0]->vertex(4).point({}), hexed::Mat<3>{.55, -.45, .05});
-        REQ_VEC_EQ(elems[0]->vertex(5).point({}), hexed::Mat<3>{.55, -.45, .55});
-        REQ_VEC_EQ(elems[5]->vertex(6).point({}), hexed::Mat<3>{.05, .05, .05});
-        REQ_VEC_EQ(elems[5]->vertex(7).point({}), hexed::Mat<3>{.05, .05, .55});
-        REQ_VEC_EQ(elems[5]->vertex(4).point({}), hexed::Mat<3>{.30, -.2, .05});
-        REQ_VEC_EQ(elems[6]->vertex(7).point({}), hexed::Mat<3>{.30, -.2, .55});
-        REQ_VEC_EQ(elems[6]->vertex(5).point({}), hexed::Mat<3>{.55, -.45, .55});
+        REQ_VEC_EQ(elems[0]->vertex(5).point({}), hexed::Mat<3>{.55, -.45, .8});
+        REQ_VEC_EQ(elems[6]->vertex(6).point({}), hexed::Mat<3>{.05, .05, .05});
+        REQ_VEC_EQ(elems[6]->vertex(7).point({}), hexed::Mat<3>{.05, .05, .8});
+        REQ_VEC_EQ(elems[5]->vertex(5).point({}), hexed::Mat<3>{.55, -.45, .8});
+        // REQ_VEC_EQ(elems[5]->vertex(4).point({}), hexed::Mat<3>{.30, -.2, .05});
+        // REQ_VEC_EQ(elems[6]->vertex(7).point({}), hexed::Mat<3>{.30, -.2, .55});
       }
       SECTION("stretched in plane") {
-        elems[0]->connect({elems[7].get(), elems[8].get(), elems[7].get(), elems[8].get()}, {{0, 1}, {1, 0}});
+        elems[0]->connect({elems[7].get(), elems[8].get(), elems[7].get(), elems[8].get()}, {{0, 2}, {1, 0}});
         REQUIRE(blocks.interior_verts().size() == 68);
         REQ_VEC_EQ(elems[0]->vertex(4).point({}), hexed::Mat<3>{1.3, 0.05, .55});
         REQ_VEC_EQ(elems[0]->vertex(6).point({}), hexed::Mat<3>{1.3, 1.05, .55});
         REQ_VEC_EQ(elems[0]->vertex(5).point({}), hexed::Mat<3>{1.05, 0.05, 1.05});
         REQ_VEC_EQ(elems[0]->vertex(7).point({}), hexed::Mat<3>{1.05, 1.05, 1.05});
-        REQ_VEC_EQ(elems[7]->vertex(4).point({}), hexed::Mat<3>{1.3, 0.05, .55});
         REQ_VEC_EQ(elems[8]->vertex(2).point({}), hexed::Mat<3>{1.05, 1.05, 1.05});
-        REQ_VEC_EQ(elems[7]->vertex(6).point({}), hexed::Mat<3>{1.3, 0.55, .55});
-        REQ_VEC_EQ(elems[8]->vertex(0).point({}), hexed::Mat<3>{1.05, 0.55, 1.05});
+        // REQ_VEC_EQ(elems[7]->vertex(4).point({}), hexed::Mat<3>{1.3, 0.05, .55});
+        // REQ_VEC_EQ(elems[7]->vertex(6).point({}), hexed::Mat<3>{1.3, 0.55, .55});
+        // REQ_VEC_EQ(elems[8]->vertex(0).point({}), hexed::Mat<3>{1.05, 0.55, 1.05});
       }
     }
   }

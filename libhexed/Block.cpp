@@ -245,6 +245,17 @@ void Mesh_element::connect(Mesh_element& other, Connection_direction dir)
 
 void Mesh_element::connect(std::vector<Mesh_element*> others, Connection_direction dir)
 {
+  HEXED_ASSERT(others.size() == math::pow(std::size_t(2), n_dim - 1), "wrong number of fine elements");
+  for (Mesh_element* other : others) {
+    HEXED_ASSERT(other, "fine element pointer is null");
+    HEXED_ASSERT(other->n_dim == n_dim, "attempt to connect elements with different dimensionality");
+    HEXED_ASSERT(&other->basis == &basis, "attempt to connect elements with different basis");
+  }
+  auto inds = vertex_inds(n_dim, dir);
+  auto face_inds = face_vertex_inds(n_dim, dir);
+  for (int i_vert = 0; i_vert < math::pow(2, n_dim - 1); ++i_vert) {
+    vertex(inds[0][i_vert]).eat(others[face_inds[i_vert]]->vertex(inds[1][i_vert]));
+  }
 }
 
 const int Mesh_blocks::no_face = -1;
