@@ -255,6 +255,7 @@ TEST_CASE("Block")
       elems[3]->connect(*elems[4], {{1, 1}, {1, 0}});
       faces[2].edge(3).interior()(1)[2] += .002;
       REQ_VEC_EQ(faces[3].edge(2).point({2}), faces[2].edge(3).point({2}));
+      elems[1]->connect(*elems[0], {{0, 0}, {0, 1}});
     }
 
     SECTION("2D hanging") {

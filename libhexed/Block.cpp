@@ -256,6 +256,15 @@ int i_edge(Connection_direction dir, int side, int i_bf)
   return 2*(dir.i_dim[side] > 3 - dir.i_dim[side] - i_bf/2) + dir.face_sign[side];
 }
 
+#define ASSERT_CON_DIMS(dir, other) \
+  HEXED_ASSERT((other)._bf, "connection expected subordinate element to have boundary face"); \
+  if (dir.i_dim[0] == dir.i_dim[1]) { \
+    HEXED_ASSERT(_i_bf == (other)._i_bf, "boundary face mismatch on same-dim connection"); \
+  } else { \
+    HEXED_ASSERT(_i_bf == 2*dir.i_dim[1] + dir.face_sign[1], "boundary face mismatch on coarse element"); \
+    HEXED_ASSERT((other)._i_bf == 2*dir.i_dim[0] + dir.face_sign[0], "boundary face mismatch in on fine element"); \
+  } \
+
 void Mesh_element::connect(Mesh_element& other, Connection_direction dir)
 {
   HEXED_ASSERT(other.n_dim == n_dim, "attempt to connect elements with different dimensionality");
@@ -264,8 +273,8 @@ void Mesh_element::connect(Mesh_element& other, Connection_direction dir)
   for (int i_vert = 0; i_vert < math::pow(2, n_dim - 1); ++i_vert) {
     vertex(inds[0][i_vert]).eat(other.vertex(inds[1][i_vert]));
   }
-  if (n_dim == 3 && _bf) {
-    HEXED_ASSERT(other._bf, "attempt to connect an element with a boundary face to one without");
+  if (n_dim == 3 && _bf && _i_bf/2 != dir.i_dim[0]) {
+    ASSERT_CON_DIMS(dir, other);
     other._sf->edge(i_edge(dir, 1, other._i_bf)).glue(_sf->edge(i_edge(dir, 0, _i_bf)));
   }
 }
@@ -300,16 +309,12 @@ void Mesh_element::connect(std::vector<Mesh_element*> others, Connection_directi
     }
   }
   if (n_dim == 3 && _bf && _i_bf/2 != dir.i_dim[0]) {
-    HEXED_ASSERT(dir.i_dim[0] == dir.i_dim[1] || _i_bf == 2*dir.i_dim[1] + dir.face_sign[1],
-      "boundary face mismatch on coarse element");
     Edge& edge = _sf->edge(i_edge(dir, 0, _i_bf));
     int edge_dim = _i_bf/2 > 3 - dir.i_dim[0] - _i_bf/2;
     int strides [2] {vstride(2, edge_dim), vstride(2, !edge_dim)};
     Array<Mesh_element*> to_glue({2}, [&](int i){return others[face_inds[_i_bf%2*strides[0] + i*strides[1]]];});
     auto glue = [&](int i_glue, int i_half) {
-      HEXED_ASSERT(to_glue[i_glue]->_bf &&
-        (dir.i_dim[0] == dir.i_dim[1] || to_glue[i_glue]->_i_bf == 2*dir.i_dim[0] + dir.face_sign[0]),
-        "boundary face mismatch in on fine element");
+      ASSERT_CON_DIMS(dir, *to_glue[i_glue]);
       to_glue[i_glue]->_sf->edge(i_edge(dir, 1, to_glue[i_glue]->_i_bf)).glue(edge, i_half);
     };
     if (to_glue[0] == to_glue[1]) glue(0, Edge::no);
