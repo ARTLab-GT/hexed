@@ -37,7 +37,7 @@ Mat<dyn, dyn> Basis::interpolate(const Mat<>& sample) const
   return interp;
 }
 
-Mat<dyn, dyn> Basis::restrict(int i_half) const
+Mat<dyn, dyn> Basis::prolong(int i_half) const
 {
   return interpolate(.5*(nodes() + Mat<>::Constant(row_size, double(i_half))));
 }

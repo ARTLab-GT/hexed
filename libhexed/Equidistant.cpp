@@ -89,7 +89,7 @@ Mat<dyn, dyn> Equidistant::filter() const
   return {};
 }
 
-Mat<dyn, dyn> Equidistant::prolong (int i_half) const
+Mat<dyn, dyn> Equidistant::restrict (int i_half) const
 {
   HEXED_ASSERT(false, "Not implemented");
   return {};

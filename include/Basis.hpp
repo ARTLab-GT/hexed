@@ -47,18 +47,18 @@ class Basis
    */
   Mat<dyn, dyn> interpolate(const Mat<>& sample) const;
   /*! \brief Matrix to prolong into polynomial space of one higher refinement level.
-   * \details `prolong(i_half)(i, j)` is the value at the `i`th standard node
-   * of the orthogonal projection of the `j`th polynomial in the
-   * refined space into the space of this basis.
-   */
-  virtual Mat<dyn, dyn> prolong(int i_half) const = 0;
-  /*! \brief Restrict from refined space above to polynomial space spanned by this basis.
-   * \details `restrict(i_half)(i, j)` is the `j`th basis polynomial evaluated at the `i`th node in the refined space.
+   * \details `prolong(i_half)(i, j)` is the `j`th basis polynomial evaluated at the `i`th node in the refined space.
    * If `i_half` is 0, refined space is interval [0, 0.5]. If `i_half` is 1, then [0.5, 1].
    * This is a basic, naive implementation.
    * Derived classes may override for performance and/or precision.
    */
-  virtual Mat<dyn, dyn> restrict(int i_half) const;
+  virtual Mat<dyn, dyn> prolong(int i_half) const;
+  /*! \brief Restrict from refined space above to polynomial space spanned by this basis.
+   * \details `restrict(i_half)(i, j)` is the value at the `i`th standard node
+   * of the orthogonal projection of the `j`th polynomial in the
+   * refined space into the space of this basis.
+   */
+  virtual Mat<dyn, dyn> restrict(int i_half) const = 0;
   //! \brief maximum stable CFL number for 1D convection
   double max_cfl() const;
   //! \brief ratio of time step for convection stage 2 to stage 1

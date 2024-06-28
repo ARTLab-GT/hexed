@@ -208,10 +208,11 @@ TEST_CASE("Block")
       elems.push_back(blocks.create_element({.52, .70, .60}, .02, 1));
       elems.push_back(blocks.create_element({.50, .68, .60}, .02, 2));
       elems.push_back(blocks.create_element({.50, .70, .58}, .02, 4));
+      elems.push_back(blocks.create_element({.50, .72, .58}, .02, 4));
       auto interior = blocks.interior_verts();
       auto boundary = blocks.boundary_verts();
-      REQUIRE(interior.size() == 20);
-      REQUIRE(boundary.size() == 12);
+      REQUIRE(interior.size() == 24);
+      REQUIRE(boundary.size() == 16);
       REQUIRE(&elems[0]->vertex(0) == &interior[0]);
       REQUIRE(&elems[1]->vertex(0) == &interior[8]);
       REQUIRE(&elems[1]->vertex(4) == &boundary[0]);
@@ -225,7 +226,7 @@ TEST_CASE("Block")
       REQUIRE_THAT(elems[0]->point({4, 2, 4}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.52, .71, .62}, hexed::math::Approx_equal()));
       REQUIRE_THAT(elems[0]->point({0, 0, 4}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.50, .70, .62}, hexed::math::Approx_equal()));
       auto faces = blocks.faces_3d();
-      REQUIRE(faces.size() == 3);
+      REQUIRE(faces.size() == 4);
       faces[0].edge(3).interior()(1)[2] += .002;
       faces[1].interior()(1)(1)[1] += .002;
       REQUIRE_THAT(elems[1]->point({4, 2, 4}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.54, .710, .622}, hexed::math::Approx_equal()));
@@ -239,8 +240,8 @@ TEST_CASE("Block")
       {
         auto interior = blocks.interior_verts();
         auto boundary = blocks.boundary_verts();
-        REQUIRE(interior.size() == 18);
-        REQUIRE(boundary.size() == 10);
+        REQUIRE(interior.size() == 22);
+        REQUIRE(boundary.size() == 14);
         REQUIRE(&elems[1]->vertex(0) == &elems[3]->vertex(5));
         REQUIRE(&elems[1]->vertex(2) == &elems[3]->vertex(7));
         REQUIRE(&elems[1]->vertex(4) == &elems[3]->vertex(4));
@@ -249,8 +250,11 @@ TEST_CASE("Block")
       REQUIRE_THAT(faces[2].edge(1).point({1}), Catch::Matchers::RangeEquals(faces[0].edge(2).point({1}), hexed::math::Approx_equal()));
       elems[2]->connect(*elems[1], {{0, 1}, {1, 0}});
       elems[3]->connect(*elems[2], {{1, 2}, {0, 0}});
-      REQUIRE_THAT(faces[0].edge(0).point({1}), Catch::Matchers::RangeEquals(faces[1].edge(1).point({1}), hexed::math::Approx_equal()));
-      REQUIRE_THAT(faces[1].edge(2).point({1}), Catch::Matchers::RangeEquals(faces[2].edge(2).point({1}), hexed::math::Approx_equal()));
+      REQ_VEC_EQ(faces[0].edge(0).point({1}), faces[1].edge(1).point({1}));
+      REQ_VEC_EQ(faces[1].edge(2).point({1}), faces[2].edge(2).point({1}));
+      elems[3]->connect(*elems[4], {{1, 1}, {1, 0}});
+      faces[2].edge(3).interior()(1)[2] += .002;
+      REQ_VEC_EQ(faces[3].edge(2).point({2}), faces[2].edge(3).point({2}));
     }
 
     SECTION("2D hanging") {
@@ -358,19 +362,31 @@ TEST_CASE("Block")
       };
       std::vector<std::unique_ptr<hexed::next::Mesh_element>> elems;
       hexed::Mat<3> zero = hexed::Mat<3>::Zero();
+      SECTION("same dim") {
+        elems.push_back(blocks.create_element(zero, 1., 2));
+        elems.push_back(blocks.create_element({-.5, 0., 0.}, .5, 2));
+        elems.push_back(blocks.create_element({-.5, 0., .5}, .5, 2));
+        elems.push_back(blocks.create_element({-.5, .5, 0.}, .5));
+        elems.push_back(blocks.create_element({-.5, .5, .5}, .5));
+        elems[0]->connect({elems[1].get(), elems[2].get(), elems[3].get(), elems[4].get()}, {{0, 0}, {0, 1}});
+        reset();
+        warp(blocks.faces_3d()[0].edge(0));
+        REQUIRE(blocks.faces_3d()[1].edge(1).point({2})(2) == Catch::Approx(.28));
+        REQUIRE(blocks.faces_3d()[2].edge(1).point({2})(2) == Catch::Approx(.78));
+      }
       SECTION("dim 0") {
         elems.push_back(blocks.create_element(zero, 1., 4));
-        elems.push_back(blocks.create_element({-.5, .0, .0}, .5, 4));
-        elems.push_back(blocks.create_element({-.5, .0, .5}, .5));
-        elems.push_back(blocks.create_element({-.5, .5, .0}, .5, 4));
-        elems.push_back(blocks.create_element({-.5, .5, .5}, .5));
-        elems[0]->connect({elems[1].get(), elems[2].get(), elems[3].get(), elems[4].get()}, {{1, 0}, {1, 1}});
+        elems.push_back(blocks.create_element({.0, .0, 1.}, .5));
+        elems.push_back(blocks.create_element({.0, .5, 1.}, .5, 3));
+        elems.push_back(blocks.create_element({.5, .0, 1.}, .5));
+        elems.push_back(blocks.create_element({.5, .5, 1.}, .5, 3));
+        elems[0]->connect({elems[1].get(), elems[2].get(), elems[3].get(), elems[4].get()}, {{1, 2}, {1, 0}});
         reset();
         warp(blocks.faces_3d()[0].edge(3));
-        REQUIRE(blocks.faces_3d()[1].edge(1).point({2})(0) == Catch::Approx(.125));
-        REQUIRE(blocks.faces_3d()[1].edge(1).point({2})(2) == Catch::Approx(.03));
-        REQUIRE(blocks.faces_3d()[2].edge(1).point({2})(0) == Catch::Approx(.625));
-        REQUIRE(blocks.faces_3d()[2].edge(1).point({2})(2) == Catch::Approx(.03));
+        REQUIRE(blocks.faces_3d()[1].edge(2).point({2})(0) == Catch::Approx(.25));
+        REQUIRE(blocks.faces_3d()[1].edge(2).point({2})(2) == Catch::Approx(.53));
+        REQUIRE(blocks.faces_3d()[2].edge(2).point({2})(0) == Catch::Approx(.75));
+        REQUIRE(blocks.faces_3d()[2].edge(2).point({2})(2) == Catch::Approx(.53));
       }
       SECTION("dim 1") {
         elems.push_back(blocks.create_element(zero, 1., 5));
@@ -386,7 +402,7 @@ TEST_CASE("Block")
         REQUIRE(blocks.faces_3d()[2].edge(3).point({2})(1) == Catch::Approx(.75));
         REQUIRE(blocks.faces_3d()[2].edge(3).point({2})(2) == Catch::Approx(.53));
       }
-      SECTION("stretched out of plane") {
+      SECTION("stretched in-plane") {
         elems.push_back(blocks.create_element(zero, 1., 3));
         elems.push_back(blocks.create_element({0., -.5, -.5}, .5, 4));
         elems.push_back(blocks.create_element({.5, -.5, -.5}, .5, 4));
@@ -398,7 +414,7 @@ TEST_CASE("Block")
         REQUIRE(blocks.faces_3d()[2].edge(3).point({2})(0) == Catch::Approx(.75));
         REQUIRE(blocks.faces_3d()[2].edge(3).point({2})(2) == Catch::Approx(-.22));
       }
-      SECTION("stretched in plane") {
+      SECTION("stretched out-of-plane") {
         elems.push_back(blocks.create_element(zero, 1., 2));
         elems.push_back(blocks.create_element({0., 1., 1.0}, .5));
         elems.push_back(blocks.create_element({0., 1., 1.5}, .5, 5));

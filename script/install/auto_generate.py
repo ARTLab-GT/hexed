@@ -54,7 +54,7 @@ def auto_generate(build_dir, max_row_size):
 
     for basis_params in [("Gauss_legendre", gauss_legendre), ("Gauss_lobatto", gauss_lobatto)]:
         name = basis_params[0]
-        include = f"#include <{name}.hpp>\n"
+        include = f"#include <hexed/assert.hpp>\n#include <hexed/{name}.hpp>\n"
         text = f"""namespace {name}_lookup
 {{"""
         for row_size in range(2, max_row_size + 1):
@@ -62,7 +62,7 @@ def auto_generate(build_dir, max_row_size):
             nodes = [(node + 1)/2 for node in nodes]
             weights = [weight/2 for weight in weights]
             basis = Basis(nodes, weights, calc_digits=calc_digits)
-            member_names = ["node", "weight", "diff_mat", "boundary", "orthogonal", "filter", "eigenvals"]
+            member_names = ["node", "weight", "diff_mat", "boundary", "orthogonal", "filter", "eigenvals", "prolong"]
 
             text += f"""
 const double node{row_size} [{row_size}] {{
@@ -119,17 +119,17 @@ const double filter{row_size} [{row_size**2}] {{
                 text += "\n"
             text += "};\n"
 
-            if "legendre" in name:
-                text += f"""
+            text += f"""
 const double prolong{row_size} [2*{row_size**2}] {{
 """
-                for i_half in [0, 1]:
-                    for i_operand in range(row_size):
-                        for i_result in range(row_size):
-                            text += f"{basis.prolong(i_result, i_operand, i_half)}, "
-                        text += "\n"
-                text += "};\n"
+            for i_half in [0, 1]:
+                for i_operand in range(row_size):
+                    for i_result in range(row_size):
+                        text += f"{basis.prolong(i_result, i_operand, i_half)}, "
+                    text += "\n"
+            text += "};\n"
 
+            if "legendre" in name:
                 text += f"""
 const double restrict{row_size} [2*{row_size**2}] {{
 """
@@ -139,7 +139,7 @@ const double restrict{row_size} [2*{row_size**2}] {{
                             text += f"{basis.restrict(i_result, i_operand, i_half)}, "
                         text += "\n"
                 text += "};\n"
-                member_names += ["prolong", "restrict"]
+                member_names.append("restrict")
 
         for member_name in member_names:
             text += f"""
@@ -153,7 +153,7 @@ const double* const {member_name}s [{max_row_size + 1 - min_row_size}] {{"""
 
         conditional_block = """
   if (({} > row_size) || (row_size > {})) {{
-    throw std::runtime_error("Not implemented for required row_size.");
+    HEXED_ASSERT(false, "Not implemented for required row_size.");
   }}""".format(min_row_size, max_row_size)
 
         text += f"""
@@ -222,14 +222,13 @@ double {name}::min_eig_diffusion() const
 
         placeholder_body = """
 {
-  throw std::runtime_error("Not implemented.");
+  HEXED_ASSERT(false, "Not implemented.");
   return Eigen::MatrixXd::Zero(1, 1);
 }
 """
 
         text += f"Eigen::MatrixXd {name}::prolong(int i_half) const"
-        if "legendre" in name:
-            text += f"""
+        text += f"""
 {{{conditional_block}
   Eigen::MatrixXd p (row_size, row_size);
   for (int i_entry = 0; i_entry < row_size*row_size; ++i_entry) {{
@@ -238,8 +237,6 @@ double {name}::min_eig_diffusion() const
   return p;
 }}
 """
-        else:
-            text += placeholder_body
 
         text += f"Eigen::MatrixXd {name}::restrict(int i_half) const"
         if "legendre" in name:

@@ -26,7 +26,7 @@ class Equidistant : public Basis
   Mat<dyn, dyn> boundary() const override;
   Mat<> orthogonal(int degree) const override; //!< placeholder (throws an exception)
   Mat<dyn, dyn> filter() const override; //!< placeholder (throws an exception)
-  Mat<dyn, dyn> prolong(int i_half) const override; //!< placeholder (throws an exception)
+  Mat<dyn, dyn> restrict(int i_half) const override; //!< placeholder (throws an exception)
   double min_eig_diffusion() const override; //!< placeholder (throws an exception)
 };
 

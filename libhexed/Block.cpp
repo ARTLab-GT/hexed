@@ -126,7 +126,7 @@ Mat<3> Edge::_point(std::vector<int> coords) const
     else {
       Mat<3, dyn> pts(3, row_size);
       for (int c = 0; c < row_size; ++c) pts(all, c) = _glued_to->point({c});
-      return pts*basis.restrict(_half)(coord, all).transpose();
+      return pts*basis.prolong(_half)(coord, all).transpose();
     }
   }
   if (coord ==       0) return _verts[0]->point({});
@@ -246,14 +246,14 @@ Mat<3> Mesh_element::_point(std::vector<int> coords) const
 }
 
 Mesh_element::Mesh_element(int nd, const Basis& b)
-: Block(nd, b.row_size), _bf(this), basis{b}
+: Block(nd, b.row_size), _i_bf{6}, _bf(this), basis{b}
 {
   for (int i_vert = 0; i_vert < math::pow(2, nd); ++i_vert) _verts.emplace_back(this);
 }
 
-int i_edge(Connection_direction dir, int side)
+int i_edge(Connection_direction dir, int side, int i_bf)
 {
-  return 2*(dir.i_dim[side] > 3 - dir.i_dim[0] - dir.i_dim[1]) + dir.face_sign[side];
+  return 2*(dir.i_dim[side] > 3 - dir.i_dim[side] - i_bf/2) + dir.face_sign[side];
 }
 
 void Mesh_element::connect(Mesh_element& other, Connection_direction dir)
@@ -266,7 +266,7 @@ void Mesh_element::connect(Mesh_element& other, Connection_direction dir)
   }
   if (n_dim == 3 && _bf) {
     HEXED_ASSERT(other._bf, "attempt to connect an element with a boundary face to one without");
-    other._sf->edge(i_edge(dir, 1)).glue(_sf->edge(i_edge(dir, 0)));
+    other._sf->edge(i_edge(dir, 1, other._i_bf)).glue(_sf->edge(i_edge(dir, 0, _i_bf)));
   }
 }
 
@@ -298,6 +298,22 @@ void Mesh_element::connect(std::vector<Mesh_element*> others, Connection_directi
       }
       if (do_it) others[face_inds[i_vert]]->vertex(inds[1][j_vert]).glue(*this, coords);
     }
+  }
+  if (n_dim == 3 && _bf && _i_bf/2 != dir.i_dim[0]) {
+    HEXED_ASSERT(dir.i_dim[0] == dir.i_dim[1] || _i_bf == 2*dir.i_dim[1] + dir.face_sign[1],
+      "boundary face mismatch on coarse element");
+    Edge& edge = _sf->edge(i_edge(dir, 0, _i_bf));
+    int edge_dim = _i_bf/2 > 3 - dir.i_dim[0] - _i_bf/2;
+    int strides [2] {vstride(2, edge_dim), vstride(2, !edge_dim)};
+    Array<Mesh_element*> to_glue({2}, [&](int i){return others[face_inds[_i_bf%2*strides[0] + i*strides[1]]];});
+    auto glue = [&](int i_glue, int i_half) {
+      HEXED_ASSERT(to_glue[i_glue]->_bf &&
+        (dir.i_dim[0] == dir.i_dim[1] || to_glue[i_glue]->_i_bf == 2*dir.i_dim[0] + dir.face_sign[0]),
+        "boundary face mismatch in on fine element");
+      to_glue[i_glue]->_sf->edge(i_edge(dir, 1, to_glue[i_glue]->_i_bf)).glue(edge, i_half);
+    };
+    if (to_glue[0] == to_glue[1]) glue(0, Edge::no);
+    else for (int i_glue = 0; i_glue < 2; ++i_glue) glue(i_glue, i_glue);
   }
 }
 
