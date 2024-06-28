@@ -10,7 +10,7 @@ void warp(hexed::next::Edge& e)
 {
   for (int i_node = 0; i_node < 3; ++i_node) {
     double n = e.basis.node(i_node + 1);
-    e.interior()(i_node)[2] += .16*(n - .5)*(n - .5);
+    e.interior()(i_node)[2] += .04 - .16*(n - .5)*(n - .5);
   }
 }
 
@@ -348,6 +348,14 @@ TEST_CASE("Block")
 
     SECTION("connection with edge gluing") {
       hexed::next::Mesh_blocks blocks(3, basis5);
+      auto reset = [&blocks]() {
+        for (unsigned i_face = 0; i_face < blocks.faces_3d().size(); ++i_face) {
+          for (int i_edge = 0; i_edge < 4; ++i_edge) {
+            blocks.faces_3d()[i_face].edge(i_edge).reset();
+          }
+          blocks.faces_3d()[i_face].reset();
+        }
+      };
       std::vector<std::unique_ptr<hexed::next::Mesh_element>> elems;
       hexed::Mat<3> zero = hexed::Mat<3>::Zero();
       SECTION("dim 0") {
@@ -357,16 +365,48 @@ TEST_CASE("Block")
         elems.push_back(blocks.create_element({-.5, .5, .0}, .5, 4));
         elems.push_back(blocks.create_element({-.5, .5, .5}, .5));
         elems[0]->connect({elems[1].get(), elems[2].get(), elems[3].get(), elems[4].get()}, {{1, 0}, {1, 1}});
-        for (unsigned i_face = 0; i_face < blocks.faces_3d().size(); ++i_face) {
-          for (int i_edge = 0; i_edge < 4; ++i_edge) {
-            blocks.faces_3d()[i_face].edge(i_edge).reset();
-          }
-        }
+        reset();
         warp(blocks.faces_3d()[0].edge(3));
         REQUIRE(blocks.faces_3d()[1].edge(1).point({2})(0) == Catch::Approx(.125));
         REQUIRE(blocks.faces_3d()[1].edge(1).point({2})(2) == Catch::Approx(.03));
-        REQUIRE(blocks.faces_3d()[2].edge(1).point({2})(0) == Catch::Approx(.125));
+        REQUIRE(blocks.faces_3d()[2].edge(1).point({2})(0) == Catch::Approx(.625));
         REQUIRE(blocks.faces_3d()[2].edge(1).point({2})(2) == Catch::Approx(.03));
+      }
+      SECTION("dim 1") {
+        elems.push_back(blocks.create_element(zero, 1., 5));
+        elems.push_back(blocks.create_element({1., 0., -.5}, .5));
+        elems.push_back(blocks.create_element({1., .5, -.5}, .5));
+        elems.push_back(blocks.create_element({1.5, 0., -.5}, .5, 1));
+        elems.push_back(blocks.create_element({1.5, .5, -.5}, .5, 1));
+        elems[0]->connect({elems[1].get(), elems[2].get(), elems[3].get(), elems[4].get()}, {{0, 2}, {1, 1}});
+        reset();
+        warp(blocks.faces_3d()[0].edge(1));
+        REQUIRE(blocks.faces_3d()[1].edge(3).point({2})(1) == Catch::Approx(.25));
+        REQUIRE(blocks.faces_3d()[1].edge(3).point({2})(2) == Catch::Approx(.53));
+        REQUIRE(blocks.faces_3d()[2].edge(3).point({2})(1) == Catch::Approx(.75));
+        REQUIRE(blocks.faces_3d()[2].edge(3).point({2})(2) == Catch::Approx(.53));
+      }
+      SECTION("stretched out of plane") {
+        elems.push_back(blocks.create_element(zero, 1., 3));
+        elems.push_back(blocks.create_element({0., -.5, -.5}, .5, 4));
+        elems.push_back(blocks.create_element({.5, -.5, -.5}, .5, 4));
+        elems[0]->connect({elems[1].get(), elems[1].get(), elems[2].get(), elems[2].get()}, {{2, 1}, {0, 1}});
+        reset();
+        warp(blocks.faces_3d()[0].edge(2));
+        REQUIRE(blocks.faces_3d()[1].edge(3).point({2})(0) == Catch::Approx(.25));
+        REQUIRE(blocks.faces_3d()[1].edge(3).point({2})(2) == Catch::Approx(-.22));
+        REQUIRE(blocks.faces_3d()[2].edge(3).point({2})(0) == Catch::Approx(.75));
+        REQUIRE(blocks.faces_3d()[2].edge(3).point({2})(2) == Catch::Approx(-.22));
+      }
+      SECTION("stretched in plane") {
+        elems.push_back(blocks.create_element(zero, 1., 2));
+        elems.push_back(blocks.create_element({0., 1., 1.0}, .5));
+        elems.push_back(blocks.create_element({0., 1., 1.5}, .5, 5));
+        elems[0]->connect({elems[1].get(), elems[2].get(), elems[1].get(), elems[2].get()}, {{2, 1}, {1, 0}});
+        reset();
+        warp(blocks.faces_3d()[0].edge(3));
+        REQUIRE(blocks.faces_3d()[1].edge(2).point({2})(0) == Catch::Approx(.375));
+        REQUIRE(blocks.faces_3d()[1].edge(2).point({2})(2) == Catch::Approx(1.54));
       }
     }
   }
