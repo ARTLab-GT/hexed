@@ -6,27 +6,43 @@
 namespace hexed
 {
 
+/*! \brief Abstract base class for implementing mutually-connected pointers.
+ * \details Specifies an interface that has a reference to a `T` (`mine()`),
+ * as well as a mechanism to connect with and disconnect from a `Ptr_base<T, U>`.
+ * Implements the mechanics of mutual connection and disconnection.
+ * Derived classes should implement `mine()`, `connect_self(Ptr_base<U, T>*)`, and `disconnect_self(Ptr_base<U, T>*)`
+ * and then implement their own interface that calls `connect(Ptr_base<U, T>*)` and `disconnect(Ptr_base<U, T>*)`.
+ */
 template <typename T, typename U>
 class Ptr_base
 {
   friend class Ptr_base<U, T>;
+
   protected:
+  //! \brief Do whatever I need to do to connect myself to this `Ptr_base` without worrying about the other side.
   virtual void connect_self(Ptr_base<U, T>*) = 0;
+  //! \brief Do whatever I need to do to disconnect myself from this `Ptr_base` without worrying about the other side.
+  //! \details What happends if I'm not already connected to the `Ptr_base` is up to the derived class.
   virtual void disconnect_self(Ptr_base<U, T>*) = 0;
+
+  //! \brief Mutually connect us by calling both our `connect_self`.
   void connect(Ptr_base<U, T>* other)
   {
     connect_self(other);
     if (other) other->connect_self(this);
   }
+
+  //! \brief Mutually disconnect us by calling both our `disconnect_self`.
   void disconnect(Ptr_base<U, T>* other)
   {
     if (other) other->disconnect_self(this);
     disconnect_self(other);
   }
+
   public:
   virtual ~Ptr_base() = default;
-  virtual T& mine() = 0;
-  virtual const T& mine() const = 0;
+  virtual T& mine() = 0; //!< \brief Obtain the object I am permanently associated with.
+  virtual const T& mine() const = 0; //!< \overload
 };
 
 /*! \brief For creating pairs of mutually connected pointers in a robust way.
@@ -38,7 +54,7 @@ class Ptr_base
  * A `Mutual_ptr` does not own any data.
  * It only manages pairing and unpairing.
  * A `Mutual_ptr<T, U>` is permanently associated with an object of type `T`
- * and can point to objects of type `U` by pairing with a `Mutual_ptr<U, T>`.
+ * and can point to objects of type `U` by pairing with a `Mutual_ptr<U, T>`, or more generally, any `Ptr_base<U, T>`.
  */
 template <typename T, typename U>
 class Mutual_ptr : public Ptr_base<T, U>
@@ -68,11 +84,13 @@ class Mutual_ptr : public Ptr_base<T, U>
   //! \brief Copying is not supported, since what that ought to do to pairs is unclear.
   Mutual_ptr(const Mutual_ptr&) = delete;
   Mutual_ptr& operator=(const Mutual_ptr&) = delete;
-  //! \brief Move semantics steal the other's pairing, if applicable
-  Mutual_ptr(Mutual_ptr&& other) : _mine{nullptr}, _partner{nullptr}
-  {
-    *this = std::move(other);
-  }
+  //! \see `operator=(Mutual_ptr&& other)`
+  Mutual_ptr(Mutual_ptr&& other) : _mine{nullptr}, _partner{nullptr} {*this = std::move(other);}
+
+  /*! \brief Move semantics steal the other's pairing.
+   * \details If `other` is unpaired, `this` will be unpaired.
+   * `other` is left unpaired with its `mine` intact.
+   */
   Mutual_ptr& operator=(Mutual_ptr&& other)
   {
     unpair();
@@ -90,8 +108,8 @@ class Mutual_ptr : public Ptr_base<T, U>
   void unpair() {this->disconnect(_partner);}
 
   operator bool() const {return _partner;} //!< \brief returns `true` iff currently paired
-  #define ACCESS \
-    /*! \brief the object that `this` is permanently associated with */ \
+
+  #define ACCESS(CONST) \
     CONST T& mine() CONST {return *_mine;} \
     /*! \brief if paired, the `Mutual_ptr` this is currently paired with; else `nullptr` */ \
     CONST Ptr_base<U, T>* partner() CONST {return _partner;} \
@@ -108,15 +126,17 @@ class Mutual_ptr : public Ptr_base<T, U>
       return _partner->mine(); \
     } \
 
-  #define CONST
-  ACCESS
-  #undef CONST
-  #define CONST const
-  ACCESS
-  #undef CONST
+  ACCESS()
+  ACCESS(const)
   #undef ACCESS
 };
 
+/*! \brief Like a `Mutual_ptr`, except it can accept multiple partners.
+ * \details Has a sequence of `partners()`, each of which is a `Ptr_base<U, T>`.
+ * Thus it can be connected to `Mutual_ptr`s or other `Multiple_ptr`s.
+ * Disconnecting (using `Multiple_ptr::remove`, `Mutual_ptr::unpair()`, or destroying the partners)
+ * will simply remove partners from the sequence.
+ */
 template <typename T, typename U>
 class Multiple_ptr : public Ptr_base<T, U>
 {
@@ -132,10 +152,21 @@ class Multiple_ptr : public Ptr_base<T, U>
   }
 
   public:
+  //! \brief Constructs a `Multiple_ptr` and permanently associates it with `data`.
+  //! \details `data` must not be null.
   Multiple_ptr(T* data) : _mine{data} {HEXED_ASSERT(_mine, "`Multiple_ptr` cannot be constructed from null data.");}
+  ~Multiple_ptr() {for (auto p : _partners) this->disconnect(p);}
+  //! \brief Cannot copy a `Multiple_ptr` because it is unclear what that should do to partners.
   Multiple_ptr(const Multiple_ptr&) = delete;
   Multiple_ptr& operator=(const Multiple_ptr&) = delete;
+  //! \see `operator=(Multiple_ptr&&)`
   Multiple_ptr(Multiple_ptr&& other) : _mine{nullptr} {*this = std::move(other);}
+
+  /*! \brief Moving a `Multiple_ptr` steals the others partners.
+   * \details `mine()` will point to `other.mine()`.
+   * Any partners `this` had before the move assignment will be removed.
+   * `other` will be left with its `mine()` intact and no partners.
+   */
   Multiple_ptr& operator=(Multiple_ptr&& other)
   {
     _mine = other._mine;
@@ -146,22 +177,23 @@ class Multiple_ptr : public Ptr_base<T, U>
     }
     return *this;
   }
-  ~Multiple_ptr() {for (auto p : _partners) this->disconnect(p);}
-  void add(Ptr_base<U, T>& other) {this->connect(&other);}
-  void remove(Ptr_base<U, T>& other) {this->disconnect(&other);}
 
-  #define ACCESS \
+  //! \brief Adds `other` to the list of partners and reciprocally connects it with `this`.
+  void add(Ptr_base<U, T>& other) {this->connect(&other);}
+  //! \brief Removes `other` from the list of partners and reciprocally disconnects it from `this`.
+  void remove(Ptr_base<U, T>& other) {this->disconnect(&other);}
+  //! \brief Returns `true` iff `this` has at least 1 partner.
+  operator bool() const {return !_partners.empty();}
+
+  #define ACCESS(CONST) \
     CONST T& mine() CONST {return *_mine;} \
+    /*! \brief Obtains the sequence of partners, in no particular order. */ \
     std::vector<CONST Ptr_base<U, T>*> partners() CONST { \
       return _partners; \
     } \
 
-  #define CONST
-  ACCESS
-  #undef CONST
-  #define CONST const
-  ACCESS
-  #undef CONST
+  ACCESS()
+  ACCESS(const)
   #undef ACCESS
 };
 

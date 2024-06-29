@@ -92,7 +92,9 @@ TEST_CASE("Multiple_ptr") {
   std::unique_ptr<hexed::Multiple_ptr<std::string, int>> multi1(new hexed::Multiple_ptr<std::string, int>(&s2));
 
   SECTION("connecting and disconnecting") {
+    REQUIRE(!*multi0);
     multi0->add(*mutual0);
+    REQUIRE(*multi0);
     mutual1->pair(*multi0);
     multi1->add(*multi0);
     REQUIRE(&multi0->mine() == &i);
