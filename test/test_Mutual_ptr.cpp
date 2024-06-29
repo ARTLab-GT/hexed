@@ -77,3 +77,35 @@ TEST_CASE("Mutual_ptr")
     REQUIRE(!pdi);
   }
 }
+
+#define REQ_CONTENTS(vec, ...) REQUIRE_THAT(vec, Catch::Matchers::UnorderedRangeEquals(__VA_ARGS__));
+
+TEST_CASE("Multiple_ptr") {
+  REQUIRE_THROWS(hexed::Multiple_ptr<int, std::string>(nullptr));
+  int i = 43;
+  std::string s0 = "ubiquitous";
+  std::string s1 = "mendacious";
+  std::string s2 = "polyglottal";
+  std::unique_ptr<hexed::Multiple_ptr<int, std::string>> multi0(new hexed::Multiple_ptr<int, std::string>(&i));
+  std::unique_ptr<hexed::Mutual_ptr<std::string, int>> mutual0(new hexed::Mutual_ptr<std::string, int>(&s0));
+  std::unique_ptr<hexed::Mutual_ptr<std::string, int>> mutual1(new hexed::Mutual_ptr<std::string, int>(&s1));
+  std::unique_ptr<hexed::Multiple_ptr<std::string, int>> multi1(new hexed::Multiple_ptr<std::string, int>(&s2));
+  multi0->add(*mutual0);
+  mutual1->pair(*multi0);
+  multi1->add(*multi0);
+  REQUIRE(&multi0->mine() == &i);
+  REQ_CONTENTS(multi0->partners(), std::vector<void*>{mutual0.get(), mutual1.get(), multi1.get()});
+  REQ_CONTENTS(multi1->partners(), std::vector<void*>{multi0.get()});
+  REQUIRE(mutual0->partner() == multi0.get());
+  std::unique_ptr<hexed::Multiple_ptr<int, std::string>> multi2(new hexed::Multiple_ptr<int, std::string>(&i));
+  multi2->add(*mutual0);
+  REQ_CONTENTS(multi0->partners(), std::vector<void*>{mutual1.get(), multi1.get()});
+  REQ_CONTENTS(multi2->partners(), std::vector<void*>{mutual0.get()});
+  multi1.reset();
+  multi2.reset();
+  REQUIRE(!mutual0);
+  REQ_CONTENTS(multi0->partners(), std::vector<void*>{mutual1.get()});
+  multi0->add(*mutual0);
+  multi0->remove(multi1.get());
+  REQ_CONTENTS(multi0->partners(), std::vector<void*>{mutual0.get()});
+}

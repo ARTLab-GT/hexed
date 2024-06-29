@@ -43,8 +43,8 @@ class Vertex : public Block
   inline Vertex(Mat<3> pos, int row_size) : Block{0, row_size}, pos{pos}, _alive{true}, _mass{1}, _glued_to(this) {}
   void eat(Vertex& other);
   void glue(Mesh_element& to, std::vector<double> coords);
-  void pair(Mutual_ptr<Edge, Vertex>& ptr);
-  void pair(Mutual_ptr<Mesh_element, Vertex>& ptr);
+  void pair(Ptr_base<Edge, Vertex>& ptr);
+  void pair(Ptr_base<Mesh_element, Vertex>& ptr);
   void purge();
   inline bool alive() {return _alive;}
 };
@@ -59,7 +59,7 @@ class Boundary_interior : public Block
   Boundary_interior(int n_dim, const Basis& basis);
   virtual void reset() = 0;
   inline Array<double> interior() {return _interior;};
-  inline void pair(Mutual_ptr<Mesh_element, Boundary_interior>& ptr) {_elem.pair(ptr);}
+  inline void pair(Ptr_base<Mesh_element, Boundary_interior>& ptr) {_elem.pair(ptr);}
   inline bool alive() {return _elem;}
 };
 

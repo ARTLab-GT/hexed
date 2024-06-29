@@ -79,13 +79,13 @@ void Vertex::glue(Mesh_element& to, std::vector<double> coords)
   _glued_coords = coords;
 }
 
-void Vertex::pair(Mutual_ptr<Edge, Vertex>& ptr)
+void Vertex::pair(Ptr_base<Edge, Vertex>& ptr)
 {
   _edges.emplace_back(this);
   _edges.back().pair(ptr);
 }
 
-void Vertex::pair(Mutual_ptr<Mesh_element, Vertex>& ptr)
+void Vertex::pair(Ptr_base<Mesh_element, Vertex>& ptr)
 {
   _elems.emplace_back(this);
   _elems.back().pair(ptr);
