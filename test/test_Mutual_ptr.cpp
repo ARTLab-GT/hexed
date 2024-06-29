@@ -101,11 +101,11 @@ TEST_CASE("Multiple_ptr") {
   multi2->add(*mutual0);
   REQ_CONTENTS(multi0->partners(), std::vector<void*>{mutual1.get(), multi1.get()});
   REQ_CONTENTS(multi2->partners(), std::vector<void*>{mutual0.get()});
+  multi0->remove(*mutual1);
+  REQ_CONTENTS(multi0->partners(), std::vector<void*>{multi1.get()});
+  REQUIRE(!*mutual1);
   multi1.reset();
   multi2.reset();
-  REQUIRE(!mutual0);
-  REQ_CONTENTS(multi0->partners(), std::vector<void*>{mutual1.get()});
-  multi0->add(*mutual0);
-  multi0->remove(multi1.get());
-  REQ_CONTENTS(multi0->partners(), std::vector<void*>{mutual0.get()});
+  REQUIRE(!*mutual0);
+  REQUIRE(multi0->partners().size() == 0);
 }

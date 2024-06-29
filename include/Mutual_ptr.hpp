@@ -124,15 +124,18 @@ class Multiple_ptr : public Ptr_base<T, U>
   std::vector<Ptr_base<U, T>*> _partners;
   void connect_self(Ptr_base<U, T>* other) override
   {
+    _partners.push_back(other);
   }
   void disconnect_self(Ptr_base<U, T>* other) override
   {
+    std::erase(_partners, other);
   }
 
   public:
-  Multiple_ptr(T* data) {}
-  void add(Ptr_base<U, T>& other) {}
-  void remove(Ptr_base<U, T>*) {}
+  Multiple_ptr(T* data) : _mine{data} {HEXED_ASSERT(_mine, "`Multiple_ptr` cannot be constructed from null data.");}
+  ~Multiple_ptr() {for (auto p : _partners) this->disconnect(p);}
+  void add(Ptr_base<U, T>& other) {this->connect(&other);}
+  void remove(Ptr_base<U, T>& other) {this->disconnect(&other);}
 
   #define ACCESS \
     CONST T& mine() CONST {return *_mine;} \
