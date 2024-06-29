@@ -90,22 +90,44 @@ TEST_CASE("Multiple_ptr") {
   std::unique_ptr<hexed::Mutual_ptr<std::string, int>> mutual0(new hexed::Mutual_ptr<std::string, int>(&s0));
   std::unique_ptr<hexed::Mutual_ptr<std::string, int>> mutual1(new hexed::Mutual_ptr<std::string, int>(&s1));
   std::unique_ptr<hexed::Multiple_ptr<std::string, int>> multi1(new hexed::Multiple_ptr<std::string, int>(&s2));
-  multi0->add(*mutual0);
-  mutual1->pair(*multi0);
-  multi1->add(*multi0);
-  REQUIRE(&multi0->mine() == &i);
-  REQ_CONTENTS(multi0->partners(), std::vector<void*>{mutual0.get(), mutual1.get(), multi1.get()});
-  REQ_CONTENTS(multi1->partners(), std::vector<void*>{multi0.get()});
-  REQUIRE(mutual0->partner() == multi0.get());
-  std::unique_ptr<hexed::Multiple_ptr<int, std::string>> multi2(new hexed::Multiple_ptr<int, std::string>(&i));
-  multi2->add(*mutual0);
-  REQ_CONTENTS(multi0->partners(), std::vector<void*>{mutual1.get(), multi1.get()});
-  REQ_CONTENTS(multi2->partners(), std::vector<void*>{mutual0.get()});
-  multi0->remove(*mutual1);
-  REQ_CONTENTS(multi0->partners(), std::vector<void*>{multi1.get()});
-  REQUIRE(!*mutual1);
-  multi1.reset();
-  multi2.reset();
-  REQUIRE(!*mutual0);
-  REQUIRE(multi0->partners().size() == 0);
+
+  SECTION("connecting and disconnecting") {
+    multi0->add(*mutual0);
+    mutual1->pair(*multi0);
+    multi1->add(*multi0);
+    REQUIRE(&multi0->mine() == &i);
+    REQ_CONTENTS(multi0->partners(), std::vector<void*>{mutual0.get(), mutual1.get(), multi1.get()});
+    REQ_CONTENTS(multi1->partners(), std::vector<void*>{multi0.get()});
+    REQUIRE(mutual0->partner() == multi0.get());
+    std::unique_ptr<hexed::Multiple_ptr<int, std::string>> multi2(new hexed::Multiple_ptr<int, std::string>(&i));
+    multi2->add(*mutual0);
+    REQ_CONTENTS(multi0->partners(), std::vector<void*>{mutual1.get(), multi1.get()});
+    REQ_CONTENTS(multi2->partners(), std::vector<void*>{mutual0.get()});
+    multi0->remove(*mutual1);
+    REQ_CONTENTS(multi0->partners(), std::vector<void*>{multi1.get()});
+    REQUIRE(!*mutual1);
+    multi1.reset();
+    multi2.reset();
+    REQUIRE(!*mutual0);
+    REQUIRE(multi0->partners().size() == 0);
+  }
+
+  SECTION("move semantics") {
+    int j = 0;
+    hexed::Multiple_ptr<int, std::string> multi3(&i);
+    hexed::Multiple_ptr<int, std::string> multi4(&j);
+    hexed::Multiple_ptr<std::string, int> multi5(&s1);
+    mutual0->pair(multi3);
+    multi3.add(*multi1);
+    multi4.add(multi5);
+    multi4 = std::move(multi3);
+    REQUIRE(mutual0->partner() == &multi4);
+    REQ_CONTENTS(multi4.partners(), std::vector<void*>{mutual0.get(), multi1.get()});
+    REQUIRE(&multi4.mine() == &i);
+    REQUIRE(multi3.partners().empty());
+    hexed::Multiple_ptr<int, std::string> multi6(std::move(multi4));
+    REQUIRE(&multi4.mine() == &i);
+    REQ_CONTENTS(multi6.partners(), std::vector<void*>{mutual0.get(), multi1.get()});
+    REQUIRE(multi4.partners().empty());
+  }
 }

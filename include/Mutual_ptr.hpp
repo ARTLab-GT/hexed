@@ -133,6 +133,19 @@ class Multiple_ptr : public Ptr_base<T, U>
 
   public:
   Multiple_ptr(T* data) : _mine{data} {HEXED_ASSERT(_mine, "`Multiple_ptr` cannot be constructed from null data.");}
+  Multiple_ptr(const Multiple_ptr&) = delete;
+  Multiple_ptr& operator=(const Multiple_ptr&) = delete;
+  Multiple_ptr(Multiple_ptr&& other) : _mine{nullptr} {*this = std::move(other);}
+  Multiple_ptr& operator=(Multiple_ptr&& other)
+  {
+    _mine = other._mine;
+    for (auto p : _partners) this->disconnect(p);
+    for (auto p : other._partners) {
+      other.disconnect(p);
+      this->connect(p);
+    }
+    return *this;
+  }
   ~Multiple_ptr() {for (auto p : _partners) this->disconnect(p);}
   void add(Ptr_base<U, T>& other) {this->connect(&other);}
   void remove(Ptr_base<U, T>& other) {this->disconnect(&other);}
