@@ -71,7 +71,7 @@ class Mortal_ptr : public Mortal_ptr_base
   #define ACCESS(CONST) \
     CONST T* get() CONST \
     { \
-      T* data = dynamic_cast<T*>(_data); \
+      CONST T* data = dynamic_cast<T*>(_data); \
       HEXED_ASSERT(!data == !_data, "`Mortal_ptr` is pointing to an object of incompatible type."); \
       return data; \
     } \
@@ -79,7 +79,7 @@ class Mortal_ptr : public Mortal_ptr_base
     CONST T* operator->() CONST {return get();} \
     CONST T& value() CONST \
     { \
-      T* data = get(); \
+      CONST T* data = get(); \
       HEXED_ASSERT(data, "`Mortal_ptr` is null"); \
       return *data; \
     } \

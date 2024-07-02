@@ -37,5 +37,20 @@ T& printed(T& t)
 template <typename T> T* new_copy(const T& t) {return new T(t);} //!< useful for cppyy which doesn't like to relinquish ownership
 template <typename T> T* new_move(T&& t) {return new T(t);} //!< useful for cppyy which doesn't like to relinquish ownership
 
+#define HEXED_QUAL_PTR_ACCESS(CONST, GET) \
+  CONST T* get() CONST {GET(CONST)} \
+  CONST T& operator*() CONST {return *get();} \
+  CONST T* operator->() CONST {return get();} \
+  CONST T& value() CONST \
+  { \
+    CONST T* data = get(); \
+    HEXED_ASSERT(data, "pointer object is null"); \
+    return *data; \
+  } \
+
+#define HEXED_PTR_ACCESS(GET) \
+  HEXED_QUAL_PTR_ACCESS(, GET) \
+  HEXED_QUAL_PTR_ACCESS(const, GET) \
+
 }
 #endif
