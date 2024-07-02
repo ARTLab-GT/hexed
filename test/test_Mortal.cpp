@@ -12,7 +12,7 @@ TEST_CASE("Mortal")
 {
   Derived d0{1903};
   REQUIRE(d0.n_pointers() == 0);
-  hexed::Mortal_ptr<Derived> p0{};
+  hexed::Mortal_ptr<Derived> p0;
   REQUIRE(!p0);
   REQUIRE(p0.get() == nullptr);
   REQUIRE_THROWS(p0.value());
@@ -45,12 +45,14 @@ TEST_CASE("Mortal")
   REQUIRE(d0.n_pointers() == 1);
 
   SECTION("Mortal(Mortal&&)") {
+    REQUIRE(p0.get() == &d0);
     Derived d2 = std::move(d0);
     REQUIRE(d2.i == 1903);
     REQUIRE(d2.n_pointers() == 1);
     REQUIRE(p0.get() == &d2);
     hexed::Mortal m;
-    REQUIRE_THROWS(m = std::move(d2));
+    m = std::move(d2);
+    REQUIRE_THROWS(p0.get());
   }
 
   SECTION("Mortal_ptr(Mortal_ptr&&)") {

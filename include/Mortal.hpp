@@ -2,6 +2,8 @@
 #define HEXED_MORTAL_HPP_
 
 #include <vector>
+#include <utility>
+#include "assert.hpp"
 
 namespace hexed
 {
@@ -17,41 +19,69 @@ class Mortal
   inline Mortal(Mortal&& other) {*this = std::move(other);}
   Mortal& operator=(Mortal&&);
   virtual ~Mortal();
-  inline int n_pointers() const {return 0;}
+  inline std::size_t n_pointers() const {return _ptrs.size();}
 };
 
 class Mortal_ptr_base
 {
   friend class Mortal;
+
   protected:
-  virtual void _connect(Mortal*) = 0;
-  virtual void _disconnect(Mortal*) = 0;
+  void _connect(Mortal*);
+  void _disconnect(Mortal*);
+  virtual void _set(Mortal*) = 0;
+  virtual void _unset(Mortal*) = 0;
+
   public:
-  Mortal_ptr_base() = default;
-  inline Mortal_ptr_base(Mortal_ptr_base&& other) {*this = std::move(other);}
-  Mortal_ptr_base& operator=(Mortal_ptr_base&&);
-  virtual ~Mortal_ptr_base() {}
+  virtual ~Mortal_ptr_base() = default;
 };
 
 template <typename T>
 class Mortal_ptr : public Mortal_ptr_base
 {
-  T* _data;
-  void _connect(Mortal* data) override {}
-  void _disconnect(Mortal* data) override {}
+  Mortal* _data;
+
+  void _set(Mortal* data) override
+  {
+    _disconnect(_data);
+    _data = data;
+  }
+
+  void _unset(Mortal* data) override
+  {
+    HEXED_ASSERT(data == _data, "cannot disconnect from a pointer I am not currently connected to");
+    _data = nullptr;
+  }
 
   public:
   Mortal_ptr(T* data = nullptr) {set(data);}
-  void set(T* data = nullptr) {}
-  operator bool() const {return false;}
+  Mortal_ptr(Mortal_ptr&& other) {*this = std::move(other);}
+  ~Mortal_ptr() {_disconnect(_data);}
+
+  Mortal_ptr& operator=(Mortal_ptr&& other)
+  {
+    _connect(other._data);
+    other.set();
+    return *this;
+  }
+
+  void set(T* data = nullptr) {_connect(data);}
+  operator bool() const {return _data;}
 
   #define ACCESS(CONST) \
-    CONST T* get() CONST {return _data;} \
-    CONST T& operator*() CONST {return *_data;} \
-    CONST T* operator->() CONST {return _data;} \
+    CONST T* get() CONST \
+    { \
+      T* data = dynamic_cast<T*>(_data); \
+      HEXED_ASSERT(!data == !_data, "`Mortal_ptr` is pointing to an object of incompatible type."); \
+      return data; \
+    } \
+    CONST T& operator*() CONST {return *get();} \
+    CONST T* operator->() CONST {return get();} \
     CONST T& value() CONST \
     { \
-      return *_data; \
+      T* data = get(); \
+      HEXED_ASSERT(data, "`Mortal_ptr` is null"); \
+      return *data; \
     } \
 
   ACCESS()
