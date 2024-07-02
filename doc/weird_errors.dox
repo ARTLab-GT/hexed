@@ -21,3 +21,11 @@ class Mesh_element : public Block
 
 Mesh_element::Mesh_element(...) : Block(n_dim, ...)
 ~~~
+
+__Error:__
+~~~{.unparsed}
+undefined reference to `vtable for hexed::Mortal'
+~~~
+
+__Solution:__
+`hexed::Mortal` had declared a virtual destructor in the header file which was never defined in the `.cpp` file.
