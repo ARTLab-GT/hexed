@@ -110,8 +110,7 @@ Boundary_interior::Boundary_interior(int n_dim, const Basis& b)
 
 Edge::Edge(Vertex& vertex0, Vertex& vertex1, const Basis& b) :
   Boundary_interior(1, b),
-  _verts{this, this},
-  _glued_to{this}
+  _verts{this, this}
 {
   vertex0.pair(_verts[0]);
   vertex1.pair(_verts[1]);
@@ -146,21 +145,8 @@ const int Edge::no = -1;
 
 void Edge::glue(Edge& other, int half)
 {
-  other._glued.emplace_back(&other);
-  _glued_to.pair(other._glued.back());
+  _glued_to.set(&other);
   _half = half;
-}
-
-void Edge::unglue()
-{
-  Edge& other = _glued_to.value();
-  _glued_to.unpair();
-  std::erase(other._glued, false);
-}
-
-bool Edge::glued() const
-{
-  return _glued_to;
 }
 
 Mat<3> Surface_face::_point(std::vector<int> coords) const

@@ -4,6 +4,7 @@
 #include <memory>
 #include "math.hpp"
 #include "Mutual_ptr.hpp"
+#include "Mortal.hpp"
 #include "Basis.hpp"
 #include "Array.hpp"
 #include "Sequence.hpp"
@@ -12,7 +13,7 @@
 namespace hexed::next
 {
 
-class Block
+class Block : public Mortal
 {
   protected:
   virtual Mat<3> _point(std::vector<int> node_coords) const = 0;
@@ -20,7 +21,7 @@ class Block
   const int n_dim;
   const int row_size;
   inline Block(int n_dim, int row_size) : n_dim{n_dim}, row_size{row_size} {}
-  virtual ~Block() = default;
+  Block(Block&&) = default;
   Mat<3> point(std::vector<int> node_coords) const;
   virtual Array<double> points() const;
   static void visualize(std::string format, std::string file_name, const std::vector<Block*>&, double time = 0.);
@@ -66,17 +67,16 @@ class Boundary_interior : public Block
 class Edge : public Boundary_interior
 {
   std::array<Mutual_ptr<Edge, Vertex>, 2> _verts;
-  Mutual_ptr<Edge, Edge> _glued_to;
+  Mortal_ptr<Edge> _glued_to;
   int _half;
-  std::vector<Mutual_ptr<Edge, Edge>> _glued;
   Mat<3> _point(std::vector<int>) const override;
   public:
   Edge(Vertex& vertex0, Vertex& vertex1, const Basis&);
   void reset() override;
   static const int no;
   void glue(Edge& other, int half = no);
-  void unglue();
-  bool glued() const;
+  void unglue() {_glued_to.set();}
+  bool glued() const {return _glued_to;}
 };
 
 class Surface_face : public Boundary_interior

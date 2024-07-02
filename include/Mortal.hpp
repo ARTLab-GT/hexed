@@ -54,8 +54,8 @@ class Mortal_ptr : public Mortal_ptr_base
   }
 
   public:
-  Mortal_ptr(T* data = nullptr) {set(data);}
-  Mortal_ptr(Mortal_ptr&& other) {*this = std::move(other);}
+  Mortal_ptr(T* data = nullptr) : _data{nullptr} {set(data);}
+  Mortal_ptr(Mortal_ptr&& other) : _data{nullptr} {*this = std::move(other);}
   ~Mortal_ptr() {_disconnect(_data);}
 
   Mortal_ptr& operator=(Mortal_ptr&& other)
