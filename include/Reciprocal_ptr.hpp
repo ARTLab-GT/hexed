@@ -15,6 +15,18 @@ class Reciprocal_base : public Mortal
   virtual void _set(Reciprocal_base<U, T>&) = 0;
   virtual void _unset(Reciprocal_base<U, T>&) = 0;
 
+  void _connect(Reciprocal_base<U, T>& other)
+  {
+    _set(other);
+    other._set(*this);
+  }
+
+  void _disconnect(Reciprocal_base<U, T>& other)
+  {
+    other._unset(*this);
+    _unset(other);
+  }
+
   public:
   Mortal_ptr<T> mine;
   Reciprocal_base(T* data) : mine(data) {}
@@ -25,19 +37,34 @@ class Reciprocal_ptr : public Reciprocal_base<T, U>
 {
   Mortal_ptr<Reciprocal_base<U, T>> _partner;
 
-  void _set(Reciprocal_base<U, T>&) override {}
-  void _unset(Reciprocal_base<U, T>&) override {}
+  void _set(Reciprocal_base<U, T>& other) override
+  {
+    unpair();
+    _partner.set(&other);
+  }
+
+  void _unset(Reciprocal_base<U, T>& other) override
+  {
+    HEXED_ASSERT(&other == _partner.get(), "disconnecting a `Reciprocal_ptr` from a pointer it is not connected to");
+    _partner.set();
+  }
 
   public:
   Reciprocal_ptr(T* data) : Reciprocal_base<T, U>{data} {}
-  void pair(Reciprocal_base<U, T>& other) {}
-  void unpair() {}
-  bool paired() const {return false;}
-  operator bool() const {return false;}
+  void pair(Reciprocal_base<U, T>& other) {this->_connect(other);}
+  void unpair() {if (_partner) this->_disconnect(*_partner);}
+  bool paired() const {return _partner;}
+
+  operator bool() const
+  {
+    if (_partner) return _partner->mine;
+    return false;
+  }
 
   #define ACCESS(CONST) \
     CONST U* get() CONST \
     { \
+      if (_partner) return _partner->mine.get(); \
       return nullptr; \
     } \
     CONST U& operator*() CONST {return *get();} \

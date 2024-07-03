@@ -54,6 +54,7 @@ TEST_CASE("Reciprocal_ptr")
   REQUIRE(!ptr1);
   REQUIRE(!ptr0.paired());
   REQUIRE(!ptr1.paired());
+  ptr0.unpair();
   ptr0.pair(ptr1);
 
   {
@@ -75,7 +76,7 @@ TEST_CASE("Reciprocal_ptr")
   REQUIRE(!ptr1.paired());
   REQUIRE(ptr1.get() == nullptr);
 
-  REQUIRE(ptr0.paired());
+  ptr0.pair(ptr1);
   hexed::Reciprocal_ptr<Derived0, Derived1> ptr3(std::move(ptr0));
   REQUIRE(ptr3.mine.get() == &d01);
   REQUIRE(!ptr0);
