@@ -14,34 +14,30 @@ class Reciprocal_base : public Mortal
   protected:
   virtual void _set(Reciprocal_base<U, T>&) = 0;
   virtual void _unset(Reciprocal_base<U, T>&) = 0;
-  void _connect(Reciprocal_ptr<U, T>& other) {}
-  void _disconnect(Reciprocal_ptr<U, T>& other) {}
+  void _connect(Reciprocal_base<U, T>& other) {}
+  void _disconnect(Reciprocal_base<U, T>& other) {}
 
   public:
-  virtual ~Reciprocal_base() = default;
-  virtual T* mine() = 0;
-  virtual const T* mine() const = 0;
+  Mortal_ptr<T> mine;
+  Reciprocal_base(T* data) : mine(data) {}
 };
 
 template <typename T, typename U>
-class Reciprocal_ptr : public Reciprocal_base
+class Reciprocal_ptr : public Reciprocal_base<T, U>
 {
-  Mortal_ptr<T> _mine;
-  Mortal_ptr<Reciprocal_ptr<U, T>> _partner;
+  Mortal_ptr<Reciprocal_base<U, T>> _partner;
 
   void _set(Reciprocal_base<U, T>&) override {}
   void _unset(Reciprocal_base<U, T>&) override {}
 
   public:
-  Mortal_ptr(T* data) {}
-  virtual ~Mortal_ptr() {}
+  Reciprocal_ptr(T* data) : Reciprocal_base<T, U>{data} {}
   void pair(Reciprocal_base<U, T>& other) {}
   void unpair() {}
   bool paired() const {return false;}
   operator bool() const {return false;}
 
   #define ACCESS(CONST) \
-    CONST T* mine() CONST {return nullptr;} \
     CONST U* get() CONST \
     { \
       return nullptr; \

@@ -16,9 +16,11 @@ class Mortal
   std::vector<Mortal_ptr_base*> _ptrs;
   public:
   Mortal() = default;
+  Mortal(const Mortal&) = delete;
   inline Mortal(Mortal&& other) {*this = std::move(other);}
-  Mortal& operator=(Mortal&&);
   virtual ~Mortal();
+  Mortal& operator=(const Mortal&) = delete;
+  Mortal& operator=(Mortal&&);
   inline std::size_t n_pointers() const {return _ptrs.size();}
 };
 
@@ -55,9 +57,11 @@ class Mortal_ptr : public Mortal_ptr_base
 
   public:
   Mortal_ptr(T* data = nullptr) : _data{nullptr} {set(data);}
+  Mortal_ptr(const Mortal_ptr&) = delete;
   Mortal_ptr(Mortal_ptr&& other) : _data{nullptr} {*this = std::move(other);}
   ~Mortal_ptr() {_disconnect(_data);}
 
+  Mortal_ptr& operator=(const Mortal_ptr&) = delete;
   Mortal_ptr& operator=(Mortal_ptr&& other)
   {
     _connect(other._data);
