@@ -39,14 +39,14 @@ TEST_CASE("Reciprocal_ptr")
   REQUIRE(ptr1->s == "ubiquitous");
   REQUIRE(ptr1.value().s == "ubiquitous");
 
-  ptr0.mine.set();
+  ptr0.set();
   REQUIRE(ptr0);
   REQUIRE(!ptr1);
   REQUIRE(ptr0.paired());
   REQUIRE(ptr1.paired());
   REQUIRE(ptr1.get() == nullptr);
   Derived0 d01("mendacious");
-  ptr0.mine.set(&d01);
+  ptr0.set(&d01);
   REQUIRE(ptr1.get() == &d01);
 
   ptr0.unpair();
@@ -78,7 +78,7 @@ TEST_CASE("Reciprocal_ptr")
 
   ptr0.pair(ptr1);
   hexed::Reciprocal_ptr<Derived0, Derived1> ptr3(std::move(ptr0));
-  REQUIRE(ptr3.mine.get() == &d01);
+  REQUIRE(ptr3.mine() == &d01);
   REQUIRE(!ptr0);
   REQUIRE(ptr1);
   REQUIRE(ptr3);

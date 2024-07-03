@@ -14,8 +14,6 @@ class Base
   protected:
   virtual void _set(Base<U, T>&) = 0;
   virtual void _unset(Base<U, T>&) = 0;
-  virtual T* _mine() {return nullptr;}
-  virtual const T* _mine() const {return nullptr;}
 
   void _connect(Base<U, T>& other)
   {
@@ -28,6 +26,10 @@ class Base
     other._unset(*this);
     _unset(other);
   }
+
+  public:
+  virtual T* mine() {return nullptr;}
+  virtual const T* mine() const {return nullptr;}
 };
 
 template <typename T, typename U>
@@ -70,6 +72,7 @@ class Single : public Base<T, U>
 
   void pair(Base<U, T>& other) {this->_connect(other);}
   void unpair() {if (_partner) this->_disconnect(*_partner);}
+  bool paired() const {return _get();}
 };
 
 template <typename T, typename U>
