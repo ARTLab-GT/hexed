@@ -14,8 +14,6 @@ class Reciprocal_base : public Mortal
   protected:
   virtual void _set(Reciprocal_base<U, T>&) = 0;
   virtual void _unset(Reciprocal_base<U, T>&) = 0;
-  void _connect(Reciprocal_base<U, T>& other) {}
-  void _disconnect(Reciprocal_base<U, T>& other) {}
 
   public:
   Mortal_ptr<T> mine;
