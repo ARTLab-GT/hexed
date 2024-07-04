@@ -19,7 +19,7 @@ class Reciprocal_ptr : public mutual::Single<T, U>, public Pointer<U>
   #define ACCESS(CONST) \
     CONST U* get() CONST \
     { \
-      if (this->paired()) return this->_yours(*this->_get()); \
+      if (this->paired()) return this->_yours(*this->partner()); \
       return nullptr; \
     } \
 

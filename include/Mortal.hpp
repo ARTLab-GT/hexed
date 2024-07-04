@@ -30,8 +30,8 @@ class Mortal_ptr : protected mutual::Single<void, void>, public Pointer<T>
   #define ACCESS(CONST) \
     CONST T* get() CONST \
     { \
-      CONST T* data = dynamic_cast<CONST T*>(_get()); \
-      HEXED_ASSERT(!data == !_get(), "`Mortal_ptr` is pointing to an object of incompatible type."); \
+      CONST T* data = dynamic_cast<CONST T*>(partner()); \
+      HEXED_ASSERT(!data == !partner(), "`Mortal_ptr` is pointing to an object of incompatible type."); \
       return data; \
     } \
 

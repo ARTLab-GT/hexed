@@ -79,13 +79,13 @@ void Vertex::glue(Mesh_element& to, std::vector<double> coords)
   _glued_coords = coords;
 }
 
-void Vertex::pair(Ptr_base<Edge, Vertex>& ptr)
+void Vertex::pair(mutual::Base<Edge, Vertex>& ptr)
 {
   _edges.emplace_back(this);
   _edges.back().pair(ptr);
 }
 
-void Vertex::pair(Ptr_base<Mesh_element, Vertex>& ptr)
+void Vertex::pair(mutual::Base<Mesh_element, Vertex>& ptr)
 {
   _elems.emplace_back(this);
   _elems.back().pair(ptr);
@@ -105,7 +105,7 @@ std::vector<int> interior_dims(int n_dim, int row_size)
 }
 
 Boundary_interior::Boundary_interior(int n_dim, const Basis& b)
-: Block(n_dim, b.row_size), _elem(this), _interior(interior_dims(n_dim, row_size)), basis{b}
+: Block(n_dim, b.row_size), _interior(interior_dims(n_dim, row_size)), basis{b}
 {}
 
 Edge::Edge(Vertex& vertex0, Vertex& vertex1, const Basis& b) :
@@ -232,7 +232,7 @@ Mat<3> Mesh_element::_point(std::vector<int> coords) const
 }
 
 Mesh_element::Mesh_element(int nd, const Basis& b)
-: Block(nd, b.row_size), _i_bf{6}, _bf(this), basis{b}
+: Block(nd, b.row_size), _i_bf{6}, basis{b}
 {
   for (int i_vert = 0; i_vert < math::pow(2, nd); ++i_vert) _verts.emplace_back(this);
 }
@@ -347,13 +347,13 @@ std::unique_ptr<Mesh_element> Mesh_blocks::create_element(Mat<3> pos, double siz
     if (n_dim == 2) {
       int vert0 = sign*vstride(2, i_dim);
       _edges_2d.emplace_back(new Edge(ptr->vertex(vert0), ptr->vertex(vert0 + vstride(2, !i_dim)), basis));
-      _edges_2d.back()->pair(ptr->_bf);
+      ptr->_bf.set(_edges_2d.back().get());
     } else if (n_dim == 3) {
       std::array<Vertex*, 4> verts;
       for (int i_vert = 0; i_vert < 4; ++i_vert) verts[i_vert] = _boundary_verts.end()[i_vert - 4].get();
       _faces_3d.emplace_back(new Surface_face(verts, basis));
-      _faces_3d.back()->pair(ptr->_bf);
-      ptr->_sf = _faces_3d.back().get();
+      ptr->_bf.set(_faces_3d.back().get());
+      ptr->_sf.set(_faces_3d.back().get());
     }
   }
   return ptr;

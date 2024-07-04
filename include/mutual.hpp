@@ -52,8 +52,6 @@ class Single : public Base<T, U>
   }
 
   protected:
-  Base<U, T>* _get() {return _partner;}
-  const Base<U, T>* _get() const {return _partner;}
 
   public:
   Single() : _partner{nullptr} {}
@@ -74,7 +72,9 @@ class Single : public Base<T, U>
 
   void pair(Base<U, T>& other) {this->_connect(other);}
   void unpair() {if (_partner) this->_disconnect(*_partner);}
-  bool paired() const {return _get();}
+  bool paired() const {return partner();}
+  Base<U, T>* partner() {return _partner;}
+  const Base<U, T>* partner() const {return _partner;}
 };
 
 template <typename T, typename U>

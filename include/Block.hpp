@@ -3,8 +3,7 @@
 
 #include <memory>
 #include "math.hpp"
-#include "Mutual_ptr.hpp"
-#include "Mortal.hpp"
+#include "Reciprocal_ptr.hpp"
 #include "Basis.hpp"
 #include "Array.hpp"
 #include "Sequence.hpp"
@@ -32,11 +31,11 @@ class Mesh_element;
 
 class Vertex : public Block
 {
-  std::vector<Mutual_ptr<Vertex, Edge>> _edges;
-  std::vector<Mutual_ptr<Vertex, Mesh_element>> _elems;
+  std::vector<Reciprocal_ptr<Vertex, Edge>> _edges;
+  std::vector<Reciprocal_ptr<Vertex, Mesh_element>> _elems;
   bool _alive;
   int _mass;
-  Mutual_ptr<Vertex, Mesh_element> _glued_to;
+  Reciprocal_ptr<Vertex, Mesh_element> _glued_to;
   std::vector<double> _glued_coords;
   Mat<3> _point(std::vector<int>) const override;
   public:
@@ -44,15 +43,14 @@ class Vertex : public Block
   inline Vertex(Mat<3> pos, int row_size) : Block{0, row_size}, pos{pos}, _alive{true}, _mass{1}, _glued_to(this) {}
   void eat(Vertex& other);
   void glue(Mesh_element& to, std::vector<double> coords);
-  void pair(Ptr_base<Edge, Vertex>& ptr);
-  void pair(Ptr_base<Mesh_element, Vertex>& ptr);
+  void pair(mutual::Base<Edge, Vertex>& ptr);
+  void pair(mutual::Base<Mesh_element, Vertex>& ptr);
   void purge();
   inline bool alive() {return _alive;}
 };
 
 class Boundary_interior : public Block
 {
-  Mutual_ptr<Boundary_interior, Mesh_element> _elem;
   protected:
   Array<double> _interior;
   public:
@@ -60,13 +58,12 @@ class Boundary_interior : public Block
   Boundary_interior(int n_dim, const Basis& basis);
   virtual void reset() = 0;
   inline Array<double> interior() {return _interior;};
-  inline void pair(Ptr_base<Mesh_element, Boundary_interior>& ptr) {_elem.pair(ptr);}
-  inline bool alive() {return _elem;}
+  inline bool alive() {return true;}
 };
 
 class Edge : public Boundary_interior
 {
-  std::array<Mutual_ptr<Edge, Vertex>, 2> _verts;
+  std::array<Reciprocal_ptr<Edge, Vertex>, 2> _verts;
   Mortal_ptr<Edge> _glued_to;
   int _half;
   Mat<3> _point(std::vector<int>) const override;
@@ -93,11 +90,11 @@ class Mesh_element : public Block
 {
   friend class Mesh_blocks;
   friend void Vertex::glue(Mesh_element&, std::vector<double>);
-  std::vector<Mutual_ptr<Mesh_element, Vertex>> _verts;
+  std::vector<Reciprocal_ptr<Mesh_element, Vertex>> _verts;
   int _i_bf;
-  Mutual_ptr<Mesh_element, Boundary_interior> _bf;
-  Surface_face* _sf;
-  std::vector<Mutual_ptr<Mesh_element, Vertex>> _glued_verts;
+  Mortal_ptr<Boundary_interior> _bf;
+  Mortal_ptr<Surface_face> _sf;
+  std::vector<Reciprocal_ptr<Mesh_element, Vertex>> _glued_verts;
   Mat<3> _vertex_point(std::vector<int>) const;
   Mat<3> _point(std::vector<int>) const override;
   Mesh_element(int nd, const Basis&);
