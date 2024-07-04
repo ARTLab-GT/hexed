@@ -11,9 +11,12 @@ template <typename T, typename U>
 class Base
 {
   friend class Base<U, T>;
+
   protected:
   virtual void _set(Base<U, T>&) = 0;
   virtual void _unset(Base<U, T>&) = 0;
+  virtual T* _mine() {return nullptr;}
+  virtual const T* _mine() const {return nullptr;}
 
   void _connect(Base<U, T>& other)
   {
@@ -27,9 +30,8 @@ class Base
     _unset(other);
   }
 
-  public:
-  virtual T* mine() {return nullptr;}
-  virtual const T* mine() const {return nullptr;}
+  static U* _yours(Base<U, T>& other) {return other._mine();}
+  static const U* _yours(const Base<U, T>& other) {return other._mine();}
 };
 
 template <typename T, typename U>

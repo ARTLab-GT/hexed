@@ -9,19 +9,17 @@ namespace hexed
 template <typename T, typename U>
 class Reciprocal_ptr : public mutual::Single<T, U>, public Pointer<U>
 {
-
-  Mortal_ptr<T> _mine;
+  T* _mine() {return mine.get();}
+  const T* _mine() const {return mine.get();}
 
   public:
-  Reciprocal_ptr(T* data) : _mine(data) {}
-  void set(T* data = nullptr) {_mine.set(data);}
-  T* mine() {return _mine.get();}
-  const T* mine() const {return _mine.get();}
+  Mortal_ptr<T> mine;
+  Reciprocal_ptr(T* data) : mine(data) {}
 
   #define ACCESS(CONST) \
     CONST U* get() CONST \
     { \
-      if (this->paired()) return this->_get()->mine(); \
+      if (this->paired()) return this->_yours(*this->_get()); \
       return nullptr; \
     } \
 
