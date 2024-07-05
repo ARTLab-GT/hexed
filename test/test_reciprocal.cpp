@@ -101,5 +101,30 @@ TEST_CASE("reciprocal")
     #define REQ_SAME_ADDRS(refs, T, U, ...) \
       REQUIRE_THAT(refs.transform<void*>([](hexed::mutual::Base<T, U>& ref)->void*{return &ref;}), Catch::Matchers::RangeEquals(std::vector<void*>__VA_ARGS__));
     REQ_SAME_ADDRS(list0.partners(), Derived1, Derived0, {&list1});
+    REQ_SAME_ADDRS(list1.partners(), Derived0, Derived1, {&ptr0, &list0});
+    REQUIRE_THAT(list1.theirs(), Catch::Matchers::RangeEquals(std::vector<void*>{&d00, &d01}));
+    REQUIRE(ptr0.get() == &d10);
+
+    SECTION("unpair/remove") {
+      list0.remove(ptr1);
+      REQ_SAME_ADDRS(list0.partners(), Derived1, Derived0, {&list1});
+      ptr0.unpair();
+      list0.remove(list1);
+      REQUIRE(list0.partners().empty());
+      REQ_SAME_ADDRS(list1.partners(), Derived0, Derived1, {&ptr0});
+    }
+
+    SECTION("clear") {
+      list1.clear();
+      REQUIRE(!ptr0);
+      REQUIRE(list1.partners().empty());
+      REQUIRE(list0.partners().empty());
+    }
+
+    SECTION("multiple add") {
+      list0.add(list1);
+      REQ_SAME_ADDRS(list0.partners(), Derived1, Derived0, {&list1});
+      REQ_SAME_ADDRS(list1.partners(), Derived0, Derived1, {&ptr0, &list0});
+    }
   }
 }

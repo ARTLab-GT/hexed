@@ -109,7 +109,14 @@ class Multiple : public Base<T, U>
         [this](std::size_t index)->CONST Base<U, T>& {return *_partners[index];}, \
         [this](){return _partners.size();}, \
       }; \
-    }
+    } \
+    next::Sequence<CONST U*> theirs() CONST { \
+      return { \
+        [this](std::size_t index){return this->_yours(*_partners[index]);}, \
+        [this](){return _partners.size();}, \
+      }; \
+    } \
+
   ACCESS()
   ACCESS(const)
   #undef ACCESS
