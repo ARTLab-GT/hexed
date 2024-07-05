@@ -2,13 +2,14 @@
 #define HEXED_ITERATOR_HPP_
 
 #include <functional>
+#include <iterator>
 #include "utils.hpp"
 
 namespace hexed
 {
 
 template <typename T>
-class Iterator
+class Iterator : public std::iterator<std::random_access_iterator_tag, T>
 {
   std::function<T(std::size_t)> _get;
   int _index;
@@ -46,13 +47,17 @@ class Iterator
 template <typename T> Iterator<T> operator+(int diff, Iterator<T> it) {return it.add( diff);}
 template <typename T> Iterator<T> operator+(Iterator<T> it, int diff) {return it.add( diff);}
 template <typename T> Iterator<T> operator-(Iterator<T> it, int diff) {return it.add(-diff);}
-template <typename T> int operator-(Iterator<T> it0, Iterator<T> it1) {return it0.index() - it1.index();}
 template <typename T> bool operator!=(Iterator<T> it0, Iterator<T> it1) {return it0.index() != it1.index();}
 template <typename T> bool operator==(Iterator<T> it0, Iterator<T> it1) {return it0.index() == it1.index();}
 template <typename T> bool operator<=(Iterator<T> it0, Iterator<T> it1) {return it0.index() <= it1.index();}
 template <typename T> bool operator>=(Iterator<T> it0, Iterator<T> it1) {return it0.index() >= it1.index();}
 template <typename T> bool operator <(Iterator<T> it0, Iterator<T> it1) {return it0.index()  < it1.index();}
 template <typename T> bool operator >(Iterator<T> it0, Iterator<T> it1) {return it0.index()  > it1.index();}
+
+template <typename T>
+Iterator<T>::difference_type operator-(Iterator<T> it0, Iterator<T> it1) {
+  return it0.index() - it1.index();
+}
 
 }
 #endif

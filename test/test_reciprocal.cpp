@@ -93,16 +93,19 @@ TEST_CASE("reciprocal")
   SECTION("Reciprocal_list") {
     hexed::Reciprocal_list<Derived0, Derived1> list0(&d01);
     hexed::Reciprocal_list<Derived1, Derived0> list1(&d10);
+    #define REQ_SAME_ADDRS(refs, T, U, ...) { \
+        auto addrs_seq = refs.transform<void*>([](hexed::mutual::Base<T, U>& ref)->void*{return &ref;}); \
+        std::vector<void*> addrs(addrs_seq.begin(), addrs_seq.end()); \
+        REQUIRE_THAT(addrs, Catch::Matchers::UnorderedRangeEquals(std::vector<void*>__VA_ARGS__)); \
+      }
     REQUIRE(!ptr0);
     REQUIRE(!list0.partners());
     REQUIRE(!list1.partners());
     list1.add(list0);
     ptr0.pair(list1);
-    #define REQ_SAME_ADDRS(refs, T, U, ...) \
-      REQUIRE_THAT(refs.transform<void*>([](hexed::mutual::Base<T, U>& ref)->void*{return &ref;}), Catch::Matchers::RangeEquals(std::vector<void*>__VA_ARGS__));
     REQ_SAME_ADDRS(list0.partners(), Derived1, Derived0, {&list1});
     REQ_SAME_ADDRS(list1.partners(), Derived0, Derived1, {&ptr0, &list0});
-    REQUIRE_THAT(list1.theirs(), Catch::Matchers::RangeEquals(std::vector<void*>{&d00, &d01}));
+    REQUIRE_THAT(list1.theirs(), Catch::Matchers::UnorderedRangeEquals(std::vector<void*>{&d00, &d01}));
     REQUIRE(ptr0.get() == &d10);
 
     SECTION("unpair/remove") {

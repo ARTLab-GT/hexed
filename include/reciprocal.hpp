@@ -36,9 +36,21 @@ class Reciprocal_list : public mutual::Multiple<T, U>
   public:
   Mortal_ptr<T> mine;
   Reciprocal_list(T* data) : mine(data) {}
-  void add(mutual::Base<U, T>& other) {}
-  void remove(mutual::Base<U, T>& other) {}
+  void add(mutual::Base<U, T>& other) {this->_connect(other);}
+  void remove(mutual::Base<U, T>& other) {this->_disconnect(other);}
   void clear() {}
+
+  #define ACCESS(CONST) \
+    next::Sequence<CONST U*> theirs() CONST { \
+      auto p = this->partners(); \
+      return { \
+        [p](std::size_t index){return mutual::Base<T, U>::_yours(p[index]);}, \
+        [p](){return p.size();}, \
+      }; \
+    }
+  ACCESS()
+  ACCESS(const)
+  #undef ACCESS
 };
 
 }
