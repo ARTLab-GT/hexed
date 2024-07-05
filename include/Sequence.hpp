@@ -49,6 +49,27 @@ class Sequence
   Iterator<T> begin() const {return Iterator<T>(_get, 0);}
   Iterator<T> end() const {return Iterator<T>(_get, size());}
 
+  template <typename U>
+  bool contains(const U& value) {
+    for (int index = 0; index < _size(); ++index) {
+      if (_get(index) == value) return true;
+    }
+    return false;
+  }
+
+  typedef std::add_lvalue_reference<typename std::remove_pointer<T>::type>::type reference_t;
+  typedef std::add_pointer<typename std::remove_reference<T>::type>::type pointer_t;
+
+  Sequence<reference_t> dereference() const {
+    getter g{_get};
+    return {[g](std::size_t index)->reference_t {return *g(index);}, _size};
+  }
+
+  Sequence<pointer_t> address() const {
+    getter g{_get};
+    return {[g](std::size_t index)->pointer_t {return addr_if_possible(g(index));}, _size};
+  }
+
   template <typename storage_t = std::remove_reference<T>::type>
   static Sequence vector_view(std::vector<storage_t>& vec)
   {

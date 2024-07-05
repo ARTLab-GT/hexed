@@ -40,19 +40,15 @@ class Single : public Base<T, U>
 {
   Base<U, T>* _partner;
 
-  void _set(Base<U, T>& other) override
-  {
+  void _set(Base<U, T>& other) override {
     unpair();
     _partner = &other;
   }
 
-  void _unset(Base<U, T>& other) override
-  {
+  void _unset(Base<U, T>& other) override {
     HEXED_ASSERT(_partner == &other, "not connected to `other`");
     _partner = nullptr;
   }
-
-  protected:
 
   public:
   Single() : _partner{nullptr} {}
@@ -61,8 +57,7 @@ class Single : public Base<T, U>
   ~Single() {unpair();}
   Single& operator=(const Single&) = delete;
 
-  Single& operator=(Single&& other)
-  {
+  Single& operator=(Single&& other) {
     unpair();
     if (other._partner) {
       pair(*other._partner);
@@ -83,7 +78,12 @@ class Multiple : public Base<T, U>
 {
   std::vector<Base<U, T>*> _partners;
 
-  void _set(Base<U, T>& other) override {_partners.push_back(&other);}
+  void _set(Base<U, T>& other) override {
+    if (!std::any_of(_partners.begin(), _partners.end(), [&other](Base<U, T>* p){return p == &other;})) {
+      _partners.push_back(&other);
+    }
+  }
+
   void _unset(Base<U, T>& other) override {std::erase(_partners, &other);}
 
   public:
@@ -93,8 +93,7 @@ class Multiple : public Base<T, U>
   ~Multiple() {for (auto p : _partners) this->_disconnect(*p);}
   Multiple& operator=(const Multiple&) = delete;
 
-  Multiple& operator=(Multiple&& other)
-  {
+  Multiple& operator=(Multiple&& other) {
     for (auto p : _partners) this->_disconnect(*p);
     for (auto p : other._partners) {
       other._disconnect(*p);

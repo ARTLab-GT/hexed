@@ -9,7 +9,7 @@ namespace hexed
 {
 
 template <typename T>
-class Iterator : public std::iterator<std::random_access_iterator_tag, T>
+class Iterator : public std::iterator<std::random_access_iterator_tag, std::remove_reference<T>>
 {
   std::function<T(std::size_t)> _get;
   int _index;
@@ -40,7 +40,7 @@ class Iterator : public std::iterator<std::random_access_iterator_tag, T>
   }
 
   T operator*() const {return _get(_index);}
-  T* operator->() const {return addr_if_possible(_get(_index));}
+  std::add_pointer<std::remove_reference<T>> operator->() const {return addr_if_possible(_get(_index));}
   T operator[](int diff) {return _get(_index + diff);}
 };
 

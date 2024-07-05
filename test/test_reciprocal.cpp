@@ -111,10 +111,11 @@ TEST_CASE("reciprocal")
     SECTION("unpair/remove") {
       list0.remove(ptr1);
       REQ_SAME_ADDRS(list0.partners(), Derived1, Derived0, {&list1});
-      ptr0.unpair();
       list0.remove(list1);
       REQUIRE(list0.partners().empty());
       REQ_SAME_ADDRS(list1.partners(), Derived0, Derived1, {&ptr0});
+      ptr0.unpair();
+      REQUIRE(list1.partners().empty());
     }
 
     SECTION("clear") {
