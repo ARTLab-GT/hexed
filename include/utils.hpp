@@ -37,6 +37,9 @@ T& printed(T& t)
 template <typename T> T* new_copy(const T& t) {return new T(t);} //!< useful for cppyy which doesn't like to relinquish ownership
 template <typename T> T* new_move(T&& t) {return new T(t);} //!< useful for cppyy which doesn't like to relinquish ownership
 
+template <typename T> T* addr_if_possible(T& arg) {return &arg;}
+template <typename T> T* addr_if_possible(T&& arg) {return nullptr;}
+
 #define HEXED_QUAL_PTR_ACCESS(CONST, GET) \
   CONST T* get() CONST {GET(CONST)} \
   CONST T& operator*() CONST {return *get();} \

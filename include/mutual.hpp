@@ -3,6 +3,7 @@
 
 #include <vector>
 #include "assert.hpp"
+#include "Sequence.hpp"
 
 namespace hexed::mutual
 {
@@ -85,10 +86,6 @@ class Multiple : public Base<T, U>
   void _set(Base<U, T>& other) override {_partners.push_back(&other);}
   void _unset(Base<U, T>& other) override {std::erase(_partners, &other);}
 
-  protected:
-  std::vector<Base<U, T>*> _get() {return _partners;}
-  const std::vector<Base<U, T>*> _get() const {return _partners;}
-
   public:
   Multiple() = default;
   Multiple(const Multiple&) = delete;
@@ -105,6 +102,17 @@ class Multiple : public Base<T, U>
     }
     return *this;
   }
+
+  #define ACCESS(CONST) \
+    next::Sequence<CONST Base<U, T>&> partners() CONST { \
+      return { \
+        [this](std::size_t index)->CONST Base<U, T>& {return *_partners[index];}, \
+        [this](){return _partners.size();}, \
+      }; \
+    }
+  ACCESS()
+  ACCESS(const)
+  #undef ACCESS
 };
 
 }

@@ -3,7 +3,7 @@
 
 #include <memory>
 #include "math.hpp"
-#include "Reciprocal_ptr.hpp"
+#include "reciprocal.hpp"
 #include "Basis.hpp"
 #include "Array.hpp"
 #include "Sequence.hpp"

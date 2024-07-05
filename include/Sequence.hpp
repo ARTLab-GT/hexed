@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <vector>
+#include "Iterator.hpp"
 
 namespace hexed
 {
@@ -37,8 +38,12 @@ class Sequence
   Sequence(getter get, sizer size)
   : _get{get}, _size{size}
   {}
-  std::size_t size() {return _size();}
-  T operator[](std::size_t index) {return _get(index);}
+  std::size_t size() const {return _size();}
+  T operator[](std::size_t index) const {return _get(index);}
+  operator bool() const {return _size();}
+  bool empty() const {return !_size();}
+  Iterator<T> begin() const {return Iterator<T>(_get, 0);}
+  Iterator<T> end() const {return Iterator<T>(_get, size());}
 
   template <typename storage_t = std::remove_reference<T>::type>
   static Sequence vector_view(std::vector<storage_t>& vec)

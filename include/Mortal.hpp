@@ -9,11 +9,7 @@
 namespace hexed
 {
 
-class Mortal : public mutual::Multiple<void, void>
-{
-  public:
-  inline std::size_t n_pointers() const {return _get().size();}
-};
+typedef mutual::Multiple<void, void> Mortal;
 
 template <typename T>
 class Mortal_ptr : protected mutual::Single<void, void>, public Pointer<T>
