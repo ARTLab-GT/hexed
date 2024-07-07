@@ -51,10 +51,11 @@ class Vertex : public Block
 
 class Boundary_interior : public Block
 {
+  const Basis* _basis;
   protected:
   Array<double> _interior;
   public:
-  const Basis& basis;
+  inline const Basis& basis() const {return *_basis;}
   Boundary_interior(int n_dim, const Basis& basis);
   virtual void reset() = 0;
   inline Array<double> interior() {return _interior;};
@@ -90,6 +91,7 @@ class Mesh_element : public Block
 {
   friend class Mesh_blocks;
   friend void Vertex::glue(Mesh_element&, std::vector<double>);
+  const Basis* _basis;
   std::vector<Reciprocal_ptr<Mesh_element, Vertex>> _verts;
   int _i_bf;
   Mortal_ptr<Boundary_interior> _bf;
@@ -99,8 +101,8 @@ class Mesh_element : public Block
   Mat<3> _point(std::vector<int>) const override;
   Mesh_element(int nd, const Basis&);
   public:
-  const Basis& basis;
   inline Vertex& vertex(int i_vert) {return *_verts[i_vert];}
+  inline const Basis& basis() const {return *_basis;}
   void connect(Mesh_element& other, Connection_direction);
   void connect(std::vector<Mesh_element*> others, Connection_direction);
 };
@@ -109,7 +111,7 @@ class Mesh_blocks
 {
   std::vector<Vertex> _interior_verts;
   std::vector<Vertex> _boundary_verts;
-  std::vector<std::unique_ptr<Edge>> _edges_2d;
+  std::vector<Edge> _edges_2d;
   std::vector<std::unique_ptr<Surface_face>> _faces_3d;
   public:
   static const int no_face;

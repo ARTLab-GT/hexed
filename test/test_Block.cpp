@@ -9,7 +9,7 @@
 void warp(hexed::next::Edge& e)
 {
   for (int i_node = 0; i_node < 3; ++i_node) {
-    double n = e.basis.node(i_node + 1);
+    double n = e.basis().node(i_node + 1);
     e.interior()(i_node)[2] += .04 - .16*(n - .5)*(n - .5);
   }
 }

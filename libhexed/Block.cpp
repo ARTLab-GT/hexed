@@ -46,7 +46,7 @@ Mat<3> Vertex::_point(std::vector<int>) const
   Array<double> points = _glued_to->points();
   Mat<3> p;
   Eigen::Map<const Mat<>> sample(_glued_coords.data(), _glued_coords.size());
-  Mat<dyn, dyn> proj = _glued_to->basis.interpolate(sample);
+  Mat<dyn, dyn> proj = _glued_to->basis().interpolate(sample);
   for (int i_dim = 0; i_dim < 3; ++i_dim) {
     Mat<> vec = points(i_dim).vector();
     for (int j_dim = _glued_coords.size() - 1; j_dim >= 0; --j_dim) {
@@ -88,7 +88,7 @@ std::vector<int> interior_dims(int n_dim, int row_size)
 }
 
 Boundary_interior::Boundary_interior(int n_dim, const Basis& b)
-: Block(n_dim, b.row_size), _interior(interior_dims(n_dim, b.row_size)), basis{b}
+: Block(n_dim, b.row_size), _basis{&b}, _interior(interior_dims(n_dim, b.row_size))
 {}
 
 Edge::Edge(Vertex& vertex0, Vertex& vertex1, const Basis& b) :
@@ -108,7 +108,7 @@ Mat<3> Edge::_point(std::vector<int> coords) const
     else {
       Mat<3, dyn> pts(3, row_size());
       for (int c = 0; c < row_size(); ++c) pts(all, c) = _glued_to->point({c});
-      return pts*basis.prolong(_half)(coord, all).transpose();
+      return pts*basis().prolong(_half)(coord, all).transpose();
     }
   }
   if (coord ==       0) return _verts[0]->point({});
@@ -119,7 +119,7 @@ Mat<3> Edge::_point(std::vector<int> coords) const
 void Edge::reset()
 {
   for (int i = 1; i < row_size() - 1; ++i) {
-    double n = basis.node(i);
+    double n = basis().node(i);
     _interior(i - 1) = Array<double>(Mat<3>((1 - n)*_verts[0]->point({}) + n*_verts[1]->point({})));
   }
 }
@@ -146,7 +146,7 @@ Surface_face::Surface_face(std::array<Vertex*, 4> verts, const Basis& b)
 {
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
-      _edges.emplace_back(*verts[(2 - i_dim)*sign], *verts[(2 - i_dim)*sign + 1 + i_dim], basis);
+      _edges.emplace_back(*verts[(2 - i_dim)*sign], *verts[(2 - i_dim)*sign + 1 + i_dim], basis());
     }
   }
   reset();
@@ -157,7 +157,7 @@ void Surface_face::reset()
   int rs = row_size();
   int int_sz = (rs - 2)*(rs - 2);
   int tot_sz = rs*rs;
-  Mat<dyn, dyn> dmsq = basis.diff_mat()*basis.diff_mat();
+  Mat<dyn, dyn> dmsq = basis().diff_mat()*basis().diff_mat();
   Mat_rm<> lhs_mat = Mat_rm<>::Zero(tot_sz, int_sz);
   Mat_rm<> rhs_mat = Mat_rm<>::Zero(tot_sz, 3);
   Array<double> lhs({rs, rs, rs - 2, rs - 2}, lhs_mat.data());
@@ -193,7 +193,7 @@ Mat<3> Mesh_element::_vertex_point(std::vector<int> coords) const
     double weight = 1;
     for (int i_dim = 0; i_dim < n_dim(); ++i_dim) {
       bool sign = i_vert/vstride(n_dim(), i_dim)%2;
-      weight *= !sign + math::sign(sign)*basis.node(coords[i_dim]);
+      weight *= !sign + math::sign(sign)*_basis->node(coords[i_dim]);
     }
     point += weight*_verts[i_vert]->pos;
   }
@@ -206,7 +206,7 @@ Mat<3> Mesh_element::_point(std::vector<int> coords) const
   if (_i_bf != Mesh_blocks::no_face) {
     int sign = _i_bf%2;
     int i_dim = _i_bf/2;
-    double interp_coef = !sign + math::sign(sign)*basis.node(coords[i_dim]);
+    double interp_coef = !sign + math::sign(sign)*_basis->node(coords[i_dim]);
     coords[i_dim] = sign*(row_size() - 1);
     Mat<3> uncorrected = _vertex_point(coords);
     coords.erase(coords.begin() + i_dim);
@@ -216,7 +216,7 @@ Mat<3> Mesh_element::_point(std::vector<int> coords) const
 }
 
 Mesh_element::Mesh_element(int nd, const Basis& b)
-: Block(nd, b.row_size), _i_bf{6}, _glued_verts(this), basis{b}
+: Block(nd, b.row_size), _basis{&b}, _i_bf{6}, _glued_verts(this)
 {
   for (int i_vert = 0; i_vert < math::pow(2, nd); ++i_vert) _verts.emplace_back(this);
 }
@@ -238,7 +238,7 @@ int i_edge(Connection_direction dir, int side, int i_bf)
 void Mesh_element::connect(Mesh_element& other, Connection_direction dir)
 {
   HEXED_ASSERT(other.n_dim() == n_dim(), "attempt to connect elements with different dimensionality");
-  HEXED_ASSERT(&other.basis == &basis, "attempt to connect elements with different basis");
+  HEXED_ASSERT(other._basis == _basis, "attempt to connect elements with different basis");
   auto inds = vertex_inds(n_dim(), dir);
   for (int i_vert = 0; i_vert < math::pow(2, n_dim() - 1); ++i_vert) {
     vertex(inds[0][i_vert]).eat(other.vertex(inds[1][i_vert]));
@@ -255,7 +255,7 @@ void Mesh_element::connect(std::vector<Mesh_element*> others, Connection_directi
   for (Mesh_element* other : others) {
     HEXED_ASSERT(other, "fine element pointer is null");
     HEXED_ASSERT(other->n_dim() == n_dim(), "attempt to connect elements with different dimensionality");
-    HEXED_ASSERT(&other->basis == &basis, "attempt to connect elements with different basis");
+    HEXED_ASSERT(other->_basis == _basis, "attempt to connect elements with different basis");
   }
   auto inds = vertex_inds(n_dim(), dir);
   auto face_inds = face_vertex_inds(n_dim(), dir);
@@ -313,7 +313,7 @@ Sequence<T&> purge_fetch(std::vector<T>& vec) {
 
 Sequence<Vertex&> Mesh_blocks::interior_verts() {return purge_fetch(_interior_verts);}
 Sequence<Vertex&> Mesh_blocks::boundary_verts() {return purge_fetch(_boundary_verts);}
-Sequence<Edge&> Mesh_blocks::edges_2d() {return purge_fetch_ptr(_edges_2d);}
+Sequence<Edge&> Mesh_blocks::edges_2d() {return purge_fetch(_edges_2d);}
 Sequence<Surface_face&> Mesh_blocks::faces_3d() {return purge_fetch_ptr(_faces_3d);}
 
 std::unique_ptr<Mesh_element> Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_face)
@@ -336,8 +336,8 @@ std::unique_ptr<Mesh_element> Mesh_blocks::create_element(Mat<3> pos, double siz
     int sign = boundary_face%2;
     if (n_dim == 2) {
       int vert0 = sign*vstride(2, i_dim);
-      _edges_2d.emplace_back(new Edge(ptr->vertex(vert0), ptr->vertex(vert0 + vstride(2, !i_dim)), basis));
-      ptr->_bf.set(_edges_2d.back().get());
+      _edges_2d.emplace_back(ptr->vertex(vert0), ptr->vertex(vert0 + vstride(2, !i_dim)), basis);
+      ptr->_bf.set(&_edges_2d.back());
     } else if (n_dim == 3) {
       std::array<Vertex*, 4> verts;
       for (int i_vert = 0; i_vert < 4; ++i_vert) verts[i_vert] = &_boundary_verts.end()[i_vert - 4];
