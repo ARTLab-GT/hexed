@@ -58,15 +58,18 @@ Mat<3> Vertex::_point(std::vector<int>) const
   return p;
 }
 
+Vertex::Vertex(Mat<3> pos, int row_size)
+: Block{0, row_size}, _edges{this}, _elems{this}, _alive{true}, _mass{1}, _glued_to(this), pos{pos}
+{}
+
 void Vertex::eat(Vertex& other)
 {
   if (&other == this) return;
   other._alive = false;
   pos = (_mass*pos + other._mass*other.pos)/(_mass + other._mass);
   _mass += other._mass;
-  other.purge();
-  for (auto& edge : other._edges) pair(*edge.partner());
-  for (auto& elem : other._elems) pair(*elem.partner());
+  for (auto& partner : other._edges.partners()) pair(partner);
+  for (auto& partner : other._elems.partners()) pair(partner);
   other._mass = 0;
 }
 
@@ -77,24 +80,6 @@ void Vertex::glue(Mesh_element& to, std::vector<double> coords)
   to._glued_verts.emplace_back(&to);
   to._glued_verts.back().pair(_glued_to);
   _glued_coords = coords;
-}
-
-void Vertex::pair(mutual::Base<Edge, Vertex>& ptr)
-{
-  _edges.emplace_back(this);
-  _edges.back().pair(ptr);
-}
-
-void Vertex::pair(mutual::Base<Mesh_element, Vertex>& ptr)
-{
-  _elems.emplace_back(this);
-  _elems.back().pair(ptr);
-}
-
-void Vertex::purge()
-{
-  std::erase(_edges, false);
-  std::erase(_elems, false);
 }
 
 std::vector<int> interior_dims(int n_dim, int row_size)

@@ -68,7 +68,7 @@ class Single : public Base<T, U>
 
   void pair(Base<U, T>& other) {this->_connect(other);}
   void unpair() {if (_partner) this->_disconnect(*_partner);}
-  bool paired() const {return partner();}
+  bool paired() const {return _partner;}
   Base<U, T>* partner() {return _partner;}
   const Base<U, T>* partner() const {return _partner;}
 };
@@ -90,12 +90,13 @@ class Multiple : public Base<T, U>
   Multiple() = default;
   Multiple(const Multiple&) = delete;
   Multiple(Multiple&& other) {*this = std::move(other);}
-  ~Multiple() {for (auto p : _partners) this->_disconnect(*p);}
+  ~Multiple() {for (int i = _partners.size() - 1; i >= 0; --i) this->_disconnect(*_partners[i]);}
   Multiple& operator=(const Multiple&) = delete;
 
   Multiple& operator=(Multiple&& other) {
-    for (auto p : _partners) this->_disconnect(*p);
-    for (auto p : other._partners) {
+    for (int i = _partners.size() - 1; i >= 0; --i) this->_disconnect(*_partners[i]);
+    for (int i = other._partners.size() - 1; i >= 0; --i) {
+      Base<U, T>* p = other._partners[i];
       other._disconnect(*p);
       this->_connect(*p);
     }

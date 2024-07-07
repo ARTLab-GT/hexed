@@ -20,7 +20,6 @@ class Block : public Mortal
   const int n_dim;
   const int row_size;
   inline Block(int n_dim, int row_size) : n_dim{n_dim}, row_size{row_size} {}
-  Block(Block&&) = default;
   Mat<3> point(std::vector<int> node_coords) const;
   virtual Array<double> points() const;
   static void visualize(std::string format, std::string file_name, const std::vector<Block*>&, double time = 0.);
@@ -31,8 +30,8 @@ class Mesh_element;
 
 class Vertex : public Block
 {
-  std::vector<Reciprocal_ptr<Vertex, Edge>> _edges;
-  std::vector<Reciprocal_ptr<Vertex, Mesh_element>> _elems;
+  Reciprocal_list<Vertex, Edge> _edges;
+  Reciprocal_list<Vertex, Mesh_element> _elems;
   bool _alive;
   int _mass;
   Reciprocal_ptr<Vertex, Mesh_element> _glued_to;
@@ -40,12 +39,11 @@ class Vertex : public Block
   Mat<3> _point(std::vector<int>) const override;
   public:
   Mat<3> pos;
-  inline Vertex(Mat<3> pos, int row_size) : Block{0, row_size}, pos{pos}, _alive{true}, _mass{1}, _glued_to(this) {}
+  Vertex(Mat<3> pos, int row_size);
   void eat(Vertex& other);
   void glue(Mesh_element& to, std::vector<double> coords);
-  void pair(mutual::Base<Edge, Vertex>& ptr);
-  void pair(mutual::Base<Mesh_element, Vertex>& ptr);
-  void purge();
+  inline void pair(mutual::Base<Edge, Vertex>& ptr) {_edges.add(ptr);}
+  inline void pair(mutual::Base<Mesh_element, Vertex>& ptr) {_elems.add(ptr);}
   inline bool alive() {return _alive;}
 };
 

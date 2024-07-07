@@ -42,14 +42,16 @@ TEST_CASE("Mortal")
     hexed::Mortal_ptr<Derived> p2(&d0);
     REQUIRE(d0.partners().size() == 2);
   }
-  REQUIRE(d0.partners().size() == 1);
+  p1.set(&d0);
+  REQUIRE(d0.partners().size() == 2);
 
   SECTION("Mortal(Mortal&&)") {
     REQUIRE(p0.get() == &d0);
     Derived d2 = std::move(d0);
     REQUIRE(d2.i == 1903);
-    REQUIRE(d2.partners().size() == 1);
+    REQUIRE(d2.partners().size() == 2);
     REQUIRE(p0.get() == &d2);
+    REQUIRE(p1.get() == &d2);
     hexed::Mortal m;
     m = std::move(d2);
     REQUIRE_THROWS(p0.get());
@@ -57,7 +59,7 @@ TEST_CASE("Mortal")
 
   SECTION("Mortal_ptr(Mortal_ptr&&)") {
     hexed::Mortal_ptr<Derived> p2 = std::move(p0);
-    REQUIRE(d0.partners().size() == 1);
+    REQUIRE(d0.partners().size() == 2);
     REQUIRE(p2.get() == &d0);
     REQUIRE(!p0);
     REQUIRE(p0.get() == nullptr);
