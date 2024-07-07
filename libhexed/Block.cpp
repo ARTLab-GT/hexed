@@ -299,13 +299,6 @@ Mesh_blocks::Mesh_blocks(int nd, const Basis& b)
 {}
 
 template <typename T>
-Sequence<T&> purge_fetch_ptr(std::vector<std::unique_ptr<T>>& vec)
-{
-  std::erase_if(vec, [](std::unique_ptr<T>& ptr){return !ptr->alive();});
-  return Sequence<T&>::template ptr_vector_view<std::unique_ptr<T>&>(vec);
-}
-
-template <typename T>
 Sequence<T&> purge_fetch(std::vector<T>& vec) {
   std::erase_if(vec, [](T& t){return !t.alive();});
   return Sequence<T&>::vector_view(vec);
@@ -314,7 +307,7 @@ Sequence<T&> purge_fetch(std::vector<T>& vec) {
 Sequence<Vertex&> Mesh_blocks::interior_verts() {return purge_fetch(_interior_verts);}
 Sequence<Vertex&> Mesh_blocks::boundary_verts() {return purge_fetch(_boundary_verts);}
 Sequence<Edge&> Mesh_blocks::edges_2d() {return purge_fetch(_edges_2d);}
-Sequence<Surface_face&> Mesh_blocks::faces_3d() {return purge_fetch_ptr(_faces_3d);}
+Sequence<Surface_face&> Mesh_blocks::faces_3d() {return purge_fetch(_faces_3d);}
 
 std::unique_ptr<Mesh_element> Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_face)
 {
@@ -341,9 +334,9 @@ std::unique_ptr<Mesh_element> Mesh_blocks::create_element(Mat<3> pos, double siz
     } else if (n_dim == 3) {
       std::array<Vertex*, 4> verts;
       for (int i_vert = 0; i_vert < 4; ++i_vert) verts[i_vert] = &_boundary_verts.end()[i_vert - 4];
-      _faces_3d.emplace_back(new Surface_face(verts, basis));
-      ptr->_bf.set(_faces_3d.back().get());
-      ptr->_sf.set(_faces_3d.back().get());
+      _faces_3d.emplace_back(verts, basis);
+      ptr->_bf.set(&_faces_3d.back());
+      ptr->_sf.set(&_faces_3d.back());
     }
   }
   return ptr;

@@ -112,7 +112,7 @@ class Mesh_blocks
   std::vector<Vertex> _interior_verts;
   std::vector<Vertex> _boundary_verts;
   std::vector<Edge> _edges_2d;
-  std::vector<std::unique_ptr<Surface_face>> _faces_3d;
+  std::vector<Surface_face> _faces_3d;
   public:
   static const int no_face;
   const int n_dim;
