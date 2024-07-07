@@ -19,14 +19,12 @@ class Base
   virtual T* _mine() {return nullptr;}
   virtual const T* _mine() const {return nullptr;}
 
-  void _connect(Base<U, T>& other)
-  {
+  void _connect(Base<U, T>& other) {
     _set(other);
     other._set(*this);
   }
 
-  void _disconnect(Base<U, T>& other)
-  {
+  void _disconnect(Base<U, T>& other) {
     other._unset(*this);
     _unset(other);
   }

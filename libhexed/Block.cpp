@@ -68,17 +68,15 @@ void Vertex::eat(Vertex& other)
   other._alive = false;
   pos = (_mass*pos + other._mass*other.pos)/(_mass + other._mass);
   _mass += other._mass;
-  for (auto& partner : other._edges.partners()) pair(partner);
-  for (auto& partner : other._elems.partners()) pair(partner);
+  for (int i = other._edges.partners().size() - 1; i >= 0; --i) pair(other._edges.partners()[i]);
+  for (int i = other._elems.partners().size() - 1; i >= 0; --i) pair(other._elems.partners()[i]);
   other._mass = 0;
 }
 
 void Vertex::glue(Mesh_element& to, std::vector<double> coords)
 {
   HEXED_ASSERT(std::size_t(to.n_dim) == coords.size(), "wrong number of glued coordinates");
-  std::erase(to._glued_verts, false);
-  to._glued_verts.emplace_back(&to);
-  to._glued_verts.back().pair(_glued_to);
+  _glued_to.pair(to._glued_verts);
   _glued_coords = coords;
 }
 
@@ -217,7 +215,7 @@ Mat<3> Mesh_element::_point(std::vector<int> coords) const
 }
 
 Mesh_element::Mesh_element(int nd, const Basis& b)
-: Block(nd, b.row_size), _i_bf{6}, basis{b}
+: Block(nd, b.row_size), _i_bf{6}, _glued_verts(this), basis{b}
 {
   for (int i_vert = 0; i_vert < math::pow(2, nd); ++i_vert) _verts.emplace_back(this);
 }

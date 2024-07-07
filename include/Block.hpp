@@ -92,7 +92,7 @@ class Mesh_element : public Block
   int _i_bf;
   Mortal_ptr<Boundary_interior> _bf;
   Mortal_ptr<Surface_face> _sf;
-  std::vector<Reciprocal_ptr<Mesh_element, Vertex>> _glued_verts;
+  Reciprocal_list<Mesh_element, Vertex> _glued_verts;
   Mat<3> _vertex_point(std::vector<int>) const;
   Mat<3> _point(std::vector<int>) const override;
   Mesh_element(int nd, const Basis&);
