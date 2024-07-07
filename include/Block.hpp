@@ -14,12 +14,14 @@ namespace hexed::next
 
 class Block : public Mortal
 {
+  int _n_dim;
+  int _row_size;
   protected:
   virtual Mat<3> _point(std::vector<int> node_coords) const = 0;
   public:
-  const int n_dim;
-  const int row_size;
-  inline Block(int n_dim, int row_size) : n_dim{n_dim}, row_size{row_size} {}
+  inline Block(int n_dim, int row_size) : _n_dim{n_dim}, _row_size{row_size} {}
+  inline int n_dim() const {return _n_dim;}
+  inline int row_size() const {return _row_size;}
   Mat<3> point(std::vector<int> node_coords) const;
   virtual Array<double> points() const;
   static void visualize(std::string format, std::string file_name, const std::vector<Block*>&, double time = 0.);
@@ -105,8 +107,8 @@ class Mesh_element : public Block
 
 class Mesh_blocks
 {
-  std::vector<std::unique_ptr<Vertex>> _interior_verts;
-  std::vector<std::unique_ptr<Vertex>> _boundary_verts;
+  std::vector<Vertex> _interior_verts;
+  std::vector<Vertex> _boundary_verts;
   std::vector<std::unique_ptr<Edge>> _edges_2d;
   std::vector<std::unique_ptr<Surface_face>> _faces_3d;
   public:

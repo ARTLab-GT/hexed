@@ -20,8 +20,8 @@ TEST_CASE("Block")
 
   // vertex construction
   hexed::next::Vertex vert0({.1, -.3, .2}, 4);
-  REQUIRE(vert0.n_dim == 0);
-  REQUIRE(vert0.row_size == 4);
+  REQUIRE(vert0.n_dim() == 0);
+  REQUIRE(vert0.row_size() == 4);
   REQUIRE(vert0.alive());
   REQUIRE_THAT(vert0.point({}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2}, hexed::math::Approx_equal()));
   hexed::next::Vertex vert1({.3, -.1, .4}, 4);
@@ -29,8 +29,8 @@ TEST_CASE("Block")
   // edge construction
   hexed::Equidistant basis(4);
   hexed::next::Edge edge0(vert0, vert1, basis);
-  REQUIRE(edge0.n_dim == 1);
-  REQUIRE(edge0.row_size == 4);
+  REQUIRE(edge0.n_dim() == 1);
+  REQUIRE(edge0.row_size() == 4);
   auto test_interp = [&](hexed::next::Edge& edge){
     for (int i = 0; i < 4; ++i) {
       REQUIRE_THAT(edge.point({i}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2} + i*hexed::Mat<3>::Constant(.2/3.), hexed::math::Approx_equal()));
