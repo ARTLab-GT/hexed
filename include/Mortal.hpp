@@ -6,8 +6,7 @@
 #include "mutual.hpp"
 #include "Pointer.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \brief represents an object that could die at any moment
  * \details As described in the documentation for the `mutual` namespace,
@@ -40,9 +39,8 @@ class Mortal : public mutual::Multiple<void, void> {};
  * and calling its `value()` will throw an exception.
  */
 template <typename T>
-class Mortal_ptr : protected mutual::Single<void, void>, public Pointer<T>
-{
-  public:
+class Mortal_ptr : protected mutual::Single<void, void>, public Pointer<T> {
+public:
   //! \brief constructs a `Mortal_ptr` that points to `data`
   Mortal_ptr(T* data = nullptr) {set(data);}
 

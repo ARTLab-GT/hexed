@@ -6,16 +6,14 @@
 
 #define REQ_VEC_EQ(vec0, ...) REQUIRE_THAT(vec0, Catch::Matchers::RangeEquals(__VA_ARGS__, hexed::math::Approx_equal()))
 
-void warp(hexed::next::Edge& e)
-{
+void warp(hexed::next::Edge& e) {
   for (int i_node = 0; i_node < 3; ++i_node) {
     double n = e.basis().node(i_node + 1);
     e.interior()(i_node)[2] += .04 - .16*(n - .5)*(n - .5);
   }
 }
 
-TEST_CASE("Block")
-{
+TEST_CASE("Block") {
   static_assert(hexed::config::max_row_size >= 5); // these tests require a row size of at least 5
 
   // vertex construction
@@ -107,13 +105,13 @@ TEST_CASE("Block")
 
   hexed::Gauss_lobatto basis5(5);
 
-  SECTION("Surface_face") {
+  SECTION("Face") {
     std::vector<hexed::next::Vertex> verts;
     verts.emplace_back(hexed::Mat<3>{1., 1.5, 1.}, 5);
     verts.emplace_back(hexed::Mat<3>{2., 1.0, 1.}, 5);
     verts.emplace_back(hexed::Mat<3>{1., 2.0, 3.}, 5);
     verts.emplace_back(hexed::Mat<3>{2., 2.0, 1.}, 5);
-    hexed::next::Surface_face face({&verts[0], &verts[1], &verts[2], &verts[3]}, basis5);
+    hexed::next::Face face({&verts[0], &verts[1], &verts[2], &verts[3]}, basis5);
     REQUIRE_THAT(face.edge(0).point({0}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.0, 1.500, 1.0}, hexed::math::Approx_equal()));
     REQUIRE_THAT(face.edge(0).point({2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, 1.250, 1.0}, hexed::math::Approx_equal()));
     REQUIRE_THAT(face.edge(3).point({2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{2.0, 1.500, 1.0}, hexed::math::Approx_equal()));
@@ -155,10 +153,10 @@ TEST_CASE("Block")
     hexed::next::Block::visualize("default", "vertex_interp_face1", {&face});
   }
 
-  SECTION("Mesh_element/Mesh_blocks") {
+  SECTION("Element_shape/Mesh_blocks") {
     SECTION("2D conformal") {
       hexed::next::Mesh_blocks blocks(2, basis5);
-      std::vector<std::unique_ptr<hexed::next::Mesh_element>> elems;
+      std::vector<std::unique_ptr<hexed::next::Element_shape>> elems;
       elems.push_back(blocks.create_element({-.2, .3, .1}, .7));
       elems.push_back(blocks.create_element({-.9, .3, .1}, .7, 0));
       elems.push_back(blocks.create_element({-.2, 1., .1}, .7, 3));
@@ -203,7 +201,7 @@ TEST_CASE("Block")
 
     SECTION("3D conformal") {
       hexed::next::Mesh_blocks blocks(3, basis5);
-      std::vector<std::unique_ptr<hexed::next::Mesh_element>> elems;
+      std::vector<std::unique_ptr<hexed::next::Element_shape>> elems;
       elems.push_back(blocks.create_element({.50, .70, .60}, .02));
       elems.push_back(blocks.create_element({.52, .70, .60}, .02, 1));
       elems.push_back(blocks.create_element({.50, .68, .60}, .02, 2));
@@ -260,7 +258,7 @@ TEST_CASE("Block")
 
     SECTION("2D hanging") {
       hexed::next::Mesh_blocks blocks(2, basis5);
-      std::vector<std::unique_ptr<hexed::next::Mesh_element>> elems;
+      std::vector<std::unique_ptr<hexed::next::Element_shape>> elems;
       elems.push_back(blocks.create_element({.1, .1, .1}, 1.));
       elems.push_back(blocks.create_element({1., 0., .1}, .5));
       elems.push_back(blocks.create_element({1., .5, .1}, .5));
@@ -299,7 +297,7 @@ TEST_CASE("Block")
 
     SECTION("3D hanging") {
       hexed::next::Mesh_blocks blocks(3, basis5);
-      std::vector<std::unique_ptr<hexed::next::Mesh_element>> elems;
+      std::vector<std::unique_ptr<hexed::next::Element_shape>> elems;
       elems.push_back(blocks.create_element({.1, .1, .1}, 1.)); //
       elems.push_back(blocks.create_element({0., 1.0, -.5}, .5));
       elems.push_back(blocks.create_element({0., 1.5, -.5}, .5));
@@ -361,7 +359,7 @@ TEST_CASE("Block")
           blocks.faces_3d()[i_face].reset();
         }
       };
-      std::vector<std::unique_ptr<hexed::next::Mesh_element>> elems;
+      std::vector<std::unique_ptr<hexed::next::Element_shape>> elems;
       hexed::Mat<3> zero = hexed::Mat<3>::Zero();
       SECTION("same dim") {
         elems.push_back(blocks.create_element(zero, 1., 2));

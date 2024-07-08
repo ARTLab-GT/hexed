@@ -16,8 +16,7 @@
  * When it is time for an object to be deleted, I simply want everyone currently referencing it to _know_.
  * This namespace provides the fundamental base classes to meet this need.
  */
-namespace hexed::mutual
-{
+namespace hexed::mutual {
 
 /*! \brief abstract base class for all mutually-connected objects
  * \details Implements the basic mechanics of mutual connection and disconnection.
@@ -34,11 +33,9 @@ namespace hexed::mutual
  * Derived classes may override `_mine()` to provide their partners access to some data.
  */
 template <typename T, typename U>
-class Base
-{
+class Base {
   friend class Base<U, T>;
-
-  protected:
+protected:
   //! \brief takes the necessary steps to connect `this` to `that`, without worrying about anything on `that`'s end
   virtual void _set(Base<U, T>& that) = 0;
   //! \brief takes the necessary steps to disconnect `this` from `that`, without worrying about anything on `that`'s end
@@ -66,21 +63,8 @@ class Base
 
 //! \brief an object which is mutually connected ("paired") with only one other object
 template <typename T, typename U>
-class Single : public Base<T, U>
-{
-  Base<U, T>* _partner;
-
-  void _set(Base<U, T>& other) override {
-    unpair();
-    _partner = &other;
-  }
-
-  void _unset(Base<U, T>& other) override {
-    HEXED_ASSERT(_partner == &other, "not connected to `other`");
-    _partner = nullptr;
-  }
-
-  public:
+class Single : public Base<T, U> {
+public:
   //! \brief Constructs a `Single` with no partner (it is "unpaired")
   Single() : _partner{nullptr} {}
   Single(const Single&) = delete;
@@ -109,6 +93,17 @@ class Single : public Base<T, U>
   //! \brief provides access to `this`'s partner
   Base<U, T>* partner() {return _partner;}
   const Base<U, T>* partner() const {return _partner;} //!< \overload
+
+private:
+  void _set(Base<U, T>& other) override {
+    unpair();
+    _partner = &other;
+  }
+  void _unset(Base<U, T>& other) override {
+    HEXED_ASSERT(_partner == &other, "not connected to `other`");
+    _partner = nullptr;
+  }
+  Base<U, T>* _partner;
 };
 
 /*! \brief an object that can be mutually connected with any number of partners
@@ -122,17 +117,7 @@ class Single : public Base<T, U>
 template <typename T, typename U>
 class Multiple : public Base<T, U>
 {
-  std::vector<Base<U, T>*> _partners;
-
-  void _set(Base<U, T>& that) override {
-    if (!std::any_of(_partners.begin(), _partners.end(), [&that](Base<U, T>* p){return p == &that;})) {
-      _partners.push_back(&that);
-    }
-  }
-
-  void _unset(Base<U, T>& that) override {std::erase(_partners, &that);}
-
-  public:
+public:
   Multiple() = default;
   Multiple(const Multiple&) = delete;
   //! \brief steals all of `that`'s partners, leaving `that` unconnected
@@ -163,6 +148,15 @@ class Multiple : public Base<T, U>
   ACCESS()
   ACCESS(const)
   #undef ACCESS
+  std::vector<Base<U, T>*> _partners;
+
+private:
+  void _set(Base<U, T>& that) override {
+    if (!std::any_of(_partners.begin(), _partners.end(), [&that](Base<U, T>* p){return p == &that;})) {
+      _partners.push_back(&that);
+    }
+  }
+  void _unset(Base<U, T>& that) override {std::erase(_partners, &that);}
 };
 
 }

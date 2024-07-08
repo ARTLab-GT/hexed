@@ -94,7 +94,7 @@ TEST_CASE("reciprocal")
     hexed::Reciprocal_list<Derived0, Derived1> list0(&d01);
     hexed::Reciprocal_list<Derived1, Derived0> list1(&d10);
     #define REQ_SAME_ADDRS(refs, T, U, ...) { \
-        auto addrs_seq = refs.transform<void*>([](hexed::mutual::Base<T, U>& ref)->void*{return &ref;}); \
+        auto addrs_seq = refs.address(); \
         std::vector<void*> addrs(addrs_seq.begin(), addrs_seq.end()); \
         REQUIRE_THAT(addrs, Catch::Matchers::UnorderedRangeEquals(std::vector<void*>__VA_ARGS__)); \
       }

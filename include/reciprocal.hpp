@@ -3,8 +3,7 @@
 
 #include "Mortal.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \brief Implements pairs of reciprocally-connected pointers.
  * \details This class addresses the case where object `a` needs to have a pointer to object `b`
@@ -23,18 +22,8 @@ namespace hexed
  * and `pair()` the `Reciprocal_ptr`s.
  */
 template <typename T, typename U>
-class Reciprocal_ptr : public mutual::Single<T, U>, public Pointer<U>
-{
-  T* _mine() {return mine.get();}
-  const T* _mine() const {return mine.get();}
-
-  public:
-  /*! \brief The object that `this` is a proxy for in reciprocal connections.
-   * \details Usually, `this` will be a member of the object `mine` points to,
-   * but that is not technically necessary.
-   * The user should feel free to modify this data member at will (including setting it to null).
-   */
-  Mortal_ptr<T> mine;
+class Reciprocal_ptr : public mutual::Single<T, U>, public Pointer<U> {
+public:
   //! \brief constructs a `Reciprocal_ptr` and sets its `mine` to `data` (which can be null)
   Reciprocal_ptr(T* data) : mine(data) {}
 
@@ -49,6 +38,17 @@ class Reciprocal_ptr : public mutual::Single<T, U>, public Pointer<U>
   ACCESS()
   ACCESS(const)
   #undef ACCESS
+
+  /*! \brief The object that `this` is a proxy for in reciprocal connections.
+   * \details Usually, `this` will be a member of the object `mine` points to,
+   * but that is not technically necessary.
+   * The user should feel free to modify this data member at will (including setting it to null).
+   */
+  Mortal_ptr<T> mine;
+
+private:
+  T* _mine() {return mine.get();}
+  const T* _mine() const {return mine.get();}
 };
 
 /*! \brief Like `Reciprocal_ptr`, put it can be connected with multiple partners
@@ -56,15 +56,8 @@ class Reciprocal_ptr : public mutual::Single<T, U>, public Pointer<U>
  * Of course, in both cases connections are reciprocated.
  */
 template <typename T, typename U>
-class Reciprocal_list : public mutual::Multiple<T, U>
-{
-  T* _mine() {return mine.get();}
-  const T* _mine() const {return mine.get();}
-
+class Reciprocal_list : public mutual::Multiple<T, U> {
   public:
-  //! \brief The object that `this` is a proxy for in reciprocal connections.
-  //! \see `Reciprocal_ptr::mine`
-  Mortal_ptr<T> mine;
   //! \brief Constructs a `Reciprocal_list` and sets its `mine` to `data` (which can be null).
   Reciprocal_list(T* data) : mine(data) {}
   //! \brief Reciprocally connects `this` with `that`.
@@ -91,6 +84,14 @@ class Reciprocal_list : public mutual::Multiple<T, U>
   ACCESS()
   ACCESS(const)
   #undef ACCESS
+
+  //! \brief The object that `this` is a proxy for in reciprocal connections.
+  //! \see `Reciprocal_ptr::mine`
+  Mortal_ptr<T> mine;
+
+private:
+  T* _mine() {return mine.get();}
+  const T* _mine() const {return mine.get();}
 };
 
 }

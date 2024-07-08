@@ -2,11 +2,9 @@
 #include <hexed/Visualizer.hpp>
 #include <hexed/vertex_inds.hpp>
 
-namespace hexed::next
-{
+namespace hexed::next {
 
-Array<double> Block::points() const
-{
+Array<double> Block::points() const {
   std::vector<int> shape {3};
   for (int i_dim = 0; i_dim < _n_dim; ++i_dim) shape.push_back(_row_size);
   Array<double> pts(shape);
@@ -19,8 +17,7 @@ Array<double> Block::points() const
   return pts;
 }
 
-void Block::visualize(std::string format, std::string file_name, const std::vector<Block*>& blocks, double time)
-{
+void Block::visualize(std::string format, std::string file_name, const std::vector<Block*>& blocks, double time) {
   int block_dim = blocks.empty() ? 1 : blocks[0]->_n_dim;
   auto visualizer = Visualizer::create(format, 3, block_dim, file_name, {}, time, Visualizer::block);
   for (Block* block : blocks) {
@@ -29,8 +26,7 @@ void Block::visualize(std::string format, std::string file_name, const std::vect
   }
 }
 
-Mat<3> Block::point(std::vector<int> node_coords) const
-{
+Mat<3> Block::point(std::vector<int> node_coords) const {
   #ifdef DEBUG
   HEXED_ASSERT(int(node_coords.size()) == _n_dim, "wrong number of node coordinates");
   for (int coord : node_coords) {
@@ -40,8 +36,7 @@ Mat<3> Block::point(std::vector<int> node_coords) const
   return _point(node_coords);
 }
 
-Mat<3> Vertex::_point(std::vector<int>) const
-{
+Mat<3> Vertex::_point(std::vector<int>) const {
   if (!_glued_to) return pos;
   Array<double> points = _glued_to->points();
   Mat<3> p;
@@ -59,11 +54,10 @@ Mat<3> Vertex::_point(std::vector<int>) const
 }
 
 Vertex::Vertex(Mat<3> pos, int row_size)
-: Block{0, row_size}, _edges{this}, _elems{this}, _alive{true}, _mass{1}, _glued_to(this), pos{pos}
-{}
+: Block(0, row_size), pos{pos}, _edges(this), _elems(this), _alive{true}, _mass{1}, _glued_to(this) {
+}
 
-void Vertex::eat(Vertex& other)
-{
+void Vertex::eat(Vertex& other) {
   if (&other == this) return;
   other._alive = false;
   pos = (_mass*pos + other._mass*other.pos)/(_mass + other._mass);
@@ -73,35 +67,30 @@ void Vertex::eat(Vertex& other)
   other._mass = 0;
 }
 
-void Vertex::glue(Mesh_element& to, std::vector<double> coords)
-{
+void Vertex::glue(Element_shape& to, std::vector<double> coords) {
   HEXED_ASSERT(std::size_t(to.n_dim()) == coords.size(), "wrong number of glued coordinates");
   _glued_to.pair(to._glued_verts);
   _glued_coords = coords;
 }
 
-std::vector<int> interior_dims(int n_dim, int row_size)
-{
+std::vector<int> interior_dims(int n_dim, int row_size) {
   std::vector<int> dims(n_dim, row_size - 2);
   dims.push_back(3);
   return dims;
 }
 
 Boundary_interior::Boundary_interior(int n_dim, const Basis& b)
-: Block(n_dim, b.row_size), _basis{&b}, _interior(interior_dims(n_dim, b.row_size))
-{}
+: Block(n_dim, b.row_size), _basis{&b}, _interior(interior_dims(n_dim, b.row_size)) {
+}
 
-Edge::Edge(Vertex& vertex0, Vertex& vertex1, const Basis& b) :
-  Boundary_interior(1, b),
-  _verts{this, this}
-{
+Edge::Edge(Vertex& vertex0, Vertex& vertex1, const Basis& b)
+: Boundary_interior(1, b), _verts{this, this} {
   vertex0.pair(_verts[0]);
   vertex1.pair(_verts[1]);
   reset();
 }
 
-Mat<3> Edge::_point(std::vector<int> coords) const
-{
+Mat<3> Edge::_point(std::vector<int> coords) const {
   int coord = coords[0];
   if (glued()) {
     if (_half == no) return _glued_to->_point(coords);
@@ -116,8 +105,7 @@ Mat<3> Edge::_point(std::vector<int> coords) const
   return _interior(coord - 1).vector();
 }
 
-void Edge::reset()
-{
+void Edge::reset() {
   for (int i = 1; i < row_size() - 1; ++i) {
     double n = basis().node(i);
     _interior(i - 1) = Array<double>(Mat<3>((1 - n)*_verts[0]->point({}) + n*_verts[1]->point({})));
@@ -126,14 +114,12 @@ void Edge::reset()
 
 const int Edge::no = -1;
 
-void Edge::glue(Edge& other, int half)
-{
+void Edge::glue(Edge& other, int half) {
   _glued_to.set(&other);
   _half = half;
 }
 
-Mat<3> Surface_face::_point(std::vector<int> coords) const
-{
+Mat<3> Face::_point(std::vector<int> coords) const {
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
     if (coords[i_dim] ==       0) return _edges[2*i_dim    ].point({coords[!i_dim]});
     if (coords[i_dim] == row_size() - 1) return _edges[2*i_dim + 1].point({coords[!i_dim]});
@@ -141,9 +127,8 @@ Mat<3> Surface_face::_point(std::vector<int> coords) const
   return _interior(coords[0] - 1)(coords[1] - 1).vector();
 }
 
-Surface_face::Surface_face(std::array<Vertex*, 4> verts, const Basis& b)
-: Boundary_interior(2, b)
-{
+Face::Face(std::array<Vertex*, 4> verts, const Basis& b)
+: Boundary_interior(2, b) {
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
       _edges.emplace_back(*verts[(2 - i_dim)*sign], *verts[(2 - i_dim)*sign + 1 + i_dim], basis());
@@ -152,8 +137,7 @@ Surface_face::Surface_face(std::array<Vertex*, 4> verts, const Basis& b)
   reset();
 }
 
-void Surface_face::reset()
-{
+void Face::reset() {
   int rs = row_size();
   int int_sz = (rs - 2)*(rs - 2);
   int tot_sz = rs*rs;
@@ -186,8 +170,7 @@ void Surface_face::reset()
 
 int vstride(int n_dim, int i_dim) {return math::pow(2, n_dim - 1 - i_dim);}
 
-Mat<3> Mesh_element::_vertex_point(std::vector<int> coords) const
-{
+Mat<3> Element_shape::_vertex_point(std::vector<int> coords) const {
   Mat<3> point = Mat<3>::Zero();
   for (int i_vert = 0; i_vert < math::pow(2, n_dim()); ++i_vert) {
     double weight = 1;
@@ -200,8 +183,7 @@ Mat<3> Mesh_element::_vertex_point(std::vector<int> coords) const
   return point;
 }
 
-Mat<3> Mesh_element::_point(std::vector<int> coords) const
-{
+Mat<3> Element_shape::_point(std::vector<int> coords) const {
   Mat<3> point = _vertex_point(coords);
   if (_i_bf != Mesh_blocks::no_face) {
     int sign = _i_bf%2;
@@ -215,14 +197,12 @@ Mat<3> Mesh_element::_point(std::vector<int> coords) const
   return point;
 }
 
-Mesh_element::Mesh_element(int nd, const Basis& b)
-: Block(nd, b.row_size), _basis{&b}, _i_bf{6}, _glued_verts(this)
-{
+Element_shape::Element_shape(int nd, const Basis& b)
+: Block(nd, b.row_size), _basis{&b}, _i_bf{6}, _glued_verts(this) {
   for (int i_vert = 0; i_vert < math::pow(2, nd); ++i_vert) _verts.emplace_back(this);
 }
 
-int i_edge(Connection_direction dir, int side, int i_bf)
-{
+int i_edge(Connection_direction dir, int side, int i_bf) {
   return 2*(dir.i_dim[side] > 3 - dir.i_dim[side] - i_bf/2) + dir.face_sign[side];
 }
 
@@ -235,8 +215,7 @@ int i_edge(Connection_direction dir, int side, int i_bf)
     HEXED_ASSERT((other)._i_bf == 2*dir.i_dim[0] + dir.face_sign[0], "boundary face mismatch in on fine element"); \
   } \
 
-void Mesh_element::connect(Mesh_element& other, Connection_direction dir)
-{
+void Element_shape::connect(Element_shape& other, Connection_direction dir) {
   HEXED_ASSERT(other.n_dim() == n_dim(), "attempt to connect elements with different dimensionality");
   HEXED_ASSERT(other._basis == _basis, "attempt to connect elements with different basis");
   auto inds = vertex_inds(n_dim(), dir);
@@ -249,10 +228,9 @@ void Mesh_element::connect(Mesh_element& other, Connection_direction dir)
   }
 }
 
-void Mesh_element::connect(std::vector<Mesh_element*> others, Connection_direction dir)
-{
+void Element_shape::connect(std::vector<Element_shape*> others, Connection_direction dir) {
   HEXED_ASSERT(others.size() == math::pow(std::size_t(2), n_dim() - 1), "wrong number of fine elements");
-  for (Mesh_element* other : others) {
+  for (Element_shape* other : others) {
     HEXED_ASSERT(other, "fine element pointer is null");
     HEXED_ASSERT(other->n_dim() == n_dim(), "attempt to connect elements with different dimensionality");
     HEXED_ASSERT(other->_basis == _basis, "attempt to connect elements with different basis");
@@ -282,7 +260,7 @@ void Mesh_element::connect(std::vector<Mesh_element*> others, Connection_directi
     Edge& edge = _sf->edge(i_edge(dir, 0, _i_bf));
     int edge_dim = _i_bf/2 > 3 - dir.i_dim[0] - _i_bf/2;
     int strides [2] {vstride(2, edge_dim), vstride(2, !edge_dim)};
-    Array<Mesh_element*> to_glue({2}, [&](int i){return others[face_inds[_i_bf%2*strides[0] + i*strides[1]]];});
+    Array<Element_shape*> to_glue({2}, [&](int i){return others[face_inds[_i_bf%2*strides[0] + i*strides[1]]];});
     auto glue = [&](int i_glue, int i_half) {
       ASSERT_CON_DIMS(dir, *to_glue[i_glue]);
       to_glue[i_glue]->_sf->edge(i_edge(dir, 1, to_glue[i_glue]->_i_bf)).glue(edge, i_half);
@@ -295,8 +273,8 @@ void Mesh_element::connect(std::vector<Mesh_element*> others, Connection_directi
 const int Mesh_blocks::no_face = -1;
 
 Mesh_blocks::Mesh_blocks(int nd, const Basis& b)
-: n_dim{nd}, basis{b}
-{}
+: n_dim{nd}, basis{b} {
+}
 
 template <typename T>
 Sequence<T&> purge_fetch(std::vector<T>& vec) {
@@ -307,11 +285,10 @@ Sequence<T&> purge_fetch(std::vector<T>& vec) {
 Sequence<Vertex&> Mesh_blocks::interior_verts() {return purge_fetch(_interior_verts);}
 Sequence<Vertex&> Mesh_blocks::boundary_verts() {return purge_fetch(_boundary_verts);}
 Sequence<Edge&> Mesh_blocks::edges_2d() {return purge_fetch(_edges_2d);}
-Sequence<Surface_face&> Mesh_blocks::faces_3d() {return purge_fetch(_faces_3d);}
+Sequence<Face&> Mesh_blocks::faces_3d() {return purge_fetch(_faces_3d);}
 
-std::unique_ptr<Mesh_element> Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_face)
-{
-  std::unique_ptr<Mesh_element> ptr(new Mesh_element(n_dim, basis));
+std::unique_ptr<Element_shape> Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_face) {
+  std::unique_ptr<Element_shape> ptr(new Element_shape(n_dim, basis));
   ptr->_i_bf = boundary_face;
   int nv = math::pow(2, n_dim);
   for (int i_vert = 0; i_vert < nv; ++i_vert) {
