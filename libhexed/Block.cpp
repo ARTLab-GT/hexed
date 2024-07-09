@@ -54,17 +54,16 @@ Mat<3> Vertex::_point(std::vector<int>) const {
 }
 
 Vertex::Vertex(Mat<3> pos, int row_size)
-: Block(0, row_size), pos{pos}, _edges(this), _elems(this), _alive{true}, _mass{1}, _glued_to(this) {
+: Block(0, row_size), pos{pos}, _edges(this), _elems(this), _glued_to(this) {
 }
 
 void Vertex::eat(Vertex& that) {
+  HEXED_ASSERT(alive() && that.alive(), "both vertices must be alive (at least at the start...)");
   if (&that == this) return;
-  that._alive = false;
-  pos = (_mass*pos + that._mass*that.pos)/(_mass + that._mass);
-  _mass += that._mass;
+  std::size_t sz [2] {_elems.partners().size(), that._elems.partners().size()};
+  pos = (sz[0]*pos + sz[1]*that.pos)/(sz[0] + sz[1]);
   for (int i = that._edges.partners().size() - 1; i >= 0; --i) pair(that._edges.partners()[i]);
   for (int i = that._elems.partners().size() - 1; i >= 0; --i) pair(that._elems.partners()[i]);
-  that._mass = 0;
 }
 
 void Vertex::glue(Element_shape& to, std::vector<double> coords) {

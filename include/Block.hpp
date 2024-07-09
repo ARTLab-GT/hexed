@@ -53,7 +53,8 @@ class Edge;
 class Element_shape;
 
 /*! \brief Represents a mesh vertex (a point).
- * \details A `Vertex` has `n_dim()` and `row_size()` equal to 0.
+ * \details A `Vertex` has `n_dim()` 0.
+ * The `row_size()` is arbitrary, but may as well be set to the same as other mesh `Block`s for consistency.
  * Thus its position should be obtained as `point({})`.
  */
 class Vertex : public Block {
@@ -66,7 +67,7 @@ class Vertex : public Block {
   //! \details If `this` was not previously `alive()`, it will be now.
   inline void pair(mutual::Base<Element_shape, Vertex>& ptr) {_elems.add(ptr);}
   //! \brief Returns `true` iff `this` has at least one `Element_shape` pointing to it.
-  inline bool alive() {return _alive;}
+  inline bool alive() {return !_elems.partners().empty();}
 
   /*! \brief Combines this vertex with `that` and steals its resources.
    * \details All `Edge`s and `Element_shape`s that currently have pointers to `that`
@@ -75,6 +76,9 @@ class Vertex : public Block {
    * weighted by the numbers of elements pointing to each of them before `eat`ing.
    * `that` will no longer be `alive`, as it no longer has any element pointers.
    * The fact that "eat" seemed like the natural word for this may be a sign that I've read too much SnK...
+   *
+   * Both vertices must be `alive()` before calling `eat()`, or else an exception is thrown.
+   * Autocannibalism is allowed and simply does nothing (as long as the vertex is `alive()`).
    */
   void eat(Vertex& that);
 
@@ -96,8 +100,6 @@ class Vertex : public Block {
   Mat<3> _point(std::vector<int>) const override;
   Reciprocal_list<Vertex, Edge> _edges;
   Reciprocal_list<Vertex, Element_shape> _elems;
-  bool _alive;
-  int _mass;
   Reciprocal_ptr<Vertex, Element_shape> _glued_to;
   std::vector<double> _glued_coords;
 };

@@ -20,9 +20,14 @@ TEST_CASE("Block") {
   hexed::next::Vertex vert0({.1, -.3, .2}, 4);
   REQUIRE(vert0.n_dim() == 0);
   REQUIRE(vert0.row_size() == 4);
+  REQUIRE(!vert0.alive());
+  hexed::Reciprocal_ptr<hexed::next::Element_shape, hexed::next::Vertex> ptr0(nullptr);
+  vert0.pair(ptr0);
   REQUIRE(vert0.alive());
   REQUIRE_THAT(vert0.point({}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2}, hexed::math::Approx_equal()));
   hexed::next::Vertex vert1({.3, -.1, .4}, 4);
+  hexed::Reciprocal_ptr<hexed::next::Element_shape, hexed::next::Vertex> ptr1(nullptr);
+  vert1.pair(ptr1);
 
   // edge construction
   hexed::Equidistant basis(4);
@@ -53,6 +58,13 @@ TEST_CASE("Block") {
   SECTION("vertex `eat`ing") {
     hexed::next::Vertex vert2({3., 3., 3.}, 4);
     hexed::next::Vertex vert3({0., 0., 0.}, 4);
+    SECTION("vertices must be alive before eating") {
+      REQUIRE_THROWS(vert2.eat(vert3));
+    }
+    hexed::Reciprocal_ptr<hexed::next::Element_shape, hexed::next::Vertex> ptr2(nullptr);
+    hexed::Reciprocal_ptr<hexed::next::Element_shape, hexed::next::Vertex> ptr3(nullptr);
+    vert2.pair(ptr2);
+    vert3.pair(ptr3);
     hexed::next::Edge edge1(vert0, vert2, basis);
     hexed::next::Edge edge2(vert0, vert3, basis);
     REQUIRE_THAT(edge1.point({3}), Catch::Matchers::RangeEquals(hexed::Mat<3>{3., 3., 3.}));
