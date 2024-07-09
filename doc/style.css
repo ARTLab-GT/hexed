@@ -35,7 +35,7 @@ html {
     --page-link-color: #a0b0f0;
     --hexed-contrast0: #212121;
     --hexed-contrast1: #282828;
-    --hexed-contrast2: #404040;
+    --hexed-contrast2: #353535;
     --hexed-table-color: #282858;
     --hexed-border-color: var(--hexed-contrast1);
     --hexed-border-style: none;
@@ -46,7 +46,7 @@ html {
     --memdef-proto-background-color: var(--hexed-contrast1);
     --memdef-title-background-color: var(--hexed-contrast1);
     --memdef-doc-background-color: var(--hexed-contrast0);
-    --fragment-background-color: var(--hexed-contrast1);
+    --fragment-background-color: var(--hexed-contrast2);
     --memdef-border-color: var(--hexed-table-color);
   }
 }

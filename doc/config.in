@@ -18,3 +18,4 @@ HTML_EXTRA_STYLESHEET = {[options["source_dir"]]}/doc/style.css
 ALIASES += today="{[info["date"]]}" proj_version=" version {[info["version"]]}, commit `{[info["commit"]]}`" me="\ref Contact \"me\"" show_details="\details \f$ \f$"
 IMAGE_PATH = {[options["build_dir"]]}doc/html/
 CITE_BIB_FILES = {[options["source_dir"]]}/doc/references.bib
+COLLABORATION_GRAPH = NO
