@@ -19,14 +19,18 @@ Array<double> Block::points() const {
   return pts;
 }
 
-void Block::visualize(std::string format, std::string file_name, const std::vector<Block*>& blocks, double time) {
+void Block::visualize(std::string format, std::string file_name, double time) {
+  Sequence<const Block&> seq([this](std::size_t)->const Block& {return *this;}, []()->std::size_t{return 1;});
+  visualize(format, file_name, seq, time);
+}
+
+void Block::visualize(std::string format, std::string file_name, next::Sequence<const Block&> blocks, double time) {
   // construct the Visualizer
-  int block_dim = blocks.empty() ? 1 : blocks[0]->_n_dim;
+  int block_dim = blocks.empty() ? 1 : blocks[0]._n_dim;
   auto visualizer = Visualizer::create(format, 3, block_dim, file_name, {}, time, Visualizer::block);
   // write each block via the Visualizer
-  for (Block* block : blocks) {
-    HEXED_ASSERT(block, "Null pointer passed to `Block::visualize`.");
-    visualizer->write_block(block->points(), Array<double>({}));
+  for (const Block& block : blocks) {
+    visualizer->write_block(block.points(), Array<double>({}));
   }
 }
 

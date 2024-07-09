@@ -40,7 +40,9 @@ public:
   virtual Array<double> points() const;
   //! \brief Visualizes the nodes of a set of `Block`s.
   //! \details All blocks in the list must have the same `n_dim()`.
-  static void visualize(std::string format, std::string file_name, const std::vector<Block*>&, double time = 0.);
+  static void visualize(std::string format, std::string file_name, next::Sequence<const Block&>, double time = 0.);
+  //! \brief Visualizes the nodes of a single `Block`.
+  void visualize(std::string format, std::string file_name, double time = 0.);
 protected:
   //! \brief Derived classes must override this function to define the nodes.
   virtual Mat<3> _point(std::vector<int> node_coords) const = 0;

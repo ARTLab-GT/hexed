@@ -151,7 +151,7 @@ TEST_CASE("Block") {
         }
       }
     }
-    hexed::next::Block::visualize("default", "vertex_interp_face0", {&face});
+    face.visualize("default", "vertex_interp_face0");
     auto pos2 = [](double pos0, double pos1){return 4.*pos0 - 2.*pos0*pos0 - 2*pos1 + 1.*pos1*pos1;};
     for (auto& vert : verts) {
       vert.pos(2) = pos2(vert.pos(0), vert.pos(1));
@@ -164,7 +164,7 @@ TEST_CASE("Block") {
       }
     }
     face.reset();
-    hexed::next::Block::visualize("default", "vertex_interp_face1", {&face});
+    face.visualize("default", "vertex_interp_face1");
   }
 
   SECTION("Element_shape/Mesh_blocks") {
