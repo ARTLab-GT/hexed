@@ -204,9 +204,9 @@ class Face : public Boundary_block {
   //! \details The order of the edges is \f$ \{\xi_0 = 0\}, \{\xi_0 = 1\}, \{\xi_1 = 0\}, \{\xi_1 = 1\} \f$.
   inline Edge& edge(int i) {return _edges[i];}
 
-  /*! \brief sets `interior()` to solve Laplace's equation.
+  /*! \brief sets `interior()` to minimize the Laplacian.
    * \details Specifically, the Laplacian of each physical coordinate as a function of the reference coordinates
-   * is required to be uniformly 0
+   * is minimized in the \f$ L^2 \f$ norm.
    */
   void reset() override;
 
@@ -293,7 +293,7 @@ class Mesh_blocks {
    * The vertices and `Boundary_block` (if any) of the element can be accessed
    * in the lower-dimensional entity sequence access functions.
    */
-  std::unique_ptr<Element_shape> create_element(Mat<3> pos, double size, int boundary_face = no_face);
+  Element_shape create_element(Mat<3> pos, double size, int boundary_face = no_face);
 
   //! \brief Passed to `create_element` to indicate that no faces are on the surface boundary.
   static const int no_face;
