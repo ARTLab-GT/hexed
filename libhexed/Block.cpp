@@ -57,14 +57,14 @@ Vertex::Vertex(Mat<3> pos, int row_size)
 : Block(0, row_size), pos{pos}, _edges(this), _elems(this), _alive{true}, _mass{1}, _glued_to(this) {
 }
 
-void Vertex::eat(Vertex& other) {
-  if (&other == this) return;
-  other._alive = false;
-  pos = (_mass*pos + other._mass*other.pos)/(_mass + other._mass);
-  _mass += other._mass;
-  for (int i = other._edges.partners().size() - 1; i >= 0; --i) pair(other._edges.partners()[i]);
-  for (int i = other._elems.partners().size() - 1; i >= 0; --i) pair(other._elems.partners()[i]);
-  other._mass = 0;
+void Vertex::eat(Vertex& that) {
+  if (&that == this) return;
+  that._alive = false;
+  pos = (_mass*pos + that._mass*that.pos)/(_mass + that._mass);
+  _mass += that._mass;
+  for (int i = that._edges.partners().size() - 1; i >= 0; --i) pair(that._edges.partners()[i]);
+  for (int i = that._elems.partners().size() - 1; i >= 0; --i) pair(that._elems.partners()[i]);
+  that._mass = 0;
 }
 
 void Vertex::glue(Element_shape& to, std::vector<double> coords) {
@@ -79,12 +79,12 @@ std::vector<int> interior_dims(int n_dim, int row_size) {
   return dims;
 }
 
-Boundary_interior::Boundary_interior(int n_dim, const Basis& b)
-: Block(n_dim, b.row_size), _basis{&b}, _interior(interior_dims(n_dim, b.row_size)) {
+Boundary_block::Boundary_block(int n_dim, const Basis& b)
+: Block(n_dim, b.row_size), _interior(interior_dims(n_dim, b.row_size)), _basis{&b} {
 }
 
 Edge::Edge(Vertex& vertex0, Vertex& vertex1, const Basis& b)
-: Boundary_interior(1, b), _verts{this, this} {
+: Boundary_block(1, b), _verts{this, this} {
   vertex0.pair(_verts[0]);
   vertex1.pair(_verts[1]);
   reset();
@@ -128,7 +128,7 @@ Mat<3> Face::_point(std::vector<int> coords) const {
 }
 
 Face::Face(std::array<Vertex*, 4> verts, const Basis& b)
-: Boundary_interior(2, b) {
+: Boundary_block(2, b) {
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
       _edges.emplace_back(*verts[(2 - i_dim)*sign], *verts[(2 - i_dim)*sign + 1 + i_dim], basis());
