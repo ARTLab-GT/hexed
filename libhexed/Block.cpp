@@ -79,7 +79,7 @@ std::vector<int> interior_dims(int n_dim, int row_size) {
 }
 
 Boundary_block::Boundary_block(int n_dim, const Basis& b)
-: Block(n_dim, b.row_size), _interior(interior_dims(n_dim, b.row_size)), _basis{&b} {
+: Block(n_dim, b.row_size), _interior(interior_dims(n_dim, b.row_size)), _basis{&b}, _elem(this) {
 }
 
 Edge::Edge(Vertex& vertex0, Vertex& vertex1, const Basis& b)
@@ -197,7 +197,7 @@ Mat<3> Element_shape::_point(std::vector<int> coords) const {
 }
 
 Element_shape::Element_shape(int nd, const Basis& b)
-: Block(nd, b.row_size), _basis{&b}, _i_bf{6}, _glued_verts(this) {
+: Block(nd, b.row_size), _basis{&b}, _i_bf{6}, _bf(this), _glued_verts(this) {
   for (int i_vert = 0; i_vert < math::pow(2, nd); ++i_vert) _verts.emplace_back(this);
 }
 
@@ -306,12 +306,12 @@ std::unique_ptr<Element_shape> Mesh_blocks::create_element(Mat<3> pos, double si
     if (n_dim == 2) {
       int vert0 = sign*vstride(2, i_dim);
       _edges_2d.emplace_back(ptr->vertex(vert0), ptr->vertex(vert0 + vstride(2, !i_dim)), basis);
-      ptr->_bf.set(&_edges_2d.back());
+      _edges_2d.back().pair(ptr->_bf);
     } else if (n_dim == 3) {
       std::array<Vertex*, 4> verts;
       for (int i_vert = 0; i_vert < 4; ++i_vert) verts[i_vert] = &_boundary_verts.end()[i_vert - 4];
       _faces_3d.emplace_back(verts, basis);
-      ptr->_bf.set(&_faces_3d.back());
+      _faces_3d.back().pair(ptr->_bf);
       ptr->_sf.set(&_faces_3d.back());
     }
   }

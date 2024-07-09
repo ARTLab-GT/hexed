@@ -112,13 +112,18 @@ class Vertex : public Block {
  */
 class Boundary_block : public Block {
   public:
-  inline const Basis& basis() const {return *_basis;}
   Boundary_block(int n_dim, const Basis& basis);
+  inline const Basis& basis() const {return *_basis;}
+  inline bool alive() {return _elem;} //!< \brief `true` iff `this` currently has an `Element_shape` referencing it.
+  //! \brief sets `elem` to point to `this`
+  inline void pair(mutual::Base<Element_shape, Boundary_block>& elem) {_elem.pair(elem);}
+
   /*! \brief Resets the interior nodes to a minimal interpolation of the boundary nodes.
    * \details In what sense the interpolation is minimal is to be determined by derived classes.
    * This should be called in the constructor of the derived classes.
    */
   virtual void reset() = 0;
+
   /*! \brief A modifiable view of the interior points.
    * \details layout:
    * ([i_row \f$\in\f$ [0, `row_size()` - 1)]
@@ -128,13 +133,13 @@ class Boundary_block : public Block {
    * \attention The layout is transposed with respect to `Block::points`!
    */
   inline Array<double> interior() {return _interior;};
-  inline bool alive() {return true;} //!< \brief `true` iff `this` currently has an `Element_shape` referencing it.
 
   protected:
   Array<double> _interior; //!< \brief storage for the interior points
 
   private:
   const Basis* _basis;
+  Reciprocal_ptr<Boundary_block, Element_shape> _elem;
 };
 
 /*! \brief A 1-dimensional `Block` connecting 2 `Vertex`s.
@@ -152,7 +157,7 @@ class Edge : public Boundary_block {
    * `Vertex::eat` can redirect these to point to different vertices.
    */
   Edge(Vertex& vertex0, Vertex& vertex1, const Basis&);
-  void reset() override;
+  void reset() override; //!< \brief sets `interior()` to linear interpolation between vertices
   //! \brief Used in `glue()` to indicate that you are not gluing to either half of the target edge
   static const int no;
 
@@ -198,6 +203,11 @@ class Face : public Boundary_block {
   //! \brief Access the `i`th edge.
   //! \details The order of the edges is \f$ \{\xi_0 = 0\}, \{\xi_0 = 1\}, \{\xi_1 = 0\}, \{\xi_1 = 1\} \f$.
   inline Edge& edge(int i) {return _edges[i];}
+
+  /*! \brief sets `interior()` to solve Laplace's equation.
+   * \details Specifically, the Laplacian of each physical coordinate as a function of the reference coordinates
+   * is required to be uniformly 0
+   */
   void reset() override;
 
   private:
@@ -248,7 +258,7 @@ class Element_shape : public Block {
   const Basis* _basis;
   std::vector<Reciprocal_ptr<Element_shape, Vertex>> _verts;
   int _i_bf;
-  Mortal_ptr<Boundary_block> _bf;
+  Reciprocal_ptr<Element_shape, Boundary_block> _bf;
   Mortal_ptr<Face> _sf;
   Reciprocal_list<Element_shape, Vertex> _glued_verts;
 };

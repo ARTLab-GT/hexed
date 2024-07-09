@@ -34,6 +34,7 @@ TEST_CASE("Block") {
   hexed::next::Edge edge0(vert0, vert1, basis);
   REQUIRE(edge0.n_dim() == 1);
   REQUIRE(edge0.row_size() == 4);
+  REQUIRE(!edge0.alive());
   auto test_interp = [&](hexed::next::Edge& edge){
     for (int i = 0; i < 4; ++i) {
       REQUIRE_THAT(edge.point({i}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2} + i*hexed::Mat<3>::Constant(.2/3.), hexed::math::Approx_equal()));
@@ -124,6 +125,7 @@ TEST_CASE("Block") {
     verts.emplace_back(hexed::Mat<3>{1., 2.0, 3.}, 5);
     verts.emplace_back(hexed::Mat<3>{2., 2.0, 1.}, 5);
     hexed::next::Face face({&verts[0], &verts[1], &verts[2], &verts[3]}, basis5);
+    REQUIRE(!face.alive());
     REQUIRE_THAT(face.edge(0).point({0}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.0, 1.500, 1.0}, hexed::math::Approx_equal()));
     REQUIRE_THAT(face.edge(0).point({2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, 1.250, 1.0}, hexed::math::Approx_equal()));
     REQUIRE_THAT(face.edge(3).point({2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{2.0, 1.500, 1.0}, hexed::math::Approx_equal()));
@@ -198,6 +200,7 @@ TEST_CASE("Block") {
       REQUIRE_THAT(elems[0]->point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.15, .65, .1}, hexed::math::Approx_equal()));
       auto edges = blocks.edges_2d();
       REQUIRE(edges.size() == 2);
+      REQUIRE(edges[0].alive());
       REQUIRE_THAT(edges[0].interior()(1), Catch::Matchers::RangeEquals(hexed::Mat<3>{-.9, .65, .1}, hexed::math::Approx_equal()));
       edges[0].interior()(1)[0] = -.8;
       REQUIRE_THAT(elems[1]->point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{-.5, .65, .1}, hexed::math::Approx_equal()));
@@ -237,6 +240,7 @@ TEST_CASE("Block") {
       REQUIRE_THAT(elems[0]->point({0, 0, 4}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.50, .70, .62}, hexed::math::Approx_equal()));
       auto faces = blocks.faces_3d();
       REQUIRE(faces.size() == 4);
+      REQUIRE(faces[0].alive());
       faces[0].edge(3).interior()(1)[2] += .002;
       faces[1].interior()(1)(1)[1] += .002;
       REQUIRE_THAT(elems[1]->point({4, 2, 4}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.54, .710, .622}, hexed::math::Approx_equal()));
