@@ -91,6 +91,18 @@ public:
     return {[&vec](std::size_t index)->T{return vec[index];}, [&vec](){return vec.size();}};
   }
 
+  Sequence<T> operator+(Sequence<T> that) {
+    getter gets [2] {_get, that._get};
+    sizer sizes [2] {_size, that._size};
+    return {
+      [gets, sizes](std::size_t index)->T {
+        std::size_t s = sizes[0]();
+        return index < s ? gets[0](index) : gets[1](index - s);
+      },
+      [sizes](){return sizes[0]() + sizes[1]();},
+    };
+  }
+
 private:
   sizer _size;
   getter _get;

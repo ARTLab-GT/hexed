@@ -96,12 +96,18 @@ class Vertex : public Block {
    */
   void glue(Element_shape& to, std::vector<double> coords);
 
+  //! \brief Computes a hypothetical new position for this vertex to improve mesh quality, but doesn't apply it yet
+  void calc_relax();
+  //! \brief Applies the update computed with `calc_update`.
+  inline void apply_relax() {pos += _update;}
+
   //! \brief current position of this vertex
   //! \details `Block::point` will return this value, unless the vertes is currently `glue()`d.
   Mat<3> pos;
 
   private:
   Mat<3> _point(std::vector<int>) const override;
+  Mat<3> _update;
   Reciprocal_list<Vertex, Edge> _edges;
   Reciprocal_list<Vertex, Element_shape> _elems;
   Reciprocal_ptr<Vertex, Element_shape> _glued_to;
@@ -282,6 +288,8 @@ class Mesh_blocks {
   //! \brief Access the list of all vertices which are __not__ on the \ref surface_bc "surface boundary".
   //! \brief Includes vertices on the \ref extremal_bc "extremal boundaries".
   Sequence<Vertex&> interior_verts();
+  //! \brief List of all vertices
+  inline Sequence<Vertex&> verts() {return boundary_verts() + interior_verts();}
   //! \brief If 2D, obtains the list of surface edges.
   //! \details If not 2D, returns an empty sequence.
   Sequence<Edge&> edges_2d();

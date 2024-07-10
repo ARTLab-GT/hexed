@@ -1390,6 +1390,13 @@ void Accessible_mesh::relax(double factor)
     if (vert->is_mobile()) vert->pos = factor*vert->temp_vector + (1 - factor)*vert->pos;
   }
   snap_vertices();
+  // update `next::Vertex`s
+  #pragma omp parallel for
+  for (auto& vert : _blocks.verts()) vert.calc_relax();
+  #if 0
+  #pragma omp parallel for
+  for (auto& vert : _blocks.verts()) vert.apply_relax();
+  #endif
 }
 
 Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& basis, std::function<bool(Element&)> mask)

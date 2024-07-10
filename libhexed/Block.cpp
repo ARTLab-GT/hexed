@@ -66,7 +66,7 @@ Mat<3> Vertex::_point(std::vector<int>) const {
 }
 
 Vertex::Vertex(Mat<3> pos, int row_size)
-: Block(0, row_size), pos{pos}, _edges(this), _elems(this), _glued_to(this) {
+: Block(0, row_size), pos{pos}, _update{Mat<3>::Zero()}, _edges(this), _elems(this), _glued_to(this) {
 }
 
 void Vertex::eat(Vertex& that) {
@@ -84,6 +84,18 @@ void Vertex::glue(Element_shape& to, std::vector<double> coords) {
   HEXED_ASSERT(std::size_t(to.n_dim()) == coords.size(), "wrong number of glued coordinates");
   _glued_to.pair(to._glued_verts);
   _glued_coords = coords;
+}
+
+void Vertex::calc_relax() {
+  HEXED_ASSERT(alive(), "`Vertex` must be `alive()` to compute update");
+  _update.setZero();
+  #if 0
+  for (auto elem : _elems.theirs()) {
+    int nv = math::pow(2, elem->n_dim());
+    for (int i_vert = 0; i_vert < nv; ++i_vert) _update += elem->vertex(i_vert).pos/nv;
+  }
+  _update = .9*(_update/_elems.theirs().size() - pos);
+  #endif
 }
 
 std::vector<int> interior_dims(int n_dim, int row_size) {
