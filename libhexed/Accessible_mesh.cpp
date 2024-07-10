@@ -181,15 +181,18 @@ Element& Accessible_mesh::element(int ref_level, bool is_deformed, int serial_n)
   return container(is_deformed).at(ref_level, serial_n);
 }
 
-void Accessible_mesh::connect_cartesian(int ref_level, std::array<int, 2> serial_n, Con_dir<Element> direction, std::array<bool, 2> is_deformed)
-{
+void Accessible_mesh::connect_cartesian(
+  int ref_level, std::array<int, 2> serial_n, Con_dir<Element> direction, std::array<bool, 2> is_deformed
+) {
   std::array<Element*, 2> el_ar;
   for (int i_side : {0, 1}) el_ar[i_side] = &element(ref_level, is_deformed[i_side], serial_n[i_side]);
   car.cons.emplace_back(new Element_face_connection<Element>(el_ar, direction));
+  el_ar[0]->shape().connect(el_ar[1]->shape(), direction);
 }
 
-void Accessible_mesh::connect_deformed(int ref_level, std::array<int, 2> serial_n, Con_dir<Deformed_element> direction)
-{
+void Accessible_mesh::connect_deformed(
+  int ref_level, std::array<int, 2> serial_n, Con_dir<Deformed_element> direction
+) {
   if ((direction.i_dim[0] == direction.i_dim[1]) && (direction.face_sign[0] == direction.face_sign[1])) {
     throw std::runtime_error("attempt to connect faces of same sign along same dimension which is forbidden");
   }
@@ -198,15 +201,16 @@ void Accessible_mesh::connect_deformed(int ref_level, std::array<int, 2> serial_
     el_ar[i_side] = &def.elems.at(ref_level, serial_n[i_side]);
   }
   def.cons.emplace_back(new Element_face_connection<Deformed_element>(el_ar, direction));
+  el_ar[0]->shape().connect(el_ar[1]->shape(), direction);
 }
 
-void Accessible_mesh::connect_hanging(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Deformed_element> dir,
-                                      bool coarse_deformed, std::vector<bool> fine_deformed, std::array<bool, 2> stretch)
-{
+void Accessible_mesh::connect_hanging(
+  int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Deformed_element> dir,
+  bool coarse_deformed, std::vector<bool> fine_deformed, std::array<bool, 2> stretch
+) {
   bool is_car = !coarse_deformed;
   for (bool fine_def : fine_deformed) is_car = (is_car||!fine_def);
-  if (is_car)
-  {
+  if (is_car) {
     Element* coarse = &element(coarse_ref_level, coarse_deformed, coarse_serial);
     std::vector<Element*> fine;
     for (int i_fine = 0; i_fine < n_vert/2; ++i_fine) {
@@ -216,9 +220,7 @@ void Accessible_mesh::connect_hanging(int coarse_ref_level, int coarse_serial, s
       throw std::runtime_error("attempted to form a cartesian hanging-node connection with incompatible `Con_dir`.");
     }
     car.ref_face_cons[params.n_dim - 1].emplace_back(new Refined_connection<Element> {coarse, fine, {dir.i_dim[0]}, dir.face_sign[1]});
-  }
-  else
-  {
+  } else {
     Deformed_element* coarse = &def.elems.at(coarse_ref_level, coarse_serial);
     std::vector<Deformed_element*> fine;
     for (unsigned i_fine = 0; i_fine < fine_serial.size(); ++i_fine) {
@@ -226,6 +228,16 @@ void Accessible_mesh::connect_hanging(int coarse_ref_level, int coarse_serial, s
     }
     def.ref_face_cons[math::log(2, fine_serial.size())].emplace_back(new Refined_connection<Deformed_element> {coarse, fine, dir, false, stretch});
   }
+  // connect element shapes
+  std::vector<next::Element_shape*> fine;
+  for (int i = 0; i < 1 + stretch[0]; ++i) {
+    for (std::size_t i_fine = 0; i_fine < fine_serial.size(); ++i_fine) {
+      for (int i = 0; i < 1 + stretch[1]; ++i) {
+        fine.emplace_back(&element(coarse_ref_level + 1, fine_deformed[i_fine], fine_serial[i_fine]).shape());
+      }
+    }
+  }
+  element(coarse_ref_level, coarse_deformed, coarse_serial).shape().connect(fine, dir);
 }
 
 int Accessible_mesh::add_boundary_condition(Flow_bc* flow_bc, Mesh_bc* mesh_bc)
