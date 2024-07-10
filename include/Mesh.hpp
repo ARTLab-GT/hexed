@@ -224,6 +224,9 @@ class Mesh
   virtual void write(std::string file_name) = 0;
   //! \brief write the mesh in the OpenFOAM PolyMesh format
   virtual void export_polymesh(std::string dir_name) = 0;
+  //! \brief visualize the mesh
+  //! \details For debugging. For actual simulations, use `Solver::visualize_field`.
+  virtual void visualize(std::string format, std::string file_name) = 0;
   //!\}
   protected:
   virtual void reset_verts() = 0;

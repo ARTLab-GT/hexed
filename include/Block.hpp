@@ -22,7 +22,7 @@ namespace hexed::next {
  * To represent a 2D mesh, just set the last physical coordinate to 0.
  */
 class Block : public Mortal {
-public:
+  public:
   inline Block(int n_dim, int row_size) : _n_dim{n_dim}, _row_size{row_size} {}
   inline int n_dim() const {return _n_dim;} //!< \brief number of _topological_ dimensions.
   //! \brief number nodes along each dimension \see \ref basis_row_size "row size"
@@ -42,11 +42,13 @@ public:
   //! \details All blocks in the list must have the same `n_dim()`.
   static void visualize(std::string format, std::string file_name, next::Sequence<const Block&>, double time = 0.);
   //! \brief Visualizes the nodes of a single `Block`.
-  void visualize(std::string format, std::string file_name, double time = 0.);
-protected:
+  void visualize(std::string format, std::string file_name, double time = 0.) const;
+
+  protected:
   //! \brief Derived classes must override this function to define the nodes.
   virtual Mat<3> _point(std::vector<int> node_coords) const = 0;
-private:
+
+  private:
   int _n_dim;
   int _row_size;
 };

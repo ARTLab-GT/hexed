@@ -19,7 +19,7 @@ Array<double> Block::points() const {
   return pts;
 }
 
-void Block::visualize(std::string format, std::string file_name, double time) {
+void Block::visualize(std::string format, std::string file_name, double time) const {
   Sequence<const Block&> seq([this](std::size_t)->const Block& {return *this;}, []()->std::size_t{return 1;});
   visualize(format, file_name, seq, time);
 }

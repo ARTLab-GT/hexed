@@ -899,8 +899,7 @@ TEST_CASE("uncertainty")
   REQUIRE(sol.sample(0, true, sn, hexed::Uncertainty())[0] == Catch::Approx(correct));
 }
 
-TEST_CASE("cylinder tree mesh")
-{
+TEST_CASE("cylinder tree mesh") {
   static_assert(hexed::config::max_row_size >= 6);
   constexpr int row_size = 6;
   hexed::Solver solver (2, row_size, 1.);
@@ -914,6 +913,7 @@ TEST_CASE("cylinder tree mesh")
   for (int i = 0; i < 3; ++i) solver.mesh().relax();
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
+  solver.mesh().visualize("default", "cyl_before_ref");
   REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
   for (int i = 0; i < 6; ++i) {
     // this criterion will refine all elements with a vertex that is within .1 of the midpoint of the arc
@@ -936,6 +936,7 @@ TEST_CASE("cylinder tree mesh")
   }
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
+  solver.mesh().visualize("default", "cyl_after_ref");
   REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
   for (int i = 0; i < 6; ++i) {
     solver.mesh().update(hexed::criteria::never, [](hexed::Element& elem){return elem.refinement_level() > 3;});
@@ -945,6 +946,7 @@ TEST_CASE("cylinder tree mesh")
   REQUIRE(solver.mesh().n_elements() == n_initial); // this mesh should have been completely unrefined to where it started
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
+  solver.mesh().visualize("default", "cyl_after_unref");
   REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
 }
 

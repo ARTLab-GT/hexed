@@ -5,6 +5,7 @@
 #include "Mesh_by_type.hpp"
 #include "Tree.hpp"
 #include "Kernel_mesh.hpp"
+#include "Gauss_lobatto.hpp"
 
 namespace hexed {
 
@@ -39,6 +40,8 @@ class Accessible_mesh : public Mesh {
   std::vector<std::vector<Vertex::Non_transferable_ptr>> boundary_verts; // a vector of the vertices that are on each boundary
   std::vector<Vertex::Non_transferable_ptr> smooth_verts; // a vector of the vertices that need to be smoothed in this sweep
   int _mask_levels;
+  Gauss_lobatto _basis;
+  next::Mesh_blocks _blocks;
 
   // masked sequences
   template <typename view_t, typename storage_t>
@@ -198,6 +201,7 @@ class Accessible_mesh : public Mesh {
                      ptr_convert<Element_connection&, Element_face_connection<Deformed_element>*>> extruded_connections() {return {extrude_cons};}
   void write(std::string file_name) override;
   void export_polymesh(std::string dir_name) override;
+  void visualize(std::string format, std::string file_name) override;
 
   protected:
   void reset_verts() override;

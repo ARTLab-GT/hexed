@@ -148,6 +148,8 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
   surf_geom{nullptr},
   verts_are_reset{false},
   _mask_levels{0},
+  _basis(params.row_size),
+  _blocks(params.n_dim, _basis),
   buffer_dist{std::sqrt(params.n_dim)/2}
 {
   def.face_con_v = def_face_cons;
@@ -165,6 +167,7 @@ int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<in
   int sn = container(is_deformed).emplace(ref_level, position, origin, aniso_ref_level);
   Element& elem = element(ref_level, is_deformed, sn);
   for (int i_vert = 0; i_vert < n_vert; ++i_vert) vert_ptrs.emplace_back(elem.vertex(i_vert));
+  elem.create_shape(_blocks);
   return sn;
 }
 
@@ -1979,6 +1982,14 @@ void Accessible_mesh::export_polymesh(std::string dir_name)
   });
   write_polymesh_file(dir_name, "owner",     "labelList", n_faces,    [&](int i_entry){return format_str(100, "%i", owners   [i_entry]);}, face_note);
   write_polymesh_file(dir_name, "neighbour", "labelList", n_internal, [&](int i_entry){return format_str(100, "%i", neighbors[i_entry]);}, face_note);
+}
+
+void Accessible_mesh::visualize(std::string format, std::string file_name) {
+  next::Sequence<const next::Block&> shapes(
+    [this](std::size_t index)->const next::Block& {return elements()[index].shape();},
+    [this]()->std::size_t {return elements().size();}
+  );
+  next::Block::visualize(format, file_name, shapes);
 }
 
 }

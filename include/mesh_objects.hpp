@@ -17,7 +17,7 @@ namespace hexed
 class Element_new;
 class Boundary;
 class Face;
-class Connection;
+class Connection_new;
 class Hanging;
 
 class Element_new : public Kernel_element
@@ -98,7 +98,7 @@ class Face
   Element_new* _element;
   Boundary* _boundary;
   Hanging* _hanging_owner;
-  Mutual_ptr<Face, Connection> _connection;
+  Mutual_ptr<Face, Connection_new> _connection;
   Mutual_ptr<Face, Hanging> _hanging;
   Array<double> _state;
   Array<double> _node_adj;
@@ -112,9 +112,9 @@ class Face
   Face(Hanging&);
 
   class Connect {
-    friend Connection;
+    friend Connection_new;
     friend Hanging;
-    Connect(Face&, Mutual_ptr<Connection, Face>&);
+    Connect(Face&, Mutual_ptr<Connection_new, Face>&);
     Connect(Face&, Mutual_ptr<Hanging, Face>&);
   };
 
@@ -123,7 +123,7 @@ class Face
   int sign();
   Element_new* element();
   Boundary* boundary();
-  Connection* connection();
+  Connection_new* connection();
   Hanging* hanging();
   bool is_connected();
   Array<double> state();
@@ -132,13 +132,13 @@ class Face
   Array<Vertex*> vertices();
 };
 
-class Connection
+class Connection_new
 {
-  std::array<Mutual_ptr<Connection, Face>, 2> _faces;
+  std::array<Mutual_ptr<Connection_new, Face>, 2> _faces;
 
   public:
-  Connection(Face&, Face&);
-  Connection(const Connection&) = delete;
+  Connection_new(Face&, Face&);
+  Connection_new(const Connection_new&) = delete;
   bool deformed();
   bool is_connected();
   Face* face(int i_face);
