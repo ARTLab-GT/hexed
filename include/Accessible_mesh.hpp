@@ -6,16 +6,13 @@
 #include "Tree.hpp"
 #include "Kernel_mesh.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \brief A mesh that supports access to the actual elements with the numerical data they contain.
- * \details This level of
- * access is required by the numerical scheme but should be hidden from the library user, who should not be
- * concerned with numerical details.
+ * \details This level of access is required by the numerical scheme but should be hidden from the library user,
+ * who should not be concerned with numerical details.
  */
-class Accessible_mesh : public Mesh
-{
+class Accessible_mesh : public Mesh {
   Storage_params params;
   int n_vert;
   double root_sz;
@@ -45,15 +42,14 @@ class Accessible_mesh : public Mesh
 
   // masked sequences
   template <typename view_t, typename storage_t>
-  struct Masked
-  {
+  struct Masked {
     std::vector<storage_t*> ptrs;
     Vector_view<view_t&, storage_t*, ptr_convert<view_t&, storage_t*>> view;
     Slice<view_t&> slice;
     Masked() : view(ptrs), slice(view) {}
+
     template <typename T, typename U>
-    void populate(T& base_seq, U criterion)
-    {
+    void populate(T& base_seq, U criterion) {
       ptrs.resize(base_seq.size());
       int i_ptr = 0;
       for (int i = 0; i < int(base_seq.size()); ++i) {
@@ -156,8 +152,7 @@ class Accessible_mesh : public Mesh
    * After modifying the mesh, you should call `reset_masks()` before making any new masks.
    * \todo Make this more intuitive and less error-prone.
    */
-  class Masked_mesh
-  {
+  class Masked_mesh {
     Masked<Kernel_element, Element> _masked_elems;
     Masked<Kernel_element, Element> _masked_car_elems;
     Masked<Kernel_element, Element> _masked_def_elems;
