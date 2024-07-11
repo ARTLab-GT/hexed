@@ -117,7 +117,7 @@ void Vertex::calc_relax() {
     }
     HEXED_ASSERT(i_this >= 0, "`this` does not appear to be a vertex of `elem`!");
   }
-  _update = .2*(_update/(nd*_elems.theirs().size()) - pos);
+  _update = .9*(_update/(nd*_elems.theirs().size()) - pos);
 }
 
 std::vector<int> interior_dims(int n_dim, int row_size) {
