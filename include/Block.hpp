@@ -242,6 +242,8 @@ class Element_shape : public Block {
   friend void Vertex::glue(Element_shape&, std::vector<double>);
 
   public:
+  //! \brief Obtains the edge length of this element before any vertex adjustment.
+  inline double nominal_size() const {return _nom_sz;}
   //! \brief Accesses the `i_vert`th vertex (in standard row-major order)
   inline Vertex& vertex(int i_vert) {return *_verts[i_vert];}
   inline const Basis& basis() const {return *_basis;}
@@ -266,6 +268,7 @@ class Element_shape : public Block {
   Mat<3> _vertex_point(std::vector<int>) const;
   Mat<3> _point(std::vector<int>) const override;
   const Basis* _basis;
+  double _nom_sz;
   std::vector<Reciprocal_ptr<Element_shape, Vertex>> _verts;
   int _i_bf;
   Reciprocal_ptr<Element_shape, Boundary_block> _bf;

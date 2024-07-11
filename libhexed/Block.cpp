@@ -4,6 +4,8 @@
 
 namespace hexed::next {
 
+int vstride(int n_dim, int i_dim) {return math::pow(2, n_dim - 1 - i_dim);}
+
 Array<double> Block::points() const {
   // construct an Array with the correct shape
   std::vector<int> shape {3};
@@ -89,11 +91,33 @@ void Vertex::glue(Element_shape& to, std::vector<double> coords) {
 void Vertex::calc_relax() {
   HEXED_ASSERT(alive(), "`Vertex` must be `alive()` to compute update");
   _update.setZero();
+  int nd = _elems.theirs()[0]->n_dim();
+  int nv = math::pow(2, _elems.theirs()[0]->n_dim());
   for (auto elem : _elems.theirs()) {
-    int nv = math::pow(2, elem->n_dim());
-    for (int i_vert = 0; i_vert < nv; ++i_vert) _update += elem->vertex(i_vert).point({})/nv;
+    int i_this = -1;
+    Mat<3, dyn> verts(3, nv);
+    for (int i_vert = 0; i_vert < nv; ++i_vert) {
+      Vertex& vert = elem->vertex(i_vert);
+      verts(all, i_vert) = vert.point({});
+      if (&vert == this) i_this = i_vert;
+    }
+    std::vector<int> coords(nd);
+    for (int i_dim = 0; i_dim < nd; ++i_dim) coords[i_dim] = i_this/vstride(nd, i_dim)%2*vstride(nd, i_dim);
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      Mat<3, 2> edges;
+      int opposite = i_this + (vstride(nd, i_dim) - 2*coords[i_dim]);
+      for (int i_edge = 0; i_edge < 2; ++i_edge) {
+        int j_dim = (i_dim + i_edge + 1)%nd;
+        if (i_edge < nd - 1) {
+          int start = opposite - coords[j_dim];
+          edges(all, i_edge) = verts(all, start + vstride(nd, j_dim)) - verts(all, start);
+        } else edges(all, i_edge) = math::sign(j_dim)*Mat<3>::Unit(2);
+      }
+      _update += verts(all, opposite) + math::sign(i_dim)*elem->nominal_size()*(edges(all, 0).cross(edges(all, 1)));
+    }
+    HEXED_ASSERT(i_this >= 0, "`this` does not appear to be a vertex of `elem`!");
   }
-  _update = .1*(_update/_elems.theirs().size() - pos);
+  _update = .2*(_update/(nd*_elems.theirs().size()) - pos);
 }
 
 std::vector<int> interior_dims(int n_dim, int row_size) {
@@ -145,7 +169,7 @@ void Edge::glue(Edge& other, int half) {
 Mat<3> Face::_point(std::vector<int> coords) const {
   // if the point is on the boundary of the node array, forward to one of the edges
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
-    if (coords[i_dim] ==       0) return _edges[2*i_dim    ].point({coords[!i_dim]});
+    if (coords[i_dim] ==              0) return _edges[2*i_dim    ].point({coords[!i_dim]});
     if (coords[i_dim] == row_size() - 1) return _edges[2*i_dim + 1].point({coords[!i_dim]});
   }
   // otherwise, return an interior node
@@ -202,8 +226,6 @@ void Face::reset() {
   Mat_rm<> soln = lhs_mat.fullPivHouseholderQr().solve(rhs_mat);
   _interior = soln.data();
 }
-
-int vstride(int n_dim, int i_dim) {return math::pow(2, n_dim - 1 - i_dim);}
 
 Mat<3> Element_shape::_vertex_point(std::vector<int> coords) const {
   // computes a point via order-1 interpolation between the vertices,
@@ -336,6 +358,7 @@ Sequence<Face&> Mesh_blocks::faces_3d() {return purge_fetch(_faces_3d);}
 Element_shape Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_face) {
   // create the element
   Element_shape elem(n_dim, basis);
+  elem._nom_sz = size;
   // create vertices for the element and connect the element's vertex pointers to it
   int nv = math::pow(2, n_dim);
   for (int i_vert = 0; i_vert < nv; ++i_vert) {
