@@ -31,6 +31,10 @@ namespace next {
  * This may not be particularly fast.
  * If you need extremely fast entry access, you should use a contiguous array rather than a general sequence.
  * This class is a simpler alternative to the idea of [ranges](https://en.cppreference.com/w/cpp/ranges).
+ *
+ * __Thread safety__ \n
+ * Access to entries with [] or iterators is thread-safe.
+ * Access to the sequence itself (e.g. with `dereference()`, `operator+()`, etc.) is not thread safe.
  */
 template <typename T>
 class Sequence {
@@ -91,6 +95,7 @@ public:
     return {[&vec](std::size_t index)->T{return vec[index];}, [&vec](){return vec.size();}};
   }
 
+  //! \brief concatenates
   Sequence<T> operator+(Sequence<T> that) {
     getter gets [2] {_get, that._get};
     sizer sizes [2] {_size, that._size};

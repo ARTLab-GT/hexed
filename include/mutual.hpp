@@ -31,6 +31,9 @@ namespace hexed::mutual {
  * - Move semantics that cause the moved-to object to steal the partners of the moved-from object.
  *
  * Derived classes may override `_mine()` to provide their partners access to some data.
+ *
+ * __Thread Safety__ \n
+ * %Connection and disconnection, and by consequence move semantics, are __not__ thread safe in general.
  */
 template <typename T, typename U>
 class Base {
