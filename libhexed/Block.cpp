@@ -74,7 +74,7 @@ void Vertex::eat(Vertex& that) {
   if (&that == this) return;
   // compute averaged position
   std::size_t sz [2] {_elems.partners().size(), that._elems.partners().size()};
-  pos = (sz[0]*pos + sz[1]*that.pos)/(sz[0] + sz[1]);
+  pos = (sz[0]*point({}) + sz[1]*that.point({}))/(sz[0] + sz[1]);
   // steal pointers
   for (int i = that._edges.partners().size() - 1; i >= 0; --i) pair(that._edges.partners()[i]);
   for (int i = that._elems.partners().size() - 1; i >= 0; --i) pair(that._elems.partners()[i]);
@@ -91,7 +91,7 @@ void Vertex::calc_relax() {
   _update.setZero();
   for (auto elem : _elems.theirs()) {
     int nv = math::pow(2, elem->n_dim());
-    for (int i_vert = 0; i_vert < nv; ++i_vert) _update += elem->vertex(i_vert).pos/nv;
+    for (int i_vert = 0; i_vert < nv; ++i_vert) _update += elem->vertex(i_vert).point({})/nv;
   }
   _update = .1*(_update/_elems.theirs().size() - pos);
 }
@@ -215,7 +215,7 @@ Mat<3> Element_shape::_vertex_point(std::vector<int> coords) const {
       bool sign = i_vert/vstride(n_dim(), i_dim)%2;
       weight *= !sign + math::sign(sign)*_basis->node(coords[i_dim]);
     }
-    point += weight*_verts[i_vert]->pos;
+    point += weight*_verts[i_vert]->point({});
   }
   return point;
 }
