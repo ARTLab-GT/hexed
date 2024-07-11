@@ -1416,10 +1416,11 @@ void Accessible_mesh::relax(double factor)
   }
   snap_vertices();
   // update `next::Vertex`s
-  //#pragma omp parallel for
-  for (auto& vert : _blocks.verts()) vert.calc_relax();
-  //#pragma omp parallel for
-  for (auto& vert : _blocks.verts()) vert.apply_relax();
+  auto verts = _blocks.verts();
+  #pragma omp parallel for
+  for (auto& vert : verts) vert.calc_relax();
+  #pragma omp parallel for
+  for (auto& vert : verts) vert.apply_relax();
 }
 
 Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& basis, std::function<bool(Element&)> mask)
