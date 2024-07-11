@@ -35,7 +35,7 @@ namespace hexed::mutual {
 template <typename T, typename U>
 class Base {
   friend class Base<U, T>;
-protected:
+  protected:
   //! \brief takes the necessary steps to connect `this` to `that`, without worrying about anything on `that`'s end
   virtual void _set(Base<U, T>& that) = 0;
   //! \brief takes the necessary steps to disconnect `this` from `that`, without worrying about anything on `that`'s end
@@ -64,7 +64,7 @@ protected:
 //! \brief an object which is mutually connected ("paired") with only one other object
 template <typename T, typename U>
 class Single : public Base<T, U> {
-public:
+  public:
   //! \brief Constructs a `Single` with no partner (it is "unpaired")
   Single() : _partner{nullptr} {}
   Single(const Single&) = delete;
@@ -94,13 +94,13 @@ public:
   Base<U, T>* partner() {return _partner;}
   const Base<U, T>* partner() const {return _partner;} //!< \overload
 
-private:
-  void _set(Base<U, T>& other) override {
+  private:
+  void _set(Base<U, T>& that) override {
     unpair();
-    _partner = &other;
+    _partner = &that;
   }
-  void _unset(Base<U, T>& other) override {
-    HEXED_ASSERT(_partner == &other, "not connected to `other`");
+  void _unset(Base<U, T>& that) override {
+    HEXED_ASSERT(_partner == &that, "not connected to `that`");
     _partner = nullptr;
   }
   Base<U, T>* _partner;
@@ -115,9 +115,8 @@ private:
  * so derrived classes shouldn't have to worry about that.
  */
 template <typename T, typename U>
-class Multiple : public Base<T, U>
-{
-public:
+class Multiple : public Base<T, U> {
+  public:
   Multiple() = default;
   Multiple(const Multiple&) = delete;
   //! \brief steals all of `that`'s partners, leaving `that` unconnected
@@ -150,7 +149,7 @@ public:
   #undef ACCESS
   std::vector<Base<U, T>*> _partners;
 
-private:
+  private:
   void _set(Base<U, T>& that) override {
     if (!std::any_of(_partners.begin(), _partners.end(), [&that](Base<U, T>* p){return p == &that;})) {
       _partners.push_back(&that);

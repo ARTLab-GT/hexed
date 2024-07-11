@@ -89,13 +89,11 @@ void Vertex::glue(Element_shape& to, std::vector<double> coords) {
 void Vertex::calc_relax() {
   HEXED_ASSERT(alive(), "`Vertex` must be `alive()` to compute update");
   _update.setZero();
-  #if 0
   for (auto elem : _elems.theirs()) {
     int nv = math::pow(2, elem->n_dim());
     for (int i_vert = 0; i_vert < nv; ++i_vert) _update += elem->vertex(i_vert).pos/nv;
   }
-  _update = .9*(_update/_elems.theirs().size() - pos);
-  #endif
+  _update = .1*(_update/_elems.theirs().size() - pos);
 }
 
 std::vector<int> interior_dims(int n_dim, int row_size) {

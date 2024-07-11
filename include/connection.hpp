@@ -238,7 +238,12 @@ class Refined_connection
         any_str = true;
       }
     }
-    if (int(fine.size()) != n_fine) throw std::runtime_error("wrong number of elements in `Refined_connection`");
+    HEXED_ASSERT(int(fine.size()) == n_fine,
+      format_str(
+        1000, "wrong number of fine elements (%i) in `Refined_connection` (stretch = {%i, %i})",
+        int(fine.size()), int(stretch_arg[0]), int(stretch_arg[1])
+      )
+    );
     std::vector<int> permutation_inds {face_vertex_inds(nd, con_dir)};
     auto vert_inds {vertex_inds(nd, con_dir)};
     // merge vertices

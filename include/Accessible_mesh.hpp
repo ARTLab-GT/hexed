@@ -82,6 +82,14 @@ class Accessible_mesh : public Mesh {
   void snap_vertices();
   void create_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3));
   void read_file(std::string file_name);
+  void _connect(std::array<Element*, 2>, Con_dir<Element>);
+  void _connect(std::array<Deformed_element*, 2>, Con_dir<Deformed_element>);
+  void _connect(Element*, std::vector<Element*>, Con_dir<Deformed_element>);
+  void _connect(Deformed_element*, std::vector<Deformed_element*>, Con_dir<Deformed_element>,
+                std::array<bool, 2> = {false, false});
+
+  template <typename Elem_t>
+  void _connect_shapes(Elem_t*, std::vector<Elem_t*>, Con_dir<Deformed_element>, std::array<bool, 2>);
 
   public:
   //! \brief how far must the center of an element be from the geometry relative to the nominal size
