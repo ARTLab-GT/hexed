@@ -107,13 +107,13 @@ void Vertex::calc_relax() {
       Mat<3, 2> edges;
       int opposite = i_this + (vstride(nd, i_dim) - 2*coords[i_dim]);
       for (int i_edge = 0; i_edge < 2; ++i_edge) {
-        int j_dim = (i_dim + i_edge + 1)%nd;
         if (i_edge < nd - 1) {
+          int j_dim = (i_dim + i_edge + 1)%nd;
           int start = opposite - coords[j_dim];
           edges(all, i_edge) = verts(all, start + vstride(nd, j_dim)) - verts(all, start);
-        } else edges(all, i_edge) = math::sign(j_dim)*Mat<3>::Unit(2);
+        } else edges(all, i_edge) = math::sign(!i_dim)*elem->nominal_size()*Mat<3>::Unit(2);
       }
-      _update += verts(all, opposite) + math::sign(i_dim)*elem->nominal_size()*(edges(all, 0).cross(edges(all, 1)));
+      _update += verts(all, opposite) + math::sign(coords[i_dim])/elem->nominal_size()*edges(all, 0).cross(edges(all, 1));
     }
     HEXED_ASSERT(i_this >= 0, "`this` does not appear to be a vertex of `elem`!");
   }
