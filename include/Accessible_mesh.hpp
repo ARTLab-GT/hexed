@@ -63,7 +63,8 @@ class Accessible_mesh : public Mesh {
   };
 
   Element_container& container(bool is_deformed);
-  int add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin, int aniso_ref_level = 0);
+  int add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin,
+                  int aniso_ref_level = 0, int surface_face = next::Mesh_blocks::no_face);
   Element& add_elem(bool is_deformed, Tree&);
   bool intersects_surface(Tree*);
   bool is_surface(Tree*);

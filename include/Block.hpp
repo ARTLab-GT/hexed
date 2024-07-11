@@ -72,6 +72,8 @@ class Vertex : public Block {
   inline void pair(mutual::Base<Element_shape, Vertex>& ptr) {_elems.add(ptr);}
   //! \brief Returns `true` iff `this` has at least one `Element_shape` pointing to it.
   inline bool alive() {return !_elems.partners().empty();}
+  //! \brief Maximum nominal size of connected elements
+  double nominal_size() const;
 
   /*! \brief Combines this vertex with `that` and steals its resources.
    * \details All `Edge`s and `Element_shape`s that currently have pointers to `that`
@@ -299,6 +301,8 @@ class Mesh_blocks {
   //! \brief If 3D, obtains the list of surface faces.
   //! \details If not 3D, returns an empty sequence.
   Sequence<Face&> faces_3d();
+  //b \brief returns `edges_2d` or `faces_3d`, as appropriate
+  Sequence<Boundary_block&> boundary_sides();
 
   /*! \brief Constructs an element and returns it (you now own it).
    * \brief Vertex 0 of the element has position `pos`.

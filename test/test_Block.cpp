@@ -177,6 +177,7 @@ TEST_CASE("Block") {
       elems.push_back(blocks.create_element({-.9, .3, .1}, .7, 0));
       elems.push_back(blocks.create_element({-.2, 1., .1}, .7, 3));
       REQUIRE(elems[0].nominal_size() == Catch::Approx(0.7));
+      REQUIRE(elems[0].vertex(0).nominal_size() == Catch::Approx(0.7));
       SECTION("vertex gluing") {
         hexed::next::Vertex vert({10., 20., 30.}, 5);
         vert.glue(elems[1], {.1, .2});

@@ -71,6 +71,12 @@ Vertex::Vertex(Mat<3> pos, int row_size)
 : Block(0, row_size), pos{pos}, _update{Mat<3>::Zero()}, _edges(this), _elems(this), _glued_to(this) {
 }
 
+double Vertex::nominal_size() const {
+  double nom_sz = 0;
+  for (auto elem : _elems.theirs()) nom_sz = std::max(nom_sz, elem->nominal_size());
+  return nom_sz;
+}
+
 void Vertex::eat(Vertex& that) {
   HEXED_ASSERT(alive() && that.alive(), "both vertices must be alive (at least at the start...)");
   if (&that == this) return;
@@ -354,6 +360,10 @@ Sequence<Vertex&> Mesh_blocks::interior_verts() {return purge_fetch(_interior_ve
 Sequence<Vertex&> Mesh_blocks::boundary_verts() {return purge_fetch(_boundary_verts);}
 Sequence<Edge&> Mesh_blocks::edges_2d() {return purge_fetch(_edges_2d);}
 Sequence<Face&> Mesh_blocks::faces_3d() {return purge_fetch(_faces_3d);}
+
+Sequence<Boundary_block&> Mesh_blocks::boundary_sides() {
+  return edges_2d().cast<Boundary_block&>() + faces_3d().cast<Boundary_block&>();
+}
 
 Element_shape Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_face) {
   // create the element

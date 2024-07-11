@@ -162,12 +162,11 @@ Accessible_mesh::~Accessible_mesh()
   def.purge_connections(criteria::always);
 }
 
-int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin, int aniso_ref_level)
-{
+int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin, int aniso_ref_level, int surface_face) {
   int sn = container(is_deformed).emplace(ref_level, position, origin, aniso_ref_level);
   Element& elem = element(ref_level, is_deformed, sn);
   for (int i_vert = 0; i_vert < n_vert; ++i_vert) vert_ptrs.emplace_back(elem.vertex(i_vert));
-  elem.create_shape(_blocks);
+  elem.create_shape(_blocks, surface_face);
   return sn;
 }
 
@@ -330,39 +329,33 @@ Accessible_mesh::vertex_view Accessible_mesh::vertices()
 }
 
 //! \cond helper classes and functions for Accessible_mesh::extrude
-struct Empty_face
-{
+struct Empty_face {
   Deformed_element& elem;
   int i_dim;
   int face_sign;
 };
-struct Connection_plan
-{
+struct Connection_plan {
   int ref_level;
   std::array<int, 2> serial_ns;
   Con_dir<Deformed_element> dir;
 };
-struct Refined_connection_plan
-{
+struct Refined_connection_plan {
   int coarse_ref;
   int coarse_sn;
   std::vector<int> fine_sn;
   Con_dir<Deformed_element> dir;
   std::array<bool, 2> stretch;
 };
-bool aligned_same_dim(Con_dir<Deformed_element> dir, std::array<int, 2> extrude_dim)
-{
+bool aligned_same_dim(Con_dir<Deformed_element> dir, std::array<int, 2> extrude_dim) {
   return (dir.i_dim[0] == dir.i_dim[1]) && (dir.face_sign[0] != dir.face_sign[1])
          && (extrude_dim[0] == extrude_dim[1]);
 }
-bool aligned_different_dim(Con_dir<Deformed_element> dir, std::array<int, 2> extrude_dim)
-{
+bool aligned_different_dim(Con_dir<Deformed_element> dir, std::array<int, 2> extrude_dim) {
   return (dir.i_dim[0] == extrude_dim[1]) && (dir.i_dim[1] == extrude_dim[0]);
 }
 //! \endcond
 
-void request_connection(Element& elem, int n_dim, int i_dim, bool i_sign, int j_dim, bool j_sign)
-{
+void request_connection(Element& elem, int n_dim, int i_dim, bool i_sign, int j_dim, bool j_sign) {
   // record data at vertex which is on the face to be connected, on the face which was extruded from,
   // and if applicable has the minimum index to satisfy the above consitions.
   int i_vert =   j_sign*math::pow(2, n_dim - 1 - j_dim)
@@ -377,13 +370,11 @@ void request_connection(Element& elem, int n_dim, int i_dim, bool i_sign, int j_
   record.push_back(2*i_dim + i_sign);
 }
 
-void Accessible_mesh::extrude(bool collapse, double offset, bool force)
-{
+void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
   erase_if(vert_ptrs, &Vertex::Non_transferable_ptr::is_null);
   const int nd = params.n_dim;
   const int n_faces = 2*nd;
-  // initialize number of connections of each face to 0
-  {
+  { // initialize number of connections of each face to 0
     auto& elems = elements();
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       for (int i_face = 0; i_face < n_faces; ++i_face) {
@@ -391,8 +382,7 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force)
       }
     }
   }
-  // initialize vertex records to empty
-  {
+  { // initialize vertex records to empty
     auto verts = vertices();
     for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
       verts[i_vert].record.clear();
@@ -409,7 +399,7 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force)
     con.element().face_record[2*con.i_dim() + con.inside_face_sign()] = 2 + con.bound_cond_serial_n();
   }
 
-  // request connections with existing extruded elements
+  // request connections for existing extruded elements
   if (tree) {
     def.elems.write_sns();
     for (auto con : extrude_cons) {
@@ -451,12 +441,11 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force)
   }
   // create extruded elements
   const int n_record = 4;
-  for (auto face : empty_faces)
-  {
+  for (auto face : empty_faces) {
     auto nom_pos = face.elem.nominal_position();
     nom_pos[face.i_dim] += 2*face.face_sign - 1;
     const int ref_level = face.elem.refinement_level();
-    int sn = add_element(ref_level, true, nom_pos, face.elem.origin, face.elem.aniso_ref_level() + 1);
+    int sn = add_element(ref_level, true, nom_pos, face.elem.origin, face.elem.aniso_ref_level() + 1, 2*face.i_dim + face.face_sign);
     Con_dir<Deformed_element> dir {{face.i_dim, face.i_dim}, {!face.face_sign, bool(face.face_sign)}};
     auto& elem = def.elems.at(ref_level, sn);
     elem.record = sn;
@@ -1421,6 +1410,18 @@ void Accessible_mesh::relax(double factor)
   for (auto& vert : verts) vert.calc_relax();
   #pragma omp parallel for
   for (auto& vert : verts) vert.apply_relax();
+  if (surf_geom) {
+    auto bverts = _blocks.boundary_verts();
+    #pragma omp parallel for
+    for (auto& vert : bverts) {
+      HEXED_ASSERT(vert.alive(), "boundary vertices should all be alive");
+      auto seq = Eigen::seqN(0, params.n_dim);
+      vert.pos(seq) = surf_geom->nearest_point(vert.pos(seq), huge, vert.nominal_size()).point();
+    }
+  }
+  auto bound_sides = _blocks.boundary_sides();
+  #pragma omp parallel for
+  for (auto& side : bound_sides) side.reset();
 }
 
 Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& basis, std::function<bool(Element&)> mask)

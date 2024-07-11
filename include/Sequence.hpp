@@ -86,6 +86,13 @@ public:
     return {[g](std::size_t index)->Pointer_t {return addr_if_possible(g(index));}, _size};
   }
 
+  //! \brief `static_cast`s the elements to the specified type
+  template <typename U>
+  Sequence<U> cast() const {
+    getter g{_get};
+    return {[g](std::size_t index)->U {return static_cast<U>(g(index));}, _size};
+  }
+
   /*! \brief Given a `std::vector`, returns its entries as a sequence.
    * \details This is such a common operation it was deemed worthy of a dedicated member function.
    * You can use this for by-value or by-reference access depending on whether `T` is a reference type.
