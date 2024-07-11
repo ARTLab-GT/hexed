@@ -13,9 +13,9 @@ namespace hexed {
  */
 template <typename T>
 class Iterator : public std::iterator<std::random_access_iterator_tag, std::remove_reference<T>> {
-public:
+  public:
   typedef std::iterator<std::random_access_iterator_tag, std::remove_reference<T>>::difference_type Diff_t;
-  Iterator(std::function<T(std::size_t)> get, std::size_t index) : _index{index}, _get{get} {}
+  Iterator(std::function<T(std::size_t)> get, std::size_t index) : _get{get}, _index{index} {}
   std::size_t index() const {return _index;} //!< \brief Obtains the current index of this iterator.
   std::function<T(std::size_t)> get() const {return _get;} //!< \brief Obtains this iterator's access function.
   Iterator& operator++() {return *this += 1;}
@@ -43,9 +43,9 @@ public:
   std::add_pointer<std::remove_reference<T>> operator->() const {return addr_if_possible(_get(_index));}
   T operator[](Diff_t diff) {return _get(_index + diff);}
 
-private:
+  private:
   std::function<T(std::size_t)> _get;
-  int _index;
+  std::size_t _index;
 };
 
 //! \relates Iterator

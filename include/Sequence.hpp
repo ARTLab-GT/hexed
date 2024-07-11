@@ -109,8 +109,8 @@ public:
   }
 
 private:
-  sizer _size;
   getter _get;
+  sizer _size;
 };
 
 }
