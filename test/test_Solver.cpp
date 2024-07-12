@@ -953,7 +953,7 @@ TEST_CASE("cylinder tree mesh") {
   REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
 }
 
-#if NDEBUG
+//#if NDEBUG
 TEST_CASE("sphere tree mesh") {
   static_assert(hexed::config::max_row_size >= 4);
   constexpr int row_size = 2;
@@ -993,6 +993,7 @@ TEST_CASE("sphere tree mesh") {
   solver.initialize(hexed::Constant_func({0., 0., 0., 1., 1e5}));
   solver.mesh().visualize("default", "sph_after_ref");
   solver.visualize_field("default", "sph_after_ref_soln", hexed::Constant_func({}), 2);
+  solver.visualize_surface("default", "sph_after_ref_surf", 6, hexed::Constant_func({}), 2);
   for (int i = 0; i < 3; ++i) {
     solver.mesh().update(hexed::criteria::never, [](hexed::Element& elem){return elem.refinement_level() > 3;});
     for (int i = 0; i < 6; ++i) solver.mesh().relax();
@@ -1004,7 +1005,7 @@ TEST_CASE("sphere tree mesh") {
   solver.mesh().visualize("default", "sph_after_unref");
   solver.visualize_field("default", "sph_after_unref_soln", hexed::Constant_func({}), 2);
 }
-#endif
+//#endif
 
 TEST_CASE("file I/O")
 {

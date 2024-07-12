@@ -126,7 +126,8 @@ class Boundary_block : public Block {
   public:
   Boundary_block(int n_dim, const Basis& basis);
   inline const Basis& basis() const {return *_basis;}
-  inline bool alive() {return _elem;} //!< \brief `true` iff `this` currently has an `Element_shape` referencing it.
+  //! \brief `true` iff `this` currently has an `Element_shape` referencing it.
+  inline bool alive() const {return _elem;}
   //! \brief sets `elem` to point to `this`
   inline void pair(mutual::Base<Element_shape, Boundary_block>& elem) {_elem.pair(elem);}
 
@@ -187,7 +188,7 @@ class Edge : public Boundary_block {
   void glue(Edge& that, int half = no);
 
   void unglue() {_glued_to.set();} //!< \brief If this edge is currently `glue()`d, unglue it.
-  bool glued() const {return _glued_to;} //!< \brief `true` iff `this` is currently `glue()`d to another edge
+  bool glued() const; //!< \brief `true` iff `this` is currently `glue()`d to another edge
 
   private:
   Mat<3> _point(std::vector<int>) const override;

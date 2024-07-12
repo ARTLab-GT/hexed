@@ -50,11 +50,11 @@ Mat<3> Vertex::_point(std::vector<int>) const {
   // usually, the vertex will not be glued and we can just return the `pos`
   if (!_glued_to) return pos;
   // the rest is to compute the position in the special case that the vertex is glued
-  Array<double> points = _glued_to->points(); // fetch _all_ of the nodes of the element `this` is glued to
+  Array<double> points = _glued_to.value().points(); // fetch _all_ of the nodes of the element `this` is glued to
   Mat<3> p; // this is where we will put the computed position
   // compute the interpolation matrix
   Eigen::Map<const Mat<>> sample(_glued_coords.data(), _glued_coords.size());
-  Mat<dyn, dyn> interp = _glued_to->basis().interpolate(sample);
+  Mat<dyn, dyn> interp = _glued_to.value().basis().interpolate(sample);
   // apply the interpolation matrix along each dimension to compute the desired point
   for (int i_dim = 0; i_dim < 3; ++i_dim) {
     Mat<> vec = points(i_dim).vector();
@@ -73,7 +73,10 @@ Vertex::Vertex(Mat<3> pos, int row_size)
 
 double Vertex::nominal_size() const {
   double nom_sz = 0;
-  for (auto elem : _elems.theirs()) nom_sz = std::max(nom_sz, elem->nominal_size());
+  for (auto elem : _elems.theirs()) {
+    HEXED_ASSERT("elem", "element is null");
+    nom_sz = std::max(nom_sz, elem->nominal_size());
+  }
   return nom_sz;
 }
 
@@ -97,9 +100,11 @@ void Vertex::glue(Element_shape& to, std::vector<double> coords) {
 void Vertex::calc_relax() {
   HEXED_ASSERT(alive(), "`Vertex` must be `alive()` to compute update");
   _update.setZero();
+  HEXED_ASSERT(_elems.theirs()[0], "element is null");
   int nd = _elems.theirs()[0]->n_dim();
-  int nv = math::pow(2, _elems.theirs()[0]->n_dim());
+  int nv = math::pow(2, nd);
   for (auto elem : _elems.theirs()) {
+    HEXED_ASSERT(elem, "element is null");
     int i_this = -1;
     Mat<3, dyn> verts(3, nv);
     for (int i_vert = 0; i_vert < nv; ++i_vert) {
@@ -146,30 +151,37 @@ Edge::Edge(Vertex& vertex0, Vertex& vertex1, const Basis& b)
 Mat<3> Edge::_point(std::vector<int> coords) const {
   int coord = coords[0];
   if (glued()) {
-    if (_half == no) return _glued_to->_point(coords);
+    if (_half == no) return _glued_to.value()._point(coords);
     else {
       Mat<3, dyn> pts(3, row_size());
-      for (int c = 0; c < row_size(); ++c) pts(all, c) = _glued_to->point({c});
+      for (int c = 0; c < row_size(); ++c) pts(all, c) = _glued_to.value().point({c});
       return pts*basis().prolong(_half)(coord, all).transpose();
     }
   }
-  if (coord ==       0) return _verts[0]->point({});
-  if (coord == row_size() - 1) return _verts[1]->point({});
+  if (coord ==       0) return _verts[0].value().point({});
+  if (coord == row_size() - 1) return _verts[1].value().point({});
   return _interior(coord - 1).vector();
 }
 
 void Edge::reset() {
   for (int i = 1; i < row_size() - 1; ++i) {
     double n = basis().node(i);
-    _interior(i - 1) = Array<double>(Mat<3>((1 - n)*_verts[0]->point({}) + n*_verts[1]->point({})));
+    _interior(i - 1) = Array<double>(Mat<3>((1 - n)*_verts[0].value().point({}) + n*_verts[1].value().point({})));
   }
 }
 
 const int Edge::no = -1;
 
 void Edge::glue(Edge& other, int half) {
+  std::cout << "foo" << std::flush;
   _glued_to.set(&other);
   _half = half;
+  std::cout << "bar" << std::endl;
+}
+
+bool Edge::glued() const {
+  if (_glued_to) return _glued_to->alive();
+  else return false;
 }
 
 Mat<3> Face::_point(std::vector<int> coords) const {
@@ -243,7 +255,7 @@ Mat<3> Element_shape::_vertex_point(std::vector<int> coords) const {
       bool sign = i_vert/vstride(n_dim(), i_dim)%2;
       weight *= !sign + math::sign(sign)*_basis->node(coords[i_dim]);
     }
-    point += weight*_verts[i_vert]->point({});
+    point += weight*_verts[i_vert].value().point({});
   }
   return point;
 }
@@ -259,7 +271,7 @@ Mat<3> Element_shape::_point(std::vector<int> coords) const {
     coords[i_dim] = sign*(row_size() - 1);
     Mat<3> uncorrected = _vertex_point(coords);
     coords.erase(coords.begin() + i_dim);
-    point += interp_coef*(_bf->point(coords) - uncorrected);
+    point += interp_coef*(_bf.value().point(coords) - uncorrected);
   }
   return point;
 }
@@ -273,14 +285,17 @@ int i_edge(Connection_direction dir, int side, int i_bf) {
   return 2*(dir.i_dim[side] > 3 - dir.i_dim[side] - i_bf/2) + dir.face_sign[side];
 }
 
-#define ASSERT_CON_DIMS(dir, other) \
-  HEXED_ASSERT((other)._bf, "connection expected subordinate element to have boundary face"); \
+#define ASSERT_CON_DIMS(dir, that) { \
+  HEXED_ASSERT((that)._bf, "connection expected subordinate element to have boundary face"); \
   if (dir.i_dim[0] == dir.i_dim[1]) { \
-    HEXED_ASSERT(_i_bf == (other)._i_bf, "boundary face mismatch on same-dim connection"); \
+    HEXED_ASSERT(_i_bf == (that)._i_bf, "boundary face mismatch on same-dim connection"); \
   } else { \
-    HEXED_ASSERT(_i_bf == 2*dir.i_dim[1] + dir.face_sign[1], "boundary face mismatch on left element"); \
-    HEXED_ASSERT((other)._i_bf == 2*dir.i_dim[0] + dir.face_sign[0], "boundary face mismatch in on right element"); \
+    HEXED_ASSERT(_i_bf/2 == dir.i_dim[1], "boundary face mismatch on left element"); \
+    HEXED_ASSERT((that)._i_bf/2 == dir.i_dim[0], "boundary face mismatch in on right element"); \
+    HEXED_ASSERT((_i_bf%2 == dir.face_sign[1]) == ((that)._i_bf%2 == dir.face_sign[0]), \
+                 "boundary face sign mismatch in different-dim connection"); \
   } \
+} \
 
 void Element_shape::connect(Element_shape& other, Connection_direction dir) {
   HEXED_ASSERT(other.n_dim() == n_dim(), "attempt to connect elements with different dimensionality");
@@ -292,8 +307,8 @@ void Element_shape::connect(Element_shape& other, Connection_direction dir) {
   }
   // glue boundary edges
   if (n_dim() == 3 && _bf && _i_bf/2 != dir.i_dim[0]) {
-    //ASSERT_CON_DIMS(dir, other);
-    //other._sf->edge(i_edge(dir, 1, other._i_bf)).glue(_sf->edge(i_edge(dir, 0, _i_bf)));
+    ASSERT_CON_DIMS(dir, other);
+    other._sf.value().edge(i_edge(dir, 1, other._i_bf)).glue(_sf.value().edge(i_edge(dir, 0, _i_bf)));
   }
 }
 
@@ -330,13 +345,15 @@ void Element_shape::connect(std::vector<Element_shape*> others, Connection_direc
   }
   // glue edges
   if (n_dim() == 3 && _bf && _i_bf/2 != dir.i_dim[0]) {
-    Edge& edge = _sf->edge(i_edge(dir, 0, _i_bf));
+    Edge& edge = _sf.value().edge(i_edge(dir, 0, _i_bf));
     int edge_dim = _i_bf/2 > 3 - dir.i_dim[0] - _i_bf/2;
     int strides [2] {vstride(2, edge_dim), vstride(2, !edge_dim)};
     Array<Element_shape*> to_glue({2}, [&](int i){return others[face_inds[_i_bf%2*strides[0] + i*strides[1]]];});
     auto glue = [&](int i_glue, int i_half) {
-      //ASSERT_CON_DIMS(dir, *to_glue[i_glue]);
-      //to_glue[i_glue]->_sf->edge(i_edge(dir, 1, to_glue[i_glue]->_i_bf)).glue(edge, i_half);
+      std::cout << "FOO" << std::flush;
+      ASSERT_CON_DIMS(dir, *to_glue[i_glue]);
+      to_glue[i_glue]->_sf.value().edge(i_edge(dir, 1, to_glue[i_glue]->_i_bf)).glue(edge, i_half);
+      std::cout << "BAR" << std::endl;
     };
     if (to_glue[0] == to_glue[1]) glue(0, Edge::no);
     else for (int i_glue = 0; i_glue < 2; ++i_glue) glue(i_glue, i_glue);
