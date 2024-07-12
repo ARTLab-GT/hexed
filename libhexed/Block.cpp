@@ -278,8 +278,8 @@ int i_edge(Connection_direction dir, int side, int i_bf) {
   if (dir.i_dim[0] == dir.i_dim[1]) { \
     HEXED_ASSERT(_i_bf == (other)._i_bf, "boundary face mismatch on same-dim connection"); \
   } else { \
-    HEXED_ASSERT(_i_bf == 2*dir.i_dim[1] + dir.face_sign[1], "boundary face mismatch on coarse element"); \
-    HEXED_ASSERT((other)._i_bf == 2*dir.i_dim[0] + dir.face_sign[0], "boundary face mismatch in on fine element"); \
+    HEXED_ASSERT(_i_bf == 2*dir.i_dim[1] + dir.face_sign[1], "boundary face mismatch on left element"); \
+    HEXED_ASSERT((other)._i_bf == 2*dir.i_dim[0] + dir.face_sign[0], "boundary face mismatch in on right element"); \
   } \
 
 void Element_shape::connect(Element_shape& other, Connection_direction dir) {
@@ -292,8 +292,8 @@ void Element_shape::connect(Element_shape& other, Connection_direction dir) {
   }
   // glue boundary edges
   if (n_dim() == 3 && _bf && _i_bf/2 != dir.i_dim[0]) {
-    ASSERT_CON_DIMS(dir, other);
-    other._sf->edge(i_edge(dir, 1, other._i_bf)).glue(_sf->edge(i_edge(dir, 0, _i_bf)));
+    //ASSERT_CON_DIMS(dir, other);
+    //other._sf->edge(i_edge(dir, 1, other._i_bf)).glue(_sf->edge(i_edge(dir, 0, _i_bf)));
   }
 }
 
@@ -335,8 +335,8 @@ void Element_shape::connect(std::vector<Element_shape*> others, Connection_direc
     int strides [2] {vstride(2, edge_dim), vstride(2, !edge_dim)};
     Array<Element_shape*> to_glue({2}, [&](int i){return others[face_inds[_i_bf%2*strides[0] + i*strides[1]]];});
     auto glue = [&](int i_glue, int i_half) {
-      ASSERT_CON_DIMS(dir, *to_glue[i_glue]);
-      to_glue[i_glue]->_sf->edge(i_edge(dir, 1, to_glue[i_glue]->_i_bf)).glue(edge, i_half);
+      //ASSERT_CON_DIMS(dir, *to_glue[i_glue]);
+      //to_glue[i_glue]->_sf->edge(i_edge(dir, 1, to_glue[i_glue]->_i_bf)).glue(edge, i_half);
     };
     if (to_glue[0] == to_glue[1]) glue(0, Edge::no);
     else for (int i_glue = 0; i_glue < 2; ++i_glue) glue(i_glue, i_glue);

@@ -953,6 +953,59 @@ TEST_CASE("cylinder tree mesh") {
   REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
 }
 
+#if NDEBUG
+TEST_CASE("sphere tree mesh") {
+  static_assert(hexed::config::max_row_size >= 4);
+  constexpr int row_size = 2;
+  hexed::Solver solver (3, row_size, 1.);
+  std::vector<hexed::Flow_bc*> bcs;
+  hexed::Mat<3> origin{2., 2., 2.};
+  for (int i = 0; i < 6; ++i) bcs.push_back(new hexed::Freestream(hexed::Mat<5>{0., 0., 0., 1., 1e5}));
+  solver.mesh().add_tree(bcs, origin);
+  for (int i = 0; i < 3; ++i) solver.mesh().update();
+  solver.mesh().set_surface(new hexed::Hypersphere(origin, .5), new hexed::Nonpenetration, origin + Eigen::Vector3d{.8, .8, .8});
+  int n_initial = solver.mesh().n_elements();
+  for (int i = 0; i < 3; ++i) solver.mesh().relax();
+  solver.calc_jacobian();
+  solver.initialize(hexed::Constant_func({0., 0., 0., 1., 1e5}));
+  solver.mesh().visualize("default", "sph_before_ref");
+  solver.visualize_field("default", "sph_before_ref_soln", hexed::Constant_func({}), 2);
+  for (int i = 0; i < 3; ++i) {
+    // this criterion will refine all elements with a vertex that is within .1 of the midpoint of the arc
+    auto criterion = [origin](hexed::Element& elem) {
+      bool ref = false;
+      for (int i_vert = 0; i_vert < 8; ++i_vert) {
+        double dist = 0;
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+          dist += hexed::math::pow(elem.vertex(i_vert).pos[i_dim] - origin(i_dim) - .5/std::sqrt(3), 2);
+        }
+        double r = .1;
+        ref = ref || dist < r*r;
+      }
+      ref = ref && elem.refinement_level() <= 6;
+      return ref;
+    };
+    solver.mesh().update(criterion);
+    for (int i = 0; i < 4; ++i) solver.mesh().relax();
+    solver.mesh().valid().assert_valid();
+  }
+  solver.calc_jacobian();
+  solver.initialize(hexed::Constant_func({0., 0., 0., 1., 1e5}));
+  solver.mesh().visualize("default", "sph_after_ref");
+  solver.visualize_field("default", "sph_after_ref_soln", hexed::Constant_func({}), 2);
+  for (int i = 0; i < 3; ++i) {
+    solver.mesh().update(hexed::criteria::never, [](hexed::Element& elem){return elem.refinement_level() > 3;});
+    for (int i = 0; i < 6; ++i) solver.mesh().relax();
+    solver.mesh().valid().assert_valid();
+  }
+  REQUIRE(solver.mesh().n_elements() == n_initial); // this mesh should have been completely unrefined to where it started
+  solver.calc_jacobian();
+  solver.initialize(hexed::Constant_func({0., 0., 0., 1., 1e5}));
+  solver.mesh().visualize("default", "sph_after_unref");
+  solver.visualize_field("default", "sph_after_unref_soln", hexed::Constant_func({}), 2);
+}
+#endif
+
 TEST_CASE("file I/O")
 {
   double tol = 1e-6;
