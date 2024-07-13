@@ -173,10 +173,8 @@ void Edge::reset() {
 const int Edge::no = -1;
 
 void Edge::glue(Edge& other, int half) {
-  std::cout << "foo" << std::flush;
   _glued_to.set(&other);
   _half = half;
-  std::cout << "bar" << std::endl;
 }
 
 bool Edge::glued() const {
@@ -350,10 +348,8 @@ void Element_shape::connect(std::vector<Element_shape*> others, Connection_direc
     int strides [2] {vstride(2, edge_dim), vstride(2, !edge_dim)};
     Array<Element_shape*> to_glue({2}, [&](int i){return others[face_inds[_i_bf%2*strides[0] + i*strides[1]]];});
     auto glue = [&](int i_glue, int i_half) {
-      std::cout << "FOO" << std::flush;
       ASSERT_CON_DIMS(dir, *to_glue[i_glue]);
       to_glue[i_glue]->_sf.value().edge(i_edge(dir, 1, to_glue[i_glue]->_i_bf)).glue(edge, i_half);
-      std::cout << "BAR" << std::endl;
     };
     if (to_glue[0] == to_glue[1]) glue(0, Edge::no);
     else for (int i_glue = 0; i_glue < 2; ++i_glue) glue(i_glue, i_glue);
@@ -379,7 +375,18 @@ Sequence<Edge&> Mesh_blocks::edges_2d() {return purge_fetch(_edges_2d);}
 Sequence<Face&> Mesh_blocks::faces_3d() {return purge_fetch(_faces_3d);}
 
 Sequence<Boundary_block&> Mesh_blocks::boundary_sides() {
-  return edges_2d().cast<Boundary_block&>() + faces_3d().cast<Boundary_block&>();
+  if (n_dim == 2) return edges_2d().cast<Boundary_block&>();
+  else if (n_dim == 3) {
+    faces_3d(); // calling this performs purge
+    std::vector<Face>& faces = _faces_3d;
+    return {
+      [&faces](std::size_t index)->Boundary_block& {
+        if (index < 4*faces.size()) return faces[index/4].edge(index%4);
+        else return faces[index - 4*faces.size()];
+      },
+      [&faces](){return 5*faces.size();},
+    };
+  } else return Sequence<Boundary_block&>();
 }
 
 Element_shape Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_face) {

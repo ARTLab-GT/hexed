@@ -953,10 +953,10 @@ TEST_CASE("cylinder tree mesh") {
   REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
 }
 
-//#if NDEBUG
+#if NDEBUG
 TEST_CASE("sphere tree mesh") {
   static_assert(hexed::config::max_row_size >= 4);
-  constexpr int row_size = 2;
+  constexpr int row_size = 4;
   hexed::Solver solver (3, row_size, 1.);
   std::vector<hexed::Flow_bc*> bcs;
   hexed::Mat<3> origin{2., 2., 2.};
@@ -970,7 +970,7 @@ TEST_CASE("sphere tree mesh") {
   solver.initialize(hexed::Constant_func({0., 0., 0., 1., 1e5}));
   solver.mesh().visualize("default", "sph_before_ref");
   solver.visualize_field("default", "sph_before_ref_soln", hexed::Constant_func({}), 2);
-  for (int i = 0; i < 3; ++i) {
+  for (int i = 0; i < 2; ++i) {
     // this criterion will refine all elements with a vertex that is within .1 of the midpoint of the arc
     auto criterion = [origin](hexed::Element& elem) {
       bool ref = false;
@@ -1005,7 +1005,7 @@ TEST_CASE("sphere tree mesh") {
   solver.mesh().visualize("default", "sph_after_unref");
   solver.visualize_field("default", "sph_after_unref_soln", hexed::Constant_func({}), 2);
 }
-//#endif
+#endif
 
 TEST_CASE("file I/O")
 {

@@ -57,6 +57,10 @@ public:
   Sequence(getter get, sizer size)
   : _get{get}, _size{size}
   {}
+  Sequence()
+  : _get{[](std::size_t index)->T {HEXED_THROW("call to the `get()` of an empty `Sequence`");}},
+    _size{[]()->std::size_t {return 0;}}
+  {}
   std::size_t size() const {return _size();} //!< \brief size of the sequence
   T operator[](std::size_t index) const {return _get(index);} //!< \brief the `index`th entry of the sequence
   operator bool() const {return _size();} //!< \brief `true` iff `size()` is nonzero

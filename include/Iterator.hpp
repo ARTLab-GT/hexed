@@ -2,7 +2,6 @@
 #define HEXED_ITERATOR_HPP_
 
 #include <functional>
-#include <iterator>
 #include "utils.hpp"
 
 namespace hexed {
@@ -12,15 +11,20 @@ namespace hexed {
  * All arithmetic and comparison operators simply operate on the index.
  */
 template <typename T>
-class Iterator : public std::iterator<std::random_access_iterator_tag, std::remove_reference<T>> {
+class Iterator {
   public:
-  typedef std::iterator<std::random_access_iterator_tag, std::remove_reference<T>>::difference_type Diff_t;
+  using iterator_category = std::random_access_iterator_tag;
+  using value_type = T;
+  using difference_type = int;
+  using pointer = std::remove_reference<T>*;
+  using reference = std::add_lvalue_reference<T>;
+
   Iterator(std::function<T(std::size_t)> get, std::size_t index) : _get{get}, _index{index} {}
   std::size_t index() const {return _index;} //!< \brief Obtains the current index of this iterator.
   std::function<T(std::size_t)> get() const {return _get;} //!< \brief Obtains this iterator's access function.
   Iterator& operator++() {return *this += 1;}
   Iterator& operator--() {return *this -= 1;}
-  Iterator& operator-=(Diff_t diff) {return *this += -diff;}
+  Iterator& operator-=(difference_type diff) {return *this += -diff;}
 
   Iterator operator++(int) {
     Iterator it{this};
@@ -34,14 +38,14 @@ class Iterator : public std::iterator<std::random_access_iterator_tag, std::remo
     return it;
   }
 
-  Iterator& operator+=(Diff_t diff) {
+  Iterator& operator+=(difference_type diff) {
     _index += diff;
     return *this;
   }
 
   T operator*() const {return _get(_index);}
   std::add_pointer<std::remove_reference<T>> operator->() const {return addr_if_possible(_get(_index));}
-  T operator[](Diff_t diff) {return _get(_index + diff);}
+  T operator[](difference_type diff) {return _get(_index + diff);}
 
   private:
   std::function<T(std::size_t)> _get;
