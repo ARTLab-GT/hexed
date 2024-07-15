@@ -195,74 +195,69 @@ class Array {
     return _strides[i_dim + 1];
   }
 
-  T* data() {return _data;} //!< \brief fetches pointer to data
-  const T* data() const {return _data;} //!< \overload
-
-  #define BODY \
-    if constexpr (HEXED_ARRAY_BOUNDS_CHECK) { \
-      HEXED_ASSERT(_order, "indexing an order-0 `Array` with `[]`"); \
-      HEXED_ASSERT(i < size(), "indexing an `Array` out of bounds with `[]`"); \
+  #define QUALIFIED(CONST) \
+    CONST T* data() CONST {return _data;} /*!< \brief fetches pointer to data */ \
+    /*! \brief Accesses elements by flat indexing. \
+     * \details Equivalent to `data()[i]`, give or take bounds checking \
+     */ \
+    CONST T& operator[](int i) CONST { \
+      if constexpr (HEXED_ARRAY_BOUNDS_CHECK) { \
+        HEXED_ASSERT(_order, "indexing an order-0 `Array` with `[]`"); \
+        HEXED_ASSERT(i < size(), "indexing an `Array` out of bounds with `[]`"); \
+      } \
+      return _data[i]; \
     } \
-    return _data[i];
-  //! \brief Accesses elements by flat indexing.
-  //! \details Equivalent to `data()[i]`, give or take bounds checking
-  T&       operator[](int i)        {BODY}
-  const T& operator[] (int i) const {BODY} //!< \overload
-  #undef BODY
-
-  Array<T>       operator()()       {return {_order, _data, _shape, _strides};} //!< \brief Creates an array as a reference to `this`'s data
-  const Array<T> operator()() const {return {_order, _data, _shape, _strides};} //!< \overload
-
-  #define BODY \
-    if constexpr (HEXED_ARRAY_BOUNDS_CHECK) { \
-      HEXED_ASSERT(_order, "indexing an order-0 `Array` with `()`"); \
-      HEXED_ASSERT(i < _shape[0], "indexing an `Array` out of bounds with `()`"); \
+    /*! \brief Creates an array as a reference to `this`'s data */ \
+    CONST Array<T> operator()() CONST {return {_order, _data, _shape, _strides};} \
+    /*! \brief Creates an array which is a view of the `i`th "row" of `this`. \
+     * \details Resulting array will have 1 less `order()` \
+     * and shape equal to the shape of `this` but with the first element removed. \
+     * You can think of it as equivalent to the operator `[]` of multidimensional builtin arrays \
+     * or [NumPy arays](https://numpy.org/doc/stable/user/absolute_beginners.html#what-is-an-array). \
+     * For example, if you have an order 3 array `a` with shape {10, 4, 5}, you can access the element at (5, 2, 3) \
+     * with either `a[113]` (5*4*5 + 2*5 + 3 = 113) or `a(5)(2)[3]`. \
+     */ \
+    CONST Array<T> operator()(int i) CONST { \
+      if constexpr (HEXED_ARRAY_BOUNDS_CHECK) { \
+        HEXED_ASSERT(_order, "indexing an order-0 `Array` with `()`"); \
+        HEXED_ASSERT(i < _shape[0], "indexing an `Array` out of bounds with `()`"); \
+      } \
+      return {_order - 1, _data + i*_strides[1], _shape + 1, _strides + 1}; \
     } \
-    return {_order - 1, _data + i*_strides[1], _shape + 1, _strides + 1};
-  /*! \brief Creates an array which is a view of the `i`th "row" of `this`.
-   * \details Resulting array will have 1 less `order()`
-   * and shape equal to the shape of `this` but with the first element removed.
-   * You can think of it as equivalent to the operator `[]` of multidimensional builtin arrays
-   * or [NumPy arays](https://numpy.org/doc/stable/user/absolute_beginners.html#what-is-an-array).
-   * For example, if you have an order 3 array `a` with shape {10, 4, 5}, you can access the element at (5, 2, 3)
-   * with either `a[113]` (5*4*5 + 2*5 + 3 = 113) or `a(5)(2)[3]`.
-   */
-  Array<T>       operator()(int i)       {BODY}
-  const Array<T> operator()(int i) const {BODY} //!< \overload
-  #undef BODY
-
-  #define BODY \
-    if constexpr (HEXED_ARRAY_BOUNDS_CHECK) { \
-      HEXED_ASSERT(_order, "indexing an order-0 `Array` with `()`"); \
+    /*! \brief Creates an array which is a view of rows [`start`, `stop`) of this. \
+     * \details As indicated by the interval notation, includes `start` but not `stop`. \
+     * If `stop` is less than `start` or not less than `size()[0]`, \
+     * this results in an array with 0 as the first entry of its `shape` (and consequently size 0). \
+     * _This will not result in an exception nor undefined behavior_, \
+     * unless of course you attempt to access data from this empty array. \
+     * Equivalent to `array[start:stop]` for \
+     * [NumPy arays](https://numpy.org/doc/stable/user/absolute_beginners.html#what-is-an-array). \
+     * The resulting array will have the same order as `this`. \
+     * The first entry of `shape()` will be `stop - start` and the rest will be the same as `this` \
+     * (granted the above caveat about empty results). \
+     */ \
+    CONST Array<T> operator()(int start, int stop) CONST { \
+      if constexpr (HEXED_ARRAY_BOUNDS_CHECK) { \
+        HEXED_ASSERT(_order, "indexing an order-0 `Array` with `()`"); \
+      } \
+      std::vector<int> s = shape(); \
+      s[0] = std::max(0, std::min(stop, _shape[0]) - start); \
+      return {s, _data + start*_strides[1]}; \
     } \
-    std::vector<int> s = shape(); \
-    s[0] = std::max(0, std::min(stop, _shape[0]) - start); \
-    return {s, _data + start*_strides[1]};
-  /*! \brief Creates an array which is a view of rows [`start`, `stop`) of this.
-   * \details As indicated by the interval notation, includes `start` but not `stop`.
-   * If `stop` is less than `start` or not less than `size()[0]`,
-   * this results in an array with 0 as the first entry of its `shape` (and consequently size 0).
-   * _This will not result in an exception nor undefined behavior_, unless of course you attempt to access data from this empty array.
-   * Equivalent to `array[start:stop]` for [NumPy arays](https://numpy.org/doc/stable/user/absolute_beginners.html#what-is-an-array).
-   * The resulting array will have the same order as `this`.
-   * The first entry of `shape()` will be `stop - start` and the rest will be the same as `this` (granted the above caveat about empty results).
-   */
-  Array<T>       operator()(int start, int stop)       {BODY}
-  const Array<T> operator()(int start, int stop) const {BODY} //!< \overload
-  #undef BODY
+    /*! \brief %Iterator type to allow `Array` to function like a \
+     * [standard container](https://en.cppreference.com/w/cpp/container). \
+     * \details Iterators remain valid throughout the lifetime of the array, \
+     * since there is no mechanism that changes the address of its underlying data. \
+     */ \
+    typedef CONST T* CONST##iterator; \
+    CONST##iterator begin() CONST {return data();} /*!< \brief %Iterator to beginning of (flat) data. */ \
+    CONST##iterator end() CONST {return data() + size();} /*!< \brief %Iterator 1 word past the end of (flat) data. */ \
+    /*! \brief view of data as an `Eigen` vector object */ \
+    CONST Eigen::Map<Eigen::Matrix<T, dyn, 1>> vector() CONST {return {_data, size()};} \
 
-  //! \brief Iterator type to allow `Array` to function like a [standard container](https://en.cppreference.com/w/cpp/container).
-  //! \details Iterators remain valid throughout the lifetime of the array,
-  //! since there is no mechanism that changes the address of its underlying data.
-  typedef T* iterator;
-  typedef const T* const_iterator; //!< \see `Array::iterator`
-  iterator begin() {return data();} //!< \brief Iterator to beginning of (flat) data.
-  const_iterator begin() const {return data();} //!< \brief Const iterator to beginning of (flat) data.
-  iterator end() {return data() + size();} //!< \brief Iterator 1 word past the end of (flat) data.
-  const_iterator end() const {return data() + size();} //!< \brief Const iterator 1 word past the end of (flat) data.
-
-        Eigen::Map<Eigen::Matrix<T, dyn, 1>> vector()       {return {_data, size()};}
-  const Eigen::Map<Eigen::Matrix<T, dyn, 1>> vector() const {return {_data, size()};}
+  QUALIFIED()
+  QUALIFIED(const)
+  #undef QUALIFIED
 };
 
 #define DEFINE_OPERATOR(BIN_OP) \
