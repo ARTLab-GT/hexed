@@ -5,39 +5,37 @@
 #include "Qpoint_func.hpp"
 #include "Boundary_func.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 //! a function that has a single value for each element
-class Element_func : virtual public Qpoint_func
-{
-  std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
+class Element_func : virtual public Qpoint_func {
   public:
+  std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
+  using Qpoint_func::operator();
   virtual std::vector<double> operator()(Element& elem, const Basis&, double time) const = 0; //!< \details --
 };
 
 //! an `Element_func` that doesn't depend on a `Basis` or the time
-class Element_info : virtual public Element_func, virtual public Boundary_func
-{
+class Element_info : virtual public Element_func, virtual public Boundary_func {
+  public:
   std::vector<double> operator()(Element& elem, const Basis&, double time) const override;
   std::vector<double> operator()(Boundary_connection&, int i_fqpoint, double time) const override;
-  public:
+  using Element_func::operator();
+  using Boundary_func::operator();
   virtual std::vector<double> operator()(Element& elem) const = 0; //!< \details --
 };
 
 /*! \brief function to fetch the value of the `uncertainty` member of the `Element`.
  * \details Only useful if you have already set the `uncertainty` member to something you are interested in.
  */
-class Uncertainty : virtual public Element_info
-{
+class Uncertainty : virtual public Element_info {
   public:
   inline int n_var(int n_dim) const override {return 1;}
   std::vector<double> operator()(Element& elem) const override;
 };
 
 //! computes the average of the provided `Qpoint_func` within the element by Gaussian quadrature
-class Elem_average : public Element_func
-{
+class Elem_average : public Element_func {
   const Qpoint_func& qf;
   public:
   Elem_average(const Qpoint_func& func); //!< \param func function you want to compute the average of
@@ -48,8 +46,7 @@ class Elem_average : public Element_func
 };
 
 //! computes the \f$L_2\f$ norm of the provided `Qpoint_func` within the element by Gaussian quadrature
-class Elem_l2 : public Element_func
-{
+class Elem_l2 : public Element_func {
   const Qpoint_func& qf;
   public:
   Elem_l2(const Qpoint_func&); //!< \param func function you want to compute the norm of
@@ -72,8 +69,7 @@ class Elem_l2 : public Element_func
  * In other words, you project the solution onto the highest-order univariate Legendre polynomial along each dimension,
  * take the \f$L_2\f$ norm of this in the other dimensions, and then take the RMS of that whole expression over all dimensions.
  */
-class Elem_nonsmooth : public Element_func
-{
+class Elem_nonsmooth : public Element_func {
   const Qpoint_func& qf;
   public:
   Elem_nonsmooth(const Qpoint_func& func); //!< \param func the function you want to compute the nonsmoothness of (\f$u\f$ in the explanation above).
@@ -81,12 +77,10 @@ class Elem_nonsmooth : public Element_func
   inline int n_var(int n_dim) const override {return qf.n_var(n_dim);}
   inline std::string variable_name(int n_dim, int i_var) const override {return "nonsmoothness_" + qf.variable_name(n_dim, i_var);}
   std::vector<double> operator()(Element& elem, const Basis&, double time) const override;
-
 };
 
 //! \brief same as `Elem_nonsmooth`, but normalized by `Elem_l2`
-class Normalized_nonsmooth : public Element_func
-{
+class Normalized_nonsmooth : public Element_func {
   const Qpoint_func& qf;
   const Elem_nonsmooth ns;
   const Elem_l2 l2;
@@ -110,8 +104,7 @@ class Normalized_nonsmooth : public Element_func
  * As I understand it, the definition above is equivalent to that used by Fluent&reg; and Pointwise&reg;
  * for quads and hexes.
  */
-class Equiangle_skewness : public Element_func
-{
+class Equiangle_skewness : public Element_func {
   public:
   inline int n_var(int n_dim) const override {return 1;}
   inline std::string variable_name(int n_dim, int i_var) const override {return "equiangle_skewness";}
@@ -119,8 +112,7 @@ class Equiangle_skewness : public Element_func
 };
 
 //! Returns 1 if the element is deformed, otherwise 0
-class Is_deformed : public Element_info
-{
+class Is_deformed : public Element_info {
   public:
   inline int n_var(int n_dim) const override {return 1;}
   inline std::string variable_name(int n_dim, int i_var) const override {return "is_deformed";}
@@ -128,8 +120,7 @@ class Is_deformed : public Element_info
 };
 
 //! Returns 1 if the element has a `Tree` pointer, else 0
-class Has_tree : public Element_info
-{
+class Has_tree : public Element_info {
   public:
   inline int n_var(int n_dim) const override {return 1;}
   inline std::string variable_name(int n_dim, int i_var) const override {return "has_tree";}
@@ -137,8 +128,7 @@ class Has_tree : public Element_info
 };
 
 //! Returns `Element::record`
-class Record : public Element_info
-{
+class Record : public Element_info {
   public:
   inline int n_var(int n_dim) const override {return 1;}
   inline std::string variable_name(int n_dim, int i_var) const override {return "record";}

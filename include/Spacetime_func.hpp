@@ -6,18 +6,17 @@
 #include "Domain_func.hpp"
 #include "config.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \brief Represents a function of position and time.
  *
  * \details Useful for specifying initial conditions and analytic flow solutions.
  */
-class Spacetime_func : public Domain_func
-{
+class Spacetime_func : public Domain_func {
+  public:
   std::vector<double> operator()(std::vector<double> pos, double time,
                                  std::vector<double> state) const override;
-  public:
+  using Domain_func::operator();
   virtual std::vector<double> operator()(std::vector<double> pos, double time) const = 0;
 };
 
@@ -25,8 +24,7 @@ class Spacetime_func : public Domain_func
  * \details Expression is evaluated in an environment that includes
  * `pos0`, `pos1`, `pos2`, and `time`.
  */
-class Spacetime_expr : public Spacetime_func
-{
+class Spacetime_expr : public Spacetime_func {
   Struct_expr _expr;
   const Interpreter& _inter;
   public:
@@ -38,8 +36,7 @@ class Spacetime_expr : public Spacetime_func
 };
 
 //! \brief Always returns the same constant (vector) value.
-class Constant_func : public Spacetime_func
-{
+class Constant_func : public Spacetime_func {
   std::vector<double> value;
   public:
   //! \param value_arg The constant value to be returned. Size can be whatever you want.
@@ -50,8 +47,7 @@ class Constant_func : public Spacetime_func
 };
 
 //! \brief Returns the position vector.
-class Position_func : public Spacetime_func
-{
+class Position_func : public Spacetime_func {
   public:
   inline int n_var(int n_dim) const override {return n_dim;}
   inline std::string variable_name(int n_dim, int i_var) const override {return "position" + std::to_string(i_var);}
@@ -59,16 +55,14 @@ class Position_func : public Spacetime_func
 };
 
 //! Returns an empty vector. You can pass this to `Solver::visualize_field_tecplot` if you just want to visualize the position.
-class Empty_func : public Spacetime_func
-{
+class Empty_func : public Spacetime_func {
   public:
   inline int n_var(int n_dim) const override {return 0;}
   inline std::vector<double> operator()(std::vector<double> pos, double time) const override {return {};}
 };
 
 //! Returns a random output uniformly distributed in a user-specified range.
-class Random_func : public Spacetime_func
-{
+class Random_func : public Spacetime_func {
   std::vector<double> m;
   std::vector<double> v;
   int gran;
@@ -85,8 +79,7 @@ class Random_func : public Spacetime_func
 };
 
 //! Computes a single output variable which is a linear combination of components of position.
-class Linear : public Spacetime_func
-{
+class Linear : public Spacetime_func {
   Eigen::Matrix<double, 1, Eigen::Dynamic> coefs;
   public:
   /*! \param arg Coefficients for components of position.
@@ -100,8 +93,7 @@ class Linear : public Spacetime_func
 };
 
 //! A class of `Spacetime_func`s whose output is a state vector.
-class State_from_spacetime : public Spacetime_func
-{
+class State_from_spacetime : public Spacetime_func {
   public:
   inline int n_var(int n_dim) const override {return n_dim + 2;}
   inline std::string variable_name(int n_dim, int i_var) const override {return "state" + std::to_string(i_var);}
@@ -117,8 +109,7 @@ class State_from_spacetime : public Spacetime_func
  * \attention Singularity at `location`! This class is applicable only to domains
  * which do not include this point.
  */
-class Doublet : public State_from_spacetime
-{
+class Doublet : public State_from_spacetime {
   std::vector<double> freestream;
   int n_v;
   int n_dim;
@@ -133,18 +124,16 @@ class Doublet : public State_from_spacetime
 
 /*! \brief Initial consition for classic Sod problem.
  * \details G. A. Sod. A survey of several finite difference methods for systems of nonlinear hyperbolic conservation laws. JCP 27 (1978). http://dx.doi.org/10.1016/0021-9991(78)90023-2
- * \attention Only initial condition -- not time dependent!
+ * \attention Only initial condition---not time dependent!
  */
-class Sod : public State_from_spacetime
-{
+class Sod : public State_from_spacetime {
   public:
   double heat_rat = 1.4;
   std::vector<double> operator()(std::vector<double> pos, double time) const override;
 };
 
 //! multivariate Gaussian distribution in terms of spatial coordinates normalized to evaluate to 1 at the zero vector
-class Spatial_gaussian : public Spacetime_func
-{
+class Spatial_gaussian : public Spacetime_func {
   std::vector<double> dev;
   public:
   /*! \param std_dev the standard deviation for each variable.
@@ -158,8 +147,7 @@ class Spatial_gaussian : public Spacetime_func
 /*! \brief Steady-state solution to Laplacian diffusion in an anular domain (for verification testing).
  * \details Velocity is uniformly zero, total energy is uniform, and mass is proportional to log of distance from origin.
  */
-class Annular_diffusion_test : public State_from_spacetime
-{
+class Annular_diffusion_test : public State_from_spacetime {
   double val_scale;
   double rad_scale;
   double ener;
@@ -178,8 +166,7 @@ class Annular_diffusion_test : public State_from_spacetime
  * This `Spacetime_func` gives you state as a function of position using a numerical root finder,
  * so be sure to set the tolerance if you care where you stand on the accuracy/speed tradeoff.
  */
-class Ringleb : public State_from_spacetime
-{
+class Ringleb : public State_from_spacetime {
   double tol;
   double heat_rat;
   public:
