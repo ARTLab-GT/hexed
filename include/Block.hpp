@@ -275,6 +275,7 @@ class Element_shape : public Block {
   std::vector<Reciprocal_ptr<Element_shape, Vertex>> _verts;
   int _i_bf;
   Reciprocal_ptr<Element_shape, Boundary_block> _bf;
+  Reciprocal_list<Element_shape, Boundary_block> _boundary_edges;
   Mortal_ptr<Face> _sf;
   Reciprocal_list<Element_shape, Vertex> _glued_verts;
 };

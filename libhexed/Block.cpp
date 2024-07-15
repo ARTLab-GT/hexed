@@ -275,7 +275,7 @@ Mat<3> Element_shape::_point(std::vector<int> coords) const {
 }
 
 Element_shape::Element_shape(int nd, const Basis& b)
-: Block(nd, b.row_size), _basis{&b}, _i_bf{6}, _bf(this), _glued_verts(this) {
+: Block(nd, b.row_size), _basis{&b}, _i_bf{6}, _bf(this), _boundary_edges(this), _glued_verts(this) {
   for (int i_vert = 0; i_vert < math::pow(2, nd); ++i_vert) _verts.emplace_back(this);
 }
 
@@ -419,6 +419,7 @@ Element_shape Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_
       for (int i_vert = 0; i_vert < 4; ++i_vert) verts[i_vert] = &_boundary_verts.end()[i_vert - 4];
       _faces_3d.emplace_back(verts, basis);
       _faces_3d.back().pair(elem._bf);
+      for (int i_edge = 0; i_edge < 4; ++i_edge) _faces_3d.back().edge(i_edge).pair(elem._boundary_edges);
       elem._sf.set(&_faces_3d.back());
     }
   }
