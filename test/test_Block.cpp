@@ -15,6 +15,8 @@ void warp(hexed::next::Edge& e) {
 
 TEST_CASE("Block") {
   static_assert(hexed::config::max_row_size >= 5); // these tests require a row size of at least 5
+  hexed::Gauss_lobatto basis5(5);
+  hexed::next::Mesh_blocks blocks(3, basis5);
 
   // vertex construction
   hexed::next::Vertex vert0({.1, -.3, .2}, 4);
@@ -91,6 +93,10 @@ TEST_CASE("Block") {
     test_interp(edge0);
     REQUIRE(!edge0.glued());
     edge0.glue(*edge3);
+    REQUIRE(!edge0.glued());
+    auto elem = blocks.create_element({0., 0., 0.}, 1.);
+    hexed::Reciprocal_ptr<hexed::next::Element_shape, hexed::next::Boundary_block> ptr(&elem);
+    edge3->pair(ptr);
     REQUIRE(edge0.glued());
     edge4.glue(*edge3, 0);
     REQUIRE(edge4.glued());
@@ -117,8 +123,6 @@ TEST_CASE("Block") {
       test_interp(edge0);
     }
   }
-
-  hexed::Gauss_lobatto basis5(5);
 
   SECTION("Face") {
     std::vector<hexed::next::Vertex> verts;
@@ -171,7 +175,6 @@ TEST_CASE("Block") {
 
   SECTION("Element_shape/Mesh_blocks") {
     SECTION("2D conformal") {
-      hexed::next::Mesh_blocks blocks(2, basis5);
       std::vector<hexed::next::Element_shape> elems;
       elems.push_back(blocks.create_element({-.2, .3, .1}, .7));
       elems.push_back(blocks.create_element({-.9, .3, .1}, .7, 0));
@@ -370,7 +373,6 @@ TEST_CASE("Block") {
     }
 
     SECTION("connection with edge gluing") {
-      hexed::next::Mesh_blocks blocks(3, basis5);
       auto reset = [&blocks]() {
         for (unsigned i_face = 0; i_face < blocks.faces_3d().size(); ++i_face) {
           for (int i_edge = 0; i_edge < 4; ++i_edge) {
