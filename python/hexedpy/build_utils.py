@@ -801,6 +801,8 @@ class Builder:
         else:
             self.venv_dir = None
             self._python = "python3"
+        if self.options["internet"]:
+            self.python("-m", "pip", "install", "--upgrade", "pip")
         self.prefices = Prefices(self.env)
         self.prefices.add("bin", env_vars=["PATH"])
         self.prefices.add("lib", env_vars=["LIBRARY_PATH", "LD_LIBRARY_PATH", "DT_RPATH"],
