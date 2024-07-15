@@ -79,7 +79,7 @@ void throw_critical(const char* message)
 } // namespace assert
 } // namespace hexed
 
-/* \brief Throws an exception with an informative error message.
+/*! \brief Throws an exception with an informative error message.
  * \details Throws an exception with a message
  * that includes `message` plus some additional info for debugging.
  * Works inside single-threaded regions as well as OpenMP parallel regions.

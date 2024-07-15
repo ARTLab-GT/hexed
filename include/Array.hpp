@@ -1,6 +1,9 @@
 #ifndef HEXED_ARRAY_HPP_
 #define HEXED_ARRAY_HPP_
 
+//! \file Array.hpp \brief Defines `hexe::Array` and related macros, functions, and constants
+
+//! \brief Controls whether bounds-checking assertions are used in `hexed::Array`.
 #ifndef HEXED_ARRAY_BOUNDS_CHECK
   #ifdef DEBUG
     #define HEXED_ARRAY_BOUNDS_CHECK true
@@ -14,7 +17,16 @@
 #include "math.hpp"
 #include "Iterator.hpp"
 
+//! \brief Enforces an assertion iff `HEXED_ARRAY_BOUNDS_CHECK` is `true`.
+#define HEXED_ARRAY_ASSERT(...) \
+  if constexpr (HEXED_ARRAY_BOUNDS_CHECK) { \
+    HEXED_ASSERT(__VA_ARGS__); \
+  } \
+
 namespace hexed {
+
+constexpr int whatever = -1; //!< \brief used in `Array<T>::reshaped()`
+constexpr int same = -2; //!< \brief used in `Array<T>::reshaped()`
 
 /*! \brief Represents a dynamic-sized multidimensional array.
  * \details This is an array-style container designed to meet the following objectives:
@@ -59,15 +71,6 @@ namespace hexed {
  */
 template <typename T>
 class Array {
-  int _order;
-  std::vector<T> _data_storage;
-  std::vector<int> _shape_storage;
-  std::vector<int> _stride_storage;
-  T* _data;
-  int* _shape;
-  int* _strides;
-  Array(int o, T* d, int* sh, int* st) : _order{o}, _data{d}, _shape{sh}, _strides{st} {}
-
   public:
   /*! \brief Creates an array from scratch.
    * \details Array will have dimensions specified by `shape_arg`.
@@ -201,10 +204,8 @@ class Array {
      * \details Equivalent to `data()[i]`, give or take bounds checking \
      */ \
     CONST T& operator[](int i) CONST { \
-      if constexpr (HEXED_ARRAY_BOUNDS_CHECK) { \
-        HEXED_ASSERT(_order, "indexing an order-0 `Array` with `[]`"); \
-        HEXED_ASSERT(i < size(), "indexing an `Array` out of bounds with `[]`"); \
-      } \
+      HEXED_ARRAY_ASSERT(_order, "indexing an order-0 `Array` with `[]`"); \
+      HEXED_ARRAY_ASSERT(i < size(), "indexing an `Array` out of bounds with `[]`"); \
       return _data[i]; \
     } \
     /*! \brief Creates an array as a reference to `this`'s data */ \
@@ -218,10 +219,8 @@ class Array {
      * with either `a[113]` (5*4*5 + 2*5 + 3 = 113) or `a(5)(2)[3]`. \
      */ \
     CONST Array<T> operator()(int i) CONST { \
-      if constexpr (HEXED_ARRAY_BOUNDS_CHECK) { \
-        HEXED_ASSERT(_order, "indexing an order-0 `Array` with `()`"); \
-        HEXED_ASSERT(i < _shape[0], "indexing an `Array` out of bounds with `()`"); \
-      } \
+      HEXED_ARRAY_ASSERT(_order, "indexing an order-0 `Array` with `()`"); \
+      HEXED_ARRAY_ASSERT(i < _shape[0], "indexing an `Array` out of bounds with `()`"); \
       return {_order - 1, _data + i*_strides[1], _shape + 1, _strides + 1}; \
     } \
     /*! \brief Creates an array which is a view of rows [`start`, `stop`) of this. \
@@ -236,13 +235,49 @@ class Array {
      * The first entry of `shape()` will be `stop - start` and the rest will be the same as `this` \
      * (granted the above caveat about empty results). \
      */ \
-    CONST Array<T> operator()(int start, int stop) CONST { \
-      if constexpr (HEXED_ARRAY_BOUNDS_CHECK) { \
-        HEXED_ASSERT(_order, "indexing an order-0 `Array` with `()`"); \
-      } \
+    CONST Array operator()(int start, int stop) CONST { \
+      HEXED_ARRAY_ASSERT(_order, "indexing an order-0 `Array` with `()`"); \
       std::vector<int> s = shape(); \
       s[0] = std::max(0, std::min(stop, _shape[0]) - start); \
       return {s, _data + start*_strides[1]}; \
+    } \
+    /*! \brief Returns an array referencing the same data as `this` but with a different shape. \
+     * \details The new size must be less than or equal to the old size, or else behavior is undefined. \
+     * If any entries of `new_shape` are `hexed::same`, \
+     * then they will be converted to the entry of the current shape at the same index. \
+     * E.g., if `shape()` is `{2, 3, 4}` and you call `reshape({1, same, 4})`, \
+     * the resulting shape will be `{1, 3, 4}`. \
+     * Of course, the index of any `same` arguments must be less than `order()`.
+     * If exactly one of the entries of `new_shape` is `whatever`, \
+     * it will be converted to whatever value is necessary to keep the size the same. \
+     * Making more than 1 entry `whatever` is not allowed. \
+     * Note that reshaping maintains the underlying (row-major) storage order of the values
+     * (unlike Eigen's [conservativeResize]
+     * (https://eigen.tuxfamily.org/dox/classEigen_1_1PlainObjectBase.html#a712c25be1652e5a64a00f28c8ed11462)),
+     * so it can't generally be used to select a block of an `Array`.
+     * It is more useful for adding or removing dimensions.
+     * E.g., `array.reshaped({whatever})` flattens `array`.
+     */ \
+    CONST Array reshaped(std::vector<int> new_shape) CONST { \
+      std::vector<int> s = new_shape; \
+      int sz = 1; \
+      int i_whatever = -1; \
+      for (std::size_t i = 0; i < s.size(); ++i) { \
+        if (s[i] == same) { \
+          HEXED_ARRAY_ASSERT(i < order(), "`same` appears at a position >= `order()`"); \
+          s[i] = _shape[i]; \
+        } \
+        if (s[i] == whatever) { \
+          HEXED_ARRAY_ASSERT(i_whatever == -1, "more than one `hexed::whatever` in `new_shape`"); \
+          i_whatever = i; \
+        } else sz *= s[i]; \
+      } \
+      if (i_whatever >= 0) { \
+        HEXED_ARRAY_ASSERT(size()%sz == 0, "`whatever` dimension is not an integer"); \
+        s[i_whatever] = size()/sz; \
+      } \
+      HEXED_ARRAY_ASSERT(sz <= size(), "`new_shape` is larger than current shape"); \
+      return {s, _data}; \
     } \
     /*! \brief %Iterator type to allow `Array` to function like a \
      * [standard container](https://en.cppreference.com/w/cpp/container). \
@@ -258,14 +293,22 @@ class Array {
   QUALIFIED()
   QUALIFIED(const)
   #undef QUALIFIED
+
+  private:
+  int _order;
+  std::vector<T> _data_storage;
+  std::vector<int> _shape_storage;
+  std::vector<int> _stride_storage;
+  T* _data;
+  int* _shape;
+  int* _strides;
+  Array(int o, T* d, int* sh, int* st) : _order{o}, _data{d}, _shape{sh}, _strides{st} {}
 };
 
 #define DEFINE_OPERATOR(BIN_OP) \
   template <typename T> \
   Array<T> operator BIN_OP(const Array<T>& op0, const Array<T>& op1) { \
-    if constexpr (HEXED_ARRAY_BOUNDS_CHECK) { \
-      HEXED_ASSERT(op0.size() == op1.size(), "array sizes must match for arithmetic"); \
-    } \
+    HEXED_ARRAY_ASSERT(op0.size() == op1.size(), "array sizes must match for arithmetic"); \
     Array<T> result = op0.copy(); \
     for (int i = 0; i < op0.size(); ++i) result[i] = op0[i] BIN_OP op1[i]; \
     return result; \

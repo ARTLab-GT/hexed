@@ -1423,13 +1423,10 @@ void Accessible_mesh::relax(double factor) {
   for (auto& side : bound_sides) {
     side.reset();
     if (surf_geom) {
-      Array<double> interior = side.interior();
-      //! \todo get array flattening and then simplify this
-      for (int i_point = 0; i_point < interior.size()/3; ++i_point) {
-        Mat<> point(params.n_dim);
-        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) point(i_dim) = interior[3*i_point + i_dim];
-        Mat<> nearest = surf_geom->nearest_point(point, huge, 1.).point(); //! \todo get the correct distance guess
-        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) interior[3*i_point + i_dim] = nearest(i_dim);
+      Array<double> interior = side.interior().reshaped({whatever, 3});
+      for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
+        auto p = interior(i_point).vector();
+        p = surf_geom->nearest_point(p, huge, 1.).point(); //! \todo get the correct distance guess
       }
     }
   }

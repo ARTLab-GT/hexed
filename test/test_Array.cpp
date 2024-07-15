@@ -2,16 +2,14 @@
 #define HEXED_ARRAY_BOUNDS_CHECK true
 #include <hexed/Array.hpp>
 
-hexed::Array<double> make_array()
-{
+hexed::Array<double> make_array() {
   hexed::Array<double> arr({2});
   arr[0] = .0;
   arr[1] = .1;
   return arr;
 }
 
-TEST_CASE("Array")
-{
+TEST_CASE("Array") {
   hexed::Array<double> arr0({2, 3, 4});
   REQUIRE(arr0.order() == 3);
   REQUIRE_THAT(arr0.shape(), Catch::Matchers::RangeEquals(std::vector<int>{2, 3, 4}));
@@ -26,6 +24,7 @@ TEST_CASE("Array")
   REQUIRE(arr0.data()[0] == 0.);
   REQUIRE(arr0[23] == 0.);
 
+  // indexing
   auto view = arr0();
   view[1] = 0.6;
   REQUIRE(arr0[1] == Catch::Approx(0.6));
@@ -44,6 +43,16 @@ TEST_CASE("Array")
   for (int i = 0; i < 24; ++i) REQUIRE(arr0[i] == Catch::Approx(i));
   arr0[1] = 42;
   REQUIRE(arr1[1] == Catch::Approx(1));
+
+  // reshaping
+  auto reshaped0 = arr0.reshaped({5, 4});
+  REQUIRE(&reshaped0(0)[0] == &arr0(0)(0)[0]);
+  REQUIRE(&reshaped0(0)[1] == &arr0(0)(0)[1]);
+  REQUIRE(&reshaped0(1)[0] == &arr0(0)(1)[0]);
+  REQUIRE(&reshaped0(3)[0] == &arr0(1)(0)[0]);
+  auto reshaped1 = arr0.reshaped({hexed::same, hexed::whatever});
+  REQUIRE_THAT(reshaped1.shape(), Catch::Matchers::RangeEquals(std::vector<int>{2, 12}));
+  REQUIRE(&reshaped1(1)[11] == &arr0(1)(2)[3]);
 
   hexed::Array<double> arr2(arr0);
   REQUIRE_THAT(arr0.shape(), Catch::Matchers::RangeEquals(std::vector<int>{2, 3, 4}));
@@ -78,8 +87,7 @@ TEST_CASE("Array")
   auto arr8{hexed::Array<double>::make(.1, -.2, 1.5)};
   REQUIRE_THAT(arr8, Catch::Matchers::RangeEquals(std::vector<double>{.1, -.2, 1.5}, hexed::math::Approx_equal()));
 
-  SECTION("arithmetic")
-  {
+  SECTION("arithmetic") {
     // only test one binary operator, since all of them are defined with the same macro
     hexed::Array<double> a0({2, 2});
     a0[0] = .0;
