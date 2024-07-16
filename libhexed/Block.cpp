@@ -103,8 +103,10 @@ void Vertex::calc_relax() {
   HEXED_ASSERT(_elems.theirs()[0], "element is null");
   int nd = _elems.theirs()[0]->n_dim();
   int nv = math::pow(2, nd);
+  double tot_sz = 0;
   for (auto elem : _elems.theirs()) {
     HEXED_ASSERT(elem, "element is null");
+    tot_sz += 1/elem->nominal_size();
     int i_this = -1;
     Mat<3, dyn> verts(3, nv);
     for (int i_vert = 0; i_vert < nv; ++i_vert) {
@@ -124,11 +126,13 @@ void Vertex::calc_relax() {
           edges(all, i_edge) = verts(all, start + vstride(nd, j_dim)) - verts(all, start);
         } else edges(all, i_edge) = math::sign(!i_dim)*elem->nominal_size()*Mat<3>::Unit(2);
       }
-      _update += verts(all, opposite) + math::sign(coords[i_dim])/elem->nominal_size()*edges(all, 0).cross(edges(all, 1));
+      _update += (verts(all, opposite)
+                  + math::sign(coords[i_dim])/elem->nominal_size()*edges(all, 0).cross(edges(all, 1)))
+                 /elem->nominal_size();
     }
     HEXED_ASSERT(i_this >= 0, "`this` does not appear to be a vertex of `elem`!");
   }
-  _update = .9*(_update/(nd*_elems.theirs().size()) - pos);
+  _update = .9*(_update/(nd*tot_sz) - pos);
 }
 
 std::vector<int> interior_dims(int n_dim, int row_size) {
