@@ -1403,12 +1403,29 @@ void Accessible_mesh::relax(double factor) {
     if (vert->is_mobile()) vert->pos = factor*vert->temp_vector + (1 - factor)*vert->pos;
   }
   snap_vertices();
-  // update `next::Vertex`s
+  //// update `next::Vertex`s
+  // relax vertices to improve mesh quality
   auto verts = _blocks.verts();
   #pragma omp parallel for
   for (auto& vert : verts) vert.calc_relax();
   #pragma omp parallel for
   for (auto& vert : verts) vert.apply_relax();
+  // snap vertices to extremal boundaries
+  if (tree) {
+    for (int i_con = 0; i_con < bound_cons.size(); ++i_con) {
+      auto& con = bound_cons[i_con];
+      int bc_sn = con.bound_cond_serial_n();
+      if (bc_sn < 2*params.n_dim) {
+        int i_dim = bc_sn/2;
+        bool sign = bc_sn%2;
+        std::vector<int> inds = vertex_inds(params.n_dim, {{i_dim, i_dim}, {sign, !sign}})[0];
+        for (int i_vert : inds) {
+          con.element().shape().vertex(i_vert).pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
+        }
+      }
+    }
+  }
+  // snap vertices to surface boundary
   if (surf_geom) {
     auto bverts = _blocks.boundary_verts();
     #pragma omp parallel for
@@ -1418,6 +1435,7 @@ void Accessible_mesh::relax(double factor) {
       vert.pos(seq) = surf_geom->nearest_point(vert.pos(seq), huge, vert.nominal_size()).point();
     }
   }
+  // snap edge/face interiors to surface boundary
   auto bound_sides = _blocks.boundary_sides();
   #pragma omp parallel for
   for (auto& side : bound_sides) {
@@ -1450,7 +1468,9 @@ Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& ba
 {
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < mesh.elems.size(); ++i_elem) {
-    if (mesh.elems[i_elem]._mask >= mesh._mask_levels - 1 && mask(mesh.elems[i_elem])) mesh.elems[i_elem]._mask = mesh._mask_levels;
+    if (mesh.elems[i_elem]._mask >= mesh._mask_levels - 1 && mask(mesh.elems[i_elem])) {
+      mesh.elems[i_elem]._mask = mesh._mask_levels;
+    }
   }
   #define MASK_REF_CONS(mbt) \
     for (int i_con = 0; i_con < mbt.refined_connections().size(); ++i_con) { \
