@@ -1426,13 +1426,14 @@ void Accessible_mesh::relax(double factor) {
       Array<double> interior = side.interior().reshaped({whatever, 3});
       for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
         auto p = interior(i_point)(0, params.n_dim).vector();
-        p = surf_geom->nearest_point(p, huge, 1.).point(); //! \todo get the correct distance guess
+        p = surf_geom->nearest_point(p, huge, side.element()->nominal_size()).point();
       }
     }
   }
 }
 
-Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& basis, std::function<bool(Element&)> mask)
+Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& basis,
+                                          std::function<bool(Element&)> mask)
 : kernel_mesh {
     mesh.params.n_dim,
     mesh.params.row_size,

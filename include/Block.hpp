@@ -130,6 +130,8 @@ class Boundary_block : public Block {
   inline bool alive() const {return _elem;}
   //! \brief sets `elem` to point to `this`
   inline void pair(mutual::Base<Element_shape, Boundary_block>& elem) {_elem.pair(elem);}
+  //! \brief Get the element `this` is `pair()`d with (`nullptr` if not paired).
+  inline Element_shape* element() {return _elem.get();}
 
   /*! \brief Resets the interior nodes to a minimal interpolation of the boundary nodes.
    * \details In what sense the interpolation is minimal is to be determined by derived classes.
