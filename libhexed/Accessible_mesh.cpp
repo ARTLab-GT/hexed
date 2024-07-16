@@ -161,6 +161,7 @@ int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<in
   Element& elem = element(ref_level, is_deformed, sn);
   for (int i_vert = 0; i_vert < n_vert; ++i_vert) vert_ptrs.emplace_back(elem.vertex(i_vert));
   elem.create_shape(_blocks, surface_face);
+  elem.shape().deformed = is_deformed;
   return sn;
 }
 

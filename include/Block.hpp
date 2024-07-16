@@ -247,8 +247,11 @@ class Element_shape : public Block {
   friend void Vertex::glue(Element_shape&, std::vector<double>);
 
   public:
+  bool deformed = false;
   //! \brief Obtains the edge length of this element before any vertex adjustment.
   inline double nominal_size() const {return _nom_sz;}
+  //! \brief What the position of vertex `i_vert` _would_ be supposed to be if this were a Cartesian element.
+  Mat<3> nominal_position(int i_vert = 0) const;
   //! \brief Accesses the `i_vert`th vertex (in standard row-major order)
   inline Vertex& vertex(int i_vert) {return *_verts[i_vert];}
   inline const Basis& basis() const {return *_basis;}
@@ -274,6 +277,7 @@ class Element_shape : public Block {
   Mat<3> _point(std::vector<int>) const override;
   const Basis* _basis;
   double _nom_sz;
+  Mat<3> _nom_pos;
   std::vector<Reciprocal_ptr<Element_shape, Vertex>> _verts;
   int _i_bf;
   Reciprocal_ptr<Element_shape, Boundary_block> _bf;
@@ -305,7 +309,7 @@ class Mesh_blocks {
   //! \brief If 3D, obtains the list of surface faces.
   //! \details If not 3D, returns an empty sequence.
   Sequence<Face&> faces_3d();
-  //b \brief returns `edges_2d` or `faces_3d`, as appropriate
+  //! \brief returns `edges_2d` or `faces_3d`, as appropriate
   Sequence<Boundary_block&> boundary_sides();
 
   /*! \brief Constructs an element and returns it (you now own it).

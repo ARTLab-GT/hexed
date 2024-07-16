@@ -114,6 +114,11 @@ void Vertex::calc_relax() {
       verts(all, i_vert) = vert.point({});
       if (&vert == this) i_this = i_vert;
     }
+    HEXED_ASSERT(i_this >= 0, "`this` does not appear to be a vertex of `elem`!");
+    if (!elem->deformed) {
+      _update = elem->nominal_position(i_this) - pos;
+      return;
+    }
     std::vector<int> coords(nd);
     for (int i_dim = 0; i_dim < nd; ++i_dim) coords[i_dim] = i_this/vstride(nd, i_dim)%2*vstride(nd, i_dim);
     for (int i_dim = 0; i_dim < nd; ++i_dim) {
@@ -130,7 +135,6 @@ void Vertex::calc_relax() {
                   + math::sign(coords[i_dim])/elem->nominal_size()*edges(all, 0).cross(edges(all, 1)))
                  /elem->nominal_size();
     }
-    HEXED_ASSERT(i_this >= 0, "`this` does not appear to be a vertex of `elem`!");
   }
   _update = .9*(_update/(nd*tot_sz) - pos);
 }
@@ -283,6 +287,12 @@ Element_shape::Element_shape(int nd, const Basis& b)
   for (int i_vert = 0; i_vert < math::pow(2, nd); ++i_vert) _verts.emplace_back(this);
 }
 
+Mat<3> Element_shape::nominal_position(int i_vert) const {
+  Mat<3> pos = _nom_pos;
+  for (int i_dim = 0; i_dim < n_dim(); ++i_dim) pos(i_dim) += i_vert/vstride(n_dim(), i_dim)%2*_nom_sz;
+  return pos;
+}
+
 int i_edge(Connection_direction dir, int side, int i_bf) {
   return 2*(dir.i_dim[side] > 3 - dir.i_dim[side] - i_bf/2) + dir.face_sign[side];
 }
@@ -397,6 +407,7 @@ Element_shape Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_
   // create the element
   Element_shape elem(n_dim, basis);
   elem._nom_sz = size;
+  elem._nom_pos = pos;
   // create vertices for the element and connect the element's vertex pointers to it
   int nv = math::pow(2, n_dim);
   for (int i_vert = 0; i_vert < nv; ++i_vert) {
@@ -404,9 +415,7 @@ Element_shape Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_
     if (boundary_face != no_face) {
       if ((i_vert/vstride(n_dim, boundary_face/2))%2 == boundary_face%2) vec = &_boundary_verts;
     }
-    Mat<3> p = pos;
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) p(i_dim) += i_vert/vstride(n_dim, i_dim)%2*size;
-    vec->emplace_back(p, basis.row_size);
+    vec->emplace_back(elem.nominal_position(i_vert), basis.row_size);
     vec->back().pair(elem._verts[i_vert]);
   }
   // if necessary, create a `Boundary_block` and connect the element's boundary side pointer to it
