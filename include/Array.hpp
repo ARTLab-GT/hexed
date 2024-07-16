@@ -1,7 +1,7 @@
 #ifndef HEXED_ARRAY_HPP_
 #define HEXED_ARRAY_HPP_
 
-//! \file Array.hpp \brief Defines `hexe::Array` and related macros, functions, and constants
+//! \file Array.hpp \brief Defines `Array` and related macros, functions, and constants
 
 //! \brief Controls whether bounds-checking assertions are used in `hexed::Array`.
 #ifndef HEXED_ARRAY_BOUNDS_CHECK

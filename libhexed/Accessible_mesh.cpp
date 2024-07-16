@@ -1425,7 +1425,7 @@ void Accessible_mesh::relax(double factor) {
     if (surf_geom) {
       Array<double> interior = side.interior().reshaped({whatever, 3});
       for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
-        auto p = interior(i_point).vector();
+        auto p = interior(i_point)(0, params.n_dim).vector();
         p = surf_geom->nearest_point(p, huge, 1.).point(); //! \todo get the correct distance guess
       }
     }
