@@ -4,8 +4,7 @@
 #include <omp.h>
 #include "config.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \brief wrapper for [OpenMP lock routines](https://www.openmp.org/spec-html/5.0/openmpse31.html).
  * \details This class can be used to prevent data races by OpenMP threads.
@@ -23,15 +22,13 @@ namespace hexed
  * } // lock is released because `a` is destroyed
  * ~~~
  */
-class Lock
-{
+class Lock {
   #if HEXED_THREADED
   omp_lock_t l;
   #endif
   public:
   //! acquires the lock when constructed and releases when destroyed
-  class Acquire
-  {
+  class Acquire {
     Lock& lock;
     public:
     Acquire(Lock&);
