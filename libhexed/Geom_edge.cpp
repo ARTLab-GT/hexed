@@ -24,4 +24,23 @@ void Geom_edge::visualize(std::string format, std::string name) const {
   vis->write_block(transposed, Array<double>({0, _n_points}));
 }
 
+Geom_edge::Node Geom_edge::nearest(Mat<3> to, double start, double stop) const {
+  Node node{Mat<3>::Constant(std::nan("")), 0, std::nan("")};
+  double dist = huge;
+  for (int i_point = 0; i_point < _n_points; ++i_point) {
+    double a = _arc_len[i_point];
+    if (a >= start && a < stop) {
+      Mat<3> p = _points(i_point).vector();
+      double d = (p - to).norm();
+      if (d < dist) {
+        dist = d;
+        node.pos = p;
+        node.index = i_point;
+        node.arc_len = a;
+      }
+    }
+  }
+  return node;
+}
+
 }

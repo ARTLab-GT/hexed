@@ -82,6 +82,7 @@ class Accessible_mesh : public Mesh {
   // identify which vertices are on which boundaries and write it to `Vertex::record`
   // must be called directly befor `snap_vertices`
   void snap_vertices();
+  void _match_edges();
   void create_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3));
   void read_file(std::string file_name);
   void _connect(std::array<Element*, 2>, Con_dir<Element>);
@@ -92,6 +93,11 @@ class Accessible_mesh : public Mesh {
 
   template <typename Elem_t>
   void _connect_shapes(Elem_t*, std::vector<Elem_t*>, Con_dir<Deformed_element>, std::array<bool, 2>);
+
+  struct Edge_match {
+    Mortal_ptr<next::Edge> edge;
+    std::array<Geom_edge::Node, 2> nodes;
+  };
 
   public:
   //! \brief how far must the center of an element be from the geometry relative to the nominal size
@@ -141,7 +147,7 @@ class Accessible_mesh : public Mesh {
 
   void add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3)) override;
   void set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) override;
-  inline void set_edges(std::vector<Geom_edge>&& geom_edges) override {_geom_edges = std::move(geom_edges);}
+  void set_edges(std::vector<Geom_edge>&&) override;
   void set_unref_locks(std::function<bool(Element&)> lock_if = criteria::never) override;
   bool update(std::function<bool(Element&)> refine_criterion = criteria::always, std::function<bool(Element&)> unrefine_criterion = criteria::never) override;
   void set_all_smooth() override;

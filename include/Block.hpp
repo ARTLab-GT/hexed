@@ -74,6 +74,9 @@ class Vertex : public Block {
   inline bool alive() {return !_elems.partners().empty();}
   //! \brief Maximum nominal size of connected elements
   double nominal_size() const;
+  //! \brief Access the list of edges that have `this` as an endpoint
+  Sequence<Edge&> edges() {return _edges.theirs().dereference();}
+  inline bool glued() const {return _glued_to;}
 
   /*! \brief Combines this vertex with `that` and steals its resources.
    * \details All `Edge`s and `Element_shape`s that currently have pointers to `that`
@@ -166,15 +169,17 @@ class Boundary_block : public Block {
  */
 class Edge : public Boundary_block {
   public:
+  //! \brief Used in `glue()` to indicate that you are not gluing to either half of the target edge
+  static const int no;
+
   /*! \brief Constructs an `Edge` with endpoints `vertex0` and `vertex1`.
    * \details `point({0})` will return `vertex0.point({})`
    * and `point({row_size() - 1})` will return `vertex1.point({})`.
    * `Vertex::eat` can redirect these to point to different vertices.
    */
   Edge(Vertex& vertex0, Vertex& vertex1, const Basis&);
+  inline Vertex& vertex(int i_vert) {return _verts[i_vert].value();} //!< \brief access the vertices (index 0 or 1)
   void reset() override; //!< \brief sets `interior()` to linear interpolation between vertices
-  //! \brief Used in `glue()` to indicate that you are not gluing to either half of the target edge
-  static const int no;
 
   /*! \brief Glues the edge to another edge (or half of it).
    * \details Once this is called, the `Block::interior()` becomes irrelevant,

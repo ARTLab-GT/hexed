@@ -79,9 +79,10 @@ public:
   }
 
   //! \brief If this is a sequence of pointer-like entries, returns a sequence of dereferenced entries.
-  Sequence<Reference_t> dereference() const {
+  template <typename U = Reference_t>
+  Sequence<U> dereference() const {
     getter g{_get};
-    return {[g](std::size_t index)->Reference_t {return *g(index);}, _size};
+    return {[g](std::size_t index)->U {return *g(index);}, _size};
   }
 
   //! \brief If the entries of this sequence have addresses, returns them as a sequence.

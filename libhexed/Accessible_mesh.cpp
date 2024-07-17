@@ -119,6 +119,74 @@ void Accessible_mesh::snap_vertices() {
   }
 }
 
+void Accessible_mesh::_match_edges() {
+  for (auto& geom_edge : _geom_edges) {
+    std::vector<Edge_match> candidates;
+    auto faces = _blocks.faces_3d();
+    for (auto& face : faces) {
+      for (int i_edge = 0; i_edge < 4; ++i_edge) {
+        auto& edge = face.edge(i_edge);
+        if (!edge.glued()) {
+          std::array<Geom_edge::Node, 2> nodes;
+          double dist = 0.;
+          for (int i_vert = 0; i_vert < 2; ++i_vert) {
+            Mat<3> pos = edge.vertex(i_vert).point({});
+            nodes[i_vert] = geom_edge.nearest(pos);
+            dist = std::max(dist, (nodes[i_vert].pos - pos).norm());
+          }
+          if (dist < edge.element()->nominal_size()) {
+            candidates.emplace_back(&edge, nodes);
+          }
+        }
+      }
+    }
+    next::Block::visualize("default", "candidates", {
+      [&candidates](std::size_t i)->next::Block& {return candidates[i].edge.value();},
+      [&candidates](){return candidates.size();},
+    });
+    std::vector<Mortal_ptr<next::Edge>> matched;
+    auto verts = _blocks.boundary_verts();
+    next::Vertex* best_vert = nullptr;
+    double badness = huge;
+    double arc_len = 0;
+    for (auto& vert : verts) if (!vert.glued()) {
+      Mat<3> p = vert.point({});
+      auto node = geom_edge.nearest(p);
+      double b = (p - node.pos).norm() + node.arc_len;
+      if (b < badness) {
+        best_vert = &vert;
+        badness = b;
+        arc_len = node.arc_len;
+      }
+    }
+    next::Vertex* curr = best_vert;
+    double progress = 0;
+    while (true) {
+      next::Edge* best_edge = nullptr;
+      double temp_arc_len = 0;
+      for (auto& edge : curr->edges()) if (!edge.glued()) {
+        next::Vertex* vert = &edge.vertex(0) == curr ? &edge.vertex(1) : &edge.vertex(0);
+        Mat<3> p = vert->point({});
+        auto node = geom_edge.nearest(p, arc_len);
+        double prog = node.arc_len - (p - node.pos).norm();
+        if (prog > progress) {
+          best_edge = &edge;
+          best_vert = vert;
+          progress = prog;
+          temp_arc_len = node.arc_len;
+        }
+      }
+      if (!best_edge) break;
+      matched.emplace_back(best_edge);
+      curr = best_vert;
+      std::cout << arc_len << " " << temp_arc_len << "\n";
+      arc_len = temp_arc_len;
+    }
+    next::Block::visualize("default", "matched",
+      next::Sequence<Mortal_ptr<next::Edge>&>::vector_view(matched).dereference<const next::Block&>());
+  }
+}
+
 Storage_params incr_res_cache(Storage_params params) {
   params.n_stage += 1;
   return params;
@@ -744,6 +812,11 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   id_smooth_verts();
 }
 
+void Accessible_mesh::set_edges(std::vector<Geom_edge>&& geom_edges) {
+  _geom_edges = std::move(geom_edges);
+  _match_edges();
+}
+
 void Accessible_mesh::set_unref_locks(std::function<bool(Element&)> lock_if) {
   auto& elems = elements();
   #pragma omp parallel for
@@ -1339,6 +1412,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   id_boundary_verts();
   snap_vertices();
   id_smooth_verts();
+  _match_edges();
   return n_before > n_after; // any change to the element structure (including adding elements!) will cause `purge` to reduce the size of `elems`
 }
 

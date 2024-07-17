@@ -962,13 +962,18 @@ TEST_CASE("sphere tree mesh") {
   hexed::Mat<3> origin{2., 2., 2.};
   for (int i = 0; i < 6; ++i) bcs.push_back(new hexed::Freestream(hexed::Mat<5>{0., 0., 0., 1., 1e5}));
   solver.mesh().add_tree(bcs, origin);
-  for (int i = 0; i < 3; ++i) solver.mesh().update();
+  for (int i = 0; i < 3; ++i) {
+    solver.mesh().update();
+  }
+  solver.mesh().set_surface(new hexed::Hypersphere(origin, .5), new hexed::Nonpenetration, origin + Eigen::Vector3d{.8, .8, .8});
+  for (int i = 0; i < 3; ++i) solver.mesh().relax();
+  solver.mesh().visualize("default", "sph_before_edge");
   {
     std::vector<hexed::Geom_edge> edges;
-    int n = 300;
+    int n = 100;
     hexed::Array<double> arr({n + 1, 3});
     for (int i = 0; i <= n; ++i) {
-      double angle = i*2*hexed::constants::pi/n;
+      double angle = i*.5*hexed::constants::pi/n;
       hexed::Mat<3> point = origin + .5*hexed::Mat<3>{.5, std::cos(angle), std::sin(angle)}.normalized();
       arr(i).vector() = point;
     }
@@ -976,7 +981,6 @@ TEST_CASE("sphere tree mesh") {
     edges.back().visualize("default", "edge");
     solver.mesh().set_edges(std::move(edges));
   }
-  solver.mesh().set_surface(new hexed::Hypersphere(origin, .5), new hexed::Nonpenetration, origin + Eigen::Vector3d{.8, .8, .8});
   int n_initial = solver.mesh().n_elements();
   for (int i = 0; i < 3; ++i) solver.mesh().relax();
   solver.calc_jacobian();

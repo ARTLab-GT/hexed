@@ -20,5 +20,16 @@ TEST_CASE("Geom_edge") {
     REQUIRE_THAT(edge.points(), Catch::Matchers::RangeEquals(points, hexed::math::Approx_equal()));
     std::vector<double> correct {0., std::sqrt(3.), std::sqrt(3.) + std::sqrt(2.)};
     REQUIRE_THAT(edge.arc_len(), Catch::Matchers::RangeEquals(correct, hexed::math::Approx_equal(0., 1e-8)));
+    hexed::Mat<3> to{2.1, 2.1, 2.1};
+    auto node = edge.nearest(to);
+    REQUIRE_THAT(node.pos, Catch::Matchers::RangeEquals(std::vector<double>{2., 2., 2.}, hexed::math::Approx_equal()));
+    REQUIRE(node.arc_len == Catch::Approx(std::sqrt(3.)));
+    REQUIRE(node.index == 1);
+    node = edge.nearest(to, std::sqrt(3.) + .01);
+    REQUIRE(node.arc_len == Catch::Approx(std::sqrt(3.) + std::sqrt(2.)));
+    REQUIRE(node.index == 2);
+    node = edge.nearest(to, 0., .01);
+    REQUIRE(node.arc_len == Catch::Approx(0.).margin(1e-6));
+    REQUIRE(node.index == 0);
   }
 }
