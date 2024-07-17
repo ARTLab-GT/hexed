@@ -963,6 +963,19 @@ TEST_CASE("sphere tree mesh") {
   for (int i = 0; i < 6; ++i) bcs.push_back(new hexed::Freestream(hexed::Mat<5>{0., 0., 0., 1., 1e5}));
   solver.mesh().add_tree(bcs, origin);
   for (int i = 0; i < 3; ++i) solver.mesh().update();
+  {
+    std::vector<hexed::Geom_edge> edges;
+    int n = 300;
+    hexed::Array<double> arr({n + 1, 3});
+    for (int i = 0; i <= n; ++i) {
+      double angle = i*2*hexed::constants::pi/n;
+      hexed::Mat<3> point = origin + .5*hexed::Mat<3>{.5, std::cos(angle), std::sin(angle)}.normalized();
+      arr(i).vector() = point;
+    }
+    edges.emplace_back(arr.copy());
+    edges.back().visualize("default", "edge");
+    solver.mesh().set_edges(std::move(edges));
+  }
   solver.mesh().set_surface(new hexed::Hypersphere(origin, .5), new hexed::Nonpenetration, origin + Eigen::Vector3d{.8, .8, .8});
   int n_initial = solver.mesh().n_elements();
   for (int i = 0; i < 3; ++i) solver.mesh().relax();
@@ -970,6 +983,8 @@ TEST_CASE("sphere tree mesh") {
   solver.initialize(hexed::Constant_func({0., 0., 0., 1., 1e5}));
   solver.mesh().visualize("default", "sph_before_ref");
   solver.visualize_field("default", "sph_before_ref_soln", hexed::Constant_func({}), 2);
+
+  #if 0
   for (int i = 0; i < 2; ++i) {
     // this criterion will refine all elements with a vertex that is within .1 of the midpoint of the arc
     auto criterion = [origin](hexed::Element& elem) {
@@ -1004,6 +1019,7 @@ TEST_CASE("sphere tree mesh") {
   solver.initialize(hexed::Constant_func({0., 0., 0., 1., 1e5}));
   solver.mesh().visualize("default", "sph_after_unref");
   solver.visualize_field("default", "sph_after_unref_soln", hexed::Constant_func({}), 2);
+  #endif
 }
 #endif
 

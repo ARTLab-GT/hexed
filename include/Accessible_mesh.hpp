@@ -42,6 +42,7 @@ class Accessible_mesh : public Mesh {
   int _mask_levels;
   Gauss_lobatto _basis;
   next::Mesh_blocks _blocks;
+  std::vector<Geom_edge> _geom_edges;
 
   // masked sequences
   template <typename view_t, typename storage_t>
@@ -140,6 +141,7 @@ class Accessible_mesh : public Mesh {
 
   void add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3)) override;
   void set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) override;
+  inline void set_edges(std::vector<Geom_edge>&& geom_edges) override {_geom_edges = std::move(geom_edges);}
   void set_unref_locks(std::function<bool(Element&)> lock_if = criteria::never) override;
   bool update(std::function<bool(Element&)> refine_criterion = criteria::always, std::function<bool(Element&)> unrefine_criterion = criteria::never) override;
   void set_all_smooth() override;

@@ -7,6 +7,7 @@
 #include "Layer_sequence.hpp"
 #include "Surface_geom.hpp"
 #include "connection.hpp"
+#include "Geom_edge.hpp"
 
 namespace hexed
 {
@@ -166,13 +167,14 @@ class Mesh
   virtual bool update(std::function<bool(Element&)> refine_criterion = criteria::always, std::function<bool(Element&)> unrefine_criterion = criteria::never) = 0;
   virtual void set_all_smooth() = 0; //!< sets `need_smooth` to `true` for all vertices to perform global relaxation (only effective until the next `update()` cycle)
   /*! \brief Relax the vertices to improve mesh quality.
-   * \details By default, relaxation is performed incrementally
-   * -- only vertices of elements that are new in the most recent `update()` cycle are smoothed.
-   *  To smooth all, call `set_all_smooth()`.
+   * \details By default, relaxation is performed incrementally---only vertices of elements that are new
+   * in the most recent `update()` cycle are smoothed.
+   * To smooth all, call `set_all_smooth()`.
    * \param factor A larger number yields more change in the mesh. 0 => no update, 1 => "full" update, > 1 allowed but suspect
    */
   virtual void relax(double factor = 0.9) = 0;
   virtual int surface_bc_sn() = 0; //!< what is the serial number of the geometry surface BC?
+  virtual void set_edges(std::vector<Geom_edge>&&) = 0;
   //! \}
 
   //! \name observers
