@@ -980,15 +980,14 @@ TEST_CASE("sphere tree mesh") {
     edges.emplace_back(arr.copy());
     edges.back().visualize("default", "edge");
     solver.mesh().set_edges(std::move(edges));
+    solver.mesh().match_edges();
   }
   int n_initial = solver.mesh().n_elements();
   for (int i = 0; i < 3; ++i) solver.mesh().relax();
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 0., 1., 1e5}));
   solver.mesh().visualize("default", "sph_before_ref");
-  solver.visualize_field("default", "sph_before_ref_soln", hexed::Constant_func({}), 2);
 
-  #if 0
   for (int i = 0; i < 2; ++i) {
     // this criterion will refine all elements with a vertex that is within .1 of the midpoint of the arc
     auto criterion = [origin](hexed::Element& elem) {
@@ -1005,25 +1004,25 @@ TEST_CASE("sphere tree mesh") {
       return ref;
     };
     solver.mesh().update(criterion);
-    for (int i = 0; i < 4; ++i) solver.mesh().relax();
+    for (int i = 0; i < 3; ++i) solver.mesh().relax();
+    solver.mesh().match_edges();
+    for (int i = 0; i < 3; ++i) solver.mesh().relax();
     solver.mesh().valid().assert_valid();
   }
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 0., 1., 1e5}));
   solver.mesh().visualize("default", "sph_after_ref");
-  solver.visualize_field("default", "sph_after_ref_soln", hexed::Constant_func({}), 2);
-  solver.visualize_surface("default", "sph_after_ref_surf", 6, hexed::Constant_func({}), 2);
   for (int i = 0; i < 3; ++i) {
     solver.mesh().update(hexed::criteria::never, [](hexed::Element& elem){return elem.refinement_level() > 3;});
-    for (int i = 0; i < 6; ++i) solver.mesh().relax();
+    for (int i = 0; i < 3; ++i) solver.mesh().relax();
+    solver.mesh().match_edges();
+    for (int i = 0; i < 3; ++i) solver.mesh().relax();
     solver.mesh().valid().assert_valid();
   }
   REQUIRE(solver.mesh().n_elements() == n_initial); // this mesh should have been completely unrefined to where it started
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 0., 1., 1e5}));
   solver.mesh().visualize("default", "sph_after_unref");
-  solver.visualize_field("default", "sph_after_unref_soln", hexed::Constant_func({}), 2);
-  #endif
 }
 #endif
 

@@ -119,31 +119,10 @@ void Accessible_mesh::snap_vertices() {
   }
 }
 
-void Accessible_mesh::_match_edges() {
+void Accessible_mesh::match_edges() {
+  _blocks.edges_2d();
+  _blocks.faces_3d();
   for (auto& geom_edge : _geom_edges) {
-    std::vector<Edge_match> candidates;
-    auto faces = _blocks.faces_3d();
-    for (auto& face : faces) {
-      for (int i_edge = 0; i_edge < 4; ++i_edge) {
-        auto& edge = face.edge(i_edge);
-        if (!edge.glued()) {
-          std::array<Geom_edge::Node, 2> nodes;
-          double dist = 0.;
-          for (int i_vert = 0; i_vert < 2; ++i_vert) {
-            Mat<3> pos = edge.vertex(i_vert).point({});
-            nodes[i_vert] = geom_edge.nearest(pos);
-            dist = std::max(dist, (nodes[i_vert].pos - pos).norm());
-          }
-          if (dist < edge.element()->nominal_size()) {
-            candidates.emplace_back(&edge, nodes);
-          }
-        }
-      }
-    }
-    next::Block::visualize("default", "candidates", {
-      [&candidates](std::size_t i)->next::Block& {return candidates[i].edge.value();},
-      [&candidates](){return candidates.size();},
-    });
     auto verts = _blocks.boundary_verts();
     next::Vertex* best_vert = nullptr;
     double badness = huge;
@@ -181,6 +160,7 @@ void Accessible_mesh::_match_edges() {
       if (!best_edge) break;
       if (!geom_edge.matched_edges.empty()) if (best_edge == geom_edge.matched_edges.back().get()) {
         geom_edge.matched_edges.erase(geom_edge.matched_edges.end());
+        geom_edge.matched_vertices.erase(geom_edge.matched_vertices.end());
         break;
       }
       geom_edge.matched_edges.emplace_back(best_edge);
@@ -819,7 +799,7 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
 
 void Accessible_mesh::set_edges(std::vector<Geom_edge>&& geom_edges) {
   _geom_edges = std::move(geom_edges);
-  _match_edges();
+  match_edges();
 }
 
 void Accessible_mesh::set_unref_locks(std::function<bool(Element&)> lock_if) {
@@ -1417,7 +1397,10 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   id_boundary_verts();
   snap_vertices();
   id_smooth_verts();
-  _match_edges();
+  for (auto& edge : _geom_edges) {
+    edge.matched_vertices.clear();
+    edge.matched_edges.clear();
+  }
   return n_before > n_after; // any change to the element structure (including adding elements!) will cause `purge` to reduce the size of `elems`
 }
 
@@ -1489,7 +1472,7 @@ void Accessible_mesh::relax(double factor) {
         geom_edge.matched_vertices.front().value().pos = geom_edge.points()(0).vector();
         geom_edge.matched_vertices.back().value().pos = geom_edge.points()(geom_edge.n_points() - 1).vector();
       }
-      for (std::size_t i_vert = 1; i_vert < geom_edge.matched_vertices.size() - 1; ++i_vert) {
+      for (long long i_vert = 1; i_vert < (long long)geom_edge.matched_vertices.size() - 1; ++i_vert) {
         auto& pos = geom_edge.matched_vertices[i_vert].value().pos;
         pos = geom_edge.nearest(pos).pos;
       }

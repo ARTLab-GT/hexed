@@ -9,8 +9,7 @@
 #include "connection.hpp"
 #include "Geom_edge.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \details
  * Represents a collection of interconnected elements. This class is an interface which supports
@@ -22,8 +21,7 @@ namespace hexed
  * pointers or references because they preclude (illegal) attempts to relate objects owned by different
  * meshes.
  */
-class Mesh
-{
+class Mesh {
   public:
   //! \returns Nominal size (\f$\Delta h\f$) of elements with refinement level 0.
   virtual double root_size() = 0;
@@ -102,8 +100,7 @@ class Mesh
    */
   virtual void extrude(bool collapse = false, double offset = 0, bool force = false) = 0;
   //! \overload
-  inline void extrude(Layer_sequence layers)
-  {
+  inline void extrude(Layer_sequence layers) {
     double height = 1;
     for (int i_layer = layers.n_layers() - 1; i_layer > 0; --i_layer) {
       double new_height = height - layers.spacing(i_layer);
@@ -175,22 +172,21 @@ class Mesh
   virtual void relax(double factor = 0.9) = 0;
   virtual int surface_bc_sn() = 0; //!< what is the serial number of the geometry surface BC?
   virtual void set_edges(std::vector<Geom_edge>&&) = 0;
+  virtual void match_edges() = 0;
   //! \}
 
   //! \name observers
   //!\{
   virtual int n_elements() = 0; //!< \brief number of elements currently in the mesh
   //! An object to provide information about whether the mesh connectivity is valid and if not, why.
-  class Connection_validity
-  {
+  class Connection_validity {
     public:
     const int n_redundant; //!< number of redundant connections, counting each participating face as one
     const int n_missing; //!< number of missing connections
     //! returns true if connectivity is valid
     inline operator bool() {return (n_redundant == 0) && (n_missing == 0);}
     //! if connectivity is invalid, throw an exception with a helpful message
-    inline void assert_valid()
-    {
+    inline void assert_valid() {
       if (!*this) {
         auto message = "Invalid mesh with " + std::to_string(n_redundant) + " redundant connections and "
                        + std::to_string(n_missing) + " missing connections.";
@@ -209,8 +205,7 @@ class Mesh
   //! get handles for all elements currently in the mesh, in no particular order (mostly for testing/debugging)
   virtual std::vector<elem_handle> elem_handles() = 0;
   //! Temporarily resets the vertices of a mesh to their nominal positions for debugging
-  class Reset_vertices
-  {
+  class Reset_vertices {
     Mesh& m;
     public:
     //! resets to nominal position
