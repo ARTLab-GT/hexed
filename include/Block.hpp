@@ -78,6 +78,8 @@ class Vertex : public Block {
   Sequence<Edge&> edges() {return _edges.theirs().dereference();}
   inline bool glued() const {return _glued_to;}
   void shadow(Vertex& that);
+  inline void unshadow() {_shadowed.unpair();}
+  inline bool are_shadows(Vertex& that) const {return _shadowed.get() == &that || that._shadowed.get() == this;}
 
   /*! \brief Combines this vertex with `that` and steals its resources.
    * \details All `Edge`s and `Element_shape`s that currently have pointers to `that`

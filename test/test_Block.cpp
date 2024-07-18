@@ -89,7 +89,11 @@ TEST_CASE("Block") {
   SECTION("vertex shadowing") {
     hexed::next::Vertex vert2({2., 2., 2.}, 4);
     hexed::next::Vertex vert3({0., 0., 0.}, 4);
+    REQUIRE(!vert2.are_shadows(vert3));
+    REQUIRE(!vert3.are_shadows(vert2));
     vert2.shadow(vert3);
+    REQUIRE(vert2.are_shadows(vert3));
+    REQUIRE(vert3.are_shadows(vert2));
     REQ_VEC_EQ(vert2.point({}), hexed::Mat<3>{1., 1., 1.});
     REQ_VEC_EQ(vert3.point({}), hexed::Mat<3>{1., 1., 1.});
     vert2.pos(0) = 4;
