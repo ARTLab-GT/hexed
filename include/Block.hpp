@@ -77,6 +77,7 @@ class Vertex : public Block {
   //! \brief Access the list of edges that have `this` as an endpoint
   Sequence<Edge&> edges() {return _edges.theirs().dereference();}
   inline bool glued() const {return _glued_to;}
+  void shadow(Vertex& that);
 
   /*! \brief Combines this vertex with `that` and steals its resources.
    * \details All `Edge`s and `Element_shape`s that currently have pointers to `that`
@@ -116,6 +117,8 @@ class Vertex : public Block {
   Reciprocal_list<Vertex, Edge> _edges;
   Reciprocal_list<Vertex, Element_shape> _elems;
   Reciprocal_ptr<Vertex, Element_shape> _glued_to;
+  Reciprocal_ptr<Vertex, Vertex> _shadowed;
+  Reciprocal_list<Vertex, Vertex> _shadows;
   std::vector<double> _glued_coords;
 };
 

@@ -47,7 +47,8 @@ Mat<3> Block::point(std::vector<int> node_coords) const {
 }
 
 Mat<3> Vertex::_point(std::vector<int>) const {
-  // usually, the vertex will not be glued and we can just return the `pos`
+  // usually, the vertex will not be glued or a shadow and we can just return the `pos`
+  if (_shadowed) return _shadowed->point({});
   if (!_glued_to) return pos;
   // the rest is to compute the position in the special case that the vertex is glued
   Array<double> points = _glued_to.value().points(); // fetch _all_ of the nodes of the element `this` is glued to
@@ -68,7 +69,15 @@ Mat<3> Vertex::_point(std::vector<int>) const {
 }
 
 Vertex::Vertex(Mat<3> pos, int row_size)
-: Block(0, row_size), pos{pos}, _update{Mat<3>::Zero()}, _edges(this), _elems(this), _glued_to(this) {
+: Block(0, row_size),
+  pos{pos},
+  _update{Mat<3>::Zero()},
+  _edges(this),
+  _elems(this),
+  _glued_to(this),
+  _shadowed(this),
+  _shadows(this)
+{
 }
 
 double Vertex::nominal_size() const {
@@ -78,6 +87,12 @@ double Vertex::nominal_size() const {
     nom_sz = std::max(nom_sz, elem->nominal_size());
   }
   return nom_sz;
+}
+
+void Vertex::shadow(Vertex& that) {
+  that.pos = pos = .5*(that.point({}) + point({}));
+  HEXED_ASSERT(that._shadowed.get() != this, "two `Vertex`s cannot shadow each other");
+  _shadowed.pair(that._shadows);
 }
 
 void Vertex::eat(Vertex& that) {
