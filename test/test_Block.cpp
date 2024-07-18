@@ -425,6 +425,9 @@ TEST_CASE("Block") {
         REQUIRE(blocks3.faces_3d()[1].edge(2).point({2})(2) == Catch::Approx(.53));
         REQUIRE(blocks3.faces_3d()[2].edge(2).point({2})(0) == Catch::Approx(.75));
         REQUIRE(blocks3.faces_3d()[2].edge(2).point({2})(2) == Catch::Approx(.53));
+        REQUIRE_THAT(blocks3.faces_3d()[0].edge(2).contacted_elements(), Catch::Matchers::UnorderedRangeEquals(std::vector<void*>{&elems[0]}));
+        REQUIRE_THAT(blocks3.faces_3d()[0].edge(3).contacted_elements(), Catch::Matchers::UnorderedRangeEquals(std::vector<void*>{&elems[0], &elems[2], &elems[4]}));
+        REQUIRE_THAT(blocks3.faces_3d()[1].edge(2).contacted_elements(), Catch::Matchers::UnorderedRangeEquals(std::vector<void*>{&elems[0], &elems[2]}));
       }
       SECTION("dim 1") {
         elems.push_back(blocks3.create_element(zero, 1., 5));

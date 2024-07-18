@@ -199,13 +199,15 @@ class Edge : public Boundary_block {
    */
   void glue(Edge& that, int half = no);
 
-  void unglue() {_glued_to.set();} //!< \brief If this edge is currently `glue()`d, unglue it.
+  void unglue() {_glued_to.unpair();} //!< \brief If this edge is currently `glue()`d, unglue it.
   bool glued() const; //!< \brief `true` iff `this` is currently `glue()`d to another edge
+  std::vector<Element_shape*> contacted_elements();
 
   private:
   Mat<3> _point(std::vector<int>) const override;
   std::array<Reciprocal_ptr<Edge, Vertex>, 2> _verts;
-  Mortal_ptr<Edge> _glued_to;
+  Reciprocal_ptr<Edge, Edge> _glued_to;
+  Reciprocal_list<Edge, Edge> _glued;
   int _half;
 };
 

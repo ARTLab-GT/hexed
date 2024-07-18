@@ -164,13 +164,6 @@ Boundary_block::Boundary_block(int n_dim, const Basis& b)
 : Block(n_dim, b.row_size), _interior(interior_dims(n_dim, b.row_size)), _basis{&b}, _elem(this) {
 }
 
-Edge::Edge(Vertex& vertex0, Vertex& vertex1, const Basis& b)
-: Boundary_block(1, b), _verts{this, this} {
-  vertex0.pair(_verts[0]);
-  vertex1.pair(_verts[1]);
-  reset();
-}
-
 Mat<3> Edge::_point(std::vector<int> coords) const {
   int coord = coords[0];
   if (glued()) {
@@ -186,6 +179,14 @@ Mat<3> Edge::_point(std::vector<int> coords) const {
   return _interior(coord - 1).vector();
 }
 
+Edge::Edge(Vertex& vertex0, Vertex& vertex1, const Basis& b)
+: Boundary_block(1, b), _verts{this, this}, _glued_to(this), _glued(this)
+{
+  vertex0.pair(_verts[0]);
+  vertex1.pair(_verts[1]);
+  reset();
+}
+
 void Edge::reset() {
   for (int i = 1; i < row_size() - 1; ++i) {
     double n = basis().node(i);
@@ -196,13 +197,21 @@ void Edge::reset() {
 const int Edge::no = -1;
 
 void Edge::glue(Edge& other, int half) {
-  _glued_to.set(&other);
+  _glued_to.pair(other._glued);
   _half = half;
 }
 
 bool Edge::glued() const {
   if (_glued_to) return _glued_to->alive();
   else return false;
+}
+
+std::vector<Element_shape*> Edge::contacted_elements() {
+  std::vector<Element_shape*> elems;
+  if (element()) elems.push_back(element());
+  if (glued()) elems.push_back(_glued_to->element());
+  for (Edge* edge : _glued.theirs()) if (edge) if (edge->alive()) elems.push_back(edge->element());
+  return elems;
 }
 
 Mat<3> Face::_point(std::vector<int> coords) const {
