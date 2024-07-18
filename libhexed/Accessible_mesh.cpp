@@ -127,14 +127,17 @@ void Accessible_mesh::match_edges() {
     next::Vertex* best_vert = nullptr;
     double badness = huge;
     double arc_len = 0;
-    for (auto& vert : verts) if (!vert.glued()) {
-      Mat<3> p = vert.point({});
-      auto node = geom_edge.nearest(p);
-      double b = (p - node.pos).norm() + node.arc_len;
-      if (b < badness) {
-        best_vert = &vert;
-        badness = b;
-        arc_len = node.arc_len;
+    for (auto& vert : verts) {
+      vert.unshadow();
+      if (!vert.glued()) {
+        Mat<3> p = vert.point({});
+        auto node = geom_edge.nearest(p);
+        double b = (p - node.pos).norm() + node.arc_len;
+        if (b < badness) {
+          best_vert = &vert;
+          badness = b;
+          arc_len = node.arc_len;
+        }
       }
     }
     geom_edge.matched_edges.clear();
@@ -167,6 +170,21 @@ void Accessible_mesh::match_edges() {
       curr = best_vert;
       geom_edge.matched_vertices.emplace_back(best_vert);
       arc_len = temp_arc_len;
+    }
+    for (std::size_t i_edge = 1; i_edge < geom_edge.matched_edges.size(); ++i_edge) {
+      std::array<next::Edge*, 2> edges {geom_edge.matched_edges[i_edge - 1].get(),
+                                        geom_edge.matched_edges[i_edge].get()};
+      bool collapsed = false;
+      for (int i = 0; i < 2; ++i) collapsed = collapsed || edges[i]->vertex(0).are_shadows(edges[i]->vertex(1));
+      if (!collapsed) {
+        bool shared_elem = false;
+        for (auto elem0 : edges[0]->contacted_elements()) {
+          for (auto elem1 : edges[1]->contacted_elements()) {
+            shared_elem = shared_elem || elem0 == elem1;
+          }
+        }
+        if (shared_elem) edges[0]->vertex(0).shadow(edges[0]->vertex(1));
+      }
     }
     next::Block::visualize("default", "matched", next::Sequence<Mortal_ptr<next::Edge>&>::vector_view(geom_edge.matched_edges).dereference<const next::Block&>());
   }
