@@ -970,7 +970,7 @@ TEST_CASE("sphere tree mesh") {
   solver.mesh().visualize("default", "sph_before_edge");
   {
     std::vector<hexed::Geom_edge> edges;
-    int n = 100;
+    int n = 1000;
     hexed::Array<double> arr({n + 1, 3});
     for (int i = 0; i <= n; ++i) {
       double angle = i*.5*hexed::constants::pi/n;

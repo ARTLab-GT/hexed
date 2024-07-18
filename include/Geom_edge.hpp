@@ -3,6 +3,7 @@
 
 #include <string>
 #include "Array.hpp"
+#include "Block.hpp"
 
 namespace hexed {
 
@@ -14,9 +15,13 @@ class Geom_edge {
     double arc_len;
   };
 
+  std::vector<Mortal_ptr<next::Edge>> matched_edges;
+  std::vector<Mortal_ptr<next::Vertex>> matched_vertices;
+
   Geom_edge(Array<double>&& points);
   inline const Array<double> points() const {return _points();}
   inline const Array<double> arc_len() const {return _arc_len();}
+  inline int n_points() const {return _n_points;}
   inline double len() const {return _arc_len[_arc_len.size()];}
   void visualize(std::string format, std::string name) const;
   Node nearest(Mat<3> to, double start = 0, double stop = huge) const;

@@ -144,7 +144,6 @@ void Accessible_mesh::_match_edges() {
       [&candidates](std::size_t i)->next::Block& {return candidates[i].edge.value();},
       [&candidates](){return candidates.size();},
     });
-    std::vector<Mortal_ptr<next::Edge>> matched;
     auto verts = _blocks.boundary_verts();
     next::Vertex* best_vert = nullptr;
     double badness = huge;
@@ -159,11 +158,14 @@ void Accessible_mesh::_match_edges() {
         arc_len = node.arc_len;
       }
     }
+    geom_edge.matched_edges.clear();
+    geom_edge.matched_vertices.clear();
+    geom_edge.matched_vertices.emplace_back(best_vert);
     next::Vertex* curr = best_vert;
-    double progress = 0;
     while (true) {
       next::Edge* best_edge = nullptr;
       double temp_arc_len = 0;
+      double progress = -huge;
       for (auto& edge : curr->edges()) if (!edge.glued()) {
         next::Vertex* vert = &edge.vertex(0) == curr ? &edge.vertex(1) : &edge.vertex(0);
         Mat<3> p = vert->point({});
@@ -177,13 +179,16 @@ void Accessible_mesh::_match_edges() {
         }
       }
       if (!best_edge) break;
-      matched.emplace_back(best_edge);
+      if (!geom_edge.matched_edges.empty()) if (best_edge == geom_edge.matched_edges.back().get()) {
+        geom_edge.matched_edges.erase(geom_edge.matched_edges.end());
+        break;
+      }
+      geom_edge.matched_edges.emplace_back(best_edge);
       curr = best_vert;
-      std::cout << arc_len << " " << temp_arc_len << "\n";
+      geom_edge.matched_vertices.emplace_back(best_vert);
       arc_len = temp_arc_len;
     }
-    next::Block::visualize("default", "matched",
-      next::Sequence<Mortal_ptr<next::Edge>&>::vector_view(matched).dereference<const next::Block&>());
+    next::Block::visualize("default", "matched", next::Sequence<Mortal_ptr<next::Edge>&>::vector_view(geom_edge.matched_edges).dereference<const next::Block&>());
   }
 }
 
@@ -1469,8 +1474,8 @@ void Accessible_mesh::relax(double factor) {
       }
     }
   }
-  // snap vertices to surface boundary
   if (surf_geom) {
+    // snap vertices to surface boundary
     auto bverts = _blocks.boundary_verts();
     #pragma omp parallel for
     for (auto& vert : bverts) {
@@ -1478,19 +1483,51 @@ void Accessible_mesh::relax(double factor) {
       auto seq = Eigen::seqN(0, params.n_dim);
       vert.pos(seq) = surf_geom->nearest_point(vert.pos(seq), huge, vert.nominal_size()).point();
     }
-  }
-  // snap edge/face interiors to surface boundary
-  auto bound_sides = _blocks.boundary_sides();
-  #pragma omp parallel for
-  for (auto& side : bound_sides) {
-    side.reset();
-    if (surf_geom) {
-      Array<double> interior = side.interior().reshaped({whatever, 3});
-      for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
-        auto p = interior(i_point)(0, params.n_dim).vector();
-        p = surf_geom->nearest_point(p, huge, side.element()->nominal_size()).point();
+    // snap vertices to geometry edges
+    for (auto& geom_edge : _geom_edges) {
+      if (!geom_edge.matched_vertices.empty()) {
+        geom_edge.matched_vertices.front().value().pos = geom_edge.points()(0).vector();
+        geom_edge.matched_vertices.back().value().pos = geom_edge.points()(geom_edge.n_points() - 1).vector();
+      }
+      for (std::size_t i_vert = 1; i_vert < geom_edge.matched_vertices.size() - 1; ++i_vert) {
+        auto& pos = geom_edge.matched_vertices[i_vert].value().pos;
+        pos = geom_edge.nearest(pos).pos;
       }
     }
+    // snaps a `Boundary_block` to the geometry surface
+    auto snap_block = [this](next::Boundary_block& block) {
+      block.reset();
+      Array<double> interior = block.interior().reshaped({whatever, 3});
+      for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
+        auto p = interior(i_point)(0, params.n_dim).vector();
+        p = surf_geom->nearest_point(p, huge, block.element()->nominal_size()).point();
+      }
+    };
+    // snap edges to the surface (regardless of dimensionality)
+    auto edges_2d = _blocks.edges_2d();
+    #pragma omp parallel for
+    for (auto& edge : edges_2d) snap_block(edge);
+    auto faces_3d = _blocks.faces_3d();
+    #pragma omp parallel for
+    for (auto& face : faces_3d) {
+      for (int i_edge = 0; i_edge < 4; ++i_edge) snap_block(face.edge(i_edge));
+    }
+    // Snap mesh edges to geometry edges.
+    // This has to happen after snapping edges to the surface (which would undo this)
+    // but before snapping faces to the surface
+    // (or else the `reset()` function would be called with incorrect edge data)
+    for (auto& geom_edge : _geom_edges) {
+      for (auto& edge : geom_edge.matched_edges) {
+        edge.value().reset();
+        Array<double> interior = edge.value().interior();
+        for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
+          interior(i_point).vector() = geom_edge.nearest(interior(i_point).vector()).pos;
+        }
+      }
+    }
+    // snap face interiors (if 3D) to surface
+    #pragma omp parallel for
+    for (auto& face : faces_3d) snap_block(face);
   }
 }
 
