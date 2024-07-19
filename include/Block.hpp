@@ -65,6 +65,9 @@ class Vertex : public Block {
   public:
   //! \brief Constructs a `Vertex` and initializes its position
   Vertex(Mat<3> pos, int row_size);
+  Vertex(Vertex&&) = default;
+  Vertex& operator=(Vertex&&) = default;
+  ~Vertex();
   //! \brief Adds `ptr` to a `Reciprocal_list<Vertex, Edge>` with `this` as its `mine`.
   inline void pair(mutual::Base<Edge, Vertex>& ptr) {_edges.add(ptr);}
   //! \brief Adds `ptr` to a `Reciprocal_list<Vertex, Element_shape>` with `this` as its `mine`.

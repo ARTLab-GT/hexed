@@ -80,6 +80,10 @@ Vertex::Vertex(Mat<3> pos, int row_size)
 {
 }
 
+Vertex::~Vertex() {
+  for (auto v : _shadows.theirs()) v->pos = point({});
+}
+
 double Vertex::nominal_size() const {
   double nom_sz = 0;
   for (auto elem : _elems.theirs()) {
@@ -144,9 +148,7 @@ void Vertex::calc_relax() {
           int j_dim = (i_dim + i_edge + 1)%nd;
           int start = opposite - coords[j_dim];
           edges(all, i_edge) = verts(all, start + vstride(nd, j_dim)) - verts(all, start);
-          double norm = edges(all, i_edge).norm();
-          if (norm < 1e-3*elem->nominal_size()) degenerate = true;
-          else edges(all, i_edge) /= norm;
+          if (edges(all, i_edge).norm() < 1e-2*elem->nominal_size()) degenerate = true;
         } else edges(all, i_edge) = math::sign(!i_dim)*Mat<3>::Unit(2);
       }
       if (!degenerate) {
