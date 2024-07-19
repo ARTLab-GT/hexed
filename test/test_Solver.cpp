@@ -1016,7 +1016,7 @@ TEST_CASE("sphere tree mesh") {
     solver.mesh().update(hexed::criteria::never, [](hexed::Element& elem){return elem.refinement_level() > 3;});
     for (int i = 0; i < 3; ++i) solver.mesh().relax();
     solver.mesh().match_edges();
-    for (int i = 0; i < 3; ++i) solver.mesh().relax();
+    for (int i = 0; i < 6; ++i) solver.mesh().relax();
     solver.mesh().valid().assert_valid();
   }
   REQUIRE(solver.mesh().n_elements() == n_initial); // this mesh should have been completely unrefined to where it started

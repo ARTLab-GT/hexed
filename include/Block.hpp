@@ -107,7 +107,7 @@ class Vertex : public Block {
   //! \brief Computes a hypothetical new position for this vertex to improve mesh quality, but doesn't apply it yet
   void calc_relax();
   //! \brief Applies the update computed with `calc_update`.
-  inline void apply_relax() {pos += _update;}
+  void apply_relax();
 
   //! \brief current position of this vertex
   //! \details `Block::point` will return this value, unless the vertes is currently `glue()`d.

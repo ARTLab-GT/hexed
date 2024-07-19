@@ -121,7 +121,6 @@ void Vertex::calc_relax() {
   double tot_sz = 0;
   for (auto elem : _elems.theirs()) {
     HEXED_ASSERT(elem, "element is null");
-    tot_sz += 1/elem->nominal_size();
     int i_this = -1;
     Mat<3, dyn> verts(3, nv);
     for (int i_vert = 0; i_vert < nv; ++i_vert) {
@@ -139,19 +138,33 @@ void Vertex::calc_relax() {
     for (int i_dim = 0; i_dim < nd; ++i_dim) {
       Mat<3, 2> edges;
       int opposite = i_this + (vstride(nd, i_dim) - 2*coords[i_dim]);
+      bool degenerate = false;
       for (int i_edge = 0; i_edge < 2; ++i_edge) {
         if (i_edge < nd - 1) {
           int j_dim = (i_dim + i_edge + 1)%nd;
           int start = opposite - coords[j_dim];
           edges(all, i_edge) = verts(all, start + vstride(nd, j_dim)) - verts(all, start);
-        } else edges(all, i_edge) = math::sign(!i_dim)*elem->nominal_size()*Mat<3>::Unit(2);
+          double norm = edges(all, i_edge).norm();
+          if (norm < 1e-3*elem->nominal_size()) degenerate = true;
+          else edges(all, i_edge) /= norm;
+        } else edges(all, i_edge) = math::sign(!i_dim)*Mat<3>::Unit(2);
       }
-      _update += (verts(all, opposite)
-                  + math::sign(coords[i_dim])/elem->nominal_size()*edges(all, 0).cross(edges(all, 1)))
-                 /elem->nominal_size();
+      if (!degenerate) {
+        tot_sz += 1/elem->nominal_size();
+        _update += (verts(all, opposite)
+                    + math::sign(coords[i_dim])*elem->nominal_size()*edges(all, 0).cross(edges(all, 1)))
+                   /elem->nominal_size();
+      }
     }
   }
-  _update = .9*(_update/(nd*tot_sz) - pos);
+  _update = .9*(_update/tot_sz - point({}));
+}
+
+void Vertex::apply_relax() {
+  if (_shadowed) return;
+  Mat<3> u = _update;
+  for (auto s : _shadows.theirs()) u += s->_update;
+  pos += u/(1 + _shadows.theirs().size());
 }
 
 std::vector<int> interior_dims(int n_dim, int row_size) {
