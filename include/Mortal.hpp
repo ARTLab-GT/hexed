@@ -14,13 +14,14 @@ namespace hexed {
  * where when that object is destroyed or moved the pointers are updated.
  * You can obtain this by deriving a class from `Mortal` and creating `Mortal_ptr`s to it.
  * \warning You may not move any object derived from `Mortal` to an object of a different type.
+ * This is undefined behavior.
  * For example, __the following is illegal:__
  * ~~~
  * class Derived : hexed::Mortal {};
  * Derived d;
  * Mortal m(std::move(d));
  * ~~~
- * However, __the following is fine:__
+ * However, __the following is OK:__
  * ~~~
  * class Derived : hexed::Mortal {};
  * Derived d;
@@ -52,9 +53,7 @@ public:
 
   #define ACCESS(CONST) \
     CONST T* get() CONST { \
-      CONST T* data = dynamic_cast<CONST T*>(partner()); \
-      HEXED_ASSERT(!data == !partner(), "`Mortal_ptr` is pointing to an object of incompatible type."); \
-      return data; \
+      return static_cast<CONST T*>(partner()); \
     } \
 
   ACCESS()

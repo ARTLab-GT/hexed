@@ -22,19 +22,33 @@ namespace hexed {
  * and `pair()` the `Reciprocal_ptr`s.
  */
 template <typename T, typename U>
-class Reciprocal_ptr : public mutual::Single<T, U>, public Pointer<U> {
+class Reciprocal_ptr : public mutual::Single<T, U> {
 public:
   //! \brief constructs a `Reciprocal_ptr` and sets its `mine` to `data` (which can be null)
   Reciprocal_ptr(T* data) : mine(data) {}
+  operator bool() const {return get();} //!< \brief returns `true` iff `this` is not null
 
   #define ACCESS(CONST) \
     /* \brief points to the `mine` of the `partner()` of `this` */ \
     /* \details if not paired, returns `nullptr` */ \
-    CONST U* get() CONST \
-    { \
+    CONST U* get() CONST { \
       if (this->paired()) return this->_yours(*this->partner()); \
       return nullptr; \
-    }
+    } \
+    /*! \brief obtains a reference to the object `this` points to */ \
+    /*!  \details undefined behavior if `this` is null */ \
+    CONST U& operator*() CONST {return *get();} \
+    /*! \brief accesses the members of the object `this` points to */ \
+    /*! \details undefined behavior if `this` is null */ \
+    CONST U* operator->() CONST {return get();} \
+    /*! \brief obtains a reference to the object `this` points to */ \
+    /*!  \details throws an exception if `this` is null */ \
+    CONST U& value() CONST { \
+      CONST U* data = get(); \
+      HEXED_ASSERT(data, "`get()` is null"); \
+      return *data; \
+    } \
+
   ACCESS()
   ACCESS(const)
   #undef ACCESS
@@ -47,8 +61,8 @@ public:
   Mortal_ptr<T> mine;
 
 private:
-  T* _mine() {return mine.get();}
-  const T* _mine() const {return mine.get();}
+  T* _mine() override {return mine.get();}
+  const T* _mine() const override {return mine.get();}
 };
 
 /*! \brief Like `Reciprocal_ptr`, put it can be connected with multiple partners
@@ -90,8 +104,8 @@ class Reciprocal_list : public mutual::Multiple<T, U> {
   Mortal_ptr<T> mine;
 
 private:
-  T* _mine() {return mine.get();}
-  const T* _mine() const {return mine.get();}
+  T* _mine() override {return mine.get();}
+  const T* _mine() const override {return mine.get();}
 };
 
 }
