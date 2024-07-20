@@ -521,20 +521,6 @@ class Python_script(Buildable):
     def build(self):
         self.builder.python(self._script, *self._args)
 
-def list_of_strings(arg):
-    if isinstance(arg, str):
-        return [arg]
-    else:
-        return [str(s) for s in arg]
-
-def none_or_type(typename):
-    def convert(arg):
-        if arg is None or (isinstance(arg, str) and arg.lower() == "none"):
-            return None
-        else:
-            return typename(arg)
-    return convert
-
 class Compiler:
     high_level_flags = True
     position_independent = True
@@ -546,42 +532,21 @@ class Compiler:
     openmp = False
     architecture = None
     extra_flags = []
-    def __init__(self, builder):
-        self.builder.add_options({
-            "high_level_flags": Option(True, convert=as_bool),
-            "position_independent": Option(True, convert=as_bool),
-            "warn": Option(["all", "no-array-bounds"], convert=list_of_strings),
-            "cpp_standard": Option(None, convert=none_or_type(int)),
-            "optimize": Option(None, convert=none_or_type(int)),
-            "debug": Option(None, convert=none_or_type(int)),
-            "sanitize": Option(False, convert=as_bool),
-            "openmp": Option(False, convert=as_bool),
-            "architecture": Option(None, convert=none_or_type(str),
-            "extra_flags": Option([], convert=list_of_strings),
-        })
-        self.flags = []
-        if self.builder.options["high_level_flags"]:
-            if self.builder.options["position_independent"]: self.flags.append("-fPIC")
-            for w in self.builder.options["warn"]: self.flags.append("-W" + w)
-            std = self.builder.options["cpp_standard"]
-            if std: self.flags += [f"-std=c++{std}", "-pedantic"]
-            if self.builder.options["optimize"]: self.flags.append(f"-O{self.builder.options["optimize"]}")
-            debug = self.builder.options["debug"]
-            if debug: self.flags += [f"-g{debug}", "-DDEBUG"]
-            if self.builder.options["def_debug"]: self.flags.append("-DNDEBUG")
-            if self.builder.options["sanitize"]:
-                self.flags += [f"-fsanitize={f}" for f in [
-                    "bounds-strict",
-                    "undefined",
-                    "address",
-                    "leak",
-                    "pointer-compare",
-                    "pointer-subtract",
-                ]]
-            if self.builder.options["openmp"]: self.flags.append("-fopenmp")
-            arch = self.builder.options["architecture"]
-            if arch: self.flags.append("-march=" + arch)
-        for f in self.builder.options["extra_flags"]: self.flags.append(f)
+    def flags(self):
+        fs = []
+        if self.high_level_flags:
+            if self.position_independent: fs.append("-fPIC")
+            assert isinstance(self.warn, list), '`Compiler.warn` must be a list of warning options (e.g. `["all", "error"]` for `-Wall -Werror`)'
+            for w in self.warn: fs.append("-W" + w)
+            if self.cpp_standard: fs += [f"-std=c++{int(self.cpp_standard)}", "-pedantic"]
+            if self.optimize: fs += [f"-O{self.optimize}", "-DNDEBUG"]
+            if self.debug: fs += [f"-g{self.debug}", "-DDEBUG"]
+            if self.sanitize: fs += [f"-fsanitize={f}" for f in ["bounds-strict", "undefined", "address", "leak", "pointer-compare", "pointer-subtract"]]
+            if self.openmp: fs.append("-fopenmp")
+            if self.architecture: fs.append("-march=" + self.architecture)
+        assert isinstance(self.extra_flags, list)
+        for f in self.extra_flags: fs.append(f)
+        return fs
 
 class Compile(Subprocess):
     def __init__(self, builder, source, output=None, compiler=Compiler()):
