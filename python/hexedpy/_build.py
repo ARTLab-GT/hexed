@@ -12,7 +12,6 @@ class Hexed(bu.C_project):
         self.builder.add_options({
             "build_mode": bu.Option("release", convert=lambda s: s.lower(), assertions=bu.assert_true(lambda s: s in ["release", "debug"])),
             "max_row_size": bu.Option(8, convert=int, assertions=bu.assert_true(lambda n: n >= 2, "max_row_size must be at least 2")),
-            "threaded": bu.Option(True, convert=bu.as_bool),
             "n_threads": bu.Option(os.cpu_count(), convert=int, assertions=bu.assert_nonneg),
             "use_xdmf": bu.Option(True, convert=bu.as_bool),
             "use_tecio": bu.Option(False, convert=bu.as_bool),
@@ -25,7 +24,9 @@ class Hexed(bu.C_project):
         })
         is_release = self.builder.options["build_mode"] == "release"
         self.builder.add_options({
-            "architecture": bu.Option(["any", "native"][is_release]),
+            "architecture": bu.Option([None, "native"][is_release]),
+            "optimize": bu.Option([None, 3][is_release]),
+            "debug": bu.Option([None, 3][not is_release]),
             "build_wheel": bu.Option(is_release, convert=bu.as_bool),
             "run_tests": bu.Option(not is_release, convert=bu.as_bool),
             "sanitize": bu.Option(not is_release, convert=bu.as_bool),
@@ -46,9 +47,7 @@ class Hexed(bu.C_project):
             bu.Compiler.optimize = 3
         elif self.builder.options["build_mode"] == "debug":
             bu.Compiler.debug = 3
-        if self.builder.options["threaded"]:
-            bu.Compiler.openmp = True
-        else:
+        if not self.builder.options["openmp"]:
             bu.Compiler.warn.append("no-unknown-pragmas")
         if self.builder.options["sanitize"]:
             bu.Compiler.sanitize = True
