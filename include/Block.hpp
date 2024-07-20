@@ -29,7 +29,7 @@ class Block : public Mortal {
   inline int row_size() const {return _row_size;}
   //! \brief Obtains the node with array indices specified by `node_coords`.
   //! \details `node_coords` must have `n_dim()` entries and each entry must be in [0, `row_size()`).
-  Mat<3> point(std::vector<int> node_coords) const;
+  Mat<3> point(const std::vector<int>& node_coords) const;
   /*! \brief Obtains all the nodes as a multidimensional array
    * \details This is not a reference.
    * Calling this function allocates memory for the points
@@ -46,7 +46,7 @@ class Block : public Mortal {
 
   protected:
   //! \brief Derived classes must override this function to define the nodes.
-  virtual Mat<3> _point(std::vector<int> node_coords) const = 0;
+  virtual Mat<3> _point(const std::vector<int>& node_coords) const = 0;
 
   private:
   int _n_dim;
@@ -118,7 +118,7 @@ class Vertex : public Block {
   Mat<3> pos;
 
   private:
-  Mat<3> _point(std::vector<int>) const override;
+  Mat<3> _point(const std::vector<int>&) const override;
   Mat<3> _update;
   Reciprocal_list<Vertex, Edge> _edges;
   Reciprocal_list<Vertex, Element_shape> _elems;
@@ -209,7 +209,7 @@ class Edge : public Boundary_block {
   std::vector<Element_shape*> contacted_elements();
 
   private:
-  Mat<3> _point(std::vector<int>) const override;
+  Mat<3> _point(const std::vector<int>&) const override;
   std::array<Reciprocal_ptr<Edge, Vertex>, 2> _verts;
   Reciprocal_ptr<Edge, Edge> _glued_to;
   Reciprocal_list<Edge, Edge> _glued;
@@ -243,7 +243,7 @@ class Face : public Boundary_block {
   void reset() override;
 
   private:
-  Mat<3> _point(std::vector<int>) const override;
+  Mat<3> _point(const std::vector<int>&) const override;
   std::vector<Edge> _edges;
 };
 
@@ -291,8 +291,8 @@ class Element_shape : public Block {
 
   private:
   Element_shape(int nd, const Basis&);
-  Mat<3> _vertex_point(std::vector<int>) const;
-  Mat<3> _point(std::vector<int>) const override;
+  Mat<3> _vertex_point(const std::vector<int>&) const;
+  Mat<3> _point(const std::vector<int>&) const override;
   const Basis* _basis;
   double _nom_sz;
   Mat<3> _nom_pos;

@@ -12,8 +12,8 @@ Array<double> Block::points() const {
   for (int i_dim = 0; i_dim < _n_dim; ++i_dim) shape.push_back(_row_size);
   Array<double> pts(shape);
   // populate array
+  std::vector<int> inds(_n_dim);
   for (int i_point = 0; i_point < pts.stride(0); ++i_point) {
-    std::vector<int> inds(_n_dim);
     for (int i_dim = 0; i_dim < _n_dim; ++i_dim) inds[i_dim] = (i_point/pts.stride(1 + i_dim))%_row_size;
     auto pt = point(inds);
     for (int i_dim = 0; i_dim < 3; ++i_dim) pts(i_dim)[i_point] = pt(i_dim);
@@ -36,7 +36,7 @@ void Block::visualize(std::string format, std::string file_name, next::Sequence<
   }
 }
 
-Mat<3> Block::point(std::vector<int> node_coords) const {
+Mat<3> Block::point(const std::vector<int>& node_coords) const {
   #ifdef DEBUG
   HEXED_ASSERT(int(node_coords.size()) == _n_dim, "wrong number of node coordinates");
   for (int coord : node_coords) {
@@ -46,7 +46,7 @@ Mat<3> Block::point(std::vector<int> node_coords) const {
   return _point(node_coords);
 }
 
-Mat<3> Vertex::_point(std::vector<int>) const {
+Mat<3> Vertex::_point(const std::vector<int>&) const {
   // usually, the vertex will not be glued or a shadow and we can just return the `pos`
   if (_shadowed) return _shadowed->point({});
   if (!_glued_to) return pos;
@@ -190,7 +190,7 @@ Boundary_block::Boundary_block(int n_dim, const Basis& b)
 : Block(n_dim, b.row_size), _interior(interior_dims(n_dim, b.row_size)), _basis{&b}, _elem(this) {
 }
 
-Mat<3> Edge::_point(std::vector<int> coords) const {
+Mat<3> Edge::_point(const std::vector<int>& coords) const {
   int coord = coords[0];
   if (glued()) {
     if (_half == no) return _glued_to.value()._point(coords);
@@ -240,7 +240,7 @@ std::vector<Element_shape*> Edge::contacted_elements() {
   return elems;
 }
 
-Mat<3> Face::_point(std::vector<int> coords) const {
+Mat<3> Face::_point(const std::vector<int>& coords) const {
   // if the point is on the boundary of the node array, forward to one of the edges
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
     if (coords[i_dim] ==              0) return _edges[2*i_dim    ].point({coords[!i_dim]});
@@ -301,7 +301,7 @@ void Face::reset() {
   _interior = soln.data();
 }
 
-Mat<3> Element_shape::_vertex_point(std::vector<int> coords) const {
+Mat<3> Element_shape::_vertex_point(const std::vector<int>& coords) const {
   // computes a point via order-1 interpolation between the vertices,
   // without accounting for boundary-side warping
   Mat<3> point = Mat<3>::Zero();
@@ -316,18 +316,19 @@ Mat<3> Element_shape::_vertex_point(std::vector<int> coords) const {
   return point;
 }
 
-Mat<3> Element_shape::_point(std::vector<int> coords) const {
+Mat<3> Element_shape::_point(const std::vector<int>& coords) const {
   // first compute point by interpolating between vertices
   Mat<3> point = _vertex_point(coords);
   // then, if `this` has a side on the boundary, adjust it to account for the actual position of the boundary nodes
   if (_i_bf != Mesh_blocks::no_face) {
+    std::vector<int> c(coords);
     int sign = _i_bf%2;
     int i_dim = _i_bf/2;
-    double interp_coef = !sign + math::sign(sign)*_basis->node(coords[i_dim]);
-    coords[i_dim] = sign*(row_size() - 1);
-    Mat<3> uncorrected = _vertex_point(coords);
-    coords.erase(coords.begin() + i_dim);
-    point += interp_coef*(_bf.value().point(coords) - uncorrected);
+    double interp_coef = !sign + math::sign(sign)*_basis->node(c[i_dim]);
+    c[i_dim] = sign*(row_size() - 1);
+    Mat<3> uncorrected = _vertex_point(c);
+    c.erase(c.begin() + i_dim);
+    point += interp_coef*(_bf.value().point(c) - uncorrected);
   }
   return point;
 }
