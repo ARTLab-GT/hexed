@@ -14,6 +14,7 @@ class Hexed(bu.C_project):
             "max_row_size": bu.Option(8, convert=int, assertions=bu.assert_true(lambda n: n >= 2, "max_row_size must be at least 2")),
             "threaded": bu.Option(True, convert=bu.as_bool),
             "n_threads": bu.Option(os.cpu_count(), convert=int, assertions=bu.assert_nonneg),
+            "profile": bu.Option(False, convert=bu.as_bool),
             "use_xdmf": bu.Option(True, convert=bu.as_bool),
             "use_tecio": bu.Option(False, convert=bu.as_bool),
             "build_tests": bu.Option(True, convert=bu.as_bool),
@@ -52,6 +53,9 @@ class Hexed(bu.C_project):
             bu.Compiler.warn.append("no-unknown-pragmas")
         if self.builder.options["sanitize"]:
             bu.Compiler.sanitize = True
+        if self.builder.options["profile"]:
+            bu.Compiler.debug = 3
+            bu.Compiler.profile = True
         # Get a list of all source files. The entire build process can be bypassed if there are no changes to any of these files
         self._all_sources = bu.all_(bu.contents(self.sdir, ignore=lambda f:
             bu.not_source(f) or

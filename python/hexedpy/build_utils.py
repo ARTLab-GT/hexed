@@ -531,6 +531,7 @@ class Compiler:
     sanitize = False
     openmp = False
     architecture = None
+    profile = False
     extra_flags = []
     def flags(self):
         fs = []
@@ -539,11 +540,15 @@ class Compiler:
             assert isinstance(self.warn, list), '`Compiler.warn` must be a list of warning options (e.g. `["all", "error"]` for `-Wall -Werror`)'
             for w in self.warn: fs.append("-W" + w)
             if self.cpp_standard: fs += [f"-std=c++{int(self.cpp_standard)}", "-pedantic"]
-            if self.optimize: fs += [f"-O{self.optimize}", "-DNDEBUG"]
-            if self.debug: fs += [f"-g{self.debug}", "-DDEBUG"]
+            if self.optimize:
+                fs += [f"-O{self.optimize}", "-DNDEBUG"]
+            else:
+                fs.append("-DDEBUG")
+            if self.debug: fs.append(f"-g{self.debug}")
             if self.sanitize: fs += [f"-fsanitize={f}" for f in ["bounds-strict", "undefined", "address", "leak", "pointer-compare", "pointer-subtract"]]
             if self.openmp: fs.append("-fopenmp")
             if self.architecture: fs.append("-march=" + self.architecture)
+            if self.profile: fs.append("-pg")
         assert isinstance(self.extra_flags, list)
         for f in self.extra_flags: fs.append(f)
         return fs
