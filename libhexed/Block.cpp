@@ -96,7 +96,9 @@ double Vertex::nominal_size() const {
 void Vertex::shadow(Vertex& that) {
   that.pos = pos = .5*(that.point({}) + point({}));
   HEXED_ASSERT(that._shadowed.get() != this, "two `Vertex`s cannot shadow each other");
-  _shadowed.pair(that._shadows);
+  HEXED_ASSERT(!_shadowed || !that._shadowed, "one of the vertices must not already be shadowing");
+  if (_shadowed) that._shadowed.pair(_shadows);
+  else _shadowed.pair(that._shadows);
 }
 
 void Vertex::eat(Vertex& that) {
@@ -117,8 +119,26 @@ void Vertex::glue(Element_shape& to, std::vector<double> coords) {
 }
 
 void Vertex::calc_relax() {
-  HEXED_ASSERT(alive(), "`Vertex` must be `alive()` to compute update");
-  _update.setZero();
+  _update = _desired_pos() - point({});
+}
+
+void Vertex::apply_relax() {
+  if (_shadowed || glued()) return;
+  Mat<3> u = _update;
+  for (auto s : _shadows.theirs()) u += s->_update;
+  pos += u/(1 + _shadows.theirs().size());
+}
+
+double Vertex::badness(Mat<3> proposed_pos) const {
+  Mat<3> des_pos = _desired_pos();
+  for (auto s : _shadows.theirs()) des_pos += s->_desired_pos();
+  des_pos /= 1 + _shadows.theirs().size();
+  return (proposed_pos - des_pos).norm();
+}
+
+Mat<3> Vertex::_desired_pos() const {
+  Mat<3> des_pos = Mat<3>::Zero();
+  HEXED_ASSERT(alive(), "`Vertex` must be `alive()` to compute optimize postion");
   HEXED_ASSERT(_elems.theirs()[0], "element is null");
   int nd = _elems.theirs()[0]->n_dim();
   int nv = math::pow(2, nd);
@@ -128,15 +148,12 @@ void Vertex::calc_relax() {
     int i_this = -1;
     Mat<3, dyn> verts(3, nv);
     for (int i_vert = 0; i_vert < nv; ++i_vert) {
-      Vertex& vert = elem->vertex(i_vert);
+      const Vertex& vert = elem->vertex(i_vert);
       verts(all, i_vert) = vert.point({});
       if (&vert == this) i_this = i_vert;
     }
     HEXED_ASSERT(i_this >= 0, "`this` does not appear to be a vertex of `elem`!");
-    if (!elem->deformed) {
-      _update = elem->nominal_position(i_this) - pos;
-      return;
-    }
+    if (!elem->deformed) return elem->nominal_position(i_this);
     std::vector<int> coords(nd);
     for (int i_dim = 0; i_dim < nd; ++i_dim) coords[i_dim] = i_this/vstride(nd, i_dim)%2*vstride(nd, i_dim);
     for (int i_dim = 0; i_dim < nd; ++i_dim) {
@@ -149,24 +166,18 @@ void Vertex::calc_relax() {
           int start = opposite - coords[j_dim];
           edges(all, i_edge) = verts(all, start + vstride(nd, j_dim)) - verts(all, start);
           if (edges(all, i_edge).norm() < 1e-2*elem->nominal_size()) degenerate = true;
-        } else edges(all, i_edge) = math::sign(!i_dim)*Mat<3>::Unit(2);
+        } else edges(all, i_edge) = math::sign(!i_dim)*elem->nominal_size()*Mat<3>::Unit(2);
       }
       if (!degenerate) {
         tot_sz += 1/elem->nominal_size();
-        _update += (verts(all, opposite)
-                    + math::sign(coords[i_dim])*elem->nominal_size()*edges(all, 0).cross(edges(all, 1)))
+        des_pos += (verts(all, opposite)
+                    + math::sign(coords[i_dim])/elem->nominal_size()*edges(all, 0).cross(edges(all, 1)))
                    /elem->nominal_size();
       }
     }
   }
-  _update = .9*(_update/tot_sz - point({}));
-}
-
-void Vertex::apply_relax() {
-  if (_shadowed) return;
-  Mat<3> u = _update;
-  for (auto s : _shadows.theirs()) u += s->_update;
-  pos += u/(1 + _shadows.theirs().size());
+  des_pos = .9*des_pos/tot_sz + .1*point({});
+  return des_pos;
 }
 
 std::vector<int> interior_dims(int n_dim, int row_size) {

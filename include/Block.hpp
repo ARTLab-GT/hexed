@@ -74,7 +74,7 @@ class Vertex : public Block {
   //! \details If `this` was not previously `alive()`, it will be now.
   inline void pair(mutual::Base<Element_shape, Vertex>& ptr) {_elems.add(ptr);}
   //! \brief Returns `true` iff `this` has at least one `Element_shape` pointing to it.
-  inline bool alive() {return !_elems.partners().empty();}
+  inline bool alive() const {return !_elems.partners().empty();}
   //! \brief Maximum nominal size of connected elements
   double nominal_size() const;
   //! \brief Access the list of edges that have `this` as an endpoint
@@ -111,6 +111,7 @@ class Vertex : public Block {
   void calc_relax();
   //! \brief Applies the update computed with `calc_update`.
   void apply_relax();
+  double badness(Mat<3> proposed_pos) const;
 
   //! \brief current position of this vertex
   //! \details `Block::point` will return this value, unless the vertes is currently `glue()`d.
@@ -125,6 +126,7 @@ class Vertex : public Block {
   Reciprocal_ptr<Vertex, Vertex> _shadowed;
   Reciprocal_list<Vertex, Vertex> _shadows;
   std::vector<double> _glued_coords;
+  Mat<3> _desired_pos() const;
 };
 
 /*! \brief A `Block` which is part of the mesh boundary.
@@ -269,6 +271,7 @@ class Element_shape : public Block {
   Mat<3> nominal_position(int i_vert = 0) const;
   //! \brief Accesses the `i_vert`th vertex (in standard row-major order)
   inline Vertex& vertex(int i_vert) {return *_verts[i_vert];}
+  inline const Vertex& vertex(int i_vert) const {return *_verts[i_vert];}
   inline const Basis& basis() const {return *_basis;}
 
   /*! \brief Stipulates that 1 face of `this` is conformally connected to 1 face of `that`.

@@ -183,7 +183,15 @@ void Accessible_mesh::match_edges() {
             shared_elem = shared_elem || elem0 == elem1;
           }
         }
-        if (shared_elem) edges[0]->vertex(0).shadow(edges[0]->vertex(1));
+        if (shared_elem) {
+          double badness [2] {};
+          for (int i = 0; i < 2; ++i) {
+            Mat<3> avg_pos = .5*(edges[i]->vertex(0).point({}) + edges[i]->vertex(1).point({}));
+            for (int j = 0; j < 2; ++j) badness[i] += edges[i]->vertex(j).badness(avg_pos);
+          }
+          int collapse = badness[1] < badness[0];
+          edges[collapse]->vertex(0).shadow(edges[collapse]->vertex(1));
+        }
       }
     }
     next::Block::visualize("default", "matched", next::Sequence<Mortal_ptr<next::Edge>&>::vector_view(geom_edge.matched_edges).dereference<const next::Block&>());
