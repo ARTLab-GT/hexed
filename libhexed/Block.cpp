@@ -118,37 +118,8 @@ void Vertex::glue(Element_shape& to, std::vector<double> coords) {
   _glued_coords = coords;
 }
 
-void Vertex::find_neighbors() {
-  HEXED_ASSERT(alive(), "`Vertex` must be `alive()` to compute optimize postion");
-  HEXED_ASSERT(_elems.theirs()[0], "element is null");
-  _nd = _elems.theirs()[0]->n_dim();
-  _nv = math::pow(2, _nd);
-  auto theirs = _elems.theirs();
-  _neighbors.resize(_nv*theirs.size());
-  _i_this.resize(theirs.size());
-  _nom_sz.resize(theirs.size());
-  _car_elem = nullptr;
-  _car_i_vert = -1;
-  for (std::size_t i_elem = 0; i_elem < theirs.size(); ++i_elem) {
-    Element_shape* elem = theirs[i_elem];
-    HEXED_ASSERT(elem, "element is null");
-    if (!elem->deformed) _car_elem = elem;
-    _nom_sz[i_elem] = elem->nominal_size();
-    _i_this[i_elem] = -1;
-    for (int i_vert = 0; i_vert < _nv; ++i_vert) {
-      const Vertex* vert = &elem->vertex(i_vert);
-      _neighbors[_nv*i_elem + i_vert] = vert;
-      if (vert == this) {
-        _i_this[i_elem] = i_vert;
-        if (!elem->deformed) _car_i_vert = i_vert;
-      }
-    }
-    HEXED_ASSERT(_i_this[i_elem] >= 0, "`this` does not appear to be a vertex of one of its elements!");
-  }
-}
-
 void Vertex::calc_relax() {
-  _update = _desired_pos() - point({});
+  _update = _desired_pos() - pos;
 }
 
 void Vertex::apply_relax() {
@@ -166,35 +137,42 @@ double Vertex::badness(Mat<3> proposed_pos) const {
 }
 
 Mat<3> Vertex::_desired_pos() const {
-  if (_car_elem) return _car_elem->nominal_position(_car_i_vert);
   Mat<3> des_pos = Mat<3>::Zero();
+  HEXED_ASSERT(alive(), "`Vertex` must be `alive()` to compute optimize postion");
+  HEXED_ASSERT(_elems.theirs()[0], "element is null");
+  int nd = _elems.theirs()[0]->n_dim();
+  int nv = math::pow(2, nd);
   double tot_sz = 0;
-  for (std::size_t i_elem = 0; i_elem < _i_this.size(); ++i_elem) {
-    Mat<3, dyn> verts(3, _nv);
-    for (int i_vert = 0; i_vert < _nv; ++i_vert) {
-      verts(all, i_vert) = _neighbors[_nv*i_elem + i_vert]->pos;
+  for (auto elem : _elems.theirs()) {
+    HEXED_ASSERT(elem, "element is null");
+    int i_this = -1;
+    Mat<3, dyn> verts(3, nv);
+    for (int i_vert = 0; i_vert < nv; ++i_vert) {
+      const Vertex& vert = elem->vertex(i_vert);
+      verts(all, i_vert) = vert.pos;
+      if (&vert == this) i_this = i_vert;
     }
-    std::vector<int> coords(_nd);
-    for (int i_dim = 0; i_dim < _nd; ++i_dim) {
-      coords[i_dim] = _i_this[i_elem]/vstride(_nd, i_dim)%2*vstride(_nd, i_dim);
-    }
-    for (int i_dim = 0; i_dim < _nd; ++i_dim) {
+    HEXED_ASSERT(i_this >= 0, "`this` does not appear to be a vertex of `elem`!");
+    if (!elem->deformed) return elem->nominal_position(i_this);
+    std::vector<int> coords(nd);
+    for (int i_dim = 0; i_dim < nd; ++i_dim) coords[i_dim] = i_this/vstride(nd, i_dim)%2*vstride(nd, i_dim);
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
       Mat<3, 2> edges;
-      int opposite = _i_this[i_elem] + (vstride(_nd, i_dim) - 2*coords[i_dim]);
+      int opposite = i_this + (vstride(nd, i_dim) - 2*coords[i_dim]);
       bool degenerate = false;
       for (int i_edge = 0; i_edge < 2; ++i_edge) {
-        if (i_edge < _nd - 1) {
-          int j_dim = (i_dim + i_edge + 1)%_nd;
+        if (i_edge < nd - 1) {
+          int j_dim = (i_dim + i_edge + 1)%nd;
           int start = opposite - coords[j_dim];
-          edges(all, i_edge) = verts(all, start + vstride(_nd, j_dim)) - verts(all, start);
-          if (edges(all, i_edge).norm() < 1e-2*_nom_sz[i_elem]) degenerate = true;
-        } else edges(all, i_edge) = math::sign(!i_dim)*_nom_sz[i_elem]*Mat<3>::Unit(2);
+          edges(all, i_edge) = verts(all, start + vstride(nd, j_dim)) - verts(all, start);
+          if (edges(all, i_edge).norm() < 1e-2*elem->nominal_size()) degenerate = true;
+        } else edges(all, i_edge) = math::sign(!i_dim)*elem->nominal_size()*Mat<3>::Unit(2);
       }
       if (!degenerate) {
-        tot_sz += 1/_nom_sz[i_elem];
+        tot_sz += 1/elem->nominal_size();
         des_pos += (verts(all, opposite)
-                    + math::sign(coords[i_dim])/_nom_sz[i_elem]*edges(all, 0).cross(edges(all, 1)))
-                   /_nom_sz[i_elem];
+                    + math::sign(coords[i_dim])/elem->nominal_size()*edges(all, 0).cross(edges(all, 1)))
+                   /elem->nominal_size();
       }
     }
   }
@@ -474,6 +452,16 @@ Sequence<Boundary_block&> Mesh_blocks::boundary_sides() {
       [&faces](){return 5*faces.size();},
     };
   } else return Sequence<Boundary_block&>();
+}
+
+void Mesh_blocks::relax_vertices() {
+  auto vs = verts();
+  #pragma omp parallel for
+  for (auto& vert : vs) vert.pos = vert.point({});
+  #pragma omp parallel for
+  for (auto& vert : vs) vert.calc_relax();
+  #pragma omp parallel for
+  for (auto& vert : vs) vert.apply_relax();
 }
 
 Element_shape Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_face) {

@@ -31,12 +31,12 @@ std::string Stopwatch_tree::report() const {
 }
 
 Stopwatch_tree& Stopwatch_tree::operator[](std::string name) {
-  HEXED_ASSERT(children.contains(name), format_str(1000, "no child named `%s`", name));
+  HEXED_ASSERT(children.contains(name), format_str(1000, "no child named `%s`", name.c_str()));
   return children.at(name);
 }
 
 Stopwatch_tree& Stopwatch_tree::emplace(std::string name, std::string work_unit) {
-  HEXED_ASSERT(!children.contains(name), format_str(1000, "child named `%s` already exists", name));
+  HEXED_ASSERT(!children.contains(name), format_str(1000, "child named `%s` already exists", name.c_str()));
   children.emplace(name, work_unit);
   return (*this)[name];
 }

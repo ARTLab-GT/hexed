@@ -42,7 +42,9 @@ class Accessible_mesh : public Mesh {
   int _mask_levels;
   Gauss_lobatto _basis;
   next::Mesh_blocks _blocks;
+  int _n_verts;
   std::vector<Geom_edge> _geom_edges;
+  Stopwatch_tree _stopwatch;
 
   // masked sequences
   template <typename view_t, typename storage_t>
@@ -219,6 +221,7 @@ class Accessible_mesh : public Mesh {
   void write(std::string file_name) override;
   void export_polymesh(std::string dir_name) override;
   void visualize(std::string format, std::string file_name) override;
+  inline const Stopwatch_tree& stopwatch_tree() const override {return _stopwatch;}
 
   protected:
   void reset_verts() override;

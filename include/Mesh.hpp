@@ -8,6 +8,7 @@
 #include "Surface_geom.hpp"
 #include "connection.hpp"
 #include "Geom_edge.hpp"
+#include "Stopwatch_tree.hpp"
 
 namespace hexed {
 
@@ -213,6 +214,8 @@ class Mesh {
     //! restores vertices to where they were before this object was constructed
     inline ~Reset_vertices() {m.restore_verts();}
   };
+  //! \brief Obtain performance data.
+  virtual const Stopwatch_tree& stopwatch_tree() const = 0;
   //!\}
 
   //! \name I/O
