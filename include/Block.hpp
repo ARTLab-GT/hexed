@@ -107,6 +107,7 @@ class Vertex : public Block {
    */
   void glue(Element_shape& to, std::vector<double> coords);
 
+  void find_neighbors();
   //! \brief Computes a hypothetical new position for this vertex to improve mesh quality, but doesn't apply it yet
   void calc_relax();
   //! \brief Applies the update computed with `calc_update`.
@@ -127,6 +128,13 @@ class Vertex : public Block {
   Reciprocal_list<Vertex, Vertex> _shadows;
   std::vector<double> _glued_coords;
   Mat<3> _desired_pos() const;
+  std::vector<const Vertex*> _neighbors;
+  std::vector<int> _i_this;
+  std::vector<double> _nom_sz;
+  Element_shape* _car_elem;
+  int _car_i_vert;
+  int _nd;
+  int _nv;
 };
 
 /*! \brief A `Block` which is part of the mesh boundary.

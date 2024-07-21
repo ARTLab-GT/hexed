@@ -1,12 +1,13 @@
-#include <Accessible_mesh.hpp>
-#include <math.hpp>
-#include <Row_index.hpp>
-#include <erase_if.hpp>
-#include <utils.hpp>
-#include <Gauss_legendre.hpp>
-#include <H5Cpp.h>
 #include <filesystem>
 #include <fstream>
+#include <H5Cpp.h>
+#include <hexed/Accessible_mesh.hpp>
+#include <hexed/math.hpp>
+#include <hexed/Row_index.hpp>
+#include <hexed/erase_if.hpp>
+#include <hexed/utils.hpp>
+#include <hexed/Gauss_legendre.hpp>
+#include <hexed/global_hacks.hpp> //!< \todo remove this
 
 namespace hexed {
 
@@ -821,6 +822,11 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   id_boundary_verts();
   snap_vertices();
   id_smooth_verts();
+  _blocks.edges_2d();
+  _blocks.faces_3d();
+  auto verts = _blocks.verts();
+  #pragma omp parallel for
+  for (auto& vert : verts) vert.find_neighbors();
 }
 
 void Accessible_mesh::set_edges(std::vector<Geom_edge>&& geom_edges) {
@@ -1423,6 +1429,14 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion, std
   id_boundary_verts();
   snap_vertices();
   id_smooth_verts();
+  _blocks.edges_2d();
+  _blocks.faces_3d();
+  global_hacks::stopwatch["find neighbors"].stopwatch.start();
+  auto verts = _blocks.verts();
+  #pragma omp parallel for
+  for (auto& vert : verts) vert.find_neighbors();
+  global_hacks::stopwatch["find neighbors"].stopwatch.pause();
+  global_hacks::stopwatch["find neighbors"].work_units_completed += _blocks.verts().size();
   for (auto& edge : _geom_edges) {
     edge.matched_vertices.clear();
     edge.matched_edges.clear();
@@ -1441,6 +1455,9 @@ void Accessible_mesh::set_all_smooth() {
 }
 
 void Accessible_mesh::relax(double factor) {
+  auto& sw = global_hacks::stopwatch;
+  sw["relax"].stopwatch.start();
+  sw["relax"]["legacy"].stopwatch.start();
   id_boundary_verts();
   // calculate average neighbor position
   #pragma omp parallel for
@@ -1456,6 +1473,9 @@ void Accessible_mesh::relax(double factor) {
     if (vert->is_mobile()) vert->pos = factor*vert->temp_vector + (1 - factor)*vert->pos;
   }
   snap_vertices();
+  sw["relax"]["legacy"].stopwatch.pause();
+  sw["relax"]["legacy"].work_units_completed += smooth_verts.size();
+  sw["relax"]["optimization"].stopwatch.start();
   //// update `next::Vertex`s
   // relax vertices to improve mesh quality
   auto verts = _blocks.verts();
@@ -1463,6 +1483,10 @@ void Accessible_mesh::relax(double factor) {
   for (auto& vert : verts) vert.calc_relax();
   #pragma omp parallel for
   for (auto& vert : verts) vert.apply_relax();
+  #pragma omp parallel for
+  for (auto& vert : verts) vert.pos = vert.point({});
+  sw["relax"]["optimization"].stopwatch.pause();
+  sw["relax"]["optimization"].work_units_completed += verts.size();
   // snap vertices to extremal boundaries
   if (tree) {
     #pragma omp parallel for
@@ -1538,6 +1562,8 @@ void Accessible_mesh::relax(double factor) {
     #pragma omp parallel for
     for (auto& face : faces_3d) snap_block(face);
   }
+  sw["relax"].stopwatch.pause();
+  sw["relax"].work_units_completed += verts.size();
 }
 
 Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& basis,
