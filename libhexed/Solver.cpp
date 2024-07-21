@@ -2,23 +2,21 @@
 #include <iostream>
 #include <H5Cpp.h>
 
-#include <config.hpp>
-#include <Solver.hpp>
-#include <Tecplot_file.hpp>
-#include <Vis_data.hpp>
-#include <Xdmf_wrapper.hpp>
-#include <iterative.hpp>
-#include <Gauss_lobatto.hpp>
-#include <Face_permutation.hpp>
-#include <Row_index.hpp>
-#include <stabilizing_art_visc.hpp>
-#include <Array.hpp>
+#include <hexed/config.hpp>
+#include <hexed/Solver.hpp>
+#include <hexed/Tecplot_file.hpp>
+#include <hexed/Vis_data.hpp>
+#include <hexed/Xdmf_wrapper.hpp>
+#include <hexed/iterative.hpp>
+#include <hexed/Gauss_lobatto.hpp>
+#include <hexed/Face_permutation.hpp>
+#include <hexed/Row_index.hpp>
+#include <hexed/stabilizing_art_visc.hpp>
+#include <hexed/Array.hpp>
 
-namespace hexed
-{
+namespace hexed {
 
-Kernel_mesh Solver::_kernel_mesh()
-{
+Kernel_mesh Solver::_kernel_mesh() {
   return {
     params.n_dim,
     params.row_size,
@@ -33,8 +31,7 @@ Kernel_mesh Solver::_kernel_mesh()
   };
 }
 
-void Solver::_put_cache()
-{
+void Solver::_put_cache() {
   auto& elems = acc_mesh->elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -44,8 +41,7 @@ void Solver::_put_cache()
   }
 }
 
-void Solver::_get_cache()
-{
+void Solver::_get_cache() {
   auto& elems = acc_mesh->elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -55,12 +51,13 @@ void Solver::_get_cache()
   }
 }
 
-void Solver::share_vertex_data(std::function<double&(Element&, int i_vertex)> access_fun, std::function<double(Mat<>)> reduce)
-{
+void Solver::share_vertex_data(std::function<double&(Element&, int i_vertex)> access_fun, std::function<double(Mat<>)> reduce) {
   share_vertex_data(access_fun, access_fun, reduce);
 }
 
-void Solver::share_vertex_data(std::function<double(Element&, int i_vertex)> get, std::function<double&(Element&, int i_vertex)> set, std::function<double(Mat<>)> reduce)
+void Solver::share_vertex_data(std::function<double(Element&, int i_vertex)> get,
+                               std::function<double&(Element&, int i_vertex)> set,
+                               std::function<double(Mat<>)> reduce)
 {
   auto& elements = acc_mesh->elements();
   #pragma omp parallel for
@@ -76,21 +73,19 @@ void Solver::share_vertex_data(std::function<double(Element&, int i_vertex)> get
   for (int i_match = 0; i_match < matchers.size(); ++i_match) matchers[i_match].match(set);
 }
 
-void Solver::apply_state_bcs()
-{
-  stopwatch.children.at("boundary conditions").stopwatch.start();
+void Solver::apply_state_bcs() {
+  stopwatch["boundary conditions"].stopwatch.start();
   auto& bc_cons {_preti_masks[_preti_level]->bound_cons};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh->boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
   }
-  stopwatch.children.at("boundary conditions").stopwatch.pause();
-  stopwatch.children.at("boundary conditions").work_units_completed += bc_cons.size();
+  stopwatch["boundary conditions"].stopwatch.pause();
+  stopwatch["boundary conditions"].work_units_completed += bc_cons.size();
 }
 
-void Solver::apply_flux_bcs()
-{
+void Solver::apply_flux_bcs() {
   auto& bc_cons {_preti_masks[_preti_level]->bound_cons};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
@@ -103,8 +98,7 @@ void Solver::apply_flux_bcs()
   }
 }
 
-void Solver::apply_avc_diff_bcs()
-{
+void Solver::apply_avc_diff_bcs() {
   auto& bc_cons {acc_mesh->boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
@@ -113,8 +107,7 @@ void Solver::apply_avc_diff_bcs()
   }
 }
 
-void Solver::apply_avc_diff_flux_bcs()
-{
+void Solver::apply_avc_diff_flux_bcs() {
   auto& bc_cons {acc_mesh->boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
@@ -123,8 +116,7 @@ void Solver::apply_avc_diff_flux_bcs()
   }
 }
 
-void Solver::apply_fta_flux_bcs()
-{
+void Solver::apply_fta_flux_bcs() {
   int nd = params.n_dim;
   int rs = params.row_size;
   int nq = params.n_qpoint();
@@ -137,17 +129,15 @@ void Solver::apply_fta_flux_bcs()
   }
 }
 
-bool Solver::use_ldg()
-{
+bool Solver::use_ldg() {
   return visc.is_viscous || therm_cond.is_viscous || use_art_visc;
 }
 
-double Solver::max_dt(double msc, double msd)
-{
+double Solver::max_dt(double msc, double msd) {
   Kernel_options opts {
-    stopwatch.children.at("cartesian"),
-    stopwatch.children.at("deformed" ),
-    stopwatch.children.at("prolong/restrict"),
+    stopwatch["cartesian"],
+    stopwatch["deformed"],
+    stopwatch["prolong/restrict"],
     0, 0, bool(_namespace->get<int>("use_filter")),
   };
   bool local_time = _namespace->get<int>("local_time");
@@ -155,8 +145,7 @@ double Solver::max_dt(double msc, double msd)
   else return max_dt_euler(_kernel_mesh(), opts, msc, msd, local_time);
 }
 
-void Solver::_init_face_state()
-{
+void Solver::_init_face_state() {
   compute_write_face(_kernel_mesh());
   compute_prolong(_kernel_mesh());
   auto& bc_cons {acc_mesh->boundary_connections()};
@@ -216,30 +205,29 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   status.set_time();
   // setup categories for performance reporting
   std::string unit = "(element*(time integration stage))";
-  stopwatch.children.emplace("prolong/restrict", unit);
-  stopwatch.children.emplace("fix admis.", "(element*(fix admis. iter))");
-  stopwatch.children.at("fix admis.").children.emplace("check admis.", "(element*update)");
-  stopwatch.children.emplace("set art visc", stopwatch.work_unit_name);
-  stopwatch.children.at("set art visc").children.emplace("initialize", stopwatch.work_unit_name);
-  stopwatch.children.at("set art visc").children.emplace("advection", stopwatch.work_unit_name);
-  stopwatch.children.at("set art visc").children.at("advection").children.emplace("update", unit);
-  stopwatch.children.at("set art visc").children.at("advection").children.emplace("setup", stopwatch.work_unit_name);
-  stopwatch.children.at("set art visc").children.at("advection").children.emplace("BCs", unit);
-  stopwatch.children.at("set art visc").children.emplace("diffusion", stopwatch.work_unit_name);
+  stopwatch.emplace("prolong/restrict", unit);
+  stopwatch.emplace("fix admis.", "(element*(fix admis. iter))");
+  stopwatch["fix admis."].emplace("check admis.", "(element*update)");
+  stopwatch.emplace("set art visc", stopwatch.work_unit_name);
+  stopwatch["set art visc"].emplace("initialize", stopwatch.work_unit_name);
+  stopwatch["set art visc"].emplace("advection", stopwatch.work_unit_name);
+  stopwatch["set art visc"]["advection"].emplace("update", unit);
+  stopwatch["set art visc"]["advection"].emplace("setup", stopwatch.work_unit_name);
+  stopwatch["set art visc"]["advection"].emplace("BCs", unit);
+  stopwatch["set art visc"].emplace("diffusion", stopwatch.work_unit_name);
   for (std::string type : {"cartesian", "deformed"}) {
-    for (auto* sw : {&stopwatch, &stopwatch.children.at("set art visc").children.at("advection"),
-                     &stopwatch.children.at("set art visc").children.at("diffusion"), &stopwatch.children.at("fix admis.")}) {
-      sw->children.emplace(type, stopwatch.work_unit_name);
-      auto& children = sw->children.at(type).children;
-      children.emplace("compute time step", stopwatch.work_unit_name);
-      children.emplace("neighbor", "(connection*(time integration stage))");
-      children.emplace("local", unit);
+    for (auto* sw : {&stopwatch, &stopwatch["set art visc"]["advection"],
+                     &stopwatch["set art visc"]["diffusion"], &stopwatch["fix admis."]}) {
+      sw->emplace(type, stopwatch.work_unit_name);
+      (*sw)[type].emplace("compute time step", stopwatch.work_unit_name);
+      (*sw)[type].emplace("neighbor", "(connection*(time integration stage))");
+      (*sw)[type].emplace("local", unit);
     }
-    for (auto* sw : {&stopwatch, &stopwatch.children.at("fix admis."), &stopwatch.children.at("set art visc").children.at("diffusion")}) {
-      sw->children.at(type).children.emplace("reconcile LDG flux", unit);
+    for (auto* sw : {&stopwatch, &stopwatch["fix admis."], &stopwatch["set art visc"]["diffusion"]}) {
+      (*sw)[type].emplace("reconcile LDG flux", unit);
     }
   }
-  stopwatch.children.emplace("boundary conditions", "(boundary connection)*(time integration stage)");
+  stopwatch.emplace("boundary conditions", "(boundary connection)*(time integration stage)");
   // initialize advection state to 1
   auto& elements = acc_mesh->elements();
   const int nq = params.n_qpoint();
@@ -259,8 +247,7 @@ Mesh& Solver::mesh() {return *acc_mesh;}
 Storage_params Solver::storage_params() {return params;}
 const Stopwatch_tree& Solver::stopwatch_tree() {return stopwatch;}
 
-void Solver::read_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs, Surface_geom* geom, Flow_bc* surface_bc)
-{
+void Solver::read_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs, Surface_geom* geom, Flow_bc* surface_bc) {
   acc_mesh.reset(new Accessible_mesh(file_name, extremal_bcs, geom, surface_bc));
   HEXED_ASSERT(acc_mesh->storage_params().n_stage == params.n_stage, "attempt to read a mesh file with a different `n_stage`");
   HEXED_ASSERT(acc_mesh->storage_params().n_var == params.n_var, "attempt to read a mesh file with a different `n_var`");
@@ -270,8 +257,7 @@ void Solver::read_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs
   calc_jacobian(false);
 }
 
-void Solver::read_state(std::string file_name)
-{
+void Solver::read_state(std::string file_name) {
   auto& elems = acc_mesh->elements();
   H5::H5File file(file_name + ".state.h5", H5F_ACC_RDONLY);
   hsize_t n_elem = elems.size();
@@ -291,8 +277,7 @@ void Solver::read_state(std::string file_name)
   _init_face_state();
 }
 
-void Solver::write_state(std::string file_name)
-{
+void Solver::write_state(std::string file_name) {
   auto& elems = acc_mesh->elements();
   H5::H5File file(file_name + ".state.h5", H5F_ACC_TRUNC);
   hsize_t n_elem = elems.size();
@@ -312,8 +297,7 @@ void Solver::write_state(std::string file_name)
   }
 }
 
-void Solver::calc_jacobian(bool snap)
-{
+void Solver::calc_jacobian(bool snap) {
   acc_mesh->valid().assert_valid();
   if (snap) snap_faces();
   const int n_dim = params.n_dim;
@@ -423,8 +407,7 @@ void Solver::calc_jacobian(bool snap)
   _preti_masks = acc_mesh->preti_masks(basis);
 }
 
-void Solver::initialize(const Spacetime_func& func)
-{
+void Solver::initialize(const Spacetime_func& func) {
   acc_mesh->valid().assert_valid();
   if (func.n_var(params.n_dim) < params.n_var) {
     throw std::runtime_error("initializer has too few output variables");
@@ -443,18 +426,15 @@ void Solver::initialize(const Spacetime_func& func)
   _init_face_state();
 }
 
-bool Solver::using_art_visc()
-{
+bool Solver::using_art_visc() {
   return use_art_visc;
 }
 
-void Solver::set_art_visc_off()
-{
+void Solver::set_art_visc_off() {
   use_art_visc = false;
 }
 
-void Solver::set_art_visc_constant(double value)
-{
+void Solver::set_art_visc_constant(double value) {
   use_art_visc = true;
   auto& elements = acc_mesh->elements();
   #pragma omp parallel for
@@ -466,16 +446,15 @@ void Solver::set_art_visc_constant(double value)
   }
 }
 
-void Solver::diffuse_art_visc(double diff_time)
-{
+void Solver::diffuse_art_visc(double diff_time) {
   // evaluate CFL condition
   double diff_safety = _namespace->get<double>("av_diff_max_safety");
   double n_cheby = _namespace->get<double>("n_cheby_av");
   double cheby_safety = _namespace->get<double>("cheby_safety");
   Kernel_options opts {
-    stopwatch.children.at("set art visc").children.at("diffusion").children.at("cartesian"),
-    stopwatch.children.at("set art visc").children.at("diffusion").children.at("deformed"),
-    stopwatch.children.at("prolong/restrict"),
+    stopwatch["set art visc"]["diffusion"]["cartesian"],
+    stopwatch["set art visc"]["diffusion"]["deformed"],
+    stopwatch["prolong/restrict"],
     0.,
     0,
     false,
@@ -496,17 +475,16 @@ void Solver::diffuse_art_visc(double diff_time)
   }
 }
 
-void Solver::update_art_visc_smoothness(double advect_length)
-{
+void Solver::update_art_visc_smoothness(double advect_length) {
   stopwatch.stopwatch.start();
-  stopwatch.children.at("set art visc").stopwatch.start();
+  stopwatch["set art visc"].stopwatch.start();
   use_art_visc = true;
   const int nq = params.n_qpoint();
   const int nd = params.n_dim;
   const int rs = params.row_size;
   auto& elements = acc_mesh->elements();
 
-  stopwatch.children.at("set art visc").children.at("initialize").stopwatch.start();
+  stopwatch["set art visc"]["initialize"].stopwatch.start();
   // set advection velocity
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
@@ -518,18 +496,18 @@ void Solver::update_art_visc_smoothness(double advect_length)
       }
     }
   }
-  stopwatch.children.at("set art visc").children.at("initialize").stopwatch.pause();
-  stopwatch.children.at("set art visc").children.at("initialize").work_units_completed += elements.size();
+  stopwatch["set art visc"]["initialize"].stopwatch.pause();
+  stopwatch["set art visc"]["initialize"].work_units_completed += elements.size();
   // enforce CFL condition
-  auto& sw_adv = stopwatch.children.at("set art visc").children.at("advection");
+  auto& sw_adv = stopwatch["set art visc"]["advection"];
   sw_adv.stopwatch.start();
   compute_write_face(_kernel_mesh());
   compute_prolong(_kernel_mesh());
   double adv_safety = _namespace->get<double>("av_advect_max_safety");
   Kernel_options opts {
-    sw_adv.children.at("cartesian"),
-    sw_adv.children.at("deformed" ),
-    stopwatch.children.at("prolong/restrict"),
+    sw_adv["cartesian"],
+    sw_adv["deformed"],
+    stopwatch["prolong/restrict"],
     1.,
     0,
     false,
@@ -541,31 +519,31 @@ void Solver::update_art_visc_smoothness(double advect_length)
   // perform pseudotime iteration
   for (int iter = 0; iter < _namespace->get<int>("av_advect_iters"); ++iter)
   {
-    sw_adv.children.at("setup").stopwatch.start();
+    sw_adv["setup"].stopwatch.start();
     // evaluate advection operator
     compute_write_face_advection(_kernel_mesh());
     compute_prolong_advection(_kernel_mesh());
-    sw_adv.children.at("setup").stopwatch.pause();
+    sw_adv["setup"].stopwatch.pause();
     for (int i = 0; i < 2; ++i) {
-      sw_adv.children.at("BCs").stopwatch.start();
+      sw_adv["BCs"].stopwatch.start();
       auto& bc_cons {acc_mesh->boundary_connections()};
       #pragma omp parallel for
       for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
         int bc_sn = bc_cons[i_con].bound_cond_serial_n();
         acc_mesh->boundary_condition(bc_sn).flow_bc->apply_advection(bc_cons[i_con]);
       }
-      sw_adv.children.at("BCs").stopwatch.pause();
-      sw_adv.children.at("BCs").work_units_completed += acc_mesh->elements().size();
+      sw_adv["BCs"].stopwatch.pause();
+      sw_adv["BCs"].work_units_completed += acc_mesh->elements().size();
       opts.i_stage = i;
       compute_advection(_kernel_mesh(), opts, advect_length);
     }
-    sw_adv.children.at("cartesian").work_units_completed += acc_mesh->cartesian().elements().size();
-    sw_adv.children.at("deformed" ).work_units_completed += acc_mesh->deformed ().elements().size();
+    sw_adv["cartesian"].work_units_completed += acc_mesh->cartesian().elements().size();
+    sw_adv["deformed" ].work_units_completed += acc_mesh->deformed ().elements().size();
   }
-  sw_adv.children.at("setup").work_units_completed += elements.size();
-  sw_adv.children.at("update").work_units_completed += elements.size();
-  stopwatch.children.at("set art visc").children.at("advection").stopwatch.pause();
-  stopwatch.children.at("set art visc").children.at("advection").work_units_completed += elements.size();
+  sw_adv["setup"].work_units_completed += elements.size();
+  sw_adv["update"].work_units_completed += elements.size();
+  stopwatch["set art visc"]["advection"].stopwatch.pause();
+  stopwatch["set art visc"]["advection"].work_units_completed += elements.size();
   // compute projection onto Legendre polynomial
   Eigen::VectorXd weights = basis.node_weights();
   Eigen::VectorXd orth = basis.orthogonal(av_rs - 1);
@@ -586,10 +564,10 @@ void Solver::update_art_visc_smoothness(double advect_length)
   // begin root-smear-square operation
   int n_real = params.n_forcing - 1; // number of real time steps (as apposed to pseudotime steps)
   double diff_time = _namespace->get<double>("av_diff_ratio")*advect_length*advect_length/n_real; // compute size of real time step (as opposed to pseudotime)
-  stopwatch.children.at("set art visc").children.at("diffusion").stopwatch.start();
+  stopwatch["set art visc"]["diffusion"].stopwatch.start();
   diffuse_art_visc(diff_time);
-  stopwatch.children.at("set art visc").children.at("diffusion").stopwatch.pause();
-  stopwatch.children.at("set art visc").children.at("diffusion").work_units_completed += elements.size();
+  stopwatch["set art visc"]["diffusion"].stopwatch.pause();
+  stopwatch["set art visc"]["diffusion"].work_units_completed += elements.size();
 
   // clean up
   double mult = _namespace->get<double>("av_visc_mult")*advect_length;
@@ -618,13 +596,12 @@ void Solver::update_art_visc_smoothness(double advect_length)
   // update the face state
   compute_write_face(_kernel_mesh());
   compute_prolong(_kernel_mesh());
-  stopwatch.children.at("set art visc").stopwatch.pause();
-  stopwatch.children.at("set art visc").work_units_completed += elements.size();
+  stopwatch["set art visc"].stopwatch.pause();
+  stopwatch["set art visc"].work_units_completed += elements.size();
   stopwatch.stopwatch.pause();
 }
 
-void Solver::update_art_visc_elwise(double width, bool pde_based)
-{
+void Solver::update_art_visc_elwise(double width, bool pde_based) {
   use_art_visc = true;
   Mass mass;
   set_uncertainty(Normalized_nonsmooth(mass));
@@ -675,9 +652,8 @@ void Solver::update_art_visc_elwise(double width, bool pde_based)
   }
 }
 
-void Solver::set_art_visc_admis()
-{
-  stopwatch.children.at("set art visc").stopwatch.start();
+void Solver::set_art_visc_admis() {
+  stopwatch["set art visc"].stopwatch.start();
   use_art_visc = true;
   // compute the desired artificial viscosity in each element
   double char_speed = _namespace->get<double>("freestream_speed") + _namespace->get<double>("freestream_sound_speed");
@@ -695,24 +671,21 @@ void Solver::set_art_visc_admis()
     Eigen::Map<Mat<>> vert_av(&elems[i_elem].vertex_elwise_av(0), params.n_vertices());
     qpoint_av = math::hypercube_matvec(interp, vert_av);
   }
-  stopwatch.children.at("set art visc").stopwatch.pause();
-  stopwatch.children.at("set art visc").work_units_completed += elems.size();
+  stopwatch["set art visc"].stopwatch.pause();
+  stopwatch["set art visc"].work_units_completed += elems.size();
 }
 
-void Solver::set_art_visc_row_size(int row_size)
-{
+void Solver::set_art_visc_row_size(int row_size) {
   HEXED_ASSERT(row_size >= 2, "`row_size` must be >= 2");
   HEXED_ASSERT(row_size <= basis.row_size, "`row_size` must be <= discretization row size");
   av_rs = row_size;
 }
 
-void Solver::set_fix_admissibility(bool value)
-{
+void Solver::set_fix_admissibility(bool value) {
   fix_admis = value;
 }
 
-void Solver::set_uncertainty(const Element_func& func)
-{
+void Solver::set_uncertainty(const Element_func& func) {
   auto& elems = acc_mesh->elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -720,8 +693,7 @@ void Solver::set_uncertainty(const Element_func& func)
   }
 }
 
-void Solver::set_uncert_surface_rep(int bc_sn)
-{
+void Solver::set_uncert_surface_rep(int bc_sn) {
   const int nv = params.n_var;
   const int nd = params.n_dim;
   const int nq = params.n_qpoint();
@@ -851,8 +823,7 @@ void Solver::set_uncert_surface_rep(int bc_sn)
   compute_write_face(_kernel_mesh());
 }
 
-void Solver::synch_extruded_uncert()
-{
+void Solver::synch_extruded_uncert() {
   auto cons = acc_mesh->extruded_connections();
   bool changed = true;
   while(changed) {
@@ -873,8 +844,7 @@ void Solver::synch_extruded_uncert()
   }
 }
 
-void Solver::update()
-{
+void Solver::update() {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
   double safety = _namespace->get<double>("max_safety");
   double cheby_safety = _namespace->get<double>("cheby_safety");
@@ -907,9 +877,9 @@ void Solver::update()
             // compute inviscid update
             for (int i = 0; i < 2; ++i) {
               Kernel_options opts {
-                .sw_car = stopwatch.children.at("cartesian"),
-                .sw_def = stopwatch.children.at("deformed" ),
-                .sw_pr = stopwatch.children.at("prolong/restrict"),
+                .sw_car = stopwatch["cartesian"],
+                .sw_def = stopwatch["deformed"],
+                .sw_pr = stopwatch["prolong/restrict"],
                 .dt = dt/sub_iters,
                 .i_stage = i,
                 .compute_residual = false,
@@ -924,8 +894,8 @@ void Solver::update()
               fixed = fix_admissibility(_namespace->get<double>("fix_admis_max_safety")) || fixed;
             }
             stopwatch.work_units_completed += km.elems.size();
-            stopwatch.children.at("cartesian").work_units_completed += km.car_elems.size();
-            stopwatch.children.at("deformed" ).work_units_completed += km.def_elems.size();
+            stopwatch["cartesian"].work_units_completed += km.car_elems.size();
+            stopwatch["deformed" ].work_units_completed += km.def_elems.size();
             if (fixed) break;
           }
           if (fixed) break;
@@ -946,8 +916,7 @@ void Solver::update()
   stopwatch.stopwatch.pause();
 }
 
-void Solver::update_implicit()
-{
+void Solver::update_implicit() {
   HEXED_ASSERT(_implicit, "`update_implicit` called on a Solver that was not constructed in implicit mode");
   Linearized lin(*this);
   iterative::gmres(lin, 27, 1);
@@ -957,13 +926,12 @@ void Solver::update_implicit()
   fix_admissibility(.7);
 }
 
-void Solver::compute_residual()
-{
+void Solver::compute_residual() {
   apply_state_bcs();
   Kernel_options opts {
-    stopwatch.children.at("cartesian"),
-    stopwatch.children.at("deformed" ),
-    stopwatch.children.at("prolong/restrict"),
+    stopwatch["cartesian"],
+    stopwatch["deformed"],
+    stopwatch["prolong/restrict"],
     1.,
     0,
     true,
@@ -973,8 +941,7 @@ void Solver::compute_residual()
   else compute_euler(_kernel_mesh(), opts);
 }
 
-void Solver::compute_lts_constraints()
-{
+void Solver::compute_lts_constraints() {
   auto& elems = acc_mesh->deformed().elements();
   int nd = params.n_dim;
   int nq = params.n_qpoint();
@@ -1002,15 +969,13 @@ void Solver::compute_lts_constraints()
   _namespace->assign("min_lts_dc_ratio", min_ratio);
 }
 
-Iteration_status Solver::iteration_status()
-{
+Iteration_status Solver::iteration_status() {
   Iteration_status stat = status;
   return stat;
 }
 
-bool Solver::is_admissible()
-{
-  auto& sw = stopwatch.children.at("fix admis.").children.at("check admis.");
+bool Solver::is_admissible() {
+  auto& sw = stopwatch["fix admis."]["check admis."];
   sw.stopwatch.start();
   auto& elems = _preti_masks[_preti_level]->kernel_mesh.elems;
   const int nd = params.n_dim;
@@ -1065,10 +1030,9 @@ bool Solver::is_admissible()
   return admiss && refined_admiss;
 }
 
-bool Solver::fix_admissibility(double stability_ratio)
-{
+bool Solver::fix_admissibility(double stability_ratio) {
   if (!fix_admis) return false;
-  auto& sw_fix = stopwatch.children.at("fix admis.");
+  auto& sw_fix = stopwatch["fix admis."];
   sw_fix.stopwatch.start();
   std::string wd = _namespace->lookup<std::string>("working_dir").value();
   const int nd = params.n_dim;
@@ -1156,9 +1120,9 @@ bool Solver::fix_admissibility(double stability_ratio)
     }
     double dt = stability_ratio;
     Kernel_options opts {
-      stopwatch.children.at("fix admis.").children.at("cartesian"),
-      stopwatch.children.at("fix admis.").children.at("deformed" ),
-      stopwatch.children.at("prolong/restrict"),
+      stopwatch["fix admis."]["cartesian"],
+      stopwatch["fix admis."]["deformed"],
+      stopwatch["prolong/restrict"],
       0.,
       0,
       false,
@@ -1199,24 +1163,20 @@ bool Solver::fix_admissibility(double stability_ratio)
   return iter;
 }
 
-void Solver::reset_counters()
-{
+void Solver::reset_counters() {
   status.fix_admis_iters = 0;
   _namespace->assign("fix_iters", 0);
 }
 
-std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func& func)
-{
+std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func& func) {
   return func(acc_mesh->element(ref_level, is_deformed, serial_n), basis, i_qpoint, _namespace->get<double>("flow_time"));
 }
 
-std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n, const Element_func& func)
-{
+std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n, const Element_func& func) {
   return func(acc_mesh->element(ref_level, is_deformed, serial_n), basis, _namespace->get<double>("flow_time"));
 }
 
-std::vector<double> Solver::integral_field(const Qpoint_func& integrand)
-{
+std::vector<double> Solver::integral_field(const Qpoint_func& integrand) {
   // compute `n_dim`-dimensional quadrature weights from 1D weights
   Eigen::VectorXd weights = math::pow_outer(basis.node_weights(), params.n_dim);
   // now compute the integral with the above quadrature weights
@@ -1235,8 +1195,7 @@ std::vector<double> Solver::integral_field(const Qpoint_func& integrand)
   return integral;
 }
 
-std::vector<double> Solver::integral_surface(const Boundary_func& integrand, int bc_sn)
-{
+std::vector<double> Solver::integral_surface(const Boundary_func& integrand, int bc_sn) {
   // setup
   const int nd = params.n_dim;
   const int n_int = integrand.n_var(nd);
@@ -1273,8 +1232,7 @@ std::vector<double> Solver::integral_surface(const Boundary_func& integrand, int
   return integral;
 };
 
-std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func, int n_sample)
-{
+std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func, int n_sample) {
   const int n_var = func.n_var(params.n_dim);
   std::vector<std::array<double, 2>> bounds(n_var);
   for (int i_var = 0; i_var < n_var; ++i_var) {
@@ -1295,8 +1253,7 @@ std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func,
   return bounds;
 }
 
-void Solver::visualize_field(std::string format, std::string name, const Qpoint_func& output_variables, int n_sample, bool wireframe)
-{
+void Solver::visualize_field(std::string format, std::string name, const Qpoint_func& output_variables, int n_sample, bool wireframe) {
   auto visualizer = Visualizer::create(format, params.n_dim, wireframe ? 1 : params.n_dim, name, output_variables,
                                        _namespace->get<double>("flow_time"), Visualizer::block);
   HEXED_ASSERT(params.n_dim > wireframe, "can only visualize field wireframes in > 1D");
@@ -1327,8 +1284,7 @@ void Solver::visualize_field(std::string format, std::string name, const Qpoint_
   }
 }
 
-void Solver::visualize_surface(std::string format, std::string name, int bc_sn, const Boundary_func& func, int n_sample, bool wireframe)
-{
+void Solver::visualize_surface(std::string format, std::string name, int bc_sn, const Boundary_func& func, int n_sample, bool wireframe) {
   HEXED_ASSERT(params.n_dim > 1, "cannot visualize surfaces in 1D");
   HEXED_ASSERT(params.n_dim > 1 + wireframe, "can only visualize surface wireframes in 3D");
   auto visualizer = Visualizer::create(format, params.n_dim, wireframe ? 1 : params.n_dim - 1, name, func, _namespace->get<double>("flow_time"), Visualizer::block);
@@ -1405,8 +1361,7 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
   visualizer.reset();
 }
 
-void Solver::visualize_contour(std::string format, std::string name, const Qpoint_func& contour_by, const Qpoint_func& output_variables, int n_sample)
-{
+void Solver::visualize_contour(std::string format, std::string name, const Qpoint_func& contour_by, const Qpoint_func& output_variables, int n_sample) {
   auto visualizer = Visualizer::create(format, params.n_dim, params.n_dim - 1, name, output_variables,
                                        _namespace->get<double>("flow_time"), Visualizer::block);
   Position_func pos_func;
@@ -1426,14 +1381,12 @@ void Solver::visualize_contour(std::string format, std::string name, const Qpoin
   }
 }
 
-void Solver::vis_cart_surf(std::string format, std::string name, int bc_sn, const Boundary_func& func)
-{
+void Solver::vis_cart_surf(std::string format, std::string name, int bc_sn, const Boundary_func& func) {
   Mesh::Reset_vertices reset(*acc_mesh);
   visualize_surface(format, name, bc_sn, func, 2);
 }
 
-void Solver::vis_lts_constraints(std::string format, std::string name, int n_sample)
-{
+void Solver::vis_lts_constraints(std::string format, std::string name, int n_sample) {
   auto& elems = acc_mesh->elements();
   int nf = params.n_dof();
   int nq = params.n_qpoint();
@@ -1467,8 +1420,7 @@ void Solver::vis_lts_constraints(std::string format, std::string name, int n_sam
   }
 }
 
-Array<double> Solver::skews()
-{
+Array<double> Solver::skews() {
   auto& elems = acc_mesh->elements();
   Array<double> s({elems.size()});
   Equiangle_skewness equi;
