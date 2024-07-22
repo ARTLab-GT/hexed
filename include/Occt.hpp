@@ -11,8 +11,7 @@
 #include "constants.hpp"
 #include "Simplex_geom.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \brief Wrapper interface for CAD geometry defined by
  * [Open CASCADE Technology](https://dev.opencascade.org/doc/overview/html/index.html) (OCCT).
@@ -39,8 +38,7 @@ namespace hexed
  * Why is CAD software always a mess?
  * Maybe engineering is just always a mess...
  */
-class Occt
-{
+class Occt {
   // whether the message settings for OCCT have been set to prevent it polluting `std::cout`
   static bool message_set; // defaults to false
   // set OCCT messages to do nothing, if that hasn't already been done
@@ -124,8 +122,7 @@ class Occt
    * As a result, the preferred way to interact with CAD geometry is to discretize it with `triangles()`
    * and then convert it to a `Simplex geom`.
    */
-  class Geom : public Surface_geom
-  {
+  class Geom : public Surface_geom {
     const int nd;
     std::vector<opencascade::handle<Geom_Surface>> _surfaces;
     std::vector<opencascade::handle<Geom2d_Curve>> _curves;

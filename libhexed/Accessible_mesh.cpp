@@ -1226,7 +1226,6 @@ void Accessible_mesh::id_smooth_verts() {
 
 bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
                              std::function<bool(Element&)> unrefine_criterion) {
-  _stopwatch["update"].stopwatch.start();
   /* `Element::record` is used to identify which elements are going to be modified.
    * 0 => do nothing
    * 1 => refine
@@ -1235,6 +1234,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
    * 3 => toggle deformity
    */
   HEXED_ASSERT(tree, "need a tree to refine");
+  _stopwatch["update"].stopwatch.start();
   int nd = params.n_dim;
   auto& elems = elements();
   // decide which elements to (un)refine

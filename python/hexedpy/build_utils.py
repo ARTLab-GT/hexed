@@ -457,6 +457,17 @@ class Catch2(C_project):
         )[0]
         self.builder.cmake(directory, ["-DBUILD_TESTING=OFF", "-DBUILD_SHARED_LIBS=ON"])
 
+class Occt(C_project):
+    version = "7.8.0"
+    def __init__(self, builder, toolkits=[]):
+        self.installed_files = {"include":["opencascade"], "lib":toolkits, "cmake":["opencascade"]}
+    def find(self):
+        found = super().find()
+        self.builder.prefices["include"] += (self.builder.find_in("include", "opencascade").find().assets[0],)
+        return found
+    def build(self):
+        raise Exception("Sorry, auto-installing OCCT is not implemented. You have to install it yourself")
+
 class Pip(Buildable):
     fake_names = {
         "gitpython": "git",
@@ -826,7 +837,6 @@ class Builder:
                     self.prefices[prefix] = ()
         module_path = parent(parent(os.path.realpath(__file__)))
         self.prefices["python"] = (module_path,) + self.prefices["python"]
-        self.prefices["cmake"] = (f"{self.build_dir}lib/cmake/",) + self.prefices["cmake"]
         for p in self.prefices:
             self.prefices[p] = (f"{self.build_dir}{p}/",) + self.prefices[p]
         cmake_paths = ()
@@ -834,7 +844,7 @@ class Builder:
             p = Prefices.remove_suffix(p, "bin")
             p = Prefices.remove_suffix(p, "sbin")
             cmake_paths += (p, p + "lib/")
-        self.prefices["cmake"] = (self.build_dir + "lib/",) + tuple(self.prefices["cmake"]) + ('/home/mcsp3/codes/hexed/build_test/', '/home/mcsp3/codes/hexed/build_test/lib/', '/home/mcsp3/.main_venv/', '/home/mcsp3/.main_venv/lib/', '/home/mcsp3/.local/', '/home/mcsp3/.local/lib/', '/usr/local/', '/usr/local/lib/', '/usr/local/', '/usr/local/lib/', '/usr/', '/usr/lib/', '/usr/', '/usr/lib/', '/', '/lib/', '/', '/lib/', '/usr/games/', '/usr/games/lib/', '/usr/local/games/', '/usr/local/games/lib/', '/snap/', '/snap/lib/', '/opt/tecplot/360ex_2020r2/', '/opt/tecplot/360ex_2020r2/lib/', '/opt/tecplot/chorus_2020r2/', '/opt/tecplot/chorus_2020r2/lib/')
+        self.prefices["cmake"] = cmake_paths + tuple(self.prefices["cmake"])
         self[Pip](["cmake", "pypisearch"]).do
 
     def site_packages(self, python=None):

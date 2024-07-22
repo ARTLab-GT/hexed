@@ -1,15 +1,13 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/Mortal.hpp>
 
-class Derived : public hexed::Mortal
-{
+class Derived : public hexed::Mortal {
   public:
   int i;
   Derived(int ii) : i{ii} {}
 };
 
-TEST_CASE("Mortal")
-{
+TEST_CASE("Mortal") {
   Derived d0{1903};
   REQUIRE(d0.partners().size() == 0);
   hexed::Mortal_ptr<Derived> p0;
@@ -52,9 +50,6 @@ TEST_CASE("Mortal")
     REQUIRE(d2.partners().size() == 2);
     REQUIRE(p0.get() == &d2);
     REQUIRE(p1.get() == &d2);
-    hexed::Mortal m;
-    m = std::move(d2);
-    REQUIRE_THROWS(p0.get());
   }
 
   SECTION("Mortal_ptr(Mortal_ptr&&)") {

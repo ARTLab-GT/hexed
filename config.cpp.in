@@ -1,7 +1,6 @@
 #include <config.hpp>
 
-namespace hexed::config
-{
+namespace hexed::config {
 
 const std::string commit = "{[info['commit']]}";
 

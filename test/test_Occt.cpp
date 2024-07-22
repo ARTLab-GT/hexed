@@ -5,8 +5,7 @@
 
 #if HEXED_USE_OCCT
 
-void test(std::string file_extension)
-{
+void test(std::string file_extension) {
   REQUIRE_THROWS(hexed::Occt::read("nonexistent." + file_extension));
   // ellipsoid bounding box: [-.25, .25] x [-.125, .125] x [-.125, .125]
   hexed::Occt::Geom geom(hexed::Occt::read("ellipsoid." + file_extension), 3);
@@ -22,17 +21,13 @@ void test(std::string file_extension)
   CHECK_THAT(intersections, Catch::Matchers::UnorderedRangeEquals(std::vector<double>{-correct, correct}, hexed::math::Approx_equal(0, 1e-2)));
 }
 
-TEST_CASE("Occt::Geom")
-{
-  SECTION("3D")
-  {
+TEST_CASE("Occt::Geom") {
+  SECTION("3D") {
     test("igs");
     test("stp");
   }
-  SECTION("2D")
-  {
+  SECTION("2D") {
     auto shape = hexed::Occt::read("ellipse.STEP");
-    hexed::Occt::write_image(shape, "test.png");
     std::vector<std::unique_ptr<hexed::Surface_geom>> geoms;
     geoms.emplace_back(new hexed::Occt::Geom(shape, 2));
     geoms.emplace_back(new hexed::Simplex_geom(hexed::Occt::segments(shape, 1000)));

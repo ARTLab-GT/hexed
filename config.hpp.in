@@ -9,8 +9,7 @@
  */
 
 //! \brief Namespace for options configured at build time. See \ref hexed_config.hpp.in.
-namespace hexed::config
-{
+namespace hexed::config {
 
 constexpr int version_major = {[info["version_major"]]}; //!< \brief this is Hexed version \ref version_major .\ref version_minor .\ref version_patch
 constexpr int version_minor = {[info["version_minor"]]}; //!< \brief this is Hexed version \ref version_major .\ref version_minor .\ref version_patch
@@ -26,7 +25,7 @@ constexpr int n_threads = {[options["n_threads"]]}; //!< \brief number of thread
 #define HEXED_USE_XDMF {[int(options["use_xdmf"])]}
 #define HEXED_USE_TECPLOT {[int(options["use_tecio"])]}
 #define HEXED_USE_NLOPT 0
-#define HEXED_USE_OCCT 0
+#define HEXED_USE_OCCT {[int(options["use_occt"])]}
 #define HEXED_OBSESSIVE_TIMING {[int(options["obsessive_timing"])]}
 
 }
