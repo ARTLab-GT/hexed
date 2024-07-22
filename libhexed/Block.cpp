@@ -145,6 +145,7 @@ Mat<3> Vertex::_desired_pos() const {
   double tot_sz = 0;
   for (auto elem : _elems.theirs()) {
     HEXED_ASSERT(elem, "element is null");
+    double nom_sz = elem->nominal_size();
     int i_this = -1;
     Mat<3, dyn> verts(3, nv);
     for (int i_vert = 0; i_vert < nv; ++i_vert) {
@@ -165,14 +166,13 @@ Mat<3> Vertex::_desired_pos() const {
           int j_dim = (i_dim + i_edge + 1)%nd;
           int start = opposite - coords[j_dim];
           edges(all, i_edge) = verts(all, start + vstride(nd, j_dim)) - verts(all, start);
-          if (edges(all, i_edge).norm() < 1e-2*elem->nominal_size()) degenerate = true;
-        } else edges(all, i_edge) = math::sign(!i_dim)*elem->nominal_size()*Mat<3>::Unit(2);
+          if (edges(all, i_edge).norm() < 1e-2*nom_sz) degenerate = true;
+        } else edges(all, i_edge) = math::sign(!i_dim)*nom_sz*Mat<3>::Unit(2);
       }
       if (!degenerate) {
-        tot_sz += 1/elem->nominal_size();
-        des_pos += (verts(all, opposite)
-                    + math::sign(coords[i_dim])/elem->nominal_size()*edges(all, 0).cross(edges(all, 1)))
-                   /elem->nominal_size();
+        tot_sz += 1/nom_sz;
+        des_pos += (verts(all, opposite) + math::sign(coords[i_dim])/nom_sz*edges(all, 0).cross(edges(all, 1)))
+                   /nom_sz;
       }
     }
   }
