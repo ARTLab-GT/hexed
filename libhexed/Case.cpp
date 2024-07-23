@@ -1,26 +1,23 @@
 #include <filesystem>
 #include <cctype>
-#include <Case.hpp>
-#include <Simplex_geom.hpp>
-#include <read_csv.hpp>
-#include <standard_atmosphere.hpp>
-#include <Occt.hpp>
-#include <hil_properties.hpp>
-#include <Csv.hpp>
+#include <hexed/Case.hpp>
+#include <hexed/Simplex_geom.hpp>
+#include <hexed/read_csv.hpp>
+#include <hexed/standard_atmosphere.hpp>
+#include <hexed/Occt.hpp>
+#include <hexed/hil_properties.hpp>
+#include <hexed/Csv.hpp>
 
-namespace hexed
-{
+namespace hexed {
 
 const double heat_rat = 1.4;
 
-Solver& Case::_solver()
-{
+Solver& Case::_solver() {
   HEXED_ASSERT(_solver_ptr, "`Solver` object does not exist", assert::User_error);
   return *_solver_ptr;
 }
 
-std::string strip_trailing_digits(std::string s)
-{
+std::string strip_trailing_digits(std::string s) {
   while (std::isdigit(s.back())) s.pop_back();
   return s;
 }
@@ -29,8 +26,7 @@ std::string strip_trailing_digits(std::string s)
      double Case::_vard(std::string name) {return _inter.variables->get<     double>(name);}
 std::string Case::_vars(std::string name) {return _inter.variables->get<std::string>(name);}
 
-Mat<> Case::_get_vector(std::string name, int size)
-{
+Mat<> Case::_get_vector(std::string name, int size) {
   Mat<> vec(size);
   for (int i = 0; i < size; ++i) {
     HEXED_ASSERT(_inter.variables->lookup<double>(name + std::to_string(i)), "must specify all components of `" + name + "` or none", assert::User_error);
@@ -38,15 +34,13 @@ Mat<> Case::_get_vector(std::string name, int size)
   }
   return vec;
 }
-void Case::_set_vector(std::string name, Mat<> vec)
-{
+void Case::_set_vector(std::string name, Mat<> vec) {
   for (int i = 0; i < int(vec.size()); ++i) {
     _inter.variables->assign<double>(name + std::to_string(i), vec(i));
   }
 }
 
-Flow_bc* Case::_make_bc(std::string name)
-{
+Flow_bc* Case::_make_bc(std::string name) {
   Mat<> freestream = _get_vector("freestream", _vari("n_dim") + 2);
   if      (name == "characteristic") return new Riemann_invariants(freestream);
   else if (name == "freestream") return new Freestream(freestream);
@@ -82,19 +76,16 @@ Flow_bc* Case::_make_bc(std::string name)
   return nullptr; // will never happen. just to shut up GCC warning
 }
 
-std::string Case::_iteration_suffix()
-{
+std::string Case::_iteration_suffix() {
   return format_str(100, "iter%.*i", _vari("iter_width"), _vari("iteration"));
 }
 
-void force_symlink(const std::filesystem::path& target, const std::filesystem::path& link)
-{
+void force_symlink(const std::filesystem::path& target, const std::filesystem::path& link) {
   if (std::filesystem::exists(link)) std::filesystem::remove(link);
   std::filesystem::create_symlink(target, link);
 }
 
-std::vector<Flow_bc*> Case::_make_extremal_bcs()
-{
+std::vector<Flow_bc*> Case::_make_extremal_bcs() {
   std::vector<Flow_bc*> bcs;
   for (int i_dim = 0; i_dim < _vari("n_dim"); ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
@@ -104,8 +95,7 @@ std::vector<Flow_bc*> Case::_make_extremal_bcs()
   return bcs;
 }
 
-Surface_geom* Case::_make_geom()
-{
+Surface_geom* Case::_make_geom() {
   int nd = _vari("n_dim");
   std::vector<Surface_geom*> geoms;
   for (int i_geom = 0;; ++i_geom) {
@@ -149,8 +139,7 @@ Surface_geom* Case::_make_geom()
   return nullptr;
 }
 
-std::string Case::_assignment(std::string var_name)
-{
+std::string Case::_assignment(std::string var_name) {
   std::string statement = var_name + " = ";
   if      (_inter.variables->lookup<        int>(var_name)) statement += std::to_string(_vari(var_name));
   else if (_inter.variables->lookup<     double>(var_name)) statement += format_str(100, "%.20e", _vard(var_name));
@@ -388,6 +377,7 @@ Case::Case(std::string input_script)
   _inter.variables->create("write_mesh", new Namespace::Heisenberg<std::string>([this]() {
     _printers->info("writing mesh... ");
     std::string file_name = _vars("working_dir") + _iteration_suffix();
+    _solver().mesh().visualize("default", "mesh_diagnostic");
     _solver().mesh().write(file_name);
     force_symlink(_iteration_suffix() + ".mesh.h5", _vars("working_dir") + "latest.mesh.h5");
     _printers->info("done\n");
