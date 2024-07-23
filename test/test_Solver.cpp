@@ -639,22 +639,18 @@ void test_conservation(Test_mesh& tm, std::string name)
 }
 
 // test the solver on a sinusoid-derived initial condition which has a simple analytic solution
-TEST_CASE("Solver time marching")
-{
-  SECTION("all cartesian")
-  {
+TEST_CASE("Solver time marching") {
+  SECTION("all cartesian") {
     All_cartesian ac(true);
     test_marching(ac, "car");
   }
-  SECTION("all deformed")
-  {
+  SECTION("all deformed") {
     All_deformed ad0 (0, true);
     test_marching(ad0, "def0");
     All_deformed ad1 (1, true);
     test_marching(ad1, "def1");
   }
-  SECTION("extruded with deformed hanging nodes")
-  {
+  SECTION("extruded with deformed hanging nodes") {
     #define TEST_DIMENSIONS(i_dim, j_dim) \
       SECTION("dimensions " #i_dim " " #j_dim) { \
           Extrude_hanging eh(i_dim, j_dim, true); \
@@ -673,22 +669,18 @@ TEST_CASE("Solver time marching")
 }
 
 // test the solver on a sinusoid-derived initial condition which has a simple analytic solution
-TEST_CASE("Solver viscosity")
-{
-  SECTION("all cartesian")
-  {
+TEST_CASE("Solver viscosity") {
+  SECTION("all cartesian") {
     All_cartesian ac(true, hexed::Transport_model::constant(3.));
     test_visc(ac, "car");
   }
-  SECTION("all deformed")
-  {
+  SECTION("all deformed") {
     All_deformed ad0 (0, true, hexed::Transport_model::constant(3.));
     test_visc(ad0, "def0");
     All_deformed ad1 (1, true, hexed::Transport_model::constant(3.));
     test_visc(ad1, "def1");
   }
-  SECTION("extruded with deformed hanging nodes")
-  {
+  SECTION("extruded with deformed hanging nodes") {
     #define TEST_DIMENSIONS(i_dim, j_dim) \
       SECTION("dimensions " #i_dim " " #j_dim) { \
           Extrude_hanging eh(i_dim, j_dim, true, hexed::Transport_model::constant(3.)); \
@@ -707,22 +699,18 @@ TEST_CASE("Solver viscosity")
 }
 
 // test the solver on a randomly perturbed input (for which it can't possibly be accurate) and verify conservation
-TEST_CASE("Solver conservation")
-{
-  SECTION("all cartesian")
-  {
+TEST_CASE("Solver conservation") {
+  SECTION("all cartesian") {
     All_cartesian ac(true);
     test_conservation(ac, "car");
   }
-  SECTION("all deformed")
-  {
+  SECTION("all deformed") {
     All_deformed ad0 (0, true);
     test_conservation(ad0, "def0");
     All_deformed ad1 (1, true);
     test_conservation(ad1, "def1");
   }
-  SECTION("extruded with deformed hanging nodes")
-  {
+  SECTION("extruded with deformed hanging nodes") {
     #define TEST_CONSERVATION(i_dim, j_dim) \
       SECTION("dimensions " #i_dim " " #j_dim) { \
           Extrude_hanging eh(i_dim, j_dim, true); \
@@ -740,10 +728,8 @@ TEST_CASE("Solver conservation")
   }
 }
 
-TEST_CASE("face extrusion")
-{
-  SECTION("2D")
-  {
+TEST_CASE("face extrusion") {
+  SECTION("2D") {
     int serial_n [3][3];
     serial_n[1][1] = -1; // so that we know if we accidentally use this
     hexed::Solver solver {2, 2, 1.};
@@ -778,8 +764,7 @@ TEST_CASE("face extrusion")
     // check that state variables have been interpolated correctly during second extrusion
     REQUIRE(solver.integral_field(hexed::Qpoint_expr(hexed::Struct_expr("errsq = (density - (1 + pos0))^2"), inter))[0] == Catch::Approx(0.).scale(1.));
   }
-  SECTION("3D")
-  {
+  SECTION("3D") {
     int serial_n [3][3][3];
     serial_n[1][1][1] = -1; // so that we know if we accidentally use this
     hexed::Solver solver {3, 2, 1.};
@@ -808,8 +793,7 @@ TEST_CASE("face extrusion")
   }
 }
 
-TEST_CASE("normal continuity uncertainty")
-{
+TEST_CASE("normal continuity uncertainty") {
   hexed::Solver sol({3, hexed::config::max_row_size, .2});
   int elem_sn = sol.mesh().add_element(0, true, {0, 0, 0});
   sol.mesh().extrude();
@@ -826,9 +810,7 @@ TEST_CASE("normal continuity uncertainty")
   }
 }
 
-TEST_CASE("artificial viscosity convergence")
-{
-  #if NDEBUG
+TEST_CASE("artificial viscosity convergence", "[.slow]") {
   const int len0 = 100;
   const int len1 = 2;
   hexed::Solver sol(2, hexed::config::max_row_size, 1./len0);
@@ -876,11 +858,9 @@ TEST_CASE("artificial viscosity convergence")
   REQUIRE(sol.iteration_status().adv_res < 1e-12);
   REQUIRE(sol.iteration_status().diff_res < 1e-12);
   CHECK(std::log(sol.bounds_field(hexed::Art_visc_coef())[0][1]/init_max)/std::log(2) > hexed::config::max_row_size - 2.);
-  #endif
 }
 
-TEST_CASE("uncertainty")
-{
+TEST_CASE("uncertainty") {
   hexed::Solver sol(2, 2, 1.);
   int sn = sol.mesh().add_element(0, true, {0, 0});
   sol.mesh().extrude();
@@ -953,8 +933,7 @@ TEST_CASE("cylinder tree mesh") {
   REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
 }
 
-#if NDEBUG
-TEST_CASE("sphere tree mesh") {
+TEST_CASE("sphere tree mesh", "[.slow]") {
   static_assert(hexed::config::max_row_size >= 4);
   constexpr int row_size = 4;
   hexed::Solver solver (3, row_size, 1.);
@@ -1025,7 +1004,6 @@ TEST_CASE("sphere tree mesh") {
   solver.mesh().visualize("default", "sph_after_unref");
   std::cout << solver.mesh().stopwatch_tree().report() << std::endl;
 }
-#endif
 
 TEST_CASE("file I/O")
 {
