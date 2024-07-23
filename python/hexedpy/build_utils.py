@@ -271,6 +271,7 @@ class Buildable(Deliverable):
             self.builder.indent = prev_indent
             self.builder.message("\x1b[1;32mBuilt------------------\x1b[0m" + str(self))
         if self.has_test():
+            os.chdir(self.bdir)
             self.builder.message("\x1b[1;36mTesting----------------\x1b[0m" + str(self))
             self.builder.indent += "\x1b[;36m| \x1b[0m"
             assert self.test(), f"Tests for {self} failed after building."
