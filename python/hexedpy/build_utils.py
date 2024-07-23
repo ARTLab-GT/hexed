@@ -248,26 +248,29 @@ class Buildable(Deliverable):
         return utd
     def __str__(self):
         return str(self.output())
+    def test(self):
+        return True
     def find(self):
         if not isinstance(self.depends(), Dummy):
             self.builder.message(    "\x1b[0;94mChecking dependencies--\x1b[0m" + str(self))
         #self.builder.indent_level += 1
         assert self.found_depends, f"Failed to obtain dependencies {Deliverable.make(self.depends())} for {self.output()}."
+        cwd = os.getcwd()
+        os.chdir(self.bdir)
         if self.up_to_date():
             #self.builder.indent_level -= 1
             self.builder.message("\x1b[0;94mFound up-to-date-------\x1b[0m" + str(self))
         else:
             #self.builder.indent_level -= 1
             self.builder.message("\x1b[1;35mBuilding---------------\x1b[0m" + str(self))
-            cwd = os.getcwd()
-            os.chdir(self.builder.build_dir)
             #self.builder.indent_level += 1
             self.build()
-            os.chdir(cwd)
             self._found_output = Deliverable.make(self.output()).find()
             self.touch()
             #self.builder.indent_level -= 1
             self.builder.message("\x1b[1;32mBuilt------------------\x1b[0m" + str(self))
+        assert self.test(), f"Tests for {self} failed after building."
+        os.chdir(cwd)
         return self.found_output
     @property
     def do(self):

@@ -170,15 +170,14 @@ class Hexed(bu.C_project):
                     stdout=log_file,
                 ).do
 
-        ### run tests
+    def test(self):
         if self.builder.options["build_tests"] and self.builder.options["run_tests"]:
-            try:
-                args = [self.bdir + "bin/hexed_test", self.builder.options["test_args"]]
-                if self.builder.options["gdb"]:
-                    args = ["gdb", "--args"] + args
-                self.builder.subproc(args)
-            except Exception as e:
-                print(e)
+            args = [self.bdir + "bin/hexed_test", self.builder.options["test_args"]]
+            if self.builder.options["gdb"]:
+                args = ["gdb", "--args"] + args
+            return self.builder.subproc(args)
+        else:
+            return True
 
 if __name__ == "__main__":
     builder = bu.Builder()
