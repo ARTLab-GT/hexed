@@ -248,28 +248,34 @@ class Buildable(Deliverable):
         return utd
     def __str__(self):
         return str(self.output())
-    def test(self):
-        return True
+    def has_test(self):
+        return False
     def find(self):
+        prev_indent = self.builder.indent
         if not isinstance(self.depends(), Dummy):
-            self.builder.message(    "\x1b[0;94mChecking dependencies--\x1b[0m" + str(self))
-        #self.builder.indent_level += 1
+            self.builder.message("\x1b[0;94mChecking dependencies--\x1b[0m" + str(self))
+            self.builder.indent += "\x1b[;94m| \x1b[0m"
         assert self.found_depends, f"Failed to obtain dependencies {Deliverable.make(self.depends())} for {self.output()}."
         cwd = os.getcwd()
         os.chdir(self.bdir)
         if self.up_to_date():
-            #self.builder.indent_level -= 1
+            self.builder.indent = prev_indent
             self.builder.message("\x1b[0;94mFound up-to-date-------\x1b[0m" + str(self))
         else:
-            #self.builder.indent_level -= 1
+            self.builder.indent = prev_indent
             self.builder.message("\x1b[1;35mBuilding---------------\x1b[0m" + str(self))
-            #self.builder.indent_level += 1
+            self.builder.indent += "\x1b[;35m| \x1b[0m"
             self.build()
             self._found_output = Deliverable.make(self.output()).find()
             self.touch()
-            #self.builder.indent_level -= 1
+            self.builder.indent = prev_indent
             self.builder.message("\x1b[1;32mBuilt------------------\x1b[0m" + str(self))
-        assert self.test(), f"Tests for {self} failed after building."
+        if self.has_test():
+            self.builder.message("\x1b[1;36mTesting----------------\x1b[0m" + str(self))
+            self.builder.indent += "\x1b[;36m| \x1b[0m"
+            assert self.test(), f"Tests for {self} failed after building."
+            self.builder.indent = prev_indent
+            self.builder.message("\x1b[1;32mPassed tests-----------\x1b[0m" + str(self))
         os.chdir(cwd)
         return self.found_output
     @property
@@ -678,7 +684,7 @@ class Union(Buildable):
                 with Pool(processes=builder.options["n_build_procs"]) as pool:
                     pool.map(lambda p: exec(p), procs, chunksize=1)
             """.replace(16*" ", "")
-            self.builder.python("-", "--build_dir=" + self.builder.build_dir, input=bytes(commands, encoding="utf8"))
+            self.builder.python("-", "__base_indent=" + self.builder.indent, "--build_dir=" + self.builder.build_dir, input=bytes(commands, encoding="utf8"))
         else:
             for b in self._buildables:
                 b.do
@@ -783,6 +789,9 @@ class Prefices(Dict_wrapper):
 
 class Builder:
     def _merge_option(self, opt):
+        if opt.startswith("__base_indent"):
+            self.indent = opt.split("=")[1]
+            return
         match = re.fullmatch("--([a-z_]+)=(.*)", opt)
         assert match, f"Invalid option syntax `{opt}`. Options must be of the form --option_name=value"
         name = match.group(1)
@@ -804,14 +813,13 @@ class Builder:
             "internet": Option(True, convert=as_bool),
         }
         self.info = {"date":time.strftime("%Y-%m-%d", time.gmtime())}
+        self.indent = ""
         for opt in opts:
             self._merge_option(opt)
         self.mkdir(self.build_dir)
         self.cache_dir = self.build_dir + "cache/"
         self.mkdir(self.cache_dir)
         self.synch_cache()
-        self.indent_level = 0
-        self.tab = " \x1b[1;34m|\x1b[0m"
         self.env = dict(os.environ)
         if self.options["venv"]:
             self.venv_dir = self.build_dir + ".build_venv/"
@@ -890,11 +898,8 @@ class Builder:
                     with open(self.cache_dir + name, "w") as cache:
                         cache.write(text)
 
-    def indent(self):
-        return self.indent_level*self.tab
-
     def message(self, text, **kwargs):
-        print(self.indent() + text, flush=True, **kwargs)
+        print(self.indent + text, flush=True, **kwargs)
 
     def mkdir(self, name):
         os.makedirs(absolute(name), exist_ok=True)

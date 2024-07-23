@@ -32,31 +32,6 @@ class Hexed(bu.C_project):
             "run_tests": bu.Option(not is_release, convert=bu.as_bool),
             "sanitize": bu.Option(not is_release, convert=bu.as_bool),
         })
-        self.builder.info["version"] = self.version
-        self.builder.info["version_major"], self.builder.info["version_minor"], self.builder.info["version_patch"] = self.version.split(".")
-        if os.path.isdir(self.sdir + ".git/"):
-            self[bu.Pip]("gitpython").do
-            command = f"import git; repo = git.Repo('{self.sdir}'); print(repo.head.commit, end='')"
-            self.builder.info["commit"] = self.builder.python("-c", command, capture_output=True).stdout.decode()
-        else:
-            self.builder.info["commit"] = "notagitrepo"
-        #### determine compile flags
-        bu.Compiler.cpp_standard = 20
-        if self.builder.options["architecture"] != "any":
-            bu.Compiler.architecture = self.builder.options["architecture"]
-        if self.builder.options["build_mode"] == "release":
-            bu.Compiler.optimize = 3
-        elif self.builder.options["build_mode"] == "debug":
-            bu.Compiler.debug = 3
-        if self.builder.options["threaded"]:
-            bu.Compiler.openmp = True
-        else:
-            bu.Compiler.warn.append("no-unknown-pragmas")
-        if self.builder.options["sanitize"]:
-            bu.Compiler.sanitize = True
-        if self.builder.options["profile"]:
-            bu.Compiler.debug = 3
-            bu.Compiler.profile = True
         # Get a list of all source files. The entire build process can be bypassed if there are no changes to any of these files
         self._all_sources = bu.all_(bu.contents(self.sdir, ignore=lambda f:
             bu.not_source(f) or
@@ -82,6 +57,31 @@ class Hexed(bu.C_project):
         return deps
 
     def build(self):
+        #### configure
+        if os.path.isdir(self.sdir + ".git/"):
+            self[bu.Pip]("gitpython").do
+            command = f"import git; repo = git.Repo('{self.sdir}'); print(repo.head.commit, end='')"
+            self.builder.info["commit"] = self.builder.python("-c", command, capture_output=True).stdout.decode()
+        else:
+            self.builder.info["commit"] = "notagitrepo"
+        self.builder.info["version"] = self.version
+        self.builder.info["version_major"], self.builder.info["version_minor"], self.builder.info["version_patch"] = self.version.split(".")
+        bu.Compiler.cpp_standard = 20
+        if self.builder.options["architecture"] != "any":
+            bu.Compiler.architecture = self.builder.options["architecture"]
+        if self.builder.options["build_mode"] == "release":
+            bu.Compiler.optimize = 3
+        elif self.builder.options["build_mode"] == "debug":
+            bu.Compiler.debug = 3
+        if self.builder.options["threaded"]:
+            bu.Compiler.openmp = True
+        else:
+            bu.Compiler.warn.append("no-unknown-pragmas")
+        if self.builder.options["sanitize"]:
+            bu.Compiler.sanitize = True
+        if self.builder.options["profile"]:
+            bu.Compiler.debug = 3
+            bu.Compiler.profile = True
         #### compile and link
         self.builder.prefices["include"] = (self.bdir + "include/hexed",) + self.builder.prefices["include"]
         self.builder.mkdir(self.bdir + "libhexed")
@@ -170,14 +170,14 @@ class Hexed(bu.C_project):
                     stdout=log_file,
                 ).do
 
+    def has_test(self):
+        return self.builder.options["build_tests"] and self.builder.options["run_tests"]
+
     def test(self):
-        if self.builder.options["build_tests"] and self.builder.options["run_tests"]:
-            args = [self.bdir + "bin/hexed_test", self.builder.options["test_args"]]
-            if self.builder.options["gdb"]:
-                args = ["gdb", "--args"] + args
-            return self.builder.subproc(args)
-        else:
-            return True
+        args = [self.bdir + "bin/hexed_test", self.builder.options["test_args"]]
+        if self.builder.options["gdb"]:
+            args = ["gdb", "--args"] + args
+        return self.builder.subproc(args)
 
 if __name__ == "__main__":
     builder = bu.Builder()
