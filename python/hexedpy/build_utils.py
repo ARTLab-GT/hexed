@@ -764,6 +764,8 @@ class Prefices(Dict_wrapper):
     def add(self, name, env_vars=[], suffix="", sys_paths=()):
         self._env_vars[name] = env_vars
         self._suffices[name] = suffix
+        if isinstance(sys_paths, str):
+            sys_paths = (sys_paths,)
         self._sys_paths[name] = tuple(sys_paths)
         paths = []
         for var in env_vars:
@@ -834,7 +836,7 @@ class Builder:
         self.prefices = Prefices(self.env)
         self.prefices.add("bin", env_vars=["PATH"])
         self.prefices.add("lib", env_vars=["LIBRARY_PATH", "LD_LIBRARY_PATH", "DT_RPATH"],
-            sys_paths=(("usr/lib/") if self.options["use_system_paths"] else ()))
+            sys_paths=(("/usr/lib/") if self.options["use_system_paths"] else ()))
         self.prefices.add("include", env_vars=["INCLUDE_PATH", "CPLUS_INCLUDE_PATH"],
             sys_paths=(("/usr/include/", "/usr/local/include/") if self.options["use_system_paths"] else ()))
         self.prefices.add("share")
