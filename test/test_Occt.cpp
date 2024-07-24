@@ -8,7 +8,7 @@
 void test(std::string file_extension) {
   REQUIRE_THROWS(hexed::Occt::read("nonexistent." + file_extension));
   // ellipsoid bounding box: [-.25, .25] x [-.125, .125] x [-.125, .125]
-  hexed::Occt::Geom geom(hexed::Occt::read("ellipsoid." + file_extension), 3);
+  hexed::Occt::Geom geom(hexed::Occt::read("../test_assets/ellipsoid." + file_extension), 3);
   auto nearest = geom.nearest_point(-hexed::Mat<3>::Unit(0)).point();
   REQUIRE_THAT(nearest, Catch::Matchers::RangeEquals(hexed::Mat<3>{-.25, 0., 0.}, hexed::math::Approx_equal(0, 1e-3)));
   REQUIRE(geom.nearest_point(-hexed::Mat<3>::Unit(0), 0.1).empty());
@@ -27,7 +27,7 @@ TEST_CASE("Occt::Geom") {
     test("stp");
   }
   SECTION("2D") {
-    auto shape = hexed::Occt::read("ellipse.STEP");
+    auto shape = hexed::Occt::read("../test_assets/ellipse.STEP");
     std::vector<std::unique_ptr<hexed::Surface_geom>> geoms;
     geoms.emplace_back(new hexed::Occt::Geom(shape, 2));
     geoms.emplace_back(new hexed::Simplex_geom(hexed::Occt::segments(shape, 1000)));

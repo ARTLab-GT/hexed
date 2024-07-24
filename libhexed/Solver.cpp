@@ -1263,7 +1263,8 @@ std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func,
   return bounds;
 }
 
-void Solver::visualize_field(std::string format, std::string name, const Qpoint_func& output_variables, int n_sample, bool wireframe) {
+void Solver::visualize_field(std::string format, std::string name, const Qpoint_func& output_variables,
+                             int n_sample, bool wireframe) {
   auto visualizer = Visualizer::create(format, params.n_dim, wireframe ? 1 : params.n_dim, name, output_variables,
                                        _namespace->get<double>("flow_time"), Visualizer::block);
   HEXED_ASSERT(params.n_dim > wireframe, "can only visualize field wireframes in > 1D");
