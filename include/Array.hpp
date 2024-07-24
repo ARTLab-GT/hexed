@@ -294,6 +294,29 @@ class Array {
   QUALIFIED(const)
   #undef QUALIFIED
 
+  #define DEFINE_OPERATOR(BIN_OP) \
+    Array<T>& operator BIN_OP(const Array<T>& that) { \
+      HEXED_ARRAY_ASSERT(that.size() == size(), "array sizes must match for arithmetic"); \
+      for (int i = 0; i < size(); ++i) { \
+        _data[i] BIN_OP that[i]; \
+      } \
+      return *this; \
+    } \
+    template <typename Scalar> \
+    Array<T>& operator BIN_OP(Scalar s) { \
+      for (int i = 0; i < size(); ++i) { \
+        _data[i] BIN_OP s; \
+      } \
+      return *this; \
+    } \
+
+  DEFINE_OPERATOR(-=)
+  DEFINE_OPERATOR(+=)
+  DEFINE_OPERATOR(/=)
+  DEFINE_OPERATOR(*=)
+  DEFINE_OPERATOR(%=)
+  #undef DEFINE_OPERATOR
+
   private:
   int _order;
   std::vector<T> _data_storage;
