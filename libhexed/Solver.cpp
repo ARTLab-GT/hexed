@@ -51,14 +51,14 @@ void Solver::_get_cache() {
   }
 }
 
-void Solver::share_vertex_data(std::function<double&(Element&, int i_vertex)> access_fun, std::function<double(Mat<>)> reduce) {
+void Solver::share_vertex_data(std::function<double&(Element&, int i_vertex)> access_fun,
+                               std::function<double(Mat<>)> reduce) {
   share_vertex_data(access_fun, access_fun, reduce);
 }
 
 void Solver::share_vertex_data(std::function<double(Element&, int i_vertex)> get,
                                std::function<double&(Element&, int i_vertex)> set,
-                               std::function<double(Mat<>)> reduce)
-{
+                               std::function<double(Mat<>)> reduce) {
   auto& elements = acc_mesh->elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
@@ -158,27 +158,29 @@ void Solver::_init_face_state() {
 
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
                Transport_model viscosity_model, Transport_model thermal_conductivity_model,
-               std::shared_ptr<Namespace> space, std::shared_ptr<Printer_set> printer, bool implicit) :
-  params{implicit ? Linearized::storage_start + Linearized::n_storage : 2, n_dim + 2, n_dim, row_size},
-  acc_mesh{new Accessible_mesh(params, root_mesh_size)},
-  basis{row_size},
-  stopwatch{"(element*update)"},
-  use_art_visc{false},
-  fix_admis{false},
-  av_rs{row_size},
-  visc{viscosity_model},
-  therm_cond{thermal_conductivity_model},
-  _namespace{space},
-  _printer{printer},
-  _implicit{implicit},
-  _preti_level{0}
+               std::shared_ptr<Namespace> space, std::shared_ptr<Printer_set> printer, bool implicit)
+: params{implicit ? Linearized::storage_start + Linearized::n_storage : 2, n_dim + 2, n_dim, row_size}
+, acc_mesh{new Accessible_mesh(params, root_mesh_size)}
+, basis{row_size}
+, stopwatch{"(element*update)"}
+, use_art_visc{false}
+, fix_admis{false}
+, av_rs{row_size}
+, visc{viscosity_model}
+, therm_cond{thermal_conductivity_model}
+, _namespace{space}
+, _printer{printer}
+, _implicit{implicit}
+, _preti_level{0}
 {
   _namespace->assign_default("max_safety", .7); // maximum allowed safety factor for time stepping
   _namespace->assign_default("max_time_step", huge); // maximum allowed time step
   _namespace->assign_default("fix_admis_max_safety", .7); // staility ratio for fixing thermodynamic admissibility.
   _namespace->assign_default("av_diff_ratio", .3); // ratio of diffusion time to advection width
-  _namespace->assign_default("av_visc_mult", 1e2); // final scaling parameter applied to artificial viscosity coefficient
-  _namespace->assign_default("av_unscaled_max", 5.); // maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
+  // final scaling parameter applied to artificial viscosity coefficient
+  _namespace->assign_default("av_visc_mult", 1e2);
+  // maximum artificial viscosity coefficient before scaling (i.e. nondimensional)
+  _namespace->assign_default("av_unscaled_max", 5.);
   _namespace->assign_default("av_advect_max_safety", .7); // stability ratio for advection
   _namespace->assign_default("av_diff_max_safety", .7); // stability ratio for diffusion
   _namespace->assign_default("buffer_dist", .8*std::sqrt(params.n_dim));
@@ -187,8 +189,10 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("n_cheby_av", 1);
   _namespace->assign_default("cheby_safety", .9); // safety factor to apply to Chebyshev-acceleration
   _namespace->assign_default("bl_multirate", 0);
-  _namespace->assign_default("av_advect_iters", 1); // number of advection iterations to run each time `update_art_visc_smoothness` is called
-  _namespace->assign_default("av_diff_iters", 1); // number of diffusion iterations to run each time `update_art_visc_smoothness` is called
+  // number of advection iterations to run each time `update_art_visc_smoothness` is called
+  _namespace->assign_default("av_advect_iters", 1);
+  // number of diffusion iterations to run each time `update_art_visc_smoothness` is called
+  _namespace->assign_default("av_diff_iters", 1);
   _namespace->assign_default("flow_iters", 1);
   _namespace->assign_default("bl_iters", 1);
   _namespace->assign_default("fix_iters", 0);
@@ -247,13 +251,19 @@ Mesh& Solver::mesh() {return *acc_mesh;}
 Storage_params Solver::storage_params() {return params;}
 const Stopwatch_tree& Solver::stopwatch_tree() {return stopwatch;}
 
-void Solver::read_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs, Surface_geom* geom, Flow_bc* surface_bc) {
+void Solver::read_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs,
+                       Surface_geom* geom, Flow_bc* surface_bc) {
   acc_mesh.reset(new Accessible_mesh(file_name, extremal_bcs, geom, surface_bc));
-  HEXED_ASSERT(acc_mesh->storage_params().n_stage == params.n_stage, "attempt to read a mesh file with a different `n_stage`");
-  HEXED_ASSERT(acc_mesh->storage_params().n_var == params.n_var, "attempt to read a mesh file with a different `n_var`");
-  HEXED_ASSERT(acc_mesh->storage_params().n_dim == params.n_dim, "attempt to read a mesh file with a different `n_dim`");
-  HEXED_ASSERT(acc_mesh->storage_params().row_size == params.row_size, "attempt to read a mesh file with a different `row_size`");
-  HEXED_ASSERT(acc_mesh->storage_params().n_forcing == params.n_forcing, "attempt to read a mesh file with a different `n_forcing`");
+  HEXED_ASSERT(acc_mesh->storage_params().n_stage == params.n_stage,
+               "attempt to read a mesh file with a different `n_stage`");
+  HEXED_ASSERT(acc_mesh->storage_params().n_var == params.n_var,
+               "attempt to read a mesh file with a different `n_var`");
+  HEXED_ASSERT(acc_mesh->storage_params().n_dim == params.n_dim,
+               "attempt to read a mesh file with a different `n_dim`");
+  HEXED_ASSERT(acc_mesh->storage_params().row_size == params.row_size,
+               "attempt to read a mesh file with a different `row_size`");
+  HEXED_ASSERT(acc_mesh->storage_params().n_forcing == params.n_forcing,
+               "attempt to read a mesh file with a different `n_forcing`");
   calc_jacobian(false);
 }
 
