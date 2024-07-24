@@ -123,9 +123,7 @@ void Accessible_mesh::match_edges() {
   if (!surf_geom) return;
   _blocks.edges_2d();
   _blocks.faces_3d();
-  std::cout << "matching edges" << std::endl;
   for (auto& geom_edge : surf_geom->edges()) {
-    std::cout << "  edge" << std::endl;
     auto verts = _blocks.boundary_verts();
     next::Vertex* best_vert = nullptr;
     double badness = huge;
@@ -156,7 +154,7 @@ void Accessible_mesh::match_edges() {
         Mat<3> p = vert->point({});
         double d = 2*edge.element()->nominal_size();
         auto node = geom_edge.nearest(p, arc_len - d, arc_len + d);
-        double prog = node.arc_len - .3*(p - node.pos).norm();
+        double prog = node.arc_len - (p - node.pos).norm();
         if (prog > progress) {
           best_edge = &edge;
           best_vert = vert;
@@ -168,10 +166,8 @@ void Accessible_mesh::match_edges() {
       if (!geom_edge.matched_edges.empty()) if (best_edge == geom_edge.matched_edges.back().get()) {
         geom_edge.matched_edges.erase(geom_edge.matched_edges.end());
         geom_edge.matched_vertices.erase(geom_edge.matched_vertices.end());
-        std::cout << "    backtracking " << progress << std::endl;
         break;
       }
-      std::cout << "    " << progress << std::endl;
       geom_edge.matched_edges.emplace_back(best_edge);
       curr = best_vert;
       geom_edge.matched_vertices.emplace_back(best_vert);
@@ -200,7 +196,6 @@ void Accessible_mesh::match_edges() {
         }
       }
     }
-    next::Block::visualize("default", "matched", next::Sequence<Mortal_ptr<next::Edge>&>::vector_view(geom_edge.matched_edges).dereference<const next::Block&>());
   }
 }
 
@@ -210,29 +205,29 @@ Storage_params incr_res_cache(Storage_params params) {
 }
 
 Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg)
-: params{params_arg},
-  n_vert{math::pow(2, params.n_dim)},
-  root_sz{root_size_arg},
-  car{params, root_sz},
-  def{incr_res_cache(params), root_sz},
-  def_as_car{def.elements()},
-  elems{car.elements(), def_as_car},
-  kernel_elems{elems},
-  elem_cons{car.element_connections(), def.element_connections()},
-  bound_face_cons{car.bound_face_con_view, def.bound_face_con_view},
-  bound_cons{car.boundary_connections(), def.boundary_connections()},
-  def_face_cons{def.elem_face_con_v, bound_face_cons},
-  ref_face_v{car.refined_faces(), def.refined_faces()},
-  matcher_v{car.hanging_vertex_matchers(), def.hanging_vertex_matchers()},
-  surf_bc_sn{-1}, // set to -1 to prevent uninitialized comparisons
-  surf_geom{nullptr},
-  verts_are_reset{false},
-  _mask_levels{0},
-  _basis(params.row_size),
-  _blocks(params.n_dim, _basis),
-  _n_verts{0},
-  _stopwatch("mesh"),
-  buffer_dist{std::sqrt(params.n_dim)/2}
+: params{params_arg}
+, n_vert{math::pow(2, params.n_dim)}
+, root_sz{root_size_arg}
+, car{params, root_sz}
+, def{incr_res_cache(params), root_sz}
+, def_as_car{def.elements()}
+, elems{car.elements(), def_as_car}
+, kernel_elems{elems}
+, elem_cons{car.element_connections(), def.element_connections()}
+, bound_face_cons{car.bound_face_con_view, def.bound_face_con_view}
+, bound_cons{car.boundary_connections(), def.boundary_connections()}
+, def_face_cons{def.elem_face_con_v, bound_face_cons}
+, ref_face_v{car.refined_faces(), def.refined_faces()}
+, matcher_v{car.hanging_vertex_matchers(), def.hanging_vertex_matchers()}
+, surf_bc_sn{-1} // set to -1 to prevent uninitialized comparisons
+, surf_geom{nullptr}
+, verts_are_reset{false}
+, _mask_levels{0}
+, _basis(params.row_size)
+, _blocks(params.n_dim, _basis)
+, _n_verts{0}
+, _stopwatch("mesh")
+, buffer_dist{std::sqrt(params.n_dim)/2}
 {
   def.face_con_v = def_face_cons;
   _stopwatch.emplace("relax", "vertex update");
@@ -1442,7 +1437,6 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   snap_vertices();
   id_smooth_verts();
   _n_verts = _blocks.verts().size();
-  std::cout << "clearing" << std::endl;
   if (surf_geom) for (auto& edge : surf_geom->edges()) {
     edge.matched_vertices.clear();
     edge.matched_edges.clear();
@@ -2028,8 +2022,7 @@ void Accessible_mesh::read_file(std::string file_name) {
 }
 
 Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs, Surface_geom* geometry, Flow_bc* surface_bc)
-: Accessible_mesh(read_params(file_name), read_root_sz(file_name))
-{
+: Accessible_mesh(read_params(file_name), read_root_sz(file_name)) {
   // take ownership of these to avoid memory leaks in case of exception
   std::unique_ptr<Flow_bc> fbc;
   if (surface_bc) fbc.reset(surface_bc);
@@ -2052,8 +2045,7 @@ Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> ex
 }
 
 Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> flow_bcs, std::vector<Mesh_bc*> mesh_bcs)
-: Accessible_mesh(read_params(file_name), read_root_sz(file_name))
-{
+: Accessible_mesh(read_params(file_name), read_root_sz(file_name)) {
   HEXED_ASSERT(flow_bcs.size() == mesh_bcs.size(), "must supply same number of flow and mesh boundary conditions");
   for (unsigned i_bc = 0; i_bc < flow_bcs.size(); ++i_bc) {
     add_boundary_condition(flow_bcs[i_bc], mesh_bcs[i_bc]);

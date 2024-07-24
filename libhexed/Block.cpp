@@ -69,16 +69,15 @@ Mat<3> Vertex::_point(const std::vector<int>&) const {
 }
 
 Vertex::Vertex(Mat<3> pos, int row_size)
-: Block(0, row_size),
-  pos{pos},
-  _update{Mat<3>::Zero()},
-  _edges(this),
-  _elems(this),
-  _glued_to(this),
-  _shadowed(this),
-  _shadows(this)
-{
-}
+: Block(0, row_size)
+, pos{pos}
+, _update{Mat<3>::Zero()}
+, _edges(this)
+, _elems(this)
+, _glued_to(this)
+, _shadowed(this)
+, _shadows(this)
+{}
 
 Vertex::~Vertex() {
   for (auto v : _shadows.theirs()) v->pos = point({});
@@ -187,8 +186,11 @@ std::vector<int> interior_dims(int n_dim, int row_size) {
 }
 
 Boundary_block::Boundary_block(int n_dim, const Basis& b)
-: Block(n_dim, b.row_size), _interior(interior_dims(n_dim, b.row_size)), _basis{&b}, _elem(this) {
-}
+: Block(n_dim, b.row_size)
+, _interior(interior_dims(n_dim, b.row_size))
+, _basis{&b}
+, _elem(this)
+{}
 
 Mat<3> Edge::_point(const std::vector<int>& coords) const {
   int coord = coords[0];
@@ -206,7 +208,10 @@ Mat<3> Edge::_point(const std::vector<int>& coords) const {
 }
 
 Edge::Edge(Vertex& vertex0, Vertex& vertex1, const Basis& b)
-: Boundary_block(1, b), _verts{this, this}, _glued_to(this), _glued(this)
+: Boundary_block(1, b)
+, _verts{this, this}
+, _glued_to(this)
+, _glued(this)
 {
   vertex0.pair(_verts[0]);
   vertex1.pair(_verts[1]);
@@ -250,8 +255,7 @@ Mat<3> Face::_point(const std::vector<int>& coords) const {
   return _interior(coords[0] - 1)(coords[1] - 1).vector();
 }
 
-Face::Face(std::array<Vertex*, 4> verts, const Basis& b)
-: Boundary_block(2, b) {
+Face::Face(std::array<Vertex*, 4> verts, const Basis& b) : Boundary_block(2, b) {
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
       _edges.emplace_back(*verts[(2 - i_dim)*sign], *verts[(2 - i_dim)*sign + 1 + i_dim], basis());
@@ -334,7 +338,13 @@ Mat<3> Element_shape::_point(const std::vector<int>& coords) const {
 }
 
 Element_shape::Element_shape(int nd, const Basis& b)
-: Block(nd, b.row_size), _basis{&b}, _i_bf{6}, _bf(this), _boundary_edges(this), _glued_verts(this) {
+: Block(nd, b.row_size)
+, _basis{&b}
+, _i_bf{6}
+, _bf(this)
+, _boundary_edges(this)
+, _glued_verts(this)
+{
   for (int i_vert = 0; i_vert < math::pow(2, nd); ++i_vert) _verts.emplace_back(this);
 }
 
@@ -423,8 +433,7 @@ void Element_shape::connect(std::vector<Element_shape*> others, Connection_direc
 
 const int Mesh_blocks::no_face = -1;
 
-Mesh_blocks::Mesh_blocks(int nd, const Basis& b)
-: n_dim{nd}, basis{b} {
+Mesh_blocks::Mesh_blocks(int nd, const Basis& b): n_dim{nd}, basis{b} {
 }
 
 template <typename T>
