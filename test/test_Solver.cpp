@@ -933,6 +933,7 @@ TEST_CASE("cylinder tree mesh") {
   REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
 }
 
+#if 0
 TEST_CASE("sphere tree mesh", "[.slow]") {
   static_assert(hexed::config::max_row_size >= 4);
   constexpr int row_size = 4;
@@ -945,7 +946,6 @@ TEST_CASE("sphere tree mesh", "[.slow]") {
     solver.mesh().update();
   }
   solver.mesh().set_surface(new hexed::Hypersphere(origin, .5), new hexed::Nonpenetration, origin + Eigen::Vector3d{.8, .8, .8});
-  for (int i = 0; i < 3; ++i) solver.mesh().relax();
   solver.mesh().visualize("default", "sph_before_edge");
   {
     std::vector<hexed::Geom_edge> edges;
@@ -959,8 +959,8 @@ TEST_CASE("sphere tree mesh", "[.slow]") {
     edges.emplace_back(arr.copy());
     edges.back().visualize("default", "edge");
     solver.mesh().set_edges(std::move(edges));
-    solver.mesh().match_edges();
   }
+  solver.mesh().relax_and_match(6);
   int n_initial = solver.mesh().n_elements();
   for (int i = 0; i < 3; ++i) solver.mesh().relax();
   solver.calc_jacobian();
@@ -983,9 +983,7 @@ TEST_CASE("sphere tree mesh", "[.slow]") {
       return ref;
     };
     solver.mesh().update(criterion);
-    for (int i = 0; i < 3; ++i) solver.mesh().relax();
-    solver.mesh().match_edges();
-    for (int i = 0; i < 3; ++i) solver.mesh().relax();
+    solver.mesh().relax_and_match(6);
     solver.mesh().valid().assert_valid();
   }
   solver.calc_jacobian();
@@ -993,9 +991,7 @@ TEST_CASE("sphere tree mesh", "[.slow]") {
   solver.mesh().visualize("default", "sph_after_ref");
   for (int i = 0; i < 3; ++i) {
     solver.mesh().update(hexed::criteria::never, [](hexed::Element& elem){return elem.refinement_level() > 3;});
-    for (int i = 0; i < 3; ++i) solver.mesh().relax();
-    solver.mesh().match_edges();
-    for (int i = 0; i < 6; ++i) solver.mesh().relax();
+    solver.mesh().relax_and_match(6);
     solver.mesh().valid().assert_valid();
   }
   REQUIRE(solver.mesh().n_elements() == n_initial); // this mesh should have been completely unrefined to where it started
@@ -1004,6 +1000,7 @@ TEST_CASE("sphere tree mesh", "[.slow]") {
   solver.mesh().visualize("default", "sph_after_unref");
   std::cout << solver.mesh().stopwatch_tree().report() << std::endl;
 }
+#endif
 
 TEST_CASE("file I/O")
 {

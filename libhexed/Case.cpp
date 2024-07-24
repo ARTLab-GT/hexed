@@ -296,10 +296,7 @@ Case::Case(std::string input_script)
     if (geom) {
       _has_geom = true;
       _solver().mesh().set_surface(geom, _make_bc(_vars("surface_bc")), _get_vector("flood_fill_start", _vari("n_dim")));
-      int n_smooth = _vari("n_smooth");
-      for (int i_smooth = 0; i_smooth < n_smooth/2; ++i_smooth) _solver().mesh().relax(0.5);
-      _solver().mesh().match_edges();
-      for (int i_smooth = 0; i_smooth < n_smooth - n_smooth/2; ++i_smooth) _solver().mesh().relax(0.5);
+      _solver().mesh().relax_and_match(_vari("n_smooth"), .5);
       _solver().calc_jacobian();
     }
     return "";
@@ -322,10 +319,7 @@ Case::Case(std::string input_script)
     _solver().set_uncertainty(Elem_nonsmooth(jidf));
     _solver().mesh().set_unref_locks(criteria::if_extruded);
     bool changed = _solver().mesh().update(crits[0], crits[1]);
-    int n_smooth = _vari("n_smooth");
-    for (int i_smooth = 0; i_smooth < n_smooth/2; ++i_smooth) _solver().mesh().relax(0.5);
-    _solver().mesh().match_edges();
-    for (int i_smooth = 0; i_smooth < n_smooth - n_smooth/2; ++i_smooth) _solver().mesh().relax(0.5);
+    _solver().mesh().relax_and_match(_vari("n_smooth"), .5);
     _solver().calc_jacobian();
     return changed;
   }));

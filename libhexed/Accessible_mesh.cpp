@@ -119,86 +119,91 @@ void Accessible_mesh::snap_vertices() {
   }
 }
 
-void Accessible_mesh::match_edges() {
-  if (!surf_geom) return;
+void Accessible_mesh::relax_and_match(int n_relax, double factor) {
   _blocks.edges_2d();
   _blocks.faces_3d();
   auto verts = _blocks.boundary_verts();
   for (auto& vert : verts) vert.unshadow();
-  for (auto& geom_edge : surf_geom->edges()) {
-    next::Vertex* best_vert = nullptr;
-    double badness = huge;
-    double arc_len = 0;
-    for (auto& vert : verts) {
-      if (!vert.glued()) {
-        Mat<3> p = vert.point({});
-        auto node = geom_edge.nearest(p);
-        double b = (p - node.pos).norm() + node.arc_len;
-        if (b < badness) {
-          best_vert = &vert;
-          badness = b;
-          arc_len = node.arc_len;
+  for (int i_relax = 0; i_relax < n_relax/2; ++i_relax) relax(factor);
+  if (surf_geom) {
+    for (auto& geom_edge : surf_geom->edges()) {
+      next::Vertex* best_vert = nullptr;
+      double badness = huge;
+      double arc_len = 0;
+      for (auto& vert : verts) {
+        if (!vert.glued()) {
+          Mat<3> p = vert.point({});
+          auto node = geom_edge.nearest(p);
+          double b = (p - node.pos).norm() + node.arc_len;
+          if (b < badness) {
+            best_vert = &vert;
+            badness = b;
+            arc_len = node.arc_len;
+          }
         }
       }
-    }
-    geom_edge.matched_edges.clear();
-    geom_edge.matched_vertices.clear();
-    geom_edge.matched_vertices.emplace_back(best_vert);
-    next::Vertex* curr = best_vert;
-    while (true) {
-      next::Edge* best_edge = nullptr;
-      double temp_arc_len = 0;
-      double progress = -huge;
-      for (auto& edge : curr->edges()) if (!edge.glued()) {
-        next::Vertex* vert = &edge.vertex(0) == curr ? &edge.vertex(1) : &edge.vertex(0);
-        Mat<3> p = vert->point({});
-        double d = 2*edge.element()->nominal_size();
-        auto node = geom_edge.nearest(p, arc_len - d, arc_len + d);
-        double prog = node.arc_len - (p - node.pos).norm();
-        if (prog > progress) {
-          best_edge = &edge;
-          best_vert = vert;
-          progress = prog;
-          temp_arc_len = node.arc_len;
-        }
-      }
-      if (!best_edge) break;
-      if (!geom_edge.matched_edges.empty()) if (best_edge == geom_edge.matched_edges.back().get()) {
-        geom_edge.matched_edges.erase(geom_edge.matched_edges.end());
-        geom_edge.matched_vertices.erase(geom_edge.matched_vertices.end());
-        break;
-      }
-      geom_edge.matched_edges.emplace_back(best_edge);
-      curr = best_vert;
+      geom_edge.matched_edges.clear();
+      geom_edge.matched_vertices.clear();
       geom_edge.matched_vertices.emplace_back(best_vert);
-      arc_len = temp_arc_len;
-    }
-    for (std::size_t i_edge = 1; i_edge < geom_edge.matched_edges.size(); ++i_edge) {
-      std::array<next::Edge*, 2> edges {
-        geom_edge.matched_edges[i_edge - 1].get(),
-        geom_edge.matched_edges[i_edge].get(),
-      };
-      bool collapsed = false;
-      for (int i = 0; i < 2; ++i) collapsed = collapsed || edges[i]->vertex(0).are_shadows(edges[i]->vertex(1));
-      if (!collapsed) {
-        bool shared_elem = false;
-        for (auto elem0 : edges[0]->contacted_elements()) {
-          for (auto elem1 : edges[1]->contacted_elements()) {
-            shared_elem = shared_elem || elem0 == elem1;
+      next::Vertex* curr = best_vert;
+      while (true) {
+        next::Edge* best_edge = nullptr;
+        double temp_arc_len = 0;
+        double progress = -huge;
+        for (auto& edge : curr->edges()) if (!edge.glued()) {
+          next::Vertex* vert = &edge.vertex(0) == curr ? &edge.vertex(1) : &edge.vertex(0);
+          Mat<3> p = vert->point({});
+          double d = 2*edge.element()->nominal_size();
+          auto node = geom_edge.nearest(p, arc_len - d, arc_len + d);
+          double prog = node.arc_len - (p - node.pos).norm();
+          if (prog > progress) {
+            best_edge = &edge;
+            best_vert = vert;
+            progress = prog;
+            temp_arc_len = node.arc_len;
           }
         }
-        if (shared_elem) {
-          double badness [2] {};
-          for (int i = 0; i < 2; ++i) {
-            Mat<3> avg_pos = .5*(edges[i]->vertex(0).point({}) + edges[i]->vertex(1).point({}));
-            for (int j = 0; j < 2; ++j) badness[i] += edges[i]->vertex(j).badness(avg_pos);
+        if (!best_edge) break;
+        if (!geom_edge.matched_edges.empty()) if (best_edge == geom_edge.matched_edges.back().get()) {
+          geom_edge.matched_edges.erase(geom_edge.matched_edges.end());
+          geom_edge.matched_vertices.erase(geom_edge.matched_vertices.end());
+          break;
+        }
+        geom_edge.matched_edges.emplace_back(best_edge);
+        curr = best_vert;
+        geom_edge.matched_vertices.emplace_back(best_vert);
+        arc_len = temp_arc_len;
+      }
+    }
+    for (auto& geom_edge : surf_geom->edges()) {
+      for (std::size_t i_edge = 1; i_edge < geom_edge.matched_edges.size(); ++i_edge) {
+        std::array<next::Edge*, 2> edges {
+          geom_edge.matched_edges[i_edge - 1].get(),
+          geom_edge.matched_edges[i_edge].get(),
+        };
+        bool collapsed = false;
+        for (int i = 0; i < 2; ++i) collapsed = collapsed || edges[i]->vertex(0).are_shadows(edges[i]->vertex(1));
+        if (!collapsed) {
+          bool shared_elem = false;
+          for (auto elem0 : edges[0]->contacted_elements()) {
+            for (auto elem1 : edges[1]->contacted_elements()) {
+              shared_elem = shared_elem || elem0 == elem1;
+            }
           }
-          int collapse = badness[1] < badness[0];
-          edges[collapse]->vertex(0).shadow(edges[collapse]->vertex(1));
+          if (shared_elem) {
+            double badness [2] {};
+            for (int i = 0; i < 2; ++i) {
+              Mat<3> avg_pos = .5*(edges[i]->vertex(0).point({}) + edges[i]->vertex(1).point({}));
+              for (int j = 0; j < 2; ++j) badness[i] += edges[i]->vertex(j).badness(avg_pos);
+            }
+            int collapse = badness[1] < badness[0];
+            edges[collapse]->vertex(0).shadow(edges[collapse]->vertex(1));
+          }
         }
       }
     }
   }
+  for (int i_relax = 0; i_relax < n_relax - n_relax/2; ++i_relax) relax(factor);
 }
 
 Storage_params incr_res_cache(Storage_params params) {
@@ -835,10 +840,6 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   snap_vertices();
   id_smooth_verts();
   _n_verts = _blocks.verts().size();
-}
-
-void Accessible_mesh::set_edges(std::vector<Geom_edge>&& geom_edges) {
-  match_edges();
 }
 
 void Accessible_mesh::set_unref_locks(std::function<bool(Element&)> lock_if) {

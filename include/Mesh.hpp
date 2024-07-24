@@ -172,8 +172,7 @@ class Mesh {
    */
   virtual void relax(double factor = 0.9) = 0;
   virtual int surface_bc_sn() = 0; //!< what is the serial number of the geometry surface BC?
-  virtual void set_edges(std::vector<Geom_edge>&&) = 0;
-  virtual void match_edges() = 0;
+  virtual void relax_and_match(int n_relax = 0, double factor = .9) = 0;
   //! \}
 
   //! \name observers
