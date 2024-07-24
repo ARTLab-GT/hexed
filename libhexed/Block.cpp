@@ -93,11 +93,11 @@ double Vertex::nominal_size() const {
 }
 
 void Vertex::shadow(Vertex& that) {
-  that.pos = pos = .5*(that.point({}) + point({}));
   HEXED_ASSERT(that._shadowed.get() != this, "two `Vertex`s cannot shadow each other");
   HEXED_ASSERT(!_shadowed || !that._shadowed, "one of the vertices must not already be shadowing");
   if (_shadowed) that._shadowed.pair(_shadows);
   else _shadowed.pair(that._shadows);
+  that.pos = pos = .5*(that.point({}) + point({}));
 }
 
 void Vertex::eat(Vertex& that) {

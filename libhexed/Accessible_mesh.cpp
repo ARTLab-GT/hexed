@@ -123,13 +123,13 @@ void Accessible_mesh::match_edges() {
   if (!surf_geom) return;
   _blocks.edges_2d();
   _blocks.faces_3d();
+  auto verts = _blocks.boundary_verts();
+  for (auto& vert : verts) vert.unshadow();
   for (auto& geom_edge : surf_geom->edges()) {
-    auto verts = _blocks.boundary_verts();
     next::Vertex* best_vert = nullptr;
     double badness = huge;
     double arc_len = 0;
     for (auto& vert : verts) {
-      vert.unshadow();
       if (!vert.glued()) {
         Mat<3> p = vert.point({});
         auto node = geom_edge.nearest(p);
@@ -174,8 +174,10 @@ void Accessible_mesh::match_edges() {
       arc_len = temp_arc_len;
     }
     for (std::size_t i_edge = 1; i_edge < geom_edge.matched_edges.size(); ++i_edge) {
-      std::array<next::Edge*, 2> edges {geom_edge.matched_edges[i_edge - 1].get(),
-                                        geom_edge.matched_edges[i_edge].get()};
+      std::array<next::Edge*, 2> edges {
+        geom_edge.matched_edges[i_edge - 1].get(),
+        geom_edge.matched_edges[i_edge].get(),
+      };
       bool collapsed = false;
       for (int i = 0; i < 2; ++i) collapsed = collapsed || edges[i]->vertex(0).are_shadows(edges[i]->vertex(1));
       if (!collapsed) {
